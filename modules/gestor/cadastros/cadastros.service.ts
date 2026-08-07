@@ -36,14 +36,19 @@ export const DEFAULT_EAD_FINANCEIRO_CONFIG: CursoFinanceiroConfig = {
   parcelasPadrao: 1,
   descontoPontualidade: 0,
   considerarTaxaNoCheckout: false,
+  metodosRecebimento: {
+    pix: true,
+    boleto: true,
+    cartao: false
+  },
   descontoMetodo: {
     pix: false,
     boleto: false,
     cartao: false
   },
   cartao: {
-    aceitar: true,
-    maxParcelas: 2,
+    aceitar: false,
+    maxParcelas: 1,
     aplicarDescontoPontualidade: false,
     repassarCustoParcelamento: false
   },
@@ -433,6 +438,7 @@ export const cadastrosService = {
       .from('modulos')
       .select('*, disciplinas(*, aulas(*))')
       .eq('curso_id', cursoId)
+      .order('ordem', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: true });
       
     if (modError) {
@@ -442,9 +448,12 @@ export const cadastrosService = {
 
     // Ordena disciplinas e aulas localmente por criacao
     return (modulosData || []).map(m => {
-      const disciplinasSorted = (m.disciplinas || []).sort((a: any, b: any) => 
-        new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime()
-      );
+      const disciplinasSorted = (m.disciplinas || []).sort((a: any, b: any) => {
+        const orderDifference = Number(a.ordem ?? Number.MAX_SAFE_INTEGER)
+          - Number(b.ordem ?? Number.MAX_SAFE_INTEGER);
+        if (orderDifference !== 0) return orderDifference;
+        return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+      });
       
       return {
         id: m.id,
@@ -487,12 +496,13 @@ export const cadastrosService = {
     }
 
     // 2. Insere os novos módulos
-    for (const modulo of modulos) {
+    for (const [moduloIndex, modulo] of modulos.entries()) {
       const { data: insertedModulo, error: modError } = await supabase
         .from('modulos')
         .insert({
           curso_id: cursoId,
-          nome: modulo.nome
+          nome: modulo.nome,
+          ordem: moduloIndex + 1,
         })
         .select()
         .single();
@@ -503,12 +513,13 @@ export const cadastrosService = {
       }
 
       // 3. Insere as disciplinas
-      for (const disc of modulo.disciplinas) {
+      for (const [disciplinaIndex, disc] of modulo.disciplinas.entries()) {
         const { data: insertedDisc, error: discError } = await supabase
           .from('disciplinas')
           .insert({
             modulo_id: insertedModulo.id,
             nome: disc.nome,
+            ordem: disciplinaIndex + 1,
             carga_horaria: disc.cargaHoraria,
             carga_horaria_teoria: disc.cargaHorariaTeoria || 0,
             carga_horaria_pratica: disc.cargaHorariaPratica || 0,

@@ -18,14 +18,16 @@ import TechnicalDataError from './detalhes/components/TechnicalDataError';
 import { useGestaoCursos } from '../hooks/useGestaoCursos';
 import { gestaoQueryKeys } from '../gestao.query-keys';
 import { invalidateTechnicalLandingQueries } from '../../../public/landing-pages/cursos-tecnicos/technicalLanding.keys';
+import type { GestorPermissions } from '../../access-control';
 
 interface GestaoTecnicosProps {
   onToggleDetails?: React.Dispatch<boolean>;
   poloId?: string;
   creationPoloId?: string;
+  permissions: GestorPermissions;
 }
 
-const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId, creationPoloId }) => {
+const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId, creationPoloId, permissions }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTurma, setSelectedTurma] = useState<Turma | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Turma | null>(null);
@@ -99,6 +101,8 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId
       <TurmaTecnicoDetalhes 
         turma={selectedTurma} 
         onBack={handleCloseDetails} 
+        onTurmaUpdated={setSelectedTurma}
+        permissions={permissions}
       />
     );
   }
@@ -187,7 +191,6 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId
                   <TurmaCard
                     turma={turma}
                     colorTheme="emerald"
-                    showPoloDetails
                     showDisciplineProgress
                     onDelete={setDeleteTarget}
                   />

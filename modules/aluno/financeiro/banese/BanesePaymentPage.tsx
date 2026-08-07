@@ -5,6 +5,7 @@ import Clock3 from 'lucide-react/dist/esm/icons/clock-3';
 import FileStack from 'lucide-react/dist/esm/icons/file-stack';
 import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
 import ShieldCheck from 'lucide-react/dist/esm/icons/shield-check';
+import MessageCircle from 'lucide-react/dist/esm/icons/message-circle';
 import BaneseBoletoPanel from './components/BaneseBoletoPanel';
 import BaneseBoletoDocument from './components/BaneseBoletoDocument';
 import BaneseCarnetDownload from './components/BaneseCarnetDownload';
@@ -52,9 +53,11 @@ const BanesePaymentPage = ({ installment, installments, onBack, onRefresh }: Ban
   const pix = getBanesePixPresentation(record);
   const status = getBaneseStatusPresentation(record);
   const paymentClosed = !canPayBaneseRecord(record);
+  const isPendingEad = !paymentClosed && String(record.modalidade || '').toUpperCase() === 'EAD';
   const boletoDocument = useBaneseBoletoDocument(
     record.id,
     Boolean(record.gateway_boleto_linha_digitavel && record.gateway_boleto_codigo_barras),
+    pix.state,
   );
   const carnetDocument = useBaneseCarnetDocument(
     carnetInstallments[0]?.id ?? record.id,
@@ -164,6 +167,36 @@ const BanesePaymentPage = ({ installment, installments, onBack, onRefresh }: Ban
 
           <aside className="order-1 space-y-3 lg:sticky lg:top-5 lg:order-2">
             <BaneseChargeSummary record={record} pix={pix} />
+            {isPendingEad ? (
+              <section className="rounded-[1.6rem] border border-amber-200 bg-amber-50 p-4 text-amber-950 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <Clock3 size={19} className="mt-0.5 shrink-0 text-amber-600" />
+                  <div>
+                    <p className="text-sm font-black">Aguardando confirmação do Banese</p>
+                    <p className="mt-1 text-[11px] font-semibold leading-relaxed">
+                      O curso será liberado automaticamente após a confirmação. Se você pagou via Pix e o acesso
+                      não for liberado em até 20 minutos, fale conosco. Boleto pode levar até 48 horas úteis.
+                    </p>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                      <a
+                        href={`https://wa.me/557996028316?text=${encodeURIComponent('Olá! Realizei o pagamento de um curso EAD e ainda aguardo a confirmação do Banese.')}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 text-[9px] font-black uppercase tracking-wider text-white hover:bg-emerald-700"
+                      >
+                        <MessageCircle size={13} /> WhatsApp
+                      </a>
+                      <a
+                        href="/aluno?module=comunicacao"
+                        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-300 bg-white px-3 text-[9px] font-black uppercase tracking-wider text-amber-900 hover:bg-amber-100"
+                      >
+                        <MessageCircle size={13} /> Comunicação
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            ) : null}
             {isCarnet ? (
               <BaneseCarnetDownload
                 installmentCount={carnetInstallments.length}

@@ -2,6 +2,7 @@ export type WhatsAppSector =
   | 'pedagogico_coordenacao'
   | 'financeiro'
   | 'comercial_matriculas'
+  | 'secretaria'
   | 'atendimento_geral';
 
 export type WhatsAppTicketStatus =
@@ -30,9 +31,61 @@ export interface WhatsAppConexao {
   app_secret?: string | null;
   verify_token?: string | null;
   token_configured?: boolean;
+  embedded_signup_config_id?: string | null;
+  business_portfolio_id?: string | null;
+  app_secret_configured?: boolean;
+  verify_token_configured?: boolean;
+  webhook_verified_at?: string | null;
+  waba_subscribed_at?: string | null;
+  coexistence_verified_at?: string | null;
+  contacts_sync_status?: 'not_requested' | 'requested' | 'receiving' | 'completed' | 'error';
+  contacts_sync_request_id?: string | null;
+  history_sync_status?: 'not_requested' | 'requested' | 'receiving' | 'completed' | 'declined' | 'error';
+  history_sync_request_id?: string | null;
+  history_sync_progress?: number | null;
+  last_account_event?: string | null;
+  last_account_event_at?: string | null;
+  last_health_check_at?: string | null;
+  last_error?: string | null;
+  business_profile_cache?: Partial<WhatsAppBusinessProfile> | null;
+  profile_synced_at?: string | null;
   created_at: string;
   updated_at: string;
 }
+
+export const isWhatsAppConnectionOutboundReady = (
+  connection?: WhatsAppConexao | null,
+) =>
+  Boolean(
+    connection?.status === 'ativo' &&
+    connection.phone_number_id &&
+    connection.token_configured,
+  );
+
+export const isWhatsAppConnectionWebhookReady = (
+  connection?: WhatsAppConexao | null,
+) =>
+  Boolean(
+    isWhatsAppConnectionOutboundReady(connection) &&
+    connection?.waba_id &&
+    connection?.app_id &&
+    connection.app_secret_configured &&
+    connection.verify_token_configured &&
+    connection.webhook_verified_at &&
+    connection.waba_subscribed_at,
+  );
+
+export const isWhatsAppConnectionReady = (connection?: WhatsAppConexao | null) =>
+  Boolean(
+    isWhatsAppConnectionOutboundReady(connection) &&
+    (
+      connection?.connection_mode !== 'coexistence' ||
+      (
+        isWhatsAppConnectionWebhookReady(connection) &&
+        connection.coexistence_verified_at
+      )
+    ),
+  );
 
 export interface WhatsAppConversation {
   id: string;
@@ -61,13 +114,23 @@ export interface WhatsAppConversation {
   tempo_total_atendimento_seg?: number | null;
   csat_score?: number | null;
   csat_comentario?: string | null;
+  csat_requested_at?: string | null;
   data_inicio_atendimento?: string | null;
   data_fim_atendimento?: string | null;
+}
+
+export interface WhatsAppRoutingPolo {
+  id: string;
+  nome: string;
+  cidade: string | null;
 }
 
 export interface WhatsAppFlowSettings {
   id?: string;
   scope?: string;
+  conexao_id?: string;
+  flow_type?: 'universo_main' | 'institutional';
+  routing_config?: WhatsAppFlowRoutingConfig;
   enabled: boolean;
   max_attempts: number;
   auto_close_enabled: boolean;
@@ -90,12 +153,60 @@ export interface WhatsAppFlowSettings {
   updated_at?: string;
 }
 
+export type WhatsAppFlowActionType =
+  | 'goto'
+  | 'route'
+  | 'finance_link'
+  | 'finance_pix'
+  | 'finance_irpf'
+  | 'course_agent'
+  | 'redirect'
+  | 'handoff'
+  | 'reply';
+
+export type WhatsAppFlowPoloMode = 'inherit' | 'default' | 'label' | 'none';
+
+export interface WhatsAppFlowOption {
+  id: string;
+  label: string;
+  enabled: boolean;
+  action: WhatsAppFlowActionType;
+  targetNodeId?: string | null;
+  sector?: WhatsAppSector | null;
+  poloMode?: WhatsAppFlowPoloMode;
+  poloLabel?: string | null;
+  institution?: WhatsAppInstituicao | null;
+  subject?: string | null;
+  responseMessage?: string | null;
+  rememberKey?: string | null;
+  rememberValue?: string | null;
+  setInstitution?: WhatsAppInstituicao | null;
+}
+
+export interface WhatsAppFlowNode {
+  id: string;
+  name: string;
+  message: string;
+  enabled: boolean;
+  options: WhatsAppFlowOption[];
+}
+
+export interface WhatsAppFlowDefinition {
+  version: 1;
+  startNodeId: string;
+  nodes: WhatsAppFlowNode[];
+}
+
+export interface WhatsAppFlowRoutingConfig extends Record<string, unknown> {
+  flow_builder?: WhatsAppFlowDefinition;
+}
+
 export interface WhatsAppFlowSession {
   id: string;
   conversa_id: string;
   telefone: string;
   aluno_id: string | null;
-  status: 'awaiting_cpf' | 'menu' | 'choosing_receivable' | 'choosing_irpf_year' | 'handoff' | 'closed';
+  status: 'awaiting_cpf' | 'menu' | 'course_agent' | 'choosing_receivable' | 'choosing_irpf_year' | 'awaiting_csat' | 'handoff' | 'closed';
   verified_at: string | null;
   attempts: number;
   selected_payment_method: 'link' | 'pix' | null;
@@ -141,6 +252,18 @@ export interface WhatsAppContact {
   status: string | null;
   foto: string | null;
   poloNome: string;
+  matriculas: WhatsAppContactEnrollment[];
+}
+
+export interface WhatsAppContactEnrollment {
+  id: string;
+  status: string;
+  turmaId: string;
+  turmaNome: string;
+  turmaCodigo: string;
+  cursoId: string;
+  cursoNome: string;
+  modalidade: string;
 }
 
 export interface WhatsAppBusinessProfile {

@@ -16,6 +16,18 @@ export interface TurmaAulaPlanejada {
   titulo: string;
   cargaHoraria: number;
   dataAula?: string;
+  /** Horário oficial devolvido pela grade canônica; nunca é deduzido no client. */
+  horaInicio?: string | null;
+  horaFim?: string | null;
+  sessoes: TurmaAulaSessao[];
+}
+
+export type TurmaAulaPeriodo = 'M' | 'T' | 'N' | 'U';
+
+export interface TurmaAulaSessao {
+  id: string;
+  periodo: TurmaAulaPeriodo;
+  cargaHoraria: number;
 }
 
 export interface TurmaAtividadeExtraClasse {
@@ -41,6 +53,18 @@ export interface TurmaAulaInput {
   titulo: string;
   horas: number;
   dataAula: string;
+  horaInicio?: string | null;
+  horaFim?: string | null;
+}
+
+export interface TurmaAulaUpdateInput {
+  aulaId: string;
+  disciplinaId: string;
+  titulo?: string | null;
+  horas: number;
+  dataAula: string;
+  horaInicio?: string | null;
+  horaFim?: string | null;
 }
 
 export interface TurmaAtividadeExtraClasseInput {

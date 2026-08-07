@@ -1,20 +1,34 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createPortal } from 'react-dom';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router';
 import { supabase } from '../../../lib/supabase';
+import { textMatchesSearch } from '../../../lib/search';
 import { CalendarDays, CheckCircle, Clock, CreditCard, ExternalLink, Filter, Search, TrendingUp, X, BadgeAlert, FileText, LayoutGrid, List, Download, Zap, RotateCcw } from 'lucide-react';
 import FinanceiroCardItem from './FinanceiroCardItem';
 import ReciboDespesaPreview, { ReciboData } from '../../gestor/cadastros/modelos-documentos/recibo/ReciboDespesaPreview';
 import { paymentCheckoutService } from '../../asaas/asaas.service';
 import EadPaymentModal, { EadPaymentPanelData } from '../../ead/components/EadPaymentModal';
+import { useEadPaymentConfirmationWatcher } from '../../ead/hooks/useEadPaymentConfirmationWatcher';
 import {
-  invalidateAlunoEadPaymentQueries,
-  useEadPaymentConfirmationWatcher,
-} from '../../ead/hooks/useEadPaymentConfirmationWatcher';
+  alunoCourseAccessKeys,
+  invalidateAlunoCourseAccessQueries,
+} from '../shared/aluno-course-access.queries';
 import { getBanesePaymentActionLabel, hasRegisteredBaneseBoleto } from './banese/banese-payment.utils';
 import BanesePaymentStatePage from './banese/BanesePaymentStatePage';
 import useBanesePaymentDetails from './banese/hooks/useBanesePaymentDetails';
+import {
+  preparePaymentWindow,
+  renderPdfInPaymentWindow,
+  renderPaymentWindowError,
+} from '../shared/paymentWindow';
+import { fetchBaneseBoletoDocument } from '../shared/baneseBoletoDocument';
+import FinancialUnderlineTabs from '../../gestor/financeiro/components/FinancialUnderlineTabs';
+import AlunoMobileFinanceSummary from './components/mobile/AlunoMobileFinanceSummary';
+import {
+  buildSelectablePdfBlobFromContinuousElement,
+  downloadPdfBlob,
+} from '../../shared/pdf/dom-to-selectable-pdf';
 
 const BanesePaymentPage = React.lazy(() => import('./banese/BanesePaymentPage'));
 
@@ -44,9 +58,12 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 8;
   const receiptRef = useRef<HTMLDivElement>(null);
+  const paymentDialogRef = useRef<HTMLElement>(null);
+  const receiptDialogRef = useRef<HTMLElement>(null);
+  const previousOverlayFocusRef = useRef<HTMLElement | null>(null);
 
   const invalidateAlunoPaymentQueries = React.useCallback(() => {
-    invalidateAlunoEadPaymentQueries(queryClient, alunoId);
+    invalidateAlunoCourseAccessQueries(queryClient, alunoId);
   }, [alunoId, queryClient]);
 
   const confirmEadPayment = React.useCallback(() => {
@@ -63,94 +80,89 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
     onConfirmed: confirmEadPayment,
   });
 
-  // Fetch actual contas_receber from Supabase
+  // O backend devolve o extrato e os valores financeiros canonicos.
   const {
-    data: dbRecords = [],
+    data: financeiroData,
     isLoading,
     isError: isFinanceiroError,
     refetch: refetchFinanceiro,
-  } = useQuery<any[]>({
-    queryKey: ['aluno-financeiro', alunoId],
+  } = useQuery<{
+    rows: any[];
+    summary: {
+      totalPaid: number;
+      totalPending: number;
+      openByModality: Array<{ modality: string; count: number; total: number }>;
+    };
+  }>({
+    queryKey: alunoCourseAccessKeys.finance(alunoId),
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('contas_receber')
-        .select(`
-          id,
-          cliente_id,
-          matricula_id,
-          turma_id,
-          descricao,
-          categoria,
-          tipo_lancamento,
-          parcela_numero,
-          valor,
-          valor_pago,
-          data_vencimento,
-          data_pagamento,
-          status,
-          forma_pagamento,
-          origem_pagamento,
-          asaas_invoice_url,
-          asaas_status,
-          asaas_transaction_receipt_url,
-          gateway_provider,
-          gateway_environment,
-          gateway_payment_method,
-          gateway_payment_id,
-          gateway_status,
-          gateway_bank_slip_url,
-          gateway_invoice_url,
-          gateway_boleto_linha_digitavel,
-          gateway_boleto_codigo_barras,
-          gateway_boleto_nosso_numero,
-          turmas!left(
-            id,
-            curso_id,
-            nome,
-            valor_parcela,
-            qtd_parcelas,
-            desconto_pontualidade,
-            juros_atraso,
-            multa_atraso,
-            aplicar_desconto_matricula,
-            aplicar_multa_juros_matricula,
-            aplicar_desconto_mensalidade,
-            aplicar_multa_juros_mensalidade,
-            aplicar_desconto_rematricula,
-            aplicar_multa_juros_rematricula,
-            cursos!left(
-              id,
-              modalidade,
-              nome
-            )
-          ),
-          matriculas!left(
-            desconto_pontualidade_individual,
-            juros_atraso_individual,
-            multa_atraso_individual
-          ),
-          parceiros!left(nome, cpf_cnpj)
-        `)
-        .eq('cliente_id', alunoId)
-        .order('data_vencimento', { ascending: true });
+      const { data, error } = await supabase.rpc(
+        'get_aluno_financeiro_portal_secure',
+        { p_aluno_id: alunoId },
+      );
       
       if (error) throw error;
-      return data || [];
+      if (!data || typeof data !== 'object' || Array.isArray(data)) {
+        return {
+          rows: [],
+          summary: { totalPaid: 0, totalPending: 0, openByModality: [] },
+        };
+      }
+      const payload = data as Record<string, any>;
+      return {
+        rows: Array.isArray(payload.rows) ? payload.rows : [],
+        summary: {
+          totalPaid: Number(payload.summary?.totalPaid || 0),
+          totalPending: Number(payload.summary?.totalPending || 0),
+          openByModality: Array.isArray(payload.summary?.openByModality)
+            ? payload.summary.openByModality.map((item: any) => ({
+                modality: String(item.modality || 'OUTROS'),
+                count: Number(item.count || 0),
+                total: Number(item.total || 0),
+              }))
+            : [],
+        },
+      };
     },
-    staleTime: 30_000,
+    staleTime: 60_000,
     refetchOnWindowFocus: true,
   });
+  const dbRecords = financeiroData?.rows || [];
+  const canonicalSummary = financeiroData?.summary || {
+    totalPaid: 0,
+    totalPending: 0,
+    openByModality: [],
+  };
+
+  useEffect(() => {
+    const channel = supabase
+      .channel(`aluno_financeiro_realtime_${alunoId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'finance_realtime_events',
+          filter: `aluno_id=eq.${alunoId}`,
+        },
+        () => {
+          void queryClient.invalidateQueries({
+            queryKey: alunoCourseAccessKeys.finance(alunoId),
+            exact: true,
+            refetchType: 'active',
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [alunoId, queryClient]);
 
   const hiddenStatuses = ['CANCELADO', 'ESTORNADO'];
   const installments = dbRecords.filter((record) => !hiddenStatuses.includes(String(record.status || '').toUpperCase()));
   const modalityOrder: string[] = ['EAD', 'TECNICO', 'LIVRE', 'ESPECIALIZACAO', 'OUTROS'];
-
-  const toNumber = (value: any, fallback = 0) => {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : fallback;
-  };
-
-  const roundMoney = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
 
   const getInstallmentTurma = (inst: any) =>
     Array.isArray(inst.turmas) ? inst.turmas[0] : inst.turmas;
@@ -158,7 +170,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
   const getInstallmentModality = (inst: any) => {
     const turma = getInstallmentTurma(inst);
     const curso = turma && (Array.isArray(turma.cursos) ? turma.cursos[0] : turma.cursos);
-    const rawModality = String(curso?.modalidade || '').toUpperCase();
+    const rawModality = String(inst.modalidade || inst.courseModality || curso?.modalidade || '').toUpperCase();
 
     if (['EAD', 'TECNICO', 'LIVRE', 'ESPECIALIZACAO'].includes(rawModality)) {
       return rawModality;
@@ -170,7 +182,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
   const getInstallmentCourseName = (inst: any) => {
     const turma = getInstallmentTurma(inst);
     const curso = turma && (Array.isArray(turma.cursos) ? turma.cursos[0] : turma.cursos);
-    return curso?.nome || 'Sem curso vinculado';
+    return inst.cursoNome || inst.courseName || curso?.nome || 'Sem curso vinculado';
   };
 
   const getInstallmentCourseId = (inst: any) => {
@@ -253,85 +265,6 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
     return modality === 'EAD' ? 'Cobrança EAD' : 'Cobrança';
   };
 
-  const getFinancePolicy = (inst: any, modality: string) => {
-    const turma = getInstallmentTurma(inst) || {};
-    const matricula = Array.isArray(inst.matriculas) ? inst.matriculas[0] : inst.matriculas;
-    const type = String(inst.tipo_lancamento || '').toUpperCase();
-    const description = String(inst.descricao || '').toLowerCase();
-    const discount = toNumber(matricula?.desconto_pontualidade_individual ?? turma.desconto_pontualidade, 0);
-    const interestPercent = toNumber(matricula?.juros_atraso_individual ?? turma.juros_atraso, 0);
-    const lateFee = toNumber(matricula?.multa_atraso_individual ?? turma.multa_atraso, 0);
-
-    const isMatricula = type === 'MATRICULA' || description.includes('matricula') || description.includes('matrícula');
-    const isRematricula = type === 'REMATRICULA' || description.includes('rematricula') || description.includes('rematrícula');
-    const isParcela = type === 'PARCELA' || description.includes('mensalidade');
-
-    const canDiscount = modality !== 'EAD' && (
-      (isMatricula && turma.aplicar_desconto_matricula === true) ||
-      (isParcela && turma.aplicar_desconto_mensalidade !== false) ||
-      (isRematricula && turma.aplicar_desconto_rematricula !== false)
-    );
-
-    const canLateCharge = modality !== 'EAD' && (
-      (isMatricula && turma.aplicar_multa_juros_matricula !== false) ||
-      (isParcela && turma.aplicar_multa_juros_mensalidade !== false) ||
-      (isRematricula && turma.aplicar_multa_juros_rematricula !== false)
-    );
-
-    return {
-      discount: canDiscount ? discount : 0,
-      interestPercent: canLateCharge ? interestPercent : 0,
-      lateFee: canLateCharge ? lateFee : 0,
-      canDiscount,
-      canLateCharge
-    };
-  };
-
-  const buildFinancialSummary = (inst: any, modality: string, isOverdue: boolean) => {
-    const status = String(inst.status || '').toUpperCase();
-    const baseValue = toNumber(inst.valor, 0);
-    const paidValue = toNumber(inst.valor_pago, baseValue);
-    if (hasRegisteredBaneseBoleto(inst)) {
-      return {
-        baseValue,
-        paidValue,
-        punctualDiscount: 0,
-        totalUntilDue: baseValue,
-        interestPercent: 0,
-        interestValue: 0,
-        lateFeeValue: 0,
-        totalWithLate: baseValue,
-        highlightValue: status === 'PAGO' ? paidValue : baseValue,
-        highlightLabel: status === 'PAGO' ? 'Valor pago' : 'Valor do boleto',
-        hasDiscount: false,
-        hasLateCharge: false,
-        canLateCharge: false,
-      };
-    }
-    const policy = getFinancePolicy(inst, modality);
-    const punctualDiscount = status === 'PAGO' ? 0 : Math.min(baseValue, Math.max(0, policy.discount));
-    const totalUntilDue = roundMoney(Math.max(0, baseValue - punctualDiscount));
-    const interestValue = isOverdue ? roundMoney(baseValue * (policy.interestPercent / 100)) : 0;
-    const lateFeeValue = isOverdue ? Math.max(0, policy.lateFee) : 0;
-    const totalWithLate = roundMoney(baseValue + interestValue + lateFeeValue);
-
-    return {
-      baseValue,
-      paidValue,
-      punctualDiscount,
-      totalUntilDue,
-      interestPercent: policy.interestPercent,
-      interestValue,
-      lateFeeValue,
-      totalWithLate,
-      highlightValue: status === 'PAGO' ? paidValue : isOverdue ? totalWithLate : totalUntilDue,
-      highlightLabel: status === 'PAGO' ? 'Valor pago' : isOverdue ? 'Total em atraso' : 'Total até o vencimento',
-      hasDiscount: punctualDiscount > 0,
-      hasLateCharge: interestValue > 0 || lateFeeValue > 0,
-      canLateCharge: policy.canLateCharge
-    };
-  };
-
   const toInstallmentRow = (inst: any) => {
     const modality = getInstallmentModality(inst);
     const turma = getInstallmentTurma(inst);
@@ -339,7 +272,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const isOverdue = String(inst.status || '').toUpperCase() === 'VENCIDO' || (String(inst.status || '').toUpperCase() === 'PENDENTE' && Boolean(dueDate) && dueDate < today);
-    const financialSummary = buildFinancialSummary(inst, modality, isOverdue);
+    const financialSummary = inst.financial_summary;
     return {
       ...inst,
       modalidade: modality,
@@ -384,10 +317,18 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
       if (!summary || !sameBankTitle) return [];
       return [toInstallmentRow({
         ...detail,
+        turmas: summary.turmas,
+        modalidade: detail.modalidade || summary.modalidade,
+        cursoNome: detail.cursoNome || summary.cursoNome,
+        turmaNome: detail.turmaNome || summary.turmaNome,
+        curso_id: summary.cursoId,
+        turma_id: summary.turma_id,
+        matricula_id: summary.matricula_id,
         status: summary.status,
         gateway_status: summary.gateway_status,
         valor_pago: summary.valor_pago,
         data_pagamento: summary.data_pagamento,
+        financial_summary: summary.financial_summary,
       })];
     })
     : [];
@@ -437,14 +378,13 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
   }, [refetchBanesePayment, refetchFinanceiro, selectedBanesePaymentSummary]);
 
   const filteredBySearchDateModality = installmentRows.filter((inst) => {
-    const normalizedSearch = searchTerm.trim().toLowerCase();
-    const matchesSearch = !normalizedSearch || [
+    const matchesSearch = textMatchesSearch(searchTerm, [
       inst.descricao,
       inst.cursoNome,
       inst.turmaNome,
       inst.status,
       inst.forma_pagamento
-    ].some((item) => String(item || '').toLowerCase().includes(normalizedSearch));
+    ]);
 
     const dueDate = parseDate(inst.data_vencimento);
     const start = startDate ? parseDate(startDate) : null;
@@ -468,18 +408,9 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
     TODOS: filteredBySearchDateModality.length
   };
 
-  const openSummaryByModality = modalityOrder.map((modality) => {
-    const items = installmentRows.filter((inst) => {
-      const status = String(inst.status || '').toUpperCase();
-      return inst.modalidade === modality && (status === 'PENDENTE' || status === 'VENCIDO' || inst.isOverdue);
-    });
-
-    return {
-      modality,
-      count: items.length,
-      total: items.reduce((sum, inst) => sum + Number(inst.financialSummary?.highlightValue || inst.valor || 0), 0),
-    };
-  }).filter((item) => item.count > 0);
+  const openSummaryByModality = modalityOrder
+    .map((modality) => canonicalSummary.openByModality.find((item) => item.modality === modality))
+    .filter((item): item is { modality: string; count: number; total: number } => Boolean(item));
 
   const filteredInstallments = filteredBySearchDateModality.filter((inst) => {
     const status = String(inst.status || '').toUpperCase();
@@ -503,7 +434,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
   }, [searchTerm, startDate, endDate, modalityFilter, statusTab, viewMode]);
 
   useEffect(() => {
-    const mobileQuery = window.matchMedia('(max-width: 639px)');
+    const mobileQuery = window.matchMedia('(max-width: 767px)');
     const keepMobileCards = () => {
       if (mobileQuery.matches) setViewMode('cards');
     };
@@ -533,12 +464,21 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
 
     const bodyOverflow = document.body.style.overflow;
     const rootOverflow = document.documentElement.style.overflow;
+    previousOverlayFocusRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
     document.body.style.overflow = 'hidden';
     document.documentElement.style.overflow = 'hidden';
+    const focusTimer = window.setTimeout(() => {
+      const activeDialog = selectedReceipt ? receiptDialogRef.current : paymentDialogRef.current;
+      activeDialog?.querySelector<HTMLElement>('[data-finance-modal-close]')?.focus();
+    }, 0);
 
     return () => {
+      window.clearTimeout(focusTimer);
       document.body.style.overflow = bodyOverflow;
       document.documentElement.style.overflow = rootOverflow;
+      previousOverlayFocusRef.current?.focus();
     };
   }, [selectedReceipt, selectedEadPayment]);
 
@@ -559,14 +499,8 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
     setCurrentPage(page);
   };
 
-  // Calculations
-  const totalPaid = installments
-    .filter(i => i.status === 'PAGO')
-    .reduce((acc, i) => acc + Number(i.valor), 0);
-
-  const totalPending = installments
-    .filter(i => i.status === 'PENDENTE' || i.status === 'VENCIDO')
-    .reduce((acc, i) => acc + Number(i.valor), 0);
+  const totalPaid = canonicalSummary.totalPaid;
+  const totalPending = canonicalSummary.totalPending;
 
   const copyPaymentLink = async (url?: string | null) => {
     if (!url) {
@@ -627,6 +561,9 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
       return;
     }
 
+    const paymentWindow = eadPaymentMethod === 'BOLETO'
+      ? preparePaymentWindow()
+      : null;
     setIsStartingEadPayment(true);
     try {
       const result = await paymentCheckoutService.getPublicCheckout(
@@ -659,10 +596,25 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
         return;
       }
 
+      if (eadPaymentMethod === 'BOLETO' && !checkoutUrl) {
+        throw new Error('O Banese registrou a cobrança, mas não retornou a rota autenticada do boleto.');
+      }
+
       if (eadPaymentMethod === 'BOLETO' && checkoutUrl) {
         invalidateAlunoPaymentQueries();
-        window.location.assign(checkoutUrl);
         setSelectedEadPayment(null);
+        try {
+          const pdf = await fetchBaneseBoletoDocument(String(checkoutResult?.receivableId || ''));
+          if (!renderPdfInPaymentWindow(paymentWindow, pdf)) {
+            throw new Error('O navegador bloqueou a nova aba do boleto.');
+          }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Não foi possível abrir o boleto Banese.';
+          renderPaymentWindowError(paymentWindow, message);
+          setEadPaymentPanel(result as EadPaymentPanelData);
+          setNotice(`${message} Use “Abrir boleto” para tentar novamente sem sair do portal.`);
+          setTimeout(() => setNotice(''), 5500);
+        }
         return;
       }
 
@@ -678,6 +630,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
       setEadPaymentPanel(result as EadPaymentPanelData);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Não foi possível preparar o pagamento EAD.';
+      renderPaymentWindowError(paymentWindow, message);
       setNotice(message);
       setTimeout(() => setNotice(''), 5500);
     } finally {
@@ -741,63 +694,19 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
     setIsGeneratingReceiptPdf(true);
 
     try {
-      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-        import('html2canvas'),
-        import('jspdf'),
-      ]);
-      const canvas = await html2canvas(receiptRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff'
-      });
-
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgWidth = 190;
-      const pageHeight = 277;
-      const ratio = imgWidth / canvas.width;
-      let remainingHeight = canvas.height;
-      const pagePixelHeight = pageHeight / ratio;
-      let position = 0;
-      let pageIndex = 0;
-
-      while (remainingHeight > 0) {
-        const sliceHeight = Math.min(pagePixelHeight, remainingHeight);
-        const sliceCanvas = document.createElement('canvas');
-        sliceCanvas.width = canvas.width;
-        sliceCanvas.height = sliceHeight;
-        const ctx = sliceCanvas.getContext('2d');
-
-        if (!ctx) {
-          throw new Error('Não foi possível preparar o canvas do recibo.');
-        }
-
-        ctx.drawImage(
-          canvas,
-          0,
-          position,
-          canvas.width,
-          sliceHeight,
-          0,
-          0,
-          canvas.width,
-          sliceHeight
-        );
-
-        const sliceData = sliceCanvas.toDataURL('image/png');
-        const sliceHeightMm = sliceHeight * ratio;
-
-        if (pageIndex > 0) {
-          pdf.addPage();
-        }
-
-        pdf.addImage(sliceData, 'PNG', 10, 10, imgWidth, sliceHeightMm);
-        remainingHeight -= sliceHeight;
-        position += sliceHeight;
-        pageIndex += 1;
-      }
-
       const fileName = `recibo-${String(selectedReceipt.id || '').slice(0, 8).toUpperCase() || 'PAGO'}-${new Date().toISOString().slice(0, 10)}.pdf`;
-      pdf.save(fileName);
+      const pdfBlob = await buildSelectablePdfBlobFromContinuousElement(receiptRef.current, {
+        orientation: 'portrait',
+        artworkFormat: 'PNG',
+        artworkScale: 2,
+        marginTopMm: 10,
+        marginRightMm: 10,
+        marginBottomMm: 10,
+        marginLeftMm: 10,
+        title: 'Recibo de pagamento',
+        subject: 'Comprovante financeiro do aluno',
+      });
+      downloadPdfBlob(pdfBlob, fileName);
       setNotice('Recibo baixado com sucesso.');
       setTimeout(() => setNotice(originalNotice), 2000);
     } catch {
@@ -995,20 +904,27 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
   }
 
   return (
-    <div className="min-w-0 space-y-5 animate-fadeIn sm:space-y-6">
+    <div className="min-w-0 space-y-4 animate-fadeIn sm:space-y-6">
       {/* Header Panel */}
-      <div className="mb-5 flex items-start justify-between sm:mb-6 sm:items-center">
+      <div className="mb-4 flex items-start justify-between sm:mb-6 sm:items-center">
         <div className="min-w-0">
-          <h2 className="flex items-center gap-2 text-xl font-black uppercase tracking-tight text-[#001a33] sm:text-2xl">
+          <h2 className="flex items-center gap-2 text-lg font-black uppercase tracking-tight text-[#001a33] sm:text-2xl">
             <CreditCard className="shrink-0 text-blue-600" size={22} />
             <span>Financeiro</span>
           </h2>
-          <p className="mt-1 max-w-xl text-xs font-medium leading-relaxed text-slate-500">Acompanhe parcelas, vencimentos e comprovantes em um só lugar.</p>
+          <p className="mt-1 max-w-xl text-[11px] font-medium leading-relaxed text-slate-500 sm:text-xs">Parcelas, vencimentos e comprovantes em um só lugar.</p>
         </div>
       </div>
 
       {/* Stats Summary */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-5">
+      <AlunoMobileFinanceSummary
+        totalPaid={totalPaid}
+        totalPending={totalPending}
+        formatCurrency={formatCurrency}
+        onViewCharges={() => document.getElementById('aluno-finance-charges')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+      />
+
+      <div className="hidden grid-cols-1 gap-3 md:grid md:grid-cols-2 md:gap-5">
         <div className="flex items-center justify-between rounded-3xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6">
           <div className="space-y-1">
             <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Total Pago</p>
@@ -1033,16 +949,16 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
       </div>
 
       {openSummaryByModality.length > 0 && (
-        <div className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm sm:rounded-[2rem]">
+        <div className="rounded-[1.5rem] border border-slate-100 bg-white p-4 shadow-sm sm:rounded-[2rem]">
           <div className="mb-3 flex items-center justify-between gap-4">
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.24em] text-blue-600">Em aberto por tipo</p>
               <p className="text-xs font-bold leading-relaxed text-slate-500">Valores pendentes organizados por modalidade.</p>
             </div>
           </div>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="-mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-1 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 xl:grid-cols-4">
             {openSummaryByModality.map((item) => (
-              <div key={item.modality} className={`rounded-2xl border px-4 py-3 ${getModalityAccent(item.modality).group}`}>
+              <div key={item.modality} className={`min-w-[78%] snap-start rounded-2xl border px-4 py-3 md:min-w-0 ${getModalityAccent(item.modality).group}`}>
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-xs font-black uppercase tracking-widest">{getModalityLabel(item.modality)}</span>
                   <span className="rounded-full bg-white/70 px-2 py-1 text-[10px] font-black uppercase tracking-widest">
@@ -1057,7 +973,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
       )}
 
       {/* Filter + List + Views */}
-      <div className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6 md:rounded-[2.5rem] md:p-8">
+      <div id="aluno-finance-charges" className="scroll-mt-4 rounded-[1.5rem] border border-slate-100 bg-white p-4 shadow-sm sm:p-6 md:rounded-[2.5rem] md:p-8">
         <div className="mb-5 flex items-center gap-2 sm:mb-6">
           <FileText size={16} className="text-blue-500" />
           <h3 className="font-bold text-xs uppercase tracking-wider text-[#001a33]">Histórico de Cobranças</h3>
@@ -1079,7 +995,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Buscar por descrição, curso ou status"
-              className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-bold text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-base font-bold text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 md:text-sm"
             />
           </div>
 
@@ -1102,7 +1018,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 lg:bg-slate-50"
+              className="h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-base font-bold text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 md:text-xs lg:bg-slate-50"
             />
           </div>
 
@@ -1114,7 +1030,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 lg:bg-slate-50"
+              className="h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-base font-bold text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 md:text-xs lg:bg-slate-50"
             />
           </div>
 
@@ -1125,7 +1041,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
             <select
               value={modalityFilter}
               onChange={(e) => setModalityFilter(e.target.value as 'TODOS' | 'EAD' | 'TECNICO' | 'LIVRE' | 'ESPECIALIZACAO')}
-              className="h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 lg:bg-slate-50"
+              className="h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-base font-bold text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 md:text-xs lg:bg-slate-50"
             >
               <option value="TODOS">Todos os tipos</option>
               <option value="EAD">EAD</option>
@@ -1135,7 +1051,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
             </select>
           </div>
 
-          <div className="hidden sm:block lg:col-span-2">
+          <div className="hidden md:block lg:col-span-2">
             <label className="sr-only">Visualização</label>
             <div className="grid h-12 grid-cols-2 gap-2">
               <button
@@ -1174,28 +1090,18 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-          {[
-            { key: 'ABERTO', label: 'Em aberto', count: tabCounts.ABERTO },
-            { key: 'ATRASADO', label: 'Atrasado', count: tabCounts.ATRASADO },
-            { key: 'PAGO', label: 'Pagos', count: tabCounts.PAGO },
-            { key: 'TODOS', label: 'Todos', count: tabCounts.TODOS }
-          ].map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setStatusTab(tab.key as 'ABERTO' | 'ATRASADO' | 'PAGO' | 'TODOS')}
-              className={`min-h-11 rounded-xl px-3 py-2.5 text-[10px] font-black uppercase tracking-wider transition-colors sm:rounded-full ${
-                statusTab === tab.key
-                  ? 'bg-blue-600 text-white shadow'
-                  : 'bg-slate-100 text-slate-600 border border-slate-200'
-              }`}
-            >
-              <span className="inline-flex items-center gap-1">
-                {tab.label}
-                <span className="px-1.5 py-0.5 rounded-full bg-white/20 text-[9px] font-black">{tab.count}</span>
-              </span>
-            </button>
-          ))}
+        <div className="mt-4">
+          <FinancialUnderlineTabs
+            items={[
+              { id: 'ABERTO', label: 'Em aberto', icon: <Clock size={15} />, badge: tabCounts.ABERTO },
+              { id: 'ATRASADO', label: 'Atrasado', icon: <BadgeAlert size={15} />, badge: tabCounts.ATRASADO },
+              { id: 'PAGO', label: 'Pagos', icon: <CheckCircle size={15} />, badge: tabCounts.PAGO },
+              { id: 'TODOS', label: 'Todos', icon: <List size={15} />, badge: tabCounts.TODOS },
+            ]}
+            value={statusTab}
+            onChange={setStatusTab}
+            ariaLabel="Filtrar histórico de cobranças por situação"
+          />
         </div>
 
         <div className="mt-4 flex flex-col gap-1 text-[11px] font-bold text-slate-500 sm:flex-row sm:items-center sm:justify-between">
@@ -1360,7 +1266,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
                       {installmentsByModality.length} item{installmentsByModality.length > 1 ? 's' : ''}
                     </span>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                     {installmentsByModality.map((inst) => (
                       <FinanceiroCardItem
                         key={inst.id}
@@ -1408,36 +1314,40 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
 
       {selectedEadPayment && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed left-0 top-0 right-0 bottom-0 z-[9999] flex h-dvh w-screen items-center justify-center overflow-y-auto bg-slate-950/70 p-4 backdrop-blur-sm pointer-events-auto"
+          className="fixed inset-0 z-[9999] flex h-dvh w-screen items-end justify-center overflow-hidden bg-slate-950/70 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-sm pointer-events-auto md:items-center md:p-4"
           onClick={closeEadPaymentChoice}
         >
-          <div
-            className="w-full max-w-xl overflow-hidden rounded-[1.75rem] border border-white/20 bg-white shadow-2xl"
+          <section
+            ref={paymentDialogRef}
+            className="flex max-h-full w-full max-w-xl flex-col overflow-hidden rounded-t-[1.75rem] border border-white/20 bg-white shadow-2xl md:max-h-[calc(100dvh-2rem)] md:rounded-[1.75rem]"
             onClick={(event) => event.stopPropagation()}
             role="dialog"
             aria-modal="true"
+            aria-labelledby="ead-payment-choice-title"
           >
-            <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
-              <div>
+            <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 px-4 py-4 md:gap-4 md:px-5">
+              <div className="min-w-0">
                 <p className="text-[10px] font-black uppercase tracking-[0.24em] text-blue-600">Pagamento EAD</p>
-                <h3 className="mt-1 text-xl font-black uppercase tracking-tight text-[#001a33]">
+                <h3 id="ead-payment-choice-title" className="mt-1 text-lg font-black uppercase tracking-tight text-[#001a33] md:text-xl">
                   Escolha como pagar
                 </h3>
                 <p className="mt-1 text-xs font-bold leading-relaxed text-slate-500">
-                  O curso será liberado somente após confirmação do gateway bancário via webhook.
+                  O curso será liberado somente após a confirmação bancária canônica do pagamento.
                 </p>
               </div>
               <button
+                data-finance-modal-close
                 type="button"
                 onClick={closeEadPaymentChoice}
                 disabled={isStartingEadPayment}
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-100 text-slate-400 hover:text-slate-700 disabled:opacity-50"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-100 text-slate-400 hover:text-slate-700 disabled:opacity-50 md:h-10 md:w-10"
+                aria-label="Fechar escolha de pagamento"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <div className="space-y-4 px-5 py-4">
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 md:px-5 md:pb-4">
               <div className="rounded-3xl border border-slate-100 bg-slate-50 p-4">
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Curso</p>
                 <p className="mt-1 text-sm font-black text-[#001a33]">{selectedEadPayment.cursoNome || selectedEadPayment.descricao}</p>
@@ -1484,12 +1394,12 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
                 A forma escolhida usa a rota bancária configurada para este curso. Cartão pode abrir o checkout seguro em nova aba.
               </div>
 
-              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <div className="sticky bottom-0 -mx-4 flex flex-col-reverse gap-2 border-t border-slate-100 bg-white/95 px-4 pb-1 pt-3 backdrop-blur-md sm:flex-row sm:justify-end md:static md:mx-0 md:border-0 md:bg-transparent md:p-0">
                 <button
                   type="button"
                   onClick={closeEadPaymentChoice}
                   disabled={isStartingEadPayment}
-                  className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                  className="min-h-12 rounded-xl border border-slate-200 bg-white px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 disabled:opacity-50 md:min-h-0"
                 >
                   Fechar
                 </button>
@@ -1497,13 +1407,13 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
                   type="button"
                   onClick={startEadPayment}
                   disabled={isStartingEadPayment}
-                  className="rounded-xl bg-emerald-600 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                  className="min-h-12 rounded-xl bg-emerald-600 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 md:min-h-0"
                 >
                   {isStartingEadPayment ? 'Preparando...' : 'Continuar pagamento'}
                 </button>
               </div>
             </div>
-          </div>
+          </section>
         </div>,
         document.body,
       )}
@@ -1536,40 +1446,62 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
       {/* Recibo Modal Overlay */}
       {selectedReceipt && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed left-0 top-0 right-0 bottom-0 bg-black/60 backdrop-blur-sm z-[9999] pointer-events-auto flex h-dvh w-screen items-center justify-center p-4 overflow-y-auto"
+          className="fixed inset-0 z-[9999] flex h-dvh w-screen items-end justify-center overflow-hidden bg-black/60 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-sm pointer-events-auto md:items-center md:p-4"
           onClick={closeReceipt}
         >
-          <div
-            className="bg-white rounded-[1.75rem] p-5 sm:p-6 max-w-2xl w-full border border-slate-100 shadow-2xl relative animate-fadeIn overflow-y-auto"
+          <section
+            ref={receiptDialogRef}
+            className="relative flex max-h-full w-full max-w-2xl flex-col overflow-hidden rounded-t-[1.75rem] border border-slate-100 bg-white shadow-2xl animate-fadeIn md:max-h-[calc(100dvh-2rem)] md:rounded-[1.75rem] md:p-6"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
+            aria-label="Recibo de pagamento"
           >
+            <header className="flex shrink-0 items-center justify-between border-b border-slate-100 px-4 py-3 md:hidden">
+              <div>
+                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-600">Documento financeiro</p>
+                <h3 id="student-receipt-title" className="mt-0.5 text-base font-black uppercase tracking-tight text-[#001a33]">Recibo de pagamento</h3>
+              </div>
+              <button
+                data-finance-modal-close
+                type="button"
+                onClick={closeReceipt}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-100 text-slate-400 active:bg-slate-50"
+                aria-label="Fechar recibo"
+              >
+                <X size={18} />
+              </button>
+            </header>
             <button
+              data-finance-modal-close
+              type="button"
               onClick={closeReceipt}
-              className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-50 rounded-full transition-colors"
+              className="absolute right-4 top-4 z-10 hidden h-10 w-10 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-700 md:flex"
+              aria-label="Fechar recibo"
             >
               <X size={16} />
             </button>
 
-            <div
-              ref={receiptRef}
-              className="print-area"
-            >
-              <ReciboDespesaPreview data={receiptPayload || undefined} />
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 md:overflow-y-auto md:p-0">
+              <div
+                ref={receiptRef}
+                className="print-area"
+              >
+                <ReciboDespesaPreview data={receiptPayload || undefined} />
+              </div>
             </div>
 
-            <div className="mt-6 flex flex-col sm:flex-row justify-end gap-3">
+            <div className="flex shrink-0 flex-col-reverse justify-end gap-2 border-t border-slate-100 bg-white px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:flex-row md:mt-6 md:border-0 md:p-0">
               <button
                 onClick={closeReceipt}
-                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-[10px] uppercase tracking-wider rounded-xl transition-colors"
+                className="min-h-12 rounded-xl bg-slate-100 px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-600 transition-colors hover:bg-slate-200 md:min-h-0"
               >
                 Fechar
               </button>
               <button
                 onClick={downloadReceiptPdf}
                 disabled={isGeneratingReceiptPdf}
-                className={`px-4 py-2.5 font-bold text-[10px] uppercase tracking-wider rounded-xl transition-colors shadow-md inline-flex items-center gap-2 justify-center ${
+                className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider shadow-md transition-colors md:min-h-0 ${
                   isGeneratingReceiptPdf
                     ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
                     : 'bg-emerald-600 hover:bg-emerald-700 text-white'
@@ -1579,7 +1511,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
                 {isGeneratingReceiptPdf ? 'Gerando PDF...' : 'Baixar PDF'}
               </button>
             </div>
-          </div>
+          </section>
         </div>,
         document.body,
       )}

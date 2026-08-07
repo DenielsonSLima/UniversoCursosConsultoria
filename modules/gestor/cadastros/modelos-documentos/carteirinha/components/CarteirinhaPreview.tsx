@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, CreditCard } from 'lucide-react';
 import { assinaturasService } from '../../../../configuracoes/assinaturas/assinaturas.service';
-import { getDocumentValidationQrUrl } from '../../../../../shared/document-validation/document-validation.url';
+import { DocumentValidationQrCodeImage } from '../../../../../shared/document-validation/DocumentValidationQrCodeImage';
 
 interface CarteirinhaPreviewProps {
   formData: any;
@@ -24,7 +24,9 @@ interface CarteirinhaPreviewProps {
     poloCnpj?: string;
     poloTelefone?: string;
   };
+  showValidationQrCode?: boolean;
   isEditable?: boolean;
+  transformOrigin?: React.CSSProperties['transformOrigin'];
   onChangePositions?: (positions: any) => void;
 }
 
@@ -57,7 +59,9 @@ const CarteirinhaPreview: React.FC<CarteirinhaPreviewProps> = ({
   page, 
   zoomLevel, 
   aluno,
+  showValidationQrCode = true,
   isEditable = false,
+  transformOrigin = 'top center',
   onChangePositions
 }) => {
   // Tamanho padrão CR80: 85.6mm x 54mm (landscape)
@@ -147,7 +151,6 @@ const CarteirinhaPreview: React.FC<CarteirinhaPreviewProps> = ({
   };
 
   const codeValidador = studentData.validationCode || studentData.matricula;
-  const qrCodeUrl = getDocumentValidationQrUrl(codeValidador);
   const institutionalText = [
     studentData.poloRazaoSocial,
     studentData.poloCnpj ? `CNPJ: ${studentData.poloCnpj}` : null,
@@ -169,6 +172,7 @@ const CarteirinhaPreview: React.FC<CarteirinhaPreviewProps> = ({
     fontVariantLigatures: 'none',
     textRendering: 'geometricPrecision',
     WebkitFontSmoothing: 'antialiased',
+    transformOrigin,
   };
 
   // LÓGICA DO DRAG & DROP NATIVO EM PORCENTAGEM
@@ -386,16 +390,22 @@ const CarteirinhaPreview: React.FC<CarteirinhaPreviewProps> = ({
             </div>
 
             {/* QR Code de Validação Digital */}
-            <div 
-              style={getPosStyle('qrcode')}
-              onMouseDown={(e) => handleDragStart(e, 'qrcode')}
-              className={`w-[13%] h-[20.8%] bg-white p-[0.5mm] flex items-center justify-center rounded-[0.8mm] z-15 ${getDragBorderClass()}`}
-            >
-              <img src={qrCodeUrl} alt="QR" className="w-full h-full object-contain" />
-            </div>
+            {showValidationQrCode && (
+              <div
+                style={getPosStyle('qrcode')}
+                onMouseDown={(e) => handleDragStart(e, 'qrcode')}
+                className={`w-[13%] h-[20.8%] bg-white p-[0.5mm] flex items-center justify-center rounded-[0.8mm] z-15 ${getDragBorderClass()}`}
+              >
+                <DocumentValidationQrCodeImage
+                  code={codeValidador}
+                  alt="QR"
+                  className="h-full w-full"
+                />
+              </div>
+            )}
 
             {/* Código textual para consulta quando a leitura do QR não for possível */}
-            {formData.showValidationCode !== false && (
+            {showValidationQrCode && formData.showValidationCode !== false && (
               <div
                 style={{
                   ...getPosStyle('codigoValidacao'),
@@ -409,8 +419,9 @@ const CarteirinhaPreview: React.FC<CarteirinhaPreviewProps> = ({
               </div>
             )}
 
-            {/* Validade de Meia Entrada */}
-            <div 
+            {/* Validade canônica do validador */}
+            {showValidationQrCode && (
+            <div
               style={getPosStyle('validade')}
               onMouseDown={(e) => handleDragStart(e, 'validade')}
               className={`w-[35%] h-[12%] flex items-center justify-center text-center z-15 ${getDragBorderClass()}`}
@@ -424,6 +435,7 @@ const CarteirinhaPreview: React.FC<CarteirinhaPreviewProps> = ({
                 <span style={{ fontSize: fontDados, color: corTexto, fontWeight: 900 }}>{validadeMesAno}</span>
               )}
             </div>
+            )}
           </>
         ) : (
           // VERSO - POSICIONAMENTO DINÂMICO E ARRASTÁVEL NO VERSO
@@ -524,7 +536,7 @@ const CarteirinhaPreview: React.FC<CarteirinhaPreviewProps> = ({
             )}
 
             {/* URL da Instituição / Validador */}
-            {formData.showSiteValidador !== false && (
+            {showValidationQrCode && formData.showSiteValidador !== false && (
               <div 
                 style={{ 
                   ...getPosStyle('siteValidador'), 
@@ -598,9 +610,13 @@ const CarteirinhaPreview: React.FC<CarteirinhaPreviewProps> = ({
                        <User size={32} className="text-slate-300" />
                      )}
                   </div>
-                  <div className="mt-2 text-center w-full bg-slate-900 text-white rounded p-0.5">
-                     <p className="text-[6px] font-black uppercase tracking-wider">{studentData.validade.split('/')[2]}</p>
-                  </div>
+                  {showValidationQrCode && (
+                    <div className="mt-2 text-center w-full bg-slate-900 text-white rounded p-0.5">
+                      <p className="text-[6px] font-black uppercase tracking-wider">
+                        {studentData.validade.split('/')[2] || studentData.validade}
+                      </p>
+                    </div>
+                  )}
                </div>
 
                {/* Coluna de Dados */}
@@ -640,9 +656,13 @@ const CarteirinhaPreview: React.FC<CarteirinhaPreviewProps> = ({
                   </div>
                   
                   <div className={`flex items-center justify-between border-t border-slate-200/50 pt-1 mt-1`}>
-                    <p className="text-[6px] font-black" style={{ color: formData.corPrimaria }}>
-                       Válida até {studentData.validade}
-                    </p>
+                    {showValidationQrCode && (
+                      <p className="text-[6px] font-black" style={{ color: formData.corPrimaria }}>
+                        {studentData.validade === 'Sem vencimento'
+                          ? 'Sem vencimento'
+                          : `Válida até ${studentData.validade}`}
+                      </p>
+                    )}
                     {formData.tipoCurso === 'Cursos Livres' && (
                       <span className="text-[5px] font-black bg-amber-100 text-amber-700 px-1 py-0.5 rounded uppercase">Uso Interno</span>
                     )}
@@ -650,8 +670,13 @@ const CarteirinhaPreview: React.FC<CarteirinhaPreviewProps> = ({
                </div>
 
                {/* Coluna do QR Code na Frente */}
+               {showValidationQrCode && (
                <div className="w-[18mm] h-full border-l border-slate-100/30 py-2 px-1 flex flex-col items-center justify-center text-center z-10" style={{ backgroundColor: ocultarDesign ? 'transparent' : formData.corSecundaria + '10' }}>
-                  <img src={qrCodeUrl} alt="Validação QR" className="w-[13mm] h-[13mm] bg-white p-0.5 rounded shadow-sm mb-1" />
+                  <DocumentValidationQrCodeImage
+                    code={codeValidador}
+                    alt="Validação QR"
+                    className="mb-1 h-[13mm] w-[13mm] rounded bg-white p-0.5 shadow-sm"
+                  />
                   <p className="text-[4px] font-black text-slate-500 uppercase tracking-widest leading-none">
                     VALIDAÇÃO<br/>DIGITAL
                   </p>
@@ -667,6 +692,7 @@ const CarteirinhaPreview: React.FC<CarteirinhaPreviewProps> = ({
                     </p>
                   )}
                </div>
+               )}
 
                {/* Marca d'água super sutil (ocultada se selecionado design customizado) */}
                {!ocultarDesign && (

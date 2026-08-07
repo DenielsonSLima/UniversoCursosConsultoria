@@ -42,29 +42,25 @@ export const gestaoService = {
     };
 
     if (sortBy === 'ALUNOS_DESC') {
-      let rankingQuery = applyFilters(
-        supabase
-          .from('turmas')
-          .select('id, nome, cursos!inner(modalidade), matriculas(count)', { count: 'exact' }),
-      );
-      if (filters.modalidade === 'EAD') {
-        rankingQuery = rankingQuery.in('matriculas.status', ['ATIVO', 'CONCLUIDO']);
-      }
-      rankingQuery = rankingQuery.range(0, 9999);
-      const { data: rankingData, count, error: rankingError } = await rankingQuery;
+      const { data: rankingResult, error: rankingError } = await supabase.rpc('rank_gestao_turmas', {
+        p_modalidade: filters.modalidade,
+        p_status: filters.status,
+        p_polo_id: filters.poloId || null,
+        p_search: searchTerm || null,
+        p_data_inicial: filters.dataInicial || null,
+        p_data_final: filters.dataFinal || null,
+        p_offset: from,
+        p_limit: filters.pageSize,
+      });
       if (rankingError) throw rankingError;
 
-      const rankedIds = (rankingData || [])
-        .map((row: any) => ({
-          id: row.id,
-          nome: row.nome || '',
-          alunos: Number(row.matriculas?.[0]?.count || 0),
-        }))
-        .sort((a: any, b: any) => b.alunos - a.alunos || a.nome.localeCompare(b.nome, 'pt-BR'))
-        .slice(from, to + 1)
-        .map((row: any) => row.id);
+      const ranking = (rankingResult || {}) as {
+        data?: Array<{ id: string; alunos: number }>;
+        total?: number;
+      };
+      const rankedIds = (ranking.data || []).map((row) => row.id);
 
-      if (rankedIds.length === 0) return { data: [], total: count || 0 };
+      if (rankedIds.length === 0) return { data: [], total: Number(ranking.total || 0) };
 
       const { data: pageData, error: pageError } = await supabase
         .from('turmas')
@@ -81,7 +77,7 @@ export const gestaoService = {
       const enriched = filters.modalidade === 'TECNICO'
         ? await enrichTechnicalAcademicProgress(mapped)
         : mapped;
-      return { data: enriched, total: count || 0 };
+      return { data: enriched, total: Number(ranking.total || 0) };
     }
 
     let query = applyFilters(
@@ -129,10 +125,28 @@ export const gestaoService = {
     return (data || []).map(mapTurma);
   },
 
+  async getActivePresentialClasses(poloId?: string): Promise<Turma[]> {
+    let query = supabase
+      .from('turmas')
+      .select(TURMA_PAGE_SELECT)
+      .in('cursos.modalidade', ['TECNICO', 'LIVRE', 'ESPECIALIZACAO'])
+      .eq('status', 'EM_ANDAMENTO')
+      .order('nome', { ascending: true });
+
+    if (poloId) query = query.eq('polo_id', poloId);
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    return enrichTechnicalAcademicProgress((data || []).map(mapTurma));
+  },
+
   async createTurma(turma: Omit<Turma, 'id' | 'alunosMatriculados'>): Promise<Turma> {
     if (turma.modalidade !== 'EAD' && !turma.poloId) {
       throw new Error('Informe o polo da turma antes de abrir inscrições.');
     }
+
+    const isTechnical = turma.modalidade === 'TECNICO';
 
     if (
       turma.modalidade === 'TECNICO'
@@ -169,9 +183,9 @@ export const gestaoService = {
       bloquear_matriculas_apos_completar_vagas: turma.bloquearMatriculasAposCompletarVagas ?? true,
       turno: turma.turno,
       status: turma.status || 'EM_ANDAMENTO',
-      valor_matricula: Number(turma.valorMatricula ?? 150),
-      valor_rematricula: Number(turma.valorRematricula ?? 100),
-      qtd_parcelas: Number(turma.qtdParcelas ?? 1),
+      valor_matricula: Number(turma.valorMatricula ?? 0),
+      valor_rematricula: Number(turma.valorRematricula ?? 0),
+      qtd_parcelas: Number(turma.qtdParcelas ?? 0),
       valor_parcela: Number(turma.valorParcela ?? 0),
       desconto_pontualidade: Number(turma.descontoPontualidade ?? 0),
       juros_atraso: Number(turma.jurosAtraso ?? 0),
@@ -182,8 +196,8 @@ export const gestaoService = {
       ,
       origem_financeira: turma.origemFinanceira || 'NORMAL',
       financeiro_herdado: turma.financeiroHerdado || false,
-      gerar_cobrancas_futuras: turma.gerarCobrancasFuturas ?? false,
-      sincronizar_asaas_futuro: turma.sincronizarAsaasFuturo ?? true,
+      gerar_cobrancas_futuras: turma.gerarCobrancasFuturas ?? isTechnical,
+      sincronizar_asaas_futuro: turma.sincronizarAsaasFuturo ?? (isTechnical ? false : true),
       obs_financeira_origem: turma.obsFinanceiraOrigem || null,
     };
 
@@ -330,11 +344,95 @@ export const gestaoService = {
     }
   },
 
+  async saveTechnicalClassConfiguration(
+    turma: Turma,
+    input: {
+      nome: string;
+      dataInicio: string | null;
+      dataPrevisaoTermino: string | null;
+      dataInicioInscricao?: string | null;
+      dataFimInscricao?: string | null;
+      publicarNoSite?: boolean;
+      permitirInscricoesOnline?: boolean;
+      exigeMatricula?: boolean;
+      aceitaConcomitante?: boolean;
+      aceitaSubsequente?: boolean;
+      serieMinimaEnsinoMedio?: number;
+      qtdVagasMinima?: number;
+      frequenciaMinimaPercent?: number;
+      mediaMinima?: number;
+      bloquearMatriculasAposCompletarVagas?: boolean;
+      origemFinanceira?: 'NORMAL' | 'LEGADO';
+      financeiroHerdado?: boolean;
+      gerarCobrancasFuturas?: boolean;
+      sincronizarAsaasFuturo?: boolean;
+      obsFinanceiraOrigem?: string;
+    },
+  ): Promise<Turma> {
+    if (input.aceitaConcomitante === false && input.aceitaSubsequente === false) {
+      throw new Error('A turma técnica deve aceitar ingresso concomitante, subsequente ou ambos.');
+    }
+
+    const { data, error } = await supabase.rpc('salvar_configuracao_turma_tecnica', {
+      p_turma_id: turma.id,
+      p_config: {
+        nome: input.nome.trim(),
+        data_inicio: input.dataInicio || null,
+        data_previsao_termino: input.dataPrevisaoTermino || null,
+        data_inicio_inscricao: input.dataInicioInscricao || null,
+        data_fim_inscricao: input.dataFimInscricao || null,
+        publicar_no_site: input.publicarNoSite === true,
+        permitir_inscricoes_online: input.permitirInscricoesOnline === true,
+        exige_matricula: input.exigeMatricula !== false,
+        aceita_concomitante: input.aceitaConcomitante === true,
+        aceita_subsequente: input.aceitaSubsequente === true,
+        serie_minima_ensino_medio: Number(input.serieMinimaEnsinoMedio ?? 2),
+        qtd_vagas_minima: Number(input.qtdVagasMinima ?? 0),
+        frequencia_minima_percent: Number(input.frequenciaMinimaPercent ?? 75),
+        media_minima: Number(input.mediaMinima ?? 6),
+        bloquear_matriculas_apos_completar_vagas: input.bloquearMatriculasAposCompletarVagas !== false,
+        origem_financeira: input.origemFinanceira || 'NORMAL',
+        financeiro_herdado: input.financeiroHerdado === true,
+        gerar_cobrancas_futuras: input.gerarCobrancasFuturas === true,
+        sincronizar_asaas_futuro: input.sincronizarAsaasFuturo === true,
+        ...(input.obsFinanceiraOrigem !== undefined
+          ? { obs_financeira_origem: input.obsFinanceiraOrigem || null }
+          : {}),
+      },
+    });
+
+    if (error) {
+      console.error('Erro ao salvar configuração da turma técnica:', error);
+      throw error;
+    }
+    if (!data) throw new Error('O banco não retornou a turma atualizada.');
+
+    const mapped = mapTurma({
+      ...data,
+      cursos: { nome: turma.cursoNome, modalidade: turma.modalidade },
+      polos: {
+        nome: turma.poloNome,
+        cnpj: turma.poloCnpj,
+        cidade: turma.poloCidade,
+        estado: turma.poloEstado,
+      },
+      matriculas: [],
+    });
+
+    return {
+      ...turma,
+      ...mapped,
+      alunosMatriculados: turma.alunosMatriculados,
+      alunosAtivos: turma.alunosAtivos,
+      alunosInativos: turma.alunosInativos,
+    };
+  },
+
   // Busca cursos do cadastro por modalidade
   async getCursosByModalidade(modalidade: string): Promise<any[]> {
     const { data, error } = await supabase
       .from('cursos')
-      .select('*')
+      .select('id, nome, modalidade')
       .eq('modalidade', modalidade)
       .eq('status', 'ativo')
       .order('nome', { ascending: true });
@@ -356,7 +454,7 @@ export const gestaoService = {
       valorParcela: number;
       descontoPontualidade: number;
       jurosAtraso: number;
-      multaAtraso: number;
+      multaAtrasoPercentual: number;
       aplicarDescontoMatricula?: boolean;
       aplicarMultaJurosMatricula?: boolean;
       aplicarDescontoMensalidade?: boolean;
@@ -364,6 +462,7 @@ export const gestaoService = {
       aplicarDescontoRematricula?: boolean;
       aplicarMultaJurosRematricula?: boolean;
       diaVencimentoPadrao: number;
+      instrucaoBoletoCarne: string;
       cronogramaFinanceiro: any[];
     }
   ): Promise<void> {
@@ -376,14 +475,15 @@ export const gestaoService = {
         valor_parcela: config.valorParcela,
         desconto_pontualidade: config.descontoPontualidade,
         juros_atraso: config.jurosAtraso,
-        multa_atraso: config.multaAtraso,
+        multa_atraso_percentual: config.multaAtrasoPercentual,
         aplicar_desconto_matricula: config.aplicarDescontoMatricula === true,
-        aplicar_multa_juros_matricula: config.aplicarMultaJurosMatricula !== false,
+        aplicar_multa_juros_matricula: false,
         aplicar_desconto_mensalidade: config.aplicarDescontoMensalidade !== false,
         aplicar_multa_juros_mensalidade: config.aplicarMultaJurosMensalidade !== false,
-        aplicar_desconto_rematricula: config.aplicarDescontoRematricula !== false,
-        aplicar_multa_juros_rematricula: config.aplicarMultaJurosRematricula !== false,
+        aplicar_desconto_rematricula: false,
+        aplicar_multa_juros_rematricula: false,
         dia_vencimento_padrao: config.diaVencimentoPadrao,
+        instrucao_boleto_carne: config.instrucaoBoletoCarne.trim(),
         cronograma_financeiro: config.cronogramaFinanceiro
       })
       .eq('id', id);

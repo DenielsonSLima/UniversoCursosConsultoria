@@ -1,4 +1,19 @@
 import { supabase } from '../../../../lib/supabase';
+import type { DashboardWidgetId } from '../../access-control';
+
+export type PerfilSetorComunicacao =
+  | 'todos'
+  | 'pedagogico_coordenacao'
+  | 'financeiro'
+  | 'comercial_matriculas'
+  | 'secretaria'
+  | 'atendimento_geral';
+
+export interface PerfilCommunicationScope {
+  sector: PerfilSetorComunicacao;
+  poloId: string | null;
+  canViewAll: boolean;
+}
 
 export interface PerfilAcesso {
   id?: string;
@@ -7,8 +22,11 @@ export interface PerfilAcesso {
   permissoes: {
     modules: string[];
     financeiroTabs?: string[];
+    dashboardWidgets?: DashboardWidgetId[];
     tabs?: Record<string, string[]>;
     allPolos: boolean;
+    poloIds?: string[];
+    communicationScope?: PerfilCommunicationScope;
   };
   restricao_horario: {
     dias: number[];

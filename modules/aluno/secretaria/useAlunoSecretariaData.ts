@@ -70,8 +70,15 @@ export const useAlunoSecretariaData = (alunoId: string) => {
     solicitacoes: solicitacoesQuery.data || [],
     prazos: prazosQuery.data || DEFAULT_PRAZOS,
     eligibility,
-    isLoading: alunoQuery.isLoading || matriculasQuery.isLoading || estagiosQuery.isLoading,
-    isError: alunoQuery.isError || matriculasQuery.isError || estagiosQuery.isError,
-    error: alunoQuery.error || matriculasQuery.error || estagiosQuery.error,
+    isLoading: alunoQuery.isLoading || matriculasQuery.isLoading || solicitacoesQuery.isLoading || estagiosQuery.isLoading || prazosQuery.isLoading,
+    isError: alunoQuery.isError || matriculasQuery.isError || solicitacoesQuery.isError || estagiosQuery.isError || prazosQuery.isError,
+    error: alunoQuery.error || matriculasQuery.error || solicitacoesQuery.error || estagiosQuery.error || prazosQuery.error,
+    refetch: () => Promise.all([
+      alunoQuery.refetch(),
+      matriculasQuery.refetch(),
+      solicitacoesQuery.refetch(),
+      estagiosQuery.refetch(),
+      prazosQuery.refetch(),
+    ]),
   };
 };

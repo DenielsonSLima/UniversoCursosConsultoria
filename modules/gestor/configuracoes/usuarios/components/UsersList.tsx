@@ -1,14 +1,32 @@
 
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, Search, Shield, Mail, RefreshCw, Edit3 } from 'lucide-react';
+import React, { useState } from 'react';
+import {
+  ArrowLeft,
+  Edit3,
+  Mail,
+  Plus,
+  Power,
+  RefreshCw,
+  RotateCcw,
+  Search,
+  Shield,
+  Trash2,
+} from 'lucide-react';
 import UserFormAdd from './UserFormAdd';
-import { useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../../../../../lib/supabase';
 import { buildGestorPermissionsPayload, normalizeFinanceiroTabs, normalizeGestorModules } from '../../../access-control';
-import { usuariosKeys } from '../usuarios.keys';
-import { useUsuariosByContextQuery } from '../hooks/useUsuariosConfigQueries';
-import { useCreateUsuarioMutation, useUpdateUsuarioMutation } from '../hooks/useUsuariosMutations';
+import {
+  useUsuariosByContextQuery,
+  useUsuariosManagementStatesQuery,
+} from '../hooks/useUsuariosConfigQueries';
+import {
+  useCreateUsuarioMutation,
+  useDeleteUsuarioMutation,
+  useToggleUsuarioStatusMutation,
+  useUpdateUsuarioMutation,
+} from '../hooks/useUsuariosMutations';
 import { NovoUsuarioFormData, UsuarioSistema, UsuarioSistemaInput } from '../usuarios.types';
+import ConfirmModal from '../../../components/ConfirmModal';
+import ToastNotification, { useToast } from '../../../components/ToastNotification';
 
 interface UsersListProps {
   contextId: string; // 'global' ou ID da empresa
@@ -16,42 +34,41 @@ interface UsersListProps {
   onBack: () => void;
 }
 
+type UserConfirmation =
+  | {
+      kind: 'status';
+      user: UsuarioSistema;
+      nextStatus: 'Ativo' | 'Inativo';
+    }
+  | {
+      kind: 'delete';
+      user: UsuarioSistema;
+    };
+
 const UsersList: React.FC<UsersListProps> = ({ contextId, contextTitle, onBack }) => {
-  const queryClient = useQueryClient();
+  const { toasts, removeToast, toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddingUser, setIsAddingUser] = useState(false);
   const [editingUser, setEditingUser] = useState<UsuarioSistema | null>(null);
+  const [userConfirmation, setUserConfirmation] = useState<UserConfirmation | null>(null);
 
   const { data: users = [], isLoading, isError, error } = useUsuariosByContextQuery(contextId);
+  const managementStatesQuery = useUsuariosManagementStatesQuery(contextId, users);
 
-  // 2. Escuta Realtime focada neste contexto de usuários
-  useEffect(() => {
-    const channel = supabase
-      .channel(`users_list_realtime_${contextId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'usuarios_sistema', filter: `context=eq.${contextId}` },
-        () => {
-          queryClient.invalidateQueries({ queryKey: usuariosKeys.byContext(contextId) });
-          queryClient.invalidateQueries({ queryKey: usuariosKeys.counts() });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [contextId, queryClient]);
-
-  const createUserMutation = useCreateUsuarioMutation(contextId, () => {
+  const createUserMutation = useCreateUsuarioMutation(contextId, (createdUser) => {
     setIsAddingUser(false);
-    alert('Usuário cadastrado com sucesso!');
+    toast.success(
+      'Usuário cadastrado',
+      createdUser.access_message || 'O novo acesso foi criado com sucesso.',
+    );
   });
 
   const updateUserMutation = useUpdateUsuarioMutation(contextId, () => {
     setEditingUser(null);
-    alert('Usuário atualizado com sucesso!');
+    toast.success('Usuário atualizado', 'As alterações do acesso foram salvas.');
   });
+  const toggleStatusMutation = useToggleUsuarioStatusMutation(contextId);
+  const deleteUserMutation = useDeleteUsuarioMutation(contextId);
 
   const buildPayload = (newUser: NovoUsuarioFormData): UsuarioSistemaInput => {
     const modules = normalizeGestorModules(newUser.permissoes);
@@ -88,6 +105,12 @@ const UsersList: React.FC<UsersListProps> = ({ contextId, contextTitle, onBack }
             horario_fim: newUser.horarioFim,
           }
         : null,
+      setor_comunicacao: newUser.setorComunicacao,
+      polo_comunicacao_id: newUser.podeVisualizarTodosSetores || newUser.podeVisualizarTodosPolos
+        ? null
+        : newUser.poloComunicacaoId,
+      pode_visualizar_todos_polos: newUser.podeVisualizarTodosPolos,
+      pode_visualizar_todos_setores: newUser.podeVisualizarTodosSetores,
     };
   };
 
@@ -97,14 +120,14 @@ const UsersList: React.FC<UsersListProps> = ({ contextId, contextTitle, onBack }
       updateUserMutation.mutate(
         { id: editingUser.id, user: payload },
         {
-          onError: (err: any) => alert(`Erro ao atualizar usuário: ${err.message}`),
+          onError: (err: any) => toast.error('Erro ao atualizar usuário', err.message),
         },
       );
       return;
     }
 
     createUserMutation.mutate(payload, {
-      onError: (err: any) => alert(`Erro ao cadastrar usuário: ${err.message}`),
+      onError: (err: any) => toast.error('Erro ao cadastrar usuário', err.message),
     });
   };
 
@@ -122,14 +145,62 @@ const UsersList: React.FC<UsersListProps> = ({ contextId, contextTitle, onBack }
     setEditingUser(user);
   };
 
+  const handleToggleStatus = (user: UsuarioSistema) => {
+    if (!user.id) return;
+    const nextStatus = user.status === 'Ativo' ? 'Inativo' : 'Ativo';
+    setUserConfirmation({ kind: 'status', user, nextStatus });
+  };
+
+  const handleDeleteUser = (user: UsuarioSistema) => {
+    if (!user.id) return;
+    setUserConfirmation({ kind: 'delete', user });
+  };
+
+  const confirmUserAction = () => {
+    if (!userConfirmation?.user.id) return;
+
+    if (userConfirmation.kind === 'status') {
+      const { user, nextStatus } = userConfirmation;
+      toggleStatusMutation.mutate(
+        { id: user.id, status: nextStatus },
+        {
+          onSuccess: () => toast.success(
+            nextStatus === 'Inativo' ? 'Usuário inativado' : 'Usuário reativado',
+            `O acesso de ${user.nome} foi ${nextStatus === 'Inativo' ? 'inativado' : 'reativado'} com sucesso.`,
+          ),
+          onError: (mutationError: Error) => toast.error(
+            'Não foi possível alterar o acesso',
+            mutationError.message,
+          ),
+        },
+      );
+      return;
+    }
+
+    const { user } = userConfirmation;
+    deleteUserMutation.mutate(user.id, {
+      onSuccess: () => toast.success(
+        'Usuário excluído',
+        `O acesso sem atividade de ${user.nome} foi excluído com sucesso.`,
+      ),
+      onError: (mutationError: Error) => toast.error(
+        'Não foi possível excluir o usuário',
+        mutationError.message,
+      ),
+    });
+  };
+
   if (isAddingUser || editingUser) {
     return (
-      <UserFormAdd 
-        contextId={contextId}
-        initialUser={editingUser || undefined}
-        onSave={handleSaveUser} 
-        onCancel={handleCloseForm} 
-      />
+      <>
+        <ToastNotification toasts={toasts} onRemove={removeToast} />
+        <UserFormAdd
+          contextId={contextId}
+          initialUser={editingUser || undefined}
+          onSave={handleSaveUser}
+          onCancel={handleCloseForm}
+        />
+      </>
     );
   }
 
@@ -153,6 +224,8 @@ const UsersList: React.FC<UsersListProps> = ({ contextId, contextTitle, onBack }
 
   return (
     <div className="animate-fadeIn">
+      <ToastNotification toasts={toasts} onRemove={removeToast} />
+
       {/* Header da Lista */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 border-b border-slate-100 pb-6">
         <div className="flex items-center gap-4">
@@ -191,6 +264,11 @@ const UsersList: React.FC<UsersListProps> = ({ contextId, contextTitle, onBack }
       </div>
 
       {/* Grid de Cards de Usuários */}
+      {managementStatesQuery.isError && users.length > 0 && (
+        <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm font-semibold text-amber-800">
+          Não foi possível verificar o histórico dos usuários. As ações de inativar e excluir ficaram indisponíveis por segurança.
+        </div>
+      )}
       {filteredUsers.length === 0 ? (
         <div className="p-12 text-center bg-slate-50 rounded-[2rem] border border-dashed border-slate-200">
           <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300 shadow-sm">
@@ -200,7 +278,13 @@ const UsersList: React.FC<UsersListProps> = ({ contextId, contextTitle, onBack }
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredUsers.map((user) => (
+          {filteredUsers.map((user) => {
+            const managementState = user.id
+              ? managementStatesQuery.data?.[user.id]
+              : undefined;
+            const isManaging = toggleStatusMutation.isPending || deleteUserMutation.isPending;
+
+            return (
             <div 
               key={user.id} 
               className="bg-white rounded-[2rem] border border-slate-100 p-6 hover:shadow-xl hover:shadow-blue-900/5 hover:border-blue-200 transition-all duration-300 group flex flex-col items-center relative overflow-hidden"
@@ -265,16 +349,91 @@ const UsersList: React.FC<UsersListProps> = ({ contextId, contextTitle, onBack }
                 </div>
               </div>
 
-              <button
-                onClick={() => handleEditUser(user)}
-                className="mt-4 w-full rounded-xl bg-[#001a33] text-white text-xs uppercase tracking-wider py-2.5 font-bold inline-flex items-center justify-center gap-2 hover:bg-blue-900 transition-colors shadow-md"
-              >
-                <Edit3 size={14} /> Editar
-              </button>
+              <div className="mt-4 w-full space-y-2">
+                <button
+                  onClick={() => handleEditUser(user)}
+                  className="w-full rounded-xl bg-[#001a33] text-white text-xs uppercase tracking-wider py-2.5 font-bold inline-flex items-center justify-center gap-2 hover:bg-blue-900 transition-colors shadow-md"
+                >
+                  <Edit3 size={14} /> Editar
+                </button>
+
+                {managementStatesQuery.isLoading && (
+                  <div className="flex items-center justify-center gap-2 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    <RefreshCw className="animate-spin" size={12} />
+                    Verificando histórico
+                  </div>
+                )}
+
+                {managementState?.canChangeStatus && (
+                  <div className={`grid gap-2 ${managementState.canDelete ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                    <button
+                      type="button"
+                      disabled={isManaging}
+                      onClick={() => handleToggleStatus(user)}
+                      className={`inline-flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-[10px] font-black uppercase tracking-wider transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                        user.status === 'Ativo'
+                          ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100'
+                          : 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                      }`}
+                    >
+                      {user.status === 'Ativo'
+                        ? <><Power size={13} /> Inativar</>
+                        : <><RotateCcw size={13} /> Reativar</>}
+                    </button>
+
+                    {managementState.canDelete && (
+                      <button
+                        type="button"
+                        disabled={isManaging}
+                        onClick={() => handleDeleteUser(user)}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-[10px] font-black uppercase tracking-wider text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <Trash2 size={13} /> Excluir
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {managementState?.hasActivity && managementState.canChangeStatus && (
+                  <p className="px-1 text-center text-[10px] font-semibold leading-relaxed text-slate-400">
+                    Possui histórico: exclusão bloqueada, somente inativação.
+                  </p>
+                )}
+              </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={userConfirmation !== null}
+        title={
+          userConfirmation?.kind === 'delete'
+            ? 'Excluir usuário'
+            : userConfirmation?.nextStatus === 'Inativo'
+              ? 'Inativar usuário'
+              : 'Reativar usuário'
+        }
+        message={
+          userConfirmation?.kind === 'delete'
+            ? `Excluir permanentemente ${userConfirmation.user.nome}? Esta ação só é permitida para usuários sem nenhuma atividade.`
+            : userConfirmation?.nextStatus === 'Inativo'
+              ? `Deseja inativar o acesso de ${userConfirmation?.user.nome}?`
+              : `Deseja reativar o acesso de ${userConfirmation?.user.nome}?`
+        }
+        confirmText={
+          userConfirmation?.kind === 'delete'
+            ? 'Excluir'
+            : userConfirmation?.nextStatus === 'Inativo'
+              ? 'Inativar'
+              : 'Reativar'
+        }
+        cancelText="Cancelar"
+        variant={userConfirmation?.kind === 'delete' ? 'danger' : 'warning'}
+        onClose={() => setUserConfirmation(null)}
+        onConfirm={confirmUserAction}
+      />
     </div>
   );
 };

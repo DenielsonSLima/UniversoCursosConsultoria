@@ -1,8 +1,14 @@
 import { ValidatableDocumentType } from '../../shared/document-validation/document-validation.types';
+import type { PublicValidationField } from './validator.fields';
 
 export type ValidationStatus = 'valid' | 'expired' | 'revoked' | 'invalid';
 
 export type { ValidatableDocumentType };
+
+export type AcademicDocumentValidationType = Exclude<
+  ValidatableDocumentType,
+  'carteirinha' | 'carteirinha_preceptor'
+>;
 
 export interface BaseValidationResult {
   type: ValidatableDocumentType;
@@ -26,6 +32,8 @@ export interface BaseValidationResult {
   enrollmentDate?: string | null;
   referencePeriod: string | null;
   issueCount: number | null;
+  visibleFields: PublicValidationField[];
+  schemaVersion: number;
 }
 
 export interface CarteirinhaValidationResult extends BaseValidationResult {
@@ -36,25 +44,23 @@ export interface CarteirinhaValidationResult extends BaseValidationResult {
 }
 
 export interface AcademicDocumentValidationResult extends BaseValidationResult {
-  type:
-    | 'declaracao_matricula'
-    | 'declaracao_frequencia'
-    | 'boletim'
-    | 'atestado_conclusao_tecnico'
-    | 'declaracao_irpf'
-    | 'historico_escolar'
-    | 'transferencia'
-    | 'cracha_estagio'
-    | 'rematricula'
-    | 'termo_estagio'
-    | 'certificado_tecnico'
-    | 'certificado_livre'
-    | 'certificado_ead'
-    | 'certificado_especializacao';
+  type: AcademicDocumentValidationType;
+  documentTitle: string;
+  registryMode: 'emission';
+}
+
+/**
+ * A credencial de preceptor não é um documento acadêmico do aluno. O contrato
+ * público conserva os nomes de campos legados para compatibilidade com a RPC,
+ * mas só expõe o nome do titular já mascarado e metadados da emissão.
+ */
+export interface CarteirinhaPreceptorValidationResult extends BaseValidationResult {
+  type: 'carteirinha_preceptor';
   documentTitle: string;
   registryMode: 'emission';
 }
 
 export type DocumentValidationResult =
   | CarteirinhaValidationResult
+  | CarteirinhaPreceptorValidationResult
   | AcademicDocumentValidationResult;

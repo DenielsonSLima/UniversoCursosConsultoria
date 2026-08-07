@@ -1,9 +1,9 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   requireGestorAtivo,
   requireGestorGlobal,
   requireGestorTab,
+  requireGlobalFinancialTabAccess,
 } from "../_shared/authz.ts";
 import {
   buildCorsHeaders,
@@ -28,28 +28,36 @@ const numberOrNull = (value: unknown) => {
   return Number.isFinite(numeric) ? numeric : null;
 };
 
+const hasOwn = (value: object, key: string) =>
+  Object.prototype.hasOwnProperty.call(value, key);
+
 const allowedModalities = new Set([
   "EAD",
   "TECNICO",
-  "LIVRES",
+  "LIVRE",
   "ESPECIALIZACAO",
   "SUPERIOR",
 ]);
 
+const normalizeModality = (value: unknown) => {
+  const modality = String(value || "").trim().toUpperCase();
+  return modality === "LIVRES" ? "LIVRE" : modality;
+};
+
 const normalizeModalities = (value: unknown) => {
   if (!Array.isArray(value)) {
-    return ["EAD", "TECNICO", "LIVRES", "ESPECIALIZACAO"];
+    return ["EAD", "TECNICO", "LIVRE", "ESPECIALIZACAO"];
   }
 
   const modalities = value
-    .map((item) => String(item || "").trim().toUpperCase())
+    .map(normalizeModality)
     .filter((item, index, list) =>
       allowedModalities.has(item) && list.indexOf(item) === index
     );
 
   return modalities.length > 0
     ? modalities
-    : ["EAD", "TECNICO", "LIVRES", "ESPECIALIZACAO"];
+    : ["EAD", "TECNICO", "LIVRE", "ESPECIALIZACAO"];
 };
 
 Deno.serve(async (req: Request) => {
@@ -85,27 +93,38 @@ Deno.serve(async (req: Request) => {
     const gestor = await requireGestorAtivo(req, admin);
     requireGestorTab(gestor, "comunicacao", "comunicacao-whatsapp");
     requireGestorGlobal(gestor);
+    requireGlobalFinancialTabAccess(gestor, "receber");
 
     const body = await req.json();
-    if (body.waConnectionMode !== "cloud_api") {
+
+    const { data: currentConfig, error: currentConfigError } = await admin
+      .from("mensageria_config")
+      .select(
+        "wa_provider, wa_instance_name, wa_instance_url, wa_connection_mode, wa_business_account_id, wa_phone_number_id, wa_display_phone_number, wa_graph_version, wa_app_id, wa_embedded_signup_config_id, wa_account_currency, wa_estimated_balance, wa_quality_rating, wa_messaging_limit, wa_enabled, wa_status, wa_due_notice_days, wa_send_due_notice, wa_due_notice_template, wa_send_payment_receipt, wa_payment_receipt_template, wa_send_overdue_notice, wa_overdue_notice_days, wa_default_overdue_template, wa_send_multiple_overdue_notice, wa_multiple_overdue_min_installments, wa_multiple_overdue_template, wa_due_notice_modalities, wa_payment_receipt_modalities, wa_overdue_notice_modalities, wa_multiple_overdue_modalities",
+      )
+      .eq("tipo", "whatsapp")
+      .maybeSingle();
+    if (currentConfigError) throw currentConfigError;
+
+    const connectionMode = hasOwn(body, "waConnectionMode")
+      ? String(body.waConnectionMode || "")
+      : String(currentConfig?.wa_connection_mode || "cloud_api");
+    if (connectionMode !== "cloud_api") {
       throw new Error(
         "O salvamento manual aceita somente Cloud API exclusiva. A coexistencia deve ser concluida pelo Embedded Signup.",
       );
     }
 
-    const businessAccountId = trimOrNull(body.waBusinessAccountId);
-    const phoneNumberId = trimOrNull(body.waPhoneNumberId);
-    const requestedEnabled = body.waEnabled === true;
+    const businessAccountId = hasOwn(body, "waBusinessAccountId")
+      ? trimOrNull(body.waBusinessAccountId)
+      : trimOrNull(currentConfig?.wa_business_account_id);
+    const phoneNumberId = hasOwn(body, "waPhoneNumberId")
+      ? trimOrNull(body.waPhoneNumberId)
+      : trimOrNull(currentConfig?.wa_phone_number_id);
+    const requestedEnabled = hasOwn(body, "waEnabled")
+      ? body.waEnabled === true
+      : currentConfig?.wa_enabled === true;
     const accessToken = trimOrNull(body.waToken);
-
-    const { data: currentConfig, error: currentConfigError } = await admin
-      .from("mensageria_config")
-      .select(
-        "wa_connection_mode, wa_business_account_id, wa_phone_number_id, wa_status",
-      )
-      .eq("tipo", "whatsapp")
-      .maybeSingle();
-    if (currentConfigError) throw currentConfigError;
 
     const identityChanged =
       String(currentConfig?.wa_business_account_id || "") !==
@@ -161,25 +180,46 @@ Deno.serve(async (req: Request) => {
       .from("mensageria_config")
       .upsert({
         tipo: "whatsapp",
-        wa_provider: trimOrNull(body.waProvider) || "meta_cloud",
+        wa_provider: hasOwn(body, "waProvider")
+          ? trimOrNull(body.waProvider) || "meta_cloud"
+          : currentConfig?.wa_provider || "meta_cloud",
         wa_connection_mode: "cloud_api",
-        wa_instance_name: trimOrNull(body.waInstanceName),
-        wa_instance_url: trimOrNull(body.waInstanceUrl) ||
-          "https://graph.facebook.com",
+        wa_instance_name: hasOwn(body, "waInstanceName")
+          ? trimOrNull(body.waInstanceName)
+          : currentConfig?.wa_instance_name,
+        wa_instance_url: hasOwn(body, "waInstanceUrl")
+          ? trimOrNull(body.waInstanceUrl) || "https://graph.facebook.com"
+          : currentConfig?.wa_instance_url || "https://graph.facebook.com",
         wa_token: null,
         wa_status: requestedEnabled ? "configurado" : "inativo",
         wa_business_account_id: businessAccountId,
         wa_business_portfolio_id: null,
         wa_phone_number_id: phoneNumberId,
-        wa_display_phone_number: trimOrNull(body.waDisplayPhoneNumber),
-        wa_graph_version: normalizeGraphVersion(body.waGraphVersion),
-        wa_app_id: trimOrNull(body.waAppId),
-        wa_embedded_signup_config_id: trimOrNull(body.waEmbeddedSignupConfigId),
+        wa_display_phone_number: hasOwn(body, "waDisplayPhoneNumber")
+          ? trimOrNull(body.waDisplayPhoneNumber)
+          : currentConfig?.wa_display_phone_number,
+        wa_graph_version: hasOwn(body, "waGraphVersion")
+          ? normalizeGraphVersion(body.waGraphVersion)
+          : normalizeGraphVersion(currentConfig?.wa_graph_version),
+        wa_app_id: hasOwn(body, "waAppId")
+          ? trimOrNull(body.waAppId)
+          : currentConfig?.wa_app_id,
+        wa_embedded_signup_config_id: hasOwn(body, "waEmbeddedSignupConfigId")
+          ? trimOrNull(body.waEmbeddedSignupConfigId)
+          : currentConfig?.wa_embedded_signup_config_id,
         wa_webhook_verify_token: null,
-        wa_account_currency: trimOrNull(body.waAccountCurrency) || "BRL",
-        wa_estimated_balance: numberOrNull(body.waEstimatedBalance),
-        wa_quality_rating: trimOrNull(body.waQualityRating),
-        wa_messaging_limit: trimOrNull(body.waMessagingLimit),
+        wa_account_currency: hasOwn(body, "waAccountCurrency")
+          ? trimOrNull(body.waAccountCurrency) || "BRL"
+          : currentConfig?.wa_account_currency || "BRL",
+        wa_estimated_balance: hasOwn(body, "waEstimatedBalance")
+          ? numberOrNull(body.waEstimatedBalance)
+          : currentConfig?.wa_estimated_balance,
+        wa_quality_rating: hasOwn(body, "waQualityRating")
+          ? trimOrNull(body.waQualityRating)
+          : currentConfig?.wa_quality_rating,
+        wa_messaging_limit: hasOwn(body, "waMessagingLimit")
+          ? trimOrNull(body.waMessagingLimit)
+          : currentConfig?.wa_messaging_limit,
         wa_enabled: requestedEnabled,
         wa_last_health_check_at: new Date().toISOString(),
         wa_coexistence_verified_at: null,
@@ -190,39 +230,68 @@ Deno.serve(async (req: Request) => {
         wa_history_sync_progress: null,
         wa_last_account_event: "CLOUD_API_CONFIG_SAVED",
         wa_last_account_event_at: new Date().toISOString(),
-        wa_due_notice_days: Number(body.waDueNoticeDays || 3),
-        wa_send_due_notice: body.waSendDueNotice !== false,
-        wa_due_notice_template: trimOrNull(body.waDueNoticeTemplate) ||
+        wa_due_notice_days: hasOwn(body, "waDueNoticeDays")
+          ? Math.max(Number(body.waDueNoticeDays || 0), 0)
+          : Number(currentConfig?.wa_due_notice_days ?? 3),
+        wa_send_due_notice: hasOwn(body, "waSendDueNotice")
+          ? body.waSendDueNotice === true
+          : currentConfig?.wa_send_due_notice === true,
+        wa_due_notice_template: (hasOwn(body, "waDueNoticeTemplate")
+          ? trimOrNull(body.waDueNoticeTemplate)
+          : trimOrNull(currentConfig?.wa_due_notice_template)) ||
           "Ola, {{nome_aluno}}!\n\nEste e um lembrete de que sua mensalidade referente ao curso *{{nome_curso}}*, no valor de *{{valor_fatura}}*, vence em *{{data_vencimento}}*.\n\nIdentificacao do aluno: CPF final *{{cpf_final}}*.\n\nVoce pode realizar o pagamento pelo link abaixo:\n{{link_pagamento}}\n\nCaso o pagamento ja tenha sido efetuado, desconsidere esta mensagem.\n\nEquipe Universo Cursos e Consultoria.",
-        wa_send_payment_receipt: body.waSendPaymentReceipt !== false,
+        wa_send_payment_receipt: hasOwn(body, "waSendPaymentReceipt")
+          ? body.waSendPaymentReceipt === true
+          : currentConfig?.wa_send_payment_receipt === true,
         wa_payment_receipt_template:
-          trimOrNull(body.waPaymentReceiptTemplate) ||
+          (hasOwn(body, "waPaymentReceiptTemplate")
+            ? trimOrNull(body.waPaymentReceiptTemplate)
+            : trimOrNull(currentConfig?.wa_payment_receipt_template)) ||
           "Ola, {{nome_aluno}}!\n\nSeu pagamento no valor de *{{valor_fatura}}*, referente a mensalidade n. *{{numero_mensalidade}}* do curso *{{nome_curso}}*, foi confirmado com sucesso.\n\nIdentificacao do aluno: CPF final *{{cpf_final}}*.\n\nAgradecemos pela confianca e por fazer parte da Universo Cursos e Consultoria.\n\nSe precisar de suporte, nossa equipe esta a disposicao.\n\nEquipe Universo Cursos e Consultoria.",
-        wa_send_overdue_notice: body.waSendOverdueNotice !== false,
-        wa_overdue_notice_days: Number(body.waOverdueNoticeDays || 1),
+        wa_send_overdue_notice: hasOwn(body, "waSendOverdueNotice")
+          ? body.waSendOverdueNotice === true
+          : currentConfig?.wa_send_overdue_notice === true,
+        wa_overdue_notice_days: hasOwn(body, "waOverdueNoticeDays")
+          ? Math.max(Number(body.waOverdueNoticeDays || 0), 0)
+          : Number(currentConfig?.wa_overdue_notice_days ?? 1),
         wa_default_overdue_template:
-          trimOrNull(body.waDefaultOverdueTemplate) ||
+          (hasOwn(body, "waDefaultOverdueTemplate")
+            ? trimOrNull(body.waDefaultOverdueTemplate)
+            : trimOrNull(currentConfig?.wa_default_overdue_template)) ||
           "Ola, {{nome_aluno}}!\n\nIdentificamos que a mensalidade no valor de *{{valor_fatura}}* ainda consta como pendente em nosso sistema.\n\n*Turma:* {{nome_turma}}\n*CPF final:* {{cpf_final}}\n*Vencimento:* {{data_vencimento}}\n\nPara realizar o pagamento, acesse:\n{{link_pagamento}}\n\nCaso o pagamento ja tenha sido efetuado, desconsidere esta mensagem.\n\nEquipe Universo Cursos e Consultoria.",
-        wa_send_multiple_overdue_notice:
-          body.waSendMultipleOverdueNotice !== false,
+        wa_send_multiple_overdue_notice: hasOwn(body, "waSendMultipleOverdueNotice")
+          ? body.waSendMultipleOverdueNotice === true
+          : currentConfig?.wa_send_multiple_overdue_notice === true,
         wa_multiple_overdue_min_installments: Math.max(
-          Number(body.waMultipleOverdueMinInstallments || 2),
+          hasOwn(body, "waMultipleOverdueMinInstallments")
+            ? Number(body.waMultipleOverdueMinInstallments || 2)
+            : Number(currentConfig?.wa_multiple_overdue_min_installments ?? 2),
           2,
         ),
         wa_multiple_overdue_template:
-          trimOrNull(body.waMultipleOverdueTemplate) ||
+          (hasOwn(body, "waMultipleOverdueTemplate")
+            ? trimOrNull(body.waMultipleOverdueTemplate)
+            : trimOrNull(currentConfig?.wa_multiple_overdue_template)) ||
           "Ola, {{nome_aluno}}!\n\nIdentificamos parcelas pendentes em seu cadastro.\n\n*Quantidade:* {{quantidade_parcelas}}\n*Valor total:* {{valor_total_atrasado}}\n*Curso:* {{nome_curso}}\n*Turma:* {{nome_turma}}\n*CPF final:* {{cpf_final}}\n\nPara regularizar sua situacao, responda a esta mensagem. Nossa equipe verificara as opcoes disponiveis.\n\nCaso o pagamento ja tenha sido realizado, desconsidere este aviso.\n\nEquipe Universo Cursos e Consultoria.",
         wa_due_notice_modalities: normalizeModalities(
-          body.waDueNoticeModalities,
+          hasOwn(body, "waDueNoticeModalities")
+            ? body.waDueNoticeModalities
+            : currentConfig?.wa_due_notice_modalities,
         ),
         wa_payment_receipt_modalities: normalizeModalities(
-          body.waPaymentReceiptModalities,
+          hasOwn(body, "waPaymentReceiptModalities")
+            ? body.waPaymentReceiptModalities
+            : currentConfig?.wa_payment_receipt_modalities,
         ),
         wa_overdue_notice_modalities: normalizeModalities(
-          body.waOverdueNoticeModalities,
+          hasOwn(body, "waOverdueNoticeModalities")
+            ? body.waOverdueNoticeModalities
+            : currentConfig?.wa_overdue_notice_modalities,
         ),
         wa_multiple_overdue_modalities: normalizeModalities(
-          body.waMultipleOverdueModalities,
+          hasOwn(body, "waMultipleOverdueModalities")
+            ? body.waMultipleOverdueModalities
+            : currentConfig?.wa_multiple_overdue_modalities,
         ),
       }, { onConflict: "tipo" });
     if (upsertError) throw upsertError;

@@ -5,12 +5,13 @@ import { usuariosKeys } from '../usuarios.keys';
 import { usuariosService } from '../usuarios.service';
 import { UsuarioSistema } from '../usuarios.types';
 
-export const useUsuariosPolosQuery = () =>
-  useQuery({
+export const useUsuariosPolosQuery = () => {
+  return useQuery({
     queryKey: usuariosKeys.polos(),
     queryFn: polosService.getAll,
     staleTime: 60_000,
   });
+};
 
 export const useUsuariosCountsQuery = () =>
   useQuery<Record<string, number>>({
@@ -36,5 +37,18 @@ export const useUsuariosByContextQuery = (contextId: string) =>
     queryFn: () => contextId === 'global'
       ? usuariosService.getGlobalUsers()
       : usuariosService.getUsersByContext(contextId),
+    staleTime: 30_000,
+  });
+
+export const useUsuariosManagementStatesQuery = (
+  contextId: string,
+  users: UsuarioSistema[],
+) =>
+  useQuery({
+    queryKey: usuariosKeys.management(contextId),
+    queryFn: () => usuariosService.getManagementStates(
+      users.flatMap(user => user.id ? [user.id] : []),
+    ),
+    enabled: users.length > 0,
     staleTime: 30_000,
   });

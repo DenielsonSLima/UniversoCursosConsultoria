@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import type { Curso, EadConfig } from '../../cadastros.types';
-import { normalizeCursoFinanceiroConfig } from '../../cadastros.service';
 import { diplomaService } from '../../modelos-documentos/diploma/diploma.service';
 import { DEFAULT_EAD_RETRY_HOURS } from './eadCourseWizard.helpers';
 import { getMainEadVideoUrl } from './eadCourseWizard.utils';
@@ -15,15 +14,6 @@ export const useEadCourseWizardInitialization = (
     setArea,
     setCargaHoraria,
     setValorText,
-    setFinanceiroPix,
-    setFinanceiroBoleto,
-    setFinanceiroCartao,
-    setFinanceiroParcelado,
-    setFinanceiroParcelasPadrao,
-    setFinanceiroMaxParcelas,
-    setFinanceiroTaxaPagaPor,
-    setFinanceiroRepassarCustoParcelamento,
-    setFinanceiroConsiderarTaxaNoCheckout,
     setDescricao,
     setImagemUrl,
     setVersao,
@@ -61,17 +51,6 @@ export const useEadCourseWizardInitialization = (
       setImagemUrl(curso.imagem_url || '');
       setVersao(curso.versao || '1.0');
       setPublicarSite(curso.publicar_site || false);
-
-      const financeiroConfig = normalizeCursoFinanceiroConfig(curso.financeiro_config || undefined);
-      setFinanceiroPix(financeiroConfig.metodosRecebimento.pix);
-      setFinanceiroBoleto(financeiroConfig.metodosRecebimento.boleto);
-      setFinanceiroCartao(financeiroConfig.metodosRecebimento.cartao);
-      setFinanceiroParcelado(financeiroConfig.cartao.aceitar);
-      setFinanceiroParcelasPadrao(financeiroConfig.parcelasPadrao.toString());
-      setFinanceiroMaxParcelas(financeiroConfig.cartao.maxParcelas.toString());
-      setFinanceiroTaxaPagaPor(financeiroConfig.taxaPagaPor);
-      setFinanceiroRepassarCustoParcelamento(financeiroConfig.cartao.repassarCustoParcelamento === true);
-      setFinanceiroConsiderarTaxaNoCheckout(financeiroConfig.considerarTaxaNoCheckout === true);
 
       const config: EadConfig = curso.ead_config || {
         cronograma: [],

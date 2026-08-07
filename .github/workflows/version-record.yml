@@ -17,6 +17,11 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
       - name: Validar registro da alteração
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}

@@ -14,7 +14,6 @@ const DiariosPage: React.FC = () => {
   const editor = useDiarioTemplateEditor();
   const {
     activeTab,
-    applyCentralSignature,
     canvasRef,
     capaCampos,
     capaInputRef,
@@ -145,7 +144,6 @@ const DiariosPage: React.FC = () => {
                     />
                   ) : (
                     <DiarioBackCoverSettingsPanel
-                      applyCentralSignature={applyCentralSignature}
                       contracapaCustomImageRef={contracapaCustomImageRef}
                       form={form}
                       setForm={setForm}

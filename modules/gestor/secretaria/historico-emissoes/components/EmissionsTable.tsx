@@ -63,7 +63,7 @@ const EmissionsTable: React.FC<Props> = ({
               ? systemUsers[item.emitido_por] || 'Operador do Sistema'
               : 'Aluno (Auto-emissão)';
             const docLabel = DOCUMENT_TABS.find((tab) => tab.key === item.documento)?.label
-              || item.documento.replace('_', ' ');
+              || item.documento.replaceAll('_', ' ');
             const validityDate = item.validade_ate ? new Date(item.validade_ate) : null;
             const expired = validityDate ? validityDate.getTime() < Date.now() : false;
             return (
@@ -72,8 +72,13 @@ const EmissionsTable: React.FC<Props> = ({
                   <span className="mt-1 block text-[10px] font-bold leading-none text-slate-400">{new Date(item.emitido_em).toLocaleString('pt-BR')}</span></td>
                 <td className="px-5 py-4"><span className="block text-xs font-bold leading-tight text-slate-800">{item.dados_emissao?.studentName || item.aluno?.nome || 'NÃO IDENTIFICADO'}</span>
                   <span className="mt-0.5 block text-[10px] font-bold leading-none text-slate-400">CPF: {item.dados_emissao?.studentCpf || item.aluno?.cpf_cnpj || '---'}</span></td>
-                <td className="px-5 py-4"><span className="block truncate font-mono text-[11px] font-black text-blue-600" title={item.codigo}>{item.codigo}</span></td>
-                <td className="px-5 py-4">{validityDate ? <div className="flex flex-col items-start gap-1">
+                <td className="px-5 py-4">{item.validacao_publica === false
+                  ? <span className="inline-flex rounded-md bg-slate-100 px-2 py-1 text-[8px] font-black uppercase tracking-wider text-slate-500">Somente auditoria interna</span>
+                  : <span className="block truncate font-mono text-[11px] font-black text-blue-600" title={item.codigo}>{item.codigo}</span>}
+                </td>
+                <td className="px-5 py-4">{item.validacao_publica === false
+                  ? <span className="inline-flex whitespace-nowrap rounded-md bg-slate-100 px-2 py-1 text-[9px] font-black uppercase tracking-wider text-slate-400">Não se aplica</span>
+                  : validityDate ? <div className="flex flex-col items-start gap-1">
                   <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11px] font-black text-slate-700"><Calendar size={12} className={expired ? 'text-rose-500' : 'text-emerald-500'} />{validityDate.toLocaleDateString('pt-BR')}</span>
                   <span className={`rounded-md px-2 py-0.5 text-[8px] font-black uppercase tracking-wider ${expired ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'}`}>{expired ? 'Expirado' : 'Vigente'}</span>
                 </div> : <span className="inline-flex whitespace-nowrap rounded-md bg-slate-100 px-2 py-1 text-[9px] font-black uppercase tracking-wider text-slate-400">Sem validade</span>}</td>

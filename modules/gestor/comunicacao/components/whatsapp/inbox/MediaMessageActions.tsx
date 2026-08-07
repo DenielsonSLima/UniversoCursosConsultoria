@@ -3,11 +3,19 @@ import { AlertCircle, Download, FileText, Image, Loader2, Play, Wand2 } from 'lu
 import { whatsappService } from '../whatsapp.service';
 import { WhatsAppMessage } from '../whatsapp.types';
 import { mediaDataUrl, mediaPayloadFor } from './mediaUtils';
+import WhatsAppAudioPlayer from './WhatsAppAudioPlayer';
 
 interface MediaMessageActionsProps {
   message: WhatsAppMessage;
   outgoing: boolean;
 }
+
+const friendlyLoadError = (mediaType: string) => {
+  if (mediaType === 'audio') return 'Não foi possível carregar este áudio agora. Tente novamente.';
+  if (mediaType === 'image') return 'Não foi possível carregar esta imagem agora. Tente novamente.';
+  if (mediaType === 'document') return 'Não foi possível abrir este documento agora. Tente novamente.';
+  return 'Não foi possível carregar esta mídia agora. Tente novamente.';
+};
 
 const MediaMessageActions: React.FC<MediaMessageActionsProps> = ({ message, outgoing }) => {
   const media = mediaPayloadFor(message);
@@ -28,16 +36,17 @@ const MediaMessageActions: React.FC<MediaMessageActionsProps> = ({ message, outg
       const next = { url: mediaDataUrl(file.base64, file.mime), mime: file.mime, filename: file.filename };
       setPreview(next);
       return next;
-    } catch (error: any) {
-      setLoadError(error?.message || 'Não foi possível carregar esta mídia.');
+    } catch {
+      console.error(`[WhatsApp] Falha ao carregar ${media.type} da mensagem ${message.id}.`);
+      setLoadError(friendlyLoadError(media.type));
       return null;
     } finally {
       setLoading(false);
     }
-  }, [media.filename, media.mime, message.id, preview]);
+  }, [media.filename, media.mime, media.type, message.id, preview]);
 
   useEffect(() => {
-    if (media.type !== 'image' || preview || !media.id) return;
+    if (!['image', 'audio'].includes(media.type) || preview || !media.id) return;
     const element = containerRef.current;
     if (!element) return;
     const observer = new window.IntersectionObserver((entries) => {
@@ -60,22 +69,26 @@ const MediaMessageActions: React.FC<MediaMessageActionsProps> = ({ message, outg
 
   const transcribe = async () => {
     setLoading(true);
+    setLoadError('');
     try {
       setTranscription(await whatsappService.transcribeMessageAudio(message.id));
+    } catch {
+      console.error(`[WhatsApp] Falha ao transcrever o áudio da mensagem ${message.id}.`);
+      setLoadError('Não foi possível transcrever este áudio agora. Tente novamente.');
     } finally {
       setLoading(false);
     }
   };
 
-  const textClass = outgoing ? 'text-white/90' : 'text-slate-600';
+  const textClass = 'text-[#3b4a54]';
   const buttonClass = outgoing
-    ? 'border-white/20 bg-white/10 text-white hover:bg-white/15'
+    ? 'border-[#b8cfb4] bg-white/35 text-[#3b4a54] hover:bg-white/55'
     : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100';
 
   return (
     <div ref={containerRef} className="space-y-2">
       {loading && media.type === 'image' && !preview && (
-        <div className={`flex h-44 min-w-64 items-center justify-center rounded-xl ${outgoing ? 'bg-white/10' : 'bg-slate-100'}`}>
+        <div className={`flex h-44 min-w-64 items-center justify-center rounded-lg ${outgoing ? 'bg-white/35' : 'bg-slate-100'}`}>
           <Loader2 size={22} className="animate-spin opacity-70" />
         </div>
       )}
@@ -83,30 +96,39 @@ const MediaMessageActions: React.FC<MediaMessageActionsProps> = ({ message, outg
         <img
           src={preview.url}
           alt={media.caption || 'Imagem WhatsApp'}
-          className="max-h-80 w-full min-w-64 rounded-xl object-cover"
+          className="max-h-80 w-full min-w-64 rounded-lg object-cover"
           loading="lazy"
         />
       )}
+      {loading && media.type === 'audio' && !preview && (
+        <div className={`flex min-h-12 min-w-[280px] items-center gap-3 rounded-full px-4 ${outgoing ? 'bg-white/35' : 'bg-slate-100'}`}>
+          <Loader2 size={18} className="animate-spin opacity-70" />
+          <span className="text-xs font-bold opacity-70">Carregando áudio...</span>
+        </div>
+      )}
       {preview && media.type === 'audio' && (
-        <audio controls src={preview.url} className="w-full min-w-[260px]" />
+        <WhatsAppAudioPlayer src={preview.url} outgoing={outgoing} />
       )}
 
       <div className={`flex flex-wrap gap-2 text-xs font-bold ${textClass}`}>
         {media.type === 'image' && !preview && !loading && <MediaButton icon={Image} label="Carregar imagem" className={buttonClass} loading={loading} onClick={loadMedia} />}
-        {media.type === 'audio' && <MediaButton icon={Play} label="Ouvir áudio" className={buttonClass} loading={loading} onClick={loadMedia} />}
+        {media.type === 'audio' && !preview && !loading && <MediaButton icon={Play} label="Carregar áudio" className={buttonClass} loading={loading} onClick={loadMedia} />}
         {media.type === 'audio' && <MediaButton icon={Wand2} label="Transcrever" className={buttonClass} loading={loading} onClick={transcribe} />}
         {media.type === 'document' && <MediaButton icon={FileText} label="Abrir PDF" className={buttonClass} loading={loading} onClick={download} />}
         {media.type !== 'document' && preview && <MediaButton icon={Download} label="Baixar" className={buttonClass} loading={false} onClick={download} />}
       </div>
 
       {loadError && (
-        <div className={`flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold ${outgoing ? 'bg-white/10 text-white/90' : 'bg-rose-50 text-rose-700'}`}>
-          <AlertCircle size={13} />
-          {loadError}
+        <div
+          role="status"
+          className="flex items-start gap-2 rounded-lg bg-[#fff4e5] px-2.5 py-2 text-xs font-medium leading-relaxed text-[#7a4d00]"
+        >
+          <AlertCircle size={14} className="mt-0.5 shrink-0" />
+          <span>{loadError}</span>
         </div>
       )}
       {transcription && (
-        <div className={`rounded-xl p-3 text-xs font-semibold leading-relaxed ${outgoing ? 'bg-white/10 text-white/90' : 'bg-emerald-50 text-emerald-900'}`}>
+        <div className={`rounded-lg p-3 text-xs font-semibold leading-relaxed ${outgoing ? 'bg-white/35 text-[#111b21]' : 'bg-emerald-50 text-emerald-900'}`}>
           {transcription}
         </div>
       )}

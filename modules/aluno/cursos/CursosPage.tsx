@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
+import { waitForDocumentAssets } from '../../shared/qrcode/document-assets';
+import {
+  buildSelectablePdfBlobFromElements,
+  downloadPdfBlob,
+} from '../../shared/pdf/dom-to-selectable-pdf';
 import { ZoomIn, ZoomOut } from 'lucide-react';
 import CertificadoPreview from '../../gestor/secretaria/certificados/components/CertificadoPreview';
 import { defaultEadCheckoutMethod, resolveEadCheckoutOptions } from './eadCheckoutOptions';
@@ -168,29 +171,21 @@ const CursosPage: React.FC<CursosPageProps> = ({
     }
   }, [courses, selectedCourse]);
 
-  const buildCertificatePdf = async () => {
+  const buildCertificatePdfBlob = async () => {
     if (!certificatePdfSourceRef.current || !alunoCertificado) return null;
 
-    const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-    const pages = Array.from(certificatePdfSourceRef.current.querySelectorAll(CERTIFICATE_PDF_PAGE_SELECTOR)) as any[];
+    await waitForDocumentAssets(certificatePdfSourceRef.current);
+    const pages = Array.from(
+      certificatePdfSourceRef.current.querySelectorAll<HTMLElement>(CERTIFICATE_PDF_PAGE_SELECTOR),
+    );
     const captureTargets = pages.length ? pages : [certificatePdfSourceRef.current];
-
-    for (const [index, page] of captureTargets.entries()) {
-      const canvas = await html2canvas(page, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        width: page.offsetWidth,
-        height: page.offsetHeight,
-        windowWidth: Math.max(document.documentElement.clientWidth, page.scrollWidth, page.offsetWidth),
-        windowHeight: Math.max(document.documentElement.clientHeight, page.scrollHeight, page.offsetHeight),
-      });
-
-      if (index > 0) pdf.addPage('a4', 'landscape');
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 297, 210);
-    }
-
-    return pdf;
+    return buildSelectablePdfBlobFromElements(captureTargets, {
+      orientation: 'landscape',
+      artworkFormat: 'PNG',
+      artworkScale: 2,
+      title: `Certificado - ${alunoCertificado.curso?.nome || selectedCourse?.nome || 'Curso'}`,
+      subject: 'Certificado acadêmico',
+    });
   };
 
   const downloadCertificatePdf = async () => {
@@ -198,9 +193,12 @@ const CursosPage: React.FC<CursosPageProps> = ({
 
     setIsDownloadingCertificate(true);
     try {
-      const pdf = await buildCertificatePdf();
-      if (!pdf) return;
-      pdf.save(getCertificateFileName(alunoCertificado.curso?.nome || selectedCourse?.nome));
+      const pdfBlob = await buildCertificatePdfBlob();
+      if (!pdfBlob) return;
+      downloadPdfBlob(
+        pdfBlob,
+        getCertificateFileName(alunoCertificado.curso?.nome || selectedCourse?.nome),
+      );
     } catch (error) {
       console.error('Erro ao baixar certificado em PDF:', error);
       alert('Não foi possível baixar o certificado em PDF agora.');
@@ -214,9 +212,9 @@ const CursosPage: React.FC<CursosPageProps> = ({
 
     setIsDownloadingCertificate(true);
     try {
-      const pdf = await buildCertificatePdf();
-      if (!pdf) return;
-      const pdfUrl = URL.createObjectURL(pdf.output('blob'));
+      const pdfBlob = await buildCertificatePdfBlob();
+      if (!pdfBlob) return;
+      const pdfUrl = URL.createObjectURL(pdfBlob);
       const iframe = document.createElement('iframe');
       iframe.style.position = 'fixed';
       iframe.style.right = '0';

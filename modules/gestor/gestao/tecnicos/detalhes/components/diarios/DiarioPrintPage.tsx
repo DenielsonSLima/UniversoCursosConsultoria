@@ -8,6 +8,8 @@ interface DiarioPrintPageProps {
   moduloNome: string;
   title: string;
   pageLabel: string;
+  compactMode?: boolean;
+  logoAlignRight?: boolean;
   children: React.ReactNode;
 }
 
@@ -18,12 +20,28 @@ const DiarioPrintPage: React.FC<DiarioPrintPageProps> = ({
   moduloNome,
   title,
   pageLabel,
+  compactMode = false,
+  logoAlignRight = false,
   children,
 }) => (
-  <section className="diario-print-page">
+  <section className={`diario-print-page ${compactMode ? 'diario-print-page--compact' : ''}`}>
     <div className="diario-accent" />
     <div className="diario-page-body">
-      <div className="text-center text-[7pt] font-bold uppercase tracking-[.12em] text-slate-500">{template.cabecalho}</div>
+      <div className={`diario-page-header ${logoAlignRight ? 'diario-page-header--right' : ''}`}>
+        {template?.cabecalhoLogoUrl ? (
+          <img
+            src={template.cabecalhoLogoUrl}
+            alt="Logo"
+            className={`diario-page-logo ${logoAlignRight ? 'diario-page-logo--right' : ''}`}
+          />
+        ) : (
+          <img
+            src="/LogoUniverso.png"
+            alt="Universo Cursos e Consultoria"
+            className={`diario-page-logo ${logoAlignRight ? 'diario-page-logo--right' : ''}`}
+          />
+        )}
+      </div>
       <h2 className="diario-doc-title">{title}</h2>
       <div className="diario-meta">
         <div><strong>Curso:</strong> {turma.cursoNome || '—'}</div>
@@ -33,7 +51,9 @@ const DiarioPrintPage: React.FC<DiarioPrintPageProps> = ({
         <div><strong>Unidade educacional:</strong> {disciplina.nome}</div>
         <div><strong>Carga horária:</strong> {disciplina.cargaHoraria || 0}h</div>
       </div>
-      {children}
+      <div className="diario-page-content">
+        {children}
+      </div>
       <div className="diario-footer">
         <span>{template.rodape}</span>
         <span>{pageLabel}</span>

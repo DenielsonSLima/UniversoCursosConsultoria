@@ -14,6 +14,7 @@ export interface EmissionLog {
   emitido_em: string;
   ultima_emissao_em: string;
   validade_ate: string | null;
+  validacao_publica?: boolean;
   revogado_em: string | null;
   emitido_por: string | null;
   quantidade_emissoes: number;
@@ -25,6 +26,16 @@ export interface EmissionLog {
     rg?: string;
     data_nascimento?: string;
     foto_url?: string;
+    sexo?: string;
+    nacionalidade?: string;
+    naturalidade?: string;
+    orgao_emissor?: string;
+    titulo_eleitor?: string;
+    reservista?: string;
+    nome_mae?: string;
+    nome_pai?: string;
+    escola_ensino_medio?: string;
+    ano_conclusao_ensino_medio?: number | string;
   };
   matricula?: {
     id: string;
@@ -33,12 +44,19 @@ export interface EmissionLog {
   };
 }
 export interface AcademicComponentRow {
+  moduleId: string | null;
   moduleName: string;
   moduleOrder: number;
+  disciplineOrder?: number;
   discipline: string;
   cargaHoraria: number;
+  cargaHorariaTeoria?: number;
+  cargaHorariaPratica?: number;
+  cargaHorariaEstagio?: number;
   nota: number | null;
+  notaEstagio?: number | null;
   frequencia: number | null;
+  frequenciaEstagio?: number | null;
   situacao: string;
 }
 
@@ -50,6 +68,14 @@ export interface AcademicPreviewData {
   periodoCurso: string;
   observacoesHistorico: string;
   situacaoAcademica: string;
+  mediaGeral: number | null;
+  frequenciaGeral: number | null;
+  inicioCurso: string | null;
+  fimCurso: string | null;
+  courseArea: string;
+  courseTechnologicalAxis: string;
+  courseProfessionalProfile: string;
+  moduleNames: string[];
 }
 
 export interface AcademicPreviewRpcPayload {
@@ -59,6 +85,11 @@ export interface AcademicPreviewRpcPayload {
   inicioCurso?: string | null;
   fimCurso?: string | null;
   situacaoAcademica?: string;
+  mediaGeral?: number | null;
+  frequenciaGeral?: number | null;
+  courseArea?: string | null;
+  courseTechnologicalAxis?: string | null;
+  courseProfessionalProfile?: string | null;
 }
 
 export interface TurmaFilter {

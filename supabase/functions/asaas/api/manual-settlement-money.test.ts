@@ -44,6 +44,43 @@ Deno.test("normaliza BRL em centavos e valida a composição no servidor", () =>
   assert.equal(moneyToCents("1,234,567.89", "Valor"), 123_456_789);
 });
 
+Deno.test("aceita UUID legado do PostgreSQL para a conta bancária", () => {
+  const normalized = normalizeManualSettlementRequest(
+    {
+      ...body,
+      contaBancariaId: "10110110-1101-1011-0110-110110110101",
+    },
+    receivable,
+    new Date("2026-07-22T15:00:00Z"),
+  );
+
+  assert.equal(
+    normalized.accountId,
+    "10110110-1101-1011-0110-110110110101",
+  );
+});
+
+Deno.test("mantém a chave idempotente estrita e rejeita conta malformada", () => {
+  assert.throws(
+    () =>
+      normalizeManualSettlementRequest(
+        { ...body, idempotencyKey: "10110110-1101-1011-0110-110110110101" },
+        receivable,
+        new Date("2026-07-22T15:00:00Z"),
+      ),
+    /Identificador idempotente inválido/i,
+  );
+  assert.throws(
+    () =>
+      normalizeManualSettlementRequest(
+        { ...body, contaBancariaId: "10110110-1101-1011" },
+        receivable,
+        new Date("2026-07-22T15:00:00Z"),
+      ),
+    /Conta bancária obrigatória/i,
+  );
+});
+
 Deno.test("rejeita separadores monetários ambíguos ou malformados", () => {
   for (
     const malformed of [

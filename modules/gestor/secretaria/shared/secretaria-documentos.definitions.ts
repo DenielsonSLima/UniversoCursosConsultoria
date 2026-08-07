@@ -7,13 +7,35 @@ import {
   FileBadge,
   FileCheck2,
   Landmark,
-  RefreshCcw,
   ScrollText,
   Vote,
+  FolderKanban,
+  FileSignature,
 } from 'lucide-react';
 import { SecretariaDocumentoDefinition } from './secretaria-documentos.types';
 
 export const secretariaDocumentoDefinitions: Record<string, SecretariaDocumentoDefinition> = {
+  pastaIdentificacao: {
+    id: 'pasta_identificacao',
+    title: 'Pasta de Identificação',
+    description: 'Capa A4 da pasta do aluno com foto e dados cadastrais.',
+    singularLabel: 'Pasta de Identificação',
+    actionLabel: 'Preparar pasta',
+    icon: FolderKanban,
+    accent: 'text-cyan-700',
+    softAccent: 'bg-cyan-50',
+  },
+  fichaMatricula: {
+    id: 'ficha_matricula',
+    title: 'Ficha de Matrícula',
+    description: 'Ficha completa do ingresso com foto, termo e assinaturas.',
+    singularLabel: 'Ficha de Matrícula',
+    actionLabel: 'Preparar ficha',
+    icon: FileSignature,
+    accent: 'text-blue-700',
+    softAccent: 'bg-blue-50',
+    templateSelection: 'ficha_matricula',
+  },
   declaracaoMatricula: {
     id: 'declaracao_matricula',
     title: 'Declaração de Matrícula',
@@ -48,8 +70,12 @@ export const secretariaDocumentoDefinitions: Record<string, SecretariaDocumentoD
     accent: 'text-indigo-700',
     softAccent: 'bg-indigo-50',
     technicalOnly: true,
-    activeEnrollmentOnly: true,
-    activeTurmaOnly: true,
+    enrollmentStatuses: [
+      'ATIVO',
+      'EM_DEPENDENCIA',
+      'CONCLUIDO',
+      'REPROVADO',
+    ],
     academicPreview: 'boletim_tecnico',
   },
   atestadoConclusao: {
@@ -75,6 +101,8 @@ export const secretariaDocumentoDefinitions: Record<string, SecretariaDocumentoD
     icon: Landmark,
     accent: 'text-amber-700',
     softAccent: 'bg-amber-50',
+    technicalOnly: true,
+    allowBatch: false,
     referenceMode: 'irpf_annual',
   },
   historicoEscolar: {
@@ -87,7 +115,12 @@ export const secretariaDocumentoDefinitions: Record<string, SecretariaDocumentoD
     accent: 'text-slate-700',
     softAccent: 'bg-slate-100',
     technicalOnly: true,
-    enrollmentStatuses: ['ATIVO', 'CONCLUIDO'],
+    enrollmentStatuses: [
+      'ATIVO',
+      'EM_DEPENDENCIA',
+      'CONCLUIDO',
+      'REPROVADO',
+    ],
   },
   crachaEstagio: {
     id: 'cracha_estagio',
@@ -101,6 +134,7 @@ export const secretariaDocumentoDefinitions: Record<string, SecretariaDocumentoD
     technicalOnly: true,
     activeEnrollmentOnly: true,
     activeTurmaOnly: true,
+    internshipOnly: true,
   },
   crachaPeriodoEleitoral: {
     id: 'cracha_periodo_eleitoral',
@@ -116,19 +150,6 @@ export const secretariaDocumentoDefinitions: Record<string, SecretariaDocumentoD
     activeTurmaOnly: true,
     internshipOnly: true,
   },
-  rematricula: {
-    id: 'rematricula',
-    title: 'Rematrícula',
-    description: 'Preparação individual ou coletiva do processo de rematrícula.',
-    singularLabel: 'Processo de Rematrícula',
-    actionLabel: 'Preparar rematrícula',
-    icon: RefreshCcw,
-    accent: 'text-violet-700',
-    softAccent: 'bg-violet-50',
-    technicalOnly: true,
-    activeEnrollmentOnly: true,
-    activeTurmaOnly: true,
-  },
   termoEstagio: {
     id: 'termo_estagio',
     title: 'Termo de Estágio',
@@ -141,6 +162,7 @@ export const secretariaDocumentoDefinitions: Record<string, SecretariaDocumentoD
     technicalOnly: true,
     activeEnrollmentOnly: true,
     activeTurmaOnly: true,
+    internshipOnly: true,
   },
   transferencia: {
     id: 'transferencia',

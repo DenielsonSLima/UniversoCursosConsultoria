@@ -1,3 +1,5 @@
+import { waitForQrCodeAssets } from '../../../shared/qrcode/qr-code-assets';
+
 type CarteirinhaLayoutType = 'dobra' | 'espelhado';
 
 type PdfTextRun = {
@@ -14,6 +16,7 @@ type PdfTextRun = {
 const waitForPrintAssets = async (container: HTMLDivElement | null) => {
   if (!container) return;
 
+  await waitForQrCodeAssets(container, 20_000);
   const images = Array.from(container.querySelectorAll<HTMLImageElement>('img'));
   await Promise.all(images.map((image) => {
     if (image.complete && image.naturalWidth > 0) return Promise.resolve();

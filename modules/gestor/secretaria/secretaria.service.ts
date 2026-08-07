@@ -49,34 +49,24 @@ export const secretariaService = {
   // ── SOLICITAÇÕES ────────────────────────────────────────────────────────────
 
   async getSolicitacoes(): Promise<Solicitacao[]> {
-    try {
-      const { data, error } = await supabase
-        .from('secretaria_solicitacoes')
-        .select('*')
-        .order('created_at', { ascending: false });
+    const { data, error } = await supabase
+      .from('secretaria_solicitacoes')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      return (data || []).map(rowToSolicitacao);
-    } catch (e) {
-      console.error('[secretariaService] Erro ao buscar solicitações:', e);
-      return [];
-    }
+    if (error) throw error;
+    return (data || []).map(rowToSolicitacao);
   },
 
   async getSolicitacoesByAluno(alunoId: string): Promise<Solicitacao[]> {
-    try {
-      const { data, error } = await supabase
-        .from('secretaria_solicitacoes')
-        .select('*')
-        .eq('aluno_id', alunoId)
-        .order('created_at', { ascending: false });
+    const { data, error } = await supabase
+      .from('secretaria_solicitacoes')
+      .select('*')
+      .eq('aluno_id', alunoId)
+      .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      return (data || []).map(rowToSolicitacao);
-    } catch (e) {
-      console.error('[secretariaService] Erro ao buscar solicitações do aluno:', e);
-      return [];
-    }
+    if (error) throw error;
+    return (data || []).map(rowToSolicitacao);
   },
 
   async createSolicitacao(sol: Omit<Solicitacao, 'id'>): Promise<Solicitacao | null> {
@@ -189,53 +179,29 @@ export const secretariaService = {
     page: number;
     pageSize: number;
   }): Promise<{ data: any[]; total: number }> {
-    try {
-      const from = (params.page - 1) * params.pageSize;
-      const to = from + params.pageSize - 1;
-
-      let query = supabase
-        .from('documentos_validacao')
-        .select(`
-          *,
-          aluno:parceiros(id, nome, cpf_cnpj),
-          matricula:matriculas(
-            id,
-            status,
-            turma:turmas(id, nome, codigo)
-          )
-        `, { count: 'exact' });
-
-      if (params.documento && params.documento !== 'todos') {
-        query = query.eq('documento', params.documento);
-      }
-
-      if (params.poloId) {
-        query = query.eq('polo_id', params.poloId);
-      }
-
-      if (params.turmaId && params.turmaId !== 'todos') {
-        query = query.eq('matriculas.turma_id', params.turmaId);
-      }
-
-      if (params.search) {
-        const cleanSearch = params.search.trim();
-        query = query.or(`codigo.ilike.%${cleanSearch}%,dados_emissao->>studentName.ilike.%${cleanSearch}%,dados_emissao->>studentCpf.ilike.%${cleanSearch}%`);
-      }
-
-      const { data, count, error } = await query
-        .order('ultima_emissao_em', { ascending: false })
-        .range(from, to);
-
-      if (error) throw error;
-
-      return {
-        data: data || [],
-        total: count || 0
-      };
-    } catch (e) {
-      console.error('[secretariaService] Erro ao buscar emissões paginadas:', e);
-      return { data: [], total: 0 };
+    const from = (params.page - 1) * params.pageSize;
+    if (!params.poloId) {
+      throw new Error('Selecione um polo antes de consultar o histórico de emissões.');
     }
+    const { data, error } = await supabase.rpc('search_secretaria_emissions_secure', {
+      p_polo_id: params.poloId,
+      p_documento: params.documento && params.documento !== 'todos'
+        ? params.documento
+        : null,
+      p_turma_id: params.turmaId && params.turmaId !== 'todos'
+        ? params.turmaId
+        : null,
+      p_search: params.search?.trim().replace(/[%_,()]/g, ' ') || '',
+      p_offset: from,
+      p_limit: params.pageSize,
+    });
+
+    if (error) throw error;
+    const payload = (data || {}) as { items?: any[]; total?: number };
+
+    return {
+      data: payload.items || [],
+      total: Number(payload.total || 0),
+    };
   }
 };
-

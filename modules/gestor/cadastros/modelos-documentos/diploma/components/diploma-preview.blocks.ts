@@ -227,11 +227,15 @@ export const getBlocks = (formData: any) => {
     },
   ];
 
-  if (formData.blocks && formData.blocks.length > 0) {
+  const validationBlockIds = new Set(['qrcode', 'versoQrcode', 'validacaoSite']);
+
+  if (Array.isArray(formData.blocks)) {
     const normalizedBlocks = formData.blocks.map((block: any) => normalizeLegacyBlock(block, formData));
     const existingIds = new Set(normalizedBlocks.map((block: any) => block.id));
     const missingBlocks = defaultBlocks
-      .filter((block: any) => !existingIds.has(block.id))
+      .filter((block: any) => (
+        !existingIds.has(block.id) && !validationBlockIds.has(block.id)
+      ))
       .map((block: any) => normalizeLegacyBlock(block, formData));
     return [...normalizedBlocks, ...missingBlocks];
   }

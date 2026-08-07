@@ -1,6 +1,7 @@
 import React from 'react';
 import { AlertTriangle, Loader2, X } from 'lucide-react';
 import { ExternalTransferCredit } from '../../academic-lifecycle.service';
+import { getMaceioIsoDate } from '../../../technicalClassDates';
 
 export interface ExternalCreditDraft {
   selected: boolean;
@@ -20,11 +21,15 @@ interface ReceiveExternalTransferModalProps {
   originInstitution: string;
   originCourse: string;
   reason: string;
+  notes: string;
+  transferDate: string;
   credits: Record<string, ExternalCreditDraft>;
   onStudentChange: (value: string) => void;
   onInstitutionChange: (value: string) => void;
   onCourseChange: (value: string) => void;
   onReasonChange: (value: string) => void;
+  onNotesChange: (value: string) => void;
+  onTransferDateChange: (value: string) => void;
   onCreditsChange: (value: Record<string, ExternalCreditDraft>) => void;
   onRetry: () => void;
   onClose: () => void;
@@ -49,11 +54,15 @@ const ReceiveExternalTransferModal: React.FC<ReceiveExternalTransferModalProps> 
   originInstitution,
   originCourse,
   reason,
+  notes,
+  transferDate,
   credits,
   onStudentChange,
   onInstitutionChange,
   onCourseChange,
   onReasonChange,
+  onNotesChange,
+  onTransferDateChange,
   onCreditsChange,
   onRetry,
   onClose,
@@ -94,6 +103,18 @@ const ReceiveExternalTransferModal: React.FC<ReceiveExternalTransferModalProps> 
           <input value={originInstitution} onChange={(event) => onInstitutionChange(event.target.value)} placeholder="Instituição de origem" className="w-full rounded-xl border border-slate-200 p-3.5 outline-none focus:border-violet-500" />
           <input value={originCourse} onChange={(event) => onCourseChange(event.target.value)} placeholder="Curso de origem (opcional)" className="w-full rounded-xl border border-slate-200 p-3.5 outline-none focus:border-violet-500" />
           <textarea value={reason} onChange={(event) => onReasonChange(event.target.value)} placeholder="Motivo e contexto da transferência" className="min-h-24 w-full resize-none rounded-xl border border-slate-200 p-3.5 outline-none focus:border-violet-500" />
+          <div>
+            <label className="mb-2 block text-[10px] font-black uppercase tracking-wider text-slate-500">Data da transferência</label>
+            <input
+              type="date"
+              required
+              max={getMaceioIsoDate()}
+              value={transferDate}
+              onChange={(event) => onTransferDateChange(event.target.value)}
+              className="w-full rounded-xl border border-slate-200 p-3.5 outline-none focus:border-violet-500"
+            />
+          </div>
+          <textarea value={notes} onChange={(event) => onNotesChange(event.target.value)} placeholder="Observações adicionais (opcional)" className="min-h-20 w-full resize-none rounded-xl border border-slate-200 p-3.5 outline-none focus:border-violet-500" />
 
           <section className="rounded-2xl border border-violet-100 bg-violet-50/60 p-4">
             <div className="mb-3 flex gap-2 text-violet-800">
@@ -130,7 +151,7 @@ const ReceiveExternalTransferModal: React.FC<ReceiveExternalTransferModalProps> 
             </div>
           </section>
 
-          <button onClick={onConfirm} disabled={loading || loadError || !selectedStudentId || !originInstitution.trim() || !reason.trim() || pending} className="flex w-full items-center justify-center gap-2 rounded-xl bg-violet-700 py-3 text-xs font-black uppercase text-white disabled:opacity-40">
+          <button onClick={onConfirm} disabled={loading || loadError || !selectedStudentId || !originInstitution.trim() || !reason.trim() || !transferDate || transferDate > getMaceioIsoDate() || pending} className="flex w-full items-center justify-center gap-2 rounded-xl bg-violet-700 py-3 text-xs font-black uppercase text-white disabled:opacity-40">
             {pending && <Loader2 size={14} className="animate-spin" />}
             {pending ? 'Registrando...' : 'Registrar recebimento'}
           </button>

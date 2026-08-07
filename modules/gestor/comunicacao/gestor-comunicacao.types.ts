@@ -1,16 +1,24 @@
 import { PortalAuthProfile } from '../../login/portal-session';
+import type { WhatsAppOpsTab } from './components/whatsapp-panel/types';
 
 export interface GestorChat {
   id: string;
-  remetente_id: string;
+  remetente_id: string | null;
   remetente_nome: string;
-  remetente_tipo: 'Aluno' | 'Professor';
+  remetente_tipo: 'Aluno' | 'Professor' | 'Visitante';
   categoria_id: string | null;
   status: 'pendente' | 'solucionada';
   ultimo_texto: string | null;
   ultima_data: string;
   created_at: string;
   updated_at: string;
+  origem?: 'app' | 'portal' | 'publico';
+  polo_id?: string | null;
+  setor?: string | null;
+  assunto?: string | null;
+  protocolo?: string | null;
+  primeira_resposta_em?: string | null;
+  encerrado_em?: string | null;
 }
 
 export interface GestorMessage {
@@ -38,6 +46,9 @@ export interface GestorCategory {
 export interface ComunicacaoPageProps {
   gestorProfile?: PortalAuthProfile | null;
   channel?: 'mensagem' | 'whatsapp';
+  embedded?: boolean;
+  whatsappInitialTab?: WhatsAppOpsTab;
+  showWhatsAppModuleTabs?: boolean;
 }
 
 export const getGestorCategoryInfo = (categories: GestorCategory[], categoryId: string | null) => {

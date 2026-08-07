@@ -5,7 +5,6 @@ import {
   MIN_EAD_PROVA_QUESTOES,
   parseBRLPrice,
 } from './eadCourseWizard.helpers';
-import { clampEadInstallments } from './eadFinancialConfig';
 import { normalizeChoiceAnswer, normalizeVimeoVideoUrl } from './eadCourseWizard.utils';
 import type { EadCourseWizardState } from './useEadCourseWizardState';
 
@@ -24,15 +23,6 @@ export const useEadCourseWizardPersistence = ({
     area,
     cargaHoraria,
     valorText,
-    financeiroPix,
-    financeiroBoleto,
-    financeiroCartao,
-    financeiroParcelado,
-    financeiroParcelasPadrao,
-    financeiroMaxParcelas,
-    financeiroTaxaPagaPor,
-    financeiroRepassarCustoParcelamento,
-    financeiroConsiderarTaxaNoCheckout,
     descricao,
     imagemUrl,
     versao,
@@ -66,19 +56,9 @@ export const useEadCourseWizardPersistence = ({
 
     const valorParsed = parseBRLPrice(valorText);
     if (!valorParsed || valorParsed <= 0) {
-      showToast('Informe o valor do curso EAD. O preço é obrigatório para exibição pública e geração do link de pagamento no Asaas.', 'warning');
+      showToast('Informe o valor do curso EAD. O preço é obrigatório para exibição no catálogo e geração da cobrança.', 'warning');
       return;
     }
-
-    if (!financeiroPix && !financeiroBoleto && !financeiroCartao) {
-      showToast('Selecione pelo menos uma forma de recebimento para o checkout do curso.', 'warning');
-      return;
-    }
-
-    const parcelasPadraoParsed = clampEadInstallments(parseInt(financeiroParcelasPadrao) || 1);
-    const maxParcelasParsed = financeiroParcelado
-      ? Math.max(parcelasPadraoParsed, clampEadInstallments(parseInt(financeiroMaxParcelas) || parcelasPadraoParsed))
-      : 1;
 
     if (provas.length === 0) {
       showToast('Cadastre pelo menos uma prova final para o curso EAD.', 'warning');
@@ -175,13 +155,13 @@ export const useEadCourseWizardPersistence = ({
     const isPublishing = forcePublishState !== undefined ? forcePublishState : publicarSite;
     const financeiroConfig = normalizeCursoFinanceiroConfig({
       valorBase: valorParsed,
-      parcelasPadrao: parcelasPadraoParsed,
-      considerarTaxaNoCheckout: financeiroConsiderarTaxaNoCheckout,
-      taxaPagaPor: financeiroTaxaPagaPor,
+      parcelasPadrao: 1,
+      considerarTaxaNoCheckout: false,
+      taxaPagaPor: 'aluno',
       metodosRecebimento: {
-        pix: financeiroPix,
-        boleto: financeiroBoleto,
-        cartao: financeiroCartao
+        pix: true,
+        boleto: true,
+        cartao: false
       },
       descontoMetodo: {
         pix: false,
@@ -189,10 +169,10 @@ export const useEadCourseWizardPersistence = ({
         cartao: false
       },
       cartao: {
-        aceitar: financeiroCartao && financeiroParcelado,
-        maxParcelas: financeiroCartao ? maxParcelasParsed : 1,
+        aceitar: false,
+        maxParcelas: 1,
         aplicarDescontoPontualidade: false,
-        repassarCustoParcelamento: financeiroCartao && financeiroParcelado && financeiroRepassarCustoParcelamento
+        repassarCustoParcelamento: false
       },
       asaas: {
         gerarParcelamentoMensalidades: false,

@@ -62,17 +62,12 @@ export const boletoResultFromResponse = (
   const situationCode = Number(
     rawRecord.CodigoSituacaoBoleto ?? rawRecord.codigoSituacaoBoleto,
   );
+  const canonicalOurNumber = String(payload.NossoNumero);
   return {
-    id: firstString(
-      rawRecord.id,
-      rawRecord.Id,
-      rawRecord.NossoNumero,
-      rawRecord.nossoNumero,
-      rawRecord.NumeroDocumento,
-      rawRecord.numeroDocumento,
-      payload.NossoNumero,
-      payload.IdTituloEmpresa,
-    ),
+    // O Banese pode desserializar NossoNumero como número e remover os zeros
+    // à esquerda. A identidade remota canônica deste fluxo é sempre o Nosso
+    // Número validado de 9 dígitos enviado no pedido.
+    id: canonicalOurNumber,
     // O Banese devolve os dados do titulo, nao um PDF hospedado. A URL
     // apresentada ao aluno e sempre a pagina autenticada da Universo, onde o
     // boleto/carne e montado localmente a partir da linha e do codigo de barras
@@ -81,7 +76,7 @@ export const boletoResultFromResponse = (
     bankSlipUrl: portalUrl || null,
     bankSlipDigitableLine: linhaDigitavel,
     bankSlipBarcode: codigoBarras,
-    bankSlipOurNumber: String(payload.NossoNumero),
+    bankSlipOurNumber: canonicalOurNumber,
     financialTerms,
     status: Number.isInteger(situationCode)
       ? BANESE_BOLETO_STATUS[situationCode] || "UNKNOWN"

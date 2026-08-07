@@ -40,6 +40,8 @@ export function toCamel(s: any) {
   if (!s) return null;
 
   const poloNome = formatPoloNome(s.polos, s.polo_id);
+  const categoria = Array.isArray(s.categoria) ? s.categoria[0] : s.categoria;
+  const tipoParceria = Array.isArray(s.tipo_parceria) ? s.tipo_parceria[0] : s.tipo_parceria;
 
   const result = {
     id: s.id,
@@ -49,6 +51,8 @@ export function toCamel(s: any) {
     cpf: s.cpf_cnpj,
     cnpj: s.cpf_cnpj,
     email: s.email,
+    matriculaAcesso: s.matricula_acesso,
+    authLoginEmail: s.auth_login_email,
     telefone: s.telefone,
     contato1: s.telefone,
     cep: s.cep,
@@ -118,12 +122,21 @@ export function toCamel(s: any) {
     conta: s.conta,
     tipoConta: s.tipo_conta,
     tipoServico: s.tipo_servico,
-    tipoPj: s.tipo_pj,
-    tipoConvenio: s.tipo_convenio,
+    categoriaId: s.categoria_id,
+    categoriaNome: categoria?.nome || null,
+    tipoParceriaId: s.tipo_parceria_id,
+    tipoParceriaNome: tipoParceria?.nome || s.tipo_convenio || null,
+    classificacaoLegada: s.tipo_pj,
+    tipoPj: categoria?.nome || s.tipo_pj,
+    tipoConvenio: tipoParceria?.nome || s.tipo_convenio,
     aceitouTermosUso: s.aceitou_termos_uso,
     aceitouTermosUsoEm: s.aceitou_termos_uso_em,
     termosUsoVersao: s.termos_uso_versao,
     trocaSenhaObrigatoria: s.troca_senha_obrigatoria,
+    acessoStatus: s.acesso_status,
+    acessoErro: s.acesso_erro,
+    conviteEnviadoEm: s.convite_enviado_em,
+    acessoAtivadoEm: s.acesso_ativado_em,
     poloIds: s.polo_ids || [],
     modalidadesAluno: s.modalidadesAluno || [],
     cursosAlunoIds: s.cursosAlunoIds || [],
@@ -215,12 +228,27 @@ export function toSnake(c: any) {
     conta: source.conta || null,
     tipo_conta: source.tipoConta || null,
     tipo_servico: source.tipoServico || null,
+    categoria_id: source.categoriaId || source.categoria_id || null,
+    tipo_parceria_id: source.tipoParceriaId || source.tipo_parceria_id || null,
     tipo_pj: source.tipoPj || null,
     tipo_convenio: source.tipoConvenio || null,
     aceitou_termos_uso: source.aceitouTermosUso ?? source.aceitou_termos_uso ?? false,
     aceitou_termos_uso_em: source.aceitouTermosUsoEm || source.aceitou_termos_uso_em || null,
     termos_uso_versao: source.termosUsoVersao || source.termos_uso_versao || null,
-    troca_senha_obrigatoria: source.trocaSenhaObrigatoria ?? source.troca_senha_obrigatoria ?? false,
+    ...(Object.prototype.hasOwnProperty.call(source, 'trocaSenhaObrigatoria')
+      || Object.prototype.hasOwnProperty.call(source, 'troca_senha_obrigatoria')
+      ? {
+        troca_senha_obrigatoria:
+          source.trocaSenhaObrigatoria ?? source.troca_senha_obrigatoria ?? false,
+      }
+      : {}),
+    ...(source.acessoStatus || source.acesso_status
+      ? { acesso_status: source.acessoStatus || source.acesso_status }
+      : {}),
+    ...(Object.prototype.hasOwnProperty.call(source, 'acessoErro')
+      || Object.prototype.hasOwnProperty.call(source, 'acesso_erro')
+      ? { acesso_erro: source.acessoErro ?? source.acesso_erro ?? null }
+      : {}),
     polo_ids: poloIds,
   };
 }

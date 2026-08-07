@@ -11,12 +11,11 @@ interface PJCardProps {
   data: any;
   onClick?: () => void;
   onDelete?: () => void;
-  onConfirmEmail?: () => void;
-  isConfirmingEmail?: boolean;
 }
 
-const PJCard: React.FC<PJCardProps> = ({ data, onClick, onDelete, onConfirmEmail, isConfirmingEmail }) => {
+const PJCard: React.FC<PJCardProps> = ({ data, onClick, onDelete }) => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [logoFailed, setLogoFailed] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
 
@@ -30,6 +29,10 @@ const PJCard: React.FC<PJCardProps> = ({ data, onClick, onDelete, onConfirmEmail
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  useEffect(() => {
+    setLogoFailed(false);
+  }, [data.foto]);
 
   const isAtivo = data.status?.toUpperCase() === 'ATIVO';
   const formattedCnpj = formatCnpj(data.cnpj);
@@ -53,9 +56,14 @@ const PJCard: React.FC<PJCardProps> = ({ data, onClick, onDelete, onConfirmEmail
       {/* Header */}
       <div className="flex justify-between items-start mb-4 relative z-20">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-[14px] bg-slate-800 text-white flex items-center justify-center overflow-hidden border border-slate-700 shadow-sm shrink-0">
-            {data.foto ? (
-              <img src={data.foto} alt={data.nome} className="w-full h-full object-contain" />
+          <div className="w-11 h-11 rounded-[14px] bg-white text-slate-600 flex items-center justify-center overflow-hidden border border-slate-200 shadow-sm shrink-0">
+            {data.foto && !logoFailed ? (
+              <img
+                src={data.foto}
+                alt={`Logo de ${data.nome}`}
+                className="h-full w-full bg-white object-contain p-1.5"
+                onError={() => setLogoFailed(true)}
+              />
             ) : (
               <Building size={20} className="opacity-80" />
             )}
@@ -114,9 +122,17 @@ const PJCard: React.FC<PJCardProps> = ({ data, onClick, onDelete, onConfirmEmail
         }`}>
           {isAtivo ? 'Ativo' : 'Inativo'}
         </span>
-        {data.tipoPj && (
+        {data.categoriaNome && (
           <span className="px-2.5 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-semibold rounded-full border border-slate-200">
-            <Tag size={9} />{data.tipoPj}
+            <Tag size={9} />{data.categoriaNome}
+          </span>
+        )}
+        {(data.tipoParceriaNome || data.tipoConvenio) && (
+          <span
+            className="max-w-full whitespace-nowrap text-[10px] font-bold leading-5 text-slate-900"
+            title={data.tipoParceriaNome || data.tipoConvenio}
+          >
+            {data.tipoParceriaNome || data.tipoConvenio}
           </span>
         )}
       </div>
@@ -136,8 +152,6 @@ const PJCard: React.FC<PJCardProps> = ({ data, onClick, onDelete, onConfirmEmail
               <span className="truncate font-medium" title={data.email}>{data.email}</span>
               <EmailConfirmationStatus
                 status={data.emailConfirmationStatus}
-                isConfirming={isConfirmingEmail}
-                onConfirm={onConfirmEmail}
               />
             </div>
           </div>

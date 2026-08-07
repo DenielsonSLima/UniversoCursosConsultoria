@@ -247,16 +247,16 @@ const ReciboDespesaPreview: React.FC<ReciboDespesaPreviewProps> = ({ data }) => 
     s ? new Date(`${s}T00:00:00`).toLocaleDateString('pt-BR') : '-';
 
   return (
-    <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm font-sans max-w-2xl mx-auto">
+    <div className="mx-auto max-w-2xl overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 font-sans shadow-sm md:rounded-3xl md:p-8">
       {/* Header */}
-      <div className="flex justify-between items-start border-b-2 border-[#001a33] pb-5 mb-6">
-        <div>
-          <h1 className="text-xl font-black text-[#001a33] uppercase tracking-tight">{sample.empresaNome}</h1>
+      <div className="mb-4 flex flex-col gap-3 border-b-2 border-[#001a33] pb-4 md:mb-6 md:flex-row md:items-start md:justify-between md:gap-5 md:pb-5">
+        <div className="min-w-0">
+          <h1 className="break-words text-base font-black uppercase leading-tight tracking-tight text-[#001a33] md:text-xl">{sample.empresaNome}</h1>
           {sample.empresaCnpj && <p className="text-xs text-slate-400 mt-0.5">CNPJ: {sample.empresaCnpj}</p>}
-          {sample.poloNome && <p className="text-xs text-slate-500 mt-0.5">Unidade: {sample.poloNome}</p>}
+          {sample.poloNome && <p className="mt-0.5 break-words text-xs text-slate-500">Unidade: {sample.poloNome}</p>}
         </div>
-        <div className="text-right">
-          <span className="inline-block bg-[#001a33] text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg">
+        <div className="min-w-0 text-left md:shrink-0 md:text-right">
+          <span className="inline-block max-w-full break-words rounded-lg bg-[#001a33] px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-white md:text-[10px] md:tracking-widest">
             {sample.reciboTitulo || 'Recibo de Despesa'}
           </span>
           {sample.reciboNumero && <p className="text-sm font-black text-[#001a33] mt-1">{sample.reciboNumero}</p>}
@@ -264,22 +264,22 @@ const ReciboDespesaPreview: React.FC<ReciboDespesaPreviewProps> = ({ data }) => 
       </div>
 
       {/* Valor */}
-      <div className="bg-slate-50 border-2 border-[#001a33] rounded-2xl p-6 text-center mb-6">
-        <p className="text-4xl font-black text-[#001a33]">{formatCurrency(sample.valorPago ?? sample.valor)}</p>
+      <div className="mb-4 rounded-2xl border-2 border-[#001a33] bg-slate-50 p-4 text-center md:mb-6 md:p-6">
+        <p className="break-words text-3xl font-black tracking-tight text-[#001a33] md:text-4xl">{formatCurrency(sample.valorPago ?? sample.valor)}</p>
         <p className="text-xs text-slate-400 mt-1">Valor do pagamento</p>
       </div>
 
       {/* Descrição */}
-      <div className="bg-slate-50 rounded-xl p-4 mb-5">
+      <div className="mb-4 rounded-xl bg-slate-50 p-4 md:mb-5">
         <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 mb-1">Descrição</p>
-        <p className="font-semibold text-slate-800">{sample.descricao}</p>
+        <p className="break-words font-semibold text-slate-800">{sample.descricao}</p>
         {sample.categoriaNome && (
           <p className="text-xs text-slate-400 mt-1">Categoria: {sample.categoriaNome}</p>
         )}
       </div>
 
       {/* Grid de campos */}
-      <div className="grid grid-cols-2 gap-4 mb-5">
+      <div className="mb-5 grid grid-cols-1 gap-3 min-[390px]:grid-cols-2 md:gap-4">
         {[
           {
             label: sample.contraparteLabel || 'Fornecedor',
@@ -292,23 +292,23 @@ const ReciboDespesaPreview: React.FC<ReciboDespesaPreviewProps> = ({ data }) => 
           { label: 'Status', value: sample.status || '—' },
           { label: 'Emissão', value: new Date().toLocaleDateString('pt-BR') },
         ].map((f) => (
-          <div key={f.label}>
+          <div key={f.label} className="min-w-0 rounded-xl bg-slate-50/70 p-3 md:rounded-none md:bg-transparent md:p-0">
             <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 mb-0.5">{f.label}</p>
-            <p className="text-sm font-semibold text-slate-700">{f.value}</p>
-            {'detail' in f && f.detail && <p className="mt-0.5 text-[10px] font-semibold text-slate-500">{f.detail}</p>}
+            <p className="break-words text-sm font-semibold text-slate-700">{f.value}</p>
+            {'detail' in f && f.detail && <p className="mt-0.5 break-all text-[10px] font-semibold text-slate-500">{f.detail}</p>}
           </div>
         ))}
       </div>
 
       {/* Rodapé */}
-      <div className="border-t border-dashed border-slate-300 pt-5 flex justify-between items-end">
-        <p className="text-[10px] text-slate-400">
+      <div className="flex flex-col gap-6 border-t border-dashed border-slate-300 pt-5 md:flex-row md:items-end md:justify-between">
+        <p className="break-words text-[10px] text-slate-400">
           Gerado em: {new Date().toLocaleString('pt-BR')}
         </p>
-        <div className="text-center">
-          <div className="border-t border-slate-800 w-40 mx-auto mb-2" />
-          <p className="text-xs font-semibold text-slate-600">{sample.empresaNome}</p>
-          <p className="text-[10px] text-slate-400">{sample.poloNome}</p>
+        <div className="w-full min-w-0 text-center md:w-auto md:min-w-40">
+          <div className="mx-auto mb-2 w-full max-w-40 border-t border-slate-800" />
+          <p className="break-words text-xs font-semibold text-slate-600">{sample.empresaNome}</p>
+          <p className="break-words text-[10px] text-slate-400">{sample.poloNome}</p>
         </div>
       </div>
     </div>

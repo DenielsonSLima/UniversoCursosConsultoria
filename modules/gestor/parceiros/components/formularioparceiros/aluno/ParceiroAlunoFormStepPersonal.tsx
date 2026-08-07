@@ -34,12 +34,12 @@ const ParceiroAlunoFormStepPersonal: React.FC<PersonalStepProps> = ({
     </div>
 
     <div className="flex flex-col md:flex-row gap-6 items-center bg-slate-50 p-5 rounded-2xl border border-slate-200 mb-5">
-      <div className="w-24 h-24 rounded-full bg-slate-100 border-2 border-slate-200 relative overflow-hidden group shrink-0">
+      <div className="aspect-[3/4] w-24 rounded-xl bg-slate-100 border-2 border-slate-200 relative overflow-hidden group shrink-0">
         {formData.foto ? (
           <img src={formData.foto} alt="Prévia da Foto" className="w-full h-full object-cover" />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-slate-400">
-            <User size={40} />
+            <User size={36} />
           </div>
         )}
         {isUploadingPhoto && (
@@ -50,7 +50,7 @@ const ParceiroAlunoFormStepPersonal: React.FC<PersonalStepProps> = ({
       </div>
       <div className="space-y-2 text-left w-full">
         <h5 className="text-sm font-bold text-[#001a33] uppercase">Foto do Aluno</h5>
-        <p className="text-xs text-slate-400">Envie uma foto recente de identificação (JPG, PNG).</p>
+        <p className="text-xs text-slate-400">Envie e enquadre uma foto recente no formato oficial 3×4 (JPG, PNG ou WEBP).</p>
         <div className="flex gap-2">
           <label className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-blue-700 transition-colors cursor-pointer flex items-center gap-1.5 shadow-md shadow-blue-600/10">
             <Upload size={14} />

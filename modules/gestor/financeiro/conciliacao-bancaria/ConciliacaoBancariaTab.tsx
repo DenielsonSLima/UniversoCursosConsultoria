@@ -1,14 +1,11 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Activity,
   ArrowDownLeft,
   ArrowUpRight,
-  FileCheck2,
   FileSpreadsheet,
-  Globe,
   Layers,
   RefreshCw,
-  ShieldAlert,
 } from 'lucide-react';
 import { integracaoBancariaService } from '../../configuracoes/integracao-bancaria/integracao-bancaria.service';
 import BaneseCnabRemittancePanel from './BaneseCnabRemittancePanel';
@@ -18,6 +15,7 @@ import ConciliacaoOrigemBaixaPanel from './components/ConciliacaoOrigemBaixaPane
 import ConciliacaoTransactionsPanel from './components/ConciliacaoTransactionsPanel';
 import { useBaneseCnabReturn } from './hooks/useBaneseCnabReturn';
 import { useBaneseConciliacaoQueries } from './hooks/useBaneseConciliacaoQueries';
+import FinancialUnderlineTabs from '../components/FinancialUnderlineTabs';
 
 interface ConciliacaoBancariaTabProps {
   poloId?: string | null;
@@ -101,72 +99,46 @@ const ConciliacaoBancariaTab: React.FC<ConciliacaoBancariaTabProps> = ({ poloId 
           </div>
         </div>
 
-        {/* Sub-Tabs Nav Pill */}
-        <div className="mt-6 flex flex-wrap gap-2 rounded-2xl bg-slate-100/80 p-1.5">
-          <button
-            type="button"
-            onClick={() => setActiveSubTab('conciliacao')}
-            className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-xs font-extrabold transition-all ${
-              activeSubTab === 'conciliacao'
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-            }`}
-          >
-            <Layers size={16} className={activeSubTab === 'conciliacao' ? 'text-blue-600' : 'text-slate-400'} />
-            <span>Conciliação & Baixas</span>
-            <span className="rounded-full bg-slate-200/80 px-2 py-0.5 text-[10px] font-black text-slate-700">
-              {queries.receivables.length}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveSubTab('remessas')}
-            className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-xs font-extrabold transition-all ${
-              activeSubTab === 'remessas'
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-            }`}
-          >
-            <ArrowUpRight size={16} className={activeSubTab === 'remessas' ? 'text-amber-600' : 'text-slate-400'} />
-            <span>Remessas Pendentes</span>
-            {eligibleCount > 0 ? (
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800">
-                {eligibleCount}
-              </span>
-            ) : null}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveSubTab('retorno')}
-            className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-xs font-extrabold transition-all ${
-              activeSubTab === 'retorno'
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-            }`}
-          >
-            <ArrowDownLeft size={16} className={activeSubTab === 'retorno' ? 'text-purple-600' : 'text-slate-400'} />
-            <span>Retorno Pendente</span>
-            {recentReturnsCount > 0 ? (
-              <span className="rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-black text-purple-800">
-                {recentReturnsCount}
-              </span>
-            ) : null}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveSubTab('diagnostico')}
-            className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-xs font-extrabold transition-all ${
-              activeSubTab === 'diagnostico'
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-            }`}
-          >
-            <Activity size={16} className={activeSubTab === 'diagnostico' ? 'text-emerald-600' : 'text-slate-400'} />
-            <span>Diagnóstico & API</span>
-          </button>
+        <div className="mt-6">
+          <FinancialUnderlineTabs
+            items={[
+              {
+                id: 'conciliacao' as const,
+                label: 'Conciliação & Baixas',
+                icon: <Layers size={16} />,
+                badge: queries.receivables.length,
+                activeIconClassName: 'text-blue-600',
+                badgeClassName: 'bg-blue-50 text-blue-700',
+              },
+              {
+                id: 'remessas' as const,
+                label: 'Remessas Pendentes',
+                icon: <ArrowUpRight size={16} />,
+                badge: eligibleCount > 0 ? eligibleCount : undefined,
+                activeIconClassName: 'text-amber-600',
+                badgeClassName: 'bg-amber-50 text-amber-700',
+              },
+              {
+                id: 'retorno' as const,
+                label: 'Retorno Pendente',
+                icon: <ArrowDownLeft size={16} />,
+                badge: recentReturnsCount > 0 ? recentReturnsCount : undefined,
+                activeIconClassName: 'text-purple-600',
+                badgeClassName: 'bg-purple-50 text-purple-700',
+              },
+              {
+                id: 'diagnostico' as const,
+                label: 'Diagnóstico & API',
+                icon: <Activity size={16} />,
+                activeIconClassName: 'text-emerald-600',
+              },
+            ]}
+            value={activeSubTab}
+            onChange={setActiveSubTab}
+            ariaLabel="Áreas da conciliação bancária"
+            indicatorClassName="bg-blue-600"
+            equalWidth
+          />
         </div>
       </div>
 

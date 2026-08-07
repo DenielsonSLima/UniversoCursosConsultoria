@@ -1,3 +1,5 @@
+> Arquivo legado. As instruções vigentes estão em `AGENTS.md` e `ai/operacao/`.
+
 # Diretrizes de Notificação do Sistema (Notification Guidelines)
 
 ## Regra Fundamental / Core Rule

@@ -58,7 +58,7 @@ const ReciboDespesaPage: React.FC = () => {
       <div className="mt-8 p-6 bg-blue-50 rounded-2xl border border-blue-100">
         <h3 className="text-sm font-black text-blue-800 uppercase tracking-wide mb-3">Como usar</h3>
         <ul className="space-y-2 text-xs text-blue-700 font-medium">
-          <li>• Acesse <strong>Financeiro → Despesas Fixas</strong> ou <strong>Despesas Variáveis</strong></li>
+          <li>• Acesse <strong>Financeiro → Contas a Pagar → Despesas Fixas</strong> ou <strong>Despesas Variáveis</strong></li>
           <li>• Crie um lançamento com a opção <strong>"Lançar e Dar Baixa"</strong>, ou dê baixa em um lançamento existente</li>
           <li>• Após confirmar o pagamento, clique no ícone de impressora na linha/card do lançamento</li>
           <li>• O recibo será gerado automaticamente com todos os dados do lançamento</li>

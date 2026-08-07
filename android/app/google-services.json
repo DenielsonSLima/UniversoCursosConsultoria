@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "148081644153",
+    "project_id": "universocursoseconsultor-ca647",
+    "storage_bucket": "universocursoseconsultor-ca647.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:148081644153:android:41647d01fd5f0e4339baa8",
+        "android_client_info": {
+          "package_name": "br.com.universocc.aluno"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCTQ5rR4aqlaBI4LP2oUlgBID3TRTanxXI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

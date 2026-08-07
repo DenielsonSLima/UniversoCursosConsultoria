@@ -17,7 +17,7 @@ export interface FinanceiroConfigData {
   valorParcela: number;
   descontoPontualidade: number;
   jurosAtraso: number;
-  multaAtraso: number;
+  multaAtrasoPercentual: number;
   aplicarDescontoMatricula: boolean;
   aplicarMultaJurosMatricula: boolean;
   aplicarDescontoMensalidade: boolean;
@@ -25,81 +25,42 @@ export interface FinanceiroConfigData {
   aplicarDescontoRematricula: boolean;
   aplicarMultaJurosRematricula: boolean;
   diaVencimentoPadrao: number;
+  instrucaoBoletoCarne: string;
   cronogramaFinanceiro: any[];
 }
 
+export type FinanceiroCalculationInput = Pick<
+  FinanceiroConfigData,
+  | 'valorParcela'
+  | 'descontoPontualidade'
+  | 'jurosAtraso'
+  | 'aplicarDescontoMensalidade'
+  | 'aplicarMultaJurosMensalidade'
+> & {
+  multaAtraso?: number;
+  multaAtrasoPercentual?: number;
+};
+
+export const DEFAULT_INSTRUCAO_BOLETO_CARNE =
+  'SR.(A) CAIXA: NÃO RECEBER ESTE TÍTULO APÓS 60 (SESSENTA) DIAS DO VENCIMENTO.';
+
 export const DEFAULT_FINANCEIRO_CONFIG: FinanceiroConfigData = {
-  valorMatricula: 150.00,
-  valorRematricula: 100.00,
-  qtdParcelas: 11,
-  valorParcela: 350.00,
-  descontoPontualidade: 20.00,
-  jurosAtraso: 2.0,
-  multaAtraso: 5.00,
+  valorMatricula: 0,
+  valorRematricula: 0,
+  qtdParcelas: 0,
+  valorParcela: 0,
+  descontoPontualidade: 0,
+  jurosAtraso: 0,
+  multaAtrasoPercentual: 0,
   aplicarDescontoMatricula: false,
-  aplicarMultaJurosMatricula: true,
+  aplicarMultaJurosMatricula: false,
   aplicarDescontoMensalidade: true,
   aplicarMultaJurosMensalidade: true,
-  aplicarDescontoRematricula: true,
-  aplicarMultaJurosRematricula: true,
+  aplicarDescontoRematricula: false,
+  aplicarMultaJurosRematricula: false,
   diaVencimentoPadrao: 10,
+  instrucaoBoletoCarne: DEFAULT_INSTRUCAO_BOLETO_CARNE,
   cronogramaFinanceiro: [],
-};
-
-export const calcularDataVencimento = (
-  dataInicio: string,
-  diaVencimento: number,
-  offsetMeses: number,
-): string => {
-  if (!dataInicio) return '';
-  const date = new Date(`${dataInicio}T00:00:00`);
-  date.setMonth(date.getMonth() + offsetMeses);
-
-  const ano = date.getFullYear();
-  const mes = date.getMonth();
-  const ultimoDia = new Date(ano, mes + 1, 0).getDate();
-  const diaFinal = Math.min(diaVencimento, ultimoDia);
-  const dateFinal = new Date(ano, mes, diaFinal);
-
-  const y = dateFinal.getFullYear();
-  const m = String(dateFinal.getMonth() + 1).padStart(2, '0');
-  const d = String(dateFinal.getDate()).padStart(2, '0');
-
-  return `${y}-${m}-${d}`;
-};
-
-export const buildFinanceiroCronograma = (
-  config: FinanceiroConfigData,
-  dataInicio: string,
-): CronogramaItem[] => {
-  const cronograma: CronogramaItem[] = [{
-    id: 'matr',
-    tipo: 'MATRICULA',
-    label: 'Matrícula Inicial',
-    valor: config.valorMatricula,
-    dataVencimento: dataInicio || '',
-  }];
-
-  for (let i = 1; i <= config.qtdParcelas; i += 1) {
-    cronograma.push({
-      id: `parc-${i}`,
-      tipo: 'PARCELA',
-      label: `Mensalidade ${i}/${config.qtdParcelas}`,
-      valor: config.valorParcela,
-      numero: i,
-      dataVencimento: calcularDataVencimento(dataInicio, config.diaVencimentoPadrao, i),
-    });
-  }
-
-  cronograma.push({
-    id: 'rem-apos-ciclo',
-    tipo: 'REMATRICULA',
-    label: 'Rematrícula após o ciclo',
-    valor: config.valorRematricula,
-    dataVencimento: calcularDataVencimento(dataInicio, config.diaVencimentoPadrao, config.qtdParcelas + 1),
-  });
-
-  return cronograma;
 };
 
 export const mapSavedCronograma = (items: any[]): CronogramaItem[] => items.map((item: any) => ({
@@ -126,10 +87,24 @@ export const shouldUseSavedCronograma = (
 };
 
 export const financeiroConfigService = {
+  async buildSchedule(config: FinanceiroConfigData, dataInicio: string): Promise<CronogramaItem[]> {
+    const { data, error } = await supabase.rpc('build_gestao_financial_schedule', {
+      p_data_inicio: dataInicio || null,
+      p_valor_matricula: config.valorMatricula,
+      p_valor_parcela: config.valorParcela,
+      p_valor_rematricula: config.valorRematricula,
+      p_qtd_parcelas: config.qtdParcelas,
+      p_dia_vencimento: config.diaVencimentoPadrao,
+    });
+
+    if (error) throw error;
+    return mapSavedCronograma((data || []) as any[]);
+  },
+
   async getConfig(turmaId: string): Promise<FinanceiroConfigData> {
     const { data, error } = await supabase
       .from('turmas')
-      .select('valor_matricula, valor_rematricula, qtd_parcelas, valor_parcela, desconto_pontualidade, juros_atraso, multa_atraso, aplicar_desconto_matricula, aplicar_multa_juros_matricula, aplicar_desconto_mensalidade, aplicar_multa_juros_mensalidade, aplicar_desconto_rematricula, aplicar_multa_juros_rematricula, dia_vencimento_padrao, cronograma_financeiro')
+      .select('valor_matricula, valor_rematricula, qtd_parcelas, valor_parcela, desconto_pontualidade, juros_atraso, multa_atraso_percentual, aplicar_desconto_matricula, aplicar_multa_juros_matricula, aplicar_desconto_mensalidade, aplicar_multa_juros_mensalidade, aplicar_desconto_rematricula, aplicar_multa_juros_rematricula, dia_vencimento_padrao, instrucao_boleto_carne, cronograma_financeiro')
       .eq('id', turmaId)
       .single();
 
@@ -142,25 +117,37 @@ export const financeiroConfigService = {
       valorParcela: Number(data.valor_parcela),
       descontoPontualidade: Number(data.desconto_pontualidade),
       jurosAtraso: Number(data.juros_atraso),
-      multaAtraso: Number(data.multa_atraso),
-      aplicarDescontoMatricula: data.aplicar_desconto_matricula === true,
-      aplicarMultaJurosMatricula: data.aplicar_multa_juros_matricula !== false,
-      aplicarDescontoMensalidade: data.aplicar_desconto_mensalidade !== false,
-      aplicarMultaJurosMensalidade: data.aplicar_multa_juros_mensalidade !== false,
-      aplicarDescontoRematricula: data.aplicar_desconto_rematricula !== false,
-      aplicarMultaJurosRematricula: data.aplicar_multa_juros_rematricula !== false,
+      multaAtrasoPercentual: Number(data.multa_atraso_percentual),
+      aplicarDescontoMatricula: false,
+      aplicarMultaJurosMatricula: false,
+      aplicarDescontoMensalidade: true,
+      aplicarMultaJurosMensalidade: true,
+      aplicarDescontoRematricula: false,
+      aplicarMultaJurosRematricula: false,
       diaVencimentoPadrao: Number(data.dia_vencimento_padrao || 10),
+      instrucaoBoletoCarne: String(
+        data.instrucao_boleto_carne || DEFAULT_INSTRUCAO_BOLETO_CARNE,
+      ).trim(),
       cronogramaFinanceiro: data.cronograma_financeiro || [],
     };
   },
 
-  async calculateRules(config: Pick<FinanceiroConfigData, 'valorParcela' | 'descontoPontualidade' | 'jurosAtraso' | 'multaAtraso'>) {
-    const { data, error } = await supabase.rpc('calcular_regras_financeiras_turma', {
-      valor_parcela: config.valorParcela,
-      desconto_pontualidade: config.descontoPontualidade,
-      juros_atraso_percentual: config.jurosAtraso,
-      multa_atraso: config.multaAtraso,
-    });
+  async calculateRules(config: FinanceiroCalculationInput) {
+    const usesPercentageFine = config.multaAtrasoPercentual !== undefined;
+    const rpcName = usesPercentageFine
+      ? 'calculate_gestao_technical_financial_preview'
+      : 'calculate_gestao_financial_preview';
+    const params = {
+      p_valor: config.valorParcela,
+      p_desconto: config.descontoPontualidade,
+      p_juros_percentual: config.jurosAtraso,
+      p_aplicar_desconto: config.aplicarDescontoMensalidade,
+      p_aplicar_encargos: config.aplicarMultaJurosMensalidade,
+      ...(usesPercentageFine
+        ? { p_multa_percentual: config.multaAtrasoPercentual }
+        : { p_multa: config.multaAtraso || 0 }),
+    };
+    const { data, error } = await supabase.rpc(rpcName, params);
 
     if (error) throw error;
     return data[0];

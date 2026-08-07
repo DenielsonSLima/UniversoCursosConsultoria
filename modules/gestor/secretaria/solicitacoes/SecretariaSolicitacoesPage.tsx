@@ -22,6 +22,8 @@ import {
   History,
   ArrowUpDown
 } from 'lucide-react';
+import { getSecretariaErrorMessage } from '../shared/secretaria-error';
+import { matchesSecretariaSearch } from '../secretaria-search';
 
 
 
@@ -30,6 +32,8 @@ import {
 // ─── Main Component ───────────────────────────────────────────────────────────
 const SecretariaSolicitacoesPage: React.FC = () => {
   const [solicitacoes, setSolicitacoes] = useState<Solicitacao[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'pendentes' | 'historico' | 'config'>('pendentes');
 
   // Pending tab state
@@ -56,15 +60,30 @@ const SecretariaSolicitacoesPage: React.FC = () => {
 
   // ── Load data — NUNCA localStorage, sempre Supabase ──────────────────────
   useEffect(() => {
+    let active = true;
     const loadData = async () => {
-      const [sols, prz] = await Promise.all([
-        secretariaService.getSolicitacoes(),
-        secretariaService.getPrazos()
-      ]);
-      setSolicitacoes(sols);
-      setPrazos(prz);
+      setIsLoading(true);
+      setLoadError(null);
+      try {
+        const [sols, prz] = await Promise.all([
+          secretariaService.getSolicitacoes(),
+          secretariaService.getPrazos()
+        ]);
+        if (!active) return;
+        setSolicitacoes(sols);
+        setPrazos(prz);
+      } catch (error) {
+        if (!active) return;
+        setLoadError(getSecretariaErrorMessage(
+          error,
+          'Não foi possível carregar as solicitações da Secretaria.',
+        ));
+      } finally {
+        if (active) setIsLoading(false);
+      }
     };
-    loadData();
+    void loadData();
+    return () => { active = false; };
   }, []);
 
   const saveToStorage = (list: Solicitacao[]) => {
@@ -88,8 +107,10 @@ const SecretariaSolicitacoesPage: React.FC = () => {
     return solicitacoes
       .filter(s => s.status === 'Pendente')
       .filter(s => {
-        const q = searchPend.toLowerCase();
-        const matchSearch = !q || s.alunoNome.toLowerCase().includes(q) || s.alunoMatricula.toLowerCase().includes(q);
+        const matchSearch = matchesSecretariaSearch(
+          searchPend,
+          [s.alunoNome, s.alunoMatricula],
+        );
         const matchType = typeFilterPend === 'todos' || s.tipo === typeFilterPend;
         return matchSearch && matchType;
       })
@@ -100,8 +121,10 @@ const SecretariaSolicitacoesPage: React.FC = () => {
     return solicitacoes
       .filter(s => s.status !== 'Pendente')
       .filter(s => {
-        const q = searchHist.toLowerCase();
-        const matchSearch = !q || s.alunoNome.toLowerCase().includes(q) || s.alunoMatricula.toLowerCase().includes(q);
+        const matchSearch = matchesSecretariaSearch(
+          searchHist,
+          [s.alunoNome, s.alunoMatricula],
+        );
         const matchType = typeFilterHist === 'todos' || s.tipo === typeFilterHist;
         const matchStatus = statusFilterHist === 'todos' || s.status === statusFilterHist;
         return matchSearch && matchType && matchStatus;
@@ -130,11 +153,15 @@ const SecretariaSolicitacoesPage: React.FC = () => {
     const novaRespostaData = new Date().toISOString().split('T')[0];
 
     // Salva no Supabase — NUNCA localStorage
-    await secretariaService.updateSolicitacao(selectedSolicitacao.id, {
+    const saved = await secretariaService.updateSolicitacao(selectedSolicitacao.id, {
       status: novoStatus as any,
       resposta: novaResposta,
       respostaData: novaRespostaData
     });
+    if (!saved) {
+      alert('Não foi possível salvar a alteração. Os dados da tela não foram modificados.');
+      return;
+    }
 
     // Atualiza estado local
     const updated = solicitacoes.map(item =>
@@ -172,6 +199,19 @@ const SecretariaSolicitacoesPage: React.FC = () => {
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="space-y-5 text-xs font-sans animate-fadeIn">
+
+      {loadError && (
+        <div className="flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700">
+          <AlertCircle size={18} className="shrink-0" />
+          <p className="font-bold">{loadError}</p>
+        </div>
+      )}
+
+      {isLoading && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center font-bold text-slate-500">
+          Carregando solicitações...
+        </div>
+      )}
 
       {/* ── Top Nav Tabs ── */}
       <div className="flex gap-1 bg-white border border-slate-100 shadow-sm rounded-2xl p-1.5">

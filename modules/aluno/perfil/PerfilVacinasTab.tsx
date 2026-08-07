@@ -198,7 +198,7 @@ const PerfilVacinasTab: React.FC<PerfilVacinasTabProps> = ({
                                 value={draft.dataAplicacao}
                                 disabled={isApproved}
                                 onChange={(event) => updateDraft(key, { dataAplicacao: event.target.value })}
-                                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:border-emerald-300"
+                                className="min-h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-base font-bold text-slate-700 outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100 md:min-h-0 md:text-xs"
                               />
                             </label>
                             <label className="space-y-1">
@@ -208,7 +208,7 @@ const PerfilVacinasTab: React.FC<PerfilVacinasTabProps> = ({
                                 value={draft.lote}
                                 disabled={isApproved}
                                 onChange={(event) => updateDraft(key, { lote: event.target.value })}
-                                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:border-emerald-300"
+                                className="min-h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-base font-bold text-slate-700 outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100 md:min-h-0 md:text-xs"
                               />
                             </label>
                             <label className="space-y-1">
@@ -218,7 +218,7 @@ const PerfilVacinasTab: React.FC<PerfilVacinasTabProps> = ({
                                 value={draft.localAplicacao}
                                 disabled={isApproved}
                                 onChange={(event) => updateDraft(key, { localAplicacao: event.target.value })}
-                                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:border-emerald-300"
+                                className="min-h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-base font-bold text-slate-700 outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100 md:min-h-0 md:text-xs"
                               />
                             </label>
                           </div>
@@ -231,13 +231,13 @@ const PerfilVacinasTab: React.FC<PerfilVacinasTabProps> = ({
                                 const input = buildInput(context, vacina, dose);
                                 if (input) onSave(input);
                               }}
-                              className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#001a33] px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-white transition hover:bg-blue-900 disabled:opacity-60"
+                              className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-[#001a33] px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-white outline-none transition hover:bg-blue-900 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-60 md:min-h-0"
                             >
                               <FileText size={13} />
                               {saving ? 'Salvando...' : 'Salvar dados'}
                             </button>
 
-                            <label className="inline-flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-white px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-600 transition hover:border-emerald-300 hover:text-emerald-700">
+                            <label className="inline-flex min-h-11 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-white px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-600 outline-none transition hover:border-emerald-300 hover:text-emerald-700 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:ring-offset-2 md:min-h-0">
                               <Upload size={13} />
                               {isApproved
                                 ? 'Comprovante aprovado'
@@ -247,7 +247,7 @@ const PerfilVacinasTab: React.FC<PerfilVacinasTabProps> = ({
                               <input
                                 type="file"
                                 accept="image/jpeg,image/png,application/pdf"
-                                className="hidden"
+                                className="sr-only"
                                 disabled={uploading || isApproved}
                                 onChange={(event) => {
                                   const file = event.target.files?.[0];
@@ -264,7 +264,7 @@ const PerfilVacinasTab: React.FC<PerfilVacinasTabProps> = ({
                               href={registro.arquivoUrl}
                               target="_blank"
                               rel="noreferrer"
-                              className="mt-3 inline-block text-[10px] font-black uppercase tracking-widest text-blue-600 hover:underline"
+                              className="mt-3 inline-flex min-h-11 items-center rounded-xl px-2 text-[10px] font-black uppercase tracking-widest text-blue-600 outline-none hover:bg-blue-50 hover:underline focus-visible:ring-2 focus-visible:ring-blue-500 md:min-h-0 md:px-0"
                             >
                               Ver comprovante enviado
                             </a>

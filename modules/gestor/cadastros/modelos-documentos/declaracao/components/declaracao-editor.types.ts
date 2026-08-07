@@ -19,11 +19,23 @@ export interface DeclaracaoEditorProps {
   migrateDeclarationDefaults?: boolean;
   hideBackButton?: boolean;
   scopeLabel?: string;
+  enableEnrollmentSettings?: boolean;
+  studentPreview?: EditorStudentPreview | null;
+  studentPreviewLoading?: boolean;
+  studentPreviewError?: string;
+  onLoadStudentPreview?: () => void;
+  onClearStudentPreview?: () => void;
 }
 
 export interface EditorVariable {
   code: string;
   label: string;
+}
+
+export interface EditorStudentPreview {
+  enrollmentId: string;
+  label: string;
+  replacements: Record<string, string>;
 }
 
 export interface AbsoluteField {

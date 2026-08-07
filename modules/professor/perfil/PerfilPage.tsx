@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { parceirosService } from '../../gestor/parceiros/parceiros.service';
-import { Award, KeyRound, Landmark, Link2, Mail, Phone, ShieldCheck, User, Wallet } from 'lucide-react';
+import { Award, FileSignature, KeyRound, Landmark, Link2, Mail, Phone, ShieldCheck, User, Wallet } from 'lucide-react';
 import GoogleIdentityCard from '../../shared/auth/GoogleIdentityCard';
 import { loginService } from '../../login/login.service';
 import ToastNotification, { useToast } from '../../gestor/components/ToastNotification';
+import ProfessorSignaturePanel from './ProfessorSignaturePanel';
 
 interface PerfilPageProps {
   professorId: string;
 }
 
-type PerfilTab = 'dados' | 'seguranca' | 'google';
+type PerfilTab = 'dados' | 'assinatura' | 'seguranca' | 'google';
 
 const maskDate = (value: string) => value
   .replace(/\D/g, '')
@@ -137,10 +138,10 @@ const PerfilPage: React.FC<PerfilPageProps> = ({ professorId }) => {
     event.preventDefault();
     setPasswordMessage(null);
 
-    if (novaSenha.length < 6 || !/[A-Z]/.test(novaSenha) || !/[a-z]/.test(novaSenha) || !/\d/.test(novaSenha)) {
+    if (novaSenha.length < 8 || !/[A-Z]/.test(novaSenha) || !/[a-z]/.test(novaSenha) || !/\d/.test(novaSenha)) {
       setPasswordMessage({
         tone: 'error',
-        text: 'A senha deve ter no mínimo 6 caracteres, 1 maiúscula, 1 minúscula e 1 número.',
+        text: 'A senha deve ter no mínimo 8 caracteres, 1 maiúscula, 1 minúscula e 1 número.',
       });
       return;
     }
@@ -155,6 +156,7 @@ const PerfilPage: React.FC<PerfilPageProps> = ({ professorId }) => {
 
   const tabItems: { id: PerfilTab; label: string; icon: React.ReactNode }[] = [
     { id: 'dados', label: 'Dados e Pagamento', icon: <User size={15} /> },
+    { id: 'assinatura', label: 'Minha Assinatura', icon: <FileSignature size={15} /> },
     { id: 'seguranca', label: 'Segurança', icon: <KeyRound size={15} /> },
     { id: 'google', label: 'Conta Google', icon: <Link2 size={15} /> },
   ];
@@ -168,7 +170,7 @@ const PerfilPage: React.FC<PerfilPageProps> = ({ professorId }) => {
   }
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="space-y-6">
       <div className="bg-white rounded-[2.5rem] border border-slate-100 p-5 md:p-6 shadow-sm">
         <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
@@ -583,7 +585,7 @@ const PerfilPage: React.FC<PerfilPageProps> = ({ professorId }) => {
                       value={novaSenha}
                       onChange={(event) => setNovaSenha(event.target.value)}
                       className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 font-bold text-slate-700 outline-none transition focus:border-emerald-500 focus:bg-white"
-                      placeholder="Mínimo 6 caracteres"
+                      placeholder="Mínimo 8 caracteres"
                     />
                   </div>
                   <div className="space-y-1">
@@ -599,7 +601,7 @@ const PerfilPage: React.FC<PerfilPageProps> = ({ professorId }) => {
                 </div>
 
                 <p className="mt-3 text-[11px] font-semibold text-slate-500">
-                  Use no mínimo 6 caracteres, com letra maiúscula, minúscula e número.
+                  Use no mínimo 8 caracteres, com letra maiúscula, minúscula e número.
                 </p>
 
                 {passwordMessage && (
@@ -624,6 +626,13 @@ const PerfilPage: React.FC<PerfilPageProps> = ({ professorId }) => {
               </form>
             </div>
           </div>
+        )}
+
+        {activeTab === 'assinatura' && (
+          <ProfessorSignaturePanel
+            professorId={professorId}
+            professorName={profile?.nomeCompleto || profile?.nome || 'Professor(a)'}
+          />
         )}
 
         {activeTab === 'google' && (

@@ -8,7 +8,8 @@ interface ProfilePhotoAdjustModalProps {
   onConfirm: (file: File) => void | Promise<void>;
 }
 
-const outputSize = 720;
+const outputWidth = 720;
+const outputHeight = 960;
 
 const ProfilePhotoAdjustModal: React.FC<ProfilePhotoAdjustModalProps> = ({
   file,
@@ -16,27 +17,47 @@ const ProfilePhotoAdjustModal: React.FC<ProfilePhotoAdjustModalProps> = ({
   onCancel,
   onConfirm,
 }) => {
-  const [zoom, setZoom] = useState(1.15);
+  const [zoom, setZoom] = useState(1);
   const [positionX, setPositionX] = useState(50);
   const [positionY, setPositionY] = useState(50);
   const [previewUrl, setPreviewUrl] = useState('');
+  const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
     const url = URL.createObjectURL(file);
+    setImageSize({ width: 0, height: 0 });
     setPreviewUrl(url);
 
     return () => URL.revokeObjectURL(url);
   }, [file]);
 
-  const previewStyle = useMemo(() => ({
-    objectFit: 'cover' as const,
-    objectPosition: `${positionX}% ${positionY}%`,
-    transform: `scale(${zoom})`,
-    transformOrigin: `${positionX}% ${positionY}%`,
-  }), [positionX, positionY, zoom]);
+  const previewStyle = useMemo(() => {
+    if (!imageSize.width || !imageSize.height) return {};
+
+    const sourceAspectRatio = imageSize.width / imageSize.height;
+    const frameAspectRatio = outputWidth / outputHeight;
+    const baseWidthPercent = sourceAspectRatio >= frameAspectRatio
+      ? (sourceAspectRatio / frameAspectRatio) * 100
+      : 100;
+    const baseHeightPercent = sourceAspectRatio >= frameAspectRatio
+      ? 100
+      : (frameAspectRatio / sourceAspectRatio) * 100;
+    const widthPercent = baseWidthPercent * zoom;
+    const heightPercent = baseHeightPercent * zoom;
+
+    return {
+      position: 'absolute' as const,
+      width: `${widthPercent}%`,
+      height: `${heightPercent}%`,
+      maxWidth: 'none',
+      maxHeight: 'none',
+      left: `${-(widthPercent - 100) * (positionX / 100)}%`,
+      top: `${-(heightPercent - 100) * (positionY / 100)}%`,
+    };
+  }, [imageSize.height, imageSize.width, positionX, positionY, zoom]);
 
   const reset = () => {
-    setZoom(1.15);
+    setZoom(1);
     setPositionX(50);
     setPositionY(50);
   };
@@ -52,20 +73,23 @@ const ProfilePhotoAdjustModal: React.FC<ProfilePhotoAdjustModalProps> = ({
     });
 
     const canvas = document.createElement('canvas');
-    canvas.width = outputSize;
-    canvas.height = outputSize;
+    canvas.width = outputWidth;
+    canvas.height = outputHeight;
     const context = canvas.getContext('2d');
     if (!context) throw new Error('Não foi possível preparar o editor de foto.');
 
     context.fillStyle = '#ffffff';
-    context.fillRect(0, 0, outputSize, outputSize);
+    context.fillRect(0, 0, outputWidth, outputHeight);
 
-    const baseScale = Math.max(outputSize / image.naturalWidth, outputSize / image.naturalHeight);
+    const baseScale = Math.max(
+      outputWidth / image.naturalWidth,
+      outputHeight / image.naturalHeight,
+    );
     const scale = baseScale * zoom;
     const drawWidth = image.naturalWidth * scale;
     const drawHeight = image.naturalHeight * scale;
-    const maxOffsetX = Math.max(0, drawWidth - outputSize);
-    const maxOffsetY = Math.max(0, drawHeight - outputSize);
+    const maxOffsetX = Math.max(0, drawWidth - outputWidth);
+    const maxOffsetY = Math.max(0, drawHeight - outputHeight);
     const drawX = -maxOffsetX * (positionX / 100);
     const drawY = -maxOffsetY * (positionY / 100);
 
@@ -93,7 +117,7 @@ const ProfilePhotoAdjustModal: React.FC<ProfilePhotoAdjustModalProps> = ({
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
           <div>
             <h2 className="text-lg font-black uppercase tracking-tight text-[#001a33]">Ajustar foto</h2>
-            <p className="mt-1 text-xs font-bold text-slate-500">Enquadre o rosto antes de salvar.</p>
+            <p className="mt-1 text-xs font-bold text-slate-500">Enquadre a foto oficial no formato 3×4.</p>
           </div>
           <button
             type="button"
@@ -108,22 +132,34 @@ const ProfilePhotoAdjustModal: React.FC<ProfilePhotoAdjustModalProps> = ({
 
         <div className="grid gap-6 p-6 lg:grid-cols-[1fr_0.85fr]">
           <div className="flex items-center justify-center rounded-[2rem] border border-slate-100 bg-slate-100 p-5">
-            <div className="relative h-72 w-72 overflow-hidden rounded-full border-[10px] border-white bg-slate-200 shadow-xl">
+            <div className="relative aspect-[3/4] w-60 overflow-hidden rounded-2xl border-[10px] border-white bg-slate-200 shadow-xl">
               {previewUrl && (
                 <img
                   src={previewUrl}
                   alt="Prévia da foto ajustada"
-                  className="h-full w-full"
+                  onLoad={(event) => {
+                    setImageSize({
+                      width: event.currentTarget.naturalWidth,
+                      height: event.currentTarget.naturalHeight,
+                    });
+                  }}
                   style={previewStyle}
                 />
               )}
-              <div className="pointer-events-none absolute inset-0 rounded-full ring-1 ring-inset ring-slate-900/10" />
+              <div className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-slate-900/10" />
+              <div className="pointer-events-none absolute inset-x-0 top-1/3 border-t border-dashed border-white/60" />
+              <div className="pointer-events-none absolute inset-x-0 top-2/3 border-t border-dashed border-white/60" />
+              <div className="pointer-events-none absolute inset-y-0 left-1/3 border-l border-dashed border-white/60" />
+              <div className="pointer-events-none absolute inset-y-0 left-2/3 border-l border-dashed border-white/60" />
+              <span className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-slate-950/65 px-3 py-1 text-[9px] font-black uppercase tracking-widest text-white">
+                Área impressa
+              </span>
             </div>
           </div>
 
           <div className="space-y-5">
             <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4 text-xs font-semibold leading-relaxed text-blue-800">
-              Use o zoom para aproximar e mova a foto na horizontal/vertical para centralizar o rosto.
+              Esta é a proporção usada na ficha, carteirinha e demais documentos. Centralize o rosto e mantenha cabeça e ombros dentro da moldura.
             </div>
 
             <label className="block space-y-2">

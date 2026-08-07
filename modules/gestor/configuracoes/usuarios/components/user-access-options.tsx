@@ -15,60 +15,73 @@ import {
   TrendingDown,
   TrendingUp,
   UserPlus,
+  Archive,
+  Landmark,
 } from 'lucide-react';
+import { SECRETARIA_ACCESS_OPTIONS } from '../../../secretaria/secretaria-access';
+import {
+  GESTOR_CADASTRO_NAVIGATION,
+  GESTOR_MAIN_NAVIGATION,
+} from '../../../gestor-navigation.config';
 
-export const USER_FORM_MODULES = [
-  { id: 'inicio', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
-  { id: 'parceiros', label: 'Parceiros', icon: <Handshake size={18} /> },
-  { id: 'cadastros', label: 'Cadastros', icon: <UserPlus size={18} /> },
-  { id: 'gestao', label: 'Gestão', icon: <Briefcase size={18} /> },
-  { id: 'secretaria', label: 'Secretaria', icon: <FileText size={18} /> },
-  { id: 'caixa', label: 'Caixa', icon: <ShoppingCart size={18} /> },
-  { id: 'financeiro', label: 'Financeiro', icon: <TrendingUp size={18} /> },
-  { id: 'biblioteca', label: 'Biblioteca', icon: <BookOpen size={18} /> },
-  { id: 'calendario', label: 'Calendário', icon: <CalendarDays size={18} /> },
-  { id: 'comunicacao', label: 'Comunicação', icon: <MessageSquare size={18} /> },
-  { id: 'relatorios', label: 'Relatórios', icon: <BarChart size={18} /> },
-  { id: 'configuracoes', label: 'Configurações', icon: <Settings size={18} /> },
-];
+const USER_FORM_MODULE_ICONS: Record<string, React.ReactNode> = {
+  inicio: <LayoutDashboard size={18} />,
+  gestao: <Briefcase size={18} />,
+  secretaria: <FileText size={18} />,
+  calendario: <CalendarDays size={18} />,
+  comunicacao: <MessageSquare size={18} />,
+  parceiros: <Handshake size={18} />,
+  financeiro: <TrendingUp size={18} />,
+  patrimonio: <Archive size={18} />,
+  caixa: <ShoppingCart size={18} />,
+  cadastros: <UserPlus size={18} />,
+  biblioteca: <BookOpen size={18} />,
+  relatorios: <BarChart size={18} />,
+  configuracoes: <Settings size={18} />,
+};
+
+export const USER_FORM_MODULES = GESTOR_MAIN_NAVIGATION.map(item => ({
+  id: item.id,
+  label: item.id === 'inicio' ? 'Dashboard' : item.label,
+  icon: USER_FORM_MODULE_ICONS[item.id],
+}));
 
 export const USER_FORM_FINANCEIRO_TABS = [
   { id: 'resumo', label: 'Resumo', icon: <Layers size={16} /> },
   { id: 'receber', label: 'Contas a Receber', icon: <TrendingUp size={16} /> },
-  { id: 'despesas', label: 'Despesas', icon: <TrendingDown size={16} /> },
+  { id: 'despesas', label: 'Contas a Pagar', icon: <TrendingDown size={16} /> },
+  { id: 'emprestimos', label: 'Empréstimos', icon: <Landmark size={16} /> },
   { id: 'transferencias', label: 'Transferências', icon: <ArrowRightLeft size={16} /> },
   { id: 'conciliacao-bancaria', label: 'Conciliação Bancária', icon: <FileText size={16} /> },
   { id: 'outros-debitos', label: 'Outros Débitos', icon: <TrendingDown size={16} /> },
   { id: 'outros-creditos', label: 'Outros Créditos', icon: <TrendingUp size={16} /> },
 ];
 
-const CADASTROS_TABS = [
-  { id: 'cadastros-checklist', label: 'Check List Estágio' },
-  { id: 'cadastros-ead', label: 'Cursos EAD' },
-  { id: 'cadastros-especializacao', label: 'Cursos Especialização' },
-  { id: 'cadastros-livres', label: 'Cursos Livres' },
-  { id: 'cadastros-tecnicos', label: 'Cursos Técnicos' },
-  { id: 'cadastros-superior', label: 'Ensino Superior' },
-  { id: 'cadastros-ficha', label: 'Ficha Matrícula' },
-  { id: 'cadastros-modelos', label: 'Modelos Documentos' },
-];
-
-const SECRETARIA_TABS = [
-  { id: 'solicitacoes', label: 'Solicitações' },
-  { id: 'carteirinhas', label: 'Carteirinhas de Estudante' },
-  { id: 'declaracoes', label: 'Declaração de Matrícula' },
-  { id: 'historico', label: 'Histórico de Emissões' },
-  { id: 'recebimentos', label: 'Recebimentos / Baixa' },
-];
+const CADASTROS_TABS = GESTOR_CADASTRO_NAVIGATION.map(item => ({ ...item }));
 
 const COMUNICACAO_TABS = [
-  { id: 'comunicacao-mensagem', label: 'Mensagens internas' },
-  { id: 'comunicacao-whatsapp', label: 'WhatsApp' },
+  { id: 'comunicacao-mensagem', label: 'Atendimento — Portal e app' },
+  { id: 'comunicacao-whatsapp', label: 'Atendimento — WhatsApp e operações' },
+  { id: 'comunicacao-automacoes', label: 'Automações multicanal' },
+];
+
+const GESTAO_TURMA_TABS = [
+  { id: 'resumo', label: 'Resumo' },
+  { id: 'alunos', label: 'Alunos' },
+  { id: 'grade', label: 'Grade e Professores / Aulas' },
+  { id: 'atividades', label: 'Atividades' },
+  { id: 'diarios', label: 'Diários' },
+  { id: 'financeiro', label: 'Financeiro da Turma' },
+  { id: 'vacinas', label: 'Vacinas' },
+  { id: 'estagio', label: 'Estágio' },
+  { id: 'academico', label: 'Ciclo Acadêmico' },
+  { id: 'configuracoes', label: 'Configurações da Turma' },
 ];
 
 export const USER_FORM_MODULE_TABS: Record<string, { id: string; label: string }[]> = {
+  gestao: GESTAO_TURMA_TABS,
   cadastros: CADASTROS_TABS,
-  secretaria: SECRETARIA_TABS,
+  secretaria: [...SECRETARIA_ACCESS_OPTIONS],
   comunicacao: COMUNICACAO_TABS,
 };
 

@@ -1,10 +1,12 @@
 import { supabase } from '../../lib/supabase';
+import type { User } from '@supabase/supabase-js';
 import { onlyDigits } from '../shared/utils/identityValidation';
 import { GestorPermissions, normalizeGestorPermissions } from '../gestor/access-control';
 import { syncAlunoGoogleAvatar } from './partner-avatar-sync';
 import { isPortalScheduleBlocked, PortalScheduleRestriction } from './portal-schedule';
 import { isActivePortalStatus } from './portal-status';
 import { PORTAL_LAST_ACTIVITY_STORAGE_KEY } from '../shared/hooks/inactivity-policy';
+import { resolveGestorPoloScope } from './gestor-polo-scope';
 
 export type PortalRole = 'Aluno' | 'Professor' | 'Gestor';
 
@@ -13,6 +15,8 @@ export interface PortalAuthProfile {
   nome: string;
   email: string;
   tipo: PortalRole;
+  telefone?: string | null;
+  fotoPath?: string | null;
   activePoloId?: string | null;
   poloIds?: string[];
   context?: string | null;
@@ -25,11 +29,16 @@ export interface PortalAuthProfile {
   personalizar_permissoes?: boolean;
   isBlockedSchedule?: boolean;
   restricao_horario?: PortalScheduleRestriction | null;
+  setorComunicacao?: string | null;
+  poloComunicacaoId?: string | null;
+  podeVisualizarTodosPolos?: boolean;
+  podeVisualizarTodosSetores?: boolean;
 }
 
 export interface PortalProfileOptions {
   preferredRole?: PortalRole;
   allowedRoles?: PortalRole[];
+  authenticatedUser?: User | null;
 }
 
 export interface GestorAccessScope {
@@ -163,21 +172,16 @@ export const getGestorAccessScope = (profile?: PortalAuthProfile | null): Gestor
     };
   }
 
-  const context = (profile.context || '').trim();
   const permissions = profile.gestorPermissions || normalizeGestorPermissions(null, {
     fallbackFullAccess: false,
   });
-  const explicitPoloIds = normalizeStringArray(profile.poloIds);
-  const contextPoloIds = context && context !== 'global' ? [context] : [];
-  const allowedPoloIds = explicitPoloIds.length > 0 ? explicitPoloIds : contextPoloIds;
-  const isGlobal = permissions.allPolos && allowedPoloIds.length === 0;
-  const activePoloId = isGlobal ? (profile.activePoloId || null) : allowedPoloIds[0] || null;
 
-  return {
-    isGlobal,
-    allowedPoloIds: isGlobal ? null : allowedPoloIds,
-    activePoloId,
-  };
+  return resolveGestorPoloScope({
+    context: profile.context,
+    explicitPoloIds: profile.poloIds,
+    allPolos: permissions.allPolos,
+    preferredPoloId: profile.activePoloId,
+  });
 };
 
 const buildPartnerProfile = async (selectedPartner: any, fallbackEmail: string): Promise<PortalAuthProfile | null> => {
@@ -257,6 +261,8 @@ const buildGestorProfile = (gestorRows: any): PortalAuthProfile | null => {
     nome: gestorRows.nome,
     email: gestorRows.email,
     tipo: 'Gestor',
+    telefone: gestorRows.telefone || null,
+    fotoPath: gestorRows.foto_path || null,
     context: gestorRows.context || null,
     activePoloId: explicitPoloIds[0] || null,
     poloIds: explicitPoloIds,
@@ -266,23 +272,34 @@ const buildGestorProfile = (gestorRows: any): PortalAuthProfile | null => {
     personalizar_permissoes: personalizarPermissoes,
     isBlockedSchedule: isBlocked,
     restricao_horario: restricao || null,
+    setorComunicacao: gestorRows.setor_comunicacao || 'todos',
+    poloComunicacaoId: gestorRows.polo_comunicacao_id || null,
+    podeVisualizarTodosPolos: Boolean(gestorRows.pode_visualizar_todos_polos),
+    podeVisualizarTodosSetores: Boolean(gestorRows.pode_visualizar_todos_setores),
   };
 };
 
 export const getPortalProfile = async (options: PortalProfileOptions = {}): Promise<PortalAuthProfile | null> => {
-  const authenticatedUser = await getAuthenticatedUser();
+  const authenticatedUser =
+    options.authenticatedUser || await getAuthenticatedUser();
   const email = authenticatedUser?.email?.trim().toLowerCase();
   if (!email) return null;
 
-  const partnerSelect = 'id, nome, email, tipo, polo_id, polo_ids, status, foto_url';
+  const partnerSelect = 'id, nome, email, auth_login_email, auth_user_id, tipo, polo_id, polo_ids, status, foto_url';
+  const shouldQueryPartners = !options.allowedRoles?.length
+    || options.allowedRoles.some((role) => role === 'Aluno' || role === 'Professor');
+  let partnerRows: any[] = [];
 
-  const { data: partnerRows, error: partnerError } = await supabase
-    .from('parceiros')
-    .select(partnerSelect)
-    .ilike('email', email)
-    .in('tipo', ['Aluno', 'Professor']);
+  if (shouldQueryPartners) {
+    const { data, error } = await supabase
+      .from('parceiros')
+      .select(partnerSelect)
+      .eq('auth_user_id', authenticatedUser.id)
+      .in('tipo', ['Aluno', 'Professor']);
 
-  if (partnerError) throw new Error(partnerError.message);
+    if (error) throw new Error(error.message);
+    partnerRows = data || [];
+  }
 
   const orderedPartnerRoles = options.preferredRole && options.preferredRole !== 'Gestor'
     ? [options.preferredRole, ...(['Professor', 'Aluno'] as PortalRole[]).filter((role) => role !== options.preferredRole)]
@@ -290,7 +307,7 @@ export const getPortalProfile = async (options: PortalProfileOptions = {}): Prom
 
   for (const role of orderedPartnerRoles) {
     if (!isRoleAllowed(role, options.allowedRoles)) continue;
-    const selectedPartner = (partnerRows || []).find((p) => p.tipo === role);
+    const selectedPartner = partnerRows.find((p) => p.tipo === role);
     const partnerWithAvatar = selectedPartner?.tipo === 'Aluno'
       ? await syncAlunoGoogleAvatar(selectedPartner, authenticatedUser)
       : selectedPartner;
@@ -302,8 +319,8 @@ export const getPortalProfile = async (options: PortalProfileOptions = {}): Prom
 
   const { data: gestorRows, error: gestorError } = await supabase
     .from('usuarios_sistema')
-    .select('id, nome, email, status, context, polo_ids, permissoes, perfil_acesso_id, personalizar_permissoes, restricao_horario, perfis_acesso(permissoes, restricao_horario)')
-    .ilike('email', email)
+    .select('id, auth_user_id, nome, email, telefone, foto_path, status, context, polo_ids, permissoes, perfil_acesso_id, personalizar_permissoes, restricao_horario, setor_comunicacao, polo_comunicacao_id, pode_visualizar_todos_polos, pode_visualizar_todos_setores, perfis_acesso(permissoes, restricao_horario)')
+    .eq('auth_user_id', authenticatedUser.id)
     .limit(1)
     .maybeSingle();
 
@@ -314,10 +331,23 @@ export const getPortalProfile = async (options: PortalProfileOptions = {}): Prom
   return buildGestorProfile(gestorRows);
 };
 
-export const getInstitutionalProfiles = async (): Promise<PortalAuthProfile[]> => {
+export const getInstitutionalProfiles = async (
+  authenticatedUser?: User | null,
+): Promise<PortalAuthProfile[]> => {
+  const resolvedUser = authenticatedUser || await getAuthenticatedUser();
+  if (!resolvedUser) return [];
+
   const [gestor, professor] = await Promise.all([
-    getPortalProfile({ preferredRole: 'Gestor', allowedRoles: ['Gestor'] }),
-    getPortalProfile({ preferredRole: 'Professor', allowedRoles: ['Professor'] }),
+    getPortalProfile({
+      preferredRole: 'Gestor',
+      allowedRoles: ['Gestor'],
+      authenticatedUser: resolvedUser,
+    }),
+    getPortalProfile({
+      preferredRole: 'Professor',
+      allowedRoles: ['Professor'],
+      authenticatedUser: resolvedUser,
+    }),
   ]);
 
   return [gestor, professor].filter(Boolean) as PortalAuthProfile[];

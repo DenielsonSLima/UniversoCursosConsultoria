@@ -17,6 +17,7 @@ import {
   type BaneseAccessToken,
   BaneseAdapterConfigurationError,
   BaneseAdapterError,
+  BaneseCancellationRequiresReviewError,
   type Environment,
   type SupabaseAdminRpcClient,
 } from "./types.ts";
@@ -34,61 +35,186 @@ import {
   normalizeBanesePixPayload,
   normalizeBanesePixQrImage,
 } from "../../internal/pix-validation.ts";
+import { renderOfficialBanesePixQr } from "../../internal/official-pix-qr.ts";
 
 const isProduction = (environment: Environment) => environment === "production";
 
-const hasPixReturn = (raw: unknown) => {
-  const record = asRecord(raw);
-  const pixPayload = firstString(
-    record.brCodeEMV,
-    record.dsUrl,
-    record.brCode,
-    record.BrCodeEMV,
-    record.copiaCola,
-    record.pixPayload,
-    record.pix,
-    record.qrText,
-    record.txId,
-    record.txid,
-  );
-  const pixEncodedImage = firstString(
-    record.base64,
-    record.qrCode,
-    record.qrcode,
-    record.qrCodeBase64,
-    record.qr_code_base64,
-    record.qrCodeImage,
-    record.pixQrCode,
-    record.pixImagem,
-  );
-  return { pixPayload, pixEncodedImage };
+const PIX_PAYLOAD_FIELD_NAMES = new Set([
+  "brcodeemv",
+  "dsurl",
+  "brcode",
+  "copiacola",
+  "pixpayload",
+  "qrtext",
+  "emv",
+]);
+
+const PIX_IMAGE_FIELD_NAMES = new Set([
+  "base64",
+  "qrcode",
+  "qrcodebase64",
+  "qrcodeimage",
+  "pixqrcode",
+  "piximagem",
+  "imagemqrcode",
+]);
+
+const normalizedFieldName = (value: string) =>
+  value.replace(/[^a-z0-9]/gi, "").toLowerCase();
+
+const pixReturnCandidates = (raw: unknown) => {
+  const payloadCandidates: string[] = [];
+  const imageCandidates: string[] = [];
+  let visited = 0;
+
+  const visit = (
+    value: unknown,
+    parentPath: string[],
+    depth: number,
+  ) => {
+    if (
+      depth > 4 || visited > 120 || !value || typeof value !== "object"
+    ) {
+      return;
+    }
+    visited += 1;
+
+    for (const [key, child] of Object.entries(asRecord(value))) {
+      const normalizedKey = normalizedFieldName(key);
+      const path = [...parentPath, normalizedKey];
+      const pixScoped = path.some((part) =>
+        /pix|qr|brcode|emv|copia/.test(part)
+      );
+
+      if (typeof child === "string") {
+        const candidate = child.trim();
+        if (!candidate) continue;
+
+        if (
+          PIX_PAYLOAD_FIELD_NAMES.has(normalizedKey) ||
+          (normalizedKey === "payload" && pixScoped)
+        ) {
+          payloadCandidates.push(candidate);
+        }
+        if (
+          PIX_IMAGE_FIELD_NAMES.has(normalizedKey) ||
+          (normalizedKey === "imagem" && pixScoped)
+        ) {
+          imageCandidates.push(candidate);
+        }
+        // Alguns contratos chamam o conteúdo simplesmente de QRCode. Como o
+        // validador distingue EMV de imagem, é seguro tentar ambos os formatos.
+        if (normalizedKey === "qrcode") {
+          payloadCandidates.push(candidate);
+        }
+        continue;
+      }
+
+      visit(child, path, depth + 1);
+    }
+  };
+
+  visit(raw, [], 0);
+  return { payloadCandidates, imageCandidates };
 };
 
-const normalizeBanesePixFromResponse = (
+const normalizeBanesePixFromResponse = async (
   raw: unknown,
   amount: number,
 ) => {
-  const { pixPayload, pixEncodedImage } = hasPixReturn(raw);
+  const { payloadCandidates, imageCandidates } = pixReturnCandidates(raw);
+  let pixPayload: string | null = null;
+  let pixEncodedImage: string | null = null;
 
-  if (!pixPayload || !pixEncodedImage) return {
+  for (const candidate of payloadCandidates) {
+    try {
+      pixPayload = normalizeBanesePixPayload(candidate, amount).payload;
+      break;
+    } catch {
+      // O diagnóstico persiste apenas presença/validade, nunca o conteúdo.
+    }
+  }
+  for (const candidate of imageCandidates) {
+    try {
+      pixEncodedImage = normalizeBanesePixQrImage(candidate);
+      break;
+    } catch {
+      // O diagnóstico persiste apenas presença/validade, nunca o conteúdo.
+    }
+  }
+
+  let imageSource: "bank" | "generated_from_official_emv" | null =
+    pixEncodedImage ? "bank" : null;
+  if (pixPayload && !pixEncodedImage) {
+    pixEncodedImage = await renderOfficialBanesePixQr(pixPayload);
+    imageSource = "generated_from_official_emv";
+  }
+
+  const complete = Boolean(pixPayload && pixEncodedImage);
+  return {
+    pixPayload: complete ? pixPayload : null,
+    pixEncodedImage: complete ? pixEncodedImage : null,
+    diagnostic: {
+      payloadCandidatePresent: payloadCandidates.length > 0,
+      imageCandidatePresent: imageCandidates.length > 0,
+      payloadValid: Boolean(pixPayload),
+      imageValid: Boolean(pixEncodedImage),
+      imageSource,
+      complete,
+    },
+  };
+};
+
+const normalizeBanesePixFromResponses = async (
+  responses: Array<{ source: "creation" | "confirmation"; raw: unknown }>,
+  amount: number,
+) => {
+  const diagnostics: Array<Record<string, unknown>> = [];
+  for (const response of responses) {
+    const normalized = await normalizeBanesePixFromResponse(
+      response.raw,
+      amount,
+    );
+    diagnostics.push({
+      source: response.source,
+      ...normalized.diagnostic,
+    });
+    if (normalized.pixPayload && normalized.pixEncodedImage) {
+      return {
+        pixPayload: normalized.pixPayload,
+        pixEncodedImage: normalized.pixEncodedImage,
+        diagnostic: {
+          source: response.source,
+          complete: true,
+          attempts: diagnostics,
+        },
+      };
+    }
+  }
+  return {
     pixPayload: null,
     pixEncodedImage: null,
+    diagnostic: {
+      source: null,
+      complete: false,
+      attempts: diagnostics,
+    },
   };
-
-  try {
-    const payload = normalizeBanesePixPayload(pixPayload, amount).payload;
-    const encodedImage = normalizeBanesePixQrImage(pixEncodedImage);
-    return {
-      pixPayload: payload,
-      pixEncodedImage: encodedImage,
-    };
-  } catch {
-    return {
-      pixPayload: null,
-      pixEncodedImage: null,
-    };
-  }
 };
+
+const withProductionPix = (
+  result: AdapterCreateChargeResult,
+  pix: Awaited<ReturnType<typeof normalizeBanesePixFromResponses>>,
+): AdapterCreateChargeResult => ({
+  ...result,
+  pixPayload: pix.pixPayload,
+  pixEncodedImage: pix.pixEncodedImage,
+  raw: {
+    ...asRecord(result.raw),
+    // Diagnóstico deliberadamente sem payload, imagem ou credenciais.
+    pixDiagnostic: pix.diagnostic,
+  },
+});
 
 export const createBaneseBoletoCharge = async (
   input: AdapterCreateChargeInput,
@@ -127,18 +253,6 @@ export const createBaneseBoletoCharge = async (
     throw new BaneseAdapterConfigurationError(
       "Boleto Banese requer um recebivel persistido antes do registro bancario.",
     );
-  }
-
-  if (isProduction(input.environment)) {
-    const amountCents = Math.round(Number(input.amount) * 100);
-    if (
-      !Number.isSafeInteger(amountCents) || amountCents < 200 ||
-      amountCents > 1000
-    ) {
-      throw new BaneseAdapterConfigurationError(
-        "Boleto Banese em producao deve ficar entre R$2,00 e R$10,00.",
-      );
-    }
   }
 
   // Tudo que depende somente do pedido local precisa falhar antes da reserva.
@@ -206,12 +320,12 @@ export const createBaneseBoletoCharge = async (
         }
       }
       if (isProduction(input.environment)) {
-        const productionPix = normalizeBanesePixFromResponse(
-          confirmedRaw,
+        const productionPix = await normalizeBanesePixFromResponses(
+          [{ source: "confirmation", raw: confirmedRaw }],
           input.amount,
         );
-        return {
-          ...boletoResultFromResponse(
+        return withProductionPix(
+          boletoResultFromResponse(
             input,
             payload,
             convenio,
@@ -219,9 +333,8 @@ export const createBaneseBoletoCharge = async (
             confirmedRaw,
             true,
           ),
-          pixPayload: productionPix.pixPayload,
-          pixEncodedImage: productionPix.pixEncodedImage,
-        };
+          productionPix,
+        );
       }
       return boletoResultFromResponse(
         input,
@@ -289,10 +402,6 @@ export const createBaneseBoletoCharge = async (
     }
   }
 
-  const pix = isProduction(input.environment)
-    ? normalizeBanesePixFromResponse(confirmedRaw, input.amount)
-    : { pixPayload: null, pixEncodedImage: null };
-
   const result = boletoResultFromResponse(
     input,
     payload,
@@ -302,11 +411,14 @@ export const createBaneseBoletoCharge = async (
     false,
   );
   if (isProduction(input.environment)) {
-    return {
-      ...result,
-      pixPayload: pix.pixPayload,
-      pixEncodedImage: pix.pixEncodedImage,
-    };
+    // O e-mail final do Banese confirma que o BolePix é devolvido no último
+    // passo da criação. A consulta posterior usada para confirmar juros/multa
+    // pode não repetir o QR; por isso a resposta original do POST prevalece.
+    const pix = await normalizeBanesePixFromResponses([
+      { source: "creation", raw },
+      { source: "confirmation", raw: confirmedRaw },
+    ], input.amount);
+    return withProductionPix(result, pix);
   }
 
   return result;
@@ -318,6 +430,8 @@ export const queryBaneseBoleto = async (
   input: {
     convenio: unknown;
     nossoNumero: unknown;
+    accessToken?: BaneseAccessToken;
+    signal?: AbortSignal;
   },
 ) => {
   assertEnvironment(environment);
@@ -329,12 +443,14 @@ export const queryBaneseBoleto = async (
     );
   }
 
-  const token = await requestBaneseBoletoAccessToken(admin, environment);
+  const token = input.accessToken ??
+    await requestBaneseBoletoAccessToken(admin, environment);
   const baseEndpoint = `${
     BANESE_BOLETO_ENDPOINTS[environment].baseUrl
   }/convenios/${convenio}/boletos/${nossoNumero}`;
   const response = await fetch(baseEndpoint, {
     headers: { Authorization: `${token.tokenType} ${token.accessToken}` },
+    signal: input.signal,
   });
   const raw = await readResponseBody(response);
   if (!response.ok) {
@@ -362,33 +478,43 @@ export const queryBaneseBoleto = async (
     boleto.CodigoSituacaoBoleto ?? boleto.codigoSituacaoBoleto,
   );
   const remoteStatus = BANESE_BOLETO_STATUS[situationCode] || "UNKNOWN";
-  let payments: Array<Record<string, unknown>> = [];
+  let payments: Array<Record<string, unknown>>;
 
-  if (situationCode === 3) {
-    const paymentResponse = await fetch(
-      `${baseEndpoint}/pagamentos/efetivados`,
-      {
-        headers: { Authorization: `${token.tokenType} ${token.accessToken}` },
-      },
-    );
-    const paymentRaw = await readResponseBody(paymentResponse);
-    if (!paymentResponse.ok) {
-      throw new BaneseAdapterError(
-        `Boleto Banese esta pago, mas a consulta dos pagamentos efetivados falhou (${paymentResponse.status}).`,
-      );
-    }
+  // O banco confirmou por e-mail que PagamentosEfetivados prevalece sobre
+  // CodigoSituacaoBoleto. Por isso a consulta não pode depender do código 3.
+  const paymentResponse = await fetch(
+    `${baseEndpoint}/pagamentos/efetivados`,
+    {
+      headers: { Authorization: `${token.tokenType} ${token.accessToken}` },
+      signal: input.signal,
+    },
+  );
+  const paymentRaw = await readResponseBody(paymentResponse);
+  if (paymentResponse.ok) {
     const paymentRecord = asRecord(paymentRaw);
-    payments = Array.isArray(paymentRecord.PagamentosEfetivados)
-      ? paymentRecord.PagamentosEfetivados.map(asRecord)
+    const paymentItems = Array.isArray(paymentRaw)
+      ? paymentRaw
+      : paymentRecord.PagamentosEfetivados ??
+        paymentRecord.pagamentosEfetivados ??
+        [];
+    payments = Array.isArray(paymentItems)
+      ? paymentItems.map(asRecord).filter((item) =>
+        Object.keys(item).length > 0
+      )
       : [];
+  } else {
+    throw new BaneseAdapterError(
+      `A consulta canônica de PagamentosEfetivados do Banese falhou (${paymentResponse.status}); o estado financeiro do boleto não pôde ser confirmado.`,
+    );
   }
+  const paid = payments.length > 0;
 
   return {
     convenio,
     nossoNumero,
     situationCode,
-    remoteStatus,
-    paid: situationCode === 3,
+    remoteStatus: paid ? BANESE_BOLETO_STATUS[3] || "PAID" : remoteStatus,
+    paid,
     payments,
     financialTerms,
     raw: sanitizedBoletoSnapshot(boleto),
@@ -401,6 +527,7 @@ export const cancelBaneseBoleto = async (
   input: {
     convenio: unknown;
     nossoNumero: unknown;
+    onMutationStart?: () => void;
   },
 ) => {
   assertEnvironment(environment);
@@ -416,8 +543,8 @@ export const cancelBaneseBoleto = async (
     convenio,
     nossoNumero,
   });
-  if (current.situationCode === 3) {
-    throw new BaneseAdapterError(
+  if (current.paid) {
+    throw new BaneseCancellationRequiresReviewError(
       "O Banese ja confirmou o pagamento deste boleto. Atualize a conciliacao antes da baixa manual.",
     );
   }
@@ -432,7 +559,10 @@ export const cancelBaneseBoleto = async (
     };
   }
   if (current.situationCode !== 2) {
-    throw new BaneseAdapterError(
+    const ErrorType = current.situationCode === 0
+      ? BaneseAdapterError
+      : BaneseCancellationRequiresReviewError;
+    throw new ErrorType(
       `Boleto Banese nao pode ser baixado na situacao ${current.situationCode} (${current.remoteStatus}).`,
     );
   }
@@ -441,6 +571,7 @@ export const cancelBaneseBoleto = async (
   const endpoint = `${
     BANESE_BOLETO_ENDPOINTS[environment].baseUrl
   }/convenios/${convenio}/boletos/${nossoNumero}/baixa`;
+  input.onMutationStart?.();
   const response = await fetch(endpoint, {
     method: "PUT",
     headers: { Authorization: `${token.tokenType} ${token.accessToken}` },
@@ -451,7 +582,7 @@ export const cancelBaneseBoleto = async (
     convenio,
     nossoNumero,
   });
-  if (confirmed.situationCode === 3) {
+  if (confirmed.paid) {
     throw new BaneseAdapterError(
       "O Banese confirmou pagamento durante a tentativa de baixa. O recebimento manual nao foi registrado.",
     );

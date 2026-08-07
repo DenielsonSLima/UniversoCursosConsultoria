@@ -1,6 +1,10 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { bearerTokenFromRequest, requireGestorAtivo, requireGestorTab } from "../_shared/authz.ts";
+import {
+  bearerTokenFromRequest,
+  requireGestorAtivo,
+  requireGestorTab,
+  requireGlobalFinancialTabAccess,
+} from "../_shared/authz.ts";
 import { buildCorsHeaders, getClientIp, isRateLimitExceeded, json } from "../_shared/http.ts";
 import { insertWhatsAppMessage, normalizeWhatsAppPhone, upsertWhatsAppConversation } from "../_shared/whatsapp.ts";
 
@@ -83,6 +87,7 @@ Deno.serve(async (req: Request) => {
     if (!isWorker) {
       const gestor = await requireGestorAtivo(req, admin);
       requireGestorTab(gestor, "comunicacao", "comunicacao-whatsapp");
+      requireGlobalFinancialTabAccess(gestor, "receber");
     }
 
     const body = await req.json().catch(() => ({}));
@@ -94,6 +99,10 @@ Deno.serve(async (req: Request) => {
     const requestedKeys = Array.isArray(body.keys)
       ? new Set(body.keys.map((key: unknown) => String(key)))
       : null;
+
+    if (!isWorker && !dryRun) {
+      throw new Error("Envio real permitido somente para o executor interno.");
+    }
 
     if ((force || targetDate !== localDateIso() || alunoId) && !isWorker) {
       throw new Error("Filtros de teste sao restritos ao executor interno.");
@@ -143,7 +152,19 @@ Deno.serve(async (req: Request) => {
     const candidates = ((candidateData || []) as Candidate[]).filter((candidate) =>
       !requestedKeys || requestedKeys.has(candidate.automation_key)
     );
-    if (dryRun) return respondJson({ ok: true, dryRun: true, targetDate, candidates });
+    if (dryRun) {
+      const byAutomation = candidates.reduce<Record<string, number>>((summary, candidate) => {
+        summary[candidate.automation_key] = (summary[candidate.automation_key] || 0) + 1;
+        return summary;
+      }, {});
+      return respondJson({
+        ok: true,
+        dryRun: true,
+        targetDate,
+        total: candidates.length,
+        byAutomation,
+      });
+    }
 
     const graphVersion = normalizeGraphVersion(config?.wa_graph_version);
     let sent = 0;
@@ -165,7 +186,9 @@ Deno.serve(async (req: Request) => {
           receivable_id: candidate.receivable_id,
           receivable_ids: candidate.receivable_ids || [],
           reference_date: candidate.reference_date,
-          dedupe_key: candidate.dedupe_key,
+          dedupe_key: testMode
+            ? `test:${targetDate}:${testAlunoId}:${candidate.dedupe_key}`
+            : candidate.dedupe_key,
           target_phone: phone,
           content: candidate.message_content,
           status: "processing",

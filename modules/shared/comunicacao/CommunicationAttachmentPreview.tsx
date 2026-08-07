@@ -1,5 +1,5 @@
 import React from 'react';
-import { Download, File, FileSpreadsheet, FileText, Image } from 'lucide-react';
+import { Download, File, FileSpreadsheet, FileText, Image, Mic } from 'lucide-react';
 import {
   CommunicationAttachmentRecord,
   getCommunicationAttachmentDisplayUrl,
@@ -13,9 +13,11 @@ interface CommunicationAttachmentPreviewProps {
 }
 
 const isImage = (value: string) => /\.(jpe?g|png|gif|webp)(\?.*)?$/i.test(value);
+const isAudio = (value: string) => /\.(mp3|m4a|mp4|ogg|oga|wav|webm)(\?.*)?$/i.test(value);
 
 const FileIcon = ({ value }: { value: string }) => {
   const lower = value.toLowerCase();
+  if (/\.(mp3|m4a|mp4|ogg|oga|wav|webm)(\?.*)?$/.test(lower)) return <Mic size={14} />;
   if (/\.(jpe?g|png|gif|webp)(\?.*)?$/.test(lower)) return <Image size={14} />;
   if (/\.pdf(\?.*)?$/.test(lower)) return <FileText size={14} className="text-red-500" />;
   if (/\.(xls|xlsx)(\?.*)?$/.test(lower)) return <FileSpreadsheet size={14} className="text-emerald-600" />;
@@ -50,6 +52,18 @@ export const CommunicationAttachmentPreview: React.FC<CommunicationAttachmentPre
             className="max-h-[160px] max-w-[220px] cursor-pointer rounded-xl object-cover"
           />
         </a>
+      ) : isAudio(fileName) ? (
+        <div className={`min-w-[250px] rounded-xl px-3 py-2 ${outgoing ? 'bg-white/10' : 'bg-slate-50'}`}>
+          <div className={`mb-2 flex items-center gap-2 text-[11px] font-bold ${outgoing ? 'text-blue-100' : 'text-slate-600'}`}>
+            <span className={`flex h-7 w-7 items-center justify-center rounded-full ${outgoing ? 'bg-white/15 text-white' : 'bg-rose-100 text-rose-600'}`}>
+              <Mic size={14} />
+            </span>
+            <span className="max-w-[180px] truncate">Mensagem de voz</span>
+          </div>
+          <audio controls preload="metadata" src={url} className="h-9 w-full max-w-[280px]" aria-label={`Reproduzir ${fileName}`}>
+            Seu navegador não oferece suporte à reprodução de áudio.
+          </audio>
+        </div>
       ) : (
         <a
           href={url}

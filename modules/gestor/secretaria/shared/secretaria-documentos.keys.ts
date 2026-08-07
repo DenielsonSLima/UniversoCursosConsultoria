@@ -30,6 +30,8 @@ export const secretariaDocumentosKeys = {
     activeTurmaOnly: boolean
   ) =>
     [...secretariaDocumentosKeys.document(context, documentId), 'turmas', { technicalOnly, activeTurmaOnly }] as const,
+  modulos: (context: SecretariaContext, documentId: SecretariaDocumentoId, turmaId: string) =>
+    [...secretariaDocumentosKeys.document(context, documentId), 'turmas', turmaId, 'modulos'] as const,
   turmaSummary: (context: SecretariaContext, documentId: SecretariaDocumentoId, turmaId: string) =>
     [...secretariaDocumentosKeys.document(context, documentId), 'turma', turmaId] as const,
   emissions: (context: SecretariaContext, documentId: SecretariaDocumentoId) =>

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Building, ShoppingBag, TrendingDown, Plus, Edit2,
+  Building, ShoppingBag, TrendingDown, TrendingUp, Plus, Edit2,
   RefreshCw, X, Check, Loader2, Wallet2, Power, PowerOff,
 } from 'lucide-react';
 import {
@@ -236,6 +236,7 @@ const CategoriasFinanceirasConfig: React.FC = () => {
   const fixas = allCategorias.filter((c) => c.tipo === 'DESPESA_FIXA');
   const variaveis = allCategorias.filter((c) => c.tipo === 'DESPESA_VARIAVEL');
   const outros = allCategorias.filter((c) => c.tipo === 'OUTRO_DEBITO');
+  const creditos = allCategorias.filter((c) => c.tipo === 'OUTRO_CREDITO');
 
   if (isLoading) {
     return (
@@ -284,14 +285,23 @@ const CategoriasFinanceirasConfig: React.FC = () => {
         />
       </div>
 
-      {/* Seção: Outros Débitos */}
-      <div className="border-t border-slate-100 pt-6">
+      {/* Seções: Outros Débitos | Outros Créditos */}
+      <div className="grid gap-8 border-t border-slate-100 pt-6 xl:grid-cols-2">
         <ColunaCategorias
           tipo="OUTRO_DEBITO"
           label="OUTROS DÉBITOS"
           icon={<TrendingDown size={16} className="text-indigo-500" />}
           accentColor="border-indigo-500"
           items={outros}
+          onToggleStatus={(item) => toggleStatusMutation.mutate(item)}
+          isToggling={toggleStatusMutation.isPending}
+        />
+        <ColunaCategorias
+          tipo="OUTRO_CREDITO"
+          label="OUTROS CRÉDITOS"
+          icon={<TrendingUp size={16} className="text-emerald-600" />}
+          accentColor="border-emerald-500"
+          items={creditos}
           onToggleStatus={(item) => toggleStatusMutation.mutate(item)}
           isToggling={toggleStatusMutation.isPending}
         />

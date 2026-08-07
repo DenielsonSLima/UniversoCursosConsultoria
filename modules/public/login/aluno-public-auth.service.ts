@@ -1,9 +1,31 @@
 import { supabase } from '../../../lib/supabase';
+import { Capacitor } from '@capacitor/core';
 import { buildAuthRedirectUrl } from '../../../lib/app-url';
+import {
+  clearPendingOAuthReturn,
+  rememberPendingOAuthReturn,
+} from '../../shared/auth/oauth-return-state';
+import {
+  isNativeOAuthPlatform,
+  startNativeGoogleOAuth,
+} from '../../shared/auth/native-oauth';
 import { loginService } from '../../login/login.service';
 import { getPortalProfile } from '../../login/portal-session';
 import { TERMS_VERSION } from '../../shared/constants/terms';
 import { isValidCpf, isValidEmail, normalizeEmail } from '../../shared/utils/identityValidation';
+import { isPublicAlunoOlderThanTen } from './aluno-birth-date';
+import { relationshipPreferenceService } from './relationship-consent.service';
+import {
+  RELATIONSHIP_BIRTHDAY_LEGAL_BASIS,
+  RELATIONSHIP_BIRTHDAY_LIA_VERSION,
+  RELATIONSHIP_BIRTHDAY_POLICY_VERSION,
+  type RelationshipPreferenceSurface,
+} from '../../shared/constants/relationship-consent';
+
+type PublicSignupRelationshipSurface = Extract<
+  RelationshipPreferenceSurface,
+  'public_signup_web' | 'public_signup_app'
+>;
 
 export interface PublicAlunoSignupData {
   nome: string;
@@ -13,8 +35,48 @@ export interface PublicAlunoSignupData {
   dataNascimento: string;
   password: string;
   acceptedTerms: boolean;
+  cep: string;
+  endereco: string;
+  numero: string;
+  complemento: string;
+  bairro: string;
+  cidade: string;
+  uf: string;
+  turnstileToken: string;
   redirectPath?: string;
+  appFlow?: boolean;
 }
+
+export const PUBLIC_ALUNO_ALREADY_REGISTERED_CODE = 'public_aluno_already_registered' as const;
+export const PUBLIC_ALUNO_ALREADY_REGISTERED_MESSAGE =
+  'Usuário já cadastrado. Entre com o e-mail informado no cadastro ou use Recuperar senha para acessar sua conta.';
+export const PUBLIC_ALUNO_CONFIRMATION_RESENT_MESSAGE =
+  'Usuário já cadastrado. Enviamos um novo link de confirmação para o e-mail informado. Você também pode Entrar ou usar Recuperar senha.';
+
+export class PublicAlunoAlreadyRegisteredError extends Error {
+  readonly code = PUBLIC_ALUNO_ALREADY_REGISTERED_CODE;
+  readonly confirmationResent: boolean;
+
+  constructor(confirmationResent = false) {
+    super(confirmationResent
+      ? PUBLIC_ALUNO_CONFIRMATION_RESENT_MESSAGE
+      : PUBLIC_ALUNO_ALREADY_REGISTERED_MESSAGE);
+    this.name = 'PublicAlunoAlreadyRegisteredError';
+    this.confirmationResent = confirmationResent;
+  }
+}
+
+export const isPublicAlunoAlreadyRegisteredError = (
+  error: unknown,
+): error is PublicAlunoAlreadyRegisteredError => (
+  error instanceof PublicAlunoAlreadyRegisteredError
+  || (
+    typeof error === 'object'
+    && error !== null
+    && 'code' in error
+    && error.code === PUBLIC_ALUNO_ALREADY_REGISTERED_CODE
+  )
+);
 
 interface FinalizeAlunoFirstAccessData {
   partnerId: string;
@@ -24,7 +86,30 @@ interface FinalizeAlunoFirstAccessData {
   newPassword?: string;
 }
 
-type PublicAlunoProfileData = Omit<PublicAlunoSignupData, 'password'>;
+type PublicAlunoProfileData = Omit<PublicAlunoSignupData, 'password' | 'redirectPath' | 'appFlow'> & {
+  relationshipBirthdayPreferenceSurface?: PublicSignupRelationshipSurface;
+};
+type LegacyPublicAlunoProfileData = Omit<
+  PublicAlunoProfileData,
+  | 'cep'
+  | 'endereco'
+  | 'numero'
+  | 'complemento'
+  | 'bairro'
+  | 'cidade'
+  | 'uf'
+  | 'turnstileToken'
+> & Partial<Pick<
+  PublicAlunoProfileData,
+  | 'cep'
+  | 'endereco'
+  | 'numero'
+  | 'complemento'
+  | 'bairro'
+  | 'cidade'
+  | 'uf'
+  | 'relationshipBirthdayPreferenceSurface'
+>>;
 
 const onlyDigits = (value: string) => value.replace(/\D/g, '');
 export const getSafePublicAlunoRedirectPath = (value?: string | null, fallback = '/aluno') => {
@@ -44,21 +129,80 @@ export const getSafePublicAlunoRedirectPath = (value?: string | null, fallback =
 };
 
 const isStrongPassword = (value: string) => (
-  value.length >= 6 && /[A-Z]/.test(value) && /[a-z]/.test(value) && /\d/.test(value)
+  value.length >= 8 && /[A-Z]/.test(value) && /[a-z]/.test(value) && /\d/.test(value)
 );
+
+const isAlreadyRegisteredSignupMessage = (message: string) => {
+  const lower = message.toLowerCase();
+  return (
+    lower.includes('already registered')
+    || lower.includes('user already')
+    || lower.includes('duplicate')
+    || lower.includes('cpf_cnpj')
+    || lower.includes('public_aluno_cpf_unique')
+    || lower.includes('cpf ja esta cadastrado')
+    || lower.includes('cpf já está cadastrado')
+  );
+};
 
 const getFriendlySignupError = (message: string) => {
   const lower = message.toLowerCase();
-  if (lower.includes('already registered') || lower.includes('user already')) {
-    return 'Este e-mail já possui acesso. Entre com sua senha para continuar a compra.';
-  }
+  if (isAlreadyRegisteredSignupMessage(message)) return PUBLIC_ALUNO_ALREADY_REGISTERED_MESSAGE;
   if (lower.includes('password')) {
-    return 'A senha precisa ter pelo menos 6 caracteres.';
+    return 'A senha precisa ter pelo menos 8 caracteres.';
   }
-  if (lower.includes('duplicate') || lower.includes('cpf_cnpj')) {
-    return 'Este CPF já está cadastrado. Entre com seu e-mail ou fale com a secretaria.';
+  if (
+    lower.includes('unexpected failure')
+    || lower.includes('check server logs')
+    || lower.includes('database error saving new user')
+  ) {
+    return 'Não foi possível concluir o cadastro agora. Tente novamente em instantes; se o problema continuar, fale com a secretaria.';
   }
-  return message;
+  return message || 'Não foi possível concluir o cadastro. Tente novamente.';
+};
+
+const assertPublicAlunoCpfAvailable = async (
+  cpf: string,
+  email: string,
+  turnstileToken: string,
+) => {
+  const { data, error } = await supabase.functions.invoke('portal-auth', {
+    body: {
+      action: 'signup',
+      identifier: email,
+      cpf,
+      turnstileToken,
+      challengeContext: Capacitor.isNativePlatform() ? 'native' : 'web',
+    },
+  });
+
+  if (!error && data?.available === true) return;
+
+  const context = (error as {
+    context?: { status?: number; clone?: () => Response };
+  } | null)?.context;
+  let code = '';
+
+  if (typeof context?.clone === 'function') {
+    try {
+      const body = await context.clone().json() as { code?: unknown };
+      code = typeof body?.code === 'string' ? body.code : '';
+    } catch {
+      // O status HTTP abaixo ainda produz uma mensagem segura.
+    }
+  }
+
+  if (context?.status === 409 || code === 'cpf_already_registered') {
+    throw new PublicAlunoAlreadyRegisteredError();
+  }
+  if (context?.status === 403 || code === 'challenge_failed') {
+    throw new Error('A verificação de segurança expirou ou falhou. Tente verificá-la novamente.');
+  }
+  if (context?.status === 429 || code === 'rate_limited') {
+    throw new Error('Muitas tentativas. Aguarde alguns minutos e tente novamente.');
+  }
+
+  throw new Error('Não foi possível verificar o CPF agora. Tente novamente em instantes.');
 };
 
 const isExistingUserError = (message: string) => {
@@ -94,11 +238,39 @@ const getFriendlyAuthRedirectError = (message: string) => {
   return decoded || 'Não foi possível concluir a confirmação do e-mail. Tente entrar novamente.';
 };
 
-const finalizePublicAlunoSignup = async (data: PublicAlunoProfileData) => {
+const ensureRelationshipTermsDefault = async (
+  surface: 'public_signup_web' | 'public_signup_app' | 'student_first_access',
+) => {
+  try {
+    await relationshipPreferenceService.ensureTermsDefault(surface);
+  } catch (error) {
+    // O trigger transacional do banco é a autoridade. Uma indisponibilidade
+    // deste reforço autenticado não pode transformar um cadastro já concluído
+    // em uma falsa falha para o aluno.
+    console.warn('Não foi possível reconfirmar a preferência de relacionamento.', error);
+  }
+};
+
+const finalizePublicAlunoSignup = async (data: LegacyPublicAlunoProfileData) => {
   const email = normalizeEmail(data.email);
   const nome = data.nome.trim().toLocaleUpperCase('pt-BR');
+  const cep = onlyDigits(data.cep || '');
+  const endereco = String(data.endereco || '').trim().toLocaleUpperCase('pt-BR');
+  const numero = String(data.numero || '').trim().toLocaleUpperCase('pt-BR');
+  const complemento = String(data.complemento || '').trim().toLocaleUpperCase('pt-BR');
+  const bairro = String(data.bairro || '').trim().toLocaleUpperCase('pt-BR');
+  const cidade = String(data.cidade || '').trim().toLocaleUpperCase('pt-BR');
+  const uf = String(data.uf || '').trim().toLocaleUpperCase('pt-BR').slice(0, 2);
+  const hasCompleteAddress = (
+    cep.length === 8
+    && Boolean(endereco)
+    && Boolean(numero)
+    && Boolean(bairro)
+    && Boolean(cidade)
+    && uf.length === 2
+  );
 
-  const { error } = await supabase.rpc('finalizar_cadastro_publico_aluno', {
+  const baseRpcPayload = {
     p_nome: nome,
     p_email: email,
     p_telefone: onlyDigits(data.telefone),
@@ -106,15 +278,37 @@ const finalizePublicAlunoSignup = async (data: PublicAlunoProfileData) => {
     p_data_nascimento: data.dataNascimento,
     p_aceitou_termos: data.acceptedTerms,
     p_termos_versao: TERMS_VERSION,
-  });
+  };
+  const { error } = hasCompleteAddress
+    ? await supabase.rpc('finalizar_cadastro_publico_aluno', {
+        ...baseRpcPayload,
+        p_cep: cep,
+        p_endereco: endereco,
+        p_numero: numero,
+        p_complemento: complemento,
+        p_bairro: bairro,
+        p_cidade: cidade,
+        p_uf: uf,
+      })
+    : await supabase.rpc('finalizar_cadastro_publico_aluno', baseRpcPayload);
 
   if (error) {
+    if (isAlreadyRegisteredSignupMessage(error.message)) {
+      throw new PublicAlunoAlreadyRegisteredError();
+    }
     throw new Error(getFriendlySignupError(error.message));
   }
 
   const profile = await getPortalProfile({ preferredRole: 'Aluno', allowedRoles: ['Aluno'] });
   if (!profile || profile.tipo !== 'Aluno') {
     throw new Error('Cadastro criado, mas não foi possível iniciar a sessão do aluno.');
+  }
+
+  // O trigger do banco cria esta preferência no aceite dos Termos, inclusive
+  // quando a confirmação de e-mail adia a primeira sessão. A garantia
+  // autenticada cobre cadastros já existentes e nunca sobrescreve um opt-out.
+  if (data.acceptedTerms && data.relationshipBirthdayPreferenceSurface) {
+    await ensureRelationshipTermsDefault(data.relationshipBirthdayPreferenceSurface);
   }
 
   return profile;
@@ -135,60 +329,115 @@ const finalizePublicSignupFromMetadata = async () => {
     cpf: String(metadata.cpf || ''),
     dataNascimento: String(metadata.dataNascimento || ''),
     acceptedTerms: metadata.acceptedTerms === true,
+    cep: String(metadata.cep || ''),
+    endereco: String(metadata.endereco || ''),
+    numero: String(metadata.numero || ''),
+    complemento: String(metadata.complemento || ''),
+    bairro: String(metadata.bairro || ''),
+    cidade: String(metadata.cidade || ''),
+    uf: String(metadata.uf || ''),
+    relationshipBirthdayPreferenceSurface:
+      metadata.relationshipBirthdayPreferenceSurface === 'public_signup_app'
+        ? 'public_signup_app'
+        : metadata.relationshipBirthdayPreferenceSurface === 'public_signup_web'
+          ? 'public_signup_web'
+          : metadata.relationshipBirthdayConsentSurface === 'public_signup_app'
+            ? 'public_signup_app'
+            : metadata.relationshipBirthdayConsentSurface === 'public_signup_web'
+              ? 'public_signup_web'
+          : undefined,
   });
+};
+
+const getExistingOrFinalizePublicAlunoProfile = async () => {
+  // O perfil sincronizado pelo Auth pode já existir e ter sido corrigido pela
+  // secretaria depois do cadastro. Nesse caso, os metadados originais não
+  // devem sobrescrever novamente CPF, telefone ou outros dados a cada login.
+  const existingProfile = await getPortalProfile({
+    preferredRole: 'Aluno',
+    allowedRoles: ['Aluno'],
+  });
+  if (existingProfile) return existingProfile;
+
+  return finalizePublicSignupFromMetadata();
 };
 
 export const alunoPublicAuthService = {
   async login(
     email: string,
     password: string,
+    turnstileToken: string,
   ) {
     const { error } = await loginService.login({
       email,
       password,
+      turnstileToken,
     });
     if (error) throw new Error(error);
 
-    let profile = await getPortalProfile({ preferredRole: 'Aluno', allowedRoles: ['Aluno'] });
-    if (!profile) {
-      profile = await finalizePublicSignupFromMetadata();
-    }
+    try {
+      const profile = await getExistingOrFinalizePublicAlunoProfile();
 
-    if (!profile || profile.tipo !== 'Aluno') {
+      if (!profile || profile.tipo !== 'Aluno') {
+        throw new Error('Este login é exclusivo para alunos. Use uma conta de aluno ou acesse o portal institucional.');
+      }
+
+      return profile;
+    } catch (profileError) {
       await loginService.logout();
-      throw new Error('Este login é exclusivo para alunos. Use uma conta de aluno ou acesse o portal institucional.');
+      throw profileError;
     }
-
-    return profile;
   },
 
   async loginWithGoogle(redirectPath = '/aluno') {
-    const redirectTo = buildAuthRedirectUrl(`/login?redirect=${encodeURIComponent(redirectPath)}`);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo,
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'consent',
+    const safeRedirectPath = getSafePublicAlunoRedirectPath(redirectPath);
+
+    if (isNativeOAuthPlatform()) {
+      try {
+        await startNativeGoogleOAuth('aluno', safeRedirectPath);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error || '');
+        throw new Error(getFriendlyOAuthError(message), { cause: error });
+      }
+      return;
+    }
+
+    rememberPendingOAuthReturn('aluno', safeRedirectPath);
+
+    // O callback precisa ser uma URL fixa da allowlist do Supabase. O destino
+    // final fica no sessionStorage e não participa da validação do redirectTo.
+    const redirectTo = buildAuthRedirectUrl('/login');
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
         },
-      },
-    });
-    if (error) throw new Error(getFriendlyOAuthError(error.message));
+      });
+      if (error) throw new Error(getFriendlyOAuthError(error.message));
+    } catch (error) {
+      clearPendingOAuthReturn('aluno');
+      throw error;
+    }
   },
 
   async finishExternalLogin() {
-    let profile = await getPortalProfile({ preferredRole: 'Aluno', allowedRoles: ['Aluno'] });
-    if (!profile) {
-      profile = await finalizePublicSignupFromMetadata();
-    }
+    try {
+      const profile = await getExistingOrFinalizePublicAlunoProfile();
 
-    if (!profile || profile.tipo !== 'Aluno') {
+      if (!profile || profile.tipo !== 'Aluno') {
+        throw new Error('Esta conta não possui vínculo de aluno. Use um e-mail de aluno ou crie o cadastro de aluno antes de entrar.');
+      }
+
+      return profile;
+    } catch (profileError) {
       await loginService.logout();
-      throw new Error('Esta conta não possui vínculo de aluno. Use um e-mail de aluno ou crie o cadastro de aluno antes de entrar.');
+      throw profileError;
     }
-
-    return profile;
   },
 
   getFriendlyAuthRedirectError,
@@ -202,15 +451,61 @@ export const alunoPublicAuthService = {
     const cpf = onlyDigits(data.cpf);
     const dataNascimento = data.dataNascimento.trim();
     const acceptedTerms = data.acceptedTerms;
+    const relationshipBirthdayPreferenceSurface: PublicSignupRelationshipSurface = data.appFlow
+      ? 'public_signup_app'
+      : 'public_signup_web';
+    const cep = onlyDigits(data.cep);
+    const endereco = data.endereco.trim().toLocaleUpperCase('pt-BR');
+    const numero = data.numero.trim().toLocaleUpperCase('pt-BR');
+    const complemento = data.complemento.trim().toLocaleUpperCase('pt-BR');
+    const bairro = data.bairro.trim().toLocaleUpperCase('pt-BR');
+    const cidade = data.cidade.trim().toLocaleUpperCase('pt-BR');
+    const uf = data.uf.trim().toLocaleUpperCase('pt-BR').slice(0, 2);
     const requestedRedirectPath = data.redirectPath
       ? getSafePublicAlunoRedirectPath(data.redirectPath)
       : null;
+    const loginPath = data.appFlow ? '/aluno/login-app' : '/login';
+    const confirmationPagePath = data.appFlow ? '/aluno/confirmacao-email' : '/confirmacao-email';
     const postConfirmationPath = requestedRedirectPath
-      ? `/login?${new URLSearchParams({ redirect: requestedRedirectPath }).toString()}`
-      : '/login';
-    const confirmationPath = `/confirmacao-email?${new URLSearchParams({
+      ? `${loginPath}?${new URLSearchParams({ redirect: requestedRedirectPath }).toString()}`
+      : loginPath;
+    const confirmationPath = `${confirmationPagePath}?${new URLSearchParams({
       redirect: postConfirmationPath,
     }).toString()}`;
+
+    const recoverExistingSignup = async () => {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password: data.password,
+      });
+      if (!signInError) {
+        try {
+          const profile = await finalizeSignup();
+          return { profile, emailConfirmationRequired: false };
+        } catch (finalizeError) {
+          // A senha comprovou a conta, mas ela só pode permanecer autenticada
+          // depois que o vínculo canônico confirmar um perfil de Aluno.
+          try {
+            const { error: signOutError } = await supabase.auth.signOut({ scope: 'local' });
+            if (signOutError) console.warn('Não foi possível limpar a sessão local após falha do cadastro.', signOutError);
+          } catch (signOutError) {
+            console.warn('Não foi possível limpar a sessão local após falha do cadastro.', signOutError);
+          }
+          throw finalizeError;
+        }
+      }
+
+      // Para cadastros que chegaram ao Auth, mas falharam antes do vínculo do
+      // aluno, o reenvio recupera a confirmação sem revelar se o e-mail existe.
+      // O Auth aplica seu próprio cooldown; o Turnstile já foi validado no
+      // preflight portal-auth que identificou o CPF existente.
+      const { error: resendError } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+        options: { emailRedirectTo: buildAuthRedirectUrl(confirmationPath) },
+      });
+      throw new PublicAlunoAlreadyRegisteredError(!resendError);
+    };
 
     if (!isValidEmail(email)) {
       throw new Error('Informe um e-mail válido. Ele será usado como login do aluno.');
@@ -225,11 +520,26 @@ export const alunoPublicAuthService = {
     }
 
     if (!isStrongPassword(data.password)) {
-      throw new Error('A senha deve ter no mínimo 6 caracteres, 1 letra maiúscula, 1 letra minúscula e 1 número.');
+      throw new Error('A senha deve ter no mínimo 8 caracteres, 1 letra maiúscula, 1 letra minúscula e 1 número.');
     }
 
     if (!dataNascimento) {
       throw new Error('Informe a data de nascimento para concluir o cadastro.');
+    }
+
+    if (!isPublicAlunoOlderThanTen(dataNascimento)) {
+      throw new Error('O cadastro é permitido somente para alunos com mais de 10 anos de idade.');
+    }
+
+    if (
+      cep.length !== 8
+      || !endereco
+      || !numero
+      || !bairro
+      || !cidade
+      || uf.length !== 2
+    ) {
+      throw new Error('Complete CEP, endereço, número, bairro, cidade e UF para concluir o cadastro.');
     }
 
     const finalizeSignup = async () => finalizePublicAlunoSignup({
@@ -239,7 +549,24 @@ export const alunoPublicAuthService = {
       cpf,
       dataNascimento,
       acceptedTerms,
+      relationshipBirthdayPreferenceSurface,
+      cep,
+      endereco,
+      numero,
+      complemento,
+      bairro,
+      cidade,
+      uf,
     });
+
+    try {
+      await assertPublicAlunoCpfAvailable(cpf, email, data.turnstileToken);
+    } catch (error) {
+      if (isPublicAlunoAlreadyRegisteredError(error)) {
+        return recoverExistingSignup();
+      }
+      throw error;
+    }
 
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
@@ -255,28 +582,34 @@ export const alunoPublicAuthService = {
           dataNascimento,
           acceptedTerms,
           termsVersion: TERMS_VERSION,
+          relationshipBirthdayDefaultEnabled: true,
+          relationshipBirthdayLegalBasis: RELATIONSHIP_BIRTHDAY_LEGAL_BASIS,
+          relationshipBirthdayActivationReason: 'terms_acceptance',
+          relationshipBirthdayPolicyVersion: RELATIONSHIP_BIRTHDAY_POLICY_VERSION,
+          relationshipBirthdayLiaVersion: RELATIONSHIP_BIRTHDAY_LIA_VERSION,
+          relationshipBirthdayPreferenceSurface,
+          relationshipBirthdayIncludesCommercialAdvertising: false,
+          cep,
+          endereco,
+          numero,
+          complemento,
+          bairro,
+          cidade,
+          uf,
         },
       },
     });
 
     if (authError) {
       if (isExistingUserError(authError.message)) {
-        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password: data.password });
-        if (signInError) throw new Error(getFriendlySignupError(authError.message));
-
-        const profile = await finalizeSignup();
-        return { profile, emailConfirmationRequired: false };
+        return recoverExistingSignup();
       }
       throw new Error(getFriendlySignupError(authError.message));
     }
 
     const identities = (authData.user as any)?.identities;
     if (Array.isArray(identities) && identities.length === 0) {
-      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password: data.password });
-      if (signInError) throw new Error('Este e-mail já possui acesso. Entre com sua senha para continuar a compra.');
-
-      const profile = await finalizeSignup();
-      return { profile, emailConfirmationRequired: false };
+      return recoverExistingSignup();
     }
 
     if (!authData.session) {
@@ -308,7 +641,7 @@ export const alunoPublicAuthService = {
       }
 
       if (!isStrongPassword(newPassword)) {
-        throw new Error('A nova senha deve ter no mínimo 6 caracteres, 1 letra maiúscula, 1 letra minúscula e 1 número.');
+        throw new Error('A nova senha deve ter no mínimo 8 caracteres, 1 letra maiúscula, 1 letra minúscula e 1 número.');
       }
 
       const passwordUpdateError = await loginService.updatePassword(newPassword);
@@ -316,16 +649,24 @@ export const alunoPublicAuthService = {
         throw new Error(passwordUpdateError);
       }
 
-      updates.troca_senha_obrigatoria = false;
+      // O trigger do Auth é a autoridade que conclui a troca obrigatória e
+      // ativa o acesso depois que a senha foi realmente persistida.
     }
 
     if (Object.keys(updates).length === 0) {
+      if (acceptedTerms) {
+        await ensureRelationshipTermsDefault('student_first_access');
+      }
       return getPortalProfile({ preferredRole: 'Aluno', allowedRoles: ['Aluno'] });
     }
 
     const { error } = await supabase.from('parceiros').update(updates).eq('id', partnerId);
     if (error) {
       throw new Error(getFriendlySignupError(error.message));
+    }
+
+    if (acceptedTerms) {
+      await ensureRelationshipTermsDefault('student_first_access');
     }
 
     return getPortalProfile({ preferredRole: 'Aluno', allowedRoles: ['Aluno'] });

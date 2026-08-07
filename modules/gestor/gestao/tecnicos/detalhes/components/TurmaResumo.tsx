@@ -1,17 +1,32 @@
 import React from 'react';
-import { AlertCircle, BookOpen, Calendar, Clock, Loader2, TrendingUp, Users } from 'lucide-react';
+import {
+  BadgeDollarSign,
+  BookOpen,
+  Calendar,
+  Gauge,
+  Loader2,
+  UserCheck,
+  Users,
+} from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Turma } from '../../../gestao.types';
 import { supabase } from '../../../../../../lib/supabase';
+import { formatAcademicSessions, groupAcademicClassMeetings } from '../../../../../../lib/academicClassMeetings';
 import { academicLifecycleKeys } from '../academic-lifecycle.keys';
 import { academicLifecycleService } from '../academic-lifecycle.service';
 import TechnicalDataError from './TechnicalDataError';
 
 interface TurmaResumoProps {
   turma: Turma;
+  canViewFinanceiro?: boolean;
+  canViewAulas?: boolean;
 }
 
-const TurmaResumo: React.FC<TurmaResumoProps> = ({ turma }) => {
+const TurmaResumo: React.FC<TurmaResumoProps> = ({
+  turma,
+  canViewFinanceiro = true,
+  canViewAulas = true,
+}) => {
   const resumoQuery = useQuery({
     queryKey: academicLifecycleKeys.resumo(turma.id),
     queryFn: () => academicLifecycleService.getResumo(turma.id),
@@ -23,17 +38,18 @@ const TurmaResumo: React.FC<TurmaResumoProps> = ({ turma }) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('aulas_turma')
-        .select('id, titulo, carga_horaria, data_aula, created_at, disciplinas(nome)')
+        .select('id, titulo, carga_horaria, sessao, data_aula, turma_id, disciplina_id, created_at, disciplinas(nome)')
         .eq('turma_id', turma.id)
         .order('data_aula', { ascending: false, nullsFirst: false })
-        .limit(3);
+        .limit(6);
       if (error) throw error;
-      return data || [];
+      return groupAcademicClassMeetings((data || []) as any[]).slice(0, 3);
     },
+    enabled: canViewAulas,
   });
   const recentClasses = recentClassesQuery.data || [];
 
-  if (resumoQuery.isLoading || recentClassesQuery.isLoading) {
+  if (resumoQuery.isLoading || (canViewAulas && recentClassesQuery.isLoading)) {
     return (
       <div className="flex justify-center items-center py-20">
         <Loader2 className="animate-spin text-[#001a33]" size={32} />
@@ -42,70 +58,117 @@ const TurmaResumo: React.FC<TurmaResumoProps> = ({ turma }) => {
     );
   }
 
-  if (resumoQuery.isError || recentClassesQuery.isError) {
+  if (resumoQuery.isError || (canViewAulas && recentClassesQuery.isError)) {
     return (
       <TechnicalDataError
         title="Resumo acadêmico não carregado"
-        message="Os indicadores foram ocultados para não exibir alunos, frequência ou aulas como zero por causa de uma falha de consulta."
+        message="Os indicadores permitidos foram ocultados para não exibir dados incorretos por causa de uma falha de consulta."
         retrying={resumoQuery.isFetching || recentClassesQuery.isFetching}
-        onRetry={() => { void Promise.all([resumoQuery.refetch(), recentClassesQuery.refetch()]); }}
+        onRetry={() => {
+          void Promise.all([
+            resumoQuery.refetch(),
+            ...(canViewAulas ? [recentClassesQuery.refetch()] : []),
+          ]);
+        }}
       />
     );
   }
 
+  const financialStatus = {
+    SEM_DADOS: {
+      label: 'Sem dados financeiros',
+      iconClass: 'bg-slate-100 text-slate-500',
+      accentClass: 'border-slate-200',
+      sidebarClass: 'border-slate-400',
+    },
+    SAUDAVEL: {
+      label: 'Saudável',
+      iconClass: 'bg-emerald-50 text-emerald-600',
+      accentClass: 'border-emerald-100',
+      sidebarClass: 'border-emerald-500',
+    },
+    ATENCAO: {
+      label: 'Atenção',
+      iconClass: 'bg-amber-50 text-amber-600',
+      accentClass: 'border-amber-100',
+      sidebarClass: 'border-amber-500',
+    },
+    CRITICA: {
+      label: 'Crítica',
+      iconClass: 'bg-rose-50 text-rose-600',
+      accentClass: 'border-rose-100',
+      sidebarClass: 'border-rose-500',
+    },
+  }[resumo?.saudeFinanceiraStatus || 'SEM_DADOS'];
+
   const cards = [
+    {
+      label: 'Total de Alunos',
+      value: resumo?.totalAlunos ?? 0,
+      icon: Users,
+      iconClass: 'bg-blue-50 text-blue-600',
+      accentClass: 'border-blue-100',
+      detail: 'Matriculados na turma',
+      empty: false,
+    },
     {
       label: 'Alunos Ativos',
       value: resumo?.alunosAtivos ?? 0,
-      icon: Users,
-      iconClass: 'bg-blue-50 text-blue-600',
-      empty: false,
-    },
-    {
-      label: 'Frequência Média',
-      value: resumo?.frequenciaMedia === null || resumo?.frequenciaMedia === undefined
-        ? 'Sem dados'
-        : `${resumo.frequenciaMedia}%`,
-      icon: TrendingUp,
+      icon: UserCheck,
       iconClass: 'bg-emerald-50 text-emerald-600',
-      empty: resumo?.frequenciaMedia === null || resumo?.frequenciaMedia === undefined,
-    },
-    {
-      label: 'Alunos em Risco',
-      value: resumo?.alunosEmRisco ?? 0,
-      icon: AlertCircle,
-      iconClass: 'bg-rose-50 text-rose-600',
+      accentClass: 'border-emerald-100',
+      detail: 'Matrículas em andamento',
       empty: false,
     },
     {
-      label: 'Progresso do Curso',
+      label: 'Progresso Geral',
       value: resumo?.progressoCurso === null || resumo?.progressoCurso === undefined
         ? 'Sem grade'
-        : `${resumo.progressoCurso}%`,
-      icon: Clock,
+        : `${resumo.progressoCurso.toLocaleString('pt-BR')}%`,
+      icon: Gauge,
       iconClass: 'bg-amber-50 text-amber-600',
+      accentClass: 'border-amber-100',
+      detail: 'Carga horária já realizada',
       empty: resumo?.progressoCurso === null || resumo?.progressoCurso === undefined,
     },
+    ...(canViewFinanceiro ? [{
+        label: 'Saúde Financeira',
+        value: resumo?.saudeFinanceiraPercentual === null
+          || resumo?.saudeFinanceiraPercentual === undefined
+          ? 'Sem dados'
+          : `${resumo.saudeFinanceiraPercentual.toLocaleString('pt-BR')}%`,
+        icon: BadgeDollarSign,
+        iconClass: financialStatus.iconClass,
+        accentClass: financialStatus.accentClass,
+        detail: financialStatus.label,
+        empty: resumo?.saudeFinanceiraPercentual === null
+          || resumo?.saudeFinanceiraPercentual === undefined,
+      }] : []),
   ];
 
   return (
     <div className="space-y-6 ">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className={`grid grid-cols-1 gap-4 ${canViewFinanceiro ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
         {cards.map((card) => {
           const Icon = card.icon;
           return (
-            <div key={card.label} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+            <div
+              key={card.label}
+              className={`bg-white p-6 rounded-2xl border shadow-sm ${card.accentClass}`}
+            >
               <div className={`inline-flex p-2 rounded-lg mb-3 ${card.iconClass}`}>
                 <Icon size={20} />
               </div>
               <p className={`font-black text-[#001a33] ${card.empty ? 'text-lg' : 'text-2xl'}`}>{card.value}</p>
               <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">{card.label}</p>
+              <p className="mt-2 text-xs font-medium text-slate-400">{card.detail}</p>
             </div>
           );
         })}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {canViewAulas && (
         <div className="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
           <h3 className="text-lg font-bold text-[#001a33] mb-4">Aulas recentes</h3>
           {recentClasses.length === 0 ? (
@@ -124,6 +187,7 @@ const TurmaResumo: React.FC<TurmaResumoProps> = ({ turma }) => {
                     <h4 className="font-bold text-[#001a33] text-sm truncate">{lesson.titulo}</h4>
                     <p className="text-xs text-slate-500 mt-1 truncate">
                       {lesson.disciplinas?.nome || 'Disciplina'} · {lesson.carga_horaria}h
+                      {formatAcademicSessions(lesson.sessoes) ? ` · ${formatAcademicSessions(lesson.sessoes)}` : ''}
                     </p>
                   </div>
                   <span className="text-[10px] font-bold text-slate-400">
@@ -136,22 +200,29 @@ const TurmaResumo: React.FC<TurmaResumoProps> = ({ turma }) => {
             </div>
           )}
         </div>
+        )}
 
-        <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200">
-          <h3 className="text-lg font-bold text-[#001a33] mb-4">Situação acadêmica</h3>
+        <div className={`bg-slate-50 p-6 rounded-3xl border border-slate-200 ${canViewAulas ? '' : 'lg:col-span-3'}`}>
+          <h3 className="text-lg font-bold text-[#001a33] mb-4">Visão da turma</h3>
           <div className="space-y-3">
             <div className="bg-white p-4 rounded-xl border-l-4 border-blue-500 shadow-sm">
               <p className="text-xs font-bold text-slate-400 uppercase mb-1">Matrículas</p>
               <p className="text-sm text-slate-700 font-medium">
-                {resumo?.totalMatriculas ?? 0} registros históricos; {resumo?.alunosAtivos ?? 0} ativos.
+                {resumo?.totalAlunos ?? 0} alunos vinculados; {resumo?.alunosAtivos ?? 0} ativos.
               </p>
             </div>
-            <div className="bg-white p-4 rounded-xl border-l-4 border-emerald-500 shadow-sm">
-              <p className="text-xs font-bold text-slate-400 uppercase mb-1">Fonte dos indicadores</p>
-              <p className="text-sm text-slate-700 font-medium">
-                Notas, frequência e progresso são consolidados pelo Supabase.
-              </p>
-            </div>
+            {canViewFinanceiro && (
+              <div className={`bg-white p-4 rounded-xl border-l-4 shadow-sm ${financialStatus.sidebarClass}`}>
+                <p className="text-xs font-bold text-slate-400 uppercase mb-1">Financeiro</p>
+                <p className="text-sm text-slate-700 font-medium">
+                  {financialStatus.label}
+                  {resumo?.saudeFinanceiraPercentual === null
+                    || resumo?.saudeFinanceiraPercentual === undefined
+                    ? '.'
+                    : ` · ${resumo.saudeFinanceiraPercentual.toLocaleString('pt-BR')}% de adimplência.`}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>

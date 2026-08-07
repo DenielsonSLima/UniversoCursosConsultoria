@@ -135,8 +135,12 @@ const firstRelation = <T>(value: T | T[] | null | undefined): T | null =>
 const courseAndClass = (row: BaneseStudentPaymentRow) => {
   const turma = firstRelation(row.turmas);
   const curso = firstRelation(turma?.cursos);
+  const modality = normalizedUpper(curso?.modalidade);
   return {
     courseName: safeOptionalText(curso?.nome, 120),
+    courseModality: ["EAD", "TECNICO", "LIVRE", "ESPECIALIZACAO"].includes(modality)
+      ? modality
+      : null,
     className: safeOptionalText(turma?.nome, 120),
   };
 };

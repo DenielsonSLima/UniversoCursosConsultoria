@@ -2,12 +2,17 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { ContasReceber } from '../../../financeiro.service';
 import {
+  formatReceivableDate,
+  formatNextPendingDueDate,
   formatOptionalCurrency,
   getPersistedGatewayFee,
   getPersistedGatewayNet,
   isPaidThroughAsaas,
   paymentGatewayCode,
   paymentGatewayLabel,
+  paymentMethodLabel,
+  receivableClassLabel,
+  receivableCourseTitle,
 } from './modalidade-receber.utils';
 
 const receivable = (overrides: Partial<ContasReceber> = {}): ContasReceber => ({
@@ -60,6 +65,16 @@ test('identifica os provedores somente para apresentação e ações da cobranç
   assert.equal(paymentGatewayLabel(mercadoPago), 'Mercado Pago');
 });
 
+test('reconhece link legado do portal como boleto Banese', () => {
+  const baneseLegacyLink = receivable({
+    origemPagamento: 'GATEWAY_EAD',
+    asaasInvoiceUrl: 'https://universocc.com.br/aluno?module=financeiro&banesePayment=receivable-id',
+  });
+
+  assert.equal(paymentGatewayCode(baneseLegacyLink), 'banese_card');
+  assert.equal(paymentGatewayLabel(baneseLegacyLink), 'Banese');
+});
+
 test('não apresenta comprovante Asaas para cobrança paga de outro provedor', () => {
   const banese = receivable({
     status: 'PAGO',
@@ -75,4 +90,43 @@ test('não apresenta comprovante Asaas para cobrança paga de outro provedor', (
 
   assert.equal(isPaidThroughAsaas(banese), false);
   assert.equal(isPaidThroughAsaas(asaas), true);
+});
+
+test('não inventa Pix ou boleto quando o Banese não informou o canal', () => {
+  const unknown = receivable({
+    status: 'PAGO',
+    gatewayProvider: 'banese_card',
+    gatewayPaymentMethod: 'BOLETO',
+    gatewaySettlementChannel: 'NAO_IDENTIFICADO',
+    formaPagamento: 'BOLETO',
+  });
+  const pix = receivable({
+    ...unknown,
+    gatewaySettlementChannel: 'PIX',
+  });
+
+  assert.equal(paymentMethodLabel(unknown), 'Boleto/Pix — canal não identificado');
+  assert.equal(paymentMethodLabel(pix), 'Pix (BolePix)');
+});
+
+test('não apresenta próximo vencimento quando o grupo está totalmente quitado', () => {
+  assert.equal(formatNextPendingDueDate(0, '2026-07-31'), '—');
+  assert.equal(formatNextPendingDueDate(1, '2026-07-31'), '31/07/2026');
+});
+
+test('formata datas financeiras vindas como data ou timestamp', () => {
+  assert.equal(formatReceivableDate('2026-08-01'), '01/08/2026');
+  assert.equal(formatReceivableDate('2026-07-25T13:23:24.852Z'), '25/07/2026');
+  assert.equal(formatReceivableDate('valor-inválido'), '—');
+});
+
+test('resume curso e turma sem repetir o nome do curso', () => {
+  const item = receivable({
+    cursoNome: 'Auxiliar Administrativo',
+    cursoModalidade: 'EAD',
+    turmaNome: 'Auxiliar Administrativo - EAD Turma Unica',
+  });
+
+  assert.equal(receivableCourseTitle(item), 'Auxiliar Administrativo — Curso EAD');
+  assert.equal(receivableClassLabel(item), 'Turma Única');
 });

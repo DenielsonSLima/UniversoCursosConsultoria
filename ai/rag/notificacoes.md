@@ -1,3 +1,5 @@
+> Arquivo legado. O RAG operacional vigente está em `ai/operacao/rag/`.
+
 # Diretrizes de Notificação do Sistema (Notification Guidelines)
 
 ## Regra Fundamental / Core Rule

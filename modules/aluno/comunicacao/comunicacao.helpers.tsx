@@ -1,11 +1,15 @@
 import React from 'react';
-import { File, FileSpreadsheet, FileText, Image, Presentation } from 'lucide-react';
+import { File, FileSpreadsheet, FileText, Image, Mic, Presentation } from 'lucide-react';
 
-export const ACCEPTED_ATTACHMENT_TYPES = 'image/jpeg,image/png,image/gif,image/webp,.pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx';
+export const ACCEPTED_ATTACHMENT_TYPES = 'image/jpeg,image/png,image/gif,image/webp,audio/webm,audio/ogg,audio/mp4,audio/mpeg,audio/wav,.mp3,.m4a,.wav,.ogg,.webm,.pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx';
 
 export const getFileIcon = (url: string | null, type?: string) => {
   if (!url && !type) return <File size={14} />;
   const lower = (url || type || '').toLowerCase();
+
+  if (/\.(mp3|m4a|mp4|ogg|oga|wav|webm)/.test(lower) || lower.startsWith('audio/')) {
+    return <Mic size={14} className="text-rose-500" />;
+  }
 
   if (/\.(jpe?g|png|gif|webp)/.test(lower) || ['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(type || '')) {
     return <Image size={14} className="text-blue-500" />;

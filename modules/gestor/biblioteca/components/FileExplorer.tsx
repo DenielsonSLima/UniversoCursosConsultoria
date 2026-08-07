@@ -5,14 +5,23 @@ import { createPortal } from 'react-dom';
 import { 
   Folder, FolderPlus, ArrowUp, ChevronRight, 
   Trash2, Edit, FolderOpen, ArrowRight, Eye, Download,
-  Copy, Lock, Search
+  Copy, Lock, Search, Check
 } from 'lucide-react';
 import { bibliotecaService } from '../biblioteca.service';
 import { TargetAudience, LibraryFolder, LibraryDocument } from '../biblioteca.types';
 import DocumentPermissionsModal from './DocumentPermissionsModal';
+import LibraryFileThumbnail from './file-preview/LibraryFileThumbnail';
+import LibrarySelectionToolbar from './LibrarySelectionToolbar';
+import LibraryFolderGrid from './LibraryFolderGrid';
+import {
+  downloadLibrarySelectionAsZip,
+  downloadSingleLibraryFile
+} from '../../../shared/library/library-download';
 import { useFileExplorerQueries } from '../hooks/useFileExplorerQueries';
 import { useFileExplorerMutations } from '../hooks/useFileExplorerMutations';
 import { useFileExplorerRealtime } from '../hooks/useFileExplorerRealtime';
+import ConfirmModal from '../../components/ConfirmModal';
+import ToastNotification, { useToast } from '../../components/ToastNotification';
 
 interface FileExplorerProps {
   teacherId?: string | null;
@@ -23,6 +32,26 @@ interface FileExplorerProps {
   restrictPermissionsToTeacherScope?: boolean;
 }
 
+type PendingDeletion =
+  | { type: 'folder'; id: string; name: string }
+  | { type: 'document'; id: string; name: string };
+
+const FOLDER_AUDIENCE_OPTIONS: Array<{ value: TargetAudience; label: string; description: string }> = [
+  { value: 'INTERNO', label: 'Somente gestão', description: 'A pasta fica privada e não aparece nos outros portais.' },
+  { value: 'ALUNOS', label: 'Alunos', description: 'A pasta aparece no acesso dos alunos autorizados.' },
+  { value: 'PROFESSORES', label: 'Professores', description: 'A pasta aparece no acesso dos professores.' },
+  { value: 'TODOS', label: 'Alunos e professores', description: 'A pasta aparece nos dois portais.' },
+];
+
+const isAudienceAllowedByParent = (
+  parentAudience: TargetAudience | null,
+  childAudience: TargetAudience,
+): boolean => {
+  if (!parentAudience || parentAudience === 'TODOS') return true;
+  if (parentAudience === 'INTERNO') return childAudience === 'INTERNO';
+  return childAudience === 'INTERNO' || childAudience === parentAudience;
+};
+
 const FileExplorer: React.FC<FileExplorerProps> = ({ 
   teacherId = null, 
   onPreviewClick,
@@ -32,11 +61,14 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
   restrictPermissionsToTeacherScope = false
 }) => {
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
-  const [breadcrumbs, setBreadcrumbs] = useState<Array<{ id: string; nome: string }>>([]);
+  const [breadcrumbs, setBreadcrumbs] = useState<Array<{ id: string; nome: string; targetAudience: TargetAudience }>>([]);
 
   // Modais e Diálogos
   const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
+  const [newFolderAudience, setNewFolderAudience] = useState<TargetAudience>('INTERNO');
+  const [sharingFolder, setSharingFolder] = useState<LibraryFolder | null>(null);
+  const [sharedAudience, setSharedAudience] = useState<TargetAudience>('INTERNO');
   
   const [renamingFolder, setRenamingFolder] = useState<LibraryFolder | null>(null);
   const [renamedName, setRenamedName] = useState('');
@@ -44,11 +76,22 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
   const [movingItem, setMovingItem] = useState<{ id: string; type: 'folder' | 'document' } | null>(null);
   const [actionType, setActionType] = useState<'move' | 'copy'>('move');
   const [permissionsDoc, setPermissionsDoc] = useState<LibraryDocument | null>(null);
+  const [pendingDeletion, setPendingDeletion] = useState<PendingDeletion | null>(null);
+  const { toasts, removeToast, toast } = useToast();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [fileTypeFilter, setFileTypeFilter] = useState('all');
+  const [selectedFolderIds, setSelectedFolderIds] = useState<Set<string>>(new Set());
+  const [selectedDocumentIds, setSelectedDocumentIds] = useState<Set<string>>(new Set());
+  const [isDownloadingSelection, setIsDownloadingSelection] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState('');
 
   const isFiltering = searchQuery.trim().length > 0 || fileTypeFilter !== 'all';
+  const currentParentAudience = breadcrumbs.at(-1)?.targetAudience ?? null;
+  const availableFolderAudienceOptions = FOLDER_AUDIENCE_OPTIONS.filter((option) => (
+    (!teacherId || ['INTERNO', 'ALUNOS'].includes(option.value))
+    && isAudienceAllowedByParent(currentParentAudience, option.value)
+  ));
 
   const {
     folders,
@@ -77,6 +120,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
   const {
     createFolderMutation,
     renameFolderMutation,
+    updateFolderAudienceMutation,
     deleteFolderMutation,
     deleteDocumentMutation,
     moveFolderMutation,
@@ -89,6 +133,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
     onFolderCreated: () => {
       setIsNewFolderOpen(false);
       setNewFolderName('');
+      setNewFolderAudience('INTERNO');
     },
     onFolderRenamed: () => {
       setRenamingFolder(null);
@@ -104,12 +149,20 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
   // Navigate into a folder
   const handleOpenFolder = (folder: LibraryFolder) => {
     setCurrentFolderId(folder.id);
-    setBreadcrumbs([...breadcrumbs, { id: folder.id, nome: folder.nome }]);
+    setBreadcrumbs([...breadcrumbs, {
+      id: folder.id,
+      nome: folder.nome,
+      targetAudience: folder.targetAudience,
+    }]);
+    setSelectedFolderIds(new Set());
+    setSelectedDocumentIds(new Set());
   };
 
   // Breadcrumb navigation click
   const handleBreadcrumbClick = (folderId: string | null, index: number) => {
     setCurrentFolderId(folderId);
+    setSelectedFolderIds(new Set());
+    setSelectedDocumentIds(new Set());
     if (folderId === null) {
       setBreadcrumbs([]);
     } else {
@@ -121,7 +174,10 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
   const handleCreateFolderSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (newFolderName.trim()) {
-      createFolderMutation.mutate(newFolderName.trim());
+      createFolderMutation.mutate({
+        nome: newFolderName.trim(),
+        targetAudience: newFolderAudience,
+      });
     }
   };
 
@@ -132,6 +188,15 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
     }
   };
 
+  const handleSharingSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!sharingFolder) return;
+    updateFolderAudienceMutation.mutate(
+      { id: sharingFolder.id, targetAudience: sharedAudience },
+      { onSuccess: () => setSharingFolder(null) },
+    );
+  };
+
   const handleConfirmMove = (targetId: string | null) => {
     if (!movingItem) return;
     if (actionType === 'copy') {
@@ -139,7 +204,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
     } else {
       if (movingItem.type === 'folder') {
         if (targetId === movingItem.id) {
-          alert('Uma pasta não pode ser movida para ela mesma!');
+          toast.info('Destino inválido', 'Uma pasta não pode ser movida para ela mesma.');
           return;
         }
         moveFolderMutation.mutate({ id: movingItem.id, targetId });
@@ -149,16 +214,140 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
     }
   };
 
-  const getFileIcon = (type: string) => {
-    switch(type) {
-        case 'PDF': return <div className="w-10 h-10 rounded-lg bg-red-50 text-red-600 flex items-center justify-center font-bold text-xs border border-red-100 shrink-0">PDF</div>;
-        case 'DOC': return <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs border border-blue-100 shrink-0">DOC</div>;
-        case 'XLS': return <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xs border border-emerald-100 shrink-0">XLS</div>;
-        case 'IMG': return <div className="w-10 h-10 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-xs border border-purple-100 shrink-0">IMG</div>;
-        case 'VIDEO': return <div className="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-xs border border-amber-100 shrink-0">VIDEO</div>;
-        default: return <div className="w-10 h-10 rounded-lg bg-slate-50 text-slate-600 flex items-center justify-center font-bold text-xs border border-slate-100 shrink-0">FILE</div>;
+  const handlePreviewDocument = (doc: LibraryDocument) => {
+    bibliotecaService.incrementAcessos(doc.id);
+    onPreviewClick(doc);
+  };
+
+  const handleConfirmDeletion = () => {
+    if (!pendingDeletion) return;
+
+    const item = pendingDeletion;
+    const mutation = item.type === 'folder'
+      ? deleteFolderMutation
+      : deleteDocumentMutation;
+
+    mutation.mutate(item.id, {
+      onSuccess: () => {
+        toast.success(
+          item.type === 'folder' ? 'Pasta apagada' : 'Arquivo apagado',
+          item.type === 'folder'
+            ? `“${item.name}” e seus arquivos foram removidos da biblioteca e do armazenamento.`
+            : `“${item.name}” foi removido da biblioteca e do armazenamento.`
+        );
+      },
+      onError: (error) => {
+        toast.error(
+          'Não foi possível apagar',
+          error instanceof Error ? error.message : 'Tente novamente em alguns instantes.'
+        );
+      }
+    });
+  };
+
+  const toggleFolderSelection = (folderId: string) => {
+    setSelectedFolderIds((current) => {
+      const next = new Set(current);
+      if (next.has(folderId)) next.delete(folderId);
+      else next.add(folderId);
+      return next;
+    });
+  };
+
+  const toggleDocumentSelection = (documentId: string) => {
+    setSelectedDocumentIds((current) => {
+      const next = new Set(current);
+      if (next.has(documentId)) next.delete(documentId);
+      else next.add(documentId);
+      return next;
+    });
+  };
+
+  const clearSelection = () => {
+    setSelectedFolderIds(new Set());
+    setSelectedDocumentIds(new Set());
+  };
+
+  const selectVisibleItems = () => {
+    setSelectedFolderIds(new Set(folders.map((folder) => folder.id)));
+    setSelectedDocumentIds(new Set(filteredDocs.map((document) => document.id)));
+  };
+
+  const handleDownloadSelection = async () => {
+    const folderIds = Array.from(selectedFolderIds) as string[];
+    const documentIds = Array.from(selectedDocumentIds) as string[];
+    const selectionCount = folderIds.length + documentIds.length;
+    if (selectionCount === 0) return;
+
+    if (folderIds.length === 0 && documentIds.length === 1) {
+      const document = documents.find((item) => item.id === documentIds[0]);
+      if (!document) return;
+
+      try {
+        await downloadSingleLibraryFile({
+          id: document.id,
+          folderId: document.pastaId || null,
+          name: document.title,
+          url: document.url,
+          fileType: document.fileType,
+          sizeBytes: document.sizeBytes
+        });
+        bibliotecaService.incrementAcessos(document.id);
+        clearSelection();
+      } catch (error) {
+        toast.error(
+          'Não foi possível baixar',
+          error instanceof Error ? error.message : 'Tente novamente em alguns instantes.'
+        );
+      }
+      return;
     }
-  };  const isContentLoading = isFoldersLoading || isDocsLoading;
+
+    setIsDownloadingSelection(true);
+    setDownloadProgress('Carregando a estrutura da biblioteca...');
+
+    try {
+      const [allFoldersForDownload, allDocumentsForDownload] = await Promise.all([
+        bibliotecaService.getFoldersForMove(teacherId),
+        bibliotecaService.getDocuments({ teacherId })
+      ]);
+
+      await downloadLibrarySelectionAsZip({
+        selectedFolderIds: folderIds,
+        selectedDocumentIds: documentIds,
+        folders: allFoldersForDownload.map((folder) => ({
+          id: folder.id,
+          name: folder.nome,
+          parentId: folder.parent_id
+        })),
+        documents: allDocumentsForDownload
+          .filter((document) => !allowedAudiences || allowedAudiences.includes(document.targetAudience))
+          .map((document) => ({
+            id: document.id,
+            folderId: document.pastaId || null,
+            name: document.title,
+            url: document.url,
+            fileType: document.fileType,
+            sizeBytes: document.sizeBytes
+          })),
+        archiveName: breadcrumbs.at(-1)?.nome || 'biblioteca',
+        onProgress: setDownloadProgress
+      });
+
+      clearSelection();
+    } catch (error) {
+      toast.error(
+        'Não foi possível preparar o ZIP',
+        error instanceof Error ? error.message : 'Tente novamente em alguns instantes.'
+      );
+    } finally {
+      setIsDownloadingSelection(false);
+      setDownloadProgress('');
+    }
+  };
+
+  const selectionCount = selectedFolderIds.size + selectedDocumentIds.size;
+  const isContentLoading = isFoldersLoading || isDocsLoading;
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -224,6 +413,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
               <option value="PDF">PDF</option>
               <option value="DOC">Word</option>
               <option value="XLS">Excel</option>
+              <option value="PPT">PowerPoint</option>
               <option value="IMG">Imagens</option>
               <option value="VIDEO">Vídeos</option>
               <option value="OTHER">Outros formatos</option>
@@ -246,7 +436,10 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
           {!readOnly && onNewUploadClick && !isFiltering && (
             <div className="flex gap-2 shrink-0 w-full sm:w-auto">
               <button 
-                onClick={() => setIsNewFolderOpen(true)}
+                onClick={() => {
+                  setNewFolderAudience('INTERNO');
+                  setIsNewFolderOpen(true);
+                }}
                 className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-white border border-slate-200 text-slate-650 hover:text-blue-600 hover:border-blue-200 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors shadow-sm"
               >
                 <FolderPlus size={14} /> Nova Pasta
@@ -262,143 +455,116 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
         </div>
       </div>
 
+      {selectionCount > 0 && (
+        <LibrarySelectionToolbar
+          count={selectionCount}
+          isZipDownload={selectedFolderIds.size > 0 || selectionCount > 1}
+          isDownloading={isDownloadingSelection}
+          progressMessage={downloadProgress}
+          onDownload={handleDownloadSelection}
+          onClear={clearSelection}
+          onSelectVisible={selectVisibleItems}
+        />
+      )}
+
       {/* Explorer Grid */}
       {isContentLoading ? (
         <div className="py-20 text-center text-slate-400 text-xs font-bold uppercase animate-pulse">
           Navegando na biblioteca...
         </div>
       ) : (
-        <div className="space-y-8">
-          
-          {/* Folders Section */}
-          {folders.length > 0 && (
-            <div className="space-y-3">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">Pastas</span>
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {folders.map((folder) => (
-                  <div 
-                    key={folder.id}
-                    className="p-4 bg-white border border-slate-150 rounded-2xl hover:shadow-xl hover:shadow-blue-900/5 hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-between group min-w-0"
-                  >
-                    <div 
-                      onClick={() => handleOpenFolder(folder)}
-                      className="flex items-center gap-3 cursor-pointer flex-1 mr-2 min-w-0"
-                    >
-                      <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl shrink-0">
-                        <Folder size={18} />
-                      </div>
-                      <span className="text-xs font-bold text-[#001a33] truncate leading-tight">{folder.nome}</span>
-                    </div>
+        <div className="space-y-9">
 
-                    {/* Folder actions dropdown/buttons */}
-                    {!readOnly && (
-                      <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                        <button 
-                          onClick={() => {
-                            setRenamingFolder(folder);
-                            setRenamedName(folder.nome);
-                          }}
-                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-slate-50 rounded"
-                          title="Renomear"
-                        >
-                          <Edit size={12} />
-                        </button>
-                        <button 
-                          onClick={() => setMovingItem({ id: folder.id, type: 'folder' })}
-                          className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-50 rounded"
-                          title="Mover"
-                        >
-                          <ArrowRight size={12} />
-                        </button>
-                        <button 
-                          onClick={() => {
-                            if (confirm('Tem certeza que deseja excluir esta pasta e todos os seus arquivos?')) {
-                              deleteFolderMutation.mutate(folder.id);
-                            }
-                          }}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-slate-50 rounded"
-                          title="Excluir"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))}
+          <LibraryFolderGrid
+            folders={folders}
+            selectedIds={selectedFolderIds}
+            onOpen={handleOpenFolder}
+            onToggle={toggleFolderSelection}
+            showAudience={!readOnly}
+            renderActions={readOnly ? undefined : (folder) => (
+              <div className="absolute right-1.5 top-1.5 flex gap-0.5 rounded-lg border border-slate-100 bg-white/95 p-0.5 opacity-100 shadow-sm transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
+                <button onClick={() => { setSharingFolder(folder); setSharedAudience(folder.targetAudience); }} className="rounded-md p-1.5 text-slate-400 hover:bg-amber-50 hover:text-amber-600" title="Compartilhamento"><Lock size={12} /></button>
+                <button onClick={() => { setRenamingFolder(folder); setRenamedName(folder.nome); }} className="rounded-md p-1.5 text-slate-400 hover:bg-blue-50 hover:text-blue-600" title="Renomear"><Edit size={12} /></button>
+                <button onClick={() => setMovingItem({ id: folder.id, type: 'folder' })} className="rounded-md p-1.5 text-slate-400 hover:bg-slate-50 hover:text-slate-700" title="Mover"><ArrowRight size={12} /></button>
+                <button onClick={() => setPendingDeletion({ type: 'folder', id: folder.id, name: folder.nome })} className="rounded-md p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600" title="Apagar"><Trash2 size={12} /></button>
               </div>
-            </div>
-          )}
+            )}
+          />
 
-          {/* Files Section */}
-          <div className="space-y-3">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">Arquivos</span>
-            
-            {filteredDocs.length === 0 && folders.length === 0 ? (
-              <div className="p-12 text-center bg-slate-50 border border-dashed border-slate-200 rounded-[2rem] text-slate-400 space-y-2">
-                {isFiltering ? (
-                  <>
-                    <Search size={32} className="mx-auto text-slate-350" />
-                    <h4 className="font-bold text-xs uppercase tracking-wider">Nenhum resultado encontrado</h4>
-                    <p className="text-[10px] text-slate-400 leading-relaxed font-medium">Nenhum arquivo corresponde aos critérios de busca selecionados.</p>
-                  </>
-                ) : (
-                  <>
-                    <FolderOpen size={32} className="mx-auto text-slate-350" />
-                    <h4 className="font-bold text-xs uppercase tracking-wider">Diretório Vazio</h4>
-                    <p className="text-[10px] text-slate-400 leading-relaxed font-medium">Esta pasta não contém arquivos ou subpastas publicadas.</p>
-                  </>
-                )}
+          {filteredDocs.length > 0 && (
+            <section className="space-y-3">
+              <div className="flex items-center gap-3 px-1">
+                <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Arquivos</span>
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-black text-slate-500">{filteredDocs.length}</span>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              <div className="flex flex-wrap items-start gap-x-1 gap-y-4">
                 {filteredDocs.map((doc) => (
-                  <div 
+                  <article
                     key={doc.id}
-                    className="p-5 bg-white border border-slate-150 rounded-[2rem] hover:shadow-xl hover:shadow-blue-900/5 hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between h-full group relative"
+                    className={`group relative flex w-[184px] shrink-0 flex-col overflow-hidden rounded-2xl border bg-white/60 p-3 transition-all duration-200 hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_10px_28px_rgba(15,55,95,0.08)] focus-within:bg-white focus-within:shadow-[0_10px_28px_rgba(15,55,95,0.08)] active:bg-white ${
+                      selectedDocumentIds.has(doc.id)
+                        ? 'border-blue-300 bg-white shadow-[0_10px_28px_rgba(37,99,235,0.12)]'
+                        : 'border-transparent hover:border-slate-200 focus-within:border-blue-200'
+                    }`}
                   >
-                    <div className="flex justify-between items-start mb-4">
-                      {getFileIcon(doc.fileType)}
-                      <span className="bg-slate-50 border border-slate-100 text-slate-500 font-bold px-2 py-0.5 rounded text-[8px] tracking-wider uppercase">
-                        {doc.targetAudience}
+                    <button
+                      type="button"
+                      onClick={() => toggleDocumentSelection(doc.id)}
+                      className={`absolute left-2 top-2 z-20 flex h-5 w-5 items-center justify-center rounded-md border transition-all ${
+                        selectedDocumentIds.has(doc.id)
+                          ? 'border-blue-600 bg-blue-600 text-white opacity-100'
+                          : 'border-slate-300 bg-white/95 text-transparent opacity-60 hover:border-blue-400 hover:opacity-100'
+                      }`}
+                      aria-label={`${selectedDocumentIds.has(doc.id) ? 'Remover' : 'Selecionar'} arquivo ${doc.title}`}
+                      aria-pressed={selectedDocumentIds.has(doc.id)}
+                      title="Selecionar arquivo"
+                    >
+                      <Check size={12} strokeWidth={3} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handlePreviewDocument(doc)}
+                      className="flex min-w-0 flex-1 flex-col items-center rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                      title={`Visualizar ${doc.title}`}
+                    >
+                      <LibraryFileThumbnail
+                        file={doc}
+                        className="transition-transform duration-200 group-hover:scale-[1.02]"
+                      />
+                      <h4 className="mt-2 line-clamp-3 min-h-[3.75em] w-full whitespace-normal break-words text-center text-xs font-bold leading-[1.25] text-[#001a33] [overflow-wrap:anywhere]" title={doc.title}>
+                        {doc.title}
+                      </h4>
+                      <span className="mt-1 text-center text-[8px] font-black uppercase tracking-[0.12em] text-slate-400">
+                        {doc.size} • {doc.acessos} acessos
                       </span>
-                    </div>
+                    </button>
 
-                    <div className="mb-6 space-y-1">
-                      <h4 className="font-bold text-[#001a33] text-sm leading-snug line-clamp-2" title={doc.title}>{doc.title}</h4>
-                      <p className="text-xs text-slate-400 line-clamp-2 min-h-[2.5em]">{doc.description || 'Sem descrição.'}</p>
-                    </div>
-
-                    <div className="mt-auto pt-4 border-t border-slate-50 flex items-center justify-between">
-                      <div className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">
-                        {doc.size} • {doc.acessos} views
-                      </div>
-                      
-                      <div className="flex gap-1">
-                        <button 
-                          onClick={() => {
-                            bibliotecaService.incrementAcessos(doc.id);
-                            onPreviewClick(doc);
-                          }}
-                          className="p-2 bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-blue-600 rounded-lg transition-colors border border-slate-100"
-                          title="Visualização Rápida"
-                        >
-                          <Eye size={14} />
-                        </button>
+                    <div className={`mt-2 grid w-full border-t border-slate-100 pt-2 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 ${
+                      readOnly ? 'grid-cols-2 gap-1' : 'grid-cols-3 gap-1'
+                    }`}>
+                      <button
+                        type="button"
+                        onClick={() => handlePreviewDocument(doc)}
+                        className="flex min-h-8 items-center justify-center rounded-lg text-slate-400 hover:bg-blue-50 hover:text-blue-600"
+                        title="Visualização rápida"
+                      >
+                        <Eye size={13} />
+                      </button>
                         <a
                           href={!doc.url || doc.url === '#' ? undefined : doc.url}
                           download={doc.title}
                           onClick={(e) => {
                             if (!doc.url || doc.url === '#') {
                               e.preventDefault();
-                              alert('Download não disponível.');
+                              toast.info('Download indisponível', 'Este arquivo não possui um endereço válido para download.');
                             } else {
                               bibliotecaService.incrementAcessos(doc.id);
                             }
                           }}
-                          className="p-2 bg-slate-50 hover:bg-emerald-50 text-slate-400 hover:text-emerald-600 rounded-lg transition-colors border border-slate-100 flex items-center justify-center"
+                          className="flex min-h-8 items-center justify-center rounded-lg text-slate-400 hover:bg-emerald-50 hover:text-emerald-600"
                           title="Baixar Arquivo"
                         >
-                          <Download size={14} />
+                          <Download size={13} />
                         </a>
                         {!readOnly && (
                           <>
@@ -407,48 +573,65 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
                                 setMovingItem({ id: doc.id, type: 'document' });
                                 setActionType('copy');
                               }}
-                              className="p-2 bg-slate-50 hover:bg-purple-50 text-slate-400 hover:text-purple-600 rounded-lg transition-colors border border-slate-100"
+                              className="flex min-h-8 items-center justify-center rounded-lg text-slate-400 hover:bg-purple-50 hover:text-purple-600"
                               title="Copiar"
                             >
-                              <Copy size={14} />
+                              <Copy size={13} />
                             </button>
                             <button 
                               onClick={() => {
                                 setMovingItem({ id: doc.id, type: 'document' });
                                 setActionType('move');
                               }}
-                              className="p-2 bg-slate-50 hover:bg-slate-100 text-slate-400 rounded-lg transition-colors border border-slate-100"
+                              className="flex min-h-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
                               title="Mover"
                             >
-                              <ArrowRight size={14} />
+                              <ArrowRight size={13} />
                             </button>
                             <button 
                               onClick={() => setPermissionsDoc(doc)}
-                              className="p-2 bg-slate-50 hover:bg-amber-50 text-slate-450 hover:text-amber-600 rounded-lg transition-colors border border-slate-100"
+                              className="flex min-h-8 items-center justify-center rounded-lg text-slate-400 hover:bg-amber-50 hover:text-amber-600"
                               title="Regras de Liberação"
                             >
-                              <Lock size={14} />
+                              <Lock size={13} />
                             </button>
                             <button 
-                              onClick={() => {
-                                if (confirm('Deseja excluir permanentemente este documento?')) {
-                                  deleteDocumentMutation.mutate(doc.id);
-                                }
-                              }}
-                              className="p-2 bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-650 rounded-lg transition-colors border border-slate-100"
-                              title="Excluir"
+                              onClick={() => setPendingDeletion({
+                                type: 'document',
+                                id: doc.id,
+                                name: doc.title
+                              })}
+                              className="flex min-h-8 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                              title="Apagar"
                             >
-                              <Trash2 size={14} />
+                              <Trash2 size={13} />
                             </button>
                           </>
                         )}
-                      </div>
                     </div>
-                  </div>
+                  </article>
                 ))}
               </div>
-            )}
-          </div>
+            </section>
+          )}
+
+          {filteredDocs.length === 0 && folders.length === 0 && (
+            <div className="space-y-2 rounded-[2rem] border border-dashed border-slate-200 bg-slate-50 p-12 text-center text-slate-400">
+              {isFiltering ? (
+                <>
+                  <Search size={32} className="mx-auto text-slate-350" />
+                  <h4 className="text-xs font-bold uppercase tracking-wider">Nenhum resultado encontrado</h4>
+                  <p className="text-[10px] font-medium leading-relaxed text-slate-400">Nenhum arquivo corresponde aos critérios de busca selecionados.</p>
+                </>
+              ) : (
+                <>
+                  <FolderOpen size={32} className="mx-auto text-slate-350" />
+                  <h4 className="text-xs font-bold uppercase tracking-wider">Diretório vazio</h4>
+                  <p className="text-[10px] font-medium leading-relaxed text-slate-400">Esta pasta não contém arquivos ou subpastas publicadas.</p>
+                </>
+              )}
+            </div>
+          )}
 
         </div>
       )}
@@ -469,6 +652,24 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
                 required
                 autoFocus
               />
+              <div className="space-y-2">
+                <label htmlFor="new-folder-audience" className="block text-[10px] font-black uppercase tracking-wider text-slate-500">
+                  Quem pode ver esta pasta?
+                </label>
+                <select
+                  id="new-folder-audience"
+                  value={newFolderAudience}
+                  onChange={(event) => setNewFolderAudience(event.target.value as TargetAudience)}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-700 outline-none focus:border-blue-500 focus:bg-white"
+                >
+                  {availableFolderAudienceOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+                <p className="text-[10px] font-medium leading-relaxed text-slate-500">
+                  {FOLDER_AUDIENCE_OPTIONS.find((option) => option.value === newFolderAudience)?.description}
+                </p>
+              </div>
               <div className="flex justify-end gap-2">
                 <button 
                   type="button" 
@@ -482,6 +683,48 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider"
                 >
                   Criar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* MODAL: COMPARTILHAMENTO DA PASTA */}
+      {sharingFolder && typeof window !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-[#001a33]/60 backdrop-blur-sm" onClick={() => setSharingFolder(null)} />
+          <div className="relative w-full max-w-sm rounded-3xl border border-slate-100 bg-white p-6 shadow-2xl animate-fadeIn">
+            <div className="mb-4 flex items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-600"><Lock size={19} /></div>
+              <div className="min-w-0">
+                <h4 className="text-lg font-black uppercase tracking-tight text-[#001a33]">Compartilhar Pasta</h4>
+                <p className="truncate text-xs font-semibold text-slate-500">{sharingFolder.nome}</p>
+              </div>
+            </div>
+            <form onSubmit={handleSharingSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="folder-audience" className="block text-[10px] font-black uppercase tracking-wider text-slate-500">Quem pode ver?</label>
+                <select
+                  id="folder-audience"
+                  value={sharedAudience}
+                  onChange={(event) => setSharedAudience(event.target.value as TargetAudience)}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-700 outline-none focus:border-blue-500 focus:bg-white"
+                >
+                  {availableFolderAudienceOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+                <p className="text-[10px] font-medium leading-relaxed text-slate-500">
+                  {FOLDER_AUDIENCE_OPTIONS.find((option) => option.value === sharedAudience)?.description}
+                  {sharingFolder.parentId ? ' A pasta também respeita a permissão de todas as pastas acima dela.' : ''}
+                </p>
+              </div>
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => setSharingFolder(null)} className="rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-wider text-slate-500 hover:bg-slate-50">Cancelar</button>
+                <button type="submit" disabled={updateFolderAudienceMutation.isPending} className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-blue-700 disabled:opacity-50">
+                  {updateFolderAudienceMutation.isPending ? 'Salvando...' : 'Salvar'}
                 </button>
               </div>
             </form>
@@ -594,6 +837,23 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
           setPermissionsDoc(null);
         }}
       />
+
+      <ConfirmModal
+        isOpen={!!pendingDeletion}
+        title="Confirmação"
+        message={
+          pendingDeletion?.type === 'folder'
+            ? `Deseja realmente apagar a pasta “${pendingDeletion.name}” e todos os arquivos dentro dela?`
+            : `Deseja realmente apagar o arquivo “${pendingDeletion?.name || ''}”?`
+        }
+        confirmText="Apagar"
+        cancelText="Cancelar"
+        variant="danger"
+        onClose={() => setPendingDeletion(null)}
+        onConfirm={handleConfirmDeletion}
+      />
+
+      <ToastNotification toasts={toasts} onRemove={removeToast} />
 
     </div>
   );

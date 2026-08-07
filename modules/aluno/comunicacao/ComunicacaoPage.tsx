@@ -1,3 +1,4 @@
+/* global MediaRecorder, MediaStream */
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { MessageSquare, Clock, CheckCircle, Tag, Plus, Trash2 } from 'lucide-react';
@@ -8,9 +9,9 @@ import {
   AlunoDeleteChatModal,
   AlunoMessageComposer,
   AlunoMessageList,
-  AlunoNewChatModal,
   CHAT_PAGE_SIZE,
 } from './AlunoComunicacaoParts';
+import AlunoAutomatedSupportModal from './AlunoAutomatedSupportModal';
 import {
   alunoComunicacaoKeys,
   alunoComunicacaoService,
@@ -21,7 +22,18 @@ import {
   ComunicacaoChat,
   ComunicacaoMensagem,
   ComunicacaoPageProps,
+  CreateAlunoChatInput,
 } from './comunicacao.types';
+import useAlunoMobileLayout from '../hooks/useAlunoMobileLayout';
+import AlunoMobileComunicacao from './mobile/AlunoMobileComunicacao';
+import AlunoSupportAvailabilityCard from './AlunoSupportAvailabilityCard';
+import { useAlunoAppDeviceStatus } from '../native-app/native-app.queries';
+import { nativeAppService } from '../native-app/native-app.service';
+import { NATIVE_PUSH_PERMISSION_CHANGED_EVENT } from '../native-app/native-app.bridge';
+import {
+  NATIVE_AUDIO_CAPTURE_ACCEPT,
+  validateCapturedAudioFile,
+} from '../../shared/comunicacao/native-audio-file';
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -47,26 +59,174 @@ const playMessageSound = (tone: 'send' | 'receive') => {
   }
 };
 
-const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome }) => {
+const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome, onNavigate }) => {
   const queryClient = useQueryClient();
   const { toasts, removeToast, toast } = useToast();
+  const isMobile = useAlunoMobileLayout();
+  const { statusQuery: appNotificationStatusQuery } = useAlunoAppDeviceStatus(alunoId);
+  const appNotificationsEnabled = Boolean(appNotificationStatusQuery.data?.notificationsEnabled);
+  const isNativeApp = nativeAppService.isAvailable();
 
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [messageText, setMessageText] = useState('');
   const [showNewChatModal, setShowNewChatModal] = useState(false);
-  const [newChatCategory, setNewChatCategory] = useState('');
-  const [newChatSubject, setNewChatSubject] = useState('');
+  const [nativePushAllowed, setNativePushAllowed] = useState(false);
   const [unreadChatIds, setUnreadChatIds] = useState<Set<string>>(new Set());
   const [activeCallTab, setActiveCallTab] = useState<'pendentes' | 'resolvidos'>('pendentes');
   const [pendingPage, setPendingPage] = useState(1);
   const [resolvedPage, setResolvedPage] = useState(1);
+  const [mobileConversationOpen, setMobileConversationOpen] = useState(false);
 
   // Attachment state
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const nativeAudioInputRef = useRef<HTMLInputElement>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const recordingStreamRef = useRef<MediaStream | null>(null);
+  const recordingChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const seenMessageIdsRef = useRef<Set<string>>(new Set());
+  const requestedChatHandledRef = useRef(false);
+
+  const clearRecordingResources = () => {
+    if (recordingTimerRef.current !== null) {
+      window.clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    recordingStreamRef.current?.getTracks().forEach((track) => track.stop());
+    recordingStreamRef.current = null;
+  };
+
+  const abortRecording = () => {
+    const recorder = recorderRef.current;
+    if (recorder) {
+      recorder.ondataavailable = null;
+      recorder.onstop = null;
+      if (recorder.state !== 'inactive') recorder.stop();
+    }
+    recorderRef.current = null;
+    recordingChunksRef.current = [];
+    clearRecordingResources();
+    setRecording(false);
+    setRecordingSeconds(0);
+  };
+
+  const stopRecording = () => {
+    const recorder = recorderRef.current;
+    if (recorder && recorder.state !== 'inactive') recorder.stop();
+  };
+
+  const selectPendingFile = (file: File | null) => {
+    if (!file) {
+      setPendingFile(null);
+      return;
+    }
+    const looksLikeAudio = file.type.toLowerCase().startsWith('audio/')
+      || /\.(?:m4a|mp4|mp3|mpeg|wav|ogg|oga|webm)$/i.test(file.name);
+    if (!looksLikeAudio) {
+      setPendingFile(file);
+      return;
+    }
+
+    const result = validateCapturedAudioFile(file, 25 * 1024 * 1024);
+    if (!result.file || result.error) {
+      toast.error('Áudio não aceito', result.error || 'Não foi possível usar o áudio selecionado.');
+      return;
+    }
+    setPendingFile(result.file);
+  };
+
+  const selectNativeAudioFile = (file: File | null) => {
+    if (!file) return;
+    selectPendingFile(file);
+  };
+
+  const startRecording = async () => {
+    if (recording || uploadingFile || pendingFile) return;
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      nativeAudioInputRef.current?.click();
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      recordingStreamRef.current = stream;
+      const Recorder = window.MediaRecorder;
+      const preferredTypes = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/ogg;codecs=opus'];
+      const mimeType = typeof Recorder.isTypeSupported === 'function'
+        ? preferredTypes.find((type) => Recorder.isTypeSupported(type))
+        : undefined;
+      const recorder = new Recorder(stream, mimeType ? { mimeType } : undefined);
+      recorderRef.current = recorder;
+      recordingChunksRef.current = [];
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) recordingChunksRef.current.push(event.data);
+      };
+      recorder.onstop = () => {
+        const canonicalType = (recorder.mimeType || mimeType || 'audio/webm').split(';')[0];
+        const extension = canonicalType.includes('ogg')
+          ? 'ogg'
+          : canonicalType.includes('webm')
+            ? 'webm'
+            : canonicalType.includes('mpeg')
+              ? 'mp3'
+              : 'm4a';
+        const blob = new Blob(recordingChunksRef.current, { type: canonicalType });
+
+        if (blob.size > 0 && blob.size <= 25 * 1024 * 1024) {
+          setPendingFile(new File([blob], `mensagem-de-voz-${Date.now()}.${extension}`, {
+            type: canonicalType,
+          }));
+        } else {
+          toast.error(
+            blob.size > 25 * 1024 * 1024 ? 'Áudio muito grande' : 'Áudio vazio',
+            blob.size > 25 * 1024 * 1024
+              ? 'A mensagem de voz deve ter no máximo 25 MB.'
+              : 'Não foi possível capturar a mensagem de voz. Tente novamente.',
+          );
+        }
+
+        recordingChunksRef.current = [];
+        recorderRef.current = null;
+        setRecording(false);
+        setRecordingSeconds(0);
+        clearRecordingResources();
+      };
+
+      recorder.start(250);
+      setRecordingSeconds(0);
+      setRecording(true);
+      recordingTimerRef.current = window.setInterval(() => {
+        setRecordingSeconds((current) => {
+          if (current >= 299) stopRecording();
+          return Math.min(current + 1, 300);
+        });
+      }, 1_000);
+    } catch (error) {
+      clearRecordingResources();
+      recorderRef.current = null;
+      setRecording(false);
+      const blocked = ['NotAllowedError', 'PermissionDeniedError'].includes(
+        (error as { name?: string } | null)?.name || '',
+      );
+      toast.error(
+        blocked ? 'Microfone bloqueado' : 'Erro ao gravar',
+        blocked
+          ? 'Permita o microfone nas configurações do navegador ou do aplicativo para enviar mensagens de voz.'
+          : 'Não foi possível iniciar a gravação de áudio.',
+      );
+    }
+  };
+
+  const handleRecord = () => {
+    if (recording) stopRecording();
+    else void startRecording();
+  };
 
   // Delete confirm modal state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -78,8 +238,27 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
     queryFn: alunoComunicacaoService.getCategories
   });
 
+  const {
+    data: supportConfig,
+    isLoading: loadingSupportConfig,
+  } = useQuery({
+    queryKey: alunoComunicacaoKeys.supportConfig(alunoId),
+    queryFn: alunoComunicacaoService.getSupportConfig,
+    enabled: Boolean(alunoId),
+    staleTime: 60_000,
+  });
+
+  const canOpenNewChat = supportConfig
+    ? supportConfig.permite_chat_app && supportConfig.permite_novo_chamado
+    : true;
+
   // ── 2. Fetch Aluno's Chats (mais recente primeiro, excluindo soft-deleted) ──
-  const { data: chats = [], isLoading: loadingChats } = useQuery<ComunicacaoChat[]>({
+  const {
+    data: chats = [],
+    isError: chatsError,
+    isLoading: loadingChats,
+    refetch: refetchChats,
+  } = useQuery<ComunicacaoChat[]>({
     queryKey: alunoComunicacaoKeys.chats(alunoId),
     queryFn: () => alunoComunicacaoService.getAlunoChats(alunoId),
     staleTime: 0,
@@ -87,7 +266,12 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
   });
 
   // ── 3. Fetch Messages for Active Chat ──
-  const { data: messages = [], isLoading: loadingMessages } = useQuery<ComunicacaoMensagem[]>({
+  const {
+    data: messages = [],
+    isError: messagesError,
+    isLoading: loadingMessages,
+    refetch: refetchMessages,
+  } = useQuery<ComunicacaoMensagem[]>({
     queryKey: alunoComunicacaoKeys.messages(activeChatId),
     enabled: !!activeChatId,
     queryFn: () => alunoComunicacaoService.getMessages(activeChatId!)
@@ -105,7 +289,49 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
     else setResolvedPage(page);
   };
 
-  useAlunoComunicacaoRealtime({ alunoId, activeChatId, setUnreadChatIds });
+  useAlunoComunicacaoRealtime({
+    alunoId,
+    activeChatId,
+    supportPoloId: supportConfig?.polo_id,
+    setUnreadChatIds,
+  });
+
+  useEffect(() => {
+    abortRecording();
+    setPendingFile(null);
+    setMessageText('');
+  }, [activeChatId]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') abortRecording();
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      abortRecording();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isNativeApp) return undefined;
+    let disposed = false;
+    const refreshPermission = () => {
+      void nativeAppService.getGlobalPushStatus().then((push) => {
+        if (!disposed) setNativePushAllowed(Boolean(
+          push && ['granted', 'provisional'].includes(push.permissionStatus) && push.token,
+        ));
+      }).catch(() => {
+        if (!disposed) setNativePushAllowed(false);
+      });
+    };
+    refreshPermission();
+    window.addEventListener(NATIVE_PUSH_PERMISSION_CHANGED_EVENT, refreshPermission);
+    return () => {
+      disposed = true;
+      window.removeEventListener(NATIVE_PUSH_PERMISSION_CHANGED_EVENT, refreshPermission);
+    };
+  }, [isNativeApp]);
 
   useEffect(() => {
     seenMessageIdsRef.current = new Set();
@@ -127,11 +353,38 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
 
   // ── 6. Autoscroll ──
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    messagesEndRef.current?.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth' });
   }, [messages]);
 
   // ── 7. Default active chat ──
   useEffect(() => {
+    if (!requestedChatHandledRef.current) {
+      const requestedChatId = new URLSearchParams(window.location.search).get('chatId');
+      const requestedChat = requestedChatId
+        ? chats.find((chat) => chat.id === requestedChatId)
+        : null;
+
+      if (requestedChat) {
+        const requestedTab = requestedChat.status === 'pendente' ? 'pendentes' : 'resolvidos';
+        const requestedTabChats = requestedTab === 'pendentes' ? pendentes : resolvidos;
+        const requestedIndex = requestedTabChats.findIndex((chat) => chat.id === requestedChat.id);
+        requestedChatHandledRef.current = true;
+        setActiveCallTab(requestedTab);
+        if (requestedTab === 'pendentes') setPendingPage(Math.floor(requestedIndex / CHAT_PAGE_SIZE) + 1);
+        else setResolvedPage(Math.floor(requestedIndex / CHAT_PAGE_SIZE) + 1);
+        setActiveChatId(requestedChat.id);
+        setMobileConversationOpen(true);
+
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.delete('chatId');
+        window.history.replaceState(window.history.state, '', `${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`);
+        return;
+      }
+
+      if (requestedChatId && !loadingChats) requestedChatHandledRef.current = true;
+    }
+
     const isCurrentInTab = activeCallChats.some(c => c.id === activeChatId);
     const totalPagesForTab = Math.max(1, Math.ceil(activeCallChats.length / CHAT_PAGE_SIZE));
 
@@ -154,13 +407,17 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
     activeCallChats,
     activeCallTab,
     activeChatId,
+    chats,
+    loadingChats,
+    pendentes,
     pendingPage,
+    resolvidos,
     resolvedPage
   ]);
 
   // ── Send Message ──
   const handleSendMessage = async () => {
-    if (!activeChatId) return;
+    if (!activeChatId || recording) return;
     const text = messageText.trim();
     const fileToSend = pendingFile;
     if (!text && !fileToSend) return;
@@ -186,6 +443,8 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
       playMessageSound('send');
     } catch (err) {
       console.error('Erro ao enviar mensagem:', err);
+      setMessageText(text);
+      setPendingFile(fileToSend);
       toast.error('Erro ao enviar', 'Não foi possível enviar a mensagem.');
     } finally {
       setUploadingFile(false);
@@ -217,37 +476,45 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
   };
 
   // ── Open New Chat ──
-  const handleCreateNewChat = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newChatCategory || !newChatSubject.trim()) return;
+  const handleCreateNewChat = async (
+    input: Pick<CreateAlunoChatInput, 'message' | 'poloLabel' | 'sector' | 'subject'>,
+  ) => {
+    if (!canOpenNewChat) {
+      throw new Error(supportConfig?.mensagem_offline || 'Não é possível abrir um novo chamado neste momento.');
+    }
     try {
-      const selectedCat = categories.find(c => c.id === newChatCategory);
-      const catName = selectedCat ? selectedCat.nome : 'Suporte';
-
       const newChat = await alunoComunicacaoService.createChat({
-        alunoId,
-        alunoNome,
-        categoryId: newChatCategory,
-        categoryName: catName,
-        subject: newChatSubject,
+        ...input,
+        notifyOnResponse: isNativeApp && (nativePushAllowed || appNotificationsEnabled),
+        origin: isNativeApp ? 'app' : 'portal',
       });
 
       setShowNewChatModal(false);
-      setNewChatCategory('');
-      setNewChatSubject('');
       queryClient.invalidateQueries({ queryKey: alunoComunicacaoKeys.chats(alunoId) });
       setActiveCallTab('pendentes');
       setPendingPage(1);
       setActiveChatId(newChat.id);
+      if (isMobile) setMobileConversationOpen(true);
       toast.success('Chamado aberto', 'Nossa equipe responderá em breve!');
     } catch (err) {
       console.error(err);
-      toast.error('Erro ao abrir chamado', 'Não foi possível abrir o chamado.');
+      throw new Error(
+        err instanceof Error ? err.message : 'Não foi possível abrir o chamado.',
+        { cause: err },
+      );
     }
   };
 
   // ── Helpers ──
   const currentChat = chats.find(c => c.id === activeChatId);
+
+  useEffect(() => {
+    if (currentChat?.status === 'solucionada') abortRecording();
+  }, [currentChat?.status]);
+
+  useEffect(() => {
+    if (!currentChat) setMobileConversationOpen(false);
+  }, [currentChat]);
 
   const getCategoryInfo = (catId: string | null) => {
     if (!catId) return { nome: 'Geral', cor: '#475569' };
@@ -256,8 +523,71 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-[calc(100vh-140px)] bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-sm animate-fadeIn">
+    <>
       <ToastNotification toasts={toasts} onRemove={removeToast} />
+      <input
+        ref={nativeAudioInputRef}
+        type="file"
+        accept={NATIVE_AUDIO_CAPTURE_ACCEPT}
+        capture
+        className="hidden"
+        tabIndex={-1}
+        aria-hidden="true"
+        onChange={(event) => {
+          selectNativeAudioFile(event.target.files?.[0] || null);
+          event.target.value = '';
+        }}
+      />
+
+      {isMobile ? (
+        <AlunoMobileComunicacao
+          activeCallTab={activeCallTab}
+          activePage={activePage}
+          categories={categories}
+          chatsError={chatsError}
+          currentChat={currentChat}
+          displayedChats={displayedChats}
+          fileInputRef={fileInputRef}
+          loadingChats={loadingChats}
+          loadingMessages={loadingMessages}
+          messagesError={messagesError}
+          messages={messages}
+          messagesEndRef={messagesEndRef}
+          messageText={messageText}
+          pendingCount={pendentes.length}
+          pendingFile={pendingFile}
+          recording={recording}
+          recordingSeconds={recordingSeconds}
+          resolvedCount={resolvidos.length}
+          showConversation={mobileConversationOpen}
+          totalChatsInTab={activeCallChats.length}
+          unreadChatIds={unreadChatIds}
+          uploadingFile={uploadingFile}
+          supportConfig={supportConfig}
+          supportConfigLoading={loadingSupportConfig}
+          canOpenNewChat={canOpenNewChat}
+          onBack={() => setMobileConversationOpen(false)}
+          onDelete={() => setShowDeleteConfirm(true)}
+          onFileChange={selectPendingFile}
+          onMessageChange={setMessageText}
+          onRecord={handleRecord}
+          onNewChat={() => canOpenNewChat && setShowNewChatModal(true)}
+          onPageChange={handlePageChange}
+          onRetryChats={() => void refetchChats()}
+          onRetryMessages={() => void refetchMessages()}
+          onSelectChat={(chatId) => {
+            setActiveChatId(chatId);
+            setMobileConversationOpen(true);
+          }}
+          onSend={handleSendMessage}
+          onTabChange={(tab) => {
+            setActiveCallTab(tab);
+            if (tab === 'pendentes') setPendingPage(1);
+            else setResolvedPage(1);
+          }}
+        />
+      ) : (
+    <div className="flex flex-col h-[calc(100vh-140px)] bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-sm animate-fadeIn">
 
       {/* ── Top Header ── */}
       <div className="bg-white px-6 py-4 border-b border-slate-200 flex justify-between items-center shrink-0">
@@ -271,12 +601,15 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
           </div>
         </div>
         <button
-          onClick={() => setShowNewChatModal(true)}
-          className="flex items-center gap-1.5 px-4 py-2.5 bg-[#001a33] hover:bg-blue-900 text-white font-bold text-xs uppercase tracking-widest rounded-xl transition-all shadow-md"
+          onClick={() => canOpenNewChat && setShowNewChatModal(true)}
+          disabled={!canOpenNewChat}
+          className="flex items-center gap-1.5 px-4 py-2.5 bg-[#001a33] hover:bg-blue-900 text-white font-bold text-xs uppercase tracking-widest rounded-xl transition-all shadow-md disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
         >
           <Plus size={14} /> Novo Chamado
         </button>
       </div>
+
+      <AlunoSupportAvailabilityCard config={supportConfig} loading={loadingSupportConfig} />
 
       {/* ── Main Layout ── */}
       <div className="flex-1 flex overflow-hidden min-h-0">
@@ -321,8 +654,13 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
 
           <div className="flex-1 overflow-y-auto p-2 space-y-1.5 custom-scrollbar">
             {loadingChats ? (
-              <div className="flex justify-center items-center py-10">
-                <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+              <div className="flex justify-center items-center py-10" role="status" aria-label="Carregando chamados">
+                <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin motion-reduce:animate-none" />
+              </div>
+            ) : chatsError ? (
+              <div className="px-4 py-10 text-center" role="alert">
+                <p className="text-[10px] font-black uppercase tracking-wider text-rose-600">Não foi possível carregar os chamados</p>
+                <button type="button" onClick={() => void refetchChats()} className="mt-3 rounded-xl bg-[#001a33] px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-white">Tentar novamente</button>
               </div>
             ) : displayedChats.length === 0 ? (
               <div className="text-center py-12 text-slate-400 px-4">
@@ -425,7 +763,13 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
             </div>
 
             {/* Messages Area — scrollable */}
-            <AlunoMessageList loading={loadingMessages} messages={messages} endRef={messagesEndRef} />
+            <AlunoMessageList
+              loading={loadingMessages}
+              error={messagesError}
+              messages={messages}
+              endRef={messagesEndRef}
+              onRetry={() => void refetchMessages()}
+            />
 
             {/* ── Input Box — FIXED at bottom ── */}
             <div className="shrink-0 border-t border-slate-200 bg-white">
@@ -440,9 +784,12 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
                   fileInputRef={fileInputRef}
                   messageText={messageText}
                   pendingFile={pendingFile}
+                  recording={recording}
+                  recordingSeconds={recordingSeconds}
                   uploading={uploadingFile}
-                  onFileChange={setPendingFile}
+                  onFileChange={selectPendingFile}
                   onMessageChange={setMessageText}
+                  onRecord={handleRecord}
                   onSend={handleSendMessage}
                 />
               )}
@@ -461,6 +808,9 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
         )}
       </div>
 
+    </div>
+      )}
+
       {/* ── Delete Confirmation Modal ── */}
       {showDeleteConfirm && (
         <AlunoDeleteChatModal deleting={deletingChat} onCancel={() => setShowDeleteConfirm(false)} onConfirm={handleDeleteChat} />
@@ -468,17 +818,13 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
 
       {/* ── New Ticket Modal ── */}
       {showNewChatModal && (
-        <AlunoNewChatModal
-          categories={categories}
-          categoryId={newChatCategory}
-          subject={newChatSubject}
-          onCategoryChange={setNewChatCategory}
+        <AlunoAutomatedSupportModal
           onClose={() => setShowNewChatModal(false)}
-          onSubmit={handleCreateNewChat}
-          onSubjectChange={setNewChatSubject}
+          onCreate={handleCreateNewChat}
+          onNavigate={onNavigate}
         />
       )}
-    </div>
+    </>
   );
 };
 

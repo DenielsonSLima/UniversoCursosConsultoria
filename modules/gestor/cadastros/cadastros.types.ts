@@ -90,6 +90,7 @@ export interface Curso {
   asaas_payment_link_url?: string | null;
   asaas_link_status?: string | null;
   created_at?: string;
+  updated_at?: string;
   modulos?: Modulo[];
   ead_config?: EadConfig;
   financeiro_config?: CursoFinanceiroConfig;

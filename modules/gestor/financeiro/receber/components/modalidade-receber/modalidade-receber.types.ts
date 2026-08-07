@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import React from 'react';
 import type {
   ContasReceber,
   ReceivablesGroupMode,
@@ -15,7 +15,7 @@ export interface ModalidadeReceberTabProps {
   modality: CourseModality;
   title: string;
   description: string;
-  icon: ReactNode;
+  icon: ReturnType<typeof React.createElement>;
   accentLabel: string;
 }
 

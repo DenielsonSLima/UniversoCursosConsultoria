@@ -22,7 +22,7 @@ const EadCourseWizardStep7 = () => {
         <div>
           <h4 className="font-black text-lg text-[#001a33] uppercase tracking-tight">Geração de Certificado EAD</h4>
           <p className="text-slate-400 text-xs font-medium mt-0.5">
-            Configure as regras acadêmicas. O preview abaixo usa o modelo atual de certificado cadastrado em Cadastros &gt; Modelos Documentos.
+            Configure as regras acadêmicas. O preview abaixo usa o modelo atual de certificado cadastrado em Formações &gt; Modelos Documentos.
           </p>
         </div>
       </div>
@@ -81,7 +81,7 @@ const EadCourseWizardStep7 = () => {
               <h5 className="text-lg font-black uppercase tracking-tight text-[#001a33]">{modeloCertificadoEad.nome}</h5>
               <p className="mt-1 text-[10px] font-black uppercase tracking-wide text-slate-600">{modeloCertificadoEad.tipoCurso}</p>
               <p className="mt-3 text-xs leading-relaxed text-slate-500">
-                Alterações feitas em Cadastros &gt; Modelos Documentos são refletidas automaticamente nesta prévia.
+                Alterações feitas em Formações &gt; Modelos Documentos são refletidas automaticamente nesta prévia.
               </p>
               <div className="mt-3 flex flex-wrap gap-2 text-[10px] font-bold">
                 <span className="px-2.5 py-1 rounded-full border border-purple-200 bg-white text-purple-700">

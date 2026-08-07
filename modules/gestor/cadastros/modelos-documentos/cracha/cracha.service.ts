@@ -177,21 +177,19 @@ const normalizeTemplate = (template: Record<string, any> | null) => {
 
 export const crachaService = {
   async getTemplate() {
-    try {
-      const { data, error } = await supabase
-        .from('documentos_templates')
-        .select('conteudo')
-        .eq('id', 'cracha')
-        .maybeSingle();
+    const { data, error } = await supabase
+      .from('documentos_templates')
+      .select('conteudo')
+      .eq('id', 'cracha')
+      .maybeSingle();
 
-      if (!error && data && data.conteudo) {
-        return normalizeTemplate(data.conteudo);
-      }
-    } catch (e) {
-      console.error('[crachaService] Erro ao buscar template do Supabase:', e);
+    if (error) {
+      console.error('[crachaService] Erro ao buscar template do Supabase:', error);
+      throw error;
     }
 
-    return DEFAULT_TEMPLATE;
+    if (!data?.conteudo) return DEFAULT_TEMPLATE;
+    return normalizeTemplate(data.conteudo) || DEFAULT_TEMPLATE;
   },
 
   async saveTemplate(data: any) {

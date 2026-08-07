@@ -1,4 +1,3 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   buildCorsHeaders,
@@ -12,6 +11,11 @@ import { handleDeletePartner } from "./handlers/delete-partner.ts";
 import { handleListPartnerEmailStatuses } from "./handlers/list-partner-email-statuses.ts";
 import { handleSendStudentInvite } from "./handlers/send-student-invite.ts";
 import { handleUpsertGestorUser } from "./handlers/upsert-gestor-user.ts";
+import {
+  handleDeleteGestorUser,
+  handleListGestorUserManagementStates,
+  handleSetGestorUserStatus,
+} from "./handlers/manage-gestor-user.ts";
 import { gestorHasModule } from "./permissions.ts";
 import { resolveSupabasePublicApiKey } from "./redirects.ts";
 import type {
@@ -24,9 +28,19 @@ const VALID_ACTIONS = [
   "send-student-invite",
   "delete-partner",
   "upsert-gestor-user",
+  "list-gestor-user-management-states",
+  "set-gestor-user-status",
+  "delete-gestor-user",
   "list-partner-email-statuses",
   "confirm-partner-email",
 ] as const;
+
+const GESTOR_USER_ACTIONS = new Set([
+  "upsert-gestor-user",
+  "list-gestor-user-management-states",
+  "set-gestor-user-status",
+  "delete-gestor-user",
+]);
 
 Deno.serve(async (req: Request) => {
   const corsHeadersForRequest = buildCorsHeaders(req);
@@ -91,7 +105,7 @@ Deno.serve(async (req: Request) => {
   }
 
   if (
-    action !== "upsert-gestor-user" &&
+    !GESTOR_USER_ACTIONS.has(action) &&
     !gestorHasModule(authorization.gestor, "parceiros")
   ) {
     return json({
@@ -117,6 +131,18 @@ Deno.serve(async (req: Request) => {
       payload.user || {},
       payload.password,
     );
+  }
+
+  if (action === "list-gestor-user-management-states") {
+    return handleListGestorUserManagementStates(context, payload.userIds);
+  }
+
+  if (action === "set-gestor-user-status") {
+    return handleSetGestorUserStatus(context, payload.userId, payload.status);
+  }
+
+  if (action === "delete-gestor-user") {
+    return handleDeleteGestorUser(context, payload.userId);
   }
 
   const partnerId = String(payload.partnerId || "").trim();

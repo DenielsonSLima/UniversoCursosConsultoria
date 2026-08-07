@@ -20,6 +20,8 @@ const CHECKOUT_ATTEMPT_SNAPSHOT_FIELDS = [
   "gateway_status",
   "gateway_payment_id",
   "gateway_payment_link_id",
+  "gateway_boleto_linha_digitavel",
+  "gateway_boleto_codigo_barras",
   "gateway_boleto_nosso_numero",
   "gateway_submission_channel",
   "gateway_submission_status",

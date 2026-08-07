@@ -1,7 +1,7 @@
 // File: modules/gestor/financeiro/despesas/components/DespesaCard.tsx
 
 import React from 'react';
-import { CheckCircle2, Clock, AlertCircle, XCircle, Printer, Trash2, Layers } from 'lucide-react';
+import { CheckCircle2, Clock, AlertCircle, XCircle, Printer, Trash2, Layers, Paperclip } from 'lucide-react';
 import { DespesaLancamento } from '../despesas.service';
 
 const formatCurrency = (value: number) =>
@@ -22,9 +22,16 @@ interface DespesaCardProps {
   onPagar?: (item: DespesaLancamento) => void;
   onExcluir?: (item: DespesaLancamento) => void;
   onImprimir?: (item: DespesaLancamento) => void;
+  onAnexo?: (item: DespesaLancamento) => void;
 }
 
-const DespesaCard: React.FC<DespesaCardProps> = ({ item, onPagar, onExcluir, onImprimir }) => {
+const DespesaCard: React.FC<DespesaCardProps> = ({
+  item,
+  onPagar,
+  onExcluir,
+  onImprimir,
+  onAnexo,
+}) => {
   const cfg = statusConfig[item.status] || statusConfig.PENDENTE;
   const isPago = item.status === 'PAGO';
   const isCancelado = item.status === 'CANCELADO';
@@ -46,6 +53,15 @@ const DespesaCard: React.FC<DespesaCardProps> = ({ item, onPagar, onExcluir, onI
                 {item.categoriaNome}
               </span>
             )}
+            {item.isRateioDerived ? (
+              <p className="mt-1 text-[10px] font-bold text-indigo-600">
+                Rateio da Matriz{item.poloMatrizNome ? ` · ${item.poloMatrizNome}` : ''}
+              </p>
+            ) : item.rateioMode && item.rateioMode !== 'SEM_RATEIO' ? (
+              <p className="mt-1 text-[10px] font-bold text-indigo-600">
+                Custo rateado{item.rateioPolosQuantidade ? ` em ${item.rateioPolosQuantidade} polo${item.rateioPolosQuantidade === 1 ? '' : 's'}` : ''}
+              </p>
+            ) : null}
           </div>
           <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-bold uppercase ${cfg.bg} ${cfg.text} border ${cfg.border} flex-shrink-0`}>
             <cfg.Icon size={10} />
@@ -58,6 +74,14 @@ const DespesaCard: React.FC<DespesaCardProps> = ({ item, onPagar, onExcluir, onI
           <p className={`text-2xl font-black ${isPago ? 'text-emerald-600' : item.status === 'VENCIDO' ? 'text-rose-600' : 'text-[#001a33]'}`}>
             {formatCurrency(item.valor)}
           </p>
+          {(item.jurosValor > 0 || item.multaValor > 0 || item.descontoValor > 0) && (
+            <p className="mt-0.5 text-[10px] font-semibold text-slate-400">
+              Base {formatCurrency(item.valorBase)}
+              {item.jurosValor > 0 ? ` · Juros +${formatCurrency(item.jurosValor)}` : ''}
+              {item.multaValor > 0 ? ` · Multa +${formatCurrency(item.multaValor)}` : ''}
+              {item.descontoValor > 0 ? ` · Desconto −${formatCurrency(item.descontoValor)}` : ''}
+            </p>
+          )}
           {item.valorPago !== undefined && item.valorPago !== item.valor && (
             <p className="text-xs text-emerald-600 font-semibold mt-0.5">
               Pago: {formatCurrency(item.valorPago)}
@@ -102,7 +126,7 @@ const DespesaCard: React.FC<DespesaCardProps> = ({ item, onPagar, onExcluir, onI
 
         {/* Ações */}
         <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity border-t border-slate-50 pt-3">
-          {!isPago && !isCancelado && onPagar && (
+          {!item.isRateioDerived && !isPago && !isCancelado && onPagar && (
             <button
               onClick={() => onPagar(item)}
               className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold uppercase tracking-wide transition-colors"
@@ -111,7 +135,7 @@ const DespesaCard: React.FC<DespesaCardProps> = ({ item, onPagar, onExcluir, onI
               Dar Baixa
             </button>
           )}
-          {onImprimir && (
+          {!item.isRateioDerived && onImprimir && (
             <button
               onClick={() => onImprimir(item)}
               className="p-2 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-colors"
@@ -120,7 +144,16 @@ const DespesaCard: React.FC<DespesaCardProps> = ({ item, onPagar, onExcluir, onI
               <Printer size={15} />
             </button>
           )}
-          {onExcluir && (
+          {item.anexoPath && onAnexo && (
+            <button
+              onClick={() => onAnexo(item)}
+              className="p-2 text-violet-500 hover:text-violet-700 hover:bg-violet-50 rounded-xl transition-colors"
+              title={`Abrir anexo${item.anexoNome ? `: ${item.anexoNome}` : ''}`}
+            >
+              <Paperclip size={15} />
+            </button>
+          )}
+          {!item.isRateioDerived && onExcluir && item.status !== 'PAGO' && item.status !== 'CANCELADO' && (
             <button
               onClick={() => onExcluir(item)}
               className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"

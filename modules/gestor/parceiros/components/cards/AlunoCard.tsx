@@ -12,11 +12,9 @@ interface AlunoCardProps {
   data: any;
   onClick?: () => void;
   onDelete?: () => void;
-  onConfirmEmail?: () => void;
-  isConfirmingEmail?: boolean;
 }
 
-const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick, onDelete, onConfirmEmail, isConfirmingEmail }) => {
+const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick, onDelete }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
@@ -63,7 +61,7 @@ const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick, onDelete, onConfir
 
       {/* Header */}
       <div className="flex justify-between items-start mb-4 relative z-20">
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
           <div className="w-11 h-11 rounded-[14px] bg-blue-50 text-blue-600 flex items-center justify-center overflow-hidden border border-blue-100 shadow-sm shrink-0">
             <img
               src={data.foto || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.nome)}&background=E0F2FE&color=2563EB&bold=true`}
@@ -72,7 +70,7 @@ const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick, onDelete, onConfir
             />
           </div>
           <div className="flex flex-col min-w-0">
-            <h3 className="text-sm font-bold text-slate-800 line-clamp-1 group-hover:text-blue-600 transition-colors" title={data.nome}>
+            <h3 className="line-clamp-1 text-xs font-bold leading-4 tracking-[-0.01em] text-slate-800 transition-colors group-hover:text-blue-600" title={data.nome}>
               {data.nome}
             </h3>
             <div className="text-[11px] text-slate-400 font-medium font-mono flex items-center gap-1.5 flex-wrap">
@@ -149,8 +147,6 @@ const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick, onDelete, onConfir
               <span className="truncate font-medium" title={data.email}>{data.email}</span>
               <EmailConfirmationStatus
                 status={data.emailConfirmationStatus}
-                isConfirming={isConfirmingEmail}
-                onConfirm={onConfirmEmail}
               />
             </div>
           </div>

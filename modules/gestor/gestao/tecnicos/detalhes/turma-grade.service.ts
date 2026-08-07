@@ -6,29 +6,63 @@ import {
   TurmaAtividadeExtraClasse,
   TurmaAtividadeExtraClasseInput,
   TurmaAulaInput,
+  TurmaAulaPeriodo,
   TurmaAulaPlanejada,
+  TurmaAulaUpdateInput,
   TurmaDisciplinaConfig,
   TurmaGradeData,
   TurmaProfessorOption,
 } from './turma-grade.types';
 
 const sortAulas = (aulas: any[]) => [...aulas].sort((a, b) => {
-  if (a.data_aula && b.data_aula) return a.data_aula.localeCompare(b.data_aula);
+  if (a.data_aula && b.data_aula) {
+    const dateOrder = a.data_aula.localeCompare(b.data_aula);
+    if (dateOrder !== 0) return dateOrder;
+    const sessionOrder: Record<string, number> = { M: 1, T: 2, N: 3, U: 4 };
+    return (sessionOrder[a.sessao] || 9) - (sessionOrder[b.sessao] || 9);
+  }
   if (a.data_aula) return -1;
   if (b.data_aula) return 1;
   return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
 });
+
+const mapHoraOficial = (value: unknown): string | null => {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  // O Postgres devolve TIME como HH:mm:ss. O campo nativo time aceita HH:mm.
+  return value.slice(0, 5);
+};
 
 const mapAulasByDisciplina = (aulas: any[]): Record<string, TurmaAulaPlanejada[]> => {
   const result: Record<string, TurmaAulaPlanejada[]> = {};
 
   sortAulas(aulas || []).forEach((aula) => {
     if (!result[aula.disciplina_id]) result[aula.disciplina_id] = [];
-    result[aula.disciplina_id].push({
+    const encontros = result[aula.disciplina_id];
+    const existente = encontros.find((item) => item.dataAula === aula.data_aula);
+    const sessao = {
+      id: aula.id,
+      periodo: (aula.sessao || 'U') as TurmaAulaPeriodo,
+      cargaHoraria: parseFloat(aula.carga_horaria),
+    };
+    const horaInicio = mapHoraOficial(aula.hora_inicio);
+    const horaFim = mapHoraOficial(aula.hora_fim);
+    if (existente) {
+      existente.sessoes.push(sessao);
+      existente.cargaHoraria += sessao.cargaHoraria;
+      // Sessões do mesmo encontro recebem o mesmo horário pela RPC. Para
+      // dados legados, preservamos o primeiro horário canônico disponível.
+      existente.horaInicio ||= horaInicio;
+      existente.horaFim ||= horaFim;
+      return;
+    }
+    encontros.push({
       id: aula.id,
       titulo: aula.titulo,
-      cargaHoraria: parseFloat(aula.carga_horaria),
+      cargaHoraria: sessao.cargaHoraria,
       dataAula: aula.data_aula,
+      horaInicio,
+      horaFim,
+      sessoes: [sessao],
     });
   });
 
@@ -89,15 +123,15 @@ export const turmaGradeService = {
       cadastrosService.getGrade(cursoId),
       supabase
         .from('turmas_disciplinas')
-        .select('*')
+        .select('disciplina_id, professor_nome, professor_id, concluida')
         .eq('turma_id', turmaId),
       supabase
         .from('aulas_turma')
-        .select('*')
+        .select('id, disciplina_id, titulo, carga_horaria, data_aula, hora_inicio, hora_fim, sessao, created_at')
         .eq('turma_id', turmaId),
       supabase
         .from('atividades_extra_classe')
-        .select('*')
+        .select('id, disciplina_id, titulo, tema, carga_horaria_compensacao, prazo_entrega, status')
         .eq('turma_id', turmaId)
         .neq('status', 'ARQUIVADA'),
       supabase
@@ -207,25 +241,41 @@ export const turmaGradeService = {
 
   async addAula(turmaId: string, input: TurmaAulaInput): Promise<TurmaAulaPlanejada> {
     const { data, error } = await supabase
-      .from('aulas_turma')
-      .insert({
-        turma_id: turmaId,
-        disciplina_id: input.disciplinaId,
-        titulo: input.titulo,
-        carga_horaria: input.horas,
-        data_aula: input.dataAula,
-      })
-      .select()
-      .single();
+      .rpc('salvar_encontro_turma_com_horario', {
+        p_turma_id: turmaId,
+        p_disciplina_id: input.disciplinaId,
+        p_titulo: input.titulo,
+        p_carga_horaria: input.horas,
+        p_data_aula: input.dataAula,
+        p_hora_inicio: input.horaInicio || null,
+        p_hora_fim: input.horaFim || null,
+        p_aula_id: null,
+      });
 
     if (error) throw error;
+    const encontro = mapAulasByDisciplina(data || [])[input.disciplinaId]?.[0];
+    if (!encontro) throw new Error('O banco não retornou o encontro criado.');
+    return encontro;
+  },
 
-    return {
-      id: data.id,
-      titulo: data.titulo,
-      cargaHoraria: parseFloat(data.carga_horaria),
-      dataAula: data.data_aula,
-    };
+  async updateAula(turmaId: string, input: TurmaAulaUpdateInput): Promise<TurmaAulaPlanejada> {
+    const { data, error } = await supabase
+      .rpc('salvar_encontro_turma_com_horario', {
+        p_turma_id: turmaId,
+        p_disciplina_id: input.disciplinaId,
+        p_titulo: input.titulo || null,
+        p_carga_horaria: input.horas,
+        p_data_aula: input.dataAula,
+        p_hora_inicio: input.horaInicio || null,
+        p_hora_fim: input.horaFim || null,
+        p_aula_id: input.aulaId,
+      });
+
+    if (error) throw error;
+    const encontros = mapAulasByDisciplina(data || [])[input.disciplinaId] || [];
+    const encontro = encontros.find((item) => item.id === input.aulaId) || encontros[0];
+    if (!encontro) throw new Error('O banco não retornou o encontro atualizado.');
+    return encontro;
   },
 
   async addAtividadeExtraClasse(
@@ -269,7 +319,7 @@ export const turmaGradeService = {
   },
 
   async removeAula(aulaId: string) {
-    const { data, error } = await supabase.rpc('remove_turma_aula_planejada', {
+    const { data, error } = await supabase.rpc('remover_encontro_turma', {
       p_aula_id: aulaId,
     });
 

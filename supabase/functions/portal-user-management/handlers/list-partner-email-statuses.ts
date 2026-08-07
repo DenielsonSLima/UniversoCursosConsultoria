@@ -1,4 +1,4 @@
-import { listAuthUsersByEmail, normalizeEmail } from "../auth-users.ts";
+import { listAuthUsersByIdentity, normalizeEmail } from "../auth-users.ts";
 import { getGestorScope, isPartnerAllowedByScope } from "../gestor-access.ts";
 import { isUuid, normalizeStringArray } from "../permissions.ts";
 import type {
@@ -32,7 +32,9 @@ export const handleListPartnerEmailStatuses = async (
 
   const { data: partners, error: partnersError } = await admin
     .from("parceiros")
-    .select("id, email, polo_id, polo_ids")
+    .select(
+      "id, tipo, email, auth_user_id, auth_login_email, polo_id, polo_ids",
+    )
     .in("id", partnerIds);
 
   if (partnersError) {
@@ -43,15 +45,25 @@ export const handleListPartnerEmailStatuses = async (
   const allowedPartners = (partners || []).filter((partner: any) =>
     isPartnerAllowedByScope(scope, partner)
   );
-  const emails = new Set<string>(
-    allowedPartners.map((partner: any) => normalizeEmail(partner.email)).filter(
-      Boolean,
-    ),
-  );
+  const authUserIds = new Set<string>();
+  const canonicalEmails = new Set<string>();
+  for (const partner of allowedPartners) {
+    if (partner.auth_user_id) {
+      authUserIds.add(partner.auth_user_id);
+      continue;
+    }
+    const canonicalEmail = normalizeEmail(partner.auth_login_email);
+    if (canonicalEmail) canonicalEmails.add(canonicalEmail);
+  }
 
+  let usersById: Map<string, any>;
   let usersByEmail: Map<string, any>;
   try {
-    usersByEmail = await listAuthUsersByEmail(admin, emails);
+    ({ usersById, usersByEmail } = await listAuthUsersByIdentity(
+      admin,
+      authUserIds,
+      canonicalEmails,
+    ));
   } catch (error) {
     return json({
       success: false,
@@ -62,12 +74,20 @@ export const handleListPartnerEmailStatuses = async (
   }
 
   const statuses: PartnerEmailStatus[] = allowedPartners.map((partner: any) => {
-    const email = normalizeEmail(partner.email);
-    const authUser = email ? usersByEmail.get(email) : null;
+    const contactEmail = normalizeEmail(partner.email);
+    const canonicalEmail = normalizeEmail(partner.auth_login_email);
+    // Um ID canônico ausente no Auth é inconsistência e nunca deve cair para
+    // busca por e-mail. O fallback usa somente auth_login_email, que é a
+    // identidade normalizada e única dos alunos no banco.
+    const authUser = partner.auth_user_id
+      ? usersById.get(partner.auth_user_id) || null
+      : canonicalEmail
+      ? usersByEmail.get(canonicalEmail) || null
+      : null;
     const emailConfirmed = Boolean(
       authUser?.email_confirmed_at || authUser?.confirmed_at,
     );
-    const status: PartnerEmailStatusValue = !email
+    const status: PartnerEmailStatusValue = !contactEmail
       ? "no_email"
       : !authUser
       ? "no_auth_user"

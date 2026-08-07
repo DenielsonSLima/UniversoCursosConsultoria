@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Building,
   Download,
@@ -24,11 +24,14 @@ import DeleteParceiroModal from './components/DeleteParceiroModal';
 import { useParceirosFilters, ParceirosTabType } from './hooks/useParceirosFilters';
 import { useParceirosMutations } from './hooks/useParceirosMutations';
 import { useParceirosQueries } from './hooks/useParceirosQueries';
+import { filterTurmasByModalidades } from './parceiros-turmas.utils';
 
-type FormType = 'aluno' | 'professor' | 'selection' | 'pf' | 'pj' | null;
+export type ParceiroFormType = 'aluno' | 'professor' | 'selection' | 'pf' | 'pj';
+type FormType = ParceiroFormType | null;
 
 interface ParceirosPageProps {
   activeTabInicial?: ParceirosTabType;
+  initialForm?: ParceiroFormType;
   poloId?: string | null;
   includeGlobal?: boolean;
   onRequestScrollTop?: () => void;
@@ -42,9 +45,15 @@ const tabs = [
   { id: 'pf', label: 'Pessoa Física', icon: User },
 ] as const;
 
-const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos', poloId, includeGlobal = false, onRequestScrollTop }) => {
+const ParceirosPage: React.FC<ParceirosPageProps> = ({
+  activeTabInicial = 'todos',
+  initialForm,
+  poloId,
+  includeGlobal = false,
+  onRequestScrollTop,
+}) => {
   const { toasts, removeToast, toast } = useToast();
-  const [showForm, setShowForm] = useState<FormType>(null);
+  const [showForm, setShowForm] = useState<FormType>(initialForm || null);
   const [showExportModal, setShowExportModal] = useState(false);
   const [activeTab, setActiveTab] = useState<ParceirosTabType>(activeTabInicial);
   const [deletingParceiro, setDeletingParceiro] = useState<any | null>(null);
@@ -56,6 +65,10 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
   useEffect(() => {
     setActiveTab(activeTabInicial);
   }, [activeTabInicial]);
+
+  useEffect(() => {
+    if (initialForm) setShowForm(initialForm);
+  }, [initialForm]);
 
   const {
     allPartners,
@@ -80,12 +93,17 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
     kpis,
   } = useParceirosFilters(allPartners, activeTab);
 
+  const turmasFiltradas = useMemo(
+    () => filterTurmasByModalidades(turmasDisponiveis, alunoModalidadeFilter),
+    [alunoModalidadeFilter, turmasDisponiveis],
+  );
+
   useEffect(() => {
     if (loadingTurmas || turmasError || turmaFilter === 'todas') return;
-    if (!turmasDisponiveis.some((turma: any) => turma.id === turmaFilter)) {
+    if (!turmasFiltradas.some((turma) => turma.id === turmaFilter)) {
       setTurmaFilter('todas');
     }
-  }, [loadingTurmas, setTurmaFilter, turmaFilter, turmasDisponiveis, turmasError]);
+  }, [loadingTurmas, setTurmaFilter, turmaFilter, turmasError, turmasFiltradas]);
 
   const turmaFilterLabel = turmasDisponiveis.find((turma: any) => turma.id === turmaFilter)?.nome;
 
@@ -96,7 +114,6 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
     savePJMutation,
     enrollAlunoMutation,
     deleteMutation,
-    confirmEmailMutation,
   } = useParceirosMutations({
     toast,
     createdAlunoNome,
@@ -228,7 +245,7 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
         onClearAlunoModalidades={clearAlunoModalidadeFilter}
         onTurmaChange={setTurmaFilter}
         selectedTurma={turmaFilter}
-        turmas={turmasDisponiveis}
+        turmas={turmasFiltradas}
         loadingTurmas={loadingTurmas}
         turmasError={turmasError}
         onRetryTurmas={() => { void reloadTurmas(); }}
@@ -244,13 +261,14 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
           onRequestScrollTop?.();
         }}
         onDeleteParceiro={setDeletingParceiro}
-        onConfirmEmail={(parceiro) => confirmEmailMutation.mutate(parceiro)}
-        confirmingEmailPartnerId={confirmEmailMutation.isPending ? confirmEmailMutation.variables?.id || null : null}
       />
 
       <ParceirosExportModal
         isOpen={showExportModal}
         onClose={() => setShowExportModal(false)}
+        items={sortedAndFilteredPartners}
+        activeTab={activeTab}
+        poloId={poloId}
         filtrosAtuais={{ searchTerm, statusFilter, alunoModalidadeFilter, turmaFilter, turmaFilterLabel }}
       />
 

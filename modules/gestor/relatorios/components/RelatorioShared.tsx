@@ -1,6 +1,7 @@
 import React from 'react';
 import { Printer } from 'lucide-react';
 import DocumentHeader from '../../components/DocumentHeader';
+import ReportWatermark from './ReportWatermark';
 
 export const MODALIDADE_LABELS: Record<string, string> = {
   todos: 'Todas',
@@ -8,6 +9,7 @@ export const MODALIDADE_LABELS: Record<string, string> = {
   EAD: 'EAD',
   LIVRE: 'Cursos Livres',
   ESPECIALIZACAO: 'Especialização',
+  SUPERIOR: 'Ensino Superior',
 };
 
 export const STATUS_LABELS: Record<string, string> = {
@@ -18,6 +20,7 @@ export const STATUS_LABELS: Record<string, string> = {
   CANCELADO: 'Cancelado',
   DESISTENTE: 'Desistente',
   TRANSFERIDO: 'Transferido',
+  REPROVADO: 'Reprovado',
   PAGO: 'Pago',
   PENDENTE: 'Pendente',
   VENCIDO: 'Vencido',
@@ -44,7 +47,17 @@ export const ReportFilterPanel: React.FC<{
   title?: string;
   children: React.ReactNode;
   summary?: React.ReactNode;
-}> = ({ title = 'Filtros do Relatório', children, summary }) => (
+  onPrint?: () => void;
+  printDisabled?: boolean;
+  printLabel?: string;
+}> = ({
+  title = 'Filtros do Relatório',
+  children,
+  summary,
+  onPrint = printReport,
+  printDisabled = false,
+  printLabel = 'Imprimir / PDF',
+}) => (
   <div className="w-full lg:w-80 bg-white rounded-3xl p-5 border border-slate-100 shadow-sm shrink-0 flex flex-col justify-between">
     <div className="space-y-5">
       <div>
@@ -55,10 +68,12 @@ export const ReportFilterPanel: React.FC<{
     </div>
 
     <button
-      onClick={printReport}
-      className="w-full mt-6 py-3 bg-[#001a33] hover:bg-blue-900 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-colors shadow-lg flex items-center justify-center gap-2"
+      type="button"
+      onClick={onPrint}
+      disabled={printDisabled}
+      className="w-full mt-6 py-3 bg-[#001a33] hover:bg-blue-900 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-colors shadow-lg flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
     >
-      <Printer size={15} /> Imprimir / PDF
+      <Printer size={15} /> {printLabel}
     </button>
   </div>
 );
@@ -67,23 +82,23 @@ export const FilterField: React.FC<{
   label: string;
   children: React.ReactNode;
 }> = ({ label, children }) => (
-  <div className="flex flex-col gap-1">
+  <label className="flex flex-col gap-1">
     <span className="text-[10px] font-bold text-slate-400 uppercase ml-1">{label}</span>
     {children}
-  </div>
+  </label>
 );
 
 export const FilterSelect: React.FC<React.SelectHTMLAttributes<HTMLSelectElement>> = (props) => (
   <select
     {...props}
-    className={`w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none cursor-pointer ${props.className || ''}`}
+    className={`w-full cursor-pointer rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 outline-none focus-visible:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-200 ${props.className || ''}`}
   />
 );
 
 export const FilterInput: React.FC<React.InputHTMLAttributes<HTMLInputElement>> = (props) => (
   <input
     {...props}
-    className={`w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none ${props.className || ''}`}
+    className={`w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 outline-none focus-visible:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-200 ${props.className || ''}`}
   />
 );
 
@@ -118,66 +133,136 @@ export const A4ReportShell: React.FC<{
   rightType: string;
   meta?: React.ReactNode;
   kpis?: React.ReactNode;
-  children: React.ReactNode;
-}> = ({ company, polo, loading, title, description, rightTitle, rightType, meta, kpis, children }) => (
-  <div className="flex-1 bg-slate-200/40 rounded-3xl p-4 sm:p-8 flex justify-center overflow-auto custom-scrollbar">
-    {loading ? (
-      <div className="flex items-center justify-center py-20 w-full">
-        <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    ) : (
-      <div
-        className="bg-white w-[210mm] min-w-[210mm] min-h-[297mm] shadow-lg p-10 relative flex flex-col print:shadow-none print:p-0 print:w-auto print:max-w-none print:min-h-0 text-slate-800 shrink-0"
-        id="print-area"
-      >
-        {polo?.watermark_url ? (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden">
-            <img
-              src={polo.watermark_url}
-              alt="Watermark"
-              style={{
-                opacity: polo.watermark_opacity ?? 0.1,
-                width: `${polo.watermark_scale ?? 50}%`,
-                transform: 'rotate(-45deg)',
-              }}
-            />
-          </div>
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden select-none opacity-[0.03]">
-            <h1 className="text-6xl font-black rotate-[-45deg] tracking-widest text-slate-900 text-center">
-              UNIVERSO CURSOS E CONSULTORIA
-            </h1>
-          </div>
-        )}
+  printAreaId?: string;
+  pages?: React.ReactNode[];
+  children?: React.ReactNode;
+}> = ({
+  company,
+  polo,
+  loading,
+  title,
+  description,
+  rightTitle,
+  rightType,
+  meta,
+  kpis,
+  printAreaId = 'print-area',
+  pages,
+  children,
+}) => {
+  const reportPages = pages?.length ? pages : [children];
+  const generatedAt = new Date().toLocaleString('pt-BR');
 
-        <DocumentHeader
-          company={company}
-          polo={polo}
-          orientation="portrait"
-          rightContent={
-            <div className="text-right">
-              <h2 className="text-sm font-black text-slate-800 uppercase tracking-tight">{rightTitle}</h2>
-              <div className="px-2.5 py-1 bg-slate-100 rounded-lg inline-block mt-2">
-                <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Tipo</p>
-                <p className="text-[10px] font-bold text-[#001a33] uppercase">{rightType}</p>
-              </div>
-            </div>
+  return (
+    <div className="min-h-[70vh] flex-1 overflow-auto rounded-3xl bg-slate-200/40 p-4 custom-scrollbar sm:p-8 lg:min-h-0">
+      <style>{`
+        @media print {
+          body * {
+            visibility: hidden !important;
           }
-        />
 
-        <div className="mb-6 relative z-10 border-b pb-4">
-          <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">{title}</h3>
-          <p className="text-xs text-slate-500 font-medium mt-1">{description}</p>
+          #${printAreaId},
+          #${printAreaId} * {
+            visibility: visible !important;
+          }
+
+          #${printAreaId} {
+            position: absolute !important;
+            inset: 0 auto auto 0 !important;
+            display: block !important;
+            width: 210mm !important;
+            min-width: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+
+          #${printAreaId} .a4-report-page {
+            width: 210mm !important;
+            min-width: 210mm !important;
+            height: 297mm !important;
+            min-height: 297mm !important;
+            margin: 0 !important;
+            padding: 10mm !important;
+            box-shadow: none !important;
+            break-after: page;
+            page-break-after: always;
+          }
+
+          #${printAreaId} .a4-report-page:last-child {
+            break-after: auto;
+            page-break-after: auto;
+          }
+
+          @page {
+            size: A4 portrait;
+            margin: 0;
+          }
+        }
+      `}</style>
+      {loading ? (
+        <div className="flex w-full items-center justify-center py-20" role="status" aria-label="Carregando relatório">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
         </div>
+      ) : (
+        <div id={printAreaId} className="flex min-w-max flex-col items-center gap-4 print:block">
+          {reportPages.map((pageContent, pageIndex) => (
+            <section
+              key={`report-page-${pageIndex + 1}`}
+              className="a4-report-page relative box-border flex h-[297mm] min-h-[297mm] w-[210mm] min-w-[210mm] shrink-0 flex-col overflow-hidden bg-white p-10 text-slate-800 shadow-lg"
+              aria-label={`Página ${pageIndex + 1} de ${reportPages.length}`}
+            >
+              <ReportWatermark polo={polo} orientation="portrait" />
 
-        {meta && <div className="grid grid-cols-3 gap-4 mb-6 relative z-10">{meta}</div>}
-        {kpis && <div className="grid grid-cols-3 gap-4 mb-6 relative z-10 text-center">{kpis}</div>}
+              <DocumentHeader
+                company={company}
+                polo={polo}
+                orientation="portrait"
+                rightContent={
+                  <div className="text-right">
+                    <h2 className="text-sm font-black uppercase tracking-tight text-slate-800">{rightTitle}</h2>
+                    <div className="mt-2 inline-block rounded-lg bg-slate-100 px-2.5 py-1">
+                      <p className="text-[8px] font-black uppercase tracking-widest text-slate-500">Tipo</p>
+                      <p className="text-[10px] font-bold uppercase text-[#001a33]">{rightType}</p>
+                    </div>
+                  </div>
+                }
+              />
 
-        <div className="relative z-10 flex-1">{children}</div>
-      </div>
-    )}
-  </div>
-);
+              {pageIndex === 0 ? (
+                <>
+                  <div className="relative z-10 mb-6 border-b pb-4">
+                    <h3 className="text-lg font-black uppercase tracking-tight text-slate-800">{title}</h3>
+                    <p className="mt-1 text-xs font-medium text-slate-500">{description}</p>
+                  </div>
+
+                  {meta && <div className="relative z-10 mb-6 grid grid-cols-3 gap-4">{meta}</div>}
+                  {kpis && <div className="relative z-10 mb-6 grid grid-cols-3 gap-4 text-center">{kpis}</div>}
+                </>
+              ) : (
+                <div className="relative z-10 mb-4 flex items-center justify-between border-b pb-3">
+                  <div>
+                    <h3 className="text-sm font-black uppercase tracking-tight text-slate-800">{title}</h3>
+                    <p className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-slate-400">Continuação</p>
+                  </div>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">
+                    Página {pageIndex + 1} de {reportPages.length}
+                  </span>
+                </div>
+              )}
+
+              <div className="relative z-10 min-h-0 flex-1 overflow-hidden">{pageContent}</div>
+              <footer className="relative z-10 mt-3 grid shrink-0 grid-cols-3 items-center border-t border-slate-100 pt-2 text-[8px] font-bold uppercase tracking-widest text-slate-400">
+                <span>Universo Cursos e Consultoria</span>
+                <span className="text-center">Gerado em {generatedAt}</span>
+                <span className="text-right">Página {pageIndex + 1} de {reportPages.length}</span>
+              </footer>
+            </section>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const ReportMetaCard: React.FC<{
   label: string;

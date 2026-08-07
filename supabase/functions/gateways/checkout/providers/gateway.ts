@@ -202,10 +202,12 @@ export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
     gateway_environment: context.environment,
     gateway_payment_method: context.charge.method,
     gateway_installments: context.charge.installmentCount,
-    asaas_fee_value: context.charge.feeValue,
-    asaas_net_value: context.charge.netValue,
-    gateway_fee_value: context.charge.feeValue,
-    gateway_net_value: context.charge.netValue,
+    // Termos simulados de checkout não são fatos contábeis. Tarifa real só é
+    // reconhecida quando confirmada e lançada separadamente como despesa.
+    asaas_fee_value: null,
+    asaas_net_value: null,
+    gateway_fee_value: null,
+    gateway_net_value: null,
     updated_at: new Date().toISOString(),
   };
 

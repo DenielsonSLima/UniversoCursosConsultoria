@@ -1,44 +1,69 @@
 import React, { useMemo, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { ArrowLeft, Building2, CheckCircle2, ArrowRight, Clock, GraduationCap, Quote, ShieldCheck, UsersRound } from 'lucide-react';
 import LoginForm from './components/LoginForm';
 import { loginService } from './login.service';
 import { LoginCredentials } from './login.types';
 import { getInstitutionalProfiles, PortalAuthProfile, savePortalSession } from './portal-session';
 import { supabase } from '../../lib/supabase';
-import DailabsSignature from '../shared/components/DailabsSignature';
+import ArkhenSignature from '../shared/components/ArkhenSignature';
 import AccessCheckingScreen from '../shared/components/AccessCheckingScreen';
+import {
+  clearOAuthReturnParams,
+  clearPendingOAuthReturn,
+  getOAuthReturnError,
+  readPendingOAuthReturn,
+  hasOAuthReturnInUrl,
+} from '../shared/auth/oauth-return-state';
 import {
   INSTITUTIONAL_LOGIN_MOTIVATIONAL_PHRASES,
   getRandomMotivationalPhrase,
 } from './motivationalPhrases';
+import type { User } from '@supabase/supabase-js';
 
-const hasOAuthReturnInUrl = () => (
-  window.location.hash.includes('access_token') ||
-  window.location.search.includes('code=')
-);
+const InstitutionalLoginClock: React.FC = () => {
+  const [currentTime, setCurrentTime] = useState(new Date());
 
-const getOAuthReturnCode = () => {
-  const searchCode = new URLSearchParams(window.location.search).get('code');
-  if (searchCode) {
-    return searchCode;
-  }
+  useEffect(() => {
+    const timer = window.setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
-  if (!window.location.hash) {
-    return null;
-  }
+  const formattedDate = currentTime.toLocaleDateString('pt-BR', {
+    weekday: 'long',
+    day: '2-digit',
+    month: 'long',
+  });
+  const formattedTime = currentTime.toLocaleTimeString('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
 
-  const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash;
-  const hashParams = new URLSearchParams(hash);
-  return hashParams.get('code');
+  return (
+    <>
+      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-100/90">
+        {formattedDate}
+      </p>
+      <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-black tabular-nums tracking-widest text-white">
+        <Clock size={13} className="text-blue-200" />
+        {formattedTime}
+      </span>
+    </>
+  );
 };
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const [pendingGoogleReturn] = useState(
+    () => readPendingOAuthReturn('institucional'),
+  );
+  const [hasExternalAuthReturn] = useState(
+    () => hasOAuthReturnInUrl() || Boolean(pendingGoogleReturn),
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [checkingExternalLogin, setCheckingExternalLogin] = useState(hasOAuthReturnInUrl);
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [checkingExternalLogin, setCheckingExternalLogin] = useState(hasExternalAuthReturn);
 
   const [loginStep, setLoginStep] = useState<'credentials' | 'role_select' | 'polo_select'>('credentials');
   const [institutionalProfiles, setInstitutionalProfiles] = useState<PortalAuthProfile[]>([]);
@@ -48,11 +73,13 @@ const LoginPage: React.FC = () => {
   const [pendingProfessor, setPendingProfessor] = useState<PortalAuthProfile | null>(null);
 
   const decodeRedirectPath = () => {
-    const redirect = new URLSearchParams(window.location.search).get('redirect');
+    const redirect =
+      new URLSearchParams(window.location.search).get('redirect') ||
+      pendingGoogleReturn?.redirectPath;
     if (!redirect) return null;
     try {
       const decoded = decodeURIComponent(redirect);
-      return decoded.startsWith('/') ? decoded : null;
+      return decoded.startsWith('/') && !decoded.startsWith('//') ? decoded : null;
     } catch {
       return null;
     }
@@ -66,7 +93,7 @@ const LoginPage: React.FC = () => {
     return '/gestor';
   };
 
-  const handleAuthenticatedProfile = async (profile: PortalAuthProfile) => {
+  const handleAuthenticatedProfile = async (profile: PortalAuthProfile): Promise<boolean> => {
     if (profile.tipo === 'Professor' && (profile.poloIds || []).length > 1) {
       const { data: polosData, error: polosError } = await supabase
         .from('polos')
@@ -83,16 +110,19 @@ const LoginPage: React.FC = () => {
         setSelectedPoloId(profile.activePoloId || polosData[0].id);
         setPendingProfessor(profile);
         setLoginStep('polo_select');
-        return;
+        return false;
       }
     }
 
     savePortalSession(profile);
-    navigate(getPostLoginRoute(profile));
+    navigate(getPostLoginRoute(profile), { replace: true });
+    return true;
   };
 
-  const resolveInstitutionalAccess = async () => {
-    const profiles = await getInstitutionalProfiles();
+  const resolveInstitutionalAccess = async (
+    authenticatedUser?: User | null,
+  ) => {
+    const profiles = await getInstitutionalProfiles(authenticatedUser);
     if (profiles.length === 0) return null;
     if (profiles.length === 1) return profiles[0];
     setInstitutionalProfiles(profiles);
@@ -115,11 +145,6 @@ const LoginPage: React.FC = () => {
   };
 
   useEffect(() => {
-    const timer = window.setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => window.clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const oauthError = params.get('oauth_error');
     const message = getOAuthErrorMessage(oauthError);
@@ -132,39 +157,33 @@ const LoginPage: React.FC = () => {
     let mounted = true;
 
     const finishGoogleReturn = async () => {
+      let isLeavingLoginPage = false;
+
       try {
-        const hasOAuthReturn = hasOAuthReturnInUrl();
-        let session = null;
+        if (!hasExternalAuthReturn) return;
 
-        if (hasOAuthReturn) {
-          const authCode = getOAuthReturnCode();
-
-          if (authCode) {
-            const { data: exchangedData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(authCode);
-
-            if (exchangeError) {
-              throw new Error(exchangeError.message || 'Não foi possível concluir a troca de sessão do Google.');
-            }
-
-            session = exchangedData.session;
-          }
-        }
-
-        if (!session) {
-          const { data } = await supabase.auth.getSession();
-          session = data?.session;
-        }
-
-        if (!session) {
-          if (hasOAuthReturn) {
-            setErrorMessage('Não foi possível recuperar a sessão do Google. Tente novamente.');
-          }
+        const authReturnError = getOAuthReturnError();
+        if (authReturnError) {
+          setErrorMessage(
+            decodeURIComponent(String(authReturnError).replace(/\+/g, ' ')),
+          );
           return;
         }
 
-        if (!hasOAuthReturn) return;
+        // O cliente Supabase já processa o callback durante a inicialização.
+        // getSession aguarda esse processamento e evita uma segunda troca PKCE.
+        const { data, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) {
+          throw new Error(sessionError.message);
+        }
+        const session = data?.session;
 
-        const profile = await resolveInstitutionalAccess();
+        if (!session) {
+          setErrorMessage('Não foi possível recuperar a sessão do Google. Tente novamente.');
+          return;
+        }
+
+        const profile = await resolveInstitutionalAccess(session.user);
         if (!mounted) return;
 
         if (profile === undefined) return;
@@ -174,12 +193,18 @@ const LoginPage: React.FC = () => {
           return;
         }
 
-        await handleAuthenticatedProfile(profile);
+        isLeavingLoginPage = await handleAuthenticatedProfile(profile);
       } catch (error) {
         if (!mounted) return;
         setErrorMessage(error instanceof Error ? error.message : 'Não foi possível concluir o login com Google.');
       } finally {
-        if (mounted) setCheckingExternalLogin(false);
+        if (mounted) {
+          clearPendingOAuthReturn('institucional');
+          clearOAuthReturnParams();
+          // Se o perfil já disparou a navegação, a validação deve permanecer
+          // montada até a próxima rota assumir, evitando o flash do formulário.
+          if (!isLeavingLoginPage) setCheckingExternalLogin(false);
+        }
       }
     };
 
@@ -187,27 +212,25 @@ const LoginPage: React.FC = () => {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [hasExternalAuthReturn]);
 
   const handleLogin = async (credentials: LoginCredentials) => {
     setIsLoading(true);
     setErrorMessage('');
 
     try {
-      const { error } = await loginService.login(credentials);
+      const { error, user } = await loginService.login(credentials);
       if (error) {
         setErrorMessage(error);
-        alert(error);
         return;
       }
 
-      const profile = await resolveInstitutionalAccess();
+      const profile = await resolveInstitutionalAccess(user);
       if (profile === undefined) return;
       if (!profile) {
         await loginService.logout();
         const message = 'Usuário autenticado, mas sem perfil válido para acesso. Verifique o cadastro do e-mail em parceiros/usuários do sistema.';
         setErrorMessage(message);
-        alert(message);
         return;
       }
 
@@ -216,7 +239,6 @@ const LoginPage: React.FC = () => {
       console.error(error);
       const message = error instanceof Error ? error.message : 'Não foi possível autenticar.';
       setErrorMessage(message);
-      alert(message);
     } finally {
       setIsLoading(false);
     }
@@ -227,11 +249,10 @@ const LoginPage: React.FC = () => {
     setErrorMessage('');
 
     try {
-      await loginService.loginWithGoogle('/sistema/login');
+      await loginService.loginWithGoogle('/sistema/login', decodeRedirectPath());
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Não foi possível iniciar o login com Google.';
       setErrorMessage(message);
-      alert(message);
       setIsLoading(false);
     }
   };
@@ -250,16 +271,6 @@ const LoginPage: React.FC = () => {
     await handleAuthenticatedProfile(profile);
   };
 
-  const formattedDate = currentTime.toLocaleDateString('pt-BR', {
-    weekday: 'long',
-    day: '2-digit',
-    month: 'long',
-  });
-  const formattedTime = currentTime.toLocaleTimeString('pt-BR', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
   const dailyPhrase = useMemo(
     () => getRandomMotivationalPhrase(INSTITUTIONAL_LOGIN_MOTIVATIONAL_PHRASES),
     []
@@ -271,7 +282,6 @@ const LoginPage: React.FC = () => {
 
   return (
     <div className="relative min-h-screen w-full bg-slate-50 font-sans">
-      <DailabsSignature tone="dark" className="absolute bottom-6 right-6 z-30" />
       <main className="grid min-h-screen xl:grid-cols-[1.04fr_0.96fr]">
         <section className="relative hidden min-h-[640px] overflow-hidden bg-[#001a33] text-white lg:flex xl:min-h-screen">
           <img src="/banner2.png" alt="" className="absolute inset-0 h-full w-full object-cover opacity-60" />
@@ -306,14 +316,10 @@ const LoginPage: React.FC = () => {
               <p className="mt-5 max-w-xl text-base font-semibold leading-relaxed text-slate-200/90">
                 Entre para administrar turmas, acompanhar alunos, lançar atividades e manter a operação acadêmica no ritmo da Universo.
               </p>
-              <div className="mt-7 max-w-xl rounded-3xl border border-blue-100/15 bg-white/10 p-4 shadow-2xl shadow-blue-950/20 backdrop-blur-xl">
-                <div className="flex items-center justify-between gap-4 border-b border-white/10 pb-3">
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-100/90">{formattedDate}</p>
-                  <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-black tabular-nums tracking-widest text-white">
-                    <Clock size={13} className="text-blue-200" />
-                    {formattedTime}
-                  </span>
-                </div>
+                <div className="mt-7 max-w-xl rounded-3xl border border-blue-100/15 bg-white/10 p-4 shadow-2xl shadow-blue-950/20 backdrop-blur-xl">
+                  <div className="flex items-center justify-between gap-4 border-b border-white/10 pb-3">
+                    <InstitutionalLoginClock />
+                  </div>
                 <div className="mt-3 flex gap-3 text-sm font-semibold leading-relaxed text-blue-50/90">
                   <Quote size={18} className="mt-0.5 shrink-0 text-blue-200" />
                   <p>{dailyPhrase}</p>
@@ -335,14 +341,16 @@ const LoginPage: React.FC = () => {
           </div>
         </section>
 
-        <section className="relative flex min-h-screen flex-col items-center justify-center p-6 py-14 sm:p-8 lg:min-h-0 lg:py-16 xl:min-h-screen">
+        <section className="relative flex min-h-screen flex-col items-center px-4 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] sm:px-8 sm:pb-10 sm:pt-8 lg:min-h-0 lg:py-16 xl:min-h-screen xl:justify-center">
           <button
+            type="button"
             onClick={() => navigate('/')}
-            className="absolute top-6 left-6 flex items-center gap-2 text-slate-500 hover:text-[#4169E1] transition-colors text-sm font-bold uppercase tracking-widest group"
+            aria-label="Voltar ao site"
+            className="group mb-4 flex w-full max-w-md items-center gap-2 text-sm font-bold uppercase tracking-widest text-slate-500 transition-colors hover:text-[#4169E1] xl:absolute xl:left-6 xl:top-6 xl:mb-0 xl:w-auto xl:max-w-none"
           >
-            <div className="p-2 rounded-full bg-white border border-slate-200 shadow-sm group-hover:border-[#4169E1] transition-colors">
+            <span className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition-all group-hover:border-[#4169E1] group-hover:shadow-md">
               <ArrowLeft size={16} />
-            </div>
+            </span>
             <span className="hidden sm:inline">Voltar ao site</span>
           </button>
 
@@ -478,6 +486,10 @@ const LoginPage: React.FC = () => {
             </div>
           </div>
         )}
+
+          <div className="mt-5 flex w-full max-w-md justify-center pb-1 sm:justify-end sm:pr-2 xl:absolute xl:bottom-6 xl:right-6 xl:mt-0 xl:w-auto xl:max-w-none xl:pb-0 xl:pr-0">
+            <ArkhenSignature tone="dark" />
+          </div>
         </section>
       </main>
     </div>

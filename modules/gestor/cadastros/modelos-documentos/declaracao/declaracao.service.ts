@@ -2,6 +2,7 @@
 // REGRA ABSOLUTA: ZERO localStorage. Supabase é a única fonte de dados.
 
 import { supabase } from '../../../../../lib/supabase';
+import { getDocumentValidationBaseUrl } from '../../../../shared/document-validation/document-validation.url';
 
 const DEFAULT_QR_CONFIG = {
   pattern: ['{POLO_ID}', '{CURSO_ID}', '{ALUNO_MATRICULA}', '{ANO_ATUAL}'],
@@ -9,7 +10,7 @@ const DEFAULT_QR_CONFIG = {
 };
 
 export const defaultTemplate = {
-  textContent: `<p>Declaramos para os devidos fins que o(a) aluno(a) <b>{{ALUNO_NOME}}</b>, portador(a) do CPF nº <b>{{ALUNO_CPF}}</b>, <b>{{ALUNO_DOCUMENTO_TIPO}}</b> nº <b>{{ALUNO_RG}}</b>, nascido(a) em <b>{{ALUNO_NASCIMENTO}}</b>, registrado(a) sob a matrícula nº <b>{{ALUNO_MATRICULA}}</b>, encontra-se regularmente matriculado(a) no curso de <b>{{CURSO_NOME}}</b>, na turma <b>{{TURMA_NOME}}</b>, nesta instituição de ensino.</p><br><p>O referido curso é realizado na modalidade presencial no polo de <b>{{POLO_NOME}}</b>.</p><br><p>Atestamos que o aluno apresenta frequência regular e está em dia com suas obrigações acadêmicas.</p>`,
+  textContent: `<p>Declaramos para os devidos fins que o(a) aluno(a) <b>{{ALUNO_NOME}}</b>, portador(a) do CPF nº <b>{{ALUNO_CPF}}</b>, <b>{{ALUNO_DOCUMENTO_TIPO}}</b> nº <b>{{ALUNO_RG}}</b>, nascido(a) em <b>{{ALUNO_NASCIMENTO}}</b>, registrado(a) sob a matrícula nº <b>{{ALUNO_MATRICULA}}</b>, encontra-se regularmente matriculado(a) no curso de <b>{{CURSO_NOME}}</b>, na turma <b>{{TURMA_NOME}}</b>, nesta instituição de ensino, no polo de <b>{{POLO_NOME}}</b>.</p>`,
   absoluteFields: [
     {
       id: 'data_field',
@@ -58,7 +59,7 @@ export const defaultTemplate = {
     {
       id: 'footer_url',
       type: 'text',
-      value: 'Para verificar a autenticidade deste documento acesse: <span style="color: #ef4444">www.universocc.com.br/validador</span>',
+      value: `Para verificar a autenticidade deste documento acesse: <span style="color: #ef4444">${getDocumentValidationBaseUrl()}</span>`,
       x: 50,
       y: 995,
       width: 694,

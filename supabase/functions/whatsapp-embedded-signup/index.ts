@@ -1,4 +1,3 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   requireGestorAtivo,
@@ -20,7 +19,7 @@ import {
   subscribeWabaToWebhooks,
 } from "./metaGraph.ts";
 import {
-  loadCurrentWhatsAppConfig,
+  loadWhatsAppConnection,
   saveCompletedEmbeddedSignup,
   updateBusinessAppSyncState,
 } from "./configRepository.ts";
@@ -35,7 +34,11 @@ import {
   normalizeGraphVersion,
   trimOrNull,
 } from "./utils.ts";
-import { getSecret, setSecret } from "./vault.ts";
+import {
+  getConnectionSecret,
+  setConnectionSecret,
+  setSecret,
+} from "./vault.ts";
 
 Deno.serve(async (req: Request) => {
   const corsHeaders = buildCorsHeaders(req);
@@ -79,6 +82,8 @@ Deno.serve(async (req: Request) => {
     requireGestorGlobal(gestor);
 
     const body = await req.json() as EmbeddedSignupBody;
+    const connectionId = trimOrNull(body.connectionId);
+    if (!connectionId) throw new Error("Selecione a linha do WhatsApp.");
     const code = trimOrNull(body.code);
     if (!code) throw new Error("Codigo do Embedded Signup nao recebido.");
     if (body.mode !== "coexistence") {
@@ -101,25 +106,33 @@ Deno.serve(async (req: Request) => {
       throw new Error("A Meta nao retornou o WABA ID no Embedded Signup.");
     }
 
-    const currentConfig = await loadCurrentWhatsAppConfig(admin);
+    const currentConnection = await loadWhatsAppConnection(
+      admin,
+      connectionId,
+    );
 
     const appId = trimOrNull(body.appId) ||
-      trimOrNull(currentConfig?.wa_app_id);
+      trimOrNull(currentConnection.app_id);
     if (!appId) throw new Error("App ID da Meta nao configurado.");
 
     const appSecretFromBody = trimOrNull(body.appSecret);
     if (appSecretFromBody) {
-      await setSecret(admin, "whatsapp_app_secret", appSecretFromBody);
+      await setConnectionSecret(
+        admin,
+        connectionId,
+        "app_secret",
+        appSecretFromBody,
+      );
     }
 
     const appSecret = appSecretFromBody ||
-      await getSecret(admin, "whatsapp_app_secret");
+      await getConnectionSecret(admin, connectionId, "app_secret");
     if (!appSecret) {
       throw new Error("App Secret da Meta nao configurado no Vault.");
     }
 
     const graphVersion = normalizeGraphVersion(
-      body.graphVersion || currentConfig?.wa_graph_version,
+      body.graphVersion || currentConnection.graph_version,
     );
     const accessToken = await exchangeEmbeddedSignupCode({
       graphVersion,
@@ -149,23 +162,56 @@ Deno.serve(async (req: Request) => {
       accessToken,
     });
 
-    await setSecret(admin, "whatsapp_meta_access_token", accessToken);
+    await setConnectionSecret(
+      admin,
+      connectionId,
+      "access_token",
+      accessToken,
+    );
+    const verifyToken = trimOrNull(body.verifyToken);
+    if (verifyToken) {
+      await setConnectionSecret(
+        admin,
+        connectionId,
+        "verify_token",
+        verifyToken,
+      );
+    }
+    const configuredVerifyToken = verifyToken ||
+      await getConnectionSecret(admin, connectionId, "verify_token");
+    if (!configuredVerifyToken) {
+      throw new Error(
+        "Informe o Verify Token do webhook antes de concluir a coexistência.",
+      );
+    }
+    if (currentConnection.is_matriz_financeira) {
+      await setSecret(admin, "whatsapp_meta_access_token", accessToken);
+      await setSecret(admin, "whatsapp_app_secret", appSecret);
+      await setSecret(
+        admin,
+        "whatsapp_webhook_verify_token",
+        configuredVerifyToken,
+      );
+    }
 
     await saveCompletedEmbeddedSignup(admin, {
+      connectionId,
       wabaId,
       phoneNumberId,
       graphVersion,
       appId,
       configurationId: trimOrNull(body.configurationId) ||
-        trimOrNull(currentConfig?.wa_embedded_signup_config_id),
+        trimOrNull(currentConnection.embedded_signup_config_id),
       businessId,
       statusPayload,
+      verifyTokenConfigured: true,
     });
 
     const syncRequests: SyncRequestResult[] = [];
     for (const syncType of BUSINESS_APP_SYNC_TYPES) {
       try {
         await updateBusinessAppSyncState(admin, {
+          connectionId,
           syncType,
           status: "requested",
           requestId: null,
@@ -178,11 +224,16 @@ Deno.serve(async (req: Request) => {
         });
         syncRequests.push(syncRequest);
         await updateBusinessAppSyncState(admin, {
+          connectionId,
           syncType,
           requestId: syncRequest.requestId,
         });
       } catch (error) {
-        await updateBusinessAppSyncState(admin, { syncType, status: "error" });
+        await updateBusinessAppSyncState(admin, {
+          connectionId,
+          syncType,
+          status: "error",
+        });
         warnings.push(
           error instanceof Error
             ? error.message
@@ -193,6 +244,7 @@ Deno.serve(async (req: Request) => {
 
     return respondJson({
       ok: true,
+      connectionId,
       event,
       wabaId,
       phoneNumberId,

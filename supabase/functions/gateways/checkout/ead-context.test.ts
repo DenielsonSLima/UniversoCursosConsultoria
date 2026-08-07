@@ -17,6 +17,9 @@ const queryResultFor = (
   if (table === "asaas_config") {
     return { environment: "sandbox" };
   }
+  if (table === "payment_gateway_runtime_config") {
+    return { enabled: true, active_environment: "sandbox" };
+  }
   if (table === "cursos") {
     return {
       id: COURSE_ID,
@@ -120,6 +123,9 @@ Deno.test("checkout EAD usa a rota Banese de boleto explicitamente", async () =>
   assert.equal(context.route.providerCode, "banese_card");
   assert.equal(context.charge.method, "BOLETO");
   assert.equal(context.charge.installmentCount, 1);
+  assert.equal(context.charge.value, 120);
+  assert.equal(context.charge.feeValue, 0);
+  assert.equal(context.charge.netValue, 120);
 });
 
 Deno.test("rota Asaas antiga falha fechada para nova cobranca", async () => {

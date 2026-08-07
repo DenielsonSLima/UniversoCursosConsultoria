@@ -1,34 +1,50 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
-import { 
-  BookOpen, Folder, FolderOpen, Download, 
-  Search, LayoutGrid, List, ChevronRight, Eye
+import {
+  BookOpen, FolderOpen, Download,
+  Search, LayoutGrid, List, ChevronRight, Eye, Check
 } from 'lucide-react';
 import QuickPreviewModal from '../../gestor/biblioteca/components/QuickPreviewModal';
-import { LibraryDocument } from '../../gestor/biblioteca/biblioteca.types';
+import LibrarySelectionToolbar from '../../gestor/biblioteca/components/LibrarySelectionToolbar';
+import LibraryFileThumbnail from '../../gestor/biblioteca/components/file-preview/LibraryFileThumbnail';
+import LibraryFolderGrid from '../../gestor/biblioteca/components/LibraryFolderGrid';
+import { LibraryDocument, LibraryFolder } from '../../gestor/biblioteca/biblioteca.types';
+import {
+  downloadLibrarySelectionAsZip,
+  downloadSingleLibraryFile
+} from '../../shared/library/library-download';
+import { resolveLibraryFileUrl } from '../../shared/library/library-storage';
 import {
   canAccessLibraryDocumentAsAluno,
   isLibraryUrl,
   matchesLibrarySearch
 } from './libraryAccess';
+import { alunoCourseAccessKeys } from '../shared/aluno-course-access.queries';
+import AlunoMobileLibrary from './components/mobile/AlunoMobileLibrary';
+import useAlunoMobileLayout from '../hooks/useAlunoMobileLayout';
 
 interface BibliotecaPageProps {
   alunoId: string;
 }
 
 const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ alunoId }) => {
+  const isMobileLayout = useAlunoMobileLayout();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [breadcrumbs, setBreadcrumbs] = useState<Array<{ id: string; nome: string }>>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [selectedFolderIds, setSelectedFolderIds] = useState<Set<string>>(new Set());
+  const [selectedDocumentIds, setSelectedDocumentIds] = useState<Set<string>>(new Set());
+  const [isDownloadingSelection, setIsDownloadingSelection] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState('');
   
   // Preview State
   const [previewDoc, setPreviewDoc] = useState<LibraryDocument | null>(null);
 
   // 1. Busca as matrículas ativas do aluno para obter cursos, turmas e polos
-  const { data: matriculas = [], isLoading: loadingMatriculas } = useQuery<any[]>({
-    queryKey: ['aluno-biblioteca-matriculas', alunoId],
+  const { data: matriculas = [], isLoading: loadingMatriculas, isError: matriculasError, refetch: refetchMatriculas } = useQuery<any[]>({
+    queryKey: alunoCourseAccessKeys.libraryEnrollments(alunoId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('matriculas')
@@ -42,10 +58,10 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ alunoId }) => {
 
   const activeTurmaIds = matriculas.map(m => m.turma_id).filter(Boolean);
   const activeCursoIds = Array.from(new Set(matriculas.map(m => m.turmas?.cursos?.id).filter(Boolean)));
-  const activePoloIds = Array.from(new Set(matriculas.map(m => m.polo_id).filter(Boolean)));
+  const activePoloIds = Array.from(new Set(matriculas.map(m => m.turmas?.polo_id).filter(Boolean)));
 
   // 2. Busca os professores vinculados às turmas do aluno
-  const { data: activeTeachers = [] } = useQuery<any[]>({
+  const { data: activeTeachers = [], isError: activeTeachersError, refetch: refetchActiveTeachers } = useQuery<any[]>({
     queryKey: ['aluno-biblioteca-professores', activeTurmaIds.join(',')],
     queryFn: async () => {
       if (activeTurmaIds.length === 0) return [];
@@ -59,7 +75,7 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ alunoId }) => {
     enabled: matriculas.length > 0
   });
 
-  const { data: turmaDisciplinas = [] } = useQuery<any[]>({
+  const { data: turmaDisciplinas = [], isError: turmaDisciplinasError, refetch: refetchTurmaDisciplinas } = useQuery<any[]>({
     queryKey: ['aluno-biblioteca-turma-disciplinas', activeTurmaIds.join(',')],
     queryFn: async () => {
       if (activeTurmaIds.length === 0) return [];
@@ -76,7 +92,7 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ alunoId }) => {
   const teacherIds = activeTeachers.map(at => at.professor_id).filter(Boolean);
 
   // 3. Busca pastas reais da biblioteca (Gestão + Seus Professores)
-  const { data: dbFolders = [], isLoading: loadingFolders } = useQuery<any[]>({
+  const { data: dbFolders = [], isLoading: loadingFolders, isError: foldersError, refetch: refetchFolders } = useQuery<any[]>({
     queryKey: ['aluno-biblioteca-pastas', selectedFolderId, teacherIds],
     queryFn: async () => {
       let query = supabase.from('biblioteca_pastas').select('*');
@@ -90,16 +106,15 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ alunoId }) => {
       const { data, error } = await query.order('nome', { ascending: true });
       if (error) throw error;
 
-      // Se for a raiz, filtra apenas pastas institucionais (teacher_id = null) ou dos professores do aluno
-      if (selectedFolderId === null && data) {
-        return data.filter((f: any) => f.teacher_id === null || teacherIds.includes(f.teacher_id));
-      }
-      return data || [];
+      // Mantém visíveis apenas pastas institucionais ou de professores vinculados ao aluno.
+      return (data || []).filter(
+        (folder: any) => folder.teacher_id === null || teacherIds.includes(folder.teacher_id)
+      );
     }
   });
 
   // 4. Busca os documentos reais da biblioteca
-  const { data: dbDocs = [], isLoading: loadingDocs } = useQuery<any[]>({
+  const { data: dbDocs = [], isLoading: loadingDocs, isError: documentsError, refetch: refetchDocuments } = useQuery<any[]>({
     queryKey: ['aluno-biblioteca-documentos', selectedFolderId],
     queryFn: async () => {
       let query = supabase.from('biblioteca_documentos').select('*');
@@ -112,7 +127,10 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ alunoId }) => {
 
       const { data, error } = await query.order('titulo', { ascending: true });
       if (error) throw error;
-      return data || [];
+      return Promise.all((data || []).map(async (document: any) => ({
+        ...document,
+        arquivo_url: await resolveLibraryFileUrl(document.arquivo_url),
+      })));
     }
   });
 
@@ -124,6 +142,15 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ alunoId }) => {
     turmaDisciplinas,
   };
 
+  const visibleFolders: LibraryFolder[] = dbFolders.map((folder: any) => ({
+    id: folder.id,
+    nome: folder.nome,
+    parentId: folder.parent_id,
+    teacherId: folder.teacher_id,
+    targetAudience: folder.publico_alvo || 'INTERNO',
+    createdAt: folder.created_at,
+  }));
+
   // 5. Filtro avançado de documentos com base nas regras de liberação do aluno
   const filteredDocuments = (dbDocs || []).filter((doc: any) => {
     return canAccessLibraryDocumentAsAluno(doc, accessContext) && matchesLibrarySearch(doc, searchQuery);
@@ -132,10 +159,14 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ alunoId }) => {
   const handleOpenFolder = (folder: any) => {
     setSelectedFolderId(folder.id);
     setBreadcrumbs([...breadcrumbs, { id: folder.id, nome: folder.nome }]);
+    setSelectedFolderIds(new Set());
+    setSelectedDocumentIds(new Set());
   };
 
   const handleBreadcrumbClick = (folderId: string | null, index: number) => {
     setSelectedFolderId(folderId);
+    setSelectedFolderIds(new Set());
+    setSelectedDocumentIds(new Set());
     if (folderId === null) {
       setBreadcrumbs([]);
     } else {
@@ -174,19 +205,181 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ alunoId }) => {
     setPreviewDoc(previewData);
   };
 
-  const getFileIcon = (type: string) => {
-    switch(type) {
-        case 'PDF': return <div className="w-10 h-10 rounded-lg bg-red-50 text-red-650 flex items-center justify-center font-bold text-xs border border-red-100 shrink-0">PDF</div>;
-        case 'DOC': return <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-650 flex items-center justify-center font-bold text-xs border border-blue-100 shrink-0">DOC</div>;
-        case 'XLS': return <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-650 flex items-center justify-center font-bold text-xs border border-emerald-100 shrink-0">XLS</div>;
-        default: return <div className="w-10 h-10 rounded-lg bg-slate-50 text-slate-655 flex items-center justify-center font-bold text-xs border border-slate-100 shrink-0">FILE</div>;
+  const incrementDocumentAccess = (documentId: string) => {
+    supabase.from('biblioteca_documentos')
+      .select('acessos')
+      .eq('id', documentId)
+      .single()
+      .then(({ data }) => {
+        const current = data?.acessos || 0;
+        supabase.from('biblioteca_documentos').update({ acessos: current + 1 }).eq('id', documentId);
+      });
+  };
+
+  const handleDownloadDocument = async (document: any) => {
+    try {
+      await downloadSingleLibraryFile({
+        id: document.id,
+        folderId: document.pasta_id || null,
+        name: document.titulo,
+        url: document.arquivo_url,
+        fileType: document.tipo_arquivo,
+        sizeBytes: document.tamanho_bytes,
+      });
+      incrementDocumentAccess(document.id);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Não foi possível baixar o arquivo.');
+    }
+  };
+
+  const toggleFolderSelection = (folderId: string) => {
+    setSelectedFolderIds((current) => {
+      const next = new Set(current);
+      if (next.has(folderId)) next.delete(folderId);
+      else next.add(folderId);
+      return next;
+    });
+  };
+
+  const toggleDocumentSelection = (documentId: string) => {
+    setSelectedDocumentIds((current) => {
+      const next = new Set(current);
+      if (next.has(documentId)) next.delete(documentId);
+      else next.add(documentId);
+      return next;
+    });
+  };
+
+  const clearSelection = () => {
+    setSelectedFolderIds(new Set());
+    setSelectedDocumentIds(new Set());
+  };
+
+  const selectVisibleItems = () => {
+    setSelectedFolderIds(new Set(dbFolders.map((folder: any) => folder.id)));
+    setSelectedDocumentIds(new Set(filteredDocuments.map((document: any) => document.id)));
+  };
+
+  const handleDownloadSelection = async () => {
+    const folderIds = Array.from(selectedFolderIds) as string[];
+    const documentIds = Array.from(selectedDocumentIds) as string[];
+    const selectionCount = folderIds.length + documentIds.length;
+    if (selectionCount === 0) return;
+
+    if (folderIds.length === 0 && documentIds.length === 1) {
+      const document = dbDocs.find(
+        (item: any) =>
+          item.id === documentIds[0] &&
+          canAccessLibraryDocumentAsAluno(item, accessContext)
+      );
+      if (!document) return;
+
+      try {
+        await downloadSingleLibraryFile({
+          id: document.id,
+          folderId: document.pasta_id || null,
+          name: document.titulo,
+          url: document.arquivo_url,
+          fileType: document.tipo_arquivo,
+          sizeBytes: document.tamanho_bytes
+        });
+        incrementDocumentAccess(document.id);
+        clearSelection();
+      } catch (error) {
+        alert(error instanceof Error ? error.message : 'Não foi possível baixar o arquivo.');
+      }
+      return;
+    }
+
+    setIsDownloadingSelection(true);
+    setDownloadProgress('Carregando a estrutura da biblioteca...');
+
+    try {
+      const { data: manifest, error: manifestError } = await supabase.rpc(
+        'biblioteca_aluno_download_manifest',
+        {
+          p_folder_ids: folderIds,
+          p_document_ids: documentIds
+        }
+      );
+
+      if (manifestError) throw manifestError;
+
+      const downloadManifest = manifest as {
+        folders?: Array<{ id: string; name: string; parentId: string | null }>;
+        documents?: Array<{
+          id: string;
+          folderId: string | null;
+          name: string;
+          url: string;
+          fileType?: string;
+          sizeBytes?: number | null;
+        }>;
+      } | null;
+
+      const resolvedDocuments = await Promise.all((downloadManifest?.documents || []).map(async (document) => ({
+        ...document,
+        url: await resolveLibraryFileUrl(document.url),
+      })));
+
+      await downloadLibrarySelectionAsZip({
+        selectedFolderIds: folderIds,
+        selectedDocumentIds: documentIds,
+        folders: downloadManifest?.folders || [],
+        documents: resolvedDocuments,
+        archiveName: breadcrumbs.at(-1)?.nome || 'biblioteca-aluno',
+        onProgress: setDownloadProgress
+      });
+
+      clearSelection();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Não foi possível preparar o arquivo ZIP.');
+    } finally {
+      setIsDownloadingSelection(false);
+      setDownloadProgress('');
     }
   };
 
   const isLoading = loadingMatriculas || loadingFolders || loadingDocs;
+  const hasLibraryError = matriculasError || activeTeachersError || turmaDisciplinasError || foldersError || documentsError;
+  const retryLibrary = () => {
+    void Promise.all([
+      refetchMatriculas(),
+      refetchActiveTeachers(),
+      refetchTurmaDisciplinas(),
+      refetchFolders(),
+      refetchDocuments(),
+    ]);
+  };
+  const selectionCount = selectedFolderIds.size + selectedDocumentIds.size;
 
   return (
     <div className="space-y-6 animate-fadeIn text-xs font-sans">
+      {isMobileLayout ? <AlunoMobileLibrary
+        breadcrumbs={breadcrumbs}
+        documents={filteredDocuments}
+        folders={dbFolders}
+        isDownloadingSelection={isDownloadingSelection}
+        isLoading={isLoading}
+        isError={hasLibraryError}
+        progressMessage={downloadProgress}
+        searchQuery={searchQuery}
+        selectedDocumentIds={selectedDocumentIds}
+        selectedFolderIds={selectedFolderIds}
+        onBreadcrumbClick={handleBreadcrumbClick}
+        onClearSelection={clearSelection}
+        onDownloadSelection={() => void handleDownloadSelection()}
+        onDownloadDocument={(document) => void handleDownloadDocument(document)}
+        onOpenFolder={handleOpenFolder}
+        onOpenPreview={handleOpenPreview}
+        onRetry={retryLibrary}
+        onSearchChange={setSearchQuery}
+        onSelectVisible={selectVisibleItems}
+        onToggleDocument={toggleDocumentSelection}
+        onToggleFolder={toggleFolderSelection}
+      /> : null}
+
+      {!isMobileLayout ? <div className="space-y-6">
       {/* Header Panel */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
@@ -248,32 +441,30 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ alunoId }) => {
         ))}
       </div>
 
+      {selectionCount > 0 && (
+        <LibrarySelectionToolbar
+          count={selectionCount}
+          isZipDownload={selectedFolderIds.size > 0 || selectionCount > 1}
+          isDownloading={isDownloadingSelection}
+          progressMessage={downloadProgress}
+          onDownload={handleDownloadSelection}
+          onClear={clearSelection}
+          onSelectVisible={selectVisibleItems}
+        />
+      )}
+
       {isLoading ? (
         <div className="py-20 text-center text-slate-400 font-bold uppercase tracking-wider animate-pulse">
           Buscando acervo digital...
         </div>
       ) : (
         <div className="space-y-6">
-          {/* Folders Row */}
-          {dbFolders.length > 0 && (
-            <div className="space-y-2">
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block ml-1">Pastas de Apoio</span>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {dbFolders.map(folder => (
-                  <div 
-                    key={folder.id}
-                    onClick={() => handleOpenFolder(folder)}
-                    className="p-4 bg-white border border-slate-150 rounded-2xl hover:shadow-lg hover:border-blue-200 transition-all cursor-pointer flex items-center gap-3"
-                  >
-                    <div className="p-2.5 bg-blue-50 text-blue-650 rounded-xl">
-                      <Folder size={18} />
-                    </div>
-                    <span className="font-bold text-[#001a33] truncate leading-tight">{folder.nome}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          <LibraryFolderGrid
+            folders={visibleFolders}
+            selectedIds={selectedFolderIds}
+            onOpen={handleOpenFolder}
+            onToggle={toggleFolderSelection}
+          />
 
           {/* Documents Section */}
           <div className="space-y-2">
@@ -290,12 +481,35 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ alunoId }) => {
                 {filteredDocuments.map(doc => (
                   <div 
                     key={doc.id}
-                    className="bg-white border border-slate-150 rounded-[2rem] p-5 shadow-sm flex flex-col justify-between hover:shadow-lg hover:border-blue-300 transition-all h-full"
+                    className={`relative border rounded-[2rem] p-5 shadow-sm flex flex-col justify-between hover:shadow-lg hover:border-blue-300 transition-all h-full ${
+                      selectedDocumentIds.has(doc.id)
+                        ? 'border-blue-300 bg-white shadow-[0_10px_28px_rgba(37,99,235,0.12)]'
+                        : 'border-slate-150 bg-white'
+                    }`}
                   >
+                    <button
+                      type="button"
+                      onClick={() => toggleDocumentSelection(doc.id)}
+                      className={`absolute right-3 top-3 z-10 flex h-5 w-5 items-center justify-center rounded-md border transition-all ${
+                        selectedDocumentIds.has(doc.id)
+                          ? 'border-blue-600 bg-blue-600 text-white'
+                          : 'border-slate-300 bg-white text-transparent hover:border-blue-400'
+                      }`}
+                      aria-label={`${selectedDocumentIds.has(doc.id) ? 'Remover' : 'Selecionar'} arquivo ${doc.titulo}`}
+                      aria-pressed={selectedDocumentIds.has(doc.id)}
+                    >
+                      <Check size={12} strokeWidth={3} />
+                    </button>
                     <div>
-                      <div className="flex justify-between items-start mb-4">
-                        {getFileIcon(doc.tipo_arquivo)}
-                        <span className="text-[9px] font-bold text-slate-400 font-mono">{doc.tamanho}</span>
+                      <div className="mb-4 pr-7">
+                        <LibraryFileThumbnail
+                          file={{
+                            fileType: doc.tipo_arquivo,
+                            title: doc.titulo,
+                            url: doc.arquivo_url,
+                          }}
+                        />
+                        <span className="mt-2 block text-right text-[9px] font-bold text-slate-400 font-mono">{doc.tamanho}</span>
                       </div>
 
                       <div className="space-y-1 mb-6">
@@ -333,9 +547,34 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ alunoId }) => {
             ) : (
               <div className="bg-white rounded-[2rem] border border-slate-150 shadow-sm overflow-hidden divide-y divide-slate-100">
                 {filteredDocuments.map(doc => (
-                  <div key={doc.id} className="p-4 flex items-center justify-between hover:bg-slate-50/50 transition-colors gap-4">
+                  <div
+                    key={doc.id}
+                    className={`p-4 flex items-center justify-between transition-colors gap-4 ${
+                      selectedDocumentIds.has(doc.id) ? 'bg-blue-50/70' : 'hover:bg-slate-50/50'
+                    }`}
+                  >
                     <div className="flex items-center gap-3 min-w-0">
-                      {getFileIcon(doc.tipo_arquivo)}
+                      <button
+                        type="button"
+                        onClick={() => toggleDocumentSelection(doc.id)}
+                        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-all ${
+                          selectedDocumentIds.has(doc.id)
+                            ? 'border-blue-600 bg-blue-600 text-white'
+                            : 'border-slate-300 bg-white text-transparent hover:border-blue-400'
+                        }`}
+                        aria-label={`${selectedDocumentIds.has(doc.id) ? 'Remover' : 'Selecionar'} arquivo ${doc.titulo}`}
+                        aria-pressed={selectedDocumentIds.has(doc.id)}
+                      >
+                        <Check size={12} strokeWidth={3} />
+                      </button>
+                      <LibraryFileThumbnail
+                        file={{
+                          fileType: doc.tipo_arquivo,
+                          title: doc.titulo,
+                          url: doc.arquivo_url,
+                        }}
+                        className="h-12 !w-12 shrink-0 rounded-lg"
+                      />
                       <div className="min-w-0">
                         <h4 className="font-bold text-xs text-[#001a33] truncate">{doc.titulo}</h4>
                         <p className="text-[10px] text-slate-450 truncate">{doc.descricao || 'Sem descrição.'}</p>
@@ -373,6 +612,7 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ alunoId }) => {
           </div>
         </div>
       )}
+      </div> : null}
 
       {/* Preview Modal */}
       <QuickPreviewModal 

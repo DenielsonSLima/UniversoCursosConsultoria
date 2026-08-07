@@ -15,39 +15,11 @@ function mapAccountToFrontend(db: any) {
     tipo: db.tipo,
     saldoInicial: db.saldo_inicial,
     dataSaldo: db.data_saldo,
-    ativo: db.ativo
+    ativo: db.ativo,
+    natureza: db.natureza || 'BANCARIA',
+    systemManaged: db.system_managed === true,
+    polosUso: (db.contas_bancarias_polos || []).map((item: any) => item.polo_id),
   };
-}
-
-// Helper de mapeamento: Frontend -> Banco
-function mapAccountToDatabase(fe: any) {
-  if (!fe) return null;
-  return {
-    polo_id: fe.poloId || fe.companyId,
-    banco: fe.banco,
-    titular: fe.titular,
-    agencia: fe.agencia,
-    conta: fe.conta,
-    tipo: fe.tipo,
-    saldo_inicial: fe.saldoInicial !== undefined ? Number(fe.saldoInicial) : 0,
-    data_saldo: fe.dataSaldo || null,
-    ativo: fe.ativo !== undefined ? fe.ativo : true
-  };
-}
-
-// Auxiliar para update
-function mapToDatabaseUpdate(fe: any) {
-  const data: any = {};
-  if (fe.banco !== undefined) data.banco = fe.banco;
-  if (fe.titular !== undefined) data.titular = fe.titular;
-  if (fe.agencia !== undefined) data.agencia = fe.agencia;
-  if (fe.conta !== undefined) data.conta = fe.conta;
-  if (fe.tipo !== undefined) data.tipo = fe.tipo;
-  if (fe.saldoInicial !== undefined) data.saldo_inicial = Number(fe.saldoInicial);
-  if (fe.dataSaldo !== undefined) data.data_saldo = fe.dataSaldo || null;
-  if (fe.ativo !== undefined) data.ativo = fe.ativo;
-  if (fe.poloId !== undefined || fe.companyId !== undefined) data.polo_id = fe.poloId || fe.companyId;
-  return data;
 }
 
 export const contasBancariasService = {
@@ -57,7 +29,16 @@ export const contasBancariasService = {
   async getCompanies(): Promise<any[]> {
     const { data, error } = await supabase
       .from('polos')
-      .select('id, nome, cnpj, cidade, estado, status, is_matriz, contas_bancarias(count)')
+      .select(`
+        id,
+        nome,
+        cnpj,
+        cidade,
+        estado,
+        status,
+        is_matriz,
+        contas_bancarias:contas_bancarias!contas_bancarias_polo_id_fkey(count)
+      `)
       .order('is_matriz', { ascending: false })
       .order('nome', { ascending: true });
 
@@ -84,7 +65,7 @@ export const contasBancariasService = {
   async getAccountsByCompany(poloId: string): Promise<any[]> {
     const { data, error } = await supabase
       .from('contas_bancarias')
-      .select('*')
+      .select('*, contas_bancarias_polos(polo_id)')
       .eq('polo_id', poloId)
       .order('banco', { ascending: true });
 
@@ -100,30 +81,41 @@ export const contasBancariasService = {
    * Cria uma nova conta bancária.
    */
   async createAccount(data: any) {
-    const dbData = mapAccountToDatabase(data);
-    const { data: created, error } = await supabase
-      .from('contas_bancarias')
-      .insert(dbData)
-      .select()
-      .single();
+    const { data: createdId, error } = await supabase.rpc('salvar_conta_bancaria_secure', {
+      p_polo_id: data.poloId || data.companyId,
+      p_banco: data.banco || '',
+      p_titular: data.titular || '',
+      p_agencia: data.agencia || '',
+      p_conta: data.conta || '',
+      p_tipo: data.tipo || 'Corrente',
+      p_polos_uso: data.polosUso || [data.poloId || data.companyId],
+      p_ativo: data.ativo !== false,
+      p_conta_id: null,
+    });
 
     if (error) {
       console.error('Erro ao criar conta:', error);
       throw new Error(error.message);
     }
 
-    return mapAccountToFrontend(created);
+    return createdId;
   },
 
   /**
    * Atualiza os dados de uma conta bancária.
    */
   async updateAccount(id: string, data: any) {
-    const dbData = mapToDatabaseUpdate(data);
-    const { error } = await supabase
-      .from('contas_bancarias')
-      .update(dbData)
-      .eq('id', id);
+    const { error } = await supabase.rpc('salvar_conta_bancaria_secure', {
+      p_polo_id: data.poloId || data.companyId,
+      p_banco: data.banco || '',
+      p_titular: data.titular || '',
+      p_agencia: data.agencia || '',
+      p_conta: data.conta || '',
+      p_tipo: data.tipo || 'Corrente',
+      p_polos_uso: data.polosUso || [data.poloId || data.companyId],
+      p_ativo: data.ativo !== false,
+      p_conta_id: id,
+    });
 
     if (error) {
       console.error('Erro ao atualizar conta:', error);
@@ -137,10 +129,9 @@ export const contasBancariasService = {
    * Exclui uma conta bancária.
    */
   async deleteAccount(id: string) {
-    const { error } = await supabase
-      .from('contas_bancarias')
-      .delete()
-      .eq('id', id);
+    const { error } = await supabase.rpc('excluir_conta_bancaria_secure', {
+      p_conta_id: id,
+    });
 
     if (error) {
       console.error('Erro ao excluir conta:', error);
@@ -171,10 +162,10 @@ export const contasBancariasService = {
    * Alterna o status ativo/inativo de uma conta bancária.
    */
   async toggleAccountStatus(id: string, status: boolean) {
-    const { error } = await supabase
-      .from('contas_bancarias')
-      .update({ ativo: status })
-      .eq('id', id);
+    const { error } = await supabase.rpc('definir_status_conta_bancaria_secure', {
+      p_conta_id: id,
+      p_ativo: status,
+    });
 
     if (error) {
       console.error('Erro ao alternar status da conta:', error);

@@ -1,25 +1,45 @@
 import { useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { academicLifecycleKeys } from '../academic-lifecycle.keys';
+import { diarioClasseKeys } from '../components/diarios/diario-classe.keys';
 import { turmaGradeService } from '../turma-grade.service';
 import {
   TurmaAtividadeExtraClasseInput,
   TurmaAulaInput,
+  TurmaAulaUpdateInput,
   TurmaDisciplinaConfig,
   TurmaProfessorOption,
 } from '../turma-grade.types';
 import { gestaoQueryKeys } from '../../../gestao.query-keys';
+import { atividadesExtraClasseKeys } from '../components/atividades-extra/atividadesExtraClasse.service';
+import { calendarioAulasExportacaoQueryKeys } from '../../../../calendario/exportacao-aulas/calendarioAulasExportacao.queryKeys';
 
-const useTurmaGradeInvalidation = (turmaId: string) => {
+const useTurmaGradeInvalidation = (
+  turmaId: string,
+  invalidateCalendarioExportacao = false,
+) => {
   const queryClient = useQueryClient();
 
   return useCallback(async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.grade(turmaId) }),
+      queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.atividades(turmaId) }),
+      queryClient.invalidateQueries({ queryKey: atividadesExtraClasseKeys.turma(turmaId) }),
       queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.diarios(turmaId) }),
+      queryClient.invalidateQueries({ queryKey: diarioClasseKeys.aulasByTurma(turmaId) }),
+      queryClient.invalidateQueries({ queryKey: diarioClasseKeys.resultadosByTurma(turmaId) }),
+      queryClient.invalidateQueries({ queryKey: diarioClasseKeys.praticasByTurma(turmaId) }),
       queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.classesByModality('TECNICO') }),
+      queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.activeClassesRoot() }),
+      ...(invalidateCalendarioExportacao
+        ? [
+          // Prefixo restrito ao exportador: a próxima emissão pede a grade
+          // canônica atualizada, sem invalidar consultas de outros módulos.
+          queryClient.invalidateQueries({ queryKey: calendarioAulasExportacaoQueryKeys.all }),
+        ]
+        : []),
     ]);
-  }, [queryClient, turmaId]);
+  }, [invalidateCalendarioExportacao, queryClient, turmaId]);
 };
 
 export const useTurmaGradeData = (turmaId: string, cursoId: string) => useQuery({
@@ -33,7 +53,7 @@ export const useAssignProfessorMutation = (
   onSuccess?: () => void | Promise<void>,
   onError?: (error: any) => void,
 ) => {
-  const invalidate = useTurmaGradeInvalidation(turmaId);
+  const invalidate = useTurmaGradeInvalidation(turmaId, true);
 
   return useMutation({
     mutationFn: (input: {
@@ -59,7 +79,7 @@ export const useAssignProfessorToAllMutation = (
   onSuccess?: () => void | Promise<void>,
   onError?: (error: any) => void,
 ) => {
-  const invalidate = useTurmaGradeInvalidation(turmaId);
+  const invalidate = useTurmaGradeInvalidation(turmaId, true);
 
   return useMutation({
     mutationFn: (input: {
@@ -105,7 +125,7 @@ export const useAddTurmaAulaMutation = (
   onSuccess?: (input: TurmaAulaInput) => void | Promise<void>,
   onError?: (error: any) => void,
 ) => {
-  const invalidate = useTurmaGradeInvalidation(turmaId);
+  const invalidate = useTurmaGradeInvalidation(turmaId, true);
 
   return useMutation({
     mutationFn: (input: TurmaAulaInput) => turmaGradeService.addAula(turmaId, input),
@@ -134,12 +154,29 @@ export const useAddTurmaAtividadeExtraClasseMutation = (
   });
 };
 
+export const useUpdateTurmaAulaMutation = (
+  turmaId: string,
+  onSuccess?: (input: TurmaAulaUpdateInput) => void | Promise<void>,
+  onError?: (error: any) => void,
+) => {
+  const invalidate = useTurmaGradeInvalidation(turmaId, true);
+
+  return useMutation({
+    mutationFn: (input: TurmaAulaUpdateInput) => turmaGradeService.updateAula(turmaId, input),
+    onSuccess: async (_data, input) => {
+      await invalidate();
+      await onSuccess?.(input);
+    },
+    onError,
+  });
+};
+
 export const useRemoveTurmaAulaMutation = (
   turmaId: string,
   onSuccess?: () => void | Promise<void>,
   onError?: (error: any) => void,
 ) => {
-  const invalidate = useTurmaGradeInvalidation(turmaId);
+  const invalidate = useTurmaGradeInvalidation(turmaId, true);
 
   return useMutation({
     mutationFn: (aulaId: string) => turmaGradeService.removeAula(aulaId),

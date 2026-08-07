@@ -1,0 +1,52 @@
+name: Qualidade do produto
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  validate-product:
+    name: TypeScript, lint, testes e build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o repositório
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Preparar Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.1
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Validar TypeScript
+        run: npx tsc --noEmit
+
+      - name: Validar lint
+        run: npm run lint
+
+      - name: Testar acessos do Gestor
+        run: npm run test:gestor-access
+
+      - name: Testar relatório do Caixa
+        run: npm run test:caixa-report
+
+      - name: Testar validação documental
+        run: npm run test:document-validation
+
+      - name: Gerar build de produção
+        run: npm run build

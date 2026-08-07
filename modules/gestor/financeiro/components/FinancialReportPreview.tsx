@@ -4,6 +4,10 @@ import { Download, FileText, Loader2, Printer, X } from 'lucide-react';
 import DocumentHeader from '../../components/DocumentHeader';
 import { empresasService } from '../../configuracoes/empresas/empresas.service';
 import { polosService } from '../../configuracoes/polos/polos.service';
+import {
+  buildSelectablePdfBlobFromElements,
+  downloadPdfBlob,
+} from '../../../shared/pdf/dom-to-selectable-pdf';
 
 export type FinancialReportTone = 'emerald' | 'rose' | 'blue' | 'slate' | 'amber';
 
@@ -41,6 +45,7 @@ interface FinancialReportPreviewModalProps {
   summaryCards?: FinancialReportSummaryCard[];
   filters?: FinancialReportFilter[];
   footerNote?: string;
+  recordLabel?: string;
   poloId?: string | null;
   polo?: any;
   company?: any;
@@ -124,59 +129,32 @@ const currentSessionPoloId = () => {
   return sessionStorage.getItem('current_polo_id') || sessionStorage.getItem('active_polo_id') || '';
 };
 
+const FIRST_PAGE_ROW_LIMIT = 17;
+const CONTINUATION_PAGE_ROW_LIMIT = 19;
+
+const paginateRows = (rows: FinancialReportRow[]) => {
+  if (rows.length === 0) return [[]];
+
+  const pages: FinancialReportRow[][] = [rows.slice(0, FIRST_PAGE_ROW_LIMIT)];
+  for (let index = FIRST_PAGE_ROW_LIMIT; index < rows.length; index += CONTINUATION_PAGE_ROW_LIMIT) {
+    pages.push(rows.slice(index, index + CONTINUATION_PAGE_ROW_LIMIT));
+  }
+  return pages;
+};
+
 const buildPdfFromElement = async (element: HTMLElement, fileName: string) => {
-  const [{ jsPDF }, html2canvasModule] = await Promise.all([
-    import('jspdf'),
-    import('html2canvas'),
-  ]);
-  const html2canvas = html2canvasModule.default;
-  const previousBoxShadow = element.style.boxShadow;
-
-  let canvas: any;
-  try {
-    element.style.boxShadow = 'none';
-    canvas = await html2canvas(element, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: '#ffffff',
-      windowWidth: element.scrollWidth,
-      windowHeight: element.scrollHeight,
-    });
-  } finally {
-    element.style.boxShadow = previousBoxShadow;
-  }
-
-  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const pageWidthMm = 210;
-  const pageHeightMm = 297;
-  const pageCanvasHeight = Math.floor((canvas.width * pageHeightMm) / pageWidthMm);
-
-  for (let position = 0, pageIndex = 0; position < canvas.height; position += pageCanvasHeight, pageIndex += 1) {
-    const sliceHeight = Math.min(pageCanvasHeight, canvas.height - position);
-    const sliceCanvas = document.createElement('canvas');
-    sliceCanvas.width = canvas.width;
-    sliceCanvas.height = sliceHeight;
-    const context = sliceCanvas.getContext('2d');
-    if (!context) continue;
-
-    context.drawImage(
-      canvas,
-      0,
-      position,
-      canvas.width,
-      sliceHeight,
-      0,
-      0,
-      canvas.width,
-      sliceHeight,
-    );
-
-    if (pageIndex > 0) pdf.addPage('a4', 'portrait');
-    const sliceHeightMm = (sliceHeight * pageWidthMm) / canvas.width;
-    pdf.addImage(sliceCanvas.toDataURL('image/jpeg', 0.94), 'JPEG', 0, 0, pageWidthMm, sliceHeightMm);
-  }
-
-  pdf.save(`${safeFileName(fileName)}.pdf`);
+  const pageElements = Array.from(
+    element.querySelectorAll<HTMLElement>('.financeiro-report-page'),
+  );
+  const pages = pageElements.length > 0 ? pageElements : [element];
+  const blob = await buildSelectablePdfBlobFromElements(pages, {
+    orientation: 'portrait',
+    artworkFormat: 'PNG',
+    artworkScale: 2,
+    title: fileName,
+    subject: 'Relatório financeiro institucional',
+  });
+  downloadPdfBlob(blob, `${safeFileName(fileName)}.pdf`);
 };
 
 export const FinancialReportStatusBadge: React.FC<{ status: string; label?: string }> = ({ status, label }) => {
@@ -199,6 +177,7 @@ const FinancialReportPreviewModal: React.FC<FinancialReportPreviewModalProps> = 
   summaryCards = [],
   filters = [],
   footerNote,
+  recordLabel = 'registro(s)',
   poloId,
   polo,
   company,
@@ -207,33 +186,63 @@ const FinancialReportPreviewModal: React.FC<FinancialReportPreviewModalProps> = 
 }) => {
   const reportRef = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
   const emittedAt = useMemo(formatDateTime, []);
   const resolvedPoloId = poloId || currentSessionPoloId();
   const toneStyle = toneStyles[tone];
 
-  const { data: fetchedCompany } = useQuery({
+  const {
+    data: fetchedCompany,
+    error: companyLoadError,
+    isLoading: isCompanyLoading,
+  } = useQuery({
     queryKey: ['financeiro-report-company-principal'],
     queryFn: () => empresasService.getCompanyPrincipal(),
     staleTime: 60_000,
     enabled: !company,
   });
 
-  const { data: fetchedPolo } = useQuery({
+  const {
+    data: fetchedPolo,
+    error: poloLoadError,
+    isLoading: isPoloLoading,
+  } = useQuery({
     queryKey: ['financeiro-report-polo', resolvedPoloId],
     queryFn: () => resolvedPoloId ? polosService.getById(resolvedPoloId) : Promise.resolve(null),
     staleTime: 60_000,
+    refetchOnMount: 'always',
     enabled: !polo && Boolean(resolvedPoloId),
   });
 
   const reportCompany = company || fetchedCompany;
   const reportPolo = polo || fetchedPolo;
+  const reportAssetsLoading = (!company && isCompanyLoading)
+    || (!polo && Boolean(resolvedPoloId) && isPoloLoading);
+  const reportAssetsError = (!company && companyLoadError)
+    || (!polo && Boolean(resolvedPoloId) && poloLoadError);
+  const reportErrorMessage = reportAssetsError
+    ? 'Não foi possível carregar a identidade visual do relatório. Atualize a página e tente novamente.'
+    : downloadError;
+  const paginatedRows = useMemo(() => paginateRows(rows), [rows]);
 
   const handleDownload = async () => {
     const element = reportRef.current;
-    if (!element) return;
+    if (!element || reportAssetsLoading) return;
+    if (reportAssetsError) {
+      setDownloadError('Não foi possível carregar a identidade visual do relatório. Atualize a página e tente novamente.');
+      return;
+    }
     setDownloading(true);
+    setDownloadError(null);
     try {
       await buildPdfFromElement(element, fileName);
+    } catch (error) {
+      console.error('Erro ao exportar relatório financeiro:', error);
+      setDownloadError(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível gerar o PDF. Confira os dados do relatório e tente novamente.',
+      );
     } finally {
       setDownloading(false);
     }
@@ -250,13 +259,25 @@ const FinancialReportPreviewModal: React.FC<FinancialReportPreviewModalProps> = 
             position: absolute !important;
             left: 0 !important;
             top: 0 !important;
-            width: 210mm !important;
-            min-width: 210mm !important;
-            min-height: auto !important;
+            display: block !important;
+            width: auto !important;
+            min-width: 0 !important;
             box-shadow: none !important;
             margin: 0 !important;
           }
-          #financeiro-report-print-area thead { display: table-header-group; }
+          #financeiro-report-print-area .financeiro-report-page {
+            width: 210mm !important;
+            height: 297mm !important;
+            min-height: 297mm !important;
+            margin: 0 !important;
+            box-shadow: none !important;
+            break-after: page;
+            page-break-after: always;
+          }
+          #financeiro-report-print-area .financeiro-report-page:last-child {
+            break-after: auto;
+            page-break-after: auto;
+          }
           #financeiro-report-print-area .financeiro-report-row {
             break-inside: avoid;
             page-break-inside: avoid;
@@ -270,13 +291,24 @@ const FinancialReportPreviewModal: React.FC<FinancialReportPreviewModalProps> = 
         <div className="financeiro-report-no-print flex flex-col gap-3 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <h3 className="truncate text-base font-black uppercase tracking-tight text-[#001a33]">{title}</h3>
-            <p className="text-xs font-bold text-slate-400">{rows.length} lançamento(s) no extrato</p>
+            <p className="text-xs font-bold text-slate-400">
+              {rows.length} {recordLabel} em {paginatedRows.length} página(s)
+            </p>
+            {reportAssetsLoading && (
+              <p className="mt-1 text-xs font-bold text-blue-600">Carregando identidade visual...</p>
+            )}
+            {reportErrorMessage && (
+              <p className="mt-1 max-w-2xl text-xs font-bold text-rose-600" role="alert">
+                {reportErrorMessage}
+              </p>
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => window.print()}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-slate-700 hover:bg-slate-50"
+              disabled={reportAssetsLoading || Boolean(reportAssetsError)}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Printer size={15} />
               Imprimir
@@ -284,7 +316,7 @@ const FinancialReportPreviewModal: React.FC<FinancialReportPreviewModalProps> = 
             <button
               type="button"
               onClick={handleDownload}
-              disabled={downloading}
+              disabled={downloading || reportAssetsLoading || Boolean(reportAssetsError)}
               className={`inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-black uppercase tracking-wider disabled:opacity-60 ${toneStyle.button}`}
             >
               {downloading ? <Loader2 className="animate-spin" size={15} /> : <Download size={15} />}
@@ -306,119 +338,152 @@ const FinancialReportPreviewModal: React.FC<FinancialReportPreviewModalProps> = 
             <div
               ref={reportRef}
               id="financeiro-report-print-area"
-              className="relative box-border min-h-[297mm] w-[210mm] min-w-[210mm] bg-white p-[12mm] text-slate-800 shadow-xl"
+              className="flex w-[210mm] min-w-[210mm] flex-col gap-4 text-slate-800"
             >
-              {reportPolo?.watermark_url ? (
-                <div className="absolute inset-0 z-0 flex items-center justify-center overflow-hidden pointer-events-none">
-                  <img
-                    src={reportPolo.watermark_url}
-                    alt="Marca d'água"
-                    style={{
-                      opacity: reportPolo.watermark_opacity ?? 0.1,
-                      width: `${reportPolo.watermark_scale ?? 50}%`,
-                      transform: reportPolo.watermark_rotate !== false ? 'rotate(-45deg)' : 'none',
-                    }}
-                  />
-                </div>
-              ) : (
-                <div className="absolute inset-0 z-0 flex items-center justify-center overflow-hidden pointer-events-none select-none opacity-[0.03]">
-                  <h1 className="rotate-[-45deg] text-center text-6xl font-black tracking-widest text-slate-900">
-                    UNIVERSO CURSOS E CONSULTORIA
-                  </h1>
-                </div>
-              )}
+              {paginatedRows.map((pageRows, pageIndex) => {
+                const isFirstPage = pageIndex === 0;
+                const rowOffset = isFirstPage
+                  ? 0
+                  : FIRST_PAGE_ROW_LIMIT + ((pageIndex - 1) * CONTINUATION_PAGE_ROW_LIMIT);
 
-              <div className="relative z-10">
-                <DocumentHeader
-                  company={reportCompany}
-                  polo={reportPolo}
-                  orientation="portrait"
-                  rightContent={
-                    <div className="text-right">
-                      <h2 className="text-sm font-black uppercase tracking-tight text-slate-800">{rightTitle}</h2>
-                      <p className="mt-2 text-[9px] font-black uppercase tracking-widest text-slate-400">Emissão</p>
-                      <p className="text-xs font-bold text-[#001a33]">{emittedAt}</p>
-                      <div className="mt-2 inline-block rounded-lg bg-slate-100 px-2.5 py-1">
-                        <p className="text-[8px] font-black uppercase tracking-widest text-slate-500">Tipo</p>
-                        <p className="text-[10px] font-black uppercase text-[#001a33]">{rightType}</p>
+                return (
+                  <section
+                    key={`page-${pageIndex + 1}`}
+                    className="financeiro-report-page relative box-border flex h-[297mm] min-h-[297mm] w-[210mm] flex-col overflow-hidden bg-white p-[12mm] shadow-xl"
+                  >
+                    {reportPolo?.watermark_url ? (
+                      <div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center overflow-hidden">
+                        <img
+                          src={reportPolo.watermark_url}
+                          alt=""
+                          aria-hidden="true"
+                          style={{
+                            opacity: reportPolo.watermark_opacity ?? 0.1,
+                            width: `${reportPolo.watermark_scale ?? 50}%`,
+                            transform: reportPolo.watermark_rotate !== false ? 'rotate(-45deg)' : 'none',
+                          }}
+                        />
                       </div>
-                    </div>
-                  }
-                />
-
-                <section className="mb-5 border-b border-slate-200 pb-4">
-                  <h4 className={`text-lg font-black uppercase tracking-tight ${toneStyle.text}`}>{title}</h4>
-                  {subtitle && <p className="mt-1 text-xs font-semibold text-slate-500">{subtitle}</p>}
-                </section>
-
-                {filters.length > 0 && (
-                  <section className="mb-5 grid gap-2" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
-                    {filters.map((filter) => (
-                      <div key={filter.label} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-                        <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">{filter.label}</p>
-                        <div className="mt-0.5 text-[10px] font-bold uppercase leading-snug text-slate-700">{filter.value}</div>
-                      </div>
-                    ))}
-                  </section>
-                )}
-
-                {summaryCards.length > 0 && (
-                  <section className="mb-5 grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(summaryCards.length, 4)}, minmax(0, 1fr))` }}>
-                    {summaryCards.map((card) => {
-                      const cardTone = toneStyles[card.tone || 'slate'];
-                      return (
-                        <div key={card.label} className={`rounded-xl border px-3 py-2 text-center ${cardTone.bg} ${cardTone.border}`}>
-                          <p className="text-[8px] font-black uppercase tracking-widest text-slate-500">{card.label}</p>
-                          <div className={`mt-1 text-xs font-black ${cardTone.text}`}>{card.value}</div>
-                        </div>
-                      );
-                    })}
-                  </section>
-                )}
-
-                <table className="w-full border-collapse text-left text-[10px]">
-                  <thead>
-                    <tr className={`${toneStyle.bg} border-y border-slate-200`}>
-                      {columns.map((column) => (
-                        <th
-                          key={column.label}
-                          className={`px-2 py-2 font-black uppercase tracking-widest text-slate-500 ${alignClass[column.align || 'left']} ${column.className || ''}`}
-                        >
-                          {column.label}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.length === 0 ? (
-                      <tr>
-                        <td colSpan={columns.length} className="px-3 py-10 text-center text-xs font-bold uppercase tracking-wider text-slate-400">
-                          Nenhum lançamento encontrado.
-                        </td>
-                      </tr>
-                    ) : rows.map((row, index) => (
-                      <tr
-                        key={row.id}
-                        className={`financeiro-report-row border-b border-slate-100 ${index % 2 === 0 ? 'bg-white/90' : 'bg-slate-50/80'} ${row.className || ''}`}
+                    ) : (
+                      <div
+                        data-pdf-raster-text="true"
+                        className="pointer-events-none absolute inset-0 z-0 flex select-none items-center justify-center overflow-hidden opacity-[0.03]"
                       >
-                        {columns.map((column, cellIndex) => (
-                          <td
-                            key={`${row.id}-${column.label}`}
-                            className={`px-2 py-2 align-top leading-snug ${alignClass[column.align || 'left']} ${column.className || ''}`}
-                          >
-                            {row.cells[cellIndex] ?? null}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        <h1 className="rotate-[-45deg] text-center text-6xl font-black tracking-widest text-slate-900">
+                          UNIVERSO CURSOS E CONSULTORIA
+                        </h1>
+                      </div>
+                    )}
 
-                <footer className="mt-8 flex items-center justify-between border-t border-slate-200 pt-3 text-[9px] font-bold uppercase tracking-wider text-slate-400">
-                  <span>{footerNote || 'Documento emitido pelo Portal de Gestão Universo Cursos e Consultoria.'}</span>
-                  <span>{rows.length} registro(s)</span>
-                </footer>
-              </div>
+                    <div className="relative z-10 flex h-full flex-col pb-8">
+                      <DocumentHeader
+                        company={reportCompany}
+                        polo={reportPolo}
+                        orientation="portrait"
+                        rightContent={
+                          <div className="text-right">
+                            <h2 className="text-sm font-black uppercase tracking-tight text-slate-800">{rightTitle}</h2>
+                            <div className="mt-3 inline-block rounded-lg bg-slate-100 px-2.5 py-1">
+                              <p className="text-[8px] font-black uppercase tracking-widest text-slate-500">Tipo</p>
+                              <p className="text-[10px] font-black uppercase text-[#001a33]">{rightType}</p>
+                            </div>
+                          </div>
+                        }
+                      />
+
+                      {isFirstPage ? (
+                        <>
+                          <section className="mb-4 border-b border-slate-200 pb-3">
+                            <h4 className={`text-lg font-black uppercase tracking-tight ${toneStyle.text}`}>{title}</h4>
+                            {subtitle && <p className="mt-1 text-xs font-semibold text-slate-500">{subtitle}</p>}
+                          </section>
+
+                          {filters.length > 0 && (
+                            <section className="mb-4 grid gap-2" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
+                              {filters.map((filter) => (
+                                <div key={filter.label} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                                  <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">{filter.label}</p>
+                                  <div className="mt-0.5 text-[10px] font-bold uppercase leading-snug text-slate-700">{filter.value}</div>
+                                </div>
+                              ))}
+                            </section>
+                          )}
+
+                          {summaryCards.length > 0 && (
+                            <section className="mb-4 grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(summaryCards.length, 4)}, minmax(0, 1fr))` }}>
+                              {summaryCards.map((card) => {
+                                const cardTone = toneStyles[card.tone || 'slate'];
+                                return (
+                                  <div key={card.label} className={`rounded-xl border px-3 py-2 text-center ${cardTone.bg} ${cardTone.border}`}>
+                                    <p className="text-[8px] font-black uppercase tracking-widest text-slate-500">{card.label}</p>
+                                    <div className={`mt-1 text-xs font-black ${cardTone.text}`}>{card.value}</div>
+                                  </div>
+                                );
+                              })}
+                            </section>
+                          )}
+                        </>
+                      ) : (
+                        <section className="mb-4 flex items-end justify-between border-b border-slate-200 pb-3">
+                          <div>
+                            <p className="text-[8px] font-black uppercase tracking-[0.2em] text-slate-400">Continuação</p>
+                            <h4 className={`mt-1 text-base font-black uppercase tracking-tight ${toneStyle.text}`}>{title}</h4>
+                          </div>
+                          <p className="text-[9px] font-bold uppercase text-slate-400">
+                            Registros {rowOffset + 1} a {rowOffset + pageRows.length}
+                          </p>
+                        </section>
+                      )}
+
+                      <table className="w-full border-collapse text-left text-[9px]">
+                        <thead>
+                          <tr className={`${toneStyle.bg} border-y border-slate-200`}>
+                            {columns.map((column) => (
+                              <th
+                                key={column.label}
+                                className={`px-2 py-1.5 font-black uppercase tracking-widest text-slate-500 ${alignClass[column.align || 'left']} ${column.className || ''}`}
+                              >
+                                {column.label}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {pageRows.length === 0 ? (
+                            <tr>
+                              <td colSpan={columns.length} className="px-3 py-10 text-center text-xs font-bold uppercase tracking-wider text-slate-400">
+                                Nenhum registro encontrado.
+                              </td>
+                            </tr>
+                          ) : pageRows.map((row, index) => (
+                            <tr
+                              key={row.id}
+                              className={`financeiro-report-row border-b border-slate-100 ${(rowOffset + index) % 2 === 0 ? 'bg-white/90' : 'bg-slate-50/80'} ${row.className || ''}`}
+                            >
+                              {columns.map((column, cellIndex) => (
+                                <td
+                                  key={`${row.id}-${column.label}`}
+                                  className={`px-2 py-[3px] align-top leading-snug ${alignClass[column.align || 'left']} ${column.className || ''}`}
+                                >
+                                  {row.cells[cellIndex] ?? null}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+
+                      <footer className="absolute inset-x-0 bottom-0 grid min-h-7 grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-4 border-t border-slate-200 bg-white/95 pt-2 text-[8px] font-bold uppercase tracking-wider text-slate-400">
+                        <span className="truncate">{footerNote || 'Documento emitido pelo Portal de Gestão Universo Cursos e Consultoria.'}</span>
+                        <span className="whitespace-nowrap font-medium normal-case tracking-normal text-slate-300">
+                          Emitido em {emittedAt}
+                        </span>
+                        <span className="whitespace-nowrap">Página {pageIndex + 1} de {paginatedRows.length} · {rows.length} {recordLabel}</span>
+                      </footer>
+                    </div>
+                  </section>
+                );
+              })}
             </div>
           </div>
         </div>

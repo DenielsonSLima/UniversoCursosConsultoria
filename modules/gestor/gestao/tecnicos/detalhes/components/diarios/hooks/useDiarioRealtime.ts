@@ -32,6 +32,21 @@ export const useDiarioRealtime = (turmaId: string, disciplinaId: string) => {
         {
           event: '*',
           schema: 'public',
+          table: 'aulas_turma',
+          filter: `turma_id=eq.${turmaId}`,
+        },
+        scheduleRefresh(
+          diarioClasseKeys.aulas(turmaId, disciplinaId),
+          diarioClasseKeys.resultados(turmaId, disciplinaId),
+          diarioClasseKeys.praticas(turmaId, disciplinaId),
+          diarioClasseKeys.fechamento(turmaId, disciplinaId),
+        ),
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
           table: 'diario_frequencia',
           filter: `turma_id=eq.${turmaId}`,
         },
@@ -53,6 +68,20 @@ export const useDiarioRealtime = (turmaId: string, disciplinaId: string) => {
       .on(
         'postgres_changes',
         {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'turmas_disciplinas',
+          filter: `turma_id=eq.${turmaId}`,
+        },
+        scheduleRefresh(
+          diarioClasseKeys.instruments(turmaId, disciplinaId),
+          diarioClasseKeys.resultados(turmaId, disciplinaId),
+          diarioClasseKeys.fechamento(turmaId, disciplinaId),
+        ),
+      )
+      .on(
+        'postgres_changes',
+        {
           event: '*',
           schema: 'public',
           table: 'diario_praticas',
@@ -69,6 +98,34 @@ export const useDiarioRealtime = (turmaId: string, disciplinaId: string) => {
           filter: `turma_id=eq.${turmaId}`,
         },
         scheduleRefresh(diarioClasseKeys.observacoes(turmaId, disciplinaId)),
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'matricula_movimentacoes',
+          filter: `turma_origem_id=eq.${turmaId}`,
+        },
+        scheduleRefresh(
+          diarioClasseKeys.students(turmaId, disciplinaId, 'GESTOR'),
+          diarioClasseKeys.students(turmaId, disciplinaId, 'PROFESSOR'),
+          diarioClasseKeys.resultados(turmaId, disciplinaId),
+        ),
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'matricula_movimentacoes',
+          filter: `turma_destino_id=eq.${turmaId}`,
+        },
+        scheduleRefresh(
+          diarioClasseKeys.students(turmaId, disciplinaId, 'GESTOR'),
+          diarioClasseKeys.students(turmaId, disciplinaId, 'PROFESSOR'),
+          diarioClasseKeys.resultados(turmaId, disciplinaId),
+        ),
       )
       .subscribe();
 

@@ -11,6 +11,7 @@ import type {
 } from './modalidade-receber.types';
 import type { ModalidadeReceberReport } from './useModalidadeReceberReport';
 import { formatCurrency } from './modalidade-receber.utils';
+import FinancialUnderlineTabs from '../../../components/FinancialUnderlineTabs';
 
 interface ModalidadeReceberToolbarProps {
   modality: CourseModality;
@@ -87,30 +88,19 @@ export const ModalidadeReceberToolbar: React.FC<ModalidadeReceberToolbarProps> =
       ))}
     </div>
 
-    <div className="flex gap-2 border-b border-slate-100 pb-2">
-      {[
-        { id: 'pending' as const, label: 'Pendentes', count: statusCounts.pending },
-        { id: 'received' as const, label: 'Recebidos', count: statusCounts.received },
-        { id: 'canceled' as const, label: 'Cancelados', count: statusCounts.canceled },
-        { id: 'all' as const, label: 'Todos', count: statusCounts.all },
-      ].map((tab) => (
-        <button
-          key={tab.id}
-          type="button"
-          onClick={() => onStatusScopeChange(tab.id)}
-          className={`flex items-center gap-2 rounded-lg border px-4 py-2 text-xs font-bold uppercase tracking-wide transition-all ${
-            statusScope === tab.id
-              ? 'border-emerald-600 bg-emerald-600 text-white shadow-sm'
-              : 'border-transparent text-slate-500 hover:bg-slate-50'
-          }`}
-        >
-          <span>{tab.label}</span>
-          <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${statusScope === tab.id ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>
-            {tab.count}
-          </span>
-        </button>
-      ))}
-    </div>
+    <FinancialUnderlineTabs
+      items={[
+        { id: 'pending' as const, label: 'Pendentes', badge: statusCounts.pending, badgeClassName: 'bg-emerald-50 text-emerald-700' },
+        { id: 'received' as const, label: 'Recebidos', badge: statusCounts.received, badgeClassName: 'bg-emerald-50 text-emerald-700' },
+        { id: 'canceled' as const, label: 'Cancelados', badge: statusCounts.canceled, badgeClassName: 'bg-emerald-50 text-emerald-700' },
+        { id: 'all' as const, label: 'Todos', badge: statusCounts.all, badgeClassName: 'bg-emerald-50 text-emerald-700' },
+      ]}
+      value={statusScope}
+      onChange={onStatusScopeChange}
+      ariaLabel="Situação das contas a receber"
+      indicatorClassName="bg-emerald-600"
+      activeIconClassName="text-emerald-600"
+    />
 
     <div className="flex flex-wrap items-center gap-3">
       <div className="relative min-w-[220px] flex-1">

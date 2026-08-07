@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckSquare2, Search, Send, Square, Trash2 } from 'lucide-react';
+import { ListChecks, Search, Send, Trash2, X } from 'lucide-react';
 
 export type ConversationStatusFilter = 'aberta' | 'arquivada';
 
@@ -18,6 +18,7 @@ interface ConversationToolbarProps {
   onSearchChange: (value: string) => void;
   onBatchSend: () => void;
   onDelete: () => void;
+  onClearSelection: () => void;
 }
 
 const ConversationToolbar: React.FC<ConversationToolbarProps> = ({
@@ -35,50 +36,74 @@ const ConversationToolbar: React.FC<ConversationToolbarProps> = ({
   onSearchChange,
   onBatchSend,
   onDelete,
+  onClearSelection,
 }) => (
   <div className="space-y-3 border-b border-slate-100 p-4">
-    <div className="flex items-center gap-2">
-      <button
-        type="button"
-        onClick={onToggleAll}
-        disabled={selectableCount === 0}
-        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border transition-colors disabled:opacity-40 ${allSelected || selectedCount > 0 ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-100 bg-slate-50 text-slate-400 hover:bg-slate-100'}`}
-        title={allSelected ? 'Limpar seleção' : 'Selecionar todas as conversas filtradas'}
-        aria-label={allSelected ? 'Limpar seleção' : 'Selecionar conversas'}
-      >
-        {allSelected ? <CheckSquare2 size={18} /> : <Square size={18} />}
-      </button>
-      <label className="relative min-w-0 flex-1">
-        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-        <input
-          value={search}
-          onChange={(event) => onSearchChange(event.target.value)}
-          placeholder="Buscar conversa..."
-          className="h-11 w-full rounded-2xl border border-slate-100 bg-slate-50 pl-10 pr-4 text-sm font-medium text-slate-700 outline-none transition-all placeholder:text-slate-400 focus:border-emerald-200 focus:bg-white"
-        />
-      </label>
-    </div>
-
-    {selectedCount > 0 && (
-      <div className="flex items-center gap-2">
-        <span className="mr-auto text-[11px] font-bold text-slate-500">{selectedCount} selecionada(s)</span>
+    {selectedCount > 0 ? (
+      <div className="flex h-11 items-center gap-1 rounded-xl bg-[#f0f2f5] px-1.5">
+        <button
+          type="button"
+          onClick={onClearSelection}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#54656f] transition-colors hover:bg-[#dfe3e5]"
+          title="Cancelar seleção"
+          aria-label="Cancelar seleção de conversas"
+        >
+          <X size={19} />
+        </button>
+        <span className="min-w-0 flex-1 truncate px-1 text-[13px] font-medium text-[#3b4a54]">
+          {selectedCount} selecionada{selectedCount === 1 ? '' : 's'}
+        </span>
+        <button
+          type="button"
+          onClick={onToggleAll}
+          disabled={selectableCount === 0}
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors disabled:opacity-40 ${
+            allSelected ? 'bg-[#d9fdd3] text-[#008069]' : 'text-[#54656f] hover:bg-[#dfe3e5]'
+          }`}
+          title={allSelected ? 'Desmarcar todas' : 'Selecionar todas'}
+          aria-label={allSelected ? 'Desmarcar todas as conversas' : 'Selecionar todas as conversas'}
+        >
+          <ListChecks size={18} />
+        </button>
         <button
           type="button"
           onClick={onBatchSend}
           disabled={sendableCount === 0}
-          className="flex h-8 items-center gap-1.5 rounded-xl bg-emerald-50 px-2.5 text-[11px] font-bold text-emerald-700 transition-colors hover:bg-emerald-100 disabled:opacity-40"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#008069] transition-colors hover:bg-[#d9fdd3] disabled:opacity-40"
           title="Enviar mensagem em lote"
+          aria-label="Enviar mensagem para as conversas selecionadas"
         >
-          <Send size={13} /> Mensagem
+          <Send size={18} />
         </button>
         <button
           type="button"
           onClick={onDelete}
           disabled={deleting}
-          className="flex h-8 items-center gap-1.5 rounded-xl bg-rose-50 px-2.5 text-[11px] font-bold text-rose-700 transition-colors hover:bg-rose-100 disabled:opacity-50"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#d93025] transition-colors hover:bg-[#fde7e5] disabled:opacity-50"
           title="Apagar conversas selecionadas"
+          aria-label={deleting ? 'Apagando conversas' : 'Apagar conversas selecionadas'}
         >
-          <Trash2 size={13} /> {deleting ? 'Apagando...' : 'Apagar'}
+          <Trash2 size={18} />
+        </button>
+      </div>
+    ) : (
+      <div className="relative">
+        <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#667781]" />
+        <input
+          value={search}
+          onChange={(event) => onSearchChange(event.target.value)}
+          placeholder="Buscar conversa..."
+          className="h-11 w-full rounded-xl border border-transparent bg-[#f0f2f5] pl-10 pr-12 text-sm font-normal text-[#111b21] outline-none transition-colors placeholder:text-[#667781] focus:border-[#d5dade] focus:bg-white"
+        />
+        <button
+          type="button"
+          onClick={onToggleAll}
+          disabled={selectableCount === 0}
+          className="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-[#667781] transition-colors hover:bg-[#dfe3e5] hover:text-[#008069] disabled:opacity-30"
+          title="Selecionar várias conversas"
+          aria-label="Selecionar várias conversas"
+        >
+          <ListChecks size={17} />
         </button>
       </div>
     )}

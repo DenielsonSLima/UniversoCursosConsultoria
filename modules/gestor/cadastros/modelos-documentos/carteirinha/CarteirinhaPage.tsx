@@ -1,10 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CreditCard } from 'lucide-react';
 import CarteirinhaCard from './components/CarteirinhaCard';
 import CarteirinhaEditor from './components/CarteirinhaEditor';
 import { carteirinhaService, type CarteirinhaTemplate } from './carteirinha.service';
 import { assinaturasService } from '../../../configuracoes/assinaturas/assinaturas.service';
 import ToastNotification, { useToast } from '../../../components/ToastNotification';
+import { DocumentTemplatePageState } from '../components/DocumentTemplateLoadingState';
+import { useDocumentBackgroundReadiness } from '../hooks/useDocumentBackgroundReadiness';
+import { documentTemplateQueryKeys } from '../document-template.query-keys';
 
 const INITIAL_MODELOS: CarteirinhaTemplate[] = [
   {
@@ -21,27 +25,34 @@ const INITIAL_MODELOS: CarteirinhaTemplate[] = [
 ];
 
 const CarteirinhaPage: React.FC = () => {
-  const [modelos, setModelos] = useState<CarteirinhaTemplate[]>(INITIAL_MODELOS);
+  const queryClient = useQueryClient();
+  const templateQuery = useQuery({
+    queryKey: documentTemplateQueryKeys.detail('carteirinha'),
+    queryFn: () => carteirinhaService.getTemplate(),
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    retry: 1,
+  });
+  const [localTemplate, setLocalTemplate] = useState<CarteirinhaTemplate | null>(null);
+  const [isDeletedLocally, setIsDeletedLocally] = useState(false);
   const [editingModelo, setEditingModelo] = useState<any>(null);
   const [isCreating, setIsCreating] = useState(false);
   const { toasts, removeToast, toast } = useToast();
 
   useEffect(() => {
-    const loadPersisted = async () => {
-      try {
-        // Sincroniza assinaturas centrais em segundo plano
-        assinaturasService.syncSignatures().catch(err => console.error('Erro ao sincronizar assinaturas:', err));
-
-        const persisted = await carteirinhaService.getTemplate();
-        if (persisted && persisted.id) {
-          setModelos(prev => prev.map(m => m.id === persisted.id ? persisted : m));
-        }
-      } catch (err) {
-        console.error('Erro ao carregar template persistido:', err);
-      }
-    };
-    loadPersisted();
+    assinaturasService.syncSignatures().catch(err => console.error('Erro ao sincronizar assinaturas:', err));
   }, []);
+
+  const modelo = useMemo(() => {
+    const template = localTemplate ?? templateQuery.data;
+    if (!template) return null;
+    return { ...INITIAL_MODELOS[0], ...template, id: template.id || INITIAL_MODELOS[0].id };
+  }, [localTemplate, templateQuery.data]);
+  const backgrounds = useDocumentBackgroundReadiness(
+    modelo?.bgFrenteUrl,
+    modelo?.hasVerso ? modelo.bgVersoUrl : null,
+  );
+  const modelos = isDeletedLocally || !modelo ? [] : [modelo];
 
   const handleEdit = (modelo: any) => {
     setEditingModelo(modelo);
@@ -50,18 +61,19 @@ const CarteirinhaPage: React.FC = () => {
 
   const handleDelete = (id: string) => {
     if (window.confirm('Tem certeza que deseja excluir este modelo?')) {
-      setModelos(modelos.filter(m => m.id !== id));
+      setIsDeletedLocally(true);
     }
   };
 
   const handleSave = async (savedModelo: any) => {
     try {
-      await carteirinhaService.saveTemplate(savedModelo);
-      if (isCreating) {
-        setModelos([...modelos, savedModelo]);
-      } else {
-        setModelos(modelos.map(m => m.id === savedModelo.id ? savedModelo : m));
+      const saved = await carteirinhaService.saveTemplate(savedModelo);
+      if (!saved) {
+        throw new Error('O serviço não confirmou a gravação do modelo.');
       }
+      queryClient.setQueryData(documentTemplateQueryKeys.detail('carteirinha'), savedModelo);
+      setLocalTemplate(savedModelo);
+      setIsDeletedLocally(false);
       toast.success('Modelo Salvo', 'O modelo de carteirinha foi salvo com sucesso!');
     } catch (err) {
       console.error('Erro ao salvar template:', err);
@@ -75,6 +87,23 @@ const CarteirinhaPage: React.FC = () => {
     setEditingModelo(null);
     setIsCreating(false);
   };
+
+  if (templateQuery.isPending || backgrounds.status === 'loading') {
+    return <DocumentTemplatePageState title="modelo de carteirinha" />;
+  }
+
+  if (templateQuery.isError || backgrounds.status === 'error') {
+    return (
+      <DocumentTemplatePageState
+        title="modelo de carteirinha"
+        isError
+        onRetry={() => {
+          if (templateQuery.isError) void templateQuery.refetch();
+          else backgrounds.retry();
+        }}
+      />
+    );
+  }
 
   if (editingModelo || isCreating) {
     return (

@@ -3,7 +3,7 @@ import { CheckCircle, Eye, EyeOff, LoaderCircle, Lock } from 'lucide-react';
 import { loginService } from '../../login/login.service';
 
 const hasStrongPassword = (value: string) => (
-  value.length >= 6 && /[A-Z]/.test(value) && /[a-z]/.test(value) && /\d/.test(value)
+  value.length >= 8 && /[A-Z]/.test(value) && /[a-z]/.test(value) && /\d/.test(value)
 );
 
 const PerfilSenhaTab: React.FC = () => {
@@ -30,7 +30,7 @@ const PerfilSenhaTab: React.FC = () => {
     if (!hasStrongPassword(newPassword)) {
       setMessage({
         tone: 'error',
-        text: 'A nova senha precisa ter no mínimo 6 caracteres, 1 letra maiúscula, 1 minúscula e 1 número.',
+        text: 'A nova senha precisa ter no mínimo 8 caracteres, 1 letra maiúscula, 1 minúscula e 1 número.',
       });
       return;
     }
@@ -85,14 +85,16 @@ const PerfilSenhaTab: React.FC = () => {
               type={showNew ? 'text' : 'password'}
               value={newPassword}
               onChange={(event) => setNewPassword(event.target.value)}
-              placeholder="Mínimo 6 caracteres, 1 maiúscula, 1 minúscula e 1 número"
-              className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 pr-12 text-sm font-semibold text-slate-800 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+              placeholder="Mínimo 8 caracteres, 1 maiúscula, 1 minúscula e 1 número"
+              className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 pr-14 text-base font-semibold text-slate-800 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100 md:pr-12 md:text-sm"
               required
             />
             <button
               type="button"
               onClick={() => setShowNew((prev) => !prev)}
-              className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100"
+              className="absolute right-0.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-xl text-slate-500 outline-none hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-blue-500 md:right-1 md:h-10 md:w-10"
+              aria-label={showNew ? 'Ocultar nova senha' : 'Mostrar nova senha'}
+              aria-pressed={showNew}
             >
               {showNew ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
@@ -107,13 +109,15 @@ const PerfilSenhaTab: React.FC = () => {
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
               placeholder="Repita a nova senha"
-              className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 pr-12 text-sm font-semibold text-slate-800 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+              className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 pr-14 text-base font-semibold text-slate-800 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100 md:pr-12 md:text-sm"
               required
             />
             <button
               type="button"
               onClick={() => setShowConfirmation((prev) => !prev)}
-              className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100"
+              className="absolute right-0.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-xl text-slate-500 outline-none hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-blue-500 md:right-1 md:h-10 md:w-10"
+              aria-label={showConfirmation ? 'Ocultar confirmação da senha' : 'Mostrar confirmação da senha'}
+              aria-pressed={showConfirmation}
             >
               {showConfirmation ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
@@ -126,7 +130,7 @@ const PerfilSenhaTab: React.FC = () => {
             : 'border-slate-200 bg-slate-50 text-slate-600'
         }`}
         >
-          Sua nova senha precisa ter 6+ caracteres, 1 letra maiúscula, 1 minúscula e 1 número.
+          Sua nova senha precisa ter 8+ caracteres, 1 letra maiúscula, 1 minúscula e 1 número.
         </p>
 
         {message && (
@@ -144,7 +148,7 @@ const PerfilSenhaTab: React.FC = () => {
         <button
           type="submit"
           disabled={isLoading || !canSubmit}
-          className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#001a33] px-4 text-xs font-black uppercase tracking-widest text-white hover:bg-blue-700 disabled:opacity-60 sm:w-auto"
+          className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#001a33] px-4 text-xs font-black uppercase tracking-widest text-white outline-none hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-60 sm:w-auto"
         >
           {isLoading ? <LoaderCircle size={16} className="h-4 w-4 animate-spin" /> : <CheckCircle size={16} />}
           {isLoading ? 'Salvando...' : 'Salvar nova senha'}

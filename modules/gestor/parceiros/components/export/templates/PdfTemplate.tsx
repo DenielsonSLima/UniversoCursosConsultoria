@@ -1,11 +1,19 @@
-import React from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { empresasService } from '../../../../configuracoes/empresas/empresas.service';
-import { polosService } from '../../../../configuracoes/polos/polos.service';
+import React, { useMemo } from 'react';
 import DocumentHeader from '../../../../components/DocumentHeader';
+import ReportWatermark from '../../../../relatorios/components/ReportWatermark';
+import type { ParceirosTabType } from '../../../hooks/useParceirosFilters';
+import {
+  normalizeParceirosForExport,
+  type ParceiroExportRow,
+} from '../parceiros-export.utils';
 
 interface PdfTemplateProps {
+  items: any[];
+  activeTab: ParceirosTabType;
+  company?: any;
+  polo?: any;
   filtrosAtuais?: {
+    searchTerm?: string;
     statusFilter?: string;
     alunoModalidadeFilter?: string[];
     turmaFilter?: string;
@@ -20,99 +28,183 @@ const modalidadeLabels: Record<string, string> = {
   TECNICO: 'Técnico',
 };
 
-const PdfTemplate: React.FC<PdfTemplateProps> = ({ filtrosAtuais }) => {
-  const { data: company } = useQuery<any>({
-    queryKey: ['empresa_principal'],
-    queryFn: () => empresasService.getCompanyPrincipal(),
-  });
+const tabLabels: Record<ParceirosTabType, string> = {
+  todos: 'Todos',
+  professores: 'Professores',
+  alunos: 'Alunos',
+  pj: 'Pessoa Jurídica',
+  pf: 'Pessoa Física',
+};
 
-  // current_polo_id é estado de sessão UI — sessionStorage é adequado
-  const poloId = sessionStorage.getItem('current_polo_id');
-  const { data: polo } = useQuery<any>({
-    queryKey: ['polo_detalhes', poloId],
-    queryFn: () => poloId ? polosService.getById(poloId) : Promise.resolve(null),
-    enabled: !!poloId,
-  });
+const FIRST_PAGE_ROW_LIMIT = 12;
+const CONTINUATION_PAGE_ROW_LIMIT = 18;
 
+const paginateRows = (rows: ParceiroExportRow[]) => {
+  if (rows.length === 0) return [[]];
+
+  const pages: ParceiroExportRow[][] = [rows.slice(0, FIRST_PAGE_ROW_LIMIT)];
+  for (
+    let index = FIRST_PAGE_ROW_LIMIT;
+    index < rows.length;
+    index += CONTINUATION_PAGE_ROW_LIMIT
+  ) {
+    pages.push(rows.slice(index, index + CONTINUATION_PAGE_ROW_LIMIT));
+  }
+  return pages;
+};
+
+const statusClass = (status: string) => {
+  const normalized = status.toLocaleUpperCase('pt-BR');
+  if (normalized === 'ATIVO') return 'text-emerald-700';
+  if (normalized === 'INATIVO') return 'text-slate-500';
+  if (normalized === 'CONCLUÍDO') return 'text-blue-700';
+  if (normalized === 'TRANCADO') return 'text-amber-700';
+  return 'text-rose-700';
+};
+
+const PdfTemplate: React.FC<PdfTemplateProps> = ({
+  items,
+  activeTab,
+  company,
+  polo,
+  filtrosAtuais,
+}) => {
+  const rows = useMemo(() => normalizeParceirosForExport(items), [items]);
+  const pages = useMemo(() => paginateRows(rows), [rows]);
   const modalidadesSelecionadas = filtrosAtuais?.alunoModalidadeFilter || [];
   const modalidadeLabel = modalidadesSelecionadas.length > 0
     ? modalidadesSelecionadas.map((item) => modalidadeLabels[item] || item).join(', ')
     : 'Todos os alunos';
 
+  const filters = [
+    { label: 'Aba / Tipo', value: tabLabels[activeTab] },
+    {
+      label: 'Status',
+      value: filtrosAtuais?.statusFilter && filtrosAtuais.statusFilter !== 'todos'
+        ? filtrosAtuais.statusFilter
+        : 'Todos',
+    },
+    { label: 'Filtro de alunos', value: modalidadeLabel },
+    {
+      label: 'Turma',
+      value: filtrosAtuais?.turmaFilter && filtrosAtuais.turmaFilter !== 'todas'
+        ? filtrosAtuais.turmaFilterLabel || 'Turma selecionada'
+        : 'Todas as turmas',
+    },
+    {
+      label: 'Busca',
+      value: filtrosAtuais?.searchTerm?.trim() || 'Sem termo de busca',
+    },
+    { label: 'Registros', value: String(rows.length) },
+  ];
+
   return (
-    <div className="text-slate-800 relative min-h-[inherit] flex flex-col justify-between text-left">
-      {/* Watermark (Marca d'água) */}
-      {polo?.watermark_url && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden">
-          <img 
-            src={polo.watermark_url} 
-            alt="Watermark" 
-            style={{
-              opacity: polo.watermark_opacity ?? 0.1,
-              width: `${polo.watermark_scale ?? 50}%`,
-              transform: polo.watermark_rotate !== false ? 'rotate(-45deg)' : 'none'
-            }}
-          />
-        </div>
-      )}
+    <>
+      {pages.map((pageRows, pageIndex) => (
+        <section
+          key={`page-${pageIndex + 1}`}
+          className="partners-report-page relative box-border flex h-[297mm] min-h-[297mm] w-[210mm] flex-col overflow-hidden bg-white p-[12mm] text-left text-slate-800 shadow-xl print:shadow-none"
+        >
+          <ReportWatermark polo={polo} orientation="portrait" />
 
-      <div className="relative z-10 flex-1">
-        {/* Header com Logo e Info da Empresa e Polo */}
-        <DocumentHeader 
-          company={company} 
-          polo={polo} 
-          orientation="portrait" 
-          rightContent={
-            <div className="text-right">
-              <h2 className="text-lg font-black text-slate-800 uppercase tracking-tight">Relatório de Parceiros</h2>
-              <p className="text-[10px] font-bold text-slate-500 uppercase mt-2">Data de Emissão</p>
-              <p className="text-sm font-bold text-[#001a33]">{new Date().toLocaleDateString('pt-BR')}</p>
-            </div>
-          }
-        />
+          <div className="relative z-10 flex h-full flex-col">
+            <DocumentHeader
+              company={company}
+              polo={polo}
+              orientation="portrait"
+              rightContent={
+                <div className="text-right">
+                  <h2 className="text-sm font-black uppercase tracking-tight text-slate-800">
+                    Relatório de Parceiros
+                  </h2>
+                  <p className="mt-2 text-[8px] font-bold uppercase text-slate-500">
+                    Data de emissão
+                  </p>
+                  <p className="text-xs font-bold text-[#001a33]">
+                    {new Date().toLocaleDateString('pt-BR')}
+                  </p>
+                </div>
+              }
+            />
 
-        <div className="mb-6 relative z-10">
-          <h2 className="text-sm font-bold bg-slate-100 px-3 py-2 uppercase tracking-widest text-[#001a33]">Resumo dos Filtros</h2>
-          <ul className="text-xs font-medium text-slate-600 mt-2 px-3 space-y-1">
-            <li>• Aba / Tipo: Todos</li>
-            <li>• Status: {filtrosAtuais?.statusFilter && filtrosAtuais.statusFilter !== 'todos' ? filtrosAtuais.statusFilter : 'Todos'}</li>
-            <li>• Filtro de alunos: {modalidadeLabel}</li>
-            <li>• Turma: {filtrosAtuais?.turmaFilter && filtrosAtuais.turmaFilter !== 'todas' ? filtrosAtuais.turmaFilterLabel || 'Turma selecionada' : 'Todas as turmas'}</li>
-          </ul>
-        </div>
+            {pageIndex === 0 && (
+              <section className="mb-4">
+                <h3 className="mb-2 bg-slate-100 px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-[#001a33]">
+                  Resumo dos filtros
+                </h3>
+                <div className="grid grid-cols-3 gap-2">
+                  {filters.map((filter) => (
+                    <div
+                      key={filter.label}
+                      className="rounded-lg border border-slate-200 bg-white/85 px-2.5 py-2"
+                    >
+                      <p className="text-[7px] font-black uppercase tracking-widest text-slate-400">
+                        {filter.label}
+                      </p>
+                      <p className="mt-0.5 truncate text-[9px] font-bold text-slate-700">
+                        {filter.value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
 
-        <table className="w-full text-left text-sm mt-4 border-collapse relative z-10">
-          <thead>
-            <tr className="border-b-2 border-slate-300">
-              <th className="py-2 pr-2 font-bold uppercase tracking-wider text-xs">Nome</th>
-              <th className="py-2 pr-2 font-bold uppercase tracking-wider text-xs">Tipo</th>
-              <th className="py-2 pr-2 font-bold uppercase tracking-wider text-xs">Status</th>
-              <th className="py-2 pr-2 font-bold uppercase tracking-wider text-xs">Documento</th>
-              <th className="py-2 font-bold uppercase tracking-wider text-xs">Contato</th>
-            </tr>
-          </thead>
-          <tbody className="font-medium text-slate-600">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-              <tr key={i} className="border-b border-slate-100">
-                <td className="py-3 pr-2">Exemplo Parceiro {i}</td>
-                <td className="py-3 pr-2">{i % 2 === 0 ? 'Aluno' : i % 3 === 0 ? 'Professor' : 'PJ'}</td>
-                <td className="py-3 pr-2">
-                  <span className={i % 5 === 0 ? "text-slate-500 font-bold" : "text-emerald-600 font-bold"}>
-                    {i % 5 === 0 ? 'Inativo' : 'Ativo'}
-                  </span>
-                </td>
-                <td className="py-3 pr-2">{i % 3 === 0 ? '00.000.000/0001-00' : '000.000.000-00'}</td>
-                <td className="py-3">contato{i}@parceiro.com</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      
-      <div className="mt-16 text-center text-xs text-slate-400 font-medium relative z-10">
-        Fim do Relatório
-      </div>
-    </div>
+            {pageIndex > 0 && (
+              <div className="mb-3 flex items-center justify-between border-b border-slate-200 pb-2">
+                <p className="text-[9px] font-black uppercase tracking-widest text-[#001a33]">
+                  Continuação
+                </p>
+                <p className="text-[8px] font-bold text-slate-400">
+                  {rows.length} registros filtrados
+                </p>
+              </div>
+            )}
+
+            <table className="w-full table-fixed border-collapse text-left">
+              <thead>
+                <tr className="border-b-2 border-slate-300">
+                  <th className="w-[28%] px-1 py-2 text-[8px] font-black uppercase tracking-wider">Nome</th>
+                  <th className="w-[12%] px-1 py-2 text-[8px] font-black uppercase tracking-wider">Tipo</th>
+                  <th className="w-[12%] px-1 py-2 text-[8px] font-black uppercase tracking-wider">Status</th>
+                  <th className="w-[20%] px-1 py-2 text-[8px] font-black uppercase tracking-wider">Documento</th>
+                  <th className="w-[28%] px-1 py-2 text-[8px] font-black uppercase tracking-wider">Contato</th>
+                </tr>
+              </thead>
+              <tbody className="font-medium text-slate-600">
+                {pageRows.length > 0 ? pageRows.map((row) => (
+                  <tr key={row.id || `${row.nome}-${row.documento}`} className="partners-report-row border-b border-slate-100">
+                    <td className="px-1 py-2.5 text-[9px] font-bold text-slate-700">
+                      <span className="block truncate" title={row.nome}>{row.nome}</span>
+                    </td>
+                    <td className="px-1 py-2.5 text-[9px]">{row.tipo}</td>
+                    <td className={`px-1 py-2.5 text-[9px] font-bold ${statusClass(row.status)}`}>
+                      {row.status}
+                    </td>
+                    <td className="px-1 py-2.5 text-[9px]">{row.documento}</td>
+                    <td className="px-1 py-2 text-[8px]">
+                      <span className="block truncate" title={row.email}>{row.email}</span>
+                      <span className="mt-0.5 block text-slate-400">{row.telefone}</span>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan={5} className="py-16 text-center text-xs font-bold text-slate-400">
+                      Nenhum parceiro corresponde aos filtros selecionados.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+
+            <footer className="mt-auto flex items-center justify-between border-t border-slate-200 pt-3 text-[8px] font-bold text-slate-400">
+              <span>UNIVERSO CURSOS E CONSULTORIA</span>
+              <span>Página {pageIndex + 1} de {pages.length}</span>
+            </footer>
+          </div>
+        </section>
+      ))}
+    </>
   );
 };
 

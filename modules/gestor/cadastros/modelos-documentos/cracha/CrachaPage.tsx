@@ -1,8 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Shield } from 'lucide-react';
 import CrachaCard from './components/CrachaCard';
 import CrachaEditor from './components/CrachaEditor';
 import { crachaService } from './cracha.service';
+import { DocumentTemplatePageState } from '../components/DocumentTemplateLoadingState';
+import { useDocumentBackgroundReadiness } from '../hooks/useDocumentBackgroundReadiness';
+import { documentTemplateQueryKeys } from '../document-template.query-keys';
 
 const INITIAL_MODELOS = [
   {
@@ -19,7 +23,15 @@ const INITIAL_MODELOS = [
 ];
 
 const CrachaPage: React.FC = () => {
-  const [modelos, setModelos] = useState(INITIAL_MODELOS);
+  const queryClient = useQueryClient();
+  const templateQuery = useQuery({
+    queryKey: documentTemplateQueryKeys.detail('cracha'),
+    queryFn: () => crachaService.getTemplate(),
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    retry: 1,
+  });
+  const [localTemplate, setLocalTemplate] = useState<any>(null);
   const [editingModelo, setEditingModelo] = useState<any>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
@@ -29,20 +41,16 @@ const CrachaPage: React.FC = () => {
     setTimeout(() => setToast(null), 4000);
   };
 
-  useEffect(() => {
-    const loadPersisted = async () => {
-      try {
-        const persisted = await crachaService.getTemplate();
-        if (persisted) {
-          const merged = { ...INITIAL_MODELOS[0], ...persisted, id: 'cracha' };
-          setModelos([merged]);
-        }
-      } catch (err) {
-        console.error('Erro ao carregar template de crachá persistido:', err);
-      }
-    };
-    loadPersisted();
-  }, []);
+  const modelo = useMemo(() => {
+    const template = localTemplate ?? templateQuery.data;
+    if (!template) return null;
+    return { ...INITIAL_MODELOS[0], ...template, id: 'cracha' };
+  }, [localTemplate, templateQuery.data]);
+  const backgrounds = useDocumentBackgroundReadiness(
+    modelo?.bgFrenteUrl,
+    modelo?.hasVerso ? modelo.bgVersoUrl : null,
+  );
+  const modelos = modelo ? [modelo] : [];
 
   const handleEdit = (modelo: any) => {
     setEditingModelo(modelo);
@@ -51,8 +59,12 @@ const CrachaPage: React.FC = () => {
 
   const handleSave = async (savedModelo: any) => {
     try {
-      await crachaService.saveTemplate(savedModelo);
-      setModelos([savedModelo]);
+      const saved = await crachaService.saveTemplate(savedModelo);
+      if (!saved) {
+        throw new Error('O serviço não confirmou a gravação do modelo.');
+      }
+      queryClient.setQueryData(documentTemplateQueryKeys.detail('cracha'), savedModelo);
+      setLocalTemplate(savedModelo);
       showToast('Modelo de crachá de estágio salvo com sucesso!', 'success');
     } catch (err) {
       console.error('Erro ao salvar template de crachá:', err);
@@ -66,6 +78,23 @@ const CrachaPage: React.FC = () => {
     setEditingModelo(null);
     setIsCreating(false);
   };
+
+  if (templateQuery.isPending || backgrounds.status === 'loading') {
+    return <DocumentTemplatePageState title="modelo de crachá" />;
+  }
+
+  if (templateQuery.isError || backgrounds.status === 'error') {
+    return (
+      <DocumentTemplatePageState
+        title="modelo de crachá"
+        isError
+        onRetry={() => {
+          if (templateQuery.isError) void templateQuery.refetch();
+          else backgrounds.retry();
+        }}
+      />
+    );
+  }
 
   if (editingModelo || isCreating) {
     return (

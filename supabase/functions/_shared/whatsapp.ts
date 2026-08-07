@@ -72,6 +72,7 @@ export const phoneBelongsToAluno = async (admin: any, alunoId: string, phone: st
 export const upsertWhatsAppConversation = async (
   admin: any,
   input: {
+    connectionId?: string | null;
     phone: string;
     aluno?: any | null;
     contactName?: string | null;
@@ -83,6 +84,18 @@ export const upsertWhatsAppConversation = async (
 ) => {
   const phone = normalizeWhatsAppPhone(input.phone);
   if (!phone) throw new Error("Telefone WhatsApp invalido.");
+
+  let connectionId = String(input.connectionId || "").trim();
+  if (!connectionId) {
+    const { data: defaultConnection, error: defaultConnectionError } = await admin
+      .from("whatsapp_conexoes")
+      .select("id")
+      .eq("is_default", true)
+      .maybeSingle();
+    if (defaultConnectionError) throw defaultConnectionError;
+    connectionId = String(defaultConnection?.id || "").trim();
+  }
+  if (!connectionId) throw new Error("Linha WhatsApp padrão não configurada.");
 
   const contactName = String(
     input.aluno?.nome || input.contactName || phone,
@@ -97,11 +110,17 @@ export const upsertWhatsAppConversation = async (
   const { data: existing, error: existingError } = await admin
     .from("whatsapp_conversas")
     .select("*")
+    .eq("conexao_id", connectionId)
     .eq("telefone", phone)
     .maybeSingle();
   if (existingError) throw existingError;
 
   if (existing) {
+    const isReopening = input.direction === "entrada" &&
+      (
+        existing.status === "arquivada" ||
+        existing.status_atendimento === "solucionada"
+      );
     const existingLastAt = String(existing.ultima_data || "");
     const isNewerPreview = Date.parse(eventAt) >= Date.parse(existingLastAt || "1970-01-01T00:00:00.000Z");
     const nextLastAt = isNewerPreview
@@ -115,8 +134,20 @@ export const upsertWhatsAppConversation = async (
         ultimo_texto: isNewerPreview ? lastText || existing.ultimo_texto : existing.ultimo_texto,
         ultima_data: nextLastAt,
         status: input.direction === "entrada" ? "aberta" : existing.status,
+        status_atendimento: isReopening
+          ? "bot_triagem"
+          : existing.status_atendimento,
         closed_at: input.direction === "entrada" ? null : existing.closed_at,
         closed_reason: input.direction === "entrada" ? null : existing.closed_reason,
+        csat_score: isReopening ? null : existing.csat_score,
+        csat_comentario: isReopening ? null : existing.csat_comentario,
+        csat_requested_at: isReopening ? null : existing.csat_requested_at,
+        data_inicio_atendimento: isReopening
+          ? null
+          : existing.data_inicio_atendimento,
+        data_fim_atendimento: isReopening
+          ? null
+          : existing.data_fim_atendimento,
         unread_count: shouldIncrementUnread
           ? Number(existing.unread_count || 0) + 1
           : Number(existing.unread_count || 0),
@@ -132,6 +163,7 @@ export const upsertWhatsAppConversation = async (
   const { data, error } = await admin
     .from("whatsapp_conversas")
     .insert({
+      conexao_id: connectionId,
       aluno_id: input.aluno?.id || null,
       contato_nome: contactName,
       telefone: phone,

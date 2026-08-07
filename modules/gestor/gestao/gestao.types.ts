@@ -47,6 +47,7 @@ export interface Turma {
   jurosAtraso: number;
   multaAtraso: number;
   diaVencimentoPadrao?: number;
+  instrucaoBoletoCarne?: string;
   origemFinanceira?: 'LEGADO' | 'NORMAL';
   financeiroHerdado?: boolean;
   gerarCobrancasFuturas?: boolean;
@@ -59,10 +60,19 @@ export interface Turma {
   aplicarMultaJurosMensalidade?: boolean;
   aplicarDescontoRematricula?: boolean;
   aplicarMultaJurosRematricula?: boolean;
+  progressoAcademicoDisponivel?: boolean;
   totalDisciplinas?: number;
+  disciplinasConcluidas?: number;
+  gradeConcluida?: boolean;
+  moduloAtualId?: string;
+  moduloAtual?: string;
+  moduloAtualOrdem?: number;
+  disciplinaAtualId?: string;
   disciplinaAtual?: string;
   disciplinaAtualOrdem?: number;
   professorAtual?: string;
+  cargaHorariaAtual?: number;
+  horasRealizadasAtual?: number;
   proximaAulaData?: string;
   proximaAulaTitulo?: string;
 }

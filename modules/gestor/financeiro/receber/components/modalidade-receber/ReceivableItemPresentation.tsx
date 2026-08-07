@@ -13,17 +13,14 @@ import { formatEnrollment } from './modalidade-receber.enrollment';
 import {
   canReverseManualSettlement,
   formatCurrency,
-  formatOptionalCurrency,
   formatReceivableDate,
-  getPersistedGatewayFee,
-  getPersistedGatewayNet,
   isPaidThroughAsaas,
   paymentGatewayCode,
   paymentGatewayLabel,
-  paymentGatewayStatusClass,
-  paymentGatewayStatusLabel,
   paymentMethodLabel,
   paymentOriginLabel,
+  receivableClassLabel,
+  receivableCourseTitle,
 } from './modalidade-receber.utils';
 
 export interface ReceivableActionsContext {
@@ -44,6 +41,38 @@ interface ItemProps {
   item: ContasReceber;
   actions: ReceivableActionsContext;
 }
+
+const hasPositiveAmount = (value?: number): value is number => (
+  typeof value === 'number' && Number.isFinite(value) && value > 0
+);
+
+const ReceivableAmountSummary: React.FC<{ item: ContasReceber }> = ({ item }) => (
+  <div className="space-y-1">
+    <p className="whitespace-nowrap text-sm font-black text-[#001a33]">
+      {formatCurrency(item.valor)}
+    </p>
+    {hasPositiveAmount(item.descontoAplicado) ? (
+      <p className="whitespace-nowrap text-[11px] font-bold text-emerald-700">
+        Desconto: {formatCurrency(item.descontoAplicado)}
+      </p>
+    ) : null}
+    {hasPositiveAmount(item.jurosAplicados) ? (
+      <p className="whitespace-nowrap text-[11px] font-bold text-amber-700">
+        Juros: {formatCurrency(item.jurosAplicados)}
+      </p>
+    ) : null}
+    {hasPositiveAmount(item.multaAplicada) ? (
+      <p className="whitespace-nowrap text-[11px] font-bold text-rose-700">
+        Multa: {formatCurrency(item.multaAplicada)}
+      </p>
+    ) : null}
+    {item.valorPago !== undefined ? (
+      <p className="whitespace-nowrap text-[11px] font-black text-emerald-700">
+        Recebido: {formatCurrency(item.valorPago)}
+      </p>
+    ) : null}
+  </div>
+);
 
 export const ReceivableStatusBadge: React.FC<{ item: ContasReceber }> = ({ item }) => (
   <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[9px] font-black uppercase ${
@@ -66,17 +95,16 @@ export const ReceivableActionButtons: React.FC<ItemProps> = ({ item, actions }) 
   if (item.status === 'PAGO') {
     const paidThroughAsaas = isPaidThroughAsaas(item);
     return (
-      <div className="flex max-w-[190px] flex-col gap-2">
-        <span className="text-[10px] font-bold text-slate-400">Recebido em {formatReceivableDate(item.dataPagamento || '')}</span>
+      <div className="flex w-full max-w-[190px] flex-col gap-2">
         <button
           type="button"
           onClick={() => actions.onOpenPaidReceipt(item)}
-          className={`inline-flex items-center justify-center gap-1 rounded-xl border px-3 py-2 text-[10px] font-black uppercase tracking-wider ${
+          className={`inline-flex w-full items-center justify-center gap-1 rounded-xl border px-3 py-2 text-[10px] font-black uppercase tracking-wider ${
             paidThroughAsaas
               ? 'border-blue-200 text-blue-600 hover:bg-blue-50'
               : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
           }`}
-          title={paidThroughAsaas ? 'Abrir comprovante oficial do Asaas' : 'Imprimir recibo interno da Universo'}
+          title={paidThroughAsaas ? 'Abrir comprovante oficial do Asaas' : 'Visualizar recibo interno da Universo'}
         >
           {paidThroughAsaas ? <ExternalLink size={12} /> : <ReceiptText size={12} />}
           {paidThroughAsaas ? 'Comprovante Asaas' : 'Recibo Universo'}
@@ -113,6 +141,10 @@ export const ReceivableActionButtons: React.FC<ItemProps> = ({ item, actions }) 
 
   const loadingBaneseDetails = actions.baneseDetailsPending
     && actions.baneseDetailsReceivableId === item.id;
+  const gatewayCode = paymentGatewayCode(item);
+  const isBanese = ['banese_card', 'banese'].includes(gatewayCode || '');
+  const hasExternalChargeUrl = !isBanese
+    && Boolean(item.asaasInvoiceUrl || item.asaasBankSlipUrl);
 
   return (
     <div className="grid w-full max-w-[180px] grid-cols-2 gap-2">
@@ -124,9 +156,9 @@ export const ReceivableActionButtons: React.FC<ItemProps> = ({ item, actions }) 
       >
         Receber
       </button>
-      {item.asaasInvoiceUrl || item.asaasBankSlipUrl || paymentGatewayCode(item) === 'banese_card' || paymentGatewayCode(item) === 'banese' ? (
+      {hasExternalChargeUrl || isBanese ? (
         <>
-          {item.asaasInvoiceUrl || item.asaasBankSlipUrl ? (
+          {hasExternalChargeUrl ? (
             <button
               type="button"
               onClick={() => actions.onCopyInvoiceUrl(item)}
@@ -140,23 +172,25 @@ export const ReceivableActionButtons: React.FC<ItemProps> = ({ item, actions }) 
             type="button"
             onClick={() => actions.onOpenCharge(item)}
             disabled={loadingBaneseDetails}
-            className={`${item.asaasInvoiceUrl || item.asaasBankSlipUrl ? '' : 'col-span-2'} flex items-center justify-center gap-1 rounded-xl border border-blue-200 px-2 py-2 text-[10px] font-black uppercase text-blue-600 hover:bg-blue-50`}
-            title={paymentGatewayCode(item) === 'banese_card' ? 'Abrir boleto Banese no portal de gestão' : 'Abrir cobrança'}
+            className={`${hasExternalChargeUrl ? '' : 'col-span-2'} flex items-center justify-center gap-1 rounded-xl border border-blue-200 px-2 py-2 text-[10px] font-black uppercase text-blue-600 hover:bg-blue-50`}
+            title={isBanese ? 'Abrir o PDF do boleto Banese em uma nova aba para imprimir' : 'Abrir cobrança'}
           >
             {loadingBaneseDetails
               ? <Loader2 className="animate-spin" size={12} />
               : <ExternalLink size={12} />}
             Abrir
           </button>
-          <button
-            type="button"
-            onClick={() => actions.onRefresh(item.id!)}
-            disabled={actions.refreshPending}
-            className="col-span-2 flex items-center justify-center gap-1 rounded-xl border border-slate-200 px-2 py-2 text-[10px] font-black uppercase text-slate-600 disabled:opacity-50"
-            title="Consultar status atual no banco configurado"
-          >
-            <RefreshCw className={actions.refreshPending ? 'animate-spin' : ''} size={12} /> Atualizar
-          </button>
+          {!isBanese ? (
+            <button
+              type="button"
+              onClick={() => actions.onRefresh(item.id!)}
+              disabled={actions.refreshPending}
+              className="col-span-2 flex items-center justify-center gap-1 rounded-xl border border-slate-200 px-2 py-2 text-[10px] font-black uppercase text-slate-600 disabled:opacity-50"
+              title="Consultar status atual no banco configurado"
+            >
+              <RefreshCw className={actions.refreshPending ? 'animate-spin' : ''} size={12} /> Atualizar
+            </button>
+          ) : null}
         </>
       ) : (
         <button
@@ -193,7 +227,6 @@ export const ReceivableRow: React.FC<ReceivableRowProps> = ({
           <p className="text-xs font-black uppercase tracking-wider text-[#001a33]">
             {item.parcelaNumero !== undefined ? `Parcela ${item.parcelaNumero}` : item.tipoLancamento || 'Cobrança'}
           </p>
-          <p className="text-[10px] font-bold text-slate-500">Venc.: {formatReceivableDate(item.dataVencimento)}</p>
           <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Matrícula: {formatEnrollment(item)}</p>
         </div>
       ) : (
@@ -206,20 +239,22 @@ export const ReceivableRow: React.FC<ReceivableRowProps> = ({
     </td>
     <td className="px-5 py-5">
       <div className="space-y-1.5">
-        <p className="break-words text-xs font-bold leading-snug text-slate-700">{item.descricao}</p>
-        <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-          {item.tipoLancamento || 'Mensalidade'} {item.parcelaNumero !== undefined ? `· Parcela ${item.parcelaNumero}` : ''}
+        <p className="break-words text-xs font-black leading-snug text-[#001a33]">
+          {receivableCourseTitle(item)}
         </p>
-        <p className="text-[10px] font-black uppercase tracking-wider text-blue-500">
-          {paymentGatewayLabel(item)}:{' '}
-          <span className={paymentGatewayStatusClass(item.asaasStatus)}>{paymentGatewayStatusLabel(item)}</span>
-        </p>
+        {receivableClassLabel(item) ? (
+          <p className="text-[10px] font-bold text-slate-500">Turma: {receivableClassLabel(item)}</p>
+        ) : null}
+        {!compactStudent ? (
+          <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+            {item.tipoLancamento || 'Mensalidade'} {item.parcelaNumero !== undefined ? `· Parcela ${item.parcelaNumero}` : ''}
+          </p>
+        ) : null}
       </div>
     </td>
     <td className="px-5 py-5">
       <div className="space-y-1.5">
-        <p className="break-words text-xs font-bold leading-snug text-slate-700">{item.turmaNome || item.cursoNome || 'Turma não informada'}</p>
-        <p className="break-words text-[10px] font-bold uppercase tracking-wide text-slate-500">{item.poloNome || 'Unidade não informada'}</p>
+        <p className="break-words text-xs font-black leading-snug text-slate-700">{item.poloNome || 'Unidade não informada'}</p>
         <p className="text-[10px] font-medium leading-snug text-slate-400">
           CNPJ: {item.poloCnpj || 'não informado'} · {item.poloCidade || 'Cidade não informada'} / {item.poloUf || 'UF'}
         </p>
@@ -235,19 +270,34 @@ export const ReceivableRow: React.FC<ReceivableRowProps> = ({
             Cobrança cancelada/excluída no {paymentGatewayLabel(item)} após baixa manual.
           </p>
         ) : null}
-        <p className="text-[10px] font-bold text-slate-400">Venc.: {formatReceivableDate(item.dataVencimento)}</p>
+      </div>
+    </td>
+    <td className="px-5 py-5">
+      <div className="space-y-2">
+        <div>
+          <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Emissão</p>
+          <p className="whitespace-nowrap text-[11px] font-bold text-slate-700">
+            {formatReceivableDate(item.dataEmissao || '')}
+          </p>
+        </div>
+        <div>
+          <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Vencimento</p>
+          <p className="whitespace-nowrap text-[11px] font-bold text-slate-700">
+            {formatReceivableDate(item.dataVencimento)}
+          </p>
+        </div>
         {item.status === 'PAGO' ? (
-          <p className="text-[10px] font-bold text-emerald-700">Pago: {formatReceivableDate(item.dataPagamento || '')}</p>
+          <div>
+            <p className="text-[9px] font-black uppercase tracking-wider text-emerald-600">Pagamento</p>
+            <p className="whitespace-nowrap text-[11px] font-black text-emerald-700">
+              {formatReceivableDate(item.dataPagamento || '')}
+            </p>
+          </div>
         ) : null}
       </div>
     </td>
     <td className="px-5 py-5">
-      <p className="whitespace-nowrap text-sm font-black text-[#001a33]">{formatCurrency(item.valor)}</p>
-      <p className="mt-1 whitespace-nowrap text-[11px] font-black text-slate-500">Taxa: {formatOptionalCurrency(getPersistedGatewayFee(item))}</p>
-      <p className="whitespace-nowrap text-[11px] font-black text-emerald-700">Líquido: {formatOptionalCurrency(getPersistedGatewayNet(item))}</p>
-      {item.valorPago !== undefined ? (
-        <p className="mt-1 whitespace-nowrap text-[10px] font-bold text-emerald-700">Rec.: {formatCurrency(item.valorPago)}</p>
-      ) : null}
+      <ReceivableAmountSummary item={item} />
     </td>
     <td className="px-5 py-5"><ReceivableActionButtons item={item} actions={actions} /></td>
   </tr>
@@ -263,20 +313,37 @@ export const ReceivableCard: React.FC<ItemProps> = ({ item, actions }) => (
       <ReceivableStatusBadge item={item} />
     </div>
     <div className="mt-4 rounded-2xl bg-slate-50 p-3">
-      <p className="text-xs font-bold text-slate-700">{item.descricao}</p>
-      <p className="mt-1 text-[10px] font-black uppercase tracking-wider text-slate-400">{item.tipoLancamento || 'Mensalidade'}</p>
+      <p className="text-xs font-black text-[#001a33]">{receivableCourseTitle(item)}</p>
+      {receivableClassLabel(item) ? (
+        <p className="mt-1 text-[10px] font-bold text-slate-500">Turma: {receivableClassLabel(item)}</p>
+      ) : null}
+      <p className="mt-1 text-[10px] font-black uppercase tracking-wider text-slate-400">
+        {item.tipoLancamento || 'Mensalidade'}
+      </p>
     </div>
-    <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
+    <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-4 text-xs">
+      <div>
+        <p className="text-[9px] font-black uppercase text-slate-400">Emissão</p>
+        <p className="font-bold text-slate-700">{formatReceivableDate(item.dataEmissao || '')}</p>
+      </div>
       <div>
         <p className="text-[9px] font-black uppercase text-slate-400">Vencimento</p>
         <p className="font-bold text-slate-700">{formatReceivableDate(item.dataVencimento)}</p>
       </div>
+      {item.status === 'PAGO' ? (
+        <div>
+          <p className="text-[9px] font-black uppercase text-slate-400">Pagamento</p>
+          <p className="font-bold text-emerald-700">{formatReceivableDate(item.dataPagamento || '')}</p>
+        </div>
+      ) : null}
       <div>
         <p className="text-[9px] font-black uppercase text-slate-400">Valor</p>
-        <p className="font-black text-[#001a33]">{formatCurrency(item.valor)}</p>
-        <p className="mt-1 text-[11px] font-black text-slate-500">Taxa: {formatOptionalCurrency(getPersistedGatewayFee(item))}</p>
-        <p className="text-[11px] font-black text-emerald-700">Líquido: {formatOptionalCurrency(getPersistedGatewayNet(item))}</p>
+        <ReceivableAmountSummary item={item} />
       </div>
+    </div>
+    <div className="mt-4 rounded-xl border border-slate-100 px-3 py-2">
+      <p className="text-[10px] font-bold text-slate-500">Forma: {paymentMethodLabel(item)}</p>
+      <p className="mt-1 text-[10px] font-bold text-slate-500">Origem: {paymentOriginLabel(item)}</p>
     </div>
     <div className="mt-4 border-t border-slate-100 pt-3">
       <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Unidade</p>

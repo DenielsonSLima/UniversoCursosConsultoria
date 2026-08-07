@@ -31,6 +31,7 @@ const invokeAdmin = async <T>(action: string, payload: Record<string, unknown> =
 export interface CheckoutPaymentSelection {
   method: GatewayPaymentMethod;
   installments?: number;
+  presentation?: 'BOLETO' | 'PIX';
 }
 
 export interface EnrollmentPaymentOption {
@@ -89,6 +90,7 @@ export const asaasIntegrationService = {
     valor: number;
     dataVencimento: string;
     clienteId?: string;
+    categoriaFinanceiraId?: string;
     formaPagamento?: 'BOLETO' | 'PIX' | 'CARTAO' | 'DINHEIRO';
     contaBancariaId?: string;
     mode: 'LOCAL_PAGO' | 'LOCAL_RECEBER' | 'GATEWAY';

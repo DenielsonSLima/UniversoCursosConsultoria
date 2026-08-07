@@ -1,4 +1,9 @@
+export type RoutingConfig = Record<string, unknown>;
+
 export type FlowSettings = {
+  conexao_id?: string;
+  flow_type: "universo_main" | "institutional";
+  routing_config: RoutingConfig;
   enabled: boolean;
   max_attempts: number;
   auto_close_enabled: boolean;
@@ -21,6 +26,8 @@ export type FlowSettings = {
 };
 
 export const DEFAULT_FLOW_SETTINGS: FlowSettings = {
+  flow_type: "institutional",
+  routing_config: {},
   enabled: false,
   max_attempts: 2,
   auto_close_enabled: true,
@@ -56,12 +63,17 @@ export const DEFAULT_FLOW_SETTINGS: FlowSettings = {
   irpf_link_intro_message: "Acesse o link abaixo para consultar e validar sua declaração de IRPF:",
 };
 
-export const getFlowSettings = async (admin: any): Promise<FlowSettings> => {
-  const { data, error } = await admin
+export const getFlowSettings = async (
+  admin: any,
+  connectionId?: string | null,
+): Promise<FlowSettings> => {
+  let query = admin
     .from("whatsapp_flow_settings")
-    .select("*")
-    .eq("scope", "default")
-    .maybeSingle();
+    .select("*");
+  query = connectionId
+    ? query.eq("conexao_id", connectionId)
+    : query.eq("scope", "default");
+  const { data, error } = await query.maybeSingle();
   if (error) throw error;
   const next = { ...DEFAULT_FLOW_SETTINGS, ...(data || {}) };
   for (const key of Object.keys(next) as Array<keyof FlowSettings>) {

@@ -13,8 +13,10 @@ import {
   Contact,
   ClipboardCheck,
   BadgeCheck,
+  Vote,
+  ShieldCheck,
   FileSignature,
-  Vote
+  CalendarDays,
 } from 'lucide-react';
 
 // Importação dos Componentes Internos
@@ -31,15 +33,27 @@ import BoletimPage from './boletim/BoletimPage';
 import DeclaracaoFrequenciaPage from './declaracao-frequencia/DeclaracaoFrequenciaPage';
 import AtestadoConclusaoPage from './atestado-conclusao/AtestadoConclusaoPage';
 import ReciboDespesaPage from './recibo/ReciboDespesaPage';
-import FichaCadastralPage from './ficha-cadastral/FichaCadastralPage';
 import CrachaPeriodoEleitoralPage from './cracha-periodo-eleitoral/CrachaPeriodoEleitoralPage';
+import DocumentValidationPoliciesPage from './validacao-documental/DocumentValidationPoliciesPage';
+import ContratoAlunoPage from './contrato-aluno/ContratoAlunoPage';
+import CarteirinhaPreceptorPage from './carteirinha-preceptor/CarteirinhaPreceptorPage';
+import CalendarioAulasPage from './calendario-aulas/CalendarioAulasPage';
 
-const ModelosDocumentosPage: React.FC = () => {
+interface ModelosDocumentosPageProps {
+  canEditValidationPolicies?: boolean;
+}
+
+const ModelosDocumentosPage: React.FC<ModelosDocumentosPageProps> = ({
+  canEditValidationPolicies = false,
+}) => {
   const [activeModule, setActiveModule] = useState<string | null>(null);
 
   const models = [
+    { id: 'validacao-documental', title: 'QR Code e Validade', desc: 'Regras individuais de validador e vencimento para todos os documentos.', icon: <ShieldCheck size={24} />, color: 'bg-[#001a33]' },
+    { id: 'contrato-aluno', title: 'Contrato do Aluno', desc: 'Modelo versionado por modalidade, com QR Code, validade e marca-d’água.', icon: <FileSignature size={24} />, color: 'bg-rose-600' },
     { id: 'carteirinha', title: 'Carteirinha de Estudante', desc: 'Identificação oficial com foto e QR Code.', icon: <CreditCard size={24} />, color: 'bg-blue-600' },
-    { id: 'ficha-cadastral', title: 'Ficha Cadastral do Aluno', desc: 'Ficha impressa do cadastro com dados, marca d’água e assinaturas.', icon: <FileSignature size={24} />, color: 'bg-blue-700' },
+    { id: 'carteirinha-preceptor', title: 'Carteirinha de Preceptor', desc: 'Credencial própria para professores autorizados no polo.', icon: <BadgeCheck size={24} />, color: 'bg-cyan-700' },
+    { id: 'calendario-aulas', title: 'Calendário de Aulas', desc: 'Modelo A4 da grade oficial por turma, com marca-d’água institucional.', icon: <CalendarDays size={24} />, color: 'bg-indigo-700' },
     { id: 'cracha', title: 'Crachá de Identificação', desc: 'Crachá vertical para colaboradores, técnicos e professores.', icon: <Contact size={24} />, color: 'bg-rose-600' },
     { id: 'cracha-periodo-eleitoral', title: 'SES', desc: 'Modelos de crachá por hospital, liberados após a entrada no estágio.', icon: <Vote size={24} />, color: 'bg-cyan-700' },
     { id: 'declaracao', title: 'Declaração Cursando', desc: 'Comprovante de matrícula ativa e regular.', icon: <FileText size={24} />, color: 'bg-emerald-600' },
@@ -53,12 +67,18 @@ const ModelosDocumentosPage: React.FC = () => {
     { id: 'diploma', title: 'Modelo Diploma', desc: 'Certificado de conclusão de curso.', icon: <Award size={24} />, color: 'bg-purple-600' },
     { id: 'irpf', title: 'Declaração de IRPF', desc: 'Modelo de declaração financeira para fins de Imposto de Renda.', icon: <FileText size={24} />, color: 'bg-emerald-700' },
     { id: 'recibo', title: 'Modelo Recibo', desc: 'Recibo de pagamento de despesas fixas, variáveis e outros débitos.', icon: <FileText size={24} />, color: 'bg-rose-600' },
-  ];
+  ].sort((first, second) => (
+    first.title.localeCompare(second.title, 'pt-BR', { sensitivity: 'base' })
+  ));
 
   const renderContent = () => {
     switch (activeModule) {
+      case 'validacao-documental':
+        return <DocumentValidationPoliciesPage readOnly={!canEditValidationPolicies} />;
+      case 'contrato-aluno': return <ContratoAlunoPage />;
       case 'carteirinha': return <CarteirinhaPage />;
-      case 'ficha-cadastral': return <FichaCadastralPage />;
+      case 'carteirinha-preceptor': return <CarteirinhaPreceptorPage />;
+      case 'calendario-aulas': return <CalendarioAulasPage />;
       case 'cracha': return <CrachaPage />;
       case 'cracha-periodo-eleitoral': return <CrachaPeriodoEleitoralPage />;
       case 'declaracao': return <DeclaracaoPage />;

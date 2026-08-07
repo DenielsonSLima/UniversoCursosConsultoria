@@ -143,7 +143,7 @@ const ParceiroProfessorDetalhes: React.FC<ParceiroProfessorDetalhesProps> = ({ p
           <ParceiroAcesso
             parceiroId={professorData.id}
             tipo="Professor"
-            email={professorData.email || `${professorData.nome.toLowerCase().replace(/\s/g, '.')}@email.com`}
+            email={professorData.email || null}
           />
         )}
       </div>

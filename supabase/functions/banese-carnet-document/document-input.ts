@@ -3,6 +3,8 @@ import type {
   BaneseDocumentAddress,
 } from "../banese/internal/types.ts";
 import type { BaneseCarnetReceivableRow } from "./document-policy.ts";
+import type { BaneseAcademicBillingContext } from "../banese/internal/technical-billing-instructions.ts";
+import { buildBaneseTechnicalBillingInstructions } from "../banese/internal/technical-billing-instructions.ts";
 
 type PartyRecord = Record<string, unknown>;
 
@@ -64,6 +66,7 @@ export const buildBaneseCarnetDocumentInputs = (
   payer: PartyRecord,
   issuer: PartyRecord,
   rawMetadata: unknown,
+  academicContext: BaneseAcademicBillingContext | null = null,
 ): BaneseBoletoDocumentInput[] => {
   const metadata = asRecord(rawMetadata);
   const beneficiary = beneficiaryIdentity(issuer, metadata);
@@ -122,13 +125,12 @@ export const buildBaneseCarnetDocumentInputs = (
       speciesCode: Number(metadata.baneseCodigoEspecie || 21),
       speciesLabel: "ME",
       acceptance: "A",
-      instructions: [
-        ...(environment === "sandbox"
-          ? ["CARNÊ DE HOMOLOGAÇÃO - NÃO REALIZAR PAGAMENTO."]
-          : []),
-        ...(text(row.descricao) ? [text(row.descricao)] : []),
-        "Sr(a) caixa, não receber após 60 dias de atraso.",
-      ],
+      instructions: buildBaneseTechnicalBillingInstructions({
+        environment,
+        documentKind: "carne",
+        description: row.descricao,
+        academicContext,
+      }),
       financialTerms: {
         ...asRecord(row.gateway_financial_terms),
         nominalAmount: amount,

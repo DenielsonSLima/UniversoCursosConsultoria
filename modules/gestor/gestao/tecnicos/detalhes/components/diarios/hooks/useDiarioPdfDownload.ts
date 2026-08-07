@@ -1,83 +1,142 @@
-import { RefObject, useState } from 'react';
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
+import { useCallback, useRef, useState } from 'react';
 import { supabase } from '../../../../../../../../lib/supabase';
-import { DiarioTemplate } from '../../../../../../cadastros/modelos-documentos/diarios/diarios.service';
-import { getDiarioFileName, getDiarioValidationCode } from '../diario-classe.utils';
+import { DiarioPrintDocumentProps } from '../diario-classe.types';
+import { getDiarioFileName } from '../diario-classe.utils';
+import { buildDiarioPdf } from '../diario-pdf';
+import { createDocumentReissueKey } from '../../../../../../../shared/document-validation/document-validation.service';
+import { printPdfBlob } from '@/modules/gestor/secretaria/shared/pdf-blob-print';
 
 interface ToastApi {
   error: (title: string, message?: string) => void;
 }
 
 interface UseDiarioPdfDownloadInput {
-  containerRef: RefObject<HTMLDivElement | null>;
-  diarioTemplate?: DiarioTemplate;
-  turma: any;
-  disciplina: any;
+  printProps: DiarioPrintDocumentProps | null;
   toast: ToastApi;
 }
 
+interface DiarioValidationRpcRow {
+  codigo: string;
+  documento: 'diario_classe';
+  validacao_publica: boolean;
+}
+
+interface ValidationOperation {
+  identity: string;
+  idempotencyKey: string;
+}
+
 export const useDiarioPdfDownload = ({
-  containerRef,
-  diarioTemplate,
-  turma,
-  disciplina,
+  printProps,
   toast,
 }: UseDiarioPdfDownloadInput) => {
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [printingPdf, setPrintingPdf] = useState(false);
+  const validationOperationRef = useRef<ValidationOperation | null>(null);
+  const pendingValidationRef = useRef<{
+    identity: string;
+    promise: Promise<string | null>;
+  } | null>(null);
+  const isBlank = printProps?.exportMode === 'EM_BRANCO';
+
+  const prepareValidationCode = useCallback(async (): Promise<string | null> => {
+    if (!printProps?.template) {
+      throw new Error('O modelo do Diário ainda não foi carregado.');
+    }
+    if (isBlank || !printProps.template.imprimirValidacaoContracapa) return null;
+
+    const turmaId = String(printProps.turma?.id || '').trim();
+    const disciplinaId = String(printProps.disciplina?.id || '').trim();
+    if (!turmaId || !disciplinaId) {
+      throw new Error('A turma e a disciplina do Diário não foram identificadas.');
+    }
+
+    const identity = `${turmaId}:${disciplinaId}`;
+    if (pendingValidationRef.current?.identity === identity) {
+      return pendingValidationRef.current.promise;
+    }
+    if (validationOperationRef.current?.identity !== identity) {
+      validationOperationRef.current = {
+        identity,
+        idempotencyKey: createDocumentReissueKey(),
+      };
+    }
+
+    const promise = (async () => {
+      const { data, error } = await (supabase.rpc as any)(
+        'emitir_diario_validacao_portal',
+        {
+          p_turma_id: turmaId,
+          p_disciplina_id: disciplinaId,
+          p_idempotency_key:
+            validationOperationRef.current!.idempotencyKey,
+        },
+      );
+      if (error) throw error;
+
+      const row = (Array.isArray(data) ? data[0] : data) as
+        | DiarioValidationRpcRow
+        | null;
+      const code = row?.codigo?.trim().toUpperCase() || '';
+      if (row?.documento !== 'diario_classe' || !code) {
+        throw new Error(
+          'O banco não confirmou o registro canônico do Diário de Classe.',
+        );
+      }
+      if (!row.validacao_publica) {
+        return null;
+      }
+
+      return code;
+    })();
+
+    pendingValidationRef.current = { identity, promise };
+    try {
+      return await promise;
+    } finally {
+      if (pendingValidationRef.current?.identity === identity) {
+        pendingValidationRef.current = null;
+      }
+    }
+  }, [
+    isBlank,
+    printProps?.disciplina?.id,
+    printProps?.template?.imprimirValidacaoContracapa,
+    printProps?.turma?.id,
+  ]);
+
+  const buildPdf = (validationCode: string | null) => {
+    if (!printProps?.template) {
+      throw new Error('O modelo do Diário ainda não foi carregado.');
+    }
+    const shouldPrintValidationBackCover = Boolean(validationCode);
+    return buildDiarioPdf({
+      ...printProps,
+      validationCode,
+      validationPreview: false,
+      template: shouldPrintValidationBackCover
+        ? printProps.template
+        : {
+            ...printProps.template,
+            // Sem uma validação pública ativa, não preserve apenas a arte de
+            // fundo: isso criaria uma segunda página visualmente vazia.
+            contracapaUrl: null,
+            imprimirValidacaoContracapa: false,
+          },
+    });
+  };
 
   const downloadPdf = async () => {
-    const container = containerRef.current;
-    if (!container) return;
-
     setDownloadingPdf(true);
     try {
-      if (diarioTemplate?.imprimirValidacaoContracapa) {
-        const validationCode = getDiarioValidationCode(turma, disciplina);
-        await supabase
-          .from('documentos_templates')
-          .upsert({
-            id: `validation_${validationCode}`,
-            conteudo: {
-              type: 'diario_classe',
-              status: 'VALID',
-              courseName: turma.cursoNome || 'Curso não informado',
-              className: turma.nome || turma.codigo || 'Turma não informada',
-              unitName: disciplina.nome,
-              issuedAt: new Date().toISOString(),
-              studentName: 'Diário de Classe Oficial',
-              studentCpf: null,
-              studentBirthDate: null,
-              studentMotherName: null,
-              enrollmentNumber: null,
-            },
-            updated_at: new Date().toISOString(),
-          });
+      if (!printProps) {
+        throw new Error('O modelo do Diário ainda não foi carregado.');
       }
-
-      const images = Array.from(container.querySelectorAll('img')) as HTMLImageElement[];
-      await Promise.all(images.map((image) => image.complete
-        ? Promise.resolve()
-        : new Promise<void>((resolve) => {
-            image.onload = () => resolve();
-            image.onerror = () => resolve();
-          })));
-
-      const pages = Array.from(container.querySelectorAll('.diario-print-page')) as HTMLElement[];
-      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-
-      for (let index = 0; index < pages.length; index += 1) {
-        const canvas = await html2canvas(pages[index], {
-          scale: 1.65,
-          useCORS: true,
-          backgroundColor: '#ffffff',
-          logging: false,
-        });
-        if (index > 0) pdf.addPage('a4', 'landscape');
-        pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 297, 210);
-      }
-
-      pdf.save(`${getDiarioFileName(turma, disciplina)}.pdf`);
+      const validationCode = await prepareValidationCode();
+      const pdf = await buildPdf(validationCode);
+      const suffix = isBlank ? '-em-branco' : '-preenchido';
+      pdf.save(`${getDiarioFileName(printProps.turma, printProps.disciplina)}${suffix}.pdf`);
+      validationOperationRef.current = null;
     } catch (error: any) {
       console.error('Erro ao gerar PDF do diário:', error);
       toast.error('Erro no PDF', error.message || 'Não foi possível gerar o diário.');
@@ -86,5 +145,31 @@ export const useDiarioPdfDownload = ({
     }
   };
 
-  return { downloadingPdf, downloadPdf };
+  const printPdf = async () => {
+    setPrintingPdf(true);
+    try {
+      if (!printProps) {
+        throw new Error('O modelo do Diário ainda não foi carregado.');
+      }
+      const validationCode = await prepareValidationCode();
+      const pdf = await buildPdf(validationCode);
+      await printPdfBlob(pdf.output('blob'), {
+        title: 'Diário de Classe',
+      });
+      validationOperationRef.current = null;
+    } catch (error: any) {
+      console.error('Erro ao imprimir PDF do diário:', error);
+      toast.error('Erro na impressão', error.message || 'Não foi possível preparar o diário para impressão.');
+    } finally {
+      setPrintingPdf(false);
+    }
+  };
+
+  return {
+    downloadingPdf,
+    printingPdf,
+    downloadPdf,
+    printPdf,
+    prepareValidationCode,
+  };
 };

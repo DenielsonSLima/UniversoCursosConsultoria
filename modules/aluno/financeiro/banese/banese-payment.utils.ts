@@ -110,8 +110,8 @@ const pixCrc16 = (value: string) => {
 
 export const isValidBanesePixPayload = (value: unknown) => {
   const payload = String(value ?? '').trim();
-  if (payload.length < 30 || payload.length > 600 || /\s/.test(payload)) return false;
-  if (!/^00020[12]/.test(payload) || !payload.includes('BR.GOV.BCB.PIX')) return false;
+  if (payload.length < 30 || payload.length > 600 || !/^[\x20-\x7E]+$/.test(payload)) return false;
+  if (!/^00020[12]/.test(payload) || !payload.toUpperCase().includes('BR.GOV.BCB.PIX')) return false;
   const match = payload.match(/6304([0-9A-F]{4})$/i);
   if (!match) return false;
   return pixCrc16(payload.slice(0, -4)) === match[1].toUpperCase();
@@ -147,10 +147,10 @@ export const getBanesePixPresentation = (record: BanesePaymentRecord): BanesePix
     state: 'pending',
     payload: null,
     imageSource: null,
-    title: 'Pix em preparação',
+    title: 'Pix não disponível neste título',
     message: payload || imageSource
-      ? 'O Banese ainda não devolveu o conjunto completo de QR Code e Pix copia e cola desta cobrança.'
-      : 'O boleto já está registrado. O Pix aparecerá aqui assim que o Banese devolver o payload oficial desta cobrança.',
+      ? 'O Banese devolveu somente parte do BolePix. Por segurança, use a linha digitável ou solicite a reemissão à secretaria.'
+      : 'Este boleto foi registrado sem o BolePix oficial. Use a linha digitável ou solicite à secretaria o cancelamento e a reemissão; o sistema não fabrica um QR Code bancário.',
   };
 };
 

@@ -10,6 +10,7 @@ import {
   X,
 } from 'lucide-react';
 import { AcademicMovementType, AcademicStudent } from '../../academic-lifecycle.service';
+import { getMaceioIsoDate } from '../../../technicalClassDates';
 
 export type OperationMode = 'MOVIMENTACAO' | 'TRANSFERENCIA' | 'RETORNO';
 export type TransferType = 'INTERNA_TURMA' | 'INTERNA_POLO' | 'EXTERNA_ENVIADA';
@@ -29,6 +30,7 @@ interface MovimentacaoAlunoModalProps {
   transferType: TransferType;
   reason: string;
   notes: string;
+  operationDate: string;
   returnDate: string;
   destinationClassId: string;
   destinationInstitution: string;
@@ -43,6 +45,7 @@ interface MovimentacaoAlunoModalProps {
   onTransferTypeChange: (type: TransferType) => void;
   onReasonChange: (value: string) => void;
   onNotesChange: (value: string) => void;
+  onOperationDateChange: (value: string) => void;
   onReturnDateChange: (value: string) => void;
   onDestinationClassChange: (value: string) => void;
   onDestinationInstitutionChange: (value: string) => void;
@@ -58,6 +61,7 @@ const MovimentacaoAlunoModal: React.FC<MovimentacaoAlunoModalProps> = ({
   transferType,
   reason,
   notes,
+  operationDate,
   returnDate,
   destinationClassId,
   destinationInstitution,
@@ -72,6 +76,7 @@ const MovimentacaoAlunoModal: React.FC<MovimentacaoAlunoModalProps> = ({
   onTransferTypeChange,
   onReasonChange,
   onNotesChange,
+  onOperationDateChange,
   onReturnDateChange,
   onDestinationClassChange,
   onDestinationInstitutionChange,
@@ -79,7 +84,13 @@ const MovimentacaoAlunoModal: React.FC<MovimentacaoAlunoModalProps> = ({
   onConfirm,
   onRetryDestination,
 }) => {
+  const today = getMaceioIsoDate();
+  const enrollmentDate = student.data_matricula?.slice(0, 10) || '';
+  const invalidOperationDate = !operationDate
+    || operationDate > today
+    || Boolean(enrollmentDate && operationDate < enrollmentDate);
   const disabled = !reason.trim()
+    || invalidOperationDate
     || movementPending
     || transferPending
     || returnPending
@@ -235,6 +246,32 @@ const MovimentacaoAlunoModal: React.FC<MovimentacaoAlunoModalProps> = ({
               placeholder="Descreva o motivo da operação"
               className="w-full p-3.5 border border-slate-200 rounded-xl outline-none focus:border-blue-500"
             />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-2">
+              {operationMode === 'TRANSFERENCIA'
+                ? 'Data da transferência'
+                : operationMode === 'RETORNO' || movementType === 'REATIVACAO'
+                  ? 'Data do retorno'
+                  : movementType === 'DESISTENCIA'
+                    ? 'Data da desistência'
+                    : movementType === 'CANCELAMENTO'
+                      ? 'Data do cancelamento'
+                      : 'Data da movimentação'}
+            </label>
+            <input
+              type="date"
+              required
+              min={enrollmentDate || undefined}
+              max={today}
+              value={operationDate}
+              onChange={(event) => onOperationDateChange(event.target.value)}
+              className="w-full p-3.5 border border-slate-200 rounded-xl outline-none focus:border-blue-500"
+            />
+            <p className="mt-1.5 text-[10px] font-semibold text-slate-400">
+              Essa data define em quais disciplinas e diários o aluno ainda deve aparecer.
+            </p>
           </div>
 
           {operationMode === 'MOVIMENTACAO' && movementType === 'TRANCAMENTO' && (

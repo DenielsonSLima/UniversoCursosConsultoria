@@ -21,6 +21,7 @@ const rowAt = (
     id: bank.receivableId,
     cliente_id: CLIENT_ID,
     matricula_id: ENROLLMENT_ID,
+    turma_id: null,
     polo_id: POLO_ID,
     descricao: `Parcela ${index + 1}`,
     tipo_lancamento: "PARCELA",

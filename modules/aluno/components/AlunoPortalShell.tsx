@@ -1,5 +1,6 @@
-import type { ReactNode, RefObject } from 'react';
+import { useEffect, useRef, type ReactNode, type RefObject } from 'react';
 import {
+  Bell,
   BookOpen,
   CalendarDays,
   CreditCard,
@@ -13,6 +14,7 @@ import {
   User,
   X,
 } from 'lucide-react';
+import AlunoMobileBottomNav from './mobile/AlunoMobileBottomNav';
 
 type AlunoMenuItem = {
   id: string;
@@ -30,6 +32,7 @@ type AlunoPortalShellProps = {
   contentScrollRef: RefObject<HTMLDivElement | null>;
   isMobileMenuOpen: boolean;
   unreadChatsCount: number;
+  unreadNotificationsCount: number;
   onLogout: () => void;
   onMobileMenuChange: (isOpen: boolean) => void;
   onModuleChange: (moduleId: string) => void;
@@ -50,10 +53,13 @@ const AlunoPortalShell = ({
   contentScrollRef,
   isMobileMenuOpen,
   unreadChatsCount,
+  unreadNotificationsCount,
   onLogout,
   onMobileMenuChange,
   onModuleChange,
 }: AlunoPortalShellProps) => {
+  const mobileDrawerRef = useRef<HTMLElement>(null);
+  const previouslyFocusedElementRef = useRef<HTMLElement | null>(null);
   const alunoInitials = (alunoNome.trim().slice(0, 2) || 'AL').toUpperCase();
   const menuItems: AlunoMenuItem[] = [
     { id: 'inicio', label: 'Início', icon: <LayoutDashboard size={20} /> },
@@ -65,6 +71,7 @@ const AlunoPortalShell = ({
     { id: 'financeiro', label: 'Financeiro', icon: <CreditCard size={20} /> },
     { id: 'biblioteca', label: 'Biblioteca', icon: <Library size={20} /> },
     { id: 'comunicacao', label: 'Comunicação', icon: <MessageSquare size={20} />, badge: unreadChatsCount },
+    { id: 'notificacoes', label: 'Notificações', icon: <Bell size={20} />, badge: unreadNotificationsCount },
     { id: 'secretaria', label: 'Secretaria', icon: <FileText size={20} /> },
     { id: 'perfil', label: 'Meu Perfil', icon: <User size={20} /> },
   ];
@@ -74,9 +81,54 @@ const AlunoPortalShell = ({
     if (closeMobile) onMobileMenuChange(false);
   };
 
+  useEffect(() => {
+    if (!isMobileMenuOpen) return;
+
+    previouslyFocusedElementRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    const previousBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const focusTimer = window.setTimeout(() => {
+      mobileDrawerRef.current?.querySelector<HTMLElement>('[data-mobile-drawer-close]')?.focus();
+    }, 0);
+    const handleDrawerKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onMobileMenuChange(false);
+        return;
+      }
+      if (event.key !== 'Tab') return;
+
+      const focusableElements = mobileDrawerRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      if (!focusableElements?.length) return;
+
+      const first = focusableElements[0];
+      const last = focusableElements[focusableElements.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleDrawerKeyDown);
+    return () => {
+      window.clearTimeout(focusTimer);
+      document.removeEventListener('keydown', handleDrawerKeyDown);
+      document.body.style.overflow = previousBodyOverflow;
+      previouslyFocusedElementRef.current?.focus();
+    };
+  }, [isMobileMenuOpen, onMobileMenuChange]);
+
   return (
     <div className="flex h-dvh min-w-0 overflow-hidden bg-slate-100 font-sans antialiased">
-      <aside className="hidden w-64 flex-col bg-[#001a33] text-white shadow-xl z-20 lg:flex">
+      <aside className="portal-sidebar-typography hidden w-64 flex-col bg-[#001a33] text-white shadow-xl z-20 lg:flex">
         <div className="border-b border-white/10 p-6">
           <div className="flex items-center justify-center rounded-2xl bg-white p-3 shadow-md">
             <img src="/LogoUniverso.png" alt="Universo Cursos e Consultoria" className="h-11 w-full object-contain" />
@@ -93,20 +145,20 @@ const AlunoPortalShell = ({
                 onClick={() => openModule(item.id)}
                 className={`group flex w-full items-center justify-between rounded-xl px-4 py-3.5 transition-all duration-200 ${
                   isActive
-                    ? 'bg-blue-600 font-bold text-white shadow-lg shadow-blue-900/50'
-                    : 'font-medium text-slate-400 hover:bg-white/5 hover:text-white'
+                    ? 'bg-blue-600 font-semibold text-white shadow-lg shadow-blue-900/50'
+                    : 'font-normal text-slate-400 hover:bg-white/5 hover:text-white'
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <div className={`relative ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-blue-400'}`}>
                     {item.icon}
                     {badge > 0 && !isActive ? (
-                      <span className="absolute -right-1.5 -top-1.5 animate-pulse">
+                      <span className="absolute -right-1.5 -top-1.5 animate-pulse motion-reduce:animate-none">
                         <Badge count={badge} compact />
                       </span>
                     ) : null}
                   </div>
-                  <span className="text-sm tracking-wide">{item.label}</span>
+                  <span className="whitespace-nowrap text-sm">{item.label}</span>
                 </div>
                 {badge > 0 && !isActive ? <Badge count={badge} /> : null}
               </button>
@@ -120,11 +172,39 @@ const AlunoPortalShell = ({
         </div>
       </aside>
 
-      <div className="fixed inset-x-0 top-0 z-30 flex h-16 items-center justify-between border-b border-white/10 bg-[#001a33] px-4 text-white shadow-lg lg:hidden">
+      <div className="fixed inset-x-0 top-0 z-30 flex h-[calc(4rem+env(safe-area-inset-top))] items-center justify-between border-b border-white/10 bg-[#001a33] px-4 pt-[env(safe-area-inset-top)] text-white shadow-lg md:hidden">
         <div className="flex h-9 w-[118px] items-center justify-center rounded-xl bg-white px-2 shadow-sm">
           <img src="/LogoUniverso.png" alt="Universo" className="h-7 w-full object-contain" />
         </div>
         <div className="flex items-center gap-2">
+          <NotificationBell
+            active={activeModule === 'notificacoes'}
+            count={unreadNotificationsCount}
+            onClick={() => openModule('notificacoes')}
+            onDark
+          />
+          <button
+            type="button"
+            onClick={() => openModule('perfil')}
+            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600 text-xs font-black text-white shadow-sm ring-1 ring-white/15"
+            aria-label="Abrir meu perfil"
+          >
+            {alunoInitials}
+          </button>
+        </div>
+      </div>
+
+      <div className="fixed inset-x-0 top-0 z-30 hidden h-16 items-center justify-between border-b border-white/10 bg-[#001a33] px-4 text-white shadow-lg md:flex lg:hidden">
+        <div className="flex h-9 w-[118px] items-center justify-center rounded-xl bg-white px-2 shadow-sm">
+          <img src="/LogoUniverso.png" alt="Universo" className="h-7 w-full object-contain" />
+        </div>
+        <div className="flex items-center gap-2">
+          <NotificationBell
+            active={activeModule === 'notificacoes'}
+            count={unreadNotificationsCount}
+            onClick={() => openModule('notificacoes')}
+            onDark
+          />
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-xs font-black text-white shadow-sm">
             {alunoInitials}
           </div>
@@ -143,7 +223,9 @@ const AlunoPortalShell = ({
       {isMobileMenuOpen ? (
         <div className="fixed inset-0 z-40 animate-fadeIn bg-slate-950/60 backdrop-blur-sm lg:hidden" onClick={() => onMobileMenuChange(false)}>
           <aside
-            className="flex h-full w-[86vw] max-w-[320px] flex-col bg-[#001a33] p-4 text-white shadow-2xl"
+            ref={mobileDrawerRef}
+            id="aluno-mobile-drawer"
+            className="portal-sidebar-typography flex h-full w-[86vw] max-w-[320px] flex-col bg-[#001a33] px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-[calc(1rem+env(safe-area-inset-top))] text-white shadow-2xl"
             onClick={(event) => event.stopPropagation()}
             role="dialog"
             aria-modal="true"
@@ -153,7 +235,7 @@ const AlunoPortalShell = ({
               <div className="flex h-12 flex-1 items-center justify-center rounded-2xl bg-white px-3">
                 <img src="/LogoUniverso.png" alt="Universo" className="h-9 w-full object-contain" />
               </div>
-              <button type="button" onClick={() => onMobileMenuChange(false)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-300" aria-label="Fechar menu">
+              <button data-mobile-drawer-close type="button" onClick={() => onMobileMenuChange(false)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-300 outline-none transition focus-visible:ring-2 focus-visible:ring-blue-300" aria-label="Fechar menu">
                 <X size={21} />
               </button>
             </div>
@@ -168,20 +250,20 @@ const AlunoPortalShell = ({
                     onClick={() => openModule(item.id, true)}
                     className={`flex min-h-12 w-full items-center justify-between rounded-xl px-4 py-3 transition-all ${
                       isActive
-                        ? 'bg-blue-600 font-bold text-white shadow-lg shadow-blue-900/50'
-                        : 'text-slate-400 hover:text-white'
+                        ? 'bg-blue-600 font-semibold text-white shadow-lg shadow-blue-900/50'
+                        : 'font-normal text-slate-400 hover:text-white'
                     }`}
                   >
                     <div className="flex items-center gap-3">
                       <div className="relative">
                         {item.icon}
                         {badge > 0 && !isActive ? (
-                          <span className="absolute -right-1.5 -top-1.5 animate-pulse">
+                          <span className="absolute -right-1.5 -top-1.5 animate-pulse motion-reduce:animate-none">
                             <Badge count={badge} compact />
                           </span>
                         ) : null}
                       </div>
-                      <span className="text-sm tracking-wide">{item.label}</span>
+                      <span className="whitespace-nowrap text-sm">{item.label}</span>
                     </div>
                     {badge > 0 && !isActive ? <Badge count={badge} compact /> : null}
                   </button>
@@ -197,10 +279,15 @@ const AlunoPortalShell = ({
         </div>
       ) : null}
 
-      <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden pt-16 lg:pt-0">
+      <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden pt-[calc(4rem+env(safe-area-inset-top))] md:pt-16 lg:pt-0">
         <header className="sticky top-0 z-10 hidden items-center justify-between border-b border-slate-200 bg-white px-8 py-4 shadow-sm lg:flex">
           <h2 className="text-lg font-black uppercase tracking-tight text-[#001a33]">Portal do Aluno</h2>
           <div className="flex items-center gap-4">
+            <NotificationBell
+              active={activeModule === 'notificacoes'}
+              count={unreadNotificationsCount}
+              onClick={() => openModule('notificacoes')}
+            />
             <div className="hidden text-right sm:block">
               <p className="text-xs font-bold text-[#001a33]">{alunoNome}</p>
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Aluno</p>
@@ -211,13 +298,55 @@ const AlunoPortalShell = ({
           </div>
         </header>
 
-        <div ref={contentScrollRef} className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain bg-slate-50 p-4 pb-8 sm:p-6 lg:p-8">
+        <div ref={contentScrollRef} className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain bg-slate-50 p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:p-6 sm:pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-8 lg:p-8">
           {children}
         </div>
       </main>
+
+      <AlunoMobileBottomNav
+        activeModule={activeModule}
+        isMoreOpen={isMobileMenuOpen}
+        unreadChatsCount={unreadChatsCount}
+        unreadNotificationsCount={unreadNotificationsCount}
+        onMoreOpen={() => onMobileMenuChange(true)}
+        onModuleChange={(moduleId) => openModule(moduleId, true)}
+      />
     </div>
   );
 };
+
+const NotificationBell = ({
+  active,
+  count,
+  onClick,
+  onDark = false,
+}: {
+  active: boolean;
+  count: number;
+  onClick: () => void;
+  onDark?: boolean;
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={`relative flex h-11 w-11 items-center justify-center rounded-xl transition-colors ${
+      active
+        ? 'bg-blue-600 text-white shadow-md'
+        : onDark
+          ? 'border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10'
+          : 'border border-slate-200 bg-white text-slate-500 shadow-sm hover:bg-slate-50 hover:text-blue-700'
+    }`}
+    aria-label={count > 0 ? `Abrir notificações, ${count} não lidas` : 'Abrir notificações'}
+    aria-current={active ? 'page' : undefined}
+  >
+    <Bell size={20} />
+    {count > 0 ? (
+      <span className="absolute -right-1.5 -top-1.5">
+        <Badge count={count} compact />
+      </span>
+    ) : null}
+  </button>
+);
 
 const AlunoIdentity = ({ email, initials, name }: { email: string; initials: string; name: string }) => (
   <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3">

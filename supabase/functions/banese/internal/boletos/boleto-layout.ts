@@ -152,7 +152,7 @@ export const drawBaneseBoletoSlip = async (
   );
 
   const payerHeight = 45;
-  const barcodeBlockHeight = showBarcode ? 68 : 0;
+  const barcodeBlockHeight = showBarcode ? 56 : 0;
   const detailsHeight = Math.max(
     64,
     top - box.y - payerHeight - barcodeBlockHeight,
@@ -183,13 +183,19 @@ export const drawBaneseBoletoSlip = async (
     ? input.instructions
     : ["Nao receber apos a data limite indicada pelo banco."];
   instructions.slice(0, 5).forEach((instruction, index) => {
+    const isCashierWarning = /CAIXA/i.test(instruction);
     drawText(
       page,
       fonts,
       instruction,
       box.x + 8,
       y + detailsHeight - 22 - index * 10,
-      { size: 7, maxWidth: instructionsWidth - 16 },
+      {
+        size: 7,
+        bold: isCashierWarning,
+        color: isCashierWarning ? COLORS.sandbox : COLORS.black,
+        maxWidth: instructionsWidth - 16,
+      },
     );
   });
   if (
@@ -309,17 +315,12 @@ export const drawBaneseBoletoSlip = async (
   );
 
   if (showBarcode) {
-    y = row(68);
+    y = row(barcodeBlockHeight);
     drawBarcode(page, input.barcode, {
       x: box.x,
-      y: y + 17,
+      y: y + 7,
       width: box.width,
       height: 42,
-    });
-    drawText(page, fonts, input.barcode, box.x + 6, y + 5, {
-      size: 6.4,
-      bold: true,
-      maxWidth: box.width - 12,
     });
   }
 };

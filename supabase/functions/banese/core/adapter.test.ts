@@ -7,6 +7,7 @@ import {
   buildBanesePixImageFixture,
   buildBanesePixPayloadFixture,
 } from "../internal/testing/pix-fixture.ts";
+import { normalizeBanesePixPayload } from "../internal/pix-validation.ts";
 import {
   baneseDueDateFactor,
   calculateBaneseAsbaceDoubleDigit,
@@ -186,28 +187,14 @@ Deno.test("nao bloqueia criacao Banese por regra de ambiente em producao", async
   );
 });
 
-Deno.test("bloqueia em producao boletas fora da faixa 2 a 10", async () => {
-  await assert.rejects(
-    () =>
-      createBaneseBoletoCharge({
-        ...reservedBoletoInput(false),
-        environment: "production",
-        amount: 1.5,
-      }),
-    (error: any) => {
-      const message = String(error?.message || error);
-      return /2,00|2.00/i.test(message) && /10,00|10.00/i.test(message);
-    },
-  );
-});
-
-Deno.test("producao aceita retorno do boleto sem pix", async () => {
+Deno.test("producao aceita valor comercial acima de 10 e retorno sem pix", async () => {
   const originalFetch = globalThis.fetch;
   const calls: Array<{ url: string; method: string }> = [];
-  const amount = 5.5;
+  const amount = 149.9;
   const values = makeBaneseBarcodePack(amount, BANESE_DOCUMENT_FIXTURE.dueDate);
   const payloadWithoutPix = JSON.stringify({
-    NossoNumero: BANESE_DOCUMENT_FIXTURE.ourNumber,
+    // A API pode desserializar o campo numérico sem os zeros à esquerda.
+    NossoNumero: Number(BANESE_DOCUMENT_FIXTURE.ourNumber),
     NumeroLinhaDigitavel: values.digitableLine,
     NumeroCodigoBarras: values.barcode,
     CodigoSituacaoBoleto: 2,
@@ -240,6 +227,11 @@ Deno.test("producao aceita retorno do boleto sem pix", async () => {
       financialTerms: null,
     };
     const result = await createBaneseBoletoCharge(productionInput);
+    assert.equal(result.id, BANESE_DOCUMENT_FIXTURE.ourNumber);
+    assert.equal(
+      result.bankSlipOurNumber,
+      BANESE_DOCUMENT_FIXTURE.ourNumber,
+    );
     assert.equal(result.pixPayload, null);
     assert.equal(result.pixEncodedImage, null);
     const postCalls = calls.filter((call) =>
@@ -297,6 +289,171 @@ Deno.test("producao aceita retornos de pix no retorno da criacao", async () => {
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+Deno.test("producao preserva BolePix do POST quando confirmacao financeira nao repete o QR", async () => {
+  const originalFetch = globalThis.fetch;
+  const amount = 8.5;
+  const values = makeBaneseBarcodePack(amount, BANESE_DOCUMENT_FIXTURE.dueDate);
+  const common = {
+    NossoNumero: BANESE_DOCUMENT_FIXTURE.ourNumber,
+    NumeroLinhaDigitavel: values.digitableLine,
+    NumeroCodigoBarras: values.barcode,
+    CodigoSituacaoBoleto: 2,
+    ValorNominal: amount,
+    DataVencimento: BANESE_DOCUMENT_FIXTURE.dueDate,
+    convenio: values.agreement,
+  };
+  const creationResponse = {
+    ...common,
+    BolePix: {
+      brCodeEMV: buildBanesePixPayloadFixture("TXID-POST", amount),
+      qrCode: `data:image/png;base64,${buildBanesePixImageFixture(1)}`,
+    },
+  };
+  const confirmationResponse = { ...common };
+
+  globalThis.fetch = async (input, init) => {
+    const url = input instanceof Request ? input.url : String(input);
+    const method = init?.method ||
+      (input instanceof Request ? input.method : "GET");
+    if (url.includes("/autenticacao/")) {
+      return new Response(
+        JSON.stringify({ access_token: "token-teste", token_type: "Bearer" }),
+        { status: 200 },
+      );
+    }
+    return new Response(
+      JSON.stringify(method === "POST" ? creationResponse : confirmationResponse),
+      { status: 200 },
+    );
+  };
+
+  try {
+    const result = await createBaneseBoletoCharge({
+      ...reservedBoletoInput(false),
+      environment: "production",
+      amount,
+      financialTerms: {
+        nominalAmount: amount,
+        dueDate: BANESE_DOCUMENT_FIXTURE.dueDate,
+      },
+    });
+    assert.equal(typeof result.pixPayload, "string");
+    assert.equal(typeof result.pixEncodedImage, "string");
+    const diagnostic = (result.raw as any)?.pixDiagnostic;
+    assert.equal(diagnostic?.source, "creation");
+    assert.equal(diagnostic?.complete, true);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+Deno.test("producao aceita GUI Banese minusculo e renderiza QR a partir do EMV oficial", async () => {
+  const originalFetch = globalThis.fetch;
+  const amount = 129.9;
+  const values = makeBaneseBarcodePack(amount, BANESE_DOCUMENT_FIXTURE.dueDate);
+  const officialPayload = buildBanesePixPayloadFixture(
+    "TXID-BANESE",
+    amount,
+    "br.gov.bcb.pix",
+  );
+  const creationResponse = {
+    NossoNumero: BANESE_DOCUMENT_FIXTURE.ourNumber,
+    NumeroLinhaDigitavel: values.digitableLine,
+    NumeroCodigoBarras: values.barcode,
+    CodigoSituacaoBoleto: 2,
+    ValorNominal: amount,
+    DataVencimento: BANESE_DOCUMENT_FIXTURE.dueDate,
+    convenio: values.agreement,
+    BolePix: {
+      qrCode: officialPayload,
+    },
+  };
+
+  globalThis.fetch = async (input) => {
+    const url = input instanceof Request ? input.url : String(input);
+    if (url.includes("/autenticacao/")) {
+      return new Response(
+        JSON.stringify({ access_token: "token-teste", token_type: "Bearer" }),
+        { status: 200 },
+      );
+    }
+    return new Response(JSON.stringify(creationResponse), { status: 200 });
+  };
+
+  try {
+    const result = await createBaneseBoletoCharge({
+      ...reservedBoletoInput(false),
+      environment: "production",
+      amount,
+      financialTerms: null,
+    });
+    assert.equal(result.pixPayload, officialPayload);
+    assert.match(result.pixEncodedImage ?? "", /^data:image\/png;base64,/);
+    const diagnostic = (result.raw as any)?.pixDiagnostic;
+    assert.equal(diagnostic?.source, "creation");
+    assert.equal(
+      diagnostic?.attempts?.[0]?.imageSource,
+      "generated_from_official_emv",
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+Deno.test("producao aceita o campo QrCode textual com GUI Banese minuscula", async () => {
+  const originalFetch = globalThis.fetch;
+  const amount = 102;
+  const values = makeBaneseBarcodePack(amount, BANESE_DOCUMENT_FIXTURE.dueDate);
+  const officialQrCode = buildBanesePixPayloadFixture(
+    "BANESE-QR-CODE",
+    amount,
+    "br.gov.bcb.pix",
+  );
+  const creationResponse = {
+    NossoNumero: BANESE_DOCUMENT_FIXTURE.ourNumber,
+    NumeroCodigoBarras: values.barcode,
+    NumeroLinhaDigitavel: values.digitableLine,
+    QrCode: officialQrCode,
+  };
+
+  globalThis.fetch = async (input) => {
+    const url = input instanceof Request ? input.url : String(input);
+    if (url.includes("/autenticacao/")) {
+      return new Response(
+        JSON.stringify({ access_token: "token-teste", token_type: "Bearer" }),
+        { status: 200 },
+      );
+    }
+    return new Response(JSON.stringify(creationResponse), { status: 200 });
+  };
+
+  try {
+    const result = await createBaneseBoletoCharge({
+      ...reservedBoletoInput(false),
+      environment: "production",
+      amount,
+      financialTerms: null,
+    });
+    assert.equal(result.pixPayload, officialQrCode);
+    assert.match(result.pixEncodedImage ?? "", /^data:image\/png;base64,/);
+    const diagnostic = (result.raw as any)?.pixDiagnostic;
+    assert.equal(diagnostic?.source, "creation");
+    assert.equal(
+      diagnostic?.attempts?.[0]?.imageSource,
+      "generated_from_official_emv",
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+Deno.test("aceita espaços permitidos pelo EMV no nome do recebedor Banese", () => {
+  const payload =
+    "00020101021226840014br.gov.bcb.pix2562qrcode-h.banese.b.br/jws/cobv/78923f2a35174d5a965f3c9442ddbe9f5204000053039865802BR5924ARACAJU PREF GABINETE DO6007ARACAJU62070503***6304A8E7";
+  const normalized = normalizeBanesePixPayload(payload, 149.9);
+  assert.equal(normalized.payload, payload);
 });
 
 Deno.test("descarta retorno de pix no formato de linha/barras", async () => {
@@ -535,7 +692,11 @@ Deno.test("falha ambigua preserva marcador de titulo remoto possivel", async () 
   }
 });
 
-const cancellationFetch = (initialSituation: number) => {
+const cancellationFetch = (
+  initialSituation: number,
+  paymentConfirmed = initialSituation === 3,
+  paymentStatus = 200,
+) => {
   let situation = initialSituation;
   const calls: Array<{ url: string; method: string }> = [];
   const fetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -556,12 +717,14 @@ const cancellationFetch = (initialSituation: number) => {
     if (url.endsWith("/pagamentos/efetivados")) {
       return new Response(
         JSON.stringify({
-          PagamentosEfetivados: [{
-            ValorPago: BANESE_DOCUMENT_FIXTURE.amount,
-            DataPagamento: BANESE_DOCUMENT_FIXTURE.dueDate,
-          }],
+          PagamentosEfetivados: paymentConfirmed
+            ? [{
+              ValorPago: BANESE_DOCUMENT_FIXTURE.amount,
+              DataPagamento: BANESE_DOCUMENT_FIXTURE.dueDate,
+            }]
+            : [],
         }),
-        { status: 200 },
+        { status: paymentStatus },
       );
     }
     return new Response(
@@ -595,7 +758,13 @@ Deno.test("baixa boleto aberto e confirma cancelamento no Banese", async () => {
     assert.equal(result.remoteStatus, "CANCELED");
     assert.equal(result.alreadyCanceled, false);
     assert.equal(calls.filter((call) => call.method === "PUT").length, 1);
-    assert.equal(calls.filter((call) => call.method === "GET").length, 2);
+    assert.equal(
+      calls.filter((call) =>
+        call.method === "GET" &&
+        !call.url.endsWith("/pagamentos/efetivados")
+      ).length,
+      2,
+    );
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -631,6 +800,46 @@ Deno.test("baixa Banese bloqueia boleto que o banco ja confirmou pago", async ()
           cancellationInput,
         ),
       /ja confirmou o pagamento/i,
+    );
+    assert.equal(calls.some((call) => call.method === "PUT"), false);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+Deno.test("PagamentosEfetivados prevalece mesmo sem CodigoSituacaoBoleto 3", async () => {
+  const originalFetch = globalThis.fetch;
+  const { calls, fetcher } = cancellationFetch(2, true);
+  globalThis.fetch = fetcher as typeof fetch;
+  try {
+    await assert.rejects(
+      () =>
+        cancelBaneseBoleto(
+          adminForBaneseReservation(true),
+          "sandbox",
+          cancellationInput,
+        ),
+      /ja confirmou o pagamento/i,
+    );
+    assert.equal(calls.some((call) => call.method === "PUT"), false);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+Deno.test("baixa Banese falha fechada se PagamentosEfetivados estiver indisponivel", async () => {
+  const originalFetch = globalThis.fetch;
+  const { calls, fetcher } = cancellationFetch(2, false, 503);
+  globalThis.fetch = fetcher as typeof fetch;
+  try {
+    await assert.rejects(
+      () =>
+        cancelBaneseBoleto(
+          adminForBaneseReservation(true),
+          "sandbox",
+          cancellationInput,
+        ),
+      /PagamentosEfetivados.*falhou.*503/i,
     );
     assert.equal(calls.some((call) => call.method === "PUT"), false);
   } finally {

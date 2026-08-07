@@ -3,6 +3,7 @@
 // Cache em memória apenas (não persiste entre sessões de página).
 
 import { supabase } from '../../../../lib/supabase';
+import { assinaturasRegistryService } from './assinaturas-registry.service';
 
 export interface AssinaturasData {
   diretoriaGeral: string;
@@ -71,7 +72,32 @@ export const assinaturasService = {
         .maybeSingle();
 
       if (!error && data && data.conteudo) {
-        _memCache = normalizeSignatureMetadata({ ...DEFAULT_ASSINATURAS, ...data.conteudo } as AssinaturasData);
+        const legacy = normalizeSignatureMetadata({
+          ...DEFAULT_ASSINATURAS,
+          ...data.conteudo,
+        } as AssinaturasData);
+
+        try {
+          const linked = await assinaturasRegistryService.getLegacyMap();
+          _memCache = normalizeSignatureMetadata({
+            ...legacy,
+            // Perfis como o aluno não leem o cadastro administrativo de
+            // assinantes. Nessa situação, preserve a configuração
+            // institucional legada em vez de substituí-la por string vazia.
+            diretoriaGeral: linked.diretoriaGeral?.previewUrl || legacy.diretoriaGeral,
+            diretoriaGeralNome: linked.diretoriaGeral?.name || legacy.diretoriaGeralNome,
+            diretoriaGeralCargo: linked.diretoriaGeral?.role || legacy.diretoriaGeralCargo,
+            secretaria: linked.secretaria?.previewUrl || legacy.secretaria,
+            secretariaNome: linked.secretaria?.name || legacy.secretariaNome,
+            secretariaCargo: linked.secretaria?.role || legacy.secretariaCargo,
+            coordenacao: linked.coordenacao?.previewUrl || legacy.coordenacao,
+            coordenacaoNome: linked.coordenacao?.name || legacy.coordenacaoNome,
+            coordenacaoCargo: linked.coordenacao?.role || legacy.coordenacaoCargo,
+          });
+        } catch (registryError) {
+          console.warn('[assinaturasService] Cadastro vinculado indisponível; usando configuração legada:', registryError);
+          _memCache = legacy;
+        }
         _memCacheTs = now;
         return _memCache;
       }

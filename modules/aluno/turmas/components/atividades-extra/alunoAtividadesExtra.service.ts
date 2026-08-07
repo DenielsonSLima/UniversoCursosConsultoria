@@ -36,7 +36,7 @@ export const alunoAtividadesExtraService = {
         perguntas,
         carga_horaria_compensacao,
         prazo_entrega,
-        disciplina:disciplinas(id, nome),
+        disciplina:disciplinas(id, nome, ordem, modulo:modulos(id, nome, ordem)),
         respostas:atividade_extra_classe_respostas(
           id,
           resposta_texto,

@@ -16,6 +16,14 @@ const TERMS: BaneseFinancialTermsInput = {
   interest: { type: "monthly-percentage", value: 1 },
 };
 
+const TECHNICAL_TERMS: BaneseFinancialTermsInput = {
+  nominalAmount: 279.9,
+  dueDate: "2026-08-10",
+  discount: { type: "fixed", value: 19.9 },
+  penalty: { type: "percentage", value: 2 },
+  interest: { type: "monthly-percentage", value: 1 },
+};
+
 Deno.test("normaliza datas padrao conforme as regras oficiais do Banese", () => {
   const result = normalizeBaneseFinancialTerms(TERMS);
   assert.deepEqual(result, {
@@ -318,7 +326,7 @@ Deno.test("formata os tres campos para impressao no boleto ou carne", () => {
   );
   assert.equal(
     formatted.interest,
-    "Juros a partir de 16/08/2026: 1% ao mês (dias corridos)",
+    "Juros a partir de 16/08/2026: R$ 0,20 por dia (1% ao mês proporcional aos dias)",
   );
   assert.deepEqual(formatted.lines, [
     formatted.discount,
@@ -363,6 +371,31 @@ Deno.test("calcula desconto e encargos conforme a data do pagamento", () => {
     daysAfterDue: 1,
     interestAccrualDays: 1,
   });
+});
+
+Deno.test("calcula a mensalidade tecnica com multa unica e um juros proporcional por dia", () => {
+  const firstLateDay = calculateBaneseAcceptablePaymentRange(
+    TECHNICAL_TERMS,
+    "2026-08-11",
+  );
+  assert.equal(firstLateDay.expectedAmount, 285.59);
+  assert.deepEqual(firstLateDay.breakdown, {
+    nominalAmount: 279.9,
+    discountAmount: 0,
+    penaltyAmount: 5.6,
+    interestAmount: 0.09,
+    daysAfterDue: 1,
+    interestAccrualDays: 1,
+  });
+
+  const thirtyDaysLate = calculateBaneseAcceptablePaymentRange(
+    TECHNICAL_TERMS,
+    "2026-09-09",
+  );
+  assert.equal(thirtyDaysLate.expectedAmount, 288.3);
+  assert.equal(thirtyDaysLate.breakdown.penaltyAmount, 5.6);
+  assert.equal(thirtyDaysLate.breakdown.interestAmount, 2.8);
+  assert.equal(thirtyDaysLate.breakdown.interestAccrualDays, 30);
 });
 
 Deno.test("expressa diferenca de arredondamento como faixa de um centavo", () => {

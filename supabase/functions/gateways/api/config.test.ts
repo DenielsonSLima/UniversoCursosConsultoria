@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  assertHomologationStageRoute,
   assertProviderAdapterReady,
   assertStoredProviderAdapterReady,
   DEFAULT_BANCO_INTER_SCOPES,
@@ -27,22 +28,21 @@ Deno.test("mantem Mercado Pago bloqueado ate recuperar criacao ambigua", () => {
   );
   assert.throws(
     () => assertStoredProviderAdapterReady("banese_card", "PIX", "sandbox"),
-    /Pix Banese permanece bloqueado/i,
+    /rota BOLETO/i,
   );
-  assert.throws(
-    () =>
-      assertStoredProviderAdapterReady(
-        "banese_card",
-        "BOLETO",
-        "production",
-      ),
-    /sandbox/i,
+  assert.doesNotThrow(() =>
+    assertStoredProviderAdapterReady(
+      "banese_card",
+      "BOLETO",
+      "production",
+    )
   );
   assert.doesNotThrow(() =>
     assertStoredProviderAdapterReady("banese_card", "BOLETO", "sandbox")
   );
-  assert.doesNotThrow(() =>
-    assertStoredProviderAdapterReady("banese_card", "PIX", "production")
+  assert.throws(
+    () => assertStoredProviderAdapterReady("banese_card", "PIX", "production"),
+    /rota BOLETO/i,
   );
   assert.throws(
     () => assertProviderAdapterReady("banese_card", "CREDIT_CARD", "sandbox"),
@@ -51,6 +51,48 @@ Deno.test("mantem Mercado Pago bloqueado ate recuperar criacao ambigua", () => {
   assert.throws(
     () => assertProviderAdapterReady("mercado_pago", "BOLETO", "sandbox"),
     /boleto e Pix devem usar Banese/i,
+  );
+});
+
+Deno.test("etapa ativa boleto Banese EAD em sandbox e producao", () => {
+  assert.doesNotThrow(() =>
+    assertHomologationStageRoute(
+      "EAD",
+      "BOLETO",
+      "banese_card",
+      "sandbox",
+    )
+  );
+  assert.throws(
+    () =>
+      assertHomologationStageRoute(
+        "LIVRE",
+        "BOLETO",
+        "banese_card",
+        "sandbox",
+      ),
+    /somente Cursos EAD/i,
+  );
+  assert.doesNotThrow(() =>
+    assertHomologationStageRoute(
+      "EAD",
+      "BOLETO",
+      "banese_card",
+      "production",
+    )
+  );
+});
+
+Deno.test("metadados fixos Banese preservam o convenio de cada ambiente", () => {
+  assert.equal(
+    enforceProviderFixedMetadata("banese_card", {}, "sandbox")
+      .baneseBoletoConvenio,
+    "15528",
+  );
+  assert.equal(
+    enforceProviderFixedMetadata("banese_card", {}, "production")
+      .baneseBoletoConvenio,
+    "15261",
   );
 });
 

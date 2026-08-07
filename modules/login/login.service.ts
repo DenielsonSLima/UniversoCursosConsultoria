@@ -1,75 +1,19 @@
 
 import { supabase } from '../../lib/supabase';
+import { Capacitor } from '@capacitor/core';
 import { LoginCredentials, AuthResponse } from './login.types';
 import { buildAuthRedirectUrl } from '../../lib/app-url';
-import { formatCpf, isCpfLike, normalizeEmail, onlyDigits } from '../shared/utils/identityValidation';
-import { clearPortalSession } from './portal-session';
+import { clearPortalSession, getPortalProfile } from './portal-session';
+import {
+  clearPendingOAuthReturn,
+  rememberPendingOAuthReturn,
+} from '../shared/auth/oauth-return-state';
 
 const AUTH_GENERIC_ERROR = 'Não foi possível autenticar com as credenciais informadas. Verifique seus dados e tente novamente.';
-const AUTH_EMAIL_NOT_CONFIRMED_ERROR = 'Falta confirmar seu e-mail. Enviamos um novo link; olhe sua caixa de entrada e também o spam/lixo eletrônico.';
-const AUTH_EMAIL_NOT_CONFIRMED_RESEND_ERROR = 'Falta confirmar seu e-mail. Olhe sua caixa de entrada e também o spam/lixo eletrônico antes de tentar entrar.';
-const AUTH_CONFIRMED_INVALID_PASSWORD_ERROR = 'Seu e-mail já está confirmado, mas a senha não confere. Digite novamente ou use “Esqueceu a senha?”.';
-
-const isEmailNotConfirmedError = (error: any) => {
-  const code = String(error?.code || error?.error_code || '').toLowerCase();
-  const message = String(error?.message || '').toLowerCase();
-  return code === 'email_not_confirmed' || message.includes('email not confirmed');
-};
-
-const isInvalidCredentialsError = (error: any) => {
-  const code = String(error?.code || error?.error_code || '').toLowerCase();
-  const message = String(error?.message || '').toLowerCase();
-  return code === 'invalid_credentials' || message.includes('invalid login credentials');
-};
-
-const sanitizeAuthError = (message: string) => {
-  if (!message) return AUTH_GENERIC_ERROR;
-  return AUTH_GENERIC_ERROR;
-};
-
-const resendSignupConfirmation = async (email: string) => {
-  const { error } = await supabase.auth.resend({
-    type: 'signup',
-    email,
-    options: {
-      emailRedirectTo: buildAuthRedirectUrl(`/confirmacao-email?redirect=${encodeURIComponent('/login')}`),
-    },
-  });
-
-  return !error;
-};
-
-const getAlunoAuthStatus = async (identifier: string) => {
-  const { data, error } = await supabase.rpc('get_public_aluno_auth_status', {
-    p_identifier: identifier,
-  });
-
-  if (error) {
-    console.warn('Não foi possível consultar status de confirmação do aluno:', error);
-    return null;
-  }
-
-  return Array.isArray(data) ? data[0] : null;
-};
-
-const buildUnconfirmedEmailError = async (email: string) => {
-  const confirmationResent = await resendSignupConfirmation(email);
-  return confirmationResent ? AUTH_EMAIL_NOT_CONFIRMED_ERROR : AUTH_EMAIL_NOT_CONFIRMED_RESEND_ERROR;
-};
-
-const resolveLoginEmail = async (identifier: string) => {
-  const value = identifier.trim();
-  if (!isCpfLike(value)) return normalizeEmail(value);
-
-  const { data, error } = await supabase.rpc('resolve_portal_login_email', {
-    p_identifier: onlyDigits(value) || formatCpf(value),
-  });
-
-  if (error) throw new Error(error.message);
-  if (data) return normalizeEmail(String(data));
-
-  throw new Error(AUTH_GENERIC_ERROR);
-};
+const AUTH_RATE_LIMIT_ERROR = 'Muitas tentativas. Aguarde alguns minutos e tente novamente.';
+const AUTH_CHALLENGE_ERROR = 'A verificação de segurança expirou ou falhou. Tente verificá-la novamente.';
+const AUTH_SERVICE_ERROR = 'O serviço de autenticação está temporariamente indisponível. Tente novamente em instantes.';
+const RECOVERY_GENERIC_MESSAGE = 'Se existir uma conta vinculada aos dados informados, enviaremos as instruções de recuperação.';
 
 const getFriendlyOAuthError = (message: string) => {
   if (message.includes('Manual linking is disabled')) {
@@ -83,85 +27,96 @@ const getFriendlyOAuthError = (message: string) => {
   return message;
 };
 
+const readPortalAuthFailure = async (error: unknown) => {
+  const context = (error as {
+    context?: {
+      status?: number;
+      clone?: () => Response;
+    };
+  })?.context;
+  const status = context?.status;
+  const errorName = error instanceof Error ? error.name : '';
+  let code = '';
+
+  if (typeof context?.clone === 'function') {
+    try {
+      const body = await context.clone().json() as { code?: unknown };
+      code = typeof body?.code === 'string' ? body.code : '';
+    } catch {
+      // A categoria HTTP ainda permite uma mensagem segura e útil.
+    }
+  }
+
+  return {
+    status,
+    code,
+    transportFailure:
+      !context
+      || errorName === 'FunctionsFetchError'
+      || errorName === 'FunctionsRelayError',
+  };
+};
+
+const getPortalAuthFailureMessage = (
+  failure: { status?: number; code: string; transportFailure: boolean },
+) => {
+  if (failure.status === 429 || failure.code === 'rate_limited') {
+    return AUTH_RATE_LIMIT_ERROR;
+  }
+  if (failure.status === 403 || failure.code === 'challenge_failed') {
+    return AUTH_CHALLENGE_ERROR;
+  }
+  if (failure.status === 503 || failure.code === 'service_unavailable') {
+    return AUTH_SERVICE_ERROR;
+  }
+  if (failure.transportFailure) {
+    return AUTH_SERVICE_ERROR;
+  }
+  return AUTH_GENERIC_ERROR;
+};
+
 export const loginService = {
   async login({
     email,
     password,
+    turnstileToken,
   }: LoginCredentials): Promise<AuthResponse> {
-    let resolvedEmail: string;
-    try {
-      resolvedEmail = await resolveLoginEmail(email);
-    } catch (error) {
-      return {
-        user: null,
-        session: null,
-        error: error instanceof Error ? error.message : 'Não foi possível localizar o CPF informado.',
-      };
-    }
-
-    const authStatus = await getAlunoAuthStatus(resolvedEmail);
-    if (
-      authStatus?.user_exists === true &&
-      authStatus?.is_student === true &&
-      authStatus?.email_confirmed === false
-    ) {
-      return {
-        user: null,
-        session: null,
-        error: await buildUnconfirmedEmailError(authStatus.resolved_email || resolvedEmail),
-      };
-    }
-
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: resolvedEmail,
-      password,
+    const { data, error } = await supabase.functions.invoke('portal-auth', {
+      body: {
+        action: 'login',
+        identifier: email.trim(),
+        password,
+        turnstileToken,
+        challengeContext: Capacitor.isNativePlatform() ? 'native' : 'web',
+      },
     });
 
     if (error) {
-      if (isEmailNotConfirmedError(error)) {
-        return {
-          user: null,
-          session: null,
-          error: await buildUnconfirmedEmailError(resolvedEmail),
-        };
-      }
-
-      const latestAuthStatus = await getAlunoAuthStatus(resolvedEmail);
-      if (
-        latestAuthStatus?.user_exists === true &&
-        latestAuthStatus?.is_student === true &&
-        latestAuthStatus?.email_confirmed === false
-      ) {
-        return {
-          user: null,
-          session: null,
-          error: await buildUnconfirmedEmailError(latestAuthStatus.resolved_email || resolvedEmail),
-        };
-      }
-
-      if (
-        isInvalidCredentialsError(error) &&
-        latestAuthStatus?.user_exists === true &&
-        latestAuthStatus?.is_student === true &&
-        latestAuthStatus?.email_confirmed === true
-      ) {
-        return {
-          user: null,
-          session: null,
-          error: AUTH_CONFIRMED_INVALID_PASSWORD_ERROR,
-        };
-      }
-
+      const failure = await readPortalAuthFailure(error);
       return {
         user: null,
         session: null,
-        error: sanitizeAuthError(error.message),
+        error: getPortalAuthFailureMessage(failure),
       };
     }
 
+    const accessToken = typeof data?.accessToken === 'string' ? data.accessToken : '';
+    const refreshToken = typeof data?.refreshToken === 'string' ? data.refreshToken : '';
+    if (!accessToken || !refreshToken) {
+      return { user: null, session: null, error: AUTH_GENERIC_ERROR };
+    }
+
+    const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
+    if (sessionError || !sessionData.session || !sessionData.user) {
+      return { user: null, session: null, error: AUTH_GENERIC_ERROR };
+    }
+
     return {
-      user: data.user,
-      session: data.session,
+      user: sessionData.user,
+      session: sessionData.session,
       error: null,
     };
   },
@@ -180,18 +135,27 @@ export const loginService = {
     console.warn('Sessão encerrada localmente; não foi possível revogar as outras sessões.', error);
   },
 
-  async loginWithGoogle(redirectPath = '/sistema/login') {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: buildAuthRedirectUrl(redirectPath),
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'consent',
+  async loginWithGoogle(
+    callbackPath = '/sistema/login',
+    postLoginRedirectPath: string | null = null,
+  ) {
+    rememberPendingOAuthReturn('institucional', postLoginRedirectPath);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: buildAuthRedirectUrl(callbackPath),
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
         },
-      },
-    });
-    if (error) throw new Error(getFriendlyOAuthError(error.message));
+      });
+      if (error) throw new Error(getFriendlyOAuthError(error.message));
+    } catch (error) {
+      clearPendingOAuthReturn('institucional');
+      throw error;
+    }
   },
   
   // Função auxiliar para recuperar sessão atual (útil para persistência)
@@ -200,17 +164,53 @@ export const loginService = {
     return data.session;
   },
 
-  async requestPasswordRecovery(email: string) {
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
-      redirectTo: buildAuthRedirectUrl('/recuperar-senha'),
+  async requestPasswordRecovery(
+    identifier: string,
+    turnstileToken: string,
+    redirectPath = '/recuperar-senha',
+  ) {
+    const { error } = await supabase.functions.invoke('portal-auth', {
+      body: {
+        action: 'recover',
+        identifier: identifier.trim(),
+        turnstileToken,
+        redirectTo: buildAuthRedirectUrl(redirectPath),
+        challengeContext: Capacitor.isNativePlatform() ? 'native' : 'web',
+      },
     });
 
-    return error ? error.message : null;
+    if (error) {
+      const failure = await readPortalAuthFailure(error);
+      if (
+        failure.status === 403
+        || failure.status === 429
+        || failure.status === 503
+        || failure.transportFailure
+      ) {
+        throw new Error(getPortalAuthFailureMessage(failure));
+      }
+      console.warn('Não foi possível concluir a solicitação de recuperação.');
+    }
+    return RECOVERY_GENERIC_MESSAGE;
   },
 
   async updatePassword(newPassword: string) {
     const { error } = await supabase.auth.updateUser({ password: newPassword });
     if (error) return error.message;
+
+    const alunoProfile = await getPortalProfile({
+      preferredRole: 'Aluno',
+      allowedRoles: ['Aluno'],
+    }).catch(() => null);
+    if (alunoProfile?.requiresPasswordReset) {
+      const { error: accessFlagError } = await supabase
+        .from('parceiros')
+        .update({ troca_senha_obrigatoria: false })
+        .eq('id', alunoProfile.id);
+      if (accessFlagError) {
+        console.warn('A senha foi alterada, mas não foi possível atualizar o indicador de primeiro acesso.');
+      }
+    }
 
     const { error: auditError } = await supabase.rpc('registrar_sistema_evento_manual', {
       p_modulo: 'Sistema',
@@ -222,6 +222,25 @@ export const loginService = {
 
     if (auditError) {
       console.warn('Não foi possível registrar auditoria de alteração de senha:', auditError);
+    }
+
+    return null;
+  },
+
+  async reauthenticateWithPassword(currentPassword: string) {
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    const email = userData.user?.email;
+    if (userError || !email) {
+      return 'Sua sessão expirou. Entre novamente para alterar a senha.';
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password: currentPassword,
+    });
+
+    if (error) {
+      return 'A senha atual está incorreta.';
     }
 
     return null;

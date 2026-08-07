@@ -5,7 +5,8 @@ import type {
   QueryDisplayState,
   TurmaDisciplinaAluno,
 } from '../../turmas.types';
-import { asNullableNumber, formatDate, formatNumeric } from '../../turmas.utils';
+import { asNullableNumber, formatDate, formatNumeric, groupCurriculumDisciplines } from '../../turmas.utils';
+import CurriculumModuleSection from './CurriculumModuleSection';
 import QueryStateNotice from '../QueryStateNotice';
 
 interface InternshipTabProps {
@@ -53,6 +54,7 @@ const InternshipTab: React.FC<InternshipTabProps> = ({ disciplines, internships,
     (total, discipline) => total + getPlannedHours(discipline),
     0,
   );
+  const modules = useMemo(() => groupCurriculumDisciplines(disciplines), [disciplines]);
 
   return (
     <div className="space-y-4 pt-4">
@@ -74,8 +76,20 @@ const InternshipTab: React.FC<InternshipTabProps> = ({ disciplines, internships,
       <QueryStateNotice state={state} label="as informações de estágio" />
 
       {!state.isLoading && !state.isError ? (
-        <div className="grid gap-3">
-          {disciplines.map((discipline) => {
+        <div className="space-y-4">
+          {modules.map((module, moduleIndex) => {
+            const moduleHours = module.itens.reduce((total, discipline) => total + getPlannedHours(discipline), 0);
+            return (
+              <CurriculumModuleSection
+                key={module.id}
+                title={module.nome}
+                order={module.ordem}
+                itemCount={module.itens.length}
+                detail={`${formatNumeric(moduleHours)}h de estágio previstas neste módulo`}
+                defaultOpen={moduleIndex === 0}
+              >
+                <div className="grid gap-3">
+          {module.itens.map((discipline) => {
             const disciplineId = getDisciplineId(discipline);
             const evaluation = evaluationByDiscipline.get(disciplineId);
             const disciplineName = discipline.disciplinas?.nome || 'Disciplina de estágio';
@@ -140,6 +154,10 @@ const InternshipTab: React.FC<InternshipTabProps> = ({ disciplines, internships,
                   </p>
                 )}
               </article>
+            );
+          })}
+                </div>
+              </CurriculumModuleSection>
             );
           })}
         </div>

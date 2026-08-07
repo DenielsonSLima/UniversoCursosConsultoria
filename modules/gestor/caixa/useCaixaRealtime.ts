@@ -1,71 +1,106 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
-import { caixaQueryKeys, PRINCIPAL_POLO_ID } from './caixa.service';
+import { getCaixaRealtimeInvalidationScopes } from './caixa.realtime';
+import { caixaQueryKeys } from './caixa.service';
+import { caixaReportQueryKeys } from './report/caixa-report.service';
 
 const DEBOUNCE_MS = 500;
 
-export const useCaixaRealtime = (poloId?: string | null) => {
+export const useCaixaRealtime = () => {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (!poloId) return;
-
-    const activePoloId = poloId === 'todos' ? null : poloId;
-    const canUseServerPoloFilter = Boolean(activePoloId && activePoloId !== PRINCIPAL_POLO_ID);
     let refreshTimer: ReturnType<typeof setTimeout> | undefined;
+    const pendingScopes = new Set<string>();
+    let requiresBroadInvalidation = false;
 
-    const refresh = () => {
-      if (refreshTimer) clearTimeout(refreshTimer);
-      refreshTimer = setTimeout(() => {
+    const invalidatePendingScopes = (refetchType: 'active' | 'none') => {
+      if (requiresBroadInvalidation) {
+        void queryClient.invalidateQueries({ queryKey: caixaQueryKeys.statements, refetchType });
         void queryClient.invalidateQueries({
-          queryKey: caixaQueryKeys.dashboard(poloId),
-          exact: true,
-          refetchType: 'active',
+          queryKey: caixaQueryKeys.financiamentoResumos,
+          refetchType,
         });
+        void queryClient.invalidateQueries({
+          queryKey: caixaQueryKeys.custosOperacionais,
+          refetchType,
+        });
+        void queryClient.invalidateQueries({ queryKey: caixaReportQueryKeys.monthly, refetchType });
+      } else {
+        pendingScopes.forEach((scope) => {
+          void queryClient.invalidateQueries({
+            queryKey: caixaQueryKeys.statementsForPolo(scope),
+            refetchType,
+          });
+          void queryClient.invalidateQueries({
+            queryKey: caixaQueryKeys.financiamentoResumosForPolo(scope),
+            refetchType,
+          });
+          void queryClient.invalidateQueries({
+            queryKey: caixaQueryKeys.custosOperacionaisForPolo(scope),
+            refetchType,
+          });
+          void queryClient.invalidateQueries({
+            queryKey: caixaReportQueryKeys.monthlyForPolo(scope),
+            refetchType,
+          });
+        });
+      }
+
+      pendingScopes.clear();
+      requiresBroadInvalidation = false;
+    };
+
+    const invalidatePolos = () => {
+      void queryClient.invalidateQueries({
+        queryKey: caixaQueryKeys.polos,
+        refetchType: 'active',
+      });
+    };
+
+    const refresh = (payload: { new?: unknown }) => {
+      const scopes = getCaixaRealtimeInvalidationScopes(payload);
+      if (scopes === null) {
+        requiresBroadInvalidation = true;
+      } else {
+        scopes.forEach((scope) => pendingScopes.add(scope));
+      }
+
+      if (refreshTimer) return;
+      refreshTimer = setTimeout(() => {
+        refreshTimer = undefined;
+        invalidatePendingScopes('active');
       }, DEBOUNCE_MS);
     };
 
-    const scopedChange = (payload: any) => {
-      if (!activePoloId || canUseServerPoloFilter) {
-        refresh();
-        return;
-      }
+    const financeChannel = supabase
+      .channel('caixa-prestacao-mensal-realtime')
+      .on('postgres_changes', {
+        // A tabela é append-only. DELETE representa somente a limpeza de
+        // eventos antigos e não uma nova alteração financeira.
+        event: 'INSERT',
+        schema: 'public',
+        table: 'finance_realtime_events',
+      }, refresh)
+      .subscribe();
 
-      const next = Object.keys(payload.new || {}).length > 0 ? payload.new : null;
-      const previous = Object.keys(payload.old || {}).length > 0 ? payload.old : null;
-      const belongsToPrincipal = (row: any) => row && (row.polo_id === activePoloId || !row.polo_id);
-      if (belongsToPrincipal(next) || belongsToPrincipal(previous) || payload.eventType === 'DELETE') {
-        refresh();
-      }
-    };
-
-    const channelName = `caixa-realtime-${activePoloId || 'todos'}`;
-    let channel = supabase.channel(channelName);
-    const addScopedTable = (table: 'contas_receber' | 'contas_pagar' | 'contas_bancarias') => {
-      if (!canUseServerPoloFilter) {
-        channel = channel.on('postgres_changes', { event: '*', schema: 'public', table }, scopedChange);
-        return;
-      }
-
-      const filter = `polo_id=eq.${activePoloId}`;
-      channel = channel
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table, filter }, scopedChange)
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table, filter }, scopedChange)
-        // DELETE pode trazer apenas a chave primária; mantém fallback sem filtro.
-        .on('postgres_changes', { event: 'DELETE', schema: 'public', table }, scopedChange);
-    };
-
-    addScopedTable('contas_receber');
-    addScopedTable('contas_pagar');
-    addScopedTable('contas_bancarias');
-    channel = channel
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'transferencias_contas' }, refresh)
+    const polosChannel = supabase
+      .channel('caixa-polos-realtime')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'polos',
+      }, invalidatePolos)
       .subscribe();
 
     return () => {
-      if (refreshTimer) clearTimeout(refreshTimer);
-      void supabase.removeChannel(channel);
+      if (refreshTimer) {
+        clearTimeout(refreshTimer);
+        invalidatePendingScopes('none');
+      }
+      void supabase.removeChannel(financeChannel);
+      void supabase.removeChannel(polosChannel);
     };
-  }, [poloId, queryClient]);
+  }, [queryClient]);
 };

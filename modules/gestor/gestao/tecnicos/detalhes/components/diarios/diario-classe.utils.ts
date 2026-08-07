@@ -26,12 +26,14 @@ export const buildAttendanceMap = (
   students.forEach((student) => {
     map[student.id] = {};
     aulas.forEach((aula) => {
-      map[student.id][aula.id] = null;
+      aula.sessoes.forEach((sessao) => {
+        map[student.id][sessao.id] = null;
+      });
     });
   });
   dbAttendance.forEach((frequency) => {
     if (map[frequency.aluno_id]) {
-      map[frequency.aluno_id][frequency.aula_id] = frequency.status as 'P' | 'F';
+      map[frequency.aluno_id][frequency.aula_id] = frequency.status as 'P' | 'F' | 'J';
     }
   });
   return map;
@@ -43,8 +45,9 @@ export const buildGradesMap = (
   dbGrades: any[],
 ): GradesMap => {
   const map: GradesMap = {};
+  const totalSessoes = aulas.reduce((total, aula) => total + aula.sessoes.length, 0);
   students.forEach((student) => {
-    map[student.id] = emptyGrade(aulas.length);
+    map[student.id] = emptyGrade(totalSessoes);
   });
   dbGrades.forEach((grade) => {
     if (!map[grade.aluno_id]) return;
@@ -69,28 +72,32 @@ export const buildGradesMap = (
 
 export const buildPraticasMap = (aulas: DiarioAula[], dbPraticas: any[]): Record<string, string> => {
   const map: Record<string, string> = {};
+  const encontroPorSessao = new Map<string, string>();
   aulas.forEach((aula) => {
     map[aula.id] = 'Aula expositiva / Prática padrão';
+    aula.sessoes.forEach((sessao) => encontroPorSessao.set(sessao.id, aula.id));
   });
   dbPraticas.forEach((practice) => {
-    map[practice.aula_id] = practice.pratica_pedagogica;
+    const encontroId = encontroPorSessao.get(practice.aula_id);
+    if (encontroId) map[encontroId] = practice.pratica_pedagogica;
   });
   return map;
 };
 
-export const getStudentStats = (gradesMap: GradesMap, studentId: string): DiarioStudentStats => {
+export const getStudentStats = (
+  gradesMap: GradesMap,
+  studentId: string,
+): DiarioStudentStats => {
   const grade = gradesMap[studentId] || emptyGrade(0);
+
   return {
     faltas: grade.total_faltas,
     frequencia: grade.frequencia_percent,
     mediaParcial: grade.media_parcial,
     mediaFinal: grade.media_final,
-    resultado: grade.resultado_final,
+    resultado: grade.resultado_final || 'SEM_LANCAMENTO',
   };
 };
-
-export const getDiarioValidationCode = (turma: any, disciplina: any) =>
-  `DIA-${(turma.codigo || turma.nome || 'TURMA').replace(/[^a-zA-Z0-9]/g, '').slice(0, 8).toUpperCase()}-${disciplina.id.slice(0, 8).toUpperCase()}`;
 
 export const getDiarioFileName = (turma: any, disciplina: any) =>
   `diario-${turma.codigo || turma.nome || 'turma'}-${disciplina.nome}`

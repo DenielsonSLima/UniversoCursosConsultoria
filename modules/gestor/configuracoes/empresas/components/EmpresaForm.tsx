@@ -12,6 +12,7 @@ const EmpresaForm: React.FC<EmpresaFormProps> = ({ initialData, onSave, onCancel
   const maskCNPJ = (v: string) => v.replace(/\D/g,'').replace(/(\d{2})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1/$2').replace(/(\d{4})(\d{1,2})/,'$1-$2').replace(/(-\d{2})\d+?$/,'$1');
   const maskCEP = (v: string) => v.replace(/\D/g,'').replace(/(\d{5})(\d)/,'$1-$2').replace(/(-\d{3})\d+?$/,'$1');
   const maskPhone = (v: string) => v.replace(/\D/g,'').replace(/(\d{2})(\d)/,'($1) $2').replace(/(\d{5})(\d)/,'$1-$2').replace(/(-\d{4})\d+?$/,'$1');
+  const maskPhoneList = (value: string) => value.split('/').slice(0, 2).map(maskPhone).filter(Boolean).join(' / ');
 
   const [formData, setFormData] = useState(() => {
     if (initialData) {
@@ -27,7 +28,7 @@ const EmpresaForm: React.FC<EmpresaFormProps> = ({ initialData, onSave, onCancel
         bairro: initialData.bairro || '',
         cidade: initialData.cidade || '',
         uf: initialData.uf || '',
-        telefone: initialData.telefone ? maskPhone(initialData.telefone) : '',
+        telefone: initialData.telefone ? maskPhoneList(initialData.telefone) : '',
         email: initialData.email || '',
         site: initialData.site || '',
         tipo: initialData.tipo || 'Filial',
@@ -167,7 +168,7 @@ const EmpresaForm: React.FC<EmpresaFormProps> = ({ initialData, onSave, onCancel
 
     if (name === 'cnpj') finalValue = maskCNPJ(finalValue);
     if (name === 'cep') finalValue = maskCEP(finalValue);
-    if (name === 'telefone') finalValue = maskPhone(finalValue);
+    if (name === 'telefone') finalValue = maskPhoneList(finalValue);
 
     setFormData(prev => ({ ...prev, [name]: finalValue }));
   };
@@ -405,8 +406,8 @@ const EmpresaForm: React.FC<EmpresaFormProps> = ({ initialData, onSave, onCancel
                   name="telefone"
                   value={formData.telefone}
                   onChange={handleChange}
-                  maxLength={15}
-                  placeholder="(00) 00000-0000"
+                  maxLength={33}
+                  placeholder="(00) 00000-0000 / (00) 00000-0001"
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:border-blue-500 outline-none transition-all"
                 />
               </div>

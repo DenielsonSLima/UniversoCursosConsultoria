@@ -18,11 +18,14 @@ import {
   WalletCards,
   X
 } from 'lucide-react';
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
+import {
+  buildSelectablePdfBlobFromContinuousElement,
+  downloadPdfBlob,
+} from '../../shared/pdf/dom-to-selectable-pdf';
 
 interface FinanceiroPageProps {
   professorId: string;
+  poloId: string;
 }
 
 type StatusTab = 'ABERTO' | 'ATRASADO' | 'PAGO' | 'TODOS';
@@ -40,6 +43,7 @@ interface ProfessorPayment {
   forma_pagamento?: string | null;
   observacao?: string | null;
   created_at?: string | null;
+  polo_id?: string | null;
   polos?: {
     nome?: string | null;
     cidade?: string | null;
@@ -51,7 +55,7 @@ interface ProfessorPayment {
 const hiddenStatuses = ['CANCELADO', 'ESTORNADO'];
 const pageSize = 8;
 
-const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ professorId }) => {
+const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ professorId, poloId }) => {
   const [selectedReceipt, setSelectedReceipt] = useState<ProfessorPayment | null>(null);
   const [isGeneratingReceiptPdf, setIsGeneratingReceiptPdf] = useState(false);
   const [notice, setNotice] = useState('');
@@ -65,18 +69,36 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ professorId }) => {
   const receiptRef = useRef<HTMLDivElement>(null);
 
   const { data: dbPayments = [], isLoading } = useQuery<ProfessorPayment[]>({
-    queryKey: ['professor-financeiro', professorId],
+    queryKey: ['professor-financeiro', professorId, poloId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('contas_pagar')
-        .select('*, polos(nome, cidade, estado)')
+        .select(`
+          id,
+          descricao,
+          categoria,
+          valor,
+          valor_pago,
+          data_vencimento,
+          data_pagamento,
+          status,
+          forma_pagamento,
+          observacao,
+          created_at,
+          polo_id,
+          polos(nome, cidade, estado)
+        `)
         .eq('fornecedor_id', professorId)
+        .eq('polo_id', poloId)
         .order('data_vencimento', { ascending: true });
 
       if (error) throw error;
-      return data || [];
+      return (data || []).map((payment: any) => ({
+        ...payment,
+        polos: Array.isArray(payment.polos) ? payment.polos[0] || null : payment.polos,
+      })) as ProfessorPayment[];
     },
-    enabled: Boolean(professorId)
+    enabled: Boolean(professorId && poloId)
   });
 
   const parseDate = (value?: string | null) => {
@@ -173,6 +195,16 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ professorId }) => {
   const visiblePayments = filteredPayments.slice((currentPageSafe - 1) * pageSize, currentPageSafe * pageSize);
 
   useEffect(() => {
+    setSelectedReceipt(null);
+    setSearchTerm('');
+    setStartDate('');
+    setEndDate('');
+    setCategoryFilter('TODOS');
+    setStatusTab('ABERTO');
+    setCurrentPage(1);
+  }, [poloId]);
+
+  useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, startDate, endDate, categoryFilter, statusTab, viewMode]);
 
@@ -202,44 +234,19 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ professorId }) => {
 
     setIsGeneratingReceiptPdf(true);
     try {
-      const canvas = await html2canvas(receiptRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff'
-      });
-
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgWidth = 190;
-      const pageHeight = 277;
-      const ratio = imgWidth / canvas.width;
-      let remainingHeight = canvas.height;
-      const pagePixelHeight = pageHeight / ratio;
-      let position = 0;
-      let pageIndex = 0;
-
-      while (remainingHeight > 0) {
-        const sliceHeight = Math.min(pagePixelHeight, remainingHeight);
-        const sliceCanvas = document.createElement('canvas');
-        sliceCanvas.width = canvas.width;
-        sliceCanvas.height = sliceHeight;
-        const ctx = sliceCanvas.getContext('2d');
-
-        if (!ctx) throw new Error('Não foi possível preparar o canvas do recibo.');
-
-        ctx.drawImage(canvas, 0, position, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
-        const sliceData = sliceCanvas.toDataURL('image/png');
-        const sliceHeightMm = sliceHeight * ratio;
-
-        if (pageIndex > 0) pdf.addPage();
-        pdf.addImage(sliceData, 'PNG', 10, 10, imgWidth, sliceHeightMm);
-
-        remainingHeight -= sliceHeight;
-        position += sliceHeight;
-        pageIndex += 1;
-      }
-
       const fileName = `recibo-professor-${String(selectedReceipt.id || '').slice(0, 8).toUpperCase() || 'PAGO'}-${new Date().toISOString().slice(0, 10)}.pdf`;
-      pdf.save(fileName);
+      const pdfBlob = await buildSelectablePdfBlobFromContinuousElement(receiptRef.current, {
+        orientation: 'portrait',
+        artworkFormat: 'PNG',
+        artworkScale: 2,
+        marginTopMm: 10,
+        marginRightMm: 10,
+        marginBottomMm: 10,
+        marginLeftMm: 10,
+        title: 'Recibo de honorários',
+        subject: 'Comprovante financeiro do professor',
+      });
+      downloadPdfBlob(pdfBlob, fileName);
       setNotice('Recibo baixado com sucesso.');
       setTimeout(() => setNotice(''), 2500);
     } catch {

@@ -1,3 +1,5 @@
+> Arquivo legado. O RAG operacional vigente está em `ai/operacao/rag/`.
+
 # Supabase MCP — Operações Remotas Obrigatórias
 
 ## Decisão operacional

@@ -1,19 +1,18 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { requireGestorAtivo, requireGestorTab } from "../_shared/authz.ts";
+import {
+  requireGestorAtivo,
+  requireGestorForWhatsAppRoute,
+  requireGestorTab,
+} from "../_shared/authz.ts";
 import { buildCorsHeaders, getClientIp, isRateLimitExceeded, json } from "../_shared/http.ts";
 import { insertWhatsAppMessage, normalizeWhatsAppPhone, phoneBelongsToAluno, upsertWhatsAppConversation } from "../_shared/whatsapp.ts";
+import { getWhatsAppMetaContext } from "../_shared/whatsapp-connection.ts";
 
 type MediaKind = "image" | "audio" | "document";
 type MediaFile = { base64?: string; type?: string; name?: string };
 
 const trim = (value: unknown) => String(value || "").trim();
 const allowedKinds = new Set(["image", "audio", "document"]);
-
-const normalizeGraphVersion = (value: unknown) => {
-  const version = trim(value) || "v23.0";
-  return /^v\d+\.\d+$/.test(version) ? version : "v23.0";
-};
 
 const decodeBase64 = (value: string) => {
   const binary = atob(value);
@@ -27,7 +26,19 @@ const metaJson = async (url: string, accessToken: string, init: RequestInit = {}
   headers.set("Authorization", `Bearer ${accessToken}`);
   const response = await fetch(url, { ...init, headers });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload?.error?.message || "Falha na Meta Cloud API.");
+  if (!response.ok) {
+    const code = Number(payload?.error?.code || 0);
+    const message = trim(payload?.error?.message);
+    if (
+      code === 190 ||
+      /authentication error|access token|token.*expir/i.test(message)
+    ) {
+      throw new Error(
+        "O token temporário da Meta expirou ou foi invalidado. Gere um novo token no painel da Meta e salve-o em Configurações > WhatsApp.",
+      );
+    }
+    throw new Error(message || "Falha na Meta Cloud API.");
+  }
   return payload;
 };
 
@@ -38,28 +49,7 @@ const createAdmin = () => {
   return createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } });
 };
 
-const getContext = async (admin: any) => {
-  const { data: config, error: configError } = await admin
-    .from("mensageria_config")
-    .select("wa_enabled, wa_status, wa_phone_number_id, wa_graph_version")
-    .eq("tipo", "whatsapp")
-    .maybeSingle();
-  if (configError) throw configError;
-
-  const { data: accessTokenSecret, error: secretError } = await admin.rpc(
-    "whatsapp_get_secret",
-    { p_secret_name: "whatsapp_meta_access_token" },
-  );
-  if (secretError) throw secretError;
-
-  const accessToken = trim(accessTokenSecret);
-  const phoneNumberId = trim(config?.wa_phone_number_id);
-  if (config?.wa_enabled !== true || config?.wa_status !== "configurado" || !accessToken || !phoneNumberId) {
-    throw new Error("API WhatsApp nao configurada ou token ausente.");
-  }
-
-  return { accessToken, phoneNumberId, graphVersion: normalizeGraphVersion(config?.wa_graph_version) };
-};
+const getContext = getWhatsAppMetaContext;
 
 const uploadMedia = async (
   context: Awaited<ReturnType<typeof getContext>>,
@@ -86,28 +76,73 @@ const uploadMedia = async (
 const sendMedia = async (admin: any, req: Request, body: any) => {
   const gestor = await requireGestorAtivo(req, admin);
   requireGestorTab(gestor, "comunicacao", "comunicacao-whatsapp");
-  const context = await getContext(admin);
+  const connectionId = trim(body.conexaoId || body.connectionId);
+  if (!connectionId) throw new Error("Selecione a linha que enviará a mídia.");
+  const context = await getContext(admin, connectionId);
   const kind = trim(body.kind) as MediaKind;
   if (!allowedKinds.has(kind)) throw new Error("Tipo de midia invalido.");
 
-  const alunoId = trim(body.alunoId);
-  const to = normalizeWhatsAppPhone(body.to);
-  if (!alunoId) throw new Error("Aluno obrigatorio para envio de midia.");
-  if (!to) throw new Error("Telefone/WhatsApp invalido.");
-
-  const { data: aluno, error: alunoError } = await admin
-    .from("parceiros")
-    .select("id,nome,tipo,telefone")
-    .eq("id", alunoId)
-    .eq("tipo", "Aluno")
-    .maybeSingle();
-  if (alunoError) throw alunoError;
-  if (!aluno) throw new Error("Aluno nao encontrado.");
-
-  const allowedPhone = await phoneBelongsToAluno(admin, aluno.id, to);
-  if (!allowedPhone) {
-    throw new Error("Telefone informado nao pertence ao aluno nem ao responsavel financeiro cadastrado na ficha.");
+  const conversationId = trim(body.conversaId || body.conversationId);
+  let alunoId = trim(body.alunoId);
+  let to = normalizeWhatsAppPhone(body.to);
+  let currentConversation: any | null = null;
+  if (conversationId) {
+    const { data, error } = await admin
+      .from("whatsapp_conversas")
+      .select(
+        "id,conexao_id,telefone,aluno_id,contato_nome,setor,polo_id,status_atendimento,data_inicio_atendimento",
+      )
+      .eq("id", conversationId)
+      .eq("conexao_id", connectionId)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) throw new Error("Conversa nao encontrada nesta linha.");
+    currentConversation = data;
+    to = normalizeWhatsAppPhone(data.telefone);
+    alunoId = trim(data.aluno_id || alunoId);
   }
+  if (!to) throw new Error("Telefone/WhatsApp invalido.");
+  if (!conversationId && !alunoId) {
+    throw new Error("Aluno obrigatorio para iniciar um novo envio de midia.");
+  }
+
+  let aluno: any | null = null;
+  if (alunoId) {
+    const { data, error } = await admin
+      .from("parceiros")
+      .select("id,nome,tipo,telefone,polo_id")
+      .eq("id", alunoId)
+      .eq("tipo", "Aluno")
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) throw new Error("Aluno nao encontrado.");
+    aluno = data;
+    if (!conversationId) {
+      const allowedPhone = await phoneBelongsToAluno(admin, aluno.id, to);
+      if (!allowedPhone) {
+        throw new Error(
+          "Telefone informado nao pertence ao aluno nem ao responsavel financeiro cadastrado na ficha.",
+        );
+      }
+    }
+  }
+  if (!currentConversation) {
+    const { data, error } = await admin
+      .from("whatsapp_conversas")
+      .select(
+        "id,conexao_id,telefone,aluno_id,contato_nome,setor,polo_id,status_atendimento,data_inicio_atendimento",
+      )
+      .eq("conexao_id", connectionId)
+      .eq("telefone", to)
+      .maybeSingle();
+    if (error) throw error;
+    currentConversation = data;
+  }
+  requireGestorForWhatsAppRoute(
+    gestor,
+    currentConversation?.setor || "atendimento_geral",
+    currentConversation?.polo_id || aluno?.polo_id || null,
+  );
 
   const caption = trim(body.caption);
   const file = body.file || {};
@@ -136,10 +171,17 @@ const sendMedia = async (admin: any, req: Request, body: any) => {
   );
 
   const content = caption || (kind === "audio" ? "[audio]" : kind === "image" ? "[imagem]" : trim(file.name) || "[documento]");
-  const conversation = await upsertWhatsAppConversation(admin, { phone: to, aluno, lastText: content, direction: "saida" });
+  const conversation = await upsertWhatsAppConversation(admin, {
+    connectionId,
+    phone: to,
+    aluno,
+    contactName: currentConversation?.contato_nome || aluno?.nome || to,
+    lastText: content,
+    direction: "saida",
+  });
   await insertWhatsAppMessage(admin, {
     conversaId: conversation.id,
-    alunoId: aluno.id,
+    alunoId: aluno?.id || conversation.aluno_id || null,
     metaMessageId: metaPayload?.messages?.[0]?.id || null,
     direction: "saida",
     senderType: "gestor",
@@ -150,6 +192,34 @@ const sendMedia = async (admin: any, req: Request, body: any) => {
     read: true,
     rawPayload: { type: kind, media: { id: mediaId, mime_type: trim(file.type), filename: trim(file.name), caption }, meta: metaPayload },
   });
+
+  if (
+    ["bot_triagem", "pendente_setor"].includes(
+      trim(currentConversation?.status_atendimento),
+    )
+  ) {
+    const startedAt = new Date().toISOString();
+    const { error: assignmentError } = await admin
+      .from("whatsapp_conversas")
+      .update({
+        atendente_id: gestor.id,
+        status_atendimento: "em_atendimento",
+        data_inicio_atendimento:
+          currentConversation?.data_inicio_atendimento || startedAt,
+        updated_at: startedAt,
+      })
+      .eq("id", conversation.id);
+    if (assignmentError) throw assignmentError;
+    const { error: pauseFlowError } = await admin
+      .from("whatsapp_flow_sessions")
+      .update({
+        status: "handoff",
+        handoff_required: true,
+        updated_at: startedAt,
+      })
+      .eq("conversa_id", conversation.id);
+    if (pauseFlowError) throw pauseFlowError;
+  }
 
   return { ok: true, conversaId: conversation.id, meta: metaPayload };
 };
@@ -179,7 +249,7 @@ const downloadMedia = async (context: Awaited<ReturnType<typeof getContext>>, me
 const getMessage = async (admin: any, messageId: string) => {
   const { data, error } = await admin
     .from("whatsapp_mensagens")
-    .select("id,message_type,raw_payload")
+    .select("id,message_type,raw_payload,whatsapp_conversas!inner(conexao_id,setor,polo_id)")
     .eq("id", messageId)
     .maybeSingle();
   if (error) throw error;
@@ -229,8 +299,20 @@ Deno.serve(async (req: Request) => {
     const action = trim(body.action);
     if (action === "send") return respondJson(await sendMedia(admin, req, body));
 
-    const context = await getContext(admin);
     const message = await getMessage(admin, trim(body.messageId));
+    const conversation = Array.isArray(message.whatsapp_conversas)
+      ? message.whatsapp_conversas[0]
+      : message.whatsapp_conversas;
+    const connectionId = trim(
+      conversation?.conexao_id || body.conexaoId || body.connectionId,
+    );
+    if (!connectionId) throw new Error("Mensagem sem linha WhatsApp vinculada.");
+    requireGestorForWhatsAppRoute(
+      gestor,
+      conversation?.setor,
+      conversation?.polo_id,
+    );
+    const context = await getContext(admin, connectionId);
     if (action === "download") {
       const { bytes: _bytes, ...media } = await downloadMedia(context, mediaIdFromMessage(message));
       return respondJson({ ok: true, media });

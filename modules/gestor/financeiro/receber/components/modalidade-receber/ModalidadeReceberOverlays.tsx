@@ -1,13 +1,15 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { Loader2, RefreshCw, X } from 'lucide-react';
-import type { ContaBancaria } from '../../../financeiro.service';
+import {
+  isContaDisponivelNoPolo,
+  type ContaBancaria,
+} from '../../../financeiro.service';
 import ManualSettlementModal from '../manual-settlement/ManualSettlementModal';
 import type { ManualSettlementPayload } from '../manual-settlement/useManualSettlementForm';
+import InstitutionalReceiptModal from './InstitutionalReceiptModal';
 import type { ModalidadeReceberOperations } from './useModalidadeReceberOperations';
 import { paymentGatewayLabel } from './modalidade-receber.utils';
-
-const BanesePaymentPage = React.lazy(() => import('../../../../../aluno/financeiro/banese/BanesePaymentPage'));
 
 interface ModalidadeReceberOverlaysProps {
   operations: ModalidadeReceberOperations;
@@ -21,52 +23,41 @@ export const ModalidadeReceberOverlays: React.FC<ModalidadeReceberOverlaysProps>
   const {
     selected,
     reversalItem,
+    receiptItem,
     reversalReason,
     recreateAsaas,
-    banesePaymentRecords,
-    selectedBanesePaymentId,
     paymentMutation,
     reversalMutation,
     setReversalReason,
     setRecreateAsaas,
     closePaymentModal,
+    closeReceiptModal,
     closeReversalModal,
-    closeBanesePayment,
-    refreshBanesePayment,
   } = operations;
 
   return (
     <>
-      {selectedBanesePaymentId && banesePaymentRecords.length ? (
-        <React.Suspense fallback={(
-          <div className="fixed inset-0 z-[99999] grid place-items-center bg-[#f2f5f7] text-[#001a33]">
-            <div className="flex items-center gap-3 text-sm font-black uppercase tracking-wider">
-              <Loader2 className="animate-spin" size={20} /> Carregando cobrança Banese
-            </div>
-          </div>
-        )}>
-          <BanesePaymentPage
-            installment={banesePaymentRecords.find((record) => record.id === selectedBanesePaymentId) || banesePaymentRecords[0]}
-            installments={banesePaymentRecords}
-            onBack={closeBanesePayment}
-            onRefresh={refreshBanesePayment}
-          />
-        </React.Suspense>
-      ) : null}
-
       {selected && typeof document !== 'undefined' ? createPortal((
         <ManualSettlementModal
           key={selected.id}
           receivable={selected}
           accounts={settlementAccounts}
           initialAccountId={(
-            settlementAccounts.find((account) => account.poloId === selected.poloId)
-            || settlementAccounts.find((account) => !account.poloId)
+            settlementAccounts.find((account) =>
+              isContaDisponivelNoPolo(account, selected.poloId)
+            )
           )?.id || ''}
           pending={paymentMutation.isPending}
           error={paymentMutation.error instanceof Error ? paymentMutation.error.message : null}
           onClose={closePaymentModal}
           onConfirm={(payload: ManualSettlementPayload) => paymentMutation.mutate(payload)}
+        />
+      ), document.body) : null}
+
+      {receiptItem && typeof document !== 'undefined' ? createPortal((
+        <InstitutionalReceiptModal
+          item={receiptItem}
+          onClose={closeReceiptModal}
         />
       ), document.body) : null}
 

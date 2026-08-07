@@ -3,24 +3,44 @@
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { CreditCard, Handshake, Search, Settings, User } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
-import { clearPortalSession, getGestorAccessScope, getPortalProfile, PortalAuthProfile } from '../login/portal-session';
+import { clearPortalSession, getGestorAccessScope, getPortalProfile, PortalAuthProfile, savePortalSession } from '../login/portal-session';
 import { isPortalScheduleBlocked } from '../login/portal-schedule';
 import AccessCheckingScreen from '../shared/components/AccessCheckingScreen';
 import { useInactivityLogout } from '../shared/hooks/useInactivityLogout';
 import { usePortalLogout } from '../shared/hooks/usePortalLogout';
 
 import { loginService } from '../login/login.service';
-import { canAccessGestorModule, normalizeGestorPermissions, canAccessTab } from './access-control';
+import {
+  buildDashboardAccessKey,
+  canAccessGestorModule,
+  canAccessCommunicationRoute,
+  normalizeGestorPermissions,
+  canAccessTab,
+  getAllowedDashboardWidgets,
+} from './access-control';
 import { useGestorOperationalRealtime } from './hooks/useGestorOperationalRealtime';
 import { caixaDashboardQueryOptions } from './caixa/caixa.service';
+import {
+  dashboardActivityQueryOptions,
+  dashboardChartQueryOptions,
+  dashboardKpisQueryOptions,
+  dashboardQueryKeys,
+} from './dashboard/dashboard.queries';
+import { gestorCalendarQueryOptions } from './calendario/calendario.queries';
 import GestorPortalShell from './components/GestorPortalShell';
 import { NoAccessScreen, ScheduleBlockedScreen } from './components/GestorAccessStates';
 import { usePendingCommunicationCount } from './hooks/usePendingCommunicationCount';
 import GestorModuleContent, { loadCaixaPage, loadSecretariaPage } from './components/GestorModuleContent';
 import { buildGestorNavigation, GESTOR_MODULE_ORDER, POLO_CADASTROS_ALLOWED } from './gestor-navigation';
+import PoloTransitionOverlay, {
+  PoloTransitionStatus,
+} from '../shared/components/PoloTransitionOverlay';
+import { waitForActivePoloQueries } from '../shared/utils/poloTransitionQueries';
+import { meuPerfilService } from './meu-perfil/meu-perfil.service';
+import type { MeuPerfilGestorData } from './meu-perfil/meu-perfil.types';
 
 const MOCK_SEARCH_DATA = [
   { id: 1, type: 'student', title: 'Ana Clara Souza', subtitle: 'Enfermagem - Matutino', module: 'cadastros-alunos' },
@@ -28,23 +48,63 @@ const MOCK_SEARCH_DATA = [
   { id: 3, type: 'financial', title: 'Pagamento Pendente', subtitle: 'Mensalidade Fev/2026 - Marcos Silva', module: 'financeiro' },
   { id: 4, type: 'financial', title: 'Fluxo de Caixa', subtitle: 'Relatório diário de entradas', module: 'caixa' },
   { id: 5, type: 'module', title: 'Emitir Declaração', subtitle: 'Acesso rápido à Secretaria', module: 'secretaria' },
-  { id: 6, type: 'module', title: 'Cadastrar Novo Aluno', subtitle: 'Atalho para Cadastros', module: 'cadastros-alunos' },
+  { id: 6, type: 'module', title: 'Cadastrar Novo Aluno', subtitle: 'Atalho para Parceiros', module: 'parceiros-novo-aluno' },
   { id: 7, type: 'partner', title: 'Prefeitura de Japoatã', subtitle: 'Convênio Ativo', module: 'parceiros' },
 ];
 
+interface PoloTransitionState {
+  fromPoloId: string;
+  fromPoloName: string;
+  fromPoloCity?: string | null;
+  fromPoloState?: string | null;
+  fromPoloIsMatriz?: boolean;
+  toPoloId: string;
+  toPoloName: string;
+  toPoloCity?: string | null;
+  toPoloState?: string | null;
+  toPoloIsMatriz?: boolean;
+  previousModule: string;
+  status: PoloTransitionStatus;
+  errorMessage?: string;
+}
+
+interface GestorPoloOption {
+  id: string;
+  nome: string;
+  cnpj: string | null;
+  cidade: string | null;
+  estado: string | null;
+  is_matriz: boolean;
+  status: string;
+}
+
+const POLO_TRANSITION_MINIMUM_MS = 550;
+const POLO_TRANSITION_SUCCESS_MS = 450;
+
 const GestorPage: React.FC = () => {
   const contentScrollRef = useRef<HTMLDivElement>(null);
-  const [activeModule, setActiveModule] = useState('inicio');
+  const [activeModule, setActiveModuleState] = useState('inicio');
+  const [hasUnsavedAutomationDraft, setHasUnsavedAutomationDraft] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
-  const [hoveredMenus, setHoveredMenus] = useState<Set<string>>(new Set());
   const [isPoloSelectorOpen, setIsPoloSelectorOpen] = useState(false);
+
+  const setActiveModule = useCallback((moduleId: string) => {
+    if (moduleId === activeModule) return;
+    if (hasUnsavedAutomationDraft && !window.confirm('Descartar as alterações não salvas deste rascunho antes de sair?')) {
+      return;
+    }
+    setHasUnsavedAutomationDraft(false);
+    setActiveModuleState(moduleId);
+  }, [activeModule, hasUnsavedAutomationDraft]);
   
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<typeof MOCK_SEARCH_DATA>([]);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
+  const [poloTransition, setPoloTransition] = useState<PoloTransitionState | null>(null);
+  const poloTransitionRunRef = useRef(0);
 
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -52,7 +112,9 @@ const GestorPage: React.FC = () => {
   // Nunca use dados do storage como autorização. O portal permanece coberto pela
   // tela de verificação até perfil, módulos, polos e agenda virem do servidor.
   const [profile, setProfile] = useState<PortalAuthProfile | null>(null);
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [isAccessRefreshing, setIsAccessRefreshing] = useState(false);
   // current_polo_id: estado de sessão UI (polo selecionado) — usa sessionStorage pois não é dado compartilhado entre usuários
   const [currentPoloId, setCurrentPoloId] = useState<string | null>(() =>
     sessionStorage.getItem('current_polo_id') ||
@@ -66,11 +128,41 @@ const GestorPage: React.FC = () => {
     () => profile?.gestorPermissions || normalizeGestorPermissions(null, { fallbackFullAccess: false }),
     [profile],
   );
+  const dashboardWidgets = useMemo(
+    () => getAllowedDashboardWidgets(gestorPermissions),
+    [gestorPermissions],
+  );
+  const dashboardAccessKey = useMemo(
+    () => buildDashboardAccessKey(gestorPermissions, profile?.id),
+    [gestorPermissions, profile?.id],
+  );
+  const gestorScope = useMemo(() => getGestorAccessScope(profile), [profile]);
+  const allowedPoloIdsKey = useMemo(
+    () => gestorScope.isGlobal
+      ? 'global'
+      : [...(gestorScope.allowedPoloIds || [])].sort().join(','),
+    [gestorScope.allowedPoloIds, gestorScope.isGlobal],
+  );
   const isScheduleBlocked = Boolean(
     profile && isPortalScheduleBlocked(profile.restricao_horario, currentDateTime),
   );
-  const canUsePortal = Boolean(profile) && !isAuthLoading && !isScheduleBlocked;
+  const canUsePortal = Boolean(profile) && !isAuthLoading && !isAccessRefreshing && !isScheduleBlocked;
   const canUseCommunication = canUsePortal && canAccessGestorModule(gestorPermissions, 'comunicacao');
+  const needsOperationalRealtime = activeModule === 'gestao'
+    || activeModule === 'parceiros'
+    || activeModule === 'secretaria';
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadProfileAvatar = async () => {
+      const url = await meuPerfilService.createAvatarUrl(profile?.fotoPath);
+      if (!cancelled) setProfileAvatarUrl(url);
+    };
+    void loadProfileAvatar();
+    return () => {
+      cancelled = true;
+    };
+  }, [profile?.fotoPath]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -93,39 +185,63 @@ const GestorPage: React.FC = () => {
     }).toLowerCase();
   }, [currentDateTime]);
 
-  const { data: activePolos = [], isLoading: isLoadingPolos } = useQuery<any[]>({
-    queryKey: ['active_polos'],
+  const { data: activePolos = [], isLoading: isLoadingPolos } = useQuery<GestorPoloOption[]>({
+    queryKey: ['active_polos', profile?.id || 'sem-usuario', allowedPoloIdsKey],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('polos')
-        .select('*')
+        .select('id, nome, cnpj, cidade, estado, is_matriz, status')
         .eq('status', 'ativo')
         .order('is_matriz', { ascending: false })
         .order('nome', { ascending: true });
+
+      if (!gestorScope.isGlobal) {
+        query = query.in('id', gestorScope.allowedPoloIds || []);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
-    enabled: canUsePortal,
+    enabled: canUsePortal && (gestorScope.isGlobal || Boolean(gestorScope.allowedPoloIds?.length)),
   });
 
   useEffect(() => {
     if (!canUsePortal) return;
-    const channel = supabase
-      .channel('header_polos_realtime')
-      .on(
+
+    let channel = supabase.channel(`header_polos_realtime_${profile?.id || 'usuario'}`);
+    const invalidatePolos = () => {
+      void queryClient.invalidateQueries({ queryKey: ['active_polos'] });
+    };
+
+    if (gestorScope.isGlobal) {
+      channel = channel.on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'polos' },
-        () => {
-          console.log('Header realtime: detectada alteração de polos, recarregando...');
-          queryClient.invalidateQueries({ queryKey: ['active_polos'] });
-        }
+        invalidatePolos,
       )
-      .subscribe();
+    } else {
+      (gestorScope.allowedPoloIds || []).forEach((poloId) => {
+        channel = channel.on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'polos', filter: `id=eq.${poloId}` },
+          invalidatePolos,
+        );
+      });
+    }
+
+    channel.subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [canUsePortal, queryClient]);
+  }, [
+    canUsePortal,
+    gestorScope.allowedPoloIds,
+    gestorScope.isGlobal,
+    profile?.id,
+    queryClient,
+  ]);
 
   const pendingChatsCount = usePendingCommunicationCount(canUseCommunication);
 
@@ -139,6 +255,7 @@ const GestorPage: React.FC = () => {
         if (!mounted) return;
 
         if (!portalProfile || portalProfile.tipo !== 'Gestor') {
+          queryClient.clear();
           clearPortalSession();
           await loginService.logout().catch(() => undefined);
           const redirect = encodeURIComponent(window.location.pathname + window.location.search);
@@ -153,8 +270,11 @@ const GestorPage: React.FC = () => {
           sessionStorage.setItem('active_polo_id', scope.activePoloId);
         }
 
+        queryClient.removeQueries({ queryKey: dashboardQueryKeys.all });
+        savePortalSession(portalProfile);
         setProfile(portalProfile);
       } catch {
+        queryClient.clear();
         clearPortalSession();
         await loginService.logout().catch(() => undefined);
         const redirect = encodeURIComponent(window.location.pathname + window.location.search);
@@ -169,14 +289,14 @@ const GestorPage: React.FC = () => {
     return () => {
       mounted = false;
     };
-  }, [navigate]);
+  }, [navigate, queryClient]);
 
   useEffect(() => {
     if (!profile?.id) return;
 
     let cancelled = false;
     const revalidateAccess = async () => {
-      setIsAuthLoading(true);
+      setIsAccessRefreshing(true);
       try {
         const refreshed = await getPortalProfile({ preferredRole: 'Gestor', allowedRoles: ['Gestor'] });
         if (cancelled) return;
@@ -184,11 +304,13 @@ const GestorPage: React.FC = () => {
           await executeLogout();
           return;
         }
+        queryClient.removeQueries({ queryKey: dashboardQueryKeys.all });
+        savePortalSession(refreshed);
         setProfile(refreshed);
       } catch {
         if (!cancelled) await executeLogout();
       } finally {
-        if (!cancelled) setIsAuthLoading(false);
+        if (!cancelled) setIsAccessRefreshing(false);
       }
     };
 
@@ -213,21 +335,19 @@ const GestorPage: React.FC = () => {
       cancelled = true;
       supabase.removeChannel(channel);
     };
-  }, [executeLogout, profile?.id, profile?.perfil_acesso_id]);
+  }, [executeLogout, profile?.id, profile?.perfil_acesso_id, queryClient]);
 
-  const gestorScope = useMemo(() => getGestorAccessScope(profile), [profile]);
   const visiblePolos = useMemo(
-    () => gestorScope.isGlobal
-      ? activePolos
-      : activePolos.filter(polo => gestorScope.allowedPoloIds?.includes(polo.id)),
+    () => activePolos,
     [activePolos, gestorScope.allowedPoloIds, gestorScope.isGlobal],
   );
   const currentPolo =
     visiblePolos.find(polo => polo.id === currentPoloId) || visiblePolos[0];
+  const effectivePoloId = currentPolo?.id || null;
   const isMatrizSelected = currentPolo?.is_matriz === true;
   const scopedPoloId = gestorScope.isGlobal
-    ? currentPoloId
-    : currentPoloId || gestorScope.activePoloId;
+    ? effectivePoloId
+    : effectivePoloId || gestorScope.activePoloId;
   const preloadModule = useCallback((moduleId: string) => {
     if (moduleId === 'secretaria') {
       void loadSecretariaPage();
@@ -240,13 +360,57 @@ const GestorPage: React.FC = () => {
       }
     }
   }, [gestorScope.isGlobal, queryClient, scopedPoloId]);
+
+  const prepareCriticalPoloData = useCallback(async (poloId: string) => {
+    if (activeModule === 'inicio') {
+      const hasKpis = dashboardWidgets.some((widgetId) => [
+        'alunos-ativos',
+        'receita-mes',
+        'inadimplencia',
+        'matriculas-mes',
+      ].includes(widgetId));
+      const dashboardPromises: Array<Promise<unknown>> = [];
+
+      if (hasKpis) {
+        dashboardPromises.push(
+          queryClient.ensureQueryData(dashboardKpisQueryOptions(poloId, dashboardAccessKey)),
+        );
+      }
+      if (dashboardWidgets.includes('fluxo-caixa')) {
+        dashboardPromises.push(
+          queryClient.ensureQueryData(dashboardChartQueryOptions(poloId, dashboardAccessKey)),
+        );
+      }
+      if (dashboardWidgets.includes('atividade-recente')) {
+        dashboardPromises.push(
+          queryClient.ensureQueryData(dashboardActivityQueryOptions(poloId, dashboardAccessKey)),
+        );
+      }
+
+      await Promise.all(dashboardPromises);
+      return;
+    }
+
+    if (activeModule === 'caixa') {
+      await queryClient.ensureQueryData(caixaDashboardQueryOptions(poloId));
+      return;
+    }
+
+    if (activeModule === 'calendario') {
+      await queryClient.ensureQueryData(gestorCalendarQueryOptions(poloId));
+    }
+  }, [activeModule, dashboardAccessKey, dashboardWidgets, queryClient]);
+
   useGestorOperationalRealtime({
-    enabled: canUsePortal,
+    enabled: canUsePortal && needsOperationalRealtime,
     poloId: scopedPoloId,
     includeGlobalPartners: gestorScope.isGlobal,
   });
   const canOpenModule = useCallback((moduleId: string) => {
-    const rootModule = moduleId.startsWith('cadastros-')
+    if (moduleId === 'meu-perfil') return true;
+    const rootModule = moduleId.startsWith('parceiros-novo-')
+      ? 'parceiros'
+      : moduleId.startsWith('cadastros-')
       ? 'cadastros'
       : moduleId.startsWith('comunicacao-')
         ? 'comunicacao'
@@ -255,13 +419,21 @@ const GestorPage: React.FC = () => {
     if (moduleId.startsWith('cadastros-') && !canAccessTab(gestorPermissions, 'cadastros', moduleId)) {
       return false;
     }
-    if (moduleId.startsWith('comunicacao-') && !canAccessTab(gestorPermissions, 'comunicacao', moduleId)) {
+    if (moduleId.startsWith('comunicacao-') && !canAccessCommunicationRoute(gestorPermissions, moduleId)) {
+      return false;
+    }
+    if (moduleId === 'comunicacao-automacoes' && (!gestorPermissions.allPolos || !isMatrizSelected)) {
       return false;
     }
     if (
       moduleId === 'comunicacao'
       && !canAccessTab(gestorPermissions, 'comunicacao', 'comunicacao-mensagem')
       && !canAccessTab(gestorPermissions, 'comunicacao', 'comunicacao-whatsapp')
+      && !(
+        gestorPermissions.allPolos
+        && isMatrizSelected
+        && canAccessTab(gestorPermissions, 'comunicacao', 'comunicacao-automacoes')
+      )
     ) {
       return false;
     }
@@ -292,7 +464,8 @@ const GestorPage: React.FC = () => {
   useEffect(() => {
     if (isAuthLoading || !profile) return;
     if (!canOpenModule(activeModule) && firstAllowedModule) {
-      setActiveModule(firstAllowedModule);
+      setHasUnsavedAutomationDraft(false);
+      setActiveModuleState(firstAllowedModule);
     }
   }, [activeModule, canOpenModule, firstAllowedModule, isAuthLoading, profile]);
 
@@ -363,48 +536,123 @@ const GestorPage: React.FC = () => {
     return <NoAccessScreen kind="modules" onLogout={executeLogout} />;
   }
 
-  const handlePoloChange = (poloId: string) => {
+  const executePoloChange = async (poloId: string) => {
     if (!gestorScope.isGlobal && !gestorScope.allowedPoloIds?.includes(poloId)) {
       return;
     }
 
     const nextPolo = visiblePolos.find(polo => polo.id === poloId);
-    setCurrentPoloId(poloId);
-    sessionStorage.setItem('current_polo_id', poloId);
-    setIsPoloSelectorOpen(false);
-
-    if (!nextPolo?.is_matriz && activeModule.startsWith('cadastros-') && !POLO_CADASTROS_ALLOWED.has(activeModule)) {
-      setActiveModule('cadastros');
+    if (!nextPolo || !currentPolo || poloId === effectivePoloId) {
+      setIsPoloSelectorOpen(false);
+      return;
     }
-    if (!nextPolo?.is_matriz && activeModule === 'configuracoes') {
-      setActiveModule('inicio');
+    if (poloTransition?.status === 'loading' || poloTransition?.status === 'success') {
+      return;
+    }
+    if (hasUnsavedAutomationDraft && !window.confirm('Descartar as alterações não salvas deste rascunho antes de trocar de polo?')) {
+      setIsPoloSelectorOpen(false);
+      return;
+    }
+
+    const runId = ++poloTransitionRunRef.current;
+    const startedAt = Date.now();
+    const previousPoloId = effectivePoloId || currentPolo.id;
+    const previousPoloName = currentPolo.nome || 'Polo atual';
+    const nextPoloName = nextPolo.nome || 'Novo polo';
+    const previousModule = activeModule;
+    let hasCommitted = false;
+
+    setIsPoloSelectorOpen(false);
+    setPoloTransition({
+      fromPoloId: previousPoloId,
+      fromPoloName: previousPoloName,
+      fromPoloCity: currentPolo.cidade,
+      fromPoloState: currentPolo.estado,
+      fromPoloIsMatriz: currentPolo.is_matriz,
+      toPoloId: poloId,
+      toPoloName: nextPoloName,
+      toPoloCity: nextPolo.cidade,
+      toPoloState: nextPolo.estado,
+      toPoloIsMatriz: nextPolo.is_matriz,
+      previousModule,
+      status: 'loading',
+    });
+
+    try {
+      await prepareCriticalPoloData(poloId);
+      if (poloTransitionRunRef.current !== runId) return;
+
+      setCurrentPoloId(poloId);
+      sessionStorage.setItem('current_polo_id', poloId);
+      hasCommitted = true;
+
+      if (!nextPolo.is_matriz && activeModule.startsWith('cadastros-') && !POLO_CADASTROS_ALLOWED.has(activeModule)) {
+        setActiveModule('cadastros');
+      }
+      if (!nextPolo.is_matriz && activeModule === 'configuracoes') {
+        setActiveModule('inicio');
+      }
+
+      await waitForActivePoloQueries(queryClient, poloId, startedAt);
+      const remainingMinimum = POLO_TRANSITION_MINIMUM_MS - (Date.now() - startedAt);
+      if (remainingMinimum > 0) {
+        await new Promise((resolve) => window.setTimeout(resolve, remainingMinimum));
+      }
+      if (poloTransitionRunRef.current !== runId) return;
+
+      setHasUnsavedAutomationDraft(false);
+      setPoloTransition((current) => current?.toPoloId === poloId
+        ? { ...current, status: 'success' }
+        : current);
+      await new Promise((resolve) => window.setTimeout(resolve, POLO_TRANSITION_SUCCESS_MS));
+      if (poloTransitionRunRef.current === runId) {
+        setPoloTransition(null);
+      }
+    } catch (error) {
+      if (poloTransitionRunRef.current !== runId) return;
+      console.error('Não foi possível concluir a troca de polo no portal do gestor:', error);
+
+      if (hasCommitted) {
+        setCurrentPoloId(previousPoloId);
+        sessionStorage.setItem('current_polo_id', previousPoloId);
+        setActiveModule(previousModule);
+      }
+
+      setPoloTransition((current) => current?.toPoloId === poloId
+        ? {
+            ...current,
+            status: 'error',
+            errorMessage: 'Não foi possível carregar os dados do polo selecionado. Verifique sua conexão e tente novamente.',
+          }
+        : current);
     }
   };
 
+  const handlePoloChange = (poloId: string) => {
+    void executePoloChange(poloId);
+  };
+
+  const cancelPoloTransition = () => {
+    poloTransitionRunRef.current += 1;
+    setPoloTransition(null);
+  };
+
   const handleLogout = async () => {
+    if (hasUnsavedAutomationDraft && !window.confirm('Descartar as alterações não salvas deste rascunho antes de sair do portal?')) {
+      return;
+    }
     setIsLogoutConfirmOpen(true);
   };
 
   const toggleMenu = (menuId: string) => {
     setExpandedMenus((current) => {
-      const next = new Set(current);
-      if (next.has(menuId)) next.delete(menuId);
-      else next.add(menuId);
-      return next;
-    });
-  };
-
-  const setMenuHovered = (menuId: string, hovered: boolean) => {
-    setHoveredMenus((current) => {
-      const next = new Set(current);
-      if (hovered) next.add(menuId);
-      else next.delete(menuId);
-      return next;
+      if (current.has(menuId)) return new Set();
+      return new Set([menuId]);
     });
   };
 
   const isDesktopMenuExpanded = (menuId: string) =>
-    isMenuPinned(menuId) || expandedMenus.has(menuId) || hoveredMenus.has(menuId);
+    expandedMenus.size > 0 ? expandedMenus.has(menuId) : isMenuPinned(menuId);
 
   const handleSearchResultClick = (module: string) => {
     if (!canOpenModule(module)) return;
@@ -427,13 +675,32 @@ const GestorPage: React.FC = () => {
       isMatrizSelected={isMatrizSelected}
       allowedCadastroTabs={visibleCadastroSubItems.map(item => item.id)}
       setActiveModule={setActiveModule}
-      currentPoloId={currentPoloId}
+      currentPoloId={effectivePoloId}
       scopedPoloId={scopedPoloId}
       isGlobal={gestorScope.isGlobal}
       currentPoloName={currentPolo?.nome}
       onRequestScrollTop={scrollContentToTop}
       permissions={gestorPermissions}
       profile={profile}
+      profileAvatarUrl={profileAvatarUrl}
+      onAutomationDraftDirtyChange={setHasUnsavedAutomationDraft}
+      onProfileUpdated={(updated: MeuPerfilGestorData) => {
+        setProfile((current) => {
+          if (!current) return current;
+          const nextProfile: PortalAuthProfile = {
+            ...current,
+            nome: updated.nome,
+            email: updated.email,
+            telefone: updated.telefone,
+            fotoPath: updated.fotoPath,
+          };
+          savePortalSession(nextProfile);
+          return nextProfile;
+        });
+        void meuPerfilService
+          .createAvatarUrl(updated.fotoPath)
+          .then(setProfileAvatarUrl);
+      }}
     />
   );
 
@@ -448,41 +715,82 @@ const GestorPage: React.FC = () => {
   };
 
   return (
-    <GestorPortalShell
-      profile={profile}
-      visibleMenuItems={visibleMenuItems}
-      activeModule={activeModule}
-      setActiveModule={setActiveModule}
-      isMobileMenuOpen={isMobileMenuOpen}
-      setIsMobileMenuOpen={setIsMobileMenuOpen}
-      expandedMenus={expandedMenus}
-      toggleMenu={toggleMenu}
-      setMenuHovered={setMenuHovered}
-      isDesktopMenuExpanded={isDesktopMenuExpanded}
-      preloadModule={preloadModule}
-      handleLogout={handleLogout}
-      searchQuery={searchQuery}
-      setSearchQuery={setSearchQuery}
-      searchResults={searchResults}
-      isSearchFocused={isSearchFocused}
-      setIsSearchFocused={setIsSearchFocused}
-      handleSearchResultClick={handleSearchResultClick}
-      getResultIcon={getResultIcon}
-      isLoadingPolos={isLoadingPolos}
-      currentPolo={currentPolo}
-      visiblePolos={visiblePolos}
-      currentPoloId={currentPoloId}
-      isPoloSelectorOpen={isPoloSelectorOpen}
-      setIsPoloSelectorOpen={setIsPoloSelectorOpen}
-      handlePoloChange={handlePoloChange}
-      formattedDate={formattedDate}
-      formattedDayOfWeek={formattedDayOfWeek}
-      contentScrollRef={contentScrollRef}
-      renderContent={renderContent}
-      isLogoutConfirmOpen={isLogoutConfirmOpen}
-      setIsLogoutConfirmOpen={setIsLogoutConfirmOpen}
-      executeLogout={executeLogout}
-    />
+    <>
+      <GestorPortalShell
+        profile={profile}
+        profileAvatarUrl={profileAvatarUrl}
+        visibleMenuItems={visibleMenuItems}
+        activeModule={activeModule}
+        setActiveModule={setActiveModule}
+        isMobileMenuOpen={isMobileMenuOpen}
+        setIsMobileMenuOpen={setIsMobileMenuOpen}
+        expandedMenus={expandedMenus}
+        toggleMenu={toggleMenu}
+        isDesktopMenuExpanded={isDesktopMenuExpanded}
+        preloadModule={preloadModule}
+        handleLogout={handleLogout}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        searchResults={searchResults}
+        isSearchFocused={isSearchFocused}
+        setIsSearchFocused={setIsSearchFocused}
+        handleSearchResultClick={handleSearchResultClick}
+        getResultIcon={getResultIcon}
+        isLoadingPolos={isLoadingPolos}
+        currentPolo={currentPolo}
+        visiblePolos={visiblePolos}
+        currentPoloId={effectivePoloId}
+        isPoloSelectorOpen={isPoloSelectorOpen}
+        setIsPoloSelectorOpen={setIsPoloSelectorOpen}
+        handlePoloChange={handlePoloChange}
+        formattedDate={formattedDate}
+        formattedDayOfWeek={formattedDayOfWeek}
+        contentScrollRef={contentScrollRef}
+        renderContent={renderContent}
+        isLogoutConfirmOpen={isLogoutConfirmOpen}
+        setIsLogoutConfirmOpen={setIsLogoutConfirmOpen}
+        executeLogout={executeLogout}
+      />
+
+      {poloTransition ? (
+        poloTransition.status === 'error' ? (
+          <PoloTransitionOverlay
+            isOpen
+            fromPoloName={poloTransition.fromPoloName}
+            fromPoloCity={poloTransition.fromPoloCity}
+            fromPoloState={poloTransition.fromPoloState}
+            fromPoloIsMatriz={poloTransition.fromPoloIsMatriz}
+            toPoloName={poloTransition.toPoloName}
+            toPoloCity={poloTransition.toPoloCity}
+            toPoloState={poloTransition.toPoloState}
+            toPoloIsMatriz={poloTransition.toPoloIsMatriz}
+            status="error"
+            errorMessage={poloTransition.errorMessage}
+            onRetry={() => { void executePoloChange(poloTransition.toPoloId); }}
+            onCancel={cancelPoloTransition}
+          />
+        ) : (
+          <PoloTransitionOverlay
+            isOpen
+            fromPoloName={poloTransition.fromPoloName}
+            fromPoloCity={poloTransition.fromPoloCity}
+            fromPoloState={poloTransition.fromPoloState}
+            fromPoloIsMatriz={poloTransition.fromPoloIsMatriz}
+            toPoloName={poloTransition.toPoloName}
+            toPoloCity={poloTransition.toPoloCity}
+            toPoloState={poloTransition.toPoloState}
+            toPoloIsMatriz={poloTransition.toPoloIsMatriz}
+            status={poloTransition.status}
+          />
+        )
+      ) : null}
+
+      {isAccessRefreshing ? (
+        <div className="fixed inset-0 z-[75]">
+          <AccessCheckingScreen portal="Gestor" />
+        </div>
+      ) : null}
+    </>
   );
 };
 

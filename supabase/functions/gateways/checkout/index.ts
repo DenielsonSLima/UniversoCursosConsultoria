@@ -1,4 +1,3 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   buildCorsHeaders,
@@ -8,6 +7,9 @@ import {
 } from "../../_shared/http.ts";
 import type { CheckoutRuntime } from "./types.ts";
 import { normalizeErrorMessage, providerLabelFor } from "./utils.ts";
+import { buildEadCheckoutContext } from "./ead-context.ts";
+import { runCourseCheckout } from "./providers/course.ts";
+import { handleGatewayCheckout } from "./providers/gateway.ts";
 
 const parseBody = (bodyText: string) => {
   try {
@@ -77,7 +79,6 @@ Deno.serve(async (req: Request) => {
   );
 
   try {
-    const { buildEadCheckoutContext } = await import("./ead-context.ts");
     const runtime: CheckoutRuntime = {
       req,
       bodyText,
@@ -89,13 +90,11 @@ Deno.serve(async (req: Request) => {
 
     const resolvedContext = await buildEadCheckoutContext(runtime);
     if (!resolvedContext) {
-      const { runCourseCheckout } = await import("./providers/course.ts");
       return runCourseCheckout(runtime);
     }
 
     const context = resolvedContext;
 
-    const { handleGatewayCheckout } = await import("./providers/gateway.ts");
     const result = await handleGatewayCheckout(context);
     const checkoutReceivableId = result.receivableId || null;
 

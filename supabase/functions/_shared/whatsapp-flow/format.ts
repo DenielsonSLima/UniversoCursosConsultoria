@@ -21,9 +21,25 @@ export const normalizeCpf = (value: unknown) => {
   return isValidCpf(digits) ? digits : "";
 };
 
+export const normalizePersonName = (value: unknown) => {
+  const name = String(value || "")
+    .normalize("NFKC")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (name.length < 5 || name.length > 120) return "";
+  if (name.split(" ").filter(Boolean).length < 2) return "";
+  return /^[\p{L}\p{M}][\p{L}\p{M}' -]*$/u.test(name) ? name : "";
+};
+
 export const parseMenuNumber = (value: unknown) => {
-  const match = String(value || "").trim().match(/^\s*(\d{1,2})\s*$/);
-  return match ? Number(match[1]) : null;
+  const input = String(value || "").trim();
+  const numeric = input.match(/^(\d{1,2})$/);
+  if (numeric) return Number(numeric[1]);
+
+  const labeled = input.match(
+    /^(?:op(?:ç|c)[aã]o\s+)?(\d{1,2})(?:\s*[-–—.):]\s*|\s+)[\p{L}\p{M}][\p{L}\p{M}\s/+&-]{0,60}$/iu,
+  );
+  return labeled ? Number(labeled[1]) : null;
 };
 
 export const detectAttendantRequest = (value: unknown) =>

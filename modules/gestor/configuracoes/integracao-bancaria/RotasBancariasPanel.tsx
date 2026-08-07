@@ -248,11 +248,16 @@ const RotasBancariasPanel: React.FC<RotasBancariasPanelProps> = ({
           <button
             type="button"
             onClick={activateRoute}
-            disabled={routeMutationPending || selectedProviderCheckoutBlocked || !selectedProviderSupportsMethod || !selectedRouteCredentialReady}
-            className={`inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-md px-5 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg transition-all disabled:opacity-40 ${brand.action}`}
+            disabled={routeMutationPending || (
+              selectedRoute?.enabled !== true
+              && (selectedProviderCheckoutBlocked || !selectedProviderSupportsMethod || !selectedRouteCredentialReady)
+            )}
+            className={`inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-md px-5 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg transition-all disabled:opacity-40 ${
+              selectedRoute?.enabled === true ? 'bg-slate-700 hover:bg-slate-800' : brand.action
+            }`}
           >
             {routeMutationPending ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
-            Aplicar rota
+            {selectedRoute?.enabled === true ? 'Desativar rota' : 'Ativar rota'}
           </button>
         </section>
 

@@ -8,8 +8,11 @@ import {
   TeacherRepository,
   TeacherStorageQuota
 } from './biblioteca.types';
+import { resolveLibraryFileUrl } from '../../shared/library/library-storage';
 
-const LIBRARY_STORAGE_BUCKETS = ['biblioteca', 'anexos', 'documentos'];
+const LIBRARY_STORAGE_BUCKETS = ['biblioteca'];
+const STORAGE_REMOVE_BATCH_SIZE = 100;
+const STORAGE_REFERENCE_QUERY_BATCH_SIZE = 50;
 const MAX_LIBRARY_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 const DEFAULT_TEACHER_STORAGE_QUOTA_GB = 1;
 const BYTES_PER_GB = 1024 * 1024 * 1024;
@@ -19,6 +22,8 @@ const ALLOWED_LIBRARY_FILE_MIME_TYPES = [
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'application/vnd.ms-excel',
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
   'image/jpeg',
   'image/jpg',
   'image/png',
@@ -80,7 +85,7 @@ const isAllowedLibraryFile = (file: File) => {
   if (ALLOWED_LIBRARY_FILE_MIME_TYPES.includes(file.type)) return true;
 
   const extension = file.name.split('.').pop()?.toLowerCase();
-  const allowedExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'jpg', 'jpeg', 'png', 'gif', 'webp'];
+  const allowedExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'jpg', 'jpeg', 'png', 'gif', 'webp'];
   return !!extension && allowedExtensions.includes(extension);
 };
 
@@ -137,6 +142,120 @@ const uploadLibraryFile = async (file: File, title: string) => {
   }
 
   return null;
+};
+
+interface LibraryStorageObject {
+  bucket: string;
+  path: string;
+}
+
+interface LibraryDocumentStorageRow {
+  id: string;
+  arquivo_url: string | null;
+}
+
+const parseLibraryStorageObject = (fileUrl?: string | null): LibraryStorageObject | null => {
+  if (!fileUrl) return null;
+
+  try {
+    const parsedUrl = new URL(fileUrl);
+    const objectMarker = '/storage/v1/object/';
+    const markerIndex = parsedUrl.pathname.indexOf(objectMarker);
+    if (markerIndex < 0) return null;
+
+    const objectPath = parsedUrl.pathname.slice(markerIndex + objectMarker.length);
+    const pathParts = objectPath.split('/').filter(Boolean);
+    const accessType = pathParts.shift();
+
+    if (!accessType || !['public', 'sign', 'authenticated'].includes(accessType)) {
+      return null;
+    }
+
+    const encodedBucket = pathParts.shift();
+    if (!encodedBucket || pathParts.length === 0) return null;
+
+    const bucket = decodeURIComponent(encodedBucket);
+    if (!LIBRARY_STORAGE_BUCKETS.includes(bucket)) return null;
+
+    const path = pathParts.map((part) => decodeURIComponent(part)).join('/');
+    return path ? { bucket, path } : null;
+  } catch {
+    return null;
+  }
+};
+
+const chunkList = <T,>(values: T[], size: number): T[][] => {
+  const chunks: T[][] = [];
+  for (let index = 0; index < values.length; index += size) {
+    chunks.push(values.slice(index, index + size));
+  }
+  return chunks;
+};
+
+/**
+ * Remove somente objetos que deixarão de ter referências no banco.
+ * Cópias de documentos podem compartilhar a mesma URL e não devem perder o arquivo físico.
+ */
+const removeUnreferencedLibraryStorageObjects = async (
+  documentsToDelete: LibraryDocumentStorageRow[]
+): Promise<void> => {
+  if (documentsToDelete.length === 0) return;
+
+  const deletedIds = new Set(documentsToDelete.map((document) => document.id));
+  const urls = Array.from(
+    new Set(
+      documentsToDelete
+        .map((document) => document.arquivo_url)
+        .filter((url): url is string => Boolean(url && parseLibraryStorageObject(url)))
+    )
+  );
+
+  if (urls.length === 0) return;
+
+  const references: LibraryDocumentStorageRow[] = [];
+  for (const urlBatch of chunkList(urls, STORAGE_REFERENCE_QUERY_BATCH_SIZE)) {
+    const { data, error } = await supabase
+      .from('biblioteca_documentos')
+      .select('id, arquivo_url')
+      .in('arquivo_url', urlBatch);
+
+    if (error) {
+      console.error('Erro ao verificar referências do arquivo no Storage:', error);
+      throw new Error('Não foi possível confirmar se o arquivo pode ser apagado do armazenamento.');
+    }
+
+    references.push(...((data || []) as LibraryDocumentStorageRow[]));
+  }
+
+  const referencedBySurvivingDocument = new Set(
+    references
+      .filter((reference) => !deletedIds.has(reference.id))
+      .map((reference) => reference.arquivo_url)
+      .filter((url): url is string => Boolean(url))
+  );
+
+  const objectsByBucket = new Map<string, Set<string>>();
+  for (const fileUrl of urls) {
+    if (referencedBySurvivingDocument.has(fileUrl)) continue;
+
+    const storageObject = parseLibraryStorageObject(fileUrl);
+    if (!storageObject) continue;
+
+    const paths = objectsByBucket.get(storageObject.bucket) || new Set<string>();
+    paths.add(storageObject.path);
+    objectsByBucket.set(storageObject.bucket, paths);
+  }
+
+  for (const [bucket, pathSet] of objectsByBucket) {
+    const paths = Array.from(pathSet);
+    for (const pathBatch of chunkList(paths, STORAGE_REMOVE_BATCH_SIZE)) {
+      const { error } = await supabase.storage.from(bucket).remove(pathBatch);
+      if (error) {
+        console.error(`Erro ao excluir arquivo do bucket ${bucket}:`, error);
+        throw new Error('Não foi possível apagar o arquivo do armazenamento. Nenhum registro foi removido.');
+      }
+    }
+  }
 };
 
 const getDefaultTeacherQuotaBytes = () => {
@@ -242,14 +361,15 @@ export const bibliotecaService = {
       throw error;
     }
 
-    return (data || []).map((doc: any) => ({
+    return Promise.all((data || []).map(async (doc: any) => ({
       id: doc.id,
       pastaId: doc.pasta_id,
       title: doc.titulo,
       description: doc.descricao || '',
       fileType: doc.tipo_arquivo,
       size: doc.tamanho,
-      url: doc.arquivo_url,
+      sizeBytes: doc.tamanho_bytes,
+      url: await resolveLibraryFileUrl(doc.arquivo_url),
       targetAudience: doc.publico_alvo,
       scope: doc.abrangencia,
       poloId: doc.polo_id,
@@ -265,7 +385,7 @@ export const bibliotecaService = {
       liberacaoData: doc.liberacao_data,
       liberacaoDisciplinaId: doc.liberacao_disciplina_id,
       liberacaoDiasValidade: doc.liberacao_dias_validade
-    }));
+    })));
   },
 
   // 2. Buscar Pastas
@@ -322,6 +442,7 @@ export const bibliotecaService = {
       nome: folder.nome,
       parentId: folder.parent_id,
       teacherId: folder.teacher_id,
+      targetAudience: folder.publico_alvo || 'INTERNO',
       createdAt: folder.created_at
     }));
   },
@@ -346,11 +467,17 @@ export const bibliotecaService = {
   },
 
   // 3. Criar Pasta
-  async createFolder(nome: string, parentId: string | null = null, teacherId: string | null = null): Promise<void> {
+  async createFolder(
+    nome: string,
+    parentId: string | null = null,
+    teacherId: string | null = null,
+    targetAudience: LibraryFolder['targetAudience'] = 'INTERNO',
+  ): Promise<void> {
     const { error } = await supabase.from('biblioteca_pastas').insert({
       nome,
       parent_id: parentId || null,
-      teacher_id: teacherId || null
+      teacher_id: teacherId || null,
+      publico_alvo: targetAudience,
     });
 
     if (error) {
@@ -372,8 +499,63 @@ export const bibliotecaService = {
     }
   },
 
-  // 5. Excluir Pasta (Cascateia no DB para subpastas e documentos)
+  async updateFolderAudience(id: string, targetAudience: LibraryFolder['targetAudience']): Promise<void> {
+    const { error } = await supabase
+      .from('biblioteca_pastas')
+      .update({ publico_alvo: targetAudience })
+      .eq('id', id);
+
+    if (error) {
+      console.error('Erro ao atualizar compartilhamento da pasta:', error);
+      throw error;
+    }
+  },
+
+  // 5. Excluir Pasta e seus arquivos físicos antes da cascata no banco
   async deleteFolder(id: string): Promise<void> {
+    const { data: folderRows, error: foldersError } = await supabase
+      .from('biblioteca_pastas')
+      .select('id, parent_id');
+
+    if (foldersError) {
+      console.error('Erro ao buscar estrutura da pasta para exclusão:', foldersError);
+      throw foldersError;
+    }
+
+    const descendantIds = new Set<string>([id]);
+    let foundDescendant = true;
+    while (foundDescendant) {
+      foundDescendant = false;
+      for (const folder of folderRows || []) {
+        if (
+          folder.parent_id &&
+          descendantIds.has(folder.parent_id) &&
+          !descendantIds.has(folder.id)
+        ) {
+          descendantIds.add(folder.id);
+          foundDescendant = true;
+        }
+      }
+    }
+
+    const folderIds = Array.from(descendantIds);
+    const documentsToDelete: LibraryDocumentStorageRow[] = [];
+    for (const folderIdBatch of chunkList(folderIds, STORAGE_REFERENCE_QUERY_BATCH_SIZE)) {
+      const { data, error } = await supabase
+        .from('biblioteca_documentos')
+        .select('id, arquivo_url')
+        .in('pasta_id', folderIdBatch);
+
+      if (error) {
+        console.error('Erro ao buscar arquivos da pasta para exclusão:', error);
+        throw error;
+      }
+
+      documentsToDelete.push(...((data || []) as LibraryDocumentStorageRow[]));
+    }
+
+    await removeUnreferencedLibraryStorageObjects(documentsToDelete);
+
     const { error } = await supabase.from('biblioteca_pastas').delete().eq('id', id);
     if (error) {
       console.error('Erro ao excluir pasta:', error);
@@ -423,14 +605,14 @@ export const bibliotecaService = {
         throw new Error('Arquivo inválido.');
       }
       if (!isAllowedLibraryFile(doc.file)) {
-        throw new Error('Formato ou tamanho de arquivo não permitido. Aceitos: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG, GIF, WEBP (até 10MB).');
+        throw new Error('Formato ou tamanho de arquivo não permitido. Aceitos: PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, JPG, PNG, GIF, WEBP (até 10MB).');
       }
       if (normalizedTeacherId) {
         await assertTeacherStorageCapacity(normalizedTeacherId, fileSizeBytes);
       }
       const uploaded = await uploadLibraryFile(doc.file, doc.title || 'documento');
       if (!uploaded) {
-        throw new Error('Não foi possível gerar URL pública do documento.');
+        throw new Error('Não foi possível registrar o arquivo privado do documento.');
       }
       arquivoUrl = uploaded;
     }
@@ -467,8 +649,21 @@ export const bibliotecaService = {
     }
   },
 
-  // 7. Excluir Documento
+  // 7. Excluir Documento do Storage e, somente depois, remover seu registro
   async deleteDocument(id: string): Promise<void> {
+    const { data: document, error: fetchError } = await supabase
+      .from('biblioteca_documentos')
+      .select('id, arquivo_url')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !document) {
+      console.error('Erro ao buscar documento para exclusão:', fetchError);
+      throw fetchError || new Error('Documento não encontrado.');
+    }
+
+    await removeUnreferencedLibraryStorageObjects([document as LibraryDocumentStorageRow]);
+
     const { error } = await supabase.from('biblioteca_documentos').delete().eq('id', id);
     if (error) {
       console.error('Erro ao excluir documento:', error);
@@ -622,14 +817,17 @@ export const bibliotecaService = {
       throw error;
     }
 
-    return (data || []).map((doc: any) => ({
+    return Promise.all((data || []).map(async (doc: any) => ({
       id: doc.id,
       pastaId: doc.pasta_id,
       title: doc.titulo,
       description: doc.descricao || '',
       fileType: doc.tipo_arquivo,
       size: doc.tamanho,
-      url: doc.arquivo_url,
+      url: await resolveLibraryFileUrl(doc.arquivo_url).catch((urlError) => {
+        console.warn('Não foi possível assinar o arquivo destacado da biblioteca:', urlError);
+        return '';
+      }),
       targetAudience: doc.publico_alvo,
       scope: doc.abrangencia,
       poloId: doc.polo_id,
@@ -645,7 +843,7 @@ export const bibliotecaService = {
       liberacaoData: doc.liberacao_data,
       liberacaoDisciplinaId: doc.liberacao_disciplina_id,
       liberacaoDiasValidade: doc.liberacao_dias_validade
-    }));
+    })));
   },
 
   // 12. Top 10 Recentes
@@ -661,14 +859,17 @@ export const bibliotecaService = {
       throw error;
     }
 
-    return (data || []).map((doc: any) => ({
+    return Promise.all((data || []).map(async (doc: any) => ({
       id: doc.id,
       pastaId: doc.pasta_id,
       title: doc.titulo,
       description: doc.descricao || '',
       fileType: doc.tipo_arquivo,
       size: doc.tamanho,
-      url: doc.arquivo_url,
+      url: await resolveLibraryFileUrl(doc.arquivo_url).catch((urlError) => {
+        console.warn('Não foi possível assinar o arquivo recente da biblioteca:', urlError);
+        return '';
+      }),
       targetAudience: doc.publico_alvo,
       scope: doc.abrangencia,
       poloId: doc.polo_id,
@@ -684,7 +885,7 @@ export const bibliotecaService = {
       liberacaoData: doc.liberacao_data,
       liberacaoDisciplinaId: doc.liberacao_disciplina_id,
       liberacaoDiasValidade: doc.liberacao_dias_validade
-    }));
+    })));
   },
 
   // 13. Buscar Repositórios de Professores (Pastas baseadas em parceiros do tipo Professor)

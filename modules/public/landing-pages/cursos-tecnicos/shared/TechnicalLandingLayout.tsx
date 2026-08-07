@@ -1,4 +1,4 @@
-import React, { type ComponentType } from 'react';
+import React from 'react';
 import { CheckCircle2, Sparkles } from 'lucide-react';
 import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
@@ -7,30 +7,29 @@ import type {
   TechnicalLandingConfig,
 } from '../technicalLanding.types';
 import TechnicalClassSummary from './TechnicalClassSummary';
-import type { TechnicalEnrollmentFormProps } from './TechnicalEnrollmentForm';
 import TechnicalLandingHero from './TechnicalLandingHero';
 import TechnicalRequiredDocuments from './TechnicalRequiredDocuments';
+import TechnicalEnrollmentForm from './TechnicalEnrollmentForm';
 
 interface TechnicalLandingLayoutProps extends TechnicalCourseLandingPageProps {
   config: TechnicalLandingConfig;
-  EnrollmentForm: ComponentType<TechnicalEnrollmentFormProps>;
 }
 
 const TechnicalLandingLayout: React.FC<TechnicalLandingLayoutProps> = ({
   data,
   enrollment,
   config,
-  EnrollmentForm,
 }) => (
-  <div className="flex min-h-screen flex-col bg-slate-50/70 antialiased">
+  <div className="flex min-h-screen flex-col bg-[#f4f7fb] antialiased">
     <Header />
     <main className="flex-1">
       <TechnicalLandingHero data={data} config={config} />
 
-      <div className="mx-auto max-w-6xl space-y-12 px-6 py-12 md:py-20">
-        <TechnicalClassSummary data={data} />
+      <div className="relative mx-auto max-w-7xl space-y-12 px-6 py-12 md:py-16">
+        <div className="pointer-events-none absolute -left-28 top-36 -z-0 h-80 w-80 rounded-full bg-blue-100/50 blur-3xl" />
+        <TechnicalClassSummary data={data} config={config} />
 
-        <div className="grid items-start gap-10 lg:grid-cols-[1.15fr_0.85fr]">
+        <div className="relative grid items-start gap-10 lg:grid-cols-[1.15fr_0.85fr]">
           <div className="space-y-10">
             {/* About Course Card */}
             <section className="rounded-[2.5rem] border border-slate-200/80 bg-white p-7 shadow-sm md:p-9 space-y-6">
@@ -65,7 +64,7 @@ const TechnicalLandingLayout: React.FC<TechnicalLandingLayoutProps> = ({
 
           {/* Sticky Side Enrollment / Concierge Card */}
           <div className="lg:sticky lg:top-28">
-            <EnrollmentForm data={data} config={config} enrollment={enrollment} />
+            <TechnicalEnrollmentForm data={data} config={config} enrollment={enrollment} />
           </div>
         </div>
       </div>

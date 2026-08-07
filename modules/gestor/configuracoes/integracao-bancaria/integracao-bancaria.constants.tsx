@@ -139,7 +139,7 @@ export const baneseFixedBankingData = (environment?: 'sandbox' | 'production') =
   agency: '033',
   account: '03/100649-0',
   beneficiaryCode: '03/100649-0',
-  agreement: environment === 'sandbox' ? '15857255' : '15261',
+  agreement: environment === 'sandbox' ? '15528' : '15261',
   pixKey: environment === 'production' ? '79998617614' : '',
 });
 
@@ -287,7 +287,6 @@ export const requiredFieldsFor = (
 
   const metadata = credential?.metadata || {};
   const hasMetadata = (key: string) => String(metadata[key] || '').trim().length > 0;
-  const hasAnyMetadata = (keys: string[]) => keys.some((key) => hasMetadata(key));
 
   return [
     { label: 'Client ID', configured: credential?.clientIdConfigured === true },

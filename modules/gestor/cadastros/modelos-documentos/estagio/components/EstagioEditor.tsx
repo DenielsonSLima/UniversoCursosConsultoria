@@ -11,6 +11,11 @@ import { marcaDaguaService } from '../../../../configuracoes/marca-dagua/marca-d
 import { assinaturasService } from '../../../../configuracoes/assinaturas/assinaturas.service';
 import DocumentHeader from '../../../../components/DocumentHeader';
 import { sanitizedHtml, sanitizeHtml, sanitizeTemplateFields } from '../../../../../../lib/htmlSanitizer';
+import { LocalQrCodeImage } from '../../../../../shared/qrcode/LocalQrCodeImage';
+import {
+    getDocumentValidationBaseUrl,
+    getDocumentValidationUrl,
+} from '../../../../../shared/document-validation/document-validation.url';
 
 interface EstagioEditorProps {
   polo: any;
@@ -282,13 +287,9 @@ const EstagioEditor: React.FC<EstagioEditorProps> = ({ polo, onBack }) => {
     return 'EST-' + codeStr;
   };
 
-  const getValidationUrl = () => {
-    return 'https://www.universocc.com.br/#/validador';
-  };
-
   // Retorna a URL completa para o validador
   const getQrCodeExampleUrl = () => {
-    return `${getValidationUrl()}?q=${getValidationCode()}`;
+    return getDocumentValidationUrl(getValidationCode());
   };
 
   if (loading) return <div className="p-12 text-center text-slate-500">Carregando editor...</div>;
@@ -716,10 +717,11 @@ const EstagioEditor: React.FC<EstagioEditorProps> = ({ polo, onBack }) => {
                             {field.type === 'qrcode' && (
                                 <div className="w-full bg-white p-1.5 shadow-sm rounded-xl border border-slate-100 flex flex-col items-center justify-center text-center">
                                     <div className="w-full aspect-square bg-white flex items-center justify-center mb-1">
-                                        <img 
-                                            src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(getQrCodeExampleUrl())}`} 
+                                        <LocalQrCodeImage
+                                            value={getQrCodeExampleUrl()}
+                                            size={150}
                                             alt="QR Code"
-                                            className="w-full h-full object-contain pointer-events-none"
+                                            className="pointer-events-none h-full w-full"
                                         />
                                     </div>
                                     <div className="w-full flex flex-col gap-0.5 border-t border-slate-100 pt-1 mt-0.5 select-all">
@@ -770,7 +772,7 @@ const EstagioEditor: React.FC<EstagioEditorProps> = ({ polo, onBack }) => {
 
                 {/* Aviso de Validade e Autenticidade do Documento */}
                 <div className="absolute bottom-10 left-0 w-full text-center text-[9px] text-slate-400 font-bold uppercase tracking-wider select-none pointer-events-none flex flex-col gap-1">
-                    <p>Para verificar a autenticidade deste termo de estágio acesse: <span className="text-teal-600 font-black">www.universocc.com.br/#/validador</span></p>
+                    <p>Para verificar a autenticidade deste termo de estágio acesse: <span className="text-teal-600 font-black">{getDocumentValidationBaseUrl()}</span></p>
                     <p>Validade deste documento: {validityDays} dias a partir da data de emissão.</p>
                 </div>
 

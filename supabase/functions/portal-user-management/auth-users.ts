@@ -94,6 +94,39 @@ export const listAuthUsersByEmail = async (admin: any, emails: Set<string>) => {
   return usersByEmail;
 };
 
+export const listAuthUsersByIdentity = async (
+  admin: any,
+  userIds: Set<string>,
+  emails: Set<string>,
+) => {
+  const usersById = new Map<string, any>();
+  const usersByEmail = new Map<string, any>();
+  if (userIds.size === 0 && emails.size === 0) {
+    return { usersById, usersByEmail };
+  }
+
+  let page = 1;
+  const perPage = 1000;
+  while (true) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage });
+    if (error) throw error;
+
+    const users = data?.users || [];
+    for (const user of users) {
+      if (user?.id && userIds.has(user.id)) usersById.set(user.id, user);
+      const email = normalizeEmail(user?.email);
+      if (email && emails.has(email)) usersByEmail.set(email, user);
+    }
+
+    const foundAll = usersById.size === userIds.size &&
+      usersByEmail.size === emails.size;
+    if (foundAll || users.length < perPage) break;
+    page += 1;
+  }
+
+  return { usersById, usersByEmail };
+};
+
 export const findAuthUserByEmail = async (admin: any, email: string) => {
   const targetEmail = normalizeEmail(email);
   let page = 1;

@@ -23,6 +23,7 @@ import CertificateTab from './turma-detail/CertificateTab';
 import EadSummaryTab from './turma-detail/EadSummaryTab';
 import GradesTab from './turma-detail/GradesTab';
 import InternshipTab from './turma-detail/InternshipTab';
+import FinancialUnderlineTabs from '../../../gestor/financeiro/components/FinancialUnderlineTabs';
 
 interface TurmaDetailProps {
   alunoId: string;
@@ -38,6 +39,8 @@ const TurmaDetail: React.FC<TurmaDetailProps> = ({ alunoId, matricula, detailTab
   const course = matricula.turmas?.cursos;
   const progressState = data.progressStateByMatricula.get(matricula.id);
   const waitingForTechnicalStart = data.selectedIsTechnical && !data.selectedHasAcademicAccess;
+  const pendingTechnicalRelease = data.selectedIsTechnical
+    && String(matricula.status || '').toUpperCase() === 'PENDENTE';
   const fallbackPercent = progressState === undefined
     && String(matricula.status || '').toUpperCase() === 'CONCLUIDO' ? 100 : 0;
   const percent = data.progressByMatricula.get(matricula.id) ?? fallbackPercent;
@@ -67,17 +70,24 @@ const TurmaDetail: React.FC<TurmaDetailProps> = ({ alunoId, matricula, detailTab
         <div className="aspect-[16/10] overflow-hidden rounded-2xl border border-slate-100 bg-slate-50 lg:aspect-auto lg:min-h-[150px]">{course?.imagem_url ? <img src={course.imagem_url} alt={course.nome || 'Curso'} loading="lazy" decoding="async" className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-slate-300"><ImageIcon size={34} /></div>}</div>
         <div className="flex min-w-0 flex-col justify-between gap-4">
           <div><div className="mb-3 flex flex-wrap gap-2"><CourseStatusBadge status={matricula.status} /><span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-600">Carga: {course?.carga_horaria || 0}h</span><span className="rounded-full bg-blue-50 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-blue-700">Inscrição: {formatDate(matricula.data_matricula || matricula.created_at)}</span></div><h3 className="break-words text-lg font-black leading-tight text-[#001a33] sm:text-xl">{course?.nome || matricula.turmas?.nome}</h3><p className="mt-1 break-words text-[10px] font-bold uppercase tracking-wider text-slate-400 sm:text-xs sm:tracking-widest">Turma: {matricula.turmas?.nome || 'Matrícula vinculada'}</p></div>
-          <div className="space-y-2"><div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-400"><span>Progresso do curso</span><span className={progressState?.isError ? 'text-rose-600' : 'text-blue-600'}>{waitingForTechnicalStart ? 'aguardando início' : progressState?.isLoading ? 'carregando' : progressState?.isError ? 'indisponível' : `${percent}%`}</span></div><div className="h-2.5 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${waitingForTechnicalStart || progressState?.isError ? 'bg-slate-300' : progressState?.isLoading ? 'w-1/3 animate-pulse bg-blue-300' : 'bg-blue-600'}`} style={progressState?.isLoading ? undefined : { width: waitingForTechnicalStart || progressState?.isError ? '0%' : `${percent}%` }} /></div>{data.selectedIsTechnical ? <p className="text-[10px] font-semibold text-slate-400">{waitingForTechnicalStart ? 'O conteúdo acadêmico será liberado quando a turma entrar em andamento.' : 'Calculado pela carga horária das disciplinas em que você foi aprovado ou teve aproveitamento.'}</p> : null}</div>
+          <div className="space-y-2"><div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-400"><span>Progresso do curso</span><span className={progressState?.isError ? 'text-rose-600' : 'text-blue-600'}>{waitingForTechnicalStart ? pendingTechnicalRelease ? 'aguardando liberação' : 'aguardando início' : progressState?.isLoading ? 'carregando' : progressState?.isError ? 'indisponível' : `${percent}%`}</span></div><div className="h-2.5 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${waitingForTechnicalStart || progressState?.isError ? 'bg-slate-300' : progressState?.isLoading ? 'w-1/3 animate-pulse bg-blue-300' : 'bg-blue-600'}`} style={progressState?.isLoading ? undefined : { width: waitingForTechnicalStart || progressState?.isError ? '0%' : `${percent}%` }} /></div>{data.selectedIsTechnical ? <p className="text-[10px] font-semibold text-slate-400">{waitingForTechnicalStart ? pendingTechnicalRelease ? 'A turma já está vinculada ao seu cadastro. O conteúdo acadêmico será liberado após a conclusão do fluxo de matrícula.' : 'O conteúdo acadêmico será liberado quando a turma entrar em andamento.' : 'Calculado pela carga horária das disciplinas em que você foi aprovado ou teve aproveitamento.'}</p> : null}</div>
           {data.selectedIsEad && course?.id && hasEadAccess(matricula) ? <button type="button" onClick={onOpenEad} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white hover:bg-blue-700 sm:w-max"><MonitorPlay size={14} /> Entrar na sala do curso</button> : null}
         </div>
       </div>
 
       {waitingForTechnicalStart ? (
         <div className="rounded-3xl border border-amber-100 bg-amber-50 p-4 text-amber-900 sm:p-7">
-          <div className="flex flex-col items-start gap-3 min-[390px]:flex-row min-[390px]:gap-4"><div className="rounded-2xl bg-white p-3 text-amber-600"><Clock3 size={22} /></div><div><p className="text-xs font-black uppercase tracking-wider sm:tracking-widest">Matrícula confirmada — aguardando início</p><p className="mt-2 max-w-2xl text-sm font-semibold leading-relaxed text-amber-800">Sua vaga está registrada. Diário, notas, atividades e estágio serão liberados quando a turma entrar em andamento.</p>{matricula.turmas?.status ? <p className="mt-3 text-[10px] font-black uppercase tracking-widest text-amber-600">Fase atual: {matricula.turmas.status.replaceAll('_', ' ')}</p> : null}</div></div>
+          <div className="flex flex-col items-start gap-3 min-[390px]:flex-row min-[390px]:gap-4"><div className="rounded-2xl bg-white p-3 text-amber-600"><Clock3 size={22} /></div><div><p className="text-xs font-black uppercase tracking-wider sm:tracking-widest">{pendingTechnicalRelease ? 'Matrícula registrada — aguardando liberação' : 'Matrícula confirmada — aguardando início'}</p><p className="mt-2 max-w-2xl text-sm font-semibold leading-relaxed text-amber-800">{pendingTechnicalRelease ? 'Você já está vinculado a esta turma. O acesso ao diário, notas, atividades e estágio será liberado quando a matrícula acadêmica for ativada.' : 'Sua vaga está registrada. Diário, notas, atividades e estágio serão liberados quando a turma entrar em andamento.'}</p>{matricula.turmas?.status ? <p className="mt-3 text-[10px] font-black uppercase tracking-widest text-amber-600">Fase atual: {matricula.turmas.status.replaceAll('_', ' ')}</p> : null}</div></div>
         </div>
       ) : <>
-        <div className="-mx-4 overflow-x-auto border-b border-slate-100 px-4 pb-4 [scrollbar-width:none] sm:mx-0 sm:px-0"><div className="flex min-w-max gap-2">{tabs.map((tab) => <button key={tab.id} type="button" onClick={() => onDetailTabChange(tab.id)} className={`flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-colors ${activeTab === tab.id ? 'bg-blue-600 text-white' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}>{tab.icon}{tab.label}</button>)}</div></div>
+        <div className="-mx-4 px-4 sm:mx-0 sm:px-0">
+          <FinancialUnderlineTabs
+            items={tabs}
+            value={activeTab}
+            onChange={onDetailTabChange}
+            ariaLabel="Seções da turma"
+          />
+        </div>
 
       {activeTab === 'certificado' ? <CertificateTab certificate={certificate} state={data.certificatesState} eadProgress={data.selectedEadProgress} /> : null}
       {activeTab === 'resumo' && data.selectedIsEad ? <EadSummaryTab matricula={matricula} progress={data.selectedEadProgress} onOpenCourse={onOpenEad} /> : null}

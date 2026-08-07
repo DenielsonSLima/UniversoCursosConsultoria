@@ -7,7 +7,13 @@ import { useEadPaymentConfirmationWatcher } from '../../../ead/hooks/useEadPayme
 import { defaultEadCheckoutMethod, resolveEadCheckoutOptions } from '../eadCheckoutOptions';
 import type { EadCheckoutPaymentMethod } from '../eadCheckoutOptions';
 import type { TechnicalProfileGate } from '../cursosPage.types';
-import { escapeCheckoutHtml } from '../cursosPage.utils';
+import {
+  navigatePaymentWindow,
+  preparePaymentWindow,
+  renderPdfInPaymentWindow,
+  renderPaymentWindowError,
+} from '../../shared/paymentWindow';
+import { fetchBaneseBoletoDocument } from '../../shared/baneseBoletoDocument';
 
 interface UseCourseCheckoutInput {
   alunoId?: string;
@@ -82,6 +88,8 @@ export const useCourseCheckout = ({
       return {
         url: result.url,
         payment: result.payment,
+        requestedPaymentMethod: String(paymentSelection?.method || '').toUpperCase(),
+        requestedPresentation: paymentSelection?.presentation,
         matriculaId: result.matriculaId,
         receivableId: result.receivableId,
         checkoutWindow,
@@ -92,25 +100,57 @@ export const useCourseCheckout = ({
       };
     },
     onMutate: () => setCheckoutError(''),
-    onSuccess: ({ url, payment, matriculaId, receivableId, checkoutWindow, sameTab, alreadyPaid, alreadyPending, awaitingWebhook }) => {
+    onSuccess: async ({ url, payment, requestedPaymentMethod, requestedPresentation, matriculaId, receivableId, checkoutWindow, sameTab, alreadyPaid, alreadyPending, awaitingWebhook }) => {
       setEadCheckoutReview(null);
-      const paymentMethod = String(payment?.method || '').toUpperCase();
+      const paymentMethod = String(payment?.method || requestedPaymentMethod || '').toUpperCase();
       const paymentProvider = String((payment as any)?.provider || 'asaas').toLowerCase();
       const hasPixQrCode = Boolean((payment as any)?.pixQrCode?.payload || (payment as any)?.pixQrCode?.encodedImage);
       const usesInlinePaymentPanel = paymentProvider === 'asaas' || (paymentMethod === 'PIX' && hasPixQrCode);
-      if (payment && usesInlinePaymentPanel && ['PIX', 'BOLETO'].includes(paymentMethod)) {
+      const wantsInlineBolePix = requestedPresentation === 'PIX' && paymentMethod === 'BOLETO';
+      if (wantsInlineBolePix) {
         if (checkoutWindow && !checkoutWindow.closed) checkoutWindow.close();
-        if (paymentMethod === 'BOLETO') {
-          const boletoUrl = payment.bankSlipUrl || payment.invoiceUrl || url;
-          if (boletoUrl) {
-            invalidateStudentCourseAccess();
-            window.location.assign(boletoUrl);
-            return;
+        setEadPaymentPanel({
+          url,
+          payment,
+          presentation: 'PIX',
+          matriculaId,
+          receivableId,
+          alreadyPaid,
+          alreadyPending,
+          awaitingWebhook,
+        });
+        setCheckoutError(awaitingWebhook
+          ? 'Pagamento localizado. O curso será liberado assim que a confirmação bancária canônica for registrada no sistema.'
+          : alreadyPending
+            ? 'Você já tinha um Boleto com Pix em aberto. Reabrimos o QR Code da mesma cobrança.'
+            : '');
+        invalidateStudentCourseAccess();
+        return;
+      }
+      if (paymentMethod === 'BOLETO') {
+        invalidateStudentCourseAccess();
+        try {
+          const pdf = await fetchBaneseBoletoDocument(String(receivableId || ''));
+          if (!renderPdfInPaymentWindow(checkoutWindow, pdf)) {
+            throw new Error('O navegador bloqueou a nova aba do boleto.');
           }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Não foi possível abrir o boleto Banese.';
+          renderPaymentWindowError(checkoutWindow, message);
+          setEadPaymentPanel({ url, payment, matriculaId, receivableId, alreadyPaid, alreadyPending, awaitingWebhook });
+          setCheckoutError(`${message} Use o botão “Abrir boleto” para tentar novamente sem sair do portal.`);
+          return;
         }
+        if (alreadyPending) {
+          setCheckoutError('Você já tinha uma cobrança em aberto para este curso. Reabrimos o boleto existente.');
+        }
+        return;
+      }
+      if (payment && usesInlinePaymentPanel && paymentMethod === 'PIX') {
+        if (checkoutWindow && !checkoutWindow.closed) checkoutWindow.close();
         setEadPaymentPanel({ url, payment, matriculaId, receivableId, alreadyPaid, alreadyPending, awaitingWebhook });
         setCheckoutError(awaitingWebhook
-          ? 'Pagamento localizado. O curso será liberado assim que o webhook do gateway bancário confirmar no sistema.'
+          ? 'Pagamento localizado. O curso será liberado assim que a confirmação bancária canônica for registrada no sistema.'
           : alreadyPending
             ? 'Você já tinha uma cobrança EAD em aberto. Reabrimos os dados de pagamento.'
             : '');
@@ -129,9 +169,7 @@ export const useCourseCheckout = ({
         return;
       }
       if (checkoutWindow && !checkoutWindow.closed) {
-        checkoutWindow.opener = null;
-        checkoutWindow.location.href = url;
-        checkoutWindow.focus();
+        navigatePaymentWindow(checkoutWindow, url);
       } else {
         window.open(url, '_blank', 'noopener,noreferrer') || window.location.assign(url);
       }
@@ -140,18 +178,7 @@ export const useCourseCheckout = ({
     },
     onError: (error: any, variables) => {
       const message = error?.message || 'Não foi possível iniciar o pagamento deste curso.';
-      if (variables?.checkoutWindow && !variables.checkoutWindow.closed) {
-        variables.checkoutWindow.document.title = 'Pagamento não iniciado';
-        variables.checkoutWindow.document.body.innerHTML = `
-          <main style="font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto; padding: 48px 24px; color: #0f172a;">
-            <p style="margin: 0 0 12px; color: #dc2626; font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;">Pagamento não iniciado</p>
-            <h1 style="margin: 0 0 12px; font-size: 28px; line-height: 1.15;">Não foi possível preparar a cobrança.</h1>
-            <p style="margin: 0 0 24px; color: #475569; font-size: 15px; line-height: 1.6;">${escapeCheckoutHtml(message)}</p>
-            <button onclick="window.close()" style="border: 0; border-radius: 12px; background: #2563eb; color: white; padding: 12px 18px; font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; cursor: pointer;">Fechar</button>
-          </main>
-        `;
-        variables.checkoutWindow.focus();
-      }
+      renderPaymentWindowError(variables?.checkoutWindow || null, message);
       setCheckoutError(message);
       invalidateStudentCourseAccess();
     },
@@ -170,16 +197,19 @@ export const useCourseCheckout = ({
         return;
       }
     }
-    const checkoutWindow = isEadCheckout ? null : window.open('', '_blank');
-    if (checkoutWindow) {
-      checkoutWindow.document.title = 'Preparando pagamento';
-      checkoutWindow.document.body.innerHTML = '<p style="font-family: sans-serif; padding: 24px;">Preparando pagamento...</p>';
-    }
+    const paymentMethod = String(paymentSelection?.method || '').toUpperCase();
+    const wantsInlineBolePix = paymentSelection?.presentation === 'PIX';
+    const opensBoletoInNewTab = isEadCheckout
+      && paymentMethod === 'BOLETO'
+      && !wantsInlineBolePix;
+    const checkoutWindow = !isEadCheckout || opensBoletoInNewTab
+      ? preparePaymentWindow()
+      : null;
     checkoutMutation.mutate({
       course,
       turmaId: turma?.id || null,
       checkoutWindow,
-      sameTab: isEadCheckout,
+      sameTab: isEadCheckout && !opensBoletoInNewTab,
       paymentSelection,
     });
   };

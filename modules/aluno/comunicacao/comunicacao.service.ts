@@ -8,6 +8,7 @@ import {
   ComunicacaoCategoria,
   ComunicacaoChat,
   ComunicacaoMensagem,
+  AlunoAtendimentoConfig,
   CreateAlunoChatInput,
   SendAlunoMessageInput,
 } from './comunicacao.types';
@@ -16,6 +17,13 @@ export const alunoComunicacaoKeys = {
   categories: ['comunicacao-categorias'] as const,
   chats: (alunoId: string) => ['aluno-chats', alunoId] as const,
   messages: (chatId: string | null) => ['chat-messages', chatId] as const,
+  supportConfig: (alunoId: string) => ['aluno-support-config', alunoId] as const,
+};
+
+const getSupportConfig = async (): Promise<AlunoAtendimentoConfig> => {
+  const { data, error } = await supabase.rpc('get_my_comunicacao_atendimento_config');
+  if (error) throw error;
+  return data as AlunoAtendimentoConfig;
 };
 
 const getCategories = async (): Promise<ComunicacaoCategoria[]> => {
@@ -105,7 +113,12 @@ const sendMessage = async ({ chatId, alunoId, alunoNome, text, file }: SendAluno
     });
   }
 
-  const content = text || (file ? `📎 ${file.name}` : '');
+  const attachmentFallback = file?.type.startsWith('audio/')
+    ? '🎤 Mensagem de voz'
+    : file
+      ? `📎 ${file.name}`
+      : '';
+  const content = text || attachmentFallback;
   const { data: newMessage, error: messageError } = await supabase
     .from('comunicacao_mensagens')
     .insert({
@@ -130,7 +143,7 @@ const sendMessage = async ({ chatId, alunoId, alunoNome, text, file }: SendAluno
   const { error: chatError } = await supabase
     .from('comunicacao_chats')
     .update({
-      ultimo_texto: text || `📎 ${file?.name}`,
+      ultimo_texto: text || attachmentFallback,
       ultima_data: new Date().toISOString(),
     })
     .eq('id', chatId);
@@ -152,35 +165,18 @@ const deleteChatForAluno = async (chatId: string, alunoId: string) => {
   if (error) throw error;
 };
 
-const createChat = async ({ alunoId, alunoNome, categoryId, categoryName, subject }: CreateAlunoChatInput) => {
-  const { data: newChat, error: chatError } = await supabase
-    .from('comunicacao_chats')
-    .insert({
-      remetente_id: alunoId,
-      remetente_nome: alunoNome,
-      remetente_tipo: 'Aluno',
-      categoria_id: categoryId,
-      status: 'pendente',
-      ultimo_texto: subject,
-      ultima_data: new Date().toISOString(),
-    })
-    .select()
-    .single();
+const createChat = async ({ sector, subject, message, poloLabel, notifyOnResponse, origin }: CreateAlunoChatInput) => {
+  const { data, error } = await supabase.rpc('create_my_routed_comunicacao_chat', {
+    p_setor: sector,
+    p_assunto: subject,
+    p_mensagem: message,
+    p_polo_label: poloLabel || null,
+    p_notificar_resposta: Boolean(notifyOnResponse),
+    p_origem: origin,
+  });
 
-  if (chatError) throw chatError;
-
-  const { error: messageError } = await supabase
-    .from('comunicacao_mensagens')
-    .insert({
-      chat_id: newChat.id,
-      remetente_id: alunoId,
-      remetente_nome: alunoNome,
-      remetente_tipo: 'aluno',
-      conteudo: `Iniciou o chamado sobre [${categoryName}]: ${subject}`,
-    });
-
-  if (messageError) throw messageError;
-  return newChat as ComunicacaoChat;
+  if (error) throw error;
+  return data as ComunicacaoChat;
 };
 
 export const alunoComunicacaoService = {
@@ -190,6 +186,7 @@ export const alunoComunicacaoService = {
   getCategories,
   getChatById,
   getMessages,
+  getSupportConfig,
   getUnreadChatIds,
   markMessagesAsRead,
   resolveMessages: resolveCommunicationAttachmentUrls,

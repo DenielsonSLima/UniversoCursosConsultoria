@@ -2,7 +2,11 @@
 
 import { supabase } from '../../../../lib/supabase';
 
-export type CategoriaFinanceiraTipo = 'DESPESA_FIXA' | 'DESPESA_VARIAVEL' | 'OUTRO_DEBITO';
+export type CategoriaFinanceiraTipo =
+  | 'DESPESA_FIXA'
+  | 'DESPESA_VARIAVEL'
+  | 'OUTRO_DEBITO'
+  | 'OUTRO_CREDITO';
 
 export interface CategoriaFinanceira {
   id: string;

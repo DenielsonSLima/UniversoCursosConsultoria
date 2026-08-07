@@ -1,14 +1,34 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Lock, Plus, Edit3, Trash2, Clock, Check, X,
+  Building2, Headphones, LayoutDashboard, Lock, Plus, Edit3, Trash2, Clock, Check, X,
   AlertCircle, Loader2
 } from 'lucide-react';
 import { supabase } from '../../../../lib/supabase';
-import { perfisAcessoService, PerfilAcesso } from './perfis-acesso.service';
+import { polosService } from '../polos/polos.service';
+import {
+  perfisAcessoService,
+  PerfilAcesso,
+  PerfilSetorComunicacao,
+} from './perfis-acesso.service';
 import PerfilAcessoForm from './PerfilAcessoForm';
+import { normalizeSecretariaAccessTabs } from '../../secretaria/secretaria-access';
+import {
+  DashboardWidgetId,
+  DEFAULT_GESTAO_TURMA_TABS,
+  getAllowedDashboardWidgets,
+  getEligibleDashboardWidgets,
+  normalizeDashboardWidgets,
+  normalizeGestorPermissions,
+} from '../../access-control';
 
 const PerfisAcessoConfig: React.FC = () => {
   const [perfis, setPerfis] = useState<PerfilAcesso[]>([]);
+  const [polos, setPolos] = useState<Array<{
+    id: string;
+    nomeFantasia: string;
+    cidade: string;
+    uf: string;
+  }>>([]);
   const [userCounts, setUserCounts] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -21,12 +41,37 @@ const PerfisAcessoConfig: React.FC = () => {
   const [descricao, setDescricao] = useState('');
   const [selectedModules, setSelectedModules] = useState<string[]>([]);
   const [selectedTabs, setSelectedTabs] = useState<Record<string, string[]>>({});
+  const [dashboardWidgets, setDashboardWidgets] = useState<DashboardWidgetId[]>([]);
+  const [todosPolos, setTodosPolos] = useState(false);
+  const [polosAcesso, setPolosAcesso] = useState<string[]>([]);
+  const [setorComunicacao, setSetorComunicacao] = useState<PerfilSetorComunicacao>('todos');
+  const [poloComunicacaoId, setPoloComunicacaoId] = useState<string | null>(null);
+  const [podeVisualizarTodosSetores, setPodeVisualizarTodosSetores] = useState(false);
   const [horarioAtivo, setHorarioAtivo] = useState(false);
   const [diasHorario, setDiasHorario] = useState<number[]>([1, 2, 3, 4, 5]);
   const [horarioInicio, setHorarioInicio] = useState('08:00');
   const [horarioFim, setHorarioFim] = useState('18:00');
 
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const draftPermissions = useMemo(
+    () => normalizeGestorPermissions({
+      modules: selectedModules,
+      financeiroTabs: selectedTabs.financeiro || [],
+      tabs: selectedTabs,
+      allPolos: todosPolos,
+    }, { fallbackFullAccess: false }),
+    [selectedModules, selectedTabs, todosPolos],
+  );
+  const eligibleDashboardWidgets = useMemo(
+    () => getEligibleDashboardWidgets(draftPermissions),
+    [draftPermissions],
+  );
+
+  useEffect(() => {
+    const eligibleSet = new Set(eligibleDashboardWidgets);
+    setDashboardWidgets((current) => current.filter((widgetId) => eligibleSet.has(widgetId)));
+  }, [eligibleDashboardWidgets]);
 
   useEffect(() => {
     fetchData();
@@ -36,8 +81,19 @@ const PerfisAcessoConfig: React.FC = () => {
     setIsLoading(true);
     setErrorMsg(null);
     try {
-      const data = await perfisAcessoService.getAll();
+      const [data, polosData] = await Promise.all([
+        perfisAcessoService.getAll(),
+        polosService.getAll(),
+      ]);
       setPerfis(data);
+      setPolos(polosData
+        .filter((polo): polo is typeof polo & { id: string } => Boolean(polo.id))
+        .map((polo) => ({
+          id: polo.id,
+          nomeFantasia: polo.nomeFantasia || polo.nome,
+          cidade: polo.cidade,
+          uf: polo.uf || polo.estado,
+        })));
 
       // Buscar contagem de usuários por perfil
       const { data: countData, error: countError } = await supabase
@@ -67,12 +123,32 @@ const PerfisAcessoConfig: React.FC = () => {
       setNome(perfil.nome);
       setDescricao(perfil.descricao || '');
       setSelectedModules(perfil.permissoes?.modules || []);
+      const profileTabs = perfil.permissoes?.tabs || {};
       setSelectedTabs({
-        ...(perfil.permissoes?.tabs || {}),
+        ...profileTabs,
+        gestao: Object.prototype.hasOwnProperty.call(profileTabs, 'gestao')
+          ? profileTabs.gestao
+          : perfil.permissoes?.modules?.includes('gestao')
+            ? DEFAULT_GESTAO_TURMA_TABS
+            : [],
+        secretaria: normalizeSecretariaAccessTabs(perfil.permissoes?.tabs?.secretaria),
         financeiro: perfil.permissoes?.tabs?.financeiro
           ?? perfil.permissoes?.financeiroTabs
           ?? [],
       });
+      const profilePermissions = normalizeGestorPermissions(perfil.permissoes, {
+        fallbackFullAccess: false,
+      });
+      setDashboardWidgets(
+        perfil.permissoes?.dashboardWidgets !== undefined
+          ? normalizeDashboardWidgets(perfil.permissoes.dashboardWidgets)
+          : getEligibleDashboardWidgets(profilePermissions),
+      );
+      setTodosPolos(Boolean(perfil.permissoes?.allPolos));
+      setPolosAcesso(perfil.permissoes?.poloIds || []);
+      setSetorComunicacao(perfil.permissoes?.communicationScope?.sector || 'todos');
+      setPoloComunicacaoId(perfil.permissoes?.communicationScope?.poloId || null);
+      setPodeVisualizarTodosSetores(Boolean(perfil.permissoes?.communicationScope?.canViewAll));
       setHorarioAtivo(perfil.restricao_horario?.ativo || false);
       setDiasHorario(perfil.restricao_horario?.dias || [1, 2, 3, 4, 5]);
       setHorarioInicio(perfil.restricao_horario?.horario_inicio || '08:00');
@@ -88,6 +164,12 @@ const PerfisAcessoConfig: React.FC = () => {
         cadastros: ['cadastros-checklist'],
         comunicacao: ['comunicacao-mensagem']
       });
+      setDashboardWidgets([]);
+      setTodosPolos(false);
+      setPolosAcesso([]);
+      setSetorComunicacao('todos');
+      setPoloComunicacaoId(null);
+      setPodeVisualizarTodosSetores(false);
       setHorarioAtivo(false);
       setDiasHorario([1, 2, 3, 4, 5]);
       setHorarioInicio('08:00');
@@ -102,11 +184,20 @@ const PerfisAcessoConfig: React.FC = () => {
   };
 
   const toggleModule = (moduleId: string) => {
-    setSelectedModules(prev => 
-      prev.includes(moduleId) 
-        ? prev.filter(m => m !== moduleId) 
+    const enablingModule = !selectedModules.includes(moduleId);
+    setSelectedModules(prev =>
+      prev.includes(moduleId)
+        ? prev.filter(m => m !== moduleId)
         : [...prev, moduleId]
     );
+    if (enablingModule && moduleId === 'gestao') {
+      setSelectedTabs(current => ({
+        ...current,
+        gestao: (current.gestao || []).length > 0
+          ? current.gestao
+          : DEFAULT_GESTAO_TURMA_TABS,
+      }));
+    }
   };
 
   const toggleTab = (moduleId: string, tabId: string) => {
@@ -117,6 +208,20 @@ const PerfisAcessoConfig: React.FC = () => {
         : [...current, tabId];
       return { ...prev, [moduleId]: updated };
     });
+  };
+
+  const toggleDashboardWidget = (widgetId: DashboardWidgetId) => {
+    if (!eligibleDashboardWidgets.includes(widgetId)) return;
+    setDashboardWidgets((current) => current.includes(widgetId)
+      ? current.filter((id) => id !== widgetId)
+      : [...current, widgetId]);
+  };
+
+  const togglePolo = (poloId: string) => {
+    if (todosPolos) return;
+    setPolosAcesso((current) => current.includes(poloId)
+      ? current.filter((id) => id !== poloId)
+      : [...current, poloId]);
   };
 
   const toggleDay = (day: number) => {
@@ -141,16 +246,38 @@ const PerfisAcessoConfig: React.FC = () => {
       setErrorMsg('Selecione ao menos uma aba do Financeiro.');
       return;
     }
+    if (selectedModules.includes('gestao') && (selectedTabs.gestao || []).length === 0) {
+      setErrorMsg('Selecione ao menos uma aba das turmas do módulo Gestão.');
+      return;
+    }
     if (selectedModules.includes('secretaria') && (selectedTabs.secretaria || []).length === 0) {
       setErrorMsg('Selecione ao menos uma aba da Secretaria.');
       return;
     }
     if (selectedModules.includes('cadastros') && (selectedTabs.cadastros || []).length === 0) {
-      setErrorMsg('Selecione ao menos uma aba de Cadastros.');
+      setErrorMsg('Selecione ao menos uma opção de Formações.');
       return;
     }
     if (selectedModules.includes('comunicacao') && (selectedTabs.comunicacao || []).length === 0) {
       setErrorMsg('Selecione ao menos um canal de Comunicação.');
+      return;
+    }
+    if (
+      selectedModules.includes('comunicacao')
+      && (selectedTabs.comunicacao || []).includes('comunicacao-automacoes')
+      && !todosPolos
+    ) {
+      setErrorMsg('Automações multicanal exigem acesso global a todos os polos.');
+      return;
+    }
+    if (!todosPolos && polosAcesso.length === 0) {
+      setErrorMsg('Selecione ao menos um polo para o perfil.');
+      return;
+    }
+    const hasWhatsApp = selectedModules.includes('comunicacao')
+      && (selectedTabs.comunicacao || []).includes('comunicacao-whatsapp');
+    if (hasWhatsApp && !podeVisualizarTodosSetores && !poloComunicacaoId) {
+      setErrorMsg('Selecione o polo de atendimento do WhatsApp para o perfil.');
       return;
     }
     if (horarioAtivo && diasHorario.length === 0) {
@@ -172,7 +299,14 @@ const PerfisAcessoConfig: React.FC = () => {
         modules: selectedModules,
         financeiroTabs: selectedTabs['financeiro'] || [],
         tabs: selectedTabs,
-        allPolos: false
+        dashboardWidgets,
+        allPolos: todosPolos,
+        poloIds: todosPolos ? [] : polosAcesso,
+        communicationScope: {
+          sector: podeVisualizarTodosSetores ? 'todos' : setorComunicacao,
+          poloId: podeVisualizarTodosSetores ? null : poloComunicacaoId,
+          canViewAll: podeVisualizarTodosSetores,
+        },
       },
       restricao_horario: {
         dias: diasHorario,
@@ -223,7 +357,7 @@ const PerfisAcessoConfig: React.FC = () => {
         <div>
           <h3 className="text-2xl font-bold text-[#001a33] tracking-tight">Perfis de Acesso</h3>
           <p className="text-slate-500 text-sm mt-1">
-            Defina papéis de acesso reutilizáveis com restrições de telas, abas e horários.
+            Defina módulos, polos, setor do WhatsApp e horários que serão herdados pelos usuários.
           </p>
         </div>
         {!isFormOpen && (
@@ -251,18 +385,41 @@ const PerfisAcessoConfig: React.FC = () => {
           descricao={descricao}
           selectedModules={selectedModules}
           selectedTabs={selectedTabs}
+          dashboardWidgets={dashboardWidgets}
+          eligibleDashboardWidgets={eligibleDashboardWidgets}
           horarioAtivo={horarioAtivo}
           diasHorario={diasHorario}
           horarioInicio={horarioInicio}
           horarioFim={horarioFim}
+          polos={polos}
+          todosPolos={todosPolos}
+          polosAcesso={polosAcesso}
+          setorComunicacao={setorComunicacao}
+          poloComunicacaoId={poloComunicacaoId}
+          podeVisualizarTodosSetores={podeVisualizarTodosSetores}
           isSaving={isSaving}
           setNome={setNome}
           setDescricao={setDescricao}
+          setTodosPolos={(value) => {
+            setTodosPolos(value);
+            if (value) setPolosAcesso([]);
+          }}
+          setSetorComunicacao={setSetorComunicacao}
+          setPoloComunicacaoId={setPoloComunicacaoId}
+          setPodeVisualizarTodosSetores={(value) => {
+            setPodeVisualizarTodosSetores(value);
+            if (value) {
+              setSetorComunicacao('todos');
+              setPoloComunicacaoId(null);
+            }
+          }}
           setHorarioAtivo={setHorarioAtivo}
           setHorarioInicio={setHorarioInicio}
           setHorarioFim={setHorarioFim}
           onToggleModule={toggleModule}
           onToggleTab={toggleTab}
+          onToggleDashboardWidget={toggleDashboardWidget}
+          onTogglePolo={togglePolo}
           onToggleDay={toggleDay}
           onClose={handleCloseForm}
           onSubmit={handleSave}
@@ -274,6 +431,24 @@ const PerfisAcessoConfig: React.FC = () => {
             const usersLinked = userCounts[perfil.id || ''] || 0;
             const hasRestriction = perfil.restricao_horario?.ativo;
             const daysCount = perfil.restricao_horario?.dias?.length || 0;
+            const profilePoloIds = perfil.permissoes?.poloIds || [];
+            const communicationScope = perfil.permissoes?.communicationScope;
+            const profilePermissions = normalizeGestorPermissions(perfil.permissoes, {
+              fallbackFullAccess: false,
+            });
+            const profileDashboardWidgets = getAllowedDashboardWidgets(profilePermissions);
+            const poloScopeLabel = perfil.permissoes?.allPolos
+              ? 'Todos os polos'
+              : profilePoloIds.length === 1
+                ? '1 polo permitido'
+                : `${profilePoloIds.length} polos permitidos`;
+            const communicationLabel = communicationScope?.canViewAll
+              ? 'WhatsApp: gestor geral'
+              : communicationScope?.poloId
+                ? `WhatsApp: ${communicationScope.sector === 'todos'
+                  ? 'todos os setores do polo'
+                  : communicationScope.sector.replaceAll('_', ' ')}`
+                : 'WhatsApp sem escopo padrão';
 
             return (
               <div 
@@ -300,6 +475,23 @@ const PerfisAcessoConfig: React.FC = () => {
                       <Check className="text-emerald-500" size={14} />
                       <span>{perfil.permissoes?.modules?.length || 0} módulos permitidos</span>
                     </div>
+
+                    <div className="flex items-center gap-2 text-[10px] text-slate-600 font-semibold uppercase">
+                      <LayoutDashboard className="text-indigo-500" size={14} />
+                      <span>{profileDashboardWidgets.length} indicadores na tela inicial</span>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-[10px] text-slate-600 font-semibold uppercase">
+                      <Building2 className="text-blue-500" size={14} />
+                      <span>{poloScopeLabel}</span>
+                    </div>
+
+                    {(perfil.permissoes?.tabs?.comunicacao || []).includes('comunicacao-whatsapp') && (
+                      <div className="flex items-center gap-2 text-[10px] text-slate-600 font-semibold uppercase">
+                        <Headphones className="text-emerald-500" size={14} />
+                        <span>{communicationLabel}</span>
+                      </div>
+                    )}
 
                     <div className="flex items-center gap-2 text-[10px] text-slate-600 font-semibold uppercase">
                       {hasRestriction ? (

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Tags, Search, Edit, Trash2, RefreshCw } from 'lucide-react';
 import CategoriaForm from './components/CategoriaForm';
-import { categoriasService, Categoria } from './categorias.service';
+import { categoriasQueryKeys, categoriasService, Categoria } from './categorias.service';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
 
@@ -15,7 +15,7 @@ const CategoriasConfig: React.FC = () => {
 
   // 1. Buscar categorias do Supabase
   const { data: categorias = [], isLoading, isError, error } = useQuery<Categoria[]>({
-    queryKey: ['categorias'],
+    queryKey: categoriasQueryKeys.all,
     queryFn: categoriasService.getAll,
   });
 
@@ -27,7 +27,7 @@ const CategoriasConfig: React.FC = () => {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'categorias' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['categorias'] });
+          queryClient.invalidateQueries({ queryKey: categoriasQueryKeys.all });
         }
       )
       .subscribe();
@@ -47,7 +47,7 @@ const CategoriasConfig: React.FC = () => {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['categorias'] });
+      queryClient.invalidateQueries({ queryKey: categoriasQueryKeys.all });
       setShowModal(false);
       setEditingCategoria(null);
     },
@@ -57,7 +57,7 @@ const CategoriasConfig: React.FC = () => {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => categoriasService.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['categorias'] });
+      queryClient.invalidateQueries({ queryKey: categoriasQueryKeys.all });
     },
     onError: (err: any) => alert(`Erro ao excluir categoria: ${err.message}`),
   });

@@ -37,6 +37,7 @@ import {
 import type { LoginResult, SessionEntry, WhatsAppCoexistenceTabProps } from './types';
 
 const WhatsAppCoexistenceTab: React.FC<WhatsAppCoexistenceTabProps> = ({
+  connectionId,
   draft,
   activeConfig,
   webhookUrl,
@@ -129,6 +130,7 @@ const WhatsAppCoexistenceTab: React.FC<WhatsAppCoexistenceTabProps> = ({
 
     try {
       const result = await mensageriaService.completeWhatsAppEmbeddedSignup({
+        connectionId,
         code,
         mode: 'coexistence',
         appId,
@@ -150,7 +152,7 @@ const WhatsAppCoexistenceTab: React.FC<WhatsAppCoexistenceTabProps> = ({
     } finally {
       setIsCompleting(false);
     }
-  }, [appId, clearPendingLaunchWarning, clearPendingSessionWarning, configurationId, draft.waAppSecret, graphVersion, queryClient]);
+  }, [appId, clearPendingLaunchWarning, clearPendingSessionWarning, configurationId, connectionId, draft.waAppSecret, graphVersion, queryClient]);
 
   useEffect(() => {
     const handleMessage = (event: any) => {

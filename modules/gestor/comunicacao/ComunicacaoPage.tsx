@@ -1,4 +1,5 @@
-import React, { useState, useRef } from 'react';
+/* global MediaRecorder, MediaStream */
+import React, { useEffect, useState, useRef } from 'react';
 import { MessageSquare } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import {
@@ -19,7 +20,10 @@ import {
 import { useGestorComunicacaoRealtime } from './useGestorComunicacaoRealtime';
 import { GestorChatPanel, GestorDeleteChatModal, GestorInbox } from './GestorComunicacaoParts';
 
-const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile, channel = 'mensagem' }) => {
+const InternalCommunicationPage: React.FC<ComunicacaoPageProps> = ({
+  gestorProfile,
+  embedded = false,
+}) => {
   const { toasts, removeToast, toast } = useToast();
   const [activeTicketStatus, setActiveTicketStatus] = useState<'pendente' | 'solucionada'>('pendente');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('todos');
@@ -46,13 +50,119 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile, channe
   // Attachment state
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const recordingStreamRef = useRef<MediaStream | null>(null);
+  const recordingChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<number | null>(null);
   const gestorNome = gestorProfile?.nome || 'Gestor (Escola)';
   const gestorId = gestorProfile?.id || null;
 
   // Delete confirm
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingChat, setDeletingChat] = useState(false);
+
+  const clearRecordingResources = () => {
+    if (recordingTimerRef.current !== null) {
+      window.clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    recordingStreamRef.current?.getTracks().forEach((track) => track.stop());
+    recordingStreamRef.current = null;
+  };
+
+  const stopRecording = () => {
+    const recorder = recorderRef.current;
+    if (recorder && recorder.state !== 'inactive') recorder.stop();
+  };
+
+  const startRecording = async () => {
+    if (recording || uploadingFile) return;
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      toast.error('Gravação indisponível', 'Este navegador não oferece suporte à gravação de áudio.');
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const Recorder = window.MediaRecorder;
+      const preferredTypes = [
+        'audio/mp4',
+        'audio/webm;codecs=opus',
+        'audio/ogg;codecs=opus',
+      ];
+      const mimeType = preferredTypes.find((type) => Recorder.isTypeSupported(type));
+      const recorder = new Recorder(stream, mimeType ? { mimeType } : undefined);
+      recordingStreamRef.current = stream;
+      recorderRef.current = recorder;
+      recordingChunksRef.current = [];
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) recordingChunksRef.current.push(event.data);
+      };
+      recorder.onstop = () => {
+        const canonicalType = (recorder.mimeType || mimeType || 'audio/webm').split(';')[0];
+        const extension = canonicalType.includes('ogg')
+          ? 'ogg'
+          : canonicalType.includes('webm')
+            ? 'webm'
+            : canonicalType.includes('mpeg')
+              ? 'mp3'
+              : 'm4a';
+        const blob = new Blob(recordingChunksRef.current, { type: canonicalType });
+        if (blob.size > 0) {
+          setPendingFile(new File([blob], `mensagem-de-voz-${Date.now()}.${extension}`, {
+            type: canonicalType,
+          }));
+        } else {
+          toast.error('Áudio vazio', 'Não foi possível capturar a mensagem de voz. Tente novamente.');
+        }
+        recordingChunksRef.current = [];
+        recorderRef.current = null;
+        setRecording(false);
+        clearRecordingResources();
+      };
+
+      recorder.start(250);
+      setRecordingSeconds(0);
+      setRecording(true);
+      recordingTimerRef.current = window.setInterval(() => {
+        setRecordingSeconds((current) => {
+          if (current >= 299) stopRecording();
+          return current + 1;
+        });
+      }, 1_000);
+    } catch (error) {
+      clearRecordingResources();
+      setRecording(false);
+      const blocked = (error as { name?: string } | null)?.name === 'NotAllowedError';
+      toast.error(
+        blocked ? 'Microfone bloqueado' : 'Erro ao gravar',
+        blocked
+          ? 'Permita o uso do microfone no navegador para enviar mensagens de voz.'
+          : 'Não foi possível iniciar a gravação de áudio.',
+      );
+    }
+  };
+
+  useEffect(() => {
+    setMessageText('');
+    setPendingFile(null);
+    return () => {
+      const recorder = recorderRef.current;
+      if (recorder) {
+        recorder.ondataavailable = null;
+        recorder.onstop = null;
+        if (recorder.state !== 'inactive') recorder.stop();
+        recorderRef.current = null;
+      }
+      recordingChunksRef.current = [];
+      clearRecordingResources();
+      setRecording(false);
+    };
+  }, [activeChatId]);
 
 
   // Send Message
@@ -76,12 +186,17 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile, channe
         });
       }
 
+      const attachmentFallback = fileToSend?.type.startsWith('audio/')
+        ? '🎤 Mensagem de voz'
+        : fileToSend
+          ? `📎 ${fileToSend.name}`
+          : '';
       const msgPayload: any = {
         chat_id: activeChatId,
         remetente_id: gestorId,
         remetente_nome: gestorNome,
         remetente_tipo: 'gestor',
-        conteudo: text || (fileToSend ? `📎 ${fileToSend.name}` : ''),
+        conteudo: text || attachmentFallback,
         anexo_path: attachmentPath,
         anexo_url: null,
       };
@@ -96,8 +211,11 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile, channe
       }
 
       await supabase.from('comunicacao_chats').update({
-        ultimo_texto: text || `📎 ${fileToSend?.name}`,
-        ultima_data: new Date().toISOString()
+        ultimo_texto: text || attachmentFallback,
+        ultima_data: new Date().toISOString(),
+        ...(currentChat?.origem === 'publico' && !currentChat.primeira_resposta_em
+          ? { primeira_resposta_em: new Date().toISOString() }
+          : {}),
       }).eq('id', activeChatId);
 
       const [resolvedMessage] = await resolveCommunicationAttachmentUrls([newMsg as GestorMessage]);
@@ -108,6 +226,8 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile, channe
       playGestorMessageSound('send');
     } catch (err) {
       console.error('Erro ao enviar mensagem:', err);
+      setMessageText(text);
+      setPendingFile(fileToSend);
       toast.error('Erro ao enviar', 'Não foi possível enviar sua resposta.');
     } finally {
       setUploadingFile(false);
@@ -270,7 +390,7 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile, channe
       // 1. Update status
       const { error: chatErr } = await supabase
         .from('comunicacao_chats')
-        .update({ status: 'solucionada', updated_at: new Date().toISOString() })
+        .update({ status: 'solucionada', encerrado_em: new Date().toISOString(), updated_at: new Date().toISOString() })
         .eq('id', activeChatId);
 
       if (chatErr) throw chatErr;
@@ -356,7 +476,7 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile, channe
   });
 
   return (
-    <div className="flex h-[calc(100vh-120px)] flex-col overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm animate-fadeIn antialiased">
+    <div className={`flex min-h-0 flex-col overflow-hidden bg-white antialiased ${embedded ? 'h-full flex-1' : 'h-[calc(100vh-120px)] rounded-3xl border border-slate-100 shadow-sm animate-fadeIn'}`}>
       <ToastNotification toasts={toasts} onRemove={removeToast} />
       <StartInternalConversationModal
         open={showStartConversation}
@@ -365,7 +485,7 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile, channe
         onStart={handleStartInternalConversation}
       />
 
-      {channel !== 'whatsapp' && (
+      {!embedded && (
         <div className="flex shrink-0 items-center justify-between border-b border-slate-100 bg-white px-6 py-4">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
@@ -382,47 +502,44 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile, channe
       )}
 
       <div className="flex-1 flex overflow-hidden min-h-0">
-        {channel === 'whatsapp' ? (
-          <WhatsAppCommunicationPanel />
-        ) : (
-          <>
-            <GestorInbox
-              activeChatId={activeChatId}
-              activeStatus={activeTicketStatus}
-              categories={categories}
-              chats={chats}
-              filteredChats={filteredChats}
-              loading={loadingChats}
-              pendingCount={pendingCount}
-              searchText={searchText}
-              selectedCategory={selectedCategoryFilter}
-              solvedCount={solvedCount}
-              unreadChatIds={unreadChatIds}
-              onActiveChat={setActiveChatId}
-              onActiveStatus={setActiveTicketStatus}
-              onCategory={setSelectedCategoryFilter}
-              onSearch={setSearchText}
-              onStart={() => setShowStartConversation(true)}
-            />
-            <GestorChatPanel
-              categories={categories}
-              chat={currentChat}
-              fileInputRef={fileInputRef}
-              loading={loadingMessages}
-              messageText={messageText}
-              messages={messages}
-              messagesEndRef={messagesEndRef}
-              pendingFile={pendingFile}
-              uploading={uploadingFile}
-              onDelete={() => setShowDeleteConfirm(true)}
-              onFile={setPendingFile}
-              onMessage={setMessageText}
-              onSend={handleSendMessage}
-              onSolve={handleMarkAsSolved}
-              onTransfer={handleTransferCategory}
-            />
-          </>
-        )}
+        <GestorInbox
+          activeChatId={activeChatId}
+          activeStatus={activeTicketStatus}
+          categories={categories}
+          chats={chats}
+          filteredChats={filteredChats}
+          loading={loadingChats}
+          pendingCount={pendingCount}
+          searchText={searchText}
+          selectedCategory={selectedCategoryFilter}
+          solvedCount={solvedCount}
+          unreadChatIds={unreadChatIds}
+          onActiveChat={setActiveChatId}
+          onActiveStatus={setActiveTicketStatus}
+          onCategory={setSelectedCategoryFilter}
+          onSearch={setSearchText}
+          onStart={() => setShowStartConversation(true)}
+        />
+        <GestorChatPanel
+          categories={categories}
+          chat={currentChat}
+          fileInputRef={fileInputRef}
+          loading={loadingMessages}
+          messageText={messageText}
+          messages={messages}
+          messagesEndRef={messagesEndRef}
+          pendingFile={pendingFile}
+          recording={recording}
+          recordingSeconds={recordingSeconds}
+          uploading={uploadingFile}
+          onDelete={() => setShowDeleteConfirm(true)}
+          onFile={setPendingFile}
+          onMessage={setMessageText}
+          onRecord={recording ? stopRecording : startRecording}
+          onSend={handleSendMessage}
+          onSolve={handleMarkAsSolved}
+          onTransfer={handleTransferCategory}
+        />
       </div>
 
       {showDeleteConfirm && (
@@ -434,6 +551,23 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile, channe
       )}
     </div>
   );
+};
+
+const ComunicacaoPage: React.FC<ComunicacaoPageProps> = (props) => {
+  if (props.channel === 'whatsapp') {
+    return (
+      <div className={`flex min-h-0 flex-col overflow-hidden bg-white antialiased ${props.embedded ? 'h-full flex-1' : 'h-[calc(100vh-120px)] rounded-3xl border border-slate-100 shadow-sm animate-fadeIn'}`}>
+        <div className="min-h-0 flex-1 overflow-hidden">
+          <WhatsAppCommunicationPanel
+            initialTab={props.whatsappInitialTab}
+            showModuleTabs={props.showWhatsAppModuleTabs}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  return <InternalCommunicationPage {...props} />;
 };
 
 export default ComunicacaoPage;

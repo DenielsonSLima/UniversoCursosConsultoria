@@ -11,11 +11,9 @@ interface PFCardProps {
   data: any;
   onClick?: () => void;
   onDelete?: () => void;
-  onConfirmEmail?: () => void;
-  isConfirmingEmail?: boolean;
 }
 
-const PFCard: React.FC<PFCardProps> = ({ data, onClick, onDelete, onConfirmEmail, isConfirmingEmail }) => {
+const PFCard: React.FC<PFCardProps> = ({ data, onClick, onDelete }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
@@ -135,8 +133,6 @@ const PFCard: React.FC<PFCardProps> = ({ data, onClick, onDelete, onConfirmEmail
               <span className="truncate font-medium" title={data.email}>{data.email}</span>
               <EmailConfirmationStatus
                 status={data.emailConfirmationStatus}
-                isConfirming={isConfirmingEmail}
-                onConfirm={onConfirmEmail}
               />
             </div>
           </div>

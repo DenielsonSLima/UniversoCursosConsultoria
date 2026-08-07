@@ -29,7 +29,7 @@ const BanesePixPanel = ({ pix, disabled = false }: BanesePixPanelProps) => {
           </div>
         </div>
         <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-white px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-emerald-700">
-          <ShieldCheck size={11} /> {pix.state === 'available' ? 'Oficial' : pix.state === 'sandbox-unavailable' ? 'Homologação' : 'Aguardando banco'}
+          <ShieldCheck size={11} /> {pix.state === 'available' ? 'Oficial' : pix.state === 'sandbox-unavailable' ? 'Homologação' : 'Indisponível'}
         </span>
       </div>
 

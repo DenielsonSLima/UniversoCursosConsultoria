@@ -20,6 +20,7 @@ export type OtherCreditInput = {
   value: number;
   dueDate: string;
   clientId: string | null;
+  categoryId: string | null;
   accountId: string | null;
   mode: OtherCreditMode;
   paymentMethod: OtherCreditPaymentMethod | null;
@@ -117,6 +118,10 @@ export const normalizeOtherCreditRequest = (
   const mode = normalizeMode(body.mode);
   const paymentMethod = normalizePaymentMethod(body.formaPagamento);
   const clientId = optionalUuid(body.clienteId, "Parceiro");
+  const categoryId = optionalUuid(
+    body.categoriaFinanceiraId,
+    "Categoria financeira",
+  );
   const accountId = optionalUuid(body.contaBancariaId, "Conta bancaria");
 
   if (mode === "LOCAL_PAGO") {
@@ -133,8 +138,15 @@ export const normalizeOtherCreditRequest = (
   }
 
   if (mode === "GATEWAY") {
-    if (!paymentMethod || paymentMethod === "DINHEIRO") {
-      throw new Error("Link bancario exige Pix, boleto ou cartao.");
+    if (!clientId) {
+      throw new Error(
+        "Parceiro obrigatorio para emitir cobranca BolePix pelo Banese.",
+      );
+    }
+    if (paymentMethod !== "BOLETO") {
+      throw new Error(
+        "Link bancario de Outros Creditos aceita somente BolePix do Banese.",
+      );
     }
   }
 
@@ -151,6 +163,7 @@ export const normalizeOtherCreditRequest = (
     value,
     dueDate,
     clientId,
+    categoryId,
     accountId,
     mode,
     paymentMethod,
@@ -189,6 +202,11 @@ export const buildOtherCreditPayload = (
       "A forma de pagamento diverge da rota bancaria de Outros Creditos.",
     );
   }
+  if (route && route.providerCode !== "banese_card") {
+    throw new Error(
+      "Novas cobrancas de Outros Creditos por link usam somente o Banese.",
+    );
+  }
 
   return {
     id: input.idempotencyKey,
@@ -198,6 +216,7 @@ export const buildOtherCreditPayload = (
     data_vencimento: input.dueDate,
     status: isPaid ? "PAGO" : "PENDENTE",
     categoria: "OUTROS_CREDITOS",
+    categoria_financeira_id: input.categoryId,
     cliente_id: input.clientId,
     forma_pagamento: input.paymentMethod,
     conta_bancaria_id: isPaid ? input.accountId : null,
@@ -250,6 +269,8 @@ export const assertOtherCreditReplayMatches = (
     sameMoney(existing.valor, expected.valor) &&
     String(existing.data_vencimento || "").slice(0, 10) ===
       expected.data_vencimento &&
+    (existing.categoria_financeira_id || null) ===
+      expected.categoria_financeira_id &&
     (existing.cliente_id || null) === expected.cliente_id;
 
   const status = String(existing.status || "").trim().toUpperCase();
@@ -358,6 +379,11 @@ export const resolveOtherCreditRoute = async (
   }
 
   const providerCode = normalizeProviderCode(data.provider_code);
+  if (providerCode !== "banese_card") {
+    throw new Error(
+      "A rota de Outros Creditos deve usar o Banese para emitir BolePix.",
+    );
+  }
   assertStoredProviderAdapterReady(providerCode, paymentMethod, environment);
   return { providerCode, environment, paymentMethod };
 };
@@ -406,6 +432,22 @@ export const validateOtherCreditReferences = async (
       !partnerPoloIds.includes(input.poloId)
     ) {
       throw new Error("Parceiro nao pertence ao polo deste credito.");
+    }
+  }
+
+  if (input.categoryId) {
+    const category = await selectOne(
+      admin.from("categorias_financeiras").select("id, tipo, status")
+        .eq("id", input.categoryId),
+      "Categoria financeira nao encontrada.",
+    );
+    if (
+      String(category.status || "").trim().toLowerCase() !== "ativo" ||
+      String(category.tipo || "").trim().toUpperCase() !== "OUTRO_CREDITO"
+    ) {
+      throw new Error(
+        "A categoria deve estar ativa e pertencer a Outros Creditos.",
+      );
     }
   }
 

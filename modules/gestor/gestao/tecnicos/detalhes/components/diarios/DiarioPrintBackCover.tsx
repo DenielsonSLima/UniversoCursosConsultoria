@@ -1,12 +1,12 @@
 import React from 'react';
-import { getDocumentValidationQrUrl, getDocumentValidationUrl } from '../../../../../../shared/document-validation/document-validation.url';
+import { DocumentValidationQrCodeImage } from '../../../../../../shared/document-validation/DocumentValidationQrCodeImage';
+import { getDocumentValidationUrl } from '../../../../../../shared/document-validation/document-validation.url';
 import { DiarioPrintDocumentProps } from './diario-classe.types';
-import { getDiarioValidationCode } from './diario-classe.utils';
 import { moduloNumero } from './diario-print.utils';
 
 type DiarioPrintBackCoverProps = Pick<
   DiarioPrintDocumentProps,
-  'template' | 'turma' | 'disciplina' | 'moduloNome' | 'watermark'
+  'template' | 'turma' | 'disciplina' | 'moduloNome' | 'watermark' | 'validationCode'
 >;
 
 const DiarioPrintBackCover: React.FC<DiarioPrintBackCoverProps> = ({
@@ -15,8 +15,9 @@ const DiarioPrintBackCover: React.FC<DiarioPrintBackCoverProps> = ({
   disciplina,
   moduloNome,
   watermark,
+  validationCode,
 }) => {
-  const validationCode = getDiarioValidationCode(turma, disciplina);
+  const canonicalValidationCode = validationCode?.trim() || '';
 
   return (
     <section className="diario-print-page">
@@ -40,7 +41,7 @@ const DiarioPrintBackCover: React.FC<DiarioPrintBackCoverProps> = ({
         </div>
       )}
 
-      {template.imprimirValidacaoContracapa && (
+      {template.imprimirValidacaoContracapa && canonicalValidationCode && (
         <div className="absolute inset-[12mm_15mm_12mm_20mm] border border-[#071a33]/25 p-8 flex flex-col justify-between rounded-2xl text-[#071a33] z-10 overflow-hidden text-left bg-transparent">
           <div className="relative z-10 flex justify-between items-start border-b border-[#071a33]/15 pb-3">
             <div className="w-full">
@@ -65,44 +66,41 @@ const DiarioPrintBackCover: React.FC<DiarioPrintBackCoverProps> = ({
               </div>
 
               <div className="bg-slate-50/20 border border-slate-100/30 p-2 rounded font-mono text-[7.5pt] text-slate-500">
-                <div><strong>Chave de Autenticação:</strong> {validationCode}</div>
-                <div className="mt-0.5"><strong>Endereço de Validação:</strong> {getDocumentValidationUrl(validationCode)}</div>
+                <div><strong>Chave de Autenticação:</strong> {canonicalValidationCode}</div>
+                <div className="mt-0.5"><strong>Endereço de Validação:</strong> {getDocumentValidationUrl(canonicalValidationCode)}</div>
               </div>
             </div>
 
             <div className="flex flex-col items-center justify-center border-l border-slate-200/20 pl-4">
-              <img
-                src={getDocumentValidationQrUrl(validationCode, 180)}
+              <DocumentValidationQrCodeImage
+                code={canonicalValidationCode}
+                size={180}
                 alt="QR Code"
                 style={{
                   width: `${template.qrCodeSize || 28}mm`,
                   height: `${template.qrCodeSize || 28}mm`,
-                  objectFit: 'contain',
                 }}
                 className="bg-white p-1 border border-slate-200 rounded"
               />
               <div className="text-center mt-1">
                 <span className="block text-[5pt] font-black text-slate-400 tracking-widest uppercase">CÓD. VALIDAÇÃO</span>
-                <span className="block text-[6pt] font-mono font-bold text-blue-600 leading-tight whitespace-pre-line">{validationCode}</span>
+                <span className="block text-[6pt] font-mono font-bold text-blue-600 leading-tight whitespace-pre-line">{canonicalValidationCode}</span>
               </div>
             </div>
           </div>
 
           <div className="relative z-10 grid grid-cols-2 gap-12 text-center border-t border-[#071a33]/10 pt-4 text-[9pt]">
-            <div className="flex flex-col items-center justify-end h-14">
-              <div className="border-b border-slate-400 w-full mb-1"></div>
-              <p className="font-bold">{template.diretorNome || '—'}</p>
-              <p className="text-[7pt] text-slate-500 uppercase font-black">{template.diretorCargo || 'Diretor(a) Geral'}</p>
-            </div>
-            <div className="flex flex-col items-center justify-end h-14">
-              <div className="border-b border-slate-400 w-full mb-1"></div>
-              <p className="font-bold">{template.secretarioNome || '—'}</p>
-              <p className="text-[7pt] text-slate-500 uppercase font-black">{template.secretarioCargo || 'Secretaria Acadêmica'}</p>
-            </div>
+            <ManualSignatureLine label="ASSINATURA DO PROFESSOR" />
+            <ManualSignatureLine label="ASSINATURA DO COORDENADOR DO CURSO" />
           </div>
 
           {template.contracapaCampos
-            ?.filter((field) => field.visible && field.isImage)
+            ?.filter((field) =>
+              field.visible
+              && field.isImage
+              && field.id !== 'signature_diretor'
+              && field.id !== 'signature_secretario',
+            )
             .map((field) => (
               <img
                 key={field.id}
@@ -125,5 +123,12 @@ const DiarioPrintBackCover: React.FC<DiarioPrintBackCoverProps> = ({
     </section>
   );
 };
+
+const ManualSignatureLine: React.FC<{ label: string }> = ({ label }) => (
+  <div className="flex h-14 flex-col items-center justify-end">
+    <div className="mb-1 w-full border-b border-slate-400" />
+    <p className="text-[7pt] font-black text-slate-500">{label}</p>
+  </div>
+);
 
 export default DiarioPrintBackCover;

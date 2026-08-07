@@ -20,30 +20,35 @@ export function useFinanceiroSharedQueries(options: FinanceiroSharedQueriesOptio
   } = options;
 
   const accountsQuery = useQuery({
-    queryKey: financeiroQueryKeys.contasBancariasSaldos,
-    queryFn: () => financeiroService.getContasBancariasSaldos(),
-    staleTime: 60_000,
+    queryKey: [...financeiroQueryKeys.contasBancariasSaldos, poloId || 'todos'],
+    queryFn: () => financeiroService.getContasBancariasSaldos(poloId),
+    staleTime: 0,
+    gcTime: 30 * 60_000,
+    refetchOnMount: 'always',
     enabled: accounts,
   });
 
   const polosQuery = useQuery({
     queryKey: financeiroQueryKeys.polos,
     queryFn: () => financeiroService.getPolos(),
-    staleTime: 60_000,
+    staleTime: 30 * 60_000,
+    gcTime: 60 * 60_000,
     enabled: polos,
   });
 
   const partnersQuery = useQuery({
-    queryKey: financeiroQueryKeys.parceiros,
-    queryFn: () => financeiroService.getParceiros(),
-    staleTime: 60_000,
-    enabled: partners,
+    queryKey: financeiroQueryKeys.parceirosByPolo(poloId),
+    queryFn: () => financeiroService.getParceiros(poloId || undefined),
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
+    enabled: partners && Boolean(poloId),
   });
 
   const turmasQuery = useQuery({
     queryKey: ['financeiro-shared-turmas', poloId || 'sem-polo'],
     queryFn: () => financeiroService.getTurmas(poloId || undefined),
-    staleTime: 60_000,
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
     enabled: turmas && Boolean(poloId),
   });
 

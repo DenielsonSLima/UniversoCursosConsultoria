@@ -60,7 +60,11 @@ export const sumBanesePaymentValues = (
     return total + value;
   }, 0);
 
-export type BaneseSettlementMethod = "BOLETO" | "PIX";
+export type BaneseSettlementMethod =
+  | "BOLETO"
+  | "PIX"
+  | "NAO_IDENTIFICADO"
+  | "MISTO";
 
 const normalizedSettlementLabel = (value: unknown) =>
   String(value ?? "").trim().toUpperCase().replace(/[\s_-]+/g, " ");
@@ -72,7 +76,7 @@ const hasReasonCode61 = (value: unknown) => {
   );
 };
 
-const paymentHasCanonicalPixEvidence = (
+const classifyBanesePaymentEvidence = (
   payment: Record<string, unknown>,
 ) => {
   const reasonValues = [
@@ -103,22 +107,34 @@ const paymentHasCanonicalPixEvidence = (
     ["BOLETO", "CODIGO DE BARRAS", "LINHA DIGITAVEL"].includes(value)
   );
 
-  return !explicitlyBoleto &&
-    (explicitlyPix || reasonValues.some(hasReasonCode61));
+  const hasPixEvidence = explicitlyPix || reasonValues.some(hasReasonCode61);
+  if (hasPixEvidence && explicitlyBoleto) return "CONFLITO";
+  if (hasPixEvidence) return "PIX";
+  if (explicitlyBoleto) return "BOLETO";
+  return "NAO_IDENTIFICADO";
 };
 
 /**
- * O produto bancario permanece BOLETO. A forma contabil muda para PIX somente
- * quando cada pagamento traz prova canonica de liquidacao BolePix. O manual
- * atual de PagamentosEfetivados documenta apenas banco, data e valor; portanto,
- * ausencia, texto descritivo livre, conflito ou pagamento misto falham fechado.
+ * O produto bancario permanece BOLETO. O canal de liquidacao somente e
+ * classificado quando o retorno traz prova canonica. A API documentada hoje
+ * retorna apenas banco, data e valor, portanto a ausencia de prova nao pode ser
+ * apresentada como boleto nem como Pix.
  */
 export const classifyBaneseSettlementMethod = (
   payments: Array<Record<string, unknown>>,
-): BaneseSettlementMethod =>
-  payments.length > 0 && payments.every(paymentHasCanonicalPixEvidence)
-    ? "PIX"
-    : "BOLETO";
+): BaneseSettlementMethod => {
+  if (payments.length === 0) return "NAO_IDENTIFICADO";
+  const evidence = payments.map(classifyBanesePaymentEvidence);
+  if (
+    evidence.includes("CONFLITO") ||
+    evidence.includes("NAO_IDENTIFICADO")
+  ) {
+    return "NAO_IDENTIFICADO";
+  }
+  const channels = new Set(evidence);
+  if (channels.size > 1) return "MISTO";
+  return evidence[0] as "PIX" | "BOLETO";
+};
 
 const banesePaymentDate = (payment: Record<string, unknown>) => {
   const raw = String(
@@ -374,6 +390,7 @@ export const reconcileBaneseReceivable = async (
     },
   );
   const receivableUpdate: Record<string, unknown> = {
+    gateway_payment_id: snapshotNossoNumero,
     gateway_status: snapshot.remoteStatus,
     gateway_financial_terms: confirmedFinancialTerms,
     gateway_financial_terms_confirmed_at:
@@ -410,11 +427,22 @@ export const reconcileBaneseReceivable = async (
   const shouldSettle = snapshot.paid &&
     String(receivable.status || "").toUpperCase() !== "PAGO";
   const settlementMethod = classifyBaneseSettlementMethod(snapshot.payments);
+  if (snapshot.paid) {
+    receivableUpdate.gateway_settlement_channel = settlementMethod;
+    receivableUpdate.gateway_settlement_source = "API";
+    receivableUpdate.gateway_settlement_evidence = {
+      classification: settlementMethod,
+      paymentCount: snapshot.payments.length,
+      documentedFields: ["BancoRecebedor", "DataPagamento", "ValorPago"],
+    };
+    receivableUpdate.gateway_settlement_recorded_at = syncedAt;
+  }
   if (shouldSettle) {
     receivableUpdate.status = "PAGO";
     receivableUpdate.valor_pago = Number(paymentTotal.toFixed(2));
     receivableUpdate.data_pagamento = paymentDates.at(-1);
-    receivableUpdate.forma_pagamento = settlementMethod;
+    receivableUpdate.forma_pagamento =
+      settlementMethod === "PIX" ? "PIX" : "BOLETO";
     receivableUpdate.origem_pagamento = "BANESE";
   }
 
@@ -499,6 +527,7 @@ export const reconcileBaneseReceivable = async (
           .update({
             ...transactionPayload,
             ...recoveredTransactionBankNumbers,
+            remote_payment_id: snapshotNossoNumero,
             bank_slip_our_number: snapshotNossoNumero,
             raw_payload: {
               ...(transaction.raw_payload &&
@@ -553,6 +582,10 @@ export const reconcileBaneseReceivable = async (
 
   let futureSyncWarning: string | null = null;
   if (snapshot.paid && String(updated.status || "").toUpperCase() === "PAGO") {
+    // A liberação acadêmica decorre diretamente do pagamento confirmado pelo
+    // banco. Falhas na projeção auxiliar de inscricoes_online devem permanecer
+    // auditáveis, mas não podem impedir o acesso de EAD/Livre/Especialização.
+    await activateEnrollmentAfterPayment({ admin } as any, updated);
     await syncOnlineInscriptionPayment({ admin } as any, {
       receivable: updated,
       gatewayProvider: "banese_card",
@@ -563,7 +596,6 @@ export const reconcileBaneseReceivable = async (
       legacyPaymentMethod: String(updated.forma_pagamento || settlementMethod),
       pendingStatus: "AGUARDANDO_PAGAMENTO",
     });
-    await activateEnrollmentAfterPayment({ admin } as any, updated);
 
     if (
       dependencies.syncFutureInstallments &&

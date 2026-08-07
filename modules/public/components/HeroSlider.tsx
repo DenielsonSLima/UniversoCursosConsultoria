@@ -1,6 +1,7 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight, MapPin, Quote } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
+import { usePublicUnits } from '../contact/usePublicUnits';
 
 interface SlideData {
   image: string;
@@ -15,12 +16,11 @@ interface SlideData {
   }[];
 }
 
-const slides: SlideData[] = [
+const BASE_SLIDES: SlideData[] = [
   {
     image: '/banner1.png', // Student split background
     title: 'Sua qualificação começa aqui — e abre portas no mercado.',
     subtitle: 'Desde 2011 oferecendo formação profissional e consultoria de excelência. Cursos livres, técnicos e profissionalizantes.',
-    locations: ['Japoatã', 'Porto da Folha', 'Aquidabã'],
     buttons: [
       { text: 'Conheça Nossos Cursos', primary: true, action: 'cursos' },
       { text: 'Falar com Consultor', primary: false, action: 'contato' }
@@ -50,13 +50,24 @@ const slides: SlideData[] = [
 const HeroSlider: React.FC = () => {
   const [current, setCurrent] = React.useState(0);
   const navigate = useNavigate();
+  const { data: publicUnits = [] } = usePublicUnits();
+  const locations = React.useMemo(
+    () => publicUnits.map((unit) => unit.city || unit.name).filter(Boolean),
+    [publicUnits],
+  );
+  const slides = React.useMemo(
+    () => BASE_SLIDES.map((slide, index) => (
+      index === 0 ? { ...slide, locations } : slide
+    )),
+    [locations],
+  );
 
   React.useEffect(() => {
     const timer = setInterval(() => {
       setCurrent((prev) => (prev + 1) % slides.length);
     }, 6000);
     return () => clearInterval(timer);
-  }, []);
+  }, [slides.length]);
 
   const next = () => setCurrent((prev) => (prev + 1) % slides.length);
   const prev = () => setCurrent((prev) => (prev - 1 + slides.length) % slides.length);

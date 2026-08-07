@@ -1,179 +1,269 @@
 import React from 'react';
-import { MapPin, Phone, Clock, MessageCircle } from 'lucide-react';
+import {
+  AlertCircle,
+  Building2,
+  Clock3,
+  ExternalLink,
+  Loader2,
+  Mail,
+  MapPin,
+  MessageCircle,
+  Phone,
+} from 'lucide-react';
+import { usePublicUnits } from '../usePublicUnits';
+import type { PublicUnit, PublicUnitSchedule } from '../contact.types';
 
-const unitsData = [
-  {
-    name: "Unidade Japoatã (Matriz)",
-    address: [
-      "Rua V, nº 56 - Loteamento São José",
-      "CEP 49950-000",
-      "Japoatã - SE"
-    ],
-    phone: [
-      "(79) 99602-8316",
-      "(79) 99861-7614"
-    ],
-    whatsapp: "5579996028316",
-    hours: [
-      { day: "Segunda a Sexta", time: "08:00 às 17:00" },
-      { day: "Sábado", time: "08:00 às 17:00" }
-    ],
-    image: "/unnamed-2.jpg",
-    mapsUrl: "https://www.google.com/maps/search/?api=1&query=Rua+V%2C+56%2C+Loteamento+S%C3%A3o+Jos%C3%A9%2C+Japoat%C3%A3+-+SE%2C+49950-000"
-  },
-  {
-    name: "Unidade Aquidabã",
-    address: [
-      "Rua Eduardo Chaves, nº 109, Centro (Vizinho ao Fórum)",
-      "CEP 49945-000",
-      "Aquidabã - SE"
-    ],
-    phone: [
-      "(79) 99602-8316",
-      "(79) 99861-7614"
-    ],
-    whatsapp: "5579996028316",
-    hours: [
-      { day: "Segunda a Sexta", time: "08:00 às 17:00" },
-      { day: "Sábado", time: "08:00 às 17:00" }
-    ],
-    image: null,
-    mapsUrl: "https://maps.app.goo.gl/SSe3eGXDpMmSoseu5"
-  },
-  {
-    name: "Unidade Porto da Folha",
-    address: [
-      "Rua Major João Gonçalves, nº 1783, Centro (Vizinho à Delegacia)",
-      "CEP 49800-000",
-      "Porto da Folha - SE"
-    ],
-    phone: [
-      "(79) 99602-8316",
-      "(79) 99861-7614"
-    ],
-    whatsapp: "5579996028316",
-    hours: [
-      { day: "Segunda a Sexta", time: "08:00 às 17:00" },
-      { day: "Sábado", time: "08:00 às 17:00" }
-    ],
-    image: null,
-    mapsUrl: "https://www.google.com/maps/search/?api=1&query=Rua+Major+Jo%C3%A3o+Gon%C3%A7alves%2C+1783%2C+Centro%2C+Porto+da+Folha+-+SE%2C+49800-000"
+const WEEK_DAYS = [
+  ['1', 'Segunda'],
+  ['2', 'Terça'],
+  ['3', 'Quarta'],
+  ['4', 'Quinta'],
+  ['5', 'Sexta'],
+  ['6', 'Sábado'],
+  ['0', 'Domingo'],
+] as const;
+
+const titleCase = (value: string) =>
+  value
+    .toLocaleLowerCase('pt-BR')
+    .replace(/(^|[\s/-])([\p{L}])/gu, (_match, separator, letter) => `${separator}${letter.toLocaleUpperCase('pt-BR')}`);
+
+const splitPhones = (phone: string | null) =>
+  (phone || '')
+    .split(/\s*(?:\/|;|\||\n)\s*/)
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+const getWhatsAppNumber = (phone: string) => {
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length < 10) return null;
+  return digits.startsWith('55') ? digits : `55${digits}`;
+};
+
+const formatPublicPhone = (phone: string) => phone.trim().startsWith('+55') ? phone : `+55 ${phone}`;
+
+const getUnitLabel = (unit: PublicUnit) => {
+  const city = titleCase(unit.city || unit.name);
+  return unit.isMatrix ? `Unidade ${city} · Matriz` : `Unidade ${city}`;
+};
+
+const getAddressLines = (unit: PublicUnit) => {
+  const street = [unit.address, unit.number].filter(Boolean).join(', ');
+  const location = [unit.city ? titleCase(unit.city) : '', unit.state?.toLocaleUpperCase('pt-BR')]
+    .filter(Boolean)
+    .join(' · ');
+
+  return [
+    street,
+    unit.complement,
+    unit.district ? titleCase(unit.district) : '',
+    unit.postalCode ? `CEP ${unit.postalCode}` : '',
+    location,
+  ].filter(Boolean);
+};
+
+const getMapsUrl = (unit: PublicUnit) => {
+  const query = getAddressLines(unit).join(', ');
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+};
+
+const formatSchedule = (schedule: PublicUnitSchedule | null) => {
+  if (!schedule) return [];
+
+  const activeDays = WEEK_DAYS.flatMap(([id, label]) => {
+    const rule = schedule[id];
+    return rule?.ativo && rule.inicio && rule.fim
+      ? [{ label, time: `${rule.inicio} às ${rule.fim}` }]
+      : [];
+  });
+
+  const groups = activeDays.reduce<Array<{ label: string; time: string }>>((result, day) => {
+    const previous = result.at(-1);
+    if (!previous || previous.time !== day.time) {
+      result.push({ ...day });
+      return result;
+    }
+
+    const firstDay = previous.label.split(' a ')[0];
+    previous.label = `${firstDay} a ${day.label}`;
+    return result;
+  }, []);
+
+  if (schedule.feriados?.ativo === false) {
+    groups.push({ label: 'Feriados', time: 'Fechado' });
   }
-];
 
-const UnitsList: React.FC = () => {
+  return groups;
+};
+
+const UnitCard = ({ unit }: { unit: PublicUnit; key?: React.Key }) => {
+  const addressLines = getAddressLines(unit);
+  const mapsUrl = getMapsUrl(unit);
+  const phones = splitPhones(unit.phone);
+  const whatsapp = phones.length ? getWhatsAppNumber(phones[0]) : null;
+  const hours = formatSchedule(unit.supportHours);
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-      {unitsData.map((unit, index) => (
-        <div 
-          key={index} 
-          className="bg-white rounded-[32px] overflow-hidden border border-slate-100 shadow-2xl hover:shadow-blue-900/10 transition-all group"
+    <article className="group overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_24px_60px_-38px_rgba(0,26,51,0.55)] transition duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-[0_30px_70px_-38px_rgba(37,99,235,0.45)]">
+      <div className="relative h-48 overflow-hidden bg-[#001a33]">
+        <iframe
+          src={`https://maps.google.com/maps?q=${encodeURIComponent(addressLines.join(', '))}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
+          className="h-full w-full scale-[1.03] border-0 grayscale-[15%] transition duration-700 group-hover:scale-110"
+          loading="lazy"
+          title={`Mapa de ${getUnitLabel(unit)}`}
+          tabIndex={-1}
+        />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#001a33] via-[#001a33]/30 to-transparent" />
+        <a
+          href={mapsUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="absolute inset-0 flex items-end justify-between gap-4 p-6 text-white outline-none ring-inset focus-visible:ring-4 focus-visible:ring-blue-400"
+          aria-label={`Abrir ${getUnitLabel(unit)} no Google Maps`}
         >
-          {unit.image ? (
-            <div className="h-48 overflow-hidden relative">
-              <img 
-                src={unit.image} 
-                alt={unit.name} 
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-              <div className="absolute bottom-4 left-6">
-                <h3 className="text-white font-black text-xl uppercase tracking-tighter">
-                  {unit.name}
-                </h3>
-              </div>
-            </div>
-          ) : (
-            <a 
-              href={unit.mapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="h-48 block overflow-hidden relative group/map cursor-pointer"
-            >
-              <iframe 
-                src={`https://maps.google.com/maps?q=${encodeURIComponent(unit.address.join(', '))}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
-                width="100%" 
-                height="100%" 
-                className="border-0 pointer-events-none scale-105 group-hover/map:scale-110 transition-transform duration-700"
-                loading="lazy"
-                title={`Mapa ${unit.name}`}
-              ></iframe>
-              <div className="absolute inset-0 bg-black/20 group-hover/map:bg-black/10 transition-colors pointer-events-none"></div>
-              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent pointer-events-none"></div>
-              <div className="absolute bottom-4 left-6 pointer-events-none">
-                <h3 className="text-white font-black text-xl uppercase tracking-tighter">
-                  {unit.name}
-                </h3>
-                <p className="text-blue-400 text-[10px] font-bold uppercase tracking-wider mt-0.5">Clique para ver no Google Maps</p>
-              </div>
-            </a>
-          )}
-          
-          <div className="p-8 space-y-6">
-            {/* Endereço */}
-            <a 
-              href={unit.mapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex gap-4 hover:bg-slate-50 p-2 -mx-2 rounded-2xl transition-colors group/address cursor-pointer block text-left"
-            >
-              <div className="p-2 bg-blue-50 text-blue-600 rounded-xl h-fit group-hover/address:bg-blue-600 group-hover/address:text-white transition-colors">
-                <MapPin size={18} />
-              </div>
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1">
-                  Localização
-                  <span className="text-blue-500 font-bold group-hover/address:text-blue-600 group-hover/address:underline text-[9px] uppercase tracking-normal normal-case ml-1">(Ver no Mapa)</span>
-                </p>
-                <div className="space-y-0.5">
-                  {unit.address.map((line, idx) => (
-                    <p key={idx} className="text-slate-700 font-medium leading-snug group-hover/address:text-blue-900 transition-colors">{line}</p>
-                  ))}
-                </div>
-              </div>
-            </a>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-blue-200">
+              {unit.isMatrix ? 'Sede principal' : 'Atendimento presencial'}
+            </p>
+            <h2 className="mt-1 text-2xl font-black tracking-tight">{getUnitLabel(unit)}</h2>
+          </div>
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/15 backdrop-blur">
+            <ExternalLink size={18} />
+          </span>
+        </a>
+      </div>
 
-            {/* Contato */}
-            <div className="flex gap-4">
-              <div className="p-2 bg-blue-50 text-blue-600 rounded-xl h-fit">
-                <Phone size={18} />
-              </div>
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Telefone</p>
-                {unit.phone.map((p, idx) => (
-                  <p key={idx} className="text-slate-700 font-bold">{p}</p>
-                ))}
-              </div>
+      <div className="grid gap-6 p-6 sm:p-7">
+        <div className="flex gap-4">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+            <MapPin size={19} />
+          </span>
+          <div className="min-w-0">
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Localização</p>
+            <div className="mt-2 space-y-1">
+              {addressLines.map((line) => (
+                <p key={line} className="text-sm font-semibold leading-5 text-slate-700">{line}</p>
+              ))}
             </div>
-
-            {/* Horários */}
-            <div className="flex gap-4">
-              <div className="p-2 bg-blue-50 text-blue-600 rounded-xl h-fit">
-                <Clock size={18} />
-              </div>
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Funcionamento</p>
-                {unit.hours.map((h, i) => (
-                  <p key={i} className="text-slate-700 text-sm">
-                    <span className="font-semibold text-blue-900">{h.day}:</span> {h.time}
-                  </p>
-                ))}
-              </div>
-            </div>
-
-            {/* Ação */}
-            <a 
-              href={`https://wa.me/${unit.whatsapp}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full mt-4 flex items-center justify-center gap-2 bg-[#FFFFFF] border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all"
-            >
-              <MessageCircle size={16} />
-              Falar com esta unidade
-            </a>
           </div>
         </div>
-      ))}
+
+        <div className="grid gap-5 border-t border-slate-100 pt-6 sm:grid-cols-2">
+          <div className="flex gap-3">
+            <Phone className="mt-0.5 shrink-0 text-blue-600" size={18} />
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Contato</p>
+              {phones.length ? phones.map((phone) => {
+                const number = getWhatsAppNumber(phone);
+                return number ? (
+                  <a
+                    key={phone}
+                    href={`https://wa.me/${number}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 flex items-center gap-1.5 text-sm font-black text-[#001a33] hover:text-blue-600"
+                  >
+                    <MessageCircle size={14} /> {formatPublicPhone(phone)}
+                  </a>
+                ) : (
+                  <a key={phone} href={`tel:${phone.replace(/\D/g, '')}`} className="mt-1 block text-sm font-black text-[#001a33] hover:text-blue-600">
+                    {formatPublicPhone(phone)}
+                  </a>
+                );
+              }) : <p className="mt-1 text-sm font-semibold text-slate-500">Consulte pelo atendimento central</p>}
+              {unit.email ? (
+                <a href={`mailto:${unit.email}`} className="mt-1 flex items-center gap-1.5 break-all text-xs font-bold text-slate-500 hover:text-blue-600">
+                  <Mail size={13} /> {unit.email}
+                </a>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <Clock3 className="mt-0.5 shrink-0 text-blue-600" size={18} />
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Funcionamento</p>
+              {hours.length ? hours.map((range) => (
+                <p key={`${range.label}-${range.time}`} className="mt-1 text-sm font-semibold text-slate-700">
+                  <span className="font-black text-[#001a33]">{range.label}:</span> {range.time}
+                </p>
+              )) : <p className="mt-1 text-sm font-semibold text-slate-500">Horário sob consulta</p>}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+          {whatsapp ? (
+            <a
+              href={`https://wa.me/${whatsapp}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-[3.25rem] items-center justify-center gap-2 rounded-2xl bg-blue-600 px-5 text-xs font-black uppercase tracking-[0.14em] text-white shadow-lg shadow-blue-200 transition hover:bg-[#001a33]"
+            >
+              <MessageCircle size={17} />
+              Falar com esta unidade
+            </a>
+          ) : (
+            <a
+              href={mapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-[3.25rem] items-center justify-center gap-2 rounded-2xl bg-blue-600 px-5 text-xs font-black uppercase tracking-[0.14em] text-white"
+            >
+              <MapPin size={17} /> Ver localização
+            </a>
+          )}
+          <a
+            href={mapsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-[3.25rem] items-center justify-center gap-2 rounded-2xl border border-slate-200 px-5 text-xs font-black uppercase tracking-[0.12em] text-[#001a33] transition hover:border-blue-300 hover:bg-blue-50"
+          >
+            Como chegar <ExternalLink size={15} />
+          </a>
+        </div>
+      </div>
+    </article>
+  );
+};
+
+const UnitsList: React.FC = () => {
+  const { data: units = [], isLoading, isError } = usePublicUnits();
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-80 items-center justify-center rounded-[2rem] border border-slate-200 bg-white">
+        <div className="text-center">
+          <Loader2 className="mx-auto animate-spin text-blue-600" size={30} />
+          <p className="mt-3 text-sm font-bold text-slate-500">Carregando unidades...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="rounded-[2rem] border border-rose-200 bg-white p-8 text-center">
+        <AlertCircle className="mx-auto text-rose-500" size={30} />
+        <h2 className="mt-3 text-lg font-black text-[#001a33]">Não foi possível carregar as unidades</h2>
+        <p className="mt-1 text-sm font-semibold text-slate-500">Tente novamente em alguns instantes.</p>
+      </div>
+    );
+  }
+
+  if (!units.length) {
+    return (
+      <div className="rounded-[2rem] border border-slate-200 bg-white p-10 text-center">
+        <Building2 className="mx-auto text-blue-600" size={32} />
+        <h2 className="mt-3 text-lg font-black text-[#001a33]">Unidades em atualização</h2>
+        <p className="mt-1 text-sm font-semibold text-slate-500">Os canais de atendimento serão publicados em breve.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 gap-7 lg:grid-cols-2">
+      {units.map((unit) => <UnitCard key={unit.id} unit={unit} />)}
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
+import { formatAcademicSessions, groupAcademicClassMeetings } from '../../../lib/academicClassMeetings';
 import { BookOpen, GraduationCap, MessageSquare, Calendar, Clock, AlertTriangle, CheckCircle2, WalletCards, History, Pin, PlayCircle, Image as ImageIcon } from 'lucide-react';
 import { canAccessLibraryDocumentAsAluno } from '../biblioteca/libraryAccess';
 import {
@@ -11,6 +12,9 @@ import {
   toggleStudentPinnedCourse,
   type StudentCourseAccessItem,
 } from '../cursos/courseAccessHistory';
+import { alunoCourseAccessKeys } from '../shared/aluno-course-access.queries';
+import AlunoMobileHome from './components/AlunoMobileHome';
+import useAlunoMobileLayout from '../hooks/useAlunoMobileLayout';
 
 type InicioUpcomingEvent = {
   id: string;
@@ -46,35 +50,46 @@ const getCourseModalityClasses = (value?: string | null) => {
 
 interface InicioPageProps {
   alunoId: string;
+  canViewCalendar: boolean;
   onNavigate: (module: string) => void;
   onOpenCourse?: (courseId: string, turmaId: string | null, targetModule: 'turmas' | 'cursos') => void;
 }
 
-const InicioPage: React.FC<InicioPageProps> = ({ alunoId, onNavigate, onOpenCourse }) => {
-  // Query to count enrolled classes
-  const { data: matriculasCount = 0 } = useQuery({
-    queryKey: ['aluno-matriculas-count', alunoId],
+const InicioPage: React.FC<InicioPageProps> = ({ alunoId, canViewCalendar, onNavigate, onOpenCourse }) => {
+  const isMobileLayout = useAlunoMobileLayout();
+  // Conta também a matrícula técnica pendente para o aluno enxergar que já
+  // está registrado, sem liberar conteúdo acadêmico antes da ativação.
+  const { data: enrollmentSummary = { visible: 0, pendingTechnical: 0 }, isError: enrollmentSummaryError, refetch: refetchEnrollmentSummary } = useQuery({
+    queryKey: alunoCourseAccessKeys.homeEnrollmentCount(alunoId),
     queryFn: async () => {
-      const { count, error } = await supabase
-        .from('matriculas')
-        .select('*', { count: 'exact', head: true })
-        .eq('aluno_id', alunoId)
-        .in('status', ['ATIVO', 'CONCLUIDO']);
-      
-      if (error) throw error;
-      return count || 0;
+      const [releasedResult, pendingResult] = await Promise.all([
+        supabase
+          .from('matriculas')
+          .select('*', { count: 'exact', head: true })
+          .eq('aluno_id', alunoId)
+          .in('status', ['ATIVO', 'CONCLUIDO', 'EM_DEPENDENCIA']),
+        supabase.rpc('get_aluno_matriculas_tecnicas_pendentes_secure'),
+      ]);
+      if (releasedResult.error) throw releasedResult.error;
+      if (pendingResult.error) throw pendingResult.error;
+      const pendingTechnical = Array.isArray(pendingResult.data)
+        ? pendingResult.data.length
+        : 0;
+      const released = releasedResult.count || 0;
+      return { visible: released + pendingTechnical, pendingTechnical };
     }
   });
+  const matriculasCount = enrollmentSummaryError ? null : enrollmentSummary.visible;
 
   // 2. Informações de matrícula para contexto de acesso
-  const { data: matriculas = [], isLoading: loadingMatriculas } = useQuery<any[]>({
-    queryKey: ['aluno-inicio-matriculas', alunoId],
+  const { data: matriculas = [], isLoading: loadingMatriculas, isError: matriculasError, refetch: refetchMatriculas } = useQuery<any[]>({
+    queryKey: alunoCourseAccessKeys.homeEnrollments(alunoId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('matriculas')
         .select('*, turmas(*, cursos(*))')
         .eq('aluno_id', alunoId)
-        .in('status', ['ATIVO', 'CONCLUIDO']);
+        .in('status', ['ATIVO', 'CONCLUIDO', 'EM_DEPENDENCIA']);
       if (error) throw error;
       return data || [];
     }
@@ -214,7 +229,7 @@ const InicioPage: React.FC<InicioPageProps> = ({ alunoId, onNavigate, onOpenCour
   };
 
   // 3. Count de documentos realmente disponíveis ao aluno no contexto atual
-  const { data: bibliotecaCount = 0 } = useQuery<number>({
+  const { data: bibliotecaCount = 0, isError: bibliotecaCountError, refetch: refetchBibliotecaCount } = useQuery<number>({
     queryKey: [
       'aluno-biblioteca-count',
       alunoId,
@@ -236,7 +251,7 @@ const InicioPage: React.FC<InicioPageProps> = ({ alunoId, onNavigate, onOpenCour
   });
 
   // Query to count open chats
-  const { data: chatsCount = 0 } = useQuery({
+  const { data: chatsCount = 0, isError: chatsCountError, refetch: refetchChatsCount } = useQuery({
     queryKey: ['aluno-chats-count', alunoId],
     queryFn: async () => {
       const { count, error } = await supabase
@@ -250,8 +265,8 @@ const InicioPage: React.FC<InicioPageProps> = ({ alunoId, onNavigate, onOpenCour
     }
   });
 
-  const { data: financeiroResumo, isLoading: loadingFinanceiro } = useQuery<any>({
-    queryKey: ['aluno-inicio-financeiro-resumo', alunoId],
+  const { data: financeiroResumo, isLoading: loadingFinanceiro, isError: financeiroError, refetch: refetchFinanceiro } = useQuery<any>({
+    queryKey: alunoCourseAccessKeys.homeFinanceSummary(alunoId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('contas_receber')
@@ -291,7 +306,7 @@ const InicioPage: React.FC<InicioPageProps> = ({ alunoId, onNavigate, onOpenCour
     }
   });
 
-  const { data: proximosEventos = [], isLoading: loadingProximosEventos } = useQuery<InicioUpcomingEvent[]>({
+  const { data: proximosEventos = [], isLoading: loadingProximosEventos, isError: proximosEventosError, refetch: refetchProximosEventos } = useQuery<InicioUpcomingEvent[]>({
     queryKey: ['aluno-inicio-proximos-eventos', alunoId, activeTurmaIds.join(',')],
     enabled: !!alunoId && !loadingMatriculas,
     queryFn: async () => {
@@ -300,16 +315,16 @@ const InicioPage: React.FC<InicioPageProps> = ({ alunoId, onNavigate, onOpenCour
       const today = toLocalDateKey(new Date());
       const { data, error } = await supabase
         .from('aulas_turma')
-        .select('id, titulo, carga_horaria, data_aula, turma_id, disciplina_id')
+        .select('id, titulo, carga_horaria, sessao, data_aula, turma_id, disciplina_id')
         .in('turma_id', activeTurmaIds)
         .not('data_aula', 'is', null)
         .gte('data_aula', today)
         .order('data_aula', { ascending: true })
-        .limit(6);
+        .limit(12);
 
       if (error) throw error;
 
-      const aulas = data || [];
+      const aulas = groupAcademicClassMeetings((data || []) as any[]).slice(0, 6);
       const disciplinaIds = [...new Set(aulas.map((aula: any) => aula.disciplina_id).filter(Boolean))];
       const [{ data: disciplinasData, error: disciplinasError }, { data: configsData, error: configsError }] = await Promise.all([
         disciplinaIds.length > 0
@@ -336,6 +351,7 @@ const InicioPage: React.FC<InicioPageProps> = ({ alunoId, onNavigate, onOpenCour
         const disciplinaNome = disciplinaNames.get(aula.disciplina_id) || 'Disciplina';
         const config = configMap.get(`${aula.turma_id}-${aula.disciplina_id}`) || {};
         const cargaHoraria = Number(aula.carga_horaria || 0);
+        const sessoesLabel = formatAcademicSessions(aula.sessoes);
 
         return {
           id: `aula-${aula.id}`,
@@ -345,6 +361,7 @@ const InicioPage: React.FC<InicioPageProps> = ({ alunoId, onNavigate, onOpenCour
           detail: [
             config.professor_nome ? `Prof. ${config.professor_nome}` : null,
             cargaHoraria > 0 ? `${cargaHoraria}h` : null,
+            sessoesLabel,
             turma.turno ? `Turno ${turma.turno}` : null,
           ].filter(Boolean).join(' • '),
         };
@@ -359,9 +376,40 @@ const InicioPage: React.FC<InicioPageProps> = ({ alunoId, onNavigate, onOpenCour
     if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
     return dateStr;
   };
+  const hasHomeDataError = enrollmentSummaryError || matriculasError || bibliotecaCountError || chatsCountError || financeiroError || proximosEventosError;
+  const retryHomeData = () => {
+    void Promise.all([
+      refetchEnrollmentSummary(),
+      refetchMatriculas(),
+      refetchBibliotecaCount(),
+      refetchChatsCount(),
+      refetchFinanceiro(),
+      refetchProximosEventos(),
+    ]);
+  };
 
   return (
-    <div className="space-y-8 animate-fadeIn antialiased">
+    <>
+      {isMobileLayout ? <AlunoMobileHome
+        bibliotecaCount={bibliotecaCountError ? null : bibliotecaCount}
+        canViewCalendar={canViewCalendar}
+        chatsCount={chatsCountError ? null : chatsCount}
+        courseDataError={matriculasError || enrollmentSummaryError}
+        financeDataError={financeiroError}
+        hasDataError={hasHomeDataError}
+        financeiroResumo={financeiroResumo}
+        loadingFinanceiro={loadingFinanceiro}
+        loadingProximosEventos={loadingProximosEventos}
+        matriculasCount={matriculasCount}
+        primaryCourse={quickAccessCourses[0]}
+        proximosEventos={proximosEventos}
+        onNavigate={onNavigate}
+        onOpenCourse={handleOpenQuickAccessCourse}
+        onRetry={retryHomeData}
+        scheduleDataError={proximosEventosError}
+      /> : null}
+
+      {!isMobileLayout ? <div className="space-y-8 animate-fadeIn antialiased">
       {/* KPI Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         {/* KPI 1 */}
@@ -372,7 +420,11 @@ const InicioPage: React.FC<InicioPageProps> = ({ alunoId, onNavigate, onOpenCour
           <div className="space-y-1">
             <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Meus Cursos</p>
             <p className="text-3xl font-black text-[#001a33]">{matriculasCount}</p>
-            <p className="text-[10px] text-slate-500 font-medium">Cursos matriculados e liberados</p>
+            <p className="text-[10px] text-slate-500 font-medium">
+              {enrollmentSummary.pendingTechnical > 0
+                ? `${enrollmentSummary.pendingTechnical} aguardando liberação acadêmica`
+                : 'Cursos matriculados e liberados'}
+            </p>
           </div>
           <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
             <GraduationCap size={22} />
@@ -647,7 +699,8 @@ const InicioPage: React.FC<InicioPageProps> = ({ alunoId, onNavigate, onOpenCour
           </div>
         </div>
       </div>
-    </div>
+      </div> : null}
+    </>
   );
 };
 

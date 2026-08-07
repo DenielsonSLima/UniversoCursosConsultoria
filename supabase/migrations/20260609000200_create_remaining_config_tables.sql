@@ -174,11 +174,11 @@ ON CONFLICT (id) DO NOTHING;
 -- Seed: Categorias
 INSERT INTO categorias (id, nome, tipo, descricao, status)
 VALUES
-  ('c1111111-1111-1111-1111-111111111111', 'Supermercado', 'pj', 'Fornecedores de alimentos', 'ativo'),
-  ('c2222222-2222-2222-2222-222222222222', 'Posto de Combustível', 'pj', 'Fornecimento de combustível', 'ativo'),
-  ('c3333333-3333-3333-3333-333333333333', 'Aluno Bolsista', 'aluno', 'Alunos com bolsa integral', 'ativo'),
-  ('c4444444-4444-4444-4444-444444444444', 'Professor Substituto', 'professor', 'Professores temporários', 'ativo'),
-  ('c5555555-5555-5555-5555-555555555555', 'Prestador de Serviço TI', 'pf', 'Manutenção e suporte', 'ativo')
+  ('c1111111-1111-1111-1111-111111111111', 'SUPERMERCADO', 'pj', 'Fornecedores de alimentos', 'ativo'),
+  ('c2222222-2222-2222-2222-222222222222', 'POSTO DE COMBUSTÍVEL', 'pj', 'Fornecimento de combustível', 'ativo'),
+  ('c3333333-3333-3333-3333-333333333333', 'ALUNO BOLSISTA', 'aluno', 'Alunos com bolsa integral', 'ativo'),
+  ('c4444444-4444-4444-4444-444444444444', 'PROFESSOR SUBSTITUTO', 'professor', 'Professores temporários', 'ativo'),
+  ('c5555555-5555-5555-5555-555555555555', 'PRESTADOR DE SERVIÇO TI', 'pf', 'Manutenção e suporte', 'ativo')
 ON CONFLICT (id) DO NOTHING;
 
 -- Seed: Taxas

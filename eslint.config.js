@@ -7,7 +7,8 @@ export default [
     ignores: [
       "dist/**",
       "node_modules/**",
-      "pasta sem título/**"
+      "pasta sem título/**",
+      "pasta sem título/**"
     ]
   },
   js.configs.recommended,

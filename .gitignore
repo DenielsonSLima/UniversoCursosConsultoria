@@ -41,7 +41,32 @@ supabase/.temp
 !/banese homologacao/retornos/2026-07-16-bolepix-webhook-e-conciliacao.md
 /tmp/
 
+# Índices locais da memória RAG; as fontes canônicas são versionadas em ai/operacao.
+/ai/operacao/rag/index.json
+/ai/operacao/rag/embeddings.json
+
+# Artefatos nativos regeneráveis; não são código-fonte nem entram em lotes.
+/android/.gradle/
+/android/.idea/
+/android/app/build/
+/android/build/
+/android/capacitor-cordova-android-plugins/build/
+/android/local.properties
+/android/**/.DS_Store
+/ios/**/.DS_Store
+/ios/App/Pods/
+/ios/App/DerivedData/
+
+# Bundles locais de diagnóstico e planilhas operacionais com dados de turmas
+/scratch/
+/DIARIOS/
+/Documentos/turma*.xls
+/Documentos/radiologia*.xls
+
 # Boletos de homologação com dados pessoais (entrega local, nunca versionar)
 /output/pdf/banese-homologacao-*.pdf
 /output/pdf/banese/boletos/*.pdf
 /output/pdf/banese/carne/*.pdf
+
+# Triagem local de documentos e artefatos operacionais; nunca publicar no GitHub
+/ARQUIVOS_EM_TRIAGEM_2026-08-03/

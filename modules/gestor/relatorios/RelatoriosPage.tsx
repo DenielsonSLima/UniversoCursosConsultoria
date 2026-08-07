@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Users, Building, BookOpen, DollarSign, BarChart3, FileText, Sparkles, ArrowLeft, ChevronRight, AlertTriangle, Award, GraduationCap, ClipboardList, CheckCircle2, Landmark } from 'lucide-react';
+import { Users, Building, BookOpen, DollarSign, BarChart3, FileText, ArrowLeft, ChevronRight, AlertTriangle, Award, GraduationCap, ClipboardList, CheckCircle2, Landmark, ShieldCheck } from 'lucide-react';
 import { empresasService } from '../configuracoes/empresas/empresas.service';
 import { polosService } from '../configuracoes/polos/polos.service';
 
@@ -13,13 +13,16 @@ import RelatorioDRE from './components/RelatorioDRE';
 import RelatorioInadimplencia from './components/RelatorioInadimplencia';
 import RelatorioEstagios from './components/RelatorioEstagios';
 import RelatorioFinanceiroTurmaMensal from './components/RelatorioFinanceiroTurmaMensal';
+import RelatorioFinanceiroPreEstagio from './components/RelatorioFinanceiroPreEstagio';
 import RelatorioAlunosCursando from './components/RelatorioAlunosCursando';
 import RelatorioAlunosFinalizados from './components/RelatorioAlunosFinalizados';
-import RelatorioMatriculaInicial from './components/RelatorioMatriculaInicial';
 import RelatorioSituacaoAluno from './components/RelatorioSituacaoAluno';
 import RelatorioLucroTurma from './components/RelatorioLucroTurma';
+import RelatorioMatriculas from './matriculas/RelatorioMatriculas';
+import DiagnosticoMatriculaInicial from './censo-escolar/matricula-inicial/DiagnosticoMatriculaInicial';
+import { useRelatoriosRealtime } from './hooks/useRelatoriosRealtime';
 
-type ReportType = 'turmas' | 'polos' | 'cursos' | 'financeiro' | 'dre' | 'inadimplencia' | 'estagios' | 'financeiro-turma-mensal' | 'alunos-cursando' | 'alunos-finalizados' | 'matricula-inicial' | 'situacao-aluno' | 'lucro-turma';
+type ReportType = 'turmas' | 'polos' | 'cursos' | 'financeiro' | 'dre' | 'inadimplencia' | 'estagios' | 'financeiro-turma-mensal' | 'financeiro-pre-estagio' | 'alunos-cursando' | 'alunos-finalizados' | 'matriculas' | 'matricula-inicial' | 'situacao-aluno' | 'lucro-turma';
 
 interface ReportMenuItem {
   id: ReportType;
@@ -35,15 +38,29 @@ interface RelatoriosPageProps {
 
 const RelatoriosPage: React.FC<RelatoriosPageProps> = ({ poloId }) => {
   const [activeReport, setActiveReport] = useState<ReportType | null>(null);
+  useRelatoriosRealtime({
+    enabled: activeReport === 'matriculas' || activeReport === 'matricula-inicial',
+    poloId,
+  });
 
   // 1. Fetch Company Principal Details
-  const { data: company, isLoading: loadingCompany } = useQuery<any>({
+  const {
+    data: company,
+    isLoading: loadingCompany,
+    isError: companyError,
+    refetch: refetchCompany,
+  } = useQuery<any>({
     queryKey: ['empresa_principal'],
     queryFn: () => empresasService.getCompanyPrincipal(),
   });
 
   // 2. Fetch Active Polo Details
-  const { data: polo, isLoading: loadingPolo } = useQuery<any>({
+  const {
+    data: polo,
+    isLoading: loadingPolo,
+    isError: poloError,
+    refetch: refetchPolo,
+  } = useQuery<any>({
     queryKey: ['polo_detalhes', poloId],
     queryFn: () => poloId ? polosService.getById(poloId) : Promise.resolve(null),
     enabled: !!poloId,
@@ -107,11 +124,25 @@ const RelatoriosPage: React.FC<RelatoriosPageProps> = ({ poloId }) => {
       category: 'financeiro'
     },
     {
+      id: 'financeiro-pre-estagio',
+      label: 'Financeiro da Turma para Estágio',
+      description: 'Conferência dos alunos ativos e das parcelas do curso pagas, abertas e vencidas antes do estágio.',
+      icon: <ShieldCheck size={22} />,
+      category: 'financeiro'
+    },
+    {
       id: 'lucro-turma',
       label: 'DRE / Resultado de Turma',
       description: 'Análise consolidada de lucro confrontando receitas de mensalidades e despesas da turma.',
       icon: <BarChart3 size={22} />,
       category: 'financeiro'
+    },
+    {
+      id: 'matriculas',
+      label: 'Relatório de Matrículas',
+      description: 'Relação operacional paginada por período, situação, modalidade, turma e polo.',
+      icon: <ClipboardList size={22} />,
+      category: 'academico'
     },
     {
       id: 'alunos-cursando',
@@ -129,8 +160,8 @@ const RelatoriosPage: React.FC<RelatoriosPageProps> = ({ poloId }) => {
     },
     {
       id: 'matricula-inicial',
-      label: 'Matrícula Inicial',
-      description: 'Base acadêmica inspirada na coleta de Matrícula Inicial do Censo Escolar/Inep.',
+      label: 'Diagnóstico do Censo Escolar',
+      description: 'Prontidão cadastral atual para a Matrícula Inicial, sem representar declaração oficial.',
       icon: <Landmark size={22} />,
       category: 'oficial'
     },
@@ -161,14 +192,18 @@ const RelatoriosPage: React.FC<RelatoriosPageProps> = ({ poloId }) => {
         return <RelatorioEstagios company={company} polo={polo} />;
       case 'financeiro-turma-mensal':
         return <RelatorioFinanceiroTurmaMensal company={company} polo={polo} />;
+      case 'financeiro-pre-estagio':
+        return <RelatorioFinanceiroPreEstagio company={company} polo={polo} />;
       case 'lucro-turma':
         return <RelatorioLucroTurma company={company} polo={polo} />;
       case 'alunos-cursando':
         return <RelatorioAlunosCursando company={company} polo={polo} />;
       case 'alunos-finalizados':
         return <RelatorioAlunosFinalizados company={company} polo={polo} />;
+      case 'matriculas':
+        return <RelatorioMatriculas company={company} polo={polo} poloId={poloId} />;
       case 'matricula-inicial':
-        return <RelatorioMatriculaInicial company={company} polo={polo} />;
+        return <DiagnosticoMatriculaInicial company={company} polo={polo} poloId={poloId} />;
       case 'situacao-aluno':
         return <RelatorioSituacaoAluno company={company} polo={polo} />;
       default:
@@ -212,12 +247,6 @@ const RelatoriosPage: React.FC<RelatoriosPageProps> = ({ poloId }) => {
             </p>
           </div>
         </div>
-
-        {polo && (
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-[#001a33]/5 border border-[#001a33]/15 text-[#001a33] rounded-xl text-[10px] font-black uppercase tracking-wider">
-            <Sparkles size={11} /> Unidade Ativa: {polo.nome}
-          </div>
-        )}
       </div>
 
       {/* Main Content Area */}
@@ -370,8 +399,27 @@ const RelatoriosPage: React.FC<RelatoriosPageProps> = ({ poloId }) => {
           /* If a report is selected: Show it full-width */
           <div className="h-full overflow-hidden p-6">
             {(loadingCompany || loadingPolo) ? (
-              <div className="h-full w-full flex justify-center items-center">
-                <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+              <div className="flex h-full w-full items-center justify-center" role="status" aria-label="Carregando identificação institucional">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+              </div>
+            ) : (companyError || poloError || !company || (poloId && !polo)) ? (
+              <div className="flex h-full w-full items-center justify-center">
+                <div className="max-w-lg rounded-3xl border border-red-200 bg-white p-8 text-center shadow-sm" role="alert">
+                  <AlertTriangle className="mx-auto text-red-600" size={28} />
+                  <h3 className="mt-3 text-sm font-black uppercase tracking-tight text-[#001a33]">
+                    Identificação institucional indisponível
+                  </h3>
+                  <p className="mt-2 text-xs font-medium leading-relaxed text-slate-500">
+                    A prévia e a impressão foram bloqueadas para evitar um relatório com cabeçalho, CNPJ ou marca d&apos;água incorretos.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => void Promise.all([refetchCompany(), poloId ? refetchPolo() : Promise.resolve()])}
+                    className="mt-5 rounded-xl bg-[#001a33] px-5 py-2.5 text-[10px] font-black uppercase tracking-wider text-white hover:bg-blue-900"
+                  >
+                    Tentar novamente
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="h-full w-full overflow-hidden">

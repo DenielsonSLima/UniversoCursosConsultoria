@@ -1,7 +1,7 @@
 import React from 'react';
 import { Award } from 'lucide-react';
 import { sanitizedHtml } from '../../../../../../lib/htmlSanitizer';
-import { getDocumentValidationQrUrl } from '../../../../../shared/document-validation/document-validation.url';
+import { DocumentValidationQrCodeImage } from '../../../../../shared/document-validation/DocumentValidationQrCodeImage';
 import { parseProgrammaticRows, replacePreviewVariables } from './diploma-preview.text';
 
 interface DiplomaBlockContentProps {
@@ -152,10 +152,11 @@ const DiplomaBlockContent: React.FC<DiplomaBlockContentProps> = ({
       }
       return (
         <div style={{ width: qrW }} className="bg-white p-1 rounded border border-slate-200 flex flex-col items-center shadow-sm">
-          <img
-            src={getDocumentValidationQrUrl(previewData.codigo_validacao, qrSize * 2)}
+          <DocumentValidationQrCodeImage
+            code={previewData.codigo_validacao}
+            size={qrSize * 2}
             alt="QR de validação"
-            className="w-full h-auto object-contain pointer-events-none"
+            className="pointer-events-none h-auto w-full"
           />
           <span className="text-[6px] font-black text-slate-400 mt-1 uppercase tracking-widest">Código: {previewData.codigo_validacao}</span>
         </div>

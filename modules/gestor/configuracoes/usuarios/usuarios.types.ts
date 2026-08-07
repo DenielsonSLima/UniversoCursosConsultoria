@@ -1,6 +1,14 @@
 import { GestorPermissions } from '../../access-control';
 import { PortalScheduleRestriction } from '../../../login/portal-schedule';
 
+export type SetorComunicacao =
+  | 'todos'
+  | 'pedagogico_coordenacao'
+  | 'financeiro'
+  | 'comercial_matriculas'
+  | 'secretaria'
+  | 'atendimento_geral';
+
 export interface UsuarioSistema {
   id?: string;
   nome: string;
@@ -16,7 +24,12 @@ export interface UsuarioSistema {
   perfil_nome?: string | null;
   personalizar_permissoes?: boolean;
   restricao_horario?: PortalScheduleRestriction | null;
+  setor_comunicacao?: SetorComunicacao | null;
+  polo_comunicacao_id?: string | null;
+  pode_visualizar_todos_polos?: boolean;
+  pode_visualizar_todos_setores?: boolean;
   created_at?: string;
+  access_message?: string;
 }
 
 export interface UsuarioSistemaInput {
@@ -33,6 +46,18 @@ export interface UsuarioSistemaInput {
   perfil_acesso_id?: string | null;
   personalizar_permissoes?: boolean;
   restricao_horario?: PortalScheduleRestriction | null;
+  setor_comunicacao?: SetorComunicacao | null;
+  polo_comunicacao_id?: string | null;
+  pode_visualizar_todos_polos?: boolean;
+  pode_visualizar_todos_setores?: boolean;
+}
+
+export interface UsuarioManagementState {
+  userId: string;
+  canDelete: boolean;
+  canChangeStatus: boolean;
+  hasActivity: boolean;
+  reason: string | null;
 }
 
 export interface NovoUsuarioFormData {
@@ -56,4 +81,8 @@ export interface NovoUsuarioFormData {
   diasHorario: number[];
   horarioInicio: string;
   horarioFim: string;
+  setorComunicacao: SetorComunicacao;
+  poloComunicacaoId: string | null;
+  podeVisualizarTodosPolos: boolean;
+  podeVisualizarTodosSetores: boolean;
 }

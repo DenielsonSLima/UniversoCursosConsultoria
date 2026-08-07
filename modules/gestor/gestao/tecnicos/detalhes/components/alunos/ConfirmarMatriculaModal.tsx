@@ -3,6 +3,7 @@ import { Calendar, CircleDollarSign, DollarSign, Percent, ReceiptText, X } from 
 import { Turma } from '../../../../gestao.types';
 import { TurmaFinanceiroMatriculaConfig, PrevisaoFinanceiraTurma } from '../../turma-alunos.service';
 import type { GatewayPaymentMethod } from '../../../../../../asaas/asaas.service';
+import type { FinanceiroRulesCalculation } from '../financeiro/financeiro-config.utils';
 
 export type EnrollmentStep = 'MATRICULA' | 'PARCELAS';
 
@@ -24,6 +25,9 @@ interface ConfirmarMatriculaModalProps {
   finance: EnrollmentFinance;
   turmaFinanceiroConfig?: TurmaFinanceiroMatriculaConfig;
   previsao?: PrevisaoFinanceiraTurma;
+  financialPreview?: FinanceiroRulesCalculation;
+  financialPreviewLoading: boolean;
+  financialPreviewError: boolean;
   enrollmentFlags: {
     financeiro_herdado: boolean;
     gerar_cobranca_inicial: boolean;
@@ -126,6 +130,9 @@ const ConfirmarMatriculaModal: React.FC<ConfirmarMatriculaModalProps> = ({
   finance,
   turmaFinanceiroConfig,
   previsao,
+  financialPreview,
+  financialPreviewLoading,
+  financialPreviewError,
   enrollmentFlags,
   paymentMethod,
   availablePaymentMethods,
@@ -141,15 +148,9 @@ const ConfirmarMatriculaModal: React.FC<ConfirmarMatriculaModalProps> = ({
   onConfirm,
 }) => {
   const environmentLabel = (paymentOptionsEnvironment || 'sandbox').toUpperCase();
-  const aplicaDescontoMensalidade = turmaFinanceiroConfig?.aplicarDescontoMensalidade !== false;
-  const aplicaEncargosMensalidade = turmaFinanceiroConfig?.aplicarMultaJurosMensalidade !== false;
-  const descontoMensalidade = aplicaDescontoMensalidade ? finance.descontoPontualidade : 0;
-  const jurosMensais = aplicaEncargosMensalidade
-    ? finance.valorParcela * (finance.jurosAtraso / 100)
-    : 0;
-  const multaMensalidade = aplicaEncargosMensalidade ? finance.multaAtraso : 0;
-  const mensalidadeComDesconto = Math.max(0, finance.valorParcela - descontoMensalidade);
-  const mensalidadeEmAtraso = finance.valorParcela + jurosMensais + multaMensalidade;
+  const descontoMensalidade = Number(financialPreview?.desconto_aplicado || 0);
+  const jurosDiarios = Number(financialPreview?.juros_valor_dia || 0);
+  const multaMensalidade = Number(financialPreview?.multa_aplicada || 0);
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
@@ -316,7 +317,9 @@ const ConfirmarMatriculaModal: React.FC<ConfirmarMatriculaModalProps> = ({
                   label="Valor da mensalidade"
                   value={finance.valorParcela}
                   onChange={(value) => onFinanceChange('valorParcela', String(value))}
-                  helper={`${turmaFinanceiroConfig?.qtdParcelas || 11} parcelas por ciclo`}
+                  helper={turmaFinanceiroConfig
+                    ? `${turmaFinanceiroConfig.qtdParcelas} parcelas por ciclo`
+                    : 'Quantidade definida na configuração da turma'}
                 />
                 <label className="space-y-2">
                   <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">Dia das mensalidades</span>
@@ -325,7 +328,7 @@ const ConfirmarMatriculaModal: React.FC<ConfirmarMatriculaModalProps> = ({
                     onChange={(event) => onFinanceChange('diaVencimento', event.target.value)}
                     className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm font-bold text-slate-700 outline-none focus:border-emerald-500"
                   >
-                    {[5, 10, 15, 20, 25, 28].map((day) => (
+                    {Array.from({ length: 31 }, (_, index) => index + 1).map((day) => (
                       <option key={day} value={day}>Todo dia {String(day).padStart(2, '0')}</option>
                     ))}
                   </select>
@@ -361,11 +364,19 @@ const ConfirmarMatriculaModal: React.FC<ConfirmarMatriculaModalProps> = ({
                       />
                     </div>
                   </label>
-                  <MoneyField
-                    label="Multa por atraso"
-                    value={finance.multaAtraso}
-                    onChange={(value) => onFinanceChange('multaAtraso', String(value))}
-                  />
+                  <label className="space-y-2">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">Multa única</span>
+                    <div className="relative">
+                      <Percent size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-amber-600" />
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={formatPercent(finance.multaAtraso)}
+                        onChange={(event) => onFinanceChange('multaAtraso', String(parseDecimalMask(event.target.value)))}
+                        className="w-full rounded-xl border border-amber-200 bg-white py-3 pl-10 pr-3 text-sm font-black text-slate-700 outline-none focus:border-amber-500"
+                      />
+                    </div>
+                  </label>
                 </div>
 
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -382,12 +393,24 @@ const ConfirmarMatriculaModal: React.FC<ConfirmarMatriculaModalProps> = ({
                 <p className="text-[10px] font-black uppercase tracking-wider text-emerald-700">Resumo financeiro individual</p>
                 <div className="mt-3 grid gap-2 text-xs font-bold text-emerald-900 md:grid-cols-3">
                   <div className="rounded-xl bg-white/70 p-3"><span className="block text-[9px] uppercase text-emerald-600">Matrícula</span>{formatCurrency(finance.valorMatricula)}</div>
-                  <div className="rounded-xl bg-white/70 p-3"><span className="block text-[9px] uppercase text-emerald-600">Mensalidade em dia</span>{formatCurrency(mensalidadeComDesconto)}</div>
-                  <div className="rounded-xl bg-white/70 p-3"><span className="block text-[9px] uppercase text-rose-500">Após 1 mês</span>{formatCurrency(mensalidadeEmAtraso)}</div>
+                  <div className="rounded-xl bg-white/70 p-3">
+                    <span className="block text-[9px] uppercase text-emerald-600">Mensalidade em dia</span>
+                    {financialPreview ? formatCurrency(financialPreview.valor_com_desconto) : 'Calculando no servidor...'}
+                  </div>
+                  <div className="rounded-xl bg-white/70 p-3">
+                    <span className="block text-[9px] uppercase text-rose-500">Após 30 dias</span>
+                    {financialPreview ? formatCurrency(financialPreview.valor_com_atraso) : 'Calculando no servidor...'}
+                  </div>
                 </div>
                 <p className="mt-3 text-[10px] font-semibold leading-relaxed text-emerald-700">
-                  Mensalidade de {formatCurrency(finance.valorParcela)}; desconto aplicado de {formatCurrency(descontoMensalidade)}; juros aplicados de {formatPercent(aplicaEncargosMensalidade ? finance.jurosAtraso : 0)} ({formatCurrency(jurosMensais)}) e multa aplicada de {formatCurrency(multaMensalidade)}. {getResumoPrevisao(previsao)}
+                  Mensalidade de {formatCurrency(finance.valorParcela)}; desconto aplicado de {formatCurrency(descontoMensalidade)}; um único juros de {formatPercent(finance.jurosAtraso)} ao mês, proporcional aos dias ({formatCurrency(jurosDiarios)} por dia no boleto/carnê), e multa única de {formatPercent(finance.multaAtraso)} ({formatCurrency(multaMensalidade)}). {getResumoPrevisao(previsao)}
                 </p>
+                {financialPreviewLoading && (
+                  <p className="mt-2 text-[10px] font-bold text-blue-700">Atualizando a prévia oficial no servidor...</p>
+                )}
+                {financialPreviewError && (
+                  <p className="mt-2 text-[10px] font-bold text-rose-700">A prévia oficial está indisponível; a confirmação foi bloqueada.</p>
+                )}
                 <div className="mt-3 grid gap-2 md:grid-cols-3">
                   <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-emerald-700">
                     <input
@@ -400,10 +423,10 @@ const ConfirmarMatriculaModal: React.FC<ConfirmarMatriculaModalProps> = ({
                   <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-emerald-700">
                     <input
                       type="checkbox"
-                      checked={enrollmentFlags.sincronizar_asaas ?? true}
-                      onChange={(event) => onFlagsChange({ ...enrollmentFlags, sincronizar_asaas: event.target.checked })}
+                      checked={false}
+                      disabled
                     />
-                    Sincronizar no gateway
+                    Gateway desligado
                   </label>
                   <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700">
                     Rematrícula {formatCurrency(finance.valorRematricula)}

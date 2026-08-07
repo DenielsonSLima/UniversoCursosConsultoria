@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { CheckSquare, Eye, EyeOff, Lock, FileText, LoaderCircle } from 'lucide-react';
 import { alunoPublicAuthService } from './aluno-public-auth.service';
 import { getPortalProfile, savePortalSession, PortalAuthProfile } from '../../login/portal-session';
@@ -8,20 +8,20 @@ import { TERMS_VERSION } from '../../shared/constants/terms';
 
 const getDefaultNext = (searchParams: URLSearchParams) => {
   const next = searchParams.get('next');
-  if (!next) return '/aluno';
+  if (!next) return '/aluno/';
   try {
     const decoded = decodeURIComponent(next);
-    return decoded.startsWith('/') ? decoded : '/aluno';
+    return decoded.startsWith('/') ? decoded : '/aluno/';
   } catch {
-    return '/aluno';
+    return '/aluno/';
   }
 };
 
-const hasStrongPassword = (value: string) => value.length >= 6 && /[A-Z]/.test(value) && /[a-z]/.test(value) && /\d/.test(value);
+const hasStrongPassword = (value: string) => value.length >= 8 && /[A-Z]/.test(value) && /[a-z]/.test(value) && /\d/.test(value);
 
 const buildTermsAcceptedText = () => (
   <p className="text-xs font-semibold leading-relaxed text-slate-600">
-    Ao continuar, eu confirmo que li e aceito os <Link to="/termos" className="text-[#001a33] underline">Termos de Uso</Link> e estou ciente das regras de matrícula e da política de privacidade.
+    Ao continuar, eu confirmo que li e aceito os <Link to="/termos" className="text-[#001a33] underline">Termos de Uso</Link>. Estou ciente de que felicitações de aniversário e relacionamento não comercial ficam ativas por padrão, sob legítimo interesse, e podem ser desativadas a qualquer momento em Notificações.
   </p>
 );
 
@@ -29,6 +29,7 @@ type NavigateState = 'idle' | 'loading' | 'success' | 'error';
 
 const AlunoFirstAccessPage: React.FC = () => {
   const navigate = useNavigate();
+  const alunoLoginPath = window.location.pathname.startsWith('/aluno/') ? '/aluno/entrar' : '/login';
   const [searchParams] = useSearchParams();
   const next = getDefaultNext(searchParams);
   const [isChecking, setIsChecking] = useState(true);
@@ -47,7 +48,7 @@ const AlunoFirstAccessPage: React.FC = () => {
 
       if (!currentProfile) {
         await loginService.logout();
-        navigate('/login', { replace: true });
+        navigate(alunoLoginPath, { replace: true });
         return;
       }
 
@@ -68,7 +69,7 @@ const AlunoFirstAccessPage: React.FC = () => {
     };
 
     loadProfile();
-  }, [next, navigate]);
+  }, [alunoLoginPath, next, navigate]);
 
   const termsAccepted = useMemo(() => Boolean(acceptedTerms), [acceptedTerms]);
   const requiresPasswordChange = Boolean(profile?.requiresPasswordReset);
@@ -90,7 +91,7 @@ const AlunoFirstAccessPage: React.FC = () => {
       if (!hasStrongPassword(newPassword)) {
         setMessage({
           tone: 'error',
-          text: 'A nova senha precisa ter no mínimo 6 caracteres, 1 maiúscula, 1 minúscula e 1 número.',
+          text: 'A nova senha precisa ter no mínimo 8 caracteres, 1 maiúscula, 1 minúscula e 1 número.',
         });
         return;
       }
@@ -106,7 +107,7 @@ const AlunoFirstAccessPage: React.FC = () => {
     try {
       const updatedProfile = await alunoPublicAuthService.finalizeFirstAccess({
         partnerId: profile.id,
-        acceptedTerms: Boolean(termsAccepted || profile?.acceptedTermsAt),
+        acceptedTerms: needsTermsAcceptance && termsAccepted,
         acceptTermsVersion: TERMS_VERSION,
         setPassword: requiresPasswordChange,
         newPassword,
@@ -153,7 +154,7 @@ const AlunoFirstAccessPage: React.FC = () => {
               Para proteger sua conta e concluir a entrada, valide os itens abaixo antes de seguir.
             </p>
           </div>
-          <Link to="/aluno" className="text-xs font-black uppercase tracking-widest text-slate-500">
+          <Link to="/aluno/" className="text-xs font-black uppercase tracking-widest text-slate-500">
             Interromper
           </Link>
         </div>
@@ -205,7 +206,7 @@ const AlunoFirstAccessPage: React.FC = () => {
                       autoComplete="new-password"
                       value={newPassword}
                       onChange={(event) => setNewPassword(event.target.value)}
-                      placeholder="Mínimo 6 caracteres, 1 maiúscula, 1 minúscula e 1 número"
+                      placeholder="Mínimo 8 caracteres, 1 maiúscula, 1 minúscula e 1 número"
                       className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm font-semibold outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                       required
                     />
@@ -243,7 +244,7 @@ const AlunoFirstAccessPage: React.FC = () => {
                 </label>
 
                 <p className="text-[10px] font-semibold text-slate-500">
-                  A senha deve ter ao menos 6 caracteres, uma letra maiúscula, uma minúscula e um número.
+                  A senha deve ter ao menos 8 caracteres, uma letra maiúscula, uma minúscula e um número.
                 </p>
 
                   <button

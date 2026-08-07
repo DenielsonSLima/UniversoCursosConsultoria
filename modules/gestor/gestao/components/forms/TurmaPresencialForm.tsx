@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Calendar,
   CalendarClock,
@@ -78,7 +78,7 @@ interface TurmaPresencialFormConfig {
 interface TurmaPresencialFormProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: any) => void;
+  onSave: (data: any) => void | Promise<void>;
   cursosDisponiveis: any[];
   selectedPoloId?: string;
   config: TurmaPresencialFormConfig;
@@ -99,15 +99,35 @@ const TurmaPresencialForm: React.FC<TurmaPresencialFormProps> = ({
 }) => {
   const [polos, setPolos] = useState<any[]>([]);
   const [formData, setFormData] = useState<TurmaPresencialFormData>(config.defaults);
+  const [isLoadingPolos, setIsLoadingPolos] = useState(false);
+  const [polosError, setPolosError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const Icon = config.Icon;
 
-  useEffect(() => {
-    polosService.getAll().then(setPolos);
+  const loadPolos = useCallback(async () => {
+    setIsLoadingPolos(true);
+    setPolosError(null);
+    try {
+      setPolos(await polosService.getAll());
+    } catch (error) {
+      setPolosError(error instanceof Error ? error.message : 'Não foi possível carregar os polos.');
+    } finally {
+      setIsLoadingPolos(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void loadPolos();
+  }, [loadPolos]);
 
   useEffect(() => {
     setFormData(config.defaults);
   }, [config.defaults]);
+
+  useEffect(() => {
+    if (isOpen) setSaveError(null);
+  }, [isOpen]);
 
   useEffect(() => {
     if (selectedPoloId) {
@@ -136,8 +156,13 @@ const TurmaPresencialForm: React.FC<TurmaPresencialFormProps> = ({
 
   const selectedPolo = polos.find(p => p.id === formData.poloId);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleClose = () => {
+    if (!isSaving) onClose();
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSaving) return;
     const curso = cursosDisponiveis.find(c => c.id === formData.cursoId);
     const polo = selectedPolo;
 
@@ -146,16 +171,24 @@ const TurmaPresencialForm: React.FC<TurmaPresencialFormProps> = ({
       return;
     }
 
-    onSave({
-      ...formData,
-      nome: formData.nomeAutomatico,
-      codigo: formData.codigoAutomatico,
-      cursoNome: curso.nome,
-      poloNome: polo.cidade,
-      modalidade: config.modalidade,
-      status: 'EM_ANDAMENTO',
-    });
-    onClose();
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      await onSave({
+        ...formData,
+        nome: formData.nomeAutomatico,
+        codigo: formData.codigoAutomatico,
+        cursoNome: curso.nome,
+        poloNome: polo.cidade,
+        modalidade: config.modalidade,
+        status: 'EM_ANDAMENTO',
+      });
+      onClose();
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Não foi possível salvar a turma.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const updateForm = (patch: Partial<TurmaPresencialFormData>) => {
@@ -167,7 +200,7 @@ const TurmaPresencialForm: React.FC<TurmaPresencialFormProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-[#001a33]/60 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
+      <div className="absolute inset-0 bg-[#001a33]/60 backdrop-blur-sm transition-opacity" onClick={handleClose}></div>
 
       <div className="relative bg-white rounded-[2rem] w-full max-w-2xl p-8 shadow-2xl  border border-slate-100 max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
@@ -175,12 +208,26 @@ const TurmaPresencialForm: React.FC<TurmaPresencialFormProps> = ({
             <h3 className="text-xl font-black text-[#001a33] uppercase tracking-tight">{config.title}</h3>
             <p className="text-xs text-slate-500 font-medium">{config.subtitle}</p>
           </div>
-          <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-50 text-slate-400 hover:text-red-500 transition-colors">
+          <button type="button" onClick={handleClose} disabled={isSaving} className="p-2 rounded-full hover:bg-slate-50 text-slate-400 hover:text-red-500 transition-colors disabled:cursor-not-allowed disabled:opacity-40">
             <X size={20} />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {polosError && (
+            <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700" role="alert">
+              <p className="font-bold">Polos não carregados.</p>
+              <p className="mt-1">{polosError}</p>
+              <button
+                type="button"
+                onClick={() => { void loadPolos(); }}
+                disabled={isLoadingPolos}
+                className="mt-2 font-black uppercase tracking-wider underline disabled:opacity-50"
+              >
+                {isLoadingPolos ? 'Carregando...' : 'Tentar novamente'}
+              </button>
+            </div>
+          )}
           <div className={selectedPoloId ? "space-y-4" : "grid grid-cols-1 md:grid-cols-2 gap-4"}>
             <div className="space-y-2">
               <label className="text-xs font-bold text-[#001a33] uppercase tracking-wider flex items-center gap-2">
@@ -470,7 +517,7 @@ const TurmaPresencialForm: React.FC<TurmaPresencialFormProps> = ({
                   value={formData.diaVencimentoPadrao}
                   onChange={(e) => updateForm({ diaVencimentoPadrao: parseInt(e.target.value, 10) || 10 })}
                 >
-                  {[5, 10, 15, 20, 25, 28].map((d) => (
+                  {Array.from({ length: 31 }, (_, index) => index + 1).map((d) => (
                     <option key={d} value={d}>{d}</option>
                   ))}
                 </select>
@@ -515,7 +562,7 @@ const TurmaPresencialForm: React.FC<TurmaPresencialFormProps> = ({
                 onChange={(e) => updateForm({ sincronizarAsaasFuturo: e.target.checked })}
                 className={`h-4 w-4 rounded border-slate-300 ${config.theme.checkboxText}`}
               />
-              Sincronizar futuras cobranças com Asaas
+              Sincronizar futuras cobranças com o gateway configurado
             </label>
           </div>
 
@@ -535,12 +582,17 @@ const TurmaPresencialForm: React.FC<TurmaPresencialFormProps> = ({
           </div>
 
           <div className="flex justify-end pt-4">
+            {saveError && (
+              <p className="mr-auto max-w-sm self-center text-xs font-bold text-rose-600" role="alert">
+                {saveError}
+              </p>
+            )}
             <button
               type="submit"
-              disabled={!formData.nomeAutomatico}
+              disabled={!formData.nomeAutomatico || isSaving || isLoadingPolos || Boolean(polosError)}
               className={`px-8 py-3 bg-[#001a33] text-white rounded-xl font-bold uppercase text-xs tracking-wider ${config.theme.accentHoverBg} transition-colors shadow-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed`}
             >
-              <Save size={16} /> {config.submitLabel}
+              <Save size={16} /> {isSaving ? 'Salvando...' : config.submitLabel}
             </button>
           </div>
         </form>

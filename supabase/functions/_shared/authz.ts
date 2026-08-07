@@ -10,6 +10,10 @@ export interface GestorAutorizado {
   modules: string[];
   financeiroTabs: string[];
   tabs: Record<string, string[]>;
+  communicationSector: string;
+  communicationPoloId: string | null;
+  canViewAllCommunicationPolos: boolean;
+  canViewAllCommunication: boolean;
 }
 
 const UUID_RE =
@@ -138,7 +142,7 @@ export const requireGestorAtivo = async (
   const { data: usuario, error: usuarioError } = await admin
     .from("usuarios_sistema")
     .select(
-      "id, email, perfil, status, context, polo_ids, permissoes, perfil_acesso_id, personalizar_permissoes, restricao_horario, perfis_acesso(permissoes, restricao_horario)",
+      "id, email, perfil, status, context, polo_ids, permissoes, perfil_acesso_id, personalizar_permissoes, restricao_horario, setor_comunicacao, polo_comunicacao_id, pode_visualizar_todos_polos, pode_visualizar_todos_setores, perfis_acesso(permissoes, restricao_horario)",
     )
     .ilike("email", email)
     .maybeSingle();
@@ -187,6 +191,12 @@ export const requireGestorAtivo = async (
     modules: effective.modules,
     financeiroTabs: effective.financeiroTabs,
     tabs: effective.tabs,
+    communicationSector: String(usuario.setor_comunicacao || "todos"),
+    communicationPoloId: usuario.polo_comunicacao_id || null,
+    canViewAllCommunicationPolos:
+      usuario.pode_visualizar_todos_polos === true ||
+      usuario.pode_visualizar_todos_setores === true,
+    canViewAllCommunication: usuario.pode_visualizar_todos_setores === true,
   };
 };
 
@@ -216,6 +226,38 @@ export const requireGestorTab = (
 export const requireGestorGlobal = (gestor: GestorAutorizado) => {
   if (!gestor.isGlobal || normalize(gestor.perfil) !== "gestor") {
     throw new Error("Apenas gestor global pode alterar configuracoes globais.");
+  }
+};
+
+export const requireGestorForWhatsAppRoute = (
+  gestor: GestorAutorizado,
+  sector?: string | null,
+  poloId?: string | null,
+) => {
+  if (gestor.canViewAllCommunication) return;
+  if (!poloId) {
+    throw new Error(
+      "Atendimento WhatsApp sem polo não pode ser operado por usuário restrito.",
+    );
+  }
+  if (!gestor.canViewAllCommunicationPolos) {
+    if (!gestor.communicationPoloId) {
+      throw new Error(
+        "Usuário sem polo de comunicação não pode operar o WhatsApp.",
+      );
+    }
+    if (gestor.communicationPoloId !== poloId) {
+      throw new Error(
+        "Atendimento WhatsApp pertence a outro polo.",
+      );
+    }
+  }
+  const allowedSector = normalize(gestor.communicationSector || "todos");
+  const routeSector = normalize(sector || "atendimento_geral");
+  if (allowedSector !== "todos" && allowedSector !== routeSector) {
+    throw new Error(
+      "Atendimento WhatsApp pertence a outro setor.",
+    );
   }
 };
 

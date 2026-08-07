@@ -9,17 +9,15 @@ import {
   ChevronRight,
   Landmark,
   Loader2,
-  Pencil,
   Plus,
   Search,
-  Trash2,
   X,
 } from 'lucide-react';
-import ConfirmModal from '../../components/ConfirmModal';
 import ToastNotification, { useToast } from '../../components/ToastNotification';
 import {
   ContaBancaria,
   financeiroService,
+  isContaDisponivelNoPolo,
   TransferenciaConta,
   TransferenciaInput,
   TransferenciasFilters,
@@ -29,6 +27,7 @@ import { useFinanceiroRealtime } from '../hooks/useFinanceiroRealtime';
 import { useFinanceiroSharedQueries } from '../hooks/useFinanceiroSharedQueries';
 import { useTransferenciasQueries } from './hooks/useTransferenciasQueries';
 import { caixaQueryKeys } from '../../caixa/caixa.service';
+import FinancialUnderlineTabs from '../components/FinancialUnderlineTabs';
 
 type PeriodScope = 'current_month' | 'all';
 
@@ -37,6 +36,7 @@ interface TransferenciasTabProps {
 }
 
 interface TransferFormState {
+  requestId: string;
   dataTransferencia: string;
   observacao: string;
   valor: string;
@@ -46,11 +46,21 @@ interface TransferFormState {
   contaDestinoId: string;
 }
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const createRequestId = () => globalThis.crypto?.randomUUID?.()
+  || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
 const DEFAULT_TRANSFER_DESCRIPTION = 'Transferência entre contas';
 
 const createEmptyForm = (poloId = ''): TransferFormState => ({
+  requestId: createRequestId(),
   dataTransferencia: today(),
   observacao: DEFAULT_TRANSFER_DESCRIPTION,
   valor: '',
@@ -96,13 +106,14 @@ const TransferenciasTab: React.FC<TransferenciasTabProps> = ({ poloId }) => {
   const [endDate, setEndDate] = useState('');
   const [page, setPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingTransfer, setEditingTransfer] = useState<TransferenciaConta | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<TransferenciaConta | null>(null);
   const pageSize = 8;
 
-  useFinanceiroRealtime();
+  useFinanceiroRealtime(poloId);
 
-  const { accountsQuery, polosQuery } = useFinanceiroSharedQueries({ partners: false });
+  const { accountsQuery, polosQuery } = useFinanceiroSharedQueries({
+    partners: false,
+    poloId,
+  });
   const accounts = accountsQuery.data || [];
   const polos = polosQuery.data || [];
   const activePoloId = poloId || '';
@@ -120,15 +131,9 @@ const TransferenciasTab: React.FC<TransferenciasTabProps> = ({ poloId }) => {
     mesAtual: periodScope === 'current_month',
   }), [activePoloId, destinationAccountFilter, endDate, originAccountFilter, periodScope, search, startDate]);
 
-  const { transferenciasQuery } = useTransferenciasQueries(filters);
+  const { transferenciasQuery, summaryQuery } = useTransferenciasQueries(filters);
   const transferencias = transferenciasQuery.data || [];
   const isLoading = transferenciasQuery.isLoading || accountsQuery.isLoading || polosQuery.isLoading;
-
-  const kpis = useMemo(() => {
-    const total = transferencias.reduce((s, i) => s + i.valor, 0);
-    const count = transferencias.length;
-    return { total, count };
-  }, [transferencias]);
 
   const activeAccounts = useMemo(
     () => accounts.filter((account) => account.ativo !== false),
@@ -136,18 +141,24 @@ const TransferenciasTab: React.FC<TransferenciasTabProps> = ({ poloId }) => {
   );
 
   const filterAccounts = useMemo(
-    () => activeAccounts.filter((account) => !activePoloId || account.poloId === activePoloId),
+    () => activeAccounts.filter((account) => isContaDisponivelNoPolo(account, activePoloId)),
     [activeAccounts, activePoloId],
   );
 
   const originAccounts = useMemo(
-    () => activeAccounts.filter((account) => !form.poloOrigemId || account.poloId === form.poloOrigemId),
+    () => activeAccounts.filter((account) => isContaDisponivelNoPolo(account, form.poloOrigemId)),
     [activeAccounts, form.poloOrigemId],
   );
 
   const destinationAccounts = useMemo(
-    () => activeAccounts.filter((account) => !form.poloDestinoId || account.poloId === form.poloDestinoId),
-    [activeAccounts, form.poloDestinoId],
+    () => activeAccounts.filter((account) => (
+      isContaDisponivelNoPolo(account, form.poloDestinoId)
+      && !(
+        form.poloOrigemId === form.poloDestinoId
+        && account.id === form.contaOrigemId
+      )
+    )),
+    [activeAccounts, form.contaOrigemId, form.poloDestinoId, form.poloOrigemId],
   );
 
   const totalPages = Math.max(1, Math.ceil(transferencias.length / pageSize));
@@ -199,52 +210,34 @@ const TransferenciasTab: React.FC<TransferenciasTabProps> = ({ poloId }) => {
   };
 
   const saveMutation = useMutation({
-    mutationFn: async (input: TransferenciaInput) => {
-      if (editingTransfer?.id) {
-        await financeiroService.updateTransferencia(editingTransfer.id, input);
-      } else {
-        await financeiroService.createTransferencia(input);
-      }
-    },
+    mutationFn: (input: TransferenciaInput) => financeiroService.createTransferencia(input),
     onSuccess: async () => {
       await invalidateTransferencias();
       setIsModalOpen(false);
-      setEditingTransfer(null);
       setForm(createEmptyForm(activePoloId));
       toast.success(
-        editingTransfer ? 'Transferência atualizada' : 'Transferência registrada',
+        'Transferência registrada',
         'Os saldos serão recalculados pelo banco na próxima atualização.',
       );
     },
     onError: (error: any) => toast.error('Erro na transferência', error.message),
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => financeiroService.deleteTransferencia(id),
-    onSuccess: async () => {
-      await invalidateTransferencias();
-      setDeleteTarget(null);
-      toast.success('Transferência excluída', 'O lançamento foi removido e os saldos serão recompostos.');
-    },
-    onError: (error: any) => toast.error('Erro ao excluir', error.message),
-  });
-
   const openCreateModal = () => {
-    setEditingTransfer(null);
     setForm(createEmptyForm(activePoloId));
     setIsModalOpen(true);
   };
 
-  const openEditModal = (transfer: TransferenciaConta) => {
-    setEditingTransfer(transfer);
+  const openReverseModal = (transfer: TransferenciaConta) => {
     setForm({
-      dataTransferencia: transfer.dataTransferencia || today(),
-      observacao: transfer.observacao || '',
+      requestId: createRequestId(),
+      dataTransferencia: today(),
+      observacao: `Estorno: ${transfer.observacao || 'Transferência interna'}`,
       valor: formatCurrencyInput(String(transfer.valor)),
-      poloOrigemId: transfer.poloId || activePoloId,
-      contaOrigemId: transfer.contaOrigemId,
-      poloDestinoId: transfer.poloDestinoId || transfer.poloId || activePoloId,
-      contaDestinoId: transfer.contaDestinoId,
+      poloOrigemId: transfer.poloDestinoId || activePoloId,
+      contaOrigemId: transfer.contaDestinoId,
+      poloDestinoId: transfer.poloId || activePoloId,
+      contaDestinoId: transfer.contaOrigemId,
     });
     setIsModalOpen(true);
   };
@@ -268,8 +261,14 @@ const TransferenciasTab: React.FC<TransferenciasTabProps> = ({ poloId }) => {
       toast.warning('Destino obrigatório', 'Selecione o polo e a conta de destino.');
       return null;
     }
-    if (form.contaOrigemId === form.contaDestinoId) {
-      toast.warning('Contas iguais', 'A conta de destino precisa ser diferente da origem.');
+    if (
+      form.contaOrigemId === form.contaDestinoId
+      && form.poloOrigemId === form.poloDestinoId
+    ) {
+      toast.warning(
+        'Origem e destino iguais',
+        'Selecione outra conta bancária ou um polo diferente para o destino.',
+      );
       return null;
     }
     if (!numericValue || numericValue <= 0) {
@@ -278,6 +277,7 @@ const TransferenciasTab: React.FC<TransferenciasTabProps> = ({ poloId }) => {
     }
 
     return {
+      requestId: form.requestId,
       poloOrigemId: form.poloOrigemId,
       contaOrigemId: form.contaOrigemId,
       poloDestinoId: form.poloDestinoId,
@@ -327,8 +327,28 @@ const TransferenciasTab: React.FC<TransferenciasTabProps> = ({ poloId }) => {
       {/* KPI Cards */}
       <div className="grid grid-cols-2 gap-3 max-w-xl">
         {[
-          { label: 'Total Transferido', value: formatCurrency(kpis.total), color: 'text-[#001a33]' },
-          { label: 'Quantidade', value: `${kpis.count} transferências`, color: 'text-indigo-600' },
+          {
+            label: 'Total Transferido',
+            value: !activePoloId
+              ? 'Selecione um polo'
+              : summaryQuery.isPending
+                ? 'Carregando...'
+              : summaryQuery.isError
+                ? 'Indisponível'
+                : formatCurrency(summaryQuery.data?.totalValue || 0),
+            color: 'text-[#001a33]',
+          },
+          {
+            label: 'Quantidade',
+            value: !activePoloId
+              ? 'Selecione um polo'
+              : summaryQuery.isPending
+                ? 'Carregando...'
+              : summaryQuery.isError
+                ? 'Indisponível'
+                : `${summaryQuery.data?.totalCount || 0} transferências`,
+            color: 'text-indigo-600',
+          },
         ].map((kpi) => (
           <div key={kpi.label} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
             <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 mb-1">{kpi.label}</p>
@@ -336,26 +356,24 @@ const TransferenciasTab: React.FC<TransferenciasTabProps> = ({ poloId }) => {
           </div>
         ))}
       </div>
+      {summaryQuery.isError && (
+        <p className="max-w-xl rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-xs font-bold text-rose-700">
+          Não foi possível carregar o resumo canônico das transferências. Tente atualizar a página.
+        </p>
+      )}
 
       {/* Tabs de período */}
-      <div className="flex gap-2 border-b border-slate-100 pb-2">
-        {[
+      <FinancialUnderlineTabs
+        items={[
           { id: 'current_month' as const, label: 'Mês Atual' },
           { id: 'all' as const, label: 'Todos' },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setPeriodScope(tab.id)}
-            className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all border ${
-              periodScope === tab.id
-                ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                : 'text-slate-500 border-transparent hover:bg-slate-50'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+        ]}
+        value={periodScope}
+        onChange={setPeriodScope}
+        ariaLabel="Período das transferências"
+        indicatorClassName="bg-indigo-600"
+        activeIconClassName="text-indigo-600"
+      />
 
       {/* Filtros */}
       <div className="flex flex-wrap gap-3 items-center">
@@ -440,6 +458,10 @@ const TransferenciasTab: React.FC<TransferenciasTabProps> = ({ poloId }) => {
             <Loader2 className="animate-spin text-[#001a33]" size={22} />
             <span className="text-sm font-bold text-slate-500">Carregando transferências...</span>
           </div>
+        ) : transferenciasQuery.isError ? (
+          <div className="py-20 text-center text-sm font-bold text-rose-700">
+            Não foi possível carregar as transferências.
+          </div>
         ) : transferencias.length === 0 ? (
           <div className="py-20 text-center">
             <ArrowRightLeft className="mx-auto mb-3 text-slate-300" size={36} />
@@ -507,16 +529,10 @@ const TransferenciasTab: React.FC<TransferenciasTabProps> = ({ poloId }) => {
                     <td className="px-5 py-4">
                       <div className="flex flex-wrap gap-2">
                         <button
-                          onClick={() => openEditModal(transfer)}
-                          className="inline-flex items-center gap-1 rounded-xl border border-blue-200 px-3 py-2 text-[10px] font-black uppercase text-blue-600 hover:bg-blue-50"
+                          onClick={() => openReverseModal(transfer)}
+                          className="inline-flex items-center gap-1 rounded-xl border border-amber-200 px-3 py-2 text-[10px] font-black uppercase text-amber-700 hover:bg-amber-50"
                         >
-                          <Pencil size={13} /> Editar
-                        </button>
-                        <button
-                          onClick={() => setDeleteTarget(transfer)}
-                          className="inline-flex items-center gap-1 rounded-xl border border-rose-200 px-3 py-2 text-[10px] font-black uppercase text-rose-600 hover:bg-rose-50"
-                        >
-                          <Trash2 size={13} /> Excluir
+                          <ArrowRightLeft size={13} /> Estornar
                         </button>
                       </div>
                     </td>
@@ -557,7 +573,7 @@ const TransferenciasTab: React.FC<TransferenciasTabProps> = ({ poloId }) => {
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">
-                  {editingTransfer ? 'Editar lançamento' : 'Nova transferência'}
+                  Nova transferência
                 </p>
                 <h4 className="text-xl font-black uppercase tracking-tight text-[#001a33]">Transferência entre contas</h4>
               </div>
@@ -666,7 +682,11 @@ const TransferenciasTab: React.FC<TransferenciasTabProps> = ({ poloId }) => {
                         onChange={(event) => setForm((current) => ({ ...current, contaDestinoId: event.target.value }))}
                         className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 outline-none focus:border-emerald-300"
                       >
-                        <option value="">Selecione</option>
+                        <option value="">
+                          {form.poloOrigemId === form.poloDestinoId && form.contaOrigemId
+                            ? 'Selecione outra conta'
+                            : 'Selecione'}
+                        </option>
                         {destinationAccounts.map((account) => (
                           <option key={account.id} value={account.id}>
                             {accountOptionLabel(account)}
@@ -692,25 +712,13 @@ const TransferenciasTab: React.FC<TransferenciasTabProps> = ({ poloId }) => {
                   className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#001a33] px-6 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg shadow-slate-900/15 disabled:opacity-50"
                 >
                   {saveMutation.isPending ? <Loader2 className="animate-spin" size={16} /> : <Plus size={16} />}
-                  {editingTransfer ? 'Salvar edição' : 'Salvar transferência'}
+                  Salvar transferência
                 </button>
               </div>
             </form>
           </div>
         </div>
       ), document.body)}
-
-      <ConfirmModal
-        isOpen={!!deleteTarget}
-        onClose={() => setDeleteTarget(null)}
-        onConfirm={() => {
-          if (deleteTarget?.id) deleteMutation.mutate(deleteTarget.id);
-        }}
-        title="Excluir transferência?"
-        message="O lançamento será removido da movimentação interna."
-        confirmText="Excluir"
-        variant="warning"
-      />
     </div>
   );
 };

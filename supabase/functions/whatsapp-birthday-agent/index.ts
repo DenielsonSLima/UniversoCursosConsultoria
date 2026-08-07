@@ -1,4 +1,3 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { bearerTokenFromRequest, requireGestorAtivo, requireGestorTab } from "../_shared/authz.ts";
 import { buildCorsHeaders, getClientIp, isRateLimitExceeded, json } from "../_shared/http.ts";
@@ -183,6 +182,9 @@ Deno.serve(async (req: Request) => {
     const force = body.force === true;
     const alunoId = String(body.alunoId || "").trim() || null;
     const limit = Math.min(Math.max(Number(body.limit || 100), 1), 500);
+    if (!isWorker && !dryRun) {
+      throw new Error("Envio real permitido somente para o executor interno.");
+    }
     if ((force || targetDate !== todayIso() || alunoId) && !isWorker) {
       throw new Error("Filtros de teste sao restritos ao executor interno.");
     }
@@ -244,7 +246,15 @@ Deno.serve(async (req: Request) => {
     const rows = ((candidates || []) as BirthdayCandidate[]).filter((candidate) =>
       !effectiveAlunoId || candidate.aluno_id === effectiveAlunoId
     );
-    if (dryRun) return respondJson({ ok: true, targetDate, dryRun: true, testMode, candidates: rows });
+    if (dryRun) {
+      return respondJson({
+        ok: true,
+        targetDate,
+        dryRun: true,
+        testMode,
+        total: rows.length,
+      });
+    }
 
     const graphVersion = normalizeGraphVersion(config?.wa_graph_version);
     let sent = 0;
@@ -253,23 +263,27 @@ Deno.serve(async (req: Request) => {
 
     for (const candidate of rows) {
       const targetPhone = testMode ? testRecipientPhone : candidate.telefone;
-      const { data: delivery, error: deliveryError } = await admin
-        .from("whatsapp_birthday_deliveries")
-        .insert({
-          aluno_id: candidate.aluno_id,
-          message_bank_id: candidate.message_bank_id,
-          birthday_date: targetDate,
-          target_phone: targetPhone,
-          content: candidate.message_content,
-          status: "processing",
-        })
-        .select("id")
-        .maybeSingle();
+      let deliveryId: string | null = null;
+      if (!testMode) {
+        const { data: delivery, error: deliveryError } = await admin
+          .from("whatsapp_birthday_deliveries")
+          .insert({
+            aluno_id: candidate.aluno_id,
+            message_bank_id: candidate.message_bank_id,
+            birthday_date: targetDate,
+            target_phone: targetPhone,
+            content: candidate.message_content,
+            status: "processing",
+          })
+          .select("id")
+          .maybeSingle();
 
-      if (deliveryError) {
-        if (deliveryError.code === "23505") skipped += 1;
-        else failures.push({ alunoId: candidate.aluno_id, error: deliveryError.message });
-        continue;
+        if (deliveryError) {
+          if (deliveryError.code === "23505") skipped += 1;
+          else failures.push({ alunoId: candidate.aluno_id, error: deliveryError.message });
+          continue;
+        }
+        deliveryId = String(delivery?.id || "") || null;
       }
 
       try {
@@ -321,22 +335,26 @@ Deno.serve(async (req: Request) => {
           read: true,
         });
 
-        await admin
-          .from("whatsapp_birthday_deliveries")
-          .update({
-            status: "sent",
-            meta_message_id: metaPayload?.messages?.[0]?.id || null,
-            sent_at: new Date().toISOString(),
-          })
-          .eq("id", delivery?.id);
+        if (deliveryId) {
+          await admin
+            .from("whatsapp_birthday_deliveries")
+            .update({
+              status: "sent",
+              meta_message_id: metaPayload?.messages?.[0]?.id || null,
+              sent_at: new Date().toISOString(),
+            })
+            .eq("id", deliveryId);
+        }
         sent += 1;
       } catch (error) {
         const message = error instanceof Error ? error.message : "Erro inesperado no envio.";
         failures.push({ alunoId: candidate.aluno_id, error: message });
-        await admin
-          .from("whatsapp_birthday_deliveries")
-          .update({ status: "error", error: message })
-          .eq("id", delivery?.id);
+        if (deliveryId) {
+          await admin
+            .from("whatsapp_birthday_deliveries")
+            .update({ status: "error", error: message })
+            .eq("id", deliveryId);
+        }
       }
     }
 

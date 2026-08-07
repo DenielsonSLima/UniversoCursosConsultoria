@@ -1,22 +1,31 @@
 // File: modules/gestor/secretaria/declaracao-matricula/SecretariaDeclaracaoMatriculaPage.tsx
 
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { CreditCard, Users, Search, Printer, ArrowLeft, Loader2, Download, Trash2, X } from 'lucide-react';
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
 import { supabase } from '../../../../lib/supabase';
 import { declaracaoService } from '../../cadastros/modelos-documentos/declaracao/declaracao.service';
 import { marcaDaguaService } from '../../configuracoes/marca-dagua/marca-dagua.service';
-import { academicosService } from '../../configuracoes/academicos/academicos.service';
 import { polosService } from '../../configuracoes/polos/polos.service';
-import { parceirosService } from '../../parceiros/parceiros.service';
-import { documentValidationService } from '../../../shared/document-validation/document-validation.service';
+import {
+  createDocumentReissueKey,
+  documentValidationService,
+} from '../../../shared/document-validation/document-validation.service';
 import { ValidatableDocumentType } from '../../../shared/document-validation/document-validation.types';
+import { getDocumentValidationUrl } from '../../../shared/document-validation/document-validation.url';
 import { formatMatricula } from '../../../../lib/academicUtils';
 import { onlyDigits } from '../../../../lib/documentFormatters';
+import { matchesSecretariaSearch } from '../secretaria-search';
 import { sanitizedHtml } from '../../../../lib/htmlSanitizer';
 import DocumentHeader from '../../components/DocumentHeader';
 import SecretariaAlunoSearchCard from '../shared/SecretariaAlunoSearchCard';
+import { documentValidationPoliciesService } from '../../cadastros/modelos-documentos/validacao-documental/document-validation-policies.service';
+import { LocalQrCodeImage } from '../../../shared/qrcode/LocalQrCodeImage';
+import { waitForQrCodeAssets } from '../../../shared/qrcode/qr-code-assets';
+import {
+  buildSelectablePdfBlobFromElements,
+  downloadPdfBlob,
+} from '../../../shared/pdf/dom-to-selectable-pdf';
 
 interface Aluno {
   id: string;
@@ -39,7 +48,7 @@ interface Aluno {
 }
 
 const TEMPLATE_DEFAULT = {
-  textContent: `<p>Declaramos para os devidos fins que o(a) aluno(a) <b>{{ALUNO_NOME}}</b>, portador(a) do CPF nº <b>{{ALUNO_CPF}}</b>, <b>{{ALUNO_DOCUMENTO_TIPO}}</b> nº <b>{{ALUNO_RG}}</b>, nascido(a) em <b>{{ALUNO_NASCIMENTO}}</b>, registrado(a) sob a matrícula nº <b>{{ALUNO_MATRICULA}}</b>, encontra-se regularmente matriculado(a) no curso de <b>{{CURSO_NOME}}</b>, na turma <b>{{TURMA_NOME}}</b>, nesta instituição de ensino.</p><br><p>O referido curso é realizado na modalidade presencial no polo de <b>{{POLO_NOME}}</b>.</p><br><p>Atestamos que o aluno apresenta frequência regular e está em dia com suas obrigações acadêmicas.</p>`,
+  textContent: `<p>Declaramos para os devidos fins que o(a) aluno(a) <b>{{ALUNO_NOME}}</b>, portador(a) do CPF nº <b>{{ALUNO_CPF}}</b>, <b>{{ALUNO_DOCUMENTO_TIPO}}</b> nº <b>{{ALUNO_RG}}</b>, nascido(a) em <b>{{ALUNO_NASCIMENTO}}</b>, registrado(a) sob a matrícula nº <b>{{ALUNO_MATRICULA}}</b>, encontra-se regularmente matriculado(a) no curso de <b>{{CURSO_NOME}}</b>, na turma <b>{{TURMA_NOME}}</b>, nesta instituição de ensino, no polo de <b>{{POLO_NOME}}</b>.</p>`,
   absoluteFields: [],
   validityDays: 30,
   v: 2
@@ -82,82 +91,129 @@ const SecretariaDeclaracaoMatriculaPage = ({
   // Model Configs
   const [templateConfig, setTemplateConfig] = useState<any>(defaultTemplate);
   const [watermark, setWatermark] = useState<any>(null);
-  const [academicConfigs, setAcademicConfigs] = useState<any>(null);
 
   // States for printing visualizer
   const [isPrinting, setIsPrinting] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isPreparingValidation, setIsPreparingValidation] = useState(false);
   const [validationCodes, setValidationCodes] = useState<Record<string, string>>({});
+  const [validationExpirations, setValidationExpirations] = useState<Record<string, string | null>>({});
+  const [validationPublicByStudent, setValidationPublicByStudent] = useState<Record<string, boolean>>({});
+  const [validationPublic, setValidationPublic] = useState(true);
+  const [validationValidityDays, setValidationValidityDays] = useState<number | null>(null);
+  const [frequenciesByStudent, setFrequenciesByStudent] = useState<Record<string, number>>({});
   const printContentRef = useRef<HTMLDivElement>(null);
+  const validationRequestRef = useRef<{
+    fingerprint: string;
+    idempotencyKey: string;
+  } | null>(null);
+  const validationRequestInFlightRef = useRef(false);
+
+  useEffect(() => {
+    if (!isPrinting) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !isDownloading) {
+        setIsPrinting(false);
+      }
+    };
+    window.addEventListener('keydown', closeOnEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [isDownloading, isPrinting]);
 
   const matchesAlunoSearch = (aluno: Aluno, term: string) => {
-    const normalized = term.trim().toUpperCase();
     const digits = onlyDigits(term);
-    return aluno.nome.toUpperCase().includes(normalized)
+    return matchesSecretariaSearch(term, [aluno.nome, aluno.curso, aluno.turmaNome])
       || Boolean(aluno.cpf && (aluno.cpf.includes(term) || (digits && onlyDigits(aluno.cpf).includes(digits))))
-      || Boolean(aluno.rg && aluno.rg.includes(term))
-      || Boolean(aluno.curso && aluno.curso.toUpperCase().includes(normalized))
-      || Boolean(aluno.turmaNome && aluno.turmaNome.toUpperCase().includes(normalized));
+      || Boolean(aluno.rg && aluno.rg.includes(term));
   };
 
   const loadAcademicoData = async (activePoloId: string) => {
     try {
       setLoading(true);
-      
-      // Load polo info
-      const poloData = await polosService.getById(activePoloId);
+
+      const [poloData, enrollmentsResult] = await Promise.all([
+        polosService.getById(activePoloId),
+        supabase
+          .from('matriculas')
+          .select(`
+            id, aluno_id, turma_id, status, data_matricula,
+            parceiros!inner(
+              id, nome, cpf_cnpj, rg, data_nascimento, foto_url, tipo_documento
+            ),
+            turmas!inner(
+              id, nome, codigo, status, polo_id,
+              cursos!inner(nome),
+              polos(nome, cnpj, cidade, estado)
+            )
+          `)
+          .eq('status', 'ATIVO')
+          .eq('turmas.status', 'EM_ANDAMENTO')
+          .or(`polo_id.eq.${activePoloId},polo_id.is.null`, { foreignTable: 'turmas' })
+          .order('data_matricula', { ascending: false }),
+      ]);
       setPoloInfo(poloData);
-      
-      // Load students of active polo or Geral (polo_id IS NULL)
-      const { data: dbAlunos, error: errorAlunos } = await supabase
-        .from('parceiros')
-        .select('*')
-        .eq('tipo', 'Aluno')
-        .or(`polo_id.eq.${activePoloId},polo_ids.cs.{${activePoloId}},polo_id.is.null`)
-        .order('nome', { ascending: true });
-        
-      if (errorAlunos) throw errorAlunos;
+      if (enrollmentsResult.error) throw enrollmentsResult.error;
 
-      const allTurmas = await parceirosService.getTurmasDisponiveis();
-      // Filter turmas by polo or load all
-      const filteredTurmas = allTurmas.filter((t: any) => t.poloId === activePoloId || !t.poloId);
-      setTurmas(filteredTurmas);
-      
-      const mapped = await Promise.all(
-        (dbAlunos || []).map(async (p) => {
-          const matriculas = await parceirosService.getMatriculas(p.id);
-          const activeMat = matriculas.find(m => m.status?.toUpperCase() === 'ATIVO') || matriculas[0];
-          const turmaIds = matriculas.map(m => m.turma_id);
-          
-          return {
-            id: p.id,
-            enrollmentId: activeMat?.id,
-            nome: p.nome.toUpperCase(),
-            cpf: p.cpf_cnpj || '',
-            rg: p.rg || '',
-            nascimento: p.data_nascimento || '',
-            matricula: activeMat ? formatMatricula(activeMat.id, activeMat.data_matricula, activeMat.turmas?.polo_id || activePoloId) : 'PENDENTE',
-            curso: activeMat?.turmas?.cursos?.nome || 'Curso Geral',
-            turmaNome: activeMat?.turmas?.nome || '',
-            turmaCodigo: activeMat?.turmas?.codigo || '',
-            instituicao: 'Universo Cursos e Consultoria',
-            fotoUrl: p.foto_url || null,
-            tipoDocumento: p.tipo_documento || 'CARTEIRA NACIONAL DE IDENTIFICAÇÃO',
-            turmaIds,
-            poloNome: activeMat?.turmas?.polos?.nome || poloData?.nome || 'Universo Cursos e Consultoria',
-            poloCnpj: activeMat?.turmas?.polos?.cnpj || poloData?.cnpj || '',
-            cidadePolo: (() => {
-              const rawCidade = activeMat?.turmas?.polos?.cidade || poloData?.cidade || 'Aracaju';
-              const rawUf = activeMat?.turmas?.polos?.estado || poloData?.estado || 'SE';
-              if (rawCidade.includes('/')) return rawCidade;
-              return `${rawCidade}/${rawUf}`;
-            })(),
-          };
-        })
+      const rows = (enrollmentsResult.data || []) as any[];
+      const enrollmentsByStudent = new Map<string, any[]>();
+      const classesById = new Map<string, { id: string; nome: string; codigo: string }>();
+      rows.forEach((enrollment) => {
+        const current = enrollmentsByStudent.get(enrollment.aluno_id) || [];
+        current.push(enrollment);
+        enrollmentsByStudent.set(enrollment.aluno_id, current);
+        if (enrollment.turmas?.id && !classesById.has(enrollment.turmas.id)) {
+          classesById.set(enrollment.turmas.id, {
+            id: enrollment.turmas.id,
+            nome: enrollment.turmas.nome || 'Turma',
+            codigo: enrollment.turmas.codigo || '',
+          });
+        }
+      });
+
+      const mapped = [...enrollmentsByStudent.values()].map((studentEnrollments): Aluno => {
+        const activeMat = studentEnrollments[0];
+        const student = activeMat.parceiros || {};
+        const turma = activeMat.turmas || {};
+        const turmaPolo = turma.polos || {};
+        const rawCidade = turmaPolo.cidade || poloData?.cidade || 'Aracaju';
+        const rawUf = turmaPolo.estado || poloData?.estado || 'SE';
+        return {
+          id: student.id || activeMat.aluno_id,
+          enrollmentId: activeMat.id,
+          nome: String(student.nome || '').toUpperCase(),
+          cpf: student.cpf_cnpj || '',
+          rg: student.rg || '',
+          nascimento: student.data_nascimento || '',
+          matricula: formatMatricula(
+            activeMat.id,
+            activeMat.data_matricula,
+            turma.polo_id || activePoloId
+          ),
+          curso: turma.cursos?.nome || 'Curso Geral',
+          turmaNome: turma.nome || '',
+          turmaCodigo: turma.codigo || '',
+          instituicao: 'Universo Cursos e Consultoria',
+          fotoUrl: student.foto_url || null,
+          tipoDocumento: student.tipo_documento || 'CARTEIRA NACIONAL DE IDENTIFICAÇÃO',
+          turmaIds: studentEnrollments.map((enrollment) => enrollment.turma_id),
+          poloNome: turmaPolo.nome || poloData?.nome || 'Universo Cursos e Consultoria',
+          poloCnpj: turmaPolo.cnpj || poloData?.cnpj || '',
+          cidadePolo: rawCidade.includes('/') ? rawCidade : `${rawCidade}/${rawUf}`,
+        };
+      });
+
+      setTurmas(
+        [...classesById.values()].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
       );
-
-      setAlunos(mapped);
+      setAlunos(mapped.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')));
     } catch (err) {
       console.error('Erro ao carregar dados acadêmicos:', err);
     } finally {
@@ -170,20 +226,17 @@ const SecretariaDeclaracaoMatriculaPage = ({
       try {
         const activePoloId = sessionStorage.getItem('current_polo_id') || '44444444-4444-4444-4444-444444444444';
 
-        // Load document template
-        const template = await documentService.getTemplate(activePoloId);
+        const [template, watermarks, , validationPolicy] = await Promise.all([
+          documentService.getTemplate(activePoloId),
+          marcaDaguaService.getCompaniesWithWatermark(),
+          loadAcademicoData(activePoloId),
+          documentValidationPoliciesService.getByDocument(documentType),
+        ]);
         setTemplateConfig(template);
-
-        // Load watermark
-        const watermarks = await marcaDaguaService.getCompaniesWithWatermark();
         const wm = watermarks.find(w => w.id === activePoloId);
         setWatermark(wm);
-
-        // Load global academic configs
-        const academicData = await academicosService.getConfigs();
-        setAcademicConfigs(academicData);
-        
-        await loadAcademicoData(activePoloId);
+        setValidationPublic(validationPolicy?.validacao_publica !== false);
+        setValidationValidityDays(validationPolicy?.validade_dias ?? null);
       } catch (err) {
         console.error('Erro ao carregar configurações de declaração:', err);
       }
@@ -193,8 +246,10 @@ const SecretariaDeclaracaoMatriculaPage = ({
 
   const handleSearch = () => {
     if (!searchQuery.trim()) return;
-    const query = searchQuery.toUpperCase();
-    const result = alunos.find(a => a.nome.includes(query) || a.cpf.includes(query) || a.rg.includes(query));
+    const result = alunos.find((aluno) => matchesSecretariaSearch(
+      searchQuery,
+      [aluno.nome, aluno.cpf, aluno.rg, aluno.curso, aluno.turmaNome],
+    ));
     if (result) {
       setSelectedAluno(result);
       setSearchQuery('');
@@ -204,6 +259,7 @@ const SecretariaDeclaracaoMatriculaPage = ({
   };
 
   const handlePrintAction = async () => {
+    if (validationRequestInFlightRef.current) return;
     const targets = mode === 'individual'
       ? (selectedAluno ? [selectedAluno] : [])
       : mode === 'lote'
@@ -218,21 +274,47 @@ const SecretariaDeclaracaoMatriculaPage = ({
       return;
     }
 
+    const requestFingerprint = JSON.stringify([
+      documentType,
+      eligibleTargets.map((aluno) => aluno.enrollmentId),
+    ]);
+    if (validationRequestRef.current?.fingerprint !== requestFingerprint) {
+      validationRequestRef.current = {
+        fingerprint: requestFingerprint,
+        idempotencyKey: createDocumentReissueKey(),
+      };
+    }
+
+    validationRequestInFlightRef.current = true;
     setIsPreparingValidation(true);
     try {
-      const validityDays = templateConfig.validityDays || 30;
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + validityDays);
-      const expiresAtISO = expiresAt.toISOString();
+      if (documentType === 'declaracao_frequencia') {
+        const frequencyEntries = await Promise.all(eligibleTargets.map(async (aluno) => {
+          const { data, error } = await (supabase.rpc as any)('get_secretaria_documento_academico', {
+            p_matricula_id: aluno.enrollmentId,
+            p_documento: 'declaracao_frequencia',
+          });
+          if (error) throw error;
+          const frequency = data?.frequenciaGeral;
+          if (frequency === null || frequency === undefined) {
+            throw new Error(`A frequência de ${aluno.nome} ainda não está consolidada.`);
+          }
+          return [aluno.id, Number(frequency)] as const;
+        }));
+        setFrequenciesByStudent((current) => ({
+          ...current,
+          ...Object.fromEntries(frequencyEntries),
+        }));
+      }
 
       const issues = await Promise.all(
         eligibleTargets.map(async (aluno) => ({
           alunoId: aluno.id,
-          issue: await documentValidationService.issue({
+          issue: await documentValidationService.reissue({
             type: documentType,
             enrollmentId: aluno.enrollmentId!,
-            expiresAt: expiresAtISO,
-            registerReissue: true,
+            idempotencyKey:
+              `${validationRequestRef.current!.idempotencyKey}:${aluno.enrollmentId}`,
           }),
         }))
       );
@@ -241,11 +323,28 @@ const SecretariaDeclaracaoMatriculaPage = ({
         ...current,
         ...Object.fromEntries(issues.map(({ alunoId, issue }) => [alunoId, issue.code])),
       }));
+      setValidationExpirations((current) => ({
+        ...current,
+        ...Object.fromEntries(issues.map(({ alunoId, issue }) => [alunoId, issue.expiresAt])),
+      }));
+      setValidationPublicByStudent((current) => ({
+        ...current,
+        ...Object.fromEntries(issues.map(({ alunoId, issue }) => [
+          alunoId,
+          issue.validationPublic,
+        ])),
+      }));
       setIsPrinting(true);
+      validationRequestRef.current = null;
     } catch (error) {
       console.error('Erro ao registrar emissão de declaração:', error);
-      alert('Não foi possível gerar os códigos de validação das declarações.');
+      alert(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível preparar as declarações.'
+      );
     } finally {
+      validationRequestInFlightRef.current = false;
       setIsPreparingValidation(false);
     }
   };
@@ -350,6 +449,7 @@ const SecretariaDeclaracaoMatriculaPage = ({
     const container = printContentRef.current;
     if (!container) return;
 
+    await waitForQrCodeAssets(container);
     const images = Array.from(
       container.querySelectorAll<HTMLImageElement>('img')
     ) as HTMLImageElement[];
@@ -376,26 +476,17 @@ const SecretariaDeclaracaoMatriculaPage = ({
       await waitForPrintAssets();
       restoreImages = await inlinePrintImages();
 
-      const pdf = new jsPDF({
+      const pdfBlob = await buildSelectablePdfBlobFromElements(pages, {
         orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-        compress: true
+        artworkFormat: 'PNG',
+        artworkScale: 2,
+        title: documentTitle,
+        subject: 'Declaração institucional emitida pela Secretaria',
       });
-
-      for (let index = 0; index < pages.length; index += 1) {
-        const canvas = await html2canvas(pages[index], {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          allowTaint: false,
-        });
-        const imgData = canvas.toDataURL('image/jpeg', 0.95);
-        if (index > 0) pdf.addPage('a4', 'portrait');
-        pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
-      }
-
-      pdf.save(`${fileSlug}-${new Date().toISOString().split('T')[0]}.pdf`);
+      downloadPdfBlob(
+        pdfBlob,
+        `${fileSlug}-${new Date().toISOString().split('T')[0]}.pdf`,
+      );
     } catch (error) {
       console.error('Erro ao baixar declaração:', error);
       alert('Não foi possível gerar o PDF da declaração.');
@@ -405,8 +496,18 @@ const SecretariaDeclaracaoMatriculaPage = ({
     }
   };
 
-  const triggerBrowserPrint = () => {
-    window.print();
+  const triggerBrowserPrint = async () => {
+    try {
+      await waitForPrintAssets();
+      window.print();
+    } catch (error) {
+      console.error('Erro ao preparar declaração para impressão:', error);
+      window.alert(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível preparar o QR Code para impressão.',
+      );
+    }
   };
 
   const rawAlunosParaImprimir = mode === 'individual'
@@ -417,7 +518,12 @@ const SecretariaDeclaracaoMatriculaPage = ({
           : alunos.filter(a => a.turmaIds && a.turmaIds.includes(selectedTurmaId)))
       : customSelectedAlunos;
 
-  const parseTemplate = (htmlText: string, aluno: Aluno, validationCode: string) => {
+  const parseTemplate = (
+    htmlText: string,
+    aluno: Aluno,
+    validationCode: string,
+    validationExpiresAt?: string | null,
+  ) => {
     if (!htmlText) return '';
     let parsed = htmlText;
 
@@ -429,10 +535,13 @@ const SecretariaDeclaracaoMatriculaPage = ({
     const dataExtenso = `${today.getDate()} de ${meses[today.getMonth()]} de ${today.getFullYear()}`;
     const horaAtual = `${String(today.getHours()).padStart(2, '0')}:${String(today.getMinutes()).padStart(2, '0')}`;
 
-    const validityDays = templateConfig.validityDays || 30;
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + validityDays);
-    const validadeFormatada = `${String(expiresAt.getDate()).padStart(2, '0')}/${String(expiresAt.getMonth() + 1).padStart(2, '0')}/${expiresAt.getFullYear()}`;
+    const expiresAt = validationExpiresAt ? new Date(validationExpiresAt) : null;
+    const validityDays = expiresAt
+      ? Math.max(1, Math.ceil((expiresAt.getTime() - today.getTime()) / (24 * 60 * 60 * 1000)))
+      : null;
+    const validadeFormatada = expiresAt
+      ? `${String(expiresAt.getDate()).padStart(2, '0')}/${String(expiresAt.getMonth() + 1).padStart(2, '0')}/${expiresAt.getFullYear()}`
+      : 'Sem vencimento';
 
     const formatarData = (dataStr?: string) => {
       if (!dataStr) return 'Não informada';
@@ -467,8 +576,17 @@ const SecretariaDeclaracaoMatriculaPage = ({
     parsed = parsed.replace(/{{DATA_ATUAL}}/g, dataExtenso);
     parsed = parsed.replace(/{{HORA_ATUAL}}/g, horaAtual);
     parsed = parsed.replace(/{{DATA_GERACAO}}/g, `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()} às ${horaAtual}`);
-    parsed = parsed.replace(/{{VALIDADE_DIAS}}/g, String(validityDays));
+    parsed = parsed.replace(
+      /{{VALIDADE_DIAS}}/g,
+      validityDays === null ? 'Sem vencimento' : String(validityDays),
+    );
     parsed = parsed.replace(/{{VALIDADE_DATA}}/g, validadeFormatada);
+    parsed = parsed.replace(
+      /{{FREQUENCIA_GERAL}}/g,
+      frequenciesByStudent[aluno.id] === undefined
+        ? 'Não consolidada'
+        : `${frequenciesByStudent[aluno.id].toFixed(2).replace('.', ',')}%`
+    );
 
     return parsed;
   };
@@ -476,7 +594,9 @@ const SecretariaDeclaracaoMatriculaPage = ({
   const renderA4Pages = () => {
     return rawAlunosParaImprimir.map((aluno, index) => {
       const code = validationCodes[aluno.id] || 'VALIDACAO-PENDENTE';
-      const parsedText = parseTemplate(templateConfig.textContent, aluno, code);
+      const expiresAt = validationExpirations[aluno.id];
+      const issuedValidationPublic = validationPublicByStudent[aluno.id] === true;
+      const parsedText = parseTemplate(templateConfig.textContent, aluno, code, expiresAt);
 
       return (
         <div
@@ -514,7 +634,7 @@ const SecretariaDeclaracaoMatriculaPage = ({
 
           {/* 4. Campos Absolutos */}
           {templateConfig.absoluteFields?.map((field: any) => {
-            const parsedVal = parseTemplate(field.value, aluno, code);
+            const parsedVal = parseTemplate(field.value, aluno, code, expiresAt);
             return (
               <div
                 key={field.id}
@@ -528,13 +648,14 @@ const SecretariaDeclaracaoMatriculaPage = ({
                   ...field.style
                 }}
               >
-                {field.type === 'qrcode' && (
+                {field.type === 'qrcode' && issuedValidationPublic && (
                   <div className="w-full bg-white p-1.5 shadow-sm rounded-xl border border-slate-100 flex flex-col items-center justify-center text-center">
                     <div className="w-full aspect-square bg-white flex items-center justify-center mb-1" style={{ width: field.width ? `${field.width}px` : '100px' }}>
-                      <img
-                        src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`${academicConfigs?.validacaoUrl || 'https://www.universocc.com.br/validador'}?q=${code}`)}`}
+                      <LocalQrCodeImage
+                        value={getDocumentValidationUrl(code)}
+                        size={150}
                         alt="QR Code"
-                        className="w-full h-full object-contain pointer-events-none"
+                        className="pointer-events-none h-full w-full"
                       />
                     </div>
                     <div className="w-full flex flex-col gap-0.5 border-t border-slate-100 pt-1 mt-0.5 select-all">
@@ -550,8 +671,13 @@ const SecretariaDeclaracaoMatriculaPage = ({
                   <img
                     src={field.value}
                     alt="Assinatura"
-                    className="w-full h-auto object-contain pointer-events-none"
-                    style={{ width: field.width ? `${field.width}px` : '200px' }}
+                    className="w-full pointer-events-none"
+                    style={{
+                      width: field.width ? `${field.width}px` : '200px',
+                      height: field.height ? `${field.height}px` : 'auto',
+                      objectFit: field.style?.objectFit || 'contain',
+                      objectPosition: field.style?.objectPosition || 'center',
+                    }}
                   />
                 )}
 
@@ -575,46 +701,53 @@ const SecretariaDeclaracaoMatriculaPage = ({
     );
   }
 
-  if (isPrinting) {
-    return (
-      <div className="fixed inset-0 bg-slate-900 z-[9999] overflow-y-auto custom-scrollbar flex flex-col" id="print-layout">
+  if (isPrinting && typeof document !== 'undefined') {
+    return createPortal(
+      <div
+        className="fixed inset-0 z-[2147483000] flex h-screen h-[100dvh] w-screen flex-col overflow-hidden bg-slate-950"
+        id="print-layout"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Visualizador: ${documentTitle}`}
+      >
         {/* Barra superior de Ações */}
-        <div className="bg-slate-800 text-white p-4 shadow-md sticky top-0 flex justify-between items-center z-[10000] print:hidden">
-          <div className="flex items-center gap-4">
+        <div className="z-10 flex shrink-0 flex-col gap-3 border-b border-white/10 bg-slate-800 px-4 py-3 text-white shadow-md sm:flex-row sm:items-center sm:justify-between sm:px-6 print:hidden">
+          <div className="flex min-w-0 items-center gap-3 sm:gap-4">
             <button
               onClick={() => setIsPrinting(false)}
-              className="p-2 bg-slate-700/50 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl transition-colors flex items-center gap-2 text-xs font-bold uppercase tracking-wider"
+              className="flex shrink-0 items-center gap-2 rounded-xl bg-slate-700/50 p-2 text-xs font-bold uppercase tracking-wider text-slate-300 transition-colors hover:bg-slate-700 hover:text-white"
+              aria-label="Fechar visualizador"
             >
               <ArrowLeft size={16} /> Voltar
             </button>
-            <div>
-              <h3 className="text-sm font-black uppercase tracking-widest text-white">Visualizador de Documentos</h3>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+            <div className="min-w-0">
+              <h3 className="truncate text-sm font-black uppercase tracking-widest text-white">Visualizador de Documentos</h3>
+              <p className="mt-0.5 truncate text-[10px] font-bold uppercase tracking-widest text-slate-400">
                 Emissão: {documentTitle} ({rawAlunosParaImprimir.length} pág.)
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-3">
             <button
               onClick={handleDownload}
               disabled={isDownloading}
-              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-5 py-3 rounded-xl font-bold uppercase tracking-widest text-xs transition-all border border-white/15 disabled:opacity-60"
+              className="flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-3 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white transition-all hover:bg-white/20 disabled:opacity-60 sm:px-5 sm:py-3 sm:text-xs"
             >
               {isDownloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-              {isDownloading ? 'Gerando...' : 'Fazer Download PDF'}
+              <span>{isDownloading ? 'Gerando...' : 'Download PDF'}</span>
             </button>
             <button
-              onClick={triggerBrowserPrint}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold uppercase tracking-widest text-xs transition-all shadow-lg"
+              onClick={() => void triggerBrowserPrint()}
+              className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white shadow-lg transition-all hover:bg-blue-700 sm:px-6 sm:py-3 sm:text-xs"
             >
-              <Printer size={16} /> Confirmar Impressão
+              <Printer size={16} /> <span>Imprimir</span>
             </button>
           </div>
         </div>
 
-        <div className="flex-1 bg-slate-900 p-8 overflow-y-auto flex flex-col items-center">
-          <div ref={printContentRef} className="print-content flex flex-col items-center">
+        <div className="flex min-h-0 flex-1 flex-col items-center overflow-auto bg-slate-900 p-3 custom-scrollbar sm:p-8">
+          <div ref={printContentRef} className="print-content flex min-w-max flex-col items-center">
             {renderA4Pages()}
           </div>
         </div>
@@ -664,7 +797,8 @@ const SecretariaDeclaracaoMatriculaPage = ({
             margin: 0;
           }
         `}} />
-      </div>
+      </div>,
+      document.body,
     );
   }
 
@@ -826,10 +960,16 @@ const SecretariaDeclaracaoMatriculaPage = ({
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Validade do Lote</label>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Política do Validador</label>
                 <input
                   type="text"
-                  value={`${templateConfig.validityDays || 30} dias`}
+                  value={
+                    !validationPublic
+                      ? 'Sem validador público'
+                      : validationValidityDays === null
+                        ? 'Sem vencimento'
+                        : `${validationValidityDays} dias`
+                  }
                   disabled
                   className="w-full p-4 bg-slate-100 border border-slate-200 rounded-2xl font-bold text-slate-500 text-sm outline-none"
                 />

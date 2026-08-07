@@ -1,18 +1,14 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
-  BookOpen,
   Briefcase,
-  GraduationCap,
   Loader2,
   Users,
-  Calendar,
   Zap,
   Award,
 } from 'lucide-react';
 import { gestaoService } from '../gestao.service';
 import { gestaoQueryKeys } from '../gestao.query-keys';
-import { enrichTechnicalAcademicProgress } from '../gestao.mappers';
 
 interface GestaoResumoProps {
   poloId?: string;
@@ -31,19 +27,10 @@ const GestaoResumo: React.FC<GestaoResumoProps> = ({ poloId }) => {
 
   // Query 2: Turmas Ativas Enriquecidas
   const activeClassesQuery = useQuery({
-    queryKey: ['gestao', 'resumo-active-classes', poloId],
-    queryFn: async () => {
-      const [tecnicas, livres, especializacoes] = await Promise.all([
-        gestaoService.getTurmasByModalidade('TECNICO', poloId),
-        gestaoService.getTurmasByModalidade('LIVRE', poloId),
-        gestaoService.getTurmasByModalidade('ESPECIALIZACAO', poloId),
-      ]);
-      const active = [...tecnicas, ...livres, ...especializacoes].filter(
-        (t) => t.status === 'EM_ANDAMENTO'
-      );
-      return await enrichTechnicalAcademicProgress(active);
-    },
+    queryKey: gestaoQueryKeys.activeClasses(poloId),
+    queryFn: () => gestaoService.getActivePresentialClasses(poloId),
     staleTime: 5 * 60_000,
+    refetchInterval: 5 * 60_000,
   });
 
   const isLoading = summaryQuery.isLoading || activeClassesQuery.isLoading;
@@ -66,7 +53,6 @@ const GestaoResumo: React.FC<GestaoResumoProps> = ({ poloId }) => {
     );
   }
 
-  const kpis = summaryQuery.data;
   const allActiveClasses = activeClassesQuery.data || [];
 
   // Cálculos dinâmicos com base nas turmas em aberto

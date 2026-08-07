@@ -44,8 +44,9 @@ type InviteStudentResult = {
 
 type DeletePartnerResult = {
   success: boolean;
-  action?: 'delete-partner';
+  action?: 'delete-partner' | 'deactivate-partner';
   partnerDeleted?: boolean;
+  partnerDeactivated?: boolean;
   authUserDeleted?: boolean;
   message?: string;
 };
@@ -53,13 +54,6 @@ type DeletePartnerResult = {
 type PartnerEmailStatusesResult = {
   success: boolean;
   statuses?: PartnerEmailConfirmationStatus[];
-};
-
-type ConfirmPartnerEmailResult = {
-  success: boolean;
-  userId?: string | null;
-  emailConfirmed: boolean;
-  message?: string;
 };
 
 const invokeAdminFunction = async <T>(payload: Record<string, unknown>): Promise<T> => {
@@ -98,13 +92,6 @@ export const portalActivationService = {
     }
 
     return statuses;
-  },
-
-  async confirmPartnerEmail(partnerId: string): Promise<ConfirmPartnerEmailResult> {
-    return invokeAdminFunction<ConfirmPartnerEmailResult>({
-      action: 'confirm-partner-email',
-      partnerId,
-    });
   },
 
   async ensureStudentAccess(payload: InviteStudentPayload): Promise<InviteStudentResult> {

@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   ArrowRightLeft,
   FileText,
+  Landmark,
   Layers,
   Lock,
   TrendingDown,
@@ -15,29 +16,33 @@ import { FinanceiroTabId } from '../access-control';
 import ResumoTab from './resumo/ResumoTab';
 import ReceberTab from './receber/ReceberTab';
 import DespesasTab from './despesas/DespesasTab';
+import EmprestimosTab from './emprestimos/EmprestimosTab';
 import TransferenciasTab from './transferencias/TransferenciasTab';
 import ConciliacaoBancariaTab from './conciliacao-bancaria/ConciliacaoBancariaTab';
 import OutrosDebitosTab from './outros-debitos/OutrosDebitosTab';
 import OutrosCreditosTab from './outros-creditos/OutrosCreditosTab';
+import FinancialUnderlineTabs from './components/FinancialUnderlineTabs';
 
 type FinancialTab = FinanceiroTabId;
 
 interface FinanceiroPageProps {
   poloId?: string | null;
+  isMatriz: boolean;
   allowedTabs?: FinancialTab[];
 }
 
-const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ poloId, allowedTabs }) => {
+const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ poloId, isMatriz, allowedTabs }) => {
   const [activeTab, setActiveTab] = useState<FinancialTab>('resumo');
 
   const tabs = useMemo(() => [
-    { id: 'resumo' as const, label: 'Resumo', icon: <Layers size={14} />, colorClass: 'bg-[#001a33] text-white shadow-md' },
-    { id: 'receber' as const, label: 'Contas a Receber', icon: <TrendingUp size={14} />, colorClass: 'bg-emerald-600 text-white shadow-md' },
-    { id: 'despesas' as const, label: 'Despesas', icon: <TrendingDown size={14} />, colorClass: 'bg-rose-600 text-white shadow-md' },
-    { id: 'transferencias' as const, label: 'Transferências', icon: <ArrowRightLeft size={14} />, colorClass: 'bg-slate-800 text-white shadow-md' },
-    { id: 'conciliacao-bancaria' as const, label: 'Conciliação Bancária', icon: <FileText size={14} className="text-blue-200" />, colorClass: 'bg-cyan-700 text-white shadow-md' },
-    { id: 'outros-debitos' as const, label: 'Outros Débitos', icon: <TrendingDown size={14} className="rotate-90 text-rose-500" />, colorClass: 'bg-indigo-600 text-white shadow-md' },
-    { id: 'outros-creditos' as const, label: 'Outros Créditos', icon: <TrendingUp size={14} className="-rotate-90 text-emerald-500" />, colorClass: 'bg-teal-600 text-white shadow-md' },
+    { id: 'resumo' as const, label: 'Resumo', icon: <Layers size={14} /> },
+    { id: 'receber' as const, label: 'Contas a Receber', icon: <TrendingUp size={14} /> },
+    { id: 'despesas' as const, label: 'Contas a Pagar', icon: <TrendingDown size={14} /> },
+    { id: 'emprestimos' as const, label: 'Empréstimos', icon: <Landmark size={14} /> },
+    { id: 'transferencias' as const, label: 'Transferências', icon: <ArrowRightLeft size={14} /> },
+    { id: 'conciliacao-bancaria' as const, label: 'Conciliação Bancária', icon: <FileText size={14} /> },
+    { id: 'outros-debitos' as const, label: 'Outros Débitos', icon: <TrendingDown size={14} className="rotate-90" /> },
+    { id: 'outros-creditos' as const, label: 'Outros Créditos', icon: <TrendingUp size={14} className="-rotate-90" /> },
   ], []);
   const visibleTabs = useMemo(() => {
     if (!allowedTabs) return tabs;
@@ -55,9 +60,11 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ poloId, allowedTabs }) 
       case 'resumo':
         return <ResumoTab poloId={poloId} />;
       case 'receber':
-        return <ReceberTab poloId={poloId} />;
+        return <ReceberTab poloId={poloId} isMatriz={isMatriz} />;
       case 'despesas':
         return <DespesasTab poloId={poloId} />;
+      case 'emprestimos':
+        return <EmprestimosTab poloId={poloId} isMatriz={isMatriz} />;
       case 'transferencias':
         return <TransferenciasTab poloId={poloId} />;
       case 'conciliacao-bancaria':
@@ -90,31 +97,13 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ poloId, allowedTabs }) 
   return (
     <div className="max-w-7xl mx-auto animate-fadeIn pb-12">
       {/* ABA DE NAVEGAÇÃO PRINCIPAL */}
-      <div className="border-b border-slate-200 mb-8">
-        <div className="flex gap-6 overflow-x-auto pb-px">
-          {visibleTabs.map((tab) => {
-            const isActive = activeTab === tab.id;
-            return (
-              <button 
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 pb-3 text-xs font-bold uppercase tracking-wider transition-all relative shrink-0 ${
-                  isActive 
-                    ? 'text-[#001a33] font-extrabold' 
-                    : 'text-slate-400 hover:text-slate-700'
-                }`}
-              >
-                <span className={isActive ? 'text-[#4169E1]' : 'text-slate-400'}>
-                  {tab.icon}
-                </span>
-                <span>{tab.label}</span>
-                {isActive && (
-                  <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#4169E1] rounded-full" />
-                )}
-              </button>
-            );
-          })}
-        </div>
+      <div className="mb-8">
+        <FinancialUnderlineTabs
+          items={visibleTabs}
+          value={activeTab}
+          onChange={setActiveTab}
+          ariaLabel="Seções do módulo financeiro"
+        />
       </div>
 
       {/* CONTEÚDO PRINCIPAL DAS ABAS */}

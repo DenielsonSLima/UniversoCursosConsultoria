@@ -1,7 +1,7 @@
 import React from 'react';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, SlidersHorizontal } from 'lucide-react';
 import { DiarioStudent } from './diario-classe.service';
-import { DiarioStudentStats, GradesMap } from './diario-classe.types';
+import { ActiveInstruments, DiarioStudentStats, GradesMap } from './diario-classe.types';
 
 type GradeField = 'p' | 'ti' | 'tg' | 's' | 'cq' | 'o' | 'rec';
 
@@ -9,130 +9,198 @@ interface DiarioResultadoTabProps {
   students: DiarioStudent[];
   localGrades: GradesMap;
   isReadOnly: boolean;
+  activeInstruments: ActiveInstruments;
+  onToggleInstrument: (field: keyof ActiveInstruments) => void;
   getStats: (studentId: string) => DiarioStudentStats;
   onGradeChange: (studentId: string, field: GradeField, value: string) => void;
-  onSaveGrade: (studentId: string) => void;
+  onSaveGrade: (studentId: string, field: GradeField) => void;
 }
 
 const DiarioResultadoTab: React.FC<DiarioResultadoTabProps> = ({
   students,
   localGrades,
   isReadOnly,
+  activeInstruments,
+  onToggleInstrument,
   getStats,
   onGradeChange,
   onSaveGrade,
-}) => (
-  <div>
-    {students.length === 0 ? (
-      <div className="py-20 text-center text-slate-400 flex flex-col items-center">
-        <AlertCircle size={48} className="mb-4 opacity-50 text-slate-300" />
-        <p className="font-bold text-sm">Nenhum aluno matriculado nesta turma.</p>
-        <p className="text-xs text-slate-500 mt-1">Matricule alunos na aba "Alunos" para lançar notas.</p>
-      </div>
-    ) : (
-      <div className="overflow-x-auto">
-        <table className="w-full text-center border-collapse">
-          <thead>
-            <tr>
-              <th className="p-4 border-b border-slate-200 border-r w-12 text-xs font-black text-slate-400" rowSpan={2}>Nº</th>
-              <th className="p-4 border-b border-slate-200 border-r min-w-[250px] text-xs font-black text-[#001a33] uppercase text-left" rowSpan={2}>Nome do Aluno</th>
-              <th className="p-2 border-b border-slate-200 border-r text-xs font-black text-blue-700 bg-blue-50/50" colSpan={6}>INSTRUMENTOS AVALIATIVOS (0.0 a 10.0)</th>
-              <th className="p-4 border-b border-slate-200 border-r text-[10px] font-black text-slate-500 bg-slate-50" rowSpan={2}>MÉDIA PARCIAL</th>
-              <th className="p-4 border-b border-slate-200 border-r text-[10px] font-black text-slate-500 bg-slate-50" rowSpan={2}>REC<br /><span className="font-bold text-slate-400">SUBST.</span></th>
-              <th className="p-4 border-b border-slate-200 border-r text-[10px] font-black text-slate-500 bg-slate-50" rowSpan={2}>MÉDIA FINAL</th>
-              <th className="p-2 border-b border-slate-200 border-r text-xs font-black text-amber-700 bg-amber-50/50" colSpan={2}>FREQUÊNCIA</th>
-              <th className="p-4 border-b border-slate-200 text-xs font-black text-[#001a33] uppercase" rowSpan={2}>RESULTADO FINAL</th>
-            </tr>
-            <tr>
-              <GradeHeader title="Prova">P</GradeHeader>
-              <GradeHeader title="Trabalho Individual">TI</GradeHeader>
-              <GradeHeader title="Trabalho em Grupo">TG</GradeHeader>
-              <GradeHeader title="Seminário">S</GradeHeader>
-              <GradeHeader title="Critérios Qualitativos">CQ</GradeHeader>
-              <GradeHeader title="Outros">O</GradeHeader>
-              <th className="p-2 border-b border-slate-200 border-r text-[10px] uppercase font-bold text-slate-400 w-16">FALTAS</th>
-              <th className="p-2 border-b border-slate-200 border-r text-[10px] uppercase font-bold text-slate-400 w-16">% PRES.</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {students.map((aluno, idx) => {
-              const stats = getStats(aluno.id);
-              const isCredited = stats.resultado === 'APROVEITADO';
-              const studentGrades = localGrades[aluno.id] || { p: 0, ti: 0, tg: 0, s: 0, cq: 0, o: 0, rec: null };
-              const commonInputProps = {
-                studentId: aluno.id,
-                onGradeChange,
-                onSaveGrade,
-                disabled: isReadOnly || isCredited,
-              };
-              return (
-                <tr key={aluno.id} className={`transition-colors ${isCredited ? 'bg-violet-50/60' : 'hover:bg-slate-50/50'}`}>
-                  <td className="p-2 text-center border-r border-slate-100 text-slate-400 font-mono text-xs">{String(idx + 1).padStart(2, '0')}</td>
-                  <td className="p-2 border-r border-slate-100 font-bold text-xs text-[#001a33] text-left truncate max-w-[200px]">{aluno.nome}</td>
-                  <GradeInput {...commonInputProps} field="p" value={studentGrades.p} />
-                  <GradeInput {...commonInputProps} field="ti" value={studentGrades.ti} />
-                  <GradeInput {...commonInputProps} field="tg" value={studentGrades.tg} />
-                  <GradeInput {...commonInputProps} field="s" value={studentGrades.s} />
-                  <GradeInput {...commonInputProps} field="cq" value={studentGrades.cq} />
-                  <GradeInput {...commonInputProps} field="o" value={studentGrades.o} />
-                  <td className="p-2 border-r border-slate-100 font-bold text-xs bg-slate-50">
-                    {stats.mediaParcial === null ? '—' : stats.mediaParcial.toFixed(1)}
-                  </td>
-                  <GradeInput
-                    {...commonInputProps}
-                    field="rec"
-                    value={studentGrades.rec}
-                    recovery
-                    disabled={isReadOnly || isCredited || (stats.mediaParcial !== null && stats.mediaParcial >= 6)}
-                  />
-                  <td className="p-2 border-r border-slate-100 font-black text-sm bg-slate-50 text-[#001a33]">
-                    {stats.mediaFinal === null ? '—' : stats.mediaFinal.toFixed(1)}
-                  </td>
-                  <td className="p-2 border-r border-slate-100 font-bold text-xs text-red-600">{stats.faltas}</td>
-                  <td className="p-2 border-r border-slate-100 font-bold text-xs">
-                    {stats.frequencia === null ? '—' : `${stats.frequencia}%`}
-                  </td>
-                  <td className="p-2">
-                    <span className={`inline-block px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${
-                      ['APROVADO', 'APROVEITADO'].includes(stats.resultado)
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : ['EM_RECUPERACAO', 'FREQUENCIA_PENDENTE', 'SEM_LANCAMENTO'].includes(stats.resultado)
-                          ? 'bg-amber-100 text-amber-800'
-                          : 'bg-red-100 text-red-800'
-                    }`}>
-                      {stats.resultado.replaceAll('_', ' ')}
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    )}
+}) => {
+  const instrumentsList: { key: keyof ActiveInstruments; label: string; fullTitle: string }[] = [
+    { key: 'p', label: 'P', fullTitle: 'Prova Escrita' },
+    { key: 'ti', label: 'TI', fullTitle: 'Trabalho Individual' },
+    { key: 'tg', label: 'TG', fullTitle: 'Trabalho em Grupo' },
+    { key: 's', label: 'S', fullTitle: 'Seminário' },
+    { key: 'cq', label: 'CQ', fullTitle: 'Critérios Qualitativos' },
+    { key: 'o', label: 'O', fullTitle: 'Outros Instrumentos' },
+  ];
 
-    <div className="p-6 bg-slate-50 border-t border-slate-200">
-      <p className="text-xs font-bold text-slate-500 mb-2">LEGENDA - Instrumentos Avaliativos:</p>
-      <div className="flex flex-wrap gap-x-6 gap-y-2 text-[10px] font-medium text-slate-600">
-        <span><strong>P</strong> - Prova Escrita</span>
-        <span><strong>TI</strong> - Trabalho Individual</span>
-        <span><strong>TG</strong> - Trabalho em Grupo</span>
-        <span><strong>S</strong> - Seminário</span>
-        <span><strong>CQ</strong> - Critérios Qualitativos (assiduidade, participação, etc.)</span>
-        <span><strong>O</strong> - Outros / Atividades Práticas</span>
-        <span><strong>REC</strong> - Recuperação Semestral</span>
+  return (
+    <div>
+      {/* Barra de controle dos Instrumentos Avaliativos */}
+      <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
+          <SlidersHorizontal size={16} className="text-blue-600 shrink-0" />
+          <span>Instrumentos Avaliativos da Disciplina:</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          {instrumentsList.map((inst) => {
+            const active = activeInstruments[inst.key];
+            return (
+              <button
+                key={inst.key}
+                type="button"
+                onClick={() => !isReadOnly && onToggleInstrument(inst.key)}
+                disabled={isReadOnly}
+                className={`px-3 py-1.5 rounded-xl font-bold text-[11px] transition-all border flex items-center gap-1.5 cursor-pointer ${
+                  active
+                    ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 shadow-sm'
+                    : 'bg-slate-100 text-slate-400 border-slate-200 line-through hover:bg-slate-200 opacity-70'
+                } disabled:cursor-not-allowed`}
+                title={active ? `Clique para anular/remover ${inst.fullTitle}` : `Clique para ativar ${inst.fullTitle}`}
+              >
+                <span>{inst.label}</span>
+                <span className={`text-[9px] font-black px-1 rounded ${active ? 'bg-blue-200 text-blue-800' : 'bg-slate-200 text-slate-600'}`}>
+                  {active ? 'ATIVO' : 'ANULADO'}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
-      <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-[11px] font-bold leading-relaxed text-blue-900">
-        Regra da recuperação: quando a média parcial fica abaixo de 6,0, o aluno entra em recuperação.
-        A nota REC é substitutiva: se for maior que a média parcial, ela passa a ser a média final; se for menor, a média parcial é preservada.
-        O período só pode ser fechado depois que todas as recuperações pendentes forem lançadas.
+
+      {students.length === 0 ? (
+        <div className="py-20 text-center text-slate-400 flex flex-col items-center">
+          <AlertCircle size={48} className="mb-4 opacity-50 text-slate-300" />
+          <p className="font-bold text-sm">Nenhum aluno matriculado nesta turma.</p>
+          <p className="text-xs text-slate-500 mt-1">Matricule alunos na aba "Alunos" para lançar notas.</p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-center border-collapse">
+            <thead>
+              <tr>
+                <th className="p-4 border-b border-slate-200 border-r w-12 text-xs font-black text-slate-400" rowSpan={2}>Nº</th>
+                <th className="p-4 border-b border-slate-200 border-r min-w-[250px] text-xs font-black text-[#001a33] uppercase text-left" rowSpan={2}>Nome do Aluno</th>
+                <th className="p-2 border-b border-slate-200 border-r text-xs font-black text-blue-700 bg-blue-50/50" colSpan={6}>INSTRUMENTOS AVALIATIVOS (0.0 a 10.0)</th>
+                <th className="p-4 border-b border-slate-200 border-r text-[10px] font-black text-slate-500 bg-slate-50" rowSpan={2}>MÉDIA PARCIAL</th>
+                <th className="p-4 border-b border-slate-200 border-r text-[10px] font-black text-slate-500 bg-slate-50" rowSpan={2}>REC<br /><span className="font-bold text-slate-400">SUBST.</span></th>
+                <th className="p-4 border-b border-slate-200 border-r text-[10px] font-black text-slate-500 bg-slate-50" rowSpan={2}>MÉDIA FINAL</th>
+                <th className="p-2 border-b border-slate-200 border-r text-xs font-black text-amber-700 bg-amber-50/50" colSpan={2}>FREQUÊNCIA</th>
+                <th className="p-4 border-b border-slate-200 text-xs font-black text-[#001a33] uppercase" rowSpan={2}>RESULTADO FINAL</th>
+              </tr>
+              <tr>
+                {instrumentsList.map((inst) => (
+                  <GradeHeader
+                    key={inst.key}
+                    title={inst.fullTitle}
+                    active={activeInstruments[inst.key]}
+                    onToggle={() => !isReadOnly && onToggleInstrument(inst.key)}
+                  >
+                    {inst.label}
+                  </GradeHeader>
+                ))}
+                <th className="p-2 border-b border-slate-200 border-r text-[10px] uppercase font-bold text-slate-400 w-16">FALTAS</th>
+                <th className="p-2 border-b border-slate-200 border-r text-[10px] uppercase font-bold text-slate-400 w-16">% PRES.</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {students.map((aluno, idx) => {
+                const stats = getStats(aluno.id);
+                const isCredited = stats.resultado === 'APROVEITADO';
+                const studentGrades = localGrades[aluno.id] || { p: null, ti: null, tg: null, s: null, cq: null, o: null, rec: null };
+                const commonInputProps = {
+                  studentId: aluno.id,
+                  onGradeChange,
+                  onSaveGrade,
+                };
+                return (
+                  <tr key={aluno.id} className={`transition-colors ${isCredited ? 'bg-violet-50/60' : 'hover:bg-slate-50/50'}`}>
+                    <td className="p-2 text-center border-r border-slate-100 text-slate-400 font-mono text-xs">{String(idx + 1).padStart(2, '0')}</td>
+                    <td className="p-2 border-r border-slate-100 font-bold text-xs text-[#001a33] text-left truncate max-w-[200px]">{aluno.nome}</td>
+                    <GradeInput {...commonInputProps} field="p" value={studentGrades.p} disabled={isReadOnly || isCredited || !activeInstruments.p} />
+                    <GradeInput {...commonInputProps} field="ti" value={studentGrades.ti} disabled={isReadOnly || isCredited || !activeInstruments.ti} />
+                    <GradeInput {...commonInputProps} field="tg" value={studentGrades.tg} disabled={isReadOnly || isCredited || !activeInstruments.tg} />
+                    <GradeInput {...commonInputProps} field="s" value={studentGrades.s} disabled={isReadOnly || isCredited || !activeInstruments.s} />
+                    <GradeInput {...commonInputProps} field="cq" value={studentGrades.cq} disabled={isReadOnly || isCredited || !activeInstruments.cq} />
+                    <GradeInput {...commonInputProps} field="o" value={studentGrades.o} disabled={isReadOnly || isCredited || !activeInstruments.o} />
+                    <td className="p-2 border-r border-slate-100 font-black text-xs bg-slate-50/80 text-blue-900">
+                      {stats.mediaParcial === null ? '—' : stats.mediaParcial.toFixed(1)}
+                    </td>
+                    <GradeInput
+                      {...commonInputProps}
+                      field="rec"
+                      value={studentGrades.rec}
+                      recovery
+                      disabled={isReadOnly || isCredited || (stats.mediaParcial !== null && stats.mediaParcial >= 6)}
+                    />
+                    <td className="p-2 border-r border-slate-100 font-black text-sm bg-slate-50 text-[#001a33]">
+                      {stats.mediaFinal === null ? '—' : stats.mediaFinal.toFixed(1)}
+                    </td>
+                    <td className="p-2 border-r border-slate-100 font-bold text-xs text-red-600">{stats.faltas}</td>
+                    <td className="p-2 border-r border-slate-100 font-bold text-xs">
+                      {stats.frequencia === null ? '—' : `${stats.frequencia}%`}
+                    </td>
+                    <td className="p-2">
+                      <span className={`inline-block px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${
+                        ['APROVADO', 'APROVEITADO'].includes(stats.resultado)
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : ['EM_RECUPERACAO', 'FREQUENCIA_PENDENTE', 'SEM_LANCAMENTO'].includes(stats.resultado)
+                            ? 'bg-amber-100 text-amber-800'
+                            : 'bg-red-100 text-red-800'
+                      }`}>
+                        {stats.resultado.replaceAll('_', ' ')}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <div className="p-6 bg-slate-50 border-t border-slate-200">
+        <p className="text-xs font-bold text-slate-500 mb-2">LEGENDA - Instrumentos Avaliativos:</p>
+        <div className="flex flex-wrap gap-x-6 gap-y-2 text-[10px] font-medium text-slate-600">
+          <span className={activeInstruments.p ? 'font-bold text-blue-900' : 'line-through text-slate-400'}><strong>P</strong> - Prova Escrita</span>
+          <span className={activeInstruments.ti ? 'font-bold text-blue-900' : 'line-through text-slate-400'}><strong>TI</strong> - Trabalho Individual</span>
+          <span className={activeInstruments.tg ? 'font-bold text-blue-900' : 'line-through text-slate-400'}><strong>TG</strong> - Trabalho em Grupo</span>
+          <span className={activeInstruments.s ? 'font-bold text-blue-900' : 'line-through text-slate-400'}><strong>S</strong> - Seminário</span>
+          <span className={activeInstruments.cq ? 'font-bold text-blue-900' : 'line-through text-slate-400'}><strong>CQ</strong> - Critérios Qualitativos</span>
+          <span className={activeInstruments.o ? 'font-bold text-blue-900' : 'line-through text-slate-400'}><strong>O</strong> - Outros / Atividades Práticas</span>
+          <span><strong>REC</strong> - Recuperação Semestral</span>
+        </div>
+        <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-[11px] font-bold leading-relaxed text-blue-900">
+          A Média Parcial é calculada somando os pontos obtidos nos instrumentos ativos da disciplina (limitada a 10.0). Instrumentos anulados são desconsiderados do cálculo e da exibição.
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
-const GradeHeader: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
-  <th className="p-2 border-b border-slate-200 border-r text-[10px] uppercase font-bold text-slate-400 w-12" title={title}>{children}</th>
+const GradeHeader: React.FC<{
+  title: string;
+  active: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}> = ({ title, active, onToggle, children }) => (
+  <th
+    className={`p-2 border-b border-slate-200 border-r text-[10px] uppercase font-bold w-12 cursor-pointer transition-colors ${
+      active
+        ? 'text-blue-700 bg-blue-50/70 hover:bg-blue-100'
+        : 'text-slate-300 bg-slate-100 hover:bg-slate-200 line-through'
+    }`}
+    title={`${title} (${active ? 'Ativo - Clique para anular' : 'Anulado - Clique para ativar'})`}
+    onClick={onToggle}
+  >
+    <div className="flex flex-col items-center justify-center gap-0.5">
+      <span>{children}</span>
+      <span className={`text-[8px] font-black px-1 rounded ${active ? 'bg-blue-200 text-blue-800' : 'bg-slate-200 text-slate-500'}`}>
+        {active ? '✓' : '✕'}
+      </span>
+    </div>
+  </th>
 );
 
 interface GradeInputProps {
@@ -154,18 +222,20 @@ const GradeInput: React.FC<GradeInputProps> = ({
   onGradeChange,
   onSaveGrade,
 }) => (
-  <td className="p-1 border-r border-slate-100">
+  <td className={`p-1 border-r border-slate-100 ${disabled ? 'bg-slate-100/50' : ''}`}>
     <input
       type="number"
       min="0"
       max="10"
       step="0.1"
-      className={`w-full text-center text-xs font-bold ${recovery ? 'text-blue-600' : 'text-slate-700'} bg-transparent outline-none focus:bg-blue-50/50 rounded py-1`}
-      value={value === null || value === undefined ? '' : value}
-      placeholder={recovery ? '—' : undefined}
+      inputMode="decimal"
+      className={`w-full text-center text-xs font-bold ${recovery ? 'text-blue-600' : 'text-slate-700'} ${disabled ? 'text-slate-300' : ''} bg-transparent outline-none focus:bg-blue-50/50 rounded py-1`}
+      value={disabled && (value === null || value === undefined) ? '' : (value === null || value === undefined ? '' : value)}
+      placeholder="—"
       disabled={disabled}
       onChange={(event) => onGradeChange(studentId, field, event.target.value)}
-      onBlur={() => onSaveGrade(studentId)}
+      onFocus={(event) => event.currentTarget.select()}
+      onBlur={() => onSaveGrade(studentId, field)}
       onKeyDown={(event) => {
         if (event.key === 'Enter') (event.target as HTMLInputElement).blur();
       }}

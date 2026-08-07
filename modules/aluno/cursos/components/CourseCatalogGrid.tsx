@@ -17,6 +17,7 @@ import {
   hasEadAccess,
   hasPendingEadPayment,
 } from '../cursosPage.utils';
+import { formatEadCheckoutMoney } from '../eadCheckoutOptions';
 
 interface CourseCatalogGridProps {
   groupedCourses: [string, any[]][];
@@ -124,6 +125,17 @@ const CourseCatalogGrid: React.FC<CourseCatalogGridProps> = ({
                 </div>
 
                 <div className="mt-6 border-t border-slate-100 pt-4 space-y-4">
+                  {isEad && (
+                    <div className="flex items-end justify-between gap-3 rounded-2xl bg-emerald-50/70 px-3 py-2.5">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-emerald-700">
+                        Valor do curso
+                      </span>
+                      <strong className="text-base font-black text-[#001a33]">
+                        {formatEadCheckoutMoney(Number(course.valor) || 0)}
+                      </strong>
+                    </div>
+                  )}
+
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5 text-xs text-slate-400 font-bold">
                       <Clock size={14} />

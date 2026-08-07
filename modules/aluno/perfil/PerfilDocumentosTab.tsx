@@ -1,115 +1,253 @@
-import React from 'react';
-import { CheckCircle, Clock, FileText, Upload, XCircle } from 'lucide-react';
-import { PerfilDocumento } from './perfil.types';
+import React, { useMemo, useState } from 'react';
+import { FileText } from 'lucide-react';
+import type {
+  DocumentoAlunoArquivo,
+  DocumentoAlunoModoEnvio,
+  DocumentoAlunoPainel,
+} from '../../shared/documentos-aluno/documentos-aluno.types';
+import { documentosAlunoV2Service } from '../../shared/documentos-aluno/documentos-aluno.service';
+import {
+  DocumentoEnvioModoSelector,
+  DocumentoEnvioOrientacoes,
+  DocumentoSeparadoCard,
+  DocumentoVersoesHistorico,
+  PdfUnicoStatusCard,
+  PdfUnicoUploader,
+} from './documentos';
 
 interface PerfilDocumentosTabProps {
-  documentos: PerfilDocumento[];
-  uploading: boolean;
-  onUpload: React.Dispatch<{ docName: string; file: File }>;
+  painel: DocumentoAlunoPainel;
+  uploadingKey?: string | null;
+  cancellingLotId?: string | null;
+  onUploadSeparado: (documentoId: string, files: File[]) => Promise<unknown>;
+  onUploadPdf: (file: File) => Promise<unknown>;
+  onCancelLote: (
+    loteId: string,
+    arquivos: Array<{ bucket: string; path: string }>,
+  ) => Promise<unknown>;
 }
 
-const getDocStatusBadge = (status?: string | null, hasFile = false) => {
-  switch (status?.toLowerCase()) {
-    case 'pendente':
-    case 'entregue':
-      if (!hasFile) break;
-      return (
-        <span className="inline-flex items-center gap-1 rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-blue-700">
-          <Clock size={10} /> Em Análise
-        </span>
-      );
-    case 'aprovado':
-      return (
-        <span className="inline-flex items-center gap-1 rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-emerald-700">
-          <CheckCircle size={10} /> Aprovado
-        </span>
-      );
-    case 'recusado':
-    case 'rejeitado':
-      return (
-        <span className="inline-flex items-center gap-1 rounded-full border border-red-100 bg-red-50 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-red-700">
-          <XCircle size={10} /> Recusado
-        </span>
-      );
-    default:
-      return (
-        <span className="inline-flex items-center gap-1 rounded-full border border-slate-100 bg-slate-50 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-slate-650">
-          Pendente
-        </span>
-      );
-  }
-};
+const PerfilDocumentosTab: React.FC<PerfilDocumentosTabProps> = ({
+  painel,
+  uploadingKey = null,
+  cancellingLotId = null,
+  onUploadSeparado,
+  onUploadPdf,
+  onCancelLote,
+}) => {
+  const [mode, setMode] = useState<DocumentoAlunoModoEnvio>('separado');
+  const [selectedByDocument, setSelectedByDocument] = useState<Record<string, File[]>>({});
+  const [selectedPdf, setSelectedPdf] = useState<File | null>(null);
+  const [errorsByDocument, setErrorsByDocument] = useState<Record<string, string | null>>({});
+  const [pdfError, setPdfError] = useState<string | null>(null);
 
-const DocumentCard: React.FC<{
-  doc: PerfilDocumento;
-  uploading: boolean;
-  onUpload: React.Dispatch<{ docName: string; file: File }>;
-}> = ({ doc, uploading, onUpload }) => (
-  <div className="flex flex-col gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4 text-xs font-medium">
-    <div className="flex flex-col items-start gap-2 min-[390px]:flex-row min-[390px]:justify-between">
-      <div className="min-w-0 space-y-0.5">
-        <p className="break-words font-bold text-[#001a33]">{doc.nome}</p>
-        {doc.observacao ? (
-          <p className="text-[9px] font-bold text-red-500">{doc.observacao}</p>
-        ) : (
-          <p className="text-[9px] text-slate-400">{doc.arquivoUrl ? 'Arquivo enviado à secretaria' : 'Pendente de entrega'}</p>
-        )}
-      </div>
-      {getDocStatusBadge(doc.status, Boolean(doc.arquivoUrl))}
-    </div>
+  const openLots = useMemo(
+    () => painel.lotesPdf.filter((lote) =>
+      ['preparando', 'aguardando_mapeamento'].includes(lote.status)),
+    [painel.lotesPdf],
+  );
+  const pdfLots = useMemo(
+    () => painel.lotesPdf.filter((lote) => lote.modo === 'pdf_unico'),
+    [painel.lotesPdf],
+  );
+  const separatePreparingLots = useMemo(
+    () => painel.lotesPdf.filter((lote) =>
+      lote.modo === 'separado' && lote.status === 'preparando'),
+    [painel.lotesPdf],
+  );
+  const pdfPending = pdfLots.some((lote) =>
+    ['preparando', 'aguardando_mapeamento'].includes(lote.status));
+  const pendingDocumentIds = useMemo(
+    () => new Set(
+      openLots.flatMap((lote) => lote.documentoIds),
+    ),
+    [openLots],
+  );
+  const eligibleItems = useMemo(
+    () => painel.itens.filter((item) =>
+      ['nao_enviado', 'recusado'].includes(item.status)
+      && !pendingDocumentIds.has(item.id)),
+    [painel.itens, pendingDocumentIds],
+  );
 
-    {doc.status !== 'aprovado' && (
-      <label className="flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 px-3 py-2 text-center text-[10px] font-black text-slate-500 transition-all hover:border-blue-500 hover:bg-white hover:text-blue-600">
-        <Upload size={14} />
-        <span>{uploading ? 'Enviando...' : doc.arquivoUrl ? 'Substituir Arquivo' : 'Escolher Arquivo'}</span>
-        <input
-          type="file"
-          accept="image/*,application/pdf"
-          className="hidden"
-          disabled={uploading}
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (file) onUpload({ docName: doc.nome, file });
-          }}
-        />
-      </label>
-    )}
+  const openFile = async (arquivo: DocumentoAlunoArquivo) => {
+    const signed = await documentosAlunoV2Service.getArquivoUrl(arquivo);
+    if (signed.url) window.open(signed.url, '_blank', 'noopener,noreferrer');
+  };
 
-    {doc.arquivoUrl && (
-      <a
-        href={doc.arquivoUrl}
-        target="_blank"
-        rel="noreferrer"
-        className="py-2 text-center text-[10px] font-black uppercase text-blue-600 hover:underline"
-      >
-        Visualizar arquivo enviado
-      </a>
-    )}
-  </div>
-);
-
-const PerfilDocumentosTab: React.FC<PerfilDocumentosTabProps> = ({ documentos, uploading, onUpload }) => {
   return (
-    <div className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6 md:rounded-[2.5rem]">
-      <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
-        <FileText className="text-blue-600" size={18} />
-        <h3 className="text-xs font-bold uppercase tracking-wider text-[#001a33]">Documentação Escolar</h3>
-      </div>
+    <div className="space-y-5">
+      <section className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6 md:rounded-[2.5rem]">
+        <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
+          <FileText className="text-blue-600" size={18} />
+          <h3 className="text-xs font-bold uppercase tracking-wider text-[#001a33]">
+            Documentação Escolar
+          </h3>
+        </div>
 
-      <p className="mt-5 text-xs font-medium leading-relaxed text-slate-500">
-        Para concluir sua matrícula, envie cópias legíveis em PDF ou imagem. A secretaria analisará cada arquivo.
-      </p>
+        <div className="mt-5">
+          <DocumentoEnvioModoSelector
+            value={mode}
+            onChange={setMode}
+            disabled={Boolean(uploadingKey)}
+          />
+        </div>
 
-      <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {documentos.map((doc, index) => (
-          <DocumentCard key={doc.id || `${doc.nome}-${index}`} doc={doc} uploading={uploading} onUpload={onUpload} />
+        {mode === 'separado' ? (
+          <div className="mt-5 space-y-4">
+            {separatePreparingLots.map((lote) => (
+              <PdfUnicoStatusCard
+                key={lote.id}
+                title="Envio separado incompleto"
+                cancelling={cancellingLotId === lote.id}
+                envio={{
+                  id: lote.id,
+                  status: 'preparando',
+                  arquivos: lote.arquivos,
+                  criadoEm: lote.criadoEm,
+                  finalizadoEm: lote.finalizadoEm,
+                }}
+                onOpenArquivo={(arquivo) => void openFile(arquivo)}
+                onCancel={() => void onCancelLote(lote.id, lote.arquivos)}
+              />
+            ))}
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {painel.itens.map((documento) => {
+                const selectedFiles = selectedByDocument[documento.id] || [];
+                const uploading = uploadingKey === documento.id;
+                return (
+                  <DocumentoSeparadoCard
+                    key={documento.id}
+                    documento={documento}
+                    selectedFiles={selectedFiles}
+                    uploading={uploading}
+                    canSubmit={
+                      ['nao_enviado', 'recusado'].includes(documento.status)
+                      && !pendingDocumentIds.has(documento.id)
+                    }
+                    blockReason={
+                      pendingDocumentIds.has(documento.id)
+                        ? 'Este item já faz parte de um envio em andamento.'
+                        : null
+                    }
+                    error={errorsByDocument[documento.id]}
+                    onFilesSelected={(documentoId, incoming) => {
+                      setErrorsByDocument((current) => ({ ...current, [documentoId]: null }));
+                      setSelectedByDocument((current) => {
+                        const unique = new Map<string, File>();
+                        for (const file of [...(current[documentoId] || []), ...incoming]) {
+                          unique.set(`${file.name}:${file.size}:${file.lastModified}`, file);
+                        }
+                        return {
+                          ...current,
+                          [documentoId]: [...unique.values()].slice(0, 5),
+                        };
+                      });
+                    }}
+                    onRemoveSelectedFile={(documentoId, index) => {
+                      setSelectedByDocument((current) => ({
+                        ...current,
+                        [documentoId]: (current[documentoId] || []).filter(
+                          (_file, fileIndex) => fileIndex !== index,
+                        ),
+                      }));
+                    }}
+                    onSubmit={async (documentoId) => {
+                      const files = selectedByDocument[documentoId] || [];
+                      try {
+                        await onUploadSeparado(documentoId, files);
+                        setSelectedByDocument((current) => ({ ...current, [documentoId]: [] }));
+                      } catch (error) {
+                        setErrorsByDocument((current) => ({
+                          ...current,
+                          [documentoId]: error instanceof Error
+                            ? error.message
+                            : 'Não foi possível enviar este documento.',
+                        }));
+                      }
+                    }}
+                    onOpenArquivo={(arquivo) => void openFile(arquivo)}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <div className="mt-5 space-y-4">
+            <PdfUnicoUploader
+              selectedFile={selectedPdf}
+              uploading={uploadingKey === 'pdf_unico'}
+              disabled={pdfPending || eligibleItems.length === 0}
+              error={pdfError}
+              blockReason={
+                pdfPending
+                  ? 'Já existe um PDF aguardando organização da secretaria.'
+                  : eligibleItems.length === 0
+                    ? 'Todos os documentos estão bloqueados ou aprovados.'
+                    : null
+              }
+              onFileSelected={(file) => {
+                setPdfError(null);
+                setSelectedPdf(file);
+              }}
+              onSubmit={async () => {
+                if (!selectedPdf) return;
+                try {
+                  await onUploadPdf(selectedPdf);
+                  setSelectedPdf(null);
+                } catch (error) {
+                  setPdfError(
+                    error instanceof Error ? error.message : 'Não foi possível enviar o PDF.',
+                  );
+                }
+              }}
+            />
+
+            {pdfLots.map((lote) => (
+              <PdfUnicoStatusCard
+                key={lote.id}
+                cancelling={cancellingLotId === lote.id}
+                envio={{
+                  id: lote.id,
+                  status: lote.status === 'aguardando_mapeamento'
+                    ? 'aguardando_mapeamento'
+                    : lote.status === 'arquivado'
+                      ? 'arquivado'
+                      : lote.status === 'preparando'
+                        ? 'preparando'
+                        : 'mapeado',
+                  arquivos: lote.arquivos,
+                  criadoEm: lote.criadoEm,
+                  finalizadoEm: lote.finalizadoEm,
+                }}
+                onOpenArquivo={(arquivo) => void openFile(arquivo)}
+                onCancel={lote.status === 'preparando'
+                  ? () => void onCancelLote(lote.id, lote.arquivos)
+                  : undefined}
+              />
+            ))}
+          </div>
+        )}
+
+        {painel.itens.length === 0 ? (
+          <p className="mt-5 rounded-2xl border border-dashed border-slate-200 p-6 text-center text-xs font-medium text-slate-500">
+            O checklist de documentos ainda não foi disponibilizado pela secretaria.
+          </p>
+        ) : null}
+      </section>
+
+      <DocumentoEnvioOrientacoes />
+
+      {painel.itens
+        .filter((item) => item.versoes.length > 0)
+        .map((item) => (
+          <DocumentoVersoesHistorico
+            key={item.id}
+            versions={item.versoes}
+            currentVersionId={item.versaoAtual?.id}
+            onOpenArquivo={(arquivo) => void openFile(arquivo)}
+          />
         ))}
-      </div>
-      {documentos.length === 0 && (
-        <p className="mt-5 rounded-2xl border border-dashed border-slate-200 p-6 text-center text-xs font-medium text-slate-500">
-          O checklist de documentos ainda não foi disponibilizado pela secretaria.
-        </p>
-      )}
     </div>
   );
 };

@@ -1,6 +1,8 @@
 export type ValidatableDocumentType =
   | 'carteirinha'
+  | 'carteirinha_preceptor'
   | 'cracha_estagio'
+  | 'contrato_aluno'
   | 'declaracao_matricula'
   | 'declaracao_frequencia'
   | 'declaracao_irpf'
@@ -8,13 +10,14 @@ export type ValidatableDocumentType =
   | 'atestado_conclusao_tecnico'
   | 'historico_escolar'
   | 'transferencia'
-  | 'rematricula'
   | 'termo_estagio'
   | 'certificado_tecnico'
   | 'certificado_livre'
   | 'certificado_ead'
   | 'certificado_especializacao'
-  | 'diario_classe';
+  | 'diario_classe'
+  | 'pasta_identificacao'
+  | 'ficha_matricula';
 
 export interface DocumentValidationPolicy {
   prefix: string;
@@ -28,7 +31,23 @@ export interface IssueDocumentInput {
   expiresAt?: string | null;
   sourceReference?: string;
   referencePeriod?: string;
+  idempotencyKey?: string;
   registerReissue?: boolean;
+}
+
+export interface IssueDocumentBatchInput
+  extends Omit<IssueDocumentInput, 'enrollmentId'> {
+  enrollmentIds: string[];
+}
+
+export interface ReissueDocumentInput
+  extends Omit<IssueDocumentInput, 'idempotencyKey' | 'registerReissue'> {
+  idempotencyKey: string;
+}
+
+export interface ReissueDocumentBatchInput
+  extends Omit<IssueDocumentBatchInput, 'idempotencyKey' | 'registerReissue'> {
+  idempotencyKey: string;
 }
 
 export interface IssuedDocumentValidation {
@@ -36,7 +55,12 @@ export interface IssuedDocumentValidation {
   type: ValidatableDocumentType;
   issuedAt: string;
   expiresAt: string | null;
+  validationPublic: boolean;
   lastIssuedAt?: string;
   issueCount?: number;
   reused?: boolean;
+}
+
+export interface PreparedDocumentReissue extends IssuedDocumentValidation {
+  policyVersion: number;
 }

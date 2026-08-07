@@ -1,6 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { getSecretariaContext } from '../shared/secretaria-documentos.service';
-import { documentValidationService } from '../../../shared/document-validation/document-validation.service';
+import {
+  createDocumentReissueKey,
+  documentValidationService,
+} from '../../../shared/document-validation/document-validation.service';
 import type { ValidatableDocumentType } from '../../../shared/document-validation/document-validation.types';
 import ToastNotification, { useToast } from '../../components/ToastNotification';
 import EmissionsToolbar from './components/EmissionsToolbar';
@@ -8,7 +11,10 @@ import EmissionsTable from './components/EmissionsTable';
 import ReprintModal from './components/ReprintModal';
 import { PAGE_SIZE } from './historico-emissoes.constants';
 import { historicoEmissoesService } from './historico-emissoes.service';
-import { downloadEmissionPdf } from './preview-utils';
+import {
+  downloadEmissionPdf,
+  saveEmissionPdfBlob,
+} from './preview-utils';
 import type {
   AcademicPreviewData,
   EmissionLog,
@@ -16,11 +22,22 @@ import type {
   TurmaFilter,
 } from './historico-emissoes.types';
 import type { CertificadoAcademico } from '../certificados/certificados.types';
+import { waitForDocumentAssets } from '../../../shared/qrcode/document-assets';
+import {
+  assertEmissionAlignedWithIssue,
+  getEmissionRenderKey,
+  waitForCanonicalEmissionRender,
+} from './reissue-flow';
 
 const SecretariaHistoricoEmissoesPage: React.FC = () => {
   const context = getSecretariaContext();
   const { toasts, removeToast, toast } = useToast();
   const printContentRef = useRef<HTMLDivElement>(null);
+  const reissueOperationRef = useRef(false);
+  const reissueRequestRef = useRef<{
+    fingerprint: string;
+    idempotencyKey: string;
+  } | null>(null);
 
   const [activeTab, setActiveTab] = useState('todos');
   const [searchQuery, setSearchQuery] = useState('');
@@ -85,6 +102,7 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
   }, [activeTab, appliedSearch, context.poloId, page, reloadVersion, selectedTurmaId]);
 
   const clearPreview = () => {
+    if (reissueOperationRef.current) return;
     setIsPreviewOpen(false);
     setSelectedEmission(null);
     setTemplateConfig(null);
@@ -122,43 +140,162 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
     }
   };
 
-  const registerReissue = async (emission: EmissionLog) => {
-    await documentValidationService.issue({
+  const getReissueRequest = (emission: EmissionLog) => {
+    const fingerprint = JSON.stringify([
+      emission.documento,
+      emission.matricula_id,
+      emission.periodo_referencia || null,
+      emission.referencia_externa || null,
+      context.userId || null,
+    ]);
+    if (reissueRequestRef.current?.fingerprint !== fingerprint) {
+      reissueRequestRef.current = {
+        fingerprint,
+        idempotencyKey: createDocumentReissueKey(),
+      };
+    }
+    return {
       type: emission.documento as ValidatableDocumentType,
       enrollmentId: emission.matricula_id,
       referencePeriod: emission.periodo_referencia || undefined,
       sourceReference: emission.referencia_externa || undefined,
       issuedBy: context.userId,
-      registerReissue: true,
-    });
+      idempotencyKey: reissueRequestRef.current.idempotencyKey,
+    };
+  };
+
+  const prepareReissueOutput = async (emission: EmissionLog) => {
+    setIsLoadingPreview(true);
+    setPreviewError(null);
+    try {
+      const prepared = await documentValidationService.prepareReissue(
+        getReissueRequest(emission),
+      );
+      const canonicalEmission =
+        await historicoEmissoesService.loadEmissionByCode(prepared.code);
+      const preparedEmission: EmissionLog = {
+        ...canonicalEmission,
+        ultima_emissao_em:
+          prepared.lastIssuedAt || canonicalEmission.ultima_emissao_em,
+        validade_ate: prepared.expiresAt,
+        validacao_publica: prepared.validationPublic,
+        quantidade_emissoes:
+          prepared.issueCount || canonicalEmission.quantidade_emissoes + 1,
+        dados_emissao: {
+          ...(canonicalEmission.dados_emissao || {}),
+          validationPublic: prepared.validationPublic,
+        },
+      };
+      const resources = await historicoEmissoesService.loadPreviewFresh(
+        preparedEmission,
+        context.poloId,
+      );
+
+      setSelectedEmission(preparedEmission);
+      applyPreview(resources);
+      setIsLoadingPreview(false);
+
+      const container = await waitForCanonicalEmissionRender(
+        () => printContentRef.current,
+        getEmissionRenderKey(preparedEmission),
+      );
+      await waitForDocumentAssets(container);
+      const pdfBlob = await downloadEmissionPdf(
+        container,
+        canonicalEmission,
+        '2-via',
+        undefined,
+        undefined,
+        false,
+      );
+      if (!pdfBlob) {
+        throw new Error('A captura de segurança da segunda via não foi concluída.');
+      }
+      return { canonicalEmission: preparedEmission, container, pdfBlob };
+    } catch (error) {
+      setIsLoadingPreview(false);
+      setPreviewError(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível preparar a segunda via sem alterar o registro.',
+      );
+      throw error;
+    }
+  };
+
+  const confirmCanonicalReissue = async (emission: EmissionLog) => {
+    const issued = await documentValidationService.reissue(
+      getReissueRequest(emission),
+    );
+    assertEmissionAlignedWithIssue(emission, issued);
     setReloadVersion((version) => version + 1);
+    return issued;
+  };
+
+  const beginReissueOperation = (): boolean => {
+    if (reissueOperationRef.current) return false;
+    reissueOperationRef.current = true;
+    return true;
+  };
+
+  const endReissueOperation = () => {
+    reissueOperationRef.current = false;
+  };
+
+  const finishReissueRequest = () => {
+    reissueRequestRef.current = null;
+  };
+
+  const discardStalePreparedRequest = (error: unknown) => {
+    if (
+      typeof error === 'object'
+      && error !== null
+      && 'code' in error
+      && error.code === '40001'
+    ) {
+      finishReissueRequest();
+    }
   };
 
   const handlePrint = async () => {
-    if (!selectedEmission || previewError) return;
+    if (!selectedEmission || !printContentRef.current || previewError || !beginReissueOperation()) return;
     setIsReissuing(true);
     try {
-      await registerReissue(selectedEmission);
-      setTimeout(() => window.print(), 500);
+      const { canonicalEmission } = await prepareReissueOutput(selectedEmission);
+      await confirmCanonicalReissue(canonicalEmission);
+      window.print();
+      finishReissueRequest();
     } catch (error) {
-      console.error('Erro ao registrar segunda via:', error);
-      toast.error('Erro ao Registrar', 'Não foi possível registrar a emissão da segunda via no banco.');
+      discardStalePreparedRequest(error);
+      console.error('Erro ao preparar segunda via:', error);
+      toast.error(
+        'Erro ao preparar impressão',
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível preparar a segunda via para impressão.',
+      );
     } finally {
       setIsReissuing(false);
+      endReissueOperation();
     }
   };
 
   const handleDownload = async () => {
-    if (!selectedEmission || !printContentRef.current || previewError) return;
+    if (!selectedEmission || !printContentRef.current || previewError || !beginReissueOperation()) return;
     setIsDownloading(true);
     try {
-      await downloadEmissionPdf(printContentRef.current, selectedEmission);
-      await registerReissue(selectedEmission);
+      const { canonicalEmission, pdfBlob } =
+        await prepareReissueOutput(selectedEmission);
+      await confirmCanonicalReissue(canonicalEmission);
+      saveEmissionPdfBlob(pdfBlob, canonicalEmission);
+      finishReissueRequest();
     } catch (error) {
+      discardStalePreparedRequest(error);
       console.error('Erro ao gerar PDF da segunda via:', error);
       toast.error('Erro ao Processar', 'Erro ao processar o PDF.');
     } finally {
       setIsDownloading(false);
+      endReissueOperation();
     }
   };
 
@@ -204,6 +341,7 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
           isLoading={isLoadingPreview}
           isDownloading={isDownloading}
           isReissuing={isReissuing}
+          fullscreenViewer
           printContentRef={printContentRef}
           onClose={clearPreview}
           onDownload={handleDownload}

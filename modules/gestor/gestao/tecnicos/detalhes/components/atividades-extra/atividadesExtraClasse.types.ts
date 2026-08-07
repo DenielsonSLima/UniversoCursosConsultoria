@@ -15,6 +15,8 @@ export interface DisciplinaOption {
   nome: string;
   cargaHoraria: number;
   periodoStatus: string | null;
+  professorId?: string | null;
+  professorNome?: string | null;
 }
 
 export type AtividadeTipoResposta = 'TEXTO' | 'PERGUNTAS' | 'ENVIO' | 'MISTO';
@@ -68,6 +70,10 @@ export interface AtividadeExtraClasseRecord {
     nome?: string | null;
     carga_horaria?: number | string | null;
   } | null;
+  professor?: {
+    id?: string | null;
+    nome?: string | null;
+  } | null;
   respostas?: AtividadeExtraClasseResposta[];
 }
 
@@ -90,3 +96,20 @@ export interface AtividadeExtraClasseResposta {
     nome?: string | null;
   } | null;
 }
+
+export interface AtividadeAlunoRoster {
+  id: string;
+  nome: string;
+  matricula?: string | null;
+  status?: string | null;
+}
+
+export interface AtividadeAlunoComResposta {
+  id: string;
+  nome: string;
+  matricula: string | null;
+  matriculaStatus: string | null;
+  resposta: AtividadeExtraClasseResposta | null;
+}
+
+export type AtividadeAlunoFiltro = 'TODOS' | 'AGUARDANDO' | 'REVISAR' | 'CORRIGIDOS';

@@ -17,8 +17,9 @@ const crc16Ccitt = (value: string) => {
 export const buildBanesePixPayloadFixture = (
   txid: string,
   amount = 20_000,
+  gui = "BR.GOV.BCB.PIX",
 ) => {
-  const merchantAccount = `${tlv("00", "BR.GOV.BCB.PIX")}${
+  const merchantAccount = `${tlv("00", gui)}${
     tlv("01", "12345678901")
   }`;
   const additionalData = tlv("05", txid);

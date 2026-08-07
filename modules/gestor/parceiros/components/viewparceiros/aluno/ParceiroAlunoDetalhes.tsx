@@ -204,7 +204,10 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
           <ParceiroAcesso
             parceiroId={alunoData.id}
             tipo="Aluno"
-            email={alunoData.email || `${alunoData.nome.toLowerCase().replace(/\s/g, '.')}@email.com`}
+            email={alunoData.email || null}
+            matriculaAcesso={alunoData.matriculaAcesso || null}
+            acessoStatus={alunoData.acessoStatus || null}
+            acessoErro={alunoData.acessoErro || null}
           />
         )}
       </div>

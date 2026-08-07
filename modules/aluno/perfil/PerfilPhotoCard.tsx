@@ -2,6 +2,7 @@ import React from 'react';
 import { Camera, ShieldCheck, Upload, User } from 'lucide-react';
 import ProfilePhotoAdjustModal from '../../shared/components/ProfilePhotoAdjustModal';
 import { PerfilData } from './perfil.types';
+import AlunoMobileProfilePhotoCard from './components/mobile/AlunoMobileProfilePhotoCard';
 
 type Props = {
   profile: PerfilData;
@@ -31,7 +32,13 @@ const PerfilPhotoCard: React.FC<Props> = ({
       />
     )}
 
-    <aside className="space-y-4">
+    <AlunoMobileProfilePhotoCard
+      profile={profile}
+      uploadingPhoto={uploadingPhoto}
+      onFileSelected={onPendingPhotoChange}
+    />
+
+    <aside className="hidden space-y-4 md:block">
       <div className="rounded-3xl border border-blue-100 bg-white p-4 shadow-sm sm:p-6 md:rounded-[2.5rem]">
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
@@ -41,7 +48,7 @@ const PerfilPhotoCard: React.FC<Props> = ({
         </div>
 
         <div className="mt-5 flex flex-col items-center text-center">
-          <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-[1.75rem] border border-slate-100 bg-slate-50 text-blue-600 shadow-inner sm:h-36 sm:w-36 sm:rounded-[2rem]">
+          <div className="flex aspect-[3/4] w-28 items-center justify-center overflow-hidden rounded-2xl border border-slate-100 bg-slate-50 text-blue-600 shadow-inner sm:w-36">
             {profile?.foto ? (
               <img src={profile.foto} alt="Foto de perfil do aluno" className="h-full w-full object-cover" />
             ) : (
@@ -58,10 +65,10 @@ const PerfilPhotoCard: React.FC<Props> = ({
               </div>
               <div>
                 <p className="text-[11px] font-black uppercase tracking-wider text-amber-800">
-                  Foto oficial para documentos
+                  Foto oficial 3×4
                 </p>
                 <p className="mt-1 text-xs font-semibold leading-relaxed text-amber-900/80">
-                  Envie uma foto recente, nítida, de frente e sem filtros. Esta imagem poderá ser usada na carteirinha, no crachá, na ficha de matrícula e em outros documentos acadêmicos.
+                  Envie uma foto recente, nítida, de frente e sem filtros. Antes de salvar, você poderá enquadrá-la exatamente na proporção usada nos documentos acadêmicos.
                 </p>
               </div>
             </div>

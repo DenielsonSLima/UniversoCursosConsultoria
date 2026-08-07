@@ -53,7 +53,7 @@ export function useFinanceiroRealtime(poloId?: string | null) {
           refetchType: 'active',
         });
         void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.resumoKpis });
-        void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos, exact: true });
+        void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos });
         void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.alunoReceivables });
 
         turmaIds.forEach((turmaId) => {
@@ -65,15 +65,17 @@ export function useFinanceiroRealtime(poloId?: string | null) {
       }
 
       if (accountsChanged) {
-        void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos, exact: true });
+        void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos });
       }
       if (transfersChanged) {
         void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.transferenciasRoot });
-        void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos, exact: true });
+        void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos });
+        void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.resumoKpis });
       }
       if (expensesChanged) {
-        void queryClient.invalidateQueries({ queryKey: despesasQueryKeys.lancamentosRoot });
-        void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos, exact: true });
+        void queryClient.invalidateQueries({ queryKey: despesasQueryKeys.all });
+        void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos });
+        void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.resumoKpis });
       }
 
       receivablesChanged = false;
@@ -94,15 +96,44 @@ export function useFinanceiroRealtime(poloId?: string | null) {
       if (activePoloId && record.polo_id && record.polo_id !== activePoloId) return;
       receivablesChanged = true;
       if (record.turma_id) turmaIds.add(record.turma_id);
-      if (record.cliente_id) alunoIds.add(record.cliente_id);
+      if (record.aluno_id || record.cliente_id) alunoIds.add(record.aluno_id || record.cliente_id);
       schedule();
     };
 
     const onAccountChange = (payload: any) => {
-      const record = recordFromPayload(payload);
-      if (activePoloId && record.polo_id && record.polo_id !== activePoloId) return;
       accountsChanged = true;
       schedule();
+    };
+
+    // A tabela de eventos é compartilhada por receber, pagar, contas e
+    // transferências. Não trate toda alteração como conta a receber: isso
+    // refazia listas grandes de alunos para uma simples despesa ou baixa.
+    const onFinanceEvent = (payload: any) => {
+      const record = recordFromPayload(payload);
+      if (activePoloId && record.polo_id && record.polo_id !== activePoloId) return;
+
+      switch (record.source_table) {
+        case 'contas_receber':
+          onReceivableChange(payload);
+          break;
+        case 'contas_pagar':
+        case 'despesas_lancamentos':
+          expensesChanged = true;
+          schedule();
+          break;
+        case 'transferencias_contas':
+          transfersChanged = true;
+          schedule();
+          break;
+        case 'contas_bancarias':
+        case 'contas_bancarias_polos':
+          onAccountChange(payload);
+          break;
+        default:
+          // Novas fontes precisam ser classificadas explicitamente antes de
+          // invalidarem consultas. Assim evitamos varreduras globais caras.
+          break;
+      }
     };
 
     const channelName = `financeiro_recebiveis_realtime_${activePoloId || 'todos'}`;
@@ -111,20 +142,38 @@ export function useFinanceiroRealtime(poloId?: string | null) {
     channel = channel.on(
       'postgres_changes',
       {
-        event: '*',
+        event: 'INSERT',
         schema: 'public',
-        table: 'contas_receber',
+        table: 'finance_realtime_events',
         ...(activePoloId ? { filter: `polo_id=eq.${activePoloId}` } : {}),
       },
-      onReceivableChange,
+      onFinanceEvent,
     );
     channel = channel
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'contas_bancarias' }, onAccountChange)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'transferencias_contas' }, () => {
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'contas_bancarias',
+      }, onAccountChange)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'contas_bancarias_polos',
+      }, onAccountChange)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'transferencias_contas',
+      }, () => {
         transfersChanged = true;
         schedule();
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'despesas_lancamentos' }, () => {
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'despesas_lancamentos',
+        ...(activePoloId ? { filter: `polo_id=eq.${activePoloId}` } : {}),
+      }, () => {
         expensesChanged = true;
         schedule();
       })

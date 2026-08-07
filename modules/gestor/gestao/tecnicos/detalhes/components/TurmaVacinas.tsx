@@ -61,7 +61,7 @@ const TurmaVacinas: React.FC<TurmaVacinasProps> = ({ turma }) => {
         <Syringe className="mx-auto text-slate-300" size={46} />
         <h3 className="mt-4 text-lg font-black text-[#001a33]">Este curso não exige vacina para estágio</h3>
         <p className="mx-auto mt-2 max-w-md text-xs font-semibold leading-relaxed text-slate-500">
-          Para ativar, vá em Cadastros, Cursos Técnicos, abra o curso e entre na aba Vacinas.
+          Para ativar, vá em Formações, Cursos Técnicos, abra o curso e entre na aba Vacinas.
         </p>
       </div>
     );

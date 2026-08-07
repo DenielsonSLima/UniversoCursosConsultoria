@@ -6,17 +6,19 @@ import {
 
 export type CourseModality = 'TECNICO' | 'EAD' | 'LIVRE' | 'ESPECIALIZACAO';
 
+const RECEIVABLES_DETAIL_CONTRACT_VERSION = 'issued-at-v1';
+
 export const financeiroQueryKeys = {
   all: ['financeiro'] as const,
   receivablesRoot: ['financeiro', 'receivables'] as const,
   receivablesByModality: (modality: CourseModality, poloId?: string | null) =>
     ['financeiro', 'receivables', 'modality', modality, poloId || 'sem-polo'] as const,
   receivablesPageByModality: (modality: CourseModality, filters: ReceivablesPageFilters) =>
-    ['financeiro', 'receivables', 'modality-page', modality, filters] as const,
+    ['financeiro', 'receivables', 'modality-page', RECEIVABLES_DETAIL_CONTRACT_VERSION, modality, filters] as const,
   receivablesGroupsByModality: (modality: CourseModality, filters: ReceivablesPageFilters) =>
-    ['financeiro', 'receivables', 'modality-groups', modality, filters] as const,
+    ['financeiro', 'receivables', 'modality-groups', RECEIVABLES_DETAIL_CONTRACT_VERSION, modality, filters] as const,
   receivablesGroupItems: (modality: CourseModality, filters: ReceivablesPageFilters) =>
-    ['financeiro', 'receivables', 'modality-group-items', modality, filters] as const,
+    ['financeiro', 'receivables', 'modality-group-items', RECEIVABLES_DETAIL_CONTRACT_VERSION, modality, filters] as const,
   receivablesModalitySummary: (modality: CourseModality, filters: ReceivablesSummaryFilters) =>
     ['financeiro', 'receivables', 'modality-summary', modality, filters] as const,
   outrosCreditosRoot: ['financeiro', 'outros-creditos'] as const,
@@ -27,6 +29,8 @@ export const financeiroQueryKeys = {
   transferenciasRoot: ['financeiro', 'transferencias'] as const,
   transferenciasList: (filters: TransferenciasFilters) =>
     ['financeiro', 'transferencias', 'list', filters] as const,
+  transferenciasSummary: (filters: TransferenciasFilters) =>
+    ['financeiro', 'transferencias', 'summary', filters] as const,
   conciliacaoBancariaRoot: ['financeiro', 'conciliacao-bancaria'] as const,
   conciliacaoBancariaItems: (poloId?: string | null) =>
     ['financeiro', 'conciliacao-bancaria', 'items', poloId || 'sem-polo'] as const,
@@ -50,6 +54,8 @@ export const financeiroQueryKeys = {
   contasBancariasSaldos: ['financeiro', 'contas-bancarias-saldos'] as const,
   polos: ['financeiro', 'polos'] as const,
   parceiros: ['financeiro', 'parceiros'] as const,
+  parceirosByPolo: (poloId?: string | null) =>
+    ['financeiro', 'parceiros', poloId || 'todos'] as const,
   resumoKpis: ['financeiro-resumo-kpis'] as const,
   resumoKpisByPolo: (poloId?: string | null) =>
     ['financeiro-resumo-kpis', poloId || 'todos'] as const,

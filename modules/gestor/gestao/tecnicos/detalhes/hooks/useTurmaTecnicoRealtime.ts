@@ -12,12 +12,16 @@ export const useTurmaTecnicoRealtime = (turmaId: string) => {
 
     let refreshTimer: ReturnType<typeof setTimeout> | undefined;
     let refreshFinanceiro = false;
+    let subscribedOnce = false;
     const turmaKeys = [
       academicLifecycleKeys.turma(turmaId),
+      academicLifecycleKeys.grade(turmaId),
+      academicLifecycleKeys.diarios(turmaId),
       ['turma_financeiro_config', turmaId] as const,
       ['turma-financeiro', turmaId] as const,
       ['financeiro-alunos', turmaId] as const,
       ['diario-alunos', turmaId] as const,
+      ['diario-notas-resultados', turmaId] as const,
     ];
 
     const scheduleRefresh = (financeiro = false) => {
@@ -59,12 +63,27 @@ export const useTurmaTecnicoRealtime = (turmaId: string) => {
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'turmas', filter: `id=eq.${turmaId}` },
+        { event: '*', schema: 'public', table: 'aulas_turma', filter: `turma_id=eq.${turmaId}` },
+        scheduleGradeRefresh,
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'diario_frequencia', filter: `turma_id=eq.${turmaId}` },
         () => scheduleRefresh(),
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'matriculas', filter: `turma_id=eq.${turmaId}` },
+        { event: '*', schema: 'public', table: 'diario_notas', filter: `turma_id=eq.${turmaId}` },
+        () => scheduleRefresh(),
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'atividades_extra_classe', filter: `turma_id=eq.${turmaId}` },
+        () => scheduleRefresh(),
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'gestao_realtime_events', filter: `turma_id=eq.${turmaId}` },
         () => scheduleRefresh(),
       )
       .on(
@@ -92,7 +111,11 @@ export const useTurmaTecnicoRealtime = (turmaId: string) => {
         { event: '*', schema: 'public', table: 'transferencias_academicas', filter: `turma_destino_id=eq.${turmaId}` },
         () => scheduleRefresh(),
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status !== 'SUBSCRIBED') return;
+        if (subscribedOnce) scheduleRefresh(true);
+        subscribedOnce = true;
+      });
 
     return () => {
       if (refreshTimer) clearTimeout(refreshTimer);

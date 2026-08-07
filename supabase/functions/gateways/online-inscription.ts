@@ -57,6 +57,19 @@ const firstString = (...values: unknown[]) => {
 const onlyDigits = (value: unknown) =>
   String(value ?? "").replace(/\D/g, "") || null;
 
+export const normalizeGatewayPaymentIdentity = (
+  providerCodeValue: unknown,
+  value: unknown,
+) => {
+  const candidate = firstString(value);
+  if (!candidate) return null;
+  const providerCode = firstString(providerCodeValue)?.toLowerCase();
+  if (providerCode !== "banese_card" || !/^\d{1,9}$/.test(candidate)) {
+    return candidate;
+  }
+  return candidate.padStart(9, "0");
+};
+
 export const hasRepairableOnlineInscriptionIdentity = (receivable: any) => {
   const providerCode = firstString(receivable?.gateway_provider)?.toLowerCase();
   const environment = firstString(receivable?.gateway_environment)
@@ -145,11 +158,17 @@ export const assertCompatibleOnlineInscriptionIdentity = (input: {
     input.providerCode === "asaas" ? existing.asaas_payment_link_id : null,
   );
   const paymentLinkId = firstString(input.paymentLinkId, existingLinkId);
-  const existingPaymentId = firstString(
-    existing.gateway_payment_id,
-    input.providerCode === "asaas" ? existing.asaas_payment_id : null,
+  const existingPaymentId = normalizeGatewayPaymentIdentity(
+    input.providerCode,
+    firstString(
+      existing.gateway_payment_id,
+      input.providerCode === "asaas" ? existing.asaas_payment_id : null,
+    ),
   );
-  const incomingPaymentId = firstString(input.paymentId);
+  const incomingPaymentId = normalizeGatewayPaymentIdentity(
+    input.providerCode,
+    input.paymentId,
+  );
   if (
     existingPaymentId && incomingPaymentId &&
     existingPaymentId !== incomingPaymentId

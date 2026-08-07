@@ -6,6 +6,8 @@ import { contasBancariasService } from '../contas-bancarias.service';
 import ConfirmModal from '../../../components/ConfirmModal';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../../lib/supabase';
+import { financeiroQueryKeys } from '../../../financeiro/financeiro.queryKeys';
+import { caixaQueryKeys } from '../../../caixa/caixa.service';
 
 interface CompanyAccountsManagerProps {
   company: any;
@@ -17,6 +19,13 @@ const CompanyAccountsManager: React.FC<CompanyAccountsManagerProps> = ({ company
   const [viewState, setViewState] = useState<'list' | 'form'>('list');
   const [selectedAccount, setSelectedAccount] = useState<any | null>(null);
   const queryClient = useQueryClient();
+  const invalidateAccountState = () => Promise.all([
+    queryClient.invalidateQueries({ queryKey: ['accounts'] }),
+    queryClient.invalidateQueries({ queryKey: ['companies_accounts'] }),
+    queryClient.invalidateQueries({ queryKey: ['saldo_inicial_accounts'] }),
+    queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos }),
+    queryClient.invalidateQueries({ queryKey: caixaQueryKeys.dashboards }),
+  ]);
 
   // Estado Modal Exclusão
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -30,6 +39,8 @@ const CompanyAccountsManager: React.FC<CompanyAccountsManagerProps> = ({ company
   const { data: accounts = [], isLoading, isError, error } = useQuery<any[]>({
     queryKey: ['accounts', company.id],
     queryFn: () => contasBancariasService.getAccountsByCompany(company.id),
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   // 2. Realtime para atualizar as contas instantaneamente se houver mudanças no banco
@@ -38,11 +49,13 @@ const CompanyAccountsManager: React.FC<CompanyAccountsManagerProps> = ({ company
       .channel(`accounts_realtime_${company.id}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'contas_bancarias', filter: `polo_id=eq.${company.id}` },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['accounts', company.id] });
-          queryClient.invalidateQueries({ queryKey: ['companies_accounts'] });
-        }
+        { event: '*', schema: 'public', table: 'contas_bancarias' },
+        invalidateAccountState
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'contas_bancarias_polos' },
+        invalidateAccountState
       )
       .subscribe();
 
@@ -60,12 +73,8 @@ const CompanyAccountsManager: React.FC<CompanyAccountsManagerProps> = ({ company
         return contasBancariasService.createAccount(data);
       }
     },
-    onSuccess: (_result, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['accounts', company.id] });
-      if (variables?.poloId && variables.poloId !== company.id) {
-        queryClient.invalidateQueries({ queryKey: ['accounts', variables.poloId] });
-      }
-      queryClient.invalidateQueries({ queryKey: ['companies_accounts'] });
+    onSuccess: async () => {
+      await invalidateAccountState();
       setViewState('list');
       setSelectedAccount(null);
     },
@@ -75,9 +84,8 @@ const CompanyAccountsManager: React.FC<CompanyAccountsManagerProps> = ({ company
   const toggleStatusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: boolean }) => 
       contasBancariasService.toggleAccountStatus(id, status),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['accounts', company.id] });
-      queryClient.invalidateQueries({ queryKey: ['companies_accounts'] });
+    onSuccess: async () => {
+      await invalidateAccountState();
       setAccountToToggle(null);
     },
     onError: (err: any) => alert(`Erro ao alterar status da conta: ${err.message}`),
@@ -85,9 +93,8 @@ const CompanyAccountsManager: React.FC<CompanyAccountsManagerProps> = ({ company
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => contasBancariasService.deleteAccount(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['accounts', company.id] });
-      queryClient.invalidateQueries({ queryKey: ['companies_accounts'] });
+    onSuccess: async () => {
+      await invalidateAccountState();
       setAccountToDelete(null);
     },
     onError: (err: any) => alert(`Erro ao excluir conta: ${err.message}`),
@@ -229,10 +236,20 @@ const CompanyAccountsManager: React.FC<CompanyAccountsManagerProps> = ({ company
                 <div>
                   <p className="text-xs font-bold uppercase tracking-widest opacity-80">{account.banco}</p>
                   <p className="text-[10px] font-medium opacity-60">{account.tipo}</p>
+                  <p className="mt-1 text-[9px] font-black uppercase tracking-wider text-white/80">
+                    {account.systemManaged
+                      ? 'Gerenciada pela integração Banese'
+                      : account.natureza === 'CAIXA_INTERNO'
+                      ? 'Caixa individual'
+                      : account.polosUso?.length > 1
+                        ? `Compartilhada com ${account.polosUso.length} unidades`
+                        : 'Uso exclusivo'}
+                  </p>
                 </div>
                 
                 {/* Ações Rápidas (Sempre visíveis mas discretas) */}
-                <div className="flex gap-2">
+                {!account.systemManaged && (
+                  <div className="flex gap-2">
                   <button 
                     onClick={(e) => { e.stopPropagation(); confirmToggleStatus(account); }}
                     className={`p-1.5 rounded-lg backdrop-blur-md transition-colors ${
@@ -266,7 +283,8 @@ const CompanyAccountsManager: React.FC<CompanyAccountsManagerProps> = ({ company
                       </button>
                     </>
                   )}
-                </div>
+                  </div>
+                )}
               </div>
 
               <div className="relative z-10">

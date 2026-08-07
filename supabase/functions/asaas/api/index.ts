@@ -1,4 +1,3 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { createAsaasBillingService } from "./billing.service.ts";
 import { createAsaasCarnetService } from "./carnet.service.ts";
@@ -367,7 +366,6 @@ Deno.serve(async (req: Request) => {
     const {
       mapBillingType,
       refreshReceivableStatus,
-      syncFutureInstallments,
       syncReceivable,
     } = billing;
     const online = createAsaasOnlineService(admin, mapBillingType);

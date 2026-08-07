@@ -1,7 +1,8 @@
 import React from 'react';
-import { ArrowRightLeft, PauseCircle, RotateCcw, Trash2, UserX } from 'lucide-react';
+import { ArrowRightLeft, History, PauseCircle, RotateCcw, Trash2, UserX } from 'lucide-react';
 import { formatMatricula } from '../../../../../../../lib/academicUtils';
-import { AcademicStudent } from '../../academic-lifecycle.service';
+import { formatCpf } from '../../../../../../../lib/documentFormatters';
+import { AcademicMovement, AcademicStudent } from '../../academic-lifecycle.service';
 
 interface TurmaAlunosTableProps {
   students: AcademicStudent[];
@@ -9,6 +10,8 @@ interface TurmaAlunosTableProps {
   onOpenMovement: React.Dispatch<AcademicStudent>;
   onOpenTransfer: React.Dispatch<AcademicStudent>;
   onRemoveEnrollment: React.Dispatch<AcademicStudent>;
+  latestMovements: Map<string, AcademicMovement>;
+  onOpenHistory: React.Dispatch<AcademicStudent>;
 }
 
 const getStatusStyle = (status: string) => {
@@ -29,6 +32,8 @@ const TurmaAlunosTable: React.FC<TurmaAlunosTableProps> = ({
   onOpenMovement,
   onOpenTransfer,
   onRemoveEnrollment,
+  latestMovements,
+  onOpenHistory,
 }) => {
   if (students.length === 0) {
     return (
@@ -52,7 +57,12 @@ const TurmaAlunosTable: React.FC<TurmaAlunosTableProps> = ({
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
-          {students.map((student) => (
+          {students.map((student) => {
+            const latestMovement = latestMovements.get(student.matricula_id);
+            const movementDate = latestMovement?.data_movimentacao
+              ? new Date(`${latestMovement.data_movimentacao}T12:00:00`).toLocaleDateString('pt-BR')
+              : null;
+            return (
             <tr key={student.matricula_id} className="hover:bg-slate-50 transition-colors">
               <td className="px-6 py-5">
                 <div className="flex items-center gap-3">
@@ -62,7 +72,7 @@ const TurmaAlunosTable: React.FC<TurmaAlunosTableProps> = ({
                   <div>
                     <span className="font-bold text-[#001a33] text-sm block">{student.nome}</span>
                     <span className="text-[10px] text-slate-500">
-                      CPF: {student.cpf || 'Não informado'}
+                      CPF: {formatCpf(student.cpf) || 'Não informado'}
                     </span>
                   </div>
                 </div>
@@ -74,6 +84,15 @@ const TurmaAlunosTable: React.FC<TurmaAlunosTableProps> = ({
                 <span className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase ${getStatusStyle(student.status)}`}>
                   {student.status.replace('_', ' ')}
                 </span>
+                {latestMovement && latestMovement.tipo !== 'MATRICULA' && movementDate && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenHistory(student)}
+                    className="mt-1.5 block text-left text-[10px] font-bold text-slate-500 hover:text-blue-700"
+                  >
+                    Desde {movementDate} · ver detalhes
+                  </button>
+                )}
               </td>
               <td className="px-6 py-5">
                 {student.frequencia_percent === null ? (
@@ -84,6 +103,14 @@ const TurmaAlunosTable: React.FC<TurmaAlunosTableProps> = ({
               </td>
               <td className="px-6 py-5">
                 <div className="flex items-center justify-end gap-2">
+                  <button
+                    onClick={() => onOpenHistory(student)}
+                    disabled={!latestMovement}
+                    title="Ver histórico da matrícula"
+                    className="p-2.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <History size={16} />
+                  </button>
                   <button
                     onClick={() => onOpenMovement(student)}
                     disabled={readOnly || student.status === 'TRANSFERIDO' || student.status === 'CONCLUIDO'}
@@ -115,7 +142,7 @@ const TurmaAlunosTable: React.FC<TurmaAlunosTableProps> = ({
                 </div>
               </td>
             </tr>
-          ))}
+          );})}
         </tbody>
       </table>
     </div>

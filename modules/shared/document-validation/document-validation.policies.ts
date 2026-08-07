@@ -17,9 +17,17 @@ export const DOCUMENT_VALIDATION_POLICIES: Record<
     prefix: 'CIE',
     title: 'Carteirinha de Estudante',
   },
+  carteirinha_preceptor: {
+    prefix: 'PRE',
+    title: 'Carteirinha de Preceptor',
+  },
   cracha_estagio: {
     prefix: 'CRA-EST',
     title: 'Crachá de Estágio',
+  },
+  contrato_aluno: {
+    prefix: 'CON-ALU',
+    title: 'Contrato do Aluno',
   },
   declaracao_matricula: {
     prefix: 'DEC-MAT',
@@ -49,13 +57,17 @@ export const DOCUMENT_VALIDATION_POLICIES: Record<
     prefix: 'TRA',
     title: 'Transferência Escolar',
   },
-  rematricula: {
-    prefix: 'REM',
-    title: 'Comprovante de Rematrícula',
-  },
   termo_estagio: {
     prefix: 'TER-EST',
     title: 'Termo de Estágio',
+  },
+  pasta_identificacao: {
+    prefix: 'PASTA',
+    title: 'Pasta de Identificação do Aluno',
+  },
+  ficha_matricula: {
+    prefix: 'FICHA-MAT',
+    title: 'Ficha de Matrícula',
   },
   certificado_tecnico: {
     prefix: 'CERT-TEC',

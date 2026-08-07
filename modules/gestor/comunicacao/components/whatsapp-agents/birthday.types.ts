@@ -41,7 +41,7 @@ export const BIRTHDAY_TEMPLATE_VARIABLES = [
 export const DEFAULT_BIRTHDAY_SETTINGS: BirthdayAgentSettings = {
   enabled: false,
   sendTime: '09:00',
-  modalities: ['TECNICO', 'EAD', 'LIVRES', 'ESPECIALIZACAO'],
+  modalities: ['TECNICO', 'EAD', 'LIVRE', 'ESPECIALIZACAO'],
   enrollmentStatuses: ['ATIVO'],
   schoolName: 'Universo Cursos e Consultoria',
   messageTemplate: DEFAULT_BIRTHDAY_TEMPLATE,
@@ -51,7 +51,7 @@ export const DEFAULT_BIRTHDAY_SETTINGS: BirthdayAgentSettings = {
 export const BIRTHDAY_MODALITIES = [
   { id: 'TECNICO', label: 'Técnico' },
   { id: 'EAD', label: 'EAD' },
-  { id: 'LIVRES', label: 'Livres' },
+  { id: 'LIVRE', label: 'Livres' },
   { id: 'ESPECIALIZACAO', label: 'Especialização' },
   { id: 'SUPERIOR', label: 'Superior' },
 ];

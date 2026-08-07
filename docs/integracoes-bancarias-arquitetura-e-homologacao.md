@@ -174,19 +174,19 @@ validação formal do próprio banco são as referências normativas.
 
 ## Estado verificado no ambiente remoto
 
-Na conferência final desta sessão:
+Na conferência de 24/07/2026, após a correção baseada no `email.txt`:
 
-- cinco rotas de boleto Banese no sandbox estavam habilitadas, uma por
-  modalidade suportada;
-- todas as rotas Pix Banese estavam desabilitadas;
-- todas as rotas Banese de produção estavam desabilitadas;
-- todas as dez rotas de cartão Mercado Pago estavam desabilitadas;
+- a integração canônica estava ativa no ambiente `sandbox`;
+- somente a rota `EAD + BOLETO + Banese` estava habilitada;
+- todas as demais rotas de boleto, Pix, produção e cartão estavam desabilitadas;
+- o convênio sandbox estava fixado em `15528` e o de produção em `15261`;
+- Pix/BolePix estava indisponível no sandbox e Mercado Pago continuava
+  bloqueado para cobrança real;
 - Asaas e Banco Inter não possuíam rotas de novas cobranças;
-- dez títulos Banese de homologação foram preservados;
-- as tabelas de baixa manual tinham zero registros e zero eventos de teste;
-- Perfil Financeiro e Perfil Gestor tinham módulo Financeiro, aba Conciliação e
-  `allPolos` habilitados;
-- as migrations e Edge Functions desta entrega estavam aplicadas/ativas.
+- a confirmação financeira usava a presença em `PagamentosEfetivados`,
+  independentemente de `CodigoSituacaoBoleto = 3`;
+- a migration canônica e as Edge Functions de configuração, checkout e
+  conciliação estavam aplicadas/ativas.
 
 ## Critérios antes de produção
 
@@ -199,4 +199,3 @@ Na conferência final desta sessão:
    somente os dados de teste identificados.
 6. Fazer ativação canário por método/modalidade, com monitoramento e rollback
    definido.
-

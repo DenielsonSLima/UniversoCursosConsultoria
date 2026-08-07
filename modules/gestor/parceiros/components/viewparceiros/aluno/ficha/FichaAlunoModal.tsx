@@ -8,6 +8,8 @@ import { formatMatricula } from '../../../../../../../lib/academicUtils';
 import { sanitizedHtml } from '../../../../../../../lib/htmlSanitizer';
 import { supabase } from '../../../../../../../lib/supabase';
 import { fichaCadastralService } from '../../../../../cadastros/modelos-documentos/ficha-cadastral/ficha-cadastral.service';
+import { LocalQrCodeImage } from '../../../../../../shared/qrcode/LocalQrCodeImage';
+import { waitForQrCodeAssets } from '../../../../../../shared/qrcode/qr-code-assets';
 
 interface FichaAlunoModalProps {
   aluno: any;
@@ -157,8 +159,19 @@ const FichaAlunoModal: React.FC<FichaAlunoModalProps> = ({ aluno, onClose }) => 
     }))
     .filter((field: any) => field.pageIndex === pageIndex);
 
-  const handlePrint = () => {
-    window.print();
+  const handlePrint = async () => {
+    if (!printRef.current) return;
+    try {
+      await waitForQrCodeAssets(printRef.current);
+      window.print();
+    } catch (error) {
+      console.error('[FichaAlunoModal] QR Code indisponível:', error);
+      window.alert(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível preparar o QR Code para impressão.',
+      );
+    }
   };
 
   return (
@@ -286,18 +299,29 @@ const FichaAlunoModal: React.FC<FichaAlunoModalProps> = ({ aluno, onClose }) => 
                       top: field.pageTop,
                       width: field.width ? `${field.width}px` : 'auto',
                       height: field.height ? `${field.height}px` : 'auto',
+                      overflow: field.height ? 'hidden' : 'visible',
                       color: '#0f172a',
                       ...(field.style || {}),
                     }}
                   >
                     {field.type === 'image' && (
-                      <img src={field.value} alt="Assinatura" className="h-auto w-full object-contain" />
+                      <img
+                        src={field.value}
+                        alt="Elemento visual"
+                        className="w-full"
+                        style={{
+                          height: field.height ? '100%' : 'auto',
+                          objectFit: field.style?.objectFit || 'contain',
+                          objectPosition: field.style?.objectPosition || 'center',
+                        }}
+                      />
                     )}
                     {field.type === 'qrcode' && (
-                      <img
-                        src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`FICHA-${matriculaLabel}`)}`}
+                      <LocalQrCodeImage
+                        value={`FICHA-${matriculaLabel}`}
+                        size={150}
                         alt="QR Code"
-                        className="h-auto w-full object-contain"
+                        className="h-auto w-full"
                       />
                     )}
                     {field.type !== 'image' && field.type !== 'qrcode' && (

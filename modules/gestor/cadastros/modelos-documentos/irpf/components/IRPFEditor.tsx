@@ -9,6 +9,11 @@ import { marcaDaguaService } from '../../../../configuracoes/marca-dagua/marca-d
 import { assinaturasService } from '../../../../configuracoes/assinaturas/assinaturas.service';
 import DocumentHeader from '../../../../components/DocumentHeader';
 import { sanitizedHtml, sanitizeHtml, sanitizeTemplateFields } from '../../../../../../lib/htmlSanitizer';
+import { LocalQrCodeImage } from '../../../../../shared/qrcode/LocalQrCodeImage';
+import {
+  getDocumentValidationBaseUrl,
+  getDocumentValidationUrl,
+} from '../../../../../shared/document-validation/document-validation.url';
 
 interface IRPFEditorProps {
   polo: any;
@@ -148,7 +153,7 @@ const IRPFEditor: React.FC<IRPFEditorProps> = ({ polo, onBack, scopeLabel }) => 
         {
           id: 'footer_url',
           type: 'text',
-          value: 'Para verificar a autenticidade deste documento acesse: <span style="color: #ef4444">www.universocc.com.br/validador</span>',
+          value: `Para verificar a autenticidade deste documento acesse: <span style="color: #ef4444">${getDocumentValidationBaseUrl()}</span>`,
           x: 50,
           y: 1015,
           width: 694,
@@ -333,12 +338,8 @@ const IRPFEditor: React.FC<IRPFEditorProps> = ({ polo, onBack, scopeLabel }) => 
     return 'IRPF-' + codeStr;
   };
 
-  const getValidationUrl = () => {
-    return 'https://www.universocc.com.br/validador';
-  };
-
   const getQrCodeExampleUrl = () => {
-    return `${getValidationUrl()}?q=${getValidationCode()}`;
+    return getDocumentValidationUrl(getValidationCode());
   };
 
   if (loading) return <div className="p-12 text-center text-slate-500">Carregando editor...</div>;
@@ -847,10 +848,11 @@ const IRPFEditor: React.FC<IRPFEditorProps> = ({ polo, onBack, scopeLabel }) => 
                             {field.type === 'qrcode' && (
                                 <div className="w-full bg-white p-1.5 shadow-sm rounded-xl border border-slate-100 flex flex-col items-center justify-center text-center">
                                     <div className="w-full aspect-square bg-white flex items-center justify-center mb-1">
-                                        <img 
-                                            src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(getQrCodeExampleUrl())}`} 
+                                        <LocalQrCodeImage
+                                            value={getQrCodeExampleUrl()}
+                                            size={150}
                                             alt="QR Code"
-                                            className="w-full h-full object-contain pointer-events-none"
+                                            className="pointer-events-none h-full w-full"
                                         />
                                     </div>
                                     <div className="w-full flex flex-col gap-0.5 border-t border-slate-100 pt-1 mt-0.5 select-all">

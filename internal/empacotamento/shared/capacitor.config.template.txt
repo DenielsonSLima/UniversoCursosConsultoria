@@ -1,0 +1,11 @@
+// Este modelo somente será promovido para /capacitor.config.ts depois da
+// instalação do Capacitor na etapa 2.
+import type { CapacitorConfig } from '@capacitor/cli';
+
+const config: CapacitorConfig = {
+  appId: 'br.com.universocc.aluno',
+  appName: 'Universo Cursos e Consultoria',
+  webDir: 'dist',
+};
+
+export default config;

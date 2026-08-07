@@ -79,6 +79,7 @@ export interface GatewayOverview {
   credentials: GatewayCredential[];
   routes: GatewayRoute[];
   activeEnvironment: GatewayEnvironment;
+  integrationEnabled: boolean;
   issuerConfig?: GatewayIssuerConfig | null;
   issuerCandidates: GatewayIssuerCandidate[];
   activePolosCount: number;
@@ -115,6 +116,11 @@ export interface SaveRouteInput {
 
 export interface SaveIssuerInput {
   issuerPoloId: string;
+}
+
+export interface SaveRuntimeConfigInput {
+  enabled: boolean;
+  activeEnvironment: GatewayEnvironment;
 }
 
 const extractFunctionErrorMessage = async (error: any) => {
@@ -215,6 +221,7 @@ export const integracaoBancariaService = {
       credentials: (data.credentials || []).map(mapCredential),
       routes: (data.routes || []).map(mapRoute),
       activeEnvironment: data.activeEnvironment === 'production' ? 'production' : 'sandbox',
+      integrationEnabled: data.integrationEnabled === true,
       issuerConfig: mapIssuerConfig(data.issuerConfig),
       issuerCandidates: (data.issuerCandidates || []).map(mapIssuerCandidate),
       activePolosCount: Number(data.activePolosCount || 0),
@@ -230,6 +237,19 @@ export const integracaoBancariaService = {
   async saveRoute(input: SaveRouteInput): Promise<GatewayRoute> {
     const data = await invoke<any>('save-route', input);
     return mapRoute(data.route);
+  },
+
+  async saveRuntimeConfig(input: SaveRuntimeConfigInput): Promise<{
+    enabled: boolean;
+    activeEnvironment: GatewayEnvironment;
+  }> {
+    const data = await invoke<any>('save-runtime-config', input);
+    return {
+      enabled: data.runtimeConfig?.enabled === true,
+      activeEnvironment: data.runtimeConfig?.activeEnvironment === 'production'
+        ? 'production'
+        : 'sandbox',
+    };
   },
 
   async saveIssuer(input: SaveIssuerInput): Promise<GatewayIssuerConfig> {

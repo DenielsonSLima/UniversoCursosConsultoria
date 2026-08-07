@@ -10,7 +10,7 @@ interface DocumentVariableContext {
   irpfPayments: Array<{ total_anual_pago?: number | string | null }>;
 }
 
-const amountInWords = (value: number): string => {
+export const amountInWords = (value: number): string => {
   if (value === 0) return 'zero reais';
   const units = ['', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove'];
   const tens = ['', 'dez', 'vinte', 'trinta', 'quarenta', 'cinquenta', 'sessenta', 'setenta', 'oitenta', 'noventa'];
@@ -119,7 +119,6 @@ export const buildFallbackValidationCode = (context: ValidationCodeContext) => {
 };
 
 export const buildValidationUrl = (registeredCode: string | undefined, fallbackCode: string, baseUrl?: string) => {
-  if (registeredCode) return getDocumentValidationUrl(registeredCode);
-  const validationBase = baseUrl || 'https://www.universocc.com.br/validador';
-  return `${validationBase}${validationBase.includes('?') ? '&' : '?'}q=${encodeURIComponent(fallbackCode)}`;
+  void baseUrl;
+  return getDocumentValidationUrl(registeredCode || fallbackCode);
 };

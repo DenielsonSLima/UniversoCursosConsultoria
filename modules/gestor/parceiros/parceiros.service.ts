@@ -10,7 +10,9 @@ import { documentosAlunoService } from './documentos-aluno.service';
 
 export const parceirosService = {
   async getAll(tipo?: string, filters?: { poloId?: string; includeGlobal?: boolean }) {
-    let query = supabase.from('parceiros').select('*, polos(nome,cidade,estado)');
+    let query = supabase
+      .from('parceiros')
+      .select('*, polos(nome,cidade,estado), categoria:categorias!parceiros_categoria_id_fkey(id,nome,status), tipo_parceria:tipos_parceria!parceiros_tipo_parceria_id_fkey(id,nome,status)');
     let filterTipo: string | null = null;
     
     if (tipo && tipo !== 'todos') {
@@ -150,7 +152,7 @@ export const parceirosService = {
   async getById(id: string) {
     const { data, error } = await supabase
       .from('parceiros')
-      .select('*, polos(nome)')
+      .select('*, polos(nome), categoria:categorias!parceiros_categoria_id_fkey(id,nome,status), tipo_parceria:tipos_parceria!parceiros_tipo_parceria_id_fkey(id,nome,status)')
       .eq('id', id)
       .single();
       

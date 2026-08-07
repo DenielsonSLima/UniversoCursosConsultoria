@@ -1,4 +1,3 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   bearerTokenFromRequest,
@@ -16,6 +15,8 @@ import type {
   BaneseBoletoDocumentInput,
   BaneseDocumentAddress,
 } from "../banese/internal/types.ts";
+import { loadBaneseAcademicBillingContext } from "../banese/internal/technical-billing-context.ts";
+import { buildBaneseTechnicalBillingInstructions } from "../banese/internal/technical-billing-instructions.ts";
 import {
   allowedBaneseLogoUrl,
   BANESE_DOCUMENT_SECURITY_HEADERS,
@@ -157,7 +158,7 @@ Deno.serve(async (req: Request) => {
     const { data: row, error: receivableError } = await admin
       .from("contas_receber")
       .select(`
-        id, cliente_id, polo_id, descricao, valor, data_vencimento,
+        id, cliente_id, matricula_id, turma_id, polo_id, descricao, valor, data_vencimento,
         gateway_boleto_issued_at,
         gateway_environment, gateway_payment_id, gateway_pix_payload,
         gateway_pix_encoded_image, gateway_boleto_linha_digitavel,
@@ -247,6 +248,11 @@ Deno.serve(async (req: Request) => {
         qrCodeBase64: text(row.gateway_pix_encoded_image),
       }
       : null;
+    const academicContext = await loadBaneseAcademicBillingContext(
+      admin,
+      row.matricula_id,
+      row.turma_id,
+    );
 
     const input: BaneseBoletoDocumentInput = {
       receivableId: row.id,
@@ -266,7 +272,7 @@ Deno.serve(async (req: Request) => {
         agency: text(metadata.baneseAgencia || row.gateway_boleto_agencia),
         account: text(metadata.baneseConta || metadata.baneseContaDisplay),
         agreement: text(
-          metadata.baneseBoletoConvenio || row.gateway_boleto_convenio,
+          row.gateway_boleto_convenio || metadata.baneseBoletoConvenio,
         ),
         beneficiaryCode: text(metadata.baneseCodigoBeneficiario),
         wallet: text(metadata.baneseCarteira) || null,
@@ -279,12 +285,12 @@ Deno.serve(async (req: Request) => {
       speciesCode: Number(metadata.baneseCodigoEspecie || 21),
       speciesLabel: "ME",
       acceptance: "A",
-      instructions: environment === "sandbox"
-        ? [
-          "BOLETO DE HOMOLOGAÇÃO - NÃO REALIZAR PAGAMENTO.",
-          text(row.descricao),
-        ]
-        : [text(row.descricao)],
+      instructions: buildBaneseTechnicalBillingInstructions({
+        environment,
+        documentKind: "boleto",
+        description: row.descricao,
+        academicContext,
+      }),
       financialTerms: {
         ...asRecord(row.gateway_financial_terms),
         nominalAmount: amount,

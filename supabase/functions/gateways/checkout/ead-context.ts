@@ -20,6 +20,7 @@ import {
   normalizeProviderCode,
   UUID_RE,
 } from "./utils.ts";
+import { getGatewayRuntimeConfig } from "../runtime-config.ts";
 
 const BLOCKING_ENROLLMENT_STATUSES = new Set([
   "ATIVO",
@@ -76,12 +77,13 @@ const checkoutRouteModalidade = (value: unknown) => {
 export const resolveGatewayEnvironment = async (
   admin: any,
 ): Promise<GatewayEnvironment> => {
-  const { data, error } = await admin
-    .from("asaas_config")
-    .select("environment")
-    .maybeSingle();
-  if (error) throw error;
-  return normalizeEnvironment(data?.environment);
+  const runtimeConfig = await getGatewayRuntimeConfig(admin);
+  if (!runtimeConfig.enabled) {
+    throw new Error(
+      "As cobrancas online estao temporariamente desativadas nas configuracoes bancarias.",
+    );
+  }
+  return normalizeEnvironment(runtimeConfig.activeEnvironment);
 };
 
 const looksLikeRpcNotFound = (error: any) => {
@@ -195,13 +197,13 @@ export const resolvePaymentGatewayRoute = async (
     paymentMethod,
     configuredEnvironment,
   );
-  const availableEnvironments = [
+  const availableEnvironments: GatewayEnvironment[] = [
     ...new Set(
       availableRoutes
         .map((route: any) => String(route?.environment || ""))
         .filter(Boolean),
     ),
-  ].map(normalizedEnvironmentLabel);
+  ].map((value) => normalizeEnvironment(value));
 
   for (const routeEnvironment of paymentMethodPreferredEnvironment(paymentMethod)) {
     const environmentRoutes = (availableRoutes || []).filter((route: any) =>
@@ -258,7 +260,9 @@ export const resolvePaymentGatewayRoute = async (
   throw new Error(
     `Rota ${paymentMethod} de ${modalidade} nao esta ativa nos ambientes suportados. ${
       availableEnvironments.length
-        ? `Existen rotas ativas em: ${availableEnvironments.join(", ")}.`
+        ? `Existem rotas ativas em: ${
+          availableEnvironments.map(normalizedEnvironmentLabel).join(", ")
+        }.`
         : ""
     }`.trim(),
   );
@@ -381,18 +385,20 @@ export const buildEadCheckoutContext = async (
     throw new Error("Curso EAD indisponivel para matricula online.");
   }
 
-  const charge = resolveEadCharge(course, {
+  const paymentInput = {
     method: body.eadPaymentMethod ?? body.paymentMethod ?? body.method ??
       body.billingType,
     installments: body.eadInstallments ?? body.installments,
-  });
+  };
+  const preliminaryCharge = resolveEadCharge(course, paymentInput);
   const gatewayEnvironment = await resolveGatewayEnvironment(runtime.admin);
   const { route } = await resolvePaymentGatewayRoute(
     runtime.admin,
     "EAD",
-    charge.method,
+    preliminaryCharge.method,
     gatewayEnvironment,
   );
+  const charge = resolveEadCharge(course, paymentInput, route.providerCode);
 
   const token = String(runtime.req.headers.get("Authorization") || "").replace(
     /^Bearer\s+/i,

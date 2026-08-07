@@ -9,9 +9,10 @@ export type SecretariaDocumentoId =
   | 'historico_escolar'
   | 'cracha_estagio'
   | 'cracha_periodo_eleitoral'
-  | 'rematricula'
   | 'transferencia'
-  | 'termo_estagio';
+  | 'termo_estagio'
+  | 'pasta_identificacao'
+  | 'ficha_matricula';
 
 export interface SecretariaDocumentoDefinition {
   id: SecretariaDocumentoId;
@@ -32,6 +33,7 @@ export interface SecretariaDocumentoDefinition {
   allowBatch?: boolean;
   academicPreview?: 'boletim_tecnico' | 'atestado_conclusao_tecnico';
   referenceMode?: 'irpf_annual';
+  templateSelection?: 'ficha_matricula';
 }
 
 export interface SecretariaContext {
@@ -60,6 +62,7 @@ export interface SecretariaMatriculaResumo {
   turmaId: string;
   turmaNome: string;
   turmaCodigo: string;
+  cursoId: string;
   cursoNome: string;
   modalidade: string;
   poloId: string;
@@ -69,9 +72,16 @@ export interface SecretariaTurmaResumo {
   id: string;
   nome: string;
   codigo: string;
+  cursoId: string;
   cursoNome: string;
   modalidade: string;
   turno: string;
   status: string;
   totalAlunos: number;
+}
+
+export interface SecretariaModuloResumo {
+  id: string;
+  nome: string;
+  ordem: number;
 }

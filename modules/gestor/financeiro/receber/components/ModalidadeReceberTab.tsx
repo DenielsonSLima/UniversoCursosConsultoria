@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { keepPreviousData, useQueries } from '@tanstack/react-query';
 import {
   financeiroService,
+  isContaDisponivelNoPolo,
   type ReceivablesPageFilters,
 } from '../../financeiro.service';
 import ToastNotification, { useToast } from '../../../components/ToastNotification';
@@ -115,7 +116,7 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
   const activeSettlementAccounts = useMemo(() => (
     accounts.filter((account) =>
       account.ativo !== false
-      && (!operations.selected?.poloId || !account.poloId || account.poloId === operations.selected.poloId)
+      && isContaDisponivelNoPolo(account, operations.selected?.poloId)
     )
   ), [accounts, operations.selected?.poloId]);
 
@@ -174,13 +175,14 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
     dueEnd,
     statusScope,
     groupMode,
+    kpis,
     statusCounts,
     toast,
   });
 
   const receivableActions: ReceivableActionsContext = {
     baneseDetailsPending: operations.baneseDetailsMutation.isPending,
-    baneseDetailsReceivableId: operations.baneseDetailsMutation.variables,
+    baneseDetailsReceivableId: operations.baneseDetailsMutation.variables?.receivableId,
     refreshPending: operations.refreshMutation.isPending,
     syncPending: operations.syncMutation.isPending,
     onOpenPayment: operations.openPayment,

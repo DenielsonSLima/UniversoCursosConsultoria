@@ -13,7 +13,8 @@ business flow.
 Checkout dispatch and route selection live in `../gateways`. Boleto is enabled
 only in sandbox for the July/2026 homologation. The adapter allocates a unique
 `NossoNumero`, stores the bank-returned digitable line/barcode and opens the
-authenticated student finance page. Production routes remain unchanged.
+authenticated student finance page. Production routes remain disabled during
+the EAD sandbox validation.
 
 The bank confirmed on 2026-07-16 that agreement `15528` returns only the
 digitable line and barcode in homologation. In production, BolePix will be
@@ -28,13 +29,10 @@ bank response matches the request. Existing pending sandbox titles may be
 repaired idempotently with `PUT` to the same `NossoNumero`, followed by another
 read; production repair remains blocked until homologation is formally closed.
 
-Banese also confirmed that a payment webhook exists, but explicitly recommended
-active boleto queries as the primary and more stable reconciliation mechanism.
-The webhook route stays fail-closed until Banese provides its authentication,
-payload, retry and event identity contract. The current reconciliation only
-settles locally after status code `3` is accompanied by complete effective
-payment details with matching amount and a valid payment date; this conservative
-rule protects against temporarily inconsistent bank responses. The amount
+Banese corrected its initial answer: boleto collection has no payment webhook.
+The system polls `PagamentosEfetivados`, whose presence is authoritative even
+when `CodigoSituacaoBoleto` has not yet changed to `3`. A status code `3`
+without complete effective payment details does not settle locally. The amount
 check uses the bank-confirmed discount, fine and interest for the effective
 payment date, including cent rounding, rather than requiring the nominal value.
 An isolated

@@ -8,41 +8,50 @@ import { canAccessTab } from '../access-control';
 import SecretariaDashboard from './components/SecretariaDashboard';
 import { secretariaDocumentoDefinitions } from './shared/secretaria-documentos.definitions';
 import { secretariaCarteirinhasWorkspaceQueryOptions } from './carteirinhas/secretaria-carteirinhas.service';
+import { SECRETARIA_ACCESS_OPTIONS } from './secretaria-access';
 
 const moduleLoaders = {
   alunos: () => import('./alunos/SecretariaAlunosPage'),
   boletim: () => import('./boletins/SecretariaBoletinsPage'),
   carteirinha: () => import('./carteirinhas/SecretariaCarteirinhasPage'),
+  'carteirinha-preceptor': () => import('./carteirinhas-preceptor/SecretariaCarteirinhasPreceptorPage'),
   solicitacoes: () => import('./solicitacoes/SecretariaSolicitacoesPage'),
+  'dependencias-academicas': () => import('./dependencias-academicas/DependenciasAcademicasPage'),
   'declaracao-matricula': () => import('./declaracao-matricula/SecretariaDeclaracaoMatriculaPage'),
   'declaracao-frequencia': () => import('./declaracao-frequencia/SecretariaDeclaracaoFrequenciaPage'),
   'declaracao-irpf': () => import('./declaracao-irpf/SecretariaDeclaracaoIrpfPage'),
+  'contrato-aluno': () => import('./contratos-aluno/SecretariaContratosAlunoPage'),
   'historico-escolar': () => import('./historico-escolar/SecretariaHistoricoEscolarPage'),
   'cracha-estagio': () => import('./cracha-estagio/SecretariaCrachaEstagioPage'),
-  rematricula: () => import('./rematricula/SecretariaRematriculaPage'),
   'termo-estagio': () => import('./termo-estagio/SecretariaTermoEstagioPage'),
   'consulta-financeira': () => import('./consulta-financeira/SecretariaConsultaFinanceiraPage'),
   'historico-emissoes': () => import('./historico-emissoes/SecretariaHistoricoEmissoesPage'),
   certificados: () => import('./certificados/SecretariaCertificadosPage'),
   'atestado-conclusao': () => import('./atestado-conclusao/SecretariaAtestadoConclusaoPage'),
+  'pasta-identificacao': () => import('./pasta-identificacao/SecretariaPastaIdentificacaoPage'),
+  'ficha-matricula': () => import('./ficha-matricula/SecretariaFichaMatriculaPage'),
   documento: () => import('./shared/SecretariaDocumentoEmissionPage'),
 } as const;
 
 const SecretariaAlunosPage = lazy(moduleLoaders.alunos);
 const SecretariaBoletinsPage = lazy(moduleLoaders.boletim);
 const SecretariaCarteirinhasPage = lazy(moduleLoaders.carteirinha);
+const SecretariaCarteirinhasPreceptorPage = lazy(moduleLoaders['carteirinha-preceptor']);
 const SecretariaSolicitacoesPage = lazy(moduleLoaders.solicitacoes);
+const DependenciasAcademicasPage = lazy(moduleLoaders['dependencias-academicas']);
 const SecretariaDeclaracaoMatriculaPage = lazy(moduleLoaders['declaracao-matricula']);
 const SecretariaDeclaracaoFrequenciaPage = lazy(moduleLoaders['declaracao-frequencia']);
 const SecretariaDeclaracaoIrpfPage = lazy(moduleLoaders['declaracao-irpf']);
+const SecretariaContratosAlunoPage = lazy(moduleLoaders['contrato-aluno']);
 const SecretariaHistoricoEscolarPage = lazy(moduleLoaders['historico-escolar']);
 const SecretariaCrachaEstagioPage = lazy(moduleLoaders['cracha-estagio']);
-const SecretariaRematriculaPage = lazy(moduleLoaders.rematricula);
 const SecretariaTermoEstagioPage = lazy(moduleLoaders['termo-estagio']);
 const SecretariaConsultaFinanceiraPage = lazy(moduleLoaders['consulta-financeira']);
 const SecretariaHistoricoEmissoesPage = lazy(moduleLoaders['historico-emissoes']);
 const SecretariaCertificadosPage = lazy(moduleLoaders.certificados);
 const SecretariaAtestadoConclusaoPage = lazy(moduleLoaders['atestado-conclusao']);
+const SecretariaPastaIdentificacaoPage = lazy(moduleLoaders['pasta-identificacao']);
+const SecretariaFichaMatriculaPage = lazy(moduleLoaders['ficha-matricula']);
 const SecretariaDocumentoEmissionPage = lazy(moduleLoaders.documento);
 
 const secretariaModuleHeaders: Record<string, { title: string; description: string }> = {
@@ -70,6 +79,10 @@ const secretariaModuleHeaders: Record<string, { title: string; description: stri
     title: 'Declaração de IRPF',
     description: 'Comprovante financeiro do ano-calendário.',
   },
+  'contrato-aluno': {
+    title: 'Contratos de Aluno',
+    description: 'Emissão individual, em lote ou personalizada com o conteúdo canônico.',
+  },
   'historico-escolar': {
     title: 'Histórico Escolar',
     description: 'Percurso curricular e resultados acadêmicos.',
@@ -77,6 +90,10 @@ const secretariaModuleHeaders: Record<string, { title: string; description: stri
   carteirinha: {
     title: 'Carteirinha Estudantil',
     description: 'Identificação estudantil com QR Code.',
+  },
+  'carteirinha-preceptor': {
+    title: 'Carteirinha de Preceptor',
+    description: 'Identificação profissional para professores ativos do polo.',
   },
   'cracha-estagio': {
     title: 'Crachá de Estágio',
@@ -90,10 +107,6 @@ const secretariaModuleHeaders: Record<string, { title: string; description: stri
     title: 'Termo de Estágio',
     description: 'Termo de compromisso e dados acadêmicos do estágio supervisionado.',
   },
-  rematricula: {
-    title: 'Rematrícula',
-    description: 'Preparação individual ou coletiva do processo de rematrícula.',
-  },
   transferencia: {
     title: 'Transferência',
     description: 'Transferência externa e emissão de guia.',
@@ -101,6 +114,10 @@ const secretariaModuleHeaders: Record<string, { title: string; description: stri
   solicitacoes: {
     title: 'Solicitações Acadêmicas',
     description: 'Análise e homologação de requerimentos.',
+  },
+  'dependencias-academicas': {
+    title: 'Dependências Acadêmicas',
+    description: 'Reoferta por disciplina, cobrança Banese e acompanhamento do diário de destino.',
   },
   certificados: {
     title: 'Certificados',
@@ -111,8 +128,16 @@ const secretariaModuleHeaders: Record<string, { title: string; description: stri
     description: 'Auditoria dos documentos emitidos pela secretaria.',
   },
   'consulta-financeira': {
-    title: 'Recebimentos',
-    description: 'Pesquise qualquer pessoa, consulte dívidas em aberto e registre baixas manuais.',
+    title: 'Financeiro',
+    description: 'Recebimentos agrupados por aluno e curso, nos modos individual, lote e personalizado.',
+  },
+  'pasta-identificacao': {
+    title: 'Pasta de Identificação',
+    description: 'Capa A4 da pasta do aluno, individual, em lote ou personalizada.',
+  },
+  'ficha-matricula': {
+    title: 'Ficha de Matrícula',
+    description: 'Ficha completa com foto, dados acadêmicos, termo e assinaturas.',
   },
 };
 
@@ -157,23 +182,9 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ poloId, gestorPermissio
 
   const allowedTabsList = useMemo(() => {
     if (!gestorPermissions) return null;
-    const permissionMap: Record<string, string> = {
-      'solicitacoes': 'solicitacoes',
-      'carteirinha': 'carteirinhas',
-      'declaracao-matricula': 'declaracoes',
-      'declaracao-frequencia': 'declaracoes',
-      'declaracao-irpf': 'declaracoes',
-      'atestado-conclusao': 'declaracoes',
-      'historico-escolar': 'historico',
-      'historico-emissoes': 'historico',
-      'consulta-financeira': 'recebimentos',
-    };
-
-    return Object.keys(secretariaModuleHeaders).filter(id => {
-      const permKey = permissionMap[id];
-      if (!permKey) return true;
-      return canAccessTab(gestorPermissions, 'secretaria', permKey);
-    });
+    return SECRETARIA_ACCESS_OPTIONS
+      .map(option => option.id)
+      .filter(id => canAccessTab(gestorPermissions, 'secretaria', id));
   }, [gestorPermissions]);
 
   useEffect(() => {
@@ -203,18 +214,22 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ poloId, gestorPermissio
         return <SecretariaDeclaracaoFrequenciaPage />;
       case 'declaracao-irpf':
         return <SecretariaDeclaracaoIrpfPage />;
+      case 'contrato-aluno':
+        return <SecretariaContratosAlunoPage poloId={poloId} />;
       case 'historico-escolar':
         return <SecretariaHistoricoEscolarPage />;
       case 'cracha-estagio':
         return <SecretariaCrachaEstagioPage />;
       case 'cracha-periodo-eleitoral':
         return <SecretariaDocumentoEmissionPage definition={secretariaDocumentoDefinitions.crachaPeriodoEleitoral} />;
-      case 'rematricula':
-        return <SecretariaRematriculaPage />;
       case 'termo-estagio':
         return <SecretariaTermoEstagioPage />;
       case 'consulta-financeira':
         return <SecretariaConsultaFinanceiraPage />;
+      case 'pasta-identificacao':
+        return <SecretariaPastaIdentificacaoPage />;
+      case 'ficha-matricula':
+        return <SecretariaFichaMatriculaPage />;
       case 'transferencia':
         return <SecretariaDocumentoEmissionPage definition={secretariaDocumentoDefinitions.transferencia} />;
       case 'boletim':
@@ -223,8 +238,12 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ poloId, gestorPermissio
         return <SecretariaAtestadoConclusaoPage />;
       case 'carteirinha':
         return <SecretariaCarteirinhasPage poloId={poloId} />;
+      case 'carteirinha-preceptor':
+        return <SecretariaCarteirinhasPreceptorPage poloId={poloId} />;
       case 'solicitacoes':
         return <SecretariaSolicitacoesPage />;
+      case 'dependencias-academicas':
+        return <DependenciasAcademicasPage poloId={poloId} />;
       case 'historico-emissoes':
         return <SecretariaHistoricoEmissoesPage />;
       case 'certificados':

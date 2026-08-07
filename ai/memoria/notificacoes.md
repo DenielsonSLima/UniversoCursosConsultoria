@@ -1,3 +1,5 @@
+> Arquivo legado. A fonte operacional vigente é `ai/operacao/MEMORIA_CANONICA.md` em conjunto com `AGENTS.md`.
+
 # Diretrizes de Notificação do Sistema (Notification Guidelines)
 
 ## Regra Fundamental / Core Rule

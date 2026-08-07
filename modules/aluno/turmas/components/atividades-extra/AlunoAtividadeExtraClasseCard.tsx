@@ -124,7 +124,7 @@ const AlunoAtividadeExtraClasseCard: React.FC<AlunoAtividadeExtraClasseCardProps
               href={safeVideoUrl}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-3 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-xs font-black text-blue-700"
+              className="flex min-h-11 items-center gap-3 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-xs font-black text-blue-700 outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 md:min-h-0"
             >
               <Video size={16} />
               Abrir vídeo da atividade
@@ -145,7 +145,7 @@ const AlunoAtividadeExtraClasseCard: React.FC<AlunoAtividadeExtraClasseCardProps
                     onChange={(event) => updateAtividadeDraft(atividade.id, {
                       respostas: { [index]: event.target.value },
                     })}
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none transition-colors focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-base font-semibold text-slate-700 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-500 md:text-xs"
                     placeholder="Sua resposta"
                   />
                 </label>
@@ -162,7 +162,7 @@ const AlunoAtividadeExtraClasseCard: React.FC<AlunoAtividadeExtraClasseCardProps
             disabled={!podeEditar}
             value={getAtividadeDraftTexto(atividade)}
             onChange={(event) => updateAtividadeDraft(atividade.id, { texto: event.target.value })}
-            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-xs font-semibold leading-relaxed text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-base font-semibold leading-relaxed text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-500 md:text-xs"
             placeholder="Resposta em texto"
           />
         )}
@@ -176,7 +176,7 @@ const AlunoAtividadeExtraClasseCard: React.FC<AlunoAtividadeExtraClasseCardProps
               disabled={!podeEditar}
               value={getAtividadeDraftAnexo(atividade)}
               onChange={(event) => updateAtividadeDraft(atividade.id, { anexoUrl: event.target.value })}
-              className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-9 pr-3 text-xs font-bold text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
+              className="min-h-12 w-full rounded-xl border border-slate-200 bg-white py-3 pl-9 pr-3 text-base font-bold text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-500 md:min-h-0 md:text-xs"
               placeholder="Link do trabalho (HTTPS)"
             />
             {!podeEditar && safeAnexoUrl && (
@@ -184,7 +184,7 @@ const AlunoAtividadeExtraClasseCard: React.FC<AlunoAtividadeExtraClasseCardProps
                 href={safeAnexoUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="mt-2 inline-flex text-[10px] font-black uppercase tracking-widest text-blue-700 underline"
+                className="mt-2 inline-flex min-h-11 items-center rounded-xl px-2 text-[10px] font-black uppercase tracking-widest text-blue-700 underline outline-none focus-visible:ring-2 focus-visible:ring-blue-500 md:min-h-0 md:px-0"
               >
                 Abrir link do trabalho (HTTPS)
               </a>
@@ -201,10 +201,10 @@ const AlunoAtividadeExtraClasseCard: React.FC<AlunoAtividadeExtraClasseCardProps
             type="button"
             onClick={() => onSubmit(atividade)}
             disabled={!podeEditar}
-            className="inline-flex min-h-[42px] w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white outline-none transition-colors hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 md:min-h-[42px]"
           >
             {isSubmitting ? (
-              <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent motion-reduce:animate-none" />
             ) : (
               <Send size={14} />
             )}

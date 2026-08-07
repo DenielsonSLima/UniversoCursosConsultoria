@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import EadPaymentModal from '../../../ead/components/EadPaymentModal';
 import {
+  buildEadCheckoutSubmission,
   defaultEadCheckoutMethod,
   formatEadCheckoutMoney,
   resolveEadCheckoutOptions,
@@ -73,10 +74,10 @@ const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({ view }) => {
   } = view;
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="space-y-4 animate-fadeIn md:space-y-6">
       <div>
         <div>
-          <h2 className="text-2xl font-black text-[#001a33] uppercase tracking-tight flex items-center gap-2">
+          <h2 className="flex items-center gap-2 text-xl font-black uppercase tracking-tight text-[#001a33] md:text-2xl">
             <BookOpen className="text-blue-600" />
             Cursos Disponíveis
           </h2>
@@ -89,9 +90,10 @@ const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({ view }) => {
           <input
             type="text"
             placeholder="Pesquisar cursos..."
+            aria-label="Pesquisar cursos disponíveis"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-white border border-slate-200 focus:border-blue-500 outline-none rounded-xl pl-9 pr-3 py-2 text-xs font-bold text-slate-700 shadow-sm transition-all"
+            className="h-12 w-full rounded-xl border border-slate-200 bg-white py-2 pl-10 pr-3 text-base font-bold text-slate-700 shadow-sm outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100 md:h-auto md:pl-9 md:text-xs"
           />
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
         </div>
@@ -102,7 +104,7 @@ const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({ view }) => {
             <select
               value={categoryFilter}
               onChange={(event) => setCategoryFilter(event.target.value)}
-              className="h-11 rounded-xl border border-slate-100 bg-slate-50 px-3 text-xs font-bold normal-case tracking-normal text-slate-700 outline-none transition-colors focus:border-blue-500"
+              className="min-h-12 rounded-xl border border-slate-100 bg-slate-50 px-3 text-base font-bold normal-case tracking-normal text-slate-700 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-100 md:min-h-11 md:text-xs"
             >
               <option value="todas">Todas as categorias</option>
               {availableCategories.map(category => (
@@ -116,7 +118,7 @@ const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({ view }) => {
             <select
               value={sortDirection}
               onChange={(event) => setSortDirection(event.target.value as 'asc' | 'desc')}
-              className="h-11 rounded-xl border border-slate-100 bg-slate-50 px-3 text-xs font-bold normal-case tracking-normal text-slate-700 outline-none transition-colors focus:border-blue-500"
+              className="min-h-12 rounded-xl border border-slate-100 bg-slate-50 px-3 text-base font-bold normal-case tracking-normal text-slate-700 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-100 md:min-h-11 md:text-xs"
             >
               <option value="asc">A-Z crescente</option>
               <option value="desc">Z-A decrescente</option>
@@ -131,7 +133,11 @@ const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({ view }) => {
         </div>
       </div>
 
-      <div className="flex bg-slate-100 p-1.5 rounded-2xl w-full sm:w-max">
+      <div
+        className="-mx-1 flex snap-x gap-1 overflow-x-auto rounded-2xl bg-slate-100 p-1.5 [scrollbar-width:none] md:mx-0 md:w-max md:overflow-visible"
+        role="tablist"
+        aria-label="Modalidades de cursos disponíveis"
+      >
         {[
           ['ead', 'Cursos EAD', <MonitorPlay size={15} />],
           ['live', 'Cursos Livres', <Zap size={15} />],
@@ -140,8 +146,11 @@ const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({ view }) => {
         ].map(([id, label, icon]) => (
           <button
             key={id as string}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === id}
             onClick={() => setActiveTab(id as any)}
-            className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+            className={`flex min-h-11 shrink-0 snap-start items-center justify-center gap-2 whitespace-nowrap rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-wider outline-none transition-all focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 md:px-5 md:text-xs ${
               activeTab === id ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-blue-600'
             }`}
           >
@@ -170,7 +179,8 @@ const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({ view }) => {
               <button
                 type="button"
                 onClick={() => setTechnicalProfileGate(null)}
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-100 text-slate-400 hover:text-slate-700"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-100 text-slate-400 outline-none hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-blue-500 md:h-10 md:w-10"
+                aria-label="Fechar aviso de perfil necessário"
               >
                 <X size={18} />
               </button>
@@ -195,7 +205,7 @@ const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({ view }) => {
               <button
                 type="button"
                 onClick={() => setTechnicalProfileGate(null)}
-                className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-700"
+                className="min-h-11 rounded-xl border border-slate-200 bg-white px-5 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500 outline-none hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 md:min-h-0"
               >
                 Voltar aos cursos
               </button>
@@ -205,7 +215,7 @@ const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({ view }) => {
                   setTechnicalProfileGate(null);
                   onRequireTechnicalProfile?.();
                 }}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white hover:bg-blue-700"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white outline-none hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 md:min-h-0"
               >
                 <User size={14} />
                 Ir para Meu Perfil
@@ -226,7 +236,8 @@ const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({ view }) => {
               <button
                 type="button"
                 onClick={() => setCheckoutReview(null)}
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-100 text-slate-400 hover:text-slate-700"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-100 text-slate-400 outline-none hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-blue-500 md:h-10 md:w-10"
+                aria-label="Fechar confirmação de matrícula"
               >
                 <X size={18} />
               </button>
@@ -262,7 +273,7 @@ const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({ view }) => {
                   type="checkbox"
                   checked={acceptedOnlineTerms}
                   onChange={(event) => setAcceptedOnlineTerms(event.target.checked)}
-                  className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600"
+                  className="mt-0.5 h-5 w-5 shrink-0 rounded border-slate-300 text-blue-600 outline-none focus-visible:ring-2 focus-visible:ring-blue-500 md:h-4 md:w-4"
                 />
                 <span>
                   Declaro que li e aceito os termos da matrícula online, autorizo o uso dos meus dados para emissão da cobrança e confirmo que escolhi o polo correto.
@@ -274,7 +285,7 @@ const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({ view }) => {
               <button
                 type="button"
                 onClick={() => setCheckoutReview(null)}
-                className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-700"
+                className="min-h-11 rounded-xl border border-slate-200 bg-white px-5 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500 outline-none hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 md:min-h-0"
               >
                 Revisar depois
               </button>
@@ -289,7 +300,7 @@ const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({ view }) => {
                     installments: 1,
                   });
                 }}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white hover:bg-emerald-700 disabled:bg-slate-300"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white outline-none hover:bg-emerald-700 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:bg-slate-300 md:min-h-0"
               >
                 {checkoutMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
                 Continuar para pagamento
@@ -341,7 +352,8 @@ const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({ view }) => {
                 <button
                   type="button"
                   onClick={() => setEadCheckoutReview(null)}
-                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-100 text-slate-400 hover:text-slate-700"
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-100 text-slate-400 outline-none hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-emerald-500 md:h-10 md:w-10"
+                  aria-label="Fechar pagamento EAD"
                 >
                   <X size={18} />
                 </button>
@@ -353,7 +365,7 @@ const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({ view }) => {
                   <p className="mt-1 text-2xl font-black text-[#001a33]">{formatEadCheckoutMoney(options.amount)}</p>
                 </div>
 
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {options.options.map(option => {
                     const active = selectedMethod === option.method;
                     const Icon = option.method === 'CREDIT_CARD' ? CreditCard : option.method === 'BOLETO' ? FileText : Zap;
@@ -365,7 +377,7 @@ const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({ view }) => {
                           setEadPaymentMethod(option.method);
                           setEadInstallments(option.method === 'CREDIT_CARD' ? Math.max(1, options.maxParcelas) : 1);
                         }}
-                        className={`flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all ${
+                        className={`flex min-h-11 items-center justify-center gap-2 rounded-xl border px-4 py-3 text-[10px] font-black uppercase tracking-widest outline-none transition-all focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 md:min-h-0 ${
                           active
                             ? 'border-emerald-500 bg-emerald-600 text-white shadow-sm'
                             : 'border-slate-200 bg-white text-slate-500 hover:border-emerald-200 hover:text-emerald-700'
@@ -386,7 +398,7 @@ const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({ view }) => {
                     <select
                       value={selectedInstallments}
                       onChange={(event) => setEadInstallments(Number(event.target.value) || 1)}
-                      className="mt-2 w-full rounded-xl border border-blue-100 bg-white px-4 py-3 text-sm font-black text-[#001a33] outline-none focus:border-blue-400"
+                      className="mt-2 min-h-12 w-full rounded-xl border border-blue-100 bg-white px-4 py-3 text-base font-black text-[#001a33] outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 md:min-h-0 md:text-sm"
                     >
                       {Array.from({ length: options.maxParcelas }, (_, index) => index + 1).map(installments => (
                         <option key={installments} value={installments}>
@@ -400,7 +412,9 @@ const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({ view }) => {
                 <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-xs font-bold leading-relaxed text-slate-600">
                   {selectedMethod === 'CREDIT_CARD'
                     ? `Cartão selecionado: ${selectedInstallments}x de ${formatEadCheckoutMoney(installmentValue)} sobre o valor do curso. Juros do gateway podem alterar o total no checkout.`
-                    : `${selectedMethod === 'PIX' ? 'Pix' : 'Boleto'} selecionado: cobrança única de ${formatEadCheckoutMoney(options.amount)}.`}
+                    : selectedMethod === 'PIX'
+                      ? `Pix selecionado: será emitido um único Boleto com Pix de ${formatEadCheckoutMoney(options.amount)} e o QR Code oficial aparecerá nesta tela.`
+                      : `Boleto com Pix selecionado: o PDF completo da cobrança de ${formatEadCheckoutMoney(options.amount)} será aberto em uma nova aba.`}
                 </div>
 
                 {checkoutError && (
@@ -414,7 +428,7 @@ const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({ view }) => {
                 <button
                   type="button"
                   onClick={() => setEadCheckoutReview(null)}
-                  className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-700"
+                  className="min-h-11 rounded-xl border border-slate-200 bg-white px-5 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500 outline-none hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 md:min-h-0"
                 >
                   Voltar
                 </button>
@@ -423,12 +437,13 @@ const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({ view }) => {
                   disabled={checkoutMutation.isPending || options.options.length === 0}
                   onClick={() => {
                     const review = eadCheckoutReview;
-                    startCheckout(review.course, null, {
-                      method: selectedMethod,
-                      installments: selectedInstallments,
-                    });
+                    startCheckout(
+                      review.course,
+                      null,
+                      buildEadCheckoutSubmission(selectedMethod, selectedInstallments),
+                    );
                   }}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white hover:bg-emerald-700 disabled:bg-slate-300"
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white outline-none hover:bg-emerald-700 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:bg-slate-300 md:min-h-0"
                 >
                   {checkoutMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
                   Continuar para pagamento

@@ -2,7 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import { formatMatricula } from '../../../../lib/academicUtils';
-import { documentValidationService } from '../../../shared/document-validation/document-validation.service';
+import {
+  createDocumentReissueKey,
+  documentValidationService,
+} from '../../../shared/document-validation/document-validation.service';
 import { TEMPLATE_DEFAULT } from './secretaria-carteirinhas.helpers';
 import { downloadCarteirinhasPdf, printCarteirinhas } from './secretaria-carteirinhas.pdf';
 import {
@@ -16,6 +19,7 @@ import SecretariaCarteirinhasControls, {
 import SecretariaCarteirinhasPrintLayout, {
   type CarteirinhaLayoutType,
 } from './SecretariaCarteirinhasPrintLayout';
+import { matchesSecretariaSearch } from '../secretaria-search';
 
 interface SecretariaCarteirinhasPageProps {
   poloId?: string | null;
@@ -35,19 +39,22 @@ const SecretariaCarteirinhasPage: React.FC<SecretariaCarteirinhasPageProps> = ({
   const [selectedAluno, setSelectedAluno] = useState<Aluno | null>(null);
   const [templateConfig, setTemplateConfig] = useState<any>(TEMPLATE_DEFAULT);
   const [selectedTurmaId, setSelectedTurmaId] = useState('todos');
-  const [validadeGeral, setValidadeGeral] = useState(() => {
-    const defaultValidity = new Date();
-    defaultValidity.setMonth(defaultValidity.getMonth() + 12);
-    return defaultValidity.toISOString().split('T')[0];
-  });
   const [layoutType, setLayoutType] = useState<CarteirinhaLayoutType>('dobra');
   const [isPrinting, setIsPrinting] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isPreparingValidation, setIsPreparingValidation] = useState(false);
-  const [validationCodes, setValidationCodes] = useState<Record<string, string>>({});
+  const [validationSnapshots, setValidationSnapshots] = useState<Record<string, {
+    code: string;
+    expiresAt: string | null;
+    validationPublic: boolean;
+  }>>({});
   const printContentRef = useRef<HTMLDivElement>(null);
+  const validationRequestRef = useRef<{
+    fingerprint: string;
+    idempotencyKey: string;
+  } | null>(null);
+  const validationRequestInFlightRef = useRef(false);
   const workspaceQuery = useQuery(secretariaCarteirinhasWorkspaceQueryOptions(activePoloId));
-
   useEffect(() => {
     const workspace = workspaceQuery.data;
     if (!workspace) return;
@@ -71,10 +78,7 @@ const SecretariaCarteirinhasPage: React.FC<SecretariaCarteirinhasPageProps> = ({
       }
     });
 
-    const validityMonths = Number(academicConfigs.validityMonths ?? 12);
     const mapped = Array.from(primaryEnrollmentByStudent.values()).map((enrollment) => {
-      const validityBase = enrollment.dataMatricula ? new Date(enrollment.dataMatricula) : new Date();
-      validityBase.setMonth(validityBase.getMonth() + validityMonths);
       return {
         id: enrollment.alunoId,
         enrollmentId: enrollment.enrollmentId,
@@ -87,7 +91,7 @@ const SecretariaCarteirinhasPage: React.FC<SecretariaCarteirinhasPageProps> = ({
         turmaNome: enrollment.turmaNome,
         turmaCodigo: enrollment.turmaCodigo,
         instituicao: 'Universo Cursos e Consultoria',
-        validade: validityBase.toLocaleDateString('pt-BR'),
+        validade: 'Sem vencimento',
         fotoUrl: enrollment.fotoUrl,
         tipoDocumento: enrollment.tipoDocumento || 'CARTEIRA NACIONAL DE IDENTIFICAÇÃO',
         turmaIds: enrollmentIdsByStudent.get(enrollment.alunoId) || [enrollment.turmaId],
@@ -96,10 +100,6 @@ const SecretariaCarteirinhasPage: React.FC<SecretariaCarteirinhasPageProps> = ({
         poloTelefone: institutionalData?.telefone,
       } satisfies Aluno;
     });
-
-    const validityDate = new Date();
-    validityDate.setMonth(validityDate.getMonth() + validityMonths);
-    setValidadeGeral(validityDate.toISOString().split('T')[0]);
 
     const mergedTemplate = {
       ...TEMPLATE_DEFAULT,
@@ -122,9 +122,9 @@ const SecretariaCarteirinhasPage: React.FC<SecretariaCarteirinhasPageProps> = ({
 
   const handleSearch = () => {
     if (!searchQuery.trim()) return;
-    const query = searchQuery.toUpperCase();
-    const result = alunos.find((aluno) => (
-      aluno.nome.includes(query) || aluno.cpf.includes(query) || aluno.rg.includes(query)
+    const result = alunos.find((aluno) => matchesSecretariaSearch(
+      searchQuery,
+      [aluno.nome, aluno.cpf, aluno.rg, aluno.curso, aluno.turmaNome],
     ));
     if (result) {
       setSelectedAluno(result);
@@ -134,6 +134,7 @@ const SecretariaCarteirinhasPage: React.FC<SecretariaCarteirinhasPageProps> = ({
   };
 
   const handlePrintAction = async () => {
+    if (validationRequestInFlightRef.current) return;
     const targets = mode === 'individual'
       ? (selectedAluno ? [selectedAluno] : [])
       : mode === 'lote'
@@ -148,30 +149,46 @@ const SecretariaCarteirinhasPage: React.FC<SecretariaCarteirinhasPageProps> = ({
       return;
     }
 
+    const requestFingerprint = JSON.stringify(
+      eligibleTargets.map((aluno) => aluno.enrollmentId),
+    );
+    if (validationRequestRef.current?.fingerprint !== requestFingerprint) {
+      validationRequestRef.current = {
+        fingerprint: requestFingerprint,
+        idempotencyKey: createDocumentReissueKey(),
+      };
+    }
+
+    validationRequestInFlightRef.current = true;
     setIsPreparingValidation(true);
     try {
-      const expiresAt = new Date(`${validadeGeral}T23:59:59`).toISOString();
       const issues = await Promise.all(
         eligibleTargets.map(async (aluno) => ({
           alunoId: aluno.id,
-          issue: await documentValidationService.issue({
+          issue: await documentValidationService.reissue({
             type: 'carteirinha',
             enrollmentId: aluno.enrollmentId!,
-            expiresAt,
-            registerReissue: true,
+            idempotencyKey:
+              `${validationRequestRef.current!.idempotencyKey}:${aluno.enrollmentId}`,
           }),
         })),
       );
 
-      setValidationCodes((current) => ({
+      setValidationSnapshots((current) => ({
         ...current,
-        ...Object.fromEntries(issues.map(({ alunoId, issue }) => [alunoId, issue.code])),
+        ...Object.fromEntries(issues.map(({ alunoId, issue }) => [alunoId, {
+          code: issue.code,
+          expiresAt: issue.expiresAt,
+          validationPublic: issue.validationPublic,
+        }])),
       }));
       setIsPrinting(true);
+      validationRequestRef.current = null;
     } catch (error) {
       console.error('[SecretariaCarteirinhas] Falha ao registrar emissão:', error);
       alert('Não foi possível registrar os códigos de validação das carteirinhas.');
     } finally {
+      validationRequestInFlightRef.current = false;
       setIsPreparingValidation(false);
     }
   };
@@ -196,15 +213,18 @@ const SecretariaCarteirinhasPage: React.FC<SecretariaCarteirinhasPageProps> = ({
 
   const startNumber = templateConfig.startNumber || 1000;
   const alunosParaImprimir = rawAlunosParaImprimir.map((aluno, index) => {
-    const parts = validadeGeral.split('-');
-    const validadeFormatada = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : aluno.validade;
+    const snapshot = validationSnapshots[aluno.id];
+    const validadeFormatada = snapshot?.expiresAt
+      ? new Date(snapshot.expiresAt).toLocaleDateString('pt-BR')
+      : 'Sem vencimento';
     return {
       ...aluno,
       matricula: aluno.matricula && aluno.matricula !== 'PENDENTE' && aluno.matricula !== 'CIE-PENDENTE'
         ? aluno.matricula
         : `CIE-${startNumber + index}`,
       validade: validadeFormatada,
-      validationCode: validationCodes[aluno.id],
+      validationCode: snapshot?.code,
+      validationPublic: snapshot?.validationPublic ?? false,
     };
   });
 
@@ -269,10 +289,9 @@ const SecretariaCarteirinhasPage: React.FC<SecretariaCarteirinhasPageProps> = ({
       setSearchQueryCustom={setSearchQueryCustom}
       setSelectedAluno={setSelectedAluno}
       setSelectedTurmaId={setSelectedTurmaId}
-      setValidadeGeral={setValidadeGeral}
       startNumber={startNumber}
       turmas={turmas}
-      validadeGeral={validadeGeral}
+      validadeGeral="Calculada por aluno: término da turma"
     />
   );
 };

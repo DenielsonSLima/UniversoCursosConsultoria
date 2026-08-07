@@ -13,8 +13,6 @@ interface ParceirosListProps {
   isLoading: boolean;
   onSelectParceiro?: (parceiro: any) => void;
   onDeleteParceiro?: (parceiro: any) => void;
-  onConfirmEmail?: (parceiro: any) => void;
-  confirmingEmailPartnerId?: string | null;
 }
 
 const ParceirosList: React.FC<ParceirosListProps> = ({ 
@@ -22,8 +20,6 @@ const ParceirosList: React.FC<ParceirosListProps> = ({
   isLoading,
   onSelectParceiro,
   onDeleteParceiro,
-  onConfirmEmail,
-  confirmingEmailPartnerId,
 }) => {
   const [page, setPage] = useState(1);
 
@@ -40,22 +36,17 @@ const ParceirosList: React.FC<ParceirosListProps> = ({
   const renderCard = (item: any) => {
     const handleSelect = () => onSelectParceiro && onSelectParceiro(item);
     const handleDelete = () => onDeleteParceiro && onDeleteParceiro(item);
-    const handleConfirmEmail = () => onConfirmEmail && onConfirmEmail(item);
-    const emailConfirmationProps = {
-      onConfirmEmail: handleConfirmEmail,
-      isConfirmingEmail: confirmingEmailPartnerId === item.id,
-    };
     
     switch (item.tipo) {
       case 'Aluno':
-        return <AlunoCard key={item.id} data={item} onClick={handleSelect} onDelete={handleDelete} {...emailConfirmationProps} />;
+        return <AlunoCard key={item.id} data={item} onClick={handleSelect} onDelete={handleDelete} />;
       case 'Professor':
-        return <ProfessorCard key={item.id} data={item} onClick={handleSelect} onDelete={handleDelete} {...emailConfirmationProps} />;
+        return <ProfessorCard key={item.id} data={item} onClick={handleSelect} onDelete={handleDelete} />;
       case 'PJ':
-        return <PJCard key={item.id} data={item} onClick={handleSelect} onDelete={handleDelete} {...emailConfirmationProps} />;
+        return <PJCard key={item.id} data={item} onClick={handleSelect} onDelete={handleDelete} />;
       case 'PF':
       default:
-        return <PFCard key={item.id} data={item} onClick={handleSelect} onDelete={handleDelete} {...emailConfirmationProps} />;
+        return <PFCard key={item.id} data={item} onClick={handleSelect} onDelete={handleDelete} />;
     }
   };
 

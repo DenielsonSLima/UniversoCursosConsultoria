@@ -11,15 +11,6 @@ export const useEadCourseWizardState = () => {
   const [area, setArea] = useState('Outros');
   const [cargaHoraria, setCargaHoraria] = useState('');
   const [valorText, setValorText] = useState('');
-  const [financeiroPix, setFinanceiroPix] = useState(true);
-  const [financeiroBoleto, setFinanceiroBoleto] = useState(true);
-  const [financeiroCartao, setFinanceiroCartao] = useState(true);
-  const [financeiroParcelado, setFinanceiroParcelado] = useState(true);
-  const [financeiroParcelasPadrao, setFinanceiroParcelasPadrao] = useState('1');
-  const [financeiroMaxParcelas, setFinanceiroMaxParcelas] = useState('2');
-  const [financeiroTaxaPagaPor, setFinanceiroTaxaPagaPor] = useState<'aluno' | 'instituicao'>('aluno');
-  const [financeiroRepassarCustoParcelamento, setFinanceiroRepassarCustoParcelamento] = useState(false);
-  const [financeiroConsiderarTaxaNoCheckout, setFinanceiroConsiderarTaxaNoCheckout] = useState(false);
   const [descricao, setDescricao] = useState('');
   const [imagemUrl, setImagemUrl] = useState('');
   const [versao, setVersao] = useState('1.0');
@@ -108,24 +99,6 @@ export const useEadCourseWizardState = () => {
     setCargaHoraria,
     valorText,
     setValorText,
-    financeiroPix,
-    setFinanceiroPix,
-    financeiroBoleto,
-    setFinanceiroBoleto,
-    financeiroCartao,
-    setFinanceiroCartao,
-    financeiroParcelado,
-    setFinanceiroParcelado,
-    financeiroParcelasPadrao,
-    setFinanceiroParcelasPadrao,
-    financeiroMaxParcelas,
-    setFinanceiroMaxParcelas,
-    financeiroTaxaPagaPor,
-    setFinanceiroTaxaPagaPor,
-    financeiroRepassarCustoParcelamento,
-    setFinanceiroRepassarCustoParcelamento,
-    financeiroConsiderarTaxaNoCheckout,
-    setFinanceiroConsiderarTaxaNoCheckout,
     descricao,
     setDescricao,
     imagemUrl,

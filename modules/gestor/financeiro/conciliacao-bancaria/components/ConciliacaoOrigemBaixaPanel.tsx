@@ -20,6 +20,7 @@ import {
   formatConciliacaoCurrency,
   formatConciliacaoDate,
 } from '../conciliacao-bancaria.formatters';
+import { textMatchesSearch } from '../../../../../lib/search';
 
 interface ConciliacaoOrigemBaixaPanelProps {
   rows: BaneseReceivable[];
@@ -124,13 +125,12 @@ export const ConciliacaoOrigemBaixaPanel: React.FC<ConciliacaoOrigemBaixaPanelPr
       result = result.filter((r) => r.status === selectedStatus);
     }
 
-    const search = searchTerm.trim().toLowerCase();
-    if (search) {
-      result = result.filter((r) => (
-        r.descricao.toLowerCase().includes(search)
-        || r.nossoNumero?.toLowerCase().includes(search)
-        || r.status.toLowerCase().includes(search)
-      ));
+    if (searchTerm.trim()) {
+      result = result.filter((row) => textMatchesSearch(searchTerm, [
+        row.descricao,
+        row.nossoNumero,
+        row.status,
+      ]));
     }
 
     return result;
@@ -171,9 +171,14 @@ export const ConciliacaoOrigemBaixaPanel: React.FC<ConciliacaoOrigemBaixaPanelPr
       case 'CAIXA_MANUAL':
       default:
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-extrabold text-emerald-800">
-            <Building2 size={12} className="text-emerald-600" />
-            Caixa / Manual
+          <span className="inline-flex flex-col items-start gap-1">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-extrabold text-emerald-800">
+              <Building2 size={12} className="text-emerald-600" />
+              Caixa / Manual
+            </span>
+            {['CANCELED', 'CANCELLED', 'DELETED'].includes(String(row.gatewayStatus || '').toUpperCase()) ? (
+              <span className="text-[9px] font-bold text-slate-500">Título Banese cancelado</span>
+            ) : null}
           </span>
         );
     }
@@ -423,7 +428,8 @@ export const ConciliacaoOrigemBaixaPanel: React.FC<ConciliacaoOrigemBaixaPanelPr
                       <td className="p-3.5 text-right">
                         {row.status === 'PAGO' ? (
                           <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-700">
-                            <CheckCircle2 size={13} /> Conciliado
+                            <CheckCircle2 size={13} />
+                            {row.canalBaixa === 'CAIXA_MANUAL' ? 'Baixa manual registrada' : 'Conciliado'}
                           </span>
                         ) : (
                           <button

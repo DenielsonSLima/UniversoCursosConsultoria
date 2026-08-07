@@ -75,7 +75,7 @@ const TurmaFormModal: React.FC<TurmaFormModalProps> = ({
                 ))}
             </select>
             <p className="text-[10px] text-blue-600/70 mt-2">
-                * As turmas são vinculadas aos cursos cadastrados no módulo "Cadastros".
+                * As turmas são vinculadas aos cursos cadastrados no módulo "Formações".
             </p>
           </div>
 

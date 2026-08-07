@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { GraduationCap, Settings, Sparkles, Save, FileSpreadsheet, BadgeCheck, FileCode, QrCode } from 'lucide-react';
 import ToastNotification, { useToast } from '../../components/ToastNotification';
 import { academicosService } from './academicos.service';
+import { getDocumentValidationBaseUrl } from '../../../shared/document-validation/document-validation.url';
 
 const AcademicosConfig: React.FC = () => {
   const [activeSubTab, setActiveSubTab] = useState<'matricula' | 'carteirinha' | 'certificados' | 'validacao'>('matricula');
@@ -13,8 +14,7 @@ const AcademicosConfig: React.FC = () => {
   const [usePoloCode, setUsePoloCode] = useState(false);
   const [yearFormat, setYearFormat] = useState('yy');
 
-  // Endereço de Validação State
-  const [validacaoUrl, setValidacaoUrl] = useState('https://www.universocc.com.br/validador');
+  const validacaoUrl = getDocumentValidationBaseUrl();
 
   // Carteirinha Settings States
   const [carteirinhaPrimaryColor, setCarteirinhaPrimaryColor] = useState('#001a33');
@@ -47,7 +47,6 @@ const AcademicosConfig: React.FC = () => {
         setTemplateEad(configs.templateEad);
         setTemplateLivres(configs.templateLivres);
         setTemplateEspecializacao(configs.templateEspecializacao);
-        setValidacaoUrl(configs.validacaoUrl || 'https://www.universocc.com.br/validador');
       } catch (err) {
         console.error('[AcademicosConfig] Erro ao carregar configurações:', err);
       }
@@ -362,12 +361,12 @@ const AcademicosConfig: React.FC = () => {
                 <input 
                   type="url" 
                   value={validacaoUrl}
-                  onChange={(e) => setValidacaoUrl(e.target.value)}
+                  readOnly
                   className="w-full p-3 bg-slate-50 border border-slate-200 outline-none rounded-xl focus:border-purple-500 focus:bg-white transition-all font-bold text-slate-700"
-                  placeholder="Ex: https://www.universocc.com.br/validador"
+                  placeholder="URL canônica do validador"
                 />
                 <p className="text-[10px] text-slate-400 mt-1">
-                  Certifique-se de incluir o protocolo (http:// ou https://) para que os QR Codes funcionem perfeitamente.
+                  Definida por VITE_PUBLIC_SITE_URL e protegida contra HTTP, IP local e origem divergente.
                 </p>
               </div>
             </div>

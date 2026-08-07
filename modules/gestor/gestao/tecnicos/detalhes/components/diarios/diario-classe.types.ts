@@ -1,9 +1,35 @@
 import { DiarioTemplate } from '../../../../../cadastros/modelos-documentos/diarios/diarios.service';
 import { DiarioAula, DiarioStudent } from './diario-classe.service';
+import { DiarioExportMode } from './turma-diarios.types';
 
-export type DiarioActiveTab = 'frequencia' | 'resultado' | 'conteudo' | 'observacoes';
+export type DiarioActiveTab = 'frequencia' | 'resultado' | 'conteudo' | 'observacoes' | 'fechamento';
+export type DiarioLockScope = 'ABERTO' | 'PROFESSOR' | 'TOTAL';
 
-export type AttendanceStatus = 'P' | 'F' | null;
+export interface DiarioClosureState {
+  bloqueio: DiarioLockScope;
+  status: 'EM_ANDAMENTO' | 'AGUARDANDO_REVISAO' | 'EM_REVISAO' | 'FECHADO';
+  horas_realizadas: number;
+  carga_horaria: number;
+  progresso_percent: number;
+  bloqueado_em: string | null;
+  motivo: string | null;
+  alunos_ativos: number;
+  aulas_realizadas: number;
+  frequencias_pendentes: number;
+  notas_pendentes: number;
+  pode_fechar: boolean;
+}
+
+export interface ActiveInstruments {
+  p: boolean;
+  ti: boolean;
+  tg: boolean;
+  s: boolean;
+  cq: boolean;
+  o: boolean;
+}
+
+export type AttendanceStatus = 'P' | 'F' | 'J' | null;
 export type AttendanceMap = Record<string, Record<string, AttendanceStatus>>;
 
 export interface DiarioGradeResult {
@@ -38,6 +64,8 @@ export interface DiarioClasseProps {
   turma: any;
   onBack: () => void;
   accessMode?: 'GESTOR' | 'PROFESSOR';
+  initialExportMode?: DiarioExportMode;
+  returnToListOnExportClose?: boolean;
 }
 
 export interface DiarioPrintDocumentProps {
@@ -51,7 +79,11 @@ export interface DiarioPrintDocumentProps {
   gradesMap: GradesMap;
   praticasMap: Record<string, string>;
   observacoes: string;
+  activeInstruments?: ActiveInstruments;
   watermark?: any;
-  diretorSigUrl?: string | null;
-  secretarioSigUrl?: string | null;
+  exportMode?: DiarioExportMode;
+  /** Código canônico retornado por emitir_diario_validacao_portal. */
+  validationCode?: string | null;
+  /** Identifica a renderização visual que não registra uma emissão no backend. */
+  validationPreview?: boolean;
 }

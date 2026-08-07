@@ -1,13 +1,19 @@
 import React, { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import AccessCheckingScreen from '../shared/components/AccessCheckingScreen';
+import { Capacitor } from '@capacitor/core';
+import { useLocation, useNavigate } from 'react-router';
 import ConfirmModal from '../shared/components/ConfirmModal';
 import { useInactivityLogout } from '../shared/hooks/useInactivityLogout';
 import { usePortalLogout } from '../shared/hooks/usePortalLogout';
 import AlunoPortalShell from './components/AlunoPortalShell';
+import { useAlunoCourseAccessRealtime } from './hooks/useAlunoCourseAccessRealtime';
 import { useAlunoCalendarEligibility, useAlunoUnreadChats } from './hooks/useAlunoPortalData';
 import { useAlunoPortalProfile } from './hooks/useAlunoPortalProfile';
 import type { PerfilTabId } from './perfil/perfil.types';
+import AlunoAppSplash from './pwa/AlunoAppSplash';
+import AlunoNativeAppDeviceRuntime from './native-app/AlunoNativeAppDeviceRuntime';
+import { nativeAppService } from './native-app/native-app.service';
+import { useAlunoUnreadNotifications } from './notificacoes/useAlunoNotifications';
+import { getAlunoLogoutPath } from './aluno-logout-route';
 
 // Cada área é carregada apenas quando o aluno a acessa, reduzindo o peso inicial no celular.
 const InicioPage = lazy(() => import('./inicio/InicioPage'));
@@ -19,6 +25,7 @@ const ComunicacaoPage = lazy(() => import('./comunicacao/ComunicacaoPage'));
 const PerfilPage = lazy(() => import('./perfil/PerfilPage'));
 const SecretariaPage = lazy(() => import('./secretaria/SecretariaPage'));
 const CalendarioAlunoPage = lazy(() => import('./calendario/CalendarioAlunoPage'));
+const NotificacoesPage = lazy(() => import('./notificacoes/NotificacoesPage'));
 
 const ALLOWED_MODULES = new Set([
   'inicio',
@@ -27,8 +34,10 @@ const ALLOWED_MODULES = new Set([
   'financeiro',
   'biblioteca',
   'comunicacao',
+  'calendario',
   'secretaria',
   'perfil',
+  'notificacoes',
 ]);
 
 const ALLOWED_PROFILE_TABS = new Set<PerfilTabId>([
@@ -47,7 +56,10 @@ const AlunoModuleLoading = () => (
 
 const AlunoPage: React.FC = () => {
   const navigate = useNavigate();
-  const executeLogout = usePortalLogout({ loginPath: '/login' });
+  const location = useLocation();
+  const executeLogout = usePortalLogout({
+    loginPath: getAlunoLogoutPath(Capacitor.isNativePlatform()),
+  });
   const contentScrollRef = useRef<HTMLDivElement>(null);
   const [activeModule, setActiveModule] = useState('inicio');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -56,13 +68,28 @@ const AlunoPage: React.FC = () => {
   const [initialProfileTab, setInitialProfileTab] = useState<PerfilTabId>('perfil');
   const [initialCourseId, setInitialCourseId] = useState<string | null>(null);
   const [initialTurmaId, setInitialTurmaId] = useState<string | null>(null);
-  const { profile, isAuthLoading, isAuthorized } = useAlunoPortalProfile();
+  const { profile, isAuthLoading, isAuthorized, connectionError, retry } = useAlunoPortalProfile();
 
   // O ID só é disponibilizado a queries e subscriptions depois da validação
   // autoritativa do perfil. Dados graváveis do sessionStorage nunca autorizam o portal.
   const alunoId = isAuthorized ? profile?.id || '' : '';
   const canViewCalendar = useAlunoCalendarEligibility(alunoId, isAuthorized);
   const unreadChatsCount = useAlunoUnreadChats(alunoId, isAuthorized);
+  const unreadNotificationsCount = useAlunoUnreadNotifications(alunoId, isAuthorized);
+  useAlunoCourseAccessRealtime(alunoId, isAuthorized);
+
+  const handleLogout = useCallback(() => {
+    if (!nativeAppService.isAvailable()) {
+      executeLogout();
+      return;
+    }
+    void Promise.race([
+      nativeAppService.logout(),
+      new Promise<boolean>((resolve) => window.setTimeout(() => resolve(false), 4_000)),
+    ]).catch((error) => {
+      console.warn('A presença do aplicativo não pôde ser encerrada antes do logout.', error);
+    }).finally(executeLogout);
+  }, [executeLogout]);
 
   const scrollContentToTop = useCallback(() => {
     requestAnimationFrame(() => {
@@ -75,13 +102,17 @@ const AlunoPage: React.FC = () => {
   }, [activeModule, scrollContentToTop]);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(location.search);
     const requestedModule = params.get('module');
+    const requestedPathModule = location.pathname === '/aluno/comunicacao'
+      ? 'comunicacao'
+      : null;
     const requestedCourseId = params.get('courseId');
     const requestedProfileTab = params.get('tab') as PerfilTabId | null;
 
-    if (requestedModule && ALLOWED_MODULES.has(requestedModule)) {
-      setActiveModule(requestedModule);
+    const resolvedModule = requestedPathModule || requestedModule;
+    if (resolvedModule && ALLOWED_MODULES.has(resolvedModule)) {
+      setActiveModule(resolvedModule);
     }
     if (requestedCourseId) {
       setInitialCourseId(requestedCourseId);
@@ -94,18 +125,18 @@ const AlunoPage: React.FC = () => {
       setProfileNotice('technical-enrollment');
       setInitialProfileTab('documentos');
       setActiveModule('perfil');
-      navigate('/aluno', { replace: true });
+      navigate('/aluno/', { replace: true });
       return;
     }
     if (params.get('asaas') === 'success') {
       setActiveModule('turmas');
-      navigate('/aluno', { replace: true });
+      navigate('/aluno/', { replace: true });
     }
-  }, [navigate]);
+  }, [location.pathname, location.search, navigate]);
 
   useInactivityLogout({
     isEnabled: isAuthorized,
-    onTimeout: executeLogout,
+    onTimeout: handleLogout,
   });
 
   useEffect(() => {
@@ -114,8 +145,17 @@ const AlunoPage: React.FC = () => {
     }
   }, [activeModule, canViewCalendar]);
 
+  if (connectionError) {
+    return (
+      <AlunoAppSplash
+        message="Não foi possível conectar. Verifique sua internet e tente novamente."
+        onRetry={retry}
+      />
+    );
+  }
+
   if (isAuthLoading || !isAuthorized || !profile) {
-    return <AccessCheckingScreen portal="Aluno" />;
+    return <AlunoAppSplash />;
   }
 
   const alunoNome = profile.nome || '';
@@ -132,6 +172,7 @@ const AlunoPage: React.FC = () => {
         return (
           <InicioPage
             alunoId={alunoId}
+            canViewCalendar={canViewCalendar}
             onNavigate={setActiveModule}
             onOpenCourse={(courseId, turmaId, targetModule) => {
               setInitialCourseId(courseId);
@@ -167,9 +208,17 @@ const AlunoPage: React.FC = () => {
       case 'biblioteca':
         return <BibliotecaPage alunoId={alunoId} />;
       case 'comunicacao':
-        return <ComunicacaoPage alunoId={alunoId} alunoNome={alunoNome} />;
+        return <ComunicacaoPage alunoId={alunoId} alunoNome={alunoNome} onNavigate={setActiveModule} />;
       case 'secretaria':
         return <SecretariaPage alunoId={alunoId} />;
+      case 'notificacoes':
+        return (
+          <NotificacoesPage
+            alunoId={alunoId}
+            unreadCount={unreadNotificationsCount}
+            onNavigate={(deepLink) => navigate(deepLink)}
+          />
+        );
       case 'perfil':
         return (
           <PerfilPage
@@ -180,12 +229,13 @@ const AlunoPage: React.FC = () => {
           />
         );
       default:
-        return <InicioPage alunoId={alunoId} onNavigate={setActiveModule} />;
+        return <InicioPage alunoId={alunoId} canViewCalendar={canViewCalendar} onNavigate={setActiveModule} />;
     }
   };
 
   return (
     <>
+      <AlunoNativeAppDeviceRuntime alunoId={alunoId} />
       <AlunoPortalShell
         activeModule={activeModule}
         alunoEmail={alunoEmail}
@@ -194,9 +244,13 @@ const AlunoPage: React.FC = () => {
         contentScrollRef={contentScrollRef}
         isMobileMenuOpen={isMobileMenuOpen}
         unreadChatsCount={unreadChatsCount}
+        unreadNotificationsCount={unreadNotificationsCount}
         onLogout={() => setIsLogoutConfirmOpen(true)}
         onMobileMenuChange={setIsMobileMenuOpen}
-        onModuleChange={setActiveModule}
+        onModuleChange={(moduleId) => {
+          setActiveModule(moduleId);
+          navigate(moduleId === 'comunicacao' ? '/aluno/comunicacao' : `/aluno/?module=${moduleId}`);
+        }}
       >
         <Suspense fallback={<AlunoModuleLoading />}>
           {renderContent()}
@@ -211,7 +265,7 @@ const AlunoPage: React.FC = () => {
         cancelText="Cancelar"
         variant="danger"
         onClose={() => setIsLogoutConfirmOpen(false)}
-        onConfirm={executeLogout}
+        onConfirm={handleLogout}
       />
     </>
   );

@@ -235,27 +235,13 @@ export const drawBanesePixPanel = (
     },
   );
   if (hasOfficialPix && input.pix && pixQr) {
-    const qrSize = Math.min(96, box.width - 14, box.height - 35);
+    const qrSize = Math.min(110, box.width - 8, box.height - 22);
     page.drawImage(pixQr, {
       x: box.x + (box.width - qrSize) / 2,
-      y: box.y + box.height - qrSize - 18,
+      y: box.y + 4,
       width: qrSize,
       height: qrSize,
     });
-    if (input.pix.txid) {
-      drawBaneseText(
-        page,
-        fonts,
-        `TXID ${input.pix.txid}`,
-        box.x + 5,
-        box.y + 6,
-        {
-          size: 4.6,
-          color: BANESE_PDF_COLORS.gray,
-          maxWidth: box.width - 10,
-        },
-      );
-    }
     return;
   }
 

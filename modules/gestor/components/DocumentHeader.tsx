@@ -123,7 +123,7 @@ export const DocumentHeader: React.FC<DocumentHeaderProps> = ({
   }
 
   const resolvedRazao = razaoSocial || (polo?.nomeFantasia && polo?.nomeFantasia !== polo?.nome ? polo?.nome : company?.razaoSocial || '');
-  const resolvedCnpj = cnpj || polo?.cnpj || company?.cnpj || '00.000.000/0001-00';
+  const resolvedCnpj = cnpj || polo?.cnpj || company?.cnpj || 'Não informado';
   const resolvedTelefone = telefone || polo?.telefone || company?.telefone || '';
   const resolvedEmail = email || polo?.email || company?.email || '';
   

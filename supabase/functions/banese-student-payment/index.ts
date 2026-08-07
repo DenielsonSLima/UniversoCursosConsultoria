@@ -1,4 +1,3 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 import {
   buildCorsHeaders,
@@ -42,7 +41,7 @@ const PAYMENT_SELECT = `
   gateway_issuer_polo_id,
   gateway_financial_terms,
   gateway_financial_terms_confirmed_at,
-  turmas!left(nome,cursos!left(nome))
+  turmas!left(nome,cursos!left(nome,modalidade))
 `;
 
 class HttpError extends Error {

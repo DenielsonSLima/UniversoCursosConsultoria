@@ -11,6 +11,8 @@ const CourseStatusBadge: React.FC<CourseStatusBadgeProps> = ({ status }) => {
       return <span className="inline-flex items-center gap-1 rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-blue-700"><Award size={10} /> Concluída</span>;
     case 'REPROVADO':
       return <span className="inline-flex items-center gap-1 rounded-full border border-rose-100 bg-rose-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-rose-700"><AlertCircle size={10} /> Reprovado</span>;
+    case 'EM_DEPENDENCIA':
+      return <span className="inline-flex items-center gap-1 rounded-full border border-amber-100 bg-amber-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-amber-700"><Clock size={10} /> Em dependência</span>;
     case 'PENDENTE':
     case 'AGUARDANDO_PAGAMENTO':
     case 'AGUARDANDO_CONFIRMACAO':

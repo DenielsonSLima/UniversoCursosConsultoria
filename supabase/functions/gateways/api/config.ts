@@ -14,6 +14,7 @@ export type ProviderCode =
 
 export const GESTOR_ACTIONS = new Set([
   "get-overview",
+  "save-runtime-config",
   "save-credential",
   "save-route",
   "save-issuer",
@@ -23,6 +24,7 @@ export const GESTOR_ACTIONS = new Set([
 ]);
 
 export const GLOBAL_ACTIONS = new Set([
+  "save-runtime-config",
   "save-credential",
   "save-route",
   "save-issuer",
@@ -87,9 +89,9 @@ export const assertProviderAdapterReady = (
     );
   }
   if (providerCode !== "banese_card") return;
-  if (paymentMethod === "PIX" && environment !== "production") {
+  if (paymentMethod === "PIX") {
     throw new Error(
-      "Pix Banese permanece bloqueado em sandbox enquanto o ambiente de homologacao do banco estiver indisponivel.",
+      "O BolePix Banese e emitido pela rota BOLETO em producao. Nao existe uma cobranca PIX Banese separada neste convenio.",
     );
   }
   if (paymentMethod === "CREDIT_CARD") {
@@ -97,6 +99,23 @@ export const assertProviderAdapterReady = (
       "Banese nao aceita cartao de credito neste fluxo. Use Mercado Pago para cartao.",
     );
   }
+};
+
+export const assertHomologationStageRoute = (
+  modalidade: Modalidade,
+  paymentMethod: PaymentMethod,
+  providerCode: ProviderCode,
+  environment: Environment,
+) => {
+  if (
+    modalidade === "EAD" &&
+    paymentMethod === "BOLETO" &&
+    providerCode === "banese_card" &&
+    (environment === "sandbox" || environment === "production")
+  ) return;
+  throw new Error(
+    "Nesta etapa, somente Cursos EAD com boleto Banese podem ser ativados. Em producao, o Pix e devolvido no proprio BolePix.",
+  );
 };
 
 export const normalizeEnvironment = (value: unknown): Environment => {
@@ -245,8 +264,9 @@ export const baneseFixedMetadata = (environment?: Environment) => ({
   baneseConta: "03/100649-0",
   baneseContaDisplay: "03/100649-0",
   baneseCodigoBeneficiario: "03/100649-0",
-  baneseConvenio: environment === "sandbox" ? "15857255" : "15261",
-  baneseBoletoConvenio: environment === "sandbox" ? "15857255" : "15261",
+  baneseConvenio: environment === "sandbox" ? "15528" : "15261",
+  baneseBoletoConvenio: environment === "sandbox" ? "15528" : "15261",
+  banesePixConvenio: environment === "sandbox" ? "15528" : "15261",
   ...(environment === "production" ? { banesePixChave: "79998617614" } : {}),
 });
 

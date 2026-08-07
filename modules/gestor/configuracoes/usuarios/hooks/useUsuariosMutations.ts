@@ -8,15 +8,18 @@ interface UpdateUsuarioPayload {
   user: UsuarioSistemaInput;
 }
 
-export const useCreateUsuarioMutation = (contextId: string, onSuccess?: () => void) => {
+export const useCreateUsuarioMutation = (
+  contextId: string,
+  onSuccess?: (user: Awaited<ReturnType<typeof usuariosService.createUser>>) => void,
+) => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (newUser: UsuarioSistemaInput) => usuariosService.createUser(newUser),
-    onSuccess: () => {
+    onSuccess: (user) => {
       queryClient.invalidateQueries({ queryKey: usuariosKeys.byContext(contextId) });
       queryClient.invalidateQueries({ queryKey: usuariosKeys.counts() });
-      onSuccess?.();
+      onSuccess?.(user);
     },
   });
 };
@@ -29,6 +32,40 @@ export const useUpdateUsuarioMutation = (contextId: string, onSuccess?: () => vo
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: usuariosKeys.byContext(contextId) });
       queryClient.invalidateQueries({ queryKey: usuariosKeys.counts() });
+      onSuccess?.();
+    },
+  });
+};
+
+export const useToggleUsuarioStatusMutation = (
+  contextId: string,
+  onSuccess?: () => void,
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: 'Ativo' | 'Inativo' }) =>
+      usuariosService.toggleUserStatus(id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: usuariosKeys.byContext(contextId) });
+      queryClient.invalidateQueries({ queryKey: usuariosKeys.management(contextId) });
+      onSuccess?.();
+    },
+  });
+};
+
+export const useDeleteUsuarioMutation = (
+  contextId: string,
+  onSuccess?: () => void,
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => usuariosService.deleteUser(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: usuariosKeys.byContext(contextId) });
+      queryClient.invalidateQueries({ queryKey: usuariosKeys.counts() });
+      queryClient.invalidateQueries({ queryKey: usuariosKeys.management(contextId) });
       onSuccess?.();
     },
   });

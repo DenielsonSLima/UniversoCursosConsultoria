@@ -49,6 +49,7 @@ const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
   const [destinationInstitution, setDestinationInstitution] = useState('');
   const [reason, setReason] = useState('');
   const [notes, setNotes] = useState('');
+  const [operationDate, setOperationDate] = useState(getMaceioIsoDate());
   const [returnDate, setReturnDate] = useState('');
 
   const { data: matriculas = [], isLoading, isError, error: matriculasError, refetch: refetchMatriculas } = useQuery<any[]>({
@@ -170,6 +171,8 @@ const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
       queryClient.invalidateQueries({ queryKey: ['financeiro-aluno-receivables', alunoId] }),
       queryClient.invalidateQueries({ queryKey: ['aluno-financeiro', alunoId] }),
       queryClient.invalidateQueries({ queryKey: ['financeiro-tecnico-recebiveis'] }),
+      queryClient.invalidateQueries({ queryKey: ['diario-alunos'] }),
+      queryClient.invalidateQueries({ queryKey: ['diario-notas-resultados'] }),
     ]);
   };
 
@@ -295,6 +298,7 @@ const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
       tipo: movementType,
       motivo: reason,
       observacao: notes,
+      dataMovimentacao: operationDate,
       dataRetornoPrevista: movementType === 'TRANCAMENTO' ? returnDate || undefined : undefined,
     }),
     onSuccess: async () => {
@@ -314,6 +318,7 @@ const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
           turmaDestinoId: destinationClassId,
           motivo: reason,
           observacao: notes,
+          dataRetorno: operationDate,
         });
       }
       return academicLifecycleService.transferir({
@@ -323,6 +328,7 @@ const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
         turmaDestinoId: transferType === 'EXTERNA_ENVIADA' ? undefined : destinationClassId,
         instituicaoDestino: transferType === 'EXTERNA_ENVIADA' ? destinationInstitution : undefined,
         observacao: notes,
+        dataTransferencia: operationDate,
       });
     },
     onSuccess: async () => {
@@ -335,6 +341,7 @@ const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
     setSelected(null);
     setReason('');
     setNotes('');
+    setOperationDate(getMaceioIsoDate());
     setReturnDate('');
     setDestinationClassId('');
     setDestinationInstitution('');
@@ -342,6 +349,7 @@ const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
 
   const openOperation = (matricula: any, operationMode: OperationMode) => {
     setSelected(matricula);
+    setOperationDate(getMaceioIsoDate());
     setMode(operationMode);
     setMovementType(
       ['TRANCADO', 'CANCELADO', 'DESISTENTE'].includes(matricula.status)
@@ -446,6 +454,11 @@ const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
                 <p className="text-xs font-black text-[#001a33]">{movement.tipo.replaceAll('_', ' ')}</p>
                 <p className="mt-1 text-[10px] font-bold text-slate-500">{formatEnrollmentDate(movement.data_movimentacao)} · {movement.status_anterior || 'INÍCIO'} → {movement.status_novo}</p>
                 <p className="mt-1 text-xs text-slate-600">{movement.motivo}</p>
+                {movement.observacao && (
+                  <p className="mt-2 whitespace-pre-wrap rounded-lg bg-white px-3 py-2 text-xs text-slate-600">
+                    <span className="font-black text-slate-400">Observação: </span>{movement.observacao}
+                  </p>
+                )}
               </div>
             </div>
           ))}
@@ -488,6 +501,7 @@ const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
         destinationClasses={destinationClasses}
         reason={reason}
         notes={notes}
+        operationDate={operationDate}
         returnDate={returnDate}
         movementMutation={movementMutation}
         transferMutation={transferMutation}
@@ -498,6 +512,7 @@ const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
         onDestinationInstitutionChange={setDestinationInstitution}
         onReasonChange={setReason}
         onNotesChange={setNotes}
+        onOperationDateChange={setOperationDate}
         onReturnDateChange={setReturnDate}
         onCloseOperation={closeModal}
       />

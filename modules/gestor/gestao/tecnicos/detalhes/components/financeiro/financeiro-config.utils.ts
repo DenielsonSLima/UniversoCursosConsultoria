@@ -1,7 +1,11 @@
 import { FinanceiroConfigData } from './financeiro-config.service';
 
 export interface FinanceiroRulesCalculation {
+  desconto_aplicado: number;
   juros_calculados: number;
+  juros_percentual_dia: number;
+  juros_valor_dia: number;
+  multa_aplicada: number;
   valor_com_atraso: number;
   valor_com_desconto: number;
 }
@@ -44,3 +48,10 @@ export const formatCurrencyBRL = (value: number) => value.toLocaleString('pt-BR'
   style: 'currency',
   currency: 'BRL',
 });
+
+export const formatPercentageBR = (value: number, maximumFractionDigits = 4) => (
+  value.toLocaleString('pt-BR', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits,
+  })
+);

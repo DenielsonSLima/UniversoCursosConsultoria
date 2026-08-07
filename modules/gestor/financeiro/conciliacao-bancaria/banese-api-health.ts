@@ -25,23 +25,20 @@ export interface BaneseReconciliationAuditRow {
 
 const meaningfulText = (value: unknown) => {
   if (value === null || value === undefined) return null;
-  let normalized = '';
-  if (typeof value === 'object') {
+  const normalized = typeof value === 'object' ? (() => {
     const valObj = value as Record<string, unknown>;
     if (typeof valObj.message === 'string' && valObj.message.trim()) {
-      normalized = valObj.message.trim();
-    } else if (typeof valObj.error === 'string' && valObj.error.trim()) {
-      normalized = valObj.error.trim();
-    } else {
-      try {
-        normalized = JSON.stringify(value).trim();
-      } catch {
-        normalized = String(value).trim();
-      }
+      return valObj.message.trim();
     }
-  } else {
-    normalized = String(value).trim();
-  }
+    if (typeof valObj.error === 'string' && valObj.error.trim()) {
+      return valObj.error.trim();
+    }
+    try {
+      return JSON.stringify(value).trim();
+    } catch {
+      return String(value).trim();
+    }
+  })() : String(value).trim();
   return normalized && normalized !== '-' && normalized !== '[object Object]' ? normalized : null;
 };
 

@@ -1,0 +1,9 @@
+{
+  "appName": "Universo Cursos e Consultoria",
+  "productName": "Portal do Aluno",
+  "appId": "br.com.universocc.aluno",
+  "webDir": "dist",
+  "startPath": "/aluno/login-app",
+  "themeColor": "#001a33",
+  "backgroundColor": "#ffffff"
+}

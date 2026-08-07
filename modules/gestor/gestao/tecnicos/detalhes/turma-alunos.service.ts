@@ -28,7 +28,7 @@ export interface TurmaFinanceiroMatriculaConfig {
   valorParcela: number;
   descontoPontualidade: number;
   jurosAtraso: number;
-  multaAtraso: number;
+  multaAtrasoPercentual: number;
   aplicarDescontoMatricula: boolean;
   aplicarMultaJurosMatricula: boolean;
   aplicarDescontoMensalidade: boolean;
@@ -65,59 +65,23 @@ export const isValidStudentCpf = (value?: string | null) => {
 };
 
 export const turmaAlunosService = {
-  async getAvailableStudents(turmaId: string, enrolledIds: Set<string>, searchTerm: string): Promise<AvailableStudent[]> {
+  async getAvailableStudents(turmaId: string, searchTerm: string): Promise<AvailableStudent[]> {
     const normalizedSearch = searchTerm.trim().replace(/\s+/g, ' ');
-    if (!normalizedSearch) return [];
+    if (normalizedSearch.length < 2) return [];
 
-    const textSearch = normalizedSearch.replace(/[,%()]/g, ' ').replace(/\s+/g, ' ').trim();
-    const digitSearch = normalizedSearch.replace(/\D/g, '');
-    const searchFilters = [
-      textSearch ? `nome.ilike.%${textSearch}%` : null,
-      digitSearch ? `cpf_cnpj.ilike.%${digitSearch}%` : null,
-      digitSearch ? `telefone.ilike.%${digitSearch}%` : null,
-      digitSearch ? `responsavel_telefone.ilike.%${digitSearch}%` : null,
-    ].filter(Boolean);
-
-    if (searchFilters.length === 0) return [];
-
-    const excludedIds = new Set(enrolledIds);
-    const { data: turma, error: turmaError } = await supabase
-      .from('turmas')
-      .select('curso_id')
-      .eq('id', turmaId)
-      .maybeSingle();
-
-    if (turmaError) throw turmaError;
-    if (turma?.curso_id) {
-      const { data: courseEnrollments, error: courseEnrollmentsError } = await supabase
-        .from('matriculas')
-        .select('aluno_id, turmas!inner(curso_id)')
-        .eq('turmas.curso_id', turma.curso_id)
-        .in('status', ['PENDENTE', 'AGUARDANDO_PAGAMENTO', 'AGUARDANDO_CONFIRMACAO', 'ATIVO', 'TRANCADO', 'CONCLUIDO']);
-
-      if (courseEnrollmentsError) throw courseEnrollmentsError;
-      for (const enrollment of courseEnrollments || []) {
-        if (enrollment.aluno_id) excludedIds.add(enrollment.aluno_id);
-      }
-    }
-
-    const { data, error } = await supabase
-      .from('parceiros')
-      .select('id, nome, cpf_cnpj, telefone, tipo_documento, rg, nome_mae, responsavel_nome, responsavel_cpf, responsavel_parentesco, responsavel_telefone, responsavel_email, responsavel_financeiro, situacao_ensino_medio, serie_ensino_medio_atual, escola_ensino_medio, ano_conclusao_ensino_medio, ano_previsto_conclusao_ensino_medio')
-      .eq('tipo', 'Aluno')
-      .eq('status', 'ATIVO')
-      .or(searchFilters.join(','))
-      .order('nome')
-      .limit(30);
-
+    const { data, error } = await supabase.rpc('search_gestao_available_students', {
+      p_turma_id: turmaId,
+      p_search: normalizedSearch,
+      p_limit: 30,
+    });
     if (error) throw error;
-    return ((data || []) as AvailableStudent[]).filter((student) => !excludedIds.has(student.id));
+    return (data || []) as AvailableStudent[];
   },
 
   async getFinanceiroMatriculaConfig(turmaId: string): Promise<TurmaFinanceiroMatriculaConfig> {
     const { data, error } = await supabase
       .from('turmas')
-      .select('valor_matricula, valor_rematricula, valor_parcela, desconto_pontualidade, juros_atraso, multa_atraso, aplicar_desconto_matricula, aplicar_multa_juros_matricula, aplicar_desconto_mensalidade, aplicar_multa_juros_mensalidade, aplicar_desconto_rematricula, aplicar_multa_juros_rematricula, dia_vencimento_padrao, qtd_parcelas, origem_financeira, financeiro_herdado, gerar_cobrancas_futuras, sincronizar_asaas_futuro')
+      .select('valor_matricula, valor_rematricula, valor_parcela, desconto_pontualidade, juros_atraso, multa_atraso_percentual, aplicar_desconto_matricula, aplicar_multa_juros_matricula, aplicar_desconto_mensalidade, aplicar_multa_juros_mensalidade, aplicar_desconto_rematricula, aplicar_multa_juros_rematricula, dia_vencimento_padrao, qtd_parcelas, origem_financeira, financeiro_herdado, gerar_cobrancas_futuras, sincronizar_asaas_futuro')
       .eq('id', turmaId)
       .single();
 
@@ -129,19 +93,19 @@ export const turmaAlunosService = {
       valorParcela: Number(data.valor_parcela || 0),
       descontoPontualidade: Number(data.desconto_pontualidade || 0),
       jurosAtraso: Number(data.juros_atraso || 0),
-      multaAtraso: Number(data.multa_atraso || 0),
-      aplicarDescontoMatricula: data.aplicar_desconto_matricula === true,
-      aplicarMultaJurosMatricula: data.aplicar_multa_juros_matricula !== false,
-      aplicarDescontoMensalidade: data.aplicar_desconto_mensalidade !== false,
-      aplicarMultaJurosMensalidade: data.aplicar_multa_juros_mensalidade !== false,
-      aplicarDescontoRematricula: data.aplicar_desconto_rematricula !== false,
-      aplicarMultaJurosRematricula: data.aplicar_multa_juros_rematricula !== false,
+      multaAtrasoPercentual: Number(data.multa_atraso_percentual || 0),
+      aplicarDescontoMatricula: false,
+      aplicarMultaJurosMatricula: false,
+      aplicarDescontoMensalidade: true,
+      aplicarMultaJurosMensalidade: true,
+      aplicarDescontoRematricula: false,
+      aplicarMultaJurosRematricula: false,
       diaVencimento: Number(data.dia_vencimento_padrao || 10),
-      qtdParcelas: Number(data.qtd_parcelas || 11),
+      qtdParcelas: Number(data.qtd_parcelas),
       origemFinanceira: (data.origem_financeira === 'LEGADO' ? 'LEGADO' : 'NORMAL'),
       financeiroHerdado: data.financeiro_herdado ?? false,
       gerarCobrancasFuturas: data.gerar_cobrancas_futuras ?? false,
-      sincronizarAsaasFuturo: data.sincronizar_asaas_futuro !== false,
+      sincronizarAsaasFuturo: false,
     };
   },
 

@@ -2,11 +2,19 @@
 // File: App.tsx
 
 import React, { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
 
 import SeoManager from './modules/public/components/SeoManager';
 import VersionedPortal from './modules/shared/components/VersionedPortal';
 import AccessCheckingScreen from './modules/shared/components/AccessCheckingScreen';
+import RouteScrollManager from './modules/shared/components/RouteScrollManager';
+import AlunoAppSplash from './modules/aluno/pwa/AlunoAppSplash';
+import AlunoPwaRuntime from './modules/aluno/pwa/AlunoPwaRuntime';
+import AlunoConnectivityStatus from './modules/aluno/pwa/AlunoConnectivityStatus';
+import NativeAuthBridge from './modules/shared/auth/NativeAuthBridge';
+import NativeTurnstileChallengePage from './modules/shared/auth/NativeTurnstileChallengePage';
+import NativePushBridge from './modules/aluno/native-app/NativePushBridge';
+import NativePushPermissionBootstrap from './modules/aluno/native-app/NativePushPermissionBootstrap';
 import { TECHNICAL_LANDING_ROUTE_PATTERN } from './modules/public/landing-pages/cursos-tecnicos/technicalLanding.routes';
 
 const PublicPage = lazy(() => import('./modules/public/public.page'));
@@ -25,6 +33,10 @@ const EspecializacaoDetailPage = lazy(() => import('./modules/public/especializa
 const EadPublicPage = lazy(() => import('./modules/public/ead/EadPublicPage'));
 const EadDetailPage = lazy(() => import('./modules/public/ead/EadDetailPage'));
 const AlunoLoginPublicPage = lazy(() => import('./modules/public/login/AlunoLoginPublicPage'));
+const AlunoAppLoginPage = lazy(() => import('./modules/aluno/login-app/AlunoAppLoginPage'));
+const AlunoAppSignupPage = lazy(() => import('./modules/aluno/login-app/AlunoAppSignupPage'));
+const AlunoAppRecoveryPage = lazy(() => import('./modules/aluno/login-app/AlunoAppRecoveryPage'));
+const AlunoPublicSupportPage = lazy(() => import('./modules/aluno/login-app/AlunoPublicSupportPage'));
 const AlunoEmailConfirmationPage = lazy(() => import('./modules/public/login/AlunoEmailConfirmationPage'));
 const AlunoFirstAccessPage = lazy(() => import('./modules/public/login/AlunoFirstAccessPage'));
 const ValidatorPage = lazy(() => import('./modules/public/validator/ValidatorPage'));
@@ -35,12 +47,11 @@ const ProfessorPage = lazy(() => import('./modules/professor/professor.page'));
 const AlunoPage = lazy(() => import('./modules/aluno/aluno.page'));
 const TechnicalLandingRoute = lazy(() => import('./modules/public/landing-pages/cursos-tecnicos/TechnicalLandingRoute'));
 const BioPage = lazy(() => import('./modules/public/bio/BioPage'));
-
 const RouteLoadingScreen = () => {
   const pathname = window.location.pathname;
   if (pathname.startsWith('/gestor')) return <AccessCheckingScreen portal="Gestor" />;
   if (pathname.startsWith('/professor')) return <AccessCheckingScreen portal="Professor" />;
-  if (pathname.startsWith('/aluno')) return <AccessCheckingScreen portal="Aluno" />;
+  if (pathname === '/aluno' || pathname.startsWith('/aluno/')) return <AlunoAppSplash />;
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
@@ -53,9 +64,22 @@ const RouteLoadingScreen = () => {
 };
 
 const App: React.FC = () => {
+  // Esta página vive dentro do iframe nativo de segurança. Ela não pode
+  // passar pelo Suspense/fallback global (que exibe a marca da Universo), nem
+  // iniciar bridges, consultas ou shells que não pertencem ao Cloudflare.
+  if (window.location.pathname === '/native-auth/turnstile') {
+    return <NativeTurnstileChallengePage />;
+  }
+
   return (
     <BrowserRouter>
+      <NativeAuthBridge />
+      <NativePushBridge />
+      <NativePushPermissionBootstrap />
+      <RouteScrollManager />
       <SeoManager />
+      <AlunoPwaRuntime />
+      <AlunoConnectivityStatus />
       <Suspense fallback={<RouteLoadingScreen />}>
         <Routes>
 
@@ -80,9 +104,25 @@ const App: React.FC = () => {
 
         {/* ── Login público do aluno ── */}
         <Route path="/login" element={<AlunoLoginPublicPage />} />
+        <Route path="/cadastro" element={<AlunoLoginPublicPage />} />
         <Route path="/confirmacao-email" element={<AlunoEmailConfirmationPage />} />
         <Route path="/primeiro-acesso" element={<AlunoFirstAccessPage />} />
         <Route path="/recuperar-senha" element={<PasswordRecoveryPage />} />
+
+        {/* ── Rotas instaláveis do aluno: mantidas dentro do escopo /aluno/ ── */}
+        <Route path="/aluno/login-app" element={<AlunoAppLoginPage />} />
+        <Route path="/aluno/cadastro-app" element={<AlunoAppSignupPage />} />
+        <Route path="/aluno/recuperar-senha-app" element={<AlunoAppRecoveryPage />} />
+        <Route path="/aluno/atendimento-publico" element={<AlunoPublicSupportPage />} />
+        <Route path="/aluno/entrar" element={<AlunoLoginPublicPage />} />
+        <Route path="/aluno/cadastro" element={<Navigate to="/aluno/cadastro-app" replace />} />
+        <Route path="/aluno/confirmacao-email" element={<AlunoEmailConfirmationPage />} />
+        <Route path="/aluno/primeiro-acesso" element={<AlunoFirstAccessPage />} />
+        <Route path="/aluno/recuperar-senha" element={<Navigate to="/aluno/recuperar-senha-app" replace />} />
+
+        {/* ── Atalhos compartilháveis para unidades e localização ── */}
+        <Route path="/localizacao" element={<ContactPage />} />
+        <Route path="/polos" element={<ContactPage />} />
 
         {/* ── Cursos EAD ── */}
         {/* Em produção: redireciona para a plataforma EAD externa */}

@@ -80,6 +80,17 @@ class FakeQuery {
     return this;
   }
 
+  filter(column: string, operator: string, value: unknown) {
+    if (operator !== "eq") {
+      throw new Error(`Operador fake inesperado: ${operator}`);
+    }
+    const expected = typeof value === "string" ? JSON.parse(value) : value;
+    this.filters.push((row) =>
+      JSON.stringify(row[column]) === JSON.stringify(expected)
+    );
+    return this;
+  }
+
   in(column: string, values: unknown[]) {
     this.filters.push((row) => values.includes(row[column]));
     return this;
@@ -527,18 +538,18 @@ Deno.test("classifica BolePix somente com prova canonica em todos os pagamentos"
       CodigoMotivoLiquidacao: "61",
       FormaLiquidacao: "BOLETO",
     }]),
-    "BOLETO",
+    "NAO_IDENTIFICADO",
   );
   assert.equal(
     classifyBaneseSettlementMethod([
       { CodigoMotivoLiquidacao: "61" },
-      { BancoRecebedor: "BANCO DO ESTADO DE SERGIPE" },
+      { FormaLiquidacao: "BOLETO" },
     ]),
-    "BOLETO",
+    "MISTO",
   );
 });
 
-Deno.test("formato atualmente documentado pela API falha fechado como BOLETO", () => {
+Deno.test("formato atualmente documentado pela API nao inventa o canal", () => {
   assert.equal(
     classifyBaneseSettlementMethod([{
       BancoRecebedor: "BANCO DO ESTADO DE SERGIPE",
@@ -547,9 +558,13 @@ Deno.test("formato atualmente documentado pela API falha fechado como BOLETO", (
       Descricao: "Liquidado via Pix",
       QrCode: "nao-e-prova-do-canal-usado",
     }]),
+    "NAO_IDENTIFICADO",
+  );
+  assert.equal(
+    classifyBaneseSettlementMethod([{ FormaLiquidacao: "BOLETO" }]),
     "BOLETO",
   );
-  assert.equal(classifyBaneseSettlementMethod([]), "BOLETO");
+  assert.equal(classifyBaneseSettlementMethod([]), "NAO_IDENTIFICADO");
 });
 
 Deno.test("rejeita qualquer DataPagamento invalida no detalhe bancario", async () => {
@@ -655,6 +670,81 @@ Deno.test("liquidacao API com motivo canonico 61 contabiliza PIX", async () => {
   assert.equal(
     admin.tables.payment_gateway_transactions[0].raw_payload.settlementMethod,
     "PIX",
+  );
+});
+
+Deno.test("liquidacao canonica Banese libera curso EAD automaticamente", async () => {
+  const matriculaId = "22222222-2222-4222-8222-222222222222";
+  const turmaId = "33333333-3333-4333-8333-333333333333";
+  const alunoId = "44444444-4444-4444-8444-444444444444";
+  const cursoId = "55555555-5555-4555-8555-555555555555";
+  const receivable: FakeRow = receivableFixture({
+    matricula_id: matriculaId,
+    turma_id: turmaId,
+    cliente_id: alunoId,
+    tipo_lancamento: "MATRICULA",
+    forma_pagamento: "BOLETO",
+    // Reproduz o retorno real que removeu zeros à esquerda no checkout.
+    gateway_payment_id: String(Number(NOSSO_NUMERO)),
+  });
+  const admin = fakeAdmin(receivable);
+  admin.tables.inscricoes_online = [{
+    id: "66666666-6666-4666-8666-666666666666",
+    curso_id: cursoId,
+    turma_id: turmaId,
+    aluno_id: alunoId,
+    matricula_id: matriculaId,
+    receivable_id: RECEIVABLE_ID,
+    gateway_provider: "banese_card",
+    gateway_environment: "sandbox",
+    gateway_payment_id: String(Number(NOSSO_NUMERO)),
+    status: "AGUARDANDO_PAGAMENTO",
+    forma_pagamento: "BOLETO",
+    pago_em: null,
+    confirmado_em: null,
+  }];
+  admin.tables.matriculas = [{
+    id: matriculaId,
+    turma_id: turmaId,
+    aluno_id: alunoId,
+    status: "PENDENTE",
+    turmas: {
+      cursos: { id: cursoId, modalidade: "EAD" },
+    },
+  }];
+  admin.tables.turmas = [{ id: turmaId, curso_id: cursoId }];
+  admin.tables.parceiros = [{ id: alunoId, nome: "Aluno EAD Banese" }];
+
+  await reconcileBaneseReceivable(admin, RECEIVABLE_ID, {
+    queryBoleto: () =>
+      Promise.resolve(boletoSnapshot({
+        situationCode: 3,
+        remoteStatus: "PAID",
+        paid: true,
+        payments: [{
+          ValorPago: 20_038.33,
+          DataPagamento: "2026-08-16",
+          FormaLiquidacao: "BOLETO",
+        }],
+      }) as any),
+  });
+
+  assert.equal(receivable.status, "PAGO");
+  assert.equal(receivable.gateway_payment_id, NOSSO_NUMERO);
+  assert.equal(receivable.data_pagamento, "2026-08-16");
+  assert.equal(admin.tables.inscricoes_online[0].status, "PAGO");
+  assert.equal(
+    admin.tables.inscricoes_online[0].gateway_payment_id,
+    NOSSO_NUMERO,
+  );
+  assert.equal(
+    admin.tables.inscricoes_online[0].pago_em,
+    "2026-08-16",
+  );
+  assert.equal(admin.tables.matriculas[0].status, "ATIVO");
+  assert.equal(
+    admin.tables.payment_gateway_transactions[0].remote_payment_id,
+    NOSSO_NUMERO,
   );
 });
 

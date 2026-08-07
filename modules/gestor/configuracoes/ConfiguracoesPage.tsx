@@ -1,5 +1,6 @@
 
-import React, { useState } from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { 
   Building2, 
   Users, 
@@ -12,13 +13,16 @@ import {
   Server,
   ArrowLeft,
   Tags,
-  Percent,
-  Calculator,
   MessageCircle,
   FileCode2,
   GraduationCap,
   Megaphone,
-  Lock
+  Lock,
+  Activity,
+  HardDrive,
+  Handshake,
+  Smartphone,
+  BellRing
 } from 'lucide-react';
 
 // Importação dos Submódulos
@@ -30,8 +34,7 @@ import SaldoInicialConfig from './saldo-inicial/SaldoInicialConfig';
 import IntegracaoBancariaConfig from './integracao-bancaria/IntegracaoBancariaConfig';
 import ApiStatusConfig from './api-status/ApiStatusConfig';
 import CategoriasConfig from './categorias/CategoriasConfig';
-import RegrasCobrancaConfig from './regras-cobranca/RegrasCobrancaConfig';
-import TaxasPagamentoConfig from './taxas-pagamento/TaxasPagamentoConfig';
+import TiposParceriaConfig from './tipos-parceria/TiposParceriaConfig';
 import MensageriaConfig from './mensageria/MensageriaConfig';
 import TemplatesMensagensConfig from './templates-mensagens/TemplatesMensagensConfig';
 import PolosConfig from './polos/PolosConfig';
@@ -41,29 +44,53 @@ import CategoriasFinanceirasConfig from './categorias-financeiras/CategoriasFina
 import SitePublicoConfig from './site-publico/SitePublicoConfig';
 import LogsEventosConfig from './logs-eventos/LogsEventosConfig';
 import PerfisAcessoConfig from './perfis-acesso/PerfisAcessoConfig';
+import ConsultaApiBaneseConfig from './consulta-api-banese/ConsultaApiBaneseConfig';
+import ArmazenamentoConfig from './armazenamento/ArmazenamentoConfig';
+import DispositivosAppConfig from './dispositivos-app/DispositivosAppConfig';
+import PushNotificationsConfig from './push-notifications/PushNotificationsConfig';
+import {
+  banesePollingQueryKey,
+  consultaApiBaneseService,
+} from './consulta-api-banese/consulta-api-banese.service';
 
 const ConfiguracoesPage: React.FC = () => {
   const [activeSection, setActiveSection] = useState<string | null>(null);
+  const sectionTopRef = useRef<HTMLDivElement>(null);
+  const banesePollingQuery = useQuery({
+    queryKey: banesePollingQueryKey,
+    queryFn: consultaApiBaneseService.getDashboard,
+    staleTime: 30_000,
+    retry: false,
+  });
 
   const menuItems = [
     { id: 'empresas', title: 'Dados da Empresa', desc: 'CNPJ, Endereço e Logo', icon: <Building2 size={24} />, color: 'bg-blue-500' },
     { id: 'polos', title: 'Polos e Filiais', desc: 'Gestão das unidades', icon: <Building2 size={24} />, color: 'bg-sky-500' },
     { id: 'academicos', title: 'Matrícula e Validação', desc: 'Configurações de registros, carteirinhas e certificados', icon: <GraduationCap size={24} />, color: 'bg-purple-500' },
     { id: 'site-publico', title: 'Site Público', desc: 'Faixa de avisos e turmas abertas', icon: <Megaphone size={24} />, color: 'bg-blue-700' },
-    { id: 'categorias', title: 'Categorias (Parceiros)', desc: 'Classificação de cadastros', icon: <Tags size={24} />, color: 'bg-orange-500' },
+    { id: 'categorias', title: 'Categorias de Cadastros', desc: 'Segmentos de alunos, professores, PF e PJ', icon: <Tags size={24} />, color: 'bg-orange-500' },
+    { id: 'tipos-parceria', title: 'Tipos de Parceria', desc: 'Convênios e vínculos de pessoas jurídicas', icon: <Handshake size={24} />, color: 'bg-blue-700' },
     { id: 'categorias-financeiras', title: 'Categorias Financeiras', desc: 'Adicionar, ativar e inativar', icon: <Wallet2 size={24} />, color: 'bg-rose-600' },
     { id: 'usuarios', title: 'Usuários e Permissões', desc: 'Gestão de acesso ao sistema', icon: <Users size={24} />, color: 'bg-indigo-500' },
+    { id: 'dispositivos-app', title: 'Dispositivos do App', desc: 'Instalações, sessões e notificações por polo', icon: <Smartphone size={24} />, color: 'bg-blue-600' },
+    { id: 'push-notifications', title: 'Políticas de Push', desc: 'Categorias, privacidade e horários de envio', icon: <BellRing size={24} />, color: 'bg-violet-600' },
     { id: 'perfis-acesso', title: 'Perfis de Acesso', desc: 'Gerenciar permissões por perfil', icon: <Lock size={24} />, color: 'bg-rose-500' },
     { id: 'marca-dagua', title: 'Marca D\'água', desc: 'Personalização de documentos', icon: <Stamp size={24} />, color: 'bg-cyan-500' },
     { id: 'assinaturas', title: 'Central de Assinaturas', desc: 'Diretoria, Secretaria e Coordenação', icon: <Stamp size={24} />, color: 'bg-pink-600' },
     { id: 'contas', title: 'Contas Bancárias', desc: 'Contas para recebimento', icon: <Landmark size={24} />, color: 'bg-emerald-500' },
     { id: 'saldo', title: 'Saldo Inicial', desc: 'Ajuste de caixa inicial', icon: <Wallet size={24} />, color: 'bg-teal-500' },
     { id: 'logs', title: 'Logs e Eventos', desc: 'Auditoria do sistema', icon: <FileText size={24} />, color: 'bg-slate-500' },
-    { id: 'regras-cobranca', title: 'Regras de Cobrança', desc: 'Juros, multas e descontos', icon: <Percent size={24} />, color: 'bg-yellow-500' },
-    { id: 'taxas-pagamento', title: 'Taxas e Formas Pgto', desc: 'Descontos de maquininhas', icon: <Calculator size={24} />, color: 'bg-fuchsia-500' },
+    { id: 'armazenamento', title: 'Armazenamento', desc: 'Cota, arquivos e dados do sistema', icon: <HardDrive size={24} />, color: 'bg-blue-600' },
     { id: 'mensageria', title: 'WhatsApp API', desc: 'Meta Cloud API e webhooks', icon: <MessageCircle size={24} />, color: 'bg-green-500' },
     { id: 'templates-mensagens', title: 'Templates', desc: 'Textos de notificação', icon: <FileCode2 size={24} />, color: 'bg-blue-400' },
     { id: 'integracao-bancaria', title: 'Integração Bancária', desc: 'Rotas de pagamento', icon: <CreditCard size={24} />, color: 'bg-rose-500' },
+    ...(banesePollingQuery.data?.available ? [{
+      id: 'consulta-api-banese',
+      title: 'Consulta API Banese',
+      desc: 'Confirmações, prioridade EAD e saúde operacional',
+      icon: <Activity size={24} />,
+      color: 'bg-emerald-700',
+    }] : []),
     { id: 'api', title: 'Status da API', desc: 'Monitoramento de serviços', icon: <Server size={24} />, color: 'bg-violet-500' },
   ];
 
@@ -74,27 +101,35 @@ const ConfiguracoesPage: React.FC = () => {
       case 'academicos': return <AcademicosConfig />;
       case 'site-publico': return <SitePublicoConfig />;
       case 'categorias': return <CategoriasConfig />;
+      case 'tipos-parceria': return <TiposParceriaConfig />;
       case 'categorias-financeiras': return <CategoriasFinanceirasConfig />;
       case 'usuarios': return <UsuariosConfig />;
+      case 'dispositivos-app': return <DispositivosAppConfig />;
+      case 'push-notifications': return <PushNotificationsConfig />;
       case 'perfis-acesso': return <PerfisAcessoConfig />;
       case 'marca-dagua': return <MarcaDaguaConfig />;
       case 'assinaturas': return <AssinaturasConfig />;
       case 'contas': return <ContasBancariasConfig />;
       case 'saldo': return <SaldoInicialConfig />;
       case 'logs': return <LogsEventosConfig />;
-      case 'regras-cobranca': return <RegrasCobrancaConfig />;
-      case 'taxas-pagamento': return <TaxasPagamentoConfig />;
+      case 'armazenamento': return <ArmazenamentoConfig />;
       case 'mensageria': return <MensageriaConfig />;
       case 'templates-mensagens': return <TemplatesMensagensConfig />;
       case 'integracao-bancaria': return <IntegracaoBancariaConfig />;
+      case 'consulta-api-banese': return <ConsultaApiBaneseConfig />;
       case 'api': return <ApiStatusConfig />;
       default: return null;
     }
   };
 
+  useLayoutEffect(() => {
+    if (!activeSection) return;
+    sectionTopRef.current?.scrollIntoView({ block: 'start', behavior: 'auto' });
+  }, [activeSection]);
+
   if (activeSection) {
     return (
-      <div className="animate-fadeIn">
+      <div ref={sectionTopRef}>
         <button 
           onClick={() => setActiveSection(null)} 
           className="mb-6 flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-blue-600 transition-colors uppercase tracking-widest group"

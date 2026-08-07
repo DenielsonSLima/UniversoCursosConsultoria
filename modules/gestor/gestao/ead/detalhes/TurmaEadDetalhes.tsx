@@ -6,8 +6,8 @@ import {
   CreditCard,
   GraduationCap,
   Loader2,
+  LockKeyhole,
   Plus,
-  Search,
   Settings,
   ShieldCheck,
   Users,
@@ -26,10 +26,16 @@ import {
   useMatricularAlunoEadMutation,
 } from './hooks/useTurmaEadMutations';
 import { useTurmaEadRealtime } from './hooks/useTurmaEadRealtime';
+import AdicionarAlunoEadModal from './components/AdicionarAlunoEadModal';
+import {
+  canAccessGestaoTurmaTab,
+  type GestorPermissions,
+} from '../../../access-control';
 
 interface TurmaEadDetalhesProps {
   turma: Turma;
   onBack: () => void;
+  permissions: GestorPermissions;
 }
 
 const formatCurrency = (value?: number | null) =>
@@ -110,6 +116,17 @@ const normalizeStatus = (status?: string | null) =>
 const isEadEnrollmentActive = (status?: string | null) => EAD_ACTIVE_STATUSES.has(normalizeStatus(status));
 const isEadEnrollmentPending = (status?: string | null) => EAD_PENDING_STATUSES.has(normalizeStatus(status));
 
+const useDebouncedValue = <T,>(value: T, delayMs: number) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => setDebouncedValue(value), delayMs);
+    return () => window.clearTimeout(timeoutId);
+  }, [delayMs, value]);
+
+  return debouncedValue;
+};
+
 const StatCard = ({ label, value, icon, tone = 'slate' }: { label: string; value: string | number; icon: React.ReactNode; tone?: 'slate' | 'purple' | 'emerald' | 'amber' | 'blue' }) => {
   const tones = {
     slate: 'bg-white border-slate-200 text-slate-500',
@@ -130,11 +147,14 @@ const StatCard = ({ label, value, icon, tone = 'slate' }: { label: string; value
   );
 };
 
-const TurmaEadDetalhes: React.FC<TurmaEadDetalhesProps> = ({ turma, onBack }) => {
+const TurmaEadDetalhes: React.FC<TurmaEadDetalhesProps> = ({ turma, onBack, permissions }) => {
   const { toasts, removeToast, toast } = useToast();
   const [activeTab, setActiveTab] = useState<'resumo' | 'alunos' | 'financeiro' | 'configuracoes'>('resumo');
+  const canViewFinanceiro = canAccessGestaoTurmaTab(permissions, 'financeiro');
   const [searchAluno, setSearchAluno] = useState('');
   const [showAddAluno, setShowAddAluno] = useState(false);
+  const normalizedSearchAluno = searchAluno.trim();
+  const debouncedSearchAluno = useDebouncedValue(normalizedSearchAluno, 300);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -144,7 +164,7 @@ const TurmaEadDetalhes: React.FC<TurmaEadDetalhesProps> = ({ turma, onBack }) =>
 
   const resumoQuery = useTurmaEadResumo(turma.id);
   const alunosQuery = useTurmaEadAlunos(turma.id);
-  const alunosDisponiveisQuery = useTurmaEadAlunosDisponiveis(turma.id, searchAluno, showAddAluno);
+  const alunosDisponiveisQuery = useTurmaEadAlunosDisponiveis(turma.id, debouncedSearchAluno, showAddAluno);
   const liberarMutation = useLiberarMatriculaEadMutation(
     turma.id,
     (error: any) => toast.error('Não foi possível liberar', error?.message || 'Tente novamente em alguns instantes.'),
@@ -174,20 +194,30 @@ const TurmaEadDetalhes: React.FC<TurmaEadDetalhesProps> = ({ turma, onBack }) =>
   const alunosLiberados = alunosComAcesso.length;
   const alunosConcluidos = alunosComAcesso.filter((aluno) => normalizeStatus(aluno.status) === 'CONCLUIDO').length;
   const alunosPendentesCount = alunosPendentes.length;
-  const pagamentosQuery = useTurmaEadPagamentos(turma.id);
+  const pagamentosQuery = useTurmaEadPagamentos(turma.id, canViewFinanceiro);
 
   const tabs = [
     { id: 'resumo', label: 'Resumo', icon: <BarChart3 size={17} /> },
     { id: 'alunos', label: 'Alunos', icon: <Users size={17} /> },
     { id: 'financeiro', label: 'Financeiro', icon: <CreditCard size={17} /> },
     { id: 'configuracoes', label: 'Configuracoes', icon: <Settings size={17} /> },
-  ] as const;
+  ].filter((tab) => canAccessGestaoTurmaTab(permissions, tab.id)) as Array<{
+    id: 'resumo' | 'alunos' | 'financeiro' | 'configuracoes';
+    label: string;
+    icon: React.ReactNode;
+  }>;
+
+  useEffect(() => {
+    if (!tabs.some((tab) => tab.id === activeTab)) {
+      setActiveTab(tabs[0]?.id || 'resumo');
+    }
+  }, [activeTab, permissions]);
 
   const renderResumo = () => (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         <StatCard label="Alunos com acesso" value={alunosLiberados} icon={<Users size={18} />} tone="purple" />
-        <StatCard label="Pendentes" value={alunosPendentesCount} icon={<CreditCard size={18} />} tone="amber" />
+        {canViewFinanceiro && <StatCard label="Pendentes" value={alunosPendentesCount} icon={<CreditCard size={18} />} tone="amber" />}
         <StatCard label="Liberados" value={alunosLiberados} icon={<ShieldCheck size={18} />} tone="emerald" />
         <StatCard label="Concluidos" value={alunosConcluidos} icon={<GraduationCap size={18} />} tone="blue" />
       </div>
@@ -209,10 +239,12 @@ const TurmaEadDetalhes: React.FC<TurmaEadDetalhesProps> = ({ turma, onBack }) =>
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Curso</p>
               <p className="mt-1 text-sm font-black text-[#001a33]">{resumo?.cursoNome || turma.cursoNome}</p>
             </div>
-            <div className="rounded-2xl bg-slate-50 p-4">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Valor publico</p>
-              <p className="mt-1 text-sm font-black text-emerald-700">{formatCurrency(resumo?.valor)}</p>
-            </div>
+            {canViewFinanceiro && (
+              <div className="rounded-2xl bg-slate-50 p-4">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Valor publico</p>
+                <p className="mt-1 text-sm font-black text-emerald-700">{formatCurrency(resumo?.valor)}</p>
+              </div>
+            )}
             <div className="rounded-2xl bg-slate-50 p-4">
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Aulas e atividades</p>
               <p className="mt-1 text-sm font-black text-[#001a33]">
@@ -310,7 +342,7 @@ const TurmaEadDetalhes: React.FC<TurmaEadDetalhesProps> = ({ turma, onBack }) =>
         </div>
       )}
 
-      {alunosPendentes.length > 0 && (
+      {canViewFinanceiro && alunosPendentes.length > 0 && (
         <div className="mt-6 rounded-3xl border border-amber-100 bg-amber-50/40 p-6">
           <div className="mb-4">
             <h4 className="text-sm font-black uppercase tracking-tight text-[#001a33]">Pendências de pagamento</h4>
@@ -368,56 +400,23 @@ const TurmaEadDetalhes: React.FC<TurmaEadDetalhesProps> = ({ turma, onBack }) =>
         </div>
       )}
 
-      {showAddAluno && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-2xl rounded-3xl bg-white p-6 shadow-2xl">
-            <div className="mb-5 flex items-center justify-between">
-              <div>
-                <h4 className="text-lg font-black uppercase tracking-tight text-[#001a33]">Adicionar aluno EAD</h4>
-                <p className="text-xs font-bold text-slate-500">Matricula manual liberada, sem gerar recebimento.</p>
-              </div>
-              <button type="button" onClick={() => setShowAddAluno(false)} className="rounded-xl bg-slate-100 px-4 py-2 text-xs font-black uppercase text-slate-500">
-                Fechar
-              </button>
-            </div>
-
-            <div className="mb-4 flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-              <Search size={16} className="text-slate-400" />
-              <input
-                value={searchAluno}
-                onChange={(event) => setSearchAluno(event.target.value)}
-                placeholder="Buscar por nome, email ou CPF"
-                className="w-full bg-transparent text-sm font-bold outline-none placeholder:text-slate-400"
-              />
-            </div>
-
-            <div className="max-h-[380px] overflow-y-auto rounded-2xl border border-slate-100">
-              {alunosDisponiveisQuery.isLoading ? (
-                <div className="py-10 text-center text-sm font-bold text-slate-400">Buscando alunos...</div>
-              ) : (alunosDisponiveisQuery.data || []).length === 0 ? (
-                <div className="py-10 text-center text-sm font-bold text-slate-400">Nenhum aluno disponivel.</div>
-              ) : (
-                (alunosDisponiveisQuery.data || []).map((aluno) => (
-                  <div key={aluno.id} className="flex items-center justify-between gap-4 border-b border-slate-100 px-4 py-3 last:border-b-0">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-black text-[#001a33]">{aluno.nome}</p>
-                      <p className="truncate text-xs font-bold text-slate-400">{aluno.email || aluno.cpfCnpj || 'Sem contato'}</p>
-                    </div>
-                    <button
-                      type="button"
-                      disabled={matricularMutation.isPending}
-                      onClick={() => matricularMutation.mutate(aluno.id)}
-                      className="rounded-lg bg-purple-600 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-purple-700 disabled:opacity-60"
-                    >
-                      Matricular
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <AdicionarAlunoEadModal
+        open={showAddAluno}
+        search={searchAluno}
+        alunos={(alunosDisponiveisQuery.data || []) as AlunoDisponivel[]}
+        isLoading={alunosDisponiveisQuery.isLoading}
+        isFetching={alunosDisponiveisQuery.isFetching}
+        isSearchSettling={showAddAluno && normalizedSearchAluno !== debouncedSearchAluno}
+        isError={alunosDisponiveisQuery.isError}
+        pendingAlunoId={matricularMutation.isPending ? matricularMutation.variables : null}
+        onSearchChange={setSearchAluno}
+        onClose={() => {
+          setShowAddAluno(false);
+          setSearchAluno('');
+        }}
+        onRetry={() => void alunosDisponiveisQuery.refetch()}
+        onMatricular={(alunoId) => matricularMutation.mutate(alunoId)}
+      />
     </div>
   );
 
@@ -516,6 +515,7 @@ const TurmaEadDetalhes: React.FC<TurmaEadDetalhesProps> = ({ turma, onBack }) =>
   );
 
   const renderContent = () => {
+    if (!tabs.some((tab) => tab.id === activeTab)) return null;
     if (resumoQuery.isLoading) {
       return <div className="rounded-3xl bg-white py-16 text-center text-sm font-bold text-slate-400">Carregando turma EAD...</div>;
     }
@@ -586,7 +586,15 @@ const TurmaEadDetalhes: React.FC<TurmaEadDetalhesProps> = ({ turma, onBack }) =>
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 md:px-0">{renderContent()}</div>
+      <div className="mx-auto max-w-7xl px-4 md:px-0">
+        {tabs.length === 0 ? (
+          <div className="rounded-3xl border border-amber-100 bg-amber-50 p-8 text-center">
+            <LockKeyhole className="mx-auto text-amber-600" size={28} />
+            <h3 className="mt-3 text-sm font-black uppercase tracking-wider text-amber-900">Nenhuma área da turma liberada</h3>
+            <p className="mt-1 text-sm font-medium text-amber-700">Solicite ao administrador uma permissão de aba para o módulo Gestão.</p>
+          </div>
+        ) : renderContent()}
+      </div>
       <ToastNotification toasts={toasts} onRemove={removeToast} />
     </div>
   );

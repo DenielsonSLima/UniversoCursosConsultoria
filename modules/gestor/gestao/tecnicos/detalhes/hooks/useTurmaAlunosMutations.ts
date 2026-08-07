@@ -31,6 +31,7 @@ export interface MovementInput {
   tipo: AcademicMovementType;
   motivo: string;
   observacao?: string;
+  dataMovimentacao: string;
   dataRetornoPrevista?: string;
 }
 
@@ -41,6 +42,7 @@ export interface TransferInput {
   turmaDestinoId?: string;
   instituicaoDestino?: string;
   observacao?: string;
+  dataTransferencia: string;
 }
 
 export interface ReturnInput {
@@ -48,6 +50,7 @@ export interface ReturnInput {
   turmaDestinoId: string;
   motivo: string;
   observacao?: string;
+  dataRetorno: string;
 }
 
 export const useTurmaAcademicInvalidation = (turmaId: string) => {
@@ -59,13 +62,18 @@ export const useTurmaAcademicInvalidation = (turmaId: string) => {
       queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.summaries() }),
       queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.classesByModality('TECNICO') }),
       queryClient.invalidateQueries({ queryKey: ['diario-alunos', turmaId] }),
+      queryClient.invalidateQueries({ queryKey: ['diario-notas-resultados', turmaId] }),
       queryClient.invalidateQueries({ queryKey: ['turma-financeiro', turmaId] }),
       queryClient.invalidateQueries({ queryKey: ['financeiro-tecnico-recebiveis'] }),
       queryClient.invalidateQueries({ queryKey: ['financeiro-aluno-receivables'] }),
     ];
 
     if (extraTurmaId) {
-      invalidations.push(queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.turma(extraTurmaId) }));
+      invalidations.push(
+        queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.turma(extraTurmaId) }),
+        queryClient.invalidateQueries({ queryKey: ['diario-alunos', extraTurmaId] }),
+        queryClient.invalidateQueries({ queryKey: ['diario-notas-resultados', extraTurmaId] }),
+      );
     }
 
     await Promise.all(invalidations);
@@ -103,6 +111,7 @@ export const useMovementMutation = (
     tipo: input.tipo,
     motivo: input.motivo,
     observacao: input.observacao,
+    dataMovimentacao: input.dataMovimentacao,
     dataRetornoPrevista: input.dataRetornoPrevista,
   }),
   onSuccess,
@@ -120,6 +129,7 @@ export const useTransferMutation = (
     turmaDestinoId: input.tipo === 'EXTERNA_ENVIADA' ? undefined : input.turmaDestinoId,
     instituicaoDestino: input.tipo === 'EXTERNA_ENVIADA' ? input.instituicaoDestino : undefined,
     observacao: input.observacao,
+    dataTransferencia: input.dataTransferencia,
   }),
   onSuccess,
   onError,

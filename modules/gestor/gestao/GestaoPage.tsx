@@ -1,12 +1,29 @@
 // File: modules/gestor/gestao/GestaoPage.tsx
 
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { BarChart3, Briefcase, Award, MonitorPlay, Zap } from 'lucide-react';
 import GestaoResumo from './resumo/GestaoResumo';
-import GestaoTecnicos from './tecnicos/GestaoTecnicos';
-import GestaoLivres from './livres/GestaoLivres';
-import GestaoEspecializacao from './especializacao/GestaoEspecializacao';
-import GestaoEad from './ead/GestaoEad';
+import { useGestaoRealtime } from './hooks/useGestaoRealtime';
+import type { GestorPermissions } from '../access-control';
+
+const loadGestaoTecnicos = () => import('./tecnicos/GestaoTecnicos');
+const loadGestaoLivres = () => import('./livres/GestaoLivres');
+const loadGestaoEspecializacao = () => import('./especializacao/GestaoEspecializacao');
+const loadGestaoEad = () => import('./ead/GestaoEad');
+
+const GestaoTecnicos = React.lazy(loadGestaoTecnicos);
+const GestaoLivres = React.lazy(loadGestaoLivres);
+const GestaoEspecializacao = React.lazy(loadGestaoEspecializacao);
+const GestaoEad = React.lazy(loadGestaoEad);
+
+type GestaoTab = 'resumo' | 'tecnicos' | 'livres' | 'especializacao' | 'ead';
+
+const preloadTab = (tab: GestaoTab) => {
+  if (tab === 'tecnicos') void loadGestaoTecnicos();
+  if (tab === 'livres') void loadGestaoLivres();
+  if (tab === 'especializacao') void loadGestaoEspecializacao();
+  if (tab === 'ead') void loadGestaoEad();
+};
 
 interface GestaoPageProps {
   poloId?: string;
@@ -14,10 +31,12 @@ interface GestaoPageProps {
   poloNome?: string;
   isMatriz: boolean;
   onRequestScrollTop?: () => void;
+  permissions: GestorPermissions;
 }
 
-const GestaoPage: React.FC<GestaoPageProps> = ({ poloId, activePoloId, isMatriz, onRequestScrollTop }) => {
-  const [activeTab, setActiveTab] = useState<'resumo' | 'tecnicos' | 'livres' | 'especializacao' | 'ead'>('resumo');
+const GestaoPage: React.FC<GestaoPageProps> = ({ poloId, activePoloId, isMatriz, onRequestScrollTop, permissions }) => {
+  useGestaoRealtime(poloId);
+  const [activeTab, setActiveTab] = useState<GestaoTab>('resumo');
   const [isDetailView, setIsDetailView] = useState(false);
 
   useEffect(() => {
@@ -31,13 +50,13 @@ const GestaoPage: React.FC<GestaoPageProps> = ({ poloId, activePoloId, isMatriz,
     onRequestScrollTop?.();
   }, [activeTab, isDetailView, onRequestScrollTop]);
 
-  const tabs = [
+  const tabs: Array<{ id: GestaoTab; label: string; icon: React.ReactNode }> = [
     { id: 'resumo', label: 'Resumo', icon: <BarChart3 size={14} /> },
     { id: 'tecnicos', label: 'Técnicos', icon: <Briefcase size={14} /> },
     { id: 'livres', label: 'Livres', icon: <Zap size={14} /> },
     { id: 'especializacao', label: 'Especialização', icon: <Award size={14} /> },
-    ...(isMatriz ? [{ id: 'ead', label: 'EAD', icon: <MonitorPlay size={14} /> }] : []),
-  ] as const;
+    ...(isMatriz ? [{ id: 'ead' as const, label: 'EAD', icon: <MonitorPlay size={14} /> }] : []),
+  ];
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -50,7 +69,9 @@ const GestaoPage: React.FC<GestaoPageProps> = ({ poloId, activePoloId, isMatriz,
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
+                  onMouseEnter={() => preloadTab(tab.id)}
+                  onFocus={() => preloadTab(tab.id)}
+                  onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center gap-2 pb-3 text-xs font-bold uppercase tracking-wider transition-all relative shrink-0 ${
                     isActive
                       ? 'text-[#001a33] font-extrabold'
@@ -73,11 +94,13 @@ const GestaoPage: React.FC<GestaoPageProps> = ({ poloId, activePoloId, isMatriz,
 
       {/* Conteúdo Dinâmico */}
       <div className="min-h-[500px]">
-        {activeTab === 'resumo' && <GestaoResumo poloId={poloId} />}
-        {activeTab === 'tecnicos' && <GestaoTecnicos onToggleDetails={setIsDetailView} poloId={poloId} creationPoloId={activePoloId || poloId} />}
-        {activeTab === 'livres' && <GestaoLivres onToggleDetails={setIsDetailView} poloId={poloId} creationPoloId={activePoloId || poloId} />}
-        {activeTab === 'especializacao' && <GestaoEspecializacao onToggleDetails={setIsDetailView} poloId={poloId} creationPoloId={activePoloId || poloId} />}
-        {isMatriz && activeTab === 'ead' && <GestaoEad onToggleDetails={setIsDetailView} />}
+        <Suspense fallback={<div className="py-16 text-center text-sm font-bold text-slate-400">Carregando área de gestão...</div>}>
+          {activeTab === 'resumo' && <GestaoResumo poloId={poloId} />}
+          {activeTab === 'tecnicos' && <GestaoTecnicos onToggleDetails={setIsDetailView} poloId={poloId} creationPoloId={activePoloId || poloId} permissions={permissions} />}
+          {activeTab === 'livres' && <GestaoLivres onToggleDetails={setIsDetailView} poloId={poloId} creationPoloId={activePoloId || poloId} permissions={permissions} />}
+          {activeTab === 'especializacao' && <GestaoEspecializacao onToggleDetails={setIsDetailView} poloId={poloId} creationPoloId={activePoloId || poloId} permissions={permissions} />}
+          {isMatriz && activeTab === 'ead' && <GestaoEad onToggleDetails={setIsDetailView} permissions={permissions} />}
+        </Suspense>
       </div>
     </div>
   );

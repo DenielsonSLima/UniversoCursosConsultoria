@@ -1,10 +1,11 @@
 import React from 'react';
-import { AlertCircle, Calendar, DollarSign, Edit2, Percent, RefreshCw } from 'lucide-react';
+import { AlertCircle, Calendar, DollarSign, Edit2, FileText, Percent, RefreshCw } from 'lucide-react';
 import { CronogramaItem, FinanceiroConfigData } from './financeiro-config.service';
 import {
   FINANCEIRO_POLICIES,
   FinanceiroRulesCalculation,
   formatCurrencyBRL,
+  formatPercentageBR,
 } from './financeiro-config.utils';
 
 interface FinanceiroConfigSummaryProps {
@@ -12,6 +13,7 @@ interface FinanceiroConfigSummaryProps {
   config: FinanceiroConfigData;
   cronograma: CronogramaItem[];
   onEdit: () => void;
+  turmaLabel: string;
 }
 
 const FinanceiroConfigSummary: React.FC<FinanceiroConfigSummaryProps> = ({
@@ -19,8 +21,10 @@ const FinanceiroConfigSummary: React.FC<FinanceiroConfigSummaryProps> = ({
   config,
   cronograma,
   onEdit,
-}) => (
-  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+  turmaLabel,
+}) => {
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
     <div className="lg:col-span-2 bg-white border border-slate-100 rounded-[2rem] p-8 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
       <div>
         <div className="flex justify-between items-start mb-8">
@@ -75,9 +79,25 @@ const FinanceiroConfigSummary: React.FC<FinanceiroConfigSummaryProps> = ({
           </div>
           <div className="space-y-1">
             <p className="text-[10px] text-red-500 font-bold uppercase flex items-center gap-1">
-              <AlertCircle size={10} /> Juros/Mês
+              <AlertCircle size={10} /> Juros proporcional
             </p>
-            <p className="text-lg font-black text-red-500">{config.jurosAtraso}%</p>
+            <p className="text-lg font-black text-red-500">{config.jurosAtraso}% ao mês</p>
+            <p className="text-[10px] font-semibold leading-relaxed text-slate-500">
+              {calculo
+                ? `${formatPercentageBR(calculo.juros_percentual_dia)}% ao dia ≈ ${formatCurrencyBRL(calculo.juros_valor_dia)}/dia no boleto/carnê`
+                : 'Calculando equivalente diário...'}
+            </p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-[10px] text-red-500 font-bold uppercase flex items-center gap-1">
+              <AlertCircle size={10} /> Multa única
+            </p>
+            <p className="text-lg font-black text-red-500">{config.multaAtrasoPercentual}%</p>
+            <p className="text-[10px] font-semibold leading-relaxed text-slate-500">
+              {calculo
+                ? `${formatCurrencyBRL(calculo.multa_aplicada)} uma única vez`
+                : 'Calculando multa em reais...'}
+            </p>
           </div>
         </div>
 
@@ -90,6 +110,21 @@ const FinanceiroConfigSummary: React.FC<FinanceiroConfigSummaryProps> = ({
               </p>
             </div>
           ))}
+        </div>
+
+        <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/70 p-4">
+          <div className="flex items-start gap-3">
+            <FileText size={18} className="mt-0.5 shrink-0 text-amber-700" />
+            <div className="min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-wider text-amber-800">
+                Impresso no boleto e no carnê
+              </p>
+              <p className="mt-1 text-xs font-bold text-[#001a33]">Turma: {turmaLabel}</p>
+              <p className="mt-1 text-xs font-extrabold leading-relaxed text-amber-900">
+                {config.instrucaoBoletoCarne}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -104,18 +139,20 @@ const FinanceiroConfigSummary: React.FC<FinanceiroConfigSummaryProps> = ({
             <span className="text-xl font-black text-emerald-700">
               {calculo
                 ? formatCurrencyBRL(calculo.valor_com_desconto)
-                : formatCurrencyBRL(Math.max(0, config.valorParcela - config.descontoPontualidade))}
+                : 'Calculando no servidor...'}
             </span>
           </div>
         </div>
 
         <div className="bg-rose-50/50 border border-rose-100 rounded-2xl p-5 flex flex-col justify-between">
           <div>
-            <span className="text-[10px] text-rose-600 font-bold uppercase tracking-wider block mb-1">Se pago após o vencimento (Exemplo com 1 mês de atraso - RPC)</span>
+            <span className="text-[10px] text-rose-600 font-bold uppercase tracking-wider block mb-1">Se pago após o vencimento (Exemplo com 30 dias de atraso - RPC)</span>
             <p className="text-slate-500 text-xs font-medium">
-              Parcela + juros de {config.jurosAtraso}% ({calculo
-                ? formatCurrencyBRL(calculo.juros_calculados)
-                : formatCurrencyBRL(config.valorParcela * (config.jurosAtraso / 100))}) + multa de {formatCurrencyBRL(config.multaAtraso)}
+              Parcela + juros diário de {calculo
+                ? formatCurrencyBRL(calculo.juros_valor_dia)
+                : 'calculando...'} ({config.jurosAtraso}% ao mês proporcional aos dias) + multa única de {config.multaAtrasoPercentual}% ({calculo
+                  ? formatCurrencyBRL(calculo.multa_aplicada)
+                  : 'calculando...'})
             </p>
           </div>
           <div className="mt-4 flex justify-between items-baseline">
@@ -123,7 +160,7 @@ const FinanceiroConfigSummary: React.FC<FinanceiroConfigSummaryProps> = ({
             <span className="text-xl font-black text-rose-700">
               {calculo
                 ? formatCurrencyBRL(calculo.valor_com_atraso)
-                : formatCurrencyBRL(config.valorParcela + (config.valorParcela * (config.jurosAtraso / 100)) + config.multaAtraso)}
+                : 'Calculando no servidor...'}
             </span>
           </div>
         </div>
@@ -171,7 +208,8 @@ const FinanceiroConfigSummary: React.FC<FinanceiroConfigSummaryProps> = ({
         })}
       </div>
     </div>
-  </div>
-);
+    </div>
+  );
+};
 
 export default FinanceiroConfigSummary;

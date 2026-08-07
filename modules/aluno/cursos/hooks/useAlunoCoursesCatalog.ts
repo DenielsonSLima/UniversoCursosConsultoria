@@ -2,7 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
 import { textMatchesSearch } from '../../../../lib/search';
-import { invalidateAlunoEadPaymentQueries } from '../../../ead/hooks/useEadPaymentConfirmationWatcher';
+import {
+  alunoCourseAccessKeys,
+  invalidateAlunoCourseAccessQueries,
+} from '../../shared/aluno-course-access.queries';
 import { alunoPerfilKeys, alunoPerfilService } from '../../perfil/perfil.service';
 import { getTechnicalEnrollmentMissingFields } from '../../../shared/utils/technicalEnrollmentRequirements';
 import {
@@ -32,11 +35,11 @@ export const useAlunoCoursesCatalog = (alunoId?: string) => {
   const [searchTerm, setSearchTerm] = useState('');
 
   const invalidateStudentCourseAccess = useCallback(() => {
-    invalidateAlunoEadPaymentQueries(queryClient, alunoId);
+    invalidateAlunoCourseAccessQueries(queryClient, alunoId);
   }, [alunoId, queryClient]);
 
   const { data: courses = [], isLoading, isError } = useQuery<any[]>({
-    queryKey: ['aluno-cursos-disponiveis', alunoId],
+    queryKey: alunoCourseAccessKeys.catalog(alunoId || ''),
     queryFn: async () => {
       const [coursesResult, matriculasResult, turmasOnlineResult] = await Promise.all([
         supabase.from('cursos').select('*').eq('status', 'ativo').order('nome', { ascending: true }),
@@ -145,28 +148,6 @@ export const useAlunoCoursesCatalog = (alunoId?: string) => {
     () => getTechnicalEnrollmentMissingFields(technicalEnrollmentProfile),
     [technicalEnrollmentProfile],
   );
-
-  useEffect(() => {
-    if (!hasAlunoContext || !alunoId) return;
-    const channel = supabase
-      .channel(`aluno_cursos_access_realtime_${alunoId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'matriculas', filter: `aluno_id=eq.${alunoId}` },
-        invalidateStudentCourseAccess,
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'contas_receber', filter: `cliente_id=eq.${alunoId}` },
-        invalidateStudentCourseAccess,
-      )
-      .subscribe();
-    window.addEventListener('focus', invalidateStudentCourseAccess);
-    return () => {
-      window.removeEventListener('focus', invalidateStudentCourseAccess);
-      supabase.removeChannel(channel);
-    };
-  }, [alunoId, hasAlunoContext, invalidateStudentCourseAccess]);
 
   const currentTypeFilter = useMemo(() => {
     if (activeTab === 'live') return 'LIVRE';

@@ -2,25 +2,30 @@ import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/r
 import { academicLifecycleKeys } from '../../../academic-lifecycle.keys';
 import { gestaoService } from '../../../../../gestao.service';
 import {
+  FinanceiroCalculationInput,
   FinanceiroConfigData,
   financeiroConfigService,
 } from '../financeiro-config.service';
 
 export const financeiroConfigKeys = {
   turma: (turmaId: string) => ['turma_financeiro_config', turmaId] as const,
-  calculo: (config: Pick<FinanceiroConfigData, 'valorParcela' | 'descontoPontualidade' | 'jurosAtraso' | 'multaAtraso'>) => [
+  calculo: (config: FinanceiroCalculationInput) => [
     'calculo_regras_turma',
     config.valorParcela,
     config.descontoPontualidade,
     config.jurosAtraso,
-    config.multaAtraso,
+    config.multaAtrasoPercentual ?? config.multaAtraso ?? 0,
+    config.aplicarDescontoMensalidade,
+    config.aplicarMultaJurosMensalidade,
   ] as const,
-  calculoForm: (config: Pick<FinanceiroConfigData, 'valorParcela' | 'descontoPontualidade' | 'jurosAtraso' | 'multaAtraso'>) => [
+  calculoForm: (config: FinanceiroCalculationInput) => [
     'calculo_regras_turma_form',
     config.valorParcela,
     config.descontoPontualidade,
     config.jurosAtraso,
-    config.multaAtraso,
+    config.multaAtrasoPercentual ?? config.multaAtraso ?? 0,
+    config.aplicarDescontoMensalidade,
+    config.aplicarMultaJurosMensalidade,
   ] as const,
 };
 
@@ -34,7 +39,7 @@ export const useFinanceiroConfig = (turmaId: string) => useQuery(
 );
 
 export const useFinanceiroRulesCalculation = (
-  config: Pick<FinanceiroConfigData, 'valorParcela' | 'descontoPontualidade' | 'jurosAtraso' | 'multaAtraso'>,
+  config: FinanceiroCalculationInput,
   form = false,
   enabled = true,
 ) => useQuery({

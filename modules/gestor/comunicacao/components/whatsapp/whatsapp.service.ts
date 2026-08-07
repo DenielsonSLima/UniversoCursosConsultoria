@@ -1,8 +1,11 @@
 import { supabase } from '../../../../../lib/supabase';
+import { normalizeFlowDefinition } from '../whatsapp-flow/flowBuilder';
 import { normalizePhone } from './whatsapp.utils';
-import { WhatsAppBusinessProfile, WhatsAppContact, WhatsAppConversation, WhatsAppFlowSession, WhatsAppFlowSettings, WhatsAppMediaFile, WhatsAppMediaKind, WhatsAppMessage, WhatsAppUsageSummary } from './whatsapp.types';
+import { WhatsAppBusinessProfile, WhatsAppConexao, WhatsAppContact, WhatsAppConversation, WhatsAppFlowSession, WhatsAppFlowSettings, WhatsAppMediaFile, WhatsAppMediaKind, WhatsAppMessage, WhatsAppRoutingPolo, WhatsAppUsageSummary } from './whatsapp.types';
 
 export const DEFAULT_WHATSAPP_FLOW_SETTINGS: WhatsAppFlowSettings = {
+  flow_type: 'institutional',
+  routing_config: {},
   enabled: false,
   max_attempts: 2,
   auto_close_enabled: true,
@@ -60,6 +63,13 @@ const flowTextFields: Array<keyof Pick<WhatsAppFlowSettings,
 
 const normalizeFlowSettings = (settings?: Partial<WhatsAppFlowSettings> | null): WhatsAppFlowSettings => {
   const next = { ...DEFAULT_WHATSAPP_FLOW_SETTINGS, ...(settings || {}) } as WhatsAppFlowSettings;
+  next.routing_config = {
+    ...(next.routing_config || {}),
+    flow_builder: normalizeFlowDefinition(
+      next.routing_config?.flow_builder,
+      next.flow_type,
+    ),
+  };
   flowTextFields.forEach((field) => {
     next[field] = String(next[field] || '').replace(/\\n/g, '\n');
   });
@@ -69,24 +79,53 @@ const normalizeFlowSettings = (settings?: Partial<WhatsAppFlowSettings> | null):
 const getFunctionErrorMessage = async (error: any, fallback: string) => {
   let detail = error?.message || fallback;
   const context = error?.context;
-  if (context && typeof context.json === 'function') {
-    const payload = await context.json().catch(() => null);
-    detail = payload?.error || detail;
+  if (context) {
+    const response = typeof context.clone === 'function' ? context.clone() : context;
+    if (typeof response.json === 'function') {
+      const payload = await response.json().catch(() => null);
+      detail = payload?.error || payload?.message || detail;
+    }
   }
   return detail;
 };
 
 export const whatsappService = {
   async getContacts(): Promise<WhatsAppContact[]> {
-    const { data, error } = await supabase
-      .from('parceiros')
-      .select('id,nome,tipo,email,telefone,cpf_cnpj,cidade,status,foto_url,polos(nome,cidade,estado)')
-      .eq('tipo', 'Aluno')
-      .order('nome', { ascending: true });
+    const [contactsResult, enrollmentsResult] = await Promise.all([
+      supabase
+        .from('parceiros')
+        .select('id,nome,tipo,email,telefone,cpf_cnpj,cidade,status,foto_url,polos(nome,cidade,estado)')
+        .eq('tipo', 'Aluno')
+        .order('nome', { ascending: true }),
+      supabase
+        .from('matriculas')
+        .select('id,aluno_id,status,turma_id,turmas(id,nome,codigo,cursos(id,nome,modalidade))'),
+    ]);
 
-    if (error) throw error;
+    if (contactsResult.error) throw contactsResult.error;
+    if (enrollmentsResult.error) throw enrollmentsResult.error;
 
-    return (data || []).map((row: any) => {
+    const enrollmentsByStudent = new Map<string, any[]>();
+    (enrollmentsResult.data || []).forEach((enrollment: any) => {
+      const studentId = String(enrollment.aluno_id || '');
+      if (!studentId) return;
+      const turma = Array.isArray(enrollment.turmas) ? enrollment.turmas[0] : enrollment.turmas;
+      const curso = Array.isArray(turma?.cursos) ? turma.cursos[0] : turma?.cursos;
+      const current = enrollmentsByStudent.get(studentId) || [];
+      current.push({
+        id: enrollment.id,
+        status: String(enrollment.status || ''),
+        turmaId: String(enrollment.turma_id || turma?.id || ''),
+        turmaNome: String(turma?.nome || ''),
+        turmaCodigo: String(turma?.codigo || ''),
+        cursoId: String(curso?.id || ''),
+        cursoNome: String(curso?.nome || ''),
+        modalidade: String(curso?.modalidade || '').toUpperCase(),
+      });
+      enrollmentsByStudent.set(studentId, current);
+    });
+
+    return (contactsResult.data || []).map((row: any) => {
       const polo = Array.isArray(row.polos) ? row.polos[0] : row.polos;
       const poloNome = polo?.nome
         ? [polo.nome, [polo.cidade, polo.estado].filter(Boolean).join('/')]
@@ -105,14 +144,16 @@ export const whatsappService = {
         status: row.status,
         foto: row.foto_url,
         poloNome,
+        matriculas: enrollmentsByStudent.get(row.id) || [],
       };
     });
   },
 
-  async getConversations(): Promise<WhatsAppConversation[]> {
+  async getConversations(connectionId: string): Promise<WhatsAppConversation[]> {
     const { data, error } = await supabase
       .from('whatsapp_conversas')
       .select('*')
+      .eq('conexao_id', connectionId)
       .order('ultima_data', { ascending: false });
 
     if (error) throw error;
@@ -135,6 +176,22 @@ export const whatsappService = {
         ultimo_texto: row.ultimo_texto,
         ultima_data: row.ultima_data,
         unread_count: row.unread_count || 0,
+        closed_at: row.closed_at,
+        closed_reason: row.closed_reason,
+        conexao_id: row.conexao_id,
+        setor: row.setor,
+        polo_id: row.polo_id,
+        atendente_id: row.atendente_id,
+        instituicao: row.instituicao,
+        status_atendimento: row.status_atendimento,
+        sub_assunto: row.sub_assunto,
+        tempo_primeira_resposta_seg: row.tempo_primeira_resposta_seg,
+        tempo_total_atendimento_seg: row.tempo_total_atendimento_seg,
+        csat_score: row.csat_score,
+        csat_comentario: row.csat_comentario,
+        csat_requested_at: row.csat_requested_at,
+        data_inicio_atendimento: row.data_inicio_atendimento,
+        data_fim_atendimento: row.data_fim_atendimento,
       };
     });
   },
@@ -160,18 +217,19 @@ export const whatsappService = {
     return row || null;
   },
 
-  async getBusinessProfile(): Promise<WhatsAppBusinessProfile | null> {
+  async getBusinessProfile(connectionId: string): Promise<WhatsAppBusinessProfile | null> {
     const { data, error } = await supabase.functions.invoke('whatsapp-profile', {
-      body: { action: 'get' },
+      body: { action: 'get', conexaoId: connectionId },
     });
     if (error) throw new Error(await getFunctionErrorMessage(error, 'Não foi possível carregar o perfil na Meta.'));
     if ((data as any)?.error) throw new Error((data as any).error);
     return (data as any)?.profile || null;
   },
 
-  async saveBusinessProfile(input: { profile: WhatsAppBusinessProfile; photo?: { base64: string; type: string; name: string } | null }) {
+  async saveBusinessProfile(input: { connectionId: string; profile: WhatsAppBusinessProfile; photo?: { base64: string; type: string; name: string } | null }) {
+    const { connectionId, ...profileInput } = input;
     const { data, error } = await supabase.functions.invoke('whatsapp-profile', {
-      body: { action: 'save', ...input },
+      body: { action: 'save', conexaoId: connectionId, ...profileInput },
     });
     if (error) throw new Error(await getFunctionErrorMessage(error, 'Não foi possível salvar o perfil na Meta.'));
     if ((data as any)?.error) throw new Error((data as any).error);
@@ -203,10 +261,18 @@ export const whatsappService = {
     if (error) throw error;
   },
 
-  async sendMessage(input: { alunoId: string; to: string; message: string }) {
+  async sendMessage(input: {
+    connectionId: string;
+    alunoId?: string | null;
+    conversationId?: string | null;
+    to: string;
+    message: string;
+  }) {
     const { data, error } = await supabase.functions.invoke('whatsapp-send', {
       body: {
-        alunoId: input.alunoId,
+        alunoId: input.alunoId || null,
+        conversaId: input.conversationId || null,
+        conexaoId: input.connectionId,
         to: normalizePhone(input.to),
         message: input.message,
       },
@@ -219,9 +285,34 @@ export const whatsappService = {
     return data;
   },
 
-  async sendMediaMessage(input: { alunoId: string; to: string; kind: WhatsAppMediaKind; file: WhatsAppMediaFile; caption?: string }) {
+  async getRoutingPolos(): Promise<WhatsAppRoutingPolo[]> {
+    const { data, error } = await supabase
+      .from('polos')
+      .select('id,nome,cidade')
+      .eq('status', 'ativo')
+      .order('nome');
+    if (error) throw error;
+    return data || [];
+  },
+
+  async sendMediaMessage(input: {
+    connectionId: string;
+    alunoId?: string | null;
+    conversationId?: string | null;
+    to: string;
+    kind: WhatsAppMediaKind;
+    file: WhatsAppMediaFile;
+    caption?: string;
+  }) {
+    const { connectionId, ...mediaInput } = input;
     const { data, error } = await supabase.functions.invoke('whatsapp-media', {
-      body: { action: 'send', ...input, to: normalizePhone(input.to) },
+      body: {
+        action: 'send',
+        conexaoId: connectionId,
+        conversaId: input.conversationId || null,
+        ...mediaInput,
+        to: normalizePhone(input.to),
+      },
     });
     if (error) throw error;
     if ((data as any)?.error) throw new Error((data as any).error);
@@ -246,49 +337,57 @@ export const whatsappService = {
     return String((data as any)?.transcription || '');
   },
 
-  async getFlowSettings(): Promise<WhatsAppFlowSettings> {
+  async getFlowSettings(connectionId: string): Promise<WhatsAppFlowSettings> {
     const { data, error } = await supabase
       .from('whatsapp_flow_settings')
       .select('*')
-      .eq('scope', 'default')
+      .eq('conexao_id', connectionId)
       .maybeSingle();
     if (error) throw error;
     return normalizeFlowSettings(data);
   },
 
-  async saveFlowSettings(settings: WhatsAppFlowSettings): Promise<WhatsAppFlowSettings> {
+  async saveFlowSettings(connectionId: string, settings: WhatsAppFlowSettings): Promise<WhatsAppFlowSettings> {
     const normalized = normalizeFlowSettings(settings);
     const payload = {
       ...normalized,
       id: settings.id,
-      scope: 'default',
+      conexao_id: connectionId,
+      scope: `connection:${connectionId}`,
       updated_at: new Date().toISOString(),
     };
     const { data, error } = await supabase
       .from('whatsapp_flow_settings')
-      .upsert(payload, { onConflict: 'scope' })
+      .upsert(payload, { onConflict: 'conexao_id' })
       .select('*')
       .single();
     if (error) throw error;
     return normalizeFlowSettings(data);
   },
 
-  async getFlowSessions(): Promise<WhatsAppFlowSession[]> {
+  async getFlowSessions(connectionId: string): Promise<WhatsAppFlowSession[]> {
+    const { data: scopedConversations, error: conversationsError } = await supabase
+      .from('whatsapp_conversas')
+      .select('id,contato_nome')
+      .eq('conexao_id', connectionId);
+    if (conversationsError) throw conversationsError;
+    const scopedIds = (scopedConversations || []).map((row: any) => row.id);
+    if (scopedIds.length === 0) return [];
+
     const { data, error } = await supabase
       .from('whatsapp_flow_sessions')
       .select('*')
+      .in('conversa_id', scopedIds)
       .order('updated_at', { ascending: false })
       .limit(100);
     if (error) throw error;
 
     const rows = data || [];
-    const conversaIds = [...new Set(rows.map((row: any) => row.conversa_id).filter(Boolean))];
     const alunoIds = [...new Set(rows.map((row: any) => row.aluno_id).filter(Boolean))];
-    const [{ data: conversas }, { data: alunos }] = await Promise.all([
-      conversaIds.length ? supabase.from('whatsapp_conversas').select('id,contato_nome').in('id', conversaIds) : Promise.resolve({ data: [] as any[] }),
-      alunoIds.length ? supabase.from('parceiros').select('id,nome').in('id', alunoIds) : Promise.resolve({ data: [] as any[] }),
-    ]);
-    const conversaMap = new Map((conversas || []).map((row: any) => [row.id, row]));
+    const { data: alunos } = alunoIds.length
+      ? await supabase.from('parceiros').select('id,nome').in('id', alunoIds)
+      : { data: [] as any[] };
+    const conversaMap = new Map((scopedConversations || []).map((row: any) => [row.id, row]));
     const alunoMap = new Map((alunos || []).map((row: any) => [row.id, row]));
 
     return rows.map((row: any) => ({
@@ -346,7 +445,18 @@ export const whatsappService = {
   async reopenConversation(conversationId: string) {
     const { error: conversationError } = await supabase
       .from('whatsapp_conversas')
-      .update({ status: 'aberta', closed_at: null, closed_reason: null })
+      .update({
+        status: 'aberta',
+        status_atendimento: 'bot_triagem',
+        atendente_id: null,
+        csat_score: null,
+        csat_comentario: null,
+        csat_requested_at: null,
+        data_inicio_atendimento: null,
+        data_fim_atendimento: null,
+        closed_at: null,
+        closed_reason: null,
+      })
       .eq('id', conversationId);
     if (conversationError) throw conversationError;
 
@@ -357,7 +467,7 @@ export const whatsappService = {
     if (sessionError) throw sessionError;
   },
 
-  async getConexoes(): Promise<any[]> {
+  async getConexoes(): Promise<WhatsAppConexao[]> {
     const { data, error } = await supabase
       .from('whatsapp_conexoes')
       .select('*')
@@ -366,63 +476,75 @@ export const whatsappService = {
     return data || [];
   },
 
-  async saveConexao(input: any): Promise<any> {
-    const payload = {
-      ...input,
-      updated_at: new Date().toISOString(),
-    };
-    const { data, error } = await supabase
-      .from('whatsapp_conexoes')
-      .upsert(payload)
-      .select('*')
-      .single();
-    if (error) throw error;
-    return data;
+  async saveConexao(input: Partial<WhatsAppConexao> & {
+    tokenInput?: string;
+    appSecretInput?: string;
+    verifyTokenInput?: string;
+  }): Promise<WhatsAppConexao> {
+    const { data, error } = await supabase.functions.invoke('whatsapp-connection-config', {
+      body: input,
+    });
+    if (error) {
+      throw new Error(await getFunctionErrorMessage(error, 'Não foi possível salvar a conexão.'));
+    }
+    if ((data as any)?.error) throw new Error((data as any).error);
+    return (data as any).connection as WhatsAppConexao;
+  },
+
+  async validateConexaoCredentials(connectionId: string): Promise<{
+    ok: boolean;
+    checkedAt: string;
+    credentials: Record<
+      'accessToken' | 'appSecret' | 'verifyToken',
+      {
+        state: 'valid' | 'verified' | 'stored' | 'missing' | 'invalid';
+        message: string;
+      }
+    >;
+    connection: WhatsAppConexao;
+  }> {
+    const { data, error } = await supabase.functions.invoke('whatsapp-connection-config', {
+      body: { action: 'validate_credentials', id: connectionId },
+    });
+    if (error) {
+      throw new Error(await getFunctionErrorMessage(error, 'Não foi possível testar as credenciais.'));
+    }
+    if ((data as any)?.error) throw new Error((data as any).error);
+    return data as any;
+  },
+
+  async removeConexaoSecret(
+    connectionId: string,
+    secretKind: 'access_token' | 'app_secret' | 'verify_token',
+  ): Promise<WhatsAppConexao> {
+    const { data, error } = await supabase.functions.invoke('whatsapp-connection-config', {
+      body: {
+        action: 'remove_secret',
+        id: connectionId,
+        secretKind,
+      },
+    });
+    if (error) {
+      throw new Error(await getFunctionErrorMessage(error, 'Não foi possível remover a credencial.'));
+    }
+    if ((data as any)?.error) throw new Error((data as any).error);
+    return (data as any).connection as WhatsAppConexao;
   },
 
   async transferConversation(input: {
     conversationId: string;
-    setor?: string;
-    poloId?: string;
-    atendenteId?: string;
-    gestorNome: string;
+    setor: string;
+    poloId: string;
     motivo?: string;
   }) {
-    const { conversationId, setor, poloId, atendenteId, gestorNome, motivo } = input;
-    const updates: any = {
-      updated_at: new Date().toISOString(),
-      status_atendimento: 'pendente_setor',
-    };
-    if (setor) updates.setor = setor;
-    if (poloId !== undefined) updates.polo_id = poloId;
-    if (atendenteId !== undefined) {
-      updates.atendente_id = atendenteId;
-      if (atendenteId) updates.status_atendimento = 'em_atendimento';
-    }
-
-    const { error: chatErr } = await supabase
-      .from('whatsapp_conversas')
-      .update(updates)
-      .eq('id', conversationId);
-
-    if (chatErr) throw chatErr;
-
-    const logDesc = [
-      setor ? `setor: ${setor}` : null,
-      poloId ? `polo alterado` : null,
-      atendenteId ? `atendente atribuído` : null,
-      motivo ? `motivo: "${motivo}"` : null,
-    ]
-      .filter(Boolean)
-      .join(', ');
-
-    await supabase.from('whatsapp_mensagens').insert({
-      conversa_id: conversationId,
-      remetente_tipo: 'sistema',
-      remetente_nome: 'Sistema',
-      conteudo: `🔄 Atendimento transferido por ${gestorNome} (${logDesc || 'novo direcionamento'}).`,
-      direcao: 'saida',
+    const { data, error } = await supabase.rpc('whatsapp_transfer_conversation', {
+      p_conversation_id: input.conversationId,
+      p_setor: input.setor,
+      p_polo_id: input.poloId,
+      p_motivo: input.motivo?.trim() || null,
     });
+    if (error) throw error;
+    return data;
   },
 
   async updateTicketStatus(input: {
@@ -456,6 +578,38 @@ export const whatsappService = {
     if (error) throw error;
   },
 
+  async requestConversationRating(conversationId: string) {
+    const { data: conversation, error: conversationError } = await supabase
+      .from('whatsapp_conversas')
+      .select('id,conexao_id,aluno_id,telefone')
+      .eq('id', conversationId)
+      .maybeSingle();
+    if (conversationError) throw conversationError;
+    if (!conversation) throw new Error('Conversa não encontrada.');
+
+    await whatsappService.sendMessage({
+      connectionId: conversation.conexao_id,
+      alunoId: conversation.aluno_id,
+      conversationId: conversation.id,
+      to: conversation.telefone,
+      message: [
+        'Antes de encerrar, como você avalia este atendimento?',
+        '',
+        'Responda com uma nota de *0 a 5*:',
+        '0 — Muito insatisfeito',
+        '5 — Muito satisfeito',
+        '',
+        'Se não houver resposta, a conversa será encerrada automaticamente em 1 hora.',
+      ].join('\n'),
+    });
+
+    const { data, error } = await supabase.rpc('whatsapp_begin_csat', {
+      p_conversation_id: conversationId,
+    });
+    if (error) throw error;
+    return data;
+  },
+
   async getMetricsSummary(): Promise<any> {
     const { data: rows, error } = await supabase
       .from('whatsapp_conversas')
@@ -472,7 +626,7 @@ export const whatsappService = {
 
     const firstResponseTimes = conversations.map((c: any) => c.tempo_primeira_resposta_seg).filter((t: any) => typeof t === 'number' && t > 0);
     const totalServiceTimes = conversations.map((c: any) => c.tempo_total_atendimento_seg).filter((t: any) => typeof t === 'number' && t > 0);
-    const csats = conversations.map((c: any) => c.csat_score).filter((s: any) => typeof s === 'number' && s > 0);
+    const csats = conversations.map((c: any) => c.csat_score).filter((s: any) => typeof s === 'number' && s >= 0);
 
     const avgFirstResponseSeconds = firstResponseTimes.length ? Math.round(firstResponseTimes.reduce((a: number, b: number) => a + b, 0) / firstResponseTimes.length) : 0;
     const avgTotalServiceSeconds = totalServiceTimes.length ? Math.round(totalServiceTimes.reduce((a: number, b: number) => a + b, 0) / totalServiceTimes.length) : 0;
@@ -491,4 +645,3 @@ export const whatsappService = {
     };
   },
 };
-

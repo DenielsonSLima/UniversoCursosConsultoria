@@ -17,7 +17,10 @@ import { supabase } from '../../../../lib/supabase';
 import ToastNotification, { useToast } from '../../components/ToastNotification';
 import { WhatsAppLineConfigForm } from './components/WhatsAppLineConfigForm';
 import { whatsappService } from '../../comunicacao/components/whatsapp/whatsapp.service';
-import type { WhatsAppConexao } from '../../comunicacao/components/whatsapp/whatsapp.types';
+import {
+  isWhatsAppConnectionReady,
+  type WhatsAppConexao,
+} from '../../comunicacao/components/whatsapp/whatsapp.types';
 
 const EMPTY_CONEXAO: WhatsAppConexao = {
   id: '',
@@ -35,6 +38,8 @@ const EMPTY_CONEXAO: WhatsAppConexao = {
   app_secret: null,
   verify_token: null,
   token_configured: false,
+  app_secret_configured: false,
+  verify_token_configured: false,
   created_at: '',
   updated_at: '',
 };
@@ -88,15 +93,12 @@ const MensageriaConfig: React.FC = () => {
   }, [queryClient]);
 
   const saveMutation = useMutation({
-    mutationFn: async (data: Partial<WhatsAppConexao> & { tokenInput?: string }) => {
-      const { tokenInput, ...rest } = data as any;
-      const payload: any = { ...rest };
-      if (tokenInput) {
-        payload.token = tokenInput;
-        payload.token_configured = true;
-      }
-      return whatsappService.saveConexao(payload);
-    },
+    mutationFn: (data: Partial<WhatsAppConexao> & {
+      tokenInput?: string;
+      appSecretInput?: string;
+      verifyTokenInput?: string;
+    }) =>
+      whatsappService.saveConexao(data),
     onSuccess: (saved: any) => {
       queryClient.invalidateQueries({ queryKey: ['whatsapp_conexoes'] });
       toast.success('Conexão salva', 'Linha atualizada com sucesso.');
@@ -163,9 +165,7 @@ const MensageriaConfig: React.FC = () => {
 
         {/* One tab per number */}
         {conexoes.map((c) => {
-          const isAtivo =
-            c.status === 'ativo' &&
-            (Boolean(c.phone_number_id) || c.connection_mode === 'coexistence');
+          const isAtivo = isWhatsAppConnectionReady(c);
 
           const borderActive =
             c.instituicao === 'universo'
@@ -244,11 +244,10 @@ const MensageriaConfig: React.FC = () => {
           ) : (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
               {conexoes.map((c) => {
-                // Ativo = status ativo E tem credenciais (phone_number_id ou coexistence)
-                const temCredenciais = Boolean(c.phone_number_id) || c.connection_mode === 'coexistence';
-                const isAtivo = c.status === 'ativo' && temCredenciais;
+                // Pronto = credenciais, assinatura da WABA e webhook válidos.
+                const temCredenciais = isWhatsAppConnectionReady(c);
+                const isAtivo = temCredenciais;
                 const isDesativado = c.status === 'inativo';
-                const isSemCredenciais = c.status === 'ativo' && !temCredenciais;
 
                 const modeLabel =
                   c.connection_mode === 'coexistence'
@@ -281,7 +280,7 @@ const MensageriaConfig: React.FC = () => {
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
-                          Sem credenciais
+                          Aguardando validação
                         </span>
                       )}
                     </div>

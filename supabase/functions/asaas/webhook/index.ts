@@ -1,4 +1,3 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { baseUrlFor, createCallAsaas } from "./asaas-http.ts";
 import { createAsaasWebhookHandlers } from "./handlers.service.ts";

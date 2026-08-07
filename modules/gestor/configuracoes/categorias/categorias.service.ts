@@ -9,6 +9,13 @@ export interface Categoria {
   created_at?: string;
 }
 
+export const categoriasQueryKeys = {
+  all: ['categorias'] as const,
+  activeByType: (tipo: Categoria['tipo']) => ['categorias', 'ativas', tipo] as const,
+};
+
+const normalizeCategoriaNome = (nome: string) => nome.trim().toLocaleUpperCase('pt-BR');
+
 export const categoriasService = {
   async getAll(): Promise<Categoria[]> {
     const { data, error } = await supabase
@@ -24,10 +31,30 @@ export const categoriasService = {
     return data || [];
   },
 
-  async create(categoria: Omit<Categoria, 'id'>): Promise<Categoria> {
+  async getActiveByType(tipo: Categoria['tipo']): Promise<Categoria[]> {
     const { data, error } = await supabase
       .from('categorias')
-      .insert(categoria)
+      .select('*')
+      .eq('tipo', tipo)
+      .eq('status', 'ativo')
+      .order('nome', { ascending: true });
+
+    if (error) {
+      console.error('Erro ao buscar categorias ativas:', error);
+      throw new Error(error.message);
+    }
+
+    return data || [];
+  },
+
+  async create(categoria: Omit<Categoria, 'id'>): Promise<Categoria> {
+    const payload = {
+      ...categoria,
+      nome: normalizeCategoriaNome(categoria.nome),
+    };
+    const { data, error } = await supabase
+      .from('categorias')
+      .insert(payload)
       .select()
       .single();
 
@@ -40,9 +67,15 @@ export const categoriasService = {
   },
 
   async update(id: string, categoria: Partial<Categoria>): Promise<Categoria> {
+    const payload = {
+      ...categoria,
+      ...(categoria.nome !== undefined
+        ? { nome: normalizeCategoriaNome(categoria.nome) }
+        : {}),
+    };
     const { data, error } = await supabase
       .from('categorias')
-      .update(categoria)
+      .update(payload)
       .eq('id', id)
       .select()
       .single();

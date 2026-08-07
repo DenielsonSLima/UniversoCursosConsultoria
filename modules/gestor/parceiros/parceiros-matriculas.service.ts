@@ -29,16 +29,17 @@ export const parceirosMatriculasService = {
     return data;
   },
 
-  async updateMatriculaStatus(matriculaId: string, status: string) {
+  async updateMatriculaStatus(matriculaId: string, status: string, dataMovimentacao: string) {
     const normalizedStatus = status.toUpperCase();
     const movementType = statusMovement[normalizedStatus];
     if (!movementType) throw new Error('Situação de matrícula exige uma ação acadêmica específica.');
+    if (!dataMovimentacao) throw new Error('Informe a data efetiva da movimentação acadêmica.');
     const { data, error } = await supabase.rpc('movimentar_matricula_academica', {
       p_matricula_id: matriculaId,
       p_tipo: movementType,
       p_motivo: 'Atualização de situação pelo cadastro do aluno.',
       p_observacao: null,
-      p_data_movimentacao: null,
+      p_data_movimentacao: dataMovimentacao,
       p_data_retorno_prevista: null,
       p_responsavel_id: null,
     });

@@ -65,7 +65,7 @@ export const normalizeBanesePixPayload = (
   const payload = String(value ?? "").trim();
   if (
     payload.length < 30 || payload.length > 600 ||
-    !/^[\x20-\x7E]+$/.test(payload) || /\s/.test(payload)
+    !/^[\x20-\x7E]+$/.test(payload)
   ) {
     throw new Error(
       "Pix copia e cola Banese possui formato ou tamanho invalido.",
@@ -105,7 +105,7 @@ export const normalizeBanesePixPayload = (
         return findSingleField(
           parseEmvFields(field.value, "Conta Pix Banese"),
           "00",
-        ) ===
+        )?.toUpperCase() ===
           "BR.GOV.BCB.PIX";
       } catch {
         return false;

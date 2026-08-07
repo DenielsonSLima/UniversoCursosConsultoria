@@ -11,19 +11,20 @@ import {
 import type {
   CourseModality,
   GroupMode,
+  ReceivableKpis,
   ReceivableStatusCounts,
   StatusScope,
 } from './modalidade-receber.types';
 import { formatEnrollment } from './modalidade-receber.enrollment';
 import {
   formatCurrency,
-  formatOptionalCurrency,
   formatReceivableDate,
-  getPersistedGatewayFee,
-  getPersistedGatewayNet,
   groupModeLabels,
   paymentGatewayLabel,
   paymentMethodLabel,
+  paymentOriginLabel,
+  receivableClassLabel,
+  receivableCourseTitle,
   statusScopeLabels,
 } from './modalidade-receber.utils';
 
@@ -41,6 +42,7 @@ interface UseModalidadeReceberReportParams {
   dueEnd: string;
   statusScope: StatusScope;
   groupMode: GroupMode;
+  kpis: ReceivableKpis;
   statusCounts: ReceivableStatusCounts;
   toast: ReportToast;
 }
@@ -55,6 +57,7 @@ export const useModalidadeReceberReport = ({
   dueEnd,
   statusScope,
   groupMode,
+  kpis,
   statusCounts,
   toast,
 }: UseModalidadeReceberReportParams) => {
@@ -88,9 +91,10 @@ export const useModalidadeReceberReport = ({
 
   const columns = useMemo<FinancialReportColumn[]>(() => [
     { label: 'Aluno' },
-    { label: 'Cobrança' },
-    { label: 'Turma / unidade' },
-    { label: 'Vencimento' },
+    { label: 'Curso / turma' },
+    { label: 'Unidade' },
+    { label: 'Recebimento' },
+    { label: 'Datas' },
     { label: 'Situação', align: 'center' },
     { label: 'Valor', align: 'right' },
   ], []);
@@ -104,7 +108,10 @@ export const useModalidadeReceberReport = ({
         <p className="mt-0.5 font-bold text-slate-500">Matrícula: {formatEnrollment(item)}</p>
       </div>,
       <div>
-        <p className="font-bold text-slate-700">{item.descricao}</p>
+        <p className="font-black text-[#001a33]">{receivableCourseTitle(item)}</p>
+        {receivableClassLabel(item) ? (
+          <p className="mt-0.5 font-bold text-slate-500">Turma: {receivableClassLabel(item)}</p>
+        ) : null}
         <p className="mt-0.5 font-black uppercase tracking-wider text-slate-400">
           {item.tipoLancamento || 'Mensalidade'} {item.parcelaNumero !== undefined ? `· Parcela ${item.parcelaNumero}` : ''}
         </p>
@@ -113,41 +120,47 @@ export const useModalidadeReceberReport = ({
         ) : null}
       </div>,
       <div>
-        <p className="font-bold text-slate-700">{item.turmaNome || item.cursoNome || 'Turma não informada'}</p>
-        <p className="mt-0.5 font-bold uppercase tracking-wide text-slate-500">{item.poloNome || 'Unidade não informada'}</p>
+        <p className="font-bold uppercase tracking-wide text-slate-700">{item.poloNome || 'Unidade não informada'}</p>
+        <p className="mt-0.5 text-slate-400">CNPJ: {item.poloCnpj || 'não informado'}</p>
         <p className="mt-0.5 text-slate-400">{item.poloCidade || 'Cidade não informada'} / {item.poloUf || 'UF'}</p>
       </div>,
       <div>
-        <p className="font-bold text-slate-700">{formatReceivableDate(item.dataVencimento)}</p>
+        <p className="text-slate-500">Forma: {paymentMethodLabel(item)}</p>
+        <p className="mt-0.5 text-slate-500">Origem: {paymentOriginLabel(item)}</p>
+      </div>,
+      <div>
+        <p className="text-slate-500">Emissão: {formatReceivableDate(item.dataEmissao || '')}</p>
+        <p className="mt-0.5 font-bold text-slate-700">Venc.: {formatReceivableDate(item.dataVencimento)}</p>
         {item.status === 'PAGO' ? (
-          <p className="mt-0.5 font-bold text-emerald-700">Pago em {formatReceivableDate(item.dataPagamento || '')}</p>
+          <p className="mt-0.5 font-bold text-emerald-700">Pago: {formatReceivableDate(item.dataPagamento || '')}</p>
         ) : null}
-        <p className="mt-0.5 text-slate-500">{paymentMethodLabel(item)}</p>
       </div>,
       <FinancialReportStatusBadge status={item.status} />,
       <div>
         <p className="font-black text-[#001a33]">{formatCurrency(item.valor)}</p>
-        <p className="mt-1 text-[9px] font-bold text-slate-500">Taxa: {formatOptionalCurrency(getPersistedGatewayFee(item), 'Não informado')}</p>
-        <p className="text-[9px] font-bold text-emerald-700">Líquido: {formatOptionalCurrency(getPersistedGatewayNet(item), 'Não informado')}</p>
+        {typeof item.descontoAplicado === 'number' && item.descontoAplicado > 0 ? (
+          <p className="mt-1 text-[9px] font-bold text-emerald-700">
+            Desconto: {formatCurrency(item.descontoAplicado)}
+          </p>
+        ) : null}
+        {typeof item.jurosAplicados === 'number' && item.jurosAplicados > 0 ? (
+          <p className="text-[9px] font-bold text-amber-700">
+            Juros: {formatCurrency(item.jurosAplicados)}
+          </p>
+        ) : null}
+        {typeof item.multaAplicada === 'number' && item.multaAplicada > 0 ? (
+          <p className="text-[9px] font-bold text-rose-700">
+            Multa: {formatCurrency(item.multaAplicada)}
+          </p>
+        ) : null}
         {item.valorPago !== undefined ? (
-          <p className="mt-1 whitespace-nowrap text-[10px] font-bold text-emerald-700">Rec.: {formatCurrency(item.valorPago)}</p>
+          <p className="mt-1 whitespace-nowrap text-[10px] font-bold text-emerald-700">
+            Recebido: {formatCurrency(item.valorPago)}
+          </p>
         ) : null}
       </div>,
     ],
   })), [receivables]);
-
-  const totals = useMemo(() => {
-    const source = receivables || [];
-    const total = source.reduce((sum, item) => sum + item.valor, 0);
-    const recebido = source
-      .filter((item) => item.status === 'PAGO')
-      .reduce((sum, item) => sum + (item.valorPago ?? item.valor), 0);
-    const aReceber = source
-      .filter((item) => ['PENDENTE', 'VENCIDO', 'SUSPENSO'].includes(item.status))
-      .reduce((sum, item) => sum + item.valor, 0);
-    const vencidos = source.filter((item) => item.status === 'VENCIDO').length;
-    return { total, recebido, aReceber, vencidos };
-  }, [receivables]);
 
   const expectedCount = receivables?.length ?? (
     statusScope === 'pending'
@@ -172,11 +185,11 @@ export const useModalidadeReceberReport = ({
   }, [dueEnd, dueStart, expectedCount, groupMode, search, statusScope, title]);
 
   const summaryCards = useMemo<FinancialReportSummaryCard[]>(() => [
-    { label: 'Total previsto', value: formatCurrency(totals.total), tone: 'slate' },
-    { label: 'Recebido', value: formatCurrency(totals.recebido), tone: 'emerald' },
-    { label: 'A receber', value: formatCurrency(totals.aReceber), tone: 'amber' },
-    { label: 'Vencidos', value: totals.vencidos, tone: 'rose' },
-  ], [totals]);
+    { label: 'Total previsto', value: formatCurrency(kpis.total), tone: 'slate' },
+    { label: 'Recebido', value: formatCurrency(kpis.recebido), tone: 'emerald' },
+    { label: 'A receber', value: formatCurrency(kpis.aReceber), tone: 'amber' },
+    { label: 'Vencidos', value: kpis.vencidos, tone: 'rose' },
+  ], [kpis]);
 
   return {
     columns,

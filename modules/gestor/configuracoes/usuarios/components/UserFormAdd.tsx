@@ -4,6 +4,7 @@ import { Save, X } from 'lucide-react';
 import { formatCpf, isValidCpf, isValidEmail, normalizeEmail } from '../../../../shared/utils/identityValidation';
 import {
   DEFAULT_FINANCEIRO_TABS,
+  DEFAULT_GESTAO_TURMA_TABS,
   GESTOR_MODULE_IDS,
   GestorModuleId,
   normalizeGestorPermissions,
@@ -14,6 +15,8 @@ import { perfisAcessoService, PerfilAcesso } from '../../perfis-acesso/perfis-ac
 import UserAccessSections from './UserAccessSections';
 import UserIdentitySections from './UserIdentitySections';
 import { USER_FORM_MODULE_TABS } from './user-access-options';
+import { normalizeSecretariaAccessTabs } from '../../../secretaria/secretaria-access';
+import ToastNotification, { useToast } from '../../../components/ToastNotification';
 
 interface UserFormAddProps {
   contextId: string;
@@ -21,6 +24,16 @@ interface UserFormAddProps {
   onCancel: () => void;
   initialUser?: UsuarioSistema;
 }
+
+const GESTOR_PASSWORD_REQUIREMENTS =
+  'A senha precisa ter ao menos 8 caracteres, 1 letra maiúscula, 1 letra minúscula e 1 número.';
+
+const isStrongGestorPassword = (password: string) => (
+  password.length >= 8
+  && /[A-Z]/.test(password)
+  && /[a-z]/.test(password)
+  && /\d/.test(password)
+);
 
 const splitFullName = (fullName: string) => {
   const parts = String(fullName || '').trim().split(/\s+/);
@@ -48,10 +61,22 @@ const buildPermissionsFromUser = (user?: UsuarioSistema | null) => {
       : permissions.modules.includes('financeiro')
         ? DEFAULT_FINANCEIRO_TABS
         : [];
+  const abasModulos: Record<string, string[]> = permissions.tabs
+    ? {
+        ...permissions.tabs,
+        secretaria: normalizeSecretariaAccessTabs(permissions.tabs.secretaria),
+      }
+    : {};
+  if (
+    permissions.modules.includes('gestao')
+    && !Object.prototype.hasOwnProperty.call(abasModulos, 'gestao')
+  ) {
+    abasModulos.gestao = DEFAULT_GESTAO_TURMA_TABS;
+  }
   return {
     permissoes: permissions.modules.length > 0 ? permissions.modules : ['inicio'],
     financeiroAbas,
-    abasModulos: permissions.tabs || {},
+    abasModulos,
   };
 };
 
@@ -62,6 +87,7 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
   initialUser,
 }) => {
   const { data: companies = [] } = useUsuariosPolosQuery();
+  const { toasts, removeToast, toast } = useToast();
   const [perfis, setPerfis] = useState<PerfilAcesso[]>([]);
   
   const [formData, setFormData] = useState<NovoUsuarioFormData>({
@@ -85,6 +111,10 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
     diasHorario: [1, 2, 3, 4, 5, 6],
     horarioInicio: '08:00',
     horarioFim: '18:00',
+    setorComunicacao: 'todos',
+    poloComunicacaoId: contextId === 'global' ? null : contextId,
+    podeVisualizarTodosPolos: false,
+    podeVisualizarTodosSetores: false,
   });
 
   const [passwordStrength, setPasswordStrength] = useState(0);
@@ -118,7 +148,7 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
       sobrenome,
       cpf: initialUser.cpf || '',
       dataNascimento: '',
-      telefone: initialUser.telefone || '',
+      telefone: formatPhone(initialUser.telefone || ''),
       email: initialUser.email || '',
       senha: '',
       confirmarSenha: '',
@@ -138,6 +168,10 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
       diasHorario: initialUser.restricao_horario?.dias || [1, 2, 3, 4, 5, 6],
       horarioInicio: initialUser.restricao_horario?.horario_inicio || '08:00',
       horarioFim: initialUser.restricao_horario?.horario_fim || '18:00',
+      setorComunicacao: initialUser.setor_comunicacao || 'todos',
+      poloComunicacaoId: initialUser.polo_comunicacao_id || (contextId === 'global' ? null : contextId),
+      podeVisualizarTodosPolos: Boolean(initialUser.pode_visualizar_todos_polos),
+      podeVisualizarTodosSetores: Boolean(initialUser.pode_visualizar_todos_setores),
     }));
   }, [contextId, initialUser]);
 
@@ -158,17 +192,23 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
     return value ? formatCpf(value) : '';
   };
 
-  const formatPhone = (value: string) => value
-    .replace(/\D/g, '')
-    .replace(/(\d{2})(\d)/, '($1) $2')
-    .replace(/(\d{5})(\d)/, '$1-$2')
-    .replace(/(-\d{4})\d+?$/, '$1');
+  function formatPhone(value: string) {
+    const digits = value.replace(/\D/g, '').slice(0, 11);
+    if (!digits) return '';
+    if (digits.length === 1) return `(${digits}`;
+    if (digits.length === 2) return `(${digits})`;
+
+    const ddd = digits.slice(0, 2);
+    const number = digits.slice(2);
+    if (number.length <= 5) return `(${ddd}) ${number}`;
+    return `(${ddd}) ${number.slice(0, 5)}-${number.slice(5)}`;
+  }
 
   const checkPasswordStrength = (pass: string) => {
     let score = 0;
-    if (pass.length > 6) score += 1;
-    if (pass.length > 10) score += 1;
-    if (/[A-Z]/.test(pass)) score += 1;
+    if (pass.length >= 8) score += 1;
+    if (pass.length >= 12) score += 1;
+    if (/[A-Z]/.test(pass) && /[a-z]/.test(pass)) score += 1;
     if (/[0-9]/.test(pass)) score += 1;
     if (/[^A-Za-z0-9]/.test(pass)) score += 1;
     setPasswordStrength(score);
@@ -214,7 +254,9 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
         };
       }
 
-      const availableTabs = USER_FORM_MODULE_TABS[id] || [];
+      const availableTabs = (USER_FORM_MODULE_TABS[id] || []).filter(
+        (tab) => tab.id !== 'comunicacao-automacoes' || prev.todosPolos,
+      );
       return {
         ...prev,
         permissoes: [...current, id],
@@ -230,11 +272,18 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
 
   const toggleTodosPolos = () => {
     if (contextId !== 'global') return;
-    setFormData(prev => ({
-      ...prev,
-      todosPolos: !prev.todosPolos,
-      polosAcesso: !prev.todosPolos ? [] : contextId === 'global' ? [] : [contextId],
-    }));
+    setFormData(prev => {
+      const nextTodosPolos = !prev.todosPolos;
+      return {
+        ...prev,
+        todosPolos: nextTodosPolos,
+        polosAcesso: nextTodosPolos ? [] : contextId === 'global' ? [] : [contextId],
+        abasModulos: nextTodosPolos ? prev.abasModulos : {
+          ...prev.abasModulos,
+          comunicacao: (prev.abasModulos.comunicacao || []).filter((tab) => tab !== 'comunicacao-automacoes'),
+        },
+      };
+    });
   };
 
   const toggleFinanceiroTab = (id: string) => {
@@ -274,62 +323,83 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const validationError = (message: string) => {
+      toast.error('Revise os dados', message);
+    };
+
     if (!isValidCpf(formData.cpf)) {
-      alert('Informe um CPF válido para o usuário.');
+      validationError('Informe um CPF válido para o usuário.');
       return;
     }
     if (!isEditing && !formData.dataNascimento) {
-      alert('Informe a data de nascimento do usuário.');
+      validationError('Informe a data de nascimento do usuário.');
       return;
     }
-    if (formData.telefone.length < 14) {
-      alert('Informe o telefone do usuário.');
+    if (formData.telefone.replace(/\D/g, '').length !== 11) {
+      validationError('Informe o telefone com DDD no formato (00) 00000-0000.');
       return;
     }
     if (!isValidEmail(formData.email)) {
-      alert('Informe um e-mail válido. Ele será usado como login do gestor/usuário.');
+      validationError('Informe um e-mail válido. Ele será usado como login do gestor/usuário.');
       return;
     }
     if (formData.senha || formData.confirmarSenha) {
-      if (!formData.senha || formData.senha.length < 6) {
-        alert('A senha precisa ter ao menos 6 caracteres.');
+      if (!formData.senha || !isStrongGestorPassword(formData.senha)) {
+        validationError(GESTOR_PASSWORD_REQUIREMENTS);
         return;
       }
       if (formData.senha !== formData.confirmarSenha) {
-        alert('As senhas não coincidem!');
+        validationError('As senhas não coincidem.');
         return;
       }
     }
     if (!isEditing && !formData.senha) {
-      alert('Informe a senha inicial do usuário.');
+      validationError('Informe a senha inicial do usuário.');
       return;
     }
     if (!formData.todosPolos && formData.polosAcesso.length === 0) {
-      alert('Selecione ao menos um polo para este usuário.');
+      validationError('Selecione ao menos um polo para este usuário.');
       return;
     }
     if (!formData.perfil_acesso_id || formData.personalizarPermissoes) {
       if (formData.permissoes.length === 0 || !formData.permissoes.some(moduleId => GESTOR_MODULE_IDS.includes(moduleId as GestorModuleId))) {
-        alert('Selecione ao menos um módulo para este usuário.');
+        validationError('Selecione ao menos um módulo para este usuário.');
         return;
       }
       if (formData.permissoes.includes('financeiro') && formData.financeiroAbas.length === 0) {
-        alert('Selecione ao menos uma aba do módulo financeiro.');
+        validationError('Selecione ao menos uma aba do módulo financeiro.');
         return;
       }
-      for (const moduleId of ['cadastros', 'secretaria', 'comunicacao']) {
+      for (const moduleId of ['gestao', 'cadastros', 'secretaria', 'comunicacao']) {
         if (formData.permissoes.includes(moduleId) && (formData.abasModulos[moduleId] || []).length === 0) {
-          alert(`Selecione ao menos uma aba do módulo ${moduleId}.`);
+          validationError(`Selecione ao menos uma aba do módulo ${moduleId}.`);
           return;
         }
       }
     }
     if (formData.personalizarHorario && formData.horarioAtivo && formData.diasHorario.length === 0) {
-      alert('Selecione ao menos um dia permitido para o horário individual.');
+      validationError('Selecione ao menos um dia permitido para o horário individual.');
       return;
     }
     if (formData.personalizarHorario && formData.horarioAtivo && formData.horarioInicio === formData.horarioFim) {
-      alert('O início e o fim do horário individual não podem ser iguais.');
+      validationError('O início e o fim do horário individual não podem ser iguais.');
+      return;
+    }
+    const hasWhatsAppAccess = formData.permissoes.includes('comunicacao')
+      && (formData.abasModulos.comunicacao || []).includes('comunicacao-whatsapp');
+    const hasAutomationAccess = formData.permissoes.includes('comunicacao')
+      && (formData.abasModulos.comunicacao || []).includes('comunicacao-automacoes');
+    if (hasAutomationAccess && !formData.todosPolos) {
+      validationError('Automações multicanal exigem acesso global a todos os polos.');
+      return;
+    }
+    if (
+      hasWhatsAppAccess
+      && !formData.podeVisualizarTodosSetores
+      && !formData.podeVisualizarTodosPolos
+      && !formData.poloComunicacaoId
+    ) {
+      validationError('Selecione o polo de atendimento do WhatsApp para este usuário.');
       return;
     }
     onSave({ ...formData, email: normalizeEmail(formData.email) });
@@ -337,6 +407,7 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
 
   return (
     <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden flex flex-col h-full animate-fadeIn">
+      <ToastNotification toasts={toasts} onRemove={removeToast} />
       
       {/* Header */}
       <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
@@ -367,9 +438,11 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
           onTogglePolo={togglePolo}
         />
         <UserAccessSections
+          contextId={contextId}
           formData={formData}
           perfis={perfis}
           selectedPerfil={selectedPerfil}
+          companies={companies}
           setFormData={setFormData}
           onTogglePermission={togglePermission}
           onToggleFinanceiroTab={toggleFinanceiroTab}

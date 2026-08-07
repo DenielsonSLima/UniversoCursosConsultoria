@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   AlertTriangle,
   ArrowDownToLine,
@@ -10,7 +10,7 @@ import {
   PlayCircle,
   X,
 } from 'lucide-react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Turma } from '../../../gestao.types';
 import ToastNotification, { useToast } from '../../../../parceiros/components/shared/ToastNotification';
 import { academicLifecycleKeys } from '../academic-lifecycle.keys';
@@ -27,10 +27,17 @@ import { invalidateTechnicalLandingQueries } from '../../../../../public/landing
 
 interface TurmaAcademicoProps {
   turma: Turma;
+  onTurmaUpdated?: (turma: Turma) => void;
   onTurmaFinalizada?: () => void;
 }
 
-const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizada }) => {
+const MOVEMENTS_PAGE_SIZE = 10;
+
+const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({
+  turma,
+  onTurmaUpdated,
+  onTurmaFinalizada,
+}) => {
   const { toasts, removeToast, toast } = useToast();
   const queryClient = useQueryClient();
   const [reopenPeriod, setReopenPeriod] = useState<AcademicPeriod | null>(null);
@@ -40,7 +47,10 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizad
   const [originInstitution, setOriginInstitution] = useState('');
   const [originCourse, setOriginCourse] = useState('');
   const [transferReason, setTransferReason] = useState('');
+  const [transferNotes, setTransferNotes] = useState('');
+  const [transferDate, setTransferDate] = useState(getMaceioIsoDate());
   const [externalCredits, setExternalCredits] = useState<Record<string, ExternalCreditDraft>>({});
+  const [movementsPage, setMovementsPage] = useState(1);
 
   const periodsQuery = useQuery({
     queryKey: academicLifecycleKeys.periodos(turma.id),
@@ -49,10 +59,31 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizad
   const periods = periodsQuery.data || [];
 
   const movementsQuery = useQuery({
-    queryKey: academicLifecycleKeys.movimentacoes(turma.id),
-    queryFn: () => academicLifecycleService.getMovimentacoes(turma.id),
+    queryKey: academicLifecycleKeys.movimentacoesPagina(
+      turma.id,
+      movementsPage,
+      MOVEMENTS_PAGE_SIZE,
+    ),
+    queryFn: () => academicLifecycleService.getMovimentacoesPage(
+      turma.id,
+      movementsPage,
+      MOVEMENTS_PAGE_SIZE,
+    ),
+    placeholderData: keepPreviousData,
   });
-  const movements = movementsQuery.data || [];
+  const movements = movementsQuery.data?.items || [];
+  const movementsTotal = movementsQuery.data?.total || 0;
+  const movementsTotalPages = Math.max(1, Math.ceil(movementsTotal / MOVEMENTS_PAGE_SIZE));
+
+  useEffect(() => {
+    setMovementsPage(1);
+  }, [turma.id]);
+
+  useEffect(() => {
+    if (movementsPage > movementsTotalPages) {
+      setMovementsPage(movementsTotalPages);
+    }
+  }, [movementsPage, movementsTotalPages]);
 
   const allStudentsQuery = useQuery({
     queryKey: [...academicLifecycleKeys.turma(turma.id), 'alunos-recebimento'],
@@ -80,6 +111,8 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizad
     setOriginInstitution('');
     setOriginCourse('');
     setTransferReason('');
+    setTransferNotes('');
+    setTransferDate(getMaceioIsoDate());
     setExternalCredits({});
   };
 
@@ -126,8 +159,14 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizad
     mutationFn: (status: 'PLANEJADA' | 'INSCRICOES_ABERTAS' | 'EM_ANDAMENTO') => (
       academicLifecycleService.alterarStatusTurma(turma.id, status)
     ),
-    onSuccess: async (_data, status) => {
+    onSuccess: async (updatedRecord: any, status) => {
       await invalidate();
+      onTurmaUpdated?.({
+        ...turma,
+        status,
+        permitirInscricoesOnline: updatedRecord?.permitir_inscricoes_online
+          ?? (status === 'PLANEJADA' ? false : turma.permitirInscricoesOnline),
+      });
       if (status === 'PLANEJADA') {
         toast.success('Inscrições fechadas', 'A turma voltou ao planejamento e a inscrição online foi desativada.');
       } else if (status === 'EM_ANDAMENTO') {
@@ -135,7 +174,6 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizad
       } else {
         toast.success('Inscrições abertas', 'A matrícula administrativa está disponível, mas o conteúdo acadêmico continua bloqueado.');
       }
-      onTurmaFinalizada?.();
     },
     onError: (error: any) => toast.error('Fase não alterada', error.message),
   });
@@ -167,6 +205,8 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizad
         instituicaoOrigem: originInstitution,
         cursoOrigem: originCourse,
         motivo: transferReason,
+        observacao: transferNotes,
+        dataTransferencia: transferDate,
         aproveitamentos: (Object.entries(externalCredits) as Array<[string, ExternalCreditDraft]>)
           .filter(([, credit]) => credit.selected)
           .map(([disciplinaId, credit]) => ({
@@ -329,9 +369,13 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizad
 
       <AcademicMovementsSection
         movements={movements}
+        page={movementsPage}
+        pageSize={MOVEMENTS_PAGE_SIZE}
+        total={movementsTotal}
         isLoading={movementsQuery.isLoading}
         isError={movementsQuery.isError}
         isFetching={movementsQuery.isFetching}
+        onPageChange={setMovementsPage}
         onRetry={() => { void movementsQuery.refetch(); }}
       />
 
@@ -374,11 +418,15 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizad
           originInstitution={originInstitution}
           originCourse={originCourse}
           reason={transferReason}
+          notes={transferNotes}
+          transferDate={transferDate}
           credits={externalCredits}
           onStudentChange={setSelectedStudentId}
           onInstitutionChange={setOriginInstitution}
           onCourseChange={setOriginCourse}
           onReasonChange={setTransferReason}
+          onNotesChange={setTransferNotes}
+          onTransferDateChange={setTransferDate}
           onCreditsChange={setExternalCredits}
           onRetry={() => { void Promise.all([allStudentsQuery.refetch(), disciplinesQuery.refetch()]); }}
           onClose={closeReceiveTransfer}

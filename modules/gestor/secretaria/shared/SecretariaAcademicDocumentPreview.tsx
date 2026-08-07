@@ -1,25 +1,23 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Loader2, Printer } from 'lucide-react';
+import { ArrowLeft, Loader2, Printer } from 'lucide-react';
 import { supabase } from '../../../../lib/supabase';
 import { formatMatricula } from '../../../../lib/academicUtils';
 import { sanitizedHtml } from '../../../../lib/htmlSanitizer';
 import DocumentHeader from '../../components/DocumentHeader';
 import { boletimService } from '../../cadastros/modelos-documentos/boletim/boletim.service';
 import { atestadoConclusaoService } from '../../cadastros/modelos-documentos/atestado-conclusao/atestado-conclusao.service';
+import { loadAcademicPreview } from '../historico-emissoes/academic-preview';
+import type { EmissionLog } from '../historico-emissoes/historico-emissoes.types';
+import { getSecretariaErrorMessage } from './secretaria-error';
 
 interface Props {
   matriculaId: string;
   type: 'boletim_tecnico' | 'atestado_conclusao_tecnico';
-}
-
-interface AcademicRow {
-  modulo: string;
-  disciplina: string;
-  cargaHoraria: number;
-  media: number | null;
-  frequencia: number | null;
-  situacao: string;
+  moduleId?: string;
+  moduleName?: string;
+  onClose: () => void;
 }
 
 const formatDate = (value?: string | null) => {
@@ -27,11 +25,30 @@ const formatDate = (value?: string | null) => {
   return new Date(`${value.slice(0, 10)}T12:00:00`).toLocaleDateString('pt-BR');
 };
 
-const SecretariaAcademicDocumentPreview: React.FC<Props> = ({ matriculaId, type }) => {
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ['secretaria', 'academic-document-preview', type, matriculaId],
+const SecretariaAcademicDocumentPreview: React.FC<Props> = ({
+  matriculaId,
+  type,
+  moduleId,
+  moduleName,
+  onClose,
+}) => {
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
+
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ['secretaria', 'academic-document-preview', type, matriculaId, moduleId || 'todos'],
     queryFn: async () => {
-      const { data: matricula, error: matriculaError } = await supabase
+      const metadataPromise = supabase
         .from('matriculas')
         .select(`
           id, aluno_id, turma_id, status, data_matricula,
@@ -44,220 +61,182 @@ const SecretariaAcademicDocumentPreview: React.FC<Props> = ({ matriculaId, type 
         `)
         .eq('id', matriculaId)
         .single();
-      if (matriculaError) throw matriculaError;
+      const documentType = type === 'boletim_tecnico'
+        ? 'boletim'
+        : 'atestado_conclusao_tecnico';
+      const previewPromise = loadAcademicPreview({
+        matricula_id: matriculaId,
+        documento: documentType,
+        periodo_referencia: type === 'boletim_tecnico' ? moduleId || null : null,
+      } as EmissionLog);
+      const templatePromise = type === 'boletim_tecnico'
+        ? boletimService.getTemplate('TECNICO')
+        : atestadoConclusaoService.getTemplate('TECNICO');
 
-      const turma: any = matricula.turmas;
-      const aluno: any = matricula.parceiros;
-
-      const [
-        { data: grade, error: gradeError },
-        { data: notas, error: notasError },
-        { data: aulas, error: aulasError },
-        { data: frequencias, error: frequenciasError },
-        { data: certificado },
-      ] = await Promise.all([
-        supabase
-          .from('turmas_disciplinas')
-          .select('disciplina_id, concluida, disciplinas!inner(nome, carga_horaria, created_at, modulos!inner(nome, created_at)), periodos_letivos(ordem)')
-          .eq('turma_id', matricula.turma_id),
-        supabase
-          .from('diario_notas')
-          .select('*')
-          .eq('turma_id', matricula.turma_id)
-          .eq('aluno_id', matricula.aluno_id),
-        supabase
-          .from('aulas_turma')
-          .select('id, disciplina_id')
-          .eq('turma_id', matricula.turma_id),
-        supabase
-          .from('diario_frequencia')
-          .select('disciplina_id, status')
-          .eq('turma_id', matricula.turma_id)
-          .eq('aluno_id', matricula.aluno_id),
-        supabase
-          .from('certificados_academicos')
-          .select('data_conclusao')
-          .eq('matricula_id', matriculaId)
-          .maybeSingle(),
+      const [{ data: matricula, error: matriculaError }, academic, template] = await Promise.all([
+        metadataPromise,
+        previewPromise,
+        templatePromise,
       ]);
-      if (gradeError) throw gradeError;
-      if (notasError) throw notasError;
-      if (aulasError) throw aulasError;
-      if (frequenciasError) throw frequenciasError;
-
-      const notesByDiscipline = new Map((notas || []).map((note: any) => [note.disciplina_id, note]));
-      const classesByDiscipline = new Map<string, number>();
-      (aulas || []).forEach((lesson: any) => {
-        classesByDiscipline.set(lesson.disciplina_id, (classesByDiscipline.get(lesson.disciplina_id) || 0) + 1);
-      });
-      const absencesByDiscipline = new Map<string, number>();
-      const recordsByDiscipline = new Map<string, number>();
-      (frequencias || []).forEach((record: any) => {
-        recordsByDiscipline.set(record.disciplina_id, (recordsByDiscipline.get(record.disciplina_id) || 0) + 1);
-        if (record.status === 'F') {
-          absencesByDiscipline.set(record.disciplina_id, (absencesByDiscipline.get(record.disciplina_id) || 0) + 1);
-        }
-      });
-
-      const rows: AcademicRow[] = (grade || [])
-        .sort((a: any, b: any) => {
-          const period = Number(a.periodos_letivos?.ordem || 999) - Number(b.periodos_letivos?.ordem || 999);
-          if (period !== 0) return period;
-          const moduleOrder = String(a.disciplinas?.modulos?.created_at || '').localeCompare(String(b.disciplinas?.modulos?.created_at || ''));
-          if (moduleOrder !== 0) return moduleOrder;
-          return String(a.disciplinas?.created_at || '').localeCompare(String(b.disciplinas?.created_at || ''));
-        })
-        .map((item: any) => {
-          const note: any = notesByDiscipline.get(item.disciplina_id);
-          const partial = note
-            ? Math.min(10, ((Number(note.nota_p) + Number(note.nota_ti) + Number(note.nota_tg) + Number(note.nota_s)) / 4) + Number(note.nota_cq) + Number(note.nota_o))
-            : null;
-          const finalGrade = partial === null
-            ? null
-            : note?.nota_rec !== null && Number(note.nota_rec) > partial
-              ? Number(note.nota_rec)
-              : partial;
-          const totalClasses = classesByDiscipline.get(item.disciplina_id) || 0;
-          const frequencyRecords = recordsByDiscipline.get(item.disciplina_id) || 0;
-          const frequency = totalClasses > 0 && frequencyRecords === totalClasses
-            ? Math.round(((totalClasses - (absencesByDiscipline.get(item.disciplina_id) || 0)) / totalClasses) * 100)
-            : null;
-          const situation = finalGrade === null
-            ? 'Sem lançamento'
-            : frequency !== null && frequency < 75
-              ? 'Reprovado por frequência'
-              : finalGrade >= 6
-                ? 'Aprovado'
-                : note?.nota_rec === null
-                  ? 'Recuperação'
-                  : 'Reprovado';
-
-          return {
-            modulo: item.disciplinas?.modulos?.nome || 'Módulo',
-            disciplina: item.disciplinas?.nome || 'Disciplina',
-            cargaHoraria: Number(item.disciplinas?.carga_horaria || 0),
-            media: finalGrade === null ? null : Number(finalGrade.toFixed(1)),
-            frequencia: frequency,
-            situacao: situation,
-          };
-        });
-
-      const validGrades = rows.filter((row) => row.media !== null);
-      const validFrequencies = rows.filter((row) => row.frequencia !== null);
-      const average = validGrades.length
-        ? validGrades.reduce((sum, row) => sum + Number(row.media), 0) / validGrades.length
-        : null;
-      const generalFrequency = validFrequencies.length
-        ? validFrequencies.reduce((sum, row) => sum + Number(row.frequencia), 0) / validFrequencies.length
-        : null;
-
-      const templateService = type === 'boletim_tecnico' ? boletimService : atestadoConclusaoService;
-      const template = await templateService.getTemplate('TECNICO');
+      if (matriculaError) throw matriculaError;
 
       return {
         matricula,
-        aluno,
-        turma,
-        polo: turma.polos,
-        rows,
-        average,
-        generalFrequency,
-        completionDate: certificado?.data_conclusao || turma.data_previsao_termino,
+        aluno: matricula.parceiros as any,
+        turma: matricula.turmas as any,
+        polo: (matricula.turmas as any).polos,
+        academic,
         template,
       };
     },
     staleTime: 30_000,
   });
 
-  if (isLoading) {
-    return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-blue-600" /></div>;
+  let parsedText = '';
+  if (data) {
+    const modules = data.academic.moduleNames.join(', ') || moduleName || 'Sem módulo selecionado';
+    const replacements: Record<string, string> = {
+      '{{ALUNO_NOME}}': data.aluno.nome,
+      '{{ALUNO_CPF}}': data.aluno.cpf_cnpj || 'Não informado',
+      '{{ALUNO_RG}}': data.aluno.rg || 'Não informado',
+      '{{ALUNO_MATRICULA}}': formatMatricula(
+        data.matricula.id,
+        data.matricula.data_matricula,
+        data.turma.polo_id
+      ),
+      '{{CURSO_NOME}}': data.turma.cursos.nome,
+      '{{TURMA_NOME}}': data.turma.nome,
+      '{{POLO_NOME}}': data.polo.nome,
+      '{{CIDADE_POLO}}': `${data.polo.cidade}/${data.polo.estado}`,
+      '{{DATA_ATUAL}}': new Date().toLocaleDateString('pt-BR'),
+      '{{DATA_CONCLUSAO}}': formatDate(data.academic.fimCurso || data.turma.data_previsao_termino),
+      '{{CARGA_HORARIA_TOTAL}}': String(data.academic.cargaHorariaTotal),
+      '{{MODULO_PERIODO}}': modules,
+      '{{ANO_LETIVO}}': String(new Date().getFullYear()),
+      '{{TABELA_BOLETIM_TECNICO}}': data.academic.componentesTable,
+      '{{MEDIA_GERAL}}': data.academic.mediaGeral === null
+        ? '—'
+        : data.academic.mediaGeral.toFixed(1),
+      '{{FREQUENCIA_GERAL}}': data.academic.frequenciaGeral === null
+        ? '—'
+        : `${data.academic.frequenciaGeral.toFixed(0)}%`,
+      '{{SITUACAO_ACADEMICA}}': data.academic.situacaoAcademica,
+    };
+
+    parsedText = data.template.textContent;
+    Object.entries(replacements).forEach(([token, value]) => {
+      parsedText = parsedText.replaceAll(token, value);
+    });
   }
-  if (isError || !data) {
-    return <p className="rounded-2xl bg-rose-50 p-4 text-center text-xs font-bold text-rose-700">Não foi possível montar o preview acadêmico.</p>;
-  }
 
-  const tableHtml = `
-    <table style="width:100%;border-collapse:collapse;font-size:10px;margin-top:8px">
-      <thead><tr style="background:#f1f5f9">
-        <th style="border:1px solid #cbd5e1;padding:6px;text-align:left">Módulo</th>
-        <th style="border:1px solid #cbd5e1;padding:6px;text-align:left">Disciplina</th>
-        <th style="border:1px solid #cbd5e1;padding:6px">CH</th>
-        <th style="border:1px solid #cbd5e1;padding:6px">Nota</th>
-        <th style="border:1px solid #cbd5e1;padding:6px">Freq.</th>
-        <th style="border:1px solid #cbd5e1;padding:6px">Situação</th>
-      </tr></thead>
-      <tbody>${data.rows.map((row) => `<tr>
-        <td style="border:1px solid #cbd5e1;padding:5px">${row.modulo}</td>
-        <td style="border:1px solid #cbd5e1;padding:5px">${row.disciplina}</td>
-        <td style="border:1px solid #cbd5e1;padding:5px;text-align:center">${row.cargaHoraria}h</td>
-        <td style="border:1px solid #cbd5e1;padding:5px;text-align:center">${row.media ?? '—'}</td>
-        <td style="border:1px solid #cbd5e1;padding:5px;text-align:center">${row.frequencia === null ? '—' : `${row.frequencia}%`}</td>
-        <td style="border:1px solid #cbd5e1;padding:5px;text-align:center">${row.situacao}</td>
-      </tr>`).join('')}</tbody>
-    </table>`;
-
-  const modules = [...new Set(data.rows.map((row) => row.modulo))].join(', ');
-  const status = data.matricula.status === 'CONCLUIDO' ? 'Concluído' : data.matricula.status;
-  const replacements: Record<string, string> = {
-    '{{ALUNO_NOME}}': data.aluno.nome,
-    '{{ALUNO_CPF}}': data.aluno.cpf_cnpj || 'Não informado',
-    '{{ALUNO_RG}}': data.aluno.rg || 'Não informado',
-    '{{ALUNO_MATRICULA}}': formatMatricula(data.matricula.id, data.matricula.data_matricula, data.turma.polo_id),
-    '{{CURSO_NOME}}': data.turma.cursos.nome,
-    '{{TURMA_NOME}}': data.turma.nome,
-    '{{POLO_NOME}}': data.polo.nome,
-    '{{CIDADE_POLO}}': `${data.polo.cidade}/${data.polo.estado}`,
-    '{{DATA_ATUAL}}': new Date().toLocaleDateString('pt-BR'),
-    '{{DATA_CONCLUSAO}}': formatDate(data.completionDate),
-    '{{CARGA_HORARIA_TOTAL}}': String(data.turma.cursos.carga_horaria || 0),
-    '{{MODULO_PERIODO}}': modules || 'Sem módulos cadastrados',
-    '{{ANO_LETIVO}}': String(new Date().getFullYear()),
-    '{{TABELA_BOLETIM_TECNICO}}': tableHtml,
-    '{{MEDIA_GERAL}}': data.average === null ? '—' : data.average.toFixed(1),
-    '{{FREQUENCIA_GERAL}}': data.generalFrequency === null ? '—' : `${data.generalFrequency.toFixed(0)}%`,
-    '{{SITUACAO_ACADEMICA}}': status,
-  };
-
-  let parsedText = data.template.textContent;
-  Object.entries(replacements).forEach(([token, value]) => {
-    parsedText = parsedText.replaceAll(token, value);
-  });
-
-  return (
-    <div>
-      <div className="mb-3 flex items-center justify-between">
-        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Preview do documento</p>
-        <button onClick={() => window.print()} className="flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2 text-[10px] font-black uppercase text-slate-600">
-          <Printer size={13} /> Imprimir
-        </button>
-      </div>
-      <div className="max-h-[680px] overflow-auto rounded-2xl bg-slate-900 p-5">
-        <div className="mx-auto min-h-[1050px] w-[794px] bg-white p-14 shadow-2xl relative" style={{ fontFamily: '"Times New Roman", serif' }}>
-
-          {/* Marca d'água */}
-          {data.polo?.watermark_url && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden">
-              <img
-                src={data.polo.watermark_url}
-                alt="Watermark"
-                style={{
-                  opacity: data.polo.watermark_opacity ?? 0.1,
-                  width: `${data.polo.watermark_scale ?? 50}%`,
-                  transform: data.polo.watermark_rotate !== false ? 'rotate(-45deg)' : 'none',
-                }}
-              />
-            </div>
-          )}
-
-          <DocumentHeader polo={data.polo} orientation="portrait" />
-          <h2 className="my-8 text-center text-2xl font-bold uppercase text-[#001a33] underline underline-offset-8">
-            {type === 'boletim_tecnico' ? 'Boletim Escolar — Cursos Técnicos' : 'Atestado de Conclusão'}
-          </h2>
-          <div className="text-justify text-base leading-loose text-black relative z-10" dangerouslySetInnerHTML={sanitizedHtml(parsedText)} />
+  return createPortal(
+    <div
+      id="academic-preview-modal"
+      className="fixed inset-0 z-[2147483000] flex h-[100dvh] w-screen animate-fadeIn flex-col overflow-hidden bg-slate-950"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Prévia do documento acadêmico"
+    >
+      <header className="flex shrink-0 flex-col gap-3 border-b border-white/10 bg-slate-800 px-4 py-3 text-white sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Voltar"
+            className="rounded-xl border border-white/10 bg-white/5 p-2 text-slate-200 transition-colors hover:bg-white/10 hover:text-white"
+          >
+            <ArrowLeft size={16} />
+          </button>
+          <div>
+          <h4 className="text-sm font-black uppercase tracking-wide text-white">
+            Prévia do {type === 'boletim_tecnico' ? 'boletim escolar' : 'atestado de conclusão'}
+          </h4>
+          <p className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-slate-300">
+            {moduleName || 'Documento acadêmico oficial'}
+          </p>
+          </div>
         </div>
-      </div>
-    </div>
+        <div>
+          <button
+            type="button"
+            onClick={() => window.print()}
+            disabled={isLoading || isError}
+            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-[10px] font-black uppercase tracking-wider text-white shadow-md transition-colors hover:bg-blue-500 disabled:opacity-40"
+          >
+            <Printer size={13} /> Imprimir
+          </button>
+        </div>
+      </header>
 
+      <div className="flex min-h-0 flex-1 justify-center overflow-auto bg-slate-900 p-3 custom-scrollbar sm:p-6">
+        {isLoading && (
+          <div className="flex min-h-[297mm] w-[210mm] max-w-full flex-col items-center justify-center bg-white text-slate-400">
+            <Loader2 className="mb-4 animate-spin text-blue-600" size={34} />
+            <span className="text-[10px] font-black uppercase tracking-widest">Montando prévia oficial...</span>
+          </div>
+        )}
+        {isError && (
+          <div className="flex min-h-72 w-full max-w-xl flex-col items-center justify-center rounded-3xl border border-rose-200 bg-white p-8 text-center shadow-2xl">
+            <h5 className="text-sm font-black uppercase tracking-widest text-[#001a33]">Prévia indisponível</h5>
+            <p className="mt-3 text-xs font-bold leading-relaxed text-rose-600">
+              {getSecretariaErrorMessage(error, 'Não foi possível montar a prévia acadêmica.')}
+            </p>
+          </div>
+        )}
+        {data && !isLoading && !isError && (
+          <div className="print-page relative mx-auto min-h-[297mm] w-[210mm] max-w-full overflow-hidden border border-slate-200 bg-white p-[15mm] text-black shadow-2xl box-border" style={{ fontFamily: '"Times New Roman", Times, serif' }}>
+            {data.polo?.watermark_url && (
+              <div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center overflow-hidden">
+                <img
+                  src={data.polo.watermark_url}
+                  alt=""
+                  style={{
+                    opacity: data.polo.watermark_opacity ?? 0.1,
+                    width: `${data.polo.watermark_scale ?? 50}%`,
+                    transform: data.polo.watermark_rotate !== false ? 'rotate(-45deg)' : 'none',
+                  }}
+                />
+              </div>
+            )}
+            <DocumentHeader polo={data.polo} orientation="portrait" />
+            <h2 className="relative z-10 my-8 text-center text-2xl font-bold uppercase text-[#001a33] underline underline-offset-8">
+              {type === 'boletim_tecnico' ? 'Boletim Escolar — Cursos Técnicos' : 'Atestado de Conclusão'}
+            </h2>
+            <div
+              className="relative z-10 text-justify text-base leading-loose text-black"
+              dangerouslySetInnerHTML={sanitizedHtml(parsedText)}
+            />
+          </div>
+        )}
+      </div>
+      <style>{`
+        @media print {
+          body * { visibility: hidden; }
+          #academic-preview-modal, #academic-preview-modal * {
+            visibility: visible;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          #academic-preview-modal {
+            position: absolute;
+            inset: 0;
+            width: 210mm !important;
+            height: auto !important;
+            background: white !important;
+          }
+          #academic-preview-modal > header { display: none !important; }
+          #academic-preview-modal .print-page {
+            width: 210mm !important;
+            min-height: 297mm !important;
+            margin: 0 !important;
+            border: 0 !important;
+            box-shadow: none !important;
+          }
+        }
+        @page { size: A4 portrait; margin: 0; }
+      `}</style>
+    </div>,
+    document.body
   );
 };
 

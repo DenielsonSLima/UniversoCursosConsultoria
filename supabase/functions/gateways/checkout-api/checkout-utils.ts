@@ -319,13 +319,6 @@ export const checkoutRouteModalidade = (value: unknown) => {
 const normalizeGatewayEnvironmentLabel = (environment: GatewayEnvironment) =>
   environment === "production" ? "producao" : "sandbox";
 
-const preferredGatewayEnvironments = (
-  paymentMethod: GatewayPaymentMethod,
-): GatewayEnvironment[] =>
-  paymentMethod === "CREDIT_CARD"
-    ? ["sandbox", "production"]
-    : ["production", "sandbox"];
-
 export const resolvePaymentGatewayRoute = async (
   admin: any,
   modalidade: string,
@@ -340,6 +333,7 @@ export const resolvePaymentGatewayRoute = async (
     .select("provider_code, credential_id, enabled, environment")
     .eq("modalidade", modalidade)
     .eq("payment_method", paymentMethod)
+    .eq("environment", configuredEnvironment)
     .neq("enabled", false);
 
   if (error) {
@@ -356,48 +350,40 @@ export const resolvePaymentGatewayRoute = async (
     ...route,
     environment: normalizeEnvironment(route?.environment),
   }));
-  const availableEnvironments = [
+  const availableEnvironments: GatewayEnvironment[] = [
     ...new Set(
       availableRoutes.map((route: any) => String(route?.environment || "").trim())
         .filter(Boolean),
     ),
-  ];
+  ].map((value) => normalizeEnvironment(value));
 
-  for (const routeEnvironment of preferredGatewayEnvironments(paymentMethod)) {
-    const environmentRoutes = availableRoutes.filter((route: any) =>
-      String(route?.environment || "sandbox") === routeEnvironment
+  if (availableRoutes.length > 1) {
+    throw new Error(
+      `Configuracao duplicada para ${paymentMethod} de ${modalidade} em ${
+        normalizeGatewayEnvironmentLabel(configuredEnvironment)
+      }. Corrija para manter apenas uma rota ativa por ambiente.`,
     );
-    if (environmentRoutes.length === 0) continue;
-    if (environmentRoutes.length > 1) {
-      throw new Error(
-        `Configuracao duplicada para ${paymentMethod} de ${modalidade} em ${
-          normalizeGatewayEnvironmentLabel(routeEnvironment)
-        }. Corrija para manter apenas uma rota ativa por ambiente.`,
-      );
-    }
-
-    const route = environmentRoutes[0];
-    if (route.enabled === false) continue;
-
+  }
+  if (availableRoutes.length === 1) {
+    const route = availableRoutes[0];
     assertStoredProviderAdapterReady(
       route.provider_code,
       paymentMethod,
-      route.environment,
+      configuredEnvironment,
     );
     const providerCode = normalizeProviderCode(route.provider_code);
     if (!providerCode) {
       throw new Error(
         `Provedor bancario invalido para a rota ${paymentMethod} de ${modalidade} em ${
-          normalizeGatewayEnvironmentLabel(routeEnvironment)
+          normalizeGatewayEnvironmentLabel(configuredEnvironment)
         }.`,
       );
     }
-
     return {
       providerCode,
       credentialId: route.credential_id || null,
       enabled: route.enabled !== false,
-      environment: route.environment || routeEnvironment,
+      environment: configuredEnvironment,
     };
   }
 

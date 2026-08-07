@@ -3,6 +3,7 @@ import {
   assertNoActiveCnabSubmission,
   hasRemoteTitleReference,
 } from "../../gateways/checkout/remote-title-guard.ts";
+import { RemoteCancellationPreflightError } from "../../gateways/api/remote-cancellation-errors.ts";
 import { syncManualSettlementAcademicEffects } from "./manual-settlement-academic.ts";
 import {
   manualSettlementFingerprint,
@@ -31,6 +32,10 @@ const errorMessage = (error: unknown) =>
   error instanceof Error ? error.message : String(error);
 
 const duplicateKeyError = (error: any) => String(error?.code || "") === "23505";
+
+const createLeaseToken = (
+  dependencies: ManualSettlementServiceDependencies,
+) => dependencies.leaseToken ? dependencies.leaseToken() : crypto.randomUUID();
 
 const attemptLeaseIsActive = (attempt: ManualSettlementAttempt, now: Date) =>
   Boolean(
@@ -186,7 +191,7 @@ const resolveAttempt = async (
         "Esta baixa já está sendo processada. Aguarde a conclusão antes de tentar novamente.",
       );
     }
-    const leaseToken = (dependencies.leaseToken ?? crypto.randomUUID)();
+    const leaseToken = createLeaseToken(dependencies);
     const claimed = await repository.claimAttempt(
       current,
       leaseToken,
@@ -214,7 +219,7 @@ const resolveAttempt = async (
   assertMercadoPagoManualSettlementAllowed(receivable);
   await accountForSettlement(dependencies.admin, request.accountId, receivable);
 
-  const leaseToken = (dependencies.leaseToken ?? crypto.randomUUID)();
+  const leaseToken = createLeaseToken(dependencies);
   const leaseExpiresAt = new Date(
     now.getTime() + LEASE_MILLISECONDS,
   ).toISOString();
@@ -408,6 +413,19 @@ export const settleReceivableManually = async (
       }
     } catch (error) {
       const message = errorMessage(error);
+      if (error instanceof RemoteCancellationPreflightError) {
+        await repository.markSafeFailure(attempt.id, leaseToken, message);
+        await repository.appendEvent(
+          attempt.id,
+          dependencies.actor.id,
+          "REMOTE_CANCELLATION_PREFLIGHT_FAILED",
+          { error: message.slice(0, 1000) },
+        );
+        throw new Error(
+          `Baixa local não registrada. O banco não foi chamado: ${message}`,
+          { cause: error },
+        );
+      }
       await repository.markReviewRequired(attempt.id, leaseToken, message);
       await repository.appendEvent(
         attempt.id,

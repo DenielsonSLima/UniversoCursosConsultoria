@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../../../../lib/supabase';
 import { academicLifecycleKeys } from '../../academic-lifecycle.keys';
 import {
@@ -13,13 +13,18 @@ import {
   CorrectionDraft,
 } from './atividadesExtraClasse.types';
 import {
-  createAtividadeFormInitialState,
   getAtividadeErrorMessage,
   isAtividadeContextoOperacional,
   isAtividadeTurmaPreparacao,
-  normalizeAtividadeErrorMessage,
 } from './atividadesExtraClasse.utils';
 import { useToast } from '../../../../../parceiros/components/shared/ToastNotification';
+import { gestaoQueryKeys } from '../../../../gestao.query-keys';
+import type { Turma } from '../../../../gestao.types';
+import {
+  diarioClasseService,
+  DiarioStudent,
+} from '../diarios/diario-classe.service';
+import { diarioClasseKeys } from '../diarios/diario-classe.keys';
 
 export const useAtividadesExtraClasse = ({
   turmaId,
@@ -32,7 +37,6 @@ export const useAtividadesExtraClasse = ({
 }: AtividadesExtraClasseProps) => {
   const queryClient = useQueryClient();
   const { toasts, removeToast, toast } = useToast();
-  const [form, setForm] = useState(createAtividadeFormInitialState(disciplinaIdRestrita || ''));
   const [correctionDrafts, setCorrectionDrafts] = useState<Record<string, CorrectionDraft>>({});
   const [realtimeError, setRealtimeError] = useState<string | null>(null);
 
@@ -61,28 +65,39 @@ export const useAtividadesExtraClasse = ({
     queryFn: () => atividadesExtraClasseService.getAtividades(turmaId, disciplinaIdRestrita),
   });
 
-  useEffect(() => {
-    if (form.disciplinaId) return;
-    const firstDisciplina = disciplinas[0];
-    if (firstDisciplina?.id) {
-      setForm((prev) => ({ ...prev, disciplinaId: firstDisciplina.id }));
-    }
-  }, [disciplinas, form.disciplinaId]);
-
-  const disciplinaSelecionada = useMemo(
-    () => disciplinas.find((disciplina) => disciplina.id === form.disciplinaId) || null,
-    [disciplinas, form.disciplinaId],
+  const disciplinaIdsComAtividade = useMemo(
+    () => [...new Set(atividades.map((atividade) => atividade.disciplina_id).filter(Boolean))],
+    [atividades],
   );
+  const alunosQueries = useQueries({
+    queries: disciplinaIdsComAtividade.map((disciplinaId) => ({
+      queryKey: diarioClasseKeys.students(turmaId, disciplinaId, modo),
+      queryFn: () => diarioClasseService.getStudents(turmaId, disciplinaId, modo),
+      enabled: !!turmaId && !!disciplinaId,
+      staleTime: 15_000,
+    })),
+  });
+  const alunosPorDisciplina = useMemo(
+    () => disciplinaIdsComAtividade.reduce<Record<string, DiarioStudent[]>>((result, disciplinaId, index) => {
+      result[disciplinaId] = alunosQueries[index]?.data || [];
+      return result;
+    }, {}),
+    [alunosQueries, disciplinaIdsComAtividade],
+  );
+  const alunosErro = alunosQueries.some((query) => query.isError);
+  const loadingAlunos = alunosQueries.some((query) => query.isLoading);
+  const atividadeIdsRealtimeFilter = useMemo(() => {
+    const ids = atividades.map((atividade) => atividade.id).filter(Boolean).sort();
+    if (ids.length === 0) return '';
+    if (ids.length === 1) return `atividade_id=eq.${ids[0]}`;
+    return `atividade_id=in.(${ids.join(',')})`;
+  }, [atividades]);
 
   const turmaStatus = String(turmaCurso?.status || '').toUpperCase();
   const cursoRelation = Array.isArray(turmaCurso?.curso) ? turmaCurso.curso[0] : turmaCurso?.curso;
-  const isTecnico = String(cursoRelation?.modalidade || 'TECNICO').toUpperCase() === 'TECNICO';
+  const modalidade = String(cursoRelation?.modalidade || 'TECNICO').toUpperCase() as Turma['modalidade'];
+  const isTecnico = modalidade === 'TECNICO';
   const isPreparacao = isTecnico && isAtividadeTurmaPreparacao(turmaStatus);
-  const isOperacionalSelecionada = isTecnico
-    ? isAtividadeContextoOperacional(turmaStatus, disciplinaSelecionada?.periodoStatus)
-    : !readOnly;
-  const createAsDraft = modo === 'GESTOR' && isPreparacao;
-  const canCreate = !readOnly && (createAsDraft || isOperacionalSelecionada);
 
   const getDisciplinaPeriodoStatus = (disciplinaId: string) =>
     disciplinas.find((disciplina) => disciplina.id === disciplinaId)?.periodoStatus || null;
@@ -99,65 +114,36 @@ export const useAtividadesExtraClasse = ({
 
   const accessMessage = readOnly
     ? readOnlyMessage || 'Este período está fechado. As atividades ficam disponíveis apenas para consulta.'
-    : createAsDraft
-      ? 'A turma ainda não começou. Nesta fase, o gestor pode salvar somente rascunhos; a publicação será liberada quando o período estiver operacional.'
+    : isPreparacao
+      ? 'A turma ainda não começou. As atividades marcadas na grade ficam como rascunho até o período operacional.'
       : isTecnico && turmaStatus === 'FINALIZADA'
         ? 'A turma está finalizada. Atividades e correções estão disponíveis somente para consulta.'
         : isTecnico && turmaStatus !== 'EM_ANDAMENTO'
-          ? 'Atividades só podem ser publicadas durante a fase EM ANDAMENTO.'
-          : !isOperacionalSelecionada
-            ? 'Selecione uma disciplina com período ABERTO ou EM FECHAMENTO para publicar.'
-            : null;
+          ? 'Atividades só podem ser publicadas e corrigidas durante a fase EM ANDAMENTO.'
+          : null;
 
-  const invalidate = async () => {
+  const invalidateActivity = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: atividadesExtraClasseKeys.turma(turmaId) }),
       queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.turma(turmaId) }),
     ]);
   };
 
-  const createMutation = useMutation({
-    mutationFn: () => atividadesExtraClasseService.createAtividade({
-      turmaId,
-      form,
-      modo,
-      status: createAsDraft ? 'RASCUNHO' : 'PUBLICADA',
-    }),
-    onSuccess: async () => {
-      setForm((prev) => ({
-        ...createAtividadeFormInitialState(disciplinaIdRestrita || prev.disciplinaId),
-        disciplinaId: disciplinaIdRestrita || prev.disciplinaId,
-      }));
-      await invalidate();
-      if (createAsDraft) {
-        toast.success('Rascunho salvo', 'A atividade poderá ser publicada quando o período estiver operacional.');
-      } else {
-        toast.success('Atividade publicada', 'Os alunos já podem responder pelo portal.');
-      }
-    },
-    onError: (err: unknown) => {
-      const message = normalizeAtividadeErrorMessage(getAtividadeErrorMessage(err));
-      if (message.includes('Carga horária excedida')) {
-        toast.info('Carga horária excedida', message, { contextLabel: 'Atividade extra-classe' });
-        return;
-      }
-      const canShowMessage = message.startsWith('Selecione')
-        || message.startsWith('Informe')
-        || message.startsWith('O link')
-        || message.includes('carga horária');
-      toast.error(
-        'Atividade não publicada',
-        canShowMessage ? message : 'Não consegui publicar esta atividade agora. Revise os dados e tente novamente.',
-      );
-    },
-  });
+  const invalidateProgress = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: atividadesExtraClasseKeys.turma(turmaId) }),
+      queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.turma(turmaId) }),
+      queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.classesByModality(modalidade) }),
+      queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.activeClassesRoot() }),
+    ]);
+  };
 
   const archiveMutation = useMutation({
     mutationFn: (atividade: AtividadeExtraClasseRecord) => atividade.status === 'RASCUNHO'
       ? atividadesExtraClasseService.deleteDraft(atividade.id)
       : atividadesExtraClasseService.archiveAtividade(atividade.id),
     onSuccess: async (_data, atividade) => {
-      await invalidate();
+      await invalidateProgress();
       if (atividade.status === 'RASCUNHO') {
         toast.success('Rascunho excluído', 'O rascunho foi removido sem afetar alunos.');
       } else {
@@ -170,7 +156,7 @@ export const useAtividadesExtraClasse = ({
   const publishMutation = useMutation({
     mutationFn: (atividadeId: string) => atividadesExtraClasseService.publishAtividade(atividadeId),
     onSuccess: async () => {
-      await invalidate();
+      await invalidateProgress();
       toast.success('Atividade publicada', 'O rascunho já está disponível aos alunos.');
     },
     onError: () => toast.error(
@@ -196,7 +182,7 @@ export const useAtividadesExtraClasse = ({
       });
     },
     onSuccess: async () => {
-      await invalidate();
+      await invalidateActivity();
       toast.success('Correção salva', 'A resposta foi atualizada para o aluno.');
     },
     onError: (err: unknown) => toast.error(
@@ -210,9 +196,14 @@ export const useAtividadesExtraClasse = ({
   useEffect(() => {
     if (!turmaId) return undefined;
 
-    const invalidateRealtime = () => {
+    const invalidateActivityRealtime = () => {
       void queryClient.invalidateQueries({ queryKey: atividadesExtraClasseKeys.turma(turmaId) });
       void queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.turma(turmaId) });
+    };
+    const invalidateProgressRealtime = () => {
+      invalidateActivityRealtime();
+      void queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.classesByModality(modalidade) });
+      void queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.activeClassesRoot() });
     };
 
     const channel = supabase
@@ -220,14 +211,23 @@ export const useAtividadesExtraClasse = ({
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'atividades_extra_classe', filter: `turma_id=eq.${turmaId}` },
-        invalidateRealtime,
-      )
-      .on(
+        invalidateProgressRealtime,
+      );
+
+    if (atividadeIdsRealtimeFilter) {
+      channel.on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'atividade_extra_classe_respostas' },
-        invalidateRealtime,
-      )
-      .subscribe((status) => {
+        {
+          event: '*',
+          schema: 'public',
+          table: 'atividade_extra_classe_respostas',
+          filter: atividadeIdsRealtimeFilter,
+        },
+        invalidateActivityRealtime,
+      );
+    }
+
+    channel.subscribe((status) => {
         if (status === 'SUBSCRIBED') setRealtimeError(null);
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           setRealtimeError('As atualizações automáticas estão indisponíveis. Use “Tentar novamente” para atualizar os dados.');
@@ -237,33 +237,28 @@ export const useAtividadesExtraClasse = ({
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [modo, professorId, queryClient, turmaId]);
+  }, [atividadeIdsRealtimeFilter, modalidade, modo, professorId, queryClient, turmaId]);
 
   return {
     atividades,
-    hasLoadError: turmaCursoQuery.isError || disciplinasErro || atividadesErro,
+    alunosPorDisciplina,
+    hasLoadError: turmaCursoQuery.isError || disciplinasErro || atividadesErro || alunosErro,
     archiveMutation,
     corrigirMutation,
     correctionDrafts,
-    createMutation,
-    createAsDraft,
     publishMutation,
-    disciplinaSelecionada,
-    disciplinas,
-    form,
-    canCreate,
     canOperateAtividade,
     canRemoveAtividade,
     accessMessage,
-    loading: turmaCursoQuery.isLoading || loadingDisciplinas || loadingAtividades,
+    loading: turmaCursoQuery.isLoading || loadingDisciplinas || loadingAtividades || loadingAlunos,
     removeToast,
     setCorrectionDrafts,
-    setForm,
     toasts,
     realtimeError,
     retryLoad: async () => {
       const retries = [
         queryClient.refetchQueries({ queryKey: atividadesExtraClasseKeys.turma(turmaId) }),
+        queryClient.refetchQueries({ queryKey: ['diario-alunos', turmaId] }),
       ];
       if (!cursoId) retries.push(turmaCursoQuery.refetch().then(() => undefined));
       await Promise.all(retries);

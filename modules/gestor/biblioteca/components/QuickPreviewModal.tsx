@@ -1,9 +1,16 @@
 // File: modules/gestor/biblioteca/components/QuickPreviewModal.tsx
 
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, FileText, Download, AlertCircle, Camera } from 'lucide-react';
+import { ArrowLeft, Download, Printer } from 'lucide-react';
 import { LibraryDocument } from '../biblioteca.types';
+import FilePreviewContent from './file-preview/FilePreviewContent';
+import LibraryFileIcon from './file-preview/LibraryFileIcon';
+import {
+  getFileTypeLabel,
+  isPublicHttpUrl,
+  resolvePreviewKind
+} from './file-preview/filePreview.utils';
 
 interface QuickPreviewModalProps {
   isOpen: boolean;
@@ -11,207 +18,202 @@ interface QuickPreviewModalProps {
   document: LibraryDocument | null;
 }
 
-const QuickPreviewModal: React.FC<QuickPreviewModalProps> = ({ isOpen, onClose, document }) => {
-  if (!isOpen || !document) return null;
-  if (typeof window === 'undefined') return null;
+const QuickPreviewModal: React.FC<QuickPreviewModalProps> = ({
+  isOpen,
+  onClose,
+  document: file
+}) => {
+  const backButtonRef = useRef<React.ElementRef<'button'>>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  const normalizedUrl = `${file?.url || ''}`.trim();
+  const canDownload = isPublicHttpUrl(normalizedUrl);
+  const previewKind = file
+    ? resolvePreviewKind(file.fileType, file.title, normalizedUrl)
+    : 'OTHER';
+  const canPrint = canDownload
+    && (previewKind === 'PDF' || previewKind === 'IMG');
 
-  const normalizedUrl = `${document.url || ''}`.trim();
-  const isValidPublicUrl =
-    normalizedUrl.startsWith('http://') || normalizedUrl.startsWith('https://');
-  const isMockUrl = !normalizedUrl || normalizedUrl === '#' || normalizedUrl.startsWith('data:') || !isValidPublicUrl;
-  const fileTitle = `${document.title || 'documento'}`.toLowerCase();
-  const fileUrlBase = normalizedUrl.split('?')[0].toLowerCase();
-  const extensionHint = (() => {
-    const titleExt = fileTitle.split('.').pop() || '';
-    const urlExt = fileUrlBase.split('.').pop() || '';
-    return titleExt || urlExt || '';
-  })();
+  useEffect(() => {
+    if (!isOpen) return;
 
-  const isImageFile = () => {
-    if (document.fileType === 'IMG') return true;
-    return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(extensionHint);
+    const previousOverflow = window.document.body.style.overflow;
+    const previouslyFocused = window.document.activeElement as { focus?: () => void } | null;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onCloseRef.current();
+    };
+
+    window.document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKeyDown);
+    window.requestAnimationFrame(() => backButtonRef.current?.focus());
+
+    return () => {
+      window.document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+      previouslyFocused?.focus?.();
+    };
+  }, [isOpen]);
+
+  if (!isOpen || !file || typeof window === 'undefined') return null;
+
+  const handlePrint = () => {
+    if (!canPrint) return;
+    if (previewKind === 'PDF') {
+      const pdfWindow = window.open('', '_blank');
+      if (!pdfWindow) {
+        window.alert('Permita a abertura de pop-ups para imprimir este PDF.');
+        return;
+      }
+      pdfWindow.opener = null;
+      pdfWindow.location.replace(normalizedUrl);
+      pdfWindow.focus();
+      return;
+    }
+    window.print();
   };
 
-  const isPdfFile = () => {
-    if (document.fileType === 'PDF') return true;
-    return extensionHint === 'pdf';
-  };
+  const handleDownload = async () => {
+    if (!canDownload || isDownloading) return;
+    setIsDownloading(true);
+    try {
+      const response = await fetch(normalizedUrl, { mode: 'cors' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const blob = await response.blob();
+      if (blob.size < 1) throw new Error('Arquivo vazio');
 
-  const fileTypeTag = (() => {
-    if (isPdfFile()) return 'PDF';
-    if (isImageFile()) return 'IMG';
-    return document.fileType;
-  })();
-
-  const renderPreviewContent = () => {
-    switch (fileTypeTag) {
-      case 'IMG':
-        return (
-          <div className="flex h-full min-h-[50vh] flex-col items-center justify-center space-y-4 bg-slate-50 p-8">
-            <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center">
-              <Camera size={28} />
-            </div>
-            {isMockUrl ? (
-              <>
-                <p className="text-sm font-black text-slate-800 uppercase tracking-wide">Visualização de Imagem Indisponível</p>
-                <p className="text-xs text-slate-400 font-bold uppercase">
-                  A pré-visualização é liberada no próprio sistema quando o arquivo está publicado corretamente.
-                </p>
-              </>
-            ) : (
-              <img 
-                src={normalizedUrl} 
-                alt={document.title} 
-                className="max-h-full max-w-full object-contain rounded-lg shadow-2xl transition-transform duration-300"
-              />
-            )}
-          </div>
-        );
-      case 'PDF':
-        if (isMockUrl) {
-          return (
-            <div className="flex h-full min-h-[50vh] flex-col items-center justify-center space-y-4 bg-slate-50 p-8">
-              <div className="w-16 h-16 bg-red-100 text-red-650 rounded-full flex items-center justify-center text-red-600">
-                <FileText size={32} />
-              </div>
-              <div className="text-center space-y-1">
-                <p className="text-sm font-black text-slate-800 uppercase tracking-wide">Leitor PDF Simulado</p>
-                <p className="text-xs text-slate-400 font-bold uppercase">Ambiente interno de pré-visualização</p>
-              </div>
-              <div className="w-full max-w-md p-6 bg-white rounded-xl border border-slate-150 space-y-3 font-serif text-slate-700 text-xs leading-relaxed shadow-sm">
-                <p className="font-bold border-b border-slate-100 pb-1.5 text-center uppercase tracking-wide font-sans text-[10px] text-slate-400">
-                  Pré-visualização não disponível para este documento
-                </p>
-                <p className="leading-relaxed">
-                  O arquivo foi recebido e validado no sistema, mas não foi possível renderizar um preview embutido no momento.
-                </p>
-                <p className="leading-relaxed">
-                  Use o botão "Baixar Arquivo" para abrir o conteúdo completo no seu dispositivo.
-                </p>
-              </div>
-            </div>
-          );
-        }
-        return (
-          <iframe
-            src={normalizedUrl}
-            title={document.title}
-            className="h-full min-h-[50vh] w-full border-0 bg-white"
-          />
-        );
-      case 'DOC':
-      case 'XLS':
-        return (
-          <div className="flex h-full min-h-[50vh] flex-col items-center justify-center space-y-4 bg-slate-50 p-8">
-            <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
-              document.fileType === 'DOC' ? 'bg-blue-100 text-blue-600' : 'bg-emerald-100 text-emerald-600'
-            }`}>
-              <FileText size={32} />
-            </div>
-            <div className="text-center space-y-1">
-              <p className="text-sm font-black text-slate-800 uppercase tracking-wide">
-                {document.fileType === 'DOC' ? 'Pré-Visualização de Documento' : 'Pré-Visualização de Planilha'}
-              </p>
-              <p className="text-xs text-slate-400 font-bold uppercase">
-                Conteúdo não encontrado no preview.
-              </p>
-            </div>
-          <p className="text-xs text-slate-500 text-center max-w-lg">
-              Este é um recurso interno. Para visualizar integralmente, faça o download do arquivo.
-            </p>
-            <div className="w-full max-w-lg p-6 bg-white rounded-xl border border-slate-150 space-y-3 shadow-sm">
-              <p className="font-bold border-b border-slate-100 pb-2 text-[10px] text-slate-400 uppercase tracking-wider">
-                {document.title}
-              </p>
-              <p className="text-xs text-slate-650 leading-relaxed">
-                Prévia simplificada disponível no painel do sistema. O arquivo foi enviado para download e pode ser aberto no programa apropriado do seu dispositivo.
-              </p>
-            </div>
-            {!isMockUrl && (
-              <a
-                href={normalizedUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider border border-slate-200 text-slate-600 hover:bg-slate-50"
-              >
-                <Download size={12} />
-                Abrir arquivo
-              </a>
-            )}
-          </div>
-        );
-      default:
-        return (
-          <div className="flex h-full min-h-[50vh] flex-col items-center justify-center space-y-3 bg-amber-50 p-8 text-amber-800">
-            <AlertCircle size={36} className="text-amber-500" />
-            <h4 className="font-black uppercase text-sm">Visualização não suportada</h4>
-            <p className="text-xs text-center max-w-sm">
-              Não conseguimos abrir uma visualização rápida para o formato deste arquivo. Por favor, faça o download para abri-lo localmente.
-            </p>
-          </div>
-        );
+      const sourcePath = new URL(normalizedUrl).pathname;
+      const sourceExtension = sourcePath.match(/\.[a-z0-9]{2,8}$/i)?.[0] || '';
+      const title = file.title.trim() || 'documento';
+      const fileName = /\.[a-z0-9]{2,8}$/i.test(title) ? title : `${title}${sourceExtension}`;
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = window.document.createElement('a');
+      anchor.href = objectUrl;
+      anchor.download = fileName;
+      anchor.style.display = 'none';
+      window.document.body.appendChild(anchor);
+      try {
+        anchor.click();
+      } finally {
+        anchor.remove();
+        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+      }
+    } catch (error) {
+      console.error('Não foi possível baixar o documento da biblioteca:', error);
+      window.alert('O servidor do arquivo não autorizou o download direto. Tente novamente ou solicite o arquivo à secretaria.');
+    } finally {
+      setIsDownloading(false);
     }
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[250] flex h-screen h-[100dvh] w-screen items-stretch justify-stretch overflow-hidden">
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-[#001a33]/65 backdrop-blur-sm transition-opacity"
-        onClick={onClose}
-      ></div>
-      
-      {/* Container */}
-      <div className="relative flex h-full w-full animate-fadeIn flex-col justify-between overflow-hidden bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        
-        {/* Header */}
-        <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-4 py-3 md:px-6">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[9px] font-black uppercase tracking-widest bg-blue-50 text-blue-600 px-2.5 py-0.5 rounded-full border border-blue-100">
-                Visualização Rápida
-              </span>
-              <span className="text-[10px] text-slate-400 font-bold uppercase">{document.size}</span>
-            </div>
-            <h3 className="truncate text-base font-black uppercase tracking-tight text-[#001a33] md:text-lg">{document.title}</h3>
-          </div>
-          <button 
-            onClick={onClose} 
-            className="shrink-0 rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-50 hover:text-red-500"
+    <div
+      id="library-preview-modal"
+      className="fixed inset-0 z-[2147483000] flex h-[100dvh] w-screen animate-fadeIn flex-col overflow-hidden bg-slate-950"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="library-preview-title"
+    >
+      <header className="z-10 flex shrink-0 flex-col gap-3 border-b border-white/10 bg-slate-800 px-4 py-3 text-white shadow-md sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+          <button
+            ref={backButtonRef}
+            type="button"
+            onClick={onClose}
+            className="flex shrink-0 items-center gap-2 rounded-xl bg-slate-700/50 p-2 text-xs font-bold uppercase tracking-wider text-slate-300 transition-colors hover:bg-slate-700 hover:text-white"
+            aria-label="Fechar visualizador"
+            title="Voltar (Esc)"
           >
-            <X size={20} />
+            <ArrowLeft size={16} />
+            <span className="hidden sm:inline">Voltar</span>
+          </button>
+          <LibraryFileIcon kind={previewKind} size="sm" />
+          <div className="min-w-0">
+            <h3
+              id="library-preview-title"
+              className="truncate text-sm font-black uppercase tracking-widest text-white"
+              title={file.title}
+            >
+              Visualizador de Documentos
+            </h3>
+            <p className="mt-0.5 truncate text-[9px] font-bold uppercase tracking-widest text-slate-400 sm:text-[10px]">
+              {file.title} • {getFileTypeLabel(previewKind)} • {file.size}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-3">
+          <button
+            type="button"
+            disabled={!canDownload || isDownloading}
+            onClick={handleDownload}
+            className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-[10px] font-bold uppercase tracking-widest transition-all sm:px-5 sm:py-3 sm:text-xs ${
+              canDownload
+                ? 'border-white/15 bg-white/10 text-white hover:bg-white/20'
+                : 'cursor-not-allowed border-white/5 bg-white/5 text-slate-500'
+            }`}
+          >
+            <Download size={16} />
+            <span>{isDownloading ? 'Baixando...' : 'Baixar'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={handlePrint}
+            disabled={!canPrint}
+            className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white shadow-lg shadow-blue-950/30 transition-all hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40 sm:px-6 sm:py-3 sm:text-xs"
+            title={canPrint
+              ? previewKind === 'PDF'
+                ? 'Abrir o PDF original para impressão'
+                : 'Imprimir documento'
+              : 'Impressão disponível para PDF e imagens'
+            }
+          >
+            <Printer size={16} />
+            <span>{previewKind === 'PDF' ? 'Abrir e imprimir' : 'Imprimir'}</span>
           </button>
         </div>
+      </header>
 
-        {/* Body (Scrollable preview space) */}
-        <div className="min-h-0 flex-1 overflow-y-auto custom-scrollbar">
-          {renderPreviewContent()}
-        </div>
+      <main className="library-preview-content min-h-0 flex-1 overflow-auto bg-slate-900 custom-scrollbar">
+        <FilePreviewContent file={file} />
+      </main>
 
-        {/* Footer actions */}
-        <div className="flex shrink-0 flex-col gap-3 border-t border-slate-100 px-4 py-3 md:flex-row md:items-center md:justify-between md:px-6">
-          <p className="text-[9px] text-slate-450 uppercase font-black tracking-widest">
-            Autor: <span className="text-blue-600">{document.authorName}</span> • Criado em: {new Date(document.createdAt).toLocaleDateString('pt-BR')}
-          </p>
-            <a
-            href={isMockUrl ? undefined : normalizedUrl}
-            download={isMockUrl ? undefined : document.title}
-            onClick={(e) => {
-              if (isMockUrl) {
-                e.preventDefault();
-                alert('O download não está disponível para este documento.');
-              }
-            }}
-            className="flex items-center justify-center gap-2 rounded-xl bg-[#001a33] px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-lg shadow-blue-900/10 transition-colors hover:bg-blue-900"
-            onKeyDown={(e) => isMockUrl ? e.preventDefault() : undefined}
-          >
-            <Download size={14} /> Baixar Arquivo
-          </a>
-        </div>
-
-      </div>
+      <style>{`
+        @media print {
+          body * { visibility: hidden; }
+          #library-preview-modal, #library-preview-modal * {
+            visibility: visible;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          #library-preview-modal {
+            position: absolute;
+            inset: 0;
+            width: 210mm !important;
+            height: auto !important;
+            overflow: visible !important;
+            background: white !important;
+          }
+          #library-preview-modal > header {
+            display: none !important;
+          }
+          #library-preview-modal .library-preview-content {
+            overflow: visible !important;
+            background: white !important;
+          }
+          #library-preview-modal .library-image-preview {
+            min-height: 297mm !important;
+            padding: 0 !important;
+            background: white !important;
+          }
+          #library-preview-modal img {
+            max-width: 100% !important;
+          }
+        }
+        @page { size: A4 portrait; margin: 0; }
+      `}</style>
     </div>,
-    document.body
+    window.document.body
   );
 };
 

@@ -1,15 +1,116 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Megaphone } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { supabase } from '../../../lib/supabase';
 import { SITE_PUBLIC_TICKER_CONFIG_ID, siteTickerService } from '../siteTicker.service';
 import { siteTickerKeys } from '../siteTicker.keys';
+
+type TickerInvalidationListener = () => void;
+
+const tickerInvalidationListeners = new Set<TickerInvalidationListener>();
+let publicTickerChannel: ReturnType<typeof supabase.channel> | null = null;
+let publicTickerSubscribed = false;
+let publicTickerCleanupTimer: ReturnType<typeof setTimeout> | null = null;
+let publicTickerRemovalPromise: Promise<void> | null = null;
+
+const removePublicTickerChannel = () => {
+  if (publicTickerCleanupTimer) {
+    clearTimeout(publicTickerCleanupTimer);
+    publicTickerCleanupTimer = null;
+  }
+
+  const channel = publicTickerChannel;
+  if (!channel || publicTickerRemovalPromise) return;
+
+  publicTickerSubscribed = false;
+  publicTickerRemovalPromise = supabase
+    .removeChannel(channel)
+    .then(() => undefined)
+    .finally(() => {
+      if (publicTickerChannel === channel) {
+        publicTickerChannel = null;
+      }
+      publicTickerRemovalPromise = null;
+
+      if (tickerInvalidationListeners.size > 0) {
+        ensurePublicTickerChannel();
+      }
+    });
+};
+
+const notifyTickerInvalidationListeners = () => {
+  tickerInvalidationListeners.forEach((listener) => listener());
+};
+
+const ensurePublicTickerChannel = () => {
+  if (publicTickerChannel || publicTickerRemovalPromise) return;
+
+  const channel = supabase
+    .channel('site-public-ticker-realtime')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'turmas' }, notifyTickerInvalidationListeners)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'cursos' }, notifyTickerInvalidationListeners)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'documentos_templates', filter: `id=eq.${SITE_PUBLIC_TICKER_CONFIG_ID}` },
+      notifyTickerInvalidationListeners
+    )
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'site_publico_ticker_mensagens' },
+      notifyTickerInvalidationListeners
+    );
+
+  publicTickerChannel = channel;
+  channel.subscribe((status) => {
+    if (publicTickerChannel !== channel) return;
+
+    publicTickerSubscribed = status === 'SUBSCRIBED';
+
+    if (
+      tickerInvalidationListeners.size === 0
+      && (status === 'SUBSCRIBED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT')
+    ) {
+      removePublicTickerChannel();
+    }
+  });
+};
+
+const subscribeToPublicTickerInvalidation = (listener: TickerInvalidationListener) => {
+  if (publicTickerCleanupTimer) {
+    clearTimeout(publicTickerCleanupTimer);
+    publicTickerCleanupTimer = null;
+  }
+
+  tickerInvalidationListeners.add(listener);
+  ensurePublicTickerChannel();
+
+  return () => {
+    tickerInvalidationListeners.delete(listener);
+    if (tickerInvalidationListeners.size > 0) return;
+
+    if (publicTickerSubscribed) {
+      removePublicTickerChannel();
+      return;
+    }
+
+    // Safari reports an error when a WebSocket is closed while it is still
+    // connecting. Wait for the subscription result, with a bounded fallback,
+    // before releasing the last public channel.
+    publicTickerCleanupTimer = setTimeout(() => {
+      publicTickerCleanupTimer = null;
+      if (publicTickerChannel?.state !== 'joining') {
+        removePublicTickerChannel();
+      }
+    }, 10_000);
+  };
+};
 
 const publicTickerQueryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
+      refetchInterval: 60_000,
       retry: 1,
       staleTime: 60_000,
     },
@@ -29,21 +130,7 @@ const PublicTickerBarContent: React.FC = () => {
       void queryClient.invalidateQueries({ queryKey: siteTickerKeys.public });
     };
 
-    const channel = supabase
-      .channel('site-public-ticker-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'turmas' }, invalidateTicker)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'cursos' }, invalidateTicker)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'documentos_templates', filter: `id=eq.${SITE_PUBLIC_TICKER_CONFIG_ID}` },
-        invalidateTicker
-      )
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'site_publico_ticker_mensagens' }, invalidateTicker)
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return subscribeToPublicTickerInvalidation(invalidateTicker);
   }, [queryClient]);
 
   if (!data?.items?.length) return null;

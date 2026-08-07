@@ -17,13 +17,13 @@ const DiarioPrintDocument = forwardRef<HTMLDivElement, DiarioPrintDocumentProps>
     <div ref={ref} id="diario-print-document" aria-hidden="true">
       <DiarioPrintStyles />
       <DiarioPrintCover {...props} />
+      {(template.contracapaUrl || template.imprimirValidacaoContracapa) && (
+        <DiarioPrintBackCover {...props} />
+      )}
       <DiarioPrintFrequencyPages {...props} />
       <DiarioPrintResultPages {...props} />
       <DiarioPrintContentPages {...props} />
       {template.imprimirInstrucoes && <DiarioPrintInstructionsPage {...props} />}
-      {(template.contracapaUrl || template.imprimirValidacaoContracapa) && (
-        <DiarioPrintBackCover {...props} />
-      )}
     </div>
   );
 });

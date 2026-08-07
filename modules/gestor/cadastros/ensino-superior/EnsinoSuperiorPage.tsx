@@ -1,20 +1,33 @@
-import React, { useState, useEffect } from 'react';
-import { Building, Plus, Loader2, X, Trash2, Edit2, Power, Check, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Building, Plus, Loader2, X, Trash2, Edit2, Power, Check, AlertCircle, Search, LayoutGrid, TableProperties } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { cadastrosService } from '../cadastros.service';
 import { Curso } from '../cadastros.types';
 import { supabase } from '../../../../lib/supabase';
 import { parceirosService } from '../../parceiros/parceiros.service';
+import CursoSuperiorTable from './CursoSuperiorTable';
 
 interface EnsinoSuperiorPageProps {
   readOnly?: boolean;
 }
+
+const normalizeFilterText = (value?: string) => (
+  String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('pt-BR')
+    .trim()
+);
 
 const EnsinoSuperiorPage: React.FC<EnsinoSuperiorPageProps> = ({ readOnly = false }) => {
   const queryClient = useQueryClient();
   const [cursos, setCursos] = useState<Curso[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<'ativo' | 'inativo'>('ativo');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [areaFilter, setAreaFilter] = useState('Todas');
+  const [partnerFilter, setPartnerFilter] = useState('Todos');
+  const [displayMode, setDisplayMode] = useState<'cards' | 'table'>('cards');
 
   // Estados para Modal de Criar/Editar
   const [showFormModal, setShowFormModal] = useState(false);
@@ -312,10 +325,38 @@ const EnsinoSuperiorPage: React.FC<EnsinoSuperiorPageProps> = ({ readOnly = fals
     }
   };
 
+  const areaOptions = useMemo(() => (
+    Array.from(new Set<string>(
+      cursos
+        .map((curso) => curso.area?.trim())
+        .filter((area): area is string => Boolean(area))
+    )).sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  ), [cursos]);
 
+  const partnerOptions = useMemo(() => (
+    Array.from(new Set<string>(
+      cursos
+        .map((curso) => curso.parceiro_instituicao?.trim())
+        .filter((partner): partner is string => Boolean(partner))
+    )).sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  ), [cursos]);
 
-  // Filtragem
-  const filteredCursos = cursos.filter(c => c.status === statusFilter);
+  // Filtragem visual sobre os cursos já carregados.
+  const normalizedSearchTerm = normalizeFilterText(searchTerm);
+  const filteredCursos = cursos.filter((curso) => {
+    const matchesStatus = curso.status === statusFilter;
+    const matchesArea = areaFilter === 'Todas' || (curso.area || 'Outros') === areaFilter;
+    const matchesPartner = partnerFilter === 'Todos'
+      || (curso.parceiro_instituicao || '') === partnerFilter;
+    const searchableText = normalizeFilterText([
+      curso.nome,
+      curso.descricao,
+      curso.parceiro_instituicao,
+    ].filter(Boolean).join(' '));
+    const matchesSearch = !normalizedSearchTerm || searchableText.includes(normalizedSearchTerm);
+
+    return matchesStatus && matchesArea && matchesPartner && matchesSearch;
+  });
 
   // Agrupamento por Área
   const groupedCursos: Record<string, Curso[]> = {};
@@ -365,28 +406,109 @@ const EnsinoSuperiorPage: React.FC<EnsinoSuperiorPageProps> = ({ readOnly = fals
         </div>
       </div>
 
-      {/* Tabs de Filtro de Status */}
-      <div className="flex gap-2 mb-8 bg-slate-100 p-1 rounded-2xl max-w-xs border border-slate-200">
-        <button 
-          onClick={() => setStatusFilter('ativo')}
-          className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${
-            statusFilter === 'ativo' 
-              ? 'bg-white text-emerald-600 shadow-sm' 
-              : 'text-slate-500 hover:text-slate-700'
-          }`}
+      {/* Busca e filtros da vitrine */}
+      <div className="mb-6 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
+          <div className="relative lg:col-span-6">
+            <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400">
+              <Search size={17} />
+            </span>
+            <input
+              type="search"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Buscar curso por nome, descrição ou parceiro..."
+              aria-label="Buscar cursos superiores"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-xs font-bold text-slate-700 outline-none transition-all placeholder:font-medium placeholder:text-slate-400 focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100"
+            />
+          </div>
+
+          <div className="lg:col-span-3">
+            <select
+              value={areaFilter}
+              onChange={(event) => setAreaFilter(event.target.value)}
+              aria-label="Filtrar cursos superiores por categoria"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold tracking-normal text-slate-700 outline-none transition-all focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100"
+            >
+              <option value="Todas" className="font-medium">Todas as categorias</option>
+              {areaOptions.map((area) => (
+                <option key={area} value={area} className="font-medium">{area}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="lg:col-span-3">
+            <select
+              value={partnerFilter}
+              onChange={(event) => setPartnerFilter(event.target.value)}
+              aria-label="Filtrar cursos superiores por parceiro"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold tracking-normal text-slate-700 outline-none transition-all focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100"
+            >
+              <option value="Todos" className="font-medium">Todos os parceiros</option>
+              {partnerOptions.map((partner) => (
+                <option key={partner} value={partner} className="font-medium">{partner}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Status e modo de visualização */}
+      <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex w-full max-w-xs gap-2 rounded-2xl border border-slate-200 bg-slate-100 p-1">
+          <button
+            onClick={() => setStatusFilter('ativo')}
+            className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${
+              statusFilter === 'ativo'
+                ? 'bg-white text-emerald-600 shadow-sm'
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            Ativos ({cursos.filter(c => c.status === 'ativo').length})
+          </button>
+          <button
+            onClick={() => setStatusFilter('inativo')}
+            className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${
+              statusFilter === 'inativo'
+                ? 'bg-white text-red-500 shadow-sm'
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            Inativos ({cursos.filter(c => c.status === 'inativo').length})
+          </button>
+        </div>
+
+        <div
+          className="flex w-fit items-center rounded-xl border border-slate-200 bg-slate-100 p-1"
+          aria-label="Modo de visualização"
         >
-          Ativos ({cursos.filter(c => c.status === 'ativo').length})
-        </button>
-        <button 
-          onClick={() => setStatusFilter('inativo')}
-          className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${
-            statusFilter === 'inativo' 
-              ? 'bg-white text-red-500 shadow-sm' 
-              : 'text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          Inativos ({cursos.filter(c => c.status === 'inativo').length})
-        </button>
+          <button
+            type="button"
+            onClick={() => setDisplayMode('cards')}
+            aria-pressed={displayMode === 'cards'}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-[10px] font-black uppercase tracking-wide transition-all ${
+              displayMode === 'cards'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            <LayoutGrid size={13} />
+            Cards
+          </button>
+          <button
+            type="button"
+            onClick={() => setDisplayMode('table')}
+            aria-pressed={displayMode === 'table'}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-[10px] font-black uppercase tracking-wide transition-all ${
+              displayMode === 'table'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            <TableProperties size={13} />
+            Tabela
+          </button>
+        </div>
       </div>
 
       {/* Listagem */}
@@ -397,19 +519,31 @@ const EnsinoSuperiorPage: React.FC<EnsinoSuperiorPageProps> = ({ readOnly = fals
       ) : filteredCursos.length === 0 ? (
         <div className="text-center py-20 bg-slate-50 rounded-[2.5rem] border border-dashed border-slate-300">
            <Building className="text-slate-300 mx-auto mb-4 animate-pulse" size={48} />
-           <p className="text-slate-500 font-medium">Nenhum curso superior {statusFilter === 'ativo' ? 'ativo' : 'inativo'} cadastrado.</p>
+           <p className="text-slate-500 font-bold">Nenhum curso superior encontrado.</p>
+           <p className="mt-1 text-xs text-slate-400">Ajuste a busca ou os filtros de categoria e parceiro.</p>
         </div>
       ) : (
-        <div className="space-y-10">
-          {Object.entries(groupedCursos).map(([area, list]) => (
-            <div key={area} className="animate-fadeIn">
-              <h3 className="text-sm font-black text-[#001a33] uppercase tracking-widest border-l-4 border-blue-600 pl-3 mb-6 flex items-center gap-2">
-                <span>{area}</span>
-                <span className="text-xs bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full font-bold">{list.length}</span>
-              </h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {list.map((curso) => (
+        displayMode === 'table' ? (
+          <div className="animate-fadeIn">
+            <CursoSuperiorTable
+              cursos={filteredCursos}
+              readOnly={readOnly}
+              onEdit={handleOpenEdit}
+              onToggleStatus={handleToggleStatus}
+              onDelete={handleDeleteCurso}
+            />
+          </div>
+        ) : (
+          <div className="space-y-10">
+            {Object.entries(groupedCursos).map(([area, list]) => (
+              <div key={area} className="animate-fadeIn">
+                <h3 className="text-sm font-black text-[#001a33] uppercase tracking-widest border-l-4 border-blue-600 pl-3 mb-6 flex items-center gap-2">
+                  <span>{area}</span>
+                  <span className="text-xs bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full font-bold">{list.length}</span>
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {list.map((curso) => (
                   <div 
                     key={curso.id} 
                     className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 hover:shadow-xl hover:shadow-blue-900/5 transition-all duration-300 flex flex-col justify-between min-h-[340px] relative overflow-hidden group"
@@ -496,11 +630,12 @@ const EnsinoSuperiorPage: React.FC<EnsinoSuperiorPageProps> = ({ readOnly = fals
                       </div>}
                     </div>
                   </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )
       )}
 
       {/* Modal de Formulário (Criar/Editar) */}

@@ -59,7 +59,7 @@ const TurmaTecnicoForm: React.FC<TurmaTecnicoFormProps> = ({
     origemFinanceira: 'NORMAL' as const,
     financeiroHerdado: false,
     gerarCobrancasFuturas: true,
-    sincronizarAsaasFuturo: true,
+    sincronizarAsaasFuturo: false,
     // Campos calculados
     nomeAutomatico: '',
     codigoAutomatico: ''
@@ -277,7 +277,7 @@ const TurmaTecnicoForm: React.FC<TurmaTecnicoFormProps> = ({
                 onChange={(e) => setFormData((current) => ({ ...current, sincronizarAsaasFuturo: e.target.checked }))}
                 className="h-4 w-4 rounded border-slate-300"
               />
-              Sincronizar futuras cobranças com Asaas
+              Sincronizar futuras cobranças com o gateway configurado
             </label>
           </div>
 

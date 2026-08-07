@@ -1,9 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowUpRight, CheckCircle2, Copy, FileText, QrCode, X } from 'lucide-react';
+import { ArrowUpRight, CheckCircle2, Clock3, Copy, FileText, MessageCircle, X } from 'lucide-react';
+import { fetchBaneseBoletoDocument } from '../../aluno/shared/baneseBoletoDocument';
+import {
+  preparePaymentWindow,
+  renderPaymentWindowError,
+  renderPdfInPaymentWindow,
+} from '../../aluno/shared/paymentWindow';
+import EadOfficialPixQr from './EadOfficialPixQr';
+import { normalizeEadPaymentQrImageSource } from './eadPaymentQrImage';
 
 export interface EadPaymentPanelData {
   url?: string | null;
+  presentation?: 'BOLETO' | 'PIX';
   receivableId?: string | null;
   matriculaId?: string | null;
   alreadyPaid?: boolean;
@@ -57,21 +66,32 @@ const formatDateDisplay = (value?: string | null) => {
 
 const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose }) => {
   const [pixCopied, setPixCopied] = useState(false);
+  const [boletoError, setBoletoError] = useState('');
+  const [isOpeningBoleto, setIsOpeningBoleto] = useState(false);
   const payment = panel.payment || {};
   const method = String(payment.method || '').toUpperCase();
   const provider = String(payment.provider || 'asaas').toLowerCase();
-  const providerName = provider === 'mercado_pago' ? 'Mercado Pago' : provider === 'banese_card' ? 'Banese Card' : 'Asaas';
+  const providerName = provider === 'mercado_pago'
+    ? 'Mercado Pago'
+    : provider.startsWith('banese')
+      ? 'Banese'
+      : 'Asaas';
   const isPix = method === 'PIX';
   const isBoleto = method === 'BOLETO';
   const hasPixQrCode = Boolean(payment.pixQrCode?.payload || payment.pixQrCode?.encodedImage);
-  const showInlinePix = isPix && (provider === 'asaas' || hasPixQrCode);
+  const wantsInlineBolePix = panel.presentation === 'PIX' && isBoleto;
+  const showInlinePix = wantsInlineBolePix || (isPix && (provider === 'asaas' || hasPixQrCode));
+  const showBoletoAction = isBoleto && !wantsInlineBolePix;
   const recipientName = payment.recipient?.name || 'Universo Cursos e Consultoria';
   const recipientDocument = payment.recipient?.document || '13.278.137/0001-54';
   const displayValue = payment.displayValue || formatCurrencyDisplay(payment.value);
   const dueDate = formatDateDisplay(payment.dueDate);
   const pixExpiration = formatDateDisplay(payment.pixQrCode?.expirationDate);
+  const pixQrImageSource = normalizeEadPaymentQrImageSource(payment.pixQrCode?.encodedImage);
   const officialUrl = payment.invoiceUrl || panel.url || payment.bankSlipUrl || null;
   const expirationLabel = pixExpiration || dueDate || `Informado pelo ${providerName}`;
+  const isPendingBanese = provider.startsWith('banese')
+    && !['PAID', 'RECEIVED', 'CONFIRMED'].includes(String(payment.status || '').toUpperCase());
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -93,19 +113,38 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose }) => 
     window.setTimeout(() => setPixCopied(false), 2200);
   };
 
+  const openBaneseBoleto = async () => {
+    const paymentWindow = preparePaymentWindow();
+    setBoletoError('');
+    setIsOpeningBoleto(true);
+    try {
+      const pdf = await fetchBaneseBoletoDocument(String(panel.receivableId || ''));
+      if (!renderPdfInPaymentWindow(paymentWindow, pdf)) {
+        throw new Error('O navegador bloqueou a nova aba do boleto.');
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Não foi possível abrir o boleto Banese.';
+      renderPaymentWindowError(paymentWindow, message);
+      setBoletoError(message);
+    } finally {
+      setIsOpeningBoleto(false);
+    }
+  };
+
   if (typeof document === 'undefined') return null;
 
   return createPortal((
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-[99999] flex h-[100dvh] min-h-[100dvh] w-screen items-start justify-center overflow-y-auto overscroll-contain bg-slate-950/75 px-3 py-3 backdrop-blur-sm pointer-events-auto sm:px-4 sm:py-4"
+      aria-labelledby="ead-payment-modal-title"
+      className="fixed inset-0 z-[99999] flex h-[100dvh] min-h-[100dvh] w-screen items-center justify-center overflow-hidden overscroll-contain bg-slate-950/75 p-2 backdrop-blur-sm pointer-events-auto sm:p-4 lg:p-6"
       onMouseDown={(event) => event.stopPropagation()}
       onClick={(event) => event.stopPropagation()}
     >
       {pixCopied && createPortal((
-        <div className="fixed right-6 top-6 z-[2147483647] pointer-events-none animate-fadeIn">
-          <div className="flex items-center gap-3 rounded-2xl border border-emerald-100 border-l-4 border-l-emerald-500 bg-white px-5 py-4 text-emerald-700 shadow-2xl shadow-slate-900/15">
+        <div className="fixed left-3 right-3 top-3 z-[2147483647] pointer-events-none animate-fadeIn sm:left-auto sm:right-6 sm:top-6">
+          <div className="flex items-center justify-center gap-3 rounded-2xl border border-emerald-100 border-l-4 border-l-emerald-500 bg-white px-4 py-3 text-emerald-700 shadow-2xl shadow-slate-900/15 sm:justify-start sm:px-5 sm:py-4">
             <CheckCircle2 size={20} className="shrink-0 text-emerald-500" />
             <div>
               <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Pix copia e cola</p>
@@ -115,41 +154,35 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose }) => 
         </div>
       ), document.body)}
 
-      <div className="relative z-[100000] w-full max-w-4xl overflow-hidden rounded-[1.75rem] border border-white/20 bg-white shadow-2xl">
-        <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
-          <div>
+      <div className="relative z-[100000] flex max-h-[calc(100dvh-1rem)] w-full max-w-4xl flex-col overflow-hidden rounded-[1.25rem] border border-white/20 bg-white shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-[1.75rem] lg:max-h-[calc(100dvh-3rem)]">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 sm:gap-4 sm:px-5 sm:py-4">
+          <div className="min-w-0">
             <p className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-600">Pagamento EAD</p>
-            <h3 className="mt-1 text-xl font-black uppercase tracking-tight text-[#001a33]">
+            <h3 id="ead-payment-modal-title" className="mt-1 text-lg font-black uppercase tracking-tight text-[#001a33] sm:text-xl">
               {showInlinePix ? 'Pague com Pix' : isBoleto ? 'Boleto gerado' : 'Pagamento gerado'}
             </h3>
-            <p className="mt-1 text-xs font-bold leading-relaxed text-slate-500">
+            <p className="mt-1 text-[11px] font-bold leading-relaxed text-slate-500 sm:text-xs">
               O curso será liberado automaticamente após a confirmação do pagamento.
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-100 text-slate-400 hover:text-slate-700"
+            aria-label="Fechar pagamento"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-100 text-slate-400 hover:text-slate-700"
           >
             <X size={18} />
           </button>
         </div>
 
-        <div className="max-h-[calc(100dvh-7.5rem)] space-y-3 overflow-y-auto px-5 py-4">
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-3 py-3 sm:px-5 sm:py-4">
           {showInlinePix && (
-            <div className="grid gap-4 rounded-3xl border border-emerald-100 bg-emerald-50/60 p-4 lg:grid-cols-[280px_1fr]">
+            <div className="grid gap-4 rounded-[1.25rem] border border-emerald-100 bg-emerald-50/60 p-3 sm:rounded-3xl sm:p-4 lg:grid-cols-[minmax(220px,280px)_1fr]">
               <div className="text-center">
-                {payment.pixQrCode?.encodedImage ? (
-                  <img
-                    src={`data:image/png;base64,${payment.pixQrCode.encodedImage}`}
-                    alt="QR Code Pix"
-                    className="mx-auto h-56 w-56 rounded-2xl bg-white p-3 shadow-sm"
-                  />
-                ) : (
-                  <div className="mx-auto flex h-56 w-56 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow-sm">
-                    <QrCode size={76} />
-                  </div>
-                )}
+                <EadOfficialPixQr
+                  payload={payment.pixQrCode?.payload}
+                  imageSource={pixQrImageSource}
+                />
                 <p className="mt-3 text-[10px] font-black uppercase tracking-widest text-emerald-700">Pix copia e cola</p>
                 <div className="mt-2 rounded-2xl border border-emerald-100 bg-white p-3 text-left">
                   <p className="line-clamp-3 break-all text-[11px] font-bold leading-relaxed text-slate-600">
@@ -159,17 +192,18 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose }) => 
                 <button
                   type="button"
                   onClick={copyPix}
-                  className="mt-3 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white hover:bg-emerald-700"
+                  disabled={!payment.pixQrCode?.payload}
+                  className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 sm:w-auto"
                 >
                   <Copy size={14} />
                   Copiar Pix
                 </button>
               </div>
 
-              <div className="rounded-[1.4rem] border border-white/70 bg-white/80 p-4 shadow-sm">
-                <div className="rounded-2xl bg-[#001a33] p-4 text-white">
+              <div className="rounded-[1.15rem] border border-white/70 bg-white/80 p-3 shadow-sm sm:rounded-[1.4rem] sm:p-4">
+                <div className="rounded-2xl bg-[#001a33] p-3 text-white sm:p-4">
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-200">Valor do Pix</p>
-                  <p className="mt-1 text-3xl font-black tracking-tight">{displayValue}</p>
+                  <p className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">{displayValue}</p>
                   <p className="mt-1 text-xs font-bold text-slate-200">Expira em: {expirationLabel}</p>
                 </div>
 
@@ -227,7 +261,7 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose }) => 
             </div>
           )}
 
-          {isBoleto && (
+          {showBoletoAction && (
             <div className="rounded-3xl border border-blue-100 bg-blue-50/60 p-5">
               <div className="flex items-center gap-4">
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-sm">
@@ -240,21 +274,28 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose }) => 
                   </p>
                 </div>
               </div>
-              {payment.bankSlipUrl && (
-                <a
-                  href={payment.bankSlipUrl}
-                  target="_blank"
-                  rel="noreferrer"
+              {provider.startsWith('banese') ? (
+                <button
+                  type="button"
+                  onClick={openBaneseBoleto}
+                  disabled={isOpeningBoleto}
                   className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white hover:bg-blue-700"
                 >
                   <ArrowUpRight size={14} />
-                  Abrir boleto
+                  {isOpeningBoleto ? 'Preparando PDF...' : 'Abrir boleto'}
+                </button>
+              ) : payment.bankSlipUrl ? (
+                <a href={payment.bankSlipUrl} target="_blank" rel="noreferrer" className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white hover:bg-blue-700">
+                  <ArrowUpRight size={14} /> Abrir boleto
                 </a>
-              )}
+              ) : null}
+              {boletoError ? (
+                <p className="mt-3 text-xs font-bold text-red-600">{boletoError}</p>
+              ) : null}
             </div>
           )}
 
-          {officialUrl && (
+          {officialUrl && !isBoleto && (
             <a
               href={officialUrl}
               target="_blank"
@@ -266,7 +307,39 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose }) => 
             </a>
           )}
 
-          <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3 text-xs font-bold leading-relaxed text-slate-600">
+          {isPendingBanese ? (
+            <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-950">
+              <div className="flex items-start gap-3">
+                <Clock3 size={20} className="mt-0.5 shrink-0 text-amber-600" />
+                <div>
+                  <p className="text-sm font-black">Aguardando confirmação do Banese</p>
+                  <p className="mt-1 text-xs font-semibold leading-relaxed">
+                    Assim que o banco confirmar o pagamento, o curso será liberado automaticamente.
+                    Se você já realizou o pagamento via Pix e o acesso não for liberado em até 20 minutos,
+                    fale conosco. Pagamentos por boleto podem levar até 48 horas úteis para compensação.
+                  </p>
+                  <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                    <a
+                      href={`https://wa.me/557996028316?text=${encodeURIComponent('Olá! Realizei o pagamento de um curso EAD e ainda aguardo a confirmação do Banese.')}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 text-[10px] font-black uppercase tracking-widest text-white hover:bg-emerald-700"
+                    >
+                      <MessageCircle size={14} /> Falar no WhatsApp
+                    </a>
+                    <a
+                      href="/aluno?module=comunicacao"
+                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-300 bg-white px-4 text-[10px] font-black uppercase tracking-widest text-amber-900 hover:bg-amber-100"
+                    >
+                      <MessageCircle size={14} /> Abrir chamado
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </section>
+          ) : null}
+
+          <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3 text-[11px] font-bold leading-relaxed text-slate-600 sm:text-xs">
             A tela pode ser fechada sem cancelar a cobrança. Quando o {providerName} confirmar o pagamento, o curso aparece automaticamente em Meus Cursos.
           </div>
         </div>
