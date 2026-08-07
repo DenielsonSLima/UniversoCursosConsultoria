@@ -190,12 +190,14 @@ const TurmaGrade = ({
   });
 
   const handleAssignProfessor = async (disciplinaId: string, professorId: string) => {
+    if (assignProfessorMutation.isPending) return;
     const currentConfig = disciplinasConfig[disciplinaId] || { professor: null, concluida: false };
     const professor = professores.find((item) => item.id === professorId) || null;
     await assignProfessorMutation.mutateAsync({ disciplinaId, professor, currentConfig });
   };
 
   const handleAssignProfessorToAll = async (professorId: string) => {
+    if (assignProfessorToAllMutation.isPending) return;
     if (!cursoBase) return;
     const disciplineIds = (cursoBase.modulos || []).flatMap((modulo) => (
       modulo.disciplinas.map((disciplina) => disciplina.id)
@@ -324,6 +326,7 @@ const TurmaGrade = ({
             <select
               value={Object.values(disciplinasConfig).find((config) => config.professorId)?.professorId || ''}
               onChange={(event) => handleAssignProfessorToAll(event.target.value)}
+              disabled={assignProfessorToAllMutation.isPending}
               className="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl outline-none focus:border-indigo-500 px-3.5 py-3 transition-colors text-slate-700 shadow-sm"
             >
               <option value="">Selecione um professor...</option>
@@ -384,6 +387,7 @@ const TurmaGrade = ({
           professores={professores}
           onAssign={handleAssignProfessor}
           onClose={closeDocenteModal}
+          isAssigning={assignProfessorMutation.isPending}
         />
       )}
       {aulaParaExcluir && (

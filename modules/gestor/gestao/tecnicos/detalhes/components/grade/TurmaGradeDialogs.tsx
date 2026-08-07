@@ -8,6 +8,7 @@ interface DocenteDialogProps {
   professores: TurmaProfessorOption[];
   onAssign: (disciplinaId: string, professorId: string) => void;
   onClose: () => void;
+  isAssigning?: boolean;
 }
 
 export const TurmaGradeDocenteDialog: React.FC<DocenteDialogProps> = ({
@@ -15,6 +16,7 @@ export const TurmaGradeDocenteDialog: React.FC<DocenteDialogProps> = ({
   professores,
   onAssign,
   onClose,
+  isAssigning = false,
 }) => {
   if (typeof document === 'undefined') return null;
 
@@ -69,13 +71,28 @@ export const TurmaGradeDocenteDialog: React.FC<DocenteDialogProps> = ({
                 <button
                   key={professor.id}
                   type="button"
-                  onClick={() => onAssign(disciplinaId, professor.id)}
-                  className="group flex min-h-20 w-full items-center rounded-2xl border border-slate-200 bg-white px-5 py-4 text-left text-sm font-bold text-slate-700 transition-all hover:-translate-y-0.5 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-900 hover:shadow-md"
+                  onClick={() => {
+                    if (isAssigning) return;
+                    onAssign(disciplinaId, professor.id);
+                  }}
+                  disabled={isAssigning}
+                  className={`group flex min-h-20 w-full items-center rounded-2xl border border-slate-200 bg-white px-5 py-4 text-left text-sm font-bold text-slate-700 transition-all ${
+                    isAssigning
+                      ? 'cursor-not-allowed opacity-70'
+                      : 'text-slate-700 hover:-translate-y-0.5 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-900 hover:shadow-md'
+                  }`}
                 >
-                  <span className="mr-3 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-sm font-black text-blue-600 group-hover:bg-blue-600 group-hover:text-white">
+                  <span className={`mr-3 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-sm font-black text-blue-600 ${
+                    isAssigning ? 'group-hover:bg-blue-50 group-hover:text-blue-600' : 'group-hover:bg-blue-600 group-hover:text-white'
+                  }`}>
                     {professor.nome.slice(0, 2).toUpperCase()}
                   </span>
-                  <span className="min-w-0 truncate">{professor.nome}</span>
+                  <span className="min-w-0 flex-1 truncate">{professor.nome}</span>
+                  {isAssigning && (
+                    <span className="ml-2 flex items-center text-xs font-black uppercase tracking-widest text-blue-700">
+                      <Loader2 size={14} className="animate-spin" />
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
