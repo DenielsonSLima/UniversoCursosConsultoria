@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   CheckCircle2,
-  Droplets,
+  Eye,
+  FileEdit,
   FileSignature,
   Loader2,
   QrCode,
@@ -10,12 +11,15 @@ import {
   Save,
   ShieldCheck,
 } from 'lucide-react';
+import { empresasService } from '../../../../configuracoes/empresas/empresas.service';
+import { marcaDaguaService } from '../../../../configuracoes/marca-dagua/marca-dagua.service';
 import { useContratoAlunoTemplate } from '../hooks/useContratoAlunoTemplate';
 import {
   CONTRATO_ALUNO_MODALIDADE_LABEL,
   type ConteudoModeloContratoAluno,
   type ContratoAlunoModalidade,
 } from '../types/contrato-aluno.types';
+import { ContratoAlunoCanvas } from './ContratoAlunoCanvas';
 
 interface ContratoAlunoTemplateEditorProps {
   modalidade: ContratoAlunoModalidade;
@@ -37,7 +41,33 @@ export const ContratoAlunoTemplateEditor = ({ modalidade }: ContratoAlunoTemplat
   const [draft, setDraft] = useState<ConteudoModeloContratoAluno | null>(null);
   const [isActivationPromptOpen, setIsActivationPromptOpen] = useState(false);
   const [activationAcknowledged, setActivationAcknowledged] = useState(false);
+  const [activeTab, setActiveTab] = useState<'editor' | 'preview' | 'split'>('split');
+  const [companyInfo, setCompanyInfo] = useState<any>(null);
+  const [watermarkInfo, setWatermarkInfo] = useState<any>(null);
   const loadedVersion = useRef<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    Promise.all([
+      empresasService.getCompanyPrincipal().catch(() => null),
+      marcaDaguaService.getCompaniesWithWatermark().catch(() => []),
+    ]).then(([company, watermarks]) => {
+      if (!isMounted) return;
+      if (company) setCompanyInfo(company);
+      if (Array.isArray(watermarks) && watermarks.length > 0) {
+        // Encontra a marca d'água cadastrada no polo/empresa ou a primeira que possui imagem
+        const found =
+          watermarks.find((w: any) => w.id === company?.id && Boolean(w.watermarkUrl || w.landscapeWatermarkUrl)) ||
+          watermarks.find((w: any) => Boolean(w.watermarkUrl || w.landscapeWatermarkUrl)) ||
+          watermarks[0];
+        setWatermarkInfo(found);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!templateQuery.data) return;
@@ -55,6 +85,8 @@ export const ContratoAlunoTemplateEditor = ({ modalidade }: ContratoAlunoTemplat
     key: K,
     value: ConteudoModeloContratoAluno[K],
   ) => setDraft((current) => current ? { ...current, [key]: value } : current);
+
+  const [activePageIndex, setActivePageIndex] = useState(0);
 
   const save = () => {
     if (draft) saveMutation.mutate(draft);
@@ -105,7 +137,7 @@ export const ContratoAlunoTemplateEditor = ({ modalidade }: ContratoAlunoTemplat
 
   return (
     <div className="animate-fadeIn mx-auto max-w-7xl">
-      <header className="mb-7 flex flex-col justify-between gap-4 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm lg:flex-row lg:items-center">
+      <header className="mb-6 flex flex-col justify-between gap-4 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm lg:flex-row lg:items-center">
         <div className="flex gap-4">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#001a33] text-white shadow-lg shadow-blue-950/15">
             <FileSignature size={23} />
@@ -126,15 +158,54 @@ export const ContratoAlunoTemplateEditor = ({ modalidade }: ContratoAlunoTemplat
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={save}
-          disabled={!isDirty || saveMutation.isPending}
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#ed1c4e] px-5 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg shadow-rose-500/20 transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
-        >
-          {saveMutation.isPending ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
-          {saveMutation.isPending ? 'Salvando...' : 'Salvar versão'}
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Mode Switcher Tabs */}
+          <div className="flex rounded-xl bg-slate-100 p-1 border border-slate-200">
+            <button
+              type="button"
+              onClick={() => setActiveTab('split')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase tracking-wider rounded-lg transition ${
+                activeTab === 'split'
+                  ? 'bg-white text-[#001a33] shadow-sm'
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              Lado a lado
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('editor')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase tracking-wider rounded-lg transition ${
+                activeTab === 'editor'
+                  ? 'bg-white text-[#001a33] shadow-sm'
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              <FileEdit size={14} /> Editor
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('preview')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase tracking-wider rounded-lg transition ${
+                activeTab === 'preview'
+                  ? 'bg-white text-[#001a33] shadow-sm'
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              <Eye size={14} /> Prévia A4
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={save}
+            disabled={!isDirty || saveMutation.isPending}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#ed1c4e] px-5 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg shadow-rose-500/20 transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
+          >
+            {saveMutation.isPending ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+            {saveMutation.isPending ? 'Salvando...' : 'Salvar versão'}
+          </button>
+        </div>
       </header>
 
       {hasReviewWarning && (
@@ -194,88 +265,63 @@ export const ContratoAlunoTemplateEditor = ({ modalidade }: ContratoAlunoTemplat
         </div>
       )}
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
-        <section className="space-y-5 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
-            <FileSignature className="text-[#ed1c4e]" size={19} />
-            <h4 className="text-sm font-black uppercase tracking-wider text-[#001a33]">Conteúdo e identidade</h4>
-          </div>
+      {/* Main Workspace Layout */}
+      <div className={activeTab === 'split' ? 'grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] items-start' : 'block'}>
+        {(activeTab === 'split' || activeTab === 'editor') && (
+          <section className="space-y-5 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
+              <FileSignature className="text-[#ed1c4e]" size={19} />
+              <h4 className="text-sm font-black uppercase tracking-wider text-[#001a33]">Conteúdo e identidade</h4>
+            </div>
 
-          <label className="block">
-            <span className="mb-2 block text-[11px] font-black uppercase tracking-wider text-slate-600">Título do documento</span>
-            <input
-              value={draft.tituloDocumento}
-              onChange={(event) => update('tituloDocumento', event.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-[#001a33] outline-none transition focus:border-blue-500 focus:bg-white"
-            />
-          </label>
-
-          <label className="block">
-            <span className="mb-2 block text-[11px] font-black uppercase tracking-wider text-slate-600">Cabeçalho institucional</span>
-            <input
-              value={draft.cabecalho}
-              onChange={(event) => update('cabecalho', event.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-[#001a33] outline-none transition focus:border-blue-500 focus:bg-white"
-            />
-          </label>
-
-          <label className="block">
-            <span className="mb-2 block text-[11px] font-black uppercase tracking-wider text-slate-600">Corpo do modelo</span>
-            <textarea
-              value={draft.corpo}
-              onChange={(event) => update('corpo', event.target.value)}
-              rows={14}
-              className="w-full resize-y rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-700 outline-none transition focus:border-blue-500 focus:bg-white"
-            />
-            <span className="mt-2 block text-xs font-medium text-slate-400">Variáveis, dados de matrícula e condições financeiras serão resolvidos pela emissão segura, nunca pelo navegador.</span>
-          </label>
-
-          <div className="grid gap-4 md:grid-cols-2">
             <label className="block">
-              <span className="mb-2 block text-[11px] font-black uppercase tracking-wider text-slate-600">Rodapé</span>
-              <textarea
-                value={draft.rodape}
-                onChange={(event) => update('rodape', event.target.value)}
-                rows={3}
-                className="w-full resize-y rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-5 text-slate-700 outline-none transition focus:border-blue-500 focus:bg-white"
+              <span className="mb-2 block text-[11px] font-black uppercase tracking-wider text-slate-600">Título do documento</span>
+              <input
+                value={draft.tituloDocumento}
+                onChange={(event) => update('tituloDocumento', event.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-[#001a33] outline-none transition focus:border-blue-500 focus:bg-white"
               />
             </label>
+
             <label className="block">
-              <span className="mb-2 block text-[11px] font-black uppercase tracking-wider text-slate-600">Nota de controle</span>
-              <textarea
-                value={draft.observacaoEscopo}
-                onChange={(event) => update('observacaoEscopo', event.target.value)}
-                rows={3}
-                className="w-full resize-y rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-5 text-slate-700 outline-none transition focus:border-blue-500 focus:bg-white"
+              <span className="mb-2 block text-[11px] font-black uppercase tracking-wider text-slate-600">Cabeçalho institucional</span>
+              <input
+                value={draft.cabecalho}
+                onChange={(event) => update('cabecalho', event.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-[#001a33] outline-none transition focus:border-blue-500 focus:bg-white"
               />
             </label>
-          </div>
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2 text-sky-900">
-                  <Droplets size={18} />
-                  <span className="text-xs font-black uppercase tracking-wider">Marca-d'água</span>
-                </div>
-                <input
-                  aria-label="Ativar marca-d'água"
-                  type="checkbox"
-                  checked={draft.marcaDagua.habilitada}
-                  onChange={(event) => update('marcaDagua', { ...draft.marcaDagua, habilitada: event.target.checked })}
-                  className="h-4 w-4 accent-[#001a33]"
+            <label className="block">
+              <span className="mb-2 block text-[11px] font-black uppercase tracking-wider text-slate-600">Corpo do modelo</span>
+              <textarea
+                value={draft.corpo}
+                onChange={(event) => update('corpo', event.target.value)}
+                rows={16}
+                className="w-full resize-y rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-700 outline-none transition focus:border-blue-500 focus:bg-white"
+              />
+              <span className="mt-2 block text-xs font-medium text-slate-400">Variáveis, dados de matrícula e condições financeiras serão resolvidos pela emissão segura. O sistema calcula a extensão do texto e distribui o conteúdo automaticamente pelas folhas A4.</span>
+            </label>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="block">
+                <span className="mb-2 block text-[11px] font-black uppercase tracking-wider text-slate-600">Rodapé</span>
+                <textarea
+                  value={draft.rodape}
+                  onChange={(event) => update('rodape', event.target.value)}
+                  rows={3}
+                  className="w-full resize-y rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-5 text-slate-700 outline-none transition focus:border-blue-500 focus:bg-white"
                 />
-              </div>
-              <p className="mt-2 text-xs font-medium leading-relaxed text-sky-800">Usa a marca institucional do polo emissor, sem anexar arte local a este modelo.</p>
-              <select
-                value={draft.marcaDagua.intensidade}
-                onChange={(event) => update('marcaDagua', { ...draft.marcaDagua, intensidade: event.target.value === 'MEDIA' ? 'MEDIA' : 'SUAVE' })}
-                disabled={!draft.marcaDagua.habilitada}
-                className="mt-3 w-full rounded-lg border border-sky-200 bg-white px-3 py-2 text-xs font-bold text-sky-900 disabled:opacity-50"
-              >
-                <option value="SUAVE">Intensidade suave</option>
-                <option value="MEDIA">Intensidade média</option>
-              </select>
+              </label>
+              <label className="block">
+                <span className="mb-2 block text-[11px] font-black uppercase tracking-wider text-slate-600">Nota de controle</span>
+                <textarea
+                  value={draft.observacaoEscopo}
+                  onChange={(event) => update('observacaoEscopo', event.target.value)}
+                  rows={3}
+                  className="w-full resize-y rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-5 text-slate-700 outline-none transition focus:border-blue-500 focus:bg-white"
+                />
+              </label>
             </div>
 
             <div className="rounded-2xl border border-violet-100 bg-violet-50 p-4">
@@ -286,7 +332,7 @@ export const ContratoAlunoTemplateEditor = ({ modalidade }: ContratoAlunoTemplat
                 </div>
                 <span className="rounded-full bg-violet-700 px-2 py-1 text-[9px] font-black uppercase tracking-wider text-white">Obrigatório</span>
               </div>
-              <p className="mt-2 text-xs font-medium leading-relaxed text-violet-800">O QR leva somente a um código opaco de validação, gerado pela emissão. Apenas a validade e o rótulo são configuráveis.</p>
+              <p className="mt-2 text-xs font-medium leading-relaxed text-violet-800">O QR leva ao código opaco de validação gerado pela emissão.</p>
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <select
                   value={draft.qr.modoValidade}
@@ -312,41 +358,25 @@ export const ContratoAlunoTemplateEditor = ({ modalidade }: ContratoAlunoTemplat
                 />
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
-        <aside className="xl:sticky xl:top-6 xl:self-start">
-          <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-100 p-4 shadow-sm">
-            <div className="mb-3 flex items-center justify-between px-2">
-              <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Prévia estrutural</span>
-              <span className="flex items-center gap-1 text-[10px] font-bold text-slate-500"><ShieldCheck size={13} /> QR seguro</span>
-            </div>
-            <article className="relative min-h-[610px] overflow-hidden rounded-sm bg-white px-8 py-10 shadow-lg">
-              {draft.marcaDagua.habilitada && (
-                <div className={`pointer-events-none absolute inset-0 flex items-center justify-center ${draft.marcaDagua.intensidade === 'MEDIA' ? 'opacity-[0.09]' : 'opacity-[0.05]'}`}>
-                  <span className="-rotate-45 text-5xl font-black tracking-[0.25em] text-[#001a33]">UNIVERSO</span>
-                </div>
-              )}
-              <div className="relative text-center">
-                <p className="text-[9px] font-black tracking-[0.16em] text-[#001a33]">{draft.cabecalho}</p>
-                <div className="mx-auto mt-4 h-px w-20 bg-[#ed1c4e]" />
-                <h5 className="mt-5 text-sm font-black uppercase leading-5 text-[#001a33]">{draft.tituloDocumento}</h5>
-              </div>
-              <div className="relative mt-8 whitespace-pre-wrap text-justify text-[10px] leading-5 text-slate-700">
-                {draft.corpo || 'Conteúdo do modelo de contrato.'}
-              </div>
-              <div className="relative mt-10 border-t border-slate-200 pt-4">
-                <p className="text-[8px] leading-4 text-slate-500">{draft.rodape}</p>
-                <div className="mt-4 flex items-end justify-between gap-3">
-                  <p className="max-w-[150px] text-[8px] font-bold uppercase tracking-wider text-slate-500">{draft.qr.rotulo}</p>
-                  <div className="grid h-11 w-11 grid-cols-5 gap-px bg-white p-1 ring-1 ring-slate-300">
-                    {Array.from({ length: 25 }, (_, index) => <span key={index} className={(index * 7) % 5 < 3 ? 'bg-[#001a33]' : 'bg-white'} />)}
-                  </div>
-                </div>
-              </div>
-            </article>
-          </div>
-        </aside>
+        {(activeTab === 'split' || activeTab === 'preview') && (
+          <aside className="w-full overflow-x-auto rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm xl:sticky xl:top-6 xl:self-start">
+            <ContratoAlunoCanvas
+              tituloDocumento={draft.tituloDocumento}
+              cabecalho={draft.cabecalho}
+              corpo={draft.corpo}
+              rodape={draft.rodape}
+              observacaoEscopo={draft.observacaoEscopo}
+              qr={draft.qr}
+              polo={companyInfo}
+              centralWatermark={watermarkInfo}
+              activePageIndex={activePageIndex}
+              onPageSelect={setActivePageIndex}
+            />
+          </aside>
+        )}
       </div>
 
       {isActivationPromptOpen && (

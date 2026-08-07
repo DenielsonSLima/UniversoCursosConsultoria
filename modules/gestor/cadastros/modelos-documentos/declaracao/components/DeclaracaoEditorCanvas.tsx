@@ -304,6 +304,7 @@ const DeclaracaoEditorCanvas: React.FC<DeclaracaoEditorCanvasProps> = ({
                 if (event.currentTarget === event.target) onSelectField(null);
               }}
             >
+
               <div className="pointer-events-none absolute inset-0 z-[1]">
                 <div className="absolute top-0 bottom-0 left-1/2 border-l border-blue-500/35" />
                 <div className="absolute left-0 right-0 top-1/2 border-t border-blue-500/25" />
