@@ -68,10 +68,10 @@ const ContratosAlunoEmissionWorkspace = ({
     return matchesTurma && (!normalizedSearch || haystack.includes(normalizedSearch));
   });
   const selectedSet = new Set(selectedEnrollmentIds);
-  const isAllVisibleSelected = visibleTargets.length > 0
-    && visibleTargets.every((target) => selectedSet.has(target.enrollmentId));
   const isIndividual = mode === 'INDIVIDUAL';
   const visibleTargets = isIndividual && !normalizedSearch ? [] : matchesTargets;
+  const isAllVisibleSelected = visibleTargets.length > 0
+    && visibleTargets.every((target) => selectedSet.has(target.enrollmentId));
   const canPrepare = selectedEnrollmentIds.length > 0 && !isPreparing;
   const templatesAtivos = workspace.templates.filter((template) => template.status === 'ATIVO');
 
