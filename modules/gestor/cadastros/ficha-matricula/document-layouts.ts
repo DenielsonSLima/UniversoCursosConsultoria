@@ -123,6 +123,7 @@ const movableStudentPhoto = (
     backgroundColor: '#ffffff',
     border: '1px solid #94a3b8',
     borderRadius: '6px',
+    display: 'block',
     overflow: 'hidden',
     objectFit: 'contain',
     objectPosition: 'center',
@@ -293,7 +294,7 @@ export const pastaIdentificacaoDefaultTemplate = {
   ],
   validityDays: 0,
   pageCount: 1,
-  v: 9,
+  v: 10,
 };
 
 export const fichaMatriculaDefaultTemplate = {
@@ -378,7 +379,7 @@ export const fichaMatriculaDefaultTemplate = {
   enrollmentFormTerm: 'Solicito minha matrícula no curso acima identificado e declaro que os dados informados são verdadeiros. Estou ciente das normas acadêmicas e administrativas da unidade escolar.',
   enrollmentFormCustomFields: [],
   enrollmentFormRequiresSignature: true,
-  v: 9,
+  v: 10,
 };
 
 const pastaIdentificacaoBaseService = createDocumentTemplateService(

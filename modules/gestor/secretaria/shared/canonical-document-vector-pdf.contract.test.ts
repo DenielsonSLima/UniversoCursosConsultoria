@@ -204,6 +204,9 @@ test('preview oficial recebe um Blob PDF nativo, sem conversor de página em can
   assert.match(contractPdf, /const hasClosing = isFinalPage/);
   assert.match(contractPdf, /drawContractClosing/);
   assert.match(contractPdf, /const CLOSING_TOP = 210/);
+  assert.match(contractPdf, /drawContractInstitutionalHeader/);
+  assert.match(contractPdf, /resolveCanonicalPdfPhoto/);
+  assert.doesNotMatch(contractPdf, /align: 'justify'/);
   assert.match(preceptorPdf, /preceptor-qr-\$\{card\.source\.emissionId\}/);
   assert.match(preceptorPdf, /CARDS_PER_SHEET = 10/);
 });

@@ -9,6 +9,7 @@ import {
   drawCanonicalPdfText,
   drawCanonicalPdfWatermark,
   normalizeCanonicalPdfText,
+  resolveCanonicalPdfPhoto,
   type CanonicalPdfImage,
 } from '../shared/canonical-document-vector-pdf';
 import { parseContratoAlunoClosingLayout } from '../../../shared/contrato-aluno/closing-layout';
@@ -43,6 +44,11 @@ interface ContractVisualPage {
 
 interface ContractVisualDocument {
   pages: ContractVisualPage[];
+  institution: {
+    name: string;
+    cnpj: string;
+    logoUrl: string | null;
+  };
   qr: {
     enabled: boolean;
     label: string;
@@ -223,6 +229,7 @@ const readContractVisualDocument = (document: ContratoAlunoPreparedDocument): Co
 
   const snapshot = canonicalAsRecord(document.renderPayload?.snapshot);
   const validation = canonicalAsRecord(snapshot.validacao || snapshot.validacao_documento);
+  const institution = canonicalAsRecord(snapshot.instituicao || snapshot.institution);
   return {
     pages: rendered.pages.map((page) => ({
       header: canonicalText(page.header),
@@ -230,6 +237,11 @@ const readContractVisualDocument = (document: ContratoAlunoPreparedDocument): Co
       body: canonicalText(page.body),
       footer: canonicalText(page.footer),
     })),
+    institution: {
+      name: canonicalText(institution.nome, institution.name),
+      cnpj: canonicalText(institution.cnpj, institution.taxId),
+      logoUrl: canonicalText(institution.logoUrl, institution.logo_url) || null,
+    },
     qr: {
       enabled: rendered.qr?.enabled === true,
       label: canonicalText(rendered.qr?.label, 'Validar documento'),
@@ -242,6 +254,71 @@ const readContractVisualDocument = (document: ContratoAlunoPreparedDocument): Co
       opacity: rendered.watermark?.opacity ?? null,
     },
   };
+};
+
+const drawContractInstitutionalHeader = (
+  pdf: jsPDF,
+  page: ContractVisualPage,
+  visual: ContractVisualDocument,
+  logo: CanonicalPdfImage | null,
+) => {
+  const name = canonicalText(page.header, visual.institution.name, 'UNIVERSO CURSOS E CONSULTORIA');
+  const logoX = PAGE_LEFT;
+  const logoY = PAGE_TOP;
+  const logoSize = 19;
+  const contentX = logoX + logoSize + 4;
+  const contentWidth = PAGE_WIDTH - PAGE_RIGHT - contentX;
+
+  if (logo) {
+    const properties = pdf.getImageProperties(logo.dataUrl);
+    const scale = Math.min(logoSize / properties.width, logoSize / properties.height);
+    const width = properties.width * scale;
+    const height = properties.height * scale;
+    pdf.addImage(
+      logo.dataUrl,
+      logo.format,
+      logoX + (logoSize - width) / 2,
+      logoY + (logoSize - height) / 2,
+      width,
+      height,
+      'contrato-logo-institucional',
+      'FAST',
+    );
+  } else {
+    pdf.setDrawColor(203, 213, 225);
+    pdf.setLineWidth(0.25);
+    pdf.roundedRect(logoX, logoY, logoSize, logoSize, 1.5, 1.5, 'S');
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(0, 26, 51);
+    pdf.setFontSize(8);
+    drawCanonicalPdfText(pdf, 'U', logoX + logoSize / 2, logoY + logoSize / 2, {
+      align: 'center',
+      maxWidth: logoSize - 2,
+      maxLines: 1,
+    });
+  }
+
+  pdf.setFont('helvetica', 'bold');
+  pdf.setTextColor(0, 26, 51);
+  pdf.setFontSize(10);
+  drawCanonicalPdfText(pdf, name, contentX, logoY + 2, {
+    maxWidth: contentWidth,
+    maxLines: 2,
+    lineHeight: 1.1,
+  });
+  if (visual.institution.cnpj) {
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(71, 85, 105);
+    pdf.setFontSize(6.8);
+    drawCanonicalPdfText(pdf, `CNPJ: ${visual.institution.cnpj}`, contentX, logoY + 9.5, {
+      maxWidth: contentWidth,
+      maxLines: 1,
+    });
+  }
+
+  pdf.setDrawColor(0, 26, 51);
+  pdf.setLineWidth(0.3);
+  pdf.line(PAGE_LEFT, 39, PAGE_WIDTH - PAGE_RIGHT, 39);
 };
 
 const assertContractPageFits = (
@@ -274,6 +351,7 @@ const drawContractPage = (
   visual: ContractVisualDocument,
   document: ContratoAlunoPreparedDocument,
   qr: CanonicalPdfImage | null,
+  logo: CanonicalPdfImage | null,
   isFinalPage: boolean,
 ) => {
   const hasClosing = isFinalPage && Boolean(normalizeCanonicalPdfText(page.footer) || visual.qr.enabled);
@@ -290,18 +368,7 @@ const drawContractPage = (
     rotate: 35,
   });
 
-  pdf.setDrawColor(0, 26, 51);
-  pdf.setLineWidth(0.3);
-  pdf.line(PAGE_LEFT, 39, PAGE_WIDTH - PAGE_RIGHT, 39);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setTextColor(0, 26, 51);
-  pdf.setFontSize(10);
-  drawCanonicalPdfText(pdf, page.header, PAGE_WIDTH / 2, PAGE_TOP, {
-    align: 'center',
-    maxWidth: PAGE_WIDTH - PAGE_LEFT - PAGE_RIGHT,
-    maxLines: 2,
-    lineHeight: 1.18,
-  });
+  drawContractInstitutionalHeader(pdf, page, visual, logo);
   pdf.setDrawColor(237, 28, 78);
   pdf.setLineWidth(0.8);
   pdf.line(PAGE_WIDTH / 2 - 10, 45, PAGE_WIDTH / 2 + 10, 45);
@@ -325,7 +392,6 @@ const drawContractPage = (
   pdf.text(bodyLines, PAGE_LEFT, bodyStart, {
     baseline: 'top',
     lineHeightFactor: 1.7,
-    align: 'justify',
   });
 
   if (!hasClosing) return;
@@ -395,6 +461,9 @@ export const createContratosAlunoPdf = async (
     if (!document.validationCode) throw new Error('O contrato exige código de validação para gerar o QR Code.');
     return createCanonicalPdfQr(document.validationCode);
   }));
+  const logoAssets = await Promise.all(visuals.map((visual) => (
+    resolveCanonicalPdfPhoto(visual.institution.logoUrl)
+  )));
   const { jsPDF, GState } = await import('jspdf');
   const pdf = new jsPDF({
     orientation: 'portrait',
@@ -423,6 +492,7 @@ export const createContratosAlunoPdf = async (
         visual,
         document,
         qrAssets[documentIndex],
+        logoAssets[documentIndex],
         visualPageIndex === visual.pages.length - 1,
       );
       pageIndex += 1;

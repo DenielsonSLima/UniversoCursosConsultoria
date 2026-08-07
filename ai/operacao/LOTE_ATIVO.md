@@ -93,6 +93,21 @@ Estado: `PUBLICADO`
 - Responsável pela consolidação: Codex, com três frentes técnicas fechadas.
 - Pendências ou riscos: a publicação web ainda não foi feita; deve ser um único commit/PR/Preview contendo somente o manifesto deste lote. Perfis personalizados precisam receber explicitamente as novas permissões de Patrimônio e Empréstimos quando forem usados; a sessão deve ser renovada para o menu refletir a alteração. Não havia empréstimos legados no banco no fechamento, portanto o backfill de escopo de rateio não alterou histórico. O rateio genérico de Contas a Pagar não pode alterar o pagamento físico nem criar uma segunda obrigação para os polos. As RPCs antigas de empréstimo permanecem sem `EXECUTE` para usuários autenticados para não contornar o escopo Matriz/polo.
 
+## Lote: 2026-08-07-documentos-matricula-foto-assinatura-escala
+
+- Estado: EM_EXECUCAO
+- Objetivo: Corrigir a composição visual canônica da Ficha de Matrícula e da Pasta de Identificação e alinhar o fluxo de Contratos de Aluno à Declaração de Matrícula, para que foto, assinatura, prévia A4, busca e seleção sejam proporcionais, consistentes e alinhadas ao padrão institucional.
+- Escopo incluído: renderizadores vetoriais e visuais, composição da fotografia e assinatura, visualizador da prévia, ordem/estado de busca e seleção de Contratos de Aluno e testes focados da Ficha de Matrícula, Pasta de Identificação e Contrato de Aluno.
+- Fora de escopo: alteração de dados do aluno, regras de elegibilidade/RPC, conteúdo jurídico aprovado do contrato, outros modelos documentais, publicação GitHub/Vercel e rasterização de páginas.
+- Regras/RPC/segurança aplicáveis: prévia, download e impressão reutilizam o mesmo Blob PDF canônico; fotografia e assinatura permanecem recursos isolados; texto, linhas e campos seguem vetoriais e selecionáveis.
+- Critérios de aceite: a foto preenche seu quadro por recorte proporcional sem zoom excessivo; a assinatura da diretoria cruza a linha de assinatura com leitura natural, sem colidir no rótulo; ambas as prévias preservam a escala A4 e não aparentam zoom/corte diferente do PDF final; Contratos de Aluno apresenta primeiro a busca vazia, depois os resultados, como a Declaração; a prévia do contrato usa o mesmo desenho, margens e hierarquia estrutural do modelo aprovado e do PDF canônico.
+- Arquivos previstos: componentes/renderizadores e testes de emissão desses documentos, além deste lote e dos registros de fechamento.
+- Validações focadas: renderização de PDFs de fixture, inspeção visual A4, extração de texto, inspeção de recursos incorporados, testes de estado de busca e lint focado.
+- Validação final:
+- Publicação prevista: nenhuma sem solicitação posterior; entrega local para validação visual.
+- Responsável pela consolidação: Codex.
+- Pendências ou riscos: preservar alterações paralelas; manter o frontend sem decisões de paginação ou dados canônicos; confirmar por fixture as fotos em orientação divergente; manter Contratos de Aluno restrito às modalidades/modelos autorizados pelo retorno canônico.
+
 Abra um novo bloco abaixo antes de alterar produto, infraestrutura, banco, publicação ou documentação operacional relevante.
 
 ```md

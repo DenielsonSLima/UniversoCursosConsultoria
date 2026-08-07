@@ -236,6 +236,7 @@ const EmissionDocumentPages: React.FC<EmissionDocumentPagesProps> = ({
                   alt="Elemento visual"
                   className="w-full"
                   style={{
+                    display: 'block',
                     height: field.height ? '100%' : 'auto',
                     objectFit: field.style?.objectFit || 'contain',
                     objectPosition: field.style?.objectPosition || 'center',

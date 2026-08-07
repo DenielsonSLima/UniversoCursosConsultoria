@@ -156,6 +156,7 @@ const DeclaracaoAbsoluteField: React.FC<DeclaracaoAbsoluteFieldProps> = ({
           alt={field.value === '{{ALUNO_FOTO_URL}}' ? 'Foto do aluno' : 'Elemento visual'}
           className={`w-full pointer-events-none ${field.height ? 'h-full' : 'h-auto'}`}
           style={{
+            display: 'block',
             objectFit: field.style?.objectFit || 'contain',
             objectPosition: field.style?.objectPosition || 'center',
           }}

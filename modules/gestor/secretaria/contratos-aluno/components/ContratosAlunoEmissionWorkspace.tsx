@@ -60,7 +60,7 @@ const ContratosAlunoEmissionWorkspace = ({
   onPreview,
 }: ContratosAlunoEmissionWorkspaceProps) => {
   const normalizedSearch = searchTerm.trim().toLocaleLowerCase('pt-BR');
-  const visibleTargets = workspace.targets.filter((target) => {
+  const matchesTargets = workspace.targets.filter((target) => {
     const matchesTurma = turmaId === 'todas' || target.turmaId === turmaId;
     const haystack = [target.alunoNome, target.cursoNome, target.turmaNome, target.turmaCodigo, target.modalidade]
       .join(' ')
@@ -71,6 +71,7 @@ const ContratosAlunoEmissionWorkspace = ({
   const isAllVisibleSelected = visibleTargets.length > 0
     && visibleTargets.every((target) => selectedSet.has(target.enrollmentId));
   const isIndividual = mode === 'INDIVIDUAL';
+  const visibleTargets = isIndividual && !normalizedSearch ? [] : matchesTargets;
   const canPrepare = selectedEnrollmentIds.length > 0 && !isPreparing;
   const templatesAtivos = workspace.templates.filter((template) => template.status === 'ATIVO');
 
@@ -220,8 +221,16 @@ const ContratosAlunoEmissionWorkspace = ({
           {!visibleTargets.length && (
             <div className="px-5 py-12 text-center">
               <Users className="mx-auto text-slate-300" size={30} />
-              <p className="mt-3 text-sm font-bold text-slate-500">Nenhuma matrícula foi localizada nesse filtro.</p>
-              <p className="mt-1 text-xs text-slate-400">Ajuste a busca ou confirme o polo e a turma.</p>
+              <p className="mt-3 text-sm font-bold text-slate-500">
+                {isIndividual && !normalizedSearch
+                  ? 'Busque uma matrícula para iniciar a emissão individual.'
+                  : 'Nenhuma matrícula foi localizada nesse filtro.'}
+              </p>
+              <p className="mt-1 text-xs text-slate-400">
+                {isIndividual && !normalizedSearch
+                  ? 'Digite nome, CPF, RG, curso, turma ou código.'
+                  : 'Ajuste a busca ou confirme o polo e a turma.'}
+              </p>
             </div>
           )}
         </div>
