@@ -2,40 +2,15 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   assertCaixaReportPagesFit,
-  getCaixaReportArtworkPreset,
   isCaixaReportPageOverflowing,
 } from './caixa-report.layout';
 import {
-  CAIXA_REPORT_TEXT_LAYER_MODE,
+  CAIXA_REPORT_PDF_PIPELINE,
   getCaixaReportPdfErrorMessage,
 } from './caixa-report.pdf';
 
-test('preserva a prévia sem perdas e reduz somente relatórios extensos', () => {
-  assert.equal(CAIXA_REPORT_TEXT_LAYER_MODE, 'preserve-artwork-text');
-  assert.deepEqual(getCaixaReportArtworkPreset(1), {
-    artworkFormat: 'PNG',
-    artworkScale: 2.5,
-  });
-  assert.deepEqual(getCaixaReportArtworkPreset(8), {
-    artworkFormat: 'PNG',
-    artworkScale: 2.5,
-  });
-  assert.deepEqual(getCaixaReportArtworkPreset(9), {
-    artworkFormat: 'PNG',
-    artworkScale: 2,
-  });
-  assert.deepEqual(getCaixaReportArtworkPreset(15), {
-    artworkFormat: 'PNG',
-    artworkScale: 2,
-  });
-  assert.deepEqual(getCaixaReportArtworkPreset(16), {
-    artworkFormat: 'PNG',
-    artworkScale: 2,
-  });
-  assert.deepEqual(getCaixaReportArtworkPreset(31), {
-    artworkFormat: 'PNG',
-    artworkScale: 1.5,
-  });
+test('usa o gerador vetorial nativo do Caixa', () => {
+  assert.equal(CAIXA_REPORT_PDF_PIPELINE, 'native-vector');
 });
 
 test('traduz a causa técnica da falha do PDF para uma orientação útil', () => {
@@ -44,12 +19,8 @@ test('traduz a causa técnica da falha do PDF para uma orientação útil', () =
     /logo ou a marca d’água/i,
   );
   assert.match(
-    getCaixaReportPdfErrorMessage(new Error('A página 2 excedeu a área segura.')),
-    /ultrapassou a área segura/i,
-  );
-  assert.match(
-    getCaixaReportPdfErrorMessage(new RangeError('Out of memory while allocating canvas')),
-    /sem memória/i,
+    getCaixaReportPdfErrorMessage(new Error('A fonte Inter não carregou.')),
+    /fonte Inter/i,
   );
 });
 

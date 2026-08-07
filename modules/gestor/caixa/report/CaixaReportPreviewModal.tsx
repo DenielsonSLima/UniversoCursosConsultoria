@@ -15,7 +15,7 @@ import {
   buildCaixaReportPdf,
   getCaixaReportPdfErrorMessage,
 } from './caixa-report.pdf';
-import { downloadPdfBlob } from '../../../shared/pdf/dom-to-selectable-pdf';
+import { downloadPdfBlob } from '../../../shared/pdf/download-pdf-blob';
 import { caixaReportQueryOptions } from './caixa-report.service';
 import type { CaixaDetailedReport } from './caixa-report.types';
 
@@ -32,7 +32,6 @@ export const CaixaReportPreviewModal: React.FC<CaixaReportPreviewModalProps> = (
   poloId,
   competencia,
 }) => {
-  const documentRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<React.ElementRef<'button'>>(null);
@@ -127,13 +126,13 @@ export const CaixaReportPreviewModal: React.FC<CaixaReportPreviewModalProps> = (
   const error = reportSnapshot ? null : reportQuery.error;
 
   const handleDownload = async () => {
-    if (!documentRef.current || !report || loading || error) return;
+    if (!report || loading || error) return;
     setGenerating(true);
     setGenerationError('');
     setProgress('Preparando o documento...');
     try {
       const blob = await buildCaixaReportPdf(
-        documentRef.current,
+        report,
         (current, total) => setProgress(`Gerando página ${current} de ${total}...`),
       );
       downloadPdfBlob(blob, buildCaixaReportFileName(
@@ -238,9 +237,7 @@ export const CaixaReportPreviewModal: React.FC<CaixaReportPreviewModalProps> = (
           )}
 
           {!loading && !error && report && (
-            <div ref={documentRef}>
               <CaixaReportDocument report={report} />
-            </div>
           )}
         </div>
 
