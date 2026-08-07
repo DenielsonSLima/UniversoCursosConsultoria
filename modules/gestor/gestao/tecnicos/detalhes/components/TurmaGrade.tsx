@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Turma } from '../../../gestao.types';
 import ToastNotification, { useToast } from '../../../../parceiros/components/shared/ToastNotification';
@@ -41,6 +41,34 @@ interface AulaDeleteState {
 }
 
 const CLOSED_DOCENTE_MODAL: DocenteModalState = { isOpen: false, disciplinaId: '' };
+const resolveErrorMessage = (error: unknown) => {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  if (!error || typeof error !== 'object') return 'Não foi possível concluir a operação.';
+
+  const normalized = error as {
+    message?: string;
+    details?: string;
+    hint?: string;
+    code?: string;
+    error_description?: string;
+  };
+
+  if (normalized.message) {
+    return normalized.code ? `[${normalized.code}] ${normalized.message}` : normalized.message;
+  }
+  if (normalized.error_description) return normalized.error_description;
+  if (normalized.details) return normalized.details;
+  if (normalized.hint) return normalized.hint;
+
+  return 'Não foi possível concluir a operação.';
+};
+
+const isPermissionError = (message: string) => message.includes('Sem permissão')
+  || message.includes('permission');
+
+const isExcessHoursMessage = (message: string) => message.includes('Carga horaria excedida')
+  || message.includes('carga horária');
 
 const TurmaGrade = ({
   turma,
@@ -58,6 +86,8 @@ const TurmaGrade = ({
   const [newAulaExtraClasse, setNewAulaExtraClasse] = useState<Record<string, boolean>>({});
   const [showDocenteModal, setShowDocenteModal] = useState<DocenteModalState>(CLOSED_DOCENTE_MODAL);
   const [aulaParaExcluir, setAulaParaExcluir] = useState<AulaDeleteState | null>(null);
+  const [assigningProfessorId, setAssigningProfessorId] = useState<string | null>(null);
+  const assigningProfessorRef = useRef(false);
   const { data: gradeData, isLoading: loading } = useTurmaGradeData(turma.id, turma.cursoId);
   const cursoBase = gradeData?.cursoBase || null;
   const disciplinasConfig = gradeData?.disciplinasConfig || {};
@@ -106,15 +136,18 @@ const TurmaGrade = ({
       );
     },
     (error) => {
-      console.error('Erro ao adicionar aula:', error);
-      const message = String(error?.message || '');
-      if (message.includes('Carga horaria excedida')) {
+      const message = resolveErrorMessage(error);
+      if (isPermissionError(message)) {
+        toast.error('Aula não salva', message);
+        return;
+      }
+      if (isExcessHoursMessage(message)) {
         toast.info('Carga horária excedida', message.replace('Carga horaria', 'Carga horária'), {
           contextLabel: 'Planejamento da grade',
         });
         return;
       }
-      toast.error('Aula não salva', 'Não consegui registrar esta aula no planejamento. Tente novamente.');
+      toast.error('Aula não salva', message || 'Não consegui registrar esta aula no planejamento. Tente novamente.');
     },
   );
   const addAtividadeExtraClasseMutation = useAddTurmaAtividadeExtraClasseMutation(
@@ -133,15 +166,18 @@ const TurmaGrade = ({
       }
     },
     (error) => {
-      console.error('Erro ao adicionar atividade extra-classe:', error);
-      const message = String(error?.message || '');
-      if (message.includes('Carga horaria excedida')) {
+      const message = resolveErrorMessage(error);
+      if (isPermissionError(message)) {
+        toast.error('Atividade não salva', message);
+        return;
+      }
+      if (isExcessHoursMessage(message)) {
         toast.info('Carga horária excedida', message.replace('Carga horaria', 'Carga horária'), {
           contextLabel: 'Atividade extra-classe',
         });
         return;
       }
-      toast.error('Atividade não salva', 'Não consegui liberar esta atividade extra-classe. Tente novamente.');
+      toast.error('Atividade não salva', message || 'Não consegui liberar esta atividade extra-classe. Tente novamente.');
     },
   );
   const removeAulaMutation = useRemoveTurmaAulaMutation(
@@ -161,15 +197,18 @@ const TurmaGrade = ({
       toast.success('Horário atualizado', 'Data e carga horária foram atualizadas no diário.');
     },
     (error) => {
-      console.error('Erro ao atualizar aula:', error);
-      const message = String(error?.message || '');
-      if (message.includes('Carga horaria excedida')) {
+      const message = resolveErrorMessage(error);
+      if (isPermissionError(message)) {
+        toast.error('Aula não atualizada', message);
+        return;
+      }
+      if (isExcessHoursMessage(message)) {
         toast.info('Carga horária excedida', message.replace('Carga horaria', 'Carga horária'), {
           contextLabel: 'Planejamento da grade',
         });
         return;
       }
-      toast.error('Aula não atualizada', 'Não consegui salvar as alterações desta aula. Tente novamente.');
+      toast.error('Aula não atualizada', message || 'Não consegui salvar as alterações desta aula. Tente novamente.');
     },
   );
 
@@ -190,26 +229,43 @@ const TurmaGrade = ({
   });
 
   const handleAssignProfessor = async (disciplinaId: string, professorId: string) => {
-    if (assignProfessorMutation.isPending) return;
+    if (assignProfessorMutation.isPending || assigningProfessorRef.current) return;
     const currentConfig = disciplinasConfig[disciplinaId] || { professor: null, concluida: false };
     const professor = professores.find((item) => item.id === professorId) || null;
-    await assignProfessorMutation.mutateAsync({ disciplinaId, professor, currentConfig });
+    assigningProfessorRef.current = true;
+    setAssigningProfessorId(professorId);
+    try {
+      await assignProfessorMutation.mutateAsync({ disciplinaId, professor, currentConfig });
+    } catch (error) {
+      console.error('Falha ao atribuir docente:', error);
+    } finally {
+      setAssigningProfessorId(null);
+      assigningProfessorRef.current = false;
+    }
   };
 
   const handleAssignProfessorToAll = async (professorId: string) => {
-    if (assignProfessorToAllMutation.isPending) return;
+    if (assignProfessorToAllMutation.isPending || assigningProfessorRef.current) return;
     if (!cursoBase) return;
     const disciplineIds = (cursoBase.modulos || []).flatMap((modulo) => (
       modulo.disciplinas.map((disciplina) => disciplina.id)
     ));
     if (disciplineIds.length === 0) return;
     const professor = professores.find((item) => item.id === professorId) || null;
-    await assignProfessorToAllMutation.mutateAsync({ disciplineIds, professor, configs: disciplinasConfig });
+    try {
+      await assignProfessorToAllMutation.mutateAsync({ disciplineIds, professor, configs: disciplinasConfig });
+    } catch (error) {
+      console.error('Erro ao atribuir docente para a turma:', error);
+    }
   };
 
   const handleToggleConcluida = async (disciplinaId: string) => {
     const currentConfig = disciplinasConfig[disciplinaId] || { professor: null, concluida: false };
-    await toggleConcluidaMutation.mutateAsync({ disciplinaId, currentConfig });
+    try {
+      await toggleConcluidaMutation.mutateAsync({ disciplinaId, currentConfig });
+    } catch (error) {
+      console.error('Erro ao alternar conclusão:', error);
+    }
   };
 
   const handleAddAula = async (disciplinaId: string) => {
@@ -238,26 +294,34 @@ const TurmaGrade = ({
     if (isExtraClasse) {
       const turmaStatus = String(turma.status || '').toUpperCase();
       const isPreparacao = turmaStatus === 'PLANEJADA' || turmaStatus === 'INSCRICOES_ABERTAS';
-      await addAtividadeExtraClasseMutation.mutateAsync({
-        disciplinaId,
-        titulo: tituloInformado!,
-        horas,
-        prazoEntrega: dataStr,
-        texto: `Desenvolva uma resposta sobre o tema "${tituloInformado}". Registre sua entrega no portal do aluno.`,
-        criadoPorTipo: 'GESTOR',
-        status: isPreparacao ? 'RASCUNHO' : 'PUBLICADA',
-      });
+      try {
+        await addAtividadeExtraClasseMutation.mutateAsync({
+          disciplinaId,
+          titulo: tituloInformado!,
+          horas,
+          prazoEntrega: dataStr,
+          texto: `Desenvolva uma resposta sobre o tema "${tituloInformado}". Registre sua entrega no portal do aluno.`,
+          criadoPorTipo: 'GESTOR',
+          status: isPreparacao ? 'RASCUNHO' : 'PUBLICADA',
+        });
+      } catch (error) {
+        console.error('Erro ao adicionar atividade extra-classe:', error);
+      }
       return;
     }
 
-    await addAulaMutation.mutateAsync({
-      disciplinaId,
-      titulo: tituloInformado || ACADEMIC_CLASS_CONTENT_PENDING,
-      horas,
-      dataAula: dataStr,
-      horaInicio,
-      horaFim,
-    });
+    try {
+      await addAulaMutation.mutateAsync({
+        disciplinaId,
+        titulo: tituloInformado || ACADEMIC_CLASS_CONTENT_PENDING,
+        horas,
+        dataAula: dataStr,
+        horaInicio,
+        horaFim,
+      });
+    } catch (error) {
+      console.error('Erro ao adicionar aula:', error);
+    }
   };
 
   const handleUpdateAula = async (input: TurmaAulaUpdateInput) => {
@@ -273,13 +337,17 @@ const TurmaGrade = ({
       return;
     }
 
-    await updateAulaMutation.mutateAsync({
-      ...input,
-      dataAula,
-      horas,
-      horaInicio: input.horaInicio?.trim() || null,
-      horaFim: input.horaFim?.trim() || null,
-    });
+    try {
+      await updateAulaMutation.mutateAsync({
+        ...input,
+        dataAula,
+        horas,
+        horaInicio: input.horaInicio?.trim() || null,
+        horaFim: input.horaFim?.trim() || null,
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar aula:', error);
+    }
   };
 
   const updateDraft = <T,>(
@@ -326,7 +394,7 @@ const TurmaGrade = ({
             <select
               value={Object.values(disciplinasConfig).find((config) => config.professorId)?.professorId || ''}
               onChange={(event) => handleAssignProfessorToAll(event.target.value)}
-              disabled={assignProfessorToAllMutation.isPending}
+              disabled={assignProfessorToAllMutation.isPending || assigningProfessorRef.current}
               className="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl outline-none focus:border-indigo-500 px-3.5 py-3 transition-colors text-slate-700 shadow-sm"
             >
               <option value="">Selecione um professor...</option>
@@ -387,7 +455,8 @@ const TurmaGrade = ({
           professores={professores}
           onAssign={handleAssignProfessor}
           onClose={closeDocenteModal}
-          isAssigning={assignProfessorMutation.isPending}
+          isAssigning={assignProfessorMutation.isPending || assigningProfessorRef.current}
+          assigningProfessorId={assigningProfessorId}
         />
       )}
       {aulaParaExcluir && (

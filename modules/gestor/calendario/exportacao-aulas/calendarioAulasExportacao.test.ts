@@ -68,6 +68,10 @@ test('mantém o escopo hierárquico da cache por polo, modalidade e turma', () =
     ['gestor', 'calendario', 'exportacao-aulas', 'turmas', 'polo-matriz', 'SUPERIOR'],
   );
   assert.deepEqual(
+    calendarioAulasExportacaoQueryKeys.modulos('polo-matriz', 'TECNICO', 'turma-tec-1'),
+    ['gestor', 'calendario', 'exportacao-aulas', 'modulos', 'polo-matriz', 'TECNICO', 'turma-tec-1'],
+  );
+  assert.deepEqual(
     calendarioAulasExportacaoQueryKeys.documento('polo-matriz', 'EAD', 'turma-ead-1', '2026-08-01'),
     ['gestor', 'calendario', 'exportacao-aulas', 'documento', 'polo-matriz', 'EAD', 'turma-ead-1', '2026-08-01'],
   );
@@ -203,6 +207,38 @@ test('a migration limita a RPC ao mês ativo e não projeta observações como p
   assert.match(migration, /security definer/);
   assert.match(migration, /set search_path = ''/);
   assert.match(migration, /revoke all on function public\.preparar_calendario_aulas_exportacao_secure\(uuid, text, uuid, date\)/);
+});
+
+test('a migration do calendário inclui seleção opcional de módulo para técnico', async () => {
+  const migration = await readFile(
+    'supabase/migrations/20260807180000_filtro_modulo_exportacao_calendario_aulas.sql',
+    'utf8',
+  );
+
+  assert.match(migration, /listar_modulos_calendario_aulas_secure/);
+  assert.match(migration, /p_modulo_id uuid default null/);
+  assert.match(migration, /p_modulo_id is not null and v_modalidade <> 'TECNICO'/);
+  assert.match(migration, /p_modulo_id is null or module\.id = p_modulo_id/);
+});
+
+test('a migration final do calendário remove recorte mensal quando módulo técnico é informado', async () => {
+  const migration = await readFile(
+    'supabase/migrations/20260808090000_filtro_modulo_sem_limiite_mensal_calendario_aulas.sql',
+    'utf8',
+  );
+
+  assert.match(
+    migration,
+    /v_aplica_recorte_mensal\s*:=\s*p_modulo_id\s+is\s+null/,
+  );
+  assert.match(
+    migration,
+    /not\s+v_aplica_recorte_mensal\s+or\s*\(class_meeting\.data_aula\s+>=\s+v_inicio_periodo\s+and\s+class_meeting\.data_aula\s+<\s+v_fim_periodo\)/,
+  );
+  assert.match(
+    migration,
+    /and \(\s*not\s+v_aplica_recorte_mensal\s+or\s*\(class_meeting\.data_aula\s+>=\s+v_inicio_periodo\s+and\s+class_meeting\.data_aula\s+<\s+v_fim_periodo\)\s*\)/,
+  );
 });
 
 test('alinha a escala e o centro da marca do PDF à prévia A4 do editor', async () => {

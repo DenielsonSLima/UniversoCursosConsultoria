@@ -9,6 +9,7 @@ interface DocenteDialogProps {
   onAssign: (disciplinaId: string, professorId: string) => void;
   onClose: () => void;
   isAssigning?: boolean;
+  assigningProfessorId?: string | null;
 }
 
 export const TurmaGradeDocenteDialog: React.FC<DocenteDialogProps> = ({
@@ -17,6 +18,7 @@ export const TurmaGradeDocenteDialog: React.FC<DocenteDialogProps> = ({
   onAssign,
   onClose,
   isAssigning = false,
+  assigningProfessorId = null,
 }) => {
   if (typeof document === 'undefined') return null;
 
@@ -88,7 +90,7 @@ export const TurmaGradeDocenteDialog: React.FC<DocenteDialogProps> = ({
                     {professor.nome.slice(0, 2).toUpperCase()}
                   </span>
                   <span className="min-w-0 flex-1 truncate">{professor.nome}</span>
-                  {isAssigning && (
+                  {(isAssigning || assigningProfessorId === professor.id) && (
                     <span className="ml-2 flex items-center text-xs font-black uppercase tracking-widest text-blue-700">
                       <Loader2 size={14} className="animate-spin" />
                     </span>

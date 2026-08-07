@@ -2,6 +2,36 @@
 
 Estado: `PUBLICADO`
 
+## Lote: 2026-08-07-correcao-filtro-calendario-mes-selecionado
+
+- Estado: EM_EXECUCAO
+- Objetivo: Corrigir o recorte temporal da exportação do Calendário de Aulas para respeitar estritamente o mês selecionado na agenda, sem mudar regras de elegibilidade, autorização nem o payload canônico.
+- Escopo incluído: migration da RPC `preparar_calendario_aulas_exportacao_secure` com quatro parâmetros e atualização de lote operacional.
+- Fora de escopo: UI da agenda, autorização por escopo, composição PDF e alteração de modelos não relacionados.
+- Regras/RPC/segurança aplicáveis: Supabase e GitHub apenas por MCP; manter `SECURITY DEFINER`, `search_path` vazio e validação de polo antes de consulta.
+- Critérios de aceite: para uma seleção (polo/modalidade/turma/mês), o `WHERE` da grade usa intervalo `>= primeiro_dia_do_mes` e `< primeiro_dia_do_mes seguinte`, sem incluir outros meses.
+- Arquivos previstos: `supabase/migrations/20260807170000_fix_calendario_aulas_exportacao_mes_referencia_completo.sql` e registro no `LOTE_ATIVO.md`.
+- Validações focadas: revisão da migration aplicada e conferência do caminho de chamada já existente que envia `mesReferencia` da agenda.
+- Validação final: migration incremental já adicionada; aguarda aplicação via MCP Supabase e fechamento de lote pelo fluxo já definido.
+- Publicação prevista: sincronizar o lote via MCP GitHub quando autorizado, sem arquivos fora do escopo.
+- Responsável pela consolidação: Codex.
+- Pendências ou riscos: verificar registros da turma 40 com fuso/`data_aula` persistente para validar o recorte por mês inteiro.
+
+## Lote: 2026-08-07-calendario-filtro-modulo-exportacao-academica
+
+- Estado: EM_EXECUCAO
+- Objetivo: Ajustar fluxo de exportação de Calendário de Aulas para seleção por tipo e módulo: sem EAD, com tipo `Técnico/Livre/Especialização`, e para Técnico exigir seleção de módulo antes de exportar.
+- Escopo incluído: atualização de painel, tipos, hooks e serviços de exportação; nova migration para `listar_modulos_calendario_aulas_secure` e extensão da RPC `preparar_calendario_aulas_exportacao_secure` com filtro opcional de módulo para técnico.
+- Fora de escopo: alteração do documento PDF além de seleção de escopo, mudanças de marca d’água/visual e ajustes fora do módulo de calendário.
+- Regras/RPC/segurança aplicáveis: Supabase e GitHub apenas por MCP; manter `SECURITY DEFINER`, `search_path` vazio, autorização por polo e sem alterações de lógica financeira.
+- Critérios de aceite: o painel permite tipos Técnico/Livre/Especialização; EAD não aparece no dropdown; para Técnico o módulo é obrigatório; para não técnicos o módulo não é solicitado; o SQL filtra módulo somente no técnico e mantém recorte mensal do mês selecionado.
+- Arquivos previstos: `modules/gestor/calendario/exportacao-aulas/components/CalendarioAulasExportPanel.tsx`, `modules/gestor/calendario/exportacao-aulas/services/calendarioAulasExportacao.service.ts`, `modules/gestor/calendario/exportacao-aulas/hooks/useCalendarioAulasExportacao.ts`, `modules/gestor/calendario/exportacao-aulas/calendarioAulasExportacao.queryKeys.ts`, `modules/gestor/calendario/exportacao-aulas/types.ts`, `modules/gestor/calendario/exportacao-aulas/calendarioAulasExportacao.test.ts`, `supabase/migrations/20260807180000_filtro_modulo_exportacao_calendario_aulas.sql`.
+- Validações focadas: revisão da nova migration no corpo da função e cobertura de query keys/migration no teste local.
+- Validação final: em andamento.
+- Publicação prevista: sincronizar o lote via MCP GitHub apenas após validação funcional desta etapa.
+- Responsável pela consolidação: Codex.
+- Pendências ou riscos: conferir módulos retornados no histórico de técnicos com cadastros sem disciplina vinculada e impacto de módulo vazio (turma sem módulo) no filtro.
+
 ## Lote: 2026-08-07-assinaturas-contrato-calendario-producao
 
 - Estado: PUBLICADO

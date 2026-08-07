@@ -82,6 +82,14 @@ const buildStudentRegistrationSnapshot = (matricula: any) => ({
   enrollmentDate: matricula.data_matricula || '',
 });
 
+const normalizeCursoModalidadeFilter = (modalidade?: string | null) => {
+  const normalized = String(modalidade || '').trim().toUpperCase();
+  if (normalized === 'ESPECIALIZACAO') {
+    return ['ESPECIALIZACAO', 'SUPERIOR'] as const;
+  }
+  return normalized ? [normalized] as const : [];
+};
+
 const searchSecretariaStudents = async (
   poloId: string,
   term: string,
@@ -210,7 +218,8 @@ export const secretariaDocumentosService = {
     poloId: string,
     technicalOnly: boolean,
     activeTurmaOnly = false,
-    internshipOnly = false
+    internshipOnly = false,
+    modalidadeFilter?: string | null
   ): Promise<SecretariaTurmaResumo[]> {
     let query = supabase
       .from('turmas')
@@ -219,6 +228,14 @@ export const secretariaDocumentosService = {
       .order('nome', { ascending: true });
 
     if (technicalOnly) query = query.eq('cursos.modalidade', 'TECNICO');
+    const modalidades = normalizeCursoModalidadeFilter(
+      modalidadeFilter || (technicalOnly ? 'TECNICO' : '')
+    );
+    if (modalidades.length > 1) {
+      query = query.in('cursos.modalidade', modalidades);
+    } else if (modalidades.length === 1) {
+      query = query.eq('cursos.modalidade', modalidades[0]);
+    }
     if (activeTurmaOnly) query = query.eq('status', 'EM_ANDAMENTO');
 
     const { data, error } = await query;

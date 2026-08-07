@@ -10,6 +10,19 @@ const scopeValue = (value?: string | null, fallback = 'sem-escopo') => (
  */
 export const calendarioAulasExportacaoQueryKeys = {
   all: ['gestor', 'calendario', 'exportacao-aulas'] as const,
+  modulos: (
+    poloId?: string | null,
+    modalidade?: CalendarioAulasModalidade | null,
+    turmaId?: string | null,
+  ) => [
+    'gestor',
+    'calendario',
+    'exportacao-aulas',
+    'modulos',
+    scopeValue(poloId, 'sem-polo'),
+    modalidade || 'sem-modalidade',
+    scopeValue(turmaId, 'sem-turma'),
+  ] as const,
   turmas: (
     poloId?: string | null,
     modalidade?: CalendarioAulasModalidade | null,

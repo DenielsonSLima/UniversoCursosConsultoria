@@ -17,20 +17,50 @@ import { calendarioAulasExportacaoQueryKeys } from '../../../../calendario/expor
 const useTurmaGradeInvalidation = (
   turmaId: string,
   invalidateCalendarioExportacao = false,
+  invalidateClassLists = false,
 ) => {
   const queryClient = useQueryClient();
 
   return useCallback(async () => {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.grade(turmaId) }),
-      queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.atividades(turmaId) }),
-      queryClient.invalidateQueries({ queryKey: atividadesExtraClasseKeys.turma(turmaId) }),
-      queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.diarios(turmaId) }),
-      queryClient.invalidateQueries({ queryKey: diarioClasseKeys.aulasByTurma(turmaId) }),
-      queryClient.invalidateQueries({ queryKey: diarioClasseKeys.resultadosByTurma(turmaId) }),
-      queryClient.invalidateQueries({ queryKey: diarioClasseKeys.praticasByTurma(turmaId) }),
-      queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.classesByModality('TECNICO') }),
-      queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.activeClassesRoot() }),
+      queryClient.invalidateQueries({
+        queryKey: academicLifecycleKeys.grade(turmaId),
+        exact: true,
+      }),
+      queryClient.invalidateQueries({
+        queryKey: academicLifecycleKeys.atividades(turmaId),
+        exact: true,
+      }),
+      queryClient.invalidateQueries({
+        queryKey: atividadesExtraClasseKeys.turma(turmaId),
+        exact: true,
+      }),
+      queryClient.invalidateQueries({
+        queryKey: academicLifecycleKeys.diarios(turmaId),
+        exact: true,
+      }),
+      queryClient.invalidateQueries({
+        queryKey: diarioClasseKeys.aulasByTurma(turmaId),
+        exact: true,
+      }),
+      queryClient.invalidateQueries({
+        queryKey: diarioClasseKeys.resultadosByTurma(turmaId),
+        exact: true,
+      }),
+      queryClient.invalidateQueries({
+        queryKey: diarioClasseKeys.praticasByTurma(turmaId),
+        exact: true,
+      }),
+      ...(invalidateClassLists
+        ? [
+          queryClient.invalidateQueries({
+            queryKey: gestaoQueryKeys.classesByModality('TECNICO'),
+          }),
+          queryClient.invalidateQueries({
+            queryKey: gestaoQueryKeys.activeClassesRoot(),
+          }),
+        ]
+        : []),
       ...(invalidateCalendarioExportacao
         ? [
           // Prefixo restrito ao exportador: a próxima emissão pede a grade
@@ -39,7 +69,7 @@ const useTurmaGradeInvalidation = (
         ]
         : []),
     ]);
-  }, [invalidateCalendarioExportacao, queryClient, turmaId]);
+  }, [invalidateCalendarioExportacao, invalidateClassLists, queryClient, turmaId]);
 };
 
 export const useTurmaGradeData = (turmaId: string, cursoId: string) => useQuery({
@@ -67,8 +97,14 @@ export const useAssignProfessorMutation = (
       input.currentConfig,
     ),
     onSuccess: async () => {
-      await invalidate();
       await onSuccess?.();
+    },
+    onSettled: async () => {
+      try {
+        await invalidate();
+      } catch (error) {
+        console.error('Falha ao atualizar cache após atribuição de docente:', error);
+      }
     },
     onError,
   });
@@ -93,8 +129,14 @@ export const useAssignProfessorToAllMutation = (
       input.configs,
     ),
     onSuccess: async () => {
-      await invalidate();
       await onSuccess?.();
+    },
+    onSettled: async () => {
+      try {
+        await invalidate();
+      } catch (error) {
+        console.error('Falha ao atualizar cache após atribuição de docente em massa:', error);
+      }
     },
     onError,
   });

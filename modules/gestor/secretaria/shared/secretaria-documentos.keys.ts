@@ -27,9 +27,10 @@ export const secretariaDocumentosKeys = {
     context: SecretariaContext,
     documentId: SecretariaDocumentoId,
     technicalOnly: boolean,
-    activeTurmaOnly: boolean
+    activeTurmaOnly: boolean,
+    modalidadeFilter?: string | null
   ) =>
-    [...secretariaDocumentosKeys.document(context, documentId), 'turmas', { technicalOnly, activeTurmaOnly }] as const,
+    [...secretariaDocumentosKeys.document(context, documentId), 'turmas', { technicalOnly, activeTurmaOnly, modalidadeFilter }] as const,
   modulos: (context: SecretariaContext, documentId: SecretariaDocumentoId, turmaId: string) =>
     [...secretariaDocumentosKeys.document(context, documentId), 'turmas', turmaId, 'modulos'] as const,
   turmaSummary: (context: SecretariaContext, documentId: SecretariaDocumentoId, turmaId: string) =>

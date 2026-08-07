@@ -28,6 +28,13 @@ export interface CalendarioAulasTurma {
   modalidade: CalendarioAulasModalidade;
 }
 
+/** Resumo de módulo associado à grade da turma técnica para filtro opcional. */
+export interface CalendarioAulasTurmaModulo {
+  moduloId: string;
+  moduloNome: string;
+  moduloOrdem: number | null;
+}
+
 /**
  * Metadados visuais já resolvidos pelo servidor a partir do modelo ativo e
  * do polo. O renderer apenas posiciona estes textos no documento.
@@ -111,6 +118,8 @@ export interface PrepararCalendarioAulasExportacaoInput {
   turmaId: string;
   /** Primeiro dia do mês ativo da agenda, no formato ISO YYYY-MM-DD. */
   mesReferencia: string;
+  /** Filtro opcional por módulo (somente cursos técnicos). */
+  moduloId?: string | null;
 }
 
 export interface CalendarioAulasPdfDocument {

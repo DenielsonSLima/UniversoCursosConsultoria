@@ -59,6 +59,31 @@ interface CustomEmissionSelection {
   matricula: SecretariaMatriculaResumo;
 }
 
+type DocumentoBatchModalidade = 'TECNICO' | 'LIVRE' | 'ESPECIALIZACAO';
+
+type DocumentoBatchModalidadeOption = {
+  label: string;
+  value: DocumentoBatchModalidade;
+};
+
+const DOCUMENTO_LOTE_MODALIDADES: Record<'pasta_identificacao' | 'ficha_matricula', DocumentoBatchModalidadeOption[]> = {
+  pasta_identificacao: [
+    { label: 'Técnico', value: 'TECNICO' },
+    { label: 'Livre', value: 'LIVRE' },
+    { label: 'Especialização', value: 'ESPECIALIZACAO' },
+  ],
+  ficha_matricula: [
+    { label: 'Técnico', value: 'TECNICO' },
+    { label: 'Livre', value: 'LIVRE' },
+    { label: 'Especialização', value: 'ESPECIALIZACAO' },
+  ],
+};
+
+const mapModalidadeOptions = (documentoId: string): DocumentoBatchModalidadeOption[] =>
+  DOCUMENTO_LOTE_MODALIDADES[
+    documentoId as 'pasta_identificacao' | 'ficha_matricula'
+  ] || [];
+
 const useDebouncedValue = <T,>(value: T, delayMs: number) => {
   const [debouncedValue, setDebouncedValue] = useState(value);
   useEffect(() => {
@@ -84,6 +109,7 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
   const [selectedAluno, setSelectedAluno] = useState<SecretariaAlunoResumo | null>(null);
   const [selectedMatriculaId, setSelectedMatriculaId] = useState('');
   const [selectedTurmaId, setSelectedTurmaId] = useState('');
+  const [selectedBatchModalidade, setSelectedBatchModalidade] = useState('');
   const [selectedModuleId, setSelectedModuleId] = useState('');
   const [customSelections, setCustomSelections] = useState<CustomEmissionSelection[]>([]);
   const [selectedReferenceYear, setSelectedReferenceYear] = useState(() => getDefaultIrpfCalendarYear());
@@ -181,28 +207,31 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
       context,
       definition.id,
       !!definition.technicalOnly,
-      activeTurmaOnly
+      activeTurmaOnly,
+      supportsBatchModalidadeFilter ? selectedBatchModalidade : null
     ),
     queryFn: () =>
       secretariaDocumentosService.getTurmas(
         context.poloId,
         !!definition.technicalOnly,
         activeTurmaOnly,
-        !!definition.internshipOnly
+        !!definition.internshipOnly,
+        supportsBatchModalidadeFilter ? selectedBatchModalidade : null
       ),
-    enabled: mode === 'lote',
+    enabled: mode === 'lote' && hasBatchModalitySelected,
     staleTime: 60_000,
   });
   const { data: turmas = [], isLoading: isLoadingTurmas } = turmasQuery;
 
   const selectedMatricula = matriculas.find((item) => item.id === selectedMatriculaId);
   const selectedTurma = turmas.find((item) => item.id === selectedTurmaId);
-  const pastaBatchTurmas = useMemo(
-    () => supportsAllStudentsBatch
-      ? turmas.filter((turma) => turma.totalAlunos > 0)
-      : turmas,
-    [supportsAllStudentsBatch, turmas]
+  const pastaBatchTurmas = turmas;
+  const loteModalidades = useMemo(
+    () => mapModalidadeOptions(definition.id),
+    [definition.id]
   );
+  const supportsBatchModalidadeFilter = loteModalidades.length > 0;
+  const hasBatchModalitySelected = !supportsBatchModalidadeFilter || Boolean(selectedBatchModalidade);
   const fichaTargetModalities = useMemo(() => {
     const modalities = mode === 'individual'
       ? [selectedMatricula?.modalidade]
@@ -317,18 +346,42 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
   }, [matriculas, selectedMatriculaId]);
 
   useEffect(() => {
+    if (!supportsBatchModalidadeFilter || mode !== 'lote') {
+      setSelectedBatchModalidade('');
+      return;
+    }
+    const validModalidades = new Set(loteModalidades.map((item) => item.value));
+    if (!selectedBatchModalidade || !validModalidades.has(selectedBatchModalidade as DocumentoBatchModalidade)) {
+      setSelectedBatchModalidade(loteModalidades[0].value);
+    }
+  }, [loteModalidades, mode, selectedBatchModalidade, supportsBatchModalidadeFilter]);
+
+  useEffect(() => {
+    if (mode !== 'lote' || !supportsBatchModalidadeFilter) return;
+    setSelectedTurmaId('');
+  }, [selectedBatchModalidade, supportsBatchModalidadeFilter, mode]);
+
+  useEffect(() => {
     if (!isIrpfAnnual || !irpfTemplate) return;
     setSelectedReferenceYear(getDefaultIrpfCalendarYear(irpfLiberacaoDate));
   }, [irpfLiberacaoDate, irpfTemplate, isIrpfAnnual]);
 
   useEffect(() => {
     if (mode !== 'lote' || selectedTurmaId) return;
+    if (supportsBatchModalidadeFilter && !hasBatchModalitySelected) return;
     if (supportsAllStudentsBatch) {
       setSelectedTurmaId('todos');
       return;
     }
     if (turmas.length) setSelectedTurmaId(turmas[0].id);
-  }, [mode, selectedTurmaId, supportsAllStudentsBatch, turmas]);
+  }, [
+    hasBatchModalitySelected,
+    mode,
+    selectedTurmaId,
+    supportsAllStudentsBatch,
+    supportsBatchModalidadeFilter,
+    turmas,
+  ]);
 
   useEffect(() => {
     if (!selectsFichaTemplate) return;
@@ -440,7 +493,7 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
     mode === 'individual'
       ? !!selectedAluno && !!selectedMatriculaId && hasRequiredModule && (!selectsFichaTemplate || !!selectedTemplateId) && (!isIrpfAnnual || !!selectedIrpfYear?.released) && isCrachaEleitoralAvailable
       : mode === 'lote'
-        ? !!selectedTurmaId && hasRequiredModule && (!selectsFichaTemplate || !!selectedTemplateId) && isCrachaEleitoralAvailable
+        ? !!selectedTurmaId && hasRequiredModule && (!selectsFichaTemplate || !!selectedTemplateId) && hasBatchModalitySelected && isCrachaEleitoralAvailable
         : customSelections.length > 0 && hasRequiredModule && (!selectsFichaTemplate || !!selectedTemplateId) && isCrachaEleitoralAvailable;
 
   const openDirectDocumentViewer = () => {
@@ -457,6 +510,9 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
     setSelectedTurmaId(
       nextMode === 'lote' && supportsAllStudentsBatch ? 'todos' : ''
     );
+    if (nextMode !== 'lote') {
+      setSelectedBatchModalidade('');
+    }
     setSelectedModuleId('');
     setCustomSelections([]);
     setSelectedReferenceYear(getDefaultIrpfCalendarYear(irpfLiberacaoDate));
@@ -1056,6 +1112,27 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
                 <div className="py-16 flex justify-center"><Loader2 className="animate-spin text-slate-400" /></div>
               ) : supportsAllStudentsBatch ? (
                 <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2">
+                  {supportsBatchModalidadeFilter && (
+                    <div>
+                      <label className="mb-2 block text-xs font-bold uppercase text-slate-500">
+                        Tipo de modalidade
+                      </label>
+                      <select
+                        value={selectedBatchModalidade}
+                        onChange={(event) => {
+                          setSelectedBatchModalidade(event.target.value);
+                          setSelectedTurmaId('');
+                        }}
+                        className="w-full cursor-pointer rounded-2xl border border-slate-200 bg-slate-50 p-4 font-bold text-slate-700 outline-none focus:border-purple-500"
+                      >
+                        {loteModalidades.map((modalidade) => (
+                          <option key={modalidade.value} value={modalidade.value}>
+                            {modalidade.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   <div>
                     <label className="mb-2 block text-xs font-bold uppercase text-slate-500">
                       Selecione a turma
@@ -1063,7 +1140,8 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
                     <select
                       value={selectedTurmaId}
                       onChange={(event) => setSelectedTurmaId(event.target.value)}
-                      className="w-full cursor-pointer rounded-2xl border border-slate-200 bg-slate-50 p-4 font-bold text-slate-700 outline-none focus:border-purple-500"
+                      disabled={!hasBatchModalitySelected}
+                      className="w-full cursor-pointer rounded-2xl border border-slate-200 bg-slate-50 p-4 font-bold text-slate-700 outline-none focus:border-purple-500 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
                     >
                       <option value="todos">Todos os alunos deste polo</option>
                       {pastaBatchTurmas.map((turma) => (
@@ -1086,6 +1164,27 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
                 </div>
               ) : (
                 <div className="space-y-3">
+                  {supportsBatchModalidadeFilter && (
+                    <div>
+                      <label className="mb-2 block text-xs font-bold uppercase text-slate-500">
+                        Tipo de modalidade
+                      </label>
+                      <select
+                        value={selectedBatchModalidade}
+                        onChange={(event) => {
+                          setSelectedBatchModalidade(event.target.value);
+                          setSelectedTurmaId('');
+                        }}
+                        className="w-full cursor-pointer rounded-2xl border border-slate-200 bg-slate-50 p-4 font-bold text-slate-700 outline-none focus:border-purple-500"
+                      >
+                        {loteModalidades.map((modalidade) => (
+                          <option key={modalidade.value} value={modalidade.value}>
+                            {modalidade.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   {turmas.map((turma) => (
                     <button
                       key={turma.id}

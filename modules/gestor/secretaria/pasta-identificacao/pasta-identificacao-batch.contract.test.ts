@@ -9,10 +9,14 @@ test('pasta em lote segue o seletor compacto da carteirinha e permite todo o pol
   ]);
 
   assert.match(page, /supportsAllStudentsBatch = definition\.id === 'pasta_identificacao'/);
+  assert.match(page, /supportsBatchModalidadeFilter/);
+  assert.match(page, /mapModalidadeOptions\(definition\.id\)/);
+  assert.match(page, /Tipo de modalidade/);
+  assert.match(page, /selectedBatchModalidade/);
   assert.match(page, /<option value="todos">Todos os alunos deste polo<\/option>/);
   assert.match(page, /selectedTurmaId === 'todos'/);
   assert.match(page, /allStudentsInPolo:/);
-  assert.match(page, /turmas\.filter\(\(turma\) => turma\.totalAlunos > 0\)/);
+  assert.match(page, /pastaBatchTurmas = turmas/);
   assert.match(page, /alunos ativos no polo/);
 
   assert.match(service, /allStudentsInPolo\?: boolean/);
@@ -21,6 +25,7 @@ test('pasta em lote segue o seletor compacto da carteirinha e permite todo o pol
   assert.match(service, /query = query\.eq\('turma_id', input\.turmaId\)/);
   assert.match(service, /input\.documento === 'pasta_identificacao' && input\.modo === 'lote'/);
   assert.match(service, /input\.activeEnrollmentOnly \|\| isActiveFolderBatch/);
+  assert.match(service, /modalidadeFilter\?: string \| null/);
 });
 
 test('lote geral não amplia silenciosamente outros documentos', async () => {
