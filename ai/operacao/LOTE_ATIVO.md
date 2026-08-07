@@ -1,10 +1,11 @@
 # Lote ativo
 
-Estado: `PRONTO_PARA_VALIDACAO`
+Estado: `PUBLICADO`
 
 ## Lote: 2026-08-07-assinaturas-contrato-calendario-producao
 
-- Estado: PRONTO_PARA_VALIDACAO
+- Estado: PUBLICADO
+- Commit: `9f46816c`
 - Objetivo: Refinar o encerramento visual do contrato conforme a minuta, deixar as assinaturas lado a lado e mais acima na última página, corrigir a preparação canônica do Calendário de Aulas e garantir que sua prévia, marca-d’água e cabeçalho reproduzam o padrão institucional da Declaração, sempre para o mês selecionado na agenda.
 - Escopo incluído: composição do encerramento/assinaturas na prévia e no PDF vetorial do contrato; diagnóstico e correção mínima do handler, serviço e RPC de exportação do calendário; visualizador oficial em portal de viewport; centralização rotacionada da marca institucional no PDF; normalização do cabeçalho vetorial do calendário à geometria e tipografia da Declaração; recorte canônico da grade ao mês ativo da agenda, excluindo encontros já transcorridos; coluna exclusiva de professor e centralização interna das células; testes de regressão e inspeção visual/estrutural dos PDFs; registros operacionais; uma publicação atômica no GitHub e uma promoção Vercel para Produção após Preview aprovada.
 - Fora de escopo: edição jurídica da minuta, posicionamento livre por arrastar no documento oficial, alteração de regras acadêmicas/financeiras, mudança de modelos não relacionados e inclusão de alterações paralelas no commit.
