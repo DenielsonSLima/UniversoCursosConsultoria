@@ -195,7 +195,7 @@ const TurnstileWidget: React.FC<Props> = ({
           language: 'pt-BR',
           theme: 'light',
           size: 'flexible',
-          appearance: isLocalTurnstileHost() ? 'always' : 'interaction-only',
+          appearance: 'always',
           retry: 'auto',
           'retry-interval': RETRY_INTERVAL_MS,
           'refresh-expired': 'auto',
