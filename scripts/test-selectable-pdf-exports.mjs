@@ -4,6 +4,8 @@ import { relative, resolve, sep } from 'node:path';
 const root = resolve(import.meta.dirname, '..');
 const modulesRoot = resolve(root, 'modules');
 const selectablePdfHelper = 'modules/shared/pdf/dom-to-selectable-pdf.ts';
+const caixaDownloadHelper = 'modules/shared/pdf/download-pdf-blob.ts';
+const caixaPreviewModal = 'modules/gestor/caixa/report/CaixaReportPreviewModal.tsx';
 const sourceExtensions = new Set(['.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx']);
 
 const protectedVectorGenerators = [
@@ -177,6 +179,19 @@ const caixaVectorPdfPath = 'modules/gestor/caixa/report/caixa-report.vector-pdf.
 const caixaVectorPdfSource = sources.get(caixaVectorPdfPath) || '';
 const caixaReportDocumentPath = 'modules/gestor/caixa/report/CaixaReportDocument.tsx';
 const caixaReportDocumentSource = sources.get(caixaReportDocumentPath) || '';
+const caixaDownloadHelperSource = sources.get(caixaDownloadHelper) || '';
+const caixaPreviewModalSource = sources.get(caixaPreviewModal) || '';
+const caixaDownloadIntegrationFailures = [
+  ...(!sources.has(caixaDownloadHelper)
+    ? [`${caixaDownloadHelper} não foi encontrado no snapshot publicado.`]
+    : []),
+  ...(!/export\s+const\s+downloadPdfBlob\b/m.test(caixaDownloadHelperSource)
+    ? [`${caixaDownloadHelper} não exporta downloadPdfBlob.`]
+    : []),
+  ...(!/from\s*['"]\.\.\/\.\.\/\.\.\/shared\/pdf\/download-pdf-blob['"]/m.test(caixaPreviewModalSource)
+    ? [`${caixaPreviewModal} não aponta para o helper de download isolado.`]
+    : []),
+];
 const caixaSafariFailures = [
   ...(helperReferencePattern.test(caixaReportPdfSource)
     ? [`${caixaReportPdfPath} voltou a depender do helper híbrido de captura DOM.`]
@@ -208,12 +223,14 @@ const failures = [
   ...approvedHybridFailures,
   ...vectorGeneratorFailures,
   ...helperSafariFailures,
+  ...caixaDownloadIntegrationFailures,
   ...caixaSafariFailures,
 ];
 
 console.log('Contrato de exportações PDF selecionáveis');
 console.log('========================================');
 console.log(`Helper híbrido central: ${helperExists && missingHelperSignals.length === 0 ? 'OK' : 'INCOMPLETO'} — ${selectablePdfHelper}`);
+console.log(`Download isolado do Caixa: ${caixaDownloadIntegrationFailures.length === 0 ? 'OK' : 'INCOMPLETO'} — ${caixaDownloadHelper}`);
 console.log(`Estrutura vetorial do Caixa: ${caixaSafariFailures.length === 0 ? 'OK' : 'INCOMPLETA'} — ${caixaVectorPdfPath}`);
 
 console.log(`\nConsumidores do helper híbrido (${helperConsumers.length}):`);
