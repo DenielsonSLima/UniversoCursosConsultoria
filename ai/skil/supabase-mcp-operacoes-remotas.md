@@ -1,3 +1,5 @@
+> Arquivo legado. As instruções vigentes estão em `AGENTS.md` e `ai/operacao/`.
+
 # Skill local: Supabase remoto via MCP
 
 ## Gatilho

@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "sources": [
+    { "path": "AGENTS.md", "recursive": false },
+    { "path": "ai/operacao", "recursive": true },
+    { "path": "docs/decisions", "recursive": true }
+  ],
+  "includeExtensions": [".md"],
+  "excludePaths": [
+    "ai/operacao/rag/index.json",
+    "ai/operacao/rag/embeddings.json"
+  ]
+}
