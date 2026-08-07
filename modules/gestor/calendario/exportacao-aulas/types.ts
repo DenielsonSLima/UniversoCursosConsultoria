@@ -46,13 +46,39 @@ export interface CalendarioAulasDocumento {
   exibirModulo: boolean;
   cabecalhosTabela: CalendarioAulasCabecalhosTabela;
   marcaDaguaTexto: string | null;
-  /** Dados já saneados pela RPC; nunca exigem fetch no navegador. */
+  /** Legado inline preservado para compatibilidade do compositor vetorial. */
   marcaDaguaDataUri: string | null;
+  /** Fonte institucional da marca; pode ser um recurso inline ou URL CORS do Storage. */
+  marcaDaguaUrl: string | null;
   marcaDaguaOpacidade: number | null;
-  /** Dados já saneados pela RPC; logo HTTP externo não é carregado no client. */
+  marcaDaguaEscala: number | null;
+  marcaDaguaRotacionar: boolean | null;
+  /** Legado inline preservado para compatibilidade do compositor vetorial. */
   logoDataUri: string | null;
+  /** Cabeçalho institucional já autorizado e resolvido pela RPC. */
+  cabecalhoInstitucional: CalendarioAulasCabecalhoInstitucional;
   arquivoNome: string;
   emitidoEm: string | null;
+}
+
+/**
+ * Projeção de dados que espelha o cabeçalho institucional usado nos demais
+ * documentos. A exportação apenas posiciona estes dados; ela não consulta
+ * empresa ou polo diretamente no navegador.
+ */
+export interface CalendarioAulasCabecalhoInstitucional {
+  nome: string;
+  cnpj: string | null;
+  contato: string | null;
+  email: string | null;
+  endereco: string | null;
+  numero: string | null;
+  bairro: string | null;
+  cidade: string | null;
+  estado: string | null;
+  cep: string | null;
+  isMatriz: boolean;
+  logoUrl: string | null;
 }
 
 /** Rótulos da revisão ativa do modelo, já autorizados e resolvidos no RPC. */
@@ -68,6 +94,7 @@ export interface CalendarioAulasLinha {
   componenteCurricular: string;
   dataExibicao: string;
   horarioExibicao: string;
+  /** Nome do professor. O nome do campo permanece compatível com a RPC legada. */
   professoresObservacao: string;
 }
 
@@ -82,6 +109,8 @@ export interface PrepararCalendarioAulasExportacaoInput {
   poloId: string;
   modalidade: CalendarioAulasModalidade;
   turmaId: string;
+  /** Primeiro dia do mês ativo da agenda, no formato ISO YYYY-MM-DD. */
+  mesReferencia: string;
 }
 
 export interface CalendarioAulasPdfDocument {

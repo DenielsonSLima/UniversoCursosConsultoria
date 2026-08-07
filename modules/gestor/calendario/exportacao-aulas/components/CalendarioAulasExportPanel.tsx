@@ -29,17 +29,30 @@ type Feedback = {
 
 interface CalendarioAulasExportPanelProps {
   poloId?: string | null;
+  mesReferencia: string;
 }
 
 const getErrorMessage = (error: unknown, fallback: string) => (
   error instanceof Error && error.message ? error.message : fallback
 );
 
+const formatMesReferencia = (mesReferencia: string) => {
+  const date = new Date(`${mesReferencia}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return 'mês selecionado';
+  return new Intl.DateTimeFormat('pt-BR', {
+    month: 'long',
+    year: 'numeric',
+  }).format(date);
+};
+
 /**
  * Filtro e ação do documento de grade. A seleção é local; turmas e conteúdo
  * impresso sempre vêm de RPCs autorizadas e já preparadas pelo servidor.
  */
-const CalendarioAulasExportPanel: React.FC<CalendarioAulasExportPanelProps> = ({ poloId }) => {
+const CalendarioAulasExportPanel: React.FC<CalendarioAulasExportPanelProps> = ({
+  poloId,
+  mesReferencia,
+}) => {
   const [modalidade, setModalidade] = useState<CalendarioAulasModalidade | ''>('');
   const [turmaId, setTurmaId] = useState('');
   const [isRenderingPdf, setIsRenderingPdf] = useState(false);
@@ -50,6 +63,7 @@ const CalendarioAulasExportPanel: React.FC<CalendarioAulasExportPanelProps> = ({
   useCalendarioAulasGradeRealtime(poloId, modalidade || null, turmaId || null);
 
   const turmas = turmasQuery.data || [];
+  const mesReferenciaFormatado = formatMesReferencia(mesReferencia);
   const isPreparing = prepararMutation.isPending || isRenderingPdf;
   const canExport = Boolean(poloId && modalidade && turmaId && !isPreparing);
 
@@ -69,7 +83,12 @@ const CalendarioAulasExportPanel: React.FC<CalendarioAulasExportPanelProps> = ({
 
     setFeedback(null);
     try {
-      const payload = await prepararMutation.mutateAsync({ poloId, modalidade, turmaId });
+      const payload = await prepararMutation.mutateAsync({
+        poloId,
+        modalidade,
+        turmaId,
+        mesReferencia,
+      });
       if (payload.status !== 'PRONTO') {
         setFeedback({
           tone: 'info',
@@ -111,12 +130,12 @@ const CalendarioAulasExportPanel: React.FC<CalendarioAulasExportPanelProps> = ({
               <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-blue-700">Documento acadêmico</p>
               <h2 className="mt-0.5 text-base font-bold text-[#001a33]">Exportar calendário de aulas</h2>
               <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-500">
-                Selecione a modalidade e a turma. A grade, a ordem, os horários e a marca-d&apos;água são preparados no servidor.
+                O PDF considera somente as aulas restantes de {mesReferenciaFormatado}. A grade, a ordem, os horários e a marca-d&apos;água são preparados no servidor.
               </p>
             </div>
           </div>
           <span className="rounded-full border border-blue-100 bg-white px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-blue-700">
-            A4 retrato
+            {mesReferenciaFormatado} · A4 retrato
           </span>
         </div>
       </div>

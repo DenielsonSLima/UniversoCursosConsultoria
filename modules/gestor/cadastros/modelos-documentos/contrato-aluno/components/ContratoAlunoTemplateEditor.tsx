@@ -305,13 +305,14 @@ export const ContratoAlunoTemplateEditor = ({ modalidade }: ContratoAlunoTemplat
 
             <div className="grid gap-4 md:grid-cols-2">
               <label className="block">
-                <span className="mb-2 block text-[11px] font-black uppercase tracking-wider text-slate-600">Rodapé</span>
+                <span className="mb-2 block text-[11px] font-black uppercase tracking-wider text-slate-600">Encerramento e assinaturas</span>
                 <textarea
                   value={draft.rodape}
                   onChange={(event) => update('rodape', event.target.value)}
                   rows={3}
                   className="w-full resize-y rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-5 text-slate-700 outline-none transition focus:border-blue-500 focus:bg-white"
                 />
+                <span className="mt-2 block text-xs font-medium text-slate-400">Local, assinaturas e testemunhas são impressos somente na última página.</span>
               </label>
               <label className="block">
                 <span className="mb-2 block text-[11px] font-black uppercase tracking-wider text-slate-600">Nota de controle</span>
@@ -321,6 +322,7 @@ export const ContratoAlunoTemplateEditor = ({ modalidade }: ContratoAlunoTemplat
                   rows={3}
                   className="w-full resize-y rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-5 text-slate-700 outline-none transition focus:border-blue-500 focus:bg-white"
                 />
+                <span className="mt-2 block text-xs font-medium text-slate-400">Uso interno do modelo; não aparece na prévia nem no documento emitido.</span>
               </label>
             </div>
 

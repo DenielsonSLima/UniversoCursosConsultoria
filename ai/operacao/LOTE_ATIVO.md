@@ -1,6 +1,21 @@
 # Lote ativo
 
-Estado: `PRONTO_PARA_PUBLICACAO`
+Estado: `PRONTO_PARA_VALIDACAO`
+
+## Lote: 2026-08-07-assinaturas-contrato-calendario-producao
+
+- Estado: PRONTO_PARA_VALIDACAO
+- Objetivo: Refinar o encerramento visual do contrato conforme a minuta, deixar as assinaturas lado a lado e mais acima na última página, corrigir a preparação canônica do Calendário de Aulas e garantir que sua prévia, marca-d’água e cabeçalho reproduzam o padrão institucional da Declaração, sempre para o mês selecionado na agenda.
+- Escopo incluído: composição do encerramento/assinaturas na prévia e no PDF vetorial do contrato; diagnóstico e correção mínima do handler, serviço e RPC de exportação do calendário; visualizador oficial em portal de viewport; centralização rotacionada da marca institucional no PDF; normalização do cabeçalho vetorial do calendário à geometria e tipografia da Declaração; recorte canônico da grade ao mês ativo da agenda, excluindo encontros já transcorridos; coluna exclusiva de professor e centralização interna das células; testes de regressão e inspeção visual/estrutural dos PDFs; registros operacionais; uma publicação atômica no GitHub e uma promoção Vercel para Produção após Preview aprovada.
+- Fora de escopo: edição jurídica da minuta, posicionamento livre por arrastar no documento oficial, alteração de regras acadêmicas/financeiras, mudança de modelos não relacionados e inclusão de alterações paralelas no commit.
+- Regras/RPC/segurança aplicáveis: Supabase e GitHub exclusivamente por MCP; assinaturas, QR e encerramento continuam apenas na página final e dentro da área segura; prévia, download e impressão reutilizam o mesmo Blob PDF canônico; o backend mantém autorização, elegibilidade e paginação; nunca rasterizar uma página A4 inteira.
+- Critérios de aceite: o contrato mostra data/assinaturas em duas colunas, acima da borda inferior, apenas na última página e sem colisão com QR; o calendário selecionado retorna payload autorizado e abre, acima de todo o portal, a prévia do mesmo Blob usado para download/impressão; o PDF contém exclusivamente aulas restantes do mês ativo da agenda, com a última coluna limitada ao nome do professor e todo o conteúdo das células centralizado; a marca-d’água usa o ativo e a escala institucional pelo centro da folha; o cabeçalho do calendário usa a mesma margem, fonte e hierarquia da Declaração; PDFs mantêm A4, texto extraível e somente ativos isolados; testes focados, build e revisão das três frentes concluídos; Preview e Produção entregam o mesmo commit atômico.
+- Arquivos previstos: componentes/renderizadores/testes do contrato e calendário, migration apenas se a correção da RPC exigir, e registros operacionais do lote.
+- Validações focadas: reprodução da chamada de exportação pelo payload/RPC, teste de portal do visualizador, testes de contrato e calendário, auditoria de PDF vetorial (texto, recursos e imagens), inspeção visual do A4, lint focado, build e conferência de deploy.
+- Validação final: as três frentes confirmaram a composição da assinatura e a causa do calendário. A migration `20260807152830_fix_calendario_exportacao_volatilidade` foi aplicada pelo MCP Supabase; a função preserva `SECURITY DEFINER`, `search_path` vazio e `EXECUTE` autenticado, agora com `provolatile = 'v'`. A migration `20260807153000_filter_calendario_por_mes_selecionado` também foi aplicada pelo MCP: a nova assinatura recebe o primeiro dia do mês ativo, filtra entre o início restante desse mês e seu fim exclusivo, não concatena observações/títulos à coluna de professor e conserva a assinatura anterior como ponte para o mês atual. O modelo ativo foi revisado para `Professor(a)` com histórico correspondente. A conferência da Matriz confirmou marca A4 configurada em 100%, opacidade 1 e sem rotação; o erro era o renderer restringi-la à área útil. O visualizador oficial agora é um portal para `document.body`, cobrindo o viewport real, e o PDF calcula escala pela largura total da A4 e rotação pelo centro, igual ao editor. O renderer centraliza horizontal e verticalmente as células; o PDF A4 de fixture foi renderizado e inspecionado. Contrato vetorial 5/5, calendário 11/11, `npm run test:pdf-exports`, ESLint focado e `npm run build` passaram. Não havia navegador conectado para clicar na sessão autenticada; a validação funcional foi feita contra a RPC e o Blob PDF canônico.
+- Publicação prevista: commit atômico via MCP GitHub com manifesto explícito; uma Preview Vercel aprovada; promoção desse mesmo commit para Produção, autorizada expressamente pelo usuário nesta conversa.
+- Responsável pela consolidação: Codex.
+- Pendências ou riscos: preservar alterações paralelas e a redação jurídica da minuta; não exibir detalhes internos do RPC em erros de interface; a última confirmação visual no navegador autenticado ainda precisa ser feita antes da publicação, pois esta sessão não expôs uma janela controlável. O advisor de segurança continua sinalizando a exposição autenticada de funções `SECURITY DEFINER` no projeto; para esta RPC é deliberada, com guarda por polo, `search_path` vazio e nenhum `EXECUTE` para `anon`/`PUBLIC`.
 
 ## Lote: 2026-08-07-documentos-secretaria-calendario
 
@@ -16,6 +31,36 @@ Estado: `PRONTO_PARA_PUBLICACAO`
 - Publicação prevista: usuário autorizou expressamente nesta conversa. Publicar um único commit atômico por MCP GitHub, com PR/merge controlado e uma Preview Vercel do lote completo; após confirmar a Preview, promover o mesmo conteúdo para Produção.
 - Responsável pela consolidação: Codex, após reunião interna com três frentes delimitadas.
 - Pendências ou riscos: o modelo técnico exige aprovação auditada deliberada antes de novas emissões; Livre e Superior permanecem em revisão jurídica, sem emissão. A minuta não será copiada para RAG/logs; QR aponta apenas para validação canônica sem dados pessoais. O lote aguarda apenas as validações finais e a publicação autorizada.
+
+## Lote: 2026-08-07-correcao-calendario-padrao-documental
+
+- Estado: PRONTO_PARA_VALIDACAO
+- Objetivo: Corrigir o Calendário de Aulas para reutilizar o cabeçalho institucional e a marca-d’água padrão do sistema, tomando a Declaração de Cursando como referência visual e estrutural, sem comprimir ou sobrepor o cabeçalho na prévia.
+- Escopo incluído: renderizador canônico do calendário, sua prévia, projeção institucional autorizada da RPC e testes focados de composição visual/PDF; comparação pontual com o modelo de Declaração de Cursando e ajuste da escala do cabeçalho no cartão de prévia.
+- Fora de escopo: redesenho do modelo de declaração, mudanças nas regras/dados acadêmicos de turmas e publicação GitHub/Vercel.
+- Regras/RPC/segurança aplicáveis: a prévia, download e impressão devem continuar usando o mesmo Blob PDF canônico; cabeçalho e marca-d’água permanecem em camadas vetoriais/recursos isolados, sem rasterização da página.
+- Critérios de aceite: o calendário exibe o cabeçalho institucional completo e a marca-d’água padrão equivalentes à Declaração de Cursando; a prévia não comprime, quebra indevidamente ou sobrepõe dados do cabeçalho; o PDF mantém texto selecionável, sem imagem A4 inteira, e prévia/download/impressão continuam idênticos.
+- Arquivos previstos: renderizador/componentes compartilhados de documento do calendário, testes focados e registros operacionais de fechamento.
+- Validações focadas: comparação estrutural com a declaração, testes do calendário/PDF, extração de texto, inspeção de recursos, revisão visual local e teste do cartão de prévia em navegador conectado quando disponível.
+- Validação final: a prévia agora monta uma A4 de `794 × 1123` e a reduz proporcionalmente por `ResizeObserver`, preservando as proporções do cabeçalho de Declaração/Contrato. Deno do calendário 6/6, ESLint focado e build concluídos. A migration `20260807142446_align_calendario_institutional_branding` permanece aplicada e confirmada pelo MCP Supabase.
+- Publicação prevista: migration de RPC entregue pelo MCP Supabase; sem publicação GitHub/Vercel nesta correção, salvo solicitação posterior do usuário.
+- Responsável pela consolidação: Codex.
+- Pendências ou riscos: ativos externos só são incorporados se forem data URI de imagem ou URL HTTPS do Storage oficial. Não havia navegador conectado para automação nesta sessão; a causa visual foi confirmada pelas capturas e pela equivalência dimensional com as A4 de Declaração/Contrato. Preservar alterações locais concorrentes fora do escopo.
+
+## Lote: 2026-08-07-correcao-minuta-contrato-rodape-assinatura
+
+- Estado: PRONTO_PARA_VALIDACAO
+- Objetivo: Corrigir a composição do modelo de contrato do aluno conforme a minuta institucional, normalizando as quebras de linha do encerramento e deixando as assinaturas exclusivamente na última página.
+- Escopo incluído: leitura e renderização somente de `Documentos/MINUTA - CONTRATOS ALUNOS 2.docx`; editor, prévia e renderizador PDF vetorial do contrato; testes focados de paginação, rodapé e assinatura; registros operacionais do lote.
+- Fora de escopo: reescrita jurídica da minuta, alteração de dados acadêmicos/financeiros, mudanças em outros modelos documentais e publicação GitHub/Vercel.
+- Regras/RPC/segurança aplicáveis: a minuta permanece inalterada e não entra no RAG/logs; prévia, download e impressão usam o mesmo Blob PDF canônico; rodapé, marca-d’água e cabeçalho preservam camadas vetoriais/recursos isolados, sem rasterização da página.
+- Critérios de aceite: `\\n` não aparece de forma literal; o bloco de aceite/assinaturas não se repete e aparece apenas na página final; rodapés não sobrepõem conteúdo; cabeçalho e marca-d’água continuam consistentes nas páginas; PDF mantém texto selecionável e sem imagem A4 inteira.
+- Arquivos previstos: componentes e tipos do contrato, renderizador PDF e testes focados, além dos registros do lote.
+- Validações focadas: renderização e inspeção visual de todas as páginas da minuta, teste de paginação/assinatura, extração de texto e inspeção de recursos do PDF, lint focado e build se necessário.
+- Validação final: minuta revisada sem modificação (SHA-256 `b4df5b33631bd25411242f64f1dcaf3ea12bd03e4d8f5c3c21574fb2941a670e`); migration `20260807151556_fix_contrato_encerramento_final` aplicada pelo MCP Supabase e consultada: modelo Técnico na revisão 3, sem `\\n` literal, sete páginas canônicas e encerramento presente apenas na página 7. Teste vetorial 4/4, inspeção visual do PDF A4 de duas páginas com assinatura somente na segunda, `npm run test:pdf-exports`, ESLint focado e build concluídos.
+- Publicação prevista: nenhuma; alterações locais aguardam solicitação explícita.
+- Responsável pela consolidação: Codex.
+- Pendências ou riscos: preservar alterações paralelas fora do escopo e não converter conteúdo jurídico em dados operacionais; a assinatura deve continuar reservada à página final mesmo quando a quantidade de páginas variar.
 
 ## Lote: 2026-08-06-operacao-memoria-rag
 

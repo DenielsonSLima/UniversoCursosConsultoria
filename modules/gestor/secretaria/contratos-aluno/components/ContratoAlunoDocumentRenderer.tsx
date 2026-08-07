@@ -1,5 +1,6 @@
 import { FileWarning, QrCode } from 'lucide-react';
 import { DocumentValidationQrCodeImage } from '../../../../shared/document-validation/DocumentValidationQrCodeImage';
+import { parseContratoAlunoClosingLayout } from '../../../../shared/contrato-aluno/closing-layout';
 import {
   canonicalAsRecord,
   canonicalText,
@@ -9,6 +10,10 @@ import type { ContratoAlunoPreparedDocument } from '../types/contratos-aluno.typ
 interface ContratoAlunoDocumentRendererProps {
   document: ContratoAlunoPreparedDocument;
 }
+
+const toVisibleMultilineText = (value: string | null | undefined) => String(value || '')
+  .replace(/\\r\\n/g, '\n')
+  .replace(/\\n/g, '\n');
 
 export const isContratoAlunoRenderPayloadReady = (document: ContratoAlunoPreparedDocument) => {
   const rendered = document.renderPayload?.rendered;
@@ -49,8 +54,14 @@ const ContratoAlunoDocumentRenderer = ({ document }: ContratoAlunoDocumentRender
 
   return (
     <div className="space-y-6">
-      {rendered.pages.map((page, pageIndex) => (
-        <article
+      {rendered.pages.map((page, pageIndex) => {
+        const isFinalPage = pageIndex === rendered.pages.length - 1;
+        const footerText = toVisibleMultilineText(page.footer);
+        const showClosing = isFinalPage && Boolean(footerText || requiresQr);
+        const closingLayout = parseContratoAlunoClosingLayout(footerText);
+
+        return (
+          <article
           key={`${document.emissionId}-pagina-${pageIndex + 1}`}
           className="print-page relative mx-auto h-[297mm] w-[210mm] overflow-hidden bg-white px-[18mm] pb-[16mm] pt-[15mm] text-black shadow-2xl box-border print:shadow-none"
           data-pdf-orientation="portrait"
@@ -86,26 +97,70 @@ const ContratoAlunoDocumentRenderer = ({ document }: ContratoAlunoDocumentRender
             {page.body || ''}
           </div>
 
-          <footer className="absolute bottom-[16mm] left-[18mm] right-[18mm] z-10 border-t border-slate-200 pt-3">
-            <div className="flex items-end justify-between gap-5">
-              <p className="whitespace-pre-wrap text-[8px] leading-4 text-slate-500">{page.footer || ''}</p>
-              {requiresQr && document.validationCode && (
-                <div className="shrink-0 rounded-lg border border-slate-200 bg-white p-1.5 text-center shadow-sm">
-                  <DocumentValidationQrCodeImage
-                    code={document.validationCode}
-                    size={240}
-                    alt="QR Code de validação do contrato"
-                    className="mx-auto h-[21mm] w-[21mm]"
-                  />
-                  <div className="mt-1 flex items-center justify-center gap-1 text-[6px] font-black uppercase tracking-wide text-slate-500"><QrCode size={8} /> {qr?.label || 'Validar documento'}</div>
-                  <p className="mt-0.5 text-[6px] font-black tracking-wider text-blue-700">{document.validationCode}</p>
-                  {validityLabel && <p className="mt-0.5 text-[6px] font-semibold text-slate-500">Validade: {validityLabel}</p>}
+          {showClosing && (
+            <footer className="absolute bottom-[46mm] left-[18mm] right-[18mm] z-10 border-t border-slate-200 pt-3">
+              <div className="grid grid-cols-[minmax(0,1fr)_31mm] items-start gap-5">
+                <div className="min-w-0">
+                  {closingLayout.fallbackText ? (
+                    <p className="whitespace-pre-wrap text-[8px] leading-4 text-slate-500">{closingLayout.fallbackText}</p>
+                  ) : (
+                    <div className="space-y-3 text-slate-600">
+                      {closingLayout.location && <p className="text-[8px] leading-4">{closingLayout.location}</p>}
+
+                      {closingLayout.parties.length > 0 && (
+                        <div className="grid grid-cols-2 gap-6">
+                          {closingLayout.parties.map((party) => (
+                            <div key={party.label} className="min-w-0 text-center">
+                              <div className="flex h-[10mm] items-end justify-center border-b border-slate-500 px-2 text-[8px] text-slate-700">
+                                {party.value}
+                              </div>
+                              <p className="mt-1 text-[6px] font-black uppercase tracking-wider text-slate-500">{party.label}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {closingLayout.witnesses.length > 0 && (
+                        <div>
+                          <p className="mb-1.5 text-[6px] font-black uppercase tracking-wider text-slate-500">Testemunhas</p>
+                          <div className="grid grid-cols-2 gap-6">
+                            {closingLayout.witnesses.map((witness) => (
+                              <div key={witness.label} className="min-w-0 text-center">
+                                <div className="flex h-[8mm] items-end justify-center border-b border-slate-400 px-2 text-[7px] text-slate-700">
+                                  {witness.value}
+                                </div>
+                                <p className="mt-1 text-[5.5px] font-bold uppercase tracking-wider text-slate-400">{witness.label}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {closingLayout.additionalLines.length > 0 && (
+                        <p className="whitespace-pre-wrap text-[7px] leading-3 text-slate-500">{closingLayout.additionalLines.join('\n')}</p>
+                      )}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </footer>
+                {requiresQr && document.validationCode && (
+                  <div className="shrink-0 rounded-lg border border-slate-200 bg-white p-1.5 text-center shadow-sm">
+                    <DocumentValidationQrCodeImage
+                      code={document.validationCode}
+                      size={200}
+                      alt="QR Code de validação do contrato"
+                      className="mx-auto h-[17mm] w-[17mm]"
+                    />
+                    <div className="mt-1 flex items-center justify-center gap-1 text-[6px] font-black uppercase tracking-wide text-slate-500"><QrCode size={8} /> {qr?.label || 'Validar documento'}</div>
+                    <p className="mt-0.5 text-[6px] font-black tracking-wider text-blue-700">{document.validationCode}</p>
+                    {validityLabel && <p className="mt-0.5 text-[6px] font-semibold text-slate-500">Validade: {validityLabel}</p>}
+                  </div>
+                )}
+              </div>
+            </footer>
+          )}
         </article>
-      ))}
+        );
+      })}
     </div>
   );
 };

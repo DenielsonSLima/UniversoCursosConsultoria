@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   AlertTriangle,
   ArrowLeft,
@@ -187,8 +188,8 @@ const CanonicalDocumentPreviewModal = <Item extends CanonicalDocumentPreviewItem
 
   if (!currentItem) return null;
 
-  return (
-    <div className="fixed inset-0 z-[2147483000] flex h-screen h-[100dvh] w-screen animate-fadeIn bg-slate-950" role="dialog" aria-modal="true" aria-label={title} aria-busy={isBusy}>
+  const modal = (
+    <div id="canonical-document-preview-modal" className="fixed inset-0 z-[2147483000] flex h-[100dvh] w-screen animate-fadeIn bg-slate-950" role="dialog" aria-modal="true" aria-label={title} aria-busy={isBusy}>
       <div className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-slate-950 shadow-2xl">
         <header className="flex shrink-0 flex-col gap-3 border-b border-white/10 bg-slate-800 px-4 py-3 text-white shadow-md sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
@@ -228,12 +229,12 @@ const CanonicalDocumentPreviewModal = <Item extends CanonicalDocumentPreviewItem
           </div>
         </header>
 
-        <main className="flex min-h-0 flex-1 justify-center overflow-auto bg-slate-900 p-3 custom-scrollbar sm:p-6 lg:p-8">
+        <main className="flex min-h-0 flex-1 justify-center overflow-auto bg-slate-900 p-0 custom-scrollbar sm:p-3 lg:p-6">
           {previewUrl ? (
             <iframe
               src={previewUrl}
               title={`${title} - PDF oficial`}
-              className="h-full min-h-[620px] w-full max-w-6xl rounded-xl border border-white/15 bg-white shadow-2xl"
+              className="h-full min-h-[620px] w-full max-w-none border-0 bg-white shadow-2xl sm:rounded-xl sm:border sm:border-white/15"
             />
           ) : (
             <div className="flex min-h-[420px] w-full max-w-xl flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-800/70 p-8 text-center text-white">
@@ -260,6 +261,12 @@ const CanonicalDocumentPreviewModal = <Item extends CanonicalDocumentPreviewItem
       </div>
     </div>
   );
+
+  // O calendário é renderizado dentro de painéis animados. Sem portal, esses
+  // painéis viram o containing block de `fixed` e prendem a prévia no card.
+  // A emissão permanece a mesma; somente o contêiner de visualização sobe
+  // para o viewport real, tal como as demais prévias oficiais da Secretaria.
+  return typeof document === 'undefined' ? modal : createPortal(modal, document.body);
 };
 
 export default CanonicalDocumentPreviewModal;

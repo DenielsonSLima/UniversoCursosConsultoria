@@ -41,6 +41,10 @@ export const getCanonicalPdfInlineImage = (value: string | null | undefined): Ca
 };
 
 export const normalizeCanonicalPdfText = (value: string | null | undefined) => String(value || '')
+  // Versões iniciais do contrato persistiram quebras como os caracteres "\\n".
+  // O PDF recebe linhas reais mesmo ao reabrir um snapshot histórico.
+  .replace(/\\r\\n/g, '\n')
+  .replace(/\\n/g, '\n')
   .replace(/\u00a0/g, ' ')
   .replace(/[\u2010\u2011\u2012\u2013\u2014]/g, '-')
   .replace(/[\u2018\u2019]/g, "'")

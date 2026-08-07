@@ -25,6 +25,7 @@ export const calendarioAulasExportacaoQueryKeys = {
     poloId?: string | null,
     modalidade?: CalendarioAulasModalidade | null,
     turmaId?: string | null,
+    mesReferencia?: string | null,
   ) => [
     'gestor',
     'calendario',
@@ -33,5 +34,6 @@ export const calendarioAulasExportacaoQueryKeys = {
     scopeValue(poloId, 'sem-polo'),
     modalidade || 'sem-modalidade',
     scopeValue(turmaId, 'sem-turma'),
+    scopeValue(mesReferencia, 'sem-mes'),
   ] as const,
 };

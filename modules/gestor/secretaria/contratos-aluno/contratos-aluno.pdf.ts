@@ -11,6 +11,7 @@ import {
   normalizeCanonicalPdfText,
   type CanonicalPdfImage,
 } from '../shared/canonical-document-vector-pdf';
+import { parseContratoAlunoClosingLayout } from '../../../shared/contrato-aluno/closing-layout';
 import type {
   CanonicalDocumentPdfBuildOptions,
   CanonicalDocumentPdfResult,
@@ -24,8 +25,9 @@ const PAGE_RIGHT = 18;
 const PAGE_TOP = 15;
 const PAGE_BOTTOM = 16;
 const BODY_START = 60;
-const FOOTER_TOP = 249;
-const QR_SIZE = 21;
+/** Área exclusiva de encerramento: sobe as assinaturas sem invadir o corpo canônico. */
+const CLOSING_TOP = 210;
+const QR_SIZE = 17;
 const CONTRACT_TITLE_TOP = 47.5;
 const CONTRACT_TITLE_SIZE = 15;
 const CONTRACT_TITLE_LINE_HEIGHT = 1.12;
@@ -67,6 +69,152 @@ const getContractBodyStart = (pdf: jsPDF, title: string) => {
   return Math.max(BODY_START, CONTRACT_TITLE_TOP + titleHeight + 3);
 };
 
+const getClosingHeight = (pdf: jsPDF, footer: string, hasQr: boolean) => {
+  const layout = parseContratoAlunoClosingLayout(footer);
+  const closingWidth = hasQr ? 132 : PAGE_WIDTH - PAGE_LEFT - PAGE_RIGHT;
+
+  if (layout.fallbackText) {
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(8);
+    const lines = pdf.splitTextToSize(layout.fallbackText, closingWidth) as string[];
+    return Math.max(lines.length, 1) * 8 * 0.352778 * 1.35 + 5;
+  }
+
+  let height = 4;
+  if (layout.location) height += 6;
+  if (layout.parties.length) height += 11;
+  if (layout.witnesses.length) height += 12;
+  if (layout.additionalLines.length) {
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(7);
+    const lines = pdf.splitTextToSize(layout.additionalLines.join('\n'), closingWidth) as string[];
+    height += Math.max(lines.length, 1) * 7 * 0.352778 * 1.3 + 3;
+  }
+  return height;
+};
+
+const drawContractClosing = (
+  pdf: jsPDF,
+  footer: string,
+  hasQr: boolean,
+) => {
+  const layout = parseContratoAlunoClosingLayout(footer);
+  const closingWidth = hasQr ? 132 : PAGE_WIDTH - PAGE_LEFT - PAGE_RIGHT;
+
+  pdf.setDrawColor(226, 232, 240);
+  pdf.setLineWidth(0.2);
+  pdf.line(PAGE_LEFT, CLOSING_TOP, PAGE_WIDTH - PAGE_RIGHT, CLOSING_TOP);
+
+  if (layout.fallbackText) {
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(100, 116, 139);
+    pdf.setFontSize(8);
+    drawCanonicalPdfText(pdf, layout.fallbackText, PAGE_LEFT, CLOSING_TOP + 3, {
+      maxWidth: closingWidth,
+      maxLines: 10,
+      lineHeight: 1.35,
+    });
+    return;
+  }
+
+  let cursorY = CLOSING_TOP + 4;
+  pdf.setFont('helvetica', 'normal');
+  pdf.setTextColor(71, 85, 105);
+
+  if (layout.location) {
+    pdf.setFontSize(8);
+    drawCanonicalPdfText(pdf, layout.location, PAGE_LEFT, cursorY, {
+      maxWidth: closingWidth,
+      maxLines: 2,
+      lineHeight: 1.25,
+    });
+    cursorY += 7;
+  }
+
+  if (layout.parties.length) {
+    const columns = Math.min(layout.parties.length, 2);
+    const gap = 8;
+    const columnWidth = (closingWidth - gap * (columns - 1)) / columns;
+    const lineY = cursorY + 5;
+
+    layout.parties.slice(0, 2).forEach((party, index) => {
+      const x = PAGE_LEFT + index * (columnWidth + gap);
+      if (party.value) {
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(7.2);
+        drawCanonicalPdfText(pdf, party.value, x + columnWidth / 2, lineY - 1.5, {
+          align: 'center',
+          maxWidth: columnWidth - 2,
+          maxLines: 1,
+        });
+      }
+      pdf.setDrawColor(71, 85, 105);
+      pdf.setLineWidth(0.25);
+      pdf.line(x, lineY, x + columnWidth, lineY);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(100, 116, 139);
+      pdf.setFontSize(6.2);
+      drawCanonicalPdfText(pdf, party.label, x + columnWidth / 2, lineY + 3.2, {
+        align: 'center',
+        maxWidth: columnWidth,
+        maxLines: 1,
+      });
+    });
+    cursorY = lineY + 7;
+  }
+
+  if (layout.witnesses.length) {
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(100, 116, 139);
+    pdf.setFontSize(6.2);
+    drawCanonicalPdfText(pdf, 'TESTEMUNHAS', PAGE_LEFT, cursorY, {
+      maxWidth: closingWidth,
+      maxLines: 1,
+    });
+
+    const columns = Math.min(layout.witnesses.length, 2);
+    const gap = 8;
+    const columnWidth = (closingWidth - gap * (columns - 1)) / columns;
+    const lineY = cursorY + 5;
+    layout.witnesses.forEach((witness, index) => {
+      const x = PAGE_LEFT + index * (columnWidth + gap);
+      if (witness.value) {
+        pdf.setFont('helvetica', 'normal');
+        pdf.setTextColor(71, 85, 105);
+        pdf.setFontSize(6.8);
+        drawCanonicalPdfText(pdf, witness.value, x + columnWidth / 2, lineY - 1.3, {
+          align: 'center',
+          maxWidth: columnWidth - 2,
+          maxLines: 1,
+        });
+      }
+      pdf.setDrawColor(100, 116, 139);
+      pdf.setLineWidth(0.2);
+      pdf.line(x, lineY, x + columnWidth, lineY);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(148, 163, 184);
+      pdf.setFontSize(5.5);
+      drawCanonicalPdfText(pdf, witness.label, x + columnWidth / 2, lineY + 2.8, {
+        align: 'center',
+        maxWidth: columnWidth,
+        maxLines: 1,
+      });
+    });
+    cursorY = lineY + 6;
+  }
+
+  if (layout.additionalLines.length) {
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(100, 116, 139);
+    pdf.setFontSize(7);
+    drawCanonicalPdfText(pdf, layout.additionalLines.join('\n'), PAGE_LEFT, cursorY + 1, {
+      maxWidth: closingWidth,
+      maxLines: 4,
+      lineHeight: 1.3,
+    });
+  }
+};
+
 const readContractVisualDocument = (document: ContratoAlunoPreparedDocument): ContractVisualDocument => {
   const rendered = document.renderPayload?.rendered;
   if (!rendered?.pages.length) {
@@ -99,6 +247,7 @@ const readContractVisualDocument = (document: ContratoAlunoPreparedDocument): Co
 const assertContractPageFits = (
   pdf: jsPDF,
   page: ContractVisualPage,
+  hasClosing: boolean,
   hasQr: boolean,
 ) => {
   const bodyStart = getContractBodyStart(pdf, page.title);
@@ -109,17 +258,11 @@ const assertContractPageFits = (
     PAGE_WIDTH - PAGE_LEFT - PAGE_RIGHT,
   ) as string[];
   const bodyHeight = Math.max(bodyLines.length, 1) * 10.5 * 0.352778 * 1.7;
-  const footerWidth = hasQr ? 132 : PAGE_WIDTH - PAGE_LEFT - PAGE_RIGHT;
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(8);
-  const footerLines = pdf.splitTextToSize(
-    normalizeCanonicalPdfText(page.footer),
-    footerWidth,
-  ) as string[];
-  const footerHeight = Math.max(footerLines.length, 1) * 8 * 0.352778 * 1.35;
-  const footerAvailable = PAGE_HEIGHT - PAGE_BOTTOM - FOOTER_TOP - 3;
+  const footerHeight = getClosingHeight(pdf, normalizeCanonicalPdfText(page.footer), hasQr);
+  const footerAvailable = PAGE_HEIGHT - PAGE_BOTTOM - CLOSING_TOP - 3;
+  const bodyLimit = hasClosing ? CLOSING_TOP - 5 : PAGE_HEIGHT - PAGE_BOTTOM;
 
-  if (bodyStart + bodyHeight > FOOTER_TOP - 5 || footerHeight > footerAvailable) {
+  if (bodyStart + bodyHeight > bodyLimit || (hasClosing && footerHeight > footerAvailable)) {
     throw new Error('Uma página canônica do contrato ultrapassa a área segura do PDF. Revise a paginação no servidor antes de emitir.');
   }
 };
@@ -131,8 +274,10 @@ const drawContractPage = (
   visual: ContractVisualDocument,
   document: ContratoAlunoPreparedDocument,
   qr: CanonicalPdfImage | null,
+  isFinalPage: boolean,
 ) => {
-  assertContractPageFits(pdf, page, visual.qr.enabled);
+  const hasClosing = isFinalPage && Boolean(normalizeCanonicalPdfText(page.footer) || visual.qr.enabled);
+  assertContractPageFits(pdf, page, hasClosing, hasClosing && visual.qr.enabled);
   const bodyStart = getContractBodyStart(pdf, page.title);
   pdf.setFillColor(255, 255, 255);
   pdf.rect(0, 0, PAGE_WIDTH, PAGE_HEIGHT, 'F');
@@ -183,28 +328,19 @@ const drawContractPage = (
     align: 'justify',
   });
 
-  pdf.setDrawColor(226, 232, 240);
-  pdf.setLineWidth(0.2);
-  pdf.line(PAGE_LEFT, FOOTER_TOP, PAGE_WIDTH - PAGE_RIGHT, FOOTER_TOP);
-  const footerWidth = visual.qr.enabled ? 132 : PAGE_WIDTH - PAGE_LEFT - PAGE_RIGHT;
-  pdf.setFont('helvetica', 'normal');
-  pdf.setTextColor(100, 116, 139);
-  pdf.setFontSize(8);
-  drawCanonicalPdfText(pdf, page.footer, PAGE_LEFT, FOOTER_TOP + 3, {
-    maxWidth: footerWidth,
-    maxLines: 4,
-    lineHeight: 1.35,
-  });
+  if (!hasClosing) return;
+
+  drawContractClosing(pdf, page.footer, visual.qr.enabled);
 
   if (visual.qr.enabled) {
     if (!qr || !document.validationCode) {
       throw new Error('O contrato exige QR Code, mas a imagem de validação não foi preparada.');
     }
-    const qrX = PAGE_WIDTH - PAGE_RIGHT - QR_SIZE;
-    const qrY = FOOTER_TOP + 2;
+    const qrX = PAGE_WIDTH - PAGE_RIGHT - QR_SIZE - 1.5;
+    const qrY = CLOSING_TOP + 2;
     pdf.setFillColor(255, 255, 255);
     pdf.setDrawColor(226, 232, 240);
-    pdf.roundedRect(qrX - 1.5, qrY - 1.5, QR_SIZE + 3, QR_SIZE + 12, 1.5, 1.5, 'FD');
+    pdf.roundedRect(qrX - 1.5, qrY - 1.5, QR_SIZE + 3, QR_SIZE + 10, 1.5, 1.5, 'FD');
     pdf.addImage(
       qr.dataUrl,
       qr.format,
@@ -218,14 +354,14 @@ const drawContractPage = (
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(71, 85, 105);
     pdf.setFontSize(5.7);
-    drawCanonicalPdfText(pdf, visual.qr.label, qrX + QR_SIZE / 2, qrY + QR_SIZE + 1.2, {
+    drawCanonicalPdfText(pdf, visual.qr.label, qrX + QR_SIZE / 2, qrY + QR_SIZE + 0.9, {
       align: 'center',
       maxWidth: QR_SIZE + 2,
       maxLines: 1,
     });
     pdf.setTextColor(29, 78, 216);
     pdf.setFontSize(5.8);
-    drawCanonicalPdfText(pdf, document.validationCode, qrX + QR_SIZE / 2, qrY + QR_SIZE + 4, {
+    drawCanonicalPdfText(pdf, document.validationCode, qrX + QR_SIZE / 2, qrY + QR_SIZE + 3.4, {
       align: 'center',
       maxWidth: QR_SIZE + 2,
       maxLines: 1,
@@ -234,7 +370,7 @@ const drawContractPage = (
       pdf.setFont('helvetica', 'normal');
       pdf.setTextColor(100, 116, 139);
       pdf.setFontSize(5.4);
-      drawCanonicalPdfText(pdf, `Validade: ${visual.qr.validityLabel}`, qrX + QR_SIZE / 2, qrY + QR_SIZE + 6.8, {
+      drawCanonicalPdfText(pdf, `Validade: ${visual.qr.validityLabel}`, qrX + QR_SIZE / 2, qrY + QR_SIZE + 5.8, {
         align: 'center',
         maxWidth: QR_SIZE + 2,
         maxLines: 1,
@@ -278,9 +414,17 @@ export const createContratosAlunoPdf = async (
   let pageIndex = 0;
   documents.forEach((document, documentIndex) => {
     const visual = visuals[documentIndex];
-    visual.pages.forEach((page) => {
+    visual.pages.forEach((page, visualPageIndex) => {
       if (pageIndex > 0) pdf.addPage('a4', 'portrait');
-      drawContractPage(pdf, GState as unknown as PdfGStateConstructor, page, visual, document, qrAssets[documentIndex]);
+      drawContractPage(
+        pdf,
+        GState as unknown as PdfGStateConstructor,
+        page,
+        visual,
+        document,
+        qrAssets[documentIndex],
+        visualPageIndex === visual.pages.length - 1,
+      );
       pageIndex += 1;
     });
     options.onProgress?.({ current: documentIndex + 1, total: documents.length });

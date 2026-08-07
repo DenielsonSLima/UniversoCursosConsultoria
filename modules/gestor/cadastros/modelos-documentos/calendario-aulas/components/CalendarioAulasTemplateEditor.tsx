@@ -9,19 +9,57 @@ import {
   RefreshCw,
   Save,
 } from 'lucide-react';
+import DocumentHeader from '../../../../components/DocumentHeader';
+import { empresasService } from '../../../../configuracoes/empresas/empresas.service';
+import { marcaDaguaService } from '../../../../configuracoes/marca-dagua/marca-dagua.service';
 import { useCalendarioAulasTemplate } from '../hooks/useCalendarioAulasTemplate';
 import type { ConteudoModeloCalendarioAulas } from '../types/calendario-aulas.types';
 
 const PREVIEW_ROWS = [
   ['Componente curricular', '12/08/2026', '08:00 — 16:00', 'Professor(a) responsável'],
   ['Componente curricular', '19/08/2026', '08:00 — 16:00', 'Professor(a) responsável'],
-  ['Práticas / observação', '26/08/2026', 'Horário não informado', 'Conforme grade da turma'],
+  ['Práticas', '26/08/2026', 'Horário não informado', 'Professor(a) responsável'],
 ] as const;
+
+// A prévia não é um layout responsivo do documento: é uma página A4 inteira
+// reduzida proporcionalmente. Assim, o DocumentHeader mantém as mesmas
+// proporções usadas pelos editores de Declaração e Contrato.
+const PREVIEW_PAGE_WIDTH = 794;
+const PREVIEW_PAGE_HEIGHT = 1123;
+const PREVIEW_PAGE_PADDING = 76;
+const MIN_PREVIEW_SCALE = 0.42;
 
 export const CalendarioAulasTemplateEditor = () => {
   const { templateQuery, saveMutation } = useCalendarioAulasTemplate();
   const [draft, setDraft] = useState<ConteudoModeloCalendarioAulas | null>(null);
+  const [companyInfo, setCompanyInfo] = useState<any>(null);
+  const [watermarkInfo, setWatermarkInfo] = useState<any>(null);
+  const [previewViewport, setPreviewViewport] = useState<HTMLDivElement | null>(null);
+  const [previewScale, setPreviewScale] = useState(0.72);
   const loadedVersion = useRef<number | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    Promise.all([
+      empresasService.getCompanyPrincipal().catch(() => null),
+      marcaDaguaService.getCompaniesWithWatermark().catch(() => []),
+    ]).then(([company, watermarks]) => {
+      if (!isMounted) return;
+      if (company) setCompanyInfo(company);
+      if (!Array.isArray(watermarks) || watermarks.length === 0) return;
+
+      const institutionalWatermark =
+        watermarks.find((item: any) => item.id === company?.id && Boolean(item.watermarkUrl))
+        || watermarks.find((item: any) => Boolean(item.watermarkUrl))
+        || watermarks[0];
+      setWatermarkInfo(institutionalWatermark);
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!templateQuery.data || loadedVersion.current === templateQuery.data.revisao) return;
@@ -29,9 +67,36 @@ export const CalendarioAulasTemplateEditor = () => {
     setDraft(templateQuery.data.conteudo);
   }, [templateQuery.data]);
 
+  useEffect(() => {
+    if (!previewViewport || typeof window === 'undefined' || !window.ResizeObserver) return;
+
+    const syncPreviewScale = () => {
+      const availableWidth = previewViewport.getBoundingClientRect().width;
+      if (!availableWidth) return;
+      const nextScale = Math.min(1, Math.max(MIN_PREVIEW_SCALE, availableWidth / PREVIEW_PAGE_WIDTH));
+      setPreviewScale((current) => Math.abs(current - nextScale) < 0.005 ? current : nextScale);
+    };
+
+    syncPreviewScale();
+    const observer = new window.ResizeObserver(syncPreviewScale);
+    observer.observe(previewViewport);
+    return () => observer.disconnect();
+  }, [previewViewport]);
+
   const isDirty = useMemo(() => (
     Boolean(draft && templateQuery.data && JSON.stringify(draft) !== JSON.stringify(templateQuery.data.conteudo))
   ), [draft, templateQuery.data]);
+
+  const previewWatermarkUrl = watermarkInfo?.watermarkUrl || null;
+  const rawWatermarkOpacity = Number(watermarkInfo?.watermarkOpacity ?? 0.1);
+  const previewWatermarkOpacity = Number.isFinite(rawWatermarkOpacity)
+    ? Math.min(1, Math.max(0, rawWatermarkOpacity > 1 ? rawWatermarkOpacity / 100 : rawWatermarkOpacity))
+    : 0.1;
+  const rawWatermarkScale = Number(watermarkInfo?.watermarkScale ?? 50);
+  const previewWatermarkScale = Number.isFinite(rawWatermarkScale)
+    ? Math.min(100, Math.max(5, rawWatermarkScale))
+    : 50;
+  const previewWatermarkRotate = watermarkInfo?.watermarkRotate !== false;
 
   const update = <K extends keyof ConteudoModeloCalendarioAulas>(
     key: K,
@@ -162,7 +227,7 @@ export const CalendarioAulasTemplateEditor = () => {
                 ['componente', 'Componente curricular'],
                 ['data', 'Data'],
                 ['horario', 'Horário'],
-                ['professorObservacao', 'Professor(es) / observação'],
+                ['professorObservacao', 'Professor(a)'],
               ] as const).map(([key, label]) => (
                 <label key={key} className="block">
                   <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">{label}</span>
@@ -192,33 +257,65 @@ export const CalendarioAulasTemplateEditor = () => {
               <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Prévia A4 retrato</span>
               <span className="text-[10px] font-bold text-slate-500">Grade canônica</span>
             </div>
-            <article className="relative min-h-[620px] overflow-hidden rounded-sm bg-white px-6 py-8 shadow-lg sm:px-8">
-              {draft.exibirMarcaDagua && <span className="pointer-events-none absolute left-1/2 top-[44%] -translate-x-1/2 -rotate-45 text-5xl font-black tracking-[0.24em] text-[#001a33]/[0.045]">UNIVERSO</span>}
-              <div className="relative text-center">
-                <p className="text-xl font-black tracking-tight text-[#001a33]">UNIVERSO</p>
-                <p className="text-[8px] font-bold tracking-[0.18em] text-[#ed1c4e]">CURSOS E CONSULTORIA</p>
-                <div className="mx-auto mt-4 h-px w-20 bg-[#001a33]" />
-                <h5 className="mt-4 text-[12px] font-black uppercase text-[#001a33]">{draft.titulo}</h5>
-                <p className="mt-1 text-[9px] font-bold text-slate-600">{draft.subtitulo}</p>
-                {draft.exibirModulo && <p className="mt-1 text-[8px] font-semibold uppercase tracking-wider text-slate-500">Módulo informado pela turma</p>}
-              </div>
-              <div className="relative mt-6 overflow-hidden border border-slate-400">
-                <div className="grid grid-cols-[1.35fr_.7fr_.8fr_1.05fr] bg-slate-100 text-[7px] font-black uppercase leading-3 text-[#001a33]">
-                  <span className="border-r border-slate-400 p-2">{draft.cabecalhosTabela.componente}</span>
-                  <span className="border-r border-slate-400 p-2">{draft.cabecalhosTabela.data}</span>
-                  <span className="border-r border-slate-400 p-2">{draft.cabecalhosTabela.horario}</span>
-                  <span className="p-2">{draft.cabecalhosTabela.professorObservacao}</span>
-                </div>
-                {PREVIEW_ROWS.map((row, index) => (
-                  <div key={index} className="grid grid-cols-[1.35fr_.7fr_.8fr_1.05fr] border-t border-slate-300 text-[7px] leading-3 text-slate-700">
-                    {row.map((cell, cellIndex) => <span key={cellIndex} className={`p-2 ${cellIndex < row.length - 1 ? 'border-r border-slate-300' : ''}`}>{cellIndex === 2 && index === 2 ? draft.observacaoSemHorario : cell}</span>)}
+            <div ref={setPreviewViewport} className="w-full overflow-hidden">
+              <div
+                className="relative mx-auto"
+                style={{
+                  width: `${PREVIEW_PAGE_WIDTH * previewScale}px`,
+                  height: `${PREVIEW_PAGE_HEIGHT * previewScale}px`,
+                }}
+              >
+                <article
+                  className="absolute left-0 top-0 overflow-hidden rounded-sm bg-white shadow-lg"
+                  style={{
+                    width: `${PREVIEW_PAGE_WIDTH}px`,
+                    height: `${PREVIEW_PAGE_HEIGHT}px`,
+                    padding: `${PREVIEW_PAGE_PADDING}px`,
+                    transform: `scale(${previewScale})`,
+                    transformOrigin: 'top left',
+                  }}
+                >
+                  {draft.exibirMarcaDagua && previewWatermarkUrl ? (
+                    <div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center overflow-hidden" aria-hidden="true">
+                      <img
+                        src={previewWatermarkUrl}
+                        alt=""
+                        className="max-w-none"
+                        style={{
+                          opacity: previewWatermarkOpacity,
+                          width: `${previewWatermarkScale}%`,
+                          transform: previewWatermarkRotate ? 'rotate(-45deg)' : 'none',
+                        }}
+                      />
+                    </div>
+                  ) : null}
+                  <div className="relative z-10">
+                    <DocumentHeader company={companyInfo || undefined} orientation="portrait" />
+                    <div className="mt-6 text-center">
+                      <h5 className="text-xl font-black uppercase text-[#001a33]">{draft.titulo}</h5>
+                      <p className="mt-2 text-sm font-bold text-slate-600">{draft.subtitulo}</p>
+                      {draft.exibirModulo && <p className="mt-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Módulo informado pela turma</p>}
+                    </div>
                   </div>
-                ))}
+                  <div className="relative z-10 mt-10 overflow-hidden border border-slate-400">
+                    <div className="grid grid-cols-[1.35fr_.7fr_.8fr_1.05fr] bg-slate-100 text-center text-[10px] font-black uppercase leading-4 text-[#001a33]">
+                      <span className="border-r border-slate-400 p-3">{draft.cabecalhosTabela.componente}</span>
+                      <span className="border-r border-slate-400 p-3">{draft.cabecalhosTabela.data}</span>
+                      <span className="border-r border-slate-400 p-3">{draft.cabecalhosTabela.horario}</span>
+                      <span className="p-3">{draft.cabecalhosTabela.professorObservacao}</span>
+                    </div>
+                    {PREVIEW_ROWS.map((row, index) => (
+                      <div key={index} className="grid grid-cols-[1.35fr_.7fr_.8fr_1.05fr] border-t border-slate-300 text-[10px] leading-4 text-slate-700">
+                        {row.map((cell, cellIndex) => <span key={cellIndex} className={`flex min-h-12 items-center justify-center p-3 text-center ${cellIndex < row.length - 1 ? 'border-r border-slate-300' : ''}`}>{cellIndex === 2 && index === 2 ? draft.observacaoSemHorario : cell}</span>)}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="absolute bottom-[76px] left-[76px] right-[76px] z-10 flex items-end justify-between gap-4 border-t border-slate-200 pt-4">
+                    <p className="max-w-[340px] text-[10px] leading-4 text-slate-500">{draft.rodape}</p>
+                  </div>
+                </article>
               </div>
-              <div className="relative mt-8 flex items-end justify-between gap-4 border-t border-slate-200 pt-3">
-                <p className="max-w-[210px] text-[7px] leading-3 text-slate-500">{draft.rodape}</p>
-              </div>
-            </article>
+            </div>
           </div>
         </aside>
       </div>

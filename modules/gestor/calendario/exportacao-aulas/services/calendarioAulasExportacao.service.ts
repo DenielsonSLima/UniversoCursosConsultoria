@@ -1,5 +1,6 @@
 import { supabase } from '../../../../../lib/supabase';
 import type {
+  CalendarioAulasCabecalhoInstitucional,
   CalendarioAulasCabecalhosTabela,
   CalendarioAulasDocumento,
   CalendarioAulasExportacaoPayload,
@@ -65,6 +66,10 @@ const optionalNumber = (record: Record<string, unknown>, key: string) => (
   typeof record[key] === 'number' && Number.isFinite(record[key]) ? record[key] as number : null
 );
 
+const optionalBoolean = (record: Record<string, unknown>, key: string) => (
+  typeof record[key] === 'boolean' ? record[key] as boolean : null
+);
+
 const requiredBoolean = (record: Record<string, unknown>, key: string, context: string) => {
   if (typeof record[key] !== 'boolean') {
     throw new Error(`A resposta canônica de ${context} não informou “${key}”.`);
@@ -84,6 +89,47 @@ const mapTurma = (row: Record<string, unknown>): CalendarioAulasTurma => {
     turmaCodigo: optionalString(row, 'turma_codigo'),
     cursoNome: optionalString(row, 'curso_nome'),
     modalidade: modalidade as CalendarioAulasModalidade,
+  };
+};
+
+const mapCabecalhoInstitucional = (
+  value: unknown,
+  documento: Record<string, unknown>,
+): CalendarioAulasCabecalhoInstitucional => {
+  if (!value) {
+    // Compatibilidade transitória com uma RPC anterior à projeção completa.
+    // A exportação continua legível, mas a migração canônica passa a entregar
+    // os demais campos antes do PDF ser aberto.
+    return {
+      nome: requiredString(documento, 'instituicao', 'documento do calendário'),
+      cnpj: null,
+      contato: null,
+      email: null,
+      endereco: null,
+      numero: null,
+      bairro: null,
+      cidade: null,
+      estado: null,
+      cep: null,
+      isMatriz: false,
+      logoUrl: optionalString(documento, 'logo_data_uri'),
+    };
+  }
+
+  const row = asRecord(value, 'cabeçalho institucional do calendário');
+  return {
+    nome: requiredString(row, 'nome', 'cabeçalho institucional do calendário'),
+    cnpj: optionalString(row, 'cnpj'),
+    contato: optionalString(row, 'contato'),
+    email: optionalString(row, 'email'),
+    endereco: optionalString(row, 'endereco'),
+    numero: optionalString(row, 'numero'),
+    bairro: optionalString(row, 'bairro'),
+    cidade: optionalString(row, 'cidade'),
+    estado: optionalString(row, 'estado'),
+    cep: optionalString(row, 'cep'),
+    isMatriz: optionalBoolean(row, 'is_matriz') === true,
+    logoUrl: optionalString(row, 'logo_url'),
   };
 };
 
@@ -115,8 +161,15 @@ const mapDocumento = (value: unknown): CalendarioAulasDocumento => {
     cabecalhosTabela,
     marcaDaguaTexto: optionalString(row, 'marca_dagua_texto'),
     marcaDaguaDataUri: optionalString(row, 'marca_dagua_data_uri'),
+    marcaDaguaUrl: optionalString(row, 'marca_dagua_url'),
     marcaDaguaOpacidade: optionalNumber(row, 'marca_dagua_opacidade'),
+    marcaDaguaEscala: optionalNumber(row, 'marca_dagua_escala'),
+    marcaDaguaRotacionar: optionalBoolean(row, 'marca_dagua_rotacionar'),
     logoDataUri: optionalString(row, 'logo_data_uri'),
+    cabecalhoInstitucional: mapCabecalhoInstitucional(
+      row.cabecalho_institucional,
+      row,
+    ),
     arquivoNome: requiredString(row, 'arquivo_nome', 'documento do calendário'),
     emitidoEm: optionalString(row, 'emitido_em'),
   };
@@ -187,6 +240,7 @@ export const calendarioAulasExportacaoService = {
         p_polo_id: input.poloId,
         p_modalidade: input.modalidade,
         p_turma_id: input.turmaId,
+        p_mes_referencia: input.mesReferencia,
       },
     );
 

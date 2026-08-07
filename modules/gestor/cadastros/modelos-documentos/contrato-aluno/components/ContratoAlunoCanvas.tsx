@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { FileText, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import DocumentHeader from '../../../../components/DocumentHeader';
 import { LocalQrCodeImage } from '../../../../../shared/qrcode/LocalQrCodeImage';
+import { parseContratoAlunoClosingLayout } from '../../../../../shared/contrato-aluno/closing-layout';
 import type { ConfiguracaoQrContrato } from '../types/contrato-aluno.types';
 
 export const PAGE_WIDTH = 794;
@@ -9,22 +10,45 @@ export const PAGE_HEIGHT = 1123;
 
 const pageBreakRegex = /<div[^>]*data-page-break=["']true["'][\s\S]*?<\/div>|---QUEBRA_DE_PAGINA---/gi;
 
+export interface ContratoAlunoTemplatePage {
+  body: string;
+  /** O encerramento do contrato (local, assinaturas e testemunhas) só cabe na última folha. */
+  footer: string | null;
+}
+
+/** Corrige conteúdo salvo em versões iniciais com "\\n" literal no JSON. */
+export const normalizeContratoTemplateLineBreaks = (value: string) => value
+  .replace(/\r\n?/g, '\n')
+  .replace(/\\r\\n/g, '\n')
+  .replace(/\\n/g, '\n');
+
 /**
  * Calcula dinamicamente as páginas do contrato.
  * Se houver quebra de página explícita, respeita as marcações.
  * Caso contrário, distribui o texto automaticamente pelas páginas A4 com base na capacidade de linhas.
+ * O encerramento é aplicado uma única vez, na última página, tal como a minuta.
  */
-export const autoPaginateContractText = (corpoText: string): string[] => {
-  if (!corpoText || !corpoText.trim()) return [''];
+export const autoPaginateContractText = (
+  corpoText: string,
+  footerText = '',
+): ContratoAlunoTemplatePage[] => {
+  const normalizedBody = normalizeContratoTemplateLineBreaks(corpoText);
+  const normalizedFooter = normalizeContratoTemplateLineBreaks(footerText).trim();
+  const toPages = (bodyPages: string[]) => bodyPages.map((body, index) => ({
+    body,
+    footer: index === bodyPages.length - 1 ? normalizedFooter || null : null,
+  }));
+
+  if (!normalizedBody.trim()) return toPages(['']);
 
   // Se houver marcação explícita de quebra de página, utiliza-a
-  if (pageBreakRegex.test(corpoText)) {
-    const splitPages = corpoText.split(pageBreakRegex);
-    return splitPages.length > 0 ? splitPages : [''];
+  if (pageBreakRegex.test(normalizedBody)) {
+    const splitPages = normalizedBody.split(pageBreakRegex);
+    return toPages(splitPages.length > 0 ? splitPages : ['']);
   }
 
   // Paginação automática por capacidade de linhas/parágrafos
-  const paragraphs = corpoText.split(/\n+/);
+  const paragraphs = normalizedBody.split(/\n+/);
   const pages: string[] = [];
   let currentPageParagraphs: string[] = [];
   let currentLines = 0;
@@ -53,7 +77,7 @@ export const autoPaginateContractText = (corpoText: string): string[] => {
     pages.push(currentPageParagraphs.join('\n\n'));
   }
 
-  return pages.length > 0 ? pages : [''];
+  return toPages(pages.length > 0 ? pages : ['']);
 };
 
 interface ContratoAlunoCanvasProps {
@@ -80,7 +104,6 @@ export const ContratoAlunoCanvas: React.FC<ContratoAlunoCanvasProps> = ({
   cabecalho,
   corpo,
   rodape,
-  observacaoEscopo,
   qr,
   polo,
   centralWatermark,
@@ -88,7 +111,7 @@ export const ContratoAlunoCanvas: React.FC<ContratoAlunoCanvasProps> = ({
   onPageSelect,
 }) => {
   const [zoomScale, setZoomScale] = useState<number>(0.58);
-  const pages = autoPaginateContractText(corpo);
+  const pages = autoPaginateContractText(corpo, rodape);
   const totalPages = pages.length;
 
   const watermarkUrl =
@@ -173,6 +196,9 @@ export const ContratoAlunoCanvas: React.FC<ContratoAlunoCanvasProps> = ({
       <div className="flex flex-col gap-6 w-full items-center overflow-x-auto overflow-y-auto max-h-[820px] custom-scrollbar p-4 bg-slate-200/60 rounded-3xl border border-slate-300 shadow-inner">
         {pages.map((pageText, pageIndex) => {
           const isSelected = activePageIndex === pageIndex;
+          const isFinalPage = pageIndex === totalPages - 1;
+          const shouldRenderClosing = isFinalPage && Boolean(pageText.footer || qr.habilitado);
+          const closingLayout = parseContratoAlunoClosingLayout(pageText.footer);
 
           return (
             <div
@@ -264,53 +290,93 @@ export const ContratoAlunoCanvas: React.FC<ContratoAlunoCanvasProps> = ({
 
                   {/* Page Body Text Content */}
                   <div className="relative z-10 mt-6 mb-20 text-justify text-[11.5px] leading-[1.8] text-slate-800 font-serif whitespace-pre-wrap break-words">
-                    {pageText || (
+                    {pageText.body || (
                       <span className="italic text-slate-400 font-sans">
                         Página {pageIndex + 1} vazia ou sem texto configurado.
                       </span>
                     )}
                   </div>
 
-                  {/* Footer and QR Code Box */}
-                  <footer className="absolute bottom-[56px] left-[76px] right-[76px] z-10 border-t border-slate-200 pt-4">
-                    <div className="flex items-end justify-between gap-5">
-                      <div className="flex-1 space-y-1">
-                        <p className="whitespace-pre-wrap text-[9px] leading-relaxed text-slate-600 font-sans">
-                          {rodape}
-                        </p>
-                        {observacaoEscopo && (
-                          <p className="text-[8.5px] italic text-slate-400 font-sans">
-                            {observacaoEscopo}
-                          </p>
+                  {/* O encerramento da minuta e seu QR são exclusivos da última página. */}
+                  {shouldRenderClosing && (
+                    <footer className="absolute bottom-[176px] left-[76px] right-[76px] z-10 border-t border-slate-200 pt-4">
+                      <div className="grid grid-cols-[minmax(0,1fr)_112px] items-start gap-5">
+                        <div className="min-w-0">
+                          {closingLayout.fallbackText ? (
+                            <p className="whitespace-pre-wrap text-[9px] leading-relaxed text-slate-600 font-sans">
+                              {closingLayout.fallbackText}
+                            </p>
+                          ) : (
+                            <div className="space-y-4 font-sans text-slate-600">
+                              {closingLayout.location && (
+                                <p className="text-[9px] font-medium leading-relaxed">{closingLayout.location}</p>
+                              )}
+
+                              {closingLayout.parties.length > 0 && (
+                                <div className="grid grid-cols-2 gap-7">
+                                  {closingLayout.parties.map((party) => (
+                                    <div key={party.label} className="min-w-0 text-center">
+                                      <div className="flex h-8 items-end justify-center border-b border-slate-500 px-2 text-[8px] font-medium text-slate-700">
+                                        {party.value}
+                                      </div>
+                                      <p className="mt-1 text-[7px] font-black uppercase tracking-wider text-slate-500">{party.label}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              {closingLayout.witnesses.length > 0 && (
+                                <div>
+                                  <p className="mb-2 text-[7px] font-black uppercase tracking-wider text-slate-500">Testemunhas</p>
+                                  <div className="grid grid-cols-2 gap-7">
+                                    {closingLayout.witnesses.map((witness) => (
+                                      <div key={witness.label} className="min-w-0 text-center">
+                                        <div className="flex h-6 items-end justify-center border-b border-slate-400 px-2 text-[7px] font-medium text-slate-700">
+                                          {witness.value}
+                                        </div>
+                                        <p className="mt-1 text-[6.5px] font-bold uppercase tracking-wider text-slate-400">{witness.label}</p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {closingLayout.additionalLines.length > 0 && (
+                                <p className="whitespace-pre-wrap text-[8px] leading-relaxed text-slate-500">
+                                  {closingLayout.additionalLines.join('\n')}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* QR Code Container */}
+                        {qr.habilitado && (
+                          <div className="shrink-0 rounded-xl border border-slate-200 bg-white p-2 text-center shadow-sm w-28">
+                            <div className="w-16 h-16 mx-auto bg-white flex items-center justify-center">
+                              <LocalQrCodeImage
+                                value="https://universocursos.com/validar/PREVIA-CONTRATO"
+                                size={160}
+                                alt="QR Code de validação"
+                                className="w-full h-full pointer-events-none"
+                              />
+                            </div>
+                            <p className="mt-1 text-[7px] font-black uppercase tracking-wider text-slate-500">
+                              {qr.rotulo || 'Validar documento'}
+                            </p>
+                            <p className="text-[8px] font-mono font-black text-blue-700 tracking-wider">
+                              CON-PREVIA-001
+                            </p>
+                            <p className="text-[6.5px] font-semibold text-slate-400">
+                              {qr.modoValidade === 'POR_DIAS' && qr.diasValidade
+                                ? `Validade: ${qr.diasValidade} dias`
+                                : 'Sem vencimento'}
+                            </p>
+                          </div>
                         )}
                       </div>
-
-                      {/* QR Code Container */}
-                      {qr.habilitado && (
-                        <div className="shrink-0 rounded-xl border border-slate-200 bg-white p-2 text-center shadow-sm w-28">
-                          <div className="w-16 h-16 mx-auto bg-white flex items-center justify-center">
-                            <LocalQrCodeImage
-                              value="https://universocursos.com/validar/PREVIA-CONTRATO"
-                              size={160}
-                              alt="QR Code de validação"
-                              className="w-full h-full pointer-events-none"
-                            />
-                          </div>
-                          <p className="mt-1 text-[7px] font-black uppercase tracking-wider text-slate-500">
-                            {qr.rotulo || 'Validar documento'}
-                          </p>
-                          <p className="text-[8px] font-mono font-black text-blue-700 tracking-wider">
-                            CON-PREVIA-001
-                          </p>
-                          <p className="text-[6.5px] font-semibold text-slate-400">
-                            {qr.modoValidade === 'POR_DIAS' && qr.diasValidade
-                              ? `Validade: ${qr.diasValidade} dias`
-                              : 'Sem vencimento'}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </footer>
+                    </footer>
+                  )}
                 </article>
               </div>
             </div>

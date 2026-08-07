@@ -437,7 +437,11 @@ const AgendaWorkspace: React.FC<AgendaWorkspaceProps> = ({
       </section>
 
       {!isProfessor && !isStudent ? (
-        <CalendarioAulasExportPanel key={poloId || 'sem-polo'} poloId={poloId} />
+        <CalendarioAulasExportPanel
+          key={`${poloId || 'sem-polo'}-${currentYear}-${currentMonthIndex}`}
+          poloId={poloId}
+          mesReferencia={`${currentYear}-${String(currentMonthIndex + 1).padStart(2, '0')}-01`}
+        />
       ) : null}
 
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">

@@ -29,7 +29,7 @@ const DEFAULT_CONTENT: ConteudoModeloCalendarioAulas = {
     componente: 'Componente curricular',
     data: 'Data',
     horario: 'Horário',
-    professorObservacao: 'Professor(es) / observação',
+    professorObservacao: 'Professor(a)',
   },
 };
 
