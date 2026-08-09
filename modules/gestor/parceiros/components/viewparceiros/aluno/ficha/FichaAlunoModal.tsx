@@ -242,15 +242,7 @@ const FichaAlunoModal: React.FC<FichaAlunoModalProps> = ({ aluno, onClose }) => 
                 company={company} 
                 polo={documentPolo} 
                 orientation="portrait" 
-                rightContent={
-                  <div className="text-right">
-                    <h2 className="text-lg font-black text-slate-800 uppercase tracking-tight">Ficha Cadastral</h2>
-                    <div className="px-3 py-1 bg-slate-100 rounded-lg inline-block mt-2">
-                       <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Matrícula</p>
-                       <p className="text-sm font-bold text-[#001a33]">{matriculaLabel}</p>
-                    </div>
-                  </div>
-                }
+                meta={{ title: 'Ficha Cadastral', label: 'Matrícula', value: matriculaLabel }}
               />
             )}
 
@@ -281,15 +273,7 @@ const FichaAlunoModal: React.FC<FichaAlunoModalProps> = ({ aluno, onClose }) => 
                       company={company}
                       polo={documentPolo}
                       orientation="portrait"
-                      rightContent={
-                        <div className="text-right">
-                          <h2 className="text-lg font-black text-slate-800 uppercase tracking-tight">Ficha Cadastral</h2>
-                          <div className="px-3 py-1 bg-slate-100 rounded-lg inline-block mt-2">
-                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Matrícula</p>
-                            <p className="text-sm font-bold text-[#001a33]">{matriculaLabel}</p>
-                          </div>
-                        </div>
-                      }
+                      meta={{ title: 'Ficha Cadastral', label: 'Matrícula', value: matriculaLabel }}
                     />
 
                     <div

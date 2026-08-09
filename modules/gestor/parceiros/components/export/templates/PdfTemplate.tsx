@@ -37,7 +37,8 @@ const tabLabels: Record<ParceirosTabType, string> = {
 };
 
 const FIRST_PAGE_ROW_LIMIT = 12;
-const CONTINUATION_PAGE_ROW_LIMIT = 18;
+// A faixa de metadados do cabeçalho reduz a área útil das continuações.
+const CONTINUATION_PAGE_ROW_LIMIT = 16;
 
 const paginateRows = (rows: ParceiroExportRow[]) => {
   if (rows.length === 0) return [[]];
@@ -112,19 +113,11 @@ const PdfTemplate: React.FC<PdfTemplateProps> = ({
               company={company}
               polo={polo}
               orientation="portrait"
-              rightContent={
-                <div className="text-right">
-                  <h2 className="text-sm font-black uppercase tracking-tight text-slate-800">
-                    Relatório de Parceiros
-                  </h2>
-                  <p className="mt-2 text-[8px] font-bold uppercase text-slate-500">
-                    Data de emissão
-                  </p>
-                  <p className="text-xs font-bold text-[#001a33]">
-                    {new Date().toLocaleDateString('pt-BR')}
-                  </p>
-                </div>
-              }
+              meta={{
+                title: 'Relatório de Parceiros',
+                label: 'Data de emissão',
+                value: new Date().toLocaleDateString('pt-BR'),
+              }}
             />
 
             {pageIndex === 0 && (

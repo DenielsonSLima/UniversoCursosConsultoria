@@ -139,7 +139,7 @@ const ContratoAlunoDocumentRenderer = ({ document }: ContratoAlunoDocumentRender
           )}
 
           <header className="relative z-10 text-center">
-            <DocumentHeader polo={poloInfo} orientation="portrait" showLegalName={false} />
+            <DocumentHeader polo={poloInfo} orientation="portrait" />
             {sectionHeader && <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#001a33]">{sectionHeader}</p>}
             {(isLegacyPresentation || pageIndex === 0) && (
               <div className={`mx-auto h-0.5 w-20 bg-[#ed1c4e] ${sectionHeader ? 'mt-2.5' : ''}`} />

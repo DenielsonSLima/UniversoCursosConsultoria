@@ -5,6 +5,11 @@ import {
   formatCaixaDate,
   formatCaixaInstallment,
 } from '../caixa.formatters';
+import {
+  drawCanonicalInstitutionalHeader,
+  normalizeCanonicalInstitutionalHeader,
+} from '../../secretaria/shared/canonical-institutional-header-pdf';
+import { getCanonicalPdfInlineImage } from '../../secretaria/shared/canonical-document-vector-pdf';
 import { buildCaixaReportPages } from './caixa-report.pagination';
 import type {
   CaixaDetailedReport,
@@ -20,7 +25,6 @@ const PAGE_HEIGHT = 210;
 const CONTENT_LEFT = 15;
 const CONTENT_RIGHT = 289;
 const CONTENT_WIDTH = CONTENT_RIGHT - CONTENT_LEFT;
-const HEADER_BOTTOM = 42;
 const FOOTER_TOP = 201;
 const FONT_NAME = 'InterUniverso';
 type FontStyle = 'normal' | 'medium' | 'semibold' | 'bold' | 'extrabold' | 'black';
@@ -207,30 +211,6 @@ const drawText = (
   return lines.length;
 };
 
-const addContainedImage = (
-  pdf: jsPDF,
-  dataUrl: string,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-) => {
-  const properties = pdf.getImageProperties(dataUrl);
-  const ratio = Math.min(width / properties.width, height / properties.height);
-  const imageWidth = properties.width * ratio;
-  const imageHeight = properties.height * ratio;
-  pdf.addImage(
-    dataUrl,
-    properties.fileType || 'PNG',
-    x + ((width - imageWidth) / 2),
-    y + ((height - imageHeight) / 2),
-    imageWidth,
-    imageHeight,
-    undefined,
-    'FAST',
-  );
-};
-
 const drawPageBackground = (
   pdf: jsPDF,
   report: CaixaDetailedReport,
@@ -283,66 +263,6 @@ const drawPageBackground = (
     return;
   }
 
-};
-
-const drawHeader = (
-  pdf: jsPDF,
-  report: CaixaDetailedReport,
-  logo: string | null,
-) => {
-  pdf.setFillColor(COLORS.white);
-  pdf.setDrawColor(COLORS.slate200);
-  pdf.roundedRect(CONTENT_LEFT, 8, 26, 26, 3, 3, 'FD');
-  if (logo) addContainedImage(pdf, logo, CONTENT_LEFT + 1.5, 9.5, 23, 23);
-
-  const institution = report.institucional;
-  setText(pdf, COLORS.navy, 13, 'black');
-  const institutionName = institution.nome.toUpperCase();
-  drawText(pdf, institutionName, 46, 12.5, 100, { maxLines: 1, charSpace: -0.05 });
-  if (institution.is_matriz) {
-    const badgeX = Math.min(151, 46 + pdf.getTextWidth(institutionName) + 3);
-    pdf.setFillColor(COLORS.slate100);
-    pdf.setDrawColor(COLORS.slate200);
-    pdf.roundedRect(badgeX, 12, 14, 5, 1.5, 1.5, 'FD');
-    setText(pdf, COLORS.navy, 6.5, 'extrabold');
-    drawText(pdf, 'MATRIZ', badgeX + 7, 13.1, undefined, { align: 'center' });
-  }
-
-  const drawDetail = (label: string, value: string, x: number, y: number) => {
-    setText(pdf, COLORS.slate700, 8, 'bold');
-    drawText(pdf, label, x, y);
-    const labelWidth = pdf.getTextWidth(label);
-    setText(pdf, COLORS.slate600, 8, 'medium');
-    drawText(pdf, value, x + labelWidth + 1, y);
-  };
-  drawDetail('CNPJ:', institution.cnpj || 'Não informado', 46, 21.5);
-  drawDetail('Contato:', institution.telefone || 'Não informado', 46, 26.5);
-
-  const address = [
-    `${institution.endereco || ''}${institution.numero ? `, ${institution.numero}` : ''}`,
-    institution.bairro,
-    `${institution.cidade || ''}${institution.estado ? `/${institution.estado}` : ''}`,
-    institution.cep ? `CEP: ${institution.cep}` : '',
-  ].filter(Boolean).join(' - ');
-  setText(pdf, COLORS.slate700, 8, 'bold');
-  drawText(pdf, 'Endereço:', 123, 21.5);
-  const addressX = 123 + pdf.getTextWidth('Endereço:') + 1;
-  setText(pdf, COLORS.slate600, 8, 'medium');
-  drawText(pdf, address, addressX, 21.5, 199 - addressX, { maxLines: 2 });
-
-  setText(pdf, COLORS.slate400, 6.5, 'black');
-  drawText(pdf, 'CAIXA · USO INTERNO', CONTENT_RIGHT, 9, undefined, { align: 'right', charSpace: 0.18 });
-  setText(pdf, COLORS.navy, 6.8, 'black');
-  drawText(pdf, report.resumo.meta.escopoRotulo.toUpperCase(), CONTENT_RIGHT, 14, 88, {
-    align: 'right',
-    maxLines: 1,
-  });
-  setText(pdf, COLORS.slate500, 6.5, 'bold');
-  drawText(pdf, formatCaixaCompetencia(report.resumo.meta.competencia), CONTENT_RIGHT, 23, undefined, { align: 'right' });
-
-  pdf.setDrawColor(COLORS.slate200);
-  pdf.setLineWidth(0.35);
-  pdf.line(CONTENT_LEFT, HEADER_BOTTOM, CONTENT_RIGHT, HEADER_BOTTOM);
 };
 
 const drawFooter = (pdf: jsPDF, report: CaixaDetailedReport, pageNumber: number, pageCount: number) => {
@@ -429,15 +349,15 @@ const drawComposition = (
   });
 };
 
-const drawSummaryPage = (pdf: jsPDF, report: CaixaDetailedReport) => {
+const drawSummaryPage = (pdf: jsPDF, report: CaixaDetailedReport, contentTop: number) => {
   setText(pdf, COLORS.navy, 16, 'black');
-  drawText(pdf, 'PRESTAÇÃO DE CONTAS MENSAL', CONTENT_LEFT, 49);
+  drawText(pdf, 'PRESTAÇÃO DE CONTAS MENSAL', CONTENT_LEFT, contentTop);
   setText(pdf, COLORS.slate500, 6.5);
   drawText(
     pdf,
     `Posição contábil e movimentos confirmados de ${formatCaixaCompetencia(report.resumo.meta.competencia)}. Os compromissos em aberto refletem a posição apurada na geração do relatório.`,
     CONTENT_LEFT,
-    56,
+    contentTop + 7,
     CONTENT_WIDTH,
     { maxLines: 1 },
   );
@@ -461,7 +381,7 @@ const drawSummaryPage = (pdf: jsPDF, report: CaixaDetailedReport) => {
     drawCard(
       pdf,
       CONTENT_LEFT + (column * (cardWidth + gap)),
-      61 + (row * 19),
+      contentTop + 12 + (row * 19),
       cardWidth,
       16.5,
       card[0],
@@ -472,25 +392,28 @@ const drawSummaryPage = (pdf: jsPDF, report: CaixaDetailedReport) => {
   });
 
   const half = (CONTENT_WIDTH - gap) / 2;
-  drawComposition(pdf, CONTENT_LEFT, 100, half, report.totaisRecebimentos, 'emerald');
-  drawComposition(pdf, CONTENT_LEFT + half + gap, 100, half, report.totaisDespesas, 'rose');
+  drawComposition(pdf, CONTENT_LEFT, contentTop + 51, half, report.totaisRecebimentos, 'emerald');
+  drawComposition(pdf, CONTENT_LEFT + half + gap, contentTop + 51, half, report.totaisDespesas, 'rose');
 
   pdf.setFillColor('#eff6ff');
   pdf.setDrawColor('#dbeafe');
-  pdf.roundedRect(CONTENT_LEFT, 123.5, CONTENT_WIDTH, 6, 2, 2, 'FD');
+  pdf.roundedRect(CONTENT_LEFT, contentTop + 74.5, CONTENT_WIDTH, 6, 2, 2, 'FD');
   setText(pdf, '#1e3a8a', 5.6, 'bold');
-  drawText(pdf, 'Leitura correta: o resultado mensal representa o fluxo de caixa confirmado, não lucro contábil por competência. O saldo Banese é a posição contábil do sistema; a integração atual não consulta o extrato bancário.', CONTENT_LEFT + 3, 125, CONTENT_WIDTH - 6, { maxLines: 1 });
+  drawText(pdf, 'Leitura correta: o resultado mensal representa o fluxo de caixa confirmado, não lucro contábil por competência. O saldo Banese é a posição contábil do sistema; a integração atual não consulta o extrato bancário.', CONTENT_LEFT + 3, contentTop + 76, CONTENT_WIDTH - 6, { maxLines: 1 });
 
-  drawSummaryPanels(pdf, report, 132);
+  drawSummaryPanels(pdf, report, contentTop + 83);
 };
 
 const drawSummaryPanels = (pdf: jsPDF, report: CaixaDetailedReport, y: number) => {
   const gap = 2.5;
   const half = (CONTENT_WIDTH - gap) / 2;
+  const panelHeight = Math.min(62, FOOTER_TOP - y - 7);
+  const modalityStep = Math.min(10.5, (panelHeight - 19) / 4);
+  const courseStep = Math.min(9, (panelHeight - 18) / 5);
   const drawPanel = (x: number, eyebrow: string, title: string) => {
     pdf.setFillColor(COLORS.white);
     pdf.setDrawColor(COLORS.slate200);
-    pdf.roundedRect(x, y, half, 62, 2.5, 2.5, 'FD');
+    pdf.roundedRect(x, y, half, panelHeight, 2.5, 2.5, 'FD');
     setText(pdf, COLORS.blue, 6, 'black');
     drawText(pdf, eyebrow.toUpperCase(), x + 3, y + 3);
     setText(pdf, COLORS.navy, 7.5, 'black');
@@ -506,7 +429,7 @@ const drawSummaryPanels = (pdf: jsPDF, report: CaixaDetailedReport, y: number) =
   )).filter(Boolean);
   modalities.forEach((item, index) => {
     if (!item) return;
-    const rowY = y + 14 + (index * 10.5);
+    const rowY = y + 14 + (index * modalityStep);
     setText(pdf, COLORS.slate700, 6.5, 'bold');
     drawText(pdf, item.rotulo, CONTENT_LEFT + 3, rowY, half - 33, { maxLines: 1 });
     setText(pdf, COLORS.slate500, 5.5);
@@ -517,14 +440,15 @@ const drawSummaryPanels = (pdf: jsPDF, report: CaixaDetailedReport, y: number) =
 
   const courseX = CONTENT_LEFT + half + gap;
   if (report.resumoCursos.itens.length === 0) {
+    const emptyStateHeight = panelHeight - 18;
     pdf.setFillColor(COLORS.slate100);
-    pdf.roundedRect(courseX + 3, y + 15, half - 6, 35, 2, 2, 'F');
+    pdf.roundedRect(courseX + 3, y + 15, half - 6, emptyStateHeight, 2, 2, 'F');
     setText(pdf, COLORS.slate500, 6);
-    drawText(pdf, 'Nenhum curso parcelado possui previsão, recebimento ou atraso nesta competência.', courseX + (half / 2), y + 30, half - 18, { align: 'center', maxLines: 2 });
+    drawText(pdf, 'Nenhum curso parcelado possui previsão, recebimento ou atraso nesta competência.', courseX + (half / 2), y + 15 + (emptyStateHeight / 2), half - 18, { align: 'center', maxLines: 2 });
     return;
   }
   report.resumoCursos.itens.slice(0, 5).forEach((item, index) => {
-    const rowY = y + 14 + (index * 9);
+    const rowY = y + 14 + (index * courseStep);
     setText(pdf, COLORS.slate700, 5.8, 'bold');
     drawText(pdf, item.curso, courseX + 3, rowY, half - 53, { maxLines: 1 });
     setText(pdf, COLORS.slate500, 5);
@@ -538,15 +462,15 @@ const drawSummaryPanels = (pdf: jsPDF, report: CaixaDetailedReport, y: number) =
   });
 };
 
-const drawSectionHeading = (pdf: jsPDF, title: string, description: string, page: number, tone: Tone) => {
+const drawSectionHeading = (pdf: jsPDF, title: string, description: string, page: number, tone: Tone, contentTop: number) => {
   setText(pdf, tone === 'emerald' ? COLORS.emerald700 : COLORS.rose700, 14, 'black');
-  drawText(pdf, title.toUpperCase(), CONTENT_LEFT, 49);
+  drawText(pdf, title.toUpperCase(), CONTENT_LEFT, contentTop);
   setText(pdf, COLORS.slate500, 6.5);
-  drawText(pdf, description, CONTENT_LEFT, 55);
+  drawText(pdf, description, CONTENT_LEFT, contentTop + 6);
   setText(pdf, COLORS.slate500, 6, 'black');
-  drawText(pdf, `PÁGINA DA SEÇÃO ${page}`, CONTENT_RIGHT, 54, undefined, { align: 'right' });
+  drawText(pdf, `PÁGINA DA SEÇÃO ${page}`, CONTENT_RIGHT, contentTop + 5, undefined, { align: 'right' });
   pdf.setDrawColor(COLORS.slate200);
-  pdf.line(CONTENT_LEFT, 59, CONTENT_RIGHT, 59);
+  pdf.line(CONTENT_LEFT, contentTop + 10, CONTENT_RIGHT, contentTop + 10);
 };
 
 const drawMovementTable = (
@@ -555,16 +479,20 @@ const drawMovementTable = (
   totals: CaixaReportTotals,
   showTotals: boolean,
   tone: Tone,
+  contentTop: number,
 ) => {
   const x = CONTENT_LEFT;
-  const y = 63;
+  const y = contentTop + 14;
   const widths = [32, 52, 47, 54, 23, 39, 27];
   const headers = ['DATA / PARCELA', 'PESSOA / DESCRIÇÃO', 'CLASSIFICAÇÃO', 'ORIGEM / CONTA', 'BASE', 'AJUSTES', tone === 'emerald' ? 'RECEBIDO' : 'PAGO'];
   const accent = tone === 'emerald' ? COLORS.emerald700 : COLORS.rose700;
   const border = tone === 'emerald' ? COLORS.emerald100 : COLORS.rose100;
   const footerFill = tone === 'emerald' ? COLORS.emerald50 : COLORS.rose50;
-  const rowHeight = rows.length === 0 ? 45 : 22;
   const footerHeight = showTotals ? 17 : 0;
+  const availableRowsHeight = FOOTER_TOP - 4 - y - 8 - footerHeight;
+  const rowHeight = rows.length === 0
+    ? Math.min(45, availableRowsHeight)
+    : Math.min(22, availableRowsHeight / rows.length);
   const tableHeight = 8 + (Math.max(rows.length, 1) * rowHeight) + footerHeight;
   pdf.setFillColor(COLORS.white);
   pdf.setDrawColor(border);
@@ -611,7 +539,7 @@ const drawMovementTable = (
             style: sourceIndex === 0 ? column.firstStyle : undefined,
           }))
         ));
-        const lineStep = Math.min(3.45, 16.8 / Math.max(1, wrappedLines.length - 1));
+        const lineStep = Math.min(3.45, (rowHeight - 5.2) / Math.max(1, wrappedLines.length - 1));
         const fittedFontSize = Math.min(fontSize, Math.max(3.8, lineStep / 0.52));
         wrappedLines.forEach(({ text, style }, lineIndex) => {
           setText(pdf, column.color || (style ? COLORS.slate900 : COLORS.slate500), fittedFontSize, style || 'normal');
@@ -668,20 +596,21 @@ const drawRecurringTable = (
   page: number,
   showModalities: boolean,
   showTotals: boolean,
+  contentTop: number,
 ) => {
   setText(pdf, COLORS.blue, 6, 'black');
-  drawText(pdf, 'CARTEIRA PARCELADA · EAD NÃO INCLUÍDO', CONTENT_LEFT, 48);
+  drawText(pdf, 'CARTEIRA PARCELADA · EAD NÃO INCLUÍDO', CONTENT_LEFT, contentTop);
   setText(pdf, COLORS.navy, 14, 'black');
-  drawText(pdf, 'ACOMPANHAMENTO POR MODALIDADE E TURMA', CONTENT_LEFT, 52);
+  drawText(pdf, 'ACOMPANHAMENTO POR MODALIDADE E TURMA', CONTENT_LEFT, contentTop + 4);
   setText(pdf, COLORS.slate500, 6);
-  drawText(pdf, 'Valores previstos, recebidos, vencidos e ajustes confirmados na competência.', CONTENT_LEFT, 58);
+  drawText(pdf, 'Valores previstos, recebidos, vencidos e ajustes confirmados na competência.', CONTENT_LEFT, contentTop + 10);
   setText(pdf, COLORS.slate500, 6, 'black');
-  drawText(pdf, `PÁGINA DA SEÇÃO ${page}`, CONTENT_RIGHT, 56, undefined, { align: 'right' });
+  drawText(pdf, `PÁGINA DA SEÇÃO ${page}`, CONTENT_RIGHT, contentTop + 8, undefined, { align: 'right' });
 
   const tableRows: CaixaReportRecurringBreakdown[] = showModalities
     ? report.analiseRecorrente.modalidades
     : rows;
-  const tableY = 65;
+  const tableY = contentTop + 17;
   const firstWidth = 73;
   const valueWidth = (CONTENT_WIDTH - firstWidth) / recurringFields.length;
   pdf.setFillColor(COLORS.white);
@@ -786,6 +715,17 @@ export const createCaixaReportPdfDocument = async (
       : fetchAsDataUrl(report.institucional.landscape_watermark_url || fallbackArtworkUrl),
   ]);
   const pages = buildCaixaReportPages(report.recebimentos, report.despesas, report.analiseRecorrente.turmas);
+  const institution = normalizeCanonicalInstitutionalHeader({
+    ...report.institucional,
+    uf: report.institucional.estado,
+  });
+  const canonicalLogo = getCanonicalPdfInlineImage(logo);
+  const meta = {
+    eyebrow: 'Caixa · uso interno',
+    title: report.resumo.meta.escopoRotulo,
+    label: 'Competência',
+    value: formatCaixaCompetencia(report.resumo.meta.competencia),
+  };
 
   for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
     const page = pages[pageIndex];
@@ -795,19 +735,24 @@ export const createCaixaReportPdfDocument = async (
       await new Promise<void>((resolve) => globalThis.setTimeout(resolve, 0));
     }
     drawPageBackground(pdf, report, background, backgroundUsesFallback);
-    drawHeader(pdf, report, logo);
+    const headerLayout = drawCanonicalInstitutionalHeader(pdf, institution, canonicalLogo, {
+      orientation: 'landscape',
+      alias: 'caixa-institutional-header-logo',
+      meta,
+    });
+    const contentTop = headerLayout.contentTop;
     const isLastSectionPage = pageIndex === pages.length - 1 || pages[pageIndex + 1]?.section !== page.section;
-    if (page.section === 'RESUMO') drawSummaryPage(pdf, report);
+    if (page.section === 'RESUMO') drawSummaryPage(pdf, report, contentTop);
     if (page.section === 'RECEBIMENTOS') {
-      drawSectionHeading(pdf, 'Recebimentos confirmados', 'Aluno/pagador, parcela, curso, turma, conta e composição financeira.', page.sectionPage, 'emerald');
-      drawMovementTable(pdf, page.rows as CaixaReportReceipt[], report.totaisRecebimentos, isLastSectionPage, 'emerald');
+      drawSectionHeading(pdf, 'Recebimentos confirmados', 'Aluno/pagador, parcela, curso, turma, conta e composição financeira.', page.sectionPage, 'emerald', contentTop);
+      drawMovementTable(pdf, page.rows as CaixaReportReceipt[], report.totaisRecebimentos, isLastSectionPage, 'emerald', contentTop);
     }
     if (page.section === 'DESPESAS') {
-      drawSectionHeading(pdf, 'Despesas pagas', 'Fornecedor, classificação, parcela, conta e composição financeira.', page.sectionPage, 'rose');
-      drawMovementTable(pdf, page.rows as CaixaReportExpense[], report.totaisDespesas, isLastSectionPage, 'rose');
+      drawSectionHeading(pdf, 'Despesas pagas', 'Fornecedor, classificação, parcela, conta e composição financeira.', page.sectionPage, 'rose', contentTop);
+      drawMovementTable(pdf, page.rows as CaixaReportExpense[], report.totaisDespesas, isLastSectionPage, 'rose', contentTop);
     }
     if (page.section === 'CARTEIRA_RECORRENTE') {
-      drawRecurringTable(pdf, report, page.rows as CaixaReportRecurringClass[], page.sectionPage, page.sectionPage === 1, isLastSectionPage);
+      drawRecurringTable(pdf, report, page.rows as CaixaReportRecurringClass[], page.sectionPage, page.sectionPage === 1, isLastSectionPage, contentTop);
     }
     drawFooter(pdf, report, pageIndex + 1, pages.length);
   }

@@ -284,7 +284,7 @@ export const ContratoAlunoCanvas: React.FC<ContratoAlunoCanvasProps> = ({
 
                   {/* Institutional Header (DocumentHeader) */}
                   <div className="relative z-10">
-                    <DocumentHeader polo={polo} orientation="portrait" showLegalName={false} />
+                    <DocumentHeader polo={polo} orientation="portrait" />
                   </div>
 
                   {/* Document Title Header (shown on page 1) */}

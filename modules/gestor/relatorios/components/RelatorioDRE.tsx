@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Printer, Calendar, TrendingUp, BarChart2 } from 'lucide-react';
 import { supabase } from '../../../../lib/supabase';
 import DocumentHeader from '../../components/DocumentHeader';
+import { A4ReportPrintStyles } from './RelatorioShared';
 import ReportWatermark from './ReportWatermark';
 
 interface RelatorioDREProps {
@@ -194,7 +195,7 @@ const RelatorioDRE: React.FC<RelatorioDREProps> = ({ company, polo }) => {
           </div>
         ) : (
           <div 
-            className="bg-white w-[210mm] min-w-[210mm] min-h-[297mm] shadow-lg p-10 relative flex flex-col print:shadow-none print:p-0 print:w-auto print:max-w-none print:min-h-0 text-slate-800 shrink-0"
+            className="a4-report-page relative box-border flex h-[297mm] min-h-[297mm] w-[210mm] min-w-[210mm] shrink-0 flex-col bg-white p-10 text-slate-800 shadow-lg"
             id="print-area"
           >
             {/* Watermark (Marca d'água) */}
@@ -205,15 +206,7 @@ const RelatorioDRE: React.FC<RelatorioDREProps> = ({ company, polo }) => {
               company={company} 
               polo={polo} 
               orientation="portrait"
-              rightContent={
-                <div className="text-right">
-                  <h2 className="text-sm font-black text-slate-800 uppercase tracking-tight">Demonstrativo Contábil</h2>
-                  <div className="px-2.5 py-1 bg-slate-100 rounded-lg inline-block mt-2">
-                     <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Modelo</p>
-                     <p className="text-[10px] font-bold text-[#001a33] uppercase">DRE Simplificado</p>
-                  </div>
-                </div>
-              }
+              meta={{ title: 'Demonstrativo Contábil', label: 'Modelo', value: 'DRE Simplificado' }}
             />
 
             {/* Title / Description */}
@@ -334,22 +327,7 @@ const RelatorioDRE: React.FC<RelatorioDREProps> = ({ company, polo }) => {
         )}
       </div>
 
-      <style>{`
-        @media print {
-          body * {
-            visibility: hidden;
-          }
-          #print-area, #print-area * {
-            visibility: visible;
-          }
-          #print-area {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-          }
-        }
-      `}</style>
+      <A4ReportPrintStyles />
     </div>
   );
 };

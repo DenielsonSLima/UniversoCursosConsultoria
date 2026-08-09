@@ -462,7 +462,7 @@ test("preview oficial recebe um Blob PDF nativo, sem conversor de página em can
   assert.match(contractPdf, /resolveContractPresentationMode/);
   assert.match(contractPdf, /watermark\.rotate \? -45 : 0/);
   assert.match(contractPdf, /normalizeContractSectionHeader\(page\.header/);
-  assert.match(contractPdf, /showLegalName: false/);
+  assert.doesNotMatch(contractPdf, /showLegalName/);
   assert.match(contractPdf, /drawCanonicalPdfText\(pdf, sectionHeader/);
   assert.match(contractPdf, /resolveCanonicalPdfPhoto/);
   assert.doesNotMatch(contractPdf, /align: 'justify'/);

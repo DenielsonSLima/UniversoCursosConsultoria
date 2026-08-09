@@ -39,13 +39,16 @@ export interface Turma {
   alunosAtivos?: number;
   alunosInativos?: number;
   vagasTotais: number;
+  cobrarMatricula?: boolean;
   valorMatricula: number;
+  cobrarRematricula?: boolean;
   valorRematricula: number;
   qtdParcelas: number;
   valorParcela: number;
   descontoPontualidade: number;
   jurosAtraso: number;
   multaAtraso: number;
+  multaAtrasoPercentual?: number;
   diaVencimentoPadrao?: number;
   instrucaoBoletoCarne?: string;
   origemFinanceira?: 'LEGADO' | 'NORMAL';

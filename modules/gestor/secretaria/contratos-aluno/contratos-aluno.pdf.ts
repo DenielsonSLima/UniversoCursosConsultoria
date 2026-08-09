@@ -839,7 +839,6 @@ const drawContractPage = (
     drawCanonicalInstitutionalHeader(pdf, visual.institution, logo, {
       orientation: "portrait",
       alias: "contrato-logo-institucional",
-      showLegalName: false,
     });
     if (sectionHeader) {
       pdf.setFont("helvetica", "bold");

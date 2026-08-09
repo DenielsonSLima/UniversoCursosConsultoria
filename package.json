@@ -36,6 +36,7 @@
     "test:agent-operations": "node scripts/test-agent-operation.mjs",
     "test:saldo-inicial": "node scripts/test-saldo-inicial.mjs",
     "test:document-validation": "node scripts/test-document-validation.mjs",
+    "test:institutional-header": "deno test --allow-read --allow-env modules/gestor/components/institutional-header.model.test.ts modules/gestor/components/institutional-header.parity.contract.test.ts modules/gestor/cadastros/modelos-documentos/cabecalho-institucional/cabecalho-institucional.contract.test.ts",
     "test:contratos-aluno": "deno test --allow-read --allow-env modules/gestor/secretaria/contratos-aluno/contratos-aluno-workspace.contract.test.ts modules/gestor/secretaria/shared/canonical-document-vector-pdf.contract.test.ts modules/gestor/secretaria/historico-emissoes/emission-document.pdf.contract.test.ts supabase/tests/contrato_aluno_canonical_emission.contract.test.ts",
     "seed:ead-users": "node scripts/create-ead-test-accounts.mjs",
     "sitemap:ead": "node scripts/generate-ead-sitemap.mjs",

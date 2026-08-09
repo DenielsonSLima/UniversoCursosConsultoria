@@ -52,7 +52,15 @@ const accessibleDialogSource = readFileSync(
   "utf8",
 );
 const technicalClassFormSource = readFileSync(
-  resolve(baseDir, "../../../../components/forms/TurmaTecnicoForm.tsx"),
+  resolve(baseDir, "../../../../components/forms/turma-tecnico/TurmaTecnicoForm.tsx"),
+  "utf8",
+);
+const technicalClassFormConstantsSource = readFileSync(
+  resolve(baseDir, "../../../../components/forms/turma-tecnico/turma-tecnico-form.constants.ts"),
+  "utf8",
+);
+const technicalClassFinancialStepSource = readFileSync(
+  resolve(baseDir, "../../../../components/forms/turma-tecnico/TurmaTecnicoFinanceiroStep.tsx"),
   "utf8",
 );
 
@@ -270,19 +278,24 @@ test("lote exige IDs únicos e retorno coerente com o modo solicitado", () => {
   );
 });
 
-test("nova turma exige regra explícita e o modal não duplica criação", () => {
-  assert.match(technicalClassFormSource, /valorMatricula: 0/);
-  assert.match(technicalClassFormSource, /valorRematricula: 0/);
-  assert.match(technicalClassFormSource, /qtdParcelas: 12/);
-  assert.match(technicalClassFormSource, /valorParcela: 0/);
-  assert.doesNotMatch(technicalClassFormSource, /valorMatricula: 150/);
+test("nova turma coleta a regra flexível sem duplicar a criação financeira", () => {
+  assert.match(technicalClassFormConstantsSource, /cobrarMatricula: true/);
+  assert.match(technicalClassFormConstantsSource, /valorMatricula: 150/);
+  assert.match(technicalClassFormConstantsSource, /cobrarRematricula: true/);
+  assert.match(technicalClassFormConstantsSource, /valorRematricula: 150/);
+  assert.match(technicalClassFormConstantsSource, /qtdParcelas: 12/);
+  assert.match(technicalClassFormConstantsSource, /valorParcela: 279\.9/);
+  assert.match(technicalClassFinancialStepSource, /Gerar cobrança de matrícula/);
+  assert.match(technicalClassFinancialStepSource, /cobrarMatricula: enabled/);
+  assert.match(technicalClassFormSource, /multaAtraso: 0/);
+  assert.match(technicalClassFormSource, /cronogramaFinanceiro: \[\]/);
   assert.match(technicalClassFormSource, /sincronizarAsaasFuturo: false/);
   assert.match(technicalClassFormSource, /useAccessibleDialog/);
   assert.match(technicalClassFormSource, /role="dialog"/);
   assert.match(technicalClassFormSource, /aria-modal="true"/);
   assert.match(technicalClassFormSource, /disabled=\{isSaving\}/);
   assert.match(
-    technicalClassFormSource,
+    technicalClassFinancialStepSource,
     /disabled=\{formData\.origemFinanceira === 'LEGADO'\}/,
   );
 });

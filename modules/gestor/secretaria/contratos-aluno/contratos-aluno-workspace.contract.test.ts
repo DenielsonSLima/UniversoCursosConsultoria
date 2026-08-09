@@ -76,9 +76,9 @@ test('editor do contrato respeita cabeçalho vazio e não repete a identidade in
   ]);
 
   assert.match(canvas, /normalizeContractSectionHeader\(cabecalho/);
-  assert.match(canvas, /showLegalName=\{false\}/);
+  assert.doesNotMatch(canvas, /showLegalName/);
   assert.doesNotMatch(canvas, /cabecalho \|\| 'UNIVERSO CURSOS E CONSULTORIA'/);
   assert.match(service, /cabecalho: ''/);
   assert.match(service, /normalizeContractSectionHeader/);
-  assert.match(documentHeader, /showLegalName && resolvedRazao/);
+  assert.doesNotMatch(documentHeader, /showLegalName|resolvedRazao/);
 });

@@ -380,15 +380,7 @@ const FinancialReportPreviewModal: React.FC<FinancialReportPreviewModalProps> = 
                         company={reportCompany}
                         polo={reportPolo}
                         orientation="portrait"
-                        rightContent={
-                          <div className="text-right">
-                            <h2 className="text-sm font-black uppercase tracking-tight text-slate-800">{rightTitle}</h2>
-                            <div className="mt-3 inline-block rounded-lg bg-slate-100 px-2.5 py-1">
-                              <p className="text-[8px] font-black uppercase tracking-widest text-slate-500">Tipo</p>
-                              <p className="text-[10px] font-black uppercase text-[#001a33]">{rightType}</p>
-                            </div>
-                          </div>
-                        }
+                        meta={{ title: rightTitle, label: 'Tipo', value: rightType }}
                       />
 
                       {isFirstPage ? (

@@ -59,7 +59,7 @@ const makeReport = (): CaixaDetailedReport => ({
     bairro: 'Centro',
     cep: '49950-000',
     telefone: '(79) 99602-8316',
-    email: '',
+    email: 'email-desatualizado@polo.local',
     logo_url: null,
     is_matriz: true,
     watermark_url: null,
@@ -180,6 +180,9 @@ test('gera páginas com texto vetorial visível, Inter incorporada e nenhuma cap
   assert.ok(pages.every((page) => page.imageDrawCount === 0));
   assert.doesNotMatch(source, /\b3\s+Tr\b/);
   assert.match(source, /\/FontFile2\b/);
+  assert.match(source, /universo\.cursoseconsultoria@gmail\.com/);
+  assert.doesNotMatch(source, /email-desatualizado@polo\.local/);
+  assert.match(source, /\(CAIXA /);
   assert.ok(Object.hasOwn(pdf.getFontList(), 'InterUniverso'));
   if (process.env.CAIXA_PDF_FIXTURE_OUTPUT) {
     await writeFile(
@@ -238,4 +241,21 @@ test('preserva rótulo do resultado e diferença financeira não discriminada', 
   const receipt = makeReport().recebimentos[0];
   receipt.diferencaNaoDiscriminada = 7.25;
   assert.deepEqual(buildCaixaAdjustmentLines(receipt).at(-1), 'Não discrim.: R$\u00a07,25');
+});
+
+test('reutiliza exclusivamente o compositor institucional canônico', async () => {
+  const [source, previewSource] = await Promise.all([
+    readFile(resolve('modules/gestor/caixa/report/caixa-report.vector-pdf.ts'), 'utf8'),
+    readFile(resolve('modules/gestor/caixa/report/CaixaReportDocument.tsx'), 'utf8'),
+  ]);
+
+  assert.match(source, /drawCanonicalInstitutionalHeader/);
+  assert.match(source, /normalizeCanonicalInstitutionalHeader/);
+  assert.match(source, /getCanonicalPdfInlineImage/);
+  assert.doesNotMatch(source, /\bconst\s+drawHeader\s*=/);
+  assert.doesNotMatch(source, /\bHEADER_BOTTOM\b/);
+  assert.match(source, /eyebrow:\s*['"]Caixa · uso interno['"]/);
+  assert.match(source, /label:\s*['"]Competência['"]/);
+  assert.match(previewSource, /meta=\{\{/);
+  assert.doesNotMatch(previewSource, /rightContent=/);
 });
