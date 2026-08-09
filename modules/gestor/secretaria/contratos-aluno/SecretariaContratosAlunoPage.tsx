@@ -36,7 +36,8 @@ const SecretariaContratosAlunoPage: React.FC<SecretariaContratosAlunoPageProps> 
   const { toasts, removeToast, toast } = useToast();
   const [mode, setMode] = useState<ContratoAlunoEmissionMode>('INDIVIDUAL');
   const [searchTerm, setSearchTerm] = useState('');
-  const [turmaId, setTurmaId] = useState('todas');
+  const [batchModality, setBatchModality] = useState('');
+  const [turmaId, setTurmaId] = useState('');
   const [selectedEnrollmentIds, setSelectedEnrollmentIds] = useState<string[]>([]);
   const [customMessage, setCustomMessage] = useState('');
   const [result, setResult] = useState<ContratoAlunoPreparationResult | null>(null);
@@ -51,9 +52,14 @@ const SecretariaContratosAlunoPage: React.FC<SecretariaContratosAlunoPageProps> 
 
   const changeMode = (nextMode: ContratoAlunoEmissionMode) => {
     setMode(nextMode);
-    setSelectedEnrollmentIds((current) => nextMode === 'INDIVIDUAL' ? current.slice(0, 1) : current);
+    setSearchTerm('');
+    setBatchModality('');
+    setTurmaId('');
+    setSelectedEnrollmentIds([]);
+    setCustomMessage('');
     setResult(null);
     setPreviewIndex(null);
+    requestRef.current = null;
   };
 
   const toggleTarget = (target: ContratoAlunoTarget) => {
@@ -68,16 +74,11 @@ const SecretariaContratosAlunoPage: React.FC<SecretariaContratosAlunoPageProps> 
     });
   };
 
-  const selectVisible = (targets: ContratoAlunoTarget[]) => {
-    if (mode === 'INDIVIDUAL') return;
-    const visibleIds = targets.filter((target) => target.elegivel).map((target) => target.enrollmentId);
+  const replaceSelection = (enrollmentIds: string[]) => {
     setResult(null);
     setPreviewIndex(null);
-    setSelectedEnrollmentIds((current) => {
-      const everyVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => current.includes(id));
-      if (everyVisibleSelected) return current.filter((id) => !visibleIds.includes(id));
-      return [...new Set([...current, ...visibleIds])];
-    });
+    requestRef.current = null;
+    setSelectedEnrollmentIds([...new Set(enrollmentIds.filter((id) => selectableIds.has(id)))]);
   };
 
   const prepare = async () => {
@@ -104,7 +105,7 @@ const SecretariaContratosAlunoPage: React.FC<SecretariaContratosAlunoPageProps> 
         idempotencyKey: requestRef.current.idempotencyKey,
       });
       setResult(prepared);
-      setPreviewIndex(null);
+      setPreviewIndex(prepared.documents.length ? 0 : null);
       toast.success('Emissão preparada', prepared.message || 'O retorno canônico do contrato já está disponível.');
     } catch (error) {
       toast.error('Não foi possível preparar o contrato', getSecretariaErrorMessage(error));
@@ -151,20 +152,17 @@ const SecretariaContratosAlunoPage: React.FC<SecretariaContratosAlunoPageProps> 
         onModeChange={changeMode}
         searchTerm={searchTerm}
         onSearchTermChange={(value) => { setSearchTerm(value); }}
+        batchModality={batchModality}
+        onBatchModalityChange={(value) => { setBatchModality(value); }}
         turmaId={turmaId}
         onTurmaIdChange={(value) => { setTurmaId(value); }}
         selectedEnrollmentIds={selectedEnrollmentIds}
         onToggleTarget={toggleTarget}
-        onSelectVisible={selectVisible}
+        onReplaceSelection={replaceSelection}
         customMessage={customMessage}
         onCustomMessageChange={(value) => { setCustomMessage(value); setResult(null); }}
         onPrepare={() => { void prepare(); }}
         isPreparing={prepareMutation.isPending}
-        result={result}
-        onPreview={(emissionId) => {
-          const index = result?.documents.findIndex((document) => document.emissionId === emissionId) ?? -1;
-          if (index >= 0) setPreviewIndex(index);
-        }}
       />
       {result && previewIndex !== null && (
         <CanonicalDocumentPreviewModal

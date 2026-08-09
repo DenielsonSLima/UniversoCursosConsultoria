@@ -10,6 +10,7 @@ import {
   LogOut,
   Menu,
   MessageSquare,
+  NotebookPen,
   User,
   X,
 } from 'lucide-react';
@@ -50,6 +51,7 @@ interface ProfessorShellProps {
 const MENU_ITEMS: MenuItem[] = [
   { id: 'inicio', label: 'Início', icon: <LayoutDashboard size={20} /> },
   { id: 'turmas', label: 'Disciplinas', icon: <GraduationCap size={20} /> },
+  { id: 'plano-curso', label: 'Plano de Curso', icon: <NotebookPen size={20} /> },
   { id: 'calendario', label: 'Agenda', icon: <CalendarDays size={20} /> },
   { id: 'financeiro', label: 'Financeiro', icon: <CreditCard size={20} /> },
   { id: 'biblioteca', label: 'Biblioteca', icon: <Library size={20} /> },

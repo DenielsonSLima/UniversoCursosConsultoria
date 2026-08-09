@@ -23,6 +23,7 @@ export const DOCUMENT_TABS = [
   { key: 'cracha_estagio', label: 'Crachá de Estágio', icon: FileCheck2 },
   { key: 'pasta_identificacao', label: 'Pasta de Identificação', icon: FolderKanban },
   { key: 'ficha_matricula', label: 'Ficha de Matrícula', icon: FileSignature },
+  { key: 'contrato_aluno', label: 'Contrato do Aluno', icon: FileSignature },
   { key: 'declaracao_matricula', label: 'Declaração Matrícula', icon: FileBadge },
   { key: 'declaracao_frequencia', label: 'Declaração Frequência', icon: BadgeCheck },
   { key: 'declaracao_irpf', label: 'Declaração IRPF', icon: Landmark },
@@ -46,3 +47,13 @@ export const CERTIFICATE_DOCUMENT_MODALITY: Record<string, CertificadoModalidade
 
 export const isCertificateDocument = (documento: string) =>
   documento in CERTIFICATE_DOCUMENT_MODALITY;
+
+const OFFICIAL_VECTOR_DOCUMENTS = new Set([
+  'boletim',
+  'pasta_identificacao',
+  'ficha_matricula',
+]);
+
+export const isOfficialVectorDocument = (documento: string) => (
+  OFFICIAL_VECTOR_DOCUMENTS.has(documento)
+);

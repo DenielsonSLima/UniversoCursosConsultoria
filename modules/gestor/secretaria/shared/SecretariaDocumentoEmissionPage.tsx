@@ -202,6 +202,13 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
   });
   const { data: matriculas = [], isLoading: isLoadingMatriculas } = matriculasQuery;
 
+  const loteModalidades = useMemo(
+    () => mapModalidadeOptions(definition.id),
+    [definition.id]
+  );
+  const supportsBatchModalidadeFilter = loteModalidades.length > 0;
+  const hasBatchModalitySelected = !supportsBatchModalidadeFilter || Boolean(selectedBatchModalidade);
+
   const turmasQuery = useQuery({
     queryKey: secretariaDocumentosKeys.turmas(
       context,
@@ -226,12 +233,6 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
   const selectedMatricula = matriculas.find((item) => item.id === selectedMatriculaId);
   const selectedTurma = turmas.find((item) => item.id === selectedTurmaId);
   const pastaBatchTurmas = turmas;
-  const loteModalidades = useMemo(
-    () => mapModalidadeOptions(definition.id),
-    [definition.id]
-  );
-  const supportsBatchModalidadeFilter = loteModalidades.length > 0;
-  const hasBatchModalitySelected = !supportsBatchModalidadeFilter || Boolean(selectedBatchModalidade);
   const fichaTargetModalities = useMemo(() => {
     const modalities = mode === 'individual'
       ? [selectedMatricula?.modalidade]

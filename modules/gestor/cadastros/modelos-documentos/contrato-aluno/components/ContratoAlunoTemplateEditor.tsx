@@ -303,6 +303,21 @@ export const ContratoAlunoTemplateEditor = ({ modalidade }: ContratoAlunoTemplat
               <span className="mt-2 block text-xs font-medium text-slate-400">Variáveis, dados de matrícula e condições financeiras serão resolvidos pela emissão segura. O sistema calcula a extensão do texto e distribui o conteúdo automaticamente pelas folhas A4.</span>
             </label>
 
+            <label className="block rounded-2xl border border-rose-100 bg-rose-50/70 p-4">
+              <span className="mb-1 block text-[11px] font-black uppercase tracking-wider text-[#a30f36]">Destaques críticos em vermelho</span>
+              <span className="mb-3 block text-xs font-medium leading-relaxed text-rose-800/75">
+                Informe uma expressão por linha. O texto jurídico não é alterado: a emissão apenas aplica a cor às ocorrências exatas. Valores, datas, curso e condições financeiras do aluno já são destacados automaticamente.
+              </span>
+              <textarea
+                value={draft.destaquesCriticos.join('\n')}
+                onChange={(event) => update('destaquesCriticos', event.target.value.split('\n'))}
+                rows={6}
+                aria-label="Expressões críticas destacadas em vermelho"
+                className="w-full resize-y rounded-xl border border-rose-200 bg-white px-4 py-3 text-sm leading-6 text-slate-700 outline-none transition focus:border-[#ed1c4e]"
+              />
+              <span className="mt-2 block text-xs font-medium text-rose-800/60">Títulos de cláusulas, parágrafos, ALUNO, CONTRATANTE, CONTRATADA e OBJETO ficam em negrito automaticamente.</span>
+            </label>
+
             <div className="grid gap-4 md:grid-cols-2">
               <label className="block">
                 <span className="mb-2 block text-[11px] font-black uppercase tracking-wider text-slate-600">Encerramento e assinaturas</span>
@@ -369,6 +384,7 @@ export const ContratoAlunoTemplateEditor = ({ modalidade }: ContratoAlunoTemplat
               tituloDocumento={draft.tituloDocumento}
               cabecalho={draft.cabecalho}
               corpo={draft.corpo}
+              destaquesCriticos={draft.destaquesCriticos}
               rodape={draft.rodape}
               observacaoEscopo={draft.observacaoEscopo}
               qr={draft.qr}

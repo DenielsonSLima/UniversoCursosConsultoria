@@ -1,244 +1,200 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { RefreshCw } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { AlertTriangle } from 'lucide-react';
 import ToastNotification, { useToast } from '../../../../../parceiros/components/shared/ToastNotification';
-import { Turma } from '../../../../gestao.types';
+import type { Turma } from '../../../../gestao.types';
 import FinanceiroConfigEditor from './FinanceiroConfigEditor';
 import FinanceiroConfigSummary from './FinanceiroConfigSummary';
-import TechnicalDataError from '../TechnicalDataError';
 import {
-  CronogramaItem,
-  DEFAULT_FINANCEIRO_CONFIG,
-  FinanceiroConfigData,
-  financeiroConfigService,
-  mapSavedCronograma,
-  shouldUseSavedCronograma,
+  type FinanceiroConfigData,
+  mapConfigToRegraTecnicaInput,
+  mapRegraTecnicaCalculo,
+  mapRegraTecnicaCronograma,
+  mapRegraTecnicaToConfig,
 } from './financeiro-config.service';
+import type { MatriculaTecnicaRegra } from './matricula-tecnica-financeiro.types';
 import {
-  useFinanceiroConfig,
-  useFinanceiroRulesCalculation,
-  useSaveFinanceiroConfigMutation,
-} from './hooks/useFinanceiroConfig';
+  createFinanceiroRequestId,
+  usePreverRegraFinanceiraTecnica,
+  useSalvarRegraFinanceiraTecnica,
+} from './hooks/useMatriculaTecnicaFinanceiro';
+import { isRegraFinanceiraConflict } from './matricula-tecnica-financeiro.service';
 
 interface FinanceiroConfigProps {
   turma: Turma;
+  regra: MatriculaTecnicaRegra;
 }
 
-const getPreviewFingerprint = (data: FinanceiroConfigData) => JSON.stringify([
-  data.valorParcela,
-  data.descontoPontualidade,
-  data.jurosAtraso,
-  data.multaAtrasoPercentual,
-  data.aplicarDescontoMensalidade,
-  data.aplicarMultaJurosMensalidade,
-]);
+const inputFingerprint = (data: FinanceiroConfigData) => JSON.stringify(
+  mapConfigToRegraTecnicaInput(data),
+);
 
-const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma }) => {
+const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma, regra }) => {
   const { toasts, removeToast, toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
-  const [config, setConfig] = useState<FinanceiroConfigData>(DEFAULT_FINANCEIRO_CONFIG);
-  const [formData, setFormData] = useState({ ...config });
-  const [calculationFormData, setCalculationFormData] = useState({ ...config });
-  const [cronograma, setCronograma] = useState<CronogramaItem[]>([]);
-  const [isGeneratingSchedule, setIsGeneratingSchedule] = useState(false);
+  const [formData, setFormData] = useState<FinanceiroConfigData>(() => mapRegraTecnicaToConfig(regra));
+  const [previewForm, setPreviewForm] = useState<FinanceiroConfigData>(() => mapRegraTecnicaToConfig(regra));
+  const [baseRevision, setBaseRevision] = useState(regra.identidade.turmaRevisao);
+  const [baseFingerprint, setBaseFingerprint] = useState(regra.identidade.turmaFingerprint);
+  const [baseDraftFingerprint, setBaseDraftFingerprint] = useState(() => (
+    inputFingerprint(mapRegraTecnicaToConfig(regra))
+  ));
+  const [conflict, setConflict] = useState(false);
+  const requestRef = useRef<{ payload: string; requestId: string } | null>(null);
+  const saveMutation = useSalvarRegraFinanceiraTecnica();
   const turmaLabel = [turma.codigo, turma.nome].filter(Boolean).join(' — ');
-  const dragItem = useRef<number | null>(null);
-  const dragOverItem = useRef<number | null>(null);
-
-  const configQuery = useFinanceiroConfig(turma.id);
-  const { data: configDb, isLoading } = configQuery;
-  const saveMutation = useSaveFinanceiroConfigMutation(
-    turma.id,
-    () => {
-      toast.success('Sucesso', 'Configurações e ordem do cronograma salvas!');
-      setIsEditing(false);
-    },
-    (error: any) => {
-      toast.error('Erro', `Erro ao salvar configurações: ${error.message}`);
-    },
-  );
+  const draftFingerprint = inputFingerprint(formData);
 
   useEffect(() => {
-    if (!configDb) return;
-
-    setConfig(configDb);
-    setFormData(configDb);
-
-    if (shouldUseSavedCronograma(configDb.cronogramaFinanceiro, configDb.qtdParcelas)) {
-      setIsGeneratingSchedule(false);
-      setCronograma(mapSavedCronograma(configDb.cronogramaFinanceiro));
+    if (!isEditing) {
+      const next = mapRegraTecnicaToConfig(regra);
+      setFormData(next);
+      setPreviewForm(next);
+      setBaseRevision(regra.identidade.turmaRevisao);
+      setBaseFingerprint(regra.identidade.turmaFingerprint);
+      setBaseDraftFingerprint(inputFingerprint(next));
+      setConflict(false);
       return;
     }
-
-    let cancelled = false;
-    setIsGeneratingSchedule(true);
-    void financeiroConfigService.buildSchedule(configDb, turma.dataInicio)
-      .then((schedule) => {
-        if (!cancelled) setCronograma(schedule);
-      })
-      .catch((error: Error) => {
-        if (!cancelled) {
-          setCronograma([]);
-          toast.error('Cronograma indisponível', error.message);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setIsGeneratingSchedule(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [configDb, toast, turma.dataInicio]);
+    if (
+      regra.identidade.turmaRevisao !== baseRevision
+      || regra.identidade.turmaFingerprint !== baseFingerprint
+    ) {
+      if (draftFingerprint !== baseDraftFingerprint) {
+        setConflict(true);
+      } else {
+        const next = mapRegraTecnicaToConfig(regra);
+        setFormData(next);
+        setPreviewForm(next);
+        setBaseRevision(regra.identidade.turmaRevisao);
+        setBaseFingerprint(regra.identidade.turmaFingerprint);
+        setBaseDraftFingerprint(inputFingerprint(next));
+        setConflict(false);
+      }
+    }
+  }, [baseDraftFingerprint, baseFingerprint, baseRevision, draftFingerprint, isEditing, regra]);
 
   useEffect(() => {
     if (!isEditing) return;
-    const timer = window.setTimeout(() => {
-      setCalculationFormData(formData);
-    }, 300);
+    const timer = window.setTimeout(() => setPreviewForm(formData), 300);
     return () => window.clearTimeout(timer);
   }, [formData, isEditing]);
 
-  const calculoConfigQuery = useFinanceiroRulesCalculation(configDb || config, false, Boolean(configDb));
-  const calculoFormQuery = useFinanceiroRulesCalculation(calculationFormData, true, isEditing);
-  const calculationReady = Boolean(
-    calculoFormQuery.data
-    && !calculoFormQuery.isFetching
-    && getPreviewFingerprint(calculationFormData) === getPreviewFingerprint(formData)
+  const previewInput = useMemo(() => ({
+    turmaId: turma.id,
+    regra: mapConfigToRegraTecnicaInput(previewForm),
+  }), [previewForm, turma.id]);
+  const previewQuery = usePreverRegraFinanceiraTecnica(previewInput, isEditing && !conflict);
+  const previewReady = Boolean(
+    previewQuery.data
+    && !previewQuery.isFetching
+    && inputFingerprint(previewForm) === inputFingerprint(formData)
   );
+  const presentationRule = isEditing && previewReady ? previewQuery.data! : regra;
+  const cronograma = mapRegraTecnicaCronograma(presentationRule);
+  const calculo = mapRegraTecnicaCalculo(presentationRule);
 
-  const generateCronograma = async (source = formData) => {
-    try {
-      setIsGeneratingSchedule(true);
-      setCronograma(await financeiroConfigService.buildSchedule(source, turma.dataInicio));
-    } catch (error: any) {
-      toast.error('Cronograma não gerado', error?.message || 'Não foi possível calcular as datas no servidor.');
-    } finally {
-      setIsGeneratingSchedule(false);
-    }
+  const closeEditor = () => {
+    const next = mapRegraTecnicaToConfig(regra);
+    setFormData(next);
+    setPreviewForm(next);
+    setBaseRevision(regra.identidade.turmaRevisao);
+    setBaseFingerprint(regra.identidade.turmaFingerprint);
+    setBaseDraftFingerprint(inputFingerprint(next));
+    setConflict(false);
+    setIsEditing(false);
+    requestRef.current = null;
   };
 
-  const handleSort = () => {
-    if (dragItem.current === null || dragOverItem.current === null) return;
-
-    const nextCronograma = [...cronograma];
-    const draggedItemContent = nextCronograma[dragItem.current];
-    nextCronograma.splice(dragItem.current, 1);
-    nextCronograma.splice(dragOverItem.current, 0, draggedItemContent);
-
-    dragItem.current = null;
-    dragOverItem.current = null;
-    setCronograma(nextCronograma);
-  };
-
-  const handleUpdateItemDate = (itemId: string, newDate: string) => {
-    setCronograma((previous) => previous.map((item) => (
-      item.id === itemId ? { ...item, dataVencimento: newDate } : item
-    )));
-  };
-
-  const handleEdit = () => {
+  const openEditor = () => {
+    const next = mapRegraTecnicaToConfig(regra);
+    setFormData(next);
+    setPreviewForm(next);
+    setBaseRevision(regra.identidade.turmaRevisao);
+    setBaseFingerprint(regra.identidade.turmaFingerprint);
+    setBaseDraftFingerprint(inputFingerprint(next));
+    setConflict(false);
     setIsEditing(true);
-    setFormData({ ...config });
-    setCalculationFormData({ ...config });
-    if (cronograma.length === 0) void generateCronograma(config);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (conflict) {
+      toast.warning('Regra alterada em outra sessão', 'Descarte este rascunho e revise a versão atual antes de salvar.');
+      return;
+    }
     if (!formData.instrucaoBoletoCarne.trim()) {
-      toast.error(
-        'Instrução obrigatória',
-        'Informe a orientação que será impressa nos boletos e carnês desta turma.',
-      );
+      toast.error('Instrução obrigatória', 'Informe a orientação que será impressa nos boletos e carnês.');
       return;
     }
-    if (configQuery.isError || calculoFormQuery.isError || !calculationReady) {
-      toast.error(
-        'Dados financeiros indisponíveis',
-        'Aguarde a prévia oficial do servidor antes de salvar qualquer alteração.',
-      );
+    if (!previewReady || previewQuery.isError) {
+      toast.error('Prévia indisponível', 'Aguarde a prévia canônica do servidor antes de salvar.');
       return;
     }
-
-    saveMutation.mutate({
-      ...formData,
-      cronogramaFinanceiro: cronograma,
-    });
+    const payload = inputFingerprint(formData);
+    if (requestRef.current?.payload !== payload) {
+      requestRef.current = { payload, requestId: createFinanceiroRequestId() };
+    }
+    try {
+      await saveMutation.mutateAsync({
+        turmaId: turma.id,
+        requestId: requestRef.current.requestId,
+        expectedRevisao: baseRevision,
+        expectedFingerprint: baseFingerprint,
+        regra: mapConfigToRegraTecnicaInput(formData),
+      });
+      requestRef.current = null;
+      setIsEditing(false);
+      toast.success('Regra financeira salva', 'Valores, políticas e cronograma foram confirmados pelo servidor.');
+    } catch (error) {
+      if (isRegraFinanceiraConflict(error)) {
+        setConflict(true);
+        toast.warning('Regra alterada em outra sessão', 'O rascunho foi preservado. Descarte-o para carregar a versão atual.');
+        return;
+      }
+      toast.error('Regra não salva', error instanceof Error ? error.message : 'O servidor não confirmou a alteração.');
+    }
   };
 
-  if (configQuery.isError) {
-    return (
-      <TechnicalDataError
-        title="Configuração financeira não carregada"
-        message="A edição foi bloqueada para impedir que valores locais substituam uma configuração já existente."
-        retrying={configQuery.isFetching}
-        onRetry={() => { void configQuery.refetch(); }}
-      />
-    );
-  }
-
-  if (isEditing) {
-    if (calculoFormQuery.isError) {
-      return (
-        <TechnicalDataError
-          title="Cálculo financeiro indisponível"
-          message="A edição e o salvamento foram bloqueados até que as regras financeiras sejam recalculadas com segurança."
-          retrying={calculoFormQuery.isFetching}
-          onRetry={() => { void calculoFormQuery.refetch(); }}
-        />
-      );
-    }
-
+  if (!isEditing) {
     return (
       <>
-        <FinanceiroConfigEditor
-          calculo={calculoFormQuery.data}
-          calculationReady={calculationReady}
-          cronograma={cronograma}
-          formData={formData}
-          isSaving={saveMutation.isPending || isGeneratingSchedule}
+        <FinanceiroConfigSummary
+          calculo={mapRegraTecnicaCalculo(regra)}
+          config={mapRegraTecnicaToConfig(regra)}
+          cronograma={mapRegraTecnicaCronograma(regra)}
+          onEdit={openEditor}
           turmaLabel={turmaLabel}
-          onCancel={() => setIsEditing(false)}
-          onDragEnd={handleSort}
-          onDragEnter={(index) => { dragOverItem.current = index; }}
-          onDragStart={(index) => { dragItem.current = index; }}
-          onGenerate={() => { void generateCronograma(); }}
-          onSave={handleSave}
-          onUpdateDate={handleUpdateItemDate}
-          setFormData={setFormData}
         />
         <ToastNotification toasts={toasts} onRemove={removeToast} />
       </>
     );
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center py-10 bg-white rounded-[2rem] border border-slate-100 shadow-sm">
-        <RefreshCw className="animate-spin text-[#001a33] mr-2" size={24} />
-        <span className="text-slate-500 font-bold text-sm">Carregando configurações financeiras do banco...</span>
-      </div>
-    );
-  }
-
-  if (calculoConfigQuery.isError) {
-    return (
-      <TechnicalDataError
-        title="Cálculo financeiro indisponível"
-        message="Os valores foram carregados, mas a simulação oficial não pôde ser calculada. Nenhuma alteração foi permitida."
-        retrying={calculoConfigQuery.isFetching}
-        onRetry={() => { void calculoConfigQuery.refetch(); }}
-      />
-    );
-  }
-
   return (
     <>
-      <FinanceiroConfigSummary
-        calculo={calculoConfigQuery.data}
-        config={config}
+      {conflict ? (
+        <div role="alert" className="mb-4 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-800">
+          <AlertTriangle className="mt-0.5 shrink-0" size={18} />
+          <div>
+            <p className="text-xs font-black uppercase">A regra mudou em outra sessão</p>
+            <p className="mt-1 text-xs font-semibold">Seu rascunho foi preservado, mas salvar está bloqueado. Clique em Cancelar para carregar a versão atual.</p>
+          </div>
+        </div>
+      ) : null}
+      <FinanceiroConfigEditor
+        calculo={calculo}
+        calculationReady={previewReady && !conflict && !previewQuery.isError}
         cronograma={cronograma}
-        onEdit={handleEdit}
+        formData={formData}
+        isSaving={saveMutation.isPending || previewQuery.isFetching}
         turmaLabel={turmaLabel}
+        onCancel={closeEditor}
+        onDragEnd={() => undefined}
+        onDragEnter={() => undefined}
+        onDragStart={() => undefined}
+        onGenerate={() => { void previewQuery.refetch(); }}
+        onSave={() => { void handleSave(); }}
+        onUpdateDate={() => undefined}
+        setFormData={setFormData}
       />
       <ToastNotification toasts={toasts} onRemove={removeToast} />
     </>

@@ -50,6 +50,10 @@ const CanonicalDocumentPreviewModal = <Item extends CanonicalDocumentPreviewItem
   createPdf,
 }: CanonicalDocumentPreviewModalProps<Item>) => {
   const preparedPdfRef = useRef<PreparedPdf | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
+  const isBusyRef = useRef(false);
+  const onCloseRef = useRef(onClose);
   const preparationRef = useRef<Promise<PreparedPdf> | null>(null);
   const createPdfRef = useRef(createPdf);
   const itemsRef = useRef(items);
@@ -70,6 +74,8 @@ const CanonicalDocumentPreviewModal = <Item extends CanonicalDocumentPreviewItem
   const isBatch = items.length > 1;
   const allItemsRenderable = items.length > 0 && items.every(isRenderable);
   const isBusy = operation !== null || isPreparingPreview;
+  isBusyRef.current = isBusy;
+  onCloseRef.current = onClose;
 
   const preparePdf = async (): Promise<PreparedPdf> => {
     const key = keyRef.current;
@@ -147,16 +153,47 @@ const CanonicalDocumentPreviewModal = <Item extends CanonicalDocumentPreviewItem
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
+    returnFocusRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
     document.body.style.overflow = 'hidden';
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !isBusy) onClose();
+      if (event.key === 'Escape' && !isBusyRef.current) {
+        onCloseRef.current();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const focusable = [...(dialogRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), a[href], iframe, [tabindex]:not([tabindex="-1"])',
+      ) || [])].filter((element) => !element.hasAttribute('aria-hidden'));
+      if (focusable.length === 0) {
+        event.preventDefault();
+        dialogRef.current?.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     window.addEventListener('keydown', onKeyDown);
+    const focusFrame = window.requestAnimationFrame(() => {
+      const initial = dialogRef.current?.querySelector<HTMLElement>('[data-preview-initial-focus]');
+      if (initial && !initial.hasAttribute('disabled')) initial.focus();
+      else dialogRef.current?.focus();
+    });
     return () => {
+      window.cancelAnimationFrame(focusFrame);
       document.body.style.overflow = previousOverflow;
       window.removeEventListener('keydown', onKeyDown);
+      if (returnFocusRef.current?.isConnected) returnFocusRef.current.focus();
     };
-  }, [isBusy, onClose]);
+  }, []);
 
   const handleDownload = async () => {
     if (operation) return;
@@ -189,12 +226,13 @@ const CanonicalDocumentPreviewModal = <Item extends CanonicalDocumentPreviewItem
   if (!currentItem) return null;
 
   const modal = (
-    <div id="canonical-document-preview-modal" className="fixed inset-0 z-[2147483000] flex h-[100dvh] w-screen animate-fadeIn bg-slate-950" role="dialog" aria-modal="true" aria-label={title} aria-busy={isBusy}>
+    <div ref={dialogRef} tabIndex={-1} id="canonical-document-preview-modal" className="fixed inset-0 z-[2147483000] flex h-[100dvh] w-screen animate-fadeIn bg-slate-950 outline-none" role="dialog" aria-modal="true" aria-label={title} aria-busy={isBusy}>
       <div className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-slate-950 shadow-2xl">
         <header className="flex shrink-0 flex-col gap-3 border-b border-white/10 bg-slate-800 px-4 py-3 text-white shadow-md sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <button
               type="button"
+              data-preview-initial-focus
               onClick={onClose}
               disabled={isBusy}
               className="flex shrink-0 items-center gap-2 rounded-xl bg-slate-700/60 p-2 text-xs font-bold uppercase tracking-wider text-slate-300 transition-colors hover:bg-slate-700 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"

@@ -6,6 +6,7 @@ import { polosService } from '../../../configuracoes/polos/polos.service';
 import { getInitialTechnicalStatus } from '../../tecnicos/technicalClassDates';
 import TechnicalEnrollmentSettings from './TechnicalEnrollmentSettings';
 import TechnicalAcademicSettings from './TechnicalAcademicSettings';
+import { useAccessibleDialog } from '../../tecnicos/detalhes/components/financeiro/hooks/useAccessibleDialog';
 
 interface TurmaTecnicoFormProps {
   isOpen: boolean;
@@ -40,6 +41,14 @@ const TurmaTecnicoForm: React.FC<TurmaTecnicoFormProps> = ({
   const [polos, setPolos] = useState<any[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const requestClose = () => {
+    if (!isSaving) onClose();
+  };
+  const { dialogRef, initialFocusRef } = useAccessibleDialog(
+    isOpen,
+    requestClose,
+    isSaving,
+  );
   const [formData, setFormData] = useState({
     cursoId: '',
     poloId: '',
@@ -56,6 +65,11 @@ const TurmaTecnicoForm: React.FC<TurmaTecnicoFormProps> = ({
     vagasTotais: 40,
     frequenciaMinimaPercent: 75,
     mediaMinima: 6,
+    valorMatricula: 0,
+    valorRematricula: 0,
+    qtdParcelas: 12,
+    valorParcela: 0,
+    diaVencimentoPadrao: 10,
     origemFinanceira: 'NORMAL' as const,
     financeiroHerdado: false,
     gerarCobrancasFuturas: true,
@@ -177,15 +191,29 @@ const TurmaTecnicoForm: React.FC<TurmaTecnicoFormProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-[#001a33]/60 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
+      <div className="absolute inset-0 bg-[#001a33]/60 backdrop-blur-sm transition-opacity" onClick={requestClose}></div>
       
-      <div className="relative bg-white rounded-[2rem] w-full max-w-2xl p-8 shadow-2xl  border border-slate-100 max-h-[90vh] overflow-y-auto">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="nova-turma-tecnica-title"
+        tabIndex={-1}
+        className="relative bg-white rounded-[2rem] w-full max-w-2xl p-8 shadow-2xl  border border-slate-100 max-h-[90vh] overflow-y-auto"
+      >
         <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
           <div>
-             <h3 className="text-xl font-black text-[#001a33] uppercase tracking-tight">Nova Turma Técnica</h3>
+             <h3 id="nova-turma-tecnica-title" className="text-xl font-black text-[#001a33] uppercase tracking-tight">Nova Turma Técnica</h3>
              <p className="text-xs text-slate-500 font-medium">Preencha os dados base para gerar a turma.</p>
           </div>
-          <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-50 text-slate-400 hover:text-red-500 transition-colors">
+          <button
+            ref={(node) => { initialFocusRef.current = node; }}
+            type="button"
+            onClick={requestClose}
+            disabled={isSaving}
+            aria-label="Fechar"
+            className="p-2 rounded-full hover:bg-slate-50 text-slate-400 hover:text-red-500 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+          >
             <X size={20} />
           </button>
         </div>
@@ -247,6 +275,74 @@ const TurmaTecnicoForm: React.FC<TurmaTecnicoFormProps> = ({
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
               Configuração financeira da nova turma
             </p>
+            <p className="text-xs font-medium text-slate-500">
+              Informe a regra oficial desta turma. O servidor valida os valores e monta o cronograma canônico.
+            </p>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <label className="space-y-1 text-xs font-bold uppercase text-slate-500">
+                Matrícula inicial
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.valorMatricula}
+                  onChange={(event) => setFormData((current) => ({
+                    ...current,
+                    valorMatricula: Number(event.target.value),
+                  }))}
+                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-slate-700 outline-none focus:border-emerald-500"
+                  required
+                />
+              </label>
+              <label className="space-y-1 text-xs font-bold uppercase text-slate-500">
+                Mensalidade
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={formData.valorParcela}
+                  onChange={(event) => setFormData((current) => ({
+                    ...current,
+                    valorParcela: Number(event.target.value),
+                  }))}
+                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-slate-700 outline-none focus:border-emerald-500"
+                  required
+                />
+              </label>
+              <label className="space-y-1 text-xs font-bold uppercase text-slate-500">
+                Rematrícula
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.valorRematricula}
+                  onChange={(event) => setFormData((current) => ({
+                    ...current,
+                    valorRematricula: Number(event.target.value),
+                  }))}
+                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-slate-700 outline-none focus:border-emerald-500"
+                  required
+                />
+              </label>
+              <label className="space-y-1 text-xs font-bold uppercase text-slate-500">
+                Dia de vencimento
+                <input
+                  type="number"
+                  min="1"
+                  max="31"
+                  value={formData.diaVencimentoPadrao}
+                  onChange={(event) => setFormData((current) => ({
+                    ...current,
+                    diaVencimentoPadrao: Number(event.target.value),
+                  }))}
+                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-slate-700 outline-none focus:border-emerald-500"
+                  required
+                />
+              </label>
+            </div>
+            <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800">
+              Ciclo técnico: 1 matrícula, 12 mensalidades e 1 rematrícula. As próximas etapas só são geradas após a baixa canônica da etapa anterior.
+            </div>
             <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
               <input
                 type="checkbox"
@@ -254,8 +350,8 @@ const TurmaTecnicoForm: React.FC<TurmaTecnicoFormProps> = ({
                 onChange={(e) => setFormData((current) => ({
                   ...current,
                   origemFinanceira: e.target.checked ? 'LEGADO' : 'NORMAL',
-                  financeiroHerdado: e.target.checked ? true : current.financeiroHerdado,
-                  gerarCobrancasFuturas: e.target.checked ? false : current.gerarCobrancasFuturas,
+                  financeiroHerdado: e.target.checked,
+                  gerarCobrancasFuturas: !e.target.checked,
                 }))}
                 className="h-4 w-4 rounded border-slate-300"
               />
@@ -265,20 +361,15 @@ const TurmaTecnicoForm: React.FC<TurmaTecnicoFormProps> = ({
               <input
                 type="checkbox"
                 checked={formData.gerarCobrancasFuturas}
+                disabled={formData.origemFinanceira === 'LEGADO'}
                 onChange={(e) => setFormData((current) => ({ ...current, gerarCobrancasFuturas: e.target.checked }))}
-                className="h-4 w-4 rounded border-slate-300"
+                className="h-4 w-4 rounded border-slate-300 disabled:cursor-not-allowed disabled:opacity-50"
               />
               Gerar cobranças futuras
             </label>
-            <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={formData.sincronizarAsaasFuturo}
-                onChange={(e) => setFormData((current) => ({ ...current, sincronizarAsaasFuturo: e.target.checked }))}
-                className="h-4 w-4 rounded border-slate-300"
-              />
-              Sincronizar futuras cobranças com o gateway configurado
-            </label>
+            <p className="text-[11px] font-medium text-slate-500">
+              O fluxo técnico não envia novas cobranças ao Asaas; a integração financeira canônica é definida pelo backend.
+            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

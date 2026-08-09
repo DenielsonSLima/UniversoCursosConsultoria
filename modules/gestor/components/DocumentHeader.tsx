@@ -73,6 +73,7 @@ interface DocumentHeaderProps {
 
   orientation?: 'portrait' | 'landscape';
   rightContent?: React.ReactNode;
+  showLegalName?: boolean;
 }
 
 export const DocumentHeader: React.FC<DocumentHeaderProps> = ({
@@ -91,7 +92,8 @@ export const DocumentHeader: React.FC<DocumentHeaderProps> = ({
   polo,
   company,
   orientation = 'portrait',
-  rightContent
+  rightContent,
+  showLegalName = true,
 }) => {
   const providedLogoUrl = logoUrl || polo?.logoUrl || polo?.logo_url || company?.logoUrl || company?.logo_url;
   const [principalLogoUrl, setPrincipalLogoUrl] = useState<string | null>(
@@ -171,7 +173,7 @@ export const DocumentHeader: React.FC<DocumentHeaderProps> = ({
               </span>
             )}
           </div>
-          {resolvedRazao && resolvedRazao !== resolvedNome && (
+          {showLegalName && resolvedRazao && resolvedRazao !== resolvedNome && (
             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-0.5 leading-normal">
               {resolvedRazao}
             </p>

@@ -124,11 +124,37 @@ const ParceiroAlunoFormStepDocuments: React.FC<AlunoFormStepProps> = ({ formData
       <div className="md:col-span-2">
         <label className={LABEL_CLS}>Título de Eleitor</label>
         <input type="text" name="tituloEleitor" value={formData.tituloEleitor} onChange={onChange}
-          className={INPUT_CLS} placeholder="Número do título" />
+          inputMode="numeric" className={INPUT_CLS} placeholder="Número do título" />
         <p className="text-[10px] text-slate-400 mt-1 ml-0.5">Obrigatório para maiores de 18 anos</p>
       </div>
 
       <div>
+        <label className={LABEL_CLS}>Zona Eleitoral</label>
+        <input type="text" name="tituloEleitorZona" value={formData.tituloEleitorZona} onChange={onChange}
+          inputMode="numeric" maxLength={4} className={INPUT_CLS} placeholder="Zona" />
+      </div>
+
+      <div>
+        <label className={LABEL_CLS}>Seção Eleitoral</label>
+        <input type="text" name="tituloEleitorSecao" value={formData.tituloEleitorSecao} onChange={onChange}
+          inputMode="numeric" maxLength={4} className={INPUT_CLS} placeholder="Seção" />
+      </div>
+
+      <div>
+        <label className={LABEL_CLS}>Data de Emissão do Título</label>
+        <input type="text" name="tituloEleitorDataEmissao" value={formData.tituloEleitorDataEmissao} onChange={onChange}
+          inputMode="numeric" maxLength={10} className={INPUT_CLS} placeholder="DD/MM/AAAA" />
+      </div>
+
+      <div>
+        <label className={LABEL_CLS}>UF do Título</label>
+        <select name="tituloEleitorUf" value={formData.tituloEleitorUf} onChange={onChange} className={INPUT_CLS}>
+          <option value="">UF</option>
+          {UFS.map((uf) => <option key={uf} value={uf}>{uf}</option>)}
+        </select>
+      </div>
+
+      <div className="md:col-span-3">
         <label className={LABEL_CLS}>Certificado de Reservista</label>
         <input type="text" name="reservista" value={formData.reservista} onChange={onChange}
           className={INPUT_CLS} placeholder="Nº do certificado (homens)" />

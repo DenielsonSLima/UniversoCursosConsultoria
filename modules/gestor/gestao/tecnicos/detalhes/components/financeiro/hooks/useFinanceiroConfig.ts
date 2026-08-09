@@ -1,92 +1,12 @@
-import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { academicLifecycleKeys } from '../../../academic-lifecycle.keys';
-import { gestaoService } from '../../../../../gestao.service';
-import {
-  FinanceiroCalculationInput,
-  FinanceiroConfigData,
-  financeiroConfigService,
-} from '../financeiro-config.service';
-
-export const financeiroConfigKeys = {
-  turma: (turmaId: string) => ['turma_financeiro_config', turmaId] as const,
-  calculo: (config: FinanceiroCalculationInput) => [
-    'calculo_regras_turma',
-    config.valorParcela,
-    config.descontoPontualidade,
-    config.jurosAtraso,
-    config.multaAtrasoPercentual ?? config.multaAtraso ?? 0,
-    config.aplicarDescontoMensalidade,
-    config.aplicarMultaJurosMensalidade,
-  ] as const,
-  calculoForm: (config: FinanceiroCalculationInput) => [
-    'calculo_regras_turma_form',
-    config.valorParcela,
-    config.descontoPontualidade,
-    config.jurosAtraso,
-    config.multaAtrasoPercentual ?? config.multaAtraso ?? 0,
-    config.aplicarDescontoMensalidade,
-    config.aplicarMultaJurosMensalidade,
-  ] as const,
-};
-
-export const financeiroConfigQueryOptions = (turmaId: string) => queryOptions({
-  queryKey: financeiroConfigKeys.turma(turmaId),
-  queryFn: () => financeiroConfigService.getConfig(turmaId),
-});
-
-export const useFinanceiroConfig = (turmaId: string) => useQuery(
-  financeiroConfigQueryOptions(turmaId),
-);
-
-export const useFinanceiroRulesCalculation = (
-  config: FinanceiroCalculationInput,
-  form = false,
-  enabled = true,
-) => useQuery({
-  queryKey: form ? financeiroConfigKeys.calculoForm(config) : financeiroConfigKeys.calculo(config),
-  queryFn: () => financeiroConfigService.calculateRules(config),
-  staleTime: Infinity,
-  enabled,
-});
-
-export const useSaveFinanceiroConfigMutation = (
-  turmaId: string,
-  onSuccess?: () => void,
-  onError?: (error: any) => void,
-) => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (newConfig: FinanceiroConfigData) => financeiroConfigService.saveConfig(turmaId, newConfig),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: financeiroConfigKeys.turma(turmaId) });
-      queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.financeiroMatriculaConfig(turmaId) });
-      onSuccess?.();
-    },
-    onError,
-  });
-};
-
-export const useTurmaFinanceiroConfigMutation = (
-  turmaId: string,
-  onSuccess?: () => void,
-  onError?: (error: any) => void,
-) => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (payload: {
-      origemFinanceira: 'NORMAL' | 'LEGADO';
-      financeiroHerdado: boolean;
-      gerarCobrancasFuturas: boolean;
-      sincronizarAsaasFuturo: boolean;
-      obsFinanceiraOrigem?: string;
-    }) => gestaoService.updateTurmaFinanceiroFlags(turmaId, payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: financeiroConfigKeys.turma(turmaId) });
-      queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.turma(turmaId) });
-      onSuccess?.();
-    },
-    onError,
-  });
-};
+/**
+ * Compatibilidade de importação do módulo financeiro antigo.
+ *
+ * A fonte canônica da configuração técnica agora é o workspace/RPC flexível.
+ * Novos consumidores devem importar diretamente de
+ * `useMatriculaTecnicaFinanceiro`.
+ */
+export {
+  useMatriculaTecnicaFinanceiroWorkspace as useFinanceiroConfig,
+  usePreverRegraFinanceiraTecnica as useFinanceiroRulesCalculation,
+  useSalvarRegraFinanceiraTecnica as useSaveFinanceiroConfigMutation,
+} from './useMatriculaTecnicaFinanceiro';

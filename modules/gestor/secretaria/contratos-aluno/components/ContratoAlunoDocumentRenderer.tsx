@@ -1,6 +1,12 @@
 import { FileWarning, QrCode } from 'lucide-react';
+import DocumentHeader from '../../../components/DocumentHeader';
 import { DocumentValidationQrCodeImage } from '../../../../shared/document-validation/DocumentValidationQrCodeImage';
 import { parseContratoAlunoClosingLayout } from '../../../../shared/contrato-aluno/closing-layout';
+import { normalizeContractSectionHeader } from '../../../../shared/contrato-aluno/section-header';
+import {
+  buildContractSemanticRuns,
+  normalizeContractCriticalHighlights,
+} from '../../../../shared/contrato-aluno/semantic-format';
 import {
   canonicalAsRecord,
   canonicalText,
@@ -16,8 +22,10 @@ const toVisibleMultilineText = (value: string | null | undefined) => String(valu
   .replace(/\\n/g, '\n');
 
 export const isContratoAlunoRenderPayloadReady = (document: ContratoAlunoPreparedDocument) => {
+  const template = document.renderPayload?.template;
+  const snapshot = document.renderPayload?.snapshot;
   const rendered = document.renderPayload?.rendered;
-  if (!rendered?.pages.length) return false;
+  if (!template || !snapshot || !rendered?.pages.length) return false;
   return !(rendered.qr?.enabled && !document.validationCode);
 };
 
@@ -41,14 +49,44 @@ const ContratoAlunoDocumentRenderer = ({ document }: ContratoAlunoDocumentRender
   if (!rendered?.pages.length) return <ContractPayloadUnavailable />;
 
   const snapshot = canonicalAsRecord(payload?.snapshot);
+  const template = canonicalAsRecord(payload?.template);
   const institution = canonicalAsRecord(snapshot.instituicao);
+  const snapshotWatermark = canonicalAsRecord(snapshot.marcaDagua);
   const validation = canonicalAsRecord(snapshot.validacao);
   const watermark = rendered.watermark;
   const qr = rendered.qr;
   const watermarkLabel = canonicalText(watermark?.label, institution.nome, 'UNIVERSO');
   const watermarkOpacity = watermark?.opacity ?? 0.07;
+  const snapshotWatermarkScale = Number(snapshotWatermark.escala ?? snapshotWatermark.scale);
+  const watermarkScale = watermark?.scale
+    ?? (Number.isFinite(snapshotWatermarkScale) ? snapshotWatermarkScale : 50);
+  const watermarkRotate = watermark?.rotate == null
+    ? snapshotWatermark.rotacionar === true || snapshotWatermark.rotate === true
+    : watermark.rotate;
   const requiresQr = qr?.enabled === true;
   const validityLabel = canonicalText(qr?.validityLabel, validation.validadeExibicao);
+  const poloInfo = {
+    logoUrl: canonicalText(institution.logoUrl, institution.logo_url),
+    nomeFantasia: canonicalText(institution.nomeFantasia, institution.nome, institution.name),
+    nome: canonicalText(institution.razaoSocial, institution.nome, institution.name),
+    cnpj: canonicalText(institution.cnpj, institution.taxId),
+    endereco: canonicalText(institution.endereco, institution.address),
+    numero: canonicalText(institution.numero, institution.number),
+    bairro: canonicalText(institution.bairro, institution.neighborhood),
+    cidade: canonicalText(institution.cidade, institution.city),
+    uf: canonicalText(institution.uf, institution.estado, institution.state),
+    cep: canonicalText(institution.cep, institution.postalCode),
+    telefone: canonicalText(institution.telefone, institution.contato, institution.phone),
+    email: canonicalText(institution.email),
+    is_matriz: institution.isMatriz === true || institution.is_matriz === true,
+  };
+  const presentationVersion = canonicalText(
+    institution.presentationVersion,
+    institution.presentation_version,
+  );
+  const isLegacyPresentation = !presentationVersion
+    || presentationVersion === 'CONTRATO_A4_INSTITUCIONAL_V1';
+  const criticalHighlights = normalizeContractCriticalHighlights(template.destaquesCriticos);
 
   if (requiresQr && !document.validationCode) return <ContractPayloadUnavailable />;
 
@@ -59,6 +97,15 @@ const ContratoAlunoDocumentRenderer = ({ document }: ContratoAlunoDocumentRender
         const footerText = toVisibleMultilineText(page.footer);
         const showClosing = isFinalPage && Boolean(footerText || requiresQr);
         const closingLayout = parseContratoAlunoClosingLayout(footerText);
+        const sectionHeader = normalizeContractSectionHeader(page.header, [
+          poloInfo.nomeFantasia,
+          poloInfo.nome,
+        ]);
+        const showDocumentTitle = isLegacyPresentation || pageIndex === 0;
+        const bodyRuns = buildContractSemanticRuns(page.body, {
+          snapshot,
+          criticalHighlights,
+        });
 
         return (
           <article
@@ -73,8 +120,12 @@ const ContratoAlunoDocumentRenderer = ({ document }: ContratoAlunoDocumentRender
                 <img
                   src={watermark.imageUrl}
                   alt="Marca d'água institucional"
-                  className="max-h-[58%] max-w-[65%] object-contain"
-                  style={{ opacity: watermarkOpacity }}
+                  className="max-h-full max-w-full object-contain"
+                  style={{
+                    opacity: watermarkOpacity,
+                    width: `${watermarkScale}%`,
+                    transform: watermarkRotate ? 'rotate(-45deg)' : 'none',
+                  }}
                 />
               ) : (
                 <span
@@ -87,14 +138,24 @@ const ContratoAlunoDocumentRenderer = ({ document }: ContratoAlunoDocumentRender
             </div>
           )}
 
-          <header className="relative z-10 border-b-2 border-[#001a33]/10 pb-5 text-center">
-            {page.header && <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#001a33]">{page.header}</p>}
-            {page.title && <h1 className="mt-3 text-[17px] font-black uppercase leading-6 text-[#001a33]">{page.title}</h1>}
-            <div className="mx-auto mt-3 h-0.5 w-20 bg-[#ed1c4e]" />
+          <header className="relative z-10 text-center">
+            <DocumentHeader polo={poloInfo} orientation="portrait" showLegalName={false} />
+            {sectionHeader && <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#001a33]">{sectionHeader}</p>}
+            {(isLegacyPresentation || pageIndex === 0) && (
+              <div className={`mx-auto h-0.5 w-20 bg-[#ed1c4e] ${sectionHeader ? 'mt-2.5' : ''}`} />
+            )}
+            {showDocumentTitle && page.title && <h1 className="mt-4 text-[17px] font-black uppercase leading-6 text-[#001a33]">{page.title}</h1>}
           </header>
 
-          <div className="relative z-10 mt-7 whitespace-pre-wrap break-words text-justify font-serif text-[10.5px] leading-[1.7] text-slate-800">
-            {page.body || ''}
+          <div className={`relative z-10 whitespace-pre-wrap break-words text-justify font-serif text-[10.5px] leading-[1.7] text-slate-800 ${showDocumentTitle ? 'mt-7' : 'mt-5'}`}>
+            {bodyRuns.map((run, runIndex) => (
+              <span
+                key={`${document.emissionId}-${pageIndex}-trecho-${runIndex}`}
+                className={`${run.bold ? 'font-bold' : ''} ${run.accent ? 'text-[#ed1c4e]' : ''}`}
+              >
+                {run.text}
+              </span>
+            ))}
           </div>
 
           {showClosing && (

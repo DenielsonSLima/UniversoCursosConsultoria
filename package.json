@@ -1,7 +1,7 @@
 {
   "name": "universo-cursos-e-consultoria",
   "private": true,
-  "version": "2.3.0-beta.1",
+  "version": "2.3.0-beta.2",
   "type": "module",
   "engines": {
     "node": "24.x"
@@ -33,8 +33,10 @@
     "test:caixa-report": "node scripts/test-caixa-report.mjs",
     "test:financeiro-rpc": "node --test scripts/test-financial-rpc-contract.mjs",
     "test:pdf-exports": "node scripts/test-selectable-pdf-exports.mjs",
+    "test:agent-operations": "node scripts/test-agent-operation.mjs",
     "test:saldo-inicial": "node scripts/test-saldo-inicial.mjs",
     "test:document-validation": "node scripts/test-document-validation.mjs",
+    "test:contratos-aluno": "deno test --allow-read --allow-env modules/gestor/secretaria/contratos-aluno/contratos-aluno-workspace.contract.test.ts modules/gestor/secretaria/shared/canonical-document-vector-pdf.contract.test.ts modules/gestor/secretaria/historico-emissoes/emission-document.pdf.contract.test.ts supabase/tests/contrato_aluno_canonical_emission.contract.test.ts",
     "seed:ead-users": "node scripts/create-ead-test-accounts.mjs",
     "sitemap:ead": "node scripts/generate-ead-sitemap.mjs",
     "sync:ead-turmas": "node scripts/reconcile-ead-turmas.mjs",

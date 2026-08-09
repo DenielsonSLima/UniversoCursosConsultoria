@@ -187,10 +187,12 @@ export const loadAcademicPreview = async (
     .filter((row) => ['Aprovado', 'Aproveitado'].includes(row.situacao))
     .reduce((sum, row) => sum + (Number(row.cargaHoraria) || 0), 0);
   const moduleNames = [...new Set(rows.map((row) => row.moduleName).filter(Boolean))];
+  const componentes = sortRows(rows);
 
   return {
-    componentesTable: buildAcademicTableByDocument(rows),
-    historicoTable: buildHistoricoTable(rows),
+    componentes,
+    componentesTable: buildAcademicTableByDocument(componentes),
+    historicoTable: buildHistoricoTable(componentes),
     cargaHorariaCumprida: selectedModuleId
       ? completedModuleHours
       : Number(payload.cargaHorariaCumprida || 0),

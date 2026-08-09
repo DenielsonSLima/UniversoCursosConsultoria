@@ -22,6 +22,7 @@ const ALUNO_UPPERCASE_FIELDS = [
   'nacionalidade',
   'naturalidade',
   'tituloEleitor',
+  'tituloEleitorUf',
   'reservista',
   'nomeMae',
   'nomePai',

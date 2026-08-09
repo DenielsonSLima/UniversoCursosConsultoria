@@ -1,8 +1,8 @@
 {
-  "version": "2.3.0-beta.1",
+  "version": "2.3.0-beta.2",
   "display": "BETA",
   "stage": "beta",
-  "revision": 1,
-  "releasedAt": "2026-08-06",
-  "summary": "Patrimônio por polo, Contas a Pagar, empréstimos com rateio e Caixa operacional"
+  "revision": 2,
+  "releasedAt": "2026-08-09",
+  "summary": "Gestão acadêmica e financeira técnica, Plano de Curso e documentos oficiais canônicos"
 }

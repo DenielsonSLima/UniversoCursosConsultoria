@@ -5,11 +5,13 @@ import { empresasService } from '../../../../../configuracoes/empresas/empresas.
 import { polosService } from '../../../../../configuracoes/polos/polos.service';
 import DocumentHeader from '../../../../../components/DocumentHeader';
 import { formatMatricula } from '../../../../../../../lib/academicUtils';
+import { formatCpf } from '../../../../../../../lib/documentFormatters';
 import { sanitizedHtml } from '../../../../../../../lib/htmlSanitizer';
 import { supabase } from '../../../../../../../lib/supabase';
 import { fichaCadastralService } from '../../../../../cadastros/modelos-documentos/ficha-cadastral/ficha-cadastral.service';
 import { LocalQrCodeImage } from '../../../../../../shared/qrcode/LocalQrCodeImage';
 import { waitForQrCodeAssets } from '../../../../../../shared/qrcode/qr-code-assets';
+import { formatCep } from '../../../../../../shared/utils/brazilianCep';
 
 interface FichaAlunoModalProps {
   aluno: any;
@@ -107,8 +109,13 @@ const FichaAlunoModal: React.FC<FichaAlunoModalProps> = ({ aluno, onClose }) => 
     '{{ALUNO_NOME}}': aluno?.nome || 'Não informado',
     '{{ALUNO_FOTO_URL}}': aluno?.foto || `https://ui-avatars.com/api/?name=${encodeURIComponent(aluno?.nome || 'Aluno')}&background=E0F2FE&color=2563EB&bold=true`,
     '{{ALUNO_NOME_SOCIAL}}': aluno?.nomeSocial || aluno?.nome || 'Não informado',
-    '{{ALUNO_CPF}}': aluno?.cpf || 'Não informado',
+    '{{ALUNO_CPF}}': formatCpf(aluno?.cpf) || 'Não informado',
     '{{ALUNO_RG}}': aluno?.rg || 'Não informado',
+    '{{ALUNO_TITULO_ELEITOR}}': aluno?.tituloEleitor || 'Não informado',
+    '{{ALUNO_TITULO_ZONA}}': aluno?.tituloEleitorZona || 'Não informado',
+    '{{ALUNO_TITULO_SECAO}}': aluno?.tituloEleitorSecao || 'Não informado',
+    '{{ALUNO_TITULO_EMISSAO}}': aluno?.tituloEleitorDataEmissao || 'Não informado',
+    '{{ALUNO_TITULO_UF}}': aluno?.tituloEleitorUf || 'Não informado',
     '{{ALUNO_NASCIMENTO}}': aluno?.dataNascimento || 'Não informado',
     '{{ALUNO_SEXO}}': aluno?.sexo || 'Não informado',
     '{{ALUNO_ESTADO_CIVIL}}': aluno?.estadoCivil || 'Não informado',
@@ -119,9 +126,9 @@ const FichaAlunoModal: React.FC<FichaAlunoModalProps> = ({ aluno, onClose }) => 
     '{{ALUNO_EMAIL}}': aluno?.email || 'Não informado',
     '{{ALUNO_TELEFONE}}': aluno?.telefone || aluno?.contato1 || 'Não informado',
     '{{ALUNO_ENDERECO}}': enderecoCompleto,
-    '{{ALUNO_CEP}}': aluno?.cep || 'Não informado',
+    '{{ALUNO_CEP}}': formatCep(aluno?.cep) || 'Não informado',
     '{{ALUNO_RESPONSAVEL}}': aluno?.responsavelNome || (aluno?.responsavelFinanceiro ? aluno?.nome : 'O próprio aluno'),
-    '{{ALUNO_RESPONSAVEL_CPF}}': aluno?.responsavelCpf || aluno?.cpf || 'Não informado',
+    '{{ALUNO_RESPONSAVEL_CPF}}': formatCpf(aluno?.responsavelCpf || aluno?.cpf) || 'Não informado',
     '{{ALUNO_RESPONSAVEL_TELEFONE}}': aluno?.responsavelTelefone || aluno?.telefone || 'Não informado',
     '{{ALUNO_MATRICULA}}': matriculaLabel,
     '{{CURSO_NOME}}': cursoLabel,

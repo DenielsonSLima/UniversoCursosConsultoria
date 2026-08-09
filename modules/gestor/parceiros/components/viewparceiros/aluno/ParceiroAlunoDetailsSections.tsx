@@ -2,7 +2,7 @@ import type React from 'react';
 
 import { formatCpf } from '../../../../../../lib/documentFormatters';
 import { TECHNICAL_DOCUMENT_TYPE_OPTIONS } from '../../../../../shared/utils/technicalEnrollmentRequirements';
-import { ESCOLARIDADES } from '../../formularioparceiros/aluno/parceiro-aluno-form.constants';
+import { ESCOLARIDADES, UFS } from '../../formularioparceiros/aluno/parceiro-aluno-form.constants';
 import {
   CERTIDAO_CIVIL_MODEL_OPTIONS,
   CERTIDAO_CIVIL_TYPE_OPTIONS,
@@ -113,7 +113,26 @@ const ParceiroAlunoDocumentsSection: React.FC<DetailsSectionsProps> = ({ formDat
           </div>
           <div className="space-y-2">
             <label className="text-xs font-bold text-slate-500 uppercase ml-1">Título de Eleitor</label>
-            <input type="text" name="tituloEleitor" value={formData.tituloEleitor || ''} onChange={onChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-blue-500 outline-none" />
+            <input type="text" inputMode="numeric" name="tituloEleitor" value={formData.tituloEleitor || ''} onChange={onChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-blue-500 outline-none" />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Zona Eleitoral</label>
+            <input type="text" inputMode="numeric" maxLength={4} name="tituloEleitorZona" value={formData.tituloEleitorZona || ''} onChange={onChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-blue-500 outline-none" />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Seção Eleitoral</label>
+            <input type="text" inputMode="numeric" maxLength={4} name="tituloEleitorSecao" value={formData.tituloEleitorSecao || ''} onChange={onChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-blue-500 outline-none" />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Emissão do Título</label>
+            <input type="text" inputMode="numeric" maxLength={10} name="tituloEleitorDataEmissao" value={formData.tituloEleitorDataEmissao || ''} onChange={onChange} placeholder="DD/MM/AAAA" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-blue-500 outline-none" />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-500 uppercase ml-1">UF do Título</label>
+            <select name="tituloEleitorUf" value={formData.tituloEleitorUf || ''} onChange={onChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-blue-500 outline-none">
+              <option value="">UF</option>
+              {UFS.map((uf) => <option key={uf} value={uf}>{uf}</option>)}
+            </select>
           </div>
           <div className="space-y-2">
             <label className="text-xs font-bold text-slate-500 uppercase ml-1">Nacionalidade</label>
@@ -179,6 +198,10 @@ const ParceiroAlunoDocumentsSection: React.FC<DetailsSectionsProps> = ({ formDat
           <ParceiroAlunoDisplayField label="Número do documento" value={formData.rg} />
           <ParceiroAlunoDisplayField label="Órgão Emissor / UF" value={formData.orgaoEmissor} />
           <ParceiroAlunoDisplayField label="Título de Eleitor" value={formData.tituloEleitor} />
+          <ParceiroAlunoDisplayField label="Zona Eleitoral" value={formData.tituloEleitorZona} />
+          <ParceiroAlunoDisplayField label="Seção Eleitoral" value={formData.tituloEleitorSecao} />
+          <ParceiroAlunoDisplayField label="Emissão do Título" value={formData.tituloEleitorDataEmissao} />
+          <ParceiroAlunoDisplayField label="UF do Título" value={formData.tituloEleitorUf} />
           <ParceiroAlunoDisplayField label="Nacionalidade" value={formData.nacionalidade || 'BRASILEIRA'} />
           <ParceiroAlunoDisplayField label="Naturalidade" value={formData.naturalidade} />
           <ParceiroAlunoDisplayField label="Reservista" value={formData.reservista} />

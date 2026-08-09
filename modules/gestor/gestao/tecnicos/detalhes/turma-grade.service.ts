@@ -14,6 +14,54 @@ import {
   TurmaProfessorOption,
 } from './turma-grade.types';
 
+export interface TurmaProfessorAssignmentRow {
+  disciplina_id: string;
+  professor_id: string | null;
+  professor_nome: string | null;
+  concluida: boolean;
+}
+
+const mapProfessorAssignmentRows = (
+  data: unknown,
+  disciplinaIds: string[],
+): TurmaProfessorAssignmentRow[] => {
+  if (!Array.isArray(data)) {
+    throw new Error('O banco não retornou a configuração canônica dos docentes.');
+  }
+
+  const rows = data.map((item) => {
+    if (!item || typeof item !== 'object') {
+      throw new Error('O banco retornou uma configuração de docente inválida.');
+    }
+
+    const row = item as Record<string, unknown>;
+    if (
+      typeof row.disciplina_id !== 'string'
+      || (row.professor_id !== null && typeof row.professor_id !== 'string')
+      || (row.professor_nome !== null && typeof row.professor_nome !== 'string')
+      || typeof row.concluida !== 'boolean'
+    ) {
+      throw new Error('O banco retornou uma configuração de docente incompleta.');
+    }
+
+    return {
+      disciplina_id: row.disciplina_id,
+      professor_id: row.professor_id as string | null,
+      professor_nome: row.professor_nome as string | null,
+      concluida: row.concluida,
+    };
+  });
+
+  if (
+    rows.length !== disciplinaIds.length
+    || rows.some((row, index) => row.disciplina_id !== disciplinaIds[index])
+  ) {
+    throw new Error('O banco não confirmou todas as disciplinas na ordem solicitada.');
+  }
+
+  return rows;
+};
+
 const sortAulas = (aulas: any[]) => [...aulas].sort((a, b) => {
   if (a.data_aula && b.data_aula) {
     const dateOrder = a.data_aula.localeCompare(b.data_aula);
@@ -182,42 +230,30 @@ export const turmaGradeService = {
     turmaId: string,
     disciplinaId: string,
     professor: TurmaProfessorOption | null,
-    currentConfig: TurmaDisciplinaConfig,
-  ) {
-    const { error } = await supabase
-      .from('turmas_disciplinas')
-      .upsert({
-        turma_id: turmaId,
-        disciplina_id: disciplinaId,
-        professor_nome: professor?.nome || null,
-        professor_id: professor?.id || null,
-        concluida: currentConfig.concluida,
-      }, { onConflict: 'turma_id,disciplina_id' });
-
-    if (error) throw error;
+  ): Promise<TurmaProfessorAssignmentRow> {
+    const rows = await this.assignProfessorToDisciplines(
+      turmaId,
+      [disciplinaId],
+      professor,
+    );
+    return rows[0];
   },
 
   async assignProfessorToDisciplines(
     turmaId: string,
     disciplineIds: string[],
     professor: TurmaProfessorOption | null,
-    configs: Record<string, TurmaDisciplinaConfig>,
-  ) {
-    if (disciplineIds.length === 0) return;
+  ): Promise<TurmaProfessorAssignmentRow[]> {
+    const uniqueDisciplineIds = Array.from(new Set(disciplineIds.filter(Boolean)));
+    if (uniqueDisciplineIds.length === 0) return [];
 
-    const rows = disciplineIds.map((disciplinaId) => ({
-      turma_id: turmaId,
-      disciplina_id: disciplinaId,
-      professor_nome: professor?.nome || null,
-      professor_id: professor?.id || null,
-      concluida: configs[disciplinaId]?.concluida || false,
-    }));
-
-    const { error } = await supabase
-      .from('turmas_disciplinas')
-      .upsert(rows, { onConflict: 'turma_id,disciplina_id' });
-
+    const { data, error } = await supabase.rpc('atribuir_docente_disciplinas_turma', {
+      p_turma_id: turmaId,
+      p_disciplina_ids: uniqueDisciplineIds,
+      p_professor_id: professor?.id || null,
+    });
     if (error) throw error;
+    return mapProfessorAssignmentRows(data, uniqueDisciplineIds);
   },
 
   async toggleConcluida(

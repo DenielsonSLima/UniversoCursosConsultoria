@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import CanonicalDocumentPreviewModal from './CanonicalDocumentPreviewModal';
 import ReprintModal from '../historico-emissoes/components/ReprintModal';
 import EmissionDocumentPages from '../historico-emissoes/components/EmissionDocumentPages';
 import { historicoEmissoesService } from '../historico-emissoes/historico-emissoes.service';
@@ -13,6 +14,12 @@ import type {
   PreviewResources,
 } from '../historico-emissoes/historico-emissoes.types';
 import type { SecretariaDocumentoDefinition } from './secretaria-documentos.types';
+import type { CanonicalDocumentPreviewItem } from './canonical-document-render.types';
+import {
+  createEmissionDocumentsPdf,
+  type EmissionPdfSource,
+} from '../historico-emissoes/emission-document.pdf';
+import { isOfficialVectorDocument } from '../historico-emissoes/historico-emissoes.constants';
 import { getSecretariaErrorMessage } from './secretaria-error';
 import { waitForDocumentAssets } from '../../../shared/qrcode/document-assets';
 import {
@@ -33,6 +40,65 @@ interface PreparedPdf {
   url: string;
   filename: string;
 }
+
+interface VectorDocumentPreviewItem extends CanonicalDocumentPreviewItem {
+  emission: EmissionLog;
+}
+
+const toVectorPreviewItem = (emission: EmissionLog): VectorDocumentPreviewItem => ({
+  emission,
+  emissionId: emission.id,
+  title: emission.documento,
+  targetName: emission.dados_emissao?.studentName || emission.aluno?.nome || 'Aluno',
+  validationCode: emission.codigo || null,
+  validationUrl: null,
+  validUntil: emission.validade_ate,
+  renderPayload: null,
+});
+
+const VectorIssuedDocumentModal: React.FC<SecretariaIssuedDocumentModalProps> = ({
+  emissions,
+  poloId,
+  definition,
+  onClose,
+}) => {
+  const items = emissions.map(toVectorPreviewItem);
+  const createPdf = async (
+    selectedItems: readonly VectorDocumentPreviewItem[],
+    options: Parameters<typeof createEmissionDocumentsPdf>[1] = {},
+  ) => {
+    const selectedEmissions = selectedItems.map((item) => item.emission);
+    const totalSteps = selectedEmissions.length * 2;
+    const previews = await historicoEmissoesService.loadPreviews(
+      selectedEmissions,
+      poloId,
+      (completed) => options.onProgress?.({ current: completed, total: totalSteps }),
+    );
+    const sources: EmissionPdfSource[] = selectedEmissions.map((emission, index) => ({
+      emission,
+      preview: previews[index],
+    }));
+    return createEmissionDocumentsPdf(sources, {
+      ...options,
+      onProgress: ({ current }) => options.onProgress?.({
+        current: selectedEmissions.length + current,
+        total: totalSteps,
+      }),
+    });
+  };
+
+  return (
+    <CanonicalDocumentPreviewModal
+      items={items}
+      title={`Visualizador de ${definition.singularLabel}`}
+      accentClassName="bg-blue-600 hover:bg-blue-700"
+      fileNamePrefix={definition.id}
+      onClose={onClose}
+      isRenderable={() => true}
+      createPdf={createPdf}
+    />
+  );
+};
 
 const EMPTY_PREVIEW: PreviewResources = {
   template: null,
@@ -71,7 +137,7 @@ const waitForBatchRenderer = async (
   throw new Error('O visualizador do lote não ficou pronto a tempo para gerar o PDF.');
 };
 
-const SecretariaIssuedDocumentModal: React.FC<SecretariaIssuedDocumentModalProps> = ({
+const LegacyIssuedDocumentModal: React.FC<SecretariaIssuedDocumentModalProps> = ({
   emissions,
   poloId,
   definition,
@@ -337,5 +403,11 @@ const SecretariaIssuedDocumentModal: React.FC<SecretariaIssuedDocumentModalProps
     </>
   );
 };
+
+const SecretariaIssuedDocumentModal: React.FC<SecretariaIssuedDocumentModalProps> = (props) => (
+  isOfficialVectorDocument(props.definition.id)
+    ? <VectorIssuedDocumentModal {...props} />
+    : <LegacyIssuedDocumentModal {...props} />
+);
 
 export default SecretariaIssuedDocumentModal;

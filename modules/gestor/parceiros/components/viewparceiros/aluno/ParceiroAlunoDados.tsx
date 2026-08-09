@@ -124,7 +124,12 @@ const ParceiroAlunoDados: React.FC<ParceiroAlunoDadosProps> = ({
       setCepStatus('idle');
     }
     if (name === 'telefone' || name === 'contato1' || name === 'contato2' || name === 'responsavelTelefone') finalValue = maskPhone(finalValue);
-    if (name === 'dataNascimento' || name === 'rgDataEmissao') finalValue = maskDate(finalValue);
+    if (name === 'dataNascimento' || name === 'rgDataEmissao' || name === 'tituloEleitorDataEmissao') {
+      finalValue = maskDate(finalValue);
+    }
+    if (name === 'tituloEleitorZona' || name === 'tituloEleitorSecao') {
+      finalValue = onlyDigits(finalValue).slice(0, 4);
+    }
     if (name === 'tipoDocumento') finalValue = normalizeDocumentType(finalValue);
     if (name === 'certidaoMatricula') finalValue = normalizeCertidaoMatricula(finalValue);
     if (name === 'anoConclusaoEnsinoMedio' || name === 'anoPrevisaoConclusaoEnsinoMedio') {

@@ -45,7 +45,9 @@ const FinanceiroConfigSummary: React.FC<FinanceiroConfigSummaryProps> = ({
             <p className="text-[10px] text-slate-400 font-bold uppercase flex items-center gap-1">
               <DollarSign size={10} /> Matrícula
             </p>
-            <p className="text-lg font-black text-[#001a33]">{formatCurrencyBRL(config.valorMatricula)}</p>
+            <p className="text-lg font-black text-[#001a33]">
+              {config.cobrarMatricula ? formatCurrencyBRL(config.valorMatricula) : 'Não cobrada'}
+            </p>
           </div>
           <div className="space-y-1">
             <p className="text-[10px] text-slate-400 font-bold uppercase flex items-center gap-1">
@@ -69,7 +71,9 @@ const FinanceiroConfigSummary: React.FC<FinanceiroConfigSummaryProps> = ({
             <p className="text-[10px] text-amber-600 font-bold uppercase flex items-center gap-1">
               <RefreshCw size={10} /> Rematrícula
             </p>
-            <p className="text-lg font-black text-amber-600">{formatCurrencyBRL(config.valorRematricula)}</p>
+            <p className="text-lg font-black text-amber-600">
+              {config.cobrarRematricula ? formatCurrencyBRL(config.valorRematricula) : 'Sem renovação'}
+            </p>
           </div>
           <div className="space-y-1">
             <p className="text-[10px] text-emerald-600 font-bold uppercase flex items-center gap-1">
@@ -170,7 +174,11 @@ const FinanceiroConfigSummary: React.FC<FinanceiroConfigSummaryProps> = ({
     <div className="bg-white border border-slate-100 rounded-[2rem] p-8 shadow-sm hover:shadow-md transition-shadow flex flex-col max-h-[500px]">
       <div className="mb-4">
         <h3 className="text-lg font-black text-[#001a33] uppercase tracking-tight">Cronograma de Cobrança</h3>
-        <p className="text-slate-500 text-xs mt-0.5">Matrícula, mensalidades e rematrícula estimadas.</p>
+        <p className="text-slate-500 text-xs mt-0.5">
+          {config.cobrarRematricula
+            ? 'Matrícula, mensalidades e rematrícula do ciclo canônico.'
+            : 'O plano encerra após as mensalidades deste ciclo.'}
+        </p>
       </div>
       <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-2.5">
         {cronograma.length === 0 ? (
@@ -178,7 +186,7 @@ const FinanceiroConfigSummary: React.FC<FinanceiroConfigSummaryProps> = ({
             <Calendar size={32} className="mb-2 opacity-50" />
             <p className="text-xs font-semibold text-center">Nenhum cronograma gerado. Clique em Editar para criar.</p>
           </div>
-        ) : cronograma.map((item, index) => {
+        ) : cronograma.map((item) => {
           let badgeColor = 'bg-slate-100 text-slate-600';
           if (item.tipo === 'MATRICULA') badgeColor = 'bg-emerald-100 text-emerald-800';
           if (item.tipo === 'REMATRICULA') badgeColor = 'bg-amber-100 text-amber-800';
@@ -196,7 +204,9 @@ const FinanceiroConfigSummary: React.FC<FinanceiroConfigSummaryProps> = ({
               <div className="min-w-0 flex-1 pr-2">
                 <p className="text-xs font-bold text-[#001a33] truncate">{item.label}</p>
                 <p className="text-[10px] text-slate-500 font-semibold mt-0.5 flex items-center gap-1.5">
-                  <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${badgeColor}`}>Mês {index + 1}</span>
+                  <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${badgeColor}`}>
+                    {item.numero ? `Mensalidade ${item.numero}` : item.tipo}
+                  </span>
                   <span>Vencimento: {formattedDate}</span>
                 </p>
               </div>

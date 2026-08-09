@@ -33,6 +33,7 @@
     "pasta sem título",
     "pasta sem título",
     "supabase/functions",
-    "dist"
+    "dist",
+    "tmp"
   ]
 }

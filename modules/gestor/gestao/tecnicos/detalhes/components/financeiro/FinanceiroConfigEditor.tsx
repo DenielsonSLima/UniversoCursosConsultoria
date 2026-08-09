@@ -70,18 +70,38 @@ const FinanceiroConfigEditor: React.FC<FinanceiroConfigEditorProps> = ({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase">Matrícula (R$)</label>
+              <label className="flex items-center justify-between gap-2 text-xs font-bold text-slate-500 uppercase">
+                Matrícula (R$)
+                <span className="inline-flex items-center gap-1 text-[9px] normal-case">
+                  <input
+                    type="checkbox"
+                    checked={formData.cobrarMatricula}
+                    onChange={(event) => setFormData((previous) => ({ ...previous, cobrarMatricula: event.target.checked }))}
+                  /> Cobrar
+                </span>
+              </label>
               <input
                 type="text" name="valorMatricula"
                 value={formatCurrencyBRL(formData.valorMatricula)} onChange={handleCurrencyChange}
+                disabled={!formData.cobrarMatricula}
                 className="w-full p-3 rounded-xl border border-slate-300 outline-none focus:border-blue-500 font-bold text-slate-700 bg-white"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase">Rematrícula (R$)</label>
+              <label className="flex items-center justify-between gap-2 text-xs font-bold text-slate-500 uppercase">
+                Rematrícula (R$)
+                <span className="inline-flex items-center gap-1 text-[9px] normal-case">
+                  <input
+                    type="checkbox"
+                    checked={formData.cobrarRematricula}
+                    onChange={(event) => setFormData((previous) => ({ ...previous, cobrarRematricula: event.target.checked }))}
+                  /> Cobrar
+                </span>
+              </label>
               <input
                 type="text" name="valorRematricula"
                 value={formatCurrencyBRL(formData.valorRematricula)} onChange={handleCurrencyChange}
+                disabled={!formData.cobrarRematricula}
                 className="w-full p-3 rounded-xl border border-slate-300 outline-none focus:border-blue-500 font-bold text-slate-700 bg-white"
               />
             </div>
@@ -89,6 +109,8 @@ const FinanceiroConfigEditor: React.FC<FinanceiroConfigEditorProps> = ({
               <label className="text-xs font-bold text-slate-500 uppercase">Parcelas por ciclo</label>
               <input
                 type="number" name="qtdParcelas"
+                min={1}
+                max={60}
                 value={formData.qtdParcelas} onChange={handleNumberChange}
                 className="w-full p-3 rounded-xl border border-slate-300 outline-none focus:border-blue-500 font-bold text-slate-700 bg-white"
               />
@@ -152,7 +174,7 @@ const FinanceiroConfigEditor: React.FC<FinanceiroConfigEditorProps> = ({
             <div className="mt-3 grid gap-2 md:grid-cols-2">
               <div className="rounded-xl border border-blue-200 bg-white px-3 py-2.5">
                 <p className="text-[10px] font-black uppercase tracking-wide text-blue-700">
-                  Juros de 1% ao mês, proporcionais por dia
+                  Juros de {formatPercentageBR(formData.jurosAtraso, 2)}% ao mês, proporcionais por dia
                 </p>
                 {calculo && calculationReady ? (
                   <>
@@ -198,7 +220,10 @@ const FinanceiroConfigEditor: React.FC<FinanceiroConfigEditorProps> = ({
                     <input
                       type="checkbox"
                       checked={formData[policy.descontoKey]}
-                      disabled
+                      onChange={(event) => setFormData((previous) => ({
+                        ...previous,
+                        [policy.descontoKey]: event.target.checked,
+                      }))}
                       className="h-4 w-4 rounded border-slate-300 text-blue-600"
                     />
                     Desconto
@@ -207,7 +232,10 @@ const FinanceiroConfigEditor: React.FC<FinanceiroConfigEditorProps> = ({
                     <input
                       type="checkbox"
                       checked={formData[policy.multaKey]}
-                      disabled
+                      onChange={(event) => setFormData((previous) => ({
+                        ...previous,
+                        [policy.multaKey]: event.target.checked,
+                      }))}
                       className="h-4 w-4 rounded border-slate-300 text-blue-600"
                     />
                     Multa/Juros

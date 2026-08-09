@@ -1,7 +1,10 @@
 import { formatMatricula } from '../../../../lib/academicUtils';
+import { formatCpf } from '../../../../lib/documentFormatters';
 import { escapeHtmlText } from '../../../../lib/htmlSanitizer';
+import { formatCep } from '../../../shared/utils/brazilianCep';
 import { amountInWords } from '../../../shared/secretaria/document-template.helpers';
 import type { AcademicPreviewData, EmissionLog } from './historico-emissoes.types';
+import { snapshotFirst } from './voter-snapshot';
 
 interface TemplateParserContext {
   academicData: AcademicPreviewData | null;
@@ -99,7 +102,7 @@ export const parseEmissionTemplate = (
       context.poloInfo?.cidade,
       context.poloInfo?.estado || context.poloInfo?.uf,
     ].filter(Boolean).join('/'),
-    context.poloInfo?.cep ? `CEP: ${context.poloInfo.cep}` : '',
+    context.poloInfo?.cep ? `CEP: ${formatCep(context.poloInfo.cep)}` : '',
   ].filter(Boolean).join(' - ');
   const enrollmentFormTerm = String(
     context.templateConfig?.enrollmentFormTerm
@@ -147,7 +150,7 @@ export const parseEmissionTemplate = (
       emissionData.studentPhotoUrl || data.aluno?.foto_url || '/sem-foto-aluno.svg',
     ],
     [/{{ALUNO_NOME_SOCIAL}}/g, emissionData.studentSocialName || 'Não informado'],
-    [/{{ALUNO_CPF}}/g, emissionData.studentCpf || data.aluno?.cpf_cnpj || 'Não informado'],
+    [/{{ALUNO_CPF}}/g, formatCpf(emissionData.studentCpf || data.aluno?.cpf_cnpj) || 'Não informado'],
     [/{{ALUNO_DOCUMENTO_TIPO}}/g, 'RG'],
     [/{{ALUNO_RG}}/g, emissionData.studentRg || data.aluno?.rg || 'Não informado'],
     [/{{ALUNO_NASCIMENTO}}/g, formatDate(emissionData.studentBirthDate || data.aluno?.data_nascimento)],
@@ -169,17 +172,38 @@ export const parseEmissionTemplate = (
     [/{{ALUNO_BAIRRO}}/g, emissionData.studentDistrict || 'Não informado'],
     [/{{ALUNO_CIDADE}}/g, emissionData.studentCity || 'Não informada'],
     [/{{ALUNO_UF}}/g, emissionData.studentState || '—'],
-    [/{{ALUNO_CEP}}/g, emissionData.studentZipCode || 'Não informado'],
+    [/{{ALUNO_CEP}}/g, formatCep(emissionData.studentZipCode) || 'Não informado'],
     [/{{ALUNO_TIPO_DOCUMENTO}}/g, emissionData.studentDocumentType || 'RG'],
     [/{{ALUNO_RG_ORGAO}}/g, emissionData.studentRgIssuer || data.aluno?.orgao_emissor || '—'],
     [/{{ALUNO_RG_UF}}/g, emissionData.studentRgState || '—'],
     [/{{ALUNO_RG_EMISSAO}}/g, formatDate(emissionData.studentRgIssueDate)],
-    [/{{ALUNO_TITULO_ELEITOR}}/g, emissionData.studentVoterId || data.aluno?.titulo_eleitor || '—'],
-    [/{{ALUNO_TITULO_ZONA}}/g, emissionData.studentVoterZone || '—'],
-    [/{{ALUNO_TITULO_SECAO}}/g, emissionData.studentVoterSection || '—'],
+    [
+      /{{ALUNO_TITULO_ELEITOR}}/g,
+      snapshotFirst(emissionData, 'studentVoterId', data.aluno?.titulo_eleitor) || '—',
+    ],
+    [
+      /{{ALUNO_TITULO_ZONA}}/g,
+      snapshotFirst(emissionData, 'studentVoterZone', data.aluno?.titulo_eleitor_zona) || '—',
+    ],
+    [
+      /{{ALUNO_TITULO_SECAO}}/g,
+      snapshotFirst(emissionData, 'studentVoterSection', data.aluno?.titulo_eleitor_secao) || '—',
+    ],
+    [
+      /{{ALUNO_TITULO_EMISSAO}}/g,
+      formatOptionalDate(snapshotFirst(
+        emissionData,
+        'studentVoterIssueDate',
+        data.aluno?.titulo_eleitor_data_emissao,
+      )),
+    ],
+    [
+      /{{ALUNO_TITULO_UF}}/g,
+      snapshotFirst(emissionData, 'studentVoterState', data.aluno?.titulo_eleitor_uf) || '—',
+    ],
     [/{{ALUNO_RESERVISTA}}/g, emissionData.studentReservist || data.aluno?.reservista || '—'],
     [/{{ALUNO_RESPONSAVEL}}/g, emissionData.studentResponsibleName || 'Não informado'],
-    [/{{ALUNO_RESPONSAVEL_CPF}}/g, emissionData.studentResponsibleCpf || 'Não informado'],
+    [/{{ALUNO_RESPONSAVEL_CPF}}/g, formatCpf(emissionData.studentResponsibleCpf) || 'Não informado'],
     [/{{ALUNO_RESPONSAVEL_PARENTESCO}}/g, emissionData.studentResponsibleRelation || 'Não informado'],
     [/{{ALUNO_RESPONSAVEL_TELEFONE}}/g, emissionData.studentResponsiblePhone || 'Não informado'],
     [/{{ALUNO_OBSERVACOES}}/g, emissionData.studentNotes || ''],
@@ -219,9 +243,9 @@ export const parseEmissionTemplate = (
     [/{{VALOR_TOTAL}}/g, formattedIrpfTotal],
     [/{{VALOR_EXTENSO}}/g, amountInWords(irpfTotal)],
     [/{{RESPONSAVEL_FINANCEIRO_NOME}}/g, (emissionData.responsibleName || emissionData.studentName || data.aluno?.nome || '').toUpperCase()],
-    [/{{RESPONSAVEL_FINANCEIRO_CPF}}/g, emissionData.responsibleCpf || emissionData.studentCpf || data.aluno?.cpf_cnpj || 'Não informado'],
+    [/{{RESPONSAVEL_FINANCEIRO_CPF}}/g, formatCpf(emissionData.responsibleCpf || emissionData.studentCpf || data.aluno?.cpf_cnpj) || 'Não informado'],
     [/{{nome_aluno}}/g, (emissionData.studentName || data.aluno?.nome || '').toUpperCase()],
-    [/{{cpf}}/g, emissionData.studentCpf || data.aluno?.cpf_cnpj || 'Não informado'],
+    [/{{cpf}}/g, formatCpf(emissionData.studentCpf || data.aluno?.cpf_cnpj) || 'Não informado'],
     [/{{curso_nome}}/g, emissionData.courseName || ''],
     [/{{carga_horaria}}/g, String(emissionData.courseHours || '')],
     [/{{data_conclusao}}/g, formatDate(emissionData.completionDate)],

@@ -27,6 +27,10 @@ export interface AlunoFormData {
   certidaoLivro: string;
   certidaoFolha: string;
   tituloEleitor: string;
+  tituloEleitorZona: string;
+  tituloEleitorSecao: string;
+  tituloEleitorDataEmissao: string;
+  tituloEleitorUf: string;
   reservista: string;
   nomeMae: string;
   nomePai: string;

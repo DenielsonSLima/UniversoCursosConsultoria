@@ -15,8 +15,13 @@ export interface ContratoAlunoTurma {
 
 export interface ContratoAlunoTarget {
   enrollmentId: string;
+  poloId: string;
+  dataMatricula: string | null;
   alunoId: string;
   alunoNome: string;
+  alunoCpf: string | null;
+  alunoRg: string | null;
+  alunoFotoUrl: string | null;
   cursoNome: string;
   modalidade: ContratoAlunoModalidade | string;
   turmaId: string;

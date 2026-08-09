@@ -13,12 +13,7 @@ interface FinanceiroCronogramaItemProps {
 }
 
 const FinanceiroCronogramaItem: React.FC<FinanceiroCronogramaItemProps> = ({
-  index,
   item,
-  onDragEnd,
-  onDragEnter,
-  onDragStart,
-  onUpdateDate,
 }) => {
   let colorClass: string;
   let icon: React.ReactNode;
@@ -41,19 +36,14 @@ const FinanceiroCronogramaItem: React.FC<FinanceiroCronogramaItemProps> = ({
 
   return (
     <div
-      draggable
-      onDragStart={() => onDragStart(index)}
-      onDragEnter={() => onDragEnter(index)}
-      onDragEnd={onDragEnd}
-      onDragOver={(event) => event.preventDefault()}
-      className={`flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl border mb-2 cursor-move transition-all shadow-sm ${colorClass} active:scale-[0.98] active:shadow-lg gap-2`}
+      className={`flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl border mb-2 transition-all shadow-sm ${colorClass} gap-2`}
     >
       <div className="flex items-center gap-3">
-        <div className="cursor-grab text-slate-400 hover:text-slate-600">
+        <div className="text-slate-400">
           <GripVertical size={18} />
         </div>
         <span className="font-bold text-[10px] uppercase bg-white/50 px-2 py-1 rounded border border-black/5 shrink-0">
-          Mês {index + 1}
+          {item.numero ? `Mensalidade ${item.numero}` : item.tipo}
         </span>
         <div className="flex items-center gap-2">
           {icon}
@@ -64,7 +54,8 @@ const FinanceiroCronogramaItem: React.FC<FinanceiroCronogramaItemProps> = ({
         <input
           type="date"
           value={item.dataVencimento || ''}
-          onChange={(event) => onUpdateDate(item.id, event.target.value)}
+          readOnly
+          aria-label={`Vencimento canônico de ${item.label}`}
           className="text-xs font-bold bg-white border border-slate-200 rounded-lg px-2 py-1.5 outline-none focus:border-blue-500 text-slate-700 shadow-sm"
         />
         <div className="font-mono font-bold text-sm opacity-80 min-w-[90px] text-right">

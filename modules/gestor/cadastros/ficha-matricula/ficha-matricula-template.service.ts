@@ -1,7 +1,8 @@
 import { createDocumentTemplateService } from '../modelos-documentos/shared/document-template.service';
 import {
   fichaMatriculaDefaultTemplate,
-  normalizeRegistrationTemplateTypography,
+  registrationTemplateNeedsVoterUpgrade,
+  upgradeRegistrationVoterField,
 } from './document-layouts';
 import { fichasMatriculaService } from './fichas-matricula.service';
 
@@ -28,38 +29,19 @@ export const fichaMatriculaTemplateService = {
       enrollmentFormRequiresSignature: model.requerAssinatura,
     };
 
-    if (Number(template.v || 0) >= fichaMatriculaDefaultTemplate.v) {
+    if (!registrationTemplateNeedsVoterUpgrade(
+      template,
+      'ficha_documentos',
+      fichaMatriculaDefaultTemplate.v,
+    )) {
       return template;
     }
 
-    const defaultTemplate = cloneDefaultTemplate();
-    const canonicalFieldIds = new Set(
-      defaultTemplate.absoluteFields.map((field: any) => field.id),
+    return upgradeRegistrationVoterField(
+      template,
+      cloneDefaultTemplate(),
+      'ficha_documentos',
     );
-    const upgradedTemplate = normalizeRegistrationTemplateTypography(
-      {
-        ...template,
-        absoluteFields: [
-          ...defaultTemplate.absoluteFields,
-          ...(Array.isArray(template.absoluteFields)
-            ? template.absoluteFields.filter(
-                (field: any) => !canonicalFieldIds.has(field.id),
-              )
-            : []),
-        ],
-      },
-      fichaMatriculaDefaultTemplate.v,
-    );
-
-    await fichasMatriculaService.update({
-      ...model,
-      templateConfig: {
-        ...(model.templateConfig || {}),
-        ...upgradedTemplate,
-      },
-    }).catch(() => undefined);
-
-    return upgradedTemplate;
   },
 
   async saveTemplate(_poloId: string, template: any): Promise<boolean> {

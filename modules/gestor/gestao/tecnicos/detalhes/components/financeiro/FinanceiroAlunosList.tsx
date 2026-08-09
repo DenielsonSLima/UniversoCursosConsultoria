@@ -1,29 +1,106 @@
-// File: modules/gestor/gestao/tecnicos/detalhes/components/financeiro/FinanceiroAlunosList.tsx
-
-import React, { useState } from 'react';
-import { Search, MoreHorizontal, CheckCircle2, AlertTriangle, XCircle, FileText, Loader2, Copy, ExternalLink } from 'lucide-react';
+import React, { useMemo, useRef, useState } from 'react';
+import {
+  AlertTriangle,
+  CalendarClock,
+  CheckCircle2,
+  Clock3,
+  FileText,
+  Loader2,
+  MoreHorizontal,
+  ReceiptText,
+  Search,
+  Settings2,
+  XCircle,
+} from 'lucide-react';
 import ToastNotification, { useToast } from '../../../../../parceiros/components/shared/ToastNotification';
-import AlunoFinanceiroExtrato from './extrato/AlunoFinanceiroExtrato';
-import { AlunoFinanceiro } from './financeiro-alunos.service';
-import TechnicalDataError from '../TechnicalDataError';
 import FinancialReportExportButton from '../../../../../financeiro/components/FinancialReportPreview';
-import { Turma } from '../../../../gestao.types';
-
+import type { Turma } from '../../../../gestao.types';
+import TechnicalDataError from '../TechnicalDataError';
+import AlunoFinanceiroExtrato from './extrato/AlunoFinanceiroExtrato';
+import FinanceiroAlunoOverrideDialog from './FinanceiroAlunoOverrideDialog';
+import type {
+  MatriculaTecnicaAtivacaoModo,
+  MatriculaTecnicaFinanceiroRow,
+  MatriculaTecnicaFinanceiroWorkspace,
+  MatriculaTecnicaRegra,
+} from './matricula-tecnica-financeiro.types';
+import {
+  createFinanceiroRequestId,
+  useAtivarFinanceiroMatriculaTecnica,
+  useAtivarFinanceiroMatriculasTecnicasLote,
+} from './hooks/useMatriculaTecnicaFinanceiro';
+import { useAccessibleDialog } from './hooks/useAccessibleDialog';
+import {
+  isFinanceiroDateRejected,
+  isRegraFinanceiraConflict,
+} from './matricula-tecnica-financeiro.service';
 
 interface FinanceiroAlunosListProps {
   turma: Turma;
-  alunos: AlunoFinanceiro[];
+  regra: MatriculaTecnicaRegra;
+  resumo: MatriculaTecnicaFinanceiroWorkspace['resumo'];
+  alunos: MatriculaTecnicaFinanceiroRow[];
   isLoading: boolean;
   isError: boolean;
   isFetching: boolean;
   onRetry: () => void;
 }
 
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
+interface PendingAction {
+  matriculaIds: string[];
+  label: string;
+  modo: MatriculaTecnicaAtivacaoModo;
+}
+
+const formatMoney = (value: string | null | undefined) => {
+  if (value === null || value === undefined || value.trim() === '') return '—';
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return '—';
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(parsed);
+};
+
+const formatDateTime = (value: string | null) => value
+  ? new Date(value).toLocaleString('pt-BR')
+  : 'Não informado';
+
+const situationLabel = (row: MatriculaTecnicaFinanceiroRow) => {
+  if (row.financeiro.status === 'NAO_CONFIGURADO') return 'Não configurado';
+  if (row.financeiro.status === 'PENDENTE') return 'Pendente';
+  if (row.financeiro.status === 'AGENDADA') return 'Agendada';
+  if (row.financeiro.status === 'ATIVADA') return 'Ativada';
+  return row.situacaoFinanceira === 'INADIMPLENTE'
+    ? 'Gerada · Inadimplente'
+    : 'Gerada';
+};
+
+const statusBadge = (row: MatriculaTecnicaFinanceiroRow) => {
+  if (row.financeiro.status === 'NAO_CONFIGURADO') {
+    return <span className="flex items-center gap-1 rounded bg-slate-100 px-2 py-1 text-[10px] font-bold uppercase text-slate-500"><AlertTriangle size={12} /> Não configurado</span>;
+  }
+  if (row.financeiro.status === 'PENDENTE') {
+    return <span className="flex items-center gap-1 rounded bg-amber-100 px-2 py-1 text-[10px] font-bold uppercase text-amber-700"><Clock3 size={12} /> Pendente</span>;
+  }
+  if (row.financeiro.status === 'AGENDADA') {
+    return <span className="flex items-center gap-1 rounded bg-blue-100 px-2 py-1 text-[10px] font-bold uppercase text-blue-700"><CalendarClock size={12} /> Agendada</span>;
+  }
+  if (row.financeiro.status === 'ATIVADA') {
+    return <span className="flex items-center gap-1 rounded bg-cyan-100 px-2 py-1 text-[10px] font-bold uppercase text-cyan-700"><CheckCircle2 size={12} /> Ativada</span>;
+  }
+  return (
+    <div>
+      <span className="flex items-center gap-1 rounded bg-emerald-100 px-2 py-1 text-[10px] font-bold uppercase text-emerald-700"><CheckCircle2 size={12} /> Gerada</span>
+      {row.situacaoFinanceira === 'INADIMPLENTE' ? <p className="mt-1 text-[8px] font-black uppercase text-red-600">Inadimplente</p> : null}
+    </div>
+  );
+};
 
 const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
   turma,
+  regra,
+  resumo,
   alunos,
   isLoading,
   isError,
@@ -33,257 +110,260 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
   const { toasts, removeToast, toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMatriculaId, setSelectedMatriculaId] = useState<string | null>(null);
-  const filteredAlunos = alunos.filter(a => 
-    a.nome.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    a.matricula.includes(searchTerm)
-  );
-  const statusLabel = (status: AlunoFinanceiro['status']) => {
-    if (status === 'inadimplente') return 'Inadimplente';
-    if (status === 'atrasado') return 'Atrasado';
-    return 'Em dia';
+  const [selectedPending, setSelectedPending] = useState<string[]>([]);
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
+  const [ativarEm, setAtivarEm] = useState('');
+  const [actionMenuId, setActionMenuId] = useState<string | null>(null);
+  const [overrideMatriculaId, setOverrideMatriculaId] = useState<string | null>(null);
+  const requestIds = useRef(new Map<string, string>());
+  const individualMutation = useAtivarFinanceiroMatriculaTecnica();
+  const batchMutation = useAtivarFinanceiroMatriculasTecnicasLote();
+  const pending = individualMutation.isPending || batchMutation.isPending;
+
+  const closeActionDialog = () => {
+    setPendingAction(null);
+    setAtivarEm('');
   };
-  const alunosEmDia = filteredAlunos.filter((aluno) => aluno.status === 'em_dia').length;
-  const alunosComPendencia = filteredAlunos.length - alunosEmDia;
-  const parcelasPagas = filteredAlunos.reduce((total, aluno) => total + aluno.parcelasPagas, 0);
-  const parcelasPrevistas = filteredAlunos.reduce((total, aluno) => total + aluno.totalParcelas, 0);
-  const exportRows = filteredAlunos.map((aluno) => ({
-    id: aluno.id,
+  const { dialogRef, initialFocusRef } = useAccessibleDialog(
+    Boolean(pendingAction),
+    closeActionDialog,
+    pending,
+  );
+
+  const filteredAlunos = useMemo(() => {
+    const search = searchTerm.trim().toLocaleLowerCase('pt-BR');
+    if (!search) return alunos;
+    return alunos.filter((row) => row.alunoNome.toLocaleLowerCase('pt-BR').includes(search)
+      || row.matriculaExibicao.toLocaleLowerCase('pt-BR').includes(search));
+  }, [alunos, searchTerm]);
+  const pendingRows = alunos.filter((row) => row.financeiro.status === 'PENDENTE');
+  const pendingIds = new Set(pendingRows.map((row) => row.matriculaId));
+  const eligibleSelected = selectedPending.filter((id) => pendingIds.has(id));
+  const actionRows = pendingAction?.matriculaIds
+    .map((id) => alunos.find((row) => row.matriculaId === id))
+    .filter((row): row is MatriculaTecnicaFinanceiroRow => Boolean(row)) || [];
+  const actionRule = actionRows.length === 1 ? actionRows[0].regraEfetiva : null;
+  const currentOverrideRow = overrideMatriculaId
+    ? alunos.find((row) => row.matriculaId === overrideMatriculaId) || null
+    : null;
+
+  const exportRows = filteredAlunos.map((row) => ({
+    id: row.matriculaId,
     cells: [
-      <div key="aluno">
-        <p className="font-black text-[#001a33]">{aluno.nome}</p>
-        <p className="mt-0.5 text-[8px] font-bold uppercase text-slate-400">{statusLabel(aluno.status)}</p>
-      </div>,
-      <span key="matricula" className="font-mono text-[9px]">{aluno.matricula}</span>,
-      <div key="valores">
-        <p className="font-black text-emerald-700">Mat. {formatCurrency(aluno.valorMatricula)}</p>
-        <p className="mt-0.5 font-bold text-slate-500">
-          Mens. {aluno.valorMensalidade > 0 ? formatCurrency(aluno.valorMensalidade) : 'Aguardando baixa'}
-        </p>
-      </div>,
-      <span key="progresso" className="font-black text-[#001a33]">
-        {aluno.parcelasPagas}/{aluno.totalParcelas}
-      </span>,
-      <span
-        key="status"
-        className={`inline-flex rounded-lg border px-2 py-1 text-[8px] font-black uppercase ${
-          aluno.status === 'em_dia'
-            ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-            : aluno.status === 'atrasado'
-              ? 'border-amber-200 bg-amber-50 text-amber-700'
-              : 'border-red-200 bg-red-50 text-red-700'
-        }`}
-      >
-        {statusLabel(aluno.status)}
-      </span>,
+      <div key="aluno"><p className="font-black text-[#001a33]">{row.alunoNome}</p><p className="mt-0.5 text-[8px] font-bold uppercase text-slate-400">{situationLabel(row)}</p></div>,
+      <span key="matricula" className="font-mono text-[9px]">{row.matriculaExibicao}</span>,
+      <div key="valores"><p className="font-black text-emerald-700">Mat. {formatMoney(row.valorMatriculaEfetivo)}</p><p className="mt-0.5 font-bold text-slate-500">Mens. {formatMoney(row.valorMensalidadeEfetivo)}</p></div>,
+      <span key="progresso" className="font-black text-[#001a33]">{row.parcelasPagas}/{row.totalParcelas}</span>,
+      <span key="status" className="font-black uppercase text-slate-600">{situationLabel(row)}</span>,
     ],
   }));
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'em_dia':
-        return <span className="flex items-center gap-1 bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-[10px] font-bold uppercase"><CheckCircle2 size={12} /> Em Dia</span>;
-      case 'atrasado':
-        return <span className="flex items-center gap-1 bg-amber-100 text-amber-700 px-2 py-1 rounded text-[10px] font-bold uppercase"><AlertTriangle size={12} /> Atrasado</span>;
-      case 'inadimplente':
-        return <span className="flex items-center gap-1 bg-red-100 text-red-700 px-2 py-1 rounded text-[10px] font-bold uppercase"><XCircle size={12} /> Inadimplente</span>;
-      default:
-        return null;
-    }
+  const getRequestId = (key: string) => {
+    const current = requestIds.current.get(key);
+    if (current) return current;
+    const requestId = createFinanceiroRequestId();
+    requestIds.current.set(key, requestId);
+    return requestId;
   };
 
-  const openExtrato = (matriculaId: string) => {
-    setSelectedMatriculaId(matriculaId);
-  };
-
-  const copyChargeLink = async (aluno: AlunoFinanceiro) => {
-    if (!aluno.cobrancaUrl) {
-      toast.warning('Cobrança sem link', 'Sincronize a cobrança com o Asaas para liberar o compartilhamento.');
+  const activate = async (
+    matriculaIds: string[],
+    modo: MatriculaTecnicaAtivacaoModo,
+    scheduledAt?: string,
+  ) => {
+    const rows = matriculaIds
+      .map((id) => alunos.find((row) => row.matriculaId === id))
+      .filter((row): row is MatriculaTecnicaFinanceiroRow => Boolean(
+        row && row.financeiro.status === 'PENDENTE' && row.regraEfetiva,
+      ))
+      .sort((left, right) => left.matriculaId.localeCompare(right.matriculaId));
+    if (rows.length === 0) {
+      closeActionDialog();
+      toast.info('Situação já atualizada', 'Nenhuma das matrículas selecionadas continua pendente.');
       return;
     }
-    await navigator.clipboard.writeText(aluno.cobrancaUrl);
-    toast.success('Link copiado', `Envie a cobrança de ${aluno.nome} pelo canal de atendimento.`);
+    const identityKey = rows.map((row) => [
+      row.matriculaId,
+      row.override?.identidade.fingerprint || '',
+      row.regraEfetiva?.identidade.efetivaFingerprint || '',
+    ].join(':')).join(',');
+    const key = `${modo}:${identityKey}:${scheduledAt || ''}:${regra.identidade.turmaFingerprint}`;
+    const requestId = getRequestId(key);
+    try {
+      if (rows.length === 1) {
+        const row = rows[0];
+        await individualMutation.mutateAsync({
+          turmaId: turma.id,
+          matriculaId: row.matriculaId,
+          modo,
+          requestId,
+          expectedTurmaRevisao: regra.identidade.turmaRevisao,
+          expectedTurmaFingerprint: regra.identidade.turmaFingerprint,
+          expectedOverrideRevisao: row.override?.identidade.revisao ?? 0,
+          expectedOverrideFingerprint: row.override?.identidade.fingerprint ?? '',
+          expectedEfetivaFingerprint: row.regraEfetiva?.identidade.efetivaFingerprint || '',
+          ativarEm: scheduledAt || null,
+        });
+      } else {
+        await batchMutation.mutateAsync({
+          turmaId: turma.id,
+          matriculaIds: rows.map((row) => row.matriculaId),
+          modo,
+          requestId,
+          expectedTurmaRevisao: regra.identidade.turmaRevisao,
+          expectedTurmaFingerprint: regra.identidade.turmaFingerprint,
+          expectedRegras: rows.map((row) => ({
+            matriculaId: row.matriculaId,
+            overrideRevisao: row.override?.identidade.revisao ?? 0,
+            overrideFingerprint: row.override?.identidade.fingerprint ?? '',
+            efetivaFingerprint: row.regraEfetiva?.identidade.efetivaFingerprint || '',
+          })),
+          ativarEm: scheduledAt || null,
+        });
+      }
+      requestIds.current.delete(key);
+      setSelectedPending((current) => current.filter((id) => !rows.some((row) => row.matriculaId === id)));
+      closeActionDialog();
+      toast.success(
+        modo === 'AGORA' ? 'Cobranças confirmadas' : 'Geração agendada',
+        rows.length === 1
+          ? 'O servidor atualizou a situação financeira do aluno.'
+          : `O servidor processou o lote atômico de ${rows.length} matrículas.`,
+      );
+    } catch (error) {
+      if (isRegraFinanceiraConflict(error)) {
+        closeActionDialog();
+        onRetry();
+        toast.warning('Regra financeira alterada', 'Revise os novos valores da turma ou do aluno e confirme novamente.');
+        return;
+      }
+      if (isFinanceiroDateRejected(error)) {
+        toast.warning('Data não aceita pelo servidor', 'Informe uma data futura válida e confirme novamente.');
+        return;
+      }
+      toast.error('Financeiro não atualizado', `${error instanceof Error ? error.message : 'O servidor não confirmou a operação.'} O retry reutilizará o mesmo identificador.`);
+    }
   };
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center py-10 bg-white rounded-[2rem] border border-slate-100 shadow-sm">
-        <Loader2 className="animate-spin text-[#001a33]" size={24} />
-        <span className="text-slate-500 font-bold ml-2 text-sm">Carregando listagem financeira...</span>
-      </div>
-    );
+    return <div className="flex items-center justify-center rounded-[2rem] border border-slate-100 bg-white py-10 shadow-sm"><Loader2 className="animate-spin text-[#001a33]" size={24} /><span className="ml-2 text-sm font-bold text-slate-500">Carregando listagem financeira...</span></div>;
   }
-
   if (selectedMatriculaId) {
-    return (
-      <AlunoFinanceiroExtrato
-        matriculaId={selectedMatriculaId}
-        onBack={() => setSelectedMatriculaId(null)}
-      />
-    );
+    return <AlunoFinanceiroExtrato matriculaId={selectedMatriculaId} onBack={() => setSelectedMatriculaId(null)} />;
   }
-
   if (isError) {
-    return (
-      <TechnicalDataError
-        title="Situação financeira dos alunos não carregada"
-        message="A lista foi bloqueada para não confundir uma falha de consulta com uma turma sem alunos ou sem cobranças."
-        retrying={isFetching}
-        onRetry={onRetry}
-      />
-    );
+    return <TechnicalDataError title="Situação financeira dos alunos não carregada" message="A lista foi bloqueada para não confundir uma falha de consulta com ausência de cobrança." retrying={isFetching} onRetry={onRetry} />;
   }
 
   return (
-    <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden ">
-      
-      {/* Header da Lista */}
-      <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
-        <div>
-          <h3 className="text-lg font-bold text-[#001a33]">Situação Financeira dos Alunos</h3>
-          <p className="text-xs text-slate-500 mt-0.5">Acompanhamento de mensalidades e conciliação.</p>
-        </div>
-        
-        <div className="flex gap-3 w-full md:w-auto">
-          <div className="relative flex-1 md:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input 
-              type="text" 
-              placeholder="Buscar aluno..." 
-              className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:border-blue-500 transition-all text-slate-700"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+    <>
+      <section className="overflow-hidden rounded-[2rem] border border-slate-100 bg-white shadow-sm">
+        <div className="flex flex-col items-center justify-between gap-4 border-b border-slate-100 p-6 md:flex-row">
+          <div>
+            <h3 className="text-lg font-bold text-[#001a33]">Situação Financeira dos Alunos</h3>
+            <p className="mt-0.5 text-xs text-slate-500">Acompanhamento de mensalidades e conciliação.</p>
+          </div>
+          <div className="flex w-full flex-wrap gap-3 md:w-auto">
+            {eligibleSelected.length > 0 ? (
+              <>
+                <button type="button" disabled={pending} onClick={() => setPendingAction({ matriculaIds: eligibleSelected, label: `${eligibleSelected.length} matrículas`, modo: 'AGORA' })} className="rounded-xl bg-emerald-600 px-3 py-2.5 text-[9px] font-black uppercase text-white disabled:opacity-40">Gerar lote ({eligibleSelected.length})</button>
+                <button type="button" disabled={pending} onClick={() => setPendingAction({ matriculaIds: eligibleSelected, label: `${eligibleSelected.length} matrículas`, modo: 'AGENDADA' })} className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2.5 text-[9px] font-black uppercase text-blue-700 disabled:opacity-40">Agendar lote</button>
+              </>
+            ) : null}
+            <div className="relative min-w-56 flex-1 md:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Buscar aluno..." className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-700 outline-none transition-all focus:border-blue-500" />
+            </div>
+            <FinancialReportExportButton
+              buttonLabel="Exportar"
+              buttonClassName="border-0 bg-slate-100 text-slate-600 hover:bg-slate-200"
+              title="Situação Financeira dos Alunos"
+              subtitle="Acompanhamento das mensalidades e da conciliação financeira dos alunos vinculados à turma."
+              rightTitle="Relatório Financeiro da Turma"
+              rightType="Situação dos Alunos"
+              recordLabel="aluno(s)"
+              fileName={`situacao-financeira-${turma.codigo || turma.nome}`}
+              poloId={turma.poloId}
+              tone="blue"
+              columns={[{ label: 'Aluno' }, { label: 'Matrícula' }, { label: 'Valores' }, { label: 'Pagas / total', align: 'center' }, { label: 'Status', align: 'center' }]}
+              rows={exportRows}
+              filters={[{ label: 'Turma', value: `${turma.nome}${turma.codigo ? ` (${turma.codigo})` : ''}` }, { label: 'Curso', value: turma.cursoNome }, { label: 'Unidade / Polo', value: turma.poloNome || 'Matriz' }]}
+              summaryCards={[{ label: 'Plano lançado', value: formatMoney(resumo.total), tone: 'blue' }, { label: 'Recebido', value: formatMoney(resumo.recebido), tone: 'emerald' }, { label: 'Inadimplência', value: formatMoney(resumo.inadimplencia), tone: Number(resumo.inadimplencia) > 0 ? 'rose' : 'slate' }]}
+              footerNote={searchTerm ? `Relatório filtrado pela busca: "${searchTerm}".` : 'Relação completa dos alunos exibidos na situação financeira da turma.'}
             />
           </div>
-          <FinancialReportExportButton
-            buttonLabel="Exportar"
-            buttonClassName="border-0 bg-slate-100 text-slate-600 hover:bg-slate-200"
-            title="Situação Financeira dos Alunos"
-            subtitle="Acompanhamento das mensalidades e da conciliação financeira dos alunos vinculados à turma."
-            rightTitle="Relatório Financeiro da Turma"
-            rightType="Situação dos Alunos"
-            recordLabel="aluno(s)"
-            fileName={`situacao-financeira-${turma.codigo || turma.nome}`}
-            poloId={turma.poloId}
-            tone="blue"
-            columns={[
-              { label: 'Aluno' },
-              { label: 'Matrícula' },
-              { label: 'Valores' },
-              { label: 'Pagas / total', align: 'center' },
-              { label: 'Status', align: 'center' },
-            ]}
-            rows={exportRows}
-            filters={[
-              { label: 'Turma', value: `${turma.nome}${turma.codigo ? ` (${turma.codigo})` : ''}` },
-              { label: 'Curso', value: turma.cursoNome },
-              { label: 'Unidade / Polo', value: turma.poloNome || 'Matriz' },
-            ]}
-            summaryCards={[
-              { label: 'Alunos listados', value: filteredAlunos.length, tone: 'blue' },
-              { label: 'Em dia', value: alunosEmDia, tone: 'emerald' },
-              { label: 'Com pendência', value: alunosComPendencia, tone: alunosComPendencia > 0 ? 'rose' : 'slate' },
-              { label: 'Parcelas pagas', value: `${parcelasPagas}/${parcelasPrevistas}`, tone: 'blue' },
-            ]}
-            footerNote={searchTerm
-              ? `Relatório filtrado pela busca: "${searchTerm}".`
-              : 'Relação completa dos alunos exibidos na situação financeira da turma.'}
-          />
         </div>
-      </div>
 
-      {/* Tabela */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-left">
-          <thead className="bg-slate-50 border-b border-slate-100">
-            <tr>
-              <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Aluno</th>
-              <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Matrícula</th>
-              <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Valores</th>
-              <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Progresso Pagto.</th>
-              <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-right">Ações</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-50">
-            {filteredAlunos.length === 0 ? (
-                <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-slate-400 text-sm">
-                        <XCircle size={32} className="mx-auto mb-2 opacity-50 text-slate-300" />
-                        <p className="font-bold">Nenhum aluno matriculado na turma.</p>
-                        <p className="text-xs text-slate-500 mt-0.5">Vincule alunos na aba "Alunos" para gerar lançamentos financeiros.</p>
-                    </td>
-                </tr>
-            ) : (
-                filteredAlunos.map((aluno) => (
-                <tr
-                  key={aluno.id}
-                  onClick={() => openExtrato(aluno.id)}
-                  className="group cursor-pointer hover:bg-blue-50/30 transition-colors"
-                  title="Abrir extrato financeiro do aluno"
-                >
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead className="border-b border-slate-100 bg-slate-50">
+              <tr>
+                <th className="px-6 py-4 text-xs font-black uppercase tracking-wider text-slate-500">Aluno</th>
+                <th className="px-6 py-4 text-xs font-black uppercase tracking-wider text-slate-500">Matrícula</th>
+                <th className="px-6 py-4 text-xs font-black uppercase tracking-wider text-slate-500">Valores</th>
+                <th className="px-6 py-4 text-xs font-black uppercase tracking-wider text-slate-500">Progresso Pagto.</th>
+                <th className="px-6 py-4 text-xs font-black uppercase tracking-wider text-slate-500">Status</th>
+                <th className="px-6 py-4 text-right text-xs font-black uppercase tracking-wider text-slate-500">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {filteredAlunos.length === 0 ? (
+                <tr><td colSpan={6} className="px-6 py-12 text-center text-sm text-slate-400"><XCircle size={32} className="mx-auto mb-2 text-slate-300 opacity-50" /><p className="font-bold">Nenhum aluno matriculado na turma.</p></td></tr>
+              ) : filteredAlunos.map((row) => {
+                const canActivate = row.financeiro.status === 'PENDENTE' && Boolean(row.regraEfetiva);
+                return (
+                  <tr key={row.matriculaId} onClick={() => setSelectedMatriculaId(row.matriculaId)} className="group cursor-pointer transition-colors hover:bg-blue-50/30" title="Abrir extrato financeiro do aluno">
                     <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-500 border-2 border-white shadow-sm">
-                        {aluno.nome.charAt(0)}
-                        </div>
-                        <span className="font-bold text-[#001a33] text-sm">{aluno.nome}</span>
-                    </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-500 font-mono">{aluno.matricula}</td>
-                    <td className="px-6 py-4">
-                      <div className="space-y-1">
-                        <p className="text-[10px] font-black uppercase text-emerald-700">Mat. {formatCurrency(aluno.valorMatricula)}</p>
-                        <p className="text-[10px] font-bold uppercase text-slate-500">
-                          Mens. {aluno.valorMensalidade > 0 ? formatCurrency(aluno.valorMensalidade) : 'aguardando baixa'}
-                        </p>
+                      <div className="flex items-center gap-3">
+                        {canActivate ? <input type="checkbox" aria-label={`Selecionar ${row.alunoNome}`} checked={eligibleSelected.includes(row.matriculaId)} onClick={(event) => event.stopPropagation()} onChange={(event) => setSelectedPending((current) => event.target.checked ? [...new Set([...current, row.matriculaId])] : current.filter((id) => id !== row.matriculaId))} /> : null}
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-slate-200 text-xs font-bold text-slate-500 shadow-sm">{row.alunoNome.charAt(0)}</div>
+                        <div><span className="text-sm font-bold text-[#001a33]">{row.alunoNome}</span>{row.overrideAtivo ? <p className="mt-0.5 text-[8px] font-black uppercase text-violet-600">Regra individual</p> : null}</div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                            <div className="flex-1 h-2 w-24 bg-slate-100 rounded-full overflow-hidden">
-                                <div 
-                                    className={`h-full rounded-full ${aluno.status === 'inadimplente' ? 'bg-red-500' : 'bg-blue-500'}`} 
-                                    style={{ width: `${aluno.totalParcelas > 0 ? (aluno.parcelasPagas / aluno.totalParcelas) * 100 : 0}%` }}
-                                ></div>
-                            </div>
-                            <span className="text-[10px] font-bold text-slate-500">{aluno.parcelasPagas}/{aluno.totalParcelas}</span>
-                        </div>
-                    </td>
-                    <td className="px-6 py-4">
-                        {getStatusBadge(aluno.status)}
-                    </td>
+                    <td className="px-6 py-4 font-mono text-sm text-slate-500">{row.matriculaExibicao}</td>
+                    <td className="px-6 py-4"><div className="space-y-1"><p className="text-[10px] font-black uppercase text-emerald-700">Mat. {formatMoney(row.valorMatriculaEfetivo)}</p><p className="text-[10px] font-bold uppercase text-slate-500">Mens. {formatMoney(row.valorMensalidadeEfetivo)}</p></div></td>
+                    <td className="px-6 py-4"><div className="flex items-center gap-2"><div className="h-2 w-24 flex-1 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${row.situacaoFinanceira === 'INADIMPLENTE' ? 'bg-red-500' : 'bg-blue-500'}`} style={{ width: `${row.progressoPercentual}%` }} /></div><span className="text-[10px] font-bold text-slate-500">{row.parcelasPagas}/{row.totalParcelas}</span></div></td>
+                    <td className="px-6 py-4">{statusBadge(row)}{row.financeiro.status === 'AGENDADA' ? <p className="mt-1 text-[8px] font-bold text-blue-600">{formatDateTime(row.financeiro.ativarEm)}</p> : null}</td>
                     <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2" onClick={(event) => event.stopPropagation()}>
-                        <button onClick={() => openExtrato(aluno.id)} title="Extrato Financeiro" className="p-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors border border-blue-100">
-                            <FileText size={16} />
-                        </button>
-                        {aluno.cobrancaUrl ? (
-                          <>
-                            <button onClick={() => copyChargeLink(aluno)} title="Copiar link de cobrança" className="p-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-lg transition-colors border border-emerald-100">
-                                <Copy size={16} />
-                            </button>
-                            <a href={aluno.cobrancaUrl} target="_blank" rel="noreferrer" title={aluno.cobrancaDescricao || 'Abrir cobrança'} className="p-2 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-lg transition-colors border border-slate-100">
-                                <ExternalLink size={16} />
-                            </a>
-                          </>
-                        ) : (
-                          <button onClick={() => copyChargeLink(aluno)} title="Cobrança ainda sem link Asaas" className="p-2 bg-slate-50 text-slate-300 rounded-lg border border-slate-100">
-                              <Copy size={16} />
-                          </button>
-                        )}
-                        <button title="Mais opções" className="p-2 hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-lg transition-colors border border-transparent hover:border-slate-200">
-                            <MoreHorizontal size={16} />
-                        </button>
-                    </div>
+                      <div className="relative flex items-center justify-end gap-2" onClick={(event) => event.stopPropagation()}>
+                        <button type="button" onClick={() => setSelectedMatriculaId(row.matriculaId)} title="Extrato Financeiro" className="rounded-lg border border-blue-100 bg-blue-50 p-2 text-blue-600 transition-colors hover:bg-blue-100"><FileText size={16} /></button>
+                        <button type="button" onClick={() => setOverrideMatriculaId(row.matriculaId)} title="Configuração individual" className="rounded-lg border border-violet-100 bg-violet-50 p-2 text-violet-600 transition-colors hover:bg-violet-100"><Settings2 size={16} /></button>
+                        <button type="button" onClick={() => setActionMenuId((current) => current === row.matriculaId ? null : row.matriculaId)} title="Mais opções" className="rounded-lg border border-transparent p-2 text-slate-400 transition-colors hover:border-slate-200 hover:bg-slate-100 hover:text-slate-600"><MoreHorizontal size={16} /></button>
+                        {actionMenuId === row.matriculaId ? (
+                          <div className="absolute right-0 top-10 z-20 w-44 rounded-xl border border-slate-100 bg-white p-2 text-left shadow-xl">
+                            {canActivate ? <><button type="button" disabled={pending} onClick={() => { setActionMenuId(null); setPendingAction({ matriculaIds: [row.matriculaId], label: row.alunoNome, modo: 'AGORA' }); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[10px] font-black uppercase text-emerald-700 hover:bg-emerald-50"><ReceiptText size={14} /> Gerar agora</button><button type="button" disabled={pending} onClick={() => { setActionMenuId(null); setPendingAction({ matriculaIds: [row.matriculaId], label: row.alunoNome, modo: 'AGENDADA' }); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[10px] font-black uppercase text-blue-700 hover:bg-blue-50"><CalendarClock size={14} /> Agendar</button></> : <p className="px-3 py-2 text-[10px] font-bold text-slate-400">Sem ação pendente.</p>}
+                          </div>
+                        ) : null}
+                      </div>
                     </td>
-                </tr>
-                ))
-            )}
-          </tbody>
-        </table>
-      </div>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {pendingAction ? (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+          <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="schedule-finance-title" tabIndex={-1} className="w-full max-w-md rounded-[2rem] bg-white p-6 shadow-2xl">
+            <h3 id="schedule-finance-title" className="text-lg font-black text-[#001a33]">{pendingAction.modo === 'AGORA' ? 'Confirmar geração inicial' : 'Agendar geração'}</h3>
+            <p className="mt-1 text-xs font-semibold text-slate-500">{pendingAction.label}.</p>
+            <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-xs font-semibold text-emerald-800">
+              <strong className="block text-[10px] font-black uppercase">Regra efetiva confirmada pelo servidor</strong>
+              {actionRule
+                ? `${actionRows[0].overrideAtivo ? 'Regra individual. ' : 'Regra da turma. '}${actionRule.cobranca.matricula.habilitada ? `Matrícula inicial: ${formatMoney(actionRule.cobranca.matricula.valor)}.` : `Primeiro ciclo: ${actionRule.cobranca.mensalidade.quantidade} mensalidades de ${formatMoney(actionRule.cobranca.mensalidade.valor)}.`}`
+                : 'Cada aluno do lote será validado com sua própria regra efetiva (turma mais eventuais configurações individuais).'}
+            </div>
+            {pendingAction.modo === 'AGENDADA' ? <label className="mt-5 block space-y-2"><span className="text-[10px] font-black uppercase text-slate-500">Executar em</span><input type="datetime-local" value={ativarEm} onChange={(event) => setAtivarEm(event.target.value)} className="w-full rounded-xl border border-slate-200 p-3 text-sm font-bold outline-none focus:border-blue-500" /></label> : null}
+            <div className="mt-5 flex gap-3"><button ref={(node) => { initialFocusRef.current = node; }} type="button" disabled={pending} onClick={closeActionDialog} className="flex-1 rounded-xl border border-slate-200 py-3 text-[10px] font-black uppercase text-slate-500">Cancelar</button><button type="button" disabled={pending || (pendingAction.modo === 'AGENDADA' && !ativarEm)} onClick={() => { void activate(pendingAction.matriculaIds, pendingAction.modo, pendingAction.modo === 'AGENDADA' ? new Date(ativarEm).toISOString() : undefined); }} className="flex-1 rounded-xl bg-blue-600 py-3 text-[10px] font-black uppercase text-white disabled:opacity-50">{pending ? 'Processando...' : 'Confirmar'}</button></div>
+          </div>
+        </div>
+      ) : null}
+
+      {currentOverrideRow ? <FinanceiroAlunoOverrideDialog row={currentOverrideRow} regraTurma={regra} turmaId={turma.id} onClose={() => setOverrideMatriculaId(null)} /> : null}
       <ToastNotification toasts={toasts} onRemove={removeToast} />
-    </div>
+    </>
   );
 };
 

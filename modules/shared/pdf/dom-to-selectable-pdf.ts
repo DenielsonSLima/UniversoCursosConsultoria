@@ -1,5 +1,12 @@
 /* global ChildNode, CSSStyleDeclaration, DOMRect, HTMLCanvasElement */
 
+/**
+ * @deprecated Ponte legada: rasteriza a arte da página antes de acrescentar
+ * texto PDF. Não usar em novos fluxos. Texto selecionável sobre screenshot não
+ * atende ao contrato vetorial do projeto; consumidores existentes devem migrar
+ * para compositores nativos com imagens somente como recursos isolados.
+ */
+
 import type { jsPDF } from 'jspdf';
 
 export type PdfPageOrientation = 'portrait' | 'landscape';
