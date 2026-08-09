@@ -2,6 +2,16 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [2.3.0-beta.3] - 2026-08-09
+
+### Corrigido
+
+- O selo do cabeçalho institucional passa a identificar todos os polos pela cidade — Aquidabã, Porto da Folha e Propriá — mantendo `MATRIZ` para Japoatã.
+
+### Qualidade
+
+- A identificação das quatro unidades foi validada em PDFs vetoriais reais, nas orientações retrato e paisagem, com extração de texto e inspeção das páginas renderizadas.
+
 ## [2.3.0-beta.2] - 2026-08-09
 
 ### Adicionado
@@ -20,7 +30,6 @@ Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente
 - O Contrato do Aluno passa a usar obrigatoriamente a revisão ativa e juridicamente aprovada, com marca institucional na camada correta e replay do snapshot original.
 - A prévia, o download e a impressão da Pasta e da Ficha usam o mesmo PDF vetorial, inclusive no Safari, sem imagem A4 rasterizada.
 - Relatórios, documentos elegíveis da Secretaria, Caixa, Financeiro e Parceiros passam a usar o mesmo cabeçalho institucional, com três linhas por coluna, e-mail oficial e espaçamento protegido para textos longos.
-- O selo do cabeçalho passa a identificar também todos os polos pela cidade — Aquidabã, Porto da Folha e Propriá — mantendo `MATRIZ` para Japoatã.
 
 ### Segurança e qualidade
 
