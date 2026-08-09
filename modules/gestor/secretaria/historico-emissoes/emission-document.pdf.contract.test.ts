@@ -12,11 +12,7 @@ import {
 } from './emission-document.pdf';
 import type { EmissionLog, PreviewResources } from './historico-emissoes.types';
 import { repairFichaVoterGrid } from '../../cadastros/ficha-matricula/voter-template-repair';
-import {
-  normalizeLegacyPastaFooterGeometry,
-  PASTA_FOOTER_CANONICAL_HEIGHT,
-  PASTA_FOOTER_CANONICAL_Y,
-} from '../../cadastros/ficha-matricula/pasta-template-geometry';
+import { stripRedundantPastaFooter } from '../../cadastros/ficha-matricula/pasta-template-geometry';
 
 const PAGE_BREAK = '<div data-page-break="true"></div>';
 const ONE_PIXEL_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
@@ -414,7 +410,7 @@ test('código de QR maior que a área reservada falha em vez de truncar', async 
   );
 });
 
-test('snapshot legado da Pasta normaliza somente o rodapé inválido antes do PDF', async () => {
+test('snapshot legado da Pasta remove somente o rodapé institucional duplicado', async () => {
   const legacyFooter = {
     id: 'pasta_rodape',
     type: 'text',
@@ -444,16 +440,21 @@ test('snapshot legado da Pasta normaliza somente o rodapé inválido antes do PD
     /pasta_rodape.*ultrapassa a área canônica da página/,
   );
 
-  const normalized = normalizeLegacyPastaFooterGeometry(legacyTemplate);
-  const normalizedFooter = normalized.absoluteFields[0];
-  assert.notEqual(normalized, legacyTemplate);
+  const stripped = stripRedundantPastaFooter(legacyTemplate);
+  assert.notEqual(stripped, legacyTemplate);
   assert.equal(legacyFooter.y, 1013, 'o snapshot persistido não pode ser mutado');
-  assert.equal(normalizedFooter.y, PASTA_FOOTER_CANONICAL_Y);
-  assert.equal(normalizedFooter.height, PASTA_FOOTER_CANONICAL_HEIGHT);
+  assert.equal(legacyTemplate.absoluteFields.length, 1);
+  assert.equal(stripped.absoluteFields.length, 0);
 
-  source.preview.template = normalized;
+  source.preview.template = stripped;
   const pdf = await createEmissionDocumentsPdf([source]);
   assert.ok(pdf.blob.size > 1_000);
+  const text = await extractPdfText(pdf.blob);
+  assert.equal(
+    text.match(/INSTITUIÇÃO CONGELADA DE EXEMPLO/g)?.length,
+    1,
+    'a identidade institucional deve aparecer somente no cabeçalho canônico',
+  );
 
   if (process.env.SECRETARIA_PASTA_FOOTER_PDF_FIXTURE_OUTPUT) {
     await writeFile(
@@ -463,9 +464,9 @@ test('snapshot legado da Pasta normaliza somente o rodapé inválido antes do PD
   }
 });
 
-test('modelo v12 da Pasta reserva oito linhas para um rodapé institucional extenso', async () => {
+test('modelo v13 da Pasta remove o rodapé canônico que repete o cabeçalho', async () => {
   const template = {
-    v: 12,
+    v: 13,
     pageCount: 1,
     textContent: '<div style="min-height:1px;"></div>',
     absoluteFields: [{
@@ -479,8 +480,9 @@ test('modelo v12 da Pasta reserva oito linhas para um rodapé institucional exte
         </section>
       `,
       x: 76,
-      y: 1000,
+      y: 930,
       width: 642,
+      height: 100,
       style: { fontSize: '10px' },
     }],
   };
@@ -505,14 +507,36 @@ test('modelo v12 da Pasta reserva oito linhas para um rodapé institucional exte
     },
   };
 
-  await assert.rejects(
-    createEmissionDocumentsPdf([source]),
-    /pasta_rodape.*ultrapassa a área canônica da página/,
-  );
-
-  source.preview.template = normalizeLegacyPastaFooterGeometry(template);
+  const stripped = stripRedundantPastaFooter(template);
+  assert.notEqual(stripped, template);
+  assert.equal(template.absoluteFields.length, 1, 'o snapshot original deve permanecer intacto');
+  assert.equal(stripped.absoluteFields.length, 0);
+  source.preview.template = stripped;
   const pdf = await createEmissionDocumentsPdf([source]);
   assert.ok(pdf.blob.size > 1_000);
+  const text = await extractPdfText(pdf.blob);
+  assert.equal(
+    text.match(/INSTITUIÇÃO EDUCACIONAL DE EXEMPLO/g)?.length,
+    1,
+    'o rodapé não deve repetir o nome institucional do cabeçalho',
+  );
+});
+
+test('rodapé personalizado da Pasta não é removido pela compatibilidade', () => {
+  const template = {
+    v: 13,
+    absoluteFields: [{
+      id: 'pasta_rodape',
+      type: 'text',
+      value: '<p>Texto personalizado que não repete o cabeçalho.</p>',
+      x: 76,
+      y: 930,
+      width: 642,
+      height: 100,
+    }],
+  };
+
+  assert.equal(stripRedundantPastaFooter(template), template);
 });
 
 test('marca congelada respeita escala não padrão em geometria A4 canônica', () => {

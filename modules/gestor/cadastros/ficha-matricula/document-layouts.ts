@@ -5,9 +5,7 @@ import {
   repairFichaVoterGrid,
 } from './voter-template-repair';
 import {
-  normalizeLegacyPastaFooterGeometry,
-  PASTA_FOOTER_CANONICAL_HEIGHT,
-  PASTA_FOOTER_CANONICAL_Y,
+  stripRedundantPastaFooter,
 } from './pasta-template-geometry';
 
 export const FICHA_ALUNO_VARIABLES = [
@@ -76,15 +74,6 @@ const sectionBlock = (title: string, content: string, columns: string, rows = 1)
     <div style="height:calc(100% - 18px);box-sizing:border-box;display:grid;grid-template-columns:${columns};grid-template-rows:repeat(${rows},minmax(0,1fr));gap:5px 12px;padding:6px 8px;">
       ${content}
     </div>
-  </section>
-`;
-
-const institutionalFooter = `
-  <section style="padding:5px 8px;text-align:center;color:#475569;font-size:7px;line-height:1.35;">
-    <strong style="color:#001a33;text-transform:uppercase;">{{POLO_NOME}}</strong>
-    <span> • CNPJ {{POLO_CNPJ}}</span><br>
-    <span>{{POLO_ENDERECO_COMPLETO}}</span><br>
-    <span>Telefone: {{POLO_TELEFONE}} • E-mail: {{POLO_EMAIL}}</span>
   </section>
 `;
 
@@ -382,18 +371,10 @@ export const pastaIdentificacaoDefaultTemplate = {
       DOCUMENTS_HEIGHT,
     ),
     movableTextBlock('pasta_escolar', pastaSchoolBlock, 76, pastaSchoolY, 642, SCHOOL_HEIGHT),
-    movableTextBlock(
-      'pasta_rodape',
-      institutionalFooter,
-      76,
-      PASTA_FOOTER_CANONICAL_Y,
-      642,
-      PASTA_FOOTER_CANONICAL_HEIGHT,
-    ),
   ],
   validityDays: 0,
   pageCount: 1,
-  v: 13,
+  v: 14,
 };
 
 export const fichaMatriculaDefaultTemplate = {
@@ -490,7 +471,7 @@ const pastaIdentificacaoBaseService = createDocumentTemplateService(
 export const pastaIdentificacaoService = {
   ...pastaIdentificacaoBaseService,
   async getTemplate(poloId: string) {
-    const currentTemplate = normalizeLegacyPastaFooterGeometry(
+    const currentTemplate = stripRedundantPastaFooter(
       await pastaIdentificacaoBaseService.getTemplate(poloId),
     );
     if (!registrationTemplateNeedsVoterUpgrade(

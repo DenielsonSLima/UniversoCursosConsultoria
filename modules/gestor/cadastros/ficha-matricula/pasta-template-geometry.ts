@@ -1,7 +1,6 @@
-export const PASTA_FOOTER_CANONICAL_Y = 930;
-export const PASTA_FOOTER_CANONICAL_HEIGHT = 100;
-
-const LEGACY_PASTA_TEMPLATE_MAX_VERSION = 12;
+const REDUNDANT_PASTA_FOOTER_MAX_VERSION = 13;
+const PASTA_FOOTER_CANONICAL_Y = 930;
+const PASTA_FOOTER_CANONICAL_HEIGHT = 100;
 const LEGACY_PASTA_FOOTER_MIN_Y = 1000;
 const TEMPLATE_HEIGHT_PX = 1123;
 
@@ -10,7 +9,7 @@ const asFiniteNumber = (value: unknown) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
-const isKnownLegacyPastaFooter = (field: any) => {
+const isKnownRedundantPastaFooter = (field: any) => {
   if (field?.id !== 'pasta_rodape') return false;
 
   const x = asFiniteNumber(field.x);
@@ -19,40 +18,43 @@ const isKnownLegacyPastaFooter = (field: any) => {
   const height = asFiniteNumber(field.height);
   const value = String(field.value || '');
 
-  return x === 76
-    && width === 642
-    && y !== null
+  const usesCanonicalGeometry = y === PASTA_FOOTER_CANONICAL_Y
+    && height === PASTA_FOOTER_CANONICAL_HEIGHT;
+  const usesLegacyGeometry = y !== null
     && y >= LEGACY_PASTA_FOOTER_MIN_Y
     && y < TEMPLATE_HEIGHT_PX
-    && (height === null || height <= 0)
+    && (height === null || height <= 0);
+
+  return x === 76
+    && width === 642
+    && (usesCanonicalGeometry || usesLegacyGeometry)
     && value.includes('{{POLO_NOME}}')
+    && value.includes('{{POLO_CNPJ}}')
     && value.includes('{{POLO_ENDERECO_COMPLETO}}')
     && value.includes('{{POLO_TELEFONE}}')
     && value.includes('{{POLO_EMAIL}}');
 };
 
 /**
- * Compatibilidade determinística para snapshots de Pasta v12 ou anteriores.
- * O snapshot persistido permanece imutável; somente a geometria conhecida e
- * inválida do rodapé é normalizada durante a composição vetorial.
+ * Remove somente o rodapé institucional conhecido da Pasta v13 ou anterior,
+ * pois a mesma identidade já é exibida no cabeçalho canônico. O snapshot
+ * persistido permanece imutável; a remoção ocorre apenas na cópia renderizada.
  */
-export const normalizeLegacyPastaFooterGeometry = (template: any) => {
+export const stripRedundantPastaFooter = (template: any) => {
   if (!template || typeof template !== 'object') return template;
 
   const version = asFiniteNumber(template.v) ?? 0;
-  if (version > LEGACY_PASTA_TEMPLATE_MAX_VERSION) return template;
+  if (version > REDUNDANT_PASTA_FOOTER_MAX_VERSION) return template;
 
   const fields = Array.isArray(template.absoluteFields) ? template.absoluteFields : [];
-  let changed = false;
-  const absoluteFields = fields.map((field: any) => {
-    if (!isKnownLegacyPastaFooter(field)) return field;
-    changed = true;
-    return {
-      ...field,
-      y: PASTA_FOOTER_CANONICAL_Y,
-      height: PASTA_FOOTER_CANONICAL_HEIGHT,
-    };
-  });
+  const footerFields = fields.filter((field: any) => field?.id === 'pasta_rodape');
+  if (
+    footerFields.length !== 1
+    || !isKnownRedundantPastaFooter(footerFields[0])
+  ) return template;
 
-  return changed ? { ...template, absoluteFields } : template;
+  return {
+    ...template,
+    absoluteFields: fields.filter((field: any) => field !== footerFields[0]),
+  };
 };

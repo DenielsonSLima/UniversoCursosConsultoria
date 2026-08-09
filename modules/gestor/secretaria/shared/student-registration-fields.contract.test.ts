@@ -40,6 +40,7 @@ test('ficha cadastral, ficha de matrícula e pasta expõem o bloco eleitoral sem
     variables,
     parser,
     snapshotService,
+    historicalService,
   ] = await Promise.all([
     readFile(new URL('../../cadastros/modelos-documentos/ficha-cadastral/ficha-cadastral.service.ts', import.meta.url), 'utf8'),
     readFile(new URL('../../cadastros/ficha-matricula/document-layouts.ts', import.meta.url), 'utf8'),
@@ -48,6 +49,7 @@ test('ficha cadastral, ficha de matrícula e pasta expõem o bloco eleitoral sem
     readFile(new URL('../../cadastros/modelos-documentos/shared/documentVariables.ts', import.meta.url), 'utf8'),
     readFile(new URL('../historico-emissoes/template-parser.ts', import.meta.url), 'utf8'),
     readFile(new URL('./secretaria-documentos.service.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../historico-emissoes/historico-emissoes.service.ts', import.meta.url), 'utf8'),
   ]);
 
   for (const token of VOTER_TOKENS) {
@@ -67,10 +69,12 @@ test('ficha cadastral, ficha de matrícula e pasta expõem o bloco eleitoral sem
   assert.match(fichaCadastral, /hasFichaCadastralVoterContent/);
   assert.match(fichaCadastral, /FICHA_CADASTRAL_VOTER_BLOCK_PATTERN/);
   assert.match(layouts, /const DOCUMENTS_HEIGHT = 92;/);
-  assert.match(layouts, /pastaIdentificacaoDefaultTemplate[\s\S]*?pageCount: 1,\s+v: 13,/);
+  assert.match(layouts, /pastaIdentificacaoDefaultTemplate[\s\S]*?pageCount: 1,\s+v: 14,/);
   assert.match(layouts, /fichaMatriculaDefaultTemplate[\s\S]*?pageCount: 1,[\s\S]*?v: 12,/);
-  assert.match(layouts, /PASTA_FOOTER_CANONICAL_Y/);
-  assert.match(layouts, /PASTA_FOOTER_CANONICAL_HEIGHT/);
+  assert.doesNotMatch(
+    layouts.match(/pastaIdentificacaoDefaultTemplate[\s\S]*?export const fichaMatriculaDefaultTemplate/)?.[0] || '',
+    /pasta_rodape|institutionalFooter/,
+  );
   assert.match(layouts, /registrationTemplateNeedsVoterUpgrade/);
   assert.match(layouts, /!REGISTRATION_VOTER_TOKENS\.every/);
   assert.match(layouts, /field\?\.id === fieldId[\s\S]*?injectMissingVoterFields\([\s\S]*?field\.value/);
@@ -82,6 +86,14 @@ test('ficha cadastral, ficha de matrícula e pasta expõem o bloco eleitoral sem
   assert.doesNotMatch(fichasService, /persistTemplateUpgrades/);
   assert.doesNotMatch(fichaTemplateService, /fichasMatriculaService\.update\([\s\S]*?upgradedTemplate/);
   assert.doesNotMatch(layouts, /pastaIdentificacaoBaseService\.saveTemplate\([\s\S]*?upgradedTemplate/);
+  assert.match(
+    layouts,
+    /stripRedundantPastaFooter\([\s\S]*?pastaIdentificacaoBaseService\.getTemplate\(poloId\)/,
+  );
+  assert.match(
+    historicalService,
+    /stripRedundantPastaFooter\(frozenRegistrationTemplate\)/,
+  );
   assert.doesNotMatch(fichaCadastral, /hasTwoPageStructure|saveTemplate\(poloId, upgradedTemplate\)/);
   assert.match(
     fichasService,
