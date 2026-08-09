@@ -9,6 +9,7 @@ import { boletimService } from '../../cadastros/modelos-documentos/boletim/bolet
 import { historicoService } from '../../cadastros/modelos-documentos/historico/historico.service';
 import { transferenciaService } from '../../cadastros/modelos-documentos/transferencia/transferencia.service';
 import { pastaIdentificacaoService, fichaMatriculaDefaultTemplate } from '../../cadastros/ficha-matricula/document-layouts';
+import { normalizeLegacyPastaFooterGeometry } from '../../cadastros/ficha-matricula/pasta-template-geometry';
 import { fichasMatriculaService } from '../../cadastros/ficha-matricula/fichas-matricula.service';
 import { academicosService } from '../../configuracoes/academicos/academicos.service';
 import { marcaDaguaService } from '../../configuracoes/marca-dagua/marca-dagua.service';
@@ -98,7 +99,9 @@ const loadTemplate = async (
     hasFrozenRegistrationTemplate
     && ['pasta_identificacao', 'ficha_matricula'].includes(emission.documento)
   ) {
-    return frozenRegistrationTemplate;
+    return emission.documento === 'pasta_identificacao'
+      ? normalizeLegacyPastaFooterGeometry(frozenRegistrationTemplate)
+      : frozenRegistrationTemplate;
   }
 
   if (emission.documento === 'carteirinha') {

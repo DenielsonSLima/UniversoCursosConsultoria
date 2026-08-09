@@ -4,6 +4,11 @@ import {
   injectMissingVoterFields,
   repairFichaVoterGrid,
 } from './voter-template-repair';
+import {
+  normalizeLegacyPastaFooterGeometry,
+  PASTA_FOOTER_CANONICAL_HEIGHT,
+  PASTA_FOOTER_CANONICAL_Y,
+} from './pasta-template-geometry';
 
 export const FICHA_ALUNO_VARIABLES = [
   ...FICHA_CADASTRAL_VARIABLES,
@@ -377,11 +382,18 @@ export const pastaIdentificacaoDefaultTemplate = {
       DOCUMENTS_HEIGHT,
     ),
     movableTextBlock('pasta_escolar', pastaSchoolBlock, 76, pastaSchoolY, 642, SCHOOL_HEIGHT),
-    movableTextBlock('pasta_rodape', institutionalFooter, 76, 1000),
+    movableTextBlock(
+      'pasta_rodape',
+      institutionalFooter,
+      76,
+      PASTA_FOOTER_CANONICAL_Y,
+      642,
+      PASTA_FOOTER_CANONICAL_HEIGHT,
+    ),
   ],
   validityDays: 0,
   pageCount: 1,
-  v: 12,
+  v: 13,
 };
 
 export const fichaMatriculaDefaultTemplate = {
@@ -478,7 +490,9 @@ const pastaIdentificacaoBaseService = createDocumentTemplateService(
 export const pastaIdentificacaoService = {
   ...pastaIdentificacaoBaseService,
   async getTemplate(poloId: string) {
-    const currentTemplate = await pastaIdentificacaoBaseService.getTemplate(poloId);
+    const currentTemplate = normalizeLegacyPastaFooterGeometry(
+      await pastaIdentificacaoBaseService.getTemplate(poloId),
+    );
     if (!registrationTemplateNeedsVoterUpgrade(
       currentTemplate,
       'pasta_documentos',

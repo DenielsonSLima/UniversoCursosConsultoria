@@ -12,9 +12,30 @@ import {
 } from './emission-document.pdf';
 import type { EmissionLog, PreviewResources } from './historico-emissoes.types';
 import { repairFichaVoterGrid } from '../../cadastros/ficha-matricula/voter-template-repair';
+import {
+  normalizeLegacyPastaFooterGeometry,
+  PASTA_FOOTER_CANONICAL_HEIGHT,
+  PASTA_FOOTER_CANONICAL_Y,
+} from '../../cadastros/ficha-matricula/pasta-template-geometry';
 
 const PAGE_BREAK = '<div data-page-break="true"></div>';
 const ONE_PIXEL_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+const extractPdfText = async (blob: Blob) => {
+  const { getDocument } = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  const loadingTask = getDocument({
+    data: new Uint8Array(await blob.arrayBuffer()),
+    useSystemFonts: true,
+  });
+  const document = await loadingTask.promise;
+  const pages: string[] = [];
+  for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
+    const page = await document.getPage(pageNumber);
+    const content = await page.getTextContent();
+    pages.push(content.items.map((item) => ('str' in item ? item.str : '')).join('\n'));
+  }
+  await document.destroy();
+  return pages.join('\n\f\n');
+};
 const REAL_DOCUMENTS_GRID = `
   <section style="height:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:7px;background-color:rgba(255,255,255,.9);overflow:hidden;">
     <h4 style="margin:0;padding:4px 7px;border-bottom:1px solid #dbeafe;background-color:#eff6ff;color:#001a33;font-size:8px;line-height:1.1;text-transform:uppercase;letter-spacing:.08em;">Documentos</h4>
@@ -308,6 +329,189 @@ test('fixture real legada 4x2 é reparada e gera PDF sem overflow', async () => 
   documentField.value = repaired;
 
   const pdf = await createEmissionDocumentsPdf([makeSource(1, preview)]);
+  assert.ok(pdf.blob.size > 1_000);
+});
+
+test('compositor repara snapshot legado e quebra o código completo abaixo do QR', async () => {
+  const validationCode = 'FICHA-MAT-D278-1719-6ABC-9XYZ';
+  const preview = makePreview({
+    pageCount: 1,
+    textContent: '<div style="min-height:1px;"></div>',
+    absoluteFields: [{
+      id: 'ficha_documentos',
+      type: 'text',
+      value: REAL_LEGACY_FICHA_DOCUMENTS_GRID,
+      x: 76,
+      y: 622,
+      width: 642,
+      height: 92,
+      style: { fontSize: '10px' },
+    }, {
+      id: 'ficha_qr_regressao',
+      type: 'qrcode',
+      value: '',
+      x: 611,
+      y: 929,
+      width: 100,
+    }],
+  });
+  preview.watermark = null;
+  preview.polo = { ...preview.polo, logoUrl: null };
+  const source = makeSource(1, preview);
+  source.emission.codigo = validationCode;
+  source.emission.validacao_publica = true;
+  source.emission.dados_emissao = {
+    ...source.emission.dados_emissao,
+    studentVoterId: '123456789012',
+    studentVoterZone: '987',
+    studentVoterSection: '6543',
+    studentVoterIssueDate: '2024-03-04',
+    studentVoterState: 'AL',
+  };
+
+  const pdf = await createEmissionDocumentsPdf([source]);
+  const text = await extractPdfText(pdf.blob);
+  const compactText = text.replace(/\s/g, '');
+
+  assert.match(text, /ZONA/i);
+  assert.match(text, /SEÇÃO/i);
+  assert.match(text, /EMISSÃO \/ UF/i);
+  assert.match(text, /987/);
+  assert.match(text, /6543/);
+  assert.match(text, /04\/03\/2024 \/ AL/);
+  assert.ok(compactText.includes(validationCode), 'o código completo deve sobreviver às quebras de linha');
+  assert.doesNotMatch(text, /…|\.\.\./);
+
+  const outputPath = process.env.SECRETARIA_FICHA_QR_PDF_FIXTURE_OUTPUT;
+  if (outputPath) {
+    await writeFile(outputPath, new Uint8Array(await pdf.blob.arrayBuffer()));
+  }
+});
+
+test('código de QR maior que a área reservada falha em vez de truncar', async () => {
+  const preview = makePreview({
+    pageCount: 1,
+    textContent: '<div style="min-height:1px;"></div>',
+    absoluteFields: [{
+      id: 'ficha_qr_sem_altura',
+      type: 'qrcode',
+      value: '',
+      x: 611,
+      y: 929,
+      width: 60,
+      height: 80,
+    }],
+  });
+  preview.watermark = null;
+  preview.polo = { ...preview.polo, logoUrl: null };
+  const source = makeSource(1, preview);
+  source.emission.codigo = `FICHA-MAT-${'CODIGO-MUITO-LONGO-'.repeat(8)}`;
+  source.emission.validacao_publica = true;
+
+  await assert.rejects(
+    createEmissionDocumentsPdf([source]),
+    /código de validação.+ultrapassa a área canônica/i,
+  );
+});
+
+test('snapshot legado da Pasta normaliza somente o rodapé inválido antes do PDF', async () => {
+  const legacyFooter = {
+    id: 'pasta_rodape',
+    type: 'text',
+    value: `
+      <section style="padding:5px 8px;text-align:center;">
+        <strong>{{POLO_NOME}}</strong><span> • CNPJ {{POLO_CNPJ}}</span><br>
+        <span>{{POLO_ENDERECO_COMPLETO}}</span><br>
+        <span>Telefone: {{POLO_TELEFONE}} • E-mail: {{POLO_EMAIL}}</span>
+      </section>
+    `,
+    x: 76,
+    y: 1013,
+    width: 642,
+    style: { fontSize: '10px' },
+  };
+  const legacyTemplate = {
+    v: 9,
+    pageCount: 1,
+    textContent: '<div style="min-height:1px;"></div>',
+    absoluteFields: [legacyFooter],
+  };
+  const source = makeSource(2, makePreview(legacyTemplate));
+  source.emission.documento = 'pasta_identificacao';
+
+  await assert.rejects(
+    createEmissionDocumentsPdf([source]),
+    /pasta_rodape.*ultrapassa a área canônica da página/,
+  );
+
+  const normalized = normalizeLegacyPastaFooterGeometry(legacyTemplate);
+  const normalizedFooter = normalized.absoluteFields[0];
+  assert.notEqual(normalized, legacyTemplate);
+  assert.equal(legacyFooter.y, 1013, 'o snapshot persistido não pode ser mutado');
+  assert.equal(normalizedFooter.y, PASTA_FOOTER_CANONICAL_Y);
+  assert.equal(normalizedFooter.height, PASTA_FOOTER_CANONICAL_HEIGHT);
+
+  source.preview.template = normalized;
+  const pdf = await createEmissionDocumentsPdf([source]);
+  assert.ok(pdf.blob.size > 1_000);
+
+  if (process.env.SECRETARIA_PASTA_FOOTER_PDF_FIXTURE_OUTPUT) {
+    await writeFile(
+      process.env.SECRETARIA_PASTA_FOOTER_PDF_FIXTURE_OUTPUT,
+      new Uint8Array(await pdf.blob.arrayBuffer()),
+    );
+  }
+});
+
+test('modelo v12 da Pasta reserva oito linhas para um rodapé institucional extenso', async () => {
+  const template = {
+    v: 12,
+    pageCount: 1,
+    textContent: '<div style="min-height:1px;"></div>',
+    absoluteFields: [{
+      id: 'pasta_rodape',
+      type: 'text',
+      value: `
+        <section style="padding:5px 8px;text-align:center;">
+          <strong>{{POLO_NOME}}</strong><span> • CNPJ {{POLO_CNPJ}}</span><br>
+          <span>{{POLO_ENDERECO_COMPLETO}}</span><br>
+          <span>Telefone: {{POLO_TELEFONE}} • E-mail: {{POLO_EMAIL}}</span>
+        </section>
+      `,
+      x: 76,
+      y: 1000,
+      width: 642,
+      style: { fontSize: '10px' },
+    }],
+  };
+  const source = makeSource(2, makePreview(template));
+  source.emission.documento = 'pasta_identificacao';
+  source.emission.dados_emissao = {
+    ...source.emission.dados_emissao,
+    institutionSnapshot: {
+      nome: 'INSTITUIÇÃO EDUCACIONAL DE EXEMPLO COM RAZÃO SOCIAL EXTENSA',
+      nomeFantasia: 'INSTITUIÇÃO EDUCACIONAL DE EXEMPLO',
+      cnpj: '00.000.000/0000-00',
+      endereco: 'AVENIDA INSTITUCIONAL DE EXEMPLO COM DENOMINAÇÃO PROPOSITALMENTE EXTENSA',
+      numero: '1000',
+      complemento: 'BLOCO ADMINISTRATIVO',
+      bairro: 'BAIRRO DE EXEMPLO',
+      cidade: 'CIDADE DE EXEMPLO',
+      uf: 'EX',
+      cep: '00000-000',
+      telefone: '(00) 00000-0000 / (00) 0000-0000',
+      email: 'secretaria.documentos.institucionais@example.invalid',
+      logoUrl: null,
+    },
+  };
+
+  await assert.rejects(
+    createEmissionDocumentsPdf([source]),
+    /pasta_rodape.*ultrapassa a área canônica da página/,
+  );
+
+  source.preview.template = normalizeLegacyPastaFooterGeometry(template);
+  const pdf = await createEmissionDocumentsPdf([source]);
   assert.ok(pdf.blob.size > 1_000);
 });
 

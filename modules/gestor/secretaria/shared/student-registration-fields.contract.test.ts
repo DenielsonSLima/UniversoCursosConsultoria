@@ -67,8 +67,10 @@ test('ficha cadastral, ficha de matrícula e pasta expõem o bloco eleitoral sem
   assert.match(fichaCadastral, /hasFichaCadastralVoterContent/);
   assert.match(fichaCadastral, /FICHA_CADASTRAL_VOTER_BLOCK_PATTERN/);
   assert.match(layouts, /const DOCUMENTS_HEIGHT = 92;/);
-  assert.match(layouts, /pastaIdentificacaoDefaultTemplate[\s\S]*?pageCount: 1,\s+v: 12,/);
+  assert.match(layouts, /pastaIdentificacaoDefaultTemplate[\s\S]*?pageCount: 1,\s+v: 13,/);
   assert.match(layouts, /fichaMatriculaDefaultTemplate[\s\S]*?pageCount: 1,[\s\S]*?v: 12,/);
+  assert.match(layouts, /PASTA_FOOTER_CANONICAL_Y/);
+  assert.match(layouts, /PASTA_FOOTER_CANONICAL_HEIGHT/);
   assert.match(layouts, /registrationTemplateNeedsVoterUpgrade/);
   assert.match(layouts, /!REGISTRATION_VOTER_TOKENS\.every/);
   assert.match(layouts, /field\?\.id === fieldId[\s\S]*?injectMissingVoterFields\([\s\S]*?field\.value/);
