@@ -174,6 +174,7 @@ test('React e PDF preservam ordem, textos, meta e altura nas duas orientações'
     )));
 
     assertFragmentsInOrder(reactText, expectedDetails.map((text) => text.trim()));
+    assert.ok(reactText.includes(institution.unitLabel));
     assertFragmentsInOrder(reactText, [
       meta.eyebrow,
       meta.title,
@@ -181,6 +182,7 @@ test('React e PDF preservam ordem, textos, meta e altura nas duas orientações'
       meta.value,
     ]);
     assertTextsInOrder(probe.texts, expectedDetails);
+    assert.ok(probe.texts.some((record) => record.text === institution.unitLabel.toUpperCase()));
     assertTextsInOrder(probe.texts, [
       meta.eyebrow.toUpperCase(),
       meta.title.toUpperCase(),
@@ -194,6 +196,31 @@ test('React e PDF preservam ordem, textos, meta e altura nas duas orientações'
       : LANDSCAPE_INSTITUTIONAL_HEADER_LAYOUT;
     assert.equal(result.contentTop, layout.bottom + 15.5);
     assert.ok(probe.rects.some((rect) => rect.height === 10.5 && rect.y === layout.bottom + 2));
+  }
+});
+
+test('React e PDF exibem o nome de todos os polos ativos no selo', () => {
+  const polos = ['AQUIDABÃ', 'PORTO DA FOLHA', 'PROPRIÁ'];
+  const meta = { title: 'Documento de teste' };
+
+  for (const city of polos) {
+    for (const orientation of ['portrait', 'landscape'] as const) {
+      const fields = {
+        nomeFantasia: 'UNIVERSO CURSOS E CONSULTORIA',
+        cidade: city,
+        uf: 'SE',
+        isMatriz: false,
+      };
+      const { institution, probe } = renderProbe(orientation, fields, meta);
+      const reactText = visibleReactText(renderToStaticMarkup(React.createElement(
+        DocumentHeader,
+        { polo: fields, orientation, meta },
+      )));
+
+      assert.equal(institution.unitLabel, `Polo ${city}`);
+      assert.ok(reactText.includes(`Polo ${city}`));
+      assert.ok(probe.texts.some((record) => record.text === `POLO ${city}`));
+    }
   }
 });
 

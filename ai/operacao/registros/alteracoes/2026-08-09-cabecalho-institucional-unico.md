@@ -29,4 +29,8 @@ Diários, certificados, boleto, carnê, carteirinha estudantil, preceptor, SES, 
 
 ## Publicação
 
-Complemento final da PR #62, com produção autorizada pelo usuário em 2026-08-09 e merge condicionado à nova Preview Vercel `Ready`.
+Publicado pela PR #62 em 2026-08-09. A PR foi integrada por squash na `main` no commit `2987054bd5e7eebaf5f5130d0ed45c2bd621a7d8`; o workflow de qualidade e o deploy Vercel concluíram com sucesso, e a URL pública respondeu `HTTP 200`.
+
+## Hotfix de identificação dos polos
+
+Uma consulta somente leitura confirmou quatro unidades ativas: Matriz Japoatã e polos Aquidabã, Porto da Folha e Propriá. Como `polos.nome` repete o nome institucional em duas unidades, o selo passou a usar a cidade canônica: `MATRIZ`, `POLO AQUIDABÃ`, `POLO PORTO DA FOLHA` e `POLO PROPRIÁ`. React e PDF vetorial compartilham o mesmo valor; oito PDFs em retrato/paisagem foram extraídos e inspecionados sem corte ou sobreposição.

@@ -140,11 +140,12 @@ export const DocumentHeader = ({
             >
               {institution.name}
             </h1>
-            {institution.isHeadquarters ? (
-              <span className="rounded border border-[#001a33]/15 bg-[#001a33]/5 px-1.5 py-0.5 text-[9px] font-extrabold uppercase leading-none tracking-widest text-[#001a33]">
-                Matriz
-              </span>
-            ) : null}
+            <span
+              className="max-w-[42%] truncate rounded border border-[#001a33]/15 bg-[#001a33]/5 px-1.5 py-0.5 text-[9px] font-extrabold uppercase leading-none tracking-widest text-[#001a33]"
+              title={institution.unitLabel}
+            >
+              {institution.unitLabel}
+            </span>
           </div>
 
           <div
