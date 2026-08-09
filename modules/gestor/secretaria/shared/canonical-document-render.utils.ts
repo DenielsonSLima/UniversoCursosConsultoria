@@ -64,6 +64,8 @@ const normalizeWatermark = (value: unknown): CanonicalDocumentWatermark | null =
     label: canonicalNullableText(watermark.label, watermark.rotulo, watermark.text),
     imageUrl: canonicalNullableText(watermark.image_url, watermark.imageUrl, watermark.url),
     opacity: canonicalNumber(watermark.opacity, watermark.opacidade),
+    scale: canonicalNumber(watermark.scale, watermark.escala),
+    rotate: canonicalBoolean(watermark.rotate, watermark.rotacionar),
   };
 };
 

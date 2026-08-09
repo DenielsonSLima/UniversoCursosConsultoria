@@ -59,8 +59,13 @@ const normalizeTarget = (raw: unknown): ContratoAlunoTarget => {
 
   return {
     enrollmentId: text(row.matricula_id, row.enrollment_id, row.enrollmentId, row.id),
+    poloId: text(row.polo_id, row.poloId),
+    dataMatricula: nullableText(row.data_matricula, row.enrollment_created_at, row.dataMatricula),
     alunoId: text(row.aluno_id, row.student_id, row.alunoId, aluno.id),
     alunoNome: text(row.aluno_nome, row.student_name, row.alunoNome, aluno.nome) || 'Aluno não informado',
+    alunoCpf: nullableText(row.aluno_cpf, row.student_cpf, row.alunoCpf, aluno.cpf, aluno.cpf_cnpj),
+    alunoRg: nullableText(row.aluno_rg, row.student_rg, row.alunoRg, aluno.rg),
+    alunoFotoUrl: nullableText(row.aluno_foto_url, row.student_photo_url, row.alunoFotoUrl, aluno.foto_url),
     cursoNome: text(row.curso_nome, row.course_name, row.cursoNome, curso.nome) || 'Curso não informado',
     modalidade: text(row.modalidade, row.course_modality, row.curso_modalidade, curso.modalidade) || 'NÃO INFORMADA',
     turmaId: text(row.turma_id, row.class_id, row.turmaId, turma.id),

@@ -35,6 +35,8 @@ export const HISTORICO_VARIABLES = [
   { code: '{{ALUNO_TITULO_ELEITOR}}', label: 'Título de Eleitor' },
   { code: '{{ALUNO_TITULO_ZONA}}', label: 'Zona Eleitoral' },
   { code: '{{ALUNO_TITULO_SECAO}}', label: 'Seção Eleitoral' },
+  { code: '{{ALUNO_TITULO_EMISSAO}}', label: 'Emissão do Título de Eleitor' },
+  { code: '{{ALUNO_TITULO_UF}}', label: 'UF do Título de Eleitor' },
   { code: '{{ALUNO_RESERVISTA}}', label: 'Certificado Militar' },
   { code: '{{ENSINO_MEDIO_ESCOLA}}', label: 'Escola do Ensino Médio' },
   { code: '{{ENSINO_MEDIO_ANO_CONCLUSAO}}', label: 'Ano de Conclusão do Ensino Médio' },

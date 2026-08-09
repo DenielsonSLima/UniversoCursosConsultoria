@@ -3,6 +3,8 @@ import { FileText, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import DocumentHeader from '../../../../components/DocumentHeader';
 import { LocalQrCodeImage } from '../../../../../shared/qrcode/LocalQrCodeImage';
 import { parseContratoAlunoClosingLayout } from '../../../../../shared/contrato-aluno/closing-layout';
+import { normalizeContractSectionHeader } from '../../../../../shared/contrato-aluno/section-header';
+import { buildContractSemanticRuns } from '../../../../../shared/contrato-aluno/semantic-format';
 import type { ConfiguracaoQrContrato } from '../types/contrato-aluno.types';
 
 export const PAGE_WIDTH = 794;
@@ -84,6 +86,7 @@ interface ContratoAlunoCanvasProps {
   tituloDocumento: string;
   cabecalho: string;
   corpo: string;
+  destaquesCriticos: string[];
   rodape: string;
   observacaoEscopo: string;
   qr: ConfiguracaoQrContrato;
@@ -103,6 +106,7 @@ export const ContratoAlunoCanvas: React.FC<ContratoAlunoCanvasProps> = ({
   tituloDocumento,
   cabecalho,
   corpo,
+  destaquesCriticos,
   rodape,
   qr,
   polo,
@@ -125,6 +129,11 @@ export const ContratoAlunoCanvas: React.FC<ContratoAlunoCanvasProps> = ({
   const watermarkOpacity = rawOpacity > 1 ? rawOpacity / 100 : rawOpacity;
   const watermarkScale = centralWatermark?.watermarkScale ?? polo?.watermark_scale ?? 50;
   const watermarkRotate = centralWatermark?.watermarkRotate !== false;
+  const visibleSectionHeader = normalizeContractSectionHeader(cabecalho, [
+    polo?.nomeFantasia,
+    polo?.nome,
+    'UNIVERSO CURSOS E CONSULTORIA',
+  ]);
 
   const scaledHeight = PAGE_HEIGHT * zoomScale;
   const scaledWidth = PAGE_WIDTH * zoomScale;
@@ -199,6 +208,9 @@ export const ContratoAlunoCanvas: React.FC<ContratoAlunoCanvasProps> = ({
           const isFinalPage = pageIndex === totalPages - 1;
           const shouldRenderClosing = isFinalPage && Boolean(pageText.footer || qr.habilitado);
           const closingLayout = parseContratoAlunoClosingLayout(pageText.footer);
+          const bodyRuns = buildContractSemanticRuns(pageText.body, {
+            criticalHighlights: destaquesCriticos,
+          });
 
           return (
             <div
@@ -278,10 +290,12 @@ export const ContratoAlunoCanvas: React.FC<ContratoAlunoCanvasProps> = ({
                   {/* Document Title Header (shown on page 1) */}
                   {pageIndex === 0 && (
                     <div className="relative z-10 mt-6 mb-6 text-center">
-                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#001a33]">
-                        {cabecalho || 'UNIVERSO CURSOS E CONSULTORIA'}
-                      </p>
-                      <div className="mx-auto mt-2.5 h-0.5 w-20 bg-[#ed1c4e]" />
+                      {visibleSectionHeader && (
+                        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#001a33]">
+                          {visibleSectionHeader}
+                        </p>
+                      )}
+                      <div className={`mx-auto h-0.5 w-20 bg-[#ed1c4e] ${visibleSectionHeader ? 'mt-2.5' : ''}`} />
                       <h1 className="mt-4 text-xl font-black uppercase leading-tight tracking-tight text-[#001a33]">
                         {tituloDocumento || 'CONTRATO DE PRESTAÇÃO DE SERVIÇOS EDUCACIONAIS'}
                       </h1>
@@ -290,7 +304,14 @@ export const ContratoAlunoCanvas: React.FC<ContratoAlunoCanvasProps> = ({
 
                   {/* Page Body Text Content */}
                   <div className="relative z-10 mt-6 mb-20 text-justify text-[11.5px] leading-[1.8] text-slate-800 font-serif whitespace-pre-wrap break-words">
-                    {pageText.body || (
+                    {bodyRuns.length > 0 ? bodyRuns.map((run, runIndex) => (
+                      <span
+                        key={`${pageIndex}-trecho-${runIndex}`}
+                        className={`${run.bold ? 'font-bold' : ''} ${run.accent ? 'text-[#ed1c4e]' : ''}`}
+                      >
+                        {run.text}
+                      </span>
+                    )) : (
                       <span className="italic text-slate-400 font-sans">
                         Página {pageIndex + 1} vazia ou sem texto configurado.
                       </span>

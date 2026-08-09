@@ -1,22 +1,31 @@
 # Operação de agentes
 
-Esta é a fonte versionada de contexto operacional do repositório. Ela evita buscas amplas, decisões esquecidas e publicações fragmentadas.
+Esta pasta contém contexto operacional versionado com carregamento progressivo.
 
-## Leitura mínima por agente
+## Leitura
 
-1. `MEMORIA_CANONICA.md`
-2. `LOTE_ATIVO.md`
-3. A busca focada pelo script `node scripts/agent-memory-rag.mjs search "<demanda>"`
+- Ajuste rápido: somente AGENTS.md e os arquivos diretamente afetados.
+- Ajuste PDF focado: somente AGENTS.md, a política de PDFs e o exportador afetado.
+- Mudança padrão: acrescentar MEMORIA_CANONICA.md e o lote atual.
+- Mudança crítica: acrescentar apenas a política do domínio.
+- RAG: usar somente quando uma decisão anterior for necessária.
 
-Não leia todo o repositório, todos os registros ou todas as decisões sem necessidade. O manifesto RAG define as fontes permitidas e a busca devolve trechos citáveis.
+## Fontes
 
-## Fontes de verdade
+- Regras e roteamento: AGENTS.md
+- Índice durável: MEMORIA_CANONICA.md
+- Trabalho corrente: LOTE_ATIVO.md
+- Políticas condicionais: politicas/
+- Processo de entrega: PROTOCOLO_DE_LOTES.md
+- Histórico: registros/
+- Decisões de arquitetura: docs/decisions/
 
-- Regras duráveis e decisões operacionais: `MEMORIA_CANONICA.md`.
-- Trabalho em curso: `LOTE_ATIVO.md`.
-- Processo de entrega: `PROTOCOLO_DE_LOTES.md`.
-- Histórico de produto: `internal/versioning/CHANGELOG.md`.
-- Decisões de arquitetura: `docs/decisions/`.
-- Registros de execução e publicação: `registros/`.
+Históricos não são carregados nem indexados por padrão.
 
-Os diretórios legados `ai/memoria`, `ai/rag` e `ai/skil` não são fontes autoritativas. Eles são mantidos apenas como histórico até uma migração explícita.
+## Verificação operacional
+
+Depois de alterar AGENTS, memória, protocolo, lote ou RAG, execute:
+
+`npm run test:agent-operations`
+
+O contrato falha se o lote ativo acumular blocos, o contexto crescer além do limite, históricos voltarem ao RAG, `tmp` entrar no TypeScript, regras de PDF conflitarem ou a busca RAG gravar/ultrapassar um segundo. Não execute este teste em hotfix de produto que não alterou a operação dos agentes.

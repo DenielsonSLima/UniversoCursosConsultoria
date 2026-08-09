@@ -24,6 +24,7 @@ const BibliotecaPage = lazy(() => import('./biblioteca/BibliotecaPage'));
 const ComunicacaoPage = lazy(() => import('./comunicacao/ComunicacaoPage'));
 const PerfilPage = lazy(() => import('./perfil/PerfilPage'));
 const CalendarioProfessorPage = lazy(() => import('./calendario/CalendarioProfessorPage'));
+const PlanoCursoPage = lazy(() => import('./plano-curso/PlanoCursoPage'));
 
 interface ProfessorPoloTransitionState {
   fromPoloId: string;
@@ -258,6 +259,14 @@ const ProfessorPage: React.FC = () => {
         return (
           <TurmasPage
             key={currentPoloId || 'sem-polo'}
+            professorId={professorId}
+            poloId={currentPoloId || ''}
+          />
+        );
+      case 'plano-curso':
+        return (
+          <PlanoCursoPage
+            key={`${professorId}-${currentPoloId || 'sem-polo'}`}
             professorId={professorId}
             poloId={currentPoloId || ''}
           />

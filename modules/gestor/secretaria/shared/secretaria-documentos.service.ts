@@ -44,6 +44,10 @@ const buildStudentRegistrationSnapshot = (matricula: any) => ({
   studentNationality: matricula.parceiros?.nacionalidade || '',
   studentBirthplace: matricula.parceiros?.naturalidade || '',
   studentVoterId: matricula.parceiros?.titulo_eleitor || '',
+  studentVoterZone: matricula.parceiros?.titulo_eleitor_zona || '',
+  studentVoterSection: matricula.parceiros?.titulo_eleitor_secao || '',
+  studentVoterIssueDate: matricula.parceiros?.titulo_eleitor_data_emissao || '',
+  studentVoterState: matricula.parceiros?.titulo_eleitor_uf || '',
   studentReservist: matricula.parceiros?.reservista || '',
   studentMotherName: matricula.parceiros?.nome_mae || '',
   studentFatherName: matricula.parceiros?.nome_pai || '',
@@ -342,7 +346,8 @@ export const secretariaDocumentosService = {
           nome, nome_social, cpf_cnpj, email, telefone, foto_url,
           data_nascimento, sexo, estado_civil, raca_cor,
           rg, tipo_documento, orgao_emissor, rg_uf_emissao, rg_data_emissao,
-          nacionalidade, naturalidade, titulo_eleitor, reservista,
+          nacionalidade, naturalidade, titulo_eleitor, titulo_eleitor_zona,
+          titulo_eleitor_secao, titulo_eleitor_data_emissao, titulo_eleitor_uf, reservista,
           nome_mae, nome_pai, pcd, pcd_tipo,
           escola_ensino_medio, ano_conclusao_ensino_medio,
           cep, endereco, numero, complemento, bairro, cidade, uf,
@@ -574,13 +579,19 @@ export const secretariaDocumentosService = {
           *,
           aluno:parceiros(
             id, nome, cpf_cnpj, rg, data_nascimento, foto_url, sexo,
-            nacionalidade, naturalidade, orgao_emissor, titulo_eleitor, reservista,
+            nacionalidade, naturalidade, orgao_emissor, titulo_eleitor, titulo_eleitor_zona,
+            titulo_eleitor_secao, titulo_eleitor_data_emissao, titulo_eleitor_uf, reservista,
             nome_mae, nome_pai, escola_ensino_medio, ano_conclusao_ensino_medio
           ),
           matricula:matriculas(id, status, turma:turmas(id, nome, codigo))
         `)
         .in('codigo', codes);
       if (emissionsError) {
+        if (isRegistrationDocument) {
+          throw new Error(
+            'O snapshot oficial de Pasta/Ficha não pôde ser relido. Tente novamente antes de abrir ou exportar o PDF.',
+          );
+        }
         console.warn('[SecretariaDocumentos] Snapshot emitido não pôde ser relido; usando os dados já consolidados.', emissionsError);
       }
 
@@ -592,6 +603,11 @@ export const secretariaDocumentosService = {
           const matricula: any = matriculas[index];
           const record = records[index];
           const persisted = emissionsByCode.get(code);
+          if (isRegistrationDocument && !persisted) {
+            throw new Error(
+              `O snapshot oficial de ${input.documento === 'ficha_matricula' ? 'Ficha de Matrícula' : 'Pasta de Identificação'} não foi localizado para ${code}.`,
+            );
+          }
           const fallback: EmissionLog = {
             id: code,
             identidade: code,

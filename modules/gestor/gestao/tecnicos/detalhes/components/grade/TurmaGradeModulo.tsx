@@ -9,6 +9,7 @@ import {
 } from '../../turma-grade.types';
 import TurmaGradeDisciplina from './TurmaGradeDisciplina';
 import { TurmaGradeTheme } from './turma-grade-ui';
+import type { PlanoCursoGestaoStatus } from '../../../../../../shared/plano-curso/plano-curso.types';
 
 interface TurmaGradeModuloProps {
   modulo: Modulo;
@@ -16,6 +17,9 @@ interface TurmaGradeModuloProps {
   disciplinasConfig: Record<string, TurmaDisciplinaConfig>;
   aulas: Record<string, TurmaAulaPlanejada[]>;
   atividades: Record<string, TurmaAtividadeExtraClasse[]>;
+  planosCurso: Record<string, PlanoCursoGestaoStatus>;
+  planosCursoLoading: boolean;
+  planosCursoError: boolean;
   expanded: boolean;
   expandedDisciplines: Set<string>;
   singleProfessor: boolean;
@@ -33,6 +37,7 @@ interface TurmaGradeModuloProps {
   onToggleDisciplina: (disciplinaId: string) => void;
   onToggleConcluida: (disciplinaId: string) => void;
   onOpenProfessor: (disciplinaId: string) => void;
+  onOpenPlanoCurso: (disciplinaId: string) => void;
   onDeleteAula: (disciplinaId: string, aulaId: string) => void;
   onUpdateAula: (input: TurmaAulaUpdateInput) => Promise<void>;
   onTituloChange: (disciplinaId: string, value: string) => void;
@@ -50,6 +55,9 @@ const TurmaGradeModulo: React.FC<TurmaGradeModuloProps> = ({
   disciplinasConfig,
   aulas,
   atividades,
+  planosCurso,
+  planosCursoLoading,
+  planosCursoError,
   expanded,
   expandedDisciplines,
   singleProfessor,
@@ -67,6 +75,7 @@ const TurmaGradeModulo: React.FC<TurmaGradeModuloProps> = ({
   onToggleDisciplina,
   onToggleConcluida,
   onOpenProfessor,
+  onOpenPlanoCurso,
   onDeleteAula,
   onUpdateAula,
   onTituloChange,
@@ -134,6 +143,9 @@ const TurmaGradeModulo: React.FC<TurmaGradeModuloProps> = ({
                 config={disciplinasConfig[disciplina.id] || { professor: null, concluida: false }}
                 aulas={aulas[disciplina.id] || []}
                 atividades={atividades[disciplina.id] || []}
+                planoCurso={planosCurso[disciplina.id] || null}
+                planoCursoLoading={planosCursoLoading}
+                planoCursoError={planosCursoError}
                 metricas={metricasGrade.find((item) => item.disciplina_id === disciplina.id)}
                 theme={theme}
                 singleProfessor={singleProfessor}
@@ -149,6 +161,7 @@ const TurmaGradeModulo: React.FC<TurmaGradeModuloProps> = ({
                 onToggle={() => onToggleDisciplina(disciplina.id)}
                 onToggleConcluida={() => onToggleConcluida(disciplina.id)}
                 onOpenProfessor={() => onOpenProfessor(disciplina.id)}
+                onOpenPlanoCurso={() => onOpenPlanoCurso(disciplina.id)}
                 onDeleteAula={(aulaId) => onDeleteAula(disciplina.id, aulaId)}
                 onUpdateAula={onUpdateAula}
                 onTituloChange={(value) => onTituloChange(disciplina.id, value)}

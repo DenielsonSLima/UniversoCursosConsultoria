@@ -17,6 +17,7 @@ export interface TechnicalEnrollmentSettingsValue {
 interface TechnicalEnrollmentSettingsProps {
   value: TechnicalEnrollmentSettingsValue;
   onChange: (patch: Partial<TechnicalEnrollmentSettingsValue>) => void;
+  showEnrollmentPaymentRule?: boolean;
   onlineEnrollmentLocked?: boolean;
   onCloseOnlineEnrollments?: () => void;
   isClosingOnlineEnrollments?: boolean;
@@ -25,6 +26,7 @@ interface TechnicalEnrollmentSettingsProps {
 const TechnicalEnrollmentSettings: React.FC<TechnicalEnrollmentSettingsProps> = ({
   value,
   onChange,
+  showEnrollmentPaymentRule = true,
   onlineEnrollmentLocked = false,
   onCloseOnlineEnrollments,
   isClosingOnlineEnrollments = false,
@@ -194,13 +196,15 @@ const TechnicalEnrollmentSettings: React.FC<TechnicalEnrollmentSettingsProps> = 
                 className="h-4 w-4 rounded border-emerald-300 text-emerald-600" />
               Fechar matrícula ao completar vagas
             </label>
-            <label className="flex items-center gap-2 text-xs font-bold uppercase text-emerald-700">
-              <Settings size={14} />
-              <input type="checkbox" checked={value.exigeMatricula}
-                onChange={(event) => onChange({ exigeMatricula: event.target.checked })}
-                className="h-4 w-4 rounded border-emerald-300 text-emerald-600" />
-              Exigir pagamento de matrícula
-            </label>
+            {showEnrollmentPaymentRule ? (
+              <label className="flex items-center gap-2 text-xs font-bold uppercase text-emerald-700">
+                <Settings size={14} />
+                <input type="checkbox" checked={value.exigeMatricula}
+                  onChange={(event) => onChange({ exigeMatricula: event.target.checked })}
+                  className="h-4 w-4 rounded border-emerald-300 text-emerald-600" />
+                Exigir pagamento de matrícula
+              </label>
+            ) : null}
           </div>
         </div>
       </div>

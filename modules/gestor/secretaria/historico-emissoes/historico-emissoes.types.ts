@@ -31,6 +31,10 @@ export interface EmissionLog {
     naturalidade?: string;
     orgao_emissor?: string;
     titulo_eleitor?: string;
+    titulo_eleitor_zona?: string;
+    titulo_eleitor_secao?: string;
+    titulo_eleitor_data_emissao?: string;
+    titulo_eleitor_uf?: string;
     reservista?: string;
     nome_mae?: string;
     nome_pai?: string;
@@ -61,6 +65,7 @@ export interface AcademicComponentRow {
 }
 
 export interface AcademicPreviewData {
+  componentes: AcademicComponentRow[];
   componentesTable: string;
   historicoTable: string;
   cargaHorariaCumprida: number;

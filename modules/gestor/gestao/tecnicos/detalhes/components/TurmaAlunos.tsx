@@ -1,9 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Turma } from '../../../gestao.types';
 import ToastNotification, { useToast } from '../../../../parceiros/components/shared/ToastNotification';
-import { AcademicMovementType, AcademicStudent } from '../academic-lifecycle.service';
-import { isValidStudentCpf } from '../turma-alunos.service';
-import ConfirmarMatriculaModal, { EnrollmentFinance, EnrollmentStep } from './alunos/ConfirmarMatriculaModal';
+import { AcademicMovementType, AcademicStudent, academicLifecycleService } from '../academic-lifecycle.service';
+import ConfirmarMatriculaModal, { EnrollmentFinanceIntent } from './alunos/ConfirmarMatriculaModal';
+import ConfirmarVinculoAcademicoModal from './alunos/ConfirmarVinculoAcademicoModal';
 import MatricularAlunoModal from './alunos/MatricularAlunoModal';
 import MovimentacaoAlunoModal, { OperationMode, TransferType } from './alunos/MovimentacaoAlunoModal';
 import MovimentacaoHistoricoModal from './alunos/MovimentacaoHistoricoModal';
@@ -11,18 +12,14 @@ import TurmaAlunosTable from './alunos/TurmaAlunosTable';
 import TurmaAlunosHeader from './alunos/TurmaAlunosHeader';
 import TurmaAlunosQueryState from './alunos/TurmaAlunosQueryState';
 import RemoveEnrollmentConfirm from './alunos/RemoveEnrollmentConfirm';
-import { ENROLLMENT_PHASES, EnrollmentFlagConfig } from './alunos/turmaAlunos.config';
+import { ENROLLMENT_PHASES } from './alunos/turmaAlunos.config';
 import {
   useAvailableStudents,
   useDestinationClasses,
-  useEnrollmentPaymentOptions,
-  useTurmaFinanceiroMatriculaConfig,
   useTurmaStudents,
   useTurmaMovements,
-  usePrevisaoFinanceiraTurma,
 } from '../hooks/useTurmaAlunosQueries';
 import {
-  useEnrollStudentMutation,
   useMovementMutation,
   useRemoveEnrollmentMutation,
   useReturnEnrollmentMutation,
@@ -31,34 +28,35 @@ import {
 } from '../hooks/useTurmaAlunosMutations';
 import { getTechnicalEnrollmentMissingFields } from '../../../../../shared/utils/technicalEnrollmentRequirements';
 import { getMaceioIsoDate } from '../../technicalClassDates';
-import type { GatewayPaymentMethod } from '../../../../../asaas/asaas.service';
-import { useFinanceiroRulesCalculation } from './financeiro/hooks/useFinanceiroConfig';
+import { academicLifecycleKeys } from '../academic-lifecycle.keys';
+import {
+  createFinanceiroRequestId,
+  useAtivarFinanceiroMatriculaTecnica,
+  useMatriculaTecnicaFinanceiroWorkspace,
+  usePreVinculoAlunoTecnicoContexto,
+  usePreVincularAlunoTecnico,
+} from './financeiro/hooks/useMatriculaTecnicaFinanceiro';
+import { useMatriculaTecnicaFinanceiroRealtime } from './financeiro/hooks/useMatriculaTecnicaFinanceiroRealtime';
+import { matriculaTecnicaFinanceiroKeys } from './financeiro/matricula-tecnica-financeiro.keys';
+import {
+  isFinanceiroDateRejected,
+  isRegraFinanceiraConflict,
+} from './financeiro/matricula-tecnica-financeiro.service';
 
 interface TurmaAlunosProps {
   turma: Turma;
+  canManageFinanceiro?: boolean;
 }
-const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
+const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma, canManageFinanceiro = false }) => {
   const { toasts, removeToast, toast } = useToast();
+  const queryClient = useQueryClient();
   const [showMatricularModal, setShowMatricularModal] = useState(false);
   const [pendingEnrollment, setPendingEnrollment] = useState<any>(null);
-  const [enrollmentStep, setEnrollmentStep] = useState<EnrollmentStep>('MATRICULA');
-  const [enrollmentFinance, setEnrollmentFinance] = useState<EnrollmentFinance>({
-    valorMatricula: turma.valorMatricula || 0,
-    valorParcela: turma.valorParcela || 0,
-    valorRematricula: turma.valorRematricula || 0,
-    descontoPontualidade: turma.descontoPontualidade || 0,
-    jurosAtraso: turma.jurosAtraso || 1,
-    multaAtraso: 2,
-    dataVencimentoMatricula: getMaceioIsoDate(),
-    diaVencimento: 10,
-  });
-  const [enrollmentFlags, setEnrollmentFlags] = useState<EnrollmentFlagConfig>({
-    financeiro_herdado: turma.financeiroHerdado || false,
-    gerar_cobranca_inicial: !(turma.origemFinanceira === 'LEGADO' || turma.financeiroHerdado),
-    gerar_cobranca_futura: turma.gerarCobrancasFuturas ?? null,
-    sincronizar_asaas: false,
-  });
-  const [enrollmentPaymentMethod, setEnrollmentPaymentMethod] = useState<GatewayPaymentMethod | null>(null);
+  const [enrollmentIntent, setEnrollmentIntent] = useState<EnrollmentFinanceIntent>('PENDENTE');
+  const [primeiroVencimento, setPrimeiroVencimento] = useState('');
+  const [ativarEm, setAtivarEm] = useState('');
+  const preLinkRequestIds = useRef(new Map<string, string>());
+  const activationRequestIds = useRef(new Map<string, string>());
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<AcademicStudent | null>(null);
   const [studentToRemove, setStudentToRemove] = useState<AcademicStudent | null>(null);
@@ -76,6 +74,9 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
   const turmaStatus = String(turma.status || '').toUpperCase();
   const canEnroll = ENROLLMENT_PHASES.has(turmaStatus);
   const isReadOnly = turmaStatus === 'FINALIZADA';
+  useMatriculaTecnicaFinanceiroRealtime(
+    requireTechnicalProfile && canManageFinanceiro ? turma.id : '',
+  );
   const studentsQuery = useTurmaStudents(turma.id);
   const students = studentsQuery.data || [];
   const movementsQuery = useTurmaMovements(turma.id);
@@ -107,29 +108,16 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
     showMatricularModal,
     searchTerm,
   );
-  const financeiroConfigQuery = useTurmaFinanceiroMatriculaConfig(
+  const enrollmentWorkspaceQuery = useMatriculaTecnicaFinanceiroWorkspace(
     turma.id,
-    canEnroll && (showMatricularModal || !!pendingEnrollment),
+    pendingEnrollment?.id,
+    requireTechnicalProfile && canManageFinanceiro && canEnroll && Boolean(pendingEnrollment),
   );
-  const turmaFinanceiroConfig = financeiroConfigQuery.data;
-  const previsaoQuery = usePrevisaoFinanceiraTurma(turma.id, !!pendingEnrollment && !!turmaFinanceiroConfig);
-  const enrollmentPreviewQuery = useFinanceiroRulesCalculation({
-    valorParcela: enrollmentFinance.valorParcela,
-    descontoPontualidade: enrollmentFinance.descontoPontualidade,
-    jurosAtraso: enrollmentFinance.jurosAtraso,
-    multaAtrasoPercentual: enrollmentFinance.multaAtraso,
-    aplicarDescontoMensalidade: turmaFinanceiroConfig?.aplicarDescontoMensalidade !== false,
-    aplicarMultaJurosMensalidade: turmaFinanceiroConfig?.aplicarMultaJurosMensalidade !== false,
-  }, true, Boolean(pendingEnrollment && turmaFinanceiroConfig));
-  const paymentOptionsQuery = useEnrollmentPaymentOptions(
+  const preVinculoContextoQuery = usePreVinculoAlunoTecnicoContexto(
     turma.id,
-    !!pendingEnrollment
-      && enrollmentFlags.gerar_cobranca_inicial
-      && enrollmentFlags.sincronizar_asaas !== false,
+    pendingEnrollment?.id,
+    requireTechnicalProfile && !canManageFinanceiro && canEnroll && Boolean(pendingEnrollment),
   );
-  const paymentOptionsEnvironment = paymentOptionsQuery.data?.environment || 'sandbox';
-  const availablePaymentMethods = (paymentOptionsQuery.data?.options || [])
-    .map((option) => option.paymentMethod);
   const destinationClassesQuery = useDestinationClasses(
     turma.id,
     !!selectedStudent && (
@@ -139,38 +127,14 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
   );
   const destinationClasses = destinationClassesQuery.data || [];
   const invalidateAcademicData = useTurmaAcademicInvalidation(turma.id);
-  const enrollMutation = useEnrollStudentMutation(
-    turma.id,
-    async (result) => {
-      await invalidateAcademicData();
-      setShowMatricularModal(false);
-      setPendingEnrollment(null);
-      setEnrollmentStep('MATRICULA');
-      setSearchTerm('');
-    if (result.asaasSynced) {
-      toast.success(
-        'Matrícula e cobrança inicial geradas',
-        'O aluno foi vinculado à turma. O carnê com mensalidades será gerado após a confirmação da matrícula inicial.'
-      );
-    } else if (result.asaasSkipped) {
-      toast.success(
-        'Matrícula criada sem envio ao gateway',
-        result.asaasSkipReason || 'A regra financeira da turma/matrícula não exige sincronização no gateway.'
-      );
-    } else {
-      toast.info(
-        'Matrícula criada; sincronização pendente',
-        result.asaasError
-          ? `A cobrança local foi criada, mas o gateway respondeu: ${result.asaasError}`
-          : 'A matrícula foi criada, mas não houve confirmação de sincronização no gateway.'
-      );
-    }
-    },
-    (error: any) => toast.error('Matrícula não realizada', `Não foi possível validar/criar a cobrança no gateway: ${error.message}`),
-  );
+  const preLinkMutation = usePreVincularAlunoTecnico();
+  const activateFinanceMutation = useAtivarFinanceiroMatriculaTecnica();
+  const legacyEnrollMutation = useMutation({
+    mutationFn: (alunoId: string) => academicLifecycleService.matricularAluno(turma.id, alunoId),
+  });
   const confirmEnrollment = (student: any) => {
-    if (!canEnroll || financeiroConfigQuery.isError || financeiroConfigQuery.isLoading || !turmaFinanceiroConfig) {
-      toast.error('Matrícula indisponível', 'A fase da turma e a configuração financeira precisam estar carregadas antes da matrícula.');
+    if (!canEnroll) {
+      toast.error('Matrícula indisponível', 'A fase atual da turma não permite novas matrículas.');
       return;
     }
     if (requireTechnicalProfile) {
@@ -183,138 +147,140 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
         return;
       }
     }
-
-    const defaults = turmaFinanceiroConfig;
-    const financeiroHerdado = defaults.financeiroHerdado || defaults.origemFinanceira === 'LEGADO';
-    const gerarCobrancaInicial = defaults.origemFinanceira === 'NORMAL' && !financeiroHerdado;
-    const deveSincronizarGateway = gerarCobrancaInicial && (defaults.sincronizarAsaasFuturo ?? true);
-
-    if (deveSincronizarGateway && !isValidStudentCpf(student.cpf_cnpj)) {
-      toast.error(
-        'CPF inválido para cobrança',
-        'Atualize o CPF do aluno com um documento válido antes de gerar a cobrança no gateway.'
-      );
-      return;
-    }
-
-      setEnrollmentFinance({
-        valorMatricula: defaults.valorMatricula,
-        valorParcela: defaults.valorParcela,
-        valorRematricula: defaults.valorRematricula,
-        descontoPontualidade: defaults.descontoPontualidade,
-        jurosAtraso: defaults.jurosAtraso,
-        multaAtraso: defaults.multaAtrasoPercentual,
-        dataVencimentoMatricula: getMaceioIsoDate(),
-        diaVencimento: defaults.diaVencimento,
-      });
-      setEnrollmentFlags({
-        financeiro_herdado: financeiroHerdado,
-        gerar_cobranca_inicial: gerarCobrancaInicial,
-        gerar_cobranca_futura: defaults.gerarCobrancasFuturas ?? null,
-        sincronizar_asaas: defaults.sincronizarAsaasFuturo ?? true,
-      });
-      setEnrollmentPaymentMethod(null);
-      setEnrollmentStep('MATRICULA');
-      setPendingEnrollment(student);
-    };
+    setEnrollmentIntent('PENDENTE');
+    setPrimeiroVencimento('');
+    setAtivarEm('');
+    setShowMatricularModal(false);
+    setPendingEnrollment(student);
+  };
 
   const closeEnrollmentConfirmation = () => {
     setPendingEnrollment(null);
-    setEnrollmentStep('MATRICULA');
-    setEnrollmentPaymentMethod(null);
+    setEnrollmentIntent('PENDENTE');
+    setPrimeiroVencimento('');
+    setAtivarEm('');
   };
-  const updateEnrollmentFinance = (field: keyof typeof enrollmentFinance, value: string) => {
-    setEnrollmentFinance((current) => ({
-      ...current,
-      [field]: field === 'dataVencimentoMatricula'
-        ? value
-        : Number(value) || 0,
-    }));
-  };
-  const confirmEnrollmentFinance = () => {
+  const confirmEnrollmentFinance = async () => {
     if (!pendingEnrollment) return;
-    if (!canEnroll || !turmaFinanceiroConfig || financeiroConfigQuery.isError) {
-      toast.error('Configuração não carregada', 'Recarregue os dados financeiros antes de confirmar a matrícula.');
+    if (!requireTechnicalProfile) {
+      try {
+        await legacyEnrollMutation.mutateAsync(pendingEnrollment.id);
+        await queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.alunos(turma.id) });
+        setSearchTerm('');
+        closeEnrollmentConfirmation();
+        toast.success('Aluno vinculado', 'O vínculo acadêmico foi confirmado sem criar uma nova cobrança automática.');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'O servidor não confirmou o vínculo.';
+        toast.error('Matrícula não realizada', message);
+      }
       return;
     }
-    if (
-      enrollmentPreviewQuery.isPending
-      || enrollmentPreviewQuery.isFetching
-      || enrollmentPreviewQuery.isError
-      || !enrollmentPreviewQuery.data
-    ) {
-      toast.error('Cálculo indisponível', 'Aguarde a prévia financeira oficial do servidor antes de confirmar.');
+    const confirmedRule = canManageFinanceiro
+      ? enrollmentWorkspaceQuery.data?.regra
+      : preVinculoContextoQuery.data?.regra;
+    const financialContextError = canManageFinanceiro
+      ? enrollmentWorkspaceQuery.isError
+      : preVinculoContextoQuery.isError;
+    if (!canEnroll || financialContextError || !confirmedRule) {
+      toast.error('Regra não carregada', 'Recarregue o workspace financeiro oficial antes de confirmar.');
       return;
     }
-    if (!enrollmentFinance.dataVencimentoMatricula) {
-      toast.error('Vencimento obrigatório', 'Informe a data de vencimento da matrícula.');
+    const effectiveIntent = canManageFinanceiro ? enrollmentIntent : 'PENDENTE';
+    if (effectiveIntent === 'AGENDADA' && !ativarEm) {
+      toast.error('Agendamento obrigatório', 'Informe quando a geração financeira deve ser executada.');
       return;
     }
-    if (enrollmentFlags.gerar_cobranca_inicial && enrollmentFinance.valorMatricula <= 0) {
-      toast.error('Valor obrigatório', 'Informe o valor da matrícula para gerar a cobrança inicial.');
-      return;
+    const preLinkKey = `${pendingEnrollment.id}:${primeiroVencimento || 'CANONICO'}:${confirmedRule.revisao}:${confirmedRule.fingerprint}`;
+    const currentPreLinkRequestId = preLinkRequestIds.current.get(preLinkKey)
+      || createFinanceiroRequestId();
+    preLinkRequestIds.current.set(preLinkKey, currentPreLinkRequestId);
+    let preLinkConfirmed = false;
+    try {
+      const preLink = await preLinkMutation.mutateAsync({
+        turmaId: turma.id,
+        alunoId: pendingEnrollment.id,
+        requestId: currentPreLinkRequestId,
+        expectedRegraRevisao: confirmedRule.revisao,
+        expectedRegraFingerprint: confirmedRule.fingerprint,
+        primeiroVencimento: canManageFinanceiro ? primeiroVencimento || null : null,
+      });
+      if (preLink.cobrancaGerada) {
+        throw new Error('O pré-vínculo retornou uma cobrança inesperada.');
+      }
+      preLinkConfirmed = true;
+      await queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.alunos(turma.id) });
+
+      if (effectiveIntent !== 'PENDENTE') {
+        const effectiveRule = preLink.matricula.regraEfetiva;
+        const currentOverride = preLink.matricula.override;
+        if (!effectiveRule || !currentOverride) {
+          throw new Error('O servidor não retornou a identidade financeira efetiva da matrícula.');
+        }
+        const activationKey = `${preLink.matricula.matriculaId}:${effectiveIntent}:${ativarEm || 'AGORA'}:${preLink.regraAplicada.revisao}:${preLink.regraAplicada.fingerprint}`;
+        const currentActivationRequestId = activationRequestIds.current.get(activationKey)
+          || createFinanceiroRequestId();
+        activationRequestIds.current.set(activationKey, currentActivationRequestId);
+        await activateFinanceMutation.mutateAsync({
+          turmaId: turma.id,
+          matriculaId: preLink.matricula.matriculaId,
+          modo: effectiveIntent,
+          requestId: currentActivationRequestId,
+          expectedTurmaRevisao: effectiveRule.identidade.turmaRevisao,
+          expectedTurmaFingerprint: effectiveRule.identidade.turmaFingerprint,
+          expectedOverrideRevisao: currentOverride.identidade.revisao,
+          expectedOverrideFingerprint: currentOverride.identidade.fingerprint,
+          expectedEfetivaFingerprint: effectiveRule.identidade.efetivaFingerprint,
+          ativarEm: effectiveIntent === 'AGENDADA'
+            ? new Date(ativarEm).toISOString()
+            : null,
+        });
+      }
+
+      setShowMatricularModal(false);
+      setSearchTerm('');
+      preLinkRequestIds.current.clear();
+      activationRequestIds.current.clear();
+      closeEnrollmentConfirmation();
+      if (effectiveIntent === 'PENDENTE') {
+        toast.success('Aluno pré-vinculado', 'Nenhuma cobrança foi gerada. O financeiro ficou pendente para uma ação posterior.');
+      } else if (effectiveIntent === 'AGORA') {
+        toast.success('Cobrança inicial gerada', 'O servidor confirmou o vínculo e criou somente o título inicial local.');
+      } else {
+        toast.success('Financeiro agendado', 'O vínculo foi confirmado e a geração ficou agendada pelo servidor.');
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'O servidor não confirmou a operação.';
+      if (isRegraFinanceiraConflict(error)) {
+        void queryClient.invalidateQueries({
+          queryKey: matriculaTecnicaFinanceiroKeys.turma(turma.id),
+          refetchType: 'active',
+        });
+        toast.warning(
+          preLinkConfirmed ? 'Vínculo confirmado; regra alterada' : 'Regra financeira alterada',
+          'A regra da turma mudou durante a confirmação. Revise os novos valores e confirme novamente.',
+        );
+        return;
+      }
+      if (isFinanceiroDateRejected(error)) {
+        toast.warning(
+          preLinkConfirmed ? 'Aluno vinculado; data não aceita' : 'Data não aceita pelo servidor',
+          'A data informada já venceu ou não é válida. O financeiro permanece pendente; corrija o campo ou deixe-o vazio para usar o próximo vencimento canônico.',
+        );
+        return;
+      }
+      if (preLinkConfirmed) {
+        void queryClient.invalidateQueries({
+          queryKey: matriculaTecnicaFinanceiroKeys.turma(turma.id),
+          refetchType: 'active',
+        });
+        toast.warning(
+          'Aluno vinculado; financeiro pendente',
+          `${message} A ativação não foi confirmada. Tente novamente; o mesmo identificador será reutilizado com segurança.`,
+        );
+      } else {
+        toast.error('Matrícula não realizada', `${message} Tente novamente; o mesmo identificador será reutilizado com segurança.`);
+      }
     }
-    if (
-      enrollmentFlags.gerar_cobranca_inicial
-      && enrollmentFlags.sincronizar_asaas !== false
-      && !enrollmentPaymentMethod
-    ) {
-      toast.error('Método obrigatório', 'Escolha Pix, boleto ou cartão de crédito para a cobrança inicial.');
-      setEnrollmentStep('MATRICULA');
-      return;
-    }
-    if (
-      enrollmentFlags.gerar_cobranca_inicial
-      && enrollmentFlags.sincronizar_asaas !== false
-      && (
-        paymentOptionsQuery.isLoading
-        || paymentOptionsQuery.isError
-        || !enrollmentPaymentMethod
-        || !availablePaymentMethods.includes(enrollmentPaymentMethod)
-      )
-    ) {
-      toast.error(
-        'Rota bancária indisponível',
-        paymentOptionsQuery.isError
-          ? 'Não foi possível validar as rotas bancárias. Atualize a tela e tente novamente.'
-          : 'Escolha um método que possua rota ativa e credencial pronta neste ambiente.',
-      );
-      return;
-    }
-    if (enrollmentFlags.gerar_cobranca_futura && enrollmentFinance.valorParcela <= 0) {
-      toast.error('Valor obrigatório', 'Informe o valor da mensalidade para gerar cobranças futuras.');
-      return;
-    }
-    if (enrollmentFinance.jurosAtraso < 0 || enrollmentFinance.jurosAtraso > 100) {
-      toast.error('Juros inválidos', 'Informe juros mensais entre 0% e 100%.');
-      return;
-    }
-    if (enrollmentFinance.multaAtraso < 0 || enrollmentFinance.multaAtraso > 100) {
-      toast.error('Multa inválida', 'Informe uma multa única entre 0% e 100%.');
-      return;
-    }
-    const descontoInvalido = (
-      (turmaFinanceiroConfig.aplicarDescontoMatricula
-        && enrollmentFinance.valorMatricula > 0
-        && enrollmentFinance.descontoPontualidade >= enrollmentFinance.valorMatricula)
-      || (turmaFinanceiroConfig.aplicarDescontoMensalidade
-        && enrollmentFinance.valorParcela > 0
-        && enrollmentFinance.descontoPontualidade >= enrollmentFinance.valorParcela)
-      || (turmaFinanceiroConfig.aplicarDescontoRematricula
-        && enrollmentFinance.valorRematricula > 0
-        && enrollmentFinance.descontoPontualidade >= enrollmentFinance.valorRematricula)
-    );
-    if (enrollmentFinance.descontoPontualidade > 0 && descontoInvalido) {
-      toast.error('Desconto inválido', 'O desconto deve ser menor que cada cobrança em que ele será aplicado.');
-      return;
-    }
-    enrollMutation.mutate({
-      alunoId: pendingEnrollment.id,
-      paymentMethod: enrollmentPaymentMethod,
-      ...enrollmentFlags,
-      ...enrollmentFinance,
-      multaAtraso: enrollmentPreviewQuery.data.multa_aplicada,
-    });
   };
   const movementMutation = useMovementMutation(
     async () => {
@@ -415,47 +381,61 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
       {showMatricularModal && (
         <MatricularAlunoModal
           searchTerm={searchTerm}
-          loadingAvailable={availableStudentsQuery.isLoading || financeiroConfigQuery.isLoading}
-          enrollPending={enrollMutation.isPending || financeiroConfigQuery.isLoading}
-          loadError={financeiroConfigQuery.isError
-            ? 'A configuração financeira da turma não foi carregada. A matrícula foi bloqueada.'
-            : availableStudentsQuery.isError
-              ? 'A busca de alunos falhou. Nenhuma matrícula pode ser iniciada com dados incompletos.'
-              : null}
-          retrying={availableStudentsQuery.isFetching || financeiroConfigQuery.isFetching}
+          loadingAvailable={availableStudentsQuery.isLoading}
+          enrollPending={preLinkMutation.isPending || activateFinanceMutation.isPending || legacyEnrollMutation.isPending}
+          loadError={availableStudentsQuery.isError
+            ? 'A busca de alunos falhou. Nenhuma matrícula pode ser iniciada com dados incompletos.'
+            : null}
+          retrying={availableStudentsQuery.isFetching}
           students={availableStudentsQuery.filteredAvailableStudents}
           requireTechnicalProfile={requireTechnicalProfile}
           onSearchChange={setSearchTerm}
           onConfirmStudent={confirmEnrollment}
-          onRetry={() => { void Promise.all([financeiroConfigQuery.refetch(), availableStudentsQuery.refetch()]); }}
+          onRetry={() => { void availableStudentsQuery.refetch(); }}
           onClose={closeEnrollmentSearch}
         />
       )}
 
-      {pendingEnrollment && (
+      {pendingEnrollment && requireTechnicalProfile && (
         <ConfirmarMatriculaModal
           turma={turma}
           student={pendingEnrollment}
-          step={enrollmentStep}
-          finance={enrollmentFinance}
-          turmaFinanceiroConfig={turmaFinanceiroConfig}
-          previsao={previsaoQuery.data}
-          financialPreview={enrollmentPreviewQuery.data}
-          financialPreviewLoading={enrollmentPreviewQuery.isPending || enrollmentPreviewQuery.isFetching}
-          financialPreviewError={enrollmentPreviewQuery.isError}
-          enrollmentFlags={enrollmentFlags}
-          paymentMethod={enrollmentPaymentMethod}
-          availablePaymentMethods={availablePaymentMethods}
-          paymentOptionsLoading={paymentOptionsQuery.isLoading}
-          paymentOptionsError={paymentOptionsQuery.isError}
-          paymentOptionsEnvironment={paymentOptionsEnvironment}
-          onFlagsChange={setEnrollmentFlags}
-          onPaymentMethodChange={setEnrollmentPaymentMethod}
-          isPending={enrollMutation.isPending || paymentOptionsQuery.isLoading}
-          onStepChange={setEnrollmentStep}
-          onFinanceChange={updateEnrollmentFinance}
+          regra={canManageFinanceiro
+            ? enrollmentWorkspaceQuery.data?.regra
+            : preVinculoContextoQuery.data?.regra}
+          canManageFinanceiro={canManageFinanceiro}
+          intent={enrollmentIntent}
+          primeiroVencimento={primeiroVencimento}
+          ativarEm={ativarEm}
+          loading={canManageFinanceiro
+            ? enrollmentWorkspaceQuery.isLoading
+            : preVinculoContextoQuery.isLoading}
+          error={canManageFinanceiro
+            ? enrollmentWorkspaceQuery.isError
+            : preVinculoContextoQuery.isError}
+          retrying={canManageFinanceiro
+            ? enrollmentWorkspaceQuery.isFetching
+            : preVinculoContextoQuery.isFetching}
+          isPending={preLinkMutation.isPending || activateFinanceMutation.isPending}
+          onIntentChange={setEnrollmentIntent}
+          onPrimeiroVencimentoChange={setPrimeiroVencimento}
+          onAtivarEmChange={setAtivarEm}
+          onRetry={() => {
+            if (canManageFinanceiro) void enrollmentWorkspaceQuery.refetch();
+            else void preVinculoContextoQuery.refetch();
+          }}
           onClose={closeEnrollmentConfirmation}
-          onConfirm={confirmEnrollmentFinance}
+          onConfirm={() => { void confirmEnrollmentFinance(); }}
+        />
+      )}
+
+      {pendingEnrollment && !requireTechnicalProfile && (
+        <ConfirmarVinculoAcademicoModal
+          turma={turma}
+          student={pendingEnrollment}
+          pending={legacyEnrollMutation.isPending}
+          onClose={closeEnrollmentConfirmation}
+          onConfirm={() => { void confirmEnrollmentFinance(); }}
         />
       )}
 

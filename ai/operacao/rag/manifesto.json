@@ -1,8 +1,11 @@
 {
-  "version": 1,
+  "version": 2,
   "sources": [
     { "path": "AGENTS.md", "recursive": false },
-    { "path": "ai/operacao", "recursive": true },
+    { "path": "ai/operacao/MEMORIA_CANONICA.md", "recursive": false },
+    { "path": "ai/operacao/LOTE_ATIVO.md", "recursive": false },
+    { "path": "ai/operacao/PROTOCOLO_DE_LOTES.md", "recursive": false },
+    { "path": "ai/operacao/politicas", "recursive": true },
     { "path": "docs/decisions", "recursive": true }
   ],
   "includeExtensions": [".md"],

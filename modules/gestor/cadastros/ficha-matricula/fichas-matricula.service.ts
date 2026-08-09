@@ -1,5 +1,9 @@
 import { supabase } from '../../../../lib/supabase';
-import { fichaMatriculaDefaultTemplate } from './document-layouts';
+import {
+  fichaMatriculaDefaultTemplate,
+  registrationTemplateNeedsVoterUpgrade,
+  upgradeRegistrationVoterField,
+} from './document-layouts';
 
 export interface FichaMatriculaModel {
   id: string;
@@ -33,35 +37,31 @@ const getStoredTemplate = (row: any) => (
     : {}
 );
 
-const needsTemplateUpgrade = (row: any) => (
-  Number(getStoredTemplate(row).v || 0) < fichaMatriculaDefaultTemplate.v
+const needsTemplateUpgrade = (row: any) => registrationTemplateNeedsVoterUpgrade(
+  getStoredTemplate(row),
+  'ficha_documentos',
+  fichaMatriculaDefaultTemplate.v,
 );
-
-const mergeDefaultAbsoluteFields = (storedFields: unknown) => {
-  const defaults = JSON.parse(JSON.stringify(fichaMatriculaDefaultTemplate.absoluteFields || []));
-  const stored = Array.isArray(storedFields) ? storedFields : [];
-  return [
-    ...defaults,
-    ...stored.filter((field: any) => (
-      !defaults.some((defaultField: any) => defaultField.id === field?.id)
-    )),
-  ];
-};
 
 const buildTemplateConfig = (row: any) => {
   const customFields = Array.isArray(row.campos_customizados) ? row.campos_customizados : [];
   const requiresSignature = row.requer_assinatura !== false;
   const contractText = row.texto_contrato || '';
   const storedTemplate = getStoredTemplate(row);
+  const mergedTemplate = {
+    ...cloneDefaultTemplate(),
+    ...storedTemplate,
+    absoluteFields: Array.isArray(storedTemplate.absoluteFields)
+      ? storedTemplate.absoluteFields
+      : [],
+  };
   const templateConfig = needsTemplateUpgrade(row)
-    ? {
-        ...cloneDefaultTemplate(),
-        absoluteFields: mergeDefaultAbsoluteFields(storedTemplate.absoluteFields),
-      }
-    : {
-        ...cloneDefaultTemplate(),
-        ...storedTemplate,
-      };
+    ? upgradeRegistrationVoterField(
+        mergedTemplate,
+        fichaMatriculaDefaultTemplate,
+        'ficha_documentos',
+      )
+    : mergedTemplate;
 
   return {
     ...templateConfig,
@@ -89,22 +89,6 @@ const mapModel = (row: any): FichaMatriculaModel => {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
-};
-
-const persistTemplateUpgrades = async (rows: any[]) => {
-  const outdatedRows = rows.filter(needsTemplateUpgrade);
-  if (outdatedRows.length === 0) return;
-
-  await Promise.all(outdatedRows.map(async (row) => {
-    const { error } = await supabase
-      .from('modelos_fichas')
-      .update({
-        template_config: buildTemplateConfig(row),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', row.id);
-    if (error) throw error;
-  }));
 };
 
 const toPersistence = (model: Partial<FichaMatriculaModel>) => ({
@@ -142,7 +126,6 @@ export const fichasMatriculaService = {
       .order('created_at', { ascending: true });
     if (error) throw error;
     const rows = data || [];
-    await persistTemplateUpgrades(rows);
     return rows.map(mapModel);
   },
 
@@ -156,7 +139,6 @@ export const fichasMatriculaService = {
     if (error) throw error;
 
     const rows = data || [];
-    await persistTemplateUpgrades(rows);
     const models = rows.map(mapModel);
     return models.find((model) => (
       model.status === 'ATIVO'
@@ -173,7 +155,8 @@ export const fichasMatriculaService = {
       .eq('status', 'ATIVO')
       .order('created_at', { ascending: true });
     if (error) throw error;
-    return (data || []).map(mapModel);
+    const rows = data || [];
+    return rows.map(mapModel);
   },
 
   async getById(id: string): Promise<FichaMatriculaModel | null> {

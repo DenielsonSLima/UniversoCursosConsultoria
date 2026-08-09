@@ -17,6 +17,9 @@ import {
   ShieldCheck,
   FileSignature,
   CalendarDays,
+  BookOpenCheck,
+  Eye,
+  PanelTop,
 } from 'lucide-react';
 
 // Importação dos Componentes Internos
@@ -38,6 +41,8 @@ import DocumentValidationPoliciesPage from './validacao-documental/DocumentValid
 import ContratoAlunoPage from './contrato-aluno/ContratoAlunoPage';
 import CarteirinhaPreceptorPage from './carteirinha-preceptor/CarteirinhaPreceptorPage';
 import CalendarioAulasPage from './calendario-aulas/CalendarioAulasPage';
+import PlanoCursoPage from './plano-curso/PlanoCursoPage';
+import CabecalhoInstitucionalPage from './cabecalho-institucional/CabecalhoInstitucionalPage';
 
 interface ModelosDocumentosPageProps {
   canEditValidationPolicies?: boolean;
@@ -48,12 +53,21 @@ const ModelosDocumentosPage: React.FC<ModelosDocumentosPageProps> = ({
 }) => {
   const [activeModule, setActiveModule] = useState<string | null>(null);
 
-  const models = [
+  const models: Array<{
+    id: string;
+    title: string;
+    desc: string;
+    icon: React.ReactNode;
+    color: string;
+    action?: string;
+  }> = [
+    { id: 'cabecalho-institucional', title: 'Cabeçalho Institucional', desc: 'Prévia protegida do padrão usado por matriz e polos nos documentos oficiais.', icon: <PanelTop size={24} />, color: 'bg-[#001a33]', action: 'Visualizar' },
     { id: 'validacao-documental', title: 'QR Code e Validade', desc: 'Regras individuais de validador e vencimento para todos os documentos.', icon: <ShieldCheck size={24} />, color: 'bg-[#001a33]' },
     { id: 'contrato-aluno', title: 'Contrato do Aluno', desc: 'Modelo versionado por modalidade, com QR Code, validade e marca-d’água.', icon: <FileSignature size={24} />, color: 'bg-rose-600' },
     { id: 'carteirinha', title: 'Carteirinha de Estudante', desc: 'Identificação oficial com foto e QR Code.', icon: <CreditCard size={24} />, color: 'bg-blue-600' },
     { id: 'carteirinha-preceptor', title: 'Carteirinha de Preceptor', desc: 'Credencial própria para professores autorizados no polo.', icon: <BadgeCheck size={24} />, color: 'bg-cyan-700' },
     { id: 'calendario-aulas', title: 'Calendário de Aulas', desc: 'Modelo A4 da grade oficial por turma, com marca-d’água institucional.', icon: <CalendarDays size={24} />, color: 'bg-indigo-700' },
+    { id: 'plano-curso', title: 'Plano de Curso', desc: 'Planejamento preenchido pelo docente a partir das aulas reais da turma.', icon: <BookOpenCheck size={24} />, color: 'bg-violet-700' },
     { id: 'cracha', title: 'Crachá de Identificação', desc: 'Crachá vertical para colaboradores, técnicos e professores.', icon: <Contact size={24} />, color: 'bg-rose-600' },
     { id: 'cracha-periodo-eleitoral', title: 'SES', desc: 'Modelos de crachá por hospital, liberados após a entrada no estágio.', icon: <Vote size={24} />, color: 'bg-cyan-700' },
     { id: 'declaracao', title: 'Declaração Cursando', desc: 'Comprovante de matrícula ativa e regular.', icon: <FileText size={24} />, color: 'bg-emerald-600' },
@@ -75,10 +89,12 @@ const ModelosDocumentosPage: React.FC<ModelosDocumentosPageProps> = ({
     switch (activeModule) {
       case 'validacao-documental':
         return <DocumentValidationPoliciesPage readOnly={!canEditValidationPolicies} />;
+      case 'cabecalho-institucional': return <CabecalhoInstitucionalPage />;
       case 'contrato-aluno': return <ContratoAlunoPage />;
       case 'carteirinha': return <CarteirinhaPage />;
       case 'carteirinha-preceptor': return <CarteirinhaPreceptorPage />;
       case 'calendario-aulas': return <CalendarioAulasPage />;
+      case 'plano-curso': return <PlanoCursoPage />;
       case 'cracha': return <CrachaPage />;
       case 'cracha-periodo-eleitoral': return <CrachaPeriodoEleitoralPage />;
       case 'declaracao': return <DeclaracaoPage />;
@@ -142,8 +158,8 @@ const ModelosDocumentosPage: React.FC<ModelosDocumentosPageProps> = ({
             </p>
 
             <div className="mt-auto pt-4 border-t border-slate-50 w-full flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-slate-400 group-hover:text-blue-600 transition-colors relative z-10">
-              <span>Configurar</span>
-              <Download size={14} />
+              <span>{item.action || 'Configurar'}</span>
+              {item.action === 'Visualizar' ? <Eye size={14} /> : <Download size={14} />}
             </div>
 
             {/* Background Decoration */}

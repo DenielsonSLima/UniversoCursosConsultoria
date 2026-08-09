@@ -24,12 +24,17 @@ import {
 } from '../../turma-grade.types';
 import { isAcademicClassContentPending } from '../../../../../../../lib/academicClassMeetings';
 import { formatGradeHours, TurmaGradeTheme } from './turma-grade-ui';
+import type { PlanoCursoGestaoStatus } from '../../../../../../shared/plano-curso/plano-curso.types';
+import PlanoCursoStatusControl from './plano-curso/PlanoCursoStatusControl';
 
 interface TurmaGradeDisciplinaProps {
   disciplina: Disciplina;
   config: TurmaDisciplinaConfig;
   aulas: TurmaAulaPlanejada[];
   atividades: TurmaAtividadeExtraClasse[];
+  planoCurso: PlanoCursoGestaoStatus | null;
+  planoCursoLoading: boolean;
+  planoCursoError: boolean;
   metricas?: any;
   theme: TurmaGradeTheme;
   singleProfessor: boolean;
@@ -45,6 +50,7 @@ interface TurmaGradeDisciplinaProps {
   onToggle: () => void;
   onToggleConcluida: () => void;
   onOpenProfessor: () => void;
+  onOpenPlanoCurso: () => void;
   onDeleteAula: (aulaId: string) => void;
   onUpdateAula: (input: TurmaAulaUpdateInput) => Promise<void>;
   onTituloChange: (value: string) => void;
@@ -61,6 +67,9 @@ const TurmaGradeDisciplina: React.FC<TurmaGradeDisciplinaProps> = ({
   config,
   aulas,
   atividades,
+  planoCurso,
+  planoCursoLoading,
+  planoCursoError,
   metricas,
   theme,
   singleProfessor,
@@ -76,6 +85,7 @@ const TurmaGradeDisciplina: React.FC<TurmaGradeDisciplinaProps> = ({
   onToggle,
   onToggleConcluida,
   onOpenProfessor,
+  onOpenPlanoCurso,
   onDeleteAula,
   onUpdateAula,
   onTituloChange,
@@ -189,6 +199,13 @@ const TurmaGradeDisciplina: React.FC<TurmaGradeDisciplinaProps> = ({
               <div className={`h-full rounded-full ${progressColor}`} style={{ width: `${progressoDisciplina}%` }} />
             </div>
           </div>
+
+          <PlanoCursoStatusControl
+            plano={planoCurso}
+            isLoading={planoCursoLoading}
+            isError={planoCursoError}
+            onOpen={onOpenPlanoCurso}
+          />
 
           {singleProfessor ? (
             config.professor ? (

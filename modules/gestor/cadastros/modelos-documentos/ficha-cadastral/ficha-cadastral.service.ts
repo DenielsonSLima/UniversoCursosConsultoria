@@ -1,4 +1,5 @@
 import { createDocumentTemplateService } from '../shared/document-template.service';
+import { injectMissingVoterFields } from '../../ficha-matricula/voter-template-repair';
 
 export const FICHA_CADASTRAL_VARIABLES = [
   { code: '{{ALUNO_NOME}}', label: 'Nome do Aluno' },
@@ -6,6 +7,11 @@ export const FICHA_CADASTRAL_VARIABLES = [
   { code: '{{ALUNO_NOME_SOCIAL}}', label: 'Nome Social' },
   { code: '{{ALUNO_CPF}}', label: 'CPF' },
   { code: '{{ALUNO_RG}}', label: 'RG / Documento' },
+  { code: '{{ALUNO_TITULO_ELEITOR}}', label: 'Título de Eleitor' },
+  { code: '{{ALUNO_TITULO_ZONA}}', label: 'Zona Eleitoral' },
+  { code: '{{ALUNO_TITULO_SECAO}}', label: 'Seção Eleitoral' },
+  { code: '{{ALUNO_TITULO_EMISSAO}}', label: 'Emissão do Título' },
+  { code: '{{ALUNO_TITULO_UF}}', label: 'UF do Título' },
   { code: '{{ALUNO_NASCIMENTO}}', label: 'Nascimento' },
   { code: '{{ALUNO_SEXO}}', label: 'Sexo' },
   { code: '{{ALUNO_ESTADO_CIVIL}}', label: 'Estado Civil' },
@@ -30,6 +36,69 @@ export const FICHA_CADASTRAL_VARIABLES = [
   { code: '{{DATA_ATUAL}}', label: 'Data Atual' },
   { code: '{{DATA_GERACAO}}', label: 'Data/Hora de Geração' },
 ];
+
+export const FICHA_CADASTRAL_VOTER_TOKENS = [
+  '{{ALUNO_TITULO_ELEITOR}}',
+  '{{ALUNO_TITULO_ZONA}}',
+  '{{ALUNO_TITULO_SECAO}}',
+  '{{ALUNO_TITULO_EMISSAO}}',
+  '{{ALUNO_TITULO_UF}}',
+] as const;
+
+const FICHA_CADASTRAL_VOTER_FIELDS = [
+  ['{{ALUNO_TITULO_ELEITOR}}', 'Título'],
+  ['{{ALUNO_TITULO_ZONA}}', 'Zona'],
+  ['{{ALUNO_TITULO_SECAO}}', 'Seção'],
+  ['{{ALUNO_TITULO_EMISSAO}}', 'Emissão'],
+  ['{{ALUNO_TITULO_UF}}', 'UF'],
+].map(([token, label]) => ({
+  token,
+  markup: `<div data-system-voter-field="${token}"><strong style="display:block;margin-bottom:3px;font-size:10px;line-height:1.15;color:#0f172a;font-weight:800;text-transform:uppercase;letter-spacing:.07em;">${label}</strong>${token}</div>`,
+}));
+
+const FICHA_CADASTRAL_VOTER_BLOCK = `
+    <h4 style="font-size:14px;text-transform:uppercase;border-bottom:2px solid #cbd5e1;padding-bottom:6px;margin:0 0 10px;color:#0f172a;">Dados eleitorais</h4>
+    <section style="display:grid;grid-template-columns:2fr .7fr .7fr 1fr .55fr;gap:12px;border:1px solid #e2e8f0;border-radius:14px;padding:12px;background:rgba(255,255,255,.70);margin-bottom:20px;font-size:12px;color:#334155;font-weight:400;">
+      <div><strong style="display:block;margin-bottom:3px;font-size:10px;line-height:1.15;color:#0f172a;font-weight:800;text-transform:uppercase;letter-spacing:.07em;">Título</strong>{{ALUNO_TITULO_ELEITOR}}</div>
+      <div><strong style="display:block;margin-bottom:3px;font-size:10px;line-height:1.15;color:#0f172a;font-weight:800;text-transform:uppercase;letter-spacing:.07em;">Zona</strong>{{ALUNO_TITULO_ZONA}}</div>
+      <div><strong style="display:block;margin-bottom:3px;font-size:10px;line-height:1.15;color:#0f172a;font-weight:800;text-transform:uppercase;letter-spacing:.07em;">Seção</strong>{{ALUNO_TITULO_SECAO}}</div>
+      <div><strong style="display:block;margin-bottom:3px;font-size:10px;line-height:1.15;color:#0f172a;font-weight:800;text-transform:uppercase;letter-spacing:.07em;">Emissão</strong>{{ALUNO_TITULO_EMISSAO}}</div>
+      <div><strong style="display:block;margin-bottom:3px;font-size:10px;line-height:1.15;color:#0f172a;font-weight:800;text-transform:uppercase;letter-spacing:.07em;">UF</strong>{{ALUNO_TITULO_UF}}</div>
+    </section>
+`;
+
+const FICHA_CADASTRAL_VOTER_BLOCK_PATTERN = /\s*<h4\b[^>]*>\s*Dados eleitorais\s*<\/h4>\s*<section\b[^>]*>[\s\S]*?<\/section>/i;
+
+const hasFichaCadastralVoterContent = (textContent: unknown) => {
+  const voterBlock = String(textContent || '').match(FICHA_CADASTRAL_VOTER_BLOCK_PATTERN)?.[0] || '';
+  return FICHA_CADASTRAL_VOTER_TOKENS.every((token) => voterBlock.includes(token));
+};
+
+const upgradeFichaCadastralVoterContent = (template: any) => {
+  if (hasFichaCadastralVoterContent(template?.textContent)) {
+    return template;
+  }
+
+  const currentContent = String(template?.textContent || '');
+  const declarationMarker = '<section style="border-top:2px dashed #0f172a;';
+  const currentVoterBlock = currentContent.match(FICHA_CADASTRAL_VOTER_BLOCK_PATTERN)?.[0];
+  const repairedContent = currentVoterBlock
+    ? currentContent.replace(
+        currentVoterBlock,
+        injectMissingVoterFields(currentVoterBlock, FICHA_CADASTRAL_VOTER_FIELDS),
+      )
+    : currentContent.includes(declarationMarker)
+      ? currentContent.replace(
+          declarationMarker,
+          `${FICHA_CADASTRAL_VOTER_BLOCK}\n    ${declarationMarker}`,
+        )
+      : `${currentContent}\n${FICHA_CADASTRAL_VOTER_BLOCK}`;
+
+  return {
+    ...template,
+    textContent: repairedContent,
+  };
+};
 
 export const fichaCadastralDefaultTemplate = {
   textContent: `
@@ -80,6 +149,8 @@ export const fichaCadastralDefaultTemplate = {
       <div><strong style="display:block;margin-bottom:3px;font-size:10px;line-height:1.15;color:#0f172a;font-weight:800;text-transform:uppercase;letter-spacing:.07em;">Telefone</strong>{{ALUNO_RESPONSAVEL_TELEFONE}}</div>
     </section>
 
+    ${FICHA_CADASTRAL_VOTER_BLOCK}
+
     <section style="border-top:2px dashed #0f172a;padding-top:20px;margin-top:36px;font-size:10px;color:#475569;text-align:justify;line-height:1.7;">
       Declaro para os devidos fins que as informações prestadas nesta ficha cadastral são verdadeiras. Estou ciente do regulamento interno da instituição e dos termos contratuais relativos à prestação de serviços educacionais para o curso supracitado. Autorizo a instituição a utilizar meus dados para fins acadêmicos e comunicações oficiais.
     </section>
@@ -115,21 +186,13 @@ export const fichaCadastralDefaultTemplate = {
   ],
   validityDays: 0,
   pageCount: 2,
-  v: 3,
+  v: 5,
 };
 
-const LEGACY_FIELD_LABEL_STYLE = 'display:block;font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.08em;';
-const FIELD_LABEL_STYLE = 'display:block;margin-bottom:3px;font-size:10px;line-height:1.15;color:#0f172a;font-weight:800;text-transform:uppercase;letter-spacing:.07em;';
-
-const normalizeFichaCadastralTypography = (template: any) => ({
-  ...template,
-  textContent: String(template?.textContent || '')
-    .replaceAll(LEGACY_FIELD_LABEL_STYLE, FIELD_LABEL_STYLE)
-    .replaceAll('gap:14px;font-size:12px;">', 'gap:14px;font-size:12px;color:#334155;font-weight:400;">')
-    .replaceAll('margin-bottom:14px;font-size:12px;">', 'margin-bottom:14px;font-size:12px;color:#334155;font-weight:400;">')
-    .replaceAll('margin-bottom:28px;font-size:12px;">', 'margin-bottom:28px;font-size:12px;color:#334155;font-weight:400;">'),
-  v: fichaCadastralDefaultTemplate.v,
-});
+const normalizeTemplateVersion = (value: unknown) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+};
 
 const fichaCadastralTemplateService = createDocumentTemplateService(
   'ficha_cadastral_aluno',
@@ -141,21 +204,12 @@ export const fichaCadastralService = {
   ...fichaCadastralTemplateService,
   async getTemplate(poloId: string) {
     const template = await fichaCadastralTemplateService.getTemplate(poloId);
-    const hasTwoPageStructure = String(template?.textContent || '').includes('data-page-break');
-    if (!template?.v || Number(template.v) < 2 || !hasTwoPageStructure || Number((template as any).pageCount || 1) < 2) {
-      return JSON.parse(JSON.stringify(fichaCadastralDefaultTemplate));
-    }
-    const normalizedTemplate = Number(template.v || 0) < fichaCadastralDefaultTemplate.v
-      ? normalizeFichaCadastralTypography(template)
-      : template;
-
-    if (normalizedTemplate !== template) {
-      await fichaCadastralTemplateService.saveTemplate(poloId, normalizedTemplate).catch(() => false);
-    }
-
     return {
-      ...normalizedTemplate,
-      pageCount: Math.max(2, Number((normalizedTemplate as any).pageCount || 2)),
+      ...upgradeFichaCadastralVoterContent(template),
+      v: Math.max(
+        normalizeTemplateVersion(template?.v),
+        fichaCadastralDefaultTemplate.v,
+      ),
     };
   },
 };

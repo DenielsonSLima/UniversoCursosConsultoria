@@ -1,5 +1,12 @@
 import { createDocumentTemplateService } from '../modelos-documentos/shared/document-template.service';
 import { FICHA_CADASTRAL_VARIABLES } from '../modelos-documentos/ficha-cadastral/ficha-cadastral.service';
+import {
+  injectMissingVoterFields,
+  repairFichaVoterGrid,
+} from './voter-template-repair';
+import {
+  stripRedundantPastaFooter,
+} from './pasta-template-geometry';
 
 export const FICHA_ALUNO_VARIABLES = [
   ...FICHA_CADASTRAL_VARIABLES,
@@ -16,7 +23,6 @@ export const FICHA_ALUNO_VARIABLES = [
   { code: '{{ALUNO_RG_ORGAO}}', label: 'Órgão Emissor' },
   { code: '{{ALUNO_RG_UF}}', label: 'UF de Emissão' },
   { code: '{{ALUNO_RG_EMISSAO}}', label: 'Data de Emissão' },
-  { code: '{{ALUNO_TITULO_ELEITOR}}', label: 'Título Eleitoral' },
   { code: '{{ALUNO_RESERVISTA}}', label: 'Reservista' },
   { code: '{{ALUNO_RESPONSAVEL_PARENTESCO}}', label: 'Parentesco do Responsável' },
   { code: '{{CURSO_MODALIDADE}}', label: 'Modalidade' },
@@ -68,15 +74,6 @@ const sectionBlock = (title: string, content: string, columns: string, rows = 1)
     <div style="height:calc(100% - 18px);box-sizing:border-box;display:grid;grid-template-columns:${columns};grid-template-rows:repeat(${rows},minmax(0,1fr));gap:5px 12px;padding:6px 8px;">
       ${content}
     </div>
-  </section>
-`;
-
-const institutionalFooter = `
-  <section style="padding:5px 8px;text-align:center;color:#475569;font-size:7px;line-height:1.35;">
-    <strong style="color:#001a33;text-transform:uppercase;">{{POLO_NOME}}</strong>
-    <span> • CNPJ {{POLO_CNPJ}}</span><br>
-    <span>{{POLO_ENDERECO_COMPLETO}}</span><br>
-    <span>Telefone: {{POLO_TELEFONE}} • E-mail: {{POLO_EMAIL}}</span>
   </section>
 `;
 
@@ -202,19 +199,103 @@ const addressBlock = sectionBlock(
   3,
 );
 
+export const REGISTRATION_VOTER_TOKENS = [
+  '{{ALUNO_TITULO_ELEITOR}}',
+  '{{ALUNO_TITULO_ZONA}}',
+  '{{ALUNO_TITULO_SECAO}}',
+  '{{ALUNO_TITULO_EMISSAO}}',
+  '{{ALUNO_TITULO_UF}}',
+] as const;
+
+const REGISTRATION_VOTER_FIELDS = [
+  ['{{ALUNO_TITULO_ELEITOR}}', 'Título eleitoral', 'grid-column:span 2;'],
+  ['{{ALUNO_TITULO_ZONA}}', 'Zona', ''],
+  ['{{ALUNO_TITULO_SECAO}}', 'Seção', ''],
+  ['{{ALUNO_TITULO_EMISSAO}}', 'Emissão', ''],
+  ['{{ALUNO_TITULO_UF}}', 'UF', ''],
+].map(([token, label, span]) => ({
+  token,
+  markup: cell(label, token, span),
+}));
+
+const normalizeTemplateVersion = (value: unknown) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+};
+
 const documentsBlock = sectionBlock(
   'Documentos',
   `
-    ${cell('RG / Documento', '{{ALUNO_RG}}')}
-    ${cell('Órgão expedidor / UF', '{{ALUNO_RG_ORGAO}} / {{ALUNO_RG_UF}}')}
+    ${cell('RG / Documento', '{{ALUNO_RG}}', 'grid-column:span 2;')}
+    ${cell('Órgão expedidor / UF', '{{ALUNO_RG_ORGAO}} / {{ALUNO_RG_UF}}', 'grid-column:span 2;')}
     ${cell('Data de expedição', '{{ALUNO_RG_EMISSAO}}')}
     ${cell('CPF', '{{ALUNO_CPF}}')}
     ${cell('Título eleitoral', '{{ALUNO_TITULO_ELEITOR}}', 'grid-column:span 2;')}
-    ${cell('Reservista', '{{ALUNO_RESERVISTA}}', 'grid-column:span 2;')}
+    ${cell('Zona', '{{ALUNO_TITULO_ZONA}}')}
+    ${cell('Seção', '{{ALUNO_TITULO_SECAO}}')}
+    ${cell('Emissão / UF', '{{ALUNO_TITULO_EMISSAO}} / {{ALUNO_TITULO_UF}}')}
+    ${cell('Reservista', '{{ALUNO_RESERVISTA}}')}
   `,
-  '1fr 1fr .8fr 1fr',
+  '1.15fr 1.15fr .6fr .6fr 1fr 1fr',
   2,
 );
+
+export const registrationTemplateNeedsVoterUpgrade = (
+  template: any,
+  fieldId: string,
+  targetVersion: number,
+) => {
+  const fields = Array.isArray(template?.absoluteFields) ? template.absoluteFields : [];
+  const documentField = fields.find((field: any) => field?.id === fieldId);
+  const fieldContent = String(documentField?.value || '');
+  return normalizeTemplateVersion(template?.v) < targetVersion
+    || !REGISTRATION_VOTER_TOKENS.every((token) => fieldContent.includes(token));
+};
+
+export const upgradeRegistrationVoterField = (
+  template: any,
+  defaultTemplate: any,
+  fieldId: string,
+) => {
+  const storedFields = Array.isArray(template?.absoluteFields) ? template.absoluteFields : [];
+  const defaultFields = Array.isArray(defaultTemplate?.absoluteFields)
+    ? defaultTemplate.absoluteFields
+    : [];
+  const canonicalDocumentField = defaultFields.find((field: any) => field?.id === fieldId);
+  const repairedFields = storedFields.map((field: any) => (
+    field?.id === fieldId
+      && !REGISTRATION_VOTER_TOKENS.every((token) => (
+        String(field?.value || '').includes(token)
+      ))
+      ? {
+          ...field,
+          value: fieldId === 'ficha_documentos'
+            ? repairFichaVoterGrid(field.value)
+            : injectMissingVoterFields(
+                field.value,
+                REGISTRATION_VOTER_FIELDS,
+                'INNER_GRID',
+              ),
+        }
+      : field
+  ));
+
+  if (
+    canonicalDocumentField
+    && !storedFields.some((field: any) => field?.id === fieldId)
+  ) {
+    repairedFields.push(JSON.parse(JSON.stringify(canonicalDocumentField)));
+  }
+
+  return {
+    ...template,
+    absoluteFields: repairedFields,
+    v: Math.max(
+      normalizeTemplateVersion(template?.v),
+      normalizeTemplateVersion(defaultTemplate?.v),
+    ),
+  };
+};
 
 const pastaSchoolBlock = sectionBlock(
   'Dados escolares',
@@ -290,11 +371,10 @@ export const pastaIdentificacaoDefaultTemplate = {
       DOCUMENTS_HEIGHT,
     ),
     movableTextBlock('pasta_escolar', pastaSchoolBlock, 76, pastaSchoolY, 642, SCHOOL_HEIGHT),
-    movableTextBlock('pasta_rodape', institutionalFooter, 76, 1000),
   ],
   validityDays: 0,
   pageCount: 1,
-  v: 10,
+  v: 14,
 };
 
 export const fichaMatriculaDefaultTemplate = {
@@ -379,7 +459,7 @@ export const fichaMatriculaDefaultTemplate = {
   enrollmentFormTerm: 'Solicito minha matrícula no curso acima identificado e declaro que os dados informados são verdadeiros. Estou ciente das normas acadêmicas e administrativas da unidade escolar.',
   enrollmentFormCustomFields: [],
   enrollmentFormRequiresSignature: true,
-  v: 10,
+  v: 12,
 };
 
 const pastaIdentificacaoBaseService = createDocumentTemplateService(
@@ -391,25 +471,21 @@ const pastaIdentificacaoBaseService = createDocumentTemplateService(
 export const pastaIdentificacaoService = {
   ...pastaIdentificacaoBaseService,
   async getTemplate(poloId: string) {
-    const currentTemplate = await pastaIdentificacaoBaseService.getTemplate(poloId);
-    if (Number(currentTemplate?.v || 0) >= pastaIdentificacaoDefaultTemplate.v) {
+    const currentTemplate = stripRedundantPastaFooter(
+      await pastaIdentificacaoBaseService.getTemplate(poloId),
+    );
+    if (!registrationTemplateNeedsVoterUpgrade(
+      currentTemplate,
+      'pasta_documentos',
+      pastaIdentificacaoDefaultTemplate.v,
+    )) {
       return currentTemplate;
     }
 
-    const upgradedTemplate = {
-      ...JSON.parse(JSON.stringify(pastaIdentificacaoDefaultTemplate)),
-      absoluteFields: [
-        ...pastaIdentificacaoDefaultTemplate.absoluteFields,
-        ...(Array.isArray(currentTemplate?.absoluteFields)
-          ? currentTemplate.absoluteFields.filter((field: any) => (
-              !pastaIdentificacaoDefaultTemplate.absoluteFields.some(
-                (defaultField) => defaultField.id === field.id,
-              )
-            ))
-          : []),
-      ],
-    };
-    await pastaIdentificacaoBaseService.saveTemplate(poloId, upgradedTemplate).catch(() => false);
-    return upgradedTemplate;
+    return upgradeRegistrationVoterField(
+      currentTemplate,
+      pastaIdentificacaoDefaultTemplate,
+      'pasta_documentos',
+    );
   },
 };

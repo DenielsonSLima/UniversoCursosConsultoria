@@ -16,8 +16,7 @@ import TurmaFinanceiro from './components/TurmaFinanceiro';
 import TurmaVacinas from './components/TurmaVacinas';
 import AtividadesExtraClasse from './components/AtividadesExtraClasse';
 import { useTurmaTecnicoRealtime } from './hooks/useTurmaTecnicoRealtime';
-import { turmaFinanceiroDashboardQueryOptions } from './components/financeiro/hooks/useFinanceiroAlunos';
-import { financeiroConfigQueryOptions } from './components/financeiro/hooks/useFinanceiroConfig';
+import { matriculaTecnicaFinanceiroWorkspaceQueryOptions } from './components/financeiro/hooks/useMatriculaTecnicaFinanceiro';
 import { turmaVacinasQueryOptions } from './components/vacinas/useTurmaVacinas';
 import {
   atividadesExtraClasseService,
@@ -106,8 +105,7 @@ const TurmaTecnicoDetalhes: React.FC<TurmaTecnicoDetalhesProps> = ({
   const prefetchTab = (tabId: string) => {
     if (!canAccessGestaoTurmaTab(permissions, tabId)) return;
     if (tabId === 'financeiro') {
-      void queryClient.prefetchQuery(turmaFinanceiroDashboardQueryOptions(turma.id));
-      void queryClient.prefetchQuery(financeiroConfigQueryOptions(turma.id));
+      void queryClient.prefetchQuery(matriculaTecnicaFinanceiroWorkspaceQueryOptions(turma.id));
     }
     if (tabId === 'vacinas') {
       void queryClient.prefetchQuery(turmaVacinasQueryOptions(turma));
@@ -118,7 +116,7 @@ const TurmaTecnicoDetalhes: React.FC<TurmaTecnicoDetalhesProps> = ({
     if (!tabs.some((tab) => tab.id === activeTab)) return null;
     switch (activeTab) {
       case 'resumo': return <TurmaResumo turma={turma} canViewFinanceiro={canViewFinanceiro} canViewAulas={canViewAulas} />;
-      case 'alunos': return <TurmaAlunos turma={turma} />;
+      case 'alunos': return <TurmaAlunos turma={turma} canManageFinanceiro={canViewFinanceiro} />;
       case 'grade': return <TurmaGrade turma={turma} />;
       case 'atividades': return <AtividadesExtraClasse turmaId={turma.id} cursoId={turma.cursoId} modo="GESTOR" />;
       case 'diarios': return <TurmaDiarios turma={turma} />;

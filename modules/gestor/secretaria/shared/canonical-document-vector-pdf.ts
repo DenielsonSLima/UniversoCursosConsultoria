@@ -1,9 +1,5 @@
 import type { jsPDF } from 'jspdf';
 
-import {
-  createDocumentValidationQrDataUrl,
-} from '../../../shared/document-validation/document-validation.qr';
-
 export type CanonicalPdfImageFormat = 'PNG' | 'JPEG' | 'WEBP';
 
 export interface CanonicalPdfImage {
@@ -151,6 +147,11 @@ export const drawCanonicalPdfWatermark = (
 export const createCanonicalPdfQr = async (code: string | null | undefined) => {
   const normalized = String(code || '').trim();
   if (!normalized) return null;
+  // Carregamento sob demanda mantém consumidores puramente vetoriais, como o
+  // relatório do Caixa, independentes do runtime Node usado pela biblioteca QR.
+  const { createDocumentValidationQrDataUrl } = await import(
+    '../../../shared/document-validation/document-validation.qr'
+  );
   const dataUrl = await createDocumentValidationQrDataUrl(normalized, {
     size: 640,
     margin: 1,

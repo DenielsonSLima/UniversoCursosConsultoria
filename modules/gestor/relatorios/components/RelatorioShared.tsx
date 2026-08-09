@@ -123,6 +123,60 @@ export const SummaryCard: React.FC<{
   );
 };
 
+export const A4ReportPrintStyles: React.FC<{ printAreaId?: string }> = ({
+  printAreaId = 'print-area',
+}) => (
+  <style>{`
+    @media print {
+      body * {
+        visibility: hidden !important;
+      }
+
+      #${printAreaId},
+      #${printAreaId} * {
+        visibility: visible !important;
+      }
+
+      #${printAreaId} {
+        position: absolute !important;
+        inset: 0 auto auto 0 !important;
+        display: block !important;
+        width: 210mm !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+
+      #${printAreaId}.a4-report-page,
+      #${printAreaId} .a4-report-page {
+        display: flex !important;
+        flex-direction: column !important;
+        box-sizing: border-box !important;
+        width: 210mm !important;
+        min-width: 210mm !important;
+        height: 297mm !important;
+        min-height: 297mm !important;
+        margin: 0 !important;
+        padding: 10mm !important;
+        box-shadow: none !important;
+        break-after: page;
+        page-break-after: always;
+      }
+
+      #${printAreaId}.a4-report-page:last-child,
+      #${printAreaId} .a4-report-page:last-child {
+        break-after: auto;
+        page-break-after: auto;
+      }
+
+      @page {
+        size: A4 portrait;
+        margin: 0;
+      }
+    }
+  `}</style>
+);
+
 export const A4ReportShell: React.FC<{
   company: any;
   polo: any;
@@ -155,50 +209,7 @@ export const A4ReportShell: React.FC<{
 
   return (
     <div className="min-h-[70vh] flex-1 overflow-auto rounded-3xl bg-slate-200/40 p-4 custom-scrollbar sm:p-8 lg:min-h-0">
-      <style>{`
-        @media print {
-          body * {
-            visibility: hidden !important;
-          }
-
-          #${printAreaId},
-          #${printAreaId} * {
-            visibility: visible !important;
-          }
-
-          #${printAreaId} {
-            position: absolute !important;
-            inset: 0 auto auto 0 !important;
-            display: block !important;
-            width: 210mm !important;
-            min-width: 0 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-          }
-
-          #${printAreaId} .a4-report-page {
-            width: 210mm !important;
-            min-width: 210mm !important;
-            height: 297mm !important;
-            min-height: 297mm !important;
-            margin: 0 !important;
-            padding: 10mm !important;
-            box-shadow: none !important;
-            break-after: page;
-            page-break-after: always;
-          }
-
-          #${printAreaId} .a4-report-page:last-child {
-            break-after: auto;
-            page-break-after: auto;
-          }
-
-          @page {
-            size: A4 portrait;
-            margin: 0;
-          }
-        }
-      `}</style>
+      <A4ReportPrintStyles printAreaId={printAreaId} />
       {loading ? (
         <div className="flex w-full items-center justify-center py-20" role="status" aria-label="Carregando relatório">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
@@ -217,15 +228,7 @@ export const A4ReportShell: React.FC<{
                 company={company}
                 polo={polo}
                 orientation="portrait"
-                rightContent={
-                  <div className="text-right">
-                    <h2 className="text-sm font-black uppercase tracking-tight text-slate-800">{rightTitle}</h2>
-                    <div className="mt-2 inline-block rounded-lg bg-slate-100 px-2.5 py-1">
-                      <p className="text-[8px] font-black uppercase tracking-widest text-slate-500">Tipo</p>
-                      <p className="text-[10px] font-bold uppercase text-[#001a33]">{rightType}</p>
-                    </div>
-                  </div>
-                }
+                meta={{ title: rightTitle, label: 'Tipo', value: rightType }}
               />
 
               {pageIndex === 0 ? (

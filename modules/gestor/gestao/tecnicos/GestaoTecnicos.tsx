@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Briefcase, Archive, Activity, Megaphone } from 'lucide-react';
 import TurmaCard from '../components/TurmaCard';
-import TurmaTecnicoForm from '../components/forms/TurmaTecnicoForm';
+import TurmaTecnicoForm from '../components/forms/turma-tecnico/TurmaTecnicoForm';
 import TurmaTecnicoDetalhes from './detalhes/TurmaTecnicoDetalhes';
 import { gestaoService } from '../gestao.service';
 import { Turma } from '../gestao.types';
@@ -51,7 +51,7 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId
     toast.error('Cursos não carregados', error.message || 'Não foi possível carregar os cursos técnicos.');
   }, [cursosQuery.error, toast]);
 
-  const handleCreate = async (data: any) => {
+  const handleCreate = async (data: Parameters<typeof gestaoService.createTurma>[0]) => {
     const turma = await gestaoService.createTurma(data);
     await Promise.all([
       invalidateSiteTickerQueries(queryClient),

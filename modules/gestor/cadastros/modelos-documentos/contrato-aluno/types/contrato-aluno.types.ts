@@ -32,6 +32,8 @@ export interface ConteudoModeloContratoAluno {
   tituloDocumento: string;
   cabecalho: string;
   corpo: string;
+  /** Expressões exatas exibidas em vermelho, uma por item. */
+  destaquesCriticos: string[];
   rodape: string;
   observacaoEscopo: string;
   fonte: FonteModeloContrato;

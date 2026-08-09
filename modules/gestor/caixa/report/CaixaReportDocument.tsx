@@ -236,25 +236,18 @@ export const CaixaReportDocument: React.FC<{
             <ReportWatermark polo={polo} orientation="landscape" />
             <div
               data-caixa-report-header
-              className="relative z-10 pl-[7mm] [&>div]:mb-5"
+              className="relative z-10 pl-[7mm] [&>header]:mb-5"
             >
               <DocumentHeader
                 company={company}
                 polo={polo}
                 orientation="landscape"
-                rightContent={(
-                  <div className="text-right">
-                    <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">
-                      Caixa · uso interno
-                    </p>
-                    <p className="mt-1 text-xs font-black uppercase text-[#001a33]">
-                      {report.resumo.meta.escopoRotulo}
-                    </p>
-                    <p className="mt-1 text-[8px] font-bold text-slate-500">
-                      {formatCaixaCompetencia(report.resumo.meta.competencia)}
-                    </p>
-                  </div>
-                )}
+                meta={{
+                  eyebrow: 'Caixa · uso interno',
+                  title: report.resumo.meta.escopoRotulo,
+                  label: 'Competência',
+                  value: formatCaixaCompetencia(report.resumo.meta.competencia),
+                }}
               />
             </div>
 

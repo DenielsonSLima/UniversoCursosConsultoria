@@ -1,5 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AlertTriangle, Loader2, RefreshCw, X } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Turma } from '../../../gestao.types';
 import ToastNotification, { useToast } from '../../../../parceiros/components/shared/ToastNotification';
 import {
@@ -23,6 +24,13 @@ import {
 } from './grade/turma-grade-ui';
 import { TurmaAulaUpdateInput } from '../turma-grade.types';
 import { ACADEMIC_CLASS_CONTENT_PENDING } from '../../../../../../lib/academicClassMeetings';
+import {
+  useGestaoPlanosCurso,
+  usePlanoCursoDocumento,
+} from '../../../../../shared/plano-curso/plano-curso.hooks';
+import { usePlanoCursoRealtime } from '../../../../../shared/plano-curso/plano-curso.realtime';
+import PlanoCursoPdfPreview from '../../../../../shared/plano-curso/PlanoCursoPdfPreview';
+import { planoCursoKeys } from '../../../../../shared/plano-curso/plano-curso.keys';
 
 interface TurmaGradeProps {
   turma: Turma;
@@ -38,6 +46,13 @@ interface DocenteModalState {
 interface AulaDeleteState {
   disciplinaId: string;
   aulaId: string;
+}
+
+interface PlanoCursoPreviewState {
+  planoId: string;
+  revisao: number;
+  templateRevision: number;
+  documentoFingerprint: string;
 }
 
 const CLOSED_DOCENTE_MODAL: DocenteModalState = { isOpen: false, disciplinaId: '' };
@@ -75,6 +90,7 @@ const TurmaGrade = ({
   singleProfessor = false,
   colorTheme = 'emerald',
 }: TurmaGradeProps) => {
+  const queryClient = useQueryClient();
   const { toasts, removeToast, toast } = useToast();
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
   const [expandedDisciplines, setExpandedDisciplines] = useState<Set<string>>(new Set());
@@ -87,7 +103,9 @@ const TurmaGrade = ({
   const [showDocenteModal, setShowDocenteModal] = useState<DocenteModalState>(CLOSED_DOCENTE_MODAL);
   const [aulaParaExcluir, setAulaParaExcluir] = useState<AulaDeleteState | null>(null);
   const [assigningProfessorId, setAssigningProfessorId] = useState<string | null>(null);
+  const [planoCursoPreview, setPlanoCursoPreview] = useState<PlanoCursoPreviewState | null>(null);
   const assigningProfessorRef = useRef(false);
+  const planoCursoDialogRef = useRef<HTMLDivElement>(null);
   const { data: gradeData, isLoading: loading } = useTurmaGradeData(turma.id, turma.cursoId);
   const cursoBase = gradeData?.cursoBase || null;
   const disciplinasConfig = gradeData?.disciplinasConfig || {};
@@ -95,22 +113,119 @@ const TurmaGrade = ({
   const atividadesExtraClasse = gradeData?.atividadesExtraClasse || {};
   const professores = gradeData?.professores || [];
   const metricasGrade = gradeData?.metricasGrade || [];
+  const planosCursoQuery = useGestaoPlanosCurso(turma.id);
+  const planoCursoDocumentQuery = usePlanoCursoDocumento(
+    planoCursoPreview?.planoId || '',
+    planoCursoPreview?.revisao || 0,
+    planoCursoPreview?.templateRevision ?? null,
+    planoCursoPreview?.documentoFingerprint || '',
+  );
+  const planosCurso = useMemo(() => Object.fromEntries(
+    (planosCursoQuery.data || []).map((plano) => [plano.disciplinaId, plano]),
+  ), [planosCursoQuery.data]);
+  const isPlanoCursoPreparationOpen = Boolean(
+    planoCursoPreview && !planoCursoDocumentQuery.data,
+  );
+  usePlanoCursoRealtime({ turmaId: turma.id });
   const theme = getTurmaGradeTheme(colorTheme);
 
-  const closeDocenteModal = () => setShowDocenteModal(CLOSED_DOCENTE_MODAL);
+  const closeDocenteModal = useCallback(() => setShowDocenteModal(CLOSED_DOCENTE_MODAL), []);
+
+  const openPlanoCurso = useCallback((disciplinaId: string) => {
+    const plano = planosCurso[disciplinaId];
+    if (
+      !plano?.planoId
+      || plano.status !== 'CONCLUIDO'
+      || plano.templateRevision === null
+      || !plano.documentoFingerprint
+    ) return;
+    setPlanoCursoPreview({
+      planoId: plano.planoId,
+      revisao: plano.revisao,
+      templateRevision: plano.templateRevision,
+      documentoFingerprint: plano.documentoFingerprint,
+    });
+  }, [planosCurso]);
+
+  useEffect(() => {
+    if (!isPlanoCursoPreparationOpen) return undefined;
+    const returnFocus = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const focusFrame = window.requestAnimationFrame(() => {
+      const initial = planoCursoDialogRef.current?.querySelector<HTMLElement>('[data-plano-initial-focus]');
+      (initial || planoCursoDialogRef.current)?.focus();
+    });
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setPlanoCursoPreview(null);
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const focusable = [...(planoCursoDialogRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ) || [])];
+      if (focusable.length === 0) {
+        event.preventDefault();
+        planoCursoDialogRef.current?.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      window.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = previousOverflow;
+      if (returnFocus?.isConnected) returnFocus.focus();
+    };
+  }, [isPlanoCursoPreparationOpen]);
 
   const assignProfessorMutation = useAssignProfessorMutation(
     turma.id,
-    closeDocenteModal,
+    async (assignment) => {
+      const professorNome = assignment.professor_nome?.trim();
+      if (!professorNome) {
+        toast.error(
+          'Docente não confirmado',
+          'O servidor não retornou a identificação do docente. Tente novamente.',
+        );
+        return;
+      }
+      toast.success(
+        'Docente confirmado',
+        `Docente ${professorNome} confirmado para esta disciplina.`,
+      );
+      await queryClient.invalidateQueries({
+        queryKey: planoCursoKeys.gestaoStatusList(turma.id),
+        exact: true,
+      });
+      closeDocenteModal();
+    },
     (error) => {
       console.error('Erro ao atribuir docente:', error);
       toast.error('Docente não salvo', 'Não consegui atualizar o docente desta disciplina. Tente novamente.');
-      closeDocenteModal();
     },
   );
   const assignProfessorToAllMutation = useAssignProfessorToAllMutation(
     turma.id,
-    () => toast.success('Sucesso', 'Docente atribuído com sucesso a todas as disciplinas.'),
+    async () => {
+      toast.success('Sucesso', 'Docente atribuído com sucesso a todas as disciplinas.');
+      await queryClient.invalidateQueries({
+        queryKey: planoCursoKeys.gestaoStatusList(turma.id),
+        exact: true,
+      });
+    },
     (error) => {
       console.error('Erro ao atribuir docente para a turma:', error);
       toast.error('Docente não salvo', 'Não consegui atualizar o docente da turma. Tente novamente.');
@@ -382,6 +497,15 @@ const TurmaGrade = ({
         </span>
       </div>
 
+      {planosCursoQuery.isError ? (
+        <div className="flex items-start justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs font-bold text-amber-800" role="alert">
+          <span className="flex items-start gap-2"><AlertTriangle size={16} className="shrink-0" /> Os estados dos Planos de Curso não puderam ser carregados.</span>
+          <button type="button" onClick={() => { void planosCursoQuery.refetch(); }} disabled={planosCursoQuery.isFetching} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-white px-2.5 py-1.5 text-[9px] font-black uppercase tracking-wider ring-1 ring-amber-200 disabled:opacity-50">
+            <RefreshCw size={12} className={planosCursoQuery.isFetching ? 'animate-spin' : ''} /> Recarregar
+          </button>
+        </div>
+      ) : null}
+
       {singleProfessor && (
         <div className="bg-indigo-50/70 border border-indigo-100 p-6 rounded-[2rem] flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 shadow-sm">
           <div>
@@ -420,6 +544,9 @@ const TurmaGrade = ({
           disciplinasConfig={disciplinasConfig}
           aulas={aulas}
           atividades={atividadesExtraClasse}
+          planosCurso={planosCurso}
+          planosCursoLoading={planosCursoQuery.isLoading}
+          planosCursoError={planosCursoQuery.isError}
           expanded={expandedModules.has(modulo.id)}
           expandedDisciplines={expandedDisciplines}
           singleProfessor={singleProfessor}
@@ -437,6 +564,7 @@ const TurmaGrade = ({
           onToggleDisciplina={(id) => toggleSetItem(setExpandedDisciplines, id)}
           onToggleConcluida={handleToggleConcluida}
           onOpenProfessor={(disciplinaId) => setShowDocenteModal({ isOpen: true, disciplinaId })}
+          onOpenPlanoCurso={openPlanoCurso}
           onDeleteAula={(disciplinaId, aulaId) => setAulaParaExcluir({ disciplinaId, aulaId })}
           onUpdateAula={handleUpdateAula}
           onTituloChange={(id, value) => updateDraft(setNewAulaTitulo, id, value)}
@@ -466,6 +594,30 @@ const TurmaGrade = ({
           isDeleting={removeAulaMutation.isPending}
         />
       )}
+      {isPlanoCursoPreparationOpen ? (
+        <div ref={planoCursoDialogRef} tabIndex={-1} className="fixed inset-0 z-[2147482999] flex items-center justify-center bg-slate-950/80 p-4 outline-none" role="dialog" aria-modal="true" aria-busy={planoCursoDocumentQuery.isLoading} aria-label={planoCursoDocumentQuery.isError ? 'Plano de Curso indisponível' : 'Preparando Plano de Curso'}>
+          {planoCursoDocumentQuery.isError ? (
+            <div className="w-full max-w-md rounded-3xl bg-white p-6 text-center shadow-2xl">
+              <AlertTriangle size={32} className="mx-auto text-amber-500" />
+              <h4 className="mt-3 text-sm font-black uppercase tracking-wide text-[#001a33]">Prévia indisponível</h4>
+              <p className="mt-2 text-xs font-medium leading-relaxed text-slate-500">O servidor não retornou um Plano de Curso canônico pronto para visualização.</p>
+              <div className="mt-5 flex justify-center gap-2">
+                <button type="button" data-plano-initial-focus onClick={() => { void planoCursoDocumentQuery.refetch(); }} className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-slate-700">Tentar novamente</button>
+                <button type="button" onClick={() => setPlanoCursoPreview(null)} className="rounded-xl bg-[#001a33] px-5 py-2.5 text-[10px] font-black uppercase tracking-wider text-white">Fechar</button>
+              </div>
+            </div>
+          ) : (
+          <div className="relative rounded-3xl border border-white/10 bg-slate-900 px-10 py-9 text-center text-white shadow-2xl">
+            <button type="button" data-plano-initial-focus onClick={() => setPlanoCursoPreview(null)} aria-label="Cancelar prévia" className="absolute right-3 top-3 rounded-lg p-1.5 text-slate-400 hover:bg-white/10 hover:text-white"><X size={16} /></button>
+            <Loader2 size={34} className="mx-auto animate-spin text-emerald-300" />
+            <p className="mt-4 text-xs font-black uppercase tracking-wider">Preparando PDF vetorial...</p>
+          </div>
+          )}
+        </div>
+      ) : null}
+      {planoCursoPreview && planoCursoDocumentQuery.data ? (
+        <PlanoCursoPdfPreview payload={planoCursoDocumentQuery.data} onClose={() => setPlanoCursoPreview(null)} />
+      ) : null}
       <ToastNotification toasts={toasts} onRemove={removeToast} />
     </div>
   );

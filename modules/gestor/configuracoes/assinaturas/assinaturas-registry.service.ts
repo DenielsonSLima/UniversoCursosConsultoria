@@ -79,6 +79,9 @@ const getSignedUrl = async (path?: string | null) => {
   return data.signedUrl;
 };
 
+/** Resolve somente caminhos do bucket privado canônico de assinaturas. */
+export const getSignatureSignedUrl = (path?: string | null) => getSignedUrl(path);
+
 const normalizePartner = (partner: SignatureRegistryRow['parceiro']) => {
   if (Array.isArray(partner)) return partner[0] || null;
   return partner || null;

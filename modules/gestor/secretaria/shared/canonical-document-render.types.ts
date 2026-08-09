@@ -8,6 +8,8 @@ export interface CanonicalDocumentWatermark {
   label: string | null;
   imageUrl: string | null;
   opacity: number | null;
+  scale?: number | null;
+  rotate?: boolean | null;
 }
 
 export interface CanonicalDocumentQr {

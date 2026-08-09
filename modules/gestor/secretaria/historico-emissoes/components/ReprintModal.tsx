@@ -22,6 +22,8 @@ interface Props {
   isDownloading: boolean;
   isReissuing: boolean;
   printContentRef: React.RefObject<HTMLDivElement>;
+  /** URL do Blob PDF oficial. Quando presente, a prévia deixa de renderizar DOM. */
+  pdfUrl?: string | null;
   onClose: () => void;
   onDownload: () => void;
   onPrint: () => void;
@@ -51,6 +53,7 @@ const ReprintModal: React.FC<Props> = ({
   isDownloading,
   isReissuing,
   printContentRef,
+  pdfUrl = null,
   onClose,
   onDownload,
   onPrint,
@@ -197,13 +200,18 @@ const ReprintModal: React.FC<Props> = ({
               !isLoading && !error ? getEmissionRenderKey(emission) : undefined
             }
           >
-            {isLoading && (
+            {pdfUrl ? (
+              <iframe
+                src={pdfUrl}
+                title={`${heading} - PDF oficial`}
+                className="h-[calc(100dvh-110px)] min-h-[620px] w-[calc(100vw-2rem)] border-0 bg-white shadow-2xl sm:w-[calc(100vw-4rem)] sm:rounded-xl sm:border sm:border-white/15"
+              />
+            ) : isLoading ? (
               <div className="flex h-[297mm] w-[210mm] max-w-full flex-col items-center justify-center bg-white text-slate-400">
                 <Loader2 className="mb-4 animate-spin text-blue-600" size={36} />
                 <span className="text-[10px] font-black uppercase tracking-widest">Carregando modelo oficial...</span>
               </div>
-            )}
-            {!isLoading && error && (
+            ) : error ? (
               <div
                 className="flex min-h-[120mm] w-[210mm] max-w-full flex-col items-center justify-center rounded-2xl border border-rose-200 bg-white p-8 text-center shadow-xl"
                 role="alert"
@@ -213,16 +221,13 @@ const ReprintModal: React.FC<Props> = ({
                 <p className="mt-3 max-w-md text-xs font-bold leading-relaxed text-slate-500">{error}</p>
                 <p className="mt-2 max-w-md text-[10px] font-semibold text-rose-600">{unavailableNote}</p>
               </div>
-            )}
-
-            {!isLoading && !error && isCertificate && !certificatePreview && (
+            ) : isCertificate && !certificatePreview ? (
               <div className="min-h-[120mm] w-[210mm] max-w-full rounded-2xl border border-amber-100 bg-white p-8 text-center shadow-xl">
                 <Award className="mx-auto mb-4 text-amber-500" size={38} />
                 <h5 className="text-sm font-black uppercase tracking-widest text-[#001a33]">Certificado oficial não localizado</h5>
                 <p className="mx-auto mt-3 max-w-md text-xs font-bold leading-relaxed text-slate-500">O histórico possui um código de certificado, mas não há um registro acadêmico finalizado correspondente para renderizar a segunda via oficial.</p>
               </div>
-            )}
-            {!isLoading && !error && (!isCertificate || certificatePreview) && (
+            ) : (
               <EmissionDocumentPages
                 emission={emission}
                 templateConfig={templateConfig}

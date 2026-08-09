@@ -6,6 +6,11 @@ import {
   type ModeloDocumentoSeguro,
   type SalvarModeloDocumentoSeguroInput,
 } from '../types/contrato-aluno.types';
+import { normalizeContractSectionHeader } from '../../../../../shared/contrato-aluno/section-header';
+import {
+  DEFAULT_CONTRACT_CRITICAL_HIGHLIGHTS,
+  normalizeContractCriticalHighlights,
+} from '../../../../../shared/contrato-aluno/semantic-format';
 
 const TEMPLATE_KEY = 'contrato_aluno';
 
@@ -28,10 +33,11 @@ const defaultContent = (modalidade: ContratoAlunoModalidade): ConteudoModeloCont
   return {
     status: 'EM_REVISAO',
     tituloDocumento: 'Contrato de Prestação de Serviços Educacionais',
-    cabecalho: 'UNIVERSO CURSOS E CONSULTORIA',
+    cabecalho: '',
     corpo: isTechnical
       ? 'A minuta técnica oficial será carregada a partir do modelo canônico aprovado. Edite apenas após a revisão jurídica institucional.'
       : 'Este modelo aguarda texto jurídico aprovado para a modalidade selecionada. Nenhuma cláusula técnica é adaptada automaticamente.',
+    destaquesCriticos: [...DEFAULT_CONTRACT_CRITICAL_HIGHLIGHTS],
     rodape: 'Documento emitido eletronicamente pela Universo Cursos e Consultoria.',
     observacaoEscopo: isTechnical
       ? 'Base: minuta técnica institucional preservada no repositório de documentos.'
@@ -73,8 +79,12 @@ const normalizeContent = (
   return {
     status: isStatus(value.status) ? value.status : fallback.status,
     tituloDocumento: asString(value.tituloDocumento, fallback.tituloDocumento),
-    cabecalho: asString(value.cabecalho, fallback.cabecalho),
+    cabecalho: normalizeContractSectionHeader(
+      asString(value.cabecalho, fallback.cabecalho),
+      ['UNIVERSO CURSOS E CONSULTORIA'],
+    ),
     corpo: asString(value.corpo, fallback.corpo),
+    destaquesCriticos: normalizeContractCriticalHighlights(value.destaquesCriticos),
     rodape: asString(value.rodape, fallback.rodape),
     observacaoEscopo: asString(value.observacaoEscopo, fallback.observacaoEscopo),
     fonte,

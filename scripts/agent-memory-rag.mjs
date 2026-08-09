@@ -11,7 +11,7 @@ const ragDirectory = resolve(root, 'ai/operacao/rag');
 const manifestPath = resolve(ragDirectory, 'manifesto.json');
 const indexPath = resolve(ragDirectory, 'index.json');
 const embeddingsPath = resolve(ragDirectory, 'embeddings.json');
-const DEFAULT_LIMIT = 5;
+const DEFAULT_LIMIT = 2;
 const MAX_CHUNK_SIZE = 1_200;
 const EMBEDDING_MODEL = 'text-embedding-3-small';
 const EMBEDDING_BATCH_SIZE = 64;
@@ -29,7 +29,7 @@ const tokenize = (value) => normalize(value).split(/\s+/).filter((token) => toke
 const printHelp = () => {
   console.log(`Uso:
   node scripts/agent-memory-rag.mjs index
-  node scripts/agent-memory-rag.mjs search "termos da demanda" [--limit 5] [--json] [--semantic]
+  node scripts/agent-memory-rag.mjs search "termos da demanda" [--limit 2] [--json] [--semantic]
   node scripts/agent-memory-rag.mjs status
   node scripts/agent-memory-rag.mjs embed
 
@@ -167,13 +167,10 @@ const indexIsCurrent = async (index) => {
 };
 
 const loadIndex = async () => {
-  if (!existsSync(indexPath)) return buildIndex();
-  const index = await readJson(indexPath);
-  if (!await indexIsCurrent(index)) {
-    console.log('Índice RAG desatualizado; reindexando somente as fontes autorizadas.');
-    return buildIndex();
+  if (!existsSync(indexPath)) {
+    throw new Error('Índice RAG ausente. Execute o comando index no fechamento de um lote relevante.');
   }
-  return index;
+  return readJson(indexPath);
 };
 
 const buildDocumentFrequency = (chunks) => {

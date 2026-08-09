@@ -71,3 +71,38 @@ test('mapeia o ciclo de acesso sem apagá-lo em uma atualização sem esses camp
   assert.equal('acesso_erro' in unrelatedUpdate, false);
   assert.equal('troca_senha_obrigatoria' in unrelatedUpdate, false);
 });
+
+test('preserva dados eleitorais entre o contrato snake_case e o formulário camelCase', () => {
+  const aluno = toCamel({
+    id: 'student-voter-fields',
+    tipo: 'Aluno',
+    nome: 'Aluno de Teste',
+    titulo_eleitor: '123456789012',
+    titulo_eleitor_zona: '010',
+    titulo_eleitor_secao: '020',
+    titulo_eleitor_data_emissao: '2026-08-08',
+    titulo_eleitor_uf: 'se',
+  });
+
+  assert.equal(aluno.tituloEleitor, '123456789012');
+  assert.equal(aluno.tituloEleitorZona, '010');
+  assert.equal(aluno.tituloEleitorSecao, '020');
+  assert.equal(aluno.tituloEleitorDataEmissao, '08/08/2026');
+  assert.equal(aluno.tituloEleitorUf, 'SE');
+
+  const payload = toSnake({
+    tipo: 'Aluno',
+    nomeCompleto: 'Aluno de Teste',
+    tituloEleitor: aluno.tituloEleitor,
+    tituloEleitorZona: aluno.tituloEleitorZona,
+    tituloEleitorSecao: aluno.tituloEleitorSecao,
+    tituloEleitorDataEmissao: aluno.tituloEleitorDataEmissao,
+    tituloEleitorUf: aluno.tituloEleitorUf,
+  });
+
+  assert.equal(payload.titulo_eleitor, '123456789012');
+  assert.equal(payload.titulo_eleitor_zona, '010');
+  assert.equal(payload.titulo_eleitor_secao, '020');
+  assert.equal(payload.titulo_eleitor_data_emissao, '2026-08-08');
+  assert.equal(payload.titulo_eleitor_uf, 'SE');
+});

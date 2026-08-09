@@ -23,7 +23,15 @@ const discountCorrectionMigrationPath = new URL(
   import.meta.url,
 );
 const technicalFormPath = new URL(
-  '../modules/gestor/gestao/components/forms/TurmaTecnicoForm.tsx',
+  '../modules/gestor/gestao/components/forms/turma-tecnico/TurmaTecnicoForm.tsx',
+  import.meta.url,
+);
+const technicalFormDefaultsPath = new URL(
+  '../modules/gestor/gestao/components/forms/turma-tecnico/turma-tecnico-form.constants.ts',
+  import.meta.url,
+);
+const technicalFinancialStepPath = new URL(
+  '../modules/gestor/gestao/components/forms/turma-tecnico/TurmaTecnicoFinanceiroStep.tsx',
   import.meta.url,
 );
 const financialConfigPath = new URL(
@@ -54,6 +62,8 @@ const [
   interestCorrectionMigration,
   discountCorrectionMigration,
   technicalForm,
+  technicalFormDefaults,
+  technicalFinancialStep,
   financialConfig,
   gestaoService,
   financialEditor,
@@ -66,6 +76,8 @@ const [
   readFile(interestCorrectionMigrationPath, 'utf8'),
   readFile(discountCorrectionMigrationPath, 'utf8'),
   readFile(technicalFormPath, 'utf8'),
+  readFile(technicalFormDefaultsPath, 'utf8'),
+  readFile(technicalFinancialStepPath, 'utf8'),
   readFile(financialConfigPath, 'utf8'),
   readFile(gestaoServicePath, 'utf8'),
   readFile(financialEditorPath, 'utf8'),
@@ -105,7 +117,7 @@ test('aceita vencimento de 1 a 31 e ajusta apenas ao último dia do mês', () =>
     migration,
     /build_gestao_financial_schedule\([\s\S]*LEAST\([^,]*dia_vencimento[^,]*,\s*28\)/,
   );
-  for (const source of [financialEditor, enrollmentModal, inPersonForm]) {
+  for (const source of [financialEditor, technicalFinancialStep, inPersonForm]) {
     assert.match(source, /Array\.from\(\{ length: 31 \}/);
   }
 });
@@ -120,17 +132,18 @@ test('mantém o encadeamento idempotente do ciclo no backend', () => {
   assert.match(cycleMigration, /tipo_lancamento = 'REMATRICULA'/);
 });
 
-test('novas turmas técnicas herdam o padrão e não sincronizam gateway', () => {
-  assert.match(technicalForm, /gerarCobrancasFuturas: true/);
+test('novas turmas técnicas permitem regra flexível e não sincronizam gateway', () => {
+  assert.match(technicalFormDefaults, /gerarCobrancasFuturas: true/);
+  assert.match(technicalFormDefaults, /cobrarMatricula: true/);
+  assert.match(technicalFormDefaults, /valorMatricula: 150/);
+  assert.match(technicalFormDefaults, /valorRematricula: 150/);
+  assert.match(technicalFormDefaults, /qtdParcelas: 12/);
+  assert.match(technicalFormDefaults, /valorParcela: 279\.9/);
   assert.match(technicalForm, /sincronizarAsaasFuturo: false/);
-  assert.match(financialConfig, /valorMatricula: 150\.00/);
-  assert.match(financialConfig, /valorRematricula: 150\.00/);
-  assert.match(financialConfig, /qtdParcelas: 12/);
-  assert.match(financialConfig, /valorParcela: 279\.90/);
-  assert.match(gestaoService, /isTechnical \? 150 : 100/);
-  assert.match(gestaoService, /isTechnical \? 12 : 1/);
-  assert.match(gestaoService, /isTechnical \? 279\.90 : 0/);
-  assert.match(gestaoService, /isTechnical \? false : true/);
+  assert.match(gestaoService, /cobrar_matricula: turma\.cobrarMatricula/);
+  assert.match(gestaoService, /multa_atraso_percentual: Number\(turma\.multaAtrasoPercentual/);
+  assert.match(gestaoService, /instrucao_boleto_carne: turma\.instrucaoBoletoCarne/);
+  assert.match(financialConfig, /mapConfigToRegraTecnicaInput/);
 });
 
 test('introduz a multa percentual somente nas mensalidades técnicas', () => {

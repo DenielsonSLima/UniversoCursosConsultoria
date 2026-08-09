@@ -101,7 +101,12 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave,
       if (name === 'cpf' || name === 'responsavelCpf') finalValue = formatCpf(finalValue);
       if (name === 'cep') finalValue = maskCEP(finalValue);
       if (name === 'contato1' || name === 'contato2' || name === 'responsavelTelefone') finalValue = maskPhone(finalValue);
-      if (name === 'rgDataEmissao' || name === 'dataNascimento') finalValue = maskDate(finalValue);
+      if (name === 'rgDataEmissao' || name === 'dataNascimento' || name === 'tituloEleitorDataEmissao') {
+        finalValue = maskDate(finalValue);
+      }
+      if (name === 'tituloEleitorZona' || name === 'tituloEleitorSecao') {
+        finalValue = value.replace(/\D/g, '').slice(0, 4);
+      }
       if (name === 'certidaoMatricula') finalValue = normalizeCertidaoMatricula(finalValue);
       if (name === 'anoConclusaoEnsinoMedio' || name === 'anoPrevisaoConclusaoEnsinoMedio') {
         finalValue = value.replace(/\D/g, '').slice(0, 4);

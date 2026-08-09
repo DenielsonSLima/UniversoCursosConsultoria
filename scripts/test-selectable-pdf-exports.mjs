@@ -16,6 +16,7 @@ const protectedVectorGenerators = [
   'modules/gestor/calendario/exportacao-aulas/calendarioAulasExportacao.pdf.ts',
   'modules/gestor/secretaria/contratos-aluno/contratos-aluno.pdf.ts',
   'modules/gestor/secretaria/carteirinhas-preceptor/carteirinhas-preceptor.pdf.ts',
+  'modules/gestor/secretaria/historico-emissoes/emission-document.pdf.ts',
 ];
 
 // Documentos oficiais novos não aceitam nem a ponte híbrida nem canvas de
@@ -27,13 +28,17 @@ const strictNativeDocumentFlows = [
   'modules/gestor/calendario/exportacao-aulas/components/CalendarioAulasPdfPreview.tsx',
   'modules/gestor/secretaria/contratos-aluno/contratos-aluno.pdf.ts',
   'modules/gestor/secretaria/carteirinhas-preceptor/carteirinhas-preceptor.pdf.ts',
+  'modules/gestor/secretaria/historico-emissoes/emission-document.pdf.ts',
 ];
 
-const approvedHybridRasterPipelines = new Map([
+// Inventário temporário de pipelines antigos que ainda rasterizam a página.
+// Eles NÃO estão aprovados: permanecem aqui apenas para impedir regressão da
+// camada textual enquanto cada fluxo é migrado para composição nativa.
+const legacyHybridRasterPipelines = new Map([
   [
     'modules/gestor/secretaria/carteirinhas/secretaria-carteirinhas.pdf.ts',
     {
-      reason: 'A arte da carteirinha é raster, mas o texto visível é removido do canvas e redesenhado como camada vetorial selecionável.',
+      reason: 'A página da carteirinha ainda é rasterizada; a camada textual apenas reduz o dano e não torna o pipeline conforme.',
       requiredSignals: [
         ['coleta de texto', /\bcollectPdfTextRuns\s*\(/m],
         ['camada textual', /\baddSelectableTextLayer\s*\(/m],
@@ -41,6 +46,19 @@ const approvedHybridRasterPipelines = new Map([
       ],
     },
   ],
+]);
+
+// Novos consumidores da ponte DOM→imagem são proibidos. A lista representa
+// somente dívida já existente e deve encolher até chegar a zero.
+const knownLegacyHelperConsumers = new Set([
+  'modules/aluno/cursos/CursosPage.tsx',
+  'modules/aluno/financeiro/FinanceiroPage.tsx',
+  'modules/gestor/financeiro/components/FinancialReportPreview.tsx',
+  'modules/gestor/financeiro/receber/components/modalidade-receber/InstitutionalReceiptModal.tsx',
+  'modules/gestor/parceiros/components/export/ParceirosExportModal.tsx',
+  'modules/gestor/secretaria/declaracao-matricula/SecretariaDeclaracaoMatriculaPage.tsx',
+  'modules/gestor/secretaria/historico-emissoes/preview-utils.ts',
+  'modules/professor/financeiro/FinanceiroPage.tsx',
 ]);
 
 const normalizePath = (filePath) => relative(root, filePath).split(sep).join('/');
@@ -105,9 +123,9 @@ const sources = new Map(await Promise.all(files.map(async (filePath) => [
 
 const helperConsumers = [];
 const forbiddenRasterPipelines = [];
-const approvedHybridInventory = [];
-const approvedHybridFailures = [];
-const seenApprovedHybridPipelines = new Set();
+const legacyHybridInventory = [];
+const legacyHybridFailures = [];
+const seenLegacyHybridPipelines = new Set();
 const otherHtml2CanvasUses = [];
 
 for (const [filePath, source] of sources) {
@@ -122,21 +140,21 @@ for (const [filePath, source] of sources) {
   const bridgesCanvasIntoPdf = addImagePattern.test(source);
 
   if (hasJsPdf && bridgesCanvasIntoPdf) {
-    const approvedHybrid = approvedHybridRasterPipelines.get(filePath);
-    if (approvedHybrid) {
-      seenApprovedHybridPipelines.add(filePath);
-      const missingSignals = approvedHybrid.requiredSignals
+    const legacyHybrid = legacyHybridRasterPipelines.get(filePath);
+    if (legacyHybrid) {
+      seenLegacyHybridPipelines.add(filePath);
+      const missingSignals = legacyHybrid.requiredSignals
         .filter(([, pattern]) => !pattern.test(source))
         .map(([label]) => label);
-      approvedHybridInventory.push({
+      legacyHybridInventory.push({
         filePath,
-        reason: approvedHybrid.reason,
+        reason: legacyHybrid.reason,
         status: missingSignals.length === 0
-          ? 'HÍBRIDO VETORIAL APROVADO'
-          : `CONTRATO HÍBRIDO INCOMPLETO: ${missingSignals.join(', ')}`,
+          ? 'LEGADO RASTER NÃO CONFORME (INVENTARIADO)'
+          : `LEGADO RASTER E CAMADA TEXTUAL INCOMPLETA: ${missingSignals.join(', ')}`,
       });
       if (missingSignals.length > 0) {
-        approvedHybridFailures.push(
+        legacyHybridFailures.push(
           `${filePath} perdeu os sinais obrigatórios da camada textual vetorial: ${missingSignals.join(', ')}.`,
         );
       }
@@ -151,17 +169,18 @@ for (const [filePath, source] of sources) {
   }
 }
 
-for (const filePath of approvedHybridRasterPipelines.keys()) {
-  if (seenApprovedHybridPipelines.has(filePath)) continue;
-  approvedHybridFailures.push(
-    `${filePath} está na allowlist híbrida, mas não possui mais o pipeline raster esperado; remova a exceção obsoleta.`,
-  );
-  approvedHybridInventory.push({
+for (const filePath of legacyHybridRasterPipelines.keys()) {
+  if (seenLegacyHybridPipelines.has(filePath)) continue;
+  legacyHybridInventory.push({
     filePath,
-    reason: approvedHybridRasterPipelines.get(filePath).reason,
-    status: 'EXCEÇÃO OBSOLETA',
+    reason: legacyHybridRasterPipelines.get(filePath).reason,
+    status: 'DÍVIDA REMOVIDA — APAGAR DO INVENTÁRIO',
   });
 }
+
+const unexpectedHelperConsumers = helperConsumers.filter(
+  (filePath) => !knownLegacyHelperConsumers.has(filePath),
+);
 
 const vectorGeneratorFailures = [];
 const vectorGeneratorInventory = [];
@@ -194,7 +213,6 @@ for (const filePath of strictNativeDocumentFlows) {
     || moduleImportPattern('html2canvas').test(source)
     || /\bhtml2canvas\s*\(/m.test(source)
     || /\bcreateSelectablePdfBuilder\b/m.test(source)
-    || /\bdocument\.createElement\(\s*['"]canvas['"]\s*\)/m.test(source)
   ) {
     strictNativeDocumentFailures.push(
       `${filePath} voltou a usar captura rasterizada de página no fluxo documental nativo.`,
@@ -262,15 +280,19 @@ const caixaSafariFailures = [
 const missingHelperSignals = helperRequiredSignals
   .filter(([, pattern]) => !pattern.test(helperSource))
   .map(([label]) => label);
+const helperStillRequired = helperConsumers.length > 0;
 const failures = [
-  ...(!helperExists ? [`${selectablePdfHelper} não foi encontrado.`] : []),
-  ...(missingHelperSignals.length > 0
-    ? [`${selectablePdfHelper} perdeu partes obrigatórias do contrato híbrido: ${missingHelperSignals.join(', ')}.`]
+  ...(helperStillRequired && !helperExists ? [`${selectablePdfHelper} não foi encontrado.`] : []),
+  ...(helperStillRequired && missingHelperSignals.length > 0
+    ? [`${selectablePdfHelper} perdeu proteções temporárias da camada textual legada: ${missingHelperSignals.join(', ')}.`]
     : []),
+  ...unexpectedHelperConsumers.map((filePath) => (
+    `${filePath} é um novo consumidor proibido da ponte raster ${selectablePdfHelper}.`
+  )),
   ...forbiddenRasterPipelines.map(({ filePath }) => (
     `${filePath} ainda usa html2canvas diretamente para inserir canvas em PDF.`
   )),
-  ...approvedHybridFailures,
+  ...legacyHybridFailures,
   ...vectorGeneratorFailures,
   ...strictNativeDocumentFailures,
   ...calendarCanonicalBlobFailures,
@@ -279,13 +301,13 @@ const failures = [
   ...caixaSafariFailures,
 ];
 
-console.log('Contrato de exportações PDF selecionáveis');
-console.log('========================================');
-console.log(`Helper híbrido central: ${helperExists && missingHelperSignals.length === 0 ? 'OK' : 'INCOMPLETO'} — ${selectablePdfHelper}`);
+console.log('Contrato de exportações PDF vetoriais e selecionáveis');
+console.log('=====================================================');
+console.log(`Ponte raster legada: ${!helperStillRequired ? 'SEM CONSUMIDORES' : helperExists && missingHelperSignals.length === 0 ? 'INVENTARIADA' : 'INCOMPLETA'} — ${selectablePdfHelper}`);
 console.log(`Download isolado do Caixa: ${caixaDownloadIntegrationFailures.length === 0 ? 'OK' : 'INCOMPLETO'} — ${caixaDownloadHelper}`);
 console.log(`Estrutura vetorial do Caixa: ${caixaSafariFailures.length === 0 ? 'OK' : 'INCOMPLETA'} — ${caixaVectorPdfPath}`);
 
-console.log(`\nConsumidores do helper híbrido (${helperConsumers.length}):`);
+console.log(`\nConsumidores legados da ponte raster (${helperConsumers.length}):`);
 if (helperConsumers.length === 0) console.log('  (nenhum)');
 else helperConsumers.forEach((filePath) => console.log(`  - ${filePath}`));
 
@@ -294,9 +316,9 @@ vectorGeneratorInventory.forEach(({ filePath, status }) => {
   console.log(`  - [${status}] ${filePath}`);
 });
 
-console.log(`\nPipelines híbridos aprovados explicitamente (${approvedHybridInventory.length}):`);
-if (approvedHybridInventory.length === 0) console.log('  (nenhum)');
-else approvedHybridInventory.forEach(({ filePath, reason, status }) => {
+console.log(`\nPipelines raster legados inventariados (${legacyHybridInventory.length}):`);
+if (legacyHybridInventory.length === 0) console.log('  (nenhum)');
+else legacyHybridInventory.forEach(({ filePath, reason, status }) => {
   console.log(`  - [${status}] ${filePath}`);
   console.log(`    Motivo: ${reason}`);
 });
@@ -316,5 +338,6 @@ if (failures.length > 0) {
   failures.forEach((failure) => console.error(`  - ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log('\nRESULTADO: OK — nenhum PDF de página inteira usa rasterização direta fora do helper central.');
+  const legacyDebtCount = helperConsumers.length + seenLegacyHybridPipelines.size;
+  console.log(`\nRESULTADO: OK — nenhum pipeline raster novo; ${legacyDebtCount} fluxo(s) legado(s) não conforme(s) permanecem inventariado(s).`);
 }

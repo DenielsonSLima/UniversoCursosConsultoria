@@ -9,6 +9,7 @@ import { boletimService } from '../../cadastros/modelos-documentos/boletim/bolet
 import { historicoService } from '../../cadastros/modelos-documentos/historico/historico.service';
 import { transferenciaService } from '../../cadastros/modelos-documentos/transferencia/transferencia.service';
 import { pastaIdentificacaoService, fichaMatriculaDefaultTemplate } from '../../cadastros/ficha-matricula/document-layouts';
+import { stripRedundantPastaFooter } from '../../cadastros/ficha-matricula/pasta-template-geometry';
 import { fichasMatriculaService } from '../../cadastros/ficha-matricula/fichas-matricula.service';
 import { academicosService } from '../../configuracoes/academicos/academicos.service';
 import { marcaDaguaService } from '../../configuracoes/marca-dagua/marca-dagua.service';
@@ -89,13 +90,18 @@ const loadTemplate = async (
   poloId: string,
   academicConfigs: any
 ) => {
-  const frozenRegistrationTemplate =
-    emission.dados_emissao?.documentTemplateSnapshot;
+  const hasFrozenRegistrationTemplate = Object.prototype.hasOwnProperty.call(
+    emission.dados_emissao || {},
+    'documentTemplateSnapshot',
+  );
+  const frozenRegistrationTemplate = emission.dados_emissao?.documentTemplateSnapshot;
   if (
-    frozenRegistrationTemplate
+    hasFrozenRegistrationTemplate
     && ['pasta_identificacao', 'ficha_matricula'].includes(emission.documento)
   ) {
-    return frozenRegistrationTemplate;
+    return emission.documento === 'pasta_identificacao'
+      ? stripRedundantPastaFooter(frozenRegistrationTemplate)
+      : frozenRegistrationTemplate;
   }
 
   if (emission.documento === 'carteirinha') {
@@ -192,7 +198,10 @@ const loadPreviewResource = <T>(
 );
 
 const getTemplateCacheKey = (emission: EmissionLog, poloId: string) => {
-  if (emission.dados_emissao?.documentTemplateSnapshot) return null;
+  if (Object.prototype.hasOwnProperty.call(
+    emission.dados_emissao || {},
+    'documentTemplateSnapshot',
+  )) return null;
   return [
     'template',
     emission.documento,
@@ -230,18 +239,27 @@ const loadPreviewBatch = async (
 ): Promise<PreviewResources[]> => {
   if (!emissions.length) return [];
 
-  const watermarksPromise = loadPreviewResource(
-    cacheMode,
-    'watermarks',
-    () => marcaDaguaService.getCompaniesWithWatermark(),
+  const hasSnapshotKey = (emission: EmissionLog, key: string) => (
+    Object.prototype.hasOwnProperty.call(emission.dados_emissao || {}, key)
   );
+  const needsLiveWatermark = emissions.some((emission) => !hasSnapshotKey(emission, 'watermarkSnapshot'));
+  const livePoloIds = [...new Set(emissions
+    .filter((emission) => !hasSnapshotKey(emission, 'institutionSnapshot'))
+    .map((emission) => emission.polo_id || fallbackPoloId))];
+
+  const watermarksPromise = needsLiveWatermark
+    ? loadPreviewResource(
+        cacheMode,
+        'watermarks',
+        () => marcaDaguaService.getCompaniesWithWatermark(),
+      )
+    : Promise.resolve([]);
   const academicConfigsPromise = loadPreviewResource(
     cacheMode,
     'academic-configs',
     () => academicosService.getConfigs(),
   );
-  const poloIds = [...new Set(emissions.map((emission) => emission.polo_id || fallbackPoloId))];
-  const polosPromise = Promise.all(poloIds.map(async (poloId) => [
+  const polosPromise = Promise.all(livePoloIds.map(async (poloId) => [
     poloId,
     await loadPreviewResource(cacheMode, `polo:${poloId}`, () => polosService.getById(poloId)),
   ] as const));
@@ -292,8 +310,12 @@ const loadPreviewBatch = async (
     }
     const preview = {
       template,
-      watermark: watermarks.find((item) => item.id === poloId) || null,
-      polo: polosById.get(poloId) || null,
+      watermark: hasSnapshotKey(emission, 'watermarkSnapshot')
+        ? emission.dados_emissao.watermarkSnapshot
+        : watermarks.find((item) => item.id === poloId) || null,
+      polo: hasSnapshotKey(emission, 'institutionSnapshot')
+        ? emission.dados_emissao.institutionSnapshot
+        : polosById.get(poloId) || null,
       academicData,
       certificate,
     };
@@ -359,7 +381,8 @@ export const historicoEmissoesService = {
         *,
         aluno:parceiros(
           id, nome, cpf_cnpj, rg, data_nascimento, foto_url, sexo,
-          nacionalidade, naturalidade, orgao_emissor, titulo_eleitor, reservista,
+          nacionalidade, naturalidade, orgao_emissor, titulo_eleitor, titulo_eleitor_zona,
+          titulo_eleitor_secao, titulo_eleitor_data_emissao, titulo_eleitor_uf, reservista,
           nome_mae, nome_pai, escola_ensino_medio, ano_conclusao_ensino_medio
         ),
         matricula:matriculas(id, status, turma:turmas(id, nome, codigo))

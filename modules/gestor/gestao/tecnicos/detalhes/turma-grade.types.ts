@@ -67,13 +67,6 @@ export interface TurmaAulaUpdateInput {
   horaFim?: string | null;
 }
 
-export interface TurmaAulaUpdateInput {
-  aulaId: string;
-  disciplinaId: string;
-  horas: number;
-  dataAula: string;
-}
-
 export interface TurmaAtividadeExtraClasseInput {
   disciplinaId: string;
   titulo: string;
