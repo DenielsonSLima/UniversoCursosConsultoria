@@ -320,29 +320,28 @@ export const drawCanonicalInstitutionalHeader = (
   pdf.setFont('helvetica', 'bold');
   pdf.setTextColor(0, 26, 51);
   pdf.setFontSize(11);
-  const badgeWidth = 15;
-  const nameWidth = institution.isHeadquarters
-    ? contentWidth - badgeWidth - 4
-    : contentWidth;
+  const badgeText = institution.unitLabel.toUpperCase();
+  pdf.setFontSize(5.1);
+  const badgeWidth = Math.min(38, Math.max(15, pdf.getTextWidth(badgeText) + 5));
+  pdf.setFontSize(11);
+  const nameWidth = contentWidth - badgeWidth - 4;
   const name = institution.name.toUpperCase();
   const drawnName = drawSingleLinePdfText(pdf, name, contentX, top + 7.2, {
     maxWidth: nameWidth,
   });
-  if (institution.isHeadquarters) {
-    const badgeX = Math.min(
-      contentX + pdf.getTextWidth(drawnName) + 3,
-      pageWidth - right - badgeWidth,
-    );
-    pdf.setFillColor(248, 250, 252);
-    pdf.setDrawColor(203, 213, 225);
-    pdf.roundedRect(badgeX, top + 6.2, badgeWidth, 4.5, 1.2, 1.2, 'FD');
-    pdf.setTextColor(30, 41, 59);
-    pdf.setFontSize(5.1);
-    drawSingleLinePdfText(pdf, 'MATRIZ', badgeX + badgeWidth / 2, top + 7.3, {
-      align: 'center',
-      maxWidth: badgeWidth - 2,
-    });
-  }
+  const badgeX = Math.min(
+    contentX + pdf.getTextWidth(drawnName) + 3,
+    pageWidth - right - badgeWidth,
+  );
+  pdf.setFillColor(248, 250, 252);
+  pdf.setDrawColor(203, 213, 225);
+  pdf.roundedRect(badgeX, top + 6.2, badgeWidth, 4.5, 1.2, 1.2, 'FD');
+  pdf.setTextColor(30, 41, 59);
+  pdf.setFontSize(5.1);
+  drawSingleLinePdfText(pdf, badgeText, badgeX + badgeWidth / 2, top + 7.3, {
+    align: 'center',
+    maxWidth: badgeWidth - 2,
+  });
 
   const detailsY = top + 14.6;
   institution.leftLines.forEach((line, index) => {

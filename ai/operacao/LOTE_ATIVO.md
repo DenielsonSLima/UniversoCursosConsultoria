@@ -4,7 +4,7 @@ Estado: `PRONTO_PARA_PUBLICACAO`
 
 ## Lote: 2026-08-09-publicacao-consolidada-2-3-0-beta-2
 
-- Estado: PRONTO_PARA_PUBLICACAO
+- Estado: PUBLICADO
 - Objetivo: publicar, em uma única entrega atômica, todas as alterações locais concluídas e validadas da versão `2.3.0-beta.2`.
 - Escopo incluído: operação/memória do projeto; Grade e Docente; Plano de Curso; cadastro e documentos eleitorais; Financeiro Técnico; Contrato do Aluno; Boletim; histórico e reimpressão de documentos; compatibilidade e remoção do rodapé institucional redundante da Pasta de Identificação; migrations, testes, versionamento e registros correspondentes.
 - Fora de escopo: os arquivos brutos de referência `Documentos/MINUTA - CONTRATOS ALUNOS 2.pdf` e `Documentos/PlANO DE CURSO-T37- URGÊNCIA.docx`; artefatos de build, caches, merge, Vercel e produção.
@@ -14,6 +14,7 @@ Estado: `PRONTO_PARA_PUBLICACAO`
 - Responsável: Codex, consolidação individual.
 - Riscos: o lote é amplo porque reúne trabalhos já concluídos no mesmo estado local; todos os caminhos serão publicados por manifesto explícito e os dois documentos-fonte permanecerão somente locais.
 - Resultado da validação final: TypeScript, lint global e build aprovados; versão `2.3.0-beta.2` consistente; Contrato/PDF 44/44; hotfix focado da Pasta 20/20; domínios acadêmico, financeiro e documental 73/73; contrato operacional aprovado; exportações oficiais sem novo pipeline raster. O modelo remoto da Pasta foi confirmado em `v14`, sem `pasta_rodape`; snapshots históricos permanecem imutáveis e têm somente o rodapé institucional conhecido removido da cópia renderizada. O lint global revelou e teve removidos dois imports sem uso e duas declarações duplicadas preexistentes.
+- Publicação concluída: PR #62 integrada por squash na `main` em 2026-08-09; commit `2987054bd5e7eebaf5f5130d0ed45c2bd621a7d8`; workflow de qualidade e deploy Vercel aprovados; produção pública respondeu `HTTP 200`.
 
 ## Complemento: hotfix da geometria da Pasta de Identificação
 
@@ -33,7 +34,7 @@ Estado: `PRONTO_PARA_PUBLICACAO`
 
 ## Complemento: formulário em etapas da nova turma técnica
 
-- Estado: PRONTO_PARA_PUBLICACAO.
+- Estado: PUBLICADO.
 - Causa: o modal de criação concentrava todos os dados em uma única rolagem e ainda enviava somente parte da regra financeira flexível já aceita pelo backend.
 - Correção: o formulário foi isolado em pasta própria e dividido em quatro etapas — turma, inscrições, financeiro e revisão. A etapa financeira agora coleta matrícula opcional, mensalidades, rematrícula opcional, desconto, juros, multa, vencimento, incidência por tipo de título e instrução do boleto/carnê.
 - Matrícula opcional: `cobrarMatricula` nasce habilitado como padrão atual, mas pode ser desligado na criação. Nesse caso nenhum título inicial integra o plano; a regra continua editável depois no Financeiro da turma.
@@ -44,9 +45,18 @@ Estado: `PRONTO_PARA_PUBLICACAO`
 
 ## Complemento: cabeçalho institucional único
 
-- Estado: PRONTO_PARA_PUBLICACAO.
+- Estado: PUBLICADO.
 - Resultado: Relatórios, documentos elegíveis da Secretaria, Caixa, Financeiro e Parceiros passaram a compartilhar o mesmo modelo institucional, com três linhas por coluna, e-mail oficial protegido, dados dinâmicos de matriz/polo e metadados em faixa fixa.
 - Marca-d'água: a prévia somente leitura em Modelos de Documentos carrega a configuração da unidade em retrato e paisagem; na ausência de arte paisagem, herda integralmente arte, rotação, escala e opacidade do retrato.
 - Escopo preservado: diários, certificados, boleto, carnê, carteirinha estudantil, preceptor, SES, crachás e boletim informativo de Parceiros permanecem fora; nenhum snapshot, RPC, schema, RLS ou histórico foi alterado por este complemento.
 - Manifesto principal: `modules/gestor/components/{DocumentHeader.tsx,institutional-header.model.ts}`; `modules/gestor/secretaria/shared/canonical-institutional-header-pdf.ts`; Caixa; consumidores de Relatórios/Financeiro/Parceiros; prévia em `modelos-documentos/cabecalho-institucional`; testes contratuais e script `test:institutional-header`.
 - Validação: cabeçalho 7/7, Caixa 21/21, contratos 44/44, exportações vetoriais aprovadas, TypeScript, lint global, build, Poppler e revisão independente sem achados críticos/importantes. Smoke autenticado no Safari confirmou matriz, selo, seis linhas, e-mail oficial e faixa de metadados; nenhuma gravação remota ocorreu.
+
+## Hotfix: identificação nominal de todos os polos no cabeçalho
+
+- Estado: PRONTO_PARA_PUBLICACAO.
+- Causa: o selo era renderizado somente quando `is_matriz=true`; os três polos ativos ficavam sem identificação. O campo `polos.nome` também não é uma fonte segura para distinguir unidades, pois Aquidabã e Porto da Folha usam o mesmo nome institucional e Propriá usa uma variação comercial.
+- Correção: o resolvedor compartilhado passou a produzir o selo da unidade pela cidade canônica — `MATRIZ`, `POLO AQUIDABÃ`, `POLO PORTO DA FOLHA` e `POLO PROPRIÁ` — e React/PDF vetorial renderizam o mesmo valor com contenção horizontal.
+- Supabase: consulta somente leitura confirmou uma matriz e os três polos ativos; nenhuma linha, schema, RPC, RLS ou snapshot foi alterado.
+- Manifesto incremental: `modules/gestor/components/{institutional-header.model.ts,DocumentHeader.tsx,institutional-header.model.test.ts,institutional-header.parity.contract.test.ts}`; `modules/gestor/secretaria/shared/canonical-institutional-header-pdf.ts`; contrato documental e registros operacionais.
+- Validação: cabeçalho 9/9, Caixa 21/21, Contrato/PDF 44/44, exportações PDF, TypeScript, lint global e build aprovados. Oito PDFs reais foram extraídos/renderizados com Poppler nas duas orientações; o selo mais longo não sofreu corte nem sobreposição. O Safari remoto não expôs uma janela controlável neste fechamento.

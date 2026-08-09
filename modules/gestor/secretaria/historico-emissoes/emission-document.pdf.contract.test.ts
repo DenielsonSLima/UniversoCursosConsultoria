@@ -294,7 +294,7 @@ test('documentos oficiais reutilizam o cabeçalho institucional compartilhado', 
   assert.doesNotMatch(exporter, /const\s+draw(?:Institution|Institutional)Header\s*=/);
   assert.match(canonicalHeader, /PORTRAIT_INSTITUTIONAL_HEADER_LAYOUT/);
   assert.match(canonicalHeader, /LANDSCAPE_INSTITUTIONAL_HEADER_LAYOUT/);
-  assert.match(canonicalHeader, /'MATRIZ'/);
+  assert.match(canonicalHeader, /institution\.unitLabel\.toUpperCase\(\)/);
   assert.match(canonicalHeader, /'CNPJ'/);
   assert.match(canonicalHeader, /'Contato'/);
   assert.match(canonicalHeader, /'Endereço'/);

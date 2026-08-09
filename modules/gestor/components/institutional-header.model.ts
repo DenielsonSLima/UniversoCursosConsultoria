@@ -42,6 +42,12 @@ export interface InstitutionalHeaderFields {
   is_headquarters?: unknown;
   tipo?: unknown;
   type?: unknown;
+  unitLabel?: unknown;
+  unit_label?: unknown;
+  unitName?: unknown;
+  unit_name?: unknown;
+  poloNome?: unknown;
+  polo_nome?: unknown;
 }
 
 export interface InstitutionalHeaderSource {
@@ -82,6 +88,7 @@ export interface ResolvedInstitutionalHeader {
   state: string;
   postalCode: string;
   isHeadquarters: boolean;
+  unitLabel: string;
   leftLines: InstitutionalHeaderDetails;
   rightLines: InstitutionalHeaderDetails;
 }
@@ -140,6 +147,25 @@ const resolveIsHeadquarters = (
 
 const withPlaceholder = (value: string) => value || EMPTY_DETAIL_VALUE;
 
+const resolveUnitLabel = (
+  sources: readonly (InstitutionalHeaderFields | null | undefined)[],
+  isHeadquarters: boolean,
+  city: string,
+) => {
+  if (isHeadquarters) return 'Matriz';
+
+  const explicitUnitName = resolveText(sources, [
+    'unitLabel',
+    'unit_label',
+    'unitName',
+    'unit_name',
+    'poloNome',
+    'polo_nome',
+  ]).replace(/^POLO\s*[-·:]?\s*/i, '').trim();
+  const unitName = explicitUnitName || city;
+  return unitName ? `Polo ${unitName}` : 'Polo';
+};
+
 export const resolveInstitutionalHeader = (
   source: InstitutionalHeaderSource,
 ): ResolvedInstitutionalHeader => {
@@ -164,6 +190,7 @@ export const resolveInstitutionalHeader = (
   const city = resolveText(sources, ['cidade', 'city']);
   const state = resolveText(sources, ['uf', 'estado', 'state']);
   const postalCode = resolveText(sources, ['cep', 'postalCode', 'postal_code']);
+  const isHeadquarters = resolveIsHeadquarters(sources);
   const cityAndState = city && state
     ? `${city} (${state})`
     : city || (state ? `(${state})` : '');
@@ -186,7 +213,8 @@ export const resolveInstitutionalHeader = (
     city,
     state,
     postalCode,
-    isHeadquarters: resolveIsHeadquarters(sources),
+    isHeadquarters,
+    unitLabel: resolveUnitLabel(sources, isHeadquarters, city),
     leftLines: [
       { label: 'CNPJ', value: withPlaceholder(cnpj) },
       { label: 'Contato', value: withPlaceholder(phone) },
