@@ -2,6 +2,25 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [4.2.0-beta.1] - 2026-08-10
+
+### Adicionado
+
+- Patrimônio passa a ter catálogo empresarial de tipos, edição, baixa parcial ou total por perda, exclusão lógica auditável e posição patrimonial isolada no Caixa.
+- A criação de turma técnica passa a ter cinco etapas, vencimento inicial obrigatório, fim previsto sugerido em 24 meses e código de autorização para condições individuais.
+- A matrícula técnica passa a ter quatro etapas, com sequência completa do curso, vencimento herdado e editável, bolsa/incentivo autorizado e simulações canônicas de pagamento em dia ou em atraso.
+
+### Alterado
+
+- O total técnico apresenta o curso completo: matrícula, dois ciclos de mensalidades e uma rematrícula quando configurada.
+- Valores financeiros usam entrada formatada em real brasileiro; controles internos de gateway e financeiro legado deixam de ser expostos ao usuário final.
+
+### Segurança e qualidade
+
+- O código de condição individual fica somente como hash bcrypt, com RBAC financeiro, auditoria, redefinição sem recuperação do segredo e limite de tentativas por gestor e turma.
+- O backend impede alteração individual de ciclos, vencimento, juros, multa ou texto do boleto e encerra a sequência financeira no segundo ciclo.
+- Publicação organizada em expansão compatível e endurecimento pós-deploy para evitar interrupção entre Supabase e frontend.
+
 ## [2.3.0-beta.3] - 2026-08-09
 
 ### Corrigido
