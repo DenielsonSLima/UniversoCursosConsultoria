@@ -3,6 +3,30 @@ export const formatCaixaCurrency = (value: number) => new Intl.NumberFormat('pt-
   currency: 'BRL',
 }).format(value);
 
+const CANONICAL_DECIMAL_PATTERN = /^\d+(?:\.\d{1,2})?$/;
+
+export const isCaixaCanonicalDecimalText = (value: unknown): value is string => (
+  typeof value === 'string' && CANONICAL_DECIMAL_PATTERN.test(value)
+);
+
+/**
+ * Formata o texto decimal canônico devolvido pelo banco sem convertê-lo para
+ * `number`. Assim, valores acima do limite seguro do JavaScript preservam os
+ * centavos exatos recebidos da RPC.
+ */
+export const formatCaixaCanonicalCurrency = (value: string) => {
+  if (!isCaixaCanonicalDecimalText(value)) return 'R$ 0,00';
+
+  const [integerPart, fractionPart = ''] = value.split('.');
+  const integer = BigInt(integerPart);
+  const fraction = fractionPart.padEnd(2, '0');
+  const groupedInteger = new Intl.NumberFormat('pt-BR', {
+    maximumFractionDigits: 0,
+  }).format(integer);
+
+  return `R$ ${groupedInteger},${fraction}`;
+};
+
 export const formatCaixaCompetencia = (competencia: string) => {
   if (!competencia) return '';
   const formatted = new Intl.DateTimeFormat('pt-BR', {
