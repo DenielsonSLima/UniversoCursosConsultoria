@@ -21,6 +21,7 @@ import {
   Activity,
   HardDrive,
   Handshake,
+  PackageOpen,
   Smartphone,
   BellRing
 } from 'lucide-react';
@@ -48,12 +49,21 @@ import ConsultaApiBaneseConfig from './consulta-api-banese/ConsultaApiBaneseConf
 import ArmazenamentoConfig from './armazenamento/ArmazenamentoConfig';
 import DispositivosAppConfig from './dispositivos-app/DispositivosAppConfig';
 import PushNotificationsConfig from './push-notifications/PushNotificationsConfig';
+import TiposProdutosConfig from './tipos-produtos/TiposProdutosConfig';
 import {
   banesePollingQueryKey,
   consultaApiBaneseService,
 } from './consulta-api-banese/consulta-api-banese.service';
 
-const ConfiguracoesPage: React.FC = () => {
+interface ConfiguracoesPageProps {
+  poloId?: string | null;
+  canManageProductTypes?: boolean;
+}
+
+const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({
+  poloId,
+  canManageProductTypes = false,
+}) => {
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const sectionTopRef = useRef<HTMLDivElement>(null);
   const banesePollingQuery = useQuery({
@@ -70,6 +80,7 @@ const ConfiguracoesPage: React.FC = () => {
     { id: 'site-publico', title: 'Site Público', desc: 'Faixa de avisos e turmas abertas', icon: <Megaphone size={24} />, color: 'bg-blue-700' },
     { id: 'categorias', title: 'Categorias de Cadastros', desc: 'Segmentos de alunos, professores, PF e PJ', icon: <Tags size={24} />, color: 'bg-orange-500' },
     { id: 'tipos-parceria', title: 'Tipos de Parceria', desc: 'Convênios e vínculos de pessoas jurídicas', icon: <Handshake size={24} />, color: 'bg-blue-700' },
+    ...(canManageProductTypes ? [{ id: 'tipos-produtos', title: 'Tipos de produtos', desc: 'Catálogo usado no cadastro de patrimônio', icon: <PackageOpen size={24} />, color: 'bg-cyan-700' }] : []),
     { id: 'categorias-financeiras', title: 'Categorias Financeiras', desc: 'Adicionar, ativar e inativar', icon: <Wallet2 size={24} />, color: 'bg-rose-600' },
     { id: 'usuarios', title: 'Usuários e Permissões', desc: 'Gestão de acesso ao sistema', icon: <Users size={24} />, color: 'bg-indigo-500' },
     { id: 'dispositivos-app', title: 'Dispositivos do App', desc: 'Instalações, sessões e notificações por polo', icon: <Smartphone size={24} />, color: 'bg-blue-600' },
@@ -102,6 +113,7 @@ const ConfiguracoesPage: React.FC = () => {
       case 'site-publico': return <SitePublicoConfig />;
       case 'categorias': return <CategoriasConfig />;
       case 'tipos-parceria': return <TiposParceriaConfig />;
+      case 'tipos-produtos': return canManageProductTypes ? <TiposProdutosConfig poloId={poloId} /> : null;
       case 'categorias-financeiras': return <CategoriasFinanceirasConfig />;
       case 'usuarios': return <UsuariosConfig />;
       case 'dispositivos-app': return <DispositivosAppConfig />;
@@ -139,7 +151,7 @@ const ConfiguracoesPage: React.FC = () => {
           </div>
           <span>Voltar para Configurações</span>
         </button>
-        <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 min-h-[600px]">
+        <div className="min-h-[600px] rounded-[2rem] border border-slate-100 bg-white p-4 shadow-sm sm:p-8">
           {renderSection()}
         </div>
       </div>
