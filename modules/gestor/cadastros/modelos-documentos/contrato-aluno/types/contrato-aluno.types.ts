@@ -26,6 +26,24 @@ export interface ConfiguracaoMarcaDaguaContrato {
   origem: 'POLO_EMISSOR';
 }
 
+export interface RegrasDinamicasContratoAluno {
+  minimoAlunosTurma: number | string;
+  prazoReembolsoDiasUteis: number | string;
+  prazoRematriculaDias: number | string;
+  percentualCancelamento: number | string;
+  frequenciaEstagioObrigatoria: number | string;
+  frequenciaTeoricaMinima: number | string;
+  cargaSaudeColetiva: string;
+  honorariosCobrancaPercentual: number | string;
+  multaBibliotecaDia: string;
+}
+
+export interface FonteDocumentoContratoAluno {
+  filename: string;
+  sha256: string;
+  sourceDocxSha256?: string;
+}
+
 export interface ConteudoModeloContratoAluno {
   /** Espelho visual do estado devolvido pelo servidor; não autoriza emissão. */
   status: ModeloDocumentoStatus;
@@ -34,9 +52,14 @@ export interface ConteudoModeloContratoAluno {
   corpo: string;
   /** Expressões exatas exibidas em vermelho, uma por item. */
   destaquesCriticos: string[];
+  /** Âncoras dos três parágrafos exibidos com realce rosa discreto. */
+  destaquesAtencao: string[];
   rodape: string;
   observacaoEscopo: string;
   fonte: FonteModeloContrato;
+  presentationVersion: 'CONTRATO_A4_INSTITUCIONAL_V2' | 'CONTRATO_A4_INSTITUCIONAL_V3_MINUTA_COMPLETA';
+  regrasDinamicas: RegrasDinamicasContratoAluno;
+  sourceDocument: FonteDocumentoContratoAluno | null;
   marcaDagua: ConfiguracaoMarcaDaguaContrato;
   qr: ConfiguracaoQrContrato;
 }
