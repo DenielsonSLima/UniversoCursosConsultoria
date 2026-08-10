@@ -324,9 +324,9 @@ const drawLastPageSignature = (
   pdf.setTextColor(51, 65, 85);
   pdf.text(
     `${normalizeCanonicalPdfText(documento.rotulos.dataLocal)}: ${normalizeCanonicalPdfText(documento.localData.texto)}`,
-    centerX,
+    PAGE_MARGIN_X,
     localDateY,
-    { align: 'center' },
+    { align: 'left' },
   );
 
   if (!documento.docente.assinatura.exibir) return;
