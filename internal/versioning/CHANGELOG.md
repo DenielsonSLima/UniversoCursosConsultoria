@@ -14,6 +14,7 @@ Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente
 
 - O total técnico apresenta o curso completo: matrícula, dois ciclos de mensalidades e uma rematrícula quando configurada.
 - Valores financeiros usam entrada formatada em real brasileiro; controles internos de gateway e financeiro legado deixam de ser expostos ao usuário final.
+- Contratos técnicos e Plano de Curso recebem os refinamentos locais concluídos nos lotes de 10 de agosto.
 
 ### Segurança e qualidade
 
