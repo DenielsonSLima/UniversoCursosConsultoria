@@ -138,7 +138,7 @@ const TurmaTecnicoDetalhes: React.FC<TurmaTecnicoDetalhesProps> = ({
           onTurmaFinalizada={onBack}
         />
       );
-      case 'configuracoes': return <TurmaConfiguracoes turma={turma} onTurmaUpdated={onTurmaUpdated} />;
+      case 'configuracoes': return <TurmaConfiguracoes turma={turma} onTurmaUpdated={onTurmaUpdated} canManageFinanceiro={canViewFinanceiro} />;
       default: return null;
     }
   };
