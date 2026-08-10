@@ -2,6 +2,7 @@ import { queryOptions } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import { orderCaixaPolosByCreation } from './caixa-polos';
 import type { CaixaPolo } from './caixa-polos';
+import { isCaixaCanonicalDecimalText } from './caixa.formatters';
 
 export type CaixaResultStatus = 'POSITIVO' | 'NEGATIVO' | 'NEUTRO';
 export type CaixaScopeType = 'GLOBAL' | 'POLO';
@@ -138,6 +139,34 @@ export interface CaixaCustosOperacionais {
   observacao: string;
 }
 
+/**
+ * Posição patrimonial canônica por competência. Os valores monetários
+ * permanecem como texto decimal para preservar os centavos devolvidos pela
+ * RPC mesmo acima do limite seguro de `number` no JavaScript.
+ */
+export interface CaixaPatrimonioResumo {
+  versao: 1;
+  competencia: string;
+  escopoTipo: CaixaScopeType;
+  poloId: string | null;
+  posicaoFechamento: {
+    registrosAtivos: number;
+    unidadesAtivas: number;
+    valorAtivoCusto: string;
+  };
+  aquisicoesCompetencia: {
+    registros: number;
+    unidades: number;
+    valorCusto: string;
+  };
+  perdasCompetencia: {
+    movimentos: number;
+    unidades: number;
+    valorCusto: string;
+  };
+  observacao: string;
+}
+
 type RawItem = Record<string, unknown>;
 
 const isRecord = (value: unknown): value is RawItem => (
@@ -173,6 +202,11 @@ const isNumericValue = (value: unknown) => (
   && value !== ''
   && Number.isFinite(Number(value))
 );
+
+const isNonNegativeSafeInteger = (value: unknown) => {
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed >= 0;
+};
 
 const assertStatementPayload = (payload: RawItem) => {
   const meta = payload.meta;
@@ -251,6 +285,35 @@ const assertCustosOperacionaisPayload = (payload: RawItem) => {
     || typeof payload.observacao !== 'string'
   ) {
     throw new Error('Contrato inválido do resumo de custos operacionais do Caixa.');
+  }
+};
+
+const assertPatrimonioResumoPayload = (payload: RawItem) => {
+  const posicao = payload.posicao_fechamento;
+  const aquisicoes = payload.aquisicoes_competencia;
+  const perdas = payload.perdas_competencia;
+
+  if (
+    payload.versao !== 1
+    || typeof payload.competencia !== 'string'
+    || payload.competencia.trim() === ''
+    || (payload.escopo_tipo !== 'GLOBAL' && payload.escopo_tipo !== 'POLO')
+    || (typeof payload.polo_id !== 'string' && payload.polo_id !== null)
+    || !isRecord(posicao)
+    || !isNonNegativeSafeInteger(posicao.registros_ativos)
+    || !isNonNegativeSafeInteger(posicao.unidades_ativas)
+    || !isCaixaCanonicalDecimalText(posicao.valor_ativo_custo)
+    || !isRecord(aquisicoes)
+    || !isNonNegativeSafeInteger(aquisicoes.registros)
+    || !isNonNegativeSafeInteger(aquisicoes.unidades)
+    || !isCaixaCanonicalDecimalText(aquisicoes.valor_custo)
+    || !isRecord(perdas)
+    || !isNonNegativeSafeInteger(perdas.movimentos)
+    || !isNonNegativeSafeInteger(perdas.unidades)
+    || !isCaixaCanonicalDecimalText(perdas.valor_custo)
+    || typeof payload.observacao !== 'string'
+  ) {
+    throw new Error('Contrato inválido do resumo patrimonial do Caixa.');
   }
 };
 
@@ -435,6 +498,37 @@ export const mapCaixaCustosOperacionais = (value: unknown): CaixaCustosOperacion
   };
 };
 
+export const mapCaixaPatrimonioResumo = (value: unknown): CaixaPatrimonioResumo => {
+  const payload = asRecord(Array.isArray(value) ? value[0] : value);
+  assertPatrimonioResumoPayload(payload);
+  const posicao = asRecord(payload.posicao_fechamento);
+  const aquisicoes = asRecord(payload.aquisicoes_competencia);
+  const perdas = asRecord(payload.perdas_competencia);
+
+  return {
+    versao: 1,
+    competencia: asString(payload.competencia),
+    escopoTipo: payload.escopo_tipo === 'GLOBAL' ? 'GLOBAL' : 'POLO',
+    poloId: typeof payload.polo_id === 'string' ? payload.polo_id : null,
+    posicaoFechamento: {
+      registrosAtivos: asNumber(posicao.registros_ativos),
+      unidadesAtivas: asNumber(posicao.unidades_ativas),
+      valorAtivoCusto: asString(posicao.valor_ativo_custo),
+    },
+    aquisicoesCompetencia: {
+      registros: asNumber(aquisicoes.registros),
+      unidades: asNumber(aquisicoes.unidades),
+      valorCusto: asString(aquisicoes.valor_custo),
+    },
+    perdasCompetencia: {
+      movimentos: asNumber(perdas.movimentos),
+      unidades: asNumber(perdas.unidades),
+      valorCusto: asString(perdas.valor_custo),
+    },
+    observacao: asString(payload.observacao),
+  };
+};
+
 export const assertCaixaFinanciamentoResumoRequest = (
   resumo: CaixaFinanciamentoResumo,
   competencia: string,
@@ -454,6 +548,21 @@ export const assertCaixaCustosOperacionaisRequest = (
     || resumo.poloId !== normalizeCaixaPoloId(poloId)
   ) {
     throw new Error('O resumo de custos operacionais retornou um escopo diferente do solicitado.');
+  }
+};
+
+export const assertCaixaPatrimonioResumoRequest = (
+  resumo: CaixaPatrimonioResumo,
+  poloId: string | null | undefined,
+  competencia: string,
+) => {
+  const expectedPoloId = normalizeCaixaPoloId(poloId);
+  const hasExpectedScope = expectedPoloId
+    ? resumo.escopoTipo === 'POLO' && resumo.poloId === expectedPoloId
+    : resumo.escopoTipo === 'GLOBAL' && resumo.poloId === null;
+
+  if (!hasExpectedScope || resumo.competencia !== competencia) {
+    throw new Error('O resumo patrimonial retornou um escopo diferente do solicitado.');
   }
 };
 
@@ -533,6 +642,26 @@ export const caixaService = {
     assertCaixaCustosOperacionaisRequest(resumo, normalizedPoloId, competencia);
     return resumo;
   },
+
+  async getPatrimonioResumo(
+    poloId: string | null | undefined,
+    competencia: string,
+  ): Promise<CaixaPatrimonioResumo> {
+    const normalizedPoloId = normalizeCaixaPoloId(poloId);
+    const { data, error } = await supabase.rpc('get_caixa_patrimonio_resumo_secure', {
+      p_polo_id: normalizedPoloId,
+      p_competencia: competencia,
+    });
+
+    if (error) {
+      console.error('Erro ao buscar o resumo patrimonial do Caixa:', error);
+      throw error;
+    }
+
+    const resumo = mapCaixaPatrimonioResumo(data);
+    assertCaixaPatrimonioResumoRequest(resumo, normalizedPoloId, competencia);
+    return resumo;
+  },
 };
 
 export const caixaQueryKeys = {
@@ -574,6 +703,16 @@ export const caixaQueryKeys = {
     ...caixaQueryKeys.custosOperacionaisForPolo(poloId),
     competencia,
   ] as const,
+  patrimonioResumos: ['caixa', 'patrimonio-resumo'] as const,
+  patrimonioResumosForPolo: (poloId: string | null | undefined) => [
+    'caixa',
+    'patrimonio-resumo',
+    getCaixaScopeKey(poloId),
+  ] as const,
+  patrimonioResumo: (poloId: string | null | undefined, competencia: string) => [
+    ...caixaQueryKeys.patrimonioResumosForPolo(poloId),
+    competencia,
+  ] as const,
 };
 
 export const caixaPolosQueryOptions = () => queryOptions({
@@ -612,6 +751,17 @@ export const caixaCustosOperacionaisQueryOptions = (
 ) => queryOptions({
   queryKey: caixaQueryKeys.custosOperacionaisResumo(poloId, competencia),
   queryFn: () => caixaService.getCustosOperacionais(poloId, competencia),
+  staleTime: 30_000,
+  gcTime: 30 * 60_000,
+  refetchOnWindowFocus: true,
+});
+
+export const caixaPatrimonioResumoQueryOptions = (
+  poloId?: string | null,
+  competencia = getCurrentCaixaCompetencia(),
+) => queryOptions({
+  queryKey: caixaQueryKeys.patrimonioResumo(poloId, competencia),
+  queryFn: () => caixaService.getPatrimonioResumo(poloId, competencia),
   staleTime: 30_000,
   gcTime: 30 * 60_000,
   refetchOnWindowFocus: true,
