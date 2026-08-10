@@ -18,6 +18,7 @@ import {
 import { validateTurmaTecnicoStep } from './turma-tecnico-form.validation';
 import TurmaTecnicoDadosStep from './TurmaTecnicoDadosStep';
 import TurmaTecnicoFinanceiroStep from './TurmaTecnicoFinanceiroStep';
+import TurmaTecnicoAutorizacaoStep from './TurmaTecnicoAutorizacaoStep';
 import TurmaTecnicoReviewStep from './TurmaTecnicoReviewStep';
 import TurmaTecnicoStepper from './TurmaTecnicoStepper';
 
@@ -130,7 +131,7 @@ const TurmaTecnicoForm: React.FC<TurmaTecnicoFormProps> = ({
     aceitaSubsequente: formData.aceitaSubsequente,
     serieMinimaEnsinoMedio: formData.serieMinimaEnsinoMedio,
     bloquearMatriculasAposCompletarVagas: formData.bloquearMatriculasAposCompletarVagas,
-    qtdVagasMinima: formData.qtdVagasMinima,
+    qtdVagasMinima: 0,
     frequenciaMinimaPercent: formData.frequenciaMinimaPercent,
     mediaMinima: formData.mediaMinima,
     turno: formData.turno,
@@ -153,10 +154,12 @@ const TurmaTecnicoForm: React.FC<TurmaTecnicoFormProps> = ({
     aplicarDescontoRematricula: formData.aplicarDescontoRematricula,
     aplicarMultaJurosRematricula: formData.aplicarMultaJurosRematricula,
     diaVencimentoPadrao: formData.diaVencimentoPadrao,
+    primeiroVencimentoPadrao: formData.primeiroVencimentoPadrao,
+    codigoCondicaoIndividual: formData.codigoCondicaoIndividual,
     instrucaoBoletoCarne: formData.instrucaoBoletoCarne.trim(),
     origemFinanceira: formData.origemFinanceira,
-    financeiroHerdado: formData.financeiroHerdado,
-    gerarCobrancasFuturas: formData.gerarCobrancasFuturas,
+    financeiroHerdado: formData.origemFinanceira === 'LEGADO',
+    gerarCobrancasFuturas: formData.origemFinanceira !== 'LEGADO',
     sincronizarAsaasFuturo: false,
     cronogramaFinanceiro: [],
   });
@@ -256,6 +259,8 @@ const TurmaTecnicoForm: React.FC<TurmaTecnicoFormProps> = ({
               </section>
             ) : activeStep.id === 'FINANCEIRO' ? (
               <TurmaTecnicoFinanceiroStep formData={formData} onChange={updateForm} />
+            ) : activeStep.id === 'AUTORIZACAO' ? (
+              <TurmaTecnicoAutorizacaoStep formData={formData} onChange={updateForm} />
             ) : (
               <TurmaTecnicoReviewStep
                 course={selectedCourse}
