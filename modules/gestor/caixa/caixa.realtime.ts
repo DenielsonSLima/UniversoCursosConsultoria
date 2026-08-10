@@ -2,8 +2,18 @@ type RealtimePayload = {
   new?: unknown;
 };
 
+export type CaixaRealtimeInvalidationTarget = 'FINANCEIRO' | 'PATRIMONIO';
+
 const isRecord = (value: unknown): value is Record<string, unknown> => (
   Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+);
+
+export const getCaixaRealtimeInvalidationTarget = (
+  payload: RealtimePayload,
+): CaixaRealtimeInvalidationTarget => (
+  isRecord(payload?.new) && payload.new.source_table === 'patrimonios'
+    ? 'PATRIMONIO'
+    : 'FINANCEIRO'
 );
 
 /**
