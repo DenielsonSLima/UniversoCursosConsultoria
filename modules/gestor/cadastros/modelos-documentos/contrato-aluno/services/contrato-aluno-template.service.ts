@@ -8,7 +8,9 @@ import {
 } from '../types/contrato-aluno.types';
 import { normalizeContractSectionHeader } from '../../../../../shared/contrato-aluno/section-header';
 import {
+  DEFAULT_CONTRACT_ATTENTION_HIGHLIGHTS,
   DEFAULT_CONTRACT_CRITICAL_HIGHLIGHTS,
+  normalizeContractAttentionHighlights,
   normalizeContractCriticalHighlights,
 } from '../../../../../shared/contrato-aluno/semantic-format';
 
@@ -38,11 +40,25 @@ const defaultContent = (modalidade: ContratoAlunoModalidade): ConteudoModeloCont
       ? 'A minuta técnica oficial será carregada a partir do modelo canônico aprovado. Edite apenas após a revisão jurídica institucional.'
       : 'Este modelo aguarda texto jurídico aprovado para a modalidade selecionada. Nenhuma cláusula técnica é adaptada automaticamente.',
     destaquesCriticos: [...DEFAULT_CONTRACT_CRITICAL_HIGHLIGHTS],
+    destaquesAtencao: [...DEFAULT_CONTRACT_ATTENTION_HIGHLIGHTS],
     rodape: 'Documento emitido eletronicamente pela Universo Cursos e Consultoria.',
     observacaoEscopo: isTechnical
       ? 'Base: minuta técnica institucional preservada no repositório de documentos.'
       : 'Revisão jurídica obrigatória antes da primeira emissão desta modalidade.',
     fonte: isTechnical ? 'MINUTA_TECNICA' : 'AGUARDANDO_REVISAO_JURIDICA',
+    presentationVersion: 'CONTRATO_A4_INSTITUCIONAL_V2',
+    regrasDinamicas: {
+      minimoAlunosTurma: 35,
+      prazoReembolsoDiasUteis: 10,
+      prazoRematriculaDias: 45,
+      percentualCancelamento: 10,
+      frequenciaEstagioObrigatoria: 100,
+      frequenciaTeoricaMinima: 75,
+      cargaSaudeColetiva: '40 horas',
+      honorariosCobrancaPercentual: 20,
+      multaBibliotecaDia: 'R$ 2,00',
+    },
+    sourceDocument: null,
     marcaDagua: {
       habilitada: true,
       intensidade: 'SUAVE',
@@ -75,6 +91,11 @@ const normalizeContent = (
   const diasValidade = typeof qr.diasValidade === 'number' && Number.isFinite(qr.diasValidade)
     ? qr.diasValidade
     : null;
+  const regrasDinamicas = isRecord(value.regrasDinamicas) ? value.regrasDinamicas : {};
+  const sourceDocument = isRecord(value.sourceDocument) ? value.sourceDocument : null;
+  const asRuleValue = (rule: unknown, fallbackValue: number | string) => (
+    typeof rule === 'number' || typeof rule === 'string' ? rule : fallbackValue
+  );
 
   return {
     status: isStatus(value.status) ? value.status : fallback.status,
@@ -85,9 +106,31 @@ const normalizeContent = (
     ),
     corpo: asString(value.corpo, fallback.corpo),
     destaquesCriticos: normalizeContractCriticalHighlights(value.destaquesCriticos),
+    destaquesAtencao: normalizeContractAttentionHighlights(value.destaquesAtencao),
     rodape: asString(value.rodape, fallback.rodape),
     observacaoEscopo: asString(value.observacaoEscopo, fallback.observacaoEscopo),
     fonte,
+    presentationVersion: value.presentationVersion === 'CONTRATO_A4_INSTITUCIONAL_V3_MINUTA_COMPLETA'
+      ? 'CONTRATO_A4_INSTITUCIONAL_V3_MINUTA_COMPLETA'
+      : fallback.presentationVersion,
+    regrasDinamicas: {
+      minimoAlunosTurma: asRuleValue(regrasDinamicas.minimoAlunosTurma, fallback.regrasDinamicas.minimoAlunosTurma),
+      prazoReembolsoDiasUteis: asRuleValue(regrasDinamicas.prazoReembolsoDiasUteis, fallback.regrasDinamicas.prazoReembolsoDiasUteis),
+      prazoRematriculaDias: asRuleValue(regrasDinamicas.prazoRematriculaDias, fallback.regrasDinamicas.prazoRematriculaDias),
+      percentualCancelamento: asRuleValue(regrasDinamicas.percentualCancelamento, fallback.regrasDinamicas.percentualCancelamento),
+      frequenciaEstagioObrigatoria: asRuleValue(regrasDinamicas.frequenciaEstagioObrigatoria, fallback.regrasDinamicas.frequenciaEstagioObrigatoria),
+      frequenciaTeoricaMinima: asRuleValue(regrasDinamicas.frequenciaTeoricaMinima, fallback.regrasDinamicas.frequenciaTeoricaMinima),
+      cargaSaudeColetiva: asString(regrasDinamicas.cargaSaudeColetiva, fallback.regrasDinamicas.cargaSaudeColetiva),
+      honorariosCobrancaPercentual: asRuleValue(regrasDinamicas.honorariosCobrancaPercentual, fallback.regrasDinamicas.honorariosCobrancaPercentual),
+      multaBibliotecaDia: asString(regrasDinamicas.multaBibliotecaDia, fallback.regrasDinamicas.multaBibliotecaDia),
+    },
+    sourceDocument: sourceDocument
+      ? {
+        filename: asString(sourceDocument.filename),
+        sha256: asString(sourceDocument.sha256),
+        sourceDocxSha256: asString(sourceDocument.sourceDocxSha256) || undefined,
+      }
+      : fallback.sourceDocument,
     marcaDagua: {
       habilitada: marcaDagua.habilitada !== false,
       intensidade: marcaDagua.intensidade === 'MEDIA' ? 'MEDIA' : 'SUAVE',
