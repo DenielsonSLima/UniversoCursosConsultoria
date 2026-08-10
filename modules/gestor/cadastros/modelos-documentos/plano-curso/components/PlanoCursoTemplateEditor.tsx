@@ -105,7 +105,7 @@ const PreviewPage = ({
       <DocumentHeader company={company || undefined} orientation="portrait" />
       <div className="mb-5 text-center">
         <h5 className="text-[22px] font-black uppercase tracking-[0.08em] text-[#001a33]">
-          {draft.titulo}{continuation ? ' — continuação' : ''}
+          {draft.titulo}
         </h5>
         <p className="mt-1 text-[11px] font-bold uppercase tracking-widest text-slate-500">
           {draft.subtitulo
@@ -145,7 +145,7 @@ const PreviewPage = ({
 
       {continuation && draft.exibirAssinaturaDocente ? (
         <div className="mt-14 text-center text-[12px] font-bold text-[#001a33]">
-          <p>Japoatã, 8 de agosto de 2026.</p>
+          <p className="text-left">Japoatã, 8 de agosto de 2026.</p>
           <div className="mx-auto mt-9 w-[390px] border-t border-slate-700 pt-2 uppercase tracking-wider">
             {draft.rotulos.assinaturaDocente}
           </div>

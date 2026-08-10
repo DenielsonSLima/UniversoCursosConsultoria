@@ -22,6 +22,17 @@ export interface ProfessorPolo {
   estado?: string | null;
   cnpj?: string | null;
   is_matriz?: boolean;
+  logo_url?: string | null;
+  endereco?: string | null;
+  numero?: string | null;
+  complemento?: string | null;
+  bairro?: string | null;
+  cep?: string | null;
+  telefone?: string | null;
+  watermark_url?: string | null;
+  watermark_opacity?: number | null;
+  watermark_scale?: number | null;
+  watermark_rotate?: boolean | null;
 }
 
 interface MenuItem {

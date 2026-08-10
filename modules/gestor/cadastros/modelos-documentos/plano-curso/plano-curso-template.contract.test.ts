@@ -59,6 +59,9 @@ Deno.test('prévia do modelo preserva cabeçalho, marca e assinatura em camadas'
   assert.match(editor, /PreviewWatermark/);
   assert.match(editor, /exibirMarcaDagua/);
   assert.match(editor, /exibirAssinaturaDocente/);
+  assert.match(editor, /className="text-left">Japoatã, 8 de agosto de 2026\.<\/p>/);
+  assert.match(editor, /className="mx-auto mt-9 w-\[390px\] border-t/);
+  assert(!editor.includes('— continuação'));
   assert(!editor.includes('html2canvas'));
   assert(!editor.includes('canvas'));
 });

@@ -2,6 +2,23 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [2.3.0-beta.4] - 2026-08-10
+
+### Corrigido
+
+- O editor do Plano de Curso do professor passa a dividir o conteúdo em folhas A4 independentes, mantendo a marca-d’água institucional completa em cada página.
+- A barra de estado e ações deixa de acompanhar a rolagem e volta a permanecer no fluxo normal da tela.
+- Local e data ficam alinhados à esquerda na prévia do modelo e no PDF oficial.
+
+### Alterado
+
+- Aulas planejadas na mesma data são reunidas em uma única entrada diária, sem separação entre manhã e tarde, e o texto salvo continua associado a todas as aulas canônicas do dia.
+- O cabeçalho e a marca configurados para a unidade passam a ser repetidos nas páginas do editor do professor.
+
+### Qualidade
+
+- Foram aprovados 22 testes focados, ESLint, TypeScript, build de produção e verificação do manifesto publicado.
+
 ## [2.3.0-beta.3] - 2026-08-09
 
 ### Corrigido

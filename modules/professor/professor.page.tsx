@@ -131,7 +131,25 @@ const ProfessorPage: React.FC = () => {
 
       const { data, error } = await supabase
         .from('polos')
-        .select('id, nome, cnpj, cidade, estado, is_matriz')
+        .select(`
+          id,
+          nome,
+          cnpj,
+          cidade,
+          estado,
+          is_matriz,
+          logo_url,
+          endereco,
+          numero,
+          complemento,
+          bairro,
+          cep,
+          telefone,
+          watermark_url,
+          watermark_opacity,
+          watermark_scale,
+          watermark_rotate
+        `)
         .in('id', professorPoloIds)
         .eq('status', 'ativo')
         .order('nome', { ascending: true });
@@ -269,6 +287,7 @@ const ProfessorPage: React.FC = () => {
             key={`${professorId}-${currentPoloId || 'sem-polo'}`}
             professorId={professorId}
             poloId={currentPoloId || ''}
+            polo={currentPolo}
           />
         );
       case 'financeiro':
