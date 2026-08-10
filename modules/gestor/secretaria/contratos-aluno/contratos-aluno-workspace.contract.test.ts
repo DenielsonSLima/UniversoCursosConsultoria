@@ -82,3 +82,58 @@ test('editor do contrato respeita cabeçalho vazio e não repete a identidade in
   assert.match(service, /normalizeContractSectionHeader/);
   assert.doesNotMatch(documentHeader, /showLegalName|resolvedRazao/);
 });
+
+test('prévia estrutural reaproveita a última página para assinaturas quando houver espaço', async () => {
+  const canvas = await readFile(
+    new URL('../../cadastros/modelos-documentos/contrato-aluno/components/ContratoAlunoCanvas.tsx', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(canvas, /completeLastPageBodyLineLimit = 38/u);
+  assert.match(canvas, /isCompleteMinuta \? 125 : 90/u);
+  assert.match(canvas, /estimateBodyLines\(lastPage\.body\) <= completeLastPageBodyLineLimit/u);
+  assert.match(canvas, /lastPage\.footer = normalizedFooter/u);
+  assert.match(canvas, /if \(!closingFitsLastPage\)/u);
+  assert.match(canvas, /text-\[10\.5px\] leading-\[1\.45\]/u);
+});
+
+test('confirmação de ativação ocupa a viewport inteira por portal', async () => {
+  const editor = await readFile(
+    new URL('../../cadastros/modelos-documentos/contrato-aluno/components/ContratoAlunoTemplateEditor.tsx', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(editor, /import \{ createPortal \} from 'react-dom'/u);
+  assert.match(editor, /createPortal\(\(/u);
+  assert.match(editor, /fixed inset-0 z-\[9999\]/u);
+  assert.match(editor, /min-h-\[100dvh\] w-screen/u);
+  assert.match(editor, /document\.body/u);
+});
+
+test('minuta compacta remove subtítulo e filete vermelho sem afetar versões históricas', async () => {
+  const [renderer, pdf] = await Promise.all([
+    readFile(new URL('./components/ContratoAlunoDocumentRenderer.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('./contratos-aluno.pdf.ts', import.meta.url), 'utf8'),
+  ]);
+
+  assert.match(renderer, /!isCompleteMinutaPresentation && pageIndex === 0 && sectionHeader/u);
+  assert.match(renderer, /!isCompleteMinutaPresentation && \(isLegacyPresentation \|\| pageIndex === 0\)/u);
+  assert.match(renderer, /text-\[11px\] leading-\[1\.25\]/u);
+  assert.match(pdf, /V3_CONTINUATION_BODY_START = 60/u);
+  assert.match(pdf, /CONTRACT_V3_BODY_FONT_SIZE = 8\.5/u);
+  assert.match(pdf, /CONTRACT_V3_BODY_LINE_HEIGHT_FACTOR = 1\.22/u);
+  assert.match(pdf, /sectionHeader && isFirstPage && presentationMode !== "V3"/u);
+  assert.match(pdf, /shouldDrawAccent = presentationMode !== "V3"/u);
+});
+
+test('PDF vetorial numera todas as páginas dentro de cada contrato', async () => {
+  const pdf = await readFile(
+    new URL('./contratos-aluno.pdf.ts', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(pdf, /const drawContractPageNumber =/u);
+  assert.match(pdf, /`Página \$\{currentPage\} de \$\{totalPages\}`/u);
+  assert.match(pdf, /drawContractPageNumber\(pdf, currentPage, totalPages\)/u);
+  assert.match(pdf, /visualPageIndex \+ 1,\s*visual\.pages\.length,/u);
+});

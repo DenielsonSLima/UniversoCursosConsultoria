@@ -10,6 +10,33 @@ export const formatCurrencyBRL = (value: number) => new Intl.NumberFormat('pt-BR
   currency: 'BRL',
 }).format(value);
 
+export const parseCurrencyBRLInput = (value: string) => {
+  const digits = value.replace(/\D/g, '');
+  if (!digits) return 0;
+
+  const amount = Number(digits) / 100;
+  return Number.isFinite(amount) ? Number(amount.toFixed(2)) : 0;
+};
+
+export const addMonthsToISODate = (isoDate: string, months: number) => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
+  if (!match || !Number.isInteger(months)) return '';
+
+  const year = Number(match[1]);
+  const monthIndex = Number(match[2]) - 1;
+  const day = Number(match[3]);
+  const sourceLastDay = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
+  if (monthIndex < 0 || monthIndex > 11 || day < 1 || day > sourceLastDay) return '';
+
+  const absoluteMonth = year * 12 + monthIndex + months;
+  const targetYear = Math.floor(absoluteMonth / 12);
+  const targetMonthIndex = ((absoluteMonth % 12) + 12) % 12;
+  const targetLastDay = new Date(Date.UTC(targetYear, targetMonthIndex + 1, 0)).getUTCDate();
+  const targetDay = Math.min(day, targetLastDay);
+
+  return `${String(targetYear).padStart(4, '0')}-${String(targetMonthIndex + 1).padStart(2, '0')}-${String(targetDay).padStart(2, '0')}`;
+};
+
 const getCourseAcronym = (name: string) => {
   if (name.includes('Enfermagem')) return 'ENF';
   if (name.includes('Radiologia')) return 'RAD';

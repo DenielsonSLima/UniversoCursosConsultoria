@@ -15,7 +15,9 @@ test('Professor usa apenas RPCs seguras e mantém conclusão no backend', async 
   assert.match(service, /salvar_plano_curso_professor_secure/);
   assert.match(service, /concluir_plano_curso_professor_secure/);
   assert.doesNotMatch(service, /\.from\(['"]planos_curso['"]\)/);
-  assert.match(page, /conteudosAulas:[\s\S]*\.filter\(\(item\) => item\.conteudo\.length > 0\)/);
+  assert.match(page, /conteudosAulas: expandPlanoCursoConteudosByDay/);
+  assert.match(page, /groupPlanoCursoAulasByDay/);
+  assert.match(page, /Aulas do mesmo dia aparecem reunidas/);
   assert.doesNotMatch(page, /PlanoCursoPdfPreview/);
   assert.doesNotMatch(page, /preparar_plano_curso_documento_secure/);
 });
@@ -75,6 +77,7 @@ test('PDF usa páginas do backend, ativos isolados, rótulos canônicos e assina
   assert.match(service, /getSignatureSignedUrl\(signature\.path\)/);
   assert.match(service, /assinatura: \{ \.\.\.signature, url: signedUrl \}/);
   assert.match(pdf, /documento\.rotulos\.assinaturaDocente/);
+  assert.match(pdf, /documento\.rotulos\.dataLocal[\s\S]*PAGE_MARGIN_X,[\s\S]*localDateY,[\s\S]*align: 'left'/);
   assert.match(pdf, /cabecalho\.logoUrl \?\? documento\.cabecalho\.logoDataUri/);
   assert.match(pdf, /marcaDagua\.url \?\? documento\.marcaDagua\.dataUri/);
   assert.match(pdf, /rotacionar \? 35 : 0/);

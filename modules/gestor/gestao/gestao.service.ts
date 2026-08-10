@@ -18,13 +18,17 @@ const TURMA_PAGE_SELECT = `
   aplicar_desconto_matricula, aplicar_multa_juros_matricula,
   aplicar_desconto_mensalidade, aplicar_multa_juros_mensalidade,
   aplicar_desconto_rematricula, aplicar_multa_juros_rematricula,
-  dia_vencimento_padrao, instrucao_boleto_carne,
+  dia_vencimento_padrao, primeiro_vencimento_padrao, instrucao_boleto_carne,
   origem_financeira, financeiro_herdado, gerar_cobrancas_futuras,
   sincronizar_asaas_futuro, obs_financeira_origem,
   cursos!inner(nome, modalidade),
   polos(nome, cnpj, cidade, estado),
   matriculas(status)
 `;
+
+export type CreateTurmaInput = Omit<Turma, 'id' | 'alunosMatriculados'> & {
+  codigoCondicaoIndividual?: string;
+};
 
 export const gestaoService = {
   async getTurmasPage(filters: TurmasPageFilters): Promise<TurmasPageResult> {
@@ -146,7 +150,7 @@ export const gestaoService = {
     return enrichTechnicalAcademicProgress((data || []).map(mapTurma));
   },
 
-  async createTurma(turma: Omit<Turma, 'id' | 'alunosMatriculados'>): Promise<Turma> {
+  async createTurma(turma: CreateTurmaInput, requestId?: string): Promise<Turma> {
     if (turma.modalidade !== 'EAD' && !turma.poloId) {
       throw new Error('Informe o polo da turma antes de abrir inscrições.');
     }
@@ -196,6 +200,7 @@ export const gestaoService = {
       juros_atraso: Number(turma.jurosAtraso ?? 0),
       multa_atraso: Number(turma.multaAtraso ?? 0),
       dia_vencimento_padrao: Number(turma.diaVencimentoPadrao || 10),
+      primeiro_vencimento_padrao: turma.primeiroVencimentoPadrao || turma.dataInicio || null,
       cronograma_financeiro: Array.isArray(turma.cronogramaFinanceiro) ? turma.cronogramaFinanceiro : [],
       vagas_totais: Number(turma.vagasTotais) || 40
       ,
@@ -217,6 +222,32 @@ export const gestaoService = {
         instrucao_boleto_carne: turma.instrucaoBoletoCarne?.trim(),
       } : {}),
     };
+
+    if (isTechnical) {
+      if (!turma.codigoCondicaoIndividual) {
+        throw new Error('Defina o código de autorização das condições individuais.');
+      }
+      const { data: secureResult, error: secureError } = await supabase.rpc(
+        'criar_turma_tecnica_com_codigo_condicao_secure',
+        {
+          p_request_id: requestId || crypto.randomUUID(),
+          p_turma: dbData,
+          p_codigo: turma.codigoCondicaoIndividual,
+        },
+      );
+      if (secureError) {
+        console.error('Erro ao criar turma técnica protegida:', secureError);
+        throw secureError;
+      }
+      const created = (secureResult as { turma?: any } | null)?.turma;
+      if (!created?.id) throw new Error('O banco não confirmou a criação da turma técnica.');
+      return mapTurma({
+        ...created,
+        cursos: { nome: turma.cursoNome, modalidade: 'TECNICO' },
+        polos: { nome: turma.poloNome },
+        matriculas: [],
+      });
+    }
 
     const { data, error } = await supabase
       .from('turmas')
@@ -277,6 +308,7 @@ export const gestaoService = {
       aplicarDescontoRematricula: data.aplicar_desconto_rematricula ?? false,
       aplicarMultaJurosRematricula: data.aplicar_multa_juros_rematricula ?? false,
       diaVencimentoPadrao: Number(data.dia_vencimento_padrao || 10),
+      primeiroVencimentoPadrao: data.primeiro_vencimento_padrao || '',
       instrucaoBoletoCarne: data.instrucao_boleto_carne || '',
       origemFinanceira: (data.origem_financeira === 'LEGADO' ? 'LEGADO' : 'NORMAL'),
       financeiroHerdado: data.financeiro_herdado || false,

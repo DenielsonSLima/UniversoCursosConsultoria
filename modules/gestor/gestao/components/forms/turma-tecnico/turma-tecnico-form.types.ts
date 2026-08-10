@@ -2,7 +2,7 @@ import type { Turno, Turma } from '../../../gestao.types';
 import type { TechnicalEnrollmentSettingsValue } from '../TechnicalEnrollmentSettings';
 import type { FinanceiroConfigData } from '../../../tecnicos/detalhes/components/financeiro/financeiro-config.service';
 
-export type TurmaTecnicoStepId = 'TURMA' | 'INSCRICOES' | 'FINANCEIRO' | 'REVISAO';
+export type TurmaTecnicoStepId = 'TURMA' | 'INSCRICOES' | 'FINANCEIRO' | 'AUTORIZACAO' | 'REVISAO';
 
 export interface TurmaTecnicoStep {
   id: TurmaTecnicoStepId;
@@ -30,6 +30,9 @@ export type TurmaTecnicoFormData = TechnicalEnrollmentSettingsValue
     poloId: string;
     dataInicio: string;
     dataPrevisaoTermino: string;
+    primeiroVencimentoPadrao: string;
+    codigoCondicaoIndividual: string;
+    confirmarCodigoCondicaoIndividual: string;
     turno: Turno;
     vagasTotais: number;
     frequenciaMinimaPercent: number;
@@ -45,7 +48,9 @@ export interface TurmaTecnicoIdentity {
   codigo: string;
 }
 
-export type TurmaTecnicoSubmission = Omit<Turma, 'id' | 'alunosMatriculados'>;
+export type TurmaTecnicoSubmission = Omit<Turma, 'id' | 'alunosMatriculados'> & {
+  codigoCondicaoIndividual: string;
+};
 
 export interface TurmaTecnicoFormProps {
   isOpen: boolean;

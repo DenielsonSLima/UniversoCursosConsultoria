@@ -34,6 +34,9 @@ const contractFixture = (): ContratoAlunoPreparedDocument => ({
       destaquesCriticos: [
         "O pagamento será realizado pelos meios institucionais de cobrança disponibilizados pela CONTRATADA",
       ],
+      destaquesAtencao: [
+        "É devido pelo CONTRATANTE no caso de pedido de desistência",
+      ],
     },
     snapshot: {
       curso: {
@@ -122,6 +125,8 @@ test("contrato preserva o texto e aplica hierarquia da minuta sem HTML ou raster
     "CLÁUSULA 6ª – Valor de matrícula: R$ 200,00; Quantidade prevista de parcelas: 24.",
     "",
     "PARÁGRAFO 1º - O pagamento será realizado pelos meios institucionais de cobrança disponibilizados pela CONTRATADA.",
+    "",
+    "I - É devido pelo CONTRATANTE no caso de pedido de desistência o percentual contratual aplicável.",
   ].join("\n");
   const runs = buildContractSemanticRuns(body, {
     snapshot: {
@@ -142,6 +147,7 @@ test("contrato preserva o texto e aplica hierarquia da minuta sem HTML ou raster
   assert.ok(runs.some((run) => run.accent && run.text.includes("R$ 200,00")));
   assert.ok(runs.some((run) => run.accent && run.text.includes("24")));
   assert.ok(runs.some((run) => run.accent && run.text.includes("O pagamento será realizado")));
+  assert.ok(runs.some((run) => run.attention && run.text.includes("É devido pelo CONTRATANTE")));
 });
 
 test("contrato preserva o compositor legado em snapshots anteriores à versão V2", async () => {
@@ -149,6 +155,10 @@ test("contrato preserva o compositor legado em snapshots anteriores à versão V
   assert.equal(resolveContractPresentationMode(null), "LEGACY");
   assert.equal(resolveContractPresentationMode("CONTRATO_A4_INSTITUCIONAL_V1"), "LEGACY");
   assert.equal(resolveContractPresentationMode("CONTRATO_A4_INSTITUCIONAL_V2"), "V2");
+  assert.equal(
+    resolveContractPresentationMode("CONTRATO_A4_INSTITUCIONAL_V3_MINUTA_COMPLETA"),
+    "V3",
+  );
   assert.throws(
     () => resolveContractPresentationMode("CONTRATO_A4_INSTITUCIONAL_V3_DESCONHECIDA"),
     /versão de apresentação.*não é suportada/i,
@@ -446,7 +456,7 @@ test("preview oficial recebe um Blob PDF nativo, sem conversor de página em can
   assert.match(contractPdf, /contrato-qr-\$\{document\.emissionId\}/);
   assert.match(contractPdf, /visualPageIndex === visual\.pages\.length - 1/);
   assert.match(contractPdf, /visualPageIndex === 0/);
-  assert.match(contractPdf, /const shouldDrawAccent = presentationMode === "LEGACY" \|\| isFirstPage/);
+  assert.match(contractPdf, /const shouldDrawAccent = presentationMode !== "V3"[\s\S]*?presentationMode === "LEGACY" \|\| isFirstPage/u);
   assert.match(contractPdf, /const hasClosing = isFinalPage/);
   assert.match(contractPdf, /drawContractClosing/);
   assert.match(contractPdf, /const CLOSING_TOP = 210/);

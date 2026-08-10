@@ -5,6 +5,7 @@ import { parseContratoAlunoClosingLayout } from '../../../../shared/contrato-alu
 import { normalizeContractSectionHeader } from '../../../../shared/contrato-aluno/section-header';
 import {
   buildContractSemanticRuns,
+  normalizeContractAttentionHighlights,
   normalizeContractCriticalHighlights,
 } from '../../../../shared/contrato-aluno/semantic-format';
 import {
@@ -87,6 +88,8 @@ const ContratoAlunoDocumentRenderer = ({ document }: ContratoAlunoDocumentRender
   const isLegacyPresentation = !presentationVersion
     || presentationVersion === 'CONTRATO_A4_INSTITUCIONAL_V1';
   const criticalHighlights = normalizeContractCriticalHighlights(template.destaquesCriticos);
+  const attentionHighlights = normalizeContractAttentionHighlights(template.destaquesAtencao);
+  const isCompleteMinutaPresentation = presentationVersion === 'CONTRATO_A4_INSTITUCIONAL_V3_MINUTA_COMPLETA';
 
   if (requiresQr && !document.validationCode) return <ContractPayloadUnavailable />;
 
@@ -103,8 +106,12 @@ const ContratoAlunoDocumentRenderer = ({ document }: ContratoAlunoDocumentRender
         ]);
         const showDocumentTitle = isLegacyPresentation || pageIndex === 0;
         const bodyRuns = buildContractSemanticRuns(page.body, {
-          snapshot,
+          snapshot: {
+            ...snapshot,
+            regras: canonicalAsRecord(template.regrasDinamicas),
+          },
           criticalHighlights,
+          attentionHighlights,
         });
 
         return (
@@ -140,18 +147,28 @@ const ContratoAlunoDocumentRenderer = ({ document }: ContratoAlunoDocumentRender
 
           <header className="relative z-10 text-center">
             <DocumentHeader polo={poloInfo} orientation="portrait" />
-            {sectionHeader && <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#001a33]">{sectionHeader}</p>}
-            {(isLegacyPresentation || pageIndex === 0) && (
+            {!isCompleteMinutaPresentation && pageIndex === 0 && sectionHeader && <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#001a33]">{sectionHeader}</p>}
+            {!isCompleteMinutaPresentation && (isLegacyPresentation || pageIndex === 0) && (
               <div className={`mx-auto h-0.5 w-20 bg-[#ed1c4e] ${sectionHeader ? 'mt-2.5' : ''}`} />
             )}
-            {showDocumentTitle && page.title && <h1 className="mt-4 text-[17px] font-black uppercase leading-6 text-[#001a33]">{page.title}</h1>}
+            {showDocumentTitle && page.title && <h1 className={`${isCompleteMinutaPresentation ? 'mt-2' : 'mt-4'} text-[17px] font-black uppercase leading-6 text-[#001a33]`}>{page.title}</h1>}
           </header>
 
-          <div className={`relative z-10 whitespace-pre-wrap break-words text-justify font-serif text-[10.5px] leading-[1.7] text-slate-800 ${showDocumentTitle ? 'mt-7' : 'mt-5'}`}>
+          <div className={`relative z-10 whitespace-pre-wrap break-words text-justify font-serif text-slate-800 ${isCompleteMinutaPresentation ? 'text-[11px] leading-[1.25]' : 'text-[10.5px] leading-[1.7]'} ${showDocumentTitle ? 'mt-7' : 'mt-5'}`}>
             {bodyRuns.map((run, runIndex) => (
               <span
                 key={`${document.emissionId}-${pageIndex}-trecho-${runIndex}`}
                 className={`${run.bold ? 'font-bold' : ''} ${run.accent ? 'text-[#ed1c4e]' : ''}`}
+                style={run.attention
+                  ? {
+                    backgroundColor: '#fff5f7',
+                    boxShadow: bodyRuns[runIndex - 1]?.attention
+                      ? undefined
+                      : 'inset 0.5mm 0 0 #ed1c4e',
+                    WebkitBoxDecorationBreak: 'clone',
+                    boxDecorationBreak: 'clone',
+                  }
+                  : undefined}
               >
                 {run.text}
               </span>

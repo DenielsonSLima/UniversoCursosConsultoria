@@ -7,6 +7,7 @@ import type {
   TurmaTecnicoIdentity,
   TurmaTecnicoPoloOption,
 } from './turma-tecnico-form.types';
+import { addMonthsToISODate } from './turma-tecnico-form.utils';
 
 interface TurmaTecnicoDadosStepProps {
   cursos: TurmaTecnicoCourseOption[];
@@ -92,11 +93,21 @@ const TurmaTecnicoDadosStep: React.FC<TurmaTecnicoDadosStepProps> = ({
       </label>
       <label className="space-y-2">
         <span className="flex items-center gap-2 text-xs font-bold uppercase text-slate-500"><CalendarDays size={14} /> Início</span>
-        <input type="date" className={inputClass} value={formData.dataInicio} onChange={(event) => onChange({ dataInicio: event.target.value })} />
+        <input
+          type="date"
+          className={inputClass}
+          value={formData.dataInicio}
+          onChange={(event) => onChange({
+            dataInicio: event.target.value,
+            dataPrevisaoTermino: addMonthsToISODate(event.target.value, 24),
+            primeiroVencimentoPadrao: event.target.value,
+          })}
+        />
       </label>
       <label className="space-y-2">
         <span className="flex items-center gap-2 text-xs font-bold uppercase text-slate-500"><CalendarDays size={14} /> Fim previsto</span>
         <input type="date" className={inputClass} value={formData.dataPrevisaoTermino} onChange={(event) => onChange({ dataPrevisaoTermino: event.target.value })} />
+        <span className="block text-[10px] font-medium leading-relaxed text-slate-400">Sugerido em 24 meses; você pode alterar.</span>
       </label>
       <label className="space-y-2">
         <span className="flex items-center gap-2 text-xs font-bold uppercase text-slate-500"><Users2 size={14} /> Vagas totais</span>

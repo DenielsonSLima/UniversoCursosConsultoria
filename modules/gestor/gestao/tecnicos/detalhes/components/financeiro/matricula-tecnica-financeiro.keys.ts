@@ -24,4 +24,7 @@ export const matriculaTecnicaFinanceiroKeys = {
       fingerprint,
     ] as const
   ),
+  conditionCodeStatus: (turmaId: string) => (
+    [...matriculaTecnicaFinanceiroKeys.turma(turmaId), 'condition-code-status'] as const
+  ),
 };

@@ -19,6 +19,7 @@ import {
   caixaDashboardQueryOptions,
   caixaCustosOperacionaisQueryOptions,
   caixaFinanciamentoResumoQueryOptions,
+  caixaPatrimonioResumoQueryOptions,
   caixaPolosQueryOptions,
   getCurrentCaixaCompetencia,
   shiftCaixaCompetencia,
@@ -37,6 +38,7 @@ import { CaixaReportLauncher } from './report/CaixaReportLauncher';
 import { CaixaReconciliationCard } from './components/CaixaReconciliationCard';
 import { CaixaFinanciamentoResumoCard } from './components/CaixaFinanciamentoResumoCard';
 import { CaixaCustosOperacionaisCard } from './components/CaixaCustosOperacionaisCard';
+import { CaixaPatrimonioResumoCard } from './components/CaixaPatrimonioResumoCard';
 
 interface CaixaPageProps {
   poloId?: string | null;
@@ -108,6 +110,15 @@ const CaixaPage: React.FC<CaixaPageProps> = ({
     isError: hasCustosOperacionaisError,
   } = useQuery({
     ...caixaCustosOperacionaisQueryOptions(selectedPolo, competencia),
+    enabled: Boolean(selectedPolo),
+  });
+
+  const {
+    data: patrimonioResumo,
+    isLoading: isPatrimonioLoading,
+    isError: hasPatrimonioError,
+  } = useQuery({
+    ...caixaPatrimonioResumoQueryOptions(selectedPolo, competencia),
     enabled: Boolean(selectedPolo),
   });
 
@@ -324,6 +335,12 @@ const CaixaPage: React.FC<CaixaPageProps> = ({
           ))}
         </div>
       </section>
+
+      <CaixaPatrimonioResumoCard
+        resumo={patrimonioResumo}
+        isLoading={isPatrimonioLoading}
+        hasError={hasPatrimonioError}
+      />
 
       <CaixaFinanciamentoResumoCard
         resumo={financiamentoResumo}

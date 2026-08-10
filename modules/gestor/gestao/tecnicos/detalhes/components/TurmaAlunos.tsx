@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Turma } from '../../../gestao.types';
 import ToastNotification, { useToast } from '../../../../parceiros/components/shared/ToastNotification';
 import { AcademicMovementType, AcademicStudent, academicLifecycleService } from '../academic-lifecycle.service';
-import ConfirmarMatriculaModal, { EnrollmentFinanceIntent } from './alunos/ConfirmarMatriculaModal';
+import ConfirmarMatriculaModal, { type EnrollmentFinanceSubmission } from './alunos/ConfirmarMatriculaModal';
 import ConfirmarVinculoAcademicoModal from './alunos/ConfirmarVinculoAcademicoModal';
 import MatricularAlunoModal from './alunos/MatricularAlunoModal';
 import MovimentacaoAlunoModal, { OperationMode, TransferType } from './alunos/MovimentacaoAlunoModal';
@@ -35,6 +35,7 @@ import {
   useMatriculaTecnicaFinanceiroWorkspace,
   usePreVinculoAlunoTecnicoContexto,
   usePreVincularAlunoTecnico,
+  useSalvarOverrideFinanceiroTecnico,
 } from './financeiro/hooks/useMatriculaTecnicaFinanceiro';
 import { useMatriculaTecnicaFinanceiroRealtime } from './financeiro/hooks/useMatriculaTecnicaFinanceiroRealtime';
 import { matriculaTecnicaFinanceiroKeys } from './financeiro/matricula-tecnica-financeiro.keys';
@@ -52,10 +53,8 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma, canManageFinanceiro = 
   const queryClient = useQueryClient();
   const [showMatricularModal, setShowMatricularModal] = useState(false);
   const [pendingEnrollment, setPendingEnrollment] = useState<any>(null);
-  const [enrollmentIntent, setEnrollmentIntent] = useState<EnrollmentFinanceIntent>('PENDENTE');
-  const [primeiroVencimento, setPrimeiroVencimento] = useState('');
-  const [ativarEm, setAtivarEm] = useState('');
   const preLinkRequestIds = useRef(new Map<string, string>());
+  const overrideRequestIds = useRef(new Map<string, string>());
   const activationRequestIds = useRef(new Map<string, string>());
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<AcademicStudent | null>(null);
@@ -128,6 +127,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma, canManageFinanceiro = 
   const destinationClasses = destinationClassesQuery.data || [];
   const invalidateAcademicData = useTurmaAcademicInvalidation(turma.id);
   const preLinkMutation = usePreVincularAlunoTecnico();
+  const saveOverrideMutation = useSalvarOverrideFinanceiroTecnico();
   const activateFinanceMutation = useAtivarFinanceiroMatriculaTecnica();
   const legacyEnrollMutation = useMutation({
     mutationFn: (alunoId: string) => academicLifecycleService.matricularAluno(turma.id, alunoId),
@@ -147,20 +147,14 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma, canManageFinanceiro = 
         return;
       }
     }
-    setEnrollmentIntent('PENDENTE');
-    setPrimeiroVencimento('');
-    setAtivarEm('');
     setShowMatricularModal(false);
     setPendingEnrollment(student);
   };
 
   const closeEnrollmentConfirmation = () => {
     setPendingEnrollment(null);
-    setEnrollmentIntent('PENDENTE');
-    setPrimeiroVencimento('');
-    setAtivarEm('');
   };
-  const confirmEnrollmentFinance = async () => {
+  const confirmEnrollmentFinance = async (submission?: EnrollmentFinanceSubmission) => {
     if (!pendingEnrollment) return;
     if (!requireTechnicalProfile) {
       try {
@@ -185,7 +179,13 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma, canManageFinanceiro = 
       toast.error('Regra não carregada', 'Recarregue o workspace financeiro oficial antes de confirmar.');
       return;
     }
-    const effectiveIntent = canManageFinanceiro ? enrollmentIntent : 'PENDENTE';
+    const effectiveIntent = canManageFinanceiro ? submission?.intent || 'PENDENTE' : 'PENDENTE';
+    const primeiroVencimento = canManageFinanceiro ? submission?.primeiroVencimento || '' : '';
+    const ativarEm = canManageFinanceiro ? submission?.ativarEm || '' : '';
+    if (canManageFinanceiro && !primeiroVencimento) {
+      toast.error('Vencimento obrigatório', 'Informe o primeiro vencimento desta matrícula.');
+      return;
+    }
     if (effectiveIntent === 'AGENDADA' && !ativarEm) {
       toast.error('Agendamento obrigatório', 'Informe quando a geração financeira deve ser executada.');
       return;
@@ -210,19 +210,56 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma, canManageFinanceiro = 
       preLinkConfirmed = true;
       await queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.alunos(turma.id) });
 
+      let effectiveMatricula = preLink.matricula;
+      if (submission?.override) {
+        if (!submission.codigoAutorizacao || !submission.motivo) {
+          throw new Error('A condição individual não possui autorização válida.');
+        }
+        const effectiveRule = effectiveMatricula.regraEfetiva;
+        const currentOverride = effectiveMatricula.override;
+        if (!effectiveRule || !currentOverride) {
+          throw new Error('O servidor não retornou a identidade financeira para aplicar a condição individual.');
+        }
+        const overrideKey = JSON.stringify({
+          matriculaId: effectiveMatricula.matriculaId,
+          override: submission.override,
+          motivo: submission.motivo,
+          justificativa: submission.justificativa,
+          expected: effectiveRule.identidade,
+        });
+        const overrideRequestId = overrideRequestIds.current.get(overrideKey)
+          || createFinanceiroRequestId();
+        overrideRequestIds.current.set(overrideKey, overrideRequestId);
+        const overrideResult = await saveOverrideMutation.mutateAsync({
+          turmaId: turma.id,
+          matriculaId: effectiveMatricula.matriculaId,
+          requestId: overrideRequestId,
+          expectedTurmaRevisao: effectiveRule.identidade.turmaRevisao,
+          expectedTurmaFingerprint: effectiveRule.identidade.turmaFingerprint,
+          expectedOverrideRevisao: currentOverride.identidade.revisao,
+          expectedOverrideFingerprint: currentOverride.identidade.fingerprint,
+          override: submission.override,
+          codigoAutorizacao: submission.codigoAutorizacao,
+          motivo: submission.motivo,
+          justificativa: submission.justificativa,
+        });
+        overrideRequestIds.current.delete(overrideKey);
+        effectiveMatricula = overrideResult.matricula;
+      }
+
       if (effectiveIntent !== 'PENDENTE') {
-        const effectiveRule = preLink.matricula.regraEfetiva;
-        const currentOverride = preLink.matricula.override;
+        const effectiveRule = effectiveMatricula.regraEfetiva;
+        const currentOverride = effectiveMatricula.override;
         if (!effectiveRule || !currentOverride) {
           throw new Error('O servidor não retornou a identidade financeira efetiva da matrícula.');
         }
-        const activationKey = `${preLink.matricula.matriculaId}:${effectiveIntent}:${ativarEm || 'AGORA'}:${preLink.regraAplicada.revisao}:${preLink.regraAplicada.fingerprint}`;
+        const activationKey = `${effectiveMatricula.matriculaId}:${effectiveIntent}:${ativarEm || 'AGORA'}:${effectiveRule.identidade.efetivaFingerprint}`;
         const currentActivationRequestId = activationRequestIds.current.get(activationKey)
           || createFinanceiroRequestId();
         activationRequestIds.current.set(activationKey, currentActivationRequestId);
         await activateFinanceMutation.mutateAsync({
           turmaId: turma.id,
-          matriculaId: preLink.matricula.matriculaId,
+          matriculaId: effectiveMatricula.matriculaId,
           modo: effectiveIntent,
           requestId: currentActivationRequestId,
           expectedTurmaRevisao: effectiveRule.identidade.turmaRevisao,
@@ -239,6 +276,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma, canManageFinanceiro = 
       setShowMatricularModal(false);
       setSearchTerm('');
       preLinkRequestIds.current.clear();
+      overrideRequestIds.current.clear();
       activationRequestIds.current.clear();
       closeEnrollmentConfirmation();
       if (effectiveIntent === 'PENDENTE') {
@@ -264,7 +302,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma, canManageFinanceiro = 
       if (isFinanceiroDateRejected(error)) {
         toast.warning(
           preLinkConfirmed ? 'Aluno vinculado; data não aceita' : 'Data não aceita pelo servidor',
-          'A data informada já venceu ou não é válida. O financeiro permanece pendente; corrija o campo ou deixe-o vazio para usar o próximo vencimento canônico.',
+          'A data informada já venceu ou não é válida. O financeiro permanece pendente; corrija o vencimento e tente novamente.',
         );
         return;
       }
@@ -382,7 +420,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma, canManageFinanceiro = 
         <MatricularAlunoModal
           searchTerm={searchTerm}
           loadingAvailable={availableStudentsQuery.isLoading}
-          enrollPending={preLinkMutation.isPending || activateFinanceMutation.isPending || legacyEnrollMutation.isPending}
+          enrollPending={preLinkMutation.isPending || saveOverrideMutation.isPending || activateFinanceMutation.isPending || legacyEnrollMutation.isPending}
           loadError={availableStudentsQuery.isError
             ? 'A busca de alunos falhou. Nenhuma matrícula pode ser iniciada com dados incompletos.'
             : null}
@@ -404,9 +442,6 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma, canManageFinanceiro = 
             ? enrollmentWorkspaceQuery.data?.regra
             : preVinculoContextoQuery.data?.regra}
           canManageFinanceiro={canManageFinanceiro}
-          intent={enrollmentIntent}
-          primeiroVencimento={primeiroVencimento}
-          ativarEm={ativarEm}
           loading={canManageFinanceiro
             ? enrollmentWorkspaceQuery.isLoading
             : preVinculoContextoQuery.isLoading}
@@ -416,16 +451,13 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma, canManageFinanceiro = 
           retrying={canManageFinanceiro
             ? enrollmentWorkspaceQuery.isFetching
             : preVinculoContextoQuery.isFetching}
-          isPending={preLinkMutation.isPending || activateFinanceMutation.isPending}
-          onIntentChange={setEnrollmentIntent}
-          onPrimeiroVencimentoChange={setPrimeiroVencimento}
-          onAtivarEmChange={setAtivarEm}
+          isPending={preLinkMutation.isPending || saveOverrideMutation.isPending || activateFinanceMutation.isPending}
           onRetry={() => {
             if (canManageFinanceiro) void enrollmentWorkspaceQuery.refetch();
             else void preVinculoContextoQuery.refetch();
           }}
           onClose={closeEnrollmentConfirmation}
-          onConfirm={() => { void confirmEnrollmentFinance(); }}
+          onConfirm={(submission) => { void confirmEnrollmentFinance(submission); }}
         />
       )}
 

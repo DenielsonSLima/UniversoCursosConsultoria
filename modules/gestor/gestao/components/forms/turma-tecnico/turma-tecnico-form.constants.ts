@@ -24,6 +24,12 @@ export const TURMA_TECNICO_STEPS: TurmaTecnicoStep[] = [
     description: 'Cobranças, parcelas, encargos e texto do boleto.',
   },
   {
+    id: 'AUTORIZACAO',
+    label: 'Autorização individual',
+    shortLabel: 'Autorização',
+    description: 'Código que protege bolsas, incentivos e valores especiais.',
+  },
+  {
     id: 'REVISAO',
     label: 'Regras e revisão',
     shortLabel: 'Revisão',
@@ -38,6 +44,9 @@ export const createInitialTurmaTecnicoFormData = (
   poloId: selectedPoloId || '',
   dataInicio: '',
   dataPrevisaoTermino: '',
+  primeiroVencimentoPadrao: '',
+  codigoCondicaoIndividual: '',
+  confirmarCodigoCondicaoIndividual: '',
   dataInicioInscricao: '',
   dataFimInscricao: '',
   publicarNoSite: false,

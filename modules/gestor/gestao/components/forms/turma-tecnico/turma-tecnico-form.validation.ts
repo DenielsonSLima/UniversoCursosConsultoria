@@ -39,16 +39,12 @@ export const validateTurmaTecnicoStep = (
     ) {
       return 'O fim das inscrições deve ser posterior ao início das inscrições.';
     }
-    if (
-      !Number.isInteger(formData.qtdVagasMinima)
-      || formData.qtdVagasMinima < 0
-      || formData.qtdVagasMinima > formData.vagasTotais
-    ) {
-      return 'O limite de alunos online deve ficar entre zero e o total de vagas.';
-    }
   }
 
   if (step === 'FINANCEIRO') {
+    if (!formData.primeiroVencimentoPadrao) {
+      return 'Informe o primeiro vencimento financeiro da turma.';
+    }
     if (!isFiniteNumber(formData.valorMatricula) || formData.valorMatricula < 0) {
       return 'O valor da matrícula não pode ser negativo.';
     }
@@ -85,6 +81,20 @@ export const validateTurmaTecnicoStep = (
     }
     if (formData.origemFinanceira === 'LEGADO' && formData.gerarCobrancasFuturas) {
       return 'Turmas com histórico financeiro anterior não podem gerar novas cobranças automaticamente.';
+    }
+  }
+
+  if (step === 'AUTORIZACAO') {
+    if (
+      formData.codigoCondicaoIndividual.length < 8
+      || formData.codigoCondicaoIndividual.length > 32
+      || !/[A-Za-z]/.test(formData.codigoCondicaoIndividual)
+      || !/[0-9]/.test(formData.codigoCondicaoIndividual)
+    ) {
+      return 'Crie um código de 8 a 32 caracteres, com pelo menos uma letra e um número.';
+    }
+    if (formData.codigoCondicaoIndividual !== formData.confirmarCodigoCondicaoIndividual) {
+      return 'A confirmação do código de autorização não confere.';
     }
   }
 

@@ -1,7 +1,7 @@
 import React, { lazy, Suspense } from 'react';
 import { Lock, RefreshCw, Settings, TriangleAlert } from 'lucide-react';
 import type { PortalAuthProfile } from '../../login/portal-session';
-import { canAccessTab, getEffectiveFinanceiroTabs } from '../access-control';
+import { canAccessGestorModule, canAccessTab, getEffectiveFinanceiroTabs } from '../access-control';
 import type { GestorPermissions } from '../access-control';
 import { POLO_CADASTROS_ALLOWED } from '../gestor-navigation';
 import type { ParceiroFormType } from '../parceiros/ParceirosPage';
@@ -214,7 +214,13 @@ const GestorModuleContentView: React.FC<GestorModuleContentProps> = ({
     case 'secretaria': return <SecretariaPage key={scopedPoloId || 'sem-polo'} poloId={scopedPoloId} gestorPermissions={permissions} />;
     case 'caixa': return <CaixaPage poloId={scopedPoloId} poloName={currentPoloName} isGlobal={isGlobal} isMatriz={isMatrizSelected} />;
     case 'financeiro': return <FinanceiroPage poloId={scopedPoloId} isMatriz={isMatrizSelected} allowedTabs={getEffectiveFinanceiroTabs(permissions)} />;
-    case 'patrimonio': return <PatrimonioPage poloId={scopedPoloId} />;
+    case 'patrimonio': return (
+      <PatrimonioPage
+        poloId={scopedPoloId}
+        isGlobal={isGlobal}
+        canManageProductTypes={isMatrizSelected && isGlobal && canAccessGestorModule(permissions, 'configuracoes')}
+      />
+    );
     case 'biblioteca': return <BibliotecaPage />;
     case 'comunicacao':
       if (canAccessTab(permissions, 'comunicacao', 'comunicacao-mensagem') || canAccessTab(permissions, 'comunicacao', 'comunicacao-whatsapp')) return <UnifiedCommunicationPage gestorProfile={profile} canAccessInternal={canAccessTab(permissions, 'comunicacao', 'comunicacao-mensagem')} canAccessWhatsApp={canAccessTab(permissions, 'comunicacao', 'comunicacao-whatsapp')} />;
@@ -259,7 +265,12 @@ const GestorModuleContentView: React.FC<GestorModuleContentProps> = ({
       if (!isMatrizSelected) {
         return <div className="animate-fadeIn rounded-[2rem] border border-amber-100 bg-white p-10 text-center shadow-sm"><div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-50 text-amber-600"><Settings size={26} /></div><h2 className="text-xl font-black uppercase tracking-tight text-[#001a33]">Configurações disponíveis apenas na matriz</h2><p className="mx-auto mt-2 max-w-xl text-sm font-medium text-slate-500">Troque para o polo matriz no seletor superior para alterar integrações, tokens e regras globais do sistema.</p></div>;
       }
-      return <ConfiguracoesPage />;
+      return (
+        <ConfiguracoesPage
+          poloId={currentPoloId}
+          canManageProductTypes={isGlobal && canAccessGestorModule(permissions, 'configuracoes')}
+        />
+      );
     default:
       if (activeModule.startsWith('cadastros-')) {
         const submodule = activeModule.split('-')[1];
