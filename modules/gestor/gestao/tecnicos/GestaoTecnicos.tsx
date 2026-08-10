@@ -1,7 +1,7 @@
 
 // File: modules/gestor/gestao/tecnicos/GestaoTecnicos.tsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Briefcase, Archive, Activity, Megaphone } from 'lucide-react';
 import TurmaCard from '../components/TurmaCard';
@@ -34,6 +34,7 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId
   const [isDeleting, setIsDeleting] = useState(false);
   const { toasts, removeToast, toast } = useToast();
   const queryClient = useQueryClient();
+  const createRequestIds = useRef(new Map<string, string>());
 
   const list = useTurmasPaginadas('TECNICO', poloId);
   const cursosQuery = useGestaoCursos('TECNICO');
@@ -52,7 +53,11 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId
   }, [cursosQuery.error, toast]);
 
   const handleCreate = async (data: Parameters<typeof gestaoService.createTurma>[0]) => {
-    const turma = await gestaoService.createTurma(data);
+    const requestKey = JSON.stringify(data);
+    const requestId = createRequestIds.current.get(requestKey) || crypto.randomUUID();
+    createRequestIds.current.set(requestKey, requestId);
+    const turma = await gestaoService.createTurma(data, requestId);
+    createRequestIds.current.delete(requestKey);
     await Promise.all([
       invalidateSiteTickerQueries(queryClient),
       invalidateTechnicalLandingQueries(queryClient),
