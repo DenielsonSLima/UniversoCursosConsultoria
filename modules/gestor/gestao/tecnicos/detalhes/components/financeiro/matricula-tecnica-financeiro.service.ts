@@ -137,6 +137,8 @@ const requireRegra = (value: unknown): MatriculaTecnicaRegra => {
     || typeof value.continuidade.recorrente !== 'boolean'
     || !['APOS_REMATRICULA', 'ENCERRA_APOS_MENSALIDADES'].includes(String(value.continuidade.proximoCiclo))
     || value.continuidade.mensalidadesPorCiclo !== value.cobranca.mensalidade.quantidade
+    || !Number.isInteger(value.continuidade.maxCiclos)
+    || !Number.isInteger(value.continuidade.encerraAposCiclo)
     || value.revisao !== value.identidade.turmaRevisao
     || value.fingerprint !== value.identidade.turmaFingerprint
     || value.primeiroVencimentoSugerido !== value.vencimento.primeiroVencimentoSugerido
@@ -178,12 +180,14 @@ const requireRegra = (value: unknown): MatriculaTecnicaRegra => {
     matriculas !== (value.cobranca.matricula.habilitada ? 1 : 0)
     || mensalidades !== value.cobranca.mensalidade.quantidade
     || rematriculas !== (value.cobranca.rematricula.habilitada ? 1 : 0)
-    || value.continuidade.recorrente !== value.cobranca.rematricula.habilitada
+    || value.continuidade.recorrente !== false
     || value.continuidade.proximoCiclo !== (
       value.cobranca.rematricula.habilitada
         ? 'APOS_REMATRICULA'
         : 'ENCERRA_APOS_MENSALIDADES'
     )
+    || value.continuidade.maxCiclos !== (value.cobranca.rematricula.habilitada ? 2 : 1)
+    || value.continuidade.encerraAposCiclo !== value.continuidade.maxCiclos
   ) throw new Error('O cronograma não corresponde à cobrança canônica retornada.');
 
   return value as unknown as MatriculaTecnicaRegra;
@@ -378,6 +382,22 @@ const requireAlterarOverride = (value: unknown): AlterarOverrideFinanceiroTecnic
   return value as unknown as AlterarOverrideFinanceiroTecnicoResult;
 };
 
+const requireAlterarOverrideAutorizado = (value: unknown): AlterarOverrideFinanceiroTecnicoResult => {
+  if (isRecord(value) && value.operacao === 'AUTORIZACAO_NEGADA') {
+    const authorization = isRecord(value.autorizacao) ? value.autorizacao : null;
+    const reason = String(authorization?.motivo || 'INVALIDO');
+    const remaining = authorization?.tentativasRestantes;
+    if (reason === 'BLOQUEADO') {
+      throw new Error('Muitas tentativas de autorização. Aguarde o período de bloqueio.');
+    }
+    if (reason === 'NAO_CONFIGURADO') {
+      throw new Error('A turma não possui código de autorização configurado.');
+    }
+    throw new Error(`Código de autorização não aceito.${remaining == null ? '' : ` Restam ${Number(remaining)} tentativa(s).`}`);
+  }
+  return requireAlterarOverride(value);
+};
+
 const requireAtivacaoLote = (value: unknown): AtivarFinanceiroMatriculasTecnicasLoteResult => {
   if (
     !isRecord(value)
@@ -474,7 +494,7 @@ export const matriculaTecnicaFinanceiroService = {
 
   async salvarOverride(input: SalvarOverrideFinanceiroTecnicoInput) {
     const result = await unwrap(
-      supabase.rpc('salvar_override_financeiro_matricula_tecnica_secure', {
+      supabase.rpc('salvar_override_financeiro_matricula_tecnica_autorizado_secure', {
         p_matricula_id: input.matriculaId,
         p_request_id: input.requestId,
         p_expected_turma_revisao: input.expectedTurmaRevisao,
@@ -482,8 +502,11 @@ export const matriculaTecnicaFinanceiroService = {
         p_expected_override_revisao: input.expectedOverrideRevisao,
         p_expected_override_fingerprint: input.expectedOverrideFingerprint,
         p_override: input.override,
+        p_codigo: input.codigoAutorizacao,
+        p_motivo: input.motivo,
+        p_justificativa: input.justificativa || null,
       }),
-      requireAlterarOverride,
+      requireAlterarOverrideAutorizado,
     );
     if (
       result.operacao !== 'SALVAR_OVERRIDE_MATRICULA'
@@ -497,15 +520,18 @@ export const matriculaTecnicaFinanceiroService = {
 
   async removerOverride(input: RemoverOverrideFinanceiroTecnicoInput) {
     const result = await unwrap(
-      supabase.rpc('remover_override_financeiro_matricula_tecnica_secure', {
+      supabase.rpc('remover_override_financeiro_matricula_tecnica_autorizado_secure', {
         p_matricula_id: input.matriculaId,
         p_request_id: input.requestId,
         p_expected_turma_revisao: input.expectedTurmaRevisao,
         p_expected_turma_fingerprint: input.expectedTurmaFingerprint,
         p_expected_override_revisao: input.expectedOverrideRevisao,
         p_expected_override_fingerprint: input.expectedOverrideFingerprint,
+        p_codigo: input.codigoAutorizacao,
+        p_motivo: input.motivo,
+        p_justificativa: input.justificativa || null,
       }),
-      requireAlterarOverride,
+      requireAlterarOverrideAutorizado,
     );
     if (
       result.operacao !== 'REMOVER_OVERRIDE_MATRICULA'
