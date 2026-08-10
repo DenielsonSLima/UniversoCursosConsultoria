@@ -36,32 +36,10 @@ export const autoPaginateContractText = (
 ): ContratoAlunoTemplatePage[] => {
   const normalizedBody = normalizeContratoTemplateLineBreaks(corpoText);
   const normalizedFooter = normalizeContratoTemplateLineBreaks(footerText).trim();
-  const isCompleteMinuta = normalizedBody.length >= 20_000;
-  // A minuta completa usa composição mais compacta. Na folha final, 38 linhas
-  // deixam a área inferior livre para assinaturas e QR sem criar página vazia.
-  // A largura efetiva da minuta compacta comporta cerca de 125 caracteres
-  // por linha. O valor anterior (105) antecipava as quebras e deixava grandes
-  // áreas vazias em todas as folhas.
-  const charsPerLine = isCompleteMinuta ? 125 : 90;
-  const completeLastPageBodyLineLimit = 38;
-  const estimateBodyLines = (body: string) => body
-    .split(/\n+/)
-    .reduce((total, paragraph) => (
-      total + Math.max(1, Math.ceil(paragraph.length / charsPerLine)) + 1
-    ), 0);
-  const toPages = (bodyPages: string[]) => {
-    const pages = bodyPages.map((body) => ({ body, footer: null as string | null }));
-    if (!normalizedFooter) return pages;
-    const lastPage = pages[pages.length - 1];
-    const closingFitsLastPage = !isCompleteMinuta
-      || estimateBodyLines(lastPage.body) <= completeLastPageBodyLineLimit;
-
-    if (!closingFitsLastPage) {
-      return [...pages, { body: '', footer: normalizedFooter }];
-    }
-    lastPage.footer = normalizedFooter;
-    return pages;
-  };
+  const toPages = (bodyPages: string[]) => bodyPages.map((body, index) => ({
+    body,
+    footer: index === bodyPages.length - 1 ? normalizedFooter || null : null,
+  }));
 
   if (!normalizedBody.trim()) return toPages(['']);
 
@@ -77,15 +55,15 @@ export const autoPaginateContractText = (
   let currentPageParagraphs: string[] = [];
   let currentLines = 0;
 
+  // Em média 90 caracteres por linha em fonte serif 11px em A4
+  const CHARS_PER_LINE = 90;
+
   for (let i = 0; i < paragraphs.length; i++) {
     const para = paragraphs[i];
-    const paraLines = Math.max(1, Math.ceil(para.length / charsPerLine));
+    const paraLines = Math.max(1, Math.ceil(para.length / CHARS_PER_LINE));
     const isPageOne = pages.length === 0;
     // Página 1 possui cabeçalho + título (limite ~28 linhas); demais páginas (~34 linhas)
-    const isLastSourceParagraph = i === paragraphs.length - 1;
-    const pageLineLimit = isCompleteMinuta
-      ? isLastSourceParagraph && normalizedFooter ? completeLastPageBodyLineLimit : isPageOne ? 48 : 58
-      : isPageOne ? 28 : 34;
+    const pageLineLimit = isPageOne ? 28 : 34;
 
     if (currentLines > 0 && currentLines + paraLines > pageLineLimit) {
       pages.push(currentPageParagraphs.join('\n\n'));
@@ -109,7 +87,6 @@ interface ContratoAlunoCanvasProps {
   cabecalho: string;
   corpo: string;
   destaquesCriticos: string[];
-  destaquesAtencao: string[];
   rodape: string;
   observacaoEscopo: string;
   qr: ConfiguracaoQrContrato;
@@ -130,7 +107,6 @@ export const ContratoAlunoCanvas: React.FC<ContratoAlunoCanvasProps> = ({
   cabecalho,
   corpo,
   destaquesCriticos,
-  destaquesAtencao,
   rodape,
   qr,
   polo,
@@ -141,7 +117,6 @@ export const ContratoAlunoCanvas: React.FC<ContratoAlunoCanvasProps> = ({
   const [zoomScale, setZoomScale] = useState<number>(0.58);
   const pages = autoPaginateContractText(corpo, rodape);
   const totalPages = pages.length;
-  const isCompleteMinuta = normalizeContratoTemplateLineBreaks(corpo).length >= 20_000;
 
   const watermarkUrl =
     centralWatermark?.watermarkUrl ||
@@ -235,7 +210,6 @@ export const ContratoAlunoCanvas: React.FC<ContratoAlunoCanvasProps> = ({
           const closingLayout = parseContratoAlunoClosingLayout(pageText.footer);
           const bodyRuns = buildContractSemanticRuns(pageText.body, {
             criticalHighlights: destaquesCriticos,
-            attentionHighlights: destaquesAtencao,
           });
 
           return (
@@ -316,36 +290,24 @@ export const ContratoAlunoCanvas: React.FC<ContratoAlunoCanvasProps> = ({
                   {/* Document Title Header (shown on page 1) */}
                   {pageIndex === 0 && (
                     <div className="relative z-10 mt-6 mb-6 text-center">
-                      {!isCompleteMinuta && visibleSectionHeader && (
+                      {visibleSectionHeader && (
                         <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#001a33]">
                           {visibleSectionHeader}
                         </p>
                       )}
-                      {!isCompleteMinuta && (
-                        <div className={`mx-auto h-0.5 w-20 bg-[#ed1c4e] ${visibleSectionHeader ? 'mt-2.5' : ''}`} />
-                      )}
-                      <h1 className={`${isCompleteMinuta ? '' : 'mt-4'} text-xl font-black uppercase leading-tight tracking-tight text-[#001a33]`}>
+                      <div className={`mx-auto h-0.5 w-20 bg-[#ed1c4e] ${visibleSectionHeader ? 'mt-2.5' : ''}`} />
+                      <h1 className="mt-4 text-xl font-black uppercase leading-tight tracking-tight text-[#001a33]">
                         {tituloDocumento || 'CONTRATO DE PRESTAÇÃO DE SERVIÇOS EDUCACIONAIS'}
                       </h1>
                     </div>
                   )}
 
                   {/* Page Body Text Content */}
-                  <div className={`relative z-10 mt-6 mb-20 text-justify text-slate-800 font-serif whitespace-pre-wrap break-words ${isCompleteMinuta ? 'text-[10.5px] leading-[1.45]' : 'text-[11.5px] leading-[1.8]'}`}>
+                  <div className="relative z-10 mt-6 mb-20 text-justify text-[11.5px] leading-[1.8] text-slate-800 font-serif whitespace-pre-wrap break-words">
                     {bodyRuns.length > 0 ? bodyRuns.map((run, runIndex) => (
                       <span
                         key={`${pageIndex}-trecho-${runIndex}`}
                         className={`${run.bold ? 'font-bold' : ''} ${run.accent ? 'text-[#ed1c4e]' : ''}`}
-                        style={run.attention
-                          ? {
-                            backgroundColor: '#fff5f7',
-                            boxShadow: bodyRuns[runIndex - 1]?.attention
-                              ? undefined
-                              : 'inset 2px 0 0 #ed1c4e',
-                            WebkitBoxDecorationBreak: 'clone',
-                            boxDecorationBreak: 'clone',
-                          }
-                          : undefined}
                       >
                         {run.text}
                       </span>
