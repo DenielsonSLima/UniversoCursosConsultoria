@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -318,6 +319,21 @@ export const ContratoAlunoTemplateEditor = ({ modalidade }: ContratoAlunoTemplat
               <span className="mt-2 block text-xs font-medium text-rose-800/60">Títulos de cláusulas, parágrafos, ALUNO, CONTRATANTE, CONTRATADA e OBJETO ficam em negrito automaticamente.</span>
             </label>
 
+            <label className="block rounded-2xl border border-rose-100 bg-[#fff9fa] p-4">
+              <span className="mb-1 block text-[11px] font-black uppercase tracking-wider text-[#a30f36]">Blocos de atenção com realce discreto</span>
+              <span className="mb-3 block text-xs font-medium leading-relaxed text-rose-800/75">
+                Informe uma frase-âncora por linha. O parágrafo correspondente recebe somente fundo rosa quase branco e filete vermelho; o marcador amarelo da minuta não é reproduzido.
+              </span>
+              <textarea
+                value={draft.destaquesAtencao.join('\n')}
+                onChange={(event) => update('destaquesAtencao', event.target.value.split('\n'))}
+                rows={4}
+                aria-label="Âncoras dos blocos de atenção"
+                className="w-full resize-y rounded-xl border border-rose-200 bg-white px-4 py-3 text-sm leading-6 text-slate-700 outline-none transition focus:border-[#ed1c4e]"
+              />
+              <span className="mt-2 block text-xs font-medium text-rose-800/60">Use apenas os três blocos críticos aprovados da cláusula financeira.</span>
+            </label>
+
             <div className="grid gap-4 md:grid-cols-2">
               <label className="block">
                 <span className="mb-2 block text-[11px] font-black uppercase tracking-wider text-slate-600">Encerramento e assinaturas</span>
@@ -385,6 +401,7 @@ export const ContratoAlunoTemplateEditor = ({ modalidade }: ContratoAlunoTemplat
               cabecalho={draft.cabecalho}
               corpo={draft.corpo}
               destaquesCriticos={draft.destaquesCriticos}
+              destaquesAtencao={draft.destaquesAtencao}
               rodape={draft.rodape}
               observacaoEscopo={draft.observacaoEscopo}
               qr={draft.qr}
@@ -397,8 +414,8 @@ export const ContratoAlunoTemplateEditor = ({ modalidade }: ContratoAlunoTemplat
         )}
       </div>
 
-      {isActivationPromptOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#001a33]/55 p-4" role="dialog" aria-modal="true" aria-labelledby="confirmar-ativacao-contrato">
+      {isActivationPromptOpen && typeof document !== 'undefined' && createPortal((
+        <div className="fixed inset-0 z-[9999] flex min-h-[100dvh] w-screen items-center justify-center overflow-y-auto bg-[#001a33]/55 p-4" role="dialog" aria-modal="true" aria-labelledby="confirmar-ativacao-contrato">
           <div className="w-full max-w-lg rounded-[2rem] bg-white p-6 shadow-2xl">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-100 text-amber-800">
               <AlertTriangle size={22} />
@@ -420,7 +437,7 @@ export const ContratoAlunoTemplateEditor = ({ modalidade }: ContratoAlunoTemplat
             </div>
           </div>
         </div>
-      )}
+      ), document.body)}
     </div>
   );
 };
