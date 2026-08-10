@@ -12,13 +12,15 @@ import { gestaoQueryKeys } from '../../../gestao.query-keys';
 import { academicLifecycleService } from '../academic-lifecycle.service';
 import { invalidateTechnicalLandingQueries } from '../../../../../public/landing-pages/cursos-tecnicos/technicalLanding.keys';
 import { getInitialTechnicalStatus } from '../../technicalClassDates';
+import TechnicalConditionCodeSettings from './financeiro/TechnicalConditionCodeSettings';
 
 interface TurmaConfiguracoesProps {
   turma: Turma;
   onTurmaUpdated?: (turma: Turma) => void;
+  canManageFinanceiro?: boolean;
 }
 
-const TurmaConfiguracoes: React.FC<TurmaConfiguracoesProps> = ({ turma, onTurmaUpdated }) => {
+const TurmaConfiguracoes: React.FC<TurmaConfiguracoesProps> = ({ turma, onTurmaUpdated, canManageFinanceiro = false }) => {
   const { toasts, removeToast, toast } = useToast();
   const queryClient = useQueryClient();
   const [currentStatus, setCurrentStatus] = useState(turma.status);
@@ -40,8 +42,8 @@ const TurmaConfiguracoes: React.FC<TurmaConfiguracoesProps> = ({ turma, onTurmaU
     bloquearMatriculasAposCompletarVagas: turma.bloquearMatriculasAposCompletarVagas ?? true,
     origemFinanceira: turma.origemFinanceira || 'NORMAL',
     financeiroHerdado: turma.financeiroHerdado || false,
-    gerarCobrancasFuturas: turma.gerarCobrancasFuturas || false,
-    sincronizarAsaasFuturo: turma.sincronizarAsaasFuturo ?? false,
+    gerarCobrancasFuturas: true,
+    sincronizarAsaasFuturo: false,
   });
 
   useEffect(() => {
@@ -201,40 +203,11 @@ const TurmaConfiguracoes: React.FC<TurmaConfiguracoesProps> = ({ turma, onTurmaU
           ) : null}
         </div>
 
-        <div className="md:col-span-2 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 space-y-2">
-          <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700">Financeiro legado / histórico</p>
-          <label className="text-xs font-bold text-emerald-700 uppercase flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={form.origemFinanceira === 'LEGADO'}
-              onChange={(e) => setForm((current) => ({
-                ...current,
-                origemFinanceira: e.target.checked ? 'LEGADO' : 'NORMAL',
-                financeiroHerdado: e.target.checked || current.financeiroHerdado,
-              }))}
-              className="h-4 w-4 rounded border-emerald-300 text-emerald-600"
-            />
-            Turma com histórico financeiro anterior
-          </label>
-          <label className="text-xs font-bold text-emerald-700 uppercase flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={form.gerarCobrancasFuturas}
-              onChange={(e) => setForm((current) => ({ ...current, gerarCobrancasFuturas: e.target.checked }))}
-              className="h-4 w-4 rounded border-emerald-300 text-emerald-600"
-            />
-            Gerar cobranças futuras
-          </label>
-          <label className="text-xs font-bold text-emerald-700 uppercase flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={form.sincronizarAsaasFuturo}
-              onChange={(e) => setForm((current) => ({ ...current, sincronizarAsaasFuturo: e.target.checked }))}
-              className="h-4 w-4 rounded border-emerald-300 text-emerald-600"
-            />
-            Sincronizar futuras cobranças com o gateway configurado
-          </label>
-        </div>
+        {canManageFinanceiro ? (
+          <div className="md:col-span-2">
+            <TechnicalConditionCodeSettings turmaId={turma.id} />
+          </div>
+        ) : null}
 
         <div className="md:col-span-2">
           <TechnicalAcademicSettings
