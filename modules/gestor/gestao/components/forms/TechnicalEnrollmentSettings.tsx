@@ -1,5 +1,5 @@
 import React from 'react';
-import { CalendarClock, Eye, GraduationCap, Loader2, MegaphoneOff, MonitorPlay, School, Settings, Users2 } from 'lucide-react';
+import { CalendarClock, Eye, GraduationCap, Loader2, MegaphoneOff, MonitorPlay, School, Settings } from 'lucide-react';
 
 export interface TechnicalEnrollmentSettingsValue {
   publicarNoSite?: boolean;
@@ -180,22 +180,17 @@ const TechnicalEnrollmentSettings: React.FC<TechnicalEnrollmentSettingsProps> = 
               className="w-full rounded-xl border border-emerald-100 bg-white p-3 outline-none focus:border-emerald-500" />
           </div>
         </div>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <label className="flex items-center gap-2 text-xs font-bold uppercase text-emerald-700">
-              <Users2 size={14} /> Limite de alunos online
-            </label>
-            <input type="number" min="0" value={value.qtdVagasMinima}
-              onChange={(event) => onChange({ qtdVagasMinima: parseInt(event.target.value, 10) || 0 })}
-              className="w-full rounded-xl border border-emerald-100 bg-white p-3 outline-none focus:border-emerald-500" />
-          </div>
-          <div className="space-y-3 md:pt-7">
+        <div className="rounded-xl border border-emerald-100 bg-white/70 p-4">
+          <div className="space-y-3">
             <label className="flex items-center gap-2 text-xs font-bold uppercase text-emerald-700">
               <input type="checkbox" checked={value.bloquearMatriculasAposCompletarVagas}
                 onChange={(event) => onChange({ bloquearMatriculasAposCompletarVagas: event.target.checked })}
                 className="h-4 w-4 rounded border-emerald-300 text-emerald-600" />
               Fechar matrícula ao completar vagas
             </label>
+            <p className="text-[10px] font-medium leading-relaxed text-slate-500">
+              Usa automaticamente o total de vagas definido nos dados da turma.
+            </p>
             {showEnrollmentPaymentRule ? (
               <label className="flex items-center gap-2 text-xs font-bold uppercase text-emerald-700">
                 <Settings size={14} />
