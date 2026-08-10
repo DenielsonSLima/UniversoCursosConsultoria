@@ -50,6 +50,7 @@ export interface Turma {
   multaAtraso: number;
   multaAtrasoPercentual?: number;
   diaVencimentoPadrao?: number;
+  primeiroVencimentoPadrao?: string;
   instrucaoBoletoCarne?: string;
   origemFinanceira?: 'LEGADO' | 'NORMAL';
   financeiroHerdado?: boolean;
