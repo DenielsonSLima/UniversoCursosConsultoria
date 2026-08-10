@@ -1,7 +1,10 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
-import { getCaixaRealtimeInvalidationScopes } from './caixa.realtime';
+import {
+  getCaixaRealtimeInvalidationScopes,
+  getCaixaRealtimeInvalidationTarget,
+} from './caixa.realtime';
 import { caixaQueryKeys } from './caixa.service';
 import { caixaReportQueryKeys } from './report/caixa-report.service';
 
@@ -12,11 +15,13 @@ export const useCaixaRealtime = () => {
 
   useEffect(() => {
     let refreshTimer: ReturnType<typeof setTimeout> | undefined;
-    const pendingScopes = new Set<string>();
-    let requiresBroadInvalidation = false;
+    const pendingFinancialScopes = new Set<string>();
+    const pendingPatrimonioScopes = new Set<string>();
+    let requiresBroadFinancialInvalidation = false;
+    let requiresBroadPatrimonioInvalidation = false;
 
     const invalidatePendingScopes = (refetchType: 'active' | 'none') => {
-      if (requiresBroadInvalidation) {
+      if (requiresBroadFinancialInvalidation) {
         void queryClient.invalidateQueries({ queryKey: caixaQueryKeys.statements, refetchType });
         void queryClient.invalidateQueries({
           queryKey: caixaQueryKeys.financiamentoResumos,
@@ -28,7 +33,7 @@ export const useCaixaRealtime = () => {
         });
         void queryClient.invalidateQueries({ queryKey: caixaReportQueryKeys.monthly, refetchType });
       } else {
-        pendingScopes.forEach((scope) => {
+        pendingFinancialScopes.forEach((scope) => {
           void queryClient.invalidateQueries({
             queryKey: caixaQueryKeys.statementsForPolo(scope),
             refetchType,
@@ -48,8 +53,24 @@ export const useCaixaRealtime = () => {
         });
       }
 
-      pendingScopes.clear();
-      requiresBroadInvalidation = false;
+      if (requiresBroadPatrimonioInvalidation) {
+        void queryClient.invalidateQueries({
+          queryKey: caixaQueryKeys.patrimonioResumos,
+          refetchType,
+        });
+      } else {
+        pendingPatrimonioScopes.forEach((scope) => {
+          void queryClient.invalidateQueries({
+            queryKey: caixaQueryKeys.patrimonioResumosForPolo(scope),
+            refetchType,
+          });
+        });
+      }
+
+      pendingFinancialScopes.clear();
+      pendingPatrimonioScopes.clear();
+      requiresBroadFinancialInvalidation = false;
+      requiresBroadPatrimonioInvalidation = false;
     };
 
     const invalidatePolos = () => {
@@ -61,10 +82,17 @@ export const useCaixaRealtime = () => {
 
     const refresh = (payload: { new?: unknown }) => {
       const scopes = getCaixaRealtimeInvalidationScopes(payload);
-      if (scopes === null) {
-        requiresBroadInvalidation = true;
+      const target = getCaixaRealtimeInvalidationTarget(payload);
+      if (target === 'PATRIMONIO') {
+        if (scopes === null) {
+          requiresBroadPatrimonioInvalidation = true;
+        } else {
+          scopes.forEach((scope) => pendingPatrimonioScopes.add(scope));
+        }
+      } else if (scopes === null) {
+        requiresBroadFinancialInvalidation = true;
       } else {
-        scopes.forEach((scope) => pendingScopes.add(scope));
+        scopes.forEach((scope) => pendingFinancialScopes.add(scope));
       }
 
       if (refreshTimer) return;
