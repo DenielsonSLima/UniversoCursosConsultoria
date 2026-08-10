@@ -17,6 +17,7 @@ import { parseContratoAlunoClosingLayout } from "../../../shared/contrato-aluno/
 import { normalizeContractSectionHeader } from "../../../shared/contrato-aluno/section-header";
 import {
   buildContractSemanticRuns,
+  normalizeContractAttentionHighlights,
   normalizeContractCriticalHighlights,
   type ContractSemanticRun,
 } from "../../../shared/contrato-aluno/semantic-format";
@@ -32,9 +33,12 @@ const PAGE_LEFT = 18;
 const PAGE_RIGHT = 18;
 const PAGE_TOP = 15;
 const PAGE_BOTTOM = 16;
+const PAGE_NUMBER_Y = PAGE_HEIGHT - 7;
 const LEGACY_BODY_START = 60;
 const V2_BODY_START = 82;
 const V2_CONTINUATION_BODY_START = 62;
+const V3_BODY_START = 75;
+const V3_CONTINUATION_BODY_START = 60;
 /** Área exclusiva de encerramento: sobe as assinaturas sem invadir o corpo canônico. */
 const CLOSING_TOP = 210;
 const QR_SIZE = 17;
@@ -45,6 +49,7 @@ const V2_CONTRACT_TITLE_SIZE = 13;
 const CONTRACT_TITLE_LINE_HEIGHT = 1.12;
 const CONTRACT_PRESENTATION_LEGACY = "CONTRATO_A4_INSTITUCIONAL_V1";
 const CONTRACT_PRESENTATION_V2 = "CONTRATO_A4_INSTITUCIONAL_V2";
+const CONTRACT_PRESENTATION_V3 = "CONTRATO_A4_INSTITUCIONAL_V3_MINUTA_COMPLETA";
 
 type PdfGStateConstructor = new (parameters: { opacity: number }) => unknown;
 
@@ -60,6 +65,7 @@ interface ContractVisualDocument {
   presentationVersion: string;
   snapshot: Record<string, unknown>;
   criticalHighlights: string[];
+  attentionHighlights: string[];
   institution: {
     name: string;
     legalName: string;
@@ -91,7 +97,7 @@ interface ContractVisualDocument {
   };
 }
 
-export type ContractPresentationMode = "LEGACY" | "V2";
+export type ContractPresentationMode = "LEGACY" | "V2" | "V3";
 
 export const resolveContractPresentationMode = (
   presentationVersion: string | null | undefined,
@@ -100,6 +106,7 @@ export const resolveContractPresentationMode = (
     return "LEGACY";
   }
   if (presentationVersion === CONTRACT_PRESENTATION_V2) return "V2";
+  if (presentationVersion === CONTRACT_PRESENTATION_V3) return "V3";
   throw new Error(
     `A versão de apresentação do contrato não é suportada: ${presentationVersion}.`,
   );
@@ -222,18 +229,22 @@ const getContractBodyStart = (
   presentationMode: ContractPresentationMode,
   showTitle = true,
 ) => {
-  if (!showTitle && presentationMode === "V2") {
-    return V2_CONTINUATION_BODY_START;
+  if (!showTitle && presentationMode !== "LEGACY") {
+    return presentationMode === "V3"
+      ? V3_CONTINUATION_BODY_START
+      : V2_CONTINUATION_BODY_START;
   }
-  const titleSize = presentationMode === "V2"
+  const titleSize = presentationMode !== "LEGACY"
     ? V2_CONTRACT_TITLE_SIZE
     : LEGACY_CONTRACT_TITLE_SIZE;
-  const titleTop = presentationMode === "V2"
+  const titleTop = presentationMode !== "LEGACY"
     ? V2_CONTRACT_TITLE_TOP
     : LEGACY_CONTRACT_TITLE_TOP;
-  const bodyStart = presentationMode === "V2"
-    ? V2_BODY_START
-    : LEGACY_BODY_START;
+  const bodyStart = presentationMode === "V3"
+    ? V3_BODY_START
+    : presentationMode === "V2"
+      ? V2_BODY_START
+      : LEGACY_BODY_START;
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(titleSize);
   const titleLines = pdf.splitTextToSize(
@@ -458,8 +469,12 @@ const readContractVisualDocument = (
       institution.presentationVersion,
       institution.presentation_version,
     ),
-    snapshot,
+    snapshot: {
+      ...snapshot,
+      regras: canonicalAsRecord(template.regrasDinamicas),
+    },
     criticalHighlights: normalizeContractCriticalHighlights(template.destaquesCriticos),
+    attentionHighlights: normalizeContractAttentionHighlights(template.destaquesAtencao),
     institution: {
       name: canonicalText(institution.nome, institution.name),
       legalName: canonicalText(institution.razaoSocial, institution.legalName),
@@ -571,6 +586,7 @@ interface ContractPdfPiece {
   text: string;
   bold: boolean;
   accent: boolean;
+  attention: boolean;
   width: number;
 }
 
@@ -582,22 +598,49 @@ interface ContractPdfWord {
 interface ContractPdfLine {
   words: ContractPdfWord[];
   paragraphEnd: boolean;
+  attention: boolean;
 }
 
 interface ContractPdfBodyLayout {
   lines: ContractPdfLine[];
+  fontSize: number;
+  spaceWidth: number;
   lineHeight: number;
   height: number;
 }
 
 const CONTRACT_BODY_FONT_SIZE = 10.5;
 const CONTRACT_BODY_LINE_HEIGHT_FACTOR = 1.7;
+const CONTRACT_V3_BODY_FONT_SIZE = 8.5;
+const CONTRACT_V3_BODY_LINE_HEIGHT_FACTOR = 1.22;
 const CONTRACT_BODY_NORMAL_COLOR = [30, 41, 59] as const;
 const CONTRACT_BODY_ACCENT_COLOR = [237, 28, 78] as const;
+const CONTRACT_BODY_ATTENTION_COLOR = [255, 245, 247] as const;
+const CONTRACT_BODY_MIN_SPACE_WIDTH = 1.2;
+
+const getContractBodyTypography = (presentationMode: ContractPresentationMode) => (
+  presentationMode === "V3"
+    ? {
+      fontSize: CONTRACT_V3_BODY_FONT_SIZE,
+      lineHeightFactor: CONTRACT_V3_BODY_LINE_HEIGHT_FACTOR,
+    }
+    : {
+      fontSize: CONTRACT_BODY_FONT_SIZE,
+      lineHeightFactor: CONTRACT_BODY_LINE_HEIGHT_FACTOR,
+    }
+);
+
+const getContractPdfSpaceWidth = (
+  pdf: jsPDF,
+  presentationMode: ContractPresentationMode,
+) => presentationMode === "V3"
+  ? Math.max(pdf.getTextWidth(" "), CONTRACT_BODY_MIN_SPACE_WIDTH)
+  : pdf.getTextWidth(" ");
 
 const setContractPdfPieceStyle = (
   pdf: jsPDF,
   piece: Pick<ContractPdfPiece, "bold" | "accent">,
+  fontSize: number,
 ) => {
   pdf.setFont("times", piece.bold ? "bold" : "normal");
   if (piece.accent) {
@@ -605,21 +648,22 @@ const setContractPdfPieceStyle = (
   } else {
     pdf.setTextColor(...CONTRACT_BODY_NORMAL_COLOR);
   }
-  pdf.setFontSize(CONTRACT_BODY_FONT_SIZE);
+  pdf.setFontSize(fontSize);
 };
 
 const contractRunsToPdfWords = (
   pdf: jsPDF,
   runs: readonly ContractSemanticRun[],
+  fontSize: number,
 ) => {
   const tokens: Array<ContractPdfWord | "BREAK"> = [];
   let pieces: ContractPdfPiece[] = [];
   let pieceText = "";
-  let pieceStyle: Pick<ContractPdfPiece, "bold" | "accent"> | null = null;
+  let pieceStyle: Pick<ContractPdfPiece, "bold" | "accent" | "attention"> | null = null;
 
   const flushPiece = () => {
     if (!pieceText || !pieceStyle) return;
-    setContractPdfPieceStyle(pdf, pieceStyle);
+    setContractPdfPieceStyle(pdf, pieceStyle, fontSize);
     pieces.push({
       ...pieceStyle,
       text: pieceText,
@@ -651,11 +695,17 @@ const contractRunsToPdfWords = (
       }
       if (
         pieceStyle
-        && (pieceStyle.bold !== run.bold || pieceStyle.accent !== run.accent)
+        && (pieceStyle.bold !== run.bold
+          || pieceStyle.accent !== run.accent
+          || pieceStyle.attention !== run.attention)
       ) {
         flushPiece();
       }
-      pieceStyle = { bold: run.bold, accent: run.accent };
+      pieceStyle = {
+        bold: run.bold,
+        accent: run.accent,
+        attention: run.attention,
+      };
       pieceText += character;
     }
   });
@@ -667,22 +717,29 @@ const layoutContractSemanticBody = (
   pdf: jsPDF,
   body: string,
   visual: ContractVisualDocument,
+  presentationMode: ContractPresentationMode,
 ): ContractPdfBodyLayout => {
   const maxWidth = PAGE_WIDTH - PAGE_LEFT - PAGE_RIGHT;
+  const typography = getContractBodyTypography(presentationMode);
   const runs = buildContractSemanticRuns(normalizeCanonicalPdfText(body), {
     snapshot: visual.snapshot,
     criticalHighlights: visual.criticalHighlights,
+    attentionHighlights: visual.attentionHighlights,
   });
-  const tokens = contractRunsToPdfWords(pdf, runs);
+  const tokens = contractRunsToPdfWords(pdf, runs, typography.fontSize);
   pdf.setFont("times", "normal");
-  pdf.setFontSize(CONTRACT_BODY_FONT_SIZE);
-  const spaceWidth = pdf.getTextWidth(" ");
+  pdf.setFontSize(typography.fontSize);
+  const spaceWidth = getContractPdfSpaceWidth(pdf, presentationMode);
   const lines: ContractPdfLine[] = [];
   let words: ContractPdfWord[] = [];
   let width = 0;
 
   const flushLine = (paragraphEnd: boolean) => {
-    lines.push({ words, paragraphEnd });
+    lines.push({
+      words,
+      paragraphEnd,
+      attention: words.some((word) => word.pieces.some((piece) => piece.attention)),
+    });
     words = [];
     width = 0;
   };
@@ -701,10 +758,12 @@ const layoutContractSemanticBody = (
   });
   if (words.length || !lines.length) flushLine(true);
 
-  const lineHeight = CONTRACT_BODY_FONT_SIZE * 0.352778
-    * CONTRACT_BODY_LINE_HEIGHT_FACTOR;
+  const lineHeight = typography.fontSize * 0.352778
+    * typography.lineHeightFactor;
   return {
     lines,
+    fontSize: typography.fontSize,
+    spaceWidth,
     lineHeight,
     height: Math.max(lines.length, 1) * lineHeight,
   };
@@ -717,8 +776,8 @@ const drawContractSemanticBody = (
 ) => {
   const maxWidth = PAGE_WIDTH - PAGE_LEFT - PAGE_RIGHT;
   pdf.setFont("times", "normal");
-  pdf.setFontSize(CONTRACT_BODY_FONT_SIZE);
-  const normalSpaceWidth = pdf.getTextWidth(" ");
+  pdf.setFontSize(layout.fontSize);
+  const normalSpaceWidth = layout.spaceWidth;
 
   layout.lines.forEach((line, lineIndex) => {
     if (!line.words.length) return;
@@ -730,9 +789,28 @@ const drawContractSemanticBody = (
     let cursorX = PAGE_LEFT;
     const cursorY = startY + lineIndex * layout.lineHeight;
 
+    if (line.attention) {
+      pdf.setFillColor(...CONTRACT_BODY_ATTENTION_COLOR);
+      pdf.rect(
+        PAGE_LEFT - 1.3,
+        cursorY - 0.35,
+        maxWidth + 2.6,
+        layout.lineHeight,
+        "F",
+      );
+      pdf.setDrawColor(...CONTRACT_BODY_ACCENT_COLOR);
+      pdf.setLineWidth(0.45);
+      pdf.line(
+        PAGE_LEFT - 1.3,
+        cursorY - 0.35,
+        PAGE_LEFT - 1.3,
+        cursorY + layout.lineHeight - 0.35,
+      );
+    }
+
     line.words.forEach((word, wordIndex) => {
       word.pieces.forEach((piece) => {
-        setContractPdfPieceStyle(pdf, piece);
+        setContractPdfPieceStyle(pdf, piece, layout.fontSize);
         pdf.text(piece.text, cursorX, cursorY, { baseline: "top" });
         cursorX += piece.width;
       });
@@ -758,8 +836,13 @@ const assertContractPageFits = (
     showTitle,
   );
   let bodyHeight: number;
-  if (presentationMode === "V2") {
-    bodyHeight = layoutContractSemanticBody(pdf, page.body, visual).height;
+  if (presentationMode !== "LEGACY") {
+    bodyHeight = layoutContractSemanticBody(
+      pdf,
+      page.body,
+      visual,
+      presentationMode,
+    ).height;
   } else {
     pdf.setFont("times", "normal");
     pdf.setFontSize(CONTRACT_BODY_FONT_SIZE);
@@ -788,6 +871,27 @@ const assertContractPageFits = (
   }
 };
 
+const drawContractPageNumber = (
+  pdf: jsPDF,
+  currentPage: number,
+  totalPages: number,
+) => {
+  pdf.setFont("helvetica", "normal");
+  pdf.setTextColor(100, 116, 139);
+  pdf.setFontSize(7);
+  drawCanonicalPdfText(
+    pdf,
+    `Página ${currentPage} de ${totalPages}`,
+    PAGE_WIDTH / 2,
+    PAGE_NUMBER_Y,
+    {
+      align: "center",
+      maxWidth: PAGE_WIDTH - PAGE_LEFT - PAGE_RIGHT,
+      maxLines: 1,
+    },
+  );
+};
+
 const drawContractPage = (
   pdf: jsPDF,
   GState: PdfGStateConstructor,
@@ -799,6 +903,8 @@ const drawContractPage = (
   watermarkAsset: CanonicalPdfImage | null,
   isFirstPage: boolean,
   isFinalPage: boolean,
+  currentPage: number,
+  totalPages: number,
 ) => {
   const presentationMode = resolveContractPresentationMode(
     visual.presentationVersion,
@@ -828,7 +934,7 @@ const drawContractPage = (
   pdf.setFillColor(255, 255, 255);
   pdf.rect(0, 0, PAGE_WIDTH, PAGE_HEIGHT, "F");
 
-  if (presentationMode === "V2") {
+  if (presentationMode !== "LEGACY") {
     drawContractWatermark(
       pdf,
       GState,
@@ -840,7 +946,7 @@ const drawContractPage = (
       orientation: "portrait",
       alias: "contrato-logo-institucional",
     });
-    if (sectionHeader) {
+    if (sectionHeader && isFirstPage && presentationMode !== "V3") {
       pdf.setFont("helvetica", "bold");
       pdf.setTextColor(0, 26, 51);
       pdf.setFontSize(6.2);
@@ -859,20 +965,21 @@ const drawContractPage = (
     );
     drawContractInstitutionalHeaderLegacy(pdf, page, visual, logo);
   }
-  const shouldDrawAccent = presentationMode === "LEGACY" || isFirstPage;
+  const shouldDrawAccent = presentationMode !== "V3"
+    && (presentationMode === "LEGACY" || isFirstPage);
   if (shouldDrawAccent) {
     pdf.setDrawColor(237, 28, 78);
     pdf.setLineWidth(0.8);
-    const accentY = presentationMode === "V2" ? 65 : 45;
+    const accentY = presentationMode !== "LEGACY" ? 65 : 45;
     pdf.line(PAGE_WIDTH / 2 - 10, accentY, PAGE_WIDTH / 2 + 10, accentY);
   }
   if (showDocumentTitle) {
     pdf.setFont("helvetica", "bold");
     pdf.setTextColor(0, 26, 51);
-    const titleSize = presentationMode === "V2"
+    const titleSize = presentationMode !== "LEGACY"
       ? V2_CONTRACT_TITLE_SIZE
       : LEGACY_CONTRACT_TITLE_SIZE;
-    const titleTop = presentationMode === "V2"
+    const titleTop = presentationMode !== "LEGACY"
       ? V2_CONTRACT_TITLE_TOP
       : LEGACY_CONTRACT_TITLE_TOP;
     pdf.setFontSize(titleSize);
@@ -884,10 +991,10 @@ const drawContractPage = (
     });
   }
 
-  if (presentationMode === "V2") {
+  if (presentationMode !== "LEGACY") {
     drawContractSemanticBody(
       pdf,
-      layoutContractSemanticBody(pdf, page.body, visual),
+      layoutContractSemanticBody(pdf, page.body, visual, presentationMode),
       bodyStart,
     );
   } else {
@@ -903,6 +1010,8 @@ const drawContractPage = (
       lineHeightFactor: CONTRACT_BODY_LINE_HEIGHT_FACTOR,
     });
   }
+
+  drawContractPageNumber(pdf, currentPage, totalPages);
 
   if (!hasClosing) return;
 
@@ -1047,6 +1156,8 @@ export const createContratosAlunoPdf = async (
         watermarkAssets[documentIndex],
         visualPageIndex === 0,
         visualPageIndex === visual.pages.length - 1,
+        visualPageIndex + 1,
+        visual.pages.length,
       );
       pageIndex += 1;
     });
