@@ -5,7 +5,10 @@ import {
   caixaQueryKeys,
   type CaixaMonthlyStatement,
 } from './caixa.service';
-import { getCaixaRealtimeInvalidationScopes } from './caixa.realtime';
+import {
+  getCaixaRealtimeInvalidationScopes,
+  getCaixaRealtimeInvalidationTarget,
+} from './caixa.realtime';
 import {
   caixaReportQueryKey,
   caixaReportQueryKeys,
@@ -51,6 +54,27 @@ test('invalida somente o polo afetado e o consolidado', () => {
   assert.deepEqual(
     caixaReportQueryKeys.monthlyForPolo('polo-a'),
     ['caixa-report', 'monthly', 'polo-a'],
+  );
+});
+
+test('roteia eventos de patrimônio sem invalidar os contratos financeiros', () => {
+  assert.equal(
+    getCaixaRealtimeInvalidationTarget({
+      new: { source_table: 'patrimonios', polo_id: 'polo-a' },
+    }),
+    'PATRIMONIO',
+  );
+  assert.deepEqual(
+    getCaixaRealtimeInvalidationScopes({
+      new: { source_table: 'patrimonios', polo_id: 'polo-a' },
+    }),
+    ['polo-a', 'todos'],
+  );
+  assert.equal(
+    getCaixaRealtimeInvalidationTarget({
+      new: { source_table: 'contas_receber', polo_id: 'polo-a' },
+    }),
+    'FINANCEIRO',
   );
 });
 
