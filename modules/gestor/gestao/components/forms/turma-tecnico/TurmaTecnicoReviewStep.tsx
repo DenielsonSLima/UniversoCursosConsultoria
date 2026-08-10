@@ -29,7 +29,7 @@ const TurmaTecnicoReviewStep: React.FC<TurmaTecnicoReviewStepProps> = ({
 }) => (
   <section aria-labelledby="review-step-title" className="space-y-6">
     <div>
-      <p className="text-[10px] font-black uppercase tracking-[0.22em] text-indigo-600">Etapa 4</p>
+      <p className="text-[10px] font-black uppercase tracking-[0.22em] text-indigo-600">Etapa 5</p>
       <h4 id="review-step-title" className="mt-1 text-lg font-black uppercase tracking-tight text-[#001a33]">Regras acadêmicas e revisão</h4>
       <p className="mt-1 text-xs font-medium text-slate-500">Ajuste os critérios finais e confira a configuração antes de criar.</p>
     </div>
@@ -77,10 +77,15 @@ const TurmaTecnicoReviewStep: React.FC<TurmaTecnicoReviewStepProps> = ({
       <div className="flex items-center gap-2"><WalletCards size={17} className="text-blue-600" /><p className="text-xs font-black uppercase tracking-wide text-[#001a33]">Plano financeiro</p></div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-xl bg-white p-3"><p className="flex items-center gap-2 text-[9px] font-black uppercase text-slate-400"><ReceiptText size={12} /> Matrícula</p><p className="mt-1 text-sm font-black text-[#001a33]">{formData.cobrarMatricula ? formatCurrencyBRL(formData.valorMatricula) : 'Não gerar'}</p></div>
-        <div className="rounded-xl bg-white p-3"><p className="text-[9px] font-black uppercase text-slate-400">Mensalidades</p><p className="mt-1 text-sm font-black text-[#001a33]">{formData.qtdParcelas}x de {formatCurrencyBRL(formData.valorParcela)}</p></div>
+        <div className="rounded-xl bg-white p-3"><p className="text-[9px] font-black uppercase text-slate-400">Mensalidades por ciclo</p><p className="mt-1 text-sm font-black text-[#001a33]">{formData.qtdParcelas}x de {formatCurrencyBRL(formData.valorParcela)}</p></div>
         <div className="rounded-xl bg-white p-3"><p className="text-[9px] font-black uppercase text-slate-400">Rematrícula</p><p className="mt-1 text-sm font-black text-[#001a33]">{formData.cobrarRematricula ? formatCurrencyBRL(formData.valorRematricula) : 'Não cobrar'}</p></div>
-        <div className="rounded-xl bg-white p-3"><p className="text-[9px] font-black uppercase text-slate-400">Vencimento</p><p className="mt-1 text-sm font-black text-[#001a33]">Todo dia {String(formData.diaVencimentoPadrao).padStart(2, '0')}</p></div>
+        <div className="rounded-xl bg-white p-3"><p className="text-[9px] font-black uppercase text-slate-400">Primeiro vencimento</p><p className="mt-1 text-sm font-black text-[#001a33]">{formData.primeiroVencimentoPadrao || '—'}</p><p className="mt-1 text-[9px] font-semibold text-slate-400">Depois, todo dia {String(formData.diaVencimentoPadrao).padStart(2, '0')}</p></div>
       </div>
+      <p className="mt-3 rounded-xl border border-blue-100 bg-white px-3 py-2.5 text-[10px] font-semibold leading-relaxed text-blue-700">
+        {formData.cobrarRematricula
+          ? `Após a rematrícula paga, o segundo e último ciclo repete ${formData.qtdParcelas} mensalidades.`
+          : `Sem rematrícula, o plano termina após as ${formData.qtdParcelas} mensalidades deste ciclo.`}
+      </p>
       <div className="mt-3 grid gap-3 md:grid-cols-3">
         <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3"><p className="text-[9px] font-black uppercase text-emerald-700">Desconto</p><p className="mt-1 text-xs font-black text-emerald-800">{formatCurrencyBRL(formData.descontoPontualidade)}</p></div>
         <div className="rounded-xl border border-rose-100 bg-rose-50 p-3"><p className="text-[9px] font-black uppercase text-rose-600">Juros proporcional</p><p className="mt-1 text-xs font-black text-rose-700">{formData.jurosAtraso}% ao mês</p></div>
@@ -90,6 +95,11 @@ const TurmaTecnicoReviewStep: React.FC<TurmaTecnicoReviewStepProps> = ({
         <p className="flex items-center gap-2 text-[9px] font-black uppercase text-amber-700"><FileText size={12} /> Impresso no boleto e no carnê</p>
         <p className="mt-1 text-[11px] font-bold leading-relaxed text-amber-900">{formData.instrucaoBoletoCarne}</p>
       </div>
+    </div>
+
+    <div className="rounded-2xl border border-violet-100 bg-violet-50 p-4">
+      <p className="text-[10px] font-black uppercase tracking-wide text-violet-700">Condições individuais protegidas</p>
+      <p className="mt-1 text-xs font-semibold leading-relaxed text-violet-900">Um código de autorização foi definido para liberar bolsa, incentivo ou valor especial. O código não será exibido após a criação.</p>
     </div>
   </section>
 );
