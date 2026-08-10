@@ -88,6 +88,13 @@ export interface MatriculaTecnicaRegra {
     recorrente: boolean;
     proximoCiclo: 'APOS_REMATRICULA' | 'ENCERRA_APOS_MENSALIDADES';
     mensalidadesPorCiclo: number;
+    maxCiclos: number;
+    encerraAposCiclo: number;
+  };
+  curso?: {
+    totalCiclos: number;
+    totalMensalidades: number;
+    totalNominal: string;
   };
 }
 
@@ -250,7 +257,12 @@ export interface SalvarOverrideFinanceiroTecnicoInput {
   expectedOverrideRevisao: number;
   expectedOverrideFingerprint: string;
   override: MatriculaTecnicaOverrideInput;
+  codigoAutorizacao: string;
+  motivo: CondicaoIndividualMotivo;
+  justificativa?: string | null;
 }
+
+export type CondicaoIndividualMotivo = 'BOLSA' | 'CONVENIO' | 'INCENTIVO' | 'NEGOCIACAO' | 'OUTRO';
 
 export interface RemoverOverrideFinanceiroTecnicoInput extends Omit<
   SalvarOverrideFinanceiroTecnicoInput,
