@@ -86,6 +86,7 @@ export const mapTurma = (t: any): Turma => {
     aplicarDescontoRematricula: t.aplicar_desconto_rematricula ?? false,
     aplicarMultaJurosRematricula: t.aplicar_multa_juros_rematricula ?? false,
     diaVencimentoPadrao: Number(t.dia_vencimento_padrao || 10),
+    primeiroVencimentoPadrao: t.primeiro_vencimento_padrao || '',
     instrucaoBoletoCarne: t.instrucao_boleto_carne || '',
     origemFinanceira: t.origem_financeira === 'LEGADO' ? 'LEGADO' : 'NORMAL',
     financeiroHerdado: t.financeiro_herdado ?? false,
