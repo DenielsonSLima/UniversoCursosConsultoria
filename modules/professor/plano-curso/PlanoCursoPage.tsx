@@ -16,12 +16,22 @@ import {
 } from 'lucide-react';
 
 import ToastNotification, { useToast } from '../../gestor/parceiros/components/shared/ToastNotification';
+import DocumentHeader from '../../gestor/components/DocumentHeader';
+import ReportWatermark from '../../gestor/relatorios/components/ReportWatermark';
+import type { ProfessorPolo } from '../components/ProfessorShell';
 import {
   dirtyPlanoCursoEditorSession,
   emptyPlanoCursoEditorSession,
   hydratedPlanoCursoEditorSession,
   reconcilePlanoCursoEditorSession,
 } from './plano-curso-editor-session';
+import {
+  expandPlanoCursoConteudosByDay,
+  groupPlanoCursoAulasByDay,
+  paginatePlanoCursoDays,
+  PLANO_CURSO_DAYS_PER_PAGE,
+  type PlanoCursoDiaEditor,
+} from './plano-curso-day-editor';
 import {
   useConcludeProfessorPlanoCurso,
   useProfessorPlanoCursoWorkspace,
@@ -39,6 +49,7 @@ import type {
 interface PlanoCursoPageProps {
   professorId: string;
   poloId: string;
+  polo: ProfessorPolo | null;
 }
 
 interface SelectedAssignment {
@@ -91,6 +102,122 @@ const PlanoStatusBadge: React.FC<{ status: PlanoCursoStatus }> = ({ status }) =>
   );
 };
 
+const PlanoCursoPaper: React.FC<{
+  children: React.ReactNode;
+  pageNumber: number;
+  polo: ProfessorPolo | null;
+  totalPages: number;
+  workspace: PlanoCursoWorkspace;
+}> = ({ children, pageNumber, polo, totalPages, workspace }) => {
+  const institutionalPolo = polo || { nome: workspace.poloNome };
+
+  return (
+    <article
+      data-plano-curso-page={pageNumber}
+      aria-label={`Página ${pageNumber} de ${totalPages} do Plano de Curso`}
+      className="relative mx-auto min-h-[1123px] w-full max-w-5xl overflow-hidden rounded-sm border border-slate-200 bg-white shadow-2xl shadow-slate-950/10 sm:aspect-[210/297]"
+    >
+      <ReportWatermark polo={institutionalPolo} orientation="portrait" />
+      <div className="absolute inset-0 z-10">
+        <div className="h-2 bg-[#001a33]" />
+        <div className="px-5 pb-16 pt-7 sm:px-9 sm:pt-9 lg:px-12">
+          <DocumentHeader polo={institutionalPolo} orientation="portrait" />
+          <div className="mb-6 border-b border-slate-200 pb-6 text-center">
+            <h2 className="text-xl font-black uppercase tracking-[0.08em] text-[#001a33] sm:text-2xl">
+              Plano de Curso
+            </h2>
+            <p className="mt-1 text-xs font-bold uppercase tracking-wider text-slate-400">
+              {workspace.cursoNome} · {workspace.turmaNome}
+            </p>
+          </div>
+          {children}
+        </div>
+      </div>
+      <footer className="pointer-events-none absolute inset-x-5 bottom-5 z-20 flex items-center justify-between border-t border-slate-200/80 pt-2 text-[9px] font-bold uppercase tracking-widest text-slate-400 sm:inset-x-9 lg:inset-x-12">
+        <span>Plano de Curso</span>
+        <span>Página {pageNumber} de {totalPages}</span>
+      </footer>
+    </article>
+  );
+};
+
+const PlanoCursoDayEditorRow = React.memo(({
+  canEdit,
+  content,
+  day,
+  dayNumber,
+  isLegacyMerged,
+  isMutating,
+  onContentChange,
+}: {
+  canEdit: boolean;
+  content: string;
+  day: PlanoCursoDiaEditor;
+  dayNumber: number;
+  isLegacyMerged: boolean;
+  isMutating: boolean;
+  onContentChange: (dataAula: string, value: string) => void;
+}) => (
+  <div className="grid min-h-[205px] gap-4 px-4 py-5 lg:grid-cols-[240px_1fr] lg:px-5">
+    <div>
+      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-purple-700">
+        Dia letivo {String(dayNumber).padStart(2, '0')}
+      </p>
+      <p className="mt-1 text-base font-black text-[#001a33]">{day.dataExibicao}</p>
+      <div className="mt-3 space-y-1.5">
+        {day.titulos.map((titulo) => (
+          <p key={titulo} className="text-xs font-semibold leading-5 text-slate-600">{titulo}</p>
+        ))}
+      </div>
+      {day.aulaIds.length > 1 ? (
+        <p className="mt-3 inline-flex rounded-full bg-purple-50 px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-purple-700">
+          Aulas do dia reunidas
+        </p>
+      ) : null}
+    </div>
+    <div>
+      {canEdit ? (
+        <>
+          <label htmlFor={`conteudo-${day.dataAula}`} className="mb-2 block text-[11px] font-black uppercase tracking-wide text-slate-500">
+            Conteúdo programático do dia
+          </label>
+          <textarea
+            id={`conteudo-${day.dataAula}`}
+            value={content}
+            onChange={(event) => onContentChange(day.dataAula, event.target.value)}
+            disabled={isMutating}
+            rows={4}
+            maxLength={8_000}
+            placeholder="Descreva o conteúdo programático deste dia"
+            className="h-28 w-full resize-none rounded-lg border border-slate-300 bg-white/90 px-4 py-3 text-sm font-medium leading-6 text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-purple-500 focus:bg-white focus:ring-4 focus:ring-purple-50 disabled:cursor-not-allowed disabled:bg-slate-50"
+          />
+          <div className="mt-1.5 flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+            <p className={`text-[10px] font-semibold leading-4 ${isLegacyMerged ? 'text-amber-700' : 'text-slate-400'}`}>
+              {isLegacyMerged
+                ? 'Textos anteriores foram reunidos para leitura. Ao editar, o novo texto será aplicado ao dia inteiro.'
+                : 'Este texto vale para todas as aulas previstas nesta data.'}
+            </p>
+            <span className="shrink-0 text-[10px] font-bold text-slate-400">
+              {content.length.toLocaleString('pt-BR')}/8.000
+            </span>
+          </div>
+        </>
+      ) : (
+        <div>
+          <p className="mb-2 text-[11px] font-black uppercase tracking-wide text-slate-500">
+            Conteúdo programático do dia
+          </p>
+          <div className="min-h-24 whitespace-pre-wrap rounded-lg bg-slate-50/90 px-4 py-3 text-sm font-medium leading-6 text-slate-700">
+            {content || <span className="italic text-slate-400">Não informado.</span>}
+          </div>
+        </div>
+      )}
+    </div>
+  </div>
+));
+
+PlanoCursoDayEditorRow.displayName = 'PlanoCursoDayEditorRow';
+
 const PlanoListCard: React.FC<{
   plano: PlanoCursoProfessorResumo;
   onOpen: () => void;
@@ -131,13 +258,14 @@ const PlanoListCard: React.FC<{
   </article>
 );
 
-const PlanoCursoPage: React.FC<PlanoCursoPageProps> = ({ professorId, poloId }) => {
+const PlanoCursoPage: React.FC<PlanoCursoPageProps> = ({ professorId, poloId, polo }) => {
   const { toasts, removeToast, toast } = useToast();
   const [selected, setSelected] = useState<SelectedAssignment | null>(null);
   const [objetivosText, setObjetivosText] = useState('');
   const [criteriosText, setCriteriosText] = useState('');
   const [insumosText, setInsumosText] = useState('');
-  const [conteudos, setConteudos] = useState<Record<string, string>>({});
+  const [conteudosPorDia, setConteudosPorDia] = useState<Record<string, string>>({});
+  const [diasConteudoEditados, setDiasConteudoEditados] = useState<Set<string>>(() => new Set());
   const [editorBaseRevision, setEditorBaseRevision] = useState<number | null>(null);
   const [isEditorDirty, setIsEditorDirty] = useState(false);
   const [hasRemoteConflict, setHasRemoteConflict] = useState(false);
@@ -165,11 +293,30 @@ const PlanoCursoPage: React.FC<PlanoCursoPageProps> = ({ professorId, poloId }) 
 
   const workspace = workspaceQuery.data || null;
   const isMutating = saveMutation.isPending || concludeMutation.isPending;
+  const diasEditor = useMemo(
+    () => groupPlanoCursoAulasByDay(workspace?.aulas || []),
+    [workspace?.aulas],
+  );
+  const diasPaginas = useMemo(
+    () => paginatePlanoCursoDays(diasEditor),
+    [diasEditor],
+  );
+  const totalEditorPages = 1 + diasPaginas.length;
 
   const markEditorDirty = useCallback(() => {
     editorSessionRef.current = dirtyPlanoCursoEditorSession(editorSessionRef.current);
     setIsEditorDirty(true);
   }, []);
+
+  const handleDayContentChange = useCallback((dataAula: string, value: string) => {
+    setConteudosPorDia((current) => ({ ...current, [dataAula]: value }));
+    setDiasConteudoEditados((current) => {
+      const next = new Set(current);
+      next.add(dataAula);
+      return next;
+    });
+    markEditorDirty();
+  }, [markEditorDirty]);
 
   const hydrateEditor = useCallback((current: PlanoCursoWorkspace) => {
     editorSessionRef.current = hydratedPlanoCursoEditorSession(
@@ -182,9 +329,10 @@ const PlanoCursoPage: React.FC<PlanoCursoPageProps> = ({ professorId, poloId }) 
     setObjetivosText(current.objetivos.join('\n'));
     setCriteriosText(current.criteriosAvaliacao.join('\n'));
     setInsumosText(current.insumosRecursos.join('\n'));
-    setConteudos(Object.fromEntries(
-      current.aulas.map((aula) => [aula.aulaId, aula.conteudo]),
+    setConteudosPorDia(Object.fromEntries(
+      groupPlanoCursoAulasByDay(current.aulas).map((dia) => [dia.dataAula, dia.conteudo]),
     ));
+    setDiasConteudoEditados(new Set());
   }, []);
 
   useEffect(() => {
@@ -221,12 +369,11 @@ const PlanoCursoPage: React.FC<PlanoCursoPageProps> = ({ professorId, poloId }) 
     objetivos: linesToItems(objetivosText),
     criteriosAvaliacao: linesToItems(criteriosText),
     insumosRecursos: linesToItems(insumosText),
-    conteudosAulas: current.aulas
-      .map((aula) => ({
-        aulaId: aula.aulaId,
-        conteudo: conteudos[aula.aulaId]?.trim() || '',
-      }))
-      .filter((item) => item.conteudo.length > 0),
+    conteudosAulas: expandPlanoCursoConteudosByDay(
+      current.aulas,
+      conteudosPorDia,
+      diasConteudoEditados,
+    ),
   });
 
   const reconcileMutationFailure = async () => {
@@ -249,6 +396,19 @@ const PlanoCursoPage: React.FC<PlanoCursoPageProps> = ({ professorId, poloId }) 
     if (result.data) hydrateEditor(result.data);
   };
 
+  const validateConteudosPorDia = () => {
+    const oversizedDay = diasEditor.find((dia) => (
+      diasConteudoEditados.has(dia.dataAula)
+      && (conteudosPorDia[dia.dataAula]?.trim().length || 0) > 8_000
+    ));
+    if (!oversizedDay) return true;
+    toast.error(
+      'Conteúdo muito extenso',
+      `O conteúdo de ${oversizedDay.dataExibicao} deve ter no máximo 8.000 caracteres.`,
+    );
+    return false;
+  };
+
   const handleSave = async () => {
     const baseRevision = editorSessionRef.current.baseRevision;
     if (
@@ -258,6 +418,7 @@ const PlanoCursoPage: React.FC<PlanoCursoPageProps> = ({ professorId, poloId }) 
       || hasRemoteConflict
       || baseRevision === null
     ) return;
+    if (!validateConteudosPorDia()) return;
     try {
       const saved = await saveMutation.mutateAsync(buildSaveInput(workspace, baseRevision));
       hydrateEditor(saved);
@@ -277,6 +438,7 @@ const PlanoCursoPage: React.FC<PlanoCursoPageProps> = ({ professorId, poloId }) 
       || hasRemoteConflict
       || baseRevision === null
     ) return;
+    if (!validateConteudosPorDia()) return;
     try {
       const saved = await saveMutation.mutateAsync(buildSaveInput(workspace, baseRevision));
       hydrateEditor(saved);
@@ -379,34 +541,33 @@ const PlanoCursoPage: React.FC<PlanoCursoPageProps> = ({ professorId, poloId }) 
               Não foi possível abrir o Plano de Curso autorizado.
             </div>
           ) : (
-            <div className="space-y-5">
-              <header className="rounded-[2rem] border border-purple-100 bg-gradient-to-br from-white to-purple-50/50 p-6 shadow-sm">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2"><PlanoStatusBadge status={workspace.status} /></div>
-                    <h2 className="mt-3 text-xl font-black text-[#001a33]">{workspace.disciplinaNome}</h2>
-                    <p className="mt-1 text-xs font-bold text-slate-500">{workspace.cursoNome}</p>
-                    <p className="mt-1 text-[10px] font-semibold text-slate-400">{workspace.turmaNome} · {workspace.turmaCodigo} · {workspace.poloNome}</p>
+            <div className="space-y-4">
+              <header className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-lg shadow-slate-950/5 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#001a33] text-white">
+                    <FilePenLine size={19} />
                   </div>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <PlanoStatusBadge status={workspace.status} />
+                      <span className="text-[10px] font-bold text-slate-400">
+                        Revisão {editorBaseRevision ?? workspace.revisao}
+                        {isEditorDirty ? ' · alterações não salvas' : ''}
+                      </span>
+                    </div>
+                    <p className="mt-1 truncate text-sm font-black text-[#001a33]">{workspace.disciplinaNome}</p>
+                  </div>
+                </div>
+                {workspace.canEdit ? (
                   <div className="flex flex-wrap gap-2">
-                    {workspace.canEdit ? (
-                      <>
-                        <button type="button" onClick={() => { void handleSave(); }} disabled={isMutating || hasRemoteConflict} className="inline-flex items-center gap-2 rounded-xl border border-purple-200 bg-purple-50 px-4 py-3 text-[10px] font-black uppercase tracking-wider text-purple-700 transition hover:bg-purple-100 disabled:opacity-50">
-                          {saveMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Salvar rascunho
-                        </button>
-                        <button type="button" onClick={() => { void handleConclude(); }} disabled={isMutating || hasRemoteConflict} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-[10px] font-black uppercase tracking-wider text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-50">
-                          {concludeMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />} Concluir plano
-                        </button>
-                      </>
-                    ) : null}
+                    <button type="button" onClick={() => { void handleSave(); }} disabled={isMutating || hasRemoteConflict} className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-purple-200 bg-purple-50 px-4 py-3 text-[10px] font-black uppercase tracking-wider text-purple-700 transition hover:bg-purple-100 disabled:opacity-50 sm:flex-none">
+                      {saveMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Salvar rascunho
+                    </button>
+                    <button type="button" onClick={() => { void handleConclude(); }} disabled={isMutating || hasRemoteConflict} className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-[10px] font-black uppercase tracking-wider text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-50 sm:flex-none">
+                      {concludeMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />} Concluir plano
+                    </button>
                   </div>
-                </div>
-                <div className="mt-5 grid grid-cols-2 gap-3 border-t border-purple-100 pt-4 sm:grid-cols-4">
-                  <div><p className="text-[8px] font-black uppercase tracking-wider text-slate-400">Docente</p><p className="mt-1 truncate text-xs font-black text-[#001a33]">{workspace.professorNome}</p></div>
-                  <div><p className="text-[8px] font-black uppercase tracking-wider text-slate-400">Dias letivos</p><p className="mt-1 text-xs font-black text-[#001a33]">{workspace.totalDias}</p></div>
-                  <div><p className="text-[8px] font-black uppercase tracking-wider text-slate-400">Aulas</p><p className="mt-1 text-xs font-black text-[#001a33]">{workspace.totalAulas}</p></div>
-                  <div><p className="text-[8px] font-black uppercase tracking-wider text-slate-400">Revisão da edição</p><p className="mt-1 text-xs font-black text-[#001a33]">{editorBaseRevision ?? workspace.revisao}{isEditorDirty ? ' · não salva' : ''}</p></div>
-                </div>
+                ) : null}
               </header>
 
               {hasRemoteConflict ? (
@@ -426,46 +587,105 @@ const PlanoCursoPage: React.FC<PlanoCursoPageProps> = ({ professorId, poloId }) 
                 </div>
               ) : null}
 
-              <div className="grid gap-4 xl:grid-cols-3">
-                {[
-                  { id: 'objetivos', label: 'Objetivos', value: objetivosText, setter: setObjetivosText, help: 'Um objetivo por linha.' },
-                  { id: 'criterios', label: 'Critérios de avaliação', value: criteriosText, setter: setCriteriosText, help: 'Um critério por linha.' },
-                  { id: 'insumos', label: 'Insumos e recursos', value: insumosText, setter: setInsumosText, help: 'Um recurso por linha.' },
-                ].map((field) => (
-                  <label key={field.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                    <span className="text-xs font-black uppercase tracking-wide text-[#001a33]">{field.label}</span>
-                    <span className="mt-0.5 block text-[9px] font-semibold text-slate-400">{field.help}</span>
-                    <textarea value={field.value} onChange={(event) => { field.setter(event.target.value); markEditorDirty(); }} disabled={!workspace.canEdit || isMutating} rows={7} className="mt-3 w-full resize-y rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-medium leading-relaxed text-slate-700 outline-none transition focus:border-purple-400 focus:bg-white focus:ring-4 focus:ring-purple-50 disabled:cursor-not-allowed disabled:opacity-70" />
-                  </label>
-                ))}
-              </div>
-
-              <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-4">
-                  <div>
-                    <h3 className="text-sm font-black uppercase tracking-wide text-[#001a33]">Conteúdo por encontro</h3>
-                    <p className="mt-1 text-[10px] font-semibold text-slate-400">Datas, horários, sessões e ordem são os dados canônicos planejados pela Gestão.</p>
-                  </div>
-                  <span className="rounded-full bg-purple-50 px-3 py-1 text-[9px] font-black uppercase tracking-wider text-purple-700">{workspace.aulas.length} aulas</span>
-                </div>
-                <div className="mt-4 space-y-3">
-                  {workspace.aulas.map((aula) => (
-                    <div key={aula.aulaId} className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 lg:grid-cols-[220px_1fr]">
-                      <div>
-                        <p className="text-[9px] font-black uppercase tracking-wider text-purple-700">{aula.dataExibicao}</p>
-                        <p className="mt-1 text-xs font-black text-[#001a33]">{aula.titulo}</p>
-                        <p className="mt-2 text-[9px] font-bold text-slate-400">
-                          {[aula.horaInicio && aula.horaFim ? `${aula.horaInicio}–${aula.horaFim}` : aula.horaInicio || aula.horaFim, aula.sessao].filter(Boolean).join(' · ')}
-                        </p>
+              <div className="space-y-6 rounded-[2rem] border border-slate-200 bg-slate-100 p-3 shadow-inner sm:p-6">
+                <PlanoCursoPaper
+                  pageNumber={1}
+                  polo={polo}
+                  totalPages={totalEditorPages}
+                  workspace={workspace}
+                >
+                  <div className="overflow-hidden rounded-lg border border-slate-300 bg-white/75">
+                    {[
+                      ['Componente curricular', workspace.disciplinaNome],
+                      ['Professor(a)', workspace.professorNome],
+                      ['Dias das aulas', `${diasEditor.length} dias letivos`],
+                    ].map(([label, value]) => (
+                      <div key={label} className="grid gap-1 border-b border-slate-200 px-4 py-3 last:border-b-0 sm:grid-cols-[190px_1fr] sm:gap-4">
+                        <p className="text-[11px] font-black uppercase tracking-wide text-[#001a33]">{label}</p>
+                        <p className="text-sm font-semibold text-slate-700">{value}</p>
                       </div>
-                      <label>
-                        <span className="sr-only">Conteúdo da aula de {aula.dataExibicao}</span>
-                        <textarea value={conteudos[aula.aulaId] || ''} onChange={(event) => { setConteudos((current) => ({ ...current, [aula.aulaId]: event.target.value })); markEditorDirty(); }} disabled={!workspace.canEdit || isMutating} rows={3} placeholder="Descreva o conteúdo programático deste encontro" className="w-full resize-y rounded-xl border border-slate-200 bg-white p-3 text-xs font-medium leading-relaxed text-slate-700 outline-none transition focus:border-purple-400 focus:ring-4 focus:ring-purple-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-80" />
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </section>
+                    ))}
+                  </div>
+
+                  <div className="mt-5 overflow-hidden rounded-lg border border-slate-300 bg-white/75">
+                    {[
+                      { id: 'objetivos', label: 'Objetivos da disciplina', value: objetivosText, setter: setObjetivosText, help: 'Um objetivo por linha.' },
+                      { id: 'criterios', label: 'Critérios de avaliação utilizados', value: criteriosText, setter: setCriteriosText, help: 'Um critério por linha.' },
+                      { id: 'insumos', label: 'Insumos utilizados', value: insumosText, setter: setInsumosText, help: 'Um recurso por linha.' },
+                    ].map((field) => (
+                      <section key={field.id} className="border-b border-slate-200 last:border-b-0">
+                        <div className="flex flex-col gap-1 bg-slate-50/90 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                          <h3 className="text-xs font-black uppercase tracking-wide text-[#001a33]">{field.label}</h3>
+                          {workspace.canEdit ? <p id={`${field.id}-help`} className="text-[10px] font-semibold text-slate-400">{field.help}</p> : null}
+                        </div>
+                        {workspace.canEdit ? (
+                          <textarea
+                            id={field.id}
+                            value={field.value}
+                            onChange={(event) => { field.setter(event.target.value); markEditorDirty(); }}
+                            disabled={isMutating}
+                            rows={4}
+                            aria-describedby={`${field.id}-help`}
+                            className="block h-28 w-full resize-none border-0 bg-white/85 px-4 py-3 text-sm font-medium leading-6 text-slate-700 outline-none transition focus:bg-white focus:ring-2 focus:ring-inset focus:ring-purple-400 disabled:cursor-not-allowed disabled:bg-slate-50"
+                          />
+                        ) : (
+                          <div className="min-h-24 px-4 py-3 text-sm font-medium leading-6 text-slate-700">
+                            {linesToItems(field.value).length > 0 ? linesToItems(field.value).map((item) => <p key={item}>• {item}</p>) : <p className="italic text-slate-400">Não informado.</p>}
+                          </div>
+                        )}
+                      </section>
+                    ))}
+                  </div>
+                </PlanoCursoPaper>
+
+                {diasPaginas.map((diasPagina, pageIndex) => {
+                  const firstDayNumber = pageIndex * PLANO_CURSO_DAYS_PER_PAGE + 1;
+                  const lastDayNumber = firstDayNumber + diasPagina.length - 1;
+                  const pageNumber = pageIndex + 2;
+
+                  return (
+                    <PlanoCursoPaper
+                      key={diasPagina[0]?.dataAula || pageNumber}
+                      pageNumber={pageNumber}
+                      polo={polo}
+                      totalPages={totalEditorPages}
+                      workspace={workspace}
+                    >
+                      <section className="overflow-hidden rounded-lg border border-slate-300 bg-white/75">
+                        <div className="flex flex-col gap-3 border-b border-slate-200 bg-[#001a33] px-4 py-4 text-white sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <h3 className="text-xs font-black uppercase tracking-wide">Datas de atividades / conteúdo programático</h3>
+                            <p className="mt-1 text-[11px] font-medium text-slate-300">Uma entrada por dia letivo. Aulas do mesmo dia aparecem reunidas.</p>
+                          </div>
+                          <span className="w-fit rounded-full bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-wider">
+                            Dias {firstDayNumber}–{lastDayNumber} de {diasEditor.length}
+                          </span>
+                        </div>
+                        <div className="divide-y divide-slate-200">
+                          {diasPagina.map((day, dayIndex) => {
+                            const content = conteudosPorDia[day.dataAula] || '';
+                            const isLegacyMerged = day.possuiConteudosDivergentes
+                              && !diasConteudoEditados.has(day.dataAula);
+
+                            return (
+                              <PlanoCursoDayEditorRow
+                                key={day.dataAula}
+                                canEdit={workspace.canEdit}
+                                content={content}
+                                day={day}
+                                dayNumber={firstDayNumber + dayIndex}
+                                isLegacyMerged={isLegacyMerged}
+                                isMutating={isMutating}
+                                onContentChange={handleDayContentChange}
+                              />
+                            );
+                          })}
+                        </div>
+                      </section>
+                    </PlanoCursoPaper>
+                  );
+                })}
+              </div>
             </div>
           )}
         </>
