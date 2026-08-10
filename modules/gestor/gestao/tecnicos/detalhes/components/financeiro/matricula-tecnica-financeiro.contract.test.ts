@@ -27,6 +27,18 @@ const modalSource = readFileSync(
   resolve(baseDir, "../alunos/ConfirmarMatriculaModal.tsx"),
   "utf8",
 );
+const overrideDialogSource = readFileSync(
+  resolve(baseDir, "FinanceiroAlunoOverrideDialog.tsx"),
+  "utf8",
+);
+const technicalSettingsSource = readFileSync(
+  resolve(baseDir, "../TurmaConfiguracoes.tsx"),
+  "utf8",
+);
+const authorizationServiceSource = readFileSync(
+  resolve(baseDir, "technical-condition-authorization.service.ts"),
+  "utf8",
+);
 const listSource = readFileSync(
   resolve(baseDir, "FinanceiroAlunosList.tsx"),
   "utf8",
@@ -61,6 +73,10 @@ const technicalClassFormConstantsSource = readFileSync(
 );
 const technicalClassFinancialStepSource = readFileSync(
   resolve(baseDir, "../../../../components/forms/turma-tecnico/TurmaTecnicoFinanceiroStep.tsx"),
+  "utf8",
+);
+const technicalClassFinancialPreviewServiceSource = readFileSync(
+  resolve(baseDir, "../../../../components/forms/turma-tecnico/turma-tecnico-financeiro-preview.service.ts"),
   "utf8",
 );
 
@@ -130,7 +146,7 @@ test("editor flexível usa somente preview/save canônicos e preserva todas as p
 });
 
 test("matrícula técnica começa pendente e não usa cálculo ou gateway no browser", () => {
-  assert.match(alunosSource, /useState<EnrollmentFinanceIntent>\('PENDENTE'\)/);
+  assert.match(modalSource, /useState<EnrollmentFinanceIntent>\('PENDENTE'\)/);
   assert.match(alunosSource, /preLink\.cobrancaGerada/);
   assert.doesNotMatch(
     alunosSource,
@@ -162,6 +178,42 @@ test("matrícula técnica começa pendente e não usa cálculo ou gateway no bro
     alunosSource,
     /requireTechnicalProfile && canManageFinanceiro \? turma\.id : ''/,
   );
+});
+
+test("condição individual exige código no modal, na edição posterior e no RPC final", () => {
+  assert.match(modalSource, /Código de autorização/);
+  assert.match(modalSource, /useValidateTechnicalConditionCode/);
+  assert.match(modalSource, /codigoAutorizacao: individual \? codigo : null/);
+  assert.match(overrideDialogSource, /Valide o código para visualizar e editar/);
+  assert.match(overrideDialogSource, /codigoAutorizacao: codigo/);
+  assert.match(overrideDialogSource, /motivo,/);
+  assert.match(overrideDialogSource, /!codigoAutorizado \|\| !row\.overrideAtivo/);
+  assert.match(authorizationServiceSource, /validar_codigo_condicao_individual_turma_tecnica_secure/);
+  assert.match(serviceSource, /salvar_override_financeiro_matricula_tecnica_autorizado_secure/);
+  assert.match(serviceSource, /remover_override_financeiro_matricula_tecnica_autorizado_secure/);
+  assert.doesNotMatch(authorizationServiceSource, /localStorage|sessionStorage|codigo_hash/);
+});
+
+test("wizard explica dois ciclos, exige vencimento e simula pontualidade e atraso", () => {
+  assert.match(modalSource, /Matrícula técnica · etapa/);
+  assert.match(modalSource, /Ciclo 1/);
+  assert.match(modalSource, /Ciclo 2/);
+  assert.match(modalSource, /não abre um terceiro ciclo/);
+  assert.match(modalSource, /Pagamento até o vencimento/);
+  assert.match(modalSource, /Pagamento com 30 dias de atraso/);
+  assert.match(modalSource, /Juros de \{formatPercent\(effectiveRule\?\.encargos\.jurosAtrasoPercentual/);
+  assert.match(modalSource, /Multa única: \{formatPercent\(effectiveRule\?\.encargos\.multaAtrasoPercentual/);
+  assert.match(modalSource, /Primeiro vencimento desta matrícula/);
+  assert.match(alunosSource, /if \(canManageFinanceiro && !primeiroVencimento\)/);
+  assert.match(alunosSource, /effectiveMatricula = overrideResult\.matricula/);
+  assert.match(serviceSource, /value\.continuidade\.recorrente !== false/);
+  assert.match(serviceSource, /value\.continuidade\.maxCiclos !== \(value\.cobranca\.rematricula\.habilitada \? 2 : 1\)/);
+});
+
+test("configurações técnicas não expõem controles legados ou de gateway", () => {
+  assert.doesNotMatch(technicalSettingsSource, /Financeiro legado|Gerar cobranças futuras|Sincronizar futuras cobranças/i);
+  assert.match(technicalSettingsSource, /gerarCobrancasFuturas: true/);
+  assert.match(technicalSettingsSource, /sincronizarAsaasFuturo: false/);
 });
 
 test("geração imediata exige confirmação e modais preservam ciclo de foco", () => {
@@ -294,8 +346,20 @@ test("nova turma coleta a regra flexível sem duplicar a criação financeira", 
   assert.match(technicalClassFormSource, /role="dialog"/);
   assert.match(technicalClassFormSource, /aria-modal="true"/);
   assert.match(technicalClassFormSource, /disabled=\{isSaving\}/);
-  assert.match(
+  assert.doesNotMatch(
     technicalClassFinancialStepSource,
-    /disabled=\{formData\.origemFinanceira === 'LEGADO'\}/,
+    /Liberar próximas cobranças após cada baixa/,
+  );
+  assert.match(
+    technicalClassFormSource,
+    /gerarCobrancasFuturas: formData\.origemFinanceira !== 'LEGADO'/,
+  );
+  assert.match(
+    technicalClassFinancialPreviewServiceSource,
+    /calculate_gestao_technical_financial_preview/,
+  );
+  assert.match(
+    technicalClassFinancialPreviewServiceSource,
+    /build_gestao_financial_schedule/,
   );
 });
