@@ -1,5 +1,5 @@
 import React from 'react';
-import { Building2, Check, ClipboardCheck, Megaphone, WalletCards } from 'lucide-react';
+import { Building2, Check, ClipboardCheck, KeyRound, Megaphone, WalletCards } from 'lucide-react';
 import type { TurmaTecnicoStep } from './turma-tecnico-form.types';
 
 interface TurmaTecnicoStepperProps {
@@ -7,11 +7,11 @@ interface TurmaTecnicoStepperProps {
   steps: TurmaTecnicoStep[];
 }
 
-const icons = [Building2, Megaphone, WalletCards, ClipboardCheck];
+const icons = [Building2, Megaphone, WalletCards, KeyRound, ClipboardCheck];
 
 const TurmaTecnicoStepper: React.FC<TurmaTecnicoStepperProps> = ({ currentStep, steps }) => (
   <nav aria-label="Etapas de criação da turma" className="border-y border-slate-100 bg-slate-50/80 px-4 py-4 sm:px-7">
-    <ol className="grid grid-cols-4 gap-2">
+    <ol className="grid gap-2" style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }}>
       {steps.map((step, index) => {
         const Icon = icons[index];
         const isCurrent = index === currentStep;
