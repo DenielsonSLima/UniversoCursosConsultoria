@@ -6,6 +6,7 @@ import ToastNotification, { useToast } from '../components/ToastNotification';
 import { getPatrimonioActionAvailability } from './patrimonio.actions';
 import { PatrimonioCard } from './components/PatrimonioCard';
 import { PatrimonioDeleteDialog } from './components/PatrimonioDeleteDialog';
+import { PatrimonioExportModal } from './components/PatrimonioExportModal';
 import { PatrimonioFormModal } from './components/PatrimonioFormModal';
 import { PatrimonioTable } from './components/PatrimonioTable';
 import { PatrimonioToolbar } from './components/PatrimonioToolbar';
@@ -54,6 +55,7 @@ const PatrimonioPage: React.FC<PatrimonioPageProps> = ({
   const [editingItem, setEditingItem] = useState<PatrimonioItem | null>(null);
   const [writeOffItem, setWriteOffItem] = useState<PatrimonioItem | null>(null);
   const [removeItem, setRemoveItem] = useState<PatrimonioItem | null>(null);
+  const [isExportOpen, setIsExportOpen] = useState(false);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 300);
@@ -68,6 +70,7 @@ const PatrimonioPage: React.FC<PatrimonioPageProps> = ({
     setEditingItem(null);
     setWriteOffItem(null);
     setRemoveItem(null);
+    setIsExportOpen(false);
   }, [poloId]);
 
   useEffect(() => {
@@ -104,6 +107,7 @@ const PatrimonioPage: React.FC<PatrimonioPageProps> = ({
   const invalidateAfterMutation = useCallback(async (activePoloId: string, itemId?: string) => {
     const invalidations = [
       queryClient.invalidateQueries({ queryKey: patrimonioQueryKeys.listRoot }),
+      queryClient.invalidateQueries({ queryKey: patrimonioQueryKeys.export(activePoloId) }),
       queryClient.invalidateQueries({ queryKey: caixaQueryKeys.patrimonioResumosForPolo(activePoloId) }),
       queryClient.invalidateQueries({ queryKey: caixaQueryKeys.patrimonioResumosForPolo('todos') }),
     ];
@@ -288,6 +292,7 @@ const PatrimonioPage: React.FC<PatrimonioPageProps> = ({
         onTipoProdutoChange={handleTipoProdutoChange}
         onStatusChange={handleStatusChange}
         onViewModeChange={setViewMode}
+        onExport={() => setIsExportOpen(true)}
         onCreate={() => { createMutation.reset(); setIsFormOpen(true); }}
       />
 
@@ -318,7 +323,7 @@ const PatrimonioPage: React.FC<PatrimonioPageProps> = ({
       ) : (
         <>
           {viewMode === 'cards' ? (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {items.map((item) => (
                 <div key={item.id} className="h-full">
                   <PatrimonioCard
@@ -401,6 +406,14 @@ const PatrimonioPage: React.FC<PatrimonioPageProps> = ({
           errorMessage={removeMutation.isError ? getPatrimonioErrorMessage(removeMutation.error, 'Não foi possível excluir o patrimônio.') : undefined}
           onClose={() => setRemoveItem(null)}
           onSubmit={(input) => removeMutation.mutate(input)}
+        />
+      ) : null}
+
+      {isExportOpen && poloId ? (
+        <PatrimonioExportModal
+          open={isExportOpen}
+          poloId={poloId}
+          onClose={() => setIsExportOpen(false)}
         />
       ) : null}
     </div>

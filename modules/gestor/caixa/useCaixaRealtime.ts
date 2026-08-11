@@ -28,6 +28,14 @@ export const useCaixaRealtime = () => {
           refetchType,
         });
         void queryClient.invalidateQueries({
+          queryKey: caixaQueryKeys.posicoesLiquidas,
+          refetchType,
+        });
+        void queryClient.invalidateQueries({
+          queryKey: caixaQueryKeys.posicoesTotais,
+          refetchType,
+        });
+        void queryClient.invalidateQueries({
           queryKey: caixaQueryKeys.custosOperacionais,
           refetchType,
         });
@@ -40,6 +48,14 @@ export const useCaixaRealtime = () => {
           });
           void queryClient.invalidateQueries({
             queryKey: caixaQueryKeys.financiamentoResumosForPolo(scope),
+            refetchType,
+          });
+          void queryClient.invalidateQueries({
+            queryKey: caixaQueryKeys.posicoesLiquidasForPolo(scope),
+            refetchType,
+          });
+          void queryClient.invalidateQueries({
+            queryKey: caixaQueryKeys.posicoesTotaisForPolo(scope),
             refetchType,
           });
           void queryClient.invalidateQueries({
@@ -58,10 +74,34 @@ export const useCaixaRealtime = () => {
           queryKey: caixaQueryKeys.patrimonioResumos,
           refetchType,
         });
+        void queryClient.invalidateQueries({
+          queryKey: caixaQueryKeys.posicoesLiquidas,
+          refetchType,
+        });
+        void queryClient.invalidateQueries({
+          queryKey: caixaQueryKeys.posicoesTotais,
+          refetchType,
+        });
+        void queryClient.invalidateQueries({
+          queryKey: caixaReportQueryKeys.monthly,
+          refetchType,
+        });
       } else {
         pendingPatrimonioScopes.forEach((scope) => {
           void queryClient.invalidateQueries({
             queryKey: caixaQueryKeys.patrimonioResumosForPolo(scope),
+            refetchType,
+          });
+          void queryClient.invalidateQueries({
+            queryKey: caixaQueryKeys.posicoesLiquidasForPolo(scope),
+            refetchType,
+          });
+          void queryClient.invalidateQueries({
+            queryKey: caixaQueryKeys.posicoesTotaisForPolo(scope),
+            refetchType,
+          });
+          void queryClient.invalidateQueries({
+            queryKey: caixaReportQueryKeys.monthlyForPolo(scope),
             refetchType,
           });
         });

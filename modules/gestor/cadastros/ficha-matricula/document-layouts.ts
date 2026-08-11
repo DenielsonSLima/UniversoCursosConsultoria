@@ -269,7 +269,7 @@ export const upgradeRegistrationVoterField = (
       ))
       ? {
           ...field,
-          value: fieldId === 'ficha_documentos'
+          value: fieldId === 'ficha_documentos' || fieldId === 'pasta_documentos'
             ? repairFichaVoterGrid(field.value)
             : injectMissingVoterFields(
                 field.value,

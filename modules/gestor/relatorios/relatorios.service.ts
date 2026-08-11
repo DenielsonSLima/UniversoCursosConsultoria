@@ -4,6 +4,22 @@ import { formatMatricula } from '../../../lib/academicUtils';
 export type RelatorioModalidade = 'todos' | 'TECNICO' | 'EAD' | 'LIVRE' | 'ESPECIALIZACAO' | 'SUPERIOR';
 export type RelatorioFinanceiroStatus = 'todos' | 'PAGO' | 'PENDENTE' | 'VENCIDO' | 'CANCELADO';
 export type RelatorioTipoLancamento = 'todos' | 'MATRICULA' | 'PARCELA' | 'REMATRICULA' | 'AVULSO';
+export type RelatorioMovimentacaoFinanceiraTipo =
+  | 'EXTRATO_CONTA'
+  | 'ENTRADAS'
+  | 'SAIDAS'
+  | 'RECEITAS'
+  | 'DESPESAS';
+export type RelatorioMovimentacaoFinanceiraStatus =
+  | 'ATIVOS'
+  | 'TODOS'
+  | 'PAGO'
+  | 'PENDENTE'
+  | 'VENCIDO'
+  | 'SUSPENSO'
+  | 'CANCELADO'
+  | 'ESTORNADO'
+  | 'DEVOLVIDO';
 
 export interface RelatorioTurmaOption {
   id: string;
@@ -96,6 +112,87 @@ export interface RelatorioMatriculaAcademicaItem {
   certificadoEmissao?: string | null;
 }
 
+export interface RelatorioMovimentacaoFinanceiraFiltros {
+  tipo: RelatorioMovimentacaoFinanceiraTipo;
+  poloId?: string | null;
+  dataInicio: string;
+  dataFim: string;
+  contaBancariaId?: string | null;
+  categoria?: string | null;
+  status?: RelatorioMovimentacaoFinanceiraStatus;
+  busca?: string | null;
+}
+
+export interface RelatorioMovimentacaoFinanceiraConta {
+  id: string;
+  banco: string;
+  titular: string;
+  agencia: string;
+  conta: string;
+  natureza: 'BANCARIA' | 'CAIXA_INTERNO';
+  polo: string;
+  compartilhada: boolean;
+  ativa: boolean;
+  rotulo: string;
+}
+
+export interface RelatorioMovimentacaoFinanceiraCategoria {
+  chave: string;
+  rotulo: string;
+}
+
+export interface RelatorioMovimentacaoFinanceiraItem {
+  id: string;
+  data: string;
+  direcao: 'ENTRADA' | 'SAIDA' | 'NEUTRO';
+  classificacao: string;
+  origem: string;
+  descricao: string;
+  contraparte: string;
+  categoriaChave: string;
+  categoria: string;
+  status: string;
+  contaId: string | null;
+  conta: string;
+  polo: string;
+  valor: number;
+  valorPrevisto: number;
+  valorRealizado: number;
+  saldoApos: number | null;
+}
+
+export interface RelatorioMovimentacaoFinanceiraResumo {
+  totalLancamentos: number;
+  valorPrevisto: number;
+  valorRealizado: number;
+  valorEmAberto: number;
+  totalEntradas: number;
+  totalSaidas: number;
+  saldoAbertura: number | null;
+  saldoFechamento: number | null;
+  saldoDisponivel: boolean;
+  saldoObservacao: string | null;
+}
+
+export interface RelatorioMovimentacaoFinanceiraData {
+  meta: {
+    tipo: RelatorioMovimentacaoFinanceiraTipo;
+    dataReferencia: 'PAGAMENTO' | 'VENCIMENTO';
+    dataInicio: string;
+    dataFim: string;
+    escopo: string;
+    contaSelecionadaId: string | null;
+    contaSelecionada: string | null;
+  };
+  contas: RelatorioMovimentacaoFinanceiraConta[];
+  categorias: RelatorioMovimentacaoFinanceiraCategoria[];
+  resumo: RelatorioMovimentacaoFinanceiraResumo;
+  movimentos: RelatorioMovimentacaoFinanceiraItem[];
+  completo: boolean;
+  limite: number;
+  mensagem: string | null;
+}
+
 const normalizeDate = (value?: string | null) => value ? String(value).split('T')[0] : null;
 
 const isPago = (status?: string | null) => String(status || '').toUpperCase() === 'PAGO';
@@ -115,7 +212,174 @@ const daysOverdue = (status?: string | null, vencimento?: string | null) => {
 const getTurmaCurso = (row: any) => row?.turmas?.cursos || row?.turma?.curso || {};
 const getTurma = (row: any) => row?.turmas || row?.turma || {};
 
+type RelatorioRawRecord = Record<string, unknown>;
+
+const asRelatorioRawRecord = (value: unknown): RelatorioRawRecord => (
+  value && typeof value === 'object' && !Array.isArray(value)
+    ? value as RelatorioRawRecord
+    : {}
+);
+
+const asRelatorioRawArray = (value: unknown) => (
+  Array.isArray(value) ? value.map(asRelatorioRawRecord) : []
+);
+
+const asRequiredRelatorioNumber = (value: unknown, field: string) => {
+  if (
+    typeof value !== 'number'
+    && (typeof value !== 'string' || !value.trim())
+  ) {
+    throw new Error(`O relatório financeiro retornou o campo obrigatório "${field}" sem valor.`);
+  }
+
+  const parsed = Number(typeof value === 'string' ? value.trim() : value);
+  if (!Number.isFinite(parsed)) {
+    throw new Error(`O relatório financeiro retornou o campo obrigatório "${field}" inválido.`);
+  }
+
+  return parsed;
+};
+
+const asRelatorioString = (value: unknown) => (
+  typeof value === 'string' ? value : ''
+);
+
+const asRelatorioNullableString = (value: unknown) => (
+  typeof value === 'string' && value ? value : null
+);
+
+const asMovimentacaoTipo = (value: unknown): RelatorioMovimentacaoFinanceiraTipo => {
+  if (
+    value === 'EXTRATO_CONTA'
+    || value === 'ENTRADAS'
+    || value === 'SAIDAS'
+    || value === 'RECEITAS'
+    || value === 'DESPESAS'
+  ) return value;
+  throw new Error('O relatório financeiro retornou um tipo de visão inválido.');
+};
+
+const asMovimentacaoDirecao = (value: unknown): RelatorioMovimentacaoFinanceiraItem['direcao'] => {
+  if (value === 'ENTRADA' || value === 'SAIDA') return value;
+  return 'NEUTRO';
+};
+
+const asMovimentacaoContaNatureza = (value: unknown): RelatorioMovimentacaoFinanceiraConta['natureza'] => (
+  value === 'CAIXA_INTERNO' ? 'CAIXA_INTERNO' : 'BANCARIA'
+);
+
+export const mapRelatorioMovimentacaoFinanceira = (
+  value: unknown,
+): RelatorioMovimentacaoFinanceiraData => {
+  let payload = Array.isArray(value) ? value[0] : value;
+  if (typeof payload === 'string') {
+    try {
+      payload = JSON.parse(payload);
+    } catch {
+      throw new Error('O relatório financeiro retornou um contrato inválido.');
+    }
+  }
+
+  const record = asRelatorioRawRecord(payload);
+  const meta = asRelatorioRawRecord(record.meta);
+  const resumo = asRelatorioRawRecord(record.resumo);
+
+  if (!Object.keys(meta).length || !Object.keys(resumo).length || !Array.isArray(record.movimentos)) {
+    throw new Error('O relatório financeiro retornou um contrato incompleto.');
+  }
+
+  return {
+    meta: {
+      tipo: asMovimentacaoTipo(meta.tipo),
+      dataReferencia: meta.data_referencia === 'VENCIMENTO' ? 'VENCIMENTO' : 'PAGAMENTO',
+      dataInicio: asRelatorioString(meta.data_inicio),
+      dataFim: asRelatorioString(meta.data_fim),
+      escopo: asRelatorioString(meta.escopo),
+      contaSelecionadaId: asRelatorioNullableString(meta.conta_selecionada_id),
+      contaSelecionada: asRelatorioNullableString(meta.conta_selecionada),
+    },
+    contas: asRelatorioRawArray(record.contas).map((conta) => ({
+      id: asRelatorioString(conta.id),
+      banco: asRelatorioString(conta.banco),
+      titular: asRelatorioString(conta.titular),
+      agencia: asRelatorioString(conta.agencia),
+      conta: asRelatorioString(conta.conta),
+      natureza: asMovimentacaoContaNatureza(conta.natureza),
+      polo: asRelatorioString(conta.polo),
+      compartilhada: conta.compartilhada === true,
+      ativa: conta.ativa !== false,
+      rotulo: asRelatorioString(conta.rotulo),
+    })).filter((conta) => Boolean(conta.id && conta.rotulo)),
+    categorias: asRelatorioRawArray(record.categorias).map((categoria) => ({
+      chave: asRelatorioString(categoria.chave),
+      rotulo: asRelatorioString(categoria.rotulo),
+    })).filter((categoria) => Boolean(categoria.chave && categoria.rotulo)),
+    resumo: {
+      totalLancamentos: asRequiredRelatorioNumber(resumo.total_lancamentos, 'resumo.total_lancamentos'),
+      valorPrevisto: asRequiredRelatorioNumber(resumo.valor_previsto, 'resumo.valor_previsto'),
+      valorRealizado: asRequiredRelatorioNumber(resumo.valor_realizado, 'resumo.valor_realizado'),
+      valorEmAberto: asRequiredRelatorioNumber(resumo.valor_em_aberto, 'resumo.valor_em_aberto'),
+      totalEntradas: asRequiredRelatorioNumber(resumo.total_entradas, 'resumo.total_entradas'),
+      totalSaidas: asRequiredRelatorioNumber(resumo.total_saidas, 'resumo.total_saidas'),
+      saldoAbertura: resumo.saldo_abertura === null ? null : asRequiredRelatorioNumber(resumo.saldo_abertura, 'resumo.saldo_abertura'),
+      saldoFechamento: resumo.saldo_fechamento === null ? null : asRequiredRelatorioNumber(resumo.saldo_fechamento, 'resumo.saldo_fechamento'),
+      saldoDisponivel: resumo.saldo_disponivel === true,
+      saldoObservacao: asRelatorioNullableString(resumo.saldo_observacao),
+    },
+    movimentos: asRelatorioRawArray(record.movimentos).map((item) => ({
+      id: asRelatorioString(item.id),
+      data: asRelatorioString(item.data),
+      direcao: asMovimentacaoDirecao(item.direcao),
+      classificacao: asRelatorioString(item.classificacao),
+      origem: asRelatorioString(item.origem),
+      descricao: asRelatorioString(item.descricao),
+      contraparte: asRelatorioString(item.contraparte),
+      categoriaChave: asRelatorioString(item.categoria_chave),
+      categoria: asRelatorioString(item.categoria),
+      status: asRelatorioString(item.status),
+      contaId: asRelatorioNullableString(item.conta_id),
+      conta: asRelatorioString(item.conta),
+      polo: asRelatorioString(item.polo),
+      valor: asRequiredRelatorioNumber(item.valor, 'movimentos.valor'),
+      valorPrevisto: asRequiredRelatorioNumber(item.valor_previsto, 'movimentos.valor_previsto'),
+      valorRealizado: asRequiredRelatorioNumber(item.valor_realizado, 'movimentos.valor_realizado'),
+      saldoApos: item.saldo_apos === null ? null : asRequiredRelatorioNumber(item.saldo_apos, 'movimentos.saldo_apos'),
+    })).filter((item) => Boolean(item.id && item.data)),
+    completo: record.completo === true,
+    limite: asRequiredRelatorioNumber(record.limite, 'limite'),
+    mensagem: asRelatorioNullableString(record.mensagem),
+  };
+};
+
 export const relatoriosService = {
+  async getMovimentacaoFinanceira(
+    filters: RelatorioMovimentacaoFinanceiraFiltros,
+  ): Promise<RelatorioMovimentacaoFinanceiraData> {
+    const { data, error } = await supabase.rpc(
+      'get_relatorio_movimentacao_financeira_secure',
+      {
+        p_polo_id: filters.poloId && filters.poloId !== 'todos' ? filters.poloId : null,
+        p_tipo: filters.tipo,
+        p_data_inicio: filters.dataInicio,
+        p_data_fim: filters.dataFim,
+        p_conta_bancaria_id: filters.contaBancariaId || null,
+        p_categoria: filters.categoria || null,
+        p_status: filters.status || 'ATIVOS',
+        p_busca: filters.busca?.trim() || null,
+      },
+    );
+
+    if (error) {
+      console.error('Erro ao buscar movimentação financeira para relatório:', {
+        code: error.code,
+        message: error.message,
+      });
+      throw error;
+    }
+
+    return mapRelatorioMovimentacaoFinanceira(data);
+  },
+
   async getTurmasOptions(modalidade: RelatorioModalidade = 'todos', poloId?: string): Promise<RelatorioTurmaOption[]> {
     let query = supabase
       .from('turmas')

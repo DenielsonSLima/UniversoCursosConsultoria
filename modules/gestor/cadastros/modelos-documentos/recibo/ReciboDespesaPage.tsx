@@ -1,12 +1,32 @@
 // File: modules/gestor/cadastros/modelos-documentos/recibo/ReciboDespesaPage.tsx
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Receipt, Printer } from 'lucide-react';
-import ReciboDespesaPreview, { printReciboDespesa } from './ReciboDespesaPreview';
+import ReciboDespesaPreview, { type ReciboData } from './ReciboDespesaPreview';
+import DespesaReciboModal from '../../../financeiro/despesas/components/DespesaReciboModal';
+
+const exemploRecibo: ReciboData = {
+  empresaNome: 'Universo Cursos e Consultoria',
+  descricao: 'Aluguel de Outubro — Sede Principal',
+  valor: 2500,
+  valorPago: 2500,
+  dataLancamento: new Date().toISOString().slice(0, 10),
+  dataVencimento: new Date().toISOString().slice(0, 10),
+  dataPagamento: new Date().toISOString().slice(0, 10),
+  fornecedorNome: 'João Silva Imóveis',
+  categoriaNome: 'Aluguel',
+  formaPagamento: 'PIX',
+  contaBancariaNome: 'Conta institucional',
+  poloNome: 'Polo Matriz — Aracaju/SE',
+  status: 'PAGO',
+};
 
 const ReciboDespesaPage: React.FC = () => {
+  const [showExampleReceipt, setShowExampleReceipt] = useState(false);
+
   return (
-    <div className="animate-fadeIn">
+    <>
+      <div className="animate-fadeIn">
       {/* Header */}
       <div className="mb-8 flex flex-col md:flex-row justify-between items-end gap-4">
         <div>
@@ -24,21 +44,8 @@ const ReciboDespesaPage: React.FC = () => {
           </p>
         </div>
         <button
-          onClick={() =>
-            printReciboDespesa({
-              empresaNome: 'Universo Cursos e Consultoria',
-              descricao: 'Aluguel de Outubro — Sede Principal',
-              valor: 2500,
-              valorPago: 2500,
-              dataVencimento: new Date().toISOString().slice(0, 10),
-              dataPagamento: new Date().toISOString().slice(0, 10),
-              fornecedorNome: 'João Silva Imóveis',
-              categoriaNome: 'Aluguel',
-              formaPagamento: 'PIX',
-              poloNome: 'Polo Matriz — Aracaju/SE',
-              status: 'PAGO',
-            })
-          }
+          type="button"
+          onClick={() => setShowExampleReceipt(true)}
           className="flex items-center gap-2 px-6 py-3 bg-[#001a33] hover:bg-blue-900 text-white rounded-2xl font-bold uppercase tracking-wide text-sm shadow-md transition-colors"
         >
           <Printer size={16} />
@@ -64,7 +71,15 @@ const ReciboDespesaPage: React.FC = () => {
           <li>• O recibo será gerado automaticamente com todos os dados do lançamento</li>
         </ul>
       </div>
-    </div>
+      </div>
+
+      {showExampleReceipt && (
+        <DespesaReciboModal
+          data={exemploRecibo}
+          onClose={() => setShowExampleReceipt(false)}
+        />
+      )}
+    </>
   );
 };
 

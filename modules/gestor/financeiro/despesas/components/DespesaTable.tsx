@@ -1,14 +1,22 @@
-// File: modules/gestor/financeiro/despesas/components/DespesaTable.tsx
-
 import React from 'react';
-import { Edit2, Trash2, CheckCircle2, Clock, AlertCircle, XCircle, Banknote, Paperclip } from 'lucide-react';
+import {
+  AlertCircle,
+  CheckCircle2,
+  Clock,
+  Paperclip,
+  Pencil,
+  Printer,
+  RotateCcw,
+  XCircle,
+  Banknote,
+} from 'lucide-react';
+import { ContaBancaria } from '../../financeiro.service';
 import { DespesaLancamento } from '../despesas.service';
-
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
-
-const formatDate = (value?: string) =>
-  value ? new Date(`${value}T00:00:00`).toLocaleDateString('pt-BR') : '-';
+import {
+  formatDespesaCurrency,
+  formatDespesaDate,
+  getDespesaContaLabel,
+} from './despesaPresentation';
 
 const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
   const configs: Record<string, { label: string; className: string; Icon: React.ElementType }> = {
@@ -28,16 +36,22 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
 
 interface DespesaTableProps {
   items: DespesaLancamento[];
+  contas: ContaBancaria[];
   onPagar?: (item: DespesaLancamento) => void;
-  onExcluir?: (item: DespesaLancamento) => void;
+  onEditar?: (item: DespesaLancamento) => void;
+  onCancelar?: (item: DespesaLancamento) => void;
   onImprimir?: (item: DespesaLancamento) => void;
   onAnexo?: (item: DespesaLancamento) => void;
 }
 
+const actionClass = 'inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-[10px] font-black uppercase tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1';
+
 const DespesaTable: React.FC<DespesaTableProps> = ({
   items,
+  contas,
   onPagar,
-  onExcluir,
+  onEditar,
+  onCancelar,
   onImprimir,
   onAnexo,
 }) => {
@@ -53,127 +67,158 @@ const DespesaTable: React.FC<DespesaTableProps> = ({
 
   return (
     <div className="overflow-x-auto rounded-2xl border border-slate-100">
-      <table className="w-full text-left">
+      <table className="min-w-[1480px] w-full text-left">
         <thead>
           <tr className="bg-slate-50 border-b border-slate-100">
-            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400">Vencimento</th>
+            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400">Datas</th>
             <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400">Descrição</th>
             <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400">Categoria</th>
             <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400">Fornecedor</th>
-            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400 text-right">Valor</th>
+            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400 text-right">Valores</th>
+            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400">Pagamento</th>
             <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400">Parcela</th>
             <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400">Status</th>
             <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400 text-right">Ações</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-50">
-          {items.map((item) => (
-            <tr key={item.id} className="hover:bg-slate-50/60 transition-colors group">
-              <td className="px-4 py-3 text-sm font-semibold text-slate-700 whitespace-nowrap">
-                {formatDate(item.dataVencimento)}
-                {item.dataPagamento && (
-                  <div className="text-[10px] text-emerald-600 font-medium mt-0.5">
-                    Pago: {formatDate(item.dataPagamento)}
-                  </div>
-                )}
-              </td>
-              <td className="px-4 py-3 text-sm text-slate-700 max-w-[200px]">
-                <div className="font-semibold truncate">{item.descricao}</div>
-                {item.isRateioDerived ? (
-                  <div className="mt-0.5 text-[10px] font-bold text-indigo-600">
-                    Rateio da Matriz{item.poloMatrizNome ? ` · ${item.poloMatrizNome}` : ''}
-                  </div>
-                ) : item.rateioMode && item.rateioMode !== 'SEM_RATEIO' ? (
-                  <div className="mt-0.5 text-[10px] font-bold text-indigo-600">
-                    Custo rateado{item.rateioPolosQuantidade ? ` em ${item.rateioPolosQuantidade} polo${item.rateioPolosQuantidade === 1 ? '' : 's'}` : ''}
-                  </div>
-                ) : null}
-                {item.turmaNome && (
-                  <div className="text-[10px] text-indigo-600 font-bold mt-0.5">Turma: {item.turmaNome}</div>
-                )}
-                {item.observacao && (
-                  <div className="text-[10px] text-slate-400 truncate mt-0.5">{item.observacao}</div>
-                )}
-              </td>
-              <td className="px-4 py-3">
-                {item.categoriaNome ? (
-                  <span className="px-2 py-1 bg-rose-50 text-rose-700 rounded-lg text-[10px] font-bold uppercase tracking-wider">
-                    {item.categoriaNome}
-                  </span>
-                ) : (
-                  <span className="text-slate-300 text-xs">—</span>
-                )}
-              </td>
-              <td className="px-4 py-3 text-sm text-slate-600">
-                {item.fornecedorNome || <span className="text-slate-300">—</span>}
-              </td>
-              <td className="px-4 py-3 text-right whitespace-nowrap">
-                <span className="font-black text-slate-800">{formatCurrency(item.valor)}</span>
-                {(item.jurosValor > 0 || item.multaValor > 0 || item.descontoValor > 0) && (
-                  <div className="mt-0.5 text-right text-[9px] font-semibold text-slate-400">
-                    Base {formatCurrency(item.valorBase)}
-                  </div>
-                )}
-                {item.valorPago !== undefined && item.valorPago !== item.valor && (
-                  <div className="text-[10px] text-emerald-600 font-medium mt-0.5 text-right">
-                    Pago: {formatCurrency(item.valorPago)}
-                  </div>
-                )}
-              </td>
-              <td className="px-4 py-3 text-center">
-                {item.totalParcelas > 1 ? (
-                  <span className="text-xs text-slate-500 font-bold">
-                    {item.parcelaNumero}/{item.totalParcelas}
-                  </span>
-                ) : (
-                  <span className="text-slate-200 text-xs">—</span>
-                )}
-              </td>
-              <td className="px-4 py-3">
-                <StatusBadge status={item.status} />
-              </td>
-              <td className="px-4 py-3">
-                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {!item.isRateioDerived && item.status !== 'PAGO' && item.status !== 'CANCELADO' && onPagar && (
-                    <button
-                      onClick={() => onPagar(item)}
-                      className="p-1.5 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
-                      title="Dar Baixa"
-                    >
-                      <CheckCircle2 size={15} />
-                    </button>
+        <tbody className="divide-y divide-slate-100">
+          {items.map((item) => {
+            const isPago = item.status === 'PAGO';
+            const isCancelado = item.status === 'CANCELADO';
+            const isAberto = item.status === 'PENDENTE' || item.status === 'VENCIDO';
+            const contaLabel = getDespesaContaLabel(item, contas);
+            const hasBaixaEstornada = isCancelado && Boolean(item.estornadoEm);
+
+            return (
+              <tr key={item.id} className="align-top transition-colors hover:bg-slate-50/70">
+                <td className="px-4 py-3 text-xs font-semibold text-slate-700 whitespace-nowrap leading-5">
+                  <p><span className="font-black text-slate-400">Lançamento:</span> {formatDespesaDate(item.dataLancamento)}</p>
+                  <p><span className="font-black text-slate-400">Vencimento:</span> {formatDespesaDate(item.dataVencimento)}</p>
+                </td>
+                <td className="px-4 py-3 text-sm text-slate-700 max-w-[230px]">
+                  <div className="font-semibold truncate">{item.descricao}</div>
+                  {item.isRateioDerived ? (
+                    <div className="mt-0.5 text-[10px] font-bold text-indigo-600">
+                      Rateio da Matriz{item.poloMatrizNome ? ` · ${item.poloMatrizNome}` : ''}
+                    </div>
+                  ) : item.rateioMode && item.rateioMode !== 'SEM_RATEIO' ? (
+                    <div className="mt-0.5 text-[10px] font-bold text-indigo-600">
+                      Custo rateado{item.rateioPolosQuantidade ? ` em ${item.rateioPolosQuantidade} polo${item.rateioPolosQuantidade === 1 ? '' : 's'}` : ''}
+                    </div>
+                  ) : null}
+                  {item.turmaNome && (
+                    <div className="text-[10px] text-indigo-600 font-bold mt-0.5">Turma: {item.turmaNome}</div>
                   )}
-                  {!item.isRateioDerived && onImprimir && (
-                    <button
-                      onClick={() => onImprimir(item)}
-                      className="p-1.5 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
-                      title="Imprimir Recibo"
-                    >
-                      <Edit2 size={15} />
-                    </button>
+                  {item.observacao && (
+                    <div className="text-[10px] text-slate-400 truncate mt-0.5">{item.observacao}</div>
                   )}
-                  {item.anexoPath && onAnexo && (
-                    <button
-                      onClick={() => onAnexo(item)}
-                      className="p-1.5 text-violet-500 hover:text-violet-700 hover:bg-violet-50 rounded-lg transition-colors"
-                      title={`Abrir anexo${item.anexoNome ? `: ${item.anexoNome}` : ''}`}
-                    >
-                      <Paperclip size={15} />
-                    </button>
+                </td>
+                <td className="px-4 py-3 text-xs font-semibold text-slate-600">
+                  {item.categoriaNome || 'Sem categoria'}
+                </td>
+                <td className="px-4 py-3 text-xs font-semibold text-slate-600">
+                  {item.fornecedorNome || 'Fornecedor não informado'}
+                </td>
+                <td className="px-4 py-3 text-right whitespace-nowrap text-xs">
+                  <p className="font-black text-slate-800">Previsto: {formatDespesaCurrency(item.valor)}</p>
+                  {isPago && (
+                    <p className="mt-0.5 font-bold text-emerald-700">Valor pago: {formatDespesaCurrency(item.valorPago ?? item.valor)}</p>
                   )}
-                  {!item.isRateioDerived && onExcluir && item.status !== 'PAGO' && item.status !== 'CANCELADO' && (
-                    <button
-                      onClick={() => onExcluir(item)}
-                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                      title="Excluir"
-                    >
-                      <Trash2 size={15} />
-                    </button>
+                  {hasBaixaEstornada && (
+                    <p className="mt-0.5 font-bold text-slate-500">Baixa estornada: {formatDespesaCurrency(item.valorPago ?? item.valor)}</p>
                   )}
-                </div>
-              </td>
-            </tr>
-          ))}
+                  {(item.jurosValor > 0 || item.multaValor > 0 || item.descontoValor > 0) && (
+                    <p className="mt-0.5 text-[9px] font-semibold text-slate-400">Base {formatDespesaCurrency(item.valorBase)}</p>
+                  )}
+                </td>
+                <td className="px-4 py-3 text-[10px] font-semibold leading-5 text-slate-600 min-w-[205px]">
+                  {isPago ? (
+                    <>
+                      <p><span className="font-black text-slate-400">Conta de saída:</span> {contaLabel || 'Conta não localizada'}</p>
+                      <p className="text-emerald-700">Pago em {formatDespesaDate(item.dataPagamento)}{item.formaPagamento ? ` · ${item.formaPagamento}` : ''}</p>
+                    </>
+                  ) : hasBaixaEstornada ? (
+                    <>
+                      <p className="font-black text-slate-500">Baixa estornada</p>
+                      <p>Histórico: {contaLabel || 'conta preservada no histórico'}</p>
+                    </>
+                  ) : (
+                    <p className="text-slate-400">Ainda não baixada</p>
+                  )}
+                </td>
+                <td className="px-4 py-3 text-center text-xs font-bold text-slate-600 whitespace-nowrap">
+                  {item.totalParcelas > 1
+                    ? `${item.parcelaNumero}/${item.totalParcelas}`
+                    : 'Única (1/1)'}
+                </td>
+                <td className="px-4 py-3"><StatusBadge status={item.status} /></td>
+                <td className="px-4 py-3">
+                  {item.isRateioDerived ? (
+                    <span className="text-[10px] font-bold text-slate-400">Somente informativa</span>
+                  ) : (
+                    <div className="flex flex-wrap items-center justify-end gap-1">
+                      {isAberto && onEditar && (
+                        <button
+                          type="button"
+                          onClick={() => onEditar(item)}
+                          className={`${actionClass} text-blue-600 hover:bg-blue-50 focus-visible:ring-blue-500`}
+                          title="Editar lançamento"
+                          aria-label={`Editar lançamento ${item.descricao}`}
+                        >
+                          <Pencil size={14} /> <span className="hidden 2xl:inline">Editar</span>
+                        </button>
+                      )}
+                      {isAberto && onPagar && (
+                        <button
+                          type="button"
+                          onClick={() => onPagar(item)}
+                          className={`${actionClass} text-emerald-700 hover:bg-emerald-50 focus-visible:ring-emerald-500`}
+                          title="Dar baixa"
+                          aria-label={`Dar baixa em ${item.descricao}`}
+                        >
+                          <CheckCircle2 size={14} /> <span className="hidden 2xl:inline">Dar baixa</span>
+                        </button>
+                      )}
+                      {!isCancelado && onImprimir && (
+                        <button
+                          type="button"
+                          onClick={() => onImprimir(item)}
+                          className={`${actionClass} text-slate-600 hover:bg-slate-100 focus-visible:ring-slate-500`}
+                          title={isPago ? 'Abrir prévia do recibo' : 'Abrir prévia do lançamento'}
+                          aria-label={`${isPago ? 'Abrir prévia do recibo de' : 'Abrir prévia do lançamento'} ${item.descricao}`}
+                        >
+                          <Printer size={14} /> <span className="hidden 2xl:inline">Imprimir</span>
+                        </button>
+                      )}
+                      {item.anexoPath && onAnexo && !isCancelado && (
+                        <button
+                          type="button"
+                          onClick={() => onAnexo(item)}
+                          className={`${actionClass} text-violet-600 hover:bg-violet-50 focus-visible:ring-violet-500`}
+                          title={`Abrir anexo${item.anexoNome ? `: ${item.anexoNome}` : ''}`}
+                          aria-label={`Abrir anexo de ${item.descricao}`}
+                        >
+                          <Paperclip size={14} /> <span className="hidden 2xl:inline">Anexo</span>
+                        </button>
+                      )}
+                      {!isCancelado && onCancelar && (
+                        <button
+                          type="button"
+                          onClick={() => onCancelar(item)}
+                          className={`${actionClass} ${isPago ? 'text-rose-700 hover:bg-rose-50 focus-visible:ring-rose-500' : 'text-slate-600 hover:bg-slate-100 focus-visible:ring-slate-500'}`}
+                          title={isPago ? 'Estornar e cancelar' : 'Cancelar lançamento'}
+                          aria-label={`${isPago ? 'Estornar e cancelar' : 'Cancelar'} ${item.descricao}`}
+                        >
+                          {isPago ? <RotateCcw size={14} /> : <XCircle size={14} />}
+                          <span className="hidden 2xl:inline">{isPago ? 'Estornar' : 'Cancelar'}</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

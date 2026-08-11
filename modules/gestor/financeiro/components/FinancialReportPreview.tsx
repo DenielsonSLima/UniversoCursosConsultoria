@@ -1,4 +1,5 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Download, FileText, Loader2, Printer, X } from 'lucide-react';
 import DocumentHeader from '../../components/DocumentHeader';
@@ -185,6 +186,10 @@ const FinancialReportPreviewModal: React.FC<FinancialReportPreviewModalProps> = 
   onClose,
 }) => {
   const reportRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<React.ElementRef<'button'>>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+  const downloadingRef = useRef(false);
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const emittedAt = useMemo(formatDateTime, []);
@@ -225,6 +230,49 @@ const FinancialReportPreviewModal: React.FC<FinancialReportPreviewModalProps> = 
     : downloadError;
   const paginatedRows = useMemo(() => paginateRows(rows), [rows]);
 
+  useEffect(() => {
+    downloadingRef.current = downloading;
+  }, [downloading]);
+
+  useEffect(() => {
+    previousFocusRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const focusFrame = window.requestAnimationFrame(() => closeButtonRef.current?.focus());
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !downloadingRef.current) {
+        onClose();
+        return;
+      }
+      if (event.key !== 'Tab' || !dialogRef.current) return;
+      const focusable = Array.from(dialogRef.current.querySelectorAll(
+        'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), '
+        + 'textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      )) as HTMLElement[];
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+      previousFocusRef.current?.focus();
+    };
+  }, [onClose]);
+
   const handleDownload = async () => {
     const element = reportRef.current;
     if (!element || reportAssetsLoading) return;
@@ -248,8 +296,14 @@ const FinancialReportPreviewModal: React.FC<FinancialReportPreviewModalProps> = 
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-[130] flex items-center justify-center bg-slate-950/70 p-3 backdrop-blur-sm sm:p-5">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[140] flex items-center justify-center bg-slate-950/70 p-3 backdrop-blur-sm sm:p-5"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="financeiro-report-preview-title"
+      aria-busy={downloading || reportAssetsLoading}
+    >
       <style>{`
         @media print {
           body { background: #fff !important; }
@@ -287,10 +341,10 @@ const FinancialReportPreviewModal: React.FC<FinancialReportPreviewModalProps> = 
         }
       `}</style>
 
-      <div className="flex max-h-[94vh] w-full max-w-6xl flex-col overflow-hidden rounded-[2rem] bg-white shadow-2xl">
+      <div ref={dialogRef} className="flex max-h-[94vh] w-full max-w-6xl flex-col overflow-hidden rounded-[2rem] bg-white shadow-2xl">
         <div className="financeiro-report-no-print flex flex-col gap-3 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <h3 className="truncate text-base font-black uppercase tracking-tight text-[#001a33]">{title}</h3>
+            <h3 id="financeiro-report-preview-title" className="truncate text-base font-black uppercase tracking-tight text-[#001a33]">{title}</h3>
             <p className="text-xs font-bold text-slate-400">
               {rows.length} {recordLabel} em {paginatedRows.length} página(s)
             </p>
@@ -323,8 +377,10 @@ const FinancialReportPreviewModal: React.FC<FinancialReportPreviewModalProps> = 
               {downloading ? 'Gerando...' : 'Baixar PDF'}
             </button>
             <button
+              ref={closeButtonRef}
               type="button"
               onClick={onClose}
+              disabled={downloading}
               className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-200"
               title="Fechar"
             >
@@ -480,7 +536,8 @@ const FinancialReportPreviewModal: React.FC<FinancialReportPreviewModalProps> = 
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 };
 

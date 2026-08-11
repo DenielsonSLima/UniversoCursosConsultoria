@@ -1,4 +1,10 @@
-import type { CaixaMonthlyStatement } from '../caixa.service';
+import type {
+  CaixaFinanciamentoResumo,
+  CaixaMonthlyStatement,
+  CaixaPatrimonioResumo,
+  CaixaPosicaoLiquidaResumo,
+  CaixaPosicaoTotalDados,
+} from '../caixa.service';
 
 export type CaixaCompositionStatus =
   | 'COMPOSICAO_EXPLICITA'
@@ -141,8 +147,41 @@ export interface CaixaReportRecurringAnalysis {
   totais: CaixaReportRecurringBreakdown;
 }
 
+/**
+ * A posição complementar só expõe dados quando a RPC canônica correspondente
+ * autorizou a leitura. Assim, a prestação operacional continua disponível a
+ * quem possui Caixa, sem transformar uma falha de autorização em saldo zero.
+ */
+export type CaixaReportComplementaryPosition<T> =
+  | {
+    disponivel: true;
+    dados: T;
+  }
+  | {
+    disponivel: false;
+    motivo: 'ACESSO_RESTRITO';
+  };
+
+/**
+ * A posição total traz o mesmo valor composto da RPC do Caixa. A data de
+ * corte acompanha o estado para que o PDF nunca pareça uma posição "de hoje"
+ * quando a competência selecionada já foi encerrada.
+ */
+export type CaixaReportPosicaoTotal =
+  | {
+    disponivel: true;
+    dataCorte: string;
+    dados: CaixaPosicaoTotalDados;
+  }
+  | {
+    disponivel: false;
+    dataCorte: string;
+    motivo: 'ACESSO_RESTRITO' | 'HISTORICO_INSUFICIENTE';
+    observacao: string;
+  };
+
 export interface CaixaDetailedReport {
-  versao: number;
+  versao: 6;
   geradoEm: string;
   completo: boolean;
   confidencial: boolean;
@@ -152,6 +191,10 @@ export interface CaixaDetailedReport {
   resumo: CaixaMonthlyStatement;
   totaisRecebimentos: CaixaReportTotals;
   totaisDespesas: CaixaReportTotals;
+  financiamento: CaixaReportComplementaryPosition<CaixaFinanciamentoResumo>;
+  patrimonio: CaixaReportComplementaryPosition<CaixaPatrimonioResumo>;
+  posicaoLiquida: CaixaReportComplementaryPosition<CaixaPosicaoLiquidaResumo>;
+  posicaoTotal: CaixaReportPosicaoTotal;
   resumoCursos: CaixaReportCourseSummary;
   analiseRecorrente: CaixaReportRecurringAnalysis;
   recebimentos: CaixaReportReceipt[];

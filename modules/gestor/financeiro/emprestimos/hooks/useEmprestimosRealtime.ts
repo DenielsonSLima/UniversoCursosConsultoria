@@ -29,6 +29,10 @@ export function useEmprestimosRealtime(
           queryKey: emprestimosQueryKeys.list(poloId),
           refetchType: 'active',
         }),
+        queryClient.invalidateQueries({
+          queryKey: ['financeiro', 'emprestimos', 'exportacao', poloId],
+          refetchType: 'none',
+        }),
         queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos }),
         queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.resumoKpis }),
         queryClient.invalidateQueries({ queryKey: caixaQueryKeys.dashboards }),

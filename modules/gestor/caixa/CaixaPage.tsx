@@ -20,6 +20,8 @@ import {
   caixaCustosOperacionaisQueryOptions,
   caixaFinanciamentoResumoQueryOptions,
   caixaPatrimonioResumoQueryOptions,
+  caixaPosicaoLiquidaResumoQueryOptions,
+  caixaPosicaoTotalResumoQueryOptions,
   caixaPolosQueryOptions,
   getCurrentCaixaCompetencia,
   shiftCaixaCompetencia,
@@ -39,6 +41,8 @@ import { CaixaReconciliationCard } from './components/CaixaReconciliationCard';
 import { CaixaFinanciamentoResumoCard } from './components/CaixaFinanciamentoResumoCard';
 import { CaixaCustosOperacionaisCard } from './components/CaixaCustosOperacionaisCard';
 import { CaixaPatrimonioResumoCard } from './components/CaixaPatrimonioResumoCard';
+import { CaixaPosicaoLiquidaResumoCard } from './components/CaixaPosicaoLiquidaResumoCard';
+import { CaixaPosicaoTotalResumoCard } from './components/CaixaPosicaoTotalResumoCard';
 
 interface CaixaPageProps {
   poloId?: string | null;
@@ -119,6 +123,24 @@ const CaixaPage: React.FC<CaixaPageProps> = ({
     isError: hasPatrimonioError,
   } = useQuery({
     ...caixaPatrimonioResumoQueryOptions(selectedPolo, competencia),
+    enabled: Boolean(selectedPolo),
+  });
+
+  const {
+    data: posicaoLiquidaResumo,
+    isLoading: isPosicaoLiquidaLoading,
+    isError: hasPosicaoLiquidaError,
+  } = useQuery({
+    ...caixaPosicaoLiquidaResumoQueryOptions(selectedPolo, competencia),
+    enabled: Boolean(selectedPolo),
+  });
+
+  const {
+    data: posicaoTotalResumo,
+    isLoading: isPosicaoTotalLoading,
+    isError: hasPosicaoTotalError,
+  } = useQuery({
+    ...caixaPosicaoTotalResumoQueryOptions(selectedPolo, competencia),
     enabled: Boolean(selectedPolo),
   });
 
@@ -335,6 +357,18 @@ const CaixaPage: React.FC<CaixaPageProps> = ({
           ))}
         </div>
       </section>
+
+      <CaixaPosicaoTotalResumoCard
+        resumo={posicaoTotalResumo}
+        isLoading={isPosicaoTotalLoading}
+        hasError={hasPosicaoTotalError}
+      />
+
+      <CaixaPosicaoLiquidaResumoCard
+        resumo={posicaoLiquidaResumo}
+        isLoading={isPosicaoLiquidaLoading}
+        hasError={hasPosicaoLiquidaError}
+      />
 
       <CaixaPatrimonioResumoCard
         resumo={patrimonioResumo}

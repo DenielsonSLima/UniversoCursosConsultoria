@@ -4,6 +4,9 @@ import { resolve } from 'node:path';
 import test from 'node:test';
 import type { CaixaDetailedReport } from './caixa-report.types';
 import {
+  getCaixaReportPosicaoTotal,
+} from './caixa-report.posicao-total';
+import {
   buildCaixaAdjustmentLines,
   CAIXA_REPORT_PDF_PIPELINE,
   createCaixaReportPdfDocument,
@@ -42,7 +45,7 @@ const recurringTotals = {
 };
 
 const makeReport = (): CaixaDetailedReport => ({
-  versao: 3,
+  versao: 6,
   geradoEm: '2026-08-06T03:00:00Z',
   completo: true,
   confidencial: true,
@@ -102,6 +105,67 @@ const makeReport = (): CaixaDetailedReport => ({
   },
   totaisRecebimentos: { ...emptyTotals, valorBase: 99.9, descontoIdentificado: 99, valorFinal: 0.9, quantidade: 1 },
   totaisDespesas: { ...emptyTotals },
+  financiamento: {
+    disponivel: true,
+    dados: {
+      competencia: '2026-08-01',
+      creditoLiberadoMatriz: 2500,
+      obrigacaoRateada: 520,
+      principalRateado: 480,
+      encargosRateados: 40,
+      pagoRateado: 520,
+      observacao: 'Financiamento fora do resultado operacional.',
+    },
+  },
+  patrimonio: {
+    disponivel: true,
+    dados: {
+      versao: 1,
+      competencia: '2026-08-01',
+      escopoTipo: 'POLO',
+      poloId: null,
+      posicaoFechamento: {
+        registrosAtivos: 1,
+        unidadesAtivas: 2,
+        valorAtivoCusto: '1250.50',
+      },
+      aquisicoesCompetencia: {
+        registros: 1,
+        unidades: 2,
+        valorCusto: '1250.50',
+      },
+      perdasCompetencia: {
+        movimentos: 0,
+        unidades: 0,
+        valorCusto: '0.00',
+      },
+      observacao: 'Patrimônio não altera o resultado operacional.',
+    },
+  },
+  posicaoLiquida: {
+    disponivel: true,
+    dados: {
+      versao: 1,
+      competencia: '2026-08-01',
+      escopoTipo: 'POLO',
+      poloId: null,
+      valorPatrimonialCusto: '1250.50',
+      saldoEmprestimosAPagar: '520.00',
+      valorLiquido: '730.50',
+      observacao: 'Patrimônio a custo menos empréstimos a pagar.',
+    },
+  },
+  posicaoTotal: {
+    disponivel: true,
+    dataCorte: '2026-08-06',
+    dados: {
+      saldoCaixaRegistrado: '15.80',
+      valorPatrimonialCusto: '1250.50',
+      saldoEmprestimosAPagar: '520.00',
+      valorTotalLiquido: '746.30',
+      observacao: 'Caixa registrado no fechamento mais patrimônio a custo menos empréstimos a pagar.',
+    },
+  },
   resumoCursos: { itens: [], quantidadeCursos: 0, quantidadeOmitidas: 0, totais: { previstoNoMes: 0, recebidoNoMes: 0, emAtraso: 0, quantidadeTurmas: 0, quantidadeAlunos: 0 } },
   analiseRecorrente: { modalidades: [], turmas: [], totais: recurringTotals },
   recebimentos: [{
@@ -175,7 +239,7 @@ test('gera páginas com texto vetorial visível, Inter incorporada e nenhuma cap
   const source = pdf.output();
 
   assert.equal(CAIXA_REPORT_PDF_PIPELINE, 'native-vector');
-  assert.equal(pages.length, 4);
+  assert.equal(pages.length, 5);
   assert.ok(pages.every((page) => page.hasTextOperator));
   assert.ok(pages.every((page) => page.imageDrawCount === 0));
   assert.doesNotMatch(source, /\b3\s+Tr\b/);
@@ -183,6 +247,10 @@ test('gera páginas com texto vetorial visível, Inter incorporada e nenhuma cap
   assert.match(source, /universo\.cursoseconsultoria@gmail\.com/);
   assert.doesNotMatch(source, /email-desatualizado@polo\.local/);
   assert.match(source, /\(CAIXA /);
+  // Text drawn with the embedded Inter subset is encoded as glyph IDs in the
+  // PDF stream. Page count and text operators prove the dedicated vector page;
+  // textual content is verified through Poppler extraction in the PDF smoke.
+  assert.ok(pages[1]?.hasTextOperator);
   assert.ok(Object.hasOwn(pdf.getFontList(), 'InterUniverso'));
   if (process.env.CAIXA_PDF_FIXTURE_OUTPUT) {
     await writeFile(
@@ -234,6 +302,51 @@ test('mantém conteúdo vetorial quando logo e marca paisagem são imagens decor
   }
 });
 
+test('mantém a prestação operacional quando posições complementares não são autorizadas', async () => {
+  const [regularFont, mediumFont, semiBoldFont, boldFont, extraBoldFont, blackFont] = await Promise.all([
+    readFile(resolve('public/fonts/Inter-Regular.ttf')),
+    readFile(resolve('public/fonts/Inter-Medium.ttf')),
+    readFile(resolve('public/fonts/Inter-SemiBold.ttf')),
+    readFile(resolve('public/fonts/Inter-Bold.ttf')),
+    readFile(resolve('public/fonts/Inter-ExtraBold.ttf')),
+    readFile(resolve('public/fonts/Inter-Black.ttf')),
+  ]);
+  const asArrayBuffer = (file: Uint8Array) => file.buffer.slice(
+    file.byteOffset,
+    file.byteOffset + file.byteLength,
+  ) as ArrayBuffer;
+  const report = makeReport();
+  report.financiamento = { disponivel: false, motivo: 'ACESSO_RESTRITO' };
+  report.patrimonio = { disponivel: false, motivo: 'ACESSO_RESTRITO' };
+  report.posicaoLiquida = { disponivel: false, motivo: 'ACESSO_RESTRITO' };
+  report.posicaoTotal = {
+    disponivel: false,
+    dataCorte: '2026-08-06',
+    motivo: 'ACESSO_RESTRITO',
+    observacao: 'Escopo complementar indisponível.',
+  };
+
+  const pdf = await createCaixaReportPdfDocument(report, undefined, {
+    regularFontBuffer: asArrayBuffer(regularFont),
+    mediumFontBuffer: asArrayBuffer(mediumFont),
+    semiBoldFontBuffer: asArrayBuffer(semiBoldFont),
+    boldFontBuffer: asArrayBuffer(boldFont),
+    extraBoldFontBuffer: asArrayBuffer(extraBoldFont),
+    blackFontBuffer: asArrayBuffer(blackFont),
+  });
+  const pages = inspectCaixaPdfOperatorsForTest(pdf);
+
+  assert.equal(pages.length, 5);
+  assert.ok(pages.every((page) => page.hasTextOperator));
+  assert.ok(pages.every((page) => page.imageDrawCount === 0));
+  if (process.env.CAIXA_PDF_RESTRICTED_FIXTURE_OUTPUT) {
+    await writeFile(
+      process.env.CAIXA_PDF_RESTRICTED_FIXTURE_OUTPUT,
+      new Uint8Array(pdf.output('arraybuffer')),
+    );
+  }
+});
+
 test('preserva rótulo do resultado e diferença financeira não discriminada', () => {
   assert.equal(getCaixaResultLabel('NEGATIVO'), 'Déficit do mês');
   assert.equal(getCaixaResultLabel('POSITIVO'), 'Superávit do mês');
@@ -241,6 +354,16 @@ test('preserva rótulo do resultado e diferença financeira não discriminada', 
   const receipt = makeReport().recebimentos[0];
   receipt.diferencaNaoDiscriminada = 7.25;
   assert.deepEqual(buildCaixaAdjustmentLines(receipt).at(-1), 'Não discrim.: R$\u00a07,25');
+});
+
+test('usa a posição total recebida do backend sem recompor valores no PDF', () => {
+  const position = getCaixaReportPosicaoTotal(makeReport());
+  assert.ok(position?.disponivel);
+  if (!position?.disponivel) throw new Error('A posição total deveria estar disponível neste fixture.');
+  assert.equal(position.dados.saldoCaixaRegistrado, '15.80');
+  assert.equal(position.dados.valorPatrimonialCusto, '1250.50');
+  assert.equal(position.dados.saldoEmprestimosAPagar, '520.00');
+  assert.equal(position.dados.valorTotalLiquido, '746.30');
 });
 
 test('reutiliza exclusivamente o compositor institucional canônico', async () => {
@@ -256,6 +379,20 @@ test('reutiliza exclusivamente o compositor institucional canônico', async () =
   assert.doesNotMatch(source, /\bHEADER_BOTTOM\b/);
   assert.match(source, /eyebrow:\s*['"]Caixa · uso interno['"]/);
   assert.match(source, /label:\s*['"]Competência['"]/);
+  assert.match(source, /drawNonOperationalPositionsPage/);
+  assert.match(source, /drawLiquidPositionBand/);
+  assert.match(source, /drawTotalPositionCard/);
+  assert.match(source, /POSIÇÃO TOTAL NO CORTE/);
+  assert.match(source, /dados\.valorTotalLiquido/);
+  assert.match(source, /dados\.saldoCaixaRegistrado/);
+  assert.match(source, /formatCaixaCanonicalCurrency\(patrimonio\./);
+  assert.match(source, /formatCaixaCanonicalCurrency\(dados\.valorLiquido\)/);
+  assert.match(source, /formatCaixaCurrency\(financiamento\./);
+  assert.match(source, /drawRestrictedNonOperationalPosition/);
   assert.match(previewSource, /meta=\{\{/);
+  assert.match(previewSource, /CaixaReportNonOperationalPositions/);
+  assert.match(previewSource, /PositionTotalMetric/);
+  assert.match(previewSource, /getCaixaReportPosicaoTotal/);
+  assert.match(previewSource, /dados\.valorTotalLiquido/);
   assert.doesNotMatch(previewSource, /rightContent=/);
 });

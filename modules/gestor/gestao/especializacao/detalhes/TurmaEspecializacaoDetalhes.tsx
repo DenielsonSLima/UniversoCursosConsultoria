@@ -52,7 +52,7 @@ const TurmaEspecializacaoDetalhes: React.FC<TurmaEspecializacaoDetalhesProps> = 
     if (!tabs.some((tab) => tab.id === activeTab)) return null;
     switch (activeTab) {
       case 'resumo': return <TurmaResumo turma={turma} canViewFinanceiro={canViewFinanceiro} canViewAulas={canViewAulas} />;
-      case 'alunos': return <TurmaAlunos turma={turma} />;
+      case 'alunos': return <TurmaAlunos turma={turma} canManageFinanceiro={canViewFinanceiro} />;
       case 'grade': return <TurmaGrade turma={turma} singleProfessor={true} colorTheme="rose" />;
       case 'diarios': return <TurmaDiarios turma={turma} />;
       case 'financeiro': return <TurmaFinanceiro turma={turma} />;

@@ -10,7 +10,18 @@ const positiveNumber = (value: unknown) => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 };
 
+const singlePlanSnapshot = (receivable: any) => {
+  const snapshot = receivable?.regra_financeira_plano_unico_snapshot;
+  return snapshot && typeof snapshot === "object" && !Array.isArray(snapshot) &&
+      snapshot.origem === "PLANO_UNICO"
+    ? snapshot
+    : null;
+};
+
 const launchPolicy = (receivable: any, turma: any) => {
+  if (singlePlanSnapshot(receivable)) {
+    return { discount: true, penalty: true };
+  }
   const launchType = String(receivable?.tipo_lancamento || "").toUpperCase();
   if (launchType === "MATRICULA") {
     return {
@@ -36,24 +47,29 @@ export const buildConfiguredBaneseFinancialTerms = (input: {
   matricula?: any;
 }): BaneseFinancialTermsInput => {
   const { receivable, turma, matricula } = input;
+  const plan = singlePlanSnapshot(receivable);
   const nominalAmount = roundMoney(receivable?.valor);
   const dueDate = String(receivable?.data_vencimento || "").slice(0, 10);
   const policy = launchPolicy(receivable, turma);
   const discountValue = roundMoney(
-    matricula?.desconto_pontualidade_individual ??
+    plan?.descontoPontualidade ??
+      matricula?.desconto_pontualidade_individual ??
       turma?.desconto_pontualidade,
   );
   const interestValue = positiveNumber(
-    matricula?.juros_atraso_individual ?? turma?.juros_atraso,
+    plan?.jurosAtrasoPercentual ??
+      matricula?.juros_atraso_individual ?? turma?.juros_atraso,
   );
-  const percentagePenaltySource =
-    matricula?.multa_atraso_percentual_individual ??
+  const percentagePenaltySource = plan
+    ? null
+    : matricula?.multa_atraso_percentual_individual ??
       turma?.multa_atraso_percentual;
   const hasPercentagePenalty = percentagePenaltySource !== null &&
     percentagePenaltySource !== undefined;
   const percentagePenaltyValue = positiveNumber(percentagePenaltySource);
   const fixedPenaltyValue = roundMoney(
-    matricula?.multa_atraso_individual ?? turma?.multa_atraso,
+    plan?.multaAtraso ?? matricula?.multa_atraso_individual ??
+      turma?.multa_atraso,
   );
 
   return {

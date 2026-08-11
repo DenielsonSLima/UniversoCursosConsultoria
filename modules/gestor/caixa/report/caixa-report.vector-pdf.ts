@@ -1,6 +1,7 @@
 import type { jsPDF } from 'jspdf';
 import {
   formatCaixaCompetencia,
+  formatCaixaCanonicalCurrency,
   formatCaixaCurrency,
   formatCaixaDate,
   formatCaixaInstallment,
@@ -11,6 +12,10 @@ import {
 } from '../../secretaria/shared/canonical-institutional-header-pdf';
 import { getCanonicalPdfInlineImage } from '../../secretaria/shared/canonical-document-vector-pdf';
 import { buildCaixaReportPages } from './caixa-report.pagination';
+import {
+  getCaixaReportPosicaoTotal,
+  getCaixaReportPosicaoTotalUnavailableMessage,
+} from './caixa-report.posicao-total';
 import type {
   CaixaDetailedReport,
   CaixaReportExpense,
@@ -19,6 +24,7 @@ import type {
   CaixaReportRecurringClass,
   CaixaReportTotals,
 } from './caixa-report.types';
+import type { CaixaReportPosicaoTotal } from './caixa-report.posicao-total';
 
 const PAGE_WIDTH = 297;
 const PAGE_HEIGHT = 210;
@@ -310,6 +316,66 @@ const drawCard = (
   drawText(pdf, description, x + 2.2, y + 11.8, width - 4.4, { maxLines: 1 });
 };
 
+const drawTotalPositionCard = (
+  pdf: jsPDF,
+  options: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    position: CaixaReportPosicaoTotal | null;
+  },
+) => {
+  const { x, y, width, height, position } = options;
+  const availablePosition = position?.disponivel === true ? position : null;
+  const fill = availablePosition ? COLORS.navy : COLORS.amber50;
+  const border = availablePosition ? '#0b365d' : COLORS.amber100;
+  const label = availablePosition ? '#bfdbfe' : '#92400e';
+  const detail = availablePosition ? '#dbeafe' : '#92400e';
+
+  pdf.setFillColor(fill);
+  pdf.setDrawColor(border);
+  pdf.roundedRect(x, y, width, height, 2.5, 2.5, 'FD');
+  setText(pdf, label, 6.2, 'black');
+  drawText(pdf, 'POSIÇÃO TOTAL NO CORTE', x + 2.2, y + 2.2, width - 4.4, { maxLines: 1 });
+
+  if (!availablePosition) {
+    setText(pdf, '#92400e', 11.5, 'black');
+    drawText(pdf, 'INDISPONÍVEL', x + 2.2, y + 6.2, width - 4.4, { maxLines: 1 });
+    setText(pdf, detail, 5.6);
+    drawText(
+      pdf,
+      getCaixaReportPosicaoTotalUnavailableMessage(position),
+      x + 2.2,
+      y + 11.8,
+      width - 4.4,
+      { maxLines: 1 },
+    );
+    return;
+  }
+
+  const { dados } = availablePosition;
+  const totalIsNegative = dados.valorTotalLiquido.startsWith('-');
+  setText(pdf, totalIsNegative ? '#fda4af' : '#a7f3d0', 12.5, 'black');
+  drawText(
+    pdf,
+    formatCaixaCanonicalCurrency(dados.valorTotalLiquido),
+    x + width - 2.2,
+    y + 5.8,
+    undefined,
+    { align: 'right' },
+  );
+  setText(pdf, detail, 5.2);
+  drawText(
+    pdf,
+    `Corte ${formatCaixaDate(availablePosition.dataCorte)} · Caixa: ${formatCaixaCanonicalCurrency(dados.saldoCaixaRegistrado)} · Patrimônio: ${formatCaixaCanonicalCurrency(dados.valorPatrimonialCusto)} · Empréstimos: ${formatCaixaCanonicalCurrency(dados.saldoEmprestimosAPagar)}`,
+    x + 2.2,
+    y + 11.8,
+    width - 4.4,
+    { maxLines: 1 },
+  );
+};
+
 const drawComposition = (
   pdf: jsPDF,
   x: number,
@@ -365,29 +431,33 @@ const drawSummaryPage = (pdf: jsPDF, report: CaixaDetailedReport, contentTop: nu
   const gap = 2.5;
   const cardWidth = (CONTENT_WIDTH - (3 * gap)) / 4;
   const resultLabel = getCaixaResultLabel(report.resumo.resumoCompetencia.resultadoStatus);
+  drawTotalPositionCard(pdf, {
+    x: CONTENT_LEFT,
+    y: contentTop + 12,
+    width: (cardWidth * 2) + gap,
+    height: 16.5,
+    position: getCaixaReportPosicaoTotal(report),
+  });
+
   const cards = [
-    ['Saldo contábil registrado', formatCaixaCurrency(report.resumo.saldosHoje.registradoTotal), 'Posição contábil do sistema; não é consulta ao extrato', 'neutral'],
-    ['Entradas recebidas', formatCaixaCurrency(report.totaisRecebimentos.valorFinal), `${report.totaisRecebimentos.quantidade} recebimento(s) confirmado(s)`, 'emerald'],
-    ['Saídas pagas', formatCaixaCurrency(report.totaisDespesas.valorFinal), `${report.totaisDespesas.quantidade} pagamento(s) confirmado(s)`, 'rose'],
-    [resultLabel, formatCaixaCurrency(report.resumo.resumoCompetencia.resultado), 'Entradas menos saídas confirmadas no período', report.resumo.resumoCompetencia.resultado >= 0 ? 'emerald' : 'rose'],
-    ['A receber', formatCaixaCurrency(report.resumo.compromissos.aReceber), 'Receitas futuras ainda em aberto', 'neutral'],
-    ['Inadimplência', formatCaixaCurrency(report.resumo.compromissos.receberVencido), 'Valor vencido e ainda não recebido', 'amber'],
-    ['A pagar', formatCaixaCurrency(report.resumo.compromissos.aPagar), 'Obrigações futuras ainda em aberto', 'neutral'],
-    ['Obrigações vencidas', formatCaixaCurrency(report.resumo.compromissos.pagarVencido), 'Valor vencido e ainda não pago', 'rose'],
+    { column: 2, row: 0, label: 'Entradas recebidas', value: formatCaixaCurrency(report.totaisRecebimentos.valorFinal), description: `${report.totaisRecebimentos.quantidade} recebimento(s) confirmado(s)`, tone: 'emerald' },
+    { column: 3, row: 0, label: 'Saídas pagas', value: formatCaixaCurrency(report.totaisDespesas.valorFinal), description: `${report.totaisDespesas.quantidade} pagamento(s) confirmado(s)`, tone: 'rose' },
+    { column: 0, row: 1, label: 'Saldo contábil registrado', value: formatCaixaCurrency(report.resumo.saldosHoje.registradoTotal), description: 'Posição contábil do sistema; não é consulta ao extrato', tone: 'neutral' },
+    { column: 1, row: 1, label: resultLabel, value: formatCaixaCurrency(report.resumo.resumoCompetencia.resultado), description: 'Entradas menos saídas confirmadas no período', tone: report.resumo.resumoCompetencia.resultado >= 0 ? 'emerald' : 'rose' },
+    { column: 2, row: 1, label: 'A receber', value: formatCaixaCurrency(report.resumo.compromissos.aReceber), description: `Em atraso: ${formatCaixaCurrency(report.resumo.compromissos.receberVencido)}`, tone: report.resumo.compromissos.receberVencido > 0 ? 'amber' : 'neutral' },
+    { column: 3, row: 1, label: 'A pagar', value: formatCaixaCurrency(report.resumo.compromissos.aPagar), description: `Vencidas: ${formatCaixaCurrency(report.resumo.compromissos.pagarVencido)}`, tone: report.resumo.compromissos.pagarVencido > 0 ? 'rose' : 'neutral' },
   ] as const;
-  cards.forEach((card, index) => {
-    const row = index < 4 ? 0 : 1;
-    const column = index % 4;
+  cards.forEach((card) => {
     drawCard(
       pdf,
-      CONTENT_LEFT + (column * (cardWidth + gap)),
-      contentTop + 12 + (row * 19),
+      CONTENT_LEFT + (card.column * (cardWidth + gap)),
+      contentTop + 12 + (card.row * 19),
       cardWidth,
       16.5,
-      card[0],
-      card[1],
-      card[2],
-      card[3],
+      card.label,
+      card.value,
+      card.description,
+      card.tone,
     );
   });
 
@@ -402,6 +472,229 @@ const drawSummaryPage = (pdf: jsPDF, report: CaixaDetailedReport, contentTop: nu
   drawText(pdf, 'Leitura correta: o resultado mensal representa o fluxo de caixa confirmado, não lucro contábil por competência. O saldo Banese é a posição contábil do sistema; a integração atual não consulta o extrato bancário.', CONTENT_LEFT + 3, contentTop + 76, CONTENT_WIDTH - 6, { maxLines: 1 });
 
   drawSummaryPanels(pdf, report, contentTop + 83);
+};
+
+const drawNonOperationalPanel = (
+  pdf: jsPDF,
+  options: {
+    x: number;
+    y: number;
+    height: number;
+    eyebrow: string;
+    title: string;
+    description: string;
+    notice: string;
+  },
+) => {
+  pdf.setFillColor(COLORS.white);
+  pdf.setDrawColor(COLORS.slate200);
+  pdf.roundedRect(options.x, options.y, CONTENT_WIDTH, options.height, 2.5, 2.5, 'FD');
+  setText(pdf, COLORS.blue, 6, 'black');
+  drawText(pdf, options.eyebrow.toUpperCase(), options.x + 3, options.y + 3);
+  setText(pdf, COLORS.navy, 8.5, 'black');
+  drawText(pdf, options.title.toUpperCase(), options.x + 3, options.y + 6.7);
+  setText(pdf, COLORS.slate500, 5.7);
+  drawText(pdf, options.description, options.x + 3, options.y + 11.2, CONTENT_WIDTH - 6, { maxLines: 1 });
+  pdf.setDrawColor(COLORS.slate100);
+  pdf.line(options.x + 3, options.y + 14.5, options.x + CONTENT_WIDTH - 3, options.y + 14.5);
+  pdf.setFillColor('#eff6ff');
+  pdf.setDrawColor('#dbeafe');
+  pdf.roundedRect(options.x + 3, options.y + options.height - 10, CONTENT_WIDTH - 6, 7, 1.8, 1.8, 'FD');
+  setText(pdf, '#1e3a8a', 5.6, 'bold');
+  drawText(pdf, options.notice, options.x + 5, options.y + options.height - 8.2, CONTENT_WIDTH - 10, { maxLines: 1 });
+};
+
+const drawRestrictedNonOperationalPosition = (
+  pdf: jsPDF,
+  options: { x: number; y: number; label: string },
+) => {
+  setText(pdf, '#92400e', 7, 'black');
+  drawText(pdf, `DADOS DE ${options.label.toUpperCase()} INDISPONÍVEIS`, options.x + 3, options.y + 23);
+  setText(pdf, '#92400e', 5.8);
+  drawText(
+    pdf,
+    'Este perfil não possui o escopo complementar necessário. A prestação operacional permanece disponível.',
+    options.x + 3,
+    options.y + 28,
+    CONTENT_WIDTH - 6,
+    { maxLines: 2 },
+  );
+};
+
+const drawLiquidPositionBand = (
+  pdf: jsPDF,
+  report: CaixaDetailedReport,
+  x: number,
+  y: number,
+) => {
+  const position = report.posicaoLiquida;
+  pdf.setFillColor('#eff6ff');
+  pdf.setDrawColor('#bfdbfe');
+  pdf.roundedRect(x, y, CONTENT_WIDTH, 10, 2.2, 2.2, 'FD');
+
+  if (!position.disponivel) {
+    setText(pdf, '#92400e', 6.2, 'black');
+    drawText(pdf, 'POSIÇÃO LÍQUIDA INDISPONÍVEL', x + 3, y + 2.2);
+    setText(pdf, '#92400e', 5.5);
+    drawText(
+      pdf,
+      'Este perfil precisa dos escopos patrimonial e financeiro para visualizar o valor líquido.',
+      x + 3,
+      y + 5.6,
+      CONTENT_WIDTH - 6,
+      { maxLines: 1 },
+    );
+    return;
+  }
+
+  const { dados } = position;
+  const isNegative = dados.valorLiquido.startsWith('-');
+  setText(pdf, COLORS.blue, 6.1, 'black');
+  drawText(pdf, 'VALOR LÍQUIDO (PATRIMÔNIO A CUSTO - EMPRÉSTIMOS A PAGAR)', x + 3, y + 2.1);
+  setText(pdf, isNegative ? COLORS.rose700 : COLORS.emerald700, 10.5, 'black');
+  drawText(
+    pdf,
+    formatCaixaCanonicalCurrency(dados.valorLiquido),
+    x + CONTENT_WIDTH - 3,
+    y + 1.8,
+    undefined,
+    { align: 'right' },
+  );
+  setText(pdf, COLORS.slate600, 5.5);
+  drawText(
+    pdf,
+    `Patrimônio a custo: ${formatCaixaCanonicalCurrency(dados.valorPatrimonialCusto)} - Empréstimos a pagar: ${formatCaixaCanonicalCurrency(dados.saldoEmprestimosAPagar)}`,
+    x + 3,
+    y + 6,
+    CONTENT_WIDTH - 6,
+    { maxLines: 1 },
+  );
+};
+
+const drawNonOperationalPositionsPage = (
+  pdf: jsPDF,
+  report: CaixaDetailedReport,
+  contentTop: number,
+) => {
+  setText(pdf, COLORS.blue, 6.3, 'black');
+  drawText(pdf, 'POSIÇÃO COMPLEMENTAR', CONTENT_LEFT, contentTop);
+  setText(pdf, COLORS.navy, 15, 'black');
+  drawText(pdf, 'PATRIMÔNIO E FINANCIAMENTO', CONTENT_LEFT, contentTop + 4.5);
+  setText(pdf, COLORS.slate500, 6.3);
+  drawText(
+    pdf,
+    'Posições canônicas da competência, exibidas separadamente do fluxo operacional.',
+    CONTENT_LEFT,
+    contentTop + 11,
+  );
+
+  const posicaoLiquidaTop = contentTop + 17;
+  drawLiquidPositionBand(pdf, report, CONTENT_LEFT, posicaoLiquidaTop);
+
+  const patrimonioTop = posicaoLiquidaTop + 12;
+  const patrimonioHeight = 46;
+  drawNonOperationalPanel(pdf, {
+    x: CONTENT_LEFT,
+    y: patrimonioTop,
+    height: patrimonioHeight,
+    eyebrow: 'Posição patrimonial',
+    title: 'Bens e perdas reconhecidos a custo',
+    description: 'Fechamento recalculável da competência selecionada.',
+    notice: 'Posição isolada: patrimônio a custo não altera saldo, entradas, saídas ou resultado operacional.',
+  });
+  if (report.patrimonio.disponivel) {
+    const patrimonio = report.patrimonio.dados;
+    const patrimonioGap = 2.5;
+    const patrimonioCardWidth = (CONTENT_WIDTH - (3 * patrimonioGap) - 6) / 4;
+    const patrimonioCards = [
+      [
+        'Valor ativo a custo',
+        formatCaixaCanonicalCurrency(patrimonio.posicaoFechamento.valorAtivoCusto),
+        `${patrimonio.posicaoFechamento.registrosAtivos} registro(s) ativo(s)`,
+        'neutral',
+      ],
+      [
+        'Unidades ativas',
+        String(patrimonio.posicaoFechamento.unidadesAtivas),
+        'Disponíveis no fechamento',
+        'neutral',
+      ],
+      [
+        'Aquisições',
+        formatCaixaCanonicalCurrency(patrimonio.aquisicoesCompetencia.valorCusto),
+        `${patrimonio.aquisicoesCompetencia.registros} registro(s) · ${patrimonio.aquisicoesCompetencia.unidades} unidade(s)`,
+        'emerald',
+      ],
+      [
+        'Perdas',
+        formatCaixaCanonicalCurrency(patrimonio.perdasCompetencia.valorCusto),
+        `${patrimonio.perdasCompetencia.movimentos} baixa(s) · ${patrimonio.perdasCompetencia.unidades} unidade(s)`,
+        'rose',
+      ],
+    ] as const;
+    patrimonioCards.forEach((card, index) => {
+      drawCard(
+        pdf,
+        CONTENT_LEFT + 3 + (index * (patrimonioCardWidth + patrimonioGap)),
+        patrimonioTop + 18,
+        patrimonioCardWidth,
+        17,
+        card[0],
+        card[1],
+        card[2],
+        card[3],
+      );
+    });
+  } else {
+    drawRestrictedNonOperationalPosition(pdf, {
+      x: CONTENT_LEFT,
+      y: patrimonioTop,
+      label: 'patrimônio',
+    });
+  }
+
+  const financiamentoTop = patrimonioTop + patrimonioHeight + 4;
+  const financiamentoHeight = 46;
+  drawNonOperationalPanel(pdf, {
+    x: CONTENT_LEFT,
+    y: financiamentoTop,
+    height: financiamentoHeight,
+    eyebrow: 'Financiamento e rateios',
+    title: 'Empréstimos e obrigações do escopo',
+    description: 'Crédito, principal e encargos são apresentados fora da receita e despesa operacional.',
+    notice: 'Leitura correta: crédito, principal e encargos de empréstimo são financiamento e não compõem o resultado operacional.',
+  });
+  if (report.financiamento.disponivel) {
+    const financiamento = report.financiamento.dados;
+    const financiamentoGap = 2;
+    const financiamentoCardWidth = (CONTENT_WIDTH - (4 * financiamentoGap) - 6) / 5;
+    const financiamentoCards = [
+      ['Crédito liberado', formatCaixaCurrency(financiamento.creditoLiberadoMatriz), 'Liberação no escopo', 'neutral'],
+      ['Obrigações rateadas', formatCaixaCurrency(financiamento.obrigacaoRateada), 'Compromissos da competência', 'rose'],
+      ['Principal rateado', formatCaixaCurrency(financiamento.principalRateado), 'Componente de capital', 'neutral'],
+      ['Encargos rateados', formatCaixaCurrency(financiamento.encargosRateados), 'Juros e demais encargos', 'amber'],
+      ['Baixado no polo', formatCaixaCurrency(financiamento.pagoRateado), 'Pagamento confirmado', 'emerald'],
+    ] as const;
+    financiamentoCards.forEach((card, index) => {
+      drawCard(
+        pdf,
+        CONTENT_LEFT + 3 + (index * (financiamentoCardWidth + financiamentoGap)),
+        financiamentoTop + 18,
+        financiamentoCardWidth,
+        17,
+        card[0],
+        card[1],
+        card[2],
+        card[3],
+      );
+    });
+  } else {
+    drawRestrictedNonOperationalPosition(pdf, {
+      x: CONTENT_LEFT,
+      y: financiamentoTop,
+      label: 'financiamento',
+    });
+  }
 };
 
 const drawSummaryPanels = (pdf: jsPDF, report: CaixaDetailedReport, y: number) => {
@@ -743,6 +1036,9 @@ export const createCaixaReportPdfDocument = async (
     const contentTop = headerLayout.contentTop;
     const isLastSectionPage = pageIndex === pages.length - 1 || pages[pageIndex + 1]?.section !== page.section;
     if (page.section === 'RESUMO') drawSummaryPage(pdf, report, contentTop);
+    if (page.section === 'POSICOES_COMPLEMENTARES') {
+      drawNonOperationalPositionsPage(pdf, report, contentTop);
+    }
     if (page.section === 'RECEBIMENTOS') {
       drawSectionHeading(pdf, 'Recebimentos confirmados', 'Aluno/pagador, parcela, curso, turma, conta e composição financeira.', page.sectionPage, 'emerald', contentTop);
       drawMovementTable(pdf, page.rows as CaixaReportReceipt[], report.totaisRecebimentos, isLastSectionPage, 'emerald', contentTop);

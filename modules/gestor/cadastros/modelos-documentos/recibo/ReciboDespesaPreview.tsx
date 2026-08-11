@@ -11,20 +11,37 @@ const formatCurrency = (value: number) =>
 const formatDate = (value?: string) =>
   value ? new Date(`${value}T00:00:00`).toLocaleDateString('pt-BR') : '-';
 
+export const formatCpfCnpj = (value?: string) => {
+  const digits = String(value || '').replace(/\D/g, '');
+  if (digits.length === 11) {
+    return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+  }
+  if (digits.length === 14) {
+    return digits.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+  }
+  return undefined;
+};
+
 export interface ReciboData {
+  lancamentoId?: string;
   reciboTitulo?: string;
   reciboNumero?: string;
   contraparteLabel?: string;
   assinaturaNome?: string;
   descricao: string;
   valor: number;
+  dataLancamento?: string;
   dataVencimento: string;
   dataPagamento?: string;
   valorPago?: number;
   fornecedorNome?: string;
+  /** Documento real do fornecedor; nunca o UUID interno do parceiro. */
+  fornecedorDocumento?: string;
   fornecedorId?: string;
   categoriaNome?: string;
   formaPagamento?: string;
+  contaBancariaNome?: string;
+  poloId?: string;
   poloNome?: string;
   parcelaNumero?: number;
   totalParcelas?: number;
@@ -38,8 +55,12 @@ export interface ReciboData {
 }
 
 export const despesaToReciboData = (item: DespesaLancamento, empresaInfo?: Partial<ReciboData>): ReciboData => ({
+  lancamentoId: item.despesaLancamentoId || item.id,
+  reciboTitulo: item.status === 'PAGO' ? 'Recibo de Pagamento' : 'Comprovante de Lançamento',
+  reciboNumero: item.id.slice(0, 8).toUpperCase(),
   descricao: item.descricao,
   valor: item.valor,
+  dataLancamento: item.dataLancamento,
   dataVencimento: item.dataVencimento,
   dataPagamento: item.dataPagamento,
   valorPago: item.valorPago,
@@ -47,6 +68,8 @@ export const despesaToReciboData = (item: DespesaLancamento, empresaInfo?: Parti
   fornecedorId: item.fornecedorId,
   categoriaNome: item.categoriaNome,
   formaPagamento: item.formaPagamento,
+  contaBancariaNome: item.contaBancariaNome,
+  poloId: item.poloId,
   poloNome: item.poloNome,
   parcelaNumero: item.parcelaNumero,
   totalParcelas: item.totalParcelas,
@@ -161,7 +184,7 @@ export const printReciboDespesa = (data: ReciboData) => {
     <div class="field">
       <label>${text(data.contraparteLabel || 'Fornecedor / Credor')}</label>
       <span>${text(data.fornecedorNome || 'Não informado')}</span>
-      ${data.fornecedorId ? `<small>CPF/CNPJ: ${text(data.fornecedorId)}</small>` : ''}
+      ${formatCpfCnpj(data.fornecedorDocumento) ? `<small>CPF/CNPJ: ${text(formatCpfCnpj(data.fornecedorDocumento))}</small>` : ''}
     </div>
     <div class="field">
       <label>Data de Vencimento</label>
@@ -284,7 +307,9 @@ const ReciboDespesaPreview: React.FC<ReciboDespesaPreviewProps> = ({ data }) => 
           {
             label: sample.contraparteLabel || 'Fornecedor',
             value: sample.fornecedorNome || '—',
-            detail: sample.fornecedorId ? `CPF/CNPJ: ${sample.fornecedorId}` : undefined,
+            detail: formatCpfCnpj(sample.fornecedorDocumento)
+              ? `CPF/CNPJ: ${formatCpfCnpj(sample.fornecedorDocumento)}`
+              : undefined,
           },
           { label: 'Data Vencimento', value: formatDate(sample.dataVencimento) },
           { label: 'Data Pagamento', value: formatDate(sample.dataPagamento) },

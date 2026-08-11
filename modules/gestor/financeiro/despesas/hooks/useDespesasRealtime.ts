@@ -18,8 +18,9 @@ export function useDespesasRealtime(poloId?: string | null) {
     const flush = () => {
       refreshTimer = undefined;
       if (expensesChanged) {
-        void queryClient.invalidateQueries({ queryKey: despesasQueryKeys.all });
-        void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.resumoKpis });
+        void queryClient.invalidateQueries({ queryKey: despesasQueryKeys.lancamentosRoot });
+        void queryClient.invalidateQueries({ queryKey: despesasQueryKeys.summaryRoot });
+        void queryClient.invalidateQueries({ queryKey: despesasQueryKeys.groupSummaryRoot });
       }
       if (balancesChanged) {
         void queryClient.invalidateQueries({

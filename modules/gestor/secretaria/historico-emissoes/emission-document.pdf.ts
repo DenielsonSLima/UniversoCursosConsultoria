@@ -24,6 +24,7 @@ import {
   isPublicDocumentValidationEnabled,
 } from './document-validation-rendering';
 import { snapshotFirst } from './voter-snapshot';
+import { repairFichaVoterGrid } from '../../cadastros/ficha-matricula/voter-template-repair';
 import type {
   AcademicComponentRow,
   EmissionLog,
@@ -208,7 +209,12 @@ export const resolveRegistrationSnapshotTemplate = (
     : '';
   const signatures = template.enrollmentFormRequiresSignature === false
     ? ''
-    : 'ASSINATURA DO ALUNO OU RESPONSÁVEL<br>DEFERIMENTO DA DIRETORIA';
+    : `
+      <section style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:16px;text-align:center;font-size:8px;color:#0f172a;">
+        <div style="border-top:1px solid #0f172a;padding-top:5px;">ASSINATURA DO ALUNO OU RESPONSÁVEL</div>
+        <div style="border-top:1px solid #0f172a;padding-top:5px;">DEFERIMENTO DA DIRETORIA</div>
+      </section>
+    `;
   const replacements: Record<string, unknown> = {
     FICHA_TERMO: canonicalText(template.enrollmentFormTerm, 'Solicito minha matrícula e declaro verdadeiros os dados informados.'),
     FICHA_CAMPOS_EXTRAS: customFields,
@@ -1140,10 +1146,13 @@ const drawRegistrationGrid = (
     return true;
   }
 
-  let gridY = y;
-  let gridHeight = height;
+  let gridY = y + pxToMmY(cssPixels(sectionStyle['margin-top']));
+  let gridHeight = height - (gridY - y);
+  if (gridHeight <= 0) {
+    throw new Error(`${context} não possui área útil após a margem superior.`);
+  }
   if (header) {
-    const headerHeight = Math.min(height, pxToMmY(18));
+    const headerHeight = Math.min(gridHeight, pxToMmY(18));
     pdf.setFillColor(239, 246, 255);
     pdf.roundedRect(x, y, width, headerHeight, radius, radius, 'F');
     pdf.rect(x, y + Math.max(0, headerHeight - radius), width, Math.min(radius, headerHeight), 'F');
@@ -1161,6 +1170,10 @@ const drawRegistrationGrid = (
   }
 
   const gridStyle = parseInlineStyle(grid.openTag);
+  const inheritedTextAlignSource = gridStyle['text-align'] || sectionStyle['text-align'];
+  const inheritedTextAlign = inheritedTextAlignSource === 'center' || inheritedTextAlignSource === 'right'
+    ? inheritedTextAlignSource
+    : 'left';
   const cells = collectDirectDivs(grid.inner);
   if (!cells.length) return false;
   const columns = expandGridColumns(gridStyle['grid-template-columns']);
@@ -1207,19 +1220,56 @@ const drawRegistrationGrid = (
       .slice(position.column, position.column + span)
       .reduce((total, current) => total + current, 0)
       + gapX * (span - 1);
+    const borderTop = String(cellStyle['border-top'] || '');
+    const cellPadding = parseSpacing(cellStyle.padding);
+    const paddingTop = pxToMmY(cssPixels(cellStyle['padding-top'], cellPadding.vertical));
+    if (borderTop && !/\bnone\b/i.test(borderTop)) {
+      const color = borderTop.match(/#([0-9a-f]{6})\b/i)?.[1];
+      if (color) {
+        pdf.setDrawColor(
+          Number.parseInt(color.slice(0, 2), 16),
+          Number.parseInt(color.slice(2, 4), 16),
+          Number.parseInt(color.slice(4, 6), 16),
+        );
+      } else {
+        pdf.setDrawColor(15, 23, 42);
+      }
+      pdf.setLineWidth(Math.max(0.1, pxToMmY(cssPixels(borderTop, 1))));
+      pdf.line(cellX, cellY, cellX + cellWidth, cellY);
+    }
     const strong = findBalancedElement(cell.inner, 'strong');
     const label = strong ? emissionHtmlToVectorText(strong.inner) : '';
     const value = emissionHtmlToVectorText(strong ? cell.inner.replace(strong.full, '') : cell.inner);
     const innerX = cellX + 0.2;
     const textWidth = Math.max(1, cellWidth - 0.4);
-    let cursorY = cellY;
+    const cellTextAlign = cellStyle['text-align'] === 'center' || cellStyle['text-align'] === 'right'
+      ? cellStyle['text-align']
+      : inheritedTextAlign;
+    let cursorY = cellY + paddingTop;
 
     if (label) {
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(4.8);
       pdf.setTextColor(15, 23, 42);
-      const labelLines = assertCellLines(pdf, label.toUpperCase(), textWidth, rowHeight, 4.8, 2, `${context}, rótulo ${cellIndex + 1}`);
-      pdf.text(labelLines, innerX, cursorY, { baseline: 'top', lineHeightFactor: 1.1 });
+      const labelLines = assertCellLines(
+        pdf,
+        label.toUpperCase(),
+        textWidth,
+        Math.max(0.5, cellY + rowHeight - cursorY),
+        4.8,
+        2,
+        `${context}, rótulo ${cellIndex + 1}`,
+      );
+      const labelX = cellTextAlign === 'center'
+        ? cellX + cellWidth / 2
+        : cellTextAlign === 'right'
+          ? cellX + cellWidth - 0.2
+          : innerX;
+      pdf.text(labelLines, labelX, cursorY, {
+        align: cellTextAlign,
+        baseline: 'top',
+        lineHeightFactor: 1.1,
+      });
       cursorY += labelLines.length * 4.8 * 0.352778 * 1.1 + 0.45;
     }
     if (value) {
@@ -1228,7 +1278,16 @@ const drawRegistrationGrid = (
       pdf.setTextColor(51, 65, 85);
       const valueHeight = Math.max(0.5, cellY + rowHeight - cursorY);
       const valueLines = assertCellLines(pdf, value, textWidth, valueHeight, 6.2, 2, `${context}, valor ${cellIndex + 1}`);
-      pdf.text(valueLines, innerX, cursorY, { baseline: 'top', lineHeightFactor: 1.12 });
+      const valueX = cellTextAlign === 'center'
+        ? cellX + cellWidth / 2
+        : cellTextAlign === 'right'
+          ? cellX + cellWidth - 0.2
+          : innerX;
+      pdf.text(valueLines, valueX, cursorY, {
+        align: cellTextAlign,
+        baseline: 'top',
+        lineHeightFactor: 1.12,
+      });
     }
   });
   return true;
@@ -1287,18 +1346,35 @@ const drawField = (
       `secretaria-qr-${visual.source.emission.id}`,
     );
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(5.8);
+    const codeFontSize = 5.8;
+    const codeLineHeight = 1.2;
+    const codeY = y + qrSize + 1;
+    const codeHeight = Math.max(0, y + height - codeY);
+    pdf.setFontSize(codeFontSize);
     pdf.setTextColor(29, 78, 216);
-    drawCanonicalPdfText(pdf, visual.source.emission.codigo, x + width / 2, y + qrSize + 1, {
+    const codeLines = assertTextFits(
+      pdf,
+      visual.source.emission.codigo,
+      width,
+      codeHeight,
+      codeFontSize,
+      codeLineHeight,
+      `O código de validação do campo “${fieldKey}”`,
+    );
+    pdf.text(codeLines, x + width / 2, codeY, {
       align: 'center',
-      maxWidth: width,
-      maxLines: 1,
+      baseline: 'top',
+      lineHeightFactor: codeLineHeight,
     });
     return;
   }
 
   if (field.type !== 'text') return;
-  const parsed = resolveEmissionVectorTemplate(visual.source, field.value);
+  const fieldValue = REGISTRATION_VECTOR_DOCUMENTS.has(visual.source.emission.documento)
+    && (field.id === 'ficha_documentos' || field.id === 'pasta_documentos')
+    ? repairFichaVoterGrid(field.value)
+    : field.value;
+  const parsed = resolveEmissionVectorTemplate(visual.source, fieldValue);
   assertNoResidualTemplateTokens(parsed, `O campo “${fieldKey}”`);
   if (drawRegistrationGrid(pdf, parsed, x, y, width, height, `O campo “${fieldKey}”`)) return;
   const text = emissionHtmlToVectorText(parsed);

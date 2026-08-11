@@ -2,6 +2,24 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [4.2.0-beta.2] - 2026-08-11
+
+### Adicionado
+
+- Cursos livres e especializações passam a ter plano financeiro único, com parcelas variáveis, snapshots imutáveis e matrícula idempotente.
+- Caixa recebe posições operacional, líquida e total; empréstimos ganham liquidação, ajustes, exportação paisagem e separação do crédito do resultado operacional.
+- A Central de Relatórios passa a oferecer extrato, entradas, saídas, receitas e despesas por contrato financeiro canônico.
+
+### Corrigido
+
+- Contas a Pagar preserva lançamento, fornecedor, categoria, turma, recibo vetorial e os fluxos auditáveis de edição, cancelamento e estorno.
+- A política de Realtime mantém o acesso autorizado à aba Outros Créditos durante a publicação dos relatórios financeiros.
+
+### Segurança e qualidade
+
+- Histórico de migrations foi reconciliado com o banco remoto sem reaplicar versões já existentes.
+- RPCs legadas de empréstimos recebem `search_path` vazio e grants restritos a `service_role` na migration de endurecimento pendente.
+
 ## [4.2.0-beta.1] - 2026-08-10
 
 ### Adicionado

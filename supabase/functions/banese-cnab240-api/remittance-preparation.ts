@@ -78,7 +78,7 @@ const loadSelectedReceivables = async (
   const { data, error } = await admin
     .from("contas_receber")
     .select(
-      "id,cliente_id,matricula_id,turma_id,polo_id,descricao,valor,data_vencimento,created_at,updated_at,status,tipo_lancamento,parcela_numero,gateway_installments,gateway_provider,gateway_environment,gateway_payment_method,gateway_payment_id,gateway_payment_link_id,gateway_boleto_nosso_numero,gateway_boleto_convenio,gateway_boleto_agencia,gateway_boleto_linha_digitavel,gateway_boleto_codigo_barras,gateway_boleto_issued_at,gateway_invoice_url,gateway_bank_slip_url,gateway_creation_token,gateway_status,gateway_last_error,gateway_financial_terms,gateway_financial_terms_confirmed_at,gateway_submission_channel,gateway_submission_status,gateway_cnab_file_id",
+      "id,cliente_id,matricula_id,turma_id,polo_id,descricao,valor,data_vencimento,created_at,updated_at,status,tipo_lancamento,parcela_numero,regra_financeira_plano_unico_snapshot,gateway_installments,gateway_provider,gateway_environment,gateway_payment_method,gateway_payment_id,gateway_payment_link_id,gateway_boleto_nosso_numero,gateway_boleto_convenio,gateway_boleto_agencia,gateway_boleto_linha_digitavel,gateway_boleto_codigo_barras,gateway_boleto_issued_at,gateway_invoice_url,gateway_bank_slip_url,gateway_creation_token,gateway_status,gateway_last_error,gateway_financial_terms,gateway_financial_terms_confirmed_at,gateway_submission_channel,gateway_submission_status,gateway_cnab_file_id",
     )
     .in("id", ids)
     .limit(ids.length);

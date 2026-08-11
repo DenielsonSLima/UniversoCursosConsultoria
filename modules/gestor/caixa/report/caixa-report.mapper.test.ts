@@ -89,8 +89,68 @@ const receipt = {
   valor_recebido: 14.9,
 };
 
+const financiamento = {
+  competencia: '2026-07-01',
+  credito_liberado_matriz: 3000,
+  obrigacao_rateada: 450,
+  principal_rateado: 400,
+  encargos_rateados: 50,
+  pago_rateado: 450,
+  observacao: 'Financiamento fora do resultado operacional.',
+};
+
+const patrimonio = {
+  versao: 1,
+  competencia: '2026-07-01',
+  escopo_tipo: 'GLOBAL',
+  polo_id: null,
+  posicao_fechamento: {
+    registros_ativos: 2,
+    unidades_ativas: 3,
+    valor_ativo_custo: '1500.00',
+  },
+  aquisicoes_competencia: {
+    registros: 1,
+    unidades: 1,
+    valor_custo: '500.00',
+  },
+  perdas_competencia: {
+    movimentos: 0,
+    unidades: 0,
+    valor_custo: '0.00',
+  },
+  observacao: 'Patrimônio não altera o resultado operacional.',
+};
+
+const posicaoLiquida = {
+  versao: 1,
+  competencia: '2026-07-01',
+  escopo_tipo: 'GLOBAL',
+  polo_id: null,
+  valor_patrimonial_custo: '1500.00',
+  saldo_emprestimos_a_pagar: '600.00',
+  valor_liquido: '900.00',
+  observacao: 'Patrimônio a custo menos empréstimos a pagar.',
+};
+
+const posicaoTotal = {
+  versao: 1,
+  competencia: '2026-07-01',
+  data_corte: '2026-07-31',
+  escopo_tipo: 'GLOBAL',
+  polo_id: null,
+  disponivel: true,
+  dados: {
+    saldo_caixa_registrado: '14.90',
+    valor_patrimonial_custo: '1500.00',
+    saldo_emprestimos_a_pagar: '600.00',
+    valor_total_liquido: '914.90',
+    observacao: 'Caixa registrado mais patrimônio a custo menos empréstimos a pagar.',
+  },
+};
+
 const makePayload = () => ({
-  versao: 3,
+  versao: 6,
   gerado_em: '2026-07-27T23:00:00Z',
   completo: true,
   confidencial: true,
@@ -122,6 +182,19 @@ const makePayload = () => ({
   resumo: JSON.parse(JSON.stringify(summary)) as typeof summary,
   totais_recebimentos: totals(1),
   totais_despesas: totals(0),
+  financiamento: {
+    disponivel: true,
+    dados: { ...financiamento },
+  },
+  patrimonio: {
+    disponivel: true,
+    dados: JSON.parse(JSON.stringify(patrimonio)) as typeof patrimonio,
+  },
+  posicao_liquida: {
+    disponivel: true,
+    dados: { ...posicaoLiquida },
+  },
+  posicao_total: JSON.parse(JSON.stringify(posicaoTotal)) as typeof posicaoTotal,
   resumo_cursos: {
     itens: [{
       curso_id: '33333333-3333-3333-3333-333333333333',
@@ -216,6 +289,78 @@ test('aceita o contrato canônico completo sem recalcular valores', () => {
   assert.equal(report.recebimentos[0].tipoLancamento, 'MATRICULA');
   assert.equal(report.resumoCursos.itens[0].recebidoNoMes, 750);
   assert.equal(report.analiseRecorrente.turmas[0].juros, 10);
+  assert.equal(report.financiamento.disponivel, true);
+  assert.equal(report.patrimonio.disponivel, true);
+  assert.equal(report.posicaoLiquida.disponivel, true);
+  assert.equal(report.posicaoTotal.disponivel, true);
+  if (!report.financiamento.disponivel || !report.patrimonio.disponivel || !report.posicaoLiquida.disponivel || !report.posicaoTotal.disponivel) {
+    throw new Error('As posições complementares deveriam estar disponíveis neste fixture.');
+  }
+  assert.equal(report.financiamento.dados.obrigacaoRateada, 450);
+  assert.equal(report.patrimonio.dados.posicaoFechamento.valorAtivoCusto, '1500.00');
+  assert.equal(report.posicaoLiquida.dados.valorLiquido, '900.00');
+  assert.equal(report.posicaoTotal.dataCorte, '2026-07-31');
+  assert.equal(report.posicaoTotal.dados.valorTotalLiquido, '914.90');
+});
+
+test('recusa posições complementares ausentes ou fora da competência e escopo do relatório', () => {
+  const missingPatrimonio = makePayload();
+  delete (missingPatrimonio as { patrimonio?: unknown }).patrimonio;
+  assert.throws(() => mapCaixaDetailedReport(missingPatrimonio), /Contrato inválido/);
+
+  const missingPosicaoLiquida = makePayload();
+  delete (missingPosicaoLiquida as { posicao_liquida?: unknown }).posicao_liquida;
+  assert.throws(() => mapCaixaDetailedReport(missingPosicaoLiquida), /Contrato inválido/);
+
+  const missingPosicaoTotal = makePayload();
+  delete (missingPosicaoTotal as { posicao_total?: unknown }).posicao_total;
+  assert.throws(() => mapCaixaDetailedReport(missingPosicaoTotal), /Contrato inválido/);
+
+  const wrongCompetencia = makePayload();
+  wrongCompetencia.financiamento.dados.competencia = '2026-08-01';
+  assert.throws(() => mapCaixaDetailedReport(wrongCompetencia), /competência diferente/);
+
+  const wrongScope = makePayload();
+  const wrongScopePatrimonio = wrongScope.patrimonio.dados as {
+    escopo_tipo: string;
+    polo_id: string | null;
+  };
+  wrongScopePatrimonio.escopo_tipo = 'POLO';
+  wrongScopePatrimonio.polo_id = '55555555-5555-5555-5555-555555555555';
+  assert.throws(() => mapCaixaDetailedReport(wrongScope), /escopo diferente/);
+});
+
+test('preserva a prestação operacional quando uma posição complementar não é autorizada', () => {
+  const payload = makePayload();
+  payload.financiamento = { disponivel: false, motivo: 'ACESSO_RESTRITO' } as any;
+  payload.patrimonio = { disponivel: false, motivo: 'ACESSO_RESTRITO' } as any;
+  payload.posicao_liquida = { disponivel: false, motivo: 'ACESSO_RESTRITO' } as any;
+  payload.posicao_total = {
+    versao: 1,
+    competencia: '2026-07-01',
+    data_corte: '2026-07-31',
+    escopo_tipo: 'GLOBAL',
+    polo_id: null,
+    disponivel: false,
+    motivo: 'ACESSO_RESTRITO',
+    observacao: 'Escopo complementar indisponível.',
+  } as any;
+
+  const report = mapCaixaDetailedReport(payload);
+  assert.deepEqual(report.financiamento, { disponivel: false, motivo: 'ACESSO_RESTRITO' });
+  assert.deepEqual(report.patrimonio, { disponivel: false, motivo: 'ACESSO_RESTRITO' });
+  assert.deepEqual(report.posicaoLiquida, { disponivel: false, motivo: 'ACESSO_RESTRITO' });
+  assert.deepEqual(report.posicaoTotal, {
+    disponivel: false,
+    dataCorte: '2026-07-31',
+    motivo: 'ACESSO_RESTRITO',
+    observacao: 'Escopo complementar indisponível.',
+  });
+  assert.equal(report.resumo.resumoCompetencia.resultado, 14.9);
+
+  const invalidReason = makePayload();
+  invalidReason.financiamento = { disponivel: false, motivo: 'SEM_DADOS' } as any;
+  assert.throws(() => mapCaixaDetailedReport(invalidReason), /financiamento\.motivo/);
 });
 
 test('recusa coerção de número enviado como texto', () => {

@@ -4,6 +4,7 @@
 import React, { useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight, Tag } from 'lucide-react';
 import { DespesaGroupSummary, DespesaLancamento } from '../despesas.service';
+import { ContaBancaria } from '../../financeiro.service';
 import DespesaTable from './DespesaTable';
 import DespesaCard from './DespesaCard';
 
@@ -14,8 +15,10 @@ interface DespesaGroupedViewProps {
   items: DespesaLancamento[];
   summaries: DespesaGroupSummary[];
   viewMode: 'tabela' | 'cards';
+  contas: ContaBancaria[];
   onPagar?: (item: DespesaLancamento) => void;
-  onExcluir?: (item: DespesaLancamento) => void;
+  onEditar?: (item: DespesaLancamento) => void;
+  onCancelar?: (item: DespesaLancamento) => void;
   onImprimir?: (item: DespesaLancamento) => void;
   onAnexo?: (item: DespesaLancamento) => void;
 }
@@ -24,8 +27,10 @@ const DespesaGroupedView: React.FC<DespesaGroupedViewProps> = ({
   items,
   summaries,
   viewMode,
+  contas,
   onPagar,
-  onExcluir,
+  onEditar,
+  onCancelar,
   onImprimir,
   onAnexo,
 }) => {
@@ -129,8 +134,10 @@ const DespesaGroupedView: React.FC<DespesaGroupedViewProps> = ({
                 {viewMode === 'tabela' ? (
                   <DespesaTable
                     items={group.items}
+                    contas={contas}
                     onPagar={onPagar}
-                    onExcluir={onExcluir}
+                    onEditar={onEditar}
+                    onCancelar={onCancelar}
                     onImprimir={onImprimir}
                     onAnexo={onAnexo}
                   />
@@ -140,8 +147,10 @@ const DespesaGroupedView: React.FC<DespesaGroupedViewProps> = ({
                       <DespesaCard
                         key={item.id}
                         item={item}
+                        contas={contas}
                         onPagar={onPagar}
-                        onExcluir={onExcluir}
+                        onEditar={onEditar}
+                        onCancelar={onCancelar}
                         onImprimir={onImprimir}
                         onAnexo={onAnexo}
                       />

@@ -1,17 +1,17 @@
 # Lote ativo
 
-Estado: `PUBLICACAO_EM_ANDAMENTO`
+Estado: `PRONTO_PARA_PUBLICACAO`
 
-## Lote: 2026-08-10-publicacao-4-2-0-beta-1
+## Lote: 2026-08-11-financeiro-operacional-4-2-0-beta-2
 
-- Estado: PUBLICACAO_EM_ANDAMENTO.
-- Objetivo: publicar a versão `4.2.0-beta.1` com todos os lotes locais concluídos de Contrato/Plano de Curso, Patrimônio/Caixa e Financeiro Técnico, preservando a separação dos respectivos manifestos e validações.
-- Escopo incluído: refinamentos concluídos de Contrato e Plano de Curso; catálogo e ciclo de vida patrimonial com posição isolada no Caixa; criação e matrícula técnica em etapas; vencimento padrão; total nominal do curso; autorização segura de bolsa/incentivo; migrations, testes, versionamento e registros correspondentes.
-- Fora de escopo: nova edição de conteúdo durante a publicação; mudança em cobranças já emitidas; reprecificação de títulos históricos; gateways legados; artefatos de build, caches e documentos-fonte brutos.
-- Estratégia de produção: expansão compatível no Supabase; publicação do frontend pela PR da versão; confirmação do deploy; revogação dos dois RPCs antigos de override somente depois do frontend novo estar ativo.
-- Critérios de aceite: versão e changelog consistentes; migrations versionadas e aplicadas pelo MCP Supabase; TypeScript, testes focados e build aprovados; GitHub publicado por manifesto explícito; Preview/checks aprovados; produção HTTP 200 e smoke autenticado proporcional.
-- Validação local: 155 testes focados aprovados — incluindo 44 de Contrato/Plano de Curso —, TypeScript global aprovado e build Vite de 3.445 módulos aprovado para `4.2.0-beta.1`.
-- Banco: migration de expansão `secure_technical_individual_conditions` aplicada e verificada; tabelas de código/tentativas sem leitura direta, segredo em bcrypt, RPCs `SECURITY DEFINER` com `search_path` explícito e caminhos legados mantidos somente durante a janela de deploy.
-- Responsável pela consolidação: Codex; revisão financeira, de UX e de segurança concluída por três agentes sem achado Critical/Important pendente.
-- Autorizações de publicação: em 2026-08-10, o usuário autorizou expressamente tanto as migrations protegidas de Patrimônio/Financeiro quanto o editor oficial de Contrato/Plano de Curso e o compositor PDF.
-- Pendências: concluir a PR, confirmar os checks e o smoke, aplicar a migration de endurecimento pós-deploy e registrar os identificadores finais.
+- Estado: PRONTO_PARA_PUBLICACAO.
+- Objetivo: publicar a versão `4.2.0-beta.2` com plano financeiro único não técnico, operações financeiras auditáveis, posições do Caixa, ciclo de empréstimos e relatórios financeiros separados.
+- Escopo incluído: plano único para cursos livres/especializações; Contas a Pagar, recibo vetorial, edição/cancelamento/estorno; Caixa, patrimônio e empréstimos; relatório financeiro; Termos Banese/EAD; compositores e contratos afetados; migrations, versionamento, testes e registro operacional.
+- Fora de escopo: reprecificação ou alteração de títulos/documentos históricos; emissão de cobrança real; merge em `main`, Produção, caches e artefatos de build.
+- Regras/RPC/segurança aplicáveis: GitHub e Supabase exclusivamente por MCP; cálculos financeiros no backend; RLS/RPC com menor privilégio e `search_path` vazio; PDF continua vetorial e canônico.
+- Critérios de aceite: versão/changelog consistentes; histórico de migrations reconciliado sem reaplicação; contratos de Caixa, financeiro, documentos e Edge Functions aprovados; TypeScript e build aprovados; commit atômico por manifesto explícito e PR/Preview pendentes de confirmação.
+- Validação final: `test:caixa-report` 42/42; contratos financeiros/patrimônio/relatórios/gestão 25/25; Contrato do Aluno 50/50; Contas a Pagar 4/4; migrations/contratos Supabase focados 44/44; Edge Functions Banese/EAD 32/32; `tsc --noEmit`, `npm run build` e `git diff --check` aprovados.
+- Banco: cinco fontes foram alinhadas aos IDs já aplicados no remoto; cinco migrations já coincidiam com o histórico remoto; três novas fontes permanecem **versionadas e não aplicadas**: plano único, relatórios e endurecimento de duas RPCs legadas de empréstimo. A policy de Realtime dos relatórios preserva `outros-creditos`.
+- Publicação prevista: branch e PR em rascunho pelo MCP GitHub; aplicar as três migrations e executar smoke autenticado somente após revisão da PR e autorização explícita de Produção.
+- Responsável pela consolidação: Codex, com revisão independente de validação, worktree e migrations.
+- Pendências ou riscos: a Preview da versão anterior falhou por limite de builds do Vercel; a nova Preview e o smoke autenticado ainda dependem do provedor/sessão. Node local `20.19.5` difere do `24.x` declarado pelo projeto.

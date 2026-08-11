@@ -33,6 +33,7 @@ export interface DespesaLancamento {
   multaValor: number;
   descontoValor: number;
   valor: number;
+  dataLancamento?: string;
   dataVencimento: string;
   dataPagamento?: string;
   valorPago?: number;
@@ -43,6 +44,7 @@ export interface DespesaLancamento {
   fornecedorNome?: string;
   formaPagamento?: string;
   contaBancariaId?: string;
+  contaBancariaNome?: string;
   parcelaNumero: number;
   totalParcelas: number;
   grupoParcelas?: string;
@@ -54,6 +56,9 @@ export interface DespesaLancamento {
   anexoNome?: string;
   anexoMime?: string;
   anexoTamanho?: number;
+  cancelamentoMotivo?: string;
+  canceladoEm?: string;
+  estornadoEm?: string;
   createdAt: string;
   /** Linha econômica de rateio: informativa, sem baixa, exclusão ou recibo próprios. */
   isRateioDerived?: boolean;
@@ -61,6 +66,59 @@ export interface DespesaLancamento {
   rateioPolosQuantidade?: number;
   poloMatrizId?: string;
   poloMatrizNome?: string;
+}
+
+/** Snapshot fechado pelo backend para o recibo/comprovante vetorial. */
+export interface DespesaReciboSnapshot {
+  receipt: {
+    lancamentoId: string;
+    reciboTitulo?: string;
+    reciboNumero?: string;
+    descricao: string;
+    valor: number;
+    valorBase?: number;
+    jurosValor?: number;
+    multaValor?: number;
+    descontoValor?: number;
+    dataLancamento?: string;
+    dataVencimento: string;
+    dataPagamento?: string;
+    valorPago?: number;
+    fornecedorNome?: string;
+    fornecedorDocumento?: string;
+    categoriaNome?: string;
+    formaPagamento?: string;
+    contaBancariaNome?: string;
+    poloId?: string;
+    poloNome?: string;
+    parcelaNumero?: number;
+    totalParcelas?: number;
+    observacao?: string;
+    status?: string;
+  };
+  polo: {
+    id?: string;
+    nome: string;
+    nomeFantasia?: string;
+    cnpj?: string;
+    cidade?: string;
+    estado?: string;
+    uf?: string;
+    status?: string;
+    is_matriz?: boolean;
+    logoUrl?: string;
+    endereco?: string;
+    numero?: string;
+    complemento?: string;
+    bairro?: string;
+    cep?: string;
+    telefone?: string;
+    email?: string;
+    watermark_url?: string;
+    watermark_opacity?: number;
+    watermark_scale?: number;
+    watermark_rotate?: boolean;
+  };
 }
 
 export interface DespesaBaixaParams {
@@ -71,6 +129,27 @@ export interface DespesaBaixaParams {
   jurosValor?: number;
   multaValor?: number;
   descontoValor?: number;
+}
+
+export interface UpdateDespesaInput {
+  requestId: string;
+  descricao: string;
+  valorBase: number;
+  dataLancamento: string;
+  dataVencimento: string;
+  jurosValor?: number;
+  multaValor?: number;
+  descontoValor?: number;
+  categoriaFinanceiraId?: string;
+  fornecedorId?: string;
+  observacao?: string;
+  turmaId?: string;
+}
+
+export interface CancelarOuEstornarDespesaInput {
+  requestId: string;
+  motivo: string;
+  confirmarEstorno?: boolean;
 }
 
 /**
@@ -136,27 +215,34 @@ const mapLancamento = (row: any): DespesaLancamento => ({
   multaValor: Number(row.multa_valor || 0),
   descontoValor: Number(row.desconto_valor || 0),
   valor: Number(row.valor || 0),
+  dataLancamento: row.data_lancamento ?? undefined,
   dataVencimento: row.data_vencimento,
   dataPagamento: row.data_pagamento ?? undefined,
-  valorPago: row.valor_pago !== null ? Number(row.valor_pago) : undefined,
+  valorPago: row.valor_pago !== null && row.valor_pago !== undefined
+    ? Number(row.valor_pago)
+    : undefined,
   status: row.status,
   categoriaFinanceiraId: row.categoria_financeira_id ?? undefined,
-  categoriaNome: row.categorias_financeiras?.nome ?? undefined,
+  categoriaNome: row.categoria_nome ?? row.categorias_financeiras?.nome ?? undefined,
   fornecedorId: row.fornecedor_id ?? undefined,
-  fornecedorNome: row.parceiros?.nome ?? undefined,
+  fornecedorNome: row.fornecedor_nome ?? row.parceiros?.nome ?? undefined,
   formaPagamento: row.forma_pagamento ?? undefined,
   contaBancariaId: row.conta_bancaria_id ?? undefined,
+  contaBancariaNome: row.conta_bancaria_nome ?? undefined,
   parcelaNumero: Number(row.parcela_numero || 1),
   totalParcelas: Number(row.total_parcelas || 1),
   grupoParcelas: row.grupo_parcelas_id ?? undefined,
   observacao: row.observacao ?? undefined,
   turmaId: row.turma_id ?? undefined,
-  turmaNome: row.turmas?.nome ?? undefined,
+  turmaNome: row.turma_nome ?? row.turmas?.nome ?? undefined,
   anexoBucket: row.anexo_bucket ?? undefined,
   anexoPath: row.anexo_path ?? undefined,
   anexoNome: row.anexo_nome ?? undefined,
   anexoMime: row.anexo_mime ?? undefined,
   anexoTamanho: row.anexo_tamanho !== null ? Number(row.anexo_tamanho) : undefined,
+  cancelamentoMotivo: row.cancelamento_motivo ?? undefined,
+  canceladoEm: row.cancelado_em ?? undefined,
+  estornadoEm: row.estornado_em ?? undefined,
   createdAt: row.created_at,
   isRateioDerived: Boolean(row.is_rateio_derivado),
   rateioMode: row.rateio_modo ?? 'SEM_RATEIO',
@@ -166,6 +252,43 @@ const mapLancamento = (row: any): DespesaLancamento => ({
   poloMatrizId: row.polo_matriz_id ?? undefined,
   poloMatrizNome: row.polo_matriz_nome ?? undefined,
 });
+
+const isDetailedExpenseReadUnavailable = (error: any) => (
+  error?.code === 'PGRST202'
+  || /listar_despesas_economicas_detalhadas_secure/i.test(error?.message || '')
+);
+
+const isExpenseReceiptSnapshotUnavailable = (error: any) => (
+  error?.code === 'PGRST202'
+  || /preparar_recibo_despesa_secure/i.test(error?.message || '')
+);
+
+const enrichLegacyEconomicRowsWithLaunchDate = async (rows: any[]) => {
+  const physicalIds = Array.from(new Set(
+    rows
+      .filter((row) => !row.is_rateio_derivado)
+      .map((row) => row.despesa_lancamento_id ?? row.id)
+      .filter(Boolean),
+  ));
+  if (physicalIds.length === 0) return rows;
+
+  // Compatibilidade de rollout: a RPC anterior não retorna data_lancamento.
+  // Consultamos somente os títulos físicos já autorizados pela leitura
+  // econômica; linhas derivadas de rateio nunca consultam a Matriz.
+  const { data, error } = await supabase
+    .from('despesas_lancamentos')
+    .select('id, data_lancamento')
+    .in('id', physicalIds);
+
+  if (error || !Array.isArray(data)) return rows;
+  const datesById = new Map(data.map((row: any) => [row.id, row.data_lancamento]));
+  return rows.map((row) => ({
+    ...row,
+    data_lancamento: row.data_lancamento
+      ?? datesById.get(row.despesa_lancamento_id ?? row.id)
+      ?? null,
+  }));
+};
 
 const toUpper = (value?: string | null) => (value || '').trim().toLocaleUpperCase('pt-BR');
 
@@ -225,7 +348,7 @@ export const despesasService = {
     // rateios econômicos recebidos de uma Matriz, sem criar títulos ou baixas
     // duplicadas no navegador.
     if (scopedPoloId && filters.tipo) {
-      const { data, error } = await supabase.rpc('listar_despesas_economicas_secure', {
+      const params = {
         p_tipo: filters.tipo,
         p_polo_id: scopedPoloId,
         p_categoria_id: filters.categoriaId || null,
@@ -234,13 +357,32 @@ export const despesasService = {
         p_due_end: filters.dataFim || null,
         p_status_scope: filters.statusScope || 'todos',
         p_turma_id: filters.turmaId || null,
-      });
+      };
+
+      // A RPC detalhada mantém a leitura econômica/rateio canônica, incluindo
+      // a data real de lançamento e os dados de estorno. O fallback evita que
+      // uma aba em atualização fique indisponível antes da migration chegar.
+      let response = await supabase.rpc(
+        'listar_despesas_economicas_detalhadas_secure',
+        params,
+      );
+      let usingLegacyEconomicRead = false;
+      if (response.error && isDetailedExpenseReadUnavailable(response.error)) {
+        response = await supabase.rpc('listar_despesas_economicas_secure', params);
+        usingLegacyEconomicRead = true;
+      }
+
+      const { data, error } = response;
 
       if (error) {
         console.error('Erro ao buscar contas a pagar econômicas:', error);
         throw error;
       }
-      return (data || []).map(mapLancamento);
+      const rows = Array.isArray(data) ? data : [];
+      const detailedRows = usingLegacyEconomicRead
+        ? await enrichLegacyEconomicRowsWithLaunchDate(rows)
+        : rows;
+      return detailedRows.map(mapLancamento);
     }
 
     let query = supabase
@@ -402,7 +544,10 @@ export const despesasService = {
       console.error('Erro ao criar despesa:', error);
       throw error;
     }
-    return (data || []).map(mapLancamento);
+    if (!Array.isArray(data) || data.length === 0) {
+      throw new Error('O lançamento não retornou nenhuma despesa confirmada. Tente novamente.');
+    }
+    return data.map(mapLancamento);
   },
 
   // ----------------------------------------------------------
@@ -429,6 +574,85 @@ export const despesasService = {
     }
   },
 
+  // ----------------------------------------------------------
+  // Editar lançamento em aberto
+  // ----------------------------------------------------------
+  async updateDespesa(
+    id: string,
+    input: UpdateDespesaInput,
+  ): Promise<DespesaLancamento> {
+    const { data, error } = await supabase.rpc('atualizar_despesa_secure', {
+      p_despesa_id: id,
+      p_request_id: input.requestId,
+      p_descricao: input.descricao,
+      p_valor_base: input.valorBase,
+      p_data_lancamento: input.dataLancamento,
+      p_data_vencimento: input.dataVencimento,
+      p_juros_valor: input.jurosValor || 0,
+      p_multa_valor: input.multaValor || 0,
+      p_desconto_valor: input.descontoValor || 0,
+      p_categoria_financeira_id: input.categoriaFinanceiraId || null,
+      p_fornecedor_id: input.fornecedorId || null,
+      p_observacao: input.observacao || null,
+      p_turma_id: input.turmaId || null,
+    });
+
+    if (error) {
+      console.error('Erro ao editar despesa:', error);
+      throw error;
+    }
+
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row) throw new Error('A edição não retornou a despesa confirmada.');
+    return mapLancamento(row);
+  },
+
+  // ----------------------------------------------------------
+  // Cancelar / estornar com histórico preservado
+  // ----------------------------------------------------------
+  async cancelarOuEstornarDespesa(
+    id: string,
+    input: CancelarOuEstornarDespesaInput,
+  ): Promise<DespesaLancamento> {
+    const { data, error } = await supabase.rpc('cancelar_ou_estornar_despesa_secure', {
+      p_despesa_id: id,
+      p_request_id: input.requestId,
+      p_motivo: input.motivo,
+      p_confirmar_estorno: Boolean(input.confirmarEstorno),
+    });
+
+    if (error) {
+      console.error('Erro ao cancelar ou estornar despesa:', error);
+      throw error;
+    }
+
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row) throw new Error('O cancelamento não retornou a despesa confirmada.');
+    return mapLancamento(row);
+  },
+
+  // ----------------------------------------------------------
+  // Snapshot institucional do recibo / comprovante
+  // ----------------------------------------------------------
+  async getDespesaReciboSnapshot(id: string): Promise<DespesaReciboSnapshot | null> {
+    const { data, error } = await supabase.rpc('preparar_recibo_despesa_secure', {
+      p_despesa_id: id,
+    });
+
+    // Compatibilidade de rollout: antes da migration, o modal ainda pode
+    // montar a prévia com a linha já autorizada. Após a migration, este
+    // caminho sempre recebe o snapshot fechado no backend.
+    if (error && isExpenseReceiptSnapshotUnavailable(error)) return null;
+    if (error) {
+      console.error('Erro ao preparar o recibo da despesa:', error);
+      throw error;
+    }
+    if (!data || typeof data !== 'object') {
+      throw new Error('O recibo não retornou um snapshot institucional válido.');
+    }
+    return data as DespesaReciboSnapshot;
+  },
+
   async getDespesaAnexoUrl(item: DespesaLancamento): Promise<string> {
     if (!item.anexoPath) throw new Error('Esta despesa não possui anexo.');
 
@@ -444,28 +668,15 @@ export const despesasService = {
   // ----------------------------------------------------------
   // Cancelar / Excluir
   // ----------------------------------------------------------
-  async cancelarDespesa(id: string): Promise<void> {
-    const { error } = await supabase.rpc('cancelar_despesa_secure', {
-      p_despesa_id: id,
-      p_motivo: 'Cancelada pelo gestor',
+  async cancelarDespesa(id: string, motivo = 'Cancelada pelo gestor'): Promise<void> {
+    await despesasService.cancelarOuEstornarDespesa(id, {
+      requestId: createFinanceRequestId(),
+      motivo,
     });
-
-    if (error) {
-      console.error('Erro ao cancelar despesa:', error);
-      throw error;
-    }
   },
 
   async deleteDespesa(id: string): Promise<void> {
-    const { error } = await supabase.rpc('cancelar_despesa_secure', {
-      p_despesa_id: id,
-      p_motivo: 'Excluída da lista pelo gestor',
-    });
-
-    if (error) {
-      console.error('Erro ao excluir despesa:', error);
-      throw error;
-    }
+    await despesasService.cancelarDespesa(id, 'Cancelada pelo gestor');
   },
 
   // ----------------------------------------------------------

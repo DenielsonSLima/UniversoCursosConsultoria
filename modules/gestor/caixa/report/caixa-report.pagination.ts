@@ -6,6 +6,7 @@ import type {
 
 export type CaixaReportSection =
   | 'RESUMO'
+  | 'POSICOES_COMPLEMENTARES'
   | 'RECEBIMENTOS'
   | 'DESPESAS'
   | 'CARTEIRA_RECORRENTE';
@@ -34,6 +35,11 @@ export const buildCaixaReportPages = (
   const pages: CaixaReportPage[] = [{
     key: 'summary',
     section: 'RESUMO',
+    sectionPage: 1,
+    rows: [],
+  }, {
+    key: 'positions',
+    section: 'POSICOES_COMPLEMENTARES',
     sectionPage: 1,
     rows: [],
   }];

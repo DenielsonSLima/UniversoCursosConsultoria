@@ -2,11 +2,24 @@ import type { EmprestimoFinanceiro, EmprestimoParcela } from './emprestimos.type
 
 export const emprestimosQueryKeys = {
   all: ['financeiro', 'emprestimos'] as const,
+  bancosCredores: (poloResponsavelId?: string | null) => [
+    'financeiro',
+    'emprestimos',
+    'bancos-credores',
+    poloResponsavelId || 'sem-polo',
+  ] as const,
   list: (poloResponsavelId?: string | null) => [
     'financeiro',
     'emprestimos',
     'lista',
     poloResponsavelId || 'sem-polo',
+  ] as const,
+  export: (poloResponsavelId?: string | null, statusScope = 'TODOS') => [
+    'financeiro',
+    'emprestimos',
+    'exportacao',
+    poloResponsavelId || 'sem-polo',
+    statusScope,
   ] as const,
 };
 

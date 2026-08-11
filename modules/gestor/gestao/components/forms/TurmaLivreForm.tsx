@@ -1,8 +1,8 @@
 import React from 'react';
 import { Zap } from 'lucide-react';
-import { Turno } from '../../gestao.types';
-import TurmaPresencialForm, { TurmaPresencialFormData } from './TurmaPresencialForm';
 import { parseCivilDate } from '../../gestao-date.utils';
+import TurmaPlanoUnicoForm from './turma-plano-unico/TurmaPlanoUnicoForm';
+import type { TurmaPlanoUnicoFormConfig } from './turma-plano-unico/turma-plano-unico-form.types';
 
 interface TurmaLivreFormProps {
   isOpen: boolean;
@@ -12,54 +12,26 @@ interface TurmaLivreFormProps {
   selectedPoloId?: string;
 }
 
-const livreDefaults: TurmaPresencialFormData = {
-  cursoId: '',
-  poloId: '',
-  dataInicio: '',
-  dataPrevisaoTermino: '',
-  turno: 'NOTURNO' as Turno,
-  vagasTotais: 30,
-  valorMatricula: 150,
-  valorRematricula: 80,
-  qtdParcelas: 1,
-  valorParcela: 0,
-  descontoPontualidade: 0,
-  jurosAtraso: 2,
-  multaAtraso: 5,
-  diaVencimentoPadrao: 10,
-  dataInicioInscricao: '',
-  dataFimInscricao: '',
-  permitirInscricoesOnline: false,
-  exigeMatricula: true,
-  origemFinanceira: 'NORMAL',
-  financeiroHerdado: false,
-  gerarCobrancasFuturas: false,
-  sincronizarAsaasFuturo: true,
-  qtdVagasMinima: 0,
-  bloquearMatriculasAposCompletarVagas: true,
-  nomeAutomatico: '',
-  codigoAutomatico: '',
-};
-
-const livreConfig = {
+const livreConfig: TurmaPlanoUnicoFormConfig = {
   modalidade: 'LIVRE' as const,
   title: 'Nova Turma Curso Livre',
   subtitle: 'Capacitação rápida e prática.',
-  cursoLabel: 'Curso Livre',
-  submitLabel: 'Abrir Turma',
-  automaticLabel: 'Identificação Automática',
+  courseLabel: 'Curso Livre',
+  submitLabel: 'Abrir turma',
   Icon: Zap,
+  defaultTurno: 'NOTURNO',
+  defaultVagas: 30,
   theme: {
     accentText: 'text-amber-500',
-    accentMutedText: 'text-amber-700/60',
-    accentBorderFocus: 'focus:border-amber-500',
+    accentSoftText: 'text-amber-700/70',
+    accentFocus: 'focus:border-amber-500 focus:ring-2 focus:ring-amber-100',
     accentHoverBg: 'hover:bg-amber-600',
     accentSoftBg: 'bg-amber-50',
     accentSoftBorder: 'border-amber-100',
-    checkboxText: 'text-amber-600',
+    accentStepBg: 'bg-amber-500',
+    accentStepText: 'text-amber-700',
   },
-  defaults: livreDefaults,
-  generateIdentity: ({ curso, polo, formData }: { curso: any; polo: any; formData: TurmaPresencialFormData }) => {
+  generateIdentity: ({ curso, polo, formData }) => {
     const date = parseCivilDate(formData.dataInicio);
     if (!date) return null;
     const { year } = date;
@@ -77,7 +49,7 @@ const livreConfig = {
 };
 
 const TurmaLivreForm: React.FC<TurmaLivreFormProps> = (props) => (
-  <TurmaPresencialForm {...props} config={livreConfig} />
+  <TurmaPlanoUnicoForm {...props} config={livreConfig} />
 );
 
 export default TurmaLivreForm;
