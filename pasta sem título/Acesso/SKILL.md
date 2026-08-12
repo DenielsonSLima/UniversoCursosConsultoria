@@ -143,6 +143,33 @@ Antes de criar algo, **verifique se já existe** usando o MCP:
 
 Isso evita erros de "já existe" e garante idempotência.
 
+## AUTORIZAÇÃO PERSISTENTE — UNIVERSO CURSOS
+
+O titular deste projeto autorizou expressamente operações remotas de entrega
+quando pedir para **atualizar**, **publicar**, **aplicar migrations** ou
+**promover Produção**. Para esses pedidos, não solicite uma segunda confirmação
+de rotina.
+
+Execute autonomamente, sempre pelo MCP apropriado:
+
+1. aplique apenas migrations versionadas, revisadas, testadas e ainda ausentes
+   no histórico remoto;
+2. publique o manifesto explícito no GitHub, acompanhe CI/Preview e corrija
+   falhas diretamente relacionadas;
+3. após checks aprovados, promova a PR/release para `main` e confirme o deploy
+   de Produção quando o pedido incluir publicação/Produção;
+4. registre IDs remotos, migrations e limitações reais no lote operacional.
+
+Esta autorização não dispensa validação, preflight, smoke proporcional, nem as
+regras de menor privilégio. Ela também não cobre exclusão ampla/irreversível,
+`reset`/force-push destrutivo, alteração manual de dados financeiros existentes,
+disparo de cobrança real, segredos, usuários ou integrações externas sem pedido
+específico para essa ação.
+
+GitHub e Supabase continuam exclusivamente via MCP. Safari pode ser usado para
+smoke autenticado quando disponível, mas nunca para contornar o MCP em operações
+de GitHub ou Supabase.
+
 ---
 
 ## TRATAMENTO DE ERROS

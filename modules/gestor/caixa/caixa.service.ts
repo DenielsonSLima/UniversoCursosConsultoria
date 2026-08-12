@@ -2,7 +2,10 @@ import { queryOptions } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import { orderCaixaPolosByCreation } from './caixa-polos';
 import type { CaixaPolo } from './caixa-polos';
-import { isCaixaCanonicalDecimalText } from './caixa.formatters';
+import {
+  isCaixaCanonicalDecimalText,
+  isCaixaSignedCanonicalDecimalText,
+} from './caixa.formatters';
 
 export type CaixaResultStatus = 'POSITIVO' | 'NEGATIVO' | 'NEUTRO';
 export type CaixaScopeType = 'GLOBAL' | 'POLO';
@@ -167,6 +170,54 @@ export interface CaixaPatrimonioResumo {
   observacao: string;
 }
 
+/**
+ * Resultado canônico de patrimônio a custo menos saldo de empréstimos ainda
+ * devido no fechamento. Valores monetários são texto decimal para manter os
+ * centavos exatos, inclusive quando o resultado é negativo.
+ */
+export interface CaixaPosicaoLiquidaResumo {
+  versao: 1;
+  competencia: string;
+  escopoTipo: CaixaScopeType;
+  poloId: string | null;
+  valorPatrimonialCusto: string;
+  saldoEmprestimosAPagar: string;
+  valorLiquido: string;
+  observacao: string;
+}
+
+/**
+ * A posição total registrada combina três posições canônicas no mesmo corte:
+ * caixa, patrimônio a custo e empréstimos a pagar. Os valores continuam como
+ * texto decimal, pois esse contrato nunca deve ser recomposto pelo cliente.
+ */
+export interface CaixaPosicaoTotalDados {
+  saldoCaixaRegistrado: string;
+  valorPatrimonialCusto: string;
+  saldoEmprestimosAPagar: string;
+  valorTotalLiquido: string;
+  observacao: string;
+}
+
+interface CaixaPosicaoTotalResumoBase {
+  versao: 1;
+  competencia: string;
+  dataCorte: string;
+  escopoTipo: CaixaScopeType;
+  poloId: string | null;
+}
+
+export type CaixaPosicaoTotalResumo =
+  | (CaixaPosicaoTotalResumoBase & {
+    disponivel: true;
+    dados: CaixaPosicaoTotalDados;
+  })
+  | (CaixaPosicaoTotalResumoBase & {
+    disponivel: false;
+    motivo: 'ACESSO_RESTRITO' | 'HISTORICO_INSUFICIENTE';
+    observacao: string;
+  });
+
 type RawItem = Record<string, unknown>;
 
 const isRecord = (value: unknown): value is RawItem => (
@@ -207,6 +258,10 @@ const isNonNegativeSafeInteger = (value: unknown) => {
   const parsed = Number(value);
   return Number.isSafeInteger(parsed) && parsed >= 0;
 };
+
+const isCaixaDate = (value: unknown): value is string => (
+  typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
+);
 
 const assertStatementPayload = (payload: RawItem) => {
   const meta = payload.meta;
@@ -314,6 +369,59 @@ const assertPatrimonioResumoPayload = (payload: RawItem) => {
     || typeof payload.observacao !== 'string'
   ) {
     throw new Error('Contrato inválido do resumo patrimonial do Caixa.');
+  }
+};
+
+const assertPosicaoLiquidaResumoPayload = (payload: RawItem) => {
+  if (
+    payload.versao !== 1
+    || typeof payload.competencia !== 'string'
+    || payload.competencia.trim() === ''
+    || (payload.escopo_tipo !== 'GLOBAL' && payload.escopo_tipo !== 'POLO')
+    || (typeof payload.polo_id !== 'string' && payload.polo_id !== null)
+    || !isCaixaCanonicalDecimalText(payload.valor_patrimonial_custo)
+    || !isCaixaCanonicalDecimalText(payload.saldo_emprestimos_a_pagar)
+    || !isCaixaSignedCanonicalDecimalText(payload.valor_liquido)
+    || typeof payload.observacao !== 'string'
+  ) {
+    throw new Error('Contrato inválido da posição líquida do Caixa.');
+  }
+};
+
+const assertPosicaoTotalResumoPayload = (payload: RawItem) => {
+  const hasBaseContract = (
+    payload.versao === 1
+    && isCaixaDate(payload.competencia)
+    && isCaixaDate(payload.data_corte)
+    && (payload.escopo_tipo === 'GLOBAL' || payload.escopo_tipo === 'POLO')
+    && (typeof payload.polo_id === 'string' || payload.polo_id === null)
+  );
+
+  if (!hasBaseContract) {
+    throw new Error('Contrato inválido da posição total do Caixa.');
+  }
+
+  if (payload.disponivel === true) {
+    const dados = payload.dados;
+    if (
+      !isRecord(dados)
+      || !isCaixaSignedCanonicalDecimalText(dados.saldo_caixa_registrado)
+      || !isCaixaCanonicalDecimalText(dados.valor_patrimonial_custo)
+      || !isCaixaCanonicalDecimalText(dados.saldo_emprestimos_a_pagar)
+      || !isCaixaSignedCanonicalDecimalText(dados.valor_total_liquido)
+      || typeof dados.observacao !== 'string'
+    ) {
+      throw new Error('Contrato inválido da posição total do Caixa.');
+    }
+    return;
+  }
+
+  if (
+    payload.disponivel !== false
+    || (payload.motivo !== 'ACESSO_RESTRITO' && payload.motivo !== 'HISTORICO_INSUFICIENTE')
+    || typeof payload.observacao !== 'string'
+  ) {
+    throw new Error('Contrato inválido da posição total do Caixa.');
   }
 };
 
@@ -529,6 +637,58 @@ export const mapCaixaPatrimonioResumo = (value: unknown): CaixaPatrimonioResumo 
   };
 };
 
+export const mapCaixaPosicaoLiquidaResumo = (value: unknown): CaixaPosicaoLiquidaResumo => {
+  const payload = asRecord(Array.isArray(value) ? value[0] : value);
+  assertPosicaoLiquidaResumoPayload(payload);
+
+  return {
+    versao: 1,
+    competencia: asString(payload.competencia),
+    escopoTipo: payload.escopo_tipo === 'GLOBAL' ? 'GLOBAL' : 'POLO',
+    poloId: typeof payload.polo_id === 'string' ? payload.polo_id : null,
+    valorPatrimonialCusto: asString(payload.valor_patrimonial_custo),
+    saldoEmprestimosAPagar: asString(payload.saldo_emprestimos_a_pagar),
+    valorLiquido: asString(payload.valor_liquido),
+    observacao: asString(payload.observacao),
+  };
+};
+
+export const mapCaixaPosicaoTotalResumo = (value: unknown): CaixaPosicaoTotalResumo => {
+  const payload = asRecord(Array.isArray(value) ? value[0] : value);
+  assertPosicaoTotalResumoPayload(payload);
+  const base = {
+    versao: 1 as const,
+    competencia: asString(payload.competencia),
+    dataCorte: asString(payload.data_corte),
+    escopoTipo: payload.escopo_tipo === 'GLOBAL' ? 'GLOBAL' as const : 'POLO' as const,
+    poloId: typeof payload.polo_id === 'string' ? payload.polo_id : null,
+  };
+
+  if (payload.disponivel === true) {
+    const dados = asRecord(payload.dados);
+    return {
+      ...base,
+      disponivel: true,
+      dados: {
+        saldoCaixaRegistrado: asString(dados.saldo_caixa_registrado),
+        valorPatrimonialCusto: asString(dados.valor_patrimonial_custo),
+        saldoEmprestimosAPagar: asString(dados.saldo_emprestimos_a_pagar),
+        valorTotalLiquido: asString(dados.valor_total_liquido),
+        observacao: asString(dados.observacao),
+      },
+    };
+  }
+
+  return {
+    ...base,
+    disponivel: false,
+    motivo: payload.motivo === 'ACESSO_RESTRITO'
+      ? 'ACESSO_RESTRITO'
+      : 'HISTORICO_INSUFICIENTE',
+    observacao: asString(payload.observacao),
+  };
+};
+
 export const assertCaixaFinanciamentoResumoRequest = (
   resumo: CaixaFinanciamentoResumo,
   competencia: string,
@@ -563,6 +723,36 @@ export const assertCaixaPatrimonioResumoRequest = (
 
   if (!hasExpectedScope || resumo.competencia !== competencia) {
     throw new Error('O resumo patrimonial retornou um escopo diferente do solicitado.');
+  }
+};
+
+export const assertCaixaPosicaoLiquidaResumoRequest = (
+  resumo: CaixaPosicaoLiquidaResumo,
+  poloId: string | null | undefined,
+  competencia: string,
+) => {
+  const expectedPoloId = normalizeCaixaPoloId(poloId);
+  const hasExpectedScope = expectedPoloId
+    ? resumo.escopoTipo === 'POLO' && resumo.poloId === expectedPoloId
+    : resumo.escopoTipo === 'GLOBAL' && resumo.poloId === null;
+
+  if (!hasExpectedScope || resumo.competencia !== competencia) {
+    throw new Error('A posição líquida retornou um escopo diferente do solicitado.');
+  }
+};
+
+export const assertCaixaPosicaoTotalResumoRequest = (
+  resumo: CaixaPosicaoTotalResumo,
+  poloId: string | null | undefined,
+  competencia: string,
+) => {
+  const expectedPoloId = normalizeCaixaPoloId(poloId);
+  const hasExpectedScope = expectedPoloId
+    ? resumo.escopoTipo === 'POLO' && resumo.poloId === expectedPoloId
+    : resumo.escopoTipo === 'GLOBAL' && resumo.poloId === null;
+
+  if (!hasExpectedScope || resumo.competencia !== competencia) {
+    throw new Error('A posição total retornou um escopo diferente do solicitado.');
   }
 };
 
@@ -662,6 +852,46 @@ export const caixaService = {
     assertCaixaPatrimonioResumoRequest(resumo, normalizedPoloId, competencia);
     return resumo;
   },
+
+  async getPosicaoLiquidaResumo(
+    poloId: string | null | undefined,
+    competencia: string,
+  ): Promise<CaixaPosicaoLiquidaResumo> {
+    const normalizedPoloId = normalizeCaixaPoloId(poloId);
+    const { data, error } = await supabase.rpc('get_caixa_posicao_liquida_resumo_secure', {
+      p_polo_id: normalizedPoloId,
+      p_competencia: competencia,
+    });
+
+    if (error) {
+      console.error('Erro ao buscar a posição líquida do Caixa:', error);
+      throw error;
+    }
+
+    const resumo = mapCaixaPosicaoLiquidaResumo(data);
+    assertCaixaPosicaoLiquidaResumoRequest(resumo, normalizedPoloId, competencia);
+    return resumo;
+  },
+
+  async getPosicaoTotalResumo(
+    poloId: string | null | undefined,
+    competencia: string,
+  ): Promise<CaixaPosicaoTotalResumo> {
+    const normalizedPoloId = normalizeCaixaPoloId(poloId);
+    const { data, error } = await supabase.rpc('get_caixa_posicao_total_resumo_secure', {
+      p_polo_id: normalizedPoloId,
+      p_competencia: competencia,
+    });
+
+    if (error) {
+      console.error('Erro ao buscar a posição total do Caixa:', error);
+      throw error;
+    }
+
+    const resumo = mapCaixaPosicaoTotalResumo(data);
+    assertCaixaPosicaoTotalResumoRequest(resumo, normalizedPoloId, competencia);
+    return resumo;
+  },
 };
 
 export const caixaQueryKeys = {
@@ -713,6 +943,26 @@ export const caixaQueryKeys = {
     ...caixaQueryKeys.patrimonioResumosForPolo(poloId),
     competencia,
   ] as const,
+  posicoesLiquidas: ['caixa', 'posicao-liquida'] as const,
+  posicoesLiquidasForPolo: (poloId: string | null | undefined) => [
+    'caixa',
+    'posicao-liquida',
+    getCaixaScopeKey(poloId),
+  ] as const,
+  posicaoLiquida: (poloId: string | null | undefined, competencia: string) => [
+    ...caixaQueryKeys.posicoesLiquidasForPolo(poloId),
+    competencia,
+  ] as const,
+  posicoesTotais: ['caixa', 'posicao-total'] as const,
+  posicoesTotaisForPolo: (poloId: string | null | undefined) => [
+    'caixa',
+    'posicao-total',
+    getCaixaScopeKey(poloId),
+  ] as const,
+  posicaoTotal: (poloId: string | null | undefined, competencia: string) => [
+    ...caixaQueryKeys.posicoesTotaisForPolo(poloId),
+    competencia,
+  ] as const,
 };
 
 export const caixaPolosQueryOptions = () => queryOptions({
@@ -762,6 +1012,28 @@ export const caixaPatrimonioResumoQueryOptions = (
 ) => queryOptions({
   queryKey: caixaQueryKeys.patrimonioResumo(poloId, competencia),
   queryFn: () => caixaService.getPatrimonioResumo(poloId, competencia),
+  staleTime: 30_000,
+  gcTime: 30 * 60_000,
+  refetchOnWindowFocus: true,
+});
+
+export const caixaPosicaoLiquidaResumoQueryOptions = (
+  poloId?: string | null,
+  competencia = getCurrentCaixaCompetencia(),
+) => queryOptions({
+  queryKey: caixaQueryKeys.posicaoLiquida(poloId, competencia),
+  queryFn: () => caixaService.getPosicaoLiquidaResumo(poloId, competencia),
+  staleTime: 30_000,
+  gcTime: 30 * 60_000,
+  refetchOnWindowFocus: true,
+});
+
+export const caixaPosicaoTotalResumoQueryOptions = (
+  poloId?: string | null,
+  competencia = getCurrentCaixaCompetencia(),
+) => queryOptions({
+  queryKey: caixaQueryKeys.posicaoTotal(poloId, competencia),
+  queryFn: () => caixaService.getPosicaoTotalResumo(poloId, competencia),
   staleTime: 30_000,
   gcTime: 30 * 60_000,
   refetchOnWindowFocus: true,

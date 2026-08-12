@@ -1,14 +1,22 @@
-// File: modules/gestor/financeiro/despesas/components/DespesaCard.tsx
-
 import React from 'react';
-import { CheckCircle2, Clock, AlertCircle, XCircle, Printer, Trash2, Layers, Paperclip } from 'lucide-react';
+import {
+  AlertCircle,
+  CheckCircle2,
+  Clock,
+  Layers,
+  Paperclip,
+  Pencil,
+  Printer,
+  RotateCcw,
+  XCircle,
+} from 'lucide-react';
+import { ContaBancaria } from '../../financeiro.service';
 import { DespesaLancamento } from '../despesas.service';
-
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
-
-const formatDate = (value?: string) =>
-  value ? new Date(`${value}T00:00:00`).toLocaleDateString('pt-BR') : '-';
+import {
+  formatDespesaCurrency,
+  formatDespesaDate,
+  getDespesaContaLabel,
+} from './despesaPresentation';
 
 const statusConfig: Record<string, { label: string; bg: string; text: string; border: string; Icon: React.ElementType }> = {
   PAGO: { label: 'Pago', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', Icon: CheckCircle2 },
@@ -19,39 +27,46 @@ const statusConfig: Record<string, { label: string; bg: string; text: string; bo
 
 interface DespesaCardProps {
   item: DespesaLancamento;
+  contas: ContaBancaria[];
   onPagar?: (item: DespesaLancamento) => void;
-  onExcluir?: (item: DespesaLancamento) => void;
+  onEditar?: (item: DespesaLancamento) => void;
+  onCancelar?: (item: DespesaLancamento) => void;
   onImprimir?: (item: DespesaLancamento) => void;
   onAnexo?: (item: DespesaLancamento) => void;
 }
 
+const actionClass = 'inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1';
+
 const DespesaCard: React.FC<DespesaCardProps> = ({
   item,
+  contas,
   onPagar,
-  onExcluir,
+  onEditar,
+  onCancelar,
   onImprimir,
   onAnexo,
 }) => {
   const cfg = statusConfig[item.status] || statusConfig.PENDENTE;
   const isPago = item.status === 'PAGO';
   const isCancelado = item.status === 'CANCELADO';
+  const isAberto = item.status === 'PENDENTE' || item.status === 'VENCIDO';
+  const hasBaixaEstornada = isCancelado && Boolean(item.estornadoEm);
+  const contaLabel = getDespesaContaLabel(item, contas);
 
   return (
-    <div
-      className={`relative bg-white rounded-3xl border shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden group ${cfg.border}`}
-    >
-      {/* Top accent stripe */}
+    <article className={`relative overflow-hidden rounded-3xl border bg-white shadow-sm transition-shadow duration-300 hover:shadow-lg ${cfg.border}`}>
       <div className={`h-1 w-full ${isPago ? 'bg-emerald-500' : item.status === 'VENCIDO' ? 'bg-rose-500' : isCancelado ? 'bg-slate-300' : 'bg-amber-400'}`} />
 
       <div className="p-5">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <div className="flex-1 min-w-0">
-            <p className="font-black text-sm text-[#001a33] truncate">{item.descricao}</p>
-            {item.categoriaNome && (
-              <span className="inline-block mt-1 px-2 py-0.5 bg-rose-50 text-rose-600 rounded-full text-[10px] font-bold uppercase tracking-wider">
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-black text-[#001a33]">{item.descricao}</p>
+            {item.categoriaNome ? (
+              <span className="mt-1 inline-block rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-rose-600">
                 {item.categoriaNome}
               </span>
+            ) : (
+              <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Sem categoria</p>
             )}
             {item.isRateioDerived ? (
               <p className="mt-1 text-[10px] font-bold text-indigo-600">
@@ -63,108 +78,151 @@ const DespesaCard: React.FC<DespesaCardProps> = ({
               </p>
             ) : null}
           </div>
-          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-bold uppercase ${cfg.bg} ${cfg.text} border ${cfg.border} flex-shrink-0`}>
+          <span className={`inline-flex flex-shrink-0 items-center gap-1 rounded-xl border px-2.5 py-1 text-[10px] font-bold uppercase ${cfg.bg} ${cfg.text} ${cfg.border}`}>
             <cfg.Icon size={10} />
             {cfg.label}
           </span>
         </div>
 
-        {/* Valor principal */}
-        <div className="mb-3">
-          <p className={`text-2xl font-black ${isPago ? 'text-emerald-600' : item.status === 'VENCIDO' ? 'text-rose-600' : 'text-[#001a33]'}`}>
-            {formatCurrency(item.valor)}
+        <div className="mb-4 rounded-2xl bg-slate-50 px-4 py-3">
+          <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Valor previsto</p>
+          <p className={`mt-0.5 text-2xl font-black ${isPago ? 'text-emerald-600' : item.status === 'VENCIDO' ? 'text-rose-600' : 'text-[#001a33]'}`}>
+            {formatDespesaCurrency(item.valor)}
           </p>
+          {isPago && (
+            <p className="mt-0.5 text-xs font-bold text-emerald-700">Valor pago: {formatDespesaCurrency(item.valorPago ?? item.valor)}</p>
+          )}
+          {hasBaixaEstornada && (
+            <p className="mt-0.5 text-xs font-bold text-slate-500">Baixa estornada: {formatDespesaCurrency(item.valorPago ?? item.valor)}</p>
+          )}
           {(item.jurosValor > 0 || item.multaValor > 0 || item.descontoValor > 0) && (
-            <p className="mt-0.5 text-[10px] font-semibold text-slate-400">
-              Base {formatCurrency(item.valorBase)}
-              {item.jurosValor > 0 ? ` · Juros +${formatCurrency(item.jurosValor)}` : ''}
-              {item.multaValor > 0 ? ` · Multa +${formatCurrency(item.multaValor)}` : ''}
-              {item.descontoValor > 0 ? ` · Desconto −${formatCurrency(item.descontoValor)}` : ''}
-            </p>
-          )}
-          {item.valorPago !== undefined && item.valorPago !== item.valor && (
-            <p className="text-xs text-emerald-600 font-semibold mt-0.5">
-              Pago: {formatCurrency(item.valorPago)}
+            <p className="mt-1 text-[10px] font-semibold text-slate-400">
+              Base {formatDespesaCurrency(item.valorBase)}
+              {item.jurosValor > 0 ? ` · Juros +${formatDespesaCurrency(item.jurosValor)}` : ''}
+              {item.multaValor > 0 ? ` · Multa +${formatDespesaCurrency(item.multaValor)}` : ''}
+              {item.descontoValor > 0 ? ` · Desconto −${formatDespesaCurrency(item.descontoValor)}` : ''}
             </p>
           )}
         </div>
 
-        {/* Meta info */}
-        <div className="grid grid-cols-2 gap-2 mb-4">
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-xs">
           <div>
-            <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 mb-0.5">Vencimento</p>
-            <p className="text-xs font-bold text-slate-700">{formatDate(item.dataVencimento)}</p>
+            <dt className="text-[9px] font-black uppercase tracking-wider text-slate-400">Data de lançamento</dt>
+            <dd className="mt-0.5 font-bold text-slate-700">{formatDespesaDate(item.dataLancamento)}</dd>
           </div>
-          {item.dataPagamento && (
-            <div>
-              <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 mb-0.5">Pagamento</p>
-              <p className="text-xs font-bold text-emerald-600">{formatDate(item.dataPagamento)}</p>
-            </div>
-          )}
-          {item.fornecedorNome && (
-            <div className="col-span-2">
-              <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 mb-0.5">Fornecedor</p>
-              <p className="text-xs font-semibold text-slate-600 truncate">{item.fornecedorNome}</p>
-            </div>
-          )}
+          <div>
+            <dt className="text-[9px] font-black uppercase tracking-wider text-slate-400">Vencimento</dt>
+            <dd className="mt-0.5 font-bold text-slate-700">{formatDespesaDate(item.dataVencimento)}</dd>
+          </div>
+          <div className="col-span-2">
+            <dt className="text-[9px] font-black uppercase tracking-wider text-slate-400">Fornecedor</dt>
+            <dd className="mt-0.5 truncate font-semibold text-slate-700">{item.fornecedorNome || 'Fornecedor não informado'}</dd>
+          </div>
+          <div>
+            <dt className="text-[9px] font-black uppercase tracking-wider text-slate-400">Parcela</dt>
+            <dd className="mt-0.5 flex items-center gap-1 font-bold text-slate-700">
+              <Layers size={11} className="text-slate-400" />
+              {item.totalParcelas > 1 ? `${item.parcelaNumero}/${item.totalParcelas}` : 'Única (1/1)'}
+            </dd>
+          </div>
           {item.turmaNome && (
-            <div className="col-span-2">
-              <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 mb-0.5">Turma vinculado</p>
-              <p className="text-xs font-bold text-indigo-600 truncate">{item.turmaNome}</p>
-            </div>
-          )}
-          {item.totalParcelas > 1 && (
             <div>
-              <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 mb-0.5">Parcela</p>
-              <div className="flex items-center gap-1">
-                <Layers size={10} className="text-slate-400" />
-                <p className="text-xs font-bold text-slate-600">{item.parcelaNumero}/{item.totalParcelas}</p>
-              </div>
+              <dt className="text-[9px] font-black uppercase tracking-wider text-slate-400">Turma vinculada</dt>
+              <dd className="mt-0.5 truncate font-bold text-indigo-600">{item.turmaNome}</dd>
             </div>
           )}
-        </div>
+          {isPago && (
+            <>
+              <div>
+                <dt className="text-[9px] font-black uppercase tracking-wider text-slate-400">Pagamento</dt>
+                <dd className="mt-0.5 font-bold text-emerald-700">{formatDespesaDate(item.dataPagamento)}</dd>
+              </div>
+              <div>
+                <dt className="text-[9px] font-black uppercase tracking-wider text-slate-400">Forma de pagamento</dt>
+                <dd className="mt-0.5 font-bold text-emerald-700">{item.formaPagamento || 'Não informada'}</dd>
+              </div>
+              <div className="col-span-2">
+                <dt className="text-[9px] font-black uppercase tracking-wider text-slate-400">Conta de saída</dt>
+                <dd className="mt-0.5 font-semibold text-slate-700">{contaLabel || 'Conta não localizada'}</dd>
+              </div>
+            </>
+          )}
+          {hasBaixaEstornada && (
+            <div className="col-span-2 rounded-xl bg-slate-50 px-3 py-2">
+              <dt className="text-[9px] font-black uppercase tracking-wider text-slate-500">Baixa estornada</dt>
+              <dd className="mt-0.5 font-semibold text-slate-600">
+                {contaLabel ? `Conta original: ${contaLabel}` : 'Os dados da baixa foram preservados no histórico.'}
+              </dd>
+            </div>
+          )}
+        </dl>
 
-        {/* Ações */}
-        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity border-t border-slate-50 pt-3">
-          {!item.isRateioDerived && !isPago && !isCancelado && onPagar && (
-            <button
-              onClick={() => onPagar(item)}
-              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold uppercase tracking-wide transition-colors"
-            >
-              <CheckCircle2 size={12} />
-              Dar Baixa
-            </button>
-          )}
-          {!item.isRateioDerived && onImprimir && (
-            <button
-              onClick={() => onImprimir(item)}
-              className="p-2 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-colors"
-              title="Imprimir Recibo"
-            >
-              <Printer size={15} />
-            </button>
-          )}
-          {item.anexoPath && onAnexo && (
-            <button
-              onClick={() => onAnexo(item)}
-              className="p-2 text-violet-500 hover:text-violet-700 hover:bg-violet-50 rounded-xl transition-colors"
-              title={`Abrir anexo${item.anexoNome ? `: ${item.anexoNome}` : ''}`}
-            >
-              <Paperclip size={15} />
-            </button>
-          )}
-          {!item.isRateioDerived && onExcluir && item.status !== 'PAGO' && item.status !== 'CANCELADO' && (
-            <button
-              onClick={() => onExcluir(item)}
-              className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
-              title="Excluir"
-            >
-              <Trash2 size={15} />
-            </button>
-          )}
-        </div>
+        {item.observacao && (
+          <p className="mt-3 border-t border-slate-100 pt-3 text-[10px] font-medium text-slate-400">{item.observacao}</p>
+        )}
+
+        {!item.isRateioDerived && !isCancelado && (
+          <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
+            {isAberto && onEditar && (
+              <button
+                type="button"
+                onClick={() => onEditar(item)}
+                className={`${actionClass} border border-blue-200 text-blue-700 hover:bg-blue-50 focus-visible:ring-blue-500`}
+                aria-label={`Editar lançamento ${item.descricao}`}
+              >
+                <Pencil size={13} /> Editar
+              </button>
+            )}
+            {isAberto && onPagar && (
+              <button
+                type="button"
+                onClick={() => onPagar(item)}
+                className={`${actionClass} bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-500`}
+                aria-label={`Dar baixa em ${item.descricao}`}
+              >
+                <CheckCircle2 size={13} /> Dar baixa
+              </button>
+            )}
+            {onImprimir && (
+              <button
+                type="button"
+                onClick={() => onImprimir(item)}
+                className={`${actionClass} border border-slate-200 text-slate-600 hover:bg-slate-50 focus-visible:ring-slate-500`}
+                aria-label={`${isPago ? 'Abrir prévia do recibo de' : 'Abrir prévia do lançamento'} ${item.descricao}`}
+              >
+                <Printer size={13} /> {isPago ? 'Prévia do recibo' : 'Prévia'}
+              </button>
+            )}
+            {item.anexoPath && onAnexo && (
+              <button
+                type="button"
+                onClick={() => onAnexo(item)}
+                className={`${actionClass} border border-violet-200 text-violet-700 hover:bg-violet-50 focus-visible:ring-violet-500`}
+                aria-label={`Abrir anexo de ${item.descricao}`}
+              >
+                <Paperclip size={13} /> Anexo
+              </button>
+            )}
+            {onCancelar && (
+              <button
+                type="button"
+                onClick={() => onCancelar(item)}
+                className={`${actionClass} ${isPago ? 'border border-rose-200 text-rose-700 hover:bg-rose-50 focus-visible:ring-rose-500' : 'border border-slate-200 text-slate-600 hover:bg-slate-50 focus-visible:ring-slate-500'}`}
+                aria-label={`${isPago ? 'Estornar e cancelar' : 'Cancelar'} ${item.descricao}`}
+              >
+                {isPago ? <RotateCcw size={13} /> : <XCircle size={13} />}
+                {isPago ? 'Estornar e cancelar' : 'Cancelar'}
+              </button>
+            )}
+          </div>
+        )}
+        {item.isRateioDerived && (
+          <p className="mt-4 border-t border-slate-100 pt-3 text-[10px] font-bold text-slate-400">
+            Linha econômica de rateio: a correção é feita no lançamento físico da Matriz.
+          </p>
+        )}
       </div>
-    </div>
+    </article>
   );
 };
 

@@ -3,14 +3,21 @@ import DocumentHeader from '../../components/DocumentHeader';
 import ReportWatermark from '../../relatorios/components/ReportWatermark';
 import {
   formatCaixaCompetencia,
+  formatCaixaCanonicalCurrency,
   formatCaixaCurrency,
+  formatCaixaDate,
 } from '../caixa.formatters';
 import { buildCaixaReportPages } from './caixa-report.pagination';
+import {
+  getCaixaReportPosicaoTotal,
+  getCaixaReportPosicaoTotalUnavailableMessage,
+} from './caixa-report.posicao-total';
 import {
   CaixaExpensesTable,
   CaixaReceiptsTable,
 } from './CaixaReportTables';
 import { CaixaReportRecurringAnalysis } from './CaixaReportRecurringAnalysis';
+import { CaixaReportNonOperationalPositions } from './CaixaReportNonOperationalPositions';
 import { CaixaReportSummaryBreakdowns } from './CaixaReportSummaryBreakdowns';
 import type {
   CaixaDetailedReport,
@@ -18,6 +25,7 @@ import type {
   CaixaReportReceipt,
   CaixaReportRecurringClass,
 } from './caixa-report.types';
+import type { CaixaReportPosicaoTotal } from './caixa-report.posicao-total';
 
 const ExecutiveMetric: React.FC<{
   label: string;
@@ -40,8 +48,50 @@ const ExecutiveMetric: React.FC<{
   );
 };
 
+const PositionTotalMetric: React.FC<{
+  position: CaixaReportPosicaoTotal | null;
+}> = ({ position }) => {
+  if (!position?.disponivel) {
+    return (
+      <div className="col-span-2 rounded-xl border border-amber-200 bg-amber-50 p-2 text-amber-900">
+        <p className="text-[8px] font-black uppercase tracking-wide">Posição total no corte</p>
+        <p className="mt-0.5 text-[14px] font-black leading-none">Indisponível</p>
+        <p className="mt-0.5 text-[7.5px] leading-3 text-amber-800">
+          {getCaixaReportPosicaoTotalUnavailableMessage(position)}
+        </p>
+      </div>
+    );
+  }
+
+  const { dados } = position;
+  const totalIsNegative = dados.valorTotalLiquido.startsWith('-');
+  return (
+    <div className="col-span-2 rounded-xl border border-[#0b365d] bg-[#001a33] p-2 text-white">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[8px] font-black uppercase tracking-wide text-blue-100">
+            Posição total no corte
+          </p>
+          <p className={`mt-0.5 text-[15px] font-black leading-none ${
+            totalIsNegative ? 'text-rose-300' : 'text-emerald-300'
+          }`}>
+            {formatCaixaCanonicalCurrency(dados.valorTotalLiquido)}
+          </p>
+        </div>
+        <p className="max-w-[42%] text-right text-[7px] font-semibold leading-3 text-blue-100">
+          Caixa + patrimônio a custo − empréstimos a pagar
+        </p>
+      </div>
+      <p className="mt-1 border-t border-blue-400/30 pt-1 text-[7px] leading-3 text-blue-100">
+        Corte {formatCaixaDate(position.dataCorte)} · Caixa: {formatCaixaCanonicalCurrency(dados.saldoCaixaRegistrado)} · Patrimônio: {formatCaixaCanonicalCurrency(dados.valorPatrimonialCusto)} · Empréstimos: {formatCaixaCanonicalCurrency(dados.saldoEmprestimosAPagar)}
+      </p>
+    </div>
+  );
+};
+
 const SummaryPage: React.FC<{ report: CaixaDetailedReport }> = ({ report }) => {
   const statement = report.resumo;
+  const posicaoTotal = getCaixaReportPosicaoTotal(report);
   const resultLabel = statement.resumoCompetencia.resultadoStatus === 'NEGATIVO'
     ? 'Déficit do mês'
     : statement.resumoCompetencia.resultadoStatus === 'POSITIVO'
@@ -60,11 +110,7 @@ const SummaryPage: React.FC<{ report: CaixaDetailedReport }> = ({ report }) => {
       </div>
 
       <div className="grid grid-cols-4 gap-2">
-        <ExecutiveMetric
-          label="Saldo contábil registrado"
-          value={statement.saldosHoje.registradoTotal}
-          helper="Posição contábil do sistema; não é consulta ao extrato"
-        />
+        <PositionTotalMetric position={posicaoTotal} />
         <ExecutiveMetric
           label="Entradas recebidas"
           value={statement.resumoCompetencia.entradasRecebidasBrutas}
@@ -78,6 +124,11 @@ const SummaryPage: React.FC<{ report: CaixaDetailedReport }> = ({ report }) => {
           tone="rose"
         />
         <ExecutiveMetric
+          label="Saldo contábil registrado"
+          value={statement.saldosHoje.registradoTotal}
+          helper="Posição contábil do sistema; não é consulta ao extrato"
+        />
+        <ExecutiveMetric
           label={resultLabel}
           value={statement.resumoCompetencia.resultado}
           helper="Entradas menos saídas confirmadas no período"
@@ -86,24 +137,14 @@ const SummaryPage: React.FC<{ report: CaixaDetailedReport }> = ({ report }) => {
         <ExecutiveMetric
           label="A receber"
           value={statement.compromissos.aReceber}
-          helper="Receitas futuras ainda em aberto"
-        />
-        <ExecutiveMetric
-          label="Inadimplência"
-          value={statement.compromissos.receberVencido}
-          helper="Valor vencido e ainda não recebido"
-          tone="amber"
+          helper={`Em atraso: ${formatCaixaCurrency(statement.compromissos.receberVencido)}`}
+          tone={statement.compromissos.receberVencido > 0 ? 'amber' : 'navy'}
         />
         <ExecutiveMetric
           label="A pagar"
           value={statement.compromissos.aPagar}
-          helper="Obrigações futuras ainda em aberto"
-        />
-        <ExecutiveMetric
-          label="Obrigações vencidas"
-          value={statement.compromissos.pagarVencido}
-          helper="Valor vencido e ainda não pago"
-          tone="rose"
+          helper={`Vencidas: ${formatCaixaCurrency(statement.compromissos.pagarVencido)}`}
+          tone={statement.compromissos.pagarVencido > 0 ? 'rose' : 'navy'}
         />
       </div>
 
@@ -253,6 +294,9 @@ export const CaixaReportDocument: React.FC<{
 
             <div data-caixa-report-content className="relative z-10 min-h-0 pl-[7mm]">
               {page.section === 'RESUMO' && <SummaryPage report={report} />}
+              {page.section === 'POSICOES_COMPLEMENTARES' && (
+                <CaixaReportNonOperationalPositions report={report} />
+              )}
               {page.section === 'RECEBIMENTOS' && (
                 <>
                   <SectionHeading

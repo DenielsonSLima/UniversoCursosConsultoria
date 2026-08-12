@@ -34,7 +34,16 @@ export const activateEnrollmentAfterPayment = async (
   receivable: any,
 ) => {
   if (!receivable?.matricula_id) return;
-  if (String(receivable.tipo_lancamento || "").toUpperCase() !== "MATRICULA") {
+  const launchType = String(receivable.tipo_lancamento || "").toUpperCase();
+  const singlePlan =
+    receivable?.regra_financeira_plano_unico_snapshot?.origem ===
+      "PLANO_UNICO";
+  // Em planos únicos, a matrícula só é ativada pela primeira parcela. Os
+  // títulos seguintes quitam o saldo financeiro, mas não podem alterar o
+  // ciclo acadêmico da matrícula por si só.
+  const isSinglePlanFirstInstallment = singlePlan &&
+    Number(receivable?.parcela_numero) === 1;
+  if (launchType !== "MATRICULA" && !isSinglePlanFirstInstallment) {
     return;
   }
 

@@ -7,6 +7,16 @@ export type StatusTurma =
 export type Turno = 'MATUTINO' | 'VESPERTINO' | 'NOTURNO' | 'INTEGRAL' | 'EAD';
 export type TurmasSortBy = 'NOME_ASC' | 'NOME_DESC' | 'ALUNOS_DESC';
 
+export interface PlanoFinanceiroUnicoInput {
+  valorTotal: number;
+  qtdParcelas: number;
+  primeiroVencimento: string;
+  diaVencimento: number;
+  descontoPontualidade: number;
+  jurosAtrasoPercentual: number;
+  multaAtraso: number;
+}
+
 export interface Turma {
   id: string;
   codigo: string; // Gerado Automaticamente

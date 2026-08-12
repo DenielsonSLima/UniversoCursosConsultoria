@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import test from 'node:test';
 import {
   assertCaixaStatementRequest,
@@ -39,6 +41,14 @@ test('separa o cache mensal por polo, consolidado e competência', () => {
     caixaReportQueryKey('polo-a', '2026-07-01'),
     ['caixa-report', 'monthly', 'polo-a', '2026-07-01'],
   );
+  assert.deepEqual(
+    caixaQueryKeys.posicaoLiquida('polo-a', '2026-07-01'),
+    ['caixa', 'posicao-liquida', 'polo-a', '2026-07-01'],
+  );
+  assert.deepEqual(
+    caixaQueryKeys.posicaoTotal('polo-a', '2026-07-01'),
+    ['caixa', 'posicao-total', 'polo-a', '2026-07-01'],
+  );
 });
 
 test('invalida somente o polo afetado e o consolidado', () => {
@@ -76,6 +86,20 @@ test('roteia eventos de patrimônio sem invalidar os contratos financeiros', () 
     }),
     'FINANCEIRO',
   );
+});
+
+test('invalida posições líquida e total para eventos patrimoniais e financeiros', () => {
+  const source = readFileSync(
+    join(process.cwd(), 'modules/gestor/caixa/useCaixaRealtime.ts'),
+    'utf8',
+  );
+  const matches = source.match(/caixaQueryKeys\.posicoesLiquidasForPolo\(scope\)/g) ?? [];
+  const totalMatches = source.match(/caixaQueryKeys\.posicoesTotaisForPolo\(scope\)/g) ?? [];
+
+  assert.equal(matches.length, 2);
+  assert.equal(totalMatches.length, 2);
+  assert.match(source, /queryKey: caixaQueryKeys\.posicoesLiquidas,/);
+  assert.match(source, /queryKey: caixaQueryKeys\.posicoesTotais,/);
 });
 
 test('rejeita resposta de outro polo, consolidado ou competência', () => {

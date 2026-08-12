@@ -24,6 +24,7 @@ import {
   createEmprestimoRequestId,
   emprestimosService,
 } from '../emprestimos.service';
+import { useEmprestimoBancosCredoresQuery } from '../hooks/useEmprestimosQueries';
 import type {
   EmprestimoFinanceiro,
   EmprestimoFormaPagamento,
@@ -47,6 +48,13 @@ const formatCurrencyInput = (value: string) => {
   });
 };
 
+const formatPoloLocalizacao = (polo: FinanceiroPolo) => (
+  [polo.cidade, polo.estado || polo.uf]
+    .map((value) => value?.trim())
+    .filter((value): value is string => Boolean(value))
+    .join(' • ') || 'Cidade/UF não informadas'
+);
+
 interface EmprestimoFormProps {
   poloResponsavelId: string;
   poloResponsavelNome: string;
@@ -68,7 +76,7 @@ const EmprestimoForm: React.FC<EmprestimoFormProps> = ({
 }) => {
   const queryClient = useQueryClient();
   const requestIdRef = useRef(createEmprestimoRequestId());
-  const [credorNome, setCredorNome] = useState('');
+  const [credorParceiroId, setCredorParceiroId] = useState('');
   const [descricao, setDescricao] = useState('');
   const [valorLiberado, setValorLiberado] = useState('');
   const [valorTotalDivida, setValorTotalDivida] = useState('');
@@ -86,6 +94,11 @@ const EmprestimoForm: React.FC<EmprestimoFormProps> = ({
     () => polos.filter((polo) => Boolean(polo.id)),
     [polos],
   );
+  const bancosCredoresQuery = useEmprestimoBancosCredoresQuery(
+    poloResponsavelId,
+    Boolean(poloResponsavelId),
+  );
+  const bancosCredores = bancosCredoresQuery.data || [];
   const rateioDisponivel = isMatriz;
   const rateioEfetivo: EmprestimoRateioModo = rateioDisponivel
     ? rateioModo
@@ -95,7 +108,7 @@ const EmprestimoForm: React.FC<EmprestimoFormProps> = ({
     mutationFn: () => emprestimosService.criar({
       requestId: requestIdRef.current,
       poloResponsavelId,
-      credorNome: credorNome.trim(),
+      credorParceiroId,
       descricao: descricao.trim(),
       valorLiberado: parseCurrencyInput(valorLiberado),
       valorTotalDivida: parseCurrencyInput(valorTotalDivida),
@@ -112,6 +125,8 @@ const EmprestimoForm: React.FC<EmprestimoFormProps> = ({
     onSuccess: async (emprestimo) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: emprestimosQueryKeys.list(poloResponsavelId) }),
+        queryClient.invalidateQueries({ queryKey: emprestimosQueryKeys.export(poloResponsavelId, 'ATIVOS') }),
+        queryClient.invalidateQueries({ queryKey: emprestimosQueryKeys.export(poloResponsavelId, 'TODOS') }),
         queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos }),
         queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.resumoKpis }),
         queryClient.invalidateQueries({ queryKey: caixaQueryKeys.dashboards }),
@@ -138,7 +153,7 @@ const EmprestimoForm: React.FC<EmprestimoFormProps> = ({
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     if (
-      !credorNome.trim()
+      !credorParceiroId
       || !descricao.trim()
       || !parseCurrencyInput(valorLiberado)
       || !parseCurrencyInput(valorTotalDivida)
@@ -179,15 +194,35 @@ const EmprestimoForm: React.FC<EmprestimoFormProps> = ({
         <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 px-7 py-6 md:grid-cols-2">
           <div>
             <label className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-400">
-              <UsersRound size={11} className="mr-1 inline" /> Credor *
+              <Landmark size={11} className="mr-1 inline" /> Banco credor (Parceiro PJ • categoria Banco) *
             </label>
-            <input
-              value={credorNome}
-              onChange={(event) => setCredorNome(event.target.value)}
-              placeholder="Ex.: Banco, cooperativa ou investidor"
+            <select
+              value={credorParceiroId}
+              onChange={(event) => setCredorParceiroId(event.target.value)}
               required
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold outline-none transition-all placeholder:text-slate-300 focus:ring-2 focus:ring-indigo-500"
-            />
+              disabled={bancosCredoresQuery.isPending || bancosCredoresQuery.isError}
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold outline-none transition-all focus:ring-2 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:text-slate-400"
+            >
+              <option value="">
+                {bancosCredoresQuery.isPending
+                  ? 'Carregando bancos cadastrados...'
+                  : 'Selecione um banco cadastrado...'}
+              </option>
+              {bancosCredores.map((banco) => (
+                <option key={banco.id} value={banco.id}>
+                  {banco.nome}{banco.cpfCnpj ? ` • ${banco.cpfCnpj}` : ''}
+                </option>
+              ))}
+            </select>
+            {bancosCredoresQuery.isError ? (
+              <p className="mt-1.5 text-[11px] font-medium text-rose-600">
+                Não foi possível carregar os bancos cadastrados. Tente novamente ao reabrir o formulário.
+              </p>
+            ) : bancosCredores.length === 0 && !bancosCredoresQuery.isPending ? (
+              <p className="mt-1.5 text-[11px] font-medium text-amber-700">
+                Nenhum Parceiro PJ com categoria Banco está disponível neste polo. Cadastre-o no módulo Parceiros.
+              </p>
+            ) : null}
           </div>
           <div>
             <label className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-400">
@@ -365,14 +400,21 @@ const EmprestimoForm: React.FC<EmprestimoFormProps> = ({
                     {polosAtivos.map((polo) => {
                       const selected = polosSelecionados.has(polo.id);
                       return (
-                        <label key={polo.id} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50">
+                        <label key={polo.id} className="flex cursor-pointer items-start gap-2 rounded-lg px-2 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50">
                           <input
                             type="checkbox"
                             checked={selected}
                             onChange={() => togglePolo(polo.id)}
-                            className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                            className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                           />
-                          <span className="min-w-0 truncate">{polo.is_matriz ? 'Matriz — ' : 'Polo — '}{polo.nome}</span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-xs font-black text-slate-700">
+                              {polo.is_matriz ? 'Matriz — ' : 'Polo — '}{polo.nome}
+                            </span>
+                            <span className="mt-0.5 block truncate text-[10px] font-medium text-slate-400">
+                              {formatPoloLocalizacao(polo)}
+                            </span>
+                          </span>
                         </label>
                       );
                     })}

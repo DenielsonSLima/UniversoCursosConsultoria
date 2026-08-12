@@ -279,6 +279,8 @@ const mapReceivableRpcRow = (row: any): ContasReceber => ({
   valorPago: row.valor_pago === null || row.valor_pago === undefined ? undefined : Number(row.valor_pago),
   status: row.status,
   categoria: row.categoria,
+  categoriaFinanceiraId: row.categoria_financeira_id || undefined,
+  categoriaFinanceiraNome: row.categoria_financeira_nome || undefined,
   clienteId: row.cliente_id || undefined,
   clienteNome: row.cliente_nome || 'Aluno',
   clienteCpfCnpj: row.cliente_cpf_cnpj || '',
@@ -700,7 +702,24 @@ export const financeiroService = {
   },
 
   async getOutrosCreditos(poloId?: string): Promise<ContasReceber[]> {
-    return this.getContasReceber({ categoria: 'OUTROS_CREDITOS', poloId });
+    const { data, error } = await supabase.rpc('listar_outros_creditos_secure', {
+      p_polo_id: poloId && poloId !== 'todos' ? poloId : null,
+    });
+
+    if (error) {
+      console.error('Erro ao buscar outros créditos:', error);
+      throw error;
+    }
+
+    let payload: unknown = data;
+    if (typeof data === 'string') {
+      try {
+        payload = JSON.parse(data);
+      } catch {
+        payload = [];
+      }
+    }
+    return (Array.isArray(payload) ? payload : []).map(mapReceivableRpcRow);
   },
 
   async getOutrosCreditosSummary(filters: ReceivablesSummaryFilters = {}): Promise<ReceivablesSummary> {

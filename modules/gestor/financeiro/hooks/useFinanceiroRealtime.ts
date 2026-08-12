@@ -55,6 +55,17 @@ export function useFinanceiroRealtime(poloId?: string | null) {
         void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.resumoKpis });
         void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos });
         void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.alunoReceivables });
+        // Outros Créditos usa um read model próprio. A alteração de uma conta
+        // a receber pode incluir/retirar um vínculo de empréstimo, portanto a
+        // aba precisa receber a mesma invalidação escopada, sem botão manual.
+        void queryClient.invalidateQueries({
+          predicate: (query) => (
+            query.queryKey[0] === financeiroQueryKeys.outrosCreditosRoot[0]
+            && query.queryKey[1] === financeiroQueryKeys.outrosCreditosRoot[1]
+            && queryMatchesPolo(query.queryKey)
+          ),
+          refetchType: 'active',
+        });
 
         turmaIds.forEach((turmaId) => {
           void queryClient.invalidateQueries({ queryKey: ['turma-financeiro', turmaId] });

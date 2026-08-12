@@ -6,7 +6,13 @@ import {
   TrendingDown, Layers,
 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { despesasService, DespesaBaixaParams, DespesaLancamento } from '../despesas/despesas.service';
+import {
+  CancelarOuEstornarDespesaInput,
+  despesasService,
+  DespesaBaixaParams,
+  DespesaLancamento,
+  UpdateDespesaInput,
+} from '../despesas/despesas.service';
 import { despesasQueryKeys, DespesaStatusScope, DespesaTipo } from '../despesas/despesas.queryKeys';
 import { useDespesasQueries } from '../despesas/hooks/useDespesasQueries';
 import { useDespesasRealtime } from '../despesas/hooks/useDespesasRealtime';
@@ -16,12 +22,11 @@ import DespesaTable from '../despesas/components/DespesaTable';
 import DespesaCard from '../despesas/components/DespesaCard';
 import DespesaGroupedView from '../despesas/components/DespesaGroupedView';
 import DespesaBaixaModal from '../despesas/components/DespesaBaixaModal';
+import DespesaEditModal from '../despesas/components/DespesaEditModal';
+import DespesaCancelModal from '../despesas/components/DespesaCancelModal';
+import DespesaReciboModal from '../despesas/components/DespesaReciboModal';
 import ToastNotification, { useToast } from '../../components/ToastNotification';
 import { useFinanceiroSharedQueries } from '../hooks/useFinanceiroSharedQueries';
-import {
-  printReciboDespesa,
-  despesaToReciboData,
-} from '../../cadastros/modelos-documentos/recibo/ReciboDespesaPreview';
 import FinancialUnderlineTabs from '../components/FinancialUnderlineTabs';
 import { financeiroQueryKeys } from '../financeiro.queryKeys';
 import { caixaQueryKeys } from '../../caixa/caixa.service';
@@ -44,6 +49,9 @@ const OutrosDebitosTab: React.FC<{ poloId?: string | null }> = ({ poloId: scoped
   const [agrupar, setAgrupar] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [baixaItem, setBaixaItem] = useState<DespesaLancamento | null>(null);
+  const [editItem, setEditItem] = useState<DespesaLancamento | null>(null);
+  const [cancelItem, setCancelItem] = useState<DespesaLancamento | null>(null);
+  const [reciboItem, setReciboItem] = useState<DespesaLancamento | null>(null);
 
   useDespesasRealtime(scopedPoloId);
 
@@ -91,40 +99,64 @@ const OutrosDebitosTab: React.FC<{ poloId?: string | null }> = ({ poloId: scoped
     vencidos: summaryQuery.data?.vencidosCount || 0,
   }), [summaryQuery.data]);
 
+  const invalidateExpenseData = async (includeBalances = false) => {
+    const invalidations = [
+      queryClient.invalidateQueries({ queryKey: despesasQueryKeys.lancamentosRoot }),
+      queryClient.invalidateQueries({ queryKey: despesasQueryKeys.summaryRoot }),
+      queryClient.invalidateQueries({ queryKey: despesasQueryKeys.groupSummaryRoot }),
+    ];
+    if (includeBalances) {
+      invalidations.push(
+        queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos }),
+        queryClient.invalidateQueries({ queryKey: caixaQueryKeys.dashboards }),
+      );
+    }
+    await Promise.all(invalidations);
+  };
+
   const baixaMutation = useMutation({
     mutationFn: (params: DespesaBaixaParams) =>
       despesasService.markDespesaPaga(baixaItem!.id, params),
     onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: despesasQueryKeys.all }),
-        queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos }),
-        queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.resumoKpis }),
-        queryClient.invalidateQueries({ queryKey: caixaQueryKeys.dashboards }),
-      ]);
+      await invalidateExpenseData(true);
       toast.success('Baixa confirmada!', 'O débito foi liquidado com sucesso.');
       setBaixaItem(null);
     },
     onError: (err: any) => toast.error('Erro ao dar baixa', err.message),
   });
 
-  const excluirMutation = useMutation({
-    mutationFn: (id: string) => despesasService.deleteDespesa(id),
+  const editMutation = useMutation({
+    mutationFn: (input: UpdateDespesaInput) => despesasService.updateDespesa(editItem!.id, input),
     onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: despesasQueryKeys.all }),
-        queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos }),
-        queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.resumoKpis }),
-        queryClient.invalidateQueries({ queryKey: caixaQueryKeys.dashboards }),
-      ]);
-      toast.success('Registro cancelado', 'O histórico do débito foi preservado.');
+      await invalidateExpenseData();
+      toast.success('Débito atualizado', 'Os dados do lançamento foram corrigidos com segurança.');
+      setEditItem(null);
     },
-    onError: (err: any) => toast.error('Erro ao excluir', err.message),
+    onError: (err: any) => toast.error('Erro ao editar', err.message),
   });
 
-  const handleExcluir = (item: DespesaLancamento) => {
-    if (confirm(`Excluir "${item.descricao}"?`)) excluirMutation.mutate(item.id);
+  const cancelarMutation = useMutation({
+    mutationFn: (input: CancelarOuEstornarDespesaInput) => (
+      despesasService.cancelarOuEstornarDespesa(cancelItem!.id, input)
+    ),
+    onSuccess: async () => {
+      const wasPaid = cancelItem?.status === 'PAGO';
+      await invalidateExpenseData(wasPaid);
+      toast.success(
+        wasPaid ? 'Baixa estornada e débito cancelado' : 'Débito cancelado',
+        wasPaid
+          ? 'O saldo interno foi corrigido e a trilha da baixa foi preservada.'
+          : 'O histórico foi preservado com segurança.',
+      );
+      setCancelItem(null);
+    },
+    onError: (err: any) => toast.error('Erro ao cancelar ou estornar', err.message),
+  });
+
+  const handleCancelar = (item: DespesaLancamento) => {
+    setCancelItem(item);
   };
-  const handleImprimir = (item: DespesaLancamento) => printReciboDespesa(despesaToReciboData(item));
+  const handleImprimir = (item: DespesaLancamento) => setReciboItem(item);
   const handleAnexo = async (item: DespesaLancamento) => {
     const preview = window.open('about:blank', '_blank');
     if (preview) preview.opener = null;
@@ -244,13 +276,40 @@ const OutrosDebitosTab: React.FC<{ poloId?: string | null }> = ({ poloId: scoped
           Não foi possível carregar os totais canônicos por categoria.
         </div>
       ) : agrupar ? (
-        <DespesaGroupedView items={filtered} summaries={groupSummaryQuery.data || []} viewMode={viewMode} onPagar={(item) => setBaixaItem(item)} onExcluir={handleExcluir} onImprimir={handleImprimir} onAnexo={handleAnexo} />
+        <DespesaGroupedView
+          items={filtered}
+          summaries={groupSummaryQuery.data || []}
+          viewMode={viewMode}
+          contas={contas}
+          onPagar={(item) => setBaixaItem(item)}
+          onEditar={setEditItem}
+          onCancelar={handleCancelar}
+          onImprimir={handleImprimir}
+          onAnexo={handleAnexo}
+        />
       ) : viewMode === 'tabela' ? (
-        <DespesaTable items={filtered} onPagar={(item) => setBaixaItem(item)} onExcluir={handleExcluir} onImprimir={handleImprimir} onAnexo={handleAnexo} />
+        <DespesaTable
+          items={filtered}
+          contas={contas}
+          onPagar={(item) => setBaixaItem(item)}
+          onEditar={setEditItem}
+          onCancelar={handleCancelar}
+          onImprimir={handleImprimir}
+          onAnexo={handleAnexo}
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((item) => (
-            <DespesaCard key={item.id} item={item} onPagar={(i) => setBaixaItem(i)} onExcluir={handleExcluir} onImprimir={handleImprimir} onAnexo={handleAnexo} />
+            <DespesaCard
+              key={item.id}
+              item={item}
+              contas={contas}
+              onPagar={(i) => setBaixaItem(i)}
+              onEditar={setEditItem}
+              onCancelar={handleCancelar}
+              onImprimir={handleImprimir}
+              onAnexo={handleAnexo}
+            />
           ))}
         </div>
       )}
@@ -280,6 +339,38 @@ const OutrosDebitosTab: React.FC<{ poloId?: string | null }> = ({ poloId: scoped
           onClose={() => setBaixaItem(null)}
           isPending={baixaMutation.isPending}
           tone="indigo"
+        />
+      )}
+
+      {editItem && (
+        <DespesaEditModal
+          item={editItem}
+          categorias={categorias}
+          parceiros={parceiros}
+          turmas={turmas}
+          onConfirm={(input) => editMutation.mutate(input)}
+          onClose={() => setEditItem(null)}
+          isPending={editMutation.isPending}
+          tone="indigo"
+        />
+      )}
+
+      {cancelItem && (
+        <DespesaCancelModal
+          item={cancelItem}
+          onConfirm={(input) => cancelarMutation.mutate(input)}
+          onClose={() => setCancelItem(null)}
+          isPending={cancelarMutation.isPending}
+          tone="indigo"
+        />
+      )}
+
+      {reciboItem && (
+        <DespesaReciboModal
+          item={reciboItem}
+          contas={contas}
+          parceiros={parceiros}
+          onClose={() => setReciboItem(null)}
         />
       )}
     </div>

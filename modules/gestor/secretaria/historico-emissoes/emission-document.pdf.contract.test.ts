@@ -384,6 +384,87 @@ test('compositor repara snapshot legado e quebra o código completo abaixo do QR
   }
 });
 
+test('Pasta legada usa a mesma grade eleitoral completa da Ficha', async () => {
+  const preview = makePreview({
+    pageCount: 1,
+    textContent: '<div style="min-height:1px;"></div>',
+    absoluteFields: [{
+      id: 'pasta_documentos',
+      type: 'text',
+      value: REAL_LEGACY_FICHA_DOCUMENTS_GRID,
+      x: 76,
+      y: 690,
+      width: 642,
+      height: 92,
+      style: { fontSize: '10px' },
+    }],
+  });
+  preview.watermark = null;
+  preview.polo = { ...preview.polo, logoUrl: null };
+  const source = makeSource(2, preview);
+  source.emission.dados_emissao = {
+    ...source.emission.dados_emissao,
+    studentVoterId: '123456789012',
+    studentVoterZone: '987',
+    studentVoterSection: '6543',
+    studentVoterIssueDate: '2024-03-04',
+    studentVoterState: 'AL',
+  };
+
+  const pdf = await createEmissionDocumentsPdf([source]);
+  const text = await extractPdfText(pdf.blob);
+
+  assert.match(text, /ZONA/i);
+  assert.match(text, /SEÇÃO/i);
+  assert.match(text, /EMISSÃO \/ UF/i);
+  assert.match(text, /987/);
+  assert.match(text, /6543/);
+  assert.match(text, /04\/03\/2024 \/ AL/);
+
+  const outputPath = process.env.SECRETARIA_PASTA_VOTER_PDF_FIXTURE_OUTPUT;
+  if (outputPath) {
+    await writeFile(outputPath, new Uint8Array(await pdf.blob.arrayBuffer()));
+  }
+});
+
+test('assinaturas da Ficha preservam linhas vetoriais e rótulos centralizados', async () => {
+  const preview = makePreview({
+    pageCount: 1,
+    textContent: '<div style="min-height:1px;"></div>',
+    absoluteFields: [{
+      id: 'ficha_assinaturas',
+      type: 'text',
+      value: '{{FICHA_ASSINATURAS}}',
+      x: 76,
+      y: 946,
+      width: 642,
+      height: 42,
+      style: { fontSize: '10px' },
+    }],
+    enrollmentFormRequiresSignature: true,
+  });
+  preview.watermark = null;
+  preview.polo = { ...preview.polo, logoUrl: null };
+  const source = makeSource(1, preview);
+  const resolved = resolveRegistrationSnapshotTemplate(
+    '{{FICHA_ASSINATURAS}}',
+    source.emission,
+    source.preview,
+  );
+
+  assert.match(resolved, /display:grid/i);
+  assert.match(resolved, /border-top:1px solid #0f172a/i);
+  const pdf = await createEmissionDocumentsPdf([source]);
+  const text = await extractPdfText(pdf.blob);
+  assert.match(text, /ASSINATURA DO ALUNO OU RESPONSÁVEL/i);
+  assert.match(text, /DEFERIMENTO DA DIRETORIA/i);
+
+  const outputPath = process.env.SECRETARIA_FICHA_SIGNATURE_PDF_FIXTURE_OUTPUT;
+  if (outputPath) {
+    await writeFile(outputPath, new Uint8Array(await pdf.blob.arrayBuffer()));
+  }
+});
+
 test('código de QR maior que a área reservada falha em vez de truncar', async () => {
   const preview = makePreview({
     pageCount: 1,

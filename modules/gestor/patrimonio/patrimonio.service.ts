@@ -130,6 +130,28 @@ export const patrimonioService = {
     };
   },
 
+  async listAllForExport(poloId: string): Promise<PatrimonioItem[]> {
+    const items: PatrimonioItem[] = [];
+    const pageSize = 100;
+    let offset = 0;
+
+    for (;;) {
+      const page = await this.list({
+        poloId,
+        status: 'todos',
+        limit: pageSize,
+        offset,
+      });
+      items.push(...page.items);
+
+      if (page.items.length === 0) break;
+      offset += page.items.length;
+      if (offset >= page.total) break;
+    }
+
+    return items;
+  },
+
   async create(input: CreatePatrimonioInput): Promise<PatrimonioItem> {
     const { data, error } = await supabase.rpc('criar_patrimonio_v2_secure', {
       p_request_id: input.requestId,

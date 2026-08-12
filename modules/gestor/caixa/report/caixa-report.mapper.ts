@@ -1,4 +1,14 @@
-import { mapCaixaStatement } from '../caixa.service';
+import {
+  assertCaixaFinanciamentoResumoRequest,
+  assertCaixaPatrimonioResumoRequest,
+  assertCaixaPosicaoLiquidaResumoRequest,
+  assertCaixaPosicaoTotalResumoRequest,
+  mapCaixaFinanciamentoResumo,
+  mapCaixaPatrimonioResumo,
+  mapCaixaPosicaoLiquidaResumo,
+  mapCaixaPosicaoTotalResumo,
+  mapCaixaStatement,
+} from '../caixa.service';
 import type {
   CaixaCompositionStatus,
   CaixaDetailedReport,
@@ -371,15 +381,103 @@ const assertUnique = (keys: string[], field: string) => {
 
 export const mapCaixaDetailedReport = (value: unknown): CaixaDetailedReport => {
   const payload = record(Array.isArray(value) ? value[0] : value, 'payload');
-  if (requiredNumber(payload.versao, 'versao') !== 3 || payload.completo !== true) {
+  if (requiredNumber(payload.versao, 'versao') !== 6 || payload.completo !== true) {
     throw new Error('O relatório detalhado do Caixa está incompleto ou possui versão incompatível.');
   }
 
   assertStrictStatementSummary(payload.resumo);
+  const resumo = mapCaixaStatement(payload.resumo);
   const limitePorTabela = integer(payload.limite_por_tabela, 'limite_por_tabela');
   const limiteTotal = integer(payload.limite_total, 'limite_total');
   const totaisRecebimentos = totals(payload.totais_recebimentos, 'totais_recebimentos');
   const totaisDespesas = totals(payload.totais_despesas, 'totais_despesas');
+  const financiamentoPayload = record(payload.financiamento, 'financiamento');
+  const financiamento: CaixaDetailedReport['financiamento'] = financiamentoPayload.disponivel === false
+    ? (() => {
+      if (financiamentoPayload.motivo !== 'ACESSO_RESTRITO') {
+        throw new Error('Contrato inválido do relatório do Caixa: financiamento.motivo.');
+      }
+      return { disponivel: false, motivo: 'ACESSO_RESTRITO' };
+    })()
+    : (() => {
+      if (financiamentoPayload.disponivel !== true) {
+        throw new Error('Contrato inválido do relatório do Caixa: financiamento.disponivel.');
+      }
+      const dados = mapCaixaFinanciamentoResumo(
+        record(financiamentoPayload.dados, 'financiamento.dados'),
+      );
+      assertCaixaFinanciamentoResumoRequest(dados, resumo.meta.competencia);
+      return { disponivel: true, dados };
+    })();
+
+  const patrimonioPayload = record(payload.patrimonio, 'patrimonio');
+  const patrimonio: CaixaDetailedReport['patrimonio'] = patrimonioPayload.disponivel === false
+    ? (() => {
+      if (patrimonioPayload.motivo !== 'ACESSO_RESTRITO') {
+        throw new Error('Contrato inválido do relatório do Caixa: patrimonio.motivo.');
+      }
+      return { disponivel: false, motivo: 'ACESSO_RESTRITO' };
+    })()
+    : (() => {
+      if (patrimonioPayload.disponivel !== true) {
+        throw new Error('Contrato inválido do relatório do Caixa: patrimonio.disponivel.');
+      }
+      const dados = mapCaixaPatrimonioResumo(
+        record(patrimonioPayload.dados, 'patrimonio.dados'),
+      );
+      assertCaixaPatrimonioResumoRequest(
+        dados,
+        resumo.meta.poloId,
+        resumo.meta.competencia,
+      );
+      return { disponivel: true, dados };
+    })();
+
+  const posicaoLiquidaPayload = record(payload.posicao_liquida, 'posicao_liquida');
+  const posicaoLiquida: CaixaDetailedReport['posicaoLiquida'] = posicaoLiquidaPayload.disponivel === false
+    ? (() => {
+      if (posicaoLiquidaPayload.motivo !== 'ACESSO_RESTRITO') {
+        throw new Error('Contrato inválido do relatório do Caixa: posicao_liquida.motivo.');
+      }
+      return { disponivel: false, motivo: 'ACESSO_RESTRITO' };
+    })()
+    : (() => {
+      if (posicaoLiquidaPayload.disponivel !== true) {
+        throw new Error('Contrato inválido do relatório do Caixa: posicao_liquida.disponivel.');
+      }
+      const dados = mapCaixaPosicaoLiquidaResumo(
+        record(posicaoLiquidaPayload.dados, 'posicao_liquida.dados'),
+      );
+      assertCaixaPosicaoLiquidaResumoRequest(
+        dados,
+        resumo.meta.poloId,
+        resumo.meta.competencia,
+      );
+      return { disponivel: true, dados };
+    })();
+
+  const posicaoTotalPayload = record(payload.posicao_total, 'posicao_total');
+  const posicaoTotalResumo = mapCaixaPosicaoTotalResumo(posicaoTotalPayload);
+  assertCaixaPosicaoTotalResumoRequest(
+    posicaoTotalResumo,
+    resumo.meta.poloId,
+    resumo.meta.competencia,
+  );
+  let posicaoTotal: CaixaDetailedReport['posicaoTotal'];
+  if (posicaoTotalResumo.disponivel === true) {
+    posicaoTotal = {
+      disponivel: true,
+      dataCorte: posicaoTotalResumo.dataCorte,
+      dados: posicaoTotalResumo.dados,
+    };
+  } else {
+    posicaoTotal = {
+      disponivel: false,
+      dataCorte: posicaoTotalResumo.dataCorte,
+      motivo: posicaoTotalResumo.motivo,
+      observacao: posicaoTotalResumo.observacao,
+    };
+  }
   const resumoCursos = courseSummary(payload.resumo_cursos);
   const analiseRecorrente = recurringAnalysis(payload.analise_recorrente);
   const recebimentos = array(payload.recebimentos, 'recebimentos').map(receipt);
@@ -407,16 +505,20 @@ export const mapCaixaDetailedReport = (value: unknown): CaixaDetailedReport => {
   );
 
   return {
-    versao: 3,
+    versao: 6,
     geradoEm: string(payload.gerado_em, 'gerado_em'),
     completo: true,
     confidencial: boolean(payload.confidencial, 'confidencial'),
     limitePorTabela,
     limiteTotal,
     institucional: institution(payload.institucional),
-    resumo: mapCaixaStatement(payload.resumo),
+    resumo,
     totaisRecebimentos,
     totaisDespesas,
+    financiamento,
+    patrimonio,
+    posicaoLiquida,
+    posicaoTotal,
     resumoCursos,
     analiseRecorrente,
     recebimentos,

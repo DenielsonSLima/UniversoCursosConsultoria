@@ -77,6 +77,10 @@ test('ficha cadastral, ficha de matrícula e pasta expõem o bloco eleitoral sem
   );
   assert.match(layouts, /registrationTemplateNeedsVoterUpgrade/);
   assert.match(layouts, /!REGISTRATION_VOTER_TOKENS\.every/);
+  assert.match(
+    layouts,
+    /fieldId === 'ficha_documentos' \|\| fieldId === 'pasta_documentos'\s*\? repairFichaVoterGrid/,
+  );
   assert.match(layouts, /field\?\.id === fieldId[\s\S]*?injectMissingVoterFields\([\s\S]*?field\.value/);
   assert.match(layouts, /repairedFields\.push\(JSON\.parse\(JSON\.stringify\(canonicalDocumentField\)\)\)/);
   assert.match(layouts, /v: Math\.max\([\s\S]*?normalizeTemplateVersion\(template\?\.v\)[\s\S]*?normalizeTemplateVersion\(defaultTemplate\?\.v\)/);

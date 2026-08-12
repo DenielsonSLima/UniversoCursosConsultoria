@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Zap, Archive, Activity } from 'lucide-react';
 import TurmaCard from '../components/TurmaCard';
@@ -29,6 +29,7 @@ const GestaoLivres: React.FC<GestaoLivresProps> = ({ onToggleDetails, poloId, cr
   const [deleteTarget, setDeleteTarget] = useState<Turma | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const queryClient = useQueryClient();
+  const createRequestIds = useRef(new Map<string, string>());
 
   const list = useGestaoLivresTurmas(poloId);
   const cursosQuery = useGestaoCursos('LIVRE');
@@ -39,8 +40,12 @@ const GestaoLivres: React.FC<GestaoLivresProps> = ({ onToggleDetails, poloId, cr
     if (onToggleDetails) onToggleDetails(false);
   }, [onToggleDetails, poloId]);
 
-  const handleCreate = async (data: any) => {
-    await gestaoService.createTurma(data);
+  const handleCreate = async (data: Parameters<typeof gestaoService.createTurma>[0]) => {
+    const requestKey = JSON.stringify(data);
+    const requestId = createRequestIds.current.get(requestKey) || crypto.randomUUID();
+    createRequestIds.current.set(requestKey, requestId);
+    await gestaoService.createTurma(data, requestId);
+    createRequestIds.current.delete(requestKey);
     await Promise.allSettled([
       invalidateSiteTickerQueries(queryClient),
       queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.classesByModality('LIVRE') }),

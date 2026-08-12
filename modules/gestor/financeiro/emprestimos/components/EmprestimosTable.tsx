@@ -1,44 +1,30 @@
 import React from 'react';
 import {
   CheckCircle2,
-  CircleDollarSign,
-  Eye,
   Landmark,
   ReceiptText,
-  TriangleAlert,
 } from 'lucide-react';
-import type { EmprestimoFinanceiro, EmprestimoParcela } from '../emprestimos.types';
-
-const formatCurrency = (value: number) => (
-  Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-);
-
-const formatDate = (value?: string) => (
-  value ? new Date(`${value}T00:00:00`).toLocaleDateString('pt-BR') : '—'
-);
-
-const statusClass = (status: string) => {
-  if (status === 'PAGO' || status === 'QUITADO') return 'border-emerald-200 bg-emerald-50 text-emerald-700';
-  if (status === 'VENCIDO') return 'border-rose-200 bg-rose-50 text-rose-700';
-  if (status === 'CANCELADO') return 'border-slate-200 bg-slate-100 text-slate-500';
-  return 'border-amber-200 bg-amber-50 text-amber-700';
-};
-
-const statusLabel = (status: string) => (
-  status === 'QUITADO' ? 'Quitado' : status.charAt(0) + status.slice(1).toLowerCase()
-);
+import type { EmprestimoFinanceiro } from '../emprestimos.types';
+import {
+  emprestimoStatusClass,
+  emprestimoStatusLabel,
+  formatEmprestimoContaCredito,
+  formatEmprestimoCurrency,
+  formatEmprestimoDate,
+  getEmprestimoNextParcela,
+} from '../emprestimos.presentation';
 
 interface EmprestimosTableProps {
   items: EmprestimoFinanceiro[];
   canSettle: boolean;
-  onDetails: (item: EmprestimoFinanceiro) => void;
-  onSettle: (item: EmprestimoFinanceiro, parcela: EmprestimoParcela) => void;
+  onOpen: (item: EmprestimoFinanceiro) => void;
+  onSettle: (item: EmprestimoFinanceiro) => void;
 }
 
 const EmprestimosTable: React.FC<EmprestimosTableProps> = ({
   items,
   canSettle,
-  onDetails,
+  onOpen,
   onSettle,
 }) => {
   if (items.length === 0) {
@@ -58,6 +44,7 @@ const EmprestimosTable: React.FC<EmprestimosTableProps> = ({
           <tr className="border-b border-slate-100 bg-slate-50">
             <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400">Contrato</th>
             <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400">Liberação</th>
+            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400">Conta do crédito</th>
             <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-wider text-slate-400">Dívida</th>
             <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400">Próxima parcela</th>
             <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400">Status</th>
@@ -66,62 +53,56 @@ const EmprestimosTable: React.FC<EmprestimosTableProps> = ({
         </thead>
         <tbody className="divide-y divide-slate-50">
           {items.map((item) => {
-            const nextParcela = item.parcelas.find(
-              (parcela) => parcela.status === 'PENDENTE' || parcela.status === 'VENCIDO',
-            );
+            const nextParcela = getEmprestimoNextParcela(item);
             return (
               <tr key={item.id} className="group transition-colors hover:bg-slate-50/60">
                 <td className="px-4 py-3">
-                  <p className="max-w-[250px] truncate text-sm font-black text-[#001a33]">{item.descricao}</p>
-                  <p className="mt-0.5 max-w-[250px] truncate text-xs font-medium text-slate-500">{item.credorNome || 'Credor não informado'}</p>
+                  <button type="button" onClick={() => onOpen(item)} className="max-w-[250px] text-left outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+                    <p className="truncate text-sm font-black text-[#001a33] hover:text-indigo-700">{item.descricao}</p>
+                    <p className="mt-0.5 truncate text-xs font-medium text-slate-500">{item.credorNome || 'Credor não informado'}</p>
+                  </button>
                 </td>
                 <td className="px-4 py-3">
-                  <p className="text-sm font-semibold text-slate-700">{formatDate(item.dataLiberacao)}</p>
+                  <p className="text-sm font-semibold text-slate-700">{formatEmprestimoDate(item.dataLiberacao)}</p>
                   <p className="mt-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-600">
-                    Crédito: {formatCurrency(item.valorLiberado)}
+                    Crédito: {formatEmprestimoCurrency(item.valorLiberado)}
+                  </p>
+                </td>
+                <td className="px-4 py-3">
+                  <p className="max-w-[210px] truncate text-xs font-semibold text-slate-600" title={formatEmprestimoContaCredito(item.contaCredito)}>
+                    {formatEmprestimoContaCredito(item.contaCredito)}
                   </p>
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <p className="text-sm font-black text-[#001a33]">{formatCurrency(item.valorTotalDivida)}</p>
+                  <p className="text-sm font-black text-[#001a33]">{formatEmprestimoCurrency(item.valorTotalDivida)}</p>
                   <p className="mt-0.5 text-[10px] font-bold text-slate-400">{item.totalParcelas || item.parcelas.length} parcelas</p>
                 </td>
                 <td className="px-4 py-3">
                   {nextParcela ? (
                     <>
-                      <p className="text-sm font-semibold text-slate-700">{formatDate(nextParcela.dataVencimento)}</p>
-                      <p className="mt-0.5 flex items-center gap-1 text-[10px] font-bold text-indigo-600"><ReceiptText size={11} /> {formatCurrency(nextParcela.valorTotal)}</p>
+                      <p className="text-sm font-semibold text-slate-700">{formatEmprestimoDate(nextParcela.dataVencimento)}</p>
+                      <p className="mt-0.5 flex items-center gap-1 text-[10px] font-bold text-indigo-600"><ReceiptText size={11} /> {formatEmprestimoCurrency(nextParcela.valorTotal)}</p>
                     </>
                   ) : (
                     <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700"><CheckCircle2 size={13} /> Sem parcelas abertas</span>
                   )}
                 </td>
                 <td className="px-4 py-3">
-                  <span className={`inline-flex rounded-lg border px-2.5 py-1 text-[10px] font-black uppercase tracking-wider ${statusClass(item.status)}`}>
-                    {statusLabel(item.status)}
+                  <span className={`inline-flex rounded-lg border px-2.5 py-1 text-[10px] font-black uppercase tracking-wider ${emprestimoStatusClass(item.status)}`}>
+                    {emprestimoStatusLabel(item.status)}
                   </span>
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex justify-end gap-2">
-                    <button
-                      type="button"
-                      onClick={() => onDetails(item)}
-                      title="Ver contrato e rateio"
-                      className="rounded-lg border border-slate-200 p-2 text-slate-500 transition-colors hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600"
-                    >
-                      <Eye size={14} />
-                    </button>
+                    <button type="button" onClick={() => onOpen(item)} className="rounded-lg border border-slate-200 px-2.5 py-2 text-[10px] font-black uppercase tracking-wide text-slate-600 transition-colors hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600">Abrir</button>
                     {canSettle && nextParcela && (
                       <button
                         type="button"
-                        onClick={() => onSettle(item, nextParcela)}
-                        title="Dar baixa da próxima parcela"
-                        className={`rounded-lg border p-2 transition-colors ${
-                          nextParcela.status === 'VENCIDO'
-                            ? 'border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100'
-                            : 'border-indigo-200 bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
-                        }`}
+                        onClick={() => onSettle(item)}
+                        title="Selecionar parcelas para dar baixa"
+                        className="rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-2 text-[10px] font-black uppercase tracking-wide text-indigo-600 transition-colors hover:bg-indigo-100"
                       >
-                        {nextParcela.status === 'VENCIDO' ? <TriangleAlert size={14} /> : <CircleDollarSign size={14} />}
+                        Baixar
                       </button>
                     )}
                   </div>

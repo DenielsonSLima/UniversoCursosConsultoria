@@ -1,1 +1,1 @@
-export { default } from '../../../tecnicos/detalhes/components/TurmaConfiguracoes';
+export { TurmaPlanoFinanceiroUnicoConfiguracoes as default } from '../../../presencial-financeiro-unico';

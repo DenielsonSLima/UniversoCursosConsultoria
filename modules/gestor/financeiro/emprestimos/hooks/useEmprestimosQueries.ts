@@ -20,3 +20,19 @@ export function useEmprestimosQuery(
     gcTime: 30 * 60_000,
   });
 }
+
+export function useEmprestimoBancosCredoresQuery(
+  poloResponsavelId?: string | null,
+  enabled = true,
+) {
+  const poloId = normalizePoloResponsavelId(poloResponsavelId);
+
+  return useQuery({
+    queryKey: emprestimosQueryKeys.bancosCredores(poloId),
+    queryFn: () => emprestimosService.listarBancosCredores(poloId),
+    enabled: enabled && Boolean(poloId),
+    staleTime: 30_000,
+    gcTime: 30 * 60_000,
+    refetchOnMount: 'always',
+  });
+}

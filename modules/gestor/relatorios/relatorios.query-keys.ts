@@ -17,4 +17,9 @@ export const relatoriosKeys = {
     readiness: (filters: RelatoriosQueryFilters) =>
       [...relatoriosKeys.censo.matriculaInicial(), 'readiness', filters] as const,
   },
+  financeiro: {
+    all: () => [...relatoriosKeys.all, 'movimentacao-financeira'] as const,
+    report: (filters: RelatoriosQueryFilters) =>
+      [...relatoriosKeys.financeiro.all(), filters] as const,
+  },
 };

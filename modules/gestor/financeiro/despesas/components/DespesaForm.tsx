@@ -194,15 +194,21 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
                 : undefined,
             },
         anexo: anexo || undefined,
-      }),
+    }),
     onSuccess: async (created) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: despesasQueryKeys.all }),
-        queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos }),
-        queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.resumoKpis }),
-        queryClient.invalidateQueries({ queryKey: caixaQueryKeys.dashboards }),
-        queryClient.invalidateQueries({ queryKey: caixaQueryKeys.custosOperacionais }),
-      ]);
+      const invalidations = [
+        queryClient.invalidateQueries({ queryKey: despesasQueryKeys.lancamentosRoot }),
+        queryClient.invalidateQueries({ queryKey: despesasQueryKeys.summaryRoot }),
+        queryClient.invalidateQueries({ queryKey: despesasQueryKeys.groupSummaryRoot }),
+      ];
+      if (mode === 'baixa') {
+        invalidations.push(
+          queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos }),
+          queryClient.invalidateQueries({ queryKey: caixaQueryKeys.dashboards }),
+          queryClient.invalidateQueries({ queryKey: caixaQueryKeys.custosOperacionais }),
+        );
+      }
+      await Promise.all(invalidations);
       requestIdRef.current = createFinanceRequestId();
       onSuccess(created, mode);
     },

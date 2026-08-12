@@ -8,7 +8,7 @@ import { polosService } from '../configuracoes/polos/polos.service';
 import RelatorioTurmas from './components/RelatorioTurmas';
 import RelatorioPolos from './components/RelatorioPolos';
 import RelatorioCursos from './components/RelatorioCursos';
-import RelatorioFinanceiro from './components/RelatorioFinanceiro';
+import RelatorioMovimentacaoFinanceira from './components/RelatorioMovimentacaoFinanceira';
 import RelatorioDRE from './components/RelatorioDRE';
 import RelatorioInadimplencia from './components/RelatorioInadimplencia';
 import RelatorioEstagios from './components/RelatorioEstagios';
@@ -22,7 +22,7 @@ import RelatorioMatriculas from './matriculas/RelatorioMatriculas';
 import DiagnosticoMatriculaInicial from './censo-escolar/matricula-inicial/DiagnosticoMatriculaInicial';
 import { useRelatoriosRealtime } from './hooks/useRelatoriosRealtime';
 
-type ReportType = 'turmas' | 'polos' | 'cursos' | 'financeiro' | 'dre' | 'inadimplencia' | 'estagios' | 'financeiro-turma-mensal' | 'financeiro-pre-estagio' | 'alunos-cursando' | 'alunos-finalizados' | 'matriculas' | 'matricula-inicial' | 'situacao-aluno' | 'lucro-turma';
+type ReportType = 'turmas' | 'polos' | 'cursos' | 'extrato-financeiro-conta' | 'financeiro-entradas' | 'financeiro-saidas' | 'financeiro-receitas' | 'financeiro-despesas' | 'dre' | 'inadimplencia' | 'estagios' | 'financeiro-turma-mensal' | 'financeiro-pre-estagio' | 'alunos-cursando' | 'alunos-finalizados' | 'matriculas' | 'matricula-inicial' | 'situacao-aluno' | 'lucro-turma';
 
 interface ReportMenuItem {
   id: ReportType;
@@ -40,6 +40,11 @@ const RelatoriosPage: React.FC<RelatoriosPageProps> = ({ poloId }) => {
   const [activeReport, setActiveReport] = useState<ReportType | null>(null);
   useRelatoriosRealtime({
     enabled: activeReport === 'matriculas' || activeReport === 'matricula-inicial',
+    financeiroEnabled: activeReport === 'extrato-financeiro-conta'
+      || activeReport === 'financeiro-entradas'
+      || activeReport === 'financeiro-saidas'
+      || activeReport === 'financeiro-receitas'
+      || activeReport === 'financeiro-despesas',
     poloId,
   });
 
@@ -96,10 +101,38 @@ const RelatoriosPage: React.FC<RelatoriosPageProps> = ({ poloId }) => {
       category: 'operacional'
     },
     {
-      id: 'financeiro',
-      label: 'Relatório Financeiro',
-      description: 'Extrato analítico detalhado do fluxo de caixa de receitas (entradas) e despesas (saídas).',
+      id: 'extrato-financeiro-conta',
+      label: 'Extrato Financeiro por Conta',
+      description: 'Extrato de uma conta bancária ou caixa, com saldo de abertura, entradas, saídas e fechamento.',
+      icon: <Landmark size={22} />,
+      category: 'financeiro'
+    },
+    {
+      id: 'financeiro-entradas',
+      label: 'Relatório de Entradas',
+      description: 'Somente movimentações efetivas que entraram no caixa: recebimentos, financiamentos e transferências físicas.',
       icon: <DollarSign size={22} />,
+      category: 'financeiro'
+    },
+    {
+      id: 'financeiro-saidas',
+      label: 'Relatório de Saídas',
+      description: 'Somente movimentações efetivas que saíram do caixa: pagamentos, amortizações e transferências físicas.',
+      icon: <BarChart3 size={22} />,
+      category: 'financeiro'
+    },
+    {
+      id: 'financeiro-receitas',
+      label: 'Relatório de Receitas',
+      description: 'Receitas operacionais de mensalidades por vencimento, separadas de créditos, adiantamentos e empréstimos.',
+      icon: <FileText size={22} />,
+      category: 'financeiro'
+    },
+    {
+      id: 'financeiro-despesas',
+      label: 'Relatório de Despesas',
+      description: 'Despesas operacionais e rateios por vencimento, separadas do principal de empréstimos e das transferências.',
+      icon: <AlertTriangle size={22} />,
       category: 'financeiro'
     },
     {
@@ -182,8 +215,16 @@ const RelatoriosPage: React.FC<RelatoriosPageProps> = ({ poloId }) => {
         return <RelatorioPolos company={company} polo={polo} />;
       case 'cursos':
         return <RelatorioCursos company={company} polo={polo} />;
-      case 'financeiro':
-        return <RelatorioFinanceiro company={company} polo={polo} />;
+      case 'extrato-financeiro-conta':
+        return <RelatorioMovimentacaoFinanceira company={company} polo={polo} tipo="EXTRATO_CONTA" />;
+      case 'financeiro-entradas':
+        return <RelatorioMovimentacaoFinanceira company={company} polo={polo} tipo="ENTRADAS" />;
+      case 'financeiro-saidas':
+        return <RelatorioMovimentacaoFinanceira company={company} polo={polo} tipo="SAIDAS" />;
+      case 'financeiro-receitas':
+        return <RelatorioMovimentacaoFinanceira company={company} polo={polo} tipo="RECEITAS" />;
+      case 'financeiro-despesas':
+        return <RelatorioMovimentacaoFinanceira company={company} polo={polo} tipo="DESPESAS" />;
       case 'dre':
         return <RelatorioDRE company={company} polo={polo} />;
       case 'inadimplencia':

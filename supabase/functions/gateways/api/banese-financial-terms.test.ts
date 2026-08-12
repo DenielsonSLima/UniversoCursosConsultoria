@@ -67,3 +67,60 @@ Deno.test("respeita flags por tipo de lancamento", () => {
   assert.equal(disabled.interest, null);
   assert.equal(disabled.penalty, null);
 });
+
+Deno.test("prioriza o snapshot do plano único, sem consultar regra viva da turma", () => {
+  const result = buildConfiguredBaneseFinancialTerms({
+    receivable: {
+      ...receivable,
+      regra_financeira_plano_unico_snapshot: {
+        origem: "PLANO_UNICO",
+        descontoPontualidade: 12.5,
+        jurosAtrasoPercentual: 2.25,
+        multaAtraso: 7.4,
+      },
+    },
+    turma: {
+      ...turma,
+      desconto_pontualidade: 1,
+      juros_atraso: 99,
+      multa_atraso: 99,
+      aplicar_desconto_mensalidade: false,
+      aplicar_multa_juros_mensalidade: false,
+    },
+    matricula: {
+      desconto_pontualidade_individual: 0,
+      juros_atraso_individual: 0,
+      multa_atraso_individual: 0,
+    },
+  });
+
+  assert.deepEqual(result, {
+    nominalAmount: 279.9,
+    dueDate: "2026-08-10",
+    discount: { type: "fixed", value: 12.5 },
+    interest: { type: "monthly-percentage", value: 2.25 },
+    penalty: { type: "fixed", value: 7.4 },
+  });
+});
+
+Deno.test("ignora JSON não canônico para não reprificar um título de outra modalidade", () => {
+  const result = buildConfiguredBaneseFinancialTerms({
+    receivable: {
+      ...receivable,
+      regra_financeira_plano_unico_snapshot: {
+        descontoPontualidade: 99,
+        jurosAtrasoPercentual: 99,
+        multaAtraso: 99,
+      },
+    },
+    turma,
+  });
+
+  assert.deepEqual(result, {
+    nominalAmount: 279.9,
+    dueDate: "2026-08-10",
+    discount: { type: "fixed", value: 19.9 },
+    interest: { type: "monthly-percentage", value: 1 },
+    penalty: { type: "percentage", value: 2 },
+  });
+});

@@ -4,9 +4,18 @@ export const formatCaixaCurrency = (value: number) => new Intl.NumberFormat('pt-
 }).format(value);
 
 const CANONICAL_DECIMAL_PATTERN = /^\d+(?:\.\d{1,2})?$/;
+const SIGNED_CANONICAL_DECIMAL_PATTERN = /^-?\d+(?:\.\d{1,2})?$/;
 
 export const isCaixaCanonicalDecimalText = (value: unknown): value is string => (
   typeof value === 'string' && CANONICAL_DECIMAL_PATTERN.test(value)
+);
+
+/**
+ * A posição líquida pode ficar negativa, mas continua sendo devolvida pelo
+ * backend como decimal textual para não perder precisão no navegador.
+ */
+export const isCaixaSignedCanonicalDecimalText = (value: unknown): value is string => (
+  typeof value === 'string' && SIGNED_CANONICAL_DECIMAL_PATTERN.test(value)
 );
 
 /**
@@ -15,16 +24,17 @@ export const isCaixaCanonicalDecimalText = (value: unknown): value is string => 
  * centavos exatos recebidos da RPC.
  */
 export const formatCaixaCanonicalCurrency = (value: string) => {
-  if (!isCaixaCanonicalDecimalText(value)) return 'R$ 0,00';
+  if (!isCaixaSignedCanonicalDecimalText(value)) return 'R$ 0,00';
 
-  const [integerPart, fractionPart = ''] = value.split('.');
+  const isNegative = value.startsWith('-');
+  const [integerPart, fractionPart = ''] = (isNegative ? value.slice(1) : value).split('.');
   const integer = BigInt(integerPart);
   const fraction = fractionPart.padEnd(2, '0');
   const groupedInteger = new Intl.NumberFormat('pt-BR', {
     maximumFractionDigits: 0,
   }).format(integer);
 
-  return `R$ ${groupedInteger},${fraction}`;
+  return `R$ ${isNegative ? '-' : ''}${groupedInteger},${fraction}`;
 };
 
 export const formatCaixaCompetencia = (competencia: string) => {

@@ -5,10 +5,19 @@ import { buildCaixaReportPages } from './caixa-report.pagination';
 const item = (id: string) => ({ id } as any);
 const recurringItem = (turmaId: string) => ({ turmaId } as any);
 
-test('mantém resumo e as duas tabelas mesmo sem movimentos', () => {
+test('fixa o resumo mensal na primeira página e as posições complementares depois dele', () => {
   const pages = buildCaixaReportPages([], [], []);
+  assert.equal(pages[0]?.key, 'summary');
+  assert.equal(pages[0]?.section, 'RESUMO');
+  assert.equal(pages[1]?.key, 'positions');
+  assert.equal(pages[1]?.section, 'POSICOES_COMPLEMENTARES');
+  assert.equal(
+    pages.findIndex((page) => page.section === 'POSICOES_COMPLEMENTARES'),
+    1,
+  );
   assert.deepEqual(pages.map((page) => page.section), [
     'RESUMO',
+    'POSICOES_COMPLEMENTARES',
     'RECEBIMENTOS',
     'DESPESAS',
     'CARTEIRA_RECORRENTE',

@@ -142,6 +142,30 @@ test('mantém a RPC, o card e a invalidação patrimonial isolados no Caixa', ()
   assert.match(serviceSource, /p_competencia: competencia/);
   assert.match(pageSource, /<CaixaPatrimonioResumoCard/);
   assert.match(realtimeSource, /caixaQueryKeys\.patrimonioResumosForPolo\(scope\)/);
+  assert.match(realtimeSource, /caixaReportQueryKeys\.monthlyForPolo\(scope\)/);
+  assert.match(realtimeSource, /queryKey: caixaReportQueryKeys\.monthly/);
   assert.match(cardSource, /Valor ativo a custo/);
   assert.match(cardSource, /Patrimônio não altera o caixa disponível nem o resultado operacional/);
+});
+
+test('exibe posição líquida, patrimônio e financiamento depois do resumo mensal', () => {
+  const pageSource = readFileSync(
+    join(process.cwd(), 'modules/gestor/caixa/CaixaPage.tsx'),
+    'utf8',
+  );
+  const resumoOperacionalIndex = pageSource.indexOf('label="Entradas operacionais no mês"');
+  const compromissosIndex = pageSource.indexOf("{ label: 'Receitas futuras'");
+  const posicaoLiquidaIndex = pageSource.indexOf('<CaixaPosicaoLiquidaResumoCard');
+  const patrimonioIndex = pageSource.indexOf('<CaixaPatrimonioResumoCard');
+  const financiamentoIndex = pageSource.indexOf('<CaixaFinanciamentoResumoCard');
+  const custosIndex = pageSource.indexOf('<CaixaCustosOperacionaisCard');
+  const graficoIndex = pageSource.indexOf('Movimentação operacional');
+
+  assert.ok(resumoOperacionalIndex >= 0);
+  assert.ok(compromissosIndex > resumoOperacionalIndex);
+  assert.ok(posicaoLiquidaIndex > compromissosIndex);
+  assert.ok(patrimonioIndex > posicaoLiquidaIndex);
+  assert.ok(financiamentoIndex > patrimonioIndex);
+  assert.ok(custosIndex > financiamentoIndex);
+  assert.ok(graficoIndex > custosIndex);
 });

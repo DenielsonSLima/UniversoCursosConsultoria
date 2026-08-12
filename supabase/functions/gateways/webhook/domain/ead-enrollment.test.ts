@@ -81,6 +81,40 @@ for (const modality of ["EAD", "LIVRE", "ESPECIALIZACAO"]) {
   });
 }
 
+for (const modality of ["LIVRE", "ESPECIALIZACAO"]) {
+  Deno.test(`ativa matrícula ${modality} após a primeira parcela do plano único`, async () => {
+    const { context, selectedEnrollmentIds, activatedEnrollmentIds } =
+      createContext(modality);
+
+    await activateEnrollmentAfterPayment(context, {
+      matricula_id: "enrollment-id",
+      tipo_lancamento: "PARCELA",
+      parcela_numero: modality === "LIVRE" ? 1 : "1",
+      regra_financeira_plano_unico_snapshot: { origem: "PLANO_UNICO" },
+    });
+
+    assert.deepEqual(selectedEnrollmentIds, ["enrollment-id"]);
+    assert.deepEqual(activatedEnrollmentIds, ["enrollment-id"]);
+  });
+}
+
+for (const modality of ["LIVRE", "ESPECIALIZACAO"]) {
+  Deno.test(`nao ativa matrícula ${modality} pela segunda parcela do plano único`, async () => {
+    const { context, selectedEnrollmentIds, activatedEnrollmentIds } =
+      createContext(modality);
+
+    await activateEnrollmentAfterPayment(context, {
+      matricula_id: "enrollment-id",
+      tipo_lancamento: "PARCELA",
+      parcela_numero: 2,
+      regra_financeira_plano_unico_snapshot: { origem: "PLANO_UNICO" },
+    });
+
+    assert.deepEqual(selectedEnrollmentIds, []);
+    assert.deepEqual(activatedEnrollmentIds, []);
+  });
+}
+
 Deno.test("mantem matricula TECNICO sem ativacao automatica", async () => {
   const { context, selectedEnrollmentIds, activatedEnrollmentIds } =
     createContext("TECNICO");

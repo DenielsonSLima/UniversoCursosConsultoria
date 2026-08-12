@@ -1,6 +1,11 @@
 // File: modules/gestor/gestao/gestao.service.ts
 
-import { Turma, TurmasPageFilters, TurmasPageResult } from './gestao.types';
+import {
+  PlanoFinanceiroUnicoInput,
+  Turma,
+  TurmasPageFilters,
+  TurmasPageResult,
+} from './gestao.types';
 import { supabase } from '../../../lib/supabase';
 import { enrichTechnicalAcademicProgress, mapTurma } from './gestao.mappers';
 import { gestaoKpisService } from './gestao-kpis.service';
@@ -28,6 +33,7 @@ const TURMA_PAGE_SELECT = `
 
 export type CreateTurmaInput = Omit<Turma, 'id' | 'alunosMatriculados'> & {
   codigoCondicaoIndividual?: string;
+  planoFinanceiroUnico?: PlanoFinanceiroUnicoInput;
 };
 
 export const gestaoService = {
@@ -156,6 +162,8 @@ export const gestaoService = {
     }
 
     const isTechnical = turma.modalidade === 'TECNICO';
+    const isSinglePlanClass = turma.modalidade === 'LIVRE'
+      || turma.modalidade === 'ESPECIALIZACAO';
 
     if (
       turma.modalidade === 'TECNICO'
@@ -244,6 +252,55 @@ export const gestaoService = {
       return mapTurma({
         ...created,
         cursos: { nome: turma.cursoNome, modalidade: 'TECNICO' },
+        polos: { nome: turma.poloNome },
+        matriculas: [],
+      });
+    }
+
+    if (isSinglePlanClass) {
+      const plano = turma.planoFinanceiroUnico;
+      if (!plano) {
+        throw new Error('Defina o plano financeiro único antes de abrir a turma.');
+      }
+
+      const { data: secureResult, error: secureError } = await supabase.rpc(
+        'criar_turma_plano_financeiro_unico_secure',
+        {
+          p_request_id: requestId || crypto.randomUUID(),
+          p_turma: {
+            codigo: dbData.codigo,
+            nome: dbData.nome,
+            curso_id: dbData.curso_id,
+            polo_id: dbData.polo_id,
+            data_inicio: dbData.data_inicio,
+            data_previsao_termino: dbData.data_previsao_termino,
+            data_inicio_inscricao: dbData.data_inicio_inscricao,
+            data_fim_inscricao: dbData.data_fim_inscricao,
+            publicar_no_site: dbData.publicar_no_site,
+            permitir_inscricoes_online: dbData.permitir_inscricoes_online,
+            serie_minima_ensino_medio: dbData.serie_minima_ensino_medio,
+            qtd_vagas_minima: dbData.qtd_vagas_minima,
+            frequencia_minima_percent: dbData.frequencia_minima_percent,
+            media_minima: dbData.media_minima,
+            bloquear_matriculas_apos_completar_vagas: dbData.bloquear_matriculas_apos_completar_vagas,
+            turno: dbData.turno,
+            status: dbData.status,
+            vagas_totais: dbData.vagas_totais,
+          },
+          p_plano: plano,
+        },
+      );
+      if (secureError) {
+        console.error('Erro ao criar turma com plano financeiro único:', secureError);
+        throw secureError;
+      }
+      const created = (secureResult as { turma?: any } | null)?.turma;
+      if (!created?.id) {
+        throw new Error('O banco não confirmou a criação da turma com plano financeiro.');
+      }
+      return mapTurma({
+        ...created,
+        cursos: { nome: turma.cursoNome, modalidade: turma.modalidade },
         polos: { nome: turma.poloNome },
         matriculas: [],
       });

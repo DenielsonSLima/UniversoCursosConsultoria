@@ -19,8 +19,11 @@ export function useTurmaPresencialRealtime({ turmaId, modalidade, channelPrefix 
 
     let refreshTimer: ReturnType<typeof setTimeout> | undefined;
     let refreshFinanceiro = false;
+    let subscribedOnce = false;
     const turmaKeys = [
       academicLifecycleKeys.turma(turmaId),
+      ['turma-plano-financeiro-unico', turmaId] as const,
+      ['turma-plano-financeiro-unico', turmaId, 'alunos'] as const,
       ['turma_financeiro_config', turmaId] as const,
       ['turma-financeiro', turmaId] as const,
       ['financeiro-alunos', turmaId] as const,
@@ -58,8 +61,11 @@ export function useTurmaPresencialRealtime({ turmaId, modalidade, channelPrefix 
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'contas_receber', filter: `turma_id=eq.${turmaId}` },
-        () => scheduleRefresh(true),
+        { event: 'INSERT', schema: 'public', table: 'finance_realtime_events', filter: `turma_id=eq.${turmaId}` },
+        (payload) => {
+          const sourceTable = String((payload.new as { source_table?: unknown } | undefined)?.source_table || '').toLowerCase();
+          if (sourceTable === 'contas_receber') scheduleRefresh(true);
+        },
       )
       .on(
         'postgres_changes',
@@ -81,7 +87,11 @@ export function useTurmaPresencialRealtime({ turmaId, modalidade, channelPrefix 
         { event: '*', schema: 'public', table: 'transferencias_academicas', filter: `turma_destino_id=eq.${turmaId}` },
         () => scheduleRefresh(),
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status !== 'SUBSCRIBED') return;
+        if (subscribedOnce) scheduleRefresh(true);
+        subscribedOnce = true;
+      });
 
     return () => {
       if (refreshTimer) clearTimeout(refreshTimer);

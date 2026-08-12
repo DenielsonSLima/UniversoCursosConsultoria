@@ -1,8 +1,8 @@
 import React from 'react';
 import { Award } from 'lucide-react';
-import { Turno } from '../../gestao.types';
-import TurmaPresencialForm, { TurmaPresencialFormData } from './TurmaPresencialForm';
 import { parseCivilDate } from '../../gestao-date.utils';
+import TurmaPlanoUnicoForm from './turma-plano-unico/TurmaPlanoUnicoForm';
+import type { TurmaPlanoUnicoFormConfig } from './turma-plano-unico/turma-plano-unico-form.types';
 
 interface TurmaEspecializacaoFormProps {
   isOpen: boolean;
@@ -12,54 +12,26 @@ interface TurmaEspecializacaoFormProps {
   selectedPoloId?: string;
 }
 
-const especializacaoDefaults: TurmaPresencialFormData = {
-  cursoId: '',
-  poloId: '',
-  dataInicio: '',
-  dataPrevisaoTermino: '',
-  turno: 'VESPERTINO' as Turno,
-  vagasTotais: 35,
-  valorMatricula: 200,
-  valorRematricula: 120,
-  qtdParcelas: 1,
-  valorParcela: 0,
-  descontoPontualidade: 0,
-  jurosAtraso: 2,
-  multaAtraso: 5,
-  diaVencimentoPadrao: 10,
-  dataInicioInscricao: '',
-  dataFimInscricao: '',
-  permitirInscricoesOnline: false,
-  exigeMatricula: true,
-  origemFinanceira: 'NORMAL',
-  financeiroHerdado: false,
-  gerarCobrancasFuturas: false,
-  sincronizarAsaasFuturo: true,
-  qtdVagasMinima: 0,
-  bloquearMatriculasAposCompletarVagas: true,
-  nomeAutomatico: '',
-  codigoAutomatico: '',
-};
-
-const especializacaoConfig = {
+const especializacaoConfig: TurmaPlanoUnicoFormConfig = {
   modalidade: 'ESPECIALIZACAO' as const,
   title: 'Nova Especialização',
   subtitle: 'Pós-técnico e aprofundamento.',
-  cursoLabel: 'Especialização',
-  submitLabel: 'Abrir Especialização',
-  automaticLabel: 'Gerado Automaticamente',
+  courseLabel: 'Especialização',
+  submitLabel: 'Abrir especialização',
   Icon: Award,
+  defaultTurno: 'VESPERTINO',
+  defaultVagas: 35,
   theme: {
     accentText: 'text-rose-600',
-    accentMutedText: 'text-rose-700/60',
-    accentBorderFocus: 'focus:border-rose-500',
+    accentSoftText: 'text-rose-700/70',
+    accentFocus: 'focus:border-rose-500 focus:ring-2 focus:ring-rose-100',
     accentHoverBg: 'hover:bg-rose-600',
     accentSoftBg: 'bg-rose-50',
     accentSoftBorder: 'border-rose-100',
-    checkboxText: 'text-rose-600',
+    accentStepBg: 'bg-rose-500',
+    accentStepText: 'text-rose-700',
   },
-  defaults: especializacaoDefaults,
-  generateIdentity: ({ curso, polo, formData }: { curso: any; polo: any; formData: TurmaPresencialFormData }) => {
+  generateIdentity: ({ curso, polo, formData }) => {
     const date = parseCivilDate(formData.dataInicio);
     if (!date) return null;
     const { year } = date;
@@ -76,7 +48,7 @@ const especializacaoConfig = {
 };
 
 const TurmaEspecializacaoForm: React.FC<TurmaEspecializacaoFormProps> = (props) => (
-  <TurmaPresencialForm {...props} config={especializacaoConfig} />
+  <TurmaPlanoUnicoForm {...props} config={especializacaoConfig} />
 );
 
 export default TurmaEspecializacaoForm;

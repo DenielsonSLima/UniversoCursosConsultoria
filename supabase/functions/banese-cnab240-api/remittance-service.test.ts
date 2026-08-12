@@ -32,8 +32,12 @@ Deno.test("remessa de baixa ou cancelamento permanece bloqueada sem homologaçã
 });
 
 class FakeQuery implements PromiseLike<{ data: any; error: null }> {
-  constructor(private readonly value: any) {}
-  select() {
+  constructor(
+    private readonly value: any,
+    private readonly selectCalls?: string[],
+  ) {}
+  select(columns?: string) {
+    if (columns) this.selectCalls?.push(columns);
     return this;
   }
   eq() {
@@ -71,7 +75,10 @@ const receivableId = "11111111-1111-4111-8111-111111111111";
 const payerId = "22222222-2222-4222-8222-222222222222";
 const ourNumber = calculateBaneseNossoNumero("033", "00000001");
 
-const tables = (transactions: any[] = []) => ({
+const tables = (
+  transactions: any[] = [],
+  receivableOverrides: Record<string, unknown> = {},
+) => ({
   asaas_config: { environment: "sandbox" },
   payment_gateway_credentials: {
     metadata: {
@@ -122,6 +129,7 @@ const tables = (transactions: any[] = []) => ({
     gateway_submission_channel: null,
     gateway_submission_status: null,
     gateway_cnab_file_id: null,
+    ...receivableOverrides,
   }],
   payment_gateway_transactions: transactions,
   parceiros: [{
@@ -139,9 +147,12 @@ const tables = (transactions: any[] = []) => ({
   }],
 });
 
-const fakeAdmin = (values: ReturnType<typeof tables>) => ({
+const fakeAdmin = (
+  values: ReturnType<typeof tables>,
+  selectCalls?: string[],
+) => ({
   from(table: keyof typeof values) {
-    return new FakeQuery(values[table]);
+    return new FakeQuery(values[table], selectCalls);
   },
 });
 
@@ -190,6 +201,48 @@ Deno.test("prévia bloqueia cobrança que já possui transação bancária", asy
       ),
     /transação bancária.*duplicidade/i,
   );
+});
+
+Deno.test("contingência CNAB mantém os termos congelados do plano único", async () => {
+  const selectCalls: string[] = [];
+  const preview = await previewRemittance(
+    fakeAdmin(
+      tables([], {
+        descricao: "Parcela 1/3 - Curso Livre",
+        valor: 250,
+        tipo_lancamento: "PARCELA",
+        parcela_numero: 1,
+        gateway_financial_terms: null,
+        gateway_financial_terms_confirmed_at: null,
+        regra_financeira_plano_unico_snapshot: {
+          origem: "PLANO_UNICO",
+          descontoPontualidade: 12.5,
+          jurosAtrasoPercentual: 2.25,
+          multaAtraso: 7.4,
+        },
+      }),
+      selectCalls,
+    ),
+    { environment: "sandbox", receivableIds: [receivableId] },
+  );
+
+  assert.equal(
+    selectCalls.some((columns) =>
+      columns.includes("regra_financeira_plano_unico_snapshot")
+    ),
+    true,
+  );
+  assert.deepEqual(preview.items[0].financialTerms, {
+    nominalAmount: 250,
+    dueDate: "2026-08-15",
+    discount: { type: "fixed", value: 12.5, validUntil: "2026-08-15" },
+    penalty: { type: "fixed", value: 7.4, startsOn: "2026-08-16" },
+    interest: {
+      type: "monthly-percentage",
+      value: 2.25,
+      startsOn: "2026-08-16",
+    },
+  });
 });
 
 Deno.test("resposta perdida do RPC preserva claim já confirmado no banco", () => {
