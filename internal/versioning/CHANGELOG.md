@@ -14,11 +14,12 @@ Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente
 
 - Contas a Pagar preserva lançamento, fornecedor, categoria, turma, recibo vetorial e os fluxos auditáveis de edição, cancelamento e estorno.
 - A política de Realtime mantém o acesso autorizado à aba Outros Créditos durante a publicação dos relatórios financeiros.
+- O extrato financeiro passa a expor corretamente o indicador de conta ativa em todos os retornos da RPC canônica.
 
 ### Segurança e qualidade
 
 - Histórico de migrations foi reconciliado com o banco remoto sem reaplicar versões já existentes.
-- RPCs legadas de empréstimos recebem `search_path` vazio e grants restritos a `service_role` na migration de endurecimento pendente.
+- RPCs legadas de empréstimos receberam `search_path` vazio e grants restritos a `service_role`; as fontes locais usam os IDs efetivamente registrados pelo banco.
 
 ## [4.2.0-beta.1] - 2026-08-10
 

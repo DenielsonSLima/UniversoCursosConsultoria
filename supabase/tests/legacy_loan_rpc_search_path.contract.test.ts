@@ -6,7 +6,7 @@ declare const Deno: {
 };
 
 const migrationUrl = new URL(
-  '../migrations/20260811123907_harden_legacy_financial_loan_rpc_search_path.sql',
+  '../migrations/20260812010257_harden_legacy_financial_loan_rpc_search_path.sql',
   import.meta.url,
 );
 const sql = await Deno.readTextFile(migrationUrl);

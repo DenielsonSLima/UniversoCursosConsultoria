@@ -6,7 +6,7 @@ declare const Deno: {
 };
 
 const migrationUrl = new URL(
-  '../migrations/20260811123906_create_separated_financial_reports.sql',
+  '../migrations/20260812010242_create_separated_financial_reports.sql',
   import.meta.url,
 );
 const sql = await Deno.readTextFile(migrationUrl);
@@ -49,6 +49,13 @@ Deno.test('extrato só usa movimentos físicos e não inventa saldo sem base', (
   assert.match(reportFunction, /v_conta_acesso_desde IS NULL OR v_conta_acesso_desde <= v_inicio/i);
   assert.match(reportFunction, /Movimentos anteriores ao vínculo e os saldos foram ocultados/i);
   assert.match(reportFunction, /saldo_apos/i);
+});
+
+Deno.test('o escopo da conta compartilhada fecha o CASE antes do INTO', () => {
+  assert.match(
+    reportFunction,
+    /case\s+when p_polo_id is null or cb\.polo_id = p_polo_id then null::date\s+else \([\s\S]*?acesso\.polo_id = p_polo_id[\s\S]*?\)\s+end\s+into/i,
+  );
 });
 
 Deno.test('resultado operacional não mistura principal de empréstimo', () => {

@@ -246,7 +246,7 @@ BEGIN
           WHERE acesso.conta_bancaria_id = cb.id
             AND acesso.polo_id = p_polo_id
         )
-      )
+      END
     INTO
       v_conta_rotulo,
       v_conta_data_saldo,
