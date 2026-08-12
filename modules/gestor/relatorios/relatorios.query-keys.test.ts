@@ -46,3 +46,24 @@ test('a chave do diagnóstico diferencia modalidade e situação', () => {
   assert.notDeepEqual(technical, ead);
   assert.notDeepEqual(technical, completed);
 });
+
+test('as chaves financeiras isolam detalhe, fluxo de caixa e inadimplência', () => {
+  const filters = {
+    poloId: 'polo-a',
+    dataInicio: '2026-08-01',
+    dataFim: '2026-08-12',
+  };
+  const detalhe = relatoriosKeys.financeiro.report({
+    ...filters,
+    tipo: 'ENTRADAS',
+  });
+  const fluxo = relatoriosKeys.financeiro.fluxo(filters);
+  const inadimplencia = relatoriosKeys.financeiro.inadimplencia({
+    poloId: 'polo-a',
+    dataCorte: '2026-08-12',
+    minDiasAtraso: 1,
+  });
+
+  assert.notDeepEqual(detalhe, fluxo);
+  assert.notDeepEqual(fluxo, inadimplencia);
+});

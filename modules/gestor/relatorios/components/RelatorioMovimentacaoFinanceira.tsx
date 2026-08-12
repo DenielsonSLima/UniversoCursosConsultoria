@@ -35,10 +35,15 @@ import {
   SummaryCard,
 } from './RelatorioShared';
 
+type RelatorioMovimentacaoFinanceiraDetalheTipo = Exclude<
+  RelatorioMovimentacaoFinanceiraTipo,
+  'CATEGORIAS'
+>;
+
 interface RelatorioMovimentacaoFinanceiraProps {
   company: any;
   polo: any;
-  tipo: RelatorioMovimentacaoFinanceiraTipo;
+  tipo: RelatorioMovimentacaoFinanceiraDetalheTipo;
 }
 
 interface ReportConfiguration {
@@ -54,7 +59,7 @@ interface ReportConfiguration {
   fileName: string;
 }
 
-const REPORT_CONFIG: Record<RelatorioMovimentacaoFinanceiraTipo, ReportConfiguration> = {
+const REPORT_CONFIG: Record<RelatorioMovimentacaoFinanceiraDetalheTipo, ReportConfiguration> = {
   EXTRATO_CONTA: {
     title: 'Extrato Financeiro por Conta',
     shortTitle: 'Extrato por Conta',
