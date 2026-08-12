@@ -1,3 +1,9 @@
+import {
+  DEPENDENCY_BILLING_DAYS_TO_WRITE_OFF,
+  DEPENDENCY_BILLING_ORIGIN,
+  dependencyBillingSnapshotFrom,
+} from "../banese/internal/dependency-billing.ts";
+
 export const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -20,6 +26,10 @@ export class DependencyCheckoutContractError extends Error {
 const normalized = (value: unknown) => String(value ?? "").trim();
 const normalizedUpper = (value: unknown) => normalized(value).toUpperCase();
 const digits = (value: unknown) => normalized(value).replace(/\D/g, "");
+const finiteNumber = (value: unknown) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
 
 const requireEqualId = (
   actual: unknown,
@@ -147,6 +157,74 @@ export const assertDependencyReceivableContract = (input: {
       "Cobrança de dependência não pode gerar parcelas pela matrícula.",
     );
   }
+  if (Number(receivable.gateway_installments) !== 1) {
+    throw new DependencyCheckoutContractError(
+      409,
+      "Cobrança de dependência deve conter exatamente uma parcela.",
+    );
+  }
+  if (receivable.parcela_numero !== null) {
+    throw new DependencyCheckoutContractError(
+      409,
+      "Cobrança de dependência não pode entrar no cronograma de parcelas.",
+    );
+  }
+  if (
+    normalized(receivable.origem_cronograma_id) !==
+      `${DEPENDENCY_BILLING_ORIGIN.toLowerCase()}:${normalized(attempt.id)}`
+  ) {
+    throw new DependencyCheckoutContractError(
+      409,
+      "A origem da cobrança de dependência diverge da tentativa acadêmica.",
+    );
+  }
+  const amount = Number(receivable.valor);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new DependencyCheckoutContractError(
+      409,
+      "A cobrança de dependência possui valor inválido.",
+    );
+  }
+  const financialSnapshot = dependencyBillingSnapshotFrom(
+    receivable.regra_financeira_dependencia_snapshot,
+  );
+  // A ausência identifica um título legado. Ele continua operável sem ser
+  // reinterpretado como cobrança nova; todo INSERT após a migration recebe
+  // snapshot obrigatório pela trigger do banco.
+  if (financialSnapshot) {
+    if (
+      normalized(financialSnapshot.tentativaId) !== normalized(attempt.id) ||
+      normalized(financialSnapshot.disciplinaId) !==
+        normalized(attempt.disciplina_id) ||
+      normalized(financialSnapshot.descricaoCobranca) !==
+        normalized(receivable.descricao) ||
+      Number(financialSnapshot.diasBaixaDevolucao) !==
+        DEPENDENCY_BILLING_DAYS_TO_WRITE_OFF
+    ) {
+      throw new DependencyCheckoutContractError(
+        409,
+        "O snapshot da cobrança de dependência está inconsistente.",
+      );
+    }
+    const discount = finiteNumber(financialSnapshot.descontoPontualidade) ?? 0;
+    const interest = finiteNumber(financialSnapshot.jurosAtrasoPercentual) ?? 0;
+    const penalty = finiteNumber(financialSnapshot.multaAtrasoPercentual) ?? 0;
+    if (
+      discount < 0 || discount >= amount || interest < 0 || interest >= 100 ||
+      penalty < 0 || penalty >= 100
+    ) {
+      throw new DependencyCheckoutContractError(
+        409,
+        "Os encargos do snapshot de dependência são inválidos.",
+      );
+    }
+    if (!/^Disciplina:\s+\S/u.test(normalized(receivable.descricao))) {
+      throw new DependencyCheckoutContractError(
+        409,
+        "A descrição da cobrança deve identificar somente a disciplina.",
+      );
+    }
+  }
   if (normalized(receivable.gateway_provider) !== "banese_card") {
     throw new DependencyCheckoutContractError(
       409,
@@ -173,13 +251,6 @@ export const assertDependencyReceivableContract = (input: {
     throw new DependencyCheckoutContractError(
       409,
       "O ambiente Banese da cobrança não foi definido.",
-    );
-  }
-  const amount = Number(receivable.valor);
-  if (!Number.isFinite(amount) || amount <= 0) {
-    throw new DependencyCheckoutContractError(
-      409,
-      "A cobrança de dependência possui valor inválido.",
     );
   }
   const attemptAmount = Number(attempt.valor_cobrado_snapshot);

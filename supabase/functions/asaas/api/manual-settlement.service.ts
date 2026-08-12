@@ -3,6 +3,11 @@ import {
   assertNoActiveCnabSubmission,
   hasRemoteTitleReference,
 } from "../../gateways/checkout/remote-title-guard.ts";
+import {
+  dependencyBillingSnapshotFrom,
+  DEPENDENCY_BILLING_DAYS_TO_WRITE_OFF,
+  isDependencyReceivable,
+} from "../../banese/internal/dependency-billing.ts";
 import { RemoteCancellationPreflightError } from "../../gateways/api/remote-cancellation-errors.ts";
 import { syncManualSettlementAcademicEffects } from "./manual-settlement-academic.ts";
 import {
@@ -65,6 +70,69 @@ const providerCodeFor = (receivable: any) =>
   (receivable?.asaas_payment_id || receivable?.asaas_payment_link_id
     ? "asaas"
     : null);
+
+const utcDay = (value: unknown, label: string) => {
+  const iso = String(value || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+    throw new Error(`${label} inválida para a cobrança da disciplina.`);
+  }
+  const [year, month, day] = iso.split("-").map(Number);
+  const instant = Date.UTC(year, month - 1, day);
+  if (
+    !Number.isFinite(instant) ||
+    new Date(instant).toISOString().slice(0, 10) !== iso
+  ) {
+    throw new Error(`${label} inválida para a cobrança da disciplina.`);
+  }
+  return instant;
+};
+
+/**
+ * A baixa presencial precisa obedecer à mesma janela enviada ao Banese. A
+ * validação ocorre antes de cancelar o título remoto, evitando deixá-lo
+ * cancelado caso a baixa local seja fora dos 60 dias.
+ */
+const assertDependencyManualSettlementWindow = (
+  receivable: any,
+  paymentDate: string,
+  now = new Date(),
+) => {
+  if (!isDependencyReceivable(receivable)) return;
+  const snapshot = dependencyBillingSnapshotFrom(
+    receivable?.regra_financeira_dependencia_snapshot,
+  );
+  // Dependências legadas seguem o contrato antigo. Toda cobrança nova possui
+  // o snapshot, que é a fonte canônica desta regra.
+  if (!snapshot) return;
+
+  if (
+    Number(snapshot.diasBaixaDevolucao) !==
+      DEPENDENCY_BILLING_DAYS_TO_WRITE_OFF
+  ) {
+    throw new Error(
+      "Os termos da cobrança da disciplina não possuem o prazo bancário obrigatório de 60 dias.",
+    );
+  }
+
+  const dueDay = utcDay(receivable?.data_vencimento, "Vencimento");
+  const paidDay = utcDay(paymentDate, "Data de pagamento");
+  const lastPayableDay = dueDay +
+    DEPENDENCY_BILLING_DAYS_TO_WRITE_OFF * 24 * 60 * 60 * 1000;
+  const operationDay = utcDay(
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Maceio",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(now),
+    "Data da operação",
+  );
+  if (paidDay > lastPayableDay || operationDay > lastPayableDay) {
+    throw new Error(
+      "A cobrança da disciplina não pode receber baixa após 60 dias do vencimento.",
+    );
+  }
+};
 
 const attemptInput = (
   request: NormalizedManualSettlementRequest,
@@ -214,6 +282,7 @@ const resolveAttempt = async (
       "Baixa manual permitida apenas para cobranças pendentes ou vencidas.",
     );
   }
+  assertDependencyManualSettlementWindow(receivable, request.paymentDate, now);
   assertNoKnownRemotePayment(receivable);
   assertNoActiveCnabSubmission(receivable);
   assertMercadoPagoManualSettlementAllowed(receivable);

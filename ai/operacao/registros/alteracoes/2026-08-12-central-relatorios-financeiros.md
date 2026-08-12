@@ -1,7 +1,7 @@
 # Alteração — Central de Relatórios Financeiros
 
 - Lote: 2026-08-12-central-relatorios-financeiros
-- Estado no fechamento local: EM_PUBLICACAO
+- Estado no fechamento: PUBLICADO
 - Projeto Supabase: kfekgwyqozhicpfuunpo
 
 ## Resultado
@@ -36,7 +36,7 @@
 
 - Produção foi autorizada em 2026-08-12. A Edge Function `asaas-api` foi publicada como v78, com JWT obrigatório, preservando 77 arquivos remotos e alterando somente `asaas/api/index.ts`.
 - A migration `20260812141118_add_financial_report_summaries_and_ar_aging` foi aplicada ao projeto `kfekgwyqozhicpfuunpo`. As RPCs estão com `SECURITY DEFINER`, `search_path` vazio, execução negada a `anon` e permitida somente a `authenticated` sob RBAC interno.
-- O frontend segue por commit isolado deste manifesto; a publicação é verificada após o deploy automático da Vercel.
+- A PR [#70](https://github.com/DenielsonSLima/UniversoCursosConsultoria/pull/70) passou pelos gates de qualidade e versão, foi mesclada em `main` no commit [`d9d85fa4`](https://github.com/DenielsonSLima/UniversoCursosConsultoria/commit/d9d85fa44ddd4b97e95e472c3c353547bac4c431) e a [implantação Vercel de Produção](https://vercel.com/denielson-limas-projects/universo-cursos-consultoria/6qKVKoq7gj1Ha7coXpr2oF5ooVxf) concluiu com sucesso.
 - Um corte histórico não é reconstituição contábil absoluta para cancelamentos, estornos ou suspensões legados sem evento datado: esses estados ainda refletem o registro atual. Para auditoria histórica integral, será necessário um razão de eventos de status.
 
 ## Manifesto

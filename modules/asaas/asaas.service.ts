@@ -170,6 +170,7 @@ export const asaasIntegrationService = {
       baneseRecreated?: boolean;
       gatewayRecreated?: boolean;
       gatewayProvider?: string | null;
+      requiresDependencyCheckout?: boolean;
     }>('reverse-manual-settlement', {
       receivableId,
       ...params,

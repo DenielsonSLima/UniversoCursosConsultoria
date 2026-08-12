@@ -16,7 +16,14 @@ import type {
   BaneseDocumentAddress,
 } from "../banese/internal/types.ts";
 import { loadBaneseAcademicBillingContext } from "../banese/internal/technical-billing-context.ts";
-import { buildBaneseTechnicalBillingInstructions } from "../banese/internal/technical-billing-instructions.ts";
+import {
+  buildBaneseDependencyBillingInstructions,
+  buildBaneseTechnicalBillingInstructions,
+} from "../banese/internal/technical-billing-instructions.ts";
+import {
+  dependencyBillingSnapshotFrom,
+  isDependencyReceivable,
+} from "../banese/internal/dependency-billing.ts";
 import {
   allowedBaneseLogoUrl,
   BANESE_DOCUMENT_SECURITY_HEADERS,
@@ -159,6 +166,7 @@ Deno.serve(async (req: Request) => {
       .from("contas_receber")
       .select(`
         id, cliente_id, matricula_id, turma_id, polo_id, descricao, valor, data_vencimento,
+        tipo_lancamento, regra_financeira_dependencia_snapshot,
         gateway_boleto_issued_at,
         gateway_environment, gateway_payment_id, gateway_pix_payload,
         gateway_pix_encoded_image, gateway_boleto_linha_digitavel,
@@ -248,11 +256,32 @@ Deno.serve(async (req: Request) => {
         qrCodeBase64: text(row.gateway_pix_encoded_image),
       }
       : null;
-    const academicContext = await loadBaneseAcademicBillingContext(
-      admin,
-      row.matricula_id,
-      row.turma_id,
+    const isDependency = isDependencyReceivable(row);
+    const dependencySnapshot = isDependency
+      ? dependencyBillingSnapshotFrom(
+        row.regra_financeira_dependencia_snapshot,
+      )
+      : null;
+    const dependencyDescription = text(dependencySnapshot?.descricaoCobranca);
+    const usesIsolatedDependencyPresentation = Boolean(
+      dependencySnapshot && dependencyDescription,
     );
+    if (dependencySnapshot && !dependencyDescription) {
+      throw new HttpError(
+        409,
+        "A cobrança de disciplina não possui descrição canônica.",
+      );
+    }
+    // Títulos legados continuam renderizáveis com o compositor que já os
+    // acompanhava. Somente títulos novos, com snapshot próprio, recebem a
+    // apresentação neutra da disciplina e a regra bancária de 60 dias.
+    const academicContext = usesIsolatedDependencyPresentation
+      ? null
+      : await loadBaneseAcademicBillingContext(
+        admin,
+        row.matricula_id,
+        row.turma_id,
+      );
 
     const input: BaneseBoletoDocumentInput = {
       receivableId: row.id,
@@ -285,12 +314,18 @@ Deno.serve(async (req: Request) => {
       speciesCode: Number(metadata.baneseCodigoEspecie || 21),
       speciesLabel: "ME",
       acceptance: "A",
-      instructions: buildBaneseTechnicalBillingInstructions({
-        environment,
-        documentKind: "boleto",
-        description: row.descricao,
-        academicContext,
-      }),
+      instructions: usesIsolatedDependencyPresentation
+        ? buildBaneseDependencyBillingInstructions({
+          environment,
+          documentKind: "boleto",
+          description: dependencyDescription,
+        })
+        : buildBaneseTechnicalBillingInstructions({
+          environment,
+          documentKind: "boleto",
+          description: row.descricao,
+          academicContext,
+        }),
       financialTerms: {
         ...asRecord(row.gateway_financial_terms),
         nominalAmount: amount,

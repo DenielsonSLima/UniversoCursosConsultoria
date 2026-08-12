@@ -32,6 +32,7 @@ const rowAt = (
     id: bank.receivableId,
     cliente_id: CLIENT_ID,
     matricula_id: ENROLLMENT_ID,
+    turma_id: "55555555-5555-4555-8555-555555555555",
     descricao: `Mensalidade ${index + 1}`,
     categoria: "MENSALIDADE",
     tipo_lancamento: "PARCELA",
@@ -55,6 +56,7 @@ const rowAt = (
     gateway_issuer_polo_id: ISSUER_ID,
     gateway_financial_terms: bank.financialTerms || null,
     gateway_financial_terms_confirmed_at: "2026-07-16T12:00:00Z",
+    regra_financeira_dependencia_snapshot: null,
     turmas: {
       nome: "Técnico em Administração",
       cursos: { nome: "Curso Técnico", modalidade: "TECNICO" },
@@ -104,6 +106,28 @@ Deno.test("devolve curso, turma e modalidade sem expor identificadores internos"
   assert.equal(dto.courseName, "Curso Técnico");
   assert.equal(dto.courseModality, "TECNICO");
   assert.equal(dto.className, "Técnico em Administração");
+});
+
+Deno.test("disciplina refeita não expõe curso ou turma no DTO do aluno", () => {
+  const dto = sanitizeBaneseStudentCharge(
+    rowAt(0, {
+      matricula_id: null,
+      tipo_lancamento: "DEPENDENCIA",
+      descricao: "Dependência - Anatomia - TEC-2026",
+      regra_financeira_dependencia_snapshot: {
+        origem: "DEPENDENCIA",
+        descricaoCobranca: "Disciplina: Anatomia Humana",
+      },
+    }),
+    GROUP_MARKER,
+  );
+
+  assert.equal(dto.description, "Disciplina: Anatomia Humana");
+  assert.equal(dto.category, "DISCIPLINA");
+  assert.equal(dto.chargeType, "DISCIPLINA");
+  assert.equal(dto.courseName, null);
+  assert.equal(dto.courseModality, null);
+  assert.equal(dto.className, null);
 });
 
 Deno.test("devolve somente termos financeiros bancarios confirmados", () => {

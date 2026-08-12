@@ -27,6 +27,8 @@ const FinanceiroCardItem: React.FC<FinanceiroCardItemProps> = ({
   onPayNow,
   onOpenBanesePayment,
 }) => {
+  const isIsolatedDependency = installment.isIsolatedDependency === true
+    || String(installment.tipo_lancamento || '').toUpperCase() === 'DISCIPLINA';
   const paymentLabel = [
     installment.turmaNome,
     installment.cursoNome,
@@ -193,15 +195,17 @@ const FinanceiroCardItem: React.FC<FinanceiroCardItemProps> = ({
         </div>
 
         <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3 text-[11px] text-slate-600">
-          <div className="mb-3 flex items-start gap-2">
-            <GraduationCap size={14} className="mt-0.5 shrink-0 text-slate-500" />
-            <span className="min-w-0">
-              <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400">Curso / Turma</span>
-              <span className="block break-words font-bold text-slate-700">
-                {hasReferenceInfo ? paymentLabel.join(' • ') : 'Vinculação em atualização no momento'}
+          {isIsolatedDependency ? null : (
+            <div className="mb-3 flex items-start gap-2">
+              <GraduationCap size={14} className="mt-0.5 shrink-0 text-slate-500" />
+              <span className="min-w-0">
+                <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400">Curso / Turma</span>
+                <span className="block break-words font-bold text-slate-700">
+                  {hasReferenceInfo ? paymentLabel.join(' • ') : 'Vinculação em atualização no momento'}
+                </span>
               </span>
-            </span>
-          </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 gap-2 min-[390px]:grid-cols-2">
             <div className="rounded-xl bg-white px-3 py-2">

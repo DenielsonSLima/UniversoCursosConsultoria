@@ -2,8 +2,16 @@ import {
   type BaneseCnab240RemittanceTitleInput,
   buildBaneseCnab240Remittance,
 } from "../gateways/api/banese-cnab240.remittance.ts";
-import { resolveBaneseReceivableFinancialTerms } from "../gateways/api/banese-financial-terms.ts";
+import {
+  buildDependencyBaneseFinancialTerms,
+  resolveBaneseReceivableFinancialTerms,
+} from "../gateways/api/banese-financial-terms.ts";
 import { normalizeBaneseFinancialTerms } from "../banese/internal/financial-terms.ts";
+import {
+  DEPENDENCY_BILLING_DAYS_TO_WRITE_OFF,
+  dependencyBillingSnapshotFrom,
+  isDependencyReceivable,
+} from "../banese/internal/dependency-billing.ts";
 import {
   assertReceivableEligibleForCnabRemittance,
   BANESE_CNAB_PROVIDER,
@@ -78,7 +86,7 @@ const loadSelectedReceivables = async (
   const { data, error } = await admin
     .from("contas_receber")
     .select(
-      "id,cliente_id,matricula_id,turma_id,polo_id,descricao,valor,data_vencimento,created_at,updated_at,status,tipo_lancamento,parcela_numero,regra_financeira_plano_unico_snapshot,gateway_installments,gateway_provider,gateway_environment,gateway_payment_method,gateway_payment_id,gateway_payment_link_id,gateway_boleto_nosso_numero,gateway_boleto_convenio,gateway_boleto_agencia,gateway_boleto_linha_digitavel,gateway_boleto_codigo_barras,gateway_boleto_issued_at,gateway_invoice_url,gateway_bank_slip_url,gateway_creation_token,gateway_status,gateway_last_error,gateway_financial_terms,gateway_financial_terms_confirmed_at,gateway_submission_channel,gateway_submission_status,gateway_cnab_file_id",
+      "id,cliente_id,matricula_id,turma_id,polo_id,descricao,valor,data_vencimento,created_at,updated_at,status,tipo_lancamento,parcela_numero,regra_financeira_plano_unico_snapshot,regra_financeira_dependencia_snapshot,gateway_installments,gateway_provider,gateway_environment,gateway_payment_method,gateway_payment_id,gateway_payment_link_id,gateway_boleto_nosso_numero,gateway_boleto_convenio,gateway_boleto_agencia,gateway_boleto_linha_digitavel,gateway_boleto_codigo_barras,gateway_boleto_issued_at,gateway_invoice_url,gateway_bank_slip_url,gateway_creation_token,gateway_status,gateway_last_error,gateway_financial_terms,gateway_financial_terms_confirmed_at,gateway_submission_channel,gateway_submission_status,gateway_cnab_file_id",
     )
     .in("id", ids)
     .limit(ids.length);
@@ -146,6 +154,29 @@ const payerAddress = (payer: any) => {
 };
 
 const termsForRemittance = async (admin: any, receivable: any) => {
+  if (isDependencyReceivable(receivable)) {
+    const snapshot = dependencyBillingSnapshotFrom(
+      receivable.regra_financeira_dependencia_snapshot,
+    );
+    if (snapshot) {
+      return normalizeBaneseFinancialTerms(
+        buildDependencyBaneseFinancialTerms(receivable),
+      );
+    }
+    if (
+      receivable.gateway_financial_terms &&
+      receivable.gateway_financial_terms_confirmed_at
+    ) {
+      return normalizeBaneseFinancialTerms({
+        ...receivable.gateway_financial_terms,
+        nominalAmount: Number(receivable.valor || 0),
+        dueDate: String(receivable.data_vencimento || "").slice(0, 10),
+      });
+    }
+    throw new Error(
+      "Cobrança de dependência legada sem termos confirmados exige conciliação antes da remessa.",
+    );
+  }
   if (
     receivable.gateway_financial_terms &&
     receivable.gateway_financial_terms_confirmed_at
@@ -220,7 +251,11 @@ export const prepareRemittance = async (
       companyControlNumber: `CR${compactId.slice(0, 23)}`,
       documentSpecies,
       issueDate: toBaneseCivilDate(receivable.created_at),
-      writeOffDays,
+      // A remessa histórica já fixava 60 dias para dependência. Preservar esse
+      // contrato não reprifica encargos nem transforma o título em snapshot.
+      writeOffDays: isDependencyReceivable(receivable)
+        ? DEPENDENCY_BILLING_DAYS_TO_WRITE_OFF
+        : writeOffDays,
       payer: {
         name: fixedText(payer.nome, 40),
         document: String(payer.cpf_cnpj || "").trim(),

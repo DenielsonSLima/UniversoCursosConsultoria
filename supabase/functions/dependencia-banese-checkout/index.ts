@@ -402,6 +402,9 @@ const createDependencyBoleto = async (input: {
     environment,
   });
 
+  // Títulos novos usam exclusivamente o snapshot próprio. O resolvedor só
+  // consulta o contrato histórico da turma quando recebe um título legado,
+  // criado antes da coluna de isolamento.
   const financialTerms = await resolveBaneseReceivableFinancialTerms(
     input.admin,
     lockedReceivable,
@@ -418,7 +421,7 @@ const createDependencyBoleto = async (input: {
       receivable: lockedReceivable,
       payer: payerForGateway(input.payer),
       amount: Number(lockedReceivable.valor),
-      description: String(lockedReceivable.descricao || "Dependência"),
+      description: String(lockedReceivable.descricao || "Disciplina"),
       dueDate: String(lockedReceivable.data_vencimento).slice(0, 10),
       installments: 1,
       successUrl: null,

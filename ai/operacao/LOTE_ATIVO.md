@@ -2,12 +2,14 @@
 
 Estado: `EM_PUBLICACAO`
 
-## Lote: 2026-08-12-central-relatorios-financeiros
+## Lote: 2026-08-12-cobranca-isolada-dependencia-academica
 
 - Estado: EM_PUBLICACAO.
-- Objetivo: concluir a Central de Relatórios Financeiros com resumos canônicos, inadimplência por aging e fluxo de caixa realizado versus projetado.
-- Escopo incluído: preservar os cinco relatórios separados já em trabalho local (extrato, entradas, saídas, receitas e despesas); incluir resumo por categoria, composição das entradas e fluxo de caixa; substituir a inadimplência legada por RPC segura, filtros e PDF vetorial.
-- Fora de escopo: alterar títulos históricos, criar cobranças, modificar cálculo de empréstimos/rateios, reimplementar o DRE legado ou orçamento versus realizado.
-- Regras aplicáveis: GitHub e Supabase exclusivamente por MCP; cálculos e agregações somente no backend/RPC; PDF vetorial com Blob canônico; RBAC de Relatórios por escopo de polo e exposição mínima de dados pessoais.
-- Critérios de aceite: cada cartão usa contrato financeiro canônico; receita/despesa permanecem por competência e entrada/saída por caixa; resumos usam todos os registros filtrados, não a prévia limitada; inadimplência usa saldo residual, data de corte e faixas de atraso; 21 testes contratuais, 5 testes de cache/Realtime, TypeScript, lint e `deno check` aprovados. O smoke autenticado permanece pendente por indisponibilidade de navegador conectado.
-- Publicação: autorizada em 2026-08-12. `asaas-api` v78 foi publicada e a migration remota `20260812141118_add_financial_report_summaries_and_ar_aging` foi aplicada. O frontend deste lote está em publicação por commit isolado.
+- Objetivo: isolar a cobrança da disciplina refeita da matrícula, do cronograma e das condições financeiras da turma técnica.
+- Escopo incluído: política própria por disciplina/polo; snapshot imutável de desconto, juros e multa; uma cobrança Banese; vencimento único; descrição neutra; prazo bancário e visual de 60 dias; portal/PDF sem turma, curso ou motivo da reprovação; baixa e estorno auditáveis.
+- Fora de escopo: alterar parcelas do curso técnico, transferir o aluno para a turma inteira, reprificar títulos históricos, criar carnê, aceitar Pix ou mudar a classificação contábil legada de mensalidade nesta entrega.
+- Regras aplicáveis: GitHub e Supabase exclusivamente por MCP; uma parcela; `matricula_id` nula; `tipo_lancamento=DEPENDENCIA`; liberação acadêmica somente após pagamento comprovado; nenhum smoke que crie cobrança real.
+- Critérios de aceite: migration aplicada; 11 runtimes ativos com o mesmo `verify_jwt`; política padrão R$ 19,90 / 1% / 2%; descrição `Disciplina: X`; 60 dias no payload e no documento; títulos legados compatíveis; 117 testes Deno, TypeScript, ESLint focal, `deno check`, build e revisão independente sem P0/P1.
+- Produção Supabase: migration `20260812190154_isolate_dependency_reoffer_billing.sql` aplicada pelo MCP; runtimes ativos: `payment-checkout` v19, `checkout-api` v14, `asaas-api` v79, `asaas-webhook` v34, `payment-gateway-api` v16, `payment-gateway-webhook` v9, `banese-student-payment` v10, `banese-boleto-document` v12, `banese-reconciliation-worker` v24, `banese-cnab240-api` v9 e `dependencia-banese-checkout` v6.
+- Smoke visual: pendente porque nenhum navegador interno ou externo estava conectado à sessão; contratos e verificações remotas falharam fechados sem criar título.
+- Publicação GitHub/Vercel: em andamento no lote `4.3.1`, após a promoção atômica da Central de Relatórios `4.3.0`.

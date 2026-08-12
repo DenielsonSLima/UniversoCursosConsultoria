@@ -162,12 +162,17 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
 
   const hiddenStatuses = ['CANCELADO', 'ESTORNADO'];
   const installments = dbRecords.filter((record) => !hiddenStatuses.includes(String(record.status || '').toUpperCase()));
-  const modalityOrder: string[] = ['EAD', 'TECNICO', 'LIVRE', 'ESPECIALIZACAO', 'OUTROS'];
+  const modalityOrder: string[] = ['DISCIPLINA', 'EAD', 'TECNICO', 'LIVRE', 'ESPECIALIZACAO', 'OUTROS'];
 
   const getInstallmentTurma = (inst: any) =>
     Array.isArray(inst.turmas) ? inst.turmas[0] : inst.turmas;
 
+  const isIsolatedDependency = (inst: any) =>
+    inst?.cobranca_disciplina_avulsa === true
+    || String(inst?.tipo_lancamento || '').toUpperCase() === 'DISCIPLINA';
+
   const getInstallmentModality = (inst: any) => {
+    if (isIsolatedDependency(inst)) return 'DISCIPLINA';
     const turma = getInstallmentTurma(inst);
     const curso = turma && (Array.isArray(turma.cursos) ? turma.cursos[0] : turma.cursos);
     const rawModality = String(inst.modalidade || inst.courseModality || curso?.modalidade || '').toUpperCase();
@@ -180,12 +185,16 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
   };
 
   const getInstallmentCourseName = (inst: any) => {
+    if (isIsolatedDependency(inst)) {
+      return '';
+    }
     const turma = getInstallmentTurma(inst);
     const curso = turma && (Array.isArray(turma.cursos) ? turma.cursos[0] : turma.cursos);
     return inst.cursoNome || inst.courseName || curso?.nome || 'Sem curso vinculado';
   };
 
   const getInstallmentCourseId = (inst: any) => {
+    if (isIsolatedDependency(inst)) return null;
     const turma = getInstallmentTurma(inst);
     const curso = turma && (Array.isArray(turma.cursos) ? turma.cursos[0] : turma.cursos);
     return inst.curso_id || turma?.curso_id || curso?.id || null;
@@ -196,6 +205,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
 
   const getInstallmentClassName = (modality: string) => {
     const palette = {
+      DISCIPLINA: 'bg-cyan-50 text-cyan-700 border-cyan-100',
       EAD: 'bg-sky-50 text-sky-700 border-sky-100',
       TECNICO: 'bg-violet-50 text-violet-700 border-violet-100',
       LIVRE: 'bg-emerald-50 text-emerald-700 border-emerald-100',
@@ -208,6 +218,13 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
 
   const getModalityAccent = (modality: string) => {
     const palette = {
+      DISCIPLINA: {
+        line: 'border-l-cyan-500',
+        group: 'bg-cyan-50/80 text-cyan-800 border-cyan-100',
+        card: 'border-cyan-100 bg-cyan-50/25',
+        action: 'bg-cyan-600 hover:bg-cyan-700 text-white shadow-cyan-600/20',
+        soft: 'bg-cyan-50 text-cyan-700 border-cyan-100'
+      },
       EAD: {
         line: 'border-l-sky-500',
         group: 'bg-sky-50/80 text-sky-800 border-sky-100',
@@ -258,7 +275,9 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
     const raw = String(inst.tipo_lancamento || '').toUpperCase();
     const description = String(inst.descricao || '').toLowerCase();
 
+    if (isIsolatedDependency(inst)) return 'Disciplina';
     if (modality === 'EAD' && description.includes('inscricao')) return 'Inscrição EAD';
+    if (raw === 'DEPENDENCIA') return 'Disciplina';
     if (raw === 'MATRICULA' || description.includes('matricula') || description.includes('matrícula')) return 'Matrícula';
     if (raw === 'PARCELA' || description.includes('mensalidade')) return `Mensalidade${inst.parcela_numero ? ` ${inst.parcela_numero}` : ''}`;
     if (raw === 'REMATRICULA' || description.includes('rematricula') || description.includes('rematrícula')) return 'Rematrícula';
@@ -266,6 +285,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
   };
 
   const toInstallmentRow = (inst: any) => {
+    const isIsolatedDependencyCharge = isIsolatedDependency(inst);
     const modality = getInstallmentModality(inst);
     const turma = getInstallmentTurma(inst);
     const dueDate = parseDate(inst.data_vencimento);
@@ -278,10 +298,13 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
       modalidade: modality,
       cursoId: getInstallmentCourseId(inst),
       cursoNome: getInstallmentCourseName(inst),
-      turmaNome: turma?.nome || 'N/A',
+      turmaNome: isIsolatedDependencyCharge
+        ? ''
+        : turma?.nome || 'N/A',
       chargeKind: getChargeKind(inst, modality),
       financialSummary,
       modalityAccent: getModalityAccent(modality),
+      isIsolatedDependency: isIsolatedDependencyCharge,
       isOverdue
     };
   };
@@ -779,6 +802,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
 
   const getModalityLabel = (modality: string) => {
     const map: Record<string, string> = {
+      DISCIPLINA: 'Disciplina',
       EAD: 'EAD',
       TECNICO: 'Técnico',
       LIVRE: 'Livre',
@@ -1162,9 +1186,11 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
                             <tr className={`border-l-4 border-b border-slate-100 ${inst.modalityAccent.line} transition-colors hover:bg-slate-50/70`}>
                               <td className="py-4 px-4">
                                 <p className="font-black leading-snug text-slate-800">{inst.descricao}</p>
-                                <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                                  {inst.cursoNome} • {inst.turmaNome}
-                                </p>
+                                {inst.isIsolatedDependency ? null : (
+                                  <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                    {inst.cursoNome} • {inst.turmaNome}
+                                  </p>
+                                )}
                               </td>
                               <td className="py-4 px-4">
                                 <span className={`inline-flex items-center text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border ${getInstallmentClassName(inst.modalidade)}`}>

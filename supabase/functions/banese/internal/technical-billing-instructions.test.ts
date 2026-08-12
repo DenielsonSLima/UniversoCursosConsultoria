@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   DEFAULT_TECHNICAL_BILLING_INSTRUCTION,
+  buildBaneseDependencyBillingInstructions,
   buildBaneseTechnicalBillingInstructions,
 } from "./technical-billing-instructions.ts";
 
@@ -51,4 +52,18 @@ Deno.test("não aplica instruções técnicas a cobrança de outra modalidade", 
     }),
     ["Curso livre"],
   );
+});
+
+Deno.test("boleto da disciplina refeita não revela turma nem motivo acadêmico", () => {
+  const instructions = buildBaneseDependencyBillingInstructions({
+    environment: "production",
+    documentKind: "boleto",
+    description: "Disciplina: Anatomia e Fisiologia Humana",
+  });
+
+  assert.deepEqual(instructions, [
+    "Disciplina: Anatomia e Fisiologia Humana",
+    DEFAULT_TECHNICAL_BILLING_INSTRUCTION,
+  ]);
+  assert.doesNotMatch(instructions.join(" "), /turma|dependência|reprov/i);
 });

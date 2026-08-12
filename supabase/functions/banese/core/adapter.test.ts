@@ -147,6 +147,36 @@ Deno.test("payload boleto preserva campos financeiros validados", () => {
   });
 });
 
+Deno.test("boleto de disciplina fixa baixa bancária em 60 dias", () => {
+  const payload = buildBaneseBoletoPayload({
+    ...validInput,
+    receivable: {
+      ...validInput.receivable,
+      tipo_lancamento: "DEPENDENCIA",
+      regra_financeira_dependencia_snapshot: {
+        origem: "DEPENDENCIA",
+        diasBaixaDevolucao: 60,
+      },
+      quantidadeDiasBaixaDevolucao: 5,
+    },
+  });
+
+  assert.equal(payload.QuantidadeDiasBaixaDevolucao, 60);
+});
+
+Deno.test("boleto legado de dependência preserva o prazo configurado", () => {
+  const payload = buildBaneseBoletoPayload({
+    ...validInput,
+    receivable: {
+      ...validInput.receivable,
+      tipo_lancamento: "DEPENDENCIA",
+      quantidadeDiasBaixaDevolucao: 5,
+    },
+  });
+
+  assert.equal(payload.QuantidadeDiasBaixaDevolucao, 5);
+});
+
 Deno.test("payload boleto inclui numero e complemento no endereco", () => {
   const payload = buildBaneseBoletoPayload({
     ...validInput,

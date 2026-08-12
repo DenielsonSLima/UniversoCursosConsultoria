@@ -1,5 +1,8 @@
 import { supabase } from '../../../../lib/supabase';
-import { dependencyRulePercentage } from './dependencias-academicas.finance';
+import {
+  dependencyBillingPreviewContractError,
+  dependencyRulePercentage,
+} from './dependencias-academicas.finance';
 import type {
   DependenciaAcademica,
   DependenciaBoleto,
@@ -253,6 +256,18 @@ const normalizeRegra = (raw: unknown, index: number): DependenciaRegraFinanceira
       cargaHoraria !== null && cargaHoraria <= 40 ? 'Até 40h' : 'Acima de 40h'
     ),
     percentual,
+    descontoPontualidade: number(
+      row.descontoPontualidade,
+      row.desconto_pontualidade,
+    ),
+    jurosAtrasoPercentual: number(
+      row.jurosAtrasoPercentual,
+      row.juros_atraso_percentual,
+    ),
+    multaAtrasoPercentual: number(
+      row.multaAtrasoPercentual,
+      row.multa_atraso_percentual,
+    ),
     valorReferencia: nullableNumber(row.valor_referencia, row.valor_base),
     vigenciaInicio: nullableText(row.vigencia_inicio, row.created_at),
     origem: (() => {
@@ -287,7 +302,57 @@ const normalizePrevia = (
 ): DependenciaPrevia => {
   const row = unwrap(raw);
   const financeira = unwrap(row.financeiro || row.preview || row.previa);
-  const bloqueio = nullableText(row.bloqueio, row.motivo_bloqueio, financeira.bloqueio);
+  const descricaoCobranca = nullableText(
+    row.descricaoCobranca,
+    row.descricao_cobranca,
+    financeira.descricaoCobranca,
+    financeira.descricao,
+  );
+  const descontoPontualidade = nullableNumber(
+    row.descontoPontualidade,
+    row.desconto_pontualidade,
+    financeira.descontoPontualidade,
+    financeira.desconto_pontualidade,
+  );
+  const jurosAtrasoPercentual = nullableNumber(
+    row.jurosAtrasoPercentual,
+    row.juros_atraso_percentual,
+    financeira.jurosAtrasoPercentual,
+    financeira.juros_atraso_percentual,
+  );
+  const multaAtrasoPercentual = nullableNumber(
+    row.multaAtrasoPercentual,
+    row.multa_atraso_percentual,
+    financeira.multaAtrasoPercentual,
+    financeira.multa_atraso_percentual,
+  );
+  const diasBaixaDevolucao = nullableNumber(
+    row.diasBaixaDevolucao,
+    row.dias_baixa_devolucao,
+    financeira.diasBaixaDevolucao,
+    financeira.dias_baixa_devolucao,
+  );
+  const instrucaoBoleto = nullableText(
+    row.instrucaoBoleto,
+    row.instrucao_boleto,
+    financeira.instrucaoBoleto,
+    financeira.instrucao_boleto,
+  );
+  const contratoBloqueio = dependencyBillingPreviewContractError({
+    origin: text(financeira.origem, row.origem_financeira),
+    description: descricaoCobranca,
+    discount: descontoPontualidade,
+    monthlyInterest: jurosAtrasoPercentual,
+    penalty: multaAtrasoPercentual,
+    writeOffDays: diasBaixaDevolucao,
+    instruction: instrucaoBoleto,
+  });
+  const bloqueio = nullableText(
+    row.bloqueio,
+    row.motivo_bloqueio,
+    financeira.bloqueio,
+    contratoBloqueio,
+  );
   return {
     turmaDestinoId: text(row.turmaDestinoId, row.turma_destino_id, row.turma_id, input.turmaDestinoId),
     disciplinaNome: text(row.disciplinaNome, row.disciplina_nome) || 'Disciplina',
@@ -307,15 +372,17 @@ const normalizePrevia = (
       financeira.valor,
       financeira.valor_cobrar,
     ),
+    descontoPontualidade: descontoPontualidade ?? 0,
+    jurosAtrasoPercentual: jurosAtrasoPercentual ?? 0,
+    multaAtrasoPercentual: multaAtrasoPercentual ?? 0,
+    diasBaixaDevolucao: diasBaixaDevolucao ?? 0,
+    instrucaoBoleto: instrucaoBoleto || '',
     dataVencimento: text(
       row.data_vencimento,
       financeira.data_vencimento,
       input.dataVencimento,
     ),
-    descricaoCobranca: text(
-      row.descricao_cobranca,
-      financeira.descricao,
-    ) || 'Dependência acadêmica',
+    descricaoCobranca: descricaoCobranca || 'Disciplina',
     regraResumo: text(row.regra, row.regra_resumo, financeira.regra_resumo) || 'Regra calculada pelo backend',
     podeConfirmar: row.pode_confirmar !== false && !bloqueio,
     bloqueio,
@@ -436,11 +503,14 @@ export const dependenciasAcademicasService = {
     input: DependenciaPoliticaInput,
   ): Promise<void> {
     const { error } = await supabase.rpc(
-      'configurar_politica_dependencia_disciplina_secure',
+      'configurar_politica_dependencia_disciplina_financeira_secure',
       {
         p_polo_id: input.poloId,
         p_disciplina_id: input.disciplinaId,
         p_multiplicador_parcela: input.multiplicadorParcela,
+        p_desconto_pontualidade: input.descontoPontualidade,
+        p_juros_atraso_percentual: input.jurosAtrasoPercentual,
+        p_multa_atraso_percentual: input.multaAtrasoPercentual,
         p_idempotency_key: input.idempotencyKey,
       },
     );

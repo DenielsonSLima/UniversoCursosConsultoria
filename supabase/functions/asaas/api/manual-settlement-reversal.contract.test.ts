@@ -17,4 +17,12 @@ Deno.test("estorno manual grava a data auditável para saldo histórico", () => 
   );
   assert.match(reversalRoute, /eq\("status", "PAGO"\)/);
   assert.match(reversalRoute, /eq\("origem_pagamento", "PRESENCIAL"\)/);
+  assert.match(
+    reversalRoute,
+    /isIsolatedDependency[\s\S]*?forma_pagamento:[\s\S]*?isIsolatedDependency[\s\S]*?"BOLETO"/,
+  );
+  assert.match(
+    reversalRoute,
+    /requiresDependencyCheckout[\s\S]*?shouldRecreateGateway && !requiresDependencyCheckout[\s\S]*?requiresDependencyCheckout/,
+  );
 });

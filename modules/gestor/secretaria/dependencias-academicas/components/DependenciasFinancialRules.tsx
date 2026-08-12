@@ -41,6 +41,14 @@ const createIdempotencyKey = () => (
     : `dependencia-politica-${Date.now()}-${Math.random().toString(36).slice(2)}`
 );
 
+const DEFAULT_DEPENDENCY_TERMS = {
+  descontoPontualidade: 19.9,
+  jurosAtrasoPercentual: 1,
+  multaAtrasoPercentual: 2,
+};
+
+const decimal = (value: string) => Number(value.replace(',', '.'));
+
 const DependenciasFinancialRules = ({
   poloId,
   rules,
@@ -50,6 +58,9 @@ const DependenciasFinancialRules = ({
 }: DependenciasFinancialRulesProps) => {
   const [disciplineId, setDisciplineId] = useState('');
   const [percentage, setPercentage] = useState('50');
+  const [discount, setDiscount] = useState(String(DEFAULT_DEPENDENCY_TERMS.descontoPontualidade));
+  const [interest, setInterest] = useState(String(DEFAULT_DEPENDENCY_TERMS.jurosAtrasoPercentual));
+  const [penalty, setPenalty] = useState(String(DEFAULT_DEPENDENCY_TERMS.multaAtrasoPercentual));
   const policyAttemptRef = useRef<DependencyPolicyAttempt | null>(null);
   const formRef = useRef<HTMLElement | null>(null);
   const [removingRuleId, setRemovingRuleId] = useState<string | null>(null);
@@ -59,6 +70,9 @@ const DependenciasFinancialRules = ({
     const currentRule = rules.find((rule) => rule.disciplinaId === nextId);
     if (currentRule) {
       setPercentage(String(currentRule.percentual));
+      setDiscount(String(currentRule.descontoPontualidade));
+      setInterest(String(currentRule.jurosAtrasoPercentual));
+      setPenalty(String(currentRule.multaAtrasoPercentual));
       return;
     }
     const discipline = disciplines.find((item) => item.id === nextId);
@@ -69,6 +83,9 @@ const DependenciasFinancialRules = ({
         ? '50'
         : '100',
     );
+    setDiscount(String(DEFAULT_DEPENDENCY_TERMS.descontoPontualidade));
+    setInterest(String(DEFAULT_DEPENDENCY_TERMS.jurosAtrasoPercentual));
+    setPenalty(String(DEFAULT_DEPENDENCY_TERMS.multaAtrasoPercentual));
   };
 
   const editRule = (rule: DependenciaRegraFinanceira) => {
@@ -85,18 +102,32 @@ const DependenciasFinancialRules = ({
         if (disciplineId === rule.disciplinaId) {
           setDisciplineId('');
           setPercentage('50');
+          setDiscount(String(DEFAULT_DEPENDENCY_TERMS.descontoPontualidade));
+          setInterest(String(DEFAULT_DEPENDENCY_TERMS.jurosAtrasoPercentual));
+          setPenalty(String(DEFAULT_DEPENDENCY_TERMS.multaAtrasoPercentual));
         }
       },
     });
   };
 
   const save = () => {
-    const parsedPercentage = Number(percentage.replace(',', '.'));
+    const parsedPercentage = decimal(percentage);
+    const parsedDiscount = decimal(discount);
+    const parsedInterest = decimal(interest);
+    const parsedPenalty = decimal(penalty);
     if (
       !disciplineId
       || !Number.isFinite(parsedPercentage)
       || parsedPercentage < 1
       || parsedPercentage > 1000
+      || !Number.isFinite(parsedDiscount)
+      || parsedDiscount < 0
+      || !Number.isFinite(parsedInterest)
+      || parsedInterest < 0
+      || parsedInterest >= 100
+      || !Number.isFinite(parsedPenalty)
+      || parsedPenalty < 0
+      || parsedPenalty >= 100
     ) return;
     const multiplier = parsedPercentage / 100;
     const attempt = resolveDependencyPolicyAttempt(
@@ -105,6 +136,9 @@ const DependenciasFinancialRules = ({
         poloId,
         disciplinaId: disciplineId,
         multiplicadorParcela: multiplier,
+        descontoPontualidade: parsedDiscount,
+        jurosAtrasoPercentual: parsedInterest,
+        multaAtrasoPercentual: parsedPenalty,
       },
       createIdempotencyKey,
     );
@@ -113,6 +147,9 @@ const DependenciasFinancialRules = ({
       poloId,
       disciplinaId: disciplineId,
       multiplicadorParcela: multiplier,
+      descontoPontualidade: parsedDiscount,
+      jurosAtrasoPercentual: parsedInterest,
+      multaAtrasoPercentual: parsedPenalty,
       idempotencyKey: attempt.idempotencyKey,
     }, {
       onSuccess: () => {
@@ -140,9 +177,20 @@ const DependenciasFinancialRules = ({
       </article>
     </div>
 
+    <section className="rounded-3xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-950">
+      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-700">Cobrança avulsa da disciplina</p>
+      <h3 className="mt-1 text-base font-black">Termos próprios, sem mexer no curso técnico</h3>
+      <p className="mt-1 max-w-4xl text-xs font-semibold leading-relaxed text-emerald-800">
+        A reoferta cria um único boleto da disciplina. Desconto, juros e multa são congelados no título e não usam a turma de destino, a matrícula ou as mensalidades do aluno.
+      </p>
+      <p className="mt-3 rounded-xl border border-emerald-200 bg-white/70 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-emerald-800">
+        Instrução fixa: SR.(A) CAIXA: NÃO RECEBER ESTE TÍTULO APÓS 60 (SESSENTA) DIAS DO VENCIMENTO.
+      </p>
+    </section>
+
     <section ref={formRef} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
-        <div className="flex-1">
+      <div className="flex flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-end">
+        <div className="flex-1 lg:min-w-[250px]">
           <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-700">
             Configuração por disciplina
           </p>
@@ -158,6 +206,9 @@ const DependenciasFinancialRules = ({
               onClick={() => {
                 setDisciplineId('');
                 setPercentage('50');
+                setDiscount(String(DEFAULT_DEPENDENCY_TERMS.descontoPontualidade));
+                setInterest(String(DEFAULT_DEPENDENCY_TERMS.jurosAtrasoPercentual));
+                setPenalty(String(DEFAULT_DEPENDENCY_TERMS.multaAtrasoPercentual));
               }}
               className="mt-2 inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-slate-500 transition hover:text-blue-700"
             >
@@ -190,6 +241,41 @@ const DependenciasFinancialRules = ({
             step="0.01"
             value={percentage}
             onChange={(event) => setPercentage(event.target.value)}
+            className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700"
+          />
+        </label>
+        <label className="block lg:w-36">
+          <span className="text-[9px] font-black uppercase tracking-wider text-slate-500">Desconto R$</span>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={discount}
+            onChange={(event) => setDiscount(event.target.value)}
+            className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700"
+          />
+        </label>
+        <label className="block lg:w-32">
+          <span className="text-[9px] font-black uppercase tracking-wider text-slate-500">Juros % mês</span>
+          <input
+            type="number"
+            min="0"
+            max="99.9999"
+            step="0.01"
+            value={interest}
+            onChange={(event) => setInterest(event.target.value)}
+            className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700"
+          />
+        </label>
+        <label className="block lg:w-32">
+          <span className="text-[9px] font-black uppercase tracking-wider text-slate-500">Multa % única</span>
+          <input
+            type="number"
+            min="0"
+            max="99.9999"
+            step="0.01"
+            value={penalty}
+            onChange={(event) => setPenalty(event.target.value)}
             className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700"
           />
         </label>
@@ -251,6 +337,9 @@ const DependenciasFinancialRules = ({
               <div className="mt-3 grid grid-cols-2 gap-2 text-[10px] font-bold text-slate-500">
                 <span>CH: {rule.cargaHoraria ?? '—'}h</span>
                 <span>Base: {formatCurrency(rule.valorReferencia)}</span>
+                <span>Desconto: {formatCurrency(rule.descontoPontualidade)}</span>
+                <span>Juros: {rule.jurosAtrasoPercentual}% ao mês</span>
+                <span className="col-span-2">Multa: {rule.multaAtrasoPercentual}% única</span>
                 <span className="col-span-2">Vigência: {formatDate(rule.vigenciaInicio)}</span>
               </div>
               {rule.disciplinaId ? (
@@ -314,6 +403,7 @@ const DependenciasFinancialRules = ({
                 <th className="px-4 py-3">Carga horária</th>
                 <th className="px-4 py-3">Faixa</th>
                 <th className="px-4 py-3">Percentual</th>
+                <th className="px-4 py-3">Encargos próprios</th>
                 <th className="px-4 py-3">Referência</th>
                 <th className="px-4 py-3">Vigência / origem</th>
                 <th className="px-4 py-3 text-right">Ações</th>
@@ -326,6 +416,10 @@ const DependenciasFinancialRules = ({
                   <td className="px-4 py-4">{rule.cargaHoraria ?? '—'}h</td>
                   <td className="px-4 py-4">{rule.faixa}</td>
                   <td className="px-4 py-4 font-black text-cyan-800">{rule.percentual}%</td>
+                  <td className="px-4 py-4 text-[10px] font-bold text-slate-600">
+                    <p>Desc. {formatCurrency(rule.descontoPontualidade)}</p>
+                    <p className="mt-1">Juros {rule.jurosAtrasoPercentual}% · multa {rule.multaAtrasoPercentual}%</p>
+                  </td>
                   <td className="px-4 py-4">{formatCurrency(rule.valorReferencia)}</td>
                   <td className="px-4 py-4">
                     <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500">

@@ -32,6 +32,10 @@ import {
   resolveReceivableGatewayPaymentMethod,
 } from "./gateway-routing-guard.ts";
 import {
+  dependencyBillingSnapshotFrom,
+  isDependencyReceivable,
+} from "../../banese/internal/dependency-billing.ts";
+import {
   applyReceivableSnapshotFields,
   applyRemoteIdentitySnapshot,
   assertNoActiveCnabSubmission,
@@ -1354,6 +1358,17 @@ export const createAsaasBillingService = (
     let receivable = initialReceivable;
     const receivableStatus = String(receivable.status || "").toUpperCase();
     if (receivableStatus === "PAGO") return receivable;
+
+    if (
+      isDependencyReceivable(receivable) &&
+      dependencyBillingSnapshotFrom(
+        receivable.regra_financeira_dependencia_snapshot,
+      )
+    ) {
+      throw new Error(
+        "Cobrança de disciplina deve ser emitida pelo fluxo específico de dependência.",
+      );
+    }
 
     const hasAsaasCreationLock =
       String(receivable.asaas_status || "").toUpperCase() === "CREATING" ||

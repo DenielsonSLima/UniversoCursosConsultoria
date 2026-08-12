@@ -830,6 +830,7 @@ export const financeiroService = {
     baneseRecreated?: boolean;
     gatewayRecreated?: boolean;
     gatewayProvider?: string | null;
+    requiresDependencyCheckout?: boolean;
   }> {
     return asaasIntegrationService.reverseInPersonSettlement(id, params);
   },
