@@ -1,7 +1,7 @@
 # Alteração — Estabilização 4.2.0
 
 - Lote: `2026-08-12-estabilizacao-4-2-0`
-- Estado no registro inicial: `EM VALIDAÇÃO PARA PUBLICAÇÃO`
+- Estado no fechamento: `PUBLICADO`
 - Projeto Supabase: `kfekgwyqozhicpfuunpo`
 
 ## Resultado
@@ -20,9 +20,11 @@
 - `npm run test:financial-report-pdf`: 4/4, incluindo a falha explícita para uma linha que não cabe integralmente em A4.
 - `npm run test:pdf-exports`: aprovado; nenhuma captura raster nova e oito fluxos legados permanecem inventariados.
 - Deno: data Maceió e ciclo de empréstimos 9/9.
-- `deno check` dos nove entrypoints: aprovado sob Node `v24.19.0`; TypeScript, lint e build da árvore isolada são gates obrigatórios da CI de publicação.
+- `deno check` dos nove entrypoints: aprovado sob Node `v24.19.0`; a CI remota da árvore isolada aprovou instalação, TypeScript, lint, testes e build sob Node 24, e o controle de versão também foi aprovado.
 - O PDF de amostra foi inspecionado com Poppler: duas páginas A4, texto extraível, nenhuma imagem de página e renderização visual aprovada.
 
-## Pendências de fechamento
+## Publicação
 
-- Criar PR atômica com versão estável, aguardar CI/Preview, mesclar em `main` e confirmar Vercel Produção antes de atualizar este estado para `PUBLICADO`.
+- A PR [#67](https://github.com/DenielsonSLima/UniversoCursosConsultoria/pull/67) foi mesclada por squash em `main` no commit [`a8989718`](https://github.com/DenielsonSLima/UniversoCursosConsultoria/commit/a8989718366fe668d285419f653ec33816a7afb9).
+- A [implantação Vercel de Produção](https://vercel.com/denielson-limas-projects/universo-cursos-consultoria/QR6xUP8a8zwdhbMrNhVdpmUb1e8A) concluiu com sucesso.
+- Nenhuma cobrança, matrícula ou migration foi criada como smoke de produção; os fluxos financeiros foram verificados por contratos, bundles ativos e gates de publicação.
