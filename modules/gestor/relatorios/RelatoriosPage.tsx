@@ -9,6 +9,8 @@ import RelatorioTurmas from './components/RelatorioTurmas';
 import RelatorioPolos from './components/RelatorioPolos';
 import RelatorioCursos from './components/RelatorioCursos';
 import RelatorioMovimentacaoFinanceira from './components/RelatorioMovimentacaoFinanceira';
+import RelatorioResumoFinanceiro from './components/RelatorioResumoFinanceiro';
+import RelatorioFluxoCaixa from './components/RelatorioFluxoCaixa';
 import RelatorioDRE from './components/RelatorioDRE';
 import RelatorioInadimplencia from './components/RelatorioInadimplencia';
 import RelatorioEstagios from './components/RelatorioEstagios';
@@ -22,7 +24,7 @@ import RelatorioMatriculas from './matriculas/RelatorioMatriculas';
 import DiagnosticoMatriculaInicial from './censo-escolar/matricula-inicial/DiagnosticoMatriculaInicial';
 import { useRelatoriosRealtime } from './hooks/useRelatoriosRealtime';
 
-type ReportType = 'turmas' | 'polos' | 'cursos' | 'extrato-financeiro-conta' | 'financeiro-entradas' | 'financeiro-saidas' | 'financeiro-receitas' | 'financeiro-despesas' | 'dre' | 'inadimplencia' | 'estagios' | 'financeiro-turma-mensal' | 'financeiro-pre-estagio' | 'alunos-cursando' | 'alunos-finalizados' | 'matriculas' | 'matricula-inicial' | 'situacao-aluno' | 'lucro-turma';
+type ReportType = 'turmas' | 'polos' | 'cursos' | 'extrato-financeiro-conta' | 'financeiro-entradas' | 'financeiro-saidas' | 'financeiro-receitas' | 'financeiro-despesas' | 'financeiro-resumo-categorias' | 'financeiro-resumo-entradas' | 'financeiro-fluxo-caixa' | 'dre' | 'inadimplencia' | 'estagios' | 'financeiro-turma-mensal' | 'financeiro-pre-estagio' | 'alunos-cursando' | 'alunos-finalizados' | 'matriculas' | 'matricula-inicial' | 'situacao-aluno' | 'lucro-turma';
 
 interface ReportMenuItem {
   id: ReportType;
@@ -44,7 +46,11 @@ const RelatoriosPage: React.FC<RelatoriosPageProps> = ({ poloId }) => {
       || activeReport === 'financeiro-entradas'
       || activeReport === 'financeiro-saidas'
       || activeReport === 'financeiro-receitas'
-      || activeReport === 'financeiro-despesas',
+      || activeReport === 'financeiro-despesas'
+      || activeReport === 'financeiro-resumo-categorias'
+      || activeReport === 'financeiro-resumo-entradas'
+      || activeReport === 'financeiro-fluxo-caixa'
+      || activeReport === 'inadimplencia',
     poloId,
   });
 
@@ -136,6 +142,27 @@ const RelatoriosPage: React.FC<RelatoriosPageProps> = ({ poloId }) => {
       category: 'financeiro'
     },
     {
+      id: 'financeiro-resumo-categorias',
+      label: 'Resumo por Categoria',
+      description: 'Consolidação de receitas e despesas operacionais por categoria, com previsto, realizado e saldo em aberto.',
+      icon: <BarChart3 size={22} />,
+      category: 'financeiro'
+    },
+    {
+      id: 'financeiro-resumo-entradas',
+      label: 'Resumo de Entradas',
+      description: 'Composição das entradas efetivas de caixa por classificação financeira.',
+      icon: <DollarSign size={22} />,
+      category: 'financeiro'
+    },
+    {
+      id: 'financeiro-fluxo-caixa',
+      label: 'Fluxo de Caixa',
+      description: 'Fluxo realizado e projeção operacional, confrontando caixa efetivo com receitas e despesas em aberto.',
+      icon: <BarChart3 size={22} />,
+      category: 'financeiro'
+    },
+    {
       id: 'dre',
       label: 'Relatório DRE',
       description: 'Demonstrativo do Resultado do Exercício com receitas brutas, impostos, custos diretos e margens.',
@@ -145,7 +172,7 @@ const RelatoriosPage: React.FC<RelatoriosPageProps> = ({ poloId }) => {
     {
       id: 'inadimplencia',
       label: 'Relatório de Inadimplência',
-      description: 'Listagem reativa de parcelas em aberto e atrasadas por aluno, contato e dias de atraso.',
+      description: 'Aging de títulos vencidos por data de corte, com saldo residual, faixas de atraso e lista operacional de cobrança.',
       icon: <AlertTriangle size={22} />,
       category: 'financeiro'
     },
@@ -225,6 +252,12 @@ const RelatoriosPage: React.FC<RelatoriosPageProps> = ({ poloId }) => {
         return <RelatorioMovimentacaoFinanceira company={company} polo={polo} tipo="RECEITAS" />;
       case 'financeiro-despesas':
         return <RelatorioMovimentacaoFinanceira company={company} polo={polo} tipo="DESPESAS" />;
+      case 'financeiro-resumo-categorias':
+        return <RelatorioResumoFinanceiro company={company} polo={polo} visao="CATEGORIAS" />;
+      case 'financeiro-resumo-entradas':
+        return <RelatorioResumoFinanceiro company={company} polo={polo} visao="ENTRADAS" />;
+      case 'financeiro-fluxo-caixa':
+        return <RelatorioFluxoCaixa company={company} polo={polo} />;
       case 'dre':
         return <RelatorioDRE company={company} polo={polo} />;
       case 'inadimplencia':

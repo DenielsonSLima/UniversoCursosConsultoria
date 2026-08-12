@@ -1,8 +1,8 @@
 {
-  "version": "4.2.0",
+  "version": "4.3.0",
   "display": "ESTÁVEL",
   "stage": "stable",
   "revision": 1,
   "releasedAt": "2026-08-12",
-  "summary": "Estabilização financeira, PDFs vetoriais e runtimes de cobrança alinhados à produção"
+  "summary": "Central de Relatórios Financeiros com resumos, fluxo de caixa e aging seguro"
 }

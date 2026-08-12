@@ -1,17 +1,13 @@
 # Lote ativo
 
-Estado: `PUBLICADO`
+Estado: `EM_PUBLICACAO`
 
-## Lote: 2026-08-12-estabilizacao-4-2-0
+## Lote: 2026-08-12-central-relatorios-financeiros
 
-- Estado: PUBLICADO.
-- Objetivo: promover `4.2.0-beta.2` para a versão estável `4.2.0`, corrigindo os gates encontrados na revisão de produção.
-- Escopo incluído: compositor vetorial e Blob único dos cinco relatórios financeiros separados; datas civis de Maceió em criação/baixa de empréstimos; republicação dos nove runtimes financeiros; atualização de versão, changelog e registros operacionais.
-- Fora de escopo: reprecificação, alteração de títulos/documentos históricos, criação de cobrança real e reexecução de migrations já aplicadas.
-- Regras aplicáveis: GitHub e Supabase exclusivamente por MCP; cálculos financeiros no backend; PDF vetorial e Blob canônico; manter os `verify_jwt` já configurados por função.
-- Critérios de aceite: versão/changelog consistentes; contratos focados, TypeScript, lint, build e diff-check aprovados sob Node 24; inspeção de PDF com texto extraível, sem imagem de página e renderização visual aprovada; nove Edge Functions ativas na versão nova; PR/CI/Preview, merge em `main` e Vercel Produção confirmados.
-- Validação concluída: `test:financial-report-pdf` 4/4, incluindo rejeição explícita de linha incompatível com A4; `test:pdf-exports` aprovado e a dívida raster reduziu de 9 para 8 fluxos; contratos Deno de data Maceió e empréstimos 9/9; inspeção Poppler do novo PDF confirmou duas páginas A4, texto extraível e nenhum recurso de imagem; `deno check` dos nove entrypoints aprovado. A CI remota da árvore isolada aprovou instalação, TypeScript, lint, testes e build sob Node 24; o controle de versão também foi aprovado.
-- Produção Supabase: migrations de 11–12/ago já estavam aplicadas; os nove runtimes incompatíveis foram republicados por MCP: `banese-cnab240-api` v8, `payment-checkout` v18, `checkout-api` v13, `payment-gateway-api` v15, `payment-gateway-webhook` v8, `asaas-api` v77, `asaas-webhook` v33, `dependencia-banese-checkout` v5 e `banese-reconciliation-worker` v23. As confirmações remotas encontram o snapshot de plano único, CNAB e ativação EAD pela primeira parcela nos bundles ativos.
-- Node local: alinhado a `v24.19.0` (engines `24.x`).
-- Publicação GitHub/Vercel: PR [#67](https://github.com/DenielsonSLima/UniversoCursosConsultoria/pull/67) aprovada e mesclada por squash em `main` no commit [`a8989718`](https://github.com/DenielsonSLima/UniversoCursosConsultoria/commit/a8989718366fe668d285419f653ec33816a7afb9). A [implantação Vercel de Produção](https://vercel.com/denielson-limas-projects/universo-cursos-consultoria/QR6xUP8a8zwdhbMrNhVdpmUb1e8A) está pronta.
-- Responsável pela consolidação: Codex, com revisão independente de financeiro, interface/PDF e manifestos de Edge Functions.
+- Estado: EM_PUBLICACAO.
+- Objetivo: concluir a Central de Relatórios Financeiros com resumos canônicos, inadimplência por aging e fluxo de caixa realizado versus projetado.
+- Escopo incluído: preservar os cinco relatórios separados já em trabalho local (extrato, entradas, saídas, receitas e despesas); incluir resumo por categoria, composição das entradas e fluxo de caixa; substituir a inadimplência legada por RPC segura, filtros e PDF vetorial.
+- Fora de escopo: alterar títulos históricos, criar cobranças, modificar cálculo de empréstimos/rateios, reimplementar o DRE legado ou orçamento versus realizado.
+- Regras aplicáveis: GitHub e Supabase exclusivamente por MCP; cálculos e agregações somente no backend/RPC; PDF vetorial com Blob canônico; RBAC de Relatórios por escopo de polo e exposição mínima de dados pessoais.
+- Critérios de aceite: cada cartão usa contrato financeiro canônico; receita/despesa permanecem por competência e entrada/saída por caixa; resumos usam todos os registros filtrados, não a prévia limitada; inadimplência usa saldo residual, data de corte e faixas de atraso; 21 testes contratuais, 5 testes de cache/Realtime, TypeScript, lint e `deno check` aprovados. O smoke autenticado permanece pendente por indisponibilidade de navegador conectado.
+- Publicação: autorizada em 2026-08-12. `asaas-api` v78 foi publicada e a migration remota `20260812141118_add_financial_report_summaries_and_ar_aging` foi aplicada. O frontend deste lote está em publicação por commit isolado.

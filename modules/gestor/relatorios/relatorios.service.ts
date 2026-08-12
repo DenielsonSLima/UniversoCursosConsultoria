@@ -9,7 +9,8 @@ export type RelatorioMovimentacaoFinanceiraTipo =
   | 'ENTRADAS'
   | 'SAIDAS'
   | 'RECEITAS'
-  | 'DESPESAS';
+  | 'DESPESAS'
+  | 'CATEGORIAS';
 export type RelatorioMovimentacaoFinanceiraStatus =
   | 'ATIVOS'
   | 'TODOS'
@@ -45,8 +46,6 @@ export interface RelatorioFinanceiroMensalItem {
   valorPago: number;
   status: string;
   diasAtraso: number;
-  asaasStatus?: string | null;
-  asaasInvoiceUrl?: string | null;
 }
 
 export type RelatorioFinanceiroPreEstagioSituacao = 'QUITADO' | 'PENDENTE' | 'CADASTRO_INCOMPLETO';
@@ -174,6 +173,17 @@ export interface RelatorioMovimentacaoFinanceiraResumo {
   saldoObservacao: string | null;
 }
 
+export interface RelatorioMovimentacaoFinanceiraAgregacao {
+  chave: string;
+  rotulo: string;
+  totalLancamentos: number;
+  valorPrevisto: number;
+  valorRealizado: number;
+  valorEmAberto: number;
+  totalEntradas: number;
+  totalSaidas: number;
+}
+
 export interface RelatorioMovimentacaoFinanceiraData {
   meta: {
     tipo: RelatorioMovimentacaoFinanceiraTipo;
@@ -186,8 +196,92 @@ export interface RelatorioMovimentacaoFinanceiraData {
   };
   contas: RelatorioMovimentacaoFinanceiraConta[];
   categorias: RelatorioMovimentacaoFinanceiraCategoria[];
+  agregacoes: {
+    categorias: RelatorioMovimentacaoFinanceiraAgregacao[];
+    classificacoes: RelatorioMovimentacaoFinanceiraAgregacao[];
+    origens: RelatorioMovimentacaoFinanceiraAgregacao[];
+  };
   resumo: RelatorioMovimentacaoFinanceiraResumo;
   movimentos: RelatorioMovimentacaoFinanceiraItem[];
+  completo: boolean;
+  limite: number;
+  mensagem: string | null;
+}
+
+export interface RelatorioFluxoCaixaFiltros {
+  poloId?: string | null;
+  dataInicio: string;
+  dataFim: string;
+}
+
+export interface RelatorioFluxoCaixaLinha {
+  chave: string;
+  rotulo: string;
+  tipo: 'REALIZADO' | 'PROJECAO' | 'RESULTADO';
+  valor: number;
+}
+
+export interface RelatorioFluxoCaixaData {
+  meta: {
+    dataInicio: string;
+    dataFim: string;
+    escopo: string;
+  };
+  resumo: {
+    entradasRealizadas: number;
+    saidasRealizadas: number;
+    receitasEmAberto: number;
+    despesasEmAberto: number;
+    fluxoRealizado: number;
+    fluxoProjetado: number;
+  };
+  linhas: RelatorioFluxoCaixaLinha[];
+  mensagem: string | null;
+}
+
+export interface RelatorioInadimplenciaFiltros {
+  poloId?: string | null;
+  dataCorte: string;
+  minDiasAtraso: number;
+  busca?: string | null;
+}
+
+export interface RelatorioInadimplenciaFaixa {
+  chave: string;
+  rotulo: string;
+  quantidade: number;
+  valorEmAberto: number;
+}
+
+export interface RelatorioInadimplenciaDevedor {
+  id: string;
+  devedor: string;
+  contato: string;
+  curso: string;
+  polo: string;
+  descricao: string;
+  dataVencimento: string;
+  diasAtraso: number;
+  faixa: string;
+  valorEmAberto: number;
+}
+
+export interface RelatorioInadimplenciaData {
+  meta: {
+    dataCorte: string;
+    escopo: string;
+    minDiasAtraso: number;
+  };
+  resumo: {
+    quantidadeTitulos: number;
+    quantidadeDevedores: number;
+    valorEmAtraso: number;
+    valorFaturadoVencido: number;
+    percentualInadimplencia: number | null;
+    percentualComparavel: boolean;
+  };
+  faixas: RelatorioInadimplenciaFaixa[];
+  devedores: RelatorioInadimplenciaDevedor[];
   completo: boolean;
   limite: number;
   mensagem: string | null;
@@ -240,6 +334,11 @@ const asRequiredRelatorioNumber = (value: unknown, field: string) => {
   return parsed;
 };
 
+const asRelatorioNullableNumber = (value: unknown, field: string) => {
+  if (value === null || value === undefined || value === '') return null;
+  return asRequiredRelatorioNumber(value, field);
+};
+
 const asRelatorioString = (value: unknown) => (
   typeof value === 'string' ? value : ''
 );
@@ -255,6 +354,7 @@ const asMovimentacaoTipo = (value: unknown): RelatorioMovimentacaoFinanceiraTipo
     || value === 'SAIDAS'
     || value === 'RECEITAS'
     || value === 'DESPESAS'
+    || value === 'CATEGORIAS'
   ) return value;
   throw new Error('O relatório financeiro retornou um tipo de visão inválido.');
 };
@@ -267,6 +367,24 @@ const asMovimentacaoDirecao = (value: unknown): RelatorioMovimentacaoFinanceiraI
 const asMovimentacaoContaNatureza = (value: unknown): RelatorioMovimentacaoFinanceiraConta['natureza'] => (
   value === 'CAIXA_INTERNO' ? 'CAIXA_INTERNO' : 'BANCARIA'
 );
+
+const asFluxoCaixaLinhaTipo = (value: unknown): RelatorioFluxoCaixaLinha['tipo'] => {
+  if (value === 'PROJECAO' || value === 'RESULTADO') return value;
+  return 'REALIZADO';
+};
+
+const mapMovimentacaoAgregacao = (
+  value: RelatorioRawRecord,
+): RelatorioMovimentacaoFinanceiraAgregacao => ({
+  chave: asRelatorioString(value.chave),
+  rotulo: asRelatorioString(value.rotulo),
+  totalLancamentos: asRequiredRelatorioNumber(value.total_lancamentos, 'agregacoes.total_lancamentos'),
+  valorPrevisto: asRequiredRelatorioNumber(value.valor_previsto, 'agregacoes.valor_previsto'),
+  valorRealizado: asRequiredRelatorioNumber(value.valor_realizado, 'agregacoes.valor_realizado'),
+  valorEmAberto: asRequiredRelatorioNumber(value.valor_em_aberto, 'agregacoes.valor_em_aberto'),
+  totalEntradas: asRequiredRelatorioNumber(value.total_entradas, 'agregacoes.total_entradas'),
+  totalSaidas: asRequiredRelatorioNumber(value.total_saidas, 'agregacoes.total_saidas'),
+});
 
 export const mapRelatorioMovimentacaoFinanceira = (
   value: unknown,
@@ -283,6 +401,7 @@ export const mapRelatorioMovimentacaoFinanceira = (
   const record = asRelatorioRawRecord(payload);
   const meta = asRelatorioRawRecord(record.meta);
   const resumo = asRelatorioRawRecord(record.resumo);
+  const agregacoes = asRelatorioRawRecord(record.agregacoes);
 
   if (!Object.keys(meta).length || !Object.keys(resumo).length || !Array.isArray(record.movimentos)) {
     throw new Error('O relatório financeiro retornou um contrato incompleto.');
@@ -314,6 +433,17 @@ export const mapRelatorioMovimentacaoFinanceira = (
       chave: asRelatorioString(categoria.chave),
       rotulo: asRelatorioString(categoria.rotulo),
     })).filter((categoria) => Boolean(categoria.chave && categoria.rotulo)),
+    agregacoes: {
+      categorias: asRelatorioRawArray(agregacoes.categorias)
+        .map(mapMovimentacaoAgregacao)
+        .filter((item) => Boolean(item.chave && item.rotulo)),
+      classificacoes: asRelatorioRawArray(agregacoes.classificacoes)
+        .map(mapMovimentacaoAgregacao)
+        .filter((item) => Boolean(item.chave && item.rotulo)),
+      origens: asRelatorioRawArray(agregacoes.origens)
+        .map(mapMovimentacaoAgregacao)
+        .filter((item) => Boolean(item.chave && item.rotulo)),
+    },
     resumo: {
       totalLancamentos: asRequiredRelatorioNumber(resumo.total_lancamentos, 'resumo.total_lancamentos'),
       valorPrevisto: asRequiredRelatorioNumber(resumo.valor_previsto, 'resumo.valor_previsto'),
@@ -351,6 +481,106 @@ export const mapRelatorioMovimentacaoFinanceira = (
   };
 };
 
+const parseRelatorioPayload = (value: unknown, errorMessage: string): RelatorioRawRecord => {
+  let payload = Array.isArray(value) ? value[0] : value;
+  if (typeof payload === 'string') {
+    try {
+      payload = JSON.parse(payload);
+    } catch {
+      throw new Error(errorMessage);
+    }
+  }
+
+  const record = asRelatorioRawRecord(payload);
+  if (!Object.keys(record).length) throw new Error(errorMessage);
+  return record;
+};
+
+export const mapRelatorioFluxoCaixa = (value: unknown): RelatorioFluxoCaixaData => {
+  const record = parseRelatorioPayload(value, 'O fluxo de caixa retornou um contrato inválido.');
+  const meta = asRelatorioRawRecord(record.meta);
+  const resumo = asRelatorioRawRecord(record.resumo);
+
+  if (!Object.keys(meta).length || !Object.keys(resumo).length || !Array.isArray(record.linhas)) {
+    throw new Error('O fluxo de caixa retornou um contrato incompleto.');
+  }
+
+  return {
+    meta: {
+      dataInicio: asRelatorioString(meta.data_inicio),
+      dataFim: asRelatorioString(meta.data_fim),
+      escopo: asRelatorioString(meta.escopo),
+    },
+    resumo: {
+      entradasRealizadas: asRequiredRelatorioNumber(resumo.entradas_realizadas, 'resumo.entradas_realizadas'),
+      saidasRealizadas: asRequiredRelatorioNumber(resumo.saidas_realizadas, 'resumo.saidas_realizadas'),
+      receitasEmAberto: asRequiredRelatorioNumber(resumo.receitas_em_aberto, 'resumo.receitas_em_aberto'),
+      despesasEmAberto: asRequiredRelatorioNumber(resumo.despesas_em_aberto, 'resumo.despesas_em_aberto'),
+      fluxoRealizado: asRequiredRelatorioNumber(resumo.fluxo_realizado, 'resumo.fluxo_realizado'),
+      fluxoProjetado: asRequiredRelatorioNumber(resumo.fluxo_projetado, 'resumo.fluxo_projetado'),
+    },
+    linhas: asRelatorioRawArray(record.linhas).map((linha) => ({
+      chave: asRelatorioString(linha.chave),
+      rotulo: asRelatorioString(linha.rotulo),
+      tipo: asFluxoCaixaLinhaTipo(linha.tipo),
+      valor: asRequiredRelatorioNumber(linha.valor, 'linhas.valor'),
+    })).filter((linha) => Boolean(linha.chave && linha.rotulo)),
+    mensagem: asRelatorioNullableString(record.mensagem),
+  };
+};
+
+export const mapRelatorioInadimplencia = (value: unknown): RelatorioInadimplenciaData => {
+  const record = parseRelatorioPayload(value, 'O relatório de inadimplência retornou um contrato inválido.');
+  const meta = asRelatorioRawRecord(record.meta);
+  const resumo = asRelatorioRawRecord(record.resumo);
+
+  if (
+    !Object.keys(meta).length
+    || !Object.keys(resumo).length
+    || !Array.isArray(record.faixas)
+    || !Array.isArray(record.devedores)
+  ) {
+    throw new Error('O relatório de inadimplência retornou um contrato incompleto.');
+  }
+
+  return {
+    meta: {
+      dataCorte: asRelatorioString(meta.data_corte),
+      escopo: asRelatorioString(meta.escopo),
+      minDiasAtraso: asRequiredRelatorioNumber(meta.min_dias_atraso, 'meta.min_dias_atraso'),
+    },
+    resumo: {
+      quantidadeTitulos: asRequiredRelatorioNumber(resumo.quantidade_titulos, 'resumo.quantidade_titulos'),
+      quantidadeDevedores: asRequiredRelatorioNumber(resumo.quantidade_devedores, 'resumo.quantidade_devedores'),
+      valorEmAtraso: asRequiredRelatorioNumber(resumo.valor_em_atraso, 'resumo.valor_em_atraso'),
+      valorFaturadoVencido: asRequiredRelatorioNumber(resumo.valor_faturado_vencido, 'resumo.valor_faturado_vencido'),
+      percentualInadimplencia: asRelatorioNullableNumber(resumo.percentual_inadimplencia, 'resumo.percentual_inadimplencia'),
+      percentualComparavel: resumo.percentual_comparavel === true,
+    },
+    faixas: asRelatorioRawArray(record.faixas).map((faixa) => ({
+      chave: asRelatorioString(faixa.chave),
+      rotulo: asRelatorioString(faixa.rotulo),
+      quantidade: asRequiredRelatorioNumber(faixa.quantidade, 'faixas.quantidade'),
+      valorEmAberto: asRequiredRelatorioNumber(faixa.valor_em_aberto, 'faixas.valor_em_aberto'),
+    })).filter((faixa) => Boolean(faixa.chave && faixa.rotulo)),
+    devedores: asRelatorioRawArray(record.devedores).map((devedor) => ({
+      id: asRelatorioString(devedor.id),
+      devedor: asRelatorioString(devedor.devedor),
+      contato: asRelatorioString(devedor.contato),
+      curso: asRelatorioString(devedor.curso),
+      polo: asRelatorioString(devedor.polo),
+      descricao: asRelatorioString(devedor.descricao),
+      dataVencimento: asRelatorioString(devedor.data_vencimento),
+      diasAtraso: asRequiredRelatorioNumber(devedor.dias_atraso, 'devedores.dias_atraso'),
+      faixa: asRelatorioString(devedor.faixa),
+      valorEmAberto: asRequiredRelatorioNumber(devedor.valor_em_aberto, 'devedores.valor_em_aberto'),
+    })).filter((devedor) => Boolean(devedor.id && devedor.dataVencimento)),
+    completo: record.completo === true,
+    limite: asRequiredRelatorioNumber(record.limite, 'limite'),
+    mensagem: asRelatorioNullableString(record.mensagem),
+  };
+};
+
 export const relatoriosService = {
   async getMovimentacaoFinanceira(
     filters: RelatorioMovimentacaoFinanceiraFiltros,
@@ -378,6 +608,53 @@ export const relatoriosService = {
     }
 
     return mapRelatorioMovimentacaoFinanceira(data);
+  },
+
+  async getFluxoCaixa(
+    filters: RelatorioFluxoCaixaFiltros,
+  ): Promise<RelatorioFluxoCaixaData> {
+    const { data, error } = await supabase.rpc(
+      'get_relatorio_fluxo_caixa_secure',
+      {
+        p_polo_id: filters.poloId && filters.poloId !== 'todos' ? filters.poloId : null,
+        p_data_inicio: filters.dataInicio,
+        p_data_fim: filters.dataFim,
+      },
+    );
+
+    if (error) {
+      console.error('Erro ao buscar fluxo de caixa para relatório:', {
+        code: error.code,
+        message: error.message,
+      });
+      throw error;
+    }
+
+    return mapRelatorioFluxoCaixa(data);
+  },
+
+  async getInadimplencia(
+    filters: RelatorioInadimplenciaFiltros,
+  ): Promise<RelatorioInadimplenciaData> {
+    const { data, error } = await supabase.rpc(
+      'get_relatorio_inadimplencia_secure',
+      {
+        p_polo_id: filters.poloId && filters.poloId !== 'todos' ? filters.poloId : null,
+        p_data_corte: filters.dataCorte,
+        p_min_dias_atraso: filters.minDiasAtraso,
+        p_busca: filters.busca?.trim() || null,
+      },
+    );
+
+    if (error) {
+      console.error('Erro ao buscar inadimplência para relatório:', {
+        code: error.code,
+        message: error.message,
+      });
+      throw error;
+    }
+
+    return mapRelatorioInadimplencia(data);
   },
 
   async getTurmasOptions(modalidade: RelatorioModalidade = 'todos', poloId?: string): Promise<RelatorioTurmaOption[]> {
@@ -424,8 +701,6 @@ export const relatoriosService = {
         status,
         tipo_lancamento,
         parcela_numero,
-        asaas_status,
-        asaas_invoice_url,
         parceiros(nome, cpf_cnpj),
         turmas!inner(id, nome, codigo, polo_id, cursos!inner(nome, modalidade))
       `)
@@ -462,8 +737,6 @@ export const relatoriosService = {
         valorPago: Number(row.valor_pago || (isPago(row.status) ? row.valor : 0) || 0),
         status: isVencido(row.status, row.data_vencimento) ? 'VENCIDO' : (row.status || 'PENDENTE'),
         diasAtraso: daysOverdue(row.status, row.data_vencimento),
-        asaasStatus: row.asaas_status,
-        asaasInvoiceUrl: row.asaas_invoice_url,
       };
     });
   },
