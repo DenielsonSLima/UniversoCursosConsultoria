@@ -1,7 +1,7 @@
 # Alteração — Cobrança isolada de Dependência Acadêmica
 
 - Lote: `2026-08-12-cobranca-isolada-dependencia-academica`
-- Estado no fechamento local: `EM_PUBLICACAO`
+- Estado no fechamento: `PUBLICADO`
 - Projeto Supabase: `kfekgwyqozhicpfuunpo`
 
 ## Resultado
@@ -46,4 +46,6 @@
 ## Publicação
 
 - Supabase de produção concluído sem criar, emitir, pagar ou alterar uma cobrança real.
-- GitHub/Vercel segue por PR atômica da versão `4.3.1`, preservando 189 alterações locais de outros lotes fora do manifesto.
+- A PR [#71](https://github.com/DenielsonSLima/UniversoCursosConsultoria/pull/71) passou por controle de versão, TypeScript, lint, testes, build e Preview; foi mesclada em `main` no commit [`6a399b06`](https://github.com/DenielsonSLima/UniversoCursosConsultoria/commit/6a399b06bb3b0be158abfe1a232c5b86a932d495).
+- A [implantação Vercel de Produção](https://vercel.com/denielson-limas-projects/universo-cursos-consultoria/GVjnaPAh4PufDxrnPgigCRHSPs5u) concluiu com sucesso.
+- Os 189 caminhos locais de outros lotes permaneceram fora do manifesto e não foram enviados nesta publicação.
