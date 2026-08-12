@@ -1,7 +1,7 @@
 # Alteração — Financeiro operacional 4.2.0-beta.2
 
 - Lote: `2026-08-11-financeiro-operacional-4-2-0-beta-2`
-- Estado no fechamento local: `PUBLICACAO_EM_ANDAMENTO`
+- Estado no fechamento local: `PUBLICADO`
 - Projeto Supabase: `kfekgwyqozhicpfuunpo`
 
 ## Resultado
@@ -29,5 +29,6 @@
 
 ## Riscos e publicação
 
-- A PR [#66](https://github.com/DenielsonSLima/UniversoCursosConsultoria/pull/66) recebeu autorização explícita para promoção. O commit corretivo com fontes reconciliadas, teste do alias e registro operacional ainda seguirá por CI/Preview antes do merge em `main`.
+- A PR [#66](https://github.com/DenielsonSLima/UniversoCursosConsultoria/pull/66) recebeu autorização explícita, passou em CI/Preview e foi mesclada por squash no commit [`7e676eff`](https://github.com/DenielsonSLima/UniversoCursosConsultoria/commit/7e676eff94748e26535ac160568cfe677c886ec3) de `main`.
+- A implantação [Vercel de Produção](https://vercel.com/denielson-limas-projects/universo-cursos-consultoria/7TkxEadsKLMXjp81EG71i1iKJTiH) concluiu com sucesso após o merge.
 - A cobertura autenticada de criação do plano único não é executada neste fechamento porque exigiria fabricar turma, matrícula ou cobrança em Produção. A checagem de contrato e o smoke sem escrita do relatório permanecem aprovados.
