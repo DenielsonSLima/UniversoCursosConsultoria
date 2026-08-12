@@ -282,6 +282,34 @@ const getFirstTableY = (
   return y;
 };
 
+/**
+ * A tabela só pode receber linhas inteiras: cortar uma célula entre páginas
+ * mudaria a leitura/auditoria do lançamento. Quando uma única linha não cabe
+ * na menor área útil possível, falhamos antes de desenhar qualquer página.
+ */
+const assertRowsFitOnPage = (
+  pdf: jsPDF,
+  rows: NormalizedFinancialReportRow[],
+  widths: number[],
+  firstTableY: number,
+  continuationTableY: number,
+  tableBottom: number,
+) => {
+  const firstPageCapacity = tableBottom - firstTableY - TABLE_HEADER_HEIGHT;
+  const continuationPageCapacity = tableBottom - continuationTableY - TABLE_HEADER_HEIGHT;
+  const maximumRowHeight = Math.min(firstPageCapacity, continuationPageCapacity);
+
+  if (maximumRowHeight <= 0) {
+    throw new Error('Os filtros e resumos do relatório não deixam espaço para os registros em uma página A4. Reduza o conteúdo exibido e tente novamente.');
+  }
+
+  rows.forEach((row) => {
+    if (measureRowHeight(pdf, row, widths) > maximumRowHeight) {
+      throw new Error(`O registro ${row.id} é longo demais para caber integralmente em uma página A4. Reduza o conteúdo da linha e tente novamente.`);
+    }
+  });
+};
+
 const buildFinancialReportPages = (
   pdf: jsPDF,
   rows: NormalizedFinancialReportRow[],
@@ -643,6 +671,14 @@ export const createFinancialReportPdfDocument = async (
   const firstTableY = getFirstTableY(pdf, input, contentTop);
   const continuationTableY = contentTop + 14;
   const tableBottom = input.footerNote ? TABLE_BOTTOM_WITH_NOTE : TABLE_BOTTOM_WITHOUT_NOTE;
+  assertRowsFitOnPage(
+    pdf,
+    rows,
+    widths,
+    firstTableY,
+    continuationTableY,
+    tableBottom,
+  );
   const pages = buildFinancialReportPages(
     pdf,
     rows,

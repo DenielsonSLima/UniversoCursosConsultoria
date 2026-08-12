@@ -88,6 +88,16 @@ test('gera relatório financeiro vetorial paginado, com texto e sem imagem de p�
   }
 });
 
+test('falha explicitamente antes de desenhar uma linha que não cabe na A4', async () => {
+  const input = makeInput(1);
+  input.rows[0].cells[1] = 'Detalhamento operacional muito longo '.repeat(600);
+
+  await assert.rejects(
+    () => createFinancialReportPdfDocument(input),
+    /registro receipt-1 é longo demais para caber integralmente em uma página A4/i,
+  );
+});
+
 test('entrega Blob PDF para a mesma prévia, download e impressão', async () => {
   const blob = await buildFinancialReportPdf(makeInput(1));
   assert.equal(blob.type, 'application/pdf');

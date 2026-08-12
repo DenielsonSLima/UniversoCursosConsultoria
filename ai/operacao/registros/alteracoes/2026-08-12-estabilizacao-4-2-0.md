@@ -17,10 +17,10 @@
 
 ## Validações
 
-- `npm run test:financial-report-pdf`: 3/3.
+- `npm run test:financial-report-pdf`: 4/4, incluindo a falha explícita para uma linha que não cabe integralmente em A4.
 - `npm run test:pdf-exports`: aprovado; nenhuma captura raster nova e oito fluxos legados permanecem inventariados.
 - Deno: data Maceió e ciclo de empréstimos 9/9.
-- `tsc --noEmit` e `deno check` dos nove entrypoints: aprovados sob Node `v24.19.0`.
+- `deno check` dos nove entrypoints: aprovado sob Node `v24.19.0`; TypeScript, lint e build da árvore isolada são gates obrigatórios da CI de publicação.
 - O PDF de amostra foi inspecionado com Poppler: duas páginas A4, texto extraível, nenhuma imagem de página e renderização visual aprovada.
 
 ## Pendências de fechamento
