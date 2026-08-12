@@ -93,6 +93,9 @@ export interface DependenciaRegraFinanceira {
   cargaHoraria: number | null;
   faixa: string;
   percentual: number;
+  descontoPontualidade: number;
+  jurosAtrasoPercentual: number;
+  multaAtrasoPercentual: number;
   valorReferencia: number | null;
   vigenciaInicio: string | null;
   origem: string;
@@ -122,6 +125,11 @@ export interface DependenciaPrevia {
   percentualAplicado: number;
   valorBase: number;
   valorCobrar: number;
+  descontoPontualidade: number;
+  jurosAtrasoPercentual: number;
+  multaAtrasoPercentual: number;
+  diasBaixaDevolucao: number;
+  instrucaoBoleto: string;
   dataVencimento: string;
   descricaoCobranca: string;
   regraResumo: string;
@@ -158,6 +166,9 @@ export interface DependenciaPoliticaInput {
   poloId: string;
   disciplinaId: string;
   multiplicadorParcela: number;
+  descontoPontualidade: number;
+  jurosAtrasoPercentual: number;
+  multaAtrasoPercentual: number;
   idempotencyKey: string;
 }
 

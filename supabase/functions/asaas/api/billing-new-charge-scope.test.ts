@@ -56,6 +56,43 @@ Deno.test("sync generico sem rota nao cria nova cobranca Asaas", async () => {
   }
 });
 
+Deno.test("sync genérico bloqueia cobrança nova de disciplina", async () => {
+  const originalFetch = globalThis.fetch;
+  let remoteCalls = 0;
+  try {
+    globalThis.fetch = (() => {
+      remoteCalls += 1;
+      throw new Error("Não deveria chamar gateway");
+    }) as typeof fetch;
+
+    const service = createAsaasBillingService(
+      createAdmin({
+        id: "00000000-0000-4000-8000-000000000012",
+        status: "PENDENTE",
+        cliente_id: "00000000-0000-4000-8000-000000000013",
+        matricula_id: null,
+        turma_id: "00000000-0000-4000-8000-000000000014",
+        tipo_lancamento: "DEPENDENCIA",
+        regra_financeira_dependencia_snapshot: {
+          origem: "DEPENDENCIA",
+        },
+        gateway_provider: "banese_card",
+        gateway_payment_method: "BOLETO",
+        forma_pagamento: "BOLETO",
+      }),
+      () => false,
+    );
+
+    await assert.rejects(
+      () => service.syncReceivable(runtime, "dependency-receivable"),
+      /fluxo específico de dependência/i,
+    );
+    assert.equal(remoteCalls, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 Deno.test("sync preserva link Asaas historico sem novo POST", async () => {
   const originalFetch = globalThis.fetch;
   let remoteCalls = 0;

@@ -15,6 +15,10 @@ import {
 } from "../checkout/remote-title-guard.ts";
 import type { Environment } from "./config.ts";
 import { requireGatewayEnvironment } from "./environment.ts";
+import {
+  dependencyBillingSnapshotFrom,
+  isDependencyReceivable,
+} from "../../banese/internal/dependency-billing.ts";
 
 const onlyDigits = (value: unknown) => String(value || "").replace(/\D/g, "");
 
@@ -427,6 +431,17 @@ export const reconcileBaneseReceivable = async (
   const shouldSettle = snapshot.paid &&
     String(receivable.status || "").toUpperCase() !== "PAGO";
   const settlementMethod = classifyBaneseSettlementMethod(snapshot.payments);
+  if (
+    shouldSettle && settlementMethod === "PIX" &&
+    isDependencyReceivable(receivable) &&
+    dependencyBillingSnapshotFrom(
+      receivable.regra_financeira_dependencia_snapshot,
+    )
+  ) {
+    throw new Error(
+      "Cobrança de disciplina aceita liquidação somente por boleto Banese; o retorno Pix exige revisão.",
+    );
+  }
   if (snapshot.paid) {
     receivableUpdate.gateway_settlement_channel = settlementMethod;
     receivableUpdate.gateway_settlement_source = "API";

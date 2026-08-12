@@ -1,6 +1,10 @@
 import type {
   BaneseFinancialTermsInput,
 } from "../../banese/internal/financial-terms.ts";
+import {
+  dependencyBillingSnapshotFrom,
+  isDependencyReceivable,
+} from "../../banese/internal/dependency-billing.ts";
 
 const roundMoney = (value: unknown) =>
   Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
@@ -16,6 +20,54 @@ const singlePlanSnapshot = (receivable: any) => {
       snapshot.origem === "PLANO_UNICO"
     ? snapshot
     : null;
+};
+
+const dependencyPlanSnapshot = (receivable: any) =>
+  dependencyBillingSnapshotFrom(
+    receivable?.regra_financeira_dependencia_snapshot,
+  );
+
+/**
+ * Dependência é uma cobrança avulsa e isolada: nunca herda desconto, juros ou
+ * multa da turma de reoferta nem da matrícula de origem.
+ */
+export const buildDependencyBaneseFinancialTerms = (
+  receivable: any,
+): BaneseFinancialTermsInput => {
+  const snapshot = dependencyPlanSnapshot(receivable);
+  if (!snapshot) {
+    throw new Error(
+      "Cobrança de dependência sem snapshot financeiro canônico exige conciliação.",
+    );
+  }
+
+  const nominalAmount = roundMoney(receivable?.valor);
+  const dueDate = String(receivable?.data_vencimento || "").slice(0, 10);
+  const discountValue = roundMoney(snapshot.descontoPontualidade);
+  const interestValue = positiveNumber(snapshot.jurosAtrasoPercentual);
+  const penaltyValue = positiveNumber(snapshot.multaAtrasoPercentual);
+  const appliesDiscount = snapshot.aplicarDesconto !== false;
+  const appliesPenalty = snapshot.aplicarMultaJuros !== false;
+
+  if (appliesDiscount && discountValue >= nominalAmount && discountValue > 0) {
+    throw new Error(
+      "O desconto da cobrança de dependência deve ser menor que o valor da disciplina.",
+    );
+  }
+
+  return {
+    nominalAmount,
+    dueDate,
+    discount: appliesDiscount && discountValue > 0
+      ? { type: "fixed", value: discountValue }
+      : null,
+    interest: appliesPenalty && interestValue > 0
+      ? { type: "monthly-percentage", value: interestValue }
+      : null,
+    penalty: appliesPenalty && penaltyValue > 0
+      ? { type: "percentage", value: penaltyValue }
+      : null,
+  };
 };
 
 const launchPolicy = (receivable: any, turma: any) => {
@@ -47,6 +99,9 @@ export const buildConfiguredBaneseFinancialTerms = (input: {
   matricula?: any;
 }): BaneseFinancialTermsInput => {
   const { receivable, turma, matricula } = input;
+  if (isDependencyReceivable(receivable) && dependencyPlanSnapshot(receivable)) {
+    return buildDependencyBaneseFinancialTerms(receivable);
+  }
   const plan = singlePlanSnapshot(receivable);
   const nominalAmount = roundMoney(receivable?.valor);
   const dueDate = String(receivable?.data_vencimento || "").slice(0, 10);
@@ -98,6 +153,10 @@ export const resolveBaneseReceivableFinancialTerms = async (
   admin: any,
   receivable: any,
 ): Promise<BaneseFinancialTermsInput> => {
+  if (isDependencyReceivable(receivable) && dependencyPlanSnapshot(receivable)) {
+    return buildDependencyBaneseFinancialTerms(receivable);
+  }
+
   const { data: turma, error: turmaError } = receivable?.turma_id
     ? await admin
       .from("turmas")

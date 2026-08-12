@@ -4,6 +4,7 @@ export type BaneseStudentPaymentRow = {
   id: string;
   cliente_id: string | null;
   matricula_id: string | null;
+  turma_id: string | null;
   descricao: string | null;
   categoria: string | null;
   tipo_lancamento: string | null;
@@ -27,6 +28,7 @@ export type BaneseStudentPaymentRow = {
   gateway_issuer_polo_id: string | null;
   gateway_financial_terms: Record<string, unknown> | null;
   gateway_financial_terms_confirmed_at: string | null;
+  regra_financeira_dependencia_snapshot: Record<string, unknown> | null;
   turmas?:
     | {
       nome?: string | null;

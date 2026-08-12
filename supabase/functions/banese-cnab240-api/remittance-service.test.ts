@@ -6,6 +6,7 @@ import {
   previewRemittance,
   toBaneseCivilDate,
 } from "./remittance-service.ts";
+import { prepareRemittance } from "./remittance-preparation.ts";
 
 Deno.test("data de emissão usa o dia civil de Maceió", () => {
   assert.equal(toBaneseCivilDate("2026-07-22T00:30:00Z"), "2026-07-21");
@@ -243,6 +244,88 @@ Deno.test("contingência CNAB mantém os termos congelados do plano único", asy
       startsOn: "2026-08-16",
     },
   });
+});
+
+Deno.test("contingência CNAB da disciplina usa snapshot próprio e baixa em 60 dias", async () => {
+  const selectCalls: string[] = [];
+  const prepared = await prepareRemittance(
+    fakeAdmin(
+      tables([], {
+        descricao: "Disciplina: Anatomia Humana",
+        tipo_lancamento: "DEPENDENCIA",
+        matricula_id: null,
+        parcela_numero: null,
+        gateway_installments: 1,
+        regra_financeira_dependencia_snapshot: {
+          origem: "DEPENDENCIA",
+          descontoPontualidade: 19.9,
+          jurosAtrasoPercentual: 1,
+          multaAtrasoPercentual: 2,
+          aplicarDesconto: true,
+          aplicarMultaJuros: true,
+          diasBaixaDevolucao: 60,
+        },
+        gateway_financial_terms: {
+          nominalAmount: 250,
+          dueDate: "2026-08-15",
+          discount: { type: "fixed", value: 1 },
+          penalty: { type: "percentage", value: 99 },
+          interest: { type: "monthly-percentage", value: 99 },
+        },
+        gateway_financial_terms_confirmed_at: "2026-07-21T12:00:00Z",
+      }),
+      selectCalls,
+    ),
+    [receivableId],
+    "sandbox",
+  );
+
+  assert.equal(
+    selectCalls.some((columns) =>
+      columns.includes("regra_financeira_dependencia_snapshot")
+    ),
+    true,
+  );
+  assert.equal(prepared.titles[0].writeOffDays, 60);
+  assert.deepEqual(prepared.titles[0].financialTerms, {
+    nominalAmount: 250,
+    dueDate: "2026-08-15",
+    discount: {
+      type: "fixed",
+      value: 19.9,
+      validUntil: "2026-08-15",
+    },
+    penalty: {
+      type: "percentage",
+      value: 2,
+      startsOn: "2026-08-16",
+    },
+    interest: {
+      type: "monthly-percentage",
+      value: 1,
+      startsOn: "2026-08-16",
+    },
+  });
+});
+
+Deno.test("dependência legada com termos já confirmados preserva baixa em 60 dias na contingência", async () => {
+  const prepared = await prepareRemittance(
+    fakeAdmin(
+      tables([], {
+        descricao: "Disciplina: Anatomia Humana",
+        tipo_lancamento: "DEPENDENCIA",
+        matricula_id: null,
+        parcela_numero: null,
+        gateway_installments: 1,
+        regra_financeira_dependencia_snapshot: null,
+        gateway_financial_terms_confirmed_at: "2026-07-21T12:00:00Z",
+      }),
+    ),
+    [receivableId],
+    "sandbox",
+  );
+
+  assert.equal(prepared.titles[0].writeOffDays, 60);
 });
 
 Deno.test("resposta perdida do RPC preserva claim já confirmado no banco", () => {

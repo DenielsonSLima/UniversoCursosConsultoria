@@ -4,6 +4,62 @@ const finiteNumber = (value: unknown): number | null => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+export const DEPENDENCY_BILLING_DAYS_TO_WRITE_OFF = 60;
+
+export const DEPENDENCY_BILLING_INSTRUCTION =
+  'SR.(A) CAIXA: NÃO RECEBER ESTE TÍTULO APÓS 60 (SESSENTA) DIAS DO VENCIMENTO.';
+
+interface DependencyBillingPreviewContract {
+  origin: unknown;
+  description: unknown;
+  discount: unknown;
+  monthlyInterest: unknown;
+  penalty: unknown;
+  writeOffDays: unknown;
+  instruction: unknown;
+}
+
+/**
+ * Impede o cliente novo de confirmar usando uma resposta antiga/incompleta do
+ * backend. Os valores podem ser zero, mas precisam vir explicitamente do
+ * snapshot canônico da dependência.
+ */
+export const dependencyBillingPreviewContractError = (
+  contract: DependencyBillingPreviewContract,
+): string | null => {
+  const origin = String(contract.origin ?? '').trim().toUpperCase();
+  const description = String(contract.description ?? '').trim();
+  const instruction = String(contract.instruction ?? '').trim();
+  const discount = finiteNumber(contract.discount);
+  const monthlyInterest = finiteNumber(contract.monthlyInterest);
+  const penalty = finiteNumber(contract.penalty);
+  const writeOffDays = finiteNumber(contract.writeOffDays);
+
+  if (origin !== 'DEPENDENCIA') {
+    return 'A prévia financeira da disciplina está desatualizada. Recarregue após atualizar o backend.';
+  }
+  if (!description.startsWith('Disciplina: ')) {
+    return 'A descrição isolada da disciplina não foi confirmada pelo backend.';
+  }
+  if (
+    discount === null
+    || monthlyInterest === null
+    || penalty === null
+    || discount < 0
+    || monthlyInterest < 0
+    || penalty < 0
+  ) {
+    return 'Os encargos próprios da disciplina não foram confirmados pelo backend.';
+  }
+  if (writeOffDays !== DEPENDENCY_BILLING_DAYS_TO_WRITE_OFF) {
+    return 'O prazo bancário de 60 dias não foi confirmado pelo backend.';
+  }
+  if (instruction !== DEPENDENCY_BILLING_INSTRUCTION) {
+    return 'A instrução obrigatória do boleto não foi confirmada pelo backend.';
+  }
+  return null;
+};
+
 /**
  * O contrato atual do backend persiste e retorna o multiplicador da parcela:
  * 0,5 = 50%, 1 = 100%, 1,5 = 150% e 10 = 1000%.
@@ -47,6 +103,9 @@ interface DependencyPolicyPayload {
   poloId: string;
   disciplinaId: string;
   multiplicadorParcela: number;
+  descontoPontualidade: number;
+  jurosAtrasoPercentual: number;
+  multaAtrasoPercentual: number;
 }
 
 const dependencyPolicyFingerprint = (
@@ -55,6 +114,9 @@ const dependencyPolicyFingerprint = (
   payload.poloId,
   payload.disciplinaId,
   payload.multiplicadorParcela.toFixed(4),
+  payload.descontoPontualidade.toFixed(2),
+  payload.jurosAtrasoPercentual.toFixed(4),
+  payload.multaAtrasoPercentual.toFixed(4),
 ].join(':');
 
 /**

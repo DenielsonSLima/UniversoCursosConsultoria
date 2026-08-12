@@ -106,7 +106,9 @@ const BanesePaymentPage = ({ installment, installments, onBack, onRefresh }: Ban
           <div className="max-w-3xl">
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-blue-700">
-                {record.modalidade || 'Curso'}
+                {String(record.tipo_lancamento || '').toUpperCase() === 'DISCIPLINA'
+                  ? 'Disciplina'
+                  : record.modalidade || 'Curso'}
               </span>
               {isCarnet ? (
                 <span className="inline-flex items-center gap-1 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-emerald-700">

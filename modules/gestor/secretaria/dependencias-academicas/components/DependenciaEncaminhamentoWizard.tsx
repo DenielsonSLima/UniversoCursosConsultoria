@@ -328,7 +328,7 @@ const DependenciaEncaminhamentoWizard = ({
               ) : preview ? (
                 <div className="overflow-hidden rounded-3xl border border-cyan-200 bg-white">
                   <div className="border-b border-cyan-100 bg-cyan-50 px-5 py-4">
-                    <p className="text-[9px] font-black uppercase tracking-[0.17em] text-cyan-700">Prévia da reoferta</p>
+                    <p className="text-[9px] font-black uppercase tracking-[0.17em] text-cyan-700">Cobrança avulsa · 1 boleto</p>
                     <h5 className="mt-1 text-lg font-black text-[#001a33]">{preview.disciplinaNome}</h5>
                     <p className="mt-1 text-xs font-semibold text-cyan-900">{selectedOffer?.turmaNome || preview.turmaDestinoNome}</p>
                   </div>
@@ -345,9 +345,28 @@ const DependenciaEncaminhamentoWizard = ({
                       </div>
                     ))}
                   </dl>
+                  <dl className="grid grid-cols-2 gap-px border-t border-slate-200 bg-slate-200 sm:grid-cols-4">
+                    {[
+                      ['Desconto até vencimento', formatCurrency(preview.descontoPontualidade)],
+                      ['Juros após vencimento', `${preview.jurosAtrasoPercentual}% ao mês`],
+                      ['Multa após vencimento', `${preview.multaAtrasoPercentual}% única`],
+                      ['Baixa bancária', `${preview.diasBaixaDevolucao} dias após vencimento`],
+                    ].map(([label, value]) => (
+                      <div key={label} className="bg-white p-4">
+                        <dt className="text-[8px] font-black uppercase tracking-wider text-slate-400">{label}</dt>
+                        <dd className="mt-1 text-sm font-black text-[#001a33]">{value}</dd>
+                      </div>
+                    ))}
+                  </dl>
                   <div className="p-5">
                     <p className="text-xs font-bold text-slate-700">{preview.descricaoCobranca}</p>
                     <p className="mt-1 text-[10px] font-semibold text-slate-500">{preview.regraResumo}</p>
+                    <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[10px] font-bold leading-relaxed text-emerald-800">
+                      {preview.instrucaoBoleto}
+                    </p>
+                    <p className="mt-2 text-[10px] font-semibold leading-relaxed text-slate-500">
+                      Esta é uma cobrança única da disciplina. Ela não altera matrícula, mensalidades nem cronograma financeiro do curso técnico.
+                    </p>
                     {preview.bloqueio ? (
                       <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-bold text-rose-700">{preview.bloqueio}</div>
                     ) : null}

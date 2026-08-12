@@ -9,7 +9,7 @@ import {
   ShieldAlert,
   X,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import DependenciaEncaminhamentoWizard from './components/DependenciaEncaminhamentoWizard';
 import DependenciasFinancialRules from './components/DependenciasFinancialRules';
 import DependenciasKpis from './components/DependenciasKpis';
@@ -66,11 +66,34 @@ const DependenciasAcademicasPage = ({ poloId }: DependenciasAcademicasPageProps)
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<DependenciaAcademica | null>(null);
   const [activeBoleto, setActiveBoleto] = useState<DependenciaBoleto | null>(null);
+  const [checkoutAfterReversalId, setCheckoutAfterReversalId] = useState<string | null>(() => (
+    typeof window === 'undefined'
+      ? null
+      : window.sessionStorage.getItem('dependencia:checkout-after-reversal')
+  ));
   const workspaceQuery = useDependenciasWorkspaceQuery(activePoloId);
   const policyMutation = useConfigurarPoliticaDependenciaMutation(activePoloId);
   const removePolicyMutation = useRemoverPoliticaDependenciaMutation(activePoloId);
   const boletoMutation = useEmitirBoletoDependenciaMutation(activePoloId);
   useDependenciasAcademicasRealtime(activePoloId);
+  const openOrEmitBoleto = useCallback((item: DependenciaAcademica) => {
+    if (hasCompleteDependencyBoleto(item.boleto)) {
+      setActiveBoleto(item.boleto);
+      return;
+    }
+    const recebivelId = item.boleto.recebivelId || item.cobrancaId;
+    if (!recebivelId || !item.tentativaId) return;
+    boletoMutation.mutate({
+      tentativaId: item.tentativaId,
+      cobrancaId: item.cobrancaId,
+      recebivelId,
+      turmaId: item.turmaDestinoId,
+      disciplinaId: item.disciplinaId,
+      status: item.status,
+    }, {
+      onSuccess: (result) => setActiveBoleto(result.boleto),
+    });
+  }, [boletoMutation]);
 
   useEffect(() => {
     setSelected(null);
@@ -83,6 +106,16 @@ const DependenciasAcademicasPage = ({ poloId }: DependenciasAcademicasPageProps)
   }, [activePoloId]);
 
   const workspace = workspaceQuery.data;
+  useEffect(() => {
+    if (!checkoutAfterReversalId || !workspace?.dependencias.length) return;
+    const item = workspace.dependencias.find((candidate) => (
+      (candidate.boleto.recebivelId || candidate.cobrancaId) === checkoutAfterReversalId
+    ));
+    if (!item?.tentativaId) return;
+    window.sessionStorage.removeItem('dependencia:checkout-after-reversal');
+    setCheckoutAfterReversalId(null);
+    openOrEmitBoleto(item);
+  }, [checkoutAfterReversalId, openOrEmitBoleto, workspace?.dependencias]);
   const boletoPendingId = boletoMutation.isPending
     ? boletoMutation.variables?.recebivelId || null
     : null;
@@ -243,25 +276,6 @@ const DependenciasAcademicasPage = ({ poloId }: DependenciasAcademicasPageProps)
   const hasFilters = Boolean(
     search || modalidadeFilter || cursoFilter || turmaFilter,
   );
-
-  const openOrEmitBoleto = (item: DependenciaAcademica) => {
-    if (hasCompleteDependencyBoleto(item.boleto)) {
-      setActiveBoleto(item.boleto);
-      return;
-    }
-    const recebivelId = item.boleto.recebivelId || item.cobrancaId;
-    if (!recebivelId || !item.tentativaId) return;
-    boletoMutation.mutate({
-      tentativaId: item.tentativaId,
-      cobrancaId: item.cobrancaId,
-      recebivelId,
-      turmaId: item.turmaDestinoId,
-      disciplinaId: item.disciplinaId,
-      status: item.status,
-    }, {
-      onSuccess: (result) => setActiveBoleto(result.boleto),
-    });
-  };
 
   if (!activePoloId) {
     return (

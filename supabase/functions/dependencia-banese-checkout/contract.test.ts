@@ -31,6 +31,22 @@ const context = () => ({
     gateway_provider: "banese_card",
     gateway_environment: "production",
     gateway_payment_method: "BOLETO",
+    gateway_installments: 1,
+    parcela_numero: null as number | null,
+    origem_cronograma_id: `dependencia:${IDS.attempt}`,
+    descricao: "Disciplina: Anatomia Humana",
+    regra_financeira_dependencia_snapshot: {
+      origem: "DEPENDENCIA",
+      tentativaId: IDS.attempt,
+      disciplinaId: IDS.discipline,
+      descricaoCobranca: "Disciplina: Anatomia Humana",
+      descontoPontualidade: 19.9,
+      jurosAtrasoPercentual: 1,
+      multaAtrasoPercentual: 2,
+      aplicarDesconto: true,
+      aplicarMultaJuros: true,
+      diasBaixaDevolucao: 60,
+    } as Record<string, unknown>,
     valor: 250,
     data_vencimento: "2027-02-10",
   },
@@ -113,6 +129,52 @@ Deno.test("rejeita matrícula direta, aluno, turma ou disciplina divergentes", (
     () => assertDependencyReceivableContract(anotherDiscipline),
     /diverge do componente curricular/,
   );
+});
+
+Deno.test("rejeita cronograma, parcela ou snapshot que descaracterizem a cobrança avulsa", () => {
+  const recurring = context();
+  recurring.receivable.gateway_installments = 2;
+  assert.throws(
+    () => assertDependencyReceivableContract(recurring),
+    /exatamente uma parcela/,
+  );
+
+  const scheduled = context();
+  scheduled.receivable.parcela_numero = 1;
+  assert.throws(
+    () => assertDependencyReceivableContract(scheduled),
+    /cronograma de parcelas/,
+  );
+
+  const inconsistentSnapshot = context();
+  inconsistentSnapshot.receivable.regra_financeira_dependencia_snapshot = {
+    ...inconsistentSnapshot.receivable.regra_financeira_dependencia_snapshot,
+    descricaoCobranca: "Dependência - Anatomia Humana",
+  };
+  assert.throws(
+    () => assertDependencyReceivableContract(inconsistentSnapshot),
+    /snapshot.*inconsistente/,
+  );
+
+  const invalidTerms = context();
+  invalidTerms.receivable.regra_financeira_dependencia_snapshot = {
+    ...invalidTerms.receivable.regra_financeira_dependencia_snapshot,
+    multaAtrasoPercentual: 100,
+  };
+  assert.throws(
+    () => assertDependencyReceivableContract(invalidTerms),
+    /encargos.*inválidos/,
+  );
+});
+
+Deno.test("mantém título legado operável sem aplicar apresentação nova", () => {
+  const legacy = context();
+  delete (legacy.receivable as Record<string, unknown>)
+    .regra_financeira_dependencia_snapshot;
+  legacy.receivable.descricao =
+    "Dependência - Anatomia Humana - ENF-T40-INT-MAT";
+
+  assert.doesNotThrow(() => assertDependencyReceivableContract(legacy));
 });
 
 Deno.test("rejeita provedor, Pix, cobrança secundária e status não pagável", () => {

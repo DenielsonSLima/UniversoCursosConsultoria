@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
-import { buildConfiguredBaneseFinancialTerms } from "./banese-financial-terms.ts";
+import {
+  buildConfiguredBaneseFinancialTerms,
+  buildDependencyBaneseFinancialTerms,
+} from "./banese-financial-terms.ts";
 
 const receivable = {
   valor: 279.9,
@@ -112,6 +115,75 @@ Deno.test("ignora JSON não canônico para não reprificar um título de outra m
         jurosAtrasoPercentual: 99,
         multaAtraso: 99,
       },
+    },
+    turma,
+  });
+
+  assert.deepEqual(result, {
+    nominalAmount: 279.9,
+    dueDate: "2026-08-10",
+    discount: { type: "fixed", value: 19.9 },
+    interest: { type: "monthly-percentage", value: 1 },
+    penalty: { type: "percentage", value: 2 },
+  });
+});
+
+Deno.test("dependência usa exclusivamente seu snapshot, nunca a turma ou matrícula", () => {
+  const dependencyReceivable = {
+    valor: 139.95,
+    data_vencimento: "2026-08-10",
+    tipo_lancamento: "DEPENDENCIA",
+    regra_financeira_dependencia_snapshot: {
+      origem: "DEPENDENCIA",
+      descontoPontualidade: 19.9,
+      jurosAtrasoPercentual: 1,
+      multaAtrasoPercentual: 2,
+      aplicarDesconto: true,
+      aplicarMultaJuros: true,
+    },
+  };
+  const result = buildConfiguredBaneseFinancialTerms({
+    receivable: dependencyReceivable,
+    turma: {
+      desconto_pontualidade: 1,
+      juros_atraso: 99,
+      multa_atraso_percentual: 99,
+      aplicar_desconto_mensalidade: false,
+      aplicar_multa_juros_mensalidade: false,
+    },
+    matricula: {
+      desconto_pontualidade_individual: 0,
+      juros_atraso_individual: 0,
+      multa_atraso_percentual_individual: 0,
+    },
+  });
+
+  assert.deepEqual(result, {
+    nominalAmount: 139.95,
+    dueDate: "2026-08-10",
+    discount: { type: "fixed", value: 19.9 },
+    interest: { type: "monthly-percentage", value: 1 },
+    penalty: { type: "percentage", value: 2 },
+  });
+});
+
+Deno.test("dependência sem snapshot não herda a regra da turma", () => {
+  assert.throws(
+    () => buildDependencyBaneseFinancialTerms({
+      valor: 279.9,
+      data_vencimento: "2026-08-10",
+      tipo_lancamento: "DEPENDENCIA",
+    }),
+    /snapshot financeiro canônico/,
+  );
+});
+
+Deno.test("título legado de dependência mantém o contrato financeiro anterior", () => {
+  const result = buildConfiguredBaneseFinancialTerms({
+    receivable: {
+      valor: 279.9,
+      data_vencimento: "2026-08-10",
+      tipo_lancamento: "DEPENDENCIA",
     },
     turma,
   });

@@ -673,6 +673,36 @@ Deno.test("liquidacao API com motivo canonico 61 contabiliza PIX", async () => {
   );
 });
 
+Deno.test("dependência nova não libera quando Banese informa BolePix", async () => {
+  const receivable: FakeRow = receivableFixture({
+    tipo_lancamento: "DEPENDENCIA",
+    regra_financeira_dependencia_snapshot: {
+      origem: "DEPENDENCIA",
+      diasBaixaDevolucao: 60,
+    },
+  });
+  const admin = fakeAdmin(receivable);
+
+  await assert.rejects(
+    () => reconcileBaneseReceivable(admin, RECEIVABLE_ID, {
+      queryBoleto: () =>
+        Promise.resolve(boletoSnapshot({
+          situationCode: 3,
+          remoteStatus: "PAID",
+          paid: true,
+          payments: [{
+            ValorPago: 20_038.33,
+            DataPagamento: "2026-08-16",
+            CodigoMotivoLiquidacao: "61",
+          }],
+        }) as any),
+    }),
+    /somente por boleto Banese.*revisão/i,
+  );
+
+  assert.equal(receivable.status, "PENDENTE");
+});
+
 Deno.test("liquidacao canonica Banese libera curso EAD automaticamente", async () => {
   const matriculaId = "22222222-2222-4222-8222-222222222222";
   const turmaId = "33333333-3333-4333-8333-333333333333";

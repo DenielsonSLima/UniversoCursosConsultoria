@@ -1,5 +1,7 @@
+import { DEPENDENCY_BILLING_INSTRUCTION } from "./dependency-billing.ts";
+
 export const DEFAULT_TECHNICAL_BILLING_INSTRUCTION =
-  "SR.(A) CAIXA: NÃO RECEBER ESTE TÍTULO APÓS 60 (SESSENTA) DIAS DO VENCIMENTO.";
+  DEPENDENCY_BILLING_INSTRUCTION;
 
 export type BaneseAcademicBillingContext = {
   modality: string;
@@ -52,5 +54,22 @@ export const buildBaneseTechnicalBillingInstructions = (
     180,
   );
   if (instruction) instructions.push(instruction);
+  return instructions;
+};
+
+/** A disciplina refeita não expõe a turma de reoferta nem o motivo acadêmico. */
+export const buildBaneseDependencyBillingInstructions = (
+  input: Pick<TechnicalBillingInstructionInput, "environment" | "documentKind" | "description">,
+) => {
+  const instructions: string[] = [];
+  if (input.environment === "sandbox") {
+    instructions.push(
+      `${input.documentKind === "carne" ? "CARNÊ" : "BOLETO"} DE HOMOLOGAÇÃO - NÃO REALIZAR PAGAMENTO.`,
+    );
+  }
+
+  const description = singleLine(input.description, 120);
+  if (description) instructions.push(description);
+  instructions.push(DEPENDENCY_BILLING_INSTRUCTION);
   return instructions;
 };

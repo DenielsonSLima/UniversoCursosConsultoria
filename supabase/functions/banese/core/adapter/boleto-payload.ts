@@ -3,6 +3,11 @@ import {
   normalizeBaneseFinancialTerms,
 } from "../../internal/financial-terms.ts";
 import {
+  DEPENDENCY_BILLING_DAYS_TO_WRITE_OFF,
+  dependencyBillingSnapshotFrom,
+  isDependencyReceivable,
+} from "../../internal/dependency-billing.ts";
+import {
   type AdapterCreateChargeInput,
   BaneseAdapterConfigurationError,
   BaneseAdapterError,
@@ -117,12 +122,28 @@ export const validateBaneseBoletoPayloadInput = (
   });
 
   const codigoEspecie = boletoSpecies(metadata.baneseCodigoEspecie);
-  const quantidadeDiasBaixaDevolucao = boundedInteger(
-    metadata.quantidadeDiasBaixaDevolucao,
-    30,
-    1,
-    180,
-  );
+  const dependencySnapshot = isDependencyReceivable(input.receivable)
+    ? dependencyBillingSnapshotFrom(
+      input.receivable?.regra_financeira_dependencia_snapshot,
+    )
+    : null;
+  if (
+    dependencySnapshot &&
+    Number(dependencySnapshot.diasBaixaDevolucao) !==
+      DEPENDENCY_BILLING_DAYS_TO_WRITE_OFF
+  ) {
+    throw new BaneseAdapterError(
+      "O boleto de dependência deve permanecer disponível por 60 dias após o vencimento.",
+    );
+  }
+  const quantidadeDiasBaixaDevolucao = dependencySnapshot
+    ? DEPENDENCY_BILLING_DAYS_TO_WRITE_OFF
+    : boundedInteger(
+      metadata.quantidadeDiasBaixaDevolucao,
+      30,
+      1,
+      180,
+    );
   const financialTerms = input.financialTerms
     ? normalizeBaneseFinancialTerms({
       ...input.financialTerms,

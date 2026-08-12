@@ -18,6 +18,7 @@ const PAYMENT_SELECT = `
   id,
   cliente_id,
   matricula_id,
+  turma_id,
   descricao,
   categoria,
   tipo_lancamento,
@@ -41,6 +42,7 @@ const PAYMENT_SELECT = `
   gateway_issuer_polo_id,
   gateway_financial_terms,
   gateway_financial_terms_confirmed_at,
+  regra_financeira_dependencia_snapshot,
   turmas!left(nome,cursos!left(nome,modalidade))
 `;
 

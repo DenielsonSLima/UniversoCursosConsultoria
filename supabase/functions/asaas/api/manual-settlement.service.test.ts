@@ -67,6 +67,7 @@ const actor: GestorAutorizado = {
   communicationSector: "",
   communicationPoloId: null,
   canViewAllCommunication: false,
+  canViewAllCommunicationPolos: false,
 };
 
 const fakeAdmin = () => ({
@@ -423,6 +424,79 @@ Deno.test("canal CNAB Banese falha fechado sem chamar cancelador API", async () 
   );
   assert.equal(cancelCalled, false);
   assert.deepEqual(fake.events, []);
+});
+
+Deno.test("dependência avulsa bloqueia baixa presencial após 60 dias antes de cancelar o boleto", async () => {
+  const isolatedDependency = {
+    ...receivable,
+    tipo_lancamento: "DEPENDENCIA",
+    data_vencimento: "2026-05-20",
+    regra_financeira_dependencia_snapshot: {
+      origem: "DEPENDENCIA",
+      diasBaixaDevolucao: 60,
+    },
+    gateway_provider: "banese_card",
+    gateway_environment: "sandbox",
+    gateway_payment_method: "BOLETO",
+    gateway_payment_id: "000000015",
+    gateway_boleto_nosso_numero: "000000015",
+    gateway_status: "PENDING",
+  };
+  const fake = fakeRepository({ currentReceivable: isolatedDependency });
+  let cancelCalled = false;
+
+  await assert.rejects(
+    () => settleReceivableManually({
+      ...dependencies(fake.repository),
+      cancelBanese: async () => {
+        cancelCalled = true;
+        throw new Error("não deveria cancelar");
+      },
+    }),
+    /não pode receber baixa após 60 dias/i,
+  );
+
+  assert.equal(cancelCalled, false);
+  assert.equal(fake.finalizeCalls, 0);
+  assert.deepEqual(fake.events, []);
+});
+
+Deno.test("dependência bloqueia baixa retrodatada iniciada depois da janela bancária", async () => {
+  const isolatedDependency = {
+    ...receivable,
+    tipo_lancamento: "DEPENDENCIA",
+    data_vencimento: "2026-05-20",
+    regra_financeira_dependencia_snapshot: {
+      origem: "DEPENDENCIA",
+      diasBaixaDevolucao: 60,
+    },
+    gateway_provider: "banese_card",
+    gateway_environment: "sandbox",
+    gateway_payment_method: "BOLETO",
+    gateway_payment_id: "000000015",
+    gateway_boleto_nosso_numero: "000000015",
+    gateway_status: "PENDING",
+  };
+  const fake = fakeRepository({ currentReceivable: isolatedDependency });
+  const retroactiveBody = {
+    ...body,
+    dataPagamento: "2026-07-19",
+  };
+  let cancelCalled = false;
+
+  await assert.rejects(
+    () => settleReceivableManually({
+      ...dependencies(fake.repository, retroactiveBody),
+      cancelBanese: async () => {
+        cancelCalled = true;
+        throw new Error("não deveria cancelar");
+      },
+    }),
+    /não pode receber baixa após 60 dias/i,
+  );
+
+  assert.equal(cancelCalled, false);
+  assert.equal(fake.finalizeCalls, 0);
 });
 
 Deno.test("projeta inscrição e matrícula após concluir a baixa manual", async () => {

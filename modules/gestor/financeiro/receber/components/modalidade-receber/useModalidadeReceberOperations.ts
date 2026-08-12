@@ -110,6 +110,12 @@ export const useModalidadeReceberOperations = (toast: OperationToast) => {
     }),
     onSuccess: async (result) => {
       const reversedReceivable = reversalItem;
+      if (result.requiresDependencyCheckout && reversedReceivable?.id) {
+        sessionStorage.setItem(
+          'dependencia:checkout-after-reversal',
+          reversedReceivable.id,
+        );
+      }
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.receivablesRoot }),
         queryClient.invalidateQueries({ queryKey: ['financeiro-aluno-receivables'] }),
@@ -122,7 +128,9 @@ export const useModalidadeReceberOperations = (toast: OperationToast) => {
       ]);
       toast.success(
         'Baixa manual estornada',
-        result.gatewayRecreated && reversedReceivable
+        result.requiresDependencyCheckout
+          ? 'O recebível voltou para pendente. Reemita o mesmo boleto pela tela de Dependências Acadêmicas.'
+          : result.gatewayRecreated && reversedReceivable
           ? `O recebível voltou para pendente e uma nova cobrança ${paymentGatewayLabel(reversedReceivable)} foi gerada.`
           : 'O recebível voltou para pendente para nova conferência.',
       );

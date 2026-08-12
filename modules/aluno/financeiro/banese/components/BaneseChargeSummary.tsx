@@ -22,12 +22,15 @@ interface BaneseChargeSummaryProps {
 const summaryItems = (
   record: BanesePaymentRecord,
   pix: BanesePixPresentation,
-) => [
+) => {
+  const isDependency = String(record.tipo_lancamento || '').toUpperCase() === 'DISCIPLINA';
+  return [
   { label: 'Vencimento', value: formatBaneseDate(record.data_vencimento), icon: CalendarDays },
   { label: 'Forma de pagamento', value: pix.state === 'available' ? 'Boleto com Pix' : 'Boleto Banese', icon: WalletCards },
-  { label: 'Modalidade', value: String(record.modalidade || 'Curso').replace('_', ' '), icon: GraduationCap },
+  ...(isDependency ? [] : [{ label: 'Modalidade', value: String(record.modalidade || 'Curso').replace('_', ' '), icon: GraduationCap }]),
   { label: 'Valor', value: formatBaneseCurrency(record.valor), icon: ReceiptText },
 ];
+};
 
 const BaneseChargeSummary = ({ record, pix }: BaneseChargeSummaryProps) => {
   const payer = getBanesePayer(record);
@@ -61,7 +64,7 @@ const BaneseChargeSummary = ({ record, pix }: BaneseChargeSummaryProps) => {
       <section className="rounded-[1.6rem] border border-amber-200 bg-[#fffaf0] p-4 shadow-sm">
         <p className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-700">Descrição da cobrança</p>
         <p className="mt-2 text-sm font-black leading-relaxed text-[#001a33]">{record.descricao || 'Cobrança de curso'}</p>
-        {record.cursoNome ? <p className="mt-1 text-xs font-semibold text-slate-500">{record.cursoNome}{record.turmaNome && record.turmaNome !== 'N/A' ? ` • ${record.turmaNome}` : ''}</p> : null}
+        {String(record.tipo_lancamento || '').toUpperCase() !== 'DISCIPLINA' && record.cursoNome ? <p className="mt-1 text-xs font-semibold text-slate-500">{record.cursoNome}{record.turmaNome && record.turmaNome !== 'N/A' ? ` • ${record.turmaNome}` : ''}</p> : null}
       </section>
 
       <div className="grid grid-cols-2 gap-2">

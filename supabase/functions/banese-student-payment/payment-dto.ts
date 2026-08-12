@@ -7,6 +7,10 @@ import {
   normalizeBanesePixQrImage,
 } from "../banese/internal/pix-validation.ts";
 import { normalizeBaneseFinancialTerms } from "../banese/internal/financial-terms.ts";
+import {
+  dependencyBillingSnapshotFrom,
+  isDependencyReceivable,
+} from "../banese/internal/dependency-billing.ts";
 import type {
   BaneseEnvironment,
   BaneseStudentChargeDto,
@@ -133,6 +137,18 @@ const firstRelation = <T>(value: T | T[] | null | undefined): T | null =>
   Array.isArray(value) ? value[0] ?? null : value ?? null;
 
 const courseAndClass = (row: BaneseStudentPaymentRow) => {
+  if (
+    isDependencyReceivable(row) &&
+    dependencyBillingSnapshotFrom(
+      row.regra_financeira_dependencia_snapshot,
+    )
+  ) {
+    return {
+      courseName: null,
+      courseModality: null,
+      className: null,
+    };
+  }
   const turma = firstRelation(row.turmas);
   const curso = firstRelation(turma?.cursos);
   const modality = normalizedUpper(curso?.modalidade);
@@ -368,15 +384,24 @@ export const sanitizeBaneseStudentCharge = (
   const amount = safeAmount(row.valor, true) as number;
   const installment = Number(row.parcela_numero);
   const relation = courseAndClass(row);
+  const dependencySnapshot = isDependencyReceivable(row)
+    ? dependencyBillingSnapshotFrom(row.regra_financeira_dependencia_snapshot)
+    : null;
   const { digitableLine, barcode } = bankTitle(row);
   const dueDate = safeIsoDate(row.data_vencimento);
   if (!dueDate) throw new Error("Vencimento da cobranca Banese invalido.");
   return {
     id: row.id,
     groupMarker,
-    description: safeText(row.descricao, "Cobrança Universo Cursos", 160),
-    category: safeOptionalText(row.categoria, 60),
-    chargeType: safeOptionalText(row.tipo_lancamento, 40),
+    description: safeText(
+      dependencySnapshot?.descricaoCobranca ?? row.descricao,
+      "Cobrança Universo Cursos",
+      160,
+    ),
+    category: dependencySnapshot ? "DISCIPLINA" : safeOptionalText(row.categoria, 60),
+    chargeType: dependencySnapshot
+      ? "DISCIPLINA"
+      : safeOptionalText(row.tipo_lancamento, 40),
     installmentNumber: Number.isInteger(installment) && installment > 0
       ? installment
       : null,

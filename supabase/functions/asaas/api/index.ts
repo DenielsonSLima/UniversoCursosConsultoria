@@ -1120,6 +1120,11 @@ Deno.serve(async (req: Request) => {
         recreateAsaas,
       );
       const reversalTimestamp = new Date().toISOString();
+      const isIsolatedDependency =
+        String(receivable.tipo_lancamento || "").toUpperCase() ===
+          "DEPENDENCIA" &&
+        receivable.regra_financeira_dependencia_snapshot?.origem ===
+          "DEPENDENCIA";
 
       let reverseQuery = admin
         .from("contas_receber")
@@ -1131,6 +1136,8 @@ Deno.serve(async (req: Request) => {
           manual_settlement_reversed_at: reversalTimestamp,
           forma_pagamento: clearCanceledGateway
             ? restoredLegacyPaymentMethod
+            : isIsolatedDependency
+            ? "BOLETO"
             : null,
           origem_pagamento: shouldRecreateAsaas
             ? "ASAAS"
@@ -1226,7 +1233,10 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const finalReceivable = shouldRecreateGateway
+      const requiresDependencyCheckout = Boolean(
+        isIsolatedDependency && shouldRecreateGateway,
+      );
+      const finalReceivable = shouldRecreateGateway && !requiresDependencyCheckout
         ? await syncReceivable(
           await getGatewayRuntimeForMovement(),
           reverted.id,
@@ -1237,8 +1247,9 @@ Deno.serve(async (req: Request) => {
         success: true,
         receivable: finalReceivable,
         asaasRecreated: shouldRecreateAsaas,
-        baneseRecreated: shouldRecreateBanese,
-        gatewayRecreated: shouldRecreateGateway,
+        baneseRecreated: shouldRecreateBanese && !requiresDependencyCheckout,
+        gatewayRecreated: shouldRecreateGateway && !requiresDependencyCheckout,
+        requiresDependencyCheckout,
         gatewayProvider: shouldRecreateBanese
           ? "banese_card"
           : shouldRecreateAsaas
