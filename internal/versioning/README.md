@@ -12,7 +12,7 @@ Esta pasta é a fonte oficial para identificar e registrar cada versão do siste
 Antes de publicar qualquer mudança no produto:
 
 1. Atualize `system-version.json`, incrementando a versão e a revisão.
-2. Mantenha `display` como `BETA` enquanto o sistema estiver nessa fase.
+2. Mantenha `display` coerente com a fase: `BETA` em pré-lançamento e `ESTÁVEL` para uma versão sem sufixo de pré-lançamento.
 3. Atualize `releasedAt` e descreva resumidamente a entrega em `summary`.
 4. Crie no topo de `CHANGELOG.md` uma entrada com a mesma versão e data.
 5. Preserve todas as entradas históricas anteriores sem alterações.
@@ -24,4 +24,4 @@ O build valida a consistência desses arquivos. Pull requests que alterarem o pr
 
 - Correção: `0.1.0-beta.1` → `0.1.0-beta.2`
 - Funcionalidade compatível: `0.1.0-beta.2` → `0.2.0-beta.1`
-- Versão estável: `1.0.0`
+- Saída da beta: `4.2.0-beta.2` → `4.2.0` (ou o próximo número sem sufixo quando houver mudança incompatível)

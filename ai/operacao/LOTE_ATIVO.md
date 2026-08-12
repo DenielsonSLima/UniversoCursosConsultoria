@@ -1,18 +1,17 @@
 # Lote ativo
 
-Estado: `PUBLICADO`
+Estado: `EM VALIDAÇÃO PARA PUBLICAÇÃO`
 
-## Lote: 2026-08-11-financeiro-operacional-4-2-0-beta-2
+## Lote: 2026-08-12-estabilizacao-4-2-0
 
-- Estado: PUBLICADO.
-- Objetivo: publicar a versão `4.2.0-beta.2` com plano financeiro único não técnico, operações financeiras auditáveis, posições do Caixa, ciclo de empréstimos e relatórios financeiros separados.
-- Escopo incluído: plano único para cursos livres/especializações; Contas a Pagar, recibo vetorial, edição/cancelamento/estorno; Caixa, patrimônio e empréstimos; relatório financeiro; Termos Banese/EAD; compositores e contratos afetados; migrations, versionamento, testes e registro operacional.
-- Fora de escopo: reprecificação ou alteração de títulos/documentos históricos; emissão de cobrança real; caches e artefatos de build.
-- Regras/RPC/segurança aplicáveis: GitHub e Supabase exclusivamente por MCP; cálculos financeiros no backend; RLS/RPC com menor privilégio e `search_path` vazio; PDF continua vetorial e canônico.
-- Critérios de aceite: versão/changelog consistentes; histórico de migrations reconciliado sem reaplicação; contratos de Caixa, financeiro, documentos e Edge Functions aprovados; TypeScript e build aprovados; manifesto explícito; CI/Preview do último commit da PR, merge em `main` e Vercel Produção confirmados.
-- Validação já concluída: `test:caixa-report` 42/42; contratos financeiros/patrimônio/relatórios/Gestão 25/25; Contrato do Aluno 50/50; Contas a Pagar 4/4; migrations/contratos Supabase focados 44/44; Edge Functions Banese/EAD 32/32; replay focal de plano único/relatórios/hardening 20/20; `npm run lint`, `tsc --noEmit`, `npm run build` e `git diff --check` aprovados. A CI do ajuste corretivo segue neste fechamento.
-- Banco: cinco fontes foram alinhadas aos IDs já aplicados no remoto; cinco já coincidiam com o histórico. As migrations novas foram aplicadas por MCP Supabase com os IDs remotos `20260812005933` (plano único), `20260812010242` (relatórios), `20260812010257` (endurecimento das RPCs legadas) e `20260812010814` (correção do alias de conta no relatório). As fontes locais usam esses IDs. A policy de Realtime preserva `outros-creditos`; as RPCs legadas ficam com `search_path` vazio e `EXECUTE` somente para `service_role`.
-- Smoke remoto: a chamada `EXTRATO_CONTA` do relatório foi executada com `service_role` e rollback, retornando o payload canônico; não criou dados. A cobertura autenticada de criação do plano único permanece pendente para não fabricar turma, matrícula ou cobrança em Produção.
-- Publicação concluída: PR [#66](https://github.com/DenielsonSLima/UniversoCursosConsultoria/pull/66) foi mesclada por squash em `main` no commit [`7e676eff`](https://github.com/DenielsonSLima/UniversoCursosConsultoria/commit/7e676eff94748e26535ac160568cfe677c886ec3). A implantação [Vercel de Produção](https://vercel.com/denielson-limas-projects/universo-cursos-consultoria/7TkxEadsKLMXjp81EG71i1iKJTiH) concluiu com sucesso.
-- Responsável pela consolidação: Codex, com revisão independente de validação, worktree e migrations.
-- Pendências ou riscos: o primeiro corpo da RPC de relatórios tinha alias incorreto (`conta.ativa`) e recebeu a migration corretiva `20260812010814`, validada por smoke real. A cobertura autenticada de criação do plano único continua deliberadamente pendente para não fabricar turma, matrícula ou cobrança em Produção. Node local `20.19.5` difere do `24.x` declarado pelo projeto.
+- Estado: EM VALIDAÇÃO PARA PUBLICAÇÃO.
+- Objetivo: promover `4.2.0-beta.2` para a versão estável `4.2.0`, corrigindo os gates encontrados na revisão de produção.
+- Escopo incluído: compositor vetorial e Blob único dos cinco relatórios financeiros separados; datas civis de Maceió em criação/baixa de empréstimos; republicação dos nove runtimes financeiros; atualização de versão, changelog e registros operacionais.
+- Fora de escopo: reprecificação, alteração de títulos/documentos históricos, criação de cobrança real e reexecução de migrations já aplicadas.
+- Regras aplicáveis: GitHub e Supabase exclusivamente por MCP; cálculos financeiros no backend; PDF vetorial e Blob canônico; manter os `verify_jwt` já configurados por função.
+- Critérios de aceite: versão/changelog consistentes; contratos focados, TypeScript, lint, build e diff-check aprovados sob Node 24; inspeção de PDF com texto extraível, sem imagem de página e renderização visual aprovada; nove Edge Functions ativas na versão nova; PR/CI/Preview, merge em `main` e Vercel Produção confirmados.
+- Validação concluída até aqui: `test:financial-report-pdf` 4/4, incluindo rejeição explícita de linha incompatível com A4; `test:pdf-exports` aprovado e a dívida raster reduziu de 9 para 8 fluxos; contratos Deno de data Maceió e empréstimos 9/9; inspeção Poppler do novo PDF confirmou duas páginas A4, texto extraível e nenhum recurso de imagem; `deno check` dos nove entrypoints aprovado. TypeScript, lint e build da árvore isolada seguem como gates obrigatórios da CI sob Node 24.
+- Produção Supabase: migrations de 11–12/ago já estavam aplicadas; os nove runtimes incompatíveis foram republicados por MCP: `banese-cnab240-api` v8, `payment-checkout` v18, `checkout-api` v13, `payment-gateway-api` v15, `payment-gateway-webhook` v8, `asaas-api` v77, `asaas-webhook` v33, `dependencia-banese-checkout` v5 e `banese-reconciliation-worker` v23. As confirmações remotas encontram o snapshot de plano único, CNAB e ativação EAD pela primeira parcela nos bundles ativos.
+- Node local: alinhado a `v24.19.0` (engines `24.x`).
+- Publicação GitHub/Vercel: pendente do manifesto final, CI e Preview desta versão estável.
+- Responsável pela consolidação: Codex, com revisão independente de financeiro, interface/PDF e manifestos de Edge Functions.

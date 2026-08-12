@@ -17,6 +17,7 @@ const protectedVectorGenerators = [
   'modules/gestor/secretaria/contratos-aluno/contratos-aluno.pdf.ts',
   'modules/gestor/secretaria/carteirinhas-preceptor/carteirinhas-preceptor.pdf.ts',
   'modules/gestor/secretaria/historico-emissoes/emission-document.pdf.ts',
+  'modules/gestor/financeiro/components/financial-report.vector-pdf.ts',
 ];
 
 // Documentos oficiais novos não aceitam nem a ponte híbrida nem canvas de
@@ -29,6 +30,8 @@ const strictNativeDocumentFlows = [
   'modules/gestor/secretaria/contratos-aluno/contratos-aluno.pdf.ts',
   'modules/gestor/secretaria/carteirinhas-preceptor/carteirinhas-preceptor.pdf.ts',
   'modules/gestor/secretaria/historico-emissoes/emission-document.pdf.ts',
+  'modules/gestor/financeiro/components/FinancialReportPreview.tsx',
+  'modules/gestor/financeiro/components/financial-report.vector-pdf.ts',
 ];
 
 // Inventário temporário de pipelines antigos que ainda rasterizam a página.
@@ -53,7 +56,6 @@ const legacyHybridRasterPipelines = new Map([
 const knownLegacyHelperConsumers = new Set([
   'modules/aluno/cursos/CursosPage.tsx',
   'modules/aluno/financeiro/FinanceiroPage.tsx',
-  'modules/gestor/financeiro/components/FinancialReportPreview.tsx',
   'modules/gestor/financeiro/receber/components/modalidade-receber/InstitutionalReceiptModal.tsx',
   'modules/gestor/parceiros/components/export/ParceirosExportModal.tsx',
   'modules/gestor/secretaria/declaracao-matricula/SecretariaDeclaracaoMatriculaPage.tsx',
@@ -277,6 +279,28 @@ const caixaSafariFailures = [
     ? [`${caixaReportDocumentPath} perdeu as linhas fixas que protegem o cabeçalho durante a captura.`]
     : []),
 ];
+const financialReportPreviewPath = 'modules/gestor/financeiro/components/FinancialReportPreview.tsx';
+const financialReportVectorPath = 'modules/gestor/financeiro/components/financial-report.vector-pdf.ts';
+const financialReportPreviewSource = sources.get(financialReportPreviewPath) || '';
+const financialReportVectorSource = sources.get(financialReportVectorPath) || '';
+const financialReportNativeFailures = [
+  ...(!/FINANCIAL_REPORT_PDF_PIPELINE\s*=\s*['"]native-vector['"]/m.test(financialReportVectorSource)
+    || !/drawCanonicalInstitutionalHeader/m.test(financialReportVectorSource)
+    || !/pdf\.text\s*\(/m.test(financialReportVectorSource)
+    || !/pdf\.(?:rect|roundedRect|line)\s*\(/m.test(financialReportVectorSource)
+    ? [`${financialReportVectorPath} perdeu os sinais do compositor vetorial nativo.`]
+    : []),
+  ...(/html2canvas|dom-to-selectable-pdf|buildSelectablePdfBlobFromElements/i.test(
+    `${financialReportPreviewSource}\n${financialReportVectorSource}`,
+  )
+    ? [`O relatório financeiro voltou a depender de captura rasterizada de página.`]
+    : []),
+  ...(!/downloadPdfBlob\(preparedPdf\.blob, preparedPdf\.fileName\)/m.test(financialReportPreviewSource)
+    || !/await printPdfBlob\(preparedPdf\.blob/m.test(financialReportPreviewSource)
+    || !/<iframe[\s\S]*src=\{previewUrl\}/m.test(financialReportPreviewSource)
+    ? [`${financialReportPreviewPath} não reutiliza o mesmo Blob na prévia, download e impressão.`]
+    : []),
+];
 const missingHelperSignals = helperRequiredSignals
   .filter(([, pattern]) => !pattern.test(helperSource))
   .map(([label]) => label);
@@ -299,6 +323,7 @@ const failures = [
   ...helperSafariFailures,
   ...caixaDownloadIntegrationFailures,
   ...caixaSafariFailures,
+  ...financialReportNativeFailures,
 ];
 
 console.log('Contrato de exportações PDF vetoriais e selecionáveis');
@@ -306,6 +331,7 @@ console.log('=====================================================');
 console.log(`Ponte raster legada: ${!helperStillRequired ? 'SEM CONSUMIDORES' : helperExists && missingHelperSignals.length === 0 ? 'INVENTARIADA' : 'INCOMPLETA'} — ${selectablePdfHelper}`);
 console.log(`Download isolado do Caixa: ${caixaDownloadIntegrationFailures.length === 0 ? 'OK' : 'INCOMPLETO'} — ${caixaDownloadHelper}`);
 console.log(`Estrutura vetorial do Caixa: ${caixaSafariFailures.length === 0 ? 'OK' : 'INCOMPLETA'} — ${caixaVectorPdfPath}`);
+console.log(`Relatório financeiro nativo: ${financialReportNativeFailures.length === 0 ? 'OK' : 'INCOMPLETO'} — ${financialReportVectorPath}`);
 
 console.log(`\nConsumidores legados da ponte raster (${helperConsumers.length}):`);
 if (helperConsumers.length === 0) console.log('  (nenhum)');

@@ -1,7 +1,7 @@
 {
   "name": "universo-cursos-e-consultoria",
   "private": true,
-  "version": "4.2.0-beta.2",
+  "version": "4.2.0",
   "type": "module",
   "engines": {
     "node": "24.x"
@@ -32,6 +32,7 @@
     "test:banese-rate-limit-simulation": "node scripts/test-banese-rate-limit-simulation.mjs",
     "test:caixa-report": "node scripts/test-caixa-report.mjs",
     "test:financeiro-rpc": "node --test scripts/test-financial-rpc-contract.mjs",
+    "test:financial-report-pdf": "node scripts/test-financial-report-pdf.mjs",
     "test:pdf-exports": "node scripts/test-selectable-pdf-exports.mjs",
     "test:agent-operations": "node scripts/test-agent-operation.mjs",
     "test:saldo-inicial": "node scripts/test-saldo-inicial.mjs",

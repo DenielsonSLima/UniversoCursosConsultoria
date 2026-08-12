@@ -7,12 +7,13 @@ declare const Deno: {
 
 const read = (path: string) => Deno.readTextFile(new URL(path, import.meta.url));
 
-const [tab, table, card, details, baixa, lifecycle, exportModal, exportPdf, loanMigration, otherCreditsMigration, otherCreditsService, realtime] = await Promise.all([
+const [tab, table, card, details, baixa, form, lifecycle, exportModal, exportPdf, loanMigration, otherCreditsMigration, otherCreditsService, realtime] = await Promise.all([
   read('./EmprestimosTab.tsx'),
   read('./components/EmprestimosTable.tsx'),
   read('./components/EmprestimoCard.tsx'),
   read('./components/EmprestimoDetailsPage.tsx'),
   read('./components/EmprestimoBaixaModal.tsx'),
+  read('./components/EmprestimoForm.tsx'),
   read('./components/EmprestimoLifecycleModal.tsx'),
   read('./components/EmprestimosExportModal.tsx'),
   read('./emprestimos-export.pdf.ts'),
@@ -50,6 +51,14 @@ Deno.test('baixa permite selecionar parcelas e encaminha somente IDs para o back
   assert.match(tab, /emprestimosService\.baixarParcelas/);
   assert.match(loanMigration, /baixar_emprestimo_parcelas_polo_secure/);
   assert.match(loanMigration, /p_emprestimo_parcela_ids uuid\[\]/);
+});
+
+Deno.test('criação e baixa usam a data civil de Maceió, não uma data UTC', () => {
+  assert.match(form, /import \{ todayInMaceio \}/);
+  assert.match(baixa, /import \{ todayInMaceio \}/);
+  assert.match(form, /useState\(todayInMaceio\(\)\)/);
+  assert.match(baixa, /useState\(todayInMaceio\(\)\)/);
+  assert.doesNotMatch(`${form}\n${baixa}`, /toISOString\(\)\.slice\(0, 10\)/);
 });
 
 Deno.test('baixa registra ajustes opcionais sem calcular valor final no frontend', () => {

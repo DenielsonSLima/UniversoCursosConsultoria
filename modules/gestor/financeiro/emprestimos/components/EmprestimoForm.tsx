@@ -25,14 +25,13 @@ import {
   emprestimosService,
 } from '../emprestimos.service';
 import { useEmprestimoBancosCredoresQuery } from '../hooks/useEmprestimosQueries';
+import { todayInMaceio } from '../../receber/components/manual-settlement/manual-settlement-date';
 import type {
   EmprestimoFinanceiro,
   EmprestimoFormaPagamento,
   EmprestimoRateioModo,
 } from '../emprestimos.types';
 import type { ContaBancaria, FinanceiroPolo } from '../../financeiro.service';
-
-const today = () => new Date().toISOString().slice(0, 10);
 
 const parseCurrencyInput = (value: string) => {
   const normalized = value.replace(/[^\d.,]/g, '').replace(/\./g, '').replace(',', '.');
@@ -80,8 +79,8 @@ const EmprestimoForm: React.FC<EmprestimoFormProps> = ({
   const [descricao, setDescricao] = useState('');
   const [valorLiberado, setValorLiberado] = useState('');
   const [valorTotalDivida, setValorTotalDivida] = useState('');
-  const [dataLiberacao, setDataLiberacao] = useState(today());
-  const [dataPrimeiroVencimento, setDataPrimeiroVencimento] = useState(today());
+  const [dataLiberacao, setDataLiberacao] = useState(todayInMaceio());
+  const [dataPrimeiroVencimento, setDataPrimeiroVencimento] = useState(todayInMaceio());
   const [totalParcelas, setTotalParcelas] = useState('1');
   const [intervaloMeses, setIntervaloMeses] = useState('1');
   const [contaCreditoId, setContaCreditoId] = useState('');

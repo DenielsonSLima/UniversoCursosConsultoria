@@ -1,8 +1,8 @@
 {
-  "version": "4.2.0-beta.2",
-  "display": "BETA",
-  "stage": "beta",
-  "revision": 2,
-  "releasedAt": "2026-08-11",
-  "summary": "Plano financeiro único, operações de empréstimos e relatórios financeiros separados"
+  "version": "4.2.0",
+  "display": "ESTÁVEL",
+  "stage": "stable",
+  "revision": 1,
+  "releasedAt": "2026-08-12",
+  "summary": "Estabilização financeira, PDFs vetoriais e runtimes de cobrança alinhados à produção"
 }
