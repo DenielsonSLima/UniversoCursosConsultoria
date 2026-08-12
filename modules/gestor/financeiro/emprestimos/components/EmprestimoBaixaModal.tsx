@@ -25,8 +25,7 @@ import type {
   EmprestimoFormaPagamento,
 } from '../emprestimos.types';
 import type { ContaBancaria } from '../../financeiro.service';
-
-const today = () => new Date().toISOString().slice(0, 10);
+import { todayInMaceio } from '../../receber/components/manual-settlement/manual-settlement-date';
 
 const parseCurrency = (value: string) => (
   Number(value.replace(/[^\d.,]/g, '').replace(/\./g, '').replace(',', '.') || 0)
@@ -77,7 +76,7 @@ const EmprestimoBaixaModal: React.FC<EmprestimoBaixaModalProps> = ({
     )
   ));
   const [contaBancariaId, setContaBancariaId] = useState('');
-  const [dataPagamento, setDataPagamento] = useState(today());
+  const [dataPagamento, setDataPagamento] = useState(todayInMaceio());
   const [formaPagamento, setFormaPagamento] = useState<EmprestimoFormaPagamento>('PIX');
   const [adjustmentsOpen, setAdjustmentsOpen] = useState(false);
   const [jurosValor, setJurosValor] = useState('');
