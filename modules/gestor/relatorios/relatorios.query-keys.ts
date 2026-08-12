@@ -21,5 +21,9 @@ export const relatoriosKeys = {
     all: () => [...relatoriosKeys.all, 'movimentacao-financeira'] as const,
     report: (filters: RelatoriosQueryFilters) =>
       [...relatoriosKeys.financeiro.all(), filters] as const,
+    fluxo: (filters: RelatoriosQueryFilters) =>
+      [...relatoriosKeys.financeiro.all(), 'fluxo-caixa', filters] as const,
+    inadimplencia: (filters: RelatoriosQueryFilters) =>
+      [...relatoriosKeys.financeiro.all(), 'inadimplencia', filters] as const,
   },
 };

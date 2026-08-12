@@ -1,301 +1,343 @@
-import React, { useState, useEffect } from 'react';
-import { Printer, AlertTriangle, Phone } from 'lucide-react';
-import { supabase } from '../../../../lib/supabase';
-import DocumentHeader from '../../components/DocumentHeader';
-import { A4ReportPrintStyles } from './RelatorioShared';
-import ReportWatermark from './ReportWatermark';
+import React, { useDeferredValue, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import {
+  AlertTriangle,
+  CalendarDays,
+  CircleDollarSign,
+  Phone,
+  RefreshCw,
+  Search,
+  Users,
+} from 'lucide-react';
+import FinancialReportExportButton, {
+  type FinancialReportColumn,
+  type FinancialReportFilter,
+  type FinancialReportRow,
+  type FinancialReportSummaryCard,
+} from '../../financeiro/components/FinancialReportPreview';
+import {
+  relatoriosService,
+  type RelatorioInadimplenciaFiltros,
+} from '../relatorios.service';
+import { relatoriosKeys } from '../relatorios.query-keys';
+import {
+  FilterField,
+  FilterInput,
+  FilterSelect,
+  formatCurrency,
+  formatDate,
+  SummaryCard,
+} from './RelatorioShared';
 
 interface RelatorioInadimplenciaProps {
   company: any;
   polo: any;
 }
 
-interface DefaultingStudent {
-  id: string;
-  nome: string;
-  telefone: string;
-  curso: string;
-  dataVencimento: string;
-  diasAtraso: number;
-  valorDevido: number;
-  poloNome: string;
-  poloId: string;
-}
+const toInputDate = (date: Date) => [
+  String(date.getFullYear()),
+  String(date.getMonth() + 1).padStart(2, '0'),
+  String(date.getDate()).padStart(2, '0'),
+].join('-');
+
+const overdueOptions = [
+  { value: 1, label: 'Qualquer atraso (a partir de 1 dia)' },
+  { value: 8, label: 'A partir de 8 dias' },
+  { value: 31, label: 'A partir de 31 dias' },
+  { value: 61, label: 'A partir de 61 dias' },
+  { value: 91, label: 'A partir de 91 dias' },
+];
+
+const overdueTone = (days: number) => {
+  if (days >= 61) return 'bg-rose-50 text-rose-700';
+  if (days >= 31) return 'bg-orange-50 text-orange-700';
+  return 'bg-amber-50 text-amber-700';
+};
 
 const RelatorioInadimplencia: React.FC<RelatorioInadimplenciaProps> = ({ company, polo }) => {
-  const [inadimplentesList, setInadimplentesList] = useState<DefaultingStudent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedPoloId, setSelectedPoloId] = useState(polo?.id || 'todos');
-  const [minDaysOverdue, setMinDaysOverdue] = useState('0');
+  const [dataCorte, setDataCorte] = useState(() => toInputDate(new Date()));
+  const [minDiasAtraso, setMinDiasAtraso] = useState(1);
+  const [busca, setBusca] = useState('');
+  const deferredBusca = useDeferredValue(busca);
 
-  useEffect(() => {
-    fetchData();
-  }, [polo?.id]);
+  const filters = useMemo<RelatorioInadimplenciaFiltros>(() => ({
+    poloId: polo?.id || null,
+    dataCorte,
+    minDiasAtraso,
+    busca: deferredBusca || null,
+  }), [dataCorte, deferredBusca, minDiasAtraso, polo?.id]);
 
-  useEffect(() => {
-    setSelectedPoloId(polo?.id || 'todos');
-  }, [polo?.id]);
-
-  const fetchData = async () => {
-    setLoading(true);
-    if (!polo?.id) {
-      setInadimplentesList([]);
-      setLoading(false);
-      return;
-    }
-    try {
-      const todayStr = new Date().toISOString().split('T')[0];
-
-      // Query unpaid receivables past due date
-      let receivablesQuery = supabase
-        .from('contas_receber')
-        .select(`
-          id,
-          valor,
-          data_vencimento,
-          status,
-          descricao,
-          polo_id,
-          polos ( nome ),
-          cliente_id,
-          parceiros ( nome, telefone, curso_id, cursos ( nome ) )
-        `)
-        .neq('status', 'PAGO')
-        .lt('data_vencimento', todayStr);
-      receivablesQuery = receivablesQuery.eq('polo_id', polo.id);
-      const { data: dbReceivables, error } = await receivablesQuery;
-
-      if (error) throw error;
-
-      const today = new Date();
-      const mapped: DefaultingStudent[] = (dbReceivables || []).map((r: any) => {
-        const due = new Date(r.data_vencimento);
-        const timeDiff = Math.abs(today.getTime() - due.getTime());
-        const diffDays = Math.ceil(timeDiff / (1000 * 3600 * 24));
-
-        return {
-          id: r.id,
-          nome: r.parceiros?.nome || 'Responsável Não Informado',
-          telefone: r.parceiros?.telefone || 'Sem contato',
-          curso: r.parceiros?.cursos?.nome || r.descricao || 'Curso Acadêmico',
-          dataVencimento: r.data_vencimento,
-          diasAtraso: diffDays,
-          valorDevido: Number(r.valor) || 0,
-          poloNome: r.polos?.nome || 'Geral',
-          poloId: r.polo_id || ''
-        };
-      });
-
-      setInadimplentesList(mapped);
-    } catch (err) {
-      console.error('Erro ao carregar inadimplentes:', err);
-      setInadimplentesList([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handlePrint = () => {
-    window.print();
-  };
-
-  const filteredItems = inadimplentesList.filter(item => {
-    if (selectedPoloId !== 'todos' && item.poloId !== selectedPoloId) return false;
-    if (item.diasAtraso < parseInt(minDaysOverdue, 10)) return false;
-    return true;
+  const reportQuery = useQuery({
+    queryKey: relatoriosKeys.financeiro.inadimplencia(filters),
+    queryFn: () => relatoriosService.getInadimplencia(filters),
+    staleTime: 0,
+    gcTime: 5 * 60_000,
+    refetchOnWindowFocus: true,
   });
 
-  const totalDevido = filteredItems.reduce((acc, curr) => acc + curr.valorDevido, 0);
+  const data = reportQuery.data;
+  const percentualInadimplencia = data?.resumo.percentualComparavel
+    && data.resumo.percentualInadimplencia !== null
+    ? data.resumo.percentualInadimplencia.toFixed(1) + '%'
+    : '—';
+  const exportColumns = useMemo<FinancialReportColumn[]>(() => [
+    { label: 'Devedor' },
+    { label: 'Contato' },
+    { label: 'Curso / lançamento' },
+    { label: 'Vencimento', align: 'center' },
+    { label: 'Atraso', align: 'center' },
+    { label: 'Saldo em aberto', align: 'right' },
+  ], []);
+  const exportRows = useMemo<FinancialReportRow[]>(() => (data?.devedores || []).map((item) => ({
+    id: item.id,
+    cells: [
+      item.devedor,
+      item.contato || 'Não informado',
+      item.curso || item.descricao,
+      formatDate(item.dataVencimento),
+      String(item.diasAtraso) + ' dias',
+      formatCurrency(item.valorEmAberto),
+    ],
+  })), [data?.devedores]);
+  const exportSummary = useMemo<FinancialReportSummaryCard[]>(() => data ? [
+    { label: 'Títulos vencidos', value: data.resumo.quantidadeTitulos, tone: 'amber' },
+    { label: 'Devedores', value: data.resumo.quantidadeDevedores, tone: 'slate' },
+    { label: 'Saldo em atraso', value: formatCurrency(data.resumo.valorEmAtraso), tone: 'rose' },
+    { label: 'Inadimplência', value: percentualInadimplencia, tone: 'blue' },
+  ] : [], [data, percentualInadimplencia]);
+  const exportFilters = useMemo<FinancialReportFilter[]>(() => data ? [
+    { label: 'Data de corte', value: formatDate(data.meta.dataCorte) },
+    { label: 'Escopo', value: data.meta.escopo },
+    { label: 'Atraso mínimo', value: String(data.meta.minDiasAtraso) + ' dia(s)' },
+    ...(busca.trim() ? [{ label: 'Busca', value: busca.trim() }] : []),
+  ] : [], [busca, data]);
+  const canExport = Boolean(
+    data
+    && data.completo
+    && data.devedores.length > 0
+    && !reportQuery.isFetching,
+  );
 
-  const formatCurrency = (val: number) => {
-    return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-  };
-
-  const formatDate = (dateStr: string) => {
-    const [y, m, d] = dateStr.split('-');
-    return `${d}/${m}/${y}`;
+  const clearFilters = () => {
+    setDataCorte(toInputDate(new Date()));
+    setMinDiasAtraso(1);
+    setBusca('');
   };
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 h-full w-full">
-      {/* Lado Esquerdo: Filtros e Métricas */}
-      <div className="w-full lg:w-72 bg-white rounded-3xl p-5 border border-slate-100 shadow-sm shrink-0 flex flex-col justify-between">
+    <div className="flex h-full w-full flex-col gap-6 lg:flex-row">
+      <aside className="w-full shrink-0 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm lg:w-80">
         <div className="space-y-5">
-          <div>
-            <h3 className="text-sm font-black text-[#001a33] uppercase tracking-wider mb-3">Filtros do Relatório</h3>
-            
-            <div className="space-y-3">
-              {/* Polo */}
-              <div className="flex flex-col gap-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase ml-1">Unidade / Polo</span>
-                <select
-                  value={selectedPoloId}
-                  onChange={(e) => setSelectedPoloId(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none cursor-pointer"
-                >
-                  <option value="todos">Todos os Polos</option>
-                  <option value="matriz-id">Matriz - Aracaju</option>
-                  <option value="estancia-id">Polo Estância</option>
-                  <option value="lagarto-id">Polo Lagarto</option>
-                  <option value="propria-id">Polo Própria</option>
-                </select>
-              </div>
-
-              {/* Tempo de Atraso */}
-              <div className="flex flex-col gap-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase ml-1">Tempo de Atraso</span>
-                <select
-                  value={minDaysOverdue}
-                  onChange={(e) => setMinDaysOverdue(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none cursor-pointer"
-                >
-                  <option value="0">Qualquer atraso (&gt;0 dias)</option>
-                  <option value="15">Mais de 15 dias de atraso</option>
-                  <option value="30">Mais de 30 dias de atraso</option>
-                  <option value="60">Mais de 60 dias de atraso</option>
-                </select>
-              </div>
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-rose-50 text-rose-600">
+              <AlertTriangle size={19} />
+            </div>
+            <div>
+              <h3 className="text-sm font-black uppercase tracking-tight text-[#001a33]">Filtros da cobrança</h3>
+              <p className="mt-1 text-[11px] font-medium leading-relaxed text-slate-400">Aging de contas a receber vencidas</p>
             </div>
           </div>
 
-          <div className="border-t border-slate-100 pt-4 space-y-3">
-            <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Resumo Geral</h4>
-            
-            <div className="space-y-2">
-              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-100 flex items-center justify-between">
-                <div>
-                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-wider">Devedores</p>
-                  <p className="text-lg font-black text-[#001a33] mt-0.5">{filteredItems.length}</p>
-                </div>
-                <AlertTriangle size={20} className="text-amber-500 opacity-60" />
+          <div className="space-y-3 border-t border-slate-100 pt-4">
+            <FilterField label="Data de corte">
+              <FilterInput
+                type="date"
+                value={dataCorte}
+                max={toInputDate(new Date())}
+                onChange={(event) => setDataCorte(event.target.value)}
+                aria-label="Data de corte"
+              />
+            </FilterField>
+
+            <FilterField label="Atraso mínimo">
+              <FilterSelect
+                value={minDiasAtraso}
+                onChange={(event) => setMinDiasAtraso(Number(event.target.value))}
+              >
+                {overdueOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </FilterSelect>
+            </FilterField>
+
+            <FilterField label="Buscar">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                <FilterInput
+                  value={busca}
+                  onChange={(event) => setBusca(event.target.value)}
+                  placeholder="Devedor, contato ou curso"
+                  className="pl-9"
+                />
               </div>
-              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-100 flex items-center justify-between">
-                <div>
-                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-wider">Total em Atraso</p>
-                  <p className="text-md font-black text-red-500 mt-0.5">{formatCurrency(totalDevido)}</p>
-                </div>
-                <span className="text-xs font-black text-red-500 shrink-0">R$</span>
-              </div>
-            </div>
+            </FilterField>
           </div>
+
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 transition-colors hover:bg-slate-50"
+          >
+            <RefreshCw size={14} />
+            Limpar filtros
+          </button>
         </div>
 
-        <button 
-          onClick={handlePrint}
-          className="w-full mt-6 py-3 bg-[#001a33] hover:bg-blue-900 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-colors shadow-lg flex items-center justify-center gap-2"
-        >
-          <Printer size={15} /> Imprimir / PDF
-        </button>
-      </div>
+        <div className="mt-5 border-t border-slate-100 pt-5">
+          <FinancialReportExportButton
+            title="Relatório de Inadimplência"
+            subtitle="Contas a receber vencidas, com saldo residual, faixas de atraso e dados operacionais de cobrança."
+            rightTitle="Relatórios Financeiros"
+            rightType="Inadimplência"
+            fileName={['relatorio-inadimplencia', dataCorte].join('-')}
+            columns={exportColumns}
+            rows={exportRows}
+            summaryCards={exportSummary}
+            filters={exportFilters}
+            footerNote="Dados pessoais exibidos exclusivamente para operação de cobrança autorizada. O saldo considera pagamentos parciais e a taxa só é exibida na visão completa do corte."
+            poloId={polo?.id}
+            polo={polo}
+            company={company}
+            tone="rose"
+            buttonLabel="Gerar PDF"
+            buttonClassName="w-full"
+            disabled={!canExport}
+          />
+          {!canExport && !reportQuery.isLoading && (
+            <p className="mt-2 text-center text-[10px] font-medium leading-relaxed text-slate-400">
+              {data && !data.completo
+                ? 'Reduza os filtros para gerar um PDF completo com dados pessoais.'
+                : 'Aplique filtros que retornem ao menos um título em atraso para gerar o PDF.'}
+            </p>
+          )}
+        </div>
+      </aside>
 
-      {/* Lado Direito: Preview da Página A4 */}
-      <div className="flex-1 bg-slate-200/40 rounded-3xl p-4 sm:p-8 flex justify-center overflow-auto custom-scrollbar">
-        {loading ? (
-          <div className="flex items-center justify-center py-20 w-full">
-            <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-          </div>
-        ) : (
-          <div 
-            className="a4-report-page relative box-border flex h-[297mm] min-h-[297mm] w-[210mm] min-w-[210mm] shrink-0 flex-col bg-white p-10 text-slate-800 shadow-lg"
-            id="print-area"
-          >
-            {/* Watermark (Marca d'água) */}
-            <ReportWatermark polo={polo} orientation="portrait" />
-
-            {/* Document Header */}
-            <DocumentHeader 
-              company={company} 
-              polo={polo} 
-              orientation="portrait"
-              meta={{ title: 'Cobrança e Caixa', label: 'Tipo', value: 'Relatório de Inadimplência' }}
-            />
-
-            {/* Title / Description */}
-            <div className="mb-6 relative z-10 border-b pb-4">
-              <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Relação de Alunos com Débitos em Atraso</h3>
-              <p className="text-xs text-slate-500 font-medium mt-1">
-                Relatório de cobrança listando alunos com boletos ou parcelas em aberto vencidos, incluindo dias em atraso e telefone para fins de assessoria de renegociação financeira.
-              </p>
-            </div>
-
-            {/* Metadados do Relatório */}
-            <div className="grid grid-cols-2 gap-4 mb-6 relative z-10">
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-                <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider">Unidade / Polo</span>
-                <p className="text-xs font-bold text-slate-800 uppercase mt-0.5">{polo?.nome || 'Matriz'}</p>
-              </div>
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-                <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider">Atraso Mínimo Filtrado</span>
-                <p className="text-xs font-bold text-slate-800 uppercase mt-0.5">{minDaysOverdue} DIAS</p>
-              </div>
-            </div>
-
-            {/* Tabela de Dados */}
-            <div className="relative z-10 flex-1">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b-2 border-slate-350 text-[10px] font-bold text-slate-500 uppercase tracking-wider bg-slate-50">
-                    <th className="py-2 px-3">Nome do Aluno</th>
-                    <th className="py-2 px-2">Telefone</th>
-                    <th className="py-2 px-2 text-center">Vencimento</th>
-                    <th className="py-2 px-2 text-center">Atraso (Dias)</th>
-                    <th className="py-2 px-2 text-center">Unidade</th>
-                    <th className="py-2 px-3 text-right">Valor em Aberto</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-700">
-                  {filteredItems.map(item => (
-                    <tr key={item.id} className="hover:bg-slate-50/50">
-                      <td className="py-3 px-3 font-bold text-[#001a33]">{item.nome}</td>
-                      <td className="py-3 px-2 text-slate-600 font-bold text-[10px] flex items-center gap-1 mt-1">
-                        <Phone size={10} className="text-slate-400" />
-                        {item.telefone}
-                      </td>
-                      <td className="py-3 px-2 text-center text-slate-500 font-bold">{formatDate(item.dataVencimento)}</td>
-                      <td className="py-3 px-2 text-center">
-                        <span className={`inline-block text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded ${
-                          item.diasAtraso > 45 ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'
-                        }`}>
-                          {item.diasAtraso} DIAS
-                        </span>
-                      </td>
-                      <td className="py-3 px-2 text-center text-slate-500 font-medium truncate max-w-[100px]">{item.poloNome}</td>
-                      <td className="py-3 px-3 text-right font-black text-red-500">{formatCurrency(item.valorDevido)}</td>
-                    </tr>
-                  ))}
-                  {filteredItems.length > 0 && (
-                    <tr className="bg-slate-50 font-black border-t-2 border-slate-350">
-                      <td colSpan={5} className="py-3 px-3 text-[#001a33] uppercase">Total Geral Inadimplente</td>
-                      <td className="py-3 px-3 text-right text-red-500">{formatCurrency(totalDevido)}</td>
-                    </tr>
-                  )}
-                  {filteredItems.length === 0 && (
-                    <tr>
-                      <td colSpan={6} className="py-8 text-center text-slate-400 font-bold uppercase tracking-widest text-[10px]">
-                        Nenhum débito pendente atende aos filtros atuais.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Footer de Assinaturas e Página */}
-            <div className="mt-8 pt-6 border-t border-slate-200 relative z-10 flex justify-between items-end text-[9px] text-slate-400 font-bold uppercase tracking-wider">
+      <section className="min-h-[70vh] min-w-0 flex-1 overflow-auto rounded-3xl bg-slate-100/70 p-4 custom-scrollbar sm:p-6">
+        <div className="mx-auto min-h-full max-w-6xl rounded-3xl border border-slate-100 bg-white p-5 shadow-sm sm:p-6">
+          <header className="border-b border-slate-100 pb-5">
+            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
               <div>
-                <p>UNIVERSO CURSOS E CONSULTORIA</p>
-                <p className="text-[8px] font-medium text-slate-400 lowercase mt-0.5">Gerado automaticamente pelo painel do gestor.</p>
+                <div className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                  <CircleDollarSign size={13} />
+                  Cobrança · {data?.meta.escopo || polo?.nome || 'Consolidado'}
+                </div>
+                <h3 className="text-lg font-black uppercase tracking-tight text-[#001a33]">Relatório de Inadimplência</h3>
+                <p className="mt-1 max-w-3xl text-xs font-medium leading-relaxed text-slate-500">
+                  Títulos vencidos por data de corte, com saldo residual e faixas de atraso para priorizar a cobrança.
+                </p>
               </div>
-              <div className="text-right">
-                <p>Página 1 de 1</p>
+              <div className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-slate-500">
+                <CalendarDays size={13} />
+                Corte em {formatDate(dataCorte)}
               </div>
             </div>
+          </header>
 
-          </div>
-        )}
-      </div>
+          {reportQuery.isLoading ? (
+            <div className="flex min-h-[420px] items-center justify-center" role="status" aria-label="Carregando inadimplência">
+              <RefreshCw size={28} className="animate-spin text-rose-600" />
+            </div>
+          ) : reportQuery.isError ? (
+            <div className="flex min-h-[420px] items-center justify-center">
+              <div className="max-w-md rounded-3xl border border-rose-100 bg-rose-50 p-7 text-center">
+                <AlertTriangle className="mx-auto text-rose-600" size={26} />
+                <h4 className="mt-3 text-sm font-black uppercase tracking-tight text-rose-800">Não foi possível gerar a inadimplência</h4>
+                <p className="mt-2 text-xs font-medium leading-relaxed text-rose-700">{reportQuery.error instanceof Error ? reportQuery.error.message : 'Revise os filtros e tente novamente.'}</p>
+                <button type="button" onClick={() => void reportQuery.refetch()} className="mt-5 rounded-xl bg-rose-600 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:bg-rose-700">Tentar novamente</button>
+              </div>
+            </div>
+          ) : data ? (
+            <>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <SummaryCard label="Títulos vencidos" value={data.resumo.quantidadeTitulos} tone="amber" />
+                <SummaryCard label="Devedores" value={data.resumo.quantidadeDevedores} tone="slate" />
+                <SummaryCard label="Saldo em atraso" value={formatCurrency(data.resumo.valorEmAtraso)} tone="red" />
+                <SummaryCard label="Inadimplência" value={percentualInadimplencia} tone="blue" />
+              </div>
 
-      <A4ReportPrintStyles />
+              <p className="mt-4 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-xs font-medium leading-relaxed text-slate-600">
+                {data.resumo.percentualComparavel
+                  ? 'Base da taxa: ' + formatCurrency(data.resumo.valorEmAtraso) + ' em atraso sobre ' + formatCurrency(data.resumo.valorFaturadoVencido) + ' faturados e vencidos no escopo do corte.'
+                  : 'A taxa de inadimplência fica oculta quando a busca ou o atraso mínimo restringe a amostra. O saldo e as faixas continuam refletindo os filtros aplicados.'}
+              </p>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                {data.faixas.map((faixa) => (
+                  <div key={faixa.chave} className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
+                    <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">{faixa.rotulo}</p>
+                    <p className="mt-1 text-sm font-black text-[#001a33]">{formatCurrency(faixa.valorEmAberto)}</p>
+                    <p className="mt-1 text-[10px] font-semibold text-slate-500">{faixa.quantidade} título(s)</p>
+                  </div>
+                ))}
+              </div>
+
+              {data.mensagem && (
+                <p className="mt-4 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-xs font-medium leading-relaxed text-amber-800">
+                  {data.mensagem}
+                </p>
+              )}
+
+              <div className="mt-6 overflow-hidden rounded-2xl border border-slate-100">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-left">
+                    <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-wider text-slate-400">
+                      <tr>
+                        <th className="px-4 py-3">Devedor</th>
+                        <th className="px-4 py-3">Contato</th>
+                        <th className="px-4 py-3">Curso / lançamento</th>
+                        <th className="px-4 py-3 text-center">Vencimento</th>
+                        <th className="px-4 py-3 text-center">Atraso</th>
+                        <th className="px-4 py-3 text-right">Saldo em aberto</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-xs">
+                      {data.devedores.map((item) => (
+                        <tr key={item.id} className="hover:bg-slate-50/70">
+                          <td className="px-4 py-3 font-bold text-[#001a33]">{item.devedor}</td>
+                          <td className="px-4 py-3 font-semibold text-slate-600">
+                            <span className="inline-flex items-center gap-1">
+                              <Phone size={12} className="text-slate-400" />
+                              {item.contato || 'Não informado'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <p className="font-bold text-slate-700">{item.curso || item.descricao || 'Não informado'}</p>
+                            {item.curso && item.descricao && item.descricao !== item.curso ? (
+                              <p className="mt-0.5 text-[10px] font-medium text-slate-400">{item.descricao}</p>
+                            ) : null}
+                          </td>
+                          <td className="px-4 py-3 text-center font-semibold text-slate-500">{formatDate(item.dataVencimento)}</td>
+                          <td className="px-4 py-3 text-center">
+                            <span className={'inline-flex rounded-md px-2 py-1 text-[9px] font-black uppercase tracking-wide ' + overdueTone(item.diasAtraso)}>
+                              {item.diasAtraso} dias
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right font-black text-rose-600">{formatCurrency(item.valorEmAberto)}</td>
+                        </tr>
+                      ))}
+                      {data.devedores.length === 0 && (
+                        <tr>
+                          <td colSpan={6} className="px-4 py-12 text-center text-[10px] font-black uppercase tracking-widest text-slate-400">
+                            Nenhum título em atraso atende aos filtros selecionados.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="mt-4 flex items-start gap-2 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-xs font-medium leading-relaxed text-slate-500">
+                <Users size={15} className="mt-0.5 shrink-0 text-slate-400" />
+                <span>
+                  A lista operacional contém dados pessoais e só fica disponível dentro do módulo autorizado de Relatórios.
+                </span>
+              </div>
+            </>
+          ) : null}
+        </div>
+      </section>
     </div>
   );
 };

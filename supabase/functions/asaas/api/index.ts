@@ -1119,6 +1119,7 @@ Deno.serve(async (req: Request) => {
         receivable,
         recreateAsaas,
       );
+      const reversalTimestamp = new Date().toISOString();
 
       let reverseQuery = admin
         .from("contas_receber")
@@ -1127,6 +1128,7 @@ Deno.serve(async (req: Request) => {
           conta_bancaria_id: null,
           valor_pago: null,
           data_pagamento: null,
+          manual_settlement_reversed_at: reversalTimestamp,
           forma_pagamento: clearCanceledGateway
             ? restoredLegacyPaymentMethod
             : null,
@@ -1206,6 +1208,8 @@ Deno.serve(async (req: Request) => {
           "conta_bancaria_id",
           "valor_pago",
           "data_pagamento",
+          "manual_settlement_id",
+          "manual_settlement_reversed_at",
           "forma_pagamento",
           "gateway_status",
           "asaas_status",
