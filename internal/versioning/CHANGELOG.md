@@ -2,6 +2,19 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [4.3.2] - 2026-08-13
+
+### Corrigido
+
+- A conciliação Banese deixa de criar uma execução financeira quando não há título elegível na fila.
+- A reserva da fila e a criação da execução passam a ocorrer na mesma transação, evitando ciclos vazios e corridas entre workers.
+
+### Segurança e qualidade
+
+- Execuções vazias legadas e telemetria técnica bem-sucedida recebem retenção estrita após 48 horas; pagamentos, tentativas, transições e falhas continuam preservados.
+- O novo entrypoint funciona com os privilégios mínimos do `service_role`, o prune fica restrito ao cron e os entrypoints legados de início e claim foram revogados.
+- Três migrations, worker v26, smoke real de fila vazia, teste focal 9/9, `deno check` e revisão independente foram validados antes da publicação.
+
 ## [4.3.1] - 2026-08-12
 
 ### Adicionado

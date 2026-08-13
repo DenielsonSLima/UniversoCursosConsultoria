@@ -1,8 +1,8 @@
 {
-  "version": "4.3.1",
+  "version": "4.3.2",
   "display": "ESTÁVEL",
   "stage": "stable",
   "revision": 1,
-  "releasedAt": "2026-08-12",
-  "summary": "Cobrança avulsa e isolada para refazer disciplina em dependência acadêmica"
+  "releasedAt": "2026-08-13",
+  "summary": "Conciliação Banese sem ciclos financeiros vazios e com retenção segura"
 }

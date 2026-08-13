@@ -199,16 +199,25 @@ Deno.serve(async (req: Request) => {
   }
 
   const startedAt = Date.now();
-  const { data: runConfig, error: beginError } = await admin.rpc(
-    "begin_banese_reconciliation_run",
+  const { data: runConfig, error: prepareError } = await admin.rpc(
+    "prepare_banese_reconciliation_batch_v3",
   );
-  if (beginError) {
-    console.error("banese reconciliation begin failed", {
-      errorClass: "BEGIN_RUN_ERROR",
+  if (prepareError) {
+    console.error("banese reconciliation prepare failed", {
+      errorClass: "PREPARE_ERROR",
     });
     return json({ error: "Não foi possível iniciar a conciliação." }, 500);
   }
-  if (!runConfig?.enabled) {
+  if (
+    !runConfig || typeof runConfig !== "object" ||
+    typeof runConfig.enabled !== "boolean"
+  ) {
+    console.error("banese reconciliation prepare returned invalid response", {
+      errorClass: "PREPARE_CONTRACT_ERROR",
+    });
+    return json({ error: "A reserva da conciliação retornou dados inválidos." }, 500);
+  }
+  if (runConfig.enabled === false) {
     return json({
       success: true,
       skipped: true,
@@ -231,37 +240,46 @@ Deno.serve(async (req: Request) => {
     Math.min(300, Number(runConfig.oauthRefreshMarginSeconds || 60)),
   );
 
-  const { data: claimed, error: claimError } = await admin.rpc(
-    "claim_banese_reconciliation_batch_v2",
-    { p_run_id: runId },
-  );
-  if (claimError) {
-    console.error("banese reconciliation claim failed", {
-      errorClass: "CLAIM_ERROR",
-    });
-    const { error: failureAuditError } = await admin.rpc(
-      "fail_banese_reconciliation_run",
-      {
-        p_run_id: runId,
-        p_error_class: "CLAIM_ERROR",
-        p_decision: "Falha interna ao preparar a fila de consulta Banese.",
-        p_duration_ms: Date.now() - startedAt,
-      },
-    );
-    if (failureAuditError) {
-      console.error("banese reconciliation failure audit failed", {
-        errorClass: "FAILURE_AUDIT_ERROR",
-      });
-    }
-    return json({ error: "Não foi possível iniciar a conciliação." }, 500);
-  }
-
-  const items = (Array.isArray(claimed) ? claimed : [])
+  const rawItems: Array<Record<string, unknown>> = Array.isArray(runConfig.items)
+    ? runConfig.items.filter(
+      (item: unknown): item is Record<string, unknown> =>
+        Boolean(item) && typeof item === "object",
+    )
+    : [];
+  const items = rawItems
     .map((item) => ({
-      receivableId: String(item?.receivable_id ?? ""),
+      receivableId: String(item?.receivableId ?? ""),
       modality: String(item?.modality ?? "OUTROS_CREDITOS"),
     }))
     .filter((item) => Boolean(item.receivableId));
+
+  const claimed = Number(runConfig.claimed || 0);
+  if (!runId || !environment || claimed !== items.length || items.length === 0) {
+    console.error("banese reconciliation prepare returned invalid batch", {
+      errorClass: "PREPARE_CONTRACT_ERROR",
+      hasRunId: Boolean(runId),
+      hasEnvironment: Boolean(environment),
+      claimed,
+      items: items.length,
+    });
+    if (runId) {
+      const { error: failureAuditError } = await admin.rpc(
+        "fail_banese_reconciliation_run",
+        {
+          p_run_id: runId,
+          p_error_class: "PREPARE_CONTRACT_ERROR",
+          p_decision: "A reserva Banese retornou um lote inconsistente.",
+          p_duration_ms: Date.now() - startedAt,
+        },
+      );
+      if (failureAuditError) {
+        console.error("banese reconciliation failure audit failed", {
+          errorClass: "FAILURE_AUDIT_ERROR",
+        });
+      }
+    }
+    return json({ error: "A reserva da conciliação retornou dados inválidos." }, 500);
+  }
   let reconciled = 0;
   let paid = 0;
   let failed = 0;
