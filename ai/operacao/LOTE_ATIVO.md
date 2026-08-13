@@ -1,6 +1,6 @@
 # Lote ativo
 
-Estado: `PUBLICACAO_AUTORIZADA`
+Estado: `PUBLICADO`
 
 ## Lote: 2026-08-13-conciliacao-banese-sem-ciclos-vazios
 
@@ -11,4 +11,4 @@ Estado: `PUBLICACAO_AUTORIZADA`
 - Critérios de aceite: fila vazia retorna `NO_CLAIMABLE_TITLES` sem criar `run`, tentativa, OAuth ou chamada Banese; transições de configuração relevantes continuam preservadas; lote com título continua protegido por advisory lock, `SKIP LOCKED`, lease e `config_version`; reserva restrita a `service_role`, prune restrito ao `postgres`/cron e entrypoints legados revogados; dois ciclos reais após reativação sem logs de reconciliação vazios.
 - Produção Supabase: migrations `20260813031252_prune_banese_no_work_reconciliation_runs.sql`, `20260813034453_prepare_banese_reconciliation_batch_atomically.sql` e `20260813041928_harden_banese_reconciliation_entrypoints.sql` aplicadas por MCP; worker `banese-reconciliation-worker` v26 ativo; cron pausado durante o rollout e reativado após a validação.
 - Validação: teste focal 9/9 e `deno check` aprovados; chamadas transacionais como `service_role` e `postgres` validaram os privilégios mínimos; chamada direta da RPC em fila vazia devolveu `NO_CLAIMABLE_TITLES` com zero `run`/lease; ciclos reais do worker v26 retornaram HTTP 200 com `skipped`; ao fechamento há zero execução, tentativa, transição e lease Banese; não foi criada cobrança real.
-- Publicação GitHub: versão `4.3.2` autorizada em 2026-08-13, com manifesto explícito e revisão final independente antes da PR.
+- Publicação GitHub/Vercel: PR [#73](https://github.com/DenielsonSLima/UniversoCursosConsultoria/pull/73) mesclada em `main` no commit [`e1e2f38f`](https://github.com/DenielsonSLima/UniversoCursosConsultoria/commit/e1e2f38fd5195d61c5a51b777e7ae40a48a63914); [deploy de Produção](https://vercel.com/denielson-limas-projects/universo-cursos-consultoria/2MjYmKSNMpiEbXsJ6KWtXkTsss6y) pronto; versão `4.3.2` estável publicada.
