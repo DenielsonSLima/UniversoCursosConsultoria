@@ -26,6 +26,14 @@ const profilePolicyMigrationPath = new URL(
   '../supabase/migrations/20260727061428_harden_banese_autopilot_p10_and_worker_fencing.sql',
   import.meta.url,
 );
+const atomicReservationMigrationPath = new URL(
+  '../supabase/migrations/20260813034453_prepare_banese_reconciliation_batch_atomically.sql',
+  import.meta.url,
+);
+const entrypointHardeningMigrationPath = new URL(
+  '../supabase/migrations/20260813041928_harden_banese_reconciliation_entrypoints.sql',
+  import.meta.url,
+);
 const baneseConsolePath = new URL(
   '../modules/gestor/configuracoes/consulta-api-banese/ConsultaApiBaneseConfig.tsx',
   import.meta.url,
@@ -52,13 +60,15 @@ const eadModalPath = new URL(
   import.meta.url,
 );
 
-const [migration, profileExpansionMigration, historyHardeningMigration, healthGuardMigration, priorityProfilesMigration, profilePolicyMigration, financialCycleMigration, worker, boletoAdapter, authAdapter, eadModal, baneseConsole, rootStyles] = await Promise.all([
+const [migration, profileExpansionMigration, historyHardeningMigration, healthGuardMigration, priorityProfilesMigration, profilePolicyMigration, atomicReservationMigration, entrypointHardeningMigration, financialCycleMigration, worker, boletoAdapter, authAdapter, eadModal, baneseConsole, rootStyles] = await Promise.all([
   readFile(migrationPath, 'utf8'),
   readFile(profileExpansionMigrationPath, 'utf8'),
   readFile(historyHardeningMigrationPath, 'utf8'),
   readFile(healthGuardMigrationPath, 'utf8'),
   readFile(priorityProfilesMigrationPath, 'utf8'),
   readFile(profilePolicyMigrationPath, 'utf8'),
+  readFile(atomicReservationMigrationPath, 'utf8'),
+  readFile(entrypointHardeningMigrationPath, 'utf8'),
   readFile(financialCycleMigrationPath, 'utf8'),
   readFile(workerPath, 'utf8'),
   readFile(boletoAdapterPath, 'utf8'),
@@ -121,6 +131,30 @@ test('agenda um único ciclo por minuto e desativa a reserva legada', () => {
   assert.match(migration, /'banese-reconciliation-every-minute',\s+'\* \* \* \* \*'/);
   assert.match(migration, /select null::uuid\s+where false/);
   assert.match(migration, /claim_banese_reconciliation_batch_v2/);
+});
+
+test('reserva títulos antes de criar execução e ignora fila vazia sem histórico', () => {
+  assert.match(atomicReservationMigration, /prepare_banese_reconciliation_batch_v3/);
+  assert.match(atomicReservationMigration, /pg_advisory_xact_lock/);
+  assert.match(atomicReservationMigration, /FOR UPDATE OF locked_queue SKIP LOCKED/);
+  assert.match(atomicReservationMigration, /WHERE EXISTS \(SELECT 1 FROM candidates\)/);
+  assert.match(atomicReservationMigration, /'NO_CLAIMABLE_TITLES'/);
+  assert.match(atomicReservationMigration, /'Reserva Banese inconsistente; a transação foi revertida\.'/);
+  assert.match(atomicReservationMigration, /SET search_path = ''/);
+  assert.match(atomicReservationMigration, /REVOKE ALL ON FUNCTION public\.prepare_banese_reconciliation_batch_v3\(\)[\s\S]+FROM PUBLIC, anon, authenticated/);
+  assert.match(atomicReservationMigration, /GRANT EXECUTE ON FUNCTION public\.prepare_banese_reconciliation_batch_v3\(\)[\s\S]+TO service_role/);
+  assert.match(worker, /prepare_banese_reconciliation_batch_v3/);
+  assert.doesNotMatch(worker, /begin_banese_reconciliation_run/);
+  assert.doesNotMatch(worker, /claim_banese_reconciliation_batch_v2/);
+  assert.match(worker, /PREPARE_CONTRACT_ERROR/);
+  assert.match(worker, /typeof runConfig\.enabled !== "boolean"/);
+  assert.match(worker, /runConfig\.enabled === false/);
+  assert.match(worker, /Array\.isArray\(runConfig\.items\)/);
+  assert.match(entrypointHardeningMigration, /prepare_banese_reconciliation_batch_v3\(\)[\s\S]+SECURITY INVOKER/);
+  assert.match(entrypointHardeningMigration, /prune_banese_reconciliation_no_work_runs\(\)[\s\S]+SECURITY INVOKER/);
+  assert.match(entrypointHardeningMigration, /begin_banese_reconciliation_run\(\)[\s\S]+FROM PUBLIC, anon, authenticated, service_role/);
+  assert.match(entrypointHardeningMigration, /claim_banese_reconciliation_batch_v2\(uuid\)[\s\S]+FROM PUBLIC, anon, authenticated, service_role/);
+  assert.match(entrypointHardeningMigration, /banese_reconciliation_runs_no_work_retention_idx/);
 });
 
 test('worker consulta títulos existentes sem importar ou sincronizar parcelas futuras', () => {
