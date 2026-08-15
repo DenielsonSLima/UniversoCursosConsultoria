@@ -2,6 +2,19 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [4.3.3] - 2026-08-14
+
+### Adicionado
+
+- Uma pessoa vinculada como Professor e Gestor pode escolher o perfil institucional ao entrar, sem que um redirecionamento do outro portal anule sua escolha.
+- O cadastro de Professor consegue reutilizar, de forma controlada, a identidade institucional já existente de um Gestor com CPF e e-mail correspondentes.
+
+### Segurança e qualidade
+
+- A autorização do vínculo usa o UID canônico da sessão, exige escopo do parceiro, acesso global e Configurações, e não aceita identificador Auth enviado pelo navegador.
+- O vínculo valida CPF e e-mail, evita colisão com outro Professor e trata concorrência sem concluir o cadastro indevidamente.
+- Os contratos de login, autorização e vínculo foram adicionados aos gates de qualidade.
+
 ## [4.3.2] - 2026-08-13
 
 ### Corrigido

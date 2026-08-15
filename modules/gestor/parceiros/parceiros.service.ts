@@ -8,6 +8,31 @@ import { validateAlunoProfessorIdentity } from './utils/parceiro-validators';
 import { parceirosMatriculasService } from './parceiros-matriculas.service';
 import { documentosAlunoService } from './documentos-aluno.service';
 
+const linkProfessorInstitutionalProfile = async (partner: any) => {
+  if (partner?.tipo !== 'Professor' || !partner?.id) return partner;
+
+  try {
+    const result = await portalActivationService.linkProfessorAuthIdentity(partner.id);
+    return {
+      ...partner,
+      institutionalProfileLinked: Boolean(result.profileLinked),
+      institutionalProfileLinkState: result.profileLinkState || null,
+      institutionalProfileLinkMessage: result.message || null,
+      institutionalProfileLinkError: null,
+    };
+  } catch (error) {
+    return {
+      ...partner,
+      institutionalProfileLinked: false,
+      institutionalProfileLinkState: null,
+      institutionalProfileLinkMessage: null,
+      institutionalProfileLinkError: error instanceof Error
+        ? error.message
+        : 'Não foi possível preparar o vínculo de acesso institucional.',
+    };
+  }
+};
+
 export const parceirosService = {
   async getAll(tipo?: string, filters?: { poloId?: string; includeGlobal?: boolean }) {
     let query = supabase
@@ -187,7 +212,7 @@ export const parceirosService = {
       throw error;
     }
     
-    return toCamel(inserted);
+    return linkProfessorInstitutionalProfile(toCamel(inserted));
   },
 
   async update(id: string, data: any) {
@@ -205,7 +230,7 @@ export const parceirosService = {
       throw error;
     }
     
-    return toCamel(updated);
+    return linkProfessorInstitutionalProfile(toCamel(updated));
   },
 
   async uploadProfilePhoto(profileId: string, _currentProfile: any, file: File) {

@@ -34,8 +34,17 @@ export type FunctionResponse = {
   statuses?: PartnerEmailStatus[];
   managementStates?: GestorUserManagementState[];
   emailConfirmed?: boolean;
+  profileLinked?: boolean;
+  profileLinkState?: InstitutionalProfileLinkState;
   error?: string;
 };
+
+export type InstitutionalProfileLinkState =
+  | "linked"
+  | "already_linked"
+  | "no_matching_gestor"
+  | "not_eligible"
+  | "requires_global_configuration_access";
 
 export type PartnerEmailStatusValue =
   | "confirmed"
@@ -67,6 +76,7 @@ export type Partner = {
   tipo: string;
   nome: string;
   email?: string | null;
+  cpf_cnpj?: string | null;
   auth_user_id?: string | null;
   acesso_status?: string | null;
   acesso_erro?: string | null;

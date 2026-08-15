@@ -17,7 +17,7 @@ export const ensureAuthorizedGestor = async (
   }
 
   const { data: authData, error: authError } = await admin.auth.getUser(bearer);
-  if (authError || !authData?.user?.email) {
+  if (authError || !authData?.user?.id || !authData.user.email) {
     return {
       authorized: false,
       error: "Sessão inválida para executar esta ação.",
@@ -27,9 +27,9 @@ export const ensureAuthorizedGestor = async (
   const { data: gestor, error: gestorError } = await admin
     .from("usuarios_sistema")
     .select(
-      "id, nome, email, status, context, polo_ids, permissoes, perfil_acesso_id, personalizar_permissoes, restricao_horario, perfis_acesso(permissoes, restricao_horario)",
+      "id, auth_user_id, nome, email, status, context, polo_ids, permissoes, perfil_acesso_id, personalizar_permissoes, restricao_horario, perfis_acesso(permissoes, restricao_horario)",
     )
-    .eq("email", authData.user.email.toLowerCase())
+    .eq("auth_user_id", authData.user.id)
     .maybeSingle();
 
   if (gestorError || !gestor || !isActiveGestor(gestor.status)) {
@@ -115,14 +115,17 @@ export const loadManagedPartner = async (
   partnerId: string,
   json: JsonResponder,
 ): Promise<Partner | Response> => {
-  if (!partnerId) {
-    return json({ success: false, error: "partnerId é obrigatório." }, 400);
+  if (!partnerId || !isUuid(partnerId)) {
+    return json(
+      { success: false, error: "partnerId válido é obrigatório." },
+      400,
+    );
   }
 
   const { data: partner, error: partnerError } = await admin
     .from("parceiros")
     .select(
-      "id, tipo, nome, email, auth_user_id, acesso_status, acesso_erro, convite_enviado_em, acesso_ativado_em, troca_senha_obrigatoria, matricula_acesso, auth_login_email, polo_id, polo_ids",
+      "id, tipo, nome, email, cpf_cnpj, auth_user_id, acesso_status, acesso_erro, convite_enviado_em, acesso_ativado_em, troca_senha_obrigatoria, matricula_acesso, auth_login_email, polo_id, polo_ids",
     )
     .eq("id", partnerId)
     .maybeSingle();

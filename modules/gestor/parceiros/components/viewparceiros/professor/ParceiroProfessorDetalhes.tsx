@@ -30,6 +30,42 @@ const ParceiroProfessorDetalhes: React.FC<ParceiroProfessorDetalhesProps> = ({ p
     onSuccess: (updated) => {
       queryClient.setQueryData(['parceiro', professorData.id], updated);
       queryClient.invalidateQueries({ queryKey: ['parceiros'] });
+      if (updated?.institutionalProfileLinked) {
+        toast.success(
+          'Professor atualizado e acesso vinculado',
+          `${updated.nome || professorData.nome} poderá escolher Professor ou Gestor ao entrar no portal institucional.`,
+          {
+            avatarUrl: updated.foto || professorData.foto,
+            avatarName: updated.nome || professorData.nome,
+            contextLabel: 'Acesso institucional',
+          },
+        );
+        return;
+      }
+      if (updated?.institutionalProfileLinkError) {
+        toast.error(
+          'Professor atualizado, acesso pendente',
+          `Os dados foram salvos, mas o vínculo com o acesso institucional não foi concluído: ${updated.institutionalProfileLinkError}`,
+          {
+            avatarUrl: updated.foto || professorData.foto,
+            avatarName: updated.nome || professorData.nome,
+            contextLabel: 'Acesso institucional',
+          },
+        );
+        return;
+      }
+      if (updated?.institutionalProfileLinkState === 'requires_global_configuration_access') {
+        toast.success(
+          'Professor atualizado',
+          updated.institutionalProfileLinkMessage || 'Caso também seja Gestor, um gestor global com acesso a Configurações deve concluir o vínculo de acesso.',
+          {
+            avatarUrl: updated.foto || professorData.foto,
+            avatarName: updated.nome || professorData.nome,
+            contextLabel: 'Acesso institucional',
+          },
+        );
+        return;
+      }
       toast.success('Professor atualizado', `${updated.nome || professorData.nome} teve os dados salvos com sucesso.`, {
         avatarUrl: updated.foto || professorData.foto,
         avatarName: updated.nome || professorData.nome,

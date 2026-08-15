@@ -1,10 +1,15 @@
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useMemo, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { ArrowLeft, Building2, CheckCircle2, ArrowRight, Clock, GraduationCap, Quote, ShieldCheck, UsersRound } from 'lucide-react';
+import { ArrowLeft, Building2, CheckCircle2, ArrowRight, Clock, GraduationCap, LoaderCircle, Quote, ShieldCheck, UsersRound } from 'lucide-react';
 import LoginForm from './components/LoginForm';
 import { loginService } from './login.service';
 import { LoginCredentials } from './login.types';
 import { getInstitutionalProfiles, PortalAuthProfile, savePortalSession } from './portal-session';
+import {
+  getProfileSelectionErrorMessage,
+  requiresProfessorPoloSelection,
+  resolveProfilePostLoginRoute,
+} from './profile-selection';
 import { supabase } from '../../lib/supabase';
 import ArkhenSignature from '../shared/components/ArkhenSignature';
 import AccessCheckingScreen from '../shared/components/AccessCheckingScreen';
@@ -71,6 +76,10 @@ const LoginPage: React.FC = () => {
   const [professorName, setProfessorName] = useState('');
   const [selectedPoloId, setSelectedPoloId] = useState('');
   const [pendingProfessor, setPendingProfessor] = useState<PortalAuthProfile | null>(null);
+  const [isSelectingProfile, setIsSelectingProfile] = useState(false);
+  const [pendingProfileKey, setPendingProfileKey] = useState<string | null>(null);
+  const [profileSelectionError, setProfileSelectionError] = useState('');
+  const profileSelectionInFlightRef = useRef(false);
 
   const decodeRedirectPath = () => {
     const redirect =
@@ -86,15 +95,13 @@ const LoginPage: React.FC = () => {
   };
 
   const getPostLoginRoute = (profile: PortalAuthProfile) => {
-    const redirectPath = decodeRedirectPath();
-    if (redirectPath) return redirectPath;
-    if (profile.tipo === 'Aluno') return '/aluno';
-    if (profile.tipo === 'Professor') return '/professor';
-    return '/gestor';
+    return resolveProfilePostLoginRoute(profile.tipo, decodeRedirectPath());
   };
 
   const handleAuthenticatedProfile = async (profile: PortalAuthProfile): Promise<boolean> => {
-    if (profile.tipo === 'Professor' && (profile.poloIds || []).length > 1) {
+    let profileToAuthenticate = profile;
+
+    if (requiresProfessorPoloSelection(profile)) {
       const { data: polosData, error: polosError } = await supabase
         .from('polos')
         .select('id, nome')
@@ -104,18 +111,31 @@ const LoginPage: React.FC = () => {
         throw new Error(polosError.message);
       }
 
-      if (polosData && polosData.length > 1) {
+      if (!polosData?.length) {
+        throw new Error('Nenhum polo vinculado está disponível para acesso.');
+      }
+
+      if (polosData.length > 1) {
         setProfessorPolos(polosData);
         setProfessorName(profile.nome);
-        setSelectedPoloId(profile.activePoloId || polosData[0].id);
+        setSelectedPoloId(
+          polosData.some((polo) => polo.id === profile.activePoloId)
+            ? profile.activePoloId || polosData[0].id
+            : polosData[0].id,
+        );
         setPendingProfessor(profile);
         setLoginStep('polo_select');
         return false;
       }
+
+      profileToAuthenticate = {
+        ...profile,
+        activePoloId: polosData[0].id,
+      };
     }
 
-    savePortalSession(profile);
-    navigate(getPostLoginRoute(profile), { replace: true });
+    savePortalSession(profileToAuthenticate);
+    navigate(getPostLoginRoute(profileToAuthenticate), { replace: true });
     return true;
   };
 
@@ -268,7 +288,24 @@ const LoginPage: React.FC = () => {
   };
 
   const handleRoleSelect = async (profile: PortalAuthProfile) => {
-    await handleAuthenticatedProfile(profile);
+    if (profileSelectionInFlightRef.current) return;
+
+    const profileKey = `${profile.tipo}-${profile.id}`;
+    profileSelectionInFlightRef.current = true;
+    setIsSelectingProfile(true);
+    setPendingProfileKey(profileKey);
+    setProfileSelectionError('');
+
+    try {
+      await handleAuthenticatedProfile(profile);
+    } catch (error) {
+      console.error('Falha ao selecionar perfil institucional:', error);
+      setProfileSelectionError(getProfileSelectionErrorMessage(profile));
+    } finally {
+      profileSelectionInFlightRef.current = false;
+      setIsSelectingProfile(false);
+      setPendingProfileKey(null);
+    }
   };
 
   const dailyPhrase = useMemo(
@@ -387,16 +424,26 @@ const LoginPage: React.FC = () => {
               <p className="text-slate-500 text-sm">
                 Encontramos mais de um perfil institucional para este login. Escolha como deseja entrar agora.
               </p>
+              {profileSelectionError ? (
+                <p role="alert" className="mt-3 text-xs font-bold leading-relaxed text-red-600">
+                  {profileSelectionError}
+                </p>
+              ) : null}
             </div>
 
             <div className="space-y-3 mb-8">
               {institutionalProfiles.map((profile) => {
                 const Icon = profile.tipo === 'Gestor' ? Building2 : GraduationCap;
+                const profileKey = `${profile.tipo}-${profile.id}`;
+                const isPendingSelection = pendingProfileKey === profileKey;
                 return (
                   <button
-                    key={`${profile.tipo}-${profile.id}`}
+                    key={profileKey}
+                    type="button"
                     onClick={() => handleRoleSelect(profile)}
-                    className="w-full flex items-center justify-between p-5 rounded-2xl border border-slate-200 bg-white hover:bg-blue-50 hover:border-blue-200 transition-all text-left group"
+                    disabled={isSelectingProfile}
+                    aria-busy={isPendingSelection}
+                    className="w-full flex items-center justify-between p-5 rounded-2xl border border-slate-200 bg-white hover:bg-blue-50 hover:border-blue-200 transition-all text-left group disabled:cursor-wait disabled:opacity-70"
                   >
                     <div className="flex items-center gap-3">
                       <div className="p-2 rounded-xl bg-slate-100 text-blue-600 group-hover:bg-blue-100">
@@ -404,18 +451,29 @@ const LoginPage: React.FC = () => {
                       </div>
                       <div>
                         <p className="font-bold text-sm text-[#001a33]">{profile.tipo}</p>
-                        <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider mt-0.5">{profile.nome}</p>
+                        <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider mt-0.5">
+                          {isPendingSelection ? 'Preparando acesso...' : profile.nome}
+                        </p>
                       </div>
                     </div>
-                    <ArrowRight className="text-blue-600" size={18} />
+                    {isPendingSelection ? (
+                      <LoaderCircle className="animate-spin text-blue-600" size={18} aria-hidden="true" />
+                    ) : (
+                      <ArrowRight className="text-blue-600" size={18} />
+                    )}
                   </button>
                 );
               })}
             </div>
 
             <button
-              onClick={() => setLoginStep('credentials')}
-              className="w-full bg-white border border-slate-200 text-slate-500 hover:text-slate-800 py-3.5 rounded-xl transition-all uppercase tracking-widest text-[10px] font-black text-center"
+              type="button"
+              onClick={() => {
+                setProfileSelectionError('');
+                setLoginStep('credentials');
+              }}
+              disabled={isSelectingProfile}
+              className="w-full bg-white border border-slate-200 text-slate-500 hover:text-slate-800 py-3.5 rounded-xl transition-all uppercase tracking-widest text-[10px] font-black text-center disabled:cursor-wait disabled:opacity-70"
             >
               Voltar para Login
             </button>
