@@ -13,6 +13,7 @@ const [
   portalAuthFunction,
   loginService,
   portalSession,
+  profileSelection,
   loginPage,
   indexHtml,
   envExample,
@@ -30,6 +31,7 @@ const [
   readSource('supabase/functions/portal-auth/index.ts'),
   readSource('modules/login/login.service.ts'),
   readSource('modules/login/portal-session.ts'),
+  readSource('modules/login/profile-selection.ts'),
   readSource('modules/login/LoginPage.tsx'),
   readSource('index.html'),
   readSource('.env.example'),
@@ -203,6 +205,14 @@ test('authenticated user is reused while institutional access is resolved', () =
   assert.match(loginPage, /resolveInstitutionalAccess\(user\)/)
   assert.match(loginPage, /resolveInstitutionalAccess\(session\.user\)/)
   assert.doesNotMatch(loginPage, /\balert\(/)
+})
+
+test('institutional redirect honors the selected profile', () => {
+  assert.match(loginPage, /resolveProfilePostLoginRoute/)
+  assert.match(profileSelection, /normalizeInternalRoute/)
+  assert.match(profileSelection, /route\.startsWith\(`\$\{homeRoute\}\/`\)/)
+  assert.match(profileSelection, /Professor:\s*["']\/professor["']/)
+  assert.doesNotMatch(profileSelection, /sessionStorage/)
 })
 
 test('safe backend failure codes are translated without exposing credentials', () => {

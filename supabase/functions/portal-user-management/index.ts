@@ -9,6 +9,7 @@ import { ensureAuthorizedGestor, loadManagedPartner } from "./gestor-access.ts";
 import { handleConfirmPartnerEmail } from "./handlers/confirm-partner-email.ts";
 import { handleDeletePartner } from "./handlers/delete-partner.ts";
 import { handleListPartnerEmailStatuses } from "./handlers/list-partner-email-statuses.ts";
+import { handleLinkProfessorAuthIdentity } from "./handlers/link-professor-auth-identity.ts";
 import { handleSendStudentInvite } from "./handlers/send-student-invite.ts";
 import { handleUpsertGestorUser } from "./handlers/upsert-gestor-user.ts";
 import {
@@ -33,6 +34,7 @@ const VALID_ACTIONS = [
   "delete-gestor-user",
   "list-partner-email-statuses",
   "confirm-partner-email",
+  "link-professor-auth-identity",
 ] as const;
 
 const GESTOR_USER_ACTIONS = new Set([
@@ -160,6 +162,10 @@ Deno.serve(async (req: Request) => {
 
   if (action === "delete-partner") {
     return handleDeletePartner(context, partner);
+  }
+
+  if (action === "link-professor-auth-identity") {
+    return handleLinkProfessorAuthIdentity(context, partner);
   }
 
   return handleSendStudentInvite(context, partner, {

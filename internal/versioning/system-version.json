@@ -1,8 +1,8 @@
 {
-  "version": "4.3.2",
+  "version": "4.3.3",
   "display": "ESTÁVEL",
   "stage": "stable",
   "revision": 1,
-  "releasedAt": "2026-08-13",
-  "summary": "Conciliação Banese sem ciclos financeiros vazios e com retenção segura"
+  "releasedAt": "2026-08-14",
+  "summary": "Seleção segura de perfil institucional para Professor e Gestor"
 }

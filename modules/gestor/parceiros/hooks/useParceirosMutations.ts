@@ -127,7 +127,24 @@ export const useParceirosMutations = ({
     mutationFn: (data: any) => parceirosService.create({ ...data, tipo: 'Professor' }),
     onSuccess: (created) => {
       invalidatePartners();
-      toast.success('Professor cadastrado!', `${created.nome} foi registrado com sucesso.`);
+      if (created?.institutionalProfileLinked) {
+        toast.success(
+          'Professor cadastrado e acesso vinculado!',
+          `${created.nome} poderá escolher Professor ou Gestor ao entrar no portal institucional.`,
+        );
+      } else if (created?.institutionalProfileLinkError) {
+        toast.error(
+          'Professor cadastrado, acesso pendente',
+          `O cadastro foi salvo, mas o vínculo com o acesso institucional não foi concluído: ${created.institutionalProfileLinkError}`,
+        );
+      } else if (created?.institutionalProfileLinkState === 'requires_global_configuration_access') {
+        toast.success(
+          'Professor cadastrado',
+          created?.institutionalProfileLinkMessage || `${created.nome} foi registrado. Caso também seja Gestor, um gestor global com acesso a Configurações deve concluir o vínculo de acesso.`,
+        );
+      } else {
+        toast.success('Professor cadastrado!', `${created.nome} foi registrado com sucesso.`);
+      }
       setShowForm(null);
     },
     onError: () => toast.error('Erro ao salvar professor', 'Verifique se o CPF já está cadastrado.')

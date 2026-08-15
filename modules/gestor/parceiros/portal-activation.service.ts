@@ -56,6 +56,19 @@ type PartnerEmailStatusesResult = {
   statuses?: PartnerEmailConfirmationStatus[];
 };
 
+type LinkProfessorAuthIdentityResult = {
+  success: boolean;
+  action?: 'link-professor-auth-identity';
+  profileLinked?: boolean;
+  profileLinkState?:
+    | 'linked'
+    | 'already_linked'
+    | 'no_matching_gestor'
+    | 'not_eligible'
+    | 'requires_global_configuration_access';
+  message?: string;
+};
+
 const invokeAdminFunction = async <T>(payload: Record<string, unknown>): Promise<T> => {
   const { data, error } = await supabase.functions.invoke('portal-user-management', {
     body: payload,
@@ -100,6 +113,13 @@ export const portalActivationService = {
       partnerId: payload.partnerId,
       email: payload.email || null,
       redirectTo: payload.redirectTo,
+    });
+  },
+
+  async linkProfessorAuthIdentity(partnerId: string): Promise<LinkProfessorAuthIdentityResult> {
+    return invokeAdminFunction<LinkProfessorAuthIdentityResult>({
+      action: 'link-professor-auth-identity',
+      partnerId,
     });
   },
 

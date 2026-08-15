@@ -42,6 +42,15 @@ jobs:
       - name: Testar acessos do Gestor
         run: npm run test:gestor-access
 
+      - name: Testar login institucional e vínculo de Professor
+        run: |
+          npm run test:portal-auth
+          deno test --allow-read \
+            modules/login/profile-selection.test.ts \
+            supabase/functions/portal-user-management/gestor-access.test.ts \
+            supabase/functions/portal-user-management/handlers/link-professor-auth-identity.test.ts \
+            supabase/functions/portal-user-management/handlers/upsert-gestor-user.test.ts
+
       - name: Testar relatório do Caixa
         run: npm run test:caixa-report
 
