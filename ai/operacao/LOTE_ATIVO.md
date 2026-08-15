@@ -2,13 +2,14 @@
 
 Estado: `PUBLICADO`
 
-## Lote: 2026-08-13-conciliacao-banese-sem-ciclos-vazios
+## Lote: 2026-08-14-selecao-perfil-institucional
 
-- Objetivo: impedir que o worker Banese crie execuções financeiras vazias quando não houver título elegível na fila.
-- Escopo incluído: uma RPC atômica que reserva a fila antes de criar a execução; adaptação do worker; nova retenção automática de 48h para ciclos vazios e telemetria técnica bem-sucedida; hardening dos entrypoints; documentação e teste focal.
-- Fora de escopo: alterar valores, perfil ou quantidade de consultas Banese; emitir cobranças; mudar a frequência do cron de reconciliação; alterar a política de retenção de falhas, pagamentos ou tentativas.
-- Risco e guarda: financeiro em produção. Pausar cron, garantir zero execução/lease ativo, aplicar migration, publicar o worker, testar o caso de fila vazia e reativar o cron sem criar título real.
-- Critérios de aceite: fila vazia retorna `NO_CLAIMABLE_TITLES` sem criar `run`, tentativa, OAuth ou chamada Banese; transições de configuração relevantes continuam preservadas; lote com título continua protegido por advisory lock, `SKIP LOCKED`, lease e `config_version`; reserva restrita a `service_role`, prune restrito ao `postgres`/cron e entrypoints legados revogados; dois ciclos reais após reativação sem logs de reconciliação vazios.
-- Produção Supabase: migrations `20260813031252_prune_banese_no_work_reconciliation_runs.sql`, `20260813034453_prepare_banese_reconciliation_batch_atomically.sql` e `20260813041928_harden_banese_reconciliation_entrypoints.sql` aplicadas por MCP; worker `banese-reconciliation-worker` v26 ativo; cron pausado durante o rollout e reativado após a validação.
-- Validação: teste focal 9/9 e `deno check` aprovados; chamadas transacionais como `service_role` e `postgres` validaram os privilégios mínimos; chamada direta da RPC em fila vazia devolveu `NO_CLAIMABLE_TITLES` com zero `run`/lease; ciclos reais do worker v26 retornaram HTTP 200 com `skipped`; ao fechamento há zero execução, tentativa, transição e lease Banese; não foi criada cobrança real.
-- Publicação GitHub/Vercel: PR [#73](https://github.com/DenielsonSLima/UniversoCursosConsultoria/pull/73) mesclada em `main` no commit [`e1e2f38f`](https://github.com/DenielsonSLima/UniversoCursosConsultoria/commit/e1e2f38fd5195d61c5a51b777e7ae40a48a63914); [deploy de Produção](https://vercel.com/denielson-limas-projects/universo-cursos-consultoria/2MjYmKSNMpiEbXsJ6KWtXkTsss6y) pronto; versão `4.3.2` estável publicada.
+- Objetivo: permitir que uma mesma identidade institucional escolha, no login, se acessa como Professor ou Gestor.
+- Escopo incluído: proteção de redirect pelo perfil escolhido; vínculo seguro do Professor à identidade existente de Gestor quando CPF e e-mail coincidem; feedback de vínculo pendente; autorização canônica por `auth_user_id`; cobertura de CI para seleção, autorização e vínculo.
+- Fora de escopo: migrations, mudança de RLS, redução de privilégios de backend por perfil visual, alteração do fluxo nativo OAuth, criação de contas ou mudança de senhas.
+- Risco e guarda: Auth e Edge Function em produção. A nova ação exige sessão JWT, módulo Parceiros, escopo do parceiro, gestor global e Configurações; o navegador não informa `auth_user_id`.
+- Critérios de aceite: escolha Professor/Gestor não aceita deep link do outro portal; CPF/e-mail/identidade precisam coincidir; conflito ou concorrência não conclui o vínculo; a função mantém JWT obrigatório; testes e deploys aprovados.
+- Produção Supabase: Edge Function `portal-user-management` v28 ativa, com `verify_jwt=true`; nenhuma migration aplicada.
+- Validação: 27 testes Deno, 14 testes de login institucional, TypeScript, controle de versão, qualidade GitHub Actions e Preview Vercel aprovados; fonte remota v28 confirma ação nova, autorização por UID e handler ativo; `/sistema/login` em produção respondeu HTTP 200.
+- Smoke autenticado: pendente por não haver sessão institucional de teste disponível neste ambiente; nenhum dado pessoal foi alterado durante a validação.
+- Publicação GitHub/Vercel: PR [#75](https://github.com/DenielsonSLima/UniversoCursosConsultoria/pull/75) mesclada em `main` no commit [`940a576`](https://github.com/DenielsonSLima/UniversoCursosConsultoria/commit/940a576ad31ae2265b171112069e43facf681913); [deploy de Produção](https://vercel.com/denielson-limas-projects/universo-cursos-consultoria/BB3ULE3V3tvWiWqTLAwh8Xs2bwh6) concluído; versão `4.3.3` publicada.
