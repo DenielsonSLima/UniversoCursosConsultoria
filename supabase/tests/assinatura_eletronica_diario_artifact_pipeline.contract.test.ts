@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 
 const migrationUrl = new URL(
-  "../migrations/20260819203314_harden_diario_artifact_pipeline.sql",
+  "../migrations/20260819160000_harden_diario_artifact_pipeline.sql",
   import.meta.url,
 );
 
@@ -74,7 +74,7 @@ Deno.test("migration é incremental, atômica, mantém a política desligada e n
 Deno.test("watermark inline é canônica, limitada e não amplia logo ou outros assets", () => {
   assert.match(
     watermark,
-    /\^data:image\/\(png\|jpeg\|webp\);base64,\(\[A-Za-z0-9\+\/\]\+\=\{0,2\}\)\$/i,
+    /\^data:image\/\(png\|jpeg\|webp\);base64,\(\[A-Za-z0-9\+\/\]\+=\{0,2\}\)\$/i,
   );
   assert.match(watermark, /char_length\(v_base64\) > 1398104/i);
   assert.match(

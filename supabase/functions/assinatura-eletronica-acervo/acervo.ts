@@ -352,7 +352,7 @@ const parseJsonBody = async (request: Request) => {
   if (!contentType.startsWith("application/json")) throw invalidRequest();
   try {
     const bytes = await readBodyBounded(request);
-    return JSON.parse(new TextDecoder().decode(bytes));
+    return JSON.parse(new globalThis.TextDecoder().decode(bytes));
   } catch (error) {
     if (error instanceof ArchiveHttpError) throw error;
     throw invalidRequest();

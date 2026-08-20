@@ -11,11 +11,11 @@ const dryRunMigrationUrl = new URL(
   import.meta.url,
 );
 const individualProofsV1Url = new URL(
-  "../migrations/20260820130912_add_individual_signature_proofs_v1.sql",
+  "../migrations/20260820010500_add_individual_signature_proofs_v1.sql",
   import.meta.url,
 );
 const genericSignersV6Url = new URL(
-  "../migrations/20260820192457_enable_diario_generic_signers_v6.sql",
+  "../migrations/20260820200000_enable_diario_generic_signers_v6.sql",
   import.meta.url,
 );
 const archiveEdgeAdapterUrl = new URL(
@@ -128,7 +128,7 @@ Deno.test("cada RPC escolhe v6 por politica_snapshot e mantém literalmente P/C=
     assert.match(predicate, /participante_shape\.status = \\'ASSINADO\\'/u);
     assert.match(predicate, /identidade_snapshot ->> \\'name\\'/u);
     assert.match(predicate, /\) = 2';/u);
-    assert.match(predicate, /v_old := E'      AND ' \|\| v_legacy_predicate/u);
+    assert.match(predicate, /v_old\x20:=\x20E'\x20{6}AND\x20'\x20\|\|\x20v_legacy_predicate/u);
     assert.match(predicate, /CASE/u);
     assert.match(
       predicate,

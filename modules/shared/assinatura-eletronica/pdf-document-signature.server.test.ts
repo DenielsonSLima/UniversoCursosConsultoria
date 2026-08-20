@@ -572,7 +572,7 @@ test("o mesmo template global é repetido para N signatários sem papel no layou
 });
 
 test("template global rejeita texto livre, quiet zone sobreposta e mistura com layout histórico", async () => {
-  const arbitraryLabel = structuredClone(GLOBAL_STAMP_TEMPLATE) as unknown as {
+  const arbitraryLabel = globalThis.structuredClone(GLOBAL_STAMP_TEMPLATE) as unknown as {
     elements: Array<{ style: Record<string, unknown> }>;
   };
   arbitraryLabel.elements[3].style.label = "Nome livre: ";
@@ -581,7 +581,7 @@ test("template global rejeita texto livre, quiet zone sobreposta e mistura com l
     /estilo de signerName.*imutável/i,
   );
 
-  const hiddenHash = structuredClone(GLOBAL_STAMP_TEMPLATE) as unknown as {
+  const hiddenHash = globalThis.structuredClone(GLOBAL_STAMP_TEMPLATE) as unknown as {
     elements: Array<{ style: Record<string, unknown> }>;
   };
   hiddenHash.elements[6].style.color = "#FFFFFF";
@@ -590,7 +590,7 @@ test("template global rejeita texto livre, quiet zone sobreposta e mistura com l
     /estilo de signatureHash.*imutável/i,
   );
 
-  const qrOverlap = structuredClone(GLOBAL_STAMP_TEMPLATE) as unknown as {
+  const qrOverlap = globalThis.structuredClone(GLOBAL_STAMP_TEMPLATE) as unknown as {
     elements: Array<Record<string, unknown>>;
   };
   qrOverlap.elements[9].xBp = 60_000;

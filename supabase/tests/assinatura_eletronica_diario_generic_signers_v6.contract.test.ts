@@ -3,19 +3,19 @@
 import assert from "node:assert/strict";
 
 const migrationUrl = new URL(
-  "../migrations/20260820192457_enable_diario_generic_signers_v6.sql",
+  "../migrations/20260820200000_enable_diario_generic_signers_v6.sql",
   import.meta.url,
 );
 const previousMigrationUrl = new URL(
-  "../migrations/20260820182744_fix_partner_access_trigger_order.sql",
+  "../migrations/20260820190000_fix_partner_access_trigger_order.sql",
   import.meta.url,
 );
 const individualProofsV1Url = new URL(
-  "../migrations/20260820130912_add_individual_signature_proofs_v1.sql",
+  "../migrations/20260820010500_add_individual_signature_proofs_v1.sql",
   import.meta.url,
 );
 const globalStampV5Url = new URL(
-  "../migrations/20260820180725_add_signature_editor_v5_global_stamp_template.sql",
+  "../migrations/20260820113000_add_signature_editor_v5_global_stamp_template.sql",
   import.meta.url,
 );
 
@@ -23,9 +23,6 @@ const sql = await Deno.readTextFile(migrationUrl);
 const previousMigration = await Deno.readTextFile(previousMigrationUrl);
 const individualProofsV1 = await Deno.readTextFile(individualProofsV1Url);
 const globalStampV5 = await Deno.readTextFile(globalStampV5Url);
-
-const occurrences = (source: string, fragment: string) =>
-  source.split(fragment).length - 1;
 
 const functionBlock = (name: string) => {
   const start = sql.indexOf(`CREATE OR REPLACE FUNCTION public.${name}`);

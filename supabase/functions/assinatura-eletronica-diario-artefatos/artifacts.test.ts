@@ -312,7 +312,7 @@ Deno.test("geometria v3 rejeita papel, label livre e distribuição adulterada",
   };
   assert.throws(() => normalizeFrozenSignatureGeometry(roleLeak));
 
-  const arbitraryLabel = structuredClone(frozenGeometryV3()) as unknown as
+  const arbitraryLabel = globalThis.structuredClone(frozenGeometryV3()) as unknown as
     & Record<string, unknown>
     & {
       template: { elements: Array<{ style: Record<string, unknown> }> };
