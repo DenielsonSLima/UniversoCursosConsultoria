@@ -9,7 +9,7 @@ import {
   X,
 } from 'lucide-react';
 import { DiarioPrintDocumentProps } from '../diario-classe.types';
-import { buildDiarioPdf } from '../diario-pdf';
+import { buildDiarioPdf } from '../diario-pdf.browser';
 import { DiarioExportMode } from '../turma-diarios.types';
 
 const DIARIO_PREVIEW_VALIDATION_CODE = 'DIA-TECNICO-PREVIA';

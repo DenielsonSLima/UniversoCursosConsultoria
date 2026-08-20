@@ -21,9 +21,10 @@ interface GestaoEspecializacaoProps {
   poloId?: string;
   creationPoloId?: string;
   permissions: GestorPermissions;
+  gestorContextId: string;
 }
 
-const GestaoEspecializacao: React.FC<GestaoEspecializacaoProps> = ({ onToggleDetails, poloId, creationPoloId, permissions }) => {
+const GestaoEspecializacao: React.FC<GestaoEspecializacaoProps> = ({ onToggleDetails, poloId, creationPoloId, permissions, gestorContextId }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTurma, setSelectedTurma] = useState<Turma | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Turma | null>(null);
@@ -83,6 +84,7 @@ const GestaoEspecializacao: React.FC<GestaoEspecializacaoProps> = ({ onToggleDet
         turma={selectedTurma} 
         onBack={handleCloseDetails} 
         permissions={permissions}
+        gestorContextId={gestorContextId}
       />
     );
   }

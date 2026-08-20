@@ -1,0 +1,7 @@
+{
+  "imports": {
+    "pdf-lib": "npm:pdf-lib@1.17.1",
+    "jspdf": "npm:jspdf@4.2.1/dist/jspdf.es.min.js",
+    "qrcode": "npm:qrcode@1.5.4"
+  }
+}

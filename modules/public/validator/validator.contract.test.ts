@@ -40,6 +40,40 @@ const canonicalRecord = (type: string, code: string) => ({
   issueCount: 1,
 });
 
+const SIGNATURE_EVENT_ID = '11111111-1111-4111-8111-111111111111';
+const SIGNATURE_CODE = `SIG-${SIGNATURE_EVENT_ID.toUpperCase()}`;
+const canonicalSignatureRecord = () => ({
+  type: 'assinatura_eletronica',
+  proofKind: 'SIGNATURE_EVENT',
+  status: 'ACTIVE',
+  code: SIGNATURE_CODE,
+  document: {
+    type: 'diario_classe',
+    code: 'AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA',
+    finalSha256: 'a'.repeat(64),
+  },
+  signature: {
+    eventId: SIGNATURE_EVENT_ID,
+    signerNameMasked: 'Maria d***',
+    signerCpfMasked: '***.***.***-01',
+    role: 'PROFESSOR',
+    roleLabel: 'Professor(a)',
+    signedAt: '2026-08-20T00:59:45-03:00',
+    hash: 'b'.repeat(64),
+  },
+  institution: { name: 'Universo Cursos e Consultoria' },
+  schemaVersion: 1,
+});
+
+const requireAcademicResult = (
+  result: ReturnType<typeof mapCanonicalValidationRecord>,
+) => {
+  if (!result || result.type === 'assinatura_eletronica') {
+    throw new Error('Resultado acadêmico esperado.');
+  }
+  return result;
+};
+
 Deno.test('todo tipo acadêmico público possui política e renderer explícitos', () => {
   for (const type of PUBLIC_ACADEMIC_DOCUMENT_TYPES) {
     assert.ok(DOCUMENT_VALIDATION_POLICIES[type]);
@@ -76,6 +110,58 @@ Deno.test('Diário possui renderer público explícito e contrato canônico', ()
     )?.type,
     'diario_classe',
   );
+});
+
+Deno.test('prova individual SIG usa contrato dedicado, mínimo e revogável', () => {
+  assert.equal(resolveValidatorRenderer('assinatura_eletronica'), 'assinatura_eletronica');
+  const active = mapCanonicalValidationRecord(
+    canonicalSignatureRecord(),
+    SIGNATURE_CODE,
+  );
+  const revoked = mapCanonicalValidationRecord(
+    { ...canonicalSignatureRecord(), status: 'REVOKED' },
+    SIGNATURE_CODE,
+  );
+
+  assert.equal(active?.type, 'assinatura_eletronica');
+  assert.equal(active?.status, 'valid');
+  assert.equal(
+    active?.type === 'assinatura_eletronica'
+      ? active.signature.signerCpfMasked
+      : null,
+    '***.***.***-01',
+  );
+  assert.equal(revoked?.status, 'revoked');
+});
+
+Deno.test('prova SIG falha fechada para PII bruta, Storage, chaves extras e código não SIG', () => {
+  const base = canonicalSignatureRecord();
+  assert.equal(
+    mapCanonicalValidationRecord({
+      ...base,
+      signature: { ...base.signature, signerNameMasked: 'Maria da Silva' },
+    }, SIGNATURE_CODE),
+    null,
+  );
+  assert.equal(
+    mapCanonicalValidationRecord({
+      ...base,
+      signature: { ...base.signature, signerCpfMasked: '123.456.789-01' },
+    }, SIGNATURE_CODE),
+    null,
+  );
+  assert.equal(
+    mapCanonicalValidationRecord({ ...base, storagePath: 'envelopes/x.pdf' }, SIGNATURE_CODE),
+    null,
+  );
+  assert.equal(
+    mapCanonicalValidationRecord({
+      ...base,
+      signature: { ...base.signature, unknownProof: true },
+    }, SIGNATURE_CODE),
+    null,
+  );
+  assert.equal(mapCanonicalValidationRecord(base, 'DIA-NAO-SIG'), null);
 });
 
 Deno.test('contrato e credencial de preceptor têm renderer e perfil público próprios', () => {
@@ -150,33 +236,33 @@ Deno.test('tipo desconhecido nunca produz estado público válido', () => {
 });
 
 Deno.test('status da validação é autoridade da RPC, mesmo com data passada', () => {
-  const result = mapCanonicalValidationRecord(
+  const result = requireAcademicResult(mapCanonicalValidationRecord(
     {
       ...canonicalRecord('certificado_tecnico', 'CERT-TEC-0001'),
       status: 'ACTIVE',
       expiresAt: '2000-01-01T03:00:00.000Z',
     },
     'CERT-TEC-0001',
-  );
+  ));
 
   assert.equal(result?.status, 'valid');
   assert.ok(result?.expiresAt);
 });
 
 Deno.test('literal Não informado permanece legível e não recebe máscara', () => {
-  const result = mapCanonicalValidationRecord(
+  const result = requireAcademicResult(mapCanonicalValidationRecord(
     {
       ...canonicalRecord('pasta_identificacao', 'PASTA-0002'),
       maskedMotherName: 'Não informado',
     },
     'PASTA-0002',
-  );
+  ));
 
   assert.equal(result?.maskedMotherName, 'Não informado');
 });
 
 Deno.test('mapper aplica as mesmas máscaras canônicas do backend', () => {
-  const result = mapCanonicalValidationRecord(
+  const result = requireAcademicResult(mapCanonicalValidationRecord(
     {
       ...canonicalRecord('declaracao_matricula', 'DEC-MASCARA'),
       studentName: 'Maria de Oliveira Santos',
@@ -191,7 +277,7 @@ Deno.test('mapper aplica as mesmas máscaras canônicas do backend', () => {
       ],
     },
     'DEC-MASCARA',
-  );
+  ));
 
   assert.equal(result?.studentName, 'Maria d***');
   assert.equal(result?.maskedCpf, '***.***.***-01');
@@ -199,14 +285,14 @@ Deno.test('mapper aplica as mesmas máscaras canônicas do backend', () => {
 });
 
 Deno.test('mapper recebe visibleFields e schemaVersion do contrato v2', () => {
-  const result = mapCanonicalValidationRecord(
+  const result = requireAcademicResult(mapCanonicalValidationRecord(
     {
       ...canonicalRecord('certificado_tecnico', 'CERT-0002'),
       visibleFields: ['courseName', 'institutionName', 'issuedAt'],
       schemaVersion: 2,
     },
     'CERT-0002',
-  );
+  ));
 
   assert.deepEqual(
     result?.visibleFields,
@@ -221,10 +307,10 @@ Deno.test('mapper limita resultado realmente legado v1 ao perfil mínimo', () =>
   };
   delete legacyRecord.schemaVersion;
   delete legacyRecord.visibleFields;
-  const result = mapCanonicalValidationRecord(
+  const result = requireAcademicResult(mapCanonicalValidationRecord(
     legacyRecord,
     'DEC-LEGADO',
-  );
+  ));
 
   assert.equal(result?.schemaVersion, 1);
   assert.deepEqual(result?.visibleFields, ['institutionName', 'issuedAt']);
@@ -282,7 +368,7 @@ Deno.test('schema v2 sem visibleFields íntegro falha fechado', () => {
 });
 
 Deno.test('mapper remascara valores com asterisco sem confiar no emissor', () => {
-  const result = mapCanonicalValidationRecord(
+  const result = requireAcademicResult(mapCanonicalValidationRecord(
     {
       ...canonicalRecord('declaracao_matricula', 'DEC-ASTERISCO'),
       visibleFields: [
@@ -299,7 +385,7 @@ Deno.test('mapper remascara valores com asterisco sem confiar no emissor', () =>
       maskedEnrollmentNumber: 'MAT*123456',
     },
     'DEC-ASTERISCO',
-  );
+  ));
 
   assert.equal(result?.studentName, 'Maria d***');
   assert.equal(result?.maskedCpf, '***.***.***-91');
@@ -330,17 +416,34 @@ Deno.test('datas civis usam calendário de Maceió sem recuo UTC', () => {
   );
 });
 
-Deno.test('serviço público usa somente a RPC canônica e nunca lista tabelas', async () => {
+Deno.test('serviço público roteia SIG antes do legado e nunca lista tabelas', async () => {
   const serviceSource = await Deno.readTextFile(
     new URL('./validator.service.ts', import.meta.url),
   );
 
   assert.match(serviceSource, /validar_documento_por_codigo/);
+  assert.match(serviceSource, /validar_assinatura_eletronica_por_codigo/);
   assert.doesNotMatch(serviceSource, /validar_carteirinha_legada_por_codigo/);
   assert.doesNotMatch(serviceSource, /\.from\s*\(/);
   assert.doesNotMatch(serviceSource, /documentos_templates/);
   assert.doesNotMatch(serviceSource, /matriculas/);
-  assert.equal(serviceSource.match(/supabase\.rpc\s*\(/g)?.length, 1);
+  assert.equal(serviceSource.match(/supabase\.rpc\s*\(/g)?.length, 2);
+  assert.ok(
+    serviceSource.indexOf("code.startsWith('SIG-')")
+      < serviceSource.indexOf('return validateEmissionRegistry(code)'),
+  );
+  assert.match(serviceSource, /SIGNATURE_CODE_PATTERN\.test\(code\)[\s\S]*?: null/);
+});
+
+Deno.test('UI da prova SIG fixa segundos e UTC-03 sem alegar validade jurídica', async () => {
+  const source = await Deno.readTextFile(
+    new URL('./assinatura/AssinaturaEletronicaValidationResult.tsx', import.meta.url),
+  );
+  assert.match(source, /timeZone:\s*SIGNATURE_TIME_ZONE/);
+  assert.match(source, /second:\s*'2-digit'/);
+  assert.match(source, /timeZoneName:\s*'longOffset'/);
+  assert.match(source, /America\/Maceio/);
+  assert.doesNotMatch(source, /validade jur[ií]dica/i);
 });
 
 Deno.test('migration fecha validation_*, preserva ticker e elimina fallback legado', async () => {

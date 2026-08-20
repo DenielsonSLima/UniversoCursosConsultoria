@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { supabase } from '../../../../../../../../lib/supabase';
 import { DiarioPrintDocumentProps } from '../diario-classe.types';
 import { getDiarioFileName } from '../diario-classe.utils';
-import { buildDiarioPdf } from '../diario-pdf';
+import { buildDiarioPdf } from '../diario-pdf.browser';
 import { createDocumentReissueKey } from '../../../../../../../shared/document-validation/document-validation.service';
 import { printPdfBlob } from '@/modules/gestor/secretaria/shared/pdf-blob-print';
 

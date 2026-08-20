@@ -21,9 +21,10 @@ interface GestaoLivresProps {
   poloId?: string;
   creationPoloId?: string;
   permissions: GestorPermissions;
+  gestorContextId: string;
 }
 
-const GestaoLivres: React.FC<GestaoLivresProps> = ({ onToggleDetails, poloId, creationPoloId, permissions }) => {
+const GestaoLivres: React.FC<GestaoLivresProps> = ({ onToggleDetails, poloId, creationPoloId, permissions, gestorContextId }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTurma, setSelectedTurma] = useState<Turma | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Turma | null>(null);
@@ -83,6 +84,7 @@ const GestaoLivres: React.FC<GestaoLivresProps> = ({ onToggleDetails, poloId, cr
         turma={selectedTurma} 
         onBack={handleCloseDetails} 
         permissions={permissions}
+        gestorContextId={gestorContextId}
       />
     );
   }

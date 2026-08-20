@@ -10,11 +10,13 @@ import HistoricoValidationResult from './historico/HistoricoValidationResult';
 import IrpfValidationResult from './irpf/IrpfValidationResult';
 import PreceptorValidationResult from './preceptor/PreceptorValidationResult';
 import TransferenciaValidationResult from './transferencia/TransferenciaValidationResult';
+import AssinaturaEletronicaValidationResult from './assinatura/AssinaturaEletronicaValidationResult';
 import { resolveValidatorRenderer } from './validator.rendering';
 import type {
   AcademicDocumentValidationResult,
   CarteirinhaPreceptorValidationResult,
   DocumentValidationResult,
+  ElectronicSignatureValidationResult,
 } from './validator.types';
 
 const ValidationResultContent: React.FC<{
@@ -46,6 +48,12 @@ const ValidationResultContent: React.FC<{
       return <FichaCadastralValidationResult result={academicResult} />;
     case 'diario':
       return <DiarioValidationResult result={academicResult} />;
+    case 'assinatura_eletronica':
+      return (
+        <AssinaturaEletronicaValidationResult
+          result={result as ElectronicSignatureValidationResult}
+        />
+      );
     default:
       return null;
   }

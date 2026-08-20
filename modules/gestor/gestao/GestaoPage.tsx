@@ -1,4 +1,3 @@
-// File: modules/gestor/gestao/GestaoPage.tsx
 
 import React, { Suspense, useEffect, useState } from 'react';
 import { BarChart3, Briefcase, Award, MonitorPlay, Zap } from 'lucide-react';
@@ -32,9 +31,10 @@ interface GestaoPageProps {
   isMatriz: boolean;
   onRequestScrollTop?: () => void;
   permissions: GestorPermissions;
+  gestorContextId: string;
 }
 
-const GestaoPage: React.FC<GestaoPageProps> = ({ poloId, activePoloId, isMatriz, onRequestScrollTop, permissions }) => {
+const GestaoPage: React.FC<GestaoPageProps> = ({ poloId, activePoloId, isMatriz, onRequestScrollTop, permissions, gestorContextId }) => {
   useGestaoRealtime(poloId);
   const [activeTab, setActiveTab] = useState<GestaoTab>('resumo');
   const [isDetailView, setIsDetailView] = useState(false);
@@ -96,9 +96,9 @@ const GestaoPage: React.FC<GestaoPageProps> = ({ poloId, activePoloId, isMatriz,
       <div className="min-h-[500px]">
         <Suspense fallback={<div className="py-16 text-center text-sm font-bold text-slate-400">Carregando área de gestão...</div>}>
           {activeTab === 'resumo' && <GestaoResumo poloId={poloId} />}
-          {activeTab === 'tecnicos' && <GestaoTecnicos onToggleDetails={setIsDetailView} poloId={poloId} creationPoloId={activePoloId || poloId} permissions={permissions} />}
-          {activeTab === 'livres' && <GestaoLivres onToggleDetails={setIsDetailView} poloId={poloId} creationPoloId={activePoloId || poloId} permissions={permissions} />}
-          {activeTab === 'especializacao' && <GestaoEspecializacao onToggleDetails={setIsDetailView} poloId={poloId} creationPoloId={activePoloId || poloId} permissions={permissions} />}
+          {activeTab === 'tecnicos' && <GestaoTecnicos onToggleDetails={setIsDetailView} poloId={poloId} creationPoloId={activePoloId || poloId} permissions={permissions} gestorContextId={gestorContextId} />}
+          {activeTab === 'livres' && <GestaoLivres onToggleDetails={setIsDetailView} poloId={poloId} creationPoloId={activePoloId || poloId} permissions={permissions} gestorContextId={gestorContextId} />}
+          {activeTab === 'especializacao' && <GestaoEspecializacao onToggleDetails={setIsDetailView} poloId={poloId} creationPoloId={activePoloId || poloId} permissions={permissions} gestorContextId={gestorContextId} />}
           {isMatriz && activeTab === 'ead' && <GestaoEad onToggleDetails={setIsDetailView} permissions={permissions} />}
         </Suspense>
       </div>

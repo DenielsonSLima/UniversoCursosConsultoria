@@ -9,6 +9,7 @@ import {
   Wallet, 
   Wallet2,
   FileText, 
+  FileSignature,
   CreditCard, 
   Server,
   ArrowLeft,
@@ -41,6 +42,7 @@ import TemplatesMensagensConfig from './templates-mensagens/TemplatesMensagensCo
 import PolosConfig from './polos/PolosConfig';
 import AcademicosConfig from './academicos/AcademicosConfig';
 import AssinaturasConfig from './assinaturas/AssinaturasConfig';
+import AssinaturaEletronicaConfig from './assinatura-eletronica/AssinaturaEletronicaConfig';
 import CategoriasFinanceirasConfig from './categorias-financeiras/CategoriasFinanceirasConfig';
 import SitePublicoConfig from './site-publico/SitePublicoConfig';
 import LogsEventosConfig from './logs-eventos/LogsEventosConfig';
@@ -88,6 +90,7 @@ const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({
     { id: 'perfis-acesso', title: 'Perfis de Acesso', desc: 'Gerenciar permissões por perfil', icon: <Lock size={24} />, color: 'bg-rose-500' },
     { id: 'marca-dagua', title: 'Marca D\'água', desc: 'Personalização de documentos', icon: <Stamp size={24} />, color: 'bg-cyan-500' },
     { id: 'assinaturas', title: 'Central de Assinaturas', desc: 'Diretoria, Secretaria e Coordenação', icon: <Stamp size={24} />, color: 'bg-pink-600' },
+    { id: 'assinatura-eletronica', title: 'Assinatura Eletrônica', desc: 'Política e modelo do comprovante', icon: <FileSignature size={24} />, color: 'bg-blue-700' },
     { id: 'contas', title: 'Contas Bancárias', desc: 'Contas para recebimento', icon: <Landmark size={24} />, color: 'bg-emerald-500' },
     { id: 'saldo', title: 'Saldo Inicial', desc: 'Ajuste de caixa inicial', icon: <Wallet size={24} />, color: 'bg-teal-500' },
     { id: 'logs', title: 'Logs e Eventos', desc: 'Auditoria do sistema', icon: <FileText size={24} />, color: 'bg-slate-500' },
@@ -121,6 +124,7 @@ const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({
       case 'perfis-acesso': return <PerfisAcessoConfig />;
       case 'marca-dagua': return <MarcaDaguaConfig />;
       case 'assinaturas': return <AssinaturasConfig />;
+      case 'assinatura-eletronica': return <AssinaturaEletronicaConfig />;
       case 'contas': return <ContasBancariasConfig />;
       case 'saldo': return <SaldoInicialConfig />;
       case 'logs': return <LogsEventosConfig />;

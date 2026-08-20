@@ -2,6 +2,20 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [4.4.0] - 2026-08-20
+
+### Adicionado
+
+- Assinatura Eletrônica ganha um único editor livre de carimbo, aplicado automaticamente a todos os signatários autorizados do Diário de Classe.
+- Imagem, textos probatórios, linha e QR podem ser movidos e redimensionados; bindings, rótulos, estilos e evidências individuais permanecem protegidos pelo contrato canônico.
+- O fluxo técnico do Diário aceita de um a seis signatários canônicos, com ordenação e provas individuais imutáveis, sem separar o modelo visual por Professor e Coordenador.
+
+### Segurança e qualidade
+
+- A marca institucional vem exclusivamente do registro `watermark_landscape_<polo_id>` de Modelos de Documentos, inclusive quando seu recurso canônico é uma data URI; não existe fallback genérico ou edição de marca no editor de assinatura.
+- Migrations incrementais v4–v7, Edge Functions com JWT obrigatório e o acervo de assinaturas foram revisados no projeto de produção. A migration já aplicada de provas individuais foi preservada sem edição ou reaplicação.
+- Contratos de assinatura, Edge e PDF vetorial, além do build de produção, foram aprovados. A política jurídica do Diário continua desabilitada; por isso não foi criada assinatura real durante a validação.
+
 ## [4.3.3] - 2026-08-14
 
 ### Adicionado

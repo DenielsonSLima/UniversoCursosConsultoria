@@ -478,3 +478,15 @@ verify_jwt = false
 
 [functions.push-notification-dispatcher]
 verify_jwt = false
+
+[functions.assinatura-eletronica-modelo-assets]
+verify_jwt = true
+
+[functions.assinatura-eletronica-reautenticacao]
+verify_jwt = true
+
+[functions.assinatura-eletronica-acervo]
+verify_jwt = true
+
+[functions.assinatura-eletronica-diario-artefatos]
+verify_jwt = true
