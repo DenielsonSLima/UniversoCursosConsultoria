@@ -60,7 +60,31 @@ export interface CarteirinhaPreceptorValidationResult extends BaseValidationResu
   registryMode: 'emission';
 }
 
+export interface ElectronicSignatureValidationResult {
+  type: 'assinatura_eletronica';
+  proofKind: 'SIGNATURE_EVENT';
+  status: Extract<ValidationStatus, 'valid' | 'revoked'>;
+  code: string;
+  document: {
+    type: 'diario_classe';
+    code: string;
+    finalSha256: string;
+  };
+  signature: {
+    eventId: string;
+    signerNameMasked: string;
+    signerCpfMasked: string;
+    role: 'PROFESSOR' | 'COORDENADOR';
+    roleLabel: string;
+    signedAt: string;
+    hash: string;
+  };
+  institution: { name: string };
+  schemaVersion: 1;
+}
+
 export type DocumentValidationResult =
   | CarteirinhaValidationResult
   | CarteirinhaPreceptorValidationResult
-  | AcademicDocumentValidationResult;
+  | AcademicDocumentValidationResult
+  | ElectronicSignatureValidationResult;

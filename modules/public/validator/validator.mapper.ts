@@ -4,6 +4,7 @@ import {
   type CarteirinhaValidationResult,
   type CarteirinhaPreceptorValidationResult,
   type DocumentValidationResult,
+  type ElectronicSignatureValidationResult,
   type ValidationStatus,
 } from './validator.types';
 import { isPublicAcademicDocumentType } from './validator.rendering';
@@ -23,8 +24,30 @@ type AliasedRecordValue = {
 
 const VALIDATION_TIME_ZONE = 'America/Maceio';
 const DATE_ONLY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+const SIGNATURE_CODE_PATTERN =
+  /^SIG-[0-9A-F]{8}-[0-9A-F]{4}-[1-5][0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$/u;
+const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
+const MASKED_CPF_PATTERN = /^\*\*\*\.\*\*\*\.\*\*\*-[0-9]{2}$/u;
+const ISO_WITH_SECONDS_PATTERN =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/u;
 const hasOwn = (record: ValidationRecord, key: string) => (
   Object.prototype.hasOwnProperty.call(record, key)
+);
+
+const asRecord = (value: unknown): ValidationRecord | null => (
+  value && typeof value === 'object' && !Array.isArray(value)
+    ? value as ValidationRecord
+    : null
+);
+
+const hasExactKeys = (
+  record: ValidationRecord,
+  allowed: readonly string[],
+) => (
+  Object.keys(record).length === allowed.length
+  && Object.keys(record).every((key) => allowed.includes(key))
 );
 
 const asOptionalString = (value: unknown): string | null => (
@@ -55,6 +78,18 @@ const maskName = (name?: string | null) => {
   return parts.length > 1
     ? `${parts[0]} ${parts[1][0]}***`
     : parts[0];
+};
+
+const minimizeSignatureName = (name?: string | null) => {
+  const normalizedName = (name || '')
+    .replace(/\*/g, '')
+    .trim()
+    .replace(/\s+/g, ' ');
+  const parts = normalizedName.split(' ').filter(Boolean);
+  if (!parts.length) return null;
+  return parts.length > 1
+    ? `${parts[0]} ${parts[1][0]}***`
+    : `${parts[0][0]}***`;
 };
 
 const maskEnrollmentNumber = (value?: string | null) => {
@@ -153,6 +188,104 @@ const normalizeValidationCode = (value: string) => (
   value.trim().toUpperCase().replace(/\s+/g, '')
 );
 
+const mapElectronicSignatureRecord = (
+  record: ValidationRecord,
+  queriedCode: string,
+): ElectronicSignatureValidationResult | null => {
+  if (!hasExactKeys(record, [
+    'type',
+    'proofKind',
+    'status',
+    'code',
+    'document',
+    'signature',
+    'institution',
+    'schemaVersion',
+  ])) return null;
+
+  const document = asRecord(record.document);
+  const signature = asRecord(record.signature);
+  const institution = asRecord(record.institution);
+  if (
+    !document || !signature || !institution
+    || !hasExactKeys(document, ['type', 'code', 'finalSha256'])
+    || !hasExactKeys(signature, [
+      'eventId',
+      'signerNameMasked',
+      'signerCpfMasked',
+      'role',
+      'roleLabel',
+      'signedAt',
+      'hash',
+    ])
+    || !hasExactKeys(institution, ['name'])
+  ) return null;
+
+  const code = asOptionalString(record.code);
+  const eventId = asOptionalString(signature.eventId);
+  const signerNameMasked = asOptionalString(signature.signerNameMasked);
+  const signerCpfMasked = asOptionalString(signature.signerCpfMasked);
+  const signedAt = asOptionalString(signature.signedAt);
+  const signatureHash = asOptionalString(signature.hash);
+  const documentCode = asOptionalString(document.code);
+  const documentFinalSha256 = asOptionalString(document.finalSha256);
+  const institutionName = asOptionalString(institution.name);
+  const role = signature.role;
+  if (role !== 'PROFESSOR' && role !== 'COORDENADOR') return null;
+  const expectedRoleLabel = role === 'PROFESSOR'
+    ? 'Professor(a)'
+    : 'Coordenador(a) de curso';
+  const roleLabel = asOptionalString(signature.roleLabel);
+  const minimizedName = minimizeSignatureName(signerNameMasked);
+  const normalizedCode = normalizeValidationCode(queriedCode);
+  const status = mapCanonicalStatus(asOptionalString(record.status));
+
+  if (
+    record.type !== 'assinatura_eletronica'
+    || record.proofKind !== 'SIGNATURE_EVENT'
+    || record.schemaVersion !== 1
+    || (status !== 'valid' && status !== 'revoked')
+    || !code || !SIGNATURE_CODE_PATTERN.test(code)
+    || code !== normalizedCode
+    || !eventId || !UUID_PATTERN.test(eventId)
+    || code !== `SIG-${eventId.toUpperCase()}`
+    || !signerNameMasked || !minimizedName || signerNameMasked !== minimizedName
+    || !signerCpfMasked || !MASKED_CPF_PATTERN.test(signerCpfMasked)
+    || roleLabel !== expectedRoleLabel
+    || !signedAt || !ISO_WITH_SECONDS_PATTERN.test(signedAt)
+    || !Number.isFinite(Date.parse(signedAt))
+    || !signatureHash || !SHA256_PATTERN.test(signatureHash)
+    || document.type !== 'diario_classe'
+    || !documentCode || !UUID_PATTERN.test(documentCode)
+    || documentCode !== documentCode.toUpperCase()
+    || !documentFinalSha256 || !SHA256_PATTERN.test(documentFinalSha256)
+    || !institutionName
+  ) return null;
+
+  return {
+    type: 'assinatura_eletronica',
+    proofKind: 'SIGNATURE_EVENT',
+    status,
+    code,
+    document: {
+      type: 'diario_classe',
+      code: documentCode,
+      finalSha256: documentFinalSha256,
+    },
+    signature: {
+      eventId: eventId.toLowerCase(),
+      signerNameMasked,
+      signerCpfMasked,
+      role,
+      roleLabel,
+      signedAt,
+      hash: signatureHash,
+    },
+    institution: { name: institutionName },
+    schemaVersion: 1,
+  };
+};
+
 const resolveVisibilityProfile = (
   record: ValidationRecord,
 ): {
@@ -217,6 +350,9 @@ export const mapCanonicalValidationRecord = (
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const record = value as ValidationRecord;
   const type = record.type;
+  if (type === 'assinatura_eletronica') {
+    return mapElectronicSignatureRecord(record, code);
+  }
   if (
     type !== 'carteirinha'
     && type !== 'carteirinha_preceptor'

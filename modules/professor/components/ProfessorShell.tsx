@@ -4,6 +4,7 @@ import {
   CalendarDays,
   ChevronDown,
   CreditCard,
+  FileSignature,
   GraduationCap,
   LayoutDashboard,
   Library,
@@ -35,7 +36,7 @@ export interface ProfessorPolo {
   watermark_rotate?: boolean | null;
 }
 
-interface MenuItem {
+export interface ProfessorMenuItem {
   id: string;
   label: string;
   icon: React.ReactNode;
@@ -52,6 +53,11 @@ interface ProfessorShellProps {
   isPoloSelectorOpen: boolean;
   professorEmail: string;
   professorNome: string;
+  /** A casca é visual; cada portal continua responsável por sua própria guarda. */
+  menuItems?: readonly ProfessorMenuItem[];
+  portalTitle?: string;
+  portalRoleLabel?: string;
+  logoutAriaLabel?: string;
   onLogout: () => void;
   onModuleChange: (moduleId: string) => void;
   onMobileMenuChange: (isOpen: boolean) => void;
@@ -59,10 +65,11 @@ interface ProfessorShellProps {
   onPoloSelectorChange: (isOpen: boolean) => void;
 }
 
-const MENU_ITEMS: MenuItem[] = [
+const MENU_ITEMS: ProfessorMenuItem[] = [
   { id: 'inicio', label: 'Início', icon: <LayoutDashboard size={20} /> },
   { id: 'turmas', label: 'Disciplinas', icon: <GraduationCap size={20} /> },
   { id: 'plano-curso', label: 'Plano de Curso', icon: <NotebookPen size={20} /> },
+  { id: 'assinatura-eletronica', label: 'Assinaturas', icon: <FileSignature size={20} /> },
   { id: 'calendario', label: 'Agenda', icon: <CalendarDays size={20} /> },
   { id: 'financeiro', label: 'Financeiro', icon: <CreditCard size={20} /> },
   { id: 'biblioteca', label: 'Biblioteca', icon: <Library size={20} /> },
@@ -80,10 +87,11 @@ const formatPoloDetails = (polo: ProfessorPolo) =>
 
 const ProfessorNavigation: React.FC<{
   activeModule: string;
+  menuItems: readonly ProfessorMenuItem[];
   onModuleChange: (moduleId: string) => void;
-}> = ({ activeModule, onModuleChange }) => (
+}> = ({ activeModule, menuItems, onModuleChange }) => (
   <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-1 custom-scrollbar">
-    {MENU_ITEMS.map((item) => (
+    {menuItems.map((item) => (
       <button
         key={item.id}
         onClick={() => onModuleChange(item.id)}
@@ -105,8 +113,10 @@ const ProfessorNavigation: React.FC<{
 const ProfessorAccountCard: React.FC<{
   professorEmail: string;
   professorNome: string;
+  roleLabel?: string;
+  logoutAriaLabel?: string;
   onLogout: () => void;
-}> = ({ professorEmail, professorNome, onLogout }) => (
+}> = ({ professorEmail, professorNome, roleLabel = 'Docente', logoutAriaLabel = 'Sair do portal do professor', onLogout }) => (
   <div className="border-t border-white/10 p-4">
     <div className="flex items-center justify-between gap-2 rounded-2xl border border-white/10 bg-white/5 p-3 transition-colors duration-300 hover:bg-white/10">
       <div className="flex min-w-0 items-center gap-3">
@@ -117,7 +127,7 @@ const ProfessorAccountCard: React.FC<{
           <p className="truncate text-xs font-bold leading-tight text-white" title={professorNome}>
             {professorNome}
           </p>
-          <p className="mt-1 truncate text-[10px] text-slate-400" title={professorEmail}>
+          <p className="mt-1 truncate text-[10px] text-slate-400" title={`${roleLabel}: ${professorEmail}`}>
             {professorEmail}
           </p>
         </div>
@@ -126,7 +136,7 @@ const ProfessorAccountCard: React.FC<{
         type="button"
         onClick={onLogout}
         title="Sair"
-        aria-label="Sair do portal do professor"
+        aria-label={logoutAriaLabel}
         className="shrink-0 rounded-xl p-2 text-slate-400 transition-all duration-200 hover:bg-red-500/10 hover:text-red-400 focus:outline-none focus:ring-2 focus:ring-purple-400/60"
       >
         <LogOut size={16} />
@@ -223,6 +233,10 @@ const ProfessorShell: React.FC<ProfessorShellProps> = ({
   isPoloSelectorOpen,
   professorEmail,
   professorNome,
+  menuItems = MENU_ITEMS,
+  portalTitle = 'Portal do Professor',
+  portalRoleLabel = 'Docente',
+  logoutAriaLabel = 'Sair do portal do professor',
   onLogout,
   onModuleChange,
   onMobileMenuChange,
@@ -237,10 +251,12 @@ const ProfessorShell: React.FC<ProfessorShellProps> = ({
         </div>
       </div>
 
-      <ProfessorNavigation activeModule={activeModule} onModuleChange={onModuleChange} />
+      <ProfessorNavigation activeModule={activeModule} menuItems={menuItems} onModuleChange={onModuleChange} />
       <ProfessorAccountCard
         professorEmail={professorEmail}
         professorNome={professorNome}
+        roleLabel={portalRoleLabel}
+        logoutAriaLabel={logoutAriaLabel}
         onLogout={onLogout}
       />
     </aside>
@@ -265,7 +281,7 @@ const ProfessorShell: React.FC<ProfessorShellProps> = ({
           </div>
 
           <nav className="flex-1 overflow-y-auto space-y-2 mt-4">
-            {MENU_ITEMS.map((item) => (
+            {menuItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => {
@@ -287,6 +303,8 @@ const ProfessorShell: React.FC<ProfessorShellProps> = ({
           <ProfessorAccountCard
             professorEmail={professorEmail}
             professorNome={professorNome}
+            roleLabel={portalRoleLabel}
+            logoutAriaLabel={logoutAriaLabel}
             onLogout={onLogout}
           />
         </aside>
@@ -296,7 +314,7 @@ const ProfessorShell: React.FC<ProfessorShellProps> = ({
     <main className="flex-1 overflow-auto relative w-full lg:pt-0 pt-16 flex flex-col">
       <header className="bg-white border-b border-slate-200 px-8 py-4 flex justify-between items-center sticky top-0 z-10 shadow-sm">
         <div className="flex items-center gap-3">
-          <h2 className="text-lg font-black text-[#001a33] uppercase tracking-tight">Portal do Professor</h2>
+          <h2 className="text-lg font-black text-[#001a33] uppercase tracking-tight">{portalTitle}</h2>
         </div>
 
         <div className="flex items-center gap-6">
@@ -316,7 +334,7 @@ const ProfessorShell: React.FC<ProfessorShellProps> = ({
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
               <p className="text-xs font-bold text-[#001a33]">{professorNome}</p>
-              <p className="text-[10px] text-slate-500 uppercase tracking-widest font-black">Docente</p>
+              <p className="text-[10px] text-slate-500 uppercase tracking-widest font-black">{portalRoleLabel}</p>
             </div>
             <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm border-2 border-slate-200 shadow-sm">
               {professorNome.slice(0, 2).toUpperCase()}

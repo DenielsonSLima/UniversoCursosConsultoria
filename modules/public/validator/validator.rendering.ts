@@ -1,7 +1,6 @@
 import type {
   AcademicDocumentValidationType,
   DocumentValidationResult,
-  ValidatableDocumentType,
 } from './validator.types';
 
 export type ValidatorRendererId =
@@ -15,7 +14,8 @@ export type ValidatorRendererId =
   | 'estagio'
   | 'certificado'
   | 'ficha_cadastral'
-  | 'diario';
+  | 'diario'
+  | 'assinatura_eletronica';
 
 export const PUBLIC_ACADEMIC_DOCUMENT_TYPES = [
   'cracha_estagio',
@@ -73,10 +73,11 @@ export const VALIDATOR_RENDERER_BY_TYPE = {
   pasta_identificacao: 'ficha_cadastral',
   ficha_matricula: 'ficha_cadastral',
   diario_classe: 'diario',
+  assinatura_eletronica: 'assinatura_eletronica',
 } as const satisfies Record<DocumentValidationResult['type'], ValidatorRendererId>;
 
 export const resolveValidatorRenderer = (
-  type: ValidatableDocumentType,
+  type: DocumentValidationResult['type'],
 ): ValidatorRendererId | null => (
   VALIDATOR_RENDERER_BY_TYPE[type] || null
 );

@@ -1,6 +1,4 @@
 
-// File: modules/gestor/gestao/tecnicos/GestaoTecnicos.tsx
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Briefcase, Archive, Activity, Megaphone } from 'lucide-react';
@@ -25,9 +23,10 @@ interface GestaoTecnicosProps {
   poloId?: string;
   creationPoloId?: string;
   permissions: GestorPermissions;
+  gestorContextId: string;
 }
 
-const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId, creationPoloId, permissions }) => {
+const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId, creationPoloId, permissions, gestorContextId }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTurma, setSelectedTurma] = useState<Turma | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Turma | null>(null);
@@ -108,6 +107,7 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId
         onBack={handleCloseDetails} 
         onTurmaUpdated={setSelectedTurma}
         permissions={permissions}
+        gestorContextId={gestorContextId}
       />
     );
   }

@@ -1,8 +1,8 @@
 {
-  "version": "4.3.3",
+  "version": "4.4.0",
   "display": "ESTÁVEL",
   "stage": "stable",
   "revision": 1,
-  "releasedAt": "2026-08-14",
-  "summary": "Seleção segura de perfil institucional para Professor e Gestor"
+  "releasedAt": "2026-08-20",
+  "summary": "Editor global de carimbo e fluxo de assinatura do Diário até seis signatários"
 }

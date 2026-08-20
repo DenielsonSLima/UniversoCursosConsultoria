@@ -13,9 +13,10 @@ import {
 
 interface TurmaDiariosProps {
   turma: Turma;
+  gestorContextId?: string;
 }
 
-const TurmaDiarios: React.FC<TurmaDiariosProps> = ({ turma }) => {
+const TurmaDiarios: React.FC<TurmaDiariosProps> = ({ turma, gestorContextId = '' }) => {
   const [selection, setSelection] = useState<TurmaDiarioSelection | null>(null);
   const diariosQuery = useTurmaDiarios(turma.id);
   const modules = diariosQuery.data || [];
@@ -57,6 +58,7 @@ const TurmaDiarios: React.FC<TurmaDiariosProps> = ({ turma }) => {
         onBack={() => setSelection(null)}
         initialExportMode={selection.exportMode}
         returnToListOnExportClose={Boolean(selection.exportMode)}
+        gestorContextId={gestorContextId}
       />
     );
   }

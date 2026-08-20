@@ -1,12 +1,12 @@
-import type { jsPDF } from 'jspdf';
+import type { jsPDF } from "jspdf";
 
 import {
-  resolveInstitutionalHeader,
   type InstitutionalDocumentMeta,
   type InstitutionalHeaderFields,
   type ResolvedInstitutionalHeader,
-} from '../../components/institutional-header.model';
-import type { CanonicalPdfImage } from './canonical-document-vector-pdf';
+  resolveInstitutionalHeader,
+} from "../../components/institutional-header.model.ts";
+import type { CanonicalPdfImage } from "./canonical-document-vector-pdf.core.ts";
 
 /** Contrato legado preservado para snapshots e exportadores já existentes. */
 export interface CanonicalInstitutionalHeader {
@@ -38,28 +38,30 @@ export interface CanonicalInstitutionalHeaderRenderResult
   contentTop: number;
 }
 
-export const PORTRAIT_INSTITUTIONAL_HEADER_LAYOUT: CanonicalInstitutionalHeaderLayout = {
-  left: 20,
-  right: 20,
-  top: 20,
-  bottom: 55,
-  logoSize: 29,
-};
+export const PORTRAIT_INSTITUTIONAL_HEADER_LAYOUT:
+  CanonicalInstitutionalHeaderLayout = {
+    left: 20,
+    right: 20,
+    top: 20,
+    bottom: 55,
+    logoSize: 29,
+  };
 
-export const LANDSCAPE_INSTITUTIONAL_HEADER_LAYOUT: CanonicalInstitutionalHeaderLayout = {
-  left: 20,
-  right: 20,
-  top: 15,
-  bottom: 50,
-  logoSize: 29,
-};
+export const LANDSCAPE_INSTITUTIONAL_HEADER_LAYOUT:
+  CanonicalInstitutionalHeaderLayout = {
+    left: 20,
+    right: 20,
+    top: 15,
+    bottom: 50,
+    logoSize: 29,
+  };
 
 /** Rótulos reconhecidos por contratos de auditoria anteriores ao modelo comum. */
 export const CANONICAL_INSTITUTIONAL_HEADER_LEGACY_LABELS = [
-  'CNPJ',
-  'Contato',
-  'Endereço',
-  'Email',
+  "CNPJ",
+  "Contato",
+  "Endereço",
+  "Email",
 ] as const;
 
 export const normalizeCanonicalInstitutionalHeader = (
@@ -71,7 +73,7 @@ export const normalizeCanonicalInstitutionalHeader = (
   return {
     name: resolved.name,
     // A propriedade continua no contrato para ler snapshots antigos, mas não é exibida.
-    legalName: '',
+    legalName: "",
     cnpj: resolved.cnpj,
     address: resolved.address,
     number: resolved.number,
@@ -110,7 +112,7 @@ const drawContainedLogo = (
     width,
     height,
     alias,
-    'FAST',
+    "FAST",
   );
 };
 
@@ -120,13 +122,13 @@ const drawSingleLinePdfText = (
   x: number,
   y: number,
   options: {
-    align?: 'left' | 'center' | 'right';
+    align?: "left" | "center" | "right";
     maxWidth?: number;
     minimumFontSize?: number;
   } = {},
 ) => {
-  const text = String(value || '').replace(/\s+/g, ' ').trim();
-  if (!text) return '';
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  if (!text) return "";
   let fittedText = text;
   if (options.maxWidth) {
     const currentSize = pdf.getFontSize();
@@ -138,10 +140,12 @@ const drawSingleLinePdfText = (
       ));
     }
     if (pdf.getTextWidth(fittedText) > options.maxWidth) {
-      const ellipsis = '...';
+      const ellipsis = "...";
       let start = 0;
       let end = fittedText.length;
-      let candidate = pdf.getTextWidth(ellipsis) <= options.maxWidth ? ellipsis : '';
+      let candidate = pdf.getTextWidth(ellipsis) <= options.maxWidth
+        ? ellipsis
+        : "";
       while (start <= end) {
         const middle = Math.floor((start + end) / 2);
         const prefix = fittedText.slice(0, middle).trimEnd();
@@ -156,10 +160,10 @@ const drawSingleLinePdfText = (
       fittedText = candidate;
     }
   }
-  if (!fittedText) return '';
+  if (!fittedText) return "";
   pdf.text(fittedText, x, y, {
-    align: options.align ?? 'left',
-    baseline: 'top',
+    align: options.align ?? "left",
+    baseline: "top",
   });
   return fittedText;
 };
@@ -174,9 +178,9 @@ const getSingleLineFontSize = (
 ) => {
   const labelText = `${label}: `;
   pdf.setFontSize(preferredSize);
-  pdf.setFont('helvetica', 'bold');
+  pdf.setFont("helvetica", "bold");
   const labelWidth = pdf.getTextWidth(labelText);
-  pdf.setFont('helvetica', 'normal');
+  pdf.setFont("helvetica", "normal");
   const valueWidth = pdf.getTextWidth(value);
   const totalWidth = labelWidth + valueWidth;
   if (totalWidth <= width) return preferredSize;
@@ -194,12 +198,12 @@ const drawHeaderDetail = (
   const fontSize = getSingleLineFontSize(pdf, label, value, width, 6.2, 4.5);
   const labelText = `${label}: `;
   pdf.setFontSize(fontSize);
-  pdf.setFont('helvetica', 'bold');
+  pdf.setFont("helvetica", "bold");
   pdf.setTextColor(30, 41, 59);
-  pdf.text(labelText, x, y, { baseline: 'top' });
+  pdf.text(labelText, x, y, { baseline: "top" });
   const labelWidth = pdf.getTextWidth(labelText);
 
-  pdf.setFont('helvetica', 'normal');
+  pdf.setFont("helvetica", "normal");
   pdf.setTextColor(71, 85, 105);
   drawSingleLinePdfText(pdf, value, x + labelWidth, y, {
     maxWidth: Math.max(0, width - labelWidth),
@@ -209,9 +213,10 @@ const drawHeaderDetail = (
 
 const normalizeForDrawing = (
   institution: CanonicalInstitutionalHeader | ResolvedInstitutionalHeader,
-) => resolveInstitutionalHeader({
-  overrides: institution as unknown as InstitutionalHeaderFields,
-});
+) =>
+  resolveInstitutionalHeader({
+    overrides: institution as unknown as InstitutionalHeaderFields,
+  });
 
 const drawDocumentMeta = (
   pdf: jsPDF,
@@ -229,17 +234,17 @@ const drawDocumentMeta = (
   pdf.setFillColor(248, 250, 252);
   pdf.setDrawColor(226, 232, 240);
   pdf.setLineWidth(0.2);
-  pdf.roundedRect(left, top, width, 10.5, 1.5, 1.5, 'FD');
+  pdf.roundedRect(left, top, width, 10.5, 1.5, 1.5, "FD");
 
   if (meta.eyebrow) {
-    pdf.setFont('helvetica', 'bold');
+    pdf.setFont("helvetica", "bold");
     pdf.setTextColor(148, 163, 184);
     pdf.setFontSize(4.8);
     drawSingleLinePdfText(pdf, meta.eyebrow.toUpperCase(), left + 3, top + 2, {
       maxWidth: leftWidth - 6,
     });
   }
-  pdf.setFont('helvetica', 'bold');
+  pdf.setFont("helvetica", "bold");
   pdf.setTextColor(0, 26, 51);
   pdf.setFontSize(6.6);
   drawSingleLinePdfText(pdf, meta.title.toUpperCase(), left + 3, top + 5.2, {
@@ -247,22 +252,28 @@ const drawDocumentMeta = (
   });
 
   if (meta.label) {
-    pdf.setFont('helvetica', 'bold');
+    pdf.setFont("helvetica", "bold");
     pdf.setTextColor(148, 163, 184);
     pdf.setFontSize(4.6);
     drawSingleLinePdfText(pdf, meta.label.toUpperCase(), rightX - 3, top + 2, {
-      align: 'right',
+      align: "right",
       maxWidth: rightWidth - 6,
     });
   }
   if (meta.value) {
-    pdf.setFont('helvetica', 'bold');
+    pdf.setFont("helvetica", "bold");
     pdf.setTextColor(51, 65, 85);
     pdf.setFontSize(5.7);
-    drawSingleLinePdfText(pdf, meta.value.toUpperCase(), rightX - 3, top + 5.2, {
-      align: 'right',
-      maxWidth: rightWidth - 6,
-    });
+    drawSingleLinePdfText(
+      pdf,
+      meta.value.toUpperCase(),
+      rightX - 3,
+      top + 5.2,
+      {
+        align: "right",
+        maxWidth: rightWidth - 6,
+      },
+    );
   }
 };
 
@@ -275,7 +286,7 @@ export const drawCanonicalInstitutionalHeader = (
   institutionSource: CanonicalInstitutionalHeader | ResolvedInstitutionalHeader,
   logo: CanonicalPdfImage | null,
   options: {
-    orientation?: 'portrait' | 'landscape';
+    orientation?: "portrait" | "landscape";
     alias?: string;
     meta?: InstitutionalDocumentMeta;
     /** @deprecated A razão social não é mais renderizada. */
@@ -283,21 +294,21 @@ export const drawCanonicalInstitutionalHeader = (
   } = {},
 ): CanonicalInstitutionalHeaderRenderResult => {
   const institution = normalizeForDrawing(institutionSource);
-  const layout = options.orientation === 'landscape'
+  const layout = options.orientation === "landscape"
     ? LANDSCAPE_INSTITUTIONAL_HEADER_LAYOUT
     : PORTRAIT_INSTITUTIONAL_HEADER_LAYOUT;
   const pageWidth = pdf.internal.pageSize.getWidth();
   const { left, right, top, bottom, logoSize } = layout;
   const contentX = left + logoSize + 5;
   const contentWidth = pageWidth - right - contentX;
-  const detailsGap = options.orientation === 'landscape' ? 9 : 5;
+  const detailsGap = options.orientation === "landscape" ? 9 : 5;
   const detailsWidth = (contentWidth - detailsGap) / 2;
   const detailsRightX = contentX + detailsWidth + detailsGap;
 
   pdf.setFillColor(255, 255, 255);
   pdf.setDrawColor(226, 232, 240);
   pdf.setLineWidth(0.25);
-  pdf.roundedRect(left, top, logoSize, logoSize, 3, 3, 'FD');
+  pdf.roundedRect(left, top, logoSize, logoSize, 3, 3, "FD");
   if (logo) {
     drawContainedLogo(
       pdf,
@@ -305,24 +316,27 @@ export const drawCanonicalInstitutionalHeader = (
       left,
       top,
       logoSize,
-      options.alias || 'institutional-header-logo',
+      options.alias || "institutional-header-logo",
     );
   } else {
-    pdf.setFont('helvetica', 'bold');
+    pdf.setFont("helvetica", "bold");
     pdf.setTextColor(0, 26, 51);
     pdf.setFontSize(7.2);
-    drawSingleLinePdfText(pdf, 'UNIVERSO', left + logoSize / 2, top + 12.5, {
-      align: 'center',
+    drawSingleLinePdfText(pdf, "UNIVERSO", left + logoSize / 2, top + 12.5, {
+      align: "center",
       maxWidth: logoSize - 4,
     });
   }
 
-  pdf.setFont('helvetica', 'bold');
+  pdf.setFont("helvetica", "bold");
   pdf.setTextColor(0, 26, 51);
   pdf.setFontSize(11);
   const badgeText = institution.unitLabel.toUpperCase();
   pdf.setFontSize(5.1);
-  const badgeWidth = Math.min(38, Math.max(15, pdf.getTextWidth(badgeText) + 5));
+  const badgeWidth = Math.min(
+    38,
+    Math.max(15, pdf.getTextWidth(badgeText) + 5),
+  );
   pdf.setFontSize(11);
   const nameWidth = contentWidth - badgeWidth - 4;
   const name = institution.name.toUpperCase();
@@ -335,20 +349,34 @@ export const drawCanonicalInstitutionalHeader = (
   );
   pdf.setFillColor(248, 250, 252);
   pdf.setDrawColor(203, 213, 225);
-  pdf.roundedRect(badgeX, top + 6.2, badgeWidth, 4.5, 1.2, 1.2, 'FD');
+  pdf.roundedRect(badgeX, top + 6.2, badgeWidth, 4.5, 1.2, 1.2, "FD");
   pdf.setTextColor(30, 41, 59);
   pdf.setFontSize(5.1);
   drawSingleLinePdfText(pdf, badgeText, badgeX + badgeWidth / 2, top + 7.3, {
-    align: 'center',
+    align: "center",
     maxWidth: badgeWidth - 2,
   });
 
   const detailsY = top + 14.6;
   institution.leftLines.forEach((line, index) => {
-    drawHeaderDetail(pdf, line.label, line.value, contentX, detailsY + index * 4.35, detailsWidth);
+    drawHeaderDetail(
+      pdf,
+      line.label,
+      line.value,
+      contentX,
+      detailsY + index * 4.35,
+      detailsWidth,
+    );
   });
   institution.rightLines.forEach((line, index) => {
-    drawHeaderDetail(pdf, line.label, line.value, detailsRightX, detailsY + index * 4.35, detailsWidth);
+    drawHeaderDetail(
+      pdf,
+      line.label,
+      line.value,
+      detailsRightX,
+      detailsY + index * 4.35,
+      detailsWidth,
+    );
   });
 
   pdf.setDrawColor(226, 232, 240);

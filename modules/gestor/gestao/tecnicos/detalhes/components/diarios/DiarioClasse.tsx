@@ -1,4 +1,3 @@
-// File: modules/gestor/gestao/tecnicos/detalhes/components/diarios/DiarioClasse.tsx
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { Loader2 } from 'lucide-react';
@@ -6,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import ToastNotification, { useToast } from '../../../../../parceiros/components/shared/ToastNotification';
 import { diariosService } from '../../../../../cadastros/modelos-documentos/diarios/diarios.service';
 import DiarioClasseHeader from './DiarioClasseHeader';
+import DiarioElectronicSignaturePanel from './DiarioElectronicSignaturePanel';
 import DiarioConteudoTab from './DiarioConteudoTab';
 import DiarioFrequenciaTab from './DiarioFrequenciaTab';
 import DiarioObservacoesTab from './DiarioObservacoesTab';
@@ -80,6 +80,7 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
   accessMode = 'GESTOR',
   initialExportMode,
   returnToListOnExportClose = false,
+  gestorContextId = '',
 }) => {
   const { toasts, removeToast, toast } = useToast();
   const effectiveAccessMode: 'GESTOR' | 'PROFESSOR' = accessMode === 'PROFESSOR'
@@ -481,6 +482,15 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
         activeTab={activeTab}
         setActiveTab={setActiveTab}
       />
+
+      {effectiveAccessMode === 'GESTOR' ? (
+        <DiarioElectronicSignaturePanel
+          contextId={gestorContextId}
+          poloId={turma.poloId || ''}
+          turmaId={turma.id}
+          disciplinaId={disciplina.id}
+        />
+      ) : null}
 
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[500px] mb-8">
         <div className="flex-1">

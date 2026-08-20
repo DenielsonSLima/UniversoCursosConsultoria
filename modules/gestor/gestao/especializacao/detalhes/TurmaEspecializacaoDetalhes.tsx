@@ -1,4 +1,3 @@
-// File: modules/gestor/gestao/especializacao/detalhes/TurmaEspecializacaoDetalhes.tsx
 
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, PieChart, Users, BookOpen, Book, Settings, DollarSign, LockKeyhole } from 'lucide-react';
@@ -19,9 +18,10 @@ interface TurmaEspecializacaoDetalhesProps {
   turma: Turma;
   onBack: () => void;
   permissions: GestorPermissions;
+  gestorContextId: string;
 }
 
-const TurmaEspecializacaoDetalhes: React.FC<TurmaEspecializacaoDetalhesProps> = ({ turma, onBack, permissions }) => {
+const TurmaEspecializacaoDetalhes: React.FC<TurmaEspecializacaoDetalhesProps> = ({ turma, onBack, permissions, gestorContextId }) => {
   const [activeTab, setActiveTab] = useState('resumo');
   const canViewFinanceiro = canAccessGestaoTurmaTab(permissions, 'financeiro');
   const canViewAulas = canAccessGestaoTurmaTab(permissions, 'grade')
@@ -54,7 +54,7 @@ const TurmaEspecializacaoDetalhes: React.FC<TurmaEspecializacaoDetalhesProps> = 
       case 'resumo': return <TurmaResumo turma={turma} canViewFinanceiro={canViewFinanceiro} canViewAulas={canViewAulas} />;
       case 'alunos': return <TurmaAlunos turma={turma} canManageFinanceiro={canViewFinanceiro} />;
       case 'grade': return <TurmaGrade turma={turma} singleProfessor={true} colorTheme="rose" />;
-      case 'diarios': return <TurmaDiarios turma={turma} />;
+      case 'diarios': return <TurmaDiarios turma={turma} gestorContextId={gestorContextId} />;
       case 'financeiro': return <TurmaFinanceiro turma={turma} />;
       case 'configuracoes': return <TurmaConfiguracoes turma={turma} />;
       default: return null;

@@ -15,6 +15,7 @@ const moduleLoaders = {
   boletim: () => import('./boletins/SecretariaBoletinsPage'),
   carteirinha: () => import('./carteirinhas/SecretariaCarteirinhasPage'),
   'carteirinha-preceptor': () => import('./carteirinhas-preceptor/SecretariaCarteirinhasPreceptorPage'),
+  'assinatura-eletronica': () => import('./assinaturas/SecretariaAssinaturasPage'),
   solicitacoes: () => import('./solicitacoes/SecretariaSolicitacoesPage'),
   'dependencias-academicas': () => import('./dependencias-academicas/DependenciasAcademicasPage'),
   'declaracao-matricula': () => import('./declaracao-matricula/SecretariaDeclaracaoMatriculaPage'),
@@ -37,6 +38,7 @@ const SecretariaAlunosPage = lazy(moduleLoaders.alunos);
 const SecretariaBoletinsPage = lazy(moduleLoaders.boletim);
 const SecretariaCarteirinhasPage = lazy(moduleLoaders.carteirinha);
 const SecretariaCarteirinhasPreceptorPage = lazy(moduleLoaders['carteirinha-preceptor']);
+const SecretariaAssinaturasPage = lazy(moduleLoaders['assinatura-eletronica']);
 const SecretariaSolicitacoesPage = lazy(moduleLoaders.solicitacoes);
 const DependenciasAcademicasPage = lazy(moduleLoaders['dependencias-academicas']);
 const SecretariaDeclaracaoMatriculaPage = lazy(moduleLoaders['declaracao-matricula']);
@@ -95,6 +97,10 @@ const secretariaModuleHeaders: Record<string, { title: string; description: stri
     title: 'Carteirinha de Preceptor',
     description: 'Identificação profissional para professores ativos do polo.',
   },
+  'assinatura-eletronica': {
+    title: 'Assinaturas e Acervo',
+    description: 'Acompanhe pendências e consulte documentos assinados pela Secretaria.',
+  },
   'cracha-estagio': {
     title: 'Crachá de Estágio',
     description: 'Identificação para atividades supervisionadas.',
@@ -143,10 +149,15 @@ const secretariaModuleHeaders: Record<string, { title: string; description: stri
 
 interface SecretariaPageProps {
   poloId?: string | null;
+  gestorContextId: string;
   gestorPermissions?: any;
 }
 
-const SecretariaPage: React.FC<SecretariaPageProps> = ({ poloId, gestorPermissions }) => {
+const SecretariaPage: React.FC<SecretariaPageProps> = ({
+  poloId,
+  gestorContextId,
+  gestorPermissions,
+}) => {
   const pageRef = useRef<HTMLDivElement>(null);
   const [activeModule, setActiveModule] = useState<string>('dashboard');
   const queryClient = useQueryClient();
@@ -240,6 +251,8 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ poloId, gestorPermissio
         return <SecretariaCarteirinhasPage poloId={poloId} />;
       case 'carteirinha-preceptor':
         return <SecretariaCarteirinhasPreceptorPage poloId={poloId} />;
+      case 'assinatura-eletronica':
+        return <SecretariaAssinaturasPage contextId={gestorContextId} poloId={poloId} />;
       case 'solicitacoes':
         return <SecretariaSolicitacoesPage />;
       case 'dependencias-academicas':

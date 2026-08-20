@@ -25,6 +25,7 @@ const ComunicacaoPage = lazy(() => import('./comunicacao/ComunicacaoPage'));
 const PerfilPage = lazy(() => import('./perfil/PerfilPage'));
 const CalendarioProfessorPage = lazy(() => import('./calendario/CalendarioProfessorPage'));
 const PlanoCursoPage = lazy(() => import('./plano-curso/PlanoCursoPage'));
+const ProfessorAssinaturasPage = lazy(() => import('./assinaturas/ProfessorAssinaturasPage'));
 
 interface ProfessorPoloTransitionState {
   fromPoloId: string;
@@ -288,6 +289,13 @@ const ProfessorPage: React.FC = () => {
             professorId={professorId}
             poloId={currentPoloId || ''}
             polo={currentPolo}
+          />
+        );
+      case 'assinatura-eletronica':
+        return (
+          <ProfessorAssinaturasPage
+            contextId={profile.contextId || ''}
+            poloId={currentPoloId}
           />
         );
       case 'financeiro':

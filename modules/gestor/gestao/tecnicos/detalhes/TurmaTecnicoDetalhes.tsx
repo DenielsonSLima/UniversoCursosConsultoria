@@ -1,6 +1,4 @@
 
-// File: modules/gestor/gestao/tecnicos/detalhes/TurmaTecnicoDetalhes.tsx
-
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, PieChart, Users, BookOpen, Book, Settings, Activity, GraduationCap, DollarSign, Syringe, ClipboardCheck, LockKeyhole, Loader2 } from 'lucide-react';
@@ -33,6 +31,7 @@ interface TurmaTecnicoDetalhesProps {
   onBack: () => void;
   onTurmaUpdated: (turma: Turma) => void;
   permissions: GestorPermissions;
+  gestorContextId: string;
 }
 
 const TurmaTecnicoDetalhes: React.FC<TurmaTecnicoDetalhesProps> = ({
@@ -40,6 +39,7 @@ const TurmaTecnicoDetalhes: React.FC<TurmaTecnicoDetalhesProps> = ({
   onBack,
   onTurmaUpdated,
   permissions,
+  gestorContextId,
 }) => {
   const [activeTab, setActiveTab] = useState('resumo');
   const queryClient = useQueryClient();
@@ -119,7 +119,7 @@ const TurmaTecnicoDetalhes: React.FC<TurmaTecnicoDetalhesProps> = ({
       case 'alunos': return <TurmaAlunos turma={turma} canManageFinanceiro={canViewFinanceiro} />;
       case 'grade': return <TurmaGrade turma={turma} />;
       case 'atividades': return <AtividadesExtraClasse turmaId={turma.id} cursoId={turma.cursoId} modo="GESTOR" />;
-      case 'diarios': return <TurmaDiarios turma={turma} />;
+      case 'diarios': return <TurmaDiarios turma={turma} gestorContextId={gestorContextId} />;
       case 'financeiro': return <TurmaFinanceiro turma={turma} />;
       case 'vacinas': return <TurmaVacinas turma={turma} />;
       case 'estagio': return (

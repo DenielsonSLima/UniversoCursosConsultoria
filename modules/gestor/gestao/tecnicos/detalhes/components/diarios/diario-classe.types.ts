@@ -66,6 +66,8 @@ export interface DiarioClasseProps {
   accessMode?: 'GESTOR' | 'PROFESSOR';
   initialExportMode?: DiarioExportMode;
   returnToListOnExportClose?: boolean;
+  /** UUID do gestor ativo; necessário apenas para o fluxo autoritativo de assinatura. */
+  gestorContextId?: string;
 }
 
 export interface DiarioPrintDocumentProps {
