@@ -26,7 +26,12 @@ Deno.test('catálogo, políticas e renderers cobrem os mesmos 19 documentos', ()
     .map((document) => document.id)
     .sort();
   const policyTypes = Object.keys(DOCUMENT_VALIDATION_POLICIES).sort();
-  const rendererTypes = Object.keys(VALIDATOR_RENDERER_BY_TYPE).sort();
+  // A prova SIG é um evento de assinatura, não um modelo de documento
+  // configurável. Ela possui renderer público próprio, mas não deve abrir uma
+  // política de emissão no catálogo de Modelos de Documentos.
+  const rendererTypes = Object.keys(VALIDATOR_RENDERER_BY_TYPE)
+    .filter((type) => type !== 'assinatura_eletronica')
+    .sort();
 
   assert.equal(catalogTypes.length, 19);
   assert.equal(catalogTypes.map(String).includes('rematricula'), false);
