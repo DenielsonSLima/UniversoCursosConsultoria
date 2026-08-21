@@ -55,7 +55,7 @@ const canonicalSignatureRecord = () => ({
   signature: {
     eventId: SIGNATURE_EVENT_ID,
     signerNameMasked: 'Maria d***',
-    signerCpfMasked: '***.***.***-01',
+    signerCpfMasked: '12*.***.**9-01',
     role: 'PROFESSOR',
     roleLabel: 'Professor(a)',
     signedAt: '2026-08-20T00:59:45-03:00',
@@ -103,13 +103,39 @@ Deno.test('Pasta e Ficha usam o renderer cadastral público', () => {
 
 Deno.test('Diário possui renderer público explícito e contrato canônico', () => {
   assert.equal(resolveValidatorRenderer('diario_classe'), 'diario');
-  assert.equal(
-    mapCanonicalValidationRecord(
-      canonicalRecord('diario_classe', 'DIA-0001'),
-      'DIA-0001',
-    )?.type,
-    'diario_classe',
+  const validationCode = 'AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA';
+  const active = mapCanonicalValidationRecord(
+    canonicalRecord('diario_classe', validationCode),
+    validationCode.toLowerCase(),
   );
+  const revoked = mapCanonicalValidationRecord(
+    {
+      ...canonicalRecord('diario_classe', validationCode),
+      status: 'REVOKED',
+    },
+    validationCode,
+  );
+  assert.equal(active?.type, 'diario_classe');
+  assert.equal(active?.status, 'valid');
+  assert.equal(revoked?.type, 'diario_classe');
+  assert.equal(revoked?.status, 'revoked');
+});
+
+Deno.test('Diário recusa resposta remota que tente publicar campo pessoal', () => {
+  const validationCode = 'BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB';
+  const result = mapCanonicalValidationRecord(
+    {
+      ...canonicalRecord('diario_classe', validationCode),
+      visibleFields: [
+        'institutionName',
+        'issuedAt',
+        'studentCpf',
+      ],
+    },
+    validationCode,
+  );
+
+  assert.equal(result, null);
 });
 
 Deno.test('prova individual SIG usa contrato dedicado, mínimo e revogável', () => {
@@ -129,9 +155,24 @@ Deno.test('prova individual SIG usa contrato dedicado, mínimo e revogável', ()
     active?.type === 'assinatura_eletronica'
       ? active.signature.signerCpfMasked
       : null,
-    '***.***.***-01',
+    '12*.***.**9-01',
   );
   assert.equal(revoked?.status, 'revoked');
+});
+
+Deno.test('prova individual SIG continua aceitando a máscara histórica congelada', () => {
+  const historical = canonicalSignatureRecord();
+  historical.signature.signerCpfMasked = '***.***.***-01';
+
+  const result = mapCanonicalValidationRecord(historical, SIGNATURE_CODE);
+
+  assert.equal(result?.type, 'assinatura_eletronica');
+  assert.equal(
+    result?.type === 'assinatura_eletronica'
+      ? result.signature.signerCpfMasked
+      : null,
+    '***.***.***-01',
+  );
 });
 
 Deno.test('prova SIG falha fechada para PII bruta, Storage, chaves extras e código não SIG', () => {

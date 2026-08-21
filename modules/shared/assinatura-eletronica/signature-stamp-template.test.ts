@@ -5,11 +5,17 @@ import {
   cloneElectronicSignatureStampTemplate,
   createDefaultElectronicSignatureStampTemplate,
   deriveAutomaticSignatureStampPlacements,
+  getSignatureStampTemplateElementVisualBounds,
+  getSignatureStampTemplateQrCollisionElementIds,
+  isSignatureStampTemplateElementOptionalVisual,
+  isSignatureStampTemplateElementVisible,
   isSignatureStampTemplateQrClear,
   moveSignatureStampTemplateElement,
   normalizeElectronicSignatureStampAutoLayout,
   normalizeElectronicSignatureStampTemplate,
+  placeSignatureStampVerificationBelowQr,
   resizeSignatureStampTemplateElement,
+  resizeSignatureStampTemplateElementFromCenter,
   templateElementsOverlap,
 } from "./signature-stamp-template";
 import {
@@ -87,6 +93,171 @@ test("normalizador rejeita QR sobreposto, mas não modifica outros campos", () =
     () => normalizeElectronicSignatureStampTemplate(hiddenProof),
     /estilo de signatureHash.*imutável/i,
   );
+});
+
+test("padrão posiciona código e URL de verificação abaixo do QR", () => {
+  const template = placeSignatureStampVerificationBelowQr(
+    createDefaultElectronicSignatureStampTemplate(),
+  );
+  const qr = template.elements.find((element) =>
+    element.id === "verificationQr"
+  )!;
+  const code = template.elements.find((element) =>
+    element.id === "verificationCode"
+  )!;
+  const url = template.elements.find((element) =>
+    element.id === "verificationUrl"
+  )!;
+
+  assert.equal(code.binding, "VERIFICATION_CODE");
+  assert.equal(url.binding, "VERIFICATION_URL");
+  assert.equal(code.xBp, 71_000);
+  assert.equal(code.widthBp, 29_000);
+  const qrVisualBounds = getSignatureStampTemplateElementVisualBounds(qr);
+  assert.ok(code.yBp >= qrVisualBounds.yBp + qrVisualBounds.heightBp);
+  assert.ok(url.yBp > code.yBp + code.heightBp);
+  assert.equal(url.xBp, code.xBp);
+  assert.equal(url.widthBp, code.widthBp);
+  assert.equal(isSignatureStampTemplateQrClear(template), true);
+});
+
+test("coluna de validação continua abaixo do QR no tamanho máximo", () => {
+  const base = createDefaultElectronicSignatureStampTemplate();
+  const qr = base.elements.find((element) => element.id === "verificationQr")!;
+  const grownQr = resizeSignatureStampTemplateElement(qr, 40_000, 40_000);
+  const template = placeSignatureStampVerificationBelowQr({
+    ...base,
+    elements: base.elements.map((element) =>
+      element.id === "verificationQr" ? grownQr : element
+    ),
+  });
+  const code = template.elements.find((element) =>
+    element.id === "verificationCode"
+  )!;
+  const url = template.elements.find((element) =>
+    element.id === "verificationUrl"
+  )!;
+
+  assert.equal(grownQr.widthBp, 40_000);
+  const qrVisualBounds = getSignatureStampTemplateElementVisualBounds(grownQr);
+  assert.equal(
+    code.yBp,
+    Math.round(qrVisualBounds.yBp + qrVisualBounds.heightBp + 1_000),
+  );
+  assert.equal(url.yBp, code.yBp + code.heightBp + 1_000);
+  assert.equal(url.yBp + url.heightBp, 90_000);
+  assert.equal(isSignatureStampTemplateQrClear(template), true);
+});
+
+test("somente itens visuais opcionais podem ser ocultados sem alterar a prova", () => {
+  const legacyTemplate = createDefaultElectronicSignatureStampTemplate();
+  const hiddenVisualTemplate = {
+    ...legacyTemplate,
+    hiddenElementIds: ["signerRole", "title", "divider"] as const,
+  };
+  const normalized = normalizeElectronicSignatureStampTemplate(
+    hiddenVisualTemplate,
+  );
+
+  assert.equal(
+    normalizeElectronicSignatureStampTemplate(legacyTemplate).hiddenElementIds,
+    undefined,
+  );
+  assert.deepEqual(normalized.hiddenElementIds, [
+    "signerRole",
+    "title",
+    "divider",
+  ]);
+  assert.equal(
+    isSignatureStampTemplateElementVisible(normalized, "signerRole"),
+    false,
+  );
+  assert.equal(
+    isSignatureStampTemplateElementVisible(normalized, "signatureHash"),
+    true,
+  );
+  assert.equal(
+    isSignatureStampTemplateElementVisible(normalized, "title"),
+    false,
+  );
+  assert.equal(
+    isSignatureStampTemplateElementOptionalVisual("divider"),
+    true,
+  );
+  assert.equal(
+    isSignatureStampTemplateElementOptionalVisual("signatureHash"),
+    false,
+  );
+  assert.deepEqual(
+    cloneElectronicSignatureStampTemplate(normalized).hiddenElementIds,
+    ["signerRole", "title", "divider"],
+  );
+
+  assert.throws(
+    () =>
+      normalizeElectronicSignatureStampTemplate({
+        ...legacyTemplate,
+        hiddenElementIds: ["signatureHash"],
+      }),
+    /lista de elementos ocultos/i,
+  );
+});
+
+test("o QR usa o quadrado visível para seleção e colisão", () => {
+  const template = createDefaultElectronicSignatureStampTemplate();
+  const qr = template.elements.find((element) =>
+    element.id === "verificationQr"
+  )!;
+  const visualBounds = getSignatureStampTemplateElementVisualBounds(qr);
+
+  assert.ok(visualBounds.xBp > qr.xBp);
+  assert.equal(visualBounds.yBp, qr.yBp);
+  assert.ok(
+    Math.abs(
+      visualBounds.widthBp * 19 - visualBounds.heightBp * 7,
+    ) < 0.001,
+  );
+
+  const grownQr = resizeSignatureStampTemplateElement(
+    qr,
+    31_000,
+    31_000,
+  );
+  const grownTemplate = placeSignatureStampVerificationBelowQr({
+    ...template,
+    elements: template.elements.map((element) =>
+      element.id === "verificationQr" ? grownQr : element
+    ),
+  });
+
+  assert.deepEqual(
+    getSignatureStampTemplateQrCollisionElementIds(grownTemplate),
+    [],
+  );
+  assert.equal(isSignatureStampTemplateQrClear(grownTemplate), true);
+
+  const grownVisualBounds = getSignatureStampTemplateElementVisualBounds(
+    grownQr,
+  );
+  const overlapping = {
+    ...grownTemplate,
+    elements: grownTemplate.elements.map((element) =>
+      element.id === "signerName"
+        ? {
+          ...element,
+          xBp: grownVisualBounds.xBp,
+          yBp: grownVisualBounds.yBp,
+          widthBp: 8_000,
+          heightBp: 8_000,
+        }
+        : element
+    ),
+  };
+  assert.deepEqual(
+    getSignatureStampTemplateQrCollisionElementIds(overlapping),
+    ["signerName"],
+  );
+  assert.equal(isSignatureStampTemplateQrClear(overlapping), false);
 });
 
 test("um modelo global gera blocos neutros para N signatários sem sobreposição", () => {

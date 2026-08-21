@@ -20,7 +20,6 @@ import {
   ELECTRONIC_SIGNATURE_STAMP_CONTENT_LAYOUT_LIMITS,
   ELECTRONIC_SIGNATURE_STAMP_DISPLAY_TITLE,
   ELECTRONIC_SIGNATURE_STAMP_MAX_SIGNERS,
-  ELECTRONIC_SIGNATURE_STAMP_PLACEHOLDERS,
   ELECTRONIC_SIGNATURE_STAMP_ROLES,
   type ElectronicSignatureDocumentEditor,
   type ElectronicSignatureLegalSection,
@@ -32,6 +31,7 @@ import {
   type ElectronicSignatureStampRole,
   type ElectronicSignatureStampSlot,
   type ElectronicSignatureStampTemplateElement,
+  type ElectronicSignatureStampTemplateHiddenElementId,
 } from "../../../shared/assinatura-eletronica/assinatura-eletronica.contract.ts";
 import {
   isCanonicalInstitutionalWatermarkDataUri,
@@ -50,6 +50,7 @@ import {
   normalizeElectronicSignatureStampTemplate,
 } from "../../../shared/assinatura-eletronica/signature-stamp-template.ts";
 import { getDocumentValidationQrValue } from "../../../shared/document-validation/document-validation.qr.ts";
+import { formatDocumentValidationUrlForDisplay } from "../../../shared/document-validation/document-validation.url.ts";
 import { createLocalQrCodeDataUrl } from "../../../shared/qrcode/local-qrcode.ts";
 
 const PAGE_WIDTH = 210;
@@ -1407,10 +1408,15 @@ const drawValidationCard = (
   pdf.setFont("courier", "normal");
   pdf.setTextColor(71, 85, 105);
   pdf.setFontSize(4.45);
-  pdf.text(prepared.validationUrl, contentX, top + 17.2, {
-    baseline: "top",
-    maxWidth: width - qrSize - 15,
-  });
+  pdf.text(
+    formatDocumentValidationUrlForDisplay(prepared.validationUrl),
+    contentX,
+    top + 17.2,
+    {
+      baseline: "top",
+      maxWidth: width - qrSize - 15,
+    },
+  );
 };
 
 const drawConfirmationCard = (
@@ -1937,12 +1943,22 @@ const stampPreviewRectFromPlacement = (
 const stampPreviewRectForElement = (
   stampRect: StampPreviewRect,
   element: ElectronicSignatureStampTemplateElement,
-): StampPreviewRect => ({
-  x: stampRect.x + stampRect.width * element.xBp / 100_000,
-  y: stampRect.y + stampRect.height * element.yBp / 100_000,
-  width: stampRect.width * element.widthBp / 100_000,
-  height: stampRect.height * element.heightBp / 100_000,
-});
+): StampPreviewRect => {
+  const rect = {
+    x: stampRect.x + stampRect.width * element.xBp / 100_000,
+    y: stampRect.y + stampRect.height * element.yBp / 100_000,
+    width: stampRect.width * element.widthBp / 100_000,
+    height: stampRect.height * element.heightBp / 100_000,
+  };
+  if (element.kind !== "QR") return rect;
+  const size = Math.min(rect.width, rect.height);
+  return {
+    x: rect.x + (rect.width - size) / 2,
+    y: rect.y + (rect.height - size) / 2,
+    width: size,
+    height: size,
+  };
+};
 
 const stampTemplateColor = (value: string) =>
   [
@@ -1952,76 +1968,42 @@ const stampTemplateColor = (value: string) =>
   ] as const;
 
 const STAMP_PREVIEW_BINDING_VALUES = {
-  SIGNER_ROLE: "{{PAPEL_DO_SIGNATÁRIO}}",
+  SIGNER_ROLE: "Signatário",
   DISPLAY_TITLE: ELECTRONIC_SIGNATURE_STAMP_DISPLAY_TITLE,
-  SIGNER_NAME: "{{NOME_DO_SIGNATÁRIO}}",
-  SIGNED_AT: ELECTRONIC_SIGNATURE_STAMP_PLACEHOLDERS.signedAt,
-  SIGNER_CPF_MASKED: ELECTRONIC_SIGNATURE_STAMP_PLACEHOLDERS.signerCpfMasked,
-  SIGNATURE_HASH: ELECTRONIC_SIGNATURE_STAMP_PLACEHOLDERS.signatureHash,
-  VERIFICATION_CODE: "{{CÓDIGO_DE_VERIFICAÇÃO}}",
-  VERIFICATION_URL: ELECTRONIC_SIGNATURE_STAMP_PLACEHOLDERS.verificationUrl,
+  SIGNER_NAME: "Maria S. Lima",
+  SIGNED_AT: "20/08/2026, 15:42",
+  SIGNER_CPF_MASKED: "12*.***.**9-01",
+  SIGNATURE_HASH: "a91f…5e7c",
+  VERIFICATION_CODE: "SIG-00000000-0000-4000-8000-000000000001",
+  VERIFICATION_URL:
+    "https://universocc.com.br/validador?code=SIG-00000000-0000-4000-8000-000000000001",
 } as const;
+
+/** Conteúdo demonstrativo; nunca corresponde a um evento de assinatura real. */
+const STAMP_PREVIEW_QR_VALUE =
+  "https://universocc.com.br/validador?code=SIG-00000000-0000-4000-8000-000000000001";
 
 const drawStampTemplateQr = (
   pdf: jsPDF,
   rect: StampPreviewRect,
   color: readonly [number, number, number],
+  dataUrl: string,
+  sampleIndex: number,
 ) => {
-  const quietZone = Math.max(0.2, Math.min(rect.width, rect.height) * 0.08);
-  const contentSize = Math.min(rect.width, rect.height) - quietZone * 2;
-  const x = rect.x + (rect.width - contentSize) / 2;
-  const y = rect.y + (rect.height - contentSize) / 2;
-  const gridSize = 13;
-  const moduleSize = contentSize / gridSize;
   pdf.setFillColor(255, 255, 255);
   pdf.setDrawColor(...color);
   pdf.setLineWidth(0.13);
-  pdf.rect(
-    x - quietZone,
-    y - quietZone,
-    contentSize + quietZone * 2,
-    contentSize + quietZone * 2,
-    "FD",
+  pdf.rect(rect.x, rect.y, rect.width, rect.height, "FD");
+  pdf.addImage(
+    dataUrl,
+    "PNG",
+    rect.x,
+    rect.y,
+    rect.width,
+    rect.height,
+    `preview-carimbo-global-qr-${sampleIndex}`,
+    "FAST",
   );
-  pdf.setFillColor(...color);
-  for (let row = 0; row < gridSize; row += 1) {
-    for (let column = 0; column < gridSize; column += 1) {
-      const finder = (row < 5 && column < 5) ||
-        (row < 5 && column >= gridSize - 5) ||
-        (row >= gridSize - 5 && column < 5);
-      if (!finder && ((row * 7 + column * 5 + row * column) % 4 < 2)) {
-        pdf.rect(
-          x + column * moduleSize,
-          y + row * moduleSize,
-          moduleSize * 0.88,
-          moduleSize * 0.88,
-          "F",
-        );
-      }
-    }
-  }
-  const finderSize = moduleSize * 5;
-  [[x, y], [x + contentSize - finderSize, y], [x, y + contentSize - finderSize]]
-    .forEach(([finderX, finderY]) => {
-      pdf.setFillColor(255, 255, 255);
-      pdf.setDrawColor(...color);
-      pdf.setLineWidth(moduleSize * 0.85);
-      pdf.rect(
-        finderX + moduleSize * 0.5,
-        finderY + moduleSize * 0.5,
-        finderSize - moduleSize,
-        finderSize - moduleSize,
-        "FD",
-      );
-      pdf.setFillColor(...color);
-      pdf.rect(
-        finderX + moduleSize * 1.65,
-        finderY + moduleSize * 1.65,
-        moduleSize * 1.7,
-        moduleSize * 1.7,
-        "F",
-      );
-    });
 };
 
 const drawGlobalSignatureStamp = (
@@ -2030,6 +2012,7 @@ const drawGlobalSignatureStamp = (
   placement: ElectronicSignatureStampPlacement,
   asset: CanonicalPdfImage | null,
   sampleIndex: number,
+  qrDataUrl: string,
 ) => {
   const stampRect = stampPreviewRectFromPlacement(placement);
   pdf.setDrawColor(148, 163, 184);
@@ -2045,6 +2028,13 @@ const drawGlobalSignatureStamp = (
   );
 
   stamp.template.elements.forEach((element) => {
+    if (
+      stamp.template.hiddenElementIds?.includes(
+        element.id as ElectronicSignatureStampTemplateHiddenElementId,
+      )
+    ) {
+      return;
+    }
     const rect = stampPreviewRectForElement(stampRect, element);
     if (element.kind === "LINE") {
       const color = stampTemplateColor(element.style.color);
@@ -2061,7 +2051,7 @@ const drawGlobalSignatureStamp = (
       return;
     }
     if (element.kind === "QR") {
-      drawStampTemplateQr(pdf, rect, [7, 26, 51]);
+      drawStampTemplateQr(pdf, rect, [7, 26, 51], qrDataUrl, sampleIndex);
       return;
     }
     if (element.kind === "IMAGE") {
@@ -2117,9 +2107,25 @@ const drawGlobalSignatureStamp = (
     pdf.setTextColor(...color);
     pdf.setFontSize(fontSize);
     const value = STAMP_PREVIEW_BINDING_VALUES[element.binding];
+    const previewVerificationUrl = element.binding === "VERIFICATION_URL"
+      ? new URL(value)
+      : null;
+    const previewVerificationDisplayBase = previewVerificationUrl
+      ? formatDocumentValidationUrlForDisplay(value, { includeSearch: false })
+      : "";
+    const previewVerificationQuery = previewVerificationUrl
+      ? `?${previewVerificationUrl.searchParams.toString()}`
+      : "";
+    const text = element.binding === "VERIFICATION_CODE"
+      ? `CÓD. VALIDAÇÃO\n${value.slice(0, 20)}\n${value.slice(20)}`
+      : element.binding === "VERIFICATION_URL"
+      ? `${element.style.label.trim()}\n${previewVerificationDisplayBase}\n${
+        previewVerificationQuery.slice(0, 24)
+      }\n${previewVerificationQuery.slice(24)}`
+      : `${element.style.label}${value}`;
     drawCanonicalPdfText(
       pdf,
-      `${element.style.label}${value}`,
+      text,
       element.style.align === "CENTER"
         ? rect.x + rect.width / 2
         : element.style.align === "RIGHT"
@@ -2149,7 +2155,7 @@ const drawGlobalSignatureStamp = (
   );
 };
 
-const drawSignatureStampPlacementPreview = (
+const drawSignatureStampPlacementPreview = async (
   pdf: jsPDF,
   GState: PdfGStateConstructor,
   payload: ElectronicSignatureTemplatePreviewPayload,
@@ -2214,13 +2220,18 @@ const drawSignatureStampPlacementPreview = (
       "A imagem própria do carimbo não foi resolvida para a prévia.",
     );
   }
+  const qrDataUrl = await createLocalQrCodeDataUrl(STAMP_PREVIEW_QR_VALUE, {
+    size: 512,
+    margin: 4,
+    errorCorrectionLevel: "M",
+  });
   const sampleSignerCount = Math.min(3, stamp.autoLayout.maxSigners);
   const placements = deriveAutomaticSignatureStampPlacements(
     stamp.autoLayout,
     sampleSignerCount,
   );
   placements.forEach((placement, index) => {
-    drawGlobalSignatureStamp(pdf, stamp, placement, asset, index);
+    drawGlobalSignatureStamp(pdf, stamp, placement, asset, index, qrDataUrl);
   });
   pdf.setFont("helvetica", "bold");
   pdf.setTextColor(148, 163, 184);
@@ -2300,7 +2311,7 @@ export const createElectronicSignatureStampTemplatePreviewPdf = async (
     author: "Universo Cursos e Consultoria",
     creator: "Universo Cursos e Consultoria",
   });
-  drawSignatureStampPlacementPreview(
+  await drawSignatureStampPlacementPreview(
     pdf,
     GState as unknown as PdfGStateConstructor,
     payload,

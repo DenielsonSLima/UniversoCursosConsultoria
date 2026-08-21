@@ -67,6 +67,7 @@ Além de todos os arquivos desta pasta (`index.ts`, `artifacts.ts`,
 - `modules/gestor/secretaria/shared/canonical-document-vector-pdf.core.ts`
 - `modules/gestor/secretaria/shared/canonical-institutional-header-pdf.ts`
 - `modules/shared/assinatura-eletronica/assinatura-eletronica.contract.ts`
+- `modules/shared/assinatura-eletronica/canonical-institutional-watermark.ts`
 - `modules/shared/assinatura-eletronica/diary-pdf-semantic-manifest.ts`
 - `modules/shared/assinatura-eletronica/pdf-document-signature.server.ts`
 - `modules/shared/assinatura-eletronica/signature-stamp-placement.ts`

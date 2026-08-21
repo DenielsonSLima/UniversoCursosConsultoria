@@ -2,6 +2,21 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [4.4.1] - 2026-08-20
+
+### Corrigido
+
+- O editor global do carimbo passou a selecionar o QR pelo quadrado realmente impresso, permite ajustar o tamanho de todos os elementos com controles visíveis e informa de forma clara quando a área protegida do QR impede uma alteração.
+- Papel do signatário, título e linha decorativa podem ser ocultados do visual; campos probatórios obrigatórios continuam presentes e imutáveis.
+- QR, código e endereço de verificação foram organizados em uma coluna própria. O endereço exibido começa por `www.universocc.com.br`, enquanto o conteúdo técnico do QR preserva a URL HTTPS completa.
+- O CPF da assinatura exibe somente os dois primeiros e os três últimos dígitos, preservando a validação de registros históricos no formato anterior.
+
+### Segurança e qualidade
+
+- As cinco migrations incrementais de visibilidade, geometria do QR, máscara de CPF e coluna de validação foram preservadas com os identificadores reais do ledger de produção; a migration aplicada de provas individuais não foi editada nem reaplicada.
+- Editor, compositor PDF, validador público, Edge Function e contratos de banco foram revisados em conjunto. Foram aprovados 220 testes relevantes, TypeScript, ESLint, formatação, inspeção vetorial do PDF e smoke remoto protegido.
+- A Edge `assinatura-eletronica-diario-artefatos` está na versão 9, ativa e com JWT obrigatório.
+
 ## [4.4.0] - 2026-08-20
 
 ### Adicionado

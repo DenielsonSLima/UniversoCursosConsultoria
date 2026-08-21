@@ -29,7 +29,8 @@ const UUID_PATTERN =
 const SIGNATURE_CODE_PATTERN =
   /^SIG-[0-9A-F]{8}-[0-9A-F]{4}-[1-5][0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$/u;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
-const MASKED_CPF_PATTERN = /^\*\*\*\.\*\*\*\.\*\*\*-[0-9]{2}$/u;
+const MASKED_CPF_PATTERN =
+  /^(?:[0-9]{2}\*\.\*{3}\.\*{2}[0-9]-[0-9]{2}|\*{3}\.\*{3}\.\*{3}-[0-9]{2})$/u;
 const ISO_WITH_SECONDS_PATTERN =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/u;
 const hasOwn = (record: ValidationRecord, key: string) => (
@@ -379,10 +380,14 @@ export const mapCanonicalValidationRecord = (
   if (!status || !visibilityProfile) return null;
 
   // Defesa em profundidade: ainda que uma política remota seja configurada de
-  // forma inadequada, estes dois documentos não entram em estado público
+  // forma inadequada, estes documentos não entram em estado público
   // válido se tentarem carregar atributos pessoais fora da allowlist.
   if (
-    (type === 'contrato_aluno' || type === 'carteirinha_preceptor')
+    (
+      type === 'diario_classe'
+      || type === 'contrato_aluno'
+      || type === 'carteirinha_preceptor'
+    )
     && visibilityProfile.visibleFields.some((field) => (
       !isPublicValidationFieldAllowedForDocument(field, type)
     ))
