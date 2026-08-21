@@ -12,6 +12,15 @@ const CrachaCard: React.FC<CrachaCardProps> = ({ modelo, onEdit, onDelete }) => 
     <div 
       className="bg-white rounded-3xl p-5 border border-slate-200 hover:border-blue-400 hover:shadow-lg transition-all group flex flex-col h-full animate-fadeIn cursor-pointer" 
       onClick={() => onEdit(modelo)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onEdit(modelo);
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label={`Editar ${modelo.nome}`}
     >
       <div className="flex justify-between items-start mb-4">
         <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
@@ -20,6 +29,7 @@ const CrachaCard: React.FC<CrachaCardProps> = ({ modelo, onEdit, onDelete }) => 
         <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <button 
             onClick={(e) => { e.stopPropagation(); onEdit(modelo); }}
+            aria-label={`Editar ${modelo.nome}`}
             className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors"
           >
             <Edit size={16} />

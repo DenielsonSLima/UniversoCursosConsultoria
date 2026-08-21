@@ -143,9 +143,13 @@ Deno.test("vincula professor ao Auth do gestor somente quando e-mail e CPF coinc
 
   assert.equal(response.status, 200);
   assert.equal(body.success, true);
+  assert.equal(body.userId, "auth-gestor");
   assert.equal(body.profileLinked, true);
   assert.equal(body.profileLinkState, "linked");
-  assert.deepEqual(fixture.linkedPayloads, [{ auth_user_id: "auth-gestor" }]);
+  assert.deepEqual(fixture.linkedPayloads, [{
+    auth_user_id: "auth-gestor",
+    auth_login_email: professorEmail,
+  }]);
 });
 
 Deno.test("não vincula quando o CPF do professor diverge do gestor", async () => {
@@ -322,5 +326,8 @@ Deno.test("recusa concorrência quando a atualização condicional não encontra
   assert.equal(response.status, 409);
   assert.equal(body.success, false);
   assert.match(body.error, /mudou durante a operação/i);
-  assert.deepEqual(fixture.linkedPayloads, [{ auth_user_id: "auth-gestor" }]);
+  assert.deepEqual(fixture.linkedPayloads, [{
+    auth_user_id: "auth-gestor",
+    auth_login_email: professorEmail,
+  }]);
 });

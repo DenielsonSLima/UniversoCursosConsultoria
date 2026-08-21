@@ -3,17 +3,15 @@ import { Accessibility, Loader2, Upload, User } from 'lucide-react';
 
 import {
   ESTADOS_CIVIS,
-  formatPoloOption,
   INPUT_CLS,
   LABEL_CLS,
   PCD_TIPOS,
   sectionHeaderCls,
 } from './parceiro-aluno-form.constants';
-import type { AlunoFormStepProps, PoloOption } from './parceiro-aluno-form.types';
+import type { AlunoFormStepProps } from './parceiro-aluno-form.types';
 import { RACA_COR_OPTIONS } from '../../../utils/parceiros.constants';
 
 interface PersonalStepProps extends AlunoFormStepProps {
-  polos: PoloOption[];
   isUploadingPhoto: boolean;
   onPhotoUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onRemovePhoto: () => void;
@@ -21,7 +19,6 @@ interface PersonalStepProps extends AlunoFormStepProps {
 
 const ParceiroAlunoFormStepPersonal: React.FC<PersonalStepProps> = ({
   formData,
-  polos,
   isUploadingPhoto,
   onChange,
   onPhotoUpload,
@@ -71,16 +68,6 @@ const ParceiroAlunoFormStepPersonal: React.FC<PersonalStepProps> = ({
     </div>
 
     <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-      <div>
-        <label className={LABEL_CLS}>Polo/Unidade <span className="text-red-500">*</span></label>
-        <select name="poloId" value={formData.poloId} onChange={onChange} className={INPUT_CLS}>
-          {polos.length === 0 && <option value={formData.poloId}>Carregando polos...</option>}
-          {polos.map((polo) => (
-            <option key={polo.id} value={polo.id}>{formatPoloOption(polo)}</option>
-          ))}
-        </select>
-      </div>
-
       <div>
         <label className={LABEL_CLS}>Status do Aluno <span className="text-red-500">*</span></label>
         <select name="status" value={formData.status} onChange={onChange} className={INPUT_CLS} required>

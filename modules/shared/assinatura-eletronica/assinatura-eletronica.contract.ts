@@ -308,7 +308,7 @@ export interface ElectronicSignatureLegalEditorPage {
 export const ELECTRONIC_SIGNATURE_STAMP_CANONICAL_LABEL =
   "Documento assinado eletronicamente" as const;
 export const ELECTRONIC_SIGNATURE_STAMP_DISPLAY_TITLE =
-  "Documento assinado digitalmente" as const;
+  "Assinado digitalmente" as const;
 /**
  * Papéis de prova atualmente autorizados pelo piloto. Eles pertencem ao
  * participante/evento imutável, nunca à configuração visual do carimbo.
@@ -370,7 +370,33 @@ export const ELECTRONIC_SIGNATURE_STAMP_CONTENT_LAYOUT_LIMITS = {
 export type ElectronicSignatureStampTemplateFont =
   | "HELVETICA"
   | "HELVETICA_BOLD"
-  | "COURIER";
+  | "HELVETICA_OBLIQUE"
+  | "HELVETICA_BOLD_OBLIQUE"
+  | "COURIER"
+  | "COURIER_BOLD"
+  | "COURIER_OBLIQUE"
+  | "COURIER_BOLD_OBLIQUE";
+
+export const ELECTRONIC_SIGNATURE_STAMP_TEMPLATE_HELVETICA_FONTS = [
+  "HELVETICA",
+  "HELVETICA_BOLD",
+  "HELVETICA_OBLIQUE",
+  "HELVETICA_BOLD_OBLIQUE",
+] as const satisfies readonly ElectronicSignatureStampTemplateFont[];
+
+export const ELECTRONIC_SIGNATURE_STAMP_TEMPLATE_COURIER_FONTS = [
+  "COURIER",
+  "COURIER_BOLD",
+  "COURIER_OBLIQUE",
+  "COURIER_BOLD_OBLIQUE",
+] as const satisfies readonly ElectronicSignatureStampTemplateFont[];
+
+/** Faixa segura compartilhada pelo editor, banco e compositores vetoriais. */
+export const ELECTRONIC_SIGNATURE_STAMP_TEMPLATE_FONT_SIZE_LIMITS = {
+  minBp: 4_000,
+  maxBp: 16_000,
+  stepBp: 500,
+} as const;
 
 export type ElectronicSignatureStampTemplateTextAlign =
   | "LEFT"
@@ -606,18 +632,34 @@ export interface ElectronicSignaturePreviewInstitution {
 }
 
 /**
- * A marca landscape institucional é um recurso inline já congelado pelo
+ * A marca retrato institucional é um recurso inline já congelado pelo
  * backend. O identificador do Modelo de Documentos continua sendo a única
  * autoridade de origem; esta forma não admite URL, Storage ou fallback.
  */
 export type ElectronicSignatureCanonicalInstitutionalWatermarkDataUri =
   `data:image/${"png" | "jpeg" | "webp"};base64,${string}`;
 
+/**
+ * Apresentação materializada em Modelos de Documentos junto do recurso
+ * cadastro retrato do polo (`watermark_*`). Esses valores não podem ser recriados por
+ * cada compositor: a prévia e o comprovante usam exatamente este registro.
+ */
+export interface ElectronicSignatureInstitutionalWatermarkSettings {
+  opacity: number;
+  scale: number;
+  rotate: boolean;
+}
+
+export interface ElectronicSignaturePreviewWatermark
+  extends ElectronicSignatureInstitutionalWatermarkSettings {
+  url: ElectronicSignatureCanonicalInstitutionalWatermarkDataUri;
+}
+
 export interface ElectronicSignaturePreviewIdentity {
   institution: ElectronicSignaturePreviewInstitution;
   logoUrl: string | null;
-  /** Sempre vem de watermark_landscape_<polo_id> como data URI canônica. */
-  watermarkUrl: ElectronicSignatureCanonicalInstitutionalWatermarkDataUri;
+  /** Sempre vem do cadastro retrato canônico da unidade emissora. */
+  watermark: ElectronicSignaturePreviewWatermark;
 }
 
 /** Ativo de marca-d'água resolvido pela Edge Function autorizada. */

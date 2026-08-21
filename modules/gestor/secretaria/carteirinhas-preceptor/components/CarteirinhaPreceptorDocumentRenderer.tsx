@@ -22,6 +22,10 @@ export const isCarteirinhaPreceptorRenderPayloadReady = (
   const template = canonicalAsRecord(payload?.template);
   const snapshot = canonicalAsRecord(payload?.snapshot);
   if (!Object.keys(template).length || !Object.keys(snapshot).length) return false;
+  if (template.layoutVersion === 'CR80_VERTICAL_V1') {
+    const emissao = canonicalAsRecord(snapshot.emissao);
+    if (!Array.isArray(template.fields) || !canonicalText(emissao.dataExibicao, emissao.data_exibicao)) return false;
+  }
   const renderedQr = payload?.rendered?.qr;
   const templateQr = canonicalAsRecord(template.qr);
   const qrEnabled = renderedQr ? renderedQr.enabled : booleanValue(templateQr.habilitado, templateQr.enabled);
@@ -30,13 +34,13 @@ export const isCarteirinhaPreceptorRenderPayloadReady = (
 
 const PreceptorPayloadUnavailable = () => (
   <section
-    data-render-error="O servidor não retornou o snapshot canônico da carteirinha de preceptor."
+    data-render-error="O servidor não retornou o snapshot canônico do Crachá de Preceptor."
     className="mx-auto flex min-h-[420px] w-[min(210mm,100%)] flex-col items-center justify-center rounded-2xl border border-amber-200 bg-white p-8 text-center shadow-xl"
   >
     <FileWarning className="text-amber-500" size={38} />
     <h5 className="mt-4 text-sm font-black uppercase tracking-wide text-[#001a33]">Prévia canônica indisponível</h5>
     <p className="mt-2 max-w-md text-sm font-medium leading-relaxed text-slate-500">
-      A credencial foi preparada, mas o retorno não contém o modelo e o snapshot necessários para montar uma carteirinha oficial.
+      A credencial foi preparada, mas o retorno não contém o modelo e o snapshot necessários para montar um crachá oficial.
     </p>
   </section>
 );
@@ -132,7 +136,7 @@ const CarteirinhaPreceptorDocumentRenderer = ({ document }: CarteirinhaPreceptor
               <DocumentValidationQrCodeImage
                 code={document.validationCode}
                 size={240}
-                alt="QR Code de validação da carteirinha"
+                alt="QR Code de validação do crachá"
                 className="h-[17mm] w-[17mm]"
               />
               <p className="mt-[0.5mm] flex items-center justify-center gap-[0.5mm] text-[4.5px] font-black uppercase tracking-wide text-slate-500"><QrCode size={6} /> {qrLabel}</p>

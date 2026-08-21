@@ -96,13 +96,11 @@ Deno.test("endereço impresso usa www sem alterar a URL HTTPS canônica", () => 
   );
   assert.equal(
     formatDocumentValidationUrlForDisplay(canonicalUrl),
-    "www.universocc.com.br/validador?code=SIG-ABC%2F2026",
-  );
-  assert.equal(
-    formatDocumentValidationUrlForDisplay(canonicalUrl, {
-      includeSearch: false,
-    }),
     "www.universocc.com.br/validador",
+  );
+  assert.doesNotMatch(
+    formatDocumentValidationUrlForDisplay(canonicalUrl),
+    /\?/,
   );
 });
 

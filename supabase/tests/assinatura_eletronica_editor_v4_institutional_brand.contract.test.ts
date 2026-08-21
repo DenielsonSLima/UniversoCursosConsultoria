@@ -3,11 +3,11 @@
 import assert from "node:assert/strict";
 
 const migrationUrl = new URL(
-  "../migrations/20260820180207_add_signature_editor_v4_institutional_brand.sql",
+  "../migrations/20260820103000_add_signature_editor_v4_institutional_brand.sql",
   import.meta.url,
 );
 const previousMigrationUrl = new URL(
-  "../migrations/20260820130912_add_individual_signature_proofs_v1.sql",
+  "../migrations/20260820010500_add_individual_signature_proofs_v1.sql",
   import.meta.url,
 );
 const artifactsUrl = new URL(

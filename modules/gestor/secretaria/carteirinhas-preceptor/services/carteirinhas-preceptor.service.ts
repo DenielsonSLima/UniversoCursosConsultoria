@@ -84,7 +84,7 @@ const normalizeTemplateInfo = (raw: unknown) => {
       template.name,
       content.nomeModelo,
       content.nome_modelo,
-    ) || 'Carteirinha de preceptor',
+    ) || 'Crachá de Preceptor',
     versao: nullableText(template.versao, template.version, template.revision, template.revisao),
     status: nullableText(template.status),
     marcaDaguaAtiva: boolean(
@@ -121,7 +121,7 @@ const normalizePreparedDocument = (raw: unknown, index: number) => {
   return {
     emissionId: text(row.emission_id, row.emissao_id, row.id) || `preparado-${index + 1}`,
     documentId: nullableText(row.document_id, row.documento_id),
-    title: text(row.title, row.titulo, row.document_name, row.documento_nome) || 'Carteirinha de preceptor',
+    title: text(row.title, row.titulo, row.document_name, row.documento_nome) || 'Crachá de Preceptor',
     targetName: text(row.target_name, row.professor_nome, row.preceptor_nome, row.nome, target.nome) || 'Professor selecionado',
     validationCode: nullableText(row.validation_code, row.codigo_validacao),
     validationUrl: nullableText(row.validation_url, row.url_validacao),

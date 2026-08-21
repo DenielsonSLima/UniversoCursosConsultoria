@@ -785,7 +785,9 @@ export const normalizeFrozenSignatureGeometry = (
       schemaVersion: 3,
       layout: null,
       contentLayout: null,
-      template: normalizeElectronicSignatureStampTemplate(geometry.template),
+      template: normalizeElectronicSignatureStampTemplate(geometry.template, {
+        allowLegacySignerNameLabel: true,
+      }),
       autoLayout: normalizeElectronicSignatureStampAutoLayout(
         geometry.autoLayout,
       ),
@@ -1199,7 +1201,16 @@ const finalize = async (
     ...preflight.receiptPayload,
     logo: asCanonicalImage(receiptLogo),
     institutionalWatermark: institutionalWatermark
-      ? asCanonicalImage(institutionalWatermark)
+      ? {
+        image: asCanonicalImage(institutionalWatermark),
+        settings: snapshot.institutionalIdentity.watermark
+          ? {
+            opacity: snapshot.institutionalIdentity.watermark.opacity,
+            scale: snapshot.institutionalIdentity.watermark.scale,
+            rotate: snapshot.institutionalIdentity.watermark.rotate,
+          }
+          : null,
+      }
       : null,
     validation: { code: preflight.verification.code, url: validationUrl },
   };

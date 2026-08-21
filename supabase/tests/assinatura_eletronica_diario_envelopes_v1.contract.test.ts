@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 
 const migrationUrl = new URL(
-  "../migrations/20260819203221_enable_diario_signature_envelopes_v1.sql",
+  "../migrations/20260819123000_enable_diario_signature_envelopes_v1.sql",
   import.meta.url,
 );
 

@@ -72,7 +72,7 @@ const CarteirinhasPreceptorEmissionWorkspace = ({
             </span>
             <div>
               <p className="text-[11px] font-black uppercase tracking-[0.18em] text-violet-700">Identificação profissional</p>
-              <h3 className="mt-1 text-xl font-black tracking-tight text-[#001a33]">Carteirinhas de preceptor</h3>
+              <h3 className="mt-1 text-xl font-black tracking-tight text-[#001a33]">Crachás de Preceptor</h3>
               <p className="mt-1 max-w-xl text-sm font-medium leading-relaxed text-slate-500">
                 A lista vem exclusivamente dos professores ativos vinculados ao polo. O backend confirma o vínculo, QR Code, validade e documento oficial.
               </p>

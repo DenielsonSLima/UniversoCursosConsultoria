@@ -1,12 +1,13 @@
 import React from 'react';
 import { User, ShieldCheck } from 'lucide-react';
 import { DocumentValidationQrCodeImage } from '../../../../../shared/document-validation/DocumentValidationQrCodeImage';
-import { resolveCrachaFields } from './cracha-editor.model';
+import { resolveCrachaFields, type CrachaTemplateVariant } from './cracha-editor.model';
 
 interface CrachaPreviewProps {
   formData: any;
   page: 'frente' | 'verso';
   zoomLevel: number;
+  variant?: CrachaTemplateVariant;
   aluno?: {
     nome: string;
     cpf: string;
@@ -16,6 +17,18 @@ interface CrachaPreviewProps {
     polo?: string;
     curso?: string;
     validade?: string;
+    fotoUrl?: string | null;
+    foto?: string | null;
+    validationCode?: string;
+  };
+  preceptor?: {
+    nome: string;
+    cargo?: string;
+    area?: string;
+    registro?: string;
+    polo?: string;
+    validade?: string;
+    emissao?: string;
     fotoUrl?: string | null;
     foto?: string | null;
     validationCode?: string;
@@ -30,51 +43,91 @@ const CrachaPreview: React.FC<CrachaPreviewProps> = ({
   formData, 
   page, 
   zoomLevel, 
+  variant = 'estagio',
   aluno,
+  preceptor,
   isEditable = false,
   selectedFieldId = null,
   onSelectField,
   onChangePositions
 }) => {
+  const templateVariant: CrachaTemplateVariant = variant === 'preceptor' ? 'preceptor' : 'estagio';
   // Calcular data de validade (1 ano a partir da emissão)
   const today = new Date();
   const validadeDate = new Date(today);
   validadeDate.setFullYear(validadeDate.getFullYear() + 1);
 
-  const collaboratorData = aluno ? {
-    nome: aluno.nome,
-    cargo: aluno.cargo || formData.cargoPadrao || 'ESTAGIÁRIO',
-    matricula: aluno.matricula,
-    cpf: aluno.cpf,
-    polo: aluno.polo || 'POLO JAPOATÃ (MATRIZ)',
-    curso: aluno.curso || 'TÉCNICO EM ENFERMAGEM',
-    admissao: '05/01/2024',
-    emissao: today.toLocaleDateString('pt-BR'),
-    validade: aluno.validade || validadeDate.toLocaleDateString('pt-BR'),
-    instituicao: 'UNIVERSO CURSOS E CONSULTORIA',
-    fotoUrl: aluno.fotoUrl || aluno.foto || null,
-    validationCode: aluno.validationCode,
-  } : {
-    nome: 'CARLOS HENRIQUE DE OLIVEIRA',
-    cargo: formData.cargoPadrao || 'ESTAGIÁRIO',
-    matricula: '2026F987',
-    cpf: '987.654.321-99',
-    polo: 'POLO JAPOATÃ (MATRIZ)',
-    curso: 'TÉCNICO EM ENFERMAGEM',
-    admissao: '05/01/2024',
-    emissao: today.toLocaleDateString('pt-BR'),
-    validade: validadeDate.toLocaleDateString('pt-BR'),
-    instituicao: 'UNIVERSO CURSOS E CONSULTORIA',
-    fotoUrl: null,
-    validationCode: undefined,
-  };
+  const collaboratorData = templateVariant === 'preceptor'
+    ? preceptor ? {
+      nome: preceptor.nome,
+      cargo: formData.cargoPadrao || preceptor.cargo || 'PRECEPTOR(A)',
+      matricula: '',
+      cpf: '',
+      curso: '',
+      registro: preceptor.registro || 'REGISTRO PROFISSIONAL',
+      area: preceptor.area || 'ÁREA DE FORMAÇÃO',
+      polo: preceptor.polo || 'POLO EMISSOR',
+      admissao: '',
+      emissao: preceptor.emissao || today.toLocaleDateString('pt-BR'),
+      validade: preceptor.validade || validadeDate.toLocaleDateString('pt-BR'),
+      instituicao: 'UNIVERSO CURSOS E CONSULTORIA',
+      fotoUrl: preceptor.fotoUrl || preceptor.foto || null,
+      validationCode: preceptor.validationCode,
+    } : {
+      nome: 'NOME DO(A) PRECEPTOR(A)',
+      cargo: formData.cargoPadrao || 'PRECEPTOR(A)',
+      matricula: '',
+      cpf: '',
+      curso: '',
+      registro: 'REGISTRO PROFISSIONAL',
+      area: 'ÁREA DE FORMAÇÃO',
+      polo: 'POLO EMISSOR',
+      admissao: '',
+      emissao: today.toLocaleDateString('pt-BR'),
+      validade: validadeDate.toLocaleDateString('pt-BR'),
+      instituicao: 'UNIVERSO CURSOS E CONSULTORIA',
+      fotoUrl: null,
+      validationCode: undefined,
+    }
+    : aluno ? {
+      nome: aluno.nome,
+      cargo: aluno.cargo || formData.cargoPadrao || 'ESTAGIÁRIO',
+      matricula: aluno.matricula,
+      cpf: aluno.cpf,
+      registro: '',
+      area: '',
+      polo: aluno.polo || 'POLO JAPOATÃ (MATRIZ)',
+      curso: aluno.curso || 'TÉCNICO EM ENFERMAGEM',
+      admissao: '05/01/2024',
+      emissao: today.toLocaleDateString('pt-BR'),
+      validade: aluno.validade || validadeDate.toLocaleDateString('pt-BR'),
+      instituicao: 'UNIVERSO CURSOS E CONSULTORIA',
+      fotoUrl: aluno.fotoUrl || aluno.foto || null,
+      validationCode: aluno.validationCode,
+    } : {
+      nome: 'CARLOS HENRIQUE DE OLIVEIRA',
+      cargo: formData.cargoPadrao || 'ESTAGIÁRIO',
+      matricula: '2026F987',
+      cpf: '987.654.321-99',
+      registro: '',
+      area: '',
+      polo: 'POLO JAPOATÃ (MATRIZ)',
+      curso: 'TÉCNICO EM ENFERMAGEM',
+      admissao: '05/01/2024',
+      emissao: today.toLocaleDateString('pt-BR'),
+      validade: validadeDate.toLocaleDateString('pt-BR'),
+      instituicao: 'UNIVERSO CURSOS E CONSULTORIA',
+      fotoUrl: null,
+      validationCode: undefined,
+    };
 
-  const codeValidador = collaboratorData.validationCode || collaboratorData.matricula;
+  const codeValidador = collaboratorData.validationCode
+    || (templateVariant === 'preceptor' ? collaboratorData.registro : collaboratorData.matricula);
 
   const useCustomBg = page === 'frente' ? !!formData.bgFrenteUrl : !!formData.bgVersoUrl;
   const ocultarDesign = useCustomBg && !!formData.ocultarDesignPadrao;
 
-  const activeFields = resolveCrachaFields(formData);
+  const activeFields = resolveCrachaFields(formData, templateVariant);
 
   const replaceVars = (val: string) => {
     if (!val) return '';
@@ -84,8 +137,13 @@ const CrachaPreview: React.FC<CrachaPreviewProps> = ({
       .replace(/{{ALUNO_CPF}}/g, collaboratorData.cpf)
       .replace(/{{POLO_NOME}}/g, collaboratorData.polo)
       .replace(/{{ALUNO_CURSO}}/g, collaboratorData.curso)
+      .replace(/{{PRECEPTOR_NOME}}/g, collaboratorData.nome)
+      .replace(/{{PRECEPTOR_CARGO}}/g, collaboratorData.cargo)
+      .replace(/{{PRECEPTOR_REGISTRO}}/g, collaboratorData.registro)
+      .replace(/{{PRECEPTOR_AREA}}/g, collaboratorData.area)
       .replace(/{{DATA_HOJE}}/g, collaboratorData.emissao)
-      .replace(/{{DATA_VALIDADE}}/g, collaboratorData.validade);
+      .replace(/{{DATA_VALIDADE}}/g, collaboratorData.validade)
+      .replace(/{{VALIDACAO_CODIGO}}/g, codeValidador);
   };
 
   // Drag & Drop Handler
@@ -284,7 +342,7 @@ const CrachaPreview: React.FC<CrachaPreviewProps> = ({
               className={`${hoverOutlineStyle} transition-all`}
             >
               {collaboratorData.fotoUrl ? (
-                <img src={collaboratorData.fotoUrl} alt="Foto" className="w-full h-full object-cover pointer-events-none" />
+                <img src={collaboratorData.fotoUrl} alt={templateVariant === 'preceptor' ? 'Foto do preceptor' : 'Foto do estudante'} className="w-full h-full object-cover pointer-events-none" />
               ) : (
                 <User className="text-slate-300 pointer-events-none" style={{ width: '60%', height: '60%' }} />
               )}

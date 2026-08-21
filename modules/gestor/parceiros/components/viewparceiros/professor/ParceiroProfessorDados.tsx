@@ -20,6 +20,10 @@ const ParceiroProfessorDados: React.FC<ParceiroProfessorDadosProps> = ({ data, o
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
   useEffect(() => {
+    setFormData(data);
+  }, [data]);
+
+  useEffect(() => {
     const fetchPolos = async () => {
       try {
         const res = await parceirosService.getPolos();
@@ -50,6 +54,7 @@ const ParceiroProfessorDados: React.FC<ParceiroProfessorDadosProps> = ({ data, o
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
+    if (name === 'email' && (data.authUserId || formData.authUserId)) return;
     let finalValue = value;
     if (type === 'text' || e.target.tagName === 'SELECT') {
       if (name !== 'email') {
@@ -73,6 +78,8 @@ const ParceiroProfessorDados: React.FC<ParceiroProfessorDadosProps> = ({ data, o
     onChange(formData);
     setIsEditing(false);
   };
+
+  const hasLinkedAccess = Boolean(data.authUserId || formData.authUserId);
 
   // Helper para renderizar os campos
   const DisplayField = ({ label, value }: { label: string, value: any }) => (
@@ -172,9 +179,14 @@ const ParceiroProfessorDados: React.FC<ParceiroProfessorDadosProps> = ({ data, o
                       {RACA_COR_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
                     </select>
                 </div>
-                 <div className="space-y-2 md:col-span-2">
+                <div className="space-y-2 md:col-span-2">
                     <label className="text-xs font-bold text-slate-500 uppercase ml-1">E-mail</label>
-                    <input type="email" name="email" value={formData.email || ''} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-purple-500 outline-none" />
+                    {hasLinkedAccess && (
+                      <p className="text-[10px] font-semibold leading-relaxed text-slate-400">
+                        O e-mail de login já está vinculado a uma identidade de acesso e não pode ser alterado por esta tela.
+                      </p>
+                    )}
+                    <input type="email" name="email" value={formData.email || ''} onChange={handleChange} readOnly={hasLinkedAccess} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-purple-500 outline-none read-only:cursor-not-allowed read-only:text-slate-500" />
                 </div>
               </div>
             ) : (

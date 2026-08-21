@@ -29,3 +29,11 @@ export const buildAuthRedirectUrl = (path: string) => {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
   return `${getAuthRedirectOrigin()}${normalizedPath}`;
 };
+
+// Convites enviados pela Edge precisam usar uma origem liberada no Auth remoto.
+// Em desenvolvimento, o portal pode estar em localhost, que não é
+// necessariamente uma origem autorizada para e-mails de acesso.
+export const buildConfiguredAuthRedirectUrl = (path: string) => {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return `${configuredSiteOrigin()}${normalizedPath}`;
+};

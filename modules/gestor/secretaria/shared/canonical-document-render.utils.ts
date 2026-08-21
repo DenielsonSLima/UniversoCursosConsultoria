@@ -88,8 +88,10 @@ const normalizeRendered = (value: unknown): CanonicalDocumentRenderedContent | n
   const rendered = canonicalAsRecord(value);
   if (!Object.keys(rendered).length) return null;
   const rawPages = Array.isArray(rendered.pages) ? rendered.pages : [];
+  const emissao = canonicalAsRecord(rendered.emissao);
   return {
     kind: canonicalNullableText(rendered.kind, rendered.tipo),
+    emissao: Object.keys(emissao).length ? emissao : canonicalNullableText(rendered.emissao),
     pages: rawPages.map(normalizePage),
     watermark: normalizeWatermark(rendered.watermark || rendered.marca_dagua || rendered.marcaDagua),
     qr: normalizeQr(rendered.qr),

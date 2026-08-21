@@ -1,6 +1,7 @@
 import React, { useMemo, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { ArrowLeft, Building2, CheckCircle2, ArrowRight, Clock, GraduationCap, LoaderCircle, Quote, ShieldCheck, UsersRound } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft, Building2, CheckCircle2, ArrowRight, Clock, GraduationCap, Quote, ShieldCheck, UsersRound } from 'lucide-react';
 import LoginForm from './components/LoginForm';
 import { loginService } from './login.service';
 import { LoginCredentials } from './login.types';
@@ -25,6 +26,12 @@ import {
   getRandomMotivationalPhrase,
 } from './motivationalPhrases';
 import type { User } from '@supabase/supabase-js';
+import PortalProfileSelector, { portalProfileKey } from './components/PortalProfileSelector';
+import {
+  getPortalAccessErrorLog,
+  getPortalAccessErrorMessage,
+} from './institutional-login-error';
+import { PortalContextServiceError } from './portal-context.service';
 
 const InstitutionalLoginClock: React.FC = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -60,6 +67,7 @@ const InstitutionalLoginClock: React.FC = () => {
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [pendingGoogleReturn] = useState(
     () => readPendingOAuthReturn('institucional'),
   );
@@ -108,7 +116,7 @@ const LoginPage: React.FC = () => {
         .in('id', profile.poloIds || []);
 
       if (polosError) {
-        throw new Error(polosError.message);
+        throw new PortalContextServiceError(polosError.message, polosError.code);
       }
 
       if (!polosData?.length) {
@@ -134,6 +142,7 @@ const LoginPage: React.FC = () => {
       };
     }
 
+    queryClient.clear();
     savePortalSession(profileToAuthenticate);
     navigate(getPostLoginRoute(profileToAuthenticate), { replace: true });
     return true;
@@ -216,7 +225,14 @@ const LoginPage: React.FC = () => {
         isLeavingLoginPage = await handleAuthenticatedProfile(profile);
       } catch (error) {
         if (!mounted) return;
-        setErrorMessage(error instanceof Error ? error.message : 'Não foi possível concluir o login com Google.');
+        console.error(
+          'Falha ao resolver acesso institucional após login com Google:',
+          getPortalAccessErrorLog(error),
+        );
+        setErrorMessage(getPortalAccessErrorMessage(
+          error,
+          'Não foi possível concluir o login com Google.',
+        ));
       } finally {
         if (mounted) {
           clearPendingOAuthReturn('institucional');
@@ -256,9 +272,14 @@ const LoginPage: React.FC = () => {
 
       await handleAuthenticatedProfile(profile);
     } catch (error) {
-      console.error(error);
-      const message = error instanceof Error ? error.message : 'Não foi possível autenticar.';
-      setErrorMessage(message);
+      console.error(
+        'Falha ao resolver acesso institucional:',
+        getPortalAccessErrorLog(error),
+      );
+      setErrorMessage(getPortalAccessErrorMessage(
+        error,
+        'Não foi possível autenticar.',
+      ));
     } finally {
       setIsLoading(false);
     }
@@ -283,6 +304,7 @@ const LoginPage: React.FC = () => {
       ...pendingProfessor,
       activePoloId: selectedPoloId,
     };
+    queryClient.clear();
     savePortalSession(finalProfile);
     navigate(getPostLoginRoute(finalProfile));
   };
@@ -290,7 +312,7 @@ const LoginPage: React.FC = () => {
   const handleRoleSelect = async (profile: PortalAuthProfile) => {
     if (profileSelectionInFlightRef.current) return;
 
-    const profileKey = `${profile.tipo}-${profile.id}`;
+    const profileKey = portalProfileKey(profile);
     profileSelectionInFlightRef.current = true;
     setIsSelectingProfile(true);
     setPendingProfileKey(profileKey);
@@ -299,7 +321,10 @@ const LoginPage: React.FC = () => {
     try {
       await handleAuthenticatedProfile(profile);
     } catch (error) {
-      console.error('Falha ao selecionar perfil institucional:', error);
+      console.error(
+        'Falha ao selecionar perfil institucional:',
+        getPortalAccessErrorLog(error),
+      );
       setProfileSelectionError(getProfileSelectionErrorMessage(profile));
     } finally {
       profileSelectionInFlightRef.current = false;
@@ -402,7 +427,7 @@ const LoginPage: React.FC = () => {
                 <ShieldCheck size={13} /> Acesso institucional
               </span>
               <h2 className="text-3xl font-black text-[#001a33] mb-3">Bem-vindo de volta</h2>
-              <p className="text-sm font-semibold leading-relaxed text-slate-500">Entre como gestor, professor ou secretaria para acessar o portal.</p>
+              <p className="text-sm font-semibold leading-relaxed text-slate-500">Entre como gestor, professor ou coordenador para acessar o portal.</p>
               {errorMessage ? <p className="mt-3 text-xs text-red-600 font-bold">{errorMessage}</p> : null}
             </div>
 
@@ -415,68 +440,22 @@ const LoginPage: React.FC = () => {
             />
           </div>
         ) : loginStep === 'role_select' ? (
-          <div className="w-full max-w-md animate-fadeIn rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-200/70 sm:p-8">
-            <div className="mb-8 text-center lg:text-left">
-              <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-4 mx-auto lg:mx-0">
-                <ShieldCheck size={24} />
-              </div>
-              <h2 className="text-2xl font-black text-[#001a33] mb-2 uppercase tracking-tight">Escolha o acesso</h2>
-              <p className="text-slate-500 text-sm">
-                Encontramos mais de um perfil institucional para este login. Escolha como deseja entrar agora.
+          <div className="w-full max-w-[560px] animate-fadeIn">
+            {profileSelectionError ? (
+              <p role="alert" className="mb-3 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-xs font-bold leading-relaxed text-red-600">
+                {profileSelectionError}
               </p>
-              {profileSelectionError ? (
-                <p role="alert" className="mt-3 text-xs font-bold leading-relaxed text-red-600">
-                  {profileSelectionError}
-                </p>
-              ) : null}
-            </div>
-
-            <div className="space-y-3 mb-8">
-              {institutionalProfiles.map((profile) => {
-                const Icon = profile.tipo === 'Gestor' ? Building2 : GraduationCap;
-                const profileKey = `${profile.tipo}-${profile.id}`;
-                const isPendingSelection = pendingProfileKey === profileKey;
-                return (
-                  <button
-                    key={profileKey}
-                    type="button"
-                    onClick={() => handleRoleSelect(profile)}
-                    disabled={isSelectingProfile}
-                    aria-busy={isPendingSelection}
-                    className="w-full flex items-center justify-between p-5 rounded-2xl border border-slate-200 bg-white hover:bg-blue-50 hover:border-blue-200 transition-all text-left group disabled:cursor-wait disabled:opacity-70"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-xl bg-slate-100 text-blue-600 group-hover:bg-blue-100">
-                        <Icon size={18} />
-                      </div>
-                      <div>
-                        <p className="font-bold text-sm text-[#001a33]">{profile.tipo}</p>
-                        <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider mt-0.5">
-                          {isPendingSelection ? 'Preparando acesso...' : profile.nome}
-                        </p>
-                      </div>
-                    </div>
-                    {isPendingSelection ? (
-                      <LoaderCircle className="animate-spin text-blue-600" size={18} aria-hidden="true" />
-                    ) : (
-                      <ArrowRight className="text-blue-600" size={18} />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-
-            <button
-              type="button"
-              onClick={() => {
+            ) : null}
+            <PortalProfileSelector
+              profiles={institutionalProfiles}
+              isSelecting={isSelectingProfile}
+              pendingProfileKey={pendingProfileKey}
+              onSelect={handleRoleSelect}
+              onBack={() => {
                 setProfileSelectionError('');
                 setLoginStep('credentials');
               }}
-              disabled={isSelectingProfile}
-              className="w-full bg-white border border-slate-200 text-slate-500 hover:text-slate-800 py-3.5 rounded-xl transition-all uppercase tracking-widest text-[10px] font-black text-center disabled:cursor-wait disabled:opacity-70"
-            >
-              Voltar para Login
-            </button>
+            />
           </div>
         ) : (
           <div className="w-full max-w-md animate-fadeIn rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-200/70 sm:p-8">

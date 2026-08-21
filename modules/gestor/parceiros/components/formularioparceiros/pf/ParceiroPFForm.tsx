@@ -1,7 +1,7 @@
 // File: modules/gestor/parceiros/components/formularioparceiros/pf/ParceiroPFForm.tsx
 // Formulário completo de Pessoa Física (Prestador de Serviço)
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   User, MapPin, Save, X, FileText, DollarSign, Briefcase, ChevronRight, ChevronLeft, CheckCircle2, Plus
 } from 'lucide-react';
@@ -9,6 +9,8 @@ import {
 interface ParceiroPFFormProps {
   onCancel?: () => void;
   onSave?: (data: any) => void;
+  defaultPoloId?: string | null;
+  onScopeError?: (message: string) => void;
 }
 
 const STEPS = [
@@ -37,7 +39,12 @@ const BANCOS = [
   'Nubank', 'Inter', 'Sicoob', 'Sicredi', 'Outro'
 ];
 
-const ParceiroPFForm: React.FC<ParceiroPFFormProps> = ({ onCancel, onSave }) => {
+const ParceiroPFForm: React.FC<ParceiroPFFormProps> = ({
+  onCancel,
+  onSave,
+  defaultPoloId,
+  onScopeError,
+}) => {
   const [currentStep, setCurrentStep] = useState(1);
 
   // Dynamic category states
@@ -51,7 +58,7 @@ const ParceiroPFForm: React.FC<ParceiroPFFormProps> = ({ onCancel, onSave }) => 
 
   const [formData, setFormData] = useState({
     // Step 1 — Dados Pessoais
-    polo: 'matriz',
+    poloId: defaultPoloId || '',
     nome: '',
     cpf: '',
     dataNascimento: '',
@@ -77,6 +84,13 @@ const ParceiroPFForm: React.FC<ParceiroPFFormProps> = ({ onCancel, onSave }) => 
     tipoConta: 'Corrente',
     observacoes: '',
   });
+
+  useEffect(() => {
+    if (!defaultPoloId) return;
+    setFormData((previous) => (previous.poloId
+      ? previous
+      : { ...previous, poloId: defaultPoloId }));
+  }, [defaultPoloId]);
 
   const maskCPF = (v: string) => v.replace(/\D/g,'').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})/,'$1-$2').replace(/(-\d{2})\d+?$/,'$1');
   const maskCEP = (v: string) => v.replace(/\D/g,'').replace(/(\d{5})(\d)/,'$1-$2').replace(/(-\d{3})\d+?$/,'$1');
@@ -128,6 +142,10 @@ const ParceiroPFForm: React.FC<ParceiroPFFormProps> = ({ onCancel, onSave }) => 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.poloId) {
+      onScopeError?.('Selecione um polo ativo no cabeçalho antes de cadastrar o parceiro.');
+      return;
+    }
     const finalServico = showCustomServico ? customServico.trim().toUpperCase() : selectedServico;
     const finalVinculo = showCustomVinculo ? customVinculo.trim().toUpperCase() : selectedVinculo;
     if (onSave) onSave({
@@ -200,15 +218,7 @@ const ParceiroPFForm: React.FC<ParceiroPFFormProps> = ({ onCancel, onSave }) => 
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              <div>
-                <label className={labelCls}>Polo/Unidade</label>
-                <select name="polo" value={formData.polo} onChange={handleChange} className={inputCls}>
-                  <option value="matriz">Matriz — Aracaju</option>
-                  <option value="estancia">Polo Estância</option>
-                </select>
-              </div>
-
-              <div className="md:col-span-2">
+              <div className="md:col-span-3">
                 <label className={labelCls}>Nome Completo <span className="text-red-500">*</span></label>
                 <input type="text" name="nome" value={formData.nome} onChange={handleChange}
                   className={inputCls} placeholder="Nome completo do prestador" required />

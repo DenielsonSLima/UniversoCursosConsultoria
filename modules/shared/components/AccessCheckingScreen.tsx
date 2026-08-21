@@ -2,7 +2,7 @@ import React from 'react';
 import { CheckCircle2, Loader2, LockKeyhole, ShieldCheck } from 'lucide-react';
 
 type AccessCheckingScreenProps = {
-  portal?: 'Aluno' | 'Gestor' | 'Professor';
+  portal?: 'Aluno' | 'Responsavel' | 'Gestor' | 'Professor' | 'Coordenador';
 };
 
 const AccessCheckingScreen: React.FC<AccessCheckingScreenProps> = ({ portal = 'Gestor' }) => {

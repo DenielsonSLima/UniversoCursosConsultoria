@@ -3,23 +3,23 @@
 import assert from "node:assert/strict";
 
 const migrationUrl = new URL(
-  "../migrations/20260820180725_add_signature_editor_v5_global_stamp_template.sql",
+  "../migrations/20260820113000_add_signature_editor_v5_global_stamp_template.sql",
   import.meta.url,
 );
 const appliedIndividualUrl = new URL(
-  "../migrations/20260820130912_add_individual_signature_proofs_v1.sql",
+  "../migrations/20260820010500_add_individual_signature_proofs_v1.sql",
   import.meta.url,
 );
 const previousV4Url = new URL(
-  "../migrations/20260820180207_add_signature_editor_v4_institutional_brand.sql",
+  "../migrations/20260820103000_add_signature_editor_v4_institutional_brand.sql",
   import.meta.url,
 );
 const globalModelNormalizationUrl = new URL(
-  "../migrations/20260820181901_normalize_global_signature_stamp_model_v5.sql",
+  "../migrations/20260820114500_normalize_global_signature_stamp_model_v5.sql",
   import.meta.url,
 );
 const envelopeRequestV1Url = new URL(
-  "../migrations/20260819203221_enable_diario_signature_envelopes_v1.sql",
+  "../migrations/20260819123000_enable_diario_signature_envelopes_v1.sql",
   import.meta.url,
 );
 

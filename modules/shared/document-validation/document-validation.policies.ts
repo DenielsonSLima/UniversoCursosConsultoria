@@ -19,7 +19,7 @@ export const DOCUMENT_VALIDATION_POLICIES: Record<
   },
   carteirinha_preceptor: {
     prefix: 'PRE',
-    title: 'Carteirinha de Preceptor',
+    title: 'Crachá de Preceptor',
   },
   cracha_estagio: {
     prefix: 'CRA-EST',

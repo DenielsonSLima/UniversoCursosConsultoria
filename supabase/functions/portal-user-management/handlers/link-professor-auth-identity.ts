@@ -151,7 +151,7 @@ export const handleLinkProfessorAuthIdentity = async (
 
   const { data: linkedPartner, error: linkError } = await context.admin
     .from("parceiros")
-    .update({ auth_user_id: authUser.id })
+    .update({ auth_user_id: authUser.id, auth_login_email: email })
     .eq("id", partner.id)
     .is("auth_user_id", null)
     .select("id, auth_user_id")
@@ -178,6 +178,7 @@ export const handleLinkProfessorAuthIdentity = async (
   return context.json({
     success: true,
     action: ACTION,
+    userId: authUser.id,
     profileLinked: true,
     profileLinkState: "linked",
     message: "O acesso existente também foi vinculado ao perfil de Professor.",

@@ -35,7 +35,6 @@ export interface UsuarioSistema {
 export interface UsuarioSistemaInput {
   nome: string;
   email: string;
-  senha?: string;
   cpf?: string;
   telefone?: string;
   perfil: string;
@@ -67,8 +66,6 @@ export interface NovoUsuarioFormData {
   dataNascimento: string;
   telefone: string;
   email: string;
-  senha: string;
-  confirmarSenha: string;
   todosPolos: boolean;
   polosAcesso: string[];
   permissoes: string[];

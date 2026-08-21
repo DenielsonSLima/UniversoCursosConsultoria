@@ -87,7 +87,6 @@ const UsersList: React.FC<UsersListProps> = ({ contextId, contextTitle, onBack }
     return {
       nome: `${newUser.nome} ${newUser.sobrenome}`.trim(),
       email: newUser.email,
-      senha: newUser.senha,
       cpf: newUser.cpf,
       telefone: newUser.telefone,
       perfil,

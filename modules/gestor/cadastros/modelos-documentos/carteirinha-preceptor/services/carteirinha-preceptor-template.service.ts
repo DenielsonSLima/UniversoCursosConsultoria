@@ -1,4 +1,10 @@
 import { supabase } from '../../../../../../lib/supabase';
+import {
+  createPreceptorCrachaModel,
+  hasPreceptorCrachaLayout,
+  PRECEPTOR_CRACHA_LAYOUT_VERSION,
+  type CrachaTemplateField,
+} from '../../cracha/components/cracha-editor.model';
 import type {
   ConteudoModeloCarteirinhaPreceptor,
   ModeloCarteirinhaPreceptorSeguro,
@@ -17,46 +23,59 @@ const isStatus = (value: unknown): value is StatusModeloPreceptor => (
   value === 'RASCUNHO' || value === 'ATIVO' || value === 'EM_REVISAO'
 );
 
-const DEFAULT_CONTENT: ConteudoModeloCarteirinhaPreceptor = {
-  nomeModelo: 'Carteirinha de Preceptor',
-  tituloFrente: 'PRECEPTOR(A)',
-  subtituloFrente: 'UNIVERSO CURSOS E CONSULTORIA',
-  mensagemVerso: 'Credencial institucional de uso pessoal e intransferível. A autenticidade pode ser conferida pelo QR Code.',
-  rodape: 'Documento institucional · valide pelo QR Code',
-  mostrarFoto: true,
-  mostrarPolo: true,
-  marcaDaguaHabilitada: true,
-  qr: {
-    habilitado: true,
-    rotulo: 'Validar credencial',
-    caminhoValidacao: '/validar-documento',
-    modoValidade: 'POR_DIAS',
-    diasValidade: 365,
-  },
+const normalizeQr = (value: unknown) => {
+  const qr = isRecord(value) ? value : {};
+  const modoValidade = qr.modoValidade === 'POR_DIAS' ? 'POR_DIAS' : 'SEM_VENCIMENTO';
+  return {
+    habilitado: qr.habilitado !== false,
+    rotulo: asString(qr.rotulo, 'Validar credencial'),
+    caminhoValidacao: asString(qr.caminhoValidacao, '/validar-documento'),
+    modoValidade,
+    diasValidade: modoValidade === 'POR_DIAS' && typeof qr.diasValidade === 'number' && Number.isFinite(qr.diasValidade)
+      ? qr.diasValidade
+      : modoValidade === 'POR_DIAS' ? 365 : null,
+  } as const;
 };
 
 const normalizeContent = (value: unknown): ConteudoModeloCarteirinhaPreceptor => {
-  if (!isRecord(value)) return DEFAULT_CONTENT;
-  const qr = isRecord(value.qr) ? value.qr : {};
-  const modoValidade = qr.modoValidade === 'POR_DIAS' ? 'POR_DIAS' : 'SEM_VENCIMENTO';
+  const source = isRecord(value) ? value : {};
+  // Modelos antigos precisam continuar identificáveis aqui. A tela então usa o
+  // modelo de estágio vigente como fonte visual do primeiro clone; converter
+  // nesta camada faria perder os fundos personalizados antes de ela carregá-los.
+  if (!hasPreceptorCrachaLayout(source)) {
+    return {
+      ...source,
+      id: CARTEIRINHA_PRECEPTOR_TEMPLATE_KEY,
+      nome: asString(source.nome, asString(source.nomeModelo, 'Crachá de Preceptor')),
+      nomeModelo: asString(source.nomeModelo, 'Crachá de Preceptor'),
+      tituloFrente: asString(source.tituloFrente, 'PRECEPTOR(A)'),
+      subtituloFrente: asString(source.subtituloFrente, 'UNIVERSO CURSOS E CONSULTORIA'),
+      mensagemVerso: asString(source.mensagemVerso, 'Credencial institucional de uso pessoal e intransferível. A autenticidade pode ser conferida pelo QR Code.'),
+      rodape: asString(source.rodape, 'Documento institucional · valide pelo QR Code'),
+      mostrarFoto: source.mostrarFoto !== false,
+      mostrarPolo: source.mostrarPolo !== false,
+      marcaDaguaHabilitada: source.marcaDaguaHabilitada !== false,
+      qr: normalizeQr(source.qr),
+    } as ConteudoModeloCarteirinhaPreceptor;
+  }
+  const prepared = createPreceptorCrachaModel(source);
+  const fields = Array.isArray(prepared.fields) ? prepared.fields : [];
+
   return {
-    nomeModelo: asString(value.nomeModelo, DEFAULT_CONTENT.nomeModelo),
-    tituloFrente: asString(value.tituloFrente, DEFAULT_CONTENT.tituloFrente),
-    subtituloFrente: asString(value.subtituloFrente, DEFAULT_CONTENT.subtituloFrente),
-    mensagemVerso: asString(value.mensagemVerso, DEFAULT_CONTENT.mensagemVerso),
-    rodape: asString(value.rodape, DEFAULT_CONTENT.rodape),
-    mostrarFoto: value.mostrarFoto !== false,
-    mostrarPolo: value.mostrarPolo !== false,
-    marcaDaguaHabilitada: value.marcaDaguaHabilitada !== false,
-    qr: {
-      habilitado: qr.habilitado !== false,
-      rotulo: asString(qr.rotulo, DEFAULT_CONTENT.qr.rotulo),
-      caminhoValidacao: asString(qr.caminhoValidacao, DEFAULT_CONTENT.qr.caminhoValidacao),
-      modoValidade,
-      diasValidade: modoValidade === 'POR_DIAS' && typeof qr.diasValidade === 'number' && Number.isFinite(qr.diasValidade)
-        ? qr.diasValidade
-        : modoValidade === 'POR_DIAS' ? DEFAULT_CONTENT.qr.diasValidade : null,
-    },
+    ...prepared,
+    id: CARTEIRINHA_PRECEPTOR_TEMPLATE_KEY,
+    layoutVersion: PRECEPTOR_CRACHA_LAYOUT_VERSION,
+    nome: asString(prepared.nome, 'Crachá de Preceptor'),
+    nomeModelo: asString(source.nomeModelo, asString(prepared.nome, 'Crachá de Preceptor')),
+    tituloFrente: asString(source.tituloFrente, asString(prepared.textoFrente, 'PRECEPTOR(A)')),
+    subtituloFrente: asString(source.subtituloFrente, 'UNIVERSO CURSOS E CONSULTORIA'),
+    mensagemVerso: asString(source.mensagemVerso, asString(prepared.textoVerso)),
+    rodape: asString(source.rodape, 'Documento institucional · valide pelo QR Code'),
+    mostrarFoto: source.mostrarFoto !== false && fields.some((field) => field.type === 'foto'),
+    mostrarPolo: source.mostrarPolo !== false,
+    marcaDaguaHabilitada: source.marcaDaguaHabilitada !== false,
+    fields: fields as CrachaTemplateField[],
+    qr: normalizeQr(source.qr),
   };
 };
 
@@ -78,14 +97,8 @@ const normalizeEnvelope = (payload: unknown): ModeloCarteirinhaPreceptorSeguro =
 };
 
 /**
- * RPCs esperadas para este modelo:
- * - get_modelo_documento_template_secure('carteirinha_preceptor', null)
- * - save_modelo_documento_template_secure('carteirinha_preceptor', null,
- *   p_expected_revision, p_content jsonb, p_request_id uuid)
- *
- * O backend limita a leitura/gravação ao gestor autorizado, grava a auditoria
- * e retorna a revisão vencedora. A credencial emitida e seu QR são sempre
- * gerados em outro fluxo seguro; esta tela só edita o modelo.
+ * O backend mantém autorização, revisão, auditoria e QR opaco. Esta camada só
+ * normaliza o layout do navegador antes de enviar pelo RPC versionado.
  */
 export const carteirinhaPreceptorTemplateService = {
   async getTemplate() {

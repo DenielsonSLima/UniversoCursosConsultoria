@@ -210,7 +210,7 @@ const AlunoPage: React.FC = () => {
       case 'comunicacao':
         return <ComunicacaoPage alunoId={alunoId} alunoNome={alunoNome} onNavigate={setActiveModule} />;
       case 'secretaria':
-        return <SecretariaPage alunoId={alunoId} />;
+        return <SecretariaPage alunoId={alunoId} contextId={profile.contextId || ''} />;
       case 'notificacoes':
         return (
           <NotificacoesPage

@@ -18,6 +18,8 @@ import {
 import {
   alunoPublicAuthService,
   isPublicAlunoAlreadyRegisteredError,
+  PUBLIC_ALUNO_RACA_COR_OPTIONS,
+  PUBLIC_ALUNO_SEXO_OPTIONS,
 } from '../../public/login/aluno-public-auth.service';
 import { getPublicAlunoBirthDateMax, isPublicAlunoOlderThanTen } from '../../public/login/aluno-birth-date';
 import { formatCpf, formatPhone } from '../../public/login/aluno-login.utils';
@@ -35,6 +37,8 @@ type SignupForm = {
   nome: string;
   cpf: string;
   dataNascimento: string;
+  sexo: string;
+  racaCor: string;
   telefone: string;
   email: string;
   password: string;
@@ -53,6 +57,8 @@ const INITIAL_FORM: SignupForm = {
   nome: '',
   cpf: '',
   dataNascimento: '',
+  sexo: '',
+  racaCor: '',
   telefone: '',
   email: '',
   password: '',
@@ -152,6 +158,8 @@ const AlunoAppSignupPage: React.FC = () => {
     if (!isValidCpf(form.cpf)) return 'Informe um CPF válido.';
     if (!form.dataNascimento) return 'Informe sua data de nascimento.';
     if (!isPublicAlunoOlderThanTen(form.dataNascimento)) return 'O cadastro é permitido somente para alunos com mais de 10 anos.';
+    if (!form.sexo) return 'Selecione uma opção de sexo para continuar.';
+    if (!form.racaCor) return 'Selecione uma opção de raça/cor para continuar.';
     if (form.telefone.replace(/\D/g, '').length < 10) return 'Informe um WhatsApp válido.';
     return '';
   };
@@ -247,7 +255,7 @@ const AlunoAppSignupPage: React.FC = () => {
           </span>
           <h1 className="mt-6 text-2xl font-black">Cadastro recebido!</h1>
           <p className="mt-3 text-sm font-medium leading-relaxed text-blue-100/75">
-            Enviamos a confirmação para <strong className="text-white">{confirmationEmail}</strong>. Abra o link recebido para ativar sua conta.
+            Enviamos a confirmação para <strong className="text-white">{confirmationEmail}</strong>. Abra o link recebido para ativar sua conta. Você só poderá entrar no aplicativo após essa confirmação. Verifique também Spam ou Lixo eletrônico.
           </p>
           <Link to="/aluno/login-app" className="mt-7 flex h-14 items-center justify-center gap-2 rounded-2xl bg-blue-600 text-sm font-black shadow-xl shadow-blue-950/30">
             Voltar ao login <ArrowRight size={18} />
@@ -329,6 +337,25 @@ const AlunoAppSignupPage: React.FC = () => {
                   <span className="mt-1.5 block text-[10px] font-semibold text-blue-100/55">Cadastro permitido para maiores de 10 anos.</span>
                 </label>
                 <label className="block">
+                  <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-blue-100/70">Sexo <span className="text-red-200">*</span></span>
+                  <select required value={form.sexo} onChange={(event) => updateField('sexo', event.target.value)} className={INPUT_CLASS}>
+                    <option value="">Selecione uma opção</option>
+                    {PUBLIC_ALUNO_SEXO_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-blue-100/70">Raça/cor (autodeclaração) <span className="text-red-200">*</span></span>
+                  <select required value={form.racaCor} onChange={(event) => updateField('racaCor', event.target.value)} aria-describedby="aluno-app-raca-cor-help" className={INPUT_CLASS}>
+                    <option value="">Selecione uma opção</option>
+                    {PUBLIC_ALUNO_RACA_COR_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                  <span id="aluno-app-raca-cor-help" className="mt-1.5 block text-[10px] font-semibold leading-relaxed text-blue-100/55">Escolha a opção com a qual você se identifica. Esta informação é usada somente em registros educacionais e indicadores de inclusão; não altera sua matrícula, acesso ou certificado.</span>
+                </label>
+                <label className="block">
                   <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-blue-100/70">WhatsApp</span>
                   <span className="relative block">
                     <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -350,6 +377,9 @@ const AlunoAppSignupPage: React.FC = () => {
                     <input required type="email" autoComplete="email" value={form.email} onChange={(event) => updateField('email', event.target.value)} placeholder="seu@email.com" className={`${INPUT_CLASS} pl-12`} />
                   </span>
                 </label>
+                <div className="rounded-2xl border border-amber-200/20 bg-amber-300/10 p-3 text-[11px] font-semibold leading-relaxed text-amber-50">
+                  <CheckCircle2 className="mr-1.5 inline-block text-amber-200" size={15} /> Este será seu e-mail de acesso. Depois de criar a conta, confirme o link enviado para ativá-la; só então será possível entrar. Verifique também Spam ou Lixo eletrônico.
+                </div>
                 <label className="block">
                   <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-blue-100/70">Senha</span>
                   <span className="relative block">
@@ -380,7 +410,7 @@ const AlunoAppSignupPage: React.FC = () => {
                 <label className="flex items-start gap-3 rounded-2xl bg-white/[0.06] p-3">
                   <input type="checkbox" checked={form.acceptedTerms} onChange={(event) => updateField('acceptedTerms', event.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-blue-500" />
                   <span className="text-[11px] font-medium leading-relaxed text-blue-100/75">
-                    Li e aceito os <a href="/termos" target="_blank" rel="noreferrer" className="font-black text-blue-300 underline">Termos de Uso</a>. Estou ciente de que felicitações de aniversário e relacionamento não comercial ficam ativas por padrão, sob legítimo interesse, e podem ser desativadas em Notificações.
+                    Li e aceito os <a href="/termos" target="_blank" rel="noreferrer" className="font-black text-blue-300 underline">Termos de Uso</a> e a <a href="/privacidade" target="_blank" rel="noreferrer" className="font-black text-blue-300 underline">Política de Privacidade</a>. Estou ciente de que felicitações de aniversário e relacionamento não comercial ficam ativas por padrão, sob legítimo interesse, e podem ser desativadas em Notificações.
                   </span>
                 </label>
                 <div className="grid grid-cols-[0.8fr_1.2fr] gap-2.5">

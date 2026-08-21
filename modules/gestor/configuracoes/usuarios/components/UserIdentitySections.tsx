@@ -1,5 +1,5 @@
 import React from 'react';
-import { Building2, Check, Lock, Mail, Phone, Shield, User } from 'lucide-react';
+import { Building2, Check, Mail, Phone, Shield, User } from 'lucide-react';
 import { NovoUsuarioFormData } from '../usuarios.types';
 
 interface CompanyOption {
@@ -14,30 +14,16 @@ interface UserIdentitySectionsProps {
   isEditing: boolean;
   contextId: string;
   companies: CompanyOption[];
-  passwordStrength: number;
   onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onToggleAllPolos: () => void;
   onTogglePolo: (id: string) => void;
 }
-
-const strengthColor = (score: number) => {
-  if (score <= 2) return 'bg-red-500';
-  if (score <= 3) return 'bg-yellow-500';
-  return 'bg-emerald-500';
-};
-
-const strengthLabel = (score: number) => {
-  if (score <= 2) return 'Fraca';
-  if (score <= 3) return 'Média';
-  return 'Forte';
-};
 
 const UserIdentitySections: React.FC<UserIdentitySectionsProps> = ({
   formData,
   isEditing,
   contextId,
   companies,
-  passwordStrength,
   onChange,
   onToggleAllPolos,
   onTogglePolo,
@@ -90,55 +76,12 @@ const UserIdentitySections: React.FC<UserIdentitySectionsProps> = ({
           </div>
         </div>
         {!isEditing && (
-          <>
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase ml-1">Senha</label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input
-                  type="password"
-                  name="senha"
-                  value={formData.senha}
-                  onChange={onChange}
-                  required
-                  minLength={8}
-                  autoComplete="new-password"
-                  aria-describedby="gestor-password-requirements"
-                  className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] focus:border-blue-500 outline-none transition-all"
-                  placeholder="••••••••"
-                />
-              </div>
-              <p id="gestor-password-requirements" className="px-1 text-[10px] font-semibold text-slate-500">
-                Use 8 ou mais caracteres, com letra maiúscula, minúscula e número.
-              </p>
-              {formData.senha && (
-                <div className="flex items-center gap-2 mt-2 px-1">
-                  <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div className={`h-full transition-all duration-300 ${strengthColor(passwordStrength)}`} style={{ width: `${(passwordStrength / 5) * 100}%` }} />
-                  </div>
-                  <span className="text-[10px] font-bold uppercase text-slate-500">{strengthLabel(passwordStrength)}</span>
-                </div>
-              )}
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase ml-1">Confirmar Senha</label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input
-                  type="password"
-                  name="confirmarSenha"
-                  value={formData.confirmarSenha}
-                  onChange={onChange}
-                  required
-                  minLength={8}
-                  autoComplete="new-password"
-                  className={`w-full pl-12 pr-4 py-3 bg-slate-50 border rounded-xl text-[#001a33] outline-none transition-all ${formData.confirmarSenha && formData.senha !== formData.confirmarSenha ? 'border-red-300 focus:border-red-500' : 'border-slate-200 focus:border-blue-500'}`}
-                  placeholder="••••••••"
-                />
-              </div>
-              {formData.confirmarSenha && formData.senha !== formData.confirmarSenha && <p className="text-[10px] text-red-500 font-bold ml-1 mt-1">As senhas não conferem</p>}
-            </div>
-          </>
+          <div className="md:col-span-2 flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-blue-900">
+            <Shield className="mt-0.5 shrink-0 text-blue-600" size={18} />
+            <p className="text-xs font-semibold leading-relaxed">
+              Ao salvar, enviaremos um convite de primeiro acesso para este e-mail. A própria pessoa definirá uma senha segura antes de entrar no sistema.
+            </p>
+          </div>
         )}
       </div>
     </section>

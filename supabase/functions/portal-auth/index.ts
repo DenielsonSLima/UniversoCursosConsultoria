@@ -8,6 +8,8 @@ import { resolveRedirectTarget } from "../portal-user-management/redirects.ts";
 
 const GENERIC_LOGIN_ERROR =
   "Não foi possível autenticar com as credenciais informadas. Verifique seus dados e tente novamente.";
+const EMAIL_CONFIRMATION_REQUIRED_ERROR =
+  "Confirme o e-mail enviado para ativar sua conta. Verifique também Spam ou Lixo eletrônico.";
 const GENERIC_RECOVERY_MESSAGE =
   "Se existir uma conta vinculada aos dados informados, enviaremos as instruções de recuperação.";
 const RATE_LIMIT_ERROR =
@@ -171,6 +173,16 @@ const readAuthResponse = async (response: Response) => {
   return body && typeof body === "object"
     ? body as Record<string, unknown>
     : null;
+};
+
+const isEmailConfirmationRequired = (body: Record<string, unknown> | null) => {
+  const codes = [body?.code, body?.error_code]
+    .map((value) => String(value || "").trim().toLowerCase());
+  const message = String(body?.msg || body?.message || "")
+    .trim()
+    .toLowerCase();
+
+  return codes.includes("email_not_confirmed") || message === "email not confirmed";
 };
 
 const getRequestOrigin = (request: Request) => {
@@ -539,6 +551,13 @@ Deno.serve(async (request: Request) => {
       typeof authData?.access_token !== "string" ||
       typeof authData?.refresh_token !== "string"
     ) {
+      if (isEmailConfirmationRequired(authData)) {
+        logTiming("email_confirmation_required");
+        return json({
+          error: EMAIL_CONFIRMATION_REQUIRED_ERROR,
+          code: "email_confirmation_required",
+        }, 403);
+      }
       logTiming("invalid_credentials");
       return json({
         error: GENERIC_LOGIN_ERROR,

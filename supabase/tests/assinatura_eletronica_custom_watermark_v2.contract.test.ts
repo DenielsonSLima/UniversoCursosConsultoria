@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 
 const migrationUrl = new URL(
-  "../migrations/20260819002821_add_assinatura_eletronica_custom_watermark_assets_v2.sql",
+  "../migrations/20260818204500_add_assinatura_eletronica_custom_watermark_assets_v2.sql",
   import.meta.url,
 );
 const edgeUrl = new URL(

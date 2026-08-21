@@ -10,7 +10,7 @@ export const SECRETARIA_ACCESS_OPTIONS = [
   { id: 'pasta-identificacao', label: 'Pasta de Identificação', legacyTab: 'fichas' },
   { id: 'ficha-matricula', label: 'Ficha de Matrícula', legacyTab: 'fichas' },
   { id: 'carteirinha', label: 'Carteirinha Estudantil', legacyTab: 'carteirinhas' },
-  { id: 'carteirinha-preceptor', label: 'Carteirinha de Preceptor', legacyTab: 'carteirinhas' },
+  { id: 'carteirinha-preceptor', label: 'Crachá de Preceptor', legacyTab: 'carteirinhas' },
   { id: 'cracha-estagio', label: 'Crachá de Estágio', legacyTab: 'carteirinhas' },
   { id: 'cracha-periodo-eleitoral', label: 'Crachá SES', legacyTab: 'carteirinhas' },
   { id: 'termo-estagio', label: 'Termo de Estágio', legacyTab: 'solicitacoes' },
@@ -20,9 +20,15 @@ export const SECRETARIA_ACCESS_OPTIONS = [
   { id: 'dependencias-academicas', label: 'Dependências Acadêmicas', legacyTab: 'solicitacoes' },
   { id: 'certificados', label: 'Certificados', legacyTab: 'historico' },
   { id: 'historico-emissoes', label: 'Histórico de Emissões', legacyTab: 'historico' },
+  { id: 'assinatura-eletronica', label: 'Assinaturas e Acervo', legacyTab: null, inheritsLegacy: false },
 ] as const;
 
 export type SecretariaAccessId = typeof SECRETARIA_ACCESS_OPTIONS[number]['id'];
+
+const inheritsLegacyAccess = (option: {
+  legacyTab: string | null;
+  inheritsLegacy?: boolean;
+}) => option.legacyTab === null && option.inheritsLegacy !== false;
 
 const secretariaLegacyTabs = new Set<string>(
   SECRETARIA_ACCESS_OPTIONS.flatMap(option => option.legacyTab ? [option.legacyTab] : []),
@@ -45,7 +51,7 @@ export const normalizeSecretariaAccessTabs = (tabs: unknown): string[] => {
 
   if (hasLegacyTabs) {
     for (const option of SECRETARIA_ACCESS_OPTIONS) {
-      if (option.legacyTab === null || normalized.includes(option.legacyTab)) {
+      if (inheritsLegacyAccess(option) || (option.legacyTab !== null && normalized.includes(option.legacyTab))) {
         allowed.add(option.id);
       }
     }

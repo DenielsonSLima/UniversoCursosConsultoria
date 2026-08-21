@@ -32,6 +32,8 @@ const tabLabels: Record<ParceirosTabType, string> = {
   todos: 'Todos',
   professores: 'Professores',
   alunos: 'Alunos',
+  responsaveis: 'Responsáveis',
+  coordenacoes: 'Coordenações',
   pj: 'Pessoa Jurídica',
   pf: 'Pessoa Física',
 };

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   ArrowRight,
   Eye,
@@ -11,6 +12,8 @@ import {
 } from 'lucide-react';
 import { alunoPublicAuthService, getSafePublicAlunoRedirectPath } from '../../public/login/aluno-public-auth.service';
 import { savePortalSession, type PortalAuthProfile } from '../../login/portal-session';
+import { resolveProfilePostLoginRoute } from '../../login/profile-selection';
+import PortalProfileSelector, { portalProfileKey } from '../../login/components/PortalProfileSelector';
 import GoogleLogo from '../../shared/auth/GoogleLogo';
 import { type TurnstileStatus } from '../../shared/auth/TurnstileWidget';
 import AdaptiveTurnstileWidget from '../../shared/auth/AdaptiveTurnstileWidget';
@@ -29,11 +32,15 @@ const AlunoAppLoginPage: React.FC = () => {
   useAlunoFullscreenViewport();
 
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [publicProfiles, setPublicProfiles] = useState<PortalAuthProfile[]>([]);
+  const [isSelectingProfile, setIsSelectingProfile] = useState(false);
+  const [pendingProfileKey, setPendingProfileKey] = useState<string | null>(null);
   const [checkingExistingSession, setCheckingExistingSession] = useState(() => Capacitor.isNativePlatform());
   const [message, setMessage] = useState<LoginMessage | null>(() => (
     searchParams.get('reason') === 'session_expired'
@@ -50,6 +57,36 @@ const AlunoAppLoginPage: React.FC = () => {
   useAlunoContainedScroll(contentScrollRef);
 
   const redirectPath = getSafePublicAlunoRedirectPath(searchParams.get('redirect'));
+
+  const finishLogin = useCallback((profile?: PortalAuthProfile | null) => {
+    if (!profile) return;
+
+    if (alunoPublicAuthService.needsInitialAccess(profile)) {
+      queryClient.clear();
+      const params = new URLSearchParams({ next: redirectPath });
+      if (profile.contextId) {
+        params.set('context', profile.contextId);
+      }
+      navigate(`/aluno/primeiro-acesso?${params.toString()}`, { replace: true });
+      return;
+    }
+
+    queryClient.clear();
+    savePortalSession(profile);
+    navigate(resolveProfilePostLoginRoute(profile.tipo, redirectPath), { replace: true });
+  }, [navigate, queryClient, redirectPath]);
+
+  const continueWithProfiles = useCallback((profiles: readonly PortalAuthProfile[]) => {
+    if (profiles.length === 0) {
+      throw new Error('Não há perfil ativo disponível para este acesso.');
+    }
+    if (profiles.length === 1) {
+      finishLogin(profiles[0]);
+      return;
+    }
+    setLoading(false);
+    setPublicProfiles([...profiles]);
+  }, [finishLogin]);
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return undefined;
@@ -69,21 +106,45 @@ const AlunoAppLoginPage: React.FC = () => {
     }
 
     let mounted = true;
-    void supabase.auth.getSession().then(({ data, error }) => {
-      if (!mounted) return;
-      if (!error && data.session) {
-        navigate(redirectPath, { replace: true });
-        return;
+    void (async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (!mounted) return;
+        if (error || !data.session) {
+          setCheckingExistingSession(false);
+          return;
+        }
+
+        const profiles = await alunoPublicAuthService.finishExternalLoginAndListProfiles();
+        if (!mounted) return;
+        // Uma sessão restaurada também pode mudar de contexto. Nunca deixa
+        // dados TanStack de uma escolha anterior seguirem para o seletor.
+        queryClient.clear();
+        if (profiles.length > 1) {
+          setLoading(false);
+          setPublicProfiles([...profiles]);
+          setCheckingExistingSession(false);
+          return;
+        }
+        if (profiles.length === 1) {
+          finishLogin(profiles[0]);
+          return;
+        }
+        throw new Error('Não há perfil ativo disponível para esta sessão.');
+      } catch (error) {
+        if (!mounted) return;
+        setMessage({
+          tone: 'error',
+          text: error instanceof Error ? error.message : 'Não foi possível validar a sessão existente.',
+        });
+        setCheckingExistingSession(false);
       }
-      setCheckingExistingSession(false);
-    }).catch(() => {
-      if (mounted) setCheckingExistingSession(false);
-    });
+    })();
 
     return () => {
       mounted = false;
     };
-  }, [navigate, redirectPath, searchParams]);
+  }, [finishLogin, queryClient, searchParams]);
 
   useEffect(() => {
     if (wasLoadingRef.current && !loading) {
@@ -93,18 +154,22 @@ const AlunoAppLoginPage: React.FC = () => {
     wasLoadingRef.current = loading;
   }, [loading]);
 
-  const finishLogin = useCallback((profile?: PortalAuthProfile | null) => {
-    if (!profile) return;
-
-    if (alunoPublicAuthService.needsInitialAccess(profile)) {
-      const params = new URLSearchParams({ next: redirectPath });
-      navigate(`/aluno/primeiro-acesso?${params.toString()}`, { replace: true });
-      return;
+  const handleProfileSelect = useCallback(async (profile: PortalAuthProfile) => {
+    setIsSelectingProfile(true);
+    setPendingProfileKey(portalProfileKey(profile));
+    setMessage(null);
+    try {
+      finishLogin(profile);
+    } catch (error) {
+      setMessage({
+        tone: 'error',
+        text: error instanceof Error ? error.message : 'Não foi possível concluir o acesso com o perfil selecionado.',
+      });
+    } finally {
+      setIsSelectingProfile(false);
+      setPendingProfileKey(null);
     }
-
-    savePortalSession(profile);
-    navigate(redirectPath, { replace: true });
-  }, [navigate, redirectPath]);
+  }, [finishLogin]);
 
   useEffect(() => {
     const oauthReturn = searchParams.get('oauth_return');
@@ -132,9 +197,9 @@ const AlunoAppLoginPage: React.FC = () => {
 
     setLoading(true);
     setMessage(null);
-    void alunoPublicAuthService.finishExternalLogin()
-      .then((profile) => {
-        if (mounted) finishLogin(profile);
+    void alunoPublicAuthService.finishExternalLoginAndListProfiles()
+      .then((profiles) => {
+        if (mounted) continueWithProfiles(profiles);
       })
       .catch((error) => {
         if (!mounted) return;
@@ -151,7 +216,7 @@ const AlunoAppLoginPage: React.FC = () => {
     return () => {
       mounted = false;
     };
-  }, [finishLogin, navigate, searchParams]);
+  }, [continueWithProfiles, navigate, searchParams]);
 
   const handleSubmit: React.FormEventHandler = async (event) => {
     event.preventDefault();
@@ -172,8 +237,8 @@ const AlunoAppLoginPage: React.FC = () => {
     setTurnstileToken('');
 
     try {
-      const profile = await alunoPublicAuthService.login(identifier, password, verifiedToken);
-      finishLogin(profile);
+      const profiles = await alunoPublicAuthService.loginAndListProfiles(identifier, password, verifiedToken);
+      continueWithProfiles(profiles);
     } catch (error) {
       setMessage({
         tone: 'error',
@@ -271,6 +336,20 @@ const AlunoAppLoginPage: React.FC = () => {
             </div>
           ) : null}
 
+          {publicProfiles.length > 1 ? (
+            <PortalProfileSelector
+              profiles={publicProfiles}
+              variant="dark"
+              isSelecting={isSelectingProfile}
+              pendingProfileKey={pendingProfileKey}
+              onSelect={handleProfileSelect}
+              onBack={() => {
+                setPublicProfiles([]);
+                setMessage(null);
+              }}
+            />
+          ) : (
+          <>
           <form onSubmit={handleSubmit} className="app-login-form mt-4 space-y-3.5">
             <label className="block">
               <span className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.13em] text-blue-100/70">Matrícula ou e-mail</span>
@@ -373,6 +452,8 @@ const AlunoAppLoginPage: React.FC = () => {
               Criar conta
             </button>
           </p>
+          </>
+          )}
         </section>
       </div>
     </main>

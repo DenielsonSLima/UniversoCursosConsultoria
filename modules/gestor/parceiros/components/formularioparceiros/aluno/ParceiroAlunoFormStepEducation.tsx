@@ -11,9 +11,13 @@ const ParceiroAlunoFormStepEducation: React.FC<AlunoFormStepProps> = ({ formData
       <h4 className="text-xs font-black uppercase tracking-wider">Dados do Ensino Médio</h4>
     </div>
 
+    <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-xs font-medium leading-relaxed text-emerald-800">
+      Esta etapa é opcional no cadastro inicial. Os dados do Ensino Médio serão exigidos somente para matrícula em curso técnico.
+    </div>
+
     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
       <div className="md:col-span-2">
-        <label className={LABEL_CLS}>Situação do Ensino Médio <span className="text-red-500">*</span></label>
+        <label className={LABEL_CLS}>Situação do Ensino Médio</label>
         <select name="situacaoEnsinoMedio" value={formData.situacaoEnsinoMedio} onChange={onChange} className={INPUT_CLS}>
           <option value="">Selecione...</option>
           <option value="CURSANDO">Cursando</option>
@@ -23,7 +27,7 @@ const ParceiroAlunoFormStepEducation: React.FC<AlunoFormStepProps> = ({ formData
 
       <div className="md:col-span-2">
         <label className={LABEL_CLS}>
-          {formData.situacaoEnsinoMedio === 'CONCLUIDO' ? 'Escola onde concluiu' : 'Escola onde estuda'} <span className="text-red-500">*</span>
+          {formData.situacaoEnsinoMedio === 'CONCLUIDO' ? 'Escola onde concluiu' : 'Escola onde estuda'}
         </label>
         <input type="text" name="escolaEnsinoMedio" value={formData.escolaEnsinoMedio} onChange={onChange}
           className={INPUT_CLS} placeholder="Nome completo da escola" />
@@ -32,7 +36,7 @@ const ParceiroAlunoFormStepEducation: React.FC<AlunoFormStepProps> = ({ formData
       {formData.situacaoEnsinoMedio === 'CURSANDO' ? (
         <>
           <div>
-            <label className={LABEL_CLS}>Série atual <span className="text-red-500">*</span></label>
+            <label className={LABEL_CLS}>Série atual</label>
             <select name="serieEnsinoMedioAtual" value={formData.serieEnsinoMedioAtual} onChange={onChange} className={INPUT_CLS}>
               <option value="">Selecione...</option>
               <option value="2">2º ano</option>
@@ -40,7 +44,7 @@ const ParceiroAlunoFormStepEducation: React.FC<AlunoFormStepProps> = ({ formData
             </select>
           </div>
           <div>
-            <label className={LABEL_CLS}>Previsão de conclusão <span className="text-red-500">*</span></label>
+            <label className={LABEL_CLS}>Previsão de conclusão</label>
             <input type="text" inputMode="numeric" name="anoPrevisaoConclusaoEnsinoMedio"
               value={formData.anoPrevisaoConclusaoEnsinoMedio} onChange={onChange}
               maxLength={4} className={INPUT_CLS} placeholder="Ex: 2027" />
@@ -50,7 +54,7 @@ const ParceiroAlunoFormStepEducation: React.FC<AlunoFormStepProps> = ({ formData
 
       {formData.situacaoEnsinoMedio === 'CONCLUIDO' ? (
         <div>
-          <label className={LABEL_CLS}>Ano de conclusão <span className="text-red-500">*</span></label>
+          <label className={LABEL_CLS}>Ano de conclusão</label>
           <input type="text" inputMode="numeric" name="anoConclusaoEnsinoMedio"
             value={formData.anoConclusaoEnsinoMedio} onChange={onChange}
             maxLength={4} className={INPUT_CLS} placeholder="Ex: 2024" />
@@ -60,7 +64,7 @@ const ParceiroAlunoFormStepEducation: React.FC<AlunoFormStepProps> = ({ formData
 
     <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
       <p className="text-xs font-medium leading-relaxed text-emerald-700">
-        Estes dados determinam a elegibilidade para ingresso técnico concomitante ou subsequente.
+        Quando houver matrícula técnica, estes dados determinam a elegibilidade para ingresso concomitante ou subsequente.
       </p>
     </div>
 

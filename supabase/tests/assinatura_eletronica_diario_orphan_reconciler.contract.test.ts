@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 
 const migrationUrl = new URL(
-  "../migrations/20260819203338_add_diario_artifact_orphan_reconciler.sql",
+  "../migrations/20260819170000_add_diario_artifact_orphan_reconciler.sql",
   import.meta.url,
 );
 const sql = await Deno.readTextFile(migrationUrl);

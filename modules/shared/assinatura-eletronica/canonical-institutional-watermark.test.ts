@@ -10,7 +10,7 @@ const PNG_1X1 =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
 const canonicalPng = `data:image/png;base64,${PNG_1X1}`;
 
-test("aceita somente data URI canônica para watermark_landscape", () => {
+test("aceita somente data URI canônica para a marca retrato", () => {
   assert.equal(isCanonicalInstitutionalWatermarkDataUri(canonicalPng), true);
   assert.equal(
     assertCanonicalInstitutionalWatermarkDataUri(canonicalPng),
@@ -31,7 +31,7 @@ test("rejeita URL, MIME não suportado, espaços e base64 não canônico", () =>
     assert.equal(isCanonicalInstitutionalWatermarkDataUri(source), false);
     assert.throws(
       () => assertCanonicalInstitutionalWatermarkDataUri(source),
-      /watermark_landscape_<polo_id>/u,
+      /marca.*retrato.*polo/u,
     );
   }
 });

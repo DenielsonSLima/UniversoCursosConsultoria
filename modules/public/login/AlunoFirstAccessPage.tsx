@@ -1,20 +1,35 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
+import { useQueryClient } from '@tanstack/react-query';
+import { Capacitor } from '@capacitor/core';
 import { CheckSquare, Eye, EyeOff, Lock, FileText, LoaderCircle } from 'lucide-react';
 import { alunoPublicAuthService } from './aluno-public-auth.service';
-import { getPortalProfile, savePortalSession, PortalAuthProfile } from '../../login/portal-session';
+import {
+  clearPortalSession,
+  getPortalProfile,
+  savePortalSession,
+  PortalAuthProfile,
+} from '../../login/portal-session';
 import { loginService } from '../../login/login.service';
+import { resolveProfilePostLoginRoute } from '../../login/profile-selection';
 import { TERMS_VERSION } from '../../shared/constants/terms';
 
 const getDefaultNext = (searchParams: URLSearchParams) => {
-  const next = searchParams.get('next');
-  if (!next) return '/aluno/';
-  try {
-    const decoded = decodeURIComponent(next);
-    return decoded.startsWith('/') ? decoded : '/aluno/';
-  } catch {
-    return '/aluno/';
-  }
+  return resolveProfilePostLoginRoute('Aluno', searchParams.get('next'));
+};
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+const firstAccessRequestStorageKey = (contextId: string) => (
+  `portal_first_access_request_id:${contextId}`
+);
+
+const getStableFirstAccessRequestId = (contextId: string) => {
+  const storageKey = firstAccessRequestStorageKey(contextId);
+  const stored = sessionStorage.getItem(storageKey)?.trim() || '';
+  if (UUID_PATTERN.test(stored)) return stored;
+  const requestId = crypto.randomUUID();
+  sessionStorage.setItem(storageKey, requestId);
+  return requestId;
 };
 
 const hasStrongPassword = (value: string) => value.length >= 8 && /[A-Z]/.test(value) && /[a-z]/.test(value) && /\d/.test(value);
@@ -29,9 +44,16 @@ type NavigateState = 'idle' | 'loading' | 'success' | 'error';
 
 const AlunoFirstAccessPage: React.FC = () => {
   const navigate = useNavigate();
-  const alunoLoginPath = window.location.pathname.startsWith('/aluno/') ? '/aluno/entrar' : '/login';
+  const queryClient = useQueryClient();
+  const alunoLoginPath = Capacitor.isNativePlatform()
+    ? '/aluno/login-app'
+    : window.location.pathname.startsWith('/aluno/')
+      ? '/aluno/entrar'
+      : '/login';
   const [searchParams] = useSearchParams();
   const next = getDefaultNext(searchParams);
+  const requestedContextId = searchParams.get('context')?.trim() || null;
+  const requestIdRef = useRef<string | null>(null);
   const [isChecking, setIsChecking] = useState(true);
   const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
   const [profile, setProfile] = useState<PortalAuthProfile | null>(null);
@@ -40,36 +62,47 @@ const AlunoFirstAccessPage: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [state, setState] = useState<NavigateState>('idle');
+  const [isInterrupting, setIsInterrupting] = useState(false);
 
   useEffect(() => {
     const loadProfile = async () => {
       setIsChecking(true);
-      const currentProfile = await getPortalProfile();
+      setMessage(null);
 
-      if (!currentProfile) {
-        await loginService.logout();
-        navigate(alunoLoginPath, { replace: true });
-        return;
+      try {
+        const currentProfile = await getPortalProfile({
+          preferredRole: 'Aluno',
+          allowedRoles: ['Aluno'],
+          contextId: requestedContextId,
+        });
+
+        if (!currentProfile || !currentProfile.contextId) {
+          await loginService.logout();
+          navigate(alunoLoginPath, { replace: true });
+          return;
+        }
+
+        if (!alunoPublicAuthService.needsInitialAccess(currentProfile)) {
+          savePortalSession(currentProfile);
+          navigate(next, { replace: true });
+          return;
+        }
+
+        requestIdRef.current = getStableFirstAccessRequestId(currentProfile.contextId);
+        setProfile(currentProfile);
+        setAcceptedTerms(Boolean(currentProfile.acceptedTermsAt));
+      } catch {
+        setMessage({
+          tone: 'error',
+          text: 'Não foi possível validar seu primeiro acesso agora. Tente novamente em instantes.',
+        });
+      } finally {
+        setIsChecking(false);
       }
-
-      if (currentProfile.tipo !== 'Aluno') {
-        await loginService.logout();
-        navigate('/sistema/login', { replace: true });
-        return;
-      }
-
-      if (!alunoPublicAuthService.needsInitialAccess(currentProfile)) {
-        navigate(next, { replace: true });
-        return;
-      }
-
-      setProfile(currentProfile);
-      setAcceptedTerms(Boolean(currentProfile.acceptedTermsAt));
-      setIsChecking(false);
     };
 
-    loadProfile();
-  }, [alunoLoginPath, next, navigate]);
+    void loadProfile();
+  }, [alunoLoginPath, next, navigate, requestedContextId]);
 
   const termsAccepted = useMemo(() => Boolean(acceptedTerms), [acceptedTerms]);
   const requiresPasswordChange = Boolean(profile?.requiresPasswordReset);
@@ -77,6 +110,25 @@ const AlunoFirstAccessPage: React.FC = () => {
   const canSubmit =
     (needsTermsAcceptance ? termsAccepted : true) &&
     (!requiresPasswordChange || (hasStrongPassword(newPassword) && newPassword === confirmPassword));
+
+  const handleInterrupt = async () => {
+    if (isInterrupting || state === 'loading') return;
+    setIsInterrupting(true);
+    queryClient.clear();
+    sessionStorage.removeItem('portal_query_cache_auth_uid');
+    if (profile?.contextId) {
+      sessionStorage.removeItem(firstAccessRequestStorageKey(profile.contextId));
+    }
+    clearPortalSession();
+
+    try {
+      await loginService.logout();
+    } catch (error) {
+      console.warn('A sessão local foi interrompida, mas a revogação global não foi concluída.', error);
+    } finally {
+      navigate(alunoLoginPath, { replace: true });
+    }
+  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -105,9 +157,16 @@ const AlunoFirstAccessPage: React.FC = () => {
     setState('loading');
 
     try {
+      const contextId = profile?.contextId;
+      if (!contextId) {
+        throw new Error('O contexto do primeiro acesso não está disponível. Entre novamente.');
+      }
+      const requestId = requestIdRef.current || getStableFirstAccessRequestId(contextId);
+      requestIdRef.current = requestId;
       const updatedProfile = await alunoPublicAuthService.finalizeFirstAccess({
-        partnerId: profile.id,
-        acceptedTerms: needsTermsAcceptance && termsAccepted,
+        contextId,
+        requestId,
+        acceptedTerms: termsAccepted,
         acceptTermsVersion: TERMS_VERSION,
         setPassword: requiresPasswordChange,
         newPassword,
@@ -115,6 +174,7 @@ const AlunoFirstAccessPage: React.FC = () => {
 
       if (updatedProfile) {
         savePortalSession(updatedProfile);
+        sessionStorage.removeItem(firstAccessRequestStorageKey(contextId));
         setState('success');
         navigate(next, { replace: true });
       } else {
@@ -125,6 +185,30 @@ const AlunoFirstAccessPage: React.FC = () => {
         setState('error');
       }
     } catch (error) {
+      // A senha pode ter sido persistida antes de uma falha transitória na
+      // mutação dos termos. Relemos o mesmo contexto para que o retry não exija
+      // repetir uma etapa que o servidor já concluiu.
+      try {
+        const contextId = profile?.contextId;
+        const refreshed = contextId ? await getPortalProfile({
+          preferredRole: 'Aluno',
+          allowedRoles: ['Aluno'],
+          contextId,
+        }) : null;
+        if (refreshed) {
+          if (!alunoPublicAuthService.needsInitialAccess(refreshed)) {
+            savePortalSession(refreshed);
+            sessionStorage.removeItem(firstAccessRequestStorageKey(contextId!));
+            setState('success');
+            navigate(next, { replace: true });
+            return;
+          }
+          setProfile(refreshed);
+          setAcceptedTerms(Boolean(refreshed.acceptedTermsAt) || termsAccepted);
+        }
+      } catch {
+        // Mantém o fluxo bloqueado e o mesmo requestId para nova tentativa.
+      }
       setMessage({
         tone: 'error',
         text: error instanceof Error ? error.message : 'Não foi possível concluir o primeiro acesso.',
@@ -154,9 +238,14 @@ const AlunoFirstAccessPage: React.FC = () => {
               Para proteger sua conta e concluir a entrada, valide os itens abaixo antes de seguir.
             </p>
           </div>
-          <Link to="/aluno/" className="text-xs font-black uppercase tracking-widest text-slate-500">
-            Interromper
-          </Link>
+          <button
+            type="button"
+            onClick={() => void handleInterrupt()}
+            disabled={isInterrupting || state === 'loading'}
+            className="text-xs font-black uppercase tracking-widest text-slate-500 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isInterrupting ? 'Saindo...' : 'Interromper'}
+          </button>
         </div>
 
         <div className="space-y-6">

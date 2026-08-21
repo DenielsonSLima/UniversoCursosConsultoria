@@ -1,7 +1,10 @@
+import type { CrachaTemplateField, CrachaTemplateModel } from '../../cracha/components/cracha-editor.model';
+
 export type StatusModeloPreceptor = 'RASCUNHO' | 'ATIVO' | 'EM_REVISAO';
 export type ModoValidadePreceptor = 'SEM_VENCIMENTO' | 'POR_DIAS';
 
 export interface ConfiguracaoQrPreceptor {
+  [key: string]: unknown;
   habilitado: boolean;
   rotulo: string;
   caminhoValidacao: string;
@@ -9,7 +12,13 @@ export interface ConfiguracaoQrPreceptor {
   diasValidade: number | null;
 }
 
-export interface ConteudoModeloCarteirinhaPreceptor {
+/**
+ * A chave técnica permanece `carteirinha_preceptor`, porém o conteúdo usa o
+ * mesmo contrato visual CR80 do crachá de estágio. Só tokens PRECEPTOR_* são
+ * aceitos pela emissão oficial.
+ */
+export interface ConteudoModeloCarteirinhaPreceptor extends CrachaTemplateModel {
+  layoutVersion?: string;
   nomeModelo: string;
   tituloFrente: string;
   subtituloFrente: string;
@@ -18,6 +27,7 @@ export interface ConteudoModeloCarteirinhaPreceptor {
   mostrarFoto: boolean;
   mostrarPolo: boolean;
   marcaDaguaHabilitada: boolean;
+  fields?: CrachaTemplateField[];
   qr: ConfiguracaoQrPreceptor;
 }
 

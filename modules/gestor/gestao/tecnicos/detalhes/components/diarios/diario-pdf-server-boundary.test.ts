@@ -434,6 +434,56 @@ Deno.test("snapshot runtime é fechado e rejeita metadados, IDs e fechamento adu
   );
 });
 
+Deno.test("snapshot novo congela a apresentação exata da marca institucional", () => {
+  const watermarkUrl =
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
+  const snapshot = cloneSnapshot();
+  snapshot.institutionalIdentity.watermarkUrl = watermarkUrl;
+  snapshot.assetSources.watermarkUrl = watermarkUrl;
+  snapshot.institutionalIdentity.watermark = {
+    url: watermarkUrl,
+    opacity: 1,
+    scale: 100,
+    rotate: false,
+  };
+
+  const validated = assertValidDiarioPdfAcademicSnapshot(snapshot);
+  assert.deepEqual(validated.institutionalIdentity.watermark, {
+    url: watermarkUrl,
+    opacity: 1,
+    scale: 100,
+    rotate: false,
+  });
+
+  const divergent = cloneSnapshot();
+  divergent.institutionalIdentity.watermarkUrl = watermarkUrl;
+  divergent.assetSources.watermarkUrl = watermarkUrl;
+  divergent.institutionalIdentity.watermark = {
+    url: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2w==",
+    opacity: 1,
+    scale: 100,
+    rotate: false,
+  };
+  assert.throws(
+    () => assertValidDiarioPdfAcademicSnapshot(divergent),
+    /diverge da referência institucional/u,
+  );
+
+  const badScale = cloneSnapshot();
+  badScale.institutionalIdentity.watermarkUrl = watermarkUrl;
+  badScale.assetSources.watermarkUrl = watermarkUrl;
+  badScale.institutionalIdentity.watermark = {
+    url: watermarkUrl,
+    opacity: 1,
+    scale: 52,
+    rotate: false,
+  };
+  assert.throws(
+    () => assertValidDiarioPdfAcademicSnapshot(badScale),
+    /incrementos do modelo oficial/u,
+  );
+});
+
 Deno.test("snapshot rejeita períodos, presença, notas, faltas e mapas incoerentes", () => {
   const badPeriod = cloneSnapshot();
   badPeriod.aulas[0].sessoes.push({

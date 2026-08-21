@@ -105,9 +105,8 @@ export const usuariosService = {
    * Cria um novo usuário na tabela usuarios_sistema.
    */
   async createUser(user: UsuarioSistemaInput): Promise<UsuarioSistema> {
-    const { senha, ...dbUser } = user;
     const payload = {
-      ...dbUser,
+      ...user,
       polo_ids: user.permissoes.allPolos ? [] : user.polo_ids,
       permissoes: buildGestorPermissionsPayload(user.permissoes),
     };
@@ -115,7 +114,6 @@ export const usuariosService = {
     const { data, error } = await supabase.functions.invoke('portal-user-management', {
       body: {
         action: 'upsert-gestor-user',
-        password: senha,
         user: payload,
       },
     });
@@ -138,14 +136,13 @@ export const usuariosService = {
    * Atualiza dados de um usuário existente.
    */
   async updateUser(id: string, user: Partial<UsuarioSistemaInput>): Promise<UsuarioSistema> {
-    const { senha, ...dbUser } = user;
-    const payload = dbUser.permissoes
+    const payload = user.permissoes
       ? {
-          ...dbUser,
-          polo_ids: dbUser.permissoes.allPolos ? [] : dbUser.polo_ids,
-          permissoes: buildGestorPermissionsPayload(dbUser.permissoes),
+          ...user,
+          polo_ids: user.permissoes.allPolos ? [] : user.polo_ids,
+          permissoes: buildGestorPermissionsPayload(user.permissoes),
         }
-      : dbUser;
+      : user;
 
     const { data, error } = await supabase
       .from('usuarios_sistema')

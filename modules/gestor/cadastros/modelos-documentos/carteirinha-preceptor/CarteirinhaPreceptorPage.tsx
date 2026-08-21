@@ -9,8 +9,8 @@ const CarteirinhaPreceptorPage = () => (
           <BadgeCheck size={18} />
           <span className="text-[10px] font-black uppercase tracking-[0.2em]">Modelos de documentos</span>
         </div>
-        <h2 className="text-2xl font-black uppercase tracking-tight text-[#001a33]">Carteirinha de preceptor</h2>
-        <p className="mt-1 max-w-2xl text-sm font-medium text-slate-500">Credencial institucional própria para professores, separada da carteirinha estudantil.</p>
+        <h2 className="text-2xl font-black uppercase tracking-tight text-[#001a33]">Crachá de Preceptor</h2>
+        <p className="mt-1 max-w-2xl text-sm font-medium text-slate-500">Modelo CR80 institucional para professores, com a mesma edição visual do crachá de estágio.</p>
       </div>
       <span className="self-start rounded-full border border-cyan-100 bg-cyan-50 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-cyan-800 md:self-auto">Professor autorizado</span>
     </div>

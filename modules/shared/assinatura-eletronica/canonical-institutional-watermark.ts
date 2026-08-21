@@ -36,7 +36,7 @@ export const assertCanonicalInstitutionalWatermarkDataUri = (
 ): ElectronicSignatureCanonicalInstitutionalWatermarkDataUri => {
   if (!isCanonicalInstitutionalWatermarkDataUri(value)) {
     throw new Error(
-      `${label} deve usar a data URI canônica de watermark_landscape_<polo_id>.`,
+      `${label} deve usar a data URI canônica retrato cadastrada no polo.`,
     );
   }
   return value;

@@ -1,6 +1,31 @@
 import { createClient } from '@supabase/supabase-js';
 import { Capacitor } from '@capacitor/core';
 
+const isBrowser = typeof window !== 'undefined';
+type PasswordSetupKind = 'recovery' | 'invite';
+
+interface InitialInviteCallback {
+  accessToken: string;
+}
+
+const getInitialInviteCallback = (): InitialInviteCallback | null => {
+  if (!isBrowser) return null;
+
+  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  const searchParams = new URLSearchParams(window.location.search);
+  const type = hashParams.get('type') || searchParams.get('type');
+  const accessToken = hashParams.get('access_token') || searchParams.get('access_token');
+
+  return type === 'invite' && accessToken
+    ? { accessToken }
+    : null;
+};
+
+// O cliente do Supabase pode limpar o callback antes de uma página lazy ser
+// montada. Para convite implícito, mantenha o token do callback para conferir
+// a sessão recebida; um `type` ou `code` isolado nunca autoriza a senha.
+let pendingInitialInviteCallback = getInitialInviteCallback();
+
 const supabaseUrl =
   import.meta.env.VITE_SUPABASE_URL ||
   import.meta.env.REACT_APP_SUPABASE_URL;
@@ -27,16 +52,15 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 });
 
-const PASSWORD_RECOVERY_MARKER_KEY = 'universo.password-recovery-session';
-const PASSWORD_RECOVERY_MARKER_MAX_AGE_MS = 15 * 60 * 1000;
+const PASSWORD_SETUP_MARKER_KEY = 'universo.password-setup-session';
+const PASSWORD_SETUP_MARKER_MAX_AGE_MS = 15 * 60 * 1000;
 
-interface PasswordRecoveryMarker {
+interface PasswordSetupMarker {
   userId: string;
   accessToken: string;
   createdAt: number;
+  kind: PasswordSetupKind;
 }
-
-const isBrowser = typeof window !== 'undefined';
 
 // PasswordRecoveryPage is lazy-loaded. Persist the trusted Auth event here,
 // where the listener is registered as soon as the Supabase client is created,
@@ -44,45 +68,61 @@ const isBrowser = typeof window !== 'undefined';
 supabase.auth.onAuthStateChange((event, session) => {
   if (!isBrowser) return;
 
-  if (event === 'PASSWORD_RECOVERY' && session) {
-    const marker: PasswordRecoveryMarker = {
+  let setupKind: PasswordSetupKind | null = event === 'PASSWORD_RECOVERY'
+    ? 'recovery'
+    : null;
+
+  if (
+    pendingInitialInviteCallback
+    && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')
+  ) {
+    const callback = pendingInitialInviteCallback;
+    pendingInitialInviteCallback = null;
+    if (session?.access_token === callback.accessToken) {
+      setupKind = 'invite';
+    }
+  }
+
+  if (setupKind && session) {
+    const marker: PasswordSetupMarker = {
       userId: session.user.id,
       accessToken: session.access_token,
       createdAt: Date.now(),
+      kind: setupKind,
     };
     try {
-      window.sessionStorage.setItem(PASSWORD_RECOVERY_MARKER_KEY, JSON.stringify(marker));
+      window.sessionStorage.setItem(PASSWORD_SETUP_MARKER_KEY, JSON.stringify(marker));
     } catch {
       // A pagina ainda pode autorizar pelo evento em memoria ou pelos tokens
       // explicitos do callback quando o storage do navegador estiver bloqueado.
     }
   } else if (event === 'SIGNED_OUT') {
     try {
-      window.sessionStorage.removeItem(PASSWORD_RECOVERY_MARKER_KEY);
+      window.sessionStorage.removeItem(PASSWORD_SETUP_MARKER_KEY);
     } catch {
       // Storage indisponivel nao deve interromper o encerramento da sessao.
     }
   }
 });
 
-export const consumePasswordRecoveryMarker = (
+export const consumePasswordSetupMarker = (
   userId: string,
   accessToken: string,
-) => {
-  if (!isBrowser) return false;
+): PasswordSetupKind | null => {
+  if (!isBrowser) return null;
 
   let rawMarker: string | null;
   try {
-    rawMarker = window.sessionStorage.getItem(PASSWORD_RECOVERY_MARKER_KEY);
-    window.sessionStorage.removeItem(PASSWORD_RECOVERY_MARKER_KEY);
+    rawMarker = window.sessionStorage.getItem(PASSWORD_SETUP_MARKER_KEY);
+    window.sessionStorage.removeItem(PASSWORD_SETUP_MARKER_KEY);
   } catch {
-    return false;
+    return null;
   }
 
-  if (!rawMarker) return false;
+  if (!rawMarker) return null;
 
   try {
-    const marker = JSON.parse(rawMarker) as Partial<PasswordRecoveryMarker>;
+    const marker = JSON.parse(rawMarker) as Partial<PasswordSetupMarker>;
     const markerAge = typeof marker.createdAt === 'number'
       ? Date.now() - marker.createdAt
       : -1;
@@ -90,9 +130,10 @@ export const consumePasswordRecoveryMarker = (
       marker.userId === userId
       && marker.accessToken === accessToken
       && markerAge >= 0
-      && markerAge <= PASSWORD_RECOVERY_MARKER_MAX_AGE_MS
-    );
+      && markerAge <= PASSWORD_SETUP_MARKER_MAX_AGE_MS
+      && (marker.kind === 'recovery' || marker.kind === 'invite')
+    ) ? marker.kind : null;
   } catch {
-    return false;
+    return null;
   }
 };

@@ -40,7 +40,7 @@ const cards = [
   { id: 'pasta-identificacao', title: 'Pasta de Identificação', desc: 'Capa A4 da pasta do aluno, individual, em lote ou personalizada.', icon: FolderKanban, color: 'cyan' },
   { id: 'ficha-matricula', title: 'Ficha de Matrícula', desc: 'Ficha completa com foto, dados acadêmicos, termo e assinaturas.', icon: FileSignature, color: 'blue' },
   { id: 'carteirinha', title: 'Carteirinha Estudantil', desc: 'Identificação estudantil com QR Code.', icon: CreditCard, color: 'purple' },
-  { id: 'carteirinha-preceptor', title: 'Carteirinha de Preceptor', desc: 'Identificação profissional para professores ativos do polo.', icon: BadgeCheck, color: 'violet' },
+  { id: 'carteirinha-preceptor', title: 'Crachá de Preceptor', desc: 'Identificação profissional para professores ativos do polo.', icon: BadgeCheck, color: 'violet' },
   { id: 'cracha-estagio', title: 'Crachá de Estágio', desc: 'Identificação para atividades supervisionadas.', icon: FileCheck2, color: 'rose' },
   { id: 'cracha-periodo-eleitoral', title: 'SES', desc: 'Crachá do aluno liberado após a entrada no estágio.', icon: Vote, color: 'cyan' },
   { id: 'termo-estagio', title: 'Termo de Estágio', desc: 'Termo de compromisso individual ou em lote.', icon: BriefcaseBusiness, color: 'teal' },
@@ -50,6 +50,7 @@ const cards = [
   { id: 'dependencias-academicas', title: 'Dependências Acadêmicas', desc: 'Reoferta por disciplina, cobrança Banese e diário de destino.', icon: BookOpenCheck, color: 'cyan' },
   { id: 'certificados', title: 'Certificados', desc: 'Fila de concluintes, registros, SISTEC e emissão por modalidade.', icon: Award, color: 'emerald' },
   { id: 'historico-emissoes', title: 'Histórico de Emissões', desc: 'Controle, filtros e 2ª via de todos os documentos emitidos.', icon: History, color: 'blue' },
+  { id: 'assinatura-eletronica', title: 'Assinaturas e Acervo', desc: 'Acompanhe pendências e consulte documentos assinados.', icon: FileSignature, color: 'blue' },
 ] as const;
 
 

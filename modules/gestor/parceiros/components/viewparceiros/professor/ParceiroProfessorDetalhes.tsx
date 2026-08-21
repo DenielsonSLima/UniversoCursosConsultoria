@@ -30,6 +30,18 @@ const ParceiroProfessorDetalhes: React.FC<ParceiroProfessorDetalhesProps> = ({ p
     onSuccess: (updated) => {
       queryClient.setQueryData(['parceiro', professorData.id], updated);
       queryClient.invalidateQueries({ queryKey: ['parceiros'] });
+      if (updated?.professorAccessInviteSent) {
+        toast.success(
+          'Professor atualizado e convite enviado',
+          updated.institutionalProfileLinkMessage || `${updated.nome || professorData.nome} receberá um e-mail para criar a própria senha de acesso.`,
+          {
+            avatarUrl: updated.foto || professorData.foto,
+            avatarName: updated.nome || professorData.nome,
+            contextLabel: 'Primeiro acesso',
+          },
+        );
+        return;
+      }
       if (updated?.institutionalProfileLinked) {
         toast.success(
           'Professor atualizado e acesso vinculado',

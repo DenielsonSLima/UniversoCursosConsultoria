@@ -13,15 +13,18 @@ export function validateAlunoProfessorIdentity(data: any, options: { requireAlun
   }
 
   if (hasCpf) {
-    if (!isValidCpf(cpf || '')) {
+    const allowsBlankProfessorCpf = tipo === 'Professor' && !String(cpf || '').trim();
+    if (!allowsBlankProfessorCpf && !isValidCpf(cpf || '')) {
       throw new Error(`CPF inválido para cadastro de ${tipo.toLowerCase()}.`);
     }
   }
 
   if (hasEmail) {
-    if (!isValidEmail(data?.email || '')) {
+    const email = String(data?.email || '').trim();
+    const allowsBlankProfessorEmail = tipo === 'Professor' && !email;
+    if (!allowsBlankProfessorEmail && !isValidEmail(email)) {
       throw new Error(`E-mail inválido para cadastro de ${tipo.toLowerCase()}. Ele será usado como login.`);
     }
-    data.email = normalizeEmail(data.email);
+    if (email) data.email = normalizeEmail(email);
   }
 }

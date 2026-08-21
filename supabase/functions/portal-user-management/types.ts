@@ -3,12 +3,13 @@ export type IncomingPayload = {
   partnerId?: string;
   partnerIds?: string[];
   email?: string | null;
-  password?: string | null;
   redirectTo?: string;
   user?: Record<string, unknown>;
   userId?: string;
   userIds?: string[];
   status?: string;
+  responsavelLegalId?: string;
+  requestId?: string;
 };
 
 export type GestorUserManagementState = {
@@ -36,6 +37,7 @@ export type FunctionResponse = {
   emailConfirmed?: boolean;
   profileLinked?: boolean;
   profileLinkState?: InstitutionalProfileLinkState;
+  responsavelLegalId?: string | null;
   error?: string;
 };
 
@@ -75,6 +77,7 @@ export type Partner = {
   id: string;
   tipo: string;
   nome: string;
+  status?: string | null;
   email?: string | null;
   cpf_cnpj?: string | null;
   auth_user_id?: string | null;

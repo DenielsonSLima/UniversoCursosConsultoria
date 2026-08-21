@@ -1,6 +1,15 @@
 # Lote ativo
 
-Estado: `PUBLICADO_ASSINATURA_GLOBAL_V5_V7_1`
+Estado: `EM_VALIDACAO_DE_PUBLICACAO_4_5_0`
+
+## Lote em validação: 2026-08-21-release-4-5-0
+
+- Base remota: `400c3864c7f288780f73a6e3698050fa7b7cba03` (`main`).
+- Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-21-release-4-5-0.md`.
+- Escopo coeso: acesso e primeiro acesso, contexto multiperfil, credencial de preceptor e contrato visual seguro da assinatura eletrônica.
+- Produção Supabase: aplicar somente a migration inédita de Crachá de Preceptor; as migrations de identidade, assinatura e tipografia v6 já constam no ledger remoto. A fonte local `safe_typography_v5` e seu teste permanecem fora do manifesto, pois foram substituídos pela v6 já aplicada.
+- Critérios de aceite local aprovados: TypeScript, ESLint, build, testes de acesso/portal, Caixa, validação documental, contratos Supabase e checks Deno dos quatro entrypoints afetados.
+- Gates restantes: CI e Preview da pull request; publicação coordenada de `portal-auth` e `checkout-api`; smoke público e registro do resultado remoto.
 
 ## Complemento publicado: 2026-08-20-assinatura-global-diario-v5-v7-1
 

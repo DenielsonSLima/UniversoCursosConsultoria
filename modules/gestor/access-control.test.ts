@@ -164,10 +164,11 @@ test('expande os seis grupos legados para as operações reais da Secretaria', (
     'fichas',
   ]);
 
-  assert.equal(legacy.length, SECRETARIA_ACCESS_OPTIONS.length);
+  assert.equal(legacy.length, SECRETARIA_ACCESS_OPTIONS.length - 1);
   assert.equal(legacy.includes('alunos'), true);
   assert.equal(legacy.includes('cracha-periodo-eleitoral'), true);
   assert.equal(legacy.includes('certificados'), true);
+  assert.equal(legacy.includes('assinatura-eletronica'), false);
 });
 
 test('descarta a permissão removida de rematrícula sem afetar o grupo legado', () => {

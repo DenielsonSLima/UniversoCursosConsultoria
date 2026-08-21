@@ -9,21 +9,31 @@ const [
   mutationsSource,
   activationSource,
   emailStatusSource,
+  partnerAccessSource,
   firstAccessPageSource,
   publicAuthSource,
 ] = await Promise.all([
   readSource('./hooks/useParceirosMutations.ts'),
   readSource('./portal-activation.service.ts'),
   readSource('./components/cards/EmailConfirmationStatus.tsx'),
+  readSource('./components/viewparceiros/shared/ParceiroAcesso.tsx'),
   readSource('../../public/login/AlunoFirstAccessPage.tsx'),
   readSource('../../public/login/aluno-public-auth.service.ts'),
 ]);
 
-test('cadastro pelo gestor deixa termos pendentes e exige senha no primeiro acesso', () => {
-  assert.match(mutationsSource, /aceitouTermosUso:\s*false/);
-  assert.match(mutationsSource, /aceitouTermosUsoEm:\s*null/);
-  assert.match(mutationsSource, /termosUsoVersao:\s*null/);
-  assert.match(mutationsSource, /trocaSenhaObrigatoria:\s*true/);
+test('cadastro pelo gestor deixa termos e acesso sob autoridade do convite e primeiro acesso', () => {
+  for (const field of [
+    'trocaSenhaObrigatoria',
+    'acessoStatus',
+    'conviteEnviadoEm',
+    'aceitouTermosUso',
+    'aceitouTermosUsoEm',
+    'termosUsoVersao',
+  ]) {
+    assert.match(mutationsSource, new RegExp(`'${field}'`));
+  }
+  assert.match(mutationsSource, /delete alunoData\[field\]/);
+  assert.match(mutationsSource, /return parceirosService\.create\(\{ \.\.\.alunoData, tipo: 'Aluno' \}\)/);
   assert.doesNotMatch(mutationsSource, /aceitouTermosUso:\s*true/);
 });
 
@@ -39,14 +49,26 @@ test('aluno aceita os termos e cria a própria senha antes de concluir o acesso'
   assert.match(firstAccessPageSource, /Li e aceito os termos/);
   assert.match(firstAccessPageSource, /hasStrongPassword\(newPassword\)/);
   assert.match(firstAccessPageSource, /newPassword === confirmPassword/);
-  assert.match(publicAuthSource, /updates\.aceitou_termos_uso = true/);
-  assert.match(publicAuthSource, /loginService\.updatePassword\(newPassword\)/);
-  assert.doesNotMatch(publicAuthSource, /updates\.troca_senha_obrigatoria = false/);
+  assert.match(publicAuthSource, /supabase\.auth\.updateUser\(\{\s*password: newPassword,/);
+  assert.match(publicAuthSource, /p_aceitar_termos:\s*true/);
+  assert.match(publicAuthSource, /!profile\.acceptedTermsAt/);
+  assert.doesNotMatch(publicAuthSource, /loginService\.updatePassword\(newPassword\)/);
+  assert.doesNotMatch(publicAuthSource, /updates\.troca_senha_obrigatoria/);
 });
 
-test('somente o backend Auth conclui senha obrigatória e estado ativo', () => {
+test('a finalização passa pelo Auth e RPC sem concluir estado no cliente', () => {
   assert.doesNotMatch(publicAuthSource, /updates\.acesso_status/);
   assert.doesNotMatch(publicAuthSource, /updates\.acesso_erro/);
   assert.doesNotMatch(publicAuthSource, /updates\.acesso_ativado_em/);
-  assert.match(publicAuthSource, /trigger do Auth é a autoridade/);
+  assert.match(publicAuthSource, /const FIRST_ACCESS_RPC = 'portal_finalizar_primeiro_acesso'/);
+  assert.match(publicAuthSource, /await \(supabase\.rpc as any\)\(FIRST_ACCESS_RPC/);
+  assert.match(publicAuthSource, /const profile = await getPortalProfile\(\{/);
+});
+
+test('reenvio pendente volta ao primeiro acesso e recuperação fica restrita a conta ativa', () => {
+  assert.match(partnerAccessSource, /const needsFirstAccess = tipo === 'Aluno' && acessoStatus !== 'ativo'/);
+  assert.match(partnerAccessSource, /needsFirstAccess \? '\/login' : '\/recuperar-senha'/);
+  assert.match(partnerAccessSource, /Reenviar primeiro acesso/);
+  assert.match(partnerAccessSource, /Enviar recuperação de senha/);
+  assert.match(partnerAccessSource, /criar a primeira senha e aceitar os termos/);
 });

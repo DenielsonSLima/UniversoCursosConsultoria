@@ -18,13 +18,30 @@ import {
   tiposParceriaQueryKeys,
   tiposParceriaService,
 } from '../../../../configuracoes/tipos-parceria/tipos-parceria.service';
+import { parceirosService } from '../../../parceiros.service';
 
 interface ParceiroPJFormProps {
   onCancel?: () => void;
   onSave?: (data: any) => void;
+  defaultPoloId?: string | null;
+  canAssociateAllPolos?: boolean;
+  onScopeError?: (message: string) => void;
+}
+
+interface PoloOption {
+  id: string;
+  nome: string;
+  cidade?: string | null;
+  estado?: string | null;
+  uf?: string | null;
 }
 
 const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
+
+const formatPoloLabel = (polo: PoloOption) => {
+  const cidadeUf = [polo.cidade, polo.estado || polo.uf].filter(Boolean).join('/');
+  return cidadeUf ? `${polo.nome} - ${cidadeUf}` : polo.nome;
+};
 
 const LogoPreview: React.FC<{ src?: string; alt: string }> = ({ src, alt }) => {
   const [failed, setFailed] = useState(false);
@@ -45,7 +62,13 @@ const LogoPreview: React.FC<{ src?: string; alt: string }> = ({ src, alt }) => {
   );
 };
 
-const ParceiroPJForm: React.FC<ParceiroPJFormProps> = ({ onCancel, onSave }) => {
+const ParceiroPJForm: React.FC<ParceiroPJFormProps> = ({
+  onCancel,
+  onSave,
+  defaultPoloId,
+  canAssociateAllPolos = false,
+  onScopeError,
+}) => {
   const queryClient = useQueryClient();
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isSearchingCnpj, setIsSearchingCnpj] = useState(false);
@@ -54,6 +77,8 @@ const ParceiroPJForm: React.FC<ParceiroPJFormProps> = ({ onCancel, onSave }) => 
   const [tipoParceriaId, setTipoParceriaId] = useState('');
   const [showCategoriaForm, setShowCategoriaForm] = useState(false);
   const [showTipoParceriaForm, setShowTipoParceriaForm] = useState(false);
+  const [polos, setPolos] = useState<PoloOption[]>([]);
+  const [poloScope, setPoloScope] = useState<'active' | 'all' | string>('active');
 
   const categoriasQuery = useQuery({
     queryKey: categoriasQueryKeys.activeByType('pj'),
@@ -84,7 +109,8 @@ const ParceiroPJForm: React.FC<ParceiroPJFormProps> = ({ onCancel, onSave }) => 
 
   const [formData, setFormData] = useState({
     // Empresa
-    polo: 'geral',
+    poloId: defaultPoloId || '',
+    poloIds: defaultPoloId ? [defaultPoloId] : [],
     razaoSocial: '',
     nomeFantasia: '',
     cnpj: '',
@@ -111,6 +137,44 @@ const ParceiroPJForm: React.FC<ParceiroPJFormProps> = ({ onCancel, onSave }) => 
     telefone: '',
     observacoes: '',
   });
+
+  useEffect(() => {
+    if (!canAssociateAllPolos && poloScope !== 'active') {
+      setPoloScope('active');
+      const poloId = defaultPoloId || '';
+      setFormData((previous) => ({
+        ...previous,
+        poloId,
+        poloIds: poloId ? [poloId] : [],
+      }));
+      return;
+    }
+    if (poloScope !== 'active' || !defaultPoloId) return;
+
+    setFormData((previous) => (previous.poloId
+      ? previous
+      : { ...previous, poloId: defaultPoloId, poloIds: [defaultPoloId] }));
+  }, [canAssociateAllPolos, defaultPoloId, poloScope]);
+
+  useEffect(() => {
+    if (!canAssociateAllPolos) {
+      setPolos([]);
+      return undefined;
+    }
+
+    let active = true;
+    parceirosService.getPolos()
+      .then((data) => {
+        if (active) setPolos(data);
+      })
+      .catch((error) => {
+        console.error('Erro ao carregar polos para parceiro PJ:', error);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [canAssociateAllPolos]);
 
   const maskCNPJ = (v: string) => v.replace(/\D/g,'').replace(/(\d{2})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1/$2').replace(/(\d{4})(\d{1,2})/,'$1-$2').replace(/(-\d{2})\d+?$/,'$1');
   const maskCPF = (v: string) => v.replace(/\D/g,'').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})/,'$1-$2').replace(/(-\d{2})\d+?$/,'$1');
@@ -204,6 +268,23 @@ const ParceiroPJForm: React.FC<ParceiroPJFormProps> = ({ onCancel, onSave }) => 
     setFormData(prev => ({ ...prev, [name]: finalValue }));
   };
 
+  const handlePoloScopeChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const nextScope = event.target.value;
+    setPoloScope(nextScope);
+
+    if (nextScope === 'all') {
+      setFormData((previous) => ({ ...previous, poloId: '', poloIds: [] }));
+      return;
+    }
+
+    const poloId = nextScope === 'active' ? defaultPoloId || '' : nextScope;
+    setFormData((previous) => ({
+      ...previous,
+      poloId,
+      poloIds: poloId ? [poloId] : [],
+    }));
+  };
+
   const handleCepBlur = async () => {
     const cep = formData.cep.replace(/\D/g, '');
     if (cep.length !== 8) return;
@@ -226,6 +307,10 @@ const ParceiroPJForm: React.FC<ParceiroPJFormProps> = ({ onCancel, onSave }) => 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (poloScope !== 'all' && !formData.poloId) {
+      onScopeError?.('Selecione um polo ativo no cabeçalho antes de cadastrar a parceria.');
+      return;
+    }
     const categoria = categoriasQuery.data?.find((item) => item.id === categoriaId);
     const tipoParceria = tiposParceriaQuery.data?.find((item) => item.id === tipoParceriaId);
 
@@ -280,7 +365,7 @@ const ParceiroPJForm: React.FC<ParceiroPJFormProps> = ({ onCancel, onSave }) => 
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div>
+            <div className={canAssociateAllPolos ? '' : 'md:col-span-2'}>
               <label className={labelCls}>CNPJ <span className="text-red-500">*</span></label>
               <div className="flex gap-2">
                 <input
@@ -316,14 +401,20 @@ const ParceiroPJForm: React.FC<ParceiroPJFormProps> = ({ onCancel, onSave }) => 
               )}
             </div>
 
-            <div>
-              <label className={labelCls}>Polo/Unidade Vínculo</label>
-              <select name="polo" value={formData.polo} onChange={handleChange} className={inputCls}>
-                <option value="geral">Geral (Todos os Polos)</option>
-                <option value="matriz">Matriz — Aracaju</option>
-                <option value="estancia">Polo Estância</option>
-              </select>
-            </div>
+            {canAssociateAllPolos ? (
+              <div>
+                <label className={labelCls}>Escopo da Parceria</label>
+                <select value={poloScope} onChange={handlePoloScopeChange} className={inputCls}>
+                  <option value="active">Polo ativo no cabeçalho</option>
+                  <option value="all">Todos os polos</option>
+                  {polos
+                    .filter((polo) => polo.id !== defaultPoloId)
+                    .map((polo) => (
+                      <option key={polo.id} value={polo.id}>{formatPoloLabel(polo)}</option>
+                    ))}
+                </select>
+              </div>
+            ) : null}
 
             <div className="md:col-span-2">
               <label className={labelCls}>Logo da Empresa / Parceira</label>

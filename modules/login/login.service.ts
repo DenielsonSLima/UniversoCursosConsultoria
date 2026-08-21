@@ -3,13 +3,14 @@ import { supabase } from '../../lib/supabase';
 import { Capacitor } from '@capacitor/core';
 import { LoginCredentials, AuthResponse } from './login.types';
 import { buildAuthRedirectUrl } from '../../lib/app-url';
-import { clearPortalSession, getPortalProfile } from './portal-session';
+import { clearPortalSession } from './portal-session';
 import {
   clearPendingOAuthReturn,
   rememberPendingOAuthReturn,
 } from '../shared/auth/oauth-return-state';
 
 const AUTH_GENERIC_ERROR = 'Não foi possível autenticar com as credenciais informadas. Verifique seus dados e tente novamente.';
+const AUTH_EMAIL_CONFIRMATION_REQUIRED_ERROR = 'Confirme o e-mail enviado para ativar sua conta. Verifique também Spam ou Lixo eletrônico.';
 const AUTH_RATE_LIMIT_ERROR = 'Muitas tentativas. Aguarde alguns minutos e tente novamente.';
 const AUTH_CHALLENGE_ERROR = 'A verificação de segurança expirou ou falhou. Tente verificá-la novamente.';
 const AUTH_SERVICE_ERROR = 'O serviço de autenticação está temporariamente indisponível. Tente novamente em instantes.';
@@ -60,6 +61,9 @@ const readPortalAuthFailure = async (error: unknown) => {
 const getPortalAuthFailureMessage = (
   failure: { status?: number; code: string; transportFailure: boolean },
 ) => {
+  if (failure.code === 'email_confirmation_required') {
+    return AUTH_EMAIL_CONFIRMATION_REQUIRED_ERROR;
+  }
   if (failure.status === 429 || failure.code === 'rate_limited') {
     return AUTH_RATE_LIMIT_ERROR;
   }
@@ -197,20 +201,6 @@ export const loginService = {
   async updatePassword(newPassword: string) {
     const { error } = await supabase.auth.updateUser({ password: newPassword });
     if (error) return error.message;
-
-    const alunoProfile = await getPortalProfile({
-      preferredRole: 'Aluno',
-      allowedRoles: ['Aluno'],
-    }).catch(() => null);
-    if (alunoProfile?.requiresPasswordReset) {
-      const { error: accessFlagError } = await supabase
-        .from('parceiros')
-        .update({ troca_senha_obrigatoria: false })
-        .eq('id', alunoProfile.id);
-      if (accessFlagError) {
-        console.warn('A senha foi alterada, mas não foi possível atualizar o indicador de primeiro acesso.');
-      }
-    }
 
     const { error: auditError } = await supabase.rpc('registrar_sistema_evento_manual', {
       p_modulo: 'Sistema',

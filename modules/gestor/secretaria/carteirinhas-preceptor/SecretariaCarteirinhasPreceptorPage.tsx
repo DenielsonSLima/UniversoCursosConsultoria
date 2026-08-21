@@ -104,9 +104,9 @@ const SecretariaCarteirinhasPreceptorPage: React.FC<SecretariaCarteirinhasPrecep
       });
       setResult(prepared);
       setPreviewIndex(null);
-      toast.success('Emissão preparada', prepared.message || 'O retorno canônico da carteirinha já está disponível.');
+      toast.success('Emissão preparada', prepared.message || 'O retorno canônico do Crachá de Preceptor já está disponível.');
     } catch (error) {
-      toast.error('Não foi possível preparar a carteirinha', getSecretariaErrorMessage(error));
+      toast.error('Não foi possível preparar o crachá', getSecretariaErrorMessage(error));
     }
   };
 
@@ -115,7 +115,7 @@ const SecretariaCarteirinhasPreceptorPage: React.FC<SecretariaCarteirinhasPrecep
       <section className="flex min-h-[360px] flex-col items-center justify-center rounded-[2rem] border border-amber-100 bg-white p-8 text-center shadow-sm">
         <AlertTriangle className="text-amber-500" size={42} />
         <h3 className="mt-4 text-lg font-black text-[#001a33]">Selecione um polo para continuar</h3>
-        <p className="mt-2 max-w-md text-sm font-medium leading-relaxed text-slate-500">A carteirinha de preceptor depende de um vínculo profissional ativo dentro de uma unidade.</p>
+        <p className="mt-2 max-w-md text-sm font-medium leading-relaxed text-slate-500">O Crachá de Preceptor depende de um vínculo profissional ativo dentro de uma unidade.</p>
       </section>
     );
   }
@@ -167,9 +167,9 @@ const SecretariaCarteirinhasPreceptorPage: React.FC<SecretariaCarteirinhasPrecep
         <CanonicalDocumentPreviewModal
           items={result.documents}
           initialIndex={previewIndex}
-          title="Prévia de carteirinhas de preceptor"
+          title="Prévia de Crachás de Preceptor"
           accentClassName="bg-violet-700 hover:bg-violet-800"
-          fileNamePrefix="carteirinhas-preceptor"
+          fileNamePrefix="crachas-preceptor"
           onClose={() => setPreviewIndex(null)}
           isRenderable={isCarteirinhaPreceptorRenderPayloadReady}
           createPdf={async (documents, options) => {

@@ -1,11 +1,16 @@
 import {
   ELECTRONIC_SIGNATURE_STAMP_AUTO_LAYOUT_DEFAULTS,
+  ELECTRONIC_SIGNATURE_STAMP_TEMPLATE_COURIER_FONTS,
+  ELECTRONIC_SIGNATURE_STAMP_TEMPLATE_FONT_SIZE_LIMITS,
+  ELECTRONIC_SIGNATURE_STAMP_TEMPLATE_HELVETICA_FONTS,
   type ElectronicSignatureStampAutoLayoutV1,
   type ElectronicSignatureStampPlacement,
   type ElectronicSignatureStampTemplateBinding,
   type ElectronicSignatureStampTemplateElement,
   type ElectronicSignatureStampTemplateElementId,
+  type ElectronicSignatureStampTemplateFont,
   type ElectronicSignatureStampTemplateHiddenElementId,
+  type ElectronicSignatureStampTemplateTextElement,
   type ElectronicSignatureStampTemplateV1,
 } from "./assinatura-eletronica.contract.ts";
 
@@ -28,7 +33,7 @@ export const SIGNATURE_STAMP_TEMPLATE_ELEMENT_SPECS = [
     id: "signerName",
     kind: "TEXT",
     binding: "SIGNER_NAME",
-    label: "Assinante: ",
+    label: "",
   },
   { id: "signedAt", kind: "TEXT", binding: "SIGNED_AT", label: "Data: " },
   {
@@ -116,6 +121,85 @@ const exactKeys = (
 const integer = (value: unknown) => (
   typeof value === "number" && Number.isInteger(value) ? value : null
 );
+
+const LEGACY_SIGNER_NAME_LABEL = "Assinante: ";
+
+export interface NormalizeElectronicSignatureStampTemplateOptions {
+  /**
+   * Compatibilidade exclusiva para snapshots congelados antes da retirada do
+   * prefixo. Modelos ativos devem manter esta opção desabilitada.
+   */
+  allowLegacySignerNameLabel?: boolean;
+}
+
+export const isSignatureStampTemplateFontBold = (
+  font: ElectronicSignatureStampTemplateFont,
+) => font.includes("_BOLD");
+
+export const isSignatureStampTemplateFontOblique = (
+  font: ElectronicSignatureStampTemplateFont,
+) => font.endsWith("_OBLIQUE");
+
+export const updateSignatureStampTemplateFontVariant = (
+  font: ElectronicSignatureStampTemplateFont,
+  options: { bold?: boolean; oblique?: boolean },
+): ElectronicSignatureStampTemplateFont => {
+  const family = font.startsWith("COURIER") ? "COURIER" : "HELVETICA";
+  const bold = options.bold ?? isSignatureStampTemplateFontBold(font);
+  const oblique = options.oblique ?? isSignatureStampTemplateFontOblique(font);
+  return `${family}${bold ? "_BOLD" : ""}${
+    oblique ? "_OBLIQUE" : ""
+  }` as ElectronicSignatureStampTemplateFont;
+};
+
+const allowedFontsForTextElement = (
+  id: ElectronicSignatureStampTemplateTextElement["id"],
+): readonly ElectronicSignatureStampTemplateFont[] => (
+  id === "signatureHash" || id === "verificationCode"
+    ? ELECTRONIC_SIGNATURE_STAMP_TEMPLATE_COURIER_FONTS
+    : ELECTRONIC_SIGNATURE_STAMP_TEMPLATE_HELVETICA_FONTS
+);
+
+const normalizeTextStyle = (
+  candidate: Record<string, unknown>,
+  canonical: ElectronicSignatureStampTemplateTextElement["style"],
+  elementId: ElectronicSignatureStampTemplateTextElement["id"],
+  options: NormalizeElectronicSignatureStampTemplateOptions,
+): ElectronicSignatureStampTemplateTextElement["style"] | null => {
+  if (
+    !exactKeys(candidate, ["font", "fontSizeBp", "color", "align", "label"])
+  ) {
+    return null;
+  }
+  const font = candidate.font;
+  const fontSizeBp = integer(candidate.fontSizeBp);
+  const allowedFonts = allowedFontsForTextElement(elementId);
+  const labelIsCanonical = candidate.label === canonical.label;
+  const labelIsLegacy = options.allowLegacySignerNameLabel === true &&
+    elementId === "signerName" && candidate.label === LEGACY_SIGNER_NAME_LABEL;
+  if (
+    typeof font !== "string" ||
+    !allowedFonts.some((allowedFont) => allowedFont === font) ||
+    fontSizeBp === null ||
+    fontSizeBp < ELECTRONIC_SIGNATURE_STAMP_TEMPLATE_FONT_SIZE_LIMITS.minBp ||
+    fontSizeBp > ELECTRONIC_SIGNATURE_STAMP_TEMPLATE_FONT_SIZE_LIMITS.maxBp ||
+    fontSizeBp %
+          ELECTRONIC_SIGNATURE_STAMP_TEMPLATE_FONT_SIZE_LIMITS.stepBp !== 0 ||
+    candidate.color !== canonical.color ||
+    !["LEFT", "CENTER", "RIGHT"].includes(String(candidate.align)) ||
+    (!labelIsCanonical && !labelIsLegacy)
+  ) {
+    return null;
+  }
+  return {
+    font: font as ElectronicSignatureStampTemplateFont,
+    fontSizeBp,
+    color: canonical.color,
+    align: candidate
+      .align as ElectronicSignatureStampTemplateTextElement["style"]["align"],
+    label: candidate.label as string,
+  };
+};
 
 const hasCanonicalStyle = (
   candidate: Record<string, unknown>,
@@ -242,7 +326,7 @@ export const createDefaultElectronicSignatureStampTemplate = () => ({
         fontSizeBp: 7_500,
         color: "#071A33",
         align: "LEFT",
-        label: "Assinante: ",
+        label: "",
       },
     },
     {
@@ -369,16 +453,78 @@ type SignatureStampTemplateElementBounds = Pick<
   "xBp" | "yBp" | "widthBp" | "heightBp"
 >;
 
+type SignatureStampTemplateVisualElement =
+  & SignatureStampTemplateElementBounds
+  & { kind: string };
+
+const clampTemplateCoordinate = (
+  value: number,
+  minimum: number,
+  maximum: number,
+) => Math.min(maximum, Math.max(minimum, value));
+
+/**
+ * O banco mantém o QR em um quadro lógico quadrado para preservar o contrato
+ * v1. Na superfície horizontal, porém, somente um quadrado físico menor fica
+ * visível. A posição lógica é, portanto, projetada sobre todo o percurso
+ * visual disponível; assim os extremos 0 e 100% continuam sendo bordas reais,
+ * sem uma margem transparente que pareça bloquear o arraste.
+ */
+const projectLogicalPositionToVisual = (
+  logicalPositionBp: number,
+  logicalSizeBp: number,
+  visualSizeBp: number,
+) => {
+  const logicalTravelBp = SIGNATURE_STAMP_TEMPLATE_COORDINATE_SCALE -
+    logicalSizeBp;
+  const visualTravelBp = SIGNATURE_STAMP_TEMPLATE_COORDINATE_SCALE -
+    visualSizeBp;
+  if (logicalTravelBp <= 0) {
+    return Math.max(0, visualTravelBp) / 2;
+  }
+  if (visualTravelBp <= 0) return 0;
+  return clampTemplateCoordinate(
+    logicalPositionBp,
+    0,
+    logicalTravelBp,
+  ) * visualTravelBp / logicalTravelBp;
+};
+
+const projectVisualPositionToLogical = (
+  visualPositionBp: number,
+  logicalSizeBp: number,
+  visualSizeBp: number,
+) => {
+  const logicalTravelBp = SIGNATURE_STAMP_TEMPLATE_COORDINATE_SCALE -
+    logicalSizeBp;
+  const visualTravelBp = SIGNATURE_STAMP_TEMPLATE_COORDINATE_SCALE -
+    visualSizeBp;
+  if (logicalTravelBp <= 0 || visualTravelBp <= 0) return 0;
+  return clampTemplateCoordinate(
+    visualPositionBp,
+    0,
+    visualTravelBp,
+  ) * logicalTravelBp / visualTravelBp;
+};
+
 /**
  * Retorna a área que efetivamente aparece no editor. Textos, imagem e linha
- * ocupam o quadro inteiro. O QR preserva a proporção 1:1 e fica centralizado,
- * exatamente como no desenho final; por isso sua largura visual em BP é menor
- * quando a superfície horizontal do carimbo é mais larga que sua altura.
+ * ocupam o quadro inteiro. O QR preserva a proporção 1:1 e percorre toda a
+ * superfície visível, exatamente como no desenho final; por isso sua largura em
+ * BP é menor quando a superfície horizontal é mais larga que sua altura.
  */
-export const getSignatureStampTemplateElementVisualBounds = (
-  element: ElectronicSignatureStampTemplateElement,
+export const getSignatureStampTemplateElementVisualBoundsForSurface = (
+  element: SignatureStampTemplateVisualElement,
+  surfaceAspectWidth: number,
+  surfaceAspectHeight: number,
 ): SignatureStampTemplateElementBounds => {
-  if (element.kind !== "QR") {
+  if (
+    element.kind !== "QR" ||
+    !Number.isFinite(surfaceAspectWidth) ||
+    !Number.isFinite(surfaceAspectHeight) ||
+    surfaceAspectWidth <= 0 ||
+    surfaceAspectHeight <= 0
+  ) {
     return {
       xBp: element.xBp,
       yBp: element.yBp,
@@ -387,29 +533,68 @@ export const getSignatureStampTemplateElementVisualBounds = (
     };
   }
 
-  const physicalWidth = element.widthBp *
-    SIGNATURE_STAMP_TEMPLATE_SURFACE_ASPECT_WIDTH;
-  const physicalHeight = element.heightBp *
-    SIGNATURE_STAMP_TEMPLATE_SURFACE_ASPECT_HEIGHT;
+  const physicalWidth = element.widthBp * surfaceAspectWidth;
+  const physicalHeight = element.heightBp * surfaceAspectHeight;
   if (physicalWidth <= physicalHeight) {
-    const heightBp = physicalWidth /
-      SIGNATURE_STAMP_TEMPLATE_SURFACE_ASPECT_HEIGHT;
+    const heightBp = physicalWidth / surfaceAspectHeight;
     return {
       xBp: element.xBp,
-      yBp: element.yBp + (element.heightBp - heightBp) / 2,
+      yBp: projectLogicalPositionToVisual(
+        element.yBp,
+        element.heightBp,
+        heightBp,
+      ),
       widthBp: element.widthBp,
       heightBp,
     };
   }
 
-  const widthBp = physicalHeight /
-    SIGNATURE_STAMP_TEMPLATE_SURFACE_ASPECT_WIDTH;
+  const widthBp = physicalHeight / surfaceAspectWidth;
   return {
-    xBp: element.xBp + (element.widthBp - widthBp) / 2,
+    xBp: projectLogicalPositionToVisual(
+      element.xBp,
+      element.widthBp,
+      widthBp,
+    ),
     yBp: element.yBp,
     widthBp,
     heightBp: element.heightBp,
   };
+};
+
+export const getSignatureStampTemplateElementVisualBounds = (
+  element: ElectronicSignatureStampTemplateElement,
+): SignatureStampTemplateElementBounds =>
+  getSignatureStampTemplateElementVisualBoundsForSurface(
+    element,
+    SIGNATURE_STAMP_TEMPLATE_SURFACE_ASPECT_WIDTH,
+    SIGNATURE_STAMP_TEMPLATE_SURFACE_ASPECT_HEIGHT,
+  );
+
+const positionQrElementByVisualBounds = (
+  element: ElectronicSignatureStampTemplateElement,
+  visualXBp: number,
+  visualYBp: number,
+) => {
+  if (element.kind !== "QR") return element;
+  const visualBounds = getSignatureStampTemplateElementVisualBounds(element);
+  return clampSignatureStampTemplateElement({
+    ...element,
+    xBp: Math.round(
+      projectVisualPositionToLogical(
+        visualXBp,
+        element.widthBp,
+        visualBounds.widthBp,
+      ),
+    ),
+    yBp: Math.round(
+      projectVisualPositionToLogical(
+        visualYBp,
+        element.heightBp,
+        visualBounds.heightBp,
+      ),
+    ),
+  });
 };
 
 export const clampSignatureStampTemplateElement = (
@@ -432,7 +617,7 @@ export const clampSignatureStampTemplateElement = (
     const size = clampInteger(
       Math.min(widthBp, heightBp),
       dimensions.minWidth,
-      40_000,
+      Math.min(maximumWidth, maximumHeight),
     );
     widthBp = size;
     heightBp = size;
@@ -454,18 +639,71 @@ export const moveSignatureStampTemplateElement = (
   element: ElectronicSignatureStampTemplateElement,
   deltaXBp: number,
   deltaYBp: number,
-) =>
-  clampSignatureStampTemplateElement({
+) => {
+  if (element.kind === "QR") {
+    const visualBounds = getSignatureStampTemplateElementVisualBounds(element);
+    return positionQrElementByVisualBounds(
+      element,
+      clampTemplateCoordinate(
+        visualBounds.xBp + deltaXBp,
+        0,
+        SIGNATURE_STAMP_TEMPLATE_COORDINATE_SCALE - visualBounds.widthBp,
+      ),
+      clampTemplateCoordinate(
+        visualBounds.yBp + deltaYBp,
+        0,
+        SIGNATURE_STAMP_TEMPLATE_COORDINATE_SCALE - visualBounds.heightBp,
+      ),
+    );
+  }
+  return clampSignatureStampTemplateElement({
     ...element,
     xBp: element.xBp + deltaXBp,
     yBp: element.yBp + deltaYBp,
   });
+};
 
 export const resizeSignatureStampTemplateElement = (
   element: ElectronicSignatureStampTemplateElement,
   widthBp: number,
   heightBp: number,
-) => clampSignatureStampTemplateElement({ ...element, widthBp, heightBp });
+) => {
+  if (element.kind !== "QR") {
+    return clampSignatureStampTemplateElement({
+      ...element,
+      widthBp,
+      heightBp,
+    });
+  }
+  const currentVisualBounds = getSignatureStampTemplateElementVisualBounds(
+    element,
+  );
+  const resized = clampSignatureStampTemplateElement({
+    ...element,
+    xBp: 0,
+    yBp: 0,
+    widthBp,
+    heightBp,
+  });
+  const resizedVisualBounds = getSignatureStampTemplateElementVisualBounds(
+    resized,
+  );
+  return positionQrElementByVisualBounds(
+    resized,
+    clampTemplateCoordinate(
+      currentVisualBounds.xBp,
+      0,
+      SIGNATURE_STAMP_TEMPLATE_COORDINATE_SCALE -
+        resizedVisualBounds.widthBp,
+    ),
+    clampTemplateCoordinate(
+      currentVisualBounds.yBp,
+      0,
+      SIGNATURE_STAMP_TEMPLATE_COORDINATE_SCALE -
+        resizedVisualBounds.heightBp,
+    ),
+  );
+};
 
 /**
  * Controles +/- crescem para dentro quando o elemento já está encostado em
@@ -477,6 +715,20 @@ export const resizeSignatureStampTemplateElementFromCenter = (
   widthBp: number,
   heightBp: number,
 ) => {
+  if (element.kind === "QR") {
+    const before = getSignatureStampTemplateElementVisualBounds(element);
+    const resized = resizeSignatureStampTemplateElement(
+      element,
+      widthBp,
+      heightBp,
+    );
+    const after = getSignatureStampTemplateElementVisualBounds(resized);
+    return positionQrElementByVisualBounds(
+      resized,
+      before.xBp + (before.widthBp - after.widthBp) / 2,
+      before.yBp + (before.heightBp - after.heightBp) / 2,
+    );
+  }
   const dimensions = clampSignatureStampTemplateElement({
     ...element,
     xBp: 0,
@@ -597,6 +849,7 @@ export const isSignatureStampTemplateElementOptionalVisual = (
 
 export const normalizeElectronicSignatureStampTemplate = (
   value: unknown,
+  options: NormalizeElectronicSignatureStampTemplateOptions = {},
 ): ElectronicSignatureStampTemplateV1 => {
   const source = asRecord(value);
   const hasHiddenElementIds = Boolean(
@@ -667,15 +920,25 @@ export const normalizeElectronicSignatureStampTemplate = (
       throw new Error(`O estilo de ${spec.id} no template global é inválido.`);
     }
 
-    if (!hasCanonicalStyle(style, canonicalElement.style)) {
+    const normalizedStyle = canonicalElement.kind === "TEXT"
+      ? normalizeTextStyle(
+        style,
+        canonicalElement.style,
+        canonicalElement.id,
+        options,
+      )
+      : hasCanonicalStyle(style, canonicalElement.style)
+      ? { ...style }
+      : null;
+    if (!normalizedStyle) {
       throw new Error(
-        `O estilo de ${spec.id} no template global é imutável.`,
+        `O estilo de ${spec.id} no template global é inválido ou altera campo imutável.`,
       );
     }
     if (
       (spec.kind === "IMAGE" && (widthBp < 5_000 || heightBp < 5_000)) ||
       (spec.kind === "QR" &&
-        (widthBp !== heightBp || widthBp < 29_000 || widthBp > 40_000)) ||
+        (widthBp !== heightBp || widthBp < 29_000)) ||
       (spec.kind === "LINE" && widthBp < 5_000)
     ) {
       throw new Error(
@@ -690,7 +953,7 @@ export const normalizeElectronicSignatureStampTemplate = (
       yBp,
       widthBp,
       heightBp,
-      style: { ...style },
+      style: normalizedStyle,
     } as ElectronicSignatureStampTemplateElement;
   });
 

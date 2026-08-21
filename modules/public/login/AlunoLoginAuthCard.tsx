@@ -15,6 +15,10 @@ import {
 import GoogleLogo from '../../shared/auth/GoogleLogo';
 import { formatCpf, formatPhone, type AuthMessage, type AuthMode, type PasswordChecks } from './aluno-login.utils';
 import { getPublicAlunoBirthDateMax } from './aluno-birth-date';
+import {
+  PUBLIC_ALUNO_RACA_COR_OPTIONS,
+  PUBLIC_ALUNO_SEXO_OPTIONS,
+} from './aluno-public-auth.service';
 import AdaptiveTurnstileWidget, {
   type TurnstileStatus,
 } from '../../shared/auth/AdaptiveTurnstileWidget';
@@ -29,6 +33,8 @@ type Props = {
   nome: string;
   cpf: string;
   dataNascimento: string;
+  sexo: string;
+  racaCor: string;
   telefone: string;
   email: string;
   password: string;
@@ -55,6 +61,8 @@ type Props = {
   onNomeChange: (value: string) => void;
   onCpfChange: (value: string) => void;
   onDataNascimentoChange: (value: string) => void;
+  onSexoChange: (value: string) => void;
+  onRacaCorChange: (value: string) => void;
   onTelefoneChange: (value: string) => void;
   onEmailChange: (value: string) => void;
   onPasswordChange: (value: string) => void;
@@ -88,6 +96,8 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
   nome,
   cpf,
   dataNascimento,
+  sexo,
+  racaCor,
   telefone,
   email,
   password,
@@ -114,6 +124,8 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
   onNomeChange,
   onCpfChange,
   onDataNascimentoChange,
+  onSexoChange,
+  onRacaCorChange,
   onTelefoneChange,
   onEmailChange,
   onPasswordChange,
@@ -218,6 +230,13 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
               Recuperar senha
             </a>
           </div>
+        ) : message.action === 'request-new-link' ? (
+          <a
+            href={recoveryHref}
+            className="mt-3 block rounded-xl border border-red-200 bg-white px-3 py-2.5 text-center text-[10px] font-black uppercase tracking-wider text-red-700 transition hover:border-blue-200 hover:text-blue-700"
+          >
+            Solicitar novo link
+          </a>
         ) : null}
       </div>
     )}
@@ -360,6 +379,40 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
           </span>
         </label>
         <label className="block">
+          <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">Sexo <span className="text-red-500">*</span></span>
+          <select
+            name="sexo"
+            required
+            value={sexo}
+            onChange={(event) => onSexoChange(event.target.value)}
+            className={inputClassName}
+          >
+            <option value="">Selecione uma opção</option>
+            {PUBLIC_ALUNO_SEXO_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </label>
+        <label className="block">
+          <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">Raça/cor (autodeclaração) <span className="text-red-500">*</span></span>
+          <select
+            name="raca-cor"
+            required
+            value={racaCor}
+            onChange={(event) => onRacaCorChange(event.target.value)}
+            aria-describedby="public-aluno-raca-cor-help"
+            className={inputClassName}
+          >
+            <option value="">Selecione uma opção</option>
+            {PUBLIC_ALUNO_RACA_COR_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+          <span id="public-aluno-raca-cor-help" className="mt-1.5 block text-[10px] font-semibold leading-relaxed text-slate-400">
+            Escolha a opção com a qual você se identifica. Esta informação é usada somente em registros educacionais e indicadores de inclusão; não altera sua matrícula, acesso ou certificado.
+          </span>
+        </label>
+        <label className="block">
           <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">WhatsApp</span>
           <div className="relative">
             <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -370,6 +423,10 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
           <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">E-mail de acesso</span>
           <input type="email" name="email" autoComplete="email" required value={email} onChange={(event) => onEmailChange(event.target.value)} placeholder="seu@email.com" className={inputClassName} />
         </label>
+        <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-xs font-semibold leading-relaxed text-amber-900 sm:col-span-2">
+          <CheckCircle2 className="mr-1.5 inline-block text-amber-600" size={16} />
+          Este será seu e-mail de acesso. Depois de criar a conta, confirme o link enviado para ativá-la; só então será possível entrar. Verifique também Spam ou Lixo eletrônico.
+        </div>
         <label className="block">
           <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">Senha</span>
           <div className="relative">
@@ -402,7 +459,7 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
         <label className="col-span-2 flex items-start gap-3">
           <input type="checkbox" checked={acceptedTerms} onChange={(event) => onAcceptedTermsChange(event.target.checked)} className="mt-1 h-4 w-4 accent-blue-700" />
           <span className="text-xs font-semibold text-slate-600 leading-relaxed">
-            Declaro que li e aceito os <a href="/termos" className="text-[#001a33] underline">Termos de Uso</a> e estou
+            Declaro que li e aceito os <a href="/termos" className="text-[#001a33] underline">Termos de Uso</a> e a <a href="/privacidade" className="text-[#001a33] underline">Política de Privacidade</a>. Estou
             ciente de que felicitações de aniversário e relacionamento não comercial ficam ativas por padrão, sob
             legítimo interesse, e podem ser desativadas a qualquer momento em Notificações.
           </span>

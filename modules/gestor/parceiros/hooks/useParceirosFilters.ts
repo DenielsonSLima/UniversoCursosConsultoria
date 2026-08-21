@@ -2,12 +2,14 @@ import { useMemo, useState } from 'react';
 import { textMatchesSearch } from '../../../../lib/search';
 import type { AlunoModalidadeFilter } from '../components/ParceirosFilters';
 
-export type ParceirosTabType = 'todos' | 'professores' | 'alunos' | 'pj' | 'pf';
+export type ParceirosTabType = 'todos' | 'professores' | 'alunos' | 'responsaveis' | 'coordenacoes' | 'pj' | 'pf';
 
 const expectedTipoByTab: Record<ParceirosTabType, string> = {
   todos: '',
   professores: 'Professor',
   alunos: 'Aluno',
+  responsaveis: '',
+  coordenacoes: '',
   pj: 'PJ',
   pf: 'PF',
 };

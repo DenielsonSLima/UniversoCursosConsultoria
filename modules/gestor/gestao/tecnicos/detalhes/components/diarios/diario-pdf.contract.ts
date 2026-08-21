@@ -110,6 +110,18 @@ export interface DiarioPdfInstitutionSnapshot {
   isHeadquarters: boolean;
 }
 
+/**
+ * Apresentação do modelo de marca-d'água congelada no snapshot acadêmico.
+ * O ativo e estes parâmetros precisam viajar juntos para que a emissão não
+ * recrie uma versão genérica do recurso institucional aprovado.
+ */
+export interface DiarioPdfInstitutionalWatermark {
+  url: string;
+  opacity: number;
+  scale: number;
+  rotate: boolean;
+}
+
 export interface DiarioPdfRenderableData {
   template: DiarioPdfTemplateSnapshot;
   turma: {
@@ -139,6 +151,7 @@ export interface DiarioPdfRenderableData {
     institution: DiarioPdfInstitutionSnapshot;
     logoUrl: string;
     watermarkUrl: string | null;
+    watermark?: DiarioPdfInstitutionalWatermark;
   };
 }
 
@@ -1049,7 +1062,7 @@ export const assertValidDiarioPdfAcademicSnapshot = (
   assertExactKeys(
     institutionalIdentity,
     ["institution", "logoUrl", "watermarkUrl"],
-    [],
+    ["watermark"],
     "institutionalIdentity",
   );
   const institution = asRecord(
@@ -1096,6 +1109,66 @@ export const assertValidDiarioPdfAcademicSnapshot = (
     "institutionalIdentity.watermarkUrl",
     true,
   );
+  if (institutionalIdentity.watermark !== undefined) {
+    if (institutionalIdentity.watermarkUrl === null) {
+      fail(
+        "institutionalIdentity.watermark",
+        "exige marca-d'água institucional",
+      );
+    }
+    const watermark = asRecord(
+      institutionalIdentity.watermark,
+      "institutionalIdentity.watermark",
+    );
+    assertExactKeys(
+      watermark,
+      ["url", "opacity", "scale", "rotate"],
+      [],
+      "institutionalIdentity.watermark",
+    );
+    assertCanonicalWatermarkSource(
+      watermark.url,
+      "institutionalIdentity.watermark.url",
+    );
+    if (
+      typeof watermark.url !== "string" ||
+      !watermark.url.startsWith("data:image/")
+    ) {
+      fail(
+        "institutionalIdentity.watermark.url",
+        "deve usar o data URI institucional congelado",
+      );
+    }
+    if (watermark.url !== institutionalIdentity.watermarkUrl) {
+      fail(
+        "institutionalIdentity.watermark.url",
+        "diverge da referência institucional congelada",
+      );
+    }
+    assertNumber(
+      watermark.opacity,
+      "institutionalIdentity.watermark.opacity",
+      0,
+      1,
+    );
+    assertNumber(
+      watermark.scale,
+      "institutionalIdentity.watermark.scale",
+      10,
+      100,
+      true,
+    );
+    if (watermark.scale % 5 !== 0) {
+      fail(
+        "institutionalIdentity.watermark.scale",
+        "deve seguir os incrementos do modelo oficial",
+      );
+    }
+    assertBoolean(
+      watermark.rotate,
+      "institutionalIdentity.watermark.rotate",
+    );
+  }
 
   const assetSources = asRecord(snapshot.assetSources, "assetSources");
   assertExactKeys(

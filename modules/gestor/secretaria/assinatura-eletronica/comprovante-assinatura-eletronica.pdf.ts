@@ -2,7 +2,6 @@ import type { jsPDF } from "jspdf";
 
 import {
   type CanonicalPdfImage,
-  type CanonicalPdfWatermark,
   drawCanonicalPdfText,
   drawCanonicalPdfWatermark,
   getCanonicalPdfInlineImage,
@@ -22,6 +21,7 @@ import {
   ELECTRONIC_SIGNATURE_STAMP_MAX_SIGNERS,
   ELECTRONIC_SIGNATURE_STAMP_ROLES,
   type ElectronicSignatureDocumentEditor,
+  type ElectronicSignatureInstitutionalWatermarkSettings,
   type ElectronicSignatureLegalSection,
   type ElectronicSignaturePageWatermark,
   type ElectronicSignaturePolicyPresentation,
@@ -31,6 +31,7 @@ import {
   type ElectronicSignatureStampRole,
   type ElectronicSignatureStampSlot,
   type ElectronicSignatureStampTemplateElement,
+  type ElectronicSignatureStampTemplateFont,
   type ElectronicSignatureStampTemplateHiddenElementId,
 } from "../../../shared/assinatura-eletronica/assinatura-eletronica.contract.ts";
 import {
@@ -46,6 +47,7 @@ import {
 import {
   createDefaultElectronicSignatureStampTemplate,
   deriveAutomaticSignatureStampPlacements,
+  getSignatureStampTemplateElementVisualBoundsForSurface,
   normalizeElectronicSignatureStampAutoLayout,
   normalizeElectronicSignatureStampTemplate,
 } from "../../../shared/assinatura-eletronica/signature-stamp-template.ts";
@@ -154,6 +156,17 @@ export type ElectronicSignatureStampAssets = Readonly<
 >;
 
 /**
+ * Recurso institucional já congelado junto do documento. A apresentação é
+ * parte do modelo oficial: não se reconstrói uma marca genérica no PDF.
+ * `settings: null` existe exclusivamente para manter a reprodução dos
+ * comprovantes históricos emitidos antes da configuração ser congelada.
+ */
+export interface ElectronicSignatureInstitutionalWatermark {
+  image: CanonicalPdfImage;
+  settings: ElectronicSignatureInstitutionalWatermarkSettings | null;
+}
+
+/**
  * Adaptador puro do snapshot de política entregue pelo servidor. O chamador
  * deve utilizar apenas a versão imutável vinculada ao envelope, nunca o
  * formulário aberto no navegador.
@@ -181,7 +194,7 @@ export interface ElectronicSignatureReceiptPayload {
   institution: CanonicalInstitutionalHeader;
   logo: CanonicalPdfImage | null;
   /** Marca-d'água canônica congelada no manifesto do documento. */
-  institutionalWatermark: CanonicalPdfImage | null;
+  institutionalWatermark: ElectronicSignatureInstitutionalWatermark | null;
   presentation: ElectronicSignatureReceiptPresentation;
   document: {
     type: string;
@@ -208,7 +221,7 @@ export interface ElectronicSignatureReceiptPayload {
 export interface ElectronicSignatureTemplatePreviewPayload {
   institution: CanonicalInstitutionalHeader;
   logo: CanonicalPdfImage | null;
-  institutionalWatermark: CanonicalPdfImage | null;
+  institutionalWatermark: ElectronicSignatureInstitutionalWatermark | null;
   /** Ativo visual próprio do carimbo; nunca é reutilizado como marca-d'água. */
   signatureStampAssets: ElectronicSignatureStampAssets;
   presentation: ElectronicSignatureReceiptPresentation;
@@ -704,7 +717,9 @@ const prepareGlobalSignatureStamp = (
     enabled: false,
     canonicalLabel: ELECTRONIC_SIGNATURE_STAMP_CANONICAL_LABEL,
     assetId,
-    template: normalizeElectronicSignatureStampTemplate(source.template),
+    template: normalizeElectronicSignatureStampTemplate(source.template, {
+      allowLegacySignerNameLabel: true,
+    }),
     autoLayout: normalizeElectronicSignatureStampAutoLayout(source.autoLayout),
   };
 };
@@ -1493,36 +1508,90 @@ const drawFooter = (pdf: jsPDF, page: 1 | 2) => {
 const drawInstitutionalWatermark = (
   pdf: jsPDF,
   GState: PdfGStateConstructor,
-  institutionalWatermark: CanonicalPdfImage | null,
+  institutionalWatermark: ElectronicSignatureInstitutionalWatermark | null,
 ) => {
   /**
-   * A origem `watermark_landscape_<polo_id>` é resolvida e congelada antes de
+   * A origem retrato configurada no polo é resolvida e congelada antes de
    * chegar ao compositor. Aqui aceitamos exclusivamente sua imagem válida;
    * sem esse ativo não há texto institucional substituto nem fallback visual.
    */
-  const canonicalAsset = institutionalWatermark &&
-      isCanonicalInstitutionalWatermarkDataUri(institutionalWatermark.dataUrl)
-    ? getCanonicalPdfInlineImage(institutionalWatermark.dataUrl)
+  if (!institutionalWatermark) {
+    throw new Error(
+      "A marca-d'água institucional canônica retrato do polo é obrigatória para gerar o comprovante.",
+    );
+  }
+  const canonicalAsset = isCanonicalInstitutionalWatermarkDataUri(
+      institutionalWatermark.image.dataUrl,
+    )
+    ? getCanonicalPdfInlineImage(institutionalWatermark.image.dataUrl)
     : null;
   if (!canonicalAsset) {
     throw new Error(
-      "A marca-d'água institucional canônica watermark_landscape_<polo_id> é obrigatória para gerar o comprovante.",
+      "A marca-d'água institucional canônica retrato do polo é obrigatória para gerar o comprovante.",
     );
   }
-  const canonicalWatermark: CanonicalPdfWatermark = {
-    enabled: true,
-    imageUrl: canonicalAsset.dataUrl,
-    label: null,
-    opacity: 0.1,
-  };
-  drawCanonicalPdfWatermark(pdf, GState, canonicalWatermark, {
-    x: 25,
-    y: 62,
-    width: 160,
-    height: 172,
-    textSize: 28,
-    rotate: -45,
-  });
+  const settings = institutionalWatermark.settings;
+  if (!settings) {
+    /**
+     * Emissões antigas não carregam a apresentação do modelo no snapshot.
+     * Mantemos seus bytes/reprodução intactos em vez de reinterpretá-las.
+     */
+    drawCanonicalPdfWatermark(pdf, GState, {
+      enabled: true,
+      imageUrl: canonicalAsset.dataUrl,
+      label: null,
+      opacity: 0.1,
+    }, {
+      x: 25,
+      y: 62,
+      width: 160,
+      height: 172,
+      textSize: 28,
+      rotate: -45,
+    });
+    return;
+  }
+  if (
+    !Number.isFinite(settings.opacity) || settings.opacity < 0 ||
+    settings.opacity > 1 || !Number.isFinite(settings.scale) ||
+    !Number.isInteger(settings.scale) || settings.scale < 10 ||
+    settings.scale > 100 || settings.scale % 5 !== 0 ||
+    typeof settings.rotate !== "boolean"
+  ) {
+    throw new Error(
+      "A apresentação congelada da marca-d'água institucional é inválida.",
+    );
+  }
+
+  /**
+   * Espelha o modelo pronto da tela de Documentos: largura percentual da
+   * página, contido verticalmente, centralizado e sem uma opacidade/rotação
+   * adicional além daquela salva no próprio template institucional.
+   */
+  const properties = pdf.getImageProperties(canonicalAsset.dataUrl);
+  const factor = Math.min(
+    (PAGE_WIDTH * settings.scale / 100) / properties.width,
+    PAGE_HEIGHT / properties.height,
+  );
+  const width = properties.width * factor;
+  const height = properties.height * factor;
+  pdf.saveGraphicsState();
+  try {
+    pdf.setGState(new GState({ opacity: settings.opacity }) as never);
+    pdf.addImage(
+      canonicalAsset.dataUrl,
+      canonicalAsset.format,
+      (PAGE_WIDTH - width) / 2,
+      (PAGE_HEIGHT - height) / 2,
+      width,
+      height,
+      "assinatura-marca-dagua-institucional",
+      "FAST",
+      settings.rotate ? -45 : 0,
+    );
+  } finally {
+    pdf.restoreGraphicsState();
+  }
 };
 
 const drawLegalSections = (
@@ -1944,19 +2013,16 @@ const stampPreviewRectForElement = (
   stampRect: StampPreviewRect,
   element: ElectronicSignatureStampTemplateElement,
 ): StampPreviewRect => {
-  const rect = {
-    x: stampRect.x + stampRect.width * element.xBp / 100_000,
-    y: stampRect.y + stampRect.height * element.yBp / 100_000,
-    width: stampRect.width * element.widthBp / 100_000,
-    height: stampRect.height * element.heightBp / 100_000,
-  };
-  if (element.kind !== "QR") return rect;
-  const size = Math.min(rect.width, rect.height);
+  const visualBounds = getSignatureStampTemplateElementVisualBoundsForSurface(
+    element,
+    stampRect.width,
+    stampRect.height,
+  );
   return {
-    x: rect.x + (rect.width - size) / 2,
-    y: rect.y + (rect.height - size) / 2,
-    width: size,
-    height: size,
+    x: stampRect.x + stampRect.width * visualBounds.xBp / 100_000,
+    y: stampRect.y + stampRect.height * visualBounds.yBp / 100_000,
+    width: stampRect.width * visualBounds.widthBp / 100_000,
+    height: stampRect.height * visualBounds.heightBp / 100_000,
   };
 };
 
@@ -2004,6 +2070,75 @@ const drawStampTemplateQr = (
     `preview-carimbo-global-qr-${sampleIndex}`,
     "FAST",
   );
+};
+
+const stampTemplateJsPdfFont = (
+  font: ElectronicSignatureStampTemplateFont,
+): readonly [family: "helvetica" | "courier", style: string] => {
+  switch (font) {
+    case "HELVETICA":
+      return ["helvetica", "normal"];
+    case "HELVETICA_BOLD":
+      return ["helvetica", "bold"];
+    case "HELVETICA_OBLIQUE":
+      return ["helvetica", "italic"];
+    case "HELVETICA_BOLD_OBLIQUE":
+      return ["helvetica", "bolditalic"];
+    case "COURIER":
+      return ["courier", "normal"];
+    case "COURIER_BOLD":
+      return ["courier", "bold"];
+    case "COURIER_OBLIQUE":
+      return ["courier", "italic"];
+    case "COURIER_BOLD_OBLIQUE":
+      return ["courier", "bolditalic"];
+  }
+};
+
+const stampTemplatePreviewTextLines = (
+  element: Extract<ElectronicSignatureStampTemplateElement, { kind: "TEXT" }>,
+  value: string,
+) => {
+  if (element.binding === "VERIFICATION_CODE") {
+    return [
+      "CÓD. VALIDAÇÃO",
+      value.slice(0, 20),
+      value.slice(20),
+    ];
+  }
+  if (element.binding === "VERIFICATION_URL") {
+    const displayUrl = formatDocumentValidationUrlForDisplay(value);
+    return element.widthBp >= 40_000 && element.heightBp <= 16_000
+      ? [`${element.style.label}${displayUrl}`]
+      : [element.style.label.trim(), displayUrl];
+  }
+  if (element.binding === "SIGNER_NAME") return [value];
+  return [`${element.style.label}${value}`];
+};
+
+const resolveStampTemplateJsPdfTextSize = (
+  pdf: jsPDF,
+  lines: readonly string[],
+  rect: StampPreviewRect,
+  configuredSize: number,
+) => {
+  const minimumSize = 3.2;
+  let size = Math.max(minimumSize, configuredSize);
+  const fits = (candidate: number) => {
+    pdf.setFontSize(candidate);
+    const lineHeightMm = candidate * 25.4 / 72 * 1.14;
+    return lines.length * lineHeightMm <= rect.height + 0.001 &&
+      lines.every((line) => pdf.getTextWidth(line) <= rect.width + 0.001);
+  };
+  while (size > minimumSize && !fits(size)) {
+    size = Math.max(minimumSize, size - 0.1);
+  }
+  if (!fits(size)) {
+    throw new Error(
+      "O texto do template não cabe integralmente na área configurada.",
+    );
+  }
+  return size;
 };
 
 const drawGlobalSignatureStamp = (
@@ -2092,40 +2227,22 @@ const drawGlobalSignatureStamp = (
     }
 
     const color = stampTemplateColor(element.style.color);
-    const fontSize = Math.max(
-      3,
-      Math.min(
-        12,
-        stampRect.height * 72 / 25.4 * element.style.fontSizeBp / 100_000 *
-          0.45,
-      ),
-    );
-    pdf.setFont(
-      element.style.font === "COURIER" ? "courier" : "helvetica",
-      element.style.font === "HELVETICA_BOLD" ? "bold" : "normal",
-    );
+    const [fontFamily, fontStyle] = stampTemplateJsPdfFont(element.style.font);
+    pdf.setFont(fontFamily, fontStyle);
     pdf.setTextColor(...color);
-    pdf.setFontSize(fontSize);
     const value = STAMP_PREVIEW_BINDING_VALUES[element.binding];
-    const previewVerificationUrl = element.binding === "VERIFICATION_URL"
-      ? new URL(value)
-      : null;
-    const previewVerificationDisplayBase = previewVerificationUrl
-      ? formatDocumentValidationUrlForDisplay(value, { includeSearch: false })
-      : "";
-    const previewVerificationQuery = previewVerificationUrl
-      ? `?${previewVerificationUrl.searchParams.toString()}`
-      : "";
-    const text = element.binding === "VERIFICATION_CODE"
-      ? `CÓD. VALIDAÇÃO\n${value.slice(0, 20)}\n${value.slice(20)}`
-      : element.binding === "VERIFICATION_URL"
-      ? `${element.style.label.trim()}\n${previewVerificationDisplayBase}\n${
-        previewVerificationQuery.slice(0, 24)
-      }\n${previewVerificationQuery.slice(24)}`
-      : `${element.style.label}${value}`;
-    drawCanonicalPdfText(
+    const lines = stampTemplatePreviewTextLines(element, value);
+    const configuredSize = stampRect.height * 72 / 25.4 *
+      element.style.fontSizeBp / 100_000;
+    const fontSize = resolveStampTemplateJsPdfTextSize(
       pdf,
-      text,
+      lines,
+      rect,
+      configuredSize,
+    );
+    pdf.setFontSize(fontSize);
+    pdf.text(
+      lines,
       element.style.align === "CENTER"
         ? rect.x + rect.width / 2
         : element.style.align === "RIGHT"
@@ -2134,12 +2251,8 @@ const drawGlobalSignatureStamp = (
       rect.y,
       {
         align: element.style.align.toLowerCase() as "left" | "center" | "right",
-        maxWidth: rect.width,
-        maxLines: Math.max(
-          1,
-          Math.floor(rect.height / Math.max(1.2, fontSize * 0.42)),
-        ),
-        lineHeight: 1.05,
+        baseline: "top",
+        lineHeightFactor: 1.14,
       },
     );
   });

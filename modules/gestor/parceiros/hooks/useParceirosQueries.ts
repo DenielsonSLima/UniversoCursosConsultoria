@@ -3,7 +3,12 @@ import { parceirosService } from '../parceiros.service';
 import { parceirosQueryKeys } from '../parceiros.query-keys';
 
 export const useParceirosQueries = (
-  scope: { poloId?: string | null; includeGlobal?: boolean } = {},
+  scope: {
+    poloId?: string | null;
+    includeGlobal?: boolean;
+    enablePartners?: boolean;
+    enableTurmas?: boolean;
+  } = {},
 ) => {
   const parceirosQuery = useQuery<any[]>({
     queryKey: parceirosQueryKeys.list(scope.poloId, scope.includeGlobal),
@@ -13,6 +18,7 @@ export const useParceirosQueries = (
     }),
     staleTime: Number.POSITIVE_INFINITY,
     gcTime: 30 * 60_000,
+    enabled: scope.enablePartners !== false,
   });
 
   const turmasDisponiveisQuery = useQuery({
@@ -20,6 +26,7 @@ export const useParceirosQueries = (
     queryFn: () => parceirosService.getTurmasDisponiveis(scope.poloId || undefined),
     staleTime: Number.POSITIVE_INFINITY,
     gcTime: 30 * 60_000,
+    enabled: scope.enableTurmas !== false,
   });
 
   return {

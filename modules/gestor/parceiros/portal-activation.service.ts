@@ -59,6 +59,22 @@ type PartnerEmailStatusesResult = {
 type LinkProfessorAuthIdentityResult = {
   success: boolean;
   action?: 'link-professor-auth-identity';
+  userId?: string | null;
+  profileLinked?: boolean;
+  profileLinkState?:
+    | 'linked'
+    | 'already_linked'
+    | 'no_matching_gestor'
+    | 'not_eligible'
+    | 'requires_global_configuration_access';
+  message?: string;
+};
+
+type EnsureProfessorAccessResult = {
+  success: boolean;
+  action?: 'ensure-professor-access' | 'link-professor-auth-identity';
+  userId?: string | null;
+  inviteSent?: boolean;
   profileLinked?: boolean;
   profileLinkState?:
     | 'linked'
@@ -119,6 +135,13 @@ export const portalActivationService = {
   async linkProfessorAuthIdentity(partnerId: string): Promise<LinkProfessorAuthIdentityResult> {
     return invokeAdminFunction<LinkProfessorAuthIdentityResult>({
       action: 'link-professor-auth-identity',
+      partnerId,
+    });
+  },
+
+  async ensureProfessorAccess(partnerId: string): Promise<EnsureProfessorAccessResult> {
+    return invokeAdminFunction<EnsureProfessorAccessResult>({
+      action: 'ensure-professor-access',
       partnerId,
     });
   },

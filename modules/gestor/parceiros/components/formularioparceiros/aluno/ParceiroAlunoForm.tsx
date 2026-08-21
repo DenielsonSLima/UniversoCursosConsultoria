@@ -1,18 +1,17 @@
-// Formulário completo de Aluno em 5 etapas (Wizard) para cursos técnicos
+// Cadastro inicial de aluno, sem iniciar matrícula neste módulo.
 
 import React, { useEffect, useState } from 'react';
-import { BookOpen, CheckCircle2, ChevronLeft, ChevronRight, Save, X } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, ChevronRight, Save, X } from 'lucide-react';
 
 import { empresasService } from '../../../../configuracoes/empresas/empresas.service';
 import ProfilePhotoAdjustModal from '../../../../../shared/components/ProfilePhotoAdjustModal';
 import { formatCpf, isValidCpf, isValidEmail, normalizeEmail } from '../../../../../shared/utils/identityValidation';
-import {
-  getTechnicalEnrollmentMissingFields,
-  isAcceptedTechnicalDocumentType,
-} from '../../../../../shared/utils/technicalEnrollmentRequirements';
-import { parceirosService } from '../../../parceiros.service';
 import { uppercaseAlunoTextFields } from '../../../utils/aluno-formatters';
-import { normalizeCertidaoMatricula, validateCertidaoCivil } from '../../../utils/certidao-civil';
+import {
+  hasCertidaoCivilData,
+  normalizeCertidaoMatricula,
+  validateCertidaoCivil,
+} from '../../../utils/certidao-civil';
 import ParceiroAlunoFormStepContact from './ParceiroAlunoFormStepContact';
 import ParceiroAlunoFormStepDocuments from './ParceiroAlunoFormStepDocuments';
 import ParceiroAlunoFormStepEducation from './ParceiroAlunoFormStepEducation';
@@ -20,49 +19,37 @@ import ParceiroAlunoFormStepFamily from './ParceiroAlunoFormStepFamily';
 import ParceiroAlunoFormStepPersonal from './ParceiroAlunoFormStepPersonal';
 import {
   createInitialFormData,
-  MATRIZ_POLO_ID,
   STEPS,
 } from './parceiro-aluno-form.constants';
-import type { AlunoFormData, PoloOption } from './parceiro-aluno-form.types';
+import type { AlunoFormData } from './parceiro-aluno-form.types';
 
 interface ParceiroAlunoFormProps {
   onCancel?: () => void;
   onSave?: (data: any) => void;
   defaultPoloId?: string | null;
+  onScopeError?: (message: string) => void;
 }
 
 const maskCEP = (value: string) => value.replace(/\D/g,'').replace(/(\d{5})(\d)/,'$1-$2').replace(/(-\d{3})\d+?$/,'$1');
 const maskPhone = (value: string) => value.replace(/\D/g,'').replace(/(\d{2})(\d)/,'($1) $2').replace(/(\d{5})(\d)/,'$1-$2').replace(/(-\d{4})\d+?$/,'$1');
 const maskDate = (value: string) => value.replace(/\D/g,'').replace(/(\d{2})(\d)/,'$1/$2').replace(/(\d{2})(\d)/,'$1/$2').replace(/(\/\d{4})\d+?$/,'$1');
 
-const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave, defaultPoloId }) => {
+const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({
+  onCancel,
+  onSave,
+  defaultPoloId,
+  onScopeError,
+}) => {
   const [currentStep, setCurrentStep] = useState(1);
-  const [showMatriculaModal, setShowMatriculaModal] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [pendingPhotoFile, setPendingPhotoFile] = useState<File | null>(null);
-  const [polos, setPolos] = useState<PoloOption[]>([]);
   const [formData, setFormData] = useState<AlunoFormData>(() => createInitialFormData(defaultPoloId));
 
   useEffect(() => {
-    let mounted = true;
-    parceirosService.getPolos()
-      .then((data) => {
-        if (!mounted) return;
-        setPolos(data);
-        setFormData((previous) => {
-          if (defaultPoloId && data.some((polo) => polo.id === defaultPoloId)) {
-            return { ...previous, poloId: defaultPoloId };
-          }
-          if (data.some((polo) => polo.id === previous.poloId)) return previous;
-          return { ...previous, poloId: defaultPoloId || data[0]?.id || MATRIZ_POLO_ID };
-        });
-      })
-      .catch((error) => {
-        console.error('Erro ao carregar polos do aluno:', error);
-      });
-    return () => {
-      mounted = false;
-    };
+    if (!defaultPoloId) return;
+    setFormData((previous) => (previous.poloId
+      ? previous
+      : { ...previous, poloId: defaultPoloId }));
   }, [defaultPoloId]);
 
   const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -175,15 +162,6 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave,
 
   const stepValid = () => {
     if (currentStep === 1) return formData.nomeCompleto.trim() !== '' && isValidCpf(formData.cpf) && formData.dataNascimento.length === 10;
-    if (currentStep === 2) {
-      return isAcceptedTechnicalDocumentType(formData.tipoDocumento)
-        && formData.rg.trim() !== ''
-        && validateCertidaoCivil(formData) === null;
-    }
-    if (currentStep === 3) return getTechnicalEnrollmentMissingFields(formData)
-      .filter((field) => ['nomeMae', 'responsavelFinanceiro', 'responsavelNome', 'responsavelCpf'].includes(field.key))
-      .length === 0;
-    if (currentStep === 4) return getTechnicalEnrollmentMissingFields(formData).length === 0;
     if (currentStep === 5) return isValidEmail(formData.email) && formData.contato1.length >= 14;
     return true;
   };
@@ -191,12 +169,6 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave,
   const handleNext = () => {
     if (!stepValid()) {
       if (currentStep === 1) alert('Informe nome, CPF válido e data de nascimento para avançar.');
-      if (currentStep === 2) {
-        const certidaoError = validateCertidaoCivil(formData);
-        alert(certidaoError || 'Informe um documento de identificação aceito para curso técnico: CIN, CNH ou RG, com o número do documento.');
-      }
-      if (currentStep === 3) alert('Informe nome da mãe e declare o responsável financeiro antes de avançar.');
-      if (currentStep === 4) alert(`Complete os dados do Ensino Médio: ${getTechnicalEnrollmentMissingFields(formData).map((item) => item.label).join(', ')}.`);
       if (currentStep === 5) alert('Informe e-mail válido e telefone para concluir.');
       return;
     }
@@ -205,10 +177,14 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave,
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    if (currentStep === 5) setShowMatriculaModal(true);
+    if (currentStep === 5) handleFinalize();
   };
 
-  const handleFinalize = (matricularAgora: boolean) => {
+  const handleFinalize = () => {
+    if (!formData.poloId) {
+      onScopeError?.('Selecione um polo ativo no cabeçalho antes de cadastrar o aluno.');
+      return;
+    }
     if (!isValidCpf(formData.cpf)) {
       alert('CPF do aluno inválido. Corrija antes de salvar.');
       return;
@@ -226,13 +202,8 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave,
       return;
     }
     const certidaoError = validateCertidaoCivil(formData);
-    if (certidaoError) {
-      alert(certidaoError);
-      return;
-    }
-    const missingTechnicalFields = getTechnicalEnrollmentMissingFields(formData);
-    if (missingTechnicalFields.length > 0) {
-      alert(`Complete os dados obrigatórios para curso técnico: ${missingTechnicalFields.map((item) => item.label).join(', ')}.`);
+    if (hasCertidaoCivilData(formData) && certidaoError) {
+      alert(`A certidão civil é opcional neste cadastro. Para salvar os dados já informados, complete-a: ${certidaoError}`);
       return;
     }
     if (formData.responsavelCpf && !isValidCpf(formData.responsavelCpf)) {
@@ -247,9 +218,9 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave,
       ...formData,
       email: normalizeEmail(formData.email),
       responsavelEmail: normalizeEmail(formData.responsavelEmail),
-      matricularAgora,
+      // O módulo Parceiros só cria o cadastro. A matrícula é iniciada em Gestão.
+      matricularAgora: false,
     }));
-    setShowMatriculaModal(false);
   };
 
   return (
@@ -268,13 +239,17 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave,
       <div className="flex justify-between items-center border-b border-slate-100 pb-5 mb-6">
         <div>
           <h3 className="text-xl font-black text-[#001a33] uppercase tracking-tight">Novo Aluno</h3>
-          <p className="text-slate-500 text-sm font-medium mt-0.5">Ficha completa para matrícula em cursos técnicos</p>
+          <p className="text-slate-500 text-sm font-medium mt-0.5">Cadastro inicial do aluno</p>
         </div>
         {onCancel && (
           <button type="button" onClick={onCancel} className="p-2 rounded-full text-slate-400 hover:bg-slate-50 hover:text-red-500 transition-colors">
             <X size={20} />
           </button>
         )}
+      </div>
+
+      <div className="mb-6 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs font-medium leading-relaxed text-blue-800">
+        Para concluir o cadastro inicial, informe os dados pessoais, endereço e contato. Documentação, filiação e escolaridade podem ser preenchidas depois e só serão exigidas ao iniciar uma matrícula técnica.
       </div>
 
       <div className="flex items-center justify-between mb-8 relative">
@@ -310,7 +285,6 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave,
         {currentStep === 1 && (
           <ParceiroAlunoFormStepPersonal
             formData={formData}
-            polos={polos}
             isUploadingPhoto={isUploadingPhoto}
             onChange={handleChange}
             onPhotoUpload={handlePhotoUpload}
@@ -346,7 +320,7 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave,
               type="submit"
               className="flex items-center gap-2 px-8 py-3 rounded-xl bg-[#001a33] text-white font-bold text-xs uppercase tracking-wider hover:bg-blue-900 shadow-lg shadow-blue-900/20 transition-all"
             >
-              <Save size={16} /> Salvar Aluno
+              <Save size={16} /> Salvar Cadastro
             </button>
           )}
         </div>
@@ -365,38 +339,6 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave,
         </div>
       </form>
 
-      {showMatriculaModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm ">
-          <div className="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl relative border border-slate-100">
-            <button type="button" onClick={() => setShowMatriculaModal(false)}
-              className="absolute top-6 right-6 p-2 rounded-full text-slate-400 hover:bg-slate-50 hover:text-red-500 transition-colors">
-              <X size={20} />
-            </button>
-
-            <div className="flex flex-col items-center text-center">
-              <div className="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mb-6 shadow-sm border border-emerald-100">
-                <CheckCircle2 size={40} />
-              </div>
-              <h3 className="text-2xl font-black text-[#001a33] uppercase tracking-tight mb-2">Cadastro Finalizado</h3>
-              <p className="text-slate-500 text-sm mb-8 leading-relaxed max-w-xs mx-auto">
-                O aluno <strong>{formData.nomeCompleto || 'novo'}</strong> foi cadastrado com sucesso.<br />
-                Deseja matriculá-lo em alguma turma agora?
-              </p>
-
-              <div className="flex flex-col gap-3 w-full">
-                <button type="button" onClick={() => handleFinalize(true)}
-                  className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl uppercase tracking-wider text-sm transition-colors shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2">
-                  <BookOpen size={18} /> Sim, Matricular Agora
-                </button>
-                <button type="button" onClick={() => handleFinalize(false)}
-                  className="w-full py-4 bg-slate-50 hover:bg-slate-100 text-slate-600 font-bold rounded-xl uppercase tracking-wider text-sm transition-colors border border-slate-200">
-                  Não, Concluir Cadastro
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

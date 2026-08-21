@@ -116,7 +116,7 @@ const PJCard: React.FC<PJCardProps> = ({ data, onClick, onDelete }) => {
       </div>
 
       {/* Badges */}
-      <div className="flex flex-wrap gap-1.5 mb-3 relative z-10">
+      <div className="flex min-w-0 items-center gap-1.5 mb-3 relative z-10">
         <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
           isAtivo ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-100 text-slate-400 border-slate-200'
         }`}>
@@ -129,7 +129,7 @@ const PJCard: React.FC<PJCardProps> = ({ data, onClick, onDelete }) => {
         )}
         {(data.tipoParceriaNome || data.tipoConvenio) && (
           <span
-            className="max-w-full whitespace-nowrap text-[10px] font-bold leading-5 text-slate-900"
+            className="min-w-0 flex-1 truncate text-[10px] font-bold leading-5 text-slate-900"
             title={data.tipoParceriaNome || data.tipoConvenio}
           >
             {data.tipoParceriaNome || data.tipoConvenio}

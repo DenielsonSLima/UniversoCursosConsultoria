@@ -5,6 +5,7 @@ import {
   normalizePermissionsPayload,
   normalizeStringArray,
 } from "../permissions.ts";
+import { resolveRedirectTarget } from "../redirects.ts";
 import type { HandlerContext } from "../types.ts";
 
 const COMMUNICATION_SECTORS = new Set([
@@ -17,16 +18,14 @@ const COMMUNICATION_SECTORS = new Set([
 ]);
 
 const EMAIL_PATTERN = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
-const PASSWORD_REQUIREMENTS_ERROR =
-  "A senha precisa ter ao menos 8 caracteres, 1 letra maiúscula, 1 letra minúscula e 1 número.";
-
-const isStrongGestorPassword = (password: string) =>
-  password.length >= 8 &&
-  /[A-Z]/.test(password) &&
-  /[a-z]/.test(password) &&
-  /\d/.test(password);
+const INVITE_OPERATION_NONCE_KEY = "invite_operation_nonce";
 
 const onlyDigits = (value: unknown) => String(value || "").replace(/\D/g, "");
+
+const hasInviteOperationNonce = (authUser: any, expectedNonce: string) =>
+  String(authUser?.user_metadata?.[INVITE_OPERATION_NONCE_KEY] || "") ===
+    expectedNonce &&
+  authUser?.user_metadata?.origem === "usuarios_sistema";
 
 const isValidCpf = (value: unknown) => {
   const cpf = onlyDigits(value);
@@ -106,7 +105,6 @@ const findGestorIdentityConflict = async (admin: any, authUserId: string) => {
 export const handleUpsertGestorUser = async (
   context: HandlerContext,
   incomingUser: Record<string, unknown>,
-  passwordInput?: string | null,
 ) => {
   const { admin, gestor, json } = context;
   const scope = await getGestorScope(admin, gestor);
@@ -120,7 +118,6 @@ export const handleUpsertGestorUser = async (
 
   const email = normalizeEmail(incomingUser.email as string | null);
   const name = String(incomingUser.nome || "").trim();
-  const password = String(passwordInput || "");
   const phoneDigits = String(incomingUser.telefone || "")
     .replace(/\D/g, "")
     .slice(0, 11);
@@ -174,13 +171,6 @@ export const handleUpsertGestorUser = async (
       error: "Informe um CPF válido para o usuário.",
     }, 400);
   }
-  if (!isStrongGestorPassword(password)) {
-    return json({
-      success: false,
-      error: PASSWORD_REQUIREMENTS_ERROR,
-    }, 400);
-  }
-
   let profilePermissions:
     | ReturnType<typeof normalizePermissionsPayload>
     | null = null;
@@ -249,39 +239,11 @@ export const handleUpsertGestorUser = async (
   let authUser: any;
   let createdAuthUserId: string | null = null;
   let reusedPartnerIdentity = false;
-  try {
-    authUser = await findAuthUserByEmail(admin, email);
-  } catch (error) {
-    return json({
-      success: false,
-      error: error instanceof Error
-        ? error.message
-        : "Não foi possível localizar usuário no Supabase Auth.",
-    }, 500);
-  }
 
-  if (!authUser?.id) {
-    const { data: createdAuth, error: createAuthError } = await admin.auth.admin
-      .createUser({
-        email,
-        password,
-        email_confirm: true,
-        user_metadata: {
-          nome: name,
-          origem: "usuarios_sistema",
-        },
-      });
-
-    if (createAuthError) {
-      return json({ success: false, error: createAuthError.message }, 500);
-    }
-
-    authUser = createdAuth?.user || null;
-    createdAuthUserId = authUser?.id || null;
-  } else {
+  const validateExistingIdentity = async (existingAuthUser: any) => {
     const identityConflict = await findGestorIdentityConflict(
       admin,
-      authUser.id,
+      existingAuthUser.id,
     );
     if (identityConflict.error) {
       return json({ success: false, error: identityConflict.error }, 500);
@@ -300,13 +262,100 @@ export const handleUpsertGestorUser = async (
         }, 409);
       }
       reusedPartnerIdentity = true;
-    } else {
+      return null;
+    }
+
+    return json({
+      success: false,
+      error:
+        "Já existe uma identidade de acesso para este e-mail sem cadastro interno. Regularize essa identidade antes de criar o usuário.",
+    }, 409);
+  };
+
+  try {
+    authUser = await findAuthUserByEmail(admin, email);
+  } catch (error) {
+    return json({
+      success: false,
+      error: error instanceof Error
+        ? error.message
+        : "Não foi possível localizar usuário no Supabase Auth.",
+    }, 500);
+  }
+
+  if (!authUser?.id) {
+    const redirectResolution = resolveRedirectTarget("/recuperar-senha");
+    if (!redirectResolution.redirectTo) {
       return json({
         success: false,
-        error:
-          "Já existe uma identidade de acesso para este e-mail sem cadastro interno. Regularize essa identidade antes de criar o usuário.",
-      }, 409);
+        error: redirectResolution.error ||
+          "Não foi possível preparar o link de primeiro acesso.",
+      }, redirectResolution.status);
     }
+
+    const invitationNonce = crypto.randomUUID();
+    let inviteResult: any;
+    try {
+      inviteResult = await admin.auth.admin.inviteUserByEmail(email, {
+        data: {
+          nome: name,
+          origem: "usuarios_sistema",
+          [INVITE_OPERATION_NONCE_KEY]: invitationNonce,
+        },
+        redirectTo: redirectResolution.redirectTo,
+      });
+    } catch (error) {
+      return json({
+        success: false,
+        error: error instanceof Error
+          ? error.message
+          : "Não foi possível enviar o convite de primeiro acesso.",
+      }, 500);
+    }
+
+    const invitedAuthUser = !inviteResult.error && inviteResult.data?.user
+      ? inviteResult.data.user
+      : null;
+    if (invitedAuthUser) {
+      // GoTrue pode reenviar convite para um Auth não confirmado já existente.
+      // O nonce só é gravado quando esta chamada cria a identidade; sem ele,
+      // nunca a trate como pertencente a este cadastro.
+      if (!hasInviteOperationNonce(invitedAuthUser, invitationNonce)) {
+        return json({
+          success: false,
+          error:
+            "Não foi possível comprovar que o convite criou uma nova identidade para este usuário. Regularize este e-mail antes de tentar novamente.",
+        }, 409);
+      }
+      authUser = invitedAuthUser;
+      createdAuthUserId = authUser?.id || null;
+    } else {
+      // Uma requisição concorrente pode criar a mesma identidade entre a
+      // consulta e o convite. Reconsultar impede que o retry gere duplicidade.
+      try {
+        authUser = await findAuthUserByEmail(admin, email);
+      } catch (error) {
+        return json({
+          success: false,
+          error: error instanceof Error
+            ? error.message
+            : "Não foi possível localizar usuário no Supabase Auth.",
+        }, 500);
+      }
+      if (!authUser?.id) {
+        return json({
+          success: false,
+          error: inviteResult.error?.message ||
+            "Não foi possível enviar o convite de primeiro acesso.",
+        }, 500);
+      }
+
+      const conflictResponse = await validateExistingIdentity(authUser);
+      if (conflictResponse) return conflictResponse;
+    }
+  } else {
+    const conflictResponse = await validateExistingIdentity(authUser);
+    if (conflictResponse) return conflictResponse;
   }
 
   if (!authUser?.id) {
@@ -349,23 +398,17 @@ export const handleUpsertGestorUser = async (
     .single();
 
   if (saveUserError) {
+    // Auth e usuarios_sistema não participam da mesma transação. Excluir a
+    // identidade recém-convidada depois de uma leitura/escrita que falhou
+    // deixaria uma janela para outro fluxo tê-la vinculado a um parceiro.
+    // Preserve-a para reconciliação: sem usuario_sistema ela não recebe
+    // permissões institucionais, e nunca removemos uma conta de terceiro.
     if (createdAuthUserId) {
-      let rollbackError: unknown;
-      try {
-        const rollbackResult = await admin.auth.admin.deleteUser(
-          createdAuthUserId,
-        );
-        rollbackError = rollbackResult?.error || null;
-      } catch (error) {
-        rollbackError = error;
-      }
-      if (rollbackError) {
-        return json({
-          success: false,
-          error:
-            "O cadastro interno falhou e a identidade de acesso recém-criada não pôde ser revertida. Regularize este e-mail no Auth antes de tentar novamente.",
-        }, 500);
-      }
+      return json({
+        success: false,
+        error:
+          "O cadastro interno não foi concluído após o envio do convite. A identidade convidada foi preservada para reconciliação segura deste e-mail.",
+      }, 500);
     }
     if (saveUserError.code === "23505") {
       return json({
@@ -381,9 +424,10 @@ export const handleUpsertGestorUser = async (
     success: true,
     action: "upsert-gestor-user",
     userId: authUser?.id || null,
+    inviteSent: Boolean(createdAuthUserId),
     user: savedUser,
     message: reusedPartnerIdentity
       ? "Usuário cadastrado e vinculado ao acesso existente. A senha atual foi preservada."
-      : "Usuário cadastrado com acesso ao portal.",
+      : "Usuário cadastrado. Enviamos um convite de primeiro acesso para o e-mail informado.",
   });
 };

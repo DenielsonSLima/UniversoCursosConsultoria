@@ -21,6 +21,7 @@ import {
   ELECTRONIC_SIGNATURE_PRESENTATION_LIMITS,
   type ElectronicSignatureAdministrationDraft,
   type ElectronicSignatureDocumentEditor,
+  type ElectronicSignatureInstitutionalWatermarkSettings,
   type ElectronicSignatureLegalSection,
   type ElectronicSignaturePolicyPresentation,
   type ElectronicSignatureStampEditor,
@@ -53,7 +54,10 @@ interface PresentationSaveInput {
 interface PreviewIdentity {
   institution: CanonicalInstitutionalHeader;
   logo: CanonicalPdfImage | null;
-  institutionalWatermark: CanonicalPdfImage | null;
+  institutionalWatermark: {
+    image: CanonicalPdfImage;
+    settings: ElectronicSignatureInstitutionalWatermarkSettings;
+  } | null;
   signatureStampAssets: Readonly<Record<string, CanonicalPdfImage>>;
 }
 
@@ -480,7 +484,7 @@ const AssinaturaEletronicaConfig: React.FC = () => {
       "assinatura-eletronica",
       "preview-assets",
       canonicalPreviewIdentity?.logoUrl ?? null,
-      canonicalPreviewIdentity?.watermarkUrl ?? null,
+      canonicalPreviewIdentity?.watermark.url ?? null,
       ...modelAssetIds,
     ],
     enabled: Boolean(canonicalPreviewIdentity),
@@ -492,17 +496,17 @@ const AssinaturaEletronicaConfig: React.FC = () => {
       }
       if (
         !isCanonicalInstitutionalWatermarkDataUri(
-          canonicalPreviewIdentity.watermarkUrl,
+          canonicalPreviewIdentity.watermark.url,
         )
       ) {
         throw new Error(
-          "A marca-d’água canônica watermark_landscape_<polo_id> não foi informada pelo serviço como data URI.",
+          "A marca-d’água canônica retrato do polo não foi informada pelo serviço como data URI.",
         );
       }
       const [logo, institutionalWatermark, preparedModelAssets] = await Promise
         .all([
           resolveCanonicalPdfPhoto(canonicalPreviewIdentity.logoUrl),
-          resolveCanonicalPdfPhoto(canonicalPreviewIdentity.watermarkUrl),
+          resolveCanonicalPdfPhoto(canonicalPreviewIdentity.watermark.url),
           Promise.all(
             modelAssetIds.map(
               async (
@@ -528,13 +532,20 @@ const AssinaturaEletronicaConfig: React.FC = () => {
       }
       if (!institutionalWatermark) {
         throw new Error(
-          "A marca-d’água canônica watermark_landscape_<polo_id> não pôde ser preparada para a prévia.",
+          "A marca-d’água canônica retrato do polo não pôde ser preparada para a prévia.",
         );
       }
       return {
         institution: canonicalPreviewIdentity.institution,
         logo,
-        institutionalWatermark,
+        institutionalWatermark: {
+          image: institutionalWatermark,
+          settings: {
+            opacity: canonicalPreviewIdentity.watermark.opacity,
+            scale: canonicalPreviewIdentity.watermark.scale,
+            rotate: canonicalPreviewIdentity.watermark.rotate,
+          },
+        },
         signatureStampAssets: Object.fromEntries(preparedModelAssets),
       };
     },

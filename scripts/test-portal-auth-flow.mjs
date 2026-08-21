@@ -107,6 +107,18 @@ test('installed student app keeps password recovery inside the aluno scope', () 
   assert.match(loginService, /buildAuthRedirectUrl\(redirectPath\)/)
 })
 
+test('invite callbacks require password setup before institutional access', () => {
+  assert.match(supabaseClient, /type === 'invite' && accessToken/)
+  assert.match(supabaseClient, /pendingInitialInviteCallback/)
+  assert.match(supabaseClient, /session\?\.access_token === callback\.accessToken/)
+  assert.doesNotMatch(supabaseClient, /hashParams\.get\('code'\)/)
+  assert.match(supabaseClient, /consumePasswordSetupMarker/)
+  assert.match(passwordRecoveryPage, /passwordSetupType === 'invite'/)
+  assert.match(passwordRecoveryPage, /consumePasswordSetupMarker/)
+  assert.match(passwordRecoveryPage, /postResetPath = '\/sistema\/login'/)
+  assert.match(passwordRecoveryPage, /navigate\(postResetPath\)/)
+})
+
 test('native Google OAuth uses PKCE and never returns session tokens in the callback URL', () => {
   assert.match(supabaseClient, /flowType:\s*Capacitor\.isNativePlatform\(\)\s*\?\s*'pkce'/)
   assert.match(nativeOAuth, /exchangeCodeForSession\(callback\.code\)/)
@@ -209,9 +221,10 @@ test('authenticated user is reused while institutional access is resolved', () =
 
 test('institutional redirect honors the selected profile', () => {
   assert.match(loginPage, /resolveProfilePostLoginRoute/)
+  assert.match(profileSelection, /PORTAL_CONTEXT_HOME_ROUTES/)
+  assert.match(profileSelection, /ROLE_HOME_ROUTE\s*=\s*PORTAL_CONTEXT_HOME_ROUTES/)
   assert.match(profileSelection, /normalizeInternalRoute/)
   assert.match(profileSelection, /route\.startsWith\(`\$\{homeRoute\}\/`\)/)
-  assert.match(profileSelection, /Professor:\s*["']\/professor["']/)
   assert.doesNotMatch(profileSelection, /sessionStorage/)
 })
 
@@ -221,6 +234,20 @@ test('safe backend failure codes are translated without exposing credentials', (
   assert.match(loginService, /rate_limited/)
   assert.match(loginService, /transportFailure/)
   assert.match(loginService, /AUTH_GENERIC_ERROR/)
+})
+
+test('email confirmation is required before a student session is issued', () => {
+  assert.match(portalAuthFunction, /email_not_confirmed/)
+  assert.match(portalAuthFunction, /email_confirmation_required/)
+  assert.match(
+    portalAuthFunction,
+    /Confirme o e-mail enviado para ativar sua conta/,
+  )
+  assert.match(loginService, /email_confirmation_required/)
+  assert.match(
+    loginService,
+    /Confirme o e-mail enviado para ativar sua conta/,
+  )
 })
 
 test('Cloudflare challenge origin is preconnected', () => {
