@@ -253,6 +253,11 @@ test("comprovante de assinatura e vetorial, selecionavel e preserva somente dado
   assert.match(text, /Ana de Exemplo/);
   assert.match(text, /Conta autenticada e segundo fator/);
   assert.match(text, /ASS-2026-0001/);
+  assert.match(
+    text,
+    /www\.universocc\.com\.br\/validador\?code=ASS-2026-0001/i,
+  );
+  assert.doesNotMatch(text, /https:\/\//i);
   assert.match(text, /b{64}/);
   assert.match(text, /a{64}/);
   assert.doesNotMatch(text, /CPF|sess[aã]o|senha|token|\bip\b/i);
@@ -418,13 +423,15 @@ test("aba do carimbo gera uma única folha vetorial para a última página do do
   assert.equal(extracted.pageCount, 1);
   assert.match(extracted.text, /Documento assinado digitalmente/i);
   assert.doesNotMatch(extracted.text, /validade jur[ií]dica/i);
-  assert.match(extracted.text, /PAPEL_DO_SIGNATÁRIO/i);
-  assert.match(extracted.text, /NOME_DO_SIGNATÁRIO/i);
-  assert.match(extracted.text, /CPF_MASCARADO_DO_SIGNATARIO/i);
-  assert.match(extracted.text, /DATA_HORA_SEGUNDOS_FUSO/i);
-  assert.match(extracted.text, /HASH_INDIVIDUAL_DA_ASSINATURA/i);
-  assert.match(extracted.text, /CÓDIGO_DE_VERIFICAÇÃO/i);
-  assert.match(extracted.text, /URL_VERIFICADORA_DA_ASSINATURA/i);
+  assert.match(extracted.text, /(?:^|\n)Signatário(?:\n|$)/i);
+  assert.match(extracted.text, /Assinante:\s*Maria S\. Lima/i);
+  assert.match(extracted.text, /CPF:\s*12\*\.\*\*\*\.\*\*9-01/i);
+  assert.match(extracted.text, /Data:\s*20\/08\/2026,\s*15:42/i);
+  assert.match(extracted.text, /Hash\s+SHA-256:\s*a91f…5e7c/i);
+  assert.match(extracted.text, /CÓD\.\s+VALIDAÇÃO/i);
+  assert.match(extracted.text, /SIG-00000000-0000-40/i);
+  assert.match(extracted.text, /www\.universocc\.com\.br\/validador/i);
+  assert.doesNotMatch(extracted.text, /https:\/\//i);
   assert.match(extracted.text, /3 exemplos neutros de N signatários/i);
   assert.doesNotMatch(extracted.text, /PROFESSOR|COORDENADOR/i);
   assert.doesNotMatch(extracted.text, /Página 3|3 de 3/i);
@@ -433,6 +440,29 @@ test("aba do carimbo gera uma única folha vetorial para a última página do do
   if (output) {
     await writeFile(output, new Uint8Array(await result.blob.arrayBuffer()));
   }
+});
+
+test("prévia do carimbo pode ocultar itens visuais sem ocultar provas", async () => {
+  const source = fixture();
+  source.presentation.editor.signatureStamp.template = {
+    ...source.presentation.editor.signatureStamp.template,
+    hiddenElementIds: ["signerRole", "title", "divider"],
+  };
+
+  const result = await createElectronicSignatureStampTemplatePreviewPdf({
+    institution: source.institution,
+    logo: source.logo,
+    institutionalWatermark: source.institutionalWatermark,
+    signatureStampAssets: {},
+    presentation: source.presentation,
+  });
+  const extracted = await extractPdfText(result.blob);
+
+  assert.doesNotMatch(extracted.text, /(?:^|\n)Signatário(?:\n|$)/i);
+  assert.doesNotMatch(extracted.text, /ASSINATURA ELETRÔNICA/i);
+  assert.match(extracted.text, /Assinante:\s*Maria S\. Lima/i);
+  assert.match(extracted.text, /Hash\s+SHA-256:\s*a91f…5e7c/i);
+  assert.match(extracted.text, /CÓD\.\s+VALIDAÇÃO/i);
 });
 
 test("imagem própria do carimbo usa campo separado e precisa ser resolvida", async () => {

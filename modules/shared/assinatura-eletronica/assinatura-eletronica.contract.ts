@@ -406,6 +406,16 @@ export type ElectronicSignatureStampTemplateElementId =
   | "verificationQr"
   | "divider";
 
+/**
+ * Exceções visuais fechadas. Estes itens podem ser ocultados somente no
+ * desenho do carimbo; a prova individual, seus bindings e os campos de
+ * verificação continuam íntegros no snapshot autoritativo.
+ */
+export type ElectronicSignatureStampTemplateHiddenElementId =
+  | "signerRole"
+  | "title"
+  | "divider";
+
 interface ElectronicSignatureStampTemplateElementBase {
   id: ElectronicSignatureStampTemplateElementId;
   kind: "IMAGE" | "TEXT" | "QR" | "LINE";
@@ -473,6 +483,11 @@ export interface ElectronicSignatureStampTemplateV1 {
   schemaVersion: 1;
   coordinateSpace: "STAMP_TOP_LEFT_BP_V1";
   elements: readonly ElectronicSignatureStampTemplateElement[];
+  /**
+   * Ausente em modelos históricos. Quando presente, só pode ocultar papel,
+   * título ou linha decorativa — nunca nome, CPF, hash, código, URL ou QR.
+   */
+  hiddenElementIds?: readonly ElectronicSignatureStampTemplateHiddenElementId[];
 }
 
 /**

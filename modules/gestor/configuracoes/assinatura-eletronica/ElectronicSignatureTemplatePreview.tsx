@@ -116,17 +116,19 @@ const ElectronicSignatureTemplatePreview: React.FC<
   if (mode === "SIGNATURE_STAMP") {
     const assetId = draft.editor.signatureStamp.assetId;
     return (
-      <div className="min-h-[620px] overflow-auto rounded-[2rem] bg-slate-200/80 p-4 sm:p-6">
-        <SignatureStampTemplateEditor
-          template={draft.editor.signatureStamp.template}
-          selectedElementId={selectedStampElementId}
-          assetPreview={assetId
-            ? identity.signatureStampAssets[assetId]?.dataUrl ?? null
-            : null}
-          disabled={disabled}
-          onSelect={(elementId) => onSelectStampElement?.(elementId)}
-          onCommit={(template) => onCommitStampTemplate?.(template)}
-        />
+      <div className="overflow-visible rounded-[2rem] bg-slate-200/80 p-3 sm:p-5">
+        <div className="mx-auto max-w-6xl">
+          <SignatureStampTemplateEditor
+            template={draft.editor.signatureStamp.template}
+            selectedElementId={selectedStampElementId}
+            assetPreview={assetId
+              ? identity.signatureStampAssets[assetId]?.dataUrl ?? null
+              : null}
+            disabled={disabled}
+            onSelect={(elementId) => onSelectStampElement?.(elementId)}
+            onCommit={(template) => onCommitStampTemplate?.(template)}
+          />
+        </div>
       </div>
     );
   }

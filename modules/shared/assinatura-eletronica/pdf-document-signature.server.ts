@@ -39,6 +39,7 @@ import {
   resolveDiarySignaturePageIndex,
 } from "./diary-pdf-semantic-manifest.ts";
 import { createLocalQrCodeDataUrl } from "../qrcode/local-qrcode.ts";
+import { formatDocumentValidationUrlForDisplay } from "../document-validation/document-validation.url.ts";
 import {
   createDefaultElectronicSignatureStampTemplate,
   deriveAutomaticSignatureStampPlacements,
@@ -52,7 +53,8 @@ const PDF_MAX_PAGES = 500;
 const SHA256_PATTERN = /^[a-f0-9]{64}$/u;
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
-const MASKED_CPF_PATTERN = /^\*{3}[.]\*{3}[.]\*{3}-\d{2}$/u;
+const MASKED_CPF_PATTERN =
+  /^(?:\d{2}\*[.]\*{3}[.]\*{2}\d-\d{2}|\*{3}[.]\*{3}[.]\*{3}-\d{2})$/u;
 const SIGNED_AT_WITH_SECONDS_PATTERN =
   /T\d{2}:\d{2}:\d{2}(?:[.]\d+)?(?:Z|[+-]\d{2}:\d{2})$/u;
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a] as const;
@@ -202,6 +204,11 @@ export type ElectronicSignatureStampTemplateElement =
   | ElectronicSignatureStampTemplateQrElement
   | ElectronicSignatureStampTemplateLineElement;
 
+export type ElectronicSignatureStampTemplateHiddenElementId =
+  | "signerRole"
+  | "title"
+  | "divider";
+
 /**
  * Um único desenho global, reutilizado por todas as instâncias/signatários.
  * Somente posição e dimensões são configuráveis; bindings e estilos são
@@ -212,6 +219,8 @@ export interface ElectronicSignatureStampTemplateV1 {
   schemaVersion: 1;
   coordinateSpace: "STAMP_TOP_LEFT_BP_V1";
   elements: readonly ElectronicSignatureStampTemplateElement[];
+  /** Ausente nos envelopes históricos; só oculta itens visuais opcionais. */
+  hiddenElementIds?: readonly ElectronicSignatureStampTemplateHiddenElementId[];
 }
 
 export interface ApplySignatureStampsInput {
@@ -566,6 +575,30 @@ const hasCanonicalTemplateStyle = (
   Object.entries(canonical).every(([key, value]) => candidate[key] === value)
 );
 
+const STAMP_TEMPLATE_OPTIONAL_VISUAL_ELEMENT_IDS = [
+  "signerRole",
+  "title",
+  "divider",
+] as const satisfies readonly ElectronicSignatureStampTemplateHiddenElementId[];
+
+const normalizeTemplateHiddenElementIds = (
+  value: unknown,
+): readonly ElectronicSignatureStampTemplateHiddenElementId[] | null => {
+  if (
+    !Array.isArray(value) || value.length === 0 ||
+    value.length > STAMP_TEMPLATE_OPTIONAL_VISUAL_ELEMENT_IDS.length
+  ) {
+    return null;
+  }
+  const expected = STAMP_TEMPLATE_OPTIONAL_VISUAL_ELEMENT_IDS.filter((id) =>
+    value.includes(id)
+  );
+  return expected.length === value.length &&
+      expected.every((id, index) => value[index] === id)
+    ? expected
+    : null;
+};
+
 const templateRectsOverlap = (
   left: Pick<
     ElectronicSignatureStampTemplateElementBase,
@@ -590,12 +623,16 @@ export const normalizeElectronicSignatureStampTemplate = (
   value: unknown,
 ): ElectronicSignatureStampTemplateV1 => {
   const source = asTemplateRecord(value);
+  const hasHiddenElementIds = Boolean(
+    source && Object.prototype.hasOwnProperty.call(source, "hiddenElementIds"),
+  );
   if (
     !source ||
     !hasExactTemplateKeys(source, [
       "schemaVersion",
       "coordinateSpace",
       "elements",
+      ...(hasHiddenElementIds ? ["hiddenElementIds"] : []),
     ]) ||
     source.schemaVersion !== 1 ||
     source.coordinateSpace !== "STAMP_TOP_LEFT_BP_V1" ||
@@ -603,6 +640,14 @@ export const normalizeElectronicSignatureStampTemplate = (
     source.elements.length !== STAMP_TEMPLATE_ELEMENT_SPECS.length
   ) {
     throw new Error("O template global do carimbo eletrônico é inválido.");
+  }
+  const hiddenElementIds = hasHiddenElementIds
+    ? normalizeTemplateHiddenElementIds(source.hiddenElementIds)
+    : undefined;
+  if (hasHiddenElementIds && !hiddenElementIds) {
+    throw new Error(
+      "A lista de elementos ocultos do template global é inválida.",
+    );
   }
 
   const canonicalElements = createDefaultElectronicSignatureStampTemplate()
@@ -684,7 +729,11 @@ export const normalizeElectronicSignatureStampTemplate = (
   const qr = elements[9];
   if (
     qr.kind !== "QR" || elements.some((element, index) => (
-      index !== 9 && templateRectsOverlap(qr, element)
+      index !== 9 &&
+      !hiddenElementIds?.includes(
+        element.id as ElectronicSignatureStampTemplateHiddenElementId,
+      ) &&
+      templateRectsOverlap(qr, element)
     ))
   ) {
     throw new Error(
@@ -696,6 +745,7 @@ export const normalizeElectronicSignatureStampTemplate = (
     schemaVersion: 1,
     coordinateSpace: "STAMP_TOP_LEFT_BP_V1",
     elements,
+    ...(hiddenElementIds ? { hiddenElementIds } : {}),
   };
 };
 
@@ -1263,7 +1313,7 @@ const prepareStamps = (
   prepared.forEach((stamp) => {
     if (!MASKED_CPF_PATTERN.test(stamp.signerCpfMasked)) {
       throw new Error(
-        "O CPF do carimbo precisa permanecer mascarado no formato ***.***.***-NN.",
+        "O CPF do carimbo precisa permanecer mascarado no formato NN*.***.**N-NN ou no formato histórico ***.***.***-NN.",
       );
     }
     if (!SHA256_PATTERN.test(stamp.signatureHash)) {
@@ -1681,7 +1731,6 @@ const drawStamp = ({
     color: STAMP_BLUE,
     errorLabel: "O código individual de verificação",
   });
-  const publicValidatorUrl = new URL(stamp.verificationUrl);
   drawLabeledStampLine(page, {
     icon: "GLOBE",
     iconX,
@@ -1690,7 +1739,9 @@ const drawStamp = ({
     textX,
     maxWidth: textWidth,
     label: "Verifique em:",
-    value: `https://${publicValidatorUrl.host}${publicValidatorUrl.pathname}`,
+    value: formatDocumentValidationUrlForDisplay(stamp.verificationUrl, {
+      includeSearch: false,
+    }),
     labelFont: boldFont,
     valueFont: regularFont,
     maximumSize: Math.min(4.7, lineStep * 0.65),
@@ -1767,12 +1818,32 @@ const templateTextLines = (
         stamp.signatureHash.slice(32),
       ];
     case "VERIFICATION_CODE":
-      return [`${label}${stamp.verificationCode}`];
+      if (element.widthBp >= 40_000 && element.heightBp <= 10_000) {
+        return [stamp.verificationCode];
+      }
+      return [
+        "CÓD. VALIDAÇÃO",
+        stamp.verificationCode.slice(0, 20),
+        stamp.verificationCode.slice(20),
+      ];
     case "VERIFICATION_URL": {
       const url = new URL(stamp.verificationUrl);
+      const query = `?${url.searchParams.toString()}`;
+      const displayBaseUrl = formatDocumentValidationUrlForDisplay(
+        stamp.verificationUrl,
+        { includeSearch: false },
+      );
+      if (element.widthBp >= 40_000 && element.heightBp <= 16_000) {
+        return [
+          `${label}${displayBaseUrl}`,
+          query,
+        ];
+      }
       return [
-        `${label}${url.origin}${url.pathname}`,
-        `?${url.searchParams.toString()}`,
+        label.trim(),
+        displayBaseUrl,
+        query.slice(0, 24),
+        query.slice(24),
       ];
     }
   }
@@ -1901,6 +1972,13 @@ const drawTemplateStamp = ({
   });
 
   template.elements.forEach((element) => {
+    if (
+      template.hiddenElementIds?.includes(
+        element.id as ElectronicSignatureStampTemplateHiddenElementId,
+      )
+    ) {
+      return;
+    }
     const rect = templateElementToVisibleRect(stampRect, element);
     if (element.kind === "TEXT") {
       drawTemplateText(page, stampRect, element, stamp, fonts);

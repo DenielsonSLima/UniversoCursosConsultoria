@@ -1001,12 +1001,18 @@ const AssinaturaEletronicaConfig: React.FC = () => {
               </div>
             </div>
 
-            <div className="grid items-start gap-6 xl:grid-cols-[minmax(22rem,0.78fr)_minmax(0,1.5fr)]">
+            <div
+              className={isStampTab
+                ? "grid gap-6"
+                : "grid items-start gap-6 xl:grid-cols-[minmax(22rem,0.78fr)_minmax(0,1.5fr)]"}
+            >
               <section
                 id="signature-editor-panel"
                 role="tabpanel"
                 aria-labelledby={`signature-editor-tab-${activeTab.toLowerCase()}`}
-                className="space-y-5 rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm xl:sticky xl:top-5"
+                className={`space-y-5 rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm ${
+                  isStampTab ? "order-2" : "xl:sticky xl:top-5"
+                }`}
               >
                 <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
                   <div className="rounded-xl bg-blue-50 p-2 text-blue-700">
@@ -1289,7 +1295,13 @@ const AssinaturaEletronicaConfig: React.FC = () => {
                   )}
               </section>
 
-              <aside className="min-w-0 rounded-[2rem] border border-slate-200 bg-white p-3 shadow-sm xl:sticky xl:top-5">
+              <aside
+                className={`min-w-0 rounded-[2rem] border border-slate-200 bg-white p-3 shadow-sm ${
+                  isStampTab
+                    ? "order-1 mx-auto w-full max-w-6xl"
+                    : "xl:sticky xl:top-5"
+                }`}
+              >
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-3 px-2 pt-1">
                   <div>
                     <p className="text-[10px] font-black uppercase tracking-[0.16em] text-blue-600">

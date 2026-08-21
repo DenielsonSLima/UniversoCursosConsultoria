@@ -1,13 +1,22 @@
 # Lote ativo
 
-Estado: `EM_VALIDACAO_DE_PUBLICACAO_ASSINATURA_GLOBAL_V5_V7`
+Estado: `PUBLICADO_ASSINATURA_GLOBAL_V5_V7_1`
+
+## Complemento publicado: 2026-08-20-assinatura-global-diario-v5-v7-1
+
+- O editor passou a usar a caixa visual quadrada do QR para seleção, redimensionamento e colisão, eliminando o bloqueio provocado pela antiga caixa lógica retangular.
+- Todos os elementos possuem controles explícitos de área; Papel, Título e Linha decorativa podem ser ocultados, sem remover dados probatórios do evento.
+- QR, código e endereço foram alinhados em coluna. A legenda humana usa `www.universocc.com.br`, mas o QR e os links técnicos continuam HTTPS.
+- O CPF público do ato mostra os dois primeiros e os três últimos dígitos; registros históricos no padrão anterior continuam aceitos.
+- As migrations incrementais estão registradas no ledger como `20260820225028`, `20260820232636`, `20260821002331`, `20260821002333` e `20260821002336`. A migration `add_individual_signature_proofs_v1` foi preservada intacta.
+- Validação final: 220 testes relevantes, TypeScript, ESLint, Deno check/fmt, diff-check e PDF vetorial aprovados. A Edge de artefatos v9 está ativa com JWT obrigatório; o smoke anônimo retornou 401, confirmando o gate de autenticação.
 
 ## Fechamento complementar: 2026-08-20-assinatura-global-diario-v5-v7
 
 - Objetivo: substituir o carimbo separado por papel por um único template global livre, aplicado automaticamente a cada signatário canônico do Diário.
 - Escopo concluído: schema 5 de template global com imagem, textos, linha e QR reposicionáveis/redimensionáveis; prova, binding, rótulo e estilo imutáveis; distribuição automática de 1 a 6 signatários; acervo compatível com a cardinalidade; prévia e PDF vetoriais; marca estritamente resolvida de `watermark_landscape_<polo_id>`.
 - Segurança: a marca aceita somente o ativo canônico já registrado em Modelos de Documentos, inclusive data URI validada; não há fallback de polo/empresa nem marca editável no editor. A migration `add_individual_signature_proofs_v1` continua intacta.
-- Produção Supabase: migrations v4, v5, normalização v5, v6 e v7 foram aplicadas e pós-verificadas no projeto `kfekgwyqozhicpfuunpo`; a Edge de artefatos ativa está na versão 4 com JWT obrigatório e contrato de geometria global. A entrada de dry-run registrada pelo provedor foi preservada como fonte sem efeito e a migration real foi registrada separadamente.
+- Produção Supabase: migrations v4, v5, normalização v5, v6 e v7 foram aplicadas e pós-verificadas no projeto `kfekgwyqozhicpfuunpo`; a Edge de artefatos ativa está na versão 9 com JWT obrigatório e contrato de geometria global. A entrada de dry-run registrada pelo provedor foi preservada como fonte sem efeito e a migration real foi registrada separadamente.
 - Validação: contratos de assinatura, Edge, acervo, PDF vetorial e migrations, mais build Vite, aprovados localmente; pós-check remoto confirmou ACL, `search_path` e o ramo v6 do acervo. O smoke autenticado de assinatura não foi fabricado: a política `diario_classe` segue juridicamente desabilitada.
 
 ## Lote: 2026-08-19-piloto-assinatura-diario-professor-coordenador

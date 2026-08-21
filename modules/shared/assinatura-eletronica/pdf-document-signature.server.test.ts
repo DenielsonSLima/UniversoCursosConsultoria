@@ -33,6 +33,8 @@ const ONE_PIXEL_PNG = Uint8Array.from(
 const ONE_PIXEL_PNG_DATA_URL =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
 const VERIFICATION_URL = "https://universocc.com.br/validador?code=DIARIO-1";
+const VERIFICATION_DISPLAY_URL =
+  "www.universocc.com.br/validador?code=DIARIO-1";
 const PROFESSOR_EVENT_ID = "11111111-1111-4111-8111-111111111111";
 const COORDINATOR_EVENT_ID = "22222222-2222-4222-8222-222222222222";
 const PROFESSOR_PARTICIPANT_ID = "33333333-3333-4333-8333-333333333333";
@@ -237,7 +239,7 @@ const stamps = (): readonly [AppliedSignatureStamp, AppliedSignatureStamp] => [
     role: "PROFESSOR",
     participantId: PROFESSOR_PARTICIPANT_ID,
     signerName: "Professora Ana Souza",
-    signerCpfMasked: "***.***.***-09",
+    signerCpfMasked: "12*.***.**9-09",
     signedAt: "2026-08-19T13:14:15-03:00",
     timeZone: "America/Maceio",
     signatureEventId: PROFESSOR_EVENT_ID,
@@ -294,7 +296,7 @@ const threeGlobalTemplateStamps = (): readonly AppliedSignatureStamp[] => {
       role: "GESTOR",
       participantId: THIRD_PARTICIPANT_ID,
       signerName: "Gestora Carla Melo",
-      signerCpfMasked: "***.***.***-11",
+      signerCpfMasked: "98*.***.**7-11",
       signedAt: "2026-08-19T13:18:19-03:00",
       signatureEventId: THIRD_EVENT_ID,
       signatureHash: THIRD_SIGNATURE_HASH,
@@ -470,7 +472,7 @@ test("carimba Professor e Coordenador na página congelada sem rasterizar as pá
   assert.match(extracted.pages[2], /COORDENADOR/u);
   assert.match(extracted.pages[2], /13:14:15 UTC-03:00/i);
   const compactExtractedText = extracted.pages[2].replace(/\s+/gu, "");
-  assert.match(compactExtractedText, /CPF:\*\*\*\.\*\*\*\.\*\*\*-09/i);
+  assert.match(compactExtractedText, /CPF:12\*\.\*\*\*\.\*\*9-09/i);
   assert.match(compactExtractedText, new RegExp(PROFESSOR_SIGNATURE_HASH, "u"));
   assert.match(
     compactExtractedText,
@@ -532,7 +534,7 @@ test("template global único compõe duas instâncias automáticas com provas in
   assert.match(pageText, /PROFESSOR/u);
   assert.match(pageText, /COORDENADOR/u);
   assert.match(compactText, /Assinante:ProfessoraAnaSouza/u);
-  assert.match(compactText, /CPF:\*\*\*\.\*\*\*\.\*\*\*-09/u);
+  assert.match(compactText, /CPF:12\*\.\*\*\*\.\*\*9-09/u);
   assert.match(compactText, /13:14:15UTC-03:00/u);
   assert.match(compactText, new RegExp(PROFESSOR_SIGNATURE_HASH, "u"));
   assert.match(compactText, new RegExp(COORDINATOR_SIGNATURE_HASH, "u"));
@@ -540,9 +542,52 @@ test("template global único compõe duas instâncias automáticas com provas in
   assert.match(compactText, new RegExp(COORDINATOR_VERIFICATION_CODE, "u"));
   assert.match(
     compactText,
-    /https:\/\/universocc\.com\.br\/validador\?code=SIG-/u,
+    /www\.universocc\.com\.br\/validador\?code=SIG-/u,
   );
+  assert.doesNotMatch(compactText, /https:\/\//u);
   assert.doesNotMatch(pageText, /validade jurídica/iu);
+});
+
+test("itens visuais opcionais podem ficar ocultos no PDF sem alterar a prova", async () => {
+  const hiddenVisualTemplate = {
+    ...GLOBAL_STAMP_TEMPLATE,
+    hiddenElementIds: ["signerRole", "title", "divider"] as const,
+  };
+  const normalized = normalizeElectronicSignatureStampTemplate(
+    hiddenVisualTemplate,
+  );
+  assert.deepEqual(normalized.hiddenElementIds, [
+    "signerRole",
+    "title",
+    "divider",
+  ]);
+
+  const originalBytes = await createVectorPdf({ landscape: true });
+  const frozenTarget = await freezeDiaryPdfSignatureTarget(originalBytes, {
+    manifest: diaryManifest(3, false),
+  });
+  const result = await applyElectronicSignatureStamps({
+    originalBytes,
+    frozenTarget,
+    template: hiddenVisualTemplate,
+    autoLayout: GLOBAL_AUTO_LAYOUT,
+    stampPngBytes: ONE_PIXEL_PNG,
+    verificationUrl: VERIFICATION_URL,
+    stamps: globalTemplateStamps(),
+  });
+  const pageText = (await extractPdfText(result.finalBytes)).pages[
+    result.targetPageIndex
+  ];
+  const compactText = pageText.replace(/\s+/gu, "");
+
+  assert.doesNotMatch(pageText, /\bPROFESSOR\b/u);
+  assert.doesNotMatch(pageText, /\bCOORDENADOR\b/u);
+  assert.doesNotMatch(
+    pageText,
+    new RegExp(ELECTRONIC_SIGNATURE_STAMP_DISPLAY_TITLE, "u"),
+  );
+  assert.match(compactText, new RegExp(PROFESSOR_SIGNATURE_HASH, "u"));
+  assert.match(compactText, new RegExp(PROFESSOR_VERIFICATION_CODE, "u"));
 });
 
 test("o mesmo template global é repetido para N signatários sem papel no layout", async () => {
@@ -572,7 +617,9 @@ test("o mesmo template global é repetido para N signatários sem papel no layou
 });
 
 test("template global rejeita texto livre, quiet zone sobreposta e mistura com layout histórico", async () => {
-  const arbitraryLabel = globalThis.structuredClone(GLOBAL_STAMP_TEMPLATE) as unknown as {
+  const arbitraryLabel = globalThis.structuredClone(
+    GLOBAL_STAMP_TEMPLATE,
+  ) as unknown as {
     elements: Array<{ style: Record<string, unknown> }>;
   };
   arbitraryLabel.elements[3].style.label = "Nome livre: ";
@@ -581,7 +628,9 @@ test("template global rejeita texto livre, quiet zone sobreposta e mistura com l
     /estilo de signerName.*imutável/i,
   );
 
-  const hiddenHash = globalThis.structuredClone(GLOBAL_STAMP_TEMPLATE) as unknown as {
+  const hiddenHash = globalThis.structuredClone(
+    GLOBAL_STAMP_TEMPLATE,
+  ) as unknown as {
     elements: Array<{ style: Record<string, unknown> }>;
   };
   hiddenHash.elements[6].style.color = "#FFFFFF";
@@ -590,7 +639,9 @@ test("template global rejeita texto livre, quiet zone sobreposta e mistura com l
     /estilo de signatureHash.*imutável/i,
   );
 
-  const qrOverlap = globalThis.structuredClone(GLOBAL_STAMP_TEMPLATE) as unknown as {
+  const qrOverlap = globalThis.structuredClone(
+    GLOBAL_STAMP_TEMPLATE,
+  ) as unknown as {
     elements: Array<Record<string, unknown>>;
   };
   qrOverlap.elements[9].xBp = 60_000;
@@ -909,7 +960,7 @@ test("layout mínimo legível mantém CPF, hash completo, código e QR individua
     "",
   );
 
-  assert.match(compactExtractedText, /CPF:\*{3}[.]\*{3}[.]\*{3}-09/u);
+  assert.match(compactExtractedText, /CPF:12\*[.]\*{3}[.]\*{2}9-09/u);
   assert.match(compactExtractedText, new RegExp(PROFESSOR_SIGNATURE_HASH, "u"));
   assert.match(
     compactExtractedText,
@@ -1159,7 +1210,8 @@ test("orquestrador repassa o template global ao final vetorial e gera comprovant
   assert.match(receipt.text, /13:14:15 UTC-03:00/u);
   assert.match(receipt.text, /13:16:17 UTC-03:00/u);
   assert.match(receipt.text, /DIARIO-1/u);
-  assert.ok(receipt.text.includes(VERIFICATION_URL));
+  assert.ok(receipt.text.includes(VERIFICATION_DISPLAY_URL));
+  assert.doesNotMatch(receipt.text, /https:\/\//u);
   assert.doesNotMatch(receipt.text, /SIG-[0-9A-F-]{36}/u);
 
   const qaDirectory = process.env.SIGNATURE_PDF_QA_DIR;

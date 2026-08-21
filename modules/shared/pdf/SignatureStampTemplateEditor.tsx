@@ -1,10 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
+  Eye,
   GripVertical,
   Image as ImageIcon,
   Maximize2,
-  QrCode,
+  Minus,
+  Plus,
   ShieldCheck,
+  Trash2,
 } from "lucide-react";
 
 import type {
@@ -15,12 +18,20 @@ import type {
 import {
   cloneElectronicSignatureStampTemplate,
   getSignatureStampTemplateElementName,
+  getSignatureStampTemplateElementVisualBounds,
+  getSignatureStampTemplateQrCollisionElementIds,
+  isSignatureStampTemplateElementOptionalVisual,
+  isSignatureStampTemplateElementVisible,
   isSignatureStampTemplateQrClear,
   moveSignatureStampTemplateElement,
+  placeSignatureStampVerificationBelowQr,
   resizeSignatureStampTemplateElement,
+  resizeSignatureStampTemplateElementFromCenter,
   SIGNATURE_STAMP_TEMPLATE_COORDINATE_SCALE,
   SIGNATURE_STAMP_TEMPLATE_ELEMENT_SPECS,
 } from "../assinatura-eletronica/signature-stamp-template";
+import { LocalQrCodeImage } from "../qrcode/LocalQrCodeImage";
+import { formatDocumentValidationUrlForDisplay } from "../document-validation/document-validation.url";
 
 export interface SignatureStampTemplateEditorProps {
   /** Desenho global. Os bindings e estilos canônicos não são editáveis aqui. */
@@ -55,27 +66,35 @@ const SAMPLE_VALUES: Record<
   >,
   string
 > = {
-  SIGNER_ROLE: "Signatário autorizado",
+  SIGNER_ROLE: "Signatário",
   DISPLAY_TITLE: "Assinatura eletrônica",
-  SIGNER_NAME: "Nome do signatário",
-  SIGNED_AT: "20/08/2026, 15:42 BRT",
-  SIGNER_CPF_MASKED: "***.***.***-**",
+  SIGNER_NAME: "Maria S. Lima",
+  SIGNED_AT: "20/08/2026, 15:42",
+  SIGNER_CPF_MASKED: "12*.***.**9-01",
   SIGNATURE_HASH: "a91f…5e7c",
-  VERIFICATION_CODE: "VLD-8H2P-6KQ9",
-  VERIFICATION_URL: "validar.universo.example/8H2P",
+  VERIFICATION_CODE: "SIG-00000000-0000-4000-8000-000000000001",
+  VERIFICATION_URL:
+    "https://universocc.com.br/validador?code=SIG-00000000-0000-4000-8000-000000000001",
 };
+
+/** Conteúdo público fictício: a prévia nunca reutiliza um código real. */
+const SAMPLE_QR_URL =
+  "https://universocc.com.br/validador?code=SIG-00000000-0000-4000-8000-000000000001";
 
 const sameGeometry = (
   first: ElectronicSignatureStampTemplateV1,
   second: ElectronicSignatureStampTemplateV1,
 ) =>
+  first.elements.length === second.elements.length &&
   first.elements.every((element, index) => {
     const candidate = second.elements[index];
     return candidate && element.id === candidate.id &&
       element.xBp === candidate.xBp && element.yBp === candidate.yBp &&
       element.widthBp === candidate.widthBp &&
       element.heightBp === candidate.heightBp;
-  });
+  }) &&
+  (first.hiddenElementIds || []).join("|") ===
+    (second.hiddenElementIds || []).join("|");
 
 const replaceElement = (
   template: ElectronicSignatureStampTemplateV1,
@@ -135,10 +154,28 @@ const SignatureStampTemplateEditor: React.FC<
 
   const visibleTemplate = transientTemplate || template;
   const selectedElement = findElement(visibleTemplate, selectedElementId);
+  const isElementHidden = (
+    id: ElectronicSignatureStampTemplateElementId,
+  ) => !isSignatureStampTemplateElementVisible(template, id);
+  const selectedElementHidden = Boolean(
+    selectedElement && isElementHidden(selectedElement.id),
+  );
 
-  const announceBlockedQrCollision = () => {
+  const announceBlockedQrCollision = (
+    candidate: ElectronicSignatureStampTemplateV1,
+    elementId?: ElectronicSignatureStampTemplateElementId,
+  ) => {
+    const collisions = getSignatureStampTemplateQrCollisionElementIds(
+      candidate,
+    ).map(getSignatureStampTemplateElementName);
+    const collisionDescription = collisions.length
+      ? collisions.join(", ")
+      : "outro item protegido";
+    const elementName = elementId
+      ? getSignatureStampTemplateElementName(elementId)
+      : "este item";
     setAnnouncement(
-      "A alteração foi bloqueada: a área protegida do QR não pode se sobrepor a outro elemento.",
+      `Não foi possível alterar ${elementName}: a área protegida do QR ficaria sobre ${collisionDescription}. Mova ou reduza esses blocos; somente Papel, Título e Linha decorativa podem ser ocultados do visual.`,
     );
   };
 
@@ -173,10 +210,14 @@ const SignatureStampTemplateEditor: React.FC<
     element: ElectronicSignatureStampTemplateElement,
     deltaXBp: number,
     deltaYBp: number,
+    canvasAspectRatio = 1,
   ) => {
     if (element.kind === "QR") {
-      const sizeDelta = Math.abs(deltaXBp) >= Math.abs(deltaYBp)
-        ? deltaXBp
+      // O QR visível é quadrado. Convertemos o deslocamento horizontal
+      // para a escala vertical da superfície antes de escolher o maior gesto.
+      const horizontalSizeDelta = Math.round(deltaXBp * canvasAspectRatio);
+      const sizeDelta = Math.abs(horizontalSizeDelta) >= Math.abs(deltaYBp)
+        ? horizontalSizeDelta
         : deltaYBp;
       const size = element.widthBp + sizeDelta;
       return resizeSignatureStampTemplateElement(element, size, size);
@@ -192,9 +233,21 @@ const SignatureStampTemplateEditor: React.FC<
     interaction: PointerInteraction,
     candidate: ElectronicSignatureStampTemplateElement,
   ) => {
-    const nextTemplate = replaceElement(interaction.startTemplate, candidate);
+    let nextTemplate = replaceElement(interaction.startTemplate, candidate);
+    if (candidate.id === "verificationQr") {
+      try {
+        nextTemplate = placeSignatureStampVerificationBelowQr(nextTemplate);
+      } catch (error) {
+        setAnnouncement(
+          error instanceof Error
+            ? error.message
+            : "Não há espaço para manter o código abaixo do QR.",
+        );
+        return;
+      }
+    }
     if (!isSignatureStampTemplateQrClear(nextTemplate)) {
-      announceBlockedQrCollision();
+      announceBlockedQrCollision(nextTemplate, interaction.elementId);
       return;
     }
     interaction.latestTemplate = nextTemplate;
@@ -221,7 +274,12 @@ const SignatureStampTemplateEditor: React.FC<
     );
     const candidate = interaction.mode === "MOVE"
       ? moveSignatureStampTemplateElement(element, deltaXBp, deltaYBp)
-      : resizeFromDelta(element, deltaXBp, deltaYBp);
+      : resizeFromDelta(
+        element,
+        deltaXBp,
+        deltaYBp,
+        interaction.canvasWidth / interaction.canvasHeight,
+      );
     applyCandidate(interaction, candidate);
   };
 
@@ -253,12 +311,132 @@ const SignatureStampTemplateEditor: React.FC<
   const commitElement = (
     candidate: ElectronicSignatureStampTemplateElement,
   ) => {
-    const nextTemplate = replaceElement(template, candidate);
+    let nextTemplate = replaceElement(template, candidate);
+    if (candidate.id === "verificationQr") {
+      try {
+        nextTemplate = placeSignatureStampVerificationBelowQr(nextTemplate);
+      } catch (error) {
+        setAnnouncement(
+          error instanceof Error
+            ? error.message
+            : "Não há espaço para manter o código abaixo do QR.",
+        );
+        return false;
+      }
+    }
     if (!isSignatureStampTemplateQrClear(nextTemplate)) {
-      announceBlockedQrCollision();
+      announceBlockedQrCollision(nextTemplate, candidate.id);
+      return false;
+    }
+    if (sameGeometry(template, nextTemplate)) return false;
+    onCommit(nextTemplate);
+    return true;
+  };
+
+  const adjustSelectedElementSize = (deltaBp: number) => {
+    if (!selectedElement) return;
+    const widthBp = selectedElement.widthBp + deltaBp;
+    const heightBp = selectedElement.kind === "LINE"
+      ? selectedElement.heightBp
+      : selectedElement.kind === "TEXT"
+      ? selectedElement.heightBp + Math.round(deltaBp / 2)
+      : selectedElement.heightBp + deltaBp;
+    const candidate = selectedElement.kind === "QR"
+      ? resizeSignatureStampTemplateElement(
+        selectedElement,
+        widthBp,
+        heightBp,
+      )
+      : resizeSignatureStampTemplateElementFromCenter(
+        selectedElement,
+        widthBp,
+        heightBp,
+      );
+    if (
+      candidate.widthBp === selectedElement.widthBp &&
+      candidate.heightBp === selectedElement.heightBp
+    ) {
+      setAnnouncement(
+        deltaBp > 0
+          ? "Este elemento já atingiu o maior tamanho permitido nesta posição."
+          : "Este elemento já atingiu o menor tamanho permitido.",
+      );
       return;
     }
-    if (!sameGeometry(template, nextTemplate)) onCommit(nextTemplate);
+    if (commitElement(candidate)) {
+      setAnnouncement(
+        `Área de ${
+          getSignatureStampTemplateElementName(selectedElement.id)
+        } atualizada.`,
+      );
+    }
+  };
+
+  const applyStandardVerificationLayout = () => {
+    try {
+      const candidate = placeSignatureStampVerificationBelowQr(template);
+      if (!isSignatureStampTemplateQrClear(candidate)) {
+        announceBlockedQrCollision(candidate);
+        return;
+      }
+      if (sameGeometry(template, candidate)) {
+        setAnnouncement("O código já está posicionado abaixo do QR.");
+        return;
+      }
+      onCommit(candidate);
+      setAnnouncement(
+        "Código e endereço de verificação posicionados abaixo do QR.",
+      );
+    } catch (error) {
+      setAnnouncement(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível posicionar o código abaixo do QR.",
+      );
+    }
+  };
+
+  const toggleSelectedElementVisibility = () => {
+    if (
+      !selectedElement ||
+      !isSignatureStampTemplateElementOptionalVisual(selectedElement.id)
+    ) {
+      return;
+    }
+    const selectedId = selectedElement.id;
+    const hiddenIds = template.hiddenElementIds || [];
+    const isHidden = hiddenIds.includes(selectedId);
+    const nextHiddenElementIds = isHidden
+      ? hiddenIds.filter((id) => id !== selectedId)
+      : [
+        ...hiddenIds,
+        selectedId,
+      ].sort((left, right) => (
+        ["signerRole", "title", "divider"].indexOf(left) -
+        ["signerRole", "title", "divider"].indexOf(right)
+      ));
+    const candidate: ElectronicSignatureStampTemplateV1 = {
+      schemaVersion: template.schemaVersion,
+      coordinateSpace: template.coordinateSpace,
+      elements: template.elements,
+      ...(nextHiddenElementIds.length
+        ? { hiddenElementIds: nextHiddenElementIds }
+        : {}),
+    };
+    if (!isSignatureStampTemplateQrClear(candidate)) {
+      announceBlockedQrCollision(candidate);
+      return;
+    }
+    onCommit(candidate);
+    setAnnouncement(
+      isHidden
+        ? `${
+          getSignatureStampTemplateElementName(selectedId)
+        } restaurado no carimbo.`
+        : `${
+          getSignatureStampTemplateElementName(selectedId)
+        } ocultado somente no carimbo; as provas continuam preservadas.`,
+    );
   };
 
   const handleMoveKeyDown = (
@@ -302,11 +480,12 @@ const SignatureStampTemplateEditor: React.FC<
   const renderElement = (element: ElectronicSignatureStampTemplateElement) => {
     const selected = element.id === selectedElementId;
     const elementName = getSignatureStampTemplateElementName(element.id);
+    const visualBounds = getSignatureStampTemplateElementVisualBounds(element);
     const sharedStyle: React.CSSProperties = {
-      left: `${element.xBp / 1_000}%`,
-      top: `${element.yBp / 1_000}%`,
-      width: `${element.widthBp / 1_000}%`,
-      height: `${element.heightBp / 1_000}%`,
+      left: `${visualBounds.xBp / 1_000}%`,
+      top: `${visualBounds.yBp / 1_000}%`,
+      width: `${visualBounds.widthBp / 1_000}%`,
+      height: `${visualBounds.heightBp / 1_000}%`,
     };
 
     let content: React.ReactNode;
@@ -328,9 +507,17 @@ const SignatureStampTemplateEditor: React.FC<
         );
     } else if (element.kind === "QR") {
       content = (
-        <span className="flex h-full w-full items-center justify-center rounded-md border border-dashed border-slate-400 bg-white text-slate-700">
-          <QrCode aria-hidden="true" size="58%" strokeWidth={1.65} />
-        </span>
+        <LocalQrCodeImage
+          value={SAMPLE_QR_URL}
+          size={320}
+          margin={4}
+          errorCorrectionLevel="M"
+          alt="QR demonstrativo de validação"
+          loadingLabel="Gerando QR demonstrativo"
+          errorLabel="QR indisponível"
+          className="pointer-events-none h-full w-full rounded-md border border-dashed border-slate-400 bg-white p-[3%]"
+          imageClassName="h-full w-full object-contain [image-rendering:pixelated]"
+        />
       );
     } else if (element.kind === "LINE") {
       content = (
@@ -343,22 +530,45 @@ const SignatureStampTemplateEditor: React.FC<
         />
       );
     } else {
+      const sampleValue = SAMPLE_VALUES[element.binding];
+      const visibleSampleValue = element.binding === "VERIFICATION_URL"
+        ? formatDocumentValidationUrlForDisplay(sampleValue)
+        : sampleValue;
+      const stackedValidationText = element.binding === "VERIFICATION_CODE" ||
+        element.binding === "VERIFICATION_URL";
       content = (
         <span
-          className={`block h-full overflow-hidden whitespace-nowrap leading-tight ${
-            alignmentClass(element.style.align)
-          }`}
+          className={`block h-full select-none overflow-hidden whitespace-normal leading-[1.12] ${
+            stackedValidationText ? "break-all" : "break-words"
+          } ${alignmentClass(element.style.align)}`}
           style={{
             color: element.style.color,
             fontFamily: fontFamilyFor(element.style.font),
             fontWeight: element.style.font === "HELVETICA_BOLD" ? 700 : 500,
-            fontSize: `clamp(6px, ${
+            // A fonte no PDF é proporcional à altura física do selo. Usar cqw
+            // aqui (quando o selo é horizontal) fazia cada texto parecer enorme.
+            fontSize: `clamp(7px, ${
               element.style.fontSizeBp / 1_000
-            }cqw, 20px)`,
+            }cqh, 18px)`,
           }}
         >
-          {element.style.label}
-          {SAMPLE_VALUES[element.binding]}
+          {stackedValidationText
+            ? (
+              <>
+                <span className="block font-semibold">
+                  {element.binding === "VERIFICATION_CODE"
+                    ? "CÓD. VALIDAÇÃO"
+                    : element.style.label.trim()}
+                </span>
+                <span className="block">{visibleSampleValue}</span>
+              </>
+            )
+            : (
+              <>
+                {element.style.label}
+                {sampleValue}
+              </>
+            )}
         </span>
       );
     }
@@ -377,43 +587,40 @@ const SignatureStampTemplateEditor: React.FC<
           onPointerUp={finishInteraction}
           onPointerCancel={(event) => finishInteraction(event, true)}
           onKeyDown={(event) => handleMoveKeyDown(event, element)}
-          className={`absolute inset-0 min-h-0 min-w-0 cursor-move rounded border-2 bg-white/20 p-0 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 ${
+          className={`absolute inset-0 min-h-0 min-w-0 cursor-move rounded border-2 bg-white/10 p-0 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 ${
             selected
               ? "z-20 border-blue-600 shadow-[0_0_0_2px_rgba(255,255,255,0.92)]"
-              : "z-10 border-slate-400/70 hover:border-blue-500"
+              : "z-10 border-transparent hover:border-slate-400/80"
           } disabled:cursor-not-allowed disabled:opacity-65`}
         >
           {content}
-          <span className="pointer-events-none absolute -top-5 left-0 hidden rounded bg-[#001a33] px-1.5 py-0.5 text-[7px] font-black uppercase tracking-[0.08em] text-white shadow sm:block">
-            {elementName}
-          </span>
           <span className="sr-only">
             Valor probatório bloqueado. Use as setas para mover; Shift mais seta
             move em passos maiores.
           </span>
         </button>
-        <button
-          type="button"
-          disabled={disabled}
-          aria-label={`Redimensionar ${elementName}`}
-          aria-describedby="signature-stamp-template-guidance"
-          onClick={() => onSelect(element.id)}
-          onPointerDown={(event) =>
-            beginInteraction(event, "RESIZE", element.id)}
-          onPointerMove={continueInteraction}
-          onPointerUp={finishInteraction}
-          onPointerCancel={(event) => finishInteraction(event, true)}
-          onKeyDown={(event) => handleResizeKeyDown(event, element)}
-          className={`absolute -bottom-2 -right-2 z-30 flex h-5 w-5 items-center justify-center rounded-full border-2 bg-white text-slate-700 shadow-sm outline-none transition focus-visible:ring-2 focus-visible:ring-blue-500 ${
-            selected ? "border-blue-600" : "border-slate-400"
-          } disabled:cursor-not-allowed disabled:opacity-65`}
-        >
-          <Maximize2 aria-hidden="true" size={10} />
-          <span className="sr-only">
-            Use as setas para redimensionar; Shift mais seta altera em passos
-            maiores.
-          </span>
-        </button>
+        {selected && (
+          <button
+            type="button"
+            disabled={disabled}
+            aria-label={`Redimensionar ${elementName}`}
+            aria-describedby="signature-stamp-template-guidance"
+            onClick={() => onSelect(element.id)}
+            onPointerDown={(event) =>
+              beginInteraction(event, "RESIZE", element.id)}
+            onPointerMove={continueInteraction}
+            onPointerUp={finishInteraction}
+            onPointerCancel={(event) => finishInteraction(event, true)}
+            onKeyDown={(event) => handleResizeKeyDown(event, element)}
+            className="absolute -bottom-5 -right-5 z-30 flex h-11 w-11 touch-manipulation items-center justify-center rounded-full border-2 border-blue-600 bg-white text-slate-700 shadow-md outline-none transition hover:bg-blue-50 focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-65"
+          >
+            <Maximize2 aria-hidden="true" size={15} />
+            <span className="sr-only">
+              Use as setas para redimensionar; Shift mais seta altera em passos
+              maiores.
+            </span>
+          </button>
+        )}
       </div>
     );
   };
@@ -444,32 +651,39 @@ const SignatureStampTemplateEditor: React.FC<
 
       <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_13rem]">
         <div>
+          <div className="mb-2 flex items-center justify-between px-1 text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">
+            <span>Prévia na proporção do PDF</span>
+            <span>1 modelo · N signatários</span>
+          </div>
           <div
             ref={canvasRef}
-            className="relative aspect-square w-full touch-none overflow-visible rounded-2xl border border-slate-300 bg-[radial-gradient(circle_at_1px_1px,rgba(148,163,184,0.24)_1px,transparent_0)] bg-[size:12px_12px] p-2 shadow-inner"
-            style={{ containerType: "inline-size" }}
+            className="relative aspect-[19/7] w-full touch-none overflow-visible rounded-2xl border border-slate-300 bg-[radial-gradient(circle_at_1px_1px,rgba(148,163,184,0.24)_1px,transparent_0)] bg-[size:12px_12px] shadow-inner"
+            style={{ containerType: "size" }}
           >
-            <div className="pointer-events-none absolute inset-x-3 top-3 flex items-center justify-between text-[8px] font-black uppercase tracking-[0.12em] text-slate-400">
-              <span>Prévia geométrica</span>
-              <span>1 modelo • N signatários</span>
-            </div>
-            {visibleTemplate.elements.map(renderElement)}
+            {visibleTemplate.elements
+              .filter((element) =>
+                isSignatureStampTemplateElementVisible(
+                  visibleTemplate,
+                  element.id,
+                )
+              )
+              .map(renderElement)}
           </div>
           <p
             id="signature-stamp-template-guidance"
             className="mt-3 text-[11px] leading-relaxed text-slate-500"
           >
-            Clique em um elemento para selecioná-lo. Arraste-o para mover; use o
-            canto inferior direito ou as setas para redimensionar. A área
-            protegida do QR bloqueia sobreposições.
+            {selectedElementHidden
+              ? "Este item está oculto somente na aparência. Selecione Restaurar no painel ao lado para exibi-lo novamente."
+              : "Use os botões − e + no painel ao lado para alterar a área do bloco. Também é possível arrastar o item para mover e usar a alça azul grande para redimensionar."}
           </p>
         </div>
 
-        <div className="rounded-2xl bg-slate-50 p-3">
-          <p className="px-1 text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
+        <div className="flex flex-col rounded-2xl bg-slate-50 p-3">
+          <p className="order-1 px-1 text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
             Elementos do modelo
           </p>
-          <div className="mt-2 grid grid-cols-2 gap-1.5 xl:grid-cols-1">
+          <div className="order-3 mt-2 grid grid-cols-2 gap-1.5 xl:grid-cols-1">
             {SIGNATURE_STAMP_TEMPLATE_ELEMENT_SPECS.map((spec) => {
               const selected = spec.id === selectedElementId;
               return (
@@ -493,12 +707,17 @@ const SignatureStampTemplateEditor: React.FC<
                   <span className="truncate">
                     {getSignatureStampTemplateElementName(spec.id)}
                   </span>
+                  {isElementHidden(spec.id) && (
+                    <span className="ml-auto shrink-0 rounded-full bg-slate-200 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.08em] text-slate-600">
+                      Oculto
+                    </span>
+                  )}
                 </button>
               );
             })}
           </div>
           {selectedElement && (
-            <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3 text-[10px] leading-relaxed text-slate-600">
+            <div className="order-2 mt-3 rounded-xl border border-slate-200 bg-white p-3 text-[10px] leading-relaxed text-slate-600">
               <p className="font-black uppercase tracking-[0.1em] text-[#001a33]">
                 {getSignatureStampTemplateElementName(selectedElement.id)}
               </p>
@@ -509,14 +728,124 @@ const SignatureStampTemplateEditor: React.FC<
                 </span>
               </p>
               <p className="mt-1 text-slate-500">
-                Somente posição e dimensão podem ser alteradas.
+                {selectedElementHidden
+                  ? "Este item está oculto na aparência do carimbo; os dados e as provas continuam preservados."
+                  : "O conteúdo e o estilo canônicos ficam protegidos; você ajusta somente a área e a posição."}
               </p>
+              {isSignatureStampTemplateElementOptionalVisual(
+                  selectedElement.id,
+                )
+                ? (
+                  <button
+                    type="button"
+                    disabled={disabled}
+                    onClick={toggleSelectedElementVisibility}
+                    className={`mt-3 flex w-full items-center gap-2 rounded-lg border px-2 py-2 text-left text-[10px] font-black uppercase tracking-[0.08em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 ${
+                      selectedElementHidden
+                        ? "border-blue-200 bg-white text-blue-800 hover:bg-blue-50"
+                        : "border-red-200 bg-white text-red-700 hover:bg-red-50"
+                    }`}
+                  >
+                    {selectedElementHidden
+                      ? <Eye aria-hidden="true" size={15} />
+                      : <Trash2 aria-hidden="true" size={15} />}
+                    {selectedElementHidden
+                      ? "Restaurar no carimbo"
+                      : "Ocultar do carimbo"}
+                  </button>
+                )
+                : (
+                  <p className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 text-slate-600">
+                    <ShieldCheck
+                      aria-hidden="true"
+                      size={14}
+                      className="mr-1 inline-block text-blue-700"
+                    />
+                    Este item é obrigatório no carimbo e não pode ser excluído.
+                  </p>
+                )}
+              <div className="mt-3 rounded-lg bg-blue-50 p-2 text-blue-900">
+                {selectedElement.kind === "QR" && (
+                  <p className="font-medium">
+                    QR real de demonstração. O QR final apontará para a URL
+                    individual desta assinatura.
+                  </p>
+                )}
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <span className="font-bold">
+                    Área: {Math.round(selectedElement.widthBp / 1_000)}% ×{"  "}
+                    {Math.round(selectedElement.heightBp / 1_000)}%
+                  </span>
+                  <span className="inline-flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={disabled}
+                      onClick={() => adjustSelectedElementSize(-2_000)}
+                      className="inline-flex h-10 w-10 touch-manipulation items-center justify-center rounded-lg border border-blue-200 bg-white text-blue-800 transition hover:bg-blue-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+                      aria-label={`Diminuir área de ${
+                        getSignatureStampTemplateElementName(selectedElement.id)
+                      }`}
+                    >
+                      <Minus aria-hidden="true" size={17} />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={disabled}
+                      onClick={() => adjustSelectedElementSize(2_000)}
+                      className="inline-flex h-10 w-10 touch-manipulation items-center justify-center rounded-lg border border-blue-700 bg-blue-700 text-white transition hover:bg-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+                      aria-label={`Aumentar área de ${
+                        getSignatureStampTemplateElementName(selectedElement.id)
+                      }`}
+                    >
+                      <Plus aria-hidden="true" size={17} />
+                    </button>
+                  </span>
+                </div>
+                <p className="mt-2 text-slate-600">
+                  {selectedElement.kind === "QR"
+                    ? "O QR mantém o formato quadrado e não pode cobrir itens visíveis."
+                    : selectedElement.kind === "LINE"
+                    ? "Na linha, os controles alteram apenas a largura."
+                    : selectedElement.kind === "TEXT"
+                    ? "Nos textos, os controles aumentam a área do bloco; a fonte oficial permanece a mesma."
+                    : "Nos elementos de imagem, os controles alteram largura e altura."}
+                </p>
+                {announcement && (
+                  <p
+                    role="status"
+                    aria-live="polite"
+                    className="mt-3 rounded-lg border border-blue-200 bg-white px-2 py-2 text-blue-950"
+                  >
+                    {announcement}
+                  </p>
+                )}
+              </div>
+              {(selectedElement.id === "verificationQr" ||
+                selectedElement.id === "verificationCode" ||
+                selectedElement.id === "verificationUrl") && (
+                <button
+                  type="button"
+                  disabled={disabled}
+                  onClick={applyStandardVerificationLayout}
+                  className="mt-2 w-full rounded-lg border border-blue-200 bg-white px-2 py-2 text-left text-[10px] font-black uppercase tracking-[0.08em] text-blue-800 transition hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Posicionar código abaixo do QR
+                </button>
+              )}
             </div>
           )}
         </div>
       </div>
 
-      <p className="sr-only" aria-live="polite">{announcement}</p>
+      {!selectedElement && announcement && (
+        <p
+          role="status"
+          aria-live="polite"
+          className="mt-4 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-medium leading-relaxed text-blue-950"
+        >
+          {announcement}
+        </p>
+      )}
     </section>
   );
 };

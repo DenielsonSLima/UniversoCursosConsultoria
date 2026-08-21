@@ -148,7 +148,7 @@ const validFinalPreflight = () => ({
       order: 1,
       status: "ASSINADO",
       signerName: "Professor Teste",
-      signerCpfMasked: "***.***.***-01",
+      signerCpfMasked: "12*.***.**9-01",
       signedAt: "2026-08-19T12:00:01-03:00",
       signatureEventId: UUIDS[4],
       signatureHash: "2".repeat(64),
@@ -214,6 +214,8 @@ Deno.test("normaliza manifestos e alvo congelado antes do compositor", () => {
   assert.equal(result.semanticManifestSnapshot.targetPageIndex, 0);
   assert.equal(result.frozenSignatureTargetSnapshot.targetPage.pageNumber, 1);
   assert.equal(result.pdfAssetManifestSnapshot.assets.validationQr.width, 240);
+  assert.equal(result.participants[0].signerCpfMasked, "12*.***.**9-01");
+  assert.equal(result.participants[1].signerCpfMasked, "***.***.***-02");
 });
 
 Deno.test("rejeita alvo/manifesto adulterados e método legado", () => {
