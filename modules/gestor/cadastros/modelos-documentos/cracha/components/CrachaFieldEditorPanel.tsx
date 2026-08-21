@@ -12,13 +12,14 @@ import {
 interface CrachaFieldEditorPanelProps {
   field: any;
   hasBack: boolean;
+  templateVariables?: readonly string[];
   onClose: () => void;
   onRemove: (fieldId: string) => void;
   onUpdate: (updates: any) => void;
   onUpdateStyle: (updates: any) => void;
 }
 
-const templateVariables = [
+const defaultTemplateVariables = [
   '{{ALUNO_NOME}}',
   '{{ALUNO_MATRICULA}}',
   '{{ALUNO_CPF}}',
@@ -30,6 +31,7 @@ const templateVariables = [
 const CrachaFieldEditorPanel: React.FC<CrachaFieldEditorPanelProps> = ({
   field,
   hasBack,
+  templateVariables = defaultTemplateVariables,
   onClose,
   onRemove,
   onUpdate,
@@ -189,6 +191,8 @@ const CrachaFieldEditorPanel: React.FC<CrachaFieldEditorPanelProps> = ({
               <button
                 type="button"
                 onClick={() => onUpdateStyle({ fontWeight: field.style?.fontWeight === 'bold' ? 'normal' : 'bold' })}
+                aria-label="Alternar negrito"
+                aria-pressed={field.style?.fontWeight === 'bold'}
                 className={`p-1.5 rounded transition-colors ${field.style?.fontWeight === 'bold' ? 'bg-slate-200 text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}
               >
                 <Bold size={12} />
@@ -196,6 +200,8 @@ const CrachaFieldEditorPanel: React.FC<CrachaFieldEditorPanelProps> = ({
               <button
                 type="button"
                 onClick={() => onUpdateStyle({ fontStyle: field.style?.fontStyle === 'italic' ? 'normal' : 'italic' })}
+                aria-label="Alternar itálico"
+                aria-pressed={field.style?.fontStyle === 'italic'}
                 className={`p-1.5 rounded transition-colors ${field.style?.fontStyle === 'italic' ? 'bg-slate-200 text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}
               >
                 <Italic size={12} />
@@ -210,6 +216,8 @@ const CrachaFieldEditorPanel: React.FC<CrachaFieldEditorPanelProps> = ({
                     key={alignment}
                     type="button"
                     onClick={() => onUpdateStyle({ textAlign: alignment })}
+                    aria-label={`Alinhar texto à ${alignment === 'left' ? 'esquerda' : alignment === 'right' ? 'direita' : 'centro'}`}
+                    aria-pressed={active}
                     className={`p-1.5 rounded transition-colors ${active ? 'bg-slate-200 text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}
                   >
                     <Icon size={12} />

@@ -16,16 +16,32 @@ import CrachaEditorToast, { CrachaEditorToastState } from './CrachaEditorToast';
 import CrachaPreviewWorkspace from './CrachaPreviewWorkspace';
 import { DocumentPreviewAssetGate } from '../../components/DocumentTemplateLoadingState';
 import { useDocumentBackgroundReadiness } from '../../hooks/useDocumentBackgroundReadiness';
-import { getCrachaUploadExtension, initializeCrachaModel } from './cracha-editor.model';
+import {
+  getCrachaTemplateLabel,
+  getCrachaTemplateVariables,
+  getCrachaUploadExtension,
+  initializeCrachaModel,
+  type CrachaTemplateModel,
+  type CrachaTemplateVariant,
+} from './cracha-editor.model';
 
 interface CrachaEditorProps {
-  modelo: any;
-  onSave: (modelo: any) => void;
+  modelo: CrachaTemplateModel | Record<string, unknown>;
+  onSave: (modelo: CrachaTemplateModel) => void | Promise<void>;
   onCancel: () => void;
+  title?: string;
+  variant?: CrachaTemplateVariant;
 }
 
-const CrachaEditor: React.FC<CrachaEditorProps> = ({ modelo, onSave, onCancel }) => {
-  const [formData, setFormData] = useState<any>(() => initializeCrachaModel(modelo));
+const CrachaEditor: React.FC<CrachaEditorProps> = ({
+  modelo,
+  onSave,
+  onCancel,
+  title,
+  variant = 'estagio',
+}) => {
+  const templateVariant: CrachaTemplateVariant = variant === 'preceptor' ? 'preceptor' : 'estagio';
+  const [formData, setFormData] = useState<CrachaTemplateModel>(() => initializeCrachaModel(modelo, templateVariant));
   const backgrounds = useDocumentBackgroundReadiness(
     formData.bgFrenteUrl,
     formData.hasVerso ? formData.bgVersoUrl : null,
@@ -35,6 +51,7 @@ const CrachaEditor: React.FC<CrachaEditorProps> = ({ modelo, onSave, onCancel })
   const [previewMode, setPreviewMode] = useState<'frente' | 'verso' | 'ambos'>('ambos');
   const [zoomLevel, setZoomLevel] = useState(120);
   const [isUploading, setIsUploading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [toast, setToast] = useState<CrachaEditorToastState | null>(null);
 
@@ -70,7 +87,7 @@ const CrachaEditor: React.FC<CrachaEditorProps> = ({ modelo, onSave, onCancel })
     try {
       const side = fieldName === 'bgFrenteUrl' ? 'frente' : 'verso';
       const uniqueId = crypto.randomUUID?.() || `${Date.now()}`;
-      const filePath = `templates/cracha-${side}-${uniqueId}.${getCrachaUploadExtension(file)}`;
+      const filePath = `templates/cracha-${templateVariant}-${side}-${uniqueId}.${getCrachaUploadExtension(file)}`;
 
       const { data, error } = await supabase.storage
         .from('documentos')
@@ -183,30 +200,55 @@ const CrachaEditor: React.FC<CrachaEditorProps> = ({ modelo, onSave, onCancel })
 
   const handleZoomOut = () => setZoomLevel(prev => Math.max(50, prev - 10));
   const handleZoomIn = () => setZoomLevel(prev => Math.min(200, prev + 10));
+  const editorTitle = title || getCrachaTemplateLabel(templateVariant);
+  const photoLabel = templateVariant === 'preceptor' ? 'Foto do Preceptor' : 'Foto do Estudante';
+
+  const handleSave = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
+    try {
+      await onSave(formData);
+      showToast('Modelo salvo com sucesso!', 'success');
+    } catch (error) {
+      console.error('Erro ao salvar o modelo de crachá:', error);
+      showToast(error instanceof Error ? error.message : 'Não foi possível salvar o modelo.', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <div className="bg-white rounded-[2.5rem] p-4 lg:p-8 border border-slate-200 shadow-sm animate-fadeIn flex flex-col min-h-[calc(100vh-10rem)]">
-      <CrachaEditorHeader onCancel={onCancel} onSave={() => onSave(formData)} />
+      <CrachaEditorHeader onCancel={onCancel} onSave={handleSave} title={editorTitle} isSaving={isSaving} />
 
       <div className="flex flex-col xl:flex-row gap-8 flex-1">
         
         {/* Editor Config Panel (Left) */}
         <div className="w-full xl:w-[400px] flex flex-col gap-6 shrink-0">
-          <div className="p-1 rounded-xl flex gap-1 bg-slate-100">
+          <div className="p-1 rounded-xl flex gap-1 bg-slate-100" role="tablist" aria-label="Áreas de edição do crachá">
              <button
+                type="button"
                 onClick={() => setActiveTab('config')}
+                role="tab"
+                aria-selected={activeTab === 'config'}
                 className={`flex-1 py-2 px-4 text-xs font-bold uppercase tracking-widest rounded-lg transition-all ${activeTab === 'config' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
              >
                 Config
              </button>
              <button
+                type="button"
                 onClick={() => setActiveTab('frente')}
+                role="tab"
+                aria-selected={activeTab === 'frente'}
                 className={`flex-1 py-2 px-4 text-xs font-bold uppercase tracking-widest rounded-lg transition-all ${activeTab === 'frente' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
              >
                 Frente
              </button>
              <button
+                type="button"
                 onClick={() => setActiveTab('verso')}
+                role="tab"
+                aria-selected={activeTab === 'verso'}
                 className={`flex-1 py-2 px-4 text-xs font-bold uppercase tracking-widest rounded-lg transition-all ${activeTab === 'verso' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
              >
                 Verso
@@ -306,7 +348,7 @@ const CrachaEditor: React.FC<CrachaEditorProps> = ({ modelo, onSave, onCancel })
                       onChange={handleChange}
                       className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs font-bold text-slate-700 outline-none focus:border-blue-500 focus:bg-white transition-all"
                     />
-                    <label className="flex items-center justify-center p-3 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 rounded-xl border border-slate-200 cursor-pointer transition-colors relative">
+                    <label aria-label={`Enviar imagem de fundo da ${activeTab === 'frente' ? 'frente' : 'verso'}`} className="flex items-center justify-center p-3 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 rounded-xl border border-slate-200 cursor-pointer transition-colors relative">
                       <input 
                         type="file" 
                         accept="image/*" 
@@ -425,7 +467,7 @@ const CrachaEditor: React.FC<CrachaEditorProps> = ({ modelo, onSave, onCancel })
                               {f.type === 'foto' && (
                                 <>
                                   <User size={14} className="text-slate-400 shrink-0" />
-                                  <span>Foto do Estudante</span>
+                                  <span>{photoLabel}</span>
                                 </>
                               )}
                               {f.type === 'qrcode' && (
@@ -470,6 +512,7 @@ const CrachaEditor: React.FC<CrachaEditorProps> = ({ modelo, onSave, onCancel })
             <CrachaFieldEditorPanel
               field={selectedField}
               hasBack={formData.hasVerso}
+              templateVariables={getCrachaTemplateVariables(templateVariant)}
               onClose={() => setSelectedFieldId(null)}
               onRemove={handleRemoveField}
               onUpdate={updateSelectedField}
@@ -482,6 +525,7 @@ const CrachaEditor: React.FC<CrachaEditorProps> = ({ modelo, onSave, onCancel })
         <DocumentPreviewAssetGate status={backgrounds.status} onRetry={backgrounds.retry} title="crachá">
           <CrachaPreviewWorkspace
             formData={formData}
+            variant={templateVariant}
             previewMode={previewMode}
             selectedFieldId={selectedFieldId}
             zoomLevel={zoomLevel}

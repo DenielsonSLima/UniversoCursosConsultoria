@@ -40,7 +40,17 @@ const PrivacyPage: React.FC = () => {
               <li>Inscrever-se em nossa newsletter;</li>
               <li>Acessar nossa área do aluno ou portal do gestor.</li>
             </ul>
-            <p className="mt-2">Os dados podem incluir nome, e-mail, telefone, CPF, endereço e dados acadêmicos.</p>
+            <p className="mt-2">Os dados podem incluir nome, e-mail, telefone, CPF, endereço, sexo, informação de raça/cor por autodeclaração e dados acadêmicos.</p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-bold text-[#001a33] mb-4 uppercase tracking-tight">2.1. Raça/cor e sexo no cadastro</h2>
+            <p>
+              A informação de raça/cor é solicitada por autodeclaração. O cadastro exige a seleção de uma opção, inclusive “Prefiro não informar”, que registra a ausência de declaração. A informação de raça/cor é dado pessoal sensível nos termos da LGPD.
+            </p>
+            <p className="mt-2">
+              Esses dados são utilizados somente para registros educacionais, atendimento a obrigações legais e regulatórias e indicadores de inclusão. Não são usados para publicidade, e o acesso é restrito às pessoas autorizadas para essas finalidades.
+            </p>
           </section>
 
           <section>

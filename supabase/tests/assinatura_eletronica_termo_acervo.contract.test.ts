@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 
 const migrationUrl = new URL(
-  "../migrations/20260820002006_add_assinatura_termo_acervo_v1.sql",
+  "../migrations/20260819190000_add_assinatura_termo_acervo_v1.sql",
   import.meta.url,
 );
 const archiveBrowserServiceUrl = new URL(
@@ -11,7 +11,7 @@ const archiveBrowserServiceUrl = new URL(
   import.meta.url,
 );
 const artifactPipelineUrl = new URL(
-  "../migrations/20260819203314_harden_diario_artifact_pipeline.sql",
+  "../migrations/20260819160000_harden_diario_artifact_pipeline.sql",
   import.meta.url,
 );
 const [sql, archiveBrowserService, artifactPipeline] = await Promise.all([

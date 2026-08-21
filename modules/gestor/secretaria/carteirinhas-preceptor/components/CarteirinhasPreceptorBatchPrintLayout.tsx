@@ -160,7 +160,7 @@ const CardWatermark = ({ card }: { card: CanonicalPreceptorCardData }) => {
 
 const CardPayloadUnavailable = () => (
   <div
-    data-render-error="O servidor não retornou os dados canônicos necessários para imprimir esta carteirinha de preceptor."
+    data-render-error="O servidor não retornou os dados canônicos necessários para imprimir este Crachá de Preceptor."
     className="flex h-[54mm] w-[85.6mm] flex-col items-center justify-center border border-amber-200 bg-amber-50 p-[5mm] text-center text-amber-800"
   >
     <FileWarning size={18} />
@@ -176,7 +176,7 @@ const PreceptorCardFront = ({ document }: { document: CarteirinhaPreceptorPrepar
 
   return (
     <article
-      aria-label={`Frente da carteirinha de ${card.holderName}`}
+      aria-label={`Frente do Crachá de Preceptor de ${card.holderName}`}
       className="relative flex h-[54mm] w-[85.6mm] overflow-hidden bg-[#001a33] text-white shadow-sm [box-sizing:border-box]"
       data-canonical-document-side="front"
     >
@@ -210,7 +210,7 @@ const PreceptorCardBack = ({ document }: { document: CarteirinhaPreceptorPrepare
 
   return (
     <article
-      aria-label={`Verso da carteirinha de ${card.holderName}`}
+      aria-label={`Verso do Crachá de Preceptor de ${card.holderName}`}
       className="relative flex h-[54mm] w-[85.6mm] flex-col overflow-hidden bg-slate-50 p-[5mm] text-[#001a33] shadow-sm [box-sizing:border-box]"
       data-canonical-document-side="back"
       data-requires-qr-code={card.qrEnabled ? 'true' : undefined}
@@ -235,7 +235,7 @@ const PreceptorCardBack = ({ document }: { document: CarteirinhaPreceptorPrepare
               <DocumentValidationQrCodeImage
                 code={card.validationCode}
                 size={240}
-                alt="QR Code de validação da carteirinha de preceptor"
+                alt="QR Code de validação do Crachá de Preceptor"
                 className="h-[16.5mm] w-[16.5mm]"
               />
               <p className="mt-[0.5mm] flex items-center justify-center gap-[0.5mm] text-[4.5px] font-black uppercase tracking-wide text-slate-500">
@@ -298,7 +298,7 @@ const BATCH_PRINT_STYLES = `
 `;
 
 /**
- * Folhas A4 retrato para impressão frente/verso de carteirinhas CR80.
+ * Folhas A4 retrato para impressão frente/verso de Crachás de Preceptor CR80.
  * Cada página de frentes é seguida de uma página de versos com as colunas
  * espelhadas, pronta para duplex. A emissão e os dados exibidos já chegaram
  * prontos da RPC; o componente só monta a grade física de impressão.
@@ -335,7 +335,7 @@ const CarteirinhasPreceptorBatchPrintLayout: React.FC<CarteirinhasPreceptorBatch
                 ))}
               </div>
               <p className="absolute inset-x-[10mm] bottom-[2mm] flex justify-between text-[6px] font-black uppercase tracking-[0.14em] text-slate-400 print:hidden">
-                <span>Carteirinhas de preceptor · frentes</span>
+                <span>Crachás de Preceptor · frentes</span>
                 <span>10 CR80 por folha A4</span>
               </p>
             </section>
@@ -354,7 +354,7 @@ const CarteirinhasPreceptorBatchPrintLayout: React.FC<CarteirinhasPreceptorBatch
                 ))}
               </div>
               <p className="absolute inset-x-[10mm] bottom-[2mm] flex justify-between text-[6px] font-black uppercase tracking-[0.14em] text-slate-400 print:hidden">
-                <span>Carteirinhas de preceptor · versos espelhados</span>
+                <span>Crachás de Preceptor · versos espelhados</span>
                 <span>Duplex: virar no lado longo</span>
               </p>
             </section>

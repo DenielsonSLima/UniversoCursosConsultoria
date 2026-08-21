@@ -158,15 +158,22 @@ const ParceiroProfessorForm: React.FC<ParceiroProfessorFormProps> = ({ onCancel,
   };
 
   const stepValid = () => {
-    if (currentStep === 1) return formData.nomeCompleto.trim() !== '' && isValidCpf(formData.cpf) && formData.dataNascimento.length === 10;
-    if (currentStep === 4) return isValidEmail(formData.email) && formData.contato1.length >= 14;
+    if (currentStep === 1) {
+      return formData.nomeCompleto.trim() !== ''
+        && (!formData.cpf || isValidCpf(formData.cpf))
+        && (!formData.dataNascimento || formData.dataNascimento.length === 10);
+    }
+    if (currentStep === 4) {
+      return (!formData.email || isValidEmail(formData.email))
+        && (!formData.contato1 || formData.contato1.length >= 14);
+    }
     return true;
   };
 
   const handleNext = () => {
     if (!stepValid()) {
-      if (currentStep === 1) alert('Informe nome, CPF válido e data de nascimento para avançar.');
-      if (currentStep === 4) alert('Informe e-mail válido e telefone para concluir.');
+      if (currentStep === 1) alert('Informe o nome e, se preencher, use CPF e data de nascimento válidos.');
+      if (currentStep === 4) alert('Se preencher, informe e-mail válido e telefone completo.');
       return;
     }
     if (currentStep < 4) setCurrentStep(s => s + 1);
@@ -177,20 +184,20 @@ const ParceiroProfessorForm: React.FC<ParceiroProfessorFormProps> = ({ onCancel,
     e.preventDefault();
     const finalTitulacao = showCustomTitulacao ? customTitulacao.trim().toUpperCase() : selectedTitulacao;
     const finalVinculo = showCustomVinculo ? customVinculo.trim().toUpperCase() : selectedVinculo;
-    if (!isValidCpf(formData.cpf)) {
+    if (formData.cpf && !isValidCpf(formData.cpf)) {
       alert('CPF do professor inválido. Corrija antes de salvar.');
       return;
     }
-    if (!formData.dataNascimento || formData.dataNascimento.length !== 10) {
-      alert('Data de nascimento do professor é obrigatória.');
+    if (formData.dataNascimento && formData.dataNascimento.length !== 10) {
+      alert('Data de nascimento do professor inválida. Corrija antes de salvar.');
       return;
     }
-    if (!isValidEmail(formData.email)) {
-      alert('E-mail do professor inválido. Ele será usado como login.');
+    if (formData.email && !isValidEmail(formData.email)) {
+      alert('E-mail do professor inválido. Ele será usado como login quando informado.');
       return;
     }
-    if (formData.contato1.length < 14) {
-      alert('Telefone/WhatsApp do professor é obrigatório.');
+    if (formData.contato1 && formData.contato1.length < 14) {
+      alert('Telefone/WhatsApp do professor inválido. Corrija antes de salvar.');
       return;
     }
     if (onSave) onSave({
@@ -298,7 +305,7 @@ const ParceiroProfessorForm: React.FC<ParceiroProfessorFormProps> = ({ onCancel,
 
             {/* Polo Multi-select */}
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-5">
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1.5 ml-0.5">Polos / Unidades Vinculadas (Selecione um ou mais) <span className="text-red-500">*</span></label>
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1.5 ml-0.5">Polos / Unidades Vinculadas (Selecione um ou mais)</label>
               <div className="flex flex-wrap gap-3 mt-2">
                 {polosList.length > 0 ? (
                   polosList.map((poloItem) => {
@@ -386,15 +393,15 @@ const ParceiroProfessorForm: React.FC<ParceiroProfessorFormProps> = ({ onCancel,
               </div>
 
               <div>
-                <label className={labelCls}>CPF <span className="text-red-500">*</span></label>
+                <label className={labelCls}>CPF</label>
                 <input type="text" name="cpf" value={formData.cpf} onChange={handleChange}
-                  maxLength={14} className={`${inputCls} font-mono`} placeholder="000.000.000-00" required />
+                  maxLength={14} className={`${inputCls} font-mono`} placeholder="000.000.000-00" />
               </div>
 
               <div>
-                <label className={labelCls}>Data de Nascimento <span className="text-red-500">*</span></label>
+                <label className={labelCls}>Data de Nascimento</label>
                 <input type="text" name="dataNascimento" value={formData.dataNascimento} onChange={handleChange}
-                  maxLength={10} className={inputCls} placeholder="DD/MM/AAAA" required />
+                  maxLength={10} className={inputCls} placeholder="DD/MM/AAAA" />
               </div>
 
               <div>
@@ -663,18 +670,18 @@ const ParceiroProfessorForm: React.FC<ParceiroProfessorFormProps> = ({ onCancel,
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="md:col-span-2">
-                <label className={labelCls}><Mail size={12} className="inline mr-1" />E-mail <span className="text-red-500">*</span></label>
+                <label className={labelCls}><Mail size={12} className="inline mr-1" />E-mail de acesso</label>
                 <input type="email" name="email" value={formData.email} onChange={handleChange}
-                  className={inputCls} placeholder="professor@email.com" required />
+                  className={inputCls} placeholder="professor@email.com" />
                 <p className="text-[10px] text-slate-400 mt-1 ml-0.5 flex items-center gap-1">
-                  <AlertCircle size={10} />O acesso ao portal do professor será enviado para este e-mail.
+                  <AlertCircle size={10} />Quando um e-mail válido for informado, o professor receberá um convite para criar a própria senha.
                 </p>
               </div>
 
               <div>
-                <label className={labelCls}>Celular / WhatsApp <span className="text-red-500">*</span></label>
+                <label className={labelCls}>Celular / WhatsApp</label>
                 <input type="tel" name="contato1" value={formData.contato1} onChange={handleChange}
-                  maxLength={15} className={inputCls} placeholder="(00) 00000-0000" required />
+                  maxLength={15} className={inputCls} placeholder="(00) 00000-0000" />
               </div>
 
               <div>

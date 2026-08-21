@@ -21,6 +21,7 @@ const makeAdmin = (
   identityConflicts: { parceiros?: any[]; usuarios_sistema?: any[] } = {},
 ) => {
   const updates: Array<Record<string, unknown>> = [];
+  const inviteRedirects: string[] = [];
   let inviteCalls = 0;
   let createCalls = 0;
   let generateLinkCalls = 0;
@@ -52,8 +53,12 @@ const makeAdmin = (
           data: { user: authUsers.find((user) => user.id === id) || null },
           error: null,
         }),
-        inviteUserByEmail: async () => {
+        inviteUserByEmail: async (
+          _email: string,
+          options: { redirectTo?: string },
+        ) => {
           inviteCalls += 1;
+          if (options.redirectTo) inviteRedirects.push(options.redirectTo);
           return {
             data: {
               user: {
@@ -83,6 +88,7 @@ const makeAdmin = (
   return {
     admin,
     updates,
+    inviteRedirects,
     counts: () => ({ inviteCalls, createCalls, generateLinkCalls }),
   };
 };
@@ -95,7 +101,7 @@ const contextFor = (admin: any): HandlerContext => ({
 });
 
 const options = {
-  redirectTo: "https://universocc.com.br/primeiro-acesso",
+  redirectTo: "https://universocc.com.br/login",
   supabaseUrl: "https://project.supabase.co",
   publicApiKey: { apiKey: "anon-key", message: null },
 };
@@ -117,6 +123,9 @@ Deno.test("convite novo vincula auth_user_id e não aceita termos pelo aluno", a
     createCalls: 0,
     generateLinkCalls: 0,
   });
+  assert.deepEqual(fixture.inviteRedirects, [
+    "https://universocc.com.br/login",
+  ]);
   assert.ok(fixture.updates.some((patch) =>
     patch.auth_user_id === "auth-1" &&
     patch.acesso_status === "processando"

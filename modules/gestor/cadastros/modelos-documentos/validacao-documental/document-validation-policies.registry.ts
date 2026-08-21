@@ -13,7 +13,7 @@ export const DOCUMENT_VALIDATION_CATALOG: DocumentValidationCatalogItem[] = [
   },
   {
     id: 'carteirinha_preceptor',
-    label: 'Carteirinha de Preceptor',
+    label: 'Crachá de Preceptor',
     description: 'Credencial de professor ou preceptor emitida pelo polo, com identificação pública mínima.',
     group: 'Identificação',
   },

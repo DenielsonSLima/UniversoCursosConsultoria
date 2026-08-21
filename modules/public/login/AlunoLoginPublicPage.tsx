@@ -1,12 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   alunoPublicAuthService,
   getSafePublicAlunoRedirectPath,
   isPublicAlunoAlreadyRegisteredError,
 } from './aluno-public-auth.service';
 import { supabase } from '../../../lib/supabase';
-import { savePortalSession } from '../../login/portal-session';
+import { savePortalSession, type PortalAuthProfile } from '../../login/portal-session';
+import { resolveProfilePostLoginRoute } from '../../login/profile-selection';
+import PortalProfileSelector, { portalProfileKey } from '../../login/components/PortalProfileSelector';
 import { isValidCpf, isValidEmail } from '../../shared/utils/identityValidation';
 import { formatCep, lookupBrazilianCep } from '../../shared/utils/brazilianCep';
 import ArkhenSignature from '../../shared/components/ArkhenSignature';
@@ -43,8 +46,24 @@ const openAlunoAppDocument = (path: string): boolean => {
   return true;
 };
 
+const isExpiredAuthLink = (message: string) => {
+  // Não disparamos e-mail daqui: o CTA abre o fluxo protegido por Turnstile,
+  // sem expor se o endereço possui uma conta. "invalid" isolado é comum em
+  // callbacks OAuth e não deve ser confundido com um convite vencido.
+  const lower = String(message || '').toLowerCase();
+  return (
+    lower.includes('token')
+    || lower.includes('expired')
+    || lower.includes('otp')
+  );
+};
+
+const EXPIRED_AUTH_LINK_MESSAGE =
+  'Este link de acesso expirou ou já foi usado. Se este era seu primeiro acesso, você ainda não possui senha: solicite um novo link para criar sua senha e aceitar os termos. Se sua conta já estava ativa, use o mesmo fluxo para recuperar a senha.';
+
 const AlunoLoginPublicPage: React.FC = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const [pendingGoogleReturn] = useState(() => readPendingOAuthReturn('aluno'));
   const [hasExternalAuthReturn] = useState(
@@ -58,6 +77,9 @@ const AlunoLoginPublicPage: React.FC = () => {
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [loading, setLoading] = useState(false);
   const [checkingExternalLogin, setCheckingExternalLogin] = useState(hasExternalAuthReturn);
+  const [publicProfiles, setPublicProfiles] = useState<PortalAuthProfile[]>([]);
+  const [isSelectingProfile, setIsSelectingProfile] = useState(false);
+  const [pendingProfileKey, setPendingProfileKey] = useState<string | null>(null);
   const [message, setMessage] = useState<AuthMessage | null>(() => (
     searchParams.get('reason') === 'session_expired'
       ? { tone: 'error', text: 'Sua sessão expirou. Entre novamente para continuar com segurança.' }
@@ -73,6 +95,8 @@ const AlunoLoginPublicPage: React.FC = () => {
   const [telefone, setTelefone] = useState('');
   const [cpf, setCpf] = useState('');
   const [dataNascimento, setDataNascimento] = useState('');
+  const [sexo, setSexo] = useState('');
+  const [racaCor, setRacaCor] = useState('');
   const [password, setPassword] = useState('');
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -105,33 +129,67 @@ const AlunoLoginPublicPage: React.FC = () => {
   }, [pendingGoogleReturn, searchParams]);
   const hasExplicitRedirect = searchParams.has('redirect') || Boolean(pendingGoogleReturn?.redirectPath);
 
-  const finishAuth = async (
-    profile?: { tipo?: string; acceptedTermsAt?: string | null; requiresPasswordReset?: boolean },
-  ): Promise<boolean> => {
+  const finishAuth = async (profile?: PortalAuthProfile): Promise<boolean> => {
     if (!profile) return false;
 
     if (alunoPublicAuthService.needsInitialAccess(profile)) {
+      queryClient.clear();
       const redirect = hasExplicitRedirect ? redirectPath : '/aluno/';
       const firstAccessParams = new URLSearchParams();
       firstAccessParams.set('next', redirect);
+      if (profile.contextId) {
+        firstAccessParams.set('context', profile.contextId);
+      }
       openAlunoAppDocument(`/aluno/primeiro-acesso?${firstAccessParams.toString()}`);
       return true;
     }
 
-    savePortalSession(profile as any);
+    queryClient.clear();
+    savePortalSession(profile);
 
-    if (hasExplicitRedirect) {
-      if (!openAlunoAppDocument(redirectPath)) {
-        navigate(redirectPath, { replace: true });
+    const postLoginRoute = resolveProfilePostLoginRoute(
+      profile.tipo,
+      hasExplicitRedirect ? redirectPath : null,
+    );
+
+    if (profile.tipo === 'Aluno') {
+      if (!openAlunoAppDocument(postLoginRoute)) {
+        navigate(postLoginRoute, { replace: true });
       }
       return true;
     }
-    if (profile?.tipo === 'Aluno') {
-      openAlunoAppDocument('/aluno/');
-    } else {
-      navigate(redirectPath, { replace: true });
-    }
+
+    navigate(postLoginRoute, { replace: true });
     return true;
+  };
+
+  const continueWithProfiles = async (profiles: readonly PortalAuthProfile[]) => {
+    if (profiles.length === 0) {
+      throw new Error('Não há perfil ativo disponível para este acesso.');
+    }
+    if (profiles.length === 1) {
+      return finishAuth(profiles[0]);
+    }
+    setPublicProfiles([...profiles]);
+    return false;
+  };
+
+  const handleProfileSelect = async (profile: PortalAuthProfile) => {
+    const profileKey = portalProfileKey(profile);
+    setIsSelectingProfile(true);
+    setPendingProfileKey(profileKey);
+    setMessage(null);
+    try {
+      await finishAuth(profile);
+    } catch (error) {
+      setMessage({
+        tone: 'error',
+        text: error instanceof Error ? error.message : 'Não foi possível concluir o acesso com o perfil selecionado.',
+      });
+    } finally {
+      setIsSelectingProfile(false);
+      setPendingProfileKey(null);
+    }
   };
 
   useEffect(() => {
@@ -191,9 +249,13 @@ const AlunoLoginPublicPage: React.FC = () => {
 
         const authReturnError = getOAuthReturnError();
         if (authReturnError) {
+          const expiredAuthLink = isExpiredAuthLink(authReturnError);
           setMessage({
             tone: 'error',
-            text: alunoPublicAuthService.getFriendlyAuthRedirectError(authReturnError),
+            text: expiredAuthLink
+              ? EXPIRED_AUTH_LINK_MESSAGE
+              : alunoPublicAuthService.getFriendlyAuthRedirectError(authReturnError),
+            action: expiredAuthLink ? 'request-new-link' : undefined,
           });
           return;
         }
@@ -219,14 +281,19 @@ const AlunoLoginPublicPage: React.FC = () => {
           return;
         }
 
-        const profile = await alunoPublicAuthService.finishExternalLogin();
+        const profiles = await alunoPublicAuthService.finishExternalLoginAndListProfiles();
         if (!mounted) return;
-        isLeavingLoginPage = await finishAuth(profile);
+        isLeavingLoginPage = await continueWithProfiles(profiles);
       } catch (error) {
         if (!mounted) return;
+        const errorText = error instanceof Error
+          ? error.message
+          : 'Não foi possível concluir a autenticação.';
+        const expiredAuthLink = isExpiredAuthLink(errorText);
         setMessage({
           tone: 'error',
-          text: error instanceof Error ? error.message : 'Não foi possível concluir a autenticação.',
+          text: expiredAuthLink ? EXPIRED_AUTH_LINK_MESSAGE : errorText,
+          action: expiredAuthLink ? 'request-new-link' : undefined,
         });
       } finally {
         if (mounted) {
@@ -263,12 +330,12 @@ const AlunoLoginPublicPage: React.FC = () => {
     setLoading(true);
     setMessage(null);
     try {
-      const profile = await alunoPublicAuthService.login(
+      const profiles = await alunoPublicAuthService.loginAndListProfiles(
         loginIdentifier,
         loginPassword,
         turnstileToken,
       );
-      await finishAuth(profile);
+      await continueWithProfiles(profiles);
     } catch (error) {
       setMessage({
         tone: 'error',
@@ -300,6 +367,14 @@ const AlunoLoginPublicPage: React.FC = () => {
     }
     if (!isPublicAlunoOlderThanTen(dataNascimento)) {
       setMessage({ tone: 'error', text: 'O cadastro é permitido somente para alunos com mais de 10 anos de idade.' });
+      return false;
+    }
+    if (!sexo) {
+      setMessage({ tone: 'error', text: 'Selecione uma opção de sexo para continuar.' });
+      return false;
+    }
+    if (!racaCor) {
+      setMessage({ tone: 'error', text: 'Selecione uma opção de raça/cor para continuar.' });
       return false;
     }
     if (telefone.replace(/\D/g, '').length < 10) {
@@ -363,6 +438,8 @@ const AlunoLoginPublicPage: React.FC = () => {
         telefone,
         cpf,
         dataNascimento,
+        sexo,
+        racaCor,
         password,
         acceptedTerms,
         cep,
@@ -384,7 +461,7 @@ const AlunoLoginPublicPage: React.FC = () => {
         setLoginIdentifier(email);
         setMessage({
           tone: 'success',
-          text: 'Cadastro criado. Confirme seu e-mail e depois entre para concluir a compra.',
+          text: `Cadastro criado. Enviamos um link para ${email}. Confirme o e-mail para ativar sua conta; só então você poderá entrar e concluir a compra. Verifique também Spam ou Lixo eletrônico.`,
         });
         return;
       }
@@ -447,6 +524,18 @@ const AlunoLoginPublicPage: React.FC = () => {
         <AlunoLoginHero {...heroProps} />
         <section className="aluno-auth-typography relative flex min-h-screen flex-col items-center justify-start bg-slate-50 px-4 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))] text-slate-900 sm:px-8 sm:py-8 lg:justify-center">
           <AlunoLoginMobileHeader {...heroProps} />
+          {publicProfiles.length > 1 ? (
+            <PortalProfileSelector
+              profiles={publicProfiles}
+              isSelecting={isSelectingProfile}
+              pendingProfileKey={pendingProfileKey}
+              onSelect={handleProfileSelect}
+              onBack={() => {
+                setPublicProfiles([]);
+                setMessage(null);
+              }}
+            />
+          ) : (
           <AlunoLoginAuthCard
             mode={mode}
             loading={loading}
@@ -457,6 +546,8 @@ const AlunoLoginPublicPage: React.FC = () => {
             nome={nome}
             cpf={cpf}
             dataNascimento={dataNascimento}
+            sexo={sexo}
+            racaCor={racaCor}
             telefone={telefone}
             email={email}
             password={password}
@@ -486,6 +577,8 @@ const AlunoLoginPublicPage: React.FC = () => {
             onNomeChange={(value) => setNome(value.toLocaleUpperCase('pt-BR'))}
             onCpfChange={setCpf}
             onDataNascimentoChange={setDataNascimento}
+            onSexoChange={setSexo}
+            onRacaCorChange={setRacaCor}
             onTelefoneChange={setTelefone}
             onEmailChange={setEmail}
             onPasswordChange={setPassword}
@@ -512,6 +605,7 @@ const AlunoLoginPublicPage: React.FC = () => {
             onSignup={handleSignup}
             onGoogleLogin={handleGoogleLogin}
           />
+          )}
 
           <div className="mt-5 flex w-full max-w-[560px] justify-center pb-1 sm:justify-end sm:pr-2 lg:absolute lg:bottom-6 lg:right-6 lg:mt-0 lg:w-auto lg:max-w-none lg:pb-0 lg:pr-0">
             <ArkhenSignature tone="dark" />

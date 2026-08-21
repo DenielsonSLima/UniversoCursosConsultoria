@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 
 const migrationUrl = new URL(
-  '../migrations/20260818230318_extend_assinatura_eletronica_model_editor_v1.sql',
+  '../migrations/20260818184706_extend_assinatura_eletronica_model_editor_v1.sql',
   import.meta.url,
 );
 const contractUrl = new URL(
@@ -78,8 +78,11 @@ Deno.test('identidade da prévia é canônica, fail-closed e não é escolhida n
   assert.match(service, /normalizePreviewIdentity/i);
   assert.doesNotMatch(configuration, /polosService|marcaDaguaService|FALLBACK_PREVIEW_IDENTITY/i);
   assert.match(configuration, /canonicalPreviewIdentity\.logoUrl/i);
-  assert.doesNotMatch(configuration, /canonicalPreviewIdentity\.watermarkUrl/i);
-  assert.match(configuration, /watermarkAssets/i);
+  assert.match(configuration, /canonicalPreviewIdentity\.watermark\.url/i);
+  assert.match(configuration, /isCanonicalInstitutionalWatermarkDataUri/i);
+  assert.match(configuration, /institutionalWatermark/i);
+  assert.match(configuration, /signatureStampAssets/i);
+  assert.doesNotMatch(configuration, /watermarkAssets/i);
 });
 
 Deno.test('migration altera apenas a apresentação e preserva a fundação fail-closed', () => {
@@ -157,7 +160,10 @@ Deno.test('prévia possui factory própria e não aceita campos de evidência', 
     pdf.indexOf('export const createElectronicSignatureReceiptPdf'),
   );
 
-  assert.match(previewInterface, /institution:[\s\S]*?logo:[\s\S]*?watermarkAssets:[\s\S]*?presentation:/i);
+  assert.match(
+    previewInterface,
+    /institution:[\s\S]*?logo:[\s\S]*?institutionalWatermark:[\s\S]*?signatureStampAssets:[\s\S]*?presentation:/i,
+  );
   assert.doesNotMatch(previewInterface, /status|participants|events|hash|validation/i);
   assert.match(previewFactory, /drawTemplatePreviewPageOne/i);
   assert.match(previewFactory, /drawTemplatePreviewPageTwo/i);

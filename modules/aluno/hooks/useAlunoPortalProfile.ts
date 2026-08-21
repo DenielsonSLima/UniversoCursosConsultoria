@@ -24,6 +24,15 @@ const buildLoginRedirect = () => {
   return getAlunoRejectedSessionPath(Capacitor.isNativePlatform(), currentPath);
 };
 
+const buildFirstAccessRedirect = (contextId: string) => {
+  const currentPath = window.location.pathname + window.location.search;
+  const firstAccessParams = new URLSearchParams({
+    next: currentPath,
+    context: contextId,
+  });
+  return `/aluno/primeiro-acesso?${firstAccessParams.toString()}`;
+};
+
 export const useAlunoPortalProfile = () => {
   const navigate = useNavigate();
   const navigateRef = useRef(navigate);
@@ -81,6 +90,18 @@ export const useAlunoPortalProfile = () => {
 
         if (!portalProfile || portalProfile.tipo !== 'Aluno') {
           rejectSession();
+          return;
+        }
+
+        const hasAcceptedTerms = Boolean(portalProfile.acceptedTermsAt?.trim());
+        const hasCompletedPasswordReset = portalProfile.requiresPasswordReset === false;
+        if (!hasAcceptedTerms || !hasCompletedPasswordReset) {
+          clearPortalSession();
+          if (!portalProfile.contextId) {
+            rejectSession();
+            return;
+          }
+          navigateRef.current(buildFirstAccessRedirect(portalProfile.contextId), { replace: true });
           return;
         }
 

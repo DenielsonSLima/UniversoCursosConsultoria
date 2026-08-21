@@ -1,4 +1,4 @@
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "@supabase/supabase-js";
 import {
   buildCorsHeaders,
   getClientIp,
@@ -8,6 +8,8 @@ import {
 import { ensureAuthorizedGestor, loadManagedPartner } from "./gestor-access.ts";
 import { handleConfirmPartnerEmail } from "./handlers/confirm-partner-email.ts";
 import { handleDeletePartner } from "./handlers/delete-partner.ts";
+import { handleEnsureProfessorAccess } from "./handlers/ensure-professor-access.ts";
+import { handleEnsureResponsavelAccess } from "./handlers/ensure-responsavel-access.ts";
 import { handleListPartnerEmailStatuses } from "./handlers/list-partner-email-statuses.ts";
 import { handleLinkProfessorAuthIdentity } from "./handlers/link-professor-auth-identity.ts";
 import { handleSendStudentInvite } from "./handlers/send-student-invite.ts";
@@ -35,6 +37,8 @@ const VALID_ACTIONS = [
   "list-partner-email-statuses",
   "confirm-partner-email",
   "link-professor-auth-identity",
+  "ensure-professor-access",
+  "ensure-responsavel-access",
 ] as const;
 
 const GESTOR_USER_ACTIONS = new Set([
@@ -131,7 +135,6 @@ Deno.serve(async (req: Request) => {
     return handleUpsertGestorUser(
       context,
       payload.user || {},
-      payload.password,
     );
   }
 
@@ -145,6 +148,14 @@ Deno.serve(async (req: Request) => {
 
   if (action === "delete-gestor-user") {
     return handleDeleteGestorUser(context, payload.userId);
+  }
+
+  if (action === "ensure-responsavel-access") {
+    return handleEnsureResponsavelAccess(
+      context,
+      payload.responsavelLegalId,
+      payload.requestId,
+    );
   }
 
   const partnerId = String(payload.partnerId || "").trim();
@@ -166,6 +177,10 @@ Deno.serve(async (req: Request) => {
 
   if (action === "link-professor-auth-identity") {
     return handleLinkProfessorAuthIdentity(context, partner);
+  }
+
+  if (action === "ensure-professor-access") {
+    return handleEnsureProfessorAccess(context, partner);
   }
 
   return handleSendStudentInvite(context, partner, {

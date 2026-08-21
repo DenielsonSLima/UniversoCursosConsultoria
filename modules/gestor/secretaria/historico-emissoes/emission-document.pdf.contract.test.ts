@@ -295,10 +295,11 @@ test('documentos oficiais reutilizam o cabeçalho institucional compartilhado', 
   assert.match(canonicalHeader, /PORTRAIT_INSTITUTIONAL_HEADER_LAYOUT/);
   assert.match(canonicalHeader, /LANDSCAPE_INSTITUTIONAL_HEADER_LAYOUT/);
   assert.match(canonicalHeader, /institution\.unitLabel\.toUpperCase\(\)/);
-  assert.match(canonicalHeader, /'CNPJ'/);
-  assert.match(canonicalHeader, /'Contato'/);
-  assert.match(canonicalHeader, /'Endereço'/);
-  assert.match(canonicalHeader, /'Email'/);
+  assert.match(canonicalHeader, /CANONICAL_INSTITUTIONAL_HEADER_LEGACY_LABELS/);
+  assert.match(canonicalHeader, /["']CNPJ["']/);
+  assert.match(canonicalHeader, /["']Contato["']/);
+  assert.match(canonicalHeader, /["']Endereço["']/);
+  assert.match(canonicalHeader, /["']Email["']/);
 });
 
 test('fixture reproduz os 10 blocos visuais oficiais de Documentos em 92px', () => {

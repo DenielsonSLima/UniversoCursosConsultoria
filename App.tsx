@@ -44,6 +44,8 @@ const PasswordRecoveryPage = lazy(() => import('./modules/login/PasswordRecovery
 const LoginPage = lazy(() => import('./modules/login/LoginPage'));
 const GestorPage = lazy(() => import('./modules/gestor/gestor.page'));
 const ProfessorPage = lazy(() => import('./modules/professor/professor.page'));
+const ResponsavelPage = lazy(() => import('./modules/responsavel/responsavel.page'));
+const CoordenadorPage = lazy(() => import('./modules/coordenador/coordenador.page'));
 const AlunoPage = lazy(() => import('./modules/aluno/aluno.page'));
 const TechnicalLandingRoute = lazy(() => import('./modules/public/landing-pages/cursos-tecnicos/TechnicalLandingRoute'));
 const BioPage = lazy(() => import('./modules/public/bio/BioPage'));
@@ -51,6 +53,8 @@ const RouteLoadingScreen = () => {
   const pathname = window.location.pathname;
   if (pathname.startsWith('/gestor')) return <AccessCheckingScreen portal="Gestor" />;
   if (pathname.startsWith('/professor')) return <AccessCheckingScreen portal="Professor" />;
+  if (pathname.startsWith('/responsavel')) return <AccessCheckingScreen portal="Responsavel" />;
+  if (pathname.startsWith('/coordenador')) return <AccessCheckingScreen portal="Coordenador" />;
   if (pathname === '/aluno' || pathname.startsWith('/aluno/')) return <AlunoAppSplash />;
 
   return (
@@ -146,6 +150,8 @@ const App: React.FC = () => {
         <Route path="/sistema/login" element={<LoginPage />} />
         <Route path="/gestor/*" element={<VersionedPortal><GestorPage /></VersionedPortal>} />
         <Route path="/professor/*" element={<VersionedPortal><ProfessorPage /></VersionedPortal>} />
+        <Route path="/responsavel/*" element={<VersionedPortal><ResponsavelPage /></VersionedPortal>} />
+        <Route path="/coordenador/*" element={<VersionedPortal><CoordenadorPage /></VersionedPortal>} />
         <Route path="/cad-aed" element={<Navigate to="/sistema/login" replace />} />
         <Route path="/aluno/*" element={<VersionedPortal><AlunoPage /></VersionedPortal>} />
 

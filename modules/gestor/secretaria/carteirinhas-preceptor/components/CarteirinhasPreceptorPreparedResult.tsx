@@ -17,8 +17,8 @@ const CarteirinhasPreceptorPreparedResult = ({ result, onPreview }: Carteirinhas
           <BadgeCheck size={20} />
         </span>
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-700">Carteirinhas preparadas pelo servidor</p>
-          <h3 className="mt-1 text-base font-black text-[#001a33]">{result.documents.length} carteirinha(s) disponível(is)</h3>
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-700">Crachás preparados pelo servidor</p>
+          <h3 className="mt-1 text-base font-black text-[#001a33]">{result.documents.length} crachá(s) disponível(is)</h3>
           <p className="mt-1 text-xs font-medium leading-relaxed text-slate-600">
             {result.message || 'Os arquivos oficiais, QR Codes e regras de validade foram resolvidos de forma canônica.'}
           </p>
@@ -64,7 +64,7 @@ const CarteirinhasPreceptorPreparedResult = ({ result, onPreview }: Carteirinhas
                   rel="noreferrer"
                   className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-violet-700 px-3 py-2 text-[11px] font-black uppercase tracking-wide text-white transition-colors hover:bg-violet-800"
                 >
-                  Abrir carteirinha <ExternalLink size={13} />
+                  Abrir crachá <ExternalLink size={13} />
                 </a>
               )}
             </div>

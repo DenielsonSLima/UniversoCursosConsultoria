@@ -68,11 +68,3 @@ export interface AlunoFormStepProps {
   formData: AlunoFormData;
   onChange: AlunoFormChangeHandler;
 }
-
-export interface PoloOption {
-  id: string;
-  nome: string;
-  cidade?: string | null;
-  estado?: string | null;
-  uf?: string | null;
-}

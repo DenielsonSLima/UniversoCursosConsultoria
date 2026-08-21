@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import GoogleLogo from '../../../../../shared/auth/GoogleLogo';
 import { portalActivationService } from '../../../portal-activation.service';
-import { buildAuthRedirectUrl } from '../../../../../../lib/app-url';
+import { buildConfiguredAuthRedirectUrl } from '../../../../../../lib/app-url';
 
 interface ParceiroAcessoProps {
   parceiroId: string;
@@ -44,12 +44,26 @@ const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({
 
   const googleStatus = googleStatusQuery.data;
   const googleLinked = Boolean(googleStatus?.google_linked);
+  const needsFirstAccess = tipo === 'Aluno' && acessoStatus !== 'ativo';
+  const accessRedirectTo = buildConfiguredAuthRedirectUrl(
+    needsFirstAccess ? '/login' : '/recuperar-senha',
+  );
+  const accessActionLabel = !email
+    ? 'Gerar link de primeiro acesso'
+    : needsFirstAccess
+      ? 'Reenviar primeiro acesso'
+      : 'Enviar recuperação de senha';
+  const accessDescription = !email
+    ? 'Gera um link seguro para o aluno sem e-mail criar a senha de acesso.'
+    : needsFirstAccess
+      ? 'Reenvia o link para o aluno criar a primeira senha e aceitar os termos.'
+      : 'Envia um link seguro para o aluno redefinir a senha de uma conta já ativa.';
 
   const accessMutation = useMutation({
     mutationFn: () => portalActivationService.ensureStudentAccess({
       partnerId: parceiroId,
       email: email || undefined,
-      redirectTo: buildAuthRedirectUrl('/recuperar-senha'),
+      redirectTo: accessRedirectTo,
     }),
     onSuccess: (result) => {
       setAccessHint(result.message || 'Acesso preparado com sucesso.');
@@ -220,9 +234,7 @@ const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({
                   Primeiro acesso e recuperação
                 </h4>
                 <p className="text-xs font-medium text-slate-500">
-                  {email
-                    ? 'Envia o convite de primeiro acesso ou, se a conta já existir, um link seguro de recuperação.'
-                    : 'Gera um link seguro para o aluno sem e-mail criar a senha de acesso.'}
+                  {accessDescription}
                 </p>
               </div>
               <button
@@ -232,7 +244,7 @@ const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({
                 className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#001a33] px-6 py-3 text-xs font-bold uppercase tracking-wider text-white transition-colors hover:bg-blue-900 disabled:opacity-60"
               >
                 {accessMutation.isPending && <Loader2 className="animate-spin" size={14} />}
-                {email ? 'Enviar acesso' : 'Gerar link de acesso'}
+                {accessActionLabel}
               </button>
             </div>
 

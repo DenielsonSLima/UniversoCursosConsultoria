@@ -14,11 +14,16 @@ import type {
   ElectronicSignatureStampContentLayout,
   ElectronicSignatureStampCoordinateSpace,
   ElectronicSignatureStampLayout,
+  ElectronicSignatureStampTemplateFont
+    as SharedElectronicSignatureStampTemplateFont,
 } from "./assinatura-eletronica.contract.ts";
 import {
   ELECTRONIC_SIGNATURE_STAMP_AUTO_LAYOUT_DEFAULTS,
   ELECTRONIC_SIGNATURE_STAMP_CONTENT_LAYOUT_LIMITS,
   ELECTRONIC_SIGNATURE_STAMP_DISPLAY_TITLE,
+  ELECTRONIC_SIGNATURE_STAMP_TEMPLATE_COURIER_FONTS,
+  ELECTRONIC_SIGNATURE_STAMP_TEMPLATE_FONT_SIZE_LIMITS,
+  ELECTRONIC_SIGNATURE_STAMP_TEMPLATE_HELVETICA_FONTS,
 } from "./assinatura-eletronica.contract.ts";
 import {
   getSignatureStampVisiblePageSize,
@@ -43,6 +48,8 @@ import { formatDocumentValidationUrlForDisplay } from "../document-validation/do
 import {
   createDefaultElectronicSignatureStampTemplate,
   deriveAutomaticSignatureStampPlacements,
+  getSignatureStampTemplateElementVisualBounds,
+  getSignatureStampTemplateElementVisualBoundsForSurface,
   normalizeElectronicSignatureStampAutoLayout,
 } from "./signature-stamp-template.ts";
 
@@ -124,9 +131,7 @@ export interface AppliedSignatureStamp {
 }
 
 export type ElectronicSignatureStampTemplateFont =
-  | "HELVETICA"
-  | "HELVETICA_BOLD"
-  | "COURIER";
+  SharedElectronicSignatureStampTemplateFont;
 
 export type ElectronicSignatureStampTemplateTextAlign =
   | "LEFT"
@@ -512,7 +517,7 @@ const STAMP_TEMPLATE_ELEMENT_SPECS = [
     id: "signerName",
     kind: "TEXT",
     binding: "SIGNER_NAME",
-    label: "Assinante: ",
+    label: "",
   },
   {
     id: "signedAt",
@@ -574,6 +579,45 @@ const hasCanonicalTemplateStyle = (
   hasExactTemplateKeys(candidate, Object.keys(canonical)) &&
   Object.entries(canonical).every(([key, value]) => candidate[key] === value)
 );
+
+const LEGACY_SIGNER_NAME_LABEL = "Assinante: ";
+const STAMP_TEMPLATE_TEXT_ALIGNS = ["LEFT", "CENTER", "RIGHT"] as const;
+
+const hasCanonicalTemplateTextStyle = (
+  candidate: Record<string, unknown>,
+  canonical: Record<string, unknown>,
+  elementId: string,
+) => {
+  if (
+    !hasExactTemplateKeys(candidate, [
+      "font",
+      "fontSizeBp",
+      "color",
+      "align",
+      "label",
+    ])
+  ) {
+    return false;
+  }
+  const allowedFonts = elementId === "signatureHash" ||
+      elementId === "verificationCode"
+    ? ELECTRONIC_SIGNATURE_STAMP_TEMPLATE_COURIER_FONTS
+    : ELECTRONIC_SIGNATURE_STAMP_TEMPLATE_HELVETICA_FONTS;
+  const fontSizeBp = Number(candidate.fontSizeBp);
+  const labelIsCanonical = candidate.label === canonical.label;
+  const labelIsSupportedLegacy = elementId === "signerName" &&
+    candidate.label === LEGACY_SIGNER_NAME_LABEL;
+  return typeof candidate.font === "string" &&
+    allowedFonts.some((font) => font === candidate.font) &&
+    Number.isInteger(candidate.fontSizeBp) &&
+    fontSizeBp >= ELECTRONIC_SIGNATURE_STAMP_TEMPLATE_FONT_SIZE_LIMITS.minBp &&
+    fontSizeBp <= ELECTRONIC_SIGNATURE_STAMP_TEMPLATE_FONT_SIZE_LIMITS.maxBp &&
+    fontSizeBp %
+          ELECTRONIC_SIGNATURE_STAMP_TEMPLATE_FONT_SIZE_LIMITS.stepBp === 0 &&
+    candidate.color === canonical.color &&
+    STAMP_TEMPLATE_TEXT_ALIGNS.some((align) => align === candidate.align) &&
+    (labelIsCanonical || labelIsSupportedLegacy);
+};
 
 const STAMP_TEMPLATE_OPTIONAL_VISUAL_ELEMENT_IDS = [
   "signerRole",
@@ -696,18 +740,17 @@ export const normalizeElectronicSignatureStampTemplate = (
     if (!style) {
       throw new Error(`O estilo de ${spec.id} no template global é inválido.`);
     }
-    if (
-      !hasCanonicalTemplateStyle(
-        style,
-        canonicalElement.style as Record<string, unknown>,
-      )
-    ) {
+    const canonicalStyle = canonicalElement.style as Record<string, unknown>;
+    const styleIsValid = spec.kind === "TEXT"
+      ? hasCanonicalTemplateTextStyle(style, canonicalStyle, spec.id)
+      : hasCanonicalTemplateStyle(style, canonicalStyle);
+    if (!styleIsValid) {
       throw new Error(`O estilo de ${spec.id} no template global é imutável.`);
     }
     if (
       (spec.kind === "IMAGE" && (widthBp < 5_000 || heightBp < 5_000)) ||
       (spec.kind === "QR" &&
-        (widthBp !== heightBp || widthBp < 29_000 || widthBp > 40_000)) ||
+        (widthBp !== heightBp || widthBp < 29_000)) ||
       (spec.kind === "LINE" && widthBp < 5_000)
     ) {
       throw new Error(
@@ -727,13 +770,16 @@ export const normalizeElectronicSignatureStampTemplate = (
   });
 
   const qr = elements[9];
+  const qrVisualBounds = qr.kind === "QR"
+    ? getSignatureStampTemplateElementVisualBounds(qr)
+    : qr;
   if (
     qr.kind !== "QR" || elements.some((element, index) => (
       index !== 9 &&
       !hiddenElementIds?.includes(
         element.id as ElectronicSignatureStampTemplateHiddenElementId,
       ) &&
-      templateRectsOverlap(qr, element)
+      templateRectsOverlap(qrVisualBounds, element)
     ))
   ) {
     throw new Error(
@@ -1640,7 +1686,7 @@ const drawStamp = ({
     iconSize,
     textX,
     maxWidth: textWidth,
-    label: "Assinante:",
+    label: "",
     value: stamp.signerName,
     labelFont: boldFont,
     valueFont: regularFont,
@@ -1739,9 +1785,7 @@ const drawStamp = ({
     textX,
     maxWidth: textWidth,
     label: "Verifique em:",
-    value: formatDocumentValidationUrlForDisplay(stamp.verificationUrl, {
-      includeSearch: false,
-    }),
+    value: formatDocumentValidationUrlForDisplay(stamp.verificationUrl),
     labelFont: boldFont,
     valueFont: regularFont,
     maximumSize: Math.min(4.7, lineStep * 0.65),
@@ -1755,7 +1799,12 @@ const drawStamp = ({
 interface TemplateStampFonts {
   HELVETICA: PDFFont;
   HELVETICA_BOLD: PDFFont;
+  HELVETICA_OBLIQUE: PDFFont;
+  HELVETICA_BOLD_OBLIQUE: PDFFont;
   COURIER: PDFFont;
+  COURIER_BOLD: PDFFont;
+  COURIER_OBLIQUE: PDFFont;
+  COURIER_BOLD_OBLIQUE: PDFFont;
 }
 
 interface TemplateStampRect {
@@ -1780,13 +1829,18 @@ const templateElementToVisibleRect = (
   stampRect: SignatureStampPdfBox,
   element: ElectronicSignatureStampTemplateElement,
 ): TemplateStampRect => {
+  const visualBounds = getSignatureStampTemplateElementVisualBoundsForSurface(
+    element,
+    stampRect.width,
+    stampRect.height,
+  );
   const x = stampRect.x +
-    stampRect.width * element.xBp / STAMP_TEMPLATE_COORDINATE_SCALE;
+    stampRect.width * visualBounds.xBp / STAMP_TEMPLATE_COORDINATE_SCALE;
   const top = stampRect.y + stampRect.height -
-    stampRect.height * element.yBp / STAMP_TEMPLATE_COORDINATE_SCALE;
-  const width = stampRect.width * element.widthBp /
+    stampRect.height * visualBounds.yBp / STAMP_TEMPLATE_COORDINATE_SCALE;
+  const width = stampRect.width * visualBounds.widthBp /
     STAMP_TEMPLATE_COORDINATE_SCALE;
-  const height = stampRect.height * element.heightBp /
+  const height = stampRect.height * visualBounds.heightBp /
     STAMP_TEMPLATE_COORDINATE_SCALE;
   return { x, y: top - height, width, height };
 };
@@ -1802,7 +1856,7 @@ const templateTextLines = (
     case "DISPLAY_TITLE":
       return [ELECTRONIC_SIGNATURE_STAMP_DISPLAY_TITLE];
     case "SIGNER_NAME":
-      return [`${label}${stamp.signerName}`];
+      return [stamp.signerName];
     case "SIGNED_AT": {
       const visibleSignedAt = stamp.formattedSignedAt.replace(
         /\s+\([^)]*\)$/u,
@@ -1827,23 +1881,15 @@ const templateTextLines = (
         stamp.verificationCode.slice(20),
       ];
     case "VERIFICATION_URL": {
-      const url = new URL(stamp.verificationUrl);
-      const query = `?${url.searchParams.toString()}`;
       const displayBaseUrl = formatDocumentValidationUrlForDisplay(
         stamp.verificationUrl,
-        { includeSearch: false },
       );
       if (element.widthBp >= 40_000 && element.heightBp <= 16_000) {
-        return [
-          `${label}${displayBaseUrl}`,
-          query,
-        ];
+        return [`${label}${displayBaseUrl}`];
       }
       return [
         label.trim(),
         displayBaseUrl,
-        query.slice(0, 24),
-        query.slice(24),
       ];
     }
   }
@@ -2122,10 +2168,26 @@ export const applyElectronicSignatureStamps = async (
   assertFrozenTargetMatches(inspection, input.frozenTarget);
 
   const page = pdf.getPage(input.frozenTarget.targetPageIndex);
-  const [regularFont, boldFont, monoFont, image, qrImages] = await Promise.all([
+  const [
+    regularFont,
+    boldFont,
+    obliqueFont,
+    boldObliqueFont,
+    monoFont,
+    monoBoldFont,
+    monoObliqueFont,
+    monoBoldObliqueFont,
+    image,
+    qrImages,
+  ] = await Promise.all([
     pdf.embedFont(StandardFonts.Helvetica),
     pdf.embedFont(StandardFonts.HelveticaBold),
+    pdf.embedFont(StandardFonts.HelveticaOblique),
+    pdf.embedFont(StandardFonts.HelveticaBoldOblique),
     pdf.embedFont(StandardFonts.Courier),
+    pdf.embedFont(StandardFonts.CourierBold),
+    pdf.embedFont(StandardFonts.CourierOblique),
+    pdf.embedFont(StandardFonts.CourierBoldOblique),
     pdf.embedPng(Uint8Array.from(input.stampPngBytes)),
     Promise.all(qrDataUrls.map((dataUrl) => pdf.embedPng(dataUrl))),
   ]);
@@ -2139,7 +2201,12 @@ export const applyElectronicSignatureStamps = async (
         fonts: {
           HELVETICA: regularFont,
           HELVETICA_BOLD: boldFont,
+          HELVETICA_OBLIQUE: obliqueFont,
+          HELVETICA_BOLD_OBLIQUE: boldObliqueFont,
           COURIER: monoFont,
+          COURIER_BOLD: monoBoldFont,
+          COURIER_OBLIQUE: monoObliqueFont,
+          COURIER_BOLD_OBLIQUE: monoBoldObliqueFont,
         },
         image,
         qrImage: qrImages[index]!,

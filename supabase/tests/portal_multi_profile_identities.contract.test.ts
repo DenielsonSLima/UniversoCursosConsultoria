@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 
 const migrationUrl = new URL(
-  "../migrations/20260819203143_create_portal_multi_profile_identities.sql",
+  "../migrations/20260819110000_create_portal_multi_profile_identities.sql",
   import.meta.url,
 );
 

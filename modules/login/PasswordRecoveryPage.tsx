@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { loginService } from './login.service';
-import { consumePasswordRecoveryMarker, supabase } from '../../lib/supabase';
+import { consumePasswordSetupMarker, supabase } from '../../lib/supabase';
+import { getPortalProfile } from './portal-session';
 import {
   ArrowLeft,
   ArrowRight,
@@ -20,9 +21,11 @@ import { type TurnstileStatus } from '../shared/auth/TurnstileWidget';
 import AdaptiveTurnstileWidget from '../shared/auth/AdaptiveTurnstileWidget';
 
 type RecoveryMode = 'request' | 'reset';
+type PasswordSetupKind = 'recovery' | 'invite';
 interface RecoveryAuthorization {
   userId: string;
   accessToken: string;
+  kind: PasswordSetupKind;
 }
 
 interface PasswordRecoveryPageProps {
@@ -53,7 +56,10 @@ const getAuthReturnParam = (name: string) => {
   return hashParams.get(name) || searchParams.get(name);
 };
 
-const hasRecoveryTypeInUrl = () => getAuthReturnParam('type') === 'recovery';
+const getPasswordSetupTypeInUrl = (): PasswordSetupKind | null => {
+  const type = getAuthReturnParam('type');
+  return type === 'recovery' || type === 'invite' ? type : null;
+};
 
 const clearRecoveryAuthParams = () => {
   const authKeys = [
@@ -123,18 +129,20 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({ appFlow = f
 
   useEffect(() => {
     let mounted = true;
-    const recoveryType = hasRecoveryTypeInUrl();
+    const passwordSetupType = getPasswordSetupTypeInUrl();
     const returnError = getAuthReturnParam('error_description') || getAuthReturnParam('error');
     const code = getAuthReturnParam('code');
     const recoveryAccessToken = getAuthReturnParam('access_token');
 
-    const authorizeRecovery = (
+    const authorizePasswordSetup = (
       session: { access_token: string; user: { id: string; email?: string } },
+      kind: PasswordSetupKind,
     ) => {
       if (!mounted) return;
       setRecoveryAuthorization({
         userId: session.user.id,
         accessToken: session.access_token,
+        kind,
       });
       setMode('reset');
       if (session.user.email) setIdentifier(session.user.email);
@@ -143,7 +151,7 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({ appFlow = f
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY' && session) {
-        authorizeRecovery(session);
+        authorizePasswordSetup(session, 'recovery');
         return;
       }
 
@@ -163,7 +171,7 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({ appFlow = f
       }
     });
 
-    const detectRecoverySession = async () => {
+    const detectPasswordSetupSession = async () => {
       if (returnError) {
         clearRecoveryAuthParams();
         if (mounted) {
@@ -176,41 +184,43 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({ appFlow = f
       }
 
       // getSession aguarda a inicializacao do cliente, inclusive a troca PKCE
-      // automatica. Somente PASSWORD_RECOVERY (marker/evento) ou os tokens
-      // explicitos de recovery autorizam a alteracao.
+      // automática. Somente os eventos/markers confiáveis ou os tokens do
+      // callback de recovery/convite autorizam a alteração da senha.
       const { data: currentSessionData } = await supabase.auth.getSession();
       const currentSession = currentSessionData.session;
 
       if (
-        recoveryType
+        passwordSetupType
         && recoveryAccessToken
         && currentSession?.access_token === recoveryAccessToken
       ) {
-        authorizeRecovery(currentSession);
+        authorizePasswordSetup(currentSession, passwordSetupType);
         return;
       }
 
-      if (
-        currentSession
-        && consumePasswordRecoveryMarker(
-          currentSession.user.id,
-          currentSession.access_token,
-        )
-      ) {
-        authorizeRecovery(currentSession);
+      const markerKind = currentSession
+        ? consumePasswordSetupMarker(
+            currentSession.user.id,
+            currentSession.access_token,
+          )
+        : null;
+      if (currentSession && markerKind) {
+        authorizePasswordSetup(currentSession, markerKind);
         return;
       }
 
-      if (code || recoveryType || recoveryAccessToken) {
+      if (code || passwordSetupType || recoveryAccessToken) {
         clearRecoveryAuthParams();
         setMessage({
           tone: 'error',
-          text: 'O link de recuperação não criou uma sessão válida. Solicite um novo link abaixo.',
+          text: passwordSetupType === 'invite'
+            ? 'O link de primeiro acesso não criou uma sessão válida. Peça o reenvio do convite.'
+            : 'O link de recuperação não criou uma sessão válida. Solicite um novo link abaixo.',
         });
       }
     };
 
-    void detectRecoverySession();
+    void detectPasswordSetupSession();
 
     return () => {
       mounted = false;
@@ -268,7 +278,7 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({ appFlow = f
     if (!recoveryAuthorization) {
       setMessage({
         tone: 'error',
-        text: 'Abra o link de recuperação mais recente enviado ao seu e-mail antes de definir uma nova senha.',
+        text: 'Abra o link mais recente enviado ao seu e-mail antes de definir uma nova senha.',
       });
       setMode('request');
       return;
@@ -312,17 +322,35 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({ appFlow = f
         return;
       }
 
+      let postResetPath = alunoLoginPath;
+      try {
+        const profile = await getPortalProfile({ authenticatedUser: currentSession.user });
+        if (profile?.tipo && profile.tipo !== 'Aluno') {
+          postResetPath = '/sistema/login';
+        } else if (
+          ['usuarios_sistema', 'cadastro_professor'].includes(
+            String(currentSession.user.user_metadata?.origem || ''),
+          )
+        ) {
+          postResetPath = '/sistema/login';
+        }
+      } catch (profileError) {
+        console.warn('A senha foi alterada, mas não foi possível determinar o login de destino.', profileError);
+      }
+
       const { error: signOutError } = await supabase.auth.signOut({ scope: 'local' });
       if (signOutError) console.warn('A senha foi alterada, mas a sessão local não pôde ser encerrada.', signOutError);
 
       setMessage({
         tone: 'success',
-        text: 'Senha alterada com sucesso. Você já pode entrar com a nova senha.',
+        text: recoveryAuthorization.kind === 'invite'
+          ? 'Senha criada com sucesso. Você já pode entrar no sistema.'
+          : 'Senha alterada com sucesso. Você já pode entrar com a nova senha.',
       });
 
       loginRedirectTimerRef.current = setTimeout(() => {
         loginRedirectTimerRef.current = null;
-        navigate(alunoLoginPath);
+        navigate(postResetPath);
       }, 1000);
     } catch (error) {
       setMessage({
@@ -340,6 +368,7 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({ appFlow = f
     { label: 'Letra minúscula', valid: passwordChecks.hasLowercase },
     { label: 'Um número', valid: passwordChecks.hasNumber },
   ];
+  const isFirstAccess = recoveryAuthorization?.kind === 'invite';
 
   if (appFlow) {
     return (
@@ -373,9 +402,13 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({ appFlow = f
             </header>
 
             <section className="mt-5">
-              <p className="text-[10px] font-black uppercase tracking-[0.26em] text-blue-300">Recuperação de acesso</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.26em] text-blue-300">
+                {isFirstAccess ? 'Primeiro acesso' : 'Recuperação de acesso'}
+              </p>
               <h1 className="mt-1.5 text-[1.65rem] font-black leading-tight tracking-tight">
-                {mode === 'reset' ? 'Crie sua nova senha' : 'Esqueceu sua senha?'}
+                {mode === 'reset'
+                  ? isFirstAccess ? 'Crie sua senha de acesso' : 'Crie sua nova senha'
+                  : 'Esqueceu sua senha?'}
               </h1>
               <p className="mt-1 text-xs font-medium leading-relaxed text-blue-100/70">
                 {mode === 'reset'
@@ -515,9 +548,11 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({ appFlow = f
               )}
             </div>
 
-            <p className="mt-4 text-center text-xs font-medium text-blue-100/65">
-              Lembrou sua senha? <Link to="/aluno/login-app" className="font-black text-blue-300 hover:text-white">Voltar para entrar</Link>
-            </p>
+            {!isFirstAccess && (
+              <p className="mt-4 text-center text-xs font-medium text-blue-100/65">
+                Lembrou sua senha? <Link to="/aluno/login-app" className="font-black text-blue-300 hover:text-white">Voltar para entrar</Link>
+              </p>
+            )}
           </div>
         </div>
       </main>
@@ -559,7 +594,7 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({ appFlow = f
             <div className="my-auto max-w-xl py-12">
               <span className="inline-flex items-center gap-2 rounded-full border border-blue-200/20 bg-blue-200/10 px-4 py-2 text-[10px] font-black uppercase tracking-[0.22em] text-blue-100 backdrop-blur">
                 <ShieldCheck size={14} />
-                Segurança do Portal do Aluno
+                {isFirstAccess ? 'Segurança do primeiro acesso' : 'Segurança do Portal do Aluno'}
               </span>
               <h2 className="mt-6 max-w-lg text-4xl font-black uppercase leading-[0.98] tracking-tight xl:text-5xl">
                 Recupere seu acesso com segurança.
@@ -663,12 +698,14 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({ appFlow = f
                     </span>
                     <h1 className="mt-4 text-3xl font-black leading-tight tracking-tight text-[#001a33] sm:text-4xl">
                       {mode === 'reset'
-                        ? 'Crie sua nova senha'
+                        ? isFirstAccess ? 'Crie sua senha de acesso' : 'Crie sua nova senha'
                         : 'Redefinição de senha do aluno'}
                     </h1>
                     <p className="mt-3 max-w-md text-sm font-semibold leading-relaxed text-slate-500">
                       {mode === 'reset'
-                        ? 'Defina uma senha segura para voltar a acessar seus cursos e serviços acadêmicos.'
+                        ? isFirstAccess
+                          ? 'Defina uma senha segura para concluir seu primeiro acesso ao sistema.'
+                          : 'Defina uma senha segura para voltar a acessar seus cursos e serviços acadêmicos.'
                         : 'Informe sua matrícula de acesso ou e-mail para solicitar a recuperação.'}
                     </p>
                   </div>

@@ -15,9 +15,13 @@ const ParceiroAlunoFormStepFamily: React.FC<FamilyStepProps> = ({ formData, isMi
       <h4 className="text-xs font-black uppercase tracking-wider">Filiação</h4>
     </div>
 
+    <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-xs font-medium leading-relaxed text-rose-800">
+      Estes dados podem ser preenchidos depois no cadastro inicial. Para matrícula técnica de aluno menor de idade, os dados do responsável legal serão solicitados.
+    </div>
+
     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
       <div>
-        <label className={LABEL_CLS}>Nome da Mãe <span className="text-red-500">*</span></label>
+        <label className={LABEL_CLS}>Nome da Mãe</label>
         <input type="text" name="nomeMae" value={formData.nomeMae} onChange={onChange}
           className={INPUT_CLS} placeholder="Nome completo da mãe" />
       </div>
@@ -34,7 +38,7 @@ const ParceiroAlunoFormStepFamily: React.FC<FamilyStepProps> = ({ formData, isMi
         <div className="bg-amber-50 rounded-2xl p-4 border border-amber-200 flex items-start gap-3 mb-5">
           <AlertCircle size={16} className="text-amber-500 mt-0.5 flex-shrink-0" />
           <p className="text-xs text-amber-700 font-bold">
-            Aluno menor de idade — Dados do responsável legal são obrigatórios.
+            Aluno menor de idade — informe o responsável legal antes de iniciar uma matrícula técnica.
           </p>
         </div>
 
@@ -45,19 +49,19 @@ const ParceiroAlunoFormStepFamily: React.FC<FamilyStepProps> = ({ formData, isMi
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div className="md:col-span-2">
-            <label className={LABEL_CLS}>Nome do Responsável <span className="text-red-500">*</span></label>
+            <label className={LABEL_CLS}>Nome do Responsável</label>
             <input type="text" name="responsavelNome" value={formData.responsavelNome} onChange={onChange}
               className={INPUT_CLS} placeholder="Nome completo do responsável" />
           </div>
 
           <div>
-            <label className={LABEL_CLS}>CPF do Responsável <span className="text-red-500">*</span></label>
+            <label className={LABEL_CLS}>CPF do Responsável</label>
             <input type="text" name="responsavelCpf" value={formData.responsavelCpf} onChange={onChange}
               maxLength={14} className={`${INPUT_CLS} font-mono`} placeholder="000.000.000-00" />
           </div>
 
           <div>
-            <label className={LABEL_CLS}>Parentesco <span className="text-red-500">*</span></label>
+            <label className={LABEL_CLS}>Parentesco</label>
             <select name="responsavelParentesco" value={formData.responsavelParentesco} onChange={onChange} className={INPUT_CLS}>
               <option value="">Selecione...</option>
               <option value="MÃE">MÃE</option>
@@ -71,7 +75,7 @@ const ParceiroAlunoFormStepFamily: React.FC<FamilyStepProps> = ({ formData, isMi
           </div>
 
           <div>
-            <label className={LABEL_CLS}>Telefone do Responsável <span className="text-red-500">*</span></label>
+            <label className={LABEL_CLS}>Telefone do Responsável</label>
             <input type="tel" name="responsavelTelefone" value={formData.responsavelTelefone} onChange={onChange}
               maxLength={15} className={INPUT_CLS} placeholder="(00) 00000-0000" />
           </div>
@@ -118,8 +122,8 @@ const ParceiroAlunoFormStepFamily: React.FC<FamilyStepProps> = ({ formData, isMi
           className="mt-0.5 h-4 w-4 accent-blue-600"
         />
         <span>
-          <strong className="block text-xs uppercase tracking-wider text-blue-800">Responsável financeiro obrigatório</strong>
-          <span className="mt-1 block text-xs text-blue-700">Marque para declarar que este responsável ou o próprio aluno assumirá as cobranças da matrícula técnica.</span>
+          <strong className="block text-xs uppercase tracking-wider text-blue-800">Responsável financeiro para matrícula técnica</strong>
+          <span className="mt-1 block text-xs text-blue-700">Marque quando este responsável ou o próprio aluno assumir as cobranças de uma matrícula técnica.</span>
         </span>
       </label>
       <div className="mt-4 grid grid-cols-1 gap-5 md:grid-cols-2">

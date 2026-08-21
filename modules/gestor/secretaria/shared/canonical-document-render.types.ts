@@ -27,6 +27,8 @@ export interface CanonicalDocumentRenderedPage {
 
 export interface CanonicalDocumentRenderedContent {
   kind: string | null;
+  /** Data já congelada pela emissão, sem depender do relógio do navegador. */
+  emissao?: Record<string, unknown> | string | null;
   pages: CanonicalDocumentRenderedPage[];
   watermark: CanonicalDocumentWatermark | null;
   qr: CanonicalDocumentQr | null;

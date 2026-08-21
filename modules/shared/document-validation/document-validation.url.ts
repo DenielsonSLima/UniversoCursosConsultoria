@@ -52,17 +52,12 @@ export const getDocumentValidationBaseUrl = () => {
 export const getDocumentValidationUrl = (code: string) =>
   `${getDocumentValidationBaseUrl()}?code=${encodeURIComponent(code)}`;
 
-interface DocumentValidationDisplayUrlOptions {
-  includeSearch?: boolean;
-}
-
 /**
  * Formata a URL canônica somente para leitura humana no documento.
  * O QR e os links continuam usando a URL HTTPS original.
  */
 export const formatDocumentValidationUrlForDisplay = (
   value: string,
-  options: DocumentValidationDisplayUrlOptions = {},
 ) => {
   const url = new URL(value);
   if (
@@ -78,8 +73,5 @@ export const formatDocumentValidationUrlForDisplay = (
   const displayHostname = normalizedHostname === "universocc.com.br"
     ? "www.universocc.com.br"
     : normalizedHostname;
-  const search = options.includeSearch === false ? "" : url.search;
-  return `${displayHostname}${
-    url.port ? `:${url.port}` : ""
-  }${url.pathname}${search}`;
+  return `${displayHostname}${url.port ? `:${url.port}` : ""}${url.pathname}`;
 };

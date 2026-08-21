@@ -30,8 +30,12 @@ import { createStudentCardPrintPdfBlob, downloadStudentCardPdf } from './student
 import { waitForQrCodeAssets } from '../../shared/qrcode/qr-code-assets';
 import AlunoMobileSecretaria from './components/mobile/AlunoMobileSecretaria';
 import useAlunoMobileLayout from '../hooks/useAlunoMobileLayout';
+import ElectronicSignatureInbox from '../../shared/assinatura-eletronica/ElectronicSignatureInbox';
 
-interface SecretariaPageProps { alunoId: string }
+interface SecretariaPageProps {
+  alunoId: string;
+  contextId: string;
+}
 type Toast = { message: string; type: 'success' | 'error' | 'warning' };
 
 const printStyles = `@media print {
@@ -42,7 +46,7 @@ const printStyles = `@media print {
   #print-area-declaracao, #print-area-irpf { position:absolute;left:0;top:0;width:794px!important;height:1123px!important;padding:60px 80px!important;box-shadow:none!important;border:none!important;background:white!important;-webkit-print-color-adjust:exact;print-color-adjust:exact; }
 }`;
 
-const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
+const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId, contextId }) => {
   const isMobileLayout = useAlunoMobileLayout();
   const queryClient = useQueryClient();
   const [selectedRequestType, setSelectedRequestType] = useState<AlunoSecretariaSolicitacaoTipo>('Histórico Escolar');
@@ -371,30 +375,51 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
     <div className="space-y-5 text-xs font-sans animate-fadeIn">
       {isMobileLayout ? (
         tab === 'servicos' ? (
-          <AlunoMobileSecretaria
-            courseName={activeEnrollment?.turmas?.cursos?.nome || 'Vínculo acadêmico'}
-            eligibility={{ ...eligibility, canEmitElectionBadge: electionAvailable }}
-            enrollmentNumber={formattedEnrollment}
-            prazos={prazos}
-            selectedType={selectedRequestType}
-            solicitacoes={solicitacoes}
-            submitting={createRequest.isPending}
-            onCopyEnrollment={() => void copyEnrollment()}
-            onOpenBulletin={() => setBulletinOpen(true)}
-            onOpenDeclaration={() => setDeclarationOpen(true)}
-            onOpenIrpf={onOpenIrpf}
-            onOpenIdentity={setTab}
-            onSelectedTypeChange={setSelectedRequestType}
-            onSubmitRequest={() => {
-              if (eligibility.allowedRequests.includes(selectedRequestType)) createRequest.mutate(selectedRequestType);
-            }}
-          />
+          <div className="space-y-4">
+            <AlunoMobileSecretaria
+              courseName={activeEnrollment?.turmas?.cursos?.nome || 'Vínculo acadêmico'}
+              eligibility={{ ...eligibility, canEmitElectionBadge: electionAvailable }}
+              enrollmentNumber={formattedEnrollment}
+              prazos={prazos}
+              selectedType={selectedRequestType}
+              solicitacoes={solicitacoes}
+              submitting={createRequest.isPending}
+              onCopyEnrollment={() => void copyEnrollment()}
+              onOpenBulletin={() => setBulletinOpen(true)}
+              onOpenDeclaration={() => setDeclarationOpen(true)}
+              onOpenIrpf={onOpenIrpf}
+              onOpenIdentity={setTab}
+              onSelectedTypeChange={setSelectedRequestType}
+              onSubmitRequest={() => {
+                if (eligibility.allowedRequests.includes(selectedRequestType)) createRequest.mutate(selectedRequestType);
+              }}
+            />
+            <ElectronicSignatureInbox
+              audience="aluno"
+              profile="ALUNO"
+              contextId={contextId}
+              heading="Minhas assinaturas"
+              poloId={activePoloId}
+              compact
+            />
+          </div>
         ) : identityDocumentsView
       ) : (
         <>
           <div className="flex flex-col items-start justify-between gap-4 overflow-hidden rounded-2xl bg-gradient-to-r from-blue-900 to-slate-900 p-5 text-white shadow-lg sm:flex-row sm:items-center sm:p-7"><div><span className="rounded-lg border border-blue-500/20 bg-blue-600/30 px-3 py-1 text-[9px] font-black uppercase tracking-wider text-blue-300">Secretaria Digital</span><h2 className="mt-1 text-xl font-black uppercase tracking-tight sm:text-2xl">Serviços Acadêmicos</h2><p className="text-xs font-medium text-slate-300">Emita declarações, faça solicitações e acesse seus documentos.</p></div><div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 font-mono font-bold"><p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Minha Matrícula</p><p className="mt-1.5 text-base tracking-widest text-white">{formattedEnrollment}</p></div></div>
           {identityDocumentsView}
-          {tab === 'servicos' ? <AlunoSecretariaServicesPanel eligibility={eligibility} solicitacoes={solicitacoes} prazos={prazos} selectedType={selectedRequestType} submitting={createRequest.isPending} onSelectedTypeChange={setSelectedRequestType} onSubmit={(event) => { event.preventDefault(); if (eligibility.allowedRequests.includes(selectedRequestType)) createRequest.mutate(selectedRequestType); }} onOpenBulletin={() => setBulletinOpen(true)} onOpenDeclaration={() => setDeclarationOpen(true)} onOpenIrpf={onOpenIrpf} /> : null}
+          {tab === 'servicos' ? (
+            <>
+              <ElectronicSignatureInbox
+                audience="aluno"
+                profile="ALUNO"
+                contextId={contextId}
+                heading="Minhas assinaturas"
+                poloId={activePoloId}
+              />
+              <AlunoSecretariaServicesPanel eligibility={eligibility} solicitacoes={solicitacoes} prazos={prazos} selectedType={selectedRequestType} submitting={createRequest.isPending} onSelectedTypeChange={setSelectedRequestType} onSubmit={(event) => { event.preventDefault(); if (eligibility.allowedRequests.includes(selectedRequestType)) createRequest.mutate(selectedRequestType); }} onOpenBulletin={() => setBulletinOpen(true)} onOpenDeclaration={() => setDeclarationOpen(true)} onOpenIrpf={onOpenIrpf} />
+            </>
+          ) : null}
         </>
       )}
       <StudentCardPrintDialog

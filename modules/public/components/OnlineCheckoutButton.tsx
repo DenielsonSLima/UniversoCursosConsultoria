@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { CheckCircle2, CreditCard, Loader2, X } from 'lucide-react';
 import { paymentCheckoutService } from '../../asaas/asaas.service';
 import { ensureLinkedAlunoProfile, getPortalProfile, savePortalSession } from '../../login/portal-session';
+import { generateSafeUuid } from '../../../lib/randomUuid';
+import { alunoPublicAuthService } from '../login/aluno-public-auth.service';
 
 interface OnlineCheckoutButtonProps {
   courseId: string;
@@ -22,6 +24,7 @@ const OnlineCheckoutButton: React.FC<OnlineCheckoutButtonProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{ title: string; message: string; tone: 'success' | 'error' } | null>(null);
+  const ensureAlunoRequestIdRef = useRef(generateSafeUuid());
   const effectiveDisabled = loading || disabled || availabilityLoading;
   const studentPortalCourseUrl = `/aluno?module=cursos&courseId=${encodeURIComponent(courseId)}`;
 
@@ -31,42 +34,50 @@ const OnlineCheckoutButton: React.FC<OnlineCheckoutButtonProps> = ({
     try {
       setToast(null);
 
-      if (eadInline) {
-        const profile = await getPortalProfile({ preferredRole: 'Aluno', allowedRoles: ['Aluno'] })
-          || await ensureLinkedAlunoProfile();
-
-        if (!profile || profile.tipo !== 'Aluno') {
-          setToast({
-            title: 'Login necessário',
-            message: 'Entre ou crie seu cadastro de aluno para escolher a forma de pagamento no portal.',
-            tone: 'error',
-          });
-          setLoading(false);
-          window.location.assign(`/login?mode=cadastro&redirect=${encodeURIComponent(studentPortalCourseUrl)}`);
-          return;
-        }
-
-        savePortalSession(profile);
-        window.location.assign(studentPortalCourseUrl);
-        return;
-      }
-
       const profile = await getPortalProfile({ preferredRole: 'Aluno', allowedRoles: ['Aluno'] })
-        || await ensureLinkedAlunoProfile();
+        || await ensureLinkedAlunoProfile(undefined, ensureAlunoRequestIdRef.current);
 
       if (!profile || profile.tipo !== 'Aluno') {
-        const redirect = encodeURIComponent(window.location.pathname + window.location.search);
+        const redirectPath = eadInline
+          ? studentPortalCourseUrl
+          : window.location.pathname + window.location.search;
         setToast({
           title: 'Login necessário',
-          message: 'Entre ou crie seu cadastro de aluno para matricular-se e pagar este curso.',
+          message: eadInline
+            ? 'Entre ou crie seu cadastro de aluno para escolher a forma de pagamento no portal.'
+            : 'Entre ou crie seu cadastro de aluno para matricular-se e pagar este curso.',
           tone: 'error',
         });
         setLoading(false);
-        window.location.assign(`/login?mode=cadastro&redirect=${redirect}`);
+        window.location.assign(`/login?mode=cadastro&redirect=${encodeURIComponent(redirectPath)}`);
+        return;
+      }
+
+      if (alunoPublicAuthService.needsInitialAccess(profile)) {
+        const firstAccessParams = new URLSearchParams({
+          next: eadInline
+            ? studentPortalCourseUrl
+            : window.location.pathname + window.location.search,
+        });
+        if (profile.contextId) {
+          firstAccessParams.set('context', profile.contextId);
+        }
+        setToast({
+          title: 'Primeiro acesso pendente',
+          message: 'Aceite os termos vigentes e conclua a troca de senha antes de iniciar o pagamento.',
+          tone: 'error',
+        });
+        setLoading(false);
+        window.location.assign(`/aluno/primeiro-acesso?${firstAccessParams.toString()}`);
         return;
       }
 
       savePortalSession(profile);
+      if (eadInline) {
+        window.location.assign(studentPortalCourseUrl);
+        return;
+      }
+
       const result = await paymentCheckoutService.getPublicCheckout(
         courseId,
         profile.id,

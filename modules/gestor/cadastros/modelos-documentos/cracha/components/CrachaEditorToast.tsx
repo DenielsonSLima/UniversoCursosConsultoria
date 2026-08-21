@@ -7,7 +7,7 @@ export type CrachaEditorToastState = {
 };
 
 const CrachaEditorToast: React.FC<{ toast: CrachaEditorToastState }> = ({ toast }) => (
-  <div className="fixed top-6 right-6 z-[99999] animate-fadeIn">
+  <div className="fixed top-6 right-6 z-[99999] animate-fadeIn" role="status" aria-live="polite">
     <div className={`flex items-center gap-3 px-6 py-3.5 rounded-2xl shadow-2xl border backdrop-blur-md transition-all duration-300 ${
       toast.type === 'success'
         ? 'bg-emerald-500/95 border-emerald-400 text-white'

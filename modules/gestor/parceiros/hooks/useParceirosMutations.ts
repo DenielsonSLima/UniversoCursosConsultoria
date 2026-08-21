@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { parceirosService } from '../parceiros.service';
 import { parceirosQueryKeys } from '../parceiros.query-keys';
 import { portalActivationService } from '../portal-activation.service';
-import { buildAuthRedirectUrl } from '../../../../lib/app-url';
+import { buildConfiguredAuthRedirectUrl } from '../../../../lib/app-url';
 
 interface ToastApi {
   success: (title: string, message: string) => void;
@@ -35,17 +35,40 @@ export const useParceirosMutations = ({
   };
 
   const saveAlunoMutation = useMutation({
-    mutationFn: (data: any) =>
-      parceirosService.create({
-        ...data,
-        tipo: 'Aluno',
-        // O gestor cadastra o aluno, mas somente o próprio aluno pode aceitar
-        // os termos ao validar o convite e concluir o primeiro acesso.
-        aceitouTermosUso: false,
-        aceitouTermosUsoEm: null,
-        termosUsoVersao: null,
-        trocaSenhaObrigatoria: true,
-      }),
+    mutationFn: (data: any) => {
+      const alunoData = { ...data };
+
+      // Identidade, status de acesso e aceite jurídico pertencem somente ao
+      // fluxo autorizado de convite/primeiro acesso, nunca ao INSERT do gestor.
+      for (const field of [
+        'authUserId',
+        'auth_user_id',
+        'authLoginEmail',
+        'auth_login_email',
+        'matriculaAcesso',
+        'matricula_acesso',
+        'trocaSenhaObrigatoria',
+        'troca_senha_obrigatoria',
+        'acessoStatus',
+        'acesso_status',
+        'acessoErro',
+        'acesso_erro',
+        'conviteEnviadoEm',
+        'convite_enviado_em',
+        'acessoAtivadoEm',
+        'acesso_ativado_em',
+        'aceitouTermosUso',
+        'aceitou_termos_uso',
+        'aceitouTermosUsoEm',
+        'aceitou_termos_uso_em',
+        'termosUsoVersao',
+        'termos_uso_versao',
+      ]) {
+        delete alunoData[field];
+      }
+
+      return parceirosService.create({ ...alunoData, tipo: 'Aluno' });
+    },
     onSuccess: async (created, data) => {
       invalidatePartners();
       const isExistingAluno = Boolean(created?.existingAluno);
@@ -56,7 +79,7 @@ export const useParceirosMutations = ({
       let accessPreparationError: string | null = null;
 
       if (created?.id && !isExistingAluno) {
-        const redirectTo = buildAuthRedirectUrl('/login');
+        const redirectTo = buildConfiguredAuthRedirectUrl('/login');
         try {
           const result = await portalActivationService.ensureStudentAccess({
             partnerId: created.id,
@@ -127,7 +150,12 @@ export const useParceirosMutations = ({
     mutationFn: (data: any) => parceirosService.create({ ...data, tipo: 'Professor' }),
     onSuccess: (created) => {
       invalidatePartners();
-      if (created?.institutionalProfileLinked) {
+      if (created?.professorAccessInviteSent) {
+        toast.success(
+          'Professor cadastrado e convite enviado!',
+          created.institutionalProfileLinkMessage || `${created.nome} receberá um e-mail para criar a própria senha de acesso.`,
+        );
+      } else if (created?.institutionalProfileLinked) {
         toast.success(
           'Professor cadastrado e acesso vinculado!',
           `${created.nome} poderá escolher Professor ou Gestor ao entrar no portal institucional.`,

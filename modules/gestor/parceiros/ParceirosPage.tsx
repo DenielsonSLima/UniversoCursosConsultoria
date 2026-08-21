@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  BookOpenCheck,
   Building,
   Download,
   GraduationCap,
@@ -7,6 +8,7 @@ import {
   Plus,
   User,
   Users,
+  UsersRound,
 } from 'lucide-react';
 import ParceirosKpis from './components/ParceirosKpis';
 import ParceirosFilters from './components/ParceirosFilters';
@@ -25,6 +27,8 @@ import { useParceirosFilters, ParceirosTabType } from './hooks/useParceirosFilte
 import { useParceirosMutations } from './hooks/useParceirosMutations';
 import { useParceirosQueries } from './hooks/useParceirosQueries';
 import { filterTurmasByModalidades } from './parceiros-turmas.utils';
+import ResponsaveisTab from './responsaveis/ResponsaveisTab';
+import CoordenacoesTab from './coordenacoes/CoordenacoesTab';
 
 export type ParceiroFormType = 'aluno' | 'professor' | 'selection' | 'pf' | 'pj';
 type FormType = ParceiroFormType | null;
@@ -41,6 +45,8 @@ const tabs = [
   { id: 'todos', label: 'Todos', icon: LayoutGrid },
   { id: 'professores', label: 'Professores', icon: Users },
   { id: 'alunos', label: 'Alunos', icon: GraduationCap },
+  { id: 'responsaveis', label: 'Responsáveis', icon: UsersRound },
+  { id: 'coordenacoes', label: 'Coordenações', icon: BookOpenCheck },
   { id: 'pj', label: 'Pessoa Jurídica', icon: Building },
   { id: 'pf', label: 'Pessoa Física', icon: User },
 ] as const;
@@ -70,6 +76,8 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
     if (initialForm) setShowForm(initialForm);
   }, [initialForm]);
 
+  const isDedicatedGovernanceTab = activeTab === 'responsaveis' || activeTab === 'coordenacoes';
+
   const {
     allPartners,
     loadingPartners,
@@ -77,7 +85,12 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
     loadingTurmas,
     turmasError,
     reloadTurmas,
-  } = useParceirosQueries({ poloId, includeGlobal });
+  } = useParceirosQueries({
+    poloId,
+    includeGlobal,
+    enablePartners: !isDedicatedGovernanceTab,
+    enableTurmas: !isDedicatedGovernanceTab,
+  });
   const {
     searchTerm,
     statusFilter,
@@ -124,6 +137,10 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
     setDeletingParceiro,
   });
 
+  const toastNotification = (
+    <ToastNotification toasts={toasts} onRemove={removeToast} />
+  );
+
   if (selectedParceiro) {
     const handleBackFromDetails = () => {
       setSelectedParceiro(null);
@@ -131,43 +148,51 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
     };
 
     if (selectedParceiro.tipo === 'Aluno') {
-      return <ParceiroAlunoDetalhes alunoInicial={selectedParceiro} onBack={handleBackFromDetails} onRequestScrollTop={onRequestScrollTop} />;
+      return <>{toastNotification}<ParceiroAlunoDetalhes alunoInicial={selectedParceiro} onBack={handleBackFromDetails} onRequestScrollTop={onRequestScrollTop} /></>;
     }
     if (selectedParceiro.tipo === 'Professor') {
-      return <ParceiroProfessorDetalhes professorInicial={selectedParceiro} onBack={handleBackFromDetails} />;
+      return <>{toastNotification}<ParceiroProfessorDetalhes professorInicial={selectedParceiro} onBack={handleBackFromDetails} /></>;
     }
     if (selectedParceiro.tipo === 'PJ') {
-      return <ParceiroPJDetalhes pjInicial={selectedParceiro} onBack={handleBackFromDetails} />;
+      return <>{toastNotification}<ParceiroPJDetalhes pjInicial={selectedParceiro} onBack={handleBackFromDetails} /></>;
     }
-    return <ParceiroPFDetalhes pfInicial={selectedParceiro} onBack={handleBackFromDetails} />;
+    return <>{toastNotification}<ParceiroPFDetalhes pfInicial={selectedParceiro} onBack={handleBackFromDetails} /></>;
   }
 
   if (showForm === 'selection') {
     return (
-      <ParceiroSelectionModal
-        onSelect={setShowForm}
-        onClose={() => setShowForm(null)}
-      />
+      <>
+        {toastNotification}
+        <ParceiroSelectionModal
+          onSelect={setShowForm}
+          onClose={() => setShowForm(null)}
+        />
+      </>
     );
   }
 
   if (showForm && showForm !== 'selection') {
     return (
-      <ParceiroFormHost
-        showForm={showForm}
-        onCancel={() => setShowForm(null)}
-        onSaveAluno={(data) => saveAlunoMutation.mutate(data)}
-        onSaveProfessor={(data) => saveProfessorMutation.mutate(data)}
-        onSavePF={(data) => savePFMutation.mutate(data)}
-        onSavePJ={(data) => savePJMutation.mutate(data)}
-        defaultPoloId={poloId}
-      />
+      <>
+        {toastNotification}
+        <ParceiroFormHost
+          showForm={showForm}
+          onCancel={() => setShowForm(null)}
+          onSaveAluno={(data) => saveAlunoMutation.mutate(data)}
+          onSaveProfessor={(data) => saveProfessorMutation.mutate(data)}
+          onSavePF={(data) => savePFMutation.mutate(data)}
+          onSavePJ={(data) => savePJMutation.mutate(data)}
+          defaultPoloId={poloId}
+          canAssociateAllPolos={includeGlobal}
+          onScopeError={(message) => toast.error('Polo não selecionado', message)}
+        />
+      </>
     );
   }
 
   return (
     <div className="pb-12">
-      <ToastNotification toasts={toasts} onRemove={removeToast} />
+      {toastNotification}
 
       <div className="flex flex-col md:flex-row justify-between items-center mb-5 gap-6">
         <div>
@@ -176,7 +201,7 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
           </h2>
         </div>
 
-        <div className="flex gap-3 w-full md:w-auto">
+        {!isDedicatedGovernanceTab ? <div className="flex gap-3 w-full md:w-auto">
           <button
             onClick={() => setShowExportModal(true)}
             className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white text-slate-700 px-6 py-3 rounded-2xl font-semibold text-xs hover:bg-slate-50 hover:text-blue-600 transition-all border border-slate-200 shadow-sm"
@@ -197,10 +222,10 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
               <span>Novo Registro</span>
             </div>
           </button>
-        </div>
+        </div> : null}
       </div>
 
-      <ParceirosKpis
+      {!isDedicatedGovernanceTab ? <ParceirosKpis
         totalParceiros={kpis.totalParceiros || 0}
         totalParceirosAtivos={kpis.totalParceirosAtivos || 0}
         totalAlunos={kpis.totalAlunosVinculados || 0}
@@ -209,7 +234,7 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
         totalProfessores={kpis.totalProfessoresVinculados || 0}
         totalProfessoresAtivos={kpis.totalProfessoresAtivos || 0}
         totalProfessoresInativos={kpis.totalProfessoresInativos || 0}
-      />
+      /> : null}
 
       <div className="border-b border-slate-200 mb-5 mt-2">
         <div className="flex gap-6 overflow-x-auto pb-px">
@@ -236,6 +261,20 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
         </div>
       </div>
 
+      {activeTab === 'responsaveis' ? (
+        <ResponsaveisTab
+          poloId={poloId}
+          includeGlobal={includeGlobal}
+          toast={toast}
+        />
+      ) : activeTab === 'coordenacoes' ? (
+        <CoordenacoesTab
+          poloId={poloId}
+          includeGlobal={includeGlobal}
+          toast={toast}
+        />
+      ) : (
+        <>
       <ParceirosFilters
         onSearch={handleSearch}
         onSortChange={handleSort}
@@ -292,6 +331,8 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
           onCancel={() => setDeletingParceiro(null)}
           onConfirm={(id) => deleteMutation.mutate(id)}
         />
+      )}
+        </>
       )}
     </div>
   );

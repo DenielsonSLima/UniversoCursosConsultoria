@@ -1,3 +1,4 @@
+// File: modules/gestor/gestao/tecnicos/detalhes/components/diarios/DiarioClasse.tsx
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { Loader2 } from 'lucide-react';

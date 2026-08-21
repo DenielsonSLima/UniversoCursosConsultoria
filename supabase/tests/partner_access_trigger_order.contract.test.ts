@@ -6,7 +6,7 @@ declare const Deno: {
 };
 
 const migrationUrl = new URL(
-  "../migrations/20260820182744_fix_partner_access_trigger_order.sql",
+  "../migrations/20260820190000_fix_partner_access_trigger_order.sql",
   import.meta.url,
 );
 

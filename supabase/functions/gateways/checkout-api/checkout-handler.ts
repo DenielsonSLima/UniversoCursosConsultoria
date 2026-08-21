@@ -37,9 +37,14 @@ import {
   normalizeErrorMessage,
   resolvePaymentGatewayRoute,
   tryNormalizeGatewayPaymentMethod,
-  UUID_RE,
 } from "./checkout-utils.ts";
 import { getGatewayRuntimeConfig } from "../runtime-config.ts";
+import {
+  assertCanonicalAlunoCheckoutReady,
+  CHECKOUT_ACCESS_VALIDATION_UNAVAILABLE_MESSAGE,
+  findCanonicalCheckoutContext,
+  parseCanonicalCheckoutContexts,
+} from "./checkout-student-access.ts";
 
 export const handlePaymentCheckout = async (req: Request) => {
   const corsHeadersForRequest = buildCorsHeaders(req);
@@ -91,41 +96,64 @@ export const handlePaymentCheckout = async (req: Request) => {
     const { data: authData, error: authError } = await admin.auth.getUser(
       token,
     );
-    const authEmail = authData?.user?.email
-      ? String(authData.user.email).trim().toLowerCase()
+    const authUserId = authData?.user?.id
+      ? String(authData.user.id).trim()
       : "";
-    if (authError || !authEmail) {
+    if (authError || !authUserId) {
       throw new Error("Sessão inválida para checkout.");
     }
 
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ||
+      Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || "";
+    if (!anonKey) {
+      throw new Error(CHECKOUT_ACCESS_VALIDATION_UNAVAILABLE_MESSAGE);
+    }
+    const userClient = createClient(supabaseUrl, anonKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    });
+    const { data: portalContextsData, error: portalContextsError } =
+      await userClient.rpc("portal_listar_perfis");
+    if (portalContextsError) {
+      console.error(JSON.stringify({
+        stage: "checkout_portal_contexts",
+        outcome: "denied",
+        code: portalContextsError.code || "unknown",
+      }));
+      throw new Error(CHECKOUT_ACCESS_VALIDATION_UNAVAILABLE_MESSAGE);
+    }
+    const portalContexts = parseCanonicalCheckoutContexts(portalContextsData);
+
     const { data: usuarioSistema, error: usuarioError } = await admin
       .from("usuarios_sistema")
-      .select("id, perfil, status, context")
-      .ilike("email", authEmail)
+      .select("id, perfil, status")
+      .eq("auth_user_id", authUserId)
       .maybeSingle();
     if (usuarioError) throw usuarioError;
-    const gestorContext = usuarioSistema?.context
-      ? String(usuarioSistema.context).trim()
-      : null;
-    const gestorPoloId = UUID_RE.test(gestorContext || "")
-      ? gestorContext
-      : null;
-    let gestorGlobal = normalize(gestorContext) === "global";
-    if (gestorPoloId) {
-      const { data: polo, error: poloError } = await admin
-        .from("polos")
-        .select("is_matriz")
-        .eq("id", gestorPoloId)
-        .maybeSingle();
-      if (poloError) throw poloError;
-      if (polo?.is_matriz === true) gestorGlobal = true;
-    }
+    const gestorContext = findCanonicalCheckoutContext(
+      portalContexts,
+      "GESTOR",
+      usuarioSistema?.id || null,
+    );
     const isGestorAtivo = Boolean(
       usuarioSistema &&
+        gestorContext &&
         normalize(usuarioSistema.perfil) === "gestor" &&
         isActiveStatus(usuarioSistema.status),
     );
-    if (requestedAlunoId && isGestorAtivo && !gestorGlobal && !gestorPoloId) {
+    const gestorGlobal = gestorContext?.allPolos === true;
+    const gestorPoloIds = gestorContext?.poloIds || [];
+    const requestedAlunoContext = requestedAlunoId
+      ? findCanonicalCheckoutContext(
+        portalContexts,
+        "ALUNO",
+        String(requestedAlunoId),
+      )
+      : null;
+    const isGestorOnBehalf = Boolean(
+      requestedAlunoId && isGestorAtivo && !requestedAlunoContext,
+    );
+    if (isGestorOnBehalf && !gestorGlobal && gestorPoloIds.length === 0) {
       throw new Error(
         "Gestor sem polo definido não pode gerar checkout para outro aluno.",
       );
@@ -155,11 +183,11 @@ export const handlePaymentCheckout = async (req: Request) => {
     let alunoQuery = admin
       .from("parceiros")
       .select("*")
-      .in("tipo", ["Aluno", "Professor"]);
-    if (isGestorAtivo && requestedAlunoId) {
+      .eq("tipo", "Aluno");
+    if (isGestorOnBehalf) {
       alunoQuery = alunoQuery.eq("id", requestedAlunoId);
     } else {
-      alunoQuery = alunoQuery.ilike("email", authEmail);
+      alunoQuery = alunoQuery.eq("auth_user_id", authUserId);
     }
     const { data: aluno, error: alunoError } = await alunoQuery
       .order("created_at", { ascending: false })
@@ -171,23 +199,35 @@ export const handlePaymentCheckout = async (req: Request) => {
         "Comprador não encontrado. Faça seu cadastro antes de comprar.",
       );
     }
-    if (!isGestorAtivo && requestedAlunoId && requestedAlunoId !== aluno.id) {
+    if (
+      !isGestorOnBehalf && requestedAlunoId && requestedAlunoId !== aluno.id
+    ) {
       throw new Error(
         "Você só pode gerar checkout para o seu próprio cadastro.",
       );
     }
-    if (isGestorAtivo && requestedAlunoId && !gestorGlobal) {
-      const alunoPoloIds = Array.isArray(aluno.polo_ids)
-        ? aluno.polo_ids.map(String)
-        : [];
-      const alunoNoPolo = aluno.polo_id === gestorPoloId ||
-        alunoPoloIds.includes(String(gestorPoloId));
+    if (isGestorOnBehalf && !gestorGlobal) {
+      const alunoPoloIds = new Set([
+        ...(aluno.polo_id ? [String(aluno.polo_id)] : []),
+        ...(Array.isArray(aluno.polo_ids) ? aluno.polo_ids.map(String) : []),
+      ]);
+      const alunoNoPolo = gestorPoloIds.some((poloId) =>
+        alunoPoloIds.has(poloId)
+      );
       if (!alunoNoPolo) {
         throw new Error(
           "Gestor sem permissão para gerar checkout deste aluno.",
         );
       }
     }
+
+    assertCanonicalAlunoCheckoutReady(portalContexts, {
+      alunoId: String(aluno.id),
+      alunoAuthUserId: aluno.auth_user_id ? String(aluno.auth_user_id) : null,
+      alunoRequiresPasswordReset: aluno.troca_senha_obrigatoria,
+      actorAuthUserId: authUserId,
+      gestorOnBehalf: isGestorOnBehalf,
+    });
 
     const cpfCnpj = onlyDigits(aluno.cpf_cnpj);
     const hasValidCpfCnpjForGateway = !cpfCnpj
@@ -278,8 +318,10 @@ export const handlePaymentCheckout = async (req: Request) => {
     if (turmaId) {
       turmasQuery = turmasQuery.eq("id", turmaId);
     }
-    if (isGestorAtivo && requestedAlunoId && !gestorGlobal) {
-      turmasQuery = turmasQuery.eq("polo_id", gestorPoloId);
+    if (isGestorOnBehalf && !gestorGlobal) {
+      turmasQuery = gestorPoloIds.length === 1
+        ? turmasQuery.eq("polo_id", gestorPoloIds[0])
+        : turmasQuery.in("polo_id", gestorPoloIds);
     }
     if (requireOnlinePermission) {
       turmasQuery = turmasQuery.eq("permitir_inscricoes_online", true);

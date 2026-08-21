@@ -3,15 +3,15 @@
 import assert from "node:assert/strict";
 
 const migrationUrl = new URL(
-  "../migrations/20260818194445_create_assinatura_eletronica_foundation.sql",
+  "../migrations/20260818143000_create_assinatura_eletronica_foundation.sql",
   import.meta.url,
 );
 const hardeningMigrationUrl = new URL(
-  "../migrations/20260818194642_harden_assinatura_eletronica_function_grants.sql",
+  "../migrations/20260818164540_harden_assinatura_eletronica_function_grants.sql",
   import.meta.url,
 );
 const performanceMigrationUrl = new URL(
-  "../migrations/20260818195036_index_assinatura_eletronica_foreign_keys.sql",
+  "../migrations/20260818164927_index_assinatura_eletronica_foreign_keys.sql",
   import.meta.url,
 );
 const serviceUrl = new URL(
@@ -298,7 +298,7 @@ Deno.test("salvamento da apresentação preserva uma chave de idempotência no r
   );
   assert.match(
     configuration,
-    /mutationFn:\s*\(\{ draft: nextDraft, expectedVersion, requestId \}: PresentationSaveInput\)[\s\S]*?expectedVersion,[\s\S]*?requestId,/i,
+    /mutationFn:\s*\(\s*\{\s*draft: nextDraft, expectedVersion, requestId\s*\}: PresentationSaveInput,?\s*\)\s*=>[\s\S]*?expectedVersion,\s*requestId,/i,
   );
   assert.match(
     configuration,
@@ -307,7 +307,10 @@ Deno.test("salvamento da apresentação preserva uma chave de idempotência no r
   assert.match(configuration, /onSuccess:[\s\S]*?setSaveRequestId\(crypto\.randomUUID\(\)\)/i);
   assert.match(configuration, /if \(!currentDraft \|\| saveDraftMutation\.isPending\) return/i);
   assert.match(configuration, /setDraft\(next\);\s*setSaveRequestId\(crypto\.randomUUID\(\)\)/i);
-  assert.match(configuration, /disabled=\{!isDirty \|\| disabled\}/i);
+  assert.match(
+    configuration,
+    /disabled=\{!isDirty \|\| disabled \|\| !hasRequiredStampAsset\}/i,
+  );
   assert.match(configuration, /Salvar nova versão/i);
 });
 

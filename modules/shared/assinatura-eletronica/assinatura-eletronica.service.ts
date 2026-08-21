@@ -65,6 +65,7 @@ import {
 import {
   assertCanonicalInstitutionalWatermarkDataUri,
 } from "./canonical-institutional-watermark";
+import { toElectronicSignatureRpcError } from "./assinatura-eletronica.rpc-error";
 
 /**
  * Chave de configuração do modelo de comprovante comum. Ela não habilita um
@@ -214,11 +215,50 @@ const normalizePreviewAssetSource = (value: unknown, label: string) => {
   return source;
 };
 
-const normalizePreviewWatermarkSource = (value: unknown) =>
-  assertCanonicalInstitutionalWatermarkDataUri(
+const normalizePreviewWatermark = (value: unknown) => {
+  const source = asRecord(
     value,
-    "A marca-d'água institucional",
+    "A marca-d'água institucional da prévia não foi informada.",
   );
+  assertExactKeys(
+    source,
+    ["url", "opacity", "scale", "rotate"],
+    "A marca-d'água institucional da prévia",
+  );
+  const opacity = requiredNumber(
+    source.opacity,
+    "A opacidade da marca-d'água institucional",
+  );
+  const scale = requiredNumber(
+    source.scale,
+    "A escala da marca-d'água institucional",
+  );
+  if (opacity < 0 || opacity > 1) {
+    throw new Error(
+      "A opacidade da marca-d'água institucional está fora do modelo autorizado.",
+    );
+  }
+  if (
+    !Number.isInteger(scale) || scale < 10 || scale > 100 ||
+    scale % 5 !== 0
+  ) {
+    throw new Error(
+      "A escala da marca-d'água institucional está fora do modelo autorizado.",
+    );
+  }
+  return {
+    url: assertCanonicalInstitutionalWatermarkDataUri(
+      source.url,
+      "A marca-d'água institucional",
+    ),
+    opacity,
+    scale,
+    rotate: requiredBoolean(
+      source.rotate,
+      "A rotação da marca-d'água institucional",
+    ),
+  };
+};
 
 const normalizePreviewIdentity = (
   value: unknown,
@@ -229,7 +269,7 @@ const normalizePreviewIdentity = (
   );
   assertExactKeys(
     source,
-    ["institution", "logoUrl", "watermarkUrl"],
+    ["institution", "logoUrl", "watermark"],
     "A identidade institucional da prévia",
   );
   const institution = asRecord(
@@ -259,7 +299,7 @@ const normalizePreviewIdentity = (
     source.logoUrl,
     "O logotipo institucional",
   );
-  const watermarkUrl = normalizePreviewWatermarkSource(source.watermarkUrl);
+  const watermark = normalizePreviewWatermark(source.watermark);
   return {
     institution: {
       name: requiredBoundedString(
@@ -300,7 +340,7 @@ const normalizePreviewIdentity = (
       ),
     },
     logoUrl,
-    watermarkUrl,
+    watermark,
   };
 };
 
@@ -693,7 +733,9 @@ const normalizeGlobalSignatureStamp = (
     assetId: source.assetId === null
       ? null
       : normalizeAssetId(source.assetId, "O ativo visual do carimbo"),
-    template: normalizeElectronicSignatureStampTemplate(source.template),
+    template: normalizeElectronicSignatureStampTemplate(source.template, {
+      allowLegacySignerNameLabel: true,
+    }),
     autoLayout: normalizeElectronicSignatureStampAutoLayout(source.autoLayout),
   };
 };
@@ -1085,7 +1127,9 @@ const normalizeArchiveItem = (
     throw new Error("O status do documento do acervo não foi reconhecido.");
   }
   if (!Array.isArray(source.signers)) {
-    throw new Error("O diário finalizado não informou os signatários canônicos.");
+    throw new Error(
+      "O diário finalizado não informou os signatários canônicos.",
+    );
   }
   assertDiarySignerCount(source.signers, "O diário finalizado");
   const signers = source.signers.map(normalizeArchiveSigner);
@@ -1389,7 +1433,9 @@ const normalizeCanonicalDiaryParticipants = (
   value: unknown,
 ): readonly ElectronicSignatureEnvelopeParticipant[] => {
   if (!Array.isArray(value)) {
-    throw new Error("Os participantes canônicos do diário não foram informados.");
+    throw new Error(
+      "Os participantes canônicos do diário não foram informados.",
+    );
   }
   assertDiarySignerCount(value, "O diário");
   const participants = value.map(normalizeEnvelopeParticipant);
@@ -1399,7 +1445,9 @@ const normalizeCanonicalDiaryParticipants = (
       participant.order !== index + 1 ||
       participantIds.has(participant.participantId)
     ) {
-      throw new Error("A ordem canônica dos participantes do diário é inválida.");
+      throw new Error(
+        "A ordem canônica dos participantes do diário é inválida.",
+      );
     }
     participantIds.add(participant.participantId);
   }
@@ -1808,7 +1856,7 @@ const rpcOrThrow = async <T>(
   normalize: (value: unknown) => T,
 ): Promise<T> => {
   const { data, error } = await supabase.rpc(name, args);
-  if (error) throw error;
+  if (error) throw toElectronicSignatureRpcError(error);
   return normalize(data);
 };
 

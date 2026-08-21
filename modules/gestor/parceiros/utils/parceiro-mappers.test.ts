@@ -72,6 +72,24 @@ test('mapeia o ciclo de acesso sem apagá-lo em uma atualização sem esses camp
   assert.equal('troca_senha_obrigatoria' in unrelatedUpdate, false);
 });
 
+test('expõe a identidade Auth do professor sem reenviá-la em atualizações', () => {
+  const professor = toCamel({
+    id: 'professor-auth-1',
+    tipo: 'Professor',
+    nome: 'Professor de Teste',
+    auth_user_id: 'auth-professor-1',
+    auth_login_email: 'professor@example.com',
+  });
+  const update = toSnake({
+    ...professor,
+    nome: 'Professor Atualizado',
+  });
+
+  assert.equal(professor.authUserId, 'auth-professor-1');
+  assert.equal(professor.authLoginEmail, 'professor@example.com');
+  assert.equal('auth_user_id' in update, false);
+});
+
 test('preserva dados eleitorais entre o contrato snake_case e o formulário camelCase', () => {
   const aluno = toCamel({
     id: 'student-voter-fields',
@@ -105,4 +123,72 @@ test('preserva dados eleitorais entre o contrato snake_case e o formulário came
   assert.equal(payload.titulo_eleitor_secao, '020');
   assert.equal(payload.titulo_eleitor_data_emissao, '2026-08-08');
   assert.equal(payload.titulo_eleitor_uf, 'SE');
+});
+
+test('mantém a documentação técnica pendente no cadastro inicial de aluno', () => {
+  const payload = toSnake({
+    tipo: 'Aluno',
+    nomeCompleto: 'Aluno de Teste',
+    matricularAgora: false,
+    tipoDocumento: '',
+    certidaoTipo: '',
+    certidaoModelo: '',
+    certidaoMatricula: '',
+    certidaoTermo: '',
+    certidaoLivro: '',
+    certidaoFolha: '',
+  });
+
+  assert.equal(payload.tipo_documento, null);
+  assert.equal(payload.certidao_tipo, null);
+  assert.equal(payload.certidao_modelo, null);
+  assert.equal(payload.certidao_matricula, null);
+  assert.equal(payload.certidao_termo, null);
+  assert.equal(payload.certidao_livro, null);
+  assert.equal(payload.certidao_folha, null);
+});
+
+test('grava aluno e parceiro PF no polo ativo recebido pelo formulário', () => {
+  const poloAtivo = '11111111-1111-4111-8111-111111111111';
+
+  const aluno = toSnake({
+    tipo: 'Aluno',
+    nomeCompleto: 'Aluno de Teste',
+    poloId: poloAtivo,
+  });
+  const parceiroPf = toSnake({
+    tipo: 'PF',
+    nomeCompleto: 'Prestador de Teste',
+    poloId: poloAtivo,
+  });
+
+  assert.equal(aluno.polo_id, poloAtivo);
+  assert.deepEqual(aluno.polo_ids, [poloAtivo]);
+  assert.equal(parceiroPf.polo_id, poloAtivo);
+  assert.deepEqual(parceiroPf.polo_ids, [poloAtivo]);
+});
+
+test('mantém a parceria PJ global sem polo individual', () => {
+  const parceria = toSnake({
+    tipo: 'PJ',
+    nomeCompleto: 'Parceria Global',
+    poloId: '',
+    poloIds: [],
+  });
+
+  assert.equal(parceria.polo_id, null);
+  assert.deepEqual(parceria.polo_ids, []);
+});
+
+test('grava a parceria PJ em um único polo escolhido', () => {
+  const poloEscolhido = '22222222-2222-4222-8222-222222222222';
+  const parceria = toSnake({
+    tipo: 'PJ',
+    nomeCompleto: 'Parceria por Polo',
+    poloId: poloEscolhido,
+    poloIds: [poloEscolhido],
+  });
+
+  assert.equal(parceria.polo_id, poloEscolhido);
+  assert.deepEqual(parceria.polo_ids, [poloEscolhido]);
 });

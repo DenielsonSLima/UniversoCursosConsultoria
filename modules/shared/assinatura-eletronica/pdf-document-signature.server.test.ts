@@ -33,8 +33,7 @@ const ONE_PIXEL_PNG = Uint8Array.from(
 const ONE_PIXEL_PNG_DATA_URL =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
 const VERIFICATION_URL = "https://universocc.com.br/validador?code=DIARIO-1";
-const VERIFICATION_DISPLAY_URL =
-  "www.universocc.com.br/validador?code=DIARIO-1";
+const VERIFICATION_DISPLAY_URL = "www.universocc.com.br/validador";
 const PROFESSOR_EVENT_ID = "11111111-1111-4111-8111-111111111111";
 const COORDINATOR_EVENT_ID = "22222222-2222-4222-8222-222222222222";
 const PROFESSOR_PARTICIPANT_ID = "33333333-3333-4333-8333-333333333333";
@@ -100,7 +99,7 @@ const GLOBAL_STAMP_TEMPLATE = {
       widthBp: 48_000,
       heightBp: 10_000,
       style: {
-        font: "HELVETICA_BOLD",
+        font: "HELVETICA_BOLD_OBLIQUE",
         fontSizeBp: 10_000,
         color: "#071A33",
         align: "LEFT",
@@ -116,11 +115,11 @@ const GLOBAL_STAMP_TEMPLATE = {
       widthBp: 48_000,
       heightBp: 9_000,
       style: {
-        font: "HELVETICA",
+        font: "HELVETICA_OBLIQUE",
         fontSizeBp: 7_500,
         color: "#071A33",
         align: "LEFT",
-        label: "Assinante: ",
+        label: "",
       },
     },
     {
@@ -164,7 +163,7 @@ const GLOBAL_STAMP_TEMPLATE = {
       widthBp: 48_000,
       heightBp: 14_000,
       style: {
-        font: "COURIER",
+        font: "COURIER_OBLIQUE",
         fontSizeBp: 5_500,
         color: "#071A33",
         align: "LEFT",
@@ -180,7 +179,7 @@ const GLOBAL_STAMP_TEMPLATE = {
       widthBp: 48_000,
       heightBp: 7_000,
       style: {
-        font: "COURIER",
+        font: "COURIER_BOLD_OBLIQUE",
         fontSizeBp: 6_000,
         color: "#071A33",
         align: "LEFT",
@@ -398,6 +397,33 @@ test("inspeção preserva orientação real de PDFs retrato e paisagem", async (
   assert.match(portrait.sha256, /^[a-f0-9]{64}$/u);
 });
 
+test("PDF final aceita QR acima de 40% quando não existe colisão real", () => {
+  const largeQrTemplate = {
+    ...GLOBAL_STAMP_TEMPLATE,
+    elements: GLOBAL_STAMP_TEMPLATE.elements.map((element) =>
+      element.id === "verificationQr"
+        ? {
+          ...element,
+          xBp: 50_000,
+          yBp: 0,
+          widthBp: 50_000,
+          heightBp: 50_000,
+        }
+        : element
+    ),
+  } satisfies ElectronicSignatureStampTemplateV1;
+
+  const normalized = normalizeElectronicSignatureStampTemplate(
+    largeQrTemplate,
+  );
+  const qr = normalized.elements.find((element) =>
+    element.id === "verificationQr"
+  );
+
+  assert.equal(qr?.widthBp, 50_000);
+  assert.equal(qr?.heightBp, 50_000);
+});
+
 test("página semântica do Diário ignora a folha opcional de instruções", async () => {
   const withoutInstructions = await createVectorPdf({ landscape: true });
   const withInstructions = await createVectorPdf({
@@ -490,11 +516,11 @@ test("carimba Professor e Coordenador na página congelada sem rasterizar as pá
   assert.doesNotMatch(extracted.pages[2], /validade jurídica/iu);
   assert.doesNotMatch(
     extracted.pages[2],
-    /Documento assinado digitalmente\s+(?:PROFESSOR|COORDENADOR)/u,
+    /Assinado digitalmente\s+(?:PROFESSOR|COORDENADOR)/u,
   );
   assert.doesNotMatch(
     extracted.pages[3],
-    /Documento assinado digitalmente/i,
+    /Assinado digitalmente/i,
   );
 });
 
@@ -533,7 +559,8 @@ test("template global único compõe duas instâncias automáticas com provas in
   );
   assert.match(pageText, /PROFESSOR/u);
   assert.match(pageText, /COORDENADOR/u);
-  assert.match(compactText, /Assinante:ProfessoraAnaSouza/u);
+  assert.match(compactText, /ProfessoraAnaSouza/u);
+  assert.doesNotMatch(pageText, /Assinante:/u);
   assert.match(compactText, /CPF:12\*\.\*\*\*\.\*\*9-09/u);
   assert.match(compactText, /13:14:15UTC-03:00/u);
   assert.match(compactText, new RegExp(PROFESSOR_SIGNATURE_HASH, "u"));
@@ -542,10 +569,20 @@ test("template global único compõe duas instâncias automáticas com provas in
   assert.match(compactText, new RegExp(COORDINATOR_VERIFICATION_CODE, "u"));
   assert.match(
     compactText,
-    /www\.universocc\.com\.br\/validador\?code=SIG-/u,
+    /www\.universocc\.com\.br\/validador/u,
   );
+  assert.doesNotMatch(compactText, /validador\?code=/u);
   assert.doesNotMatch(compactText, /https:\/\//u);
   assert.doesNotMatch(pageText, /validade jurídica/iu);
+
+  const qaDirectory = process.env.SIGNATURE_PDF_QA_DIR;
+  if (qaDirectory) {
+    await mkdir(qaDirectory, { recursive: true });
+    await writeFile(
+      `${qaDirectory}/diario-template-global-tipografia.pdf`,
+      result.finalBytes,
+    );
+  }
 });
 
 test("itens visuais opcionais podem ficar ocultos no PDF sem alterar a prova", async () => {
@@ -617,6 +654,66 @@ test("o mesmo template global é repetido para N signatários sem papel no layou
 });
 
 test("template global rejeita texto livre, quiet zone sobreposta e mistura com layout histórico", async () => {
+  const styledTemplate = globalThis.structuredClone(
+    GLOBAL_STAMP_TEMPLATE,
+  ) as unknown as {
+    elements: Array<{ style: Record<string, unknown> }>;
+  };
+  styledTemplate.elements[2].style.font = "HELVETICA_BOLD_OBLIQUE";
+  styledTemplate.elements[2].style.fontSizeBp = 12_000;
+  styledTemplate.elements[2].style.align = "RIGHT";
+  styledTemplate.elements[6].style.font = "COURIER_OBLIQUE";
+  styledTemplate.elements[7].style.font = "COURIER_BOLD_OBLIQUE";
+  const normalizedStyled = normalizeElectronicSignatureStampTemplate(
+    styledTemplate,
+  );
+  const normalizedTitle = normalizedStyled.elements[2];
+  const normalizedHash = normalizedStyled.elements[6];
+  const normalizedCode = normalizedStyled.elements[7];
+  assert.equal(normalizedTitle.kind, "TEXT");
+  assert.equal(normalizedHash.kind, "TEXT");
+  assert.equal(normalizedCode.kind, "TEXT");
+  if (
+    normalizedTitle.kind !== "TEXT" || normalizedHash.kind !== "TEXT" ||
+    normalizedCode.kind !== "TEXT"
+  ) {
+    assert.fail("O fixture tipográfico precisa apontar apenas para textos.");
+  }
+  assert.equal(normalizedTitle.style.font, "HELVETICA_BOLD_OBLIQUE");
+  assert.equal(normalizedTitle.style.fontSizeBp, 12_000);
+  assert.equal(normalizedTitle.style.align, "RIGHT");
+  assert.equal(normalizedHash.style.font, "COURIER_OBLIQUE");
+  assert.equal(
+    normalizedCode.style.font,
+    "COURIER_BOLD_OBLIQUE",
+  );
+
+  const legacySignerLabel = globalThis.structuredClone(
+    GLOBAL_STAMP_TEMPLATE,
+  ) as unknown as {
+    elements: Array<{ style: Record<string, unknown> }>;
+  };
+  legacySignerLabel.elements[3].style.label = "Assinante: ";
+  const normalizedLegacySigner = normalizeElectronicSignatureStampTemplate(
+    legacySignerLabel,
+  ).elements[3];
+  assert.equal(normalizedLegacySigner.kind, "TEXT");
+  if (normalizedLegacySigner.kind !== "TEXT") {
+    assert.fail("O fixture legado do nome precisa continuar sendo texto.");
+  }
+  assert.equal(normalizedLegacySigner.style.label, "Assinante: ");
+
+  const unsteppedFontSize = globalThis.structuredClone(
+    GLOBAL_STAMP_TEMPLATE,
+  ) as unknown as {
+    elements: Array<{ style: Record<string, unknown> }>;
+  };
+  unsteppedFontSize.elements[2].style.fontSizeBp = 10_250;
+  assert.throws(
+    () => normalizeElectronicSignatureStampTemplate(unsteppedFontSize),
+    /estilo de title.*imutável/i,
+  );
+
   const arbitraryLabel = globalThis.structuredClone(
     GLOBAL_STAMP_TEMPLATE,
   ) as unknown as {
@@ -644,11 +741,27 @@ test("template global rejeita texto livre, quiet zone sobreposta e mistura com l
   ) as unknown as {
     elements: Array<Record<string, unknown>>;
   };
-  qrOverlap.elements[9].xBp = 60_000;
+  // A projeção por extremos leva o quadro lógico de 35% até a borda real.
+  // Em 52%, o quadrado visível ainda invade a coluna de texto; em 60%, não.
+  qrOverlap.elements[9].xBp = 52_000;
   assert.throws(
     () => normalizeElectronicSignatureStampTemplate(qrOverlap),
     /quiet zone do QR individual/i,
   );
+
+  const qrLogicalSideGutter = globalThis.structuredClone(
+    GLOBAL_STAMP_TEMPLATE,
+  ) as unknown as {
+    elements: Array<Record<string, unknown>>;
+  };
+  qrLogicalSideGutter.elements[1].xBp = 65_000;
+  qrLogicalSideGutter.elements[1].yBp = 3_000;
+  qrLogicalSideGutter.elements[1].widthBp = 6_000;
+  qrLogicalSideGutter.elements[1].heightBp = 9_000;
+  const normalizedSideGutter = normalizeElectronicSignatureStampTemplate(
+    qrLogicalSideGutter,
+  );
+  assert.equal(normalizedSideGutter.elements[1].xBp, 65_000);
 
   const originalBytes = await createVectorPdf({ landscape: true });
   const frozenTarget = await freezeDiaryPdfSignatureTarget(originalBytes, {
@@ -739,7 +852,7 @@ test("aplicação respeita CropBox deslocada e rotações 0/90/180/270", async (
       });
       assert.match(
         extracted.pages[result.targetPageIndex],
-        /Documento assinado digitalmente/i,
+        /Assinado digitalmente/i,
       );
       assert.match(
         extracted.pages[result.targetPageIndex],
@@ -1133,8 +1246,11 @@ test("orquestrador repassa o template global ao final vetorial e gera comprovant
       },
       logo: null,
       institutionalWatermark: {
-        dataUrl: ONE_PIXEL_PNG_DATA_URL,
-        format: "PNG",
+        image: {
+          dataUrl: ONE_PIXEL_PNG_DATA_URL,
+          format: "PNG",
+        },
+        settings: { opacity: 1, scale: 100, rotate: false },
       },
       presentation: {
         policyName: "Política do Diário de Classe",
@@ -1211,6 +1327,7 @@ test("orquestrador repassa o template global ao final vetorial e gera comprovant
   assert.match(receipt.text, /13:16:17 UTC-03:00/u);
   assert.match(receipt.text, /DIARIO-1/u);
   assert.ok(receipt.text.includes(VERIFICATION_DISPLAY_URL));
+  assert.doesNotMatch(receipt.text, /validador\?code=/u);
   assert.doesNotMatch(receipt.text, /https:\/\//u);
   assert.doesNotMatch(receipt.text, /SIG-[0-9A-F-]{36}/u);
 

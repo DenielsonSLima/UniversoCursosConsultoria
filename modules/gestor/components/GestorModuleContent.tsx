@@ -211,7 +211,14 @@ const GestorModuleContentView: React.FC<GestorModuleContentProps> = ({
           <GestaoPage poloId={currentPoloId || undefined} activePoloId={currentPoloId || undefined} isMatriz={isMatrizSelected} poloNome={currentPoloName} onRequestScrollTop={onRequestScrollTop} permissions={permissions} gestorContextId={profile.contextId || ''} />
         </ModuleErrorBoundary>
       );
-    case 'secretaria': return <SecretariaPage key={scopedPoloId || 'sem-polo'} poloId={scopedPoloId} gestorPermissions={permissions} gestorContextId={profile.contextId || ''} />;
+    case 'secretaria': return (
+      <SecretariaPage
+        key={scopedPoloId || 'sem-polo'}
+        poloId={scopedPoloId}
+        gestorContextId={profile.contextId || ''}
+        gestorPermissions={permissions}
+      />
+    );
     case 'caixa': return <CaixaPage poloId={scopedPoloId} poloName={currentPoloName} isGlobal={isGlobal} isMatriz={isMatrizSelected} />;
     case 'financeiro': return <FinanceiroPage poloId={scopedPoloId} isMatriz={isMatrizSelected} allowedTabs={getEffectiveFinanceiroTabs(permissions)} />;
     case 'patrimonio': return (

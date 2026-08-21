@@ -4,13 +4,13 @@ import assert from "node:assert/strict";
 
 const originalSql = await Deno.readTextFile(
   new URL(
-    "../migrations/20260819203143_create_portal_multi_profile_identities.sql",
+    "../migrations/20260819110000_create_portal_multi_profile_identities.sql",
     import.meta.url,
   ),
 );
 const fixSql = await Deno.readTextFile(
   new URL(
-    "../migrations/20260820033346_fix_portal_profile_polo_id_ambiguity.sql",
+    "../migrations/20260820002509_fix_portal_profile_polo_id_ambiguity.sql",
     import.meta.url,
   ),
 );

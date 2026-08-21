@@ -3,15 +3,23 @@ import { ArrowLeft, LayoutTemplate, Save } from 'lucide-react';
 
 interface CrachaEditorHeaderProps {
   onCancel: () => void;
-  onSave: () => void;
+  onSave: () => void | Promise<void>;
+  title?: string;
+  isSaving?: boolean;
 }
 
-const CrachaEditorHeader: React.FC<CrachaEditorHeaderProps> = ({ onCancel, onSave }) => (
+const CrachaEditorHeader: React.FC<CrachaEditorHeaderProps> = ({
+  onCancel,
+  onSave,
+  title = 'Crachá de Estágio',
+  isSaving = false,
+}) => (
   <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 pb-6 border-b border-slate-100 gap-4">
     <div className="flex items-center gap-4">
       <button
         type="button"
         onClick={onCancel}
+        aria-label="Voltar para modelos"
         className="p-3 bg-slate-50 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors shrink-0"
       >
         <ArrowLeft size={20} />
@@ -19,7 +27,7 @@ const CrachaEditorHeader: React.FC<CrachaEditorHeaderProps> = ({ onCancel, onSav
       <div>
         <h3 className="text-xl font-black text-[#001a33] uppercase tracking-tight flex items-center gap-2">
           <LayoutTemplate size={24} className="text-blue-600" />
-          Editar Crachá de Estágio
+          Editar {title}
         </h3>
         <p className="text-sm font-bold text-slate-500 uppercase tracking-widest mt-1">
           Personalize o layout, posicione e edite os elementos do crachá
@@ -29,9 +37,10 @@ const CrachaEditorHeader: React.FC<CrachaEditorHeaderProps> = ({ onCancel, onSav
     <button
       type="button"
       onClick={onSave}
+      disabled={isSaving}
       className="flex items-center gap-2 px-6 py-3 bg-[#001a33] text-white rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-blue-900 transition-colors shadow-lg shadow-blue-900/20 w-full sm:w-auto justify-center"
     >
-      <Save size={16} /> Salvar Alterações
+      <Save size={16} /> {isSaving ? 'Salvando...' : 'Salvar Alterações'}
     </button>
   </div>
 );

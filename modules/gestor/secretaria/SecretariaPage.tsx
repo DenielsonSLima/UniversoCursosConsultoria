@@ -15,7 +15,6 @@ const moduleLoaders = {
   boletim: () => import('./boletins/SecretariaBoletinsPage'),
   carteirinha: () => import('./carteirinhas/SecretariaCarteirinhasPage'),
   'carteirinha-preceptor': () => import('./carteirinhas-preceptor/SecretariaCarteirinhasPreceptorPage'),
-  'assinatura-eletronica': () => import('./assinaturas/SecretariaAssinaturasPage'),
   solicitacoes: () => import('./solicitacoes/SecretariaSolicitacoesPage'),
   'dependencias-academicas': () => import('./dependencias-academicas/DependenciasAcademicasPage'),
   'declaracao-matricula': () => import('./declaracao-matricula/SecretariaDeclaracaoMatriculaPage'),
@@ -28,6 +27,7 @@ const moduleLoaders = {
   'consulta-financeira': () => import('./consulta-financeira/SecretariaConsultaFinanceiraPage'),
   'historico-emissoes': () => import('./historico-emissoes/SecretariaHistoricoEmissoesPage'),
   certificados: () => import('./certificados/SecretariaCertificadosPage'),
+  'assinatura-eletronica': () => import('./assinaturas/SecretariaAssinaturasPage'),
   'atestado-conclusao': () => import('./atestado-conclusao/SecretariaAtestadoConclusaoPage'),
   'pasta-identificacao': () => import('./pasta-identificacao/SecretariaPastaIdentificacaoPage'),
   'ficha-matricula': () => import('./ficha-matricula/SecretariaFichaMatriculaPage'),
@@ -38,7 +38,6 @@ const SecretariaAlunosPage = lazy(moduleLoaders.alunos);
 const SecretariaBoletinsPage = lazy(moduleLoaders.boletim);
 const SecretariaCarteirinhasPage = lazy(moduleLoaders.carteirinha);
 const SecretariaCarteirinhasPreceptorPage = lazy(moduleLoaders['carteirinha-preceptor']);
-const SecretariaAssinaturasPage = lazy(moduleLoaders['assinatura-eletronica']);
 const SecretariaSolicitacoesPage = lazy(moduleLoaders.solicitacoes);
 const DependenciasAcademicasPage = lazy(moduleLoaders['dependencias-academicas']);
 const SecretariaDeclaracaoMatriculaPage = lazy(moduleLoaders['declaracao-matricula']);
@@ -51,6 +50,7 @@ const SecretariaTermoEstagioPage = lazy(moduleLoaders['termo-estagio']);
 const SecretariaConsultaFinanceiraPage = lazy(moduleLoaders['consulta-financeira']);
 const SecretariaHistoricoEmissoesPage = lazy(moduleLoaders['historico-emissoes']);
 const SecretariaCertificadosPage = lazy(moduleLoaders.certificados);
+const SecretariaAssinaturasPage = lazy(moduleLoaders['assinatura-eletronica']);
 const SecretariaAtestadoConclusaoPage = lazy(moduleLoaders['atestado-conclusao']);
 const SecretariaPastaIdentificacaoPage = lazy(moduleLoaders['pasta-identificacao']);
 const SecretariaFichaMatriculaPage = lazy(moduleLoaders['ficha-matricula']);
@@ -94,12 +94,8 @@ const secretariaModuleHeaders: Record<string, { title: string; description: stri
     description: 'Identificação estudantil com QR Code.',
   },
   'carteirinha-preceptor': {
-    title: 'Carteirinha de Preceptor',
+    title: 'Crachá de Preceptor',
     description: 'Identificação profissional para professores ativos do polo.',
-  },
-  'assinatura-eletronica': {
-    title: 'Assinaturas e Acervo',
-    description: 'Acompanhe pendências e consulte documentos assinados pela Secretaria.',
   },
   'cracha-estagio': {
     title: 'Crachá de Estágio',
@@ -128,6 +124,10 @@ const secretariaModuleHeaders: Record<string, { title: string; description: stri
   certificados: {
     title: 'Certificados',
     description: 'Fila de concluintes, registros, SISTEC e emissão por modalidade.',
+  },
+  'assinatura-eletronica': {
+    title: 'Assinaturas e Acervo',
+    description: 'Acompanhe pendências e consulte documentos assinados pela Secretaria.',
   },
   'historico-emissoes': {
     title: 'Histórico de Emissões',
@@ -251,8 +251,6 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({
         return <SecretariaCarteirinhasPage poloId={poloId} />;
       case 'carteirinha-preceptor':
         return <SecretariaCarteirinhasPreceptorPage poloId={poloId} />;
-      case 'assinatura-eletronica':
-        return <SecretariaAssinaturasPage contextId={gestorContextId} poloId={poloId} />;
       case 'solicitacoes':
         return <SecretariaSolicitacoesPage />;
       case 'dependencias-academicas':
@@ -261,6 +259,8 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({
         return <SecretariaHistoricoEmissoesPage />;
       case 'certificados':
         return <SecretariaCertificadosPage />;
+      case 'assinatura-eletronica':
+        return <SecretariaAssinaturasPage contextId={gestorContextId} poloId={poloId} />;
       default:
         return (
           <SecretariaDashboard

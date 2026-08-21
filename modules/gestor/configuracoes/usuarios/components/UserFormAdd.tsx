@@ -25,16 +25,6 @@ interface UserFormAddProps {
   initialUser?: UsuarioSistema;
 }
 
-const GESTOR_PASSWORD_REQUIREMENTS =
-  'A senha precisa ter ao menos 8 caracteres, 1 letra maiúscula, 1 letra minúscula e 1 número.';
-
-const isStrongGestorPassword = (password: string) => (
-  password.length >= 8
-  && /[A-Z]/.test(password)
-  && /[a-z]/.test(password)
-  && /\d/.test(password)
-);
-
 const splitFullName = (fullName: string) => {
   const parts = String(fullName || '').trim().split(/\s+/);
   const nome = parts.shift() || '';
@@ -97,8 +87,6 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
     dataNascimento: '',
     telefone: '',
     email: '',
-    senha: '',
-    confirmarSenha: '',
     todosPolos: contextId === 'global',
     polosAcesso: contextId === 'global' ? [] : [contextId],
     permissoes: ['inicio'],
@@ -116,8 +104,6 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
     podeVisualizarTodosPolos: false,
     podeVisualizarTodosSetores: false,
   });
-
-  const [passwordStrength, setPasswordStrength] = useState(0);
 
   const isEditing = Boolean(initialUser?.id);
 
@@ -150,8 +136,6 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
       dataNascimento: '',
       telefone: formatPhone(initialUser.telefone || ''),
       email: initialUser.email || '',
-      senha: '',
-      confirmarSenha: '',
       todosPolos: hasAllPolos,
       polosAcesso: initialUser.polo_ids && initialUser.polo_ids.length > 0
         ? initialUser.polo_ids
@@ -204,16 +188,6 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
     return `(${ddd}) ${number.slice(0, 5)}-${number.slice(5)}`;
   }
 
-  const checkPasswordStrength = (pass: string) => {
-    let score = 0;
-    if (pass.length >= 8) score += 1;
-    if (pass.length >= 12) score += 1;
-    if (/[A-Z]/.test(pass) && /[a-z]/.test(pass)) score += 1;
-    if (/[0-9]/.test(pass)) score += 1;
-    if (/[^A-Za-z0-9]/.test(pass)) score += 1;
-    setPasswordStrength(score);
-  };
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     
@@ -223,9 +197,6 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
       setFormData(prev => ({ ...prev, [name]: formatPhone(value) }));
     } else if (name === 'email') {
       setFormData(prev => ({ ...prev, [name]: normalizeEmail(value) }));
-    } else if (name === 'senha') {
-      setFormData(prev => ({ ...prev, [name]: value }));
-      checkPasswordStrength(value);
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
@@ -343,20 +314,6 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
       validationError('Informe um e-mail válido. Ele será usado como login do gestor/usuário.');
       return;
     }
-    if (formData.senha || formData.confirmarSenha) {
-      if (!formData.senha || !isStrongGestorPassword(formData.senha)) {
-        validationError(GESTOR_PASSWORD_REQUIREMENTS);
-        return;
-      }
-      if (formData.senha !== formData.confirmarSenha) {
-        validationError('As senhas não coincidem.');
-        return;
-      }
-    }
-    if (!isEditing && !formData.senha) {
-      validationError('Informe a senha inicial do usuário.');
-      return;
-    }
     if (!formData.todosPolos && formData.polosAcesso.length === 0) {
       validationError('Selecione ao menos um polo para este usuário.');
       return;
@@ -432,7 +389,6 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
           isEditing={isEditing}
           contextId={contextId}
           companies={companies}
-          passwordStrength={passwordStrength}
           onChange={handleChange}
           onToggleAllPolos={toggleTodosPolos}
           onTogglePolo={togglePolo}

@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 
 const migrationUrl = new URL(
-  "../migrations/20260819224314_harden_edge_rpc_contracts.sql",
+  "../migrations/20260819180000_harden_edge_rpc_contracts.sql",
   import.meta.url,
 );
 const artifactAdapterUrl = new URL(

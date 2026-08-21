@@ -10,7 +10,15 @@ import {
   startNativeGoogleOAuth,
 } from '../../shared/auth/native-oauth';
 import { loginService } from '../../login/login.service';
-import { getPortalProfile } from '../../login/portal-session';
+import {
+  getPortalAccessErrorLog,
+  getPortalAccessErrorMessage,
+} from '../../login/institutional-login-error';
+import {
+  getPortalProfile,
+  getPublicPortalProfiles,
+  type PortalAuthProfile,
+} from '../../login/portal-session';
 import { TERMS_VERSION } from '../../shared/constants/terms';
 import { isValidCpf, isValidEmail, normalizeEmail } from '../../shared/utils/identityValidation';
 import { isPublicAlunoOlderThanTen } from './aluno-birth-date';
@@ -33,6 +41,8 @@ export interface PublicAlunoSignupData {
   telefone: string;
   cpf: string;
   dataNascimento: string;
+  sexo: string;
+  racaCor: string;
   password: string;
   acceptedTerms: boolean;
   cep: string;
@@ -47,11 +57,44 @@ export interface PublicAlunoSignupData {
   appFlow?: boolean;
 }
 
+export const PUBLIC_ALUNO_SEXO_OPTIONS = [
+  { value: 'FEMININO', label: 'Feminino' },
+  { value: 'MASCULINO', label: 'Masculino' },
+  { value: 'NÃO-BINÁRIO', label: 'Não binário' },
+  { value: 'PREFIRO NÃO INFORMAR', label: 'Prefiro não informar' },
+] as const;
+
+export const PUBLIC_ALUNO_RACA_COR_OPTIONS = [
+  { value: 'BRANCA', label: 'Branca' },
+  { value: 'PRETA', label: 'Preta' },
+  { value: 'PARDA', label: 'Parda' },
+  { value: 'AMARELA', label: 'Amarela' },
+  { value: 'INDÍGENA', label: 'Indígena' },
+  { value: 'PREFIRO NÃO INFORMAR', label: 'Prefiro não informar' },
+] as const;
+
 export const PUBLIC_ALUNO_ALREADY_REGISTERED_CODE = 'public_aluno_already_registered' as const;
 export const PUBLIC_ALUNO_ALREADY_REGISTERED_MESSAGE =
   'Usuário já cadastrado. Entre com o e-mail informado no cadastro ou use Recuperar senha para acessar sua conta.';
 export const PUBLIC_ALUNO_CONFIRMATION_RESENT_MESSAGE =
   'Usuário já cadastrado. Enviamos um novo link de confirmação para o e-mail informado. Você também pode Entrar ou usar Recuperar senha.';
+const PUBLIC_ALUNO_EMAIL_CONFIRMATION_REQUIRED_MESSAGE =
+  'Confirme o e-mail enviado para ativar sua conta. Verifique também Spam ou Lixo eletrônico.';
+
+type EmailConfirmationState = {
+  email_confirmed_at?: string | null;
+  confirmed_at?: string | null;
+};
+
+const hasConfirmedEmail = (user?: EmailConfirmationState | null) =>
+  Boolean(user?.email_confirmed_at || user?.confirmed_at);
+
+const clearUnconfirmedLocalSession = async () => {
+  const { error } = await supabase.auth.signOut({ scope: 'local' });
+  if (error) {
+    console.warn('Não foi possível limpar a sessão local sem confirmação de e-mail.', error);
+  }
+};
 
 export class PublicAlunoAlreadyRegisteredError extends Error {
   readonly code = PUBLIC_ALUNO_ALREADY_REGISTERED_CODE;
@@ -79,12 +122,71 @@ export const isPublicAlunoAlreadyRegisteredError = (
 );
 
 interface FinalizeAlunoFirstAccessData {
-  partnerId: string;
+  contextId: string;
+  requestId: string;
   acceptedTerms: boolean;
   acceptTermsVersion?: string;
   setPassword?: boolean;
   newPassword?: string;
 }
+
+type FirstAccessRpcResult = {
+  contextId: string;
+  firstAccess: {
+    acceptedTermsAt: string;
+    acceptedTermsVersion: string;
+    requiresPasswordReset: false;
+  };
+  replayed: boolean;
+};
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+const FIRST_ACCESS_RPC = 'portal_finalizar_primeiro_acesso';
+const FIRST_ACCESS_GENERIC_ERROR = 'Não foi possível concluir o primeiro acesso. Tente novamente em instantes.';
+const FIRST_ACCESS_ERROR_MESSAGES: Record<string, string> = {
+  AUTENTICACAO_OBRIGATORIA: 'Sua sessão expirou. Entre novamente para concluir o primeiro acesso.',
+  PORTAL_PRIMEIRO_ACESSO_PARAMETROS_INVALIDOS: 'Os dados do primeiro acesso estão inválidos. Atualize a página e tente novamente.',
+  PORTAL_PRIMEIRO_ACESSO_CONTEXTO_NAO_AUTORIZADO: 'Este perfil de aluno não está mais disponível para a sua conta.',
+  PORTAL_PRIMEIRO_ACESSO_TERMOS_NAO_ACEITOS: 'É obrigatório aceitar os Termos de Uso para continuar.',
+  PORTAL_PRIMEIRO_ACESSO_TERMOS_VERSAO_DIVERGENTE: 'Os Termos de Uso foram atualizados. Atualize a página antes de continuar.',
+  PORTAL_PRIMEIRO_ACESSO_SENHA_AINDA_OBRIGATORIA: 'A alteração da senha ainda está sendo confirmada. Tente concluir novamente.',
+  PORTAL_IDENTIDADE_REQUEST_REPLAY_DIVERGENTE: 'Esta tentativa não corresponde mais aos dados exibidos. Atualize a página e tente novamente.',
+};
+
+const getFirstAccessErrorMessage = (error: unknown) => {
+  const raw = error && typeof error === 'object' && 'message' in error
+    ? String((error as { message?: unknown }).message || '')
+    : '';
+  const code = Object.keys(FIRST_ACCESS_ERROR_MESSAGES).find((item) => raw.includes(item));
+  return code ? FIRST_ACCESS_ERROR_MESSAGES[code] : FIRST_ACCESS_GENERIC_ERROR;
+};
+
+const normalizeFirstAccessRpcResult = (
+  value: unknown,
+  expectedContextId: string,
+  expectedTermsVersion: string,
+): FirstAccessRpcResult => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error(FIRST_ACCESS_GENERIC_ERROR);
+  }
+  const source = value as Record<string, unknown>;
+  const firstAccess = source.firstAccess;
+  if (!firstAccess || typeof firstAccess !== 'object' || Array.isArray(firstAccess)) {
+    throw new Error(FIRST_ACCESS_GENERIC_ERROR);
+  }
+  const access = firstAccess as Record<string, unknown>;
+  if (
+    source.contextId !== expectedContextId
+    || typeof access.acceptedTermsAt !== 'string'
+    || !access.acceptedTermsAt.trim()
+    || access.acceptedTermsVersion !== expectedTermsVersion
+    || access.requiresPasswordReset !== false
+    || typeof source.replayed !== 'boolean'
+  ) {
+    throw new Error(FIRST_ACCESS_GENERIC_ERROR);
+  }
+  return source as FirstAccessRpcResult;
+};
 
 type PublicAlunoProfileData = Omit<PublicAlunoSignupData, 'password' | 'redirectPath' | 'appFlow'> & {
   relationshipBirthdayPreferenceSurface?: PublicSignupRelationshipSurface;
@@ -319,7 +421,7 @@ const finalizePublicSignupFromMetadata = async () => {
   if (error || !data.user?.email) return null;
 
   const metadata = data.user.user_metadata || {};
-  if (metadata.origem !== 'cadastro_publico_ead' && metadata.tipo !== 'Aluno') return null;
+  if (metadata.origem !== 'cadastro_publico_ead' || metadata.tipo !== 'Aluno') return null;
   if (!metadata.cpf || !metadata.dataNascimento) return null;
 
   return finalizePublicAlunoSignup({
@@ -328,6 +430,8 @@ const finalizePublicSignupFromMetadata = async () => {
     telefone: String(metadata.telefone || ''),
     cpf: String(metadata.cpf || ''),
     dataNascimento: String(metadata.dataNascimento || ''),
+    sexo: String(metadata.sexo || ''),
+    racaCor: String(metadata.racaCor || ''),
     acceptedTerms: metadata.acceptedTerms === true,
     cep: String(metadata.cep || ''),
     endereco: String(metadata.endereco || ''),
@@ -362,18 +466,41 @@ const getExistingOrFinalizePublicAlunoProfile = async () => {
   return finalizePublicSignupFromMetadata();
 };
 
+const getPublicLoginProfiles = async (): Promise<PortalAuthProfile[]> => {
+  let profiles: PortalAuthProfile[];
+  try {
+    profiles = await getPublicPortalProfiles();
+  } catch (error) {
+    console.error(
+      'Falha ao resolver acesso público do aluno:',
+      getPortalAccessErrorLog(error),
+    );
+    throw new Error(getPortalAccessErrorMessage(
+      error,
+      'Não foi possível carregar os perfis disponíveis para este acesso.',
+    ), { cause: error });
+  }
+
+  if (profiles.length > 0) return profiles;
+  throw new Error('Esta conta não possui um vínculo ativo para acesso ao portal. Solicite a verificação do vínculo à secretaria.');
+};
+
 export const alunoPublicAuthService = {
   async login(
     email: string,
     password: string,
     turnstileToken: string,
   ) {
-    const { error } = await loginService.login({
+    const { error, user } = await loginService.login({
       email,
       password,
       turnstileToken,
     });
     if (error) throw new Error(error);
+    if (user && !hasConfirmedEmail(user)) {
+      await clearUnconfirmedLocalSession();
+      throw new Error(PUBLIC_ALUNO_EMAIL_CONFIRMATION_REQUIRED_MESSAGE);
+    }
 
     try {
       const profile = await getExistingOrFinalizePublicAlunoProfile();
@@ -383,6 +510,34 @@ export const alunoPublicAuthService = {
       }
 
       return profile;
+    } catch (profileError) {
+      await loginService.logout();
+      throw profileError;
+    }
+  },
+
+  /**
+   * Fluxo novo de login público. A escolha só é apresentada para contextos
+   * que a RPC já devolveu como ativos e autorizados.
+   */
+  async loginAndListProfiles(
+    email: string,
+    password: string,
+    turnstileToken: string,
+  ): Promise<PortalAuthProfile[]> {
+    const { error, user } = await loginService.login({
+      email,
+      password,
+      turnstileToken,
+    });
+    if (error) throw new Error(error);
+    if (user && !hasConfirmedEmail(user)) {
+      await clearUnconfirmedLocalSession();
+      throw new Error(PUBLIC_ALUNO_EMAIL_CONFIRMATION_REQUIRED_MESSAGE);
+    }
+
+    try {
+      return await getPublicLoginProfiles();
     } catch (profileError) {
       await loginService.logout();
       throw profileError;
@@ -440,6 +595,15 @@ export const alunoPublicAuthService = {
     }
   },
 
+  async finishExternalLoginAndListProfiles(): Promise<PortalAuthProfile[]> {
+    try {
+      return await getPublicLoginProfiles();
+    } catch (profileError) {
+      await loginService.logout();
+      throw profileError;
+    }
+  },
+
   getFriendlyAuthRedirectError,
 
   async signup(
@@ -450,6 +614,8 @@ export const alunoPublicAuthService = {
     const telefone = onlyDigits(data.telefone);
     const cpf = onlyDigits(data.cpf);
     const dataNascimento = data.dataNascimento.trim();
+    const sexo = data.sexo.trim().toLocaleUpperCase('pt-BR');
+    const racaCor = data.racaCor.trim().toLocaleUpperCase('pt-BR');
     const acceptedTerms = data.acceptedTerms;
     const relationshipBirthdayPreferenceSurface: PublicSignupRelationshipSurface = data.appFlow
       ? 'public_signup_app'
@@ -474,11 +640,20 @@ export const alunoPublicAuthService = {
     }).toString()}`;
 
     const recoverExistingSignup = async () => {
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password: data.password,
       });
       if (!signInError) {
+        if (signInData.user && !hasConfirmedEmail(signInData.user)) {
+          await clearUnconfirmedLocalSession();
+          const { error: resendError } = await supabase.auth.resend({
+            type: 'signup',
+            email,
+            options: { emailRedirectTo: buildAuthRedirectUrl(confirmationPath) },
+          });
+          throw new PublicAlunoAlreadyRegisteredError(!resendError);
+        }
         try {
           const profile = await finalizeSignup();
           return { profile, emailConfirmationRequired: false };
@@ -531,6 +706,14 @@ export const alunoPublicAuthService = {
       throw new Error('O cadastro é permitido somente para alunos com mais de 10 anos de idade.');
     }
 
+    if (!PUBLIC_ALUNO_SEXO_OPTIONS.some((option) => option.value === sexo)) {
+      throw new Error('Selecione uma opção de sexo para concluir o cadastro.');
+    }
+
+    if (!PUBLIC_ALUNO_RACA_COR_OPTIONS.some((option) => option.value === racaCor)) {
+      throw new Error('Selecione uma opção de raça/cor para concluir o cadastro.');
+    }
+
     if (
       cep.length !== 8
       || !endereco
@@ -548,6 +731,8 @@ export const alunoPublicAuthService = {
       telefone,
       cpf,
       dataNascimento,
+      sexo,
+      racaCor,
       acceptedTerms,
       relationshipBirthdayPreferenceSurface,
       cep,
@@ -580,6 +765,8 @@ export const alunoPublicAuthService = {
           cpf,
           telefone,
           dataNascimento,
+          sexo,
+          racaCor,
           acceptedTerms,
           termsVersion: TERMS_VERSION,
           relationshipBirthdayDefaultEnabled: true,
@@ -612,7 +799,8 @@ export const alunoPublicAuthService = {
       return recoverExistingSignup();
     }
 
-    if (!authData.session) {
+    if (!authData.session || (authData.user && !hasConfirmedEmail(authData.user))) {
+      if (authData.session) await clearUnconfirmedLocalSession();
       return { profile: null, emailConfirmationRequired: true };
     }
 
@@ -621,18 +809,21 @@ export const alunoPublicAuthService = {
   },
 
   async finalizeFirstAccess({
-    partnerId,
+    contextId,
+    requestId,
     acceptedTerms,
     acceptTermsVersion = TERMS_VERSION,
     setPassword = false,
     newPassword,
   }: FinalizeAlunoFirstAccessData) {
-    const updates: Record<string, any> = {};
-
-    if (acceptedTerms) {
-      updates.aceitou_termos_uso = true;
-      updates.aceitou_termos_uso_em = new Date().toISOString();
-      updates.termos_uso_versao = acceptTermsVersion;
+    if (!UUID_PATTERN.test(contextId) || !UUID_PATTERN.test(requestId)) {
+      throw new Error('O contexto do primeiro acesso é inválido. Atualize a página e tente novamente.');
+    }
+    if (!acceptedTerms) {
+      throw new Error('É obrigatório aceitar os Termos de Uso para continuar.');
+    }
+    if (acceptTermsVersion !== TERMS_VERSION) {
+      throw new Error('Os Termos de Uso foram atualizados. Atualize a página antes de continuar.');
     }
 
     if (setPassword) {
@@ -644,38 +835,53 @@ export const alunoPublicAuthService = {
         throw new Error('A nova senha deve ter no mínimo 8 caracteres, 1 letra maiúscula, 1 letra minúscula e 1 número.');
       }
 
-      const passwordUpdateError = await loginService.updatePassword(newPassword);
+      const { error: passwordUpdateError } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
       if (passwordUpdateError) {
-        throw new Error(passwordUpdateError);
+        throw new Error('Não foi possível atualizar a senha. Confira os requisitos e tente novamente.');
       }
-
-      // O trigger do Auth é a autoridade que conclui a troca obrigatória e
-      // ativa o acesso depois que a senha foi realmente persistida.
     }
 
-    if (Object.keys(updates).length === 0) {
-      if (acceptedTerms) {
-        await ensureRelationshipTermsDefault('student_first_access');
-      }
-      return getPortalProfile({ preferredRole: 'Aluno', allowedRoles: ['Aluno'] });
-    }
-
-    const { error } = await supabase.from('parceiros').update(updates).eq('id', partnerId);
+    const { data, error } = await (supabase.rpc as any)(FIRST_ACCESS_RPC, {
+      p_context_id: contextId,
+      p_aceitar_termos: true,
+      p_termos_versao: acceptTermsVersion,
+      p_request_id: requestId,
+    });
     if (error) {
-      throw new Error(getFriendlySignupError(error.message));
+      throw new Error(getFirstAccessErrorMessage(error));
     }
+    normalizeFirstAccessRpcResult(data, contextId, acceptTermsVersion);
 
-    if (acceptedTerms) {
-      await ensureRelationshipTermsDefault('student_first_access');
+    await ensureRelationshipTermsDefault('student_first_access');
+
+    // A resposta da mutação é validada, mas a navegação depende de uma nova
+    // leitura canônica. Assim, storage e resposta local nunca concluem acesso.
+    const profile = await getPortalProfile({
+      preferredRole: 'Aluno',
+      allowedRoles: ['Aluno'],
+      contextId,
+    });
+    if (
+      !profile
+      || profile.contextId !== contextId
+      || !profile.acceptedTermsAt
+      || profile.acceptedTermsVersion !== acceptTermsVersion
+      || profile.requiresPasswordReset
+    ) {
+      throw new Error(FIRST_ACCESS_GENERIC_ERROR);
     }
-
-    return getPortalProfile({ preferredRole: 'Aluno', allowedRoles: ['Aluno'] });
+    return profile;
   },
 
   needsInitialAccess(profile: { tipo?: string; acceptedTermsAt?: string | null; requiresPasswordReset?: boolean }) {
     return (
       profile?.tipo === 'Aluno'
-      && (!profile.acceptedTermsAt || Boolean(profile.requiresPasswordReset))
+      && (
+        !profile.acceptedTermsAt?.trim()
+        || profile.requiresPasswordReset !== false
+      )
     );
   },
 };

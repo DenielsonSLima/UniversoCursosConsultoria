@@ -8,13 +8,15 @@ import { validateAlunoProfessorIdentity } from './utils/parceiro-validators';
 import { parceirosMatriculasService } from './parceiros-matriculas.service';
 import { documentosAlunoService } from './documentos-aluno.service';
 
-const linkProfessorInstitutionalProfile = async (partner: any) => {
+const ensureProfessorInstitutionalAccess = async (partner: any) => {
   if (partner?.tipo !== 'Professor' || !partner?.id) return partner;
 
   try {
-    const result = await portalActivationService.linkProfessorAuthIdentity(partner.id);
+    const result = await portalActivationService.ensureProfessorAccess(partner.id);
     return {
       ...partner,
+      authUserId: result.userId || partner.authUserId || null,
+      professorAccessInviteSent: Boolean(result.inviteSent),
       institutionalProfileLinked: Boolean(result.profileLinked),
       institutionalProfileLinkState: result.profileLinkState || null,
       institutionalProfileLinkMessage: result.message || null,
@@ -55,6 +57,10 @@ export const parceirosService = {
         query = filterTipo
           ? query.or(`${scopedFilter},polo_id.is.null`)
           : query.or(`${scopedFilter},and(polo_id.is.null,tipo.neq.Aluno)`);
+      } else if (filterTipo === 'PJ') {
+        query = query.or(`${scopedFilter},polo_id.is.null`);
+      } else if (!filterTipo) {
+        query = query.or(`${scopedFilter},and(polo_id.is.null,tipo.eq.PJ)`);
       } else {
         query = query.or(scopedFilter);
       }
@@ -212,7 +218,7 @@ export const parceirosService = {
       throw error;
     }
     
-    return linkProfessorInstitutionalProfile(toCamel(inserted));
+    return ensureProfessorInstitutionalAccess(toCamel(inserted));
   },
 
   async update(id: string, data: any) {
@@ -230,7 +236,7 @@ export const parceirosService = {
       throw error;
     }
     
-    return linkProfessorInstitutionalProfile(toCamel(updated));
+    return ensureProfessorInstitutionalAccess(toCamel(updated));
   },
 
   async uploadProfilePhoto(profileId: string, _currentProfile: any, file: File) {

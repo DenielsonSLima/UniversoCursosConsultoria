@@ -231,6 +231,56 @@ const preceptorFixture = (
   },
 });
 
+const preceptorVerticalFixture = (): CarteirinhaPreceptorPreparedDocument => ({
+  emissionId: "preceptor-vertical-vetorial",
+  documentId: null,
+  title: "Crachá de Preceptor",
+  targetName: "Professora de teste vertical",
+  validationCode: "PRE-VERTICAL-TESTE",
+  validationUrl: null,
+  validUntil: "2027-08-12T00:00:00Z",
+  fileUrl: null,
+  statusLabel: null,
+  renderPayload: {
+    template: {
+      layoutVersion: "CR80_VERTICAL_V1",
+      hasVerso: true,
+      corPrimaria: "#0f172a",
+      corSecundaria: "#10b981",
+      cargoPadrao: "PRECEPTOR CLÍNICO",
+      mostrarFoto: false,
+      qr: { habilitado: true },
+      fields: [
+        { id: "nome", type: "text", value: "{{PRECEPTOR_NOME}}", x: 5, y: 45, width: 90, page: "frente", style: { fontSize: "8px", fontWeight: "bold", textAlign: "center" } },
+        { id: "registro", type: "text", value: "REGISTRO\\n{{PRECEPTOR_REGISTRO}}", x: 8, y: 58, width: 50, page: "frente", style: { fontSize: "5px", fontWeight: "bold" } },
+        { id: "qr", type: "qrcode", value: "QR_VALIDADOR_CRACHA", x: 64, y: 66, width: 25, height: 20, page: "frente" },
+        { id: "verso-nome", type: "text", value: "{{PRECEPTOR_NOME}}", x: 5, y: 43, width: 90, page: "verso", style: { fontSize: "7px", fontWeight: "bold", textAlign: "center" } },
+        { id: "verso-data", type: "text", value: "EMISSÃO: {{DATA_HOJE}}", x: 8, y: 78, width: 70, page: "verso", style: { fontSize: "5px", fontWeight: "bold" } },
+      ],
+    },
+    snapshot: {
+      preceptor: {
+        nome: "Professora de teste vertical",
+        areaFormacao: "Enfermagem",
+        registroProfissional: "COREN 12345",
+      },
+      instituicao: { nome: "Polo Matriz" },
+      emissao: { dataExibicao: "12/08/2026" },
+      validacao: { codigo: "PRE-VERTICAL-TESTE", validadeExibicao: "12/08/2027" },
+    },
+    templateRevision: 2,
+    rendered: {
+      kind: "CRACHA_PRECEPTOR",
+      pages: [],
+      watermark: { enabled: false, label: null, imageUrl: null, opacity: null },
+      qr: { enabled: true, label: "Validação", validityLabel: "12/08/2027" },
+      emissao: { dataIso: "2026-08-12T12:00:00.000Z", dataExibicao: "12/08/2026" },
+      front: { role: "Preceptor(a)" },
+      back: {},
+    },
+  },
+});
+
 test("contrato gera PDF nativo e bloqueia paginação visual no navegador", async () => {
   const document = await createContratosAlunoPdf([contractFixture()]);
   const bytes = new Uint8Array(await document.blob.arrayBuffer());
@@ -418,8 +468,28 @@ test("carteirinhas geram PDF nativo com folhas físicas frente e verso", async (
   }
 });
 
+test("Crachá de Preceptor vertical usa o snapshot de professor e data emitida pelo servidor", async () => {
+  const document = await createCarteirinhasPreceptorPdf([preceptorVerticalFixture()]);
+  const bytes = new Uint8Array(await document.blob.arrayBuffer());
+
+  assert.equal(document.fileName, "cracha-preceptor-preceptor-vertical-vetorial.pdf");
+  assert.match(new TextDecoder("latin1").decode(bytes.slice(0, 8)), /^%PDF-/);
+  assert.ok(document.blob.size > 1_000);
+  if (process.env.CANONICAL_PRECEPTOR_VERTICAL_PDF_FIXTURE_OUTPUT) {
+    await writeFile(process.env.CANONICAL_PRECEPTOR_VERTICAL_PDF_FIXTURE_OUTPUT, bytes);
+  }
+
+  const withoutIssuedAt = preceptorVerticalFixture();
+  if (!withoutIssuedAt.renderPayload?.snapshot) throw new Error("Fixture inválida.");
+  delete (withoutIssuedAt.renderPayload.snapshot as Record<string, unknown>).emissao;
+  await assert.rejects(
+    () => createCarteirinhasPreceptorPdf([withoutIssuedAt]),
+    /data canônica de emissão/i,
+  );
+});
+
 test("preview oficial recebe um Blob PDF nativo, sem conversor de página em canvas", async () => {
-  const [modal, contractPdf, preceptorPdf] = await Promise.all([
+  const [modal, contractPdf, preceptorPdf, verticalPreceptorPdf] = await Promise.all([
     readFile(
       new URL("./CanonicalDocumentPreviewModal.tsx", import.meta.url),
       "utf8",
@@ -431,6 +501,13 @@ test("preview oficial recebe um Blob PDF nativo, sem conversor de página em can
     readFile(
       new URL(
         "../carteirinhas-preceptor/carteirinhas-preceptor.pdf.ts",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+    readFile(
+      new URL(
+        "../carteirinhas-preceptor/carteirinhas-preceptor-vertical.pdf.ts",
         import.meta.url,
       ),
       "utf8",
@@ -451,6 +528,10 @@ test("preview oficial recebe um Blob PDF nativo, sem conversor de página em can
   );
   assert.doesNotMatch(
     preceptorPdf,
+    /html2canvas|createElement\('canvas'\)|toDataURL\(/,
+  );
+  assert.doesNotMatch(
+    verticalPreceptorPdf,
     /html2canvas|createElement\('canvas'\)|toDataURL\(/,
   );
   assert.match(contractPdf, /contrato-qr-\$\{document\.emissionId\}/);
@@ -478,4 +559,11 @@ test("preview oficial recebe um Blob PDF nativo, sem conversor de página em can
   assert.doesNotMatch(contractPdf, /align: 'justify'/);
   assert.match(preceptorPdf, /preceptor-qr-\$\{card\.source\.emissionId\}/);
   assert.match(preceptorPdf, /CARDS_PER_SHEET = 10/);
+  assert.match(verticalPreceptorPdf, /const CARD_HEIGHT = 85\.6/);
+  assert.match(verticalPreceptorPdf, /PRECEPTOR_NOME/);
+  assert.match(verticalPreceptorPdf, /snapshot\.emissao/);
+  assert.match(
+    verticalPreceptorPdf,
+    /template\.cargoPadrao, template\.textoFrente, renderedFront\.role/,
+  );
 });

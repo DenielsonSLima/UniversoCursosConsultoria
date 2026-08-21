@@ -1,14 +1,14 @@
 import { supabase } from '../../lib/supabase';
 import type { User } from '@supabase/supabase-js';
-import { onlyDigits } from '../shared/utils/identityValidation';
 import { GestorPermissions, normalizeGestorPermissions } from '../gestor/access-control';
-import { syncAlunoGoogleAvatar } from './partner-avatar-sync';
-import { isPortalScheduleBlocked, PortalScheduleRestriction } from './portal-schedule';
-import { isActivePortalStatus } from './portal-status';
+import { PortalScheduleRestriction } from './portal-schedule';
 import { PORTAL_LAST_ACTIVITY_STORAGE_KEY } from '../shared/hooks/inactivity-policy';
 import { resolveGestorPoloScope } from './gestor-polo-scope';
+import { listPortalContexts } from './portal-context.service';
+import type { PortalContext, PortalRole } from './portal-context.contract';
+import { resolvePortalActivePoloId } from './profile-selection';
 
-export type PortalRole = 'Aluno' | 'Professor' | 'Gestor';
+export type { PortalContext, PortalRole } from './portal-context.contract';
 
 export interface PortalAuthProfile {
   id: string;
@@ -17,6 +17,13 @@ export interface PortalAuthProfile {
   tipo: PortalRole;
   telefone?: string | null;
   fotoPath?: string | null;
+  /** Identificador de contexto devolvido pela RPC; nunca é uma autorização local. */
+  contextId?: string | null;
+  portalContext?: PortalContext | null;
+  capabilities?: readonly string[];
+  allPolos?: boolean;
+  requiresPoloSelection?: boolean;
+  scopes?: PortalContext['scopes'];
   activePoloId?: string | null;
   poloIds?: string[];
   context?: string | null;
@@ -39,6 +46,8 @@ export interface PortalProfileOptions {
   preferredRole?: PortalRole;
   allowedRoles?: PortalRole[];
   authenticatedUser?: User | null;
+  /** Dica de seleção; somente vale se reaparecer na resposta canônica da RPC. */
+  contextId?: string | null;
 }
 
 export interface GestorAccessScope {
@@ -47,61 +56,102 @@ export interface GestorAccessScope {
   activePoloId: string | null;
 }
 
-const MATRIZ_POLO_ID = '44444444-4444-4444-4444-444444444444';
-
-const normalizeStringArray = (value: unknown): string[] => {
-  if (!Array.isArray(value)) return [];
-  return value
-    .map((item) => (typeof item === 'string' ? item.trim() : ''))
-    .filter((item) => item.length > 0);
-};
-
-const resolvePartnerPoloScope = (selectedPartner: any) => {
-  const arrayPoloIds = normalizeStringArray(selectedPartner?.polo_ids);
-  const legacyPoloId = typeof selectedPartner?.polo_id === 'string'
-    ? selectedPartner.polo_id.trim()
-    : null;
-
-  if (arrayPoloIds.length > 0) {
-    return {
-      activePoloId: arrayPoloIds[0],
-      poloIds: arrayPoloIds,
-    };
-  }
-
-  if (legacyPoloId) {
-    return {
-      activePoloId: legacyPoloId,
-      poloIds: [legacyPoloId],
-    };
-  }
-
-  if (selectedPartner?.tipo === 'Professor') {
-    return {
-      activePoloId: MATRIZ_POLO_ID,
-      poloIds: [MATRIZ_POLO_ID],
-    };
-  }
-
-  return {
-    activePoloId: null,
-    poloIds: [],
-  };
-};
-
 const getAuthenticatedUser = async () => {
   const { data: userData, error: userError } = await supabase.auth.getUser();
   if (userError || !userData?.user) return null;
   return userData.user;
 };
 
-const getAuthenticatedEmail = async () => {
-  const user = await getAuthenticatedUser();
-  return user?.email?.trim().toLowerCase() || null;
+const getCanonicalGestorPermissions = (
+  context: PortalContext,
+): GestorPermissions | undefined => {
+  if (context.role !== 'Gestor') return undefined;
+
+  const permissionScope = context.scopes.find((scope) => (
+    scope
+    && typeof scope === 'object'
+    && !Array.isArray(scope)
+    && (scope as Record<string, unknown>).kind === 'GESTOR_PERMISSIONS'
+  )) as Record<string, unknown> | undefined;
+  const normalized = normalizeGestorPermissions(permissionScope?.permissions, {
+    fallbackFullAccess: false,
+  });
+
+  // Os dois sinais vêm da mesma RPC. Em eventual divergência, nunca ampliamos
+  // o alcance apresentado pelo portal.
+  return {
+    ...normalized,
+    allPolos: context.allPolos && normalized.allPolos,
+  };
 };
 
-const isRoleAllowed = (role: PortalRole, allowedRoles?: PortalRole[]) =>
-  !allowedRoles?.length || allowedRoles.includes(role);
+/**
+ * Adapta somente a apresentação do contexto canônico. O `contextId`, as
+ * capabilities e os polos continuam sendo revalidados pelas RPCs de cada
+ * domínio; esta projeção nunca confere permissão por conta própria.
+ */
+export const profileFromPortalContext = (
+  context: PortalContext,
+  authenticatedUser: User,
+): PortalAuthProfile => ({
+  id: context.contextId,
+  nome: context.label,
+  email: authenticatedUser.email?.trim().toLowerCase() || '',
+  tipo: context.role,
+  contextId: context.contextId,
+  portalContext: context,
+  capabilities: context.capabilities,
+  allPolos: context.allPolos,
+  requiresPoloSelection: context.requiresPoloSelection,
+  scopes: context.scopes,
+  activePoloId: context.poloIds[0] || null,
+  poloIds: [...context.poloIds],
+  gestorPermissions: getCanonicalGestorPermissions(context),
+  status: 'ATIVO',
+  ...(context.firstAccess ? {
+    acceptedTermsAt: context.firstAccess.acceptedTermsAt,
+    acceptedTermsVersion: context.firstAccess.acceptedTermsVersion,
+    requiresPasswordReset: context.firstAccess.requiresPasswordReset,
+  } : {}),
+});
+
+export const getPortalContexts = async (
+  authenticatedUser?: User | null,
+): Promise<readonly PortalContext[]> => {
+  const resolvedUser = authenticatedUser || await getAuthenticatedUser();
+  if (!resolvedUser) return [];
+  return listPortalContexts();
+};
+
+const getContextProfiles = async (
+  authenticatedUser: User,
+  roles?: readonly PortalRole[],
+): Promise<PortalAuthProfile[]> => {
+  const contexts = await getPortalContexts(authenticatedUser);
+  const persistedPoloId = sessionStorage.getItem('active_polo_id');
+  return contexts
+    .filter((context) => !roles?.length || roles.includes(context.role))
+    .map((context) => {
+      const profile = profileFromPortalContext(context, authenticatedUser);
+      return {
+        ...profile,
+        activePoloId: resolvePortalActivePoloId(
+          context.role,
+          context.poloIds,
+          persistedPoloId,
+        ),
+      };
+    });
+};
+
+/** Perfis elegíveis ao login público; sem relacionamento verificado a RPC não devolve Responsável. */
+export const getPublicPortalProfiles = async (
+  authenticatedUser?: User | null,
+): Promise<PortalAuthProfile[]> => {
+  const resolvedUser = authenticatedUser || await getAuthenticatedUser();
+  if (!resolvedUser) return [];
+  return getContextProfiles(resolvedUser, ['Aluno', 'Responsavel']);
+};
 
 export const getPortalSessionFromStorage = (): PortalAuthProfile | null => {
   const tipo = sessionStorage.getItem('logged_user_tipo') as PortalRole | null;
@@ -110,13 +160,14 @@ export const getPortalSessionFromStorage = (): PortalAuthProfile | null => {
   const email = sessionStorage.getItem('logged_user_email');
 
   if (!tipo || !id || !nome || !email) return null;
-  if (tipo !== 'Aluno' && tipo !== 'Professor' && tipo !== 'Gestor') return null;
+  if (!['Aluno', 'Responsavel', 'Professor', 'Coordenador', 'Gestor'].includes(tipo)) return null;
 
   return {
     id,
     nome,
     email,
     tipo,
+    contextId: sessionStorage.getItem('portal_context_id') || null,
     activePoloId: sessionStorage.getItem('active_polo_id') || null,
     poloIds: [],
     gestorPermissions: normalizeGestorPermissions(null, { fallbackFullAccess: false }),
@@ -130,6 +181,11 @@ export const savePortalSession = (profile: PortalAuthProfile) => {
   sessionStorage.setItem('logged_user_name', profile.nome);
   sessionStorage.setItem('logged_user_email', profile.email);
   sessionStorage.setItem('logged_user_tipo', profile.tipo);
+  if (profile.contextId) {
+    sessionStorage.setItem('portal_context_id', profile.contextId);
+  } else {
+    sessionStorage.removeItem('portal_context_id');
+  }
   try {
     localStorage.setItem(PORTAL_LAST_ACTIVITY_STORAGE_KEY, String(Date.now()));
   } catch {
@@ -154,6 +210,7 @@ export const clearPortalSession = () => {
   sessionStorage.removeItem('logged_user_name');
   sessionStorage.removeItem('logged_user_email');
   sessionStorage.removeItem('logged_user_tipo');
+  sessionStorage.removeItem('portal_context_id');
   sessionStorage.removeItem('active_polo_id');
   sessionStorage.removeItem('current_polo_id');
   try {
@@ -184,151 +241,28 @@ export const getGestorAccessScope = (profile?: PortalAuthProfile | null): Gestor
   });
 };
 
-const buildPartnerProfile = async (selectedPartner: any, fallbackEmail: string): Promise<PortalAuthProfile | null> => {
-  if (!selectedPartner || !isActivePortalStatus(selectedPartner.status)) return null;
-
-  const { activePoloId, poloIds } = resolvePartnerPoloScope(selectedPartner);
-  let acceptedTermsAt: string | null = null;
-  let acceptedTermsVersion: string | null = null;
-  let requiresPasswordReset = false;
-
-  if (selectedPartner.tipo === 'Aluno') {
-    const { data: partnerTermsRows, error: termsError } = await supabase
-      .from('parceiros')
-      .select('aceitou_termos_uso_em, termos_uso_versao, troca_senha_obrigatoria')
-      .eq('id', selectedPartner.id)
-      .maybeSingle();
-
-    if (termsError) {
-      const message = String(termsError.message || '').toLowerCase();
-      const hasLegacyColumns = message.includes('aceitou_termos_uso') || message.includes('termos_uso_versao');
-      const isMissingColumn = message.includes('does not exist') && hasLegacyColumns;
-      if (!isMissingColumn) {
-        throw new Error(termsError.message);
-      }
-      acceptedTermsAt = new Date().toISOString();
-    } else if (partnerTermsRows) {
-      acceptedTermsAt = partnerTermsRows.aceitou_termos_uso_em || null;
-      acceptedTermsVersion = partnerTermsRows.termos_uso_versao || null;
-      requiresPasswordReset = Boolean(partnerTermsRows.troca_senha_obrigatoria);
-    }
-  }
-
-  return {
-    id: selectedPartner.id,
-    nome: selectedPartner.nome,
-    email: selectedPartner.email || fallbackEmail,
-    tipo: selectedPartner.tipo as PortalRole,
-    activePoloId,
-    poloIds,
-    status: selectedPartner.status || null,
-    acceptedTermsAt,
-    acceptedTermsVersion,
-    requiresPasswordReset,
-  };
-};
-
-const buildGestorProfile = (gestorRows: any): PortalAuthProfile | null => {
-  if (!gestorRows || !isActivePortalStatus(gestorRows.status)) return null;
-
-  // Se houver perfil de acesso vinculado (pode vir como array dependendo do join ou objeto unico)
-  const perfilAcesso = Array.isArray(gestorRows.perfis_acesso) 
-    ? gestorRows.perfis_acesso[0] 
-    : gestorRows.perfis_acesso;
-
-  const personalizarPermissoes = Boolean(gestorRows.personalizar_permissoes);
-  const userPermissions = normalizeGestorPermissions(gestorRows.permissoes, {
-    fallbackFullAccess: false,
-  });
-  const profilePermissions = normalizeGestorPermissions(perfilAcesso?.permissoes, {
-    fallbackFullAccess: false,
-  });
-  const permissionsSource = perfilAcesso && !personalizarPermissoes
-    ? profilePermissions
-    : userPermissions;
-  // O perfil define módulos/abas. O alcance de polos continua sempre individual.
-  const permissions: GestorPermissions = {
-    ...permissionsSource,
-    allPolos: userPermissions.allPolos,
-  };
-  const explicitPoloIds = normalizeStringArray(gestorRows.polo_ids);
-
-  const restricao = gestorRows.restricao_horario ?? perfilAcesso?.restricao_horario ?? null;
-  const isBlocked = isPortalScheduleBlocked(restricao);
-
-  return {
-    id: gestorRows.id,
-    nome: gestorRows.nome,
-    email: gestorRows.email,
-    tipo: 'Gestor',
-    telefone: gestorRows.telefone || null,
-    fotoPath: gestorRows.foto_path || null,
-    context: gestorRows.context || null,
-    activePoloId: explicitPoloIds[0] || null,
-    poloIds: explicitPoloIds,
-    gestorPermissions: permissions,
-    status: gestorRows.status || null,
-    perfil_acesso_id: gestorRows.perfil_acesso_id || null,
-    personalizar_permissoes: personalizarPermissoes,
-    isBlockedSchedule: isBlocked,
-    restricao_horario: restricao || null,
-    setorComunicacao: gestorRows.setor_comunicacao || 'todos',
-    poloComunicacaoId: gestorRows.polo_comunicacao_id || null,
-    podeVisualizarTodosPolos: Boolean(gestorRows.pode_visualizar_todos_polos),
-    podeVisualizarTodosSetores: Boolean(gestorRows.pode_visualizar_todos_setores),
-  };
-};
-
 export const getPortalProfile = async (options: PortalProfileOptions = {}): Promise<PortalAuthProfile | null> => {
   const authenticatedUser =
     options.authenticatedUser || await getAuthenticatedUser();
-  const email = authenticatedUser?.email?.trim().toLowerCase();
-  if (!email) return null;
+  if (!authenticatedUser?.email) return null;
 
-  const partnerSelect = 'id, nome, email, auth_login_email, auth_user_id, tipo, polo_id, polo_ids, status, foto_url';
-  const shouldQueryPartners = !options.allowedRoles?.length
-    || options.allowedRoles.some((role) => role === 'Aluno' || role === 'Professor');
-  let partnerRows: any[] = [];
+  const profiles = await getContextProfiles(authenticatedUser, options.allowedRoles);
+  const roleProfiles = options.preferredRole
+    ? profiles.filter((profile) => profile.tipo === options.preferredRole)
+    : profiles;
+  const requestedContextId = options.contextId?.trim()
+    || sessionStorage.getItem('portal_context_id')?.trim()
+    || null;
 
-  if (shouldQueryPartners) {
-    const { data, error } = await supabase
-      .from('parceiros')
-      .select(partnerSelect)
-      .eq('auth_user_id', authenticatedUser.id)
-      .in('tipo', ['Aluno', 'Professor']);
-
-    if (error) throw new Error(error.message);
-    partnerRows = data || [];
+  if (requestedContextId) {
+    const selected = roleProfiles.find((profile) => profile.contextId === requestedContextId);
+    if (selected) return selected;
+    // Um contexto explicitamente recebido pelo fluxo e que não reaparece na
+    // RPC não pode cair silenciosamente em outro perfil.
+    if (options.contextId) return null;
   }
 
-  const orderedPartnerRoles = options.preferredRole && options.preferredRole !== 'Gestor'
-    ? [options.preferredRole, ...(['Professor', 'Aluno'] as PortalRole[]).filter((role) => role !== options.preferredRole)]
-    : (['Professor', 'Aluno'] as PortalRole[]);
-
-  for (const role of orderedPartnerRoles) {
-    if (!isRoleAllowed(role, options.allowedRoles)) continue;
-    const selectedPartner = partnerRows.find((p) => p.tipo === role);
-    const partnerWithAvatar = selectedPartner?.tipo === 'Aluno'
-      ? await syncAlunoGoogleAvatar(selectedPartner, authenticatedUser)
-      : selectedPartner;
-    const profile = await buildPartnerProfile(partnerWithAvatar, email);
-    if (profile) return profile;
-  }
-
-  if (!isRoleAllowed('Gestor', options.allowedRoles)) return null;
-
-  const { data: gestorRows, error: gestorError } = await supabase
-    .from('usuarios_sistema')
-    .select('id, auth_user_id, nome, email, telefone, foto_path, status, context, polo_ids, permissoes, perfil_acesso_id, personalizar_permissoes, restricao_horario, setor_comunicacao, polo_comunicacao_id, pode_visualizar_todos_polos, pode_visualizar_todos_setores, perfis_acesso(permissoes, restricao_horario)')
-    .eq('auth_user_id', authenticatedUser.id)
-    .limit(1)
-    .maybeSingle();
-
-  if (gestorError && gestorError.code !== 'PGRST116') {
-    throw new Error(gestorError.message);
-  }
-
-  return buildGestorProfile(gestorRows);
+  return roleProfiles[0] || null;
 };
 
 export const getInstitutionalProfiles = async (
@@ -336,27 +270,33 @@ export const getInstitutionalProfiles = async (
 ): Promise<PortalAuthProfile[]> => {
   const resolvedUser = authenticatedUser || await getAuthenticatedUser();
   if (!resolvedUser) return [];
-
-  const [gestor, professor] = await Promise.all([
-    getPortalProfile({
-      preferredRole: 'Gestor',
-      allowedRoles: ['Gestor'],
-      authenticatedUser: resolvedUser,
-    }),
-    getPortalProfile({
-      preferredRole: 'Professor',
-      allowedRoles: ['Professor'],
-      authenticatedUser: resolvedUser,
-    }),
-  ]);
-
-  return [gestor, professor].filter(Boolean) as PortalAuthProfile[];
+  return getContextProfiles(resolvedUser, ['Gestor', 'Professor', 'Coordenador']);
 };
 
-export const ensureLinkedAlunoProfile = async (sourceProfile?: PortalAuthProfile | null): Promise<PortalAuthProfile | null> => {
-  const email = await getAuthenticatedEmail();
-  if (!email) return null;
+const getLinkedAlunoFailureMessage = (message: string) => {
+  if (message.includes('ALUNO_CHECKOUT_ACESSO_JA_VINCULADO_A_PROFESSOR')) {
+    return 'Este acesso já pertence a um perfil de professor e não pode receber também um perfil de aluno. Use um acesso de aluno ou fale com a secretaria.';
+  }
+  if (message.includes('ALUNO_CHECKOUT_CPF_ORIGEM_OBRIGATORIO')) {
+    return 'Para comprar curso como aluno, complete o CPF no cadastro do professor/gestor ou crie um cadastro de aluno.';
+  }
+  if (message.includes('ALUNO_CHECKOUT_CPF_JA_VINCULADO')) {
+    return 'Já existe um cadastro de aluno com este CPF vinculado a outro acesso. Fale com a secretaria para revisar o cadastro.';
+  }
+  if (message.includes('ALUNO_CHECKOUT_IDENTIDADE_DIVERGENTE')
+    || message.includes('ALUNO_CHECKOUT_EMAIL_CANONICO_DIVERGENTE')) {
+    return 'Os dados de acesso não conferem com o cadastro de aluno. Fale com a secretaria antes de continuar.';
+  }
+  if (message.includes('ALUNO_CHECKOUT_PERFIL_INATIVO')) {
+    return 'O cadastro de aluno está inativo. Fale com a secretaria antes de continuar.';
+  }
+  return 'Não foi possível preparar o perfil de aluno para esta compra. Tente novamente ou fale com a secretaria.';
+};
 
+export const ensureLinkedAlunoProfile = async (
+  sourceProfile?: PortalAuthProfile | null,
+  requestId?: string,
+): Promise<PortalAuthProfile | null> => {
   const existingAluno = await getPortalProfile({ preferredRole: 'Aluno', allowedRoles: ['Aluno'] });
   if (existingAluno) return existingAluno;
   if (!sourceProfile) {
@@ -364,87 +304,16 @@ export const ensureLinkedAlunoProfile = async (sourceProfile?: PortalAuthProfile
       || await getPortalProfile({ preferredRole: 'Professor', allowedRoles: ['Professor'] });
   }
   if (sourceProfile?.tipo === 'Aluno') return sourceProfile;
-
-  const { data: partnerRows, error: partnerError } = await supabase
-    .from('parceiros')
-    .select('id, nome, email, tipo, polo_id, polo_ids, status, cpf_cnpj, telefone, data_nascimento')
-    .ilike('email', email)
-    .in('tipo', ['Professor', 'Aluno']);
-
-  if (partnerError) throw new Error(partnerError.message);
-
-  const sourcePartner = (partnerRows || []).find((p) => p.tipo === sourceProfile?.tipo)
-    || (partnerRows || []).find((p) => p.tipo === 'Professor')
-    || null;
-  const cpf = onlyDigits(sourcePartner?.cpf_cnpj || '');
-  let gestorCpf = '';
-
-  let sourceName = sourcePartner?.nome || sourceProfile?.nome || '';
-  let sourcePhone = sourcePartner?.telefone || null;
-  let sourceBirthDate = sourcePartner?.data_nascimento || null;
-  let sourcePoloId = sourcePartner?.polo_id || null;
-  let sourcePoloIds = normalizeStringArray(sourcePartner?.polo_ids);
-
-  if (!cpf && sourceProfile?.tipo === 'Gestor') {
-    const { data: gestorRows, error: gestorError } = await supabase
-      .from('usuarios_sistema')
-      .select('id, nome, email, status, context, cpf, telefone')
-      .ilike('email', email)
-      .limit(1)
-      .maybeSingle();
-
-    if (gestorError && gestorError.code !== 'PGRST116') {
-      throw new Error(gestorError.message);
-    }
-
-    gestorCpf = onlyDigits(gestorRows?.cpf || '');
-    sourceName = gestorRows?.nome || sourceName;
-    sourcePhone = gestorRows?.telefone || sourcePhone;
+  if (!sourceProfile?.contextId && !sourceProfile?.id) return null;
+  if (!requestId) {
+    throw new Error('Não foi possível iniciar esta operação com segurança. Atualize a página e tente novamente.');
   }
 
-  const sourceCpf = cpf || gestorCpf || onlyDigits((sourceProfile as any)?.cpf || '');
-  if (!sourceCpf) {
-    throw new Error('Para comprar curso como aluno, complete o CPF no cadastro do professor/gestor ou crie um cadastro de aluno.');
-  }
+  const { error } = await supabase.rpc('portal_garantir_perfil_aluno_checkout', {
+    p_source_context_id: sourceProfile.contextId || sourceProfile.id,
+    p_request_id: requestId,
+  });
 
-  const { data: alunoByCpf, error: alunoByCpfError } = await supabase
-    .from('parceiros')
-    .select('id, nome, email, tipo, polo_id, polo_ids, status')
-    .eq('tipo', 'Aluno')
-    .eq('cpf_cnpj', sourceCpf)
-    .maybeSingle();
-
-  if (alunoByCpfError && alunoByCpfError.code !== 'PGRST116') {
-    throw new Error(alunoByCpfError.message);
-  }
-
-  const alunoByCpfProfile = await buildPartnerProfile(alunoByCpf, email);
-  if (alunoByCpfProfile) return alunoByCpfProfile;
-
-  const alunoPayload = {
-    tipo: 'Aluno',
-    nome: sourceName || email,
-    email,
-    telefone: sourcePhone,
-    cpf_cnpj: sourceCpf,
-    data_nascimento: sourceBirthDate,
-    polo_id: sourcePoloId,
-    polo_ids: sourcePoloIds,
-    status: 'ATIVO',
-    observacao: `Cadastro aluno vinculado automaticamente ao acesso ${sourceProfile?.tipo || 'institucional'} para compra online.`,
-  };
-
-  const { data: insertedAluno, error: insertError } = await supabase
-    .from('parceiros')
-    .insert(alunoPayload)
-    .select('id, nome, email, tipo, polo_id, polo_ids, status')
-    .single();
-
-  if (insertError) {
-    throw new Error(insertError.message.includes('duplicate')
-      ? 'Já existe um cadastro com este CPF. Verifique se o aluno está cadastrado corretamente antes de comprar.'
-      : insertError.message);
-  }
-
-  return buildPartnerProfile(insertedAluno, email);
+  if (error) throw new Error(getLinkedAlunoFailureMessage(error.message));
+  return getPortalProfile({ preferredRole: 'Aluno', allowedRoles: ['Aluno'] });
 };

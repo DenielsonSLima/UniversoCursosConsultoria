@@ -3,11 +3,11 @@
 import assert from "node:assert/strict";
 
 const migrationUrl = new URL(
-  "../migrations/20260819203137_add_assinatura_eletronica_signature_stamp_editor_v3.sql",
+  "../migrations/20260819013000_add_assinatura_eletronica_signature_stamp_editor_v3.sql",
   import.meta.url,
 );
 const v5MigrationUrl = new URL(
-  "../migrations/20260820180725_add_signature_editor_v5_global_stamp_template.sql",
+  "../migrations/20260820113000_add_signature_editor_v5_global_stamp_template.sql",
   import.meta.url,
 );
 const contractUrl = new URL(
@@ -280,7 +280,7 @@ Deno.test("aba exclusiva do carimbo global não cria página 3 e bloqueia dados 
     /O mesmo template é repetido para todos os signatários autorizados/i,
   );
   assert.match(configuration, /sem separar Professor e\s*Coordenador/i);
-  assert.match(configuration, /watermark_landscape_<polo_id>/i);
+  assert.match(configuration, /institutionalWatermark/i);
   assert.match(configuration, /isCanonicalInstitutionalWatermarkDataUri/i);
   assert.doesNotMatch(configuration, /PdfStampPlacementEditor/i);
   assert.match(configuration, /uploadModelAsset\(file\)/i);

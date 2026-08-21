@@ -18,6 +18,10 @@ import type {
   CanonicalDocumentPdfResult,
 } from '../shared/canonical-document-pdf.types';
 import type { CarteirinhaPreceptorPreparedDocument } from './types/carteirinhas-preceptor.types';
+import {
+  createCarteirinhasPreceptorVerticalPdf,
+  isPreceptorVerticalLayout,
+} from './carteirinhas-preceptor-vertical.pdf';
 
 const PAGE_WIDTH = 210;
 const PAGE_HEIGHT = 297;
@@ -86,9 +90,9 @@ const getRawCard = (source: CarteirinhaPreceptorPreparedDocument) => {
     preceptor.nome,
     source.targetName,
   );
-  if (!holderName) throw new Error('A carteirinha não possui o nome canônico do preceptor.');
+  if (!holderName) throw new Error('O Crachá de Preceptor não possui o nome canônico do professor.');
   if (qrEnabled && !source.validationCode?.trim()) {
-    throw new Error('A carteirinha exige código de validação para gerar o QR Code.');
+    throw new Error('O Crachá de Preceptor exige código de validação para gerar o QR Code.');
   }
 
   return {
@@ -189,7 +193,7 @@ const assertBackMessageFits = (pdf: jsPDF, card: PreceptorCardData) => {
   const availableWidth = card.qrEnabled ? 48 : CARD_WIDTH - 10;
   const lines = pdf.splitTextToSize(normalizeCanonicalPdfText(card.backMessage), availableWidth) as string[];
   if (lines.length > 7) {
-    throw new Error(`A mensagem canônica da carteirinha de ${card.holderName} excede a área física da credencial.`);
+    throw new Error(`A mensagem canônica do Crachá de Preceptor de ${card.holderName} excede a área física da credencial.`);
   }
 };
 
@@ -295,7 +299,7 @@ const drawBack = (
   }
 
   if (card.qrEnabled) {
-    if (!card.qr) throw new Error('A carteirinha exige QR Code, mas o ativo de validação não foi preparado.');
+    if (!card.qr) throw new Error('O Crachá de Preceptor exige QR Code, mas o ativo de validação não foi preparado.');
     const qrSize = 16.5;
     const qrX = x + CARD_WIDTH - qrSize - 5;
     const qrY = y + CARD_HEIGHT - qrSize - 5;
@@ -389,14 +393,22 @@ const drawBatch = (
 };
 
 /**
- * PDF nativo de carteirinhas: CR80 físicas em A4 para lote e frente/verso
+ * PDF nativo de Crachás de Preceptor históricos: CR80 físicas em A4 para lote e frente/verso
  * centralizados para emissão individual. A prévia usa o mesmo Blob final.
  */
 export const createCarteirinhasPreceptorPdf = async (
   documents: readonly CarteirinhaPreceptorPreparedDocument[],
   options: CanonicalDocumentPdfBuildOptions = {},
 ): Promise<CanonicalDocumentPdfResult> => {
-  if (!documents.length) throw new Error('Nenhuma carteirinha foi preparada para gerar o PDF.');
+  if (!documents.length) throw new Error('Nenhum Crachá de Preceptor foi preparado para gerar o PDF.');
+
+  const verticalDocuments = documents.filter(isPreceptorVerticalLayout);
+  if (verticalDocuments.length) {
+    if (verticalDocuments.length !== documents.length) {
+      throw new Error('O lote mistura Crachás de Preceptor verticais e carteirinhas históricas; gere cada formato separadamente.');
+    }
+    return createCarteirinhasPreceptorVerticalPdf(documents, options);
+  }
 
   const rawCards = documents.map(getRawCard);
   const cards = await runWithConcurrency(rawCards, 3, async (card) => {
@@ -416,7 +428,7 @@ export const createCarteirinhasPreceptorPdf = async (
     precision: 4,
   });
   pdf.setProperties({
-    title: documents.length > 1 ? 'Carteirinhas de preceptor - lote' : documents[0].title,
+    title: documents.length > 1 ? 'Crachás de Preceptor - lote' : documents[0].title,
     subject: 'Credencial institucional emitida pela Secretaria',
     author: 'Universo Cursos e Consultoria',
     creator: 'Universo Cursos e Consultoria',

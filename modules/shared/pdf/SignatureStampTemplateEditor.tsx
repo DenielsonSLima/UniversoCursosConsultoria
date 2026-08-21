@@ -1,8 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
+  Bold,
   Eye,
   GripVertical,
   Image as ImageIcon,
+  Italic,
   Maximize2,
   Minus,
   Plus,
@@ -10,10 +15,15 @@ import {
   Trash2,
 } from "lucide-react";
 
-import type {
-  ElectronicSignatureStampTemplateElement,
-  ElectronicSignatureStampTemplateElementId,
-  ElectronicSignatureStampTemplateV1,
+import {
+  ELECTRONIC_SIGNATURE_STAMP_DISPLAY_TITLE,
+  ELECTRONIC_SIGNATURE_STAMP_TEMPLATE_FONT_SIZE_LIMITS,
+  type ElectronicSignatureStampTemplateElement,
+  type ElectronicSignatureStampTemplateElementId,
+  type ElectronicSignatureStampTemplateFont,
+  type ElectronicSignatureStampTemplateTextAlign,
+  type ElectronicSignatureStampTemplateTextElement,
+  type ElectronicSignatureStampTemplateV1,
 } from "../assinatura-eletronica/assinatura-eletronica.contract";
 import {
   cloneElectronicSignatureStampTemplate,
@@ -22,6 +32,8 @@ import {
   getSignatureStampTemplateQrCollisionElementIds,
   isSignatureStampTemplateElementOptionalVisual,
   isSignatureStampTemplateElementVisible,
+  isSignatureStampTemplateFontBold,
+  isSignatureStampTemplateFontOblique,
   isSignatureStampTemplateQrClear,
   moveSignatureStampTemplateElement,
   placeSignatureStampVerificationBelowQr,
@@ -29,19 +41,20 @@ import {
   resizeSignatureStampTemplateElementFromCenter,
   SIGNATURE_STAMP_TEMPLATE_COORDINATE_SCALE,
   SIGNATURE_STAMP_TEMPLATE_ELEMENT_SPECS,
+  updateSignatureStampTemplateFontVariant,
 } from "../assinatura-eletronica/signature-stamp-template";
 import { LocalQrCodeImage } from "../qrcode/LocalQrCodeImage";
 import { formatDocumentValidationUrlForDisplay } from "../document-validation/document-validation.url";
 
 export interface SignatureStampTemplateEditorProps {
-  /** Desenho global. Os bindings e estilos canônicos não são editáveis aqui. */
+  /** Desenho global. Conteúdo, bindings, rótulos e cores não são editáveis. */
   template: ElectronicSignatureStampTemplateV1;
   selectedElementId: ElectronicSignatureStampTemplateElementId;
   /** Data URL ou URL temporária do ativo de imagem já autorizado. */
   assetPreview: string | null;
   disabled?: boolean;
   onSelect: (id: ElectronicSignatureStampTemplateElementId) => void;
-  /** Só é chamado com uma mudança geométrica válida e sem colisão no QR. */
+  /** Só recebe mudanças válidas de geometria ou tipografia, sem colisão no QR. */
   onCommit: (template: ElectronicSignatureStampTemplateV1) => void;
 }
 
@@ -67,7 +80,7 @@ const SAMPLE_VALUES: Record<
   string
 > = {
   SIGNER_ROLE: "Signatário",
-  DISPLAY_TITLE: "Assinatura eletrônica",
+  DISPLAY_TITLE: ELECTRONIC_SIGNATURE_STAMP_DISPLAY_TITLE,
   SIGNER_NAME: "Maria S. Lima",
   SIGNED_AT: "20/08/2026, 15:42",
   SIGNER_CPF_MASKED: "12*.***.**9-01",
@@ -96,6 +109,16 @@ const sameGeometry = (
   (first.hiddenElementIds || []).join("|") ===
     (second.hiddenElementIds || []).join("|");
 
+const sameTemplate = (
+  first: ElectronicSignatureStampTemplateV1,
+  second: ElectronicSignatureStampTemplateV1,
+) =>
+  sameGeometry(first, second) && first.elements.every((element, index) => {
+    const candidate = second.elements[index];
+    return candidate && JSON.stringify(element.style) ===
+        JSON.stringify(candidate.style);
+  });
+
 const replaceElement = (
   template: ElectronicSignatureStampTemplateV1,
   replacement: ElectronicSignatureStampTemplateElement,
@@ -111,8 +134,8 @@ const findElement = (
   id: ElectronicSignatureStampTemplateElementId,
 ) => template.elements.find((element) => element.id === id) || null;
 
-const fontFamilyFor = (font: "HELVETICA" | "HELVETICA_BOLD" | "COURIER") => {
-  if (font === "COURIER") {
+const fontFamilyFor = (font: ElectronicSignatureStampTemplateFont) => {
+  if (font.startsWith("COURIER")) {
     return "ui-monospace, SFMono-Regular, Menlo, monospace";
   }
   return "ui-sans-serif, system-ui, sans-serif";
@@ -127,8 +150,8 @@ const alignmentClass = (align: "LEFT" | "CENTER" | "RIGHT") => {
 /**
  * Editor visual do único modelo global de carimbo.
  *
- * O componente só altera x/y/largura/altura. Os 11 elementos, seus bindings,
- * prefixos e estilos permanecem fechados no contrato compartilhado.
+ * O componente altera geometria e a tipografia permitida. Os 11 elementos,
+ * seus bindings, prefixos, conteúdo e cores permanecem fechados no contrato.
  */
 const SignatureStampTemplateEditor: React.FC<
   SignatureStampTemplateEditorProps
@@ -233,19 +256,7 @@ const SignatureStampTemplateEditor: React.FC<
     interaction: PointerInteraction,
     candidate: ElectronicSignatureStampTemplateElement,
   ) => {
-    let nextTemplate = replaceElement(interaction.startTemplate, candidate);
-    if (candidate.id === "verificationQr") {
-      try {
-        nextTemplate = placeSignatureStampVerificationBelowQr(nextTemplate);
-      } catch (error) {
-        setAnnouncement(
-          error instanceof Error
-            ? error.message
-            : "Não há espaço para manter o código abaixo do QR.",
-        );
-        return;
-      }
-    }
+    const nextTemplate = replaceElement(interaction.startTemplate, candidate);
     if (!isSignatureStampTemplateQrClear(nextTemplate)) {
       announceBlockedQrCollision(nextTemplate, interaction.elementId);
       return;
@@ -311,24 +322,12 @@ const SignatureStampTemplateEditor: React.FC<
   const commitElement = (
     candidate: ElectronicSignatureStampTemplateElement,
   ) => {
-    let nextTemplate = replaceElement(template, candidate);
-    if (candidate.id === "verificationQr") {
-      try {
-        nextTemplate = placeSignatureStampVerificationBelowQr(nextTemplate);
-      } catch (error) {
-        setAnnouncement(
-          error instanceof Error
-            ? error.message
-            : "Não há espaço para manter o código abaixo do QR.",
-        );
-        return false;
-      }
-    }
+    const nextTemplate = replaceElement(template, candidate);
     if (!isSignatureStampTemplateQrClear(nextTemplate)) {
       announceBlockedQrCollision(nextTemplate, candidate.id);
       return false;
     }
-    if (sameGeometry(template, nextTemplate)) return false;
+    if (sameTemplate(template, nextTemplate)) return false;
     onCommit(nextTemplate);
     return true;
   };
@@ -368,6 +367,108 @@ const SignatureStampTemplateEditor: React.FC<
         `Área de ${
           getSignatureStampTemplateElementName(selectedElement.id)
         } atualizada.`,
+      );
+    }
+  };
+
+  const commitSelectedTextStyle = (
+    update: Partial<
+      Pick<
+        ElectronicSignatureStampTemplateTextElement["style"],
+        "font" | "fontSizeBp" | "align"
+      >
+    >,
+  ) => {
+    if (
+      !selectedElement || selectedElement.kind !== "TEXT" ||
+      selectedElementHidden
+    ) {
+      return false;
+    }
+    const candidate: ElectronicSignatureStampTemplateTextElement = {
+      ...selectedElement,
+      style: { ...selectedElement.style, ...update },
+    };
+    return commitElement(candidate);
+  };
+
+  const adjustSelectedTextFontSize = (deltaBp: number) => {
+    if (!selectedElement || selectedElement.kind !== "TEXT") return;
+    const nextSize = Math.min(
+      ELECTRONIC_SIGNATURE_STAMP_TEMPLATE_FONT_SIZE_LIMITS.maxBp,
+      Math.max(
+        ELECTRONIC_SIGNATURE_STAMP_TEMPLATE_FONT_SIZE_LIMITS.minBp,
+        selectedElement.style.fontSizeBp + deltaBp,
+      ),
+    );
+    if (nextSize === selectedElement.style.fontSizeBp) {
+      setAnnouncement(
+        deltaBp > 0
+          ? "A fonte já atingiu o maior tamanho permitido."
+          : "A fonte já atingiu o menor tamanho permitido.",
+      );
+      return;
+    }
+    if (commitSelectedTextStyle({ fontSizeBp: nextSize })) {
+      setAnnouncement(
+        `Fonte de ${
+          getSignatureStampTemplateElementName(selectedElement.id)
+        } atualizada.`,
+      );
+    }
+  };
+
+  const toggleSelectedTextBold = () => {
+    if (!selectedElement || selectedElement.kind !== "TEXT") return;
+    const bold = !isSignatureStampTemplateFontBold(selectedElement.style.font);
+    if (
+      commitSelectedTextStyle({
+        font: updateSignatureStampTemplateFontVariant(
+          selectedElement.style.font,
+          { bold },
+        ),
+      })
+    ) {
+      setAnnouncement(
+        `Negrito ${bold ? "ativado" : "desativado"} em ${
+          getSignatureStampTemplateElementName(selectedElement.id)
+        }.`,
+      );
+    }
+  };
+
+  const toggleSelectedTextOblique = () => {
+    if (!selectedElement || selectedElement.kind !== "TEXT") return;
+    const oblique = !isSignatureStampTemplateFontOblique(
+      selectedElement.style.font,
+    );
+    if (
+      commitSelectedTextStyle({
+        font: updateSignatureStampTemplateFontVariant(
+          selectedElement.style.font,
+          { oblique },
+        ),
+      })
+    ) {
+      setAnnouncement(
+        `Itálico ${oblique ? "ativado" : "desativado"} em ${
+          getSignatureStampTemplateElementName(selectedElement.id)
+        }.`,
+      );
+    }
+  };
+
+  const alignSelectedText = (
+    align: ElectronicSignatureStampTemplateTextAlign,
+  ) => {
+    if (
+      selectedElement?.kind === "TEXT" &&
+      commitSelectedTextStyle({ align })
+    ) {
+      setAnnouncement(
+        `Alinhamento de ${
+          getSignatureStampTemplateElementName(selectedElement.id)
+        } atualizado.`,
       );
     }
   };
@@ -534,6 +635,9 @@ const SignatureStampTemplateEditor: React.FC<
       const visibleSampleValue = element.binding === "VERIFICATION_URL"
         ? formatDocumentValidationUrlForDisplay(sampleValue)
         : sampleValue;
+      const visibleLabel = element.id === "signerName"
+        ? ""
+        : element.style.label;
       const stackedValidationText = element.binding === "VERIFICATION_CODE" ||
         element.binding === "VERIFICATION_URL";
       content = (
@@ -544,12 +648,17 @@ const SignatureStampTemplateEditor: React.FC<
           style={{
             color: element.style.color,
             fontFamily: fontFamilyFor(element.style.font),
-            fontWeight: element.style.font === "HELVETICA_BOLD" ? 700 : 500,
+            fontWeight: isSignatureStampTemplateFontBold(element.style.font)
+              ? 700
+              : 400,
+            fontStyle: isSignatureStampTemplateFontOblique(element.style.font)
+              ? "italic"
+              : "normal",
             // A fonte no PDF é proporcional à altura física do selo. Usar cqw
             // aqui (quando o selo é horizontal) fazia cada texto parecer enorme.
             fontSize: `clamp(7px, ${
               element.style.fontSizeBp / 1_000
-            }cqh, 18px)`,
+            }cqh, 64px)`,
           }}
         >
           {stackedValidationText
@@ -565,7 +674,7 @@ const SignatureStampTemplateEditor: React.FC<
             )
             : (
               <>
-                {element.style.label}
+                {visibleLabel}
                 {sampleValue}
               </>
             )}
@@ -639,9 +748,9 @@ const SignatureStampTemplateEditor: React.FC<
             </p>
           </div>
           <p className="mt-1.5 max-w-2xl text-xs leading-relaxed text-slate-600">
-            Arraste ou redimensione apenas a posição dos elementos. Nome, data,
-            CPF, hash, código, URL e QR são vinculados à prova individual no
-            momento da assinatura.
+            Arraste e redimensione os elementos; nos textos, ajuste tamanho,
+            negrito, itálico e alinhamento. Conteúdo, rótulos e vínculos
+            probatórios continuam protegidos.
           </p>
         </div>
         <div className="inline-flex shrink-0 items-center gap-2 self-start rounded-full bg-blue-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.1em] text-blue-800">
@@ -730,6 +839,8 @@ const SignatureStampTemplateEditor: React.FC<
               <p className="mt-1 text-slate-500">
                 {selectedElementHidden
                   ? "Este item está oculto na aparência do carimbo; os dados e as provas continuam preservados."
+                  : selectedElement.kind === "TEXT"
+                  ? "Conteúdo, vínculo, rótulo e cor ficam protegidos; você ajusta geometria e tipografia."
                   : "O conteúdo e o estilo canônicos ficam protegidos; você ajusta somente a área e a posição."}
               </p>
               {isSignatureStampTemplateElementOptionalVisual(
@@ -807,7 +918,7 @@ const SignatureStampTemplateEditor: React.FC<
                     : selectedElement.kind === "LINE"
                     ? "Na linha, os controles alteram apenas a largura."
                     : selectedElement.kind === "TEXT"
-                    ? "Nos textos, os controles aumentam a área do bloco; a fonte oficial permanece a mesma."
+                    ? "Estes controles alteram a área do bloco. A tipografia possui controles próprios abaixo."
                     : "Nos elementos de imagem, os controles alteram largura e altura."}
                 </p>
                 {announcement && (
@@ -820,6 +931,110 @@ const SignatureStampTemplateEditor: React.FC<
                   </p>
                 )}
               </div>
+              {selectedElement.kind === "TEXT" && (
+                <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+                  <p className="font-black uppercase tracking-[0.1em] text-[#001a33]">
+                    Tipografia
+                  </p>
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    <span className="font-bold text-slate-700">
+                      Tamanho: {selectedElement.style.fontSizeBp / 1_000}%
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        disabled={disabled || selectedElementHidden ||
+                          selectedElement.style.fontSizeBp <=
+                            ELECTRONIC_SIGNATURE_STAMP_TEMPLATE_FONT_SIZE_LIMITS
+                              .minBp}
+                        onClick={() =>
+                          adjustSelectedTextFontSize(
+                            -ELECTRONIC_SIGNATURE_STAMP_TEMPLATE_FONT_SIZE_LIMITS
+                              .stepBp,
+                          )}
+                        aria-label={`Diminuir tamanho da fonte de ${
+                          getSignatureStampTemplateElementName(
+                            selectedElement.id,
+                          )
+                        }`}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-45"
+                      >
+                        <Minus aria-hidden="true" size={15} />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={disabled || selectedElementHidden ||
+                          selectedElement.style.fontSizeBp >=
+                            ELECTRONIC_SIGNATURE_STAMP_TEMPLATE_FONT_SIZE_LIMITS
+                              .maxBp}
+                        onClick={() =>
+                          adjustSelectedTextFontSize(
+                            ELECTRONIC_SIGNATURE_STAMP_TEMPLATE_FONT_SIZE_LIMITS
+                              .stepBp,
+                          )}
+                        aria-label={`Aumentar tamanho da fonte de ${
+                          getSignatureStampTemplateElementName(
+                            selectedElement.id,
+                          )
+                        }`}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-blue-700 bg-blue-700 text-white transition hover:bg-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-45"
+                      >
+                        <Plus aria-hidden="true" size={15} />
+                      </button>
+                    </span>
+                  </div>
+
+                  <div className="mt-2 grid grid-cols-2 gap-1.5">
+                    <button
+                      type="button"
+                      disabled={disabled || selectedElementHidden}
+                      aria-label="Alternar negrito"
+                      aria-pressed={isSignatureStampTemplateFontBold(
+                        selectedElement.style.font,
+                      )}
+                      onClick={toggleSelectedTextBold}
+                      className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white font-bold text-slate-700 transition aria-pressed:border-blue-700 aria-pressed:bg-blue-700 aria-pressed:text-white hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-45"
+                    >
+                      <Bold aria-hidden="true" size={15} /> Negrito
+                    </button>
+                    <button
+                      type="button"
+                      disabled={disabled || selectedElementHidden}
+                      aria-label="Alternar itálico"
+                      aria-pressed={isSignatureStampTemplateFontOblique(
+                        selectedElement.style.font,
+                      )}
+                      onClick={toggleSelectedTextOblique}
+                      className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white font-bold text-slate-700 transition aria-pressed:border-blue-700 aria-pressed:bg-blue-700 aria-pressed:text-white hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-45"
+                    >
+                      <Italic aria-hidden="true" size={15} /> Itálico
+                    </button>
+                  </div>
+
+                  <div
+                    className="mt-2 grid grid-cols-3 gap-1.5"
+                    aria-label="Alinhamento do texto"
+                  >
+                    {([
+                      ["LEFT", "Alinhar à esquerda", AlignLeft],
+                      ["CENTER", "Centralizar", AlignCenter],
+                      ["RIGHT", "Alinhar à direita", AlignRight],
+                    ] as const).map(([align, label, Icon]) => (
+                      <button
+                        key={align}
+                        type="button"
+                        disabled={disabled || selectedElementHidden}
+                        aria-label={label}
+                        aria-pressed={selectedElement.style.align === align}
+                        onClick={() => alignSelectedText(align)}
+                        className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 transition aria-pressed:border-blue-700 aria-pressed:bg-blue-700 aria-pressed:text-white hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-45"
+                      >
+                        <Icon aria-hidden="true" size={16} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               {(selectedElement.id === "verificationQr" ||
                 selectedElement.id === "verificationCode" ||
                 selectedElement.id === "verificationUrl") && (

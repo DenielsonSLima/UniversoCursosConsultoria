@@ -45,7 +45,7 @@ jobs:
       - name: Testar login institucional e vínculo de Professor
         run: |
           npm run test:portal-auth
-          deno test --allow-read \
+          deno test --allow-read --allow-env=PORTAL_ALLOWED_REDIRECT_ORIGINS,ALLOWED_REDIRECT_ORIGINS,PUBLIC_SITE_URL,SITE_URL,APP_URL,VITE_PUBLIC_SITE_URL \
             modules/login/profile-selection.test.ts \
             supabase/functions/portal-user-management/gestor-access.test.ts \
             supabase/functions/portal-user-management/handlers/link-professor-auth-identity.test.ts \

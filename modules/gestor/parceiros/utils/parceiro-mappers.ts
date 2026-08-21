@@ -7,7 +7,15 @@ const uniqueTruthy = <T,>(values: Array<T | null | undefined>) =>
 
 const resolvePoloId = (data: any): string | null => {
   const directPoloId = data?.poloId || data?.polo_id;
-  if (directPoloId && UUID_RE.test(String(directPoloId))) return String(directPoloId).toLowerCase();
+  const normalizedPoloId = String(directPoloId || '').toLowerCase();
+  if (
+    normalizedPoloId
+    && (
+      UUID_RE.test(normalizedPoloId)
+      || normalizedPoloId === MATRIZ_POLO_ID
+      || normalizedPoloId === ESTANCIA_LEGACY_POLO_ID
+    )
+  ) return normalizedPoloId;
   if (data?.polo === 'matriz') return MATRIZ_POLO_ID;
   if (data?.polo === 'estancia') return ESTANCIA_LEGACY_POLO_ID;
   return null;
@@ -52,6 +60,7 @@ export function toCamel(s: any) {
     cnpj: s.cpf_cnpj,
     email: s.email,
     matriculaAcesso: s.matricula_acesso,
+    authUserId: s.auth_user_id || null,
     authLoginEmail: s.auth_login_email,
     telefone: s.telefone,
     contato1: s.telefone,
@@ -185,7 +194,11 @@ export function toSnake(c: any) {
     sexo: source.sexo || null,
     raca_cor: source.racaCor || source.raca_cor || null,
     rg: source.rg || null,
-    tipo_documento: source.tipoDocumento || 'CARTEIRA NACIONAL DE IDENTIFICAÇÃO',
+    tipo_documento: source.tipoDocumento || source.tipo_documento || (
+      source.tipo === 'Aluno' && source.matricularAgora === false
+        ? null
+        : 'CARTEIRA NACIONAL DE IDENTIFICAÇÃO'
+    ),
     orgao_emissor: source.orgaoEmissor || null,
     rg_uf_emissao: source.rgUfEmissao || null,
     rg_data_emissao: dateBrToDb(source.rgDataEmissao),

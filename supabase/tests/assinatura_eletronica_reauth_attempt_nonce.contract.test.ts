@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 
 const migrationUrl = new URL(
-  "../migrations/20260819203227_harden_assinatura_reauth_attempt_nonce.sql",
+  "../migrations/20260819150000_harden_assinatura_reauth_attempt_nonce.sql",
   import.meta.url,
 );
 const edgeUrl = new URL(
