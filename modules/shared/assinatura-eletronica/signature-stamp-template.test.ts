@@ -15,7 +15,6 @@ import {
   normalizeElectronicSignatureStampTemplate,
   placeSignatureStampVerificationBelowQr,
   resizeSignatureStampTemplateElement,
-  resizeSignatureStampTemplateElementFromCenter,
   templateElementsOverlap,
 } from "./signature-stamp-template";
 import {
