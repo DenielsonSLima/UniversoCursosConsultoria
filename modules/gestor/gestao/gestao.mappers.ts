@@ -30,12 +30,16 @@ type GestaoAcademicProgressRow = {
 const ACADEMIC_PROGRESS_BATCH_SIZE = 200;
 
 const readCanonicalAcademicCount = (
-  value: number | string,
+  value: unknown,
   field: string,
   turmaId: string,
 ): number => {
-  const count = Number(value);
-  if (value == null || value === '' || !Number.isSafeInteger(count) || count < 0) {
+  const count = typeof value === 'number'
+    ? value
+    : typeof value === 'string' && /^(0|[1-9]\d*)$/.test(value)
+      ? Number(value)
+      : null;
+  if (count === null || !Number.isSafeInteger(count) || count < 0) {
     throw new Error(`O banco não retornou ${field} válido para a turma ${turmaId}.`);
   }
   return count;

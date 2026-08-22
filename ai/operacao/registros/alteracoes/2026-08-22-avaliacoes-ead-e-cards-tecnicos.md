@@ -50,9 +50,10 @@ Pós-check remoto:
 ## Validação
 
 - Contratos Deno: 22/22 aprovados.
-- Contratos Node focados: 42/42 aprovados; revisão adicional do runtime EAD: 31/31.
+- Contratos Node focados: 43/43 aprovados; revisão adicional do runtime EAD: 31/31.
 - Teste executável de batching e falha integral dos cards: 6/6.
 - TypeScript, ESLint focado, formatação Deno, `git diff --check` e build Vite de produção aprovados.
+- A contrarrevisão final passou a rejeitar feedback parcial de prova e contagens acadêmicas vazias ou apenas coercíveis, com contratos de regressão específicos.
 - Smoke autenticado no Safari: cinco cards técnicos com contagem, gestão de turmas técnicas sem erro no estado vazio, catálogo com 63 cursos EAD e editor de provas com alternativas corretas reconstituídas. Nenhum dado foi salvo durante o smoke.
 
 ## Limites verificados

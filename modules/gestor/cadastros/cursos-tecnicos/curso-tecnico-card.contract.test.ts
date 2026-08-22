@@ -27,11 +27,13 @@ const [pageSource, errorSource, serviceSource, cardSource] = await Promise.all([
 ]);
 
 Deno.test("normaliza somente o total autoritativo retornado pela RPC", () => {
-  const [curso] = normalizeCursosTecnicosCardContract([
-    { ...baseCurso, total_disciplinas: "12" as unknown as number },
-  ]);
-
-  assert.equal(curso.total_disciplinas, 12);
+  for (const value of [0, "0", 12, "12"]) {
+    const [curso] = normalizeCursosTecnicosCardContract([{
+      ...baseCurso,
+      total_disciplinas: value as number,
+    }]);
+    assert.equal(curso.total_disciplinas, Number(value));
+  }
 });
 
 Deno.test("falha explicitamente quando a RPC não entrega um total válido", () => {
@@ -39,14 +41,15 @@ Deno.test("falha explicitamente quando a RPC não entrega um total válido", () 
     () => normalizeCursosTecnicosCardContract([baseCurso]),
     /não retornou o total de disciplinas/i,
   );
-  assert.throws(
-    () =>
-      normalizeCursosTecnicosCardContract([{
+  for (const value of [-1, null, "", " ", false, "1.0", "1e0"]) {
+    assert.throws(
+      () => normalizeCursosTecnicosCardContract([{
         ...baseCurso,
-        total_disciplinas: -1,
+        total_disciplinas: value as unknown as number,
       }]),
-    /não retornou o total de disciplinas/i,
-  );
+      /não retornou o total de disciplinas/i,
+    );
+  }
 });
 
 Deno.test("lista diferencia erro de vazio e oferece nova tentativa", () => {

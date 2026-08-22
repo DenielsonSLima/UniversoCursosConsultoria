@@ -146,6 +146,33 @@ test('fotografia autoritativa exige progresso, resumo e feedback no mesmo payloa
     summary: { ...summary, questionsTotal: -1 },
     assessmentFeedback,
   }), false);
+
+  const completeResults = Object.fromEntries(Array.from({ length: 10 }, (_, index) => [
+    `questao-${index + 1}`,
+    { selectedIndex: 1, correctIndex: 1, isCorrect: true },
+  ]));
+  const submittedFeedback = {
+    activities: {},
+    quiz: { submitted: true, score: 100, passed: true, results: completeResults },
+  };
+  assert.equal(isEadProgressStatePayload({
+    progress: {},
+    summary: { ...summary, quizPassed: true },
+    assessmentFeedback: submittedFeedback,
+  }), true);
+  assert.equal(isEadProgressStatePayload({
+    progress: {},
+    summary: { ...summary, quizPassed: true },
+    assessmentFeedback: {
+      ...submittedFeedback,
+      quiz: { ...submittedFeedback.quiz, results: { 'questao-1': completeResults['questao-1'] } },
+    },
+  }), false);
+  assert.equal(isEadProgressStatePayload({
+    progress: {},
+    summary,
+    assessmentFeedback: submittedFeedback,
+  }), false);
 });
 
 test('atividade reflexiva não reutiliza questões nem correção da prova final', () => {

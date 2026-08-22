@@ -158,13 +158,28 @@ export const isEadAssessmentFeedbackPayload = (value: any) => {
   return quiz.score !== null;
 };
 
-export const isEadProgressStatePayload = (value: any) => (
-  isEadFeedbackRecord(value)
-  && isEadFeedbackRecord(value.progress)
-  && isEadFeedbackRecord(value.summary)
-  && hasEadAuthoritativeSummaryFields(value.summary)
-  && isEadAssessmentFeedbackPayload(value.assessmentFeedback)
-);
+const hasCompleteEadQuizFeedback = (
+  summary: Record<string, any>,
+  assessmentFeedback: Record<string, any>,
+) => {
+  const quiz = assessmentFeedback.quiz;
+  if (!quiz.submitted) return true;
+  const resultIds = Object.keys(quiz.results);
+  return summary.questionsTotal > 0
+    && resultIds.length === summary.questionsTotal
+    && resultIds.every(id => id.length > 0 && id === id.trim())
+    && quiz.passed === summary.quizPassed;
+};
+
+export const isEadProgressStatePayload = (value: any) => {
+  if (!isEadFeedbackRecord(value)
+    || !isEadFeedbackRecord(value.progress)
+    || !isEadFeedbackRecord(value.summary)
+    || !hasEadAuthoritativeSummaryFields(value.summary)
+    || !isEadAssessmentFeedbackPayload(value.assessmentFeedback)
+  ) return false;
+  return hasCompleteEadQuizFeedback(value.summary, value.assessmentFeedback);
+};
 
 export type EadOptionFeedbackState = 'neutral' | 'selected' | 'correct' | 'incorrect';
 

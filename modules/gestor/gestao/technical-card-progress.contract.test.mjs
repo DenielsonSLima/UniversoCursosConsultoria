@@ -133,3 +133,20 @@ test('resposta incompleta em qualquer lote não vira contagem silenciosa', async
     /Progresso acadêmico indisponível para a turma turma-201/,
   );
 });
+
+test('contagens acadêmicas vazias ou coercíveis não viram zero', async () => {
+  for (const invalidValue of [null, '', ' ', false, '1.0', '1e0']) {
+    rpcImplementation = async (_rpcName, args) => ({
+      data: args.p_turma_ids.map((id) => ({
+        ...makeProgressRow(id),
+        total_disciplinas: invalidValue,
+      })),
+      error: null,
+    });
+
+    await assert.rejects(
+      enrichTechnicalAcademicProgress([makeTurma('turma-invalida')]),
+      /não retornou o total de disciplinas válido/i,
+    );
+  }
+});
