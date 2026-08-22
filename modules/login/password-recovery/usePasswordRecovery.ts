@@ -16,6 +16,7 @@ import {
   getAuthReturnParam,
   getAuthReturnFailureMessage,
   getPasswordSetupTypeInUrl,
+  resolvePasswordSetupPresentation,
   type PasswordRecoveryPageProps,
   type PasswordSetupKind,
   type RecoveryAuthorization,
@@ -33,11 +34,17 @@ export const usePasswordRecovery = ({
   const recoverySource = recoveryParams.get('source');
   const recoveryFlow = recoveryParams.get('flow');
   const isResponsavelRecovery = recoverySource === 'responsavel';
-  const isInviteReturn = initialPasswordSetupTypeRef.current === 'invite';
-  const isInstitutional = audience === 'institutional'
-    || recoverySource === 'institucional'
-    || (!appFlow && isInviteReturn);
-  const isInviteFlow = intent === 'invite' || recoveryFlow === 'invite' || isInviteReturn;
+  const [recoveryAuthorization, setRecoveryAuthorization] =
+    useState<RecoveryAuthorization | null>(null);
+  const { isInstitutional, isInviteFlow } = resolvePasswordSetupPresentation({
+    appFlow,
+    audience,
+    intent,
+    recoverySource,
+    recoveryFlow,
+    initialKind: initialPasswordSetupTypeRef.current,
+    authorizedKind: recoveryAuthorization?.kind || null,
+  });
   const recoveryAudience = isInstitutional ? 'institutional' : 'student';
   const recoveryIntent = isInviteFlow ? 'invite' : 'recovery';
   const loginPath = isInstitutional
@@ -69,8 +76,6 @@ export const usePasswordRecovery = ({
   const [turnstileToken, setTurnstileToken] = useState('');
   const [turnstileResetSignal, setTurnstileResetSignal] = useState(0);
   const [turnstileStatus, setTurnstileStatus] = useState<TurnstileStatus>('loading');
-  const [recoveryAuthorization, setRecoveryAuthorization] =
-    useState<RecoveryAuthorization | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const loginRedirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const recoverySubmitInFlightRef = useRef(false);
