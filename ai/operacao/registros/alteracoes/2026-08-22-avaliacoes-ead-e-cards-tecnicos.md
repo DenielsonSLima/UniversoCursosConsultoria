@@ -2,7 +2,7 @@
 
 Data: 2026-08-22
 
-Estado: implementação concluída; dez migrations aplicadas no Supabase Produção; incluído no PR de produção `#81`, aguardando os gates finais de GitHub/Vercel.
+Estado: publicado em Produção; dez migrations aplicadas no Supabase e frontend integrado pela PR `#81` no commit `2b6cd0d0aef7b45d7fe2bf38d7ec075575f6eaed`; CI e Vercel aprovados.
 
 ## Resultado
 

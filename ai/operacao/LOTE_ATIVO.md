@@ -1,6 +1,6 @@
 # Lote ativo
 
-Estado: `PRONTO_PARA_PUBLICACAO_PRODUCAO_4_7_0`
+Estado: `PUBLICADO_PRODUCAO_4_7_0`
 
 ## Lote: 2026-08-22-jornada-cursos-livres
 
@@ -13,7 +13,7 @@ Estado: `PRONTO_PARA_PUBLICACAO_PRODUCAO_4_7_0`
 - Homologação: não há branch Supabase nem outro projeto configurado neste workspace.
 - Versão desta entrega: `4.7.0` estável.
 - Entrega geral: o PR de produção também incorpora o lote concluído `2026-08-22-avaliacoes-ead-e-cards-tecnicos`, com dez migrations já aplicadas e manifesto próprio.
-- GitHub/Vercel: publicação em Produção autorizada explicitamente em 2026-08-22; PR `#81` aberto e gates finais em execução antes do merge.
+- GitHub/Vercel: PR `#81` integrada por squash na `main` no commit `2b6cd0d0aef7b45d7fe2bf38d7ec075575f6eaed`; CI, Preview e deployment Vercel Produção `Dv6B54iTJkYUYg5A8HrFWBGTW4yA` concluídos com sucesso.
 - Cobranças: nenhum boleto, matrícula, turma ou outro registro operacional foi criado durante a aplicação/validação.
 
 ### Critérios de aceite
@@ -45,13 +45,13 @@ Estado: `PRONTO_PARA_PUBLICACAO_PRODUCAO_4_7_0`
 - Advisors: baseline preservado em 470 avisos de segurança e 252 de performance; nenhum core corretivo é executável externamente, nenhum RPC novo ficou acessível a `anon` e as FKs novas do lote seguem cobertas.
 - Compatibilidade do seed: as grafias legadas `HARDWARE E PERIFÉRIOS` e `SOFTWARES E SISTEMA OPERACIONAIS` foram incorporadas aos aliases, preservando os IDs existentes e evitando criar duas matérias extras.
 - Smoke autenticado: bloqueado porque nenhum navegador in-app/Chrome está conectado à sessão (`browsers = []`).
+- Smoke HTTP de Produção: `/`, `/ead`, `/cursos-tecnicos` e `/login` responderam `200`; o bundle público `main-D-_Z4xBg.js` contém a versão `4.7.0`.
 
-### Pendências de fechamento
+### Limites pós-publicação
 
 1. Fazer smoke visual autenticado da Gestão e do Portal do Aluno quando um navegador in-app/Chrome estiver conectado.
 2. Executar replay e concorrência com fixture controlada quando existir homologação ou uma turma Livre de teste autorizada; Produção ainda não possui turma/matrícula Livre e não recebeu fixture artificial.
 3. Evitar operações SQL em lote que alterem/excluam várias turmas Livres até validar esse cenário específico; a interface atual opera uma turma por vez.
-4. Concluir commit atômico, CI, Preview Vercel, merge em `main` e smoke HTTP de Produção.
 
 ### Manifesto explícito
 
