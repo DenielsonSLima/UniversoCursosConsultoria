@@ -34,6 +34,11 @@ type FixtureOptions = {
   systemUserLinks?: Array<Record<string, unknown>>;
   saveUserError?: { code?: string; message: string } | null;
   invitedAuthUser?: Record<string, unknown> | null;
+  emailInUse?: boolean;
+  cpfInUse?: boolean;
+  preflightError?: { message: string } | null;
+  proofError?: { message: string } | null;
+  conflictingUserName?: string | null;
 };
 
 const makeFixture = (options: FixtureOptions = {}) => {
@@ -44,6 +49,7 @@ const makeFixture = (options: FixtureOptions = {}) => {
   let listUsersCalls = 0;
   let partnerLinkQueries = 0;
   let systemUserLinkQueries = 0;
+  const rpcCalls: Array<{ name: string; args: Record<string, unknown> }> = [];
 
   const identityQuery = (
     rows: Array<Record<string, unknown>>,
@@ -60,6 +66,32 @@ const makeFixture = (options: FixtureOptions = {}) => {
   };
 
   const admin = {
+    rpc: async (name: string, args: Record<string, unknown>) => {
+      rpcCalls.push({ name, args });
+      if (name === "portal_validar_unicidade_usuario_sistema") {
+        return options.preflightError
+          ? { data: null, error: options.preflightError }
+          : {
+            data: [{
+              email_em_uso: Boolean(options.emailInUse),
+              cpf_em_uso: Boolean(options.cpfInUse),
+              email_usuario_nome: options.emailInUse
+                ? options.conflictingUserName || "Usuária Existente"
+                : null,
+              cpf_usuario_nome: options.cpfInUse
+                ? options.conflictingUserName || "Usuária Existente"
+                : null,
+            }],
+            error: null,
+          };
+      }
+      if (name === "portal_identidade_assinar_convite_gestor") {
+        return options.proofError
+          ? { data: null, error: options.proofError }
+          : { data: "a".repeat(64), error: null };
+      }
+      throw new Error(`RPC inesperada no teste: ${name}`);
+    },
     from: (table: string) => {
       if (table === "parceiros") {
         return {
@@ -131,6 +163,7 @@ const makeFixture = (options: FixtureOptions = {}) => {
     admin,
     gestor: {
       id: "gestor-session",
+      auth_user_id: "d897ffc3-6bb6-4299-b406-e4ebb015314e",
       context: "global",
       polo_ids: [],
       permissoes: {
@@ -149,6 +182,7 @@ const makeFixture = (options: FixtureOptions = {}) => {
     insertedUsers,
     invitedAuthPayloads,
     deletedAuthUserIds,
+    rpcCalls,
     counts: () => ({
       listUsersCalls,
       partnerLinkQueries,
@@ -184,12 +218,16 @@ Deno.test("envia convite, sem senha no payload, e cria usuário interno com vín
     string,
     unknown
   >;
-  const { invite_operation_nonce: invitationNonce, ...inviteMetadata } =
-    inviteData;
-  assert.deepEqual(inviteMetadata, {
-    nome: baseUser.nome,
-    origem: "usuarios_sistema",
-  });
+  const invitationNonce = inviteData.invite_operation_nonce;
+  assert.equal(inviteData.nome, baseUser.nome);
+  assert.equal(inviteData.origem, "usuarios_sistema");
+  assert.equal(inviteData.cpf, baseUser.cpf);
+  assert.equal(inviteData.invite_operation_version, "v1");
+  assert.equal(
+    inviteData.invite_operation_actor,
+    "d897ffc3-6bb6-4299-b406-e4ebb015314e",
+  );
+  assert.equal(inviteData.invite_operation_proof, "a".repeat(64));
   assert.equal(typeof invitationNonce, "string");
   assert.ok(String(invitationNonce).length >= 20);
   assert.equal(
@@ -200,6 +238,46 @@ Deno.test("envia convite, sem senha no payload, e cria usuário interno com vín
   assert.equal(fixture.insertedUsers.length, 1);
   assert.equal(fixture.insertedUsers[0].auth_user_id, "auth-invited");
   assert.equal(fixture.insertedUsers[0].telefone, "(79) 99999-9999");
+  assert.equal(
+    fixture.insertedUsers[0].acesso_institucional_origem,
+    "CONVITE",
+  );
+  assert.equal(
+    fixture.insertedUsers[0].primeiro_acesso_institucional_pendente,
+    true,
+  );
+  assert.equal(
+    fixture.insertedUsers[0].primeiro_acesso_institucional_operacao_id,
+    invitationNonce,
+  );
+});
+
+Deno.test("recusa CPF interno duplicado antes de consultar Auth ou enviar e-mail", async () => {
+  const fixture = makeFixture({
+    cpfInUse: true,
+    conflictingUserName: "Administrador Master",
+  });
+  const response = await handleUpsertGestorUser(fixture.context, baseUser);
+  const body = await response.json();
+
+  assert.equal(response.status, 409);
+  assert.equal(body.code, "GESTOR_CPF_JA_CADASTRADO");
+  assert.match(body.error, /Administrador Master/i);
+  assert.match(body.error, /nenhum convite foi enviado/i);
+  assert.equal(fixture.counts().listUsersCalls, 0);
+  assert.equal(fixture.invitedAuthPayloads.length, 0);
+  assert.equal(fixture.insertedUsers.length, 0);
+});
+
+Deno.test("recusa e-mail interno duplicado antes de consultar Auth ou enviar e-mail", async () => {
+  const fixture = makeFixture({ emailInUse: true });
+  const response = await handleUpsertGestorUser(fixture.context, baseUser);
+  const body = await response.json();
+
+  assert.equal(response.status, 409);
+  assert.equal(body.code, "GESTOR_EMAIL_JA_CADASTRADO");
+  assert.equal(fixture.counts().listUsersCalls, 0);
+  assert.equal(fixture.invitedAuthPayloads.length, 0);
 });
 
 Deno.test("reaproveita identidade de aluno quando e-mail e CPF conferem", async () => {
@@ -221,6 +299,18 @@ Deno.test("reaproveita identidade de aluno quando e-mail e CPF conferem", async 
   assert.equal(fixture.invitedAuthPayloads.length, 0);
   assert.equal(fixture.insertedUsers.length, 1);
   assert.equal(fixture.insertedUsers[0].auth_user_id, "auth-existing");
+  assert.equal(
+    fixture.insertedUsers[0].acesso_institucional_origem,
+    "IDENTIDADE_EXISTENTE",
+  );
+  assert.equal(
+    fixture.insertedUsers[0].primeiro_acesso_institucional_pendente,
+    false,
+  );
+  assert.equal(
+    fixture.insertedUsers[0].primeiro_acesso_institucional_operacao_id,
+    null,
+  );
   assert.equal(fixture.deletedAuthUserIds.length, 0);
   assert.deepEqual(fixture.counts(), {
     listUsersCalls: 1,
@@ -274,6 +364,42 @@ Deno.test("recusa identidade Auth órfã", async () => {
   assert.equal(fixture.insertedUsers.length, 0);
 });
 
+Deno.test("reconcilia convite legado pendente sem reenviar e-mail", async () => {
+  const fixture = makeFixture({
+    authUsers: [{
+      id: "auth-orphan",
+      email: baseUser.email,
+      invited_at: "2026-08-22T13:26:46.000Z",
+      confirmed_at: null,
+      last_sign_in_at: null,
+      user_metadata: {
+        origem: "usuarios_sistema",
+        invite_operation_nonce: "e1c540a6-8bd3-4a30-9bd8-a5fc9df70b12",
+      },
+    }],
+  });
+  const response = await handleUpsertGestorUser(fixture.context, baseUser);
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.inviteSent, false);
+  assert.match(body.message, /cadastro interno reconciliado/i);
+  assert.equal(fixture.invitedAuthPayloads.length, 0);
+  assert.equal(fixture.insertedUsers[0].auth_user_id, "auth-orphan");
+  assert.equal(
+    fixture.insertedUsers[0].acesso_institucional_origem,
+    "CONVITE",
+  );
+  assert.equal(
+    fixture.insertedUsers[0].primeiro_acesso_institucional_pendente,
+    true,
+  );
+  assert.equal(
+    fixture.insertedUsers[0].primeiro_acesso_institucional_operacao_id,
+    "e1c540a6-8bd3-4a30-9bd8-a5fc9df70b12",
+  );
+});
+
 Deno.test("não vincula Auth não confirmado reenviado sem o nonce do convite", async () => {
   const fixture = makeFixture({
     invitedAuthUser: {
@@ -301,9 +427,10 @@ Deno.test("preserva Auth convidado se o cadastro interno colidir", async () => {
   const response = await handleUpsertGestorUser(fixture.context, baseUser);
   const body = await response.json();
 
-  assert.equal(response.status, 500);
-  assert.match(body.error, /cadastro interno não foi concluído/i);
-  assert.match(body.error, /preservada para reconciliação segura/i);
+  assert.equal(response.status, 409);
+  assert.equal(body.code, "GESTOR_CONFLITO_APOS_CONVITE");
+  assert.match(body.error, /conflito de e-mail, CPF ou identidade/i);
+  assert.match(body.error, /preservada/i);
   assert.deepEqual(fixture.deletedAuthUserIds, []);
 });
 

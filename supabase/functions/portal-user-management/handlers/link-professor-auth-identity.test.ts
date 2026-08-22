@@ -149,6 +149,9 @@ Deno.test("vincula professor ao Auth do gestor somente quando e-mail e CPF coinc
   assert.deepEqual(fixture.linkedPayloads, [{
     auth_user_id: "auth-gestor",
     auth_login_email: professorEmail,
+    acesso_institucional_origem: "IDENTIDADE_EXISTENTE",
+    primeiro_acesso_institucional_pendente: false,
+    primeiro_acesso_institucional_operacao_id: null,
   }]);
 });
 
@@ -329,5 +332,8 @@ Deno.test("recusa concorrência quando a atualização condicional não encontra
   assert.deepEqual(fixture.linkedPayloads, [{
     auth_user_id: "auth-gestor",
     auth_login_email: professorEmail,
+    acesso_institucional_origem: "IDENTIDADE_EXISTENTE",
+    primeiro_acesso_institucional_pendente: false,
+    primeiro_acesso_institucional_operacao_id: null,
   }]);
 });

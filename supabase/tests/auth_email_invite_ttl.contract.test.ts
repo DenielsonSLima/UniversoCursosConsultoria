@@ -15,4 +15,8 @@ Deno.test("configuração local dá ao convite de e-mail uma janela de 24 horas 
     config,
     /additional_redirect_urls\s*=\s*\[[\s\S]*?https:\/\/universocc\.com\.br\/recuperar-senha/,
   );
+  assert.match(
+    config,
+    /additional_redirect_urls\s*=\s*\[[\s\S]*?https:\/\/universocc\.com\.br\/responsavel\/primeiro-acesso/,
+  );
 });
