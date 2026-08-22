@@ -8,7 +8,9 @@ export type IncomingPayload = {
   userId?: string;
   userIds?: string[];
   status?: string;
+  emailValidatedByManager?: boolean;
   responsavelLegalId?: string;
+  responsavelLegalIds?: string[];
   requestId?: string;
 };
 
@@ -29,15 +31,19 @@ export type FunctionResponse = {
   authUserDeleted?: boolean;
   inviteSent?: boolean;
   recoveryEmailSent?: boolean;
+  requestFinalized?: boolean;
   message?: string;
   recoveryLink?: string | null;
   user?: Record<string, unknown> | null;
-  statuses?: PartnerEmailStatus[];
+  statuses?: Array<PartnerEmailStatus | ResponsavelAccessStatus>;
   managementStates?: GestorUserManagementState[];
   emailConfirmed?: boolean;
+  emailValidatedByManager?: boolean;
+  temporaryPassword?: string;
   profileLinked?: boolean;
   profileLinkState?: InstitutionalProfileLinkState;
   responsavelLegalId?: string | null;
+  code?: string;
   error?: string;
 };
 
@@ -59,6 +65,27 @@ export type PartnerEmailStatus = {
   status: PartnerEmailStatusValue;
   authUserExists: boolean;
   emailConfirmed: boolean;
+  emailValidatedByManager: boolean;
+};
+
+export type ResponsavelAccessStatusValue =
+  | "confirmed"
+  | "pending"
+  | "no_auth_user"
+  | "no_email";
+
+export type ResponsavelAccessStatus = {
+  responsavelLegalId: string;
+  status: ResponsavelAccessStatusValue;
+  authUserExists: boolean;
+  emailConfirmed: boolean;
+  emailValidatedByManager?: boolean;
+  temporaryPasswordPending?: boolean;
+  temporaryPasswordAllowed?: boolean;
+  requiresPasswordChange?: boolean;
+  termsAccepted?: boolean;
+  currentTermsVersion?: string;
+  firstAccessPending?: boolean;
 };
 
 export type JsonResponder = (
@@ -66,11 +93,23 @@ export type JsonResponder = (
   status?: number,
 ) => Response;
 
+export type TemporaryPasswordVerificationResult = {
+  verified: boolean;
+  sessionClosed: boolean;
+};
+
+export type TemporaryPasswordVerifier = (
+  email: string,
+  password: string,
+  authUserId: string,
+) => Promise<TemporaryPasswordVerificationResult>;
+
 export type HandlerContext = {
   admin: any;
   gestor: any;
   gestorEmail: string;
   json: JsonResponder;
+  verifyTemporaryPassword?: TemporaryPasswordVerifier;
 };
 
 export type Partner = {
@@ -86,6 +125,15 @@ export type Partner = {
   convite_enviado_em?: string | null;
   acesso_ativado_em?: string | null;
   troca_senha_obrigatoria?: boolean | null;
+  aceitou_termos_uso?: boolean | null;
+  termos_uso_versao?: string | null;
+  email_validado_gestor_em?: string | null;
+  senha_temporaria_pendente?: boolean | null;
+  senha_temporaria_emitida_em?: string | null;
+  senha_atualizada_em?: string | null;
+  senha_temporaria_emissao_id?: string | null;
+  senha_temporaria_emissao_iniciada_em?: string | null;
+  senha_temporaria_emissoes_revogadas?: string[] | null;
   matricula_acesso?: string | null;
   auth_login_email?: string | null;
   polo_id?: string | null;

@@ -7,12 +7,17 @@ import {
 } from "../_shared/http.ts";
 import { ensureAuthorizedGestor, loadManagedPartner } from "./gestor-access.ts";
 import { handleConfirmPartnerEmail } from "./handlers/confirm-partner-email.ts";
+import { handleConfirmResponsavelEmail } from "./handlers/confirm-responsavel-email.ts";
 import { handleDeletePartner } from "./handlers/delete-partner.ts";
 import { handleEnsureProfessorAccess } from "./handlers/ensure-professor-access.ts";
 import { handleEnsureResponsavelAccess } from "./handlers/ensure-responsavel-access.ts";
+import { handleIssueStudentTemporaryPassword } from "./handlers/issue-student-temporary-password.ts";
+import { handleIssueResponsavelTemporaryPassword } from "./handlers/issue-responsavel-temporary-password.ts";
 import { handleListPartnerEmailStatuses } from "./handlers/list-partner-email-statuses.ts";
+import { handleListResponsavelAccessStatuses } from "./handlers/list-responsavel-access-statuses.ts";
 import { handleLinkProfessorAuthIdentity } from "./handlers/link-professor-auth-identity.ts";
 import { handleSendStudentInvite } from "./handlers/send-student-invite.ts";
+import { handleResendResponsavelAccess } from "./handlers/resend-responsavel-access.ts";
 import { handleUpsertGestorUser } from "./handlers/upsert-gestor-user.ts";
 import {
   handleDeleteGestorUser,
@@ -21,6 +26,7 @@ import {
 } from "./handlers/manage-gestor-user.ts";
 import { gestorHasModule } from "./permissions.ts";
 import { resolveSupabasePublicApiKey } from "./redirects.ts";
+import { createTemporaryPasswordVerifier } from "./temporary-password-verification.ts";
 import type {
   FunctionResponse,
   HandlerContext,
@@ -36,9 +42,14 @@ const VALID_ACTIONS = [
   "delete-gestor-user",
   "list-partner-email-statuses",
   "confirm-partner-email",
+  "issue-student-temporary-password",
   "link-professor-auth-identity",
   "ensure-professor-access",
   "ensure-responsavel-access",
+  "list-responsavel-access-statuses",
+  "confirm-responsavel-email",
+  "issue-responsavel-temporary-password",
+  "resend-responsavel-access",
 ] as const;
 
 const GESTOR_USER_ACTIONS = new Set([
@@ -50,8 +61,14 @@ const GESTOR_USER_ACTIONS = new Set([
 
 Deno.serve(async (req: Request) => {
   const corsHeadersForRequest = buildCorsHeaders(req);
-  const json = (payload: FunctionResponse, status = 200) =>
-    sendJson(payload, status, req);
+  const json = (payload: FunctionResponse, status = 200) => {
+    const response = sendJson(payload, status, req);
+    const headers = new Headers(response.headers);
+    headers.set("Cache-Control", "no-store, max-age=0");
+    headers.set("Pragma", "no-cache");
+    headers.set("Expires", "0");
+    return new Response(response.body, { status: response.status, headers });
+  };
 
   if (
     isRateLimitExceeded(`portal-user-management:${getClientIp(req)}`, 40, 60000)
@@ -125,6 +142,14 @@ Deno.serve(async (req: Request) => {
     gestor: authorization.gestor,
     gestorEmail: authorization.gestorEmail,
     json,
+    ...(publicApiKey.apiKey
+      ? {
+        verifyTemporaryPassword: createTemporaryPasswordVerifier(
+          supabaseUrl,
+          publicApiKey.apiKey,
+        ),
+      }
+      : {}),
   };
 
   if (action === "list-partner-email-statuses") {
@@ -158,6 +183,37 @@ Deno.serve(async (req: Request) => {
     );
   }
 
+  if (action === "list-responsavel-access-statuses") {
+    return handleListResponsavelAccessStatuses(
+      context,
+      payload.responsavelLegalIds,
+    );
+  }
+
+  if (action === "confirm-responsavel-email") {
+    return handleConfirmResponsavelEmail(
+      context,
+      payload.responsavelLegalId,
+      payload.emailValidatedByManager === true,
+    );
+  }
+
+  if (action === "issue-responsavel-temporary-password") {
+    return handleIssueResponsavelTemporaryPassword(
+      context,
+      payload.responsavelLegalId,
+    );
+  }
+
+  if (action === "resend-responsavel-access") {
+    return handleResendResponsavelAccess(
+      context,
+      payload.responsavelLegalId,
+      payload.requestId,
+      { supabaseUrl, publicApiKey: publicApiKey.apiKey },
+    );
+  }
+
   const partnerId = String(payload.partnerId || "").trim();
   const partner = await loadManagedPartner(
     admin,
@@ -168,7 +224,15 @@ Deno.serve(async (req: Request) => {
   if (partner instanceof Response) return partner;
 
   if (action === "confirm-partner-email") {
-    return handleConfirmPartnerEmail(context, partner);
+    return handleConfirmPartnerEmail(
+      context,
+      partner,
+      payload.emailValidatedByManager === true,
+    );
+  }
+
+  if (action === "issue-student-temporary-password") {
+    return handleIssueStudentTemporaryPassword(context, partner);
   }
 
   if (action === "delete-partner") {

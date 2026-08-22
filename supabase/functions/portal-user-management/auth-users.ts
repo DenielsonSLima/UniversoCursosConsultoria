@@ -33,6 +33,7 @@ export const sendRecoveryEmail = async (
   if (!apiKey) {
     return {
       sent: false,
+      definitiveFailure: true,
       message:
         "Configuração de e-mail ausente no servidor (SUPABASE_ANON_KEY ou SUPABASE_PUBLISHABLE_KEY).",
     };
@@ -56,13 +57,20 @@ export const sendRecoveryEmail = async (
     if (!response.ok) {
       const errorMessage = (await extractTextFromResponse(response)) ||
         `Não foi possível enviar o e-mail de recuperação (${response.status}).`;
-      return { sent: false, message: errorMessage };
+      return {
+        sent: false,
+        definitiveFailure: response.status >= 400 && response.status < 500,
+        message: errorMessage,
+      };
     }
 
-    return { sent: true, message: null };
+    return { sent: true, definitiveFailure: false, message: null };
   } catch (error) {
     return {
       sent: false,
+      // Sem resposta do provedor, o envio pode ter sido aceito. O chamador
+      // deve manter sua reserva idempotente para não duplicar o e-mail.
+      definitiveFailure: false,
       message: error instanceof Error
         ? error.message
         : "Falha inesperada ao enviar e-mail de recuperação.",

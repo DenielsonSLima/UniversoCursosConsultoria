@@ -1,3 +1,4 @@
+// File: modules/gestor/gestao/GestaoPage.tsx
 
 import React, { Suspense, useEffect, useState } from 'react';
 import { BarChart3, Briefcase, Award, MonitorPlay, Zap } from 'lucide-react';

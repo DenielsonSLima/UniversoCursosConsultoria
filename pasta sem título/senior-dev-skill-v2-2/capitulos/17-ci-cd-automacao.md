@@ -24,6 +24,10 @@
 O objetivo não é substituir julgamento humano — é eliminar os erros que
 não precisam de julgamento humano para ser detectados.
 
+O projeto também executa `npm run check:file-lines`. O verificador lê os
+manifestos auditados, limita arquivos manuais a 500 linhas físicas e só aceita
+exceções nominadas e justificadas, como migrations que já foram aplicadas.
+
 ---
 
 ## Pipeline Completo (GitHub Actions)

@@ -125,9 +125,3 @@ export interface ResponsavelLegalVincularAlunoResult {
   status: string;
   affectedPoloIds: readonly string[];
 }
-
-export interface ResponsavelAccessPreparationResult {
-  success: boolean;
-  profileLinkState: 'linked' | 'already_linked' | 'not_eligible' | string | null;
-  message: string | null;
-}

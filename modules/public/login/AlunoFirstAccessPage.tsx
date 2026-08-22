@@ -13,18 +13,21 @@ import {
 import { loginService } from '../../login/login.service';
 import { resolveProfilePostLoginRoute } from '../../login/profile-selection';
 import { TERMS_VERSION } from '../../shared/constants/terms';
+import type { PortalRole } from '../../login/portal-context.contract';
 
-const getDefaultNext = (searchParams: URLSearchParams) => {
-  return resolveProfilePostLoginRoute('Aluno', searchParams.get('next'));
+type PublicFirstAccessRole = Extract<PortalRole, 'Aluno' | 'Responsavel'>;
+
+const getDefaultNext = (searchParams: URLSearchParams, role: PublicFirstAccessRole) => {
+  return resolveProfilePostLoginRoute(role, searchParams.get('next'));
 };
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
-const firstAccessRequestStorageKey = (contextId: string) => (
-  `portal_first_access_request_id:${contextId}`
+const firstAccessRequestStorageKey = (role: PublicFirstAccessRole, contextId: string) => (
+  `portal_first_access_request_id:${role}:${contextId}`
 );
 
-const getStableFirstAccessRequestId = (contextId: string) => {
-  const storageKey = firstAccessRequestStorageKey(contextId);
+const getStableFirstAccessRequestId = (role: PublicFirstAccessRole, contextId: string) => {
+  const storageKey = firstAccessRequestStorageKey(role, contextId);
   const stored = sessionStorage.getItem(storageKey)?.trim() || '';
   if (UUID_PATTERN.test(stored)) return stored;
   const requestId = crypto.randomUUID();
@@ -34,24 +37,31 @@ const getStableFirstAccessRequestId = (contextId: string) => {
 
 const hasStrongPassword = (value: string) => value.length >= 8 && /[A-Z]/.test(value) && /[a-z]/.test(value) && /\d/.test(value);
 
-const buildTermsAcceptedText = () => (
+const buildTermsAcceptedText = (role: PublicFirstAccessRole) => (
   <p className="text-xs font-semibold leading-relaxed text-slate-600">
-    Ao continuar, eu confirmo que li e aceito os <Link to="/termos" className="text-[#001a33] underline">Termos de Uso</Link>. Estou ciente de que felicitações de aniversário e relacionamento não comercial ficam ativas por padrão, sob legítimo interesse, e podem ser desativadas a qualquer momento em Notificações.
+    Ao continuar, eu confirmo que li e aceito os <Link to="/termos" className="text-[#001a33] underline">Termos de Uso</Link>.
+    {role === 'Aluno' ? ' Estou ciente de que felicitações de aniversário e relacionamento não comercial ficam ativas por padrão, sob legítimo interesse, e podem ser desativadas a qualquer momento em Notificações.' : ''}
   </p>
 );
 
 type NavigateState = 'idle' | 'loading' | 'success' | 'error';
 
-const AlunoFirstAccessPage: React.FC = () => {
+interface AlunoFirstAccessPageProps {
+  role?: PublicFirstAccessRole;
+}
+
+const AlunoFirstAccessPage = ({ role = 'Aluno' }: AlunoFirstAccessPageProps) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const alunoLoginPath = Capacitor.isNativePlatform()
-    ? '/aluno/login-app'
-    : window.location.pathname.startsWith('/aluno/')
-      ? '/aluno/entrar'
-      : '/login';
+  const loginPath = role === 'Responsavel'
+    ? '/login'
+    : Capacitor.isNativePlatform()
+      ? '/aluno/login-app'
+      : window.location.pathname.startsWith('/aluno/')
+        ? '/aluno/entrar'
+        : '/login';
   const [searchParams] = useSearchParams();
-  const next = getDefaultNext(searchParams);
+  const next = getDefaultNext(searchParams, role);
   const requestedContextId = searchParams.get('context')?.trim() || null;
   const requestIdRef = useRef<string | null>(null);
   const [isChecking, setIsChecking] = useState(true);
@@ -71,14 +81,14 @@ const AlunoFirstAccessPage: React.FC = () => {
 
       try {
         const currentProfile = await getPortalProfile({
-          preferredRole: 'Aluno',
-          allowedRoles: ['Aluno'],
+          preferredRole: role,
+          allowedRoles: [role],
           contextId: requestedContextId,
         });
 
         if (!currentProfile || !currentProfile.contextId) {
           await loginService.logout();
-          navigate(alunoLoginPath, { replace: true });
+          navigate(loginPath, { replace: true });
           return;
         }
 
@@ -88,7 +98,7 @@ const AlunoFirstAccessPage: React.FC = () => {
           return;
         }
 
-        requestIdRef.current = getStableFirstAccessRequestId(currentProfile.contextId);
+        requestIdRef.current = getStableFirstAccessRequestId(role, currentProfile.contextId);
         setProfile(currentProfile);
         setAcceptedTerms(Boolean(currentProfile.acceptedTermsAt));
       } catch {
@@ -102,7 +112,7 @@ const AlunoFirstAccessPage: React.FC = () => {
     };
 
     void loadProfile();
-  }, [alunoLoginPath, next, navigate, requestedContextId]);
+  }, [loginPath, next, navigate, requestedContextId, role]);
 
   const termsAccepted = useMemo(() => Boolean(acceptedTerms), [acceptedTerms]);
   const requiresPasswordChange = Boolean(profile?.requiresPasswordReset);
@@ -117,7 +127,7 @@ const AlunoFirstAccessPage: React.FC = () => {
     queryClient.clear();
     sessionStorage.removeItem('portal_query_cache_auth_uid');
     if (profile?.contextId) {
-      sessionStorage.removeItem(firstAccessRequestStorageKey(profile.contextId));
+      sessionStorage.removeItem(firstAccessRequestStorageKey(role, profile.contextId));
     }
     clearPortalSession();
 
@@ -126,7 +136,7 @@ const AlunoFirstAccessPage: React.FC = () => {
     } catch (error) {
       console.warn('A sessão local foi interrompida, mas a revogação global não foi concluída.', error);
     } finally {
-      navigate(alunoLoginPath, { replace: true });
+      navigate(loginPath, { replace: true });
     }
   };
 
@@ -161,9 +171,10 @@ const AlunoFirstAccessPage: React.FC = () => {
       if (!contextId) {
         throw new Error('O contexto do primeiro acesso não está disponível. Entre novamente.');
       }
-      const requestId = requestIdRef.current || getStableFirstAccessRequestId(contextId);
+      const requestId = requestIdRef.current || getStableFirstAccessRequestId(role, contextId);
       requestIdRef.current = requestId;
       const updatedProfile = await alunoPublicAuthService.finalizeFirstAccess({
+        role,
         contextId,
         requestId,
         acceptedTerms: termsAccepted,
@@ -174,7 +185,7 @@ const AlunoFirstAccessPage: React.FC = () => {
 
       if (updatedProfile) {
         savePortalSession(updatedProfile);
-        sessionStorage.removeItem(firstAccessRequestStorageKey(contextId));
+        sessionStorage.removeItem(firstAccessRequestStorageKey(role, contextId));
         setState('success');
         navigate(next, { replace: true });
       } else {
@@ -191,14 +202,14 @@ const AlunoFirstAccessPage: React.FC = () => {
       try {
         const contextId = profile?.contextId;
         const refreshed = contextId ? await getPortalProfile({
-          preferredRole: 'Aluno',
-          allowedRoles: ['Aluno'],
+          preferredRole: role,
+          allowedRoles: [role],
           contextId,
         }) : null;
         if (refreshed) {
           if (!alunoPublicAuthService.needsInitialAccess(refreshed)) {
             savePortalSession(refreshed);
-            sessionStorage.removeItem(firstAccessRequestStorageKey(contextId!));
+            sessionStorage.removeItem(firstAccessRequestStorageKey(role, contextId!));
             setState('success');
             navigate(next, { replace: true });
             return;
@@ -255,7 +266,7 @@ const AlunoFirstAccessPage: React.FC = () => {
                 <FileText size={16} className="text-[#001a33]" />
                 <h2 className="text-sm font-black uppercase tracking-tight text-[#001a33]">Termos de Uso</h2>
               </div>
-              {buildTermsAcceptedText()}
+              {buildTermsAcceptedText(role)}
               <label className="mt-4 inline-flex items-center gap-2">
                 <input
                   type="checkbox"

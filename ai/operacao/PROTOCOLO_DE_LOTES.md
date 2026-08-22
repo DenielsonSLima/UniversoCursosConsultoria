@@ -39,10 +39,12 @@ Banco, Auth/RLS, financeiro, PDF estrutural, infraestrutura ou publicação:
 ## 5. Fechamento
 
 1. conferir o manifesto de arquivos;
-2. executar a validação final uma vez;
-3. registrar limitações reais, inclusive smoke pendente;
-4. atualizar o registro do lote;
-5. executar node scripts/agent-memory-rag.mjs index uma vez se fontes RAG mudaram.
+2. executar `npm run check:file-lines` e modularizar todo arquivo manual auditado acima de 500 linhas;
+3. preservar migrations já aplicadas como exceções imutáveis identificadas pelo registro remoto;
+4. executar a validação final uma vez;
+5. registrar limitações reais, inclusive smoke pendente;
+6. atualizar o registro do lote;
+7. executar node scripts/agent-memory-rag.mjs index uma vez se fontes RAG mudaram.
 
 ## 6. Publicação
 

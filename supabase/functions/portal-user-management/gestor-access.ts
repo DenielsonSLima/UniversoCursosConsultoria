@@ -125,7 +125,7 @@ export const loadManagedPartner = async (
   const { data: partner, error: partnerError } = await admin
     .from("parceiros")
     .select(
-      "id, tipo, nome, status, email, cpf_cnpj, auth_user_id, acesso_status, acesso_erro, convite_enviado_em, acesso_ativado_em, troca_senha_obrigatoria, matricula_acesso, auth_login_email, polo_id, polo_ids",
+      "id, tipo, nome, status, email, cpf_cnpj, auth_user_id, acesso_status, acesso_erro, convite_enviado_em, acesso_ativado_em, troca_senha_obrigatoria, aceitou_termos_uso, termos_uso_versao, email_validado_gestor_em, senha_temporaria_pendente, senha_temporaria_emitida_em, senha_atualizada_em, senha_temporaria_emissao_id, senha_temporaria_emissao_iniciada_em, senha_temporaria_emissoes_revogadas, matricula_acesso, auth_login_email, polo_id, polo_ids",
     )
     .eq("id", partnerId)
     .maybeSingle();

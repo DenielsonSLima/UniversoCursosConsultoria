@@ -28,7 +28,7 @@ const EmailConfirmationStatus: React.FC<EmailConfirmationStatusProps> = ({
         size={15}
         className="shrink-0 text-amber-500"
         aria-label="Confirmação do e-mail pendente"
-        title="Convite pendente — o aluno deve confirmar pelo e-mail recebido"
+        title="Convite pendente — o aluno pode confirmar pelo e-mail ou o gestor pode validar o canal na aba Acesso"
       />
     );
   }

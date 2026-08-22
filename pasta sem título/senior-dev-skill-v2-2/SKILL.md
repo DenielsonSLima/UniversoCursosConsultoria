@@ -48,7 +48,7 @@ description: >
 
 ---
 
-## ⚡ As 20 Regras de Ouro (Imutáveis — Nunca Quebre)
+## ⚡ As 21 Regras de Ouro (Imutáveis — Nunca Quebre)
 
 ```
 REGRA 1  → Componentes NUNCA fazem chamadas de API diretas
@@ -68,9 +68,10 @@ REGRA 14 → Arquitetura modular: separe visualização, formulários, cartões 
 REGRA 15 → Invalidação inteligente: revalide apenas chaves de cache afetadas e com cleanup de realtime adequado
 REGRA 16 → Persistência segura em multi-usuários: EM HIPÓTESE ALGUMA utilize localStorage para salvar configurações, templates, assinaturas, dados estruturais ou de negócio. Utilize exclusivamente o Supabase para sincronizar e persistir esses dados globalmente.
 REGRA 17 → Notificações do Sistema: NUNCA utilize mensagens ou diálogos nativos e genéricos do próprio navegador (como alert(), confirm() ou prompt()). Siga rigorosamente o padrão visual do sistema utilizando o hook useToast ou componentes customizados.
-REGRA 18 → Agentes e Handoff: Delegue tarefas complexas de desenvolvimento a subagentes autônomos dedicados, mantendo sempre o RAG (PROJETO_CONTEXTO.md e PROJETO_ALTERACOES.md) atualizado para continuidade do fluxo de trabalho.
+REGRA 18 → Agentes e Handoff: delegue somente frentes independentes que tragam ganho real. Em lotes relevantes, mantenha `ai/operacao/MEMORIA_CANONICA.md`, `LOTE_ATIVO.md`, o registro explícito e o índice RAG canônico atualizados no fechamento.
 REGRA 19 → Supabase SEMPRE via MCP: qualquer ação de Supabase neste projeto deve usar MCP Supabase (consultas, logs, migrations, RLS, Storage, Auth e Edge Functions). NUNCA execute nenhum comando `supabase ...`, nem para consulta/listagem/local (`supabase migration list`, `supabase status`, `supabase start`, `supabase db push`, `supabase functions deploy`, `supabase link`). Erro 401 da CLI não é bloqueio se o MCP estiver disponível.
 REGRA 20 → Modularização de portais e acessos: divida o código de cada perfil de acesso (Público, Login, Gestor, Afiliado/Aluno) em subpastas dedicadas (/src/modules) contendo seus próprios subcomponentes, hooks, services de mock e types para facilitar a manutenção futura.
+REGRA 21 → Teto de manutenção: arquivo manual tocado ou criado deve ter no máximo 500 linhas físicas e uma responsabilidade coesa. Divida componentes, hooks, services, handlers, testes e documentação ativa antes de concluir o lote. Migrations já aplicadas são imutáveis; gerados, lockfiles, binários e terceiros são exceções auditadas.
 ```
 
 ---

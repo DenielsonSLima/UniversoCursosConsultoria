@@ -1,13 +1,20 @@
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const versionPath = resolve(root, 'internal/versioning/system-version.json');
 const changelogPath = resolve(root, 'internal/versioning/CHANGELOG.md');
+const changelogArchivePath = resolve(root, 'internal/versioning/changelog');
 const versionRecord = JSON.parse(readFileSync(versionPath, 'utf8'));
 const changelog = readFileSync(changelogPath, 'utf8');
+const archivedChangelogs = existsSync(changelogArchivePath)
+  ? readdirSync(changelogArchivePath)
+      .filter(file => file.endsWith('.md'))
+      .sort()
+      .map(file => readFileSync(resolve(changelogArchivePath, file), 'utf8'))
+  : [];
 const errors = [];
 
 const semverPattern = /^(\d+)\.(\d+)\.(\d+)(?:-(alpha|beta|rc)\.(\d+))?$/;
@@ -89,6 +96,24 @@ const compareVersions = (current, previous) => {
   return 0;
 };
 
+const changelogEntries = source => {
+  const headings = [...source.matchAll(/^## \[[^\]]+\] - \d{4}-\d{2}-\d{2}$/gm)];
+  return headings.map((heading, index) => {
+    const next = headings[index + 1]?.index ?? source.length;
+    return [heading[0], source.slice(heading.index, next).trim()];
+  });
+};
+
+const completeHistoryEntries = [changelog, ...archivedChangelogs].flatMap(changelogEntries);
+const completeHistory = new Map(completeHistoryEntries);
+const completeHistoryVersions = completeHistoryEntries.map(([heading]) => heading.match(/^## \[([^\]]+)\]/)?.[1]);
+if (new Set(completeHistoryVersions).size !== completeHistoryVersions.length) {
+  const seen = new Set();
+  const duplicates = completeHistoryVersions
+    .filter(version => seen.has(version) || !seen.add(version));
+  errors.push(`Histórico contém versões duplicadas: ${[...new Set(duplicates)].join(', ')}.`);
+}
+
 const readGitFile = (ref, file) => {
   try {
     return execFileSync('git', ['show', `${ref}:${file}`], {
@@ -98,6 +123,19 @@ const readGitFile = (ref, file) => {
     });
   } catch {
     return null;
+  }
+};
+
+const readGitDirectory = (ref, directory) => {
+  try {
+    const paths = execFileSync('git', ['ls-tree', '-r', '--name-only', ref, '--', directory], {
+      cwd: root,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim().split('\n').filter(path => path.endsWith('.md'));
+    return paths.map(path => readGitFile(ref, path)).filter(Boolean);
+  } catch {
+    return [];
   }
 };
 
@@ -118,6 +156,11 @@ if (diffIndex !== -1) {
       !file.startsWith('.github/') &&
       !file.endsWith('.md')
     );
+    const baseChangelog = readGitFile(base, 'internal/versioning/CHANGELOG.md');
+    const baseHistorySources = [
+      ...(baseChangelog ? [baseChangelog] : []),
+      ...readGitDirectory(base, 'internal/versioning/changelog'),
+    ];
 
     if (productChanged) {
       for (const requiredFile of [
@@ -130,7 +173,6 @@ if (diffIndex !== -1) {
       }
 
       const baseVersionContent = readGitFile(base, 'internal/versioning/system-version.json');
-      const baseChangelog = readGitFile(base, 'internal/versioning/CHANGELOG.md');
 
       if (baseVersionContent) {
         const baseVersionRecord = JSON.parse(baseVersionContent);
@@ -141,13 +183,12 @@ if (diffIndex !== -1) {
         if (baseChangelog?.includes(expectedHeading)) {
           errors.push('CHANGELOG.md: a versão atual já existia na base; crie uma nova entrada.');
         }
-        if (baseChangelog) {
-          const historyStart = baseChangelog.search(/^## \[/m);
-          const previousHistory = historyStart >= 0 ? baseChangelog.slice(historyStart).trim() : '';
-          if (previousHistory && !changelog.includes(previousHistory)) {
-            errors.push('CHANGELOG.md: entradas históricas não podem ser removidas ou alteradas.');
-          }
-        }
+      }
+    }
+
+    for (const [heading, entry] of baseHistorySources.flatMap(changelogEntries)) {
+      if (completeHistory.get(heading) !== entry) {
+        errors.push(`Histórico de versão removido ou alterado: ${heading}.`);
       }
     }
   }

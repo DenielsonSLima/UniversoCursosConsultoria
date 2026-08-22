@@ -17,6 +17,7 @@ jobs:
       - name: Baixar o repositório
         uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Preparar Node.js
@@ -32,6 +33,16 @@ jobs:
 
       - name: Instalar dependências
         run: npm ci
+
+      - name: Validar teto de 500 linhas
+        run: npm run check:file-lines
+
+      - name: Preservar migrations aplicadas contra a base
+        if: github.event_name == 'pull_request'
+        run: npm run check:file-lines -- --check-diff "${{ github.event.pull_request.base.sha }}" "${{ github.sha }}"
+
+      - name: Validar contrato operacional dos agentes
+        run: npm run test:agent-operations
 
       - name: Validar TypeScript
         run: npx tsc --noEmit
@@ -50,6 +61,34 @@ jobs:
             supabase/functions/portal-user-management/gestor-access.test.ts \
             supabase/functions/portal-user-management/handlers/link-professor-auth-identity.test.ts \
             supabase/functions/portal-user-management/handlers/upsert-gestor-user.test.ts
+
+      - name: Testar primeiro acesso e senha temporária do Aluno
+        run: |
+          node --test modules/gestor/parceiros/student-first-access.contract.test.mjs
+          deno test --allow-read --allow-env=PORTAL_ALLOWED_REDIRECT_ORIGINS,ALLOWED_REDIRECT_ORIGINS,PUBLIC_SITE_URL,SITE_URL,APP_URL,VITE_PUBLIC_SITE_URL \
+            supabase/functions/portal-user-management/handlers/confirm-partner-email.test.ts \
+            supabase/functions/portal-user-management/handlers/issue-student-temporary-password.test.ts \
+            supabase/functions/portal-user-management/handlers/list-partner-email-statuses.test.ts \
+            supabase/functions/portal-user-management/runtime-contract.test.ts \
+            supabase/functions/portal-user-management/student-access.test.ts \
+            supabase/tests/student_temporary_password_access.contract.test.ts
+
+      - name: Testar acesso e primeiro login do Responsável
+        run: |
+          deno test --allow-read --allow-env=PORTAL_ALLOWED_REDIRECT_ORIGINS,ALLOWED_REDIRECT_ORIGINS,PUBLIC_SITE_URL,SITE_URL,APP_URL,VITE_PUBLIC_SITE_URL \
+            modules/gestor/parceiros/responsaveis/responsavel-access.contract.test.ts \
+            modules/gestor/parceiros/responsaveis/responsaveis.rpc-contract.test.ts \
+            modules/login/portal-context-first-access.test.ts \
+            modules/login/portal-context-uuid.contract.test.ts \
+            modules/login/portal-first-access.test.ts \
+            modules/public/login/aluno-first-access.contract.test.ts \
+            modules/responsavel/portal-navigation.test.ts \
+            supabase/functions/portal-user-management/handlers/confirm-responsavel-email.test.ts \
+            supabase/functions/portal-user-management/handlers/ensure-responsavel-access.test.ts \
+            supabase/functions/portal-user-management/handlers/issue-responsavel-temporary-password.test.ts \
+            supabase/functions/portal-user-management/handlers/list-responsavel-access-statuses.test.ts \
+            supabase/functions/portal-user-management/handlers/resend-responsavel-access.test.ts \
+            supabase/tests/responsavel_first_access.contract.test.ts
 
       - name: Testar relatório do Caixa
         run: npm run test:caixa-report

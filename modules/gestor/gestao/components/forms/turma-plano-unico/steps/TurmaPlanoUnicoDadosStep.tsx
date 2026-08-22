@@ -1,5 +1,5 @@
-import React from 'react';
-import { Building2, CalendarDays, Clock3, Layers3, LockKeyhole, MapPin, Users2 } from 'lucide-react';
+import React, { useId, useState } from 'react';
+import { Building2, CalendarDays, Check, ChevronDown, Clock3, Layers3, LockKeyhole, MapPin, Users2 } from 'lucide-react';
 import type { StatusTurma, Turno } from '../../../../gestao.types';
 import type {
   TurmaPlanoUnicoCourseOption,
@@ -35,7 +35,23 @@ const TurmaPlanoUnicoDadosStep: React.FC<TurmaPlanoUnicoDadosStepProps> = ({
   selectedPoloId,
   onChange,
 }) => {
+  const [isCourseMenuOpen, setIsCourseMenuOpen] = useState(false);
+  const courseLabelId = useId();
+  const courseMenuId = useId();
   const inputClass = `w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm font-semibold text-slate-700 outline-none transition ${config.theme.accentFocus}`;
+  const selectedCourse = cursos.find((course) => course.id === formData.cursoId);
+
+  const selectCourse = (cursoId: string) => {
+    onChange({ cursoId });
+    setIsCourseMenuOpen(false);
+  };
+
+  const handleCourseMenuKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Escape' || !isCourseMenuOpen) return;
+    event.preventDefault();
+    event.stopPropagation();
+    setIsCourseMenuOpen(false);
+  };
 
   return (
     <section aria-labelledby="turma-plano-unico-dados-title" className="space-y-6">
@@ -46,15 +62,43 @@ const TurmaPlanoUnicoDadosStep: React.FC<TurmaPlanoUnicoDadosStepProps> = ({
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <label className="space-y-2">
-          <span className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-[#001a33]">
+        <div className="relative space-y-2" onKeyDown={handleCourseMenuKeyDown}>
+          <span id={courseLabelId} className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-[#001a33]">
             <Layers3 size={15} className={config.theme.accentText} /> {config.courseLabel}
           </span>
-          <select className={inputClass} value={formData.cursoId} onChange={(event) => onChange({ cursoId: event.target.value })}>
-            <option value="">Selecione o curso...</option>
-            {cursos.map((course) => <option key={course.id} value={course.id}>{course.nome}</option>)}
-          </select>
-        </label>
+          <button
+            type="button"
+            aria-labelledby={courseLabelId}
+            aria-controls={isCourseMenuOpen ? courseMenuId : undefined}
+            aria-expanded={isCourseMenuOpen}
+            disabled={cursos.length === 0}
+            onClick={() => setIsCourseMenuOpen((isOpen) => !isOpen)}
+            className={`${inputClass} flex items-center justify-between gap-3 text-left disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400`}
+          >
+            <span className={selectedCourse ? 'truncate' : 'text-slate-500'}>{selectedCourse?.nome || 'Selecione o curso...'}</span>
+            <ChevronDown aria-hidden="true" size={18} className={`shrink-0 text-slate-400 transition-transform ${isCourseMenuOpen ? 'rotate-180' : ''}`} />
+          </button>
+          {isCourseMenuOpen ? (
+            <div id={courseMenuId} aria-labelledby={courseLabelId} className="absolute inset-x-0 z-20 mt-1.5 overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-900/10">
+              <div className="max-h-56 overflow-y-auto">
+                {cursos.map((course) => {
+                  const isSelected = course.id === formData.cursoId;
+                  return (
+                    <button
+                      key={course.id}
+                      type="button"
+                      onClick={() => selectCourse(course.id)}
+                      className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold transition ${isSelected ? `${config.theme.accentSoftBg} text-[#001a33]` : 'text-slate-700 hover:bg-slate-50'}`}
+                    >
+                      <span>{course.nome}</span>
+                      {isSelected ? <Check aria-hidden="true" size={16} className={`shrink-0 ${config.theme.accentText}`} /> : null}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+        </div>
 
         {selectedPoloId ? (
           <div className={`rounded-2xl border ${config.theme.accentSoftBorder} ${config.theme.accentSoftBg} px-4 py-3.5`}>

@@ -4,29 +4,34 @@ import test from 'node:test';
 
 const readSource = (relativePath: string) => readFile(new URL(relativePath, import.meta.url), 'utf8');
 
-const [contractSource, serviceSource, sessionSource, publicAuthSource] = await Promise.all([
+const [contractSource, serviceSource, sessionSource, publicAuthEntry] = await Promise.all([
   readSource('./portal-context.contract.ts'),
   readSource('./portal-context.service.ts'),
   readSource('./portal-session.ts'),
   readSource('../public/login/aluno-public-auth.service.ts'),
 ]);
+const publicAuthSource = [
+  publicAuthEntry,
+  await readSource('../public/login/aluno-public-first-access.service.ts'),
+].join('\n');
 
-test('preserva o primeiro acesso pendente do Aluno no perfil escolhido', () => {
-  assert.match(contractSource, /interface PortalStudentFirstAccess[\s\S]*acceptedTermsAt: string \| null[\s\S]*acceptedTermsVersion: string \| null[\s\S]*requiresPasswordReset: boolean/);
-  assert.match(contractSource, /firstAccess: PortalStudentFirstAccess \| null/);
-  assert.match(serviceSource, /role !== 'Aluno'/);
+test('preserva o primeiro acesso pendente dos perfis públicos no perfil escolhido', () => {
+  assert.match(contractSource, /interface PortalFirstAccess[\s\S]*acceptedTermsAt: string \| null[\s\S]*acceptedTermsVersion: string \| null[\s\S]*requiresPasswordReset: boolean/);
+  assert.match(contractSource, /firstAccess: PortalFirstAccess \| null/);
+  assert.match(serviceSource, /role !== 'Aluno' && role !== 'Responsavel'/);
   assert.match(serviceSource, /acceptedTermsAt: nullableString\(source\.acceptedTermsAt, 'firstAccess\.acceptedTermsAt'\)/);
   assert.match(serviceSource, /acceptedTermsVersion: nullableString\(source\.acceptedTermsVersion, 'firstAccess\.acceptedTermsVersion'\)/);
   assert.match(serviceSource, /requiresPasswordReset: requiredBoolean\(source\.requiresPasswordReset, 'firstAccess\.requiresPasswordReset'\)/);
   assert.match(sessionSource, /acceptedTermsAt: context\.firstAccess\.acceptedTermsAt/);
   assert.match(sessionSource, /acceptedTermsVersion: context\.firstAccess\.acceptedTermsVersion/);
   assert.match(sessionSource, /requiresPasswordReset: context\.firstAccess\.requiresPasswordReset/);
-  assert.match(publicAuthSource, /!profile\.acceptedTermsAt\?\.trim\(\)[\s\S]*profile\.requiresPasswordReset !== false/);
+  assert.match(publicAuthSource, /requiresPortalFirstAccess\(profile\)/);
 });
 
-test('não atribui estado de primeiro acesso ao Responsável', () => {
-  assert.match(serviceSource, /if \(role !== 'Aluno'\) \{[\s\S]*if \(value !== null\)[\s\S]*return null/);
+test('atribui primeiro acesso ao Responsável e mantém perfis institucionais sem esse estado', () => {
+  assert.match(serviceSource, /if \(role !== 'Aluno' && role !== 'Responsavel'\) \{[\s\S]*if \(value !== null\)[\s\S]*return null/);
   assert.match(sessionSource, /\.\.\.\(context\.firstAccess \? \{/);
+  assert.match(publicAuthSource, /requiresPortalFirstAccess\(profile\)/);
 });
 
 test('portal_listar_perfis é a única autoridade de perfis e o contextId é apenas uma dica validada', () => {

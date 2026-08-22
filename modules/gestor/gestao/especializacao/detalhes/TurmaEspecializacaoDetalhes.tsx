@@ -1,3 +1,4 @@
+// File: modules/gestor/gestao/especializacao/detalhes/TurmaEspecializacaoDetalhes.tsx
 
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, PieChart, Users, BookOpen, Book, Settings, DollarSign, LockKeyhole } from 'lucide-react';

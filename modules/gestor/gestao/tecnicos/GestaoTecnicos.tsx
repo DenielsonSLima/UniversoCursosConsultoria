@@ -1,4 +1,6 @@
 
+// File: modules/gestor/gestao/tecnicos/GestaoTecnicos.tsx
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Briefcase, Archive, Activity, Megaphone } from 'lucide-react';

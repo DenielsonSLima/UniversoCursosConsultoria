@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 test('cadastro público exige sexo e raça/cor nos dois canais e registra o contrato no banco', async () => {
-  const [service, webPage, webCard, appPage, privacyPage, config, migration] = await Promise.all([
+  const [serviceEntry, webPageEntry, webCard, appPage, privacyPage, config, migration] = await Promise.all([
     readFile(new URL('./aluno-public-auth.service.ts', import.meta.url), 'utf8'),
     readFile(new URL('./AlunoLoginPublicPage.tsx', import.meta.url), 'utf8'),
     readFile(new URL('./AlunoLoginAuthCard.tsx', import.meta.url), 'utf8'),
@@ -15,6 +15,17 @@ test('cadastro público exige sexo e raça/cor nos dois canais e registra o cont
       'utf8',
     ),
   ]);
+  const service = [
+    serviceEntry,
+    await readFile(new URL('./aluno-public-auth.contract.ts', import.meta.url), 'utf8'),
+    await readFile(new URL('./aluno-public-auth-session.helpers.ts', import.meta.url), 'utf8'),
+    await readFile(new URL('./aluno-public-signup.service.ts', import.meta.url), 'utf8'),
+  ].join('\n');
+  const webPage = [
+    webPageEntry,
+    await readFile(new URL('./useAlunoLoginPublicPage.ts', import.meta.url), 'utf8'),
+    await readFile(new URL('./useAlunoSignupForm.ts', import.meta.url), 'utf8'),
+  ].join('\n');
 
   assert.match(service, /PUBLIC_ALUNO_SEXO_OPTIONS/);
   assert.match(service, /NÃO-BINÁRIO/);

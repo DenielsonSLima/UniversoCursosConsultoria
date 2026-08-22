@@ -39,7 +39,7 @@ export const CaixaReportLauncher: React.FC<CaixaReportLauncherProps> = ({
             {formatCaixaCompetencia(competencia)}.
           </p>
           <p className="mt-1 text-[9px] font-semibold text-blue-300">
-            {scopeLabel} · conferido no backend
+            {scopeLabel} · conferido automaticamente
           </p>
         </div>
       </div>

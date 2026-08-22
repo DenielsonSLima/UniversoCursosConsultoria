@@ -3,11 +3,15 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { requireResponsavelRequestId } from './responsaveis.contract.ts';
 
-const [contractSource, serviceSource, tabSource] = await Promise.all([
+const [contractSource, serviceSource, accessServiceSource, tabSource, tabActionsSource] = await Promise.all([
   readFile(new URL('./responsaveis.contract.ts', import.meta.url), 'utf8'),
   readFile(new URL('./responsaveis.service.ts', import.meta.url), 'utf8'),
+  readFile(new URL('./responsavel-access.service.ts', import.meta.url), 'utf8'),
   readFile(new URL('./ResponsaveisTab.tsx', import.meta.url), 'utf8'),
+  readFile(new URL('./hooks/useResponsaveisTabActions.ts', import.meta.url), 'utf8'),
 ]);
+
+const tabFlowSource = `${tabSource}\n${tabActionsSource}`;
 
 test('requestId é obrigatório, validado como UUID e nunca recebe fallback no serviço', () => {
   const requestId = '5d8609ea-fb4d-4cbc-8d9f-dba28c93bca5';
@@ -20,8 +24,8 @@ test('requestId é obrigatório, validado como UUID e nunca recebe fallback no s
   assert.match(contractSource, /requestId: string;/);
   assert.doesNotMatch(contractSource, /requestId\?: string \| null/);
   assert.match(serviceSource, /requireResponsavelRequestId\(input\.requestId\)/);
-  assert.match(serviceSource, /requireResponsavelRequestId\(requestId\)/);
-  assert.doesNotMatch(serviceSource, /randomUUID|toRequestId|p_request_id: input\.requestId \|\|/);
+  assert.match(accessServiceSource, /requireResponsavelRequestId\(requestId\)/);
+  assert.doesNotMatch(`${serviceSource}\n${accessServiceSource}`, /randomUUID|toRequestId|p_request_id: input\.requestId \|\|/);
 });
 
 test('opções de alunos vêm integralmente da RPC autorizada e permanecem lazy na UI', () => {
@@ -45,7 +49,7 @@ test('leituras e mutações enviam o escopo explícito e invalidam os polos devo
     assert.match(rpcBlock.slice(0, 900), /toRpcScope\(/, `${rpc} precisa enviar polo/includeGlobal`);
   }
   assert.match(serviceSource, /affectedPoloIds: requiredStringArray\(source\.affectedPoloIds/);
-  assert.match(tabSource, /invalidateAffectedPolos\(result\.affectedPoloIds\)/);
-  assert.match(tabSource, /responsaveisLegaisQueryKeys\.polo\(affectedPoloId\)/);
-  assert.match(tabSource, /scope: queryScope/);
+  assert.match(tabFlowSource, /invalidateAffectedPolos\(result\.affectedPoloIds\)/);
+  assert.match(tabFlowSource, /responsaveisLegaisQueryKeys\.polo\(affectedPoloId\)/);
+  assert.match(tabFlowSource, /scope: queryScope/);
 });
