@@ -199,6 +199,11 @@ const AlunoPage: React.FC = () => {
             alunoId={alunoId}
             initialCourseId={initialCourseId}
             onRequireTechnicalProfile={requireTechnicalProfileCompletion}
+            onOpenEnrollment={(courseId, turmaId) => {
+              setInitialCourseId(courseId);
+              setInitialTurmaId(turmaId);
+              setActiveModule('turmas');
+            }}
           />
         );
       case 'calendario':

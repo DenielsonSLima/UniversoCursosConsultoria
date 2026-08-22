@@ -15,6 +15,7 @@ import {
   getCourseProgressPercent,
   getPoloLabel,
   hasEadAccess,
+  hasLinkedLiveEnrollment,
   hasPendingEadPayment,
 } from '../cursosPage.utils';
 import { formatEadCheckoutMoney } from '../eadCheckoutOptions';
@@ -30,6 +31,7 @@ interface CourseCatalogGridProps {
   onSelectCourse: (course: any) => void;
   onOpenEadCheckout: (course: any) => void;
   onOpenOnlineCheckout: (course: any, turma: any) => void;
+  onOpenEnrollment?: (courseId: string, turmaId: string) => void;
   onPageChange: React.Dispatch<React.SetStateAction<number>>;
 }
 
@@ -46,6 +48,7 @@ const CourseCatalogGrid: React.FC<CourseCatalogGridProps> = ({
   onSelectCourse,
   onOpenEadCheckout,
   onOpenOnlineCheckout,
+  onOpenEnrollment,
   onPageChange,
 }) => (
   <div className="space-y-6">
@@ -61,8 +64,10 @@ const CourseCatalogGrid: React.FC<CourseCatalogGridProps> = ({
           {categoryCourses.map((course, index) => {
             const globalIndex = (coursePage - 1) * COURSE_PAGE_SIZE + index;
             const eadConfig = course.ead_config || {};
-            const isEad = course.modalidade?.toUpperCase() === 'EAD';
-            const isOnlineClassModality = ONLINE_CLASS_MODALITIES.has(String(course.modalidade || '').toUpperCase());
+            const modality = String(course.modalidade || '').toUpperCase();
+            const isEad = modality === 'EAD';
+            const isLive = modality === 'LIVRE';
+            const isOnlineClassModality = ONLINE_CLASS_MODALITIES.has(modality);
             const canAccess = isEad && hasEadAccess(course);
             const pendingPayment = isEad && hasPendingEadPayment(course);
             const onlineAvailability = course.onlineAvailability;
@@ -78,6 +83,9 @@ const CourseCatalogGrid: React.FC<CourseCatalogGridProps> = ({
             const courseProgress = progressByCourseId.get(course.id);
             const courseProgressPercent = getCourseProgressPercent(courseProgress, course.alunoMatricula?.status);
             const showCourseProgress = Boolean(course.alunoMatricula);
+            const enrolledLiveTurmaId = isLive && hasLinkedLiveEnrollment(course)
+              ? String(course.alunoMatricula.turmaId)
+              : '';
             const isCheckoutLoading = checkoutMutation.isPending
               && checkoutMutation.variables?.course?.id === course.id;
 
@@ -201,6 +209,21 @@ const CourseCatalogGrid: React.FC<CourseCatalogGridProps> = ({
                         {isCheckoutLoading ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
                         {isCheckoutLoading ? 'Preparando pagamento' : pendingPayment ? 'Continuar pagamento' : 'Comprar curso'}
                       </button>
+                    )
+                  ) : enrolledLiveTurmaId ? (
+                    onOpenEnrollment ? (
+                      <button
+                        type="button"
+                        onClick={() => onOpenEnrollment(course.id, enrolledLiveTurmaId)}
+                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:bg-blue-700"
+                      >
+                        <MonitorPlay size={14} />
+                        {String(course.alunoMatricula?.status || '').toUpperCase() === 'PENDENTE' ? 'Acompanhar matrícula' : 'Abrir turma'}
+                      </button>
+                    ) : (
+                      <div className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-3 text-center text-[10px] font-black uppercase tracking-wider text-blue-700">
+                        Matrícula já vinculada. Abra a turma em Meus Cursos.
+                      </div>
                     )
                   ) : isOnlineClassModality ? (
                     onlineClassAvailable ? (

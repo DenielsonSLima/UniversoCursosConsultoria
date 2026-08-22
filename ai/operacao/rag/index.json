@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-08-22T03:34:32.700Z",
+  "builtAt": "2026-08-22T21:54:48.140Z",
   "manifestVersion": 2,
-  "sourceSignature": "29fae7c526a0bd887d808896cb5c1b5be384522225494075b3885caa113b7385",
+  "sourceSignature": "cae4513745da0c7f7557ae6dc6064819ded92067bd17256fb12c0af57fa3cab8",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "1452e41c2b0dbdd82dbd9feac094a96e53c53da803e0f55b2c7918c2b1947316"
+      "hash": "573e4bfe467502a98fd1b330dbfe2db7fbba13604ef924cf3ca6105379353d9d"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -192,40 +192,100 @@
       "part": 1
     },
     {
-      "id": "f751a64351b2489854dd",
-      "hash": "f751a64351b2489854dd3956b3b3584a61712b7a253f8940c2ccc16d87314bae",
+      "id": "e46b8bcf45f08f30b066",
+      "hash": "e46b8bcf45f08f30b0663611ccb711a043b8bc44de548cd1430d2f6061c76b3e",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Lote ativo",
-      "text": "Estado: `PUBLICADO_SUPABASE_E_DRAFT_PR_4_6_0_MODULARIZADO`",
-      "normalizedText": "estado publicado supabase e draft pr 4 6 0 modularizado",
-      "tokenCount": 6,
+      "text": "Estado: `PRONTO_PARA_PUBLICACAO_PRODUCAO_4_7_0`",
+      "normalizedText": "estado pronto para publicacao producao 4 7 0",
+      "tokenCount": 5,
       "part": 1
     },
     {
-      "id": "96d56fcbee0005d3515a",
-      "hash": "96d56fcbee0005d3515a497bb60bcd90c0f7be92fa05fdc5c17956ca160f52bb",
+      "id": "7cdd295777cd6ca4cacd",
+      "hash": "7cdd295777cd6ca4cacd988269d73ee80e9eca65bb3dd9880da0bb006f65f52d",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-08-22-modularizacao-teto-500-4-6-0",
-      "text": "- Base deste complemento: commit `f87d2958109b60b4827c9b759c42dd0c3bd076ce` no Draft PR #79. - Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-22-modularizacao-teto-500-4-6-0.md`. - Escopo: somente arquivos do lote 4.6.0 que ultrapassavam 500 linhas, suas extrações coesas e a governança necessária para tornar o teto verificável. - Três frentes independentes: login público/recuperação, gestão de Responsáveis e Edge Functions/contratos; revisão integrada separada. - Migrations remotas `20260822024300` e `20260822024309` permanecem byte a byte imutáveis e protegidas por SHA-256; novas migrations entram no teto antes da aplicação quando a divisão for segura. - O gate incremental lê manifestos auditados, exige o manifesto do lote ativo, preserva a cobertura anterior e rejeita retirada silenciosa, exceção arbitrária ou alteração de migration aplicada. - Supabase: `portal-user-management` v33 ativa com JWT obrigatório e hash `ace1f8db5b8689502de51209baea555706e1c6adcaf9b356b05b40fe33e21da9`; `portal-auth` v15 ativa como endpoint público protegido internamente, hash `f64cc48d81af92dcef3988f78f01b913e238b7e1cf87c64fa14121ab889507ec`. - Validação integrada: teto 119 arquivos",
-      "normalizedText": "base deste complemento commit f87d2958109b60b4827c9b759c42dd0c3bd076ce no draft pr 79 manifesto explicito ai operacao registros alteracoes 2026 08 22 modularizacao teto 500 4 6 0 md escopo somente arquivos do lote 4 6 0 que ultrapassavam 500 linhas suas extracoes coesas e a governanca necessaria para tornar o teto verificavel tres frentes independentes login publico recuperacao gestao de responsaveis e edge functions contratos revisao integrada separada migrations remotas 20260822024300 e 20260822024309 permanecem byte a byte imutaveis e protegidas por sha 256 novas migrations entram no teto antes da aplicacao quando a divisao for segura o gate incremental le manifestos auditados exige o manifesto do lote ativo preserva a cobertura anterior e rejeita retirada silenciosa excecao arbitraria ou alteracao de migration aplicada supabase portal user management v33 ativa com jwt obrigatorio e hash ace1f8db5b8689502de51209baea555706e1c6adcaf9b356b05b40fe33e21da9 portal auth v15 ativa como endpoint publico protegido internamente hash f64cc48d81af92dcef3988f78f01b913e238b7e1cf87c64fa14121ab889507ec validacao integrada teto 119 arquivos",
-      "tokenCount": 129,
+      "section": "Lote: 2026-08-22-jornada-cursos-livres",
+      "text": "- Pedido: consolidar Cursos Livres como jornada presencial com turma, professor único, aulas/diário, prova final online, certificado automático e plano financeiro individual negociável. - Base remota: `main` no commit `04d3ada4cfdb703b71a21cf68343d39373660503`, versão `4.6.1`; os lotes 4.6.0 e 4.6.1 já estão mesclados e preservados. - Registro: `ai/operacao/registros/alteracoes/2026-08-22-jornada-cursos-livres.md`. - Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-22-jornada-cursos-livres.md`. - Frentes concluídas localmente: contrato acadêmico e prova; condição financeira individual; Gestão e Portal do Aluno. - Supabase principal/Produção: 26 migrations aplicadas via MCP, versões remotas `20260822201749` até `20260822213949`. - Homologação: não há branch Supabase nem outro projeto configurado neste workspace. - Versão desta entrega: `4.7.0` estável. - Entrega geral: o PR de produção também incorpora o lote concluído `2026-08-22-avaliacoes-ead-e-cards-tecnicos`, com dez migrations já aplicadas e manifesto próprio. - GitHub/Vercel: publicação em Produção autorizada explicitamente em 2026-08-22; PR `#81` aberto e gates finais em execução antes do merge. - Cobranças:",
+      "normalizedText": "pedido consolidar cursos livres como jornada presencial com turma professor unico aulas diario prova final online certificado automatico e plano financeiro individual negociavel base remota main no commit 04d3ada4cfdb703b71a21cf68343d39373660503 versao 4 6 1 os lotes 4 6 0 e 4 6 1 ja estao mesclados e preservados registro ai operacao registros alteracoes 2026 08 22 jornada cursos livres md manifesto explicito ai operacao registros alteracoes 2026 08 22 jornada cursos livres md frentes concluidas localmente contrato academico e prova condicao financeira individual gestao e portal do aluno supabase principal producao 26 migrations aplicadas via mcp versoes remotas 20260822201749 ate 20260822213949 homologacao nao ha branch supabase nem outro projeto configurado neste workspace versao desta entrega 4 7 0 estavel entrega geral o pr de producao tambem incorpora o lote concluido 2026 08 22 avaliacoes ead e cards tecnicos com dez migrations ja aplicadas e manifesto proprio github vercel publicacao em producao autorizada explicitamente em 2026 08 22 pr 81 aberto e gates finais em execucao antes do merge cobrancas",
+      "tokenCount": 146,
       "part": 1
     },
     {
-      "id": "0046ab38d52589a312e9",
-      "hash": "0046ab38d52589a312e9ef0eb7c5c4feac15ed07a268996b83010c3a1cfba2f8",
+      "id": "e9ab3041e6a4738ed312",
+      "hash": "e9ab3041e6a4738ed312be6725cafe714fc9fde5e78cef8ed67fe6f7b10b14a7",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-08-22-modularizacao-teto-500-4-6-0",
-      "text": "manuais, TypeScript, ESLint global, Deno check/fmt, build, 196 testes relevantes e 49 testes focados após a limpeza do lint; revisão independente sem bloqueadores. - GitHub: complemento atômico no Draft PR #79, mantido sem merge; CI remoto é o gate final. Não publicar Vercel Produção.",
-      "normalizedText": "manuais typescript eslint global deno check fmt build 196 testes relevantes e 49 testes focados apos a limpeza do lint revisao independente sem bloqueadores github complemento atomico no draft pr 79 mantido sem merge ci remoto e o gate final nao publicar vercel producao",
-      "tokenCount": 40,
+      "section": "Lote: 2026-08-22-jornada-cursos-livres",
+      "text": "nenhum boleto, matrícula, turma ou outro registro operacional foi criado durante a aplicação/validação.",
+      "normalizedText": "nenhum boleto matricula turma ou outro registro operacional foi criado durante a aplicacao validacao",
+      "tokenCount": 13,
       "part": 2
     },
     {
-      "id": "40e7fd06bed4faa75d16",
-      "hash": "40e7fd06bed4faa75d1615b84e0e24fed27b33878f8decde8e2489f9e2e9851f",
+      "id": "2de8e98b6a6b4a4cc046",
+      "hash": "2de8e98b6a6b4a4cc04672351b2feb8ce4752d98b1ed015a1f8d8d1fb8c0d514",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-08-22-modularizacao-teto-500-4-6-0",
+      "section": "Critérios de aceite",
+      "text": "1. Toda turma Livre recebe as matérias do curso e mantém um único professor responsável. `ATENDIDO_LOCALMENTE`. 2. Aulas ficam dentro do período da turma, respeitam a carga e alimentam o diário presencial existente. `ATENDIDO_LOCALMENTE`. 3. A avaliação publicada possui pelo menos 50 questões; cada tentativa recebe 10 questões únicas escolhidas no servidor, sem gabarito no cliente. `ATENDIDO_LOCALMENTE`. 4. A prova libera na data/hora da última aula somente com cronograma completo; aprovação é calculada no banco e finaliza matrícula e certificado Livre atomicamente. `ATENDIDO_LOCALMENTE`. 5. O aluno Livre acessa resumo, diário, atividades, notas, prova final e certificado, com bloqueios retornados pelo servidor. `ATENDIDO_LOCALMENTE`. 6. O plano da turma é apenas o padrão: por aluno é possível herdar ou configurar 1–60 parcelas, desconto comercial, primeiro vencimento, pontualidade, juros e multa. `ATENDIDO_LOCALMENTE`. 7. A Gestão pode vincular sem títulos ou vincular e gerar títulos locais agora; emissão bancária permanece ação posterior no Financeiro. `ATENDIDO_LOCALMENTE`. 8. Todo cálculo financeiro, sorteio, liberação, correção, conclusão e emissão ocorre no backend; o",
+      "normalizedText": "1 toda turma livre recebe as materias do curso e mantem um unico professor responsavel atendido localmente 2 aulas ficam dentro do periodo da turma respeitam a carga e alimentam o diario presencial existente atendido localmente 3 a avaliacao publicada possui pelo menos 50 questoes cada tentativa recebe 10 questoes unicas escolhidas no servidor sem gabarito no cliente atendido localmente 4 a prova libera na data hora da ultima aula somente com cronograma completo aprovacao e calculada no banco e finaliza matricula e certificado livre atomicamente atendido localmente 5 o aluno livre acessa resumo diario atividades notas prova final e certificado com bloqueios retornados pelo servidor atendido localmente 6 o plano da turma e apenas o padrao por aluno e possivel herdar ou configurar 1 60 parcelas desconto comercial primeiro vencimento pontualidade juros e multa atendido localmente 7 a gestao pode vincular sem titulos ou vincular e gerar titulos locais agora emissao bancaria permanece acao posterior no financeiro atendido localmente 8 todo calculo financeiro sorteio liberacao correcao conclusao e emissao ocorre no backend o",
+      "tokenCount": 145,
+      "part": 1
+    },
+    {
+      "id": "0a363d0153a624814d5e",
+      "hash": "0a363d0153a624814d5eedeca7036c02fc89eddd0087a8aeab03a64ad9b843b5",
+      "path": "ai/operacao/LOTE_ATIVO.md",
+      "section": "Critérios de aceite",
+      "text": "frontend somente coleta entradas e renderiza DTOs canônicos. `ATENDIDO_LOCALMENTE`. 9. Informática Básica recebe resumos das nove matérias e banco publicado com 50 questões válidas. `ATENDIDO_LOCALMENTE`. 10. Novas tabelas/RPCs usam menor privilégio, idempotência, locks, auditoria e migrations novas com até 500 linhas. `ATENDIDO_LOCALMENTE`.",
+      "normalizedText": "frontend somente coleta entradas e renderiza dtos canonicos atendido localmente 9 informatica basica recebe resumos das nove materias e banco publicado com 50 questoes validas atendido localmente 10 novas tabelas rpcs usam menor privilegio idempotencia locks auditoria e migrations novas com ate 500 linhas atendido localmente",
+      "tokenCount": 42,
+      "part": 2
+    },
+    {
+      "id": "713504ef48f792fb8f09",
+      "hash": "713504ef48f792fb8f09d7533464627a8dd9ef6ef35b0713d7b6c7bd8f79bf0d",
+      "path": "ai/operacao/LOTE_ATIVO.md",
+      "section": "Validação local",
+      "text": "- Deno: `69/69` contratos aprovados. - Node: `28/28` contratos de interface aprovados. - `npx tsc --noEmit`: aprovado. - ESLint focado: aprovado. - `npm run build`: aprovado; somente os avisos preexistentes de chunks acima de 500 kB. - Contrarrevisão independente: nenhum blocker/High remanescente. - Teto físico: todos os arquivos manuais deste manifesto têm até 500 linhas; o serviço compartilhado foi dividido em fachada de 417 linhas e serviço de criação de 229 linhas. - Produção: ledger `26/26`; 19 triggers do lote presentes; RLS ativo e escrita/leitura direta fechada para `anon` e `authenticated` nas seis tabelas públicas novas. - Informática Básica em Produção: 1 curso, 1 módulo, 9 matérias/80h, 9 resumos, 9 conteúdos, 1 avaliação publicada e 50/50 questões válidas. - RBAC real somente leitura: gestor autorizado recebeu os DTOs de grade e avaliação; chamada sem identidade foi negada. - Financeiro real somente leitura: prévia de R$ 500 em 4 parcelas retornou quatro vencimentos e soma exata de R$ 500 pelo backend. - Advisors: baseline preservado em 470 avisos de segurança e 252 de performance; nenhum core corretivo é executável externamente, nenhum RPC novo ficou acessível a",
+      "normalizedText": "deno 69 69 contratos aprovados node 28 28 contratos de interface aprovados npx tsc noemit aprovado eslint focado aprovado npm run build aprovado somente os avisos preexistentes de chunks acima de 500 kb contrarrevisao independente nenhum blocker high remanescente teto fisico todos os arquivos manuais deste manifesto tem ate 500 linhas o servico compartilhado foi dividido em fachada de 417 linhas e servico de criacao de 229 linhas producao ledger 26 26 19 triggers do lote presentes rls ativo e escrita leitura direta fechada para anon e authenticated nas seis tabelas publicas novas informatica basica em producao 1 curso 1 modulo 9 materias 80h 9 resumos 9 conteudos 1 avaliacao publicada e 50 50 questoes validas rbac real somente leitura gestor autorizado recebeu os dtos de grade e avaliacao chamada sem identidade foi negada financeiro real somente leitura previa de r 500 em 4 parcelas retornou quatro vencimentos e soma exata de r 500 pelo backend advisors baseline preservado em 470 avisos de seguranca e 252 de performance nenhum core corretivo e executavel externamente nenhum rpc novo ficou acessivel a",
+      "tokenCount": 161,
+      "part": 1
+    },
+    {
+      "id": "9771a429b05b5aa7c8d0",
+      "hash": "9771a429b05b5aa7c8d05f355842cafbea406e80bcfd8e0e3cefb8de6d19be2d",
+      "path": "ai/operacao/LOTE_ATIVO.md",
+      "section": "Validação local",
+      "text": "`anon` e as FKs novas do lote seguem cobertas. - Compatibilidade do seed: as grafias legadas `HARDWARE E PERIFÉRIOS` e `SOFTWARES E SISTEMA OPERACIONAIS` foram incorporadas aos aliases, preservando os IDs existentes e evitando criar duas matérias extras. - Smoke autenticado: bloqueado porque nenhum navegador in-app/Chrome está conectado à sessão (`browsers = []`).",
+      "normalizedText": "anon e as fks novas do lote seguem cobertas compatibilidade do seed as grafias legadas hardware e periferios e softwares e sistema operacionais foram incorporadas aos aliases preservando os ids existentes e evitando criar duas materias extras smoke autenticado bloqueado porque nenhum navegador in app chrome esta conectado a sessao browsers",
+      "tokenCount": 45,
+      "part": 2
+    },
+    {
+      "id": "944483614ac091c6f730",
+      "hash": "944483614ac091c6f730b4461f26d64f8398c253c21dc59c1b4673a9bbdf5e87",
+      "path": "ai/operacao/LOTE_ATIVO.md",
+      "section": "Pendências de fechamento",
+      "text": "1. Fazer smoke visual autenticado da Gestão e do Portal do Aluno quando um navegador in-app/Chrome estiver conectado. 2. Executar replay e concorrência com fixture controlada quando existir homologação ou uma turma Livre de teste autorizada; Produção ainda não possui turma/matrícula Livre e não recebeu fixture artificial. 3. Evitar operações SQL em lote que alterem/excluam várias turmas Livres até validar esse cenário específico; a interface atual opera uma turma por vez. 4. Concluir commit atômico, CI, Preview Vercel, merge em `main` e smoke HTTP de Produção.",
+      "normalizedText": "1 fazer smoke visual autenticado da gestao e do portal do aluno quando um navegador in app chrome estiver conectado 2 executar replay e concorrencia com fixture controlada quando existir homologacao ou uma turma livre de teste autorizada producao ainda nao possui turma matricula livre e nao recebeu fixture artificial 3 evitar operacoes sql em lote que alterem excluam varias turmas livres ate validar esse cenario especifico a interface atual opera uma turma por vez 4 concluir commit atomico ci preview vercel merge em main e smoke http de producao",
+      "tokenCount": 81,
+      "part": 1
+    },
+    {
+      "id": "356c8cfca4a212ae94b3",
+      "hash": "356c8cfca4a212ae94b3ed113a2e3f2119dda9fa513c3c97c2a4f2989c2fdbab",
+      "path": "ai/operacao/LOTE_ATIVO.md",
+      "section": "Manifesto explícito",
+      "text": "- O manifesto consolidado, arquivo a arquivo, está no registro `ai/operacao/registros/alteracoes/2026-08-22-jornada-cursos-livres.md`. - Alguns arquivos compartilhados de Portal do Aluno e Gestão já continham alterações paralelas fora deste lote. Elas foram preservadas e não são atribuídas a esta entrega.",
+      "normalizedText": "o manifesto consolidado arquivo a arquivo esta no registro ai operacao registros alteracoes 2026 08 22 jornada cursos livres md alguns arquivos compartilhados de portal do aluno e gestao ja continham alteracoes paralelas fora deste lote elas foram preservadas e nao sao atribuidas a esta entrega",
+      "tokenCount": 41,
+      "part": 1
+    },
+    {
+      "id": "d9684f9e518a2e315202",
+      "hash": "d9684f9e518a2e3152026bada180ae53ffd10c1817ba8c1eedd34f7422226086",
+      "path": "ai/operacao/LOTE_ATIVO.md",
+      "section": "Manifesto explícito",
       "text": "Histórico encerrado: `ai/operacao/registros/ALTERACOES.md` e `ai/operacao/registros/alteracoes/`.",
       "normalizedText": "historico encerrado ai operacao registros alteracoes md e ai operacao registros alteracoes",
       "tokenCount": 11,

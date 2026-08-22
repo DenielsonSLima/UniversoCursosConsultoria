@@ -70,6 +70,7 @@ const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({ view }) => {
     setSelectedCourse,
     openEadCheckoutReview,
     openOnlineClassCheckoutReview,
+    onOpenEnrollment,
     setCoursePage,
   } = view;
 
@@ -483,6 +484,7 @@ const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({ view }) => {
           onSelectCourse={setSelectedCourse}
           onOpenEadCheckout={openEadCheckoutReview}
           onOpenOnlineCheckout={openOnlineClassCheckoutReview}
+          onOpenEnrollment={onOpenEnrollment}
           onPageChange={setCoursePage}
         />
       )}

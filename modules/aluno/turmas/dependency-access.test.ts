@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   buildDisciplineSummaries,
+  hasLiveAcademicAccess,
   hasTechnicalAcademicAccess,
   isPortalEnrollmentVisible,
   isResultadoConcluido,
@@ -44,6 +45,20 @@ Deno.test("matrícula técnica pendente aparece sem liberar conteúdo acadêmico
 
   assert.equal(isPortalEnrollmentVisible(pendingEnrollment), true);
   assert.equal(hasTechnicalAcademicAccess(pendingEnrollment), false);
+});
+
+Deno.test("matrícula Livre pendente aparece sem disparar consultas acadêmicas", () => {
+  const pendingEnrollment = {
+    ...dependencyEnrollment,
+    status: "PENDENTE",
+    turmas: {
+      ...dependencyEnrollment.turmas,
+      cursos: { ...dependencyEnrollment.turmas.cursos, modalidade: "LIVRE" },
+    },
+  };
+
+  assert.equal(isPortalEnrollmentVisible(pendingEnrollment), true);
+  assert.equal(hasLiveAcademicAccess(pendingEnrollment), false);
 });
 
 Deno.test("dependência não transforma turma ainda ativa em histórico liberado", () => {

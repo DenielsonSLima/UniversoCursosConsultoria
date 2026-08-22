@@ -2,7 +2,34 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
-Histórico anterior: [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+Histórico anterior: [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+
+## [4.7.0] - 2026-08-22
+
+### Adicionado
+
+- Cursos Livres passam a usar uma jornada presencial completa, com turma, professor responsável único, grade, aulas e diário integrados.
+- A Gestão pode preparar e publicar uma avaliação final com banco mínimo de 50 questões; cada tentativa recebe dez questões únicas sorteadas no servidor.
+- O Portal do Aluno reúne resumo acadêmico, diário, atividades, notas, prova final e certificado do Curso Livre.
+- Cada aluno pode herdar o plano financeiro padrão da turma ou receber uma condição individual de 1 a 60 parcelas, com descontos, juros e multa autorizados.
+- As avaliações EAD passam a preservar rascunhos, confirmar respostas pelo servidor e exibir o retorno correto somente no momento autorizado.
+- Os cards de Cursos Técnicos mostram a quantidade de disciplinas e o progresso acadêmico canônico de cada turma.
+
+### Alterado
+
+- A conclusão de Curso Livre, o resultado da prova e a solicitação do certificado passam a ocorrer atomicamente no backend.
+- A Gestão pode vincular o aluno sem títulos ou gerar os títulos locais no vínculo; a emissão bancária permanece uma ação posterior e separada no Financeiro.
+- O Curso Livre de Informática Básica recebeu nove matérias, resumos e conteúdos, carga total de 80 horas e avaliação publicada com 50 questões válidas.
+- Os gabaritos dos 63 cursos EAD foram removidos do JSON público e armazenados em cofre privado, com reconstituição exclusiva pelas RPCs autorizadas da Gestão.
+
+### Segurança e qualidade
+
+- Sorteio, correção, elegibilidade, cálculo financeiro, rateio de centavos e conclusão permanecem exclusivamente em RPCs autorizadas, idempotentes e auditáveis.
+- Novas tabelas usam RLS e menor privilégio; RPCs críticas usam `SECURITY DEFINER`, `search_path` vazio, locks determinísticos e grants explícitos.
+- A revisão final fechou a máscara do primeiro retorno financeiro, serializou início e entrega da prova por matrícula e passou a exigir soma exata da grade antes de concluir o salvamento.
+- Mutações e conclusão EAD foram serializadas, e os indicadores dos cards técnicos passaram a falhar de modo explícito diante de payload incompleto.
+- Fotografias parciais de prova e contagens acadêmicas vazias ou apenas coercíveis também passam a falhar fechadas no cliente.
+- Contratos acadêmicos, financeiros e de interface, TypeScript, ESLint, limite de linhas e build de produção foram validados antes da publicação.
 
 ## [4.6.1] - 2026-08-22
 
@@ -451,49 +478,3 @@ Histórico anterior: [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-
 
 - Ícones versionados quebram o cache anterior do Safari, e o fluxo de autenticação realiza uma nova carga do documento antes de entrar no portal.
 - Build de produção, TypeScript, lint, testes de autenticação e auditoria dos HTMLs gerados foram executados antes da publicação.
-
-## [2.2.3-beta.19] - 2026-08-02
-
-Esta versão consolida integralmente o conjunto de alterações acumuladas nos portais, módulos acadêmicos, financeiro, documentos, integrações, banco de dados, testes e materiais do projeto.
-
-### Adicionado
-
-- O Portal do Aluno agora possui experiência instalável exclusiva em `/aluno/`, com nome `Universo CC`, manifesto próprio, ícones regulares e maskable e tela de abertura institucional.
-- A versão mobile recebeu navegação inferior com cinco acessos, componentes compactos por módulo e suporte às áreas seguras de Android e iPhone.
-
-### Alterado
-
-- O acesso do aluno abre em modo standalone quando instalado e preserva login, primeiro acesso, recuperação de senha e retorno seguro para a página solicitada.
-- O botão Institucional permanece disponível no login público para acesso ao sistema de gestão em computador e celular.
-- Foram incorporadas em uma única publicação as revisões pendentes dos fluxos do gestor, aluno, integrações financeiras, comunicação, secretaria e infraestrutura de dados.
-
-### Removido
-
-- Arquivos legados e materiais locais marcados para exclusão foram retirados do repositório, permanecendo recuperáveis pelo histórico do Git.
-
-### Segurança
-
-- O service worker permanece restrito ao caminho `/aluno/` e não intercepta gestor, professor, Supabase, pagamentos, documentos ou dados acadêmicos privados.
-- Falhas temporárias de conexão não encerram a sessão; sessões realmente inválidas retornam ao login do aluno com o destino preservado.
-
-### Qualidade
-
-- Build de produção, TypeScript, lint e verificações de isolamento entre os manifestos do aluno e do gestor foram executados antes da publicação.
-
-## [2.2.3-beta.18] - 2026-07-31
-
-### Corrigido
-
-- Os polos do Caixa passam a respeitar a ordem cronológica de cadastro, mantendo novas unidades ao final da lista.
-- A lista de polos do Caixa e os seletores de usuários são atualizados imediatamente após criação ou alteração, sem aguardar a expiração do cache.
-- O escopo de polos do Gestor passou a validar identificadores de forma compatível com UUIDs legados do PostgreSQL e permanece fechado diante de configurações ambíguas.
-
-### Segurança
-
-- Respostas dos RPCs do Caixa e do relatório mensal são validadas pelo polo e pela competência solicitados antes de entrarem no cache.
-- Perfis globais continuam incluindo polos futuros, enquanto perfis restritos preservam somente as unidades explicitamente concedidas.
-- A auditoria confirmou as guardas de autorização dos RPCs financeiros, RLS por polo e ausência de referências de polo órfãs nos usuários ativos.
-
-### Qualidade
-
-- Testes automatizados cobrem ordem de polos, chaves de cache, invalidação Realtime, escopo global/restrito e compatibilidade do polo matriz legado.

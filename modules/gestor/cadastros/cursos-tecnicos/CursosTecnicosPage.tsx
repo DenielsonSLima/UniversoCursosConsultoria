@@ -1,11 +1,15 @@
 // File: modules/gestor/cadastros/cursos-tecnicos/CursosTecnicosPage.tsx
 
 import React, { useState } from 'react';
-import { ArrowLeft, Briefcase, Plus, Loader2, X, Copy, CheckCircle2, AlertTriangle, Image as ImageIcon, Save, Banknote, Receipt, CreditCard } from 'lucide-react';
+import { AlertTriangle, Briefcase, CheckCircle2, Loader2, Plus } from 'lucide-react';
 import CursoTecnicoCard from './components/CursoTecnicoCard';
+import CursoTecnicoCreateView from './components/CursoTecnicoCreateView';
+import CursoTecnicoDuplicateModal from './components/CursoTecnicoDuplicateModal';
+import CursosTecnicosQueryError from './components/CursosTecnicosQueryError';
 import CursoGradeCurricularDetails from '../components/CursoGradeCurricularDetails';
 import { Curso, CursoFinanceiroConfig } from '../cadastros.types';
 import { CursoTecnicoStatusFilter } from './cursos-tecnicos.service';
+import type { CursoTecnicoCardData } from './curso-tecnico-card.contract';
 import { useCursosTecnicosQueries } from './hooks/useCursosTecnicosQueries';
 import { useCursosTecnicosRealtime } from './hooks/useCursosTecnicosRealtime';
 import { useCursosTecnicosMutations } from './hooks/useCursosTecnicosMutations';
@@ -139,6 +143,7 @@ const CursosTecnicosPage: React.FC = () => {
 
   const cursos = cursosQuery.data || [];
   const loading = cursosQuery.isLoading;
+  const loadError = cursosQuery.error;
 
   const handleUploadImagem = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -245,7 +250,7 @@ const CursosTecnicosPage: React.FC = () => {
   // Filtra cursos pelo status
   const filteredCursos = cursos.filter(c => c.status === statusFilter);
 
-  const groupedClean: Record<string, Curso[]> = {};
+  const groupedClean: Record<string, CursoTecnicoCardData[]> = {};
   filteredCursos.forEach(c => {
     const area = c.area || 'Outros';
     if (!groupedClean[area]) {
@@ -266,182 +271,45 @@ const CursosTecnicosPage: React.FC = () => {
 
   if (showCreateModal) {
     return (
-      <div className="flex min-w-0 flex-col h-full animate-fadeIn bg-slate-50 min-h-screen overflow-x-hidden">
-        <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-white px-4 py-5 sm:px-6 border-b border-slate-200">
-          <div className="flex min-w-0 items-center gap-4">
-            <button
-              type="button"
-              onClick={() => resetCreateForm()}
-              className="flex-shrink-0 p-2 rounded-xl border border-slate-200 text-slate-400 hover:text-emerald-600 hover:border-emerald-200 transition-colors bg-white shadow-sm"
-              aria-label="Voltar"
-            >
-              <ArrowLeft size={20} />
-            </button>
-            <div className="min-w-0">
-              <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 px-2.5 py-1 rounded-md">
-                Curso Técnico
-              </span>
-              <h3 className="truncate text-lg sm:text-xl font-black text-[#001a33] mt-1.5 uppercase tracking-tight">
-                Novo Curso Técnico
-              </h3>
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            form="create-curso-tecnico-form"
-            disabled={isCreatingCurso || isUploading}
-            className="flex w-full sm:w-auto items-center justify-center gap-2 bg-[#001a33] hover:bg-emerald-700 text-white px-5 py-3 rounded-xl font-bold uppercase text-xs tracking-wider transition-all disabled:opacity-70 shadow-lg shadow-emerald-900/20"
-          >
-            {isCreatingCurso ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
-            Criar Curso Técnico
-          </button>
-        </div>
-
-        <div className="bg-white border-b border-slate-200 px-3 py-3 sm:px-6 sm:py-4">
-          <div className="mx-auto grid w-full max-w-5xl grid-cols-1">
-            <div className="group relative flex min-w-0 flex-col items-center gap-2 px-1">
-              <span className="relative z-10 w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm transition-all border bg-emerald-600 border-emerald-600 text-white shadow-md shadow-emerald-600/20">
-                1
-              </span>
-              <span className="block w-full truncate text-center text-[10px] font-black uppercase tracking-wide text-emerald-600">
-                Informações Básicas
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex-1 min-w-0 max-w-4xl w-full mx-auto p-4 sm:p-6 md:p-8">
-          <form id="create-curso-tecnico-form" onSubmit={handleCreateCurso} className="bg-white border border-slate-200 rounded-[2.5rem] p-6 md:p-8 shadow-sm space-y-6">
-            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-              <span className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl">
-                <Briefcase size={20} />
-              </span>
-              <h4 className="font-black text-lg text-[#001a33] uppercase tracking-tight">
-                Informações Principais do Curso
-              </h4>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="md:col-span-2 space-y-1.5">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome do Curso *</label>
-                <input required type="text" value={newCursoNome} onChange={(e) => setNewCursoNome(e.target.value)} placeholder="Ex: Técnico em Enfermagem" className="w-full px-4 py-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 outline-none font-semibold text-slate-800 transition-all" />
-              </div>
-
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between gap-3">
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Área de Formação</label>
-                  <button type="button" onClick={() => setShowNewAreaInput((prev) => !prev)} className="text-[10px] font-black uppercase tracking-wider text-emerald-600 hover:text-emerald-700">
-                    + Nova área
-                  </button>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <select value={newCursoArea} onChange={(e) => setNewCursoArea(e.target.value)} className="w-full px-4 py-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 outline-none font-bold text-slate-800 transition-all cursor-pointer">
-                    {areasDisponiveis.map(a => <option key={a} value={a}>{a}</option>)}
-                  </select>
-                  {showNewAreaInput && (
-                    <div className="flex gap-2">
-                      <input type="text" value={newAreaName} onChange={(e) => setNewAreaName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddArea())} placeholder="Nome da nova área" className="min-w-0 flex-1 px-4 py-2.5 text-xs bg-white border border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-100 outline-none font-bold text-slate-800" />
-                      <button type="button" onClick={handleAddArea} className="px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-[10px] font-black uppercase tracking-wider hover:bg-emerald-700">Adicionar</button>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Carga Horária (Horas) *</label>
-                <input required type="number" min="1" value={newCursoCargaHoraria} onChange={(e) => setNewCursoCargaHoraria(Number(e.target.value))} placeholder="Ex: 1200" className="w-full px-4 py-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 outline-none font-semibold text-slate-800 transition-all" />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Versão do Curso</label>
-                <input required type="text" value={newCursoVersao} onChange={(e) => setNewCursoVersao(e.target.value)} placeholder="Ex: 1.0" className="w-full px-4 py-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 outline-none font-semibold text-slate-800 transition-all" />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Duração (Meses)</label>
-                <input required type="number" min="1" value={newCursoDuracaoMeses} onChange={(e) => setNewCursoDuracaoMeses(Number(e.target.value))} placeholder="Ex: 24" className="w-full px-4 py-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 outline-none font-semibold text-slate-800 transition-all" />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Resumo do Curso (Exibido no Catálogo)</label>
-              <textarea value={newCursoDesc} onChange={(e) => setNewCursoDesc(e.target.value)} rows={4} placeholder="Forneça um breve resumo descrevendo os objetivos do curso, público-alvo e diferenciais." className="w-full px-4 py-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 outline-none font-semibold text-slate-800 transition-all resize-none" />
-            </div>
-
-            <div className="border border-slate-200 rounded-3xl p-5 bg-slate-50/60 space-y-4">
-              <div className="flex items-center gap-2">
-                <Banknote size={18} className="text-emerald-600" />
-                <h5 className="font-black text-sm text-[#001a33] uppercase tracking-tight">Opções Financeiras do Curso</h5>
-              </div>
-              <p className="text-xs font-semibold leading-relaxed text-slate-500">
-                Aqui ficam apenas os meios aceitos e o limite do cartão. Valor, número de parcelas, desconto, juros e multa serão definidos na turma.
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {[
-                  { label: 'Pix', icon: Banknote, enabled: financeiroPix, onToggle: () => setFinanceiroPix((prev) => !prev) },
-                  { label: 'Boleto', icon: Receipt, enabled: financeiroBoleto, onToggle: () => setFinanceiroBoleto((prev) => !prev) },
-                  { label: 'Cartão', icon: CreditCard, enabled: financeiroCartao, onToggle: () => setFinanceiroCartao((prev) => !prev) }
-                ].map((method) => {
-                  const Icon = method.icon;
-                  return (
-                    <button type="button" key={method.label} onClick={method.onToggle} className={`flex items-center justify-between rounded-2xl border px-4 py-4 text-left transition-all ${method.enabled ? 'border-emerald-200 bg-white text-emerald-700 shadow-sm' : 'border-slate-200 bg-white/70 text-slate-400'}`}>
-                      <span className="flex items-center gap-2 text-xs font-black uppercase tracking-wide">
-                        <Icon size={16} />
-                        {method.label}
-                      </span>
-                      <span className={`h-5 w-5 rounded-full border ${method.enabled ? 'border-emerald-500 bg-emerald-500' : 'border-slate-300 bg-white'}`} />
-                    </button>
-                  );
-                })}
-              </div>
-              <label className="flex flex-col gap-2 md:max-w-xs">
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Máximo de parcelas no cartão</span>
-                <input type="number" min={1} max={12} disabled={!financeiroCartao} value={financeiroMaxParcelas} onChange={(e) => setFinanceiroMaxParcelas(Math.max(1, Math.min(12, Number(e.target.value) || 1)))} className="w-full px-4 py-3 text-sm bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 outline-none font-black text-slate-800 disabled:opacity-50" />
-              </label>
-            </div>
-
-            <div className="border border-slate-200 rounded-3xl p-5 bg-slate-50/60 space-y-4">
-              <div className="flex items-center gap-2">
-                <ImageIcon size={18} className="text-emerald-600" />
-                <h5 className="font-black text-sm text-[#001a33] uppercase tracking-tight">Imagem de Capa do Curso</h5>
-              </div>
-              <div className="border-2 border-dashed border-slate-200 rounded-3xl p-6 text-center bg-white flex flex-col items-center justify-center gap-4">
-                {newCursoImagemUrl ? (
-                  <>
-                    <img src={newCursoImagemUrl} alt="Capa do curso técnico" className="max-h-48 rounded-2xl object-cover border border-slate-200 shadow-sm" />
-                    <button type="button" onClick={() => setNewCursoImagemUrl('')} className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold uppercase tracking-wider rounded-xl transition-all border border-red-200">Remover</button>
-                  </>
-                ) : (
-                  <>
-                    <div className="w-14 h-14 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center border border-slate-200 shadow-inner">
-                      <ImageIcon size={24} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-slate-700">Selecione a imagem de capa do curso</p>
-                      <p className="text-[10px] text-slate-400 mt-1 font-medium">Recomendado formato horizontal (16:9)</p>
-                    </div>
-                  </>
-                )}
-                <label className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-wider rounded-xl cursor-pointer transition-all shadow-md shadow-emerald-600/15">
-                  {isUploading ? 'Enviando...' : newCursoImagemUrl ? 'Alterar Imagem' : 'Carregar Foto'}
-                  <input type="file" accept="image/*" onChange={handleUploadImagem} disabled={isUploading} className="hidden" />
-                </label>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <input type="checkbox" id="newCursoTecnicoPublicarSitePage" checked={newCursoPublicarSite} onChange={(e) => setNewCursoPublicarSite(e.target.checked)} className="h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
-              <label htmlFor="newCursoTecnicoPublicarSitePage" className="cursor-pointer select-none text-xs font-bold text-slate-700">
-                Publicar no site público
-              </label>
-            </div>
-          </form>
-        </div>
-      </div>
+      <CursoTecnicoCreateView
+        areasDisponiveis={areasDisponiveis}
+        financeiroBoleto={financeiroBoleto}
+        financeiroCartao={financeiroCartao}
+        financeiroMaxParcelas={financeiroMaxParcelas}
+        financeiroPix={financeiroPix}
+        isCreatingCurso={isCreatingCurso}
+        isUploading={isUploading}
+        newAreaName={newAreaName}
+        newCursoArea={newCursoArea}
+        newCursoCargaHoraria={newCursoCargaHoraria}
+        newCursoDesc={newCursoDesc}
+        newCursoDuracaoMeses={newCursoDuracaoMeses}
+        newCursoImagemUrl={newCursoImagemUrl}
+        newCursoNome={newCursoNome}
+        newCursoPublicarSite={newCursoPublicarSite}
+        newCursoVersao={newCursoVersao}
+        showNewAreaInput={showNewAreaInput}
+        onAddArea={handleAddArea}
+        onBack={resetCreateForm}
+        onSubmit={handleCreateCurso}
+        onUploadImage={handleUploadImagem}
+        setFinanceiroBoleto={setFinanceiroBoleto}
+        setFinanceiroCartao={setFinanceiroCartao}
+        setFinanceiroMaxParcelas={setFinanceiroMaxParcelas}
+        setFinanceiroPix={setFinanceiroPix}
+        setNewAreaName={setNewAreaName}
+        setNewCursoArea={setNewCursoArea}
+        setNewCursoCargaHoraria={setNewCursoCargaHoraria}
+        setNewCursoDesc={setNewCursoDesc}
+        setNewCursoDuracaoMeses={setNewCursoDuracaoMeses}
+        setNewCursoImagemUrl={setNewCursoImagemUrl}
+        setNewCursoNome={setNewCursoNome}
+        setNewCursoPublicarSite={setNewCursoPublicarSite}
+        setNewCursoVersao={setNewCursoVersao}
+        setShowNewAreaInput={setShowNewAreaInput}
+      />
     );
   }
-
   return (
     <div className="animate-fadeIn relative">
       {/* Header */}
@@ -491,6 +359,12 @@ const CursosTecnicosPage: React.FC = () => {
         <div className="flex justify-center items-center py-20">
           <Loader2 className="animate-spin text-blue-600" size={32} />
         </div>
+      ) : loadError ? (
+        <CursosTecnicosQueryError
+          error={loadError}
+          isRetrying={cursosQuery.isFetching}
+          onRetry={() => { void cursosQuery.refetch(); }}
+        />
       ) : filteredCursos.length === 0 ? (
         <div className="text-center py-20 bg-slate-50 rounded-[2rem] border border-dashed border-slate-300">
            <Briefcase className="text-slate-300 mx-auto mb-4" size={48} />
@@ -521,227 +395,16 @@ const CursosTecnicosPage: React.FC = () => {
         </div>
       )}
 
-      {/* Modal Criar Novo Curso */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-[2.5rem] p-8 max-w-md w-full shadow-2xl border border-slate-100 relative">
-            <button 
-              onClick={() => setShowCreateModal(false)}
-              className="absolute top-6 right-6 p-2 text-slate-400 hover:text-red-500 rounded-xl hover:bg-slate-50 transition-all"
-            >
-              <X size={20} />
-            </button>
-            <h3 className="text-xl font-black text-[#001a33] uppercase tracking-tight mb-6">Novo Curso Técnico</h3>
-            
-            <form onSubmit={handleCreateCurso} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Nome do Curso</label>
-                <input 
-                  required
-                  type="text" 
-                  value={newCursoNome}
-                  onChange={(e) => setNewCursoNome(e.target.value)}
-                  placeholder="Ex: Técnico em Enfermagem"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-all"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Área / Categoria</label>
-                  <select 
-                    value={newCursoArea}
-                    onChange={(e) => setNewCursoArea(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-all cursor-pointer"
-                  >
-                    {areasDisponiveis.map(a => (
-                      <option key={a} value={a}>{a}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Versão</label>
-                  <input 
-                    required
-                    type="text" 
-                    value={newCursoVersao}
-                    onChange={(e) => setNewCursoVersao(e.target.value)}
-                    placeholder="Ex: 1.0"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-all"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Carga Horária (Hrs)</label>
-                  <input 
-                    required
-                    type="number" 
-                    value={newCursoCargaHoraria}
-                    onChange={(e) => setNewCursoCargaHoraria(Number(e.target.value))}
-                    placeholder="Ex: 1200"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Duração (Meses)</label>
-                  <input 
-                    required
-                    type="number" 
-                    value={newCursoDuracaoMeses}
-                    onChange={(e) => setNewCursoDuracaoMeses(Number(e.target.value))}
-                    placeholder="Ex: 24"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-all"
-                  />
-                </div>
-              </div>
-
-              {/* Imagem de Capa */}
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Imagem de Capa (Card)</label>
-                <div className="flex items-center gap-4">
-                  {newCursoImagemUrl ? (
-                    <div className="relative w-24 h-16 bg-slate-50 border border-slate-200 rounded-xl overflow-hidden shrink-0">
-                      <img src={newCursoImagemUrl} alt="Capa" className="w-full h-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => setNewCursoImagemUrl('')}
-                        className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white p-1 rounded-full transition-colors"
-                        title="Remover Imagem"
-                      >
-                        <X size={12} />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="w-24 h-16 bg-slate-50 border border-dashed border-slate-300 rounded-xl flex items-center justify-center text-slate-400 shrink-0 text-xs font-bold uppercase">
-                      Sem Capa
-                    </div>
-                  )}
-                  <div className="flex-grow">
-                    <label className="inline-block px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold uppercase tracking-wider rounded-xl cursor-pointer transition-all">
-                      {isUploading ? 'Fazendo Upload...' : newCursoImagemUrl ? 'Alterar Imagem' : 'Upload de Imagem'}
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleUploadImagem}
-                        disabled={isUploading}
-                        className="hidden"
-                      />
-                    </label>
-                    <p className="text-[9px] text-slate-400 mt-1">Imagens recomendadas: 16:9.</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Publicar no site público checkbox */}
-              <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                <input 
-                  type="checkbox"
-                  id="newCursoPublicarSite"
-                  checked={newCursoPublicarSite}
-                  onChange={(e) => setNewCursoPublicarSite(e.target.checked)}
-                  className="w-4 h-4 text-emerald-600 border-slate-300 rounded focus:ring-emerald-500 cursor-pointer"
-                />
-                <label htmlFor="newCursoPublicarSite" className="text-xs font-bold text-slate-700 select-none cursor-pointer">
-                  Publicar no site público
-                </label>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Descrição do Curso</label>
-                <textarea 
-                  value={newCursoDesc}
-                  onChange={(e) => setNewCursoDesc(e.target.value)}
-                  placeholder="Resumo sobre a formação e mercado..."
-                  className="w-full h-24 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-all resize-none"
-                />
-              </div>
-
-              <div className="pt-4 flex gap-3">
-                <button 
-                  type="submit" 
-                  disabled={isCreatingCurso}
-                  className="flex-1 py-3 bg-[#001a33] text-white rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-blue-900 transition-colors shadow-lg disabled:opacity-75"
-                >
-                  {isCreatingCurso ? 'Criando...' : 'Criar Curso'}
-                </button>
-                <button 
-                  type="button" 
-                  onClick={() => setShowCreateModal(false)}
-                  className="px-6 py-3 bg-slate-100 text-slate-500 rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-slate-200 transition-colors"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Duplicar / Criar Nova Versão */}
       {showDuplicateModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-[2.5rem] p-8 max-w-md w-full shadow-2xl border border-slate-100 relative">
-            <button 
-              onClick={() => setShowDuplicateModal(false)}
-              className="absolute top-6 right-6 p-2 text-slate-400 hover:text-red-500 rounded-xl hover:bg-slate-50 transition-all"
-            >
-              <X size={20} />
-            </button>
-            <h3 className="text-xl font-black text-[#001a33] uppercase tracking-tight mb-6 flex items-center gap-2">
-              <Copy size={20} className="text-emerald-500" />
-              <span>Duplicar Curso</span>
-            </h3>
-            
-            <form onSubmit={handleDuplicateCurso} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Nome da Nova Versão/Cópia</label>
-                <input 
-                  required
-                  type="text" 
-                  value={duplicateNome}
-                  onChange={(e) => setDuplicateNome(e.target.value)}
-                  placeholder="Ex: Técnico em Enfermagem 2.0"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-all"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Versão</label>
-                <input 
-                  required
-                  type="text" 
-                  value={duplicateVersao}
-                  onChange={(e) => setDuplicateVersao(e.target.value)}
-                  placeholder="Ex: 2.0"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-all"
-                />
-              </div>
-
-              <div className="bg-blue-50 border border-blue-100 p-4 rounded-2xl text-xs text-blue-800 leading-relaxed font-medium">
-                Esta ação criará um novo curso clonando toda a estrutura curricular (módulos, disciplinas e aulas) do curso original. O curso original permanecerá intacto.
-              </div>
-
-              <div className="pt-4 flex gap-3">
-                <button 
-                  type="submit" 
-                  disabled={isDuplicating}
-                  className="flex-1 py-3 bg-[#001a33] text-white rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-blue-900 transition-colors shadow-lg disabled:opacity-75"
-                >
-                  {isDuplicating ? 'Clonando...' : 'Confirmar Duplicação'}
-                </button>
-                <button 
-                  type="button" 
-                  onClick={() => setShowDuplicateModal(false)}
-                  className="px-6 py-3 bg-slate-100 text-slate-500 rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-slate-200 transition-colors"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <CursoTecnicoDuplicateModal
+          isDuplicating={isDuplicating}
+          nome={duplicateNome}
+          versao={duplicateVersao}
+          onClose={closeDuplicateModal}
+          onNomeChange={setDuplicateNome}
+          onSubmit={handleDuplicateCurso}
+          onVersaoChange={setDuplicateVersao}
+        />
       )}
       {/* Custom Confirmation Modal */}
       {confirmModal && confirmModal.isOpen && (

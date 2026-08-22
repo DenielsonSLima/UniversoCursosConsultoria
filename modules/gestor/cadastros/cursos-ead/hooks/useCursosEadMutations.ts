@@ -1,5 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import { cadastrosService } from '../../cadastros.service';
+import { cursosEadService } from '../cursos-ead.service';
 
 interface ToastApi {
   (message: string, type?: 'success' | 'error' | 'warning'): void;
@@ -20,7 +21,7 @@ export const useCursosEadMutations = (
 ) => {
   const duplicateMutation = useMutation({
     mutationFn: ({ cursoId, nome, versao }: DuplicateInput) =>
-      cadastrosService.duplicateEadCurso(cursoId, nome, versao),
+      cursosEadService.duplicateCourse(cursoId, nome, versao),
     onSuccess: () => {
       setShowDuplicateModal(false);
       setDuplicateTargetId(null);

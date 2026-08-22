@@ -3,7 +3,7 @@ import { ArrowLeft, Loader2, Save } from 'lucide-react';
 import { Curso } from '../cadastros.types';
 import { getModalidadeConfig } from './cursoGradeCurricular.helpers';
 
-export type CursoGradeTab = 'grade' | 'turmas' | 'financeiro' | 'vacinas' | 'publico';
+export type CursoGradeTab = 'grade' | 'turmas' | 'financeiro' | 'avaliacao' | 'vacinas' | 'publico';
 
 interface GradeKpis {
   carga_horaria_total: number;
@@ -122,12 +122,13 @@ const CursoGradeCurricularHeader: React.FC<CursoGradeCurricularHeaderProps> = ({
       </div>
     ) : null}
 
-    <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 mb-8 bg-slate-100 p-1 rounded-2xl max-w-4xl border border-slate-200">
+    <div className={`grid grid-cols-2 ${curso.modalidade === 'TECNICO' || curso.modalidade === 'LIVRE' ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-2 mb-8 bg-slate-100 p-1 rounded-2xl max-w-4xl border border-slate-200`}>
       {([
         ['grade', 'Grade Curricular'],
         ['turmas', `Turmas (${turmasCount})`],
         ['financeiro', 'Financeiro'],
-        ['vacinas', 'Vacinas'],
+        ...(curso.modalidade === 'LIVRE' ? [['avaliacao', 'Avaliação final']] : []),
+        ...(curso.modalidade === 'TECNICO' ? [['vacinas', 'Vacinas']] : []),
         ['publico', 'Público (Site)']
       ] as [CursoGradeTab, string][]).map(([tab, label]) => (
         <button

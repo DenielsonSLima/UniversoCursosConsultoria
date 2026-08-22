@@ -3,7 +3,6 @@ import {
   BookOpen,
   CheckCircle2,
   Download,
-  FileText,
   ListChecks,
   Loader2,
   Lock,
@@ -12,9 +11,10 @@ import {
   Printer,
 } from 'lucide-react';
 import EadVideoPlayer from '../EadVideoPlayer';
+import { EadActivitiesPanel } from './EadActivitiesPanel';
+import { EadQuizPanel } from './EadQuizPanel';
 import {
   MAIN_EAD_VIDEO_ID,
-  getActivityChoiceData,
   getEmbedUrl,
   getLessonDurationLabel,
 } from '../cursosPage.utils';
@@ -32,28 +32,12 @@ const EadLearningContent: React.FC<EadLearningContentProps> = ({ view }) => {
     selectedCourse,
     selectedLessonIdx,
     setSelectedLessonIdx,
-    quizAnswers,
-    setQuizAnswers,
-    quizError,
-    activityCompletionPrompt,
-    setActivityCompletionPrompt,
     conteudos,
-    currentProva,
     selectedLesson,
     selectedLessonText,
     progress,
     mainVideoUrl,
     mainVideoDone,
-    selectedLessonActivities,
-    quizPassed,
-    allLessonsDone,
-    allActivitiesDone,
-    allVideosDone,
-    questionsTotal,
-    minimumQuestions,
-    quizRetryBlocked,
-    retryCountdownLabel,
-    canTakeQuiz,
     alunoCertificado,
     certificateStatusTitle,
     certificateStatusMessage,
@@ -62,13 +46,16 @@ const EadLearningContent: React.FC<EadLearningContentProps> = ({ view }) => {
     downloadCertificatePdf,
     renderCertificatePreview,
     eadGradeCurricular,
-    randomizedQuizQuestions,
-    displayedQuizAnswers,
-    retryAvailableLabel,
-    summary,
     isLessonLocked,
+    isProgressReady,
+    isUpdatingProgress,
+    isProgressUpdatePending,
     updateProgress,
   } = view;
+  const mainVideoPending = isProgressUpdatePending('toggle_video', MAIN_EAD_VIDEO_ID);
+  const selectedLessonPending = selectedLesson?.id
+    ? isProgressUpdatePending('toggle_content', selectedLesson.id)
+    : false;
 
   return (
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
@@ -152,14 +139,19 @@ const EadLearningContent: React.FC<EadLearningContentProps> = ({ view }) => {
                       {mainVideoUrl && (
                         <button
                           onClick={() => updateProgress('toggle_video', MAIN_EAD_VIDEO_ID)}
-                          className={`inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-[10px] font-black uppercase tracking-widest ${
+                          disabled={!isProgressReady || isUpdatingProgress}
+                          className={`inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-[10px] font-black uppercase tracking-widest disabled:cursor-wait disabled:bg-slate-200 disabled:text-slate-500 ${
                             mainVideoDone
                               ? 'border border-emerald-150 bg-emerald-50 text-emerald-700'
                               : 'bg-blue-600 text-white hover:bg-blue-700'
                           }`}
                         >
-                          {mainVideoDone ? <CheckCircle2 size={15} /> : <Play size={15} />}
-                          {mainVideoDone ? 'Vídeo concluído' : 'Marcar vídeo como concluído'}
+                          {mainVideoPending
+                            ? <Loader2 size={15} className="animate-spin" />
+                            : mainVideoDone ? <CheckCircle2 size={15} /> : <Play size={15} />}
+                          {mainVideoPending
+                            ? 'Salvando vídeo'
+                            : mainVideoDone ? 'Vídeo concluído' : 'Marcar vídeo como concluído'}
                         </button>
                       )}
                       <button
@@ -251,14 +243,19 @@ const EadLearningContent: React.FC<EadLearningContentProps> = ({ view }) => {
                       </div>
                       <button
                         onClick={() => updateProgress('toggle_content', selectedLesson.id)}
-                        className={`px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
+                        disabled={!isProgressReady || isUpdatingProgress}
+                        className={`px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 disabled:cursor-wait disabled:bg-slate-200 disabled:text-slate-500 ${
                           progress.completedContentIds.includes(selectedLesson.id)
                             ? 'bg-emerald-600 text-white'
                             : 'bg-[#001a33] text-white'
                         }`}
                       >
-                        <CheckCircle2 size={14} />
-                        {progress.completedContentIds.includes(selectedLesson.id) ? 'Concluída' : 'Marcar leitura'}
+                        {selectedLessonPending
+                          ? <Loader2 size={14} className="animate-spin" />
+                          : <CheckCircle2 size={14} />}
+                        {selectedLessonPending
+                          ? 'Salvando leitura'
+                          : progress.completedContentIds.includes(selectedLesson.id) ? 'Concluída' : 'Marcar leitura'}
                       </button>
                     </div>
 
@@ -270,111 +267,7 @@ const EadLearningContent: React.FC<EadLearningContentProps> = ({ view }) => {
                       </article>
                     )}
                   </>
-                ) : (
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="text-sm font-black text-[#001a33] uppercase tracking-widest flex items-center gap-2">
-                        <ListChecks size={16} className="text-emerald-600" />
-                        Atividades desta etapa
-                      </h4>
-                      <p className="mt-1 text-xs font-bold text-slate-500">
-                        {selectedLesson?.titulo
-                          ? `Responda as atividades vinculadas a "${selectedLesson.titulo}" antes de avançar.`
-                          : 'Selecione uma etapa para visualizar as atividades vinculadas.'}
-                      </p>
-                    </div>
-
-                    {selectedLessonActivities.length === 0 ? (
-                      <div className="rounded-3xl border border-slate-100 bg-slate-50 p-8 text-center">
-                        <FileText className="mx-auto mb-3 text-slate-300" size={34} />
-                        <p className="text-sm font-bold text-slate-500">Esta etapa ainda não possui atividades cadastradas.</p>
-                      </div>
-                    ) : selectedLessonActivities.map(({ atividade, activityIndex, linkedLessonIndex }: any) => {
-                      const choiceData = getActivityChoiceData(atividade, activityIndex, currentProva);
-                      const activityDone = progress.completedActivityIds.includes(atividade.id);
-
-                      return (
-                        <div key={atividade.id} className="border border-emerald-100 bg-emerald-50/35 rounded-3xl p-4 space-y-3">
-                          <div className="flex justify-between gap-3">
-                            <div>
-                              <p className="text-xs font-black text-[#001a33]">{atividade.titulo}</p>
-                              {linkedLessonIndex >= 0 && (
-                                <p className="mt-0.5 text-[10px] font-black uppercase tracking-widest text-emerald-700">
-                                  Etapa {linkedLessonIndex + 1}
-                                  {conteudos[linkedLessonIndex]?.etapa && ` • ${conteudos[linkedLessonIndex].etapa}`}
-                                </p>
-                              )}
-                              <p className="text-xs text-slate-600 font-medium mt-1">{choiceData?.enunciado || atividade.enunciado}</p>
-                            </div>
-                            {activityDone && <CheckCircle2 size={18} className="text-emerald-600 shrink-0" />}
-                          </div>
-
-                          {choiceData ? (
-                            <div className="grid grid-cols-1 gap-2">
-                              {choiceData.opcoes.map((opcao: string, idx: number) => (
-                                <button
-                                  key={`${atividade.id}-${idx}`}
-                                  onClick={() => {
-                                    updateProgress('set_activity_answer', atividade.id, { answer: String(idx) });
-                                    if (idx === choiceData.respostaCorreta && !activityDone) {
-                                      setActivityCompletionPrompt({ activityId: atividade.id, title: atividade.titulo || 'Atividade' });
-                                    }
-                                  }}
-                                  className={`rounded-xl border px-3 py-2 text-left text-xs font-bold ${
-                                    progress.activityAnswers[atividade.id] === String(idx) ? 'border-emerald-500 bg-white text-emerald-700' : 'border-emerald-100 bg-white text-slate-600'
-                                  }`}
-                                >
-                                  {opcao}
-                                </button>
-                              ))}
-                            </div>
-                          ) : (
-                            <>
-                              <textarea
-                                rows={3}
-                                value={progress.activityAnswers[atividade.id] || ''}
-                                onChange={e => updateProgress('set_activity_answer', atividade.id, { answer: e.target.value })}
-                                className="w-full rounded-2xl border border-emerald-100 bg-white px-4 py-3 text-xs font-medium outline-none resize-none"
-                              />
-                              <button
-                                onClick={() => progress.activityAnswers[atividade.id]?.trim() && updateProgress('toggle_activity', atividade.id)}
-                                className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest"
-                              >
-                                Salvar atividade
-                              </button>
-                            </>
-                          )}
-
-                          {activityCompletionPrompt?.activityId === atividade.id && !activityDone && (
-                            <div className="rounded-2xl border border-emerald-200 bg-white p-4 shadow-sm">
-                              <p className="text-xs font-black text-emerald-700">Resposta correta.</p>
-                              <p className="mt-1 text-xs font-semibold text-slate-600">
-                                Deseja marcar esta atividade como concluída?
-                              </p>
-                              <div className="mt-3 flex flex-wrap gap-2">
-                                <button
-                                  onClick={() => {
-                                    updateProgress('toggle_activity', atividade.id);
-                                    setActivityCompletionPrompt(null);
-                                  }}
-                                  className="rounded-xl bg-emerald-600 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white"
-                                >
-                                  Sim, concluir
-                                </button>
-                                <button
-                                  onClick={() => setActivityCompletionPrompt(null)}
-                                  className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500"
-                                >
-                                  Agora não
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                ) : <EadActivitiesPanel view={view} />}
               </section>
             ) : (
               <div className="bg-white border border-slate-100 rounded-[2rem] p-12 text-center">
@@ -382,116 +275,7 @@ const EadLearningContent: React.FC<EadLearningContentProps> = ({ view }) => {
                 <p className="text-sm font-bold text-slate-500">Este curso ainda não possui etapas cadastradas.</p>
               </div>
             )
-            ) : (
-            <section className="bg-white border border-slate-100 rounded-[2rem] p-5 sm:p-7 shadow-sm space-y-4">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <h3 className="text-lg font-black text-[#001a33] uppercase tracking-tight">Prova final</h3>
-                  <p className="text-xs text-slate-500 font-medium">A prova libera quando etapas, vídeos e atividades estiverem concluídos.</p>
-                </div>
-                <span className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest ${canTakeQuiz ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
-                  {canTakeQuiz ? 'Liberada' : 'Bloqueada'}
-                </span>
-              </div>
-
-              {!canTakeQuiz ? (
-                <div className="space-y-3">
-                  {questionsTotal < minimumQuestions && (
-                    <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-xs font-bold text-amber-700">
-                      A prova ainda precisa ter no mínimo {minimumQuestions} questões cadastradas. Hoje há {questionsTotal}.
-                    </div>
-                  )}
-                  {quizRetryBlocked && (
-                    <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-xs font-bold text-red-700">
-                      <p>Sua última tentativa não atingiu a nota mínima.</p>
-                      <p className="mt-2 text-2xl font-black tracking-widest text-red-800">{retryCountdownLabel}</p>
-                      <p className="mt-1 text-[11px] text-red-600">
-                        Nova tentativa liberada em {retryAvailableLabel || `${summary.retryIntervalHours || 1} hora`}.
-                      </p>
-                    </div>
-                  )}
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                    {[
-                      ['Etapas', allLessonsDone],
-                      ['Atividades', allActivitiesDone],
-                      ['Vídeos', allVideosDone]
-                    ].map(([label, ok]) => (
-                      <div key={label as string} className={`rounded-2xl border p-3 text-xs font-black ${ok ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-slate-50 border-slate-100 text-slate-500'}`}>
-                        {ok ? <CheckCircle2 size={15} className="mb-1" /> : <Lock size={15} className="mb-1" />}
-                        {label as string}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : randomizedQuizQuestions.length ? (
-                <div className="space-y-4">
-                  {randomizedQuizQuestions.map((questao: any, qIdx: number) => {
-                    const selectedAnswer = displayedQuizAnswers[questao.id];
-                    const hasAnswered = selectedAnswer !== undefined && selectedAnswer !== null;
-                    const isCorrect = hasAnswered && Number(selectedAnswer) === Number(questao.respostaCorreta);
-
-                    return (
-                    <div key={questao.id} className="border border-slate-100 rounded-3xl p-4">
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                        <p className="text-sm font-black text-[#001a33]">{qIdx + 1}. {questao.pergunta}</p>
-                        {quizPassed && hasAnswered && (
-                          <span className={`rounded-xl px-3 py-1 text-[9px] font-black uppercase tracking-widest ${isCorrect ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
-                            {isCorrect ? 'Você acertou' : 'Você errou'}
-                          </span>
-                        )}
-                      </div>
-                      <div className="grid grid-cols-1 gap-2 mt-3">
-                        {questao.shuffledOptions.map((opcao: any, idx: number) => {
-                          const selected = Number(selectedAnswer) === Number(opcao.originalIndex);
-                          const correct = Number(questao.respostaCorreta) === Number(opcao.originalIndex);
-                          const reviewClass = quizPassed
-                            ? correct
-                              ? 'border-emerald-400 bg-emerald-50 text-emerald-800'
-                              : selected
-                                ? 'border-red-300 bg-red-50 text-red-700'
-                                : 'border-slate-100 bg-slate-50 text-slate-500'
-                            : selected
-                              ? 'border-blue-500 bg-blue-50 text-blue-700'
-                              : 'border-slate-100 bg-slate-50 text-slate-600';
-
-                          return (
-                          <button
-                            key={`${questao.id}-${opcao.originalIndex}`}
-                            type="button"
-                            disabled={quizPassed}
-                            onClick={() => setQuizAnswers(prev => ({ ...prev, [questao.id]: opcao.originalIndex }))}
-                            className={`rounded-xl border px-3 py-2 text-left text-xs font-bold transition-all disabled:cursor-default ${reviewClass}`}
-                          >
-                            <span className="mr-2 font-black">{String.fromCharCode(65 + idx)}.</span>
-                            {opcao.label}
-                            {quizPassed && correct && <span className="ml-2 font-black text-emerald-700">Resposta correta</span>}
-                            {quizPassed && selected && !correct && <span className="ml-2 font-black text-red-700">Sua resposta</span>}
-                          </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    );
-                  })}
-                  {!quizPassed && (
-                    <button
-                      onClick={() => updateProgress('finish_quiz', null, { answers: quizAnswers })}
-                      className="w-full rounded-xl bg-[#001a33] py-3 text-white text-xs font-black uppercase tracking-widest"
-                    >
-                      Corrigir prova
-                    </button>
-                  )}
-                  {quizError && (
-                    <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-xs font-bold text-red-700">
-                      {quizError}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <p className="text-xs text-slate-500 font-bold">Prova ainda não cadastrada para este curso.</p>
-              )}
-            </section>
-            )}
+            ) : <EadQuizPanel view={view} />}
           </main>
         </div>
   );

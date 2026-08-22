@@ -27,6 +27,24 @@ type GestaoAcademicProgressRow = {
   proxima_aula_titulo: string | null;
 };
 
+const ACADEMIC_PROGRESS_BATCH_SIZE = 200;
+
+const readCanonicalAcademicCount = (
+  value: unknown,
+  field: string,
+  turmaId: string,
+): number => {
+  const count = typeof value === 'number'
+    ? value
+    : typeof value === 'string' && /^(0|[1-9]\d*)$/.test(value)
+      ? Number(value)
+      : null;
+  if (count === null || !Number.isSafeInteger(count) || count < 0) {
+    throw new Error(`O banco não retornou ${field} válido para a turma ${turmaId}.`);
+  }
+  return count;
+};
+
 export const mapTurma = (t: any): Turma => {
   const matriculas = t.matriculas || [];
   const isEad = t.cursos?.modalidade === 'EAD';
@@ -100,18 +118,27 @@ export const enrichTechnicalAcademicProgress = async (turmas: Turma[]): Promise<
   if (turmas.length === 0) return turmas;
 
   const turmaIds = turmas.map((turma) => turma.id);
-
-  const { data, error } = await supabase.rpc('get_gestao_turmas_academic_progress', {
-    p_turma_ids: turmaIds,
-  });
-
-  if (error) {
-    console.error('Erro ao carregar progresso acadêmico canônico das turmas:', error);
-    throw error;
+  const turmaIdBatches: string[][] = [];
+  for (let offset = 0; offset < turmaIds.length; offset += ACADEMIC_PROGRESS_BATCH_SIZE) {
+    turmaIdBatches.push(turmaIds.slice(offset, offset + ACADEMIC_PROGRESS_BATCH_SIZE));
   }
 
+  const academicProgressRows = (await Promise.all(turmaIdBatches.map(async (batchIds) => {
+    const response = await supabase.rpc(
+      'get_gestao_turmas_academic_progress',
+      { p_turma_ids: batchIds },
+    );
+
+    if (response.error) {
+      console.error('Erro ao carregar progresso acadêmico canônico das turmas:', response.error);
+      throw response.error;
+    }
+
+    return (response.data || []) as GestaoAcademicProgressRow[];
+  }))).flat();
+
   const progressByTurma = new Map<string, GestaoAcademicProgressRow>(
-    ((data || []) as GestaoAcademicProgressRow[]).map((row) => [row.turma_id, row]),
+    academicProgressRows.map((row) => [row.turma_id, row]),
   );
 
   return turmas.map((turma) => {
@@ -119,15 +146,28 @@ export const enrichTechnicalAcademicProgress = async (turmas: Turma[]): Promise<
     if (!progress) {
       throw new Error(`Progresso acadêmico indisponível para a turma ${turma.id}.`);
     }
+    if (typeof progress.grade_concluida !== 'boolean') {
+      throw new Error(`O banco não retornou o estado da grade para a turma ${turma.id}.`);
+    }
 
     const hasCurrentDiscipline = Boolean(progress.disciplina_atual_id);
+    const totalDisciplinas = readCanonicalAcademicCount(
+      progress.total_disciplinas,
+      'o total de disciplinas',
+      turma.id,
+    );
+    const disciplinasConcluidas = readCanonicalAcademicCount(
+      progress.disciplinas_concluidas,
+      'o total de disciplinas concluídas',
+      turma.id,
+    );
 
     return {
       ...turma,
       progressoAcademicoDisponivel: true,
-      totalDisciplinas: Number(progress.total_disciplinas || 0),
-      disciplinasConcluidas: Number(progress.disciplinas_concluidas || 0),
-      gradeConcluida: progress.grade_concluida === true,
+      totalDisciplinas,
+      disciplinasConcluidas,
+      gradeConcluida: progress.grade_concluida,
       moduloAtualId: hasCurrentDiscipline ? progress.modulo_atual_id || undefined : undefined,
       moduloAtual: hasCurrentDiscipline ? progress.modulo_atual_nome || 'Módulo não informado' : undefined,
       moduloAtualOrdem: hasCurrentDiscipline && progress.modulo_atual_ordem != null

@@ -2,12 +2,17 @@ import React from 'react';
 import { CalendarDays, GraduationCap, Info, MapPin, Settings2, Users } from 'lucide-react';
 import type { Turma } from '../../gestao.types';
 import { formatDateBR } from '../formatters';
+import CodigoCondicaoPlanoFinanceiroUnicoCard from './CodigoCondicaoPlanoFinanceiroUnicoCard';
 
 interface TurmaPlanoFinanceiroUnicoConfiguracoesProps {
   turma: Turma;
+  canManageFinanceiro?: boolean;
 }
 
-const TurmaPlanoFinanceiroUnicoConfiguracoes: React.FC<TurmaPlanoFinanceiroUnicoConfiguracoesProps> = ({ turma }) => (
+const TurmaPlanoFinanceiroUnicoConfiguracoes: React.FC<TurmaPlanoFinanceiroUnicoConfiguracoesProps> = ({
+  turma,
+  canManageFinanceiro = false,
+}) => (
   <div className="space-y-6">
     <section className="rounded-[2rem] border border-slate-100 bg-white p-6 shadow-sm">
       <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-blue-600"><Settings2 size={14} /> Dados da turma</p>
@@ -23,6 +28,8 @@ const TurmaPlanoFinanceiroUnicoConfiguracoes: React.FC<TurmaPlanoFinanceiroUnico
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4"><dt className="text-[10px] font-black uppercase tracking-wider text-slate-500">Inscrições online</dt><dd className="mt-2 text-sm font-black text-[#001a33]">{turma.permitirInscricoesOnline ? 'Permitidas' : 'Não habilitadas'}</dd></div>
       </dl>
     </section>
+
+    {turma.modalidade === 'LIVRE' ? <CodigoCondicaoPlanoFinanceiroUnicoCard turmaId={turma.id} canManageFinanceiro={canManageFinanceiro} /> : null}
 
     <section className="flex items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50 p-5 text-sm text-blue-900">
       <Info className="mt-0.5 shrink-0 text-blue-600" size={20} />

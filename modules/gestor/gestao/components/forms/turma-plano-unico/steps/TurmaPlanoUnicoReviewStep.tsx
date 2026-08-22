@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
-import { CalendarDays, CheckCircle2, Layers3, MapPin, ReceiptText, Users2, WalletCards } from 'lucide-react';
+import React from 'react';
+import { CalendarDays, CheckCircle2, Layers3, Loader2, MapPin, ReceiptText, Users2, WalletCards } from 'lucide-react';
+import type { RegraPlanoFinanceiroUnico } from '../../../../presencial-financeiro-unico/types';
 import type { StatusTurma } from '../../../../gestao.types';
 import type {
   TurmaPlanoUnicoCourseOption,
@@ -8,14 +9,7 @@ import type {
   TurmaPlanoUnicoIdentity,
   TurmaPlanoUnicoPoloOption,
 } from '../turma-plano-unico-form.types';
-import {
-  buildInstallmentSchedule,
-  formatCivilDate,
-  formatCurrencyBRL,
-  formatPercentageBR,
-  getDiaVencimento,
-  getPoloLabel,
-} from '../turma-plano-unico-form.utils';
+import { formatCivilDate, formatCurrencyBRL, formatPercentageBR, getPoloLabel } from '../turma-plano-unico-form.utils';
 
 interface TurmaPlanoUnicoReviewStepProps {
   config: TurmaPlanoUnicoFormConfig;
@@ -24,17 +18,24 @@ interface TurmaPlanoUnicoReviewStepProps {
   identity: TurmaPlanoUnicoIdentity;
   initialStatus: StatusTurma;
   polo?: TurmaPlanoUnicoPoloOption;
+  preview?: RegraPlanoFinanceiroUnico;
+  previewLoading: boolean;
 }
 
-const TurmaPlanoUnicoReviewStep: React.FC<TurmaPlanoUnicoReviewStepProps> = ({ config, course, formData, identity, initialStatus, polo }) => {
-  const schedule = useMemo(() => buildInstallmentSchedule(
-    formData.valorTotal,
-    formData.qtdParcelas,
-    formData.primeiroVencimento,
-  ), [formData.primeiroVencimento, formData.qtdParcelas, formData.valorTotal]);
+const TurmaPlanoUnicoReviewStep: React.FC<TurmaPlanoUnicoReviewStepProps> = ({
+  config,
+  course,
+  formData,
+  identity,
+  initialStatus,
+  polo,
+  preview,
+  previewLoading,
+}) => {
+  const schedule = preview?.cronograma || [];
   const firstInstallment = schedule[0];
   const lastInstallment = schedule.at(-1);
-  const dueDay = getDiaVencimento(formData.primeiroVencimento);
+  const dueDay = preview?.diaVencimento || 0;
 
   return (
     <section aria-labelledby="turma-plano-unico-review-title" className="space-y-6">
@@ -61,19 +62,20 @@ const TurmaPlanoUnicoReviewStep: React.FC<TurmaPlanoUnicoReviewStepProps> = ({ c
 
       <div className={`rounded-2xl border ${config.theme.accentSoftBorder} ${config.theme.accentSoftBg} p-5`}>
         <div className="flex items-center gap-2"><WalletCards size={17} className={config.theme.accentText} /><p className="text-xs font-black uppercase tracking-wide text-[#001a33]">Plano financeiro único</p></div>
+        {previewLoading ? <p className="mt-4 flex items-center gap-2 rounded-xl bg-white p-3 text-xs font-bold text-blue-700"><Loader2 size={14} className="animate-spin" /> Atualizando a confirmação do servidor...</p> : null}
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-xl bg-white p-3"><p className="text-[9px] font-black uppercase text-slate-400">Valor total</p><p className="mt-1 text-sm font-black text-[#001a33]">{formatCurrencyBRL(formData.valorTotal)}</p></div>
-          <div className="rounded-xl bg-white p-3"><p className="flex items-center gap-2 text-[9px] font-black uppercase text-slate-400"><ReceiptText size={12} /> Parcelamento</p><p className="mt-1 text-sm font-black text-[#001a33]">{formData.qtdParcelas} parcela{formData.qtdParcelas === 1 ? '' : 's'}</p></div>
-          <div className="rounded-xl bg-white p-3"><p className="text-[9px] font-black uppercase text-slate-400">Primeiro vencimento</p><p className="mt-1 text-sm font-black text-[#001a33]">{formatCivilDate(formData.primeiroVencimento)}</p><p className="mt-1 text-[9px] font-semibold text-slate-400">Depois, dia {dueDay ? String(dueDay).padStart(2, '0') : '—'}</p></div>
-          <div className="rounded-xl bg-white p-3"><p className="text-[9px] font-black uppercase text-slate-400">Última parcela</p><p className="mt-1 text-sm font-black text-[#001a33]">{lastInstallment ? formatCurrencyBRL(lastInstallment.valor) : '—'}</p><p className="mt-1 text-[9px] font-semibold text-slate-400">{lastInstallment ? formatCivilDate(lastInstallment.vencimento) : ''}</p></div>
+          <div className="rounded-xl bg-white p-3"><p className="text-[9px] font-black uppercase text-slate-400">Valor total</p><p className="mt-1 text-sm font-black text-[#001a33]">{formatCurrencyBRL(preview?.valorTotal ?? formData.valorTotal)}</p></div>
+          <div className="rounded-xl bg-white p-3"><p className="flex items-center gap-2 text-[9px] font-black uppercase text-slate-400"><ReceiptText size={12} /> Parcelamento</p><p className="mt-1 text-sm font-black text-[#001a33]">{preview?.qtdParcelas ?? formData.qtdParcelas} parcela{(preview?.qtdParcelas ?? formData.qtdParcelas) === 1 ? '' : 's'}</p></div>
+          <div className="rounded-xl bg-white p-3"><p className="text-[9px] font-black uppercase text-slate-400">Primeiro vencimento</p><p className="mt-1 text-sm font-black text-[#001a33]">{formatCivilDate(preview?.primeiroVencimento || formData.primeiroVencimento)}</p><p className="mt-1 text-[9px] font-semibold text-slate-400">Depois, dia {dueDay ? String(dueDay).padStart(2, '0') : '—'}</p></div>
+          <div className="rounded-xl bg-white p-3"><p className="text-[9px] font-black uppercase text-slate-400">Última parcela</p><p className="mt-1 text-sm font-black text-[#001a33]">{lastInstallment ? formatCurrencyBRL(lastInstallment.valor) : '—'}</p><p className="mt-1 text-[9px] font-semibold text-slate-400">{lastInstallment ? formatCivilDate(lastInstallment.dataVencimento) : ''}</p></div>
         </div>
         <div className="mt-3 grid gap-3 md:grid-cols-3">
-          <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3"><p className="text-[9px] font-black uppercase text-emerald-700">Desconto por parcela</p><p className="mt-1 text-xs font-black text-emerald-800">{formatCurrencyBRL(formData.descontoPontualidade)}</p></div>
-          <div className="rounded-xl border border-rose-100 bg-rose-50 p-3"><p className="text-[9px] font-black uppercase text-rose-600">Juros por parcela</p><p className="mt-1 text-xs font-black text-rose-700">{formatPercentageBR(formData.jurosAtrasoPercentual)}% ao mês</p></div>
-          <div className="rounded-xl border border-rose-100 bg-rose-50 p-3"><p className="text-[9px] font-black uppercase text-rose-600">Multa por parcela</p><p className="mt-1 text-xs font-black text-rose-700">{formatCurrencyBRL(formData.multaAtraso)}</p></div>
+          <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3"><p className="text-[9px] font-black uppercase text-emerald-700">Desconto por parcela</p><p className="mt-1 text-xs font-black text-emerald-800">{formatCurrencyBRL(preview?.descontoPontualidade ?? formData.descontoPontualidade)}</p></div>
+          <div className="rounded-xl border border-rose-100 bg-rose-50 p-3"><p className="text-[9px] font-black uppercase text-rose-600">Juros por parcela</p><p className="mt-1 text-xs font-black text-rose-700">{formatPercentageBR(preview?.jurosAtrasoPercentual ?? formData.jurosAtrasoPercentual)}% ao mês</p></div>
+          <div className="rounded-xl border border-rose-100 bg-rose-50 p-3"><p className="text-[9px] font-black uppercase text-rose-600">Multa por parcela</p><p className="mt-1 text-xs font-black text-rose-700">{formatCurrencyBRL(preview?.multaAtraso ?? formData.multaAtraso)}</p></div>
         </div>
         <p className={`mt-3 rounded-xl border ${config.theme.accentSoftBorder} bg-white px-3 py-2.5 text-[10px] font-semibold leading-relaxed ${config.theme.accentSoftText}`}>Ao incluir um aluno, esta configuração será exibida para conferência e as {formData.qtdParcelas} parcela{formData.qtdParcelas === 1 ? '' : 's'} serão geradas a partir do valor total da turma.</p>
-        {firstInstallment ? <p className="mt-3 text-[10px] font-medium text-slate-500">Primeira parcela prevista: <span className="font-black text-[#001a33]">{formatCurrencyBRL(firstInstallment.valor)} em {formatCivilDate(firstInstallment.vencimento)}</span>.</p> : null}
+        {firstInstallment ? <p className="mt-3 text-[10px] font-medium text-slate-500">Primeira parcela confirmada: <span className="font-black text-[#001a33]">{formatCurrencyBRL(firstInstallment.valor)} em {formatCivilDate(firstInstallment.dataVencimento)}</span>.</p> : null}
       </div>
     </section>
   );

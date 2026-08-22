@@ -5,6 +5,7 @@ export interface CursosPageProps {
   initialCourseId?: string | null;
   onExitCourse?: () => void;
   onRequireTechnicalProfile?: () => void;
+  onOpenEnrollment?: (courseId: string, turmaId: string) => void;
 }
 
 export interface EadProgress {
@@ -29,20 +30,44 @@ export interface EadProgressSummary {
   minimumTimeDone: boolean;
   canTakeQuiz: boolean;
   quizScore?: string | number | null;
-  quizPassed?: boolean;
+  quizPassed: boolean;
   quizMinimumScore?: number;
-  questionsTotal?: number;
-  minimumQuestions?: number;
-  quizRetryBlocked?: boolean;
+  questionsTotal: number;
+  minimumQuestions: number;
+  quizRetryBlocked: boolean;
   retryIntervalHours?: number;
   retryAvailableAt?: number | null;
   completedAt?: number | null;
   certificateId?: string | null;
 }
 
+export interface EadActivityAssessmentFeedback {
+  submitted: boolean;
+  selectedIndex: number | null;
+  correctIndex: number | null;
+  isCorrect: boolean | null;
+}
+
+export interface EadQuizQuestionFeedback {
+  selectedIndex: number;
+  correctIndex: number;
+  isCorrect: boolean;
+}
+
+export interface EadAssessmentFeedback {
+  activities: Record<string, EadActivityAssessmentFeedback>;
+  quiz: {
+    submitted: boolean;
+    score: number | null;
+    passed: boolean;
+    results: Record<string, EadQuizQuestionFeedback>;
+  };
+}
+
 export interface EadProgressState {
   progress: EadProgress;
   summary: EadProgressSummary;
+  assessmentFeedback?: EadAssessmentFeedback;
 }
 
 export type LearningTab = 'video' | 'aulas' | 'prova' | 'certificado';

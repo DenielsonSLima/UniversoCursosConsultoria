@@ -10,6 +10,8 @@ const read = (file) => readFileSync(resolve(baseDir, file), 'utf8');
 const formSource = read('TurmaPlanoUnicoForm.tsx');
 const constantsSource = read('turma-plano-unico-form.constants.ts');
 const financialStepSource = read('steps/TurmaPlanoUnicoFinanceiroStep.tsx');
+const reviewStepSource = read('steps/TurmaPlanoUnicoReviewStep.tsx');
+const previewHookSource = read('useTurmaPlanoUnicoPreview.ts');
 const currencyInputSource = read('CurrencyInput.tsx');
 const validationSource = read('turma-plano-unico-form.validation.ts');
 const livreFormSource = read('../TurmaLivreForm.tsx');
@@ -34,6 +36,20 @@ test('o plano é variável por turma e não expõe regras de matrícula ou remat
   assert.doesNotMatch(constantsSource, /qtdParcelas:\s*4/);
   assert.doesNotMatch(financialStepSource, /matr[ií]cula|rematr[ií]cula/i);
   assert.doesNotMatch(formSource, /TurmaTecnico|turma-tecnico/);
+});
+
+test('parcelas, datas e centavos vêm exclusivamente da prévia do servidor', () => {
+  assert.match(previewHookSource, /previewTurmaPlan/);
+  assert.match(previewHookSource, /isSettling:\s*input !== rawInput/);
+  assert.match(formSource, /previewQuery\.data/);
+  assert.match(formSource, /previewPending = previewQuery\.isSettling \|\| previewQuery\.isFetching/);
+  assert.match(formSource, /activeStep\.id !== 'TURMA' && previewPending/);
+  assert.ok((formSource.match(/previewPending/g) || []).length >= 6);
+  assert.match(financialStepSource, /preview\?\.cronograma/);
+  assert.match(reviewStepSource, /preview\?\.cronograma/);
+  assert.doesNotMatch(formSource, /buildInstallmentSchedule|getDiaVencimento/);
+  assert.doesNotMatch(financialStepSource, /buildInstallmentSchedule|getDiaVencimento/);
+  assert.doesNotMatch(reviewStepSource, /buildInstallmentSchedule|getDiaVencimento/);
 });
 
 test('a submissão envia somente o contrato do plano financeiro único e bloqueia o checkout online legado', () => {

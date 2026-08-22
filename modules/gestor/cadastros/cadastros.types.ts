@@ -81,6 +81,7 @@ export interface Curso {
   imagem_url?: string;
   duracao_meses?: number;
   total_turmas?: number;
+  total_disciplinas?: number;
   carga_horaria_cadastrada?: number;
   publicar_site?: boolean;
   imagem_detalhe_1?: string;

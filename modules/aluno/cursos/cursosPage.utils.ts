@@ -1,6 +1,8 @@
 import { getCurrentDateInMaceio } from '../../public/courseAvailability';
 import type { EadProgress, EadProgressState } from './cursosPage.types';
 
+export { getActivityChoiceData } from './eadAssessmentFeedback';
+
 export const EAD_ACCESS_STATUSES = new Set(['ATIVO', 'CONCLUIDO']);
 export const EAD_PENDING_STATUSES = new Set(['PENDENTE', 'AGUARDANDO_PAGAMENTO', 'AGUARDANDO_CONFIRMACAO']);
 export const RECEIVABLE_PENDING_STATUSES = new Set(['PENDENTE', 'VENCIDO']);
@@ -12,6 +14,7 @@ export const BLOCKING_ENROLLMENT_STATUSES = new Set([
   'AGUARDANDO_PAGAMENTO',
   'AGUARDANDO_CONFIRMACAO',
 ]);
+export const LIVE_LINKED_ENROLLMENT_STATUSES = new Set(['ATIVO', 'CONCLUIDO', 'PENDENTE']);
 
 export const emptyProgressState: EadProgressState = {
   progress: {
@@ -129,8 +132,13 @@ export const getPoloLabel = (turma: any) => {
     .join(' - ') || 'Polo a confirmar';
 };
 
-export const getEnrollmentRank = (status?: string | null) => {
+export const getEnrollmentRank = (status?: string | null, modality?: string | null) => {
   const normalized = normalizeStatus(status);
+  if (normalizeStatus(modality) === 'LIVRE') {
+    if (normalized === 'ATIVO') return 4;
+    if (EAD_PENDING_STATUSES.has(normalized)) return 3;
+    if (normalized === 'CONCLUIDO') return 2;
+  }
   if (EAD_ACCESS_STATUSES.has(normalized)) return 3;
   if (EAD_PENDING_STATUSES.has(normalized)) return 2;
   if (normalized) return 1;
@@ -138,6 +146,9 @@ export const getEnrollmentRank = (status?: string | null) => {
 };
 
 export const hasEadAccess = (course: any) => EAD_ACCESS_STATUSES.has(normalizeStatus(course?.alunoMatricula?.status));
+export const hasLinkedLiveEnrollment = (course: any) =>
+  LIVE_LINKED_ENROLLMENT_STATUSES.has(normalizeStatus(course?.alunoMatricula?.status))
+  && Boolean(course?.alunoMatricula?.turmaId);
 export const hasPendingEadPayment = (course: any) => {
   const matricula = course?.alunoMatricula;
   if (!EAD_PENDING_STATUSES.has(normalizeStatus(matricula?.status))) return false;
@@ -241,23 +252,6 @@ export const getActivityLessonIndex = (atividade: any, activityIndex: number, le
   });
   if (titleMatchIndex >= 0) return titleMatchIndex;
   return lessons[activityIndex] ? activityIndex : -1;
-};
-
-export const getActivityChoiceData = (atividade: any, activityIndex: number, prova: any) => {
-  if (Array.isArray(atividade?.opcoes) && atividade.opcoes.length > 0) {
-    return { enunciado: atividade.enunciado, opcoes: atividade.opcoes, respostaCorreta: Number(atividade.respostaCorreta || 0) };
-  }
-  const questoes = Array.isArray(prova?.questoes) ? prova.questoes : [];
-  const questao = questoes.length > 0 ? questoes[activityIndex % questoes.length] : null;
-  if (!questao?.opcoes?.length) return null;
-  return { enunciado: questao.pergunta, opcoes: questao.opcoes, respostaCorreta: Number(questao.respostaCorreta || 0) };
-};
-
-export const getCorrectOptionIndex = (questao: any) => {
-  const raw = questao?.respostaCorreta ?? questao?.resposta_correta ?? questao?.correctAnswer
-    ?? questao?.correct_answer ?? questao?.gabarito ?? 0;
-  const parsed = Number(raw);
-  return Number.isFinite(parsed) ? parsed : 0;
 };
 
 const seededRandom = (seed: number) => {

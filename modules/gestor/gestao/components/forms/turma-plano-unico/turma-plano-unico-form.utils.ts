@@ -1,7 +1,5 @@
-import type {
-  TurmaPlanoUnicoInstallment,
-  TurmaPlanoUnicoPoloOption,
-} from './turma-plano-unico-form.types';
+import type { TurmaPlanoUnicoPoloOption } from './turma-plano-unico-form.types';
+import type { ParcelaPlanoFinanceiroUnico } from '../../../presencial-financeiro-unico/types';
 
 export const formatCurrencyBRL = (value: number) => new Intl.NumberFormat('pt-BR', {
   style: 'currency',
@@ -50,50 +48,13 @@ const getValidIsoDateParts = (isoDate: string) => {
   return { year, monthIndex, day };
 };
 
-export const addMonthsToISODate = (isoDate: string, months: number) => {
-  const source = getValidIsoDateParts(isoDate);
-  if (!source || !Number.isInteger(months)) return '';
-
-  const absoluteMonth = source.year * 12 + source.monthIndex + months;
-  const targetYear = Math.floor(absoluteMonth / 12);
-  const targetMonthIndex = ((absoluteMonth % 12) + 12) % 12;
-  const targetLastDay = new Date(Date.UTC(targetYear, targetMonthIndex + 1, 0)).getUTCDate();
-  const targetDay = Math.min(source.day, targetLastDay);
-
-  return `${String(targetYear).padStart(4, '0')}-${String(targetMonthIndex + 1).padStart(2, '0')}-${String(targetDay).padStart(2, '0')}`;
-};
-
-export const getDiaVencimento = (isoDate: string) => getValidIsoDateParts(isoDate)?.day || 0;
-
 export const formatCivilDate = (isoDate: string, fallback = '—') => {
   const parts = getValidIsoDateParts(isoDate);
   if (!parts) return fallback;
   return `${String(parts.day).padStart(2, '0')}/${String(parts.monthIndex + 1).padStart(2, '0')}/${parts.year}`;
 };
 
-const toCents = (value: number) => Math.max(0, Math.round((Number(value) || 0) * 100));
-
-export const buildInstallmentSchedule = (
-  valorTotal: number,
-  qtdParcelas: number,
-  primeiroVencimento: string,
-): TurmaPlanoUnicoInstallment[] => {
-  if (!Number.isInteger(qtdParcelas) || qtdParcelas < 1 || qtdParcelas > 60) return [];
-
-  const totalCentavos = toCents(valorTotal);
-  if (totalCentavos < 1) return [];
-
-  const valorBaseCentavos = Math.floor(totalCentavos / qtdParcelas);
-  const centavosRestantes = totalCentavos % qtdParcelas;
-
-  return Array.from({ length: qtdParcelas }, (_, index) => ({
-    numero: index + 1,
-    valor: Number(((valorBaseCentavos + (index < centavosRestantes ? 1 : 0)) / 100).toFixed(2)),
-    vencimento: addMonthsToISODate(primeiroVencimento, index),
-  }));
-};
-
-export const getPreviewInstallments = (schedule: TurmaPlanoUnicoInstallment[]) => {
+export const getPreviewInstallments = (schedule: ParcelaPlanoFinanceiroUnico[]) => {
   if (schedule.length <= 6) return schedule;
   return [...schedule.slice(0, 3), ...schedule.slice(-2)];
 };

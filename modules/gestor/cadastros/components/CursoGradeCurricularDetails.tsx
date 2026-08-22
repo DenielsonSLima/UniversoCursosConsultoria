@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { Curso, CursoFinanceiroConfig, Disciplina, Modulo } from '../cadastros.types';
 import { cadastrosService, normalizeCursoFinanceiroConfig } from '../cadastros.service';
 import { supabase } from '../../../../lib/supabase';
@@ -15,6 +17,11 @@ import CursoPublicoTab from './CursoPublicoTab';
 import CursoTurmasTab from './CursoTurmasTab';
 import CursoVacinasTab from './CursoVacinasTab';
 import { useCursoPublication } from './useCursoPublication';
+import CursoLivreAvaliacaoFinalTab from '../cursos-livres/avaliacao-final/CursoLivreAvaliacaoFinalTab';
+import {
+  createCursoLivreGradeRequestId,
+  cursosLivresService,
+} from '../cursos-livres/cursos-livres.service';
 
 interface CursoGradeCurricularDetailsProps {
   curso: Curso;
@@ -23,8 +30,13 @@ interface CursoGradeCurricularDetailsProps {
 }
 
 const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = ({ curso, onBack, onUpdate }) => {
+  const queryClient = useQueryClient();
   const [modulos, setModulos] = useState<Modulo[]>([]);
+  const [gradeFingerprint, setGradeFingerprint] = useState('');
+  const [gradeStructureLocked, setGradeStructureLocked] = useState(false);
+  const gradeSaveRequest = useRef<{ signature: string; requestId: string } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [gradeError, setGradeError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<ActiveTab>('grade');
   const [kpis, setKpis] = useState<{
@@ -35,6 +47,7 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
   const [loadingKpis, setLoadingKpis] = useState(true);
   const [turmasVinculadas, setTurmasVinculadas] = useState<any[]>([]);
   const [loadingTurmas, setLoadingTurmas] = useState(false);
+  const [turmasError, setTurmasError] = useState<string | null>(null);
   const publication = useCursoPublication({ curso, onUpdate });
   const {
     publicarSite,
@@ -64,11 +77,22 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
 
   const loadGrade = async () => {
     setLoading(true);
+    setGradeError(null);
     try {
-      setModulos(await cadastrosService.getGrade(curso.id));
+      if (curso.modalidade === 'LIVRE') {
+        const workspace = await cursosLivresService.getGradeWorkspace(curso.id);
+        setModulos(workspace.modulos);
+        setGradeFingerprint(workspace.fingerprint);
+        setGradeStructureLocked(workspace.estruturaBloqueada);
+        queryClient.setQueryData(['cursoLivrePublicGrade', curso.id], workspace.modulos);
+      } else {
+        setModulos(await cadastrosService.getGrade(curso.id));
+        setGradeFingerprint('');
+        setGradeStructureLocked(false);
+      }
     } catch (err) {
       console.error(err);
-      alert('Erro ao carregar grade do banco de dados.');
+      setGradeError('A grade não foi carregada. Nenhum estado vazio foi presumido.');
     } finally {
       setLoading(false);
     }
@@ -87,6 +111,7 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
 
   const loadTurmas = async () => {
     setLoadingTurmas(true);
+    setTurmasError(null);
     try {
       const { data, error } = await supabase
         .from('turmas')
@@ -97,6 +122,7 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
       setTurmasVinculadas(data || []);
     } catch (err) {
       console.error('Erro ao buscar turmas:', err);
+      setTurmasError('As turmas vinculadas não foram carregadas.');
     } finally {
       setLoadingTurmas(false);
     }
@@ -237,14 +263,44 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      await cadastrosService.saveGrade(curso.id, modulos);
+      if (curso.modalidade === 'LIVRE') {
+        if (!gradeFingerprint) throw new Error('Recarregue a grade oficial antes de salvar.');
+        const signature = JSON.stringify({ gradeFingerprint, modulos });
+        if (gradeSaveRequest.current?.signature !== signature) {
+          gradeSaveRequest.current = { signature, requestId: createCursoLivreGradeRequestId() };
+        }
+        let workspace = await cursosLivresService.saveGrade({
+          requestId: gradeSaveRequest.current.requestId,
+          cursoId: curso.id,
+          expectedFingerprint: gradeFingerprint,
+          modulos,
+        });
+        if (workspace.replayed) {
+          workspace = await cursosLivresService.getGradeWorkspace(curso.id);
+        }
+        gradeSaveRequest.current = null;
+        setModulos(workspace.modulos);
+        setGradeFingerprint(workspace.fingerprint);
+        setGradeStructureLocked(workspace.estruturaBloqueada);
+        queryClient.setQueryData(['cursoLivrePublicGrade', curso.id], workspace.modulos);
+      } else {
+        await cadastrosService.saveGrade(curso.id, modulos);
+      }
       await loadKpis();
       onUpdate();
       setIsSaving(false);
       alert('Grade curricular salva no Supabase com sucesso!');
     } catch (err) {
       console.error(err);
-      alert('Erro ao salvar grade no banco de dados.');
+      const errorCode = (err as { code?: string } | null)?.code;
+      if (errorCode === '40001' || errorCode === '55000') {
+        await loadGrade();
+        alert(errorCode === '40001'
+          ? 'A grade foi alterada em outra sessão e acaba de ser recarregada. Revise antes de salvar novamente.'
+          : 'A grade entrou em uso acadêmico e foi recarregada. Agora somente os resumos podem ser alterados.');
+      } else {
+        alert('Erro ao salvar grade no banco de dados.');
+      }
       setIsSaving(false);
     }
   };
@@ -290,7 +346,9 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
         onSaveVacinas={handleSaveVacinasCurso}
       />
 
-      {activeTab === 'turmas' && <CursoTurmasTab turmas={turmasVinculadas} loading={loadingTurmas} config={config} />}
+      {activeTab === 'turmas' && (turmasError ? (
+        <div role="alert" className="flex items-center justify-between gap-4 rounded-2xl border border-rose-100 bg-rose-50 p-5 text-sm font-bold text-rose-700"><span><AlertTriangle size={18} className="mr-2 inline" />{turmasError}</span><button type="button" onClick={() => void loadTurmas()} className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-white px-4 py-2 text-[10px] font-black uppercase"><RefreshCw size={14} /> Tentar novamente</button></div>
+      ) : <CursoTurmasTab turmas={turmasVinculadas} loading={loadingTurmas} config={config} />)}
       {activeTab === 'financeiro' && (
         <CursoFinanceiroTab
           financeiroConfig={financeiroConfig}
@@ -313,8 +371,14 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
           onToggleObrigatoria={handleToggleVacinaObrigatoria}
         />
       )}
+      {activeTab === 'avaliacao' && curso.modalidade === 'LIVRE' && (
+        <CursoLivreAvaliacaoFinalTab cursoId={curso.id} />
+      )}
       {activeTab === 'publico' && <CursoPublicoTab curso={curso} publication={publication} />}
       {activeTab === 'grade' && (
+        gradeError ? (
+          <div role="alert" className="flex items-center justify-between gap-4 rounded-2xl border border-rose-100 bg-rose-50 p-5 text-sm font-bold text-rose-700"><span><AlertTriangle size={18} className="mr-2 inline" />{gradeError}</span><button type="button" onClick={() => void loadGrade()} className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-white px-4 py-2 text-[10px] font-black uppercase"><RefreshCw size={14} /> Tentar novamente</button></div>
+        ) : (
         <CursoGradeTab
           curso={curso}
           config={config}
@@ -341,7 +405,9 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
           onRemoveModulo={handleRemoveModulo}
           onAddDisciplina={handleAddDisciplina}
           onRemoveDisciplina={handleRemoveDisciplina}
+          structureLocked={curso.modalidade === 'LIVRE' && gradeStructureLocked}
         />
+        )
       )}
     </div>
   );

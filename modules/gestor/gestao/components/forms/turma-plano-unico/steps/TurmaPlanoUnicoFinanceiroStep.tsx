@@ -1,23 +1,21 @@
-import React, { useMemo } from 'react';
-import { CalendarDays, Percent, ReceiptText, WalletCards } from 'lucide-react';
+import React from 'react';
+import { AlertCircle, CalendarDays, Loader2, Percent, ReceiptText, RefreshCw, WalletCards } from 'lucide-react';
+import type { RegraPlanoFinanceiroUnico } from '../../../../presencial-financeiro-unico/types';
 import type {
   TurmaPlanoUnicoFormConfig,
   TurmaPlanoUnicoFormData,
 } from '../turma-plano-unico-form.types';
-import {
-  buildInstallmentSchedule,
-  formatCivilDate,
-  formatCurrencyBRL,
-  formatPercentageBR,
-  getDiaVencimento,
-  getPreviewInstallments,
-} from '../turma-plano-unico-form.utils';
+import { formatCivilDate, formatCurrencyBRL, formatPercentageBR, getPreviewInstallments } from '../turma-plano-unico-form.utils';
 import CurrencyInput from '../CurrencyInput';
 
 interface TurmaPlanoUnicoFinanceiroStepProps {
   config: TurmaPlanoUnicoFormConfig;
   formData: TurmaPlanoUnicoFormData;
+  preview?: RegraPlanoFinanceiroUnico;
+  previewError: Error | null;
+  previewLoading: boolean;
   onChange: (patch: Partial<TurmaPlanoUnicoFormData>) => void;
+  onRetryPreview: () => void;
 }
 
 const toNonNegativeNumber = (value: string) => {
@@ -25,16 +23,20 @@ const toNonNegativeNumber = (value: string) => {
   return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
 };
 
-const TurmaPlanoUnicoFinanceiroStep: React.FC<TurmaPlanoUnicoFinanceiroStepProps> = ({ config, formData, onChange }) => {
-  const schedule = useMemo(() => buildInstallmentSchedule(
-    formData.valorTotal,
-    formData.qtdParcelas,
-    formData.primeiroVencimento,
-  ), [formData.primeiroVencimento, formData.qtdParcelas, formData.valorTotal]);
+const TurmaPlanoUnicoFinanceiroStep: React.FC<TurmaPlanoUnicoFinanceiroStepProps> = ({
+  config,
+  formData,
+  preview,
+  previewError,
+  previewLoading,
+  onChange,
+  onRetryPreview,
+}) => {
+  const schedule = preview?.cronograma || [];
   const previewInstallments = getPreviewInstallments(schedule);
   const hasHiddenInstallments = schedule.length > previewInstallments.length;
   const inputClass = `w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm font-semibold text-slate-700 outline-none transition ${config.theme.accentFocus}`;
-  const dueDay = getDiaVencimento(formData.primeiroVencimento);
+  const dueDay = preview?.diaVencimento || 0;
 
   return (
     <section aria-labelledby="turma-plano-unico-financeiro-title" className="space-y-6">
@@ -109,15 +111,22 @@ const TurmaPlanoUnicoFinanceiroStep: React.FC<TurmaPlanoUnicoFinanceiroStepProps
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-xs font-black uppercase tracking-wide text-[#001a33]">Prévia das parcelas</p>
-            <p className="mt-1 text-xs font-medium text-slate-500">O ajuste de centavos é distribuído automaticamente para fechar exatamente o valor total.</p>
+            <p className="mt-1 text-xs font-medium text-slate-500">Valores, datas e ajuste de centavos são calculados pelo servidor para fechar exatamente o total.</p>
           </div>
           <div className={`rounded-lg ${config.theme.accentSoftBg} px-3 py-2 text-right`}>
             <p className={`text-[9px] font-black uppercase tracking-wide ${config.theme.accentSoftText}`}>Total configurado</p>
-            <p className="mt-0.5 text-sm font-black text-[#001a33]">{formatCurrencyBRL(formData.valorTotal)}</p>
+            <p className="mt-0.5 text-sm font-black text-[#001a33]">{formatCurrencyBRL(preview?.valorTotal ?? formData.valorTotal)}</p>
           </div>
         </div>
 
-        {schedule.length ? (
+        {previewLoading ? (
+          <div className="mt-4 flex items-center justify-center gap-2 rounded-xl border border-blue-100 bg-white px-4 py-5 text-xs font-bold text-blue-700"><Loader2 size={15} className="animate-spin" /> Calculando a condição no servidor...</div>
+        ) : previewError ? (
+          <div className="mt-4 rounded-xl border border-rose-100 bg-rose-50 px-4 py-4 text-xs font-semibold text-rose-700">
+            <div className="flex items-start gap-2"><AlertCircle size={15} className="mt-0.5 shrink-0" /><span>{previewError.message || 'O banco não confirmou esta condição financeira.'}</span></div>
+            <button type="button" onClick={onRetryPreview} className="mt-3 inline-flex items-center gap-2 rounded-lg border border-rose-200 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-wide"><RefreshCw size={12} /> Tentar novamente</button>
+          </div>
+        ) : schedule.length ? (
           <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
             <div className="grid grid-cols-[auto_1fr_auto] gap-3 border-b border-slate-100 px-4 py-2 text-[9px] font-black uppercase tracking-wide text-slate-400">
               <span>Parcela</span><span>Vencimento</span><span>Valor</span>
@@ -129,14 +138,14 @@ const TurmaPlanoUnicoFinanceiroStep: React.FC<TurmaPlanoUnicoFinanceiroStepProps
                 ) : null}
                 <div className="grid grid-cols-[auto_1fr_auto] gap-3 px-4 py-2.5 text-xs">
                   <span className="font-black text-[#001a33]">{installment.numero}ª</span>
-                  <span className="font-semibold text-slate-500">{formatCivilDate(installment.vencimento, 'Defina a data')}</span>
+                  <span className="font-semibold text-slate-500">{formatCivilDate(installment.dataVencimento, 'Defina a data')}</span>
                   <span className="font-black text-[#001a33]">{formatCurrencyBRL(installment.valor)}</span>
                 </div>
               </React.Fragment>
             ))}
           </div>
         ) : (
-          <div className="mt-4 rounded-xl border border-dashed border-slate-200 bg-white px-4 py-5 text-center text-xs font-medium text-slate-500">Informe valor total, quantidade e primeiro vencimento para visualizar a divisão.</div>
+          <div className="mt-4 rounded-xl border border-dashed border-slate-200 bg-white px-4 py-5 text-center text-xs font-medium text-slate-500">Informe curso, polo, valor total, quantidade e primeiro vencimento para consultar a divisão oficial.</div>
         )}
         <p className="mt-3 text-[10px] font-medium leading-relaxed text-slate-500">Desconto, juros de {formatPercentageBR(formData.jurosAtrasoPercentual)}% ao mês e multa são regras aplicadas individualmente a cada parcela gerada.</p>
       </div>
