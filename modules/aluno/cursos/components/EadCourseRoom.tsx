@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   ArrowLeft,
+  AlertCircle,
   Award,
   BookOpen,
   CalendarDays,
@@ -10,6 +11,7 @@ import {
   FileText,
   MonitorPlay,
   Printer,
+  RefreshCw,
 } from 'lucide-react';
 import EadLearningContent from './EadLearningContent';
 import type { LearningTab } from '../cursosPage.types';
@@ -42,6 +44,13 @@ const EadCourseRoom: React.FC<EadCourseRoomProps> = ({ view }) => {
     conteudos,
     learningView,
     activeLearningTab,
+    isProgressReady,
+    isProgressLoading,
+    isProgressRefreshing,
+    progressQueryError,
+    retryProgress,
+    progressMutationError,
+    isUpdatingProgress,
   } = view;
 
     const enrollmentDate = alunoCertificado?.data_inscricao
@@ -70,7 +79,9 @@ const EadCourseRoom: React.FC<EadCourseRoomProps> = ({ view }) => {
             <div className="flex items-center gap-3 min-w-0">
               <button
                 onClick={closeSelectedCourse}
-                className="p-2 rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-blue-600 shrink-0"
+                disabled={isUpdatingProgress}
+                title={isUpdatingProgress ? 'Aguarde o salvamento do progresso.' : 'Voltar aos cursos'}
+                className="p-2 rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-blue-600 shrink-0 disabled:cursor-wait disabled:bg-slate-50 disabled:text-slate-300"
               >
                 <ArrowLeft size={18} />
               </button>
@@ -80,6 +91,21 @@ const EadCourseRoom: React.FC<EadCourseRoomProps> = ({ view }) => {
               </div>
             </div>
           </div>
+
+          {progressQueryError && (
+            <div role="alert" className="flex flex-col gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs font-bold text-amber-800 sm:flex-row sm:items-center sm:justify-between">
+              <span>O último progresso confirmado continua visível, mas a atualização falhou: {progressQueryError}</span>
+              <button
+                type="button"
+                onClick={retryProgress}
+                disabled={isProgressRefreshing}
+                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-amber-300 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-widest disabled:cursor-wait disabled:opacity-60"
+              >
+                <RefreshCw size={13} className={isProgressRefreshing ? 'animate-spin' : ''} />
+                {isProgressRefreshing ? 'Atualizando' : 'Tentar novamente'}
+              </button>
+            </div>
+          )}
 
           <section className="overflow-hidden rounded-[2rem] border border-emerald-100 bg-white shadow-sm">
             <div className="bg-emerald-50/80 p-6 sm:p-8">
@@ -125,7 +151,7 @@ const EadCourseRoom: React.FC<EadCourseRoomProps> = ({ view }) => {
                   </div>
                   <div className="rounded-2xl border border-emerald-100 bg-white p-4">
                     <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Nota final</p>
-                    <p className="mt-1 text-lg font-black text-blue-600">{summary.quizScore ?? '--'}%</p>
+                    <p className="mt-1 text-lg font-black text-blue-600">{summary?.quizScore ?? '--'}%</p>
                   </div>
                 </div>
               </div>
@@ -171,6 +197,58 @@ const EadCourseRoom: React.FC<EadCourseRoomProps> = ({ view }) => {
       );
     }
 
+    if (!isProgressReady) {
+      return (
+        <div className="space-y-6 animate-fadeIn">
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              onClick={closeSelectedCourse}
+              disabled={isUpdatingProgress}
+              title={isUpdatingProgress ? 'Aguarde o salvamento do progresso.' : 'Voltar aos cursos'}
+              className="p-2 rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-blue-600 shrink-0 disabled:cursor-wait disabled:bg-slate-50 disabled:text-slate-300"
+            >
+              <ArrowLeft size={18} />
+            </button>
+            <div className="min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-widest text-blue-600">Sala de aprendizagem</p>
+              <h2 className="text-xl sm:text-2xl font-black text-[#001a33] uppercase tracking-tight truncate">{selectedCourse.nome}</h2>
+            </div>
+          </div>
+
+          <section
+            role={progressQueryError ? 'alert' : 'status'}
+            aria-live="polite"
+            className={`rounded-[2rem] border bg-white p-7 text-center shadow-sm ${
+              progressQueryError ? 'border-red-100' : 'border-blue-100'
+            }`}
+          >
+            {isProgressLoading
+              ? <Loader2 className="mx-auto animate-spin text-blue-600" size={28} />
+              : <AlertCircle className="mx-auto text-red-600" size={28} />}
+            <h3 className="mt-3 text-sm font-black uppercase tracking-widest text-[#001a33]">
+              {isProgressLoading ? 'Carregando seu progresso' : 'Progresso indisponível'}
+            </h3>
+            <p className="mx-auto mt-2 max-w-xl text-xs font-bold leading-relaxed text-slate-500">
+              {isProgressLoading
+                ? 'Aguarde a confirmação do servidor antes de marcar aulas, vídeos ou responder atividades.'
+                : progressQueryError || 'Não foi possível confirmar seu progresso agora.'}
+            </p>
+            {!isProgressLoading && (
+              <button
+                type="button"
+                onClick={retryProgress}
+                disabled={isProgressRefreshing}
+                className="mt-4 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-white disabled:cursor-wait disabled:bg-slate-300"
+              >
+                <RefreshCw size={14} className={isProgressRefreshing ? 'animate-spin' : ''} />
+                {isProgressRefreshing ? 'Tentando novamente' : 'Tentar novamente'}
+              </button>
+            )}
+          </section>
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-6 animate-fadeIn">
         {renderCertificatePdfSource()}
@@ -187,7 +265,9 @@ const EadCourseRoom: React.FC<EadCourseRoomProps> = ({ view }) => {
           <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={closeSelectedCourse}
-              className="p-2 rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-blue-600 shrink-0"
+              disabled={isUpdatingProgress}
+              title={isUpdatingProgress ? 'Aguarde o salvamento do progresso.' : 'Voltar aos cursos'}
+              className="p-2 rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-blue-600 shrink-0 disabled:cursor-wait disabled:bg-slate-50 disabled:text-slate-300"
             >
               <ArrowLeft size={18} />
             </button>
@@ -208,10 +288,43 @@ const EadCourseRoom: React.FC<EadCourseRoomProps> = ({ view }) => {
             </div>
             <div className="bg-white border border-slate-100 rounded-2xl p-3">
               <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Nota</p>
-              <p className="text-lg font-black text-emerald-600">{summary.quizScore ?? '--'}%</p>
+              <p className="text-lg font-black text-emerald-600">{summary?.quizScore ?? '--'}%</p>
             </div>
           </div>
         </div>
+
+        {progressQueryError && (
+          <div role="alert" className="flex flex-col gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs font-bold text-amber-800 sm:flex-row sm:items-center sm:justify-between">
+            <span>O último progresso confirmado continua visível, mas a atualização falhou: {progressQueryError}</span>
+            <button
+              type="button"
+              onClick={retryProgress}
+              disabled={isProgressRefreshing}
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-amber-300 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-widest disabled:cursor-wait disabled:opacity-60"
+            >
+              <RefreshCw size={13} className={isProgressRefreshing ? 'animate-spin' : ''} />
+              Tentar novamente
+            </button>
+          </div>
+        )}
+
+        {progressMutationError && (
+          <div role="alert" className="flex flex-col gap-3 rounded-2xl border border-red-100 bg-red-50 p-4 text-xs font-bold text-red-700 sm:flex-row sm:items-center sm:justify-between">
+            <span className="flex gap-2">
+              <AlertCircle className="mt-0.5 shrink-0" size={16} />
+              {progressMutationError}
+            </span>
+            <button
+              type="button"
+              onClick={retryProgress}
+              disabled={isProgressRefreshing || isUpdatingProgress}
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-widest disabled:cursor-wait disabled:opacity-60"
+            >
+              <RefreshCw size={13} className={isProgressRefreshing ? 'animate-spin' : ''} />
+              {isProgressRefreshing ? 'Atualizando' : 'Atualizar progresso'}
+            </button>
+          </div>
+        )}
 
         <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
           <div className="h-full bg-blue-600 rounded-full transition-all" style={{ width: `${progressPercent}%` }} />

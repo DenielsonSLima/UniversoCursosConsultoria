@@ -1,6 +1,10 @@
 import { supabase } from '../../../../lib/supabase';
 import { cadastrosService } from '../cadastros.service';
 import { Curso, CursoFinanceiroConfig } from '../cadastros.types';
+import {
+  CursoTecnicoCardData,
+  normalizeCursosTecnicosCardContract,
+} from './curso-tecnico-card.contract';
 
 export type CursoTecnicoStatusFilter = 'ativo' | 'inativo';
 
@@ -69,8 +73,9 @@ const compressImage = (file: File): Promise<{ blob: Blob; ext: string; type: str
 };
 
 export const cursosTecnicosService = {
-  async getCursos(): Promise<Curso[]> {
-    return cadastrosService.getCursosByModalidade('TECNICO');
+  async getCursos(): Promise<CursoTecnicoCardData[]> {
+    const cursos = await cadastrosService.getCursosByModalidade('TECNICO');
+    return normalizeCursosTecnicosCardContract(cursos);
   },
 
   async createCurso(input: CreateCursoTecnicoInput): Promise<Curso> {

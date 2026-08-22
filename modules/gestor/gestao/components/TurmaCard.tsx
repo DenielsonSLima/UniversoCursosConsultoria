@@ -36,6 +36,17 @@ const TurmaCard: React.FC<TurmaCardProps> = ({
   const percentualOcupacao = turma.vagasTotais > 0
     ? Math.min(100, Math.max(0, (turma.alunosMatriculados / turma.vagasTotais) * 100))
     : 0;
+  const disciplinasConcluidas = turma.disciplinasConcluidas;
+  const totalDisciplinas = turma.totalDisciplinas;
+  const hasDisciplineCounts = disciplinasConcluidas !== undefined && totalDisciplinas !== undefined;
+  const progressoDisciplinas = hasDisciplineCounts
+    ? `${disciplinasConcluidas}/${totalDisciplinas}`
+    : '—/—';
+  const progressoDisciplinasLabel = !hasDisciplineCounts
+    ? 'Progresso de disciplinas indisponível'
+    : totalDisciplinas === 1
+      ? `${disciplinasConcluidas} de 1 disciplina concluída`
+      : `${disciplinasConcluidas} de ${totalDisciplinas} disciplinas concluídas`;
 
   return (
     <div
@@ -134,8 +145,8 @@ const TurmaCard: React.FC<TurmaCardProps> = ({
                 <BookOpen size={13} className={colors.text} />
                 Disciplinas
               </span>
-              <span className={`text-sm font-black ${colors.text}`}>
-                {turma.totalDisciplinas || 0}
+              <span aria-label={progressoDisciplinasLabel} className={`text-sm font-black ${colors.text}`}>
+                {progressoDisciplinas}
               </span>
             </div>
 

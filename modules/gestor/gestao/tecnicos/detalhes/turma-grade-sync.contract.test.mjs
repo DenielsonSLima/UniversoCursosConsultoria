@@ -71,3 +71,14 @@ test('mutações de aula escrevem o retorno canônico sem iniciar refetch concor
   assert.match(aulaHooks, /refetchType: 'none'|markStale/);
   assert.doesNotMatch(aulaHooks, /await invalidate\(\)/);
 });
+
+test('conclusão de disciplina invalida diretamente os cards de turma', () => {
+  const completionHook = gradeHook.slice(
+    gradeHook.indexOf('export const useToggleDisciplinaConcluidaMutation'),
+    gradeHook.indexOf('export const useAddTurmaAulaMutation'),
+  );
+
+  assert.match(completionHook, /useTurmaGradeInvalidation\(turmaId, false, true\)/);
+  assert.match(gradeHook, /gestaoQueryKeys\.classesByModality\('TECNICO'\)/);
+  assert.match(completionHook, /onSuccess: invalidate/);
+});

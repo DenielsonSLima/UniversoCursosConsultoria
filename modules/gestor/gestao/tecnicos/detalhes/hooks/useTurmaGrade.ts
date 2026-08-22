@@ -378,7 +378,7 @@ export const useToggleDisciplinaConcluidaMutation = (
   turmaId: string,
   onError?: (error: any) => void,
 ) => {
-  const invalidate = useTurmaGradeInvalidation(turmaId);
+  const invalidate = useTurmaGradeInvalidation(turmaId, false, true);
 
   return useMutation({
     mutationFn: (input: {

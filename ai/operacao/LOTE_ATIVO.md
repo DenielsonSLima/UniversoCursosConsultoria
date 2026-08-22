@@ -12,7 +12,8 @@ Estado: `PRONTO_PARA_PUBLICACAO_PRODUCAO_4_7_0`
 - Supabase principal/Produção: 26 migrations aplicadas via MCP, versões remotas `20260822201749` até `20260822213949`.
 - Homologação: não há branch Supabase nem outro projeto configurado neste workspace.
 - Versão desta entrega: `4.7.0` estável.
-- GitHub/Vercel: publicação em Produção autorizada explicitamente em 2026-08-22; commit, CI, Preview e promoção final ainda pendentes.
+- Entrega geral: o PR de produção também incorpora o lote concluído `2026-08-22-avaliacoes-ead-e-cards-tecnicos`, com dez migrations já aplicadas e manifesto próprio.
+- GitHub/Vercel: publicação em Produção autorizada explicitamente em 2026-08-22; PR `#81` aberto e gates finais em execução antes do merge.
 - Cobranças: nenhum boleto, matrícula, turma ou outro registro operacional foi criado durante a aplicação/validação.
 
 ### Critérios de aceite

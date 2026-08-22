@@ -1,11 +1,11 @@
 // File: modules/gestor/cadastros/cursos-tecnicos/components/CursoTecnicoCard.tsx
 
 import React from 'react';
-import { Clock, Calendar, ChevronRight, GraduationCap, Copy, Power, PowerOff, Trash2 } from 'lucide-react';
-import { Curso } from '../../cadastros.types';
+import { BookOpen, Clock, Calendar, ChevronRight, GraduationCap, Copy, Power, PowerOff, Trash2 } from 'lucide-react';
+import type { CursoTecnicoCardData } from '../curso-tecnico-card.contract';
 
 interface CursoTecnicoCardProps {
-  curso: Curso;
+  curso: CursoTecnicoCardData;
   onClick: () => void;
   onDuplicate: (e: React.MouseEvent) => void;
   onToggleStatus: (e: React.MouseEvent) => void;
@@ -16,6 +16,9 @@ const CursoTecnicoCard: React.FC<CursoTecnicoCardProps> = ({ curso, onClick, onD
   const area = curso.area || 'Saúde';
   const duracaoMeses = curso.duracao_meses || (curso.carga_horaria >= 1200 ? 24 : 18);
   const descricao = curso.descricao || `Formação profissionalizante na modalidade técnica em ${curso.nome}.`;
+  const disciplinasLabel = curso.total_disciplinas === 1
+    ? '1 disciplina'
+    : `${curso.total_disciplinas} disciplinas`;
 
   // Se carga_horaria_cadastrada estiver computado pelo banco, usamos ele para saber se a grade tem conteúdo.
   // Caso contrário, usamos a carga_horaria padrão.
@@ -42,7 +45,11 @@ const CursoTecnicoCard: React.FC<CursoTecnicoCardProps> = ({ curso, onClick, onD
         )}
       </div>
 
-      <div className="flex items-center justify-end gap-1.5 mb-5 relative z-10">
+      <div className="flex flex-wrap items-center justify-end gap-1.5 mb-5 relative z-10">
+        <span aria-label={disciplinasLabel} className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase px-2.5 py-1 rounded-full border border-emerald-100">
+          <BookOpen size={11} />
+          {disciplinasLabel}
+        </span>
         <span className="bg-slate-50 text-slate-500 text-[10px] font-bold uppercase px-3 py-1 rounded-full border border-slate-100">
           {area}
         </span>
