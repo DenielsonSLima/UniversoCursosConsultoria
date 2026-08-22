@@ -4,6 +4,7 @@ import {
   classifyAuthReturnFailure,
   getAuthReturnFailureMessage,
   getPasswordSetupTypeInUrl,
+  resolvePasswordSetupPresentation,
 } from './password-recovery-auth.ts';
 
 test('classifica falha de trigger do Auth como interna, sem alegar expiração', () => {
@@ -89,4 +90,22 @@ test('reconhece o retorno assinado de convite sem depender de query própria', (
       value: originalWindow,
     });
   }
+});
+
+test('mantém o visual institucional quando a URL foi limpa e o marker confirma o convite', () => {
+  assert.deepEqual(
+    resolvePasswordSetupPresentation({
+      appFlow: false,
+      audience: 'student',
+      intent: 'recovery',
+      recoverySource: null,
+      recoveryFlow: null,
+      initialKind: null,
+      authorizedKind: 'invite',
+    }),
+    {
+      isInstitutional: true,
+      isInviteFlow: true,
+    },
+  );
 });
