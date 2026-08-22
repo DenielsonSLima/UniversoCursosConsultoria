@@ -1,12 +1,12 @@
 # Jornada completa de Cursos Livres — 2026-08-22
 
-Estado: `PRONTO_PARA_PUBLICACAO_PRODUCAO_4_7_0`
+Estado: `PUBLICADO_PRODUCAO_4_7_1`
 
 ## Objetivo entregue
 
 Transformar Cursos Livres numa jornada presencial completa, reaproveitando turma, grade, aulas e diário existentes e acrescentando avaliação final online segura, conclusão/certificado automáticos e condição financeira individual baseada no plano padrão da turma.
 
-O backend foi aplicado no Supabase principal/Produção após autorização explícita do responsável. Nenhuma cobrança, matrícula ou turma artificial foi criada. A publicação do frontend e da versão estável `4.7.0` foi autorizada explicitamente em 2026-08-22 e aguarda somente os gates finais de GitHub/Vercel.
+O backend foi aplicado no Supabase principal/Produção após autorização explícita do responsável. Nenhuma cobrança, matrícula ou turma artificial foi criada. O frontend e a versão funcional `4.7.0` foram publicados pela PR `#81`, integrada por squash na `main`; a PR `#82` consolida o fechamento operacional e a versão final exibida `4.7.1`, sem alteração funcional adicional.
 
 ## Reunião e decisões de alinhamento
 
@@ -63,21 +63,32 @@ O backend foi aplicado no Supabase principal/Produção após autorização expl
 - Advisors pós-aplicação: baseline preservado em 470 avisos de segurança (49 `INFO`, 421 `WARN`) e 252 de performance (232 `INFO`, 20 `WARN`); execução anônima permaneceu em 13 funções legadas, nenhum core corretivo recebeu ACL externa e nenhuma FK nova do lote ficou sem índice.
 - Smoke autenticado bloqueado pelo ambiente: nenhum navegador in-app/Chrome está conectado à sessão (`browsers = []`).
 
-## Pendências de fechamento
+## Publicação GitHub/Vercel
+
+- PR: `#81` — `feat: Cursos Livres, avaliações EAD e cards técnicos 4.7.0`.
+- Commit atômico na `main`: `2b6cd0d0aef7b45d7fe2bf38d7ec075575f6eaed`.
+- Gates finais: Controle de versão `#224`, Qualidade do produto `#254` e Preview Vercel aprovados.
+- Deployment Vercel Produção: `Dv6B54iTJkYUYg5A8HrFWBGTW4yA`, concluído com sucesso.
+- Smoke HTTP: `/`, `/ead`, `/cursos-tecnicos` e `/login` responderam `200`; o bundle público `main-D-_Z4xBg.js` confirmou a versão `4.7.0`.
+- Fechamento operacional: PR `#82`, patch estável `4.7.1`, restrito a versão, registros e índice RAG.
+
+## Limites pós-publicação
 
 1. Executar smoke visual autenticado completo na Gestão e no Portal do Aluno quando houver navegador conectado.
 2. Validar replay e concorrência com fixture controlada quando existir homologação ou turma Livre de teste expressamente autorizada; a Produção ainda não possui dados operacionais Livres.
 3. Evitar bulk SQL de alteração/exclusão de múltiplas turmas Livres até testar esse cenário; a interface implementada é unitária.
-4. Concluir commit atômico, CI, Preview Vercel, merge em `main` e smoke HTTP de Produção; emissão bancária continua fora deste lote.
+
+Emissão bancária continua fora deste lote.
 
 ## Manifesto explícito
 
-Total: 113 arquivos
+Total: 114 arquivos
 
 ### Operação
 
 - `ai/operacao/LOTE_ATIVO.md`
 - `ai/operacao/qualidade/limite-linhas.json`
+- `ai/operacao/registros/ALTERACOES.md`
 - `ai/operacao/registros/alteracoes/2026-08-22-jornada-cursos-livres.md`
 - `internal/versioning/CHANGELOG.md`
 - `internal/versioning/changelog/2026-07-31-a-2026-08-02.md`

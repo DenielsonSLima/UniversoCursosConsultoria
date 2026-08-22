@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-08-22T21:54:48.140Z",
+  "builtAt": "2026-08-22T22:15:49.753Z",
   "manifestVersion": 2,
-  "sourceSignature": "cae4513745da0c7f7557ae6dc6064819ded92067bd17256fb12c0af57fa3cab8",
+  "sourceSignature": "0ddcc4d66c6d3064aa4a30a1b1d06b649b90bad7bc4f470ff3329f5c8109beb5",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "573e4bfe467502a98fd1b330dbfe2db7fbba13604ef924cf3ca6105379353d9d"
+      "hash": "7cc8b30de8ba657eb4feb39b5061de2811d7872fdc3e160c9c138c2d80fb12be"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -192,33 +192,33 @@
       "part": 1
     },
     {
-      "id": "e46b8bcf45f08f30b066",
-      "hash": "e46b8bcf45f08f30b0663611ccb711a043b8bc44de548cd1430d2f6061c76b3e",
+      "id": "504fab26034b17ae25c9",
+      "hash": "504fab26034b17ae25c949ab283afe80f34a0eed8b72028fd34e847672f4210e",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Lote ativo",
-      "text": "Estado: `PRONTO_PARA_PUBLICACAO_PRODUCAO_4_7_0`",
-      "normalizedText": "estado pronto para publicacao producao 4 7 0",
-      "tokenCount": 5,
+      "text": "Estado: `PUBLICADO_PRODUCAO_4_7_1`",
+      "normalizedText": "estado publicado producao 4 7 1",
+      "tokenCount": 3,
       "part": 1
     },
     {
-      "id": "7cdd295777cd6ca4cacd",
-      "hash": "7cdd295777cd6ca4cacd988269d73ee80e9eca65bb3dd9880da0bb006f65f52d",
+      "id": "459ba7d155df60f384a0",
+      "hash": "459ba7d155df60f384a03641443de9717d510e6eade4b20ed62299bd0ddc42f9",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Lote: 2026-08-22-jornada-cursos-livres",
-      "text": "- Pedido: consolidar Cursos Livres como jornada presencial com turma, professor único, aulas/diário, prova final online, certificado automático e plano financeiro individual negociável. - Base remota: `main` no commit `04d3ada4cfdb703b71a21cf68343d39373660503`, versão `4.6.1`; os lotes 4.6.0 e 4.6.1 já estão mesclados e preservados. - Registro: `ai/operacao/registros/alteracoes/2026-08-22-jornada-cursos-livres.md`. - Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-22-jornada-cursos-livres.md`. - Frentes concluídas localmente: contrato acadêmico e prova; condição financeira individual; Gestão e Portal do Aluno. - Supabase principal/Produção: 26 migrations aplicadas via MCP, versões remotas `20260822201749` até `20260822213949`. - Homologação: não há branch Supabase nem outro projeto configurado neste workspace. - Versão desta entrega: `4.7.0` estável. - Entrega geral: o PR de produção também incorpora o lote concluído `2026-08-22-avaliacoes-ead-e-cards-tecnicos`, com dez migrations já aplicadas e manifesto próprio. - GitHub/Vercel: publicação em Produção autorizada explicitamente em 2026-08-22; PR `#81` aberto e gates finais em execução antes do merge. - Cobranças:",
-      "normalizedText": "pedido consolidar cursos livres como jornada presencial com turma professor unico aulas diario prova final online certificado automatico e plano financeiro individual negociavel base remota main no commit 04d3ada4cfdb703b71a21cf68343d39373660503 versao 4 6 1 os lotes 4 6 0 e 4 6 1 ja estao mesclados e preservados registro ai operacao registros alteracoes 2026 08 22 jornada cursos livres md manifesto explicito ai operacao registros alteracoes 2026 08 22 jornada cursos livres md frentes concluidas localmente contrato academico e prova condicao financeira individual gestao e portal do aluno supabase principal producao 26 migrations aplicadas via mcp versoes remotas 20260822201749 ate 20260822213949 homologacao nao ha branch supabase nem outro projeto configurado neste workspace versao desta entrega 4 7 0 estavel entrega geral o pr de producao tambem incorpora o lote concluido 2026 08 22 avaliacoes ead e cards tecnicos com dez migrations ja aplicadas e manifesto proprio github vercel publicacao em producao autorizada explicitamente em 2026 08 22 pr 81 aberto e gates finais em execucao antes do merge cobrancas",
-      "tokenCount": 146,
+      "text": "- Pedido: consolidar Cursos Livres como jornada presencial com turma, professor único, aulas/diário, prova final online, certificado automático e plano financeiro individual negociável. - Base remota: `main` no commit `04d3ada4cfdb703b71a21cf68343d39373660503`, versão `4.6.1`; os lotes 4.6.0 e 4.6.1 já estão mesclados e preservados. - Registro: `ai/operacao/registros/alteracoes/2026-08-22-jornada-cursos-livres.md`. - Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-22-jornada-cursos-livres.md`. - Frentes concluídas localmente: contrato acadêmico e prova; condição financeira individual; Gestão e Portal do Aluno. - Supabase principal/Produção: 26 migrations aplicadas via MCP, versões remotas `20260822201749` até `20260822213949`. - Homologação: não há branch Supabase nem outro projeto configurado neste workspace. - Versão funcional publicada: `4.7.0` estável; fechamento operacional e versão final exibida: `4.7.1` estável. - Entrega geral: o PR de produção também incorpora o lote concluído `2026-08-22-avaliacoes-ead-e-cards-tecnicos`, com dez migrations já aplicadas e manifesto próprio. - GitHub/Vercel: PR `#81` integrada por squash na `main` no commit",
+      "normalizedText": "pedido consolidar cursos livres como jornada presencial com turma professor unico aulas diario prova final online certificado automatico e plano financeiro individual negociavel base remota main no commit 04d3ada4cfdb703b71a21cf68343d39373660503 versao 4 6 1 os lotes 4 6 0 e 4 6 1 ja estao mesclados e preservados registro ai operacao registros alteracoes 2026 08 22 jornada cursos livres md manifesto explicito ai operacao registros alteracoes 2026 08 22 jornada cursos livres md frentes concluidas localmente contrato academico e prova condicao financeira individual gestao e portal do aluno supabase principal producao 26 migrations aplicadas via mcp versoes remotas 20260822201749 ate 20260822213949 homologacao nao ha branch supabase nem outro projeto configurado neste workspace versao funcional publicada 4 7 0 estavel fechamento operacional e versao final exibida 4 7 1 estavel entrega geral o pr de producao tambem incorpora o lote concluido 2026 08 22 avaliacoes ead e cards tecnicos com dez migrations ja aplicadas e manifesto proprio github vercel pr 81 integrada por squash na main no commit",
+      "tokenCount": 141,
       "part": 1
     },
     {
-      "id": "e9ab3041e6a4738ed312",
-      "hash": "e9ab3041e6a4738ed312be6725cafe714fc9fde5e78cef8ed67fe6f7b10b14a7",
+      "id": "895e39cf0637bfe83acf",
+      "hash": "895e39cf0637bfe83acfd5498d2793d60994bfc757b417dc604bb45dd68d8757",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Lote: 2026-08-22-jornada-cursos-livres",
-      "text": "nenhum boleto, matrícula, turma ou outro registro operacional foi criado durante a aplicação/validação.",
-      "normalizedText": "nenhum boleto matricula turma ou outro registro operacional foi criado durante a aplicacao validacao",
-      "tokenCount": 13,
+      "text": "`2b6cd0d0aef7b45d7fe2bf38d7ec075575f6eaed`; CI, Preview e deployment Vercel Produção `Dv6B54iTJkYUYg5A8HrFWBGTW4yA` concluídos com sucesso. - Fechamento operacional: PR `#82` sincroniza lote, histórico, RAG e o patch estável `4.7.1`, sem alteração funcional adicional. - Cobranças: nenhum boleto, matrícula, turma ou outro registro operacional foi criado durante a aplicação/validação.",
+      "normalizedText": "2b6cd0d0aef7b45d7fe2bf38d7ec075575f6eaed ci preview e deployment vercel producao dv6b54itjkyuyg5a8hrfwbgtw4ya concluidos com sucesso fechamento operacional pr 82 sincroniza lote historico rag e o patch estavel 4 7 1 sem alteracao funcional adicional cobrancas nenhum boleto matricula turma ou outro registro operacional foi criado durante a aplicacao validacao",
+      "tokenCount": 38,
       "part": 2
     },
     {
@@ -252,23 +252,23 @@
       "part": 1
     },
     {
-      "id": "9771a429b05b5aa7c8d0",
-      "hash": "9771a429b05b5aa7c8d05f355842cafbea406e80bcfd8e0e3cefb8de6d19be2d",
+      "id": "eb8fc744c2a8372fcbc9",
+      "hash": "eb8fc744c2a8372fcbc906b21de72d32ac5df21629a056ba0fd6b1344683bd5a",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Validação local",
-      "text": "`anon` e as FKs novas do lote seguem cobertas. - Compatibilidade do seed: as grafias legadas `HARDWARE E PERIFÉRIOS` e `SOFTWARES E SISTEMA OPERACIONAIS` foram incorporadas aos aliases, preservando os IDs existentes e evitando criar duas matérias extras. - Smoke autenticado: bloqueado porque nenhum navegador in-app/Chrome está conectado à sessão (`browsers = []`).",
-      "normalizedText": "anon e as fks novas do lote seguem cobertas compatibilidade do seed as grafias legadas hardware e periferios e softwares e sistema operacionais foram incorporadas aos aliases preservando os ids existentes e evitando criar duas materias extras smoke autenticado bloqueado porque nenhum navegador in app chrome esta conectado a sessao browsers",
-      "tokenCount": 45,
+      "text": "`anon` e as FKs novas do lote seguem cobertas. - Compatibilidade do seed: as grafias legadas `HARDWARE E PERIFÉRIOS` e `SOFTWARES E SISTEMA OPERACIONAIS` foram incorporadas aos aliases, preservando os IDs existentes e evitando criar duas matérias extras. - Smoke autenticado: bloqueado porque nenhum navegador in-app/Chrome está conectado à sessão (`browsers = []`). - Smoke HTTP de Produção da entrega funcional: `/`, `/ead`, `/cursos-tecnicos` e `/login` responderam `200`; a publicação da PR `#81` expôs a versão `4.7.0`, sucedida pelo fechamento operacional `4.7.1` da PR `#82`.",
+      "normalizedText": "anon e as fks novas do lote seguem cobertas compatibilidade do seed as grafias legadas hardware e periferios e softwares e sistema operacionais foram incorporadas aos aliases preservando os ids existentes e evitando criar duas materias extras smoke autenticado bloqueado porque nenhum navegador in app chrome esta conectado a sessao browsers smoke http de producao da entrega funcional ead cursos tecnicos e login responderam 200 a publicacao da pr 81 expos a versao 4 7 0 sucedida pelo fechamento operacional 4 7 1 da pr 82",
+      "tokenCount": 71,
       "part": 2
     },
     {
-      "id": "944483614ac091c6f730",
-      "hash": "944483614ac091c6f730b4461f26d64f8398c253c21dc59c1b4673a9bbdf5e87",
+      "id": "9117831e3a029e02d2c7",
+      "hash": "9117831e3a029e02d2c72e8c8e7332e7dd60dc46448b3634392c39db2f4e5331",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Pendências de fechamento",
-      "text": "1. Fazer smoke visual autenticado da Gestão e do Portal do Aluno quando um navegador in-app/Chrome estiver conectado. 2. Executar replay e concorrência com fixture controlada quando existir homologação ou uma turma Livre de teste autorizada; Produção ainda não possui turma/matrícula Livre e não recebeu fixture artificial. 3. Evitar operações SQL em lote que alterem/excluam várias turmas Livres até validar esse cenário específico; a interface atual opera uma turma por vez. 4. Concluir commit atômico, CI, Preview Vercel, merge em `main` e smoke HTTP de Produção.",
-      "normalizedText": "1 fazer smoke visual autenticado da gestao e do portal do aluno quando um navegador in app chrome estiver conectado 2 executar replay e concorrencia com fixture controlada quando existir homologacao ou uma turma livre de teste autorizada producao ainda nao possui turma matricula livre e nao recebeu fixture artificial 3 evitar operacoes sql em lote que alterem excluam varias turmas livres ate validar esse cenario especifico a interface atual opera uma turma por vez 4 concluir commit atomico ci preview vercel merge em main e smoke http de producao",
-      "tokenCount": 81,
+      "section": "Limites pós-publicação",
+      "text": "1. Fazer smoke visual autenticado da Gestão e do Portal do Aluno quando um navegador in-app/Chrome estiver conectado. 2. Executar replay e concorrência com fixture controlada quando existir homologação ou uma turma Livre de teste autorizada; Produção ainda não possui turma/matrícula Livre e não recebeu fixture artificial. 3. Evitar operações SQL em lote que alterem/excluam várias turmas Livres até validar esse cenário específico; a interface atual opera uma turma por vez.",
+      "normalizedText": "1 fazer smoke visual autenticado da gestao e do portal do aluno quando um navegador in app chrome estiver conectado 2 executar replay e concorrencia com fixture controlada quando existir homologacao ou uma turma livre de teste autorizada producao ainda nao possui turma matricula livre e nao recebeu fixture artificial 3 evitar operacoes sql em lote que alterem excluam varias turmas livres ate validar esse cenario especifico a interface atual opera uma turma por vez",
+      "tokenCount": 68,
       "part": 1
     },
     {
