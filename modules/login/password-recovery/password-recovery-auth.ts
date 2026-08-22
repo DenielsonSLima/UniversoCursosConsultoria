@@ -16,6 +16,36 @@ export interface PasswordRecoveryPageProps {
   intent?: PasswordRecoveryIntent;
 }
 
+interface PasswordSetupPresentationInput {
+  appFlow: boolean;
+  audience: PasswordRecoveryAudience;
+  intent: PasswordRecoveryIntent;
+  recoverySource: string | null;
+  recoveryFlow: string | null;
+  initialKind: PasswordSetupKind | null;
+  authorizedKind: PasswordSetupKind | null;
+}
+
+export const resolvePasswordSetupPresentation = ({
+  appFlow,
+  audience,
+  intent,
+  recoverySource,
+  recoveryFlow,
+  initialKind,
+  authorizedKind,
+}: PasswordSetupPresentationInput) => {
+  const hasInviteEvidence = initialKind === 'invite' || authorizedKind === 'invite';
+  return {
+    isInstitutional: audience === 'institutional'
+      || recoverySource === 'institucional'
+      || (!appFlow && hasInviteEvidence),
+    isInviteFlow: intent === 'invite'
+      || recoveryFlow === 'invite'
+      || hasInviteEvidence,
+  };
+};
+
 interface AuthReturnFailureInput {
   error?: string | null;
   errorCode?: string | null;
