@@ -42,7 +42,7 @@ export const verifyTemporaryPasswordWithClient = async (
       sessionUserId === authUserId &&
       normalizeEmail(data?.user?.email) === email;
   } catch {
-    verified = false;
+    // Mantém o resultado fechado como falso quando o Auth não responde.
   }
 
   try {

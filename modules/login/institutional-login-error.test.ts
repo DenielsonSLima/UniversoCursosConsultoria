@@ -7,10 +7,14 @@ import {
   PORTAL_ACCESS_ERROR_MESSAGE,
 } from './institutional-login-error.ts';
 
-const [institutionalLoginSource, publicAlunoAuthSource] = await Promise.all([
+const [institutionalLoginSource, publicAlunoAuthEntry] = await Promise.all([
   readFile(new URL('./LoginPage.tsx', import.meta.url), 'utf8'),
   readFile(new URL('../public/login/aluno-public-auth.service.ts', import.meta.url), 'utf8'),
 ]);
+const publicAlunoAuthSource = [
+  publicAlunoAuthEntry,
+  await readFile(new URL('../public/login/aluno-public-session.service.ts', import.meta.url), 'utf8'),
+].join('\n');
 
 test('oculta detalhes SQL de falha desconhecida do serviço de contexto', () => {
   const error = new Error('column reference "polo_id" is ambiguous') as Error & { code: string };

@@ -277,25 +277,38 @@ Deno.test("identificador técnico do Auth serve apenas para reconciliar uma emis
       import.meta.url,
     ),
   );
+  const emissionCoordinator = await Deno.readTextFile(
+    new URL(
+      "../functions/portal-user-management/handlers/temporary-password-emission.ts",
+      import.meta.url,
+    ),
+  );
 
   assert.match(handler, /universocc_temporary_password_issue_id/i);
   assert.match(handler, /universocc_temporary_password_write_nonce/i);
   assert.match(
     handler,
-    /\[TEMPORARY_PASSWORD_ISSUE_METADATA_KEY\]: issueId,[\s\S]*?\[TEMPORARY_PASSWORD_WRITE_NONCE_METADATA_KEY\]: issueId/i,
+    /issueMetadataKey:\s*TEMPORARY_PASSWORD_ISSUE_METADATA_KEY[\s\S]*?writeNonceMetadataKey:\s*TEMPORARY_PASSWORD_WRITE_NONCE_METADATA_KEY/i,
   );
   assert.match(
-    handler,
-    /temporaryPasswordIssueIdFromAuthUser\(data\.user\) === issueId[\s\S]*?temporaryPasswordWriteNonceFromAuthUser\(data\.user\) === issueId/i,
+    emissionCoordinator,
+    /\[config\.issueMetadataKey\]: issueId,[\s\S]*?\[config\.writeNonceMetadataKey\]: issueId/i,
+  );
+  assert.match(
+    emissionCoordinator,
+    /issueIdFromAuthUser\(data\.user\) === issueId[\s\S]*?writeNonceFromAuthUser\(data\.user\) === issueId/i,
   );
   assert.match(handler, /reconcilePendingTemporaryPasswordEmission/i);
   assert.match(handler, /markTemporaryPasswordIssueInAuth/i);
   assert.match(handler, /cleanTemporaryPasswordIssueMarker/i);
   assert.match(handler, /portal_confirmar_limpeza_emissao_senha_temporaria/i);
-  assert.match(handler, /app_metadata: appMetadataForTemporaryPasswordIssue/i);
   assert.match(
-    handler,
-    /\[TEMPORARY_PASSWORD_ISSUE_METADATA_KEY\]: null/i,
+    emissionCoordinator,
+    /app_metadata:\s*appMetadataWithIssue\(authUser, issueId\)/i,
+  );
+  assert.match(
+    emissionCoordinator,
+    /\[config\.issueMetadataKey\]: null/i,
   );
   assert.ok(
     handler.indexOf("markTemporaryPasswordIssueInAuth(") <

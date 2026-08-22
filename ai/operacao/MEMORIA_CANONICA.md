@@ -1,6 +1,6 @@
 # Memória canônica do projeto
 
-Atualizada em: 2026-08-09
+Atualizada em: 2026-08-22
 
 ## Finalidade
 
@@ -19,6 +19,8 @@ Este arquivo é um índice curto de contexto durável. Ajustes rápidos não pre
 - O frontend React/TypeScript/Vite coleta intenção e apresenta o retorno canônico.
 - Regras acadêmicas, financeiras, autorização, elegibilidade, valores e paginação pertencem ao backend/RPC quando aplicável.
 - TanStack Query e Realtime usam invalidação pelo menor escopo afetado.
+- O teto arquitetural é de 500 linhas físicas por arquivo manual. Todo arquivo tocado acima disso deve ser modularizado no próprio lote; a adoção é incremental pelos manifestos auditados.
+- Migrations já aplicadas permanecem imutáveis mesmo acima do teto. Novas migrations devem ser divididas antes da aplicação quando a separação for tecnicamente segura; gerados, lockfiles, binários e terceiros ficam fora da contagem.
 - Testes-fonte e migrations permanecem no repositório mesmo depois de executados.
 - tmp, caches, relatórios e PDFs/PNGs de QA são regeneráveis e podem ser limpos.
 

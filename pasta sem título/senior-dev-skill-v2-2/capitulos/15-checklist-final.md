@@ -15,8 +15,9 @@
 
 [ ] Existe .service.ts, .hooks.ts e .types.ts separados para o módulo?
 
-[ ] Nenhum arquivo tem mais de 300 linhas?
+[ ] Nenhum arquivo manual tocado ou criado tem mais de 500 linhas físicas?
     Se tiver: divida em arquivos menores com responsabilidades únicas.
+    Exceções: migrations já aplicadas, gerados, lockfiles, binários e terceiros.
 
 [ ] Imports usam path alias @/ em vez de ../../..?
 

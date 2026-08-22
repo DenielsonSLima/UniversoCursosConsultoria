@@ -6,9 +6,9 @@ import {
   type PreparedResponsavelAccess,
   resolveCanonicalResponsavelIdentity,
   respondResponsavelAccessFailure,
-  type ResponsavelAuthUser,
 } from "./responsavel-access-context.ts";
 import { generateTemporaryPassword } from "./temporary-password.ts";
+import { createTemporaryPasswordEmissionCoordinator } from "./temporary-password-emission.ts";
 
 const ACTION = "issue-responsavel-temporary-password";
 export const RESPONSAVEL_TEMPORARY_PASSWORD_ISSUE_METADATA_KEY =
@@ -16,231 +16,61 @@ export const RESPONSAVEL_TEMPORARY_PASSWORD_ISSUE_METADATA_KEY =
 export const RESPONSAVEL_TEMPORARY_PASSWORD_WRITE_NONCE_METADATA_KEY =
   "universocc_responsavel_temporary_password_write_nonce";
 
-const emissionRpc = async (
-  context: HandlerContext,
-  name: string,
-  responsavelLegalId: string,
-  issueId: string,
-  actorAuthUserId: string,
-) => {
-  try {
-    const { data, error } = await context.admin.rpc(name, {
-      p_responsavel_legal_id: responsavelLegalId,
-      p_emissao_id: issueId,
-      p_actor_auth_user_id: actorAuthUserId,
-    });
-    if (error) {
-      return {
-        value: false,
-        failed: true,
-        errorCode: String(error.code || ""),
-        errorMessage: String(error.message || ""),
-      };
-    }
-    return { value: data === true, failed: false };
-  } catch {
-    return { value: false, failed: true };
-  }
-};
+const responsavelTemporaryPasswordEmission =
+  createTemporaryPasswordEmissionCoordinator({
+    targetParameter: "p_responsavel_legal_id",
+    reserveRpc: "portal_reservar_emissao_senha_temporaria_responsavel",
+    completeRpc: "portal_concluir_emissao_senha_temporaria_responsavel",
+    cancelRpc: "portal_cancelar_emissao_senha_temporaria_responsavel",
+    confirmCleanupRpc:
+      "portal_confirmar_limpeza_emissao_senha_temporaria_responsavel",
+    issueMetadataKey: RESPONSAVEL_TEMPORARY_PASSWORD_ISSUE_METADATA_KEY,
+    writeNonceMetadataKey:
+      RESPONSAVEL_TEMPORARY_PASSWORD_WRITE_NONCE_METADATA_KEY,
+  });
 
-const reserveTemporaryPasswordEmission = (
-  context: HandlerContext,
-  responsavelLegalId: string,
-  issueId: string,
-  actorAuthUserId: string,
-) =>
-  emissionRpc(
-    context,
-    "portal_reservar_emissao_senha_temporaria_responsavel",
-    responsavelLegalId,
-    issueId,
-    actorAuthUserId,
-  );
-
-const completeTemporaryPasswordEmission = (
-  context: HandlerContext,
-  responsavelLegalId: string,
-  issueId: string,
-  actorAuthUserId: string,
-) =>
-  emissionRpc(
-    context,
-    "portal_concluir_emissao_senha_temporaria_responsavel",
-    responsavelLegalId,
-    issueId,
-    actorAuthUserId,
-  );
-
-const cancelTemporaryPasswordEmission = (
-  context: HandlerContext,
-  responsavelLegalId: string,
-  issueId: string,
-  actorAuthUserId: string,
-) =>
-  emissionRpc(
-    context,
-    "portal_cancelar_emissao_senha_temporaria_responsavel",
-    responsavelLegalId,
-    issueId,
-    actorAuthUserId,
-  );
-
-const confirmTemporaryPasswordEmissionCleanup = (
-  context: HandlerContext,
-  responsavelLegalId: string,
-  issueId: string,
-  actorAuthUserId: string,
-) =>
-  emissionRpc(
-    context,
-    "portal_confirmar_limpeza_emissao_senha_temporaria_responsavel",
-    responsavelLegalId,
-    issueId,
-    actorAuthUserId,
-  );
-
-const issueIdFromAuthUser = (authUser: ResponsavelAuthUser) =>
-  String(
-    authUser?.app_metadata
-      ?.[RESPONSAVEL_TEMPORARY_PASSWORD_ISSUE_METADATA_KEY] ||
-      "",
-  ).trim();
-
-const writeNonceFromAuthUser = (authUser: ResponsavelAuthUser) =>
-  String(
-    authUser?.app_metadata
-      ?.[RESPONSAVEL_TEMPORARY_PASSWORD_WRITE_NONCE_METADATA_KEY] ||
-      "",
-  ).trim();
-
-const appMetadataWithIssue = (
-  authUser: ResponsavelAuthUser,
-  issueId: string,
-) => ({
-  ...(authUser?.app_metadata && typeof authUser.app_metadata === "object" &&
-      !Array.isArray(authUser.app_metadata)
-    ? authUser.app_metadata
-    : {}),
-  [RESPONSAVEL_TEMPORARY_PASSWORD_ISSUE_METADATA_KEY]: issueId,
-  [RESPONSAVEL_TEMPORARY_PASSWORD_WRITE_NONCE_METADATA_KEY]: issueId,
-});
-
-const appMetadataWithoutIssue = (authUser: ResponsavelAuthUser) => ({
-  ...(authUser?.app_metadata && typeof authUser.app_metadata === "object" &&
-      !Array.isArray(authUser.app_metadata)
-    ? authUser.app_metadata
-    : {}),
-  // GoTrue mescla app_metadata; null remove somente o marcador do Responsável.
-  [RESPONSAVEL_TEMPORARY_PASSWORD_ISSUE_METADATA_KEY]: null,
-  [RESPONSAVEL_TEMPORARY_PASSWORD_WRITE_NONCE_METADATA_KEY]: null,
-});
-
+const reserveTemporaryPasswordEmission =
+  responsavelTemporaryPasswordEmission.reserve;
+const completeTemporaryPasswordEmission =
+  responsavelTemporaryPasswordEmission.complete;
 const markIssueInAuth = async (
   context: HandlerContext,
   authUserId: string,
   issueId: string,
-) => {
-  let authUser: ResponsavelAuthUser;
-  try {
-    const { data, error } = await context.admin.auth.admin.getUserById(
-      authUserId,
-    );
-    if (error || !data?.user) return false;
-    authUser = data.user;
-  } catch {
-    return false;
-  }
-
-  const currentIssueId = issueIdFromAuthUser(authUser);
-  const currentWriteNonce = writeNonceFromAuthUser(authUser);
-  if (
-    (currentIssueId && currentIssueId !== issueId) ||
-    (currentWriteNonce && currentWriteNonce !== issueId)
-  ) return false;
-  if (currentIssueId !== issueId || currentWriteNonce !== issueId) {
-    try {
-      await context.admin.auth.admin.updateUserById(authUserId, {
-        app_metadata: appMetadataWithIssue(authUser, issueId),
-      });
-    } catch {
-      // Uma resposta perdida pode ocorrer depois do commit; confirme abaixo.
-    }
-  }
-
-  try {
-    const { data, error } = await context.admin.auth.admin.getUserById(
-      authUserId,
-    );
-    return !error && Boolean(data?.user) &&
-      issueIdFromAuthUser(data.user) === issueId &&
-      writeNonceFromAuthUser(data.user) === issueId;
-  } catch {
-    return false;
-  }
-};
-
+) =>
+  (await responsavelTemporaryPasswordEmission.markIssueInAuth(
+    context,
+    authUserId,
+    issueId,
+  )).marked;
 const cleanIssueMarker = async (
   context: HandlerContext,
   responsavelLegalId: string,
   issueId: string,
   authUserId: string,
   actorAuthUserId: string,
-) => {
-  try {
-    const { data, error } = await context.admin.auth.admin.getUserById(
-      authUserId,
-    );
-    if (error || !data?.user) return false;
-    const currentIssueId = issueIdFromAuthUser(data.user);
-    const currentWriteNonce = writeNonceFromAuthUser(data.user);
-    if (
-      (currentIssueId && currentIssueId !== issueId) ||
-      (currentWriteNonce && currentWriteNonce !== issueId)
-    ) return false;
-    if (currentIssueId === issueId || currentWriteNonce === issueId) {
-      try {
-        await context.admin.auth.admin.updateUserById(authUserId, {
-          app_metadata: appMetadataWithoutIssue(data.user),
-        });
-      } catch {
-        // A RPC abaixo relê auth.users e falha fechada se a remoção não ocorreu.
-      }
-    }
-  } catch {
-    return false;
-  }
-
-  const confirmation = await confirmTemporaryPasswordEmissionCleanup(
+) =>
+  (await responsavelTemporaryPasswordEmission.cleanIssueMarker(
     context,
     responsavelLegalId,
     issueId,
+    authUserId,
     actorAuthUserId,
-  );
-  return !confirmation.failed && confirmation.value;
-};
-
+  )).cleaned;
 const cancelAndCleanIssue = async (
   context: HandlerContext,
   responsavelLegalId: string,
   issueId: string,
   authUserId: string,
   actorAuthUserId: string,
-) => {
-  const cancellation = await cancelTemporaryPasswordEmission(
-    context,
-    responsavelLegalId,
-    issueId,
-    actorAuthUserId,
-  );
-  if (cancellation.failed || !cancellation.value) return false;
-  return cleanIssueMarker(
+) =>
+  (await responsavelTemporaryPasswordEmission.cancelAndCleanIssue(
     context,
     responsavelLegalId,
     issueId,
     authUserId,
     actorAuthUserId,
-  );
-};
+  )).cleaned;
 
 const reconcilePendingIssue = async (
   context: HandlerContext,

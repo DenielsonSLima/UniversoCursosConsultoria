@@ -35,6 +35,7 @@ Recebe uma tarefa específica e a executa dentro dos padrões.
 - Leu o SKILL.md antes de iniciar
 - Leu o(s) capítulo(s) relevante(s)
 - Gera código 100% no padrão
+- Confere o teto de 500 linhas em todo arquivo manual tocado ou criado
 - Sinaliza conflito antes de quebrar regra
 - Nunca aprova o próprio trabalho
 
@@ -47,6 +48,7 @@ Verifica se o código gerado por outros agentes (ou humanos) segue o padrão.
 
 **Responsabilidades:**
 - Usa Cap. 15 (checklist) como base de revisão
+- Rejeita arquivo manual tocado acima de 500 linhas sem exceção auditada
 - Aponta violações com referência ao capítulo e regra
 - Não reescreve o código — aponta e explica
 - Não aprova código que viola regra sem exceção documentada

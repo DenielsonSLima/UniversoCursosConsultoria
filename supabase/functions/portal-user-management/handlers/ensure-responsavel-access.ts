@@ -6,16 +6,14 @@ import {
   loadPreparedResponsavelAccess,
   respondResponsavelAccessFailure,
 } from "./responsavel-access-context.ts";
+import {
+  buildResponsavelInviteOperationMetadata,
+  hasValidResponsavelInviteOperationMarker,
+} from "./responsavel-invite-reconciliation.ts";
+export { INVITE_RECONCILIATION_PROOF_RPC } from "./responsavel-invite-reconciliation.ts";
 
 const ACTION = "ensure-responsavel-access";
 const EMAIL_PATTERN = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
-const INVITE_OPERATION_NONCE_KEY = "invite_operation_nonce";
-const INVITE_OPERATION_ACTOR_KEY = "invite_operation_actor";
-const INVITE_OPERATION_PROOF_KEY = "invite_operation_proof";
-const INVITE_OPERATION_VERSION_KEY = "invite_operation_version";
-const INVITE_OPERATION_VERSION = "v1";
-export const INVITE_RECONCILIATION_PROOF_RPC =
-  "portal_identidade_assinar_convite_responsavel";
 const ACCESS_BLOCK_MESSAGES: Readonly<Record<string, string>> = {
   STATUS_NAO_ATIVO: "Ative o cadastro do responsável antes de criar o acesso.",
   CPF_OBRIGATORIO:
@@ -111,99 +109,6 @@ const hasSafeMultiProfileOwnership = async (
     ),
     lookupFailed: false,
   };
-};
-
-const requestInviteOperationProof = async (
-  context: HandlerContext,
-  originalActorAuthUserId: string,
-  requestId: string,
-  responsavelLegalId: string,
-  email: string,
-) => {
-  const currentActorAuthUserId = String(
-    context.gestor?.auth_user_id || "",
-  ).trim();
-  if (
-    !isUuid(currentActorAuthUserId) || !isUuid(originalActorAuthUserId) ||
-    !isUuid(requestId) || !isUuid(responsavelLegalId)
-  ) {
-    throw new Error("CONTRATO_RECONCILIACAO_CONVITE_INVALIDO");
-  }
-
-  const { data, error } = await context.admin.rpc(
-    INVITE_RECONCILIATION_PROOF_RPC,
-    {
-      p_current_actor_auth_user_id: currentActorAuthUserId,
-      p_original_actor_auth_user_id: originalActorAuthUserId,
-      p_request_id: requestId,
-      p_responsavel_legal_id: responsavelLegalId,
-      p_email: normalizeEmail(email),
-    },
-  );
-  if (error || typeof data !== "string") {
-    throw new Error("RECONCILIACAO_CONVITE_INDISPONIVEL");
-  }
-  const proof = data.trim().toLowerCase();
-  if (!/^[0-9a-f]{64}$/.test(proof)) {
-    throw new Error("PROVA_RECONCILIACAO_CONVITE_INVALIDA");
-  }
-  return proof;
-};
-
-const constantTimeEqual = (left: string, right: string) => {
-  const length = Math.max(left.length, right.length);
-  let difference = left.length ^ right.length;
-  for (let index = 0; index < length; index += 1) {
-    difference |= (left.charCodeAt(index) || 0) ^
-      (right.charCodeAt(index) || 0);
-  }
-  return difference === 0;
-};
-
-/**
- * user_metadata pode ser alterado pelo próprio usuário. Por isso o marcador
- * só é aceito quando a HMAC emitida pelo servidor comprova ator e nonce
- * originais, o responsável e o e-mail. Ator/nonce atuais podem mudar após um
- * reload; a autorização atual é refeita pela RPC e o requestId atual segue
- * para o bind idempotente. Nenhum campo isolado autoriza o vínculo.
- */
-const hasValidInviteOperationMarker = async (
-  context: HandlerContext,
-  authUser: AuthUserRecord,
-  responsavelLegalId: string,
-  email: string,
-) => {
-  const metadata = authUser.user_metadata || {};
-  const originalActorAuthUserId = String(
-    metadata[INVITE_OPERATION_ACTOR_KEY] || "",
-  );
-  const originalRequestId = String(
-    metadata[INVITE_OPERATION_NONCE_KEY] || "",
-  );
-  if (
-    String(metadata[INVITE_OPERATION_VERSION_KEY] || "") !==
-      INVITE_OPERATION_VERSION ||
-    !isUuid(originalActorAuthUserId) ||
-    !isUuid(originalRequestId) ||
-    metadata.origem !== "cadastro_responsavel_legal" ||
-    String(metadata.responsavel_legal_id || "") !== responsavelLegalId ||
-    normalizeEmail(authUser.email) !== normalizeEmail(email)
-  ) {
-    return false;
-  }
-
-  const receivedProof = String(
-    metadata[INVITE_OPERATION_PROOF_KEY] || "",
-  ).toLowerCase();
-  if (!/^[0-9a-f]{64}$/.test(receivedProof)) return false;
-  const expectedProof = await requestInviteOperationProof(
-    context,
-    originalActorAuthUserId,
-    originalRequestId,
-    responsavelLegalId,
-    email,
-  );
-  return constantTimeEqual(receivedProof, expectedProof);
 };
 
 const bindResponsavelAccess = async (
@@ -322,7 +227,7 @@ export const handleEnsureResponsavelAccess = async (
   if (authUser?.id) {
     let isReconciledInvite: boolean;
     try {
-      isReconciledInvite = await hasValidInviteOperationMarker(
+      isReconciledInvite = await hasValidResponsavelInviteOperationMarker(
         context,
         authUser,
         responsavelLegalId,
@@ -372,14 +277,15 @@ export const handleEnsureResponsavelAccess = async (
       );
     }
 
-    let invitationProof: string;
+    let invitationMetadata: Record<string, unknown>;
     try {
-      invitationProof = await requestInviteOperationProof(
+      invitationMetadata = await buildResponsavelInviteOperationMetadata(
         context,
         actorAuthUserId,
         requestId,
         responsavelLegalId,
         prepared.email,
+        prepared.nome,
       );
     } catch {
       return publicError(
@@ -396,16 +302,7 @@ export const handleEnsureResponsavelAccess = async (
       inviteResult = await context.admin.auth.admin.inviteUserByEmail(
         prepared.email,
         {
-          data: {
-            nome: prepared.nome,
-            origem: "cadastro_responsavel_legal",
-            tipo: "ResponsavelLegal",
-            responsavel_legal_id: responsavelLegalId,
-            [INVITE_OPERATION_VERSION_KEY]: INVITE_OPERATION_VERSION,
-            [INVITE_OPERATION_ACTOR_KEY]: actorAuthUserId,
-            [INVITE_OPERATION_NONCE_KEY]: requestId,
-            [INVITE_OPERATION_PROOF_KEY]: invitationProof,
-          },
+          data: invitationMetadata,
           redirectTo: redirectResolution.redirectTo,
         },
       );
@@ -424,7 +321,7 @@ export const handleEnsureResponsavelAccess = async (
         );
         if (
           possibleReconciliation?.id &&
-          await hasValidInviteOperationMarker(
+          await hasValidResponsavelInviteOperationMarker(
             context,
             possibleReconciliation,
             responsavelLegalId,
@@ -447,7 +344,7 @@ export const handleEnsureResponsavelAccess = async (
     }
     let inviteMarkerIsValid: boolean;
     try {
-      inviteMarkerIsValid = await hasValidInviteOperationMarker(
+      inviteMarkerIsValid = await hasValidResponsavelInviteOperationMarker(
         context,
         authUser,
         responsavelLegalId,

@@ -4,12 +4,16 @@ import test from 'node:test';
 
 const readSource = (relativePath: string) => readFile(new URL(relativePath, import.meta.url), 'utf8');
 
-const [contractSource, serviceSource, sessionSource, publicAuthSource] = await Promise.all([
+const [contractSource, serviceSource, sessionSource, publicAuthEntry] = await Promise.all([
   readSource('./portal-context.contract.ts'),
   readSource('./portal-context.service.ts'),
   readSource('./portal-session.ts'),
   readSource('../public/login/aluno-public-auth.service.ts'),
 ]);
+const publicAuthSource = [
+  publicAuthEntry,
+  await readSource('../public/login/aluno-public-first-access.service.ts'),
+].join('\n');
 
 test('preserva o primeiro acesso pendente dos perfis públicos no perfil escolhido', () => {
   assert.match(contractSource, /interface PortalFirstAccess[\s\S]*acceptedTermsAt: string \| null[\s\S]*acceptedTermsVersion: string \| null[\s\S]*requiresPasswordReset: boolean/);

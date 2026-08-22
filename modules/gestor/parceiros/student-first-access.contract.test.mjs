@@ -11,7 +11,7 @@ const [
   emailStatusSource,
   partnerAccessSource,
   firstAccessPageSource,
-  publicAuthSource,
+  publicAuthEntry,
 ] = await Promise.all([
   readSource('./hooks/useParceirosMutations.ts'),
   readSource('./portal-activation.service.ts'),
@@ -20,6 +20,11 @@ const [
   readSource('../../public/login/AlunoFirstAccessPage.tsx'),
   readSource('../../public/login/aluno-public-auth.service.ts'),
 ]);
+const publicAuthSource = [
+  publicAuthEntry,
+  await readSource('../../public/login/aluno-public-auth.helpers.ts'),
+  await readSource('../../public/login/aluno-public-first-access.service.ts'),
+].join('\n');
 
 test('cadastro pelo gestor deixa termos e acesso sob autoridade do convite e primeiro acesso', () => {
   for (const field of [

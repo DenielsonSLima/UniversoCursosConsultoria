@@ -4,18 +4,22 @@ import test from 'node:test';
 
 const readSource = (relativePath: string) => readFile(new URL(relativePath, import.meta.url), 'utf8');
 
-const [serviceSource, pageSource, webLoginSource, appLoginSource, alunoPortalHookSource] = await Promise.all([
-  readSource('./aluno-public-auth.service.ts'),
+const [pageSource, webLoginEntry, appLoginSource, alunoPortalHookSource] = await Promise.all([
   readSource('./AlunoFirstAccessPage.tsx'),
   readSource('./AlunoLoginPublicPage.tsx'),
   readSource('../../aluno/login-app/AlunoAppLoginPage.tsx'),
   readSource('../../aluno/hooks/useAlunoPortalProfile.ts'),
 ]);
+const firstAccessServiceSource = await readSource('./aluno-public-first-access.service.ts');
+const webLoginSource = [
+  webLoginEntry,
+  await readSource('./useAlunoLoginPublicPage.ts'),
+].join('\n');
 
 test('primeiro acesso usa senha no Auth e aceite atômico no backend', () => {
-  const finalizeSection = serviceSource.slice(
-    serviceSource.indexOf('async finalizeFirstAccess'),
-    serviceSource.indexOf('needsInitialAccess'),
+  const finalizeSection = firstAccessServiceSource.slice(
+    firstAccessServiceSource.indexOf('finalizePublicAlunoFirstAccess'),
+    firstAccessServiceSource.indexOf('needsPublicAlunoInitialAccess'),
   );
 
   assert.match(finalizeSection, /supabase\.auth\.updateUser\(\{[\s\S]*password: newPassword/);
@@ -43,14 +47,17 @@ test('next é limitado ao portal do papel atual e rejeita caminho protocol-relat
 });
 
 test('seleção web e app transporta contextId opaco até o primeiro acesso', () => {
-  assert.match(webLoginSource, /buildPortalFirstAccessPath\(profile\.tipo, profile\.contextId, redirect\)/);
+  assert.match(
+    webLoginSource,
+    /buildPortalFirstAccessPath\(\s*profile\.tipo,\s*profile\.contextId,\s*redirect,?\s*\)/,
+  );
   assert.match(appLoginSource, /params\.set\('context', profile\.contextId\)/);
   assert.match(pageSource, /searchParams\.get\('context'\)/);
 });
 
 test('perfil de portal incompleto falha fechado no login e na entrada direta do portal', () => {
-  const needsInitialAccessSection = serviceSource.slice(
-    serviceSource.indexOf('needsInitialAccess'),
+  const needsInitialAccessSection = firstAccessServiceSource.slice(
+    firstAccessServiceSource.indexOf('needsPublicAlunoInitialAccess'),
   );
   assert.match(needsInitialAccessSection, /requiresPortalFirstAccess\(profile\)/);
   assert.doesNotMatch(needsInitialAccessSection, /hasFirstAccessState/);

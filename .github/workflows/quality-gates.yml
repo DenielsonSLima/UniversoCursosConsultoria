@@ -17,6 +17,7 @@ jobs:
       - name: Baixar o repositório
         uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Preparar Node.js
@@ -32,6 +33,16 @@ jobs:
 
       - name: Instalar dependências
         run: npm ci
+
+      - name: Validar teto de 500 linhas
+        run: npm run check:file-lines
+
+      - name: Preservar migrations aplicadas contra a base
+        if: github.event_name == 'pull_request'
+        run: npm run check:file-lines -- --check-diff "${{ github.event.pull_request.base.sha }}" "${{ github.sha }}"
+
+      - name: Validar contrato operacional dos agentes
+        run: npm run test:agent-operations
 
       - name: Validar TypeScript
         run: npx tsc --noEmit

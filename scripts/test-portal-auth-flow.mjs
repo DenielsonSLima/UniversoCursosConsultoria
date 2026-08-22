@@ -9,8 +9,9 @@ const [
   turnstileWidget,
   institutionalLoginForm,
   studentLoginForm,
-  passwordRecoveryPage,
-  portalAuthFunction,
+  passwordRecoveryEntry,
+  portalAuthEntry,
+  portalAuthSecurity,
   loginService,
   portalSession,
   profileSelection,
@@ -29,6 +30,7 @@ const [
   readSource('modules/public/login/AlunoLoginAuthCard.tsx'),
   readSource('modules/login/PasswordRecoveryPage.tsx'),
   readSource('supabase/functions/portal-auth/index.ts'),
+  readSource('supabase/functions/portal-auth/request-security.ts'),
   readSource('modules/login/login.service.ts'),
   readSource('modules/login/portal-session.ts'),
   readSource('modules/login/profile-selection.ts'),
@@ -42,6 +44,15 @@ const [
   readSource('modules/shared/auth/NativeAuthBridge.tsx'),
   readSource('lib/supabase.ts'),
 ])
+
+const portalAuthFunction = `${portalAuthEntry}\n${portalAuthSecurity}`
+const passwordRecoveryPage = [
+  passwordRecoveryEntry,
+  await readSource('modules/login/password-recovery/password-recovery-auth.ts'),
+  await readSource('modules/login/password-recovery/usePasswordRecovery.ts'),
+  await readSource('modules/login/password-recovery/PasswordRecoveryAppView.tsx'),
+  await readSource('modules/login/password-recovery/PasswordRecoveryWebView.tsx'),
+].join('\n')
 
 test('Turnstile exposes explicit loading, verification and recovery states', () => {
   for (const status of [

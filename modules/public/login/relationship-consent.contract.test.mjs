@@ -8,10 +8,10 @@ const [
   originalMigration,
   termsDefaultMigration,
   termsDefaultHardeningMigration,
-  authService,
+  authServiceEntry,
   firstAccessPage,
   appSignupPage,
-  publicSignupPage,
+  publicSignupPageEntry,
   publicSignupCard,
   notificationPage,
   termsPage,
@@ -31,6 +31,18 @@ const [
   readSource('./relationship-consent.service.ts'),
   readSource('../../../supabase/functions/push-notification-dispatcher/index.ts'),
 ]);
+
+const authService = [
+  authServiceEntry,
+  await readSource('./aluno-public-auth.contract.ts'),
+  await readSource('./aluno-public-signup.service.ts'),
+].join('\n');
+const publicSignupPage = [
+  publicSignupPageEntry,
+  await readSource('./useAlunoLoginPublicPage.ts'),
+  await readSource('./useAlunoSignupForm.ts'),
+  await readSource('./AlunoLoginPublicView.tsx'),
+].join('\n');
 
 test('cadastro remove a escolha opcional e informa o padrão nos Termos', () => {
   for (const source of [appSignupPage, publicSignupPage, publicSignupCard, firstAccessPage]) {

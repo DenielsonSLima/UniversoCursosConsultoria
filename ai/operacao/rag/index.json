@@ -1,0 +1,665 @@
+{
+  "schemaVersion": 1,
+  "retrieval": "lexical-bm25-with-source-citations",
+  "builtAt": "2026-08-22T03:34:32.700Z",
+  "manifestVersion": 2,
+  "sourceSignature": "29fae7c526a0bd887d808896cb5c1b5be384522225494075b3885caa113b7385",
+  "sources": [
+    {
+      "path": "AGENTS.md",
+      "hash": "445165b2f5eeb04dee3c85f9cbdc250e6d4e12dad6dcd57a23799a50cd5b9f09"
+    },
+    {
+      "path": "ai/operacao/LOTE_ATIVO.md",
+      "hash": "1452e41c2b0dbdd82dbd9feac094a96e53c53da803e0f55b2c7918c2b1947316"
+    },
+    {
+      "path": "ai/operacao/MEMORIA_CANONICA.md",
+      "hash": "29497a5c2f0beb9acaea9fc098f4254bb38498923dc10dce0d00f3f0b2353427"
+    },
+    {
+      "path": "ai/operacao/PROTOCOLO_DE_LOTES.md",
+      "hash": "ba7c48f77d5700149052619e51d9aa2541ecfc71a398de9c4f1b873e4a29423f"
+    },
+    {
+      "path": "ai/operacao/politicas/FINANCEIRO.md",
+      "hash": "496fcd749689c9d4f2efc17620174c6bd2b2767a5909098c1a74b4c8a757aff5"
+    },
+    {
+      "path": "ai/operacao/politicas/INTERFACE.md",
+      "hash": "6a3c9e0f21c1214617647f63f6bb5a67af49d2a2b31a59d24deb371aa83d246e"
+    },
+    {
+      "path": "ai/operacao/politicas/PDFS_OFICIAIS.md",
+      "hash": "c56647eda1711749aad7245060fb40c050250b503dc25a5e9161a1642f4bf854"
+    },
+    {
+      "path": "ai/operacao/politicas/PLANO_CURSO.md",
+      "hash": "c7587eb979f79296b7a311ac02db72f3a11323eb303a64b6b41b3f556034cff4"
+    },
+    {
+      "path": "ai/operacao/politicas/SUPABASE_E_SEGURANCA.md",
+      "hash": "f3bee8f4273a7f7e4ff5569b09316ee8ee6d2dfe598272dddcd4eb13fe96b465"
+    },
+    {
+      "path": "docs/decisions/2026-08-04-native-auth-and-rich-push.md",
+      "hash": "d586683ff323f8fd7785e81edd80da0a15e9e1008cee46f8de5507fddcc7252e"
+    },
+    {
+      "path": "docs/decisions/patrimonio-contas-a-pagar-emprestimos.md",
+      "hash": "7a888d21c6756b741a5b3dbc5b3e5179db46ea5581c98ee762d07139d529a6cd"
+    }
+  ],
+  "chunks": [
+    {
+      "id": "3a74bb6089e8315bf042",
+      "hash": "3a74bb6089e8315bf042f1dc5767c8e5b471271988251071e322828e3270cb77",
+      "path": "AGENTS.md",
+      "section": "Autoridade local",
+      "text": "- Entre fontes deste repositório, esta ordem prevalece: AGENTS.md, lote atual, política específica do domínio, memória recuperada e skill genérica. - Se uma skill genérica contrariar estas regras, descarte somente a instrução conflitante. - Comece pelo pedido exato do usuário e pelo menor caminho de código capaz de atendê-lo. Não amplie silenciosamente o escopo.",
+      "normalizedText": "entre fontes deste repositorio esta ordem prevalece agents md lote atual politica especifica do dominio memoria recuperada e skill generica se uma skill generica contrariar estas regras descarte somente a instrucao conflitante comece pelo pedido exato do usuario e pelo menor caminho de codigo capaz de atende lo nao amplie silenciosamente o escopo",
+      "tokenCount": 49,
+      "part": 1
+    },
+    {
+      "id": "77dc79f739191ad8a973",
+      "hash": "77dc79f739191ad8a973d611d80116f45ba788c04e96674d907ac28eff26977a",
+      "path": "AGENTS.md",
+      "section": "Ajuste rápido",
+      "text": "Use este fluxo quando a mudança estiver localizada em até dois arquivos de implementação e não envolver banco, Auth, autorização, financeiro, PDF gerado pelo produto, infraestrutura ou publicação.",
+      "normalizedText": "use este fluxo quando a mudanca estiver localizada em ate dois arquivos de implementacao e nao envolver banco auth autorizacao financeiro pdf gerado pelo produto infraestrutura ou publicacao",
+      "tokenCount": 26,
+      "part": 1
+    },
+    {
+      "id": "f7ff9aa27e213162982d",
+      "hash": "f7ff9aa27e213162982d5171df591bbad7d3b7d3c87818ca8221cfad6d3ae6b8",
+      "path": "AGENTS.md",
+      "section": "Ajuste rápido",
+      "text": "- Use um único agente. - Não leia MEMORIA_CANONICA.md, LOTE_ATIVO.md, RAG, históricos ou decisões. - Não abra lote, não altere documentação operacional, versão ou changelog. - Localize apenas o componente/função indicada, reproduza ou confirme a causa, aplique o patch mínimo e execute um teste focado ou smoke do fluxo. - Quando o pedido nomear módulo, tela ou documento, restrinja a primeira busca a essa pasta; amplie somente se não houver resultado. - Não rode build, lint global ou suíte ampla por padrão. - Se o diagnóstico localizado não convergir rapidamente ou o risco crescer, reclassifique a tarefa e informe o motivo; não transforme um ajuste pequeno em auditoria ampla.",
+      "normalizedText": "use um unico agente nao leia memoria canonica md lote ativo md rag historicos ou decisoes nao abra lote nao altere documentacao operacional versao ou changelog localize apenas o componente funcao indicada reproduza ou confirme a causa aplique o patch minimo e execute um teste focado ou smoke do fluxo quando o pedido nomear modulo tela ou documento restrinja a primeira busca a essa pasta amplie somente se nao houver resultado nao rode build lint global ou suite ampla por padrao se o diagnostico localizado nao convergir rapidamente ou o risco crescer reclassifique a tarefa e informe o motivo nao transforme um ajuste pequeno em auditoria ampla",
+      "tokenCount": 95,
+      "part": 1
+    },
+    {
+      "id": "9c96c2a1581663ca89bf",
+      "hash": "9c96c2a1581663ca89bf97223a6b1e17128d90c78cd21402f5bc976a94096fed",
+      "path": "AGENTS.md",
+      "section": "Ajuste PDF focado",
+      "text": "Use quando a alteração estiver em um compositor PDF nativo existente, limitada a até dois arquivos de implementação e apenas texto, estilo, espaçamento ou posição de recurso isolado.",
+      "normalizedText": "use quando a alteracao estiver em um compositor pdf nativo existente limitada a ate dois arquivos de implementacao e apenas texto estilo espacamento ou posicao de recurso isolado",
+      "tokenCount": 25,
+      "part": 1
+    },
+    {
+      "id": "a3fb38605ef82a71e4e7",
+      "hash": "a3fb38605ef82a71e4e7d07564d7543e1a6f8b3e7887cf97bdfa9a801b1b7649",
+      "path": "AGENTS.md",
+      "section": "Ajuste PDF focado",
+      "text": "- Use um agente e carregue somente `ai/operacao/politicas/PDFS_OFICIAIS.md`. - Não leia memória, lote, RAG ou histórico e não abra lote. - Valide apenas o contrato/exportador afetado, texto extraído, recursos embutidos e a página relevante renderizada. - Não rode build global por padrão. - Reclassifique se houver alteração de payload/backend, elegibilidade, cálculo, paginação, novo exportador, captura raster ou compositor compartilhado com impacto amplo.",
+      "normalizedText": "use um agente e carregue somente ai operacao politicas pdfs oficiais md nao leia memoria lote rag ou historico e nao abra lote valide apenas o contrato exportador afetado texto extraido recursos embutidos e a pagina relevante renderizada nao rode build global por padrao reclassifique se houver alteracao de payload backend elegibilidade calculo paginacao novo exportador captura raster ou compositor compartilhado com impacto amplo",
+      "tokenCount": 59,
+      "part": 1
+    },
+    {
+      "id": "19ffc7b3d143753afbc4",
+      "hash": "19ffc7b3d143753afbc4a7755ac0c2ccab4976d7c0705bd114ef3eb358ee7cd8",
+      "path": "AGENTS.md",
+      "section": "Mudança padrão",
+      "text": "Use quando a alteração envolve um domínio e mais de dois arquivos, mas não possui risco crítico.",
+      "normalizedText": "use quando a alteracao envolve um dominio e mais de dois arquivos mas nao possui risco critico",
+      "tokenCount": 15,
+      "part": 1
+    },
+    {
+      "id": "705eca2454b27c7d6984",
+      "hash": "705eca2454b27c7d6984eb716a244632ff69e136ae106ec5f46662766a8d6427",
+      "path": "AGENTS.md",
+      "section": "Mudança padrão",
+      "text": "- Leia MEMORIA_CANONICA.md e somente o bloco atual de LOTE_ATIVO.md. - Consulte o RAG apenas se uma decisão anterior for necessária, com no máximo dois resultados. - Use um agente por padrão. Delegue apenas uma frente realmente independente que economize tempo. - Abra lote somente para mudança coesa de produto, documentação operacional ou entrega que será publicada.",
+      "normalizedText": "leia memoria canonica md e somente o bloco atual de lote ativo md consulte o rag apenas se uma decisao anterior for necessaria com no maximo dois resultados use um agente por padrao delegue apenas uma frente realmente independente que economize tempo abra lote somente para mudanca coesa de produto documentacao operacional ou entrega que sera publicada",
+      "tokenCount": 54,
+      "part": 1
+    },
+    {
+      "id": "9b98e516ed95c8ae03b7",
+      "hash": "9b98e516ed95c8ae03b770038f0a5fb6f94c1309e344b2d9908306e5474cf538",
+      "path": "AGENTS.md",
+      "section": "Mudança crítica",
+      "text": "Banco/Supabase, Auth/RLS, financeiro, mudança estrutural de PDF, infraestrutura e publicação exigem a política específica indicada abaixo.",
+      "normalizedText": "banco supabase auth rls financeiro mudanca estrutural de pdf infraestrutura e publicacao exigem a politica especifica indicada abaixo",
+      "tokenCount": 16,
+      "part": 1
+    },
+    {
+      "id": "a60b99cacbe31bc7f139",
+      "hash": "a60b99cacbe31bc7f1390f2dd6a78c1dc6ebbdfcf27d2fa7ef38e4611d0517fa",
+      "path": "AGENTS.md",
+      "section": "Mudança crítica",
+      "text": "- Um agente continua sendo o padrão; múltiplos agentes não são requisito. - Reproduza o fluxo real antes de implementar e valide o contrato diretamente afetado. - Use build completo somente quando o risco de integração justificar ou no fechamento para publicação.",
+      "normalizedText": "um agente continua sendo o padrao multiplos agentes nao sao requisito reproduza o fluxo real antes de implementar e valide o contrato diretamente afetado use build completo somente quando o risco de integracao justificar ou no fechamento para publicacao",
+      "tokenCount": 34,
+      "part": 1
+    },
+    {
+      "id": "cc8762acc9560d4dc503",
+      "hash": "cc8762acc9560d4dc503823d7ecb66c72dbc7d72b1c2c96b7294000691539e78",
+      "path": "AGENTS.md",
+      "section": "Operações remotas",
+      "text": "- GitHub remoto é somente via MCP GitHub. Não use git ou gh para criar branch, commit, push, pull request ou publicação. - Supabase é somente via MCP Supabase. Não execute Supabase CLI para consultas, migrations, banco, Auth, Storage, RLS, Realtime ou Edge Functions. - Preserve alterações paralelas e publique apenas um manifesto explícito de arquivos do lote. - Produção exige pedido explícito do usuário e critérios de aceite confirmados.",
+      "normalizedText": "github remoto e somente via mcp github nao use git ou gh para criar branch commit push pull request ou publicacao supabase e somente via mcp supabase nao execute supabase cli para consultas migrations banco auth storage rls realtime ou edge functions preserve alteracoes paralelas e publique apenas um manifesto explicito de arquivos do lote producao exige pedido explicito do usuario e criterios de aceite confirmados",
+      "tokenCount": 62,
+      "part": 1
+    },
+    {
+      "id": "3f641c676f0cb79f5343",
+      "hash": "3f641c676f0cb79f53431f73994f3f969aba6202577a2c7264b30edf4ad372a3",
+      "path": "AGENTS.md",
+      "section": "Qualidade e escopo",
+      "text": "- A sequência padrão é: reprodução, teste/checagem específica, patch mínimo, smoke real e validação final proporcional. - Correção visual/interativa não fica pronta sem smoke do fluxo correspondente; se a sessão autenticada estiver indisponível, registre a pendência sem substituir o smoke por dezenas de testes não relacionados. - Não altere AGENTS, skills ou memória dentro de um hotfix de produto. Mudanças de governança pertencem a lote operacional separado. - Arquivos manuais de implementação, teste, documentação ativa, política ou skill têm teto de 500 linhas físicas. Se um arquivo tocado ultrapassar o teto, divida-o no mesmo lote por responsabilidade coesa; não masque a violação comprimindo código ou removendo legibilidade. - Migrations futuras devem ser divididas antes da aplicação quando isso preservar atomicidade e ordem. Migrations já aplicadas são imutáveis e constituem exceção auditada; arquivos gerados, lockfiles, binários e código de terceiros também não entram no teto. - A adoção do teto é incremental: valide primeiro o manifesto explícito do lote atual e amplie o escopo auditado a cada lote, sem transformar a regra em varredura silenciosa de dívida técnica antiga. -",
+      "normalizedText": "a sequencia padrao e reproducao teste checagem especifica patch minimo smoke real e validacao final proporcional correcao visual interativa nao fica pronta sem smoke do fluxo correspondente se a sessao autenticada estiver indisponivel registre a pendencia sem substituir o smoke por dezenas de testes nao relacionados nao altere agents skills ou memoria dentro de um hotfix de produto mudancas de governanca pertencem a lote operacional separado arquivos manuais de implementacao teste documentacao ativa politica ou skill tem teto de 500 linhas fisicas se um arquivo tocado ultrapassar o teto divida o no mesmo lote por responsabilidade coesa nao masque a violacao comprimindo codigo ou removendo legibilidade migrations futuras devem ser divididas antes da aplicacao quando isso preservar atomicidade e ordem migrations ja aplicadas sao imutaveis e constituem excecao auditada arquivos gerados lockfiles binarios e codigo de terceiros tambem nao entram no teto a adocao do teto e incremental valide primeiro o manifesto explicito do lote atual e amplie o escopo auditado a cada lote sem transformar a regra em varredura silenciosa de divida tecnica antiga",
+      "tokenCount": 155,
+      "part": 1
+    },
+    {
+      "id": "dfe3a61c446e359fc392",
+      "hash": "dfe3a61c446e359fc3923704a5baa28961cd0a227fc861b6eff848dec1c92335",
+      "path": "AGENTS.md",
+      "section": "Qualidade e escopo",
+      "text": "Testes-fonte e migrations aplicadas permanecem versionados. Eles protegem regressões, auditoria, drift e reconstrução de ambientes. - Caches, PDFs/PNGs gerados, relatórios temporários, harnesses em tmp e saídas de build são regeneráveis e não pertencem ao lote. - Não varra o repositório inteiro nem use estado Git amplo como lista de trabalho.",
+      "normalizedText": "testes fonte e migrations aplicadas permanecem versionados eles protegem regressoes auditoria drift e reconstrucao de ambientes caches pdfs pngs gerados relatorios temporarios harnesses em tmp e saidas de build sao regeneraveis e nao pertencem ao lote nao varra o repositorio inteiro nem use estado git amplo como lista de trabalho",
+      "tokenCount": 45,
+      "part": 2
+    },
+    {
+      "id": "b0f660f70a489a371241",
+      "hash": "b0f660f70a489a371241ed5c0cf13617a8fcc8304be5af2c9824c7a452d2ba78",
+      "path": "AGENTS.md",
+      "section": "Políticas carregadas somente por domínio",
+      "text": "- PDFs gerados pelo produto: ai/operacao/politicas/PDFS_OFICIAIS.md - Supabase, Auth e segurança: ai/operacao/politicas/SUPABASE_E_SEGURANCA.md - Financeiro e cobranças: ai/operacao/politicas/FINANCEIRO.md - Plano de Curso: ai/operacao/politicas/PLANO_CURSO.md - Interface e notificações: ai/operacao/politicas/INTERFACE.md - Lotes, validação e publicação: ai/operacao/PROTOCOLO_DE_LOTES.md",
+      "normalizedText": "pdfs gerados pelo produto ai operacao politicas pdfs oficiais md supabase auth e seguranca ai operacao politicas supabase e seguranca md financeiro e cobrancas ai operacao politicas financeiro md plano de curso ai operacao politicas plano curso md interface e notificacoes ai operacao politicas interface md lotes validacao e publicacao ai operacao protocolo de lotes md",
+      "tokenCount": 51,
+      "part": 1
+    },
+    {
+      "id": "f615aed5453dcd459d05",
+      "hash": "f615aed5453dcd459d05f166a45124fcb7a0ea54cfc25767bbfff8f4fab5d98c",
+      "path": "AGENTS.md",
+      "section": "Memória e RAG",
+      "text": "- ai/operacao é a fonte versionada; ai/memoria, ai/rag e ai/skil são legados removidos. - A busca RAG é opcional para ajustes rápidos e somente leitura. Reindexe explicitamente uma vez ao fechar um lote operacional ou de publicação. - Nunca indexe segredos, dados pessoais, dumps, código-fonte completo ou artefatos gerados.",
+      "normalizedText": "ai operacao e a fonte versionada ai memoria ai rag e ai skil sao legados removidos a busca rag e opcional para ajustes rapidos e somente leitura reindexe explicitamente uma vez ao fechar um lote operacional ou de publicacao nunca indexe segredos dados pessoais dumps codigo fonte completo ou artefatos gerados",
+      "tokenCount": 45,
+      "part": 1
+    },
+    {
+      "id": "f751a64351b2489854dd",
+      "hash": "f751a64351b2489854dd3956b3b3584a61712b7a253f8940c2ccc16d87314bae",
+      "path": "ai/operacao/LOTE_ATIVO.md",
+      "section": "Lote ativo",
+      "text": "Estado: `PUBLICADO_SUPABASE_E_DRAFT_PR_4_6_0_MODULARIZADO`",
+      "normalizedText": "estado publicado supabase e draft pr 4 6 0 modularizado",
+      "tokenCount": 6,
+      "part": 1
+    },
+    {
+      "id": "96d56fcbee0005d3515a",
+      "hash": "96d56fcbee0005d3515a497bb60bcd90c0f7be92fa05fdc5c17956ca160f52bb",
+      "path": "ai/operacao/LOTE_ATIVO.md",
+      "section": "Lote: 2026-08-22-modularizacao-teto-500-4-6-0",
+      "text": "- Base deste complemento: commit `f87d2958109b60b4827c9b759c42dd0c3bd076ce` no Draft PR #79. - Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-22-modularizacao-teto-500-4-6-0.md`. - Escopo: somente arquivos do lote 4.6.0 que ultrapassavam 500 linhas, suas extrações coesas e a governança necessária para tornar o teto verificável. - Três frentes independentes: login público/recuperação, gestão de Responsáveis e Edge Functions/contratos; revisão integrada separada. - Migrations remotas `20260822024300` e `20260822024309` permanecem byte a byte imutáveis e protegidas por SHA-256; novas migrations entram no teto antes da aplicação quando a divisão for segura. - O gate incremental lê manifestos auditados, exige o manifesto do lote ativo, preserva a cobertura anterior e rejeita retirada silenciosa, exceção arbitrária ou alteração de migration aplicada. - Supabase: `portal-user-management` v33 ativa com JWT obrigatório e hash `ace1f8db5b8689502de51209baea555706e1c6adcaf9b356b05b40fe33e21da9`; `portal-auth` v15 ativa como endpoint público protegido internamente, hash `f64cc48d81af92dcef3988f78f01b913e238b7e1cf87c64fa14121ab889507ec`. - Validação integrada: teto 119 arquivos",
+      "normalizedText": "base deste complemento commit f87d2958109b60b4827c9b759c42dd0c3bd076ce no draft pr 79 manifesto explicito ai operacao registros alteracoes 2026 08 22 modularizacao teto 500 4 6 0 md escopo somente arquivos do lote 4 6 0 que ultrapassavam 500 linhas suas extracoes coesas e a governanca necessaria para tornar o teto verificavel tres frentes independentes login publico recuperacao gestao de responsaveis e edge functions contratos revisao integrada separada migrations remotas 20260822024300 e 20260822024309 permanecem byte a byte imutaveis e protegidas por sha 256 novas migrations entram no teto antes da aplicacao quando a divisao for segura o gate incremental le manifestos auditados exige o manifesto do lote ativo preserva a cobertura anterior e rejeita retirada silenciosa excecao arbitraria ou alteracao de migration aplicada supabase portal user management v33 ativa com jwt obrigatorio e hash ace1f8db5b8689502de51209baea555706e1c6adcaf9b356b05b40fe33e21da9 portal auth v15 ativa como endpoint publico protegido internamente hash f64cc48d81af92dcef3988f78f01b913e238b7e1cf87c64fa14121ab889507ec validacao integrada teto 119 arquivos",
+      "tokenCount": 129,
+      "part": 1
+    },
+    {
+      "id": "0046ab38d52589a312e9",
+      "hash": "0046ab38d52589a312e9ef0eb7c5c4feac15ed07a268996b83010c3a1cfba2f8",
+      "path": "ai/operacao/LOTE_ATIVO.md",
+      "section": "Lote: 2026-08-22-modularizacao-teto-500-4-6-0",
+      "text": "manuais, TypeScript, ESLint global, Deno check/fmt, build, 196 testes relevantes e 49 testes focados após a limpeza do lint; revisão independente sem bloqueadores. - GitHub: complemento atômico no Draft PR #79, mantido sem merge; CI remoto é o gate final. Não publicar Vercel Produção.",
+      "normalizedText": "manuais typescript eslint global deno check fmt build 196 testes relevantes e 49 testes focados apos a limpeza do lint revisao independente sem bloqueadores github complemento atomico no draft pr 79 mantido sem merge ci remoto e o gate final nao publicar vercel producao",
+      "tokenCount": 40,
+      "part": 2
+    },
+    {
+      "id": "40e7fd06bed4faa75d16",
+      "hash": "40e7fd06bed4faa75d1615b84e0e24fed27b33878f8decde8e2489f9e2e9851f",
+      "path": "ai/operacao/LOTE_ATIVO.md",
+      "section": "Lote: 2026-08-22-modularizacao-teto-500-4-6-0",
+      "text": "Histórico encerrado: `ai/operacao/registros/ALTERACOES.md` e `ai/operacao/registros/alteracoes/`.",
+      "normalizedText": "historico encerrado ai operacao registros alteracoes md e ai operacao registros alteracoes",
+      "tokenCount": 11,
+      "part": 1
+    },
+    {
+      "id": "7672381cfef7bccc0566",
+      "hash": "7672381cfef7bccc05663f199cac91cb8934c206a7250cd8ec40f442508140a8",
+      "path": "ai/operacao/MEMORIA_CANONICA.md",
+      "section": "Memória canônica do projeto",
+      "text": "Atualizada em: 2026-08-22",
+      "normalizedText": "atualizada em 2026 08 22",
+      "tokenCount": 5,
+      "part": 1
+    },
+    {
+      "id": "bd2eb0342526954d4783",
+      "hash": "bd2eb0342526954d47831d93c0966f6bcc9850bb7580238b05faf5feb116643f",
+      "path": "ai/operacao/MEMORIA_CANONICA.md",
+      "section": "Finalidade",
+      "text": "Este arquivo é um índice curto de contexto durável. Ajustes rápidos não precisam lê-lo. Detalhes de domínio ficam nas políticas específicas e são carregados somente quando a tarefa os envolve.",
+      "normalizedText": "este arquivo e um indice curto de contexto duravel ajustes rapidos nao precisam le lo detalhes de dominio ficam nas politicas especificas e sao carregados somente quando a tarefa os envolve",
+      "tokenCount": 28,
+      "part": 1
+    },
+    {
+      "id": "b1365f58d63f5a5e2b4a",
+      "hash": "b1365f58d63f5a5e2b4a33ef85d42f7aa283f94d68cdd3a27904102c0618f1ba",
+      "path": "ai/operacao/MEMORIA_CANONICA.md",
+      "section": "Operação",
+      "text": "- AGENTS.md define a classificação entre ajuste rápido, mudança padrão e mudança crítica. - LOTE_ATIVO.md contém somente um lote corrente; históricos ficam em ai/operacao/registros/. - Um agente é o padrão. Delegação só ocorre para frentes independentes e materialmente úteis. - A validação deve exercer o fluxo real afetado antes de build ou suítes amplas. - Regras globais não são acrescentadas durante hotfix de produto.",
+      "normalizedText": "agents md define a classificacao entre ajuste rapido mudanca padrao e mudanca critica lote ativo md contem somente um lote corrente historicos ficam em ai operacao registros um agente e o padrao delegacao so ocorre para frentes independentes e materialmente uteis a validacao deve exercer o fluxo real afetado antes de build ou suites amplas regras globais nao sao acrescentadas durante hotfix de produto",
+      "tokenCount": 57,
+      "part": 1
+    },
+    {
+      "id": "7f4890b42587489a56e0",
+      "hash": "7f4890b42587489a56e05a17f8eb806c457d9ca822b6ea80bf583d8e6a66ca8f",
+      "path": "ai/operacao/MEMORIA_CANONICA.md",
+      "section": "Arquitetura e qualidade",
+      "text": "- O frontend React/TypeScript/Vite coleta intenção e apresenta o retorno canônico. - Regras acadêmicas, financeiras, autorização, elegibilidade, valores e paginação pertencem ao backend/RPC quando aplicável. - TanStack Query e Realtime usam invalidação pelo menor escopo afetado. - O teto arquitetural é de 500 linhas físicas por arquivo manual. Todo arquivo tocado acima disso deve ser modularizado no próprio lote; a adoção é incremental pelos manifestos auditados. - Migrations já aplicadas permanecem imutáveis mesmo acima do teto. Novas migrations devem ser divididas antes da aplicação quando a separação for tecnicamente segura; gerados, lockfiles, binários e terceiros ficam fora da contagem. - Testes-fonte e migrations permanecem no repositório mesmo depois de executados. - tmp, caches, relatórios e PDFs/PNGs de QA são regeneráveis e podem ser limpos.",
+      "normalizedText": "o frontend react typescript vite coleta intencao e apresenta o retorno canonico regras academicas financeiras autorizacao elegibilidade valores e paginacao pertencem ao backend rpc quando aplicavel tanstack query e realtime usam invalidacao pelo menor escopo afetado o teto arquitetural e de 500 linhas fisicas por arquivo manual todo arquivo tocado acima disso deve ser modularizado no proprio lote a adocao e incremental pelos manifestos auditados migrations ja aplicadas permanecem imutaveis mesmo acima do teto novas migrations devem ser divididas antes da aplicacao quando a separacao for tecnicamente segura gerados lockfiles binarios e terceiros ficam fora da contagem testes fonte e migrations permanecem no repositorio mesmo depois de executados tmp caches relatorios e pdfs pngs de qa sao regeneraveis e podem ser limpos",
+      "tokenCount": 108,
+      "part": 1
+    },
+    {
+      "id": "292448c3fb8516d4214c",
+      "hash": "292448c3fb8516d4214c7679c57e9c1c4156cdf2da266bed2e59e2a2786a0063",
+      "path": "ai/operacao/MEMORIA_CANONICA.md",
+      "section": "Políticas condicionais",
+      "text": "- PDFs gerados pelo produto: politicas/PDFS_OFICIAIS.md - Supabase e segurança: politicas/SUPABASE_E_SEGURANCA.md - Financeiro: politicas/FINANCEIRO.md - Plano de Curso: politicas/PLANO_CURSO.md - Interface: politicas/INTERFACE.md - Entrega e publicação: PROTOCOLO_DE_LOTES.md",
+      "normalizedText": "pdfs gerados pelo produto politicas pdfs oficiais md supabase e seguranca politicas supabase e seguranca md financeiro politicas financeiro md plano de curso politicas plano curso md interface politicas interface md entrega e publicacao protocolo de lotes md",
+      "tokenCount": 35,
+      "part": 1
+    },
+    {
+      "id": "7e9bbbe323e87138a8f3",
+      "hash": "7e9bbbe323e87138a8f33c7e43639b77ca964aa64f7e051c6742b1f9b4daded4",
+      "path": "ai/operacao/MEMORIA_CANONICA.md",
+      "section": "RAG",
+      "text": "- Fontes padrão: AGENTS.md, esta memória, lote corrente, protocolo, políticas e docs/decisions/. - Registros históricos não entram no corpus padrão. - search lê somente o índice existente e nunca grava ou reindexa. - index é executado explicitamente uma vez no fechamento de lote relevante. - Embeddings e OpenContext são opcionais e nunca bloqueiam a operação.",
+      "normalizedText": "fontes padrao agents md esta memoria lote corrente protocolo politicas e docs decisions registros historicos nao entram no corpus padrao search le somente o indice existente e nunca grava ou reindexa index e executado explicitamente uma vez no fechamento de lote relevante embeddings e opencontext sao opcionais e nunca bloqueiam a operacao",
+      "tokenCount": 45,
+      "part": 1
+    },
+    {
+      "id": "7770a6e6ad8c0b4a3818",
+      "hash": "7770a6e6ad8c0b4a38183aeac270dab333ff5053fef0653296d0031fd15e7faf",
+      "path": "ai/operacao/PROTOCOLO_DE_LOTES.md",
+      "section": "1. Ajuste rápido",
+      "text": "Para correção localizada e sem risco crítico:",
+      "normalizedText": "para correcao localizada e sem risco critico",
+      "tokenCount": 6,
+      "part": 1
+    },
+    {
+      "id": "28768a42121c74aa3b36",
+      "hash": "28768a42121c74aa3b36e0204872b531189ed56381b6c4ceb4710c6834903a04",
+      "path": "ai/operacao/PROTOCOLO_DE_LOTES.md",
+      "section": "1. Ajuste rápido",
+      "text": "1. usar um agente; 2. abrir somente o arquivo do fluxo afetado e sua dependência direta; 3. reproduzir ou confirmar a causa; 4. aplicar o menor patch; 5. executar teste focado ou smoke; 6. entregar sem criar lote, registro, versão, RAG ou build global.",
+      "normalizedText": "1 usar um agente 2 abrir somente o arquivo do fluxo afetado e sua dependencia direta 3 reproduzir ou confirmar a causa 4 aplicar o menor patch 5 executar teste focado ou smoke 6 entregar sem criar lote registro versao rag ou build global",
+      "tokenCount": 34,
+      "part": 1
+    },
+    {
+      "id": "8e6dfce2d8eb2a2c886c",
+      "hash": "8e6dfce2d8eb2a2c886c81320aa687a92e1f91a19e58251856abcb10a4a45794",
+      "path": "ai/operacao/PROTOCOLO_DE_LOTES.md",
+      "section": "1. Ajuste rápido",
+      "text": "Se o escopo ou risco crescer, reclassificar antes de continuar.",
+      "normalizedText": "se o escopo ou risco crescer reclassificar antes de continuar",
+      "tokenCount": 9,
+      "part": 1
+    },
+    {
+      "id": "77537ccf80cda3a312c5",
+      "hash": "77537ccf80cda3a312c53b377d7a43c12816291f0f3e0b98ef754effd5b609e1",
+      "path": "ai/operacao/PROTOCOLO_DE_LOTES.md",
+      "section": "2. Ajuste PDF focado",
+      "text": "- Alteração visual localizada em compositor nativo existente usa um agente. - Carregar somente a política de PDFs; não abrir memória, lote ou RAG. - Validar exportador, texto, imagens isoladas e render da página afetada. - Payload, paginação, novo pipeline ou compositor compartilhado de impacto amplo saem desta faixa.",
+      "normalizedText": "alteracao visual localizada em compositor nativo existente usa um agente carregar somente a politica de pdfs nao abrir memoria lote ou rag validar exportador texto imagens isoladas e render da pagina afetada payload paginacao novo pipeline ou compositor compartilhado de impacto amplo saem desta faixa",
+      "tokenCount": 43,
+      "part": 1
+    },
+    {
+      "id": "c79a5620b2db48e4f381",
+      "hash": "c79a5620b2db48e4f381f7642b1e6e4ce7c301189aef93471e2ed3d484d070d1",
+      "path": "ai/operacao/PROTOCOLO_DE_LOTES.md",
+      "section": "3. Mudança padrão",
+      "text": "- Manter um domínio por lote. - Registrar objetivo, arquivos, aceite, risco e validação de forma curta. - Consultar RAG apenas quando histórico/decisão for necessário, com até dois resultados. - Executar testes focados durante o trabalho e uma validação final proporcional.",
+      "normalizedText": "manter um dominio por lote registrar objetivo arquivos aceite risco e validacao de forma curta consultar rag apenas quando historico decisao for necessario com ate dois resultados executar testes focados durante o trabalho e uma validacao final proporcional",
+      "tokenCount": 35,
+      "part": 1
+    },
+    {
+      "id": "ab8b18e791e2db26dad1",
+      "hash": "ab8b18e791e2db26dad1e5adcfc4f1489e5694d89d03114760932cea66bd0e96",
+      "path": "ai/operacao/PROTOCOLO_DE_LOTES.md",
+      "section": "4. Mudança crítica",
+      "text": "Banco, Auth/RLS, financeiro, PDF estrutural, infraestrutura ou publicação:",
+      "normalizedText": "banco auth rls financeiro pdf estrutural infraestrutura ou publicacao",
+      "tokenCount": 9,
+      "part": 1
+    },
+    {
+      "id": "28cf78c35791b70dd3a3",
+      "hash": "28cf78c35791b70dd3a3bb335e856e2af8660beb2f4437eaa114c0204742d44e",
+      "path": "ai/operacao/PROTOCOLO_DE_LOTES.md",
+      "section": "4. Mudança crítica",
+      "text": "- carregar somente a política do domínio; - reproduzir o fluxo real antes do patch; - validar contrato, autorização e smoke diretamente afetados; - usar revisão adicional apenas se houver uma frente independente ou risco que a justifique.",
+      "normalizedText": "carregar somente a politica do dominio reproduzir o fluxo real antes do patch validar contrato autorizacao e smoke diretamente afetados usar revisao adicional apenas se houver uma frente independente ou risco que a justifique",
+      "tokenCount": 30,
+      "part": 1
+    },
+    {
+      "id": "e159a94077887ebdcf92",
+      "hash": "e159a94077887ebdcf92d6a8a37790f444d50b557ff632d005640c15efb90598",
+      "path": "ai/operacao/PROTOCOLO_DE_LOTES.md",
+      "section": "5. Fechamento",
+      "text": "1. conferir o manifesto de arquivos; 2. executar `npm run check:file-lines` e modularizar todo arquivo manual auditado acima de 500 linhas; 3. preservar migrations já aplicadas como exceções imutáveis identificadas pelo registro remoto; 4. executar a validação final uma vez; 5. registrar limitações reais, inclusive smoke pendente; 6. atualizar o registro do lote; 7. executar node scripts/agent-memory-rag.mjs index uma vez se fontes RAG mudaram.",
+      "normalizedText": "1 conferir o manifesto de arquivos 2 executar npm run check file lines e modularizar todo arquivo manual auditado acima de 500 linhas 3 preservar migrations ja aplicadas como excecoes imutaveis identificadas pelo registro remoto 4 executar a validacao final uma vez 5 registrar limitacoes reais inclusive smoke pendente 6 atualizar o registro do lote 7 executar node scripts agent memory rag mjs index uma vez se fontes rag mudaram",
+      "tokenCount": 59,
+      "part": 1
+    },
+    {
+      "id": "664ec84a9a3c9b7eb5d6",
+      "hash": "664ec84a9a3c9b7eb5d634f7837c8febf3d39600c076d9d04d90e0aa57a4edfb",
+      "path": "ai/operacao/PROTOCOLO_DE_LOTES.md",
+      "section": "6. Publicação",
+      "text": "- GitHub somente por MCP. - Um commit atômico e uma Preview Vercel para o lote pronto. - Não consolidar domínios sem relação apenas por proximidade de data. - Produção somente por solicitação explícita.",
+      "normalizedText": "github somente por mcp um commit atomico e uma preview vercel para o lote pronto nao consolidar dominios sem relacao apenas por proximidade de data producao somente por solicitacao explicita",
+      "tokenCount": 28,
+      "part": 1
+    },
+    {
+      "id": "0d999f1c983c309ad21c",
+      "hash": "0d999f1c983c309ad21c2d8f339ae8f64fc6c052d885fe225a1b38b69bae1fb2",
+      "path": "ai/operacao/politicas/FINANCEIRO.md",
+      "section": "Financeiro e cobranças",
+      "text": "Carregue esta política somente para financeiro, Caixa, patrimônio, empréstimos, contas a pagar ou cobrança.",
+      "normalizedText": "carregue esta politica somente para financeiro caixa patrimonio emprestimos contas a pagar ou cobranca",
+      "tokenCount": 13,
+      "part": 1
+    },
+    {
+      "id": "d5ac74ebbcd80a6e71ff",
+      "hash": "d5ac74ebbcd80a6e71ffb3c17dd4c9655dc333ecd418fad92365f01ad8c01ad4",
+      "path": "ai/operacao/politicas/FINANCEIRO.md",
+      "section": "Regras gerais",
+      "text": "- Cálculos, valores, parcelas, juros, multa, desconto, saldo e rateio pertencem ao backend/RPC. - O frontend coleta entradas e exibe o resultado canônico. - Toda mutação é autorizada por escopo, idempotente, auditável e conciliada por TanStack Query/Realtime.",
+      "normalizedText": "calculos valores parcelas juros multa desconto saldo e rateio pertencem ao backend rpc o frontend coleta entradas e exibe o resultado canonico toda mutacao e autorizada por escopo idempotente auditavel e conciliada por tanstack query realtime",
+      "tokenCount": 30,
+      "part": 1
+    },
+    {
+      "id": "1a33be9f0f83a88e9d8a",
+      "hash": "1a33be9f0f83a88e9d8a91ffaa18cf22d320f2eb72207c055d3b11ea68500aed",
+      "path": "ai/operacao/politicas/FINANCEIRO.md",
+      "section": "Gateways",
+      "text": "- Novas cobranças usam Banese para boleto/Pix e Mercado Pago para cartão. - Banese não processa cartão. - Pix Banese permanece bloqueado em produção até liberação formal. - Mercado Pago permanece bloqueado para cobrança real até homologação de cartão, webhook, idempotência e recuperação ambígua. - Asaas e Banco Inter não podem ser selecionados para novas cobranças; preserve somente o histórico necessário. - API Banese é o fluxo principal. CNAB240 é contingência e exige EDI7 real. - Boleto e carnê são montados pelo sistema e entregues por rota privada/autenticada.",
+      "normalizedText": "novas cobrancas usam banese para boleto pix e mercado pago para cartao banese nao processa cartao pix banese permanece bloqueado em producao ate liberacao formal mercado pago permanece bloqueado para cobranca real ate homologacao de cartao webhook idempotencia e recuperacao ambigua asaas e banco inter nao podem ser selecionados para novas cobrancas preserve somente o historico necessario api banese e o fluxo principal cnab240 e contingencia e exige edi7 real boleto e carne sao montados pelo sistema e entregues por rota privada autenticada",
+      "tokenCount": 73,
+      "part": 1
+    },
+    {
+      "id": "2c50805c64cbfcdc2ab0",
+      "hash": "2c50805c64cbfcdc2ab0ebf6cefbd67648b889466ab38a7c7a581346f6593a45",
+      "path": "ai/operacao/politicas/FINANCEIRO.md",
+      "section": "Ativação acadêmica",
+      "text": "- Pagamento confirmado ativa automaticamente EAD, curso livre e especialização. - Curso técnico continua aguardando análise documental.",
+      "normalizedText": "pagamento confirmado ativa automaticamente ead curso livre e especializacao curso tecnico continua aguardando analise documental",
+      "tokenCount": 14,
+      "part": 1
+    },
+    {
+      "id": "1bfab99b17d4192a8dfa",
+      "hash": "1bfab99b17d4192a8dfa28d86ab14d8258bc5f514891ec2d067baff43f565215",
+      "path": "ai/operacao/politicas/FINANCEIRO.md",
+      "section": "Patrimônio, contas e empréstimos",
+      "text": "- Patrimônio é cadastro por polo e seus totais são calculados no banco. - Conta a Pagar rateada nasce fisicamente na Matriz; polos recebem somente alocação econômica, sem título ou baixa duplicada. - Empréstimo da Matriz usa TODOS ou SELECIONADOS; empréstimo de polo comum usa SEM_RATEIO. - Principal e quitação pertencem a financiamento; juros/encargos podem aparecer como custo financeiro separado. - Caixa não mistura financiamento ao resultado operacional.",
+      "normalizedText": "patrimonio e cadastro por polo e seus totais sao calculados no banco conta a pagar rateada nasce fisicamente na matriz polos recebem somente alocacao economica sem titulo ou baixa duplicada emprestimo da matriz usa todos ou selecionados emprestimo de polo comum usa sem rateio principal e quitacao pertencem a financiamento juros encargos podem aparecer como custo financeiro separado caixa nao mistura financiamento ao resultado operacional",
+      "tokenCount": 60,
+      "part": 1
+    },
+    {
+      "id": "fbd9274eb6d16bba7eaa",
+      "hash": "fbd9274eb6d16bba7eaa1378ef270c8757d81effebad5f9585e69373321f2945",
+      "path": "ai/operacao/politicas/INTERFACE.md",
+      "section": "Interface e notificações",
+      "text": "Carregue esta política somente para componentes visuais, interação, responsividade ou notificações.",
+      "normalizedText": "carregue esta politica somente para componentes visuais interacao responsividade ou notificacoes",
+      "tokenCount": 11,
+      "part": 1
+    },
+    {
+      "id": "0fb9c7c3876d516da261",
+      "hash": "0fb9c7c3876d516da261897e563c848c8244c7852c567acb507b91688095ad15",
+      "path": "ai/operacao/politicas/INTERFACE.md",
+      "section": "Interface e notificações",
+      "text": "- Em manutenção visual, preserve o design system e o padrão já aprovado; não aplique redesign criativo sem pedido explícito. - Não use alert, confirm, Notification.requestPermission ou notificações nativas para feedback comum. - Reutilize ToastNotification e useToast existentes no módulo correspondente. - Ajustes de texto, espaçamento, alinhamento, cor ou estado local seguem o modo rápido quando não tocam domínio crítico. - Valide a viewport e a ação realmente afetadas. Build ou dezenas de testes não substituem o clique/smoke visual. - Se o navegador autenticado estiver indisponível, marque o smoke como pendente em vez de ampliar a implementação.",
+      "normalizedText": "em manutencao visual preserve o design system e o padrao ja aprovado nao aplique redesign criativo sem pedido explicito nao use alert confirm notification requestpermission ou notificacoes nativas para feedback comum reutilize toastnotification e usetoast existentes no modulo correspondente ajustes de texto espacamento alinhamento cor ou estado local seguem o modo rapido quando nao tocam dominio critico valide a viewport e a acao realmente afetadas build ou dezenas de testes nao substituem o clique smoke visual se o navegador autenticado estiver indisponivel marque o smoke como pendente em vez de ampliar a implementacao",
+      "tokenCount": 81,
+      "part": 1
+    },
+    {
+      "id": "6eb08a399befe2f390bc",
+      "hash": "6eb08a399befe2f390bc8adb6f651fbb8c2d2860a02ff0b2317a53e498b419cb",
+      "path": "ai/operacao/politicas/PDFS_OFICIAIS.md",
+      "section": "PDFs gerados pelo produto",
+      "text": "A regra vetorial desta política vale para todo PDF exportado pelo produto. As regras de Blob canônico, cabeçalho institucional e payload de backend aplicam-se aos documentos oficiais, como contratos, carteirinhas, calendários, boletins e declarações.",
+      "normalizedText": "a regra vetorial desta politica vale para todo pdf exportado pelo produto as regras de blob canonico cabecalho institucional e payload de backend aplicam se aos documentos oficiais como contratos carteirinhas calendarios boletins e declaracoes",
+      "tokenCount": 32,
+      "part": 1
+    },
+    {
+      "id": "b036a4daaaf4fcc817dd",
+      "hash": "b036a4daaaf4fcc817dd6cee387d741951c017ad3f66ef6b3e897cc44bf2ada7",
+      "path": "ai/operacao/politicas/PDFS_OFICIAIS.md",
+      "section": "Fonte canônica",
+      "text": "- Prévia, download e impressão reutilizam exatamente o mesmo Blob PDF. - Elegibilidade, dados, ordenação, validade, QR e paginação vêm do backend/RPC. - O frontend apenas solicita o payload e compõe a apresentação vetorial; conteúdo incompatível deve falhar explicitamente.",
+      "normalizedText": "previa download e impressao reutilizam exatamente o mesmo blob pdf elegibilidade dados ordenacao validade qr e paginacao vem do backend rpc o frontend apenas solicita o payload e compoe a apresentacao vetorial conteudo incompativel deve falhar explicitamente",
+      "tokenCount": 30,
+      "part": 1
+    },
+    {
+      "id": "1cbc47b50fe43017c41a",
+      "hash": "1cbc47b50fe43017c41a748996f6b92b987949f32afcc871b761c47afc26f31e",
+      "path": "ai/operacao/politicas/PDFS_OFICIAIS.md",
+      "section": "Cabeçalho e marca",
+      "text": "- A referência visual é modules/gestor/components/DocumentHeader.tsx. - A única implementação de exportação é modules/gestor/secretaria/shared/canonical-institutional-header-pdf.ts, nas variantes retrato e paisagem. - Não crie desenhador privado de cabeçalho nem reconstrua logo, nome, selo Matriz, CNPJ, contato, endereço, e-mail, divisor ou área útil dentro de exportador específico. - A marca-d'água é camada de fundo separada, aplicada antes do conteúdo.",
+      "normalizedText": "a referencia visual e modules gestor components documentheader tsx a unica implementacao de exportacao e modules gestor secretaria shared canonical institutional header pdf ts nas variantes retrato e paisagem nao crie desenhador privado de cabecalho nem reconstrua logo nome selo matriz cnpj contato endereco e mail divisor ou area util dentro de exportador especifico a marca d agua e camada de fundo separada aplicada antes do conteudo",
+      "tokenCount": 58,
+      "part": 1
+    },
+    {
+      "id": "9f188fe6a59328fb47f7",
+      "hash": "9f188fe6a59328fb47f7c2efc9d2fb56f50d1e34e2f9aaa474bb6dc104bb596c",
+      "path": "ai/operacao/politicas/PDFS_OFICIAIS.md",
+      "section": "Vetor e recursos",
+      "text": "- Nunca rasterize a página, folha, carteirinha ou documento inteiro com html2canvas, canvas, captura de DOM ou addImage. - Pipeline híbrido que coloca screenshot/PNG da página inteira e adiciona texto vetorial ou invisível por cima também é proibido: seleção aparente não corrige a perda de qualidade da arte rasterizada. - Texto visível, tabelas, linhas, campos, bordas, fundos geométricos e marcações permanecem objetos nativos do PDF, selecionáveis, pesquisáveis e copiáveis. - Zoom não pode degradar texto, linhas ou tabelas. - Logo, marca-d'água, QR, fotografia e assinatura podem ser imagens isoladas e posicionadas independentemente. Prefira SVG/vetor quando existir. - Canvas é permitido apenas como buffer temporário para preparar um recurso isolado, como recorte de foto, transparência de assinatura ou QR; nunca para capturar o contêiner/página. - Uma imagem de fundo ou marca-d'água não pode conter o texto, as linhas, as tabelas ou outros conteúdos do documento. - Nunca use uma imagem A4 que substitua o documento.",
+      "normalizedText": "nunca rasterize a pagina folha carteirinha ou documento inteiro com html2canvas canvas captura de dom ou addimage pipeline hibrido que coloca screenshot png da pagina inteira e adiciona texto vetorial ou invisivel por cima tambem e proibido selecao aparente nao corrige a perda de qualidade da arte rasterizada texto visivel tabelas linhas campos bordas fundos geometricos e marcacoes permanecem objetos nativos do pdf selecionaveis pesquisaveis e copiaveis zoom nao pode degradar texto linhas ou tabelas logo marca d agua qr fotografia e assinatura podem ser imagens isoladas e posicionadas independentemente prefira svg vetor quando existir canvas e permitido apenas como buffer temporario para preparar um recurso isolado como recorte de foto transparencia de assinatura ou qr nunca para capturar o conteiner pagina uma imagem de fundo ou marca d agua nao pode conter o texto as linhas as tabelas ou outros conteudos do documento nunca use uma imagem a4 que substitua o documento",
+      "tokenCount": 139,
+      "part": 1
+    },
+    {
+      "id": "6aadd960a5bd775759e1",
+      "hash": "6aadd960a5bd775759e1aefdee99f1061dd8775c60a33d9dc9a454730474769a",
+      "path": "ai/operacao/politicas/PDFS_OFICIAIS.md",
+      "section": "Validação proporcional",
+      "text": "- Para ajuste localizado, execute o contrato do exportador afetado, extração de texto, inspeção de recursos e revisão visual da página relevante. - A extração deve conter o texto visível e pdfimages deve listar somente recursos isolados compatíveis com logo, marca, foto, assinatura ou QR. - Inspecione o PDF ampliado para comprovar que texto, bordas e tabelas permanecem nítidos. - Preserve o teste que rejeita cabeçalho institucional privado. - Build completo não é requisito automático; use-o apenas por risco de integração ou publicação. - Um ajuste simples de posição/estilo no compositor compartilhado deve continuar sendo tratado por um agente e pelo menor conjunto de arquivos possível. - A skill genérica de PDF pode auxiliar renderização, extração e inspeção; não deve gerar PDF do produto com ReportLab ou pipeline paralelo.",
+      "normalizedText": "para ajuste localizado execute o contrato do exportador afetado extracao de texto inspecao de recursos e revisao visual da pagina relevante a extracao deve conter o texto visivel e pdfimages deve listar somente recursos isolados compativeis com logo marca foto assinatura ou qr inspecione o pdf ampliado para comprovar que texto bordas e tabelas permanecem nitidos preserve o teste que rejeita cabecalho institucional privado build completo nao e requisito automatico use o apenas por risco de integracao ou publicacao um ajuste simples de posicao estilo no compositor compartilhado deve continuar sendo tratado por um agente e pelo menor conjunto de arquivos possivel a skill generica de pdf pode auxiliar renderizacao extracao e inspecao nao deve gerar pdf do produto com reportlab ou pipeline paralelo",
+      "tokenCount": 111,
+      "part": 1
+    },
+    {
+      "id": "48fc0b9349b6785ac716",
+      "hash": "48fc0b9349b6785ac716612d0807f9279689807d86cf331d103127bcf97efd13",
+      "path": "ai/operacao/politicas/PLANO_CURSO.md",
+      "section": "Plano de Curso técnico",
+      "text": "Carregue esta política somente ao alterar Plano de Curso, vínculo docente/disciplina/turma ou sua emissão.",
+      "normalizedText": "carregue esta politica somente ao alterar plano de curso vinculo docente disciplina turma ou sua emissao",
+      "tokenCount": 16,
+      "part": 1
+    },
+    {
+      "id": "11fd582e14d8dd6450e1",
+      "hash": "11fd582e14d8dd6450e19d3eeade149991ac64934712828610a494b74087c8e6",
+      "path": "ai/operacao/politicas/PLANO_CURSO.md",
+      "section": "Plano de Curso técnico",
+      "text": "- O plano pertence ao vínculo canônico entre turma, disciplina e docente. - O professor recebe somente disciplinas atualmente atribuídas com aulas datadas. - Identidade, elegibilidade, datas, horários, carga, ordenação e paginação são derivados nas RPCs. - RASCUNHO nunca é documento oficial para download ou impressão. - A conclusão congela snapshot completo, revisão do modelo, instante e fingerprint SHA-256. - Emissões posteriores usam o snapshot; prévia, impressão e download compartilham o mesmo Blob. - Vínculo com plano não pode ser removido ou reatribuído silenciosamente. - Aulas de plano concluído não podem ser alteradas. - RPCs e triggers mantêm ordem única de locks. - Realtime usa planos_curso; mudanças de elegibilidade usam Broadcast privado por professor e polo.",
+      "normalizedText": "o plano pertence ao vinculo canonico entre turma disciplina e docente o professor recebe somente disciplinas atualmente atribuidas com aulas datadas identidade elegibilidade datas horarios carga ordenacao e paginacao sao derivados nas rpcs rascunho nunca e documento oficial para download ou impressao a conclusao congela snapshot completo revisao do modelo instante e fingerprint sha 256 emissoes posteriores usam o snapshot previa impressao e download compartilham o mesmo blob vinculo com plano nao pode ser removido ou reatribuido silenciosamente aulas de plano concluido nao podem ser alteradas rpcs e triggers mantem ordem unica de locks realtime usa planos curso mudancas de elegibilidade usam broadcast privado por professor e polo",
+      "tokenCount": 96,
+      "part": 1
+    },
+    {
+      "id": "23fa4db02f5b391fae54",
+      "hash": "23fa4db02f5b391fae5400d0f5374e3049b2c7953aa38cf51225101f431156de",
+      "path": "ai/operacao/politicas/SUPABASE_E_SEGURANCA.md",
+      "section": "Supabase, Auth e segurança",
+      "text": "Carregue esta política somente para banco, migrations, Auth, Storage, RLS, Realtime, logs ou Edge Functions.",
+      "normalizedText": "carregue esta politica somente para banco migrations auth storage rls realtime logs ou edge functions",
+      "tokenCount": 15,
+      "part": 1
+    },
+    {
+      "id": "b09fc68fb8ce83b01605",
+      "hash": "b09fc68fb8ce83b01605c364aa093b6869fce314a20e602310ed5d418420e9e3",
+      "path": "ai/operacao/politicas/SUPABASE_E_SEGURANCA.md",
+      "section": "Supabase, Auth e segurança",
+      "text": "- Toda operação Supabase é feita exclusivamente pelo MCP Supabase; nunca use a CLI. - Consulte migrations remotas antes de aplicar ou declarar pendência. - Aplique mudança de schema por migration versionada e mantenha o arquivo local depois da aplicação. - Não reescreva, apague ou compacte migrations aplicadas sem um plano formal de baseline para todos os ambientes. - Use SECURITY DEFINER somente com search_path vazio, grants mínimos e guarda interna de identidade/empresa/polo. - Em RPC idempotente, autorize antes de consultar request_id e aceite replay somente quando o payload imutável coincidir. - Não registre segredos nem dados pessoais em logs, fixtures, RAG ou documentação. - TanStack Query e Realtime invalidam somente o escopo realmente afetado. - Uma mudança remota exige teste contratual focado; build completo não substitui validação da RPC real.",
+      "normalizedText": "toda operacao supabase e feita exclusivamente pelo mcp supabase nunca use a cli consulte migrations remotas antes de aplicar ou declarar pendencia aplique mudanca de schema por migration versionada e mantenha o arquivo local depois da aplicacao nao reescreva apague ou compacte migrations aplicadas sem um plano formal de baseline para todos os ambientes use security definer somente com search path vazio grants minimos e guarda interna de identidade empresa polo em rpc idempotente autorize antes de consultar request id e aceite replay somente quando o payload imutavel coincidir nao registre segredos nem dados pessoais em logs fixtures rag ou documentacao tanstack query e realtime invalidam somente o escopo realmente afetado uma mudanca remota exige teste contratual focado build completo nao substitui validacao da rpc real",
+      "tokenCount": 117,
+      "part": 1
+    },
+    {
+      "id": "2cffae35c49d680d3a19",
+      "hash": "2cffae35c49d680d3a19357c921ccfc4453c0af880b8ea39f8cef35e94d3fc6f",
+      "path": "docs/decisions/2026-08-04-native-auth-and-rich-push.md",
+      "section": "Decisão: autenticação nativa e notificações ricas do aluno",
+      "text": "Data: 2026-08-04",
+      "normalizedText": "data 2026 08 04",
+      "tokenCount": 4,
+      "part": 1
+    },
+    {
+      "id": "409c15f0edbcacc22bf9",
+      "hash": "409c15f0edbcacc22bf9db20495989a8c33e62c6ea19d3b450403569c4cee616",
+      "path": "docs/decisions/2026-08-04-native-auth-and-rich-push.md",
+      "section": "Contexto",
+      "text": "O portal do aluno roda na Web e dentro dos aplicativos Capacitor para Android e iOS. O fluxo nativo precisa voltar ao aplicativo depois do OAuth, abrir notificações comuns em uma tela de detalhe, encaminhar notificações de chat diretamente à conversa e suportar campanhas com imagem sem colocar regras de negócio no frontend.",
+      "normalizedText": "o portal do aluno roda na web e dentro dos aplicativos capacitor para android e ios o fluxo nativo precisa voltar ao aplicativo depois do oauth abrir notificacoes comuns em uma tela de detalhe encaminhar notificacoes de chat diretamente a conversa e suportar campanhas com imagem sem colocar regras de negocio no frontend",
+      "tokenCount": 47,
+      "part": 1
+    },
+    {
+      "id": "feabf5134472e325dca6",
+      "hash": "feabf5134472e325dca6148e374ec093a4d6d6205b270382b79eb4488d9f6ca3",
+      "path": "docs/decisions/2026-08-04-native-auth-and-rich-push.md",
+      "section": "Decisões",
+      "text": "- O callback OAuth nativo é `br.com.universocc.aluno://auth/callback`. O bridge registra o processamento antes de aguardar a troca de sessão, deduplica callbacks e preserva o estado pendente quando o navegador externo fecha antes do evento de URL. - Cloudflare Turnstile usa uma página nativa dedicada, com watchdog e estados explícitos de carregamento, sucesso e erro. O login não confunde um iframe vazio com desafio concluído. - A rota nativa do Turnstile é reescrita para a entrada Vite isolada `native-turnstile.html`. Ela não carrega React, o splash nem qualquer marca da Universo; o iframe contém exclusivamente o contêiner da Cloudflare, inclusive durante o bootstrap. - O shell WKWebView/Android WebView não aplica bounce, overscroll ou zoom à página inteira. Login e cadastro usam a altura real de `visualViewport`; somente regiões internas comprovadamente maiores que a área útil podem rolar. - Notificações comuns abrem `/aluno/?module=notificacoes&notificationId=<uuid>`; quando só existe o job, usam `sourceJobId`. Notificações de chat mantêm o deep link direto à conversa. - A caixa de notificações usa paginação keyset de 20 itens com `snapshotAt`, `visibleAt` e `id`. Atualizações",
+      "normalizedText": "o callback oauth nativo e br com universocc aluno auth callback o bridge registra o processamento antes de aguardar a troca de sessao deduplica callbacks e preserva o estado pendente quando o navegador externo fecha antes do evento de url cloudflare turnstile usa uma pagina nativa dedicada com watchdog e estados explicitos de carregamento sucesso e erro o login nao confunde um iframe vazio com desafio concluido a rota nativa do turnstile e reescrita para a entrada vite isolada native turnstile html ela nao carrega react o splash nem qualquer marca da universo o iframe contem exclusivamente o conteiner da cloudflare inclusive durante o bootstrap o shell wkwebview android webview nao aplica bounce overscroll ou zoom a pagina inteira login e cadastro usam a altura real de visualviewport somente regioes internas comprovadamente maiores que a area util podem rolar notificacoes comuns abrem aluno module notificacoes notificationid uuid quando so existe o job usam sourcejobid notificacoes de chat mantem o deep link direto a conversa a caixa de notificacoes usa paginacao keyset de 20 itens com snapshotat visibleat e id atualizacoes",
+      "tokenCount": 152,
+      "part": 1
+    },
+    {
+      "id": "f2afb707f069430a8892",
+      "hash": "f2afb707f069430a8892d4ca5a519129f022bb52f79a8d8d1d8275649cf2718a",
+      "path": "docs/decisions/2026-08-04-native-auth-and-rich-push.md",
+      "section": "Decisões",
+      "text": "Realtime invalidam a lista com debounce; o contador não refaz todas as páginas. - Imagens são recebidas somente pela Edge Function autenticada `push-notification-assets`, validadas por assinatura, dimensões e tamanho, têm metadados removidos e recebem caminho imutável `campaigns|birthday/<uuid>.(jpg|jpeg|png)` no bucket público `push-notification-images`. - O dispatcher constrói a URL pública canônica; caminhos e URLs fornecidos livremente pelo cliente são ignorados. Android/FCM e APNs recebem imagem rica, mas qualquer erro preserva a notificação textual. - No iOS, uma Notification Service Extension converte `image_url` em `UNNotificationAttachment`, com HTTPS obrigatório, timeout, limite de tamanho e fallback idempotente. - Felicitações e comunicados de relacionamento usam finalidade própria `relacionamento`, política `push-relationship-birthday-v1` e escolha explícita Sim/Não sem pré-seleção. A decisão é separada dos Termos e da permissão nativa, permanece auditável e pode ser revogada. - Publicidade comercial continua na finalidade `marketing`, exige a política independente `push-commercial-marketing-v1`, evidência de escopo comercial e aluno com pelo menos 18 anos. Não existe",
+      "normalizedText": "realtime invalidam a lista com debounce o contador nao refaz todas as paginas imagens sao recebidas somente pela edge function autenticada push notification assets validadas por assinatura dimensoes e tamanho tem metadados removidos e recebem caminho imutavel campaigns birthday uuid jpg jpeg png no bucket publico push notification images o dispatcher constroi a url publica canonica caminhos e urls fornecidos livremente pelo cliente sao ignorados android fcm e apns recebem imagem rica mas qualquer erro preserva a notificacao textual no ios uma notification service extension converte image url em unnotificationattachment com https obrigatorio timeout limite de tamanho e fallback idempotente felicitacoes e comunicados de relacionamento usam finalidade propria relacionamento politica push relationship birthday v1 e escolha explicita sim nao sem pre selecao a decisao e separada dos termos e da permissao nativa permanece auditavel e pode ser revogada publicidade comercial continua na finalidade marketing exige a politica independente push commercial marketing v1 evidencia de escopo comercial e aluno com pelo menos 18 anos nao existe",
+      "tokenCount": 147,
+      "part": 2
+    },
+    {
+      "id": "21434675149ac2ab5642",
+      "hash": "21434675149ac2ab564245eda8cdbdab2067c64711205d8b55562f4ed6a7b708",
+      "path": "docs/decisions/2026-08-04-native-auth-and-rich-push.md",
+      "section": "Decisões",
+      "text": "concessão implícita nem migração automática do consentimento antigo; na ausência do fluxo jurídico específico, campanhas comerciais falham fechado. - O dispatcher revalida consentimento e política imediatamente antes do envio por uma RPC canônica em lote: aniversário consulta `relacionamento`; campanha genérica consulta `marketing` comercial. Alterações em qualquer uma das finalidades também cancelam de forma antecipada os jobs pendentes que deixaram de ser elegíveis. - A agenda de aniversário, a seleção de alunos, matrícula elegível, data local `America/Maceio`, regra de 29/02 e idempotência aluno/ano ficam no Postgres. O frontend apenas coleta título, mensagem, horário e imagem e exibe o resultado canônico. - A configuração de aniversário inicia desativada e exige imagem pronta para ser habilitada. O agendador executa a cada cinco minutos e nunca duplica o envio do mesmo aluno no mesmo ano.",
+      "normalizedText": "concessao implicita nem migracao automatica do consentimento antigo na ausencia do fluxo juridico especifico campanhas comerciais falham fechado o dispatcher revalida consentimento e politica imediatamente antes do envio por uma rpc canonica em lote aniversario consulta relacionamento campanha generica consulta marketing comercial alteracoes em qualquer uma das finalidades tambem cancelam de forma antecipada os jobs pendentes que deixaram de ser elegiveis a agenda de aniversario a selecao de alunos matricula elegivel data local america maceio regra de 29 02 e idempotencia aluno ano ficam no postgres o frontend apenas coleta titulo mensagem horario e imagem e exibe o resultado canonico a configuracao de aniversario inicia desativada e exige imagem pronta para ser habilitada o agendador executa a cada cinco minutos e nunca duplica o envio do mesmo aluno no mesmo ano",
+      "tokenCount": 116,
+      "part": 3
+    },
+    {
+      "id": "e6fad82732e65c4887bb",
+      "hash": "e6fad82732e65c4887bb128bdcbced8fa17f4f4e90bc190d7e0b813e25aa26f5",
+      "path": "docs/decisions/2026-08-04-native-auth-and-rich-push.md",
+      "section": "Limites de validação",
+      "text": "- O simulador iOS valida build, callback, navegação e o empacotamento da extensão, mas não comprova a entrega APNs real; isso exige iPhone físico com credenciais APNs/FCM válidas. - Testes de paginação em produção devem usar registros temporários claramente marcados e removê-los após a evidência. - O Turnstile deve ser validado em Safari e nos WebViews nativos. Resolver o CAPTCHA continua sendo uma ação humana/confirmada no momento do teste. - Alterações React/CSS são empacotadas no binário Capacitor. Uma publicação Web/Vercel não atualiza sozinha aplicativos já instalados; é necessário gerar e instalar/distribuir um novo build iOS/Android. - A referência de build para esta entrega é sistema `2.2.3-beta.26`, iOS build `26`, Android `versionCode 26` e Node.js `24.x`.",
+      "normalizedText": "o simulador ios valida build callback navegacao e o empacotamento da extensao mas nao comprova a entrega apns real isso exige iphone fisico com credenciais apns fcm validas testes de paginacao em producao devem usar registros temporarios claramente marcados e remove los apos a evidencia o turnstile deve ser validado em safari e nos webviews nativos resolver o captcha continua sendo uma acao humana confirmada no momento do teste alteracoes react css sao empacotadas no binario capacitor uma publicacao web vercel nao atualiza sozinha aplicativos ja instalados e necessario gerar e instalar distribuir um novo build ios android a referencia de build para esta entrega e sistema 2 2 3 beta 26 ios build 26 android versioncode 26 e node js 24 x",
+      "tokenCount": 105,
+      "part": 1
+    },
+    {
+      "id": "65c304b380e1dce480ba",
+      "hash": "65c304b380e1dce480baff883c2f619059cd68ccdf8762f0d4551f17ac9d7d15",
+      "path": "docs/decisions/2026-08-04-native-auth-and-rich-push.md",
+      "section": "Arquivos centrais",
+      "text": "- `modules/shared/auth/NativeAuthBridge.tsx` - `modules/aluno/native-app/native-app.bridge.ts` - `modules/aluno/notificacoes/` - `modules/gestor/comunicacao/notificacoes-push/` - `supabase/functions/push-notification-assets/` - `supabase/functions/push-notification-dispatcher/` - `ios/App/NotificationServiceExtension/` - `supabase/migrations/20260804145000_paginate_student_notification_inbox.sql` - `supabase/migrations/20260804151000_create_rich_push_and_birthday_settings.sql` - `supabase/migrations/20260804203000_separate_relationship_birthday_consent.sql`",
+      "normalizedText": "modules shared auth nativeauthbridge tsx modules aluno native app native app bridge ts modules aluno notificacoes modules gestor comunicacao notificacoes push supabase functions push notification assets supabase functions push notification dispatcher ios app notificationserviceextension supabase migrations 20260804145000 paginate student notification inbox sql supabase migrations 20260804151000 create rich push and birthday settings sql supabase migrations 20260804203000 separate relationship birthday consent sql",
+      "tokenCount": 60,
+      "part": 1
+    },
+    {
+      "id": "d935d2a55f9be1ba2077",
+      "hash": "d935d2a55f9be1ba2077b12084176313f3aff926d56083fb27af76519fd37daf",
+      "path": "docs/decisions/patrimonio-contas-a-pagar-emprestimos.md",
+      "section": "Decisão: patrimônio, contas a pagar e empréstimos por polo",
+      "text": "Data: 2026-08-06",
+      "normalizedText": "data 2026 08 06",
+      "tokenCount": 4,
+      "part": 1
+    },
+    {
+      "id": "253f673942ec795f1aae",
+      "hash": "253f673942ec795f1aae3d7d0807d0fa80406e52d9d66696b18d744f177b7da6",
+      "path": "docs/decisions/patrimonio-contas-a-pagar-emprestimos.md",
+      "section": "Contexto",
+      "text": "O Gestor precisava registrar ativos por polo, organizar despesas como Contas a Pagar e permitir que um crédito contratado pela Matriz gerasse parcelas e custo econômico distribuído entre polos, sem alterar artificialmente o resultado operacional do Caixa.",
+      "normalizedText": "o gestor precisava registrar ativos por polo organizar despesas como contas a pagar e permitir que um credito contratado pela matriz gerasse parcelas e custo economico distribuido entre polos sem alterar artificialmente o resultado operacional do caixa",
+      "tokenCount": 32,
+      "part": 1
+    },
+    {
+      "id": "7d66577a2d4897095067",
+      "hash": "7d66577a2d4897095067211408fdaf0ff1ddc0c758141ed08afc9ba9d897cd46",
+      "path": "docs/decisions/patrimonio-contas-a-pagar-emprestimos.md",
+      "section": "Decisões",
+      "text": "- Patrimônio é um módulo separado abaixo de Financeiro, com pasta própria, serviços, hooks, formulário e modos card/tabela. O cadastro é associado a um polo e registra data de aquisição, tipo, descrição, quantidade, valor unitário, total, série e observação. - Quantidade, valores e total de patrimônio são validados e totalizados exclusivamente pelas RPCs. A tela não multiplica nem compõe valores financeiros. - A antiga apresentação de Despesas passa a se chamar Contas a Pagar. Ela preserva os dados e inclui desdobramento opcional: uma obrigação pode ficar em aberto como total único ou gerar parcelas canônicas para baixa posterior. - Contas a Pagar podem ser rateadas somente quando lançadas pela Matriz. Há um único título e uma única baixa física integrais na Matriz; todos ou os polos selecionados recebem alocações econômicas canônicas em centavos. O rateio não duplica pagamento, banco nem título exigível nos polos participantes. - Empréstimo criado pela Matriz deve usar `TODOS` ou `SELECIONADOS`: o crédito e a Conta a Pagar física ficam na Matriz, enquanto cada parcela distribui custo econômico para os polos do rateio. Empréstimo criado com o polo comum selecionado usa",
+      "normalizedText": "patrimonio e um modulo separado abaixo de financeiro com pasta propria servicos hooks formulario e modos card tabela o cadastro e associado a um polo e registra data de aquisicao tipo descricao quantidade valor unitario total serie e observacao quantidade valores e total de patrimonio sao validados e totalizados exclusivamente pelas rpcs a tela nao multiplica nem compoe valores financeiros a antiga apresentacao de despesas passa a se chamar contas a pagar ela preserva os dados e inclui desdobramento opcional uma obrigacao pode ficar em aberto como total unico ou gerar parcelas canonicas para baixa posterior contas a pagar podem ser rateadas somente quando lancadas pela matriz ha um unico titulo e uma unica baixa fisica integrais na matriz todos ou os polos selecionados recebem alocacoes economicas canonicas em centavos o rateio nao duplica pagamento banco nem titulo exigivel nos polos participantes emprestimo criado pela matriz deve usar todos ou selecionados o credito e a conta a pagar fisica ficam na matriz enquanto cada parcela distribui custo economico para os polos do rateio emprestimo criado com o polo comum selecionado usa",
+      "tokenCount": 159,
+      "part": 1
+    },
+    {
+      "id": "465d78eee41e1a5a8083",
+      "hash": "465d78eee41e1a5a8083df6c682880f45ed552933b868d65af15975f882a1491",
+      "path": "docs/decisions/patrimonio-contas-a-pagar-emprestimos.md",
+      "section": "Decisões",
+      "text": "obrigatoriamente `SEM_RATEIO`: crédito, parcelas, Conta a Pagar e baixa ficam apenas naquele polo. - A baixa é feita no polo responsável pelo contrato. Para contratos da Matriz, cada polo participante recebe somente o custo econômico rateado; para contrato próprio, não existe linha derivada em outra unidade. Assim, responsabilidade financeira e fluxo físico de banco permanecem separados. - Caixa distingue operação de financiamento: crédito de empréstimo não é receita operacional; principal é quitação de dívida e juros/encargos são custo financeiro separado. Empréstimo não é classificado como despesa fixa ou variável operacional e não cria ponto de equilíbrio artificial. - Realtime e TanStack Query usam escopo mínimo: Patrimônio invalida o polo do evento; empréstimos invalidam Matriz, consolidado e os polos devolvidos pelo backend no rateio. Não há varredura global de cache. - RPCs financeiras autorizam antes de checar idempotência, comparam o payload imutável em replays e mantêm auditoria de escopo. Isso evita vazar existência de operações ou aceitar um mesmo `request_id` com conteúdo diferente.",
+      "normalizedText": "obrigatoriamente sem rateio credito parcelas conta a pagar e baixa ficam apenas naquele polo a baixa e feita no polo responsavel pelo contrato para contratos da matriz cada polo participante recebe somente o custo economico rateado para contrato proprio nao existe linha derivada em outra unidade assim responsabilidade financeira e fluxo fisico de banco permanecem separados caixa distingue operacao de financiamento credito de emprestimo nao e receita operacional principal e quitacao de divida e juros encargos sao custo financeiro separado emprestimo nao e classificado como despesa fixa ou variavel operacional e nao cria ponto de equilibrio artificial realtime e tanstack query usam escopo minimo patrimonio invalida o polo do evento emprestimos invalidam matriz consolidado e os polos devolvidos pelo backend no rateio nao ha varredura global de cache rpcs financeiras autorizam antes de checar idempotencia comparam o payload imutavel em replays e mantem auditoria de escopo isso evita vazar existencia de operacoes ou aceitar um mesmo request id com conteudo diferente",
+      "tokenCount": 145,
+      "part": 2
+    },
+    {
+      "id": "dde426db25c1c9be787e",
+      "hash": "dde426db25c1c9be787ee2b5af5c34e92aa29948190a7e5087719fed2e2369b3",
+      "path": "docs/decisions/patrimonio-contas-a-pagar-emprestimos.md",
+      "section": "Limites e validação",
+      "text": "- No fechamento não havia empréstimos legados; logo, o backfill de escopo não precisou classificar contratos históricos. - O usuário deve liberar explicitamente as permissões de Patrimônio e Empréstimos para perfis personalizados que precisarem das novas telas. A sessão precisa ser renovada (ou receber recarga forçada) para refletir uma permissão alterada. - A publicação Web permanece em lote único: commit/PR/Preview depois da validação, e produção somente com solicitação explícita.",
+      "normalizedText": "no fechamento nao havia emprestimos legados logo o backfill de escopo nao precisou classificar contratos historicos o usuario deve liberar explicitamente as permissoes de patrimonio e emprestimos para perfis personalizados que precisarem das novas telas a sessao precisa ser renovada ou receber recarga forcada para refletir uma permissao alterada a publicacao web permanece em lote unico commit pr preview depois da validacao e producao somente com solicitacao explicita",
+      "tokenCount": 62,
+      "part": 1
+    }
+  ]
+}

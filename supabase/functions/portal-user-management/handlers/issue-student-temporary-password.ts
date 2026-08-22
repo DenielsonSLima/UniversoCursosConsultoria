@@ -7,6 +7,8 @@ import {
 } from "./student-first-access-state.ts";
 import { resolveCanonicalStudentIdentity } from "./student-access-identity.ts";
 import { generateTemporaryPassword } from "./temporary-password.ts";
+import { createTemporaryPasswordEmissionCoordinator } from "./temporary-password-emission.ts";
+
 const TEMPORARY_PASSWORD_ISSUE_METADATA_KEY =
   "universocc_temporary_password_issue_id";
 export const TEMPORARY_PASSWORD_WRITE_NONCE_METADATA_KEY =
@@ -15,33 +17,35 @@ export const TEMPORARY_PASSWORD_WRITE_NONCE_METADATA_KEY =
 /** Mantém a política do primeiro acesso sem guardar a senha em lugar algum. */
 export const generateStudentTemporaryPassword = generateTemporaryPassword;
 
+const studentTemporaryPasswordEmission =
+  createTemporaryPasswordEmissionCoordinator({
+    targetParameter: "p_partner_id",
+    reserveRpc: "portal_reservar_emissao_senha_temporaria",
+    completeRpc: "portal_concluir_emissao_senha_temporaria",
+    cancelRpc: "portal_cancelar_emissao_senha_temporaria",
+    confirmCleanupRpc: "portal_confirmar_limpeza_emissao_senha_temporaria",
+    issueMetadataKey: TEMPORARY_PASSWORD_ISSUE_METADATA_KEY,
+    writeNonceMetadataKey: TEMPORARY_PASSWORD_WRITE_NONCE_METADATA_KEY,
+  });
+
 const reserveTemporaryPasswordEmission = async (
   context: HandlerContext,
   partnerId: string,
   issueId: string,
   actorAuthUserId: string,
 ) => {
-  try {
-    const { data, error } = await context.admin.rpc(
-      "portal_reservar_emissao_senha_temporaria",
-      {
-        p_partner_id: partnerId,
-        p_emissao_id: issueId,
-        p_actor_auth_user_id: actorAuthUserId,
-      },
-    );
-    if (error) {
-      return {
-        reserved: false,
-        failed: true,
-        errorCode: String(error.code || ""),
-        errorMessage: String(error.message || ""),
-      };
-    }
-    return { reserved: data === true, failed: false };
-  } catch {
-    return { reserved: false, failed: true };
-  }
+  const result = await studentTemporaryPasswordEmission.reserve(
+    context,
+    partnerId,
+    issueId,
+    actorAuthUserId,
+  );
+  return {
+    reserved: result.value,
+    failed: result.failed,
+    errorCode: result.errorCode,
+    errorMessage: result.errorMessage,
+  };
 };
 
 const completeTemporaryPasswordEmission = async (
@@ -50,288 +54,27 @@ const completeTemporaryPasswordEmission = async (
   issueId: string,
   actorAuthUserId: string,
 ) => {
-  try {
-    const { data, error } = await context.admin.rpc(
-      "portal_concluir_emissao_senha_temporaria",
-      {
-        p_partner_id: partnerId,
-        p_emissao_id: issueId,
-        p_actor_auth_user_id: actorAuthUserId,
-      },
-    );
-    if (error) {
-      return {
-        error: error.message ||
-          "Não foi possível concluir o registro da senha temporária.",
-      };
-    }
-    if (data !== true) return { completed: false };
-    return { completed: true };
-  } catch {
-    return {
-      error: "Não foi possível concluir o registro da senha temporária.",
-    };
-  }
-};
-
-const cancelTemporaryPasswordEmission = async (
-  context: HandlerContext,
-  partnerId: string,
-  issueId: string,
-  actorAuthUserId: string,
-) => {
-  try {
-    const { data, error } = await context.admin.rpc(
-      "portal_cancelar_emissao_senha_temporaria",
-      {
-        p_partner_id: partnerId,
-        p_emissao_id: issueId,
-        p_actor_auth_user_id: actorAuthUserId,
-      },
-    );
-    if (error) {
-      return {
-        error: error.message ||
-          "Não foi possível liberar a emissão não concluída.",
-      };
-    }
-    return { cancelled: data === true };
-  } catch {
-    return { error: "Não foi possível liberar a emissão não concluída." };
-  }
-};
-
-const confirmTemporaryPasswordEmissionCleanup = async (
-  context: HandlerContext,
-  partnerId: string,
-  issueId: string,
-  actorAuthUserId: string,
-) => {
-  try {
-    const { data, error } = await context.admin.rpc(
-      "portal_confirmar_limpeza_emissao_senha_temporaria",
-      {
-        p_partner_id: partnerId,
-        p_emissao_id: issueId,
-        p_actor_auth_user_id: actorAuthUserId,
-      },
-    );
-    if (error) {
-      return {
-        error: error.message ||
-          "Não foi possível concluir a limpeza da emissão.",
-      };
-    }
-    return { cleaned: data === true };
-  } catch {
-    return { error: "Não foi possível concluir a limpeza da emissão." };
-  }
-};
-
-const appMetadataForTemporaryPasswordIssue = (
-  authUser: any,
-  issueId: string,
-) => ({
-  ...(authUser?.app_metadata && typeof authUser.app_metadata === "object" &&
-      !Array.isArray(authUser.app_metadata)
-    ? authUser.app_metadata
-    : {}),
-  [TEMPORARY_PASSWORD_ISSUE_METADATA_KEY]: issueId,
-  [TEMPORARY_PASSWORD_WRITE_NONCE_METADATA_KEY]: issueId,
-});
-
-const temporaryPasswordIssueIdFromAuthUser = (authUser: any) =>
-  String(
-    authUser?.app_metadata?.[TEMPORARY_PASSWORD_ISSUE_METADATA_KEY] || "",
-  ).trim();
-
-const temporaryPasswordWriteNonceFromAuthUser = (authUser: any) =>
-  String(
-    authUser?.app_metadata?.[TEMPORARY_PASSWORD_WRITE_NONCE_METADATA_KEY] || "",
-  ).trim();
-
-const appMetadataWithoutTemporaryPasswordIssue = (authUser: any) => {
-  const appMetadata = authUser?.app_metadata &&
-      typeof authUser.app_metadata === "object" &&
-      !Array.isArray(authUser.app_metadata)
-    ? authUser.app_metadata
-    : {};
-  // GoTrue mescla app_metadata. Para remover de fato a chave, ela precisa ser
-  // enviada com null; omiti-la preservaria o UUID da emissão anterior.
-  return {
-    ...appMetadata,
-    [TEMPORARY_PASSWORD_ISSUE_METADATA_KEY]: null,
-    [TEMPORARY_PASSWORD_WRITE_NONCE_METADATA_KEY]: null,
-  };
-};
-
-const markTemporaryPasswordIssueInAuth = async (
-  context: HandlerContext,
-  authUserId: string,
-  issueId: string,
-) => {
-  let authUser: any;
-  try {
-    const { data, error } = await context.admin.auth.admin.getUserById(
-      authUserId,
-    );
-    if (error || !data?.user) {
-      return {
-        error:
-          "Não foi possível preparar a identidade para a emissão da senha temporária.",
-      };
-    }
-    authUser = data.user;
-  } catch {
-    return {
-      error:
-        "Não foi possível preparar a identidade para a emissão da senha temporária.",
-    };
-  }
-
-  const currentIssueId = temporaryPasswordIssueIdFromAuthUser(authUser);
-  const currentWriteNonce = temporaryPasswordWriteNonceFromAuthUser(authUser);
-  if (
-    (currentIssueId && currentIssueId !== issueId) ||
-    (currentWriteNonce && currentWriteNonce !== issueId)
-  ) {
-    return {
-      error:
-        "Existe um marcador técnico de outra emissão que precisa ser revisado antes de gerar uma senha.",
-    };
-  }
-
-  let markerUpdateFailed = false;
-  if (currentIssueId !== issueId || currentWriteNonce !== issueId) {
-    try {
-      // UserUpdate grava a senha antes de app_metadata. Por isso marcador e
-      // nonce são stageados e confirmados antes da chamada password-only.
-      const { error: updateError } = await context.admin.auth.admin
-        .updateUserById(authUserId, {
-          app_metadata: appMetadataForTemporaryPasswordIssue(authUser, issueId),
-        });
-      markerUpdateFailed = Boolean(updateError);
-    } catch {
-      markerUpdateFailed = true;
-      // A resposta pode se perder depois do commit. A leitura abaixo é a
-      // fonte canônica para decidir se a etapa ficou pronta.
-    }
-  }
-
-  try {
-    const { data, error } = await context.admin.auth.admin.getUserById(
-      authUserId,
-    );
-    if (
-      !error && data?.user &&
-      temporaryPasswordIssueIdFromAuthUser(data.user) === issueId &&
-      temporaryPasswordWriteNonceFromAuthUser(data.user) === issueId
-    ) {
-      return { marked: true };
-    }
-  } catch {
-    // Falha fechada abaixo: não trocamos senha sem confirmar o marcador.
-  }
-
-  return {
-    error: markerUpdateFailed
-      ? "O Auth não confirmou o marcador seguro da emissão da senha temporária."
-      : "Não foi possível confirmar o marcador seguro da emissão da senha temporária.",
-  };
-};
-
-const cleanTemporaryPasswordIssueMarker = async (
-  context: HandlerContext,
-  partnerId: string,
-  issueId: string,
-  authUserId: string,
-  actorAuthUserId: string,
-) => {
-  let cleanupUpdateFailed = false;
-  try {
-    const { data, error } = await context.admin.auth.admin.getUserById(
-      authUserId,
-    );
-    if (error || !data?.user) {
-      return {
-        error:
-          "Não foi possível localizar a identidade para concluir a limpeza da emissão.",
-      };
-    }
-
-    const currentIssueId = temporaryPasswordIssueIdFromAuthUser(data.user);
-    const currentWriteNonce = temporaryPasswordWriteNonceFromAuthUser(
-      data.user,
-    );
-    if (
-      (currentIssueId && currentIssueId !== issueId) ||
-      (currentWriteNonce && currentWriteNonce !== issueId)
-    ) {
-      return {
-        error:
-          "A identidade contém marcadores de outra emissão e requer revisão.",
-      };
-    }
-    if (currentIssueId === issueId || currentWriteNonce === issueId) {
-      try {
-        const { error: updateError } = await context.admin.auth.admin
-          .updateUserById(authUserId, {
-            app_metadata: appMetadataWithoutTemporaryPasswordIssue(data.user),
-          });
-        cleanupUpdateFailed = Boolean(updateError);
-      } catch {
-        cleanupUpdateFailed = true;
-        // A confirmação canônica abaixo consulta auth.users novamente e só
-        // libera a reserva se o marcador realmente não estiver mais presente.
-      }
-    }
-  } catch {
-    return {
-      error:
-        "Não foi possível localizar a identidade para concluir a limpeza da emissão.",
-    };
-  }
-
-  const confirmation = await confirmTemporaryPasswordEmissionCleanup(
+  const result = await studentTemporaryPasswordEmission.complete(
     context,
     partnerId,
     issueId,
     actorAuthUserId,
   );
-  if ("cleaned" in confirmation && confirmation.cleaned) return confirmation;
-  if (cleanupUpdateFailed && !("error" in confirmation)) {
+  if (result.failed) {
     return {
-      error: "Não foi possível remover o marcador técnico da emissão.",
+      error: result.errorMessage ||
+        "Não foi possível concluir o registro da senha temporária.",
     };
   }
-  return confirmation;
+  return { completed: result.value };
 };
 
-const revokeAndCleanTemporaryPasswordEmission = async (
-  context: HandlerContext,
-  partnerId: string,
-  issueId: string,
-  authUserId: string,
-  actorAuthUserId: string,
-) => {
-  const cancellation = await cancelTemporaryPasswordEmission(
-    context,
-    partnerId,
-    issueId,
-    actorAuthUserId,
-  );
-  if (!("cancelled" in cancellation) || !cancellation.cancelled) {
-    return { cleaned: false, cancellationFailed: true };
-  }
-
-  return cleanTemporaryPasswordIssueMarker(
-    context,
-    partnerId,
-    issueId,
-    authUserId,
-    actorAuthUserId,
-  );
-};
+const markTemporaryPasswordIssueInAuth =
+  studentTemporaryPasswordEmission.markIssueInAuth;
+const cleanTemporaryPasswordIssueMarker =
+  studentTemporaryPasswordEmission.cleanIssueMarker;
+const revokeAndCleanTemporaryPasswordEmission =
+  studentTemporaryPasswordEmission.cancelAndCleanIssue;
 
 const reconcilePendingTemporaryPasswordEmission = async (
   context: HandlerContext,

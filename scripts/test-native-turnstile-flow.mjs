@@ -12,13 +12,14 @@ const [
   appRouter,
   appLogin,
   appSignup,
-  recoveryPage,
+  recoveryEntry,
   supportPage,
   loginService,
-  publicAlunoAuth,
+  publicAlunoAuthEntry,
   publicSupportService,
   cors,
-  portalAuth,
+  portalAuthEntry,
+  portalAuthSecurity,
   publicSupport,
   vercel,
   nativeAppBridge,
@@ -54,6 +55,7 @@ const [
   readSource('modules/aluno/login-app/public-support.service.ts'),
   readSource('supabase/functions/_shared/http.ts'),
   readSource('supabase/functions/portal-auth/index.ts'),
+  readSource('supabase/functions/portal-auth/request-security.ts'),
   readSource('supabase/functions/public-student-support/index.ts'),
   readSource('vercel.json'),
   readSource('modules/aluno/native-app/native-app.bridge.ts'),
@@ -75,6 +77,23 @@ const [
   readSource('native-turnstile.ts'),
   readSource('vite.config.ts'),
 ])
+
+const portalAuth = `${portalAuthEntry}\n${portalAuthSecurity}`
+const recoveryPage = [
+  recoveryEntry,
+  await readSource('modules/login/password-recovery/usePasswordRecovery.ts'),
+  await readSource('modules/login/password-recovery/PasswordRecoveryAppView.tsx'),
+  await readSource('modules/login/password-recovery/PasswordRecoveryWebView.tsx'),
+].join('\n')
+const publicAlunoAuth = [
+  publicAlunoAuthEntry,
+  await readSource('modules/public/login/aluno-public-auth.contract.ts'),
+  await readSource('modules/public/login/aluno-public-auth.helpers.ts'),
+  await readSource('modules/public/login/aluno-public-auth-session.helpers.ts'),
+  await readSource('modules/public/login/aluno-public-first-access.service.ts'),
+  await readSource('modules/public/login/aluno-public-session.service.ts'),
+  await readSource('modules/public/login/aluno-public-signup.service.ts'),
+].join('\n')
 
 test('native challenge bridge binds messages to origin, frame, nonce and action', () => {
   assert.match(nativeWidget, /event\.origin !== challengeOrigin/)
@@ -281,5 +300,8 @@ test('native login restores an existing persisted Supabase session', () => {
   assert.match(supabaseClient, /persistSession:\s*true/)
   assert.match(supabaseClient, /autoRefreshToken:\s*true/)
   assert.match(appLogin, /supabase\.auth\.getSession\(\)/)
-  assert.match(appLogin, /navigate\(redirectPath, \{ replace: true \}\)/)
+  assert.match(
+    appLogin,
+    /navigate\(resolveProfilePostLoginRoute\(profile\.tipo, redirectPath\), \{ replace: true \}\)/,
+  )
 })

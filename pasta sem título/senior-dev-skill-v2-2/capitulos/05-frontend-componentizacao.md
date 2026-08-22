@@ -169,6 +169,8 @@ export const clienteService = {
 
 ## Checklist — Frontend
 
+- [ ] Todo arquivo manual tocado ou criado tem no máximo 500 linhas físicas?
+- [ ] A divisão preserva responsabilidades coesas, em vez de apenas comprimir ou deslocar código?
 - [ ] Componentes não chamam API diretamente?
 - [ ] Pages são delegadoras (não fazem trabalho pesado)?
 - [ ] Componentes de UI em `/lib/ui` são reutilizáveis em qualquer módulo?

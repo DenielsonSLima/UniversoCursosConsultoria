@@ -103,9 +103,11 @@ Deno.test("roteador publica as ações de Professor e Responsável", async () =>
 });
 
 Deno.test("emissão do Responsável usa marcador app_metadata distinto e RPCs dedicadas", async () => {
-  const source = await readLocal(
-    "./handlers/issue-responsavel-temporary-password.ts",
-  );
+  const [source, emissionCoordinator] = await Promise.all([
+    readLocal("./handlers/issue-responsavel-temporary-password.ts"),
+    readLocal("./handlers/temporary-password-emission.ts"),
+  ]);
+  const runtime = `${source}\n${emissionCoordinator}`;
 
   assert.match(
     source,
@@ -121,21 +123,25 @@ Deno.test("emissão do Responsável usa marcador app_metadata distinto e RPCs de
   ) {
     assert.match(source, new RegExp(rpc));
   }
-  assert.match(source, /app_metadata/);
+  assert.match(emissionCoordinator, /app_metadata/);
   assert.match(
     source,
     /universocc_responsavel_temporary_password_write_nonce/,
   );
   assert.match(
     source,
-    /appMetadataWithIssue[\s\S]*RESPONSAVEL_TEMPORARY_PASSWORD_WRITE_NONCE_METADATA_KEY/,
+    /issueMetadataKey:\s*RESPONSAVEL_TEMPORARY_PASSWORD_ISSUE_METADATA_KEY[\s\S]*writeNonceMetadataKey:\s*RESPONSAVEL_TEMPORARY_PASSWORD_WRITE_NONCE_METADATA_KEY/,
+  );
+  assert.match(
+    emissionCoordinator,
+    /\[config\.issueMetadataKey\]: issueId,[\s\S]*\[config\.writeNonceMetadataKey\]: issueId/,
   );
   assert.match(source, /password:\s*temporaryPassword,\s*\n\s*}/);
   assert.match(
     source,
     /verifyTemporaryPassword\([\s\S]*identity\.authUser\.id[\s\S]*finishAfterPasswordAttempt/,
   );
-  assert.doesNotMatch(source, /console\.(?:log|info|warn|error)/);
+  assert.doesNotMatch(runtime, /console\.(?:log|info|warn|error)/);
 });
 
 Deno.test("toda resposta JSON do endpoint desabilita cache", async () => {
@@ -158,14 +164,19 @@ Deno.test("toda resposta JSON do endpoint desabilita cache", async () => {
 });
 
 Deno.test("senha temporária do aluno stageia nonce antes da senha e a verifica", async () => {
-  const source = await readLocal(
-    "./handlers/issue-student-temporary-password.ts",
-  );
+  const [source, emissionCoordinator] = await Promise.all([
+    readLocal("./handlers/issue-student-temporary-password.ts"),
+    readLocal("./handlers/temporary-password-emission.ts"),
+  ]);
 
   assert.match(source, /universocc_temporary_password_write_nonce/);
   assert.match(
     source,
-    /appMetadataForTemporaryPasswordIssue[\s\S]*TEMPORARY_PASSWORD_WRITE_NONCE_METADATA_KEY/,
+    /issueMetadataKey:\s*TEMPORARY_PASSWORD_ISSUE_METADATA_KEY[\s\S]*writeNonceMetadataKey:\s*TEMPORARY_PASSWORD_WRITE_NONCE_METADATA_KEY/,
+  );
+  assert.match(
+    emissionCoordinator,
+    /\[config\.issueMetadataKey\]: issueId,[\s\S]*\[config\.writeNonceMetadataKey\]: issueId/,
   );
   assert.match(source, /password:\s*temporaryPassword,\s*\n\s*}/);
   assert.match(
@@ -193,10 +204,14 @@ Deno.test("reenvio do responsável delega reserva e auditoria à RPC transaciona
 });
 
 Deno.test("reconciliação de convite usa somente a RPC Vault congelada", async () => {
-  const source = await readLocal("./handlers/ensure-responsavel-access.ts");
+  const [source, reconciliation] = await Promise.all([
+    readLocal("./handlers/ensure-responsavel-access.ts"),
+    readLocal("./handlers/responsavel-invite-reconciliation.ts"),
+  ]);
+  const runtime = `${source}\n${reconciliation}`;
 
   assert.match(
-    source,
+    reconciliation,
     /portal_identidade_assinar_convite_responsavel/,
   );
   for (
@@ -208,11 +223,11 @@ Deno.test("reconciliação de convite usa somente a RPC Vault congelada", async 
       "p_email",
     ]
   ) {
-    assert.match(source, new RegExp(argument));
+    assert.match(reconciliation, new RegExp(argument));
   }
-  assert.doesNotMatch(source, /PORTAL_INVITE_RECONCILIATION_SECRET/);
+  assert.doesNotMatch(runtime, /PORTAL_INVITE_RECONCILIATION_SECRET/);
   assert.doesNotMatch(
-    source,
+    runtime,
     /SUPABASE_SERVICE_ROLE_KEY[\s\S]*sign|sign[\s\S]*SUPABASE_SERVICE_ROLE_KEY/i,
   );
 });

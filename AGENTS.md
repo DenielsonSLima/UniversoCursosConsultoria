@@ -59,6 +59,9 @@ Banco/Supabase, Auth/RLS, financeiro, mudança estrutural de PDF, infraestrutura
 - A sequência padrão é: reprodução, teste/checagem específica, patch mínimo, smoke real e validação final proporcional.
 - Correção visual/interativa não fica pronta sem smoke do fluxo correspondente; se a sessão autenticada estiver indisponível, registre a pendência sem substituir o smoke por dezenas de testes não relacionados.
 - Não altere AGENTS, skills ou memória dentro de um hotfix de produto. Mudanças de governança pertencem a lote operacional separado.
+- Arquivos manuais de implementação, teste, documentação ativa, política ou skill têm teto de 500 linhas físicas. Se um arquivo tocado ultrapassar o teto, divida-o no mesmo lote por responsabilidade coesa; não masque a violação comprimindo código ou removendo legibilidade.
+- Migrations futuras devem ser divididas antes da aplicação quando isso preservar atomicidade e ordem. Migrations já aplicadas são imutáveis e constituem exceção auditada; arquivos gerados, lockfiles, binários e código de terceiros também não entram no teto.
+- A adoção do teto é incremental: valide primeiro o manifesto explícito do lote atual e amplie o escopo auditado a cada lote, sem transformar a regra em varredura silenciosa de dívida técnica antiga.
 - Testes-fonte e migrations aplicadas permanecem versionados. Eles protegem regressões, auditoria, drift e reconstrução de ambientes.
 - Caches, PDFs/PNGs gerados, relatórios temporários, harnesses em tmp e saídas de build são regeneráveis e não pertencem ao lote.
 - Não varra o repositório inteiro nem use estado Git amplo como lista de trabalho.

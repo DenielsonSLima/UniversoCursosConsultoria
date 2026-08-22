@@ -2,13 +2,20 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-const [serviceSource, hookSource, cardSource, recoverySource, appSource] = await Promise.all([
+const [serviceSource, hookSource, cardSource, recoveryEntry, appSource] = await Promise.all([
   readFile(new URL('./responsavel-access.service.ts', import.meta.url), 'utf8'),
   readFile(new URL('./hooks/useResponsavelAccess.ts', import.meta.url), 'utf8'),
   readFile(new URL('./components/ResponsavelAccessCard.tsx', import.meta.url), 'utf8'),
   readFile(new URL('../../../login/PasswordRecoveryPage.tsx', import.meta.url), 'utf8'),
   readFile(new URL('../../../../App.tsx', import.meta.url), 'utf8'),
 ]);
+const recoverySource = [
+  recoveryEntry,
+  await readFile(
+    new URL('../../../login/password-recovery/usePasswordRecovery.ts', import.meta.url),
+    'utf8',
+  ),
+].join('\n');
 
 test('cliente usa somente as ações canônicas do acesso do Responsável', () => {
   for (const action of [

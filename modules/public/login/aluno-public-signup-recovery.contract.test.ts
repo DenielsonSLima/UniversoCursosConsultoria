@@ -3,12 +3,22 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 test('cadastro existente exibe caminhos seguros de entrada e recuperação', async () => {
-  const [service, webPage, webCard, appPage] = await Promise.all([
+  const [serviceEntry, webPageEntry, webCard, appPage] = await Promise.all([
     readFile(new URL('./aluno-public-auth.service.ts', import.meta.url), 'utf8'),
     readFile(new URL('./AlunoLoginPublicPage.tsx', import.meta.url), 'utf8'),
     readFile(new URL('./AlunoLoginAuthCard.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../../aluno/login-app/AlunoAppSignupPage.tsx', import.meta.url), 'utf8'),
   ]);
+  const service = [
+    serviceEntry,
+    await readFile(new URL('./aluno-public-auth.contract.ts', import.meta.url), 'utf8'),
+    await readFile(new URL('./aluno-public-auth-session.helpers.ts', import.meta.url), 'utf8'),
+    await readFile(new URL('./aluno-public-signup.service.ts', import.meta.url), 'utf8'),
+  ].join('\n');
+  const webPage = [
+    webPageEntry,
+    await readFile(new URL('./useAlunoLoginPublicPage.ts', import.meta.url), 'utf8'),
+  ].join('\n');
 
   assert.match(service, /Usuário já cadastrado/);
   assert.match(service, /recoverExistingSignup/);

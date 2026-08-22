@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "maxLines": 500,
+  "manifests": [
+    "ai/operacao/registros/alteracoes/2026-08-21-acesso-responsavel-completo-4-6-0.md",
+    "ai/operacao/registros/alteracoes/2026-08-22-modularizacao-teto-500-4-6-0.md"
+  ],
+  "exemptions": [
+    {
+      "path": "supabase/migrations/20260821230000_harden_student_temporary_password_first_access.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260822024300",
+      "sha256": "4947fb5ab1cb4c91271a897cc76ad3b0ae45192a17a990b260de58787fdd05eb",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260821234000_complete_responsavel_first_access.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260822024309",
+      "sha256": "91b030c564ca8aa92e0fd581063541d8c0543aed32093a6b09a502a0f6fb81ba",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    }
+  ],
+  "retiredPaths": [],
+  "generatedArtifacts": [
+    {
+      "path": "ai/operacao/rag/index.json",
+      "generator": "node scripts/agent-memory-rag.mjs index",
+      "reason": "Índice RAG determinístico e regenerável; o conteúdo fonte permanece sujeito ao teto."
+    }
+  ],
+  "ignoredExtensions": [
+    ".avif",
+    ".gif",
+    ".ico",
+    ".jpeg",
+    ".jpg",
+    ".lock",
+    ".pdf",
+    ".png",
+    ".webp",
+    ".woff",
+    ".woff2"
+  ],
+  "ignoredFileNames": [
+    "bun.lock",
+    "bun.lockb",
+    "npm-shrinkwrap.json",
+    "package-lock.json",
+    "pnpm-lock.yaml",
+    "yarn.lock"
+  ]
+}
