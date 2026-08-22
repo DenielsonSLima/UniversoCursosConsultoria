@@ -8,17 +8,14 @@ import type {
   TurmaPlanoUnicoPoloOption,
   TurmaPlanoUnicoSubmission,
 } from './turma-plano-unico-form.types';
-import {
-  buildInstallmentSchedule,
-  getDiaVencimento,
-  getFriendlyPlanoUnicoSubmitError,
-} from './turma-plano-unico-form.utils';
+import { getFriendlyPlanoUnicoSubmitError } from './turma-plano-unico-form.utils';
 import { validateTurmaPlanoUnicoStep } from './turma-plano-unico-form.validation';
 import TurmaPlanoUnicoStepper from './TurmaPlanoUnicoStepper';
 import TurmaPlanoUnicoDadosStep from './steps/TurmaPlanoUnicoDadosStep';
 import TurmaPlanoUnicoFinanceiroStep from './steps/TurmaPlanoUnicoFinanceiroStep';
 import TurmaPlanoUnicoReviewStep from './steps/TurmaPlanoUnicoReviewStep';
 import { useTurmaPlanoUnicoDialog } from './useTurmaPlanoUnicoDialog';
+import { useTurmaPlanoUnicoPreview } from './useTurmaPlanoUnicoPreview';
 
 const LAST_STEP_INDEX = TURMA_PLANO_UNICO_STEPS.length - 1;
 
@@ -78,6 +75,8 @@ const TurmaPlanoUnicoForm: React.FC<TurmaPlanoUnicoFormProps> = ({
     () => polos.find((polo) => polo.id === formData.poloId),
     [formData.poloId, polos],
   );
+  const previewQuery = useTurmaPlanoUnicoPreview(formData);
+  const previewPending = previewQuery.isSettling || previewQuery.isFetching;
   const identity = useMemo(() => {
     if (!selectedCourse || !selectedPolo) return { nome: '', codigo: '' };
     return config.generateIdentity({ curso: selectedCourse, polo: selectedPolo, formData }) || { nome: '', codigo: '' };
@@ -103,23 +102,31 @@ const TurmaPlanoUnicoForm: React.FC<TurmaPlanoUnicoFormProps> = ({
       setStepError(error);
       return;
     }
+    if (activeStep.id === 'PLANO_FINANCEIRO') {
+      if (previewPending) {
+        setStepError('Aguarde a prévia oficial do plano financeiro.');
+        return;
+      }
+      if (previewQuery.isError || !previewQuery.data) {
+        setStepError('O banco não confirmou esta condição financeira. Revise os campos e tente novamente.');
+        return;
+      }
+    }
     if (currentStep < LAST_STEP_INDEX) moveToStep(currentStep + 1);
   };
 
   const buildSubmission = (): TurmaPlanoUnicoSubmission => {
-    const schedule = buildInstallmentSchedule(
-      formData.valorTotal,
-      formData.qtdParcelas,
-      formData.primeiroVencimento,
-    );
+    const officialRule = previewQuery.data;
+    if (!officialRule) throw new Error('A prévia oficial do plano financeiro expirou. Recarregue-a antes de criar a turma.');
+    const schedule = officialRule.cronograma;
     const planoFinanceiroUnico = {
-      valorTotal: formData.valorTotal,
-      qtdParcelas: formData.qtdParcelas,
-      primeiroVencimento: formData.primeiroVencimento,
-      diaVencimento: getDiaVencimento(formData.primeiroVencimento),
-      descontoPontualidade: formData.descontoPontualidade,
-      jurosAtrasoPercentual: formData.jurosAtrasoPercentual,
-      multaAtraso: formData.multaAtraso,
+      valorTotal: officialRule.valorTotal,
+      qtdParcelas: officialRule.qtdParcelas,
+      primeiroVencimento: officialRule.primeiroVencimento,
+      diaVencimento: officialRule.diaVencimento,
+      descontoPontualidade: officialRule.descontoPontualidade,
+      jurosAtrasoPercentual: officialRule.jurosAtrasoPercentual,
+      multaAtraso: officialRule.multaAtraso,
     };
 
     return {
@@ -165,7 +172,7 @@ const TurmaPlanoUnicoForm: React.FC<TurmaPlanoUnicoFormProps> = ({
       cronogramaFinanceiro: schedule.map((installment) => ({
         numero: installment.numero,
         valor: installment.valor,
-        dataVencimento: installment.vencimento,
+        dataVencimento: installment.dataVencimento,
       })),
       planoFinanceiroUnico,
     };
@@ -187,6 +194,14 @@ const TurmaPlanoUnicoForm: React.FC<TurmaPlanoUnicoFormProps> = ({
         contentRef.current?.scrollTo({ top: 0 });
         return;
       }
+    }
+    if (previewPending || previewQuery.isError || !previewQuery.data) {
+      setCurrentStep(1);
+      setStepError(previewPending
+        ? 'Aguarde a confirmação do plano financeiro pelo servidor.'
+        : 'Recarregue a prévia oficial antes de criar a turma.');
+      contentRef.current?.scrollTo({ top: 0 });
+      return;
     }
 
     setStepError('');
@@ -255,7 +270,15 @@ const TurmaPlanoUnicoForm: React.FC<TurmaPlanoUnicoFormProps> = ({
                 onChange={updateForm}
               />
             ) : activeStep.id === 'PLANO_FINANCEIRO' ? (
-              <TurmaPlanoUnicoFinanceiroStep config={config} formData={formData} onChange={updateForm} />
+              <TurmaPlanoUnicoFinanceiroStep
+                config={config}
+                formData={formData}
+                preview={previewQuery.data}
+                previewError={previewQuery.isError ? previewQuery.error : null}
+                previewLoading={previewPending}
+                onChange={updateForm}
+                onRetryPreview={() => { void previewQuery.refetch(); }}
+              />
             ) : (
               <TurmaPlanoUnicoReviewStep
                 config={config}
@@ -264,6 +287,8 @@ const TurmaPlanoUnicoForm: React.FC<TurmaPlanoUnicoFormProps> = ({
                 identity={identity}
                 initialStatus={initialStatus}
                 polo={selectedPolo}
+                preview={previewQuery.data}
+                previewLoading={previewPending}
               />
             )}
 
@@ -285,7 +310,7 @@ const TurmaPlanoUnicoForm: React.FC<TurmaPlanoUnicoFormProps> = ({
               <p className="hidden text-[9px] font-bold uppercase tracking-wide text-slate-400 sm:block">{activeStep.label}</p>
               <button
                 type="submit"
-                disabled={isSaving}
+                disabled={isSaving || (activeStep.id !== 'TURMA' && previewPending)}
                 className={`mt-1 inline-flex min-w-36 items-center justify-center gap-2 rounded-xl bg-[#001a33] px-5 py-3 text-[10px] font-black uppercase tracking-wide text-white shadow-lg shadow-slate-900/15 transition ${config.theme.accentHoverBg} focus:outline-none focus:ring-2 ${config.theme.accentFocus} disabled:cursor-not-allowed disabled:opacity-50 sm:min-w-44`}
               >
                 {isSaving ? <Loader2 size={15} className="animate-spin" /> : currentStep === LAST_STEP_INDEX ? <Save size={15} /> : <ArrowRight size={15} />}

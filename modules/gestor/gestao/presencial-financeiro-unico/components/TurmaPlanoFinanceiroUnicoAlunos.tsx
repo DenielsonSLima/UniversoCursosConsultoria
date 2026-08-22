@@ -20,13 +20,24 @@ import RemoveEnrollmentConfirm from '../../tecnicos/detalhes/components/alunos/R
 import { getMaceioIsoDate } from '../../tecnicos/technicalClassDates';
 import { useAlunosDisponiveisPlanoFinanceiroUnico } from '../hooks/useAlunosDisponiveisPlanoFinanceiroUnico';
 import {
+  useMatricularAlunoPlanoFinanceiroUnicoV2,
+  usePendenciasPlanoFinanceiroUnico,
+} from '../hooks/useCondicaoPlanoFinanceiroUnico';
+import {
   useMatricularAlunoPlanoFinanceiroUnico,
   usePlanoFinanceiroUnicoWorkspace,
   useTurmasDestinoPlanoFinanceiroUnico,
 } from '../hooks/usePlanoFinanceiroUnico';
 import { createPlanoFinanceiroUnicoRequestId } from '../presencial-financeiro-unico.service';
-import type { AlunoDisponivelPlanoFinanceiroUnico } from '../types';
+import type {
+  AlunoDisponivelPlanoFinanceiroUnico,
+  MatricularAlunoPlanoFinanceiroUnicoV2Result,
+  PendenciaPlanoFinanceiroUnico,
+} from '../types';
+import CondicaoPlanoFinanceiroUnicoModal from './CondicaoPlanoFinanceiroUnicoModal';
 import ConfirmarPlanoFinanceiroUnicoModal from './ConfirmarPlanoFinanceiroUnicoModal';
+import PendenciasPlanoFinanceiroUnicoPanel from './PendenciasPlanoFinanceiroUnicoPanel';
+import PlanoFinanceiroUnicoStateModal from './PlanoFinanceiroUnicoStateModal';
 
 interface TurmaPlanoFinanceiroUnicoAlunosProps {
   turma: Turma;
@@ -34,42 +45,6 @@ interface TurmaPlanoFinanceiroUnicoAlunosProps {
 }
 
 const ENROLLMENT_PHASES = new Set(['PLANEJADA', 'INSCRICOES_ABERTAS', 'EM_ANDAMENTO']);
-
-const PlanoStateModal: React.FC<{
-  mode: 'loading' | 'error' | 'missing';
-  retrying?: boolean;
-  onClose: () => void;
-  onRetry?: () => void;
-}> = ({ mode, retrying = false, onClose, onRetry }) => {
-  const loading = mode === 'loading';
-  const missing = mode === 'missing';
-  const title = loading
-    ? 'Carregando plano financeiro'
-    : missing
-      ? 'Plano financeiro não configurado'
-      : 'Plano financeiro não carregado';
-  const message = loading
-    ? 'Aguarde enquanto o sistema consulta o plano pré-configurado desta turma.'
-    : missing
-      ? 'Esta turma não possui um plano único válido. A matrícula não foi iniciada para evitar gerar parcelas com valores indefinidos.'
-      : 'A confirmação foi bloqueada para não gerar parcelas sem a regra oficial da turma.';
-
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
-      <section role="dialog" aria-modal="true" aria-labelledby="plano-state-title" className="w-full max-w-md rounded-[2rem] bg-white p-6 shadow-2xl">
-        <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${loading ? 'bg-blue-50 text-blue-600' : 'bg-amber-50 text-amber-600'}`}>
-          {loading ? <Loader2 className="animate-spin" size={22} /> : <AlertCircle size={22} />}
-        </div>
-        <h3 id="plano-state-title" className="mt-4 text-lg font-black text-[#001a33]">{title}</h3>
-        <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">{message}</p>
-        <div className="mt-6 flex gap-3">
-          <button type="button" onClick={onClose} className="flex-1 rounded-xl border border-slate-200 py-3 text-[10px] font-black uppercase tracking-wider text-slate-500">Voltar</button>
-          {!loading && onRetry ? <button type="button" onClick={onRetry} disabled={retrying} className="flex-1 rounded-xl bg-[#001a33] py-3 text-[10px] font-black uppercase tracking-wider text-white disabled:opacity-50"><span className="flex items-center justify-center gap-2"><RefreshCw size={14} className={retrying ? 'animate-spin' : ''} /> Recarregar</span></button> : null}
-        </div>
-      </section>
-    </div>
-  );
-};
 
 const TurmaPlanoFinanceiroUnicoAlunos: React.FC<TurmaPlanoFinanceiroUnicoAlunosProps> = ({
   turma,
@@ -79,6 +54,7 @@ const TurmaPlanoFinanceiroUnicoAlunos: React.FC<TurmaPlanoFinanceiroUnicoAlunosP
   const queryClient = useQueryClient();
   const [showMatricularModal, setShowMatricularModal] = useState(false);
   const [pendingEnrollment, setPendingEnrollment] = useState<AlunoDisponivelPlanoFinanceiroUnico | null>(null);
+  const [selectedPendingCondition, setSelectedPendingCondition] = useState<PendenciaPlanoFinanceiroUnico | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const requestIds = useRef(new Map<string, string>());
   const [selectedStudent, setSelectedStudent] = useState<AcademicStudent | null>(null);
@@ -94,6 +70,7 @@ const TurmaPlanoFinanceiroUnicoAlunos: React.FC<TurmaPlanoFinanceiroUnicoAlunosP
   const [destinationClassId, setDestinationClassId] = useState('');
   const [destinationInstitution, setDestinationInstitution] = useState('');
   const turmaStatus = String(turma.status || '').toUpperCase();
+  const isLivre = turma.modalidade === 'LIVRE';
   const canEnroll = ENROLLMENT_PHASES.has(turmaStatus);
   const isReadOnly = turmaStatus === 'FINALIZADA';
 
@@ -114,7 +91,11 @@ const TurmaPlanoFinanceiroUnicoAlunos: React.FC<TurmaPlanoFinanceiroUnicoAlunosP
   );
   const planQuery = usePlanoFinanceiroUnicoWorkspace(
     turma.id,
-    Boolean(pendingEnrollment) && canManageFinanceiro,
+    Boolean(pendingEnrollment || selectedPendingCondition) && canManageFinanceiro,
+  );
+  const pendingConditionsQuery = usePendenciasPlanoFinanceiroUnico(
+    turma.id,
+    isLivre && canManageFinanceiro,
   );
   const destinationClassesQuery = useTurmasDestinoPlanoFinanceiroUnico(
     turma.id,
@@ -124,6 +105,7 @@ const TurmaPlanoFinanceiroUnicoAlunos: React.FC<TurmaPlanoFinanceiroUnicoAlunosP
     ),
   );
   const planEnrollmentMutation = useMatricularAlunoPlanoFinanceiroUnico();
+  const planEnrollmentV2Mutation = useMatricularAlunoPlanoFinanceiroUnicoV2();
 
   const invalidateAcademicData = useCallback(async (extraTurmaId?: string) => {
     const invalidations = [
@@ -240,7 +222,7 @@ const TurmaPlanoFinanceiroUnicoAlunos: React.FC<TurmaPlanoFinanceiroUnicoAlunosP
       return;
     }
     if (!canManageFinanceiro) {
-      toast.error('Permissão financeira necessária', 'A matrícula desta modalidade sempre gera as parcelas do plano da turma. Solicite acesso à aba Financeiro.');
+      toast.error('Permissão financeira necessária', 'Solicite acesso à aba Financeiro para definir a condição comercial desta matrícula.');
       return;
     }
     setSearchTerm('');
@@ -254,7 +236,23 @@ const TurmaPlanoFinanceiroUnicoAlunos: React.FC<TurmaPlanoFinanceiroUnicoAlunosP
 
   const closeEnrollment = () => {
     setPendingEnrollment(null);
+    setSelectedPendingCondition(null);
     setSearchTerm('');
+  };
+
+  const completeV2Enrollment = (result: MatricularAlunoPlanoFinanceiroUnicoV2Result) => {
+    if (result.financeiroGerado) {
+      toast.success(
+        'Financeiro local gerado',
+        `${result.parcelasGeradas} título${result.parcelasGeradas === 1 ? '' : 's'} criado${result.parcelasGeradas === 1 ? '' : 's'}. A emissão bancária continua em Financeiro › Receber.`,
+      );
+    } else {
+      toast.success(
+        'Aluno vinculado',
+        'A condição foi preservada sem gerar títulos. Ela aparece em “Financeiro para gerar depois”.',
+      );
+    }
+    closeEnrollment();
   };
 
   const confirmPlanEnrollment = async () => {
@@ -357,11 +355,20 @@ const TurmaPlanoFinanceiroUnicoAlunos: React.FC<TurmaPlanoFinanceiroUnicoAlunosP
         <div>
           <h3 className="text-lg font-bold text-[#001a33]">Matrículas da turma</h3>
           <p className="mt-1 text-xs text-slate-500">{students.length} registros preservados, incluindo alunos inativos e transferidos.</p>
-          {!canManageFinanceiro ? <p className="mt-2 text-[11px] font-semibold text-amber-700">É necessária permissão financeira para matricular, pois o plano da turma gera as parcelas automaticamente.</p> : null}
+          {!canManageFinanceiro ? <p className="mt-2 text-[11px] font-semibold text-amber-700">É necessária permissão financeira para definir a condição e gerar as cobranças do aluno.</p> : null}
           <p className="mt-2 text-[11px] font-semibold text-slate-500">Para preservar as parcelas geradas, movimentação, transferência e remoção de matrícula não estão disponíveis nesta modalidade.</p>
         </div>
         <button type="button" onClick={openEnrollmentSearch} disabled={!canEnroll || !canManageFinanceiro} className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white shadow-md transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"><UserPlus size={16} /> Matricular aluno</button>
       </div>
+
+      {isLivre ? <PendenciasPlanoFinanceiroUnicoPanel
+        items={pendingConditionsQuery.data?.pendencias || []}
+        loading={pendingConditionsQuery.isLoading}
+        error={pendingConditionsQuery.isError}
+        retrying={pendingConditionsQuery.isFetching}
+        onRetry={() => { void pendingConditionsQuery.refetch(); }}
+        onOpen={setSelectedPendingCondition}
+      /> : null}
 
       <div className="overflow-hidden rounded-[2rem] border border-slate-100 bg-white shadow-sm">
         <TurmaAlunosTable
@@ -378,7 +385,7 @@ const TurmaPlanoFinanceiroUnicoAlunos: React.FC<TurmaPlanoFinanceiroUnicoAlunosP
       {showMatricularModal ? <MatricularAlunoModal
         searchTerm={searchTerm}
         loadingAvailable={availableStudentsQuery.isLoading || availableStudentsQuery.isSearchSettling}
-        enrollPending={planEnrollmentMutation.isPending}
+        enrollPending={planEnrollmentMutation.isPending || planEnrollmentV2Mutation.isPending}
         loadError={availableStudentsQuery.isError ? 'A busca de alunos falhou. Nenhuma matrícula pode ser iniciada com dados incompletos.' : null}
         retrying={availableStudentsQuery.isFetching}
         students={availableStudentsQuery.filteredAvailableStudents}
@@ -388,10 +395,22 @@ const TurmaPlanoFinanceiroUnicoAlunos: React.FC<TurmaPlanoFinanceiroUnicoAlunosP
         onClose={() => { setShowMatricularModal(false); setSearchTerm(''); }}
       /> : null}
 
-      {pendingEnrollment && planQuery.isLoading ? <PlanoStateModal mode="loading" onClose={closeEnrollment} /> : null}
-      {pendingEnrollment && planQuery.isError ? <PlanoStateModal mode="error" retrying={planQuery.isFetching} onClose={closeEnrollment} onRetry={() => { void planQuery.refetch(); }} /> : null}
-      {pendingEnrollment && planQuery.data && !planQuery.data.configurado ? <PlanoStateModal mode="missing" retrying={planQuery.isFetching} onClose={closeEnrollment} onRetry={() => { void planQuery.refetch(); }} /> : null}
-      {pendingEnrollment && planQuery.data?.configurado && planQuery.data.regra ? <ConfirmarPlanoFinanceiroUnicoModal turmaNome={turma.nome} student={pendingEnrollment} regra={planQuery.data.regra} pending={planEnrollmentMutation.isPending} onClose={closeEnrollment} onConfirm={() => { void confirmPlanEnrollment(); }} /> : null}
+      {(pendingEnrollment || selectedPendingCondition) && planQuery.isLoading ? <PlanoFinanceiroUnicoStateModal mode="loading" onClose={closeEnrollment} /> : null}
+      {(pendingEnrollment || selectedPendingCondition) && planQuery.isError ? <PlanoFinanceiroUnicoStateModal mode="error" retrying={planQuery.isFetching} onClose={closeEnrollment} onRetry={() => { void planQuery.refetch(); }} /> : null}
+      {(pendingEnrollment || selectedPendingCondition) && planQuery.data && !planQuery.data.configurado ? <PlanoFinanceiroUnicoStateModal mode="missing" retrying={planQuery.isFetching} onClose={closeEnrollment} onRetry={() => { void planQuery.refetch(); }} /> : null}
+      {isLivre && (pendingEnrollment || selectedPendingCondition) && planQuery.data?.configurado && planQuery.data.regra ? <CondicaoPlanoFinanceiroUnicoModal
+        turmaId={turma.id}
+        turmaNome={turma.nome}
+        student={selectedPendingCondition?.aluno || pendingEnrollment!}
+        regraTurma={planQuery.data.regra}
+        pendencia={selectedPendingCondition}
+        pending={planEnrollmentV2Mutation.isPending}
+        onClose={closeEnrollment}
+        onSubmit={(input) => planEnrollmentV2Mutation.mutateAsync(input)}
+        onCompleted={completeV2Enrollment}
+        onError={(error) => toast.error('Operação não realizada', error instanceof Error ? error.message : 'O servidor não confirmou a condição financeira.')}
+      /> : null}
+      {!isLivre && pendingEnrollment && planQuery.data?.configurado && planQuery.data.regra ? <ConfirmarPlanoFinanceiroUnicoModal turmaNome={turma.nome} student={pendingEnrollment} regra={planQuery.data.regra} pending={planEnrollmentMutation.isPending} onClose={closeEnrollment} onConfirm={() => { void confirmPlanEnrollment(); }} /> : null}
 
       {selectedStudent ? <MovimentacaoAlunoModal
         student={selectedStudent}

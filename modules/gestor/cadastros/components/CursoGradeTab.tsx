@@ -29,6 +29,7 @@ interface CursoGradeTabProps {
   onRemoveModulo: (moduloId: string) => void;
   onAddDisciplina: (moduloId: string) => void;
   onRemoveDisciplina: (moduloId: string, disciplinaId: string) => void;
+  structureLocked?: boolean;
 }
 
 const CursoGradeTab: React.FC<CursoGradeTabProps> = ({
@@ -56,7 +57,8 @@ const CursoGradeTab: React.FC<CursoGradeTabProps> = ({
   onAddModulo,
   onRemoveModulo,
   onAddDisciplina,
-  onRemoveDisciplina
+  onRemoveDisciplina,
+  structureLocked = false,
 }) => {
   if (loading) {
     return (
@@ -99,8 +101,20 @@ const CursoGradeTab: React.FC<CursoGradeTabProps> = ({
       : modulo));
   };
 
+  const updateDescription = (moduloId: string, disciplinaId: string, value: string) => {
+    setModulos(prev => prev.map(modulo => modulo.id === moduloId
+      ? {
+          ...modulo,
+          disciplinas: modulo.disciplinas.map(disciplina => disciplina.id === disciplinaId
+            ? { ...disciplina, descricao: value }
+            : disciplina)
+        }
+      : modulo));
+  };
+
   return (
     <div className="flex-grow overflow-y-auto pr-2 custom-scrollbar space-y-8 pb-20">
+      {structureLocked ? <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-xs font-semibold leading-relaxed text-amber-800">Esta grade já está em uso acadêmico. Nomes, cargas e vínculos foram preservados; os resumos das matérias continuam editáveis.</div> : null}
       {modulos.map(modulo => (
         <div key={modulo.id} className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden animate-fadeIn">
           <div className={`${config.bgColor} px-6 py-4 border-b border-slate-100 flex justify-between items-center`}>
@@ -113,7 +127,7 @@ const CursoGradeTab: React.FC<CursoGradeTabProps> = ({
                 </p>
               </div>
             </div>
-            <button onClick={() => onRemoveModulo(modulo.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16} /></button>
+            {!structureLocked ? <button onClick={() => onRemoveModulo(modulo.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16} /></button> : null}
           </div>
 
           <div className="p-4 space-y-4">
@@ -123,8 +137,8 @@ const CursoGradeTab: React.FC<CursoGradeTabProps> = ({
 
             {modulo.disciplinas.map(disciplina => (
               <div key={disciplina.id} className="border border-slate-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow bg-slate-50/30">
-                <div className="px-5 py-4 flex justify-between items-center">
-                  <div className="flex flex-col text-slate-700">
+                <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex min-w-0 flex-1 flex-col text-slate-700">
                     <div className="flex items-center gap-2"><BookOpen size={16} className={config.textColor} /><span className="font-bold text-sm">{disciplina.nome}</span></div>
                     {curso.modalidade === 'TECNICO' && (
                       <div className="flex items-center gap-3 text-[10px] text-slate-500 font-bold uppercase tracking-wider pl-6 mt-1.5">
@@ -133,9 +147,21 @@ const CursoGradeTab: React.FC<CursoGradeTabProps> = ({
                         <span>Estágio: <strong className="text-slate-700">{disciplina.cargaHorariaEstagio || 0}h</strong></span>
                       </div>
                     )}
-                    {disciplina.descricao && <p className="text-xs text-slate-400 font-medium pl-6 mt-1">{disciplina.descricao}</p>}
+                    {curso.modalidade === 'LIVRE' ? (
+                      <textarea
+                        aria-label={`Resumo do conteúdo de ${disciplina.nome}`}
+                        rows={2}
+                        maxLength={2_000}
+                        placeholder="Resumo dos conteúdos desta matéria"
+                        value={disciplina.descricao || ''}
+                        onChange={(event) => updateDescription(modulo.id, disciplina.id, event.target.value)}
+                        className="ml-6 mt-2 w-[calc(100%_-_1.5rem)] resize-y rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium leading-relaxed text-slate-600 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                      />
+                    ) : disciplina.descricao ? (
+                      <p className="mt-1 pl-6 text-xs font-medium text-slate-400">{disciplina.descricao}</p>
+                    ) : null}
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex shrink-0 items-center gap-4 self-end sm:self-start">
                     <div className="flex items-center gap-1.5">
                       {curso.modalidade === 'TECNICO' ? (
                         <div className="flex items-center gap-3 bg-white px-3 py-1.5 rounded-2xl border border-slate-200 shadow-sm">
@@ -159,18 +185,18 @@ const CursoGradeTab: React.FC<CursoGradeTabProps> = ({
                         </div>
                       ) : (
                         <>
-                          <input type="number" title="Carga Horária" className="w-16 text-center text-xs font-bold text-[#001a33] bg-white px-2.5 py-1.5 rounded-xl border border-slate-200 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" value={disciplina.cargaHoraria || 0} onChange={(event) => updateHours(modulo.id, disciplina.id, parseInt(event.target.value) || 0)} />
+                          <input type="number" title="Carga Horária" disabled={structureLocked} className="w-16 text-center text-xs font-bold text-[#001a33] bg-white px-2.5 py-1.5 rounded-xl border border-slate-200 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100 disabled:text-slate-400" value={disciplina.cargaHoraria || 0} onChange={(event) => updateHours(modulo.id, disciplina.id, parseInt(event.target.value) || 0)} />
                           <span className="text-xs font-bold text-slate-400">h</span>
                         </>
                       )}
                     </div>
-                    <button onClick={() => onRemoveDisciplina(modulo.id, disciplina.id)} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
+                    {!structureLocked ? <button onClick={() => onRemoveDisciplina(modulo.id, disciplina.id)} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={14} /></button> : null}
                   </div>
                 </div>
               </div>
             ))}
 
-            <div className="mt-4 pt-4 border-t border-slate-100 border-dashed">
+            {!structureLocked ? <div className="mt-4 pt-4 border-t border-slate-100 border-dashed">
               {addingDiscToModId === modulo.id ? (
                 <div className="flex flex-col gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-200">
                   <div className="flex flex-col sm:flex-row gap-3">
@@ -196,15 +222,15 @@ const CursoGradeTab: React.FC<CursoGradeTabProps> = ({
                   <Plus size={14} /> Nova {config.labelDisciplina} neste Módulo
                 </button>
               )}
-            </div>
+            </div> : null}
           </div>
         </div>
       ))}
 
-      <div className="bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-200 p-6 flex items-center justify-center gap-3">
+      {!structureLocked ? <div className="bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-200 p-6 flex items-center justify-center gap-3">
         <input type="text" placeholder="Nome do Novo Módulo (Ex: Módulo III)" className="w-64 px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-blue-500 text-sm bg-white" value={newModuloName} onChange={(event) => setNewModuloName(event.target.value)} />
         <button onClick={onAddModulo} className="px-4 py-2 bg-[#001a33] text-white rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-blue-900 transition-colors"><Plus size={14} /> Criar Módulo</button>
-      </div>
+      </div> : null}
     </div>
   );
 };

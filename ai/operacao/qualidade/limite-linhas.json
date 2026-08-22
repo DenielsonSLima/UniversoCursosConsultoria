@@ -3,7 +3,9 @@
   "maxLines": 500,
   "manifests": [
     "ai/operacao/registros/alteracoes/2026-08-21-acesso-responsavel-completo-4-6-0.md",
-    "ai/operacao/registros/alteracoes/2026-08-22-modularizacao-teto-500-4-6-0.md"
+    "ai/operacao/registros/alteracoes/2026-08-22-modularizacao-teto-500-4-6-0.md",
+    "ai/operacao/registros/alteracoes/2026-08-22-avaliacoes-ead-e-cards-tecnicos.md",
+    "ai/operacao/registros/alteracoes/2026-08-22-jornada-cursos-livres.md"
   ],
   "exemptions": [
     {
@@ -18,6 +20,258 @@
       "kind": "applied-migration",
       "remoteId": "20260822024309",
       "sha256": "91b030c564ca8aa92e0fd581063541d8c0543aed32093a6b09a502a0f6fb81ba",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260822103822_harden_ead_assessment_mutations.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260822140251",
+      "sha256": "53932758e96f754afcbb8f6427c4a41b192bdb1783f15e3dde31b930b675e4b0",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260822104546_include_course_discipline_count_in_kpis.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260822140318",
+      "sha256": "b468ada54f043c8509f7c3ba1af1a7bf5273c7a3c654723f36459be8ae6084e7",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260822105339_add_technical_class_completion_counts.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260822140337",
+      "sha256": "158c31ddacdb597d9f5ed9c056e37d6fcb32b87d5912414d9fb6bdbc3654683a",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260822114000_create_private_ead_answer_keys.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260822152536",
+      "sha256": "7f9da7f4fda73163912839ce0f2432e0253e3c3f7b0021616dd05f8c66b2db0e",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260822114100_lock_ead_completion_enrollment.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260822152545",
+      "sha256": "f742d163b51dcba618b387c7235efe3a95b87b3683555aad756bba841ce0f015",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260822114200_add_authoritative_ead_assessment_feedback.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260822152553",
+      "sha256": "2a30fc4b3710bcf4f27123b91997eab00f6aeef7a8ae667aef47335dc1cc8962",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260822114300_serialize_ead_assessment_mutations.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260822152601",
+      "sha256": "659eee24ac1ebd0add0d365ccae432c750c9ebb5e173cafca275de4d2ca83adb",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260822114400_sanitize_public_ead_configs.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260822152609",
+      "sha256": "3c7d5420ac94e0742d765acfb1bda4664b53759c768e9ae29cd9f94e2a7ac091",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260822114500_authorize_course_management_kpis.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260822152620",
+      "sha256": "d9a19d45eadd9ff9319b7775c6bfb6357f91714bc913d5840e4d3b433442170e",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260822114600_consolidate_authorized_technical_card_progress.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260822152627",
+      "sha256": "8ad481c7b5543bd4b80107326ab8fdff04d06217a8b37c32413bde38aef4ed18",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260822160000_create_curso_livre_assessment_schema.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260822201749",
+      "sha256": "9d94cfc8e05b72b56bbf7ca3b551f863e60274f8fe5500868fae878883cd4cd1",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260822160100_create_curso_livre_assessment_management.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260822201752",
+      "sha256": "7510514a587394aa36e38c90668cfa6d81ccd74e4e217e8045f6f0815b209a74",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260822160200_create_curso_livre_class_contract.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260822201755",
+      "sha256": "deeef28f78405fb507e0387601a271b4b7a8159d38e76cbeff2a1d0df92381d1",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260822160300_include_livre_in_professor_portal.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260822201758",
+      "sha256": "1f06408c7f1706fa375566fb8a7fc18c950a61bc943c4940a711c32dcc7efc3b",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260822160400_create_curso_livre_attempt_schema.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260822201800",
+      "sha256": "94fff1c96b01e37bbc3287107192d2ccc636bf48064c174a887754b210f2c6e6",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260822160500_enforce_curso_livre_schedule_and_access.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260822201946",
+      "sha256": "37a006c98d3b11aa14cc424523c3ab76627b238a3197f5b5291c2f27e8fa49c7",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260822160600_create_curso_livre_student_read_start.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260822201957",
+      "sha256": "980ce50f66d2a93ebba7e5f5548ec0ecb617de63dcce7c35fc77fca9de86fb2a",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260822160700_create_curso_livre_submit_certificate.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260822201959",
+      "sha256": "ae1dbd9548c14f68d963494e02aaeade056b9a6af8e0359265633aae4c9878fb",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260822160800_seed_informatica_basica_livre_assessment.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260822202002",
+      "sha256": "a3757c564386d5b43c55d4ff8d5c7b33725e0f7bdacb0f630ef86dd80946c52a",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260822160900_create_curso_livre_grade_workspace.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260822202004",
+      "sha256": "4d2062ac783e91a1035b91905542df4aa90b5e32acbd8ef57c85d4a49c755c43",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260822160910_create_curso_livre_grade_guards.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260822202016",
+      "sha256": "f64d8636d54b4e5f236e913d23f3b7b0de45d1f28e897fece08dac7052e1b58f",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260822160915_freeze_operational_curso_livre_grade.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260822202019",
+      "sha256": "186de7aded69835db3e6edbe2f8aedf0e1b07d718f96404a9e79f7e31fe0e5d4",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260822160920_save_curso_livre_grade_secure.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260822202021",
+      "sha256": "348aca89851c68d7097d7b978fb4b0477956a741e50cfa7f7a4965db38199811",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260822160930_duplicate_curso_livre_secure.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260822202024",
+      "sha256": "591c8c15292e98ac39a342491c1a71c33920a1fd5fd6b72591915c5d693d2a22",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260822161000_create_single_plan_enrollment_condition_state.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260822202026",
+      "sha256": "696e631aa3aa14b8f1d8c2e0770323f0d3845493b3a5e72db47c77a31106bd97",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260822161100_create_single_plan_canonical_preview.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260822202038",
+      "sha256": "667b91f39757e3dc313aa9def0154c053216de1a63dfacd292ffd874de8ad310",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260822161200_render_single_plan_enrollment_condition.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260822202041",
+      "sha256": "88a21db0b7190ef9168596b6a158ea6179bbf9bab280f1dd5bfec9c261d99c26",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260822161300_secure_single_plan_condition_authorization.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260822202044",
+      "sha256": "9eb34f0f0cb497387bfc22b13abc1d2cbb82b761f9f6e7d667af037e94ef3cdf",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260822161400_create_single_plan_condition_state_helpers.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260822202047",
+      "sha256": "a288b166dde9f9c48678e75beefd2a85ae77af962072bcb98ff6bed8dd05cd6a",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260822161500_create_single_plan_enrollment_v2_rpc.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260822202049",
+      "sha256": "3438c43602eb219ef61c11cede46efa4d23d169bee9cf559078953f98c2e5580",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260822161600_query_single_plan_pending_and_keep_legacy_rpc.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260822202051",
+      "sha256": "341456d714cda483a45e0665d949a15d7ddc1cf18b879cd5f096734252a51175",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260822161700_index_curso_livre_financial_foreign_keys.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260822202514",
+      "sha256": "ee5e61b0205e041869493bd1cf3743be0eaa390fc0b86f830f41e7e31365d678",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260822161800_mask_single_plan_enrollment_financial_response.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260822213942",
+      "sha256": "39b07da4c8201045b8c1424709014540a4c297112910ae20149f4a6f3c9487a1",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260822161900_serialize_curso_livre_attempt_lifecycle.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260822213944",
+      "sha256": "2ba07c889c21699d4749b1f46729b9c4e3c93bf3080cd470d0cb284aa361f63e",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260822162000_enforce_curso_livre_grade_total.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260822213946",
+      "sha256": "872bbd1bc76a8f671de39b30647ca29853f731cfecdf3f045df0c704f5923a68",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260822162100_protect_published_curso_livre_question_origin.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260822213949",
+      "sha256": "0546c0ac3ee254feaf996564b68c5859317dec9727abec6e4e719712f99af99d",
       "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
     }
   ],

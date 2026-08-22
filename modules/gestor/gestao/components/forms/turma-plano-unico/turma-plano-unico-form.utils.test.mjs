@@ -8,11 +8,10 @@ const { code } = await transform(source, { loader: 'ts', format: 'cjs', target: 
 const compiledModule = { exports: {} };
 new Function('module', 'exports', code)(compiledModule, compiledModule.exports);
 const {
-  addMonthsToISODate,
-  buildInstallmentSchedule,
+  formatCivilDate,
   formatCurrencyBRL,
   formatPercentageBR,
-  getDiaVencimento,
+  getPreviewInstallments,
   parseCurrencyBRLInput,
 } = compiledModule.exports;
 
@@ -25,23 +24,19 @@ test('formata e interpreta moeda brasileira sempre com duas casas', () => {
   assert.equal(formatPercentageBR(2).replace(/\u00a0/g, ' '), '2,00');
 });
 
-test('divide o valor configurado pela turma e preserva o total em centavos', () => {
-  const schedule = buildInstallmentSchedule(500, 3, '2026-08-10');
-
-  assert.deepEqual(schedule.map((item) => item.valor), [166.67, 166.67, 166.66]);
-  assert.equal(schedule.reduce((total, item) => total + item.valor, 0).toFixed(2), '500.00');
+test('formata datas civis sem depender do fuso do navegador', () => {
+  assert.equal(formatCivilDate('2026-01-31'), '31/01/2026');
+  assert.equal(formatCivilDate('2026-02-30'), '—');
 });
 
-test('aceita qualquer quantidade configurada de parcelas dentro do limite', () => {
-  assert.equal(buildInstallmentSchedule(840, 5, '2026-08-10').length, 5);
-  assert.equal(buildInstallmentSchedule(840, 12, '2026-08-10').length, 12);
-  assert.deepEqual(buildInstallmentSchedule(840, 61, '2026-08-10'), []);
-});
-
-test('repete o dia do primeiro vencimento e ajusta meses mais curtos', () => {
-  const schedule = buildInstallmentSchedule(300, 3, '2026-01-31');
-
-  assert.deepEqual(schedule.map((item) => item.vencimento), ['2026-01-31', '2026-02-28', '2026-03-31']);
-  assert.equal(getDiaVencimento('2026-01-31'), 31);
-  assert.equal(addMonthsToISODate('2024-02-29', 24), '2026-02-28');
+test('a interface apenas reduz a lista de parcelas devolvida pelo servidor', () => {
+  const schedule = Array.from({ length: 8 }, (_, index) => ({
+    id: `server-${index + 1}`,
+    tipo: 'PARCELA',
+    numero: index + 1,
+    label: `Parcela ${index + 1}`,
+    valor: 50,
+    dataVencimento: `2026-${String(index + 1).padStart(2, '0')}-10`,
+  }));
+  assert.deepEqual(getPreviewInstallments(schedule).map((item) => item.numero), [1, 2, 3, 7, 8]);
 });

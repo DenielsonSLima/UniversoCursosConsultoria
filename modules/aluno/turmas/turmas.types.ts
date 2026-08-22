@@ -148,7 +148,7 @@ export interface ModuloCurricularAluno<T> {
   itens: T[];
 }
 
-export type TurmaDetailTab = 'resumo' | 'diario' | 'atividades' | 'notas' | 'estagio' | 'certificado';
+export type TurmaDetailTab = 'resumo' | 'diario' | 'atividades' | 'notas' | 'prova_final' | 'estagio' | 'certificado';
 
 export interface QueryDisplayState {
   isLoading: boolean;

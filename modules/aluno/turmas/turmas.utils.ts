@@ -94,11 +94,13 @@ export const getMatriculaModalidade = (matricula?: MatriculaAluno | null) => {
 
 export const isPortalEnrollmentVisible = (matricula?: MatriculaAluno | null) => {
   const status = String(matricula?.status || '').toUpperCase();
+  const modalidade = getMatriculaModalidade(matricula);
   return ACCESS_STATUS.has(status)
     || (
-      getMatriculaModalidade(matricula) === 'TECNICO'
+      modalidade === 'TECNICO'
       && (status === 'PENDENTE' || status === 'REPROVADO' || status === 'EM_DEPENDENCIA')
-    );
+    )
+    || (modalidade === 'LIVRE' && status === 'PENDENTE');
 };
 
 export const hasTechnicalAcademicAccess = (matricula?: MatriculaAluno | null) => {
@@ -114,6 +116,11 @@ export const hasTechnicalAcademicAccess = (matricula?: MatriculaAluno | null) =>
         || enrollmentStatus === 'EM_DEPENDENCIA'
       )
     );
+};
+
+export const hasLiveAcademicAccess = (matricula?: MatriculaAluno | null) => {
+  if (getMatriculaModalidade(matricula) !== 'LIVRE') return true;
+  return ACCESS_STATUS.has(String(matricula?.status || '').toUpperCase());
 };
 
 export const asNullableNumber = (value: unknown): number | null => {

@@ -17,6 +17,7 @@ import {
   calculateAcademicProgress,
   getMatriculaModalidade,
   getProgressPercent,
+  hasLiveAcademicAccess,
   hasTechnicalAcademicAccess,
   isEadMatricula,
   isPortalEnrollmentVisible,
@@ -108,7 +109,12 @@ export const useAlunoTurmasData = (alunoId: string, selectedMatricula: Matricula
     [matriculasLiberadas],
   );
   const selectedIsTechnical = getMatriculaModalidade(selectedMatricula) === 'TECNICO';
-  const selectedHasAcademicAccess = !selectedIsTechnical || hasTechnicalAcademicAccess(selectedMatricula);
+  const selectedIsLive = getMatriculaModalidade(selectedMatricula) === 'LIVRE';
+  const selectedHasAcademicAccess = selectedIsTechnical
+    ? hasTechnicalAcademicAccess(selectedMatricula)
+    : selectedIsLive
+      ? hasLiveAcademicAccess(selectedMatricula)
+      : true;
 
   const eadProgressQueries = useQueries({
     queries: eadMatriculas.map((item) => ({
@@ -399,6 +405,7 @@ export const useAlunoTurmasData = (alunoId: string, selectedMatricula: Matricula
     selectedTurmaId,
     selectedIsEad,
     selectedIsTechnical,
+    selectedIsLive,
     selectedHasAcademicAccess,
     certificates: certificatesQuery.data || [],
     certificatesState: toQueryState(certificatesQuery),

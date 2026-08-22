@@ -3,8 +3,6 @@ import type {
   TurmaPlanoUnicoIdentity,
   TurmaPlanoUnicoStepId,
 } from './turma-plano-unico-form.types';
-import { buildInstallmentSchedule } from './turma-plano-unico-form.utils';
-
 const isFiniteNumber = (value: number) => Number.isFinite(value);
 
 export const validateTurmaPlanoUnicoStep = (
@@ -35,9 +33,6 @@ export const validateTurmaPlanoUnicoStep = (
     if (!Number.isInteger(formData.qtdParcelas) || formData.qtdParcelas < 1 || formData.qtdParcelas > 60) {
       return 'A quantidade de parcelas deve ficar entre 1 e 60.';
     }
-    if (Math.round(formData.valorTotal * 100) < formData.qtdParcelas) {
-      return 'O valor total precisa garantir ao menos R$ 0,01 em cada parcela.';
-    }
     if (!formData.primeiroVencimento) {
       return 'Informe o primeiro vencimento das parcelas.';
     }
@@ -51,18 +46,6 @@ export const validateTurmaPlanoUnicoStep = (
       return 'A multa por atraso não pode ser negativa.';
     }
 
-    const schedule = buildInstallmentSchedule(
-      formData.valorTotal,
-      formData.qtdParcelas,
-      formData.primeiroVencimento,
-    );
-    const menorParcela = Math.min(...schedule.map((installment) => installment.valor));
-    if (!Number.isFinite(menorParcela)) {
-      return 'Não foi possível calcular as parcelas. Revise valor, quantidade e primeiro vencimento.';
-    }
-    if (formData.descontoPontualidade >= menorParcela && formData.descontoPontualidade > 0) {
-      return 'O desconto de pontualidade deve ser menor que o valor de uma parcela.';
-    }
   }
 
   if (step === 'REVISAO' && (!identity.nome || !identity.codigo)) {

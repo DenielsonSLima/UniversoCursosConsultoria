@@ -24,61 +24,41 @@ const CursosPage: React.FC<CursosPageProps> = ({
   initialCourseId,
   onExitCourse,
   onRequireTechnicalProfile,
+  onOpenEnrollment,
 }) => {
+  const catalog = useAlunoCoursesCatalog(alunoId);
   const {
     queryClient,
     hasAlunoContext,
     courses,
-    isLoading,
-    isError,
     invalidateStudentCourseAccess,
     loadingTechnicalEnrollmentProfile,
     technicalEnrollmentMissingFields,
-    activeTab,
     setActiveTab,
-    categoryFilter,
-    setCategoryFilter,
-    sortDirection,
-    setSortDirection,
-    coursePage,
-    setCoursePage,
-    searchTerm,
-    setSearchTerm,
-    availableCategories,
-    currentTabCourses,
-    totalCoursePages,
-    groupedCurrentPageCourses,
-    progressByCourseId,
-  } = useAlunoCoursesCatalog(alunoId);
-  const [selectedCourse, setSelectedCourse] = useState<any | null>(null);
+  } = catalog;
+  const selectedCourseOwnerId = alunoId || '';
+  const [selectedCourseContext, setSelectedCourseContext] = useState<{
+    alunoId: string;
+    course: any;
+  } | null>(null);
+  const selectedCourse = selectedCourseContext?.alunoId === selectedCourseOwnerId
+    ? selectedCourseContext.course
+    : null;
+  const setSelectedCourse = React.useCallback((course: any | null) => {
+    setSelectedCourseContext(course ? { alunoId: selectedCourseOwnerId, course } : null);
+  }, [selectedCourseOwnerId]);
   const [isDownloadingCertificate, setIsDownloadingCertificate] = useState(false);
   const [certificateZoom, setCertificateZoom] = useState(65);
   const [selectedTurmaByCourse, setSelectedTurmaByCourse] = useState<Record<string, string>>({});
   const certificatePdfSourceRef = React.useRef<HTMLDivElement>(null);
   const initialCheckoutCourseRef = React.useRef<string | null>(null);
 
-  const {
-    checkoutError,
-    checkoutReview,
-    setCheckoutReview,
-    technicalProfileGate,
-    setTechnicalProfileGate,
-    eadCheckoutReview,
-    setEadCheckoutReview,
-    eadPaymentPanel,
-    setEadPaymentPanel,
-    eadPaymentConfirmation,
-    eadPaymentMethod,
-    setEadPaymentMethod,
-    eadInstallments,
-    setEadInstallments,
-    acceptedOnlineTerms,
-    setAcceptedOnlineTerms,
-    checkoutMutation,
-    startCheckout,
-    openOnlineClassCheckoutReview,
-    openEadCheckoutReview,
-  } = useCourseCheckout({
+  useEffect(() => {
+    setSelectedCourseContext(null);
+    initialCheckoutCourseRef.current = null;
+  }, [selectedCourseOwnerId]);
+
+  const checkout = useCourseCheckout({
     alunoId,
     hasAlunoContext,
     queryClient,
@@ -86,40 +66,25 @@ const CursosPage: React.FC<CursosPageProps> = ({
     technicalEnrollmentMissingFields,
     invalidateStudentCourseAccess,
   });
+  const {
+    eadCheckoutReview,
+    setEadCheckoutReview,
+    setEadPaymentMethod,
+    setEadInstallments,
+  } = checkout;
 
+  const eadLearning = useEadLearning({ alunoId, hasAlunoContext, selectedCourse, queryClient });
   const {
     activeLearningTab,
     setActiveLearningTab,
-    activeCourseContentTab,
-    setActiveCourseContentTab,
-    selectedLessonIdx,
-    setSelectedLessonIdx,
-    quizAnswers,
-    setQuizAnswers,
     quizError,
+    flushActivityAnswerDrafts,
     showCompletedLessons,
     setShowCompletedLessons,
-    activityCompletionPrompt,
-    setActivityCompletionPrompt,
     conteudos,
-    currentProva,
-    selectedLesson,
-    selectedLessonText,
-    progress,
     summary,
-    mainVideoUrl,
-    mainVideoDone,
-    selectedLessonActivities,
     quizPassed,
     progressPercent,
-    allLessonsDone,
-    allActivitiesDone,
-    allVideosDone,
-    questionsTotal,
-    minimumQuestions,
-    quizRetryBlocked,
-    retryCountdownLabel,
-    canTakeQuiz,
     completedAtDate,
     startedAtDate,
     completedLessonCount,
@@ -128,12 +93,13 @@ const CursosPage: React.FC<CursosPageProps> = ({
     certificateStatusTitle,
     certificateStatusMessage,
     eadCertificateModel,
-    randomizedQuizQuestions,
-    displayedQuizAnswers,
-    retryAvailableLabel,
-    isLessonLocked,
-    updateProgress,
-  } = useEadLearning({ alunoId, hasAlunoContext, selectedCourse, queryClient });
+    isProgressReady,
+    isProgressLoading,
+    isProgressRefreshing,
+    progressQueryError,
+    retryProgress,
+    isUpdatingProgress,
+  } = eadLearning;
 
   useEffect(() => {
     if (!initialCourseId || courses.length === 0) return;
@@ -161,15 +127,20 @@ const CursosPage: React.FC<CursosPageProps> = ({
     if (modality === 'LIVRE') setActiveTab('live');
     if (modality === 'ESPECIALIZACAO') setActiveTab('especializacao');
     if (modality === 'TECNICO') setActiveTab('tecnico');
-  }, [courses, eadCheckoutReview?.course?.id, initialCourseId, selectedCourse?.id]);
+  }, [courses, eadCheckoutReview?.course?.id, initialCourseId, selectedCourse?.id, setSelectedCourse]);
 
   useEffect(() => {
     if (!selectedCourse?.id || courses.length === 0) return;
     const updatedCourse = courses.find(item => item.id === selectedCourse.id);
+    if (updatedCourse && String(updatedCourse.modalidade || '').toUpperCase() === 'EAD'
+      && !hasEadAccess(updatedCourse)) {
+      setSelectedCourse(null);
+      return;
+    }
     if (updatedCourse && updatedCourse !== selectedCourse) {
       setSelectedCourse(updatedCourse);
     }
-  }, [courses, selectedCourse]);
+  }, [courses, selectedCourse, setSelectedCourse]);
 
   const buildCertificatePdfBlob = async () => {
     if (!certificatePdfSourceRef.current || !alunoCertificado) return null;
@@ -324,56 +295,21 @@ const CursosPage: React.FC<CursosPageProps> = ({
     );
   };
 
-  const closeSelectedCourse = () => {
+  const closeSelectedCourse = async () => {
+    if (isUpdatingProgress) return;
+    if (!await flushActivityAnswerDrafts()) return;
     setSelectedCourse(null);
     onExitCourse?.();
   };
 
   if (selectedCourse) {
     const learningView = {
-      activeLearningTab,
-      setActiveLearningTab,
-      activeCourseContentTab,
-      setActiveCourseContentTab,
+      ...eadLearning,
       selectedCourse,
-      selectedLessonIdx,
-      setSelectedLessonIdx,
-      quizAnswers,
-      setQuizAnswers,
-      quizError,
-      activityCompletionPrompt,
-      setActivityCompletionPrompt,
-      conteudos,
-      currentProva,
-      selectedLesson,
-      selectedLessonText,
-      progress,
-      mainVideoUrl,
-      mainVideoDone,
-      selectedLessonActivities,
-      quizPassed,
-      allLessonsDone,
-      allActivitiesDone,
-      allVideosDone,
-      questionsTotal,
-      minimumQuestions,
-      quizRetryBlocked,
-      retryCountdownLabel,
-      canTakeQuiz,
-      alunoCertificado,
-      certificateStatusTitle,
-      certificateStatusMessage,
       isDownloadingCertificate,
       printCertificate,
       downloadCertificatePdf,
       renderCertificatePreview,
-      eadGradeCurricular,
-      randomizedQuizQuestions,
-      displayedQuizAnswers,
-      retryAvailableLabel,
-      summary,
-      isLessonLocked,
-      updateProgress,
     };
 
     return (
@@ -399,6 +335,13 @@ const CursosPage: React.FC<CursosPageProps> = ({
         completedLessonCount,
         conteudos,
         activeLearningTab,
+        isProgressReady,
+        isProgressLoading,
+        isProgressRefreshing,
+        progressQueryError,
+        retryProgress,
+        progressMutationError: quizError,
+        isUpdatingProgress,
         learningView,
       }} />
     );
@@ -406,47 +349,13 @@ const CursosPage: React.FC<CursosPageProps> = ({
 
   return (
     <CourseCatalogView view={{
-      searchTerm,
-      setSearchTerm,
-      categoryFilter,
-      setCategoryFilter,
-      availableCategories,
-      sortDirection,
-      setSortDirection,
-      currentTabCourses,
-      activeTab,
-      setActiveTab,
-      checkoutError,
-      technicalProfileGate,
-      setTechnicalProfileGate,
+      ...catalog,
+      ...checkout,
       onRequireTechnicalProfile,
-      checkoutReview,
-      setCheckoutReview,
-      acceptedOnlineTerms,
-      setAcceptedOnlineTerms,
-      checkoutMutation,
-      startCheckout,
-      eadPaymentPanel,
-      setEadPaymentPanel,
-      eadPaymentConfirmation,
-      eadCheckoutReview,
-      setEadCheckoutReview,
-      eadPaymentMethod,
-      setEadPaymentMethod,
-      eadInstallments,
-      setEadInstallments,
-      isLoading,
-      isError,
-      groupedCurrentPageCourses,
-      coursePage,
-      totalCoursePages,
-      progressByCourseId,
       selectedTurmaByCourse,
       setSelectedTurmaByCourse,
       setSelectedCourse,
-      openEadCheckoutReview,
-      openOnlineClassCheckoutReview,
-      setCoursePage,
+      onOpenEnrollment,
     }} />
   );
 };

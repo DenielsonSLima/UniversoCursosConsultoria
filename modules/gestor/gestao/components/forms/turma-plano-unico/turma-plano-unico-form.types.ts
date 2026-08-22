@@ -82,9 +82,11 @@ export interface TurmaPlanoUnicoFinancialPlan {
 }
 
 export interface TurmaPlanoUnicoInstallment {
+  id: string;
   numero: number;
   valor: number;
-  vencimento: string;
+  dataVencimento: string;
+  fingerprint?: string;
 }
 
 export type TurmaPlanoUnicoSubmission = Omit<

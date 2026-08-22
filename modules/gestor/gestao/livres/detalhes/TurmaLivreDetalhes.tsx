@@ -57,7 +57,7 @@ const TurmaLivreDetalhes: React.FC<TurmaLivreDetalhesProps> = ({ turma, onBack, 
       case 'grade': return <TurmaGrade turma={turma} singleProfessor={true} colorTheme="amber" />;
       case 'diarios': return <TurmaDiarios turma={turma} gestorContextId={gestorContextId} />;
       case 'financeiro': return <TurmaFinanceiro turma={turma} />;
-      case 'configuracoes': return <TurmaConfiguracoes turma={turma} />;
+      case 'configuracoes': return <TurmaConfiguracoes turma={turma} canManageFinanceiro={canViewFinanceiro} />;
       default: return null;
     }
   };

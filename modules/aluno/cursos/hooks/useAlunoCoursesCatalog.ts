@@ -111,13 +111,25 @@ export const useAlunoCoursesCatalog = (alunoId?: string) => {
         const curso = Array.isArray(turma?.cursos) ? turma.cursos[0] : turma?.cursos;
         const courseId = turma?.curso_id || curso?.id;
         if (!courseId) continue;
+        const modality = curso?.modalidade;
         const hasActivePendingReceivable = pendingReceivableByMatricula.has(matricula.id);
         const current = enrollmentByCourse.get(courseId);
-        const currentRank = current ? getEnrollmentRank(current.status) : -1;
-        const nextRank = getEnrollmentRank(matricula.status);
+        const currentRank = current ? getEnrollmentRank(current.status, modality) : -1;
+        const nextRank = getEnrollmentRank(matricula.status, modality);
+        const nextIsPending = EAD_PENDING_STATUSES.has(normalizeStatus(matricula.status));
+        const currentIsPending = EAD_PENDING_STATUSES.has(normalizeStatus(current?.status));
+        const nextEnrollmentTime = Date.parse(matricula.data_matricula || '') || 0;
+        const currentEnrollmentTime = Date.parse(current?.dataMatricula || '') || 0;
+        const sameRankPreference = nextRank === currentRank && (
+          (nextIsPending && currentIsPending
+            && hasActivePendingReceivable !== current.hasActivePendingReceivable
+            && hasActivePendingReceivable)
+          || (hasActivePendingReceivable === current?.hasActivePendingReceivable
+            && nextEnrollmentTime > currentEnrollmentTime)
+        );
         const shouldReplace = !current
           || nextRank > currentRank
-          || (nextRank === currentRank && nextRank === 2 && !current.hasActivePendingReceivable && hasActivePendingReceivable);
+          || sameRankPreference;
         if (shouldReplace) {
           enrollmentByCourse.set(courseId, {
             id: matricula.id,
