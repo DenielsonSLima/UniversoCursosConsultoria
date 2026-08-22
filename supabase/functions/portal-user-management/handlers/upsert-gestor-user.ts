@@ -220,7 +220,7 @@ export const handleUpsertGestorUser = async (
       return null;
     }
 
-    let signedInviteIsValid = false;
+    let signedInviteIsValid: boolean;
     try {
       signedInviteIsValid = await hasValidGestorInviteOperationMarker(
         context,
@@ -318,7 +318,7 @@ export const handleUpsertGestorUser = async (
     if (invitedAuthUser) {
       // GoTrue pode reenviar convite para um Auth não confirmado já existente.
       // O marcador só é aceito quando a HMAC do banco comprova esta operação.
-      let inviteMarkerIsValid = false;
+      let inviteMarkerIsValid: boolean;
       try {
         inviteMarkerIsValid = await hasValidGestorInviteOperationMarker(
           context,
