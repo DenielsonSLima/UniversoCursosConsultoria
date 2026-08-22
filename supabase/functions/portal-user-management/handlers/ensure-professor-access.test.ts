@@ -276,6 +276,9 @@ Deno.test("envia convite novo e vincula o Auth ao professor de forma condicional
   assert.deepEqual(fixture.linkedPayloads, [{
     auth_user_id: "auth-invited",
     auth_login_email: professorEmail,
+    acesso_institucional_origem: "CONVITE",
+    primeiro_acesso_institucional_pendente: true,
+    primeiro_acesso_institucional_operacao_id: invitationNonce,
   }]);
   assert.deepEqual(fixture.deletedAuthUserIds, []);
 });
@@ -371,6 +374,9 @@ Deno.test("reaproveita somente o Auth institucional com e-mail e CPF coincidente
   assert.deepEqual(fixture.linkedPayloads, [{
     auth_user_id: "auth-gestor",
     auth_login_email: professorEmail,
+    acesso_institucional_origem: "IDENTIDADE_EXISTENTE",
+    primeiro_acesso_institucional_pendente: false,
+    primeiro_acesso_institucional_operacao_id: null,
   }]);
 });
 

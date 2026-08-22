@@ -24,6 +24,22 @@ export const ensureAuthorizedGestor = async (
     };
   }
 
+  const { data: institutionalAccessAllowed, error: institutionalAccessError } =
+    await admin.rpc(
+      "portal_identidade_institucional_acesso_liberado",
+      {
+        p_auth_user_id: authData.user.id,
+        p_perfil: "GESTOR",
+      },
+    );
+  if (institutionalAccessError || institutionalAccessAllowed !== true) {
+    return {
+      authorized: false,
+      error:
+        "Conclua a criação da sua senha institucional antes de acessar o portal.",
+    };
+  }
+
   const { data: gestor, error: gestorError } = await admin
     .from("usuarios_sistema")
     .select(

@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Building2, CheckCircle2, ArrowRight, Clock, GraduationCap, Quote, ShieldCheck, UsersRound } from 'lucide-react';
+import { ArrowLeft, Building2, CheckCircle2, ArrowRight, GraduationCap, Quote, ShieldCheck, UsersRound } from 'lucide-react';
 import LoginForm from './components/LoginForm';
 import { loginService } from './login.service';
 import { LoginCredentials } from './login.types';
@@ -32,38 +32,10 @@ import {
   getPortalAccessErrorMessage,
 } from './institutional-login-error';
 import { PortalContextServiceError } from './portal-context.service';
-
-const InstitutionalLoginClock: React.FC = () => {
-  const [currentTime, setCurrentTime] = useState(new Date());
-
-  useEffect(() => {
-    const timer = window.setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => window.clearInterval(timer);
-  }, []);
-
-  const formattedDate = currentTime.toLocaleDateString('pt-BR', {
-    weekday: 'long',
-    day: '2-digit',
-    month: 'long',
-  });
-  const formattedTime = currentTime.toLocaleTimeString('pt-BR', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
-
-  return (
-    <>
-      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-100/90">
-        {formattedDate}
-      </p>
-      <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-black tabular-nums tracking-widest text-white">
-        <Clock size={13} className="text-blue-200" />
-        {formattedTime}
-      </span>
-    </>
-  );
-};
+import {
+  getInstitutionalOAuthErrorMessage,
+  InstitutionalLoginClock,
+} from './components/InstitutionalLoginPresentation';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -159,24 +131,10 @@ const LoginPage: React.FC = () => {
     return undefined;
   };
 
-  const getOAuthErrorMessage = (errorCode: string | null) => {
-    if (!errorCode) return null;
-    if (errorCode === 'no_profile') {
-      return 'Esta conta Google não possui vínculo com nenhum perfil no portal institucional. Entre com e-mail/senha vinculado ou solicite o vínculo no suporte.';
-    }
-    if (errorCode === 'no_session') {
-      return 'Não foi possível recuperar a sessão do Google. Tente novamente.';
-    }
-    if (errorCode === 'google_error') {
-      return 'Não foi possível concluir o login com Google. Tente novamente ou use credenciais de usuário.';
-    }
-    return null;
-  };
-
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const oauthError = params.get('oauth_error');
-    const message = getOAuthErrorMessage(oauthError);
+    const message = getInstitutionalOAuthErrorMessage(oauthError);
     if (message) {
       setErrorMessage(message);
     }
@@ -436,7 +394,7 @@ const LoginPage: React.FC = () => {
               onGoogleLogin={handleGoogleLogin}
               isLoading={isLoading}
               onBack={() => navigate('/')}
-              forgotPasswordHref="/recuperar-senha"
+              forgotPasswordHref="/recuperar-senha?source=institucional"
             />
           </div>
         ) : loginStep === 'role_select' ? (

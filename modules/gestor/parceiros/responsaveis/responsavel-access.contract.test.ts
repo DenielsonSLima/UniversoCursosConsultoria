@@ -85,7 +85,7 @@ test('ações de identidade ficam restritas ao Gestor global/Matriz', () => {
 
 test('Responsável recupera a senha no login público e possui rota própria de primeiro acesso', () => {
   assert.match(recoverySource, /const isResponsavelRecovery = recoverySource === 'responsavel'/);
-  assert.match(recoverySource, /isResponsavelRecovery \? '\/login' : alunoLoginPath/);
+  assert.match(recoverySource, /postResetPath = isResponsavelRecovery \? '\/login' : loginPath/);
   assert.match(recoverySource, /if \(!isResponsavelRecovery\) \{[\s\S]{0,200}getPortalProfile/);
   assert.match(recoverySource, /'\/recuperar-senha\?source=responsavel'/);
   assert.match(appSource, /path="\/responsavel\/primeiro-acesso"/);

@@ -373,6 +373,9 @@ export const handleEnsureProfessorAccess = async (
     .update({
       auth_user_id: invitedAuthUser.id,
       auth_login_email: email,
+      acesso_institucional_origem: "CONVITE",
+      primeiro_acesso_institucional_pendente: true,
+      primeiro_acesso_institucional_operacao_id: invitationNonce,
     })
     .eq("id", partner.id)
     .eq("tipo", "Professor")

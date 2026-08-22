@@ -151,7 +151,13 @@ export const handleLinkProfessorAuthIdentity = async (
 
   const { data: linkedPartner, error: linkError } = await context.admin
     .from("parceiros")
-    .update({ auth_user_id: authUser.id, auth_login_email: email })
+    .update({
+      auth_user_id: authUser.id,
+      auth_login_email: email,
+      acesso_institucional_origem: "IDENTIDADE_EXISTENTE",
+      primeiro_acesso_institucional_pendente: false,
+      primeiro_acesso_institucional_operacao_id: null,
+    })
     .eq("id", partner.id)
     .is("auth_user_id", null)
     .select("id, auth_user_id")

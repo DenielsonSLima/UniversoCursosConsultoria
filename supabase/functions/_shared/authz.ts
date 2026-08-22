@@ -132,11 +132,23 @@ export const requireGestorAtivo = async (
   }
 
   const { data: authData, error: authError } = await admin.auth.getUser(token);
+  const authUserId = authData?.user?.id ? String(authData.user.id).trim() : "";
   const email = authData?.user?.email
     ? String(authData.user.email).trim().toLowerCase()
     : "";
-  if (authError || !email) {
+  if (authError || !authUserId || !email) {
     throw new Error("Sessao invalida para esta acao financeira.");
+  }
+
+  const { data: institutionalAccessAllowed, error: institutionalAccessError } =
+    await admin.rpc(
+      "portal_identidade_institucional_acesso_liberado",
+      { p_auth_user_id: authUserId, p_perfil: "GESTOR" },
+    );
+  if (institutionalAccessError || institutionalAccessAllowed !== true) {
+    throw new Error(
+      "Acesso institucional bloqueado ate a criacao da senha.",
+    );
   }
 
   const { data: usuario, error: usuarioError } = await admin

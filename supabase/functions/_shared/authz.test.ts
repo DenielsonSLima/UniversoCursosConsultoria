@@ -11,13 +11,25 @@ const request = new Request("https://example.test", {
   headers: { Authorization: "Bearer valid-token" },
 });
 
-const adminForUsuario = (usuario: Record<string, unknown>) => ({
+const adminForUsuario = (
+  usuario: Record<string, unknown>,
+  gate: { data: boolean | null; error: { message: string } | null } = {
+    data: true,
+    error: null,
+  },
+) => ({
   auth: {
     getUser: async () => ({
-      data: { user: { email: "financeiro@example.com" } },
+      data: {
+        user: {
+          id: "11111111-1111-4111-8111-111111111111",
+          email: "financeiro@example.com",
+        },
+      },
       error: null,
     }),
   },
+  rpc: async () => gate,
   from: () => ({
     select: () => ({
       ilike: () => ({
@@ -27,6 +39,35 @@ const adminForUsuario = (usuario: Record<string, unknown>) => ({
   }),
 });
 
+Deno.test("nega Edge compartilhada enquanto a senha institucional está pendente", async () => {
+  let queriedUserTable = false;
+  const admin = adminForUsuario({}, { data: false, error: null });
+  const guardedAdmin = {
+    ...admin,
+    from: () => {
+      queriedUserTable = true;
+      return admin.from();
+    },
+  };
+
+  await assert.rejects(
+    () => requireGestorAtivo(request, guardedAdmin),
+    /bloqueado ate a criacao da senha/i,
+  );
+  assert.equal(queriedUserTable, false);
+});
+
+Deno.test("falha fechada se a Edge compartilhada não consultar o gate", async () => {
+  const admin = adminForUsuario({}, {
+    data: null,
+    error: { message: "RPC indisponível" },
+  });
+  await assert.rejects(
+    () => requireGestorAtivo(request, admin),
+    /bloqueado ate a criacao da senha/i,
+  );
+});
+
 Deno.test("mapeia negação do guard para HTTP 403", () => {
   assert.equal(
     authorizationErrorHttpStatus(
@@ -34,7 +75,10 @@ Deno.test("mapeia negação do guard para HTTP 403", () => {
     ),
     403,
   );
-  assert.equal(authorizationErrorHttpStatus("Regra financeira invalida."), null);
+  assert.equal(
+    authorizationErrorHttpStatus("Regra financeira invalida."),
+    null,
+  );
 });
 
 const actor = (
@@ -74,37 +118,41 @@ Deno.test("autoriza Gestor e Financeiro globais com modulo e aba de conciliacao"
 
 Deno.test("nega operacao bancaria ao Financeiro sem acesso global", () => {
   assert.throws(
-    () => requireGlobalFinancialTabAccess(
-      actor({ isGlobal: false, poloId: "polo-id", poloIds: ["polo-id"] }),
-      "conciliacao-bancaria",
-    ),
+    () =>
+      requireGlobalFinancialTabAccess(
+        actor({ isGlobal: false, poloId: "polo-id", poloIds: ["polo-id"] }),
+        "conciliacao-bancaria",
+      ),
     /Acesso financeiro global obrigatorio/,
   );
 });
 
 Deno.test("nega operacao bancaria sem modulo ou aba de conciliacao", () => {
   assert.throws(
-    () => requireGlobalFinancialTabAccess(
-      actor({ modules: ["inicio", "caixa"] }),
-      "conciliacao-bancaria",
-    ),
+    () =>
+      requireGlobalFinancialTabAccess(
+        actor({ modules: ["inicio", "caixa"] }),
+        "conciliacao-bancaria",
+      ),
     /Acesso ao modulo financeiro nao autorizado/,
   );
   assert.throws(
-    () => requireGlobalFinancialTabAccess(
-      actor({ financeiroTabs: ["resumo", "receber"] }),
-      "conciliacao-bancaria",
-    ),
+    () =>
+      requireGlobalFinancialTabAccess(
+        actor({ financeiroTabs: ["resumo", "receber"] }),
+        "conciliacao-bancaria",
+      ),
     /Acesso a aba conciliacao-bancaria nao autorizado/,
   );
 });
 
 Deno.test("nega papel operacional mesmo com modulo, aba e escopo global", () => {
   assert.throws(
-    () => requireGlobalFinancialTabAccess(
-      actor({ perfil: "Operacional" }),
-      "conciliacao-bancaria",
-    ),
+    () =>
+      requireGlobalFinancialTabAccess(
+        actor({ perfil: "Operacional" }),
+        "conciliacao-bancaria",
+      ),
     /Acesso financeiro global nao autorizado/,
   );
 });

@@ -110,10 +110,16 @@ test('installed student app keeps password recovery inside the aluno scope', () 
   assert.match(appLoginPage, /to="\/aluno\/recuperar-senha-app"/)
   assert.match(appRouter, /path="\/aluno\/recuperar-senha-app"/)
   assert.match(appRecoveryPage, /<PasswordRecoveryPage appFlow \/>/)
+  assert.match(passwordRecoveryPage, /appFlow\s*\? '\/aluno\/recuperar-senha-app'/)
   assert.match(
     passwordRecoveryPage,
-    /appFlow\s*\? '\/aluno\/recuperar-senha-app'\s*:\s*isResponsavelRecovery\s*\? '\/recuperar-senha\?source=responsavel'\s*:\s*'\/recuperar-senha'/,
+    /isResponsavelRecovery\s*\? '\/recuperar-senha\?source=responsavel'/,
   )
+  assert.match(
+    passwordRecoveryPage,
+    /isInstitutional && isInviteFlow\s*\? '\/sistema\/primeiro-acesso'/,
+  )
+  assert.match(passwordRecoveryPage, /:\s*'\/recuperar-senha';/)
   assert.match(loginService, /redirectPath = '\/recuperar-senha'/)
   assert.match(loginService, /buildAuthRedirectUrl\(redirectPath\)/)
 })

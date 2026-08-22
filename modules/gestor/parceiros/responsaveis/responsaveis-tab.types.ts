@@ -11,4 +11,6 @@ export interface ResponsaveisTabProps {
   poloId?: string | null;
   includeGlobal?: boolean;
   toast: ToastApi;
+  openCreateOnMount?: boolean;
+  onCreateOpenHandled?: () => void;
 }

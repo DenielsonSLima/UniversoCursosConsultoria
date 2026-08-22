@@ -114,6 +114,7 @@ const UsersList: React.FC<UsersListProps> = ({ contextId, contextTitle, onBack }
   };
 
   const handleSaveUser = async (newUser: NovoUsuarioFormData) => {
+    if (createUserMutation.isPending || updateUserMutation.isPending) return;
     const payload = buildPayload(newUser);
     if (editingUser?.id) {
       updateUserMutation.mutate(
@@ -198,6 +199,7 @@ const UsersList: React.FC<UsersListProps> = ({ contextId, contextTitle, onBack }
           initialUser={editingUser || undefined}
           onSave={handleSaveUser}
           onCancel={handleCloseForm}
+          isSaving={createUserMutation.isPending || updateUserMutation.isPending}
         />
       </>
     );

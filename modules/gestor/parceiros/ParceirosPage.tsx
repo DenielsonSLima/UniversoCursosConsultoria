@@ -30,8 +30,12 @@ import { filterTurmasByModalidades } from './parceiros-turmas.utils';
 import ResponsaveisTab from './responsaveis/ResponsaveisTab';
 import CoordenacoesTab from './coordenacoes/CoordenacoesTab';
 
-export type ParceiroFormType = 'aluno' | 'professor' | 'selection' | 'pf' | 'pj';
-type FormType = ParceiroFormType | null;
+export type ParceiroFormType = 'aluno' | 'professor' | 'responsavel' | 'selection' | 'pf' | 'pj';
+type HostedParceiroFormType = Exclude<ParceiroFormType, 'responsavel'>;
+type FormType = HostedParceiroFormType | null;
+type ParceiroSelectionType = ParceiroFormType | null;
+const RESPONSAVEL_CREATE_UNAVAILABLE_REASON =
+  'O cadastro de responsável está disponível somente para gestores com escopo global.';
 
 interface ParceirosPageProps {
   activeTabInicial?: ParceirosTabType;
@@ -59,22 +63,36 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
   onRequestScrollTop,
 }) => {
   const { toasts, removeToast, toast } = useToast();
-  const [showForm, setShowForm] = useState<FormType>(initialForm || null);
+  const [showForm, setShowForm] = useState<FormType>(
+    initialForm === 'responsavel' ? null : initialForm || null,
+  );
   const [showExportModal, setShowExportModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<ParceirosTabType>(activeTabInicial);
+  const [activeTab, setActiveTab] = useState<ParceirosTabType>(
+    initialForm === 'responsavel' ? 'responsaveis' : activeTabInicial,
+  );
   const [deletingParceiro, setDeletingParceiro] = useState<any | null>(null);
   const [selectedParceiro, setSelectedParceiro] = useState<any | null>(null);
   const [createdAlunoNome, setCreatedAlunoNome] = useState('');
   const [showEnrollmentModalForAlunoId, setShowEnrollmentModalForAlunoId] = useState<string | null>(null);
   const [selectedTurmaIdForEnrollment, setSelectedTurmaIdForEnrollment] = useState('');
+  const [openResponsavelCreate, setOpenResponsavelCreate] = useState(
+    initialForm === 'responsavel',
+  );
 
   useEffect(() => {
     setActiveTab(activeTabInicial);
   }, [activeTabInicial]);
 
   useEffect(() => {
+    if (initialForm === 'responsavel') {
+      setShowForm(null);
+      setActiveTab('responsaveis');
+      setOpenResponsavelCreate(true);
+      onRequestScrollTop?.();
+      return;
+    }
     if (initialForm) setShowForm(initialForm);
-  }, [initialForm]);
+  }, [initialForm, onRequestScrollTop]);
 
   const isDedicatedGovernanceTab = activeTab === 'responsaveis' || activeTab === 'coordenacoes';
 
@@ -141,6 +159,21 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
     <ToastNotification toasts={toasts} onRemove={removeToast} />
   );
 
+  const handleFormSelection = (form: ParceiroSelectionType) => {
+    if (form === 'responsavel') {
+      if (!includeGlobal) {
+        toast.info('Cadastro indisponível', RESPONSAVEL_CREATE_UNAVAILABLE_REASON);
+        return;
+      }
+      setShowForm(null);
+      setActiveTab('responsaveis');
+      setOpenResponsavelCreate(true);
+      onRequestScrollTop?.();
+      return;
+    }
+    setShowForm(form);
+  };
+
   if (selectedParceiro) {
     const handleBackFromDetails = () => {
       setSelectedParceiro(null);
@@ -164,8 +197,10 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
       <>
         {toastNotification}
         <ParceiroSelectionModal
-          onSelect={setShowForm}
+          onSelect={handleFormSelection}
           onClose={() => setShowForm(null)}
+          canCreateResponsavel={includeGlobal}
+          responsavelUnavailableReason={RESPONSAVEL_CREATE_UNAVAILABLE_REASON}
         />
       </>
     );
@@ -212,6 +247,7 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
 
           <button
             onClick={() => setShowForm('selection')}
+            data-parceiro-selection-trigger
             className="group relative flex-1 md:flex-none px-6 md:px-8 py-3 bg-[#001a33] text-white rounded-2xl font-semibold text-xs overflow-hidden shadow-xl hover:shadow-2xl hover:shadow-blue-900/20 transition-all hover:-translate-y-1"
           >
             <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-blue-600 to-[#001a33] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -266,6 +302,8 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
           poloId={poloId}
           includeGlobal={includeGlobal}
           toast={toast}
+          openCreateOnMount={openResponsavelCreate}
+          onCreateOpenHandled={() => setOpenResponsavelCreate(false)}
         />
       ) : activeTab === 'coordenacoes' ? (
         <CoordenacoesTab

@@ -11,24 +11,58 @@ import { getPortalProfile } from '../portal-session';
 import { loginService } from '../login.service';
 import type { TurnstileStatus } from '../../shared/auth/TurnstileWidget';
 import {
+  classifyAuthReturnFailure,
   clearRecoveryAuthParams,
   getAuthReturnParam,
+  getAuthReturnFailureMessage,
   getPasswordSetupTypeInUrl,
+  resolvePasswordSetupPresentation,
   type PasswordRecoveryPageProps,
   type PasswordSetupKind,
   type RecoveryAuthorization,
   type RecoveryMode,
 } from './password-recovery-auth';
 
-export const usePasswordRecovery = ({ appFlow = false }: PasswordRecoveryPageProps) => {
+export const usePasswordRecovery = ({
+  appFlow = false,
+  audience = 'student',
+  intent = 'recovery',
+}: PasswordRecoveryPageProps) => {
   const navigate = useNavigate();
-  const recoverySource = new URLSearchParams(window.location.search).get('source');
+  const initialPasswordSetupTypeRef = useRef(getPasswordSetupTypeInUrl());
+  const recoveryParams = new URLSearchParams(window.location.search);
+  const recoverySource = recoveryParams.get('source');
+  const recoveryFlow = recoveryParams.get('flow');
   const isResponsavelRecovery = recoverySource === 'responsavel';
-  const alunoLoginPath = appFlow || recoverySource === 'login-app'
-    ? '/aluno/login-app'
-    : window.location.pathname.startsWith('/aluno/')
-      ? '/aluno/entrar'
-      : '/login';
+  const [recoveryAuthorization, setRecoveryAuthorization] =
+    useState<RecoveryAuthorization | null>(null);
+  const { isInstitutional, isInviteFlow } = resolvePasswordSetupPresentation({
+    appFlow,
+    audience,
+    intent,
+    recoverySource,
+    recoveryFlow,
+    initialKind: initialPasswordSetupTypeRef.current,
+    authorizedKind: recoveryAuthorization?.kind || null,
+  });
+  const recoveryAudience = isInstitutional ? 'institutional' : 'student';
+  const recoveryIntent = isInviteFlow ? 'invite' : 'recovery';
+  const loginPath = isInstitutional
+    ? '/sistema/login'
+    : appFlow || recoverySource === 'login-app'
+      ? '/aluno/login-app'
+      : window.location.pathname.startsWith('/aluno/')
+        ? '/aluno/entrar'
+        : '/login';
+  const recoveryCallbackPath = appFlow
+    ? '/aluno/recuperar-senha-app'
+    : isResponsavelRecovery
+      ? '/recuperar-senha?source=responsavel'
+      : isInstitutional && isInviteFlow
+        ? '/sistema/primeiro-acesso'
+        : isInstitutional
+          ? '/recuperar-senha?source=institucional'
+          : '/recuperar-senha';
   const [mode, setMode] = useState<RecoveryMode>('request');
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -42,8 +76,6 @@ export const usePasswordRecovery = ({ appFlow = false }: PasswordRecoveryPagePro
   const [turnstileToken, setTurnstileToken] = useState('');
   const [turnstileResetSignal, setTurnstileResetSignal] = useState(0);
   const [turnstileStatus, setTurnstileStatus] = useState<TurnstileStatus>('loading');
-  const [recoveryAuthorization, setRecoveryAuthorization] =
-    useState<RecoveryAuthorization | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const loginRedirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const recoverySubmitInFlightRef = useRef(false);
@@ -65,8 +97,11 @@ export const usePasswordRecovery = ({ appFlow = false }: PasswordRecoveryPagePro
   useEffect(() => {
     let mounted = true;
     const passwordSetupType = getPasswordSetupTypeInUrl();
-    const returnError = getAuthReturnParam('error_description') || getAuthReturnParam('error');
-    const code = getAuthReturnParam('code');
+    const returnError = getAuthReturnParam('error');
+    const returnErrorCode = getAuthReturnParam('error_code');
+    const returnErrorDescription = getAuthReturnParam('error_description');
+    const hasReturnError = Boolean(returnError || returnErrorCode || returnErrorDescription);
+    const authCode = getAuthReturnParam('code');
     const recoveryAccessToken = getAuthReturnParam('access_token');
 
     const authorizePasswordSetup = (
@@ -107,12 +142,20 @@ export const usePasswordRecovery = ({ appFlow = false }: PasswordRecoveryPagePro
     });
 
     const detectPasswordSetupSession = async () => {
-      if (returnError) {
+      if (hasReturnError) {
+        const failureKind = classifyAuthReturnFailure({
+          error: returnError,
+          errorCode: returnErrorCode,
+          errorDescription: returnErrorDescription,
+        });
         clearRecoveryAuthParams();
         if (mounted) {
           setMessage({
             tone: 'error',
-            text: 'O link de recuperação é inválido ou expirou. Solicite um novo link abaixo.',
+            text: getAuthReturnFailureMessage(failureKind, {
+              audience: recoveryAudience,
+              intent: recoveryIntent,
+            }),
           });
         }
         return;
@@ -144,13 +187,14 @@ export const usePasswordRecovery = ({ appFlow = false }: PasswordRecoveryPagePro
         return;
       }
 
-      if (code || passwordSetupType || recoveryAccessToken) {
+      if (authCode || passwordSetupType || recoveryAccessToken) {
         clearRecoveryAuthParams();
         setMessage({
           tone: 'error',
-          text: passwordSetupType === 'invite'
-            ? 'O link de primeiro acesso não criou uma sessão válida. Peça o reenvio do convite.'
-            : 'O link de recuperação não criou uma sessão válida. Solicite um novo link abaixo.',
+          text: getAuthReturnFailureMessage('invalid', {
+            audience: recoveryAudience,
+            intent: passwordSetupType === 'invite' ? 'invite' : recoveryIntent,
+          }),
         });
       }
     };
@@ -165,7 +209,7 @@ export const usePasswordRecovery = ({ appFlow = false }: PasswordRecoveryPagePro
         loginRedirectTimerRef.current = null;
       }
     };
-  }, []);
+  }, [recoveryAudience, recoveryIntent]);
 
   const requestReset = async (event: FormEvent) => {
     event.preventDefault();
@@ -186,11 +230,7 @@ export const usePasswordRecovery = ({ appFlow = false }: PasswordRecoveryPagePro
       const genericMessage = await loginService.requestPasswordRecovery(
         identifier,
         verifiedToken,
-        appFlow
-          ? '/aluno/recuperar-senha-app'
-          : isResponsavelRecovery
-            ? '/recuperar-senha?source=responsavel'
-            : '/recuperar-senha',
+        recoveryCallbackPath,
       );
       setMessage({ tone: 'success', text: genericMessage });
     } catch (error) {
@@ -214,7 +254,9 @@ export const usePasswordRecovery = ({ appFlow = false }: PasswordRecoveryPagePro
     if (!recoveryAuthorization) {
       setMessage({
         tone: 'error',
-        text: 'Abra o link mais recente enviado ao seu e-mail antes de definir uma nova senha.',
+        text: isInstitutional
+          ? 'Abra o convite ou link institucional mais recente enviado ao seu e-mail antes de definir uma senha.'
+          : 'Abra o link mais recente enviado ao seu e-mail antes de definir uma nova senha.',
       });
       setMode('request');
       return;
@@ -231,7 +273,9 @@ export const usePasswordRecovery = ({ appFlow = false }: PasswordRecoveryPagePro
       setMode('request');
       setMessage({
         tone: 'error',
-        text: 'A sessão mudou antes da redefinição. Abra novamente o link enviado ao seu e-mail.',
+        text: isInstitutional
+          ? 'A sessão mudou antes da criação da senha. Abra novamente o convite institucional mais recente.'
+          : 'A sessão mudou antes da redefinição. Abra novamente o link enviado ao seu e-mail.',
       });
       return;
     }
@@ -257,7 +301,7 @@ export const usePasswordRecovery = ({ appFlow = false }: PasswordRecoveryPagePro
         return;
       }
 
-      let postResetPath = isResponsavelRecovery ? '/login' : alunoLoginPath;
+      let postResetPath = isResponsavelRecovery ? '/login' : loginPath;
       if (!isResponsavelRecovery) {
         try {
           const profile = await getPortalProfile({ authenticatedUser: currentSession.user });
@@ -317,7 +361,7 @@ export const usePasswordRecovery = ({ appFlow = false }: PasswordRecoveryPagePro
   ];
 
   return {
-    alunoLoginPath,
+    alunoLoginPath: loginPath,
     mode,
     identifier,
     setIdentifier,
@@ -337,8 +381,10 @@ export const usePasswordRecovery = ({ appFlow = false }: PasswordRecoveryPagePro
     showConfirmation,
     setShowConfirmation,
     requirements,
+    isInstitutional,
+    isInviteFlow,
     isFirstAccess: recoveryAuthorization?.kind === 'invite',
-    onBackToLogin: () => navigate(alunoLoginPath),
+    onBackToLogin: () => navigate(loginPath),
     requestReset,
     confirmReset,
   };

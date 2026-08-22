@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { ShieldAlert } from 'lucide-react';
 import type { ResponsavelLegal } from './responsaveis.contract';
@@ -16,7 +16,13 @@ import ResponsavelDetailsPanel from './components/ResponsavelDetailsPanel';
 import ResponsaveisList from './components/ResponsaveisList';
 import ResponsaveisToolbar from './components/ResponsaveisToolbar';
 
-const ResponsaveisTab: React.FC<ResponsaveisTabProps> = ({ poloId, includeGlobal, toast }) => {
+const ResponsaveisTab: React.FC<ResponsaveisTabProps> = ({
+  poloId,
+  includeGlobal,
+  toast,
+  openCreateOnMount = false,
+  onCreateOpenHandled,
+}) => {
   const queryScope = useMemo(
     () => createResponsaveisLegaisScope(poloId, includeGlobal),
     [includeGlobal, poloId],
@@ -101,6 +107,27 @@ const ResponsaveisTab: React.FC<ResponsaveisTabProps> = ({ poloId, includeGlobal
     hasVerificationFields,
     toast,
   });
+
+  useEffect(() => {
+    if (!openCreateOnMount || !queryScope || !listQuery.isSuccess) return;
+    if (listAccess?.canCreate === true) {
+      actions.creation.setVisible(true);
+    } else {
+      toast.info(
+        'Cadastro não autorizado',
+        'Seu perfil não possui permissão global para cadastrar responsáveis.',
+      );
+    }
+    onCreateOpenHandled?.();
+  }, [
+    actions.creation.setVisible,
+    listAccess?.canCreate,
+    listQuery.isSuccess,
+    onCreateOpenHandled,
+    openCreateOnMount,
+    queryScope,
+    toast,
+  ]);
 
   if (!queryScope) {
     return (

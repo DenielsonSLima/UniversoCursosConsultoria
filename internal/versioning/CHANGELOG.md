@@ -4,6 +4,26 @@ Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente
 
 Histórico anterior: [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
 
+## [4.6.1] - 2026-08-22
+
+### Adicionado
+
+- O modal de Novo Registro em Parceiros passa a oferecer também o cadastro de Responsável.
+- Gestores, Professores e Responsáveis convidados recebem uma tela de criação de senha coerente com os portais atuais.
+
+### Corrigido
+
+- O cadastro de usuário Gestor valida e-mail e CPF antes de enviar o convite, evitando identidade Auth órfã quando os dados internos já colidem.
+- O primeiro clique no convite deixa de ser informado como expirado quando a validação falha internamente; somente a expiração real do token usa essa mensagem.
+- O retorno do convite usa a rota de recuperação já autorizada em produção e reconhece o tipo assinado pelo Supabase para abrir diretamente a criação de senha.
+
+### Segurança e qualidade
+
+- O acesso institucional fica bloqueado até a criação real da senha, com estado explícito, ledger privado e autorização revalidada no banco e nas Edge Functions.
+- Convites pendentes são reconciliados por prova HMAC e operações idempotentes; uma falha interna preserva a identidade para tratamento seguro, sem exclusão automática.
+- A identidade órfã do teste reportado foi excluída somente após validação de ausência de senha, sessão, token e vínculos internos.
+- Migrations, 20 Edge Functions, contratos focados, TypeScript e build de produção foram validados antes da publicação.
+
 ## [4.6.0] - 2026-08-21
 
 ### Adicionado

@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
-import { Save, X } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { LoaderCircle, Save, X } from 'lucide-react';
 import { formatCpf, isValidCpf, isValidEmail, normalizeEmail } from '../../../../shared/utils/identityValidation';
 import {
   DEFAULT_FINANCEIRO_TABS,
@@ -23,6 +23,7 @@ interface UserFormAddProps {
   onSave: (data: NovoUsuarioFormData) => void;
   onCancel: () => void;
   initialUser?: UsuarioSistema;
+  isSaving?: boolean;
 }
 
 const splitFullName = (fullName: string) => {
@@ -75,10 +76,12 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
   onSave,
   onCancel,
   initialUser,
+  isSaving = false,
 }) => {
   const { data: companies = [] } = useUsuariosPolosQuery();
   const { toasts, removeToast, toast } = useToast();
   const [perfis, setPerfis] = useState<PerfilAcesso[]>([]);
+  const submitLockedRef = useRef(false);
   
   const [formData, setFormData] = useState<NovoUsuarioFormData>({
     nome: '',
@@ -108,6 +111,10 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
   const isEditing = Boolean(initialUser?.id);
 
   const selectedPerfil = perfis.find(p => p.id === formData.perfil_acesso_id);
+
+  useEffect(() => {
+    if (!isSaving) submitLockedRef.current = false;
+  }, [isSaving]);
 
   useEffect(() => {
     if (contextId !== 'global') {
@@ -294,6 +301,7 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSaving || submitLockedRef.current) return;
     const validationError = (message: string) => {
       toast.error('Revise os dados', message);
     };
@@ -359,6 +367,7 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
       validationError('Selecione o polo de atendimento do WhatsApp para este usuário.');
       return;
     }
+    submitLockedRef.current = true;
     onSave({ ...formData, email: normalizeEmail(formData.email) });
   };
 
@@ -378,7 +387,13 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
               : 'Preencha as informações para conceder acesso ao sistema.'}
           </p>
         </div>
-        <button onClick={onCancel} className="p-2 rounded-full hover:bg-slate-200 text-slate-400 hover:text-red-500 transition-colors">
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={isSaving}
+          aria-label="Fechar formulário"
+          className="p-2 rounded-full hover:bg-slate-200 text-slate-400 hover:text-red-500 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+        >
           <X size={20} />
         </button>
       </div>
@@ -412,16 +427,19 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
         <button 
           type="button" 
           onClick={onCancel}
-          className="px-8 py-4 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs uppercase tracking-wider hover:bg-slate-50 transition-colors"
+          disabled={isSaving}
+          className="px-8 py-4 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs uppercase tracking-wider hover:bg-slate-50 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
         >
           Cancelar
         </button>
         <button 
           onClick={handleSubmit}
-          className="px-8 py-4 rounded-xl bg-[#001a33] text-white font-bold text-xs uppercase tracking-wider hover:bg-blue-900 shadow-lg shadow-blue-900/20 flex items-center gap-2"
+          disabled={isSaving}
+          aria-busy={isSaving}
+          className="px-8 py-4 rounded-xl bg-[#001a33] text-white font-bold text-xs uppercase tracking-wider hover:bg-blue-900 shadow-lg shadow-blue-900/20 flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <Save size={18} />
-          {isEditing ? 'Atualizar Usuário' : 'Salvar Usuário'}
+          {isSaving ? <LoaderCircle className="animate-spin" size={18} /> : <Save size={18} />}
+          {isSaving ? 'Salvando...' : isEditing ? 'Atualizar Usuário' : 'Salvar Usuário'}
         </button>
       </div>
     </div>

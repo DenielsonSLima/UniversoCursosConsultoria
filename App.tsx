@@ -150,6 +150,10 @@ const App: React.FC = () => {
 
         {/* ── Rotas do Sistema Interno ── */}
         <Route path="/sistema/login" element={<LoginPage />} />
+        <Route
+          path="/sistema/primeiro-acesso"
+          element={<PasswordRecoveryPage audience="institutional" intent="invite" />}
+        />
         <Route path="/gestor/*" element={<VersionedPortal><GestorPage /></VersionedPortal>} />
         <Route path="/professor/*" element={<VersionedPortal><ProfessorPage /></VersionedPortal>} />
         <Route path="/responsavel/*" element={<VersionedPortal><ResponsavelPage /></VersionedPortal>} />

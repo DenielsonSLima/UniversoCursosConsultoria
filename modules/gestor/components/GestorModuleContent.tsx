@@ -175,7 +175,7 @@ const GestorModuleContentView: React.FC<GestorModuleContentProps> = ({
   }
   if (activeModule.startsWith('parceiros-novo-')) {
     const requestedForm = activeModule.replace('parceiros-novo-', '') as ParceiroFormType;
-    const initialForm: ParceiroFormType = ['aluno', 'professor', 'pf', 'pj'].includes(requestedForm)
+    const initialForm: ParceiroFormType = ['aluno', 'professor', 'responsavel', 'pf', 'pj'].includes(requestedForm)
       ? requestedForm
       : 'selection';
     return (

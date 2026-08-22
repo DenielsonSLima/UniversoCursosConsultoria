@@ -7,6 +7,13 @@ import {
 } from "../permissions.ts";
 import { resolveRedirectTarget } from "../redirects.ts";
 import type { HandlerContext } from "../types.ts";
+import {
+  buildGestorInviteOperationMetadata,
+  hasValidGestorInviteOperationMarker,
+  isLegacyPendingGestorInvite,
+} from "./gestor-invite-reconciliation.ts";
+import { findGestorIdentityConflict } from "./gestor-identity-links.ts";
+import { checkGestorUserUniqueness } from "./gestor-user-preflight.ts";
 
 const COMMUNICATION_SECTORS = new Set([
   "todos",
@@ -18,14 +25,8 @@ const COMMUNICATION_SECTORS = new Set([
 ]);
 
 const EMAIL_PATTERN = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
-const INVITE_OPERATION_NONCE_KEY = "invite_operation_nonce";
 
 const onlyDigits = (value: unknown) => String(value || "").replace(/\D/g, "");
-
-const hasInviteOperationNonce = (authUser: any, expectedNonce: string) =>
-  String(authUser?.user_metadata?.[INVITE_OPERATION_NONCE_KEY] || "") ===
-    expectedNonce &&
-  authUser?.user_metadata?.origem === "usuarios_sistema";
 
 const isValidCpf = (value: unknown) => {
   const cpf = onlyDigits(value);
@@ -39,67 +40,6 @@ const isValidCpf = (value: unknown) => {
     return remainder === 10 ? 0 : remainder;
   };
   return digit(9) === Number(cpf[9]) && digit(10) === Number(cpf[10]);
-};
-
-const findGestorIdentityConflict = async (admin: any, authUserId: string) => {
-  let partnerResult: any;
-  let systemUserResult: any;
-  try {
-    [partnerResult, systemUserResult] = await Promise.all([
-      admin
-        .from("parceiros")
-        .select("id, cpf_cnpj, email")
-        .eq("auth_user_id", authUserId)
-        .limit(1),
-      admin
-        .from("usuarios_sistema")
-        .select("id")
-        .eq("auth_user_id", authUserId)
-        .limit(1),
-    ]);
-  } catch (error) {
-    return {
-      error: error instanceof Error
-        ? error.message
-        : "Não foi possível validar os vínculos da identidade de acesso.",
-      conflict: null,
-      partner: null,
-    };
-  }
-
-  const queryError = partnerResult.error || systemUserResult.error;
-  if (queryError) {
-    return {
-      error: queryError.message ||
-        "Não foi possível validar os vínculos da identidade de acesso.",
-      conflict: null,
-      partner: null,
-    };
-  }
-
-  if (partnerResult.data?.length) {
-    return {
-      error: null,
-      conflict:
-        "Este e-mail já está vinculado ao acesso de um aluno ou professor.",
-      partner: partnerResult.data[0],
-    };
-  }
-
-  if (systemUserResult.data?.length) {
-    return {
-      error: null,
-      conflict:
-        "Já existe um usuário interno vinculado a este e-mail. Edite o cadastro existente.",
-      partner: null,
-    };
-  }
-
-  return {
-    error: null,
-    conflict: null,
-    partner: partnerResult.data?.[0] || null,
-  };
 };
 
 export const handleUpsertGestorUser = async (
@@ -236,9 +176,24 @@ export const handleUpsertGestorUser = async (
     }, 400);
   }
 
+  const uniquenessConflict = await checkGestorUserUniqueness(
+    admin,
+    email,
+    incomingUser.cpf,
+  );
+  if (uniquenessConflict) {
+    return json({
+      success: false,
+      code: uniquenessConflict.code,
+      error: uniquenessConflict.error,
+    }, uniquenessConflict.status);
+  }
+
   let authUser: any;
   let createdAuthUserId: string | null = null;
   let reusedPartnerIdentity = false;
+  let reconciledPendingInvite = false;
+  let institutionalInviteOperationId: string | null = null;
 
   const validateExistingIdentity = async (existingAuthUser: any) => {
     const identityConflict = await findGestorIdentityConflict(
@@ -265,6 +220,33 @@ export const handleUpsertGestorUser = async (
       return null;
     }
 
+    let signedInviteIsValid: boolean;
+    try {
+      signedInviteIsValid = await hasValidGestorInviteOperationMarker(
+        context,
+        existingAuthUser,
+        email,
+        String(incomingUser.cpf || ""),
+      );
+    } catch {
+      return json({
+        success: false,
+        code: "GESTOR_CONVITE_RECONCILIACAO_INDISPONIVEL",
+        error:
+          "A configuração segura de reconciliação do convite está indisponível.",
+      }, 500);
+    }
+    if (
+      signedInviteIsValid ||
+      isLegacyPendingGestorInvite(existingAuthUser, email)
+    ) {
+      reconciledPendingInvite = true;
+      institutionalInviteOperationId = String(
+        existingAuthUser.user_metadata?.invite_operation_nonce || "",
+      );
+      return null;
+    }
+
     return json({
       success: false,
       error:
@@ -284,6 +266,10 @@ export const handleUpsertGestorUser = async (
   }
 
   if (!authUser?.id) {
+    // A rota /recuperar-senha já integra a allowlist hospedada do Auth.
+    // O frontend identifica type=invite no retorno assinado e apresenta o
+    // primeiro acesso institucional sem depender de uma nova configuração
+    // remota de redirect.
     const redirectResolution = resolveRedirectTarget("/recuperar-senha");
     if (!redirectResolution.redirectTo) {
       return json({
@@ -294,14 +280,27 @@ export const handleUpsertGestorUser = async (
     }
 
     const invitationNonce = crypto.randomUUID();
+    let invitationMetadata: Record<string, unknown>;
+    try {
+      invitationMetadata = await buildGestorInviteOperationMetadata(
+        context,
+        invitationNonce,
+        email,
+        String(incomingUser.cpf || ""),
+        name,
+      );
+    } catch {
+      return json({
+        success: false,
+        code: "GESTOR_CONVITE_RECONCILIACAO_INDISPONIVEL",
+        error:
+          "A configuração segura de reconciliação do convite está indisponível.",
+      }, 500);
+    }
     let inviteResult: any;
     try {
       inviteResult = await admin.auth.admin.inviteUserByEmail(email, {
-        data: {
-          nome: name,
-          origem: "usuarios_sistema",
-          [INVITE_OPERATION_NONCE_KEY]: invitationNonce,
-        },
+        data: invitationMetadata,
         redirectTo: redirectResolution.redirectTo,
       });
     } catch (error) {
@@ -318,17 +317,34 @@ export const handleUpsertGestorUser = async (
       : null;
     if (invitedAuthUser) {
       // GoTrue pode reenviar convite para um Auth não confirmado já existente.
-      // O nonce só é gravado quando esta chamada cria a identidade; sem ele,
-      // nunca a trate como pertencente a este cadastro.
-      if (!hasInviteOperationNonce(invitedAuthUser, invitationNonce)) {
+      // O marcador só é aceito quando a HMAC do banco comprova esta operação.
+      let inviteMarkerIsValid: boolean;
+      try {
+        inviteMarkerIsValid = await hasValidGestorInviteOperationMarker(
+          context,
+          invitedAuthUser,
+          email,
+          String(incomingUser.cpf || ""),
+        );
+      } catch {
         return json({
           success: false,
+          code: "GESTOR_CONVITE_RECONCILIACAO_INDISPONIVEL",
+          error:
+            "A configuração segura de reconciliação do convite está indisponível.",
+        }, 500);
+      }
+      if (!inviteMarkerIsValid) {
+        return json({
+          success: false,
+          code: "GESTOR_CONVITE_PROVA_INVALIDA",
           error:
             "Não foi possível comprovar que o convite criou uma nova identidade para este usuário. Regularize este e-mail antes de tentar novamente.",
         }, 409);
       }
       authUser = invitedAuthUser;
       createdAuthUserId = authUser?.id || null;
+      institutionalInviteOperationId = invitationNonce;
     } else {
       // Uma requisição concorrente pode criar a mesma identidade entre a
       // consulta e o convite. Reconsultar impede que o retry gere duplicidade.
@@ -387,6 +403,13 @@ export const handleUpsertGestorUser = async (
     polo_comunicacao_id: communicationPoloId,
     pode_visualizar_todos_polos: canViewAllCommunicationPolos,
     pode_visualizar_todos_setores: canViewAllCommunication,
+    acesso_institucional_origem: reusedPartnerIdentity
+      ? "IDENTIDADE_EXISTENTE"
+      : "CONVITE",
+    primeiro_acesso_institucional_pendente: !reusedPartnerIdentity,
+    primeiro_acesso_institucional_operacao_id: reusedPartnerIdentity
+      ? null
+      : institutionalInviteOperationId,
   };
 
   const { data: savedUser, error: saveUserError } = await admin
@@ -403,19 +426,21 @@ export const handleUpsertGestorUser = async (
     // deixaria uma janela para outro fluxo tê-la vinculado a um parceiro.
     // Preserve-a para reconciliação: sem usuario_sistema ela não recebe
     // permissões institucionais, e nunca removemos uma conta de terceiro.
-    if (createdAuthUserId) {
-      return json({
-        success: false,
-        error:
-          "O cadastro interno não foi concluído após o envio do convite. A identidade convidada foi preservada para reconciliação segura deste e-mail.",
-      }, 500);
-    }
     if (saveUserError.code === "23505") {
       return json({
         success: false,
+        code: "GESTOR_CONFLITO_APOS_CONVITE",
         error:
-          "Já existe um usuário interno com este e-mail, CPF ou identidade de acesso.",
+          "Um conflito de e-mail, CPF ou identidade foi detectado durante o cadastro. A identidade convidada foi preservada e nenhum novo convite deve ser enviado até a revisão dos dados.",
       }, 409);
+    }
+    if (createdAuthUserId) {
+      return json({
+        success: false,
+        code: "GESTOR_CADASTRO_INTERNO_FALHOU",
+        error:
+          "O cadastro interno não foi concluído após o envio do convite. A identidade convidada foi preservada para reconciliação segura deste e-mail.",
+      }, 500);
     }
     return json({ success: false, error: saveUserError.message }, 500);
   }
@@ -428,6 +453,8 @@ export const handleUpsertGestorUser = async (
     user: savedUser,
     message: reusedPartnerIdentity
       ? "Usuário cadastrado e vinculado ao acesso existente. A senha atual foi preservada."
+      : reconciledPendingInvite
+      ? "Cadastro interno reconciliado com o convite já enviado. O link de primeiro acesso permanece válido."
       : "Usuário cadastrado. Enviamos um convite de primeiro acesso para o e-mail informado.",
   });
 };
