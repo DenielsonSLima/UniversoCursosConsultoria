@@ -3,8 +3,8 @@ import {
   PORTAL_CONTEXT_HOME_ROUTES,
   type PortalContext,
   type PortalContextScope,
+  type PortalFirstAccess,
   type PortalRole,
-  type PortalStudentFirstAccess,
 } from './portal-context.contract';
 
 type RpcRecord = Record<string, unknown>;
@@ -98,8 +98,8 @@ const normalizeScopes = (value: unknown): readonly PortalContextScope[] => {
 const normalizeFirstAccess = (
   value: unknown,
   role: PortalRole,
-): PortalStudentFirstAccess | null => {
-  if (role !== 'Aluno') {
+): PortalFirstAccess | null => {
+  if (role !== 'Aluno' && role !== 'Responsavel') {
     if (value !== null) {
       throw new PortalContextServiceError('O estado de primeiro acesso não corresponde ao perfil autorizado.');
     }

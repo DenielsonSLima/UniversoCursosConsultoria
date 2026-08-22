@@ -4,7 +4,6 @@ import {
   CheckCircle2,
   ChevronDown,
   FilePlus2,
-  KeyRound,
   Link2,
   Loader2,
   Pencil,
@@ -27,6 +26,7 @@ import {
   responsaveisLegaisQueryKeys,
 } from './responsaveis.query-keys';
 import { responsaveisLegaisService } from './responsaveis.service';
+import ResponsavelAccessCard from './components/ResponsavelAccessCard';
 
 type ToastApi = {
   success: (title: string, message: string) => void;
@@ -42,19 +42,6 @@ interface ResponsaveisTabProps {
   includeGlobal?: boolean;
   toast: ToastApi;
 }
-
-const eligibilityMessage = (reason: string | null) => {
-  const messages: Record<string, string> = {
-    STATUS_NAO_ATIVO: 'O responsável precisa estar ativo.',
-    CPF_OBRIGATORIO: 'Informe o CPF para preparar o acesso.',
-    EMAIL_OBRIGATORIO: 'Informe o e-mail para preparar o acesso.',
-    IDENTIDADE_NAO_VERIFICADA: 'A identidade ainda precisa de verificação registrada.',
-    VINCULO_VERIFICADO_VIGENTE_OBRIGATORIO: 'É necessário um vínculo verificado e vigente com aluno ativo.',
-  };
-  return reason
-    ? messages[reason] || 'O serviço ainda não liberou este acesso.'
-    : 'O serviço ainda não liberou este acesso.';
-};
 
 const fieldClassName = 'mt-1 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100';
 
@@ -82,7 +69,6 @@ const getStableRequestId = (registry: Map<string, string>, fingerprint: string) 
 
 const ResponsaveisTab: React.FC<ResponsaveisTabProps> = ({ poloId, includeGlobal, toast }) => {
   const queryClient = useQueryClient();
-  const accessRequestIdsRef = useRef(new Map<string, string>());
   const mutationRequestIdsRef = useRef(new Map<string, string>());
   const queryScope = useMemo(
     () => createResponsaveisLegaisScope(poloId, includeGlobal),
@@ -313,22 +299,6 @@ const ResponsaveisTab: React.FC<ResponsaveisTabProps> = ({ poloId, includeGlobal
     ),
   });
 
-  const accessMutation = useMutation({
-    mutationFn: (input: {
-      responsavel: Pick<ResponsavelLegal, 'id' | 'eligible' | 'accessBlockReason'>;
-      requestId: string;
-    }) => responsaveisLegaisService.prepararAcesso(input.responsavel, input.requestId),
-    onSuccess: async (result, input) => {
-      accessRequestIdsRef.current.delete(input.responsavel.id);
-      await queryClient.invalidateQueries({ queryKey: responsaveisLegaisQueryKeys.root });
-      toast.success('Acesso preparado', result.message || 'O serviço autorizou a preparação do acesso deste responsável.');
-    },
-    onError: (error) => toast.error(
-      'Acesso não preparado',
-      error instanceof Error ? error.message : 'Tente novamente.',
-    ),
-  });
-
   const items = useMemo(() => {
     const uniqueItems = new Map<string, ResponsavelLegal>();
     for (const page of listQuery.data?.pages || []) {
@@ -500,16 +470,6 @@ const ResponsaveisTab: React.FC<ResponsaveisTabProps> = ({ poloId, includeGlobal
     setShowLinkForm(false);
     setShowIdentityVerificationForm(false);
     setIsEditing(false);
-  };
-
-  const prepareAccess = (responsavel: Pick<ResponsavelLegal, 'id' | 'eligible' | 'accessBlockReason'>) => {
-    try {
-      const requestId = accessRequestIdsRef.current.get(responsavel.id) || createStableRequestId();
-      accessRequestIdsRef.current.set(responsavel.id, requestId);
-      accessMutation.mutate({ responsavel, requestId });
-    } catch (error) {
-      toast.error('Acesso não preparado', error instanceof Error ? error.message : 'Tente novamente.');
-    }
   };
 
   if (!queryScope) {
@@ -776,9 +736,12 @@ const ResponsaveisTab: React.FC<ResponsaveisTabProps> = ({ poloId, includeGlobal
                 <ul className="mt-3 space-y-2">{selected.vinculos.length ? selected.vinculos.map((vinculo) => <li key={vinculo.id} className="rounded-xl border border-slate-100 p-3"><p className="text-xs font-black text-slate-700">{vinculo.alunoNome}</p><p className="mt-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-500">{vinculo.parentesco}{vinculo.descricaoOutro ? ` · ${vinculo.descricaoOutro}` : ''} · {vinculo.status}</p>{vinculo.verificacaoMetodo ? <p className="mt-1 text-[10px] font-medium text-slate-500">{vinculo.verificacaoMetodo}{vinculo.verificacaoReferencia ? ` · ${vinculo.verificacaoReferencia}` : ''}</p> : null}</li>) : <li className="rounded-xl border border-dashed border-slate-200 p-3 text-xs font-medium text-slate-500">Nenhum vínculo informado pelo serviço.</li>}</ul>
               </div>
 
-              <div className={`mt-5 rounded-2xl border p-4 ${selected.eligible ? 'border-emerald-100 bg-emerald-50/60' : 'border-amber-100 bg-amber-50/60'}`}>
-                <div className="flex items-start gap-3"><span className={`mt-0.5 ${selected.eligible ? 'text-emerald-600' : 'text-amber-600'}`}>{selected.eligible ? <CheckCircle2 size={18} /> : <ShieldAlert size={18} />}</span><div className="min-w-0 flex-1"><p className={`text-xs font-black ${selected.eligible ? 'text-emerald-800' : 'text-amber-800'}`}>{selected.eligible ? 'Acesso liberado pelo serviço' : 'Acesso ainda não liberado'}</p><p className={`mt-1 text-xs font-medium leading-relaxed ${selected.eligible ? 'text-emerald-700' : 'text-amber-700'}`}>{selected.eligible ? 'A Edge Function revalidará as condições antes de preparar o acesso.' : eligibilityMessage(selected.accessBlockReason)}</p>{selected.eligible ? <button type="button" disabled={accessMutation.isPending} onClick={() => prepareAccess(selected)} className="mt-3 inline-flex h-10 items-center gap-2 rounded-xl bg-emerald-600 px-3 text-[10px] font-black uppercase tracking-wide text-white disabled:opacity-60">{accessMutation.isPending ? <Loader2 className="animate-spin" size={15} /> : <KeyRound size={15} />} Preparar acesso</button> : null}</div></div>
-              </div>
+              <ResponsavelAccessCard
+                key={selected.id}
+                responsavel={selected}
+                scope={queryScope}
+                toast={toast}
+              />
             </div>
           )}
         </aside>

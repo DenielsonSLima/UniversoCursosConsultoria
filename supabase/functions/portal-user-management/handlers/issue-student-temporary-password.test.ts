@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   generateStudentTemporaryPassword,
   handleIssueStudentTemporaryPassword,
+  TEMPORARY_PASSWORD_WRITE_NONCE_METADATA_KEY,
 } from "./issue-student-temporary-password.ts";
 import type { HandlerContext, Partner } from "../types.ts";
 
@@ -23,12 +24,17 @@ const makeFixture = (options: {
   auditFailureAt?: number | null;
   identityConflict?: string | null;
   reservation?: boolean;
+  reservationError?: { code?: string; message: string };
   completion?: boolean;
   cleanup?: boolean;
   markerUpdateError?: string | null;
   markerUpdateThrows?: boolean;
   updateError?: string | null;
   updateThrows?: boolean;
+  omitStagedNonce?: boolean;
+  verification?: { verified: boolean; sessionClosed: boolean };
+  verificationThrows?: boolean;
+  verifierAvailable?: boolean;
 } = {}) => {
   const authUser = options.authUser ?? {
     id: "auth-1",
@@ -40,6 +46,12 @@ const makeFixture = (options: {
   const updates: Array<{ id: string; payload: Record<string, unknown> }> = [];
   const audits: Array<Record<string, unknown>> = [];
   const rpcCalls: Array<{ name: string; args?: Record<string, unknown> }> = [];
+  const verificationCalls: Array<{
+    email: string;
+    password: string;
+    authUserId: string;
+  }> = [];
+  const events: string[] = [];
   let auditCount = 0;
   const admin = {
     auth: {
@@ -66,8 +78,23 @@ const makeFixture = (options: {
             ? options.updateError
             : null;
           if (!updateError && payload.app_metadata) {
-            authUser.app_metadata = payload.app_metadata;
+            authUser.app_metadata = {
+              ...(authUser.app_metadata || {}),
+              ...(payload.app_metadata as Record<string, unknown>),
+            };
+            if (isMarkerSetup && options.omitStagedNonce) {
+              delete authUser.app_metadata[
+                TEMPORARY_PASSWORD_WRITE_NONCE_METADATA_KEY
+              ];
+            }
           }
+          events.push(
+            isMarkerSetup
+              ? "stage-metadata"
+              : isPasswordUpdate
+              ? "update-password"
+              : "cleanup-metadata",
+          );
           return {
             data: { user: authUser },
             error: updateError ? { message: updateError } : null,
@@ -77,11 +104,15 @@ const makeFixture = (options: {
     },
     rpc: async (name: string, args?: Record<string, unknown>) => {
       rpcCalls.push({ name, args });
+      events.push(`rpc:${name}`);
       if (name === "portal_identidade_termos_versao_vigente") {
         return { data: "2026-08-05", error: null };
       }
       if (name === "portal_reservar_emissao_senha_temporaria") {
-        return { data: options.reservation ?? true, error: null };
+        return {
+          data: options.reservation ?? true,
+          error: options.reservationError || null,
+        };
       }
       if (name === "portal_concluir_emissao_senha_temporaria") {
         return { data: options.completion ?? true, error: null };
@@ -131,8 +162,25 @@ const makeFixture = (options: {
     gestorEmail: "gestor@example.com",
     json: (payload, status = 200) =>
       new Response(JSON.stringify(payload), { status }),
+    ...(options.verifierAvailable === false ? {} : {
+      verifyTemporaryPassword: async (
+        email: string,
+        password: string,
+        authUserId: string,
+      ) => {
+        events.push("verify-password");
+        verificationCalls.push({ email, password, authUserId });
+        if (options.verificationThrows) {
+          throw new Error("verificação interrompida");
+        }
+        return options.verification || {
+          verified: true,
+          sessionClosed: true,
+        };
+      },
+    }),
   };
-  return { context, updates, audits, rpcCalls };
+  return { context, updates, audits, rpcCalls, verificationCalls, events };
 };
 
 Deno.test("gera senha forte e conclui a reserva persistida sem auditar o segredo", async () => {
@@ -154,8 +202,10 @@ Deno.test("gera senha forte e conclui a reserva persistida sem auditar o segredo
   assert.equal(fixture.updates.length, 3);
   const markerUpdate = fixture.updates[0].payload;
   const update = fixture.updates[1].payload;
+  const reservation = fixture.rpcCalls[1].args || {};
   assert.equal(update.email_confirm, true);
   assert.equal(update.password, body.temporaryPassword);
+  assert.equal(update.app_metadata, undefined);
   assert.equal(
     (markerUpdate.app_metadata as Record<string, unknown>).provider,
     "email",
@@ -174,7 +224,6 @@ Deno.test("gera senha forte e conclui a reserva persistida sem auditar o segredo
       "portal_confirmar_limpeza_emissao_senha_temporaria",
     ],
   );
-  const reservation = fixture.rpcCalls[1].args || {};
   assert.equal(reservation.p_partner_id, "partner-1");
   assert.equal(reservation.p_actor_auth_user_id, GESTOR_AUTH_USER_ID);
   assert.equal(typeof reservation.p_emissao_id, "string");
@@ -188,11 +237,41 @@ Deno.test("gera senha forte e conclui a reserva persistida sem auditar o segredo
     reservation.p_emissao_id,
   );
   assert.equal(
+    (markerUpdate.app_metadata as Record<string, unknown>)[
+      TEMPORARY_PASSWORD_WRITE_NONCE_METADATA_KEY
+    ],
+    reservation.p_emissao_id,
+  );
+  assert.deepEqual(fixture.verificationCalls, [{
+    email: "aluno@example.com",
+    password: body.temporaryPassword,
+    authUserId: "auth-1",
+  }]);
+  assert.ok(
+    fixture.events.indexOf("stage-metadata") <
+      fixture.events.indexOf("update-password"),
+  );
+  assert.ok(
+    fixture.events.indexOf("update-password") <
+      fixture.events.indexOf("verify-password"),
+  );
+  assert.ok(
+    fixture.events.indexOf("verify-password") <
+      fixture.events.indexOf(
+        "rpc:portal_concluir_emissao_senha_temporaria",
+      ),
+  );
+  assert.equal(
     (fixture.updates[2].payload.app_metadata as Record<string, unknown>)
       .universocc_temporary_password_issue_id,
     null,
   );
-  assert.equal(update.app_metadata, undefined);
+  assert.equal(
+    (fixture.updates[2].payload.app_metadata as Record<string, unknown>)[
+      TEMPORARY_PASSWORD_WRITE_NONCE_METADATA_KEY
+    ],
+    null,
+  );
 });
 
 Deno.test("aceita validação administrativa quando o Auth ainda não confirmou o e-mail", async () => {
@@ -216,6 +295,26 @@ Deno.test("aceita validação administrativa quando o Auth ainda não confirmou 
   assert.equal(response.status, 200);
   assert.equal(fixture.updates.length, 3);
   assert.equal(fixture.updates[1].payload.email_confirm, true);
+});
+
+Deno.test("não trata confirmed_at como confirmação de e-mail do aluno", async () => {
+  const fixture = makeFixture({
+    authUser: {
+      id: "auth-1",
+      email: "aluno@example.com",
+      confirmed_at: "2026-08-21T12:00:00.000Z",
+      app_metadata: {},
+      user_metadata: { partner_id: "partner-1" },
+    },
+  });
+
+  const response = await handleIssueStudentTemporaryPassword(
+    fixture.context,
+    partner,
+  );
+
+  assert.equal(response.status, 409);
+  assert.equal(fixture.updates.length, 0);
 });
 
 Deno.test("recusa senha temporária sem e-mail confirmado ou validado pelo gestor", async () => {
@@ -324,6 +423,99 @@ Deno.test("não troca a senha antes de confirmar o marcador técnico da emissão
   );
 });
 
+Deno.test("não troca a senha quando o nonce stageado não é confirmado", async () => {
+  const fixture = makeFixture({ omitStagedNonce: true });
+  const response = await handleIssueStudentTemporaryPassword(
+    fixture.context,
+    partner,
+  );
+  const body = await response.json();
+
+  assert.equal(response.status, 500);
+  assert.equal(body.temporaryPassword, undefined);
+  assert.equal(
+    fixture.updates.some((update) =>
+      typeof update.payload.password === "string"
+    ),
+    false,
+  );
+  assert.equal(fixture.verificationCalls.length, 0);
+  assert.equal(
+    fixture.rpcCalls.some((call) =>
+      call.name === "portal_cancelar_emissao_senha_temporaria"
+    ),
+    true,
+  );
+});
+
+Deno.test("conclui e limpa sem entregar quando resposta confirmou mas login falhou", async () => {
+  const fixture = makeFixture({
+    verification: { verified: false, sessionClosed: true },
+  });
+  const response = await handleIssueStudentTemporaryPassword(
+    fixture.context,
+    partner,
+  );
+  const body = await response.json();
+
+  assert.equal(response.status, 500);
+  assert.equal(body.temporaryPassword, undefined);
+  assert.equal(fixture.verificationCalls.length, 1);
+  assert.deepEqual(
+    fixture.rpcCalls.slice(-2).map((call) => call.name),
+    [
+      "portal_concluir_emissao_senha_temporaria",
+      "portal_confirmar_limpeza_emissao_senha_temporaria",
+    ],
+  );
+  const cleanupMetadata = fixture.updates.at(-1)?.payload
+    .app_metadata as Record<string, unknown>;
+  assert.equal(cleanupMetadata.universocc_temporary_password_issue_id, null);
+  assert.equal(
+    cleanupMetadata[TEMPORARY_PASSWORD_WRITE_NONCE_METADATA_KEY],
+    null,
+  );
+});
+
+Deno.test("não entrega senha quando a sessão efêmera não pode ser encerrada", async () => {
+  const fixture = makeFixture({
+    verification: { verified: true, sessionClosed: false },
+  });
+  const response = await handleIssueStudentTemporaryPassword(
+    fixture.context,
+    partner,
+  );
+  const body = await response.json();
+
+  assert.equal(response.status, 500);
+  assert.equal(body.temporaryPassword, undefined);
+  assert.equal(
+    fixture.rpcCalls.some((call) =>
+      call.name === "portal_cancelar_emissao_senha_temporaria"
+    ),
+    false,
+  );
+  assert.equal(
+    fixture.rpcCalls.at(-2)?.name,
+    "portal_concluir_emissao_senha_temporaria",
+  );
+});
+
+Deno.test("não inicia emissão sem verificador efêmero configurado", async () => {
+  const fixture = makeFixture({ verifierAvailable: false });
+  const response = await handleIssueStudentTemporaryPassword(
+    fixture.context,
+    partner,
+  );
+
+  assert.equal(response.status, 500);
+  assert.deepEqual(
+    fixture.rpcCalls.map((call) => call.name),
+    ["portal_identidade_termos_versao_vigente"],
+  );
+  assert.equal(fixture.updates.length, 0);
+});
+
 Deno.test("não entrega segredo sem concluir o estado canônico", async () => {
   const fixture = makeFixture({ completion: false });
   const response = await handleIssueStudentTemporaryPassword(
@@ -360,10 +552,10 @@ Deno.test("não entrega segredo enquanto a limpeza da emissão não estiver conf
   );
 });
 
-Deno.test("mantém a emissão pendente quando o Auth rejeita a senha sem estado canônico", async () => {
+Deno.test("cancela somente a rejeição conhecida cuja senha não autentica", async () => {
   const fixture = makeFixture({
     updateError: "senha recusada",
-    completion: false,
+    verification: { verified: false, sessionClosed: true },
   });
   const response = await handleIssueStudentTemporaryPassword(
     fixture.context,
@@ -373,13 +565,14 @@ Deno.test("mantém a emissão pendente quando o Auth rejeita a senha sem estado 
 
   assert.equal(response.status, 500);
   assert.equal(body.temporaryPassword, undefined);
-  assert.equal(fixture.updates.length, 2);
+  assert.equal(fixture.updates.length, 3);
   assert.deepEqual(
     fixture.rpcCalls.map((call) => call.name),
     [
       "portal_identidade_termos_versao_vigente",
       "portal_reservar_emissao_senha_temporaria",
-      "portal_concluir_emissao_senha_temporaria",
+      "portal_cancelar_emissao_senha_temporaria",
+      "portal_confirmar_limpeza_emissao_senha_temporaria",
     ],
   );
 });
@@ -388,6 +581,7 @@ Deno.test("mantém a reserva quando o transporte da senha falha de forma ambígu
   const fixture = makeFixture({
     updateThrows: true,
     completion: false,
+    verification: { verified: false, sessionClosed: true },
   });
   const response = await handleIssueStudentTemporaryPassword(
     fixture.context,
@@ -396,7 +590,7 @@ Deno.test("mantém a reserva quando o transporte da senha falha de forma ambígu
   const body = await response.json();
 
   assert.equal(response.status, 500);
-  assert.match(body.error, /permanece pendente/i);
+  assert.match(body.error, /permanece ambíguo|preservados/i);
   assert.equal(fixture.updates.length, 1);
   assert.deepEqual(
     fixture.rpcCalls.map((call) => call.name),
@@ -405,6 +599,42 @@ Deno.test("mantém a reserva quando o transporte da senha falha de forma ambígu
       "portal_reservar_emissao_senha_temporaria",
       "portal_concluir_emissao_senha_temporaria",
     ],
+  );
+  assert.equal(
+    fixture.rpcCalls.some((call) =>
+      call.name === "portal_cancelar_emissao_senha_temporaria"
+    ),
+    false,
+  );
+});
+
+Deno.test("reconcilia escrita ambígua observada sem entregar a senha", async () => {
+  const fixture = makeFixture({
+    updateThrows: true,
+    completion: true,
+    verification: { verified: false, sessionClosed: true },
+  });
+  const response = await handleIssueStudentTemporaryPassword(
+    fixture.context,
+    partner,
+  );
+  const body = await response.json();
+
+  assert.equal(response.status, 500);
+  assert.equal(body.temporaryPassword, undefined);
+  assert.match(body.error, /encerrada com segurança/i);
+  assert.deepEqual(
+    fixture.rpcCalls.slice(-2).map((call) => call.name),
+    [
+      "portal_concluir_emissao_senha_temporaria",
+      "portal_confirmar_limpeza_emissao_senha_temporaria",
+    ],
+  );
+  assert.equal(
+    fixture.rpcCalls.some((call) =>
+      call.name === "portal_cancelar_emissao_senha_temporaria"
+    ),
+    false,
   );
 });
 
@@ -425,6 +655,40 @@ Deno.test("recusa emissão concorrente antes de alterar o Auth", async () => {
   );
 });
 
+Deno.test("mapeia bloqueio multiperfil do aluno sem vazar erro interno", async () => {
+  const fixture = makeFixture({
+    reservationError: {
+      code: "55000",
+      message:
+        "PORTAL_EMISSAO_SENHA_TEMPORARIA_ALUNO_IDENTIDADE_MULTIPERFIL detalhe SQL",
+    },
+  });
+  const response = await handleIssueStudentTemporaryPassword(
+    fixture.context,
+    partner,
+  );
+  const body = await response.json();
+
+  assert.equal(response.status, 409);
+  assert.equal(body.code, "ALUNO_SENHA_TEMPORARIA_NAO_PERMITIDA");
+  assert.equal(fixture.updates.length, 0);
+  assert.doesNotMatch(JSON.stringify(body), /PORTAL_EMISSAO|detalhe SQL/i);
+});
+
+Deno.test("sanitiza falha desconhecida ao reservar senha do aluno", async () => {
+  const fixture = makeFixture({
+    reservationError: { code: "XX000", message: "segredo SQL interno" },
+  });
+  const response = await handleIssueStudentTemporaryPassword(
+    fixture.context,
+    partner,
+  );
+  const body = await response.json();
+
+  assert.equal(response.status, 500);
+  assert.doesNotMatch(JSON.stringify(body), /segredo SQL interno/i);
+});
+
 Deno.test("reconcilia uma emissão confirmada no Auth antes de emitir outra", async () => {
   const pendingIssueId = "22222222-2222-4222-8222-222222222222";
   const fixture = makeFixture({
@@ -435,6 +699,7 @@ Deno.test("reconcilia uma emissão confirmada no Auth antes de emitir outra", as
       app_metadata: {
         provider: "email",
         universocc_temporary_password_issue_id: pendingIssueId,
+        [TEMPORARY_PASSWORD_WRITE_NONCE_METADATA_KEY]: pendingIssueId,
       },
       user_metadata: { partner_id: "partner-1" },
     },
@@ -516,6 +781,7 @@ Deno.test("limpa uma emissão revogada antes de permitir uma nova senha", async 
       app_metadata: {
         provider: "email",
         universocc_temporary_password_issue_id: revokedIssueId,
+        [TEMPORARY_PASSWORD_WRITE_NONCE_METADATA_KEY]: revokedIssueId,
       },
       user_metadata: { partner_id: "partner-1" },
     },

@@ -84,9 +84,7 @@ export const handleListPartnerEmailStatuses = async (
       : canonicalEmail
       ? usersByEmail.get(canonicalEmail) || null
       : null;
-    const emailConfirmed = Boolean(
-      authUser?.email_confirmed_at || authUser?.confirmed_at,
-    );
+    const emailConfirmed = Boolean(authUser?.email_confirmed_at);
     const status: PartnerEmailStatusValue = !contactEmail
       ? "no_email"
       : !authUser

@@ -90,9 +90,7 @@ export const handleConfirmPartnerEmail = async (
     success: true,
     action: "confirm-partner-email",
     userId: identity.authUser.id,
-    emailConfirmed: Boolean(
-      identity.authUser.email_confirmed_at || identity.authUser.confirmed_at,
-    ),
+    emailConfirmed: Boolean(identity.authUser.email_confirmed_at),
     emailValidatedByManager: true,
     message:
       "E-mail validado pelo gestor. Agora você pode gerar uma senha temporária.",

@@ -11,8 +11,158 @@ ALTER TABLE public.parceiros
   ADD COLUMN IF NOT EXISTS senha_atualizada_em timestamptz,
   ADD COLUMN IF NOT EXISTS senha_temporaria_emissao_id uuid,
   ADD COLUMN IF NOT EXISTS senha_temporaria_emissao_iniciada_em timestamptz,
+  ADD COLUMN IF NOT EXISTS senha_temporaria_emissao_senha_alterada_em timestamptz,
   ADD COLUMN IF NOT EXISTS senha_temporaria_emissoes_revogadas uuid[]
     NOT NULL DEFAULT ARRAY[]::uuid[];
+
+ALTER TABLE public.parceiros
+  ADD CONSTRAINT parceiros_emissao_senha_temporaria_escrita_coerente
+  CHECK (
+    senha_temporaria_emissao_senha_alterada_em IS NULL
+    OR (
+      senha_temporaria_emissao_id IS NOT NULL
+      AND senha_temporaria_emissao_iniciada_em IS NOT NULL
+    )
+  );
+
+-- Serializa novos vínculos com a credencial temporária global do Auth. Uma
+-- identidade com senha assistida pendente não pode ganhar outro papel até o
+-- próprio aluno trocar a senha.
+CREATE OR REPLACE FUNCTION public.proteger_vinculo_auth_senha_temporaria()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $function$
+DECLARE
+  v_old_row jsonb;
+  v_new_row jsonb := pg_catalog.to_jsonb(NEW);
+  v_proprio_acesso_temporario boolean := false;
+  v_tipo_parceiro_alterado boolean := false;
+BEGIN
+  IF TG_OP = 'UPDATE' THEN
+    v_old_row := pg_catalog.to_jsonb(OLD);
+    v_proprio_acesso_temporario :=
+      coalesce((v_old_row ->> 'senha_temporaria_pendente')::boolean, false)
+      OR nullif(v_old_row ->> 'senha_temporaria_emissao_id', '') IS NOT NULL
+      OR coalesce((v_new_row ->> 'senha_temporaria_pendente')::boolean, false)
+      OR nullif(v_new_row ->> 'senha_temporaria_emissao_id', '') IS NOT NULL;
+    v_tipo_parceiro_alterado := TG_TABLE_NAME = 'parceiros'
+      AND upper(coalesce(v_new_row ->> 'tipo', '')) IS DISTINCT FROM
+        upper(coalesce(v_old_row ->> 'tipo', ''));
+
+    IF NEW.auth_user_id IS DISTINCT FROM OLD.auth_user_id
+       AND v_proprio_acesso_temporario THEN
+      RAISE EXCEPTION USING
+        ERRCODE = '55000',
+        MESSAGE = 'PORTAL_VINCULO_AUTH_BLOQUEADO_POR_SENHA_TEMPORARIA';
+    END IF;
+
+    IF NEW.auth_user_id IS NOT DISTINCT FROM OLD.auth_user_id
+       AND NOT v_tipo_parceiro_alterado THEN
+      RETURN NEW;
+    END IF;
+  END IF;
+
+  IF NEW.auth_user_id IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  PERFORM pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended(
+      'portal-temporary-password-auth:' || NEW.auth_user_id::text,
+      0
+    )
+  );
+
+  -- A credencial já emitida não pode ganhar acesso de Professor pela simples
+  -- troca do discriminador da própria linha do Aluno.
+  IF v_tipo_parceiro_alterado AND v_proprio_acesso_temporario THEN
+    RAISE EXCEPTION USING
+      ERRCODE = '55000',
+      MESSAGE = 'PORTAL_VINCULO_AUTH_BLOQUEADO_POR_SENHA_TEMPORARIA';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.parceiros AS aluno
+    WHERE aluno.auth_user_id = NEW.auth_user_id
+      AND upper(coalesce(aluno.tipo, '')) = 'ALUNO'
+      AND coalesce(aluno.senha_temporaria_pendente, false)
+      AND (
+        TG_TABLE_NAME <> 'parceiros'
+        OR aluno.id IS DISTINCT FROM NEW.id
+      )
+  ) THEN
+    RAISE EXCEPTION USING
+      ERRCODE = '55000',
+      MESSAGE = 'PORTAL_VINCULO_AUTH_BLOQUEADO_POR_SENHA_TEMPORARIA';
+  END IF;
+
+  RETURN NEW;
+END;
+$function$;
+
+DROP TRIGGER IF EXISTS b15_proteger_vinculo_auth_senha_temporaria
+  ON public.parceiros;
+CREATE TRIGGER b15_proteger_vinculo_auth_senha_temporaria
+BEFORE INSERT OR UPDATE ON public.parceiros
+FOR EACH ROW
+EXECUTE FUNCTION public.proteger_vinculo_auth_senha_temporaria();
+
+DROP TRIGGER IF EXISTS b15_proteger_vinculo_auth_senha_temporaria
+  ON public.usuarios_sistema;
+CREATE TRIGGER b15_proteger_vinculo_auth_senha_temporaria
+BEFORE INSERT OR UPDATE ON public.usuarios_sistema
+FOR EACH ROW
+EXECUTE FUNCTION public.proteger_vinculo_auth_senha_temporaria();
+
+DROP TRIGGER IF EXISTS b15_proteger_vinculo_auth_senha_temporaria
+  ON public.responsaveis_legais;
+CREATE TRIGGER b15_proteger_vinculo_auth_senha_temporaria
+BEFORE INSERT OR UPDATE ON public.responsaveis_legais
+FOR EACH ROW
+EXECUTE FUNCTION public.proteger_vinculo_auth_senha_temporaria();
+
+REVOKE ALL ON FUNCTION public.proteger_vinculo_auth_senha_temporaria()
+  FROM PUBLIC, anon, authenticated, service_role;
+
+-- A linha que ancora a reserva não pode desaparecer enquanto uma credencial
+-- assistida estiver ativa ou aguardando limpeza; sem ela o trigger do Auth não
+-- teria como impedir uma escrita tardia da senha em outra função do usuário.
+CREATE OR REPLACE FUNCTION public.proteger_remocao_senha_temporaria_pendente()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $function$
+DECLARE
+  v_old_row jsonb := pg_catalog.to_jsonb(OLD);
+BEGIN
+  IF coalesce(
+       (v_old_row ->> 'senha_temporaria_pendente')::boolean,
+       false
+     )
+     OR nullif(v_old_row ->> 'senha_temporaria_emissao_id', '') IS NOT NULL
+  THEN
+    RAISE EXCEPTION USING
+      ERRCODE = '55000',
+      MESSAGE = 'PORTAL_REMOCAO_BLOQUEADA_POR_SENHA_TEMPORARIA';
+  END IF;
+
+  RETURN OLD;
+END;
+$function$;
+
+DROP TRIGGER IF EXISTS b16_proteger_remocao_senha_temporaria_pendente
+  ON public.parceiros;
+CREATE TRIGGER b16_proteger_remocao_senha_temporaria_pendente
+BEFORE DELETE ON public.parceiros
+FOR EACH ROW
+EXECUTE FUNCTION public.proteger_remocao_senha_temporaria_pendente();
+
+REVOKE ALL ON FUNCTION public.proteger_remocao_senha_temporaria_pendente()
+  FROM PUBLIC, anon, authenticated, service_role;
 
 -- Os novos campos de credencial/validação seguem a mesma barreira dos demais
 -- campos de acesso: navegador não pode alterá-los por update direto.
@@ -61,6 +211,7 @@ BEGIN
        OR NEW.senha_atualizada_em IS NOT NULL
        OR NEW.senha_temporaria_emissao_id IS NOT NULL
        OR NEW.senha_temporaria_emissao_iniciada_em IS NOT NULL
+       OR NEW.senha_temporaria_emissao_senha_alterada_em IS NOT NULL
        OR coalesce(
          pg_catalog.cardinality(NEW.senha_temporaria_emissoes_revogadas),
          0
@@ -101,6 +252,7 @@ BEGIN
      OR NEW.senha_atualizada_em IS DISTINCT FROM OLD.senha_atualizada_em
      OR NEW.senha_temporaria_emissao_id IS DISTINCT FROM OLD.senha_temporaria_emissao_id
      OR NEW.senha_temporaria_emissao_iniciada_em IS DISTINCT FROM OLD.senha_temporaria_emissao_iniciada_em
+     OR NEW.senha_temporaria_emissao_senha_alterada_em IS DISTINCT FROM OLD.senha_temporaria_emissao_senha_alterada_em
      OR NEW.senha_temporaria_emissoes_revogadas IS DISTINCT FROM OLD.senha_temporaria_emissoes_revogadas THEN
     RAISE EXCEPTION USING
       ERRCODE = '42501',
@@ -331,10 +483,37 @@ BEGIN
   WHERE aluno.id = p_partner_id
   FOR UPDATE;
 
-  IF NOT FOUND OR upper(coalesce(v_aluno.tipo, '')) <> 'ALUNO' THEN
+  IF NOT FOUND OR upper(coalesce(v_aluno.tipo, '')) <> 'ALUNO'
+     OR v_aluno.auth_user_id IS NULL THEN
     RAISE EXCEPTION USING
       ERRCODE = '22023',
       MESSAGE = 'PORTAL_EMISSAO_SENHA_TEMPORARIA_ALUNO_INVALIDO';
+  END IF;
+
+  PERFORM pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended(
+      'portal-temporary-password-auth:' || v_aluno.auth_user_id::text,
+      0
+    )
+  );
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.parceiros AS outro_perfil
+    WHERE outro_perfil.auth_user_id = v_aluno.auth_user_id
+      AND outro_perfil.id <> v_aluno.id
+  ) OR EXISTS (
+    SELECT 1
+    FROM public.usuarios_sistema AS usuario_interno
+    WHERE usuario_interno.auth_user_id = v_aluno.auth_user_id
+  ) OR EXISTS (
+    SELECT 1
+    FROM public.responsaveis_legais AS responsavel
+    WHERE responsavel.auth_user_id = v_aluno.auth_user_id
+  ) THEN
+    RAISE EXCEPTION USING
+      ERRCODE = '55000',
+      MESSAGE = 'PORTAL_EMISSAO_SENHA_TEMPORARIA_ALUNO_IDENTIDADE_MULTIPERFIL';
   END IF;
 
   IF v_aluno.acesso_status = 'ativo'
@@ -372,6 +551,7 @@ BEGIN
     senha_atualizada_em = NULL,
     senha_temporaria_emissao_id = p_emissao_id,
     senha_temporaria_emissao_iniciada_em = pg_catalog.clock_timestamp(),
+    senha_temporaria_emissao_senha_alterada_em = NULL,
     updated_at = pg_catalog.statement_timestamp()
   WHERE aluno.id = p_partner_id;
 
@@ -393,6 +573,7 @@ DECLARE
   v_aluno public.parceiros%ROWTYPE;
   v_contexto jsonb;
   v_auth_issue_id text;
+  v_auth_write_nonce text;
   v_gestor_id uuid;
   v_gestor_nome text;
   v_gestor_email text;
@@ -416,11 +597,17 @@ BEGIN
   WHERE aluno.id = p_partner_id
   FOR UPDATE;
 
-  SELECT nullif(
-    auth_user.raw_app_meta_data ->> 'universocc_temporary_password_issue_id',
-    ''
-  )
-    INTO v_auth_issue_id
+  SELECT
+    nullif(
+      auth_user.raw_app_meta_data ->> 'universocc_temporary_password_issue_id',
+      ''
+    ),
+    nullif(
+      auth_user.raw_app_meta_data
+        ->> 'universocc_temporary_password_write_nonce',
+      ''
+    )
+    INTO v_auth_issue_id, v_auth_write_nonce
   FROM auth.users AS auth_user
   WHERE auth_user.id = v_aluno.auth_user_id;
 
@@ -435,7 +622,9 @@ BEGIN
      )
      OR v_aluno.senha_atualizada_em IS NULL
      OR v_aluno.senha_atualizada_em < v_aluno.senha_temporaria_emissao_iniciada_em
-     OR v_auth_issue_id IS DISTINCT FROM p_emissao_id::text THEN
+     OR v_aluno.senha_temporaria_emissao_senha_alterada_em IS NULL
+     OR v_auth_issue_id IS DISTINCT FROM p_emissao_id::text
+     OR v_auth_write_nonce IS DISTINCT FROM p_emissao_id::text THEN
     RETURN false;
   END IF;
 
@@ -464,6 +653,7 @@ BEGIN
     -- retiramos seu marcador técnico do Auth e preservamos o UUID revogado
     -- contra qualquer retry tardio da chamada anterior.
     senha_temporaria_emissao_iniciada_em = NULL,
+    senha_temporaria_emissao_senha_alterada_em = NULL,
     senha_temporaria_emissoes_revogadas = pg_catalog.array_append(
       pg_catalog.array_remove(
         coalesce(
@@ -576,6 +766,7 @@ BEGIN
     acesso_ativado_em = NULL,
     senha_temporaria_pendente = true,
     senha_temporaria_emitida_em = NULL,
+    senha_temporaria_emissao_senha_alterada_em = NULL,
     -- O ID permanece como trava de limpeza até o Edge retirar o mesmo
     -- marcador do Auth e a RPC abaixo confirmar essa leitura no banco.
     senha_temporaria_emissao_iniciada_em = NULL,
@@ -613,6 +804,7 @@ DECLARE
   v_aluno public.parceiros%ROWTYPE;
   v_contexto jsonb;
   v_auth_issue_id text;
+  v_auth_write_nonce text;
 BEGIN
   v_contexto := public.portal_identidade_exigir_service_role_actor(
     p_actor_auth_user_id
@@ -647,17 +839,23 @@ BEGIN
     RETURN false;
   END IF;
 
-  SELECT nullif(
-    auth_user.raw_app_meta_data ->> 'universocc_temporary_password_issue_id',
-    ''
-  )
-    INTO v_auth_issue_id
+  SELECT
+    nullif(
+      auth_user.raw_app_meta_data ->> 'universocc_temporary_password_issue_id',
+      ''
+    ),
+    nullif(
+      auth_user.raw_app_meta_data
+        ->> 'universocc_temporary_password_write_nonce',
+      ''
+    )
+    INTO v_auth_issue_id, v_auth_write_nonce
   FROM auth.users AS auth_user
   WHERE auth_user.id = v_aluno.auth_user_id;
 
   -- A reserva só é liberada se não restar nenhum marcador. Um UUID diferente
   -- também indica estado inesperado e deve ser revisado, nunca sobrescrito.
-  IF NOT FOUND OR v_auth_issue_id IS NOT NULL THEN
+  IF NOT FOUND OR v_auth_issue_id IS NOT NULL OR v_auth_write_nonce IS NOT NULL THEN
     RETURN false;
   END IF;
 
@@ -665,6 +863,7 @@ BEGIN
   SET
     senha_temporaria_emissao_id = NULL,
     senha_temporaria_emissao_iniciada_em = NULL,
+    senha_temporaria_emissao_senha_alterada_em = NULL,
     updated_at = pg_catalog.statement_timestamp()
   WHERE aluno.id = p_partner_id;
 
@@ -695,9 +894,10 @@ GRANT EXECUTE ON FUNCTION public.portal_confirmar_limpeza_emissao_senha_temporar
 GRANT EXECUTE ON FUNCTION public.portal_identidade_termos_versao_vigente()
   TO service_role;
 
--- O marcador técnico no Auth não libera o aluno; ele apenas cerca uma chamada
--- atrasada. Depois de revogar uma emissão, qualquer troca de senha ou de
--- marcador que tente reutilizar aquele UUID falha na transação de auth.users.
+-- O marcador técnico e o nonce são preparados no Auth antes da senha. O
+-- GoTrue persiste a senha antes de app_metadata quando ambos são enviados na
+-- mesma requisição; separar as escritas permite que o trigger reconheça a
+-- única alteração de credencial autorizada pela reserva.
 CREATE OR REPLACE FUNCTION public.rejeitar_emissao_senha_temporaria_revogada()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -707,10 +907,13 @@ AS $function$
 DECLARE
   v_issue_text text;
   v_previous_issue_text text;
+  v_write_nonce_text text;
+  v_previous_write_nonce_text text;
   v_issue_id uuid;
   v_aluno public.parceiros%ROWTYPE;
   v_password_changed boolean;
   v_marker_changed boolean;
+  v_write_nonce_changed boolean;
 BEGIN
   v_password_changed := NEW.encrypted_password IS DISTINCT FROM OLD.encrypted_password;
   v_issue_text := lower(nullif(
@@ -721,9 +924,20 @@ BEGIN
     OLD.raw_app_meta_data ->> 'universocc_temporary_password_issue_id',
     ''
   ));
+  v_write_nonce_text := lower(nullif(
+    NEW.raw_app_meta_data ->> 'universocc_temporary_password_write_nonce',
+    ''
+  ));
+  v_previous_write_nonce_text := lower(nullif(
+    OLD.raw_app_meta_data ->> 'universocc_temporary_password_write_nonce',
+    ''
+  ));
   v_marker_changed := v_issue_text IS DISTINCT FROM v_previous_issue_text;
+  v_write_nonce_changed :=
+    v_write_nonce_text IS DISTINCT FROM v_previous_write_nonce_text;
 
-  IF NOT v_password_changed AND NOT v_marker_changed THEN
+  IF NOT v_password_changed AND NOT v_marker_changed
+     AND NOT v_write_nonce_changed THEN
     RETURN NEW;
   END IF;
 
@@ -734,15 +948,17 @@ BEGIN
     INTO v_aluno
   FROM public.parceiros AS aluno
   WHERE aluno.auth_user_id = NEW.id
+    AND upper(coalesce(aluno.tipo, '')) = 'ALUNO'
   FOR UPDATE;
 
   IF NOT FOUND THEN
     RETURN NEW;
   END IF;
 
-  -- Enquanto há uma emissão ativa, toda mudança de senha precisa trazer o
-  -- marcador da própria reserva. Isso falha fechado se o Auth separar senha
-  -- e metadata e tentar gravar a senha antes do marcador correlato.
+  -- Enquanto há uma emissão ativa, marcador e nonce precisam apontar para a
+  -- própria reserva. A preparação sem senha é permitida uma única vez (ou em
+  -- retry idempotente); a escrita seguinte da senha deve conservar exatamente
+  -- os dois valores já persistidos.
   IF v_aluno.senha_temporaria_emissao_id IS NOT NULL
      AND v_aluno.senha_temporaria_emissao_iniciada_em IS NOT NULL THEN
     IF v_issue_text IS NULL
@@ -752,13 +968,65 @@ BEGIN
         ERRCODE = '55000',
         MESSAGE = 'PORTAL_EMISSAO_SENHA_TEMPORARIA_MARCADOR_DIVERGENTE';
     END IF;
+
+    IF v_password_changed THEN
+      IF v_previous_issue_text IS NULL
+         OR v_previous_issue_text !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+         OR v_previous_issue_text::uuid IS DISTINCT FROM
+           v_aluno.senha_temporaria_emissao_id
+         OR v_write_nonce_text IS NULL
+         OR v_write_nonce_text !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+         OR v_write_nonce_text::uuid IS DISTINCT FROM
+           v_aluno.senha_temporaria_emissao_id
+         OR v_previous_write_nonce_text IS NULL
+         OR v_previous_write_nonce_text !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+         OR v_previous_write_nonce_text::uuid IS DISTINCT FROM
+           v_aluno.senha_temporaria_emissao_id
+         OR v_marker_changed
+         OR v_write_nonce_changed
+         OR v_aluno.senha_temporaria_emissao_senha_alterada_em IS NOT NULL THEN
+        RAISE EXCEPTION USING
+          ERRCODE = '55000',
+          MESSAGE = 'PORTAL_EMISSAO_SENHA_TEMPORARIA_ESCRITA_DIVERGENTE';
+      END IF;
+
+      UPDATE public.parceiros AS aluno
+      SET senha_temporaria_emissao_senha_alterada_em =
+        pg_catalog.clock_timestamp()
+      WHERE aluno.id = v_aluno.id;
+    ELSIF v_write_nonce_text IS NULL
+       OR v_write_nonce_text !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+       OR v_write_nonce_text::uuid IS DISTINCT FROM
+         v_aluno.senha_temporaria_emissao_id
+       OR (
+         v_previous_issue_text IS NOT NULL
+         AND (
+           v_previous_issue_text !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+           OR v_previous_issue_text::uuid IS DISTINCT FROM
+             v_aluno.senha_temporaria_emissao_id
+         )
+       )
+       OR (
+         v_previous_write_nonce_text IS NOT NULL
+         AND (
+           v_previous_write_nonce_text !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+           OR v_previous_write_nonce_text::uuid IS DISTINCT FROM
+             v_aluno.senha_temporaria_emissao_id
+         )
+       )
+       OR v_aluno.senha_temporaria_emissao_senha_alterada_em IS NOT NULL THEN
+      RAISE EXCEPTION USING
+        ERRCODE = '55000',
+        MESSAGE = 'PORTAL_EMISSAO_SENHA_TEMPORARIA_PREPARACAO_DIVERGENTE';
+    END IF;
   END IF;
 
   -- Em limpeza, só aceitamos retirar o marcador sem trocar a senha. Uma
   -- chamada tardia não pode reutilizar o UUID nem alterar credenciais.
   IF v_aluno.senha_temporaria_emissao_id IS NOT NULL
      AND v_aluno.senha_temporaria_emissao_iniciada_em IS NULL THEN
-    IF v_password_changed OR v_issue_text IS NOT NULL THEN
+    IF v_password_changed OR v_issue_text IS NOT NULL
+       OR v_write_nonce_text IS NOT NULL THEN
       RAISE EXCEPTION USING
         ERRCODE = '55000',
         MESSAGE = 'PORTAL_EMISSAO_SENHA_TEMPORARIA_LIMPEZA_PENDENTE';
@@ -820,8 +1088,7 @@ BEGIN
   v_password_changed := TG_OP <> 'UPDATE'
     OR OLD.encrypted_password IS DISTINCT FROM NEW.encrypted_password;
   v_email_confirmation_changed := TG_OP <> 'UPDATE'
-    OR OLD.email_confirmed_at IS DISTINCT FROM NEW.email_confirmed_at
-    OR OLD.confirmed_at IS DISTINCT FROM NEW.confirmed_at;
+    OR OLD.email_confirmed_at IS DISTINCT FROM NEW.email_confirmed_at;
   v_password_updated_at := CASE
     WHEN v_password_changed THEN pg_catalog.clock_timestamp()
     ELSE NULL
@@ -844,7 +1111,7 @@ BEGIN
       ELSE parceiro.senha_atualizada_em
     END,
     troca_senha_obrigatoria = CASE
-      WHEN coalesce(NEW.email_confirmed_at, NEW.confirmed_at) IS NULL
+      WHEN NEW.email_confirmed_at IS NULL
         OR (
           coalesce(parceiro.senha_temporaria_pendente, false)
         AND (
@@ -856,7 +1123,7 @@ BEGIN
       ELSE false
     END,
     acesso_status = CASE
-      WHEN coalesce(NEW.email_confirmed_at, NEW.confirmed_at) IS NULL
+      WHEN NEW.email_confirmed_at IS NULL
         OR (
           coalesce(parceiro.senha_temporaria_pendente, false)
         AND (
@@ -869,7 +1136,7 @@ BEGIN
     END,
     acesso_erro = NULL,
     acesso_ativado_em = CASE
-      WHEN coalesce(NEW.email_confirmed_at, NEW.confirmed_at) IS NULL
+      WHEN NEW.email_confirmed_at IS NULL
         OR (
           coalesce(parceiro.senha_temporaria_pendente, false)
         AND (
@@ -881,12 +1148,11 @@ BEGIN
       ELSE coalesce(
         parceiro.acesso_ativado_em,
         NEW.email_confirmed_at,
-        NEW.confirmed_at,
         pg_catalog.clock_timestamp()
       )
     END,
     updated_at = pg_catalog.statement_timestamp()
-  WHERE parceiro.tipo = 'Aluno'
+  WHERE upper(coalesce(parceiro.tipo, '')) = 'ALUNO'
     AND parceiro.auth_user_id = NEW.id;
 
   GET DIAGNOSTICS v_updated_count = ROW_COUNT;
@@ -899,7 +1165,7 @@ BEGIN
   SELECT min(parceiro.id)
     INTO v_fallback_id
   FROM public.parceiros AS parceiro
-  WHERE parceiro.tipo = 'Aluno'
+  WHERE upper(coalesce(parceiro.tipo, '')) = 'ALUNO'
     AND parceiro.auth_user_id IS NULL
     AND lower(
       btrim(
@@ -920,7 +1186,7 @@ BEGIN
         ELSE parceiro.senha_atualizada_em
       END,
       troca_senha_obrigatoria = CASE
-        WHEN coalesce(NEW.email_confirmed_at, NEW.confirmed_at) IS NULL
+        WHEN NEW.email_confirmed_at IS NULL
           OR (
             coalesce(parceiro.senha_temporaria_pendente, false)
           AND (
@@ -932,7 +1198,7 @@ BEGIN
         ELSE false
       END,
       acesso_status = CASE
-        WHEN coalesce(NEW.email_confirmed_at, NEW.confirmed_at) IS NULL
+        WHEN NEW.email_confirmed_at IS NULL
           OR (
             coalesce(parceiro.senha_temporaria_pendente, false)
           AND (
@@ -945,7 +1211,7 @@ BEGIN
       END,
       acesso_erro = NULL,
       acesso_ativado_em = CASE
-        WHEN coalesce(NEW.email_confirmed_at, NEW.confirmed_at) IS NULL
+        WHEN NEW.email_confirmed_at IS NULL
           OR (
             coalesce(parceiro.senha_temporaria_pendente, false)
           AND (
@@ -957,7 +1223,6 @@ BEGIN
         ELSE coalesce(
           parceiro.acesso_ativado_em,
           NEW.email_confirmed_at,
-          NEW.confirmed_at,
           pg_catalog.clock_timestamp()
         )
       END,
@@ -1100,6 +1365,7 @@ BEGIN
       senha_temporaria_pendente = false,
       senha_temporaria_emissao_id = NULL,
       senha_temporaria_emissao_iniciada_em = NULL,
+      senha_temporaria_emissao_senha_alterada_em = NULL,
       updated_at = pg_catalog.statement_timestamp()
     WHERE aluno.id = p_context_id;
   ELSE
@@ -1113,6 +1379,7 @@ BEGIN
       senha_temporaria_pendente = false,
       senha_temporaria_emissao_id = NULL,
       senha_temporaria_emissao_iniciada_em = NULL,
+      senha_temporaria_emissao_senha_alterada_em = NULL,
       updated_at = pg_catalog.statement_timestamp()
     WHERE aluno.id = p_context_id;
   END IF;
@@ -1447,7 +1714,7 @@ AS $function$
   SELECT parceiro.id
   FROM public.parceiros AS parceiro
   WHERE parceiro.auth_user_id = auth.uid()
-    AND parceiro.tipo = 'Aluno'
+    AND upper(coalesce(parceiro.tipo, '')) = 'ALUNO'
     AND public.is_active_status(parceiro.status)
     AND coalesce(parceiro.troca_senha_obrigatoria, false) = false
     AND NOT (

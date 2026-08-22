@@ -10,6 +10,7 @@ export type IncomingPayload = {
   status?: string;
   emailValidatedByManager?: boolean;
   responsavelLegalId?: string;
+  responsavelLegalIds?: string[];
   requestId?: string;
 };
 
@@ -30,10 +31,11 @@ export type FunctionResponse = {
   authUserDeleted?: boolean;
   inviteSent?: boolean;
   recoveryEmailSent?: boolean;
+  requestFinalized?: boolean;
   message?: string;
   recoveryLink?: string | null;
   user?: Record<string, unknown> | null;
-  statuses?: PartnerEmailStatus[];
+  statuses?: Array<PartnerEmailStatus | ResponsavelAccessStatus>;
   managementStates?: GestorUserManagementState[];
   emailConfirmed?: boolean;
   emailValidatedByManager?: boolean;
@@ -41,6 +43,7 @@ export type FunctionResponse = {
   profileLinked?: boolean;
   profileLinkState?: InstitutionalProfileLinkState;
   responsavelLegalId?: string | null;
+  code?: string;
   error?: string;
 };
 
@@ -65,16 +68,48 @@ export type PartnerEmailStatus = {
   emailValidatedByManager: boolean;
 };
 
+export type ResponsavelAccessStatusValue =
+  | "confirmed"
+  | "pending"
+  | "no_auth_user"
+  | "no_email";
+
+export type ResponsavelAccessStatus = {
+  responsavelLegalId: string;
+  status: ResponsavelAccessStatusValue;
+  authUserExists: boolean;
+  emailConfirmed: boolean;
+  emailValidatedByManager?: boolean;
+  temporaryPasswordPending?: boolean;
+  temporaryPasswordAllowed?: boolean;
+  requiresPasswordChange?: boolean;
+  termsAccepted?: boolean;
+  currentTermsVersion?: string;
+  firstAccessPending?: boolean;
+};
+
 export type JsonResponder = (
   payload: FunctionResponse,
   status?: number,
 ) => Response;
+
+export type TemporaryPasswordVerificationResult = {
+  verified: boolean;
+  sessionClosed: boolean;
+};
+
+export type TemporaryPasswordVerifier = (
+  email: string,
+  password: string,
+  authUserId: string,
+) => Promise<TemporaryPasswordVerificationResult>;
 
 export type HandlerContext = {
   admin: any;
   gestor: any;
   gestorEmail: string;
   json: JsonResponder;
+  verifyTemporaryPassword?: TemporaryPasswordVerifier;
 };
 
 export type Partner = {

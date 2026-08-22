@@ -5,6 +5,7 @@ import {
   clearPendingOAuthReturn,
   rememberPendingOAuthReturn,
 } from '../../shared/auth/oauth-return-state';
+import { requiresPortalFirstAccess } from '../../login/portal-first-access';
 import {
   isNativeOAuthPlatform,
   startNativeGoogleOAuth,
@@ -83,11 +84,10 @@ const PUBLIC_ALUNO_EMAIL_CONFIRMATION_REQUIRED_MESSAGE =
 
 type EmailConfirmationState = {
   email_confirmed_at?: string | null;
-  confirmed_at?: string | null;
 };
 
 const hasConfirmedEmail = (user?: EmailConfirmationState | null) =>
-  Boolean(user?.email_confirmed_at || user?.confirmed_at);
+  Boolean(user?.email_confirmed_at);
 
 const clearUnconfirmedLocalSession = async () => {
   const { error } = await supabase.auth.signOut({ scope: 'local' });
@@ -121,7 +121,8 @@ export const isPublicAlunoAlreadyRegisteredError = (
   )
 );
 
-interface FinalizeAlunoFirstAccessData {
+interface FinalizePortalFirstAccessData {
+  role: 'Aluno' | 'Responsavel';
   contextId: string;
   requestId: string;
   acceptedTerms: boolean;
@@ -146,7 +147,7 @@ const FIRST_ACCESS_GENERIC_ERROR = 'Não foi possível concluir o primeiro acess
 const FIRST_ACCESS_ERROR_MESSAGES: Record<string, string> = {
   AUTENTICACAO_OBRIGATORIA: 'Sua sessão expirou. Entre novamente para concluir o primeiro acesso.',
   PORTAL_PRIMEIRO_ACESSO_PARAMETROS_INVALIDOS: 'Os dados do primeiro acesso estão inválidos. Atualize a página e tente novamente.',
-  PORTAL_PRIMEIRO_ACESSO_CONTEXTO_NAO_AUTORIZADO: 'Este perfil de aluno não está mais disponível para a sua conta.',
+  PORTAL_PRIMEIRO_ACESSO_CONTEXTO_NAO_AUTORIZADO: 'Este perfil não está mais disponível para a sua conta.',
   PORTAL_PRIMEIRO_ACESSO_TERMOS_NAO_ACEITOS: 'É obrigatório aceitar os Termos de Uso para continuar.',
   PORTAL_PRIMEIRO_ACESSO_TERMOS_VERSAO_DIVERGENTE: 'Os Termos de Uso foram atualizados. Atualize a página antes de continuar.',
   PORTAL_PRIMEIRO_ACESSO_SENHA_AINDA_OBRIGATORIA: 'A alteração da senha ainda está sendo confirmada. Tente concluir novamente.',
@@ -809,13 +810,14 @@ export const alunoPublicAuthService = {
   },
 
   async finalizeFirstAccess({
+    role,
     contextId,
     requestId,
     acceptedTerms,
     acceptTermsVersion = TERMS_VERSION,
     setPassword = false,
     newPassword,
-  }: FinalizeAlunoFirstAccessData) {
+  }: FinalizePortalFirstAccessData) {
     if (!UUID_PATTERN.test(contextId) || !UUID_PATTERN.test(requestId)) {
       throw new Error('O contexto do primeiro acesso é inválido. Atualize a página e tente novamente.');
     }
@@ -854,13 +856,15 @@ export const alunoPublicAuthService = {
     }
     normalizeFirstAccessRpcResult(data, contextId, acceptTermsVersion);
 
-    await ensureRelationshipTermsDefault('student_first_access');
+    if (role === 'Aluno') {
+      await ensureRelationshipTermsDefault('student_first_access');
+    }
 
     // A resposta da mutação é validada, mas a navegação depende de uma nova
     // leitura canônica. Assim, storage e resposta local nunca concluem acesso.
     const profile = await getPortalProfile({
-      preferredRole: 'Aluno',
-      allowedRoles: ['Aluno'],
+      preferredRole: role,
+      allowedRoles: [role],
       contextId,
     });
     if (
@@ -876,12 +880,6 @@ export const alunoPublicAuthService = {
   },
 
   needsInitialAccess(profile: { tipo?: string; acceptedTermsAt?: string | null; requiresPasswordReset?: boolean }) {
-    return (
-      profile?.tipo === 'Aluno'
-      && (
-        !profile.acceptedTermsAt?.trim()
-        || profile.requiresPasswordReset !== false
-      )
-    );
+    return requiresPortalFirstAccess(profile);
   },
 };

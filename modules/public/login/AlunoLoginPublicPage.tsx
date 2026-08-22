@@ -8,6 +8,8 @@ import {
 } from './aluno-public-auth.service';
 import { supabase } from '../../../lib/supabase';
 import { savePortalSession, type PortalAuthProfile } from '../../login/portal-session';
+import { PORTAL_CONTEXT_HOME_ROUTES } from '../../login/portal-context.contract';
+import { buildPortalFirstAccessPath } from '../../login/portal-first-access';
 import { resolveProfilePostLoginRoute } from '../../login/profile-selection';
 import PortalProfileSelector, { portalProfileKey } from '../../login/components/PortalProfileSelector';
 import { isValidCpf, isValidEmail } from '../../shared/utils/identityValidation';
@@ -134,13 +136,16 @@ const AlunoLoginPublicPage: React.FC = () => {
 
     if (alunoPublicAuthService.needsInitialAccess(profile)) {
       queryClient.clear();
-      const redirect = hasExplicitRedirect ? redirectPath : '/aluno/';
-      const firstAccessParams = new URLSearchParams();
-      firstAccessParams.set('next', redirect);
-      if (profile.contextId) {
-        firstAccessParams.set('context', profile.contextId);
+      const redirect = hasExplicitRedirect
+        ? redirectPath
+        : PORTAL_CONTEXT_HOME_ROUTES[profile.tipo];
+      if (!profile.contextId || (profile.tipo !== 'Aluno' && profile.tipo !== 'Responsavel')) {
+        throw new Error('O contexto do primeiro acesso não está disponível. Entre novamente.');
       }
-      openAlunoAppDocument(`/aluno/primeiro-acesso?${firstAccessParams.toString()}`);
+      const firstAccessPath = buildPortalFirstAccessPath(profile.tipo, profile.contextId, redirect);
+      if (!openAlunoAppDocument(firstAccessPath)) {
+        navigate(firstAccessPath, { replace: true });
+      }
       return true;
     }
 

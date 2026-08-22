@@ -23,12 +23,15 @@ export interface PortalCoordinatorScope {
 
 export type PortalContextScope = PortalCoordinatorScope | Record<string, unknown>;
 
-/** Estado canônico de primeiro acesso; presente somente no contexto de Aluno. */
-export interface PortalStudentFirstAccess {
+/** Estado canônico de primeiro acesso para perfis públicos de Aluno e Responsável. */
+export interface PortalFirstAccess {
   acceptedTermsAt: string | null;
   acceptedTermsVersion: string | null;
   requiresPasswordReset: boolean;
 }
+
+/** Alias mantido para consumidores antigos do contrato do Aluno. */
+export type PortalStudentFirstAccess = PortalFirstAccess;
 
 export interface PortalContext {
   contextId: string;
@@ -40,8 +43,8 @@ export interface PortalContext {
   allPolos: boolean;
   requiresPoloSelection: boolean;
   scopes: readonly PortalContextScope[];
-  /** ALUNO recebe dados canônicos; os demais perfis recebem explicitamente null. */
-  firstAccess: PortalStudentFirstAccess | null;
+  /** Aluno e Responsável recebem dados canônicos; perfis institucionais recebem null. */
+  firstAccess: PortalFirstAccess | null;
 }
 
 export const PORTAL_CONTEXT_HOME_ROUTES: Record<PortalRole, string> = {

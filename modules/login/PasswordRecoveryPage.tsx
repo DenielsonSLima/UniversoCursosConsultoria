@@ -91,6 +91,7 @@ const clearRecoveryAuthParams = () => {
 const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({ appFlow = false }) => {
   const navigate = useNavigate();
   const recoverySource = new URLSearchParams(window.location.search).get('source');
+  const isResponsavelRecovery = recoverySource === 'responsavel';
   const alunoLoginPath = appFlow || recoverySource === 'login-app'
     ? '/aluno/login-app'
     : window.location.pathname.startsWith('/aluno/')
@@ -251,7 +252,11 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({ appFlow = f
       const genericMessage = await loginService.requestPasswordRecovery(
         identifier,
         verifiedToken,
-        appFlow ? '/aluno/recuperar-senha-app' : '/recuperar-senha',
+        appFlow
+          ? '/aluno/recuperar-senha-app'
+          : isResponsavelRecovery
+            ? '/recuperar-senha?source=responsavel'
+            : '/recuperar-senha',
       );
       setMessage({
         tone: 'success',
@@ -322,20 +327,24 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({ appFlow = f
         return;
       }
 
-      let postResetPath = alunoLoginPath;
-      try {
-        const profile = await getPortalProfile({ authenticatedUser: currentSession.user });
-        if (profile?.tipo && profile.tipo !== 'Aluno') {
-          postResetPath = '/sistema/login';
-        } else if (
-          ['usuarios_sistema', 'cadastro_professor'].includes(
-            String(currentSession.user.user_metadata?.origem || ''),
-          )
-        ) {
-          postResetPath = '/sistema/login';
+      let postResetPath = isResponsavelRecovery ? '/login' : alunoLoginPath;
+      if (!isResponsavelRecovery) {
+        try {
+          const profile = await getPortalProfile({ authenticatedUser: currentSession.user });
+          if (profile?.tipo && ['Gestor', 'Professor', 'Coordenador'].includes(profile.tipo)) {
+            postResetPath = '/sistema/login';
+          } else if (profile?.tipo === 'Responsavel') {
+            postResetPath = '/login';
+          } else if (
+            ['usuarios_sistema', 'cadastro_professor'].includes(
+              String(currentSession.user.user_metadata?.origem || ''),
+            )
+          ) {
+            postResetPath = '/sistema/login';
+          }
+        } catch (profileError) {
+          console.warn('A senha foi alterada, mas não foi possível determinar o login de destino.', profileError);
         }
-      } catch (profileError) {
-        console.warn('A senha foi alterada, mas não foi possível determinar o login de destino.', profileError);
       }
 
       const { error: signOutError } = await supabase.auth.signOut({ scope: 'local' });

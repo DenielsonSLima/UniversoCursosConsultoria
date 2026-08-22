@@ -107,7 +107,8 @@ Deno.test("status prioriza auth_user_id, usa login canônico e não faz fallback
 
   assert.equal(response.status, 200);
   assert.equal(statuses.get(P1).status, "confirmed");
-  assert.equal(statuses.get(P2).status, "confirmed");
+  assert.equal(statuses.get(P2).status, "pending");
+  assert.equal(statuses.get(P2).emailConfirmed, false);
   assert.equal(statuses.get(P3).status, "no_auth_user");
   assert.equal(statuses.get(P3).authUserExists, false);
   assert.equal(statuses.get(P4).status, "no_email");

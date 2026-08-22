@@ -39,6 +39,7 @@ const AlunoAppRecoveryPage = lazy(() => import('./modules/aluno/login-app/AlunoA
 const AlunoPublicSupportPage = lazy(() => import('./modules/aluno/login-app/AlunoPublicSupportPage'));
 const AlunoEmailConfirmationPage = lazy(() => import('./modules/public/login/AlunoEmailConfirmationPage'));
 const AlunoFirstAccessPage = lazy(() => import('./modules/public/login/AlunoFirstAccessPage'));
+const ResponsavelFirstAccessPage = lazy(() => import('./modules/responsavel/ResponsavelFirstAccessPage'));
 const ValidatorPage = lazy(() => import('./modules/public/validator/ValidatorPage'));
 const PasswordRecoveryPage = lazy(() => import('./modules/login/PasswordRecoveryPage'));
 const LoginPage = lazy(() => import('./modules/login/LoginPage'));
@@ -111,6 +112,7 @@ const App: React.FC = () => {
         <Route path="/cadastro" element={<AlunoLoginPublicPage />} />
         <Route path="/confirmacao-email" element={<AlunoEmailConfirmationPage />} />
         <Route path="/primeiro-acesso" element={<AlunoFirstAccessPage />} />
+        <Route path="/responsavel/primeiro-acesso" element={<ResponsavelFirstAccessPage />} />
         <Route path="/recuperar-senha" element={<PasswordRecoveryPage />} />
 
         {/* ── Rotas instaláveis do aluno: mantidas dentro do escopo /aluno/ ── */}

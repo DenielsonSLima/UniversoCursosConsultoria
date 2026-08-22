@@ -6,49 +6,14 @@ import {
   hasCompletedStudentFirstAccess,
 } from "./student-first-access-state.ts";
 import { resolveCanonicalStudentIdentity } from "./student-access-identity.ts";
-
-const UPPERCASE = "ABCDEFGHJKLMNPQRSTUVWXYZ";
-const LOWERCASE = "abcdefghijkmnopqrstuvwxyz";
-const DIGITS = "23456789";
-const SYMBOLS = "!@#$%*-_";
-const ALL_PASSWORD_CHARACTERS = UPPERCASE + LOWERCASE + DIGITS + SYMBOLS;
+import { generateTemporaryPassword } from "./temporary-password.ts";
 const TEMPORARY_PASSWORD_ISSUE_METADATA_KEY =
   "universocc_temporary_password_issue_id";
-
-const secureRandomIndex = (length: number) => {
-  const limit = Math.floor(4_294_967_296 / length) * length;
-  const value = new Uint32Array(1);
-  do {
-    crypto.getRandomValues(value);
-  } while (value[0] >= limit);
-  return value[0] % length;
-};
-
-const pick = (characters: string) =>
-  characters[secureRandomIndex(characters.length)];
-
-const shuffle = (characters: string[]) => {
-  for (let index = characters.length - 1; index > 0; index -= 1) {
-    const swapIndex = secureRandomIndex(index + 1);
-    [characters[index], characters[swapIndex]] = [
-      characters[swapIndex],
-      characters[index],
-    ];
-  }
-  return characters;
-};
+export const TEMPORARY_PASSWORD_WRITE_NONCE_METADATA_KEY =
+  "universocc_temporary_password_write_nonce";
 
 /** Mantém a política do primeiro acesso sem guardar a senha em lugar algum. */
-export const generateStudentTemporaryPassword = () => {
-  const characters = [
-    pick(UPPERCASE),
-    pick(LOWERCASE),
-    pick(DIGITS),
-    pick(SYMBOLS),
-  ];
-  while (characters.length < 16) characters.push(pick(ALL_PASSWORD_CHARACTERS));
-  return shuffle(characters).join("");
-};
+export const generateStudentTemporaryPassword = generateTemporaryPassword;
 
 const reserveTemporaryPasswordEmission = async (
   context: HandlerContext,
@@ -66,11 +31,16 @@ const reserveTemporaryPasswordEmission = async (
       },
     );
     if (error) {
-      return { error: error.message || "Não foi possível reservar a emissão." };
+      return {
+        reserved: false,
+        failed: true,
+        errorCode: String(error.code || ""),
+        errorMessage: String(error.message || ""),
+      };
     }
-    return { reserved: data === true };
+    return { reserved: data === true, failed: false };
   } catch {
-    return { error: "Não foi possível reservar a emissão." };
+    return { reserved: false, failed: true };
   }
 };
 
@@ -167,11 +137,17 @@ const appMetadataForTemporaryPasswordIssue = (
     ? authUser.app_metadata
     : {}),
   [TEMPORARY_PASSWORD_ISSUE_METADATA_KEY]: issueId,
+  [TEMPORARY_PASSWORD_WRITE_NONCE_METADATA_KEY]: issueId,
 });
 
 const temporaryPasswordIssueIdFromAuthUser = (authUser: any) =>
   String(
     authUser?.app_metadata?.[TEMPORARY_PASSWORD_ISSUE_METADATA_KEY] || "",
+  ).trim();
+
+const temporaryPasswordWriteNonceFromAuthUser = (authUser: any) =>
+  String(
+    authUser?.app_metadata?.[TEMPORARY_PASSWORD_WRITE_NONCE_METADATA_KEY] || "",
   ).trim();
 
 const appMetadataWithoutTemporaryPasswordIssue = (authUser: any) => {
@@ -185,6 +161,7 @@ const appMetadataWithoutTemporaryPasswordIssue = (authUser: any) => {
   return {
     ...appMetadata,
     [TEMPORARY_PASSWORD_ISSUE_METADATA_KEY]: null,
+    [TEMPORARY_PASSWORD_WRITE_NONCE_METADATA_KEY]: null,
   };
 };
 
@@ -213,7 +190,11 @@ const markTemporaryPasswordIssueInAuth = async (
   }
 
   const currentIssueId = temporaryPasswordIssueIdFromAuthUser(authUser);
-  if (currentIssueId && currentIssueId !== issueId) {
+  const currentWriteNonce = temporaryPasswordWriteNonceFromAuthUser(authUser);
+  if (
+    (currentIssueId && currentIssueId !== issueId) ||
+    (currentWriteNonce && currentWriteNonce !== issueId)
+  ) {
     return {
       error:
         "Existe um marcador técnico de outra emissão que precisa ser revisado antes de gerar uma senha.",
@@ -221,11 +202,10 @@ const markTemporaryPasswordIssueInAuth = async (
   }
 
   let markerUpdateFailed = false;
-  if (currentIssueId !== issueId) {
+  if (currentIssueId !== issueId || currentWriteNonce !== issueId) {
     try {
-      // O GoTrue atualiza a senha antes do app_metadata quando ambos chegam
-      // juntos. Gravamos o marcador em uma etapa própria para que o trigger
-      // do banco consiga cercar a troca de senha seguinte.
+      // UserUpdate grava a senha antes de app_metadata. Por isso marcador e
+      // nonce são stageados e confirmados antes da chamada password-only.
       const { error: updateError } = await context.admin.auth.admin
         .updateUserById(authUserId, {
           app_metadata: appMetadataForTemporaryPasswordIssue(authUser, issueId),
@@ -244,7 +224,8 @@ const markTemporaryPasswordIssueInAuth = async (
     );
     if (
       !error && data?.user &&
-      temporaryPasswordIssueIdFromAuthUser(data.user) === issueId
+      temporaryPasswordIssueIdFromAuthUser(data.user) === issueId &&
+      temporaryPasswordWriteNonceFromAuthUser(data.user) === issueId
     ) {
       return { marked: true };
     }
@@ -278,7 +259,20 @@ const cleanTemporaryPasswordIssueMarker = async (
       };
     }
 
-    if (temporaryPasswordIssueIdFromAuthUser(data.user) === issueId) {
+    const currentIssueId = temporaryPasswordIssueIdFromAuthUser(data.user);
+    const currentWriteNonce = temporaryPasswordWriteNonceFromAuthUser(
+      data.user,
+    );
+    if (
+      (currentIssueId && currentIssueId !== issueId) ||
+      (currentWriteNonce && currentWriteNonce !== issueId)
+    ) {
+      return {
+        error:
+          "A identidade contém marcadores de outra emissão e requer revisão.",
+      };
+    }
+    if (currentIssueId === issueId || currentWriteNonce === issueId) {
       try {
         const { error: updateError } = await context.admin.auth.admin
           .updateUserById(authUserId, {
@@ -439,6 +433,66 @@ const temporaryPasswordSuccessResponse = (
       "Senha temporária gerada. O aluno deverá criar uma nova senha no primeiro login.",
   });
 
+type PasswordUpdateOutcome = "confirmed" | "rejected" | "ambiguous";
+
+const settleUndeliverableStudentPassword = async (
+  context: HandlerContext,
+  partner: Partner,
+  authUserId: string,
+  actorAuthUserId: string,
+  issueId: string,
+  updateOutcome: PasswordUpdateOutcome,
+  passwordWasVerified: boolean,
+) => {
+  // Uma resposta explícita de erro, sem autenticação válida, confirma que a
+  // escrita não foi aceita. Só nesse caso é seguro revogar imediatamente.
+  if (updateOutcome === "rejected" && !passwordWasVerified) {
+    const cancellation = await revokeAndCleanTemporaryPasswordEmission(
+      context,
+      partner.id,
+      issueId,
+      authUserId,
+      actorAuthUserId,
+    );
+    return context.json({
+      success: false,
+      error: "cleaned" in cancellation && cancellation.cleaned
+        ? "O Auth recusou a nova senha. A emissão foi cancelada e pode ser tentada novamente."
+        : "O Auth recusou a nova senha e a limpeza ficou pendente. Não gere outra senha até revisar esta emissão.",
+    }, 500);
+  }
+
+  // Resposta confirmada ou transporte ambíguo podem representar uma senha já
+  // persistida. A RPC observa o fence no banco; nunca limpamos antes dela.
+  const completion = await completeTemporaryPasswordEmission(
+    context,
+    partner.id,
+    issueId,
+    actorAuthUserId,
+  );
+  if (!("completed" in completion) || !completion.completed) {
+    return context.json({
+      success: false,
+      error:
+        "A senha não pôde ser verificada e o resultado da escrita permanece ambíguo. A reserva e os marcadores foram preservados para reconciliação; não gere outra senha até revisar esta emissão.",
+    }, 500);
+  }
+
+  const cleanup = await cleanTemporaryPasswordIssueMarker(
+    context,
+    partner.id,
+    issueId,
+    authUserId,
+    actorAuthUserId,
+  );
+  return context.json({
+    success: false,
+    error: "cleaned" in cleanup && cleanup.cleaned
+      ? "A alteração da senha foi encerrada com segurança, mas a credencial não foi entregue porque a verificação da sessão falhou. Gere uma nova senha temporária."
+      : "A senha não foi entregue e a limpeza segura da emissão ficou pendente. Não gere outra senha até revisar esta emissão.",
+  }, 500);
+};
+
 export const handleIssueStudentTemporaryPassword = async (
   context: HandlerContext,
   partner: Partner,
@@ -461,9 +515,7 @@ export const handleIssueStudentTemporaryPassword = async (
     }, 409);
   }
 
-  const emailWasConfirmed = Boolean(
-    identity.authUser.email_confirmed_at || identity.authUser.confirmed_at,
-  );
+  const emailWasConfirmed = Boolean(identity.authUser.email_confirmed_at);
   if (!emailWasConfirmed && !partner.email_validado_gestor_em) {
     return json({
       success: false,
@@ -477,6 +529,13 @@ export const handleIssueStudentTemporaryPassword = async (
       success: false,
       error: "A identidade do gestor não pôde ser confirmada.",
     }, 401);
+  }
+  if (!context.verifyTemporaryPassword) {
+    return json({
+      success: false,
+      error:
+        "A verificação segura da senha temporária não está configurada no servidor.",
+    }, 500);
   }
 
   const reconciliation = await reconcilePendingTemporaryPasswordEmission(
@@ -516,8 +575,23 @@ export const handleIssueStudentTemporaryPassword = async (
     issueId,
     actorAuthUserId,
   );
-  if (reservation.error) {
-    return json({ success: false, error: reservation.error }, 500);
+  if (reservation.failed) {
+    if (
+      reservation.errorMessage?.includes(
+        "PORTAL_EMISSAO_SENHA_TEMPORARIA_ALUNO_IDENTIDADE_MULTIPERFIL",
+      )
+    ) {
+      return json({
+        success: false,
+        code: "ALUNO_SENHA_TEMPORARIA_NAO_PERMITIDA",
+        error:
+          "Esta identidade também possui outro perfil. Para não alterar a senha dos demais portais, use o reenvio ou a recuperação por e-mail.",
+      }, 409);
+    }
+    return json({
+      success: false,
+      error: "Não foi possível reservar a emissão da senha temporária.",
+    }, 500);
   }
   if (!reservation.reserved) {
     return json({
@@ -550,115 +624,41 @@ export const handleIssueStudentTemporaryPassword = async (
   }
 
   const temporaryPassword = generateStudentTemporaryPassword();
-  let updateError: any;
+  let passwordUpdateOutcome: PasswordUpdateOutcome = "ambiguous";
   try {
-    ({ error: updateError } = await admin.auth.admin.updateUserById(
+    const { error } = await admin.auth.admin.updateUserById(
       identity.authUser.id,
       {
         email_confirm: true,
         password: temporaryPassword,
       },
-    ));
+    );
+    passwordUpdateOutcome = error ? "rejected" : "confirmed";
   } catch {
-    // A ausência de resposta é ambígua: a alteração no Auth pode ter sido
-    // concluída. Só liberamos a senha se o banco confirmar o marcador e a
-    // troca de credencial desta mesma emissão.
-    const completionAfterUnknownUpdate =
-      await completeTemporaryPasswordEmission(
-        context,
-        partner.id,
-        issueId,
-        actorAuthUserId,
-      );
-    if (
-      "completed" in completionAfterUnknownUpdate &&
-      completionAfterUnknownUpdate.completed
-    ) {
-      const cleanup = await cleanTemporaryPasswordIssueMarker(
-        context,
-        partner.id,
-        issueId,
-        identity.authUser.id,
-        actorAuthUserId,
-      );
-      if ("cleaned" in cleanup && cleanup.cleaned) {
-        return temporaryPasswordSuccessResponse(
-          context,
-          partner,
-          identity.authUser.id,
-          temporaryPassword,
-        );
-      }
-      return json({
-        success: false,
-        error:
-          "A senha foi atualizada, mas a limpeza segura da emissão ficou pendente. Não entregue esta senha; tente gerar uma nova depois.",
-      }, 500);
-    }
-    if ("error" in completionAfterUnknownUpdate) {
-      return json({
-        success: false,
-        error:
-          "Não foi possível confirmar o estado da emissão. Não gere outra senha até revisar esta emissão.",
-      }, 500);
-    }
-
-    return json({
-      success: false,
-      error:
-        "A comunicação com o Auth falhou e a emissão permanece pendente para evitar sobrescrever uma senha. Não gere outra até revisar esta emissão.",
-    }, 500);
+    // A resposta pode se perder depois do commit. A autenticação efêmera
+    // abaixo é a prova canônica de que esta senha específica ficou vigente.
   }
-  if (updateError) {
-    // Uma resposta explícita de erro normalmente significa que o Auth rejeitou
-    // a alteração. Ainda conferimos a emissão primeiro: se ela chegou a ser
-    // persistida apesar da resposta, a conclusão canônica é a única fonte que
-    // autoriza a entrega da senha.
-    const completionAfterRejectedUpdate =
-      await completeTemporaryPasswordEmission(
-        context,
-        partner.id,
-        issueId,
-        actorAuthUserId,
-      );
-    if (
-      "completed" in completionAfterRejectedUpdate &&
-      completionAfterRejectedUpdate.completed
-    ) {
-      const cleanup = await cleanTemporaryPasswordIssueMarker(
-        context,
-        partner.id,
-        issueId,
-        identity.authUser.id,
-        actorAuthUserId,
-      );
-      if ("cleaned" in cleanup && cleanup.cleaned) {
-        return temporaryPasswordSuccessResponse(
-          context,
-          partner,
-          identity.authUser.id,
-          temporaryPassword,
-        );
-      }
-      return json({
-        success: false,
-        error:
-          "A senha foi atualizada, mas a limpeza segura da emissão ficou pendente. Não entregue esta senha; tente gerar uma nova depois.",
-      }, 500);
-    }
-    if ("error" in completionAfterRejectedUpdate) {
-      return json({
-        success: false,
-        error:
-          "Não foi possível confirmar o estado da emissão após a rejeição do Auth. Não gere outra senha até revisar esta emissão.",
-      }, 500);
-    }
 
-    return json({
-      success: false,
-      error:
-        "O Auth recusou a senha, mas o resultado final da emissão ainda não pôde ser confirmado. Não gere outra senha até revisar esta emissão.",
-    }, 500);
+  let verification = { verified: false, sessionClosed: false };
+  try {
+    verification = await context.verifyTemporaryPassword(
+      identity.email,
+      temporaryPassword,
+      identity.authUser.id,
+    );
+  } catch {
+    // Falha fechada abaixo. Escrita ambígua preserva o fence até reconciliação.
+  }
+  if (!verification.verified || !verification.sessionClosed) {
+    return settleUndeliverableStudentPassword(
+      context,
+      partner,
+      identity.authUser.id,
+      actorAuthUserId,
+      issueId,
+      passwordUpdateOutcome,
+      verification.verified,
+    );
   }
 
   const completion = await completeTemporaryPasswordEmission(

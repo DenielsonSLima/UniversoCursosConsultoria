@@ -2,7 +2,6 @@ import { supabase } from '../../../../lib/supabase';
 import type {
   ResponsavelLegal,
   ResponsavelAlunoOption,
-  ResponsavelAccessPreparationResult,
   ResponsavelLegalDetalhe,
   ResponsavelLegalSalvarInput,
   ResponsavelLegalSalvarResult,
@@ -128,15 +127,6 @@ const normalizeVincularResult = (value: unknown): ResponsavelLegalVincularAlunoR
   };
 };
 
-const normalizeAccessPreparationResult = (value: unknown): ResponsavelAccessPreparationResult => {
-  const source = asRecord(value, 'O serviço não devolveu a confirmação de preparo do acesso.');
-  return {
-    success: source.success === true,
-    profileLinkState: typeof source.profileLinkState === 'string' ? source.profileLinkState : null,
-    message: typeof source.message === 'string' && source.message.trim() ? source.message.trim() : null,
-  };
-};
-
 const asSingleRecord = (value: unknown, message: string): RpcRecord => {
   if (Array.isArray(value)) {
     if (value.length !== 1) throw new Error(message);
@@ -152,22 +142,6 @@ const normalizeVerificationReference = (value: string | null | undefined) => (
 const requireVerificationReference = (value: string | null, message: string) => {
   if (!value || value.length < 3 || value.length > 120) throw new Error(message);
   return value;
-};
-
-const invokePortalUserManagement = async <T>(body: Record<string, unknown>): Promise<T> => {
-  const { data, error } = await supabase.functions.invoke('portal-user-management', { body });
-  if (error) {
-    const contextual = error as { message?: string; context?: { json?: () => Promise<unknown> } };
-    const payload = await contextual.context?.json?.().catch(() => null);
-    const serverMessage = payload && typeof payload === 'object' && 'error' in payload
-      ? (payload as { error?: unknown }).error
-      : null;
-    throw new Error(typeof serverMessage === 'string' ? serverMessage : contextual.message || 'Não foi possível preparar o acesso.');
-  }
-  if (data && typeof data === 'object' && 'error' in data && typeof (data as { error?: unknown }).error === 'string') {
-    throw new Error((data as { error: string }).error);
-  }
-  return data as T;
 };
 
 export const responsaveisLegaisService = {
@@ -312,23 +286,4 @@ export const responsaveisLegaisService = {
     return normalizeVincularResult(data);
   },
 
-  /** A Edge Function deve revalidar a elegibilidade; este guard é apenas UX. */
-  async prepararAcesso(
-    responsavel: Pick<ResponsavelLegal, 'id' | 'eligible' | 'accessBlockReason'>,
-    requestId: string,
-  ) {
-    const validRequestId = requireResponsavelRequestId(requestId);
-    if (!responsavel.eligible) {
-      throw new Error(responsavel.accessBlockReason || 'O serviço informou que este acesso ainda não pode ser preparado.');
-    }
-    const response = normalizeAccessPreparationResult(await invokePortalUserManagement<unknown>({
-      action: 'ensure-responsavel-access',
-      responsavelLegalId: responsavel.id,
-      requestId: validRequestId,
-    }));
-    if (response.success !== true || (response.profileLinkState !== 'linked' && response.profileLinkState !== 'already_linked')) {
-      throw new Error(response.message || 'O serviço não confirmou o preparo do acesso deste responsável.');
-    }
-    return response;
-  },
 };

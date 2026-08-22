@@ -46,4 +46,9 @@ export const responsaveisLegaisQueryKeys = {
     ...scopedRoot(scope),
     'alunos-para-vinculo',
   ] as const,
+  access: (scope: ResponsaveisLegaisScope, id: string) => [
+    ...scopedRoot(scope),
+    'access',
+    id,
+  ] as const,
 };

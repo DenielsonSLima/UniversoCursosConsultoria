@@ -108,6 +108,32 @@ Deno.test("gestor registra validação administrativa do e-mail sem confirmar o 
   });
 });
 
+Deno.test("relata confirmação do aluno apenas por email_confirmed_at", async () => {
+  const fixture = makeFixture();
+  fixture.context.admin.auth.admin.getUserById = async () => ({
+    data: {
+      user: {
+        id: "auth-1",
+        email: "aluno@example.com",
+        confirmed_at: "2026-08-21T12:00:00.000Z",
+        app_metadata: {},
+        user_metadata: { partner_id: "partner-1" },
+      },
+    },
+    error: null,
+  });
+
+  const response = await handleConfirmPartnerEmail(
+    fixture.context,
+    partner,
+    true,
+  );
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.emailConfirmed, false);
+});
+
 Deno.test("recusa validação manual sem declaração explícita do gestor", async () => {
   const fixture = makeFixture();
 

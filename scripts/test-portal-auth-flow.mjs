@@ -101,7 +101,7 @@ test('installed student app keeps password recovery inside the aluno scope', () 
   assert.match(appRecoveryPage, /<PasswordRecoveryPage appFlow \/>/)
   assert.match(
     passwordRecoveryPage,
-    /appFlow \? '\/aluno\/recuperar-senha-app' : '\/recuperar-senha'/,
+    /appFlow\s*\? '\/aluno\/recuperar-senha-app'\s*:\s*isResponsavelRecovery\s*\? '\/recuperar-senha\?source=responsavel'\s*:\s*'\/recuperar-senha'/,
   )
   assert.match(loginService, /redirectPath = '\/recuperar-senha'/)
   assert.match(loginService, /buildAuthRedirectUrl\(redirectPath\)/)
@@ -206,6 +206,17 @@ test('portal-auth emits non-sensitive timing breakdowns', () => {
   }
 
   assert.match(portalAuthFunction, /portal-auth: timing/)
+})
+
+test('portal-auth never allows credential responses to be cached', () => {
+  assert.match(
+    portalAuthFunction,
+    /tokenResponse\.headers\.set\("Cache-Control", "no-store, max-age=0"\)/,
+  )
+  assert.match(
+    portalAuthFunction,
+    /tokenResponse\.headers\.set\("Pragma", "no-cache"\)/,
+  )
 })
 
 test('authenticated user is reused while institutional access is resolved', () => {

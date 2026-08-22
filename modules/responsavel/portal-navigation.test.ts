@@ -16,14 +16,23 @@ const [coordenadorServiceSource, coordenadorPageSource] = await Promise.all([
   readFile(new URL('../coordenador/coordenador.service.ts', import.meta.url), 'utf8'),
   readFile(new URL('../coordenador/coordenador.page.tsx', import.meta.url), 'utf8'),
 ]);
+const responsavelPageSource = await readFile(new URL('./responsavel.page.tsx', import.meta.url), 'utf8');
 
 test('responsável mantém deep link e módulo sincronizados', () => {
   assert.equal(resolveResponsavelModuleFromPath('/responsavel'), 'dependentes');
-  assert.equal(resolveResponsavelModuleFromPath('/responsavel/assinaturas'), 'assinaturas');
+  assert.equal(resolveResponsavelModuleFromPath('/responsavel/assinaturas'), 'dependentes');
   assert.equal(resolveResponsavelModuleFromPath('/responsavel/perfil/'), 'perfil');
   assert.equal(resolveResponsavelModuleFromPath('/responsavel/inexistente'), null);
-  assert.equal(resolveResponsavelPathFromModule('assinaturas'), '/responsavel/assinaturas');
+  assert.equal(resolveResponsavelPathFromModule('assinaturas'), '/responsavel');
   assert.equal(resolveResponsavelPathFromModule('inexistente'), '/responsavel');
+});
+
+test('responsável usa shell, hook e componentes do próprio domínio', () => {
+  assert.match(responsavelPageSource, /ResponsavelShell/);
+  assert.match(responsavelPageSource, /useResponsavelDependentes/);
+  assert.match(responsavelPageSource, /ResponsavelDependentesPanel/);
+  assert.doesNotMatch(responsavelPageSource, /ElectronicSignatureInbox|FileSignature|Assinaturas/);
+  assert.doesNotMatch(responsavelPageSource, /ProfessorShell|professorEmail|professorNome/);
 });
 
 test('coordenador aceita o deep link público de turmas e o alias descritivo', () => {

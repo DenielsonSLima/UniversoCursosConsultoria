@@ -3,9 +3,10 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { requireResponsavelRequestId } from './responsaveis.contract.ts';
 
-const [contractSource, serviceSource, tabSource] = await Promise.all([
+const [contractSource, serviceSource, accessServiceSource, tabSource] = await Promise.all([
   readFile(new URL('./responsaveis.contract.ts', import.meta.url), 'utf8'),
   readFile(new URL('./responsaveis.service.ts', import.meta.url), 'utf8'),
+  readFile(new URL('./responsavel-access.service.ts', import.meta.url), 'utf8'),
   readFile(new URL('./ResponsaveisTab.tsx', import.meta.url), 'utf8'),
 ]);
 
@@ -20,8 +21,8 @@ test('requestId é obrigatório, validado como UUID e nunca recebe fallback no s
   assert.match(contractSource, /requestId: string;/);
   assert.doesNotMatch(contractSource, /requestId\?: string \| null/);
   assert.match(serviceSource, /requireResponsavelRequestId\(input\.requestId\)/);
-  assert.match(serviceSource, /requireResponsavelRequestId\(requestId\)/);
-  assert.doesNotMatch(serviceSource, /randomUUID|toRequestId|p_request_id: input\.requestId \|\|/);
+  assert.match(accessServiceSource, /requireResponsavelRequestId\(requestId\)/);
+  assert.doesNotMatch(`${serviceSource}\n${accessServiceSource}`, /randomUUID|toRequestId|p_request_id: input\.requestId \|\|/);
 });
 
 test('opções de alunos vêm integralmente da RPC autorizada e permanecem lazy na UI', () => {

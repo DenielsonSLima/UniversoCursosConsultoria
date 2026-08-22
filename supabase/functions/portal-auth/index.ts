@@ -182,7 +182,8 @@ const isEmailConfirmationRequired = (body: Record<string, unknown> | null) => {
     .trim()
     .toLowerCase();
 
-  return codes.includes("email_not_confirmed") || message === "email not confirmed";
+  return codes.includes("email_not_confirmed") ||
+    message === "email not confirmed";
 };
 
 const getRequestOrigin = (request: Request) => {
@@ -217,8 +218,9 @@ const verifyTurnstile = async (
   if (!requestOrigin || !callerHostname) return false;
 
   const isLocalHostname = getLocalTurnstileHostnames().has(callerHostname);
-  const isProductionHostname =
-    getProductionTurnstileHostnames().has(callerHostname);
+  const isProductionHostname = getProductionTurnstileHostnames().has(
+    callerHostname,
+  );
   const isAllowedProtocol = isLocalHostname
     ? requestOrigin.protocol === "http:" || requestOrigin.protocol === "https:"
     : requestOrigin.protocol === "https:";
@@ -232,8 +234,8 @@ const verifyTurnstile = async (
   const secretName = isNativeChallenge
     ? "TURNSTILE_NATIVE_SECRET_KEY"
     : isLocalHostname
-      ? "TURNSTILE_LOCAL_SECRET_KEY"
-      : "TURNSTILE_SECRET_KEY";
+    ? "TURNSTILE_LOCAL_SECRET_KEY"
+    : "TURNSTILE_SECRET_KEY";
   const secret = String(
     Deno.env.get(secretName) ||
       (isNativeChallenge ? Deno.env.get("TURNSTILE_SECRET_KEY") : "") ||
@@ -326,7 +328,9 @@ Deno.serve(async (request: Request) => {
   }
 
   const action = payload.action;
-  const challengeContext = payload.challengeContext === "native" ? "native" : "web";
+  const challengeContext = payload.challengeContext === "native"
+    ? "native"
+    : "web";
   const identifier = normalizeIdentifier(payload.identifier);
   const cpf = String(payload.cpf || "").replace(/\D/g, "");
   const turnstileToken = String(payload.turnstileToken || "").trim();
@@ -566,10 +570,13 @@ Deno.serve(async (request: Request) => {
     }
 
     logTiming("success");
-    return json({
+    const tokenResponse = json({
       accessToken: authData.access_token,
       refreshToken: authData.refresh_token,
     });
+    tokenResponse.headers.set("Cache-Control", "no-store, max-age=0");
+    tokenResponse.headers.set("Pragma", "no-cache");
+    return tokenResponse;
   } catch (error) {
     timings.authMs = elapsedSince(authStartedAt);
     console.error(

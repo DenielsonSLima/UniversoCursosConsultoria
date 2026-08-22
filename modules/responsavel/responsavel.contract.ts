@@ -10,19 +10,21 @@ export interface ResponsavelDependente {
   vigenteAte: string | null;
 }
 
-export type ResponsavelModuleId = 'dependentes' | 'assinaturas' | 'perfil';
+export type ResponsavelModuleId = 'dependentes' | 'perfil';
 
 const RESPONSAVEL_MODULE_PATHS: Record<ResponsavelModuleId, string> = {
   dependentes: '/responsavel',
-  assinaturas: '/responsavel/assinaturas',
   perfil: '/responsavel/perfil',
 };
 
 /** Mantém URL, menu lateral e histórico do navegador apontando para o mesmo módulo. */
 export const resolveResponsavelModuleFromPath = (pathname: string): ResponsavelModuleId | null => {
   const normalized = pathname.replace(/\/+$/, '') || '/';
-  if (normalized === '/responsavel' || normalized === '/responsavel/dependentes') return 'dependentes';
-  if (normalized === '/responsavel/assinaturas') return 'assinaturas';
+  if (
+    normalized === '/responsavel'
+    || normalized === '/responsavel/dependentes'
+    || normalized === '/responsavel/assinaturas'
+  ) return 'dependentes';
   if (normalized === '/responsavel/perfil') return 'perfil';
   return null;
 };

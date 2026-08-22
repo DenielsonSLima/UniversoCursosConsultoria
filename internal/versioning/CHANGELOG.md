@@ -2,6 +2,25 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [4.6.0] - 2026-08-21
+
+### Adicionado
+
+- O Gestor acompanha a confirmação do e-mail do Responsável, pode validar a titularidade por um canal independente, reenviar o primeiro acesso e gerar uma senha temporária exibida somente uma vez.
+- O Responsável recebeu primeiro acesso próprio: senha temporária exige troca, os Termos de Uso vigentes são obrigatórios e os dependentes permanecem bloqueados até a conclusão.
+- O portal e a administração de Responsáveis foram separados em componentes, hooks, serviços e chaves de consulta do próprio domínio.
+
+### Corrigido
+
+- Depois de criar a senha pelo convite ou pela recuperação, uma conta somente de Responsável volta ao login público compatível, em vez de ser enviada ao login institucional.
+- Um convite apagado ou expirado pode ser substituído por um novo e-mail de recuperação sem expor links ou tokens ao Gestor.
+
+### Segurança e qualidade
+
+- A emissão assistida usa marcador Auth exclusivo, reserva serializada, reconciliação, auditoria sem segredo e resposta `no-store`; emissões do Aluno e do Responsável não compartilham o mesmo identificador técnico.
+- Reenvios preservam o mesmo identificador até a conclusão canônica, evitando e-mail duplicado quando a confirmação externa fica ambígua; respostas de login com tokens também são explicitamente `no-store`.
+- Banco, Edge Function, login, primeiro acesso e interface administrativa possuem contratos focados no fluxo completo do Responsável.
+
 ## [4.5.1] - 2026-08-21
 
 ### Adicionado

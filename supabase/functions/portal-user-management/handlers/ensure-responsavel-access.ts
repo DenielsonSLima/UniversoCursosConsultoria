@@ -2,6 +2,10 @@ import { findAuthUserByEmail, normalizeEmail } from "../auth-users.ts";
 import { isUuid } from "../permissions.ts";
 import { resolveRedirectTarget } from "../redirects.ts";
 import type { HandlerContext } from "../types.ts";
+import {
+  loadPreparedResponsavelAccess,
+  respondResponsavelAccessFailure,
+} from "./responsavel-access-context.ts";
 
 const ACTION = "ensure-responsavel-access";
 const EMAIL_PATTERN = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
@@ -22,17 +26,6 @@ const ACCESS_BLOCK_MESSAGES: Readonly<Record<string, string>> = {
     "Verifique a identidade do responsável antes de criar o acesso.",
   VINCULO_VERIFICADO_VIGENTE_OBRIGATORIO:
     "Confirme ao menos um vínculo vigente antes de criar o acesso.",
-};
-
-type PreparedResponsavelAccess = {
-  responsavelLegalId: string;
-  nome: string;
-  cpf: string | null;
-  email: string | null;
-  status: string;
-  authUserId: string | null;
-  eligible: boolean;
-  accessBlockReason: string | null;
 };
 
 type AuthUserRecord = {
@@ -61,75 +54,6 @@ const publicError = (
 ) => {
   const payload = { success: false, code, error: message };
   return context.json(payload, status);
-};
-
-const prepareResponsavelAccess = async (
-  context: HandlerContext,
-  responsavelLegalId: string,
-): Promise<PreparedResponsavelAccess | Response> => {
-  const actorAuthUserId = String(context.gestor?.auth_user_id || "").trim();
-  if (!isUuid(actorAuthUserId)) {
-    return publicError(
-      context,
-      401,
-      "GESTOR_AUTH_INVALIDO",
-      "A identidade do gestor não pôde ser confirmada.",
-    );
-  }
-
-  const { data, error } = await context.admin.rpc(
-    "responsavel_legal_acesso_preparar",
-    {
-      p_responsavel_legal_id: responsavelLegalId,
-      p_actor_auth_user_id: actorAuthUserId,
-    },
-  );
-  if (error) {
-    return error.code === "42501"
-      ? publicError(
-        context,
-        403,
-        "RESPONSAVEL_ACESSO_NAO_AUTORIZADO",
-        "Você não possui autorização para preparar este acesso.",
-      )
-      : publicError(
-        context,
-        500,
-        "RESPONSAVEL_ACESSO_PREPARACAO_FALHOU",
-        "Não foi possível preparar o acesso do responsável.",
-      );
-  }
-
-  const source = data && typeof data === "object" && !Array.isArray(data)
-    ? data as Record<string, unknown>
-    : null;
-  const prepared: PreparedResponsavelAccess | null = source
-    ? {
-      responsavelLegalId: String(source.responsavelLegalId || ""),
-      nome: String(source.nome || "").trim(),
-      cpf: onlyDigits(source.cpf) || null,
-      email: normalizeEmail(source.email as string | null) || null,
-      status: String(source.status || "").trim().toUpperCase(),
-      authUserId: String(source.authUserId || "").trim() || null,
-      eligible: source.eligible === true,
-      accessBlockReason: String(source.accessBlockReason || "").trim() || null,
-    }
-    : null;
-
-  if (
-    !prepared ||
-    prepared.responsavelLegalId !== responsavelLegalId ||
-    !prepared.nome
-  ) {
-    return publicError(
-      context,
-      500,
-      "RESPONSAVEL_ACESSO_CONTRATO_INVALIDO",
-      "O serviço retornou um cadastro de responsável inválido.",
-    );
-  }
-
-  return prepared;
 };
 
 const profileMatchesResponsavel = (
@@ -326,8 +250,13 @@ export const handleEnsureResponsavelAccess = async (
     );
   }
 
-  const prepared = await prepareResponsavelAccess(context, responsavelLegalId);
-  if (prepared instanceof Response) return prepared;
+  const prepared = await loadPreparedResponsavelAccess(
+    context,
+    responsavelLegalId,
+  );
+  if ("failure" in prepared) {
+    return respondResponsavelAccessFailure(context, prepared);
+  }
   const actorAuthUserId = String(context.gestor?.auth_user_id || "").trim();
   if (!prepared.eligible || !prepared.cpf || !prepared.email) {
     return accessResult(context, {
