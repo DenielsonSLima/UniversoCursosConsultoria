@@ -1,6 +1,6 @@
 # Lote ativo
 
-Estado: `PUBLICADO_PRODUCAO_4_7_0`
+Estado: `PUBLICADO_PRODUCAO_4_7_1`
 
 ## Lote: 2026-08-22-jornada-cursos-livres
 
@@ -11,9 +11,10 @@ Estado: `PUBLICADO_PRODUCAO_4_7_0`
 - Frentes concluídas localmente: contrato acadêmico e prova; condição financeira individual; Gestão e Portal do Aluno.
 - Supabase principal/Produção: 26 migrations aplicadas via MCP, versões remotas `20260822201749` até `20260822213949`.
 - Homologação: não há branch Supabase nem outro projeto configurado neste workspace.
-- Versão desta entrega: `4.7.0` estável.
+- Versão funcional publicada: `4.7.0` estável; fechamento operacional e versão final exibida: `4.7.1` estável.
 - Entrega geral: o PR de produção também incorpora o lote concluído `2026-08-22-avaliacoes-ead-e-cards-tecnicos`, com dez migrations já aplicadas e manifesto próprio.
 - GitHub/Vercel: PR `#81` integrada por squash na `main` no commit `2b6cd0d0aef7b45d7fe2bf38d7ec075575f6eaed`; CI, Preview e deployment Vercel Produção `Dv6B54iTJkYUYg5A8HrFWBGTW4yA` concluídos com sucesso.
+- Fechamento operacional: PR `#82` sincroniza lote, histórico, RAG e o patch estável `4.7.1`, sem alteração funcional adicional.
 - Cobranças: nenhum boleto, matrícula, turma ou outro registro operacional foi criado durante a aplicação/validação.
 
 ### Critérios de aceite
@@ -45,7 +46,7 @@ Estado: `PUBLICADO_PRODUCAO_4_7_0`
 - Advisors: baseline preservado em 470 avisos de segurança e 252 de performance; nenhum core corretivo é executável externamente, nenhum RPC novo ficou acessível a `anon` e as FKs novas do lote seguem cobertas.
 - Compatibilidade do seed: as grafias legadas `HARDWARE E PERIFÉRIOS` e `SOFTWARES E SISTEMA OPERACIONAIS` foram incorporadas aos aliases, preservando os IDs existentes e evitando criar duas matérias extras.
 - Smoke autenticado: bloqueado porque nenhum navegador in-app/Chrome está conectado à sessão (`browsers = []`).
-- Smoke HTTP de Produção: `/`, `/ead`, `/cursos-tecnicos` e `/login` responderam `200`; o bundle público `main-D-_Z4xBg.js` contém a versão `4.7.0`.
+- Smoke HTTP de Produção da entrega funcional: `/`, `/ead`, `/cursos-tecnicos` e `/login` responderam `200`; a publicação da PR `#81` expôs a versão `4.7.0`, sucedida pelo fechamento operacional `4.7.1` da PR `#82`.
 
 ### Limites pós-publicação
 

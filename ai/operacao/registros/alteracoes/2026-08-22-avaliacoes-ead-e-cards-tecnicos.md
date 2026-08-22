@@ -2,7 +2,7 @@
 
 Data: 2026-08-22
 
-Estado: publicado em Produção; dez migrations aplicadas no Supabase e frontend integrado pela PR `#81` no commit `2b6cd0d0aef7b45d7fe2bf38d7ec075575f6eaed`; CI e Vercel aprovados.
+Estado: publicado em Produção na entrega funcional `4.7.0`; dez migrations aplicadas no Supabase e frontend integrado pela PR `#81` no commit `2b6cd0d0aef7b45d7fe2bf38d7ec075575f6eaed`; CI e Vercel aprovados. O fechamento operacional conjunto é versionado como `4.7.1` pela PR `#82`, sem alteração funcional adicional.
 
 ## Resultado
 

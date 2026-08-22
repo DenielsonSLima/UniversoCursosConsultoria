@@ -1,12 +1,12 @@
 # Jornada completa de Cursos Livres — 2026-08-22
 
-Estado: `PUBLICADO_PRODUCAO_4_7_0`
+Estado: `PUBLICADO_PRODUCAO_4_7_1`
 
 ## Objetivo entregue
 
 Transformar Cursos Livres numa jornada presencial completa, reaproveitando turma, grade, aulas e diário existentes e acrescentando avaliação final online segura, conclusão/certificado automáticos e condição financeira individual baseada no plano padrão da turma.
 
-O backend foi aplicado no Supabase principal/Produção após autorização explícita do responsável. Nenhuma cobrança, matrícula ou turma artificial foi criada. O frontend e a versão estável `4.7.0` foram publicados pela PR `#81`, integrada por squash na `main`.
+O backend foi aplicado no Supabase principal/Produção após autorização explícita do responsável. Nenhuma cobrança, matrícula ou turma artificial foi criada. O frontend e a versão funcional `4.7.0` foram publicados pela PR `#81`, integrada por squash na `main`; a PR `#82` consolida o fechamento operacional e a versão final exibida `4.7.1`, sem alteração funcional adicional.
 
 ## Reunião e decisões de alinhamento
 
@@ -70,6 +70,7 @@ O backend foi aplicado no Supabase principal/Produção após autorização expl
 - Gates finais: Controle de versão `#224`, Qualidade do produto `#254` e Preview Vercel aprovados.
 - Deployment Vercel Produção: `Dv6B54iTJkYUYg5A8HrFWBGTW4yA`, concluído com sucesso.
 - Smoke HTTP: `/`, `/ead`, `/cursos-tecnicos` e `/login` responderam `200`; o bundle público `main-D-_Z4xBg.js` confirmou a versão `4.7.0`.
+- Fechamento operacional: PR `#82`, patch estável `4.7.1`, restrito a versão, registros e índice RAG.
 
 ## Limites pós-publicação
 
