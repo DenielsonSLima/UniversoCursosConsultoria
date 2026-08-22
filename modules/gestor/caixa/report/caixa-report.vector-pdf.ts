@@ -279,7 +279,7 @@ const drawFooter = (pdf: jsPDF, report: CaixaDetailedReport, pageNumber: number,
   drawText(pdf, 'CONFIDENCIAL · USO INTERNO', CONTENT_LEFT, 204);
   drawText(
     pdf,
-    `GERADO PELO BACKEND EM ${new Date(report.geradoEm).toLocaleString('pt-BR')}`,
+    `EMITIDO EM ${new Date(report.geradoEm).toLocaleString('pt-BR')}`,
     PAGE_WIDTH / 2,
     204,
     undefined,
@@ -394,7 +394,7 @@ const drawComposition = (
   setText(pdf, accent, 10.5, 'bold');
   drawText(pdf, formatCaixaCurrency(totals.valorFinal), x + width - 2.5, y + 2, undefined, { align: 'right' });
   setText(pdf, COLORS.slate500, 5.5);
-  drawText(pdf, tone === 'emerald' ? 'Ajustes identificados e auditados pelo backend' : 'Pagamentos confirmados, sem duplicar lançamentos vinculados', x + 2.5, y + 6.5);
+  drawText(pdf, tone === 'emerald' ? 'Ajustes identificados nos recebimentos confirmados' : 'Pagamentos confirmados, sem duplicar lançamentos vinculados', x + 2.5, y + 6.5);
   pdf.setDrawColor(border);
   pdf.line(x + 2.5, y + 9.5, x + width - 2.5, y + 9.5);
   const values = [
@@ -956,7 +956,7 @@ const drawRecurringTable = (
     setText(pdf, '#1e3a8a', 6.2, 'bold');
     drawText(pdf, 'TOTAL DA CARTEIRA', CONTENT_LEFT + 2, totalY + 2.5);
     setText(pdf, COLORS.slate500, 5.2);
-    drawText(pdf, 'Valores canônicos do backend', CONTENT_LEFT + 2, totalY + 6.5);
+    drawText(pdf, 'Valores consolidados da carteira', CONTENT_LEFT + 2, totalY + 6.5);
     x = CONTENT_LEFT + firstWidth;
     recurringFields.forEach(([, field]) => {
       setText(pdf, COLORS.slate700, 5.5, 'bold');

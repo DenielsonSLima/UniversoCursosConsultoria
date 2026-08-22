@@ -33,7 +33,7 @@ export const handleListPartnerEmailStatuses = async (
   const { data: partners, error: partnersError } = await admin
     .from("parceiros")
     .select(
-      "id, tipo, email, auth_user_id, auth_login_email, polo_id, polo_ids",
+      "id, tipo, email, auth_user_id, auth_login_email, email_validado_gestor_em, polo_id, polo_ids",
     )
     .in("id", partnerIds);
 
@@ -100,6 +100,7 @@ export const handleListPartnerEmailStatuses = async (
       status,
       authUserExists: Boolean(authUser),
       emailConfirmed,
+      emailValidatedByManager: Boolean(partner.email_validado_gestor_em),
     };
   });
 

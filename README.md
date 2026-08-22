@@ -2,6 +2,10 @@
 
 Portal acadêmico e administrativo da Universo Cursos e Consultoria.
 
+## Documentação do sistema
+
+O guia técnico e operacional por módulo está em [docs/README.md](docs/README.md).
+
 ## Run Locally
 
 **Pré-requisito:** Node.js

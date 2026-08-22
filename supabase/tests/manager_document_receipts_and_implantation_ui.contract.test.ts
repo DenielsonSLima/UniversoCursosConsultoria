@@ -6,7 +6,7 @@ declare const Deno: {
 };
 
 const baseMigrationUrl = new URL(
-  '../migrations/20260731035500_generalize_document_receipts_and_require_complete_review.sql',
+  '../migrations/20260731035624_generalize_document_receipts_and_require_complete_review.sql',
   import.meta.url,
 );
 const workflowMigrationUrl = new URL(

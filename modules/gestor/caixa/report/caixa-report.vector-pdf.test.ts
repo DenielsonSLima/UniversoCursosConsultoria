@@ -367,9 +367,11 @@ test('usa a posição total recebida do backend sem recompor valores no PDF', ()
 });
 
 test('reutiliza exclusivamente o compositor institucional canônico', async () => {
-  const [source, previewSource] = await Promise.all([
+  const [source, documentSource, positionsPreviewSource, modalSource] = await Promise.all([
     readFile(resolve('modules/gestor/caixa/report/caixa-report.vector-pdf.ts'), 'utf8'),
     readFile(resolve('modules/gestor/caixa/report/CaixaReportDocument.tsx'), 'utf8'),
+    readFile(resolve('modules/gestor/caixa/report/CaixaReportNonOperationalPositions.tsx'), 'utf8'),
+    readFile(resolve('modules/gestor/caixa/report/CaixaReportPreviewModal.tsx'), 'utf8'),
   ]);
 
   assert.match(source, /drawCanonicalInstitutionalHeader/);
@@ -389,10 +391,21 @@ test('reutiliza exclusivamente o compositor institucional canônico', async () =
   assert.match(source, /formatCaixaCanonicalCurrency\(dados\.valorLiquido\)/);
   assert.match(source, /formatCaixaCurrency\(financiamento\./);
   assert.match(source, /drawRestrictedNonOperationalPosition/);
-  assert.match(previewSource, /meta=\{\{/);
-  assert.match(previewSource, /CaixaReportNonOperationalPositions/);
-  assert.match(previewSource, /PositionTotalMetric/);
-  assert.match(previewSource, /getCaixaReportPosicaoTotal/);
-  assert.match(previewSource, /dados\.valorTotalLiquido/);
-  assert.doesNotMatch(previewSource, /rightContent=/);
+  assert.match(source, /EMITIDO EM/);
+  assert.doesNotMatch(source, /GERADO PELO BACKEND/);
+  assert.match(documentSource, /meta=\{\{/);
+  assert.match(documentSource, /CaixaReportNonOperationalPositions/);
+  assert.match(documentSource, /PositionTotalMetric/);
+  assert.match(documentSource, /getCaixaReportPosicaoTotal/);
+  assert.match(documentSource, /dados\.valorTotalLiquido/);
+  assert.match(documentSource, /Emitido em/);
+  assert.doesNotMatch(documentSource, /Gerado pelo backend/);
+  assert.doesNotMatch(documentSource, /rightContent=/);
+  assert.match(positionsPreviewSource, /LiquidPositionBand/);
+  assert.doesNotMatch(positionsPreviewSource, /eyebrow="Posição patrimonial líquida"/);
+  assert.match(modalSource, /URL\.createObjectURL\(preparedPdf\.blob\)/);
+  assert.match(modalSource, /URL\.revokeObjectURL\(objectUrl\)/);
+  assert.match(modalSource, /<iframe/);
+  assert.match(modalSource, /downloadPdfBlob\(preparedPdf\.blob, preparedPdf\.fileName\)/);
+  assert.doesNotMatch(modalSource, /CaixaReportDocument/);
 });

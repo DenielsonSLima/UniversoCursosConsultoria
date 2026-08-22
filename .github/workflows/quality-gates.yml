@@ -51,6 +51,17 @@ jobs:
             supabase/functions/portal-user-management/handlers/link-professor-auth-identity.test.ts \
             supabase/functions/portal-user-management/handlers/upsert-gestor-user.test.ts
 
+      - name: Testar primeiro acesso e senha temporária do Aluno
+        run: |
+          node --test modules/gestor/parceiros/student-first-access.contract.test.mjs
+          deno test --allow-read --allow-env=PORTAL_ALLOWED_REDIRECT_ORIGINS,ALLOWED_REDIRECT_ORIGINS,PUBLIC_SITE_URL,SITE_URL,APP_URL,VITE_PUBLIC_SITE_URL \
+            supabase/functions/portal-user-management/handlers/confirm-partner-email.test.ts \
+            supabase/functions/portal-user-management/handlers/issue-student-temporary-password.test.ts \
+            supabase/functions/portal-user-management/handlers/list-partner-email-statuses.test.ts \
+            supabase/functions/portal-user-management/runtime-contract.test.ts \
+            supabase/functions/portal-user-management/student-access.test.ts \
+            supabase/tests/student_temporary_password_access.contract.test.ts
+
       - name: Testar relatório do Caixa
         run: npm run test:caixa-report
 

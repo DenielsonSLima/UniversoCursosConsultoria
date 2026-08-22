@@ -10,6 +10,7 @@ import { handleConfirmPartnerEmail } from "./handlers/confirm-partner-email.ts";
 import { handleDeletePartner } from "./handlers/delete-partner.ts";
 import { handleEnsureProfessorAccess } from "./handlers/ensure-professor-access.ts";
 import { handleEnsureResponsavelAccess } from "./handlers/ensure-responsavel-access.ts";
+import { handleIssueStudentTemporaryPassword } from "./handlers/issue-student-temporary-password.ts";
 import { handleListPartnerEmailStatuses } from "./handlers/list-partner-email-statuses.ts";
 import { handleLinkProfessorAuthIdentity } from "./handlers/link-professor-auth-identity.ts";
 import { handleSendStudentInvite } from "./handlers/send-student-invite.ts";
@@ -36,6 +37,7 @@ const VALID_ACTIONS = [
   "delete-gestor-user",
   "list-partner-email-statuses",
   "confirm-partner-email",
+  "issue-student-temporary-password",
   "link-professor-auth-identity",
   "ensure-professor-access",
   "ensure-responsavel-access",
@@ -50,8 +52,18 @@ const GESTOR_USER_ACTIONS = new Set([
 
 Deno.serve(async (req: Request) => {
   const corsHeadersForRequest = buildCorsHeaders(req);
-  const json = (payload: FunctionResponse, status = 200) =>
-    sendJson(payload, status, req);
+  const json = (payload: FunctionResponse, status = 200) => {
+    const response = sendJson(payload, status, req);
+    if (!Object.prototype.hasOwnProperty.call(payload, "temporaryPassword")) {
+      return response;
+    }
+
+    const headers = new Headers(response.headers);
+    headers.set("Cache-Control", "no-store, max-age=0");
+    headers.set("Pragma", "no-cache");
+    headers.set("Expires", "0");
+    return new Response(response.body, { status: response.status, headers });
+  };
 
   if (
     isRateLimitExceeded(`portal-user-management:${getClientIp(req)}`, 40, 60000)
@@ -168,7 +180,15 @@ Deno.serve(async (req: Request) => {
   if (partner instanceof Response) return partner;
 
   if (action === "confirm-partner-email") {
-    return handleConfirmPartnerEmail(context, partner);
+    return handleConfirmPartnerEmail(
+      context,
+      partner,
+      payload.emailValidatedByManager === true,
+    );
+  }
+
+  if (action === "issue-student-temporary-password") {
+    return handleIssueStudentTemporaryPassword(context, partner);
   }
 
   if (action === "delete-partner") {

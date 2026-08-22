@@ -59,15 +59,56 @@ const RestrictedPosition: React.FC<{ label: string }> = ({ label }) => (
   </div>
 );
 
+const LiquidPositionBand: React.FC<{
+  report: CaixaDetailedReport;
+}> = ({ report }) => {
+  const position = report.posicaoLiquida;
+
+  if (!position.disponivel) {
+    return (
+      <section className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900">
+        <p className="text-[8px] font-black uppercase tracking-wide">
+          Posição líquida indisponível
+        </p>
+        <p className="mt-0.5 text-[7.5px] leading-3 text-amber-800">
+          Este perfil precisa dos escopos patrimonial e financeiro para visualizar o valor líquido.
+        </p>
+      </section>
+    );
+  }
+
+  const { dados } = position;
+  const isNegative = dados.valorLiquido.startsWith('-');
+
+  return (
+    <section className="rounded-xl border border-blue-200 bg-blue-50/80 px-3 py-2">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-[8px] font-black uppercase tracking-wide text-blue-700">
+            Valor líquido (patrimônio a custo − empréstimos a pagar)
+          </p>
+          <p className="mt-0.5 text-[7.5px] leading-3 text-slate-600">
+            Patrimônio a custo: {formatCaixaCanonicalCurrency(dados.valorPatrimonialCusto)} · Empréstimos a pagar: {formatCaixaCanonicalCurrency(dados.saldoEmprestimosAPagar)}
+          </p>
+        </div>
+        <p className={`shrink-0 text-sm font-black leading-tight ${
+          isNegative ? 'text-rose-700' : 'text-emerald-700'
+        }`}>
+          {formatCaixaCanonicalCurrency(dados.valorLiquido)}
+        </p>
+      </div>
+    </section>
+  );
+};
+
 export const CaixaReportNonOperationalPositions: React.FC<{
   report: CaixaDetailedReport;
 }> = ({ report }) => {
   const patrimonio = report.patrimonio;
   const financiamento = report.financiamento;
-  const posicaoLiquida = report.posicaoLiquida;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2.5">
       <div>
         <p className="text-[8px] font-black uppercase tracking-[0.18em] text-blue-600">
           Posição complementar
@@ -80,39 +121,7 @@ export const CaixaReportNonOperationalPositions: React.FC<{
         </p>
       </div>
 
-      <PositionPanel
-        eyebrow="Posição patrimonial líquida"
-        title="Patrimônio a custo menos empréstimos a pagar"
-        description="Apuração canônica do fechamento, separada do caixa e do resultado operacional."
-      >
-        {posicaoLiquida.disponivel ? (
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            <PositionMetric
-              label="Patrimônio a custo"
-              value={formatCaixaCanonicalCurrency(posicaoLiquida.dados.valorPatrimonialCusto)}
-              helper="Bens ativos no fechamento"
-              tone="blue"
-            />
-            <PositionMetric
-              label="Empréstimos a pagar"
-              value={formatCaixaCanonicalCurrency(posicaoLiquida.dados.saldoEmprestimosAPagar)}
-              helper="Parcelas ainda devidas, com encargos"
-              tone="rose"
-            />
-            <PositionMetric
-              label="Valor líquido"
-              value={formatCaixaCanonicalCurrency(posicaoLiquida.dados.valorLiquido)}
-              helper="Ativo a custo menos empréstimos a pagar"
-              tone={posicaoLiquida.dados.valorLiquido.startsWith('-') ? 'rose' : 'emerald'}
-            />
-          </div>
-        ) : <RestrictedPosition label="posição líquida" />}
-        <p className="mt-3 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-[8px] leading-3 text-blue-900">
-          {posicaoLiquida.disponivel ? posicaoLiquida.dados.observacao : (
-            <><strong>Leitura correta:</strong> a posição líquida exige os escopos patrimonial e financeiro.</>
-          )}
-        </p>
-      </PositionPanel>
+      <LiquidPositionBand report={report} />
 
       <PositionPanel
         eyebrow="Posição patrimonial"

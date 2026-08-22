@@ -107,7 +107,7 @@ export const CaixaReportRecurringAnalysis: React.FC<{
           <div className={`grid ${GRID} items-center gap-1 border-t border-blue-100 bg-blue-50 px-2 py-2`}>
             <div>
               <p className="text-[9px] font-black uppercase text-blue-900">Total da carteira</p>
-              <p className="text-[8px] text-blue-700">Valores canônicos do backend</p>
+              <p className="text-[8px] text-blue-700">Valores consolidados da carteira</p>
             </div>
             <FinancialColumns item={report.analiseRecorrente.totais} />
           </div>
@@ -144,7 +144,7 @@ export const CaixaReportRecurringAnalysis: React.FC<{
           <div className={`grid ${GRID} items-center gap-1 border-t border-blue-100 bg-blue-50 px-2 py-2`}>
             <div>
               <p className="text-[9px] font-black uppercase text-blue-900">Total da carteira</p>
-              <p className="text-[8px] text-blue-700">Valores canônicos do backend</p>
+              <p className="text-[8px] text-blue-700">Valores consolidados da carteira</p>
             </div>
             <FinancialColumns item={report.analiseRecorrente.totais} />
           </div>

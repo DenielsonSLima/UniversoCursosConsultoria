@@ -30,6 +30,7 @@ export type PartnerEmailConfirmationStatus = {
   status: PartnerEmailConfirmationStatusValue;
   authUserExists: boolean;
   emailConfirmed: boolean;
+  emailValidatedByManager: boolean;
 };
 
 type InviteStudentResult = {
@@ -40,6 +41,25 @@ type InviteStudentResult = {
   recoveryEmailSent?: boolean;
   message?: string;
   recoveryLink?: string | null;
+};
+
+type ConfirmStudentEmailResult = {
+  success: boolean;
+  action?: 'confirm-partner-email';
+  userId?: string | null;
+  emailConfirmed?: boolean;
+  emailValidatedByManager?: boolean;
+  message?: string;
+};
+
+export type IssueStudentTemporaryPasswordResult = {
+  success: boolean;
+  action?: 'issue-student-temporary-password';
+  userId?: string | null;
+  emailConfirmed?: boolean;
+  emailValidatedByManager?: boolean;
+  temporaryPassword?: string;
+  message?: string;
 };
 
 type DeletePartnerResult = {
@@ -129,6 +149,23 @@ export const portalActivationService = {
       partnerId: payload.partnerId,
       email: payload.email || null,
       redirectTo: payload.redirectTo,
+    });
+  },
+
+  async confirmStudentEmail(partnerId: string): Promise<ConfirmStudentEmailResult> {
+    return invokeAdminFunction<ConfirmStudentEmailResult>({
+      action: 'confirm-partner-email',
+      partnerId,
+      emailValidatedByManager: true,
+    });
+  },
+
+  async issueStudentTemporaryPassword(
+    partnerId: string,
+  ): Promise<IssueStudentTemporaryPasswordResult> {
+    return invokeAdminFunction<IssueStudentTemporaryPasswordResult>({
+      action: 'issue-student-temporary-password',
+      partnerId,
     });
   },
 

@@ -208,6 +208,10 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
             matriculaAcesso={alunoData.matriculaAcesso || null}
             acessoStatus={alunoData.acessoStatus || null}
             acessoErro={alunoData.acessoErro || null}
+            trocaSenhaObrigatoria={alunoData.trocaSenhaObrigatoria ?? null}
+            aceitouTermosUso={alunoData.aceitouTermosUso ?? null}
+            termosUsoVersao={alunoData.termosUsoVersao ?? null}
+            toast={toast}
           />
         )}
       </div>

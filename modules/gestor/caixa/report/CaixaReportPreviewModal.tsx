@@ -9,7 +9,6 @@ import {
   X,
 } from 'lucide-react';
 import { formatCaixaCompetencia } from '../caixa.formatters';
-import { CaixaReportDocument } from './CaixaReportDocument';
 import {
   buildCaixaReportFileName,
   buildCaixaReportPdf,
@@ -24,6 +23,11 @@ interface CaixaReportPreviewModalProps {
   onClose: () => void;
   poloId: string | null | undefined;
   competencia: string;
+}
+
+interface PreparedCaixaReportPdf {
+  blob: Blob;
+  fileName: string;
 }
 
 export const CaixaReportPreviewModal: React.FC<CaixaReportPreviewModalProps> = ({
@@ -41,6 +45,8 @@ export const CaixaReportPreviewModal: React.FC<CaixaReportPreviewModalProps> = (
   const [progress, setProgress] = useState('');
   const [generationError, setGenerationError] = useState('');
   const [reportSnapshot, setReportSnapshot] = useState<CaixaDetailedReport | null>(null);
+  const [preparedPdf, setPreparedPdf] = useState<PreparedCaixaReportPdf | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const reportQuery = useQuery(caixaReportQueryOptions(
     poloId,
@@ -70,6 +76,59 @@ export const CaixaReportPreviewModal: React.FC<CaixaReportPreviewModalProps> = (
   useEffect(() => {
     setReportSnapshot(null);
   }, [competencia, poloId]);
+
+  useEffect(() => {
+    let active = true;
+    if (!open || !reportSnapshot) {
+      setPreparedPdf(null);
+      setGenerating(false);
+      return () => { active = false; };
+    }
+
+    setPreparedPdf(null);
+    setGenerationError('');
+    setGenerating(true);
+    setProgress('Preparando o PDF oficial...');
+
+    void buildCaixaReportPdf(
+      reportSnapshot,
+      (current, total) => {
+        if (active) setProgress(`Gerando página ${current} de ${total}...`);
+      },
+    )
+      .then((blob) => {
+        if (!active) return;
+        setPreparedPdf({
+          blob,
+          fileName: buildCaixaReportFileName(
+            reportSnapshot.resumo.meta.competencia,
+            reportSnapshot.resumo.meta.escopoRotulo,
+          ),
+        });
+        setProgress('PDF pronto.');
+      })
+      .catch((failure) => {
+        if (!active) return;
+        console.error('Não foi possível preparar o PDF do Caixa:', failure);
+        setGenerationError(getCaixaReportPdfErrorMessage(failure));
+        setProgress('');
+      })
+      .finally(() => {
+        if (active) setGenerating(false);
+      });
+
+    return () => { active = false; };
+  }, [open, reportSnapshot]);
+
+  useEffect(() => {
+    if (!preparedPdf) {
+      setPreviewUrl(null);
+      return undefined;
+    }
+    const objectUrl = URL.createObjectURL(preparedPdf.blob);
+    setPreviewUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [preparedPdf]);
 
   useEffect(() => {
     generatingRef.current = generating;
@@ -125,27 +184,16 @@ export const CaixaReportPreviewModal: React.FC<CaixaReportPreviewModalProps> = (
   const loading = !reportSnapshot && (reportQuery.isLoading || reportQuery.isFetching);
   const error = reportSnapshot ? null : reportQuery.error;
 
-  const handleDownload = async () => {
-    if (!report || loading || error) return;
-    setGenerating(true);
+  const handleDownload = () => {
+    if (!preparedPdf || loading || error || generating) return;
     setGenerationError('');
-    setProgress('Preparando o documento...');
     try {
-      const blob = await buildCaixaReportPdf(
-        report,
-        (current, total) => setProgress(`Gerando página ${current} de ${total}...`),
-      );
-      downloadPdfBlob(blob, buildCaixaReportFileName(
-        report.resumo.meta.competencia,
-        report.resumo.meta.escopoRotulo,
-      ));
-      setProgress('PDF concluído.');
+      downloadPdfBlob(preparedPdf.blob, preparedPdf.fileName);
+      setProgress('PDF baixado.');
     } catch (downloadError) {
-      console.error('Não foi possível gerar o PDF do Caixa:', downloadError);
+      console.error('Não foi possível baixar o PDF do Caixa:', downloadError);
       setGenerationError(getCaixaReportPdfErrorMessage(downloadError));
       setProgress('');
-    } finally {
-      setGenerating(false);
     }
   };
 
@@ -187,7 +235,7 @@ export const CaixaReportPreviewModal: React.FC<CaixaReportPreviewModalProps> = (
             <button
               type="button"
               onClick={handleDownload}
-              disabled={!report || loading || Boolean(error) || generating}
+              disabled={!preparedPdf || loading || Boolean(error) || generating}
               className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#001a33] px-4 py-2.5 text-xs font-black uppercase tracking-wider text-white transition hover:bg-blue-950 disabled:cursor-not-allowed disabled:bg-slate-300"
             >
               {generating ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
@@ -206,12 +254,12 @@ export const CaixaReportPreviewModal: React.FC<CaixaReportPreviewModalProps> = (
           </div>
         </header>
 
-        <div className="min-h-0 flex-1 overflow-auto bg-slate-200/70 p-4">
+        <div className="min-h-0 flex-1 overflow-hidden bg-slate-200/70 p-3 sm:p-4">
           {loading && (
             <div className="flex h-full min-h-80 flex-col items-center justify-center text-slate-500" role="status">
               <Loader2 className="animate-spin text-blue-600" size={32} />
               <p className="mt-3 text-sm font-semibold">
-                Montando detalhes e conferindo os totais no backend...
+                Montando detalhes e conferindo os totais...
               </p>
             </div>
           )}
@@ -221,7 +269,7 @@ export const CaixaReportPreviewModal: React.FC<CaixaReportPreviewModalProps> = (
               <AlertTriangle className="mx-auto text-rose-600" size={30} />
               <h3 className="mt-3 font-bold text-rose-900">Não foi possível montar o relatório</h3>
               <p className="mt-1 text-sm text-rose-700">
-                O backend recusou um relatório incompleto ou houve uma falha de conexão.
+                Não foi possível gerar um relatório completo ou houve uma falha de conexão.
               </p>
               <button
                 type="button"
@@ -236,16 +284,33 @@ export const CaixaReportPreviewModal: React.FC<CaixaReportPreviewModalProps> = (
             </div>
           )}
 
-          {!loading && !error && report && (
-              <CaixaReportDocument report={report} />
+          {!loading && !error && generationError && !previewUrl && (
+            <div className="mx-auto mt-16 max-w-lg rounded-2xl border border-rose-200 bg-rose-50 p-6 text-center" role="alert">
+              <AlertTriangle className="mx-auto text-rose-600" size={30} />
+              <h3 className="mt-3 font-bold text-rose-900">Prévia indisponível</h3>
+              <p className="mt-1 text-sm text-rose-700">{generationError}</p>
+            </div>
+          )}
+
+          {!loading && !error && report && !generationError && previewUrl && (
+            <iframe
+              src={previewUrl}
+              title="Prestação de contas mensal em PDF"
+              className="h-full min-h-[560px] w-full border-0 bg-white shadow-xl"
+            />
+          )}
+
+          {!loading && !error && report && !generationError && !previewUrl && (
+            <div className="flex h-full min-h-80 flex-col items-center justify-center text-slate-500" role="status">
+              <Loader2 className="animate-spin text-blue-600" size={32} />
+              <p className="mt-3 text-sm font-semibold">Preparando o PDF vetorial...</p>
+            </div>
           )}
         </div>
 
-        {generationError && (
-          <div className="border-t border-rose-100 bg-rose-50 px-5 py-2 text-center text-xs font-semibold text-rose-700" role="alert">
-            {generationError}
-          </div>
-        )}
+        <footer className="shrink-0 border-t border-slate-100 bg-white px-4 py-2 text-center text-[11px] font-medium text-slate-500">
+          Prévia e download usam exatamente o mesmo PDF vetorial.
+        </footer>
       </div>
     </div>,
     document.body,

@@ -8,6 +8,7 @@ export type IncomingPayload = {
   userId?: string;
   userIds?: string[];
   status?: string;
+  emailValidatedByManager?: boolean;
   responsavelLegalId?: string;
   requestId?: string;
 };
@@ -35,6 +36,8 @@ export type FunctionResponse = {
   statuses?: PartnerEmailStatus[];
   managementStates?: GestorUserManagementState[];
   emailConfirmed?: boolean;
+  emailValidatedByManager?: boolean;
+  temporaryPassword?: string;
   profileLinked?: boolean;
   profileLinkState?: InstitutionalProfileLinkState;
   responsavelLegalId?: string | null;
@@ -59,6 +62,7 @@ export type PartnerEmailStatus = {
   status: PartnerEmailStatusValue;
   authUserExists: boolean;
   emailConfirmed: boolean;
+  emailValidatedByManager: boolean;
 };
 
 export type JsonResponder = (
@@ -86,6 +90,15 @@ export type Partner = {
   convite_enviado_em?: string | null;
   acesso_ativado_em?: string | null;
   troca_senha_obrigatoria?: boolean | null;
+  aceitou_termos_uso?: boolean | null;
+  termos_uso_versao?: string | null;
+  email_validado_gestor_em?: string | null;
+  senha_temporaria_pendente?: boolean | null;
+  senha_temporaria_emitida_em?: string | null;
+  senha_atualizada_em?: string | null;
+  senha_temporaria_emissao_id?: string | null;
+  senha_temporaria_emissao_iniciada_em?: string | null;
+  senha_temporaria_emissoes_revogadas?: string[] | null;
   matricula_acesso?: string | null;
   auth_login_email?: string | null;
   polo_id?: string | null;

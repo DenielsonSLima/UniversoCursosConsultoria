@@ -37,12 +37,15 @@ test('cadastro pelo gestor deixa termos e acesso sob autoridade do convite e pri
   assert.doesNotMatch(mutationsSource, /aceitouTermosUso:\s*true/);
 });
 
-test('gestor não possui ação de confirmação manual de e-mail', () => {
-  assert.doesNotMatch(mutationsSource, /confirmEmailMutation/);
-  assert.doesNotMatch(activationSource, /confirmPartnerEmail/);
-  assert.doesNotMatch(emailStatusSource, /onConfirm/);
-  assert.doesNotMatch(emailStatusSource, /<button/);
-  assert.match(emailStatusSource, /o aluno deve confirmar pelo e-mail recebido/);
+test('gestor possui fallback assistido, auditado e sem senha persistida', () => {
+  assert.match(activationSource, /confirmStudentEmail/);
+  assert.match(activationSource, /issueStudentTemporaryPassword/);
+  assert.match(partnerAccessSource, /ConfirmModal/);
+  assert.match(partnerAccessSource, /Validar e-mail/);
+  assert.match(partnerAccessSource, /Gerar senha temporária/);
+  assert.match(partnerAccessSource, /setTemporaryPassword/);
+  assert.doesNotMatch(partnerAccessSource, /window\.confirm/);
+  assert.match(emailStatusSource, /gestor pode validar o canal na aba Acesso/);
 });
 
 test('aluno aceita os termos e cria a própria senha antes de concluir o acesso', () => {
@@ -65,8 +68,10 @@ test('a finalização passa pelo Auth e RPC sem concluir estado no cliente', () 
   assert.match(publicAuthSource, /const profile = await getPortalProfile\(\{/);
 });
 
-test('reenvio pendente volta ao primeiro acesso e recuperação fica restrita a conta ativa', () => {
-  assert.match(partnerAccessSource, /const needsFirstAccess = tipo === 'Aluno' && acessoStatus !== 'ativo'/);
+test('reenvio pendente volta ao primeiro acesso e recuperação fica restrita a conta ativa com termos vigentes', () => {
+  assert.match(partnerAccessSource, /const termsAreCurrent = aceitouTermosUso === true && termosUsoVersao === TERMS_VERSION/);
+  assert.match(partnerAccessSource, /const accessIsFullyActive = acessoStatus === 'ativo' && !trocaSenhaObrigatoria && termsAreCurrent/);
+  assert.match(partnerAccessSource, /const needsFirstAccess = tipo === 'Aluno' && !accessIsFullyActive/);
   assert.match(partnerAccessSource, /needsFirstAccess \? '\/login' : '\/recuperar-senha'/);
   assert.match(partnerAccessSource, /Reenviar primeiro acesso/);
   assert.match(partnerAccessSource, /Enviar recuperação de senha/);

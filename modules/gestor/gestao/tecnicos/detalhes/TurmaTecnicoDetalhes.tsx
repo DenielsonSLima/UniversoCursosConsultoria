@@ -1,4 +1,6 @@
 
+// File: modules/gestor/gestao/tecnicos/detalhes/TurmaTecnicoDetalhes.tsx
+
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, PieChart, Users, BookOpen, Book, Settings, Activity, GraduationCap, DollarSign, Syringe, ClipboardCheck, LockKeyhole, Loader2 } from 'lucide-react';

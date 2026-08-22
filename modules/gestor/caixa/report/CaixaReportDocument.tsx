@@ -156,7 +156,7 @@ const SummaryPage: React.FC<{ report: CaixaDetailedReport }> = ({ report }) => {
                 Composição dos recebimentos
               </p>
               <p className="mt-0.5 text-[7.5px] text-slate-600">
-                Ajustes identificados e auditados pelo backend
+                Ajustes identificados nos recebimentos confirmados
               </p>
             </div>
             <strong className="text-sm text-emerald-700">
@@ -344,7 +344,7 @@ export const CaixaReportDocument: React.FC<{
             >
               <span>Confidencial · uso interno</span>
               <span className="text-center">
-                Gerado pelo backend em {new Date(report.geradoEm).toLocaleString('pt-BR')}
+                Emitido em {new Date(report.geradoEm).toLocaleString('pt-BR')}
               </span>
               <span className="text-right">Página {pageIndex + 1} de {pages.length}</span>
             </footer>
