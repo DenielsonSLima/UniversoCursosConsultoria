@@ -76,6 +76,7 @@ Produção não possui turma técnica nem matrícula/progresso EAD. Por isso, o 
 - `modules/gestor/cadastros/cursos-ead/cursos-ead.service.ts`
 - `modules/gestor/cadastros/cursos-ead/hooks/useCursosEadMutations.ts`
 - `modules/gestor/cadastros/cursos-ead/cursos-ead-secure-config.contract.test.ts`
+- `modules/gestor/cadastros/cadastros.types.ts`
 - `modules/gestor/cadastros/cursos-tecnicos/CursosTecnicosPage.tsx`
 - `modules/gestor/cadastros/cursos-tecnicos/components/CursoTecnicoCard.tsx`
 - `modules/gestor/cadastros/cursos-tecnicos/components/CursoTecnicoCreateView.tsx`
@@ -104,4 +105,4 @@ Produção não possui turma técnica nem matrícula/progresso EAD. Por isso, o 
 - `ai/operacao/registros/alteracoes/2026-08-22-avaliacoes-ead-e-cards-tecnicos.md`
 - `ai/operacao/qualidade/limite-linhas.json`
 
-Total: 42 arquivos, sem caches, build, dump, segredo ou artefato regenerável.
+Total: 43 arquivos, sem caches, build, dump, segredo ou artefato regenerável.
