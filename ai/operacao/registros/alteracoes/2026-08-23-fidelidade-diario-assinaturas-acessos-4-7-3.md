@@ -70,7 +70,7 @@ Restaurar a listagem de turmas, igualar o Diário do Professor ao fluxo canônic
 
 ## Manifesto explícito
 
-Total: 187 arquivos
+Total: 188 arquivos
 
 - `ai/operacao/LOTE_ATIVO.md`
 - `ai/operacao/politicas/PDFS_OFICIAIS.md`
@@ -155,6 +155,7 @@ Total: 187 arquivos
 - `modules/professor/assinaturas/professor-signature-access.ts`
 - `modules/professor/professor.page.tsx`
 - `modules/professor/turmas/professor-diary-parity.test.ts`
+- `modules/shared/polo-institutional/polo-institutional.types.ts`
 - `modules/shared/assinatura-eletronica/ElectronicSignatureActionModal.helpers.ts`
 - `modules/shared/assinatura-eletronica/ElectronicSignatureActionModal.tsx`
 - `modules/shared/assinatura-eletronica/ElectronicSignatureActionModal.types.ts`
