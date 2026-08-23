@@ -1,7 +1,6 @@
 import React from 'react';
-import { BookOpenCheck, Loader2, Save } from 'lucide-react';
+import { BookOpenCheck, Info, Loader2, Save } from 'lucide-react';
 import ToastNotification from '../../../parceiros/components/shared/ToastNotification';
-import capaDiarioPadrao from '../../../../../Documentos/Capa-Diario.jpg';
 import DiarioBackCoverSettingsPanel from './components/DiarioBackCoverSettingsPanel';
 import DiarioCoverFieldsPanel from './components/DiarioCoverFieldsPanel';
 import DiarioEditorCanvas from './components/DiarioEditorCanvas';
@@ -16,7 +15,6 @@ const DiariosPage: React.FC = () => {
     activeTab,
     canvasRef,
     capaCampos,
-    capaInputRef,
     contracapaCustomImageRef,
     contracapaInputRef,
     cursos,
@@ -28,7 +26,9 @@ const DiariosPage: React.FC = () => {
     handleUpload,
     loadingCursos,
     loadingTemplate,
+    previewLogoUrl,
     previewWatermark,
+    previewInstitutionalAssetsError,
     removeToast,
     saveMutation,
     selectedCurso,
@@ -44,6 +44,7 @@ const DiariosPage: React.FC = () => {
     showCrosshairs,
     showGrid,
     snapToGrid,
+    templateError,
     toasts,
     updateFieldProperty,
     uploading,
@@ -51,12 +52,11 @@ const DiariosPage: React.FC = () => {
 
   return (
     <div className="overflow-hidden rounded-[2rem] border border-slate-100 bg-white shadow-sm animate-fadeIn">
-      <input ref={capaInputRef} type="file" accept="image/*" hidden onChange={(event) => handleUpload(event, 'capa')} />
-      <input ref={contracapaInputRef} type="file" accept="image/*" hidden onChange={(event) => handleUpload(event, 'contracapa')} />
-      <input ref={contracapaCustomImageRef} type="file" accept="image/*" hidden onChange={(event) => handleUpload(event, 'contracapa_custom')} />
+      <input ref={contracapaInputRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(event) => handleUpload(event, 'contracapa')} />
+      <input ref={contracapaCustomImageRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(event) => handleUpload(event, 'contracapa_custom')} />
 
       <PageHeader
-        disabled={!selectedCurso || saveMutation.isPending}
+        disabled={!selectedCurso || saveMutation.isPending || Boolean(templateError) || Boolean(form.capaUrl)}
         saving={saveMutation.isPending}
         onSave={() => saveMutation.mutate()}
       />
@@ -69,12 +69,35 @@ const DiariosPage: React.FC = () => {
           onSelect={setSelectedCurso}
         />
 
+        {previewInstitutionalAssetsError && (
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm font-bold text-red-800">
+            {(previewInstitutionalAssetsError as Error).message}
+          </div>
+        )}
+
         {loadingTemplate ? (
           <div className="flex min-h-[520px] items-center justify-center gap-3 text-sm font-bold text-slate-500">
             <Loader2 className="animate-spin text-blue-600" /> Carregando modelo…
           </div>
+        ) : templateError ? (
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm font-bold text-red-800">
+            {(templateError as Error).message}
+          </div>
         ) : selectedModality ? (
           <div className="space-y-6">
+            {form.capaUrl && (
+              <div className="flex flex-col justify-between gap-4 rounded-2xl border border-amber-300 bg-amber-50 p-5 text-amber-950 sm:flex-row sm:items-center">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-wider">Capa raster histórica incompatível</p>
+                  <p className="mt-1 text-[11px] font-semibold leading-relaxed text-amber-800">
+                    Esta imagem de página inteira não será emitida nem pode ser salva no modelo vetorial. Remova-a explicitamente para continuar.
+                  </p>
+                </div>
+                <button type="button" onClick={() => setForm((current) => ({ ...current, capaUrl: null }))} className="shrink-0 rounded-xl bg-amber-900 px-4 py-2 text-[10px] font-black uppercase tracking-wider text-white">
+                  Remover capa legada
+                </button>
+              </div>
+            )}
             <EditorTabs
               activeTab={activeTab}
               modalityName={selectedModality.nome}
@@ -94,6 +117,7 @@ const DiariosPage: React.FC = () => {
                     getPxFontSize={getPxFontSize}
                     handleMouseDown={handleMouseDown}
                     previewWatermark={previewWatermark}
+                    previewLogoUrl={previewLogoUrl}
                     selectedFieldId={selectedFieldId}
                     setShowCrosshairs={setShowCrosshairs}
                     setShowGrid={setShowGrid}
@@ -104,15 +128,14 @@ const DiariosPage: React.FC = () => {
                   />
                   <div className="space-y-6">
                     <div className="grid gap-6 md:grid-cols-2">
-                      <DiarioImageUploader
-                        title="Capa frontal"
-                        description="Primeira página do diário"
-                        imageUrl={form.capaUrl || capaDiarioPadrao}
-                        usingDefault={!form.capaUrl}
-                        loading={uploading === 'capa'}
-                        onSelect={() => capaInputRef.current?.click()}
-                        onRemove={() => setForm((current) => ({ ...current, capaUrl: null }))}
-                      />
+                      <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5 text-blue-900">
+                        <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider">
+                          <Info size={16} /> Capa vetorial oficial
+                        </div>
+                        <p className="mt-2 text-[11px] font-semibold leading-relaxed text-blue-800">
+                          A arte, o logotipo institucional e os campos acima são compostos como texto e formas nativas no PDF. Upload de página inteira foi removido para preservar nitidez e fidelidade.
+                        </p>
+                      </div>
                       <DiarioImageUploader
                         title="Verso / contracapa (Fundo de Imagem)"
                         description="Imagem de fundo opcional"

@@ -82,25 +82,9 @@ const ImageProperties: React.FC<{ currentField: CapaCampo; updateFieldProperty: 
         className="w-full accent-blue-600"
       />
     </div>
-    <div>
-      <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-500">Modo de Mesclagem</span>
-      <div className="flex rounded-xl bg-slate-100 p-1">
-        {(['normal', 'multiply'] as const).map((mode) => (
-          <button
-            key={mode}
-            type="button"
-            onClick={() => updateFieldProperty(currentField.id, 'mixBlendMode', mode)}
-            className={`flex-1 rounded-lg py-1.5 text-[9px] font-bold tracking-tight transition ${
-              currentField.mixBlendMode === mode || (!currentField.mixBlendMode && mode === 'normal')
-                ? 'bg-white text-slate-800 shadow-sm'
-                : 'text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            {mode === 'normal' ? 'Sem Transparência' : 'Fundo Transparente'}
-          </button>
-        ))}
-      </div>
-    </div>
+    <p className="rounded-xl bg-slate-50 p-3 text-[10px] font-semibold leading-relaxed text-slate-600">
+      Transparência real do PNG é preservada como recurso isolado. Modos de mesclagem do navegador não são usados porque não possuem equivalente estável no PDF oficial.
+    </p>
   </>
 );
 
@@ -122,16 +106,17 @@ const TextProperties: React.FC<{ currentField: CapaCampo; updateFieldProperty: U
       label="Tamanho da Fonte"
       value={currentField.fontSize}
       suffix="pt"
-      min={8}
-      max={32}
+      min={4}
+      max={24}
       onChange={(value) => updateFieldProperty(currentField.id, 'fontSize', value)}
     />
     <RangeProperty
       label="Largura do Campo"
       value={currentField.width}
       suffix="%"
-      min={10}
-      max={100}
+      min={currentField.id.startsWith('contracapaAssinatura') ? 38 : currentField.id === 'contracapaQrCode' ? 6.8 : 1}
+      max={currentField.id.startsWith('contracapaAssinatura') ? 90 : currentField.id === 'contracapaQrCode' ? 23.5 : 100}
+      step={currentField.id === 'contracapaQrCode' ? 0.1 : 1}
       onChange={(value) => updateFieldProperty(currentField.id, 'width', value)}
     />
     <div className="grid grid-cols-2 gap-3 pt-2">
@@ -196,9 +181,10 @@ interface RangePropertyProps {
   onChange: (value: number) => void;
   suffix: string;
   value: number;
+  step?: number;
 }
 
-const RangeProperty: React.FC<RangePropertyProps> = ({ label, max, min, onChange, suffix, value }) => (
+const RangeProperty: React.FC<RangePropertyProps> = ({ label, max, min, onChange, step = 1, suffix, value }) => (
   <div className="block">
     <div className="flex justify-between items-center mb-1">
       <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{label}</span>
@@ -208,8 +194,9 @@ const RangeProperty: React.FC<RangePropertyProps> = ({ label, max, min, onChange
       type="range"
       min={min}
       max={max}
+      step={step}
       value={value}
-      onChange={(event) => onChange(parseInt(event.target.value))}
+      onChange={(event) => onChange(Number(event.target.value))}
       className="w-full accent-blue-600"
     />
   </div>

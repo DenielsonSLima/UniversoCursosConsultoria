@@ -1,8 +1,8 @@
 {
-  "version": "4.7.2",
+  "version": "4.7.3",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 3,
+  "revision": 4,
   "releasedAt": "2026-08-23",
-  "summary": "Sessões multiacesso seguras, escopo de Parceiros fechado e melhorias em grade, Dashboard e documentos"
+  "summary": "Diário fiel aos modelos, assinatura Professor-Coordenador e acessos temporários validados"
 }

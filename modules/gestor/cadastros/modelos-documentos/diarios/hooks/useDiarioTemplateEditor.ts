@@ -20,7 +20,6 @@ const queryKeys = {
 export const useDiarioTemplateEditor = () => {
   const queryClient = useQueryClient();
   const { toasts, removeToast, toast } = useToast();
-  const capaInputRef = useRef<HTMLInputElement>(null);
   const contracapaInputRef = useRef<HTMLInputElement>(null);
   const contracapaCustomImageRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -42,20 +41,43 @@ export const useDiarioTemplateEditor = () => {
     queryFn: diariosService.getCursos,
   });
 
-  const { data: previewWatermark } = useQuery({
-    queryKey: ['preview-watermark'],
+  const previewPoloId = typeof window === 'undefined'
+    ? ''
+    : window.sessionStorage.getItem('current_polo_id')
+      || window.sessionStorage.getItem('active_polo_id')
+      || '';
+
+  const {
+    data: previewInstitutionalAssets,
+    error: previewInstitutionalAssetsError,
+  } = useQuery({
+    queryKey: ['diario-template-editor-institutional-assets', previewPoloId],
     queryFn: async () => {
-      const { data } = await supabase.from('polos').select('id').limit(1).maybeSingle();
-      if (data?.id) return diariosService.getLandscapeWatermark(data.id);
-      return null;
+      if (!previewPoloId) return { logoUrl: null, watermark: null };
+      const { data, error } = await supabase
+        .from('polos')
+        .select('id, logo_url')
+        .eq('id', previewPoloId)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data?.id) return { logoUrl: null, watermark: null };
+      return {
+        logoUrl: data.logo_url || null,
+        watermark: await diariosService.getLandscapeWatermark(data.id),
+      };
     },
+    enabled: Boolean(previewPoloId),
   });
 
   useEffect(() => {
     if (!selectedCurso && cursos.length) setSelectedCurso(cursos[0].id);
   }, [cursos, selectedCurso]);
 
-  const { data: template, isLoading: loadingTemplate } = useQuery({
+  const {
+    data: template,
+    error: templateError,
+    isLoading: loadingTemplate,
+  } = useQuery({
     queryKey: queryKeys.template(selectedCurso),
     queryFn: () => diariosService.getTemplate(selectedCurso),
     enabled: !!selectedCurso,
@@ -184,14 +206,11 @@ export const useDiarioTemplateEditor = () => {
         setSelectedFieldId(newField.id);
         toast.success('Logotipo adicionado', 'Você pode arrastar e redimensionar o logotipo no canvas.');
       } else {
-        const next = {
-          ...form,
-          [kind === 'capa' ? 'capaUrl' : 'contracapaUrl']: url,
-        };
+        const next = { ...form, contracapaUrl: url };
         setForm(next);
         await diariosService.saveTemplate(selectedCurso, next);
         await queryClient.invalidateQueries({ queryKey: queryKeys.template(selectedCurso) });
-        toast.success('Imagem enviada', `${kind === 'capa' ? 'Capa' : 'Contracapa'} salva com sucesso.`);
+        toast.success('Imagem enviada', 'Contracapa salva com sucesso.');
       }
     } catch (error: any) {
       toast.error('Falha no upload', error.message);
@@ -216,11 +235,15 @@ export const useDiarioTemplateEditor = () => {
   const getPxFontSize = (ptSize: number) => (ptSize * 1.333 * canvasWidth) / 1122;
 
   return {
-    activeTab, canvasRef, capaCampos, capaInputRef, contracapaCustomImageRef,
+    activeTab, canvasRef, capaCampos, contracapaCustomImageRef,
     contracapaInputRef, cursos, currentField, draggingField, form, getPxFontSize, handleMouseDown,
-    handleUpload, loadingCursos, loadingTemplate, previewWatermark, removeToast, saveMutation,
+    handleUpload, loadingCursos, loadingTemplate,
+    previewLogoUrl: previewInstitutionalAssets?.logoUrl || null,
+    previewWatermark: previewInstitutionalAssets?.watermark,
+    previewInstitutionalAssetsError,
+    removeToast, saveMutation,
     selectedCurso, selectedFieldId, selectedModality, setActiveTab, setForm, setSelectedCurso,
     setSelectedFieldId, setShowCrosshairs, setShowGrid, setSnapToGrid, showCrosshairs, showGrid,
-    snapToGrid, toasts, updateFieldProperty, uploading,
+    snapToGrid, templateError, toasts, updateFieldProperty, uploading,
   };
 };

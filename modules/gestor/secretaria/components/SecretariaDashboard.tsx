@@ -50,7 +50,7 @@ const cards = [
   { id: 'dependencias-academicas', title: 'Dependências Acadêmicas', desc: 'Reoferta por disciplina, cobrança Banese e diário de destino.', icon: BookOpenCheck, color: 'cyan' },
   { id: 'certificados', title: 'Certificados', desc: 'Fila de concluintes, registros, SISTEC e emissão por modalidade.', icon: Award, color: 'emerald' },
   { id: 'historico-emissoes', title: 'Histórico de Emissões', desc: 'Controle, filtros e 2ª via de todos os documentos emitidos.', icon: History, color: 'blue' },
-  { id: 'assinatura-eletronica', title: 'Assinaturas e Acervo', desc: 'Acompanhe pendências e consulte documentos assinados.', icon: FileSignature, color: 'blue' },
+  { id: 'assinatura-eletronica', title: 'Assinaturas', desc: 'Acompanhe pendências e consulte o acervo de documentos assinados.', icon: FileSignature, color: 'blue' },
 ] as const;
 
 

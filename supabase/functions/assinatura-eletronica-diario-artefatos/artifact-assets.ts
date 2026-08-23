@@ -32,50 +32,75 @@ export interface OwnStorageObjectReference {
   storagePath: string;
 }
 
-export type DiarioPdfAssetManifest = {
+export type DiarioPdfManifestImage = {
+  mimeType: SupportedImageMime;
+  byteSize: number;
+  width: number;
+  height: number;
+  sha256: string;
+};
+
+type DiarioPdfSharedManifestAssets = {
+  headerLogo: DiarioPdfManifestImage & {
+    sourceKind: "HTTPS_URL";
+    sourceUrl: string;
+  };
+  watermark:
+    | null
+    | (
+      & DiarioPdfManifestImage
+      & (
+        | { sourceKind: "HTTPS_URL"; sourceUrl: string }
+        | {
+          sourceKind: "INLINE_DATA_URI";
+          sourceRef: "documentSnapshot.assetSources.watermarkUrl";
+        }
+      )
+    );
+  validationQr: DiarioPdfManifestImage & {
+    sourceKind: "GENERATED_QR";
+    payload: string;
+    mimeType: "image/png";
+    width: 240;
+    height: 240;
+  };
+};
+
+export type DiarioPdfAssetManifestV1 = {
   schemaVersion: 1;
   source: "UNIVERSO_DIARIO_PDF_ASSETS_V1";
   documentSnapshotSha256: string;
   validationUrl: string;
-  assets: {
-    headerLogo: {
-      sourceKind: "HTTPS_URL";
-      sourceUrl: string;
-      mimeType: SupportedImageMime;
-      byteSize: number;
-      width: number;
-      height: number;
-      sha256: string;
-    };
-    watermark:
+  assets: DiarioPdfSharedManifestAssets;
+};
+
+export type DiarioPdfAssetManifestV2 = {
+  schemaVersion: 2;
+  source: "UNIVERSO_DIARIO_PDF_ASSETS_V2";
+  documentSnapshotSha256: string;
+  validationUrl: string;
+  assets: DiarioPdfSharedManifestAssets & {
+    backCoverBackground:
       | null
-      | (
-        & {
-          mimeType: SupportedImageMime;
-          byteSize: number;
-          width: number;
-          height: number;
-          sha256: string;
-        }
-        & (
-          | { sourceKind: "HTTPS_URL"; sourceUrl: string }
-          | {
-            sourceKind: "INLINE_DATA_URI";
-            sourceRef: "documentSnapshot.assetSources.watermarkUrl";
-          }
-        )
-      );
-    validationQr: {
-      sourceKind: "GENERATED_QR";
-      payload: string;
-      mimeType: "image/png";
-      byteSize: number;
-      width: 240;
-      height: 240;
-      sha256: string;
-    };
+      | (DiarioPdfManifestImage & {
+        sourceKind: "HTTPS_URL";
+        sourceUrl: string;
+      });
+    backCoverImages: readonly (DiarioPdfManifestImage & {
+      fieldId: string;
+      sourceUrl: string;
+    })[];
   };
 };
+
+/** V1 permanece somente para leitura/finalização de envelopes históricos. */
+export type DiarioPdfAssetManifest =
+  | DiarioPdfAssetManifestV1
+  | DiarioPdfAssetManifestV2;
+
+export const isDiarioPdfAssetManifestV2 = (
+  manifest: DiarioPdfAssetManifest,
+): manifest is DiarioPdfAssetManifestV2 => manifest.schemaVersion === 2;
 
 const fail = (message: string): never => {
   throw new Error(message);

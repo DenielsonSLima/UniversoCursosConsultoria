@@ -1,45 +1,45 @@
 # Lote ativo
 
-Estado: `PUBLICADO_GITHUB_PR_83_AGUARDANDO_PRODUCAO`
+Estado: `PUBLICACAO_AUTORIZADA_EM_VALIDACAO`
 
-## Lote: 2026-08-23-sincronizacao-completa-4-7-2
+## Lote: 2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3
 
-- Pedido: verificar completamente todas as alterações válidas do workspace e atualizar o sistema no GitHub.
-- Base remota: `main` no commit `0fb2ae07d0dbf4f4443fe09bf34ba8283d9600b3`, árvore `7667d0304dcec269dd44d5c8c2aa6ebfc26bc1d0`.
-- Registro: `ai/operacao/registros/alteracoes/2026-08-23-sincronizacao-completa-4-7-2.md`.
-- Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-23-sincronizacao-completa-4-7-2.md`.
-- Versão: `4.7.2` estável.
-- Supabase principal: hotfix de escopo de Parceiros aplicado via MCP sob a versão remota `20260823135522`; nenhum dado operacional ou cobrança foi criado.
-- GitHub: branch `release/sincronizacao-completa-4-7-2`, PR `#83`, um commit atômico contra a base auditada.
-- Produção: merge na `main` e Vercel Produção não executados sem autorização explícita.
+- Pedido: corrigir as turmas e o Diário, reutilizar os modelos configurados, validar Professor/coordenação/Aluno/Responsável e publicar o resultado.
+- Base remota de continuidade: PR `#83`, branch `release/sincronizacao-completa-4-7-2`.
+- Registro: `ai/operacao/registros/alteracoes/2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3.md`.
+- Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3.md`.
+- Versão: `4.7.3` estável.
+- Supabase: treze migrations aplicadas via MCP e `assinatura-eletronica-diario-artefatos` v13 ativa com JWT.
+- Produção: autorizada pelo usuário; merge e Vercel dependem de CI/Preview verdes.
 
 ### Critérios de aceite
 
-1. O snapshot deve conter todas as alterações válidas e somente os caminhos do manifesto. `ATENDIDO_LOCALMENTE`.
-2. Migrations aplicadas não podem ser alteradas nem excluídas; fonte v5 supersedida fica fora. `ATENDIDO_LOCALMENTE`.
-3. Logout automático preserva outros dispositivos, logout voluntário revoga globalmente e falhas de rede não reidratam a sessão. `ATENDIDO_LOCALMENTE`.
-4. Seletores de perfil/polo e primeiro acesso preservam contexto, limpam sessão local e não deixam navegação pendurada na rede. `ATENDIDO_LOCALMENTE`.
-5. Dashboard oferece Responsável pelo fluxo canônico existente. `ATENDIDO_LOCALMENTE`.
-6. Grade técnica mantém rótulos associados e horários coerentes, com arquivos abaixo de 500 linhas. `ATENDIDO_LOCALMENTE`.
-7. Reparo eleitoral preserva estruturas externas e recusa estados ambíguos. `ATENDIDO_LOCALMENTE`.
-8. Contratos críticos do lote executam no quality gate do GitHub. `ATENDIDO_LOCALMENTE`.
-9. Versão, changelog, histórico, limite de linhas e RAG permanecem sincronizados. `ATENDIDO_LOCALMENTE`.
+1. Gestor lista as turmas técnicas e livres temporárias pelo contrato canônico. `ATENDIDO`.
+2. Professor reutiliza o Diário do Gestor e acessa somente as próprias disciplinas. `ATENDIDO`.
+3. Coordenação permanece uma capacidade adicional do perfil Professor. `ATENDIDO`.
+4. Capa, página 2, contracapa, campos, QR e marca d'água vêm das configurações salvas, sem fallback genérico. `ATENDIDO`.
+5. Professor assina antes do Coordenador; o final contém duas páginas de evidências e comprovante separado. `ATENDIDO_POR_CONTRATO`; smoke real bloqueado pela ausência de sessão Gestor controlável.
+6. Gestor possui módulo `Assinaturas` com caixa, acervo, filtros e Diário final; categorias sem backend seguro ficam indisponíveis. `ATENDIDO`.
+7. Aluno, carteirinha, notas, Responsável e dependente passam pelos contratos reais. `ATENDIDO`.
+8. Nenhuma cobrança, boleto ou operação Banese é criada. `ATENDIDO`.
+9. CI, Preview, merge e Vercel Produção devem concluir antes do encerramento. `EM_VALIDACAO`.
 
 ### Validação
 
-- Node focado: 43/43.
-- Deno focado: 29/29.
-- PDF oficial da Ficha: 19/19, texto selecionável e render A4 íntegro.
-- TypeScript, ESLint global/focado, teto de 500 linhas, controle de versão, contrato operacional, RAG e build: aprovados.
-- Supabase: ledger 717/717 nomes únicos; helpers de escopo fechados, ACL mínima e advisors no baseline.
-- Revisões independentes: Auth, migrations/Supabase e UI/grade sem bloqueador residual.
-- Smoke autenticado/visual: pendente porque nenhum navegador está conectado (`[]`).
+- Acessos e navegação: 34/34.
+- Aluno e Responsável: 57/57; carteirinha CIE emitida pelo RPC do aluno.
+- PDF/assinaturas/interface: 193 contratos.
+- Edge de artefatos: 112 contratos; versão remota 13.
+- Acervo do Gestor: 10 contratos.
+- Diário assinado na turma: 5 contratos Node.
+- TypeScript, ESLint focado, Deno, teto, versão, operação, RAG e build: gate final em execução.
+- Safari remoto: janela autenticada visível ao usuário, mas indisponível ao controlador por `cgWindowNotFound`; contratos públicos substituem somente o que pode ser comprovado sem UI.
 
 ### Limites e exclusões
 
-1. `FinanceiroAlunosList.legacy.tsx`, as minutas binárias locais e a fonte v5 de tipografia não integram o commit.
-2. As 21 migrations restauradas da `main` permanecem byte-idênticas e não aparecem no delta.
-3. CI e Preview precisam ficar verdes antes de considerar a PR pronta para merge.
-4. Merge/Vercel Produção exigem autorização explícita posterior.
+1. Contratos e Matrículas aparecem como categorias futuras em `Assinaturas`, desabilitadas até existir pipeline autorizado próprio.
+2. O smoke real não foi fabricado: o Safari não ficou controlável e a preparação do envelope exige uma sessão Gestor; nenhum SQL administrativo contornou RLS.
+3. Artefatos temporários de teste e renders não integram o lote.
+4. Nenhum fluxo financeiro ou Banese integra esta entrega.
 
-Histórico encerrado: `ai/operacao/registros/ALTERACOES.md` e `ai/operacao/registros/alteracoes/`.
+Histórico: `ai/operacao/registros/ALTERACOES.md` e `ai/operacao/registros/alteracoes/`.

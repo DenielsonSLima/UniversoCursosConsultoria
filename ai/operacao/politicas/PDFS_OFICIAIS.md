@@ -8,6 +8,15 @@ A regra vetorial desta política vale para todo PDF exportado pelo produto. As r
 - Elegibilidade, dados, ordenação, validade, QR e paginação vêm do backend/RPC.
 - O frontend apenas solicita o payload e compõe a apresentação vetorial; conteúdo incompatível deve falhar explicitamente.
 
+## Fidelidade aos modelos configurados
+
+- Antes de alterar qualquer gerador, inventarie o modelo aplicável em `Modelos Documentos` e a marca d'água do polo em `Configurações`, incluindo URL, opacidade, escala e rotação.
+- Capa, contracapa, campos, coordenadas, estilos, imagens isoladas, slots de assinatura, QR, textos e paginação configurados integram o contrato do documento e devem atravessar todos os adapters até o compositor.
+- É proibido substituir configuração existente por capa, contracapa, marca d'água, posição de assinatura ou layout genérico hardcoded.
+- Um fallback só é permitido quando não existir configuração aplicável, deve coincidir com o fallback exibido pelo editor e precisa de teste de contrato.
+- Prévia, download, impressão e artefato assinado usam o mesmo snapshot do modelo e o mesmo compositor.
+- A publicação fica bloqueada sem teste-fonte do encadeamento da configuração e inspeção renderizada da capa, página interna, contracapa e páginas de assinatura aplicáveis.
+
 ## Cabeçalho e marca
 
 - A referência visual é modules/gestor/components/DocumentHeader.tsx.

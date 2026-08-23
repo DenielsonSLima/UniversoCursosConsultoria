@@ -57,7 +57,7 @@ const sortAulas = (aulas: any[]) => [...aulas].sort((a, b) => {
 
 export const diarioClasseService = {
   getTemplate(cursoId: string) {
-    return diariosService.getTemplate(cursoId);
+    return diariosService.getTemplateForEmission(cursoId);
   },
 
   async getStudents(

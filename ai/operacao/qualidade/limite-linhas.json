@@ -6,7 +6,8 @@
     "ai/operacao/registros/alteracoes/2026-08-22-modularizacao-teto-500-4-6-0.md",
     "ai/operacao/registros/alteracoes/2026-08-22-avaliacoes-ead-e-cards-tecnicos.md",
     "ai/operacao/registros/alteracoes/2026-08-22-jornada-cursos-livres.md",
-    "ai/operacao/registros/alteracoes/2026-08-23-sincronizacao-completa-4-7-2.md"
+    "ai/operacao/registros/alteracoes/2026-08-23-sincronizacao-completa-4-7-2.md",
+    "ai/operacao/registros/alteracoes/2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3.md"
   ],
   "exemptions": [
     {
@@ -281,6 +282,97 @@
       "remoteId": "20260823135522",
       "sha256": "9800fc9a23b5005ceac9285f945170ca52bf6037156d4accfb41cf00ef0acc99",
       "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260823170000_require_distinct_diary_professor_coordinator.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260823173539",
+      "sha256": "81aa76b8ee701ab4ad2ae9aba2c5b3257953447c160db9685bbd7d78ae3faa6b",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260823170100_merge_coordination_into_professor_portal.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260823184649",
+      "sha256": "a77797e60d204ff53957239a28a68fec494beb3b6800c38563f9e40f13b147c2",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260823170200_approve_matriz_diary_signature_policy.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260823173542",
+      "sha256": "bed6d2aa8e0661cb3ef4d673ebaa99cd04e12541aa74d9a17add3e5be0a63fca",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260823170300_allow_legacy_source_uuids_in_diary_snapshot.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260823174535",
+      "sha256": "c0c776c6364c4a1b95c9c7b2bf5ba765e70ec20bb8eaa0eea8540332317e11d5",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260823170400_allow_missing_institutional_email_in_diary_snapshot.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260823174906",
+      "sha256": "3dac27aa68b331ed83da3b3e21dd837a94ab47002d6f1bd80f4b6fab7de1d3c5",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260823170500_fix_gestao_academic_progress_numeric_contract.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260823180811",
+      "sha256": "d6b0488139b6102ad8bd743163fc19bcac685bc367267838e71ae37cbf77c1f5",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260823170600_expand_polo_institutional_data_for_official_documents.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260823184707",
+      "sha256": "10f07a28bcd3b60b5b21bf8bdcf97495a0bbb69f951ab3cbce95059176475e03",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260823170700_add_diary_signature_positions_to_templates.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260823184726",
+      "sha256": "9f07f15c2ed3b59e4740ecbafb2bf2d22936f591485c0b72d87ed5528b3271e8",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260823170800_freeze_diary_back_cover_assets_manifest_v2.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260823190825",
+      "sha256": "203d740b6066beb3c251f80dad795e83cc3db6f62861d58d79750c2cb88ba244",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260823170900_fix_merged_professor_profile_scope_ambiguity.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260823184947",
+      "sha256": "bd5255b3b89a76091657e9bc49980bc36564a42432a1cf0bf7ab7110ad055b8d",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260823171000_allow_diary_back_cover_semantic_manifest_v2.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260823195333",
+      "sha256": "408b1a2673f6f30360695635953e75839fe425f258944317dd6a9d7402b50837",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260823171100_separate_diary_receipt_watermark_snapshot.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260823202250",
+      "sha256": "fd82b70772374a0c1bfb5bb28287c9a23d02eceadd647a2dc3ab1d1a307f225b",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260823171200_validate_diary_back_cover_geometry.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260823210922",
+      "sha256": "9f384743498fed9174d0273d5b70c992a01a8caa49879217a108f7fb8a79a409",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
     }
   ],
   "retiredPaths": [
@@ -288,6 +380,36 @@
       "path": "modules/gestor/patrimonio/patrimonio.constants.ts",
       "retiredInManifest": "ai/operacao/registros/alteracoes/2026-08-23-sincronizacao-completa-4-7-2.md",
       "reason": "Constante sem qualquer importação ou uso após a adoção do cadastro dinâmico de tipos de patrimônio."
+    },
+    {
+      "path": "modules/gestor/gestao/tecnicos/detalhes/components/diarios/DiarioPrintBackCover.tsx",
+      "retiredInManifest": "ai/operacao/registros/alteracoes/2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3.md",
+      "reason": "Compositor raster genérico removido em favor do gerador vetorial canônico orientado pelo modelo salvo."
+    },
+    {
+      "path": "modules/gestor/gestao/tecnicos/detalhes/components/diarios/DiarioPrintCover.tsx",
+      "retiredInManifest": "ai/operacao/registros/alteracoes/2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3.md",
+      "reason": "Compositor raster genérico removido em favor do gerador vetorial canônico orientado pelo modelo salvo."
+    },
+    {
+      "path": "modules/gestor/gestao/tecnicos/detalhes/components/diarios/DiarioPrintDocument.tsx",
+      "retiredInManifest": "ai/operacao/registros/alteracoes/2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3.md",
+      "reason": "Compositor raster genérico removido em favor do gerador vetorial canônico orientado pelo modelo salvo."
+    },
+    {
+      "path": "modules/gestor/gestao/tecnicos/detalhes/components/diarios/DiarioPrintPage.tsx",
+      "retiredInManifest": "ai/operacao/registros/alteracoes/2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3.md",
+      "reason": "Compositor raster genérico removido em favor do gerador vetorial canônico orientado pelo modelo salvo."
+    },
+    {
+      "path": "modules/gestor/gestao/tecnicos/detalhes/components/diarios/DiarioPrintSections.tsx",
+      "retiredInManifest": "ai/operacao/registros/alteracoes/2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3.md",
+      "reason": "Compositor raster genérico removido em favor do gerador vetorial canônico orientado pelo modelo salvo."
+    },
+    {
+      "path": "modules/gestor/gestao/tecnicos/detalhes/components/diarios/DiarioPrintStyles.tsx",
+      "retiredInManifest": "ai/operacao/registros/alteracoes/2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3.md",
+      "reason": "Compositor raster genérico removido em favor do gerador vetorial canônico orientado pelo modelo salvo."
     }
   ],
   "generatedArtifacts": [

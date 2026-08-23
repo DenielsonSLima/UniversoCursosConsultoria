@@ -15,22 +15,38 @@ const DiarioBackCoverSettingsPanel: React.FC<DiarioBackCoverSettingsPanelProps> 
   form,
   setForm,
   uploading,
-}) => (
+}) => {
+  const qrField = form.contracapaCampos?.find((field) => field.id === 'contracapaQrCode');
+  const qrSizeMm = Math.round(((qrField?.width || 18) / 100) * 297);
+  const updateQrSize = (sizeMm: number) => {
+    const width = Number(((sizeMm / 297) * 100).toFixed(1));
+    setForm((previous) => ({
+      ...previous,
+      // Campo legado do snapshot; o tamanho visual exato vem da largura vetorial abaixo.
+      qrCodeSize: Math.min(50, sizeMm),
+      contracapaCampos: previous.contracapaCampos?.map((field) => (
+        field.id === 'contracapaQrCode' ? { ...field, width } : field
+      )),
+    }));
+  };
+
+  return (
   <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-5">
     <h5 className="text-xs font-black uppercase tracking-wider text-slate-800 border-b border-slate-100 pb-2">
       Configurar Contracapa
     </h5>
 
-    <label className="flex items-center gap-3 cursor-pointer pb-2 border-b border-slate-100">
+    <label className="flex items-center gap-3 pb-2 border-b border-slate-100">
       <input
         type="checkbox"
-        checked={form.imprimirValidacaoContracapa || false}
-        onChange={(event) => setForm({ ...form, imprimirValidacaoContracapa: event.target.checked })}
+        checked
+        readOnly
+        disabled
         className="h-4 w-4 rounded border-slate-300 accent-blue-600"
       />
       <div>
-        <span className="block text-xs font-bold text-slate-800">Imprimir Validação no Verso</span>
-        <span className="text-[10px] text-slate-500 font-medium">Habilita o cartão de validação.</span>
+        <span className="block text-xs font-bold text-slate-800">Página 2 de validação obrigatória</span>
+        <span className="text-[10px] text-slate-500 font-medium">Mantém os campos e as duas assinaturas posicionados no documento assinável.</span>
       </div>
     </label>
 
@@ -52,8 +68,9 @@ const DiarioBackCoverSettingsPanel: React.FC<DiarioBackCoverSettingsPanelProps> 
         <p className="text-[10px] font-black uppercase tracking-widest">Assinaturas manuais da contracapa</p>
       </div>
       <p className="text-[10px] font-semibold leading-relaxed text-blue-700">
-        A impressão usa duas linhas fixas e vazias: <strong>ASSINATURA DO PROFESSOR</strong> e{' '}
-        <strong>ASSINATURA DO COORDENADOR DO CURSO</strong>.
+        Todos os campos visíveis são arrastáveis. Selecione também as linhas de <strong>ASSINATURA DO PROFESSOR</strong> e{' '}
+        <strong>ASSINATURA DO COORDENADOR DO CURSO</strong>. Posição, largura, estilo e alinhamento
+        salvos neste modelo serão usados no PDF.
       </p>
     </div>
 
@@ -73,18 +90,19 @@ const DiarioBackCoverSettingsPanel: React.FC<DiarioBackCoverSettingsPanelProps> 
     <div className="border-t border-slate-100 pt-3">
       <div className="flex justify-between items-center mb-1">
         <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Tamanho do QR Code (mm)</span>
-        <span className="text-xs font-bold text-slate-700">{form.qrCodeSize || 28}mm</span>
+        <span className="text-xs font-bold text-slate-700">{qrSizeMm}mm</span>
       </div>
       <input
         type="range"
         min="20"
-        max="50"
-        value={form.qrCodeSize || 28}
-        onChange={(event) => setForm({ ...form, qrCodeSize: parseInt(event.target.value) })}
+        max="70"
+        value={qrSizeMm}
+        onChange={(event) => updateQrSize(parseInt(event.target.value, 10))}
         className="w-full accent-blue-600"
       />
     </div>
   </div>
-);
+  );
+};
 
 export default DiarioBackCoverSettingsPanel;

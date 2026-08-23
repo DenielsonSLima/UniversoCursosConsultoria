@@ -4,6 +4,26 @@ Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente
 
 Histórico anterior: [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
 
+## [4.7.3] - 2026-08-23
+
+### Corrigido
+
+- As turmas técnicas e livres temporárias voltaram a aparecer no Gestor pelo contrato acadêmico canônico, sem coerção incorreta dos indicadores numéricos.
+- O portal do Professor passou a reutilizar o mesmo Diário do Gestor, com frequência, conteúdo, notas, fechamento, prévia oficial e assinatura eletrônica.
+- Capa, contracapa, campos, marca d’água e posições de assinatura do Diário agora são consumidos diretamente de Modelos de Documentos e Configurações, com falha explícita para capa raster legada incompatível.
+
+### Adicionado
+
+- Professores com atribuição de coordenação recebem, no próprio portal, a caixa de revisão e a segunda assinatura do Diário; o papel de acesso continua sendo Professor.
+- O Gestor recebeu o módulo Assinaturas com cards de Diários, Contratos e Matrículas, filtros, caixa/acervo, documentos finais, comprovantes e atalhos para o Diário assinado dentro da turma; categorias sem pipeline próprio permanecem explicitamente indisponíveis.
+- O Diário assinado termina automaticamente com duas páginas vetoriais de evidências, além do comprovante independente para validação.
+- Uma skill operacional permanente obriga novos geradores de PDF a reutilizarem os modelos e a marca d’água configurados antes de qualquer fallback.
+
+### Segurança e qualidade
+
+- O fluxo continua Professor → Coordenador, exige reautenticação e preserva provas individuais, manifesto semântico, hashes e compatibilidade histórica; divergências de papel, posição ou geometria do modelo falham antes da emissão.
+- Os testes temporários cobrem Professor, Professor coordenador, Aluno e Responsável; nenhuma cobrança, boleto ou operação Banese é criada.
+
 ## [4.7.2] - 2026-08-23
 
 ### Corrigido
@@ -435,54 +455,3 @@ Histórico anterior: [02/08/2026 — continuação](./changelog/2026-08-02-parte
 ### Qualidade
 
 - TypeScript, lint e build de produção foram validados antes da publicação.
-
-## [2.2.3-beta.23] - 2026-08-02
-
-### Adicionado
-
-- A Comunicação do gestor foi reorganizada em Atendimento, Atendimento por polo, Atrasados, Automações, Fluxos, Agentes e Canais e perfis.
-- O atendimento público do aplicativo ganhou rota própria, protocolo e histórico persistente, sem exigir login.
-- O aluno autenticado agora visualiza disponibilidade, horário e prazo médio do atendimento do seu polo, com criação segura de novas conversas.
-- Foi criada a configuração de atendimento por polo, incluindo horários, estado on-line, mensagens, SLA, responsáveis e canais habilitados.
-
-### Alterado
-
-- Atendimento do portal/app e WhatsApp passaram a compartilhar a Central de Atendimento, preservando a identificação do canal de origem.
-- Fluxos e automações passaram a apresentar a operação multicanal para mensagem no app, notificação no celular e WhatsApp.
-- A navegação e as permissões do gestor foram alinhadas aos novos submódulos de Comunicação.
-
-### Segurança e qualidade
-
-- Abertura de chamados do aluno foi movida para funções atômicas protegidas, com RLS, validação de polo e metadados de protocolo.
-- O suporte público usa função de borda, desafio antiabuso e token próprio de retomada, sem expor gravações diretas do banco.
-- TypeScript, lint, build de produção e testes de autenticação, acesso e comunicação multicanal foram executados antes da publicação.
-
-## [2.2.3-beta.22] - 2026-08-02
-
-### Adicionado
-
-- O aplicativo do aluno recebeu login exclusivo em `/aluno/login-app`, compacto, imersivo e separado do acesso público do site.
-- O cadastro do aplicativo agora usa a rota `/aluno/cadastro-app`, dividida em três etapas próprias para celular: dados pessoais, acesso e endereço.
-
-### Alterado
-
-- Logout, expiração de sessão, recuperação de senha e confirmação de e-mail do aplicativo retornam ao novo login exclusivo.
-- O aviso visual sobre proteção e criptografia foi removido da tela de login conforme revisão de interface.
-- O cadastro público e o acesso do gestor continuam usando seus fluxos existentes, sem alterações visuais.
-
-### Qualidade
-
-- Build de produção, TypeScript, lint e testes de autenticação foram executados antes da publicação.
-
-## [2.2.3-beta.21] - 2026-08-02
-
-### Alterado
-
-- O ícone instalável do `Universo CC` passou a usar fundo branco puro e totalmente opaco.
-- A marca foi recortada pelo próprio contorno e centralizada no canvas, eliminando o deslocamento visual causado pelas margens transparentes do arquivo original.
-- Foram gerados ícones versionados em 180, 192 e 512 pixels, com respiro uniforme e cache do aplicativo atualizado para `v3`.
-
-### Qualidade
-
-- A centralização foi validada pelas coordenadas do contorno visível, e os três arquivos foram confirmados sem canal alfa.
-- Build de produção, TypeScript, lint e isolamento dos metadados do gestor foram verificados antes da publicação.

@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-08-23T17:05:27.222Z",
+  "builtAt": "2026-08-23T21:15:44.432Z",
   "manifestVersion": 2,
-  "sourceSignature": "1273712b11ed5e7000990f2d023867ad7e2c881c160bb8692dfefc920a3c9e86",
+  "sourceSignature": "6d07dd64eb097f2998b2962374d2cefd6fe3dca1d11d70128a2969ded3e8f7fe",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "559664f1f9d2c1645f82efb8546d7bd69749abeb2d53c9ca12731f70f32b8f68"
+      "hash": "3cce8892976ce6a9268e60320b7b52f0c66b88e30974b61496c996c92fa0b412"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -31,7 +31,7 @@
     },
     {
       "path": "ai/operacao/politicas/PDFS_OFICIAIS.md",
-      "hash": "c56647eda1711749aad7245060fb40c050250b503dc25a5e9161a1642f4bf854"
+      "hash": "22fbefd4c156557445b2c97973455bc14c6365e673d7d319fdf78788cec165fa"
     },
     {
       "path": "ai/operacao/politicas/PLANO_CURSO.md",
@@ -192,63 +192,63 @@
       "part": 1
     },
     {
-      "id": "ef00fa4ed1a44841defe",
-      "hash": "ef00fa4ed1a44841defe88adc49a2d6e2eb29708089d2068ff9438df360ed8b2",
+      "id": "7415f17e9a57e911270d",
+      "hash": "7415f17e9a57e911270df25e4b3ef092c91f39471bd9024d13787678c0eed95c",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Lote ativo",
-      "text": "Estado: `PUBLICADO_GITHUB_PR_83_AGUARDANDO_PRODUCAO`",
-      "normalizedText": "estado publicado github pr 83 aguardando producao",
-      "tokenCount": 7,
+      "text": "Estado: `PUBLICACAO_AUTORIZADA_EM_VALIDACAO`",
+      "normalizedText": "estado publicacao autorizada em validacao",
+      "tokenCount": 5,
       "part": 1
     },
     {
-      "id": "504d04b182abeef871d0",
-      "hash": "504d04b182abeef871d02984577cf1f097f81f88f6a419cadc23b3d91e3c7e28",
+      "id": "5b4cc684ec310c070bd5",
+      "hash": "5b4cc684ec310c070bd5ddc094a29682e0337417fccb6b18fec30d0bc2744abd",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-08-23-sincronizacao-completa-4-7-2",
-      "text": "- Pedido: verificar completamente todas as alterações válidas do workspace e atualizar o sistema no GitHub. - Base remota: `main` no commit `0fb2ae07d0dbf4f4443fe09bf34ba8283d9600b3`, árvore `7667d0304dcec269dd44d5c8c2aa6ebfc26bc1d0`. - Registro: `ai/operacao/registros/alteracoes/2026-08-23-sincronizacao-completa-4-7-2.md`. - Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-23-sincronizacao-completa-4-7-2.md`. - Versão: `4.7.2` estável. - Supabase principal: hotfix de escopo de Parceiros aplicado via MCP sob a versão remota `20260823135522`; nenhum dado operacional ou cobrança foi criado. - GitHub: branch `release/sincronizacao-completa-4-7-2`, PR `#83`, um commit atômico contra a base auditada. - Produção: merge na `main` e Vercel Produção não executados sem autorização explícita.",
-      "normalizedText": "pedido verificar completamente todas as alteracoes validas do workspace e atualizar o sistema no github base remota main no commit 0fb2ae07d0dbf4f4443fe09bf34ba8283d9600b3 arvore 7667d0304dcec269dd44d5c8c2aa6ebfc26bc1d0 registro ai operacao registros alteracoes 2026 08 23 sincronizacao completa 4 7 2 md manifesto explicito ai operacao registros alteracoes 2026 08 23 sincronizacao completa 4 7 2 md versao 4 7 2 estavel supabase principal hotfix de escopo de parceiros aplicado via mcp sob a versao remota 20260823135522 nenhum dado operacional ou cobranca foi criado github branch release sincronizacao completa 4 7 2 pr 83 um commit atomico contra a base auditada producao merge na main e vercel producao nao executados sem autorizacao explicita",
-      "tokenCount": 91,
+      "section": "Lote: 2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3",
+      "text": "- Pedido: corrigir as turmas e o Diário, reutilizar os modelos configurados, validar Professor/coordenação/Aluno/Responsável e publicar o resultado. - Base remota de continuidade: PR `#83`, branch `release/sincronizacao-completa-4-7-2`. - Registro: `ai/operacao/registros/alteracoes/2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3.md`. - Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3.md`. - Versão: `4.7.3` estável. - Supabase: treze migrations aplicadas via MCP e `assinatura-eletronica-diario-artefatos` v13 ativa com JWT. - Produção: autorizada pelo usuário; merge e Vercel dependem de CI/Preview verdes.",
+      "normalizedText": "pedido corrigir as turmas e o diario reutilizar os modelos configurados validar professor coordenacao aluno responsavel e publicar o resultado base remota de continuidade pr 83 branch release sincronizacao completa 4 7 2 registro ai operacao registros alteracoes 2026 08 23 fidelidade diario assinaturas acessos 4 7 3 md manifesto explicito ai operacao registros alteracoes 2026 08 23 fidelidade diario assinaturas acessos 4 7 3 md versao 4 7 3 estavel supabase treze migrations aplicadas via mcp e assinatura eletronica diario artefatos v13 ativa com jwt producao autorizada pelo usuario merge e vercel dependem de ci preview verdes",
+      "tokenCount": 80,
       "part": 1
     },
     {
-      "id": "1656baf73160b64201da",
-      "hash": "1656baf73160b64201dad84a3e089d2fd7e44f4cc1ba269389ff36841cb786e5",
+      "id": "f0e3a5aad28b35c38491",
+      "hash": "f0e3a5aad28b35c3849107d2ce667a8980b0236ef610372b0a4b11e69e2abc52",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Critérios de aceite",
-      "text": "1. O snapshot deve conter todas as alterações válidas e somente os caminhos do manifesto. `ATENDIDO_LOCALMENTE`. 2. Migrations aplicadas não podem ser alteradas nem excluídas; fonte v5 supersedida fica fora. `ATENDIDO_LOCALMENTE`. 3. Logout automático preserva outros dispositivos, logout voluntário revoga globalmente e falhas de rede não reidratam a sessão. `ATENDIDO_LOCALMENTE`. 4. Seletores de perfil/polo e primeiro acesso preservam contexto, limpam sessão local e não deixam navegação pendurada na rede. `ATENDIDO_LOCALMENTE`. 5. Dashboard oferece Responsável pelo fluxo canônico existente. `ATENDIDO_LOCALMENTE`. 6. Grade técnica mantém rótulos associados e horários coerentes, com arquivos abaixo de 500 linhas. `ATENDIDO_LOCALMENTE`. 7. Reparo eleitoral preserva estruturas externas e recusa estados ambíguos. `ATENDIDO_LOCALMENTE`. 8. Contratos críticos do lote executam no quality gate do GitHub. `ATENDIDO_LOCALMENTE`. 9. Versão, changelog, histórico, limite de linhas e RAG permanecem sincronizados. `ATENDIDO_LOCALMENTE`.",
-      "normalizedText": "1 o snapshot deve conter todas as alteracoes validas e somente os caminhos do manifesto atendido localmente 2 migrations aplicadas nao podem ser alteradas nem excluidas fonte v5 supersedida fica fora atendido localmente 3 logout automatico preserva outros dispositivos logout voluntario revoga globalmente e falhas de rede nao reidratam a sessao atendido localmente 4 seletores de perfil polo e primeiro acesso preservam contexto limpam sessao local e nao deixam navegacao pendurada na rede atendido localmente 5 dashboard oferece responsavel pelo fluxo canonico existente atendido localmente 6 grade tecnica mantem rotulos associados e horarios coerentes com arquivos abaixo de 500 linhas atendido localmente 7 reparo eleitoral preserva estruturas externas e recusa estados ambiguos atendido localmente 8 contratos criticos do lote executam no quality gate do github atendido localmente 9 versao changelog historico limite de linhas e rag permanecem sincronizados atendido localmente",
-      "tokenCount": 122,
+      "text": "1. Gestor lista as turmas técnicas e livres temporárias pelo contrato canônico. `ATENDIDO`. 2. Professor reutiliza o Diário do Gestor e acessa somente as próprias disciplinas. `ATENDIDO`. 3. Coordenação permanece uma capacidade adicional do perfil Professor. `ATENDIDO`. 4. Capa, página 2, contracapa, campos, QR e marca d'água vêm das configurações salvas, sem fallback genérico. `ATENDIDO`. 5. Professor assina antes do Coordenador; o final contém duas páginas de evidências e comprovante separado. `ATENDIDO_POR_CONTRATO`; smoke real bloqueado pela ausência de sessão Gestor controlável. 6. Gestor possui módulo `Assinaturas` com caixa, acervo, filtros e Diário final; categorias sem backend seguro ficam indisponíveis. `ATENDIDO`. 7. Aluno, carteirinha, notas, Responsável e dependente passam pelos contratos reais. `ATENDIDO`. 8. Nenhuma cobrança, boleto ou operação Banese é criada. `ATENDIDO`. 9. CI, Preview, merge e Vercel Produção devem concluir antes do encerramento. `EM_VALIDACAO`.",
+      "normalizedText": "1 gestor lista as turmas tecnicas e livres temporarias pelo contrato canonico atendido 2 professor reutiliza o diario do gestor e acessa somente as proprias disciplinas atendido 3 coordenacao permanece uma capacidade adicional do perfil professor atendido 4 capa pagina 2 contracapa campos qr e marca d agua vem das configuracoes salvas sem fallback generico atendido 5 professor assina antes do coordenador o final contem duas paginas de evidencias e comprovante separado atendido por contrato smoke real bloqueado pela ausencia de sessao gestor controlavel 6 gestor possui modulo assinaturas com caixa acervo filtros e diario final categorias sem backend seguro ficam indisponiveis atendido 7 aluno carteirinha notas responsavel e dependente passam pelos contratos reais atendido 8 nenhuma cobranca boleto ou operacao banese e criada atendido 9 ci preview merge e vercel producao devem concluir antes do encerramento em validacao",
+      "tokenCount": 118,
       "part": 1
     },
     {
-      "id": "a17f19084cc7de9697e3",
-      "hash": "a17f19084cc7de9697e3a62fec80feece0942da05e363b5561a8168db2c0449c",
+      "id": "32eda5831baa605c57d4",
+      "hash": "32eda5831baa605c57d46004e2945a83c1838b36a496845ac7bd0b88e9f4f0b9",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Validação",
-      "text": "- Node focado: 43/43. - Deno focado: 29/29. - PDF oficial da Ficha: 19/19, texto selecionável e render A4 íntegro. - TypeScript, ESLint global/focado, teto de 500 linhas, controle de versão, contrato operacional, RAG e build: aprovados. - Supabase: ledger 717/717 nomes únicos; helpers de escopo fechados, ACL mínima e advisors no baseline. - Revisões independentes: Auth, migrations/Supabase e UI/grade sem bloqueador residual. - Smoke autenticado/visual: pendente porque nenhum navegador está conectado (`[]`).",
-      "normalizedText": "node focado 43 43 deno focado 29 29 pdf oficial da ficha 19 19 texto selecionavel e render a4 integro typescript eslint global focado teto de 500 linhas controle de versao contrato operacional rag e build aprovados supabase ledger 717 717 nomes unicos helpers de escopo fechados acl minima e advisors no baseline revisoes independentes auth migrations supabase e ui grade sem bloqueador residual smoke autenticado visual pendente porque nenhum navegador esta conectado",
-      "tokenCount": 69,
+      "text": "- Acessos e navegação: 34/34. - Aluno e Responsável: 57/57; carteirinha CIE emitida pelo RPC do aluno. - PDF/assinaturas/interface: 193 contratos. - Edge de artefatos: 112 contratos; versão remota 13. - Acervo do Gestor: 10 contratos. - Diário assinado na turma: 5 contratos Node. - TypeScript, ESLint focado, Deno, teto, versão, operação, RAG e build: gate final em execução. - Safari remoto: janela autenticada visível ao usuário, mas indisponível ao controlador por `cgWindowNotFound`; contratos públicos substituem somente o que pode ser comprovado sem UI.",
+      "normalizedText": "acessos e navegacao 34 34 aluno e responsavel 57 57 carteirinha cie emitida pelo rpc do aluno pdf assinaturas interface 193 contratos edge de artefatos 112 contratos versao remota 13 acervo do gestor 10 contratos diario assinado na turma 5 contratos node typescript eslint focado deno teto versao operacao rag e build gate final em execucao safari remoto janela autenticada visivel ao usuario mas indisponivel ao controlador por cgwindownotfound contratos publicos substituem somente o que pode ser comprovado sem ui",
+      "tokenCount": 75,
       "part": 1
     },
     {
-      "id": "ee93d38f77b87ff5ab8a",
-      "hash": "ee93d38f77b87ff5ab8a8dd012df3dc87f7594a771579028a3a76d2209025e35",
+      "id": "10cb006be5dc154544c6",
+      "hash": "10cb006be5dc154544c679806bff2462f4c7ee1ca26389c83b42d30d209b4d6f",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Limites e exclusões",
-      "text": "1. `FinanceiroAlunosList.legacy.tsx`, as minutas binárias locais e a fonte v5 de tipografia não integram o commit. 2. As 21 migrations restauradas da `main` permanecem byte-idênticas e não aparecem no delta. 3. CI e Preview precisam ficar verdes antes de considerar a PR pronta para merge. 4. Merge/Vercel Produção exigem autorização explícita posterior.",
-      "normalizedText": "1 financeiroalunoslist legacy tsx as minutas binarias locais e a fonte v5 de tipografia nao integram o commit 2 as 21 migrations restauradas da main permanecem byte identicas e nao aparecem no delta 3 ci e preview precisam ficar verdes antes de considerar a pr pronta para merge 4 merge vercel producao exigem autorizacao explicita posterior",
-      "tokenCount": 46,
+      "text": "1. Contratos e Matrículas aparecem como categorias futuras em `Assinaturas`, desabilitadas até existir pipeline autorizado próprio. 2. O smoke real não foi fabricado: o Safari não ficou controlável e a preparação do envelope exige uma sessão Gestor; nenhum SQL administrativo contornou RLS. 3. Artefatos temporários de teste e renders não integram o lote. 4. Nenhum fluxo financeiro ou Banese integra esta entrega.",
+      "normalizedText": "1 contratos e matriculas aparecem como categorias futuras em assinaturas desabilitadas ate existir pipeline autorizado proprio 2 o smoke real nao foi fabricado o safari nao ficou controlavel e a preparacao do envelope exige uma sessao gestor nenhum sql administrativo contornou rls 3 artefatos temporarios de teste e renders nao integram o lote 4 nenhum fluxo financeiro ou banese integra esta entrega",
+      "tokenCount": 51,
       "part": 1
     },
     {
-      "id": "07a511a597db3df3e312",
-      "hash": "07a511a597db3df3e3127494c151e5d1ddaa60501563cdef14d1a1a19cb340cf",
+      "id": "f40ccaac8356863e68dd",
+      "hash": "f40ccaac8356863e68ddd7a62afdc97823fa81c3a705dd50360b20081659aac3",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Limites e exclusões",
-      "text": "Histórico encerrado: `ai/operacao/registros/ALTERACOES.md` e `ai/operacao/registros/alteracoes/`.",
-      "normalizedText": "historico encerrado ai operacao registros alteracoes md e ai operacao registros alteracoes",
-      "tokenCount": 11,
+      "text": "Histórico: `ai/operacao/registros/ALTERACOES.md` e `ai/operacao/registros/alteracoes/`.",
+      "normalizedText": "historico ai operacao registros alteracoes md e ai operacao registros alteracoes",
+      "tokenCount": 10,
       "part": 1
     },
     {
@@ -489,6 +489,16 @@
       "text": "- Prévia, download e impressão reutilizam exatamente o mesmo Blob PDF. - Elegibilidade, dados, ordenação, validade, QR e paginação vêm do backend/RPC. - O frontend apenas solicita o payload e compõe a apresentação vetorial; conteúdo incompatível deve falhar explicitamente.",
       "normalizedText": "previa download e impressao reutilizam exatamente o mesmo blob pdf elegibilidade dados ordenacao validade qr e paginacao vem do backend rpc o frontend apenas solicita o payload e compoe a apresentacao vetorial conteudo incompativel deve falhar explicitamente",
       "tokenCount": 30,
+      "part": 1
+    },
+    {
+      "id": "51ff0a606971c27ac290",
+      "hash": "51ff0a606971c27ac290097ebdbb8b72e04bae46e3187ae5f9b87d3778eec0cd",
+      "path": "ai/operacao/politicas/PDFS_OFICIAIS.md",
+      "section": "Fidelidade aos modelos configurados",
+      "text": "- Antes de alterar qualquer gerador, inventarie o modelo aplicável em `Modelos Documentos` e a marca d'água do polo em `Configurações`, incluindo URL, opacidade, escala e rotação. - Capa, contracapa, campos, coordenadas, estilos, imagens isoladas, slots de assinatura, QR, textos e paginação configurados integram o contrato do documento e devem atravessar todos os adapters até o compositor. - É proibido substituir configuração existente por capa, contracapa, marca d'água, posição de assinatura ou layout genérico hardcoded. - Um fallback só é permitido quando não existir configuração aplicável, deve coincidir com o fallback exibido pelo editor e precisa de teste de contrato. - Prévia, download, impressão e artefato assinado usam o mesmo snapshot do modelo e o mesmo compositor. - A publicação fica bloqueada sem teste-fonte do encadeamento da configuração e inspeção renderizada da capa, página interna, contracapa e páginas de assinatura aplicáveis.",
+      "normalizedText": "antes de alterar qualquer gerador inventarie o modelo aplicavel em modelos documentos e a marca d agua do polo em configuracoes incluindo url opacidade escala e rotacao capa contracapa campos coordenadas estilos imagens isoladas slots de assinatura qr textos e paginacao configurados integram o contrato do documento e devem atravessar todos os adapters ate o compositor e proibido substituir configuracao existente por capa contracapa marca d agua posicao de assinatura ou layout generico hardcoded um fallback so e permitido quando nao existir configuracao aplicavel deve coincidir com o fallback exibido pelo editor e precisa de teste de contrato previa download impressao e artefato assinado usam o mesmo snapshot do modelo e o mesmo compositor a publicacao fica bloqueada sem teste fonte do encadeamento da configuracao e inspecao renderizada da capa pagina interna contracapa e paginas de assinatura aplicaveis",
+      "tokenCount": 117,
       "part": 1
     },
     {
