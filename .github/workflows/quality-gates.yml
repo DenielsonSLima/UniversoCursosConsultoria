@@ -96,5 +96,22 @@ jobs:
       - name: Testar validação documental
         run: npm run test:document-validation
 
+      - name: Testar contratos críticos do lote
+        run: |
+          node --test \
+            lib/supabase-auth-storage.test.ts \
+            modules/login/logout-scope.contract.test.ts \
+            modules/login/portal-context-access.contract.test.ts \
+            modules/login/portal-logout-flow.test.ts \
+            modules/login/profile-selection-session.test.ts \
+            modules/gestor/gestao/tecnicos/detalhes/components/grade/TurmaGradePlanejamento.test.ts \
+            modules/gestor/parceiros/parceiros-responsavel-selection.contract.test.ts \
+            modules/gestor/secretaria/shared/voter-template-repair.test.ts
+          deno test --allow-read --allow-env \
+            supabase/functions/portal-user-management/handlers/ensure-responsavel-access.test.ts \
+            supabase/functions/portal-user-management/handlers/ensure-responsavel-access-reconciliation.test.ts \
+            supabase/tests/ead_assessment_mutations.contract.test.ts \
+            supabase/tests/partner_gestor_polo_scope_fail_closed.contract.test.ts
+
       - name: Gerar build de produção
         run: npm run build

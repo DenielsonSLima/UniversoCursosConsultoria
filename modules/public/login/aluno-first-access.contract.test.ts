@@ -51,7 +51,10 @@ test('seleção web e app transporta contextId opaco até o primeiro acesso', ()
     webLoginSource,
     /buildPortalFirstAccessPath\(\s*profile\.tipo,\s*profile\.contextId,\s*redirect,?\s*\)/,
   );
-  assert.match(appLoginSource, /params\.set\('context', profile\.contextId\)/);
+  assert.match(
+    appLoginSource,
+    /buildPortalFirstAccessPath\(\s*profile\.tipo,\s*profile\.contextId,\s*redirectPath,?\s*\)/,
+  );
   assert.match(pageSource, /searchParams\.get\('context'\)/);
 });
 
@@ -81,7 +84,7 @@ test('Interromper encerra a sessão e volta ao login correto sem abrir o portal'
 
   assert.match(interruptSection, /queryClient\.clear\(\)/);
   assert.match(interruptSection, /clearPortalSession\(\)/);
-  assert.match(interruptSection, /await loginService\.logout\(\)/);
+  assert.match(interruptSection, /await loginService\.logout\('global'\)/);
   assert.match(interruptSection, /navigate\(loginPath, \{ replace: true \}\)/);
   assert.match(pageSource, /Capacitor\.isNativePlatform\(\)[\s\S]*'\/aluno\/login-app'/);
   assert.match(pageSource, /onClick=\{\(\) => void handleInterrupt\(\)\}/);

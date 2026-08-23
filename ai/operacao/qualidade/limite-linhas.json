@@ -5,7 +5,8 @@
     "ai/operacao/registros/alteracoes/2026-08-21-acesso-responsavel-completo-4-6-0.md",
     "ai/operacao/registros/alteracoes/2026-08-22-modularizacao-teto-500-4-6-0.md",
     "ai/operacao/registros/alteracoes/2026-08-22-avaliacoes-ead-e-cards-tecnicos.md",
-    "ai/operacao/registros/alteracoes/2026-08-22-jornada-cursos-livres.md"
+    "ai/operacao/registros/alteracoes/2026-08-22-jornada-cursos-livres.md",
+    "ai/operacao/registros/alteracoes/2026-08-23-sincronizacao-completa-4-7-2.md"
   ],
   "exemptions": [
     {
@@ -273,9 +274,22 @@
       "remoteId": "20260822213949",
       "sha256": "0546c0ac3ee254feaf996564b68c5859317dec9727abec6e4e719712f99af99d",
       "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    {
+      "path": "supabase/migrations/20260822162200_close_null_partner_polo_gestor_scope.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260823135522",
+      "sha256": "9800fc9a23b5005ceac9285f945170ca52bf6037156d4accfb41cf00ef0acc99",
+      "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
     }
   ],
-  "retiredPaths": [],
+  "retiredPaths": [
+    {
+      "path": "modules/gestor/patrimonio/patrimonio.constants.ts",
+      "retiredInManifest": "ai/operacao/registros/alteracoes/2026-08-23-sincronizacao-completa-4-7-2.md",
+      "reason": "Constante sem qualquer importação ou uso após a adoção do cadastro dinâmico de tipos de patrimônio."
+    }
+  ],
   "generatedArtifacts": [
     {
       "path": "ai/operacao/rag/index.json",

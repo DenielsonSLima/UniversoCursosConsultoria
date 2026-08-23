@@ -1,16 +1,12 @@
 import React, { useMemo, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Building2, CheckCircle2, ArrowRight, GraduationCap, Quote, ShieldCheck, UsersRound } from 'lucide-react';
+import { ArrowLeft, Building2, GraduationCap, Quote, ShieldCheck, UsersRound } from 'lucide-react';
 import LoginForm from './components/LoginForm';
 import { loginService } from './login.service';
 import { LoginCredentials } from './login.types';
-import { getInstitutionalProfiles, PortalAuthProfile, savePortalSession } from './portal-session';
-import {
-  getProfileSelectionErrorMessage,
-  requiresProfessorPoloSelection,
-  resolveProfilePostLoginRoute,
-} from './profile-selection';
+import { clearPortalSession, getInstitutionalProfiles, PortalAuthProfile, savePortalSession } from './portal-session';
+import { getProfileSelectionErrorMessage, requiresProfessorPoloSelection, resolveProfilePostLoginRoute } from './profile-selection';
 import { supabase } from '../../lib/supabase';
 import ArkhenSignature from '../shared/components/ArkhenSignature';
 import AccessCheckingScreen from '../shared/components/AccessCheckingScreen';
@@ -27,15 +23,11 @@ import {
 } from './motivationalPhrases';
 import type { User } from '@supabase/supabase-js';
 import PortalProfileSelector, { portalProfileKey } from './components/PortalProfileSelector';
-import {
-  getPortalAccessErrorLog,
-  getPortalAccessErrorMessage,
-} from './institutional-login-error';
+import { getPortalAccessErrorLog, getPortalAccessErrorMessage } from './institutional-login-error';
 import { PortalContextServiceError } from './portal-context.service';
-import {
-  getInstitutionalOAuthErrorMessage,
-  InstitutionalLoginClock,
-} from './components/InstitutionalLoginPresentation';
+import { getInstitutionalOAuthErrorMessage, InstitutionalLoginClock } from './components/InstitutionalLoginPresentation';
+import { resetProfileSelectionSession } from './profile-selection-session';
+import ProfessorPoloSelector from './components/ProfessorPoloSelector';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -291,6 +283,28 @@ const LoginPage: React.FC = () => {
     }
   };
 
+  const handleProfileSelectionBack = async () => {
+    setIsSelectingProfile(true);
+    setProfileSelectionError('');
+    try {
+      await resetProfileSelectionSession({
+        signOutLocal: () => supabase.auth.signOut({ scope: 'local' }),
+        clearPortalSession,
+        clearQueryCache: () => queryClient.clear(),
+      });
+      setInstitutionalProfiles([]);
+      setProfessorPolos([]);
+      setProfessorName('');
+      setSelectedPoloId('');
+      setPendingProfessor(null);
+      setLoginStep('credentials');
+    } catch {
+      setProfileSelectionError('Não foi possível encerrar esta sessão neste dispositivo. Tente novamente.');
+    } finally {
+      setIsSelectingProfile(false);
+    }
+  };
+
   const dailyPhrase = useMemo(
     () => getRandomMotivationalPhrase(INSTITUTIONAL_LOGIN_MOTIVATIONAL_PHRASES),
     []
@@ -409,77 +423,20 @@ const LoginPage: React.FC = () => {
               isSelecting={isSelectingProfile}
               pendingProfileKey={pendingProfileKey}
               onSelect={handleRoleSelect}
-              onBack={() => {
-                setProfileSelectionError('');
-                setLoginStep('credentials');
-              }}
+              onBack={handleProfileSelectionBack}
             />
           </div>
         ) : (
-          <div className="w-full max-w-md animate-fadeIn rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-200/70 sm:p-8">
-            <div className="mb-8 text-center lg:text-left">
-              <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-4 mx-auto lg:mx-0">
-                <Building2 size={24} />
-              </div>
-              <h2 className="text-2xl font-black text-[#001a33] mb-2 uppercase tracking-tight">Escolha a Unidade</h2>
-              <p className="text-slate-500 text-sm">
-                Olá, <strong className="text-blue-700">{professorName}</strong>! Selecione em qual polo deseja realizar seus lançamentos no momento:
-              </p>
-            </div>
-
-            <div className="space-y-3 mb-8">
-              {professorPolos.map((polo) => {
-                const isSelected = selectedPoloId === polo.id;
-                return (
-                  <button
-                    key={polo.id}
-                    onClick={() => setSelectedPoloId(polo.id)}
-                    className={`w-full flex items-center justify-between p-5 rounded-2xl border transition-all text-left group ${
-                      isSelected
-                        ? 'border-blue-500 bg-blue-50/50 shadow-md ring-2 ring-blue-100'
-                        : 'border-slate-200 bg-white hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-xl transition-colors ${isSelected ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200'}`}>
-                        <Building2 size={18} />
-                      </div>
-                      <div>
-                        <p className={`font-bold text-sm ${isSelected ? 'text-[#001a33]' : 'text-slate-700'}`}>
-                          {polo.nome}
-                        </p>
-                        <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider mt-0.5">
-                          {polo.nome.toLowerCase().includes('matriz') ? 'Sede Central' : 'Filial'}
-                        </p>
-                      </div>
-                    </div>
-                    {isSelected ? (
-                      <CheckCircle2 className="text-blue-600" size={18} />
-                    ) : (
-                      <div className="w-5 h-5 rounded-full border border-slate-200" />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="space-y-3">
-              <button
-                onClick={handlePoloConfirm}
-                className="w-full bg-[#001a33] hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-900/20 text-white font-black py-4 rounded-xl transition-all uppercase tracking-widest text-xs flex items-center justify-center gap-2 group transform active:scale-[0.98]"
-              >
-                <span>Confirmar e Acessar</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </button>
-
-              <button
-                onClick={() => setLoginStep('credentials')}
-                className="w-full bg-white border border-slate-200 text-slate-500 hover:text-slate-800 py-3.5 rounded-xl transition-all uppercase tracking-widest text-[10px] font-black text-center"
-              >
-                Voltar para Login
-              </button>
-            </div>
-          </div>
+          <ProfessorPoloSelector
+            polos={professorPolos}
+            professorName={professorName}
+            selectedPoloId={selectedPoloId}
+            errorMessage={profileSelectionError}
+            isLeaving={isSelectingProfile}
+            onSelect={setSelectedPoloId}
+            onConfirm={handlePoloConfirm}
+            onBack={handleProfileSelectionBack}
+          />
         )}
 
           <div className="mt-5 flex w-full max-w-md justify-center pb-1 sm:justify-end sm:pr-2 xl:absolute xl:bottom-6 xl:right-6 xl:mt-0 xl:w-auto xl:max-w-none xl:pb-0 xl:pr-0">

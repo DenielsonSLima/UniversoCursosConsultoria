@@ -15,52 +15,12 @@ import {
   UserPlus,
   X,
 } from 'lucide-react';
-import { Disciplina } from '../../../../../cadastros/cadastros.types';
-import {
-  TurmaAtividadeExtraClasse,
-  TurmaAulaPlanejada,
-  TurmaAulaUpdateInput,
-  TurmaDisciplinaConfig,
-} from '../../turma-grade.types';
+import { TurmaAulaPlanejada } from '../../turma-grade.types';
 import { isAcademicClassContentPending } from '../../../../../../../lib/academicClassMeetings';
-import { formatGradeHours, TurmaGradeTheme } from './turma-grade-ui';
-import type { PlanoCursoGestaoStatus } from '../../../../../../shared/plano-curso/plano-curso.types';
+import { formatGradeHours } from './turma-grade-ui';
 import PlanoCursoStatusControl from './plano-curso/PlanoCursoStatusControl';
-
-interface TurmaGradeDisciplinaProps {
-  disciplina: Disciplina;
-  config: TurmaDisciplinaConfig;
-  aulas: TurmaAulaPlanejada[];
-  atividades: TurmaAtividadeExtraClasse[];
-  planoCurso: PlanoCursoGestaoStatus | null;
-  planoCursoLoading: boolean;
-  planoCursoError: boolean;
-  metricas?: any;
-  theme: TurmaGradeTheme;
-  singleProfessor: boolean;
-  isExpanded: boolean;
-  isSaving: boolean;
-  updatingAulaId?: string;
-  titulo: string;
-  data: string;
-  horas: string;
-  horaInicio: string;
-  horaFim: string;
-  isExtraClasse: boolean;
-  onToggle: () => void;
-  onToggleConcluida: () => void;
-  onOpenProfessor: () => void;
-  onOpenPlanoCurso: () => void;
-  onDeleteAula: (aulaId: string) => void;
-  onUpdateAula: (input: TurmaAulaUpdateInput) => Promise<void>;
-  onTituloChange: (value: string) => void;
-  onDataChange: (value: string) => void;
-  onHorasChange: (value: string) => void;
-  onHoraInicioChange: (value: string) => void;
-  onHoraFimChange: (value: string) => void;
-  onExtraClasseChange: (value: boolean) => void;
-  onAddPlanejamento: () => void;
-}
+import TurmaGradePlanejamentoForm from './TurmaGradePlanejamentoForm';
+import type { TurmaGradeDisciplinaProps } from './TurmaGradeDisciplina.types';
 
 const TurmaGradeDisciplina: React.FC<TurmaGradeDisciplinaProps> = ({
   disciplina,
@@ -233,7 +193,7 @@ const TurmaGradeDisciplina: React.FC<TurmaGradeDisciplinaProps> = ({
           ) : (
             <button
               onClick={onOpenProfessor}
-              className={`flex items-center gap-2 px-4 py-2 bg-slate-50 border border-dashed border-slate-300 rounded-lg text-slate-500 hover:${theme.text} hover:${theme.hoverBorder} hover:${theme.bg} transition-all text-xs font-bold uppercase tracking-wide`}
+              className={`flex items-center gap-2 px-4 py-2 bg-slate-50 border border-dashed border-slate-300 rounded-lg text-slate-500 ${theme.hoverBorder} ${theme.hoverBg} hover:text-white transition-all text-xs font-bold uppercase tracking-wide`}
             >
               <UserPlus size={14} /> Atribuir Docente
             </button>
@@ -247,7 +207,7 @@ const TurmaGradeDisciplina: React.FC<TurmaGradeDisciplinaProps> = ({
             <div>
               <span className="text-xs font-bold text-slate-700">Planejamento das aulas</span>
               <p className="mt-0.5 text-[10px] font-semibold text-slate-400">
-                A Gestão informa data e carga horária e pode adiantar o conteúdo. Se deixar em branco, o professor completa no diário.
+                A Gestão informa data e carga horária e pode adiantar o conteúdo. Em aulas de 4h ou 8h, o horário é sugerido e continua editável.
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -478,117 +438,24 @@ const TurmaGradeDisciplina: React.FC<TurmaGradeDisciplinaProps> = ({
             )}
           </div>
 
-          <div className="mt-3 pl-4 flex gap-2 items-center flex-wrap sm:flex-nowrap">
-            <CornerDownRight size={14} className={`${theme.text} shrink-0`} />
-            <label
-              className={`flex min-h-[38px] shrink-0 cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-colors ${isExtraClasse ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-500 hover:border-emerald-200 hover:text-emerald-700'}`}
-              title="Marcar como atividade extra-classe para os alunos responderem no portal"
-            >
-              <input
-                type="checkbox"
-                className="sr-only"
-                checked={isExtraClasse}
-                onChange={(event) => onExtraClasseChange(event.target.checked)}
-              />
-              <ClipboardCheck size={14} /> {isExtraClasse ? 'Extra-classe ativa' : 'Marcar extra-classe'}
-            </label>
-            {isExtraClasse ? (
-              <input
-                type="text"
-                placeholder="Tema da atividade extra-classe..."
-                className={`flex-1 text-xs bg-white border border-slate-200 rounded-xl outline-none ${theme.focusBorder} px-3 py-2.5 transition-colors font-medium text-slate-700 placeholder-slate-400 min-w-[150px]`}
-                value={titulo}
-                onChange={(event) => onTituloChange(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') document.getElementById(`turma-data-input-${disciplina.id}`)?.focus();
-                }}
-                aria-label="Tema da atividade extra-classe"
-              />
-            ) : (
-              <input
-                type="text"
-                placeholder="Conteúdo da aula (opcional)"
-                className={`flex-1 text-xs bg-white border border-slate-200 rounded-xl outline-none ${theme.focusBorder} px-3 py-2.5 transition-colors font-medium text-slate-700 placeholder-slate-400 min-w-[190px]`}
-                value={titulo}
-                onChange={(event) => onTituloChange(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') document.getElementById(`turma-data-input-${disciplina.id}`)?.focus();
-                }}
-                maxLength={1000}
-                title="Opcional: deixe em branco para o professor preencher no diário"
-                aria-label="Conteúdo programático opcional da aula"
-              />
-            )}
-            <input
-              id={`turma-data-input-${disciplina.id}`}
-              type="date"
-              className={`w-36 text-xs bg-white border border-slate-200 rounded-xl outline-none ${theme.focusBorder} px-3 py-2.5 transition-colors font-medium text-slate-700`}
-              value={data}
-              onChange={(event) => onDataChange(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  const nextInputId = isExtraClasse
-                    ? `turma-horas-input-${disciplina.id}`
-                    : `turma-hora-inicio-input-${disciplina.id}`;
-                  document.getElementById(nextInputId)?.focus();
-                }
-              }}
-            />
-            {!isExtraClasse && (
-              <input
-                id={`turma-hora-inicio-input-${disciplina.id}`}
-                type="time"
-                className={`w-[88px] text-xs bg-white border border-slate-200 rounded-xl outline-none ${theme.focusBorder} px-2 py-2.5 transition-colors text-center font-semibold text-slate-700`}
-                value={horaInicio}
-                onChange={(event) => onHoraInicioChange(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') document.getElementById(`turma-hora-fim-input-${disciplina.id}`)?.focus();
-                }}
-                title="Opcional: informe início e fim juntos"
-                aria-label="Hora de início da aula"
-              />
-            )}
-            {!isExtraClasse && (
-              <input
-                id={`turma-hora-fim-input-${disciplina.id}`}
-                type="time"
-                className={`w-[88px] text-xs bg-white border border-slate-200 rounded-xl outline-none ${theme.focusBorder} px-2 py-2.5 transition-colors text-center font-semibold text-slate-700`}
-                value={horaFim}
-                onChange={(event) => onHoraFimChange(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') document.getElementById(`turma-horas-input-${disciplina.id}`)?.focus();
-                }}
-                title="Opcional: informe início e fim juntos"
-                aria-label="Hora de fim da aula"
-              />
-            )}
-            <input
-              id={`turma-horas-input-${disciplina.id}`}
-              type="number"
-              placeholder="Hrs"
-              className={`w-16 text-xs bg-white border border-slate-200 rounded-xl outline-none ${theme.focusBorder} px-2 py-2.5 transition-colors text-center font-bold text-slate-700 placeholder-slate-400`}
-              value={horas}
-              onChange={(event) => onHorasChange(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') onAddPlanejamento();
-              }}
-            />
-            {!isExtraClasse && Number(horas.replace(',', '.')) === 8 && (
-              <span className="shrink-0 rounded-lg border border-blue-100 bg-blue-50 px-2 py-1 text-[9px] font-black uppercase tracking-wider text-blue-700">
-                M 4h + T 4h
-              </span>
-            )}
-            <button
-              type="button"
-              onClick={onAddPlanejamento}
-              className={`min-h-[38px] px-4 py-2.5 ${theme.bg} ${theme.text} rounded-xl ${theme.hoverBg} hover:text-white transition-colors border ${theme.border} flex items-center justify-center gap-2 shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-[10px] font-black uppercase tracking-widest`}
-              disabled={isSaving || !horas.trim() || !data.trim() || (isExtraClasse && !titulo.trim())}
-              aria-label={isExtraClasse ? 'Criar atividade extra-classe' : 'Planejar horário da aula'}
-            >
-              {isSaving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
-              {isExtraClasse ? 'Criar atividade' : 'Planejar horário'}
-            </button>
-          </div>
+          <TurmaGradePlanejamentoForm
+            disciplinaId={disciplina.id}
+            theme={theme}
+            titulo={titulo}
+            data={data}
+            horas={horas}
+            horaInicio={horaInicio}
+            horaFim={horaFim}
+            isExtraClasse={isExtraClasse}
+            isSaving={isSaving}
+            onTituloChange={onTituloChange}
+            onDataChange={onDataChange}
+            onHorasChange={onHorasChange}
+            onHoraInicioChange={onHoraInicioChange}
+            onHoraFimChange={onHoraFimChange}
+            onExtraClasseChange={onExtraClasseChange}
+            onAddPlanejamento={onAddPlanejamento}
+          />
         </div>
       )}
     </div>

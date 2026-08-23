@@ -9,7 +9,7 @@ export interface DashboardDaySummary {
 }
 
 export type DashboardQuickActionMode = 'partner' | 'student-finance';
-export type DashboardPartnerForm = 'aluno' | 'professor' | 'pf' | 'pj';
+export type DashboardPartnerForm = 'aluno' | 'professor' | 'responsavel' | 'pf' | 'pj';
 
 export const DAY_IN_MS = 24 * 60 * 60 * 1000;
 

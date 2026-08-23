@@ -1,8 +1,8 @@
 {
-  "version": "4.7.1",
+  "version": "4.7.2",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 2,
-  "releasedAt": "2026-08-22",
-  "summary": "Fechamento operacional da publicação 4.7.0 com registros e índice RAG sincronizados"
+  "revision": 3,
+  "releasedAt": "2026-08-23",
+  "summary": "Sessões multiacesso seguras, escopo de Parceiros fechado e melhorias em grade, Dashboard e documentos"
 }

@@ -13,6 +13,19 @@ export interface TurmaGradeTheme {
   hoverBorderDark: string;
 }
 
+interface SuggestedClassSchedule {
+  horaInicio: string;
+  horaFim: string;
+}
+
+interface SuggestedClassScheduleInput {
+  previousHours: string;
+  nextHours: string;
+  horaInicio: string;
+  horaFim: string;
+  isExtraClasse: boolean;
+}
+
 const THEMES: Record<TurmaGradeColorTheme, TurmaGradeTheme> = {
   rose: {
     text: 'text-rose-600',
@@ -59,4 +72,35 @@ export const formatGradeHours = (value: number) => {
   return Number.isInteger(value)
     ? String(value)
     : value.toFixed(2).replace(/\.?0+$/, '').replace('.', ',');
+};
+
+const resolveSuggestedClassSchedule = (hours: string): SuggestedClassSchedule | null => {
+  const normalizedHours = Number(hours.replace(',', '.'));
+  if (normalizedHours === 4) return { horaInicio: '08:00', horaFim: '12:00' };
+  if (normalizedHours === 8) return { horaInicio: '08:00', horaFim: '16:00' };
+  return null;
+};
+
+export const getSuggestedClassScheduleForHoursChange = ({
+  previousHours,
+  nextHours,
+  horaInicio,
+  horaFim,
+  isExtraClasse,
+}: SuggestedClassScheduleInput): SuggestedClassSchedule | null => {
+  if (isExtraClasse) return null;
+
+  const nextSchedule = resolveSuggestedClassSchedule(nextHours);
+  const previousSchedule = resolveSuggestedClassSchedule(previousHours);
+  const isUsingPreviousSuggestion = Boolean(
+    previousSchedule
+      && horaInicio === previousSchedule.horaInicio
+      && horaFim === previousSchedule.horaFim,
+  );
+  if (!nextSchedule) {
+    return isUsingPreviousSuggestion ? { horaInicio: '', horaFim: '' } : null;
+  }
+
+  const hasEmptySchedule = !horaInicio && !horaFim;
+  return hasEmptySchedule || isUsingPreviousSuggestion ? nextSchedule : null;
 };

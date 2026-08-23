@@ -6,10 +6,12 @@ import { PORTAL_CONTEXT_HOME_ROUTES } from '../../login/portal-context.contract'
 import { buildPortalFirstAccessPath } from '../../login/portal-first-access';
 import { resolveProfilePostLoginRoute } from '../../login/profile-selection';
 import {
+  clearPortalSession,
   savePortalSession,
   type PortalAuthProfile,
 } from '../../login/portal-session';
 import { portalProfileKey } from '../../login/components/PortalProfileSelector';
+import { resetProfileSelectionSession } from '../../login/profile-selection-session';
 import {
   STUDENT_LOGIN_MOTIVATIONAL_PHRASES,
   getRandomMotivationalPhrase,
@@ -140,6 +142,26 @@ export const useAlunoLoginPublicPage = () => {
     } finally {
       setIsSelectingProfile(false);
       setPendingProfileKey(null);
+    }
+  };
+
+  const handleProfileSelectionBack = async () => {
+    setIsSelectingProfile(true);
+    setMessage(null);
+    try {
+      await resetProfileSelectionSession({
+        signOutLocal: () => supabase.auth.signOut({ scope: 'local' }),
+        clearPortalSession,
+        clearQueryCache: () => queryClient.clear(),
+      });
+      setPublicProfiles([]);
+    } catch {
+      setMessage({
+        tone: 'error',
+        text: 'Não foi possível encerrar esta sessão neste dispositivo. Tente novamente.',
+      });
+    } finally {
+      setIsSelectingProfile(false);
     }
   };
 
@@ -346,10 +368,7 @@ export const useAlunoLoginPublicPage = () => {
       isSelecting: isSelectingProfile,
       pendingProfileKey,
       onSelect: handleProfileSelect,
-      onBack: () => {
-        setPublicProfiles([]);
-        setMessage(null);
-      },
+      onBack: handleProfileSelectionBack,
     },
     cardProps: {
       mode,

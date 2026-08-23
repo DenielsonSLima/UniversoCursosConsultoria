@@ -2,7 +2,22 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
-Histórico anterior: [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+Histórico anterior: [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+
+## [4.7.2] - 2026-08-23
+
+### Corrigido
+
+- Logout, retorno dos seletores de perfil e primeiro acesso agora limpam a sessão local com segurança, preservando outros dispositivos apenas nos encerramentos automáticos.
+- A grade técnica ganhou rótulos explícitos, horários sugeridos coerentes e remoção da sugestão ao trocar para outra carga; a Ficha de Matrícula repara a grade eleitoral sem danificar estruturas externas.
+
+### Adicionado
+
+- O atalho “Novo Registro” do Dashboard passa a oferecer Responsável pelo fluxo canônico existente.
+
+### Segurança e qualidade
+
+- O escopo RLS de Parceiros falha fechado para polo nulo, a reconciliação de convites foi reforçada e os contratos críticos passaram a integrar o gate do GitHub.
 
 ## [4.7.1] - 2026-08-22
 
@@ -471,20 +486,3 @@ Histórico anterior: [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-
 
 - A centralização foi validada pelas coordenadas do contorno visível, e os três arquivos foram confirmados sem canal alfa.
 - Build de produção, TypeScript, lint e isolamento dos metadados do gestor foram verificados antes da publicação.
-
-## [2.2.3-beta.20] - 2026-08-02
-
-### Corrigido
-
-- A instalação pelo Safari agora identifica corretamente o aplicativo do aluno como `Universo CC`, inclusive quando iniciada pelas páginas públicas de login, cadastro, confirmação ou recuperação de senha.
-- O atalho instalado abre o escopo `/aluno/`; sessões válidas seguem para o início do aluno e sessões ausentes ou expiradas retornam para `/aluno/entrar`.
-- O ícone do aplicativo passou a usar fundo azul-marinho institucional totalmente opaco, eliminando o fundo preto criado pelo iOS ao compor imagens transparentes.
-
-### Segurança
-
-- O manifesto, os ícones e o service worker permanecem exclusivos do aluno; site institucional, gestor e professor continuam usando os próprios metadados e não são controlados pelo escopo `/aluno/`.
-
-### Qualidade
-
-- Ícones versionados quebram o cache anterior do Safari, e o fluxo de autenticação realiza uma nova carga do documento antes de entrar no portal.
-- Build de produção, TypeScript, lint, testes de autenticação e auditoria dos HTMLs gerados foram executados antes da publicação.

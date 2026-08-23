@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
+import type { SyntheticEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
@@ -10,6 +11,7 @@ interface UsePortalLogoutOptions {
 }
 
 const QUERY_CACHE_AUTH_UID_KEY = 'portal_query_cache_auth_uid';
+type PortalLogoutTrigger = 'inactivity' | SyntheticEvent;
 
 export const usePortalLogout = ({ loginPath }: UsePortalLogoutOptions) => {
   const navigate = useNavigate();
@@ -26,15 +28,16 @@ export const usePortalLogout = ({ loginPath }: UsePortalLogoutOptions) => {
     }
   }, [loginPath, navigate, queryClient]);
 
-  const logout = useCallback(() => {
+  const logout = useCallback((trigger?: PortalLogoutTrigger) => {
     if (isLoggingOutRef.current) return;
     isLoggingOutRef.current = true;
 
     // A interface sai da área protegida antes da chamada remota. Assim, uma
     // rede lenta não deixa o portal montado sem dados enquanto o token é revogado.
     redirectToLogin();
-    void loginService.logout().catch((error) => {
-      console.warn('A sessão local foi encerrada, mas a revogação global não foi concluída.', error);
+    const scope = trigger === 'inactivity' ? 'local' : 'global';
+    void loginService.logout(scope).catch((error) => {
+      console.warn('Não foi possível confirmar o encerramento da sessão.', error);
     });
   }, [redirectToLogin]);
 

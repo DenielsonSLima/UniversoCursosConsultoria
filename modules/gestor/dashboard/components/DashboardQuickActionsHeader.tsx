@@ -34,7 +34,7 @@ const DashboardQuickActionsHeader: React.FC<DashboardQuickActionsHeaderProps> = 
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-bold text-[#001a33]">Cadastrar parceiro</span>
               <span className="mt-0.5 block text-[11px] font-medium text-slate-500">
-                Aluno, professor, pessoa física ou jurídica
+                Aluno, professor, responsável, pessoa física ou jurídica
               </span>
             </span>
             <ChevronRight size={16} className="text-blue-300 transition-transform group-hover:translate-x-0.5 group-hover:text-blue-600" />
