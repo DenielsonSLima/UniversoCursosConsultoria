@@ -1,48 +1,45 @@
 # Lote ativo
 
-Estado: `PUBLICADO_PRODUCAO_4_7_6`
+Estado: `EM_REVISAO_GITHUB`
 
-## Lote: 2026-08-24-caixa-assinaturas-uuid-matriz-4-7-6
+## Lote: 2026-08-24-card-email-validado-gestor
 
-- Pedido: corrigir o erro da Caixa de Assinaturas exibido na Secretaria e publicar no GitHub e em Produção.
-- Causa confirmada: a fronteira cliente das RPCs exigia nibbles de versão e variante RFC 4122, embora o PostgreSQL, o contrato de sessão e o polo Matriz usem uma forma lexical UUID legada válida. A exceção era lançada antes de qualquer request.
-- Registro: `ai/operacao/registros/alteracoes/2026-08-24-caixa-assinaturas-uuid-matriz-4-7-6.md`.
-- Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-24-caixa-assinaturas-uuid-matriz-4-7-6.md`.
-- Versão: `4.7.6` estável.
-- Publicação concluída: PR `#87` integrada por squash na `main`, commit `78417700fcb10239f4c3d51aa008c83279702088`; Vercel Production `7jcCtR6xbsuzAN5HHiJcFPrvMW6t` pronta e smoke autenticado aprovado. Nenhuma alteração Supabase foi necessária.
+- Pedido: corrigir o ícone pendente no card do aluno quando o e-mail já foi validado administrativamente e atualizar o projeto no GitHub.
+- Causa confirmada: o backend devolvia separadamente a confirmação real do Auth e a validação administrativa, mas a listagem descartava `emailValidatedByManager`; o card recebia apenas o `status` pendente do Auth.
+- Registro: `ai/operacao/registros/alteracoes/2026-08-24-card-email-validado-gestor.md`.
+- Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-24-card-email-validado-gestor.md`.
+- Próxima versão registrada na branch: `4.7.7`; a Produção permanece em `4.7.6` até eventual merge explicitamente autorizado.
 
 ### Critérios de aceite
 
-1. A Caixa de Assinaturas da Matriz chega à RPC `assinatura_eletronica_listar_caixa_contexto` sem falhar na validação local. `ATENDIDO`.
-2. UUIDs na forma lexical aceita pelo PostgreSQL, incluindo o polo Matriz, são aceitos pela fronteira das RPCs. `ATENDIDO`.
-3. UUIDs malformados ou com caracteres não hexadecimais continuam bloqueados. `ATENDIDO`.
-4. Autorização, escopo, query keys, banco, RLS e funções remotas permanecem inalterados. `ATENDIDO`.
-5. CI, Preview, merge, Produção e disponibilidade da versão 4.7.6 devem concluir antes do fechamento. `ATENDIDO`.
-6. O smoke autenticado da Caixa deve deixar o estado de erro e apresentar a caixa vazia ou os itens autorizados. `ATENDIDO`.
+1. E-mail confirmado no Auth continua exibindo check verde com o rótulo `E-mail confirmado`. `ATENDIDO`.
+2. E-mail pendente no Auth, mas validado pelo gestor, exibe check verde com o rótulo `E-mail validado pelo gestor`. `ATENDIDO`.
+3. O card não mascara nem altera o estado real do Supabase Auth. `ATENDIDO`.
+4. Nenhuma migration, dado, Auth user, RLS ou Edge Function é alterado. `ATENDIDO`.
+5. Teste focado, lint, limite de linhas, revisão independente e smoke autenticado devem aprovar antes da publicação. `ATENDIDO`.
+6. CI e Preview do GitHub devem concluir antes de qualquer merge futuro. `ATENDIDO`.
 
 ### Evidências e validação
 
-- Logs do instante da captura: sessão válida e demais requests 200, sem request para a RPC da caixa, confirmando falha anterior à rede.
-- Smoke remoto somente leitura, com o mesmo contexto autorizado e o polo Matriz: contrato com `items` e `nextCursor`, sem erro e sem mutação.
-- Node focado: `17/17` testes aprovados, incluindo o UUID legado da Matriz e a rejeição de UUID malformado.
-- Backend remoto: função presente, `SECURITY DEFINER`, `search_path` vazio, execução restrita a `authenticated` e sem grant para `anon`.
-- Node focado `17/17`, teto de 500 linhas, versão, TypeScript, lint, build e testes operacionais: aprovados; revisão independente sem finding `Critical` ou `Important`.
-- GitHub: PR `#87` integrada por squash na `main`, commit `78417700fcb10239f4c3d51aa008c83279702088`; manifesto remoto conferido com exatamente nove arquivos.
-- Vercel: Preview `ELzsXC4U5h4sNTxNGGFF6VBHgUEp` e Production `7jcCtR6xbsuzAN5HHiJcFPrvMW6t` concluídas com sucesso.
-- Produção: `https://universocc.com.br` respondeu HTTP 200; o bundle público contém a versão 4.7.6 e o resumo estável correspondente.
-- Smoke autenticado em Produção, na sessão real da Matriz: a Caixa deixou o estado de erro e exibiu `Nenhuma assinatura pendente disponível`.
+- Consulta remota somente leitura confirmou o caso real: validação administrativa presente e confirmação do Auth ainda ausente.
+- Node focado: `7/7` testes aprovados.
+- ESLint focado e `git diff --check`: aprovados.
+- Smoke visual autenticado no localhost: check verde exibido no card do aluno afetado.
+- Revisão independente contra a `main` remota sem findings `Critical` ou `Important`; único apontamento `Minor` foi o teste contratual por fonte, compensado pelo smoke visual real.
+- Controle de versão corrigido na branch com o avanço proposto para `4.7.7` e a entrada correspondente no changelog.
+- GitHub Actions `Controle de versão` e `Qualidade do produto`: aprovados no commit final da PR.
+- Preview Vercel da PR: `Ready`.
 
-### Fechamento remoto
+### Publicação GitHub
 
-1. A aplicação foi publicada pela PR `#87`, sem operação remota no Supabase.
-2. Preview protegida e Vercel Production ficaram `Ready` antes do fechamento.
-3. A sessão autenticada permaneceu ativa após a atualização e consultou a Caixa da Secretaria com sucesso.
-4. Nenhuma variável, dado, migration, Edge Function ou envelope foi alterado.
+1. Branch e PR dedicadas somente a este manifesto.
+2. Merge e Vercel Production não integram a autorização atual.
+3. CI e Preview concluíram com sucesso; a PR permanece aberta aguardando autorização explícita para eventual merge.
 
 ### Limites e exclusões
 
-1. Nenhuma migration, Edge Function, variável Vercel, dado acadêmico ou envelope integra este lote.
-2. A publicação fica restrita ao manifesto explícito de nove arquivos.
+1. Nenhuma operação remota Supabase integra este lote.
+2. O registro da próxima versão na branch não autoriza merge, promoção nem publicação em Produção.
 3. Alterações paralelas do workspace não integram a branch nem o commit remoto.
 
 Histórico: `ai/operacao/registros/ALTERACOES.md` e `ai/operacao/registros/alteracoes/`.

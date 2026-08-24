@@ -4,20 +4,26 @@ import type { PartnerEmailConfirmationStatusValue } from '../../portal-activatio
 
 interface EmailConfirmationStatusProps {
   status?: PartnerEmailConfirmationStatusValue;
+  emailValidatedByManager?: boolean;
 }
 
 const EmailConfirmationStatus: React.FC<EmailConfirmationStatusProps> = ({
   status,
+  emailValidatedByManager,
 }) => {
   if (!status || status === 'no_email') return null;
 
-  if (status === 'confirmed') {
+  if (status === 'confirmed' || emailValidatedByManager) {
+    const label = status === 'confirmed'
+      ? 'E-mail confirmado'
+      : 'E-mail validado pelo gestor';
+
     return (
       <BadgeCheck
         size={15}
         className="shrink-0 text-emerald-500"
-        aria-label="E-mail confirmado"
-        title="E-mail confirmado"
+        aria-label={label}
+        title={label}
       />
     );
   }

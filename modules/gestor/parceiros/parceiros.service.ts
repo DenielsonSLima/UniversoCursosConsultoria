@@ -168,6 +168,7 @@ export const parceirosService = {
               emailConfirmationStatus: emailStatus.status,
               authUserExists: emailStatus.authUserExists,
               emailConfirmed: emailStatus.emailConfirmed,
+              emailValidatedByManager: emailStatus.emailValidatedByManager,
             }
           : partner;
       });
