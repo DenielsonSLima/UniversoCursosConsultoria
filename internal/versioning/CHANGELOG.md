@@ -15,7 +15,7 @@ Histórico anterior: [02/08/2026 — continuação](./changelog/2026-08-02-parte
 ### Segurança e qualidade
 
 - Novas emissões congelam a capa no manifesto V3 por URL, MIME, dimensões, tamanho e SHA-256, mantendo a finalização dos manifestos V1/V2 históricos.
-- A migration e a Edge Function permanecem somente versionadas nesta PR; não houve implantação nem merge em Produção.
+- A migration V3, a Edge Function v14 e a aplicação web foram publicadas em Produção pela PR #85; o contrato remoto preserva V1/V2 históricos, exige V3 para novas emissões e mantém JWT/ACLs restritivos.
 
 ## [4.7.4] - 2026-08-23
 

@@ -1,6 +1,6 @@
 # Restauração da capa do Diário e slots digitais — 2026-08-24
 
-Estado: `PUBLICACAO_GITHUB_AUTORIZADA_SEM_MERGE_PRODUCAO`
+Estado: `PUBLICADO_PRODUCAO_4_7_5`
 
 ## Diagnóstico
 
@@ -31,7 +31,10 @@ A consulta remota foi somente leitura. Inicialmente, nos modelos `diario_TECNICO
 - Revisão independente final sem `Critical` ou `Important`.
 - Teto de 500 linhas aprovado.
 - Índice RAG operacional regenerado e contrato de agentes aprovado.
-- Smoke autenticado da interface pendente por indisponibilidade de navegador controlável.
+- GitHub: PR `#85` integrada por squash no commit assinado `eea13ab218a92775a0b5303c34a3b84450d05675`.
+- Supabase: migration remota `20260824145833_freeze_diary_cover_background_assets_manifest_v3`; helper V3, wrapper V1/V2/V3, trigger exigindo V3 e ACLs confirmados. Edge Function `assinatura-eletronica-diario-artefatos` v14 `ACTIVE`, `verify_jwt=true`, bundle `2e360030b749ba34ecc1512ebc277729d6a983a119762aab089d52ff7baea40c`.
+- Vercel Production: deployment `FvuvoteCQdDPttcVvvLnzPR2fXw6` concluído com sucesso; domínio canônico HTTP 200 e bundle público com o resumo estável 4.7.5.
+- Smoke autenticado da interface não executado: a sessão local expirou e o Preview não possui as variáveis exclusivas de Production. O fechamento preserva essa limitação sem substituir a inspeção ausente por alegação de sucesso.
 - Limpeza operacional autorizada do marcador `UCQA-20260823`: 2 turmas temporárias (Técnico e Livre), 2 matrículas, 5 parceiros, 6 identidades de acesso, 3 despesas pendentes e seus vínculos foram removidos. Os 3 patrimônios temporários foram excluídos pelo fluxo oficial e permanecem somente como registros inativos com trilha imutável de auditoria. A verificação final encontrou zero registro operacional ativo do marcador.
 
 ## Manifesto explícito
@@ -79,7 +82,8 @@ Total: 38 arquivos
 
 ## Limites
 
-- A limpeza de dados temporários do marcador `UCQA-20260823` foi a única mutação remota executada. Eventos de auditoria/Realtime e os patrimônios oficialmente excluídos foram preservados por desenho; migration, Edge Function e aplicação web não foram implantadas no Supabase ou na Vercel.
-- A publicação solicitada limita-se ao manifesto deste lote em branch/PR no GitHub. Merge em `main` e Produção continuam sem autorização.
+- A limpeza de dados temporários do marcador `UCQA-20260823`, a migration V3, a Edge Function v14 e o merge/deploy web foram as mutações remotas autorizadas. Eventos de auditoria/Realtime e os patrimônios oficialmente excluídos foram preservados por desenho.
+- A publicação ficou limitada ao manifesto explícito de 38 arquivos da PR `#85`; o squash em `main`, Supabase e Vercel Production foram concluídos. Nenhuma variável da Vercel foi alterada.
 - A correção dos três modelos não deve ser automatizada em lote: o botão de mover precisa ser usado apenas quando a imagem atual da contracapa for de fato a capa.
+- Nenhum envelope ou manifesto histórico foi regravado durante a publicação.
 - Artefatos temporários de renderização não integram o lote.
