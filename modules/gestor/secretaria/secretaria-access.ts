@@ -20,7 +20,7 @@ export const SECRETARIA_ACCESS_OPTIONS = [
   { id: 'dependencias-academicas', label: 'Dependências Acadêmicas', legacyTab: 'solicitacoes' },
   { id: 'certificados', label: 'Certificados', legacyTab: 'historico' },
   { id: 'historico-emissoes', label: 'Histórico de Emissões', legacyTab: 'historico' },
-  { id: 'assinatura-eletronica', label: 'Assinaturas e Acervo', legacyTab: null, inheritsLegacy: false },
+  { id: 'assinatura-eletronica', label: 'Assinaturas', legacyTab: null, inheritsLegacy: false },
 ] as const;
 
 export type SecretariaAccessId = typeof SECRETARIA_ACCESS_OPTIONS[number]['id'];

@@ -10,6 +10,7 @@ import {
   Search,
   UserRound,
   Users,
+  UsersRound,
   X,
 } from 'lucide-react';
 import { financeiroQueryKeys } from '../../financeiro/financeiro.queryKeys';
@@ -57,6 +58,13 @@ const partnerOptions: Array<{
     description: 'Cadastro de docente',
     icon: Users,
     tone: 'bg-violet-50 text-violet-600',
+  },
+  {
+    id: 'responsavel',
+    label: 'Responsável',
+    description: 'Representante legal do aluno',
+    icon: UsersRound,
+    tone: 'bg-emerald-50 text-emerald-600',
   },
   {
     id: 'pf',

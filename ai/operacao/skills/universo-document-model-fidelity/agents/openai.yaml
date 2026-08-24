@@ -1,0 +1,4 @@
+interface:
+  display_name: "Fidelidade dos Documentos Universo"
+  short_description: "Impede PDFs genéricos que ignorem modelos configurados"
+  default_prompt: "Confira os modelos de documentos e a marca d'água configurados antes de alterar o gerador, preserve o snapshot completo e bloqueie qualquer fallback genérico divergente."

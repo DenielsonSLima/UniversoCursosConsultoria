@@ -132,9 +132,9 @@ const AlunoFirstAccessPage = ({ role = 'Aluno' }: AlunoFirstAccessPageProps) => 
     clearPortalSession();
 
     try {
-      await loginService.logout();
+      await loginService.logout('global');
     } catch (error) {
-      console.warn('A sessão local foi interrompida, mas a revogação global não foi concluída.', error);
+      console.warn('Não foi possível confirmar o encerramento da sessão.', error);
     } finally {
       navigate(loginPath, { replace: true });
     }

@@ -1,5 +1,8 @@
 
-import { supabase } from '../../lib/supabase';
+import {
+  forceClearPersistedSupabaseSession,
+  supabase,
+} from '../../lib/supabase';
 import { Capacitor } from '@capacitor/core';
 import { LoginCredentials, AuthResponse } from './login.types';
 import { buildAuthRedirectUrl } from '../../lib/app-url';
@@ -8,6 +11,10 @@ import {
   clearPendingOAuthReturn,
   rememberPendingOAuthReturn,
 } from '../shared/auth/oauth-return-state';
+import {
+  performPortalLogout,
+  type PortalLogoutScope,
+} from './portal-logout-flow';
 
 const AUTH_GENERIC_ERROR = 'Não foi possível autenticar com as credenciais informadas. Verifique seus dados e tente novamente.';
 const AUTH_EMAIL_CONFIRMATION_REQUIRED_ERROR = 'Confirme o e-mail enviado para ativar sua conta. Verifique também Spam ou Lixo eletrônico.';
@@ -15,6 +22,8 @@ const AUTH_RATE_LIMIT_ERROR = 'Muitas tentativas. Aguarde alguns minutos e tente
 const AUTH_CHALLENGE_ERROR = 'A verificação de segurança expirou ou falhou. Tente verificá-la novamente.';
 const AUTH_SERVICE_ERROR = 'O serviço de autenticação está temporariamente indisponível. Tente novamente em instantes.';
 const RECOVERY_GENERIC_MESSAGE = 'Se existir uma conta vinculada aos dados informados, enviaremos as instruções de recuperação.';
+
+export type { PortalLogoutScope } from './portal-logout-flow';
 
 const getFriendlyOAuthError = (message: string) => {
   if (message.includes('Manual linking is disabled')) {
@@ -125,18 +134,19 @@ export const loginService = {
     };
   },
 
-  async logout() {
+  async logout(scope: PortalLogoutScope = 'local') {
     clearPortalSession();
 
-    const { error } = await supabase.auth.signOut({ scope: 'global' });
-    if (!error) return;
-
-    // Se a revogação global falhar por rede, ainda removemos o token deste
-    // navegador para impedir que um F5 restaure uma sessão já encerrada na UI.
-    const { error: localError } = await supabase.auth.signOut({ scope: 'local' });
-    if (localError) throw error;
-
-    console.warn('Sessão encerrada localmente; não foi possível revogar as outras sessões.', error);
+    const result = await performPortalLogout(scope, {
+      signOut: (requestedScope) => supabase.auth.signOut({ scope: requestedScope }),
+      forceClearLocal: forceClearPersistedSupabaseSession,
+    });
+    if (result.status === 'local-only') {
+      console.warn(
+        'Token local removido; não foi possível revogar as outras sessões.',
+        result.globalError,
+      );
+    }
   },
 
   async loginWithGoogle(
@@ -161,7 +171,7 @@ export const loginService = {
       throw error;
     }
   },
-  
+
   // Função auxiliar para recuperar sessão atual (útil para persistência)
   async getSession() {
     const { data } = await supabase.auth.getSession();

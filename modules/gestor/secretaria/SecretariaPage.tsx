@@ -126,7 +126,7 @@ const secretariaModuleHeaders: Record<string, { title: string; description: stri
     description: 'Fila de concluintes, registros, SISTEC e emissão por modalidade.',
   },
   'assinatura-eletronica': {
-    title: 'Assinaturas e Acervo',
+    title: 'Assinaturas',
     description: 'Acompanhe pendências e consulte documentos assinados pela Secretaria.',
   },
   'historico-emissoes': {

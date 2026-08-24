@@ -1,5 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 import { Capacitor } from '@capacitor/core';
+import {
+  buildSupabaseAuthStorageKey,
+  clearSupabaseAuthStorage,
+} from './supabase-auth-storage';
 
 const isBrowser = typeof window !== 'undefined';
 type PasswordSetupKind = 'recovery' | 'invite';
@@ -40,6 +44,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
+const SUPABASE_AUTH_STORAGE_KEY = buildSupabaseAuthStorageKey(supabaseUrl);
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     // Native apps are public OAuth clients. PKCE keeps access and refresh tokens
@@ -49,11 +55,39 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     // removida por logout explícito, revogação/expiração ou limpeza dos dados.
     persistSession: true,
     autoRefreshToken: true,
+    storageKey: SUPABASE_AUTH_STORAGE_KEY,
   },
 });
 
 const PASSWORD_SETUP_MARKER_KEY = 'universo.password-setup-session';
 const PASSWORD_SETUP_MARKER_MAX_AGE_MS = 15 * 60 * 1000;
+
+export const forceClearPersistedSupabaseSession = () => {
+  if (!isBrowser) return false;
+
+  const cleared = clearSupabaseAuthStorage(
+    window.localStorage,
+    SUPABASE_AUTH_STORAGE_KEY,
+  );
+  if (!cleared) return false;
+
+  pendingInitialInviteCallback = null;
+  try {
+    window.sessionStorage.removeItem(PASSWORD_SETUP_MARKER_KEY);
+  } catch {
+    // O token principal já foi removido; o marcador expira e não cria sessão.
+  }
+
+  try {
+    const channel = new window.BroadcastChannel(SUPABASE_AUTH_STORAGE_KEY);
+    channel.postMessage({ event: 'SIGNED_OUT', session: null });
+    channel.close();
+  } catch {
+    // Navegadores sem BroadcastChannel ainda ficam sem token persistido.
+  }
+
+  return true;
+};
 
 interface PasswordSetupMarker {
   userId: string;

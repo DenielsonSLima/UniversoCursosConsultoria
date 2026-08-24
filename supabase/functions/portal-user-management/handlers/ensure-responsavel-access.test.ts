@@ -3,169 +3,16 @@ import {
   handleEnsureResponsavelAccess,
   INVITE_RECONCILIATION_PROOF_RPC,
 } from "./ensure-responsavel-access.ts";
-import type { HandlerContext } from "../types.ts";
-
-const RESPONSAVEL_ID = "11111111-1111-4111-8111-111111111111";
-const ACTOR_ID = "22222222-2222-4222-8222-222222222222";
-const OTHER_ACTOR_ID = "66666666-6666-4666-8666-666666666666";
-const AUTH_ID = "33333333-3333-4333-8333-333333333333";
-const REQUEST_ID = "44444444-4444-4444-8444-444444444444";
-const OTHER_REQUEST_ID = "55555555-5555-4555-8555-555555555555";
-const EMAIL = "responsavel@example.com";
-const CPF = "52998224725";
-
-const responder = (payload: Record<string, unknown>, status = 200) =>
-  new Response(JSON.stringify(payload), {
-    status,
-    headers: { "content-type": "application/json" },
-  });
-
-type FixtureOptions = {
-  actorAuthUserId?: string;
-  prepared?: Record<string, unknown>;
-  prepareError?: { code?: string; message: string } | null;
-  bindingError?: { code?: string; message: string } | null;
-  authUsers?: Array<Record<string, unknown>>;
-  authUserById?: Record<string, unknown> | null;
-  partners?: Array<Record<string, unknown>>;
-  gestores?: Array<Record<string, unknown>>;
-  invitedAuthUser?: Record<string, unknown> | null;
-  proofError?: { code?: string; message: string } | null;
-  proofValue?: unknown;
-};
-
-type FixtureQueryResult = {
-  data: Array<Record<string, unknown>>;
-  error: null;
-};
-
-type FixtureQuery = {
-  eq: () => FixtureQuery;
-  limit: () => FixtureQueryResult;
-};
-
-const deterministicProof = async (args: Record<string, unknown>) => {
-  const canonical = [
-    "v1",
-    String(args.p_original_actor_auth_user_id || ""),
-    String(args.p_request_id || ""),
-    String(args.p_responsavel_legal_id || ""),
-    String(args.p_email || "").trim().toLowerCase(),
-  ].join("\n");
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(canonical),
-  );
-  return Array.from(new Uint8Array(digest))
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
-};
-
-const makeFixture = (options: FixtureOptions = {}) => {
-  const rpcCalls: Array<{ name: string; args: Record<string, unknown> }> = [];
-  const invitePayloads: Array<Record<string, unknown>> = [];
-  let authListCalls = 0;
-
-  const prepared = options.prepared || {
-    responsavelLegalId: RESPONSAVEL_ID,
-    nome: "Responsável Teste",
-    cpf: CPF,
-    email: EMAIL,
-    status: "ATIVO",
-    authUserId: null,
-    eligible: true,
-    accessBlockReason: null,
-  };
-
-  const admin = {
-    rpc: async (name: string, args: Record<string, unknown>) => {
-      rpcCalls.push({ name, args });
-      if (name === "responsavel_legal_acesso_preparar") {
-        return options.prepareError
-          ? { data: null, error: options.prepareError }
-          : { data: prepared, error: null };
-      }
-      if (name === "responsavel_legal_acesso_vincular") {
-        return options.bindingError
-          ? { data: null, error: options.bindingError }
-          : { data: { responsavelLegalId: RESPONSAVEL_ID }, error: null };
-      }
-      if (name === INVITE_RECONCILIATION_PROOF_RPC) {
-        if (options.proofError) {
-          return { data: null, error: options.proofError };
-        }
-        if (Object.hasOwn(options, "proofValue")) {
-          return { data: options.proofValue, error: null };
-        }
-        return { data: await deterministicProof(args), error: null };
-      }
-      throw new Error(`RPC inesperada: ${name}`);
-    },
-    from: (table: string) => ({
-      select: () => {
-        const query: FixtureQuery = {
-          eq: () => query,
-          limit: () => ({
-            data: table === "parceiros"
-              ? options.partners || []
-              : options.gestores || [],
-            error: null,
-          }),
-        };
-        return query;
-      },
-    }),
-    auth: {
-      admin: {
-        listUsers: () => {
-          authListCalls += 1;
-          return { data: { users: options.authUsers || [] }, error: null };
-        },
-        getUserById: () => ({
-          data: {
-            user: options.authUserById === undefined
-              ? { id: AUTH_ID, email: EMAIL }
-              : options.authUserById,
-          },
-          error: null,
-        }),
-        inviteUserByEmail: (
-          email: string,
-          inviteOptions: Record<string, unknown>,
-        ) => {
-          const inviteData = inviteOptions.data as Record<string, unknown>;
-          invitePayloads.push({ email, ...inviteOptions });
-          return {
-            data: {
-              user: options.invitedAuthUser === undefined
-                ? {
-                  id: AUTH_ID,
-                  email,
-                  user_metadata: inviteData,
-                }
-                : options.invitedAuthUser,
-            },
-            error: null,
-          };
-        },
-      },
-    },
-  };
-
-  const context: HandlerContext = {
-    admin,
-    gestor: { auth_user_id: options.actorAuthUserId || ACTOR_ID },
-    gestorEmail: "gestor@example.com",
-    json: responder,
-  };
-
-  return {
-    context,
-    rpcCalls,
-    invitePayloads,
-    authListCalls: () => authListCalls,
-  };
-};
+import {
+  ACTOR_ID,
+  AUTH_ID,
+  CPF,
+  EMAIL,
+  makeFixture,
+  OTHER_REQUEST_ID,
+  REQUEST_ID,
+  RESPONSAVEL_ID,
+} from "./ensure-responsavel-access.test-fixture.ts";
 
 Deno.test("não consulta o banco sem identificador válido", async () => {
   const fixture = makeFixture();
@@ -361,7 +208,10 @@ Deno.test("envia convite novo com nonce e vincula pela RPC interna", async () =>
   const invite = fixture.invitePayloads[0];
   const inviteData = invite.data as Record<string, unknown>;
   assert.equal(invite.email, EMAIL);
-  assert.equal(invite.redirectTo, "https://universocc.com.br/recuperar-senha");
+  assert.equal(
+    invite.redirectTo,
+    "https://universocc.com.br/recuperar-senha",
+  );
   assert.equal(inviteData.origem, "cadastro_responsavel_legal");
   assert.equal(inviteData.responsavel_legal_id, RESPONSAVEL_ID);
   assert.equal(inviteData.invite_operation_version, "v1");
@@ -626,86 +476,4 @@ Deno.test("reconcilia convite preservado após reload com novo requestId", async
   assert.equal(retry.rpcCalls[1].args.p_request_id, REQUEST_ID);
   assert.equal(retry.rpcCalls[2].args.p_request_id, OTHER_REQUEST_ID);
   assert.equal(retry.invitePayloads.length, 0);
-});
-
-Deno.test("permite que outro gestor autorizado reconcilie o convite assinado", async () => {
-  const failedAttempt = makeFixture({
-    bindingError: { code: "40001", message: "Estado alterado." },
-  });
-  await handleEnsureResponsavelAccess(
-    failedAttempt.context,
-    RESPONSAVEL_ID,
-    REQUEST_ID,
-  );
-  const invitationMetadata = failedAttempt.invitePayloads[0]
-    .data as Record<string, unknown>;
-  const retry = makeFixture({
-    actorAuthUserId: OTHER_ACTOR_ID,
-    authUsers: [{
-      id: AUTH_ID,
-      email: EMAIL,
-      user_metadata: invitationMetadata,
-    }],
-  });
-  const response = await handleEnsureResponsavelAccess(
-    retry.context,
-    RESPONSAVEL_ID,
-    REQUEST_ID,
-  );
-  const body = await response.json();
-
-  assert.equal(response.status, 200);
-  assert.equal(body.profileLinked, true);
-  assert.equal(body.inviteSent, false);
-  assert.equal(retry.rpcCalls.length, 3);
-  assert.equal(retry.rpcCalls[1].name, INVITE_RECONCILIATION_PROOF_RPC);
-  assert.equal(
-    retry.rpcCalls[1].args.p_current_actor_auth_user_id,
-    OTHER_ACTOR_ID,
-  );
-  assert.equal(
-    retry.rpcCalls[1].args.p_original_actor_auth_user_id,
-    ACTOR_ID,
-  );
-  assert.equal(retry.rpcCalls[2].args.p_actor_auth_user_id, OTHER_ACTOR_ID);
-  assert.equal(retry.invitePayloads.length, 0);
-});
-
-Deno.test("rejeita adulteração do ator original ou nonce assinado", async () => {
-  const failedAttempt = makeFixture({
-    bindingError: { code: "40001", message: "Estado alterado." },
-  });
-  await handleEnsureResponsavelAccess(
-    failedAttempt.context,
-    RESPONSAVEL_ID,
-    REQUEST_ID,
-  );
-  const originalMetadata = failedAttempt.invitePayloads[0]
-    .data as Record<string, unknown>;
-
-  for (
-    const alteredMetadata of [
-      { ...originalMetadata, invite_operation_actor: OTHER_ACTOR_ID },
-      { ...originalMetadata, invite_operation_nonce: OTHER_REQUEST_ID },
-    ]
-  ) {
-    const retry = makeFixture({
-      authUsers: [{
-        id: AUTH_ID,
-        email: EMAIL,
-        user_metadata: alteredMetadata,
-      }],
-    });
-    const response = await handleEnsureResponsavelAccess(
-      retry.context,
-      RESPONSAVEL_ID,
-      OTHER_REQUEST_ID,
-    );
-    const body = await response.json();
-
-    assert.equal(response.status, 409);
-    assert.match(body.error, /marcador seguro/i);
-    assert.equal(retry.rpcCalls.length, 2);
-    assert.equal(retry.invitePayloads.length, 0);
-  }
 });

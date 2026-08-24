@@ -10,8 +10,8 @@ const portraitMigrationUrl = new URL(
   "../migrations/20260821040000_use_portrait_watermark_for_signature_receipts.sql",
   import.meta.url,
 );
-const artifactUrl = new URL(
-  "../functions/assinatura-eletronica-diario-artefatos/artifacts.ts",
+const artifactFinalizationUrl = new URL(
+  "../functions/assinatura-eletronica-diario-artefatos/artifact-finalization.ts",
   import.meta.url,
 );
 const previewUrl = new URL(
@@ -19,19 +19,24 @@ const previewUrl = new URL(
   import.meta.url,
 );
 const serviceUrl = new URL(
-  "../../modules/shared/assinatura-eletronica/assinatura-eletronica.service.ts",
+  "../../modules/shared/assinatura-eletronica/assinatura-eletronica.service.preview-normalizers.ts",
+  import.meta.url,
+);
+const finalAssetsUrl = new URL(
+  "../functions/assinatura-eletronica-diario-artefatos/artifact-final-assets.ts",
   import.meta.url,
 );
 const compositorUrl = new URL(
-  "../../modules/gestor/secretaria/assinatura-eletronica/comprovante-assinatura-eletronica.pdf.ts",
+  "../../modules/gestor/secretaria/assinatura-eletronica/comprovante-assinatura-eletronica.receipt-decoration.ts",
   import.meta.url,
 );
 
 const sql = await Deno.readTextFile(migrationUrl);
 const portraitSql = await Deno.readTextFile(portraitMigrationUrl);
-const artifacts = await Deno.readTextFile(artifactUrl);
+const artifactFinalization = await Deno.readTextFile(artifactFinalizationUrl);
 const preview = await Deno.readTextFile(previewUrl);
 const service = await Deno.readTextFile(serviceUrl);
+const finalAssets = await Deno.readTextFile(finalAssetsUrl);
 const compositor = await Deno.readTextFile(compositorUrl);
 
 const functionBlock = (signature: string) => {
@@ -66,7 +71,10 @@ Deno.test("migration congela o modelo completo sem reescrever snapshots históri
     /RENAME TO assinatura_eletronica_snapshot_academico_diario_valido_v2_inline_watermark/u,
   );
   assert.match(model, /IF p_watermark IS NULL/u);
-  assert.match(model, /ARRAY\['opacity', 'rotate', 'scale', 'url'\]::text\[\]/u);
+  assert.match(
+    model,
+    /ARRAY\['opacity', 'rotate', 'scale', 'url'\]::text\[\]/u,
+  );
   assert.match(model, /v_opacity BETWEEN 0 AND 1/u);
   assert.match(model, /v_scale BETWEEN 10 AND 100/u);
   assert.match(model, /v_scale % 5 = 0/u);
@@ -106,8 +114,12 @@ Deno.test("prévia, Edge e compositor transportam os parâmetros do modelo ofici
     /\["institution", "logoUrl", "watermark"\]/u,
   );
   assert.match(
-    artifacts,
-    /snapshot\.institutionalIdentity\.watermark[\s\S]*?opacity:[\s\S]*?scale:[\s\S]*?rotate:/u,
+    artifactFinalization,
+    /resolveReceiptWatermarkSettings\([\s\S]*?preflight\.receiptWatermarkSnapshot/u,
+  );
+  assert.match(
+    finalAssets,
+    /receiptSnapshot\.opacity[\s\S]*?receiptSnapshot\.scale[\s\S]*?receiptSnapshot\.rotate/u,
   );
   assert.match(compositor, /settings\.rotate \? -45 : 0/u);
   assert.match(

@@ -9,6 +9,7 @@ import {
   createElectronicSignatureReceiptPdf,
   type ElectronicSignatureReceiptPayload,
 } from "./comprovante-assinatura-eletronica.pdf.ts";
+import { PDFDocument } from "pdf-lib";
 
 export type ElectronicSignatureReceiptPayloadWithoutHashes =
   & Omit<
@@ -30,6 +31,9 @@ export interface CreateSignedPdfArtifactsInput
 
 export interface SignedPdfArtifacts {
   originalSha256: string;
+  /** Hash do Diário com os carimbos, antes das duas páginas de evidência. */
+  signedBodySha256: string;
+  /** Hash do arquivo entregue, incluindo as duas páginas finais de evidência. */
   finalSha256: string;
   receiptSha256: string;
   finalPdfBytes: Uint8Array;
@@ -40,6 +44,29 @@ export interface SignedPdfArtifacts {
   targetPageIndex: number;
   targetPage: InspectedPdfPage;
 }
+
+const appendReceiptToSignedDiary = async (
+  signedPdfBytes: Uint8Array,
+  receiptPdfBytes: Uint8Array,
+) => {
+  const diary = await PDFDocument.load(Uint8Array.from(signedPdfBytes), {
+    ignoreEncryption: false,
+    throwOnInvalidObject: true,
+    updateMetadata: false,
+  });
+  const receipt = await PDFDocument.load(Uint8Array.from(receiptPdfBytes), {
+    ignoreEncryption: false,
+    throwOnInvalidObject: true,
+    updateMetadata: false,
+  });
+  const receiptPages = await diary.copyPages(receipt, receipt.getPageIndices());
+  receiptPages.forEach((page) => diary.addPage(page));
+  return new Uint8Array(await diary.save({
+    addDefaultPage: false,
+    updateFieldAppearances: false,
+    useObjectStreams: false,
+  }));
+};
 
 const normalizeIdentityText = (value: string) =>
   String(value || "").trim().replace(/\s+/gu, " ");
@@ -174,11 +201,22 @@ export const createSignedPdfArtifacts = async (
       "O comprovante de assinatura precisa conter exatamente duas páginas.",
     );
   }
+  const finalPdfBytes = await appendReceiptToSignedDiary(
+    signed.finalBytes,
+    receiptPdfBytes,
+  );
+  const finalInspection = await inspectPdfOriginal(finalPdfBytes);
+  if (finalInspection.pageCount !== signed.pageCount + 2) {
+    throw new Error(
+      "O Diário assinado precisa terminar com as duas páginas do comprovante.",
+    );
+  }
   return {
     originalSha256: signed.originalSha256,
-    finalSha256: signed.finalSha256,
+    signedBodySha256: signed.finalSha256,
+    finalSha256: finalInspection.sha256,
     receiptSha256: receiptInspection.sha256,
-    finalPdfBytes: signed.finalBytes,
+    finalPdfBytes,
     receiptPdfBytes,
     receiptFileName: receipt.fileName,
     originalPageCount: signed.pageCount,

@@ -4,8 +4,11 @@ import {
   CalendarRange,
   FileCheck2,
   FilePlus2,
+  FileText,
   Gauge,
   LockKeyhole,
+  Loader2,
+  ShieldCheck,
   UserRound,
 } from 'lucide-react';
 import {
@@ -17,6 +20,10 @@ interface TurmaDiarioCardProps {
   disciplina: TurmaDiarioDisciplina;
   onOpen: () => void;
   onOpenPdf: (mode: DiarioExportMode) => void;
+  onOpenSignedPdf?: () => void;
+  onOpenEvidenceReceipt?: () => void;
+  signedPdfLoading?: boolean;
+  evidenceReceiptLoading?: boolean;
 }
 
 const formatDate = (value: string | null) => {
@@ -29,12 +36,17 @@ const TurmaDiarioCard: React.FC<TurmaDiarioCardProps> = ({
   disciplina,
   onOpen,
   onOpenPdf,
+  onOpenSignedPdf,
+  onOpenEvidenceReceipt,
+  signedPdfLoading = false,
+  evidenceReceiptLoading = false,
 }) => {
   const isUnassigned = disciplina.professor === 'Não atribuído';
   const isClosed = disciplina.periodoStatus === 'FECHADO' || disciplina.bloqueioDiario === 'TOTAL';
   const isReview = disciplina.bloqueioDiario === 'PROFESSOR';
   const isAwaitingReview = !isClosed && !isReview && disciplina.progressoPercent >= 100;
   const isExcess = disciplina.horasStatus === 'EXCESSO';
+  const signedArtifactLoading = signedPdfLoading || evidenceReceiptLoading;
 
   return (
     <article className="group flex min-h-[342px] flex-col overflow-hidden rounded-[1.6rem] border border-slate-200/80 bg-white shadow-[0_12px_34px_-24px_rgba(15,23,42,0.45)] transition duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-[0_22px_50px_-28px_rgba(37,99,235,0.45)]">
@@ -147,6 +159,36 @@ const TurmaDiarioCard: React.FC<TurmaDiarioCardProps> = ({
               <FilePlus2 size={12} /> PDF em branco
             </button>
           </div>
+          {onOpenSignedPdf || onOpenEvidenceReceipt ? (
+            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {onOpenSignedPdf ? (
+                <button
+                  type="button"
+                  disabled={signedArtifactLoading}
+                  onClick={onOpenSignedPdf}
+                  className="flex min-h-10 items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-2 py-2 text-[10px] font-black uppercase tracking-[0.06em] text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100 disabled:cursor-wait disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-500"
+                >
+                  {signedPdfLoading
+                    ? <Loader2 size={13} className="animate-spin" />
+                    : <ShieldCheck size={13} />}
+                  {signedPdfLoading ? 'Autorizando…' : 'Diário assinado'}
+                </button>
+              ) : null}
+              {onOpenEvidenceReceipt ? (
+                <button
+                  type="button"
+                  disabled={signedArtifactLoading}
+                  onClick={onOpenEvidenceReceipt}
+                  className="flex min-h-10 items-center justify-center gap-1.5 rounded-xl border border-violet-200 bg-violet-50 px-2 py-2 text-[10px] font-black uppercase tracking-[0.04em] text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 disabled:cursor-wait disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-500"
+                >
+                  {evidenceReceiptLoading
+                    ? <Loader2 size={13} className="animate-spin" />
+                    : <FileText size={13} />}
+                  {evidenceReceiptLoading ? 'Autorizando…' : 'Comprovante — 2 páginas'}
+                </button>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </div>
     </article>

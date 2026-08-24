@@ -1,17 +1,13 @@
 // File: modules/gestor/gestao/tecnicos/detalhes/components/diarios/DiarioClasse.tsx
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import ToastNotification, { useToast } from '../../../../../parceiros/components/shared/ToastNotification';
 import { diariosService } from '../../../../../cadastros/modelos-documentos/diarios/diarios.service';
 import DiarioClasseHeader from './DiarioClasseHeader';
 import DiarioElectronicSignaturePanel from './DiarioElectronicSignaturePanel';
-import DiarioConteudoTab from './DiarioConteudoTab';
-import DiarioFrequenciaTab from './DiarioFrequenciaTab';
-import DiarioObservacoesTab from './DiarioObservacoesTab';
-import DiarioResultadoTab from './DiarioResultadoTab';
-import DiarioFechamentoTab from './DiarioFechamentoTab';
+import DiarioClasseTabs, { type EditableGradeField } from './DiarioClasseTabs';
 import DiarioExportModal from './export/DiarioExportModal';
 import TechnicalDataError from '../TechnicalDataError';
 import {
@@ -30,23 +26,16 @@ import {
   useSaveDiarioAulaTitleMutation,
   useToggleDiarioAttendanceMutation,
 } from './hooks/useDiarioClasse';
-import { useDiarioPdfDownload } from './hooks/useDiarioPdfDownload';
+import { useDiarioExport } from './hooks/useDiarioExport';
+import { useDiarioLocalState } from './hooks/useDiarioLocalState';
 import { useDiarioRealtime } from './hooks/useDiarioRealtime';
 import {
   DiarioClasseProps,
   DiarioActiveTab,
   DiarioGradeResult,
-  GradesMap,
-  AttendanceMap,
   AttendanceStatus,
 } from './diario-classe.types';
-import { DiarioExportMode } from './turma-diarios.types';
-import {
-  buildAttendanceMap,
-  buildGradesMap,
-  buildPraticasMap,
-  getStudentStats,
-} from './diario-classe.utils';
+import { getStudentStats } from './diario-classe.utils';
 import { useDiarioInstruments } from './hooks/useDiarioInstruments';
 import {
   getAcademicReadOnlyContent,
@@ -71,8 +60,6 @@ const EMPTY_DIARIO_GRADE: DiarioGradeResult = {
 
 const EMPTY_DIARIO_ROWS: never[] = [];
 
-type EditableGradeField = 'p' | 'ti' | 'tg' | 's' | 'cq' | 'o' | 'rec';
-
 const DiarioClasse: React.FC<DiarioClasseProps> = ({
   disciplina,
   moduloNome,
@@ -88,10 +75,6 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
     ? 'PROFESSOR'
     : 'GESTOR';
   const [activeTab, setActiveTab] = useState<DiarioActiveTab>('frequencia');
-  const [isExportModalOpen, setIsExportModalOpen] = useState(Boolean(initialExportMode));
-  const [exportMode, setExportMode] = useState<DiarioExportMode>(
-    initialExportMode || 'PREENCHIDO',
-  );
   const closureQuery = useDiarioClosure(turma.id, disciplina.id);
   const closureState = closureQuery.data;
   const closureUnavailable = closureQuery.isError;
@@ -122,11 +105,12 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
 
   const templateQuery = useDiarioTemplate(turma.cursoId);
   const { data: diarioTemplate } = templateQuery;
-  const { data: watermark } = useQuery({
+  const watermarkQuery = useQuery({
     queryKey: ['polo-watermark', turma.poloId],
-    queryFn: () => diariosService.getLandscapeWatermark(turma.poloId),
+    queryFn: () => diariosService.getLandscapeWatermarkForEmission(turma.poloId),
     enabled: Boolean(turma.poloId),
   });
+  const { data: watermark } = watermarkQuery;
   const studentsQuery = useDiarioStudents(turma.id, disciplina.id, effectiveAccessMode);
   const aulasQuery = useDiarioAulas(turma.id, disciplina.id);
   const attendanceQuery = useDiarioAttendance(turma.id, disciplina.id);
@@ -158,53 +142,28 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
     },
   });
 
-  const attendanceMap = useMemo(
-    () => buildAttendanceMap(students, aulas, dbAttendance),
-    [students, aulas, dbAttendance],
-  );
-  const gradesMap = useMemo(
-    () => buildGradesMap(students, aulas, dbGrades),
-    [students, aulas, dbGrades],
-  );
-  const praticasMap = useMemo(
-    () => buildPraticasMap(aulas, dbPraticas),
-    [aulas, dbPraticas],
-  );
-
-  const [localAttendance, setLocalAttendance] = useState<AttendanceMap>({});
-  const [localGrades, setLocalGrades] = useState<GradesMap>({});
-  const [localPraticas, setLocalPraticas] = useState<Record<string, string>>({});
-  const [localTitulos, setLocalTitulos] = useState<Record<string, string>>({});
-  const [localObservacoes, setLocalObservacoes] = useState('');
-
-  useEffect(() => {
-    setLocalAttendance({});
-  }, [dbAttendance]);
-
-  const effectiveAttendanceMap = useMemo(() => {
-    if (Object.keys(localAttendance).length === 0) return attendanceMap;
-    const merged: AttendanceMap = { ...attendanceMap };
-    Object.entries(localAttendance).forEach(([studentId, classMap]) => {
-      merged[studentId] = { ...(merged[studentId] || {}), ...(classMap as Record<string, AttendanceStatus>) };
-    });
-    return merged;
-  }, [attendanceMap, localAttendance]);
-
-  useEffect(() => {
-    if (Object.keys(gradesMap).length > 0) setLocalGrades({ ...gradesMap });
-  }, [gradesMap]);
-
-  useEffect(() => {
-    setLocalPraticas(praticasMap);
-  }, [praticasMap]);
-
-  useEffect(() => {
-    setLocalTitulos(Object.fromEntries(aulas.map((aula) => [aula.id, aula.titulo])));
-  }, [aulas]);
-
-  useEffect(() => {
-    if (dbObservacoes !== undefined) setLocalObservacoes(dbObservacoes);
-  }, [dbObservacoes]);
+  const {
+    attendanceMap,
+    effectiveAttendanceMap,
+    gradesMap,
+    praticasMap,
+    setLocalAttendance,
+    localGrades,
+    setLocalGrades,
+    localPraticas,
+    setLocalPraticas,
+    localTitulos,
+    setLocalTitulos,
+    localObservacoes,
+    setLocalObservacoes,
+  } = useDiarioLocalState({
+    students,
+    aulas,
+    dbAttendance,
+    dbGrades,
+    dbPraticas,
+    dbObservacoes,
+  });
 
   const toggleAttendanceMutation = useToggleDiarioAttendanceMutation(
     turma.id,
@@ -363,45 +322,6 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
     });
   };
 
-  const printProps = useMemo(() => {
-    if (!diarioTemplate) return null;
-    return {
-      template: diarioTemplate,
-      turma,
-      disciplina,
-      moduloNome,
-      students,
-      aulas,
-      attendanceMap,
-      gradesMap,
-      praticasMap,
-      observacoes: dbObservacoes,
-      activeInstruments,
-      watermark,
-      exportMode,
-    };
-  }, [
-    activeInstruments,
-    attendanceMap,
-    aulas,
-    dbObservacoes,
-    diarioTemplate,
-    disciplina,
-    exportMode,
-    gradesMap,
-    moduloNome,
-    praticasMap,
-    students,
-    turma,
-    watermark,
-  ]);
-
-  const {
-    downloadingPdf,
-    printingPdf,
-    downloadPdf,
-    printPdf,
-  } = useDiarioPdfDownload({ printProps, toast });
   const hasPendingWrites = toggleAttendanceMutation.isPending
     || saveStudentGradesMutation.isPending
     || savePraticaMutation.isPending
@@ -409,20 +329,36 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
     || saveObservacoesMutation.isPending
     || savingInstruments
     || setClosureMutation.isPending;
-
-  const openExportModal = (mode: DiarioExportMode) => {
-    if (hasPendingWrites) {
-      toast.info('Aguarde o salvamento', 'O PDF será liberado assim que os registros forem confirmados.');
-      return;
-    }
-    setExportMode(mode);
-    setIsExportModalOpen(true);
-  };
-
-  const closeExportModal = () => {
-    setIsExportModalOpen(false);
-    if (returnToListOnExportClose) onBack();
-  };
+  const {
+    closeExportModal,
+    downloadPdf,
+    downloadingPdf,
+    exportMode,
+    isExportModalOpen,
+    openExportModal,
+    preparePdfBlob,
+    printPdf,
+    printProps,
+    printingPdf,
+  } = useDiarioExport({
+    template: diarioTemplate,
+    turma,
+    disciplina,
+    moduloNome,
+    students,
+    aulas,
+    attendanceMap,
+    gradesMap,
+    praticasMap,
+    observacoes: dbObservacoes,
+    activeInstruments,
+    watermark,
+    initialExportMode,
+    hasPendingWrites,
+    returnToListOnExportClose,
+    onBack,
+    toast,
+  });
 
   const completeDiaryQueries = [
     templateQuery,
@@ -433,18 +369,20 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
     praticasQuery,
     observacoesQuery,
     instrumentsQuery,
+    watermarkQuery,
   ];
   const blankExportQueries = [
     templateQuery,
     studentsQuery,
     aulasQuery,
     instrumentsQuery,
+    watermarkQuery,
   ];
   const coreQueries = initialExportMode === 'EM_BRANCO'
     ? blankExportQueries
     : completeDiaryQueries;
   const loading = coreQueries.some((query) => query.isLoading);
-  const loadingError = coreQueries.some((query) => query.isError);
+  const loadingError = !turma.poloId || coreQueries.some((query) => query.isError);
   const retrying = coreQueries.some((query) => query.isFetching);
   if (loading) {
     return (
@@ -493,102 +431,61 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
         />
       ) : null}
 
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[500px] mb-8">
-        <div className="flex-1">
-          {activeTab === 'frequencia' && (
-            <DiarioFrequenciaTab
-              students={students}
-              aulas={aulas}
-              attendanceMap={effectiveAttendanceMap}
-              isReadOnly={isReadOnly}
-              onToggleAttendance={handleToggleAttendance}
-              getStats={(studentId) => getStudentStats(gradesMap, studentId)}
-            />
-          )}
-          {activeTab === 'resultado' && (
-            <DiarioResultadoTab
-              students={students}
-              localGrades={localGrades}
-              isReadOnly={isReadOnly}
-              activeInstruments={activeInstruments}
-              onToggleInstrument={handleToggleInstrument}
-              getStats={(studentId) => getStudentStats(gradesMap, studentId)}
-              onGradeChange={handleLocalGradeChange}
-              onSaveGrade={handleSaveGrade}
-            />
-          )}
-          {activeTab === 'conteudo' && (
-            <DiarioConteudoTab
-              aulas={aulas}
-              localTitulos={localTitulos}
-              setLocalTitulos={setLocalTitulos}
-              localPraticas={localPraticas}
-              setLocalPraticas={setLocalPraticas}
-              canEditAulaTitle={!isReadOnly}
-              canEditPratica={!isReadOnly}
-              savingAulaId={saveAulaTitleMutation.isPending
-                ? saveAulaTitleMutation.variables?.aulaId
-                : undefined}
-              onSaveAulaTitle={(aulaId, titulo) => {
-                const normalizedTitle = titulo.trim();
-                if (!normalizedTitle) {
-                  toast.info('Informe o conteúdo', 'Descreva o conteúdo programático antes de salvar.');
-                  return;
-                }
-                saveAulaTitleMutation.mutate({ aulaId, titulo: normalizedTitle });
-              }}
-              onSavePratica={(aulaId, text) => savePraticaMutation.mutate({ aulaId, text })}
-            />
-          )}
-          {activeTab === 'observacoes' && (
-            <DiarioObservacoesTab
-              observacoes={localObservacoes}
-              isReadOnly={isReadOnly}
-              onChange={setLocalObservacoes}
-              onSave={(text) => saveObservacoesMutation.mutate(text)}
-            />
-          )}
-          {activeTab === 'fechamento' && closureState && (
-            <DiarioFechamentoTab
-              state={closureState}
-              accessMode={effectiveAccessMode}
-              saving={setClosureMutation.isPending}
-              onChange={(bloqueio, motivo, confirmarPendencias) =>
-                setClosureMutation.mutate({ bloqueio, motivo, confirmarPendencias })}
-            />
-          )}
-          {activeTab === 'fechamento' && closureQuery.isError && (
-            <div className="p-6">
-              <TechnicalDataError
-                title="Fechamento não carregado"
-                message="Os demais dados do diário continuam disponíveis em modo seguro. Tente carregar novamente o estado de fechamento."
-                retrying={closureQuery.isFetching}
-                onRetry={() => { void closureQuery.refetch(); }}
-              />
-            </div>
-          )}
-          {activeTab === 'fechamento' && closureQuery.isPending && (
-            <div className="flex items-center justify-center gap-3 py-20 text-sm font-bold text-slate-500">
-              <Loader2 className="animate-spin text-blue-600" size={22} />
-              Verificando o fechamento do diário...
-            </div>
-          )}
-        </div>
-      </div>
+      <DiarioClasseTabs
+        activeTab={activeTab}
+        students={students}
+        aulas={aulas}
+        attendanceMap={effectiveAttendanceMap}
+        gradesMap={gradesMap}
+        localGrades={localGrades}
+        activeInstruments={activeInstruments}
+        isReadOnly={isReadOnly}
+        onToggleAttendance={handleToggleAttendance}
+        onToggleInstrument={handleToggleInstrument}
+        onGradeChange={handleLocalGradeChange}
+        onSaveGrade={handleSaveGrade}
+        localTitulos={localTitulos}
+        setLocalTitulos={setLocalTitulos}
+        localPraticas={localPraticas}
+        setLocalPraticas={setLocalPraticas}
+        savingAulaId={saveAulaTitleMutation.isPending
+          ? saveAulaTitleMutation.variables?.aulaId
+          : undefined}
+        onSaveAulaTitle={(aulaId, titulo) => {
+          const normalizedTitle = titulo.trim();
+          if (!normalizedTitle) {
+            toast.info('Informe o conteúdo', 'Descreva o conteúdo programático antes de salvar.');
+            return;
+          }
+          saveAulaTitleMutation.mutate({ aulaId, titulo: normalizedTitle });
+        }}
+        onSavePratica={(aulaId, text) => savePraticaMutation.mutate({ aulaId, text })}
+        observacoes={localObservacoes}
+        onChangeObservacoes={setLocalObservacoes}
+        onSaveObservacoes={(text) => saveObservacoesMutation.mutate(text)}
+        closureState={closureState}
+        accessMode={effectiveAccessMode}
+        closureSaving={setClosureMutation.isPending}
+        onClosureChange={(bloqueio, motivo, confirmarPendencias) =>
+          setClosureMutation.mutate({ bloqueio, motivo, confirmarPendencias })}
+        closureError={closureQuery.isError}
+        closureRetrying={closureQuery.isFetching}
+        closurePending={closureQuery.isPending}
+        onRetryClosure={() => { void closureQuery.refetch(); }}
+      />
 
       {diarioTemplate && printProps && (
-        <>
-          <DiarioExportModal
-            isOpen={isExportModalOpen}
-            onClose={closeExportModal}
-            onDownloadPdf={downloadPdf}
-            onPrintPdf={printPdf}
-            downloadingPdf={downloadingPdf}
-            printingPdf={printingPdf}
-            printProps={printProps}
-            exportMode={exportMode}
-          />
-        </>
+        <DiarioExportModal
+          isOpen={isExportModalOpen}
+          onClose={closeExportModal}
+          onDownloadPdf={downloadPdf}
+          onPrintPdf={printPdf}
+          downloadingPdf={downloadingPdf}
+          printingPdf={printingPdf}
+          preparePdfBlob={preparePdfBlob}
+          printProps={printProps}
+          exportMode={exportMode}
+        />
       )}
       <ToastNotification toasts={toasts} onRemove={removeToast} />
     </div>

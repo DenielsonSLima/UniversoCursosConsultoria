@@ -294,8 +294,10 @@ const ProfessorPage: React.FC = () => {
       case 'assinatura-eletronica':
         return (
           <ProfessorAssinaturasPage
+            capabilities={profile.capabilities}
             contextId={profile.contextId || ''}
             poloId={currentPoloId}
+            scopes={profile.scopes}
           />
         );
       case 'financeiro':

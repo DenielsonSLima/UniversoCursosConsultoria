@@ -11,8 +11,10 @@ import {
   UserRoundPlus,
 } from 'lucide-react';
 import { alunoPublicAuthService, getSafePublicAlunoRedirectPath } from '../../public/login/aluno-public-auth.service';
-import { savePortalSession, type PortalAuthProfile } from '../../login/portal-session';
+import { clearPortalSession, savePortalSession, type PortalAuthProfile } from '../../login/portal-session';
 import { resolveProfilePostLoginRoute } from '../../login/profile-selection';
+import { buildPortalFirstAccessPath } from '../../login/portal-first-access';
+import { resetProfileSelectionSession } from '../../login/profile-selection-session';
 import PortalProfileSelector, { portalProfileKey } from '../../login/components/PortalProfileSelector';
 import GoogleLogo from '../../shared/auth/GoogleLogo';
 import { type TurnstileStatus } from '../../shared/auth/TurnstileWidget';
@@ -63,11 +65,13 @@ const AlunoAppLoginPage: React.FC = () => {
 
     if (alunoPublicAuthService.needsInitialAccess(profile)) {
       queryClient.clear();
-      const params = new URLSearchParams({ next: redirectPath });
-      if (profile.contextId) {
-        params.set('context', profile.contextId);
+      if (!profile.contextId || (profile.tipo !== 'Aluno' && profile.tipo !== 'Responsavel')) {
+        throw new Error('O contexto do primeiro acesso não está disponível. Entre novamente.');
       }
-      navigate(`/aluno/primeiro-acesso?${params.toString()}`, { replace: true });
+      navigate(
+        buildPortalFirstAccessPath(profile.tipo, profile.contextId, redirectPath),
+        { replace: true },
+      );
       return;
     }
 
@@ -170,6 +174,26 @@ const AlunoAppLoginPage: React.FC = () => {
       setPendingProfileKey(null);
     }
   }, [finishLogin]);
+
+  const handleProfileSelectionBack = useCallback(async () => {
+    setIsSelectingProfile(true);
+    setMessage(null);
+    try {
+      await resetProfileSelectionSession({
+        signOutLocal: () => supabase.auth.signOut({ scope: 'local' }),
+        clearPortalSession,
+        clearQueryCache: () => queryClient.clear(),
+      });
+      setPublicProfiles([]);
+    } catch {
+      setMessage({
+        tone: 'error',
+        text: 'Não foi possível encerrar esta sessão neste dispositivo. Tente novamente.',
+      });
+    } finally {
+      setIsSelectingProfile(false);
+    }
+  }, [queryClient]);
 
   useEffect(() => {
     const oauthReturn = searchParams.get('oauth_return');
@@ -343,10 +367,7 @@ const AlunoAppLoginPage: React.FC = () => {
               isSelecting={isSelectingProfile}
               pendingProfileKey={pendingProfileKey}
               onSelect={handleProfileSelect}
-              onBack={() => {
-                setPublicProfiles([]);
-                setMessage(null);
-              }}
+              onBack={handleProfileSelectionBack}
             />
           ) : (
           <>
