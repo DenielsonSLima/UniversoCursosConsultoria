@@ -1,8 +1,8 @@
 {
-  "version": "4.7.5",
+  "version": "4.7.6",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 6,
+  "revision": 7,
   "releasedAt": "2026-08-24",
-  "summary": "Capa configurada do Diário restaurada e slots digitais explicitados"
+  "summary": "Caixa de assinaturas liberada para o UUID legado da Matriz"
 }

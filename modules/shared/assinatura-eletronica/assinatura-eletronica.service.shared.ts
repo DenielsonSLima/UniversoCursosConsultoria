@@ -17,8 +17,12 @@ export const ELECTRONIC_SIGNATURE_DIARY_ARTIFACTS_FUNCTION =
 export const ELECTRONIC_SIGNATURE_ARCHIVE_FUNCTION =
   "assinatura-eletronica-acervo";
 
+// O tipo uuid do PostgreSQL aceita a forma lexical completa sem exigir os
+// nibbles de versao/variante do RFC 4122. Alguns contextos e polos legados,
+// incluindo a matriz, usam essa representacao e continuam sendo UUIDs validos
+// para todos os contratos RPC deste modulo.
 const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 const SHA256_PATTERN = /^[a-f0-9]{64}$/u;
 
 export class ElectronicSignatureRequestError extends Error {
