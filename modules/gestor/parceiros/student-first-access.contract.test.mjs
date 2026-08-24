@@ -8,14 +8,18 @@ const readSource = (relativePath) =>
 const [
   mutationsSource,
   activationSource,
+  partnerServiceSource,
   emailStatusSource,
+  alunoCardSource,
   partnerAccessSource,
   firstAccessPageSource,
   publicAuthEntry,
 ] = await Promise.all([
   readSource('./hooks/useParceirosMutations.ts'),
   readSource('./portal-activation.service.ts'),
+  readSource('./parceiros.service.ts'),
   readSource('./components/cards/EmailConfirmationStatus.tsx'),
+  readSource('./components/cards/AlunoCard.tsx'),
   readSource('./components/viewparceiros/shared/ParceiroAcesso.tsx'),
   readSource('../../public/login/AlunoFirstAccessPage.tsx'),
   readSource('../../public/login/aluno-public-auth.service.ts'),
@@ -51,6 +55,13 @@ test('gestor possui fallback assistido, auditado e sem senha persistida', () => 
   assert.match(partnerAccessSource, /setTemporaryPassword/);
   assert.doesNotMatch(partnerAccessSource, /window\.confirm/);
   assert.match(emailStatusSource, /gestor pode validar o canal na aba Acesso/);
+});
+
+test('card considera a validação administrativa sem mascarar a confirmação do Auth', () => {
+  assert.match(partnerServiceSource, /emailValidatedByManager: emailStatus\.emailValidatedByManager/);
+  assert.match(alunoCardSource, /emailValidatedByManager=\{data\.emailValidatedByManager\}/);
+  assert.match(emailStatusSource, /status === 'confirmed' \|\| emailValidatedByManager/);
+  assert.match(emailStatusSource, /E-mail validado pelo gestor/);
 });
 
 test('aluno aceita os termos e cria a própria senha antes de concluir o acesso', () => {

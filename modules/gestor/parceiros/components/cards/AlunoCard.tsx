@@ -147,6 +147,7 @@ const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick, onDelete }) => {
               <span className="truncate font-medium" title={data.email}>{data.email}</span>
               <EmailConfirmationStatus
                 status={data.emailConfirmationStatus}
+                emailValidatedByManager={data.emailValidatedByManager}
               />
             </div>
           </div>

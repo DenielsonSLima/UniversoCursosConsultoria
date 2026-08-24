@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-08-24T17:11:06.763Z",
+  "builtAt": "2026-08-24T19:07:36.421Z",
   "manifestVersion": 2,
-  "sourceSignature": "1a2af3540e61ea05d8192aa1225b428605ecdba5e6622a483f4891dc5027dc8a",
+  "sourceSignature": "475c3128bff241bde935014312e7adc0666ff73508d359c8a9943c9f7d266b64",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "d3d667538d78d33a58f8271bc2ebdb0b58f5d701ddf16bbd5375ce342adc722e"
+      "hash": "c4a296568d19568e9a6ef22bd4b8dff60b3d00f8b747cfa489b0707bdf6de474"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -192,73 +192,63 @@
       "part": 1
     },
     {
-      "id": "87bf7870c9b0756f8c6e",
-      "hash": "87bf7870c9b0756f8c6edd4cfa964d00dc8b30f194e21fb216b8ce1a49366aa6",
+      "id": "10bc52b4f6897e31c86f",
+      "hash": "10bc52b4f6897e31c86fe72f8feb3eed67d79ac0a89f6ac4ab61c1684f62c6ad",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Lote ativo",
-      "text": "Estado: `PUBLICADO_PRODUCAO_4_7_6`",
-      "normalizedText": "estado publicado producao 4 7 6",
-      "tokenCount": 3,
+      "text": "Estado: `EM_REVISAO_GITHUB`",
+      "normalizedText": "estado em revisao github",
+      "tokenCount": 4,
       "part": 1
     },
     {
-      "id": "d6703edf6d229ff3dc9e",
-      "hash": "d6703edf6d229ff3dc9ee185fe80abf8bf58455da9f338b276e4399ba32833ea",
+      "id": "e5dd6f5903de64d4c0bb",
+      "hash": "e5dd6f5903de64d4c0bbc9e808bdffe5479b09961a74bf954f7a7491583206a1",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-08-24-caixa-assinaturas-uuid-matriz-4-7-6",
-      "text": "- Pedido: corrigir o erro da Caixa de Assinaturas exibido na Secretaria e publicar no GitHub e em Produção. - Causa confirmada: a fronteira cliente das RPCs exigia nibbles de versão e variante RFC 4122, embora o PostgreSQL, o contrato de sessão e o polo Matriz usem uma forma lexical UUID legada válida. A exceção era lançada antes de qualquer request. - Registro: `ai/operacao/registros/alteracoes/2026-08-24-caixa-assinaturas-uuid-matriz-4-7-6.md`. - Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-24-caixa-assinaturas-uuid-matriz-4-7-6.md`. - Versão: `4.7.6` estável. - Publicação concluída: PR `#87` integrada por squash na `main`, commit `78417700fcb10239f4c3d51aa008c83279702088`; Vercel Production `7jcCtR6xbsuzAN5HHiJcFPrvMW6t` pronta e smoke autenticado aprovado. Nenhuma alteração Supabase foi necessária.",
-      "normalizedText": "pedido corrigir o erro da caixa de assinaturas exibido na secretaria e publicar no github e em producao causa confirmada a fronteira cliente das rpcs exigia nibbles de versao e variante rfc 4122 embora o postgresql o contrato de sessao e o polo matriz usem uma forma lexical uuid legada valida a excecao era lancada antes de qualquer request registro ai operacao registros alteracoes 2026 08 24 caixa assinaturas uuid matriz 4 7 6 md manifesto explicito ai operacao registros alteracoes 2026 08 24 caixa assinaturas uuid matriz 4 7 6 md versao 4 7 6 estavel publicacao concluida pr 87 integrada por squash na main commit 78417700fcb10239f4c3d51aa008c83279702088 vercel production 7jcctr6xbsuzan5hhijcfprvmw6t pronta e smoke autenticado aprovado nenhuma alteracao supabase foi necessaria",
-      "tokenCount": 101,
+      "section": "Lote: 2026-08-24-card-email-validado-gestor",
+      "text": "- Pedido: corrigir o ícone pendente no card do aluno quando o e-mail já foi validado administrativamente e atualizar o projeto no GitHub. - Causa confirmada: o backend devolvia separadamente a confirmação real do Auth e a validação administrativa, mas a listagem descartava `emailValidatedByManager`; o card recebia apenas o `status` pendente do Auth. - Registro: `ai/operacao/registros/alteracoes/2026-08-24-card-email-validado-gestor.md`. - Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-24-card-email-validado-gestor.md`. - Próxima versão registrada na branch: `4.7.7`; a Produção permanece em `4.7.6` até eventual merge explicitamente autorizado.",
+      "normalizedText": "pedido corrigir o icone pendente no card do aluno quando o e mail ja foi validado administrativamente e atualizar o projeto no github causa confirmada o backend devolvia separadamente a confirmacao real do auth e a validacao administrativa mas a listagem descartava emailvalidatedbymanager o card recebia apenas o status pendente do auth registro ai operacao registros alteracoes 2026 08 24 card email validado gestor md manifesto explicito ai operacao registros alteracoes 2026 08 24 card email validado gestor md proxima versao registrada na branch 4 7 7 a producao permanece em 4 7 6 ate eventual merge explicitamente autorizado",
+      "tokenCount": 80,
       "part": 1
     },
     {
-      "id": "03cd3adb006c3d18bedd",
-      "hash": "03cd3adb006c3d18bedd493a89171576d1334deef0d51ff978bd40e5d36d97f4",
+      "id": "b9059e7a83c00ea053ec",
+      "hash": "b9059e7a83c00ea053ec75c11e825205dd1f51d078d96fa7dcb932879fe502c9",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Critérios de aceite",
-      "text": "1. A Caixa de Assinaturas da Matriz chega à RPC `assinatura_eletronica_listar_caixa_contexto` sem falhar na validação local. `ATENDIDO`. 2. UUIDs na forma lexical aceita pelo PostgreSQL, incluindo o polo Matriz, são aceitos pela fronteira das RPCs. `ATENDIDO`. 3. UUIDs malformados ou com caracteres não hexadecimais continuam bloqueados. `ATENDIDO`. 4. Autorização, escopo, query keys, banco, RLS e funções remotas permanecem inalterados. `ATENDIDO`. 5. CI, Preview, merge, Produção e disponibilidade da versão 4.7.6 devem concluir antes do fechamento. `ATENDIDO`. 6. O smoke autenticado da Caixa deve deixar o estado de erro e apresentar a caixa vazia ou os itens autorizados. `ATENDIDO`.",
-      "normalizedText": "1 a caixa de assinaturas da matriz chega a rpc assinatura eletronica listar caixa contexto sem falhar na validacao local atendido 2 uuids na forma lexical aceita pelo postgresql incluindo o polo matriz sao aceitos pela fronteira das rpcs atendido 3 uuids malformados ou com caracteres nao hexadecimais continuam bloqueados atendido 4 autorizacao escopo query keys banco rls e funcoes remotas permanecem inalterados atendido 5 ci preview merge producao e disponibilidade da versao 4 7 6 devem concluir antes do fechamento atendido 6 o smoke autenticado da caixa deve deixar o estado de erro e apresentar a caixa vazia ou os itens autorizados atendido",
-      "tokenCount": 86,
+      "text": "1. E-mail confirmado no Auth continua exibindo check verde com o rótulo `E-mail confirmado`. `ATENDIDO`. 2. E-mail pendente no Auth, mas validado pelo gestor, exibe check verde com o rótulo `E-mail validado pelo gestor`. `ATENDIDO`. 3. O card não mascara nem altera o estado real do Supabase Auth. `ATENDIDO`. 4. Nenhuma migration, dado, Auth user, RLS ou Edge Function é alterado. `ATENDIDO`. 5. Teste focado, lint, limite de linhas, revisão independente e smoke autenticado devem aprovar antes da publicação. `ATENDIDO`. 6. CI e Preview do GitHub devem concluir antes de qualquer merge futuro. `ATENDIDO`.",
+      "normalizedText": "1 e mail confirmado no auth continua exibindo check verde com o rotulo e mail confirmado atendido 2 e mail pendente no auth mas validado pelo gestor exibe check verde com o rotulo e mail validado pelo gestor atendido 3 o card nao mascara nem altera o estado real do supabase auth atendido 4 nenhuma migration dado auth user rls ou edge function e alterado atendido 5 teste focado lint limite de linhas revisao independente e smoke autenticado devem aprovar antes da publicacao atendido 6 ci e preview do github devem concluir antes de qualquer merge futuro atendido",
+      "tokenCount": 81,
       "part": 1
     },
     {
-      "id": "abf7775494649e4b64a6",
-      "hash": "abf7775494649e4b64a609149a122f67ce1dfc5a5da3466333eed9eecb39892c",
+      "id": "ac7da716c002046a2df1",
+      "hash": "ac7da716c002046a2df1794332d472ca3104204a29b8f3390e81b17fc283e41d",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Evidências e validação",
-      "text": "- Logs do instante da captura: sessão válida e demais requests 200, sem request para a RPC da caixa, confirmando falha anterior à rede. - Smoke remoto somente leitura, com o mesmo contexto autorizado e o polo Matriz: contrato com `items` e `nextCursor`, sem erro e sem mutação. - Node focado: `17/17` testes aprovados, incluindo o UUID legado da Matriz e a rejeição de UUID malformado. - Backend remoto: função presente, `SECURITY DEFINER`, `search_path` vazio, execução restrita a `authenticated` e sem grant para `anon`. - Node focado `17/17`, teto de 500 linhas, versão, TypeScript, lint, build e testes operacionais: aprovados; revisão independente sem finding `Critical` ou `Important`. - GitHub: PR `#87` integrada por squash na `main`, commit `78417700fcb10239f4c3d51aa008c83279702088`; manifesto remoto conferido com exatamente nove arquivos. - Vercel: Preview `ELzsXC4U5h4sNTxNGGFF6VBHgUEp` e Production `7jcCtR6xbsuzAN5HHiJcFPrvMW6t` concluídas com sucesso. - Produção: `https://universocc.com.br` respondeu HTTP 200; o bundle público contém a versão 4.7.6 e o resumo estável correspondente. - Smoke autenticado em Produção, na sessão real da Matriz: a Caixa deixou o estado de erro e",
-      "normalizedText": "logs do instante da captura sessao valida e demais requests 200 sem request para a rpc da caixa confirmando falha anterior a rede smoke remoto somente leitura com o mesmo contexto autorizado e o polo matriz contrato com items e nextcursor sem erro e sem mutacao node focado 17 17 testes aprovados incluindo o uuid legado da matriz e a rejeicao de uuid malformado backend remoto funcao presente security definer search path vazio execucao restrita a authenticated e sem grant para anon node focado 17 17 teto de 500 linhas versao typescript lint build e testes operacionais aprovados revisao independente sem finding critical ou important github pr 87 integrada por squash na main commit 78417700fcb10239f4c3d51aa008c83279702088 manifesto remoto conferido com exatamente nove arquivos vercel preview elzsxc4u5h4sntxnggff6vbhguep e production 7jcctr6xbsuzan5hhijcfprvmw6t concluidas com sucesso producao https universocc com br respondeu http 200 o bundle publico contem a versao 4 7 6 e o resumo estavel correspondente smoke autenticado em producao na sessao real da matriz a caixa deixou o estado de erro e",
-      "tokenCount": 145,
+      "text": "- Consulta remota somente leitura confirmou o caso real: validação administrativa presente e confirmação do Auth ainda ausente. - Node focado: `7/7` testes aprovados. - ESLint focado e `git diff --check`: aprovados. - Smoke visual autenticado no localhost: check verde exibido no card do aluno afetado. - Revisão independente contra a `main` remota sem findings `Critical` ou `Important`; único apontamento `Minor` foi o teste contratual por fonte, compensado pelo smoke visual real. - Controle de versão corrigido na branch com o avanço proposto para `4.7.7` e a entrada correspondente no changelog. - GitHub Actions `Controle de versão` e `Qualidade do produto`: aprovados no commit final da PR. - Preview Vercel da PR: `Ready`.",
+      "normalizedText": "consulta remota somente leitura confirmou o caso real validacao administrativa presente e confirmacao do auth ainda ausente node focado 7 7 testes aprovados eslint focado e git diff check aprovados smoke visual autenticado no localhost check verde exibido no card do aluno afetado revisao independente contra a main remota sem findings critical ou important unico apontamento minor foi o teste contratual por fonte compensado pelo smoke visual real controle de versao corrigido na branch com o avanco proposto para 4 7 7 e a entrada correspondente no changelog github actions controle de versao e qualidade do produto aprovados no commit final da pr preview vercel da pr ready",
+      "tokenCount": 94,
       "part": 1
     },
     {
-      "id": "b4b3c9d10f0d1bd877bd",
-      "hash": "b4b3c9d10f0d1bd877bdf87c0a960e21b509aed36417a56bb2b249cdc69dd748",
+      "id": "f44ab820b3f5343c3002",
+      "hash": "f44ab820b3f5343c30021b09a88792728dfe649a6e3b03d5cce6a56b66181501",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Evidências e validação",
-      "text": "exibiu `Nenhuma assinatura pendente disponível`.",
-      "normalizedText": "exibiu nenhuma assinatura pendente disponivel",
-      "tokenCount": 5,
-      "part": 2
-    },
-    {
-      "id": "146e7841507ea5413ecd",
-      "hash": "146e7841507ea5413ecd046bfd769563cd6bcdba224fea4429e02f69b3bf89f5",
-      "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Fechamento remoto",
-      "text": "1. A aplicação foi publicada pela PR `#87`, sem operação remota no Supabase. 2. Preview protegida e Vercel Production ficaram `Ready` antes do fechamento. 3. A sessão autenticada permaneceu ativa após a atualização e consultou a Caixa da Secretaria com sucesso. 4. Nenhuma variável, dado, migration, Edge Function ou envelope foi alterado.",
-      "normalizedText": "1 a aplicacao foi publicada pela pr 87 sem operacao remota no supabase 2 preview protegida e vercel production ficaram ready antes do fechamento 3 a sessao autenticada permaneceu ativa apos a atualizacao e consultou a caixa da secretaria com sucesso 4 nenhuma variavel dado migration edge function ou envelope foi alterado",
-      "tokenCount": 42,
+      "section": "Publicação GitHub",
+      "text": "1. Branch e PR dedicadas somente a este manifesto. 2. Merge e Vercel Production não integram a autorização atual. 3. CI e Preview concluíram com sucesso; a PR permanece aberta aguardando autorização explícita para eventual merge.",
+      "normalizedText": "1 branch e pr dedicadas somente a este manifesto 2 merge e vercel production nao integram a autorizacao atual 3 ci e preview concluiram com sucesso a pr permanece aberta aguardando autorizacao explicita para eventual merge",
+      "tokenCount": 27,
       "part": 1
     },
     {
-      "id": "215637a0c9f02ddf28b6",
-      "hash": "215637a0c9f02ddf28b639c020b6c4db1c8295d859f6cfe868ef77e8d8fa308a",
+      "id": "30f6ee87021858562eef",
+      "hash": "30f6ee87021858562eef084ac2e771418ef5527960ef0bb8b70eb4014b9b92de",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Limites e exclusões",
-      "text": "1. Nenhuma migration, Edge Function, variável Vercel, dado acadêmico ou envelope integra este lote. 2. A publicação fica restrita ao manifesto explícito de nove arquivos. 3. Alterações paralelas do workspace não integram a branch nem o commit remoto.",
-      "normalizedText": "1 nenhuma migration edge function variavel vercel dado academico ou envelope integra este lote 2 a publicacao fica restrita ao manifesto explicito de nove arquivos 3 alteracoes paralelas do workspace nao integram a branch nem o commit remoto",
-      "tokenCount": 32,
+      "text": "1. Nenhuma operação remota Supabase integra este lote. 2. O registro da próxima versão na branch não autoriza merge, promoção nem publicação em Produção. 3. Alterações paralelas do workspace não integram a branch nem o commit remoto.",
+      "normalizedText": "1 nenhuma operacao remota supabase integra este lote 2 o registro da proxima versao na branch nao autoriza merge promocao nem publicacao em producao 3 alteracoes paralelas do workspace nao integram a branch nem o commit remoto",
+      "tokenCount": 31,
       "part": 1
     },
     {
