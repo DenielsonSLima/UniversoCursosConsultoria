@@ -30,7 +30,7 @@ Deno.test("modelo do Diário persiste posições distintas para Professor e Coor
   assertMatch(manifest, /targetPageIndex: 1/);
 });
 
-Deno.test("editor e compositor usam capa vetorial e contracapa sem card paralelo", async () => {
+Deno.test("editor e compositor preservam capa configurada e contracapa sem card paralelo", async () => {
   const [page, editorTypes, service, coverPages, backFields] = await Promise.all([
     read("modules/gestor/cadastros/modelos-documentos/diarios/DiariosPage.tsx"),
     read("modules/gestor/cadastros/modelos-documentos/diarios/diarios-editor.types.ts"),
@@ -40,11 +40,15 @@ Deno.test("editor e compositor usam capa vetorial e contracapa sem card paralelo
   ]);
 
   assert(!page.includes("Capa-Diario.jpg"));
-  assert(!editorTypes.includes("DiarioUploadKind = 'capa'"));
-  assertMatch(page, /Capa vetorial oficial/);
-  assertMatch(page, /Remover capa legada/);
-  assertMatch(service, /Upload de capa completa foi desativado/);
-  assertMatch(service, /modelo histórico usa uma capa de página inteira/);
+  assertMatch(editorTypes, /DiarioUploadKind = 'capa' \| 'contracapa'/);
+  assertMatch(page, /Capa visual configurada/);
+  assertMatch(page, /handleUpload\(event, 'capa'\)/);
+  assertMatch(page, /Corrigir destino: mover esta imagem para a capa/);
+  assert(!service.includes("Upload de capa completa foi desativado"));
+  assert(!service.includes("modelo histórico usa uma capa de página inteira"));
+  assertMatch(coverPages, /if \(coverBackground\)/);
+  assertMatch(coverPages, /diario-cover-decorative-background/);
+  assertMatch(coverPages, /if \(!coverBackground\) drawCoverSlogan/);
   assert(!coverPages.includes("DADOS DO DOCUMENTO"));
   assert(!coverPages.includes("drawCanonicalInstitutionalHeader"));
   for (const id of [

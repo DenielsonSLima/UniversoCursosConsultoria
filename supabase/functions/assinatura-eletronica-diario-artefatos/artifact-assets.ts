@@ -66,6 +66,19 @@ type DiarioPdfSharedManifestAssets = {
   };
 };
 
+type DiarioPdfBackCoverManifestAssets = {
+  backCoverBackground:
+    | null
+    | (DiarioPdfManifestImage & {
+      sourceKind: "HTTPS_URL";
+      sourceUrl: string;
+    });
+  backCoverImages: readonly (DiarioPdfManifestImage & {
+    fieldId: string;
+    sourceUrl: string;
+  })[];
+};
+
 export type DiarioPdfAssetManifestV1 = {
   schemaVersion: 1;
   source: "UNIVERSO_DIARIO_PDF_ASSETS_V1";
@@ -79,28 +92,45 @@ export type DiarioPdfAssetManifestV2 = {
   source: "UNIVERSO_DIARIO_PDF_ASSETS_V2";
   documentSnapshotSha256: string;
   validationUrl: string;
-  assets: DiarioPdfSharedManifestAssets & {
-    backCoverBackground:
-      | null
-      | (DiarioPdfManifestImage & {
-        sourceKind: "HTTPS_URL";
-        sourceUrl: string;
-      });
-    backCoverImages: readonly (DiarioPdfManifestImage & {
-      fieldId: string;
-      sourceUrl: string;
-    })[];
-  };
+  assets: DiarioPdfSharedManifestAssets & DiarioPdfBackCoverManifestAssets;
 };
 
-/** V1 permanece somente para leitura/finalização de envelopes históricos. */
+export type DiarioPdfAssetManifestV3 = {
+  schemaVersion: 3;
+  source: "UNIVERSO_DIARIO_PDF_ASSETS_V3";
+  documentSnapshotSha256: string;
+  validationUrl: string;
+  assets:
+    & DiarioPdfSharedManifestAssets
+    & DiarioPdfBackCoverManifestAssets
+    & {
+      coverBackground:
+        | null
+        | (DiarioPdfManifestImage & {
+          sourceKind: "HTTPS_URL";
+          sourceUrl: string;
+        });
+    };
+};
+
+/** V1/V2 permanecem somente para leitura/finalização histórica. */
 export type DiarioPdfAssetManifest =
   | DiarioPdfAssetManifestV1
-  | DiarioPdfAssetManifestV2;
+  | DiarioPdfAssetManifestV2
+  | DiarioPdfAssetManifestV3;
+
+export type DiarioPdfAssetManifestWithBackCover =
+  | DiarioPdfAssetManifestV2
+  | DiarioPdfAssetManifestV3;
 
 export const isDiarioPdfAssetManifestV2 = (
   manifest: DiarioPdfAssetManifest,
 ): manifest is DiarioPdfAssetManifestV2 => manifest.schemaVersion === 2;
+
+export const isDiarioPdfAssetManifestWithBackCover = (
+  manifest: DiarioPdfAssetManifest,
+): manifest is DiarioPdfAssetManifestWithBackCover =>
+  manifest.schemaVersion === 2 || manifest.schemaVersion === 3;
 
 const fail = (message: string): never => {
   throw new Error(message);

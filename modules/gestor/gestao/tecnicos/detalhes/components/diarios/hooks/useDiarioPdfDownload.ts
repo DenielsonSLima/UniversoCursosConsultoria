@@ -3,6 +3,7 @@ import { supabase } from '../../../../../../../../lib/supabase';
 import { DiarioPrintDocumentProps } from '../diario-classe.types';
 import { getDiarioFileName } from '../diario-classe.utils';
 import { buildDiarioPdf } from '../diario-pdf.browser';
+import { diarioClasseService } from '../diario-classe.service';
 import { createDocumentReissueKey } from '../../../../../../../shared/document-validation/document-validation.service';
 import { downloadPdfBlob } from '../../../../../../../shared/pdf/download-pdf-blob';
 import { printPdfBlob } from '@/modules/gestor/secretaria/shared/pdf-blob-print';
@@ -29,6 +30,7 @@ interface ValidationOperation {
 
 interface PreparedPdf {
   source: DiarioPrintDocumentProps;
+  templateSignature: string;
   blob: Blob;
 }
 
@@ -46,6 +48,7 @@ export const useDiarioPdfDownload = ({
   const preparedPdfRef = useRef<PreparedPdf | null>(null);
   const pendingPdfRef = useRef<{
     source: DiarioPrintDocumentProps;
+    templateSignature: string;
     promise: Promise<Blob>;
   } | null>(null);
   const isBlank = printProps?.exportMode === 'EM_BRANCO';
@@ -56,11 +59,13 @@ export const useDiarioPdfDownload = ({
     validationOperationRef.current = null;
   }, [printProps]);
 
-  const prepareValidationCode = useCallback(async (): Promise<string | null> => {
-    if (!printProps?.template) {
+  const prepareValidationCode = useCallback(async (
+    template = printProps?.template,
+  ): Promise<string | null> => {
+    if (!template) {
       throw new Error('O modelo do Diário ainda não foi carregado.');
     }
-    if (isBlank || !printProps.template.imprimirValidacaoContracapa) return null;
+    if (isBlank || !template.imprimirValidacaoContracapa) return null;
 
     const turmaId = String(printProps.turma?.id || '').trim();
     const disciplinaId = String(printProps.disciplina?.id || '').trim();
@@ -120,7 +125,7 @@ export const useDiarioPdfDownload = ({
   }, [
     isBlank,
     printProps?.disciplina?.id,
-    printProps?.template?.imprimirValidacaoContracapa,
+    printProps?.template,
     printProps?.turma?.id,
   ]);
 
@@ -128,35 +133,59 @@ export const useDiarioPdfDownload = ({
     if (!printProps?.template) {
       throw new Error('O modelo do Diário ainda não foi carregado.');
     }
-    if (preparedPdfRef.current?.source === printProps) {
+    const cursoId = String(printProps.turma?.cursoId || '').trim();
+    if (!cursoId) {
+      throw new Error('O curso do Diário não foi identificado.');
+    }
+
+    // A prévia pode permanecer aberta em outra aba enquanto o modelo é salvo.
+    // Releia a configuração autoritativa antes de compor para nunca reutilizar
+    // uma capa genérica proveniente de um cache antigo.
+    const latestTemplate = await diarioClasseService.getTemplate(cursoId);
+    const templateSignature = JSON.stringify(latestTemplate);
+    if (
+      preparedPdfRef.current?.source === printProps
+      && preparedPdfRef.current.templateSignature === templateSignature
+    ) {
       return preparedPdfRef.current.blob;
     }
-    if (pendingPdfRef.current?.source === printProps) {
+    if (
+      pendingPdfRef.current?.source === printProps
+      && pendingPdfRef.current.templateSignature === templateSignature
+    ) {
       return pendingPdfRef.current.promise;
     }
 
     const source = printProps;
     const promise = (async () => {
-      const validationCode = await prepareValidationCode();
+      const validationCode = await prepareValidationCode(latestTemplate);
       const pdf = await buildDiarioPdf({
         ...source,
         validationCode,
         validationPreview: false,
-        template: source.template,
+        template: latestTemplate,
       });
       const blob = pdf.output('blob');
       if (!blob.size || blob.type !== 'application/pdf') {
         throw new Error('O compositor não retornou um PDF válido.');
       }
-      preparedPdfRef.current = { source, blob };
+      if (
+        pendingPdfRef.current?.source === source
+        && pendingPdfRef.current.templateSignature === templateSignature
+      ) {
+        preparedPdfRef.current = { source, templateSignature, blob };
+      }
       return blob;
     })();
 
-    pendingPdfRef.current = { source, promise };
+    pendingPdfRef.current = { source, templateSignature, promise };
     try {
       return await promise;
     } finally {
-      if (pendingPdfRef.current?.source === source) {
+      if (
+        pendingPdfRef.current?.source === source
+        && pendingPdfRef.current.templateSignature === templateSignature
+      ) {
         pendingPdfRef.current = null;
       }
     }

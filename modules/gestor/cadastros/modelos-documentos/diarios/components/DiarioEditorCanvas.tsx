@@ -36,11 +36,16 @@ const DiarioEditorCanvas: React.FC<DiarioEditorCanvasProps> = (props) => {
         className="relative aspect-[297/210] w-full select-none overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-inner"
       >
         {props.activeTab === 'capa' ? (
-          <VectorCoverBackground logoUrl={props.previewLogoUrl} />
+          <CoverDecorLayer imageUrl={props.form.capaUrl} />
         ) : props.form.contracapaUrl ? (
           <img src={props.form.contracapaUrl} alt="Fundo da contracapa" className="pointer-events-none absolute inset-0 z-0 h-full w-full object-fill" />
         ) : null}
-        <WatermarkLayer watermark={props.previewWatermark} />
+        {(props.activeTab !== 'capa' || !props.form.capaUrl) && (
+          <WatermarkLayer watermark={props.previewWatermark} />
+        )}
+        {props.activeTab === 'capa' && !props.form.capaUrl && (
+          <VectorCoverForeground logoUrl={props.previewLogoUrl} />
+        )}
         {props.showGrid && <GridLines />}
         {props.currentField && props.showCrosshairs && <Crosshairs field={props.currentField} />}
         {(props.activeTab === 'capa' || props.form.imprimirValidacaoContracapa) && fields
@@ -69,7 +74,7 @@ const CanvasToolbar: React.FC<DiarioEditorCanvasProps> = ({
   <div className="mb-2 flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
     <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
       {activeTab === 'capa'
-        ? 'Capa vetorial oficial (clique e arraste os campos)'
+        ? 'Capa oficial (clique e arraste os campos variáveis)'
         : 'Contracapa emitida (todos os campos são posicionáveis)'}
     </p>
     <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-wider text-slate-500">
@@ -91,11 +96,22 @@ const ToolbarToggle: React.FC<{
   </label>
 );
 
-const VectorCoverBackground: React.FC<{ logoUrl: string | null }> = ({ logoUrl }) => (
+const CoverDecorLayer: React.FC<{ imageUrl: string | null }> = ({ imageUrl }) => (
   <div className="pointer-events-none absolute inset-0 z-0 bg-white">
-    <div className="absolute inset-y-0 left-0 w-[8.08%] bg-[#0879d8] [background-image:repeating-linear-gradient(145deg,transparent_0,transparent_12px,rgba(41,167,239,.8)_13px,transparent_14px)]" />
-    <div className="absolute inset-y-0 left-[8.08%] w-[.74%] bg-white" />
-    <div className="absolute inset-y-0 left-[8.82%] w-[1.68%] bg-[#e30613]" />
+    {imageUrl ? (
+      <img src={imageUrl} alt="Capa visual configurada" className="h-full w-full object-fill" />
+    ) : (
+      <>
+        <div className="absolute inset-y-0 left-0 w-[8.08%] bg-[#0879d8] [background-image:repeating-linear-gradient(145deg,transparent_0,transparent_12px,rgba(41,167,239,.8)_13px,transparent_14px)]" />
+        <div className="absolute inset-y-0 left-[8.08%] w-[.74%] bg-white" />
+        <div className="absolute inset-y-0 left-[8.82%] w-[1.68%] bg-[#e30613]" />
+      </>
+    )}
+  </div>
+);
+
+const VectorCoverForeground: React.FC<{ logoUrl: string | null }> = ({ logoUrl }) => (
+  <div className="pointer-events-none absolute inset-0 z-[2]">
     <div className="absolute left-[31.65%] top-[4.76%] flex h-[15.24%] w-[41.08%] items-center justify-center">
       {logoUrl ? <img src={logoUrl} alt="Logotipo institucional" className="h-full w-full object-contain" /> : (
         <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Logotipo institucional</span>
@@ -154,7 +170,11 @@ const DraggableField: React.FC<DraggableFieldProps> = ({
   <div
     onMouseDown={(event) => onMouseDown(event, field.id, field.x, field.y)}
     className={`absolute z-10 border transition-colors ${isSelected ? 'border-blue-500 bg-blue-50/20 shadow-sm' : 'border-transparent hover:border-slate-300 hover:bg-slate-100/10'}`}
-    style={{ left: `${field.x}%`, top: `${field.y}%`, width: `${field.width}%`, cursor: isDragging ? 'grabbing' : 'grab' }}
+    style={{
+      left: `${field.x}%`, top: `${field.y}%`, width: `${field.width}%`,
+      height: field.id.startsWith('contracapaAssinatura') ? '14%' : undefined,
+      cursor: isDragging ? 'grabbing' : 'grab',
+    }}
   >
     {isSelected && <div className="pointer-events-none absolute -top-6 left-0 flex items-center gap-1 rounded bg-blue-600 px-1.5 py-0.5 text-[8px] font-black text-white shadow-sm"><Move size={8} />{field.x}% , {field.y}%</div>}
     {field.isImage ? (
@@ -162,7 +182,7 @@ const DraggableField: React.FC<DraggableFieldProps> = ({
     ) : field.id === 'contracapaQrCode' ? (
       <QrField field={field} fontSize={getPxFontSize(field.fontSize)} />
     ) : (
-      <div style={{
+      <div className={field.id.startsWith('contracapaAssinatura') ? 'h-full' : undefined} style={{
         fontSize: `${getPxFontSize(field.fontSize)}px`, fontWeight: field.bold ? 'bold' : 'normal',
         color: field.color || '#071a33', textAlign: field.align || 'left',
         borderTop: field.borderTop ? `1px solid ${field.color || '#071a33'}` : 'none',

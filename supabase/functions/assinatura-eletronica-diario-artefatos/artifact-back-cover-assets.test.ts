@@ -8,6 +8,7 @@ import {
 import type {
   DiarioPdfAssetManifestV1,
   DiarioPdfAssetManifestV2,
+  DiarioPdfAssetManifestV3,
   LoadedAssetBytes,
 } from "./artifact-assets.ts";
 
@@ -178,6 +179,28 @@ Deno.test("mantém leitura v1 histórica sem inventar ativos de contracapa", asy
     legacy,
   );
   assert.equal(loads, 0);
+});
+
+Deno.test("revalida a contracapa também no manifesto v3", async () => {
+  const { snapshot, manifest: v2 } = await v2Manifest();
+  const manifest: DiarioPdfAssetManifestV3 = {
+    ...v2,
+    schemaVersion: 3,
+    source: "UNIVERSO_DIARIO_PDF_ASSETS_V3",
+    assets: { ...v2.assets, coverBackground: null },
+  };
+  let loads = 0;
+  await reloadFrozenBackCoverAssets(
+    {
+      loadCanonicalAsset: () => {
+        loads += 1;
+        return Promise.resolve(loadedPng());
+      },
+    },
+    snapshot,
+    manifest,
+  );
+  assert.equal(loads, 3);
 });
 
 Deno.test("rejeita identificadores duplicados no modelo congelado", () => {

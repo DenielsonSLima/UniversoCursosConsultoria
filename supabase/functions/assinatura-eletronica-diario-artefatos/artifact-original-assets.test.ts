@@ -13,11 +13,13 @@ const loadedPng = () => ({
   mimeType: "image/png",
 });
 
-Deno.test("adapter Edge entrega todos os bytes de contracapa ao compositor", async () => {
+Deno.test("adapter Edge entrega capa e contracapa congeladas ao compositor", async () => {
   const snapshot = createSnapshot();
   snapshot.template.cabecalhoLogoUrl = assetUrl("logo");
   snapshot.institutionalIdentity.logoUrl = assetUrl("logo");
   snapshot.assetSources.headerLogoUrl = assetUrl("logo");
+  snapshot.template.capaUrl = assetUrl("capa");
+  snapshot.assetSources.coverUrl = assetUrl("capa");
   snapshot.template.contracapaUrl = assetUrl("contracapa");
   snapshot.assetSources.backCoverUrl = assetUrl("contracapa");
   snapshot.templateSource.raw.contracapaCampos = [
@@ -49,10 +51,14 @@ Deno.test("adapter Edge entrega todos os bytes de contracapa ao compositor", asy
     { code: snapshot.validationCode, basePath: "/validador" },
     "a".repeat(64),
   );
-  assert.equal(assets.manifest.schemaVersion, 2);
-  if (assets.manifest.schemaVersion !== 2) {
-    throw new Error("manifesto v2 esperado");
+  assert.equal(assets.manifest.schemaVersion, 3);
+  if (assets.manifest.schemaVersion !== 3) {
+    throw new Error("manifesto v3 esperado");
   }
+  assert.equal(
+    assets.manifest.assets.coverBackground?.sourceUrl,
+    assetUrl("capa"),
+  );
   assert.equal(
     assets.manifest.assets.backCoverBackground?.sourceUrl,
     assetUrl("contracapa"),
@@ -61,6 +67,7 @@ Deno.test("adapter Edge entrega todos os bytes de contracapa ao compositor", asy
     assets.manifest.assets.backCoverImages[0].fieldId,
     "selo_oficial",
   );
+  assert.ok(assets.resolved.coverBackground);
   assert.ok(assets.resolved.backCoverBackground);
   assert.ok(assets.resolved.backCoverImages.selo_oficial);
 

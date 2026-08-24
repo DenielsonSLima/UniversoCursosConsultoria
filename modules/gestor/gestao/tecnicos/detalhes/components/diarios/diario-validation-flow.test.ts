@@ -32,7 +32,12 @@ Deno.test("prévia, download e impressão do Diário reutilizam o mesmo Blob can
   assert.doesNotMatch(hookSource, /documentos_templates/);
   assert.doesNotMatch(hookSource, /validation_\$\{/);
   assert.equal((hookSource.match(/buildDiarioPdf\(/g) || []).length, 1);
+  assert.match(hookSource, /diarioClasseService\.getTemplate\(cursoId\)/);
+  assert.match(hookSource, /const templateSignature = JSON\.stringify\(latestTemplate\)/);
   assert.match(hookSource, /preparedPdfRef\.current\?\.source === printProps/);
+  assert.match(hookSource, /preparedPdfRef\.current\.templateSignature === templateSignature/);
+  assert.match(hookSource, /pendingPdfRef\.current\.templateSignature === templateSignature/);
+  assert.match(hookSource, /template: latestTemplate/);
   assert.match(hookSource, /const blob = await preparePdfBlob\(\)/);
   assert.match(hookSource, /downloadPdfBlob\(\s*blob,/);
   assert.match(hookSource, /await printPdfBlob\(blob,/);
@@ -56,6 +61,36 @@ Deno.test("prévia, download e impressão do Diário reutilizam o mesmo Blob can
     diarioClasseSource,
     /blankExportQueries = \[[\s\S]*?watermarkQuery,[\s\S]*?\]/,
   );
+});
+
+Deno.test("salvar a capa invalida a emissão e o PDF relê o modelo autoritativo", async () => {
+  const [editorHookSource, queryHookSource, pdfHookSource] = await Promise.all([
+    Deno.readTextFile(
+      new URL(
+        "../../../../../cadastros/modelos-documentos/diarios/hooks/useDiarioTemplateEditor.ts",
+        import.meta.url,
+      ),
+    ),
+    Deno.readTextFile(new URL("./hooks/useDiarioClasse.ts", import.meta.url)),
+    Deno.readTextFile(new URL("./hooks/useDiarioPdfDownload.ts", import.meta.url)),
+  ]);
+
+  assert.match(editorHookSource, /invalidateQueries\(\{ queryKey: \['diario-template'\] \}\)/);
+  assert.equal(
+    (editorHookSource.match(/refetchType: formRef\.current === savedForm \? 'active' : 'none'/g) || []).length,
+    2,
+  );
+  assert.match(queryHookSource, /staleTime: 0/);
+  assert.match(queryHookSource, /refetchOnMount: 'always'/);
+  assert.match(queryHookSource, /refetchOnWindowFocus: 'always'/);
+
+  const refreshIndex = pdfHookSource.indexOf(
+    "await diarioClasseService.getTemplate(cursoId)",
+  );
+  const buildIndex = pdfHookSource.indexOf("await buildDiarioPdf({");
+  assert.ok(refreshIndex >= 0, "a emissão deve reler o modelo salvo");
+  assert.ok(buildIndex > refreshIndex, "a releitura deve ocorrer antes da composição");
+  assert.match(pdfHookSource, /template: latestTemplate/);
 });
 
 Deno.test("adaptador web resolve a identidade do polo e não usa a turma como instituição", async () => {
@@ -193,7 +228,7 @@ Deno.test("impressão do Diário aguarda o helper seguro antes de liberar a oper
   assert.doesNotMatch(hookSource, /printPdfBlob\(pdf\.output\('blob'\)/);
   assert.match(
     hookSource,
-    /printProps\?\.template\?\.imprimirValidacaoContracapa/,
+    /template\.imprimirValidacaoContracapa/,
   );
   assert.doesNotMatch(
     hookSource,
@@ -305,7 +340,10 @@ Deno.test("editor e compositor consomem a mesma geometria, polo e marca configur
     /const baseline = y \+ \(field\.fontSize \|\| 10\) \* 0\.3528/,
   );
   assert.match(coverSource, /pdf\.line\(x, y, x \+ width, y\)/);
-  assert.match(coverSource, /drawPageWatermark\(pdf, props, watermark\);/);
+  assert.match(
+    coverSource,
+    /else \{[\s\S]*?drawPageWatermark\(pdf, props, watermark\);/,
+  );
   assert.doesNotMatch(coverSource, /Capa-Diario\.jpg|capaDiarioPadrao/);
   assert.doesNotMatch(contentPagesSource, /ASSINATURA DO PROFESSOR/);
   assert.doesNotMatch(contentPagesSource, /ASSINATURA DO COORDENADOR DO CURSO/);

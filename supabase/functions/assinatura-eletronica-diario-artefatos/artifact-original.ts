@@ -13,6 +13,7 @@ import {
   toPdfImage,
 } from "./artifact-assets.ts";
 import { loadOriginalBackCoverAssets } from "./artifact-back-cover-assets.ts";
+import { loadOriginalCoverBackground } from "./artifact-cover-background.ts";
 import type {
   AuthenticatedIdentity,
   DiarioArtifactDependencies,
@@ -66,25 +67,27 @@ export const resolveOriginalAssets = async (
   );
   const headerSource = snapshot.assetSources.headerLogoUrl;
   const watermarkSource = snapshot.assetSources.watermarkUrl;
-  const [headerLogo, watermark, qrCode, backCover] = await Promise.all([
-    dependencies.loadCanonicalAsset(headerSource).then((asset) =>
-      inspectImageAsset(asset)
-    ),
-    watermarkSource === null
-      ? Promise.resolve(null)
-      : watermarkSource.startsWith("data:")
-      ? inspectImageAsset(decodeCanonicalInlineDataImage(watermarkSource), {
-        maxBytes: MAX_INLINE_WATERMARK_BYTES,
-      })
-      : dependencies.loadCanonicalAsset(watermarkSource).then((asset) =>
+  const [headerLogo, watermark, qrCode, coverBackground, backCover] =
+    await Promise.all([
+      dependencies.loadCanonicalAsset(headerSource).then((asset) =>
         inspectImageAsset(asset)
       ),
-    qrImage(validationUrl),
-    loadOriginalBackCoverAssets(dependencies, snapshot),
-  ]);
+      watermarkSource === null
+        ? Promise.resolve(null)
+        : watermarkSource.startsWith("data:")
+        ? inspectImageAsset(decodeCanonicalInlineDataImage(watermarkSource), {
+          maxBytes: MAX_INLINE_WATERMARK_BYTES,
+        })
+        : dependencies.loadCanonicalAsset(watermarkSource).then((asset) =>
+          inspectImageAsset(asset)
+        ),
+      qrImage(validationUrl),
+      loadOriginalCoverBackground(dependencies, snapshot),
+      loadOriginalBackCoverAssets(dependencies, snapshot),
+    ]);
   const manifest: DiarioPdfAssetManifest = {
-    schemaVersion: 2,
-    source: "UNIVERSO_DIARIO_PDF_ASSETS_V2",
+    schemaVersion: 3,
+    source: "UNIVERSO_DIARIO_PDF_ASSETS_V3",
     documentSnapshotSha256,
     validationUrl,
     assets: {
@@ -115,12 +118,14 @@ export const resolveOriginalAssets = async (
         height: 240,
         sha256: qrCode.sha256,
       },
+      ...coverBackground.manifest,
       ...backCover.manifest,
     },
   };
   const resolved: DiarioPdfResolvedAssets = {
     logo: toPdfImage(headerLogo),
     watermark: watermark ? toPdfImage(watermark) : null,
+    coverBackground: coverBackground.resolved,
     ...backCover.resolved,
     qrCode: {
       image: toPdfImage(qrCode),

@@ -7,6 +7,7 @@ import {
   sha256Hex,
 } from "./artifact-assets.ts";
 import { reloadFrozenBackCoverAssets } from "./artifact-back-cover-assets.ts";
+import { reloadFrozenCoverBackground } from "./artifact-cover-background.ts";
 import {
   asRecord,
   type AuthenticatedIdentity,
@@ -126,6 +127,11 @@ export const finalize = async (
       preflight.pdfAssetManifestSnapshot,
       preflight.receiptAssetReferences.institutionalWatermark,
       preflight.receiptWatermarkSnapshot,
+    ),
+    reloadFrozenCoverBackground(
+      dependencies,
+      snapshot,
+      preflight.pdfAssetManifestSnapshot,
     ),
     reloadFrozenBackCoverAssets(
       dependencies,

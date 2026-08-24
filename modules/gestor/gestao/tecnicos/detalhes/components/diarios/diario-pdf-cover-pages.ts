@@ -101,27 +101,36 @@ export const drawCover = (
   props: DiarioPrintDocumentProps,
   logo: PdfImage,
   watermark: PdfImage | null,
+  coverBackground: PdfImage | null,
 ) => {
-  if (props.template.capaUrl) {
-    throw new Error(
-      "A capa configurada é uma página raster completa e não pode compor o Diário vetorial.",
+  if (coverBackground) {
+    pdf.addImage(
+      coverBackground.bytes,
+      coverBackground.format,
+      0,
+      0,
+      PAGE_WIDTH,
+      PAGE_HEIGHT,
+      "diario-cover-decorative-background",
+      "FAST",
     );
-  }
-  drawCoverDecor(pdf);
-  drawPageWatermark(pdf, props, watermark);
-  drawContainedImage(
-    pdf,
-    logo,
-    { x: 94, y: 10, width: 122, height: 32 },
-    "diario-cover-logo",
-  );
+  } else {
+    drawCoverDecor(pdf);
+    drawPageWatermark(pdf, props, watermark);
+    drawContainedImage(
+      pdf,
+      logo,
+      { x: 94, y: 10, width: 122, height: 32 },
+      "diario-cover-logo",
+    );
 
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(34);
-  setTextColor(pdf, "#071a73");
-  pdf.text("DIÁRIO DE CLASSE", PAGE_WIDTH / 2 + 10, 70, {
-    align: "center",
-  });
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(34);
+    setTextColor(pdf, "#071a73");
+    pdf.text("DIÁRIO DE CLASSE", PAGE_WIDTH / 2 + 10, 70, {
+      align: "center",
+    });
+  }
 
   props.template.capaCampos.filter((field) => field.visible).forEach((field) => {
     const x = (field.x / 100) * PAGE_WIDTH;
@@ -150,8 +159,8 @@ export const drawCover = (
     );
   });
 
-  drawCoverSlogan(pdf);
-  if (props.exportMode === "EM_BRANCO") {
+  if (!coverBackground) drawCoverSlogan(pdf);
+  if (props.exportMode === "EM_BRANCO" && !coverBackground) {
     const badgeWidth = 104;
     const badgeX = PAGE_WIDTH - badgeWidth - 13;
     setFillColor(pdf, "#fff7ed");

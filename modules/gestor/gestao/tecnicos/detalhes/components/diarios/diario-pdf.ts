@@ -52,6 +52,7 @@ const buildDiarioPdfInternal = (
   const {
     logo,
     watermark,
+    coverBackground,
     backCoverBackground,
     backCoverImages,
     qrCode,
@@ -75,7 +76,7 @@ const buildDiarioPdfInternal = (
     creator: "Universo Cursos e Consultoria",
   });
 
-  drawCover(pdf, props, logo, watermark);
+  drawCover(pdf, props, logo, watermark, coverBackground);
   let backCoverPageIndex: number | null = null;
   if (!isBlank && props.template.imprimirValidacaoContracapa) {
     backCoverPageIndex = drawBackCover(

@@ -58,7 +58,22 @@ const v2 = () => ({
   },
 });
 
-Deno.test("normalizador aceita v1 histórico e preserva v2 completo", () => {
+const v3 = () => ({
+  ...v2(),
+  schemaVersion: 3,
+  source: "UNIVERSO_DIARIO_PDF_ASSETS_V3",
+  assets: {
+    ...v2().assets,
+    coverBackground: {
+      sourceKind: "HTTPS_URL",
+      sourceUrl:
+        "https://project.supabase.co/storage/v1/object/public/docs/cover.png",
+      ...image,
+    },
+  },
+});
+
+Deno.test("normalizador aceita v1/v2 históricos e preserva v3 completo", () => {
   const legacy = normalizePdfAssetManifest({
     schemaVersion: 1,
     source: "UNIVERSO_DIARIO_PDF_ASSETS_V1",
@@ -75,6 +90,15 @@ Deno.test("normalizador aceita v1 histórico e preserva v2 completo", () => {
   assert.deepEqual(
     current.assets.backCoverImages.map((entry) => entry.fieldId),
     ["imagem_a", "imagem_b"],
+  );
+
+  const next = normalizePdfAssetManifest(v3());
+  assert.equal(next.schemaVersion, 3);
+  if (next.schemaVersion !== 3) throw new Error("manifesto v3 esperado");
+  assert.equal(next.assets.coverBackground?.sha256, HASH);
+  assert.equal(
+    next.assets.coverBackground?.sourceUrl,
+    "https://project.supabase.co/storage/v1/object/public/docs/cover.png",
   );
 });
 
@@ -104,6 +128,15 @@ Deno.test("normalizador rejeita campo duplicado e recurso v2 ausente", () => {
   delete missing.assets.backCoverImages;
   assert.throws(
     () => normalizePdfAssetManifest(missing),
+    /temporariamente indisponível/u,
+  );
+
+  const missingCover = v3() as Record<string, unknown> & {
+    assets: Record<string, unknown>;
+  };
+  delete missingCover.assets.coverBackground;
+  assert.throws(
+    () => normalizePdfAssetManifest(missingCover),
     /temporariamente indisponível/u,
   );
 });

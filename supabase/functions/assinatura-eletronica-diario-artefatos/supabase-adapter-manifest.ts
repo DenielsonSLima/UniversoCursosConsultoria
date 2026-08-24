@@ -62,7 +62,9 @@ export const normalizePdfAssetManifest = (
       schemaVersion === 1 &&
         source?.source === "UNIVERSO_DIARIO_PDF_ASSETS_V1" ||
       schemaVersion === 2 &&
-        source?.source === "UNIVERSO_DIARIO_PDF_ASSETS_V2"
+        source?.source === "UNIVERSO_DIARIO_PDF_ASSETS_V2" ||
+      schemaVersion === 3 &&
+        source?.source === "UNIVERSO_DIARIO_PDF_ASSETS_V3"
     )
   ) throw unavailable();
   const assets = requiredRecord(source, "assets");
@@ -135,17 +137,19 @@ export const normalizePdfAssetManifest = (
       ...shared,
     };
   }
-  const backgroundSource = assets.backCoverBackground;
-  let backCoverBackground = null;
-  if (backgroundSource !== null) {
-    const background = asRecord(backgroundSource);
-    if (background?.sourceKind !== "HTTPS_URL") throw unavailable();
-    backCoverBackground = {
+  const normalizeHttpsImage = (value: unknown) => {
+    if (value === null) return null;
+    const image = asRecord(value);
+    if (image?.sourceKind !== "HTTPS_URL") throw unavailable();
+    return {
       sourceKind: "HTTPS_URL" as const,
-      sourceUrl: requiredString(background, "sourceUrl", 2048),
-      ...normalizeManifestImage(background, MAX_CANONICAL_ASSET_BYTES),
+      sourceUrl: requiredString(image, "sourceUrl", 2048),
+      ...normalizeManifestImage(image, MAX_CANONICAL_ASSET_BYTES),
     };
-  }
+  };
+  const backCoverBackground = normalizeHttpsImage(
+    assets.backCoverBackground,
+  );
   const imageIds = new Set<string>();
   const backCoverImages = requiredArray(assets, "backCoverImages").map(
     (candidate) => {
@@ -166,14 +170,26 @@ export const normalizePdfAssetManifest = (
           backCoverImages.reduce((sum, image) => sum + image.byteSize, 0) >
       MAX_BACK_COVER_TOTAL_BYTES
   ) throw unavailable();
+  const backCoverAssets = {
+    backCoverBackground,
+    backCoverImages,
+  };
+  if (schemaVersion === 2) {
+    return {
+      schemaVersion: 2,
+      source: "UNIVERSO_DIARIO_PDF_ASSETS_V2",
+      ...shared,
+      assets: { ...shared.assets, ...backCoverAssets },
+    };
+  }
   return {
-    schemaVersion: 2,
-    source: "UNIVERSO_DIARIO_PDF_ASSETS_V2",
+    schemaVersion: 3,
+    source: "UNIVERSO_DIARIO_PDF_ASSETS_V3",
     ...shared,
     assets: {
       ...shared.assets,
-      backCoverBackground,
-      backCoverImages,
+      ...backCoverAssets,
+      coverBackground: normalizeHttpsImage(assets.coverBackground),
     },
   };
 };

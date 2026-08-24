@@ -12,6 +12,7 @@ import type {
   ReceiptInstitutionalWatermarkReference,
   ReceiptWatermarkSnapshot,
 } from "./artifact-contracts.ts";
+import { assertFrozenCoverBackgroundReference } from "./artifact-cover-background.ts";
 import { assertModelAssetReference } from "./artifact-participant-validation.ts";
 
 export const assertManifestForFinalization = (
@@ -25,7 +26,9 @@ export const assertManifestForFinalization = (
       manifest?.schemaVersion === 1 &&
         manifest.source === "UNIVERSO_DIARIO_PDF_ASSETS_V1" ||
       manifest?.schemaVersion === 2 &&
-        manifest.source === "UNIVERSO_DIARIO_PDF_ASSETS_V2"
+        manifest.source === "UNIVERSO_DIARIO_PDF_ASSETS_V2" ||
+      manifest?.schemaVersion === 3 &&
+        manifest.source === "UNIVERSO_DIARIO_PDF_ASSETS_V3"
     ) ||
     manifest.documentSnapshotSha256 !== documentSnapshotSha256 ||
     manifest.validationUrl !== validationUrl ||
@@ -38,6 +41,7 @@ export const assertManifestForFinalization = (
     manifest.assets.validationQr.width !== 240 ||
     manifest.assets.validationQr.height !== 240
   ) throw new Error("O manifesto dos recursos do PDF original é inválido.");
+  assertFrozenCoverBackgroundReference(snapshot, manifest);
   const expectedWatermark = snapshot.assetSources.watermarkUrl;
   const watermark = manifest.assets.watermark;
   if (expectedWatermark === null) {

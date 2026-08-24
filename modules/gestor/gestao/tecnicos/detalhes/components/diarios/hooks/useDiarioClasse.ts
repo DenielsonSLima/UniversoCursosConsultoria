@@ -36,6 +36,11 @@ export const useDiarioTemplate = (cursoId: string) => useQuery({
   queryKey: diarioClasseKeys.template(cursoId),
   queryFn: () => diarioClasseService.getTemplate(cursoId),
   enabled: Boolean(cursoId),
+  // Modelos documentais não podem herdar os cinco minutos de frescor global:
+  // outra aba pode ter acabado de substituir a capa oficial.
+  staleTime: 0,
+  refetchOnMount: 'always',
+  refetchOnWindowFocus: 'always',
 });
 
 export const useDiarioStudents = (
