@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../../../lib/supabase';
@@ -20,13 +20,16 @@ const queryKeys = {
 export const useDiarioTemplateEditor = () => {
   const queryClient = useQueryClient();
   const { toasts, removeToast, toast } = useToast();
+  const capaInputRef = useRef<HTMLInputElement>(null);
   const contracapaInputRef = useRef<HTMLInputElement>(null);
   const contracapaCustomImageRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const dragStartRef = useRef<{ mouseX: number; mouseY: number; fieldX: number; fieldY: number } | null>(null);
+  const formRef = useRef<DiarioTemplate>(DEFAULT_DIARIO_TEMPLATE);
+  const selectedCursoRef = useRef('TECNICO');
 
-  const [selectedCurso, setSelectedCurso] = useState('TECNICO');
-  const [form, setForm] = useState<DiarioTemplate>(DEFAULT_DIARIO_TEMPLATE);
+  const [selectedCurso, setSelectedCursoState] = useState('TECNICO');
+  const [form, setFormState] = useState<DiarioTemplate>(DEFAULT_DIARIO_TEMPLATE);
   const [uploading, setUploading] = useState<DiarioUploadKind | null>(null);
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>('curso');
   const [activeTab, setActiveTab] = useState<DiarioEditorTab>('capa');
@@ -35,6 +38,22 @@ export const useDiarioTemplateEditor = () => {
   const [showGrid, setShowGrid] = useState(true);
   const [showCrosshairs, setShowCrosshairs] = useState(true);
   const [snapToGrid, setSnapToGrid] = useState(true);
+
+  const setForm = useCallback<React.Dispatch<React.SetStateAction<DiarioTemplate>>>((action) => {
+    const next = typeof action === 'function'
+      ? (action as (current: DiarioTemplate) => DiarioTemplate)(formRef.current)
+      : action;
+    formRef.current = next;
+    setFormState(next);
+  }, []);
+
+  const setSelectedCurso = useCallback<React.Dispatch<React.SetStateAction<string>>>((action) => {
+    const next = typeof action === 'function'
+      ? (action as (current: string) => string)(selectedCursoRef.current)
+      : action;
+    selectedCursoRef.current = next;
+    setSelectedCursoState(next);
+  }, []);
 
   const { data: cursos = [], isLoading: loadingCursos } = useQuery({
     queryKey: queryKeys.cursos,
@@ -90,7 +109,7 @@ export const useDiarioTemplateEditor = () => {
       ...template,
       contracapaCampos: template.contracapaCampos || [],
     });
-  }, [template]);
+  }, [setForm, template]);
 
   useEffect(() => {
     if (activeTab === 'capa') setSelectedFieldId('curso');
@@ -135,9 +154,11 @@ export const useDiarioTemplateEditor = () => {
       const currentFields = activeTab === 'capa'
         ? (form.capaCampos || DEFAULT_CAPA_CAMPOS)
         : (form.contracapaCampos || []);
-      const fieldWidth = currentFields.find((field) => field.id === draggingField)?.width || 10;
+      const currentField = currentFields.find((field) => field.id === draggingField);
+      const fieldWidth = currentField?.width || 10;
+      const fieldHeight = currentField?.id.startsWith('contracapaAssinatura') ? 14 : 5;
       newX = Math.max(0, Math.min(100 - fieldWidth, newX));
-      newY = Math.max(0, Math.min(95, newY));
+      newY = Math.max(0, Math.min(100 - fieldHeight, newY));
 
       setForm((previous) => {
         const targetKey = activeTab === 'capa' ? 'capaCampos' : 'contracapaCampos';
@@ -167,9 +188,22 @@ export const useDiarioTemplateEditor = () => {
   }, [activeTab, draggingField, form.capaCampos, form.contracapaCampos, snapToGrid]);
 
   const saveMutation = useMutation({
-    mutationFn: () => diariosService.saveTemplate(selectedCurso, form),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.template(selectedCurso) });
+    mutationFn: async () => {
+      const savedCurso = selectedCursoRef.current;
+      const savedForm = formRef.current;
+      await diariosService.saveTemplate(savedCurso, savedForm);
+      return { savedCurso, savedForm };
+    },
+    onSuccess: async ({ savedCurso, savedForm }) => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.template(savedCurso),
+          refetchType: formRef.current === savedForm ? 'active' : 'none',
+        }),
+        // A emissão usa uma chave por UUID do curso, embora o modelo seja salvo
+        // por modalidade. Invalide todas as leituras de emissão desse modelo.
+        queryClient.invalidateQueries({ queryKey: ['diario-template'] }),
+      ]);
       toast.success('Modelo salvo', 'As configurações e layout deste diário foram atualizados.');
     },
     onError: (error: any) => toast.error('Erro ao salvar', error.message),
@@ -178,11 +212,17 @@ export const useDiarioTemplateEditor = () => {
   const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>, kind: DiarioUploadKind) => {
     const file = event.target.files?.[0];
     event.target.value = '';
-    if (!file || !selectedCurso) return;
+    const uploadCurso = selectedCursoRef.current;
+    if (!file || !uploadCurso) return;
 
     setUploading(kind);
     try {
-      const url = await diariosService.uploadImage(selectedCurso, kind, file);
+      const url = await diariosService.uploadImage(uploadCurso, kind, file);
+      if (selectedCursoRef.current !== uploadCurso) {
+        throw new Error(
+          'A modalidade foi alterada durante o envio. A imagem não foi aplicada a outro modelo; selecione o arquivo novamente.',
+        );
+      }
       if (kind === 'contracapa_custom') {
         const newField: CapaCampo = {
           id: `logo_${Math.random().toString(36).substr(2, 9)}`,
@@ -206,11 +246,23 @@ export const useDiarioTemplateEditor = () => {
         setSelectedFieldId(newField.id);
         toast.success('Logotipo adicionado', 'Você pode arrastar e redimensionar o logotipo no canvas.');
       } else {
-        const next = { ...form, contracapaUrl: url };
-        setForm(next);
-        await diariosService.saveTemplate(selectedCurso, next);
-        await queryClient.invalidateQueries({ queryKey: queryKeys.template(selectedCurso) });
-        toast.success('Imagem enviada', 'Contracapa salva com sucesso.');
+        const targetKey = kind === 'capa' ? 'capaUrl' : 'contracapaUrl';
+        setForm((previous) => ({ ...previous, [targetKey]: url }));
+        const savedForm = formRef.current;
+        await diariosService.saveTemplate(uploadCurso, savedForm);
+        // Se o usuário mover outro campo durante o upload, não deixe o refetch
+        // sobrescrever essa edição ainda não salva.
+        await Promise.all([
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.template(uploadCurso),
+            refetchType: formRef.current === savedForm ? 'active' : 'none',
+          }),
+          queryClient.invalidateQueries({ queryKey: ['diario-template'] }),
+        ]);
+        toast.success(
+          'Imagem enviada',
+          kind === 'capa' ? 'Capa visual salva com sucesso.' : 'Fundo da contracapa salvo com sucesso.',
+        );
       }
     } catch (error: any) {
       toast.error('Falha no upload', error.message);
@@ -235,7 +287,7 @@ export const useDiarioTemplateEditor = () => {
   const getPxFontSize = (ptSize: number) => (ptSize * 1.333 * canvasWidth) / 1122;
 
   return {
-    activeTab, canvasRef, capaCampos, contracapaCustomImageRef,
+    activeTab, canvasRef, capaCampos, capaInputRef, contracapaCustomImageRef,
     contracapaInputRef, cursos, currentField, draggingField, form, getPxFontSize, handleMouseDown,
     handleUpload, loadingCursos, loadingTemplate,
     previewLogoUrl: previewInstitutionalAssets?.logoUrl || null,

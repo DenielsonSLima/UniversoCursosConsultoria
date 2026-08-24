@@ -2,11 +2,11 @@ import type { DiarioPdfAcademicSnapshot } from "../../../modules/gestor/gestao/t
 import type { PdfImage } from "../../../modules/gestor/gestao/tecnicos/detalhes/components/diarios/diario-pdf-image.core.ts";
 import {
   type DiarioPdfAssetManifest,
-  type DiarioPdfAssetManifestV2,
+  type DiarioPdfAssetManifestWithBackCover,
   type DiarioPdfManifestImage,
   type InspectedImageAsset,
   inspectImageAsset,
-  isDiarioPdfAssetManifestV2,
+  isDiarioPdfAssetManifestWithBackCover,
   type LoadedAssetBytes,
   toPdfImage,
 } from "./artifact-assets.ts";
@@ -142,15 +142,15 @@ const frozenImageOptions = (entry: DiarioPdfManifestImage) => ({
 });
 
 /**
- * V1 é aceito somente para finalizar envelopes históricos. V2 relê todos os
- * bytes que influenciam a contracapa e os confere contra fonte e hash congelados.
+ * V1 é aceito somente para finalizar envelopes históricos. V2/V3 releem todos
+ * os bytes da contracapa e os conferem contra fonte e hash congelados.
  */
 export const reloadFrozenBackCoverAssets = async (
   dependencies: CanonicalAssetLoader,
   snapshot: DiarioPdfAcademicSnapshot,
   manifest: DiarioPdfAssetManifest,
 ) => {
-  if (!isDiarioPdfAssetManifestV2(manifest)) return;
+  if (!isDiarioPdfAssetManifestWithBackCover(manifest)) return;
   const sources = collectBackCoverAssetSources(snapshot);
   const frozen = manifest.assets;
   if (sources.backgroundSource === null) {
@@ -191,6 +191,6 @@ export const reloadFrozenBackCoverAssets = async (
 };
 
 export type DiarioPdfBackCoverManifestV2 = Pick<
-  DiarioPdfAssetManifestV2["assets"],
+  DiarioPdfAssetManifestWithBackCover["assets"],
   "backCoverBackground" | "backCoverImages"
 >;

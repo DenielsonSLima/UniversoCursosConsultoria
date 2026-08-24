@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-08-24T00:35:42.035Z",
+  "builtAt": "2026-08-24T13:44:42.278Z",
   "manifestVersion": 2,
-  "sourceSignature": "42dc86bad726192435808e19533357bb0749e7dc16358d1e01a5af1c6bc5d438",
+  "sourceSignature": "9615a257e07334311a6806238903afdc72c6781009ca4c3926996ef922cb1ac7",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "aa6a01608634591fcb66600a86261c6fd49bdb4fc96f9b34762f22c5babc349f"
+      "hash": "b1c7730e73e8e02cf10993ad133f754f96820bfcb47a77f8e26776b502c35009"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -192,60 +192,80 @@
       "part": 1
     },
     {
-      "id": "944858f1e3ae5a1db0c2",
-      "hash": "944858f1e3ae5a1db0c2d48885cd4b6f4db31c10541856346706a3ffe7939e23",
+      "id": "d201fc4e9c50fa7c79a5",
+      "hash": "d201fc4e9c50fa7c79a56ef9c4002df0d732220f5557e74c53bb7b86ef6143eb",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Lote ativo",
-      "text": "Estado: `PUBLICADO_PRODUCAO_4_7_4`",
-      "normalizedText": "estado publicado producao 4 7 4",
-      "tokenCount": 3,
+      "text": "Estado: `PUBLICACAO_GITHUB_AUTORIZADA_SEM_MERGE_PRODUCAO`",
+      "normalizedText": "estado publicacao github autorizada sem merge producao",
+      "tokenCount": 7,
       "part": 1
     },
     {
-      "id": "856af073dd20ae03b04e",
-      "hash": "856af073dd20ae03b04e0bc9e324eadec1247b99876c47a1e0b1527d2838f575",
+      "id": "84d1dcc74bca24223535",
+      "hash": "84d1dcc74bca24223535dff83c33100dfa8b04959b9c7b3b26c3554c790c82b8",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3",
-      "text": "- Pedido: corrigir as turmas e o Diário, reutilizar os modelos configurados, validar Professor/coordenação/Aluno/Responsável e publicar o resultado. - Base remota final: PR `#83` integrada por squash na `main`, commit `2f6461bf53459e6ab7a9e827c174113173719fc6`. - Registro: `ai/operacao/registros/alteracoes/2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3.md`. - Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3.md`. - Versão: `4.7.4` estável; patch de fechamento operacional da entrega funcional 4.7.3. - Supabase: treze migrations aplicadas via MCP e `assinatura-eletronica-diario-artefatos` v13 ativa com JWT. - Produção: entrega funcional Vercel `9uowbC2EimqTeexBXv2hPd91Ro3k` concluída; fechamento operacional 4.7.4 publicado pela PR `#84`.",
-      "normalizedText": "pedido corrigir as turmas e o diario reutilizar os modelos configurados validar professor coordenacao aluno responsavel e publicar o resultado base remota final pr 83 integrada por squash na main commit 2f6461bf53459e6ab7a9e827c174113173719fc6 registro ai operacao registros alteracoes 2026 08 23 fidelidade diario assinaturas acessos 4 7 3 md manifesto explicito ai operacao registros alteracoes 2026 08 23 fidelidade diario assinaturas acessos 4 7 3 md versao 4 7 4 estavel patch de fechamento operacional da entrega funcional 4 7 3 supabase treze migrations aplicadas via mcp e assinatura eletronica diario artefatos v13 ativa com jwt producao entrega funcional vercel 9uowbc2eimqteexbxv2hpd91ro3k concluida fechamento operacional 4 7 4 publicado pela pr 84",
-      "tokenCount": 90,
+      "section": "Lote: 2026-08-24-restauracao-capa-diario-slots-assinatura",
+      "text": "- Pedido: restaurar a capa visual configurada do Diário, corrigir a imagem gravada no destino de contracapa e tornar explícita a posição dos carimbos digitais de Professor e Coordenador. - Regressão confirmada: PR `#83`, squash `2f6461bf53459e6ab7a9e827c174113173719fc6`, integrado em `2026-08-24 00:29 UTC` (`2026-08-23 21:29 America/Maceio`). - Causa: o fluxo passou a rejeitar `capaUrl`, retirou o upload de capa e deixou o upload visível associado a `contracapaUrl`; os campos de assinatura continuaram desenhados, mas foram apresentados como linhas manuais em vez de slots dos carimbos digitais. Depois da restauração do upload, uma segunda regressão manteve o PDF no modelo antigo: editor e emissão usavam chaves de cache diferentes, com frescor global de cinco minutos e cache adicional do Blob. - Registro: `ai/operacao/registros/alteracoes/2026-08-24-restauracao-capa-diario-slots-assinatura.md`. - Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-24-restauracao-capa-diario-slots-assinatura.md`. - Publicação: solicitada para branch/PR atômica no GitHub. Merge em `main`, migration V3, Edge Function e aplicação web em Produção não foram autorizados e continuam pendentes. As",
+      "normalizedText": "pedido restaurar a capa visual configurada do diario corrigir a imagem gravada no destino de contracapa e tornar explicita a posicao dos carimbos digitais de professor e coordenador regressao confirmada pr 83 squash 2f6461bf53459e6ab7a9e827c174113173719fc6 integrado em 2026 08 24 00 29 utc 2026 08 23 21 29 america maceio causa o fluxo passou a rejeitar capaurl retirou o upload de capa e deixou o upload visivel associado a contracapaurl os campos de assinatura continuaram desenhados mas foram apresentados como linhas manuais em vez de slots dos carimbos digitais depois da restauracao do upload uma segunda regressao manteve o pdf no modelo antigo editor e emissao usavam chaves de cache diferentes com frescor global de cinco minutos e cache adicional do blob registro ai operacao registros alteracoes 2026 08 24 restauracao capa diario slots assinatura md manifesto explicito ai operacao registros alteracoes 2026 08 24 restauracao capa diario slots assinatura md publicacao solicitada para branch pr atomica no github merge em main migration v3 edge function e aplicacao web em producao nao foram autorizados e continuam pendentes as",
+      "tokenCount": 161,
       "part": 1
     },
     {
-      "id": "4583f7554e4c93d2821c",
-      "hash": "4583f7554e4c93d2821cfca913f47a6c22f2e01c636fca468750d3316851c18f",
+      "id": "19c98b37a44cf87863e4",
+      "hash": "19c98b37a44cf87863e44f396b25a9671a593f359de2b1ab28cc39457e215145",
+      "path": "ai/operacao/LOTE_ATIVO.md",
+      "section": "Lote: 2026-08-24-restauracao-capa-diario-slots-assinatura",
+      "text": "URLs de capa atuais foram salvas pelo próprio usuário no banco durante o diagnóstico.",
+      "normalizedText": "urls de capa atuais foram salvas pelo proprio usuario no banco durante o diagnostico",
+      "tokenCount": 13,
+      "part": 2
+    },
+    {
+      "id": "ab66c77deb87fa694442",
+      "hash": "ab66c77deb87fa694442c0c5f060420024c76b048f9871bae3d4415047e30d83",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Critérios de aceite",
-      "text": "1. Gestor lista as turmas técnicas e livres temporárias pelo contrato canônico. `ATENDIDO`. 2. Professor reutiliza o Diário do Gestor e acessa somente as próprias disciplinas. `ATENDIDO`. 3. Coordenação permanece uma capacidade adicional do perfil Professor. `ATENDIDO`. 4. Capa, página 2, contracapa, campos, QR e marca d'água vêm das configurações salvas, sem fallback genérico. `ATENDIDO`. 5. Professor assina antes do Coordenador; o final contém duas páginas de evidências e comprovante separado. `ATENDIDO_POR_CONTRATO`; smoke real bloqueado pela ausência de sessão Gestor controlável. 6. Gestor possui módulo `Assinaturas` com caixa, acervo, filtros e Diário final; categorias sem backend seguro ficam indisponíveis. `ATENDIDO`. 7. Aluno, carteirinha, notas, Responsável e dependente passam pelos contratos reais. `ATENDIDO`. 8. Nenhuma cobrança, boleto ou operação Banese é criada. `ATENDIDO`. 9. CI, Preview, merge e Vercel Produção devem concluir antes do encerramento. `ATENDIDO`.",
-      "normalizedText": "1 gestor lista as turmas tecnicas e livres temporarias pelo contrato canonico atendido 2 professor reutiliza o diario do gestor e acessa somente as proprias disciplinas atendido 3 coordenacao permanece uma capacidade adicional do perfil professor atendido 4 capa pagina 2 contracapa campos qr e marca d agua vem das configuracoes salvas sem fallback generico atendido 5 professor assina antes do coordenador o final contem duas paginas de evidencias e comprovante separado atendido por contrato smoke real bloqueado pela ausencia de sessao gestor controlavel 6 gestor possui modulo assinaturas com caixa acervo filtros e diario final categorias sem backend seguro ficam indisponiveis atendido 7 aluno carteirinha notas responsavel e dependente passam pelos contratos reais atendido 8 nenhuma cobranca boleto ou operacao banese e criada atendido 9 ci preview merge e vercel producao devem concluir antes do encerramento atendido",
-      "tokenCount": 117,
+      "text": "1. Capa e contracapa possuem upload e persistência separados. `ATENDIDO_LOCALMENTE`. 2. A capa enviada é o modelo visual integral da página 1, sem duplicar logo, título, marca ou slogan; somente campos variáveis são sobrepostos. `ATENDIDO_LOCALMENTE`. 3. A imagem hoje salva em `contracapaUrl` pode ser movida explicitamente para `capaUrl`, limpando o destino incorreto. `ATENDIDO_LOCALMENTE`. 4. Professor e Coordenador possuem botões próprios de seleção, slots arrastáveis, largura configurável e altura segura de 14% na página 2. `ATENDIDO_LOCALMENTE`. 5. O PDF original e o PDF assinado usam a mesma capa congelada por URL, MIME, dimensões, tamanho e SHA-256. `ATENDIDO_LOCALMENTE`. 6. Manifestos V1/V2 históricos permanecem finalizáveis; novas emissões usam V3. `ATENDIDO_LOCALMENTE`. 7. A emissão invalida o cache ao salvar, refaz a consulta ao montar/focar e relê o modelo autoritativo imediatamente antes de compor o PDF. `ATENDIDO_LOCALMENTE`. 8. Upload e salvamento fixam a modalidade de origem, bloqueiam a troca durante a operação e preservam edições concorrentes sem deixar o cache antigo válido. `ATENDIDO_LOCALMENTE`.",
+      "normalizedText": "1 capa e contracapa possuem upload e persistencia separados atendido localmente 2 a capa enviada e o modelo visual integral da pagina 1 sem duplicar logo titulo marca ou slogan somente campos variaveis sao sobrepostos atendido localmente 3 a imagem hoje salva em contracapaurl pode ser movida explicitamente para capaurl limpando o destino incorreto atendido localmente 4 professor e coordenador possuem botoes proprios de selecao slots arrastaveis largura configuravel e altura segura de 14 na pagina 2 atendido localmente 5 o pdf original e o pdf assinado usam a mesma capa congelada por url mime dimensoes tamanho e sha 256 atendido localmente 6 manifestos v1 v2 historicos permanecem finalizaveis novas emissoes usam v3 atendido localmente 7 a emissao invalida o cache ao salvar refaz a consulta ao montar focar e rele o modelo autoritativo imediatamente antes de compor o pdf atendido localmente 8 upload e salvamento fixam a modalidade de origem bloqueiam a troca durante a operacao e preservam edicoes concorrentes sem deixar o cache antigo valido atendido localmente",
+      "tokenCount": 133,
       "part": 1
     },
     {
-      "id": "d10e8b0578c4c5f203c2",
-      "hash": "d10e8b0578c4c5f203c22acf90ed5ec517bd2e5c882e273c9b6c1be7acc317a2",
+      "id": "fe577d32e27ca8895a46",
+      "hash": "fe577d32e27ca8895a46d886d78e44f589acb1ed2b741a3762243c0cde977d02",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Validação",
-      "text": "- Acessos e navegação: 34/34. - Aluno e Responsável: 57/57; carteirinha CIE emitida pelo RPC do aluno. - PDF/assinaturas/interface: 193 contratos. - Edge de artefatos: 112 contratos; versão remota 13. - Acervo do Gestor: 10 contratos. - Diário assinado na turma: 5 contratos Node. - TypeScript, ESLint, Deno, teto, versão, operação, RAG e build: aprovados localmente e no CI. - GitHub: Controle de versão `#229` e Qualidade do produto `#261` aprovados; PR `#83` integrada na `main`. - Produção: `/`, `/login`, `/gestor`, `/professor`, `/aluno` e `/validador` responderam HTTP 200; o bundle público contém `4.7.4`, `ESTÁVEL` e o resumo oficial do fechamento. - Safari remoto: janela autenticada visível ao usuário, mas indisponível ao controlador por `cgWindowNotFound`; contratos públicos substituem somente o que pode ser comprovado sem UI.",
-      "normalizedText": "acessos e navegacao 34 34 aluno e responsavel 57 57 carteirinha cie emitida pelo rpc do aluno pdf assinaturas interface 193 contratos edge de artefatos 112 contratos versao remota 13 acervo do gestor 10 contratos diario assinado na turma 5 contratos node typescript eslint deno teto versao operacao rag e build aprovados localmente e no ci github controle de versao 229 e qualidade do produto 261 aprovados pr 83 integrada na main producao login gestor professor aluno e validador responderam http 200 o bundle publico contem 4 7 4 estavel e o resumo oficial do fechamento safari remoto janela autenticada visivel ao usuario mas indisponivel ao controlador por cgwindownotfound contratos publicos substituem somente o que pode ser comprovado sem ui",
-      "tokenCount": 106,
+      "section": "Evidências e validação",
+      "text": "- Supabase: a investigação dos modelos foi somente leitura. Na consulta inicial, os três modelos tinham `capaUrl = null` e a imagem enviada estava em `contracapaUrl`; no Técnico, os bytes eram idênticos a `Documentos/Capa-Diario.jpg` (`SHA-256 98bd440ca26bcf14f37743fde3adaa5304afd90a750b582326817aff5197a2d8`). Depois do novo upload feito pelo usuário, `diario_TECNICO`, `diario_LIVRE` e `diario_ESPECIALIZACAO` passaram a possuir `capaUrl` própria; o PDF genérico remanescente confirmou o cache antigo como causa. - Supabase, limpeza autorizada: o marcador `UCQA-20260823` foi removido dos registros operacionais temporários — 2 turmas (Técnico e Livre), 2 matrículas, 5 parceiros, 6 identidades de acesso, 3 despesas pendentes e vínculos dependentes. Os 3 patrimônios foram excluídos pelo fluxo oficial e ficaram inativos com auditoria imutável. Pós-checagem: zero turma, matrícula, parceiro, acesso, despesa ou patrimônio ativo do marcador. - Render Poppler: capa configurada sem duplicação, página interna preservada, página 2 íntegra e dois carimbos dentro dos slots de Professor e Coordenador. - Deno focado: `69/69` testes aprovados. - Editor, cache, releitura do modelo, fronteira do",
+      "normalizedText": "supabase a investigacao dos modelos foi somente leitura na consulta inicial os tres modelos tinham capaurl null e a imagem enviada estava em contracapaurl no tecnico os bytes eram identicos a documentos capa diario jpg sha 256 98bd440ca26bcf14f37743fde3adaa5304afd90a750b582326817aff5197a2d8 depois do novo upload feito pelo usuario diario tecnico diario livre e diario especializacao passaram a possuir capaurl propria o pdf generico remanescente confirmou o cache antigo como causa supabase limpeza autorizada o marcador ucqa 20260823 foi removido dos registros operacionais temporarios 2 turmas tecnico e livre 2 matriculas 5 parceiros 6 identidades de acesso 3 despesas pendentes e vinculos dependentes os 3 patrimonios foram excluidos pelo fluxo oficial e ficaram inativos com auditoria imutavel pos checagem zero turma matricula parceiro acesso despesa ou patrimonio ativo do marcador render poppler capa configurada sem duplicacao pagina interna preservada pagina 2 integra e dois carimbos dentro dos slots de professor e coordenador deno focado 69 69 testes aprovados editor cache releitura do modelo fronteira do",
+      "tokenCount": 140,
       "part": 1
     },
     {
-      "id": "10cb006be5dc154544c6",
-      "hash": "10cb006be5dc154544c679806bff2462f4c7ee1ca26389c83b42d30d209b4d6f",
+      "id": "e1bd6e40268e957ca20f",
+      "hash": "e1bd6e40268e957ca20f3c45654a6bd8c711874320761246f24c41b92ff6f0fb",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Limites e exclusões",
-      "text": "1. Contratos e Matrículas aparecem como categorias futuras em `Assinaturas`, desabilitadas até existir pipeline autorizado próprio. 2. O smoke real não foi fabricado: o Safari não ficou controlável e a preparação do envelope exige uma sessão Gestor; nenhum SQL administrativo contornou RLS. 3. Artefatos temporários de teste e renders não integram o lote. 4. Nenhum fluxo financeiro ou Banese integra esta entrega.",
-      "normalizedText": "1 contratos e matriculas aparecem como categorias futuras em assinaturas desabilitadas ate existir pipeline autorizado proprio 2 o smoke real nao foi fabricado o safari nao ficou controlavel e a preparacao do envelope exige uma sessao gestor nenhum sql administrativo contornou rls 3 artefatos temporarios de teste e renders nao integram o lote 4 nenhum fluxo financeiro ou banese integra esta entrega",
+      "section": "Evidências e validação",
+      "text": "compositor e snapshot: `23/23` testes aprovados. - Revisão independente: nenhum `Critical` ou `Important` após os patches finais. - TypeScript completo, `deno check`, ESLint focado, `git diff --check` e teto de 500 linhas: aprovados. - Smoke autenticado da interface: pendente porque nenhuma sessão de navegador automatizável estava disponível; não foi substituído por uma alegação de sucesso.",
+      "normalizedText": "compositor e snapshot 23 23 testes aprovados revisao independente nenhum critical ou important apos os patches finais typescript completo deno check eslint focado git diff check e teto de 500 linhas aprovados smoke autenticado da interface pendente porque nenhuma sessao de navegador automatizavel estava disponivel nao foi substituido por uma alegacao de sucesso",
       "tokenCount": 51,
+      "part": 2
+    },
+    {
+      "id": "deb7c16c95cac8dcc207",
+      "hash": "deb7c16c95cac8dcc207e4bd074ab10766db6ee5436441ab80ae82d3e33c5621",
+      "path": "ai/operacao/LOTE_ATIVO.md",
+      "section": "Pendências após a publicação autorizada no GitHub",
+      "text": "1. Aguardar CI e Preview da branch/PR; não mesclar em `main` sem nova autorização explícita. 2. Em uma autorização de Produção separada, publicar a migration `20260824080000_freeze_diary_cover_background_assets_manifest_v3.sql`, a nova Edge Function de artefatos e a aplicação web. 3. Após a publicação da aplicação, executar o smoke autenticado de `Modelos Documentos`, abrir novamente o `PDF preenchido` e confirmar que a faixa vermelha e toda a arte da capa salva aparecem; não substituir as URLs atuais. 4. Não regravar envelopes ou manifestos históricos.",
+      "normalizedText": "1 aguardar ci e preview da branch pr nao mesclar em main sem nova autorizacao explicita 2 em uma autorizacao de producao separada publicar a migration 20260824080000 freeze diary cover background assets manifest v3 sql a nova edge function de artefatos e a aplicacao web 3 apos a publicacao da aplicacao executar o smoke autenticado de modelos documentos abrir novamente o pdf preenchido e confirmar que a faixa vermelha e toda a arte da capa salva aparecem nao substituir as urls atuais 4 nao regravar envelopes ou manifestos historicos",
+      "tokenCount": 73,
       "part": 1
     },
     {
-      "id": "f40ccaac8356863e68dd",
-      "hash": "f40ccaac8356863e68ddd7a62afdc97823fa81c3a705dd50360b20081659aac3",
+      "id": "8967d9e111bd9a24ee86",
+      "hash": "8967d9e111bd9a24ee86b2e5660b200906d90aab74092477b26431f18779e56e",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Limites e exclusões",
+      "section": "Pendências após a publicação autorizada no GitHub",
       "text": "Histórico: `ai/operacao/registros/ALTERACOES.md` e `ai/operacao/registros/alteracoes/`.",
       "normalizedText": "historico ai operacao registros alteracoes md e ai operacao registros alteracoes",
       "tokenCount": 10,

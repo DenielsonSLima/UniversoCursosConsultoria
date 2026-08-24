@@ -71,12 +71,22 @@ const resolveBrowserAssets = async (
   const backCoverImageFields = getConfiguredBackCoverFields(props).filter((field) => (
     field.visible === true && field.isImage === true
   ));
-  const [logo, watermark, backCoverBackground, backCoverImageEntries, qrCodeImage] = await Promise.all([
+  const [
+    logo,
+    watermark,
+    coverBackground,
+    backCoverBackground,
+    backCoverImageEntries,
+    qrCodeImage,
+  ] = await Promise.all([
     loadFirstImage(
       [props.institutionalIdentity.logoUrl, props.template.cabecalhoLogoUrl],
       'O logo',
     ),
     loadPdfImage(props.institutionalIdentity.watermarkUrl),
+    props.template.capaUrl
+      ? loadFirstImage([props.template.capaUrl], 'A capa configurada')
+      : Promise.resolve(null),
     props.template.contracapaUrl
       ? loadFirstImage([props.template.contracapaUrl], 'A arte decorativa da contracapa')
       : Promise.resolve(null),
@@ -106,6 +116,7 @@ const resolveBrowserAssets = async (
   return {
     logo,
     watermark,
+    coverBackground,
     backCoverBackground,
     backCoverImages: Object.fromEntries(backCoverImageEntries),
     qrCode: qrCodeImage && validationUrl

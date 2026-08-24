@@ -14,6 +14,7 @@ const DiariosPage: React.FC = () => {
   const {
     activeTab,
     canvasRef,
+    capaInputRef,
     capaCampos,
     contracapaCustomImageRef,
     contracapaInputRef,
@@ -52,11 +53,12 @@ const DiariosPage: React.FC = () => {
 
   return (
     <div className="overflow-hidden rounded-[2rem] border border-slate-100 bg-white shadow-sm animate-fadeIn">
+      <input ref={capaInputRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(event) => handleUpload(event, 'capa')} />
       <input ref={contracapaInputRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(event) => handleUpload(event, 'contracapa')} />
       <input ref={contracapaCustomImageRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(event) => handleUpload(event, 'contracapa_custom')} />
 
       <PageHeader
-        disabled={!selectedCurso || saveMutation.isPending || Boolean(templateError) || Boolean(form.capaUrl)}
+        disabled={!selectedCurso || Boolean(uploading) || saveMutation.isPending || Boolean(templateError)}
         saving={saveMutation.isPending}
         onSave={() => saveMutation.mutate()}
       />
@@ -67,6 +69,7 @@ const DiariosPage: React.FC = () => {
           loading={loadingCursos}
           selectedCurso={selectedCurso}
           onSelect={setSelectedCurso}
+          disabled={Boolean(uploading) || saveMutation.isPending}
         />
 
         {previewInstitutionalAssetsError && (
@@ -85,19 +88,6 @@ const DiariosPage: React.FC = () => {
           </div>
         ) : selectedModality ? (
           <div className="space-y-6">
-            {form.capaUrl && (
-              <div className="flex flex-col justify-between gap-4 rounded-2xl border border-amber-300 bg-amber-50 p-5 text-amber-950 sm:flex-row sm:items-center">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-wider">Capa raster histórica incompatível</p>
-                  <p className="mt-1 text-[11px] font-semibold leading-relaxed text-amber-800">
-                    Esta imagem de página inteira não será emitida nem pode ser salva no modelo vetorial. Remova-a explicitamente para continuar.
-                  </p>
-                </div>
-                <button type="button" onClick={() => setForm((current) => ({ ...current, capaUrl: null }))} className="shrink-0 rounded-xl bg-amber-900 px-4 py-2 text-[10px] font-black uppercase tracking-wider text-white">
-                  Remover capa legada
-                </button>
-              </div>
-            )}
             <EditorTabs
               activeTab={activeTab}
               modalityName={selectedModality.nome}
@@ -130,20 +120,40 @@ const DiariosPage: React.FC = () => {
                     <div className="grid gap-6 md:grid-cols-2">
                       <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5 text-blue-900">
                         <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider">
-                          <Info size={16} /> Capa vetorial oficial
+                          <Info size={16} /> {activeTab === 'capa' ? 'Capa oficial do diário' : 'Contracapa oficial do diário'}
                         </div>
                         <p className="mt-2 text-[11px] font-semibold leading-relaxed text-blue-800">
-                          A arte, o logotipo institucional e os campos acima são compostos como texto e formas nativas no PDF. Upload de página inteira foi removido para preservar nitidez e fidelidade.
+                          {activeTab === 'capa'
+                            ? 'Quando uma capa é enviada, ela permanece como o modelo visual integral aprovado. Os campos variáveis continuam independentes e posicionáveis por cima da arte.'
+                            : 'A imagem enviada ocupa o fundo da página 2. Campos, QR Code e slots de assinatura eletrônica continuam independentes e posicionáveis.'}
                         </p>
                       </div>
-                      <DiarioImageUploader
-                        title="Verso / contracapa (Fundo de Imagem)"
-                        description="Imagem de fundo opcional"
-                        imageUrl={form.contracapaUrl}
-                        loading={uploading === 'contracapa'}
-                        onSelect={() => contracapaInputRef.current?.click()}
-                        onRemove={() => setForm((current) => ({ ...current, contracapaUrl: null }))}
-                      />
+                      <div className="space-y-2">
+                        <DiarioImageUploader
+                          title={activeTab === 'capa' ? 'Capa visual configurada' : 'Fundo da contracapa'}
+                          description={activeTab === 'capa' ? 'Modelo visual integral da página 1' : 'Camada visual da página 2'}
+                          imageUrl={activeTab === 'capa' ? form.capaUrl : form.contracapaUrl}
+                          loading={uploading === (activeTab === 'capa' ? 'capa' : 'contracapa')}
+                          onSelect={() => (activeTab === 'capa' ? capaInputRef : contracapaInputRef).current?.click()}
+                          onRemove={() => setForm((current) => ({
+                            ...current,
+                            [activeTab === 'capa' ? 'capaUrl' : 'contracapaUrl']: null,
+                          }))}
+                        />
+                        {activeTab === 'capa' && !form.capaUrl && form.contracapaUrl && (
+                          <button
+                            type="button"
+                            onClick={() => setForm((current) => ({
+                              ...current,
+                              capaUrl: current.contracapaUrl,
+                              contracapaUrl: null,
+                            }))}
+                            className="w-full rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-blue-700 transition hover:bg-blue-100"
+                          >
+                            Corrigir destino: mover esta imagem para a capa
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -169,7 +179,9 @@ const DiariosPage: React.FC = () => {
                     <DiarioBackCoverSettingsPanel
                       contracapaCustomImageRef={contracapaCustomImageRef}
                       form={form}
+                      selectedFieldId={selectedFieldId}
                       setForm={setForm}
+                      setSelectedFieldId={setSelectedFieldId}
                       uploading={uploading}
                     />
                   )}
@@ -220,12 +232,13 @@ const PageHeader: React.FC<PageHeaderProps> = ({ disabled, onSave, saving }) => 
 
 interface CourseTabsProps {
   cursos: Array<{ id: string; nome: string }>;
+  disabled: boolean;
   loading: boolean;
   onSelect: React.Dispatch<React.SetStateAction<string>>;
   selectedCurso: string;
 }
 
-const CourseTabs: React.FC<CourseTabsProps> = ({ cursos, loading, onSelect, selectedCurso }) => (
+const CourseTabs: React.FC<CourseTabsProps> = ({ cursos, disabled, loading, onSelect, selectedCurso }) => (
   <div className="space-y-2">
     <p className="text-[10px] font-black uppercase tracking-[.22em] text-slate-400">Modalidades de Cursos</p>
     {loading ? (
@@ -240,8 +253,9 @@ const CourseTabs: React.FC<CourseTabsProps> = ({ cursos, loading, onSelect, sele
             <button
               key={curso.id}
               type="button"
+              disabled={disabled}
               onClick={() => onSelect(curso.id)}
-              className={`flex flex-col items-center justify-center rounded-xl py-3 px-4 text-center transition-all ${
+              className={`flex flex-col items-center justify-center rounded-xl py-3 px-4 text-center transition-all disabled:cursor-not-allowed disabled:opacity-60 ${
                 isSelected
                   ? 'bg-white text-blue-700 shadow-sm border border-slate-200/10 font-bold'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-white/40 border border-transparent'

@@ -1,19 +1,28 @@
 import React from 'react';
-import { Loader2, PenLine, Upload } from 'lucide-react';
+import { BadgeCheck, Loader2, Upload } from 'lucide-react';
 import { DiarioTemplate } from '../diarios.service';
 import { DiarioUploadKind } from '../diarios-editor.types';
 
 interface DiarioBackCoverSettingsPanelProps {
   contracapaCustomImageRef: React.RefObject<HTMLInputElement | null>;
   form: DiarioTemplate;
+  selectedFieldId: string | null;
   setForm: React.Dispatch<React.SetStateAction<DiarioTemplate>>;
+  setSelectedFieldId: React.Dispatch<React.SetStateAction<string | null>>;
   uploading: DiarioUploadKind | null;
 }
+
+const DIGITAL_SIGNATURE_SLOTS = [
+  { id: 'contracapaAssinaturaProfessor', label: 'Professor' },
+  { id: 'contracapaAssinaturaCoordenador', label: 'Coordenador do curso' },
+] as const;
 
 const DiarioBackCoverSettingsPanel: React.FC<DiarioBackCoverSettingsPanelProps> = ({
   contracapaCustomImageRef,
   form,
+  selectedFieldId,
   setForm,
+  setSelectedFieldId,
   uploading,
 }) => {
   const qrField = form.contracapaCampos?.find((field) => field.id === 'contracapaQrCode');
@@ -64,14 +73,29 @@ const DiarioBackCoverSettingsPanel: React.FC<DiarioBackCoverSettingsPanelProps> 
 
     <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
       <div className="mb-2 flex items-center gap-2 text-blue-800">
-        <PenLine size={15} />
-        <p className="text-[10px] font-black uppercase tracking-widest">Assinaturas manuais da contracapa</p>
+        <BadgeCheck size={15} />
+        <p className="text-[10px] font-black uppercase tracking-widest">Slots digitais de assinatura</p>
       </div>
       <p className="text-[10px] font-semibold leading-relaxed text-blue-700">
-        Todos os campos visíveis são arrastáveis. Selecione também as linhas de <strong>ASSINATURA DO PROFESSOR</strong> e{' '}
-        <strong>ASSINATURA DO COORDENADOR DO CURSO</strong>. Posição, largura, estilo e alinhamento
-        salvos neste modelo serão usados no PDF.
+        Cada slot reserva 14% da altura da página para o carimbo digital. Selecione abaixo para ajustar posição,
+        largura, linha e alinhamento usados no PDF.
       </p>
+      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {DIGITAL_SIGNATURE_SLOTS.map((slot) => (
+          <button
+            key={slot.id}
+            type="button"
+            onClick={() => setSelectedFieldId(slot.id)}
+            className={`rounded-xl border px-3 py-2 text-[10px] font-black uppercase tracking-wider transition ${
+              selectedFieldId === slot.id
+                ? 'border-blue-300 bg-white text-blue-800 shadow-sm'
+                : 'border-blue-200 bg-blue-100/70 text-blue-700 hover:bg-white'
+            }`}
+          >
+            Selecionar {slot.label}
+          </button>
+        ))}
+      </div>
     </div>
 
     <div className="border-t border-slate-100 pt-3 space-y-3">

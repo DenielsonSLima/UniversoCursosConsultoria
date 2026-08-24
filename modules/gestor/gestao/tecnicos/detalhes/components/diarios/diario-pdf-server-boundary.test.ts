@@ -2,9 +2,11 @@
 
 import assert from "node:assert/strict";
 import {
+  composeDiarioPdf,
   composeDiarioPdfWithManifest,
   type DiarioPdfResolvedAssets,
 } from "./diario-pdf.ts";
+import type { DiarioPdfRenderableData } from "./diario-pdf.contract.ts";
 import {
   verifyFrozenDocumentSnapshot,
 } from "../../../../../../../supabase/functions/assinatura-eletronica-diario-artefatos/snapshot-integrity.ts";
@@ -68,6 +70,69 @@ Deno.test("compositor puro reproduz bytes idênticos para o mesmo snapshot conge
 
   assert.equal(first.sha256, second.sha256);
   assert.deepEqual(first.bytes, second.bytes);
+});
+
+Deno.test("capa configurada é integral e mantém campos variáveis e linhas por cima", async () => {
+  const coverUrl = "https://assets.universocc.com.br/capa-fundo.png";
+  const snapshot = createSnapshot();
+  snapshot.template.capaUrl = coverUrl;
+  snapshot.assetSources.coverUrl = coverUrl;
+  snapshot.templateSource.raw.capaUrl = coverUrl;
+  const assets = await loadAssets();
+  const [fallback, configured] = await Promise.all([
+    composeDiarioPdfWithManifest(createSnapshot(), assets),
+    composeDiarioPdfWithManifest(snapshot, {
+      ...assets,
+      coverBackground: assets.logo,
+    }),
+  ]);
+
+  assert.notEqual(configured.sha256, fallback.sha256);
+  const coverCommands = (
+    configured.pdf.internal as unknown as { pages: string[][] }
+  ).pages[1].join("\n");
+  const fallbackCommands = (
+    fallback.pdf.internal as unknown as { pages: string[][] }
+  ).pages[1].join("\n");
+  assert.doesNotMatch(coverCommands, /\(DIÁRIO DE CLASSE\) Tj/u);
+  assert.match(coverCommands, /\(CURSO: Curso Técnico\) Tj/u);
+  assert.match(coverCommands, /\bm\n[\d.\s]+l\nS\b/u);
+  assert.match(fallbackCommands, /\(DIÁRIO DE CLASSE\) Tj/u);
+
+  await assert.rejects(
+    () => composeDiarioPdfWithManifest(snapshot, assets),
+    /capa configurada diverge do modelo congelado/u,
+  );
+  await assert.rejects(
+    () => composeDiarioPdfWithManifest(createSnapshot(), {
+      ...assets,
+      coverBackground: assets.logo,
+    }),
+    /capa configurada diverge do modelo congelado/u,
+  );
+});
+
+Deno.test("capa configurada permanece integral também no modo em branco", async () => {
+  const coverUrl = "https://assets.universocc.com.br/capa-fundo.png";
+  const snapshot: DiarioPdfRenderableData = {
+    ...createSnapshot(),
+    exportMode: "EM_BRANCO",
+  };
+  snapshot.template.capaUrl = coverUrl;
+  const assets = await loadAssets();
+  const pdf = await composeDiarioPdf(snapshot, {
+    ...assets,
+    coverBackground: assets.logo,
+    qrCode: null,
+    validationEndpoint: null,
+    validationUrl: null,
+  });
+  const coverCommands = (
+    pdf.internal as unknown as { pages: string[][] }
+  ).pages[1].join("\n");
+
+  assert.doesNotMatch(coverCommands, /MODELO MANUAL/u);
+  assert.match(coverCommands, /\(CURSO: Curso Técnico\) Tj/u);
 });
 
 Deno.test("compositor aplica escala, opacidade e rotação da marca congelada sem fallback", async () => {
@@ -278,13 +343,22 @@ Deno.test("fronteira server-safe e fluxo web usam um único adapter vetorial", a
   assert.match(core, /drawContentPages/u);
   assert.doesNotMatch(coverPages, /drawCanonicalInstitutionalHeader|DADOS DO DOCUMENTO/u);
   assert.match(assets, /drawPageWatermark/u);
+  assert.match(assets, /coverBackground/u);
   assert.match(assets, /presentation\.rotate\s*\?\s*-22\s*:\s*0/u);
+  assert.match(
+    coverPages,
+    /if \(coverBackground\)[\s\S]*?diario-cover-decorative-background[\s\S]*?else \{[\s\S]*?drawPageWatermark[\s\S]*?DIÁRIO DE CLASSE/u,
+  );
   assert.match(backCoverFields, /["']diario-validation-qr["']/u);
   assert.match(backCoverFields, /contracapaRegulamento/u);
   assert.match(backCoverFields, /contracapaAutenticacao/u);
   assert.match(backCoverFields, /resolveBackCoverSignatureSlots/u);
   assert.match(core, /crypto\.subtle\.digest\(["']SHA-256["'], bytes\)/u);
   assert.doesNotMatch(adapter, /Documentos\/Capa-Diario|capaDiarioPadrao/u);
+  assert.match(
+    adapter,
+    /props\.template\.capaUrl[\s\S]*?loadFirstImage\(\[props\.template\.capaUrl\]/u,
+  );
   assert.match(adapter, /generatedBy:\s*'TRUSTED_ADAPTER'/u);
   assert.match(adapter, /createDocumentValidationQrDataUrl/u);
   assert.match(adapter, /getDocumentValidationUrl/u);

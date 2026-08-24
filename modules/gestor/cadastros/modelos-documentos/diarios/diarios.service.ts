@@ -136,11 +136,6 @@ const sanitizeDiarioTemplate = (
 };
 
 const assertVectorDiaryTemplate = (template: DiarioTemplate) => {
-  if (String(template.capaUrl || '').trim()) {
-    throw new Error(
-      'Este modelo histórico usa uma capa de página inteira. Remova a capa raster antes de editar ou salvar; o Diário oficial aceita somente a capa vetorial configurável.',
-    );
-  }
   const fields = template.contracapaCampos || [];
   if (template.imprimirValidacaoContracapa !== true) {
     throw new Error('A página 2 de validação e assinaturas é obrigatória no Diário oficial.');
@@ -350,11 +345,6 @@ export const diariosService = {
     kind: string,
     file: File,
   ): Promise<string> {
-    if (kind === 'capa') {
-      throw new Error(
-        'Upload de capa completa foi desativado: configure os campos da capa vetorial no editor.',
-      );
-    }
     const canonicalExtension = SUPPORTED_IMAGE_MIME_TYPES.get(file.type.toLowerCase());
     if (!canonicalExtension) {
       throw new Error('Use uma imagem PNG, JPEG ou WEBP. SVG, GIF e outros formatos não são aceitos no PDF oficial.');

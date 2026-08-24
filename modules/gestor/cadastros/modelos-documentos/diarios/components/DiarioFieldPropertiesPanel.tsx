@@ -21,7 +21,11 @@ const DiarioFieldPropertiesPanel: React.FC<DiarioFieldPropertiesPanelProps> = ({
   <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4 animate-fadeIn">
     <div className="flex justify-between items-center border-b border-slate-100 pb-2">
       <h5 className="text-xs font-black uppercase tracking-wider text-slate-800">
-        {currentField.isImage ? 'Propriedades da Imagem' : 'Propriedades do Campo'}
+        {currentField.isImage
+          ? 'Propriedades da Imagem'
+          : currentField.id.startsWith('contracapaAssinatura')
+            ? 'Propriedades do Slot Digital'
+            : 'Propriedades do Campo'}
       </h5>
       <button
         type="button"
@@ -91,8 +95,10 @@ const ImageProperties: React.FC<{ currentField: CapaCampo; updateFieldProperty: 
 const TextProperties: React.FC<{ currentField: CapaCampo; updateFieldProperty: UpdateFieldProperty }> = ({
   currentField,
   updateFieldProperty,
-}) => (
-  <>
+}) => {
+  const isDigitalSignatureSlot = currentField.id.startsWith('contracapaAssinatura');
+  return (
+    <>
     <label className="block">
       <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-500">Rótulo / Prefixo</span>
       <input
@@ -119,6 +125,11 @@ const TextProperties: React.FC<{ currentField: CapaCampo; updateFieldProperty: U
       step={currentField.id === 'contracapaQrCode' ? 0.1 : 1}
       onChange={(value) => updateFieldProperty(currentField.id, 'width', value)}
     />
+    {isDigitalSignatureSlot && (
+      <p className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-[10px] font-semibold leading-relaxed text-blue-700">
+        Este slot mantém altura fixa de 14% da página para receber o carimbo da assinatura digital.
+      </p>
+    )}
     <div className="grid grid-cols-2 gap-3 pt-2">
       <ToggleButton
         active={currentField.bold}
@@ -128,7 +139,7 @@ const TextProperties: React.FC<{ currentField: CapaCampo; updateFieldProperty: U
       />
       <ToggleButton
         active={!!currentField.borderTop}
-        label="Assinatura (Linha)"
+        label={isDigitalSignatureSlot ? 'Linha do Slot' : 'Linha Superior'}
         icon={<Type size={14} />}
         onClick={() => updateFieldProperty(currentField.id, 'borderTop', !currentField.borderTop)}
       />
@@ -171,8 +182,9 @@ const TextProperties: React.FC<{ currentField: CapaCampo; updateFieldProperty: U
         />
       </div>
     </div>
-  </>
-);
+    </>
+  );
+};
 
 interface RangePropertyProps {
   label: string;
@@ -222,8 +234,10 @@ const ToggleButton: React.FC<{
 const PositionControls: React.FC<{ currentField: CapaCampo; updateFieldProperty: UpdateFieldProperty }> = ({
   currentField,
   updateFieldProperty,
-}) => (
-  <div>
+}) => {
+  const maxY = currentField.id.startsWith('contracapaAssinatura') ? 86 : 95;
+  return (
+    <div>
     <span className="mb-1.5 block text-[10px] font-black uppercase tracking-widest text-slate-500">Ajuste Fino de Posição</span>
     <div className="grid grid-cols-3 gap-2 max-w-[180px] mx-auto text-center">
       <div />
@@ -233,10 +247,11 @@ const PositionControls: React.FC<{ currentField: CapaCampo; updateFieldProperty:
       <div className="flex items-center justify-center text-[10px] font-bold text-slate-400">Pos</div>
       <PositionButton label="▶" onClick={() => updateFieldProperty(currentField.id, 'x', Math.min(100 - currentField.width, currentField.x + 0.5))} />
       <div />
-      <PositionButton label="▼" onClick={() => updateFieldProperty(currentField.id, 'y', Math.min(95, currentField.y + 0.5))} />
+      <PositionButton label="▼" onClick={() => updateFieldProperty(currentField.id, 'y', Math.min(maxY, currentField.y + 0.5))} />
     </div>
-  </div>
-);
+    </div>
+  );
+};
 
 const PositionButton: React.FC<{ label: string; onClick: () => void }> = ({ label, onClick }) => (
   <button type="button" onClick={onClick} className="rounded bg-slate-100 p-2 text-xs font-bold hover:bg-slate-200">

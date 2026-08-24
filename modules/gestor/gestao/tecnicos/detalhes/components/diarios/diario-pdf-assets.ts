@@ -32,6 +32,8 @@ export interface DiarioPdfValidationEndpoint {
 export interface DiarioPdfResolvedAssets {
   logo: PdfImage;
   watermark: PdfImage | null;
+  /** Modelo visual integral da capa; os campos variáveis seguem nativos no PDF. */
+  coverBackground: PdfImage | null;
   /** Arte decorativa isolada da contracapa; nunca contém o conteúdo do documento. */
   backCoverBackground: PdfImage | null;
   /** Recursos isolados associados aos campos `isImage` da contracapa. */
@@ -130,6 +132,15 @@ export const validateResolvedAssets = (
     "A marca-d’água do Diário",
   );
   const watermarkPresentation = validateWatermarkPresentation(props, watermark);
+  const coverBackground = assertValidPdfImage(
+    assets.coverBackground,
+    "A capa configurada do Diário",
+  );
+  if (Boolean(coverBackground) !== Boolean(props.template.capaUrl)) {
+    throw new Error(
+      "A capa configurada diverge do modelo congelado do Diário.",
+    );
+  }
   const backCoverBackground = assertValidPdfImage(
     assets.backCoverBackground,
     "A arte decorativa da contracapa do Diário",
@@ -190,6 +201,7 @@ export const validateResolvedAssets = (
     logo,
     watermark,
     watermarkPresentation,
+    coverBackground,
     backCoverBackground,
     backCoverImages,
     qrCode,

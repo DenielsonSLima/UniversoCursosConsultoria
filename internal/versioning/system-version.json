@@ -1,8 +1,8 @@
 {
-  "version": "4.7.4",
+  "version": "4.7.5",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 5,
-  "releasedAt": "2026-08-23",
-  "summary": "Publicação 4.7.3 encerrada e registros operacionais sincronizados"
+  "revision": 6,
+  "releasedAt": "2026-08-24",
+  "summary": "Capa configurada do Diário restaurada e slots digitais explicitados"
 }

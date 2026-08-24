@@ -282,6 +282,7 @@ export const loadAssets = async (): Promise<DiarioPdfResolvedAssets> => {
   return {
     logo,
     watermark: null,
+    coverBackground: null,
     backCoverBackground: null,
     backCoverImages: {},
     qrCode: {
