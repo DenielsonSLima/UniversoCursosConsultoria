@@ -1,6 +1,6 @@
 # Fidelidade do Diário, assinaturas e acessos temporários 4.7.3 — 2026-08-23
 
-Estado: `PUBLICADO_PRODUCAO_4_7_3`
+Estado: `PUBLICADO_PRODUCAO_4_7_4`
 
 ## Objetivo
 
@@ -66,7 +66,8 @@ Restaurar a listagem de turmas, igualar o Diário do Professor ao fluxo canônic
 
 - A PR #83 foi integrada por squash na `main` no commit `2f6461bf53459e6ab7a9e827c174113173719fc6`, promovendo a versão estável 4.7.3.
 - Controle de versão #229, Qualidade do produto #261, Preview e Vercel Produção `9uowbC2EimqTeexBXv2hPd91Ro3k` concluíram com sucesso.
-- As rotas `/`, `/login`, `/gestor`, `/professor`, `/aluno` e `/validador` responderam HTTP 200; o bundle público confirma `4.7.3 · ESTÁVEL` e o resumo oficial do lote.
+- O fechamento operacional foi publicado pela PR #84 como patch estável 4.7.4, sem alteração funcional adicional.
+- As rotas `/`, `/login`, `/gestor`, `/professor`, `/aluno` e `/validador` responderam HTTP 200; o bundle público confirma `4.7.4 · ESTÁVEL` e o resumo oficial do fechamento.
 - Edge Function v13 e migrations já estão ativas; a publicação web não altera dados financeiros.
 
 ## Manifesto explícito

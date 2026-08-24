@@ -1,6 +1,6 @@
 # Lote ativo
 
-Estado: `PUBLICADO_PRODUCAO_4_7_3`
+Estado: `PUBLICADO_PRODUCAO_4_7_4`
 
 ## Lote: 2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3
 
@@ -8,9 +8,9 @@ Estado: `PUBLICADO_PRODUCAO_4_7_3`
 - Base remota final: PR `#83` integrada por squash na `main`, commit `2f6461bf53459e6ab7a9e827c174113173719fc6`.
 - Registro: `ai/operacao/registros/alteracoes/2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3.md`.
 - Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3.md`.
-- Versão: `4.7.3` estável.
+- Versão: `4.7.4` estável; patch de fechamento operacional da entrega funcional 4.7.3.
 - Supabase: treze migrations aplicadas via MCP e `assinatura-eletronica-diario-artefatos` v13 ativa com JWT.
-- Produção: Vercel `9uowbC2EimqTeexBXv2hPd91Ro3k` concluída com sucesso; versão pública `4.7.3` estável.
+- Produção: entrega funcional Vercel `9uowbC2EimqTeexBXv2hPd91Ro3k` concluída; fechamento operacional 4.7.4 publicado pela PR `#84`.
 
 ### Critérios de aceite
 
@@ -34,7 +34,7 @@ Estado: `PUBLICADO_PRODUCAO_4_7_3`
 - Diário assinado na turma: 5 contratos Node.
 - TypeScript, ESLint, Deno, teto, versão, operação, RAG e build: aprovados localmente e no CI.
 - GitHub: Controle de versão `#229` e Qualidade do produto `#261` aprovados; PR `#83` integrada na `main`.
-- Produção: `/`, `/login`, `/gestor`, `/professor`, `/aluno` e `/validador` responderam HTTP 200; o bundle público contém `4.7.3`, `ESTÁVEL` e o resumo oficial do lote.
+- Produção: `/`, `/login`, `/gestor`, `/professor`, `/aluno` e `/validador` responderam HTTP 200; o bundle público contém `4.7.4`, `ESTÁVEL` e o resumo oficial do fechamento.
 - Safari remoto: janela autenticada visível ao usuário, mas indisponível ao controlador por `cgWindowNotFound`; contratos públicos substituem somente o que pode ser comprovado sem UI.
 
 ### Limites e exclusões

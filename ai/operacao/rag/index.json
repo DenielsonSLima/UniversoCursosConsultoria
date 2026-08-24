@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-08-24T00:32:59.115Z",
+  "builtAt": "2026-08-24T00:35:42.035Z",
   "manifestVersion": 2,
-  "sourceSignature": "9a2a1aefae71dd31c1e352b2dcac0e0fe0a3a1521e123c7ff9e9d9140e6b0f93",
+  "sourceSignature": "42dc86bad726192435808e19533357bb0749e7dc16358d1e01a5af1c6bc5d438",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "abad597a04c5dec8e5d513328d0736704998d5ff18e8ed71fce8ec13bd32ad2d"
+      "hash": "aa6a01608634591fcb66600a86261c6fd49bdb4fc96f9b34762f22c5babc349f"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -192,23 +192,23 @@
       "part": 1
     },
     {
-      "id": "93eae6b6cc01e3301f93",
-      "hash": "93eae6b6cc01e3301f93de2cd00eb7859e572b97f520ea1cda2da57a94389e63",
+      "id": "944858f1e3ae5a1db0c2",
+      "hash": "944858f1e3ae5a1db0c2d48885cd4b6f4db31c10541856346706a3ffe7939e23",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Lote ativo",
-      "text": "Estado: `PUBLICADO_PRODUCAO_4_7_3`",
-      "normalizedText": "estado publicado producao 4 7 3",
+      "text": "Estado: `PUBLICADO_PRODUCAO_4_7_4`",
+      "normalizedText": "estado publicado producao 4 7 4",
       "tokenCount": 3,
       "part": 1
     },
     {
-      "id": "34c7a056921b865b6e7d",
-      "hash": "34c7a056921b865b6e7d9f5932012d8fbd443b71b7ac1a7e8ccc35cc72f72d92",
+      "id": "856af073dd20ae03b04e",
+      "hash": "856af073dd20ae03b04e0bc9e324eadec1247b99876c47a1e0b1527d2838f575",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Lote: 2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3",
-      "text": "- Pedido: corrigir as turmas e o Diário, reutilizar os modelos configurados, validar Professor/coordenação/Aluno/Responsável e publicar o resultado. - Base remota final: PR `#83` integrada por squash na `main`, commit `2f6461bf53459e6ab7a9e827c174113173719fc6`. - Registro: `ai/operacao/registros/alteracoes/2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3.md`. - Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3.md`. - Versão: `4.7.3` estável. - Supabase: treze migrations aplicadas via MCP e `assinatura-eletronica-diario-artefatos` v13 ativa com JWT. - Produção: Vercel `9uowbC2EimqTeexBXv2hPd91Ro3k` concluída com sucesso; versão pública `4.7.3` estável.",
-      "normalizedText": "pedido corrigir as turmas e o diario reutilizar os modelos configurados validar professor coordenacao aluno responsavel e publicar o resultado base remota final pr 83 integrada por squash na main commit 2f6461bf53459e6ab7a9e827c174113173719fc6 registro ai operacao registros alteracoes 2026 08 23 fidelidade diario assinaturas acessos 4 7 3 md manifesto explicito ai operacao registros alteracoes 2026 08 23 fidelidade diario assinaturas acessos 4 7 3 md versao 4 7 3 estavel supabase treze migrations aplicadas via mcp e assinatura eletronica diario artefatos v13 ativa com jwt producao vercel 9uowbc2eimqteexbxv2hpd91ro3k concluida com sucesso versao publica 4 7 3 estavel",
-      "tokenCount": 80,
+      "text": "- Pedido: corrigir as turmas e o Diário, reutilizar os modelos configurados, validar Professor/coordenação/Aluno/Responsável e publicar o resultado. - Base remota final: PR `#83` integrada por squash na `main`, commit `2f6461bf53459e6ab7a9e827c174113173719fc6`. - Registro: `ai/operacao/registros/alteracoes/2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3.md`. - Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3.md`. - Versão: `4.7.4` estável; patch de fechamento operacional da entrega funcional 4.7.3. - Supabase: treze migrations aplicadas via MCP e `assinatura-eletronica-diario-artefatos` v13 ativa com JWT. - Produção: entrega funcional Vercel `9uowbC2EimqTeexBXv2hPd91Ro3k` concluída; fechamento operacional 4.7.4 publicado pela PR `#84`.",
+      "normalizedText": "pedido corrigir as turmas e o diario reutilizar os modelos configurados validar professor coordenacao aluno responsavel e publicar o resultado base remota final pr 83 integrada por squash na main commit 2f6461bf53459e6ab7a9e827c174113173719fc6 registro ai operacao registros alteracoes 2026 08 23 fidelidade diario assinaturas acessos 4 7 3 md manifesto explicito ai operacao registros alteracoes 2026 08 23 fidelidade diario assinaturas acessos 4 7 3 md versao 4 7 4 estavel patch de fechamento operacional da entrega funcional 4 7 3 supabase treze migrations aplicadas via mcp e assinatura eletronica diario artefatos v13 ativa com jwt producao entrega funcional vercel 9uowbc2eimqteexbxv2hpd91ro3k concluida fechamento operacional 4 7 4 publicado pela pr 84",
+      "tokenCount": 90,
       "part": 1
     },
     {
@@ -222,12 +222,12 @@
       "part": 1
     },
     {
-      "id": "4636d29a0e037ddc7cff",
-      "hash": "4636d29a0e037ddc7cffc239e16315ddc3807947239034e1ed2f4059a06ebbaa",
+      "id": "d10e8b0578c4c5f203c2",
+      "hash": "d10e8b0578c4c5f203c22acf90ed5ec517bd2e5c882e273c9b6c1be7acc317a2",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Validação",
-      "text": "- Acessos e navegação: 34/34. - Aluno e Responsável: 57/57; carteirinha CIE emitida pelo RPC do aluno. - PDF/assinaturas/interface: 193 contratos. - Edge de artefatos: 112 contratos; versão remota 13. - Acervo do Gestor: 10 contratos. - Diário assinado na turma: 5 contratos Node. - TypeScript, ESLint, Deno, teto, versão, operação, RAG e build: aprovados localmente e no CI. - GitHub: Controle de versão `#229` e Qualidade do produto `#261` aprovados; PR `#83` integrada na `main`. - Produção: `/`, `/login`, `/gestor`, `/professor`, `/aluno` e `/validador` responderam HTTP 200; o bundle público contém `4.7.3`, `ESTÁVEL` e o resumo oficial do lote. - Safari remoto: janela autenticada visível ao usuário, mas indisponível ao controlador por `cgWindowNotFound`; contratos públicos substituem somente o que pode ser comprovado sem UI.",
-      "normalizedText": "acessos e navegacao 34 34 aluno e responsavel 57 57 carteirinha cie emitida pelo rpc do aluno pdf assinaturas interface 193 contratos edge de artefatos 112 contratos versao remota 13 acervo do gestor 10 contratos diario assinado na turma 5 contratos node typescript eslint deno teto versao operacao rag e build aprovados localmente e no ci github controle de versao 229 e qualidade do produto 261 aprovados pr 83 integrada na main producao login gestor professor aluno e validador responderam http 200 o bundle publico contem 4 7 3 estavel e o resumo oficial do lote safari remoto janela autenticada visivel ao usuario mas indisponivel ao controlador por cgwindownotfound contratos publicos substituem somente o que pode ser comprovado sem ui",
+      "text": "- Acessos e navegação: 34/34. - Aluno e Responsável: 57/57; carteirinha CIE emitida pelo RPC do aluno. - PDF/assinaturas/interface: 193 contratos. - Edge de artefatos: 112 contratos; versão remota 13. - Acervo do Gestor: 10 contratos. - Diário assinado na turma: 5 contratos Node. - TypeScript, ESLint, Deno, teto, versão, operação, RAG e build: aprovados localmente e no CI. - GitHub: Controle de versão `#229` e Qualidade do produto `#261` aprovados; PR `#83` integrada na `main`. - Produção: `/`, `/login`, `/gestor`, `/professor`, `/aluno` e `/validador` responderam HTTP 200; o bundle público contém `4.7.4`, `ESTÁVEL` e o resumo oficial do fechamento. - Safari remoto: janela autenticada visível ao usuário, mas indisponível ao controlador por `cgWindowNotFound`; contratos públicos substituem somente o que pode ser comprovado sem UI.",
+      "normalizedText": "acessos e navegacao 34 34 aluno e responsavel 57 57 carteirinha cie emitida pelo rpc do aluno pdf assinaturas interface 193 contratos edge de artefatos 112 contratos versao remota 13 acervo do gestor 10 contratos diario assinado na turma 5 contratos node typescript eslint deno teto versao operacao rag e build aprovados localmente e no ci github controle de versao 229 e qualidade do produto 261 aprovados pr 83 integrada na main producao login gestor professor aluno e validador responderam http 200 o bundle publico contem 4 7 4 estavel e o resumo oficial do fechamento safari remoto janela autenticada visivel ao usuario mas indisponivel ao controlador por cgwindownotfound contratos publicos substituem somente o que pode ser comprovado sem ui",
       "tokenCount": 106,
       "part": 1
     },
