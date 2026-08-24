@@ -30,15 +30,17 @@ A consulta remota foi somente leitura. Inicialmente, nos modelos `diario_TECNICO
 - Renderização real: capa, página interna, contracapa e página assinada inspecionadas; sem duplicação ou colisão.
 - Revisão independente final sem `Critical` ou `Important`.
 - Teto de 500 linhas aprovado.
+- Índice RAG operacional regenerado e contrato de agentes aprovado.
 - Smoke autenticado da interface pendente por indisponibilidade de navegador controlável.
 - Limpeza operacional autorizada do marcador `UCQA-20260823`: 2 turmas temporárias (Técnico e Livre), 2 matrículas, 5 parceiros, 6 identidades de acesso, 3 despesas pendentes e seus vínculos foram removidos. Os 3 patrimônios temporários foram excluídos pelo fluxo oficial e permanecem somente como registros inativos com trilha imutável de auditoria. A verificação final encontrou zero registro operacional ativo do marcador.
 
 ## Manifesto explícito
 
-Total: 37 arquivos
+Total: 38 arquivos
 
 - `ai/operacao/LOTE_ATIVO.md`
 - `ai/operacao/qualidade/limite-linhas.json`
+- `ai/operacao/rag/index.json`
 - `ai/operacao/registros/ALTERACOES.md`
 - `ai/operacao/registros/alteracoes/2026-08-24-restauracao-capa-diario-slots-assinatura.md`
 - `internal/versioning/CHANGELOG.md`
