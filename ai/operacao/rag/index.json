@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-08-23T21:26:39.926Z",
+  "builtAt": "2026-08-24T00:35:42.035Z",
   "manifestVersion": 2,
-  "sourceSignature": "6d07dd64eb097f2998b2962374d2cefd6fe3dca1d11d70128a2969ded3e8f7fe",
+  "sourceSignature": "42dc86bad726192435808e19533357bb0749e7dc16358d1e01a5af1c6bc5d438",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "3cce8892976ce6a9268e60320b7b52f0c66b88e30974b61496c996c92fa0b412"
+      "hash": "aa6a01608634591fcb66600a86261c6fd49bdb4fc96f9b34762f22c5babc349f"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -192,43 +192,43 @@
       "part": 1
     },
     {
-      "id": "7415f17e9a57e911270d",
-      "hash": "7415f17e9a57e911270df25e4b3ef092c91f39471bd9024d13787678c0eed95c",
+      "id": "944858f1e3ae5a1db0c2",
+      "hash": "944858f1e3ae5a1db0c2d48885cd4b6f4db31c10541856346706a3ffe7939e23",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Lote ativo",
-      "text": "Estado: `PUBLICACAO_AUTORIZADA_EM_VALIDACAO`",
-      "normalizedText": "estado publicacao autorizada em validacao",
-      "tokenCount": 5,
+      "text": "Estado: `PUBLICADO_PRODUCAO_4_7_4`",
+      "normalizedText": "estado publicado producao 4 7 4",
+      "tokenCount": 3,
       "part": 1
     },
     {
-      "id": "5b4cc684ec310c070bd5",
-      "hash": "5b4cc684ec310c070bd5ddc094a29682e0337417fccb6b18fec30d0bc2744abd",
+      "id": "856af073dd20ae03b04e",
+      "hash": "856af073dd20ae03b04e0bc9e324eadec1247b99876c47a1e0b1527d2838f575",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Lote: 2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3",
-      "text": "- Pedido: corrigir as turmas e o Diário, reutilizar os modelos configurados, validar Professor/coordenação/Aluno/Responsável e publicar o resultado. - Base remota de continuidade: PR `#83`, branch `release/sincronizacao-completa-4-7-2`. - Registro: `ai/operacao/registros/alteracoes/2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3.md`. - Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3.md`. - Versão: `4.7.3` estável. - Supabase: treze migrations aplicadas via MCP e `assinatura-eletronica-diario-artefatos` v13 ativa com JWT. - Produção: autorizada pelo usuário; merge e Vercel dependem de CI/Preview verdes.",
-      "normalizedText": "pedido corrigir as turmas e o diario reutilizar os modelos configurados validar professor coordenacao aluno responsavel e publicar o resultado base remota de continuidade pr 83 branch release sincronizacao completa 4 7 2 registro ai operacao registros alteracoes 2026 08 23 fidelidade diario assinaturas acessos 4 7 3 md manifesto explicito ai operacao registros alteracoes 2026 08 23 fidelidade diario assinaturas acessos 4 7 3 md versao 4 7 3 estavel supabase treze migrations aplicadas via mcp e assinatura eletronica diario artefatos v13 ativa com jwt producao autorizada pelo usuario merge e vercel dependem de ci preview verdes",
-      "tokenCount": 80,
+      "text": "- Pedido: corrigir as turmas e o Diário, reutilizar os modelos configurados, validar Professor/coordenação/Aluno/Responsável e publicar o resultado. - Base remota final: PR `#83` integrada por squash na `main`, commit `2f6461bf53459e6ab7a9e827c174113173719fc6`. - Registro: `ai/operacao/registros/alteracoes/2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3.md`. - Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3.md`. - Versão: `4.7.4` estável; patch de fechamento operacional da entrega funcional 4.7.3. - Supabase: treze migrations aplicadas via MCP e `assinatura-eletronica-diario-artefatos` v13 ativa com JWT. - Produção: entrega funcional Vercel `9uowbC2EimqTeexBXv2hPd91Ro3k` concluída; fechamento operacional 4.7.4 publicado pela PR `#84`.",
+      "normalizedText": "pedido corrigir as turmas e o diario reutilizar os modelos configurados validar professor coordenacao aluno responsavel e publicar o resultado base remota final pr 83 integrada por squash na main commit 2f6461bf53459e6ab7a9e827c174113173719fc6 registro ai operacao registros alteracoes 2026 08 23 fidelidade diario assinaturas acessos 4 7 3 md manifesto explicito ai operacao registros alteracoes 2026 08 23 fidelidade diario assinaturas acessos 4 7 3 md versao 4 7 4 estavel patch de fechamento operacional da entrega funcional 4 7 3 supabase treze migrations aplicadas via mcp e assinatura eletronica diario artefatos v13 ativa com jwt producao entrega funcional vercel 9uowbc2eimqteexbxv2hpd91ro3k concluida fechamento operacional 4 7 4 publicado pela pr 84",
+      "tokenCount": 90,
       "part": 1
     },
     {
-      "id": "f0e3a5aad28b35c38491",
-      "hash": "f0e3a5aad28b35c3849107d2ce667a8980b0236ef610372b0a4b11e69e2abc52",
+      "id": "4583f7554e4c93d2821c",
+      "hash": "4583f7554e4c93d2821cfca913f47a6c22f2e01c636fca468750d3316851c18f",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Critérios de aceite",
-      "text": "1. Gestor lista as turmas técnicas e livres temporárias pelo contrato canônico. `ATENDIDO`. 2. Professor reutiliza o Diário do Gestor e acessa somente as próprias disciplinas. `ATENDIDO`. 3. Coordenação permanece uma capacidade adicional do perfil Professor. `ATENDIDO`. 4. Capa, página 2, contracapa, campos, QR e marca d'água vêm das configurações salvas, sem fallback genérico. `ATENDIDO`. 5. Professor assina antes do Coordenador; o final contém duas páginas de evidências e comprovante separado. `ATENDIDO_POR_CONTRATO`; smoke real bloqueado pela ausência de sessão Gestor controlável. 6. Gestor possui módulo `Assinaturas` com caixa, acervo, filtros e Diário final; categorias sem backend seguro ficam indisponíveis. `ATENDIDO`. 7. Aluno, carteirinha, notas, Responsável e dependente passam pelos contratos reais. `ATENDIDO`. 8. Nenhuma cobrança, boleto ou operação Banese é criada. `ATENDIDO`. 9. CI, Preview, merge e Vercel Produção devem concluir antes do encerramento. `EM_VALIDACAO`.",
-      "normalizedText": "1 gestor lista as turmas tecnicas e livres temporarias pelo contrato canonico atendido 2 professor reutiliza o diario do gestor e acessa somente as proprias disciplinas atendido 3 coordenacao permanece uma capacidade adicional do perfil professor atendido 4 capa pagina 2 contracapa campos qr e marca d agua vem das configuracoes salvas sem fallback generico atendido 5 professor assina antes do coordenador o final contem duas paginas de evidencias e comprovante separado atendido por contrato smoke real bloqueado pela ausencia de sessao gestor controlavel 6 gestor possui modulo assinaturas com caixa acervo filtros e diario final categorias sem backend seguro ficam indisponiveis atendido 7 aluno carteirinha notas responsavel e dependente passam pelos contratos reais atendido 8 nenhuma cobranca boleto ou operacao banese e criada atendido 9 ci preview merge e vercel producao devem concluir antes do encerramento em validacao",
-      "tokenCount": 118,
+      "text": "1. Gestor lista as turmas técnicas e livres temporárias pelo contrato canônico. `ATENDIDO`. 2. Professor reutiliza o Diário do Gestor e acessa somente as próprias disciplinas. `ATENDIDO`. 3. Coordenação permanece uma capacidade adicional do perfil Professor. `ATENDIDO`. 4. Capa, página 2, contracapa, campos, QR e marca d'água vêm das configurações salvas, sem fallback genérico. `ATENDIDO`. 5. Professor assina antes do Coordenador; o final contém duas páginas de evidências e comprovante separado. `ATENDIDO_POR_CONTRATO`; smoke real bloqueado pela ausência de sessão Gestor controlável. 6. Gestor possui módulo `Assinaturas` com caixa, acervo, filtros e Diário final; categorias sem backend seguro ficam indisponíveis. `ATENDIDO`. 7. Aluno, carteirinha, notas, Responsável e dependente passam pelos contratos reais. `ATENDIDO`. 8. Nenhuma cobrança, boleto ou operação Banese é criada. `ATENDIDO`. 9. CI, Preview, merge e Vercel Produção devem concluir antes do encerramento. `ATENDIDO`.",
+      "normalizedText": "1 gestor lista as turmas tecnicas e livres temporarias pelo contrato canonico atendido 2 professor reutiliza o diario do gestor e acessa somente as proprias disciplinas atendido 3 coordenacao permanece uma capacidade adicional do perfil professor atendido 4 capa pagina 2 contracapa campos qr e marca d agua vem das configuracoes salvas sem fallback generico atendido 5 professor assina antes do coordenador o final contem duas paginas de evidencias e comprovante separado atendido por contrato smoke real bloqueado pela ausencia de sessao gestor controlavel 6 gestor possui modulo assinaturas com caixa acervo filtros e diario final categorias sem backend seguro ficam indisponiveis atendido 7 aluno carteirinha notas responsavel e dependente passam pelos contratos reais atendido 8 nenhuma cobranca boleto ou operacao banese e criada atendido 9 ci preview merge e vercel producao devem concluir antes do encerramento atendido",
+      "tokenCount": 117,
       "part": 1
     },
     {
-      "id": "32eda5831baa605c57d4",
-      "hash": "32eda5831baa605c57d46004e2945a83c1838b36a496845ac7bd0b88e9f4f0b9",
+      "id": "d10e8b0578c4c5f203c2",
+      "hash": "d10e8b0578c4c5f203c22acf90ed5ec517bd2e5c882e273c9b6c1be7acc317a2",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Validação",
-      "text": "- Acessos e navegação: 34/34. - Aluno e Responsável: 57/57; carteirinha CIE emitida pelo RPC do aluno. - PDF/assinaturas/interface: 193 contratos. - Edge de artefatos: 112 contratos; versão remota 13. - Acervo do Gestor: 10 contratos. - Diário assinado na turma: 5 contratos Node. - TypeScript, ESLint focado, Deno, teto, versão, operação, RAG e build: gate final em execução. - Safari remoto: janela autenticada visível ao usuário, mas indisponível ao controlador por `cgWindowNotFound`; contratos públicos substituem somente o que pode ser comprovado sem UI.",
-      "normalizedText": "acessos e navegacao 34 34 aluno e responsavel 57 57 carteirinha cie emitida pelo rpc do aluno pdf assinaturas interface 193 contratos edge de artefatos 112 contratos versao remota 13 acervo do gestor 10 contratos diario assinado na turma 5 contratos node typescript eslint focado deno teto versao operacao rag e build gate final em execucao safari remoto janela autenticada visivel ao usuario mas indisponivel ao controlador por cgwindownotfound contratos publicos substituem somente o que pode ser comprovado sem ui",
-      "tokenCount": 75,
+      "text": "- Acessos e navegação: 34/34. - Aluno e Responsável: 57/57; carteirinha CIE emitida pelo RPC do aluno. - PDF/assinaturas/interface: 193 contratos. - Edge de artefatos: 112 contratos; versão remota 13. - Acervo do Gestor: 10 contratos. - Diário assinado na turma: 5 contratos Node. - TypeScript, ESLint, Deno, teto, versão, operação, RAG e build: aprovados localmente e no CI. - GitHub: Controle de versão `#229` e Qualidade do produto `#261` aprovados; PR `#83` integrada na `main`. - Produção: `/`, `/login`, `/gestor`, `/professor`, `/aluno` e `/validador` responderam HTTP 200; o bundle público contém `4.7.4`, `ESTÁVEL` e o resumo oficial do fechamento. - Safari remoto: janela autenticada visível ao usuário, mas indisponível ao controlador por `cgWindowNotFound`; contratos públicos substituem somente o que pode ser comprovado sem UI.",
+      "normalizedText": "acessos e navegacao 34 34 aluno e responsavel 57 57 carteirinha cie emitida pelo rpc do aluno pdf assinaturas interface 193 contratos edge de artefatos 112 contratos versao remota 13 acervo do gestor 10 contratos diario assinado na turma 5 contratos node typescript eslint deno teto versao operacao rag e build aprovados localmente e no ci github controle de versao 229 e qualidade do produto 261 aprovados pr 83 integrada na main producao login gestor professor aluno e validador responderam http 200 o bundle publico contem 4 7 4 estavel e o resumo oficial do fechamento safari remoto janela autenticada visivel ao usuario mas indisponivel ao controlador por cgwindownotfound contratos publicos substituem somente o que pode ser comprovado sem ui",
+      "tokenCount": 106,
       "part": 1
     },
     {

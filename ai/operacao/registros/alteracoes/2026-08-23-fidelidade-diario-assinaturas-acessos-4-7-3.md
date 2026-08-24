@@ -1,6 +1,6 @@
 # Fidelidade do Diário, assinaturas e acessos temporários 4.7.3 — 2026-08-23
 
-Estado: `PUBLICACAO_AUTORIZADA_EM_VALIDACAO`
+Estado: `PUBLICADO_PRODUCAO_4_7_4`
 
 ## Objetivo
 
@@ -59,13 +59,15 @@ Restaurar a listagem de turmas, igualar o Diário do Professor ao fluxo canônic
 - Navegação e papéis temporários: 34 contratos aprovados.
 - Aluno/Responsável: 57 verificações aprovadas.
 - Guardas remotas de geometria: Técnico e Livre preservam largura, QR+rótulo e slots válidos após a migration `20260823210922`.
-- TypeScript, ESLint focado, teto de linhas, versão, operação, RAG e build integram o gate final.
-- Revisão independente obrigatória antes da publicação.
+- TypeScript, ESLint, teto de linhas, versão, operação, RAG e build foram aprovados no gate final.
+- A revisão independente não encontrou bloqueio crítico ou alto após os patches finais.
 
 ## Publicação
 
-- Atualização atômica da PR #83 na branch `release/sincronizacao-completa-4-7-2`, promovida para a versão estável 4.7.3.
-- Merge na `main` e Vercel Produção foram autorizados expressamente pelo usuário e dependem de CI/Preview verdes.
+- A PR #83 foi integrada por squash na `main` no commit `2f6461bf53459e6ab7a9e827c174113173719fc6`, promovendo a versão estável 4.7.3.
+- Controle de versão #229, Qualidade do produto #261, Preview e Vercel Produção `9uowbC2EimqTeexBXv2hPd91Ro3k` concluíram com sucesso.
+- O fechamento operacional foi publicado pela PR #84 como patch estável 4.7.4, sem alteração funcional adicional.
+- As rotas `/`, `/login`, `/gestor`, `/professor`, `/aluno` e `/validador` responderam HTTP 200; o bundle público confirma `4.7.4 · ESTÁVEL` e o resumo oficial do fechamento.
 - Edge Function v13 e migrations já estão ativas; a publicação web não altera dados financeiros.
 
 ## Manifesto explícito
