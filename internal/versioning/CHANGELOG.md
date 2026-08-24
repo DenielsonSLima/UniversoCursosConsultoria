@@ -13,6 +13,7 @@ Histórico anterior: [02/08/2026 — continuação](./changelog/2026-08-02-parte
 ### Segurança e qualidade
 
 - A fronteira das RPCs continua rejeitando identificadores malformados; autorização, escopo, banco e funções remotas permanecem inalterados.
+- A PR #87 foi integrada na `main`, a Vercel Production ficou pronta e o smoke autenticado da Caixa da Matriz concluiu sem erro.
 
 ## [4.7.5] - 2026-08-24
 

@@ -1,6 +1,6 @@
 # Caixa de Assinaturas da Matriz — 2026-08-24
 
-Estado: `PUBLICACAO_GITHUB_E_PRODUCAO_AUTORIZADA`
+Estado: `PUBLICADO_PRODUCAO_4_7_6`
 
 ## Diagnóstico
 
@@ -19,7 +19,15 @@ A Caixa de Assinaturas exibiu erro mesmo com a sessão do Gestor válida. Nos lo
 - Teste de regressão com o UUID legado da Matriz e teste negativo com caractere não hexadecimal.
 - Smoke remoto somente leitura com o mesmo contexto autorizado e o polo Matriz: resposta canônica com `items` e `nextCursor`.
 - Contrato remoto confirmado: função `SECURITY DEFINER`, `search_path` vazio, grant para `authenticated` e ausência de grant para `anon`.
-- Teto de 500 linhas, versão, TypeScript, lint, build, CI, Preview, Produção e smoke pós-deploy serão registrados no fechamento.
+- Node focado `17/17`, teto de 500 linhas, versão, TypeScript, lint, build e testes operacionais aprovados.
+- Revisão independente sem finding `Critical` ou `Important`.
+
+## Publicação e fechamento
+
+- PR `#87` integrada por squash na `main`, commit `78417700fcb10239f4c3d51aa008c83279702088`, com exatamente os nove arquivos do manifesto.
+- Preview Vercel `ELzsXC4U5h4sNTxNGGFF6VBHgUEp` e Production `7jcCtR6xbsuzAN5HHiJcFPrvMW6t` concluídas com sucesso.
+- `https://universocc.com.br` respondeu HTTP 200; o bundle público contém a versão 4.7.6 e o resumo `Caixa de assinaturas liberada para o UUID legado da Matriz`.
+- Smoke autenticado em Produção, na sessão real da Matriz: a Caixa abriu sem o alerta de falha e exibiu `Nenhuma assinatura pendente disponível`.
 
 ## Manifesto explícito
 
@@ -37,6 +45,6 @@ Total: 9 arquivos
 
 ## Limites
 
-- Publicação autorizada no GitHub e em Produção, limitada ao manifesto acima.
+- Publicação concluída no GitHub e em Produção, limitada ao manifesto acima.
 - Nenhuma alteração remota Supabase é necessária ou autorizada por implicação.
 - Alterações paralelas do workspace, artefatos temporários e arquivos gerados fora do índice RAG não integram o lote.
