@@ -1,3 +1,3 @@
 export type DiarioEditorTab = 'capa' | 'contracapa' | 'textos';
 
-export type DiarioUploadKind = 'contracapa' | 'contracapa_custom';
+export type DiarioUploadKind = 'capa' | 'contracapa' | 'contracapa_custom';

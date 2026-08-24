@@ -35,17 +35,20 @@ A consulta remota foi somente leitura. Inicialmente, nos modelos `diario_TECNICO
 
 ## Manifesto explícito
 
-Total: 34 arquivos
+Total: 37 arquivos
 
 - `ai/operacao/LOTE_ATIVO.md`
 - `ai/operacao/qualidade/limite-linhas.json`
 - `ai/operacao/registros/ALTERACOES.md`
 - `ai/operacao/registros/alteracoes/2026-08-24-restauracao-capa-diario-slots-assinatura.md`
+- `internal/versioning/CHANGELOG.md`
+- `internal/versioning/system-version.json`
 - `modules/gestor/cadastros/modelos-documentos/diarios/DiariosPage.tsx`
 - `modules/gestor/cadastros/modelos-documentos/diarios/components/DiarioBackCoverSettingsPanel.tsx`
 - `modules/gestor/cadastros/modelos-documentos/diarios/components/DiarioEditorCanvas.tsx`
 - `modules/gestor/cadastros/modelos-documentos/diarios/components/DiarioFieldPropertiesPanel.tsx`
 - `modules/gestor/cadastros/modelos-documentos/diarios/diarios-editor.contract.test.ts`
+- `modules/gestor/cadastros/modelos-documentos/diarios/diarios-editor.types.ts`
 - `modules/gestor/cadastros/modelos-documentos/diarios/diarios.service.ts`
 - `modules/gestor/cadastros/modelos-documentos/diarios/hooks/useDiarioTemplateEditor.ts`
 - `modules/gestor/gestao/tecnicos/detalhes/components/diarios/diario-pdf-assets.ts`
