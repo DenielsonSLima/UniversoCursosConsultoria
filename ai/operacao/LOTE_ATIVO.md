@@ -1,16 +1,16 @@
 # Lote ativo
 
-Estado: `PUBLICACAO_AUTORIZADA_EM_VALIDACAO`
+Estado: `PUBLICADO_PRODUCAO_4_7_3`
 
 ## Lote: 2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3
 
 - Pedido: corrigir as turmas e o Diário, reutilizar os modelos configurados, validar Professor/coordenação/Aluno/Responsável e publicar o resultado.
-- Base remota de continuidade: PR `#83`, branch `release/sincronizacao-completa-4-7-2`.
+- Base remota final: PR `#83` integrada por squash na `main`, commit `2f6461bf53459e6ab7a9e827c174113173719fc6`.
 - Registro: `ai/operacao/registros/alteracoes/2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3.md`.
 - Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3.md`.
 - Versão: `4.7.3` estável.
 - Supabase: treze migrations aplicadas via MCP e `assinatura-eletronica-diario-artefatos` v13 ativa com JWT.
-- Produção: autorizada pelo usuário; merge e Vercel dependem de CI/Preview verdes.
+- Produção: Vercel `9uowbC2EimqTeexBXv2hPd91Ro3k` concluída com sucesso; versão pública `4.7.3` estável.
 
 ### Critérios de aceite
 
@@ -22,7 +22,7 @@ Estado: `PUBLICACAO_AUTORIZADA_EM_VALIDACAO`
 6. Gestor possui módulo `Assinaturas` com caixa, acervo, filtros e Diário final; categorias sem backend seguro ficam indisponíveis. `ATENDIDO`.
 7. Aluno, carteirinha, notas, Responsável e dependente passam pelos contratos reais. `ATENDIDO`.
 8. Nenhuma cobrança, boleto ou operação Banese é criada. `ATENDIDO`.
-9. CI, Preview, merge e Vercel Produção devem concluir antes do encerramento. `EM_VALIDACAO`.
+9. CI, Preview, merge e Vercel Produção devem concluir antes do encerramento. `ATENDIDO`.
 
 ### Validação
 
@@ -32,7 +32,9 @@ Estado: `PUBLICACAO_AUTORIZADA_EM_VALIDACAO`
 - Edge de artefatos: 112 contratos; versão remota 13.
 - Acervo do Gestor: 10 contratos.
 - Diário assinado na turma: 5 contratos Node.
-- TypeScript, ESLint focado, Deno, teto, versão, operação, RAG e build: gate final em execução.
+- TypeScript, ESLint, Deno, teto, versão, operação, RAG e build: aprovados localmente e no CI.
+- GitHub: Controle de versão `#229` e Qualidade do produto `#261` aprovados; PR `#83` integrada na `main`.
+- Produção: `/`, `/login`, `/gestor`, `/professor`, `/aluno` e `/validador` responderam HTTP 200; o bundle público contém `4.7.3`, `ESTÁVEL` e o resumo oficial do lote.
 - Safari remoto: janela autenticada visível ao usuário, mas indisponível ao controlador por `cgWindowNotFound`; contratos públicos substituem somente o que pode ser comprovado sem UI.
 
 ### Limites e exclusões
