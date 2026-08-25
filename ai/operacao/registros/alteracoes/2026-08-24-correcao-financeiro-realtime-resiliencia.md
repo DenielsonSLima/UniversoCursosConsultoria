@@ -32,7 +32,7 @@ Fechar os findings da revisão pós-publicação 4.8.1: tornar o backend a autor
 
 ## Manifesto explícito
 
-Total: 79 arquivos.
+Total: 80 arquivos.
 
 ### Auth e resiliência do Professor
 
@@ -123,6 +123,7 @@ Total: 79 arquivos.
 - `ai/operacao/registros/ALTERACOES.md`
 - `ai/operacao/registros/alteracoes/2026-08-24-correcao-financeiro-realtime-resiliencia.md`
 - `internal/versioning/CHANGELOG.md`
+- `internal/versioning/changelog/2026-08-04.md`
 - `internal/versioning/system-version.json`
 - `package.json`
 - `scripts/check-file-line-limits.mjs`
@@ -156,8 +157,9 @@ Total: 79 arquivos.
 - Controle de versão, CI completa e Vercel Preview `FYsWqDPJNM1E7amcDY8S6t3zARnU` ficaram verdes antes do merge. A PR foi mesclada por squash no commit `256eaa78e0dda2930b57f986c71ead315eed329d`.
 - O Vercel Production `TywqYpgDaxfuWcTfUx2ey69gu6Mz` e a CI pós-merge `32810616401` foram aprovados. `/`, `/login` e `/sistema/login` responderam `200`, e o bundle público `main-BCXA3xKx.js` confirmou a versão `4.8.2` e o seletor multiperfil carregado pelas duas audiências.
 - A inspeção visual automatizada pós-merge não foi executada porque a sessão não possuía navegador controlável. O smoke autenticado positivo de Professor e de recibo PAGO também permaneceu limitado pela ausência de dados naturais, sem criação de usuário, pagamento ou lançamento artificial em Produção.
-- O manifesto permanece congelado em 79 arquivos e o lote foi encerrado em Produção sem finding funcional `P1` ou `P2` aberto.
+- O manifesto funcional permaneceu congelado em 79 arquivos e o lote foi encerrado em Produção sem finding funcional `P1` ou `P2` aberto.
 - O fechamento operacional segue na PR `#94` sob o patch estável `4.8.3`; ele atualiza somente versão, evidências e RAG, sem alterar o contrato funcional entregue na `4.8.2`.
+- O gate imutável de versões exigiu manter a entrada `4.8.2` byte a byte. Para também respeitar o teto de 500 linhas, a entrada histórica `2.2.3-beta.26` foi movida sem alteração para `internal/versioning/changelog/2026-08-04.md`; o manifesto final passou a 80 arquivos.
 
 ## Limites
 

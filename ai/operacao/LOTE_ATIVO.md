@@ -7,7 +7,7 @@ Estado: `PUBLICADO_PRODUCAO_4_8_3`
 - Pedido: corrigir os fluxos Financeiro/recibo do Professor e do Aluno, sincronização TanStack/Realtime e resiliência do portal do Professor, validar internamente com agentes independentes e publicar o resultado no GitHub e em Produção.
 - Registro: `ai/operacao/registros/alteracoes/2026-08-24-correcao-financeiro-realtime-resiliencia.md`.
 - Versão funcional publicada: `4.8.2`; fechamento operacional: `4.8.3`.
-- Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-24-correcao-financeiro-realtime-resiliencia.md`; lista recongelada com 79 arquivos antes do hardening remoto.
+- Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-24-correcao-financeiro-realtime-resiliencia.md`; 79 arquivos funcionais e um arquivo de histórico movido sem alteração para o arquivo versionado no fechamento.
 
 ### Contratos do lote
 
@@ -42,6 +42,7 @@ Estado: `PUBLICADO_PRODUCAO_4_8_3`
 - A PR foi mesclada por squash no commit `256eaa78e0dda2930b57f986c71ead315eed329d`; o Vercel Production `TywqYpgDaxfuWcTfUx2ey69gu6Mz` e a CI pós-merge ficaram verdes.
 - O domínio público e as rotas `/login` e `/sistema/login` responderam `200`; o bundle `main-BCXA3xKx.js` contém a versão `4.8.2` e carrega o seletor multiperfil publicado.
 - O fechamento documental e o RAG são publicados na PR `#94` como patch estável `4.8.3`, sem alterar o contrato funcional da `4.8.2`.
+- Para preservar byte a byte a entrada `4.8.2` e o teto de 500 linhas, a entrada histórica `2.2.3-beta.26` foi apenas movida para `internal/versioning/changelog/2026-08-04.md`; o manifesto final possui 80 arquivos.
 
 ### Limites
 
