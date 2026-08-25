@@ -1,12 +1,12 @@
 # Lote ativo
 
-Estado: `PUBLICADO_PRODUCAO_4_8_2`
+Estado: `PUBLICADO_PRODUCAO_4_8_3`
 
 ## Lote: 2026-08-24-correcao-financeiro-realtime-resiliencia-4-8-2
 
 - Pedido: corrigir os fluxos Financeiro/recibo do Professor e do Aluno, sincronização TanStack/Realtime e resiliência do portal do Professor, validar internamente com agentes independentes e publicar o resultado no GitHub e em Produção.
 - Registro: `ai/operacao/registros/alteracoes/2026-08-24-correcao-financeiro-realtime-resiliencia.md`.
-- Versão alvo: `4.8.2`.
+- Versão funcional publicada: `4.8.2`; fechamento operacional: `4.8.3`.
 - Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-24-correcao-financeiro-realtime-resiliencia.md`; lista recongelada com 79 arquivos antes do hardening remoto.
 
 ### Contratos do lote
@@ -41,6 +41,7 @@ Estado: `PUBLICADO_PRODUCAO_4_8_2`
 - Controle de versão, CI completa e Vercel Preview `FYsWqDPJNM1E7amcDY8S6t3zARnU` foram aprovados no head `d3114cea629c1a3ae045ee5ce1b6ef4d8cf9a736`.
 - A PR foi mesclada por squash no commit `256eaa78e0dda2930b57f986c71ead315eed329d`; o Vercel Production `TywqYpgDaxfuWcTfUx2ey69gu6Mz` e a CI pós-merge ficaram verdes.
 - O domínio público e as rotas `/login` e `/sistema/login` responderam `200`; o bundle `main-BCXA3xKx.js` contém a versão `4.8.2` e carrega o seletor multiperfil publicado.
+- O fechamento documental e o RAG são publicados na PR `#94` como patch estável `4.8.3`, sem alterar o contrato funcional da `4.8.2`.
 
 ### Limites
 

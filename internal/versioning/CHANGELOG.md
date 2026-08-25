@@ -4,20 +4,20 @@ Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente
 
 Histórico anterior: [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
 
+## [4.8.3] - 2026-08-25
+
+### Alterado
+
+- O fechamento operacional registra ledgers e hashes das 11 migrations, PR/merge, CI, Vercel Preview/Production, smoke HTTP e limitações de autenticação sem criar usuários, pagamentos ou lançamentos artificiais; o contrato funcional publicado em 4.8.2 permanece inalterado.
 ## [4.8.2] - 2026-08-25
-
 ### Corrigido
-
 - Os Financeiros do Professor e do Aluno passam a receber do backend valores pagos, saldos, atraso, filtros, totais e paginação, sem tratar valor previsto como pagamento nem mascarar falha de consulta como saldo zerado.
 - Recibos manuais usam snapshot autorizado e PDF vetorial institucional; prévia, download e impressão compartilham o mesmo arquivo, enquanto comprovantes oficiais de gateway permanecem preservados.
 - O portal do Professor revalida os polos em toda montagem, mantém a sessão em falha transitória e nunca libera módulos com autorização apenas em cache.
 - Realtime e TanStack refazem as leituras canônicas na assinatura e reconexão, com debounce, limpeza e invalidações direcionadas para matrícula, vacinas, calendário, comunicação e financeiro.
-
 ### Segurança e qualidade
-
 - As novas RPCs confirmam a identidade e o escopo no banco, usam grants mínimos e preservam pagamento zero ou parcial, data civil de Maceió e exclusão de títulos cancelados ou estornados.
-- Os acessos multiperfil continuam separados por audiência: Aluno/Responsável no login público e Gestor/Professor no institucional, com seleção somente quando houver mais de um perfil compatível.
-- Contratos de Auth, SQL, PDF, Banese, Realtime e chaves TanStack foram incorporados ao gate obrigatório de CI.
+- Os acessos multiperfil continuam separados por audiência, com seleção somente quando houver mais de um perfil compatível; contratos de Auth, SQL, PDF, Banese, Realtime e chaves TanStack integram o gate obrigatório de CI.
 
 ## [4.8.1] - 2026-08-24
 

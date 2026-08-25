@@ -1,6 +1,6 @@
 # Correção Financeiro, Realtime e resiliência — 2026-08-24
 
-Estado: `PUBLICADO_PRODUCAO_4_8_2`
+Estado: `PUBLICADO_PRODUCAO_4_8_3`
 
 ## Objetivo
 
@@ -157,6 +157,7 @@ Total: 79 arquivos.
 - O Vercel Production `TywqYpgDaxfuWcTfUx2ey69gu6Mz` e a CI pós-merge `32810616401` foram aprovados. `/`, `/login` e `/sistema/login` responderam `200`, e o bundle público `main-BCXA3xKx.js` confirmou a versão `4.8.2` e o seletor multiperfil carregado pelas duas audiências.
 - A inspeção visual automatizada pós-merge não foi executada porque a sessão não possuía navegador controlável. O smoke autenticado positivo de Professor e de recibo PAGO também permaneceu limitado pela ausência de dados naturais, sem criação de usuário, pagamento ou lançamento artificial em Produção.
 - O manifesto permanece congelado em 79 arquivos e o lote foi encerrado em Produção sem finding funcional `P1` ou `P2` aberto.
+- O fechamento operacional segue na PR `#94` sob o patch estável `4.8.3`; ele atualiza somente versão, evidências e RAG, sem alterar o contrato funcional entregue na `4.8.2`.
 
 ## Limites
 

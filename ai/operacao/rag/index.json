@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-08-25T04:56:04.279Z",
+  "builtAt": "2026-08-25T04:58:58.119Z",
   "manifestVersion": 2,
-  "sourceSignature": "d50ca15342e32593188d94f051bae248521cf6c87e5f54fa08bf2f46dba60d49",
+  "sourceSignature": "ba4fddb3400ff76df9980197fceae3b2ef666d0a0cd327916cb397b69950dbc5",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "cfdf6635a1eb09151edf2d9bec60de6336e291ea403b977ba29a98dae8715fe9"
+      "hash": "5ba82343e67ab234118d5a11df76cc769f0c152a8d8160ee5d213a1749995979"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -192,23 +192,23 @@
       "part": 1
     },
     {
-      "id": "bffeaaab882c7bd49269",
-      "hash": "bffeaaab882c7bd492696bc1f6af3b9ee2c1d76df95a10b43af301df6ddbf341",
+      "id": "9f177273e4d74fafaac0",
+      "hash": "9f177273e4d74fafaac0987fd72c7ae359cafce335e243573e438d4635142f3b",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Lote ativo",
-      "text": "Estado: `PUBLICADO_PRODUCAO_4_8_2`",
-      "normalizedText": "estado publicado producao 4 8 2",
+      "text": "Estado: `PUBLICADO_PRODUCAO_4_8_3`",
+      "normalizedText": "estado publicado producao 4 8 3",
       "tokenCount": 3,
       "part": 1
     },
     {
-      "id": "248574465bb5071179b3",
-      "hash": "248574465bb5071179b3a4745851dbc24c4de678358497c40d6f197bcf0479b3",
+      "id": "c7f8cfdb6a556f1098bf",
+      "hash": "c7f8cfdb6a556f1098bfbd159b51dfc04be3a8e496e7ddd805f39cad9bf10b02",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Lote: 2026-08-24-correcao-financeiro-realtime-resiliencia-4-8-2",
-      "text": "- Pedido: corrigir os fluxos Financeiro/recibo do Professor e do Aluno, sincronização TanStack/Realtime e resiliência do portal do Professor, validar internamente com agentes independentes e publicar o resultado no GitHub e em Produção. - Registro: `ai/operacao/registros/alteracoes/2026-08-24-correcao-financeiro-realtime-resiliencia.md`. - Versão alvo: `4.8.2`. - Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-24-correcao-financeiro-realtime-resiliencia.md`; lista recongelada com 79 arquivos antes do hardening remoto.",
-      "normalizedText": "pedido corrigir os fluxos financeiro recibo do professor e do aluno sincronizacao tanstack realtime e resiliencia do portal do professor validar internamente com agentes independentes e publicar o resultado no github e em producao registro ai operacao registros alteracoes 2026 08 24 correcao financeiro realtime resiliencia md versao alvo 4 8 2 manifesto explicito ai operacao registros alteracoes 2026 08 24 correcao financeiro realtime resiliencia md lista recongelada com 79 arquivos antes do hardening remoto",
-      "tokenCount": 67,
+      "text": "- Pedido: corrigir os fluxos Financeiro/recibo do Professor e do Aluno, sincronização TanStack/Realtime e resiliência do portal do Professor, validar internamente com agentes independentes e publicar o resultado no GitHub e em Produção. - Registro: `ai/operacao/registros/alteracoes/2026-08-24-correcao-financeiro-realtime-resiliencia.md`. - Versão funcional publicada: `4.8.2`; fechamento operacional: `4.8.3`. - Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-24-correcao-financeiro-realtime-resiliencia.md`; lista recongelada com 79 arquivos antes do hardening remoto.",
+      "normalizedText": "pedido corrigir os fluxos financeiro recibo do professor e do aluno sincronizacao tanstack realtime e resiliencia do portal do professor validar internamente com agentes independentes e publicar o resultado no github e em producao registro ai operacao registros alteracoes 2026 08 24 correcao financeiro realtime resiliencia md versao funcional publicada 4 8 2 fechamento operacional 4 8 3 manifesto explicito ai operacao registros alteracoes 2026 08 24 correcao financeiro realtime resiliencia md lista recongelada com 79 arquivos antes do hardening remoto",
+      "tokenCount": 70,
       "part": 1
     },
     {
@@ -242,13 +242,13 @@
       "part": 1
     },
     {
-      "id": "53e2b4dd8b79f1ca4906",
-      "hash": "53e2b4dd8b79f1ca49068be1a3b05ec03a4ea14199b454ae7a2cd7a1c293f040",
+      "id": "3eb28a7147825dc974ac",
+      "hash": "3eb28a7147825dc974aceddd4d062883d8feb398a15618d0d0ca7eb54dde8030",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Evidências de publicação",
-      "text": "- A PR GitHub `#93` partiu da `main` remota `731202f07a1c784076367542ffb24faa66aee9a4` e publicou somente 78 arquivos alterados dos 79 permitidos pelo manifesto; `ai/operacao/registros/ALTERACOES.md` já era idêntico à base. - Controle de versão, CI completa e Vercel Preview `FYsWqDPJNM1E7amcDY8S6t3zARnU` foram aprovados no head `d3114cea629c1a3ae045ee5ce1b6ef4d8cf9a736`. - A PR foi mesclada por squash no commit `256eaa78e0dda2930b57f986c71ead315eed329d`; o Vercel Production `TywqYpgDaxfuWcTfUx2ey69gu6Mz` e a CI pós-merge ficaram verdes. - O domínio público e as rotas `/login` e `/sistema/login` responderam `200`; o bundle `main-BCXA3xKx.js` contém a versão `4.8.2` e carrega o seletor multiperfil publicado.",
-      "normalizedText": "a pr github 93 partiu da main remota 731202f07a1c784076367542ffb24faa66aee9a4 e publicou somente 78 arquivos alterados dos 79 permitidos pelo manifesto ai operacao registros alteracoes md ja era identico a base controle de versao ci completa e vercel preview fyswqdpjnm1e7amcdy8s6t3zarnu foram aprovados no head d3114cea629c1a3ae045ee5ce1b6ef4d8cf9a736 a pr foi mesclada por squash no commit 256eaa78e0dda2930b57f986c71ead315eed329d o vercel production tywqypgdaxfuwctfux2ey69gu6mz e a ci pos merge ficaram verdes o dominio publico e as rotas login e sistema login responderam 200 o bundle main bcxa3xkx js contem a versao 4 8 2 e carrega o seletor multiperfil publicado",
-      "tokenCount": 75,
+      "text": "- A PR GitHub `#93` partiu da `main` remota `731202f07a1c784076367542ffb24faa66aee9a4` e publicou somente 78 arquivos alterados dos 79 permitidos pelo manifesto; `ai/operacao/registros/ALTERACOES.md` já era idêntico à base. - Controle de versão, CI completa e Vercel Preview `FYsWqDPJNM1E7amcDY8S6t3zARnU` foram aprovados no head `d3114cea629c1a3ae045ee5ce1b6ef4d8cf9a736`. - A PR foi mesclada por squash no commit `256eaa78e0dda2930b57f986c71ead315eed329d`; o Vercel Production `TywqYpgDaxfuWcTfUx2ey69gu6Mz` e a CI pós-merge ficaram verdes. - O domínio público e as rotas `/login` e `/sistema/login` responderam `200`; o bundle `main-BCXA3xKx.js` contém a versão `4.8.2` e carrega o seletor multiperfil publicado. - O fechamento documental e o RAG são publicados na PR `#94` como patch estável `4.8.3`, sem alterar o contrato funcional da `4.8.2`.",
+      "normalizedText": "a pr github 93 partiu da main remota 731202f07a1c784076367542ffb24faa66aee9a4 e publicou somente 78 arquivos alterados dos 79 permitidos pelo manifesto ai operacao registros alteracoes md ja era identico a base controle de versao ci completa e vercel preview fyswqdpjnm1e7amcdy8s6t3zarnu foram aprovados no head d3114cea629c1a3ae045ee5ce1b6ef4d8cf9a736 a pr foi mesclada por squash no commit 256eaa78e0dda2930b57f986c71ead315eed329d o vercel production tywqypgdaxfuwctfux2ey69gu6mz e a ci pos merge ficaram verdes o dominio publico e as rotas login e sistema login responderam 200 o bundle main bcxa3xkx js contem a versao 4 8 2 e carrega o seletor multiperfil publicado o fechamento documental e o rag sao publicados na pr 94 como patch estavel 4 8 3 sem alterar o contrato funcional da 4 8 2",
+      "tokenCount": 91,
       "part": 1
     },
     {
