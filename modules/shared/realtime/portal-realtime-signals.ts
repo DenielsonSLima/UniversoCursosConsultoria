@@ -1,6 +1,8 @@
 export const portalRealtimeSignalTable = 'portal_realtime_signals' as const;
 
 export const portalRealtimeTopics = {
+  studentCourseAccess: (alunoId: string) =>
+    `portal:aluno:${alunoId}:acesso`,
   studentEnrollment: (alunoId: string) =>
     `portal:gestor:aluno:${alunoId}:matricula`,
   studentVaccines: (alunoId: string) =>

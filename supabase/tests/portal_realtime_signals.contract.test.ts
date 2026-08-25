@@ -7,15 +7,16 @@ const migrationNames = [
   '20260824235150_create_portal_realtime_signal_triggers.sql',
   '20260824235160_create_portal_calendar_chat_signals.sql',
   '20260824235400_move_portal_realtime_authorizer_private.sql',
+  '20260825204500_add_student_portal_realtime_audience.sql',
 ] as const;
 
-const [foundation, academic, calendarChat, privateAuthorizer] = await Promise.all(
+const [foundation, academic, calendarChat, privateAuthorizer, studentAudience] = await Promise.all(
   migrationNames.map((name) => readFile(
     new URL(`../migrations/${name}`, import.meta.url),
     'utf8',
   )),
 );
-const allMigrations = [foundation, academic, calendarChat].join('\n');
+const allMigrations = [foundation, academic, calendarChat, studentAudience].join('\n');
 
 test('outbox publica somente sinal mínimo e bloqueia INSERT direto', () => {
   const tableDefinition = foundation.slice(
@@ -144,9 +145,50 @@ test('chat usa identidade normalizada e emite somente sinal para refetch canôni
   assert.doesNotMatch(allMigrations, /\b(?:source|operation|entity_id)\b/i);
 });
 
+test('audiência do Aluno autoriza a identidade canônica e recebe matrícula por OLD e NEW', () => {
+  assert.match(studentAudience, /audience_kind in \([\s\S]*?'ALUNO'/);
+  assert.match(
+    studentAudience,
+    /when 'ALUNO' then[\s\S]*p_audience_id = public\.current_aluno_id\(\)/,
+  );
+  assert.match(
+    studentAudience,
+    /'portal:aluno:' \|\| v_old_aluno_id::text \|\| ':acesso'[\s\S]*'ALUNO'/,
+  );
+  assert.match(
+    studentAudience,
+    /'portal:aluno:' \|\| v_new_aluno_id::text \|\| ':acesso'[\s\S]*'ALUNO'/,
+  );
+  assert.match(studentAudience, /if tg_argv\[0\] = 'matricula' then/);
+  assert.match(studentAudience, /create or replace function public\.emit_portal_student_release_signal/);
+  assert.match(
+    studentAudience,
+    /alter function portal_private\.can_read_portal_realtime_signal\(text, uuid, uuid\)\s+security definer\s+set search_path = ''/,
+  );
+  assert.match(
+    studentAudience,
+    /revoke all on function portal_private\.can_read_portal_realtime_signal\([\s\S]*?\) from public, anon, authenticated, service_role/,
+  );
+  assert.match(
+    studentAudience,
+    /grant execute on function portal_private\.can_read_portal_realtime_signal\([\s\S]*?\) to authenticated/,
+  );
+  assert.doesNotMatch(
+    studentAudience,
+    /grant execute on function portal_private\.can_read_portal_realtime_signal\([\s\S]*?\) to (?:public|anon|service_role)/,
+  );
+  assert.doesNotMatch(studentAudience, /replica identity|(?:create|alter|drop)\s+[^;]*realtime\./i);
+});
+
 test('migrations manuais permanecem abaixo do teto operacional', () => {
   migrationNames.forEach((name, index) => {
-    const lines = [foundation, academic, calendarChat, privateAuthorizer][index].split('\n').length;
+    const lines = [
+      foundation,
+      academic,
+      calendarChat,
+      privateAuthorizer,
+      studentAudience,
+    ][index].split('\n').length;
     assert.ok(lines <= 500, `${name} possui ${lines} linhas`);
   });
 });

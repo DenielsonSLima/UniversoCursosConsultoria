@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "manifests": [
+    "ai/operacao/registros/alteracoes/2026-08-21-acesso-responsavel-completo-4-6-0.md",
+    "ai/operacao/registros/alteracoes/2026-08-22-modularizacao-teto-500-4-6-0.md",
+    "ai/operacao/registros/alteracoes/2026-08-22-avaliacoes-ead-e-cards-tecnicos.md",
+    "ai/operacao/registros/alteracoes/2026-08-22-jornada-cursos-livres.md",
+    "ai/operacao/registros/alteracoes/2026-08-23-sincronizacao-completa-4-7-2.md",
+    "ai/operacao/registros/alteracoes/2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3.md",
+    "ai/operacao/registros/alteracoes/2026-08-24-restauracao-capa-diario-slots-assinatura.md",
+    "ai/operacao/registros/alteracoes/2026-08-24-caixa-assinaturas-uuid-matriz-4-7-6.md",
+    "ai/operacao/registros/alteracoes/2026-08-24-card-email-validado-gestor.md",
+    "ai/operacao/registros/alteracoes/2026-08-24-identidade-auth-multiperfil.md",
+    "ai/operacao/registros/alteracoes/2026-08-24-correcao-financeiro-realtime-resiliencia.md",
+    "ai/operacao/registros/alteracoes/2026-08-25-realtime-aluno-financeiro-canonico-4-8-4.md"
+  ]
+}

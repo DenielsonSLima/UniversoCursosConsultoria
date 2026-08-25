@@ -4,6 +4,18 @@ Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente
 
 Histórico anterior: [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
 
+## [4.8.4] - 2026-08-25
+
+### Corrigido
+
+- A remoção ou troca de matrícula do Aluno passa a sincronizar por uma outbox autorizada, sem depender de DELETE filtrado do Postgres Changes, com refetch canônico ao reconectar ou retomar o aplicativo.
+- O card financeiro usa somente status, elegibilidade de recibo e resumo calculados pelo backend; a página deixa de manter uma segunda assinatura Realtime para o mesmo evento financeiro.
+
+### Segurança e qualidade
+
+- A audiência `ALUNO` é autorizada pela identidade corrente, preservando o OID do autorizador, a policy RLS, os grants mínimos e os tópicos sem payload acadêmico sensível.
+- Os quatro perfis continuam disponíveis na mesma identidade, separados entre os logins público e institucional, com seletor apenas quando há mais de um acesso compatível na audiência.
+
 ## [4.8.3] - 2026-08-25
 
 ### Alterado

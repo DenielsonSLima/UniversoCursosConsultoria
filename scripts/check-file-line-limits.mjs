@@ -21,6 +21,16 @@ const ALLOWED_GENERATED_PATHS = new Set([
 const read = path => readFileSync(path, 'utf8');
 const sha256 = content => createHash('sha256').update(content).digest('hex');
 const config = JSON.parse(read(CONFIG_PATH));
+const manifestRegistryPath = config.manifestRegistry;
+const manifestRegistry = manifestRegistryPath && existsSync(manifestRegistryPath)
+  ? JSON.parse(read(manifestRegistryPath))
+  : { manifests: [] };
+const manifests = [
+  ...new Set([
+    ...(config.manifests ?? []),
+    ...(manifestRegistry.manifests ?? []),
+  ]),
+];
 const migrationExemptionsRegistry = existsSync(MIGRATION_EXEMPTIONS_PATH)
   ? JSON.parse(read(MIGRATION_EXEMPTIONS_PATH))
   : { version: 1, exemptions: [] };
@@ -61,13 +71,19 @@ const extractManifestPaths = manifestPath => {
 if (!Number.isInteger(config.maxLines) || config.maxLines !== 500) {
   failures.push(`${CONFIG_PATH}: maxLines deve ser exatamente 500.`);
 }
-if (!Array.isArray(config.manifests) || config.manifests.length === 0) {
+if (manifestRegistryPath && !existsSync(manifestRegistryPath)) {
+  failures.push(`Registro de manifestos não encontrado: ${manifestRegistryPath}`);
+}
+if (manifestRegistryPath && manifestRegistry.version !== 1) {
+  failures.push(`${manifestRegistryPath}: version deve ser exatamente 1.`);
+}
+if (manifests.length === 0) {
   failures.push(`${CONFIG_PATH}: informe ao menos um manifesto auditado.`);
 }
 const activeLotManifest = read(ACTIVE_LOT_PATH).match(/Manifesto explícito:\s*`([^`]+)`/)?.[1];
 if (!activeLotManifest) {
   failures.push(`${ACTIVE_LOT_PATH}: manifesto explícito não identificado.`);
-} else if (!(config.manifests ?? []).includes(activeLotManifest)) {
+} else if (!manifests.includes(activeLotManifest)) {
   failures.push(`${CONFIG_PATH}: o manifesto do lote ativo não está sendo auditado (${activeLotManifest}).`);
 }
 
@@ -106,7 +122,7 @@ for (const retired of config.retiredPaths ?? []) {
     failures.push(`${CONFIG_PATH}: retirada exige path, retiredInManifest e reason.`);
     continue;
   }
-  if (!(config.manifests ?? []).includes(retired.retiredInManifest)) {
+  if (!manifests.includes(retired.retiredInManifest)) {
     failures.push(`${CONFIG_PATH}: retirada aponta para manifesto não auditado (${retired.path}).`);
   }
   if (existsSync(retired.path)) {
@@ -142,7 +158,7 @@ for (const fileName of ignoredFileNames) {
     failures.push(`${CONFIG_PATH}: arquivo não autorizado na lista de ignorados (${fileName}).`);
   }
 }
-const manifestPaths = [...new Set((config.manifests ?? []).flatMap(extractManifestPaths))];
+const manifestPaths = [...new Set(manifests.flatMap(extractManifestPaths))];
 if (manifestPaths.length === 0) {
   failures.push('Nenhum arquivo foi encontrado nos manifestos auditados.');
 }
@@ -213,8 +229,23 @@ if (diffIndex >= 0) {
     const baseConfigContent = readGitFile(base, CONFIG_PATH);
     if (baseConfigContent) {
       const baseConfig = JSON.parse(baseConfigContent);
-      for (const baseManifest of baseConfig.manifests ?? []) {
-        if (!(config.manifests ?? []).includes(baseManifest)) {
+      const baseManifestRegistryContent = baseConfig.manifestRegistry
+        ? readGitFile(base, baseConfig.manifestRegistry)
+        : null;
+      if (baseConfig.manifestRegistry && !baseManifestRegistryContent) {
+        failures.push(`Registro de manifestos não encontrado na base: ${baseConfig.manifestRegistry}`);
+      }
+      const baseManifestRegistry = baseManifestRegistryContent
+        ? JSON.parse(baseManifestRegistryContent)
+        : { manifests: [] };
+      const baseManifests = [
+        ...new Set([
+          ...(baseConfig.manifests ?? []),
+          ...(baseManifestRegistry.manifests ?? []),
+        ]),
+      ];
+      for (const baseManifest of baseManifests) {
+        if (!manifests.includes(baseManifest)) {
           failures.push(`Manifesto auditado foi removido da cobertura incremental: ${baseManifest}`);
         }
       }

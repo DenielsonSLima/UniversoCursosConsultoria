@@ -8,6 +8,7 @@ const readSource = (relativePath: string) => readFile(
 );
 
 const [
+  studentAccessSource,
   enrollmentSource,
   vaccinesSource,
   calendarPageSource,
@@ -17,6 +18,7 @@ const [
   communicationRealtimeSource,
   signalTopicsSource,
 ] = await Promise.all([
+  readSource('aluno/hooks/useAlunoCourseAccessRealtime.ts'),
   readSource('gestor/parceiros/components/viewparceiros/aluno/useMatriculaTecnicaWorkflowRealtime.ts'),
   readSource('gestor/parceiros/components/viewparceiros/aluno/ParceiroAlunoVacinas.tsx'),
   readSource('professor/calendario/CalendarioProfessorPage.tsx'),
@@ -29,6 +31,7 @@ const [
 
 test('hooks auditados ressincronizam no reconnect e limpam canal e debounce', () => {
   for (const source of [
+    studentAccessSource,
     enrollmentSource,
     vaccinesSource,
     calendarRealtimeSource,
@@ -44,6 +47,25 @@ test('hooks auditados ressincronizam no reconnect e limpam canal e debounce', ()
     assert.match(source, /removeChannel\(channel\)/);
     assert.match(source, /portalRealtimeSignalFilter/);
   }
+});
+
+test('acesso do Aluno usa outbox autorizada e mantém o sinal financeiro no mesmo controller', () => {
+  assert.match(
+    signalTopicsSource,
+    /studentCourseAccess:[\s\S]*`portal:aluno:\$\{alunoId\}:acesso`/,
+  );
+  assert.match(studentAccessSource, /studentCourseAccess\(alunoId\)/);
+  assert.match(studentAccessSource, /portalRealtimeSignalFilter/);
+  assert.match(studentAccessSource, /table: 'finance_realtime_events'/);
+  assert.match(studentAccessSource, /subscribe\(invalidation\.onChannelStatus\)/);
+  assert.match(studentAccessSource, /invalidation\.dispose\(\)/);
+  assert.doesNotMatch(studentAccessSource, /table: 'matriculas'/);
+  assert.doesNotMatch(studentAccessSource, /payload\.(?:new|old)|setQueryData|setInterval/);
+  assert.equal(
+    studentAccessSource.match(/invalidation\.schedule/g)?.length,
+    4,
+    'outbox acadêmica, outbox financeira, foco e visibilidade devem compartilhar o debounce',
+  );
 });
 
 test('hooks nunca assinam DELETE CDC nem tabelas de domínio', () => {
