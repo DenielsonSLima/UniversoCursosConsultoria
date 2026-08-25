@@ -1,6 +1,6 @@
 # Lote ativo
 
-Estado: `PUBLICADO_PRODUCAO_4_8_0`
+Estado: `PUBLICADO_PRODUCAO_4_8_1`
 
 ## Lote: 2026-08-24-identidade-auth-multiperfil-4-8-0
 
@@ -9,7 +9,7 @@ Estado: `PUBLICADO_PRODUCAO_4_8_0`
 - Identidade: todos os perfis compartilhados devem possuir o mesmo CPF válido e o mesmo e-mail canônico do Supabase Auth.
 - Registro: `ai/operacao/registros/alteracoes/2026-08-24-identidade-auth-multiperfil.md`.
 - Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-24-identidade-auth-multiperfil.md`.
-- Versão publicada: `4.8.0` estável.
+- Versão funcional publicada: `4.8.0`; fechamento operacional publicado como patch `4.8.1` estável.
 
 ### Critérios de aceite
 

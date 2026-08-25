@@ -1,6 +1,6 @@
 # Identidade Auth multiperfil — 2026-08-24
 
-Estado: `PUBLICADO_PRODUCAO_4_8_0`
+Estado: `PUBLICADO_PRODUCAO_4_8_1`
 
 ## Objetivo e contrato
 

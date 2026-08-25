@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-08-25T02:12:40.888Z",
+  "builtAt": "2026-08-25T02:16:31.635Z",
   "manifestVersion": 2,
-  "sourceSignature": "585ddb53e3078c07a45e3c5e6aa6f2ae4664593f8581b412f4d8ea9307a9b62b",
+  "sourceSignature": "af39313e11b326cfb40a5cd72bf7d157d3d6ad833f37ed6891acdaa62c07645f",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "c2104fd9060b0e417b94925d41ac0b62a94216b15c077d185c31f9ce715e96c3"
+      "hash": "680d031d7e1c2ac5dbe3efd3806b712f092c54c2251abc2fadb7a8e78549af1d"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -192,23 +192,23 @@
       "part": 1
     },
     {
-      "id": "b7323f9832435c5143ff",
-      "hash": "b7323f9832435c5143ff882fc6710fb09f61e31319ee1d4cbdc8f87b9ce1259e",
+      "id": "7e490a70517f2e914027",
+      "hash": "7e490a70517f2e9140273c77c32dd7b0e97dfd49118a0923f8e63a8f81282e2d",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Lote ativo",
-      "text": "Estado: `PUBLICADO_PRODUCAO_4_8_0`",
-      "normalizedText": "estado publicado producao 4 8 0",
+      "text": "Estado: `PUBLICADO_PRODUCAO_4_8_1`",
+      "normalizedText": "estado publicado producao 4 8 1",
       "tokenCount": 3,
       "part": 1
     },
     {
-      "id": "82a18beaf68b373b657a",
-      "hash": "82a18beaf68b373b657a62526ed447a1b68b30e9afc950c9ecb1e41e1f50552b",
+      "id": "c6c0526ef921a05ae2d3",
+      "hash": "c6c0526ef921a05ae2d3f5ea62f19841d884abad1be0693637f18f57fc18971c",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Lote: 2026-08-24-identidade-auth-multiperfil-4-8-0",
-      "text": "- Pedido: permitir que uma única identidade possua Gestor, Professor, Aluno e Responsável, selecionar o perfil dentro da audiência correta no login e publicar o lote completo em GitHub e Produção após revisão independente. - Contrato: `/login` resolve somente Aluno/Responsável; `/sistema/login` resolve somente Gestor/Professor. Um perfil entra automaticamente e dois perfis exigem escolha explícita. - Identidade: todos os perfis compartilhados devem possuir o mesmo CPF válido e o mesmo e-mail canônico do Supabase Auth. - Registro: `ai/operacao/registros/alteracoes/2026-08-24-identidade-auth-multiperfil.md`. - Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-24-identidade-auth-multiperfil.md`. - Versão publicada: `4.8.0` estável.",
-      "normalizedText": "pedido permitir que uma unica identidade possua gestor professor aluno e responsavel selecionar o perfil dentro da audiencia correta no login e publicar o lote completo em github e producao apos revisao independente contrato login resolve somente aluno responsavel sistema login resolve somente gestor professor um perfil entra automaticamente e dois perfis exigem escolha explicita identidade todos os perfis compartilhados devem possuir o mesmo cpf valido e o mesmo e mail canonico do supabase auth registro ai operacao registros alteracoes 2026 08 24 identidade auth multiperfil md manifesto explicito ai operacao registros alteracoes 2026 08 24 identidade auth multiperfil md versao publicada 4 8 0 estavel",
-      "tokenCount": 93,
+      "text": "- Pedido: permitir que uma única identidade possua Gestor, Professor, Aluno e Responsável, selecionar o perfil dentro da audiência correta no login e publicar o lote completo em GitHub e Produção após revisão independente. - Contrato: `/login` resolve somente Aluno/Responsável; `/sistema/login` resolve somente Gestor/Professor. Um perfil entra automaticamente e dois perfis exigem escolha explícita. - Identidade: todos os perfis compartilhados devem possuir o mesmo CPF válido e o mesmo e-mail canônico do Supabase Auth. - Registro: `ai/operacao/registros/alteracoes/2026-08-24-identidade-auth-multiperfil.md`. - Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-24-identidade-auth-multiperfil.md`. - Versão funcional publicada: `4.8.0`; fechamento operacional publicado como patch `4.8.1` estável.",
+      "normalizedText": "pedido permitir que uma unica identidade possua gestor professor aluno e responsavel selecionar o perfil dentro da audiencia correta no login e publicar o lote completo em github e producao apos revisao independente contrato login resolve somente aluno responsavel sistema login resolve somente gestor professor um perfil entra automaticamente e dois perfis exigem escolha explicita identidade todos os perfis compartilhados devem possuir o mesmo cpf valido e o mesmo e mail canonico do supabase auth registro ai operacao registros alteracoes 2026 08 24 identidade auth multiperfil md manifesto explicito ai operacao registros alteracoes 2026 08 24 identidade auth multiperfil md versao funcional publicada 4 8 0 fechamento operacional publicado como patch 4 8 1 estavel",
+      "tokenCount": 99,
       "part": 1
     },
     {
