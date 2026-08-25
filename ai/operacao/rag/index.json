@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-08-25T02:03:24.764Z",
+  "builtAt": "2026-08-25T02:12:40.888Z",
   "manifestVersion": 2,
-  "sourceSignature": "64e9c9ee6a6e2682339bc182aa3af3b99e3e0f40e6dd34e3ed2d8397e1992b89",
+  "sourceSignature": "585ddb53e3078c07a45e3c5e6aa6f2ae4664593f8581b412f4d8ea9307a9b62b",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "9409f3b3303285121978391b66a022e9ddd967aad17c8c79f93f756a9279a7e3"
+      "hash": "c2104fd9060b0e417b94925d41ac0b62a94216b15c077d185c31f9ce715e96c3"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -192,63 +192,63 @@
       "part": 1
     },
     {
-      "id": "313d71c87f463bd3ed78",
-      "hash": "313d71c87f463bd3ed78b6f2ea3444d7a73dbb9dd86bf8101d6e567f33c6ad37",
+      "id": "b7323f9832435c5143ff",
+      "hash": "b7323f9832435c5143ff882fc6710fb09f61e31319ee1d4cbdc8f87b9ce1259e",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Lote ativo",
-      "text": "Estado: `SUPABASE_E_EDGE_PUBLICADOS_AGUARDANDO_MERGE`",
-      "normalizedText": "estado supabase e edge publicados aguardando merge",
-      "tokenCount": 6,
+      "text": "Estado: `PUBLICADO_PRODUCAO_4_8_0`",
+      "normalizedText": "estado publicado producao 4 8 0",
+      "tokenCount": 3,
       "part": 1
     },
     {
-      "id": "3c7b84c7064efb8ebb71",
-      "hash": "3c7b84c7064efb8ebb7160fde3845f7f13518d021dd8752b194c983425824fbf",
+      "id": "82a18beaf68b373b657a",
+      "hash": "82a18beaf68b373b657a62526ed447a1b68b30e9afc950c9ecb1e41e1f50552b",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Lote: 2026-08-24-identidade-auth-multiperfil-4-8-0",
-      "text": "- Pedido: permitir que uma única identidade possua Gestor, Professor, Aluno e Responsável, selecionar o perfil dentro da audiência correta no login e publicar o lote completo em GitHub e Produção após revisão independente. - Contrato: `/login` resolve somente Aluno/Responsável; `/sistema/login` resolve somente Gestor/Professor. Um perfil entra automaticamente e dois perfis exigem escolha explícita. - Identidade: todos os perfis compartilhados devem possuir o mesmo CPF válido e o mesmo e-mail canônico do Supabase Auth. - Registro: `ai/operacao/registros/alteracoes/2026-08-24-identidade-auth-multiperfil.md`. - Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-24-identidade-auth-multiperfil.md`. - Versão proposta: `4.8.0` estável.",
-      "normalizedText": "pedido permitir que uma unica identidade possua gestor professor aluno e responsavel selecionar o perfil dentro da audiencia correta no login e publicar o lote completo em github e producao apos revisao independente contrato login resolve somente aluno responsavel sistema login resolve somente gestor professor um perfil entra automaticamente e dois perfis exigem escolha explicita identidade todos os perfis compartilhados devem possuir o mesmo cpf valido e o mesmo e mail canonico do supabase auth registro ai operacao registros alteracoes 2026 08 24 identidade auth multiperfil md manifesto explicito ai operacao registros alteracoes 2026 08 24 identidade auth multiperfil md versao proposta 4 8 0 estavel",
+      "text": "- Pedido: permitir que uma única identidade possua Gestor, Professor, Aluno e Responsável, selecionar o perfil dentro da audiência correta no login e publicar o lote completo em GitHub e Produção após revisão independente. - Contrato: `/login` resolve somente Aluno/Responsável; `/sistema/login` resolve somente Gestor/Professor. Um perfil entra automaticamente e dois perfis exigem escolha explícita. - Identidade: todos os perfis compartilhados devem possuir o mesmo CPF válido e o mesmo e-mail canônico do Supabase Auth. - Registro: `ai/operacao/registros/alteracoes/2026-08-24-identidade-auth-multiperfil.md`. - Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-24-identidade-auth-multiperfil.md`. - Versão publicada: `4.8.0` estável.",
+      "normalizedText": "pedido permitir que uma unica identidade possua gestor professor aluno e responsavel selecionar o perfil dentro da audiencia correta no login e publicar o lote completo em github e producao apos revisao independente contrato login resolve somente aluno responsavel sistema login resolve somente gestor professor um perfil entra automaticamente e dois perfis exigem escolha explicita identidade todos os perfis compartilhados devem possuir o mesmo cpf valido e o mesmo e mail canonico do supabase auth registro ai operacao registros alteracoes 2026 08 24 identidade auth multiperfil md manifesto explicito ai operacao registros alteracoes 2026 08 24 identidade auth multiperfil md versao publicada 4 8 0 estavel",
       "tokenCount": 93,
       "part": 1
     },
     {
-      "id": "4f9a735e7bab1a22dbc9",
-      "hash": "4f9a735e7bab1a22dbc940a3573034eaa16fcfdb1fc05d7762fb228e1d6d9ac5",
+      "id": "170accab3d947a67ddfc",
+      "hash": "170accab3d947a67ddfcedb258546d715cd635b2b0f60be57e3c71ddf831dea1",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Critérios de aceite",
-      "text": "1. Um UID Auth pode possuir no máximo um Gestor, um Professor, um Aluno e um Responsável compatíveis. `ATENDIDO_NO_LOTE`. 2. CPF ou e-mail divergente bloqueia o vínculo sem takeover, troca de senha ou convite indevido. `ATENDIDO_NO_LOTE`. 3. O login público nunca oferece Gestor/Professor e o institucional nunca oferece Aluno/Responsável. `ATENDIDO_NO_LOTE`. 4. Primeiro acesso, recuperação de senha, checkout e exclusão de um perfil preservam os demais contextos válidos. `ATENDIDO_NO_LOTE`. 5. O lote deve passar por branch e PR próprios, CI e Preview, Supabase, merge e smoke web de Produção. `EM_ANDAMENTO`: Supabase e Edge concluídos; merge e smoke web pendentes.",
-      "normalizedText": "1 um uid auth pode possuir no maximo um gestor um professor um aluno e um responsavel compativeis atendido no lote 2 cpf ou e mail divergente bloqueia o vinculo sem takeover troca de senha ou convite indevido atendido no lote 3 o login publico nunca oferece gestor professor e o institucional nunca oferece aluno responsavel atendido no lote 4 primeiro acesso recuperacao de senha checkout e exclusao de um perfil preservam os demais contextos validos atendido no lote 5 o lote deve passar por branch e pr proprios ci e preview supabase merge e smoke web de producao em andamento supabase e edge concluidos merge e smoke web pendentes",
-      "tokenCount": 92,
+      "text": "1. Um UID Auth pode possuir no máximo um Gestor, um Professor, um Aluno e um Responsável compatíveis. `ATENDIDO_PRODUCAO`. 2. CPF ou e-mail divergente bloqueia o vínculo sem takeover, troca de senha ou convite indevido. `ATENDIDO_PRODUCAO`. 3. O login público nunca oferece Gestor/Professor e o institucional nunca oferece Aluno/Responsável. `ATENDIDO_PRODUCAO`. 4. Primeiro acesso, recuperação de senha, checkout e exclusão de um perfil preservam os demais contextos válidos. `ATENDIDO_PRODUCAO`. 5. O lote deve passar por branch e PR próprios, CI e Preview, Supabase, merge e smoke web de Produção. `ATENDIDO_PRODUCAO`.",
+      "normalizedText": "1 um uid auth pode possuir no maximo um gestor um professor um aluno e um responsavel compativeis atendido producao 2 cpf ou e mail divergente bloqueia o vinculo sem takeover troca de senha ou convite indevido atendido producao 3 o login publico nunca oferece gestor professor e o institucional nunca oferece aluno responsavel atendido producao 4 primeiro acesso recuperacao de senha checkout e exclusao de um perfil preservam os demais contextos validos atendido producao 5 o lote deve passar por branch e pr proprios ci e preview supabase merge e smoke web de producao atendido producao",
+      "tokenCount": 81,
       "part": 1
     },
     {
-      "id": "9de4bf8fcd4d94a5f2d2",
-      "hash": "9de4bf8fcd4d94a5f2d2ab82ef234a6eec05a72206bda4eb406907ccab9eb5a7",
+      "id": "34ed8715ade5ec9892e7",
+      "hash": "34ed8715ade5ec9892e7cfe8a9ee2bd0fae8c57349ec8320982a39b7247a0a7b",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Evidências atuais",
-      "text": "- Reunião de três revisores independentes de GitHub, produto e Supabase encerrada com três pareceres `GO` e nenhum finding funcional `P1` ou `P2` aberto. - PR GitHub `#90` criada a partir da `main` remota `243cb89fe6f11fdf4b8af6f9444e99cf9c8fdd91`; CI, controle de versão e Vercel Preview aprovados no head `f0e41d54872d4bf8d6246b64b1498941ac5b822c`. - As quatorze migrations foram aplicadas em Produção, na ordem registrada, entre os ledgers `20260825015246` e `20260825015455`; o smoke pós-DDL aprovou índices, triggers, ACLs, HMAC, ordem e invariantes de identidade. - A Edge Function `portal-user-management` v35 está `ACTIVE`, com `verify_jwt: true`; requisição sem credencial retornou `401` e foi registrada na nova versão sem erro interno. - Suítes de handlers, login, feedback e contratos de migrations, lint, TypeScript, teto de linhas e build de produção foram aprovadas.",
-      "normalizedText": "reuniao de tres revisores independentes de github produto e supabase encerrada com tres pareceres go e nenhum finding funcional p1 ou p2 aberto pr github 90 criada a partir da main remota 243cb89fe6f11fdf4b8af6f9444e99cf9c8fdd91 ci controle de versao e vercel preview aprovados no head f0e41d54872d4bf8d6246b64b1498941ac5b822c as quatorze migrations foram aplicadas em producao na ordem registrada entre os ledgers 20260825015246 e 20260825015455 o smoke pos ddl aprovou indices triggers acls hmac ordem e invariantes de identidade a edge function portal user management v35 esta active com verify jwt true requisicao sem credencial retornou 401 e foi registrada na nova versao sem erro interno suites de handlers login feedback e contratos de migrations lint typescript teto de linhas e build de producao foram aprovadas",
-      "tokenCount": 110,
+      "text": "- Reunião de três revisores independentes de GitHub, produto e Supabase encerrada com três pareceres `GO` e nenhum finding funcional `P1` ou `P2` aberto. - PR GitHub `#90` criada a partir da `main` remota `243cb89fe6f11fdf4b8af6f9444e99cf9c8fdd91`; CI, controle de versão e Vercel Preview aprovados no head `f0e41d54872d4bf8d6246b64b1498941ac5b822c`. - As quatorze migrations foram aplicadas em Produção, na ordem registrada, entre os ledgers `20260825015246` e `20260825015455`; o smoke pós-DDL aprovou índices, triggers, ACLs, HMAC, ordem e invariantes de identidade. - A Edge Function `portal-user-management` v35 está `ACTIVE`, com `verify_jwt: true`; requisição sem credencial retornou `401` e foi registrada na nova versão sem erro interno. - A PR `#90` foi mesclada por squash em `db769c78b06fe74fc1752f6015337289e21e854d`; o deploy Vercel de Produção ficou verde e `/`, `/login` e `/sistema/login` responderam `200` no domínio público. - Suítes de handlers, login, feedback e contratos de migrations, lint, TypeScript, teto de linhas e build de produção foram aprovadas.",
+      "normalizedText": "reuniao de tres revisores independentes de github produto e supabase encerrada com tres pareceres go e nenhum finding funcional p1 ou p2 aberto pr github 90 criada a partir da main remota 243cb89fe6f11fdf4b8af6f9444e99cf9c8fdd91 ci controle de versao e vercel preview aprovados no head f0e41d54872d4bf8d6246b64b1498941ac5b822c as quatorze migrations foram aplicadas em producao na ordem registrada entre os ledgers 20260825015246 e 20260825015455 o smoke pos ddl aprovou indices triggers acls hmac ordem e invariantes de identidade a edge function portal user management v35 esta active com verify jwt true requisicao sem credencial retornou 401 e foi registrada na nova versao sem erro interno a pr 90 foi mesclada por squash em db769c78b06fe74fc1752f6015337289e21e854d o deploy vercel de producao ficou verde e login e sistema login responderam 200 no dominio publico suites de handlers login feedback e contratos de migrations lint typescript teto de linhas e build de producao foram aprovadas",
+      "tokenCount": 132,
       "part": 1
     },
     {
-      "id": "c2ce290990046134dc10",
-      "hash": "c2ce290990046134dc10136f16b1575de2877b8319a11e255eaccaeb6f3d20e5",
+      "id": "caa019ceecf964d62704",
+      "hash": "caa019ceecf964d627048667105b7c7e0823c97f4cf9de44f1b7dc6bee29baab",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Ordem de publicação",
-      "text": "1. Branch e PR GitHub publicadas por MCP somente com o manifesto registrado. `CONCLUIDO`. 2. CI, controle de versão e Vercel Preview aprovados. `CONCLUIDO`. 3. Quatorze migrations aplicadas em ordem e smoke SQL aprovado. `CONCLUIDO`. 4. `portal-user-management` v35 publicada e smoke de autorização aprovado. `CONCLUIDO`. 5. Atualizar evidências imutáveis, regenerar o RAG e revalidar o PR. `EM_ANDAMENTO`. 6. Tornar a PR pronta, efetuar o merge e executar smoke web de Produção. `PENDENTE`.",
-      "normalizedText": "1 branch e pr github publicadas por mcp somente com o manifesto registrado concluido 2 ci controle de versao e vercel preview aprovados concluido 3 quatorze migrations aplicadas em ordem e smoke sql aprovado concluido 4 portal user management v35 publicada e smoke de autorizacao aprovado concluido 5 atualizar evidencias imutaveis regenerar o rag e revalidar o pr em andamento 6 tornar a pr pronta efetuar o merge e executar smoke web de producao pendente",
-      "tokenCount": 58,
+      "text": "1. Branch e PR GitHub publicadas por MCP somente com o manifesto registrado. `CONCLUIDO`. 2. CI, controle de versão e Vercel Preview aprovados. `CONCLUIDO`. 3. Quatorze migrations aplicadas em ordem e smoke SQL aprovado. `CONCLUIDO`. 4. `portal-user-management` v35 publicada e smoke de autorização aprovado. `CONCLUIDO`. 5. Atualizar evidências imutáveis, regenerar o RAG e revalidar o PR. `CONCLUIDO`. 6. Tornar a PR pronta, efetuar o merge e executar smoke web de Produção. `CONCLUIDO`.",
+      "normalizedText": "1 branch e pr github publicadas por mcp somente com o manifesto registrado concluido 2 ci controle de versao e vercel preview aprovados concluido 3 quatorze migrations aplicadas em ordem e smoke sql aprovado concluido 4 portal user management v35 publicada e smoke de autorizacao aprovado concluido 5 atualizar evidencias imutaveis regenerar o rag e revalidar o pr concluido 6 tornar a pr pronta efetuar o merge e executar smoke web de producao concluido",
+      "tokenCount": 57,
       "part": 1
     },
     {
-      "id": "4c79292fa23c1ced5f4c",
-      "hash": "4c79292fa23c1ced5f4c3ad006c76e0d4d40fc677e72368cc35f7cc4467e9eba",
+      "id": "693665b120f44111cc2b",
+      "hash": "693665b120f44111cc2ba05887e4ab27f591eb80aed04c6fb6f52a031641b89d",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Limites",
-      "text": "1. PRs antigas e alterações paralelas do workspace não integram este lote. 2. Nenhum usuário de teste ou dado pessoal será criado em Produção apenas para o smoke. 3. Migrations aplicadas tornam-se imutáveis e serão registradas com o identificador real do ledger. 4. O smoke autenticado do seletor não criará usuário artificial: Produção ainda possui zero UIDs naturalmente compartilhados entre perfis.",
-      "normalizedText": "1 prs antigas e alteracoes paralelas do workspace nao integram este lote 2 nenhum usuario de teste ou dado pessoal sera criado em producao apenas para o smoke 3 migrations aplicadas tornam se imutaveis e serao registradas com o identificador real do ledger 4 o smoke autenticado do seletor nao criara usuario artificial producao ainda possui zero uids naturalmente compartilhados entre perfis",
-      "tokenCount": 53,
+      "text": "1. PRs antigas e alterações paralelas do workspace não integram este lote. 2. Nenhum usuário de teste ou dado pessoal será criado em Produção apenas para o smoke. 3. Migrations aplicadas tornam-se imutáveis e serão registradas com o identificador real do ledger. 4. O smoke autenticado do seletor não criará usuário artificial: Produção ainda possui zero UIDs naturalmente compartilhados entre perfis. 5. A inspeção visual automatizada pós-merge não foi executada porque a sessão não possuía navegador controlável; CI, Preview, contratos de UI e smoke HTTP final permaneceram verdes.",
+      "normalizedText": "1 prs antigas e alteracoes paralelas do workspace nao integram este lote 2 nenhum usuario de teste ou dado pessoal sera criado em producao apenas para o smoke 3 migrations aplicadas tornam se imutaveis e serao registradas com o identificador real do ledger 4 o smoke autenticado do seletor nao criara usuario artificial producao ainda possui zero uids naturalmente compartilhados entre perfis 5 a inspecao visual automatizada pos merge nao foi executada porque a sessao nao possuia navegador controlavel ci preview contratos de ui e smoke http final permaneceram verdes",
+      "tokenCount": 77,
       "part": 1
     },
     {
