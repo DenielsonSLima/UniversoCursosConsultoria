@@ -56,7 +56,7 @@ A Edge Function `portal-user-management` somente poderá ser publicada, em autor
 
 ## Manifesto explícito
 
-Total: 82 arquivos.
+Total: 83 arquivos.
 
 ### Entrega funcional e testes
 
@@ -144,11 +144,12 @@ Total: 82 arquivos.
 - `ai/operacao/registros/alteracoes/2026-08-24-card-email-validado-gestor.md`
 - `ai/operacao/registros/alteracoes/2026-08-24-identidade-auth-multiperfil.md`
 - `internal/versioning/CHANGELOG.md`
+- `internal/versioning/changelog/2026-08-03.md`
 - `internal/versioning/system-version.json`
 
 ### Preservado fora do lote
 
-- Documentos binários locais, o componente `.legacy.tsx` e o changelog histórico não relacionado.
+- Documentos binários locais e o componente `.legacy.tsx`.
 - O lockfile Deno local, sem alteração de dependência runtime no lote.
 - A migration/teste tipográfico v5, supersedida pela v6 já publicada.
 - O ajuste isolado do contrato de provas individuais de assinatura, que exige lote próprio.
