@@ -1,9 +1,9 @@
 import React, { lazy, Suspense, useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { RefreshCw } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { loginService } from '../login/login.service';
-import { clearPortalSession, getPortalProfile, getPortalSessionFromStorage, PortalAuthProfile } from '../login/portal-session';
+import { usePortalContextAccess } from '../login/usePortalContextAccess';
 import AccessCheckingScreen from '../shared/components/AccessCheckingScreen';
 import { useInactivityLogout } from '../shared/hooks/useInactivityLogout';
 import { usePortalLogout } from '../shared/hooks/usePortalLogout';
@@ -17,6 +17,10 @@ import {
   getProfessorModuleFromPath,
   getProfessorPathFromModule,
 } from '../login/coordinator-portal-redirect';
+import {
+  professorActivePolosFreshnessOptions,
+  resolveProfessorAccessGate,
+} from './professor-access-gate';
 
 // Sub-módulos do Professor
 import ProfessorShell, { ProfessorPolo } from './components/ProfessorShell';
@@ -49,24 +53,35 @@ interface ProfessorPoloTransitionState {
 const POLO_TRANSITION_MINIMUM_MS = 550;
 const POLO_TRANSITION_SUCCESS_MS = 450;
 
+const ProfessorConnectionError: React.FC<{ onRetry: () => void }> = ({ onRetry }) => (
+  <main className="flex min-h-screen items-center justify-center bg-slate-100 p-6">
+    <section className="w-full max-w-xl rounded-3xl border border-rose-100 bg-white p-8 text-center shadow-xl">
+      <RefreshCw className="mx-auto text-rose-600" size={28} />
+      <h1 className="mt-4 text-xl font-black text-[#001a33]">Não foi possível conferir o acesso</h1>
+      <p className="mt-2 text-sm font-medium leading-relaxed text-slate-500">Nenhum dado do portal foi liberado. Verifique a conexão e tente novamente; sua sessão não foi encerrada.</p>
+      <button type="button" onClick={onRetry} className="mt-6 inline-flex h-11 items-center gap-2 rounded-xl bg-[#001a33] px-5 text-xs font-black uppercase tracking-wide text-white hover:bg-blue-900"><RefreshCw size={16} /> Tentar novamente</button>
+    </section>
+  </main>
+);
+
 const ProfessorPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
+  const {
+    profile,
+    isLoading: isAuthLoading,
+    connectionError,
+    retry: retryAccess,
+  } = usePortalContextAccess('Professor');
   const executeLogout = usePortalLogout({ loginPath: '/sistema/login' });
   const contentScrollRef = useRef<HTMLDivElement>(null);
-  const storedProfile = getPortalSessionFromStorage();
-  const initialProfessorProfile = storedProfile?.tipo === 'Professor' ? storedProfile : null;
   const [activeModule, setActiveModule] = useState(
     () => getProfessorModuleFromPath(location.pathname) || 'inicio',
   );
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [currentPoloId, setCurrentPoloId] = useState<string | null>(null);
   const [isPoloSelectorOpen, setIsPoloSelectorOpen] = useState(false);
-  const [profile, setProfile] = useState<PortalAuthProfile | null>(initialProfessorProfile);
-  // O cache local serve apenas para a tela de espera. O escopo de polos só é
-  // liberado depois que o perfil autoritativo for hidratado no Supabase.
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
   const [poloTransition, setPoloTransition] = useState<ProfessorPoloTransitionState | null>(null);
   const poloTransitionRunRef = useRef(0);
@@ -97,52 +112,27 @@ const ProfessorPage: React.FC = () => {
   const professorNome = profile?.nome || '';
   const professorEmail = profile?.email || '';
 
-  useEffect(() => {
-    let mounted = true;
-
-    const hydrateProfile = async () => {
-      try {
-        const portalProfile = await getPortalProfile({ preferredRole: 'Professor', allowedRoles: ['Professor'] });
-        if (!mounted) return;
-
-        if (!portalProfile || portalProfile.tipo !== 'Professor') {
-          queryClient.clear();
-          clearPortalSession();
-          await loginService.logout().catch(() => undefined);
-          const redirect = encodeURIComponent(window.location.pathname + window.location.search);
-          navigate(`/sistema/login?redirect=${redirect}`, { replace: true });
-          return;
-        }
-
-        const allowedPolos = (portalProfile.poloIds || []).filter(Boolean);
-        const preferredPolo = portalProfile.activePoloId
-          && allowedPolos.includes(portalProfile.activePoloId)
-          ? portalProfile.activePoloId
-          : allowedPolos[0] || null;
-
-        setCurrentPoloId(preferredPolo || null);
-        setProfile(portalProfile);
-      } catch {
-        queryClient.clear();
-        clearPortalSession();
-        await loginService.logout().catch(() => undefined);
-        const redirect = encodeURIComponent(window.location.pathname + window.location.search);
-        navigate(`/sistema/login?redirect=${redirect}`, { replace: true });
-      } finally {
-        if (mounted) setIsAuthLoading(false);
-      }
-    };
-
-    hydrateProfile();
-
-    return () => {
-      mounted = false;
-    };
-  }, [navigate, queryClient]);
-
   // Fetch active polos for seletor
   const professorPoloIds = (profile?.poloIds || []).filter(Boolean).sort();
-  const { data: activePolos = [], isLoading: isLoadingActivePolos } = useQuery<ProfessorPolo[]>({
+
+  useEffect(() => {
+    if (!profile) return;
+    const allowedPoloIds = (profile.poloIds || []).filter(Boolean).sort();
+    const preferredPoloId = profile.activePoloId
+      && allowedPoloIds.includes(profile.activePoloId)
+      ? profile.activePoloId
+      : allowedPoloIds[0] || null;
+    setCurrentPoloId(preferredPoloId);
+  }, [profile]);
+
+  const {
+    data: activePolos = [],
+    isError: activePolosError,
+    isLoading: isLoadingActivePolos,
+    isSuccess: activePolosLoaded,
+    isFetchedAfterMount: activePolosFetchedAfterMount,
+    refetch: refetchActivePolos,
+  } = useQuery<ProfessorPolo[]>({
     queryKey: ['professor-active-polos', profile?.id, professorPoloIds],
     enabled: Boolean(profile && !isAuthLoading),
     queryFn: async () => {
@@ -174,13 +164,16 @@ const ProfessorPage: React.FC = () => {
         .order('nome', { ascending: true });
       if (error) throw error;
       return data || [];
-    }
+    },
+    ...professorActivePolosFreshnessOptions,
   });
+
+  const activePolosValidated = activePolosLoaded && activePolosFetchedAfterMount;
 
   // Redireciona apenas depois da autenticação se o professor não tiver polo ativo.
   useEffect(() => {
     if (isAuthLoading || !profile) return;
-    if (isLoadingActivePolos) return;
+    if (!activePolosValidated) return;
     if (currentPoloId && activePolos.some((polo) => polo.id === currentPoloId)) return;
 
     const fallbackPoloId = activePolos[0]?.id || null;
@@ -191,9 +184,15 @@ const ProfessorPage: React.FC = () => {
     }
 
     navigate('/sistema/login');
-  }, [activePolos, currentPoloId, isAuthLoading, isLoadingActivePolos, navigate, profile]);
+  }, [activePolos, activePolosValidated, currentPoloId, isAuthLoading, navigate, profile]);
 
   const currentPolo = activePolos.find((polo) => polo.id === currentPoloId) || null;
+  const activePolosGate = resolveProfessorAccessGate({
+    hasCurrentPolo: Boolean(currentPolo),
+    isError: activePolosError,
+    isFetchedAfterMount: activePolosFetchedAfterMount,
+    isSuccess: activePolosLoaded,
+  });
 
   const executePoloChange = async (poloId: string) => {
     const nextPolo = activePolos.find((polo) => polo.id === poloId);
@@ -280,7 +279,19 @@ const ProfessorPage: React.FC = () => {
     onTimeout: executeLogout,
   });
 
+  if (connectionError) {
+    return <ProfessorConnectionError onRetry={retryAccess} />;
+  }
+
+  if (activePolosGate === 'connection-error') {
+    return <ProfessorConnectionError onRetry={() => { void refetchActivePolos(); }} />;
+  }
+
   if (isAuthLoading || !profile) {
+    return <AccessCheckingScreen portal="Professor" />;
+  }
+
+  if (isLoadingActivePolos || activePolosGate !== 'authorized') {
     return <AccessCheckingScreen portal="Professor" />;
   }
 

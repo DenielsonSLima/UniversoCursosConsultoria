@@ -1,8 +1,8 @@
 {
-  "version": "4.8.1",
+  "version": "4.8.2",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 10,
-  "releasedAt": "2026-08-24",
-  "summary": "Fechamento operacional da identidade multiperfil publicada"
+  "revision": 11,
+  "releasedAt": "2026-08-25",
+  "summary": "Financeiros canônicos, Realtime resiliente e acesso docente revalidado"
 }

@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { supabase } from '../../../lib/supabase';
 import {
   getBrazilianOfficialEvents,
   OFFICIAL_EVENT_TYPES,
@@ -17,6 +16,7 @@ import {
   professorCalendarQueryKey,
   professorCalendarQueryOptions,
 } from './calendario-professor.queries';
+import { useProfessorCalendarRealtime } from './useProfessorCalendarRealtime';
 
 interface CalendarioProfessorPageProps {
   professorId: string;
@@ -49,6 +49,7 @@ const CalendarioProfessorPage: React.FC<CalendarioProfessorPageProps> = ({
   const persistedAndClassEvents = data?.events || [];
   const eventTypes = data?.eventTypes || [];
   const turmas = data?.turmas || [];
+  useProfessorCalendarRealtime(professorId, poloId);
 
   useEffect(() => {
     setSelectedTurmaId('');
@@ -58,44 +59,6 @@ const CalendarioProfessorPage: React.FC<CalendarioProfessorPageProps> = ({
   useEffect(() => () => {
     if (pdfPreview?.url) URL.revokeObjectURL(pdfPreview.url);
   }, [pdfPreview]);
-
-  useEffect(() => {
-    if (!professorId || !poloId) return undefined;
-
-    const invalidate = () => {
-      void queryClient.invalidateQueries({
-        queryKey: professorCalendarQueryKey(professorId, poloId),
-      });
-    };
-
-    const channel = supabase
-      .channel(`professor_calendar_${professorId}_${poloId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'calendar_events', filter: `polo_id=eq.${poloId}` },
-        invalidate,
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'aulas_turma' },
-        invalidate,
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'turmas_disciplinas',
-          filter: `professor_id=eq.${professorId}`,
-        },
-        invalidate,
-      )
-      .subscribe();
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [poloId, professorId, queryClient]);
 
   const allEventTypes = useMemo(() => {
     const typeMap = new Map<string, EventType>();

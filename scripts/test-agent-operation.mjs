@@ -31,6 +31,13 @@ const ragIndexText = read('ai/operacao/rag/index.json');
 const ragIndex = JSON.parse(ragIndexText);
 const tsconfig = JSON.parse(read('tsconfig.json'));
 const lineLimitConfig = JSON.parse(read('ai/operacao/qualidade/limite-linhas.json'));
+const migrationExemptionsRegistry = JSON.parse(
+  read('ai/operacao/qualidade/migrations-aplicadas.json'),
+);
+const migrationExemptions = [
+  ...(lineLimitConfig.exemptions ?? []),
+  ...(migrationExemptionsRegistry.exemptions ?? []),
+];
 const legacySkillsRoot = normalizedChild('.', 'pasta sem título');
 const seniorSkill = read(`${legacySkillsRoot}/senior-dev-skill-v2-2/SKILL.md`);
 
@@ -60,7 +67,7 @@ assert(/REGRA 21.+500 linhas físicas/.test(seniorSkill), 'Skill sênior perdeu 
 assert(/npm run check:file-lines/.test(protocol), 'Protocolo de fechamento perdeu o gate de 500 linhas.');
 assert(lineLimitConfig.maxLines === 500, 'Configuração operacional perdeu o teto de 500 linhas.');
 assert(
-  (lineLimitConfig.exemptions ?? []).every(item =>
+  migrationExemptions.every(item =>
     item.kind === 'applied-migration' &&
     /^\d{14}$/.test(item.remoteId ?? '') &&
     /^[a-f0-9]{64}$/.test(item.sha256 ?? '')
@@ -68,9 +75,10 @@ assert(
   'Exceções do teto precisam ser migrations aplicadas com identificador remoto e SHA-256.',
 );
 assert(
-  new Set((lineLimitConfig.exemptions ?? []).map(item => item.path)).has('supabase/migrations/20260821234000_complete_responsavel_first_access.sql'),
+  new Set(migrationExemptions.map(item => item.path)).has('supabase/migrations/20260821234000_complete_responsavel_first_access.sql'),
   'Migration aplicada do primeiro acesso do Responsável perdeu sua exceção imutável.',
 );
+assert(migrationExemptionsRegistry.version === 1, 'Registro incremental de migrations perdeu a versão canônica.');
 assert(
   (lineLimitConfig.generatedArtifacts ?? []).some(item =>
     item.path === 'ai/operacao/rag/index.json' && item.generator === 'node scripts/agent-memory-rag.mjs index'

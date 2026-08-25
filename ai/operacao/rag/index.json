@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-08-25T02:16:31.635Z",
+  "builtAt": "2026-08-25T04:46:20.377Z",
   "manifestVersion": 2,
-  "sourceSignature": "af39313e11b326cfb40a5cd72bf7d157d3d6ad833f37ed6891acdaa62c07645f",
+  "sourceSignature": "3f9b4fcfdbb85753c50f204c52a9d8eda305feefdf0e9f6fc78cd5ca41fe93d6",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "680d031d7e1c2ac5dbe3efd3806b712f092c54c2251abc2fadb7a8e78549af1d"
+      "hash": "650a047ca003d9ab0324988796705451f50b458d8b12b737cb4d6d6f6e3317d7"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -192,63 +192,63 @@
       "part": 1
     },
     {
-      "id": "7e490a70517f2e914027",
-      "hash": "7e490a70517f2e9140273c77c32dd7b0e97dfd49118a0923f8e63a8f81282e2d",
+      "id": "9ae1d7e02487d873b04e",
+      "hash": "9ae1d7e02487d873b04eaa62817ea5eaec829e185011cc83cfeaedd0102a3ec1",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Lote ativo",
-      "text": "Estado: `PUBLICADO_PRODUCAO_4_8_1`",
-      "normalizedText": "estado publicado producao 4 8 1",
-      "tokenCount": 3,
+      "text": "Estado: `DDL_VALIDADO_AGUARDANDO_PUBLICACAO_GITHUB`",
+      "normalizedText": "estado ddl validado aguardando publicacao github",
+      "tokenCount": 6,
       "part": 1
     },
     {
-      "id": "c6c0526ef921a05ae2d3",
-      "hash": "c6c0526ef921a05ae2d3f5ea62f19841d884abad1be0693637f18f57fc18971c",
+      "id": "248574465bb5071179b3",
+      "hash": "248574465bb5071179b3a4745851dbc24c4de678358497c40d6f197bcf0479b3",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-08-24-identidade-auth-multiperfil-4-8-0",
-      "text": "- Pedido: permitir que uma única identidade possua Gestor, Professor, Aluno e Responsável, selecionar o perfil dentro da audiência correta no login e publicar o lote completo em GitHub e Produção após revisão independente. - Contrato: `/login` resolve somente Aluno/Responsável; `/sistema/login` resolve somente Gestor/Professor. Um perfil entra automaticamente e dois perfis exigem escolha explícita. - Identidade: todos os perfis compartilhados devem possuir o mesmo CPF válido e o mesmo e-mail canônico do Supabase Auth. - Registro: `ai/operacao/registros/alteracoes/2026-08-24-identidade-auth-multiperfil.md`. - Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-24-identidade-auth-multiperfil.md`. - Versão funcional publicada: `4.8.0`; fechamento operacional publicado como patch `4.8.1` estável.",
-      "normalizedText": "pedido permitir que uma unica identidade possua gestor professor aluno e responsavel selecionar o perfil dentro da audiencia correta no login e publicar o lote completo em github e producao apos revisao independente contrato login resolve somente aluno responsavel sistema login resolve somente gestor professor um perfil entra automaticamente e dois perfis exigem escolha explicita identidade todos os perfis compartilhados devem possuir o mesmo cpf valido e o mesmo e mail canonico do supabase auth registro ai operacao registros alteracoes 2026 08 24 identidade auth multiperfil md manifesto explicito ai operacao registros alteracoes 2026 08 24 identidade auth multiperfil md versao funcional publicada 4 8 0 fechamento operacional publicado como patch 4 8 1 estavel",
-      "tokenCount": 99,
+      "section": "Lote: 2026-08-24-correcao-financeiro-realtime-resiliencia-4-8-2",
+      "text": "- Pedido: corrigir os fluxos Financeiro/recibo do Professor e do Aluno, sincronização TanStack/Realtime e resiliência do portal do Professor, validar internamente com agentes independentes e publicar o resultado no GitHub e em Produção. - Registro: `ai/operacao/registros/alteracoes/2026-08-24-correcao-financeiro-realtime-resiliencia.md`. - Versão alvo: `4.8.2`. - Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-24-correcao-financeiro-realtime-resiliencia.md`; lista recongelada com 79 arquivos antes do hardening remoto.",
+      "normalizedText": "pedido corrigir os fluxos financeiro recibo do professor e do aluno sincronizacao tanstack realtime e resiliencia do portal do professor validar internamente com agentes independentes e publicar o resultado no github e em producao registro ai operacao registros alteracoes 2026 08 24 correcao financeiro realtime resiliencia md versao alvo 4 8 2 manifesto explicito ai operacao registros alteracoes 2026 08 24 correcao financeiro realtime resiliencia md lista recongelada com 79 arquivos antes do hardening remoto",
+      "tokenCount": 67,
       "part": 1
     },
     {
-      "id": "170accab3d947a67ddfc",
-      "hash": "170accab3d947a67ddfcedb258546d715cd635b2b0f60be57e3c71ddf831dea1",
+      "id": "cfb70260b41a22d94588",
+      "hash": "cfb70260b41a22d9458818445680bf24a3e9c457cef57a9ff27e820d06bbe04b",
+      "path": "ai/operacao/LOTE_ATIVO.md",
+      "section": "Contratos do lote",
+      "text": "1. Status financeiro, totais, valor pago, filtros e paginação são calculados pelo backend; o frontend somente envia intenção e apresenta a resposta canônica. 2. O recibo usa payload financeiro canônico e compositor PDF nativo/vetorial, preservando modelo, cabeçalho e marca d'água institucionais; prévia, download e impressão compartilham o mesmo `Blob`. 3. Mutações de acesso do Aluno invalidam a chave TanStack exata depois da confirmação assíncrona final, inclusive quando o cache usa `staleTime: Infinity`. 4. Realtime atua como sinal de invalidação/refetch, com reconexão, ressincronização, debounce e cleanup proporcionais; exclusões não dependem de `payload.old` incompleto. 5. Falhas transitórias ao hidratar o portal do Professor preservam a sessão e oferecem repetição; JWT, papel ou perfil definitivamente inválidos continuam falhando de forma fechada.",
+      "normalizedText": "1 status financeiro totais valor pago filtros e paginacao sao calculados pelo backend o frontend somente envia intencao e apresenta a resposta canonica 2 o recibo usa payload financeiro canonico e compositor pdf nativo vetorial preservando modelo cabecalho e marca d agua institucionais previa download e impressao compartilham o mesmo blob 3 mutacoes de acesso do aluno invalidam a chave tanstack exata depois da confirmacao assincrona final inclusive quando o cache usa staletime infinity 4 realtime atua como sinal de invalidacao refetch com reconexao ressincronizacao debounce e cleanup proporcionais exclusoes nao dependem de payload old incompleto 5 falhas transitorias ao hidratar o portal do professor preservam a sessao e oferecem repeticao jwt papel ou perfil definitivamente invalidos continuam falhando de forma fechada",
+      "tokenCount": 101,
+      "part": 1
+    },
+    {
+      "id": "4281b79241c93a6726af",
+      "hash": "4281b79241c93a6726af55b5b6ba0d4b7efbe81e18cb3dff8f549f6b2ad45acb",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Critérios de aceite",
-      "text": "1. Um UID Auth pode possuir no máximo um Gestor, um Professor, um Aluno e um Responsável compatíveis. `ATENDIDO_PRODUCAO`. 2. CPF ou e-mail divergente bloqueia o vínculo sem takeover, troca de senha ou convite indevido. `ATENDIDO_PRODUCAO`. 3. O login público nunca oferece Gestor/Professor e o institucional nunca oferece Aluno/Responsável. `ATENDIDO_PRODUCAO`. 4. Primeiro acesso, recuperação de senha, checkout e exclusão de um perfil preservam os demais contextos válidos. `ATENDIDO_PRODUCAO`. 5. O lote deve passar por branch e PR próprios, CI e Preview, Supabase, merge e smoke web de Produção. `ATENDIDO_PRODUCAO`.",
-      "normalizedText": "1 um uid auth pode possuir no maximo um gestor um professor um aluno e um responsavel compativeis atendido producao 2 cpf ou e mail divergente bloqueia o vinculo sem takeover troca de senha ou convite indevido atendido producao 3 o login publico nunca oferece gestor professor e o institucional nunca oferece aluno responsavel atendido producao 4 primeiro acesso recuperacao de senha checkout e exclusao de um perfil preservam os demais contextos validos atendido producao 5 o lote deve passar por branch e pr proprios ci e preview supabase merge e smoke web de producao atendido producao",
-      "tokenCount": 81,
+      "text": "1. Testes SQL/RPC cobrem autorização, valor zero, pagamento parcial, atraso, cancelamento, filtros, paginação e payload do recibo. 2. A interface financeira não recalcula valores nem mascara erro de consulta como `R$ 0,00`; o PDF passa por extração textual, inspeção de recursos e renderização da página relevante. 3. Testes de TanStack/Realtime cobrem invalidação final, reconexão, eventos repetidos, exclusão e cleanup sem atualização direta de cache por CDC. 4. Testes do Professor cobrem indisponibilidade transitória, repetição bem-sucedida e rejeição definitiva de credencial/perfil inválido. 5. Todos os arquivos manuais tocados possuem no máximo 500 linhas e a revisão cruzada encerra sem finding funcional `P1` ou `P2` aberto. 6. Migrations, CI, controle de versão, Vercel Preview, merge e smoke de Produção ficam verdes antes do encerramento.",
+      "normalizedText": "1 testes sql rpc cobrem autorizacao valor zero pagamento parcial atraso cancelamento filtros paginacao e payload do recibo 2 a interface financeira nao recalcula valores nem mascara erro de consulta como r 0 00 o pdf passa por extracao textual inspecao de recursos e renderizacao da pagina relevante 3 testes de tanstack realtime cobrem invalidacao final reconexao eventos repetidos exclusao e cleanup sem atualizacao direta de cache por cdc 4 testes do professor cobrem indisponibilidade transitoria repeticao bem sucedida e rejeicao definitiva de credencial perfil invalido 5 todos os arquivos manuais tocados possuem no maximo 500 linhas e a revisao cruzada encerra sem finding funcional p1 ou p2 aberto 6 migrations ci controle de versao vercel preview merge e smoke de producao ficam verdes antes do encerramento",
+      "tokenCount": 110,
       "part": 1
     },
     {
-      "id": "34ed8715ade5ec9892e7",
-      "hash": "34ed8715ade5ec9892e7cfe8a9ee2bd0fae8c57349ec8320982a39b7247a0a7b",
+      "id": "c23e9bc9f1640b3fb850",
+      "hash": "c23e9bc9f1640b3fb850fa14e476108504b015e136bdf6ccd914e703030a0384",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Evidências atuais",
-      "text": "- Reunião de três revisores independentes de GitHub, produto e Supabase encerrada com três pareceres `GO` e nenhum finding funcional `P1` ou `P2` aberto. - PR GitHub `#90` criada a partir da `main` remota `243cb89fe6f11fdf4b8af6f9444e99cf9c8fdd91`; CI, controle de versão e Vercel Preview aprovados no head `f0e41d54872d4bf8d6246b64b1498941ac5b822c`. - As quatorze migrations foram aplicadas em Produção, na ordem registrada, entre os ledgers `20260825015246` e `20260825015455`; o smoke pós-DDL aprovou índices, triggers, ACLs, HMAC, ordem e invariantes de identidade. - A Edge Function `portal-user-management` v35 está `ACTIVE`, com `verify_jwt: true`; requisição sem credencial retornou `401` e foi registrada na nova versão sem erro interno. - A PR `#90` foi mesclada por squash em `db769c78b06fe74fc1752f6015337289e21e854d`; o deploy Vercel de Produção ficou verde e `/`, `/login` e `/sistema/login` responderam `200` no domínio público. - Suítes de handlers, login, feedback e contratos de migrations, lint, TypeScript, teto de linhas e build de produção foram aprovadas.",
-      "normalizedText": "reuniao de tres revisores independentes de github produto e supabase encerrada com tres pareceres go e nenhum finding funcional p1 ou p2 aberto pr github 90 criada a partir da main remota 243cb89fe6f11fdf4b8af6f9444e99cf9c8fdd91 ci controle de versao e vercel preview aprovados no head f0e41d54872d4bf8d6246b64b1498941ac5b822c as quatorze migrations foram aplicadas em producao na ordem registrada entre os ledgers 20260825015246 e 20260825015455 o smoke pos ddl aprovou indices triggers acls hmac ordem e invariantes de identidade a edge function portal user management v35 esta active com verify jwt true requisicao sem credencial retornou 401 e foi registrada na nova versao sem erro interno a pr 90 foi mesclada por squash em db769c78b06fe74fc1752f6015337289e21e854d o deploy vercel de producao ficou verde e login e sistema login responderam 200 no dominio publico suites de handlers login feedback e contratos de migrations lint typescript teto de linhas e build de producao foram aprovadas",
-      "tokenCount": 132,
+      "section": "Ordem de execução e publicação",
+      "text": "1. Implementar Auth/resiliência, Financeiro do Professor, Financeiro do Aluno e TanStack/Realtime, sem operação remota. `CONCLUIDO`. 2. Executar revisão cruzada independente e corrigir findings. `CONCLUIDO_SEM_P1_P2`. 3. Rodar testes focados, contratos SQL/PDF, lint, TypeScript, teto de linhas e build. `CONCLUIDO_LOCAL`. 4. Aplicar migrations via MCP Supabase e validar contratos/advisors/logs. `CONCLUIDO_11_DE_11`; precedência JSON corrigida incrementalmente, helpers internos privados e advisors de segurança restaurados ao baseline. 5. Publicar branch e PR via MCP GitHub; aguardar CI e Vercel Preview. `EM_ANDAMENTO`. 6. Mesclar, validar Produção, fechar versão/documentação e reindexar o RAG. `PENDENTE`.",
+      "normalizedText": "1 implementar auth resiliencia financeiro do professor financeiro do aluno e tanstack realtime sem operacao remota concluido 2 executar revisao cruzada independente e corrigir findings concluido sem p1 p2 3 rodar testes focados contratos sql pdf lint typescript teto de linhas e build concluido local 4 aplicar migrations via mcp supabase e validar contratos advisors logs concluido 11 de 11 precedencia json corrigida incrementalmente helpers internos privados e advisors de seguranca restaurados ao baseline 5 publicar branch e pr via mcp github aguardar ci e vercel preview em andamento 6 mesclar validar producao fechar versao documentacao e reindexar o rag pendente",
+      "tokenCount": 86,
       "part": 1
     },
     {
-      "id": "caa019ceecf964d62704",
-      "hash": "caa019ceecf964d627048667105b7c7e0823c97f4cf9de44f1b7dc6bee29baab",
-      "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Ordem de publicação",
-      "text": "1. Branch e PR GitHub publicadas por MCP somente com o manifesto registrado. `CONCLUIDO`. 2. CI, controle de versão e Vercel Preview aprovados. `CONCLUIDO`. 3. Quatorze migrations aplicadas em ordem e smoke SQL aprovado. `CONCLUIDO`. 4. `portal-user-management` v35 publicada e smoke de autorização aprovado. `CONCLUIDO`. 5. Atualizar evidências imutáveis, regenerar o RAG e revalidar o PR. `CONCLUIDO`. 6. Tornar a PR pronta, efetuar o merge e executar smoke web de Produção. `CONCLUIDO`.",
-      "normalizedText": "1 branch e pr github publicadas por mcp somente com o manifesto registrado concluido 2 ci controle de versao e vercel preview aprovados concluido 3 quatorze migrations aplicadas em ordem e smoke sql aprovado concluido 4 portal user management v35 publicada e smoke de autorizacao aprovado concluido 5 atualizar evidencias imutaveis regenerar o rag e revalidar o pr concluido 6 tornar a pr pronta efetuar o merge e executar smoke web de producao concluido",
-      "tokenCount": 57,
-      "part": 1
-    },
-    {
-      "id": "693665b120f44111cc2b",
-      "hash": "693665b120f44111cc2ba05887e4ab27f591eb80aed04c6fb6f52a031641b89d",
+      "id": "d256273dbdcf419418c8",
+      "hash": "d256273dbdcf419418c88fd27fc72b84bba29628b00ecee18b7bedf2e912a302",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Limites",
-      "text": "1. PRs antigas e alterações paralelas do workspace não integram este lote. 2. Nenhum usuário de teste ou dado pessoal será criado em Produção apenas para o smoke. 3. Migrations aplicadas tornam-se imutáveis e serão registradas com o identificador real do ledger. 4. O smoke autenticado do seletor não criará usuário artificial: Produção ainda possui zero UIDs naturalmente compartilhados entre perfis. 5. A inspeção visual automatizada pós-merge não foi executada porque a sessão não possuía navegador controlável; CI, Preview, contratos de UI e smoke HTTP final permaneceram verdes.",
-      "normalizedText": "1 prs antigas e alteracoes paralelas do workspace nao integram este lote 2 nenhum usuario de teste ou dado pessoal sera criado em producao apenas para o smoke 3 migrations aplicadas tornam se imutaveis e serao registradas com o identificador real do ledger 4 o smoke autenticado do seletor nao criara usuario artificial producao ainda possui zero uids naturalmente compartilhados entre perfis 5 a inspecao visual automatizada pos merge nao foi executada porque a sessao nao possuia navegador controlavel ci preview contratos de ui e smoke http final permaneceram verdes",
-      "tokenCount": 77,
+      "text": "1. Somente os arquivos do manifesto explícito integram a publicação; alterações paralelas do workspace permanecem preservadas. 2. GitHub remoto e Supabase remoto serão operados exclusivamente pelos respectivos MCPs. 3. Nenhum usuário artificial, segredo ou dado pessoal será criado ou exposto para o smoke de Produção. 4. A integração Realtime não modificará objetos internos do schema `realtime`; apenas APIs suportadas e, se indispensável, políticas permitidas em `realtime.messages`. 5. Migrations aplicadas tornam-se imutáveis e qualquer correção posterior será incremental.",
+      "normalizedText": "1 somente os arquivos do manifesto explicito integram a publicacao alteracoes paralelas do workspace permanecem preservadas 2 github remoto e supabase remoto serao operados exclusivamente pelos respectivos mcps 3 nenhum usuario artificial segredo ou dado pessoal sera criado ou exposto para o smoke de producao 4 a integracao realtime nao modificara objetos internos do schema realtime apenas apis suportadas e se indispensavel politicas permitidas em realtime messages 5 migrations aplicadas tornam se imutaveis e qualquer correcao posterior sera incremental",
+      "tokenCount": 68,
       "part": 1
     },
     {

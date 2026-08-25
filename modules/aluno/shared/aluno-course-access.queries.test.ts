@@ -33,8 +33,8 @@ Deno.test("invalida chaves exatas e raízes acadêmicas ativas do aluno", () => 
   invalidateAlunoCourseAccessQueries(queryClient as any, "student-1");
 
   assert.equal(calls.length, 13);
-  assert.equal(calls.filter((call) => call.exact === true).length, 9);
-  assert.equal(calls.filter((call) => call.exact === false).length, 4);
+  assert.equal(calls.filter((call) => call.exact === true).length, 8);
+  assert.equal(calls.filter((call) => call.exact === false).length, 5);
   assert.equal(
     calls.every((call) => call.refetchType === "active"),
     true,
@@ -46,6 +46,7 @@ Deno.test("invalida chaves exatas e raízes acadêmicas ativas do aluno", () => 
   assert.deepEqual(
     calls.filter((call) => call.exact === false).map((call) => call.queryKey),
     [
+      alunoCourseAccessKeys.finance("student-1"),
       alunoCourseAccessKeys.eadProgressRoot("student-1"),
       alunoCourseAccessKeys.technicalAcademicRoot("student-1"),
       alunoCourseAccessKeys.bulletinModulesRoot("student-1"),

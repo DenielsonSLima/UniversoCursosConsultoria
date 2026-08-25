@@ -1,18 +1,19 @@
 import React from 'react';
 import { AlertTriangle, CircleDollarSign, Clock, Copy, ExternalLink, GraduationCap, Percent, ReceiptText } from 'lucide-react';
 import { getBanesePaymentActionLabel, hasRegisteredBaneseBoleto } from './banese/banese-payment.utils';
+import type { AlunoFinancialItem } from './financeiro.types';
 
 interface FinanceiroCardItemProps {
-  installment: any;
+  installment: AlunoFinancialItem;
   formatCurrency: (value: number) => string;
   formatDate: (dateStr: string | null) => string;
   getModalityLabel: (modality: string) => string;
   getModalityClassName: (modality: string) => string;
   getInstallmentStatusBadge: (status: string) => React.ReactNode;
   onCopyLink: (url: string) => void;
-  onOpenReceipt: (installment: any) => void;
-  onPayNow?: (installment: any) => void;
-  onOpenBanesePayment?: (installment: any) => void;
+  onOpenReceipt: (installment: AlunoFinancialItem) => void;
+  onPayNow?: (installment: AlunoFinancialItem) => void;
+  onOpenBanesePayment?: (installment: AlunoFinancialItem) => void;
 }
 
 const FinanceiroCardItem: React.FC<FinanceiroCardItemProps> = ({
@@ -37,20 +38,7 @@ const FinanceiroCardItem: React.FC<FinanceiroCardItemProps> = ({
     .filter(Boolean);
 
   const hasReferenceInfo = paymentLabel.length > 0;
-  const summary = installment.financialSummary || {
-    baseValue: Number(installment.valor || 0),
-    paidValue: Number(installment.valor_pago || installment.valor || 0),
-    punctualDiscount: 0,
-    totalUntilDue: Number(installment.valor || 0),
-    interestPercent: 0,
-    interestValue: 0,
-    lateFeeValue: 0,
-    totalWithLate: Number(installment.valor || 0),
-    highlightValue: Number(installment.valor_pago || installment.valor || 0),
-    highlightLabel: 'Valor',
-    hasDiscount: false,
-    hasLateCharge: false,
-  };
+  const summary = installment.financialSummary;
   const accent = installment.modalityAccent || {
     line: 'border-l-blue-500',
     card: 'border-blue-100 bg-white',

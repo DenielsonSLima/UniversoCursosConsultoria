@@ -34,7 +34,7 @@ export const useParceirosMutations = ({
     const queryClient = useQueryClient();
 
   const invalidatePartners = () => {
-    queryClient.invalidateQueries({ queryKey: parceirosQueryKeys.all });
+    return queryClient.invalidateQueries({ queryKey: parceirosQueryKeys.all });
   };
 
   const saveAlunoMutation = useMutation({
@@ -73,7 +73,6 @@ export const useParceirosMutations = ({
       return parceirosService.create({ ...alunoData, tipo: 'Aluno' });
     },
     onSuccess: async (created, data) => {
-      invalidatePartners();
       const isExistingAluno = Boolean(created?.existingAluno);
       let studentAccessResult: InviteStudentResult | null = null;
       let accessPreparationError: string | null = null;
@@ -93,6 +92,16 @@ export const useParceirosMutations = ({
             : 'Erro desconhecido.';
         }
       }
+
+      await Promise.all([
+        invalidatePartners(),
+        created?.id
+          ? queryClient.invalidateQueries({
+            queryKey: parceirosQueryKeys.detail(created.id),
+            exact: true,
+          })
+          : Promise.resolve(),
+      ]);
 
       const studentAccessAction = studentAccessResult?.action;
       const studentProfileLinked = studentAccessResult?.profileLinked === true
@@ -181,7 +190,7 @@ export const useParceirosMutations = ({
   const saveProfessorMutation = useMutation({
     mutationFn: (data: any) => parceirosService.create({ ...data, tipo: 'Professor' }),
     onSuccess: (created) => {
-      invalidatePartners();
+      void invalidatePartners();
       if (created?.professorAccessInviteSent) {
         toast.success(
           'Professor cadastrado e convite enviado!',
@@ -216,7 +225,7 @@ export const useParceirosMutations = ({
   const savePFMutation = useMutation({
     mutationFn: (data: any) => parceirosService.create({ ...data, tipo: 'PF' }),
     onSuccess: (created) => {
-      invalidatePartners();
+      void invalidatePartners();
       toast.success('Parceiro PF cadastrado!', `${created.nome} foi registrado com sucesso.`);
       setShowForm(null);
     },
@@ -226,7 +235,7 @@ export const useParceirosMutations = ({
   const savePJMutation = useMutation({
     mutationFn: (data: any) => parceirosService.create({ ...data, tipo: 'PJ' }),
     onSuccess: (created) => {
-      invalidatePartners();
+      void invalidatePartners();
       toast.success('Parceiro PJ cadastrado!', `${created.nome} foi registrado com sucesso.`);
       setShowForm(null);
     },
@@ -236,9 +245,12 @@ export const useParceirosMutations = ({
   const enrollAlunoMutation = useMutation({
     mutationFn: ({ alunoId, turmaId }: { alunoId: string, turmaId: string }) =>
       parceirosService.matricularAluno(alunoId, turmaId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: parceirosQueryKeys.matriculas });
-      queryClient.invalidateQueries({ queryKey: parceirosQueryKeys.all });
+    onSuccess: (_result, { alunoId }) => {
+      void queryClient.invalidateQueries({
+        queryKey: parceirosQueryKeys.matriculas(alunoId),
+        exact: true,
+      });
+      void invalidatePartners();
       setShowEnrollmentModalForAlunoId(null);
       setSelectedTurmaIdForEnrollment('');
       toast.success('Matrícula efetuada!', `${createdAlunoNome} foi matriculado(a) com sucesso.`);
@@ -249,7 +261,7 @@ export const useParceirosMutations = ({
   const deleteMutation = useMutation({
     mutationFn: (id: string) => parceirosService.delete(id),
     onSuccess: (result: any) => {
-      invalidatePartners();
+      void invalidatePartners();
       toast.success(
         result?.partnerDeactivated ? 'Parceiro inativado' : 'Parceiro excluído!',
         result?.message || 'A operação foi concluída com sucesso.',

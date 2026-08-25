@@ -54,3 +54,24 @@ test('fallback que recomenda convite só ocorre sem resposta válida do backend'
     /else if \(created\?\.email && !studentAccessResult\) \{[\s\S]*?ainda precisa receber o convite/,
   );
 });
+
+test('cadastro invalida lista e detalhe somente depois da preparação canônica do acesso', () => {
+  const ensureIndex = mutationsSource.indexOf('portalActivationService.ensureStudentAccess');
+  const finalInvalidationIndex = mutationsSource.indexOf('await Promise.all([', ensureIndex);
+  const detailInvalidationIndex = mutationsSource.indexOf(
+    'parceirosQueryKeys.detail(created.id)',
+    finalInvalidationIndex,
+  );
+  const feedbackIndex = mutationsSource.indexOf(
+    'const studentAccessAction = studentAccessResult?.action',
+  );
+
+  assert.ok(ensureIndex >= 0, 'preparação de acesso ausente');
+  assert.ok(finalInvalidationIndex > ensureIndex, 'invalidação final deve ocorrer após preparar acesso');
+  assert.ok(detailInvalidationIndex > finalInvalidationIndex, 'detalhe do aluno deve ser invalidado');
+  assert.ok(feedbackIndex > detailInvalidationIndex, 'feedback só deve ocorrer após a invalidação final');
+  assert.match(
+    mutationsSource.slice(finalInvalidationIndex, feedbackIndex),
+    /invalidatePartners\(\)/,
+  );
+});

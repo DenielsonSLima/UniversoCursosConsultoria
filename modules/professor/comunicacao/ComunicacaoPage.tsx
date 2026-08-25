@@ -7,9 +7,10 @@ import { resolveCommunicationAttachmentUrls } from '../../shared/comunicacao/com
 import { ProfessorNewChatModal } from './ProfessorNewChatModal';
 import { ProfessorMessageComposer } from './ProfessorMessageComposer';
 import {
-  ProfessorCommunicationMessage,
   professorComunicacaoService,
 } from './professor-comunicacao.service';
+import { professorComunicacaoQueryKeys } from './professor-comunicacao.query-keys';
+import { useProfessorComunicacaoRealtime } from './useProfessorComunicacaoRealtime';
 
 interface ComunicacaoPageProps {
   professorId: string;
@@ -30,10 +31,11 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ professorId, professo
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  useProfessorComunicacaoRealtime(professorId, activeChatId);
 
   // 1. Fetch Categories
   const { data: categories = [] } = useQuery<any[]>({
-    queryKey: ['comunicacao-categorias'],
+    queryKey: professorComunicacaoQueryKeys.categories,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('comunicacao_categorias')
@@ -46,7 +48,7 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ professorId, professo
 
   // 2. Fetch Teacher's Chats
   const { data: chats = [], isLoading: loadingChats } = useQuery<any[]>({
-    queryKey: ['professor-chats', professorId],
+    queryKey: professorComunicacaoQueryKeys.chats(professorId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('comunicacao_chats')
@@ -60,7 +62,7 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ professorId, professo
 
   // 3. Fetch Messages for Active Chat
   const { data: messages = [], isLoading: loadingMessages } = useQuery<any[]>({
-    queryKey: ['chat-messages', activeChatId],
+    queryKey: professorComunicacaoQueryKeys.messages(activeChatId || ''),
     enabled: !!activeChatId,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -73,62 +75,7 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ professorId, professo
     }
   });
 
-  // 4. Realtime subscription for active chat's messages
-  useEffect(() => {
-    if (!activeChatId) return;
-
-    const msgsChannel = supabase
-      .channel(`chat_msgs_realtime_${activeChatId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'comunicacao_mensagens',
-          filter: `chat_id=eq.${activeChatId}`,
-        },
-        async (payload) => {
-          console.log('Realtime message received:', payload.new);
-          const [newMessage] = await resolveCommunicationAttachmentUrls([payload.new]);
-          queryClient.setQueryData(['chat-messages', activeChatId], (oldData: any[] | undefined) => {
-            if (!oldData) return [newMessage];
-            if (oldData.some(m => m.id === newMessage.id)) return oldData;
-            return [...oldData, newMessage];
-          });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(msgsChannel);
-    };
-  }, [activeChatId, queryClient]);
-
-  // 5. Realtime subscription for chats list updates
-  useEffect(() => {
-    const chatsChannel = supabase
-      .channel(`professor_chats_realtime_${professorId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'comunicacao_chats',
-          filter: `remetente_id=eq.${professorId}`
-        },
-        (payload) => {
-          console.log('Chats list update detected, invalidating...');
-          queryClient.invalidateQueries({ queryKey: ['professor-chats', professorId] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(chatsChannel);
-    };
-  }, [professorId, queryClient]);
-
-  // 6. Autoscroll to bottom
+  // 4. Autoscroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -152,7 +99,7 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ professorId, professo
     setUploadingFile(Boolean(fileToSend));
 
     try {
-      const newMsg = await professorComunicacaoService.sendMessage({
+      await professorComunicacaoService.sendMessage({
         chatId: activeChatId,
         file: fileToSend,
         professorId,
@@ -160,11 +107,16 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ professorId, professo
         text,
       });
 
-      queryClient.setQueryData(['chat-messages', activeChatId], (oldData: ProfessorCommunicationMessage[] | undefined) => {
-        if (!oldData) return [newMsg];
-        if (oldData.some(m => m.id === newMsg.id)) return oldData;
-        return [...oldData, newMsg];
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: professorComunicacaoQueryKeys.messages(activeChatId),
+          exact: true,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: professorComunicacaoQueryKeys.chats(professorId),
+          exact: true,
+        }),
+      ]);
     } catch (err) {
       console.error('Erro ao enviar mensagem:', err);
       alert('Erro ao enviar mensagem.');
@@ -214,7 +166,10 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ professorId, professo
       setNewChatCategory('');
       setNewChatSubject('');
       
-      queryClient.invalidateQueries({ queryKey: ['professor-chats', professorId] });
+      await queryClient.invalidateQueries({
+        queryKey: professorComunicacaoQueryKeys.chats(professorId),
+        exact: true,
+      });
       setActiveChatId(newChat.id);
       
       alert('Chamado aberto com sucesso!');

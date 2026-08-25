@@ -1,48 +1,46 @@
 # Lote ativo
 
-Estado: `PUBLICADO_PRODUCAO_4_8_1`
+Estado: `DDL_VALIDADO_AGUARDANDO_PUBLICACAO_GITHUB`
 
-## Lote: 2026-08-24-identidade-auth-multiperfil-4-8-0
+## Lote: 2026-08-24-correcao-financeiro-realtime-resiliencia-4-8-2
 
-- Pedido: permitir que uma única identidade possua Gestor, Professor, Aluno e Responsável, selecionar o perfil dentro da audiência correta no login e publicar o lote completo em GitHub e Produção após revisão independente.
-- Contrato: `/login` resolve somente Aluno/Responsável; `/sistema/login` resolve somente Gestor/Professor. Um perfil entra automaticamente e dois perfis exigem escolha explícita.
-- Identidade: todos os perfis compartilhados devem possuir o mesmo CPF válido e o mesmo e-mail canônico do Supabase Auth.
-- Registro: `ai/operacao/registros/alteracoes/2026-08-24-identidade-auth-multiperfil.md`.
-- Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-24-identidade-auth-multiperfil.md`.
-- Versão funcional publicada: `4.8.0`; fechamento operacional publicado como patch `4.8.1` estável.
+- Pedido: corrigir os fluxos Financeiro/recibo do Professor e do Aluno, sincronização TanStack/Realtime e resiliência do portal do Professor, validar internamente com agentes independentes e publicar o resultado no GitHub e em Produção.
+- Registro: `ai/operacao/registros/alteracoes/2026-08-24-correcao-financeiro-realtime-resiliencia.md`.
+- Versão alvo: `4.8.2`.
+- Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-24-correcao-financeiro-realtime-resiliencia.md`; lista recongelada com 79 arquivos antes do hardening remoto.
+
+### Contratos do lote
+
+1. Status financeiro, totais, valor pago, filtros e paginação são calculados pelo backend; o frontend somente envia intenção e apresenta a resposta canônica.
+2. O recibo usa payload financeiro canônico e compositor PDF nativo/vetorial, preservando modelo, cabeçalho e marca d'água institucionais; prévia, download e impressão compartilham o mesmo `Blob`.
+3. Mutações de acesso do Aluno invalidam a chave TanStack exata depois da confirmação assíncrona final, inclusive quando o cache usa `staleTime: Infinity`.
+4. Realtime atua como sinal de invalidação/refetch, com reconexão, ressincronização, debounce e cleanup proporcionais; exclusões não dependem de `payload.old` incompleto.
+5. Falhas transitórias ao hidratar o portal do Professor preservam a sessão e oferecem repetição; JWT, papel ou perfil definitivamente inválidos continuam falhando de forma fechada.
 
 ### Critérios de aceite
 
-1. Um UID Auth pode possuir no máximo um Gestor, um Professor, um Aluno e um Responsável compatíveis. `ATENDIDO_PRODUCAO`.
-2. CPF ou e-mail divergente bloqueia o vínculo sem takeover, troca de senha ou convite indevido. `ATENDIDO_PRODUCAO`.
-3. O login público nunca oferece Gestor/Professor e o institucional nunca oferece Aluno/Responsável. `ATENDIDO_PRODUCAO`.
-4. Primeiro acesso, recuperação de senha, checkout e exclusão de um perfil preservam os demais contextos válidos. `ATENDIDO_PRODUCAO`.
-5. O lote deve passar por branch e PR próprios, CI e Preview, Supabase, merge e smoke web de Produção. `ATENDIDO_PRODUCAO`.
+1. Testes SQL/RPC cobrem autorização, valor zero, pagamento parcial, atraso, cancelamento, filtros, paginação e payload do recibo.
+2. A interface financeira não recalcula valores nem mascara erro de consulta como `R$ 0,00`; o PDF passa por extração textual, inspeção de recursos e renderização da página relevante.
+3. Testes de TanStack/Realtime cobrem invalidação final, reconexão, eventos repetidos, exclusão e cleanup sem atualização direta de cache por CDC.
+4. Testes do Professor cobrem indisponibilidade transitória, repetição bem-sucedida e rejeição definitiva de credencial/perfil inválido.
+5. Todos os arquivos manuais tocados possuem no máximo 500 linhas e a revisão cruzada encerra sem finding funcional `P1` ou `P2` aberto.
+6. Migrations, CI, controle de versão, Vercel Preview, merge e smoke de Produção ficam verdes antes do encerramento.
 
-### Evidências atuais
+### Ordem de execução e publicação
 
-- Reunião de três revisores independentes de GitHub, produto e Supabase encerrada com três pareceres `GO` e nenhum finding funcional `P1` ou `P2` aberto.
-- PR GitHub `#90` criada a partir da `main` remota `243cb89fe6f11fdf4b8af6f9444e99cf9c8fdd91`; CI, controle de versão e Vercel Preview aprovados no head `f0e41d54872d4bf8d6246b64b1498941ac5b822c`.
-- As quatorze migrations foram aplicadas em Produção, na ordem registrada, entre os ledgers `20260825015246` e `20260825015455`; o smoke pós-DDL aprovou índices, triggers, ACLs, HMAC, ordem e invariantes de identidade.
-- A Edge Function `portal-user-management` v35 está `ACTIVE`, com `verify_jwt: true`; requisição sem credencial retornou `401` e foi registrada na nova versão sem erro interno.
-- A PR `#90` foi mesclada por squash em `db769c78b06fe74fc1752f6015337289e21e854d`; o deploy Vercel de Produção ficou verde e `/`, `/login` e `/sistema/login` responderam `200` no domínio público.
-- Suítes de handlers, login, feedback e contratos de migrations, lint, TypeScript, teto de linhas e build de produção foram aprovadas.
-
-### Ordem de publicação
-
-1. Branch e PR GitHub publicadas por MCP somente com o manifesto registrado. `CONCLUIDO`.
-2. CI, controle de versão e Vercel Preview aprovados. `CONCLUIDO`.
-3. Quatorze migrations aplicadas em ordem e smoke SQL aprovado. `CONCLUIDO`.
-4. `portal-user-management` v35 publicada e smoke de autorização aprovado. `CONCLUIDO`.
-5. Atualizar evidências imutáveis, regenerar o RAG e revalidar o PR. `CONCLUIDO`.
-6. Tornar a PR pronta, efetuar o merge e executar smoke web de Produção. `CONCLUIDO`.
+1. Implementar Auth/resiliência, Financeiro do Professor, Financeiro do Aluno e TanStack/Realtime, sem operação remota. `CONCLUIDO`.
+2. Executar revisão cruzada independente e corrigir findings. `CONCLUIDO_SEM_P1_P2`.
+3. Rodar testes focados, contratos SQL/PDF, lint, TypeScript, teto de linhas e build. `CONCLUIDO_LOCAL`.
+4. Aplicar migrations via MCP Supabase e validar contratos/advisors/logs. `CONCLUIDO_11_DE_11`; precedência JSON corrigida incrementalmente, helpers internos privados e advisors de segurança restaurados ao baseline.
+5. Publicar branch e PR via MCP GitHub; aguardar CI e Vercel Preview. `EM_ANDAMENTO`.
+6. Mesclar, validar Produção, fechar versão/documentação e reindexar o RAG. `PENDENTE`.
 
 ### Limites
 
-1. PRs antigas e alterações paralelas do workspace não integram este lote.
-2. Nenhum usuário de teste ou dado pessoal será criado em Produção apenas para o smoke.
-3. Migrations aplicadas tornam-se imutáveis e serão registradas com o identificador real do ledger.
-4. O smoke autenticado do seletor não criará usuário artificial: Produção ainda possui zero UIDs naturalmente compartilhados entre perfis.
-5. A inspeção visual automatizada pós-merge não foi executada porque a sessão não possuía navegador controlável; CI, Preview, contratos de UI e smoke HTTP final permaneceram verdes.
+1. Somente os arquivos do manifesto explícito integram a publicação; alterações paralelas do workspace permanecem preservadas.
+2. GitHub remoto e Supabase remoto serão operados exclusivamente pelos respectivos MCPs.
+3. Nenhum usuário artificial, segredo ou dado pessoal será criado ou exposto para o smoke de Produção.
+4. A integração Realtime não modificará objetos internos do schema `realtime`; apenas APIs suportadas e, se indispensável, políticas permitidas em `realtime.messages`.
+5. Migrations aplicadas tornam-se imutáveis e qualquer correção posterior será incremental.
 
 Histórico: `ai/operacao/registros/ALTERACOES.md` e `ai/operacao/registros/alteracoes/`.
