@@ -1,12 +1,12 @@
 # Lote ativo
 
-Estado: `PRONTO_PARA_PUBLICACAO_4_8_4`
+Estado: `PUBLICADO_PRODUCAO_4_8_5`
 
 ## Lote: 2026-08-25-realtime-aluno-financeiro-canonico-4-8-4
 
 - Pedido: revisar novamente Auth/RBAC, Financeiro, PDFs, TanStack Query e Realtime com três agentes, corrigir os findings, testar e publicar no GitHub e em Produção.
 - Registro: `ai/operacao/registros/alteracoes/2026-08-25-realtime-aluno-financeiro-canonico-4-8-4.md`.
-- Versão funcional: `4.8.4`.
+- Versão funcional publicada: `4.8.4`; fechamento operacional: `4.8.5`.
 - Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-25-realtime-aluno-financeiro-canonico-4-8-4.md`; 18 arquivos.
 
 ### Contratos do lote
@@ -32,8 +32,8 @@ Estado: `PRONTO_PARA_PUBLICACAO_4_8_4`
 2. Corrigir status legado do card, assinatura financeira duplicada e DELETE acadêmico filtrado. `CONCLUIDO_LOCAL`.
 3. Executar testes focados e revisão cruzada final. `CONCLUIDO_LOCAL`.
 4. Aplicar a migration via MCP Supabase e validar contratos remotos. `CONCLUIDO_1_DE_1`.
-5. Executar gates finais, publicar branch/PR via MCP GitHub e aguardar Preview. `EM_ANDAMENTO`.
-6. Mesclar, validar Produção, fechar evidências e reindexar o RAG uma vez. `PENDENTE`.
+5. Executar gates finais, publicar branch/PR via MCP GitHub e aguardar Preview. `CONCLUIDO_PR_95`.
+6. Mesclar, validar Produção, fechar evidências e reindexar o RAG uma vez. `CONCLUIDO_PRODUCAO_4_8_4`.
 
 ### Evidências atuais
 
@@ -44,6 +44,15 @@ Estado: `PRONTO_PARA_PUBLICACAO_4_8_4`
 - Migration aplicada sob o ledger `20260825204543 add_student_portal_realtime_audience`; OID `40832`, policy `40833`, triggers `40844`/`40845`, RLS, publication e ACL permaneceram íntegros.
 - Advisors pós-DDL permaneceram exatamente no baseline; logs entre `20:40Z` e `20:48Z` tiveram zero `ERROR`, `FATAL` ou `PANIC` textual nas oito fontes retornadas.
 - A outbox continuou vazia no pós-check, sem atividade acadêmica natural e sem fabricação de matrícula para produzir um sinal.
+
+### Evidências de publicação
+
+- A PR `#95` partiu da `main` `ce46436350c23dbc81ec4d474ae9469bf6803d56`; o head `dec565205f506cb2014aec64e452bbc523c198c5` alterou 17 dos 18 arquivos permitidos, pois `ALTERACOES.md` já era idêntico à base.
+- Os workflows de PR `32898162163` e `32898162226`, o Vercel Preview `C3rvKrWkj95Tc58oN9nDCEdFg3sU` e todos os passos do gate obrigatório ficaram verdes.
+- A PR foi mesclada por squash no commit `88b60e03390ea84daf7e814cec4393011b55510e`; a CI pós-merge `32898857333` e o Vercel Production `5waoYp9Z2nDaSUApSHGQc7frZAVp` concluíram com sucesso.
+- `/`, `/login` e `/sistema/login` responderam `200`; `main-BkQp4ncF.js` confirmou `4.8.4`, e os chunks publicados confirmaram audiência Aluno, assinatura financeira única e seletor dos quatro perfis por audiência.
+- Logs de `21:03Z` a `21:08Z` tiveram zero erro grave textual. A outbox permaneceu vazia por ausência de mutação acadêmica natural.
+- O fechamento documental segue como patch estável `4.8.5`, sem alterar o contrato funcional da `4.8.4`.
 
 ### Limites
 

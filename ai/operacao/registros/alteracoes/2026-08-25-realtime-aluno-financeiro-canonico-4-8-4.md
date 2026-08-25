@@ -1,7 +1,7 @@
 # Realtime do Aluno e Financeiro canônico — 4.8.4
 
 Data: 2026-08-25  
-Estado: `PRONTO_PARA_PUBLICACAO`
+Estado: `PUBLICADO_PRODUCAO_4_8_5`
 
 ## Objetivo
 
@@ -58,10 +58,17 @@ Total: 18 arquivos
 - Pós-check: autorizador OID `40832`, policy OID `40833`, funções de trigger OIDs `40836`/`40837`, triggers OIDs `40844`/`40845`, RLS e publication preservados; somente `authenticated` executa o autorizador.
 - Advisors pós-DDL idênticos ao baseline; logs de `20:40Z` a `20:48Z` sem `ERROR`, `FATAL` ou `PANIC` textual.
 - A outbox não recebeu atividade acadêmica natural no intervalo; nenhum dado artificial foi criado para fabricar o smoke positivo.
+- A PR `#95` partiu da `main` `ce46436350c23dbc81ec4d474ae9469bf6803d56`; head `dec565205f506cb2014aec64e452bbc523c198c5`, 17 arquivos alterados dentro dos 18 permitidos e ausência de diff apenas para `ai/operacao/registros/ALTERACOES.md`, já idêntico à base.
+- Workflows de PR `32898162163`/`32898162226` e Vercel Preview `C3rvKrWkj95Tc58oN9nDCEdFg3sU` aprovados antes do merge.
+- Merge squash `88b60e03390ea84daf7e814cec4393011b55510e`; CI pós-merge `32898857333` e Vercel Production `5waoYp9Z2nDaSUApSHGQc7frZAVp` aprovados.
+- As rotas `/`, `/login` e `/sistema/login` responderam `200`. O bundle `main-BkQp4ncF.js` contém `4.8.4`; `portal-realtime-signals-LOCaE446.js` contém o tópico `portal:aluno:<id>:acesso`; `aluno.page-DpSHMOfb.js` mantém `finance_realtime_events` sem tabela `matriculas`; `FinanceiroPage-DufDR6pu.js` usa `statusCode`/`receiptEligible`.
+- O chunk `profile-selection-session-CCxZUahV.js` preserva Aluno, Responsável, Gestor, Professor e a escolha somente quando existe mais de um perfil na audiência.
+- Logs pós-deploy de `21:03Z` a `21:08Z`: zero `ERROR`, `FATAL` ou `PANIC` textual nas sete fontes retornadas.
+- O patch `4.8.5` fecha versão, evidências e RAG sem alterar o contrato funcional publicado na `4.8.4`.
 
 ## Aceite e limites
 
-- Gates finais, CI, Preview, merge e smoke de Produção permanecem pendentes nesta etapa.
+- Gates finais, CI, Preview, merge e smoke público de Produção foram concluídos.
 - Não será criado usuário, matrícula, título ou pagamento artificial.
 - A ausência de navegador controlável será registrada como limitação, caso persista no fechamento.
 - O WhatsApp está fora do manifesto; qualquer ajuste de modo de teste ou destinatário exige decisão operacional separada.

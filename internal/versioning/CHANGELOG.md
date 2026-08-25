@@ -4,6 +4,12 @@ Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente
 
 Histórico anterior: [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
 
+## [4.8.5] - 2026-08-25
+
+### Alterado
+
+- O fechamento operacional registra migration, revisão cruzada, PR/merge, CI, Vercel Preview/Production, smoke público e limitações sem alterar o contrato funcional publicado em 4.8.4.
+
 ## [4.8.4] - 2026-08-25
 
 ### Corrigido
