@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-08-25T04:46:20.377Z",
+  "builtAt": "2026-08-25T04:56:04.279Z",
   "manifestVersion": 2,
-  "sourceSignature": "3f9b4fcfdbb85753c50f204c52a9d8eda305feefdf0e9f6fc78cd5ca41fe93d6",
+  "sourceSignature": "d50ca15342e32593188d94f051bae248521cf6c87e5f54fa08bf2f46dba60d49",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "650a047ca003d9ab0324988796705451f50b458d8b12b737cb4d6d6f6e3317d7"
+      "hash": "cfdf6635a1eb09151edf2d9bec60de6336e291ea403b977ba29a98dae8715fe9"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -192,13 +192,13 @@
       "part": 1
     },
     {
-      "id": "9ae1d7e02487d873b04e",
-      "hash": "9ae1d7e02487d873b04eaa62817ea5eaec829e185011cc83cfeaedd0102a3ec1",
+      "id": "bffeaaab882c7bd49269",
+      "hash": "bffeaaab882c7bd492696bc1f6af3b9ee2c1d76df95a10b43af301df6ddbf341",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Lote ativo",
-      "text": "Estado: `DDL_VALIDADO_AGUARDANDO_PUBLICACAO_GITHUB`",
-      "normalizedText": "estado ddl validado aguardando publicacao github",
-      "tokenCount": 6,
+      "text": "Estado: `PUBLICADO_PRODUCAO_4_8_2`",
+      "normalizedText": "estado publicado producao 4 8 2",
+      "tokenCount": 3,
       "part": 1
     },
     {
@@ -232,23 +232,33 @@
       "part": 1
     },
     {
-      "id": "c23e9bc9f1640b3fb850",
-      "hash": "c23e9bc9f1640b3fb850fa14e476108504b015e136bdf6ccd914e703030a0384",
+      "id": "d8929ca2f13dd46f924e",
+      "hash": "d8929ca2f13dd46f924ea6784797c4a48e531cabe6a5036bd57afc56c979f9ef",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Ordem de execução e publicação",
-      "text": "1. Implementar Auth/resiliência, Financeiro do Professor, Financeiro do Aluno e TanStack/Realtime, sem operação remota. `CONCLUIDO`. 2. Executar revisão cruzada independente e corrigir findings. `CONCLUIDO_SEM_P1_P2`. 3. Rodar testes focados, contratos SQL/PDF, lint, TypeScript, teto de linhas e build. `CONCLUIDO_LOCAL`. 4. Aplicar migrations via MCP Supabase e validar contratos/advisors/logs. `CONCLUIDO_11_DE_11`; precedência JSON corrigida incrementalmente, helpers internos privados e advisors de segurança restaurados ao baseline. 5. Publicar branch e PR via MCP GitHub; aguardar CI e Vercel Preview. `EM_ANDAMENTO`. 6. Mesclar, validar Produção, fechar versão/documentação e reindexar o RAG. `PENDENTE`.",
-      "normalizedText": "1 implementar auth resiliencia financeiro do professor financeiro do aluno e tanstack realtime sem operacao remota concluido 2 executar revisao cruzada independente e corrigir findings concluido sem p1 p2 3 rodar testes focados contratos sql pdf lint typescript teto de linhas e build concluido local 4 aplicar migrations via mcp supabase e validar contratos advisors logs concluido 11 de 11 precedencia json corrigida incrementalmente helpers internos privados e advisors de seguranca restaurados ao baseline 5 publicar branch e pr via mcp github aguardar ci e vercel preview em andamento 6 mesclar validar producao fechar versao documentacao e reindexar o rag pendente",
-      "tokenCount": 86,
+      "text": "1. Implementar Auth/resiliência, Financeiro do Professor, Financeiro do Aluno e TanStack/Realtime, sem operação remota. `CONCLUIDO`. 2. Executar revisão cruzada independente e corrigir findings. `CONCLUIDO_SEM_P1_P2`. 3. Rodar testes focados, contratos SQL/PDF, lint, TypeScript, teto de linhas e build. `CONCLUIDO_LOCAL`. 4. Aplicar migrations via MCP Supabase e validar contratos/advisors/logs. `CONCLUIDO_11_DE_11`; precedência JSON corrigida incrementalmente, helpers internos privados e advisors de segurança restaurados ao baseline. 5. Publicar branch e PR via MCP GitHub; aguardar CI e Vercel Preview. `CONCLUIDO_PR_93`. 6. Mesclar, validar Produção, fechar versão/documentação e reindexar o RAG. `CONCLUIDO_PRODUCAO_4_8_2`.",
+      "normalizedText": "1 implementar auth resiliencia financeiro do professor financeiro do aluno e tanstack realtime sem operacao remota concluido 2 executar revisao cruzada independente e corrigir findings concluido sem p1 p2 3 rodar testes focados contratos sql pdf lint typescript teto de linhas e build concluido local 4 aplicar migrations via mcp supabase e validar contratos advisors logs concluido 11 de 11 precedencia json corrigida incrementalmente helpers internos privados e advisors de seguranca restaurados ao baseline 5 publicar branch e pr via mcp github aguardar ci e vercel preview concluido pr 93 6 mesclar validar producao fechar versao documentacao e reindexar o rag concluido producao 4 8 2",
+      "tokenCount": 88,
       "part": 1
     },
     {
-      "id": "d256273dbdcf419418c8",
-      "hash": "d256273dbdcf419418c88fd27fc72b84bba29628b00ecee18b7bedf2e912a302",
+      "id": "53e2b4dd8b79f1ca4906",
+      "hash": "53e2b4dd8b79f1ca49068be1a3b05ec03a4ea14199b454ae7a2cd7a1c293f040",
+      "path": "ai/operacao/LOTE_ATIVO.md",
+      "section": "Evidências de publicação",
+      "text": "- A PR GitHub `#93` partiu da `main` remota `731202f07a1c784076367542ffb24faa66aee9a4` e publicou somente 78 arquivos alterados dos 79 permitidos pelo manifesto; `ai/operacao/registros/ALTERACOES.md` já era idêntico à base. - Controle de versão, CI completa e Vercel Preview `FYsWqDPJNM1E7amcDY8S6t3zARnU` foram aprovados no head `d3114cea629c1a3ae045ee5ce1b6ef4d8cf9a736`. - A PR foi mesclada por squash no commit `256eaa78e0dda2930b57f986c71ead315eed329d`; o Vercel Production `TywqYpgDaxfuWcTfUx2ey69gu6Mz` e a CI pós-merge ficaram verdes. - O domínio público e as rotas `/login` e `/sistema/login` responderam `200`; o bundle `main-BCXA3xKx.js` contém a versão `4.8.2` e carrega o seletor multiperfil publicado.",
+      "normalizedText": "a pr github 93 partiu da main remota 731202f07a1c784076367542ffb24faa66aee9a4 e publicou somente 78 arquivos alterados dos 79 permitidos pelo manifesto ai operacao registros alteracoes md ja era identico a base controle de versao ci completa e vercel preview fyswqdpjnm1e7amcdy8s6t3zarnu foram aprovados no head d3114cea629c1a3ae045ee5ce1b6ef4d8cf9a736 a pr foi mesclada por squash no commit 256eaa78e0dda2930b57f986c71ead315eed329d o vercel production tywqypgdaxfuwctfux2ey69gu6mz e a ci pos merge ficaram verdes o dominio publico e as rotas login e sistema login responderam 200 o bundle main bcxa3xkx js contem a versao 4 8 2 e carrega o seletor multiperfil publicado",
+      "tokenCount": 75,
+      "part": 1
+    },
+    {
+      "id": "58ba0b59de10dc96d7bf",
+      "hash": "58ba0b59de10dc96d7bf686ddb8da2c95b7939eff4a2053866a8f0aa81e108f2",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Limites",
-      "text": "1. Somente os arquivos do manifesto explícito integram a publicação; alterações paralelas do workspace permanecem preservadas. 2. GitHub remoto e Supabase remoto serão operados exclusivamente pelos respectivos MCPs. 3. Nenhum usuário artificial, segredo ou dado pessoal será criado ou exposto para o smoke de Produção. 4. A integração Realtime não modificará objetos internos do schema `realtime`; apenas APIs suportadas e, se indispensável, políticas permitidas em `realtime.messages`. 5. Migrations aplicadas tornam-se imutáveis e qualquer correção posterior será incremental.",
-      "normalizedText": "1 somente os arquivos do manifesto explicito integram a publicacao alteracoes paralelas do workspace permanecem preservadas 2 github remoto e supabase remoto serao operados exclusivamente pelos respectivos mcps 3 nenhum usuario artificial segredo ou dado pessoal sera criado ou exposto para o smoke de producao 4 a integracao realtime nao modificara objetos internos do schema realtime apenas apis suportadas e se indispensavel politicas permitidas em realtime messages 5 migrations aplicadas tornam se imutaveis e qualquer correcao posterior sera incremental",
-      "tokenCount": 68,
+      "text": "1. Somente os arquivos do manifesto explícito integram a publicação; alterações paralelas do workspace permanecem preservadas. 2. GitHub remoto e Supabase remoto serão operados exclusivamente pelos respectivos MCPs. 3. Nenhum usuário artificial, segredo ou dado pessoal será criado ou exposto para o smoke de Produção. 4. A integração Realtime não modificará objetos internos do schema `realtime`; apenas APIs suportadas e, se indispensável, políticas permitidas em `realtime.messages`. 5. Migrations aplicadas tornam-se imutáveis e qualquer correção posterior será incremental. 6. A inspeção visual automatizada pós-merge não foi executada porque a sessão não possuía navegador controlável; contratos de UI, Preview e smoke HTTP final permaneceram verdes.",
+      "normalizedText": "1 somente os arquivos do manifesto explicito integram a publicacao alteracoes paralelas do workspace permanecem preservadas 2 github remoto e supabase remoto serao operados exclusivamente pelos respectivos mcps 3 nenhum usuario artificial segredo ou dado pessoal sera criado ou exposto para o smoke de producao 4 a integracao realtime nao modificara objetos internos do schema realtime apenas apis suportadas e se indispensavel politicas permitidas em realtime messages 5 migrations aplicadas tornam se imutaveis e qualquer correcao posterior sera incremental 6 a inspecao visual automatizada pos merge nao foi executada porque a sessao nao possuia navegador controlavel contratos de ui preview e smoke http final permaneceram verdes",
+      "tokenCount": 91,
       "part": 1
     },
     {
