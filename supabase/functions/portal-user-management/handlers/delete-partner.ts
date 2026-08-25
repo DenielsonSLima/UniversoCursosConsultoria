@@ -1,5 +1,8 @@
 import { findAuthUserByEmail, normalizeEmail } from "../auth-users.ts";
+import { logPortalHandlerFailure } from "./handler-error-log.ts";
 import type { HandlerContext, Partner } from "../types.ts";
+
+const ACTION = "delete-partner";
 
 export const handleDeletePartner = async (
   context: HandlerContext,
@@ -78,11 +81,16 @@ export const handleDeletePartner = async (
     .eq("id", partner.id);
 
   if (deletePartnerError) {
+    const retryableConflict = ["40001", "40P01"].includes(
+      deletePartnerError.code,
+    );
+    logPortalHandlerFailure(ACTION, "delete-partner", deletePartnerError);
     return json({
       success: false,
-      error: deletePartnerError.message ||
-        "Não foi possível excluir o parceiro. Arquive e exclua os documentos administrativos antes de tentar novamente.",
-    }, 500);
+      error: retryableConflict
+        ? "O vínculo de acesso mudou durante a exclusão. Atualize os dados e tente novamente."
+        : "Não foi possível excluir o parceiro. Arquive e exclua os documentos administrativos antes de tentar novamente.",
+    }, retryableConflict ? 409 : 500);
   }
 
   if (authUserBefore?.id) {

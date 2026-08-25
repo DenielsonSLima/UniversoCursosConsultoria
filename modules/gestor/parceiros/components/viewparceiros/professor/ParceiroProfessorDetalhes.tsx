@@ -44,8 +44,11 @@ const ParceiroProfessorDetalhes: React.FC<ParceiroProfessorDetalhesProps> = ({ p
       }
       if (updated?.institutionalProfileLinked) {
         toast.success(
-          'Professor atualizado e acesso vinculado',
-          `${updated.nome || professorData.nome} poderá escolher Professor ou Gestor ao entrar no portal institucional.`,
+          updated?.institutionalAccessPending
+            ? 'Professor atualizado, primeiro acesso pendente'
+            : 'Professor atualizado e acesso vinculado',
+          updated.institutionalProfileLinkMessage
+            || `${updated.nome || professorData.nome} poderá escolher Professor ou Gestor ao entrar no portal institucional.`,
           {
             avatarUrl: updated.foto || professorData.foto,
             avatarName: updated.nome || professorData.nome,

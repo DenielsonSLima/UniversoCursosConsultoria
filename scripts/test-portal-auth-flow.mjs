@@ -132,7 +132,8 @@ test('invite callbacks require password setup before institutional access', () =
   assert.match(supabaseClient, /consumePasswordSetupMarker/)
   assert.match(passwordRecoveryPage, /passwordSetupType === 'invite'/)
   assert.match(passwordRecoveryPage, /consumePasswordSetupMarker/)
-  assert.match(passwordRecoveryPage, /postResetPath = '\/sistema\/login'/)
+  assert.match(passwordRecoveryPage, /const postResetPath = loginPath/)
+  assert.doesNotMatch(passwordRecoveryPage, /getPortalProfile|user_metadata\?\.origem/)
   assert.match(passwordRecoveryPage, /navigate\(postResetPath\)/)
 })
 

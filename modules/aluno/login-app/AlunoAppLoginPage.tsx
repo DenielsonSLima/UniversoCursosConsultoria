@@ -317,14 +317,14 @@ const AlunoAppLoginPage: React.FC = () => {
           </div>
 
           <header className="app-login-heading mt-5 text-center">
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-200">Portal do aluno</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-200">Portal do aluno e responsável</p>
             <h1 className="mt-2 text-[1.8rem] font-black leading-tight tracking-tight">
               <span className="text-blue-400">Bem-vindo(a)</span> de volta!
             </h1>
             <p className="mt-1.5 text-sm font-medium text-blue-100/75">Entre para continuar sua jornada.</p>
           </header>
 
-          <nav className="app-login-tabs mt-5 grid grid-cols-3 border-b border-white/15" aria-label="Acesso do aluno">
+          <nav className="app-login-tabs mt-5 grid grid-cols-3 border-b border-white/15" aria-label="Acesso do aluno e responsável">
             <button
               type="button"
               className="relative flex h-11 items-center justify-center gap-2 text-xs font-black uppercase tracking-[0.12em] text-blue-300 after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:bg-blue-400"

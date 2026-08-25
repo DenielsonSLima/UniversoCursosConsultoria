@@ -42,6 +42,8 @@ export type FunctionResponse = {
   temporaryPassword?: string;
   profileLinked?: boolean;
   profileLinkState?: InstitutionalProfileLinkState;
+  studentAccessPending?: boolean;
+  institutionalAccessPending?: boolean;
   responsavelLegalId?: string | null;
   code?: string;
   error?: string;
@@ -133,6 +135,7 @@ export type Partner = {
   senha_atualizada_em?: string | null;
   senha_temporaria_emissao_id?: string | null;
   senha_temporaria_emissao_iniciada_em?: string | null;
+  senha_temporaria_emissao_senha_alterada_em?: string | null;
   senha_temporaria_emissoes_revogadas?: string[] | null;
   matricula_acesso?: string | null;
   auth_login_email?: string | null;

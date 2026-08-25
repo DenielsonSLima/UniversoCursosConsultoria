@@ -1,45 +1,46 @@
 # Lote ativo
 
-Estado: `EM_REVISAO_GITHUB`
+Estado: `SUPABASE_E_EDGE_PUBLICADOS_AGUARDANDO_MERGE`
 
-## Lote: 2026-08-24-card-email-validado-gestor
+## Lote: 2026-08-24-identidade-auth-multiperfil-4-8-0
 
-- Pedido: corrigir o ícone pendente no card do aluno quando o e-mail já foi validado administrativamente e atualizar o projeto no GitHub.
-- Causa confirmada: o backend devolvia separadamente a confirmação real do Auth e a validação administrativa, mas a listagem descartava `emailValidatedByManager`; o card recebia apenas o `status` pendente do Auth.
-- Registro: `ai/operacao/registros/alteracoes/2026-08-24-card-email-validado-gestor.md`.
-- Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-24-card-email-validado-gestor.md`.
-- Próxima versão registrada na branch: `4.7.7`; a Produção permanece em `4.7.6` até eventual merge explicitamente autorizado.
+- Pedido: permitir que uma única identidade possua Gestor, Professor, Aluno e Responsável, selecionar o perfil dentro da audiência correta no login e publicar o lote completo em GitHub e Produção após revisão independente.
+- Contrato: `/login` resolve somente Aluno/Responsável; `/sistema/login` resolve somente Gestor/Professor. Um perfil entra automaticamente e dois perfis exigem escolha explícita.
+- Identidade: todos os perfis compartilhados devem possuir o mesmo CPF válido e o mesmo e-mail canônico do Supabase Auth.
+- Registro: `ai/operacao/registros/alteracoes/2026-08-24-identidade-auth-multiperfil.md`.
+- Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-24-identidade-auth-multiperfil.md`.
+- Versão proposta: `4.8.0` estável.
 
 ### Critérios de aceite
 
-1. E-mail confirmado no Auth continua exibindo check verde com o rótulo `E-mail confirmado`. `ATENDIDO`.
-2. E-mail pendente no Auth, mas validado pelo gestor, exibe check verde com o rótulo `E-mail validado pelo gestor`. `ATENDIDO`.
-3. O card não mascara nem altera o estado real do Supabase Auth. `ATENDIDO`.
-4. Nenhuma migration, dado, Auth user, RLS ou Edge Function é alterado. `ATENDIDO`.
-5. Teste focado, lint, limite de linhas, revisão independente e smoke autenticado devem aprovar antes da publicação. `ATENDIDO`.
-6. CI e Preview do GitHub devem concluir antes de qualquer merge futuro. `ATENDIDO`.
+1. Um UID Auth pode possuir no máximo um Gestor, um Professor, um Aluno e um Responsável compatíveis. `ATENDIDO_NO_LOTE`.
+2. CPF ou e-mail divergente bloqueia o vínculo sem takeover, troca de senha ou convite indevido. `ATENDIDO_NO_LOTE`.
+3. O login público nunca oferece Gestor/Professor e o institucional nunca oferece Aluno/Responsável. `ATENDIDO_NO_LOTE`.
+4. Primeiro acesso, recuperação de senha, checkout e exclusão de um perfil preservam os demais contextos válidos. `ATENDIDO_NO_LOTE`.
+5. O lote deve passar por branch e PR próprios, CI e Preview, Supabase, merge e smoke web de Produção. `EM_ANDAMENTO`: Supabase e Edge concluídos; merge e smoke web pendentes.
 
-### Evidências e validação
+### Evidências atuais
 
-- Consulta remota somente leitura confirmou o caso real: validação administrativa presente e confirmação do Auth ainda ausente.
-- Node focado: `7/7` testes aprovados.
-- ESLint focado e `git diff --check`: aprovados.
-- Smoke visual autenticado no localhost: check verde exibido no card do aluno afetado.
-- Revisão independente contra a `main` remota sem findings `Critical` ou `Important`; único apontamento `Minor` foi o teste contratual por fonte, compensado pelo smoke visual real.
-- Controle de versão corrigido na branch com o avanço proposto para `4.7.7` e a entrada correspondente no changelog.
-- GitHub Actions `Controle de versão` e `Qualidade do produto`: aprovados no commit final da PR.
-- Preview Vercel da PR: `Ready`.
+- Reunião de três revisores independentes de GitHub, produto e Supabase encerrada com três pareceres `GO` e nenhum finding funcional `P1` ou `P2` aberto.
+- PR GitHub `#90` criada a partir da `main` remota `243cb89fe6f11fdf4b8af6f9444e99cf9c8fdd91`; CI, controle de versão e Vercel Preview aprovados no head `f0e41d54872d4bf8d6246b64b1498941ac5b822c`.
+- As quatorze migrations foram aplicadas em Produção, na ordem registrada, entre os ledgers `20260825015246` e `20260825015455`; o smoke pós-DDL aprovou índices, triggers, ACLs, HMAC, ordem e invariantes de identidade.
+- A Edge Function `portal-user-management` v35 está `ACTIVE`, com `verify_jwt: true`; requisição sem credencial retornou `401` e foi registrada na nova versão sem erro interno.
+- Suítes de handlers, login, feedback e contratos de migrations, lint, TypeScript, teto de linhas e build de produção foram aprovadas.
 
-### Publicação GitHub
+### Ordem de publicação
 
-1. Branch e PR dedicadas somente a este manifesto.
-2. Merge e Vercel Production não integram a autorização atual.
-3. CI e Preview concluíram com sucesso; a PR permanece aberta aguardando autorização explícita para eventual merge.
+1. Branch e PR GitHub publicadas por MCP somente com o manifesto registrado. `CONCLUIDO`.
+2. CI, controle de versão e Vercel Preview aprovados. `CONCLUIDO`.
+3. Quatorze migrations aplicadas em ordem e smoke SQL aprovado. `CONCLUIDO`.
+4. `portal-user-management` v35 publicada e smoke de autorização aprovado. `CONCLUIDO`.
+5. Atualizar evidências imutáveis, regenerar o RAG e revalidar o PR. `EM_ANDAMENTO`.
+6. Tornar a PR pronta, efetuar o merge e executar smoke web de Produção. `PENDENTE`.
 
-### Limites e exclusões
+### Limites
 
-1. Nenhuma operação remota Supabase integra este lote.
-2. O registro da próxima versão na branch não autoriza merge, promoção nem publicação em Produção.
-3. Alterações paralelas do workspace não integram a branch nem o commit remoto.
+1. PRs antigas e alterações paralelas do workspace não integram este lote.
+2. Nenhum usuário de teste ou dado pessoal será criado em Produção apenas para o smoke.
+3. Migrations aplicadas tornam-se imutáveis e serão registradas com o identificador real do ledger.
+4. O smoke autenticado do seletor não criará usuário artificial: Produção ainda possui zero UIDs naturalmente compartilhados entre perfis.
 
 Histórico: `ai/operacao/registros/ALTERACOES.md` e `ai/operacao/registros/alteracoes/`.

@@ -1,6 +1,8 @@
-import { normalizeEmail } from "../auth-users.ts";
+import { findAuthUserByEmail, normalizeEmail } from "../auth-users.ts";
+import { findAuthIdentityConflict } from "../auth-identity-ownership.ts";
 import { getGestorScope } from "../gestor-access.ts";
 import { gestorHasModule } from "../permissions.ts";
+import { logPortalHandlerFailure } from "./handler-error-log.ts";
 import type {
   HandlerContext,
   InstitutionalProfileLinkState,
@@ -24,132 +26,138 @@ const noProfileLink = (
     ...(message ? { message } : {}),
   });
 
+const identityFailure = (
+  context: HandlerContext,
+  error: string,
+  status: number,
+) => context.json({ success: false, error }, status);
+
 /**
- * Vincula um Professor ao mesmo Auth de um usuário institucional existente.
- *
- * A operação é deliberadamente restrita a gestor global com Configurações e
- * exige e-mail e CPF coincidentes. O navegador nunca informa o auth_user_id.
+ * Vincula Professor a um Auth canonicamente comprovado por outro papel.
+ * A operação continua restrita a gestor global com Configurações e nunca usa
+ * user_metadata, envia convite ou altera a senha da identidade reaproveitada.
  */
-export const handleLinkProfessorAuthIdentity = async (
+const linkProfessorAuthIdentity = async (
   context: HandlerContext,
   partner: Partner,
 ) => {
   if (partner.tipo !== "Professor") {
-    return context.json({
-      success: false,
-      error:
-        "Somente perfis de Professor podem receber este vínculo de acesso.",
-    }, 400);
+    return identityFailure(
+      context,
+      "Somente perfis de Professor podem receber este vínculo de acesso.",
+      400,
+    );
   }
 
   const scope = await getGestorScope(context.admin, context.gestor);
   if (!scope.global || !gestorHasModule(context.gestor, "configuracoes")) {
-    // O cadastro de professor continua disponível para gestores do polo, mas
-    // somente a administração global pode unir duas identidades de acesso.
     return noProfileLink(
       context,
       "requires_global_configuration_access",
-      "O cadastro foi salvo. Se esta pessoa também for Gestor, um gestor global com acesso a Configurações deve concluir o vínculo.",
+      "O cadastro foi salvo. Um gestor global com acesso a Configurações deve concluir o vínculo multipapel.",
     );
   }
 
-  if (partner.auth_user_id) return noProfileLink(context, "already_linked");
-
   const email = normalizeEmail(partner.auth_login_email || partner.email);
+
+  if (partner.auth_user_id) {
+    let authResult: any;
+    try {
+      authResult = await context.admin.auth.admin.getUserById(
+        partner.auth_user_id,
+      );
+    } catch (error) {
+      logPortalHandlerFailure(ACTION, "get-linked-auth-user", error);
+      return identityFailure(
+        context,
+        "Não foi possível verificar a identidade de acesso do professor.",
+        500,
+      );
+    }
+
+    const authUser = authResult?.data?.user;
+    if (authResult?.error || !authUser?.id) {
+      return identityFailure(
+        context,
+        "A identidade de acesso vinculada ao professor não está mais disponível.",
+        409,
+      );
+    }
+    if (email && normalizeEmail(authUser.email) !== email) {
+      return identityFailure(
+        context,
+        "O e-mail do professor não confere com a identidade de acesso institucional.",
+        409,
+      );
+    }
+
+    const ownership = await findAuthIdentityConflict(
+      context.admin,
+      partner,
+      authUser.id,
+    );
+    if (ownership.error) return identityFailure(context, ownership.error, 500);
+    if (ownership.conflict) {
+      return identityFailure(context, ownership.conflict, 409);
+    }
+    return noProfileLink(context, "already_linked");
+  }
+
   if (!email) return noProfileLink(context, "not_eligible");
 
   const professorCpf = onlyDigits(partner.cpf_cnpj);
-  if (!professorCpf) {
-    return context.json({
-      success: false,
-      error:
-        "Informe o CPF do professor antes de vincular o acesso institucional.",
-    }, 409);
+  if (professorCpf.length !== 11) {
+    return identityFailure(
+      context,
+      "Informe o CPF do professor antes de vincular o acesso institucional.",
+      409,
+    );
   }
 
-  const { data: systemUserCandidates, error: systemUserError } = await context
-    .admin
-    .from("usuarios_sistema")
-    .select("id, email, auth_user_id, cpf")
-    .ilike("email", email)
-    .limit(2);
-
-  if (systemUserError) {
-    return context.json({
-      success: false,
-      error: "Não foi possível verificar o perfil institucional existente.",
-    }, 500);
+  let authUser: any;
+  try {
+    authUser = await findAuthUserByEmail(context.admin, email);
+  } catch (error) {
+    logPortalHandlerFailure(ACTION, "find-auth-user", error);
+    return identityFailure(
+      context,
+      "Não foi possível localizar a identidade de acesso existente.",
+      500,
+    );
   }
-
-  const systemUser = (systemUserCandidates || []).find((candidate: any) =>
-    normalizeEmail(candidate?.email) === email
-  );
-  if (!systemUser) return noProfileLink(context, "no_matching_gestor");
-
-  if (!systemUser.auth_user_id) {
-    return context.json({
-      success: false,
-      error: "Não foi possível verificar o perfil institucional existente.",
-    }, 409);
-  }
-
-  const systemUserCpf = onlyDigits(systemUser.cpf);
-  if (!systemUserCpf || systemUserCpf !== professorCpf) {
-    return context.json({
-      success: false,
-      error:
-        "O CPF do professor não confere com o usuário institucional existente.",
-    }, 409);
-  }
-
-  const { data: authData, error: authError } = await context.admin.auth.admin
-    .getUserById(systemUser.auth_user_id);
-  if (authError) {
-    return context.json({
-      success: false,
-      error: "Não foi possível verificar a identidade de acesso do professor.",
-    }, 500);
-  }
-
-  const authUser = authData?.user;
   if (!authUser?.id) {
-    return context.json({
-      success: false,
-      error:
-        "A identidade de acesso do usuário institucional não está mais disponível.",
-    }, 409);
+    return noProfileLink(
+      context,
+      "no_matching_gestor",
+      "Nenhuma identidade de acesso existente e compatível foi localizada.",
+    );
   }
-
   if (normalizeEmail(authUser.email) !== email) {
-    return context.json({
-      success: false,
-      error:
-        "O e-mail do professor não confere com a identidade de acesso institucional.",
-    }, 409);
+    return identityFailure(
+      context,
+      "O e-mail do professor não confere com a identidade de acesso institucional.",
+      409,
+    );
   }
 
-  const { data: otherPartner, error: otherPartnerError } = await context.admin
-    .from("parceiros")
-    .select("id")
-    .eq("auth_user_id", authUser.id)
-    .neq("id", partner.id)
-    .limit(1);
-
-  if (otherPartnerError) {
-    return context.json({
-      success: false,
-      error: "Não foi possível validar os vínculos de acesso existentes.",
-    }, 500);
+  const ownership = await findAuthIdentityConflict(
+    context.admin,
+    partner,
+    authUser.id,
+  );
+  if (ownership.error) return identityFailure(context, ownership.error, 500);
+  if (ownership.conflict) {
+    return identityFailure(context, ownership.conflict, 409);
+  }
+  if (!ownership.hasCompatibleProfile) {
+    return noProfileLink(
+      context,
+      "no_matching_gestor",
+      "O Auth localizado não possui outro perfil canônico que comprove a identidade desta pessoa.",
+    );
   }
 
-  if (otherPartner?.length) {
-    return context.json({
-      success: false,
-      error: "Esta identidade de acesso já pertence a outro parceiro.",
-    }, 409);
-  }
-
-  const { data: linkedPartner, error: linkError } = await context.admin
+  let linkQuery = context.admin
     .from("parceiros")
     .update({
       auth_user_id: authUser.id,
@@ -159,27 +167,48 @@ export const handleLinkProfessorAuthIdentity = async (
       primeiro_acesso_institucional_operacao_id: null,
     })
     .eq("id", partner.id)
+    .eq("tipo", "Professor")
+    .eq("email", partner.email)
+    .eq("cpf_cnpj", partner.cpf_cnpj)
     .is("auth_user_id", null)
-    .select("id, auth_user_id")
+    .select(
+      "id, auth_user_id, primeiro_acesso_institucional_pendente",
+    );
+  linkQuery = partner.auth_login_email
+    ? linkQuery.eq("auth_login_email", partner.auth_login_email)
+    : linkQuery.is("auth_login_email", null);
+  if (partner.status) linkQuery = linkQuery.eq("status", partner.status);
+  const { data: linkedPartner, error: linkError } = await linkQuery
     .maybeSingle();
 
   if (linkError) {
-    const status = linkError.code === "23505" ? 409 : 500;
-    return context.json({
-      success: false,
-      error: status === 409
-        ? "Esta identidade de acesso já pertence a outro parceiro."
+    const retryableConflict = ["40001", "40P01"].includes(linkError.code);
+    const status = retryableConflict || ["23505", "23514"].includes(
+        linkError.code,
+      )
+      ? 409
+      : 500;
+    logPortalHandlerFailure(ACTION, "link-professor", linkError);
+    return identityFailure(
+      context,
+      retryableConflict
+        ? "O vínculo de acesso mudou durante a operação. Atualize os dados e tente novamente."
+        : status === 409
+        ? "Esta identidade de acesso já pertence a outro parceiro incompatível."
         : "Não foi possível vincular o acesso institucional ao professor.",
-    }, status);
+      status,
+    );
+  }
+  if (!linkedPartner) {
+    return identityFailure(
+      context,
+      "O vínculo de acesso mudou durante a operação. Atualize o cadastro e tente novamente.",
+      409,
+    );
   }
 
-  if (!linkedPartner) {
-    return context.json({
-      success: false,
-      error:
-        "O vínculo de acesso mudou durante a operação. Atualize o cadastro e tente novamente.",
-    }, 409);
-  }
+  const institutionalAccessPending =
+    linkedPartner.primeiro_acesso_institucional_pendente === true;
 
   return context.json({
     success: true,
@@ -187,6 +216,25 @@ export const handleLinkProfessorAuthIdentity = async (
     userId: authUser.id,
     profileLinked: true,
     profileLinkState: "linked",
-    message: "O acesso existente também foi vinculado ao perfil de Professor.",
+    institutionalAccessPending,
+    message: institutionalAccessPending
+      ? "O perfil de Professor foi vinculado, mas o acesso institucional permanece pendente até a pessoa concluir o primeiro acesso da identidade existente."
+      : "O acesso existente também foi vinculado ao perfil de Professor. A senha atual foi preservada.",
   });
+};
+
+export const handleLinkProfessorAuthIdentity = async (
+  context: HandlerContext,
+  partner: Partner,
+) => {
+  try {
+    return await linkProfessorAuthIdentity(context, partner);
+  } catch (error) {
+    logPortalHandlerFailure(ACTION, "unhandled", error);
+    return identityFailure(
+      context,
+      "Não foi possível vincular o acesso institucional ao professor.",
+      500,
+    );
+  }
 };

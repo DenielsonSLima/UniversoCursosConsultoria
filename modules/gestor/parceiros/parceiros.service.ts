@@ -18,6 +18,7 @@ const ensureProfessorInstitutionalAccess = async (partner: any) => {
       authUserId: result.userId || partner.authUserId || null,
       professorAccessInviteSent: Boolean(result.inviteSent),
       institutionalProfileLinked: Boolean(result.profileLinked),
+      institutionalAccessPending: Boolean(result.institutionalAccessPending),
       institutionalProfileLinkState: result.profileLinkState || null,
       institutionalProfileLinkMessage: result.message || null,
       institutionalProfileLinkError: null,

@@ -2,7 +2,20 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
-Histórico anterior: [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+Histórico anterior: [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+
+## [4.8.0] - 2026-08-24
+
+### Adicionado
+
+- Uma mesma identidade autenticada pode reunir, de forma controlada, os perfis Gestor, Professor, Aluno e Responsável.
+- O login público oferece somente Aluno e Responsável; o login institucional oferece somente Gestor e Professor. Quando há um único perfil na audiência, o acesso é automático; quando há dois, a pessoa escolhe o contexto.
+
+### Segurança e qualidade
+
+- O compartilhamento exige CPF válido e e-mail canônico iguais em todos os perfis, preserva a senha existente e rejeita colisões ou divergências antes do vínculo.
+- Travas transacionais, constraints diferíveis e limpeza conservadora de Auth protegem vínculos e exclusões concorrentes.
+- Recuperação de senha, primeiro acesso, checkout, convites assinados e Edge Function foram revisados em conjunto, com contratos multiperfil incorporados ao gate do GitHub.
 
 ## [4.7.7] - 2026-08-24
 
@@ -460,38 +473,3 @@ Histórico anterior: [02/08/2026 — continuação](./changelog/2026-08-02-parte
 - Builds web e automações de qualidade foram alinhados ao Node.js 24.
 - Os projetos nativos iOS e Android foram avançados para o build 26 da versão 1.0.
 - TypeScript, ESLint, testes contratuais, build de produção, sincronização Capacitor e builds de simulador iOS e Android foram incluídos na validação desta versão.
-
-## [2.2.3-beta.25] - 2026-08-03
-
-### Alterado
-
-- Todas as unidades passam a atender de segunda a sexta, das 08:00 às 17:00, e aos sábados, das 08:00 às 16:00.
-- Domingos e feriados ficam identificados como períodos sem funcionamento.
-- Novos polos herdam automaticamente o mesmo horário padrão na configuração de atendimento.
-- A listagem de Polos e Filiais passa a manter a matriz sempre no primeiro card, seguida dos demais polos por cidade e nome.
-
-### Qualidade
-
-- A configuração foi conferida nas quatro unidades ativas e na consulta pública anônima usada pelo site.
-
-## [2.2.3-beta.24] - 2026-08-03
-
-### Adicionado
-
-- A página Fale Conosco agora publica automaticamente as unidades ativas cadastradas em Empresas e Polos, incluindo a unidade de Propriá.
-- O complemento do endereço passou a ser persistido nos cadastros de empresa e polo e exibido no site público.
-
-### Alterado
-
-- Todas as unidades passaram a exibir os dois números oficiais de WhatsApp, com abertura direta da conversa.
-- Endereços, contatos, imagens e horários públicos deixaram de ser duplicados no componente e agora usam uma consulta pública restrita aos campos necessários.
-- A landing de cursos técnicos ganhou cards mais compactos, cidade do polo e chamadas de inscrição mais distintas, sem divulgar a quantidade de vagas.
-
-### Corrigido
-
-- A navegação móvel do aluno voltou a receber a permissão de calendário exigida pelo componente.
-- Unidades sem horário configurado agora informam que o atendimento está sob consulta, sem exibir uma programação inventada.
-
-### Qualidade
-
-- TypeScript, lint e build de produção foram validados antes da publicação.

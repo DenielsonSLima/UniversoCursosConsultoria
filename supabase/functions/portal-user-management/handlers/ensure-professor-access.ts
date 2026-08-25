@@ -1,6 +1,12 @@
 import { findAuthUserByEmail, normalizeEmail } from "../auth-users.ts";
 import { findAuthIdentityConflict } from "../auth-identity-ownership.ts";
 import { handleLinkProfessorAuthIdentity } from "./link-professor-auth-identity.ts";
+import { logPortalHandlerFailure } from "./handler-error-log.ts";
+import {
+  buildPartnerInviteOperationMetadata,
+  readValidPartnerInviteOperationMarker,
+} from "./partner-invite-reconciliation.ts";
+import { readCurrentProfessorBinding } from "./professor-access-state.ts";
 import { resolveRedirectTarget } from "../redirects.ts";
 import type {
   HandlerContext,
@@ -10,7 +16,6 @@ import type {
 
 const ACTION = "ensure-professor-access";
 const EMAIL_PATTERN = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
-const INVITE_OPERATION_NONCE_KEY = "invite_operation_nonce";
 
 type AuthUserRecord = {
   id?: string;
@@ -21,10 +26,6 @@ type AuthUserRecord = {
 type AuthUserResult = {
   data?: { user?: AuthUserRecord | null } | null;
   error?: { message?: string } | null;
-};
-
-type SystemUserCandidate = {
-  email?: string | null;
 };
 
 const noProfessorAccess = (
@@ -47,50 +48,11 @@ const isInactivePartner = (status?: string | null) => {
   );
 };
 
-const hasInviteOperationNonce = (
-  authUser: AuthUserRecord,
-  expectedNonce: string,
-  partnerId: string,
-) =>
-  String(authUser?.user_metadata?.[INVITE_OPERATION_NONCE_KEY] || "") ===
-    expectedNonce &&
-  authUser?.user_metadata?.origem === "cadastro_professor" &&
-  String(authUser?.user_metadata?.partner_id || "") === partnerId;
-
-const readCurrentPartnerBinding = async (
-  admin: HandlerContext["admin"],
-  partnerId: string,
-) => {
-  try {
-    const { data, error } = await admin
-      .from("parceiros")
-      .select("id, tipo, status, email, auth_user_id, auth_login_email")
-      .eq("id", partnerId)
-      .maybeSingle();
-    if (error) {
-      return {
-        partner: null,
-        error: error.message ||
-          "Não foi possível verificar o vínculo atual do professor.",
-      };
-    }
-    return { partner: data || null, error: null };
-  } catch (error) {
-    return {
-      partner: null,
-      error: error instanceof Error
-        ? error.message
-        : "Não foi possível verificar o vínculo atual do professor.",
-    };
-  }
-};
-
 /**
  * Auth e dados do parceiro não participam da mesma transação. Depois que o
  * convite foi criado, apagar o Auth com base em uma leitura anterior deixa
  * uma janela em que outro fluxo pode tê-lo vinculado. Preserve a identidade
- * para reconciliação manual: sem perfil vinculado ela não ganha acesso ao
- * portal institucional, e nunca arriscamos apagar uma conta de terceiro.
+ * para reconciliação segura; sem vínculo ela não ganha acesso institucional.
  */
 const preserveInvitedAuthForReconciliation = (
   context: HandlerContext,
@@ -116,9 +78,9 @@ const alreadyLinked = (
   });
 
 /**
- * Prepara o primeiro acesso de um Professor sem ampliar o vínculo especial
- * Professor↔Gestor. Contas existentes nunca são apropriadas por e-mail: a
- * única reutilização é delegada ao handler que exige CPF e privilégio global.
+ * Prepara o primeiro acesso de um Professor. Uma identidade preexistente só
+ * é reutilizada quando outro perfil canônico comprova o mesmo CPF e e-mail;
+ * nesse caso a senha é preservada e nenhum novo convite é enviado.
  */
 export const handleEnsureProfessorAccess = async (
   context: HandlerContext,
@@ -137,11 +99,11 @@ export const handleEnsureProfessorAccess = async (
     try {
       authData = await admin.auth.admin.getUserById(partner.auth_user_id);
     } catch (error) {
+      logPortalHandlerFailure(ACTION, "get-auth-user", error);
       return json({
         success: false,
-        error: error instanceof Error
-          ? error.message
-          : "Não foi possível verificar a identidade de acesso do professor.",
+        error:
+          "Não foi possível verificar a identidade de acesso do professor.",
       }, 500);
     }
 
@@ -168,6 +130,18 @@ export const handleEnsureProfessorAccess = async (
       }, 409);
     }
 
+    const identityOwnership = await findAuthIdentityConflict(
+      admin,
+      partner,
+      authUser.id,
+    );
+    if (identityOwnership.error) {
+      return json({ success: false, error: identityOwnership.error }, 500);
+    }
+    if (identityOwnership.conflict) {
+      return json({ success: false, error: identityOwnership.conflict }, 409);
+    }
+
     return alreadyLinked(context, authUser.id);
   }
 
@@ -188,40 +162,23 @@ export const handleEnsureProfessorAccess = async (
     }, 400);
   }
 
-  const { data: systemUserCandidates, error: systemUserError } = await admin
-    .from("usuarios_sistema")
-    .select("id, email, auth_user_id, cpf")
-    .ilike("email", email)
-    .limit(2);
-  if (systemUserError) {
-    return json({
-      success: false,
-      error: "Não foi possível verificar o perfil institucional existente.",
-    }, 500);
-  }
-
-  const matchingSystemUser = (systemUserCandidates || []).find(
-    (candidate: SystemUserCandidate) =>
-      normalizeEmail(candidate?.email) === email,
-  );
-  if (matchingSystemUser) {
-    return handleLinkProfessorAuthIdentity(context, partner);
-  }
-
   let existingAuthUser: AuthUserRecord | null;
   try {
     existingAuthUser = await findAuthUserByEmail(admin, email);
   } catch (error) {
+    logPortalHandlerFailure(ACTION, "find-auth-user", error);
     return json({
       success: false,
-      error: error instanceof Error
-        ? error.message
-        : "Não foi possível localizar usuário no Supabase Auth.",
+      error: "Não foi possível localizar a identidade de acesso do professor.",
     }, 500);
   }
 
+  let invitedAuthUser: (AuthUserRecord & { id: string }) | null = null;
+  let inviteOperationRequestId: string | null = null;
+  let inviteSent = false;
+
   if (existingAuthUser?.id) {
-    const currentBinding = await readCurrentPartnerBinding(admin, partner.id);
+    const currentBinding = await readCurrentProfessorBinding(admin, partner.id);
     if (currentBinding.error) {
       return json({ success: false, error: currentBinding.error }, 500);
     }
@@ -238,7 +195,7 @@ export const handleEnsureProfessorAccess = async (
 
     const identityConflict = await findAuthIdentityConflict(
       admin,
-      partner.id,
+      partner,
       existingAuthUser.id,
     );
     if (identityConflict.error) {
@@ -248,86 +205,161 @@ export const handleEnsureProfessorAccess = async (
       return json({ success: false, error: identityConflict.conflict }, 409);
     }
 
-    return json({
-      success: false,
-      error:
-        "Já existe uma identidade de acesso para este e-mail sem vínculo seguro com este professor. Regularize a identidade antes de enviar um novo convite.",
-    }, 409);
-  }
-
-  const redirectResolution = resolveRedirectTarget("/recuperar-senha");
-  if (!redirectResolution.redirectTo) {
-    return json({
-      success: false,
-      error: redirectResolution.error ||
-        "Não foi possível preparar o link de primeiro acesso.",
-    }, redirectResolution.status);
-  }
-
-  const invitationNonce = crypto.randomUUID();
-  let inviteResult: AuthUserResult;
-  try {
-    inviteResult = await admin.auth.admin.inviteUserByEmail(email, {
-      data: {
-        nome: partner.nome,
-        origem: "cadastro_professor",
-        tipo: "Professor",
-        partner_id: partner.id,
-        [INVITE_OPERATION_NONCE_KEY]: invitationNonce,
-      },
-      redirectTo: redirectResolution.redirectTo,
-    });
-  } catch (error) {
-    return json({
-      success: false,
-      error: error instanceof Error
-        ? error.message
-        : "Não foi possível enviar o convite de primeiro acesso ao professor.",
-    }, 500);
-  }
-
-  const invitedAuthUser = !inviteResult.error && inviteResult.data?.user
-    ? inviteResult.data.user
-    : null;
-  if (!invitedAuthUser?.id) {
-    // Não vincule uma identidade reencontrada após falha incerta do convite:
-    // user_metadata é alterável pelo titular e não prova a sua titularidade.
-    const currentBinding = await readCurrentPartnerBinding(admin, partner.id);
-    if (currentBinding.error) {
-      return json({ success: false, error: currentBinding.error }, 500);
+    if (identityConflict.hasCompatibleProfile) {
+      return handleLinkProfessorAuthIdentity(context, partner);
     }
-    if (currentBinding.partner?.auth_user_id) {
-      return alreadyLinked(context, currentBinding.partner.auth_user_id);
+
+    try {
+      const operation = await readValidPartnerInviteOperationMarker(
+        context,
+        existingAuthUser,
+        partner,
+        email,
+      );
+      if (operation) {
+        invitedAuthUser = { ...existingAuthUser, id: existingAuthUser.id };
+        inviteOperationRequestId = operation.requestId;
+      }
+    } catch (error) {
+      logPortalHandlerFailure(ACTION, "validate-existing-invite-proof", error);
+      return json({
+        success: false,
+        error:
+          "Não foi possível validar a prova segura do convite existente do professor.",
+      }, 500);
     }
-    return json({
-      success: false,
-      error: inviteResult.error?.message ||
-        "Não foi possível confirmar o convite de primeiro acesso. Regularize este e-mail antes de tentar novamente.",
-    }, 500);
+
+    if (!invitedAuthUser) {
+      return json({
+        success: false,
+        error:
+          "Já existe uma identidade de acesso para este e-mail sem vínculo seguro com este professor. Regularize a identidade antes de enviar um novo convite.",
+      }, 409);
+    }
   }
 
-  // GoTrue pode reenviar convite para uma identidade não confirmada criada
-  // por outra operação. O nonce só existe quando esta chamada criou o Auth;
-  // sem essa prova, não vinculamos uma conta preexistente ao Professor.
-  if (!hasInviteOperationNonce(invitedAuthUser, invitationNonce, partner.id)) {
-    return json({
-      success: false,
-      error:
-        "Não foi possível comprovar que o convite criou uma nova identidade para este professor. Regularize este e-mail antes de tentar novamente.",
-    }, 409);
+  if (!invitedAuthUser) {
+    const redirectResolution = resolveRedirectTarget("/recuperar-senha");
+    if (!redirectResolution.redirectTo) {
+      return json({
+        success: false,
+        error: redirectResolution.error ||
+          "Não foi possível preparar o link de primeiro acesso.",
+      }, redirectResolution.status);
+    }
+
+    const invitationNonce = crypto.randomUUID();
+    let invitationMetadata: Record<string, unknown>;
+    try {
+      invitationMetadata = await buildPartnerInviteOperationMetadata(
+        context,
+        invitationNonce,
+        partner,
+        email,
+        { nome: partner.nome },
+      );
+    } catch (error) {
+      logPortalHandlerFailure(ACTION, "build-invite-proof", error);
+      return json({
+        success: false,
+        error:
+          "A configuração segura de reconciliação do convite está indisponível.",
+      }, 500);
+    }
+
+    let inviteResult: AuthUserResult | null = null;
+    try {
+      inviteResult = await admin.auth.admin.inviteUserByEmail(email, {
+        data: invitationMetadata,
+        redirectTo: redirectResolution.redirectTo,
+      });
+    } catch (error) {
+      logPortalHandlerFailure(ACTION, "invite-auth-user", error);
+    }
+    if (inviteResult?.error) {
+      logPortalHandlerFailure(
+        ACTION,
+        "invite-auth-user-result",
+        inviteResult.error,
+      );
+    }
+
+    const returnedAuthUser = !inviteResult?.error && inviteResult?.data?.user
+      ? inviteResult.data.user
+      : null;
+    let candidateAuthUser = returnedAuthUser;
+    if (!candidateAuthUser?.id) {
+      const currentBinding = await readCurrentProfessorBinding(
+        admin,
+        partner.id,
+      );
+      if (currentBinding.error) {
+        return json({ success: false, error: currentBinding.error }, 500);
+      }
+      if (currentBinding.partner?.auth_user_id) {
+        return alreadyLinked(context, currentBinding.partner.auth_user_id);
+      }
+      try {
+        candidateAuthUser = await findAuthUserByEmail(admin, email);
+      } catch (error) {
+        logPortalHandlerFailure(ACTION, "requery-invited-auth-user", error);
+      }
+      if (!candidateAuthUser?.id) {
+        return json({
+          success: false,
+          error:
+            "Não foi possível confirmar o convite de primeiro acesso. Regularize este e-mail antes de tentar novamente.",
+        }, 500);
+      }
+    }
+
+    if (normalizeEmail(candidateAuthUser.email) !== email) {
+      return preserveInvitedAuthForReconciliation(
+        context,
+        "A identidade criada para o convite não corresponde ao e-mail do professor.",
+        409,
+      );
+    }
+
+    try {
+      const operation = await readValidPartnerInviteOperationMarker(
+        context,
+        candidateAuthUser,
+        partner,
+        email,
+      );
+      if (operation) {
+        invitedAuthUser = { ...candidateAuthUser, id: candidateAuthUser.id };
+        inviteOperationRequestId = operation.requestId;
+        inviteSent = Boolean(returnedAuthUser);
+      }
+    } catch (error) {
+      logPortalHandlerFailure(ACTION, "validate-returned-invite-proof", error);
+      return preserveInvitedAuthForReconciliation(
+        context,
+        "Não foi possível validar a prova segura do convite do professor.",
+      );
+    }
+    if (!invitedAuthUser) {
+      return preserveInvitedAuthForReconciliation(
+        context,
+        "Não foi possível comprovar que o convite criou uma nova identidade para este professor.",
+        409,
+      );
+    }
   }
 
-  if (normalizeEmail(invitedAuthUser.email) !== email) {
+  if (!inviteOperationRequestId) {
     return preserveInvitedAuthForReconciliation(
       context,
-      "A identidade criada para o convite não corresponde ao e-mail do professor.",
+      "Não foi possível recuperar a operação segura do convite do professor.",
       409,
     );
   }
 
   const identityConflict = await findAuthIdentityConflict(
     admin,
-    partner.id,
+    partner,
     invitedAuthUser.id,
   );
   if (identityConflict.error) {
@@ -343,8 +375,18 @@ export const handleEnsureProfessorAccess = async (
       409,
     );
   }
+  if (identityConflict.hasCompatibleProfile) {
+    return preserveInvitedAuthForReconciliation(
+      context,
+      "A identidade ganhou outro vínculo durante o envio do convite. Revise os cadastros antes de tentar novamente.",
+      409,
+    );
+  }
 
-  const currentBeforeLink = await readCurrentPartnerBinding(admin, partner.id);
+  const currentBeforeLink = await readCurrentProfessorBinding(
+    admin,
+    partner.id,
+  );
   if (currentBeforeLink.error) {
     return preserveInvitedAuthForReconciliation(
       context,
@@ -375,7 +417,7 @@ export const handleEnsureProfessorAccess = async (
       auth_login_email: email,
       acesso_institucional_origem: "CONVITE",
       primeiro_acesso_institucional_pendente: true,
-      primeiro_acesso_institucional_operacao_id: invitationNonce,
+      primeiro_acesso_institucional_operacao_id: inviteOperationRequestId,
     })
     .eq("id", partner.id)
     .eq("tipo", "Professor")
@@ -389,7 +431,10 @@ export const handleEnsureProfessorAccess = async (
     .maybeSingle();
 
   if (linkError || !linkedPartner) {
-    const currentBinding = await readCurrentPartnerBinding(admin, partner.id);
+    if (linkError) {
+      logPortalHandlerFailure(ACTION, "link-professor", linkError);
+    }
+    const currentBinding = await readCurrentProfessorBinding(admin, partner.id);
     if (
       !currentBinding.error &&
       currentBinding.partner?.auth_user_id === invitedAuthUser.id
@@ -402,7 +447,7 @@ export const handleEnsureProfessorAccess = async (
     // reconciliação, mantendo a conta sem acesso institucional até o vínculo.
     const postLinkConflict = await findAuthIdentityConflict(
       admin,
-      partner.id,
+      partner,
       invitedAuthUser.id,
     );
     if (postLinkConflict.error) {
@@ -419,7 +464,9 @@ export const handleEnsureProfessorAccess = async (
       }, 409);
     }
 
-    const status = linkError?.code === "23505" ? 409 : 500;
+    const status = ["23505", "23514"].includes(linkError?.code || "")
+      ? 409
+      : 500;
     return preserveInvitedAuthForReconciliation(
       context,
       status === 409
@@ -433,10 +480,12 @@ export const handleEnsureProfessorAccess = async (
     success: true,
     action: ACTION,
     userId: invitedAuthUser.id,
-    inviteSent: true,
+    inviteSent,
     profileLinked: true,
     profileLinkState: "linked",
-    message:
-      "Convite de primeiro acesso enviado para o e-mail informado do professor.",
+    institutionalAccessPending: true,
+    message: inviteSent
+      ? "Convite de primeiro acesso enviado para o e-mail informado do professor."
+      : "Convite de primeiro acesso existente reconciliado com o professor.",
   });
 };

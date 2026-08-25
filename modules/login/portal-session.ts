@@ -270,7 +270,7 @@ export const getInstitutionalProfiles = async (
 ): Promise<PortalAuthProfile[]> => {
   const resolvedUser = authenticatedUser || await getAuthenticatedUser();
   if (!resolvedUser) return [];
-  return getContextProfiles(resolvedUser, ['Gestor', 'Professor', 'Coordenador']);
+  return getContextProfiles(resolvedUser, ['Gestor', 'Professor']);
 };
 
 const getLinkedAlunoFailureMessage = (message: string) => {
@@ -278,7 +278,7 @@ const getLinkedAlunoFailureMessage = (message: string) => {
     return 'Este acesso já pertence a um perfil de professor e não pode receber também um perfil de aluno. Use um acesso de aluno ou fale com a secretaria.';
   }
   if (message.includes('ALUNO_CHECKOUT_CPF_ORIGEM_OBRIGATORIO')) {
-    return 'Para comprar curso como aluno, complete o CPF no cadastro do professor/gestor ou crie um cadastro de aluno.';
+    return 'Para comprar curso como aluno, complete o CPF no perfil atual ou crie um cadastro de aluno.';
   }
   if (message.includes('ALUNO_CHECKOUT_CPF_JA_VINCULADO')) {
     return 'Já existe um cadastro de aluno com este CPF vinculado a outro acesso. Fale com a secretaria para revisar o cadastro.';
@@ -300,8 +300,14 @@ export const ensureLinkedAlunoProfile = async (
   const existingAluno = await getPortalProfile({ preferredRole: 'Aluno', allowedRoles: ['Aluno'] });
   if (existingAluno) return existingAluno;
   if (!sourceProfile) {
-    sourceProfile = await getPortalProfile({ preferredRole: 'Gestor', allowedRoles: ['Gestor'] })
-      || await getPortalProfile({ preferredRole: 'Professor', allowedRoles: ['Professor'] });
+    const responsavel = await getPortalProfile({
+      preferredRole: 'Responsavel',
+      allowedRoles: ['Responsavel'],
+    });
+    sourceProfile = responsavel?.requiresPasswordReset === false
+      ? responsavel
+      : await getPortalProfile({ preferredRole: 'Gestor', allowedRoles: ['Gestor'] })
+        || await getPortalProfile({ preferredRole: 'Professor', allowedRoles: ['Professor'] });
   }
   if (sourceProfile?.tipo === 'Aluno') return sourceProfile;
   if (!sourceProfile?.contextId && !sourceProfile?.id) return null;

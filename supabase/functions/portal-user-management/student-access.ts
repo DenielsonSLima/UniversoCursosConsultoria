@@ -14,6 +14,7 @@ export type StudentAccessPatch = {
   acesso_erro?: string | null;
   convite_enviado_em?: string | null;
   acesso_ativado_em?: string | null;
+  senha_atualizada_em?: string | null;
 };
 
 const ACCESS_COLUMNS = new Set([
@@ -39,6 +40,9 @@ const legacyPatchFrom = (patch: StudentAccessPatch) => {
   }
   if ("troca_senha_obrigatoria" in patch) {
     legacyPatch.troca_senha_obrigatoria = patch.troca_senha_obrigatoria;
+  }
+  if ("senha_atualizada_em" in patch) {
+    legacyPatch.senha_atualizada_em = patch.senha_atualizada_em;
   }
   return legacyPatch;
 };

@@ -2,7 +2,7 @@
 // File: App.tsx
 
 import React, { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router';
 
 import SeoManager from './modules/public/components/SeoManager';
 import VersionedPortal from './modules/shared/components/VersionedPortal';
@@ -16,6 +16,7 @@ import NativeTurnstileChallengePage from './modules/shared/auth/NativeTurnstileC
 import NativePushBridge from './modules/aluno/native-app/NativePushBridge';
 import NativePushPermissionBootstrap from './modules/aluno/native-app/NativePushPermissionBootstrap';
 import { TECHNICAL_LANDING_ROUTE_PATTERN } from './modules/public/landing-pages/cursos-tecnicos/technicalLanding.routes';
+import { getLegacyCoordinatorRedirect } from './modules/login/coordinator-portal-redirect';
 
 const PublicPage = lazy(() => import('./modules/public/public.page'));
 const FaqPage = lazy(() => import('./modules/public/faq/FaqPage'));
@@ -46,16 +47,20 @@ const LoginPage = lazy(() => import('./modules/login/LoginPage'));
 const GestorPage = lazy(() => import('./modules/gestor/gestor.page'));
 const ProfessorPage = lazy(() => import('./modules/professor/professor.page'));
 const ResponsavelPage = lazy(() => import('./modules/responsavel/responsavel.page'));
-const CoordenadorPage = lazy(() => import('./modules/coordenador/coordenador.page'));
 const AlunoPage = lazy(() => import('./modules/aluno/aluno.page'));
 const TechnicalLandingRoute = lazy(() => import('./modules/public/landing-pages/cursos-tecnicos/TechnicalLandingRoute'));
 const BioPage = lazy(() => import('./modules/public/bio/BioPage'));
+const LegacyCoordinatorRedirect = () => {
+  const location = useLocation();
+  return <Navigate to={getLegacyCoordinatorRedirect(location)} replace />;
+};
+
 const RouteLoadingScreen = () => {
   const pathname = window.location.pathname;
   if (pathname.startsWith('/gestor')) return <AccessCheckingScreen portal="Gestor" />;
   if (pathname.startsWith('/professor')) return <AccessCheckingScreen portal="Professor" />;
   if (pathname.startsWith('/responsavel')) return <AccessCheckingScreen portal="Responsavel" />;
-  if (pathname.startsWith('/coordenador')) return <AccessCheckingScreen portal="Coordenador" />;
+  if (pathname.startsWith('/coordenador')) return <AccessCheckingScreen portal="Professor" />;
   if (pathname === '/aluno' || pathname.startsWith('/aluno/')) return <AlunoAppSplash />;
 
   return (
@@ -157,7 +162,7 @@ const App: React.FC = () => {
         <Route path="/gestor/*" element={<VersionedPortal><GestorPage /></VersionedPortal>} />
         <Route path="/professor/*" element={<VersionedPortal><ProfessorPage /></VersionedPortal>} />
         <Route path="/responsavel/*" element={<VersionedPortal><ResponsavelPage /></VersionedPortal>} />
-        <Route path="/coordenador/*" element={<VersionedPortal><CoordenadorPage /></VersionedPortal>} />
+        <Route path="/coordenador/*" element={<LegacyCoordinatorRedirect />} />
         <Route path="/cad-aed" element={<Navigate to="/sistema/login" replace />} />
         <Route path="/aluno/*" element={<VersionedPortal><AlunoPage /></VersionedPortal>} />
 

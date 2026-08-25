@@ -50,6 +50,7 @@ Deno.test("mantém vínculo Auth durante deploy anterior à migration", async ()
     auth_user_id: "auth-1",
     auth_login_email: "aluno@example.com",
     troca_senha_obrigatoria: true,
+    senha_atualizada_em: "2026-08-20T10:00:00.000Z",
     acesso_status: "convite_enviado",
     acesso_erro: null,
   });
@@ -60,6 +61,7 @@ Deno.test("mantém vínculo Auth durante deploy anterior à migration", async ()
     auth_user_id: "auth-1",
     auth_login_email: "aluno@example.com",
     troca_senha_obrigatoria: true,
+    senha_atualizada_em: "2026-08-20T10:00:00.000Z",
   });
 });
 

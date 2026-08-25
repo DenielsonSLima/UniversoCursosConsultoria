@@ -10,7 +10,8 @@
     "ai/operacao/registros/alteracoes/2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3.md",
     "ai/operacao/registros/alteracoes/2026-08-24-restauracao-capa-diario-slots-assinatura.md",
     "ai/operacao/registros/alteracoes/2026-08-24-caixa-assinaturas-uuid-matriz-4-7-6.md",
-    "ai/operacao/registros/alteracoes/2026-08-24-card-email-validado-gestor.md"
+    "ai/operacao/registros/alteracoes/2026-08-24-card-email-validado-gestor.md",
+    "ai/operacao/registros/alteracoes/2026-08-24-identidade-auth-multiperfil.md"
   ],
   "exemptions": [
     {
@@ -376,6 +377,58 @@
       "remoteId": "20260823210922",
       "sha256": "9f384743498fed9174d0273d5b70c992a01a8caa49879217a108f7fb8a79a409",
       "reason": "Migration já aplicada em produção; o histórico precisa permanecer byte a byte imutável."
+    },
+    { "path": "supabase/migrations/20260824113000_lock_auth_identity_before_profile_link.sql", "kind": "applied-migration",
+      "remoteId": "20260825015246", "sha256": "f24cbfb2d64fc2aaaac0ecc8183058ef8396a2a9f70fa37a32b9db4d526d885b", "reason": "Migration aplicada em produção; histórico imutável."
+    },
+    { "path": "supabase/migrations/20260824113100_sync_shared_auth_email.sql", "kind": "applied-migration",
+      "remoteId": "20260825015256", "sha256": "9d1e5ed34a489fd88372a5504ac97f028f4dce709d055ab7926ae7cbe5c283ce", "reason": "Migration aplicada em produção; histórico imutável."
+    },
+    { "path": "supabase/migrations/20260824113200_harden_shared_auth_identity_deletion.sql", "kind": "applied-migration",
+      "remoteId": "20260825015307", "sha256": "1a7ec103a05ea3754ec91f2d42236aab7075fdd651519ff48402a37b1f6c7144", "reason": "Migration aplicada em produção; histórico imutável."
+    },
+    { "path": "supabase/migrations/20260824113250_include_responsavel_in_institutional_password_proof.sql", "kind": "applied-migration",
+      "remoteId": "20260825015315", "sha256": "339396b66062893a4c05f6efe13908c3c0913e8e3027833edb1d7c4cae6e51ca", "reason": "Migration aplicada em produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260824113255_scope_real_password_change_promotion.sql", "kind": "applied-migration",
+      "remoteId": "20260825015323", "sha256": "1a0207466e3ecee8c0973a977e3d33d6e41cf994c7dd85bcf72cefebc862b7cb", "reason": "Migration aplicada em produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260824113256_fail_fast_student_temporary_password_reservation.sql", "kind": "applied-migration",
+      "remoteId": "20260825015333", "sha256": "c67c6381c558783cd0c8a1df827be34f60670a2524f1eb639a47839fa75510d6", "reason": "Migration aplicada em produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260824113257_fail_fast_responsavel_temporary_password_reservation.sql", "kind": "applied-migration",
+      "remoteId": "20260825015344", "sha256": "4a6c2c1869514602cc392bba2c17ff12863d2744bf5c3ef14cc2af8bd4773249", "reason": "Migration aplicada em produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260824113260_lock_shared_credential_promotion.sql", "kind": "applied-migration",
+      "remoteId": "20260825015355", "sha256": "2eb429aad9c32a0424e5c883c675905e12db630026376e9ed6dd30989185ef59", "reason": "Migration aplicada em produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260824113270_use_canonical_shared_credential_initializers.sql", "kind": "applied-migration",
+      "remoteId": "20260825015404", "sha256": "46acc2fd9b69bea1a6a0555c3b0b4f130d7a43fb37b18004000f85c73b66364e", "reason": "Migration aplicada em produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260824113300_harden_responsavel_multi_profile_link.sql", "kind": "applied-migration",
+      "remoteId": "20260825015416", "sha256": "69a4e3c7c6fdfc40f26f93f45775a23f1024f813903c0f0dde689e53612f3b0a", "reason": "Migration aplicada em produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260824113400_allow_partner_auth_identity_per_profile.sql", "kind": "applied-migration",
+      "remoteId": "20260825015428", "sha256": "7a7d575e01808d3023ec6aa354dba64f1afff61e3637713c5b4adb612f999df4", "reason": "Migration aplicada em produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260824113410_complete_public_signup_credential_proof.sql", "kind": "applied-migration",
+      "remoteId": "20260825015437", "sha256": "775d16334d252a32277fa5f206a7fdcce6cc20c62a6e9a6716d4170ca575260b", "reason": "Migration aplicada em produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260824113600_allow_professor_student_checkout_identity.sql", "kind": "applied-migration",
+      "remoteId": "20260825015446", "sha256": "f8457c5292d57847277824b301f0bbd4d914ffa934082da73849c499f635cbab", "reason": "Migration aplicada em produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260824113700_sign_partner_invite_operations.sql", "kind": "applied-migration",
+      "remoteId": "20260825015455", "sha256": "4f994900097ce9781ff72934f7acf2ee507d1c7c5782021e4d613fc77c5fbd0e", "reason": "Migration aplicada em produção; histórico imutável."
     }
   ],
   "retiredPaths": [
