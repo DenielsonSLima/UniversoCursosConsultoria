@@ -32,6 +32,7 @@ type FixtureOptions = {
   authUsers?: Array<Record<string, unknown>>;
   partnerLinks?: Array<Record<string, unknown>>;
   systemUserLinks?: Array<Record<string, unknown>>;
+  responsavelLinks?: Array<Record<string, unknown>>;
   saveUserError?: { code?: string; message: string } | null;
   invitedAuthUser?: Record<string, unknown> | null;
   emailInUse?: boolean;
@@ -39,6 +40,7 @@ type FixtureOptions = {
   preflightError?: { message: string } | null;
   proofError?: { message: string } | null;
   conflictingUserName?: string | null;
+  persistedAccessPending?: boolean;
 };
 
 const makeFixture = (options: FixtureOptions = {}) => {
@@ -116,12 +118,24 @@ const makeFixture = (options: FixtureOptions = {}) => {
                   options.saveUserError
                     ? { data: null, error: options.saveUserError }
                     : {
-                      data: { id: "gestor-created", ...payload },
+                      data: {
+                        id: "gestor-created",
+                        ...payload,
+                        primeiro_acesso_institucional_pendente:
+                          options.persistedAccessPending ??
+                            payload.primeiro_acesso_institucional_pendente,
+                      },
                       error: null,
                     },
               }),
             };
           },
+        };
+      }
+
+      if (table === "responsaveis_legais") {
+        return {
+          select: () => identityQuery(options.responsavelLinks || [], () => {}),
         };
       }
 
@@ -280,15 +294,16 @@ Deno.test("recusa e-mail interno duplicado antes de consultar Auth ou enviar e-m
   assert.equal(fixture.invitedAuthPayloads.length, 0);
 });
 
-Deno.test("reaproveita identidade de aluno quando e-mail e CPF conferem", async () => {
-  const fixture = makeFixture({
+Deno.test("reaproveita identidade de aluno e respeita o estado persistido", async () => {
+  const existingIdentity = {
     authUsers: [{ id: "auth-existing", email: baseUser.email }],
     partnerLinks: [{
       id: "partner-existing",
       email: baseUser.email,
       cpf_cnpj: baseUser.cpf,
     }],
-  });
+  };
+  const fixture = makeFixture(existingIdentity);
   const response = await handleUpsertGestorUser(fixture.context, baseUser);
   const body = await response.json();
 
@@ -317,6 +332,19 @@ Deno.test("reaproveita identidade de aluno quando e-mail e CPF conferem", async 
     partnerLinkQueries: 1,
     systemUserLinkQueries: 1,
   });
+
+  const pendingFixture = makeFixture({
+    ...existingIdentity,
+    persistedAccessPending: true,
+  });
+  const pendingResponse = await handleUpsertGestorUser(
+    pendingFixture.context,
+    baseUser,
+  );
+  const pendingBody = await pendingResponse.json();
+  assert.equal(pendingBody.institutionalAccessPending, true);
+  assert.match(pendingBody.message, /permanece pendente/i);
+  assert.equal(pendingFixture.invitedAuthPayloads.length, 0);
 });
 
 Deno.test("não promove parceiro quando o CPF não confere", async () => {
@@ -417,20 +445,21 @@ Deno.test("não vincula Auth não confirmado reenviado sem o nonce do convite", 
   assert.deepEqual(fixture.deletedAuthUserIds, []);
 });
 
-Deno.test("preserva Auth convidado se o cadastro interno colidir", async () => {
+Deno.test("preserva Auth convidado em deadlock e orienta retry", async () => {
   const fixture = makeFixture({
     saveUserError: {
-      code: "23505",
-      message: "duplicate key value violates unique constraint",
+      code: "40P01",
+      message: "deadlock detected: PORTAL_IDENTIDADE_INTERNA",
     },
   });
   const response = await handleUpsertGestorUser(fixture.context, baseUser);
   const body = await response.json();
 
   assert.equal(response.status, 409);
-  assert.equal(body.code, "GESTOR_CONFLITO_APOS_CONVITE");
-  assert.match(body.error, /conflito de e-mail, CPF ou identidade/i);
+  assert.equal(body.code, "GESTOR_CONCORRENCIA_APOS_CONVITE");
+  assert.match(body.error, /mudou durante a operação|tente novamente/i);
   assert.match(body.error, /preservada/i);
+  assert.doesNotMatch(JSON.stringify(body), /deadlock|PORTAL_IDENTIDADE/i);
   assert.deepEqual(fixture.deletedAuthUserIds, []);
 });
 

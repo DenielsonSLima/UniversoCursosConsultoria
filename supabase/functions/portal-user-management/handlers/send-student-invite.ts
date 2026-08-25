@@ -4,31 +4,41 @@ import {
   sendRecoveryEmail,
 } from "../auth-users.ts";
 import { findAuthIdentityConflict } from "../auth-identity-ownership.ts";
-import { resolveRedirectTarget } from "../redirects.ts";
 import {
-  accessErrorMessage,
-  accessErrorSummary,
-  updateStudentAccess,
-} from "../student-access.ts";
+  buildPartnerInviteOperationMetadata,
+  readValidPartnerInviteOperationMarker,
+} from "./partner-invite-reconciliation.ts";
+import { resolveRedirectTarget } from "../redirects.ts";
+import { accessErrorSummary, updateStudentAccess } from "../student-access.ts";
 import type {
   HandlerContext,
   Partner,
   PublicApiKeyResolution,
 } from "../types.ts";
+import {
+  authOwnershipError,
+  bindCreatedStudentIdentity,
+  bindSharedStudentIdentity,
+} from "./student-access-identity.ts";
+import { createStudentInviteFailureResponder } from "./student-invite-failure.ts";
 
-const authOwnershipError = (partner: Partner, authUser: any) => {
-  if (!authUser?.id) return "Usuário de autenticação inválido.";
-  if (partner.auth_user_id && partner.auth_user_id !== authUser.id) {
-    return "Este aluno já está vinculado a outra identidade de acesso.";
-  }
+type AuthUserRecord = {
+  id: string;
+  email?: string | null;
+  user_metadata?: Record<string, unknown> | null;
+};
 
-  const metadataPartnerId = String(
-    authUser.user_metadata?.partner_id || "",
-  ).trim();
-  if (metadataPartnerId && metadataPartnerId !== partner.id) {
-    return "Este e-mail já está vinculado ao acesso de outro cadastro.";
-  }
-  return null;
+type AuthOperationResult = {
+  data?: { user?: AuthUserRecord | null } | null;
+  error?: { code?: string; message?: string } | null;
+};
+
+type RecoveryResult = {
+  data?: {
+    user?: { id?: string | null } | null;
+    properties?: { action_link?: string | null } | null;
+  } | null;
+  error?: { code?: string; message?: string } | null;
 };
 
 export const handleSendStudentInvite = async (
@@ -54,24 +64,18 @@ export const handleSendStudentInvite = async (
     partner.auth_login_email || options.email || partner.email,
   );
   const accessWasActive = partner.acesso_status === "ativo" &&
-    partner.troca_senha_obrigatoria === false;
-  const failAccess = async (
-    error: unknown,
-    status = 500,
-    authUserId?: string | null,
-  ) => {
-    const message = accessErrorMessage(
-      error,
-      "Não foi possível preparar o acesso do aluno.",
-    );
-    await updateStudentAccess(admin, partner.id, {
-      ...(authUserId ? { auth_user_id: authUserId } : {}),
-      ...(authEmail ? { auth_login_email: authEmail } : {}),
-      ...(!accessWasActive ? { acesso_status: "erro" as const } : {}),
-      acesso_erro: accessErrorSummary(message),
-    });
-    return json({ success: false, error: message }, status);
-  };
+    partner.troca_senha_obrigatoria === false &&
+    Boolean(partner.senha_atualizada_em) &&
+    !partner.senha_temporaria_pendente &&
+    !partner.senha_temporaria_emissao_id &&
+    !partner.senha_temporaria_emissao_iniciada_em &&
+    !partner.senha_temporaria_emissao_senha_alterada_em;
+  const { failAccess, failInternal } = createStudentInviteFailureResponder(
+    context,
+    partner,
+    authEmail,
+    accessWasActive,
+  );
 
   if (!authEmail) {
     return failAccess("Identidade de acesso do aluno não configurada.");
@@ -100,19 +104,25 @@ export const handleSendStudentInvite = async (
       acesso_erro: null,
     });
     if (processingError) {
-      return json({ success: false, error: processingError }, 500);
+      return failInternal("mark-processing", processingError);
     }
   }
 
-  let authUser: any;
+  let authUser: AuthUserRecord | null;
+  let identityOrigin:
+    | "linked"
+    | "existing"
+    | "invited"
+    | "reconciled-invite"
+    | "synthetic-created" = partner.auth_user_id ? "linked" : "existing";
   if (partner.auth_user_id) {
-    let existingIdentity: any;
+    let existingIdentity: AuthOperationResult;
     try {
       existingIdentity = await admin.auth.admin.getUserById(
         partner.auth_user_id,
       );
     } catch (error) {
-      return failAccess(error, 500, partner.auth_user_id);
+      return failInternal("get-auth-user", error);
     }
     if (existingIdentity.error || !existingIdentity.data?.user) {
       return failAccess(
@@ -125,14 +135,13 @@ export const handleSendStudentInvite = async (
       return failAccess(
         "O e-mail de acesso não corresponde à identidade já vinculada ao aluno.",
         409,
-        authUser.id,
       );
     }
   } else {
     try {
       authUser = await findAuthUserByEmail(admin, authEmail);
     } catch (error) {
-      return failAccess(error);
+      return failInternal("find-auth-user", error);
     }
   }
 
@@ -145,38 +154,64 @@ export const handleSendStudentInvite = async (
 
   let inviteSent = false;
   if (!authUser && canDeliverByEmail) {
-    let inviteResult: any;
+    const invitationNonce = crypto.randomUUID();
+    let invitationMetadata: Record<string, unknown>;
     try {
-      inviteResult = await admin.auth.admin.inviteUserByEmail(authEmail, {
-        data: {
+      invitationMetadata = await buildPartnerInviteOperationMetadata(
+        context,
+        invitationNonce,
+        partner,
+        authEmail,
+        {
           nome: partner.nome,
-          origem: "cadastro_gestor",
-          tipo: "Aluno",
-          partner_id: partner.id,
           matricula_acesso: partner.matricula_acesso || null,
         },
+      );
+    } catch (error) {
+      return failInternal("build-invite-proof", error);
+    }
+    let inviteResult: AuthOperationResult;
+    try {
+      inviteResult = await admin.auth.admin.inviteUserByEmail(authEmail, {
+        data: invitationMetadata,
         redirectTo: finalRedirect,
       });
     } catch (error) {
-      return failAccess(error);
+      return failInternal("invite-auth-user", error);
     }
 
     if (!inviteResult.error && inviteResult.data?.user) {
-      authUser = inviteResult.data.user;
+      const invitedAuthUser = inviteResult.data.user;
+      let inviteMarker;
+      try {
+        inviteMarker = await readValidPartnerInviteOperationMarker(
+          context,
+          invitedAuthUser,
+          partner,
+          authEmail,
+        );
+      } catch (error) {
+        return failInternal("validate-returned-invite-proof", error);
+      }
+      if (!inviteMarker) {
+        return failAccess(
+          "Não foi possível comprovar que o convite criou uma nova identidade para este aluno.",
+          409,
+        );
+      }
+      authUser = invitedAuthUser;
       inviteSent = true;
+      identityOrigin = "invited";
     } else {
       // Uma requisição concorrente pode ter criado a mesma identidade entre a
       // consulta e o convite. Reconsultar torna o retry idempotente.
       try {
         authUser = await findAuthUserByEmail(admin, authEmail);
       } catch (error) {
-        return failAccess(error);
+        return failInternal("requery-invited-auth-user", error);
       }
       if (!authUser) {
-        return failAccess(
-          inviteResult.error?.message ||
-            "Não foi possível criar o acesso do aluno.",
-        );
+        return failInternal("invite-auth-user-result", inviteResult.error);
       }
     }
   }
@@ -190,7 +225,7 @@ export const handleSendStudentInvite = async (
         400,
       );
     }
-    let createdUser: any;
+    let createdUser: AuthOperationResult;
     try {
       createdUser = await admin.auth.admin.createUser({
         email: authEmail,
@@ -204,7 +239,7 @@ export const handleSendStudentInvite = async (
         },
       });
     } catch (error) {
-      return failAccess(error);
+      return failInternal("create-synthetic-auth-user", error);
     }
     if (createdUser.error || !createdUser.data?.user) {
       // A identidade sintética também é única. Se outra requisição venceu a
@@ -212,25 +247,26 @@ export const handleSendStudentInvite = async (
       try {
         authUser = await findAuthUserByEmail(admin, authEmail);
       } catch (error) {
-        return failAccess(error);
+        return failInternal("requery-synthetic-auth-user", error);
       }
       if (!authUser) {
-        return failAccess(
-          createdUser.error?.message ||
-            "Não foi possível criar o acesso por matrícula.",
+        return failInternal(
+          "create-synthetic-auth-user-result",
+          createdUser.error,
         );
       }
     } else {
       authUser = createdUser.data.user;
+      identityOrigin = "synthetic-created";
     }
   }
 
-  const ownershipError = authOwnershipError(partner, authUser);
+  const ownershipError = authOwnershipError(partner, authUser, authEmail);
   if (ownershipError) return failAccess(ownershipError, 409);
 
   const identityConflict = await findAuthIdentityConflict(
     admin,
-    partner.id,
+    partner,
     authUser.id,
   );
   if (identityConflict.error) return failAccess(identityConflict.error);
@@ -238,36 +274,103 @@ export const handleSendStudentInvite = async (
     return failAccess(identityConflict.conflict, 409);
   }
 
-  const bindingError = await updateStudentAccess(
-    admin,
-    partner.id,
-    accessWasActive
-      ? {
-        auth_user_id: authUser.id,
-        auth_login_email: authEmail,
-        acesso_erro: null,
-      }
-      : {
-        auth_user_id: authUser.id,
+  if (
+    identityOrigin === "existing" && !partner.auth_user_id &&
+    !identityConflict.hasCompatibleProfile
+  ) {
+    if (!canDeliverByEmail) {
+      return failAccess(
+        "Já existe uma identidade para este e-mail, mas nenhum perfil canônico comprova que pertence a este aluno.",
+        409,
+      );
+    }
+    let inviteMarker;
+    try {
+      inviteMarker = await readValidPartnerInviteOperationMarker(
+        context,
+        authUser,
+        partner,
+        authEmail,
+      );
+    } catch (error) {
+      return failInternal("validate-existing-invite-proof", error);
+    }
+    if (!inviteMarker) {
+      return failAccess(
+        "Já existe uma identidade para este e-mail, mas nenhum perfil canônico ou convite assinado comprova que pertence a este aluno.",
+        409,
+      );
+    }
+    identityOrigin = "reconciled-invite";
+  }
+
+  const identityWasCreated = identityOrigin === "invited" ||
+    identityOrigin === "reconciled-invite" ||
+    identityOrigin === "synthetic-created";
+  if (identityWasCreated && identityConflict.hasCompatibleProfile) {
+    return failAccess(
+      "A identidade ganhou outro vínculo durante a criação do acesso. Revise os cadastros antes de tentar novamente.",
+      409,
+    );
+  }
+
+  if (!identityWasCreated && identityConflict.hasCompatibleProfile) {
+    const sharedBinding = await bindSharedStudentIdentity(
+      admin,
+      partner,
+      authUser.id,
+      authEmail,
+      accessWasActive,
+    );
+    if (sharedBinding.error) {
+      return failAccess(sharedBinding.error, sharedBinding.status);
+    }
+
+    return json({
+      success: true,
+      action: "link-existing-identity",
+      userId: authUser.id,
+      inviteSent: false,
+      recoveryEmailSent: false,
+      recoveryLink: null,
+      profileLinked: !partner.auth_user_id,
+      profileLinkState: partner.auth_user_id ? "already_linked" : "linked",
+      studentAccessPending: !sharedBinding.credentialReady,
+      message: sharedBinding.credentialReady
+        ? "O acesso existente também foi vinculado ao perfil de Aluno. A senha atual foi preservada."
+        : "A identidade foi vinculada ao perfil de Aluno, mas o acesso permanece pendente até a pessoa concluir o primeiro acesso já iniciado.",
+    });
+  }
+
+  if (identityWasCreated) {
+    const initialBinding = await bindCreatedStudentIdentity(
+      admin,
+      partner,
+      authUser.id,
+      authEmail,
+      inviteSent || identityOrigin === "reconciled-invite",
+    );
+    if (initialBinding.error) {
+      return failAccess(initialBinding.error, initialBinding.status);
+    }
+  } else {
+    const bindingError = await updateStudentAccess(
+      admin,
+      partner.id,
+      accessWasActive ? { auth_login_email: authEmail, acesso_erro: null } : {
         auth_login_email: authEmail,
         troca_senha_obrigatoria: true,
         acesso_status: "processando",
         acesso_erro: null,
         acesso_ativado_em: null,
       },
-  );
-  if (bindingError) return failAccess(bindingError, 500, authUser.id);
+    );
+    if (bindingError) {
+      return failInternal("update-linked-student", bindingError);
+    }
+  }
 
   if (inviteSent) {
-    const sentAt = new Date().toISOString();
-    const stateError = await updateStudentAccess(admin, partner.id, {
-      auth_user_id: authUser.id,
-      acesso_status: "convite_enviado",
-      acesso_erro: null,
-      convite_enviado_em: sentAt,
-    });
-    if (stateError) return failAccess(stateError, 500, authUser.id);
-
     return json({
       success: true,
       action: "invite",
@@ -275,6 +378,21 @@ export const handleSendStudentInvite = async (
       inviteSent: true,
       recoveryLink: null,
       message: "Convite de acesso enviado com sucesso.",
+    });
+  }
+
+  if (identityOrigin === "reconciled-invite") {
+    return json({
+      success: true,
+      action: "reconcile-invite",
+      userId: authUser.id,
+      inviteSent: false,
+      recoveryEmailSent: false,
+      recoveryLink: null,
+      profileLinked: true,
+      profileLinkState: "linked",
+      message:
+        "O convite anterior foi reconciliado e vinculado ao perfil do aluno sem novo envio.",
     });
   }
 
@@ -296,17 +414,17 @@ export const handleSendStudentInvite = async (
         partner.id,
         accessWasActive
           ? {
-            auth_user_id: authUser.id,
             acesso_erro: null,
           }
           : {
-            auth_user_id: authUser.id,
             acesso_status: "convite_enviado",
             acesso_erro: null,
             convite_enviado_em: sentAt,
           },
       );
-      if (stateError) return failAccess(stateError, 500, authUser.id);
+      if (stateError) {
+        return failInternal("mark-recovery-sent", stateError);
+      }
 
       return json({
         success: true,
@@ -324,7 +442,7 @@ export const handleSendStudentInvite = async (
       "Não foi possível enviar o link por e-mail.";
   }
 
-  let recovery: any;
+  let recovery: RecoveryResult;
   try {
     recovery = await admin.auth.admin.generateLink({
       type: "recovery",
@@ -332,15 +450,10 @@ export const handleSendStudentInvite = async (
       options: { redirectTo: finalRedirect },
     });
   } catch (error) {
-    return failAccess(error, 500, authUser.id);
+    return failInternal("generate-recovery-link", error);
   }
   if (recovery.error) {
-    return failAccess(
-      recovery.error.message ||
-        "Não foi possível gerar o link de primeiro acesso.",
-      500,
-      authUser.id,
-    );
+    return failInternal("generate-recovery-link-result", recovery.error);
   }
 
   const pendingError = await updateStudentAccess(
@@ -348,16 +461,16 @@ export const handleSendStudentInvite = async (
     partner.id,
     accessWasActive
       ? {
-        auth_user_id: authUser.id,
         acesso_erro: deliveryError ? accessErrorSummary(deliveryError) : null,
       }
       : {
-        auth_user_id: authUser.id,
         acesso_status: "pendente",
         acesso_erro: deliveryError ? accessErrorSummary(deliveryError) : null,
       },
   );
-  if (pendingError) return failAccess(pendingError, 500, authUser.id);
+  if (pendingError) {
+    return failInternal("mark-access-pending", pendingError);
+  }
 
   return json({
     success: true,

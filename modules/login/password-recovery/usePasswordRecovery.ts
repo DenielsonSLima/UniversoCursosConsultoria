@@ -7,7 +7,6 @@ import {
 } from 'react';
 import { useNavigate } from 'react-router';
 import { consumePasswordSetupMarker, supabase } from '../../../lib/supabase';
-import { getPortalProfile } from '../portal-session';
 import { loginService } from '../login.service';
 import type { TurnstileStatus } from '../../shared/auth/TurnstileWidget';
 import {
@@ -301,28 +300,10 @@ export const usePasswordRecovery = ({
         return;
       }
 
-      let postResetPath = isResponsavelRecovery ? '/login' : loginPath;
-      if (!isResponsavelRecovery) {
-        try {
-          const profile = await getPortalProfile({ authenticatedUser: currentSession.user });
-          if (profile?.tipo && ['Gestor', 'Professor', 'Coordenador'].includes(profile.tipo)) {
-            postResetPath = '/sistema/login';
-          } else if (profile?.tipo === 'Responsavel') {
-            postResetPath = '/login';
-          } else if (
-            ['usuarios_sistema', 'cadastro_professor'].includes(
-              String(currentSession.user.user_metadata?.origem || ''),
-            )
-          ) {
-            postResetPath = '/sistema/login';
-          }
-        } catch (profileError) {
-          console.warn(
-            'A senha foi alterada, mas não foi possível determinar o login de destino.',
-            profileError,
-          );
-        }
-      }
+      // O retorno acompanha a audiência que iniciou ou validou o fluxo. Em uma
+      // identidade multipapel, inferir pelo primeiro perfil canônico tornaria o
+      // destino dependente da ordem devolvida pela RPC.
+      const postResetPath = loginPath;
 
       const { error: signOutError } = await supabase.auth.signOut({ scope: 'local' });
       if (signOutError) {

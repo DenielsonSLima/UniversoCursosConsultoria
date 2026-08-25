@@ -56,19 +56,33 @@ jobs:
       - name: Testar login institucional e vínculo de Professor
         run: |
           npm run test:portal-auth
+          node --test \
+            modules/gestor/parceiros/parceiros.service.contract.test.ts
           deno test --allow-read --allow-env=PORTAL_ALLOWED_REDIRECT_ORIGINS,ALLOWED_REDIRECT_ORIGINS,PUBLIC_SITE_URL,SITE_URL,APP_URL,VITE_PUBLIC_SITE_URL \
+            modules/login/coordinator-portal-collapse.contract.test.ts \
             modules/login/profile-selection.test.ts \
             supabase/functions/portal-user-management/gestor-access.test.ts \
+            supabase/functions/portal-user-management/handlers/partner-invite-reconciliation.test.ts \
+            supabase/functions/portal-user-management/handlers/ensure-professor-access.test.ts \
+            supabase/functions/portal-user-management/handlers/ensure-professor-access-reconciliation.test.ts \
+            supabase/functions/portal-user-management/handlers/ensure-professor-access.shared-identity.test.ts \
+            supabase/functions/portal-user-management/handlers/gestor-professor-error-sanitization.test.ts \
             supabase/functions/portal-user-management/handlers/link-professor-auth-identity.test.ts \
             supabase/functions/portal-user-management/handlers/upsert-gestor-user.test.ts
 
       - name: Testar primeiro acesso e senha temporária do Aluno
         run: |
-          node --test modules/gestor/parceiros/student-first-access.contract.test.mjs
+          node --test \
+            modules/gestor/parceiros/student-first-access.contract.test.mjs \
+            modules/gestor/parceiros/student-access-feedback.contract.test.ts
           deno test --allow-read --allow-env=PORTAL_ALLOWED_REDIRECT_ORIGINS,ALLOWED_REDIRECT_ORIGINS,PUBLIC_SITE_URL,SITE_URL,APP_URL,VITE_PUBLIC_SITE_URL \
             supabase/functions/portal-user-management/handlers/confirm-partner-email.test.ts \
+            supabase/functions/portal-user-management/handlers/handler-error-log.test.ts \
             supabase/functions/portal-user-management/handlers/issue-student-temporary-password.test.ts \
             supabase/functions/portal-user-management/handlers/list-partner-email-statuses.test.ts \
+            supabase/functions/portal-user-management/handlers/send-student-invite.error-sanitization.test.ts \
+            supabase/functions/portal-user-management/handlers/send-student-invite.test.ts \
+            supabase/functions/portal-user-management/handlers/send-student-invite.shared-identity.test.ts \
             supabase/functions/portal-user-management/runtime-contract.test.ts \
             supabase/functions/portal-user-management/student-access.test.ts \
             supabase/tests/student_temporary_password_access.contract.test.ts
@@ -89,6 +103,24 @@ jobs:
             supabase/functions/portal-user-management/handlers/list-responsavel-access-statuses.test.ts \
             supabase/functions/portal-user-management/handlers/resend-responsavel-access.test.ts \
             supabase/tests/responsavel_first_access.contract.test.ts
+
+      - name: Testar identidade Auth multiperfil
+        run: |
+          deno test --allow-read --allow-env \
+            modules/gestor/parceiros/responsaveis/responsavel-access.contract.test.ts \
+            modules/login/password-recovery/password-recovery-auth.test.ts \
+            modules/login/portal-login-boundaries.contract.test.ts \
+            supabase/functions/portal-user-management/auth-identity-ownership.test.ts \
+            supabase/functions/portal-user-management/handlers/ensure-professor-access.shared-identity.test.ts \
+            supabase/functions/portal-user-management/handlers/ensure-responsavel-access.multi-profile.test.ts \
+            supabase/functions/portal-user-management/handlers/gestor-identity-links.test.ts \
+            supabase/functions/portal-user-management/handlers/partner-invite-reconciliation.test.ts \
+            supabase/functions/portal-user-management/handlers/send-student-invite.shared-identity.test.ts \
+            supabase/tests/portal_partner_auth_checkout.contract.test.ts \
+            supabase/tests/portal_partner_auth_multi_role.contract.test.ts \
+            supabase/tests/portal_shared_credential_promotion.contract.test.ts \
+            supabase/tests/portal_partner_auth_rollout_safety.contract.test.ts \
+            supabase/tests/portal_partner_invite_reconciliation.contract.test.ts
 
       - name: Testar relatório do Caixa
         run: npm run test:caixa-report
@@ -111,7 +143,12 @@ jobs:
             supabase/functions/portal-user-management/handlers/ensure-responsavel-access.test.ts \
             supabase/functions/portal-user-management/handlers/ensure-responsavel-access-reconciliation.test.ts \
             supabase/tests/ead_assessment_mutations.contract.test.ts \
-            supabase/tests/partner_gestor_polo_scope_fail_closed.contract.test.ts
+            supabase/tests/partner_gestor_polo_scope_fail_closed.contract.test.ts \
+            supabase/tests/portal_partner_auth_checkout.contract.test.ts \
+            supabase/tests/portal_partner_auth_multi_role.contract.test.ts \
+            supabase/tests/portal_shared_credential_promotion.contract.test.ts \
+            supabase/tests/portal_partner_auth_rollout_safety.contract.test.ts \
+            supabase/tests/portal_partner_invite_reconciliation.contract.test.ts
 
       - name: Gerar build de produção
         run: npm run build

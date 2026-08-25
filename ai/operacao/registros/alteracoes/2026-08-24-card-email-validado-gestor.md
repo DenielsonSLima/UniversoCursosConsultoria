@@ -1,6 +1,6 @@
 # Card de e-mail validado pelo gestor — 2026-08-24
 
-Estado: `EM_REVISAO_GITHUB`
+Estado: `PUBLICADO_PRODUCAO_4_7_7`
 
 ## Diagnóstico
 
@@ -21,14 +21,14 @@ O cadastro detalhado mostrava corretamente que o e-mail do aluno havia sido vali
 - Smoke autenticado no Safari/local: o card afetado exibiu o check verde.
 - Revisão independente contra a `main` remota: sem findings `Critical` ou `Important`; `Ready to merge`.
 - Todos os arquivos manuais do manifesto permanecem abaixo de 500 linhas.
-- Controle de versão local aprovado para `4.7.7`, com changelog correspondente; a Produção continua em `4.7.6` enquanto não houver merge autorizado.
+- Controle de versão `4.7.7`, changelog, CI e build aprovados.
 - GitHub Actions `Controle de versão` e `Qualidade do produto`: aprovados; Preview Vercel: `Ready`.
 
 ## Publicação
 
-- Escopo autorizado: GitHub e Preview da PR.
-- CI e Preview concluíram com sucesso; a PR permanece aberta para revisão e eventual autorização de merge.
-- O registro da próxima versão na branch atende ao gate do CI; merge, promoção e Produção não foram solicitados e permanecem fora do lote.
+- PR `#89` integrada por squash na `main`, commit `243cb89fe6f11fdf4b8af6f9444e99cf9c8fdd91`.
+- GitHub Actions e Vercel Production concluíram com sucesso.
+- `https://universocc.com.br/gestor` respondeu HTTP 200 e os bundles públicos contêm `emailValidatedByManager` e o rótulo `E-mail validado pelo gestor`.
 
 ## Manifesto explícito
 
@@ -48,5 +48,5 @@ Total: 10 arquivos
 ## Limites
 
 - Nenhuma alteração remota Supabase integra este lote.
-- Nenhum merge em `main` ou deploy de Produção está autorizado por implicação.
+- Publicação concluída no GitHub e na Vercel Production, limitada ao manifesto acima.
 - Alterações paralelas do workspace e artefatos temporários ficam fora do manifesto.

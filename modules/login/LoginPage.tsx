@@ -399,7 +399,7 @@ const LoginPage: React.FC = () => {
                 <ShieldCheck size={13} /> Acesso institucional
               </span>
               <h2 className="text-3xl font-black text-[#001a33] mb-3">Bem-vindo de volta</h2>
-              <p className="text-sm font-semibold leading-relaxed text-slate-500">Entre como gestor, professor ou coordenador para acessar o portal.</p>
+              <p className="text-sm font-semibold leading-relaxed text-slate-500">Entre como gestor ou professor para acessar o portal. As atribuições de coordenação ficam disponíveis no acesso do professor.</p>
               {errorMessage ? <p className="mt-3 text-xs text-red-600 font-bold">{errorMessage}</p> : null}
             </div>
 

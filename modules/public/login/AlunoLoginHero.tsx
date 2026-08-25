@@ -68,7 +68,7 @@ export const AlunoLoginHero: React.FC<HeroProps> = ({
     <div className="relative z-10 flex flex-1 flex-col justify-center px-10 pb-8 pt-8 xl:px-16 xl:pb-10">
       <div className="w-full max-w-[720px]">
         <span className="inline-flex items-center gap-2 rounded-full border border-blue-300/30 bg-blue-400/10 px-4 py-2 text-[10px] font-black uppercase tracking-[0.22em] text-blue-100">
-          <GraduationCap size={14} /> Portal do aluno
+          <GraduationCap size={14} /> Portal do aluno e responsável
         </span>
         <h1 className="mt-5 w-full max-w-[620px] text-[1.9rem] font-black uppercase leading-[0.98] tracking-tight sm:text-[2.55rem] lg:text-[2.85rem] xl:text-[3.15rem] 2xl:text-[3.2rem]">
           Comece seu curso sem esperar atendimento.
@@ -136,7 +136,7 @@ export const AlunoLoginMobileHeader: React.FC<HeroProps> = ({
           <img src="/LogoUniverso.png" alt="Universo Cursos e Consultoria" className="h-11 w-auto object-contain" />
         </div>
         <span className="inline-flex items-center gap-2 rounded-full bg-blue-600/30 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-blue-100">
-          <GraduationCap size={13} /> Portal do aluno
+          <GraduationCap size={13} /> Portal do aluno e responsável
         </span>
         <h1 className="mt-4 text-3xl font-black uppercase leading-tight tracking-tight">
           Acesse seus cursos online.

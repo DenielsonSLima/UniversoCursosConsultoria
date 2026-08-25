@@ -14,6 +14,9 @@ import {
 } from "./gestor-invite-reconciliation.ts";
 import { findGestorIdentityConflict } from "./gestor-identity-links.ts";
 import { checkGestorUserUniqueness } from "./gestor-user-preflight.ts";
+import { logPortalHandlerFailure } from "./handler-error-log.ts";
+
+const ACTION = "upsert-gestor-user";
 
 const COMMUNICATION_SECTORS = new Set([
   "todos",
@@ -42,7 +45,7 @@ const isValidCpf = (value: unknown) => {
   return digit(9) === Number(cpf[9]) && digit(10) === Number(cpf[10]);
 };
 
-export const handleUpsertGestorUser = async (
+const upsertGestorUser = async (
   context: HandlerContext,
   incomingUser: Record<string, unknown>,
 ) => {
@@ -199,23 +202,16 @@ export const handleUpsertGestorUser = async (
     const identityConflict = await findGestorIdentityConflict(
       admin,
       existingAuthUser.id,
+      incomingUser.cpf,
+      email,
     );
     if (identityConflict.error) {
       return json({ success: false, error: identityConflict.error }, 500);
     }
-    if (identityConflict.conflict && !identityConflict.partner) {
+    if (identityConflict.conflict) {
       return json({ success: false, error: identityConflict.conflict }, 409);
     }
-    if (identityConflict.partner) {
-      const informedCpf = onlyDigits(incomingUser.cpf);
-      const partnerCpf = onlyDigits(identityConflict.partner.cpf_cnpj);
-      if (!informedCpf || informedCpf !== partnerCpf) {
-        return json({
-          success: false,
-          error:
-            "O e-mail já pertence a um aluno ou professor, mas o CPF informado não confere com esse cadastro.",
-        }, 409);
-      }
+    if (identityConflict.reusableIdentity) {
       reusedPartnerIdentity = true;
       return null;
     }
@@ -228,7 +224,8 @@ export const handleUpsertGestorUser = async (
         email,
         String(incomingUser.cpf || ""),
       );
-    } catch {
+    } catch (error) {
+      logPortalHandlerFailure(ACTION, "validate-existing-invite-proof", error);
       return json({
         success: false,
         code: "GESTOR_CONVITE_RECONCILIACAO_INDISPONIVEL",
@@ -257,11 +254,10 @@ export const handleUpsertGestorUser = async (
   try {
     authUser = await findAuthUserByEmail(admin, email);
   } catch (error) {
+    logPortalHandlerFailure(ACTION, "find-auth-user", error);
     return json({
       success: false,
-      error: error instanceof Error
-        ? error.message
-        : "Não foi possível localizar usuário no Supabase Auth.",
+      error: "Não foi possível localizar usuário no Supabase Auth.",
     }, 500);
   }
 
@@ -289,7 +285,8 @@ export const handleUpsertGestorUser = async (
         String(incomingUser.cpf || ""),
         name,
       );
-    } catch {
+    } catch (error) {
+      logPortalHandlerFailure(ACTION, "build-invite-proof", error);
       return json({
         success: false,
         code: "GESTOR_CONVITE_RECONCILIACAO_INDISPONIVEL",
@@ -304,11 +301,10 @@ export const handleUpsertGestorUser = async (
         redirectTo: redirectResolution.redirectTo,
       });
     } catch (error) {
+      logPortalHandlerFailure(ACTION, "invite-auth-user", error);
       return json({
         success: false,
-        error: error instanceof Error
-          ? error.message
-          : "Não foi possível enviar o convite de primeiro acesso.",
+        error: "Não foi possível enviar o convite de primeiro acesso.",
       }, 500);
     }
 
@@ -326,7 +322,12 @@ export const handleUpsertGestorUser = async (
           email,
           String(incomingUser.cpf || ""),
         );
-      } catch {
+      } catch (error) {
+        logPortalHandlerFailure(
+          ACTION,
+          "validate-returned-invite-proof",
+          error,
+        );
         return json({
           success: false,
           code: "GESTOR_CONVITE_RECONCILIACAO_INDISPONIVEL",
@@ -351,18 +352,21 @@ export const handleUpsertGestorUser = async (
       try {
         authUser = await findAuthUserByEmail(admin, email);
       } catch (error) {
+        logPortalHandlerFailure(ACTION, "requery-invited-auth-user", error);
         return json({
           success: false,
-          error: error instanceof Error
-            ? error.message
-            : "Não foi possível localizar usuário no Supabase Auth.",
+          error: "Não foi possível localizar usuário no Supabase Auth.",
         }, 500);
       }
       if (!authUser?.id) {
+        logPortalHandlerFailure(
+          ACTION,
+          "invite-auth-user",
+          inviteResult.error,
+        );
         return json({
           success: false,
-          error: inviteResult.error?.message ||
-            "Não foi possível enviar o convite de primeiro acesso.",
+          error: "Não foi possível enviar o convite de primeiro acesso.",
         }, 500);
       }
 
@@ -416,22 +420,29 @@ export const handleUpsertGestorUser = async (
     .from("usuarios_sistema")
     .insert(userPayload)
     .select(
-      "id, nome, email, auth_user_id, cpf, telefone, perfil, status, context, polo_ids, permissoes, perfil_acesso_id, personalizar_permissoes, restricao_horario, setor_comunicacao, polo_comunicacao_id, pode_visualizar_todos_polos, pode_visualizar_todos_setores, created_at",
+      "id, nome, email, auth_user_id, cpf, telefone, perfil, status, context, polo_ids, permissoes, perfil_acesso_id, personalizar_permissoes, restricao_horario, setor_comunicacao, polo_comunicacao_id, pode_visualizar_todos_polos, pode_visualizar_todos_setores, acesso_institucional_origem, primeiro_acesso_institucional_pendente, created_at",
     )
     .single();
 
   if (saveUserError) {
+    logPortalHandlerFailure(ACTION, "save-system-user", saveUserError);
     // Auth e usuarios_sistema não participam da mesma transação. Excluir a
     // identidade recém-convidada depois de uma leitura/escrita que falhou
     // deixaria uma janela para outro fluxo tê-la vinculado a um parceiro.
     // Preserve-a para reconciliação: sem usuario_sistema ela não recebe
     // permissões institucionais, e nunca removemos uma conta de terceiro.
-    if (saveUserError.code === "23505") {
+    const retryableConflict = ["40001", "40P01"].includes(
+      saveUserError.code || "",
+    );
+    if (retryableConflict || ["23505", "23514"].includes(saveUserError.code)) {
       return json({
         success: false,
-        code: "GESTOR_CONFLITO_APOS_CONVITE",
-        error:
-          "Um conflito de e-mail, CPF ou identidade foi detectado durante o cadastro. A identidade convidada foi preservada e nenhum novo convite deve ser enviado até a revisão dos dados.",
+        code: retryableConflict
+          ? "GESTOR_CONCORRENCIA_APOS_CONVITE"
+          : "GESTOR_CONFLITO_APOS_CONVITE",
+        error: retryableConflict
+          ? "O cadastro mudou durante a operação. A identidade convidada foi preservada; atualize os dados e tente novamente."
+          : "Um conflito de e-mail, CPF ou identidade foi detectado durante o cadastro. A identidade convidada foi preservada e nenhum novo convite deve ser enviado até a revisão dos dados.",
       }, 409);
     }
     if (createdAuthUserId) {
@@ -442,19 +453,43 @@ export const handleUpsertGestorUser = async (
           "O cadastro interno não foi concluído após o envio do convite. A identidade convidada foi preservada para reconciliação segura deste e-mail.",
       }, 500);
     }
-    return json({ success: false, error: saveUserError.message }, 500);
+    return json({
+      success: false,
+      error: "Não foi possível concluir o cadastro interno do usuário.",
+    }, 500);
   }
+
+  const institutionalAccessPending =
+    savedUser?.primeiro_acesso_institucional_pendente === true;
 
   return json({
     success: true,
     action: "upsert-gestor-user",
     userId: authUser?.id || null,
     inviteSent: Boolean(createdAuthUserId),
+    institutionalAccessPending,
     user: savedUser,
-    message: reusedPartnerIdentity
+    message: reusedPartnerIdentity && institutionalAccessPending
+      ? "Usuário cadastrado e vinculado à identidade existente. O acesso institucional permanece pendente até a pessoa concluir o primeiro acesso já iniciado."
+      : reusedPartnerIdentity
       ? "Usuário cadastrado e vinculado ao acesso existente. A senha atual foi preservada."
       : reconciledPendingInvite
       ? "Cadastro interno reconciliado com o convite já enviado. O link de primeiro acesso permanece válido."
       : "Usuário cadastrado. Enviamos um convite de primeiro acesso para o e-mail informado.",
   });
+};
+
+export const handleUpsertGestorUser = async (
+  context: HandlerContext,
+  incomingUser: Record<string, unknown>,
+) => {
+  try {
+    return await upsertGestorUser(context, incomingUser);
+  } catch (error) {
+    logPortalHandlerFailure(ACTION, "unhandled", error);
+    return context.json({
+      success: false,
+      error: "Não foi possível concluir o cadastro interno do usuário.",
+    }, 500);
+  }
 };

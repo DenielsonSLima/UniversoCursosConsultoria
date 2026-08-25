@@ -1,8 +1,8 @@
 {
-  "version": "4.7.7",
+  "version": "4.8.0",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 8,
+  "revision": 9,
   "releasedAt": "2026-08-24",
-  "summary": "Card do aluno alinhado à validação administrativa do e-mail"
+  "summary": "Identidade única com seleção segura entre os perfis de acesso"
 }

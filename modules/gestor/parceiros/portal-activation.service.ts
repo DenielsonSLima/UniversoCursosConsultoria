@@ -33,12 +33,19 @@ export type PartnerEmailConfirmationStatus = {
   emailValidatedByManager: boolean;
 };
 
-type InviteStudentResult = {
+export type InviteStudentResult = {
   success: boolean;
-  action?: 'invite' | 'recovery';
+  action?:
+    | 'invite'
+    | 'recovery'
+    | 'link-existing-identity'
+    | 'reconcile-invite';
   userId?: string | null;
   inviteSent?: boolean;
   recoveryEmailSent?: boolean;
+  profileLinked?: boolean;
+  profileLinkState?: 'linked' | 'already_linked';
+  studentAccessPending?: boolean;
   message?: string;
   recoveryLink?: string | null;
 };
@@ -81,6 +88,7 @@ type LinkProfessorAuthIdentityResult = {
   action?: 'link-professor-auth-identity';
   userId?: string | null;
   profileLinked?: boolean;
+  institutionalAccessPending?: boolean;
   profileLinkState?:
     | 'linked'
     | 'already_linked'
@@ -96,6 +104,7 @@ type EnsureProfessorAccessResult = {
   userId?: string | null;
   inviteSent?: boolean;
   profileLinked?: boolean;
+  institutionalAccessPending?: boolean;
   profileLinkState?:
     | 'linked'
     | 'already_linked'

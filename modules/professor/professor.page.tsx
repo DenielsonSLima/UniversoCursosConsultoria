@@ -1,5 +1,5 @@
 import React, { lazy, Suspense, useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { loginService } from '../login/login.service';
@@ -13,6 +13,10 @@ import PoloTransitionOverlay, {
 } from '../shared/components/PoloTransitionOverlay';
 import { waitForActivePoloQueries } from '../shared/utils/poloTransitionQueries';
 import { professorDashboardQueryOptions } from './hooks/useProfessorDashboard';
+import {
+  getProfessorModuleFromPath,
+  getProfessorPathFromModule,
+} from '../login/coordinator-portal-redirect';
 
 // Sub-módulos do Professor
 import ProfessorShell, { ProfessorPolo } from './components/ProfessorShell';
@@ -47,12 +51,15 @@ const POLO_TRANSITION_SUCCESS_MS = 450;
 
 const ProfessorPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const executeLogout = usePortalLogout({ loginPath: '/sistema/login' });
   const contentScrollRef = useRef<HTMLDivElement>(null);
   const storedProfile = getPortalSessionFromStorage();
   const initialProfessorProfile = storedProfile?.tipo === 'Professor' ? storedProfile : null;
-  const [activeModule, setActiveModule] = useState('inicio');
+  const [activeModule, setActiveModule] = useState(
+    () => getProfessorModuleFromPath(location.pathname) || 'inicio',
+  );
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [currentPoloId, setCurrentPoloId] = useState<string | null>(null);
   const [isPoloSelectorOpen, setIsPoloSelectorOpen] = useState(false);
@@ -69,6 +76,17 @@ const ProfessorPage: React.FC = () => {
       contentScrollRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     });
   }, []);
+
+  const handleModuleChange = useCallback((moduleId: string) => {
+    setActiveModule(moduleId);
+    const targetPath = getProfessorPathFromModule(moduleId);
+    if (location.pathname !== targetPath) navigate(targetPath);
+  }, [location.pathname, navigate]);
+
+  useEffect(() => {
+    const routeModule = getProfessorModuleFromPath(location.pathname);
+    if (routeModule) setActiveModule(routeModule);
+  }, [location.pathname]);
 
   // Força o scroll para o topo ao trocar de módulo/página
   useEffect(() => {
@@ -273,7 +291,7 @@ const ProfessorPage: React.FC = () => {
   const renderContent = () => {
     switch (activeModule) {
       case 'inicio':
-        return <InicioPage professorId={professorId} professorNome={professorNome} poloId={currentPoloId} onNavigate={setActiveModule} />;
+        return <InicioPage professorId={professorId} professorNome={professorNome} poloId={currentPoloId} onNavigate={handleModuleChange} />;
       case 'turmas':
         return (
           <TurmasPage
@@ -311,7 +329,7 @@ const ProfessorPage: React.FC = () => {
       case 'perfil':
         return <PerfilPage professorId={professorId} />;
       default:
-        return <InicioPage professorId={professorId} professorNome={professorNome} onNavigate={setActiveModule} />;
+        return <InicioPage professorId={professorId} professorNome={professorNome} onNavigate={handleModuleChange} />;
     }
   };
 
@@ -328,7 +346,7 @@ const ProfessorPage: React.FC = () => {
         professorEmail={professorEmail}
         professorNome={professorNome}
         onLogout={handleLogout}
-        onModuleChange={setActiveModule}
+        onModuleChange={handleModuleChange}
         onMobileMenuChange={setIsMobileMenuOpen}
         onPoloChange={handlePoloChange}
         onPoloSelectorChange={setIsPoloSelectorOpen}

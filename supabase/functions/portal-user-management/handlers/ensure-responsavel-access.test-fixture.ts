@@ -25,6 +25,7 @@ type FixtureOptions = {
   authUserById?: Record<string, unknown> | null;
   partners?: Array<Record<string, unknown>>;
   gestores?: Array<Record<string, unknown>>;
+  responsaveis?: Array<Record<string, unknown>>;
   invitedAuthUser?: Record<string, unknown> | null;
   proofError?: { code?: string; message: string } | null;
   proofValue?: unknown;
@@ -104,7 +105,9 @@ export const makeFixture = (options: FixtureOptions = {}) => {
           limit: () => ({
             data: table === "parceiros"
               ? options.partners || []
-              : options.gestores || [],
+              : table === "usuarios_sistema"
+              ? options.gestores || []
+              : options.responsaveis || [],
             error: null,
           }),
         };
