@@ -2,7 +2,13 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
-Histórico anterior: [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+Histórico anterior: [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+
+## [4.8.3] - 2026-08-25
+
+### Alterado
+
+- O fechamento operacional registra ledgers e hashes das 11 migrations, PR/merge, CI, Vercel Preview/Production, smoke HTTP e limitações de autenticação sem criar usuários, pagamentos ou lançamentos artificiais; o contrato funcional publicado em 4.8.2 permanece inalterado.
 
 ## [4.8.2] - 2026-08-25
 
@@ -474,27 +480,3 @@ Histórico anterior: [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — co
 
 - Foi criado um contrato automatizado que impede novos exportadores rasterizados de página inteira fora do gerador central.
 - TypeScript, ESLint, build de produção, testes do Caixa e testes de impressão da Secretaria foram validados.
-
-## [2.2.3-beta.26] - 2026-08-04
-
-### Adicionado
-
-- Notificações push passam a aceitar imagem junto ao texto, inclusive uma imagem padrão configurável para felicitações de aniversário.
-- A caixa de notificações do aluno ganhou paginação no backend e carregamento incremental para preservar desempenho conforme o histórico cresce.
-- A escolha de receber felicitações e comunicados de relacionamento passou a ser separada, explícita, sem seleção prévia e auditável no cadastro ou primeiro acesso.
-
-### Corrigido
-
-- Login e cadastro do aplicativo foram ajustados para diferentes tamanhos de iPhone e Android, sem rolagem ou arrasto indevidos quando o conteúdo cabe na tela.
-- O campo de data de nascimento agora respeita a largura do formulário no WebKit, e o fundo azul cobre toda a área segura do aparelho.
-- A verificação Cloudflare no aplicativo deixa de exibir o bootstrap com a marca Universo e não é reiniciada apenas por trocar de aba.
-- O retorno do login com Google volta diretamente ao aplicativo no iOS e Android, sem manter o aluno preso no navegador.
-- A abertura de comunicados recebeu destino próprio com navegação de retorno; notificações de chat continuam no Atendimento.
-- O modal do chat móvel agora fica centralizado na área útil, com cabeçalho fixo e rolagem apenas no conteúdo interno.
-- A tela de notificações não repete um pedido de permissão do sistema já concedido e diferencia relacionamento de publicidade comercial.
-
-### Plataforma e qualidade
-
-- Builds web e automações de qualidade foram alinhados ao Node.js 24.
-- Os projetos nativos iOS e Android foram avançados para o build 26 da versão 1.0.
-- TypeScript, ESLint, testes contratuais, build de produção, sincronização Capacitor e builds de simulador iOS e Android foram incluídos na validação desta versão.
