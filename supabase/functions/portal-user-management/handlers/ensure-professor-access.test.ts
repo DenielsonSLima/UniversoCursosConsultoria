@@ -9,8 +9,9 @@ const responder = (payload: Record<string, unknown>, status = 200) =>
   });
 
 const professorEmail = "professor@example.com";
+const gestorAuthUserId = "11111111-1111-4111-8111-111111111111";
 const professor: Partner = {
-  id: "professor-1",
+  id: "22222222-2222-4222-8222-222222222222",
   tipo: "Professor",
   nome: "Professor Teste",
   status: "ATIVO",
@@ -21,8 +22,8 @@ const professor: Partner = {
 type FixtureOptions = {
   authUsers?: Array<Record<string, unknown>>;
   authUserById?: Record<string, unknown> | null;
-  systemUserCandidates?: Array<Record<string, unknown>>;
   systemAuthConflicts?: Array<Record<string, unknown>>;
+  responsavelConflicts?: Array<Record<string, unknown>>;
   partnerConflicts?: Array<Record<string, unknown>>;
   partnerConflictsAfterBinding?: Array<Record<string, unknown>>;
   currentPartner?: Record<string, unknown> | null;
@@ -35,17 +36,6 @@ type FixtureOptions = {
 type RowsResult = {
   data: Array<Record<string, unknown>>;
   error: null;
-};
-
-type SystemConflictQuery = {
-  eq: () => SystemConflictQuery;
-  limit: () => RowsResult;
-};
-
-type SystemCandidateQuery = {
-  ilike: () => SystemCandidateQuery;
-  eq: () => SystemConflictQuery;
-  limit: () => RowsResult;
 };
 
 type CurrentPartnerResult = {
@@ -85,22 +75,15 @@ const makeFixture = (options: FixtureOptions = {}) => {
   let partnerConflictQueries = 0;
 
   const admin = {
+    rpc: () => ({ data: "a".repeat(64), error: null }),
     from: (table: string) => {
       if (table === "usuarios_sistema") {
         return {
           select: () => {
-            const systemConflictQuery: SystemConflictQuery = {
-              eq: () => systemConflictQuery,
+            const query: any = {
+              eq: () => query,
               limit: () => ({
                 data: options.systemAuthConflicts || [],
-                error: null,
-              }),
-            };
-            const query: SystemCandidateQuery = {
-              ilike: () => query,
-              eq: () => systemConflictQuery,
-              limit: () => ({
-                data: options.systemUserCandidates || [],
                 error: null,
               }),
             };
@@ -112,7 +95,7 @@ const makeFixture = (options: FixtureOptions = {}) => {
       if (table === "parceiros") {
         return {
           select: (columns: string) => {
-            if (columns.includes("auth_login_email")) {
+            if (columns.includes("status")) {
               const currentQuery: CurrentPartnerQuery = {
                 eq: () => currentQuery,
                 maybeSingle: () => ({
@@ -169,6 +152,21 @@ const makeFixture = (options: FixtureOptions = {}) => {
         };
       }
 
+      if (table === "responsaveis_legais") {
+        return {
+          select: () => {
+            const query: any = {
+              eq: () => query,
+              limit: () => ({
+                data: options.responsavelConflicts || [],
+                error: null,
+              }),
+            };
+            return query;
+          },
+        };
+      }
+
       throw new Error(`Tabela inesperada no teste: ${table}`);
     },
     auth: {
@@ -218,6 +216,7 @@ const makeFixture = (options: FixtureOptions = {}) => {
     admin,
     gestor: {
       id: "gestor-session",
+      auth_user_id: gestorAuthUserId,
       context: "global",
       polo_ids: [],
       permissoes: {
@@ -259,14 +258,18 @@ Deno.test("envia convite novo e vincula o Auth ao professor de forma condicional
     string,
     unknown
   >;
-  const { invite_operation_nonce: invitationNonce, ...inviteMetadata } =
-    inviteData;
-  assert.deepEqual(inviteMetadata, {
+  assert.deepEqual(inviteData, {
     nome: professor.nome,
     origem: "cadastro_professor",
     tipo: "Professor",
     partner_id: professor.id,
+    invite_operation_version: "v1",
+    invite_operation_actor: gestorAuthUserId,
+    invite_operation_nonce: inviteData.invite_operation_nonce,
+    invite_operation_proof: "a".repeat(64),
   });
+  const invitationNonce = fixture.linkedPayloads[0]
+    .primeiro_acesso_institucional_operacao_id;
   assert.equal(typeof invitationNonce, "string");
   assert.ok(String(invitationNonce).length >= 20);
   assert.equal(
@@ -329,7 +332,7 @@ Deno.test("não toma posse de Auth existente sem vínculo seguro", async () => {
   assert.equal(fixture.linkedPayloads.length, 0);
 });
 
-Deno.test("não vincula Auth não confirmado reenviado sem o nonce do convite", async () => {
+Deno.test("não usa user_metadata como autorização do retorno do convite", async () => {
   const fixture = makeFixture({
     invitedAuthUser: {
       id: "auth-pendente-de-outro-fluxo",
@@ -344,20 +347,21 @@ Deno.test("não vincula Auth não confirmado reenviado sem o nonce do convite", 
   const body = await response.json();
 
   assert.equal(response.status, 409);
-  assert.match(body.error, /comprovar que o convite criou/i);
+  assert.equal(body.success, false);
+  assert.match(body.error, /não foi possível comprovar/i);
   assert.equal(fixture.linkedPayloads.length, 0);
   assert.deepEqual(fixture.deletedAuthUserIds, []);
 });
 
 Deno.test("reaproveita somente o Auth institucional com e-mail e CPF coincidentes", async () => {
   const fixture = makeFixture({
-    systemUserCandidates: [{
+    authUsers: [{ id: "auth-gestor", email: professorEmail }],
+    systemAuthConflicts: [{
       id: "gestor-1",
       email: professorEmail,
       auth_user_id: "auth-gestor",
       cpf: "12345678909",
     }],
-    authUserById: { id: "auth-gestor", email: professorEmail },
   });
   const response = await handleEnsureProfessorAccess(
     fixture.context,
@@ -382,13 +386,13 @@ Deno.test("reaproveita somente o Auth institucional com e-mail e CPF coincidente
 
 Deno.test("recusa usuário institucional com CPF divergente sem enviar convite", async () => {
   const fixture = makeFixture({
-    systemUserCandidates: [{
+    authUsers: [{ id: "auth-gestor", email: professorEmail }],
+    systemAuthConflicts: [{
       id: "gestor-1",
       email: professorEmail,
       auth_user_id: "auth-gestor",
       cpf: "98765432100",
     }],
-    authUserById: { id: "auth-gestor", email: professorEmail },
   });
   const response = await handleEnsureProfessorAccess(
     fixture.context,

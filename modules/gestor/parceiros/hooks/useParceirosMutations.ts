@@ -1,7 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { parceirosService } from '../parceiros.service';
 import { parceirosQueryKeys } from '../parceiros.query-keys';
-import { portalActivationService } from '../portal-activation.service';
+import {
+  portalActivationService,
+  type InviteStudentResult,
+} from '../portal-activation.service';
 import { buildConfiguredAuthRedirectUrl } from '../../../../lib/app-url';
 
 interface ToastApi {
@@ -72,10 +75,7 @@ export const useParceirosMutations = ({
     onSuccess: async (created, data) => {
       invalidatePartners();
       const isExistingAluno = Boolean(created?.existingAluno);
-      let inviteDispatched = false;
-      let recoverySent = false;
-      let lastMessage: string | null = null;
-      let manualRecoveryLink: string | null = null;
+      let studentAccessResult: InviteStudentResult | null = null;
       let accessPreparationError: string | null = null;
 
       if (created?.id && !isExistingAluno) {
@@ -86,18 +86,24 @@ export const useParceirosMutations = ({
             email: created.email || undefined,
             redirectTo,
           });
-          inviteDispatched = result.action === 'invite' ? true : false;
-          recoverySent = result.action === 'recovery'
-            ? Boolean(result.recoveryEmailSent)
-            : false;
-          lastMessage = result.message || null;
-          manualRecoveryLink = result.recoveryLink || null;
+          studentAccessResult = result;
         } catch (error) {
           accessPreparationError = error instanceof Error
             ? error.message
             : 'Erro desconhecido.';
         }
       }
+
+      const studentAccessAction = studentAccessResult?.action;
+      const studentProfileLinked = studentAccessResult?.profileLinked === true
+        || studentAccessResult?.profileLinkState === 'linked'
+        || studentAccessResult?.profileLinkState === 'already_linked';
+      const studentIdentityLinkedOrReconciled = studentProfileLinked
+        || studentAccessAction === 'link-existing-identity'
+        || studentAccessAction === 'reconcile-invite';
+      const studentAccessPending = studentAccessResult?.studentAccessPending === true;
+      const accessMessage = studentAccessResult?.message || null;
+      const manualRecoveryLink = studentAccessResult?.recoveryLink || null;
 
       if (data.matricularAgora) {
         setCreatedAlunoNome(created.nome);
@@ -119,20 +125,46 @@ export const useParceirosMutations = ({
             'Cadastro salvo, acesso pendente',
             `O aluno foi cadastrado, mas o acesso não foi preparado: ${accessPreparationError} Abra a aba Acesso do aluno para tentar novamente.`,
           );
-        } else if (created?.email && inviteDispatched) {
+        } else if (studentIdentityLinkedOrReconciled) {
           toast.success(
-            'Aluno cadastrado!',
-            lastMessage || `${created.nome} receberá um convite para confirmar o e-mail, aceitar os termos e criar a própria senha.`,
+            studentAccessPending
+              ? 'Cadastro salvo, acesso vinculado e pendente'
+              : studentAccessAction === 'reconcile-invite'
+                ? 'Aluno cadastrado e acesso reconciliado!'
+                : 'Aluno cadastrado e acesso vinculado!',
+            accessMessage || (studentAccessPending
+              ? `${created.nome} teve a identidade vinculada, mas o primeiro acesso ainda precisa ser concluído.`
+              : studentAccessAction === 'reconcile-invite'
+                ? `O acesso de ${created.nome} foi reconciliado e vinculado ao perfil de Aluno.`
+                : `O acesso existente foi vinculado ao perfil de Aluno de ${created.nome}.`),
           );
-        } else if (created?.email && recoverySent) {
-          toast.success('Aluno cadastrado!', `${created.nome} já possuía uma conta. Enviamos um link seguro para definir a senha e concluir o acesso.`);
-        } else if (manualRecoveryLink) {
+        } else if (studentAccessAction === 'invite') {
+          toast.success(
+            'Aluno cadastrado e convite enviado!',
+            accessMessage || `${created.nome} receberá um convite para confirmar o e-mail, aceitar os termos e criar a própria senha.`,
+          );
+        } else if (
+          studentAccessAction === 'recovery'
+          && studentAccessResult?.recoveryEmailSent
+        ) {
+          toast.success(
+            'Aluno cadastrado e recuperação enviada!',
+            accessMessage || `${created.nome} já possuía uma conta. Enviamos um link seguro para concluir o acesso.`,
+          );
+        } else if (studentAccessAction === 'recovery' && manualRecoveryLink) {
           toast.success(
             'Aluno cadastrado!',
-            `${created.nome}: ${lastMessage || 'Geramos um link de recuperação para primeiro acesso.'}`
+            `${created.nome}: ${accessMessage || 'Geramos um link de recuperação para primeiro acesso.'}`
             + ' Abra a aba Acesso para gerar um novo link quando precisar enviá-lo.',
           );
-        } else if (created?.email) {
+        } else if (studentAccessAction === 'recovery') {
+          toast.success(
+            'Aluno cadastrado, recuperação preparada',
+            accessMessage || `A recuperação de acesso de ${created.nome} foi preparada.`,
+          );
+        } else if (studentAccessResult?.message) {
+          toast.success('Aluno cadastrado!', studentAccessResult.message);
+        } else if (created?.email && !studentAccessResult) {
           toast.success(
             'Cadastro salvo, acesso pendente',
             `${created.nome} foi cadastrado, mas ainda precisa receber o convite. Abra a aba Acesso do aluno para reenviar.`,
@@ -157,8 +189,11 @@ export const useParceirosMutations = ({
         );
       } else if (created?.institutionalProfileLinked) {
         toast.success(
-          'Professor cadastrado e acesso vinculado!',
-          `${created.nome} poderá escolher Professor ou Gestor ao entrar no portal institucional.`,
+          created?.institutionalAccessPending
+            ? 'Professor cadastrado, primeiro acesso pendente'
+            : 'Professor cadastrado e acesso vinculado!',
+          created.institutionalProfileLinkMessage
+            || `${created.nome} poderá escolher Professor ou Gestor ao entrar no portal institucional.`,
         );
       } else if (created?.institutionalProfileLinkError) {
         toast.error(

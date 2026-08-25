@@ -210,7 +210,7 @@ Deno.test("envia convite novo com nonce e vincula pela RPC interna", async () =>
   assert.equal(invite.email, EMAIL);
   assert.equal(
     invite.redirectTo,
-    "https://universocc.com.br/recuperar-senha",
+    "https://universocc.com.br/recuperar-senha?source=responsavel",
   );
   assert.equal(inviteData.origem, "cadastro_responsavel_legal");
   assert.equal(inviteData.responsavel_legal_id, RESPONSAVEL_ID);
@@ -354,20 +354,23 @@ Deno.test("vínculo existente exige o mesmo e-mail verificado", async () => {
   assert.equal(fixture.rpcCalls.length, 1);
 });
 
-Deno.test("preserva convite quando o vínculo transacional falha", async () => {
-  const fixture = makeFixture({
-    bindingError: { code: "40001", message: "Estado alterado." },
-  });
-  const response = await handleEnsureResponsavelAccess(
-    fixture.context,
-    RESPONSAVEL_ID,
-    REQUEST_ID,
-  );
-  const body = await response.json();
+Deno.test("preserva convite em serialização ou deadlock transitório", async () => {
+  for (const code of ["40001", "40P01"]) {
+    const fixture = makeFixture({
+      bindingError: { code, message: "Estado alterado." },
+    });
+    const response = await handleEnsureResponsavelAccess(
+      fixture.context,
+      RESPONSAVEL_ID,
+      REQUEST_ID,
+    );
+    const body = await response.json();
 
-  assert.equal(response.status, 409);
-  assert.match(body.error, /preservada para reconciliação segura/i);
-  assert.equal(fixture.invitePayloads.length, 1);
+    assert.equal(response.status, 409);
+    assert.match(body.error, /mudou durante a operação|tente novamente/i);
+    assert.match(body.error, /preservada para reconciliação segura/i);
+    assert.equal(fixture.invitePayloads.length, 1);
+  }
 });
 
 Deno.test("reconcilia o convite preservado no retry com o mesmo requestId", async () => {

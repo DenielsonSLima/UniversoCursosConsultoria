@@ -4,88 +4,106 @@ import assert from "node:assert/strict";
 import { handleLinkProfessorAuthIdentity } from "./link-professor-auth-identity.ts";
 import type { HandlerContext, Partner } from "../types.ts";
 
+const EMAIL = "pessoa@example.com";
+const CPF = "52998224725";
+const AUTH_ID = "11111111-1111-4111-8111-111111111111";
+
+const professor: Partner = {
+  id: "professor-1",
+  tipo: "Professor",
+  nome: "Pessoa Teste",
+  status: "ATIVO",
+  email: EMAIL,
+  cpf_cnpj: CPF,
+};
+
 const responder = (payload: Record<string, unknown>, status = 200) =>
-  new Response(JSON.stringify(payload), {
-    status,
-    headers: { "content-type": "application/json" },
-  });
+  new Response(JSON.stringify(payload), { status });
 
 type FixtureOptions = {
   global?: boolean;
   configurationAccess?: boolean;
-  authUser?: Record<string, unknown> | null;
-  systemUser?: Record<string, unknown> | null;
-  otherPartners?: Array<Record<string, unknown>>;
+  authUsers?: Array<Record<string, unknown>>;
+  authUserById?: Record<string, unknown> | null;
+  rows?: Record<string, Array<Record<string, unknown>>>;
   linkedPartner?: Record<string, unknown> | null;
   linkError?: { code?: string; message: string } | null;
 };
 
-const professorEmail = "professor@example.com";
-
 const makeFixture = (options: FixtureOptions = {}) => {
   const linkedPayloads: Array<Record<string, unknown>> = [];
-  let getAuthUserCalls = 0;
-  const authUser = options.authUser === undefined
-    ? { id: "auth-gestor", email: professorEmail }
-    : options.authUser;
+  let listUsersCalls = 0;
+  let getUserCalls = 0;
+  let inviteCalls = 0;
+  let recoveryCalls = 0;
+  let passwordCalls = 0;
+  const authUser = { id: AUTH_ID, email: EMAIL };
+  const rows = options.rows || {
+    usuarios_sistema: [{ id: "gestor-1", cpf: CPF, email: EMAIL }],
+  };
 
   const admin = {
-    from: (table: string) => {
-      if (table === "usuarios_sistema") {
+    from: (table: string) => ({
+      select: () => {
         const query: any = {
-          ilike: () => query,
-          limit: async () => ({
-            data: options.systemUser
-              ? [{ email: professorEmail, ...options.systemUser }]
-              : [],
-            error: null,
-          }),
+          eq: () => query,
+          neq: () => query,
+          limit: async () => ({ data: rows[table] || [], error: null }),
         };
-        return { select: () => query };
-      }
-
-      if (table === "parceiros") {
-        return {
-          select: () => {
-            const query: any = {
-              eq: () => query,
-              neq: () => query,
-              limit: async () => ({
-                data: options.otherPartners || [],
-                error: null,
-              }),
-            };
-            return query;
-          },
-          update: (payload: Record<string, unknown>) => {
-            linkedPayloads.push(payload);
-            const query: any = {
-              eq: () => query,
-              is: () => query,
-              select: () => ({
-                maybeSingle: async () =>
-                  options.linkError
-                    ? { data: null, error: options.linkError }
-                    : {
-                      data: options.linkedPartner === undefined
-                        ? { id: "professor-1", ...payload }
-                        : options.linkedPartner,
-                      error: null,
-                    },
-              }),
-            };
-            return query;
-          },
+        return query;
+      },
+      update: (payload: Record<string, unknown>) => {
+        linkedPayloads.push(payload);
+        const query: any = {
+          eq: () => query,
+          is: () => query,
+          select: () => query,
+          maybeSingle: async () =>
+            options.linkError ? { data: null, error: options.linkError } : {
+              data: options.linkedPartner === undefined
+                ? { id: professor.id, ...payload }
+                : options.linkedPartner,
+              error: null,
+            },
         };
-      }
-
-      throw new Error(`Tabela inesperada no teste: ${table}`);
-    },
+        return query;
+      },
+    }),
     auth: {
       admin: {
+        listUsers: async () => {
+          listUsersCalls += 1;
+          return {
+            data: {
+              users: options.authUsers === undefined
+                ? [authUser]
+                : options.authUsers,
+            },
+            error: null,
+          };
+        },
         getUserById: async () => {
-          getAuthUserCalls += 1;
-          return { data: { user: authUser }, error: null };
+          getUserCalls += 1;
+          return {
+            data: {
+              user: options.authUserById === undefined
+                ? authUser
+                : options.authUserById,
+            },
+            error: null,
+          };
+        },
+        inviteUserByEmail: async () => {
+          inviteCalls += 1;
+          throw new Error("convite não permitido no vínculo");
+        },
+        generateLink: async () => {
+          recoveryCalls += 1;
+          throw new Error("recovery não permitido no vínculo");
+        },
+        updateUserById: async () => {
+          passwordCalls += 1;
+          throw new Error("senha não pode ser alterada no vínculo");
         },
       },
     },
@@ -113,28 +131,92 @@ const makeFixture = (options: FixtureOptions = {}) => {
   return {
     context,
     linkedPayloads,
-    getAuthUserCalls: () => getAuthUserCalls,
+    counts: () => ({
+      listUsersCalls,
+      getUserCalls,
+      inviteCalls,
+      recoveryCalls,
+      passwordCalls,
+    }),
   };
 };
 
-const professor: Partner = {
-  id: "professor-1",
-  tipo: "Professor",
-  nome: "Professor Teste",
-  email: professorEmail,
-  cpf_cnpj: "123.456.789-09",
+const expectSafeLink = async (
+  rows: Record<string, Array<Record<string, unknown>>>,
+) => {
+  const fixture = makeFixture({ rows });
+  const response = await handleLinkProfessorAuthIdentity(
+    fixture.context,
+    professor,
+  );
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.equal(body.profileLinked, true);
+  assert.equal(body.userId, AUTH_ID);
+  assert.equal(body.institutionalAccessPending, false);
+  assert.match(body.message, /senha atual foi preservada/i);
+  assert.deepEqual(fixture.linkedPayloads, [{
+    auth_user_id: AUTH_ID,
+    auth_login_email: EMAIL,
+    acesso_institucional_origem: "IDENTIDADE_EXISTENTE",
+    primeiro_acesso_institucional_pendente: false,
+    primeiro_acesso_institucional_operacao_id: null,
+  }]);
+  assert.deepEqual(fixture.counts(), {
+    listUsersCalls: 1,
+    getUserCalls: 0,
+    inviteCalls: 0,
+    recoveryCalls: 0,
+    passwordCalls: 0,
+  });
 };
 
-Deno.test("vincula professor ao Auth do gestor somente quando e-mail e CPF coincidem", async () => {
+Deno.test("vincula Professor ao Auth de Gestor com CPF e e-mail canônicos", async () => {
+  await expectSafeLink({
+    usuarios_sistema: [{ id: "gestor-1", cpf: CPF, email: EMAIL }],
+  });
+});
+
+Deno.test("vincula Professor ao Auth de Aluno com papel oposto", async () => {
+  await expectSafeLink({
+    parceiros: [{
+      id: "aluno-1",
+      tipo: "Aluno",
+      cpf_cnpj: CPF,
+      email: "contato-aluno@example.com",
+      auth_login_email: EMAIL,
+    }],
+  });
+});
+
+Deno.test("vincula Professor ao Auth de Responsável compatível", async () => {
+  await expectSafeLink({
+    responsaveis_legais: [{
+      id: "responsavel-1",
+      cpf_normalizado: CPF,
+      email: EMAIL,
+    }],
+  });
+});
+
+Deno.test("mantém Professor pendente quando a senha existente ainda não foi concluída", async () => {
   const fixture = makeFixture({
-    authUser: { id: "auth-gestor", email: professor.email },
-    systemUser: {
-      id: "gestor-1",
-      auth_user_id: "auth-gestor",
-      cpf: "12345678909",
+    rows: {
+      parceiros: [{
+        id: "aluno-1",
+        tipo: "Aluno",
+        cpf_cnpj: CPF,
+        email: EMAIL,
+      }],
+    },
+    linkedPartner: {
+      id: professor.id,
+      auth_user_id: AUTH_ID,
+      primeiro_acesso_institucional_pendente: true,
     },
   });
-
   const response = await handleLinkProfessorAuthIdentity(
     fixture.context,
     professor,
@@ -142,29 +224,29 @@ Deno.test("vincula professor ao Auth do gestor somente quando e-mail e CPF coinc
   const body = await response.json();
 
   assert.equal(response.status, 200);
-  assert.equal(body.success, true);
-  assert.equal(body.userId, "auth-gestor");
   assert.equal(body.profileLinked, true);
-  assert.equal(body.profileLinkState, "linked");
-  assert.deepEqual(fixture.linkedPayloads, [{
-    auth_user_id: "auth-gestor",
-    auth_login_email: professorEmail,
-    acesso_institucional_origem: "IDENTIDADE_EXISTENTE",
-    primeiro_acesso_institucional_pendente: false,
-    primeiro_acesso_institucional_operacao_id: null,
-  }]);
+  assert.equal(body.institutionalAccessPending, true);
+  assert.match(body.message, /permanece pendente/i);
+  assert.deepEqual(fixture.counts(), {
+    listUsersCalls: 1,
+    getUserCalls: 0,
+    inviteCalls: 0,
+    recoveryCalls: 0,
+    passwordCalls: 0,
+  });
 });
 
-Deno.test("não vincula quando o CPF do professor diverge do gestor", async () => {
+Deno.test("recusa quando qualquer perfil do UID diverge", async () => {
   const fixture = makeFixture({
-    authUser: { id: "auth-gestor", email: professor.email },
-    systemUser: {
-      id: "gestor-1",
-      auth_user_id: "auth-gestor",
-      cpf: "98765432100",
+    rows: {
+      usuarios_sistema: [{ id: "gestor-1", cpf: CPF, email: EMAIL }],
+      responsaveis_legais: [{
+        id: "responsavel-1",
+        cpf_normalizado: "11111111111",
+        email: EMAIL,
+      }],
     },
   });
-
   const response = await handleLinkProfessorAuthIdentity(
     fixture.context,
     professor,
@@ -172,20 +254,21 @@ Deno.test("não vincula quando o CPF do professor diverge do gestor", async () =
   const body = await response.json();
 
   assert.equal(response.status, 409);
-  assert.match(body.error, /CPF do professor não confere/i);
+  assert.match(body.error, /responsável legal/i);
   assert.equal(fixture.linkedPayloads.length, 0);
 });
 
-Deno.test("não vincula quando o e-mail do Auth diverge do professor", async () => {
+Deno.test("recusa outro Professor mesmo com CPF e e-mail iguais", async () => {
   const fixture = makeFixture({
-    authUser: { id: "auth-gestor", email: "outro-email@example.com" },
-    systemUser: {
-      id: "gestor-1",
-      auth_user_id: "auth-gestor",
-      cpf: "12345678909",
+    rows: {
+      parceiros: [{
+        id: "professor-2",
+        tipo: "Professor",
+        cpf_cnpj: CPF,
+        email: EMAIL,
+      }],
     },
   });
-
   const response = await handleLinkProfessorAuthIdentity(
     fixture.context,
     professor,
@@ -193,21 +276,12 @@ Deno.test("não vincula quando o e-mail do Auth diverge do professor", async () 
   const body = await response.json();
 
   assert.equal(response.status, 409);
-  assert.match(body.error, /e-mail do professor não confere/i);
+  assert.match(body.error, /mesmo papel/i);
   assert.equal(fixture.linkedPayloads.length, 0);
 });
 
-Deno.test("não cria vínculo quando o operador não é gestor global com Configurações", async () => {
-  const fixture = makeFixture({
-    global: false,
-    authUser: { id: "auth-gestor", email: professor.email },
-    systemUser: {
-      id: "gestor-1",
-      auth_user_id: "auth-gestor",
-      cpf: "12345678909",
-    },
-  });
-
+Deno.test("não adota Auth órfão localizado somente por e-mail", async () => {
+  const fixture = makeFixture({ rows: {} });
   const response = await handleLinkProfessorAuthIdentity(
     fixture.context,
     professor,
@@ -215,72 +289,55 @@ Deno.test("não cria vínculo quando o operador não é gestor global com Config
   const body = await response.json();
 
   assert.equal(response.status, 200);
-  assert.equal(body.success, true);
-  assert.equal(body.profileLinked, false);
-  assert.equal(
-    body.profileLinkState,
-    "requires_global_configuration_access",
-  );
-  assert.equal(fixture.getAuthUserCalls(), 0);
-  assert.equal(fixture.linkedPayloads.length, 0);
-});
-
-Deno.test("não cria vínculo quando gestor global não possui Configurações", async () => {
-  const fixture = makeFixture({
-    configurationAccess: false,
-    authUser: { id: "auth-gestor", email: professor.email },
-    systemUser: {
-      id: "gestor-1",
-      auth_user_id: "auth-gestor",
-      cpf: "12345678909",
-    },
-  });
-
-  const response = await handleLinkProfessorAuthIdentity(
-    fixture.context,
-    professor,
-  );
-  const body = await response.json();
-
-  assert.equal(response.status, 200);
-  assert.equal(body.success, true);
-  assert.equal(body.profileLinked, false);
-  assert.equal(
-    body.profileLinkState,
-    "requires_global_configuration_access",
-  );
-  assert.equal(fixture.getAuthUserCalls(), 0);
-  assert.equal(fixture.linkedPayloads.length, 0);
-});
-
-Deno.test("não consulta o Auth quando não existe Gestor com o mesmo e-mail", async () => {
-  const fixture = makeFixture();
-
-  const response = await handleLinkProfessorAuthIdentity(
-    fixture.context,
-    professor,
-  );
-  const body = await response.json();
-
-  assert.equal(response.status, 200);
-  assert.equal(body.success, true);
   assert.equal(body.profileLinked, false);
   assert.equal(body.profileLinkState, "no_matching_gestor");
-  assert.equal(fixture.getAuthUserCalls(), 0);
+  assert.match(body.message, /não possui outro perfil canônico/i);
   assert.equal(fixture.linkedPayloads.length, 0);
 });
 
-Deno.test("não reaproveita Auth que já pertence a outro parceiro", async () => {
-  const fixture = makeFixture({
-    authUser: { id: "auth-gestor", email: professor.email },
-    systemUser: {
-      id: "gestor-1",
-      auth_user_id: "auth-gestor",
-      cpf: "12345678909",
-    },
-    otherPartners: [{ id: "outro-parceiro" }],
-  });
+Deno.test("exige gestor global com Configurações antes de consultar Auth", async () => {
+  const fixture = makeFixture({ global: false });
+  const response = await handleLinkProfessorAuthIdentity(
+    fixture.context,
+    professor,
+  );
+  const body = await response.json();
 
+  assert.equal(response.status, 200);
+  assert.equal(body.profileLinkState, "requires_global_configuration_access");
+  assert.deepEqual(fixture.counts(), {
+    listUsersCalls: 0,
+    getUserCalls: 0,
+    inviteCalls: 0,
+    recoveryCalls: 0,
+    passwordCalls: 0,
+  });
+});
+
+Deno.test("vínculo já existente também é validado de forma fail-closed", async () => {
+  const fixture = makeFixture({
+    rows: {
+      parceiros: [{
+        id: "professor-2",
+        tipo: "Professor",
+        cpf_cnpj: CPF,
+        email: EMAIL,
+      }],
+    },
+  });
+  const response = await handleLinkProfessorAuthIdentity(
+    fixture.context,
+    { ...professor, auth_user_id: AUTH_ID, auth_login_email: EMAIL },
+  );
+  const body = await response.json();
+
+  assert.equal(response.status, 409);
+  assert.match(body.error, /mesmo papel/i);
+  assert.equal(fixture.counts().getUserCalls, 1);
+});
+
+Deno.test("recusa concorrência quando o update condicional não encontra perfil", async () => {
+  const fixture = makeFixture({ linkedPartner: null });
   const response = await handleLinkProfessorAuthIdentity(
     fixture.context,
     professor,
@@ -288,52 +345,40 @@ Deno.test("não reaproveita Auth que já pertence a outro parceiro", async () =>
   const body = await response.json();
 
   assert.equal(response.status, 409);
-  assert.match(body.error, /outro parceiro/i);
-  assert.equal(fixture.linkedPayloads.length, 0);
-});
-
-Deno.test("recusa ação para perfil que não seja Professor antes de consultar o Auth", async () => {
-  const fixture = makeFixture({
-    authUser: { id: "auth-gestor", email: professor.email },
-  });
-
-  const response = await handleLinkProfessorAuthIdentity(fixture.context, {
-    ...professor,
-    tipo: "Aluno",
-  });
-  const body = await response.json();
-
-  assert.equal(response.status, 400);
-  assert.match(body.error, /somente perfis de Professor/i);
-  assert.equal(fixture.getAuthUserCalls(), 0);
-  assert.equal(fixture.linkedPayloads.length, 0);
-});
-
-Deno.test("recusa concorrência quando a atualização condicional não encontra o professor", async () => {
-  const fixture = makeFixture({
-    authUser: { id: "auth-gestor", email: professor.email },
-    systemUser: {
-      id: "gestor-1",
-      auth_user_id: "auth-gestor",
-      cpf: "12345678909",
-    },
-    linkedPartner: null,
-  });
-
-  const response = await handleLinkProfessorAuthIdentity(
-    fixture.context,
-    professor,
-  );
-  const body = await response.json();
-
-  assert.equal(response.status, 409);
-  assert.equal(body.success, false);
   assert.match(body.error, /mudou durante a operação/i);
-  assert.deepEqual(fixture.linkedPayloads, [{
-    auth_user_id: "auth-gestor",
-    auth_login_email: professorEmail,
-    acesso_institucional_origem: "IDENTIDADE_EXISTENTE",
-    primeiro_acesso_institucional_pendente: false,
-    primeiro_acesso_institucional_operacao_id: null,
-  }]);
+});
+
+Deno.test("trata divergência canônica do trigger como conflito de identidade", async () => {
+  const fixture = makeFixture({
+    linkError: {
+      code: "23514",
+      message: "PORTAL_IDENTIDADE_MULTIPERFIL_DIVERGENTE",
+    },
+  });
+  const response = await handleLinkProfessorAuthIdentity(
+    fixture.context,
+    professor,
+  );
+  const body = await response.json();
+
+  assert.equal(response.status, 409);
+  assert.doesNotMatch(JSON.stringify(body), /PORTAL_IDENTIDADE/);
+});
+
+Deno.test("trata deadlock do vínculo como conflito transitório sanitizado", async () => {
+  const fixture = makeFixture({
+    linkError: {
+      code: "40P01",
+      message: "deadlock detected: PORTAL_IDENTIDADE_INTERNA",
+    },
+  });
+  const response = await handleLinkProfessorAuthIdentity(
+    fixture.context,
+    professor,
+  );
+  const body = await response.json();
+
+  assert.equal(response.status, 409);
+  assert.match(body.error, /mudou durante a operação|tente novamente/i);
+  assert.doesNotMatch(JSON.stringify(body), /deadlock|PORTAL_IDENTIDADE/i);
 });

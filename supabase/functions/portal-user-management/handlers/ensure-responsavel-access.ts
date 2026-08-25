@@ -59,7 +59,9 @@ const profileMatchesResponsavel = (
   cpf: string,
   email: string,
 ) => {
-  const profileCpf = onlyDigits(profile.cpf_cnpj ?? profile.cpf);
+  const profileCpf = onlyDigits(
+    profile.cpf_cnpj ?? profile.cpf_normalizado ?? profile.cpf,
+  );
   const canonicalProfileEmail =
     normalizeEmail(profile.auth_login_email as string | null) ||
     normalizeEmail(profile.email as string | null);
@@ -78,35 +80,51 @@ const hasSafeMultiProfileOwnership = async (
   cpf: string,
   email: string,
 ) => {
-  const { data: partners, error: partnersError } = await context.admin
-    .from("parceiros")
-    .select("id, cpf_cnpj, email, auth_login_email")
-    .eq("auth_user_id", authUserId)
-    .limit(10);
-  if (partnersError) {
+  let partnersResult: any;
+  let gestoresResult: any;
+  let responsaveisResult: any;
+  try {
+    [partnersResult, gestoresResult, responsaveisResult] = await Promise.all([
+      context.admin
+        .from("parceiros")
+        .select("id, cpf_cnpj, email, auth_login_email")
+        .eq("auth_user_id", authUserId)
+        .limit(10),
+      context.admin
+        .from("usuarios_sistema")
+        .select("id, cpf, email")
+        .eq("auth_user_id", authUserId)
+        .limit(10),
+      context.admin
+        .from("responsaveis_legais")
+        .select("id, cpf_normalizado, email")
+        .eq("auth_user_id", authUserId)
+        .limit(10),
+    ]);
+  } catch {
     return { matches: false, lookupFailed: true };
   }
   if (
-    (partners || []).some((profile: Record<string, unknown>) =>
-      profileMatchesResponsavel(profile, cpf, email)
-    )
+    partnersResult.error || gestoresResult.error || responsaveisResult.error
   ) {
-    return { matches: true, lookupFailed: false };
-  }
-
-  const { data: gestores, error: gestoresError } = await context.admin
-    .from("usuarios_sistema")
-    .select("id, cpf, email")
-    .eq("auth_user_id", authUserId)
-    .limit(10);
-  if (gestoresError) {
     return { matches: false, lookupFailed: true };
   }
 
+  // Um segundo cadastro de Responsável nunca é reutilizável, mesmo quando os
+  // dados coincidem. Os demais papéis precisam comprovar a mesma pessoa em
+  // conjunto; uma única linha divergente invalida toda a identidade.
+  if (responsaveisResult.data?.length) {
+    return { matches: false, lookupFailed: false };
+  }
+  const linkedProfiles = [
+    ...(partnersResult.data || []),
+    ...(gestoresResult.data || []),
+  ] as Array<Record<string, unknown>>;
   return {
-    matches: (gestores || []).some((profile: Record<string, unknown>) =>
-      profileMatchesResponsavel(profile, cpf, email)
-    ),
+    matches: linkedProfiles.length > 0 &&
+      linkedProfiles.every((profile) =>
+        profileMatchesResponsavel(profile, cpf, email)
+      ),
     lookupFailed: false,
   };
 };
@@ -267,7 +285,9 @@ export const handleEnsureResponsavelAccess = async (
       }
     }
   } else {
-    const redirectResolution = resolveRedirectTarget("/recuperar-senha");
+    const redirectResolution = resolveRedirectTarget(
+      "/recuperar-senha?source=responsavel",
+    );
     if (!redirectResolution.redirectTo) {
       return publicError(
         context,
@@ -376,12 +396,16 @@ export const handleEnsureResponsavelAccess = async (
     requestId,
   );
   if (binding.error) {
-    const status =
-      binding.error.code === "23505" || binding.error.code === "40001"
-        ? 409
-        : binding.error.code === "42501"
-        ? 403
-        : 500;
+    const retryableConflict = ["40001", "40P01"].includes(
+      binding.error.code,
+    );
+    const status = retryableConflict || ["23505", "23514"].includes(
+        binding.error.code,
+      )
+      ? 409
+      : binding.error.code === "42501"
+      ? 403
+      : 500;
     const code = status === 409
       ? "RESPONSAVEL_ACESSO_CONFLITO"
       : status === 403
@@ -391,7 +415,11 @@ export const handleEnsureResponsavelAccess = async (
       context,
       status,
       code,
-      `Não foi possível vincular o acesso do responsável.${
+      `${
+        retryableConflict
+          ? "O vínculo mudou durante a operação. Atualize os dados e tente novamente."
+          : "Não foi possível vincular o acesso do responsável."
+      }${
         inviteSent
           ? " A identidade convidada foi preservada para reconciliação segura."
           : ""
