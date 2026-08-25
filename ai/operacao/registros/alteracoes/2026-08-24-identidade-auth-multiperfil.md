@@ -1,6 +1,6 @@
 # Identidade Auth multiperfil — 2026-08-24
 
-Estado: `SUPABASE_E_EDGE_PUBLICADOS_AGUARDANDO_MERGE`
+Estado: `PUBLICADO_PRODUCAO_4_8_1`
 
 ## Objetivo e contrato
 
@@ -164,7 +164,9 @@ Total: 83 arquivos.
 - PR GitHub `#90`: `feat/identidade-auth-multiperfil-4-8-0` sobre `main`; CI, controle de versão e Vercel Preview aprovados no head `f0e41d54872d4bf8d6246b64b1498941ac5b822c`.
 - As 14 migrations estão aplicadas em Produção e passam no contrato pós-rollout; migrations aplicadas tornam-se imutáveis.
 - `portal-user-management` v35 está `ACTIVE`, `verify_jwt: true`, e passou no smoke remoto de rejeição sem credencial.
-- Merge GitHub, deploy web da `main` e smoke HTTP final permanecem pendentes deste fechamento.
+- A PR `#90` foi mesclada por squash na `main` como `db769c78b06fe74fc1752f6015337289e21e854d`; o status Vercel de Produção ficou verde nesse commit.
+- Smoke HTTP pós-deploy aprovado em `https://universocc.com.br/`, `/login` e `/sistema/login`, todos com `200` e `text/html`.
+- A inspeção visual automatizada pós-merge ficou indisponível por ausência de navegador controlável na sessão; CI, Vercel Preview, contratos de UI e smoke HTTP foram preservados como evidências executáveis.
 - Nenhum dado pessoal ou usuário artificial foi criado em Produção apenas para validação.
 
 ## Limites

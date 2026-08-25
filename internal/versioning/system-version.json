@@ -1,8 +1,8 @@
 {
-  "version": "4.8.0",
+  "version": "4.8.1",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 9,
+  "revision": 10,
   "releasedAt": "2026-08-24",
-  "summary": "Identidade única com seleção segura entre os perfis de acesso"
+  "summary": "Fechamento operacional da identidade multiperfil publicada"
 }

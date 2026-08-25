@@ -4,6 +4,16 @@ Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente
 
 Histórico anterior: [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
 
+## [4.8.1] - 2026-08-24
+
+### Alterado
+
+- O fechamento da identidade multiperfil registra os ledgers reais, a Edge Function v35, o merge, o deploy web e os smokes de Produção no lote ativo, no histórico operacional e no índice RAG.
+
+### Segurança e qualidade
+
+- O patch não altera o contrato funcional 4.8.0; apenas preserva evidências imutáveis de CI, rollout e limitações do smoke autenticado sem criar usuário artificial.
+
 ## [4.8.0] - 2026-08-24
 
 ### Adicionado
