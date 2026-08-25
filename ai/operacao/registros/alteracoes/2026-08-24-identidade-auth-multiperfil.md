@@ -56,7 +56,7 @@ A Edge Function `portal-user-management` será publicada somente depois das migr
 
 ## Manifesto explícito
 
-Total: 81 arquivos.
+Total: 83 arquivos.
 
 ### Entrega funcional e testes
 
@@ -112,6 +112,7 @@ Total: 81 arquivos.
 - `supabase/functions/portal-user-management/handlers/student-access-identity.ts`
 - `supabase/functions/portal-user-management/handlers/student-invite-failure.ts`
 - `supabase/functions/portal-user-management/student-access.ts`
+- `supabase/functions/portal-user-management/student-access.test.ts`
 - `supabase/functions/portal-user-management/handlers/upsert-gestor-user.test.ts`
 - `supabase/functions/portal-user-management/handlers/upsert-gestor-user.ts`
 - `supabase/functions/portal-user-management/types.ts`
@@ -120,10 +121,10 @@ Total: 81 arquivos.
 - `supabase/migrations/20260824113200_harden_shared_auth_identity_deletion.sql`
 - `supabase/migrations/20260824113250_include_responsavel_in_institutional_password_proof.sql`
 - `supabase/migrations/20260824113255_scope_real_password_change_promotion.sql`
-- `supabase/migrations/20260824113260_lock_shared_credential_promotion.sql`
-- `supabase/migrations/20260824113270_use_canonical_shared_credential_initializers.sql`
 - `supabase/migrations/20260824113256_fail_fast_student_temporary_password_reservation.sql`
 - `supabase/migrations/20260824113257_fail_fast_responsavel_temporary_password_reservation.sql`
+- `supabase/migrations/20260824113260_lock_shared_credential_promotion.sql`
+- `supabase/migrations/20260824113270_use_canonical_shared_credential_initializers.sql`
 - `supabase/migrations/20260824113300_harden_responsavel_multi_profile_link.sql`
 - `supabase/migrations/20260824113400_allow_partner_auth_identity_per_profile.sql`
 - `supabase/migrations/20260824113410_complete_public_signup_credential_proof.sql`
@@ -143,6 +144,7 @@ Total: 81 arquivos.
 - `ai/operacao/registros/alteracoes/2026-08-24-card-email-validado-gestor.md`
 - `ai/operacao/registros/alteracoes/2026-08-24-identidade-auth-multiperfil.md`
 - `internal/versioning/CHANGELOG.md`
+- `internal/versioning/changelog/2026-08-03.md`
 - `internal/versioning/system-version.json`
 
 ### Preservado fora do lote
