@@ -1,10 +1,10 @@
 # Lote ativo
 
-Estado: `EM_REVISAO_FINAL_PRODUCAO`
+Estado: `EM_REVISAO_GITHUB`
 
 ## Lote: 2026-08-24-identidade-auth-multiperfil-4-8-0
 
-- Pedido: permitir uma única identidade Auth com acessos compatíveis de Gestor, Professor, Aluno e Responsável; selecionar o perfil quando houver mais de um acesso na audiência do login; revisar em três frentes e publicar o lote completo no GitHub e em Produção.
+- Pedido: revisar as alterações locais mais recentes e atualizar o GitHub com o lote de identidade multiperfil, sem aplicar banco, Edge Functions, merge ou Produção nesta autorização.
 - Contrato: `/login` resolve somente Aluno/Responsável; `/sistema/login` resolve somente Gestor/Professor. Um perfil entra automaticamente e dois perfis exigem escolha explícita.
 - Identidade: todos os perfis compartilhados devem possuir o mesmo CPF válido e o mesmo e-mail canônico do Supabase Auth.
 - Registro: `ai/operacao/registros/alteracoes/2026-08-24-identidade-auth-multiperfil.md`.
@@ -23,7 +23,7 @@ Estado: `EM_REVISAO_FINAL_PRODUCAO`
 
 - Revisões independentes de frontend, backend e migrations identificaram riscos bloqueadores de audiência, prova de convite, mensagens internas e concorrência; todos foram corrigidos e revalidados localmente.
 - Supabase de Produção confirmado como `kfekgwyqozhicpfuunpo`; preflight sem duplicidades, divergências ou locks bloqueadores.
-- Banco remoto ainda não contém as quatorze migrations do lote; a aplicação em Produção e a publicação da Edge Function foram autorizadas, mas ainda não foram executadas.
+- Banco remoto ainda não contém as quatorze migrations do lote; nenhuma aplicação de migration ou publicação de Edge Function foi autorizada ou executada.
 - Suítes de handlers, login, feedback e contratos de migrations, lint, TypeScript, teto de linhas e build de produção foram aprovadas localmente.
 - `main` remota confirmada em `243cb89fe6f11fdf4b8af6f9444e99cf9c8fdd91`, versão 4.7.7; a referência Git local não será usada como base de publicação.
 
@@ -32,16 +32,14 @@ Estado: `EM_REVISAO_FINAL_PRODUCAO`
 1. Criar branch GitHub por MCP a partir da `main` remota e publicar somente o manifesto registrado.
 2. Abrir PR em rascunho e aguardar CI e Vercel Preview.
 3. Corrigir no mesmo PR qualquer falha de gate ou Preview, sem ampliar o manifesto silenciosamente.
-4. Com os gates verdes e GO das três revisões, aplicar as quatorze migrations na ordem registrada, interrompendo no primeiro erro.
-5. Publicar `portal-user-management` com o fechamento runtime completo e `verify_jwt: true`; executar invariantes, logs e smoke remoto.
-6. Atualizar no mesmo PR as evidências reais da aplicação, revalidar CI/Preview, mesclar e acompanhar o deploy de Produção.
-7. Executar smoke público e institucional pós-produção sem criar usuário ou dado pessoal artificial.
+4. Somente após nova autorização explícita: aplicar as quatorze migrations na ordem registrada, publicar `portal-user-management`, executar smoke remoto e avaliar o merge.
+5. Produção e smoke pós-produção permanecem fora do escopo atual.
 
 ### Limites
 
 1. PRs antigas e alterações paralelas do workspace não integram este lote.
 2. Nenhum usuário de teste ou dado pessoal será criado em Produção apenas para o smoke.
 3. Migrations aplicadas tornam-se imutáveis e serão registradas com o identificador real do ledger.
-4. Esta autorização inclui branch, PR, migrations, Edge Function, merge e Produção, condicionados aos gates e ao GO final das três frentes.
+4. A abertura do PR não autoriza merge, alteração do Supabase ou publicação em Produção.
 
 Histórico: `ai/operacao/registros/ALTERACOES.md` e `ai/operacao/registros/alteracoes/`.

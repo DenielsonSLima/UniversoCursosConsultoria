@@ -1,6 +1,6 @@
 # Identidade Auth multiperfil — 2026-08-24
 
-Estado: `EM_REVISAO_FINAL_PRODUCAO`
+Estado: `EM_REVISAO_GITHUB`
 
 ## Objetivo e contrato
 
@@ -15,7 +15,7 @@ Uma única identidade do Supabase Auth pode reunir os perfis Gestor, Professor, 
 
 - Metadados de convite somente são aceitos quando carregam prova HMAC emitida e revalidada pelo banco; a autorização não confia em campos livres de `user_metadata`.
 - O vínculo reutiliza a senha existente e não dispara convite, recuperação ou troca de termos indevida.
-- Depois do lock da linha, a trava da credencial por UID é tentada sem espera; disputa concorrente retorna `40001` para retry antes da trava de identidade. As RPCs já aplicadas de reserva foram redefinidas apenas por migrations incrementais, e constraints diferíveis revalidam CPF, e-mail e papel no fim da transação.
+- Depois do lock da linha, a trava da credencial por UID é tentada sem espera; disputa concorrente retorna `40001` para retry antes da trava de identidade. As migrations incrementais do lote redefinem as RPCs preexistentes de reserva, e constraints diferíveis revalidam CPF, e-mail e papel no fim da transação.
 - Gestor e Parceiro removem Auth somente em trigger `AFTER DELETE`, depois de reconsultar todos os perfis; a exclusão de Responsável permanece conservadora e pode deixar uma identidade órfã para limpeza operacional futura.
 - Convites de Aluno e Professor carregam prova HMAC revalidada no banco; somente `service_role` pode chamar a RPC de assinatura.
 - Concorrência serializável pode devolver `40001` e o backend também trata `40P01` de forma conservadora; chamadores devem repetir a transação com backoff.
@@ -39,7 +39,7 @@ Migrations, obrigatoriamente nesta ordem:
 13. `20260824113600_allow_professor_student_checkout_identity.sql`;
 14. `20260824113700_sign_partner_invite_operations.sql`.
 
-A Edge Function `portal-user-management` será publicada somente depois das migrations, com `verify_jwt: true` e o fechamento completo do grafo runtime acrescido das validações multiperfil.
+A Edge Function `portal-user-management` somente poderá ser publicada, em autorização futura, depois das migrations, com `verify_jwt: true` e o fechamento completo do grafo runtime acrescido das validações multiperfil.
 
 ## Validação pré-publicação
 
@@ -155,13 +155,13 @@ Total: 82 arquivos.
 
 ## Publicação e smoke
 
-- O usuário autorizou branch, PR, aplicação das migrations, publicação da Edge Function, merge e Produção.
-- A execução permanece condicionada ao GO das três revisões, CI/Preview verdes e preflight remoto imediatamente anterior.
-- O lote deve parar no primeiro erro remoto; migrations aplicadas não serão revertidas por edição ou rollback destrutivo, apenas por correção incremental forward-only.
-- O smoke autenticado do seletor será limitado a identidades reais já existentes e compatíveis; nenhum dado pessoal ou usuário artificial será criado em Produção.
+- A autorização atual cobre somente branch e PR em rascunho no GitHub.
+- Nenhuma migration, Edge Function, merge ou publicação em Produção foi autorizada ou executada.
+- A disputa real em duas sessões e o smoke autenticado permanecem pendentes até autorização explícita para aplicar as migrations.
+- Nenhum dado pessoal ou usuário artificial será criado em Produção apenas para validação.
 
 ## Limites
 
 - A publicação parte da `main` remota e não inclui o snapshot integral do workspace.
 - Nenhuma PR antiga, segredo, dado pessoal ou artefato gerado integra o commit.
-- Migrations aplicadas são imutáveis; correções futuras exigem migrations incrementais.
+- Migrations aplicadas serão imutáveis; correções futuras exigirão migrations incrementais.

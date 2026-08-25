@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-08-25T01:46:57.942Z",
+  "builtAt": "2026-08-25T01:53:28.363Z",
   "manifestVersion": 2,
-  "sourceSignature": "2367479087de0bf26c970debdef74783498ac780f5ec6b41b3e4679fa11746e6",
+  "sourceSignature": "8ca44f1b60b3d7714dbf44f67fa8bd2afd5d73256c96f93c3554a035aac16e27",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "e4d978816942d347b37ae5dd4a9df2d96472e28736d5f1f54938523677417952"
+      "hash": "39dd31f4e71ef3b633aa92e9f3a6e2fe1b6a52067684880aa3f62afb86a10a2b"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -192,23 +192,23 @@
       "part": 1
     },
     {
-      "id": "3da8473502749172cc02",
-      "hash": "3da8473502749172cc020e848a173849273d7352d49a7d8638c4127739bd73a1",
+      "id": "10bc52b4f6897e31c86f",
+      "hash": "10bc52b4f6897e31c86fe72f8feb3eed67d79ac0a89f6ac4ab61c1684f62c6ad",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Lote ativo",
-      "text": "Estado: `EM_REVISAO_FINAL_PRODUCAO`",
-      "normalizedText": "estado em revisao final producao",
-      "tokenCount": 5,
+      "text": "Estado: `EM_REVISAO_GITHUB`",
+      "normalizedText": "estado em revisao github",
+      "tokenCount": 4,
       "part": 1
     },
     {
-      "id": "54cfafff71b3efd9493e",
-      "hash": "54cfafff71b3efd9493e2e43e9123d3ceac41d3b9c2b894dff3b269ad60fccb2",
+      "id": "aa980a024f5f9cfbd623",
+      "hash": "aa980a024f5f9cfbd623341ad1b2fa61411e67331df13a4c12ab21e5502975a2",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Lote: 2026-08-24-identidade-auth-multiperfil-4-8-0",
-      "text": "- Pedido: permitir uma única identidade Auth com acessos compatíveis de Gestor, Professor, Aluno e Responsável; selecionar o perfil quando houver mais de um acesso na audiência do login; revisar em três frentes e publicar o lote completo no GitHub e em Produção. - Contrato: `/login` resolve somente Aluno/Responsável; `/sistema/login` resolve somente Gestor/Professor. Um perfil entra automaticamente e dois perfis exigem escolha explícita. - Identidade: todos os perfis compartilhados devem possuir o mesmo CPF válido e o mesmo e-mail canônico do Supabase Auth. - Registro: `ai/operacao/registros/alteracoes/2026-08-24-identidade-auth-multiperfil.md`. - Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-24-identidade-auth-multiperfil.md`. - Versão proposta: `4.8.0` estável.",
-      "normalizedText": "pedido permitir uma unica identidade auth com acessos compativeis de gestor professor aluno e responsavel selecionar o perfil quando houver mais de um acesso na audiencia do login revisar em tres frentes e publicar o lote completo no github e em producao contrato login resolve somente aluno responsavel sistema login resolve somente gestor professor um perfil entra automaticamente e dois perfis exigem escolha explicita identidade todos os perfis compartilhados devem possuir o mesmo cpf valido e o mesmo e mail canonico do supabase auth registro ai operacao registros alteracoes 2026 08 24 identidade auth multiperfil md manifesto explicito ai operacao registros alteracoes 2026 08 24 identidade auth multiperfil md versao proposta 4 8 0 estavel",
-      "tokenCount": 102,
+      "text": "- Pedido: revisar as alterações locais mais recentes e atualizar o GitHub com o lote de identidade multiperfil, sem aplicar banco, Edge Functions, merge ou Produção nesta autorização. - Contrato: `/login` resolve somente Aluno/Responsável; `/sistema/login` resolve somente Gestor/Professor. Um perfil entra automaticamente e dois perfis exigem escolha explícita. - Identidade: todos os perfis compartilhados devem possuir o mesmo CPF válido e o mesmo e-mail canônico do Supabase Auth. - Registro: `ai/operacao/registros/alteracoes/2026-08-24-identidade-auth-multiperfil.md`. - Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-24-identidade-auth-multiperfil.md`. - Versão proposta: `4.8.0` estável.",
+      "normalizedText": "pedido revisar as alteracoes locais mais recentes e atualizar o github com o lote de identidade multiperfil sem aplicar banco edge functions merge ou producao nesta autorizacao contrato login resolve somente aluno responsavel sistema login resolve somente gestor professor um perfil entra automaticamente e dois perfis exigem escolha explicita identidade todos os perfis compartilhados devem possuir o mesmo cpf valido e o mesmo e mail canonico do supabase auth registro ai operacao registros alteracoes 2026 08 24 identidade auth multiperfil md manifesto explicito ai operacao registros alteracoes 2026 08 24 identidade auth multiperfil md versao proposta 4 8 0 estavel",
+      "tokenCount": 89,
       "part": 1
     },
     {
@@ -222,33 +222,33 @@
       "part": 1
     },
     {
-      "id": "0bd4f3417386947f5e57",
-      "hash": "0bd4f3417386947f5e5714060d2e39b09a9d51a88e6c17ce83849e3ea77691cf",
+      "id": "95012d9c1dbad4511043",
+      "hash": "95012d9c1dbad451104325b8523dc33c483e3d6e6e21bdf0444f66b3c2742d83",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Evidências atuais",
-      "text": "- Revisões independentes de frontend, backend e migrations identificaram riscos bloqueadores de audiência, prova de convite, mensagens internas e concorrência; todos foram corrigidos e revalidados localmente. - Supabase de Produção confirmado como `kfekgwyqozhicpfuunpo`; preflight sem duplicidades, divergências ou locks bloqueadores. - Banco remoto ainda não contém as quatorze migrations do lote; a aplicação em Produção e a publicação da Edge Function foram autorizadas, mas ainda não foram executadas. - Suítes de handlers, login, feedback e contratos de migrations, lint, TypeScript, teto de linhas e build de produção foram aprovadas localmente. - `main` remota confirmada em `243cb89fe6f11fdf4b8af6f9444e99cf9c8fdd91`, versão 4.7.7; a referência Git local não será usada como base de publicação.",
-      "normalizedText": "revisoes independentes de frontend backend e migrations identificaram riscos bloqueadores de audiencia prova de convite mensagens internas e concorrencia todos foram corrigidos e revalidados localmente supabase de producao confirmado como kfekgwyqozhicpfuunpo preflight sem duplicidades divergencias ou locks bloqueadores banco remoto ainda nao contem as quatorze migrations do lote a aplicacao em producao e a publicacao da edge function foram autorizadas mas ainda nao foram executadas suites de handlers login feedback e contratos de migrations lint typescript teto de linhas e build de producao foram aprovadas localmente main remota confirmada em 243cb89fe6f11fdf4b8af6f9444e99cf9c8fdd91 versao 4 7 7 a referencia git local nao sera usada como base de publicacao",
-      "tokenCount": 94,
+      "text": "- Revisões independentes de frontend, backend e migrations identificaram riscos bloqueadores de audiência, prova de convite, mensagens internas e concorrência; todos foram corrigidos e revalidados localmente. - Supabase de Produção confirmado como `kfekgwyqozhicpfuunpo`; preflight sem duplicidades, divergências ou locks bloqueadores. - Banco remoto ainda não contém as quatorze migrations do lote; nenhuma aplicação de migration ou publicação de Edge Function foi autorizada ou executada. - Suítes de handlers, login, feedback e contratos de migrations, lint, TypeScript, teto de linhas e build de produção foram aprovadas localmente. - `main` remota confirmada em `243cb89fe6f11fdf4b8af6f9444e99cf9c8fdd91`, versão 4.7.7; a referência Git local não será usada como base de publicação.",
+      "normalizedText": "revisoes independentes de frontend backend e migrations identificaram riscos bloqueadores de audiencia prova de convite mensagens internas e concorrencia todos foram corrigidos e revalidados localmente supabase de producao confirmado como kfekgwyqozhicpfuunpo preflight sem duplicidades divergencias ou locks bloqueadores banco remoto ainda nao contem as quatorze migrations do lote nenhuma aplicacao de migration ou publicacao de edge function foi autorizada ou executada suites de handlers login feedback e contratos de migrations lint typescript teto de linhas e build de producao foram aprovadas localmente main remota confirmada em 243cb89fe6f11fdf4b8af6f9444e99cf9c8fdd91 versao 4 7 7 a referencia git local nao sera usada como base de publicacao",
+      "tokenCount": 93,
       "part": 1
     },
     {
-      "id": "b4d1655f2f7ca2e46aa5",
-      "hash": "b4d1655f2f7ca2e46aa5945bd9d2f4d5d5b667eef2840f2ee6a9e7133074f35f",
+      "id": "df8f5621aef69955042d",
+      "hash": "df8f5621aef69955042d91fba21fb5be3bd29a367098836f03a8949000c658e2",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Ordem de publicação",
-      "text": "1. Criar branch GitHub por MCP a partir da `main` remota e publicar somente o manifesto registrado. 2. Abrir PR em rascunho e aguardar CI e Vercel Preview. 3. Corrigir no mesmo PR qualquer falha de gate ou Preview, sem ampliar o manifesto silenciosamente. 4. Com os gates verdes e GO das três revisões, aplicar as quatorze migrations na ordem registrada, interrompendo no primeiro erro. 5. Publicar `portal-user-management` com o fechamento runtime completo e `verify_jwt: true`; executar invariantes, logs e smoke remoto. 6. Atualizar no mesmo PR as evidências reais da aplicação, revalidar CI/Preview, mesclar e acompanhar o deploy de Produção. 7. Executar smoke público e institucional pós-produção sem criar usuário ou dado pessoal artificial.",
-      "normalizedText": "1 criar branch github por mcp a partir da main remota e publicar somente o manifesto registrado 2 abrir pr em rascunho e aguardar ci e vercel preview 3 corrigir no mesmo pr qualquer falha de gate ou preview sem ampliar o manifesto silenciosamente 4 com os gates verdes e go das tres revisoes aplicar as quatorze migrations na ordem registrada interrompendo no primeiro erro 5 publicar portal user management com o fechamento runtime completo e verify jwt true executar invariantes logs e smoke remoto 6 atualizar no mesmo pr as evidencias reais da aplicacao revalidar ci preview mesclar e acompanhar o deploy de producao 7 executar smoke publico e institucional pos producao sem criar usuario ou dado pessoal artificial",
-      "tokenCount": 100,
+      "text": "1. Criar branch GitHub por MCP a partir da `main` remota e publicar somente o manifesto registrado. 2. Abrir PR em rascunho e aguardar CI e Vercel Preview. 3. Corrigir no mesmo PR qualquer falha de gate ou Preview, sem ampliar o manifesto silenciosamente. 4. Somente após nova autorização explícita: aplicar as quatorze migrations na ordem registrada, publicar `portal-user-management`, executar smoke remoto e avaliar o merge. 5. Produção e smoke pós-produção permanecem fora do escopo atual.",
+      "normalizedText": "1 criar branch github por mcp a partir da main remota e publicar somente o manifesto registrado 2 abrir pr em rascunho e aguardar ci e vercel preview 3 corrigir no mesmo pr qualquer falha de gate ou preview sem ampliar o manifesto silenciosamente 4 somente apos nova autorizacao explicita aplicar as quatorze migrations na ordem registrada publicar portal user management executar smoke remoto e avaliar o merge 5 producao e smoke pos producao permanecem fora do escopo atual",
+      "tokenCount": 65,
       "part": 1
     },
     {
-      "id": "722de3637883c2d7211e",
-      "hash": "722de3637883c2d7211e1790a202d6ac61f4f4f63be5b11eeec9ce26207b76a2",
+      "id": "690aaf5a0580b910f388",
+      "hash": "690aaf5a0580b910f388cbb5415e2db4f977ab97312cf1b34f4340b576119e2d",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Limites",
-      "text": "1. PRs antigas e alterações paralelas do workspace não integram este lote. 2. Nenhum usuário de teste ou dado pessoal será criado em Produção apenas para o smoke. 3. Migrations aplicadas tornam-se imutáveis e serão registradas com o identificador real do ledger. 4. Esta autorização inclui branch, PR, migrations, Edge Function, merge e Produção, condicionados aos gates e ao GO final das três frentes.",
-      "normalizedText": "1 prs antigas e alteracoes paralelas do workspace nao integram este lote 2 nenhum usuario de teste ou dado pessoal sera criado em producao apenas para o smoke 3 migrations aplicadas tornam se imutaveis e serao registradas com o identificador real do ledger 4 esta autorizacao inclui branch pr migrations edge function merge e producao condicionados aos gates e ao go final das tres frentes",
-      "tokenCount": 55,
+      "text": "1. PRs antigas e alterações paralelas do workspace não integram este lote. 2. Nenhum usuário de teste ou dado pessoal será criado em Produção apenas para o smoke. 3. Migrations aplicadas tornam-se imutáveis e serão registradas com o identificador real do ledger. 4. A abertura do PR não autoriza merge, alteração do Supabase ou publicação em Produção.",
+      "normalizedText": "1 prs antigas e alteracoes paralelas do workspace nao integram este lote 2 nenhum usuario de teste ou dado pessoal sera criado em producao apenas para o smoke 3 migrations aplicadas tornam se imutaveis e serao registradas com o identificador real do ledger 4 a abertura do pr nao autoriza merge alteracao do supabase ou publicacao em producao",
+      "tokenCount": 49,
       "part": 1
     },
     {
