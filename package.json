@@ -27,7 +27,7 @@
     "lint": "eslint \"**/*.{ts,tsx}\" --plugin react-hooks --rule 'react-hooks/rules-of-hooks: error'",
     "test:banese-ui": "node scripts/test-banese-payment-ui.mjs",
     "test:banese-reconciliation": "node --test scripts/test-banese-reconciliation-control.mjs",
-    "test:portal-auth": "node --test scripts/test-portal-auth-flow.mjs modules/login/coordinator-portal-collapse.contract.test.ts modules/login/portal-login-boundaries.contract.test.ts modules/login/password-recovery/password-recovery-auth.test.ts",
+    "test:portal-auth": "node --test scripts/test-portal-auth-flow.mjs modules/login/coordinator-portal-collapse.contract.test.ts modules/login/institutional-login-error.test.ts modules/login/portal-login-boundaries.contract.test.ts modules/login/password-recovery/institutional-invite-view.contract.test.ts modules/login/password-recovery/password-recovery-auth.test.ts modules/login/portal-context-access.test.ts modules/professor/professor-access-gate.test.ts",
     "test:gestor-access": "node scripts/test-gestor-access.mjs",
     "test:multichannel": "deno test --allow-read modules/gestor/comunicacao/automacoes-multicanal/multichannel-automation.test.ts",
     "test:banese-rate-limit-simulation": "node scripts/test-banese-rate-limit-simulation.mjs",

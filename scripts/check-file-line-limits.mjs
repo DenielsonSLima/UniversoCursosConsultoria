@@ -6,6 +6,7 @@ import { execFileSync } from 'node:child_process';
 import { basename, extname } from 'node:path';
 
 const CONFIG_PATH = 'ai/operacao/qualidade/limite-linhas.json';
+const MIGRATION_EXEMPTIONS_PATH = 'ai/operacao/qualidade/migrations-aplicadas.json';
 const ACTIVE_LOT_PATH = 'ai/operacao/LOTE_ATIVO.md';
 const ALLOWED_IGNORED_EXTENSIONS = new Set([
   '.avif', '.gif', '.ico', '.jpeg', '.jpg', '.lock', '.pdf', '.png', '.webp', '.woff', '.woff2',
@@ -20,6 +21,9 @@ const ALLOWED_GENERATED_PATHS = new Set([
 const read = path => readFileSync(path, 'utf8');
 const sha256 = content => createHash('sha256').update(content).digest('hex');
 const config = JSON.parse(read(CONFIG_PATH));
+const migrationExemptionsRegistry = existsSync(MIGRATION_EXEMPTIONS_PATH)
+  ? JSON.parse(read(MIGRATION_EXEMPTIONS_PATH))
+  : { version: 1, exemptions: [] };
 const failures = [];
 
 const countPhysicalLines = content => {
@@ -67,8 +71,16 @@ if (!activeLotManifest) {
   failures.push(`${CONFIG_PATH}: o manifesto do lote ativo não está sendo auditado (${activeLotManifest}).`);
 }
 
+if (migrationExemptionsRegistry.version !== 1) {
+  failures.push(`${MIGRATION_EXEMPTIONS_PATH}: version deve ser exatamente 1.`);
+}
+
+const exemptionEntries = [
+  ...(config.exemptions ?? []),
+  ...(migrationExemptionsRegistry.exemptions ?? []),
+];
 const exemptions = new Map();
-for (const exemption of config.exemptions ?? []) {
+for (const exemption of exemptionEntries) {
   if (!exemption.path || !exemption.kind || !exemption.reason) {
     failures.push(`${CONFIG_PATH}: toda exceção precisa de path, kind e reason.`);
     continue;
@@ -81,6 +93,9 @@ for (const exemption of config.exemptions ?? []) {
   }
   if (!/^[a-f0-9]{64}$/.test(exemption.sha256 ?? '')) {
     failures.push(`${CONFIG_PATH}: migration aplicada exige SHA-256 canônico (${exemption.path}).`);
+  }
+  if (exemptions.has(exemption.path)) {
+    failures.push(`Exceção de migration duplicada: ${exemption.path}`);
   }
   exemptions.set(exemption.path, exemption);
 }
@@ -210,7 +225,15 @@ if (diffIndex >= 0) {
           failures.push(`Registro de path retirado foi removido ou alterado: ${baseRetired.path}`);
         }
       }
-      for (const baseExemption of baseConfig.exemptions ?? []) {
+      const baseRegistryContent = readGitFile(base, MIGRATION_EXEMPTIONS_PATH);
+      const baseRegistry = baseRegistryContent
+        ? JSON.parse(baseRegistryContent)
+        : { exemptions: [] };
+      const baseExemptions = [
+        ...(baseConfig.exemptions ?? []),
+        ...(baseRegistry.exemptions ?? []),
+      ];
+      for (const baseExemption of baseExemptions) {
         const currentExemption = exemptions.get(baseExemption.path);
         const baseFile = readGitFile(base, baseExemption.path);
         if (!currentExemption) {

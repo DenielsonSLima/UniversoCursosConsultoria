@@ -9,6 +9,7 @@ import {
   coordenacoesQueryKeys,
   createCoordenacoesScope,
 } from './coordenacoes/coordenacoes.query-keys.ts';
+import { parceirosQueryKeys } from './parceiros.query-keys.ts';
 
 test('responsáveis isolam listas, detalhes e opções pelo escopo ativo', () => {
   const matriz = { poloId: 'polo-matriz', includeGlobal: true };
@@ -72,4 +73,15 @@ test('invalidação por polo alcança variantes local/global sem invalidar outro
     assert.equal(queryClient.getQueryState(keyAGlobal)?.isInvalidated, true);
     assert.equal(queryClient.getQueryState(keyBLocal)?.isInvalidated, false);
   }
+});
+
+test('matrículas de parceiros usam chave exata por aluno', () => {
+  assert.deepEqual(
+    parceirosQueryKeys.matriculas('aluno-a'),
+    ['parceiro', 'aluno-a', 'matriculas'],
+  );
+  assert.notDeepEqual(
+    parceirosQueryKeys.matriculas('aluno-a'),
+    parceirosQueryKeys.matriculas('aluno-b'),
+  );
 });

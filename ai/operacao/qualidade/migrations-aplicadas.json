@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "exemptions": [
+    {
+      "path": "supabase/migrations/20260824235000_create_professor_financial_portal_read.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260825041509",
+      "sha256": "1d0fe6cc0c82b46ebb7bbc52c012e1afba21cf325b87c5aff139ae3a27ca4e05",
+      "reason": "Migration aplicada em Produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260824235050_create_professor_financial_receipt_rpc.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260825041512",
+      "sha256": "35140289c3fd750ea7e479cab9dcbee42227d106694db94de2f8883060606782",
+      "reason": "Migration aplicada em Produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260824235100_create_portal_realtime_signals.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260825041514",
+      "sha256": "fc4df31d302d75e6359ba52acdc0fec0e11718dac5c256be8fa5cceca2314b03",
+      "reason": "Migration aplicada em Produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260824235150_create_portal_realtime_signal_triggers.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260825041517",
+      "sha256": "4262cbddfaf20e7fa3c5a0d4dedf636a211fb07ad262b6c2c87e21711cf1198c",
+      "reason": "Migration aplicada em Produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260824235160_create_portal_calendar_chat_signals.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260825041520",
+      "sha256": "117ff3d91c7310950d06da2720776ce444e67d2a181c62319ad9c961612c2869",
+      "reason": "Migration aplicada em Produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260824235200_create_student_financial_portal_read.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260825041525",
+      "sha256": "2a6f833cdb0d3af64ade4579013b22fdeffd64879e00cc0721b0e62284efff47",
+      "reason": "Migration aplicada em Produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260824235250_create_student_financial_receipt_rpc.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260825041529",
+      "sha256": "348dd04edcd3be95a5c15344a9a7c6775fa715f0e3e7946ee2dea2996ad39b7b",
+      "reason": "Migration aplicada em Produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260824235300_fix_student_financial_list_json_precedence.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260825042649",
+      "sha256": "e3a3d401d516d5dce494ddb4e88264e5070b4363c1eb24278881407bd098446a",
+      "reason": "Migration aplicada em Produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260824235350_fix_student_financial_receipt_json_precedence.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260825042651",
+      "sha256": "67182888d750a28d4b7a91b15f22906d3fc1853454946858130c7da97f7c75f0",
+      "reason": "Migration aplicada em Produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260824235400_move_portal_realtime_authorizer_private.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260825043901",
+      "sha256": "7ca727eab5ffc42ca1c7c6235e91ce686ef4949cbcbcd1ac8d092c51cc73c25a",
+      "reason": "Migration aplicada em Produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260824235450_use_invoker_student_financial_receipt.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260825043903",
+      "sha256": "e44558d5047a78da339b6bad3ff0ded2833487811bdafb1d965f81a6740a1a2c",
+      "reason": "Migration aplicada em Produção; histórico imutável."
+    }
+  ]
+}

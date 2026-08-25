@@ -13,6 +13,11 @@ import {
   SaveAlunoVacinaInput,
   VacinaStatus,
 } from '../../../../../shared/vacinas/vacinas.types';
+import { createRealtimeInvalidationController } from '../../../../../shared/realtime/realtime-invalidation';
+import {
+  portalRealtimeSignalFilter,
+  portalRealtimeTopics,
+} from '../../../../../shared/realtime/portal-realtime-signals';
 
 interface ParceiroAlunoVacinasProps {
   alunoId: string;
@@ -55,18 +60,41 @@ const ParceiroAlunoVacinas: React.FC<ParceiroAlunoVacinasProps> = ({ alunoId }) 
   });
 
   useEffect(() => {
-    if (!alunoId) return;
+    if (!alunoId) return undefined;
+    const recordsInvalidation = createRealtimeInvalidationController({
+      invalidate: () => queryClient.invalidateQueries({
+        queryKey: alunoVacinasKeys.records(alunoId),
+        exact: true,
+      }),
+    });
+    const contextsInvalidation = createRealtimeInvalidationController({
+      invalidate: () => queryClient.invalidateQueries({
+        queryKey: alunoVacinasKeys.contexts(alunoId),
+        exact: true,
+      }),
+    });
+    const onChannelStatus = (status: string) => {
+      recordsInvalidation.onChannelStatus(status);
+      contextsInvalidation.onChannelStatus(status);
+    };
     const channel = supabase
       .channel(`aluno_vacinas_realtime_${alunoId}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'aluno_vacinas', filter: `aluno_id=eq.${alunoId}` },
-        () => queryClient.invalidateQueries({ queryKey: alunoVacinasKeys.records(alunoId) })
+        portalRealtimeSignalFilter(portalRealtimeTopics.studentVaccines(alunoId)),
+        recordsInvalidation.schedule,
       )
-      .subscribe();
+      .on(
+        'postgres_changes',
+        portalRealtimeSignalFilter(portalRealtimeTopics.studentEnrollment(alunoId)),
+        contextsInvalidation.schedule,
+      )
+      .subscribe(onChannelStatus);
 
     return () => {
-      supabase.removeChannel(channel);
+      recordsInvalidation.dispose();
+      contextsInvalidation.dispose();
+      void supabase.removeChannel(channel);
     };
   }, [alunoId, queryClient]);
 

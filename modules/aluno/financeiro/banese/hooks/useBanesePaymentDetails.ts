@@ -101,10 +101,11 @@ const useBanesePaymentDetails = ({
 }: UseBanesePaymentDetailsOptions) => useQuery<BanesePaymentRecord[]>({
   queryKey: ['aluno-banese-payment', alunoId, paymentId],
   enabled: Boolean(alunoId && paymentId && summary),
-  queryFn: async () => {
+  queryFn: async ({ signal }) => {
     if (!paymentId || !summary) return [];
     const { data, error } = await supabase.functions.invoke('banese-student-payment', {
       body: { action: 'get', receivableId: paymentId },
+      signal,
     });
     if (error) throw new Error(await functionErrorMessage(error));
     if (data?.error) throw new Error(String(data.error));

@@ -67,10 +67,13 @@ export const invalidateAlunoCourseAccessQueries = (
   alunoId?: string | null,
 ) => {
   if (!alunoId) return;
+  const financeRoot = alunoCourseAccessKeys.finance(alunoId);
   for (const queryKey of alunoCourseAccessQueryKeys(alunoId)) {
+    const isFinanceHierarchy = queryKey[0] === financeRoot[0]
+      && queryKey[1] === financeRoot[1];
     void queryClient.invalidateQueries({
       queryKey,
-      exact: true,
+      exact: !isFinanceHierarchy,
       refetchType: 'active',
     });
   }

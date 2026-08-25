@@ -15,5 +15,5 @@ export const parceirosQueryKeys = {
     'turmas-disponiveis',
     poloId || 'todos',
   ] as const,
-  matriculas: ['parceiro'] as const,
+  matriculas: (alunoId: string) => ['parceiro', alunoId, 'matriculas'] as const,
 };

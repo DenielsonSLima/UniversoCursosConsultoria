@@ -45,7 +45,7 @@ jobs:
         run: npm run test:agent-operations
 
       - name: Validar TypeScript
-        run: npx tsc --noEmit
+        run: node --max-old-space-size=6144 ./node_modules/typescript/bin/tsc --noEmit
 
       - name: Validar lint
         run: npm run lint
@@ -121,6 +121,21 @@ jobs:
             supabase/tests/portal_shared_credential_promotion.contract.test.ts \
             supabase/tests/portal_partner_auth_rollout_safety.contract.test.ts \
             supabase/tests/portal_partner_invite_reconciliation.contract.test.ts
+
+      - name: Testar Financeiros e sincronização dos portais
+        run: |
+          node --test \
+            modules/aluno/financeiro/financeiro.contract.test.ts \
+            modules/aluno/financeiro/aluno-financeiro-receipt.pdf.test.ts \
+            modules/gestor/parceiros/governance-query-keys.test.ts \
+            modules/professor/financeiro/professor-financeiro-receipt.pdf.test.ts \
+            modules/shared/realtime/realtime-canonical.contract.test.ts \
+            modules/shared/realtime/realtime-invalidation.test.ts \
+            supabase/tests/aluno_financeiro_portal.contract.test.ts \
+            supabase/tests/portal_realtime_signals.contract.test.ts \
+            supabase/tests/professor_financial_portal.contract.test.ts
+          deno test --allow-read --allow-env \
+            modules/aluno/shared/aluno-course-access.queries.test.ts
 
       - name: Testar relatório do Caixa
         run: npm run test:caixa-report

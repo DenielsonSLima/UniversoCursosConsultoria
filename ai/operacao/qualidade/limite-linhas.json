@@ -11,7 +11,8 @@
     "ai/operacao/registros/alteracoes/2026-08-24-restauracao-capa-diario-slots-assinatura.md",
     "ai/operacao/registros/alteracoes/2026-08-24-caixa-assinaturas-uuid-matriz-4-7-6.md",
     "ai/operacao/registros/alteracoes/2026-08-24-card-email-validado-gestor.md",
-    "ai/operacao/registros/alteracoes/2026-08-24-identidade-auth-multiperfil.md"
+    "ai/operacao/registros/alteracoes/2026-08-24-identidade-auth-multiperfil.md",
+    "ai/operacao/registros/alteracoes/2026-08-24-correcao-financeiro-realtime-resiliencia.md"
   ],
   "exemptions": [
     {

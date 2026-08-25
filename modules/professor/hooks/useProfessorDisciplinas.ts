@@ -1,6 +1,11 @@
 import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
+import { createRealtimeInvalidationController } from '../../shared/realtime/realtime-invalidation';
+import {
+  portalRealtimeSignalFilter,
+  portalRealtimeTopics,
+} from '../../shared/realtime/portal-realtime-signals';
 
 export interface ProfessorDisciplinaAssignment {
   id: string;
@@ -88,64 +93,36 @@ export const useProfessorDisciplinas = (professorId: string, poloId: string) => 
 export const useProfessorDisciplinasRealtime = (
   professorId: string,
   poloId: string,
-  turmaIds: string[],
+  _turmaIds: string[],
 ) => {
   const queryClient = useQueryClient();
-  const turmaIdsKey = [...new Set(turmaIds)].sort().join(',');
 
   useEffect(() => {
     if (!professorId || !poloId) return undefined;
 
-    let invalidateTimer: ReturnType<typeof setTimeout> | undefined;
-    const invalidate = () => {
-      if (invalidateTimer) clearTimeout(invalidateTimer);
-      invalidateTimer = setTimeout(() => {
-        void queryClient.invalidateQueries({
-          queryKey: professorDisciplinasKeys.list(professorId, poloId),
-        });
-      }, 250);
-    };
+    const invalidation = createRealtimeInvalidationController({
+      invalidate: () => queryClient.invalidateQueries({
+        queryKey: professorDisciplinasKeys.list(professorId, poloId),
+        exact: true,
+      }),
+    });
 
-    const channel = supabase
-      .channel(`professor_disciplinas_realtime_${professorId}_${poloId}`)
+    const channel = supabase.channel(
+      `professor_disciplinas_realtime_${professorId}_${poloId}`,
+    );
+    channel
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'turmas_disciplinas', filter: `professor_id=eq.${professorId}` },
-        invalidate,
-      );
-
-    if (turmaIdsKey) {
-      const turmaFilter = `turma_id=in.(${turmaIdsKey})`;
-      const turmaPrimaryKeyFilter = `id=in.(${turmaIdsKey})`;
-
-      channel
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'aulas_turma', filter: turmaFilter },
-          invalidate,
-        )
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'atividades_extra_classe', filter: turmaFilter },
-          invalidate,
-        )
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'periodos_letivos', filter: turmaFilter },
-          invalidate,
-        )
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'turmas', filter: turmaPrimaryKeyFilter },
-          invalidate,
-        );
-    }
-
-    channel.subscribe();
+        portalRealtimeSignalFilter(
+          portalRealtimeTopics.professorAcademic(professorId, poloId),
+        ),
+        invalidation.schedule,
+      )
+      .subscribe(invalidation.onChannelStatus);
 
     return () => {
-      if (invalidateTimer) clearTimeout(invalidateTimer);
-      supabase.removeChannel(channel);
+      invalidation.dispose();
+      void supabase.removeChannel(channel);
     };
-  }, [poloId, professorId, queryClient, turmaIdsKey]);
+  }, [poloId, professorId, queryClient]);
 };
