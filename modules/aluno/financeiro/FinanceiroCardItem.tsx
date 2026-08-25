@@ -1,6 +1,7 @@
 import React from 'react';
 import { AlertTriangle, CircleDollarSign, Clock, Copy, ExternalLink, GraduationCap, Percent, ReceiptText } from 'lucide-react';
 import { getBanesePaymentActionLabel, hasRegisteredBaneseBoleto } from './banese/banese-payment.utils';
+import { isAlunoPaidThroughAsaas } from './financeiro.presentation';
 import type { AlunoFinancialItem } from './financeiro.types';
 
 interface FinanceiroCardItemProps {
@@ -45,24 +46,19 @@ const FinanceiroCardItem: React.FC<FinanceiroCardItemProps> = ({
     action: 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20',
     soft: 'bg-blue-50 text-blue-700 border-blue-100',
   };
-  const isPaidThroughAsaas = String(installment.status || '').toUpperCase() === 'PAGO' && (
-    String(installment.origem_pagamento || '').toUpperCase() === 'ASAAS'
-    || ['RECEIVED', 'CONFIRMED'].includes(String(installment.asaas_status || '').toUpperCase())
-    || Boolean(installment.asaas_transaction_receipt_url)
-  );
   const formatPaymentMethod = (method?: string | null) => {
     const normalized = String(method || '').trim();
     return normalized || 'Forma não informada';
   };
 
   const renderActions = () => {
-    const status = String(installment.status || '').toUpperCase();
+    const statusCode = installment.statusCode;
     const isBaneseBoleto = hasRegisteredBaneseBoleto(installment);
     const paymentUrl = installment.gateway_bank_slip_url
       || installment.gateway_invoice_url
       || installment.asaas_invoice_url;
 
-    if (['PENDENTE', 'VENCIDO'].includes(status) || installment.isOverdue) {
+    if (statusCode === 'ABERTO' || statusCode === 'ATRASADO') {
       if (isBaneseBoleto && onOpenBanesePayment) {
         return (
           <button
@@ -127,14 +123,14 @@ const FinanceiroCardItem: React.FC<FinanceiroCardItemProps> = ({
       );
     }
 
-    if (status === 'PAGO') {
+    if (statusCode === 'PAGO' && installment.receiptEligible) {
       return (
         <button
           onClick={() => onOpenReceipt(installment)}
           className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-emerald-600 transition-colors hover:bg-emerald-100"
         >
           <ReceiptText size={13} />
-          {isPaidThroughAsaas ? 'Comprovante' : 'Recibo Universo'}
+          {isAlunoPaidThroughAsaas(installment) ? 'Comprovante' : 'Recibo Universo'}
         </button>
       );
     }
@@ -159,7 +155,7 @@ const FinanceiroCardItem: React.FC<FinanceiroCardItemProps> = ({
             </span>
           </div>
           <div className="shrink-0">
-            {getInstallmentStatusBadge(installment.isOverdue ? 'VENCIDO' : installment.status)}
+            {getInstallmentStatusBadge(installment.statusCode)}
           </div>
         </div>
 
@@ -171,7 +167,7 @@ const FinanceiroCardItem: React.FC<FinanceiroCardItemProps> = ({
           <div className="flex flex-col gap-3 min-[390px]:flex-row min-[390px]:items-start min-[390px]:justify-between">
             <div className="min-w-0">
               <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">{summary.highlightLabel}</p>
-              <p className={`mt-1 text-2xl font-black ${installment.isOverdue ? 'text-rose-600' : 'text-[#001a33]'}`}>
+              <p className={`mt-1 text-2xl font-black ${installment.statusCode === 'ATRASADO' ? 'text-rose-600' : 'text-[#001a33]'}`}>
                 {formatCurrency(summary.highlightValue)}
               </p>
             </div>
@@ -214,7 +210,7 @@ const FinanceiroCardItem: React.FC<FinanceiroCardItemProps> = ({
               <span className="text-[9px] font-black uppercase tracking-widest text-emerald-700">Pagando até o vencimento</span>
               <p className="mt-1 text-lg font-black text-emerald-700">{formatCurrency(summary.totalUntilDue)}</p>
             </div>
-            {(installment.isOverdue || summary.hasLateCharge) && (
+            {(installment.statusCode === 'ATRASADO' || summary.hasLateCharge) && (
               <div className="rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 min-[390px]:col-span-2">
                 <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-rose-700">
                   <AlertTriangle size={11} /> Juros e multa
@@ -226,7 +222,7 @@ const FinanceiroCardItem: React.FC<FinanceiroCardItemProps> = ({
             )}
           </div>
 
-          {String(installment.status || '').toUpperCase() === 'PAGO' && (
+          {installment.statusCode === 'PAGO' && (
             <p className="mt-3 inline-flex items-start gap-2">
               <span className="text-slate-400 mt-0.5 font-black uppercase text-[10px] tracking-widest min-w-[16px]">•</span>
               <span>

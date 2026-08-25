@@ -10,9 +10,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, CreditCard, Loader2, RefreshCw } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router';
 
-import { supabase } from '../../../lib/supabase';
 import EadPaymentModal from '../../ead/components/EadPaymentModal';
-import { createRealtimeInvalidationController } from '../../shared/realtime/realtime-invalidation';
 import { invalidateAlunoCourseAccessQueries } from '../shared/aluno-course-access.queries';
 import AlunoEadPaymentChoiceModal from './AlunoEadPaymentChoiceModal';
 import AlunoFinanceiroFilters from './AlunoFinanceiroFilters';
@@ -160,25 +158,6 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
     media.addEventListener?.('change', syncView);
     return () => media.removeEventListener?.('change', syncView);
   }, []);
-
-  useEffect(() => {
-    const invalidation = createRealtimeInvalidationController({
-      invalidate: invalidateFinance,
-    });
-    const channel = supabase
-      .channel(`aluno_financeiro_realtime_${alunoId}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'finance_realtime_events',
-        filter: `aluno_id=eq.${alunoId}`,
-      }, invalidation.schedule)
-      .subscribe(invalidation.onChannelStatus);
-    return () => {
-      invalidation.dispose();
-      void supabase.removeChannel(channel);
-    };
-  }, [alunoId, invalidateFinance]);
 
   const resetPage = useCallback(() => setPage(1), []);
   const closeBanese = useCallback(() => {

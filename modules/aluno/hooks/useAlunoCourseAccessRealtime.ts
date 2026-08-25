@@ -1,6 +1,11 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
+import { createRealtimeInvalidationController } from '../../shared/realtime/realtime-invalidation';
+import {
+  portalRealtimeSignalFilter,
+  portalRealtimeTopics,
+} from '../../shared/realtime/portal-realtime-signals';
 import { invalidateAlunoCourseAccessQueries } from '../shared/aluno-course-access.queries';
 
 export const useAlunoCourseAccessRealtime = (
@@ -12,20 +17,17 @@ export const useAlunoCourseAccessRealtime = (
   useEffect(() => {
     if (!enabled || !alunoId) return undefined;
 
-    const invalidate = () => {
-      invalidateAlunoCourseAccessQueries(queryClient, alunoId);
-    };
+    const invalidation = createRealtimeInvalidationController({
+      invalidate: () => invalidateAlunoCourseAccessQueries(queryClient, alunoId),
+    });
     const channel = supabase
       .channel(`aluno_course_access_realtime_${alunoId}`)
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'matriculas',
-          filter: `aluno_id=eq.${alunoId}`,
-        },
-        invalidate,
+        portalRealtimeSignalFilter(
+          portalRealtimeTopics.studentCourseAccess(alunoId),
+        ),
+        invalidation.schedule,
       )
       .on(
         'postgres_changes',
@@ -35,13 +37,13 @@ export const useAlunoCourseAccessRealtime = (
           table: 'finance_realtime_events',
           filter: `aluno_id=eq.${alunoId}`,
         },
-        invalidate,
+        invalidation.schedule,
       )
-      .subscribe();
+      .subscribe(invalidation.onChannelStatus);
 
-    const refreshAfterResume = () => invalidate();
+    const refreshAfterResume = () => invalidation.schedule();
     const refreshWhenVisible = () => {
-      if (document.visibilityState === 'visible') invalidate();
+      if (document.visibilityState === 'visible') invalidation.schedule();
     };
     window.addEventListener('focus', refreshAfterResume);
     document.addEventListener('visibilitychange', refreshWhenVisible);
@@ -49,6 +51,7 @@ export const useAlunoCourseAccessRealtime = (
     return () => {
       window.removeEventListener('focus', refreshAfterResume);
       document.removeEventListener('visibilitychange', refreshWhenVisible);
+      invalidation.dispose();
       void supabase.removeChannel(channel);
     };
   }, [alunoId, enabled, queryClient]);

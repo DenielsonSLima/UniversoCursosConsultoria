@@ -77,6 +77,13 @@
       "remoteId": "20260825043903",
       "sha256": "e44558d5047a78da339b6bad3ff0ded2833487811bdafb1d965f81a6740a1a2c",
       "reason": "Migration aplicada em Produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260825204500_add_student_portal_realtime_audience.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260825204543",
+      "sha256": "59efa873989c95c95559e187d05c51d37c422e4e53317a1dd02f3adaaa32fa5d",
+      "reason": "Migration aplicada em Produção; histórico imutável."
     }
   ]
 }

@@ -16,7 +16,9 @@ const receiptSecurityMigration = read(
   'supabase/migrations/20260824235450_use_invoker_student_financial_receipt.sql',
 );
 const page = read('modules/aluno/financeiro/FinanceiroPage.tsx');
+const courseAccessRealtime = read('modules/aluno/hooks/useAlunoCourseAccessRealtime.ts');
 const list = read('modules/aluno/financeiro/AlunoFinanceiroList.tsx');
+const card = read('modules/aluno/financeiro/FinanceiroCardItem.tsx');
 const service = read('modules/aluno/financeiro/financeiro.service.ts');
 const queries = read('modules/aluno/financeiro/financeiro.queries.ts');
 const presentation = read('modules/aluno/financeiro/financeiro.presentation.ts');
@@ -176,6 +178,10 @@ test('frontend envia filtros e apresenta payload sem cálculo financeiro ou DOM 
   assert.doesNotMatch(page, /new Date\(|Math\.|\.reduce\(|\.slice\(/);
   assert.doesNotMatch(page, /valor_pago\s*\|\||financial_summary\s*\|\|/);
   assert.doesNotMatch(list, /new Date\(|Math\.|\.reduce\(|valor_pago\s*\|\|/);
+  assert.doesNotMatch(card, /installment\.(?:status|isOverdue)\b/);
+  assert.match(card, /statusCode === 'ABERTO' \|\| statusCode === 'ATRASADO'/);
+  assert.match(card, /statusCode === 'PAGO' && installment\.receiptEligible/);
+  assert.match(card, /isAlunoPaidThroughAsaas\(installment\)/);
   assert.match(page, /financeQuery\.isError \|\| !financeQuery\.data/);
   assert.match(page, /financeQuery\.refetch\(\)/);
   assert.match(service, /supabase\.rpc\('portal_aluno_financeiro_listar'/);
@@ -219,15 +225,16 @@ test('TanStack inclui aluno, filtros, página, detalhe e AbortSignal', () => {
   assert.match(queries, /gcTime: 0/);
 });
 
-test('Realtime agenda resync, reconnect e cleanup sem alterar cache por payload', () => {
-  assert.match(page, /createRealtimeInvalidationController/);
-  assert.match(page, /invalidate:\s*invalidateFinance/);
+test('Realtime financeiro tem assinatura única no hook global', () => {
+  assert.doesNotMatch(page, /finance_realtime_events|createRealtimeInvalidationController|\.channel\(/);
   assert.match(page, /invalidateAlunoCourseAccessQueries\(queryClient, alunoId\)/);
-  assert.match(page, /invalidation\.schedule/);
-  assert.match(page, /subscribe\(invalidation\.onChannelStatus\)/);
-  assert.match(page, /invalidation\.dispose\(\)/);
-  assert.match(page, /removeChannel\(channel\)/);
-  assert.doesNotMatch(page, /setQueryData|payload\.(?:new|old)/);
+  assert.match(courseAccessRealtime, /createRealtimeInvalidationController/);
+  assert.match(courseAccessRealtime, /table: 'finance_realtime_events'/);
+  assert.match(courseAccessRealtime, /subscribe\(invalidation\.onChannelStatus\)/);
+  assert.equal(
+    `${page}\n${courseAccessRealtime}`.match(/table: 'finance_realtime_events'/g)?.length,
+    1,
+  );
 });
 
 test('prévia, download e impressão reutilizam o mesmo PDF vetorial', () => {
