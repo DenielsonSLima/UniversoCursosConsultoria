@@ -1,7 +1,7 @@
 # BolePix e notificações financeiras seguras — 4.8.6
 
 Data: 2026-08-26  
-Estado: `PRONTO_PARA_PREVIEW_E_ROLLOUT_AUTORIZADO`
+Estado: `PUBLICADO_PRODUCAO_4_8_7`
 
 ## Objetivo
 
@@ -100,8 +100,20 @@ Todos os caminhos foram comparados por blob contra a `main` remota `6bbadbeb`; c
 - Projeto Supabase confirmado: `kfekgwyqozhicpfuunpo`; ledger remoto acompanha a `main` até `20260825204543` e ainda não contém as três migrations do lote.
 - Produção explicitamente autorizada pelo titular após revisão e gates.
 
-## Pendências
+## Evidências de publicação
 
-- Executar CI e Vercel Preview a partir da branch remota atômica.
-- Revalidar o preflight Supabase, aplicar as três migrations e publicar seis Edge Functions/bundles pela ordem registrada no lote.
-- Fazer smoke fail-closed sem cobrança ou destinatário artificial, mesclar a PR, aguardar Vercel Production e registrar evidências imutáveis no fechamento operacional.
+- Branch baseada em `6bbadbeb4eeee8758e33467dd0c8600a46f84534`; PR `#97`, head `1eeb9f8f03c332cea104185d1d1ee2e5a05a5741`, 53/53 arquivos do manifesto, zero extras e zero ausentes.
+- Controle de versão `32975291726`, Qualidade `32975291777` e Vercel Preview `Jo4BSYaxaYEJvh2fpN17KSWSn2as` aprovados antes da operação de Produção.
+- Migrations aplicadas em ordem: `20260826134030` (`231166783b18fb743b64834139b81a316cfdaa68c3f32a58269ae0561f0df148`), `20260826134110` (`d0738ad21e7c1ffd246d8f7003b4bce0adfd7f9d5a84afa5664d37b976ebbaeb`) e `20260826134202` (`24ddab3550b624fdfdb0301884e9a24b4e0f019b85ef52803d8ac5c00d5dece1`).
+- Objetos, triggers, índice, ACLs e predicados remotos aprovados. Advisors de segurança ficaram idênticos ao baseline; performance ganhou apenas o aviso esperado de índice recém-criado e ainda sem uso, com tabelas vazias.
+- Edge Functions ativas e com fontes runtime remotas idênticas ao workspace: `payment-checkout` v21, `checkout-api` v16, `asaas-api` v81, `dependencia-banese-checkout` v8, `push-notification-dispatcher` v15 e `whatsapp-automation-agent` v12.
+- Os três schedulers afetados foram pausados durante a janela e restaurados. Push v15 respondeu `200`; WhatsApp v12 respondeu `400` fail-closed porque o modo de teste ainda não possui Aluno configurado, sem envio de mensagem.
+- Merge squash `f3e5ffb3a69a575c227bf74af66b3ffa970a94bc`; Vercel Production `HhtcN2UxPbybTwkNKQRuyQu5NmwQ` pronta.
+- `/`, `/login` e `/sistema/login` responderam `200`. O bundle `main-aZE9Pt1f.js` contém `4.8.6`; `CursosPage-BB13SnNm.js` contém `PIX_UNAVAILABLE_USE_BOLETO` e `presentationFallbackReason`; `FinanceiroPage-04Y99uvz.js` preserva o boleto oficial.
+- Safari carregou o início e o login. O smoke autenticado não avançou pelo Turnstile da Cloudflare, que exige ação humana.
+- Nenhum usuário, recebível, cobrança, matrícula, destinatário ou mensagem artificial foi criado.
+
+## Limites pós-publicação
+
+- O WhatsApp permanece em modo de teste sem Aluno configurado; a recusa fail-closed é intencional até definição operacional de uma identidade de teste.
+- Fluxos que criariam cobrança real não foram executados; foram cobertos por testes de corrida, contratos, fontes remotas e fallback publicado.

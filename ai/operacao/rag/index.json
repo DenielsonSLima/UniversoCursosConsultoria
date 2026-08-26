@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-08-26T13:36:13.047Z",
+  "builtAt": "2026-08-26T13:57:55.052Z",
   "manifestVersion": 2,
-  "sourceSignature": "06d7fc4b8573a9d7df162dd60c38071f138f270c0ea2e580b01374665a80cd6a",
+  "sourceSignature": "e5e7852db19cde92878f4669e664a9695a4ad133c90b303f433ee17e671a7938",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "72657e7387145d22a709a6fae1b8ea3c9fe00337fb58e75694a1fb08f3961f27"
+      "hash": "3aa415fb2f52707731a19e6080a5562b6a81e11b07b2c50176b2dc8ede42f0a7"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -192,23 +192,23 @@
       "part": 1
     },
     {
-      "id": "14358001a0b1e45ae9fa",
-      "hash": "14358001a0b1e45ae9fa604f7f56f0eeae37999890615304b055d420ff5e5985",
+      "id": "1961659bbb0df2440c13",
+      "hash": "1961659bbb0df2440c13c31661ef3e7ee97263c0289c283e0cf7e4b64ebd1cdc",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Lote ativo",
-      "text": "Estado: `PRONTO_PARA_PREVIEW_E_ROLLOUT_AUTORIZADO`",
-      "normalizedText": "estado pronto para preview e rollout autorizado",
-      "tokenCount": 6,
+      "text": "Estado: `PUBLICADO_PRODUCAO_4_8_7`",
+      "normalizedText": "estado publicado producao 4 8 7",
+      "tokenCount": 3,
       "part": 1
     },
     {
-      "id": "534ac1f711bfa0b41ca7",
-      "hash": "534ac1f711bfa0b41ca7b27a3a7e27c80a4b3b2a8041887e7bba11ddc22c668a",
+      "id": "485c6138b6da40c3ff47",
+      "hash": "485c6138b6da40c3ff47f301d9532e4c0c1683d6828b204b731c9cf0e98a0407",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Lote: 2026-08-26-bolepix-e-notificacoes-financeiras-seguras",
-      "text": "- Pedido: revisar todas as alterações com três agentes e publicar GitHub, Supabase, Edge Functions e sistema web em Produção. - Registro: `ai/operacao/registros/alteracoes/2026-08-26-bolepix-e-notificacoes-financeiras-seguras.md`. - Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-26-bolepix-e-notificacoes-financeiras-seguras.md`. - Autorização: Produção solicitada explicitamente pelo titular em 2026-08-26, condicionada à revisão e aos gates. - Base remota: `main` `6bbadbeb4eeee8758e33467dd0c8600a46f84534` (`4.8.5`). O HEAD Git local histórico não é base de publicação.",
-      "normalizedText": "pedido revisar todas as alteracoes com tres agentes e publicar github supabase edge functions e sistema web em producao registro ai operacao registros alteracoes 2026 08 26 bolepix e notificacoes financeiras seguras md manifesto explicito ai operacao registros alteracoes 2026 08 26 bolepix e notificacoes financeiras seguras md autorizacao producao solicitada explicitamente pelo titular em 2026 08 26 condicionada a revisao e aos gates base remota main 6bbadbeb4eeee8758e33467dd0c8600a46f84534 4 8 5 o head git local historico nao e base de publicacao",
-      "tokenCount": 70,
+      "text": "- Pedido: revisar todas as alterações com três agentes e publicar GitHub, Supabase, Edge Functions e sistema web em Produção. - Registro: `ai/operacao/registros/alteracoes/2026-08-26-bolepix-e-notificacoes-financeiras-seguras.md`. - Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-26-bolepix-e-notificacoes-financeiras-seguras.md`. - Autorização: Produção solicitada explicitamente pelo titular em 2026-08-26, condicionada à revisão e aos gates. - Base remota: `main` `6bbadbeb4eeee8758e33467dd0c8600a46f84534` (`4.8.5`). O HEAD Git local histórico não é base de publicação. - Versão funcional publicada: `4.8.6`; fechamento operacional: `4.8.7`.",
+      "normalizedText": "pedido revisar todas as alteracoes com tres agentes e publicar github supabase edge functions e sistema web em producao registro ai operacao registros alteracoes 2026 08 26 bolepix e notificacoes financeiras seguras md manifesto explicito ai operacao registros alteracoes 2026 08 26 bolepix e notificacoes financeiras seguras md autorizacao producao solicitada explicitamente pelo titular em 2026 08 26 condicionada a revisao e aos gates base remota main 6bbadbeb4eeee8758e33467dd0c8600a46f84534 4 8 5 o head git local historico nao e base de publicacao versao funcional publicada 4 8 6 fechamento operacional 4 8 7",
+      "tokenCount": 75,
       "part": 1
     },
     {
@@ -222,24 +222,44 @@
       "part": 1
     },
     {
-      "id": "3d148445e9f7a1eb84df",
-      "hash": "3d148445e9f7a1eb84df19b1f8d8d96a398f5f3e8701ca9e95b855d32ed97cf4",
+      "id": "e491662511e027e4a76a",
+      "hash": "e491662511e027e4a76a99ffd9b26d63c92dae08fa8cbc3b652c36fb4d270d92",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Reunião e aceite técnico",
-      "text": "- Três frentes independentes revisaram notificações, EAD/BolePix e segurança/release. - O veredito inicial foi `NO-GO` por inversão de locks, reapresentação de título não cobrável e painel Pix sem payload. - Os P1 foram corrigidos antes de qualquer alteração remota: migration de runtime separada, revalidação fail-closed nos dois checkouts e downgrade canônico para boleto. - Suíte focada: `80/80`; TypeScript global, ESLint focado e `deno check` dos seis entrypoints Edge aprovados. - Todos os 53 arquivos do manifesto têm no máximo 500 linhas; `provider-checkout.ts` foi dividido de 544 para 427 linhas. - Lint global, versão, operação, teto de linhas, TypeScript e build local foram aprovados. Permanecem obrigatórios: CI, Vercel Preview, preflight Supabase e smoke fail-closed.",
-      "normalizedText": "tres frentes independentes revisaram notificacoes ead bolepix e seguranca release o veredito inicial foi no go por inversao de locks reapresentacao de titulo nao cobravel e painel pix sem payload os p1 foram corrigidos antes de qualquer alteracao remota migration de runtime separada revalidacao fail closed nos dois checkouts e downgrade canonico para boleto suite focada 80 80 typescript global eslint focado e deno check dos seis entrypoints edge aprovados todos os 53 arquivos do manifesto tem no maximo 500 linhas provider checkout ts foi dividido de 544 para 427 linhas lint global versao operacao teto de linhas typescript e build local foram aprovados permanecem obrigatorios ci vercel preview preflight supabase e smoke fail closed",
+      "text": "- Três frentes independentes revisaram notificações, EAD/BolePix e segurança/release. - O veredito inicial foi `NO-GO` por inversão de locks, reapresentação de título não cobrável e painel Pix sem payload. - Os P1 foram corrigidos antes de qualquer alteração remota: migration de runtime separada, revalidação fail-closed nos dois checkouts e downgrade canônico para boleto. - Suíte focada: `80/80`; TypeScript global, ESLint focado e `deno check` dos seis entrypoints Edge aprovados. - Todos os 53 arquivos do manifesto têm no máximo 500 linhas; `provider-checkout.ts` foi dividido de 544 para 427 linhas. - Lint global, versão, operação, teto de linhas, TypeScript e build local foram aprovados; CI, Vercel Preview, preflight Supabase e smokes fail-closed também concluíram.",
+      "normalizedText": "tres frentes independentes revisaram notificacoes ead bolepix e seguranca release o veredito inicial foi no go por inversao de locks reapresentacao de titulo nao cobravel e painel pix sem payload os p1 foram corrigidos antes de qualquer alteracao remota migration de runtime separada revalidacao fail closed nos dois checkouts e downgrade canonico para boleto suite focada 80 80 typescript global eslint focado e deno check dos seis entrypoints edge aprovados todos os 53 arquivos do manifesto tem no maximo 500 linhas provider checkout ts foi dividido de 544 para 427 linhas lint global versao operacao teto de linhas typescript e build local foram aprovados ci vercel preview preflight supabase e smokes fail closed tambem concluiram",
       "tokenCount": 108,
       "part": 1
     },
     {
-      "id": "faa9014dbe309856dbd4",
-      "hash": "faa9014dbe309856dbd4b356b54527e556352404d43344a675587e308e5a6d5c",
+      "id": "ca72851135437b481462",
+      "hash": "ca72851135437b481462a5e2d31caa6b8b113771d56abe07dec9e8dee642bac9",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Ordem remota autorizada",
-      "text": "1. Criar branch exclusivamente da `main` remota e publicar o manifesto atômico. 2. Abrir PR e exigir Controle de versão, Qualidade e Vercel Preview verdes. 3. Aplicar migrations `20260826213000`, `20260826213050` e `20260826213100`, nesta ordem, via MCP Supabase. 4. Publicar `push-notification-dispatcher` e `whatsapp-automation-agent`, preservando `verify_jwt=false` e autenticação interna. 5. Publicar o roteador compartilhado nas quatro consumidoras: `payment-checkout`, `checkout-api`, `asaas-api` e `dependencia-banese-checkout`, preservando o `verify_jwt` atual de cada função. 6. Executar smokes sem cobrança, destinatário ou dado artificial; então mesclar, aguardar Vercel Production e validar rotas/bundles.",
-      "normalizedText": "1 criar branch exclusivamente da main remota e publicar o manifesto atomico 2 abrir pr e exigir controle de versao qualidade e vercel preview verdes 3 aplicar migrations 20260826213000 20260826213050 e 20260826213100 nesta ordem via mcp supabase 4 publicar push notification dispatcher e whatsapp automation agent preservando verify jwt false e autenticacao interna 5 publicar o roteador compartilhado nas quatro consumidoras payment checkout checkout api asaas api e dependencia banese checkout preservando o verify jwt atual de cada funcao 6 executar smokes sem cobranca destinatario ou dado artificial entao mesclar aguardar vercel production e validar rotas bundles",
-      "tokenCount": 80,
+      "section": "Ordem remota concluída",
+      "text": "1. Branch criada exclusivamente da `main` remota e manifesto atômico publicado. `CONCLUIDO`. 2. PR, Controle de versão, Qualidade e Vercel Preview aprovados. `CONCLUIDO_PR_97`. 3. Migrations `20260826213000`, `20260826213050` e `20260826213100` aplicadas em ordem via MCP Supabase. `CONCLUIDO_3_DE_3`. 4. `push-notification-dispatcher` e `whatsapp-automation-agent` publicados com `verify_jwt=false` e autenticação interna preservada. `CONCLUIDO`. 5. Roteador compartilhado publicado nas quatro consumidoras, preservando o `verify_jwt` de cada função. `CONCLUIDO_4_DE_4`. 6. Smokes sem cobrança, destinatário ou dado artificial, merge e Vercel Production concluídos. `CONCLUIDO_PRODUCAO_4_8_6`.",
+      "normalizedText": "1 branch criada exclusivamente da main remota e manifesto atomico publicado concluido 2 pr controle de versao qualidade e vercel preview aprovados concluido pr 97 3 migrations 20260826213000 20260826213050 e 20260826213100 aplicadas em ordem via mcp supabase concluido 3 de 3 4 push notification dispatcher e whatsapp automation agent publicados com verify jwt false e autenticacao interna preservada concluido 5 roteador compartilhado publicado nas quatro consumidoras preservando o verify jwt de cada funcao concluido 4 de 4 6 smokes sem cobranca destinatario ou dado artificial merge e vercel production concluidos concluido producao 4 8 6",
+      "tokenCount": 75,
       "part": 1
+    },
+    {
+      "id": "b5c3154a4ea1c2fee1f7",
+      "hash": "b5c3154a4ea1c2fee1f79af63e2aa473ad3150e4f73d3577d045e6894d7c6ee6",
+      "path": "ai/operacao/LOTE_ATIVO.md",
+      "section": "Evidências de publicação",
+      "text": "- A PR `#97` partiu da `main` `6bbadbeb4eeee8758e33467dd0c8600a46f84534`; o head `1eeb9f8f03c332cea104185d1d1ee2e5a05a5741` alterou exatamente os 53 arquivos declarados, sem extras ou ausências. - Workflows `32975291726` e `32975291777` e Vercel Preview `Jo4BSYaxaYEJvh2fpN17KSWSn2as` aprovados; merge squash `f3e5ffb3a69a575c227bf74af66b3ffa970a94bc`. - Migrations remotas `20260826134030`, `20260826134110` e `20260826134202`; SHAs locais `23116678`, `d0738ad2` e `24ddab35` preservados no registro. - Edge Functions ativas: `payment-checkout` v21, `checkout-api` v16, `asaas-api` v81, `dependencia-banese-checkout` v8, `push-notification-dispatcher` v15 e `whatsapp-automation-agent` v12. Fontes runtime remotas idênticas ao workspace e `verify_jwt` preservado. - Vercel Production `HhtcN2UxPbybTwkNKQRuyQu5NmwQ` pronta; `/`, `/login` e `/sistema/login` responderam `200`; `main-aZE9Pt1f.js` confirmou `4.8.6` e os chunks públicos confirmaram o fallback BolePix. - Push v15 respondeu `200` pelo cron restaurado. WhatsApp v12 recusou com segurança o modo de teste incompleto, sem destinatário efetivo nem mensagem enviada. - Safari carregou início e login. O smoke autenticado parou no Turnstile da",
+      "normalizedText": "a pr 97 partiu da main 6bbadbeb4eeee8758e33467dd0c8600a46f84534 o head 1eeb9f8f03c332cea104185d1d1ee2e5a05a5741 alterou exatamente os 53 arquivos declarados sem extras ou ausencias workflows 32975291726 e 32975291777 e vercel preview jo4bsyaxayejvh2fpn17kswsn2as aprovados merge squash f3e5ffb3a69a575c227bf74af66b3ffa970a94bc migrations remotas 20260826134030 20260826134110 e 20260826134202 shas locais 23116678 d0738ad2 e 24ddab35 preservados no registro edge functions ativas payment checkout v21 checkout api v16 asaas api v81 dependencia banese checkout v8 push notification dispatcher v15 e whatsapp automation agent v12 fontes runtime remotas identicas ao workspace e verify jwt preservado vercel production hhtcn2uxpbybtwknkqruyqu5nmwq pronta login e sistema login responderam 200 main aze9pt1f js confirmou 4 8 6 e os chunks publicos confirmaram o fallback bolepix push v15 respondeu 200 pelo cron restaurado whatsapp v12 recusou com seguranca o modo de teste incompleto sem destinatario efetivo nem mensagem enviada safari carregou inicio e login o smoke autenticado parou no turnstile da",
+      "tokenCount": 125,
+      "part": 1
+    },
+    {
+      "id": "40b7f7960f0d3ed1034e",
+      "hash": "40b7f7960f0d3ed1034edaa6317c66bd5a91c143b01eee9660890652fbc949c9",
+      "path": "ai/operacao/LOTE_ATIVO.md",
+      "section": "Evidências de publicação",
+      "text": "Cloudflare, pois CAPTCHA exige intervenção humana. - Nenhum usuário, recebível, cobrança, matrícula ou mensagem artificial foi criado; as filas permaneceram vazias.",
+      "normalizedText": "cloudflare pois captcha exige intervencao humana nenhum usuario recebivel cobranca matricula ou mensagem artificial foi criado as filas permaneceram vazias",
+      "tokenCount": 20,
+      "part": 2
     },
     {
       "id": "b41ff58e6545a2ae8041",
@@ -302,10 +322,20 @@
       "part": 1
     },
     {
-      "id": "adda7e083eb8f1a5d3a5",
-      "hash": "adda7e083eb8f1a5d3a54c20892a8579705b7b10981da95b3f401b2b91e29549",
+      "id": "749fe13b557507f7f06f",
+      "hash": "749fe13b557507f7f06fb7f6a6c2a164e2767fcb31300579c3e8e640e029be78",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Notificações e banco",
+      "section": "Manifesto do fechamento operacional — 7 arquivos",
+      "text": "- `ai/operacao/LOTE_ATIVO.md` - `ai/operacao/rag/index.json` - `ai/operacao/registros/ALTERACOES.md` - `ai/operacao/registros/alteracoes/2026-08-26-bolepix-e-notificacoes-financeiras-seguras.md` - `internal/versioning/CHANGELOG.md` - `internal/versioning/changelog/2026-08-05-parte-1.md` - `internal/versioning/system-version.json`",
+      "normalizedText": "ai operacao lote ativo md ai operacao rag index json ai operacao registros alteracoes md ai operacao registros alteracoes 2026 08 26 bolepix e notificacoes financeiras seguras md internal versioning changelog md internal versioning changelog 2026 08 05 parte 1 md internal versioning system version json",
+      "tokenCount": 44,
+      "part": 1
+    },
+    {
+      "id": "91783799aee337ce253a",
+      "hash": "91783799aee337ce253af5b6ca1fd9a00ac49d5adfdc886ba0396e0a884679e5",
+      "path": "ai/operacao/LOTE_ATIVO.md",
+      "section": "Manifesto do fechamento operacional — 7 arquivos",
       "text": "Histórico: `ai/operacao/registros/ALTERACOES.md` e `ai/operacao/registros/alteracoes/`.",
       "normalizedText": "historico ai operacao registros alteracoes md e ai operacao registros alteracoes",
       "tokenCount": 10,
