@@ -21,13 +21,8 @@ import {
   claimExistingGatewayCheckout,
 } from "../gateway-creation-fence.ts";
 import { assertGatewayCreationFence } from "../../../asaas/api/gateway-routing-guard.ts";
-import {
-  hasRepairableOnlineInscriptionIdentity,
-  repairOnlineInscription,
-} from "../../online-inscription.ts";
 import type { EadCheckoutContext } from "../types.ts";
 import {
-  documentForGateway,
   normalizeErrorMessage,
   paymentMethodForLegacyField,
   providerLabelFor,
@@ -40,6 +35,15 @@ import {
   paymentResponseFromReceivable,
   shouldReuseReceivable,
 } from "./gateway-view.ts";
+import { buildGatewayChargeInput } from "./gateway-charge-input.ts";
+import {
+  isGatewayReceivableLocallyPayable,
+  loadGatewayCheckoutReceivable,
+} from "./gateway-receivable.ts";
+import {
+  repairAndRevalidateGatewayReuse,
+  repairCheckoutInscricao,
+} from "./gateway-reuse.ts";
 import { AUTOMATIC_ENROLLMENT_ACTIVATION_SOURCE_STATUSES } from "../../webhook/domain/ead-enrollment.ts";
 
 const markRemotePaymentCreated = (error: unknown) => {
@@ -52,42 +56,27 @@ const markRemotePaymentCreated = (error: unknown) => {
   return wrapped;
 };
 
-const repairCheckoutInscricao = async (
-  context: EadCheckoutContext,
-  receivable: any,
-  requireGatewayTransaction = false,
-) => {
-  if (!hasRepairableOnlineInscriptionIdentity(receivable)) return null;
-  return await repairOnlineInscription({
-    admin: context.admin,
-    receivable,
-    legacyPaymentMethod: paymentMethodForLegacyField(
-      receivable.gateway_payment_method || context.charge.method,
-    ),
-    academic: {
-      course: context.course,
-      turma: context.turma,
-      aluno: context.aluno,
-      matricula: context.matricula,
-    },
-    requireGatewayTransaction,
-  });
-};
-
 export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
   const providerCode = context.route.providerCode;
-
-  const { data: existingReceivables, error: existingError } = await context
-    .admin
-    .from("contas_receber")
-    .select("*")
-    .eq("matricula_id", context.matricula.id)
-    .eq("tipo_lancamento", "MATRICULA")
-    .order("created_at", { ascending: false })
-    .limit(1);
-  if (existingError) throw existingError;
-
-  let receivable = existingReceivables?.[0] || null;
+  const targetedReceivableId = context.body.receivableId
+    ? String(context.body.receivableId)
+    : null;
+  let receivable = await loadGatewayCheckoutReceivable({
+    admin: context.admin,
+    matriculaId: context.matricula.id,
+    receivableId: targetedReceivableId,
+    ...(targetedReceivableId
+      ? {
+        expectation: {
+          alunoId: context.aluno.id,
+          turmaId: context.turma.id,
+          value: context.charge.value,
+          dueDate: context.charge.dueDate,
+          description: context.charge.description,
+        },
+      }
+      : {}),
+  });
 
   if (String(receivable?.status || "").toUpperCase() === "PAGO") {
     await repairGatewayTransactionFromReceivable(context.admin, receivable);
@@ -117,8 +106,11 @@ export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
   if (
     shouldReuseReceivable(receivable, context, providerCode)
   ) {
-    await repairGatewayTransactionFromReceivable(context.admin, receivable);
-    await repairCheckoutInscricao(context, receivable, true);
+    receivable = await repairAndRevalidateGatewayReuse(
+      context,
+      receivable,
+      providerCode,
+    );
     const url = gatewayOnlyPrimaryUrl(receivable) ||
       gatewayPrimaryUrl(receivable);
     return {
@@ -143,7 +135,8 @@ export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
   } conforme rota bancaria.`;
   const resetGatewayFields = clearPreviousGatewayFields(switchMessage);
   const sameBaneseCharge = Boolean(
-    receivable?.gateway_provider === "banese_card" &&
+    isGatewayReceivableLocallyPayable(receivable) &&
+      receivable?.gateway_provider === "banese_card" &&
       providerCode === "banese_card" &&
       receivable?.gateway_environment === context.environment &&
       receivable?.gateway_payment_method === "BOLETO" &&
@@ -183,12 +176,15 @@ export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
     resetGatewayFields.gateway_financial_terms_confirmed_at =
       receivable.gateway_financial_terms_confirmed_at || null;
   }
+  const usesTargetedReceivable = Boolean(context.body.receivableId);
   const receivablePayload = {
-    polo_id: context.turma.polo_id,
+    polo_id: usesTargetedReceivable
+      ? receivable.polo_id || context.turma.polo_id
+      : context.turma.polo_id,
     descricao: context.charge.description,
     valor: context.charge.value,
     data_vencimento: context.charge.dueDate,
-    status: "PENDENTE",
+    status: usesTargetedReceivable ? receivable.status : "PENDENTE",
     cliente_id: context.aluno.id,
     matricula_id: context.matricula.id,
     turma_id: context.turma.id,
@@ -245,46 +241,6 @@ export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
     creationOwnedByThisRequest = true;
   }
 
-  const baseUrl = publicBaseUrl();
-  const gatewayChargeInput = (
-    targetReceivable: any,
-    financialTerms:
-      | Awaited<
-        ReturnType<typeof resolveBaneseReceivableFinancialTerms>
-      >
-      | null = null,
-  ) => ({
-    admin: context.admin,
-    supabaseUrl: context.supabaseUrl,
-    providerCode,
-    credentialId: context.route.credentialId,
-    environment: context.environment,
-    paymentMethod: context.charge.method,
-    receivable: targetReceivable,
-    payer: {
-      id: context.aluno.id,
-      name: context.aluno.nome,
-      email: context.aluno.email,
-      cpfCnpj: documentForGateway(context.aluno.cpf_cnpj),
-      phone: context.aluno.telefone,
-      address: context.aluno.endereco,
-      number: context.aluno.numero,
-      complement: context.aluno.complemento,
-      postalCode: context.aluno.cep,
-      district: context.aluno.bairro,
-      city: context.aluno.cidade,
-      state: context.aluno.uf ?? context.aluno.estado,
-    },
-    amount: context.charge.value,
-    description: context.charge.description,
-    dueDate: context.charge.dueDate,
-    installments: context.charge.installmentCount,
-    successUrl: `${baseUrl}/aluno?gateway=success`,
-    failureUrl: `${baseUrl}/aluno?gateway=failure`,
-    pendingUrl: `${baseUrl}/aluno?gateway=pending`,
-    financialTerms,
-  });
-
   let gatewayResult: any = null;
   if (!lockedReceivable) {
     const { data: currentReceivable, error: currentReceivableError } =
@@ -304,27 +260,27 @@ export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
       !currentCreationIsAmbiguous &&
       shouldReuseReceivable(currentReceivable, context, providerCode)
     ) {
-      await repairGatewayTransactionFromReceivable(
-        context.admin,
+      const reusableReceivable = await repairAndRevalidateGatewayReuse(
+        context,
         currentReceivable,
+        providerCode,
       );
-      await repairCheckoutInscricao(context, currentReceivable, true);
-      const url = gatewayOnlyPrimaryUrl(currentReceivable) ||
-        gatewayPrimaryUrl(currentReceivable);
+      const url = gatewayOnlyPrimaryUrl(reusableReceivable) ||
+        gatewayPrimaryUrl(reusableReceivable);
       return {
         response: {
           url,
           matriculaId: context.matricula.id,
-          receivableId: currentReceivable.id,
+          receivableId: reusableReceivable.id,
           alreadyPending: true,
           payment: paymentResponseFromReceivable(
-            currentReceivable,
+            reusableReceivable,
             context,
             providerCode,
           ),
         },
         createdRemotePayment: false,
-        receivableId: currentReceivable.id,
+        receivableId: reusableReceivable.id,
       };
     }
     if (
@@ -332,7 +288,7 @@ export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
       currentCreationIsAmbiguous
     ) {
       gatewayResult = await recoverGatewayCharge(
-        gatewayChargeInput(currentReceivable),
+        buildGatewayChargeInput(context, currentReceivable),
       );
       if (gatewayResult) {
         lockedReceivable = currentReceivable;
@@ -359,7 +315,7 @@ export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
       : null;
     try {
       gatewayResult = await createGatewayCharge(
-        gatewayChargeInput(lockedReceivable, financialTerms),
+        buildGatewayChargeInput(context, lockedReceivable, financialTerms),
       );
     } catch (error) {
       const remotePaymentMayExist = Boolean(

@@ -11,6 +11,14 @@ export const CHECKOUT_MUTABLE_RECEIVABLE_STATUSES = [
 
 const CHECKOUT_ATTEMPT_SNAPSHOT_FIELDS = [
   "status",
+  "data_pagamento",
+  "cliente_id",
+  "matricula_id",
+  "turma_id",
+  "tipo_lancamento",
+  "valor",
+  "data_vencimento",
+  "descricao",
   "origem_pagamento",
   "updated_at",
   "gateway_creation_token",

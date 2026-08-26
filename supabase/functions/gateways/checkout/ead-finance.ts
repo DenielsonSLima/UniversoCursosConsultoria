@@ -14,12 +14,29 @@ export const buildCoursePaymentDescription = (courseName: string) =>
 
 export const resolveEadCharge = (
   course: any,
-  input: { method?: unknown; installments?: unknown },
+  input: {
+    method?: unknown;
+    installments?: unknown;
+    presentation?: unknown;
+  },
   providerCode?: GatewayProviderCode,
 ): EadCharge => {
-  const financeiroConfig = normalizeCourseFinanceiroConfig(
+  const configuredFinanceiro = normalizeCourseFinanceiroConfig(
     course?.financeiro_config || {},
   );
+  const usesPixPresentationOnBoletoRail =
+    String(input.method || "").trim().toUpperCase() === "BOLETO" &&
+    String(input.presentation || "").trim().toUpperCase() === "PIX" &&
+    configuredFinanceiro.metodosRecebimento.pix;
+  const financeiroConfig = usesPixPresentationOnBoletoRail
+    ? {
+      ...configuredFinanceiro,
+      metodosRecebimento: {
+        ...configuredFinanceiro.metodosRecebimento,
+        boleto: true,
+      },
+    }
+    : configuredFinanceiro;
   const { billingType: method, installmentCount } =
     resolveCoursePaymentSelection(financeiroConfig, {
       method: input.method,
@@ -76,5 +93,27 @@ export const resolveEadCharge = (
       String(course?.nome || "Curso EAD"),
     ),
     dueDate: dueDateInDays(7),
+  };
+};
+
+export const resolveTargetedEadCharge = (
+  configuredCharge: EadCharge,
+  receivable: any,
+): EadCharge => {
+  const value = roundMoney(receivable?.valor);
+  const dueDate = String(receivable?.data_vencimento || "").slice(0, 10);
+  const description = String(receivable?.descricao || "").trim();
+  if (value <= 0 || !/^\d{4}-\d{2}-\d{2}$/.test(dueDate) || !description) {
+    throw new Error(
+      "Cobranca EAD existente sem valor, vencimento ou descricao canonicos.",
+    );
+  }
+  return {
+    ...configuredCharge,
+    value,
+    feeValue: 0,
+    netValue: value,
+    dueDate,
+    description,
   };
 };

@@ -5,8 +5,17 @@ import {
   requireGestorTab,
   requireGlobalFinancialTabAccess,
 } from "../_shared/authz.ts";
-import { buildCorsHeaders, getClientIp, isRateLimitExceeded, json } from "../_shared/http.ts";
-import { insertWhatsAppMessage, normalizeWhatsAppPhone, upsertWhatsAppConversation } from "../_shared/whatsapp.ts";
+import {
+  buildCorsHeaders,
+  getClientIp,
+  isRateLimitExceeded,
+  json,
+} from "../_shared/http.ts";
+import {
+  insertWhatsAppMessage,
+  normalizeWhatsAppPhone,
+  upsertWhatsAppConversation,
+} from "../_shared/whatsapp.ts";
 
 type AutomationKey = "due" | "receipt" | "overdue" | "multiple";
 
@@ -22,6 +31,18 @@ type Candidate = {
   message_content: string;
 };
 
+type ClaimedCandidate = {
+  delivery_id: string;
+  automation_key: AutomationKey;
+  aluno_id: string;
+  aluno_nome: string;
+  target_phone: string;
+  receivable_id: string | null;
+  receivable_ids: string[];
+  reference_date: string;
+  message_content: string;
+};
+
 const senderNames: Record<AutomationKey, string> = {
   due: "Automacao de vencimento",
   receipt: "Automacao de recebimento",
@@ -34,12 +55,13 @@ const normalizeGraphVersion = (value: unknown) => {
   return /^v\d+\.\d+$/.test(version) ? version : "v23.0";
 };
 
-const localDateIso = () => new Intl.DateTimeFormat("en-CA", {
-  timeZone: "America/Maceio",
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-}).format(new Date());
+const localDateIso = () =>
+  new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Maceio",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
 
 const parseDate = (value: unknown) => {
   const text = String(value || "").trim();
@@ -59,17 +81,29 @@ Deno.serve(async (req: Request) => {
   const corsHeaders = buildCorsHeaders(req);
   const respondJson = (body: unknown, status = 200) => json(body, status, req);
 
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  if (req.method !== "POST") return respondJson({ error: "Metodo nao permitido." }, 405);
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+  if (req.method !== "POST") {
+    return respondJson({ error: "Metodo nao permitido." }, 405);
+  }
 
-  if (isRateLimitExceeded(`whatsapp-automation-agent:${getClientIp(req)}`, 20, 60000)) {
+  if (
+    isRateLimitExceeded(
+      `whatsapp-automation-agent:${getClientIp(req)}`,
+      20,
+      60000,
+    )
+  ) {
     return respondJson({ error: "Muitos disparos em curto periodo." }, 429);
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!supabaseUrl || !serviceRoleKey) {
-    return respondJson({ error: "Ambiente Supabase incompleto para automacoes WhatsApp." }, 500);
+    return respondJson({
+      error: "Ambiente Supabase incompleto para automacoes WhatsApp.",
+    }, 500);
   }
 
   const admin = createClient(supabaseUrl, serviceRoleKey, {
@@ -110,15 +144,18 @@ Deno.serve(async (req: Request) => {
 
     const { data: config, error: configError } = await admin
       .from("mensageria_config")
-      .select("wa_enabled, wa_status, wa_phone_number_id, wa_graph_version, wa_automation_test_mode, wa_automation_test_aluno_id, wa_automation_test_recipient_phone")
+      .select(
+        "wa_enabled, wa_status, wa_phone_number_id, wa_graph_version, wa_automation_test_mode, wa_automation_test_aluno_id, wa_automation_test_recipient_phone",
+      )
       .eq("tipo", "whatsapp")
       .maybeSingle();
     if (configError) throw configError;
 
-    const { data: accessTokenSecret, error: accessTokenError } = await admin.rpc(
-      "whatsapp_get_secret",
-      { p_secret_name: "whatsapp_meta_access_token" },
-    );
+    const { data: accessTokenSecret, error: accessTokenError } = await admin
+      .rpc(
+        "whatsapp_get_secret",
+        { p_secret_name: "whatsapp_meta_access_token" },
+      );
     if (accessTokenError) throw accessTokenError;
 
     const accessToken = String(accessTokenSecret || "").trim();
@@ -128,14 +165,21 @@ Deno.serve(async (req: Request) => {
       Boolean(phoneNumberId) &&
       Boolean(accessToken);
     if (!apiActive) {
-      throw new Error("WhatsApp API precisa estar configurada e ativa para executar automacoes.");
+      throw new Error(
+        "WhatsApp API precisa estar configurada e ativa para executar automacoes.",
+      );
     }
 
     const testMode = config?.wa_automation_test_mode === true;
-    const testAlunoId = String(config?.wa_automation_test_aluno_id || "").trim() || null;
-    const testRecipientPhone = normalizeWhatsAppPhone(config?.wa_automation_test_recipient_phone);
+    const testAlunoId =
+      String(config?.wa_automation_test_aluno_id || "").trim() || null;
+    const testRecipientPhone = normalizeWhatsAppPhone(
+      config?.wa_automation_test_recipient_phone,
+    );
     if (testMode && (!testAlunoId || !testRecipientPhone)) {
-      throw new Error("Modo de teste das automacoes exige aluno e telefone destinatario.");
+      throw new Error(
+        "Modo de teste das automacoes exige aluno e telefone destinatario.",
+      );
     }
     const effectiveAlunoId = alunoId || (testMode ? testAlunoId : null);
 
@@ -149,14 +193,18 @@ Deno.serve(async (req: Request) => {
     );
     if (candidateError) throw candidateError;
 
-    const candidates = ((candidateData || []) as Candidate[]).filter((candidate) =>
-      !requestedKeys || requestedKeys.has(candidate.automation_key)
-    );
+    const candidates = ((candidateData || []) as Candidate[]).filter((
+      candidate,
+    ) => !requestedKeys || requestedKeys.has(candidate.automation_key));
     if (dryRun) {
-      const byAutomation = candidates.reduce<Record<string, number>>((summary, candidate) => {
-        summary[candidate.automation_key] = (summary[candidate.automation_key] || 0) + 1;
-        return summary;
-      }, {});
+      const byAutomation = candidates.reduce<Record<string, number>>(
+        (summary, candidate) => {
+          summary[candidate.automation_key] =
+            (summary[candidate.automation_key] || 0) + 1;
+          return summary;
+        },
+        {},
+      );
       return respondJson({
         ok: true,
         dryRun: true,
@@ -172,36 +220,49 @@ Deno.serve(async (req: Request) => {
     const failures: Array<{ key: string; alunoId: string; error: string }> = [];
 
     for (const candidate of candidates) {
-      const phone = testMode ? testRecipientPhone : normalizeWhatsAppPhone(candidate.telefone);
+      const { data: claimData, error: claimError } = await admin.rpc(
+        "claim_whatsapp_financial_automation_delivery",
+        {
+          p_automation_key: candidate.automation_key,
+          p_aluno_id: candidate.aluno_id,
+          p_reference_date: candidate.reference_date,
+          p_candidate_dedupe_key: candidate.dedupe_key,
+          p_test_mode: testMode,
+          p_target_phone_override: testMode ? testRecipientPhone : null,
+        },
+      );
+      if (claimError) {
+        failures.push({
+          key: candidate.automation_key,
+          alunoId: candidate.aluno_id,
+          error: "Falha ao revalidar a cobranca antes do envio.",
+        });
+        continue;
+      }
+
+      const claimed = ((claimData || []) as ClaimedCandidate[])[0];
+      if (!claimed) {
+        skipped += 1;
+        continue;
+      }
+
+      const phone = normalizeWhatsAppPhone(claimed.target_phone);
       if (!phone) {
-        failures.push({ key: candidate.automation_key, alunoId: candidate.aluno_id, error: "Telefone invalido." });
+        failures.push({
+          key: claimed.automation_key,
+          alunoId: claimed.aluno_id,
+          error: "Telefone invalido apos a revalidacao.",
+        });
+        await admin.from("whatsapp_automation_deliveries").update({
+          status: "error",
+          error: "Telefone invalido apos a revalidacao.",
+        }).eq("id", claimed.delivery_id);
         continue;
       }
 
-      const { data: delivery, error: deliveryError } = await admin
-        .from("whatsapp_automation_deliveries")
-        .insert({
-          automation_key: candidate.automation_key,
-          aluno_id: candidate.aluno_id,
-          receivable_id: candidate.receivable_id,
-          receivable_ids: candidate.receivable_ids || [],
-          reference_date: candidate.reference_date,
-          dedupe_key: testMode
-            ? `test:${targetDate}:${testAlunoId}:${candidate.dedupe_key}`
-            : candidate.dedupe_key,
-          target_phone: phone,
-          content: candidate.message_content,
-          status: "processing",
-        })
-        .select("id")
-        .maybeSingle();
-
-      if (deliveryError) {
-        if (deliveryError.code === "23505") skipped += 1;
-        else failures.push({ key: candidate.automation_key, alunoId: candidate.aluno_id, error: deliveryError.message });
-        continue;
-      }
-
+      // O claim é o ponto de autorização serializado com mudanças do título.
+      // Depois dele não há I/O antes da Meta; mensagem já aceita pelo provedor
+      // não pode ser desfeita por um trancamento que confirme posteriormente.
       try {
         const metaResponse = await fetch(
           `https://graph.facebook.com/${graphVersion}/${phoneNumberId}/messages`,
@@ -216,31 +277,33 @@ Deno.serve(async (req: Request) => {
               recipient_type: "individual",
               to: phone,
               type: "text",
-              text: { preview_url: true, body: candidate.message_content },
+              text: { preview_url: true, body: claimed.message_content },
             }),
           },
         );
 
         const metaPayload = await metaResponse.json().catch(() => ({}));
         if (!metaResponse.ok) {
-          throw new Error(metaPayload?.error?.message || "Falha na Meta Cloud API.");
+          throw new Error(
+            metaPayload?.error?.message || "Falha na Meta Cloud API.",
+          );
         }
 
-        const aluno = { id: candidate.aluno_id, nome: candidate.aluno_nome };
+        const aluno = { id: claimed.aluno_id, nome: claimed.aluno_nome };
         const conversation = await upsertWhatsAppConversation(admin, {
           phone,
           aluno,
-          lastText: candidate.message_content,
+          lastText: claimed.message_content,
           direction: "saida",
         });
         await insertWhatsAppMessage(admin, {
           conversaId: conversation.id,
-          alunoId: candidate.aluno_id,
+          alunoId: claimed.aluno_id,
           metaMessageId: metaPayload?.messages?.[0]?.id || null,
           direction: "saida",
           senderType: "sistema",
-          senderName: senderNames[candidate.automation_key],
-          content: candidate.message_content,
+          senderName: senderNames[claimed.automation_key],
+          content: claimed.message_content,
           messageType: "text",
           status: "sent",
           rawPayload: metaPayload,
@@ -252,15 +315,21 @@ Deno.serve(async (req: Request) => {
           meta_message_id: metaPayload?.messages?.[0]?.id || null,
           sent_at: new Date().toISOString(),
           error: null,
-        }).eq("id", delivery?.id);
+        }).eq("id", claimed.delivery_id);
         sent += 1;
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Erro inesperado no envio.";
-        failures.push({ key: candidate.automation_key, alunoId: candidate.aluno_id, error: message });
+        const message = error instanceof Error
+          ? error.message
+          : "Erro inesperado no envio.";
+        failures.push({
+          key: claimed.automation_key,
+          alunoId: claimed.aluno_id,
+          error: message,
+        });
         await admin.from("whatsapp_automation_deliveries").update({
           status: "error",
           error: message,
-        }).eq("id", delivery?.id);
+        }).eq("id", claimed.delivery_id);
       }
     }
 
@@ -276,7 +345,9 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     console.error("whatsapp-automation-agent error:", error);
     return respondJson({
-      error: error instanceof Error ? error.message : "Erro inesperado nas automacoes WhatsApp.",
+      error: error instanceof Error
+        ? error.message
+        : "Erro inesperado nas automacoes WhatsApp.",
     }, 400);
   }
 });

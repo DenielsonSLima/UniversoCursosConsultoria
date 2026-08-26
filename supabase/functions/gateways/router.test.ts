@@ -6,29 +6,47 @@ import {
   repairGatewayTransactionFromReceivable,
 } from "./router.ts";
 
-Deno.test("facade bloqueia Pix Banese mesmo sem passar pela resolucao de rota", async () => {
-  let databaseReads = 0;
-  await assert.rejects(
-    () =>
-      createGatewayCharge({
-        admin: {
-          from: () => {
-            databaseReads += 1;
-            throw new Error("nao deveria consultar configuracao");
+for (const environment of ["sandbox", "production"] as const) {
+  Deno.test(`facade bloqueia Pix Banese direto em ${environment} antes de consultar configuracao`, async () => {
+    let databaseReads = 0;
+    await assert.rejects(
+      () =>
+        createGatewayCharge({
+          admin: {
+            from: () => {
+              databaseReads += 1;
+              throw new Error("nao deveria consultar configuracao");
+            },
           },
-        },
-        supabaseUrl: "https://example.supabase.co",
-        providerCode: "banese_card",
-        environment: "sandbox",
-        paymentMethod: "PIX",
-        receivable: { id: "receivable-1" },
-        payer: {},
-        amount: 99.9,
-        description: "Matricula",
-      }),
-    /Pix Banese permanece bloqueado/i,
+          supabaseUrl: "https://example.supabase.co",
+          providerCode: "banese_card",
+          environment,
+          paymentMethod: "PIX",
+          receivable: { id: `receivable-${environment}` },
+          payer: {},
+          amount: 99.9,
+          description: "Matricula",
+        }),
+      /Pix Banese direto permanece bloqueado.*BolePix.*BOLETO/i,
+    );
+    assert.equal(databaseReads, 0);
+  });
+}
+
+Deno.test("normalizacao preserva o Pix oficial apresentado pelo BolePix BOLETO", () => {
+  const bolePix = normalizeGatewayAdapterResult("banese_card", "BOLETO", {
+    id: "boleto-123",
+    link: "https://example.supabase.co/functions/v1/banese-boleto-document",
+    pixPayload: "pix-copia-e-cola-oficial",
+    pixEncodedImage: "imagem-qr-oficial",
+  });
+
+  assert.equal(
+    bolePix.bankSlipUrl,
+    "https://example.supabase.co/functions/v1/banese-boleto-document",
   );
-  assert.equal(databaseReads, 0);
+  assert.equal(bolePix.pixPayload, "pix-copia-e-cola-oficial");
+  assert.equal(bolePix.pixEncodedImage, "imagem-qr-oficial");
 });
 
 Deno.test("facade aceita somente o escopo Banese e Mercado Pago para novas cobrancas", async () => {

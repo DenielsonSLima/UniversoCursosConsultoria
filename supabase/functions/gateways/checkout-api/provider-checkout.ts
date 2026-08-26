@@ -1,4 +1,3 @@
-import { mapBillingType } from "./checkout-rules.ts";
 import type { CheckoutContext } from "./checkout-context.ts";
 import {
   normalizeErrorMessage,
@@ -16,9 +15,7 @@ import {
 import {
   assertGatewayTitleCanBeReset,
   assertNoAmbiguousRemoteCreation,
-  boletoIssuedAtAfterReset,
   hasAmbiguousRemoteCreation,
-  isRemoteTitleNonPayable,
 } from "../checkout/remote-title-guard.ts";
 import {
   applyCheckoutAttemptSnapshot,
@@ -29,41 +26,13 @@ import { baneseFinancialTermsFromCharge } from "../api/banese-financial-terms.ts
 import { assertGatewayCreationFence } from "../../asaas/api/gateway-routing-guard.ts";
 import { AUTOMATIC_ENROLLMENT_ACTIVATION_SOURCE_STATUSES } from "../webhook/domain/ead-enrollment.ts";
 import {
-  hasRepairableOnlineInscriptionIdentity,
-  repairOnlineInscription,
-} from "../online-inscription.ts";
-
-const markRemotePaymentCreated = (error: unknown) => {
-  const marked = error && typeof error === "object"
-    ? error
-    : new Error(String(normalizeErrorMessage(error)));
-  (marked as unknown as Record<string, unknown>).remotePaymentCreated = true;
-  return marked;
-};
-
-const repairCheckoutInscricao = async (
-  context: CheckoutContext,
-  receivable: any,
-  requireGatewayTransaction = false,
-) => {
-  if (!hasRepairableOnlineInscriptionIdentity(receivable)) return null;
-  return await repairOnlineInscription({
-    admin: context.admin,
-    receivable,
-    legacyPaymentMethod: mapBillingType(
-      receivable.gateway_payment_method ||
-        context.gatewayPaymentMethodForCharge,
-    ),
-    academic: {
-      course: context.course,
-      turma: context.turma,
-      aluno: context.aluno,
-      matricula: context.matricula,
-      technicalSchoolSnapshot: context.technicalSchoolSnapshot,
-    },
-    requireGatewayTransaction,
-  });
-};
+  buildStaleGatewayFields,
+  markRemotePaymentCreated,
+  repairAndRevalidateProviderReuse,
+  repairCheckoutInscricao,
+  shouldPreserveReservedBaneseNumber,
+  shouldReuseProviderReceivable,
+} from "./provider-reuse.ts";
 
 export const handleProviderGatewayCheckout = async (
   context: CheckoutContext,
@@ -114,95 +83,27 @@ export const handleProviderGatewayCheckout = async (
     });
   }
 
-  if (
-    gatewayReceivable &&
-    gatewayReceivable.gateway_provider === providerCode &&
-    gatewayReceivable.gateway_payment_method ===
-      gatewayPaymentMethodForCharge &&
-    gatewayReceivable.gateway_environment === environment &&
-    Number(gatewayReceivable.gateway_installments || 1) ===
-      Number(charge.installmentCount || 1) &&
-    Math.round(Number(gatewayReceivable.valor || 0) * 100) ===
-      Math.round(Number(charge.value || 0) * 100) &&
-    String(gatewayReceivable.data_vencimento || "").slice(0, 10) ===
-      String(dataVencimento || "").slice(0, 10) &&
-    !isRemoteTitleNonPayable(gatewayReceivable) &&
-    (
-      providerCode !== "mercado_pago" ||
-      gatewayPaymentMethodForCharge !== "PIX" ||
-      Boolean(
-        gatewayReceivable.gateway_pix_payload ||
-          gatewayReceivable.gateway_pix_encoded_image,
-      )
-    ) &&
-    resolveCheckoutUrl(gatewayReceivable)
-  ) {
-    await repairGatewayTransactionFromReceivable(admin, gatewayReceivable);
-    await repairCheckoutInscricao(context, gatewayReceivable, true);
+  if (shouldReuseProviderReceivable(gatewayReceivable, context, providerCode)) {
+    gatewayReceivable = await repairAndRevalidateProviderReuse(
+      context,
+      gatewayReceivable,
+      providerCode,
+    );
     return json({
       url: resolveCheckoutUrl(gatewayReceivable),
       alreadyPending: true,
     });
   }
 
-  const preserveReservedBaneseNumber = Boolean(
-    gatewayReceivable?.gateway_provider === "banese_card" &&
-      providerCode === "banese_card" &&
-      gatewayReceivable?.gateway_environment === environment &&
-      gatewayReceivable?.gateway_payment_method === "BOLETO" &&
-      gatewayPaymentMethodForCharge === "BOLETO" &&
-      Number(gatewayReceivable?.gateway_installments || 1) ===
-        Number(charge.installmentCount || 1) &&
-      Math.round(Number(gatewayReceivable?.valor || 0) * 100) ===
-        Math.round(Number(charge.value || 0) * 100) &&
-      String(gatewayReceivable?.data_vencimento || "").slice(0, 10) ===
-        String(dataVencimento || "").slice(0, 10) &&
-      !isRemoteTitleNonPayable(gatewayReceivable) &&
-      gatewayReceivable?.gateway_boleto_nosso_numero,
+  const preserveReservedBaneseNumber = shouldPreserveReservedBaneseNumber(
+    gatewayReceivable,
+    context,
+    providerCode,
   );
-  const staleGatewayFields = gatewayReceivable?.id
-    ? {
-      asaas_payment_id: null,
-      asaas_payment_link_id: null,
-      nosso_numero_asaas: null,
-      asaas_invoice_url: null,
-      asaas_bank_slip_url: null,
-      asaas_installment_id: null,
-      asaas_transaction_receipt_url: null,
-      asaas_status: null,
-      asaas_synced_at: null,
-      asaas_last_error: null,
-      gateway_payment_id: null,
-      gateway_customer_id: null,
-      gateway_payment_link_id: null,
-      gateway_installment_id: null,
-      gateway_invoice_url: null,
-      gateway_bank_slip_url: null,
-      gateway_pix_payload: null,
-      gateway_pix_encoded_image: null,
-      gateway_boleto_linha_digitavel: preserveReservedBaneseNumber
-        ? gatewayReceivable.gateway_boleto_linha_digitavel || null
-        : null,
-      gateway_boleto_codigo_barras: preserveReservedBaneseNumber
-        ? gatewayReceivable.gateway_boleto_codigo_barras || null
-        : null,
-      gateway_boleto_nosso_numero: preserveReservedBaneseNumber
-        ? gatewayReceivable.gateway_boleto_nosso_numero
-        : null,
-      gateway_boleto_issued_at: boletoIssuedAtAfterReset(
-        gatewayReceivable,
-        preserveReservedBaneseNumber,
-      ),
-      gateway_financial_terms: preserveReservedBaneseNumber
-        ? gatewayReceivable.gateway_financial_terms || null
-        : null,
-      gateway_financial_terms_confirmed_at: preserveReservedBaneseNumber
-        ? gatewayReceivable.gateway_financial_terms_confirmed_at || null
-        : null,
-      gateway_transaction_receipt_url: null,
-      gateway_synced_at: null,
-    }
-    : {};
+  const staleGatewayFields = buildStaleGatewayFields(
+    gatewayReceivable,
+    preserveReservedBaneseNumber,
+  );
 
   const ambiguousAsaasCreation = providerCode === "asaas" &&
     hasAmbiguousRemoteCreation(gatewayReceivable);
@@ -326,37 +227,19 @@ export const handleProviderGatewayCheckout = async (
     if (currentCreationIsAmbiguous && providerCode !== "asaas") {
       assertNoAmbiguousRemoteCreation(currentReceivable);
     }
-    const currentUrl = currentCreationIsAmbiguous
-      ? null
-      : resolveCheckoutUrl(currentReceivable);
     if (
-      currentUrl &&
-      currentReceivable?.gateway_provider === providerCode &&
-      currentReceivable?.gateway_payment_method ===
-        gatewayPaymentMethodForCharge &&
-      currentReceivable?.gateway_environment === environment &&
-      Number(currentReceivable?.gateway_installments || 1) ===
-        Number(charge.installmentCount || 1) &&
-      Math.round(Number(currentReceivable?.valor || 0) * 100) ===
-        Math.round(Number(charge.value || 0) * 100) &&
-      String(currentReceivable?.data_vencimento || "").slice(0, 10) ===
-        String(dataVencimento || "").slice(0, 10) &&
-      !isRemoteTitleNonPayable(currentReceivable) &&
-      (
-        providerCode !== "mercado_pago" ||
-        gatewayPaymentMethodForCharge !== "PIX" ||
-        Boolean(
-          currentReceivable?.gateway_pix_payload ||
-            currentReceivable?.gateway_pix_encoded_image,
-        )
-      )
+      !currentCreationIsAmbiguous &&
+      shouldReuseProviderReceivable(currentReceivable, context, providerCode)
     ) {
-      await repairGatewayTransactionFromReceivable(
-        admin,
+      const reusableReceivable = await repairAndRevalidateProviderReuse(
+        context,
         currentReceivable,
+        providerCode,
       );
-      await repairCheckoutInscricao(context, currentReceivable, true);
-      return json({ url: currentUrl, alreadyPending: true });
+      return json({
+        url: resolveCheckoutUrl(reusableReceivable),
+        alreadyPending: true,
+      });
     }
     if (
       providerCode === "asaas" &&

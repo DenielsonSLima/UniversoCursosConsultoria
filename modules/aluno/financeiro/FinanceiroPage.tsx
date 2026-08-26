@@ -333,9 +333,13 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
         <AlunoEadPaymentChoiceModal
           item={eadPayment.selectedPayment}
           method={eadPayment.method}
+          options={eadPayment.paymentOptions}
+          isLoadingOptions={eadPayment.isLoadingPaymentOptions}
+          optionsError={eadPayment.paymentOptionsError}
           isStarting={eadPayment.isStarting}
           onMethodChange={eadPayment.setMethod}
           onClose={eadPayment.close}
+          onRetryOptions={eadPayment.retryPaymentOptions}
           onStart={() => { void eadPayment.start(); }}
         />
       ) : null}

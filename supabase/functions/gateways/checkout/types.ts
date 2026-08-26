@@ -34,6 +34,21 @@ export type CheckoutRuntime = {
   corsHeaders: Record<string, string>;
 };
 
+export type StudentEadCheckoutTarget = {
+  receivableId: string;
+  alunoId: string;
+  courseId: string;
+  turmaId: string;
+  aluno: any;
+  receivable: any;
+  turma: any;
+  matricula: {
+    id: string;
+    aluno_id: string;
+    turma_id: string;
+  };
+};
+
 export type EadCheckoutContext = CheckoutRuntime & {
   environment: GatewayEnvironment;
   course: any;

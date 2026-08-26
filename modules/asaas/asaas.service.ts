@@ -34,6 +34,19 @@ export interface CheckoutPaymentSelection {
   presentation?: 'BOLETO' | 'PIX';
 }
 
+export interface StudentEadPaymentOption {
+  id: GatewayPaymentMethod;
+  label: string;
+  checkoutMethod: GatewayPaymentMethod;
+  presentation?: 'BOLETO' | 'PIX';
+}
+
+export interface StudentEadPaymentOptionsResult {
+  success: true;
+  modalidade: 'EAD';
+  options: StudentEadPaymentOption[];
+}
+
 export interface EnrollmentPaymentOption {
   paymentMethod: GatewayPaymentMethod;
   providerCode: 'asaas' | 'mercado_pago' | 'banco_inter' | 'banese_card';
@@ -188,8 +201,11 @@ export const asaasIntegrationService = {
     alunoId: string,
     turmaId?: string | null,
     paymentSelection?: CheckoutPaymentSelection,
+    receivableId?: string | null,
   ): Promise<{
     url: string;
+    presentation?: 'BOLETO' | 'PIX';
+    presentationFallbackReason?: 'PIX_UNAVAILABLE_USE_BOLETO';
     alreadyPaid?: boolean;
     alreadyPending?: boolean;
     awaitingWebhook?: boolean;
@@ -227,10 +243,14 @@ export const asaasIntegrationService = {
       installments: paymentSelection?.installments,
       eadPaymentMethod: paymentSelection?.method,
       eadInstallments: paymentSelection?.installments,
+      presentation: paymentSelection?.presentation,
+      receivableId,
     };
 
     let result: {
       url: string;
+      presentation?: 'BOLETO' | 'PIX';
+      presentationFallbackReason?: 'PIX_UNAVAILABLE_USE_BOLETO';
       alreadyPaid?: boolean;
       alreadyPending?: boolean;
       awaitingWebhook?: boolean;
@@ -262,6 +282,8 @@ export const asaasIntegrationService = {
 
     result = await invokeFunction<{
       url: string;
+      presentation?: 'BOLETO' | 'PIX';
+      presentationFallbackReason?: 'PIX_UNAVAILABLE_USE_BOLETO';
       alreadyPaid?: boolean;
       alreadyPending?: boolean;
       awaitingWebhook?: boolean;
@@ -297,8 +319,18 @@ export const asaasIntegrationService = {
 
     return result;
   },
+
+  async getStudentEadPaymentOptions(
+    receivableId: string,
+  ): Promise<StudentEadPaymentOptionsResult> {
+    return invokeFunction<StudentEadPaymentOptionsResult>('payment-checkout', {
+      action: 'payment-options',
+      receivableId,
+    });
+  },
 };
 
 export const paymentCheckoutService = {
   getPublicCheckout: asaasIntegrationService.getPublicCheckout,
+  getStudentEadPaymentOptions: asaasIntegrationService.getStudentEadPaymentOptions,
 };

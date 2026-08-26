@@ -1,7 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { CreditCard, FileText, X, Zap } from 'lucide-react';
+import { CreditCard, FileText, Loader2, RefreshCw, X, Zap } from 'lucide-react';
 
+import type { StudentEadPaymentOption } from '../../asaas/asaas.service';
 import {
   formatAlunoFinancialCurrency,
   formatAlunoFinancialDate,
@@ -14,27 +15,36 @@ import type {
 interface AlunoEadPaymentChoiceModalProps {
   item: AlunoFinancialItem;
   method: AlunoEadPaymentMethod;
+  options: StudentEadPaymentOption[];
+  isLoadingOptions: boolean;
+  optionsError: string | null;
   isStarting: boolean;
   onMethodChange: (method: AlunoEadPaymentMethod) => void;
   onClose: () => void;
+  onRetryOptions: () => void;
   onStart: () => void;
 }
 
-const paymentMethods = [
-  { method: 'PIX' as const, label: 'Pix', icon: Zap },
-  { method: 'BOLETO' as const, label: 'Boleto', icon: FileText },
-  { method: 'CREDIT_CARD' as const, label: 'Cartão', icon: CreditCard },
-];
+const paymentMethodIcons = {
+  PIX: Zap,
+  BOLETO: FileText,
+  CREDIT_CARD: CreditCard,
+};
 
 const AlunoEadPaymentChoiceModal: React.FC<AlunoEadPaymentChoiceModalProps> = ({
   item,
   method,
+  options,
+  isLoadingOptions,
+  optionsError,
   isStarting,
   onMethodChange,
   onClose,
+  onRetryOptions,
   onStart,
 }) => {
   const dialogRef = useRef<HTMLElement>(null);
+  const canStart = options.some((option) => option.id === method);
   useEffect(() => {
     const bodyOverflow = document.body.style.overflow;
     const rootOverflow = document.documentElement.style.overflow;
@@ -109,23 +119,40 @@ const AlunoEadPaymentChoiceModal: React.FC<AlunoEadPaymentChoiceModalProps> = ({
               </div>
             </div>
           </div>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-            {paymentMethods.map((option) => {
-              const Icon = option.icon;
-              const active = method === option.method;
-              return (
-                <button
-                  key={option.method}
-                  type="button"
-                  onClick={() => onMethodChange(option.method)}
-                  disabled={isStarting}
-                  className={`inline-flex items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-[10px] font-black uppercase tracking-widest disabled:opacity-60 ${active ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-slate-200 bg-white text-slate-600'}`}
-                >
-                  <Icon size={15} /> {option.label}
-                </button>
-              );
-            })}
-          </div>
+          {isLoadingOptions ? (
+            <div className="flex min-h-24 items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 text-xs font-black uppercase tracking-widest text-blue-700">
+              <Loader2 className="animate-spin" size={17} /> Consultando formas disponíveis
+            </div>
+          ) : optionsError ? (
+            <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-xs font-bold leading-relaxed text-rose-700" role="alert">
+              <p>{optionsError}</p>
+              <button type="button" onClick={onRetryOptions} className="mt-3 inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-[10px] font-black uppercase tracking-widest text-rose-700">
+                <RefreshCw size={13} /> Tentar novamente
+              </button>
+            </div>
+          ) : options.length === 0 ? (
+            <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-xs font-bold leading-relaxed text-amber-800" role="status">
+              Nenhuma forma de pagamento está disponível para esta cobrança no momento.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              {options.map((option) => {
+                const Icon = paymentMethodIcons[option.id];
+                const active = method === option.id;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => onMethodChange(option.id)}
+                    disabled={isStarting}
+                    className={`inline-flex items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-[10px] font-black uppercase tracking-widest disabled:opacity-60 ${active ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-slate-200 bg-white text-slate-600'}`}
+                  >
+                    <Icon size={15} /> {option.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
           <div className="rounded-2xl border border-blue-100 bg-blue-50 p-3 text-xs font-bold leading-relaxed text-blue-700">
             A forma escolhida usa a rota bancária configurada para este curso.
           </div>
@@ -133,7 +160,7 @@ const AlunoEadPaymentChoiceModal: React.FC<AlunoEadPaymentChoiceModalProps> = ({
             <button type="button" onClick={onClose} disabled={isStarting} className="min-h-12 rounded-xl border border-slate-200 px-4 text-[10px] font-black uppercase tracking-widest text-slate-600">
               Fechar
             </button>
-            <button type="button" onClick={onStart} disabled={isStarting} className="min-h-12 rounded-xl bg-emerald-600 px-5 text-[10px] font-black uppercase tracking-widest text-white disabled:bg-slate-300">
+            <button type="button" onClick={onStart} disabled={isStarting || isLoadingOptions || !canStart} className="min-h-12 rounded-xl bg-emerald-600 px-5 text-[10px] font-black uppercase tracking-widest text-white disabled:bg-slate-300">
               {isStarting ? 'Preparando...' : 'Continuar pagamento'}
             </button>
           </div>

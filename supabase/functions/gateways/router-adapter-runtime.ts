@@ -219,9 +219,9 @@ export const assertGatewayChargeAdapterReady = (
       "Provedor bancario sem adapter homologado para novas cobrancas.",
     );
   }
-  if (input.paymentMethod === "PIX" && input.environment !== "production") {
+  if (input.paymentMethod === "PIX") {
     throw new Error(
-      "Pix Banese permanece bloqueado em sandbox enquanto o ambiente de homologacao do banco estiver indisponivel.",
+      "Pix Banese direto permanece bloqueado em sandbox e producao; o BolePix deve usar a rota BOLETO.",
     );
   }
   if (input.paymentMethod === "CREDIT_CARD") {

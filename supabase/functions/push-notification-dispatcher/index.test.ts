@@ -3,6 +3,7 @@ import {
   buildFirebaseMessage,
   canonicalPushImagePath,
   type ClaimedDelivery,
+  normalizePushDeliveryRevalidation,
   processClaimedPushAssetCleanups,
   publicPushImageUrl,
   pushConsentFailureCode,
@@ -141,13 +142,37 @@ Deno.test("consentimentos de relacionamento e marketing comercial são independe
     category: "institutional",
     data: { event: "birthday" },
   });
-  assert.equal(requiredPushConsentPurpose(legacyBirthday), "relationship_birthday");
+  assert.equal(
+    requiredPushConsentPurpose(legacyBirthday),
+    "relationship_birthday",
+  );
   assert.equal(
     pushConsentFailureCode(legacyBirthday, {
       available: true,
       allowedDeliveryIds: new Set(),
     }),
     "PUSH_RELATIONSHIP_BIRTHDAY_CONSENT_REQUIRED",
+  );
+});
+
+Deno.test("revalidação financeira antes do FCM falha fechada", () => {
+  assert.deepEqual(normalizePushDeliveryRevalidation(null), {
+    eligible: false,
+    reason: "PUSH_FINANCIAL_REVALIDATION_FAILED",
+  });
+  assert.deepEqual(normalizePushDeliveryRevalidation({ eligible: true }), {
+    eligible: true,
+    reason: null,
+  });
+  assert.deepEqual(
+    normalizePushDeliveryRevalidation({
+      eligible: false,
+      reason: "FINANCIAL_RECEIVABLE_NOT_ACTIONABLE",
+    }),
+    {
+      eligible: false,
+      reason: "FINANCIAL_RECEIVABLE_NOT_ACTIONABLE",
+    },
   );
 });
 
@@ -162,6 +187,17 @@ Deno.test("parâmetro de auditoria do provedor aparece uma única vez", async ()
     "o dispatcher deve consultar a decisão canônica de consentimento no banco",
   );
   assert.doesNotMatch(source, /push-marketing-v1/);
+  const revalidation = source.indexOf(
+    '"revalidate_push_notification_delivery_before_send"',
+  );
+  const providerCall = source.indexOf(
+    "https://fcm.googleapis.com/v1/projects/",
+  );
+  assert(revalidation >= 0, "o dispatcher deve revalidar a cobrança via RPC");
+  assert(
+    providerCall > revalidation,
+    "a revalidação financeira precisa ocorrer antes do POST para o FCM",
+  );
 });
 
 Deno.test("cleanup revalida por RPC antes de remover e confirma sucesso", async () => {

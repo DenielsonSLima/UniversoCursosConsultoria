@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { QueryClient } from '@tanstack/react-query';
+import { useQuery, type QueryClient } from '@tanstack/react-query';
 
 import { paymentCheckoutService } from '../../asaas/asaas.service';
 import type { EadPaymentPanelData } from '../../ead/components/EadPaymentModal';
@@ -14,6 +14,12 @@ import {
   alunoEadPaymentErrorMessage,
   normalizeAlunoEadPaymentMethod,
 } from './financeiro.presentation';
+import {
+  buildAlunoEadCheckoutSelection,
+  isAlunoEadBolePixFallback,
+  isInlineAlunoBolePix,
+  matchesAlunoEadCheckoutReceivable,
+} from './alunoEadPaymentOptions';
 import type {
   AlunoEadPaymentMethod,
   AlunoFinancialItem,
@@ -36,6 +42,30 @@ const useAlunoEadPayment = ({
   const [method, setMethod] = useState<AlunoEadPaymentMethod>('PIX');
   const [isStarting, setIsStarting] = useState(false);
   const [panel, setPanel] = useState<EadPaymentPanelData | null>(null);
+  const paymentOptionsQuery = useQuery({
+    queryKey: [
+      'aluno-ead-payment-options',
+      alunoId,
+      selectedPayment?.id || null,
+    ],
+    queryFn: () => paymentCheckoutService.getStudentEadPaymentOptions(
+      String(selectedPayment?.id || ''),
+    ),
+    enabled: Boolean(alunoId && selectedPayment?.id),
+    staleTime: 15_000,
+    retry: 1,
+  });
+  const paymentOptions = React.useMemo(
+    () => paymentOptionsQuery.data?.options || [],
+    [paymentOptionsQuery.data],
+  );
+
+  React.useEffect(() => {
+    if (!selectedPayment || paymentOptions.length === 0) return;
+    if (!paymentOptions.some((option) => option.id === method)) {
+      setMethod(paymentOptions[0].id);
+    }
+  }, [method, paymentOptions, selectedPayment]);
 
   const confirmPayment = React.useCallback(() => {
     setPanel(null);
@@ -65,21 +95,34 @@ const useAlunoEadPayment = ({
 
   const start = async () => {
     if (!selectedPayment?.cursoId) return;
-    const paymentWindow = method === 'BOLETO' ? preparePaymentWindow() : null;
+    const selectedOption = paymentOptions.find((option) => option.id === method);
+    if (!selectedOption) {
+      showNotice('Nenhuma forma de pagamento está disponível para esta cobrança EAD.', 4500);
+      return;
+    }
+    const paymentSelection = buildAlunoEadCheckoutSelection(selectedOption);
+    const paymentWindow = paymentSelection.presentation === 'BOLETO'
+      ? preparePaymentWindow()
+      : null;
     setIsStarting(true);
     try {
       const result = await paymentCheckoutService.getPublicCheckout(
         selectedPayment.cursoId,
         alunoId,
         selectedPayment.turma_id || undefined,
-        { method },
+        paymentSelection,
+        selectedPayment.id,
       );
       const checkoutResult = result as unknown as {
         url?: string;
+        presentation?: 'BOLETO' | 'PIX';
+        presentationFallbackReason?: 'PIX_UNAVAILABLE_USE_BOLETO';
         receivableId?: string;
         paymentLinkUrl?: string;
+        alreadyPaid?: boolean;
         payment?: {
           provider?: string;
+          method?: string;
           invoiceUrl?: string;
           pixQrCode?: { payload?: string; encodedImage?: string };
         };
@@ -88,18 +131,63 @@ const useAlunoEadPayment = ({
       const checkoutUrl = checkoutResult.url
         || checkoutResult.payment?.invoiceUrl
         || checkoutResult.paymentLinkUrl;
-      const hasPix = Boolean(
-        checkoutResult.payment?.pixQrCode?.payload
-        || checkoutResult.payment?.pixQrCode?.encodedImage,
-      );
-
-      if (method === 'PIX' && hasPix) {
+      const returnedMethod = String(checkoutResult.payment?.method || '').toUpperCase();
+      const returnedPresentation = checkoutResult.presentation;
+      if (!matchesAlunoEadCheckoutReceivable(
+        selectedPayment.id,
+        checkoutResult.receivableId,
+      )) {
+        throw new Error('O backend não confirmou o mesmo título financeiro selecionado.');
+      }
+      if (checkoutResult.alreadyPaid) {
+        paymentWindow?.close();
         setSelectedPayment(null);
-        setPanel(result as EadPaymentPanelData);
+        invalidateFinance();
+        showNotice('Este pagamento já foi confirmado.', 4000);
+        return;
+      }
+      const bolePixFallback = isAlunoEadBolePixFallback(
+        selectedOption,
+        returnedMethod,
+        returnedPresentation,
+        checkoutResult.payment?.pixQrCode,
+      );
+      if (
+        paymentSelection.presentation
+        && returnedPresentation !== paymentSelection.presentation
+        && !bolePixFallback
+      ) {
+        throw new Error('O backend não confirmou a apresentação de pagamento solicitada.');
+      }
+
+      if (isInlineAlunoBolePix(
+        selectedOption,
+        returnedMethod,
+        returnedPresentation,
+        checkoutResult.payment?.pixQrCode,
+      )) {
+        setSelectedPayment(null);
+        setPanel({
+          ...(result as EadPaymentPanelData),
+          presentation: 'PIX',
+        });
         invalidateFinance();
         return;
       }
-      if (method === 'CREDIT_CARD') {
+      if (bolePixFallback) {
+        setSelectedPayment(null);
+        setPanel({
+          ...(result as EadPaymentPanelData),
+          presentation: 'BOLETO',
+        });
+        invalidateFinance();
+        showNotice(
+          'O Pix não foi disponibilizado pelo banco. Use o boleto oficial deste mesmo título.',
+          5500,
+        );
+        return;
+      }
+      if (selectedOption.checkoutMethod === 'CREDIT_CARD') {
         if (!checkoutUrl) throw new Error('O gateway não retornou o link do checkout do cartão.');
         if (provider === 'mercado_pago') {
           invalidateFinance();
@@ -110,10 +198,10 @@ const useAlunoEadPayment = ({
         setSelectedPayment(null);
         return;
       }
-      if (method === 'BOLETO' && !checkoutUrl) {
+      if (paymentSelection.presentation === 'BOLETO' && !checkoutUrl) {
         throw new Error('O Banese registrou a cobrança, mas não retornou a rota autenticada do boleto.');
       }
-      if (method === 'BOLETO' && checkoutUrl) {
+      if (paymentSelection.presentation === 'BOLETO' && checkoutUrl) {
         invalidateFinance();
         setSelectedPayment(null);
         try {
@@ -149,10 +237,16 @@ const useAlunoEadPayment = ({
   return {
     selectedPayment,
     method,
+    paymentOptions,
+    isLoadingPaymentOptions: paymentOptionsQuery.isPending,
+    paymentOptionsError: paymentOptionsQuery.isError
+      ? alunoEadPaymentErrorMessage(paymentOptionsQuery.error, 'CHECKOUT')
+      : null,
     isStarting,
     panel,
     setMethod,
     setPanel,
+    retryPaymentOptions: () => { void paymentOptionsQuery.refetch(); },
     open,
     close,
     start,
