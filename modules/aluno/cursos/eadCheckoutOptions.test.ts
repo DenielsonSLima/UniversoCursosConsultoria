@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   buildEadCheckoutSubmission,
@@ -61,4 +62,21 @@ test("sem rota de boleto nenhuma apresentação BolePix é oferecida", () => {
   });
 
   assert.deepEqual(options.options, []);
+});
+
+test("curso EAD rebaixa Pix sem payload para boleto oficial", () => {
+  const hookSource = readFileSync(
+    "modules/aluno/cursos/hooks/useCourseCheckout.ts",
+    "utf8",
+  );
+
+  assert.match(hookSource, /returnedPresentation:\s*result\.presentation/);
+  assert.match(hookSource, /const bolePixFallback = requestedPresentation === 'PIX'/);
+  assert.match(hookSource, /!hasPixQrCode/);
+  assert.match(hookSource, /presentation:\s*'BOLETO'/);
+  assert.match(hookSource, /PIX_UNAVAILABLE_USE_BOLETO/);
+  assert(
+    hookSource.indexOf("if (alreadyPaid)") <
+      hookSource.indexOf("if (wantsInlineBolePix)"),
+  );
 });

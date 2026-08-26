@@ -26,9 +26,9 @@ const page = await Deno.readTextFile(
 const assetFunction = await Deno.readTextFile(
   new URL("../functions/push-notification-assets/index.ts", import.meta.url),
 );
-const dispatcherFunction = await Deno.readTextFile(
+const dispatcherAssetRuntime = await Deno.readTextFile(
   new URL(
-    "../functions/push-notification-dispatcher/index.ts",
+    "../functions/push-notification-dispatcher/push-assets.ts",
     import.meta.url,
   ),
 );
@@ -213,11 +213,13 @@ Deno.test("cleanup reativa filas terminais e possui consumidor com revalidação
     "novas referências não podem correr contra a remoção do Storage",
   );
   assert(
-    dispatcherFunction.includes("claim_push_notification_asset_cleanup") &&
-      dispatcherFunction.includes(
+    dispatcherAssetRuntime.includes("claim_push_notification_asset_cleanup") &&
+      dispatcherAssetRuntime.includes(
         "revalidate_push_notification_asset_cleanup",
       ) &&
-      dispatcherFunction.includes("complete_push_notification_asset_cleanup"),
+      dispatcherAssetRuntime.includes(
+        "complete_push_notification_asset_cleanup",
+      ),
     "o dispatcher agendado precisa consumir claim, revalidar e concluir cleanup",
   );
 });

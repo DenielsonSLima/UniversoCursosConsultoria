@@ -8,6 +8,13 @@ import {
 import type { CheckoutRuntime } from "./types.ts";
 import { normalizeErrorMessage, providerLabelFor } from "./utils.ts";
 import { buildEadCheckoutContext } from "./ead-context.ts";
+import {
+  echoCheckoutPresentation,
+  loadStudentEadCheckoutTarget,
+  PaymentCheckoutHttpError,
+  resolveStudentEadPaymentOptions,
+  validateCheckoutPresentation,
+} from "./payment-options.ts";
 import { runCourseCheckout } from "./providers/course.ts";
 import { handleGatewayCheckout } from "./providers/gateway.ts";
 
@@ -88,12 +95,31 @@ Deno.serve(async (req: Request) => {
       corsHeaders,
     };
 
-    const resolvedContext = await buildEadCheckoutContext(runtime);
+    if (runtime.body.action === "payment-options") {
+      return json(await resolveStudentEadPaymentOptions(runtime), 200, req);
+    }
+
+    const checkoutTarget = runtime.body.receivableId
+      ? (await loadStudentEadCheckoutTarget(
+        runtime,
+        String(runtime.body.receivableId),
+      )).target
+      : null;
+    const resolvedContext = await buildEadCheckoutContext(
+      runtime,
+      checkoutTarget,
+    );
     if (!resolvedContext) {
       return runCourseCheckout(runtime);
     }
 
     const context = resolvedContext;
+    const presentation = validateCheckoutPresentation(
+      runtime.body,
+      context.charge.method,
+      context.route.providerCode,
+      context.course,
+    );
 
     const result = await handleGatewayCheckout(context);
     const checkoutReceivableId = result.receivableId || null;
@@ -107,7 +133,11 @@ Deno.serve(async (req: Request) => {
       receivableId: checkoutReceivableId,
     });
 
-    return json(result.response, 200, req);
+    return json(
+      echoCheckoutPresentation(result.response, presentation),
+      200,
+      req,
+    );
   } catch (error) {
     const message = normalizeErrorMessage(error);
     console.error("Erro no payment-checkout:", error);
@@ -116,6 +146,9 @@ Deno.serve(async (req: Request) => {
     // recebivel e eventual lock permite retry/recovery e impede que a requisicao
     // perdedora apague o estado de outra chamada concorrente.
 
-    return json({ error: message }, 400, req);
+    const status = error instanceof PaymentCheckoutHttpError
+      ? error.status
+      : 400;
+    return json({ error: message }, status, req);
   }
 });

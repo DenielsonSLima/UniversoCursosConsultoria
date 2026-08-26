@@ -90,6 +90,8 @@ export const useCourseCheckout = ({
         payment: result.payment,
         requestedPaymentMethod: String(paymentSelection?.method || '').toUpperCase(),
         requestedPresentation: paymentSelection?.presentation,
+        returnedPresentation: result.presentation,
+        presentationFallbackReason: result.presentationFallbackReason,
         matriculaId: result.matriculaId,
         receivableId: result.receivableId,
         checkoutWindow,
@@ -100,13 +102,25 @@ export const useCourseCheckout = ({
       };
     },
     onMutate: () => setCheckoutError(''),
-    onSuccess: async ({ url, payment, requestedPaymentMethod, requestedPresentation, matriculaId, receivableId, checkoutWindow, sameTab, alreadyPaid, alreadyPending, awaitingWebhook }) => {
+    onSuccess: async ({ url, payment, requestedPaymentMethod, requestedPresentation, returnedPresentation, presentationFallbackReason, matriculaId, receivableId, checkoutWindow, sameTab, alreadyPaid, alreadyPending, awaitingWebhook }) => {
       setEadCheckoutReview(null);
       const paymentMethod = String(payment?.method || requestedPaymentMethod || '').toUpperCase();
       const paymentProvider = String((payment as any)?.provider || 'asaas').toLowerCase();
       const hasPixQrCode = Boolean((payment as any)?.pixQrCode?.payload || (payment as any)?.pixQrCode?.encodedImage);
       const usesInlinePaymentPanel = paymentProvider === 'asaas' || (paymentMethod === 'PIX' && hasPixQrCode);
-      const wantsInlineBolePix = requestedPresentation === 'PIX' && paymentMethod === 'BOLETO';
+      const wantsInlineBolePix = returnedPresentation === 'PIX'
+        && paymentMethod === 'BOLETO'
+        && hasPixQrCode;
+      const bolePixFallback = requestedPresentation === 'PIX'
+        && paymentMethod === 'BOLETO'
+        && !hasPixQrCode
+        && (returnedPresentation === 'PIX' || returnedPresentation === 'BOLETO');
+      if (alreadyPaid) {
+        if (checkoutWindow && !checkoutWindow.closed) checkoutWindow.close();
+        setCheckoutError('');
+        invalidateStudentCourseAccess();
+        return;
+      }
       if (wantsInlineBolePix) {
         if (checkoutWindow && !checkoutWindow.closed) checkoutWindow.close();
         setEadPaymentPanel({
@@ -124,6 +138,22 @@ export const useCourseCheckout = ({
           : alreadyPending
             ? 'Você já tinha um Boleto com Pix em aberto. Reabrimos o QR Code da mesma cobrança.'
             : '');
+        invalidateStudentCourseAccess();
+        return;
+      }
+      if (bolePixFallback) {
+        if (checkoutWindow && !checkoutWindow.closed) checkoutWindow.close();
+        setEadPaymentPanel({
+          url,
+          payment,
+          presentation: 'BOLETO',
+          presentationFallbackReason: presentationFallbackReason || 'PIX_UNAVAILABLE_USE_BOLETO',
+          matriculaId,
+          receivableId,
+          alreadyPending,
+          awaitingWebhook,
+        });
+        setCheckoutError('O banco não disponibilizou o Pix. Use o boleto oficial deste mesmo título.');
         invalidateStudentCourseAccess();
         return;
       }
@@ -154,12 +184,6 @@ export const useCourseCheckout = ({
           : alreadyPending
             ? 'Você já tinha uma cobrança EAD em aberto. Reabrimos os dados de pagamento.'
             : '');
-        invalidateStudentCourseAccess();
-        return;
-      }
-      if (alreadyPaid) {
-        if (checkoutWindow && !checkoutWindow.closed) checkoutWindow.close();
-        setCheckoutError('');
         invalidateStudentCourseAccess();
         return;
       }

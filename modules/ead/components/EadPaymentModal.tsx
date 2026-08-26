@@ -13,6 +13,7 @@ import { normalizeEadPaymentQrImageSource } from './eadPaymentQrImage';
 export interface EadPaymentPanelData {
   url?: string | null;
   presentation?: 'BOLETO' | 'PIX';
+  presentationFallbackReason?: 'PIX_UNAVAILABLE_USE_BOLETO';
   receivableId?: string | null;
   matriculaId?: string | null;
   alreadyPaid?: boolean;
@@ -66,6 +67,7 @@ const formatDateDisplay = (value?: string | null) => {
 
 const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose }) => {
   const [pixCopied, setPixCopied] = useState(false);
+  const [pixCopyError, setPixCopyError] = useState('');
   const [boletoError, setBoletoError] = useState('');
   const [isOpeningBoleto, setIsOpeningBoleto] = useState(false);
   const payment = panel.payment || {};
@@ -79,9 +81,9 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose }) => 
   const isPix = method === 'PIX';
   const isBoleto = method === 'BOLETO';
   const hasPixQrCode = Boolean(payment.pixQrCode?.payload || payment.pixQrCode?.encodedImage);
-  const wantsInlineBolePix = panel.presentation === 'PIX' && isBoleto;
+  const wantsInlineBolePix = panel.presentation === 'PIX' && isBoleto && hasPixQrCode;
   const showInlinePix = wantsInlineBolePix || (isPix && (provider === 'asaas' || hasPixQrCode));
-  const showBoletoAction = isBoleto && !wantsInlineBolePix;
+  const showBoletoAction = isBoleto;
   const recipientName = payment.recipient?.name || 'Universo Cursos e Consultoria';
   const recipientDocument = payment.recipient?.document || '13.278.137/0001-54';
   const displayValue = payment.displayValue || formatCurrencyDisplay(payment.value);
@@ -104,13 +106,15 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose }) => 
   const copyPix = async () => {
     const payload = payment.pixQrCode?.payload;
     if (!payload) return;
+    setPixCopyError('');
     try {
       await navigator.clipboard.writeText(payload);
+      setPixCopied(true);
+      window.setTimeout(() => setPixCopied(false), 2200);
     } catch (error) {
       console.warn('Nao foi possivel copiar o Pix automaticamente:', error);
+      setPixCopyError('Não foi possível copiar automaticamente. Selecione o código e copie manualmente.');
     }
-    setPixCopied(true);
-    window.setTimeout(() => setPixCopied(false), 2200);
   };
 
   const openBaneseBoleto = async () => {
@@ -176,6 +180,11 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose }) => 
         </div>
 
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-3 py-3 sm:px-5 sm:py-4">
+          {panel.presentationFallbackReason === 'PIX_UNAVAILABLE_USE_BOLETO' && (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-900">
+              O banco não disponibilizou o Pix para este título. O boleto oficial continua disponível abaixo.
+            </div>
+          )}
           {showInlinePix && (
             <div className="grid gap-4 rounded-[1.25rem] border border-emerald-100 bg-emerald-50/60 p-3 sm:rounded-3xl sm:p-4 lg:grid-cols-[minmax(220px,280px)_1fr]">
               <div className="text-center">
@@ -198,6 +207,9 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose }) => 
                   <Copy size={14} />
                   Copiar Pix
                 </button>
+                {pixCopyError && (
+                  <p className="mt-2 text-xs font-bold text-rose-600">{pixCopyError}</p>
+                )}
               </div>
 
               <div className="rounded-[1.15rem] border border-white/70 bg-white/80 p-3 shadow-sm sm:rounded-[1.4rem] sm:p-4">
@@ -270,7 +282,9 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose }) => 
                 <div>
                   <p className="text-sm font-black uppercase tracking-tight text-[#001a33]">Boleto oficial {providerName}</p>
                   <p className="mt-1 text-xs font-bold leading-relaxed text-slate-500">
-                    Se o redirecionamento automatico nao abrir, use o acesso oficial abaixo.
+                    {wantsInlineBolePix
+                      ? 'Este mesmo título também pode ser pago pelo boleto oficial em PDF.'
+                      : 'Se o redirecionamento automatico nao abrir, use o acesso oficial abaixo.'}
                   </p>
                 </div>
               </div>

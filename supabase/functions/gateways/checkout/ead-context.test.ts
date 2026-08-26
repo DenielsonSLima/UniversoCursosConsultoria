@@ -128,6 +128,55 @@ Deno.test("checkout EAD usa a rota Banese de boleto explicitamente", async () =>
   assert.equal(context.charge.netValue, 120);
 });
 
+Deno.test("titulo existente ignora janela e vagas sem recalcular seus termos", async () => {
+  const runtime = buildRuntime() as any;
+  runtime.body.alunoId = ALUNO_ID;
+  runtime.body.turmaId = TURMA_ID;
+  runtime.body.presentation = "PIX";
+  let rpcCalls = 0;
+  runtime.admin.rpc = async () => {
+    rpcCalls += 1;
+    return { data: null, error: null };
+  };
+  const context = await buildEadCheckoutContext(runtime, {
+    receivableId: "77777777-7777-4777-8777-777777777777",
+    alunoId: ALUNO_ID,
+    courseId: COURSE_ID,
+    turmaId: TURMA_ID,
+    aluno: {
+      id: ALUNO_ID,
+      tipo: "Aluno",
+      email: "multiacesso@example.com",
+    },
+    receivable: {
+      valor: 89.9,
+      data_vencimento: "2026-06-10",
+      descricao: "Inscricao EAD contratada",
+    },
+    turma: {
+      id: TURMA_ID,
+      curso_id: COURSE_ID,
+      polo_id: "66666666-6666-4666-8666-666666666666",
+      status: "ENCERRADA",
+      vagas_totais: 1,
+      matriculas: [{ status: "ATIVO" }],
+    },
+    matricula: {
+      id: MATRICULA_ID,
+      aluno_id: ALUNO_ID,
+      turma_id: TURMA_ID,
+    },
+  });
+
+  assert.ok(context);
+  assert.equal(context.turma.status, "ENCERRADA");
+  assert.equal(context.aluno.email, "multiacesso@example.com");
+  assert.equal(context.charge.value, 89.9);
+  assert.equal(context.charge.dueDate, "2026-06-10");
+  assert.equal(context.charge.description, "Inscricao EAD contratada");
+  assert.equal(rpcCalls, 0);
+});
+
 Deno.test("rota Asaas antiga falha fechada para nova cobranca", async () => {
   const runtime = buildRuntime(undefined, "asaas") as any;
   await assert.rejects(
@@ -141,7 +190,7 @@ Deno.test("usuario comum nao gera checkout em nome de outro aluno", async () => 
   runtime.body.alunoId = "77777777-7777-4777-8777-777777777777";
   await assert.rejects(
     () => buildEadCheckoutContext(runtime),
-    /apenas usuario interno ativo/i,
+    /sessao invalida para esta acao financeira/i,
   );
 });
 

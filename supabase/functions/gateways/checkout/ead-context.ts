@@ -5,8 +5,10 @@ import type {
   EadCheckoutContext,
   GatewayEnvironment,
   GatewayPaymentMethod,
+  StudentEadCheckoutTarget,
 } from "./types.ts";
-import { resolveEadCharge } from "./ead-finance.ts";
+import { resolveEadCharge, resolveTargetedEadCharge } from "./ead-finance.ts";
+import { upsertEadMatricula } from "./ead-enrollment.ts";
 import { assertStoredProviderAdapterReady } from "../api/config.ts";
 import {
   type GestorAutorizado,
@@ -86,54 +88,6 @@ export const resolveGatewayEnvironment = async (
   return normalizeEnvironment(runtimeConfig.activeEnvironment);
 };
 
-const looksLikeRpcNotFound = (error: any) => {
-  const errorMessage = String(error?.message || "").toLowerCase();
-  const details = String(error?.details || "").toLowerCase();
-  const hint = String(error?.hint || "").toLowerCase();
-  const code = String(error?.code || "").toLowerCase();
-  const haystack = `${errorMessage} ${details} ${hint}`;
-  return haystack.includes("does not exist") && haystack.includes(
-        "payment_checkout_upsert_matricula",
-      ) || code === "42883";
-};
-
-const upsertEadMatricula = async (
-  admin: any,
-  alunoId: string,
-  turmaId: string,
-) => {
-  const rpcArgs = {
-    p_aluno_id: alunoId,
-    p_turma_id: turmaId,
-    p_gerar_cobranca_futura: false,
-  };
-
-  try {
-    const { data, error } = await admin.rpc(
-      "payment_checkout_upsert_matricula",
-      rpcArgs,
-    );
-    if (!error) return data;
-
-    if (!looksLikeRpcNotFound(error)) throw error;
-
-    const fallback = await admin.rpc(
-      "asaas_checkout_upsert_matricula",
-      rpcArgs,
-    );
-    if (fallback.error) throw fallback.error;
-    return fallback.data;
-  } catch (error) {
-    if (!looksLikeRpcNotFound(error)) throw error;
-    const fallback = await admin.rpc(
-      "asaas_checkout_upsert_matricula",
-      rpcArgs,
-    );
-    if (fallback.error) throw fallback.error;
-    return fallback.data;
-  }
-};
-
 const fetchGatewayRoutes = async (
   admin: any,
   modalidade: string,
@@ -190,7 +144,8 @@ export const resolvePaymentGatewayRoute = async (
   paymentMethod: GatewayPaymentMethod,
   environment?: GatewayEnvironment,
 ): Promise<{ route: CheckoutRoute; environment: GatewayEnvironment }> => {
-  const configuredEnvironment = environment || await resolveGatewayEnvironment(admin);
+  const configuredEnvironment = environment ||
+    await resolveGatewayEnvironment(admin);
   const availableRoutes = await fetchGatewayRoutes(
     admin,
     modalidade,
@@ -205,7 +160,9 @@ export const resolvePaymentGatewayRoute = async (
     ),
   ].map((value) => normalizeEnvironment(value));
 
-  for (const routeEnvironment of paymentMethodPreferredEnvironment(paymentMethod)) {
+  for (
+    const routeEnvironment of paymentMethodPreferredEnvironment(paymentMethod)
+  ) {
     const environmentRoutes = (availableRoutes || []).filter((route: any) =>
       String(route?.environment || "sandbox") === routeEnvironment
     );
@@ -344,18 +301,29 @@ export const assertNonEadCheckoutRequestIsRoutable = async (
 
 export const buildEadCheckoutContext = async (
   runtime: CheckoutRuntime,
+  checkoutTarget: StudentEadCheckoutTarget | null = null,
 ): Promise<EadCheckoutContext | null> => {
   const body = runtime.body;
   const courseId = String(body.courseId || "");
   const requestedAlunoId = body.alunoId ? String(body.alunoId) : "";
-  const turmaId = body.turmaId ? String(body.turmaId) : null;
+  const requestedTurmaId = body.turmaId ? String(body.turmaId) : null;
+  const turmaId = checkoutTarget?.turmaId || requestedTurmaId;
 
   if (!UUID_RE.test(courseId)) throw new Error("Curso invalido.");
+  if (checkoutTarget && checkoutTarget.courseId !== courseId) {
+    throw new Error("Cobranca EAD nao corresponde ao curso informado.");
+  }
   if (requestedAlunoId && !UUID_RE.test(requestedAlunoId)) {
     throw new Error("Aluno invalido para pagamento.");
   }
-  if (turmaId && !UUID_RE.test(turmaId)) {
+  if (requestedTurmaId && !UUID_RE.test(requestedTurmaId)) {
     throw new Error("Turma invalida para pagamento.");
+  }
+  if (
+    checkoutTarget && requestedTurmaId &&
+    requestedTurmaId !== checkoutTarget.turmaId
+  ) {
+    throw new Error("Cobranca EAD nao corresponde a turma informada.");
   }
 
   const { data: course, error: courseError } = await runtime.admin
@@ -379,8 +347,9 @@ export const buildEadCheckoutContext = async (
   }
 
   if (
-    course.publicar_site !== true ||
-    String(course.status || "").toLowerCase() !== "ativo"
+    !checkoutTarget &&
+    (course.publicar_site !== true ||
+      String(course.status || "").toLowerCase() !== "ativo")
   ) {
     throw new Error("Curso EAD indisponivel para matricula online.");
   }
@@ -389,8 +358,12 @@ export const buildEadCheckoutContext = async (
     method: body.eadPaymentMethod ?? body.paymentMethod ?? body.method ??
       body.billingType,
     installments: body.eadInstallments ?? body.installments,
+    presentation: body.presentation ?? body.eadPaymentPresentation,
   };
-  const preliminaryCharge = resolveEadCharge(course, paymentInput);
+  const chargeCourse = checkoutTarget
+    ? { ...course, valor: checkoutTarget.receivable.valor }
+    : course;
+  const preliminaryCharge = resolveEadCharge(chargeCourse, paymentInput);
   const gatewayEnvironment = await resolveGatewayEnvironment(runtime.admin);
   const { route } = await resolvePaymentGatewayRoute(
     runtime.admin,
@@ -398,80 +371,88 @@ export const buildEadCheckoutContext = async (
     preliminaryCharge.method,
     gatewayEnvironment,
   );
-  const charge = resolveEadCharge(course, paymentInput, route.providerCode);
-
-  const token = String(runtime.req.headers.get("Authorization") || "").replace(
-    /^Bearer\s+/i,
-    "",
-  ).trim();
-  if (!token) throw new Error("Entre como aluno antes de comprar o curso EAD.");
-
-  const { data: authData, error: authError } = await runtime.admin.auth.getUser(
-    token,
+  const configuredCharge = resolveEadCharge(
+    chargeCourse,
+    paymentInput,
+    route.providerCode,
   );
-  const authEmail = String(authData?.user?.email || "").trim().toLowerCase();
-  if (authError || !authEmail) {
-    throw new Error("Sessao invalida para pagamento EAD.");
-  }
-
-  const { data: authenticatedAluno, error: authenticatedAlunoError } =
-    await runtime.admin
-      .from("parceiros")
-      .select("*")
-      .eq("tipo", "Aluno")
-      .ilike("email", authEmail)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-  if (authenticatedAlunoError) throw authenticatedAlunoError;
+  const charge = checkoutTarget
+    ? resolveTargetedEadCharge(configuredCharge, checkoutTarget.receivable)
+    : configuredCharge;
 
   let gestor: GestorAutorizado | null = null;
-  let aluno = authenticatedAluno;
-  if (requestedAlunoId && requestedAlunoId !== authenticatedAluno?.id) {
-    gestor = await requireGestorAtivo(runtime.req, runtime.admin);
-    requireFinanceWriteAccess(gestor);
-    const { data: requestedAluno, error: requestedAlunoError } = await runtime
-      .admin
-      .from("parceiros")
-      .select("*")
-      .eq("tipo", "Aluno")
-      .eq("id", requestedAlunoId)
-      .maybeSingle();
-    if (requestedAlunoError) throw requestedAlunoError;
-    aluno = requestedAluno;
+  let aluno = checkoutTarget?.aluno || null;
+  if (!checkoutTarget) {
+    const token = String(runtime.req.headers.get("Authorization") || "")
+      .replace(/^Bearer\s+/i, "").trim();
+    if (!token) {
+      throw new Error("Entre como aluno antes de comprar o curso EAD.");
+    }
+    const { data: authData, error: authError } = await runtime.admin.auth
+      .getUser(
+        token,
+      );
+    const authEmail = String(authData?.user?.email || "").trim().toLowerCase();
+    if (authError || !authEmail) {
+      throw new Error("Sessao invalida para pagamento EAD.");
+    }
+    const { data: authenticatedAluno, error: authenticatedAlunoError } =
+      await runtime.admin.from("parceiros").select("*").eq("tipo", "Aluno")
+        .ilike("email", authEmail).order("created_at", { ascending: false })
+        .limit(1).maybeSingle();
+    if (authenticatedAlunoError) throw authenticatedAlunoError;
+    aluno = authenticatedAluno;
+    if (requestedAlunoId && requestedAlunoId !== authenticatedAluno?.id) {
+      gestor = await requireGestorAtivo(runtime.req, runtime.admin);
+      requireFinanceWriteAccess(gestor);
+      const { data: requestedAluno, error: requestedAlunoError } = await runtime
+        .admin.from("parceiros").select("*").eq("tipo", "Aluno")
+        .eq("id", requestedAlunoId).maybeSingle();
+      if (requestedAlunoError) throw requestedAlunoError;
+      aluno = requestedAluno;
+    }
   }
   if (!aluno || String(aluno.tipo || "").toUpperCase() !== "ALUNO") {
     throw new Error("Cadastro de aluno nao localizado para pagamento EAD.");
   }
+  if (
+    checkoutTarget &&
+    (checkoutTarget.alunoId !== aluno.id ||
+      (requestedAlunoId && requestedAlunoId !== checkoutTarget.alunoId))
+  ) {
+    throw new Error(
+      "Cobranca EAD nao corresponde ao aluno e curso autenticados.",
+    );
+  }
 
-  let turmasQuery = runtime.admin
-    .from("turmas")
-    .select(`
-      id,
-      nome,
-      polo_id,
-      vagas_totais,
-      qtd_vagas_minima,
-      bloquear_matriculas_apos_completar_vagas,
-      data_inicio_inscricao,
-      data_fim_inscricao,
-      matriculas(status)
-    `)
-    .eq("curso_id", course.id)
-    .eq("status", "EM_ANDAMENTO");
-  if (turmaId) turmasQuery = turmasQuery.eq("id", turmaId);
-  const { data: turmas, error: turmasError } = await turmasQuery.order(
-    "data_inicio",
-    { ascending: true },
-  );
-  if (turmasError) throw turmasError;
-  const turma = getAvailableTurma(turmas || []);
-  if (!turma) {
-    throw new Error("Nao ha turma EAD aberta para este curso no momento.");
+  let turma = checkoutTarget?.turma || null;
+  if (!checkoutTarget) {
+    let turmasQuery = runtime.admin.from("turmas").select(`
+        id, nome, polo_id, vagas_totais, qtd_vagas_minima,
+        bloquear_matriculas_apos_completar_vagas,
+        data_inicio_inscricao, data_fim_inscricao, matriculas(status)
+      `).eq("curso_id", course.id).eq("status", "EM_ANDAMENTO");
+    if (turmaId) turmasQuery = turmasQuery.eq("id", turmaId);
+    const { data: turmas, error: turmasError } = await turmasQuery.order(
+      "data_inicio",
+      { ascending: true },
+    );
+    if (turmasError) throw turmasError;
+    turma = getAvailableTurma(turmas || []);
+    if (!turma) {
+      throw new Error("Nao ha turma EAD aberta para este curso no momento.");
+    }
+  }
+  if (!turma?.id || turma.curso_id && turma.curso_id !== course.id) {
+    throw new Error("Cobranca EAD sem turma canonica vinculada ao curso.");
   }
   if (gestor) requireGestorForPolo(gestor, turma.polo_id);
 
-  const matricula = await upsertEadMatricula(runtime.admin, aluno.id, turma.id);
+  if (checkoutTarget && checkoutTarget.turmaId !== turma.id) {
+    throw new Error("Cobranca EAD nao corresponde a turma informada.");
+  }
+  const matricula = checkoutTarget?.matricula ||
+    await upsertEadMatricula(runtime.admin, aluno.id, turma.id);
   if (!matricula?.id) {
     throw new Error("Nao foi possivel registrar a matricula EAD.");
   }

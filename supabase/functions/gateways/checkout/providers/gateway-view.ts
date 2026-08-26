@@ -1,6 +1,7 @@
 import { gatewayPrimaryUrl, type GatewayProviderCode } from "../../router.ts";
 import { isRemoteTitleNonPayable } from "../remote-title-guard.ts";
 import type { EadCheckoutContext } from "../types.ts";
+import { isGatewayReceivableLocallyPayable } from "./gateway-receivable.ts";
 
 export const EAD_PAYMENT_RECIPIENT = {
   name: "Universo Cursos e Consultoria",
@@ -51,6 +52,7 @@ export const shouldReuseReceivable = (
 ) => {
   if (
     !receivable ||
+    !isGatewayReceivableLocallyPayable(receivable) ||
     receivable.gateway_provider !== providerCode ||
     receivable.gateway_payment_method !== context.charge.method ||
     receivable.gateway_environment !== context.environment ||

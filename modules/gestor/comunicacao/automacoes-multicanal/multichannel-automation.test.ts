@@ -55,11 +55,17 @@ Deno.test('agentes separam prévia, produção e ambiente de teste', async () =>
     '../../../../supabase/functions/whatsapp-birthday-agent/index.ts',
     import.meta.url,
   );
+  const financialClaimUrl = new URL(
+    '../../../../supabase/migrations/20260826213100_harden_whatsapp_financial_notification_claim.sql',
+    import.meta.url,
+  );
   const financialAgent = await Deno.readTextFile(financialAgentUrl);
   const birthdayAgent = await Deno.readTextFile(birthdayAgentUrl);
+  const financialClaim = await Deno.readTextFile(financialClaimUrl);
 
   assert(financialAgent.includes('if (!isWorker && !dryRun)'), 'Agente financeiro deve bloquear envio real por gestor.');
-  assert(financialAgent.includes('`test:${targetDate}:${testAlunoId}:${candidate.dedupe_key}`'), 'Teste financeiro precisa de chave separada.');
+  assert(financialAgent.includes('p_test_mode: testMode'), 'Agente financeiro deve informar o modo de teste ao claim.');
+  assert(financialClaim.includes("'test:%s:%s:%s'"), 'Claim financeiro precisa de chave de teste separada.');
   assert(birthdayAgent.includes('if (!isWorker && !dryRun)'), 'Agente de aniversário deve bloquear envio real por gestor.');
   assert(birthdayAgent.includes('if (!testMode) {'), 'Teste de aniversário não deve consumir a entrega de produção.');
 });

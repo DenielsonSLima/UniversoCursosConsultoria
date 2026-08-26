@@ -2,7 +2,20 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
-Histórico anterior: [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+Histórico anterior: [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+
+## [4.8.6] - 2026-08-26
+
+### Corrigido
+
+- Avisos financeiros Push, inbox e WhatsApp passam a revalidar o recebível antes do efeito externo; títulos suspensos, cancelados, estornados, devolvidos ou pagos não recebem lembretes de cobrança.
+- O checkout EAD e o checkout legado reutilizam somente o mesmo título `PENDENTE` ou `VENCIDO`, sem pagamento, e repetem a validação entre reparos assíncronos e imediatamente antes de devolver a URL.
+- O BolePix continua sendo emitido como `BOLETO` Banese. Quando o banco não devolve QR ou payload Pix oficial, backend e portais rebaixam a apresentação para o PDF do boleto sem fabricar nem exibir um Pix vazio.
+
+### Segurança e qualidade
+
+- A guarda compartilhada bloqueia `banese_card + PIX` direto antes de consultar configuração, em sandbox e produção, sem bloquear o Pix oficial retornado dentro de uma cobrança `BOLETO`.
+- A ordem de locks financeiros foi normalizada para `contas_receber → job → delivery`, com revalidação de identidade e testes de corrida para impedir reapresentação ou envio após trancamento e pagamento.
 
 ## [4.8.5] - 2026-08-25
 
@@ -483,18 +496,3 @@ Histórico anterior: [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./cha
 ### Qualidade
 
 - O hotfix inclui contratos para vínculo Auth/aluno, criação de gestor, resiliência do chat, permissões nativas, PDFs selecionáveis, visualizador oficial do boletim, ordem de assinatura Realtime e preferências de relacionamento.
-
-## [2.2.3-beta.27] - 2026-08-05
-
-### Corrigido
-
-- Exportações de relatórios financeiros, Caixa, Parceiros, declarações, certificados e recibos passaram a manter texto real, nítido, pesquisável e selecionável.
-- Ficha de Matrícula e Pasta de Identificação deixaram de cortar linhas e campos durante a geração do PDF.
-- Documentos em lote agora respeitam orientação por página, e o crachá de estágio compõe frente e verso em uma folha A4 válida.
-- Downloads e impressões da Biblioteca usam o PDF original, sem reprocessar páginas pelo canvas.
-- Logotipos, marcas d’água, QR Codes, assinaturas, imagens e fundos são aguardados antes da captura; a exportação é bloqueada quando algum ativo ou campo não está pronto.
-
-### Qualidade
-
-- Foi criado um contrato automatizado que impede novos exportadores rasterizados de página inteira fora do gerador central.
-- TypeScript, ESLint, build de produção, testes do Caixa e testes de impressão da Secretaria foram validados.
