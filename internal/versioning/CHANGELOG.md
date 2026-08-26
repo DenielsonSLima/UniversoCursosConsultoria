@@ -4,6 +4,12 @@ Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente
 
 Histórico anterior: [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
 
+## [4.8.7] - 2026-08-26
+
+### Alterado
+
+- O fechamento operacional registra reunião, correções, migrations, Edge Functions, CI, Vercel, smokes e limitações da entrega funcional 4.8.6 sem mudar seu contrato.
+
 ## [4.8.6] - 2026-08-26
 
 ### Corrigido
@@ -469,30 +475,3 @@ Histórico anterior: [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md)
 ### Qualidade
 
 - O fluxo foi validado no Safari com lote geral e turma específica, além de contrato automatizado, TypeScript, ESLint e build de produção.
-
-## [2.2.3-beta.28] - 2026-08-05
-
-### Corrigido
-
-- O cadastro público deixa de confundir o perfil recém-criado com um CPF duplicado e passa a vincular, na mesma transação, o aluno à identidade correta do Auth.
-- CPFs, e-mails e identidades realmente existentes recebem a mensagem “Usuário já cadastrado”, com acesso direto a Entrar, Recuperar senha e reenvio seguro da confirmação quando aplicável.
-- A criação de usuários internos valida os dados antes do Auth, grava o vínculo canônico e usa a mesma política de senha forte do servidor.
-- A configuração de usuários registra todos os eventos Realtime antes de assinar o canal, eliminando a falha que interrompia a tela.
-- Ao sair do portal do aluno, o navegador volta ao início público e apenas o aplicativo nativo retorna ao login dedicado do app.
-- O atendimento público preserva o mesmo protocolo em oscilações de rede, guarda o acesso no armazenamento nativo e recebe respostas por Realtime com consulta de contingência.
-- A abertura de chamado público ganhou idempotência para que uma resposta de rede ambígua não gere protocolos duplicados.
-- O chat autenticado recria seus canais e sincroniza mensagens ao retomar o aplicativo ou recuperar a conexão.
-- O chat público antes do login não associa mais uma identidade apenas por CPF: o gestor vê “Visitante não autenticado” até a entrada segura do aluno.
-- iOS e Android passam a usar a captura/seleção nativa de áudio quando a WebView não oferece `MediaRecorder`, normalizando M4A, MP3 e WAV antes do envio.
-- O iOS passa a declarar o uso do microfone para liberar a gravação de mensagens de voz; o Android mantém as permissões no manifesto do novo pacote.
-- O boletim deixa de abrir o visualizador legado e passa a usar o visualizador oficial dos demais documentos, com Download PDF, impressão, paginação e campos configurados.
-- A prestação de contas do Caixa preserva fielmente a prévia, a logo e o fundo paisagem configurado completo — faixa azul, marca central e curvas — em PNG sem perdas nos relatórios usuais, acrescenta texto selecionável, pesquisável e copiável e estabiliza cada folha no Safari para manter cabeçalho e rodapé nas quatro páginas.
-
-### Alterado
-
-- Felicitações e comunicados não comerciais de relacionamento passam a acompanhar os Termos aceitos, com transparência e controle posterior na Central de Notificações.
-- Todos os fluxos de criação, recuperação e troca de senha passam a exigir no mínimo 8 caracteres, letra maiúscula, minúscula e número.
-
-### Qualidade
-
-- O hotfix inclui contratos para vínculo Auth/aluno, criação de gestor, resiliência do chat, permissões nativas, PDFs selecionáveis, visualizador oficial do boletim, ordem de assinatura Realtime e preferências de relacionamento.

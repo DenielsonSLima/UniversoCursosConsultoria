@@ -1,6 +1,6 @@
 # Lote ativo
 
-Estado: `PRONTO_PARA_PREVIEW_E_ROLLOUT_AUTORIZADO`
+Estado: `PUBLICADO_PRODUCAO_4_8_7`
 
 ## Lote: 2026-08-26-bolepix-e-notificacoes-financeiras-seguras
 
@@ -9,6 +9,7 @@ Estado: `PRONTO_PARA_PREVIEW_E_ROLLOUT_AUTORIZADO`
 - Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-26-bolepix-e-notificacoes-financeiras-seguras.md`.
 - Autorização: Produção solicitada explicitamente pelo titular em 2026-08-26, condicionada à revisão e aos gates.
 - Base remota: `main` `6bbadbeb4eeee8758e33467dd0c8600a46f84534` (`4.8.5`). O HEAD Git local histórico não é base de publicação.
+- Versão funcional publicada: `4.8.6`; fechamento operacional: `4.8.7`.
 
 ### Contratos do lote
 
@@ -26,16 +27,27 @@ Estado: `PRONTO_PARA_PREVIEW_E_ROLLOUT_AUTORIZADO`
 - Os P1 foram corrigidos antes de qualquer alteração remota: migration de runtime separada, revalidação fail-closed nos dois checkouts e downgrade canônico para boleto.
 - Suíte focada: `80/80`; TypeScript global, ESLint focado e `deno check` dos seis entrypoints Edge aprovados.
 - Todos os 53 arquivos do manifesto têm no máximo 500 linhas; `provider-checkout.ts` foi dividido de 544 para 427 linhas.
-- Lint global, versão, operação, teto de linhas, TypeScript e build local foram aprovados. Permanecem obrigatórios: CI, Vercel Preview, preflight Supabase e smoke fail-closed.
+- Lint global, versão, operação, teto de linhas, TypeScript e build local foram aprovados; CI, Vercel Preview, preflight Supabase e smokes fail-closed também concluíram.
 
-### Ordem remota autorizada
+### Ordem remota concluída
 
-1. Criar branch exclusivamente da `main` remota e publicar o manifesto atômico.
-2. Abrir PR e exigir Controle de versão, Qualidade e Vercel Preview verdes.
-3. Aplicar migrations `20260826213000`, `20260826213050` e `20260826213100`, nesta ordem, via MCP Supabase.
-4. Publicar `push-notification-dispatcher` e `whatsapp-automation-agent`, preservando `verify_jwt=false` e autenticação interna.
-5. Publicar o roteador compartilhado nas quatro consumidoras: `payment-checkout`, `checkout-api`, `asaas-api` e `dependencia-banese-checkout`, preservando o `verify_jwt` atual de cada função.
-6. Executar smokes sem cobrança, destinatário ou dado artificial; então mesclar, aguardar Vercel Production e validar rotas/bundles.
+1. Branch criada exclusivamente da `main` remota e manifesto atômico publicado. `CONCLUIDO`.
+2. PR, Controle de versão, Qualidade e Vercel Preview aprovados. `CONCLUIDO_PR_97`.
+3. Migrations `20260826213000`, `20260826213050` e `20260826213100` aplicadas em ordem via MCP Supabase. `CONCLUIDO_3_DE_3`.
+4. `push-notification-dispatcher` e `whatsapp-automation-agent` publicados com `verify_jwt=false` e autenticação interna preservada. `CONCLUIDO`.
+5. Roteador compartilhado publicado nas quatro consumidoras, preservando o `verify_jwt` de cada função. `CONCLUIDO_4_DE_4`.
+6. Smokes sem cobrança, destinatário ou dado artificial, merge e Vercel Production concluídos. `CONCLUIDO_PRODUCAO_4_8_6`.
+
+### Evidências de publicação
+
+- A PR `#97` partiu da `main` `6bbadbeb4eeee8758e33467dd0c8600a46f84534`; o head `1eeb9f8f03c332cea104185d1d1ee2e5a05a5741` alterou exatamente os 53 arquivos declarados, sem extras ou ausências.
+- Workflows `32975291726` e `32975291777` e Vercel Preview `Jo4BSYaxaYEJvh2fpN17KSWSn2as` aprovados; merge squash `f3e5ffb3a69a575c227bf74af66b3ffa970a94bc`.
+- Migrations remotas `20260826134030`, `20260826134110` e `20260826134202`; SHAs locais `23116678`, `d0738ad2` e `24ddab35` preservados no registro.
+- Edge Functions ativas: `payment-checkout` v21, `checkout-api` v16, `asaas-api` v81, `dependencia-banese-checkout` v8, `push-notification-dispatcher` v15 e `whatsapp-automation-agent` v12. Fontes runtime remotas idênticas ao workspace e `verify_jwt` preservado.
+- Vercel Production `HhtcN2UxPbybTwkNKQRuyQu5NmwQ` pronta; `/`, `/login` e `/sistema/login` responderam `200`; `main-aZE9Pt1f.js` confirmou `4.8.6` e os chunks públicos confirmaram o fallback BolePix.
+- Push v15 respondeu `200` pelo cron restaurado. WhatsApp v12 recusou com segurança o modo de teste incompleto, sem destinatário efetivo nem mensagem enviada.
+- Safari carregou início e login. O smoke autenticado parou no Turnstile da Cloudflare, pois CAPTCHA exige intervenção humana.
+- Nenhum usuário, recebível, cobrança, matrícula ou mensagem artificial foi criado; as filas permaneceram vazias.
 
 ### Manifesto explícito — 53 arquivos
 
@@ -105,5 +117,15 @@ Estado: `PRONTO_PARA_PREVIEW_E_ROLLOUT_AUTORIZADO`
 - `supabase/tests/push_rich_backend_hardening.contract.test.ts`
 
 Todo arquivo não listado, inclusive caches, build, temporários, lockfiles e alterações paralelas, permanece fora da publicação. Migrations aplicadas se tornam imutáveis.
+
+### Manifesto do fechamento operacional — 7 arquivos
+
+- `ai/operacao/LOTE_ATIVO.md`
+- `ai/operacao/rag/index.json`
+- `ai/operacao/registros/ALTERACOES.md`
+- `ai/operacao/registros/alteracoes/2026-08-26-bolepix-e-notificacoes-financeiras-seguras.md`
+- `internal/versioning/CHANGELOG.md`
+- `internal/versioning/changelog/2026-08-05-parte-1.md`
+- `internal/versioning/system-version.json`
 
 Histórico: `ai/operacao/registros/ALTERACOES.md` e `ai/operacao/registros/alteracoes/`.
