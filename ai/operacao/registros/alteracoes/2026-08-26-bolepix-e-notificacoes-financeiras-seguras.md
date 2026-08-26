@@ -28,18 +28,13 @@ Corrigir três contratos financeiros relacionados: impedir aviso de cobrança pa
 
 ## Manifesto explícito
 
-Total: 58 arquivos
+Total: 53 arquivos
 
 - `ai/operacao/LOTE_ATIVO.md`
 - `ai/operacao/qualidade/limite-linhas-manifestos.json`
+- `ai/operacao/rag/index.json`
 - `ai/operacao/registros/alteracoes/2026-08-26-bolepix-e-notificacoes-financeiras-seguras.md`
 - `internal/versioning/CHANGELOG.md`
-- `internal/versioning/changelog/2026-07-14-a-2026-07-26.md`
-- `internal/versioning/changelog/2026-07-26-a-2026-07-31.md`
-- `internal/versioning/changelog/2026-07-31-a-2026-08-02.md`
-- `internal/versioning/changelog/2026-08-02-parte-2.md`
-- `internal/versioning/changelog/2026-08-03.md`
-- `internal/versioning/changelog/2026-08-04.md`
 - `internal/versioning/changelog/2026-08-05-parte-1.md`
 - `internal/versioning/system-version.json`
 - `modules/aluno/cursos/hooks/useCourseCheckout.ts`
@@ -98,6 +93,7 @@ Todos os caminhos foram comparados por blob contra a `main` remota `6bbadbeb`; c
 - Produção permanece sem contas a receber e sem trancamentos atuais; o risco de aviso é determinístico, mas não há incidente ativo observado.
 - Suíte financeira/BolePix/notificações `80/80`; TypeScript global e ESLint focado aprovados.
 - `deno check` aprovado para `payment-checkout`, `checkout-api`, `asaas-api`, `dependencia-banese-checkout`, `push-notification-dispatcher` e `whatsapp-automation-agent`.
+- Lint global, controle de versão, contrato operacional, teto incremental, TypeScript e build Vite de produção aprovados localmente.
 - Arquivos manuais do manifesto com até 500 linhas; migrations futuras divididas em `213000`, `213050` e `213100` antes da aplicação.
 - Guarda central validada em sandbox/produção, preservando o payload Pix do método `BOLETO`.
 - Nenhuma migration, Edge Function, configuração ou dado foi alterado remotamente.
@@ -106,6 +102,6 @@ Todos os caminhos foram comparados por blob contra a `main` remota `6bbadbeb`; c
 
 ## Pendências
 
-- Concluir lint global, controle de versão, operação, build e CI/Preview.
+- Executar CI e Vercel Preview a partir da branch remota atômica.
 - Revalidar o preflight Supabase, aplicar as três migrations e publicar seis Edge Functions/bundles pela ordem registrada no lote.
 - Fazer smoke fail-closed sem cobrança ou destinatário artificial, mesclar a PR, aguardar Vercel Production e registrar evidências imutáveis no fechamento operacional.

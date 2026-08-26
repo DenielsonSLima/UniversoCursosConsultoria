@@ -8,6 +8,7 @@ const testFiles = [
   'modules/aluno/financeiro/banese/banese-payment.utils.test.ts',
   'modules/aluno/financeiro/banese/hooks/useBaneseBoletoDocument.test.ts',
   'modules/aluno/cursos/eadCheckoutOptions.test.ts',
+  'modules/aluno/financeiro/alunoEadPaymentOptions.test.ts',
   'modules/ead/components/eadPaymentQrImage.test.ts',
 ];
 const outputFiles = testFiles.map((_, index) =>

@@ -25,8 +25,8 @@ Estado: `PRONTO_PARA_PREVIEW_E_ROLLOUT_AUTORIZADO`
 - O veredito inicial foi `NO-GO` por inversão de locks, reapresentação de título não cobrável e painel Pix sem payload.
 - Os P1 foram corrigidos antes de qualquer alteração remota: migration de runtime separada, revalidação fail-closed nos dois checkouts e downgrade canônico para boleto.
 - Suíte focada: `80/80`; TypeScript global, ESLint focado e `deno check` dos seis entrypoints Edge aprovados.
-- Todos os 58 arquivos do manifesto têm no máximo 500 linhas; `provider-checkout.ts` foi dividido de 544 para 427 linhas.
-- Gates ainda obrigatórios antes do merge: lint global, versão, operação, build, CI, Vercel Preview, preflight Supabase e smoke fail-closed.
+- Todos os 53 arquivos do manifesto têm no máximo 500 linhas; `provider-checkout.ts` foi dividido de 544 para 427 linhas.
+- Lint global, versão, operação, teto de linhas, TypeScript e build local foram aprovados. Permanecem obrigatórios: CI, Vercel Preview, preflight Supabase e smoke fail-closed.
 
 ### Ordem remota autorizada
 
@@ -37,20 +37,15 @@ Estado: `PRONTO_PARA_PREVIEW_E_ROLLOUT_AUTORIZADO`
 5. Publicar o roteador compartilhado nas quatro consumidoras: `payment-checkout`, `checkout-api`, `asaas-api` e `dependencia-banese-checkout`, preservando o `verify_jwt` atual de cada função.
 6. Executar smokes sem cobrança, destinatário ou dado artificial; então mesclar, aguardar Vercel Production e validar rotas/bundles.
 
-### Manifesto explícito — 58 arquivos
+### Manifesto explícito — 53 arquivos
 
 #### Operação e versão
 
 - `ai/operacao/LOTE_ATIVO.md`
 - `ai/operacao/qualidade/limite-linhas-manifestos.json`
+- `ai/operacao/rag/index.json`
 - `ai/operacao/registros/alteracoes/2026-08-26-bolepix-e-notificacoes-financeiras-seguras.md`
 - `internal/versioning/CHANGELOG.md`
-- `internal/versioning/changelog/2026-07-14-a-2026-07-26.md`
-- `internal/versioning/changelog/2026-07-26-a-2026-07-31.md`
-- `internal/versioning/changelog/2026-07-31-a-2026-08-02.md`
-- `internal/versioning/changelog/2026-08-02-parte-2.md`
-- `internal/versioning/changelog/2026-08-03.md`
-- `internal/versioning/changelog/2026-08-04.md`
 - `internal/versioning/changelog/2026-08-05-parte-1.md`
 - `internal/versioning/system-version.json`
 
