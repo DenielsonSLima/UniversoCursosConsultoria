@@ -161,7 +161,7 @@ test('exibe posição total, posição líquida, patrimônio, financiamento e cu
   const posicaoLiquidaIndex = pageSource.indexOf('<CaixaPosicaoLiquidaResumoCard');
   const patrimonioIndex = pageSource.indexOf('<CaixaPatrimonioResumoCard');
   const financiamentoIndex = pageSource.indexOf('<CaixaFinanciamentoResumoCard');
-  const custosIndex = pageSource.indexOf('<CaixaCustosOperacionaisCard');
+  const custosIndex = pageSource.indexOf('<CaixaLinhaCorteCard');
 
   assert.ok(resumoOperacionalIndex >= 0);
   assert.ok(compromissosIndex > resumoOperacionalIndex);

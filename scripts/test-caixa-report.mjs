@@ -9,6 +9,7 @@ const outputDirectory = mkdtempSync(join(tmpdir(), 'caixa-report-tests-'));
 const tests = [
   'modules/gestor/caixa/caixa-data-scope.test.ts',
   'modules/gestor/caixa/caixa-financiamento-resumo.test.ts',
+  'modules/gestor/caixa/caixa-linha-corte.test.ts',
   'modules/gestor/caixa/caixa-patrimonio-resumo.test.ts',
   'modules/gestor/caixa/caixa-posicao-liquida-resumo.test.ts',
   'modules/gestor/caixa/caixa-posicao-total-resumo.test.ts',

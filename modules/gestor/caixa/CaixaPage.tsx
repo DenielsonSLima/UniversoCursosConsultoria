@@ -17,7 +17,6 @@ import {
 } from 'lucide-react';
 import {
   caixaDashboardQueryOptions,
-  caixaCustosOperacionaisQueryOptions,
   caixaFinanciamentoResumoQueryOptions,
   caixaPatrimonioResumoQueryOptions,
   caixaPosicaoLiquidaResumoQueryOptions,
@@ -40,7 +39,8 @@ import {
 import { CaixaReportLauncher } from './report/CaixaReportLauncher';
 import { CaixaReconciliationCard } from './components/CaixaReconciliationCard';
 import { CaixaFinanciamentoResumoCard } from './components/CaixaFinanciamentoResumoCard';
-import { CaixaCustosOperacionaisCard } from './components/CaixaCustosOperacionaisCard';
+import { CaixaLinhaCorteCard } from './components/CaixaLinhaCorteCard';
+import { caixaLinhaCorteQueryOptions } from './caixa-linha-corte.service';
 import { CaixaPatrimonioResumoCard } from './components/CaixaPatrimonioResumoCard';
 import { CaixaPosicaoLiquidaResumoCard } from './components/CaixaPosicaoLiquidaResumoCard';
 import { CaixaPosicaoTotalResumoCard } from './components/CaixaPosicaoTotalResumoCard';
@@ -110,11 +110,11 @@ const CaixaPage: React.FC<CaixaPageProps> = ({
   });
 
   const {
-    data: custosOperacionais,
-    isLoading: isCustosOperacionaisLoading,
-    isError: hasCustosOperacionaisError,
+    data: linhaCorteResumo,
+    isLoading: isLinhaCorteLoading,
+    isError: hasLinhaCorteError,
   } = useQuery({
-    ...caixaCustosOperacionaisQueryOptions(selectedPolo, competencia),
+    ...caixaLinhaCorteQueryOptions(selectedPolo, competencia),
     enabled: Boolean(selectedPolo),
   });
 
@@ -602,10 +602,10 @@ const CaixaPage: React.FC<CaixaPageProps> = ({
         hasError={hasFinanciamentoError}
       />
 
-      <CaixaCustosOperacionaisCard
-        resumo={custosOperacionais}
-        isLoading={isCustosOperacionaisLoading}
-        hasError={hasCustosOperacionaisError}
+      <CaixaLinhaCorteCard
+        resumo={linhaCorteResumo}
+        isLoading={isLinhaCorteLoading}
+        hasError={hasLinhaCorteError}
       />
 
       <footer className="flex items-start gap-2 px-1 text-[10px] leading-4 text-slate-400">
