@@ -281,7 +281,7 @@ export const drawFinancialReportFirstPageIntro = (
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(4.6);
       pdf.setTextColor(...COLORS.slate500);
-      drawText(pdf, card.label.toUpperCase(), x + 2, top + 1.9, { width: cardWidth - 4, maxLines: 1, align: 'center' });
+      drawText(pdf, card.label.toUpperCase(), x + cardWidth / 2, top + 1.9, { width: cardWidth - 4, maxLines: 1, align: 'center' });
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(6.55);
       pdf.setTextColor(...cardAccent);
@@ -380,9 +380,15 @@ export const drawFinancialReportTable = (
       const lines = getCellLines(pdf, cell, width);
       const align = column.align || 'left';
       const textX = align === 'right' ? cellX + width - 1.5 : align === 'center' ? cellX + width / 2 : cellX + 1.5;
-      pdf.setFont('helvetica', 'normal');
+      const isOverdue = /vencid/i.test(cell) || (column.label.toLowerCase().includes('situa') && /vencid/i.test(cell));
+      if (isOverdue) {
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(...COLORS.rose);
+      } else {
+        pdf.setFont('helvetica', 'normal');
+        pdf.setTextColor(...COLORS.slate700);
+      }
       pdf.setFontSize(ROW_FONT_SIZE);
-      pdf.setTextColor(...COLORS.slate700);
       pdf.text(lines, textX, y + 1.8, { align, baseline: 'top', lineHeightFactor: 1.08 });
       cellX += width;
     });

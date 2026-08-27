@@ -79,7 +79,7 @@ export const ReceivableStatusBadge: React.FC<{ item: ContasReceber }> = ({ item 
     item.status === 'PAGO'
       ? 'bg-emerald-50 text-emerald-700'
       : item.status === 'VENCIDO'
-        ? 'bg-rose-50 text-rose-700'
+        ? 'bg-rose-50 text-rose-600 font-black'
         : item.status === 'SUSPENSO'
           ? 'bg-blue-50 text-blue-700'
           : item.status === 'CANCELADO'

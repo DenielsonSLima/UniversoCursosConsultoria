@@ -92,7 +92,7 @@ export const useModalidadeReceberReport = ({
   const columns = useMemo<FinancialReportColumn[]>(() => [
     { label: 'Aluno' },
     { label: 'Curso / turma' },
-    { label: 'Unidade' },
+    { label: 'Parcela', align: 'center' },
     { label: 'Recebimento' },
     { label: 'Datas' },
     { label: 'Situação', align: 'center' },
@@ -112,17 +112,27 @@ export const useModalidadeReceberReport = ({
         {receivableClassLabel(item) ? (
           <p className="mt-0.5 font-bold text-slate-500">Turma: {receivableClassLabel(item)}</p>
         ) : null}
-        <p className="mt-0.5 font-black uppercase tracking-wider text-slate-400">
-          {item.tipoLancamento || 'Mensalidade'} {item.parcelaNumero !== undefined ? `· Parcela ${item.parcelaNumero}` : ''}
-        </p>
         {item.asaasInvoiceUrl && item.status !== 'PAGO' ? (
           <p className="mt-0.5 font-bold text-blue-600">Cobrança {paymentGatewayLabel(item)} vinculada</p>
         ) : null}
       </div>,
-      <div>
-        <p className="font-bold uppercase tracking-wide text-slate-700">{item.poloNome || 'Unidade não informada'}</p>
-        <p className="mt-0.5 text-slate-400">CNPJ: {item.poloCnpj || 'não informado'}</p>
-        <p className="mt-0.5 text-slate-400">{item.poloCidade || 'Cidade não informada'} / {item.poloUf || 'UF'}</p>
+      <div className="text-center">
+        <p className="font-black text-[#001a33]">
+          {item.parcelaNumero !== undefined && item.parcelaNumero !== null
+            ? `${item.parcelaNumero}/12`
+            : item.tipoLancamento === 'MATRICULA'
+              ? 'Matrícula'
+              : item.tipoLancamento === 'REMATRICULA'
+                ? 'Rematrícula'
+                : item.tipoLancamento === 'DEPENDENCIA'
+                  ? 'Dependência'
+                  : '1/1'}
+        </p>
+        {item.tipoLancamento && item.tipoLancamento !== 'PARCELA' && item.tipoLancamento !== 'MATRICULA' ? (
+          <p className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-slate-400">
+            {item.tipoLancamento}
+          </p>
+        ) : null}
       </div>,
       <div>
         <p className="text-slate-500">Forma: {paymentMethodLabel(item)}</p>
