@@ -80,6 +80,7 @@ const composition = (value: unknown): CaixaCompositionStatus => {
     && value !== 'SEM_DIFERENCA_FINANCEIRA'
     && value !== 'NAO_DISCRIMINADA'
     && value !== 'NAO_DISCRIMINADA_PELO_GATEWAY'
+    && value !== 'CONCILIADO_POR_FORMULA_BANESE'
   ) {
     throw new Error('Contrato inválido do relatório do Caixa: composicao_status.');
   }
