@@ -214,11 +214,11 @@ Deno.serve(async (req: Request) => {
   const environment = String(runConfig.environment || "") as Environment;
   const targetTitles = Math.max(
     1,
-    Math.min(375, Number(runConfig.targetTitles || 1)),
+    Math.min(9_000, Number(runConfig.targetTitles || 1)),
   );
   const maxConcurrency = Math.max(
     1,
-    Math.min(8, Number(runConfig.maxConcurrency || 1)),
+    Math.min(25, Number(runConfig.maxConcurrency || 1)),
   );
   const refreshMarginSeconds = Math.max(
     30,

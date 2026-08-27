@@ -222,7 +222,7 @@ test('worker consulta títulos existentes sem importar ou sincronizar parcelas f
   assert.match(worker, /batchController = new globalThis\.AbortController/);
   assert.match(worker, /cancelledByPeer/);
   assert.match(worker, /SUPABASE_AUDIT_WRITE/);
-  assert.match(worker, /Math\.min\(8, Number\(runConfig\.maxConcurrency/);
+  assert.match(worker, /Math\.min\(25, Number\(runConfig\.maxConcurrency/);
   assert.match(boletoAdapter, /signal: input\.signal/);
   assert.match(authAdapter, /options: \{ signal\?: AbortSignal \}/);
 });

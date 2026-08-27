@@ -3,7 +3,7 @@ const HARD_DEADLINE_MS = 50_000;
 const QUERY_RESERVE_MS = 8_000;
 const MAX_LAUNCH_WINDOW_MS = 30_000;
 const LAUNCH_DRIFT_MARGIN_MS = 2_000;
-const MAX_TARGET_TITLES = 375;
+const MAX_TARGET_TITLES = 9_000;
 
 export type BaneseLaunchPacing = Readonly<{
   processingStartedAt: number;
