@@ -154,7 +154,7 @@ const SecretariaDeclaracaoMatriculaPage = ({
               polos(nome, cnpj, cidade, estado)
             )
           `)
-          .eq('status', 'ATIVO')
+          .in('status', ['ATIVO', 'PENDENTE', 'EM_ANDAMENTO', 'CONCLUIDO'])
           .eq('turmas.status', 'EM_ANDAMENTO')
           .or(`polo_id.eq.${activePoloId},polo_id.is.null`, { foreignTable: 'turmas' })
           .order('data_matricula', { ascending: false }),

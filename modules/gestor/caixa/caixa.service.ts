@@ -44,6 +44,7 @@ export interface CaixaMonthlyStatement {
   compromissos: {
     aReceber: number;
     receberVencido: number;
+    margemInadimplencia: number;
     aPagar: number;
     pagarVencido: number;
   };
@@ -503,6 +504,13 @@ export const mapCaixaStatement = (value: unknown): CaixaMonthlyStatement => {
     compromissos: {
       aReceber: asNumber(compromissos.a_receber),
       receberVencido: asNumber(compromissos.receber_vencido),
+      margemInadimplencia: asNumber(
+        compromissos.margem_inadimplencia !== undefined
+          ? compromissos.margem_inadimplencia
+          : (asNumber(compromissos.a_receber) > 0
+            ? ((asNumber(compromissos.receber_vencido) / asNumber(compromissos.a_receber)) * 100)
+            : 0),
+      ),
       aPagar: asNumber(compromissos.a_pagar),
       pagarVencido: asNumber(compromissos.pagar_vencido),
     },

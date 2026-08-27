@@ -5,8 +5,10 @@ import test from 'node:test';
 import {
   assertCaixaStatementRequest,
   caixaQueryKeys,
+  mapCaixaStatement,
   type CaixaMonthlyStatement,
 } from './caixa.service';
+import { formatCaixaPercent } from './caixa.formatters';
 import {
   getCaixaRealtimeInvalidationScopes,
   getCaixaRealtimeInvalidationTarget,
@@ -121,3 +123,65 @@ test('rejeita resposta de outro polo, consolidado ou competência', () => {
     /escopo diferente/,
   );
 });
+
+test('mapeia a margem de inadimplência retornada pelo backend ou calculada no domínio', () => {
+  const basePayload = {
+    versao: 2,
+    meta: {
+      competencia: '2026-08-01',
+      periodo_inicio: '2026-08-01',
+      periodo_fim_exclusivo: '2026-09-01',
+      gerado_em: '2026-08-27T00:00:00Z',
+      escopo_tipo: 'GLOBAL',
+      polo_id: null,
+      escopo_rotulo: 'Resultado geral',
+      fonte_saldo: 'CONTABIL_SISTEMA',
+      extrato_bancario_disponivel: false,
+    },
+    saldos_hoje: {
+      registrado_total: 1000,
+      bancario_registrado: 1000,
+      caixa_local: 0,
+      compartilhado_total: 0,
+      posicao_compartilhada_escopo: 0,
+      nao_atribuido: 0,
+    },
+    resumo_competencia: {
+      entradas_recebidas_brutas: 5000,
+      tarifas_bancarias_confirmadas: 0,
+      saidas_pagas: 1000,
+      resultado: 4000,
+      resultado_status: 'POSITIVO',
+      quantidade_recebimentos: 10,
+      quantidade_pagamentos: 2,
+    },
+    compromissos: {
+      a_receber: 63257.4,
+      receber_vencido: 5038.2,
+      margem_inadimplencia: 7.96,
+      a_pagar: 0,
+      pagar_vencido: 0,
+    },
+    receitas_por_modalidade: [],
+    despesas_por_categoria: [],
+    serie_mensal: [],
+    contas: [],
+  };
+
+  const parsedWithBackendMargin = mapCaixaStatement(basePayload);
+  assert.equal(parsedWithBackendMargin.compromissos.margemInadimplencia, 7.96);
+  assert.equal(formatCaixaPercent(parsedWithBackendMargin.compromissos.margemInadimplencia), '7,96%');
+
+  const parsedWithoutBackendMargin = mapCaixaStatement({
+    ...basePayload,
+    compromissos: {
+      a_receber: 100,
+      receber_vencido: 15,
+      a_pagar: 0,
+      pagar_vencido: 0,
+    },
+  });
+  assert.equal(parsedWithoutBackendMargin.compromissos.margemInadimplencia, 15);
+  assert.equal(formatCaixaPercent(parsedWithoutBackendMargin.compromissos.margemInadimplencia), '15,0%');
+});
+

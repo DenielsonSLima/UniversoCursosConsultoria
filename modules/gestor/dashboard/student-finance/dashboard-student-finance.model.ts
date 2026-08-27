@@ -53,7 +53,8 @@ const normalizeLaunchType = (value: unknown): ContasReceber['tipoLancamento'] =>
     || type === 'REMATRICULA'
     || type === 'DEPENDENCIA'
   ) return type;
-  return undefined;
+  if (type === 'MENSALIDADE') return 'PARCELA';
+  return 'PARCELA';
 };
 
 export const mapDashboardStudentReceivable = (

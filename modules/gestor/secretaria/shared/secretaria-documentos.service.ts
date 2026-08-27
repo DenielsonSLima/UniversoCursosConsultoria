@@ -183,7 +183,7 @@ export const secretariaDocumentosService = {
       .or(`polo_id.eq.${poloId},polo_id.is.null`, { foreignTable: 'turmas' });
 
     if (technicalOnly) query = query.eq('turmas.cursos.modalidade', 'TECNICO');
-    if (activeEnrollmentOnly) query = query.eq('status', 'ATIVO');
+    if (activeEnrollmentOnly) query = query.in('status', ['ATIVO', 'PENDENTE', 'EM_ANDAMENTO']);
     if (activeTurmaOnly) query = query.eq('turmas.status', 'EM_ANDAMENTO');
     if (enrollmentStatuses.length) query = query.in('status', enrollmentStatuses);
     if (completedOnly) query = query.eq('status', 'CONCLUIDO');
@@ -269,7 +269,7 @@ export const secretariaDocumentosService = {
         .from('matriculas')
         .select('turma_id')
         .in('turma_id', turmas.map((turma: any) => turma.id))
-        .eq('status', 'ATIVO');
+        .in('status', ['ATIVO', 'PENDENTE', 'EM_ANDAMENTO']);
       if (activeEnrollmentsError) throw activeEnrollmentsError;
       (activeEnrollments || []).forEach((enrollment: any) => {
         activeEnrollmentCounts.set(
@@ -386,7 +386,7 @@ export const secretariaDocumentosService = {
     if (input.technicalOnly) query = query.eq('turmas.cursos.modalidade', 'TECNICO');
     const isActiveFolderBatch =
       input.documento === 'pasta_identificacao' && input.modo === 'lote';
-    if (input.activeEnrollmentOnly || isActiveFolderBatch) query = query.eq('status', 'ATIVO');
+    if (input.activeEnrollmentOnly || isActiveFolderBatch) query = query.in('status', ['ATIVO', 'PENDENTE', 'EM_ANDAMENTO']);
     if (input.activeTurmaOnly) query = query.eq('turmas.status', 'EM_ANDAMENTO');
     if (input.enrollmentStatuses?.length) query = query.in('status', input.enrollmentStatuses);
     if (input.completedOnly) query = query.eq('status', 'CONCLUIDO');

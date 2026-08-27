@@ -13,6 +13,7 @@ import {
   paymentMethodLabel,
   receivableClassLabel,
   receivableCourseTitle,
+  statusScopeLabels,
 } from './modalidade-receber.utils';
 
 const receivable = (overrides: Partial<ContasReceber> = {}): ContasReceber => ({
@@ -130,3 +131,12 @@ test('resume curso e turma sem repetir o nome do curso', () => {
   assert.equal(receivableCourseTitle(item), 'Auxiliar Administrativo — Curso EAD');
   assert.equal(receivableClassLabel(item), 'Turma Única');
 });
+
+test('rotula todos os escopos de status incluindo vencidos', () => {
+  assert.equal(statusScopeLabels.pending, 'Pendentes');
+  assert.equal(statusScopeLabels.received, 'Recebidos');
+  assert.equal(statusScopeLabels.overdue, 'Vencidos');
+  assert.equal(statusScopeLabels.canceled, 'Cancelados');
+  assert.equal(statusScopeLabels.all, 'Todos');
+});
+

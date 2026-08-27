@@ -167,9 +167,11 @@ export const useModalidadeReceberReport = ({
       ? statusCounts.pending
       : statusScope === 'received'
         ? statusCounts.received
-        : statusScope === 'canceled'
-          ? statusCounts.canceled
-          : statusCounts.all
+        : statusScope === 'overdue'
+          ? statusCounts.overdue
+          : statusScope === 'canceled'
+            ? statusCounts.canceled
+            : statusCounts.all
   );
 
   const filters = useMemo<FinancialReportFilter[]>(() => {

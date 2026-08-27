@@ -140,25 +140,24 @@ export const ReceivablesList: React.FC<ReceivablesListProps> = ({
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1260px] table-fixed text-left">
+          <table className="w-full min-w-[960px] table-fixed text-left">
             <colgroup>
+              <col className="w-[18%]" />
+              <col className="w-[26%]" />
+              <col className="w-[18%]" />
               <col className="w-[14%]" />
-              <col className="w-[21%]" />
-              <col className="w-[16%]" />
-              <col className="w-[16%]" />
-              <col className="w-[13%]" />
-              <col className="w-[9%]" />
               <col className="w-[11%]" />
+              <col className="w-[13%]" />
             </colgroup>
             <thead className="bg-slate-50">
               <tr>
-                {['Aluno / lançamento', 'Curso / turma', 'Unidade', 'Recebimento', 'Datas', 'Valor', 'Ações'].map((label) => (
+                {['Aluno / lançamento', 'Curso / turma', 'Recebimento', 'Datas', 'Valor', 'Ações'].map((label) => (
                   <th key={label} className="px-5 py-4 text-[10px] font-black uppercase tracking-wider text-slate-500">{label}</th>
                 ))}
               </tr>
             </thead>
             {totalItems === 0 ? (
-              <tbody><tr><td colSpan={7} className="py-16 text-center text-xs font-bold text-slate-400">Nenhuma cobrança encontrada.</td></tr></tbody>
+              <tbody><tr><td colSpan={6} className="py-16 text-center text-xs font-bold text-slate-400">Nenhuma cobrança encontrada.</td></tr></tbody>
             ) : groupMode === 'none' ? (
               <tbody className="divide-y divide-slate-100">
                 {receivables.map((item, index) => <ReceivableRow key={item.id} item={item} index={index} actions={actions} />)}
@@ -172,7 +171,7 @@ export const ReceivablesList: React.FC<ReceivablesListProps> = ({
               return (
                 <tbody key={group.key} className="divide-y divide-slate-100">
                   <tr className="bg-slate-50/80 transition-colors hover:bg-blue-50/70">
-                    <td colSpan={7} className="p-0">
+                    <td colSpan={6} className="p-0">
                       <button
                         type="button"
                         onClick={() => onToggleGroup(group.key)}
@@ -213,7 +212,7 @@ export const ReceivablesList: React.FC<ReceivablesListProps> = ({
                     </td>
                   </tr>
                   {isExpanded && detail?.isLoading ? (
-                    <tr><td colSpan={7} className="py-8 text-center text-xs font-bold text-slate-400"><Loader2 className="mr-2 inline animate-spin" size={14} />Carregando cobranças...</td></tr>
+                    <tr><td colSpan={6} className="py-8 text-center text-xs font-bold text-slate-400"><Loader2 className="mr-2 inline animate-spin" size={14} />Carregando cobranças...</td></tr>
                   ) : null}
                   {isExpanded ? (detail?.rows || []).map((item, index) => (
                     <ReceivableRow
@@ -226,7 +225,7 @@ export const ReceivablesList: React.FC<ReceivablesListProps> = ({
                   )) : null}
                   {isExpanded && detailTotalPages > 1 ? (
                     <tr>
-                      <td colSpan={7} className="px-5 py-3">
+                      <td colSpan={6} className="px-5 py-3">
                         <GroupPageControls
                           page={detailPage}
                           totalPages={detailTotalPages}

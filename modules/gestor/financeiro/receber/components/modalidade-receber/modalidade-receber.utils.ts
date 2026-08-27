@@ -4,6 +4,7 @@ import type { GroupMode, StatusScope } from './modalidade-receber.types';
 export const statusScopeLabels: Record<StatusScope, string> = {
   pending: 'Pendentes',
   received: 'Recebidos',
+  overdue: 'Vencidos',
   canceled: 'Cancelados',
   all: 'Todos',
 };

@@ -31,6 +31,7 @@ import type { CaixaPolo } from './caixa-polos';
 import {
   formatCaixaCompetencia,
   formatCaixaCurrency,
+  formatCaixaPercent,
 } from './caixa.formatters';
 import {
   CaixaBreakdownList,
@@ -338,55 +339,22 @@ const CaixaPage: React.FC<CaixaPageProps> = ({
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="grid grid-cols-2 divide-x divide-y divide-slate-100 md:grid-cols-4 md:divide-y-0">
+        <div className="grid grid-cols-2 divide-x divide-y divide-slate-100 sm:grid-cols-3 md:grid-cols-5 md:divide-y-0">
           {[
-            { label: 'Receitas futuras', value: statement.compromissos.aReceber, color: 'text-emerald-700' },
-            { label: 'Inadimplência', value: statement.compromissos.receberVencido, color: 'text-amber-600' },
-            { label: 'Obrigações futuras', value: statement.compromissos.aPagar, color: 'text-rose-600' },
-            { label: 'Obrigações vencidas', value: statement.compromissos.pagarVencido, color: 'text-rose-700' },
+            { label: 'Receitas futuras', value: formatCaixaCurrency(statement.compromissos.aReceber), color: 'text-emerald-700', helper: 'Compromisso em aberto hoje' },
+            { label: 'Inadimplência', value: formatCaixaCurrency(statement.compromissos.receberVencido), color: 'text-amber-600', helper: 'Valor vencido ainda não liquidado' },
+            { label: 'Margem de inadimplência', value: formatCaixaPercent(statement.compromissos.margemInadimplencia), color: 'text-amber-600', helper: 'Sobre a carteira a receber' },
+            { label: 'Obrigações futuras', value: formatCaixaCurrency(statement.compromissos.aPagar), color: 'text-rose-600', helper: 'Compromisso em aberto hoje' },
+            { label: 'Obrigações vencidas', value: formatCaixaCurrency(statement.compromissos.pagarVencido), color: 'text-rose-700', helper: 'Valor vencido ainda não liquidado' },
           ].map((item) => (
             <div key={item.label} className="px-4 py-3.5">
               <p className="text-[11px] font-medium text-slate-500">{item.label}</p>
-              <p className={`mt-1 text-lg font-bold ${item.color}`}>{formatCaixaCurrency(item.value)}</p>
-              <p className="mt-0.5 text-[10px] text-slate-400">
-                {item.label === 'Inadimplência' || item.label === 'Obrigações vencidas'
-                  ? 'Valor vencido ainda não liquidado'
-                  : 'Compromisso em aberto hoje'}
-              </p>
+              <p className={`mt-1 text-lg font-bold ${item.color}`}>{item.value}</p>
+              <p className="mt-0.5 text-[10px] text-slate-400">{item.helper}</p>
             </div>
           ))}
         </div>
       </section>
-
-      <CaixaPosicaoTotalResumoCard
-        resumo={posicaoTotalResumo}
-        isLoading={isPosicaoTotalLoading}
-        hasError={hasPosicaoTotalError}
-      />
-
-      <CaixaPosicaoLiquidaResumoCard
-        resumo={posicaoLiquidaResumo}
-        isLoading={isPosicaoLiquidaLoading}
-        hasError={hasPosicaoLiquidaError}
-      />
-
-      <CaixaPatrimonioResumoCard
-        resumo={patrimonioResumo}
-        isLoading={isPatrimonioLoading}
-        hasError={hasPatrimonioError}
-      />
-
-      <CaixaFinanciamentoResumoCard
-        resumo={financiamentoResumo}
-        isLoading={isFinanciamentoLoading}
-        hasError={hasFinanciamentoError}
-      />
-
-      <CaixaCustosOperacionaisCard
-        resumo={custosOperacionais}
-        isLoading={isCustosOperacionaisLoading}
-        hasError={hasCustosOperacionaisError}
-      />
 
       <section className="grid grid-cols-1 gap-5 lg:grid-cols-5">
         <div className="flex min-h-0 flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-3">
@@ -609,6 +577,36 @@ const CaixaPage: React.FC<CaixaPageProps> = ({
       </section>
 
       <CaixaReconciliationCard reconciliation={statement.conciliacao} />
+
+      <CaixaPosicaoTotalResumoCard
+        resumo={posicaoTotalResumo}
+        isLoading={isPosicaoTotalLoading}
+        hasError={hasPosicaoTotalError}
+      />
+
+      <CaixaPosicaoLiquidaResumoCard
+        resumo={posicaoLiquidaResumo}
+        isLoading={isPosicaoLiquidaLoading}
+        hasError={hasPosicaoLiquidaError}
+      />
+
+      <CaixaPatrimonioResumoCard
+        resumo={patrimonioResumo}
+        isLoading={isPatrimonioLoading}
+        hasError={hasPatrimonioError}
+      />
+
+      <CaixaFinanciamentoResumoCard
+        resumo={financiamentoResumo}
+        isLoading={isFinanciamentoLoading}
+        hasError={hasFinanciamentoError}
+      />
+
+      <CaixaCustosOperacionaisCard
+        resumo={custosOperacionais}
+        isLoading={isCustosOperacionaisLoading}
+        hasError={hasCustosOperacionaisError}
+      />
 
       <footer className="flex items-start gap-2 px-1 text-[10px] leading-4 text-slate-400">
         <ReceiptText size={13} className="mt-0.5 shrink-0" />

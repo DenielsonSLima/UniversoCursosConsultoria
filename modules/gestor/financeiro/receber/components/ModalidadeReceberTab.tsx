@@ -28,7 +28,7 @@ import type {
 import { useModalidadeReceberOperations } from './modalidade-receber/useModalidadeReceberOperations';
 import { useModalidadeReceberReport } from './modalidade-receber/useModalidadeReceberReport';
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 20;
 const GROUP_ITEMS_PAGE_SIZE = 25;
 
 export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
@@ -123,6 +123,7 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
   const statusCounts: ReceivableStatusCounts = {
     pending: summaryQuery.data?.pendingCount || 0,
     received: summaryQuery.data?.receivedCount || 0,
+    overdue: summaryQuery.data?.overdueCount || 0,
     canceled: summaryQuery.data?.canceledCount || 0,
     all: summaryQuery.data?.allCount || 0,
   };

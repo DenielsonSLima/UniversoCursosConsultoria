@@ -253,14 +253,6 @@ export const ReceivableRow: React.FC<ReceivableRowProps> = ({
       </div>
     </td>
     <td className="px-5 py-5">
-      <div className="space-y-1.5">
-        <p className="break-words text-xs font-black leading-snug text-slate-700">{item.poloNome || 'Unidade não informada'}</p>
-        <p className="text-[10px] font-medium leading-snug text-slate-400">
-          CNPJ: {item.poloCnpj || 'não informado'} · {item.poloCidade || 'Cidade não informada'} / {item.poloUf || 'UF'}
-        </p>
-      </div>
-    </td>
-    <td className="px-5 py-5">
       <div className="space-y-2">
         <ReceivableStatusBadge item={item} />
         <p className="text-[10px] font-bold text-slate-500">Forma: {paymentMethodLabel(item)}</p>

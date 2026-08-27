@@ -89,7 +89,7 @@ const makeReport = (): CaixaDetailedReport => ({
     },
     saldosHoje: { registradoTotal: 15.8, bancarioRegistrado: 15.8, caixaLocal: 0, compartilhadoTotal: 15.8, posicaoCompartilhadaEscopo: 15.8, naoAtribuido: 0 },
     resumoCompetencia: { entradasRecebidasBrutas: 0.9, tarifasBancariasConfirmadas: 0, saidasPagas: 0, resultado: 0.9, resultadoStatus: 'POSITIVO', quantidadeRecebimentos: 1, quantidadePagamentos: 0 },
-    compromissos: { aReceber: 0, receberVencido: 0, aPagar: 0, pagarVencido: 0 },
+    compromissos: { aReceber: 0, receberVencido: 0, margemInadimplencia: 0, aPagar: 0, pagarVencido: 0 },
     receitasPorModalidade: [
       { codigo: 'EAD', rotulo: 'Cursos EAD', valor: 0.9, quantidade: 1, percentual: 100 },
       { codigo: 'ESPECIALIZACAO', rotulo: 'Especialização', valor: 0, quantidade: 0, percentual: 0 },

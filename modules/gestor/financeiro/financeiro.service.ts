@@ -214,7 +214,7 @@ export interface ReceivablesSummaryFilters {
   categoryId?: string;
 }
 
-export type ReceivablesStatusScope = 'pending' | 'received' | 'canceled' | 'all';
+export type ReceivablesStatusScope = 'pending' | 'received' | 'overdue' | 'canceled' | 'all';
 export type ReceivablesGroupMode = 'none' | 'student' | 'class' | 'polo';
 
 export interface ReceivablesPageFilters extends ReceivablesSummaryFilters {

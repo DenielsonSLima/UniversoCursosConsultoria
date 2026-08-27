@@ -22,6 +22,7 @@ export interface ModalidadeReceberTabProps {
 export interface ReceivableStatusCounts {
   pending: number;
   received: number;
+  overdue: number;
   canceled: number;
   all: number;
 }

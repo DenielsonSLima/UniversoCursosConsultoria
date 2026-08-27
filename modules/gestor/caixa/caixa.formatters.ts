@@ -3,6 +3,11 @@ export const formatCaixaCurrency = (value: number) => new Intl.NumberFormat('pt-
   currency: 'BRL',
 }).format(value);
 
+export const formatCaixaPercent = (value: number) => `${new Intl.NumberFormat('pt-BR', {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 2,
+}).format(value)}%`;
+
 const CANONICAL_DECIMAL_PATTERN = /^\d+(?:\.\d{1,2})?$/;
 const SIGNED_CANONICAL_DECIMAL_PATTERN = /^-?\d+(?:\.\d{1,2})?$/;
 

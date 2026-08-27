@@ -92,6 +92,7 @@ export const ModalidadeReceberToolbar: React.FC<ModalidadeReceberToolbarProps> =
       items={[
         { id: 'pending' as const, label: 'Pendentes', badge: statusCounts.pending, badgeClassName: 'bg-emerald-50 text-emerald-700' },
         { id: 'received' as const, label: 'Recebidos', badge: statusCounts.received, badgeClassName: 'bg-emerald-50 text-emerald-700' },
+        { id: 'overdue' as const, label: 'Vencidos', badge: statusCounts.overdue, badgeClassName: 'bg-emerald-50 text-emerald-700' },
         { id: 'canceled' as const, label: 'Cancelados', badge: statusCounts.canceled, badgeClassName: 'bg-emerald-50 text-emerald-700' },
         { id: 'all' as const, label: 'Todos', badge: statusCounts.all, badgeClassName: 'bg-emerald-50 text-emerald-700' },
       ]}
@@ -107,7 +108,7 @@ export const ModalidadeReceberToolbar: React.FC<ModalidadeReceberToolbarProps> =
         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
         <input
           type="text"
-          placeholder="Aluno, turma, CPF, cobrança ou unidade..."
+          placeholder="Aluno, turma, CPF ou cobrança..."
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
           className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-4 text-sm outline-none transition-all focus:ring-2 focus:ring-emerald-500"
@@ -135,7 +136,6 @@ export const ModalidadeReceberToolbar: React.FC<ModalidadeReceberToolbarProps> =
       >
         <option value="student">Agrupar por aluno</option>
         <option value="class">Agrupar por turma</option>
-        <option value="polo">Agrupar por polo</option>
         <option value="none">Sem agrupamento</option>
       </select>
 

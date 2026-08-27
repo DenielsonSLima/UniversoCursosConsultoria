@@ -148,24 +148,28 @@ test('mantém a RPC, o card e a invalidação patrimonial isolados no Caixa', ()
   assert.match(cardSource, /Patrimônio não altera o caixa disponível nem o resultado operacional/);
 });
 
-test('exibe posição líquida, patrimônio e financiamento depois do resumo mensal', () => {
+test('exibe posição total, posição líquida, patrimônio, financiamento e custos após a conciliação do período', () => {
   const pageSource = readFileSync(
     join(process.cwd(), 'modules/gestor/caixa/CaixaPage.tsx'),
     'utf8',
   );
   const resumoOperacionalIndex = pageSource.indexOf('label="Entradas operacionais no mês"');
   const compromissosIndex = pageSource.indexOf("{ label: 'Receitas futuras'");
+  const graficoIndex = pageSource.indexOf('Movimentação operacional');
+  const conciliacaoIndex = pageSource.indexOf('<CaixaReconciliationCard');
+  const posicaoTotalIndex = pageSource.indexOf('<CaixaPosicaoTotalResumoCard');
   const posicaoLiquidaIndex = pageSource.indexOf('<CaixaPosicaoLiquidaResumoCard');
   const patrimonioIndex = pageSource.indexOf('<CaixaPatrimonioResumoCard');
   const financiamentoIndex = pageSource.indexOf('<CaixaFinanciamentoResumoCard');
   const custosIndex = pageSource.indexOf('<CaixaCustosOperacionaisCard');
-  const graficoIndex = pageSource.indexOf('Movimentação operacional');
 
   assert.ok(resumoOperacionalIndex >= 0);
   assert.ok(compromissosIndex > resumoOperacionalIndex);
-  assert.ok(posicaoLiquidaIndex > compromissosIndex);
+  assert.ok(graficoIndex > compromissosIndex);
+  assert.ok(conciliacaoIndex > graficoIndex);
+  assert.ok(posicaoTotalIndex > conciliacaoIndex);
+  assert.ok(posicaoLiquidaIndex > posicaoTotalIndex);
   assert.ok(patrimonioIndex > posicaoLiquidaIndex);
   assert.ok(financiamentoIndex > patrimonioIndex);
   assert.ok(custosIndex > financiamentoIndex);
-  assert.ok(graficoIndex > custosIndex);
 });
