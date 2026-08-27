@@ -10,7 +10,8 @@ export type CaixaCompositionStatus =
   | 'COMPOSICAO_EXPLICITA'
   | 'SEM_DIFERENCA_FINANCEIRA'
   | 'NAO_DISCRIMINADA'
-  | 'NAO_DISCRIMINADA_PELO_GATEWAY';
+  | 'NAO_DISCRIMINADA_PELO_GATEWAY'
+  | 'CONCILIADO_POR_FORMULA_BANESE';
 
 export interface CaixaReportInstitution {
   id: string | null;
