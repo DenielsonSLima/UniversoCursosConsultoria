@@ -33,6 +33,8 @@ supabase/.temp
 
 # Exportações administrativas com dados pessoais de alunos
 2024:2025/
+/consultas-banese-alunos/
+/relatorio-cobrancas-alunos/
 
 # Documentos bancários recebidos e artefatos de QA (podem conter dados pessoais)
 /banese homologacao/*

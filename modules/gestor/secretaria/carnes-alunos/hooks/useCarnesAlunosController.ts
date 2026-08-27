@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query';
 import { useToast } from '../../../parceiros/components/shared/ToastNotification';
 import { carnesAlunosService } from '../carnes-alunos.service';
 import {
@@ -96,6 +96,7 @@ export const useCarnesAlunosController = (poloId?: string | null) => {
       pageSize: DOCUMENT_GROUPS_PAGE_SIZE,
     }, signal),
     enabled: canQuery,
+    placeholderData: keepPreviousData,
     staleTime: 30_000,
   });
 

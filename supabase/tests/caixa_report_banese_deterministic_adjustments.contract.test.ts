@@ -11,12 +11,19 @@ const migrationUrl = new URL(
 );
 const sql = await Deno.readTextFile(migrationUrl);
 
-const functionDefinition = (name: string) => sql.match(
+const recurringMigrationUrl = new URL(
+  '../migrations/20260827153000_caixa_report_recurring_deterministic_composition.sql',
+  import.meta.url,
+);
+const recurringSql = await Deno.readTextFile(recurringMigrationUrl);
+
+const functionDefinition = (source: string, name: string) => source.match(
   new RegExp(`create or replace function public\\.${name}\\([\\s\\S]*?\\$[a-z]*\\$;`, 'i'),
 )?.[0] ?? '';
 
-const resolver = functionDefinition('resolve_receivable_financial_composition');
-const recebimentos = functionDefinition('get_caixa_relatorio_recebimentos_core');
+const resolver = functionDefinition(sql, 'resolve_receivable_financial_composition');
+const recebimentos = functionDefinition(sql, 'get_caixa_relatorio_recebimentos_core');
+const carteiraRecorrente = functionDefinition(recurringSql, 'get_caixa_relatorio_carteira_recorrente_core');
 
 Deno.test('função resolve_receivable_financial_composition possui assinatura e segurança canônica', () => {
   assert.ok(resolver.length > 0, 'Função resolve_receivable_financial_composition deve estar definida na migração.');
@@ -33,6 +40,17 @@ Deno.test('get_caixa_relatorio_recebimentos_core conecta o resolver via cross jo
   assert.match(recebimentos, /cross join lateral public\.resolve_receivable_financial_composition\(/i);
   assert.match(recebimentos, /cr\.gateway_financial_terms/i);
   assert.match(recebimentos, /security definer[\s\S]*set search_path to ''/i);
+});
+
+Deno.test('get_caixa_relatorio_carteira_recorrente_core conecta o resolver via cross join lateral', () => {
+  assert.ok(carteiraRecorrente.length > 0, 'Função get_caixa_relatorio_carteira_recorrente_core deve estar definida na migração.');
+  assert.match(carteiraRecorrente, /cross join lateral public\.resolve_receivable_financial_composition\(/i);
+  assert.match(carteiraRecorrente, /cr\.gateway_financial_terms/i);
+  assert.match(carteiraRecorrente, /security definer[\s\S]*set search_path to ''/i);
+  assert.match(carteiraRecorrente, /coalesce\(comp\.desconto, 0\)[\s\S]*?AS desconto/i);
+  assert.match(carteiraRecorrente, /coalesce\(comp\.juros, 0\)[\s\S]*?AS juros/i);
+  assert.match(carteiraRecorrente, /coalesce\(comp\.multa, 0\)[\s\S]*?AS multa/i);
+  assert.match(carteiraRecorrente, /coalesce\(comp\.diferenca_nao_discriminada, 0\)[\s\S]*?AS diferenca_nao_discriminada/i);
 });
 
 Deno.test('permissões de segurança garantem execução exclusiva pelo service_role', () => {
@@ -53,4 +71,13 @@ Deno.test('permissões de segurança garantem execução exclusiva pelo service_
       new RegExp(`grant execute on function public\\.${name}[\\s\\S]*to (?:anon|authenticated|public)`, 'i'),
     );
   }
+
+  assert.match(
+    recurringSql,
+    /revoke all on function public\.get_caixa_relatorio_carteira_recorrente_core[\s\S]*from public, anon, authenticated/i,
+  );
+  assert.match(
+    recurringSql,
+    /grant execute on function public\.get_caixa_relatorio_carteira_recorrente_core[\s\S]*to service_role/i,
+  );
 });

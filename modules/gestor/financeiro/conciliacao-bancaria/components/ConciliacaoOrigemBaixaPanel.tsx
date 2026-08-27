@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Zap,
   Building2,
@@ -14,13 +14,17 @@ import {
   Wallet,
   Sparkles,
 } from 'lucide-react';
-import type { BaneseReceivable, CanalBaixaConciliacao } from '../conciliacao-bancaria.fetch';
+import type {
+  BaneseReceivable,
+  CanalBaixaConciliacao,
+  ConciliacaoChannelCounts,
+} from '../conciliacao-bancaria.fetch';
 import {
   conciliacaoStatusClass,
   formatConciliacaoCurrency,
   formatConciliacaoDate,
 } from '../conciliacao-bancaria.formatters';
-import { textMatchesSearch } from '../../../../../lib/search';
+import ConciliacaoPagination from './ConciliacaoPagination';
 
 interface ConciliacaoOrigemBaixaPanelProps {
   rows: BaneseReceivable[];
@@ -31,6 +35,17 @@ interface ConciliacaoOrigemBaixaPanelProps {
   onSearchTermChange: (value: string) => void;
   onRefresh: (receivableId: string) => void;
   onBatchRefresh?: (ids: string[]) => Promise<void>;
+  // Pagination & Filter props
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  onPageChange: (newPage: number) => void;
+  onPageSizeChange?: (newPageSize: number) => void;
+  selectedCanal: CanalBaixaConciliacao | 'TODOS';
+  onSelectCanal: (canal: CanalBaixaConciliacao | 'TODOS') => void;
+  selectedStatus: string;
+  onSelectStatus: (status: string) => void;
+  channelCounts: ConciliacaoChannelCounts;
 }
 
 export const ConciliacaoOrigemBaixaPanel: React.FC<ConciliacaoOrigemBaixaPanelProps> = ({
@@ -42,47 +57,23 @@ export const ConciliacaoOrigemBaixaPanel: React.FC<ConciliacaoOrigemBaixaPanelPr
   onSearchTermChange,
   onRefresh,
   onBatchRefresh,
+  page,
+  pageSize,
+  totalItems,
+  onPageChange,
+  onPageSizeChange,
+  selectedCanal,
+  onSelectCanal,
+  selectedStatus,
+  onSelectStatus,
+  channelCounts,
 }) => {
-  const [selectedCanal, setSelectedCanal] = useState<CanalBaixaConciliacao | 'TODOS'>('TODOS');
-  const [selectedStatus, setSelectedStatus] = useState<string>('TODOS');
   const [isBatchSyncing, setIsBatchSyncing] = useState(false);
   const [batchProgress, setBatchProgress] = useState<{ current: number; total: number } | null>(null);
 
-  // KPI counters by channel
-  const counters = useMemo(() => {
-    let apiCount = 0;
-    let cnabCount = 0;
-    let caixaCount = 0;
-    let mpCount = 0;
-    let pendenteCount = 0;
-
-    rows.forEach((r) => {
-      if (r.status !== 'PAGO') {
-        pendenteCount += 1;
-      } else if (r.canalBaixa === 'API_BANESE') {
-        apiCount += 1;
-      } else if (r.canalBaixa === 'CNAB240') {
-        cnabCount += 1;
-      } else if (r.canalBaixa === 'MERCADO_PAGO') {
-        mpCount += 1;
-      } else {
-        caixaCount += 1;
-      }
-    });
-
-    return {
-      apiCount,
-      cnabCount,
-      caixaCount,
-      mpCount,
-      pendenteCount,
-      totalCount: rows.length,
-    };
-  }, [rows]);
-
-  const pendingReceivableIds = useMemo(() => {
-    return rows.filter((r) => r.status !== 'PAGO').map((r) => r.id);
-  }, [rows]);
+  const pendingReceivableIds = rows
+    .filter((r) => r.status !== 'PAGO')
+    .map((r) => r.id);
 
   const handleBatchSync = async () => {
     if (pendingReceivableIds.length === 0 || isBatchSyncing) return;
@@ -93,7 +84,6 @@ export const ConciliacaoOrigemBaixaPanel: React.FC<ConciliacaoOrigemBaixaPanelPr
       if (onBatchRefresh) {
         await onBatchRefresh(pendingReceivableIds);
       } else {
-        // Execute sequentially or in small chunks
         for (let i = 0; i < pendingReceivableIds.length; i += 1) {
           const id = pendingReceivableIds[i];
           setBatchProgress({ current: i + 1, total: pendingReceivableIds.length });
@@ -109,32 +99,6 @@ export const ConciliacaoOrigemBaixaPanel: React.FC<ConciliacaoOrigemBaixaPanelPr
       setBatchProgress(null);
     }
   };
-
-  const filteredRows = useMemo(() => {
-    let result = rows;
-
-    if (selectedCanal !== 'TODOS') {
-      if (selectedCanal === 'PENDENTE') {
-        result = result.filter((r) => r.status !== 'PAGO');
-      } else {
-        result = result.filter((r) => r.status === 'PAGO' && r.canalBaixa === selectedCanal);
-      }
-    }
-
-    if (selectedStatus !== 'TODOS') {
-      result = result.filter((r) => r.status === selectedStatus);
-    }
-
-    if (searchTerm.trim()) {
-      result = result.filter((row) => textMatchesSearch(searchTerm, [
-        row.descricao,
-        row.nossoNumero,
-        row.status,
-      ]));
-    }
-
-    return result;
-  }, [rows, selectedCanal, selectedStatus, searchTerm]);
 
   const renderOrigemBadge = (row: BaneseReceivable) => {
     if (row.status !== 'PAGO') {
@@ -237,7 +201,7 @@ export const ConciliacaoOrigemBaixaPanel: React.FC<ConciliacaoOrigemBaixaPanelPr
             ) : (
               <>
                 <Zap size={16} className="text-amber-300" />
-                <span>Sincronizar Todos em Lote ({pendingReceivableIds.length})</span>
+                <span>Sincronizar Visíveis em Lote ({pendingReceivableIds.length})</span>
               </>
             )}
           </button>
@@ -248,7 +212,7 @@ export const ConciliacaoOrigemBaixaPanel: React.FC<ConciliacaoOrigemBaixaPanelPr
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <button
           type="button"
-          onClick={() => setSelectedCanal('TODOS')}
+          onClick={() => onSelectCanal('TODOS')}
           className={`flex flex-col rounded-2xl border p-4 text-left transition-all ${
             selectedCanal === 'TODOS'
               ? 'border-slate-800 bg-slate-900 text-white shadow-md'
@@ -259,13 +223,13 @@ export const ConciliacaoOrigemBaixaPanel: React.FC<ConciliacaoOrigemBaixaPanelPr
             <span className="text-[10px] font-black uppercase tracking-wider opacity-80">Total Geral</span>
             <Wallet size={16} />
           </div>
-          <span className="mt-2 text-2xl font-black">{counters.totalCount}</span>
+          <span className="mt-2 text-2xl font-black">{channelCounts.totalCount}</span>
           <span className="text-[10px] opacity-75">Títulos monitorados</span>
         </button>
 
         <button
           type="button"
-          onClick={() => setSelectedCanal('API_BANESE')}
+          onClick={() => onSelectCanal('API_BANESE')}
           className={`flex flex-col rounded-2xl border p-4 text-left transition-all ${
             selectedCanal === 'API_BANESE'
               ? 'border-blue-600 bg-blue-600 text-white shadow-md'
@@ -276,13 +240,13 @@ export const ConciliacaoOrigemBaixaPanel: React.FC<ConciliacaoOrigemBaixaPanelPr
             <span className="text-[10px] font-black uppercase tracking-wider opacity-90">API Banese</span>
             <Globe size={16} />
           </div>
-          <span className="mt-2 text-2xl font-black">{counters.apiCount}</span>
+          <span className="mt-2 text-2xl font-black">{channelCounts.apiCount}</span>
           <span className="text-[10px] opacity-80">Baixas online diretas</span>
         </button>
 
         <button
           type="button"
-          onClick={() => setSelectedCanal('CNAB240')}
+          onClick={() => onSelectCanal('CNAB240')}
           className={`flex flex-col rounded-2xl border p-4 text-left transition-all ${
             selectedCanal === 'CNAB240'
               ? 'border-purple-600 bg-purple-600 text-white shadow-md'
@@ -293,13 +257,13 @@ export const ConciliacaoOrigemBaixaPanel: React.FC<ConciliacaoOrigemBaixaPanelPr
             <span className="text-[10px] font-black uppercase tracking-wider opacity-90">CNAB 240</span>
             <FileCheck size={16} />
           </div>
-          <span className="mt-2 text-2xl font-black">{counters.cnabCount}</span>
+          <span className="mt-2 text-2xl font-black">{channelCounts.cnabCount}</span>
           <span className="text-[10px] opacity-80">Baixas por arquivo .RET</span>
         </button>
 
         <button
           type="button"
-          onClick={() => setSelectedCanal('CAIXA_MANUAL')}
+          onClick={() => onSelectCanal('CAIXA_MANUAL')}
           className={`flex flex-col rounded-2xl border p-4 text-left transition-all ${
             selectedCanal === 'CAIXA_MANUAL'
               ? 'border-emerald-600 bg-emerald-600 text-white shadow-md'
@@ -310,13 +274,13 @@ export const ConciliacaoOrigemBaixaPanel: React.FC<ConciliacaoOrigemBaixaPanelPr
             <span className="text-[10px] font-black uppercase tracking-wider opacity-90">Caixa / Manual</span>
             <Building2 size={16} />
           </div>
-          <span className="mt-2 text-2xl font-black">{counters.caixaCount}</span>
+          <span className="mt-2 text-2xl font-black">{channelCounts.caixaCount}</span>
           <span className="text-[10px] opacity-80">Baixa local / balcão</span>
         </button>
 
         <button
           type="button"
-          onClick={() => setSelectedCanal('MERCADO_PAGO')}
+          onClick={() => onSelectCanal('MERCADO_PAGO')}
           className={`flex flex-col rounded-2xl border p-4 text-left transition-all ${
             selectedCanal === 'MERCADO_PAGO'
               ? 'border-sky-600 bg-sky-600 text-white shadow-md'
@@ -327,7 +291,7 @@ export const ConciliacaoOrigemBaixaPanel: React.FC<ConciliacaoOrigemBaixaPanelPr
             <span className="text-[10px] font-black uppercase tracking-wider opacity-90">Mercado Pago</span>
             <CreditCard size={16} />
           </div>
-          <span className="mt-2 text-2xl font-black">{counters.mpCount}</span>
+          <span className="mt-2 text-2xl font-black">{channelCounts.mpCount}</span>
           <span className="text-[10px] opacity-80">Cartão de Crédito</span>
         </button>
       </div>
@@ -351,10 +315,10 @@ export const ConciliacaoOrigemBaixaPanel: React.FC<ConciliacaoOrigemBaixaPanelPr
             <button
               key={st}
               type="button"
-              onClick={() => setSelectedStatus(st)}
+              onClick={() => onSelectStatus(st)}
               className={`rounded-lg px-2.5 py-1 text-[10px] font-black uppercase transition-colors ${
                 selectedStatus === st
-                  ? 'bg-slate-800 text-white'
+                  ? 'bg-slate-800 text-white shadow-sm'
                   : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
               }`}
             >
@@ -365,91 +329,105 @@ export const ConciliacaoOrigemBaixaPanel: React.FC<ConciliacaoOrigemBaixaPanelPr
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto">
-        {isLoading ? (
-          <div className="py-12 text-center text-xs font-semibold text-slate-500">
-            Carregando dados de conciliação bancária...
-          </div>
-        ) : isError ? (
-          <div className="rounded-2xl border border-rose-100 bg-rose-50 p-6 text-center text-xs font-semibold text-rose-700">
-            Não foi possível recuperar os lançamentos do ambiente bancário ativo.
-          </div>
-        ) : (
-          <table className="w-full overflow-hidden rounded-2xl border border-slate-100 text-left">
-            <thead className="bg-slate-50 text-[10px] font-black uppercase text-slate-500">
-              <tr>
-                <th className="p-3.5">Descrição / Título</th>
-                <th className="p-3.5">Nosso Número</th>
-                <th className="p-3.5">Vencimento</th>
-                <th className="p-3.5">Valor Nominal</th>
-                <th className="p-3.5">Status Título</th>
-                <th className="p-3.5">Canal & Origem da Baixa</th>
-                <th className="p-3.5 text-right">Ação Opcional</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-xs">
-              {filteredRows.length === 0 ? (
+      <div className="overflow-hidden rounded-2xl border border-slate-100">
+        <div className="overflow-x-auto">
+          {isLoading ? (
+            <div className="py-12 text-center text-xs font-semibold text-slate-500">
+              <Loader2 size={20} className="mx-auto mb-2 animate-spin text-blue-600" />
+              Carregando dados de conciliação bancária...
+            </div>
+          ) : isError ? (
+            <div className="p-6 text-center text-xs font-semibold text-rose-700 bg-rose-50">
+              Não foi possível recuperar os lançamentos do ambiente bancário ativo.
+            </div>
+          ) : (
+            <table className="w-full text-left">
+              <thead className="bg-slate-50 text-[10px] font-black uppercase text-slate-500 border-b border-slate-100">
                 <tr>
-                  <td colSpan={7} className="p-10 text-center text-xs font-bold uppercase text-slate-400">
-                    Nenhum lançamento encontrado para os filtros selecionados.
-                  </td>
+                  <th className="p-3.5">Descrição / Título</th>
+                  <th className="p-3.5">Nosso Número</th>
+                  <th className="p-3.5">Vencimento</th>
+                  <th className="p-3.5">Valor Nominal</th>
+                  <th className="p-3.5">Status Título</th>
+                  <th className="p-3.5">Canal & Origem da Baixa</th>
+                  <th className="p-3.5 text-right">Ação Opcional</th>
                 </tr>
-              ) : (
-                filteredRows.map((row) => {
-                  const isRefreshing = refreshingIds.includes(row.id);
-                  const errorText = formatErrorText(row.gatewayLastError);
-                  return (
-                    <tr key={row.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="p-3.5">
-                        <p className="font-bold text-slate-800">{row.descricao}</p>
-                        {errorText ? (
-                          <p className="mt-1 flex items-center gap-1 text-[10px] font-medium text-rose-600">
-                            <ShieldAlert size={12} /> {errorText}
-                          </p>
-                        ) : null}
-                      </td>
-                      <td className="p-3.5 font-mono text-[11px] font-bold text-slate-600">
-                        {row.nossoNumero || '-'}
-                      </td>
-                      <td className="p-3.5 text-slate-600">
-                        {formatConciliacaoDate(row.dataVencimento)}
-                      </td>
-                      <td className="p-3.5 font-black text-slate-800">
-                        {formatConciliacaoCurrency(row.valor)}
-                      </td>
-                      <td className="p-3.5">
-                        <span className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase ${conciliacaoStatusClass(row.status)}`}>
-                          {row.status}
-                        </span>
-                      </td>
-                      <td className="p-3.5">
-                        {renderOrigemBadge(row)}
-                      </td>
-                      <td className="p-3.5 text-right">
-                        {row.status === 'PAGO' ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-700">
-                            <CheckCircle2 size={13} />
-                            {row.canalBaixa === 'CAIXA_MANUAL' ? 'Baixa manual registrada' : 'Conciliado'}
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-xs">
+                {rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="p-10 text-center text-xs font-bold uppercase text-slate-400">
+                      Nenhum lançamento encontrado para os filtros selecionados.
+                    </td>
+                  </tr>
+                ) : (
+                  rows.map((row) => {
+                    const isRefreshing = refreshingIds.includes(row.id);
+                    const errorText = formatErrorText(row.gatewayLastError);
+                    return (
+                      <tr key={row.id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="p-3.5">
+                          <p className="font-bold text-slate-800">{row.descricao}</p>
+                          {errorText ? (
+                            <p className="mt-1 flex items-center gap-1 text-[10px] font-medium text-rose-600">
+                              <ShieldAlert size={12} /> {errorText}
+                            </p>
+                          ) : null}
+                        </td>
+                        <td className="p-3.5 font-mono text-[11px] font-bold text-slate-600">
+                          {row.nossoNumero || '-'}
+                        </td>
+                        <td className="p-3.5 text-slate-600">
+                          {formatConciliacaoDate(row.dataVencimento)}
+                        </td>
+                        <td className="p-3.5 font-black text-slate-800">
+                          {formatConciliacaoCurrency(row.valor)}
+                        </td>
+                        <td className="p-3.5">
+                          <span className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase ${conciliacaoStatusClass(row.status)}`}>
+                            {row.status}
                           </span>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => onRefresh(row.id)}
-                            disabled={isRefreshing || isBatchSyncing}
-                            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[10px] font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-50 transition-all"
-                            title="Verificação individual opcional via API Banese"
-                          >
-                            <RefreshCw size={11} className={isRefreshing ? 'animate-spin text-blue-600' : ''} />
-                            {isRefreshing ? 'Verificando...' : 'Re-verificar'}
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                        </td>
+                        <td className="p-3.5">
+                          {renderOrigemBadge(row)}
+                        </td>
+                        <td className="p-3.5 text-right">
+                          {row.status === 'PAGO' ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-700">
+                              <CheckCircle2 size={13} />
+                              {row.canalBaixa === 'CAIXA_MANUAL' ? 'Baixa manual registrada' : 'Conciliado'}
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => onRefresh(row.id)}
+                              disabled={isRefreshing || isBatchSyncing}
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[10px] font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-50 transition-all"
+                              title="Verificação individual opcional via API Banese"
+                            >
+                              <RefreshCw size={11} className={isRefreshing ? 'animate-spin text-blue-600' : ''} />
+                              {isRefreshing ? 'Verificando...' : 'Re-verificar'}
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {/* Pagination Controls */}
+        {!isLoading && !isError && totalItems > 0 && (
+          <ConciliacaoPagination
+            page={page}
+            pageSize={pageSize}
+            totalItems={totalItems}
+            onPageChange={onPageChange}
+            onPageSizeChange={onPageSizeChange}
+          />
         )}
       </div>
     </section>

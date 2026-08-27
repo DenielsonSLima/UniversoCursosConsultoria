@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Activity,
   ArrowDownLeft,
@@ -13,6 +13,7 @@ import ConciliacaoBancariaResumo from './ConciliacaoBancariaResumo';
 import BaneseCnabReturnPanel from './components/BaneseCnabReturnPanel';
 import ConciliacaoOrigemBaixaPanel from './components/ConciliacaoOrigemBaixaPanel';
 import ConciliacaoTransactionsPanel from './components/ConciliacaoTransactionsPanel';
+import type { CanalBaixaConciliacao } from './conciliacao-bancaria.fetch';
 import { useBaneseCnabReturn } from './hooks/useBaneseCnabReturn';
 import { useBaneseConciliacaoQueries } from './hooks/useBaneseConciliacaoQueries';
 import FinancialUnderlineTabs from '../components/FinancialUnderlineTabs';
@@ -26,8 +27,29 @@ export type SubTabConciliacao = 'remessas' | 'retorno' | 'conciliacao' | 'diagno
 const ConciliacaoBancariaTab: React.FC<ConciliacaoBancariaTabProps> = ({ poloId }) => {
   const [activeSubTab, setActiveSubTab] = useState<SubTabConciliacao>('conciliacao');
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [selectedCanal, setSelectedCanal] = useState<CanalBaixaConciliacao | 'TODOS'>('TODOS');
+  const [selectedStatus, setSelectedStatus] = useState<string>('TODOS');
   const [refreshingIds, setRefreshingIds] = useState<string[]>([]);
-  const queries = useBaneseConciliacaoQueries();
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedSearch(searchTerm.trim());
+      setPage(1);
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [searchTerm]);
+
+  const queries = useBaneseConciliacaoQueries({
+    page,
+    pageSize,
+    search: debouncedSearch,
+    status: selectedStatus,
+    canal: selectedCanal,
+  });
+
   const cnabReady = queries.cnabOverviewQuery.data?.edi7Configured === true;
 
   const overviewError = queries.cnabOverviewQuery.isError
@@ -64,6 +86,21 @@ const ConciliacaoBancariaTab: React.FC<ConciliacaoBancariaTabProps> = ({ poloId 
     } finally {
       setRefreshingIds((current) => current.filter((id) => id !== receivableId));
     }
+  };
+
+  const handleSelectCanal = (canal: CanalBaixaConciliacao | 'TODOS') => {
+    setSelectedCanal(canal);
+    setPage(1);
+  };
+
+  const handleSelectStatus = (status: string) => {
+    setSelectedStatus(status);
+    setPage(1);
+  };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setPage(1);
   };
 
   return (
@@ -106,7 +143,7 @@ const ConciliacaoBancariaTab: React.FC<ConciliacaoBancariaTabProps> = ({ poloId 
                 id: 'conciliacao' as const,
                 label: 'Conciliação & Baixas',
                 icon: <Layers size={16} />,
-                badge: queries.receivables.length,
+                badge: queries.channelCounts.totalCount || queries.totalCount || undefined,
                 activeIconClassName: 'text-blue-600',
                 badgeClassName: 'bg-blue-50 text-blue-700',
               },
@@ -175,6 +212,16 @@ const ConciliacaoBancariaTab: React.FC<ConciliacaoBancariaTabProps> = ({ poloId 
             isError={queries.bankingOverviewQuery.isError || queries.dataQuery.isError}
             onSearchTermChange={setSearchTerm}
             onRefresh={(receivableId) => { void handleRefresh(receivableId); }}
+            page={page}
+            pageSize={pageSize}
+            totalItems={queries.totalCount}
+            onPageChange={setPage}
+            onPageSizeChange={handlePageSizeChange}
+            selectedCanal={selectedCanal}
+            onSelectCanal={handleSelectCanal}
+            selectedStatus={selectedStatus}
+            onSelectStatus={handleSelectStatus}
+            channelCounts={queries.channelCounts}
           />
         </div>
       )}
