@@ -1,12 +1,20 @@
 import { supabase } from '../../../../lib/supabase';
 import type { ResumoMonthlyPeriod } from './resumo-period';
 
+export interface ReceitaOrigemItem {
+  categoria: string;
+  label: string;
+  valor: number;
+  percentual: number;
+}
+
 export interface ResumoFinanceiroValues {
   totalRecebido: number;
   totalAReceber: number;
   totalPago: number;
   totalAPagar: number;
   saldoCaixa: number;
+  receitaPorOrigem?: ReceitaOrigemItem[];
 }
 
 export interface ResumoFluxoMensal {
@@ -44,13 +52,34 @@ const requiredNumber = (value: unknown, field: string) => {
   return normalized;
 };
 
-const mapResumoFinanceiro = (row: Record<string, unknown>): ResumoFinanceiroValues => ({
-  totalRecebido: requiredNumber(row.total_recebido, 'total_recebido'),
-  totalAReceber: requiredNumber(row.total_a_receber, 'total_a_receber'),
-  totalPago: requiredNumber(row.total_pago, 'total_pago'),
-  totalAPagar: requiredNumber(row.total_a_pagar, 'total_a_pagar'),
-  saldoCaixa: requiredNumber(row.saldo_caixa, 'saldo_caixa'),
-});
+const mapReceitaOrigemList = (raw: unknown, totalRecebido: number): ReceitaOrigemItem[] => {
+  if (Array.isArray(raw) && raw.length > 0) {
+    return raw.map((item) => {
+      const row = item && typeof item === 'object' ? (item as Record<string, unknown>) : {};
+      const valor = typeof row.valor === 'number' ? row.valor : Number(row.valor || 0);
+      const percentual = totalRecebido > 0 ? Math.round((valor / totalRecebido) * 100) : 0;
+      return {
+        categoria: String(row.categoria || 'outros'),
+        label: String(row.label || 'Outras Receitas'),
+        valor,
+        percentual: typeof row.percentual === 'number' ? row.percentual : percentual,
+      };
+    });
+  }
+  return [];
+};
+
+const mapResumoFinanceiro = (row: Record<string, unknown>): ResumoFinanceiroValues => {
+  const totalRecebido = requiredNumber(row.total_recebido, 'total_recebido');
+  return {
+    totalRecebido,
+    totalAReceber: requiredNumber(row.total_a_receber, 'total_a_receber'),
+    totalPago: requiredNumber(row.total_pago, 'total_pago'),
+    totalAPagar: requiredNumber(row.total_a_pagar, 'total_a_pagar'),
+    saldoCaixa: requiredNumber(row.saldo_caixa, 'saldo_caixa'),
+    receitaPorOrigem: mapReceitaOrigemList(row.receita_por_origem, totalRecebido),
+  };
+};
 
 const fetchResumoValues = async (
   filters: ResumoFinanceiroFilters,

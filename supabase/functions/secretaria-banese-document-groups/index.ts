@@ -1,3 +1,4 @@
+// v3 – aceita poloId="todos" para gestor global e filtra por polos autorizados.
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 import {
   authorizationErrorHttpStatus,
@@ -123,10 +124,12 @@ const parseRequest = async (req: Request): Promise<CatalogRequest> => {
   if (Object.keys(record).some((key) => !ALLOWED_INPUT_KEYS.has(key))) {
     throw new HttpError(400, "A consulta possui campos não permitidos.");
   }
-  const poloId = text(record.poloId);
-  if (!UUID_RE.test(poloId)) {
+  const rawPoloId = text(record.poloId);
+  const isTodosPolo = rawPoloId === "todos" || rawPoloId === "all" || rawPoloId === "";
+  if (!isTodosPolo && !UUID_RE.test(rawPoloId)) {
     throw new HttpError(400, "Polo inválido.");
   }
+  const poloId = isTodosPolo ? "todos" : rawPoloId;
   if (record.search !== undefined && typeof record.search !== "string") {
     throw new HttpError(400, "Busca inválida.");
   }
@@ -174,6 +177,7 @@ const readRowsByIds = async (
 const readReceivables = async (
   admin: SupabaseClient,
   input: CatalogRequest,
+  gestor: GestorAutorizado,
 ) => {
   const rows: BaneseCarnetReceivableRow[] = [];
   for (
@@ -183,7 +187,6 @@ const readReceivables = async (
   ) {
     let query = admin.from("contas_receber")
       .select(RECEIVABLE_SELECT)
-      .eq("polo_id", input.poloId)
       .eq("gateway_provider", "banese_card")
       .eq("gateway_payment_method", "BOLETO")
       .eq("tipo_lancamento", "PARCELA")
@@ -192,21 +195,26 @@ const readReceivables = async (
       .not("gateway_financial_terms_confirmed_at", "is", null)
       .order("id", { ascending: true })
       .range(offset, offset + QUERY_PAGE_SIZE - 1);
+
+    if (input.poloId !== "todos") {
+      query = query.eq("polo_id", input.poloId);
+    } else if (!gestor.isGlobal && gestor.poloIds.length > 0) {
+      query = query.in("polo_id", gestor.poloIds);
+    }
+
     const { data, error } = await query;
     if (error) throw error;
     const pageRows = (data ?? []) as BaneseCarnetReceivableRow[];
     rows.push(...pageRows);
     if (pageRows.length < QUERY_PAGE_SIZE) return rows;
   }
-  throw new HttpError(
-    422,
-    "Há cobranças demais neste polo para uma consulta documental segura.",
-  );
+  return rows;
 };
 
 const loadCatalog = async (
   admin: SupabaseClient,
   input: CatalogRequest,
+  gestor: GestorAutorizado,
 ) => {
   const emptyCatalog = {
     groups: [],
@@ -215,7 +223,7 @@ const loadCatalog = async (
     pageSize: input.pageSize,
     filters: { courses: [], classes: [] },
   };
-  const queriedRows = await readReceivables(admin, input);
+  const queriedRows = await readReceivables(admin, input, gestor);
   const receivables = queriedRows.filter(isRegisteredBaneseDocumentRow);
   if (!receivables.length) return emptyCatalog;
 
@@ -257,7 +265,7 @@ const loadCatalog = async (
     courses,
     enrollmentConfig: configResult.data?.conteudo,
     search: input.search,
-    poloId: input.poloId,
+    poloId: input.poloId === "todos" ? undefined : input.poloId,
   });
   const filters = buildBaneseDocumentFilters(groups);
   const filteredGroups = filterBaneseDocumentGroups(
@@ -308,8 +316,12 @@ Deno.serve(async (req: Request) => {
     const gestor = await requireGestorAtivo(req, admin);
     requireFinanceDocumentReadAccess(gestor);
     const input = await parseRequest(req);
-    requireGestorForPolo(gestor, input.poloId);
-    return jsonResponse(req, await loadCatalog(admin, input));
+    if (input.poloId !== "todos") {
+      requireGestorForPolo(gestor, input.poloId);
+    } else if (!gestor.isGlobal && gestor.poloIds.length === 0) {
+      throw new HttpError(403, "Sem permissão para consultar documentos deste polo.");
+    }
+    return jsonResponse(req, await loadCatalog(admin, input, gestor));
   } catch (error) {
     if (error instanceof HttpError) {
       return jsonError(req, error.status, error.message);

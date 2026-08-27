@@ -4,10 +4,7 @@ import {
   type BaneseDocumentBranding,
   normalizeBaneseBoletoDocument,
 } from "../types.ts";
-import {
-  drawBaneseDocumentTitle,
-  embedBaneseBrandAssets,
-} from "../pdf/branding.ts";
+import { embedBaneseBrandAssets } from "../pdf/branding.ts";
 import {
   BANESE_PDF_COLORS,
   BANESE_PDF_PAGE,
@@ -56,13 +53,6 @@ export const buildBaneseBoletoPdf = async (
   const fonts = await baneseDocumentFonts(pdf);
   const assets = await embedBaneseBrandAssets(pdf, options.branding);
   const contentWidth = BANESE_PDF_PAGE.width - BANESE_PDF_PAGE.margin * 2;
-
-  drawBaneseDocumentTitle(page, fonts, {
-    x: BANESE_PDF_PAGE.margin,
-    y: 807,
-    width: contentWidth,
-    height: 28,
-  });
 
   if (input.environment === "sandbox") {
     page.drawRectangle({

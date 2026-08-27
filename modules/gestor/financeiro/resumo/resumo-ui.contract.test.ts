@@ -24,9 +24,8 @@ test('Resumo separa posição, vencidos e fluxo em consultas independentes', () 
   assert.match(summary, /resumoOverdueByPolo/);
   assert.match(summary, /resumoFlowByPolo/);
   assert.match(summary, /SectionError/);
-  assert.match(summary, /Hoje/);
-  assert.match(summary, /Este mês/);
-  assert.match(summary, /Personalizado/);
+  assert.match(summary, /type="date"/);
+  assert.match(summary, /setDateRange/);
   assert.doesNotMatch(summary, /Matrículas Ativas|Buscar Mensalidades|get_student_status_kpis_secure/);
 });
 

@@ -32,7 +32,7 @@ import {
 } from "./document-policy.ts";
 
 const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 class HttpError extends Error {
   constructor(public readonly status: number, message: string) {
@@ -334,8 +334,13 @@ Deno.serve(async (req: Request) => {
       pix,
     };
 
+    const isLegacyMatrizLogo = !issuer.logo_url ||
+      String(issuer.logo_url).includes("logo_1781993986277.jpg") ||
+      issuer.id === "44444444-4444-4444-4444-444444444444";
     const [companyLogoBase64, bankLogoBase64] = await Promise.all([
-      fetchImageAsDataUrl(issuer.logo_url),
+      isLegacyMatrizLogo
+        ? null
+        : fetchImageAsDataUrl(issuer.logo_url),
       fetchImageAsDataUrl(
         "https://universocc.com.br/logos/payment-gateways/banese.png",
       ),

@@ -1,6 +1,6 @@
 import { getMaceioDateKey } from '../conciliacao-bancaria/conciliacao-bancaria.utils.ts';
 
-export type ResumoPeriodPreset = 'TODAY' | 'CURRENT_MONTH' | 'CUSTOM';
+export type ResumoPeriodPreset = 'TODAY' | 'LAST_30_DAYS' | 'LAST_60_DAYS' | 'LAST_90_DAYS' | 'CURRENT_MONTH' | 'CUSTOM';
 
 export interface ResumoPeriodRange {
   start: string;
@@ -57,9 +57,11 @@ export const getResumoPresetRange = (
   reference: Date = new Date(),
 ): ResumoPeriodRange => {
   const today = getMaceioDateKey(reference);
-  return preset === 'TODAY'
-    ? { start: today, end: today }
-    : getResumoMonthRange(today);
+  if (preset === 'TODAY') return { start: today, end: today };
+  if (preset === 'LAST_30_DAYS') return { start: shiftResumoDateKey(today, -29), end: today };
+  if (preset === 'LAST_60_DAYS') return { start: shiftResumoDateKey(today, -59), end: today };
+  if (preset === 'LAST_90_DAYS') return { start: shiftResumoDateKey(today, -89), end: today };
+  return getResumoMonthRange(today);
 };
 
 export const getResumoOverdueRange = (reference: Date = new Date()): ResumoPeriodRange => ({

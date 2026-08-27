@@ -3,7 +3,7 @@ import type {
   BaneseDocumentGroupsResponse,
 } from './carnes-alunos.types';
 
-const DATABASE_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const DATABASE_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const MASKED_CPF_RE = /^\*{3}\.\*{3}\.\*{3}-(?:\d{2}|\*{2})$/;
 

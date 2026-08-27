@@ -88,7 +88,7 @@ Deno.test("gera as instruções longas do boleto sem descartar blocos", async ()
   const pdf = await PDFDocument.load(bytes);
   assert.equal(pdf.getPageCount(), 1);
   const text = await extractPdfText(bytes);
-  assert.equal(occurrences(text, "COBRANÇA EDUCACIONAL"), 1);
+  assert.doesNotMatch(text, /COBRANÇA EDUCACIONAL/);
   assert.equal(occurrences(text, description), 2);
   assert.equal(occurrences(text, classIdentification), 2);
   assert.equal(occurrences(text, cashierWarning), 2);

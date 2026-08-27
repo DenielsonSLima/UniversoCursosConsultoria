@@ -18,6 +18,7 @@ import {
   banesePartyAddress as partyAddress,
   drawBaneseBarcode as drawBarcode,
   drawBaneseBox as drawBox,
+  drawBaneseCompanyLogo as drawCompanyLogo,
   drawBaneseImageContain as drawImageContain,
   drawBaneseText as drawText,
   fitBaneseFontSize as fitFontSize,
@@ -75,7 +76,7 @@ export const drawBaneseBoletoSlip = async (
 
   const beneficiaryHeight = 37;
   y = row(beneficiaryHeight);
-  const beneficiaryLogoWidth = assets.companyLogo ? 90 : 0;
+  const beneficiaryLogoWidth = assets.companyLogo ? 116 : 0;
   page.drawRectangle({
     x: box.x,
     y,
@@ -91,15 +92,15 @@ export const drawBaneseBoletoSlip = async (
       thickness: 0.55,
       color: COLORS.black,
     });
-    drawImageContain(page, assets.companyLogo, {
+    drawCompanyLogo(page, assets.companyLogo, {
       x: box.x,
       y,
       width: beneficiaryLogoWidth,
       height: beneficiaryHeight,
-    }, 4);
+    });
   }
-  const beneficiaryTextX = box.x + beneficiaryLogoWidth + 3;
-  const beneficiaryTextWidth = mainWidth - beneficiaryLogoWidth - 6;
+  const beneficiaryTextX = box.x + beneficiaryLogoWidth + 4;
+  const beneficiaryTextWidth = mainWidth - beneficiaryLogoWidth - 8;
   drawText(
     page,
     fonts,

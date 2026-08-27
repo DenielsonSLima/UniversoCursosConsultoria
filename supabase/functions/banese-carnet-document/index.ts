@@ -29,7 +29,7 @@ import { buildBaneseCarnetDocumentInputs } from "./document-input.ts";
 import { loadBaneseAcademicBillingContext } from "../banese/internal/technical-billing-context.ts";
 
 const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const RECEIVABLE_SELECT = `
   id, cliente_id, matricula_id, polo_id, descricao, tipo_lancamento,
@@ -323,8 +323,13 @@ Deno.serve(async (req: Request) => {
     );
 
     const projectHost = new URL(supabaseUrl).hostname;
+    const isLegacyMatrizLogo = !issuerResult.data.logo_url ||
+      String(issuerResult.data.logo_url).includes("logo_1781993986277.jpg") ||
+      issuerResult.data.id === "44444444-4444-4444-4444-444444444444";
     const [issuerLogo, bankLogo] = await Promise.all([
-      imageAsDataUrl(issuerResult.data.logo_url, projectHost),
+      isLegacyMatrizLogo
+        ? null
+        : imageAsDataUrl(issuerResult.data.logo_url, projectHost),
       imageAsDataUrl(
         "https://universocc.com.br/logos/payment-gateways/banese.png",
         projectHost,

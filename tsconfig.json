@@ -28,11 +28,23 @@
     "allowImportingTsExtensions": true,
     "noEmit": true
   },
+  "include": [
+    "src",
+    "modules",
+    "lib",
+    "components",
+    "hooks",
+    "types",
+    "scripts",
+    "*.ts",
+    "*.tsx",
+    "*.d.ts"
+  ],
   "exclude": [
     "node_modules",
     "pasta sem título",
     "pasta sem título",
-    "supabase/functions",
+    "supabase",
     "dist",
     "tmp"
   ]

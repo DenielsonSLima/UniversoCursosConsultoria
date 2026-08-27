@@ -19,6 +19,7 @@ import {
   banesePartyAddress as partyAddress,
   drawBaneseBarcode as drawBarcode,
   drawBaneseBox as drawBox,
+  drawBaneseCompanyLogo as drawCompanyLogo,
   drawBaneseImageContain as drawImageContain,
   drawBaneseText as drawText,
 } from "../pdf/primitives.ts";
@@ -98,10 +99,10 @@ export const drawBaneseCarnetSlip = async (
     borderWidth: 0.7,
   });
   if (assets.companyLogo) {
-    drawImageContain(page, assets.companyLogo, {
-      x: box.x + 6,
-      y: box.y + box.height - 34,
-      width: stubWidth - 12,
+    drawCompanyLogo(page, assets.companyLogo, {
+      x: box.x + 3,
+      y: box.y + box.height - 35,
+      width: stubWidth - 6,
       height: 28,
     });
   } else {

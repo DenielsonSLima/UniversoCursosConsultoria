@@ -168,6 +168,14 @@ export const drawBaneseImageContain = (
   });
 };
 
+export const drawBaneseCompanyLogo = (
+  page: PDFPage,
+  image: PDFImage,
+  box: BaneseDocumentBox,
+) => {
+  drawBaneseImageContain(page, image, box, 6.5);
+};
+
 export const drawBaneseBarcode = (
   page: PDFPage,
   barcodeValue: string,

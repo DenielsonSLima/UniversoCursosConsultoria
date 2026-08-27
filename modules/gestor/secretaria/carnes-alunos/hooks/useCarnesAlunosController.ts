@@ -72,14 +72,15 @@ export const useCarnesAlunosController = (poloId?: string | null) => {
     return cancelActiveGeneration;
   }, [cancelActiveGeneration, poloId]);
 
+  const effectivePoloId = poloId && poloId !== 'todos' ? poloId : 'todos';
   const requiresSearch = mode !== 'batch';
   const canQuery = Boolean(
-    poloId && (!requiresSearch || debouncedSearch.length >= 2),
+    (!requiresSearch || debouncedSearch.length >= 2),
   );
   const groupsQuery = useQuery({
     queryKey: [
       'secretaria-banese-document-groups',
-      poloId,
+      effectivePoloId,
       mode,
       debouncedSearch,
       mode === 'batch' ? courseId : '',
@@ -87,7 +88,7 @@ export const useCarnesAlunosController = (poloId?: string | null) => {
       page,
     ],
     queryFn: ({ signal }) => carnesAlunosService.listGroups({
-      poloId: poloId!,
+      poloId: effectivePoloId,
       search: normalizedOptional(debouncedSearch),
       courseId: mode === 'batch' ? normalizedOptional(courseId) : undefined,
       classId: mode === 'batch' ? normalizedOptional(classId) : undefined,

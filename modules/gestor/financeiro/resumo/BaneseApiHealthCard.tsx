@@ -42,7 +42,11 @@ const evidencePresentation = {
   },
 } as const;
 
-const BaneseApiHealthCard: React.FC = () => {
+interface BaneseApiHealthCardProps {
+  compact?: boolean;
+}
+
+const BaneseApiHealthCard: React.FC<BaneseApiHealthCardProps> = ({ compact = false }) => {
   const queryClient = useQueryClient();
   const overviewQuery = useQuery({
     queryKey: ['integracao_bancaria'],
@@ -125,6 +129,61 @@ const BaneseApiHealthCard: React.FC = () => {
       ? 'Código EDI7 do Banese ainda não foi confirmado pelo servidor.'
       : null;
   const cnabNotice = describeCnabAvailabilityError(cnabError);
+
+  if (compact) {
+    return (
+      <section className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm">
+        <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-3">
+          <div>
+            <p className="text-[9px] font-black uppercase tracking-widest text-blue-700">Canal principal</p>
+            <h4 className="text-sm font-black text-[#001a33]">API Banese</h4>
+          </div>
+          <span className="inline-flex items-center gap-1 rounded-full border border-blue-100 bg-blue-50 px-2 py-0.5 text-[9px] font-black text-blue-700">
+            <Globe2 size={11} /> Global
+          </span>
+        </div>
+
+        {isLoading ? (
+          <div className="mt-3 flex items-center gap-2 rounded-xl bg-slate-50 p-3 text-xs font-bold text-slate-500">
+            <Loader2 size={13} className="animate-spin" /> Verificando...
+          </div>
+        ) : overviewQuery.isError || healthQuery.isError ? (
+          <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-[11px] font-semibold text-amber-900">
+            Indisponível no momento.
+          </div>
+        ) : evidence ? (
+          <div className="mt-3 space-y-3">
+            <div className={`rounded-xl border p-3 ${presentation.className}`}>
+              <div className="flex items-start gap-2">
+                <EvidenceIcon size={16} className="mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-wide">{presentation.label}</p>
+                  <p className="mt-0.5 text-[10px] font-semibold opacity-90">{presentation.detail}</p>
+                </div>
+              </div>
+              <div className="mt-2 text-[10px] font-bold text-slate-600">
+                Consulta: {formatApiSyncDateTime(evidence.lastReconciliationAt)}
+              </div>
+            </div>
+
+            <div className={`rounded-xl border p-3 ${cnabQuery.data?.edi7Configured === true ? 'border-indigo-200 bg-indigo-50 text-indigo-900' : 'border-amber-200 bg-amber-50 text-amber-900'}`}>
+              <div className="flex items-start gap-2">
+                <FileText size={16} className="mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-wide">CNAB240</p>
+                  <p className="mt-0.5 text-[10px] font-semibold leading-tight">
+                    {cnabQuery.data?.edi7Configured === true
+                      ? 'EDI7 configurado'
+                      : 'Contingência bloqueada (exige EDI7)'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </section>
+    );
+  }
 
   return (
     <section className="rounded-3xl border border-blue-100 bg-white p-5 shadow-sm md:p-6">

@@ -17,6 +17,10 @@ test('usa o dia civil de Maceió quando UTC já avançou para o dia seguinte', (
     start: '2026-08-26',
     end: '2026-08-26',
   });
+  assert.deepEqual(getResumoPresetRange('LAST_30_DAYS', reference), {
+    start: '2026-07-28',
+    end: '2026-08-26',
+  });
   assert.deepEqual(getResumoOverdueRange(reference), {
     start: '1970-01-01',
     end: '2026-08-25',

@@ -4,6 +4,7 @@ import {
   type BaneseDocumentBranding,
   formatBaneseDigitableLine,
 } from "../types.ts";
+import { OFFICIAL_UNIVERSO_LOGO_BASE64 } from "../assets/universo-logo.ts";
 import {
   BANESE_PDF_COLORS,
   type BaneseDocumentBox,
@@ -148,7 +149,10 @@ export const embedBaneseBrandAssets = async (
   branding: BaneseDocumentBranding = {},
 ): Promise<BaneseDocumentBrandAssets> => ({
   bankLogo: await embedImage(pdf, branding.bankLogoBase64),
-  companyLogo: await embedImage(pdf, branding.companyLogoBase64),
+  companyLogo: await embedImage(
+    pdf,
+    branding.companyLogoBase64 || OFFICIAL_UNIVERSO_LOGO_BASE64,
+  ),
 });
 
 export const embedBanesePixQr = async (
