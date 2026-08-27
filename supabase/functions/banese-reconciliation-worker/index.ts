@@ -11,6 +11,10 @@ import {
   scheduledLaunchAt,
 } from "./pacing.ts";
 import { readRequestBody, safeEqual } from "./request-guards.ts";
+import {
+  classifyBaneseReconciliationError,
+  shouldHaltBaneseReconciliationBatch,
+} from "./error-classification.ts";
 
 type CachedToken = { token: BaneseAccessToken; expiresAt: number };
 
@@ -39,66 +43,6 @@ const wait = (milliseconds: number, signal?: AbortSignal) =>
       resolve();
     }, { once: true });
   });
-
-const classifyError = (error: unknown) => {
-  const message = error instanceof Error ? error.message : String(error ?? "");
-  const statusMatch = message.match(/\((\d{3})\)/);
-  const httpStatus = statusMatch ? Number(statusMatch[1]) : null;
-  if (httpStatus === 429) {
-    return {
-      result: "THROTTLED" as const,
-      errorClass: "RATE_LIMIT",
-      httpStatus,
-      publicMessage: "Consulta Banese temporariamente limitada (HTTP 429).",
-    };
-  }
-  if (httpStatus === 401 || httpStatus === 403) {
-    return {
-      result: "ERROR" as const,
-      errorClass: "AUTH",
-      httpStatus,
-      publicMessage: "Falha de autenticação na consulta Banese.",
-    };
-  }
-  if (httpStatus && httpStatus >= 500) {
-    return {
-      result: "ERROR" as const,
-      errorClass: "UPSTREAM_5XX",
-      httpStatus,
-      publicMessage: "Serviço Banese temporariamente indisponível.",
-    };
-  }
-  if (/timeout|timed out|aborted/i.test(message)) {
-    return {
-      result: "ERROR" as const,
-      errorClass: "TIMEOUT",
-      httpStatus,
-      publicMessage: "Tempo esgotado na consulta Banese.",
-    };
-  }
-  if (/SUPABASE_AUDIT_WRITE/i.test(message)) {
-    return {
-      result: "ERROR" as const,
-      errorClass: "AUDIT_WRITE",
-      httpStatus,
-      publicMessage: "A consulta ocorreu, mas a auditoria interna falhou.",
-    };
-  }
-  if (/diverge|inválid|inval|bloquead|mudou durante/i.test(message)) {
-    return {
-      result: "ERROR" as const,
-      errorClass: "REVIEW_REQUIRED",
-      httpStatus,
-      publicMessage: "Consulta Banese requer revisão financeira.",
-    };
-  }
-  return {
-    result: "ERROR" as const,
-    errorClass: "QUERY_ERROR",
-    httpStatus,
-    publicMessage: "Não foi possível confirmar o título no Banese.",
-  };
-};
 
 const invalidateToken = (environment: Environment) => {
   tokenCache.delete(environment);
@@ -326,7 +270,11 @@ Deno.serve(async (req: Request) => {
       const queryWithSharedToken = async (
         queryAdmin: any,
         queryEnvironment: Environment,
-        input: { convenio: unknown; nossoNumero: unknown },
+        input: {
+          convenio: unknown;
+          nossoNumero: unknown;
+          recoverPix?: boolean;
+        },
       ) => {
         try {
           return await queryBaneseBoleto(queryAdmin, queryEnvironment, {
@@ -335,7 +283,7 @@ Deno.serve(async (req: Request) => {
             signal: queryController.signal,
           });
         } catch (error) {
-          const classification = classifyError(error);
+          const classification = classifyBaneseReconciliationError(error);
           if (
             classification.errorClass !== "AUTH" ||
             renewedAfterUnauthorized
@@ -398,13 +346,17 @@ Deno.serve(async (req: Request) => {
         queryController.signal.aborted;
       if (cancelledByPeer) return;
       failed += 1;
-      const classification = classifyError(error);
+      const classification = classifyBaneseReconciliationError(error);
       throttled ||= classification.result === "THROTTLED";
-      halted = true;
-      batchController.abort(classification.errorClass);
+      if (shouldHaltBaneseReconciliationBatch(classification.errorClass)) {
+        halted = true;
+        batchController.abort(classification.errorClass);
+      }
       console.error("banese reconciliation item failed", {
         receivableId,
         errorClass: classification.errorClass,
+        diagnosticCode: classification.diagnosticCode ||
+          classification.errorClass,
         httpStatus: classification.httpStatus,
       });
       if (classification.errorClass !== "AUDIT_WRITE") {
@@ -417,7 +369,11 @@ Deno.serve(async (req: Request) => {
           })
           .eq("id", receivableId)
           .eq("gateway_provider", "banese_card");
-        if (updateError) auditFailure = true;
+        if (updateError) {
+          auditFailure = true;
+          halted = true;
+          batchController.abort("AUDIT_WRITE");
+        }
 
         const { error: attemptError } = await admin.rpc(
           "record_banese_reconciliation_attempt",
@@ -431,7 +387,11 @@ Deno.serve(async (req: Request) => {
             p_duration_ms: Date.now() - attemptStartedAt,
           },
         );
-        if (attemptError) auditFailure = true;
+        if (attemptError) {
+          auditFailure = true;
+          halted = true;
+          batchController.abort("AUDIT_WRITE");
+        }
       } else {
         auditFailure = true;
       }

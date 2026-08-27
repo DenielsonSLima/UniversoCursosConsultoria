@@ -1,8 +1,8 @@
 {
-  "version": "4.8.7",
+  "version": "4.8.8",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 16,
-  "releasedAt": "2026-08-26",
-  "summary": "Fechamento operacional do BolePix e das notificações financeiras seguras 4.8.6"
+  "revision": 17,
+  "releasedAt": "2026-08-27",
+  "summary": "Recuperação segura do BolePix Banese e identificação correta da rematrícula"
 }

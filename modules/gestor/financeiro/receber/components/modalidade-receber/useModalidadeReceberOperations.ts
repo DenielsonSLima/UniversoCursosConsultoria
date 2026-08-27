@@ -70,8 +70,14 @@ export const useModalidadeReceberOperations = (toast: OperationToast) => {
 
   const syncMutation = useMutation({
     mutationFn: (receivableId: string) => asaasIntegrationService.syncReceivable(receivableId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.receivablesRoot }),
-    onError: (error: any) => console.error('Não foi possível enviar a cobrança ao banco configurado:', error),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.receivablesRoot });
+      toast.success('Cobrança enviada', 'O banco confirmou o processamento da cobrança.');
+    },
+    onError: (error: any) => toast.error(
+      'Erro ao enviar cobrança',
+      error?.message || 'Não foi possível enviar a cobrança ao banco configurado.',
+    ),
   });
 
   const refreshMutation = useMutation({

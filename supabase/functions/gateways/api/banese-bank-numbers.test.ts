@@ -4,6 +4,7 @@ import {
   baneseDocumentFixtureAt,
 } from "../../banese/internal/testing/document-fixture.ts";
 import { validateBaneseRecoveredBankNumbers } from "./banese.ts";
+import { assertBaneseTransactionPixCompatible } from "./banese-reconciliation-contract.ts";
 
 const validRaw = {
   NumeroLinhaDigitavel: BANESE_DOCUMENT_FIXTURE.digitableLine,
@@ -11,14 +12,36 @@ const validRaw = {
 };
 
 Deno.test("valida integralmente numeros bancarios recuperados do Banese", () => {
-  const result = validateBaneseRecoveredBankNumbers(validRaw);
+  const result = validateBaneseRecoveredBankNumbers(validRaw, {
+    expectedOurNumber: BANESE_DOCUMENT_FIXTURE.ourNumber,
+  });
 
   assert.deepEqual(result, {
     digitableLine: BANESE_DOCUMENT_FIXTURE.digitableLine,
     barcode: BANESE_DOCUMENT_FIXTURE.barcode,
     hasRemoteDigitableLine: true,
     hasRemoteBarcode: true,
+    replacePersistedDigitableLine: false,
   });
+});
+
+Deno.test("autoriza reparar apenas DV local invalido do mesmo titulo oficial", () => {
+  const officialLine = BANESE_DOCUMENT_FIXTURE.digitableLine;
+  const persistedDigit = officialLine[31] === "9"
+    ? "0"
+    : String(Number(officialLine[31]) + 1);
+  const invalidPersistedLine = `${officialLine.slice(0, 31)}${persistedDigit}${
+    officialLine.slice(32)
+  }`;
+
+  const result = validateBaneseRecoveredBankNumbers(validRaw, {
+    digitableLine: invalidPersistedLine,
+    barcode: BANESE_DOCUMENT_FIXTURE.barcode,
+    expectedOurNumber: BANESE_DOCUMENT_FIXTURE.ourNumber,
+  });
+
+  assert.equal(result?.replacePersistedDigitableLine, true);
+  assert.equal(result?.digitableLine, officialLine);
 });
 
 Deno.test("valida retorno parcial contra o numero bancario persistido", () => {
@@ -120,5 +143,48 @@ Deno.test("rejeita numero recuperado divergente do titulo persistido", () => {
         barcode: BANESE_DOCUMENT_FIXTURE.barcode,
       }),
     /diverge do titulo persistido/i,
+  );
+});
+
+Deno.test("rejeita Nosso Numero valido de outro titulo no codigo de barras", () => {
+  const anotherTitle = baneseDocumentFixtureAt(1);
+
+  assert.throws(
+    () =>
+      validateBaneseRecoveredBankNumbers({
+        NumeroLinhaDigitavel: anotherTitle.digitableLine,
+        NumeroCodigoBarras: anotherTitle.barcode,
+      }, {
+        expectedOurNumber: BANESE_DOCUMENT_FIXTURE.ourNumber,
+      }),
+    /Nosso Numero.*diverge do titulo conciliado/i,
+  );
+});
+
+Deno.test("bloqueia transacao Pix divergente ou incompleta antes da mutacao", () => {
+  assert.doesNotThrow(() =>
+    assertBaneseTransactionPixCompatible(
+      [{ pix_payload: null, pix_encoded_image: null }],
+      "pix-oficial",
+      "imagem-oficial",
+    )
+  );
+  assert.throws(
+    () =>
+      assertBaneseTransactionPixCompatible(
+        [{ pix_payload: "pix-anterior", pix_encoded_image: "imagem-anterior" }],
+        "pix-oficial",
+        "imagem-oficial",
+      ),
+    /payload Pix divergente/i,
+  );
+  assert.throws(
+    () =>
+      assertBaneseTransactionPixCompatible(
+        [{ pix_payload: "pix-oficial", pix_encoded_image: null }],
+        "pix-oficial",
+        "imagem-oficial",
+      ),
+    /payload Pix divergente/i,
   );
 });

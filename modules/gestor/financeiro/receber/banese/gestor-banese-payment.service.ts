@@ -41,7 +41,12 @@ export const gestorBanesePaymentService = {
       printTab.location.replace(`${documentUrl}#toolbar=1&navpanes=0&view=FitH`);
       window.setTimeout(() => URL.revokeObjectURL(documentUrl), 5 * 60_000);
     } catch (error) {
-      printTab.close();
+      printTab.document.title = 'Boleto Banese indisponível';
+      printTab.document.body.textContent = '';
+      const message = printTab.document.createElement('main');
+      message.style.cssText = 'min-height:100vh;display:grid;place-items:center;padding:32px;background:#eef2f6;color:#001a33;font-family:Arial,sans-serif;text-align:center';
+      message.textContent = 'Não foi possível montar este boleto com segurança. Volte ao Portal de Gestão e confira a mensagem apresentada.';
+      printTab.document.body.appendChild(message);
       throw error;
     }
   },

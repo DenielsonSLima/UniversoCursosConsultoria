@@ -151,6 +151,25 @@ export const formatNextPendingDueDate = (
   nextDue: string,
 ) => pendingCount > 0 && nextDue ? formatReceivableDate(nextDue) : '—';
 
+export const receivableLaunchLabel = (
+  item: ContasReceber,
+  format: 'name' | 'fraction' = 'name',
+) => {
+  const launchType = String(item.tipoLancamento || '').trim().toUpperCase();
+  const fixedLabels: Record<string, string> = {
+    MATRICULA: 'Matrícula',
+    REMATRICULA: 'Rematrícula',
+    DEPENDENCIA: 'Dependência',
+  };
+  if (fixedLabels[launchType]) return fixedLabels[launchType];
+
+  const installment = Number(item.parcelaNumero);
+  if (Number.isInteger(installment) && installment > 0) {
+    return format === 'fraction' ? `${installment}/12` : `Parcela ${installment}`;
+  }
+  return format === 'fraction' ? '1/1' : 'Mensalidade';
+};
+
 export const paymentOriginLabel = (item: ContasReceber) => {
   if (item.origemPagamento === 'PRESENCIAL') {
     return ['DELETED', 'CANCELED'].includes(String(item.asaasStatus || '').toUpperCase())

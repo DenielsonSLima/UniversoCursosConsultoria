@@ -1,8 +1,42 @@
 # Lote ativo
 
-Estado: `PUBLICADO_PARCIAL_BACKEND_BANESE_AGUARDANDO_DEMAIS_ETAPAS`
+Estado: `PUBLICADO_COM_PENDENCIA_BANCARIA_HISTORICA`
 
-## Lote: 2026-08-26-carnes-alunos-e-baixa-rapida
+## Lote: 2026-08-27-bolepix-rematricula
+
+- Pedido: recuperar o QR Code Pix oficial nos boletos e carnês Banese emitidos hoje, corrigir a rematrícula que aparecia como parcela zero e publicar o hotfix completo.
+- Registro: `ai/operacao/registros/alteracoes/2026-08-27-bolepix-rematricula.md`.
+- Manifesto explícito: seção `Manifesto explícito` do registro acima.
+- Autorização: o usuário solicitou expressamente a correção em produção e a atualização completa do GitHub.
+- Risco: crítico, por envolver financeiro, payload BolePix, PDF bancário, Edge Functions e publicação.
+
+### Contratos preservados
+
+1. O sistema aceita somente o payload Pix oficial devolvido pelo Banese; nenhum QR Code ou código bancário é fabricado.
+2. A consulta de recuperação não cria nem reemite boleto e só completa o mesmo título depois de validar identidade e termos financeiros.
+3. Uma divergência por título fica isolada em revisão e não interrompe as demais cobranças do lote.
+4. A rematrícula é identificada por `tipo_lancamento`, sem convertê-la em mensalidade zero.
+5. Alterações locais paralelas, migrations não publicadas e mudanças comerciais ficam fora do manifesto.
+
+### Resultado
+
+- O worker voltou a autenticar o agendamento e executar com resposta 200.
+- O gateway preserva o `QrCode` exato do POST e aceita completá-lo por consulta somente se o banco também devolver o campo; payload e imagem são persistidos de forma atômica.
+- Linha digitável inválida só é reparada quando o código de barras oficial prova que se trata do mesmo título.
+- Tela e relatório exibem `Rematrícula`; a sincronização possui retorno visível e uma falha de PDF não fecha silenciosamente a aba preparada.
+- A migration remota restaurou o automático P3–P9 e endureceu contratos e permissões dos RPCs sem alterar os perfis manuais P17–P20.
+- 202 testes focados, TypeScript, Deno check, build e limite de linhas foram aprovados.
+
+### Publicação e pendências
+
+- `banese-reconciliation-worker` v34 e `asaas-api` v84 estão `ACTIVE` no projeto `kfekgwyqozhicpfuunpo`.
+- A migration remota registrada como `20260827222743_repair_banese_automatic_profile_floor` foi aplicada e validada.
+- O cron em P3 processou 15 títulos, manteve 2 pendentes e isolou 13 com `REMOTE_INTEREST_TYPE_INVALID`; nenhum título diferente foi associado e nenhum QR Code foi fabricado.
+- Os 13 retornos POST históricos continuam sem par Pix persistido. O GET público documentado não fornece QR; a recuperação exige o retorno exato do banco por título ou autorização explícita para reemissão individual.
+- O smoke autenticado permanece pendente pela indisponibilidade de uma sessão controlável; o fechamento não criou cobrança nem alterou dado financeiro para teste.
+- O erro CNAB por EDI7 e decisões de recriação ou regra comercial não pertencem a este hotfix.
+
+## Lote anterior preservado: 2026-08-26-carnes-alunos-e-baixa-rapida
 
 - Pedido: separar a emissão documental de carnês Banese dos recebimentos da Secretaria e permitir baixa manual no modal rápido "Financeiro do aluno" do Início.
 - Registro: `ai/operacao/registros/alteracoes/2026-08-26-carnes-alunos-e-baixa-rapida.md`.

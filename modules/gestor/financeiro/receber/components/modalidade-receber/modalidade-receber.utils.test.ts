@@ -13,6 +13,7 @@ import {
   paymentMethodLabel,
   receivableClassLabel,
   receivableCourseTitle,
+  receivableLaunchLabel,
   statusScopeLabels,
 } from './modalidade-receber.utils';
 
@@ -140,3 +141,18 @@ test('rotula todos os escopos de status incluindo vencidos', () => {
   assert.equal(statusScopeLabels.all, 'Todos');
 });
 
+test('prioriza rematrícula sobre o número sentinela zero', () => {
+  const reenrollment = receivable({
+    tipoLancamento: 'REMATRICULA',
+    parcelaNumero: 0,
+  });
+  const installment = receivable({
+    tipoLancamento: 'PARCELA',
+    parcelaNumero: 12,
+  });
+
+  assert.equal(receivableLaunchLabel(reenrollment), 'Rematrícula');
+  assert.equal(receivableLaunchLabel(reenrollment, 'fraction'), 'Rematrícula');
+  assert.equal(receivableLaunchLabel(installment), 'Parcela 12');
+  assert.equal(receivableLaunchLabel(installment, 'fraction'), '12/12');
+});

@@ -21,6 +21,7 @@ import {
   paymentOriginLabel,
   receivableClassLabel,
   receivableCourseTitle,
+  receivableLaunchLabel,
 } from './modalidade-receber.utils';
 
 export interface ReceivableActionsContext {
@@ -225,7 +226,7 @@ export const ReceivableRow: React.FC<ReceivableRowProps> = ({
       {compactStudent ? (
         <div className="space-y-1.5">
           <p className="text-xs font-black uppercase tracking-wider text-[#001a33]">
-            {item.parcelaNumero !== undefined ? `Parcela ${item.parcelaNumero}` : item.tipoLancamento || 'Cobrança'}
+            {receivableLaunchLabel(item)}
           </p>
           <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Matrícula: {formatEnrollment(item)}</p>
         </div>
@@ -247,7 +248,7 @@ export const ReceivableRow: React.FC<ReceivableRowProps> = ({
         ) : null}
         {!compactStudent ? (
           <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-            {item.tipoLancamento || 'Mensalidade'} {item.parcelaNumero !== undefined ? `· Parcela ${item.parcelaNumero}` : ''}
+            {receivableLaunchLabel(item)}
           </p>
         ) : null}
       </div>
@@ -310,7 +311,7 @@ export const ReceivableCard: React.FC<ItemProps> = ({ item, actions }) => (
         <p className="mt-1 text-[10px] font-bold text-slate-500">Turma: {receivableClassLabel(item)}</p>
       ) : null}
       <p className="mt-1 text-[10px] font-black uppercase tracking-wider text-slate-400">
-        {item.tipoLancamento || 'Mensalidade'}
+        {receivableLaunchLabel(item)}
       </p>
     </div>
     <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-4 text-xs">

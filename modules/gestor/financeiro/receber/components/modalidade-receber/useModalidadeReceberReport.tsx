@@ -25,6 +25,7 @@ import {
   paymentOriginLabel,
   receivableClassLabel,
   receivableCourseTitle,
+  receivableLaunchLabel,
   statusScopeLabels,
 } from './modalidade-receber.utils';
 
@@ -118,15 +119,7 @@ export const useModalidadeReceberReport = ({
       </div>,
       <div className="text-center">
         <p className="font-black text-[#001a33]">
-          {item.parcelaNumero !== undefined && item.parcelaNumero !== null
-            ? `${item.parcelaNumero}/12`
-            : item.tipoLancamento === 'MATRICULA'
-              ? 'Matrícula'
-              : item.tipoLancamento === 'REMATRICULA'
-                ? 'Rematrícula'
-                : item.tipoLancamento === 'DEPENDENCIA'
-                  ? 'Dependência'
-                  : '1/1'}
+          {receivableLaunchLabel(item, 'fraction')}
         </p>
         {item.tipoLancamento && item.tipoLancamento !== 'PARCELA' && item.tipoLancamento !== 'MATRICULA' ? (
           <p className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-slate-400">

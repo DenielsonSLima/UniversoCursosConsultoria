@@ -4,6 +4,21 @@ Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente
 
 Histórico anterior: [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
 
+## [4.8.8] - 2026-08-27
+
+### Corrigido
+
+- A emissão Banese preserva o `QrCode` exato do retorno oficial antes da persistência; uma consulta só completa o Pix quando o próprio banco devolver o campo e o mesmo código de barras, valor e vencimento forem confirmados.
+- Uma divergência bancária específica fica isolada para revisão sem interromper as demais cobranças do lote.
+- Rematrícula, matrícula e dependência voltam a usar seus nomes próprios na tela e no relatório, sem aparecer como `Parcela 0`.
+- Falhas na sincronização e na montagem segura do boleto passam a permanecer visíveis ao operador.
+
+### Segurança e qualidade
+
+- Nenhum QR Code, payload EMV ou número bancário é fabricado; divergências válidas continuam bloqueadas e o exemplo bancário não é associado a títulos com valor ou vencimento diferente.
+- O automático Banese foi restaurado à faixa P3–P9 com RPCs e permissões endurecidos; o worker e o gateway publicados foram validados com testes focados, checagem de tipos e limite de 500 linhas.
+- Títulos históricos sem o retorno POST permanecem isolados: o sistema não reconstrói QR Code e não aceita tipo de juros remoto fora do contrato financeiro confirmado.
+
 ## [4.8.7] - 2026-08-26
 
 ### Alterado
