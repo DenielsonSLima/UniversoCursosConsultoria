@@ -176,7 +176,7 @@ const FinanceiroConfigSummary: React.FC<FinanceiroConfigSummaryProps> = ({
         <h3 className="text-lg font-black text-[#001a33] uppercase tracking-tight">Cronograma de Cobrança</h3>
         <p className="text-slate-500 text-xs mt-0.5">
           {config.cobrarRematricula
-            ? 'Matrícula, mensalidades e rematrícula do ciclo canônico.'
+            ? 'Matrícula, mensalidades e ciclos projetados do curso.'
             : 'O plano encerra após as mensalidades deste ciclo.'}
         </p>
       </div>

@@ -120,16 +120,59 @@ export const mapConfigToRegraTecnicaInput = (
   instrucaoBoleto: config.instrucaoBoletoCarne.trim(),
 });
 
+const addMonthsToDateString = (dateStr: string, monthsToAdd: number, targetDay: number): string => {
+  const [yearStr, monthStr, dayStr] = dateStr.split('-');
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStr, 10) - 1;
+  const day = parseInt(dayStr, 10);
+
+  const targetDate = new Date(year, month + monthsToAdd, 1);
+  const targetYear = targetDate.getFullYear();
+  const targetMonth = targetDate.getMonth();
+  const lastDay = new Date(targetYear, targetMonth + 1, 0).getDate();
+  const finalDay = Math.min(targetDay || day, lastDay);
+
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${targetYear}-${pad(targetMonth + 1)}-${pad(finalDay)}`;
+};
+
 export const mapRegraTecnicaCronograma = (
   regra: MatriculaTecnicaRegra,
-): CronogramaItem[] => regra.cronogramaCiclo.map((item) => ({
-  id: item.id,
-  tipo: item.tipo === 'MENSALIDADE' ? 'PARCELA' : item.tipo,
-  label: item.label,
-  valor: decimalToNumber(item.valor),
-  numero: item.numero || undefined,
-  dataVencimento: item.dataVencimento,
-}));
+): CronogramaItem[] => {
+  const items: CronogramaItem[] = regra.cronogramaCiclo.map((item) => ({
+    id: item.id,
+    tipo: item.tipo === 'MENSALIDADE' ? 'PARCELA' : item.tipo,
+    label: item.label,
+    valor: decimalToNumber(item.valor),
+    numero: item.numero || undefined,
+    dataVencimento: item.dataVencimento,
+  }));
+
+  // Se a rematrícula estiver habilitada, projeta também as parcelas do Ciclo 2 no cronograma
+  if (regra.cobranca.rematricula.habilitada) {
+    const rematricula = items.find((i) => i.tipo === 'REMATRICULA');
+    const valorParcela = decimalToNumber(regra.cobranca.mensalidade.valor);
+    const qtd = regra.cobranca.mensalidade.quantidade;
+    const diaBase = regra.vencimento.diaBase;
+    const baseDateStr = rematricula?.dataVencimento || regra.vencimento.primeiroVencimentoSugerido;
+
+    if (baseDateStr) {
+      for (let num = 1; num <= qtd; num++) {
+        const dueDate = addMonthsToDateString(baseDateStr, num, diaBase);
+        items.push({
+          id: `ciclo-2-mensalidade-${num}`,
+          tipo: 'PARCELA',
+          label: `Mensalidade ${num}/${qtd} (Ciclo 2)`,
+          valor: valorParcela,
+          numero: num,
+          dataVencimento: dueDate,
+        });
+      }
+    }
+  }
+
+  return items;
+};
 
 export const mapRegraTecnicaCalculo = (
   regra: MatriculaTecnicaRegra,
