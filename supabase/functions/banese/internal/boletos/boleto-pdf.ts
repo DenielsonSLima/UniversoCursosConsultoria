@@ -5,7 +5,7 @@ import {
   normalizeBaneseBoletoDocument,
 } from "../types.ts";
 import {
-  drawBaneseCompanyHeader,
+  drawBaneseDocumentTitle,
   embedBaneseBrandAssets,
 } from "../pdf/branding.ts";
 import {
@@ -57,16 +57,16 @@ export const buildBaneseBoletoPdf = async (
   const assets = await embedBaneseBrandAssets(pdf, options.branding);
   const contentWidth = BANESE_PDF_PAGE.width - BANESE_PDF_PAGE.margin * 2;
 
-  drawBaneseCompanyHeader(page, fonts, input, {
+  drawBaneseDocumentTitle(page, fonts, {
     x: BANESE_PDF_PAGE.margin,
     y: 807,
     width: contentWidth,
     height: 28,
-  }, assets);
+  });
 
   if (input.environment === "sandbox") {
     page.drawRectangle({
-      x: 200,
+      x: BANESE_PDF_PAGE.margin + 8,
       y: 813,
       width: 178,
       height: 16,
@@ -78,7 +78,7 @@ export const buildBaneseBoletoPdf = async (
       page,
       fonts,
       "HOMOLOGAÇÃO - SEM VALIDADE",
-      214,
+      BANESE_PDF_PAGE.margin + 22,
       818,
       {
         size: 7,

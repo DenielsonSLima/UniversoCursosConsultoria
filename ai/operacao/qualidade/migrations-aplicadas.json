@@ -84,6 +84,90 @@
       "remoteId": "20260825204543",
       "sha256": "59efa873989c95c95559e187d05c51d37c422e4e53317a1dd02f3adaaa32fa5d",
       "reason": "Migration aplicada em Produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260826224000_create_banese_terminal_cancellation_outbox.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260826232116",
+      "sha256": "987cd643f7feab62051a7e3d2ec00ebde28f6e22b72ff8decc945579d5e2bc39",
+      "reason": "Migration aplicada em Produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260826224010_claim_banese_terminal_cancellation_outbox.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260826232124",
+      "sha256": "1f1fdbb492807bd37dd6be83999fba8d7b0f502366d927a1158024d9ffd97282",
+      "reason": "Migration aplicada em Produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260826224020_complete_banese_terminal_cancellation_outbox.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260826232126",
+      "sha256": "82d5b3ca749e88c281093f4448a3e86992078cafc479c0f1ced10c1639a6317f",
+      "reason": "Migration aplicada em Produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260826224030_index_banese_terminal_cancellation_outbox.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260826232456",
+      "sha256": "14f78aa6a548d379e22cbbf065877cee856df43050ca4ef835cc9750b3e9df9b",
+      "reason": "Migration aplicada em Produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260826235000_align_radiology_japoata_start_to_first_charge.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260826235407",
+      "sha256": "41ae45bee3d35a4cdc6a2d459546d0acce91292510b06a5643fb317e15ee38d1",
+      "reason": "Migration aplicada em Produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260826230000_create_secure_classes_report.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260827000401",
+      "sha256": "cbac8ee87b466b76b875ddcd90d796683bd2da4ac7370e17b01b560fbb34b65a",
+      "reason": "Migration aplicada em Produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260826231000_create_secure_academic_students_report.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260827000431",
+      "sha256": "ce16f70dae3892fbfde2c04838206c86c81604986927313816b21fc85631af89",
+      "reason": "Migration aplicada em Produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260826235900_expand_terminal_cancellation_to_all_unpaid.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260827000704",
+      "sha256": "d66b5f2244604d3b075bf02f79c0fae1aadde60ffc15c5d202719acff9f6e4a2",
+      "reason": "Migration aplicada em Produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260826235910_claim_all_unpaid_terminal_cancellations.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260827000707",
+      "sha256": "dcb8365d12b289e11b2b0afd182cf71660eeeaf29004602bdff7c7c2a9d36256",
+      "reason": "Migration aplicada em Produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260826235920_complete_all_unpaid_terminal_cancellations.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260827000709",
+      "sha256": "05d8b3fd949e5762ab1138c01f414b3f380b5b84e99b64b2ea40698954385d24",
+      "reason": "Migration aplicada em Produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260827001500_harden_all_unpaid_terminal_cancellation.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260827002350",
+      "sha256": "99ee12d3bd764cf5561140f9e9193d45f0592701638fd742d5f5263f8159f62b",
+      "reason": "Migration aplicada em Produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260827002500_require_confirmed_banese_terminal_cancellation.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260827002819",
+      "sha256": "56c381292f4b8846350bba868731ca05476e0fd303fec152b919f03c62646a8b",
+      "reason": "Migration aplicada em Produção; histórico imutável."
     }
   ]
 }

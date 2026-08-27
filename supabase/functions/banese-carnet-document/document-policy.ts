@@ -5,15 +5,18 @@ import {
 import { normalizeBaneseFinancialTerms } from "../banese/internal/financial-terms.ts";
 
 export const BANESE_CARNET_MAX_ITEMS = 30;
+export const BANESE_DOCUMENT_PAYABLE_LOCAL_STATUSES = [
+  "PENDENTE",
+  "VENCIDO",
+  "AGUARDANDO_CONFIRMACAO",
+] as const;
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-const PAYABLE_LOCAL_STATUSES = new Set([
-  "PENDENTE",
-  "VENCIDO",
-  "AGUARDANDO_CONFIRMACAO",
-]);
+const PAYABLE_LOCAL_STATUSES = new Set<string>(
+  BANESE_DOCUMENT_PAYABLE_LOCAL_STATUSES,
+);
 const PAYABLE_BANK_STATUSES = new Set([
   "",
   "2",
@@ -252,23 +255,89 @@ const assertRegisteredAndConfirmed = (row: BaneseCarnetReceivableRow) => {
   }
 };
 
+export const isRegisteredBaneseDocumentRow = (
+  row: BaneseCarnetReceivableRow,
+) => {
+  try {
+    readBaneseCarnetScope(row);
+    assertRegisteredAndConfirmed(row);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+export const takeRegisteredBaneseCarnetCandidateRows = (
+  candidates: BaneseCarnetReceivableRow[],
+) =>
+  candidates
+    .filter(isRegisteredBaneseDocumentRow)
+    .slice(0, BANESE_CARNET_MAX_ITEMS + 1);
+
 const installmentOrder = (row: BaneseCarnetReceivableRow) => {
   const value = Number(row.parcela_numero);
   return Number.isInteger(value) && value > 0 ? value : Number.MAX_SAFE_INTEGER;
+};
+
+const selectScopeRows = (
+  selected: BaneseCarnetReceivableRow,
+  candidates: BaneseCarnetReceivableRow[],
+) => {
+  const scope = readBaneseCarnetScope(selected);
+  return candidates.filter((row) => isPayable(row) && matchesScope(row, scope))
+    .sort((left, right) =>
+      installmentOrder(left) - installmentOrder(right) ||
+      text(left.data_vencimento).localeCompare(text(right.data_vencimento)) ||
+      left.id.localeCompare(right.id)
+    );
+};
+
+const assertSelectedAndUniqueBankTitles = (
+  selected: BaneseCarnetReceivableRow,
+  rows: BaneseCarnetReceivableRow[],
+) => {
+  if (!rows.some((row) => row.id === selected.id)) {
+    throw new BaneseCarnetPolicyError(
+      "A parcela selecionada não pertence ao grupo seguro do carnê.",
+    );
+  }
+  const uniqueGroups = [
+    rows.map((row) => row.id),
+    rows.map((row) => digits(row.gateway_boleto_nosso_numero)),
+    rows.map((row) => digits(row.gateway_boleto_linha_digitavel)),
+    rows.map((row) => digits(row.gateway_boleto_codigo_barras)),
+  ];
+  if (uniqueGroups.some((values) => new Set(values).size !== rows.length)) {
+    throw new BaneseCarnetPolicyError(
+      "As parcelas do carnê precisam possuir títulos bancários exclusivos.",
+    );
+  }
+};
+
+/**
+ * Seleciona um grupo documental Banese válido com uma ou mais parcelas.
+ * O limite de 3..30 continua exclusivo do compositor de carnê.
+ */
+export const selectBaneseDocumentGroupRows = (
+  selected: BaneseCarnetReceivableRow,
+  candidates: BaneseCarnetReceivableRow[],
+) => {
+  const rows = selectScopeRows(selected, candidates);
+  if (!rows.length) {
+    throw new BaneseCarnetPolicyError(
+      "Nenhuma parcela registrada pertence ao grupo documental Banese.",
+    );
+  }
+  rows.forEach(assertRegisteredAndConfirmed);
+  assertSelectedAndUniqueBankTitles(selected, rows);
+  return rows;
 };
 
 export const selectBaneseCarnetDocumentRows = (
   selected: BaneseCarnetReceivableRow,
   candidates: BaneseCarnetReceivableRow[],
 ) => {
-  const scope = readBaneseCarnetScope(selected);
-  const rows = candidates.filter((row) =>
-    isPayable(row) && matchesScope(row, scope)
-  ).sort((left, right) =>
-    installmentOrder(left) - installmentOrder(right) ||
-    text(left.data_vencimento).localeCompare(text(right.data_vencimento)) ||
-    left.id.localeCompare(right.id)
-  );
+  const rows = selectScopeRows(selected, candidates);
 
   if (!rows.some((row) => row.id === selected.id)) {
     throw new BaneseCarnetPolicyError(
@@ -287,16 +356,6 @@ export const selectBaneseCarnetDocumentRows = (
   }
 
   rows.forEach(assertRegisteredAndConfirmed);
-  const uniqueGroups = [
-    rows.map((row) => row.id),
-    rows.map((row) => digits(row.gateway_boleto_nosso_numero)),
-    rows.map((row) => digits(row.gateway_boleto_linha_digitavel)),
-    rows.map((row) => digits(row.gateway_boleto_codigo_barras)),
-  ];
-  if (uniqueGroups.some((values) => new Set(values).size !== rows.length)) {
-    throw new BaneseCarnetPolicyError(
-      "As parcelas do carnê precisam possuir títulos bancários exclusivos.",
-    );
-  }
+  assertSelectedAndUniqueBankTitles(selected, rows);
   return rows;
 };

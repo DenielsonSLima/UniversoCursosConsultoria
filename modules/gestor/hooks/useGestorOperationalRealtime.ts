@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import { gestaoQueryKeys } from '../gestao/gestao.query-keys';
+import { dashboardQueryKeys } from '../dashboard/dashboard.queries';
 import { parceirosQueryKeys } from '../parceiros/parceiros.query-keys';
 import { secretariaCarteirinhasKeys } from '../secretaria/carteirinhas/secretaria-carteirinhas.service';
 
@@ -53,6 +54,7 @@ export const useGestorOperationalRealtime = ({
     let refreshParceiros = false;
     let refreshPartnerClasses = false;
     let refreshSecretaria = false;
+    let refreshDashboardKpis = false;
     let disposed = false;
     let scopeTurmasReady = !poloId;
     const scopedTurmaIds = new Set<string>();
@@ -97,7 +99,16 @@ export const useGestorOperationalRealtime = ({
     const markParceirosChanged = (changedId?: string) => {
       refreshParceiros = true;
       refreshSecretaria = true;
+      refreshDashboardKpis = true;
       void queryClient.invalidateQueries({ queryKey: parceirosQueryKeys.all, refetchType: 'none' });
+      void queryClient.invalidateQueries({
+        predicate: (query) => (
+          query.queryKey[0] === dashboardQueryKeys.all[0]
+          && query.queryKey[2] === 'kpis'
+          && (!poloId || query.queryKey[1] === poloId)
+        ),
+        refetchType: 'none',
+      });
       if (poloId) {
         void queryClient.invalidateQueries({
           queryKey: secretariaCarteirinhasKeys.workspace(poloId),
@@ -165,10 +176,22 @@ export const useGestorOperationalRealtime = ({
             stale: true,
           });
         }
+        if (refreshDashboardKpis) {
+          void queryClient.refetchQueries({
+            predicate: (query) => (
+              query.queryKey[0] === dashboardQueryKeys.all[0]
+              && query.queryKey[2] === 'kpis'
+              && (!poloId || query.queryKey[1] === poloId)
+            ),
+            type: 'active',
+            stale: true,
+          });
+        }
         refreshGestao = false;
         refreshParceiros = false;
         refreshPartnerClasses = false;
         refreshSecretaria = false;
+        refreshDashboardKpis = false;
         changedPartnerIds.clear();
       }, 400);
     }

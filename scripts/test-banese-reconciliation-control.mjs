@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
 const migrationPath = new URL(
@@ -26,6 +28,10 @@ const profilePolicyMigrationPath = new URL(
   '../supabase/migrations/20260727061428_harden_banese_autopilot_p10_and_worker_fencing.sql',
   import.meta.url,
 );
+const activeProfilePolicyMigrationPath = new URL(
+  '../supabase/migrations/20260827005500_define_banese_automatic_p3_p9_policy.sql',
+  import.meta.url,
+);
 const atomicReservationMigrationPath = new URL(
   '../supabase/migrations/20260813034453_prepare_banese_reconciliation_batch_atomically.sql',
   import.meta.url,
@@ -38,6 +44,10 @@ const baneseConsolePath = new URL(
   '../modules/gestor/configuracoes/consulta-api-banese/ConsultaApiBaneseConfig.tsx',
   import.meta.url,
 );
+const baneseAutopilotProgressPath = new URL(
+  '../modules/gestor/configuracoes/consulta-api-banese/BaneseAutopilotProgress.tsx',
+  import.meta.url,
+);
 const rootStylesPath = new URL('../styles.css', import.meta.url);
 const financialCycleMigrationPath = new URL(
   '../supabase/migrations/20260727045711_use_configured_installments_in_financial_cycles.sql',
@@ -45,6 +55,18 @@ const financialCycleMigrationPath = new URL(
 );
 const workerPath = new URL(
   '../supabase/functions/banese-reconciliation-worker/index.ts',
+  import.meta.url,
+);
+const workerPacingPath = new URL(
+  '../supabase/functions/banese-reconciliation-worker/pacing.ts',
+  import.meta.url,
+);
+const workerPacingTestPath = new URL(
+  '../supabase/functions/banese-reconciliation-worker/pacing.test.ts',
+  import.meta.url,
+);
+const workerRequestGuardsTestPath = new URL(
+  '../supabase/functions/banese-reconciliation-worker/request-guards.test.ts',
   import.meta.url,
 );
 const boletoAdapterPath = new URL(
@@ -60,21 +82,24 @@ const eadModalPath = new URL(
   import.meta.url,
 );
 
-const [migration, profileExpansionMigration, historyHardeningMigration, healthGuardMigration, priorityProfilesMigration, profilePolicyMigration, atomicReservationMigration, entrypointHardeningMigration, financialCycleMigration, worker, boletoAdapter, authAdapter, eadModal, baneseConsole, rootStyles] = await Promise.all([
+const [migration, profileExpansionMigration, historyHardeningMigration, healthGuardMigration, priorityProfilesMigration, profilePolicyMigration, activeProfilePolicyMigration, atomicReservationMigration, entrypointHardeningMigration, financialCycleMigration, worker, workerPacing, boletoAdapter, authAdapter, eadModal, baneseConsole, baneseAutopilotProgress, rootStyles] = await Promise.all([
   readFile(migrationPath, 'utf8'),
   readFile(profileExpansionMigrationPath, 'utf8'),
   readFile(historyHardeningMigrationPath, 'utf8'),
   readFile(healthGuardMigrationPath, 'utf8'),
   readFile(priorityProfilesMigrationPath, 'utf8'),
   readFile(profilePolicyMigrationPath, 'utf8'),
+  readFile(activeProfilePolicyMigrationPath, 'utf8'),
   readFile(atomicReservationMigrationPath, 'utf8'),
   readFile(entrypointHardeningMigrationPath, 'utf8'),
   readFile(financialCycleMigrationPath, 'utf8'),
   readFile(workerPath, 'utf8'),
+  readFile(workerPacingPath, 'utf8'),
   readFile(boletoAdapterPath, 'utf8'),
   readFile(authAdapterPath, 'utf8'),
   readFile(eadModalPath, 'utf8'),
   readFile(baneseConsolePath, 'utf8'),
+  readFile(baneseAutopilotProgressPath, 'utf8'),
   readFile(rootStylesPath, 'utf8'),
 ]);
 
@@ -95,7 +120,7 @@ test('preserva a escada conservadora e o histórico paginado da versão anterior
   assert.match(healthGuardMigration, /created_at >= now\(\) - interval '1 hour'/);
 });
 
-test('separa testes gerais, prioridade de vencimento e perfis aguardando Banese', () => {
+test('preserva como histórico a política P10 que antecedeu a faixa ativa', () => {
   for (const [id, rate] of [[9, 30], [10, 60], [11, 90], [12, 150]]) {
     assert.match(priorityProfilesMigration, new RegExp(`\\(${id}, '[^']+', ${rate}, ${rate * 2}, 'REAL_TEST'`));
   }
@@ -117,9 +142,33 @@ test('separa testes gerais, prioridade de vencimento e perfis aguardando Banese'
   assert.match(profilePolicyMigration, /group_name = 'AWAITING_BANESE'/);
 });
 
+test('política ativa limita o automático a P3-P9 e mantém rollback gradual', () => {
+  assert.match(activeProfilePolicyMigration, /set automatic_selectable = id between 3 and 9/i);
+  assert.match(
+    activeProfilePolicyMigration,
+    /banese_reconciliation_config_automatic_range_check check[\s\S]+selected_profile_id = 9[\s\S]+effective_profile_id between 3 and 9[\s\S]+last_stable_profile_id between 3 and 9/i,
+  );
+  assert.match(
+    activeProfilePolicyMigration,
+    /v_new_target constant text :=[\s\S]+v_target_profile := case when v_mode = 'AUTOMATIC' then 9 else p_profile_id end/i,
+  );
+  assert.match(
+    activeProfilePolicyMigration,
+    /when v_mode = 'AUTOMATIC' then 3[\s\S]+v_new_rollback constant text :=[\s\S]+when v_config\.mode = 'AUTOMATIC' then greatest\([\s\S]+3,[\s\S]+least\([\s\S]+9,/i,
+  );
+  assert.match(
+    activeProfilePolicyMigration,
+    /v_to_profile := least\(9, v_config\.selected_profile_id, v_from_profile \+ 1\)/i,
+  );
+  assert.match(
+    activeProfilePolicyMigration,
+    /Teste temporário expirado; reinício no P3 com teto automático P9/i,
+  );
+});
+
 test('console Banese mantém tipografia nítida e amostra dinâmica', () => {
-  assert.match(baneseConsole, /O avanço do P\$\{autopilot\.currentProfileId\}/);
-  assert.doesNotMatch(baneseConsole, /No P2, portanto/);
+  assert.match(baneseAutopilotProgress, /O avanço do P\$\{autopilot\.currentProfileId\}/);
+  assert.doesNotMatch(baneseAutopilotProgress, /No P2, portanto/);
   assert.match(rootStyles, /#root \.banese-console/);
   assert.match(rootStyles, /font-size: 0\.75rem !important/);
   assert.match(rootStyles, /-webkit-font-smoothing: auto/);
@@ -163,14 +212,35 @@ test('worker consulta títulos existentes sem importar ou sincronizar parcelas f
   assert.match(worker, /queryBaneseBoleto/);
   assert.match(worker, /record_banese_reconciliation_attempt/);
   assert.match(worker, /halted = true/);
-  assert.match(worker, /queryDeadline = startedAt \+ 40_000/);
-  assert.match(worker, /hardDeadline = startedAt \+ 50_000/);
+  assert.match(worker, /createLaunchPacing\(startedAt, Date\.now\(\), targetTitles\)/);
+  assert.match(worker, /scheduledLaunchAt\(pacing, index\)/);
+  assert.match(worker, /canLaunchAt\(pacing, Date\.now\(\)\)/);
+  assert.match(workerPacing, /QUERY_DEADLINE_MS = 40_000/);
+  assert.match(workerPacing, /HARD_DEADLINE_MS = 50_000/);
+  assert.match(workerPacing, /LAUNCH_DRIFT_MARGIN_MS = 2_000/);
+  assert.match(workerPacing, /pacedWindowMs \/ boundedTarget/);
   assert.match(worker, /batchController = new globalThis\.AbortController/);
   assert.match(worker, /cancelledByPeer/);
   assert.match(worker, /SUPABASE_AUDIT_WRITE/);
   assert.match(worker, /Math\.min\(8, Number\(runConfig\.maxConcurrency/);
   assert.match(boletoAdapter, /signal: input\.signal/);
   assert.match(authAdapter, /options: \{ signal\?: AbortSignal \}/);
+});
+
+test('pacing e autenticação customizada executam no gate do domínio', () => {
+  const result = spawnSync(
+    'deno',
+    [
+      'test',
+      fileURLToPath(workerPacingTestPath),
+      fileURLToPath(workerRequestGuardsTestPath),
+    ],
+    { encoding: 'utf8' },
+  );
+  const output = [result.stdout, result.stderr].filter(Boolean).join('\n');
+
+  assert.ifError(result.error);
+  assert.equal(result.status, 0, output);
 });
 
 test('ciclo técnico usa a quantidade configurada e não fixa doze parcelas', () => {

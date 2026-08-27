@@ -14,7 +14,8 @@ export const SECRETARIA_ACCESS_OPTIONS = [
   { id: 'cracha-estagio', label: 'Crachá de Estágio', legacyTab: 'carteirinhas' },
   { id: 'cracha-periodo-eleitoral', label: 'Crachá SES', legacyTab: 'carteirinhas' },
   { id: 'termo-estagio', label: 'Termo de Estágio', legacyTab: 'solicitacoes' },
-  { id: 'consulta-financeira', label: 'Financeiro / Recebimentos', legacyTab: 'recebimentos' },
+  { id: 'consulta-financeira', label: 'Recebimentos', legacyTab: 'recebimentos' },
+  { id: 'carnes-alunos', label: 'Carnês dos alunos', legacyTab: 'recebimentos' },
   { id: 'transferencia', label: 'Transferência', legacyTab: 'solicitacoes' },
   { id: 'solicitacoes', label: 'Solicitações Acadêmicas', legacyTab: 'solicitacoes' },
   { id: 'dependencias-academicas', label: 'Dependências Acadêmicas', legacyTab: 'solicitacoes' },
@@ -56,6 +57,10 @@ export const normalizeSecretariaAccessTabs = (tabs: unknown): string[] => {
       }
     }
   }
+
+  // Perfis que já tinham a consulta financeira explícita mantêm acesso à
+  // leitura dos mesmos títulos no novo submódulo documental.
+  if (allowed.has('consulta-financeira')) allowed.add('carnes-alunos');
 
   return [...allowed];
 };

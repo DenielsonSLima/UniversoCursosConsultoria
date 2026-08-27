@@ -9,7 +9,6 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../../../../../../lib/supabase';
 import { formatMatricula } from '../../../../../../lib/academicUtils';
 import {
   AcademicMovementType,
@@ -32,6 +31,8 @@ import {
   isValidEnrollmentCpf,
 } from './parceiro-aluno-matriculas.utils';
 import EnrollmentContinuitySummary from './EnrollmentContinuitySummary';
+import { financeiroQueryKeys } from '../../../../financeiro/financeiro.queryKeys';
+import { useParceiroAlunoMatriculasQueries } from './useParceiroAlunoMatriculasQueries';
 
 interface Props { alunoId: string; }
 const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
@@ -52,90 +53,22 @@ const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
   const [operationDate, setOperationDate] = useState(getMaceioIsoDate());
   const [returnDate, setReturnDate] = useState('');
 
-  const { data: matriculas = [], isLoading, isError, error: matriculasError, refetch: refetchMatriculas } = useQuery<any[]>({
-    queryKey: ['parceiro', alunoId, 'matriculas'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('matriculas')
-        .select(`
-          *,
-          turmas(
-            id, nome, codigo, turno, status, polo_id,
-            cursos(id, nome, modalidade),
-            polos(nome, cidade, estado),
-            periodos_letivos(id, nome, ordem, status, data_inicio, data_fim)
-          ),
-          matricula_aproveitamentos!matricula_aproveitamentos_matricula_id_fkey(
-            id, disciplina_id, situacao, media_final, frequencia_percent, disciplinas(nome)
-          )
-        `)
-        .eq('aluno_id', alunoId)
-        .order('data_matricula', { ascending: false });
-      if (error) throw error;
-      return data || [];
-    },
-    staleTime: 15_000,
-  });
-  const { data: movements = [] } = useQuery<any[]>({
-    queryKey: ['parceiro', alunoId, 'matricula-movimentacoes'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('matricula_movimentacoes')
-        .select(`
-          *,
-          turma_origem:turmas!matricula_movimentacoes_turma_origem_id_fkey(nome, codigo),
-          turma_destino:turmas!matricula_movimentacoes_turma_destino_id_fkey(nome, codigo)
-        `)
-        .eq('aluno_id', alunoId)
-        .order('data_movimentacao', { ascending: false })
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data || [];
-    },
-    staleTime: 15_000,
-  });
-  const { data: aluno } = useQuery<any>({
-    queryKey: ['parceiro', alunoId, 'dados-basicos'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('parceiros')
-        .select('id, nome, cpf_cnpj')
-        .eq('id', alunoId)
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    staleTime: 60_000,
-  });
-  const { data: allClasses = [] } = useQuery<any[]>({
-    queryKey: ['parceiro', alunoId, 'turmas-disponiveis'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('turmas')
-        .select(`
-          id,
-          nome,
-          codigo,
-          turno,
-          status,
-          valor_matricula,
-          valor_rematricula,
-          valor_parcela,
-          dia_vencimento_padrao,
-          origem_financeira,
-          financeiro_herdado,
-          gerar_cobrancas_futuras,
-          sincronizar_asaas_futuro,
-          cursos(id, nome, modalidade),
-          polos(nome)
-        `)
-        .eq('status', 'EM_ANDAMENTO')
-        .order('nome');
-      if (error) throw error;
-      return data || [];
-    },
-    staleTime: 60_000,
-  });
+  const {
+    matriculasQuery,
+    movementsQuery,
+    alunoQuery,
+    allClassesQuery,
+  } = useParceiroAlunoMatriculasQueries(alunoId);
+  const {
+    data: matriculas = [],
+    isLoading,
+    isError,
+    error: matriculasError,
+    refetch: refetchMatriculas,
+  } = matriculasQuery;
+  const movements = movementsQuery.data || [];
+  const aluno = alunoQuery.data;
+  const allClasses = allClassesQuery.data || [];
   const destinationClasses = useMemo(
     () => allClasses.filter((item) =>
       item.id !== selected?.turma_id
@@ -168,9 +101,10 @@ const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
       queryClient.invalidateQueries({ queryKey: ['parceiro', alunoId, 'matricula-atual'] }),
       queryClient.invalidateQueries({ queryKey: ['parceiro', alunoId, 'matricula-movimentacoes'] }),
       queryClient.invalidateQueries({ queryKey: ['matriculas', alunoId] }),
-      queryClient.invalidateQueries({ queryKey: ['financeiro-aluno-receivables', alunoId] }),
       queryClient.invalidateQueries({ queryKey: ['aluno-financeiro', alunoId] }),
-      queryClient.invalidateQueries({ queryKey: ['financeiro-tecnico-recebiveis'] }),
+      queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.receivablesRoot }),
+      queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.resumoKpis }),
+      queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.alunoReceivables }),
       queryClient.invalidateQueries({ queryKey: ['diario-alunos'] }),
       queryClient.invalidateQueries({ queryKey: ['diario-notas-resultados'] }),
     ]);

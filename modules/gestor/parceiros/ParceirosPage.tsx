@@ -103,6 +103,9 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
     loadingTurmas,
     turmasError,
     reloadTurmas,
+    statusKpis,
+    loadingStatusKpis,
+    statusKpisError,
   } = useParceirosQueries({
     poloId,
     includeGlobal,
@@ -121,7 +124,6 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
     handleSearch,
     handleSort,
     sortedAndFilteredPartners,
-    kpis,
   } = useParceirosFilters(allPartners, activeTab);
 
   const turmasFiltradas = useMemo(
@@ -261,16 +263,32 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
         </div> : null}
       </div>
 
-      {!isDedicatedGovernanceTab ? <ParceirosKpis
-        totalParceiros={kpis.totalParceiros || 0}
-        totalParceirosAtivos={kpis.totalParceirosAtivos || 0}
-        totalAlunos={kpis.totalAlunosVinculados || 0}
-        totalAlunosAtivos={kpis.totalAlunosAtivos || 0}
-        totalAlunosInativos={kpis.totalAlunosInativos || 0}
-        totalProfessores={kpis.totalProfessoresVinculados || 0}
-        totalProfessoresAtivos={kpis.totalProfessoresAtivos || 0}
-        totalProfessoresInativos={kpis.totalProfessoresInativos || 0}
-      /> : null}
+      {!isDedicatedGovernanceTab && loadingStatusKpis ? (
+        <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-3" aria-label="Carregando indicadores">
+          {[0, 1, 2].map((item) => (
+            <div key={item} className="h-36 animate-pulse rounded-3xl border border-slate-100 bg-white" />
+          ))}
+        </div>
+      ) : null}
+
+      {!isDedicatedGovernanceTab && statusKpisError ? (
+        <div role="alert" className="mb-8 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm font-semibold text-amber-900">
+          Os indicadores de cadastros estão indisponíveis. A lista de parceiros continua acessível.
+        </div>
+      ) : null}
+
+      {!isDedicatedGovernanceTab && statusKpis && !statusKpisError ? (
+        <ParceirosKpis
+          totalParceiros={statusKpis.totalParceiros!}
+          totalParceirosAtivos={statusKpis.totalParceirosAtivos!}
+          totalAlunos={statusKpis.cadastrosAlunosTotal!}
+          totalAlunosAtivos={statusKpis.cadastrosAlunosAtivos!}
+          totalAlunosInativos={statusKpis.cadastrosAlunosInativos!}
+          totalProfessores={statusKpis.totalProfessores!}
+          totalProfessoresAtivos={statusKpis.totalProfessoresAtivos!}
+          totalProfessoresInativos={statusKpis.totalProfessoresInativos!}
+        />
+      ) : null}
 
       <div className="border-b border-slate-200 mb-5 mt-2">
         <div className="flex gap-6 overflow-x-auto pb-px">

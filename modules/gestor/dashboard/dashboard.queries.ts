@@ -1,5 +1,8 @@
 import { queryOptions } from '@tanstack/react-query';
-import { dashboardService } from './dashboard.service';
+import {
+  dashboardService,
+  type DashboardKpiRequirements,
+} from './dashboard.service';
 
 export const dashboardQueryKeys = {
   all: ['dashboard'] as const,
@@ -8,10 +11,28 @@ export const dashboardQueryKeys = {
   activity: (poloId: string, accessKey: string) => [...dashboardQueryKeys.all, poloId, 'activity', 5, accessKey] as const,
 };
 
-export const dashboardKpisQueryOptions = (poloId: string, accessKey = 'legacy') => queryOptions({
-  queryKey: dashboardQueryKeys.kpis(poloId, accessKey),
-  queryFn: () => dashboardService.getKpis(poloId),
-});
+const requirementsFromAccessKey = (accessKey: string): DashboardKpiRequirements => {
+  try {
+    const parsed = JSON.parse(accessKey) as { widgets?: unknown };
+    const widgets = Array.isArray(parsed.widgets) ? parsed.widgets : [];
+    return {
+      students: widgets.includes('alunos-ativos'),
+      revenue: widgets.includes('receita-mes'),
+      delinquency: widgets.includes('inadimplencia'),
+      enrollments: widgets.includes('matriculas-mes'),
+    };
+  } catch {
+    return {};
+  }
+};
+
+export const dashboardKpisQueryOptions = (poloId: string, accessKey = 'legacy') => {
+  const requirements = requirementsFromAccessKey(accessKey);
+  return queryOptions({
+    queryKey: dashboardQueryKeys.kpis(poloId, accessKey),
+    queryFn: () => dashboardService.getKpis(poloId, requirements),
+  });
+};
 
 export const dashboardChartQueryOptions = (poloId: string, accessKey = 'legacy') => queryOptions({
   queryKey: dashboardQueryKeys.chart(poloId, accessKey),

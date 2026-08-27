@@ -6,6 +6,14 @@ export type ManualSettlementPaymentMethod =
   | "CARTAO"
   | "DINHEIRO";
 
+export const MANUAL_SETTLEMENT_CONTEXT_STANDARD = "STANDARD" as const;
+export const MANUAL_SETTLEMENT_CONTEXT_DASHBOARD_EXISTING_TITLE_ONLY =
+  "DASHBOARD_EXISTING_TITLE_ONLY" as const;
+
+export type ManualSettlementContext =
+  | typeof MANUAL_SETTLEMENT_CONTEXT_STANDARD
+  | typeof MANUAL_SETTLEMENT_CONTEXT_DASHBOARD_EXISTING_TITLE_ONLY;
+
 export type ManualSettlementState =
   | "STARTED"
   | "REMOTE_CANCELED_LOCAL_PENDING"
@@ -30,6 +38,7 @@ export interface NormalizedManualSettlementRequest {
   accountId: string;
   paymentDate: string;
   paymentMethod: ManualSettlementPaymentMethod;
+  settlementContext: ManualSettlementContext;
   breakdown: ManualSettlementBreakdown;
 }
 
@@ -82,6 +91,7 @@ export interface ManualSettlementResult {
   academicSyncCompleted?: boolean;
   academicSyncWarning?: string | null;
   futureSyncWarning?: string | null;
+  futureSyncSuppressed?: boolean;
   breakdown?: ManualSettlementBreakdown;
 }
 

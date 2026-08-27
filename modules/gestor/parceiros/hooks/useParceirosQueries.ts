@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { alunosStatusService } from '../../alunos-status/alunos-status.service';
 import { parceirosService } from '../parceiros.service';
 import { parceirosQueryKeys } from '../parceiros.query-keys';
 
@@ -29,6 +30,17 @@ export const useParceirosQueries = (
     enabled: scope.enableTurmas !== false,
   });
 
+  const kpisQuery = useQuery({
+    queryKey: parceirosQueryKeys.kpis(scope.poloId, scope.includeGlobal),
+    queryFn: () => alunosStatusService.getKpis({
+      poloId: scope.poloId,
+      includeGlobal: scope.includeGlobal,
+      consumer: 'PARCEIROS',
+    }),
+    staleTime: 60_000,
+    enabled: scope.enablePartners !== false,
+  });
+
   return {
     allPartners: parceirosQuery.data || [],
     loadingPartners: parceirosQuery.isLoading,
@@ -36,5 +48,8 @@ export const useParceirosQueries = (
     loadingTurmas: turmasDisponiveisQuery.isLoading,
     turmasError: turmasDisponiveisQuery.isError,
     reloadTurmas: turmasDisponiveisQuery.refetch,
+    statusKpis: kpisQuery.data,
+    loadingStatusKpis: kpisQuery.isLoading,
+    statusKpisError: kpisQuery.isError,
   };
 };

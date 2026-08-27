@@ -9,9 +9,22 @@ export interface CanonicalPdfImage {
 
 export interface CanonicalPdfWatermark {
   enabled: boolean;
+  /** URL/data URI mantida no snapshot; compositores browser podem resolvê-la. */
   imageUrl: string | null;
+  /** Imagem isolada já resolvida, sem rasterizar a página. */
+  image?: CanonicalPdfImage | null;
   label: string | null;
   opacity: number | null;
+  /** Percentual configurado em Configurações > Marca d'água (10 a 100). */
+  scale?: number | null;
+  /** Booleano do editor ou ângulo explícito para snapshots especializados. */
+  rotate?: boolean | number | null;
+}
+
+export interface CanonicalPdfWatermarkStyle {
+  opacity: number;
+  scale: number;
+  rotation: number;
 }
 
 type PdfGStateConstructor = new (parameters: { opacity: number }) => unknown;
@@ -103,6 +116,36 @@ const clampOpacity = (value: number | null | undefined, fallback = 0.08) => {
     : fallback;
 };
 
+const clampScale = (value: number | null | undefined, fallback = 100) => {
+  const scale = Number(value);
+  return Number.isFinite(scale)
+    ? Math.min(100, Math.max(10, scale))
+    : fallback;
+};
+
+const normalizeRotation = (
+  value: boolean | number | null | undefined,
+  fallback: number,
+) => {
+  if (value === null || value === undefined) return fallback;
+  if (typeof value === "boolean") return value ? fallback : 0;
+  const angle = Number(value);
+  return Number.isFinite(angle) ? Math.min(360, Math.max(-360, angle)) : fallback;
+};
+
+export const normalizeCanonicalPdfWatermarkStyle = (
+  watermark: CanonicalPdfWatermark,
+  fallbackRotation = 35,
+  options: { hasImage?: boolean } = {},
+): CanonicalPdfWatermarkStyle => ({
+  opacity: clampOpacity(watermark.opacity),
+  scale: clampScale(watermark.scale),
+  rotation: normalizeRotation(
+    watermark.rotate,
+    options.hasImage && watermark.rotate == null ? 0 : fallbackRotation,
+  ),
+});
+
 export const drawCanonicalPdfWatermark = (
   pdf: jsPDF,
   GState: PdfGStateConstructor,
@@ -118,34 +161,47 @@ export const drawCanonicalPdfWatermark = (
 ) => {
   if (!watermark.enabled) return;
 
+  const image = watermark.image ?? getCanonicalPdfInlineImage(watermark.imageUrl);
+  const style = normalizeCanonicalPdfWatermarkStyle(watermark, options.rotate ?? 35, {
+    hasImage: Boolean(image),
+  });
+
   pdf.saveGraphicsState();
   pdf.setGState(
-    new GState({ opacity: clampOpacity(watermark.opacity) }) as never,
+    new GState({ opacity: style.opacity }) as never,
   );
-  const image = getCanonicalPdfInlineImage(watermark.imageUrl);
   if (image) {
     const properties = pdf.getImageProperties(image.dataUrl);
+    const configuredScale = style.scale / 100;
     const scale = Math.min(
-      options.width / properties.width,
-      options.height / properties.height,
+      (options.width * configuredScale) / properties.width,
+      (options.height * configuredScale) / properties.height,
     );
     const width = properties.width * scale;
     const height = properties.height * scale;
+    const centerX = options.x + options.width / 2;
+    const centerY = options.y + options.height / 2;
+    const radians = style.rotation * (Math.PI / 180);
+    const cosine = Math.cos(radians);
+    const sine = Math.sin(radians);
+    const imageX = centerX - ((cosine * width / 2) - (sine * height / 2));
+    const imageY = centerY - height + ((sine * width / 2) + (cosine * height / 2));
     pdf.addImage(
       image.dataUrl,
       image.format,
-      options.x + (options.width - width) / 2,
-      options.y + (options.height - height) / 2,
+      imageX,
+      imageY,
       width,
       height,
       undefined,
       "FAST",
+      style.rotation,
     );
   } else {
     const label = normalizeCanonicalPdfText(watermark.label) || "UNIVERSO";
     pdf.setTextColor(0, 26, 51);
     pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(options.textSize);
+    pdf.setFontSize(options.textSize * (style.scale / 100));
     pdf.text(
       label.toUpperCase(),
       options.x + options.width / 2,
@@ -153,7 +209,7 @@ export const drawCanonicalPdfWatermark = (
       {
         align: "center",
         baseline: "middle",
-        angle: options.rotate ?? 35,
+        angle: style.rotation,
       },
     );
   }

@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import {
   authorizationErrorHttpStatus,
   type GestorAutorizado,
+  requireBaneseBoletoDocumentReadAccess,
+  requireFinanceDocumentReadAccess,
+  requireFinanceWriteAccess,
   requireGestorAtivo,
+  requireGestorForPolo,
   requireGestorForWhatsAppRoute,
   requireGlobalFinancialTabAccess,
 } from "./authz.ts";
@@ -154,6 +158,103 @@ Deno.test("nega papel operacional mesmo com modulo, aba e escopo global", () => 
         "conciliacao-bancaria",
       ),
     /Acesso financeiro global nao autorizado/,
+  );
+});
+
+Deno.test("autoriza leitura documental em Financeiro/Receber e Caixa", () => {
+  assert.doesNotThrow(() => requireFinanceDocumentReadAccess(actor()));
+  assert.doesNotThrow(() =>
+    requireFinanceDocumentReadAccess(
+      actor({ modules: ["inicio", "caixa"], financeiroTabs: [], tabs: {} }),
+    )
+  );
+  assert.throws(
+    () =>
+      requireFinanceDocumentReadAccess(
+        actor({ financeiroTabs: ["resumo"], tabs: {} }),
+      ),
+    /documentos financeiros.*nao autorizado/i,
+  );
+});
+
+Deno.test("autoriza Secretaria somente nas abas financeiras documentais", () => {
+  for (
+    const tab of ["consulta-financeira", "recebimentos", "carnes-alunos"]
+  ) {
+    assert.doesNotThrow(() =>
+      requireFinanceDocumentReadAccess(
+        actor({
+          perfil: "Secretaria",
+          modules: ["inicio", "secretaria"],
+          financeiroTabs: [],
+          tabs: { secretaria: [tab] },
+        }),
+      )
+    );
+  }
+  assert.throws(
+    () =>
+      requireFinanceDocumentReadAccess(
+        actor({
+          perfil: "Secretaria",
+          modules: ["inicio", "secretaria"],
+          financeiroTabs: [],
+          tabs: { secretaria: ["ficha-matricula"] },
+        }),
+      ),
+    /documentos financeiros.*nao autorizado/i,
+  );
+});
+
+Deno.test("leitura documental da Secretaria nunca concede baixa", () => {
+  const secretaria = actor({
+    perfil: "Secretaria",
+    modules: ["inicio", "secretaria"],
+    financeiroTabs: [],
+    tabs: { secretaria: ["carnes-alunos"] },
+    isGlobal: false,
+    poloId: "polo-a",
+    poloIds: ["polo-a"],
+  });
+  assert.doesNotThrow(() => requireFinanceDocumentReadAccess(secretaria));
+  assert.doesNotThrow(() => requireGestorForPolo(secretaria, "polo-a"));
+  assert.throws(
+    () => requireGestorForPolo(secretaria, "polo-b"),
+    /sem permissao.*polo/i,
+  );
+  assert.throws(
+    () => requireFinanceWriteAccess(secretaria),
+    /Apenas gestor ou financeiro ativo/i,
+  );
+});
+
+Deno.test("Carnês dos alunos restringe boleto direto a parcelas", () => {
+  const carnesOnly = actor({
+    perfil: "Secretaria",
+    modules: ["inicio", "secretaria"],
+    financeiroTabs: [],
+    tabs: { secretaria: ["carnes-alunos"] },
+  });
+  assert.doesNotThrow(() =>
+    requireBaneseBoletoDocumentReadAccess(carnesOnly, "PARCELA")
+  );
+  assert.throws(
+    () => requireBaneseBoletoDocumentReadAccess(carnesOnly, "DEPENDENCIA"),
+    /tipo de boleto Banese nao autorizado/i,
+  );
+  assert.doesNotThrow(() =>
+    requireBaneseBoletoDocumentReadAccess(
+      actor({
+        perfil: "Secretaria",
+        modules: ["inicio", "secretaria"],
+        financeiroTabs: [],
+        tabs: { secretaria: ["recebimentos"] },
+      }),
+      "DEPENDENCIA",
+    )
+  );
+  assert.doesNotThrow(() =>
+    requireBaneseBoletoDocumentReadAccess(actor(), "DEPENDENCIA")
   );
 });
 

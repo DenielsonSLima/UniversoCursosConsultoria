@@ -219,6 +219,12 @@ export const normalizeBaneseBoletoDocument = (
   const pix = input.environment === "production" && input.pix
     ? normalizeBanesePixDocumentData(input.pix, amount)
     : null;
+  const instructions = (input.instructions || [])
+    .map((instruction) => String(instruction || "").trim())
+    .filter(Boolean);
+  if (instructions.length > 5) {
+    throw new Error("O boleto Banese aceita no máximo 5 instruções.");
+  }
 
   return {
     ...input,
@@ -265,10 +271,7 @@ export const normalizeBaneseBoletoDocument = (
       : null,
     speciesLabel: String(input.speciesLabel || "DM").trim().slice(0, 8),
     acceptance: input.acceptance === "N" ? "N" : "A",
-    instructions: (input.instructions || [])
-      .map((instruction) => String(instruction || "").trim())
-      .filter(Boolean)
-      .slice(0, 5),
+    instructions,
     financialTerms: input.financialTerms
       ? normalizeBaneseFinancialTerms({
         ...input.financialTerms,

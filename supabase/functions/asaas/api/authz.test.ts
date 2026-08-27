@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   type GestorAutorizado,
   requireOtherCreditsWriteAccess,
+  requireReceivablesSettlementAccess,
 } from "./authz.ts";
 
 const gestor = (
@@ -21,6 +22,7 @@ const gestor = (
   communicationSector: "",
   communicationPoloId: null,
   canViewAllCommunication: false,
+  canViewAllCommunicationPolos: false,
   ...overrides,
 });
 
@@ -32,6 +34,47 @@ Deno.test("Outros Creditos exige perfil financeiro e a aba explicita", () => {
   );
   assert.throws(
     () => requireOtherCreditsWriteAccess(gestor({ perfil: "secretaria" })),
+    /sem permissao/i,
+  );
+});
+
+Deno.test("baixa de recebiveis exige Financeiro Receber para perfis financeiros", () => {
+  assert.doesNotThrow(() =>
+    requireReceivablesSettlementAccess(gestor({
+      financeiroTabs: ["receber"],
+    }))
+  );
+  assert.throws(
+    () =>
+      requireReceivablesSettlementAccess(
+        gestor({ financeiroTabs: ["resumo"] }),
+      ),
+    /sem permissao/i,
+  );
+});
+
+Deno.test("Secretaria aceita consulta financeira e o alias legado recebimentos", () => {
+  for (const tab of ["consulta-financeira", "recebimentos"]) {
+    assert.doesNotThrow(() =>
+      requireReceivablesSettlementAccess(gestor({
+        perfil: "secretaria",
+        modules: ["secretaria"],
+        financeiroTabs: [],
+        tabs: { secretaria: [tab] },
+      }))
+    );
+  }
+});
+
+Deno.test("Secretaria Carnes de Alunos nunca autoriza baixa manual", () => {
+  assert.throws(
+    () =>
+      requireReceivablesSettlementAccess(gestor({
+        perfil: "secretaria",
+        modules: ["secretaria"],
+        financeiroTabs: [],
+        tabs: { secretaria: ["carnes-alunos"] },
+      })),
     /sem permissao/i,
   );
 });

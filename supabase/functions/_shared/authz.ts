@@ -285,6 +285,62 @@ export const requireFinanceWriteAccess = (gestor: GestorAutorizado) => {
   }
 };
 
+const SECRETARIA_FINANCIAL_DOCUMENT_TABS = new Set([
+  "consulta-financeira",
+  "recebimentos",
+  "carnes-alunos",
+]);
+
+const hasFinanceDocumentReadAccess = (gestor: GestorAutorizado) =>
+  isFinanceWriteProfile(gestor.perfil) && (
+    gestor.modules.includes("caixa") ||
+    (
+      gestor.modules.includes("financeiro") &&
+      resolveGestorFinanceiroTabs(gestor).includes("receber")
+    )
+  );
+
+const secretariaFinancialDocumentTabs = (gestor: GestorAutorizado) =>
+  gestor.modules.includes("secretaria")
+    ? normalizeStringArray(gestor.tabs?.secretaria).filter((tab) =>
+      SECRETARIA_FINANCIAL_DOCUMENT_TABS.has(tab)
+    )
+    : [];
+
+/**
+ * Autoriza somente consulta/geração de documentos financeiros já existentes.
+ * Esta guarda não substitui requireFinanceWriteAccess em rotas mutantes.
+ */
+export const requireFinanceDocumentReadAccess = (
+  gestor: GestorAutorizado,
+) => {
+  const financeiroAllowed = hasFinanceDocumentReadAccess(gestor);
+  const secretariaAllowed = secretariaFinancialDocumentTabs(gestor).length > 0;
+
+  if (!financeiroAllowed && !secretariaAllowed) {
+    throw new Error(
+      "Acesso aos documentos financeiros de alunos nao autorizado.",
+    );
+  }
+};
+
+export const requireBaneseBoletoDocumentReadAccess = (
+  gestor: GestorAutorizado,
+  launchType: unknown,
+) => {
+  requireFinanceDocumentReadAccess(gestor);
+  if (hasFinanceDocumentReadAccess(gestor)) return;
+
+  const secretariaTabs = secretariaFinancialDocumentTabs(gestor);
+  const hasReceivablesAccess = secretariaTabs.includes("consulta-financeira") ||
+    secretariaTabs.includes("recebimentos");
+  if (hasReceivablesAccess || normalize(launchType) === "parcela") return;
+
+  throw new Error(
+    "Acesso da Secretaria a este tipo de boleto Banese nao autorizado.",
+  );
+};
+
 export const requireGlobalFinancialTabAccess = (
   gestor: GestorAutorizado,
   tabId: string,

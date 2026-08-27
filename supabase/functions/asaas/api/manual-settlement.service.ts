@@ -4,19 +4,20 @@ import {
   hasRemoteTitleReference,
 } from "../../gateways/checkout/remote-title-guard.ts";
 import {
-  dependencyBillingSnapshotFrom,
   DEPENDENCY_BILLING_DAYS_TO_WRITE_OFF,
+  dependencyBillingSnapshotFrom,
   isDependencyReceivable,
 } from "../../banese/internal/dependency-billing.ts";
 import { RemoteCancellationPreflightError } from "../../gateways/api/remote-cancellation-errors.ts";
 import { syncManualSettlementAcademicEffects } from "./manual-settlement-academic.ts";
+import { syncManualSettlementFutureCharges } from "./manual-settlement-future-sync.ts";
 import {
   manualSettlementFingerprint,
   normalizeManualSettlementRequest,
 } from "./manual-settlement-money.ts";
 import {
   createManualSettlementRepository,
-  manualSettlementReceivableSnapshot,
+  manualSettlementAuditedReceivableSnapshot,
 } from "./manual-settlement.repository.ts";
 import {
   assertNoKnownRemotePayment,
@@ -163,7 +164,10 @@ const attemptInput = (
   remote_payment_link_id: receivable.gateway_payment_link_id ||
     receivable.asaas_payment_link_id || null,
   requires_remote_cancellation: hasRemoteTitleReference(receivable),
-  receivable_snapshot: manualSettlementReceivableSnapshot(receivable),
+  receivable_snapshot: manualSettlementAuditedReceivableSnapshot(
+    receivable,
+    request.settlementContext,
+  ),
   state: "STARTED",
   lease_token: leaseToken,
   lease_expires_at: leaseExpiresAt,
@@ -335,67 +339,12 @@ const resolveAttempt = async (
     {
       receivableId: request.receivableId,
       idempotencyKey: request.idempotencyKey,
+      settlementContext: request.settlementContext,
       currency: "BRL",
       receivedCents: request.breakdown.receivedCents,
     },
   );
   return { attempt, replay: null };
-};
-
-const syncFutureCharges = async (
-  dependencies: ManualSettlementServiceDependencies,
-  receivable: any,
-  result: ManualSettlementResult,
-) => {
-  if (!receivable.matricula_id || !dependencies.syncFutureInstallments) {
-    return result;
-  }
-  let warning: string | null = null;
-  try {
-    const { data: enrollment, error } = await dependencies.admin
-      .from("matriculas")
-      .select(
-        "gerar_cobranca_futura, sincronizar_asaas, turmas(gerar_cobrancas_futuras, sincronizar_asaas_futuro)",
-      )
-      .eq("id", receivable.matricula_id)
-      .maybeSingle();
-    if (error) throw error;
-    const turma = Array.isArray(enrollment?.turmas)
-      ? enrollment.turmas[0]
-      : enrollment?.turmas;
-    const shouldGenerate = enrollment?.gerar_cobranca_futura ??
-      turma?.gerar_cobrancas_futuras ?? false;
-    const shouldSync = enrollment?.sincronizar_asaas ??
-      turma?.sincronizar_asaas_futuro ?? true;
-    if (shouldGenerate && shouldSync) {
-      const sync = await dependencies.syncFutureInstallments(
-        receivable.matricula_id,
-      );
-      if (sync && "skipped" in sync && sync.skipped && sync.reason) {
-        warning = String(sync.reason);
-      }
-    }
-  } catch (error) {
-    warning = errorMessage(error);
-    try {
-      await (dependencies.repository ??
-        createManualSettlementRepository(dependencies.admin))
-        .setFutureSyncError(receivable.matricula_id, warning);
-    } catch (auditError) {
-      console.error("Falha ao registrar erro de parcelas futuras:", auditError);
-    }
-  }
-
-  if (!warning) return result;
-  const updated = { ...result, futureSyncWarning: warning };
-  try {
-    await (dependencies.repository ??
-      createManualSettlementRepository(dependencies.admin))
-      .updateCompletedResult(result.settlementId, updated);
-  } catch (auditError) {
-    console.error("Falha ao anexar aviso à baixa concluída:", auditError);
-  }
-  return updated;
 };
 
 export const settleReceivableManually = async (
@@ -428,15 +377,21 @@ export const settleReceivableManually = async (
   );
   if (replay) {
     if (replay.academicSyncCompleted === true) {
-      return await syncFutureCharges(dependencies, receivable, replay);
+      return await syncManualSettlementFutureCharges(
+        dependencies,
+        request,
+        receivable,
+        replay,
+      );
     }
     const projected = await syncManualSettlementAcademicEffects(
       dependencies,
       request,
       replay,
     );
-    return await syncFutureCharges(
+    return await syncManualSettlementFutureCharges(
       dependencies,
+      request,
       projected.receivable,
       projected.result,
     );
@@ -463,8 +418,9 @@ export const settleReceivableManually = async (
         remote_payment_link_id: remote.remotePaymentLinkId,
         requires_remote_cancellation: remote.required,
         remote_canceled_at: remote.required ? new Date().toISOString() : null,
-        receivable_snapshot: manualSettlementReceivableSnapshot(
+        receivable_snapshot: manualSettlementAuditedReceivableSnapshot(
           remote.receivable,
+          request.settlementContext,
         ),
       });
       if (remote.required) {
@@ -532,8 +488,9 @@ export const settleReceivableManually = async (
     request,
     result,
   );
-  return await syncFutureCharges(
+  return await syncManualSettlementFutureCharges(
     dependencies,
+    request,
     projected.receivable,
     projected.result,
   );

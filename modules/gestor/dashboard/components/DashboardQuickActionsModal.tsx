@@ -6,34 +6,30 @@ import {
   Building2,
   GraduationCap,
   LoaderCircle,
-  ReceiptText,
   Search,
   UserRound,
   Users,
   UsersRound,
   X,
 } from 'lucide-react';
-import { financeiroQueryKeys } from '../../financeiro/financeiro.queryKeys';
-import { financeiroService } from '../../financeiro/financeiro.service';
+import ToastNotification, { useToast } from '../../components/ToastNotification';
+import ManualSettlementModal from '../../financeiro/receber/components/manual-settlement/ManualSettlementModal';
 import type {
   DashboardPartnerForm,
   DashboardQuickActionMode,
 } from '../dashboard.presentation';
-
-interface StudentReceivable {
-  id: string;
-  clienteNome: string;
-  clienteCpf: string;
-  descricao: string;
-  poloNome: string;
-  dataVencimento: string;
-  valor: number;
-  status: string;
-}
+import DashboardStudentFinanceResults from '../student-finance/DashboardStudentFinanceResults';
+import {
+  dashboardStudentFinanceSearchKey,
+  searchDashboardStudentReceivables,
+} from '../student-finance/dashboard-student-finance.service';
+import type { DashboardStudentReceivable } from '../student-finance/dashboard-student-finance.model';
+import { useDashboardStudentSettlement } from '../student-finance/useDashboardStudentSettlement';
 
 interface DashboardQuickActionsModalProps {
   mode: DashboardQuickActionMode;
   poloId?: string | null;
+  canSettleStudentFinance: boolean;
   onClose: () => void;
   onSelectPartner: (form: DashboardPartnerForm) => void;
 }
@@ -82,29 +78,21 @@ const partnerOptions: Array<{
   },
 ];
 
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
-
-const formatDate = (dateValue: string) => {
-  if (!dateValue) return 'Sem vencimento';
-  return new Date(`${dateValue}T12:00:00`).toLocaleDateString('pt-BR');
-};
-
-const getStatusTone = (status: string) => {
-  if (status === 'PAGO') return 'bg-emerald-50 text-emerald-700';
-  if (status === 'VENCIDO') return 'bg-rose-50 text-rose-700';
-  if (status === 'PENDENTE') return 'bg-blue-50 text-blue-700';
-  return 'bg-slate-100 text-slate-600';
-};
-
 const DashboardQuickActionsModal: React.FC<DashboardQuickActionsModalProps> = ({
   mode,
   poloId,
+  canSettleStudentFinance,
   onClose,
   onSelectPartner,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const { toasts, removeToast, toast } = useToast();
+  const settlement = useDashboardStudentSettlement({
+    activePoloId: poloId,
+    canSettle: canSettleStudentFinance,
+    toast,
+  });
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => setDebouncedSearch(searchTerm.trim()), 350);
@@ -113,31 +101,43 @@ const DashboardQuickActionsModal: React.FC<DashboardQuickActionsModalProps> = ({
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      if (settlement.pending) return;
+      if (settlement.selected) {
+        settlement.closeSettlement();
+        return;
+      }
+      onClose();
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  }, [onClose, settlement]);
 
-  const { data: receivables = [], isLoading, isError } = useQuery<StudentReceivable[]>({
-    queryKey: financeiroQueryKeys.alunoReceivablesSearch(debouncedSearch, poloId),
-    queryFn: () => financeiroService.searchAlunoReceivables(
+  const { data: receivables = [], isLoading, isError } = useQuery<DashboardStudentReceivable[]>({
+    queryKey: dashboardStudentFinanceSearchKey(debouncedSearch, poloId),
+    queryFn: () => searchDashboardStudentReceivables(
       debouncedSearch,
-      poloId || undefined,
-    ) as Promise<StudentReceivable[]>,
+      poloId,
+    ),
     enabled: mode === 'student-finance' && debouncedSearch.length >= 2,
     staleTime: 60_000,
   });
 
   if (typeof document === 'undefined') return null;
 
-  return createPortal(
+  return createPortal((
+    <>
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-[#001a33]/70 p-4 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-labelledby="dashboard-quick-action-title"
-      onMouseDown={(event) => event.target === event.currentTarget && onClose()}
+      onMouseDown={(event) => {
+        if (event.target !== event.currentTarget || settlement.pending) return;
+        if (settlement.selected) settlement.closeSettlement();
+        else onClose();
+      }}
     >
       <div className="max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-[2rem] border border-white/20 bg-white shadow-2xl">
         <header className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5 sm:px-7">
@@ -155,6 +155,7 @@ const DashboardQuickActionsModal: React.FC<DashboardQuickActionsModalProps> = ({
           <button
             type="button"
             onClick={onClose}
+            disabled={settlement.pending}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700"
             aria-label="Fechar"
           >
@@ -213,42 +214,57 @@ const DashboardQuickActionsModal: React.FC<DashboardQuickActionsModalProps> = ({
                 <div className="rounded-2xl bg-rose-50 px-5 py-8 text-center text-xs font-semibold text-rose-700">
                   Não foi possível consultar o financeiro agora.
                 </div>
-              ) : receivables.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-slate-200 px-5 py-10 text-center">
-                  <ReceiptText size={22} className="mx-auto text-slate-300" />
-                  <p className="mt-3 text-xs font-semibold text-slate-500">Nenhuma parcela encontrada para essa busca.</p>
-                </div>
               ) : (
-                <div className="space-y-2">
-                  {receivables.map((receivable) => (
-                    <article key={receivable.id} className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="min-w-0">
-                          <h3 className="truncate text-sm font-bold text-[#001a33]">{receivable.clienteNome}</h3>
-                          <p className="mt-0.5 text-[10px] font-medium text-slate-400">
-                            CPF: {receivable.clienteCpf || 'não informado'} • {receivable.poloNome || 'unidade não informada'}
-                          </p>
-                          <p className="mt-2 text-xs font-medium text-slate-600">{receivable.descricao}</p>
-                        </div>
-                        <div className="shrink-0 sm:text-right">
-                          <p className="text-sm font-bold text-[#001a33]">{formatCurrency(receivable.valor)}</p>
-                          <p className="mt-0.5 text-[10px] font-medium text-slate-400">
-                            Vence em {formatDate(receivable.dataVencimento)}
-                          </p>
-                          <span className={`mt-2 inline-flex rounded-full px-2 py-1 text-[9px] font-bold uppercase tracking-wide ${getStatusTone(receivable.status)}`}>
-                            {receivable.status}
-                          </span>
-                        </div>
-                      </div>
-                    </article>
-                  ))}
-                </div>
+                <DashboardStudentFinanceResults
+                  receivables={receivables}
+                  activePoloId={poloId}
+                  canSettle={canSettleStudentFinance}
+                  onSettle={settlement.openSettlement}
+                />
               )}
             </div>
           </div>
         )}
       </div>
-    </div>,
+    </div>
+
+    {settlement.selected && settlement.accountsLoading && (
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Carregando contas para baixa"
+        className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/65 p-4 backdrop-blur-sm"
+      >
+        <div className="rounded-[2rem] bg-white px-8 py-7 text-center shadow-2xl">
+          <LoaderCircle size={24} className="mx-auto animate-spin text-emerald-600" />
+          <p className="mt-3 text-xs font-bold text-slate-600">Carregando contas do polo...</p>
+          <button
+            type="button"
+            onClick={settlement.closeSettlement}
+            className="mt-4 text-[10px] font-black uppercase tracking-wider text-slate-500 hover:text-slate-800"
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+    )}
+
+    {settlement.selected && !settlement.accountsLoading && (
+      <ManualSettlementModal
+        key={settlement.selected.id}
+        receivable={settlement.selected}
+        accounts={settlement.accounts}
+        initialAccountId={settlement.accounts[0]?.id || ''}
+        pending={settlement.pending}
+        error={settlement.error}
+        onClose={settlement.closeSettlement}
+        onConfirm={settlement.confirmSettlement}
+      />
+    )}
+
+    <ToastNotification toasts={toasts} onRemove={removeToast} />
+    </>
+  ),
     document.body,
   );
 };

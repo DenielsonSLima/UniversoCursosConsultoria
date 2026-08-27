@@ -17,7 +17,7 @@ const AlunosKpi: React.FC<AlunosKpiProps> = ({ total, ativos, inativos }) => {
           <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100/50">
             <GraduationCap size={18} />
           </div>
-          <p className="text-slate-500 text-xs font-medium">Alunos</p>
+          <p className="text-slate-500 text-xs font-medium">Cadastros de alunos</p>
         </div>
         <div className="flex items-end justify-between">
           <h3 className="text-3xl font-bold text-[#001a33] tracking-tight leading-none">{total}</h3>

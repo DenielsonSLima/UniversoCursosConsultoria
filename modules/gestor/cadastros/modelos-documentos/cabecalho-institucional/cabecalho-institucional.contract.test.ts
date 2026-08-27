@@ -44,9 +44,10 @@ test('consumidores React usam somente metadados estruturados', async () => {
   const consumers = await Promise.all(consumerUrls.map((url) => readFile(url, 'utf8')));
   const source = consumers.join('\n');
   const overdueReport = consumers[3];
+  const classesReport = consumers[2];
   const partnersReport = consumers[9];
   const directReports = [
-    ...consumers.slice(1, 3),
+    consumers[1],
     ...consumers.slice(4, 8),
   ];
 
@@ -60,6 +61,8 @@ test('consumidores React usam somente metadados estruturados', async () => {
     assert.match(report, /className="a4-report-page/);
     assert.doesNotMatch(report, /print:p-0/);
   });
+  assert.match(classesReport, /<FinancialReportExportButton/);
+  assert.doesNotMatch(classesReport, /window\.print|<A4ReportPrintStyles \/>/);
   assert.match(overdueReport, /<FinancialReportExportButton/);
   assert.doesNotMatch(overdueReport, /<A4ReportPrintStyles \/>/);
   assert.match(partnersReport, /CONTINUATION_PAGE_ROW_LIMIT = 16/);

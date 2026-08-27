@@ -19,6 +19,7 @@ import {
   Vote,
   FolderKanban,
   FileSignature,
+  FileStack,
   BookOpenCheck,
 } from 'lucide-react';
 
@@ -44,7 +45,8 @@ const cards = [
   { id: 'cracha-estagio', title: 'Crachá de Estágio', desc: 'Identificação para atividades supervisionadas.', icon: FileCheck2, color: 'rose' },
   { id: 'cracha-periodo-eleitoral', title: 'SES', desc: 'Crachá do aluno liberado após a entrada no estágio.', icon: Vote, color: 'cyan' },
   { id: 'termo-estagio', title: 'Termo de Estágio', desc: 'Termo de compromisso individual ou em lote.', icon: BriefcaseBusiness, color: 'teal' },
-  { id: 'consulta-financeira', title: 'Financeiro', desc: 'Recebimentos por aluno e curso: individual, lote ou personalizado.', icon: CircleDollarSign, color: 'cyan' },
+  { id: 'consulta-financeira', title: 'Recebimentos', desc: 'Baixas por aluno e curso: individual, lote ou personalizado.', icon: CircleDollarSign, color: 'cyan' },
+  { id: 'carnes-alunos', title: 'Carnês dos Alunos', desc: 'Documentos Banese existentes: individual, em lote ou personalizado.', icon: FileStack, color: 'emerald' },
   { id: 'transferencia', title: 'Transferência', desc: 'Transferência externa e emissão de guia.', icon: ArrowRightLeft, color: 'orange' },
   { id: 'solicitacoes', title: 'Solicitações Acadêmicas', desc: 'Análise e homologação de requerimentos.', icon: ClipboardList, color: 'red' },
   { id: 'dependencias-academicas', title: 'Dependências Acadêmicas', desc: 'Reoferta por disciplina, cobrança Banese e diário de destino.', icon: BookOpenCheck, color: 'cyan' },

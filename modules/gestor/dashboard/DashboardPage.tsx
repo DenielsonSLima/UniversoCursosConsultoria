@@ -11,7 +11,6 @@ import { gestorCalendarQueryOptions } from '../calendario/calendario.queries';
 import { toDateKey } from '../calendario/calendario.official';
 import {
   buildDashboardAccessKey,
-  canAccessFinanceiroTab,
   canAccessGestorModule,
   getAllowedDashboardWidgets,
   type DashboardWidgetId,
@@ -32,6 +31,7 @@ import {
   type DashboardPartnerForm,
   type DashboardQuickActionMode,
 } from './dashboard.presentation';
+import { getDashboardStudentFinanceAccess } from './student-finance/dashboard-student-finance.access';
 
 interface DashboardPageProps {
   poloId?: string | null;
@@ -75,12 +75,9 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   const canUseCalendar = canAccessGestorModule(permissions, 'calendario');
   const canUseFinance = canAccessGestorModule(permissions, 'financeiro');
   const canCreatePartner = canAccessGestorModule(permissions, 'parceiros');
-  const canSearchStudentFinance = canUseFinance && (
-    canAccessFinanceiroTab(permissions, 'resumo')
-    || canAccessFinanceiroTab(permissions, 'receber')
-  );
+  const studentFinanceAccess = getDashboardStudentFinanceAccess(permissions);
 
-  const { data: kpis, isLoading: loadingKpis } = useQuery({
+  const { data: kpis, isLoading: loadingKpis, isError: kpisError } = useQuery({
     ...dashboardKpisQueryOptions(activePoloId, dashboardAccessKey),
     enabled: Boolean(activePoloId) && showAcademicKpis,
   });
@@ -161,7 +158,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
     <div className="animate-fadeIn space-y-6 pb-10 text-[#001a33] antialiased">
       <DashboardQuickActionsHeader
         canCreatePartner={showQuickActions && canCreatePartner}
-        canSearchStudentFinance={showQuickActions && canSearchStudentFinance}
+        canSearchStudentFinance={showQuickActions && studentFinanceAccess.canSearch}
         onOpenAction={setQuickActionMode}
       />
 
@@ -184,9 +181,9 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
         />
         {showStudents && (
           <DashboardMetricCard
-            label="Alunos ativos"
-            value={kpis?.alunosAtivos.toLocaleString('pt-BR') || 0}
-            helper="base acadêmica atual"
+            label="Cadastros de alunos ativos"
+            value={kpis?.cadastrosAlunosAtivos.toLocaleString('pt-BR') ?? '—'}
+            helper={kpisError ? 'indicador indisponível' : 'perfis de aluno ativos no polo'}
             icon={Users}
             tone="bg-emerald-50 text-emerald-600"
             loading={loadingKpis}
@@ -246,6 +243,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
         <DashboardQuickActionsModal
           mode={quickActionMode}
           poloId={poloId}
+          canSettleStudentFinance={studentFinanceAccess.canSettle}
           onClose={() => setQuickActionMode(null)}
           onSelectPartner={handlePartnerSelection}
         />

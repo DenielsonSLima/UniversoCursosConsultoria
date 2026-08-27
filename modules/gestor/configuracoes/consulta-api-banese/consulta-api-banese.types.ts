@@ -56,16 +56,26 @@ export interface BanesePollingRun {
 }
 
 export interface BanesePollingAttempt {
-  id: number;
-  run_id: string;
+  id: number | string;
+  run_id?: string | null;
   receivable_id: string;
-  modality: string;
-  result: 'PENDING' | 'PAID' | 'ERROR' | 'THROTTLED';
+  modality?: string | null;
+  result?: 'PENDING' | 'PAID' | 'ERROR' | 'THROTTLED' | null;
   remote_status?: string | null;
   error_class?: string | null;
   http_status?: number | null;
-  duration_ms: number;
+  duration_ms?: number | null;
   created_at: string;
+  partner_name?: string | null;
+  nosso_numero?: string | null;
+  description?: string | null;
+  installment_number?: number | null;
+  due_date?: string | null;
+  amount?: number | null;
+  current_receivable_status?: string | null;
+  current_gateway_status?: string | null;
+  paid_at?: string | null;
+  amount_paid?: number | null;
 }
 
 export interface BanesePollingTransition {
@@ -82,6 +92,7 @@ export interface BanesePollingTransition {
 export interface BanesePollingDashboard {
   available: boolean;
   environment: 'sandbox' | 'production';
+  canViewReceivableDetails?: boolean;
   config?: BanesePollingConfig;
   profiles?: BanesePollingProfile[];
   queue?: {
@@ -101,6 +112,8 @@ export interface BanesePollingDashboard {
   };
   lastRuns?: BanesePollingRun[];
   lastAttempts?: BanesePollingAttempt[];
+  lastSettlements?: BanesePollingAttempt[];
+  lastErrorAttempts?: BanesePollingAttempt[];
   transitions?: BanesePollingTransition[];
 }
 

@@ -29,23 +29,31 @@ export const isEnrollmentStatusEligibleForAutomaticActivation = (
   value: unknown,
 ) => AUTOMATIC_ACTIVATION_SOURCE_STATUSES.has(normalizeModality(value));
 
+const isInitialEnrollmentReceivable = (receivable: any) => {
+  const launchType = String(receivable?.tipo_lancamento || "").toUpperCase();
+  const singlePlan =
+    receivable?.regra_financeira_plano_unico_snapshot?.origem ===
+      "PLANO_UNICO";
+  return launchType === "MATRICULA" ||
+    (singlePlan && Number(receivable?.parcela_numero) === 1);
+};
+
+const enrollmentCourseFor = (enrollment: any) => {
+  const turma = Array.isArray(enrollment?.turmas)
+    ? enrollment?.turmas?.[0]
+    : enrollment?.turmas;
+  return Array.isArray(turma?.cursos) ? turma?.cursos?.[0] : turma?.cursos;
+};
+
 export const activateEnrollmentAfterPayment = async (
   context: GatewayWebhookContext,
   receivable: any,
 ) => {
   if (!receivable?.matricula_id) return;
-  const launchType = String(receivable.tipo_lancamento || "").toUpperCase();
-  const singlePlan =
-    receivable?.regra_financeira_plano_unico_snapshot?.origem ===
-      "PLANO_UNICO";
   // Em planos únicos, a matrícula só é ativada pela primeira parcela. Os
   // títulos seguintes quitam o saldo financeiro, mas não podem alterar o
   // ciclo acadêmico da matrícula por si só.
-  const isSinglePlanFirstInstallment = singlePlan &&
-    Number(receivable?.parcela_numero) === 1;
-  if (launchType !== "MATRICULA" && !isSinglePlanFirstInstallment) {
-    return;
-  }
+  if (!isInitialEnrollmentReceivable(receivable)) return;
 
   const { data: matricula, error } = await context.admin
     .from("matriculas")
@@ -54,12 +62,7 @@ export const activateEnrollmentAfterPayment = async (
     .maybeSingle();
   if (error) throw error;
 
-  const turma = Array.isArray(matricula?.turmas)
-    ? matricula?.turmas?.[0]
-    : matricula?.turmas;
-  const course = Array.isArray(turma?.cursos)
-    ? turma?.cursos?.[0]
-    : turma?.cursos;
+  const course = enrollmentCourseFor(matricula);
   // TECNICO fica deliberadamente fora: a ativacao depende da analise documental.
   if (!isAutomaticEnrollmentActivationModality(course?.modalidade)) return;
   // Uma baixa atrasada nunca pode reativar matricula encerrada, transferida,
@@ -91,6 +94,46 @@ export const syncOnlineInscriptionPayment = async (
   },
 ) => {
   if (!input.receivable?.matricula_id) return;
+
+  const matriculaId = String(input.receivable.matricula_id);
+  const { data: existingInscription, error: existingInscriptionError } =
+    await context.admin
+      .from("inscricoes_online")
+      .select("id, receivable_id")
+      .eq("matricula_id", matriculaId)
+      .maybeSingle();
+  if (existingInscriptionError) throw existingInscriptionError;
+
+  const existingReceivableId = String(
+    existingInscription?.receivable_id || "",
+  ).trim();
+  const currentReceivableId = String(input.receivable?.id || "").trim();
+  const existingIdentityMatches = Boolean(
+    existingInscription?.id &&
+      (!existingReceivableId ||
+        (currentReceivableId && existingReceivableId === currentReceivableId)),
+  );
+
+  if (!existingIdentityMatches) {
+    // Parcelas comuns não representam uma nova inscrição online. Se já houver
+    // uma identidade divergente para uma cobrança inicial, o reparo abaixo
+    // continuará responsável por rejeitá-la explicitamente.
+    if (!isInitialEnrollmentReceivable(input.receivable)) return;
+
+    if (!existingInscription?.id) {
+      const { data: enrollment, error: enrollmentError } = await context.admin
+        .from("matriculas")
+        .select("id, turmas(cursos(modalidade))")
+        .eq("id", matriculaId)
+        .maybeSingle();
+      if (enrollmentError) throw enrollmentError;
+
+      // Matrículas técnicas criadas internamente não possuem projeção de
+      // inscrição online. EAD/Livre/Especialização ainda podem reconstruí-la.
+      const course = enrollmentCourseFor(enrollment);
+      if (!isAutomaticEnrollmentActivationModality(course?.modalidade)) return;
+    }
+  }
 
   const paid = input.localStatus === "PAGO";
   await repairOnlineInscription({

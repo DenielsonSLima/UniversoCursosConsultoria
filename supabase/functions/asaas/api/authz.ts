@@ -12,16 +12,24 @@ export { bearerTokenFromRequest };
 const normalize = (value: unknown) => String(value || "").trim().toLowerCase();
 
 const resolveFinanceiroTabs = (gestor: GestorAutorizado) => {
-  const legacy = (gestor.financeiroTabs || []).map((tab) => String(tab || "").trim()).filter(Boolean);
+  const legacy = (gestor.financeiroTabs || []).map((tab) =>
+    String(tab || "").trim()
+  ).filter(Boolean);
   const scoped = Object.prototype.hasOwnProperty.call(gestor.tabs, "financeiro")
     ? (Array.isArray(gestor.tabs.financeiro) ? gestor.tabs.financeiro : [])
     : [];
-  const normalize = (values: string[]) =>
-    [...new Set(values.map((item) => String(item || "").trim()).filter(Boolean))];
+  const normalize = (
+    values: string[],
+  ) => [
+    ...new Set(values.map((item) => String(item || "").trim()).filter(Boolean)),
+  ];
   const scopedTabs = normalize(scoped);
 
   if (!scopedTabs.length) return normalize(legacy);
-  if (scopedTabs.includes("receber") && legacy.includes("receber") && !scopedTabs.includes("conciliacao-bancaria")) {
+  if (
+    scopedTabs.includes("receber") && legacy.includes("receber") &&
+    !scopedTabs.includes("conciliacao-bancaria")
+  ) {
     return normalize([...scopedTabs, "conciliacao-bancaria"]);
   }
   return scopedTabs;
@@ -58,8 +66,11 @@ export const requireReceivablesSettlementAccess = (
     ["gestor", "financeiro"].includes(normalize(gestor.perfil)) &&
     gestor.modules.includes("financeiro") &&
     resolveFinanceiroTabs(gestor).includes("receber");
+  const secretariaTabs = (gestor.tabs.secretaria || []).map(normalize);
   const canUseSecretaria = gestor.modules.includes("secretaria") &&
-    gestor.tabs.secretaria?.includes("recebimentos");
+    secretariaTabs.some((tab) =>
+      tab === "recebimentos" || tab === "consulta-financeira"
+    );
   if (!canUseFinance && !canUseSecretaria) {
     throw new Error(
       "Usuario sem permissao para registrar baixa de recebimento.",

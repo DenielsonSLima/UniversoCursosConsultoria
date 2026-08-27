@@ -4,6 +4,10 @@ import {
   moneyToCents,
   normalizeManualSettlementRequest,
 } from "./manual-settlement-money.ts";
+import {
+  MANUAL_SETTLEMENT_CONTEXT_DASHBOARD_EXISTING_TITLE_ONLY,
+  MANUAL_SETTLEMENT_CONTEXT_STANDARD,
+} from "./manual-settlement.types.ts";
 
 const receivable = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -38,10 +42,81 @@ Deno.test("normaliza BRL em centavos e valida a composição no servidor", () =>
     discountCents: 100,
     receivedCents: 10_650,
   });
+  assert.equal(
+    normalized.settlementContext,
+    MANUAL_SETTLEMENT_CONTEXT_STANDARD,
+  );
   assert.equal(moneyToCents("R$ 1.234,56", "Valor"), 123_456);
   assert.equal(moneyToCents("1.234", "Valor"), 123_400);
   assert.equal(moneyToCents("1.234.567,89", "Valor"), 123_456_789);
   assert.equal(moneyToCents("1,234,567.89", "Valor"), 123_456_789);
+});
+
+Deno.test("contexto da ação rápida é exato e contexto desconhecido falha fechado", () => {
+  const dashboard = normalizeManualSettlementRequest(
+    {
+      ...body,
+      settlementContext:
+        MANUAL_SETTLEMENT_CONTEXT_DASHBOARD_EXISTING_TITLE_ONLY,
+    },
+    { ...receivable, tipo_lancamento: "PARCELA" },
+    new Date("2026-07-22T15:00:00Z"),
+  );
+  assert.equal(
+    dashboard.settlementContext,
+    MANUAL_SETTLEMENT_CONTEXT_DASHBOARD_EXISTING_TITLE_ONLY,
+  );
+
+  for (
+    const settlementContext of [
+      "dashboard_existing_title_only",
+      "DASHBOARD",
+      "",
+      null,
+    ]
+  ) {
+    assert.throws(
+      () =>
+        normalizeManualSettlementRequest(
+          { ...body, settlementContext },
+          receivable,
+          new Date("2026-07-22T15:00:00Z"),
+        ),
+      /Contexto de baixa manual inválido/i,
+    );
+  }
+});
+
+Deno.test("ação rápida aceita apenas a allowlist de títulos existentes", () => {
+  for (const tipo_lancamento of ["PARCELA", "REMATRICULA", "DEPENDENCIA"]) {
+    assert.doesNotThrow(() =>
+      normalizeManualSettlementRequest(
+        {
+          ...body,
+          settlementContext:
+            MANUAL_SETTLEMENT_CONTEXT_DASHBOARD_EXISTING_TITLE_ONLY,
+        },
+        { ...receivable, tipo_lancamento },
+        new Date("2026-07-22T15:00:00Z"),
+      )
+    );
+  }
+
+  for (const tipo_lancamento of ["MATRICULA", "OUTRO", "", null]) {
+    assert.throws(
+      () =>
+        normalizeManualSettlementRequest(
+          {
+            ...body,
+            settlementContext:
+              MANUAL_SETTLEMENT_CONTEXT_DASHBOARD_EXISTING_TITLE_ONLY,
+          },
+          { ...receivable, tipo_lancamento },
+          new Date("2026-07-22T15:00:00Z"),
+        ),
+      /apenas de título existente com tipo financeiro reconhecido/i,
+    );
+  }
 });
 
 Deno.test("aceita UUID legado do PostgreSQL para a conta bancária", () => {
@@ -179,6 +254,10 @@ Deno.test("fingerprint é estável e muda quando um centavo muda", async () => {
       interestCents: first.breakdown.interestCents + 1,
     },
   };
+  const dashboardContext = {
+    ...first,
+    settlementContext: MANUAL_SETTLEMENT_CONTEXT_DASHBOARD_EXISTING_TITLE_ONLY,
+  };
   assert.equal(
     await manualSettlementFingerprint(first),
     await manualSettlementFingerprint(same),
@@ -186,5 +265,9 @@ Deno.test("fingerprint é estável e muda quando um centavo muda", async () => {
   assert.notEqual(
     await manualSettlementFingerprint(first),
     await manualSettlementFingerprint(changed),
+  );
+  assert.notEqual(
+    await manualSettlementFingerprint(first),
+    await manualSettlementFingerprint(dashboardContext),
   );
 });

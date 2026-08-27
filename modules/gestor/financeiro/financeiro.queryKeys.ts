@@ -59,6 +59,29 @@ export const financeiroQueryKeys = {
   resumoKpis: ['financeiro-resumo-kpis'] as const,
   resumoKpisByPolo: (poloId?: string | null) =>
     ['financeiro-resumo-kpis', poloId || 'todos'] as const,
+  resumoFinanceiroByPoloPeriod: (
+    poloId: string | null | undefined,
+    start: string,
+    end: string,
+  ) => [
+    'financeiro-resumo-kpis',
+    poloId || 'todos',
+    'financial',
+    start,
+    end,
+  ] as const,
+  resumoOverdueByPolo: (poloId: string | null | undefined, asOf: string) => [
+    'financeiro-resumo-kpis',
+    poloId || 'todos',
+    'overdue',
+    asOf,
+  ] as const,
+  resumoFlowByPolo: (poloId: string | null | undefined, monthKey: string) => [
+    'financeiro-resumo-kpis',
+    poloId || 'todos',
+    'flow-3-months',
+    monthKey,
+  ] as const,
   alunoReceivables: ['financeiro-aluno-receivables'] as const,
   alunoReceivablesSearch: (search: string, poloId?: string | null) =>
     ['financeiro-aluno-receivables', search, poloId || 'todos'] as const,

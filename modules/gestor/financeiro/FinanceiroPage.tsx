@@ -36,11 +36,11 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ poloId, isMatriz, allow
 
   const tabs = useMemo(() => [
     { id: 'resumo' as const, label: 'Resumo', icon: <Layers size={14} /> },
-    { id: 'receber' as const, label: 'Contas a Receber', icon: <TrendingUp size={14} /> },
-    { id: 'despesas' as const, label: 'Contas a Pagar', icon: <TrendingDown size={14} /> },
+    { id: 'receber' as const, label: 'A Receber', icon: <TrendingUp size={14} /> },
+    { id: 'despesas' as const, label: 'A Pagar', icon: <TrendingDown size={14} /> },
     { id: 'emprestimos' as const, label: 'Empréstimos', icon: <Landmark size={14} /> },
     { id: 'transferencias' as const, label: 'Transferências', icon: <ArrowRightLeft size={14} /> },
-    { id: 'conciliacao-bancaria' as const, label: 'Conciliação Bancária', icon: <FileText size={14} /> },
+    { id: 'conciliacao-bancaria' as const, label: 'Conciliação', icon: <FileText size={14} /> },
     { id: 'outros-debitos' as const, label: 'Outros Débitos', icon: <TrendingDown size={14} className="rotate-90" /> },
     { id: 'outros-creditos' as const, label: 'Outros Créditos', icon: <TrendingUp size={14} className="-rotate-90" /> },
   ], []);
@@ -48,6 +48,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ poloId, isMatriz, allow
     if (!allowedTabs) return tabs;
     return tabs.filter(tab => allowedTabs.includes(tab.id));
   }, [allowedTabs, tabs]);
+  const visibleTabIds = useMemo(() => visibleTabs.map((tab) => tab.id), [visibleTabs]);
 
   useEffect(() => {
     if (!visibleTabs.some(tab => tab.id === activeTab)) {
@@ -58,7 +59,13 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ poloId, isMatriz, allow
   const renderActiveTab = () => {
     switch (activeTab) {
       case 'resumo':
-        return <ResumoTab poloId={poloId} />;
+        return (
+          <ResumoTab
+            poloId={poloId}
+            availableTabs={visibleTabIds}
+            onNavigate={setActiveTab}
+          />
+        );
       case 'receber':
         return <ReceberTab poloId={poloId} isMatriz={isMatriz} />;
       case 'despesas':
@@ -97,17 +104,25 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ poloId, isMatriz, allow
   return (
     <div className="max-w-7xl mx-auto animate-fadeIn pb-12">
       {/* ABA DE NAVEGAÇÃO PRINCIPAL */}
-      <div className="mb-8">
+      <div className="mb-4 md:mb-6">
         <FinancialUnderlineTabs
           items={visibleTabs}
           value={activeTab}
           onChange={setActiveTab}
           ariaLabel="Seções do módulo financeiro"
+          idPrefix="financeiro"
+          mobileMode="select"
         />
       </div>
 
       {/* CONTEÚDO PRINCIPAL DAS ABAS */}
-      <div className="bg-white border border-slate-100 p-8 rounded-[2.5rem] shadow-xl min-h-[450px]">
+      <div
+        id={`financeiro-${activeTab}-panel`}
+        role="tabpanel"
+        aria-labelledby={`financeiro-${activeTab}-tab`}
+        tabIndex={0}
+        className="min-h-[450px] rounded-3xl border border-slate-100 bg-slate-50/40 p-4 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 md:p-6"
+      >
         {renderActiveTab()}
       </div>
     </div>

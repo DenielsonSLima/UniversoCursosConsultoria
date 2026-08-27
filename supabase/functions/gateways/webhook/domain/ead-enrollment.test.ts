@@ -296,6 +296,7 @@ Deno.test("sincronizacao da inscricao nunca sobrescreve status PAGO", async () =
       matricula_id: "enrollment-id",
       turma_id: "class-id",
       cliente_id: "student-id",
+      tipo_lancamento: "MATRICULA",
       gateway_provider: "mercado_pago",
       gateway_environment: "sandbox",
       gateway_payment_id: "payment-b",

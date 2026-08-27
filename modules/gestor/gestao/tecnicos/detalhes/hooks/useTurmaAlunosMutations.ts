@@ -5,6 +5,7 @@ import { academicLifecycleKeys } from '../academic-lifecycle.keys';
 import { turmaAsaasService } from '../asaas';
 import type { GatewayPaymentMethod } from '../../../../../asaas/asaas.service';
 import { gestaoQueryKeys } from '../../../gestao.query-keys';
+import { financeiroQueryKeys } from '../../../../financeiro/financeiro.queryKeys';
 
 type MutationSuccess<TData, TVariables> = NonNullable<UseMutationOptions<TData, Error, TVariables>['onSuccess']>;
 type MutationError<TVariables> = NonNullable<UseMutationOptions<unknown, Error, TVariables>['onError']>;
@@ -64,8 +65,9 @@ export const useTurmaAcademicInvalidation = (turmaId: string) => {
       queryClient.invalidateQueries({ queryKey: ['diario-alunos', turmaId] }),
       queryClient.invalidateQueries({ queryKey: ['diario-notas-resultados', turmaId] }),
       queryClient.invalidateQueries({ queryKey: ['turma-financeiro', turmaId] }),
-      queryClient.invalidateQueries({ queryKey: ['financeiro-tecnico-recebiveis'] }),
-      queryClient.invalidateQueries({ queryKey: ['financeiro-aluno-receivables'] }),
+      queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.receivablesRoot }),
+      queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.resumoKpis }),
+      queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.alunoReceivables }),
     ];
 
     if (extraTurmaId) {

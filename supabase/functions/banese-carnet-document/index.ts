@@ -1,7 +1,7 @@
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 import {
   bearerTokenFromRequest,
-  requireFinanceWriteAccess,
+  requireFinanceDocumentReadAccess,
   requireGestorAtivo,
   requireGestorForPolo,
 } from "../_shared/authz.ts";
@@ -17,11 +17,13 @@ import {
 import { buildBaneseCarnetPdf } from "../banese/internal/carne/carne-pdf.ts";
 import {
   BANESE_CARNET_MAX_ITEMS,
+  BANESE_DOCUMENT_PAYABLE_LOCAL_STATUSES,
   BaneseCarnetPolicyError,
   type BaneseCarnetReceivableRow,
   isAllowedBaneseLogoUrl,
   readBaneseCarnetScope,
   selectBaneseCarnetDocumentRows,
+  takeRegisteredBaneseCarnetCandidateRows,
 } from "./document-policy.ts";
 import { buildBaneseCarnetDocumentInputs } from "./document-input.ts";
 import { loadBaneseAcademicBillingContext } from "../banese/internal/technical-billing-context.ts";
@@ -39,6 +41,8 @@ const RECEIVABLE_SELECT = `
   gateway_boleto_agencia, gateway_issuer_polo_id, gateway_financial_terms,
   gateway_financial_terms_confirmed_at
 `;
+const CANDIDATE_QUERY_PAGE_SIZE = 100;
+const MAX_CANDIDATE_ROWS_SCANNED = 10_000;
 
 class HttpError extends Error {
   constructor(public readonly status: number, message: string) {
@@ -156,11 +160,62 @@ const authorize = async (
 
   try {
     const gestor = await requireGestorAtivo(req, admin);
-    requireFinanceWriteAccess(gestor);
+    requireFinanceDocumentReadAccess(gestor);
     requireGestorForPolo(gestor, poloId);
   } catch {
     throw new HttpError(403, "Sem permissão para visualizar este carnê.");
   }
+};
+
+const readRegisteredCarnetCandidates = async (
+  admin: SupabaseClient,
+  selected: BaneseCarnetReceivableRow,
+) => {
+  const scope = readBaneseCarnetScope(selected);
+  let registeredRows: BaneseCarnetReceivableRow[] = [];
+  for (
+    let offset = 0;
+    offset < MAX_CANDIDATE_ROWS_SCANNED;
+    offset += CANDIDATE_QUERY_PAGE_SIZE
+  ) {
+    let query = admin.from("contas_receber")
+      .select(RECEIVABLE_SELECT)
+      .eq("cliente_id", scope.clientId)
+      .eq("matricula_id", scope.enrollmentId)
+      .eq("gateway_provider", "banese_card")
+      .eq("gateway_environment", scope.environment)
+      .eq("gateway_payment_method", "BOLETO")
+      .eq("tipo_lancamento", "PARCELA")
+      .eq("gateway_issuer_polo_id", scope.issuerId)
+      .eq("gateway_boleto_convenio", scope.agreement)
+      .in("gateway_boleto_agencia", [
+        scope.agency,
+        String(Number(scope.agency)),
+      ])
+      .in("status", [...BANESE_DOCUMENT_PAYABLE_LOCAL_STATUSES])
+      .order("parcela_numero", { ascending: true })
+      .order("data_vencimento", { ascending: true })
+      .order("id", { ascending: true })
+      .range(offset, offset + CANDIDATE_QUERY_PAGE_SIZE - 1);
+    query = scope.poloId
+      ? query.eq("polo_id", scope.poloId)
+      : query.is("polo_id", null);
+    const { data, error } = await query;
+    if (error) throw error;
+    const pageRows = (data ?? []) as BaneseCarnetReceivableRow[];
+    registeredRows = takeRegisteredBaneseCarnetCandidateRows([
+      ...registeredRows,
+      ...pageRows,
+    ]);
+    if (
+      registeredRows.length > BANESE_CARNET_MAX_ITEMS ||
+      pageRows.length < CANDIDATE_QUERY_PAGE_SIZE
+    ) return registeredRows;
+  }
+  throw new HttpError(
+    422,
+    "Há títulos demais nesta matrícula para montar um carnê seguro.",
+  );
 };
 
 Deno.serve(async (req: Request) => {
@@ -230,29 +285,9 @@ Deno.serve(async (req: Request) => {
     await authorize(req, admin, payer, email, text(selected.polo_id) || null);
     const scope = readBaneseCarnetScope(selected);
 
-    let candidateQuery = admin.from("contas_receber")
-      .select(RECEIVABLE_SELECT)
-      .eq("cliente_id", scope.clientId)
-      .eq("matricula_id", scope.enrollmentId)
-      .eq("gateway_provider", "banese_card")
-      .eq("gateway_environment", scope.environment)
-      .eq("gateway_payment_method", "BOLETO")
-      .eq("tipo_lancamento", "PARCELA")
-      .eq("gateway_issuer_polo_id", scope.issuerId)
-      .eq("gateway_boleto_convenio", scope.agreement)
-      .in("gateway_boleto_agencia", [
-        scope.agency,
-        String(Number(scope.agency)),
-      ])
-      .order("parcela_numero", { ascending: true })
-      .limit(BANESE_CARNET_MAX_ITEMS + 1);
-    candidateQuery = scope.poloId
-      ? candidateQuery.eq("polo_id", scope.poloId)
-      : candidateQuery.is("polo_id", null);
-
     const [candidatesResult, issuerResult, credentialResult] = await Promise
       .all([
-        candidateQuery,
+        readRegisteredCarnetCandidates(admin, selected),
         admin.from("polos").select(
           "id,nome,cnpj,endereco,numero,complemento,bairro,cidade,estado,cep,logo_url",
         ).eq("id", scope.issuerId).maybeSingle(),
@@ -261,7 +296,6 @@ Deno.serve(async (req: Request) => {
           .eq("environment", scope.environment)
           .maybeSingle(),
       ]);
-    if (candidatesResult.error) throw candidatesResult.error;
     if (issuerResult.error) throw issuerResult.error;
     if (credentialResult.error) throw credentialResult.error;
     if (!issuerResult.data || !credentialResult.data) {
@@ -273,7 +307,7 @@ Deno.serve(async (req: Request) => {
 
     const rows = selectBaneseCarnetDocumentRows(
       selected,
-      (candidatesResult.data ?? []) as BaneseCarnetReceivableRow[],
+      candidatesResult,
     );
     const academicContext = await loadBaneseAcademicBillingContext(
       admin,

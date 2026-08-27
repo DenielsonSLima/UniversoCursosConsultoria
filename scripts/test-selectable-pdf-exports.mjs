@@ -18,6 +18,8 @@ const protectedVectorGenerators = [
   'modules/gestor/secretaria/carteirinhas-preceptor/carteirinhas-preceptor.pdf.ts',
   'modules/gestor/secretaria/historico-emissoes/emission-document.pdf.ts',
   'modules/gestor/financeiro/components/financial-report.vector-pdf.ts',
+  'modules/gestor/financeiro/components/financial-report.vector-pdf.layout.ts',
+  'modules/gestor/financeiro/components/financial-report.vector-pdf.resources.ts',
 ];
 
 // Documentos oficiais novos não aceitam nem a ponte híbrida nem canvas de
@@ -31,7 +33,10 @@ const strictNativeDocumentFlows = [
   'modules/gestor/secretaria/carteirinhas-preceptor/carteirinhas-preceptor.pdf.ts',
   'modules/gestor/secretaria/historico-emissoes/emission-document.pdf.ts',
   'modules/gestor/financeiro/components/FinancialReportPreview.tsx',
+  'modules/gestor/relatorios/pdf/ReportPdfPreviewModal.tsx',
   'modules/gestor/financeiro/components/financial-report.vector-pdf.ts',
+  'modules/gestor/financeiro/components/financial-report.vector-pdf.layout.ts',
+  'modules/gestor/financeiro/components/financial-report.vector-pdf.resources.ts',
 ];
 
 // Inventário temporário de pipelines antigos que ainda rasterizam a página.
@@ -280,25 +285,36 @@ const caixaSafariFailures = [
     : []),
 ];
 const financialReportPreviewPath = 'modules/gestor/financeiro/components/FinancialReportPreview.tsx';
+const reportPdfPreviewModalPath = 'modules/gestor/relatorios/pdf/ReportPdfPreviewModal.tsx';
 const financialReportVectorPath = 'modules/gestor/financeiro/components/financial-report.vector-pdf.ts';
+const financialReportLayoutPath = 'modules/gestor/financeiro/components/financial-report.vector-pdf.layout.ts';
+const financialReportResourcesPath = 'modules/gestor/financeiro/components/financial-report.vector-pdf.resources.ts';
 const financialReportPreviewSource = sources.get(financialReportPreviewPath) || '';
+const reportPdfPreviewModalSource = sources.get(reportPdfPreviewModalPath) || '';
 const financialReportVectorSource = sources.get(financialReportVectorPath) || '';
+const financialReportPipelineSource = [
+  financialReportVectorSource,
+  sources.get(financialReportLayoutPath) || '',
+  sources.get(financialReportResourcesPath) || '',
+].join('\n');
 const financialReportNativeFailures = [
   ...(!/FINANCIAL_REPORT_PDF_PIPELINE\s*=\s*['"]native-vector['"]/m.test(financialReportVectorSource)
     || !/drawCanonicalInstitutionalHeader/m.test(financialReportVectorSource)
-    || !/pdf\.text\s*\(/m.test(financialReportVectorSource)
-    || !/pdf\.(?:rect|roundedRect|line)\s*\(/m.test(financialReportVectorSource)
+    || !/pdf\.text\s*\(/m.test(financialReportPipelineSource)
+    || !/pdf\.(?:rect|roundedRect|line)\s*\(/m.test(financialReportPipelineSource)
     ? [`${financialReportVectorPath} perdeu os sinais do compositor vetorial nativo.`]
     : []),
   ...(/html2canvas|dom-to-selectable-pdf|buildSelectablePdfBlobFromElements/i.test(
-    `${financialReportPreviewSource}\n${financialReportVectorSource}`,
+    `${financialReportPreviewSource}\n${reportPdfPreviewModalSource}\n${financialReportPipelineSource}`,
   )
     ? [`O relatório financeiro voltou a depender de captura rasterizada de página.`]
     : []),
-  ...(!/downloadPdfBlob\(preparedPdf\.blob, preparedPdf\.fileName\)/m.test(financialReportPreviewSource)
-    || !/await printPdfBlob\(preparedPdf\.blob/m.test(financialReportPreviewSource)
-    || !/<iframe[\s\S]*src=\{previewUrl\}/m.test(financialReportPreviewSource)
-    ? [`${financialReportPreviewPath} não reutiliza o mesmo Blob na prévia, download e impressão.`]
+  ...(!/<ReportPdfPreviewModal/m.test(financialReportPreviewSource)
+    || !/downloadPdfBlob\(preparedPdf\.blob, preparedPdf\.fileName\)/m.test(reportPdfPreviewModalSource)
+    || !/await printPdfBlob\(preparedPdf\.blob/m.test(reportPdfPreviewModalSource)
+    || !/URL\.createObjectURL\(preparedPdf\.blob\)/m.test(reportPdfPreviewModalSource)
+    || !/<iframe[\s\S]*src=\{previewUrl\}/m.test(reportPdfPreviewModalSource)
+    ? [`${financialReportPreviewPath} e ${reportPdfPreviewModalPath} não reutilizam o mesmo Blob na prévia, download e impressão.`]
     : []),
 ];
 const missingHelperSignals = helperRequiredSignals

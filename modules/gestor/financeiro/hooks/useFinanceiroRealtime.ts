@@ -41,6 +41,10 @@ export function useFinanceiroRealtime(poloId?: string | null) {
           queryKey: caixaQueryKeys.dashboards,
           refetchType: 'none',
         });
+        void queryClient.invalidateQueries({
+          queryKey: financeiroQueryKeys.resumoKpisByPolo(activePoloId),
+          refetchType: 'active',
+        });
       }
 
       if (receivablesChanged) {
@@ -52,7 +56,6 @@ export function useFinanceiroRealtime(poloId?: string | null) {
           ),
           refetchType: 'active',
         });
-        void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.resumoKpis });
         void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos });
         void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.alunoReceivables });
         // Outros Créditos usa um read model próprio. A alteração de uma conta
@@ -81,14 +84,11 @@ export function useFinanceiroRealtime(poloId?: string | null) {
       if (transfersChanged) {
         void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.transferenciasRoot });
         void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos });
-        void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.resumoKpis });
       }
       if (expensesChanged) {
         void queryClient.invalidateQueries({ queryKey: despesasQueryKeys.all });
         void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos });
-        void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.resumoKpis });
       }
-
       receivablesChanged = false;
       accountsChanged = false;
       transfersChanged = false;

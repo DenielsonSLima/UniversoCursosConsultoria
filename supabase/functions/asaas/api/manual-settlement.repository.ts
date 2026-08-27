@@ -1,5 +1,6 @@
 import type {
   ManualSettlementAttempt,
+  ManualSettlementContext,
   ManualSettlementRepository,
   ManualSettlementResult,
 } from "./manual-settlement.types.ts";
@@ -23,6 +24,14 @@ export const manualSettlementReceivableSnapshot = (receivable: any) => ({
   asaas_payment_id: receivable?.asaas_payment_id ?? null,
   asaas_payment_link_id: receivable?.asaas_payment_link_id ?? null,
   asaas_status: receivable?.asaas_status ?? null,
+});
+
+export const manualSettlementAuditedReceivableSnapshot = (
+  receivable: any,
+  settlementContext: ManualSettlementContext,
+) => ({
+  ...manualSettlementReceivableSnapshot(receivable),
+  manual_settlement_context: settlementContext,
 });
 
 export const createManualSettlementRepository = (

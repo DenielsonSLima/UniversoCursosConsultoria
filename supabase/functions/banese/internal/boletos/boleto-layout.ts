@@ -18,10 +18,18 @@ import {
   banesePartyAddress as partyAddress,
   drawBaneseBarcode as drawBarcode,
   drawBaneseBox as drawBox,
+  drawBaneseImageContain as drawImageContain,
   drawBaneseText as drawText,
+  fitBaneseFontSize as fitFontSize,
   wrapBaneseText as wrapText,
+  wrapBaneseWords as wrapWords,
 } from "../pdf/primitives.ts";
 import { presentBaneseFinancialTerms } from "../pdf/financial-terms.ts";
+
+const instructionProfiles = [
+  { size: 7, lineHeight: 8.4, blockGap: 2 },
+  { size: 6.4, lineHeight: 7.4, blockGap: 1.5 },
+] as const;
 
 export const drawBaneseBoletoSlip = async (
   page: PDFPage,
@@ -65,16 +73,76 @@ export const drawBaneseBoletoSlip = async (
     { bold: true, alignRight: true },
   );
 
-  y = row(37);
-  drawBox(
+  const beneficiaryHeight = 37;
+  y = row(beneficiaryHeight);
+  const beneficiaryLogoWidth = assets.companyLogo ? 90 : 0;
+  page.drawRectangle({
+    x: box.x,
+    y,
+    width: mainWidth,
+    height: beneficiaryHeight,
+    borderColor: COLORS.black,
+    borderWidth: 0.55,
+  });
+  if (assets.companyLogo) {
+    page.drawLine({
+      start: { x: box.x + beneficiaryLogoWidth, y },
+      end: { x: box.x + beneficiaryLogoWidth, y: y + beneficiaryHeight },
+      thickness: 0.55,
+      color: COLORS.black,
+    });
+    drawImageContain(page, assets.companyLogo, {
+      x: box.x,
+      y,
+      width: beneficiaryLogoWidth,
+      height: beneficiaryHeight,
+    }, 4);
+  }
+  const beneficiaryTextX = box.x + beneficiaryLogoWidth + 3;
+  const beneficiaryTextWidth = mainWidth - beneficiaryLogoWidth - 6;
+  drawText(
     page,
     fonts,
-    { x: box.x, y, width: mainWidth, height: 37 },
     "Beneficiário",
-    `${input.beneficiary.name} - CNPJ/CPF ${
-      formatBaneseDocumentId(input.beneficiary.document)
-    }\n${partyAddress(input.beneficiary)}`,
-    { valueSize: 7 },
+    beneficiaryTextX,
+    y + beneficiaryHeight - 8,
+    { size: 5.4, color: COLORS.gray },
+  );
+  const beneficiaryName = `${input.beneficiary.name} - CNPJ/CPF ${
+    formatBaneseDocumentId(input.beneficiary.document)
+  }`;
+  const beneficiaryAddress = partyAddress(input.beneficiary);
+  const beneficiaryNameSize = fitFontSize(
+    beneficiaryName,
+    fonts.regular,
+    7,
+    5.5,
+    beneficiaryTextWidth,
+    "Nome e documento do beneficiário não cabem integralmente no boleto Banese.",
+  );
+  const beneficiaryAddressSize = fitFontSize(
+    beneficiaryAddress,
+    fonts.regular,
+    7,
+    5.5,
+    beneficiaryTextWidth,
+    "Endereço do beneficiário não cabe integralmente no boleto Banese.",
+  );
+  drawText(
+    page,
+    fonts,
+    beneficiaryName,
+    beneficiaryTextX,
+    y + 14,
+    { size: beneficiaryNameSize },
+  );
+  drawText(
+    page,
+    fonts,
+    beneficiaryAddress,
+    beneficiaryTextX,
+    y + 5,
+    { size: beneficiaryAddressSize },
   );
   const beneficiaryCode = input.beneficiary.beneficiaryCode;
   drawBox(
@@ -87,7 +155,7 @@ export const drawBaneseBoletoSlip = async (
   );
 
   y = row(31);
-  const widths = [82, 105, 70, 56, mainWidth - 313];
+  const widths = [90, 100, 65, 52, mainWidth - 307];
   const labels = [
     "Data do documento",
     "Número do documento",
@@ -123,7 +191,7 @@ export const drawBaneseBoletoSlip = async (
   );
 
   y = row(31);
-  const financialWidths = [78, 67, 55, mainWidth - 200];
+  const financialWidths = [90, 100, 65, mainWidth - 255];
   const financialLabels = [
     "Uso do banco",
     "Carteira",
@@ -151,7 +219,7 @@ export const drawBaneseBoletoSlip = async (
     { bold: true, alignRight: true },
   );
 
-  const payerHeight = 45;
+  const payerHeight = 34;
   const barcodeBlockHeight = showBarcode ? 56 : 0;
   const detailsHeight = Math.max(
     64,
@@ -182,47 +250,83 @@ export const drawBaneseBoletoSlip = async (
   const instructions = input.instructions?.length
     ? input.instructions
     : ["Nao receber apos a data limite indicada pelo banco."];
-  instructions.slice(0, 5).forEach((instruction, index) => {
-    const isCashierWarning = /CAIXA/i.test(instruction);
-    drawText(
-      page,
-      fonts,
-      instruction,
-      box.x + 8,
-      y + detailsHeight - 22 - index * 10,
-      {
-        size: 7,
-        bold: isCashierWarning,
-        color: isCashierWarning ? COLORS.sandbox : COLORS.black,
-        maxWidth: instructionsWidth - 16,
-      },
+  const hasPixCopyAndPaste = showBarcode &&
+    input.environment === "production" &&
+    Boolean(input.pix?.copyAndPaste);
+  const pixCopyLines = hasPixCopyAndPaste
+    ? wrapText(
+      input.pix!.copyAndPaste,
+      fonts.regular,
+      4.4,
+      instructionsWidth - 16,
+    )
+    : [];
+  const pixCopyHeight = hasPixCopyAndPaste
+    ? 3 + 7 + pixCopyLines.length * 5.5
+    : 0;
+  const instructionTop = y + detailsHeight - 22;
+  const instructionBottom = y + 7 + pixCopyHeight;
+  const preparedInstructions = instructionProfiles.map((profile) => {
+    const blocks = instructions.map((instruction) => {
+      const isCashierWarning = /CAIXA/i.test(instruction);
+      const font = isCashierWarning ? fonts.bold : fonts.regular;
+      return {
+        isCashierWarning,
+        lines: wrapWords(
+          instruction,
+          font,
+          profile.size,
+          instructionsWidth - 16,
+        ),
+      };
+    });
+    const height = blocks.reduce(
+      (total, block, index) =>
+        total + block.lines.length * profile.lineHeight +
+        (index < blocks.length - 1 ? profile.blockGap : 0),
+      0,
     );
+    return { profile, blocks, height };
   });
-  if (
-    showBarcode && input.environment === "production" &&
-    input.pix?.copyAndPaste
-  ) {
-    const titleY = y + detailsHeight - 24 -
-      instructions.slice(0, 5).length * 10;
+  const instructionLayout = preparedInstructions.find(({ height }) =>
+    instructionTop - height >= instructionBottom
+  );
+  if (!instructionLayout) {
+    throw new Error(
+      "As instruções do boleto Banese não cabem integralmente no documento.",
+    );
+  }
+  let instructionCursorY = instructionTop;
+  instructionLayout.blocks.forEach((block, blockIndex) => {
+    block.lines.forEach((line) => {
+      drawText(page, fonts, line, box.x + 8, instructionCursorY, {
+        size: instructionLayout.profile.size,
+        bold: block.isCashierWarning,
+        color: block.isCashierWarning ? COLORS.sandbox : COLORS.black,
+      });
+      instructionCursorY -= instructionLayout.profile.lineHeight;
+    });
+    if (blockIndex < instructionLayout.blocks.length - 1) {
+      instructionCursorY -= instructionLayout.profile.blockGap;
+    }
+  });
+  if (hasPixCopyAndPaste) {
+    instructionCursorY -= 3;
     drawText(
       page,
       fonts,
       "Pix Copia e Cola oficial Banese:",
       box.x + 8,
-      titleY,
+      instructionCursorY,
       { size: 5, bold: true, color: COLORS.darkGreen },
     );
-    const availableLines = Math.max(0, Math.floor((titleY - y - 7) / 5.5));
-    wrapText(
-      input.pix.copyAndPaste,
-      fonts.regular,
-      4.4,
-      instructionsWidth - 16,
-    ).slice(0, availableLines).forEach((line, index) => {
-      drawText(page, fonts, line, box.x + 8, titleY - 7 - index * 5.5, {
+    instructionCursorY -= 7;
+    pixCopyLines.forEach((line) => {
+      drawText(page, fonts, line, box.x + 8, instructionCursorY, {
         size: 4.4,
         color: COLORS.gray,
       });
+      instructionCursorY -= 5.5;
     });
   }
   drawPixPanel(page, fonts, input, pixQr, {
@@ -305,15 +409,6 @@ export const drawBaneseBoletoSlip = async (
     y + payerHeight - 22,
     { size: 7, maxWidth: box.width - 50 },
   );
-  drawText(
-    page,
-    fonts,
-    `Identificador: ${input.receivableId}`,
-    box.x + 45,
-    y + 7,
-    { size: 5.8, maxWidth: box.width - 50, color: COLORS.gray },
-  );
-
   if (showBarcode) {
     y = row(barcodeBlockHeight);
     drawBarcode(page, input.barcode, {

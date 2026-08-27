@@ -96,7 +96,7 @@ const TurmaAlunosTable: React.FC<TurmaAlunosTableProps> = ({
               </td>
               <td className="px-6 py-5">
                 {student.frequencia_percent === null ? (
-                  <span className="text-[10px] font-bold uppercase text-slate-400">Sem lançamentos</span>
+                  <span className="text-[10px] font-bold uppercase text-slate-400">Sem frequência lançada</span>
                 ) : (
                   <span className="text-sm font-black text-slate-700">{student.frequencia_percent}%</span>
                 )}

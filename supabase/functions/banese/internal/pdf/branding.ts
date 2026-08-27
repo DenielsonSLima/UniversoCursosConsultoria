@@ -99,12 +99,10 @@ export const drawBaneseBankHeader = (
   );
 };
 
-export const drawBaneseCompanyHeader = (
+export const drawBaneseDocumentTitle = (
   page: PDFPage,
   fonts: BaneseDocumentFonts,
-  input: BaneseBoletoDocumentInput,
   box: BaneseDocumentBox,
-  assets: BaneseDocumentBrandAssets,
 ) => {
   page.drawRectangle({
     ...box,
@@ -112,47 +110,16 @@ export const drawBaneseCompanyHeader = (
     borderColor: BANESE_PDF_COLORS.lightGray,
     borderWidth: 0.5,
   });
-  if (assets.companyLogo) {
-    drawBaneseImageContain(page, assets.companyLogo, {
-      x: box.x + 5,
-      y: box.y + 3,
-      width: 128,
-      height: box.height - 6,
-    });
-  } else {
-    drawBaneseText(page, fonts, "UNIVERSO", box.x + 8, box.y + 11, {
-      size: 15,
-      bold: true,
-      color: BANESE_PDF_COLORS.navy,
-    });
-    drawBaneseText(
-      page,
-      fonts,
-      "Cursos e Consultoria",
-      box.x + 8,
-      box.y + 4,
-      {
-        size: 5.5,
-        bold: true,
-        color: BANESE_PDF_COLORS.sandbox,
-      },
-    );
-  }
+  const title = "COBRANÇA EDUCACIONAL";
+  const titleSize = 8;
+  const titleWidth = fonts.bold.widthOfTextAtSize(title, titleSize);
   drawBaneseText(
     page,
     fonts,
-    "COBRANÇA EDUCACIONAL",
-    box.x + box.width - 172,
-    box.y + 17,
-    { size: 7, bold: true, color: BANESE_PDF_COLORS.navy },
-  );
-  drawBaneseText(
-    page,
-    fonts,
-    `Convênio Banese ${input.beneficiary.agreement}`,
-    box.x + box.width - 172,
-    box.y + 7,
-    { size: 6.5, color: BANESE_PDF_COLORS.gray },
+    title,
+    box.x + (box.width - titleWidth) / 2,
+    box.y + 10,
+    { size: titleSize, bold: true, color: BANESE_PDF_COLORS.navy },
   );
 };
 

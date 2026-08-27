@@ -4,15 +4,15 @@ import {
   queryBaneseBoleto,
   requestBaneseBoletoAccessToken,
 } from "../banese/core/adapter.ts";
-import type {
-  BaneseAccessToken,
-  Environment,
-} from "../banese/core/adapter.ts";
+import type { BaneseAccessToken, Environment } from "../banese/core/adapter.ts";
+import {
+  canLaunchAt,
+  createLaunchPacing,
+  scheduledLaunchAt,
+} from "./pacing.ts";
+import { readRequestBody, safeEqual } from "./request-guards.ts";
 
-type CachedToken = {
-  token: BaneseAccessToken;
-  expiresAt: number;
-};
+type CachedToken = { token: BaneseAccessToken; expiresAt: number };
 
 const tokenCache = new Map<Environment, CachedToken>();
 const tokenRequests = new Map<Environment, Promise<BaneseAccessToken>>();
@@ -26,24 +26,6 @@ const json = (body: unknown, status = 200) =>
       "X-Content-Type-Options": "nosniff",
     },
   });
-
-const safeEqual = (left: string, right: string) => {
-  const leftBytes = new TextEncoder().encode(left);
-  const rightBytes = new TextEncoder().encode(right);
-  let difference = leftBytes.length ^ rightBytes.length;
-  const length = Math.max(leftBytes.length, rightBytes.length);
-  for (let index = 0; index < length; index += 1) {
-    difference |= (leftBytes[index] ?? 0) ^ (rightBytes[index] ?? 0);
-  }
-  return difference === 0;
-};
-
-const readRequestBody = async (req: Request) => {
-  const text = await req.text();
-  if (!text) return;
-  if (text.length > 1_024) throw new Error("Corpo da requisição inválido.");
-  JSON.parse(text);
-};
 
 const wait = (milliseconds: number, signal?: AbortSignal) =>
   new Promise<void>((resolve) => {
@@ -215,7 +197,10 @@ Deno.serve(async (req: Request) => {
     console.error("banese reconciliation prepare returned invalid response", {
       errorClass: "PREPARE_CONTRACT_ERROR",
     });
-    return json({ error: "A reserva da conciliação retornou dados inválidos." }, 500);
+    return json(
+      { error: "A reserva da conciliação retornou dados inválidos." },
+      500,
+    );
   }
   if (runConfig.enabled === false) {
     return json({
@@ -240,12 +225,13 @@ Deno.serve(async (req: Request) => {
     Math.min(300, Number(runConfig.oauthRefreshMarginSeconds || 60)),
   );
 
-  const rawItems: Array<Record<string, unknown>> = Array.isArray(runConfig.items)
-    ? runConfig.items.filter(
-      (item: unknown): item is Record<string, unknown> =>
-        Boolean(item) && typeof item === "object",
-    )
-    : [];
+  const rawItems: Array<Record<string, unknown>> =
+    Array.isArray(runConfig.items)
+      ? runConfig.items.filter(
+        (item: unknown): item is Record<string, unknown> =>
+          Boolean(item) && typeof item === "object",
+      )
+      : [];
   const items = rawItems
     .map((item) => ({
       receivableId: String(item?.receivableId ?? ""),
@@ -254,7 +240,9 @@ Deno.serve(async (req: Request) => {
     .filter((item) => Boolean(item.receivableId));
 
   const claimed = Number(runConfig.claimed || 0);
-  if (!runId || !environment || claimed !== items.length || items.length === 0) {
+  if (
+    !runId || !environment || claimed !== items.length || items.length === 0
+  ) {
     console.error("banese reconciliation prepare returned invalid batch", {
       errorClass: "PREPARE_CONTRACT_ERROR",
       hasRunId: Boolean(runId),
@@ -278,7 +266,10 @@ Deno.serve(async (req: Request) => {
         });
       }
     }
-    return json({ error: "A reserva da conciliação retornou dados inválidos." }, 500);
+    return json(
+      { error: "A reserva da conciliação retornou dados inválidos." },
+      500,
+    );
   }
   let reconciled = 0;
   let paid = 0;
@@ -290,45 +281,37 @@ Deno.serve(async (req: Request) => {
   let auditFailure = false;
   const oauthMetrics = { requests: 0, reused: false };
   const batchController = new globalThis.AbortController();
-  const processingStartedAt = Date.now();
-  const queryDeadline = startedAt + 40_000;
-  const hardDeadline = startedAt + 50_000;
-  const launchWindowMs = Math.max(
-    1_000,
-    Math.min(30_000, queryDeadline - processingStartedAt - 8_000),
-  );
-  const launchIntervalMs = targetTitles <= 1
-    ? 0
-    : Math.max(80, Math.floor(launchWindowMs / (targetTitles - 1)));
-  const launchDeadline = processingStartedAt + launchWindowMs;
+  const pacing = createLaunchPacing(startedAt, Date.now(), targetTitles);
   let cursor = 0;
 
   const processItem = async (
     item: { receivableId: string; modality: string },
     index: number,
   ) => {
-    const scheduledAt = processingStartedAt + index * launchIntervalMs;
-    if (scheduledAt > Date.now()) {
-      await wait(scheduledAt - Date.now(), batchController.signal);
-    }
+    const scheduledAt = scheduledLaunchAt(pacing, index);
+    await wait(Math.max(0, scheduledAt - Date.now()), batchController.signal);
     if (
       halted || batchController.signal.aborted ||
-      Date.now() > launchDeadline
+      !canLaunchAt(pacing, Date.now())
     ) return;
     const { receivableId } = item;
     launched += 1;
     const attemptStartedAt = Date.now();
     const queryController = new globalThis.AbortController();
-    const abortQuery = () => queryController.abort(batchController.signal.reason);
-    batchController.signal.addEventListener("abort", abortQuery, { once: true });
+    const abortQuery = () =>
+      queryController.abort(batchController.signal.reason);
+    batchController.signal.addEventListener("abort", abortQuery, {
+      once: true,
+    });
     const remainingMs = Math.max(
       250,
-      Math.min(8_000, queryDeadline - Date.now()),
+      Math.min(8_000, pacing.queryDeadline - Date.now()),
     );
     const timeout = setTimeout(
-      () => queryController.abort(
-        new globalThis.DOMException("Banese query timeout", "TimeoutError"),
-      ),
+      () =>
+        queryController.abort(
+          new globalThis.DOMException("Banese query timeout", "TimeoutError"),
+        ),
       remainingMs,
     );
     try {
@@ -379,7 +362,7 @@ Deno.serve(async (req: Request) => {
       const result = await reconcileBaneseReceivable(admin, receivableId, {
         queryBoleto: queryWithSharedToken,
       });
-      if (Date.now() > hardDeadline) {
+      if (Date.now() > pacing.hardDeadline) {
         // A reconciliação pode já ter aplicado a baixa e ativado o EAD.
         // Depois desse ponto, atraso é telemetria — nunca convertemos sucesso
         // financeiro em TIMEOUT nem reabrimos a fila como se a consulta falhasse.
@@ -397,13 +380,13 @@ Deno.serve(async (req: Request) => {
       const { error: attemptError } = await admin.rpc(
         "record_banese_reconciliation_attempt",
         {
-        p_run_id: runId,
-        p_receivable_id: receivableId,
-        p_result: result.paid ? "PAID" : "PENDING",
-        p_remote_status: result.remoteStatus || null,
-        p_error_class: null,
-        p_http_status: null,
-        p_duration_ms: Date.now() - attemptStartedAt,
+          p_run_id: runId,
+          p_receivable_id: receivableId,
+          p_result: result.paid ? "PAID" : "PENDING",
+          p_remote_status: result.remoteStatus || null,
+          p_error_class: null,
+          p_http_status: null,
+          p_duration_ms: Date.now() - attemptStartedAt,
         },
       );
       if (attemptError) {
@@ -460,7 +443,7 @@ Deno.serve(async (req: Request) => {
   };
 
   const worker = async () => {
-    while (!halted && Date.now() < launchDeadline) {
+    while (!halted && Date.now() < pacing.launchDeadline) {
       const index = cursor;
       cursor += 1;
       if (index >= items.length) return;

@@ -239,7 +239,9 @@ Deno.test("exclusão de parceiro sanitiza conflitos e falhas internas", async ()
     assert.equal(response.status, code === "XX000" ? 500 : 409);
     assert.match(
       body.error,
-      code === "XX000" ? /não foi possível excluir/i : /vínculo de acesso mudou/i,
+      code === "XX000"
+        ? /não foi possível excluir/i
+        : /vínculo de acesso mudou/i,
     );
     assert.doesNotMatch(JSON.stringify(body), /db-host|segredo|token=/i);
     assert.doesNotMatch(serializedLogs, /db-host|segredo|token=/i);

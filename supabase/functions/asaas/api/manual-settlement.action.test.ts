@@ -17,6 +17,7 @@ const actor: GestorAutorizado = {
   communicationSector: "",
   communicationPoloId: null,
   canViewAllCommunication: false,
+  canViewAllCommunicationPolos: false,
 };
 
 Deno.test("ação manual-settlement delega contexto autenticado ao serviço", async () => {

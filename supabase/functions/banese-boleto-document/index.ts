@@ -1,7 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   bearerTokenFromRequest,
-  requireFinanceWriteAccess,
+  requireBaneseBoletoDocumentReadAccess,
   requireGestorAtivo,
   requireGestorForPolo,
 } from "../_shared/authz.ts";
@@ -216,7 +216,7 @@ Deno.serve(async (req: Request) => {
     if (!isOwner) {
       try {
         const gestor = await requireGestorAtivo(req, admin);
-        requireFinanceWriteAccess(gestor);
+        requireBaneseBoletoDocumentReadAccess(gestor, row.tipo_lancamento);
         requireGestorForPolo(gestor, row.polo_id);
       } catch {
         throw new HttpError(403, "Sem permissão para visualizar este boleto.");

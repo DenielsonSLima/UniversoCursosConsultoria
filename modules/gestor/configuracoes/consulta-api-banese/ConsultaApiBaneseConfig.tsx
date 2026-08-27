@@ -15,91 +15,22 @@ import {
   banesePollingQueryKey,
   consultaApiBaneseService,
 } from './consulta-api-banese.service';
+import BaneseAutopilotProgress from './BaneseAutopilotProgress';
+import BaneseAttemptsTable from './BaneseAttemptsTable';
+import BaneseConsoleHeader from './BaneseConsoleHeader';
+import BaneseTabsNav, { type BaneseTabId } from './BaneseTabsNav';
 import { BaneseRunsPanel } from './BaneseRunsPanel';
 import {
   profileOperationalExample,
   profileScaleExample,
 } from './banese-profile-examples';
-import type {
-  BanesePollingAttempt,
-  BanesePollingMode,
-} from './consulta-api-banese.types';
-
-type TabId = 'overview' | 'profiles' | 'runs' | 'queries' | 'settlements' | 'errors' | 'audit';
-
-const tabs: Array<{ id: TabId; label: string }> = [
-  { id: 'overview', label: 'Visão geral' },
-  { id: 'profiles', label: 'Perfis' },
-  { id: 'runs', label: 'Execuções' },
-  { id: 'queries', label: 'Consultas' },
-  { id: 'settlements', label: 'Baixas' },
-  { id: 'errors', label: 'Erros' },
-  { id: 'audit', label: 'Auditoria' },
-];
-
-const dateTime = (value?: string | null) => value
-  ? new Intl.DateTimeFormat('pt-BR', {
-    dateStyle: 'short',
-    timeStyle: 'medium',
-    timeZone: 'America/Maceio',
-  }).format(new Date(value))
-  : 'Ainda não registrado';
-
-const duration = (milliseconds?: number | null) => {
-  if (milliseconds === null || milliseconds === undefined) return '—';
-  if (milliseconds < 1000) return `${milliseconds} ms`;
-  return `${(milliseconds / 1000).toFixed(1)} s`;
-};
-
-const statusTone = (status: string) => {
-  if (['SUCCESS', 'PAID', 'STABLE'].includes(status)) return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-  if (['FAILED', 'ERROR', 'SUSPENDED', 'THROTTLED'].includes(status)) return 'bg-red-50 text-red-700 border-red-200';
-  return 'bg-amber-50 text-amber-700 border-amber-200';
-};
-
-const StatusPill = ({ value }: { value: string }) => (
-  <span className={`inline-flex rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-wider ${statusTone(value)}`}>
-    {value}
-  </span>
-);
-
-const AttemptsTable = ({ attempts }: { attempts: BanesePollingAttempt[] }) => (
-  <div className="overflow-hidden rounded-2xl border border-slate-200">
-    <div className="overflow-x-auto">
-      <table className="min-w-full text-left text-xs">
-        <thead className="bg-slate-50 text-[9px] font-black uppercase tracking-widest text-slate-500">
-          <tr>
-            <th className="px-4 py-3">Horário</th>
-            <th className="px-4 py-3">Modalidade</th>
-            <th className="px-4 py-3">Resultado</th>
-            <th className="px-4 py-3">Situação remota</th>
-            <th className="px-4 py-3">Classe segura</th>
-            <th className="px-4 py-3">Duração</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100 bg-white">
-          {attempts.map((attempt) => (
-            <tr key={attempt.id} className="text-slate-600">
-              <td className="whitespace-nowrap px-4 py-3 font-bold">{dateTime(attempt.created_at)}</td>
-              <td className="px-4 py-3 font-black text-[#001a33]">{attempt.modality}</td>
-              <td className="px-4 py-3"><StatusPill value={attempt.result} /></td>
-              <td className="px-4 py-3">{attempt.remote_status || '—'}</td>
-              <td className="px-4 py-3">{attempt.error_class || '—'}{attempt.http_status ? ` (${attempt.http_status})` : ''}</td>
-              <td className="px-4 py-3">{duration(attempt.duration_ms)}</td>
-            </tr>
-          ))}
-          {!attempts.length ? (
-            <tr><td colSpan={6} className="px-4 py-10 text-center font-semibold text-slate-400">Nenhuma consulta neste filtro.</td></tr>
-          ) : null}
-        </tbody>
-      </table>
-    </div>
-  </div>
-);
+import { BaneseStatusPill, formatBaneseDateTime } from './banese-display';
+import { selectBaneseAttemptFeed } from './banese-attempt-feed';
+import type { BanesePollingMode } from './consulta-api-banese.types';
 
 const ConsultaApiBaneseConfig = () => {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<TabId>('overview');
+  const [activeTab, setActiveTab] = useState<BaneseTabId>('overview');
   const [draftMode, setDraftMode] = useState<BanesePollingMode>('AUTOMATIC');
   const [draftProfile, setDraftProfile] = useState(6);
   const [reason, setReason] = useState('');
@@ -112,6 +43,8 @@ const ConsultaApiBaneseConfig = () => {
   });
   const dashboard = dashboardQuery.data;
   const config = dashboard?.config;
+  const configMode = config?.mode;
+  const configuredProfileId = config?.selected_profile_id;
   const errorSummaryQuery = useQuery({
     queryKey: [...banesePollingQueryKey, 'error-summary'],
     queryFn: consultaApiBaneseService.getErrorSummary,
@@ -120,10 +53,10 @@ const ConsultaApiBaneseConfig = () => {
   });
 
   useEffect(() => {
-    if (!config) return;
-    setDraftMode(config.mode);
-    setDraftProfile(config.selected_profile_id);
-  }, [config?.mode, config?.selected_profile_id]);
+    if (!configMode || configuredProfileId === undefined) return;
+    setDraftMode(configMode);
+    setDraftProfile(configuredProfileId);
+  }, [configMode, configuredProfileId]);
 
   useEffect(() => {
     const channel = supabase
@@ -158,12 +91,10 @@ const ConsultaApiBaneseConfig = () => {
     onError: (error) => setFeedback(error instanceof Error ? error.message : 'Não foi possível salvar.'),
   });
 
-  const attempts = dashboard?.lastAttempts || [];
   const filteredAttempts = useMemo(() => {
-    if (activeTab === 'settlements') return attempts.filter((item) => item.result === 'PAID');
-    if (activeTab === 'errors') return attempts.filter((item) => ['ERROR', 'THROTTLED'].includes(item.result));
-    return attempts;
-  }, [activeTab, attempts]);
+    if (!['queries', 'settlements', 'errors'].includes(activeTab)) return [];
+    return selectBaneseAttemptFeed(dashboard, activeTab as 'queries' | 'settlements' | 'errors');
+  }, [activeTab, dashboard]);
 
   if (dashboardQuery.isLoading) {
     return (
@@ -195,7 +126,6 @@ const ConsultaApiBaneseConfig = () => {
   const queue = dashboard.queue || { ready: 0, leased: 0, eadReady: 0, quarantined: 0 };
   const autopilot = dashboard.autopilot;
   const effective = profiles.find((profile) => profile.id === config.effective_profile_id);
-  const ceiling = profiles.find((profile) => profile.id === config.selected_profile_id);
   const previousTransition = dashboard.transitions?.find((transition) => (
     transition.from_profile_id
     && transition.to_profile_id === config.effective_profile_id
@@ -210,61 +140,14 @@ const ConsultaApiBaneseConfig = () => {
 
   return (
     <div className="banese-console space-y-6">
-      <header className="overflow-hidden rounded-[2rem] bg-[#001a33] text-white shadow-xl shadow-blue-950/10">
-        <div className="grid gap-6 p-6 lg:grid-cols-[1.15fr_0.85fr] lg:p-8">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-1 text-[9px] font-black uppercase tracking-[0.18em] text-emerald-200">
-                Ambiente {dashboard.environment === 'production' ? 'Produção' : 'Homologação'}
-              </span>
-              <StatusPill value={config.state} />
-            </div>
-            <h2 className="mt-4 text-3xl font-black uppercase tracking-tight">Consulta API Banese</h2>
-            <p className="mt-2 max-w-2xl text-sm font-semibold leading-relaxed text-slate-300">
-              Confirma pagamentos de títulos já emitidos, prioriza EAD e ajusta o ritmo com rollback automático.
-              Este módulo não cria, reemite, cancela nem gera cobranças.
-            </p>
-          </div>
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <p className="text-[8px] font-black uppercase tracking-wider text-slate-400">Anterior</p>
-                <p className="mt-1 text-xl font-black text-slate-200">{previousProfileId ? `P${previousProfileId}` : '—'}</p>
-              </div>
-              <div>
-                <p className="text-[8px] font-black uppercase tracking-wider text-blue-200">Teto configurado</p>
-                <p className="mt-1 text-xl font-black text-blue-200">P{config.selected_profile_id}</p>
-              </div>
-              <div>
-                <p className="text-[8px] font-black uppercase tracking-wider text-emerald-200">Efetivo agora</p>
-                <p className="mt-1 text-3xl font-black text-emerald-300">P{config.effective_profile_id}</p>
-              </div>
-            </div>
-            <p className="mt-3 text-sm font-black text-white">{effective?.name} • {effective?.titles_per_minute || 0} títulos/min</p>
-            <p className="mt-2 border-t border-white/10 pt-3 text-[11px] font-semibold leading-relaxed text-slate-300">
-              Exemplo real: {profileOperationalExample(effective, 20)}
-            </p>
-            <p className="mt-1 text-[9px] font-bold text-slate-400">Estimativa de capacidade; não é prazo de compensação nem SLA do Banese.</p>
-          </div>
-        </div>
-      </header>
+      <BaneseConsoleHeader
+        environment={dashboard.environment}
+        config={config}
+        effective={effective}
+        previousProfileId={previousProfileId}
+      />
 
-      <nav className="flex gap-2 overflow-x-auto pb-1" aria-label="Seções da consulta Banese">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setActiveTab(tab.id)}
-            className={`min-h-11 shrink-0 rounded-xl px-4 text-[10px] font-black uppercase tracking-wider transition ${
-              activeTab === tab.id
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'border border-slate-200 bg-white text-slate-500 hover:border-blue-200 hover:text-blue-700'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </nav>
+      <BaneseTabsNav activeTab={activeTab} onChange={setActiveTab} />
 
       {activeTab === 'overview' ? (
         <div className="space-y-6">
@@ -288,14 +171,14 @@ const ConsultaApiBaneseConfig = () => {
               <p className="text-[9px] font-black uppercase tracking-widest text-blue-600">Exemplo do seletor atual</p>
               <h3 className="mt-2 text-lg font-black">
                 {config.mode === 'AUTOMATIC'
-                  ? `Automático: P${config.effective_profile_id} agora, teto P${config.selected_profile_id}`
+                  ? `Automático P3 → P9: P${config.effective_profile_id} agora`
                   : config.mode === 'MANUAL'
                     ? `Manual: P${config.effective_profile_id}`
                     : `Pausado no P${config.effective_profile_id}`}
               </h3>
               <p className="mt-2 text-xs font-semibold leading-relaxed">
                 {config.mode === 'AUTOMATIC'
-                  ? `O marcador acompanha o perfil efetivo. O sistema pode avançar gradualmente até ${ceiling?.name || `P${config.selected_profile_id}`} e recua se detectar erro ou HTTP 429.`
+                  ? 'O marcador acompanha o perfil efetivo entre o piso P3 e o teto P9. O sistema avança gradualmente nessa faixa e recua se detectar erro ou HTTP 429.'
                   : config.mode === 'MANUAL'
                     ? 'O perfil escolhido é aplicado diretamente e permanece fixo até nova alteração auditada.'
                     : 'Nenhum novo título é reservado enquanto a operação estiver pausada.'}
@@ -329,7 +212,7 @@ const ConsultaApiBaneseConfig = () => {
                 {!errorSummaryUnavailable ? recentErrors.map((error) => (
                   <div key={error.id} className="rounded-xl bg-white/70 px-3 py-2 text-[11px] font-semibold">
                     <span className="font-black">{error.error_class || error.result}</span>
-                    {error.http_status ? ` • HTTP ${error.http_status}` : ''} • {dateTime(error.created_at)}
+                    {error.http_status ? ` • HTTP ${error.http_status}` : ''} • {formatBaneseDateTime(error.created_at)}
                   </div>
                 )) : null}
                 {errorSummaryUnavailable ? (
@@ -342,38 +225,7 @@ const ConsultaApiBaneseConfig = () => {
           </section>
 
           {config.mode === 'AUTOMATIC' && autopilot ? (
-            <section className="rounded-3xl border border-violet-200 bg-violet-50 p-5 text-violet-950">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <p className="font-black uppercase tracking-wider text-violet-700">Progresso automático P{autopilot.currentProfileId} → P{autopilot.nextProfileId || autopilot.currentProfileId}</p>
-                  <h3 className="mt-2 text-xl font-black">
-                    {autopilot.nextProfileId
-                      ? `${autopilot.validTitles} de ${autopilot.requiredTitles} títulos válidos`
-                      : 'Teto automático alcançado'}
-                  </h3>
-                  <p className="mt-2 max-w-3xl text-sm font-semibold leading-relaxed">
-                    {autopilot.nextProfileId
-                      ? `O avanço do P${autopilot.currentProfileId} exige duas condições ao mesmo tempo: ${autopilot.requiredTitles} consultas reais de títulos sem erro e 1 hora de estabilidade. Execuções com fila vazia não contam.`
-                      : 'O perfil efetivo já está no teto da escada automática conservadora.'}
-                  </p>
-                </div>
-                <span className={`rounded-full px-3 py-2 font-black ${
-                  autopilot.eligibleToPromote ? 'bg-emerald-100 text-emerald-800' : 'bg-white text-violet-800'
-                }`}>
-                  {Math.min(60, Math.floor(autopilot.stableSeconds / 60))}/60 min estáveis
-                </span>
-              </div>
-              {autopilot.nextProfileId ? (
-                <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                  <div className="h-2 overflow-hidden rounded-full bg-white">
-                    <div className="h-full rounded-full bg-violet-600" style={{ width: `${Math.min(100, (autopilot.validTitles / autopilot.requiredTitles) * 100)}%` }} />
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-white">
-                    <div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.min(100, (autopilot.stableSeconds / autopilot.requiredSeconds) * 100)}%` }} />
-                  </div>
-                </div>
-              ) : null}
-            </section>
+            <BaneseAutopilotProgress config={config} autopilot={autopilot} />
           ) : null}
 
           <section className="grid gap-5 lg:grid-cols-[1fr_0.85fr]">
@@ -403,7 +255,7 @@ const ConsultaApiBaneseConfig = () => {
                         checked={draftMode === value}
                         onChange={() => {
                           setDraftMode(value);
-                          if (value === 'AUTOMATIC') setDraftProfile(10);
+                          if (value === 'AUTOMATIC') setDraftProfile(9);
                         }}
                       />
                       {value === 'PAUSED' ? <PauseCircle size={15} /> : <Activity size={15} />}
@@ -417,7 +269,7 @@ const ConsultaApiBaneseConfig = () => {
                   <p className="font-black uppercase tracking-wider text-blue-700">Perfil controlado pelo automático</p>
                   <p className="mt-2 text-lg font-black text-[#001a33]">P{config.effective_profile_id} — {effective?.name}</p>
                   <p className="mt-1 text-sm font-semibold text-slate-600">
-                    O usuário não altera o perfil enquanto este modo estiver ativo. O sistema avança sozinho após a amostra estável e retorna ao fallback anterior ao detectar qualquer erro.
+                    O usuário não altera o perfil enquanto este modo estiver ativo. O sistema avança sozinho do piso P3 ao teto P9 após a amostra estável e retorna ao fallback anterior ao detectar qualquer erro.
                   </p>
                 </div>
               ) : null}
@@ -458,18 +310,18 @@ const ConsultaApiBaneseConfig = () => {
                 <div className="flex gap-3"><AlertTriangle className="shrink-0" size={22} /><div>
                   <h3 className="font-black">Autopiloto conservador</h3>
                   <p className="mt-1 text-xs font-semibold leading-relaxed">
-                    Promoção exige uma hora e amostra real sem erros. Qualquer erro recua para o fallback seguro; HTTP 429 também interrompe o lote e abre resfriamento de uma hora.
+                    Na escada automática P3 → P9, a promoção exige uma hora e amostra real sem erros. Qualquer erro recua para o fallback seguro; HTTP 429 também interrompe o lote e abre resfriamento de uma hora.
                   </p>
                 </div></div>
               </article>
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-2xl border border-slate-200 bg-white p-4">
                   <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Estável desde</p>
-                  <p className="mt-2 text-xs font-black text-[#001a33]">{dateTime(config.stable_since)}</p>
+                  <p className="mt-2 text-xs font-black text-[#001a33]">{formatBaneseDateTime(config.stable_since)}</p>
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-white p-4">
                   <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Última atualização</p>
-                  <p className="mt-2 text-xs font-black text-[#001a33]">{dateTime(config.updated_at)}</p>
+                  <p className="mt-2 text-xs font-black text-[#001a33]">{formatBaneseDateTime(config.updated_at)}</p>
                 </div>
               </div>
             </div>
@@ -480,7 +332,7 @@ const ConsultaApiBaneseConfig = () => {
       {activeTab === 'profiles' ? (
         <section className="space-y-4">
           <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4 text-xs font-semibold leading-relaxed text-blue-900">
-            No automático, o marcador acompanha o perfil efetivo e fica bloqueado para edição. O teto é P10; P9 e P10 só entram após amostra real estável. P11–P16 são testes manuais temporários e P17–P20 permanecem bloqueados aguardando retorno.
+            No automático, o marcador acompanha o perfil efetivo e fica bloqueado para edição. A escada vai do piso P3 ao teto P9, com avanço condicionado a amostra real estável. P10–P16 são testes manuais temporários e P17–P20 permanecem bloqueados aguardando retorno.
           </div>
           <fieldset>
             <legend className="sr-only">Perfis operacionais da consulta Banese</legend>
@@ -523,11 +375,13 @@ const ConsultaApiBaneseConfig = () => {
                         <span className="inline-flex rounded-full bg-white px-2 py-1 font-black uppercase tracking-wider text-slate-600">
                           {profile.automatic_selectable
                             ? 'Automático'
-                            : profile.group_name === 'REAL_TEST'
-                              ? 'Teste geral'
-                              : profile.group_name === 'PRIORITY_WINDOW'
-                                ? 'EAD + vencimento'
-                                : 'Aguardando Banese'}
+                            : profile.group_name === 'CONSERVATIVE'
+                              ? 'Somente manual'
+                              : profile.group_name === 'REAL_TEST'
+                                ? 'Teste geral'
+                                : profile.group_name === 'PRIORITY_WINDOW'
+                                  ? 'EAD + vencimento'
+                                  : 'Aguardando Banese'}
                         </span>
                         {!profile.selectable ? (
                           <span className="inline-flex items-center gap-1 rounded-full bg-slate-200 px-2 py-1 text-[8px] font-black uppercase tracking-wider text-slate-600">
@@ -571,14 +425,20 @@ const ConsultaApiBaneseConfig = () => {
       <div className={activeTab === 'runs' ? 'block' : 'hidden'}>
         <BaneseRunsPanel active={activeTab === 'runs'} />
       </div>
-      {['queries', 'settlements', 'errors'].includes(activeTab) ? <AttemptsTable attempts={filteredAttempts} /> : null}
+      {activeTab === 'queries' || activeTab === 'settlements' || activeTab === 'errors' ? (
+        <BaneseAttemptsTable
+          attempts={filteredAttempts}
+          context={activeTab}
+          canViewReceivableDetails={dashboard.canViewReceivableDetails === true}
+        />
+      ) : null}
       {activeTab === 'audit' ? (
         <div className="space-y-3">
           {(dashboard.transitions || []).map((transition) => (
             <article key={transition.id} className="rounded-2xl border border-slate-200 bg-white p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <StatusPill value={transition.transition_type} />
-                <time className="text-[10px] font-bold text-slate-400">{dateTime(transition.created_at)}</time>
+                <BaneseStatusPill value={transition.transition_type} />
+                <time className="text-[10px] font-bold text-slate-400">{formatBaneseDateTime(transition.created_at)}</time>
               </div>
               <p className="mt-3 text-sm font-black text-[#001a33]">
                 {transition.from_profile_id ? `P${transition.from_profile_id}` : '—'} → {transition.to_profile_id ? `P${transition.to_profile_id}` : '—'}

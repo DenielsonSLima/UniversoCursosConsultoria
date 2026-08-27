@@ -3,6 +3,11 @@ import type {
   ManualSettlementPaymentMethod,
   NormalizedManualSettlementRequest,
 } from "./manual-settlement.types.ts";
+import {
+  MANUAL_SETTLEMENT_CONTEXT_DASHBOARD_EXISTING_TITLE_ONLY,
+  MANUAL_SETTLEMENT_CONTEXT_STANDARD,
+  type ManualSettlementContext,
+} from "./manual-settlement.types.ts";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -14,6 +19,11 @@ const PAYMENT_METHODS = new Set<ManualSettlementPaymentMethod>([
   "PIX",
   "CARTAO",
   "DINHEIRO",
+]);
+const DASHBOARD_EXISTING_TITLE_LAUNCH_TYPES = new Set([
+  "PARCELA",
+  "REMATRICULA",
+  "DEPENDENCIA",
 ]);
 
 const malformedMoneyError = (label: string) =>
@@ -175,6 +185,39 @@ const assertIsoPaymentDate = (value: unknown, now: Date) => {
   return paymentDate;
 };
 
+const normalizeManualSettlementContext = (
+  body: Record<string, unknown>,
+): ManualSettlementContext => {
+  if (!Object.prototype.hasOwnProperty.call(body, "settlementContext")) {
+    return MANUAL_SETTLEMENT_CONTEXT_STANDARD;
+  }
+  const context = String(body.settlementContext || "").trim();
+  if (
+    context === MANUAL_SETTLEMENT_CONTEXT_STANDARD ||
+    context === MANUAL_SETTLEMENT_CONTEXT_DASHBOARD_EXISTING_TITLE_ONLY
+  ) {
+    return context;
+  }
+  throw new Error("Contexto de baixa manual inválido.");
+};
+
+const assertDashboardExistingTitle = (
+  settlementContext: ManualSettlementContext,
+  receivable: any,
+) => {
+  if (
+    settlementContext !==
+      MANUAL_SETTLEMENT_CONTEXT_DASHBOARD_EXISTING_TITLE_ONLY
+  ) return;
+
+  const launchType = String(receivable?.tipo_lancamento || "").trim();
+  if (!DASHBOARD_EXISTING_TITLE_LAUNCH_TYPES.has(launchType)) {
+    throw new Error(
+      "A Ação Rápida permite baixa apenas de título existente com tipo financeiro reconhecido.",
+    );
+  }
+};
+
 export const normalizeManualSettlementRequest = (
   body: Record<string, unknown>,
   receivable: any,
@@ -183,6 +226,7 @@ export const normalizeManualSettlementRequest = (
   const receivableId = String(body.receivableId || "").trim();
   const idempotencyKey = String(body.idempotencyKey || "").trim();
   const accountId = String(body.contaBancariaId || "").trim();
+  const settlementContext = normalizeManualSettlementContext(body);
   if (!UUID_RE.test(receivableId)) {
     throw new Error("Cobrança inválida para baixa manual.");
   }
@@ -194,6 +238,7 @@ export const normalizeManualSettlementRequest = (
   if (!DATABASE_UUID_RE.test(accountId)) {
     throw new Error("Conta bancária obrigatória para baixa manual.");
   }
+  assertDashboardExistingTitle(settlementContext, receivable);
 
   const paymentMethod = String(body.formaPagamento || "")
     .trim()
@@ -242,6 +287,7 @@ export const normalizeManualSettlementRequest = (
     accountId,
     paymentDate: assertIsoPaymentDate(body.dataPagamento, now),
     paymentMethod,
+    settlementContext,
     breakdown,
   };
 };
@@ -253,6 +299,7 @@ const stableFingerprintPayload = (
   accountId: request.accountId,
   paymentDate: request.paymentDate,
   paymentMethod: request.paymentMethod,
+  settlementContext: request.settlementContext,
   ...request.breakdown,
 });
 

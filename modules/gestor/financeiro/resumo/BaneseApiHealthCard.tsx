@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   FileText,
+  Globe2,
   HelpCircle,
   Loader2,
 } from 'lucide-react';
@@ -126,12 +127,21 @@ const BaneseApiHealthCard: React.FC = () => {
   const cnabNotice = describeCnabAvailabilityError(cnabError);
 
   return (
-    <section className="rounded-[2rem] border border-blue-100 bg-white p-6 shadow-sm">
-      <div>
-        <p className="text-[10px] font-black uppercase tracking-widest text-blue-700">Canal principal</p>
-        <h3 className="mt-1 text-lg font-black text-[#001a33]">Saúde operacional da API Banese</h3>
-        <p className="mt-1 text-xs font-semibold text-slate-500">Evidências reais da última reconciliação e do último teste persistidos.</p>
+    <section className="rounded-3xl border border-blue-100 bg-white p-5 shadow-sm md:p-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-widest text-blue-700">Canal principal</p>
+          <h3 className="mt-1 text-lg font-black text-[#001a33]">Saúde operacional da API Banese</h3>
+          <p className="mt-1 text-xs font-semibold text-slate-500">Evidências reais da última reconciliação e do último teste persistidos.</p>
+        </div>
+        <span className="inline-flex min-h-8 w-fit items-center gap-1.5 rounded-full border border-blue-100 bg-blue-50 px-3 text-[9px] font-black uppercase tracking-wide text-blue-700">
+          <Globe2 size={13} /> Escopo global
+        </span>
       </div>
+
+      <p className="mt-3 text-[10px] font-semibold leading-relaxed text-slate-500">
+        Operação bancária institucional; independe do polo e do período selecionados acima.
+      </p>
 
       {isLoading ? (
         <div className="mt-5 flex items-center gap-2 rounded-xl bg-slate-50 p-4 text-xs font-bold text-slate-500"><Loader2 size={15} className="animate-spin" /> Consultando evidências...</div>

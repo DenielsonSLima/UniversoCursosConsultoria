@@ -25,6 +25,7 @@ const moduleLoaders = {
   'cracha-estagio': () => import('./cracha-estagio/SecretariaCrachaEstagioPage'),
   'termo-estagio': () => import('./termo-estagio/SecretariaTermoEstagioPage'),
   'consulta-financeira': () => import('./consulta-financeira/SecretariaConsultaFinanceiraPage'),
+  'carnes-alunos': () => import('./carnes-alunos/SecretariaCarnesAlunosPage'),
   'historico-emissoes': () => import('./historico-emissoes/SecretariaHistoricoEmissoesPage'),
   certificados: () => import('./certificados/SecretariaCertificadosPage'),
   'assinatura-eletronica': () => import('./assinaturas/SecretariaAssinaturasPage'),
@@ -48,6 +49,7 @@ const SecretariaHistoricoEscolarPage = lazy(moduleLoaders['historico-escolar']);
 const SecretariaCrachaEstagioPage = lazy(moduleLoaders['cracha-estagio']);
 const SecretariaTermoEstagioPage = lazy(moduleLoaders['termo-estagio']);
 const SecretariaConsultaFinanceiraPage = lazy(moduleLoaders['consulta-financeira']);
+const SecretariaCarnesAlunosPage = lazy(moduleLoaders['carnes-alunos']);
 const SecretariaHistoricoEmissoesPage = lazy(moduleLoaders['historico-emissoes']);
 const SecretariaCertificadosPage = lazy(moduleLoaders.certificados);
 const SecretariaAssinaturasPage = lazy(moduleLoaders['assinatura-eletronica']);
@@ -134,8 +136,12 @@ const secretariaModuleHeaders: Record<string, { title: string; description: stri
     description: 'Auditoria dos documentos emitidos pela secretaria.',
   },
   'consulta-financeira': {
-    title: 'Financeiro',
+    title: 'Recebimentos',
     description: 'Recebimentos agrupados por aluno e curso, nos modos individual, lote e personalizado.',
+  },
+  'carnes-alunos': {
+    title: 'Carnês dos Alunos',
+    description: 'Emissão individual, em lote ou personalizada a partir dos títulos Banese existentes.',
   },
   'pasta-identificacao': {
     title: 'Pasta de Identificação',
@@ -237,6 +243,8 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({
         return <SecretariaTermoEstagioPage />;
       case 'consulta-financeira':
         return <SecretariaConsultaFinanceiraPage />;
+      case 'carnes-alunos':
+        return <SecretariaCarnesAlunosPage poloId={poloId} />;
       case 'pasta-identificacao':
         return <SecretariaPastaIdentificacaoPage />;
       case 'ficha-matricula':

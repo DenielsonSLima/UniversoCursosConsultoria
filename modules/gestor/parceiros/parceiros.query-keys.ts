@@ -8,6 +8,13 @@ export const parceirosQueryKeys = {
     poloId || 'todos',
     includeGlobal ? 'global' : 'local',
   ] as const,
+  kpis: (poloId?: string | null, includeGlobal?: boolean) => [
+    'parceiros',
+    'cadastros',
+    'kpis',
+    poloId || 'todos',
+    includeGlobal ? 'global' : 'local',
+  ] as const,
   detail: (id: string) => ['parceiro', id] as const,
   availableClasses: ['parceiros', 'turmas-disponiveis'] as const,
   turmasDisponiveis: (poloId?: string | null) => [

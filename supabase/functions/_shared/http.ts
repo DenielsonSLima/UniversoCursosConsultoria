@@ -64,8 +64,9 @@ const mergeRequestedHeaders = (request?: Request | null) => {
     "x-requested-with",
   ]);
 
-  const requestedHeaderList =
-    parseOriginList(request?.headers.get("access-control-request-headers"));
+  const requestedHeaderList = parseOriginList(
+    request?.headers.get("access-control-request-headers"),
+  );
   for (const header of requestedHeaderList) {
     const normalized = normalizeHeaderValue(header);
     if (isRequestedHeader(normalized)) {
@@ -85,12 +86,15 @@ const parseOriginList = (value?: string | null) =>
 const isLocalDevelopmentOrigin = (origin: string) => {
   try {
     const hostname = new URL(origin).hostname;
-    if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "0.0.0.0" || hostname === "::1") {
+    if (
+      hostname === "localhost" || hostname === "127.0.0.1" ||
+      hostname === "0.0.0.0" || hostname === "::1"
+    ) {
       return true;
     }
-    return /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname)
-      || /^192\.168\.\d{1,3}\.\d{1,3}$/.test(hostname)
-      || /^172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}$/.test(hostname);
+    return /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname) ||
+      /^192\.168\.\d{1,3}\.\d{1,3}$/.test(hostname) ||
+      /^172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}$/.test(hostname);
   } catch {
     return false;
   }
@@ -130,12 +134,18 @@ const resolveAllowOrigin = (requestOrigin: string | null | undefined) => {
     return normalizedRequestOrigin;
   }
   const parsedOrigin = parseOrigin(requestOrigin);
-  if (parsedOrigin && (isLocalDevelopmentOrigin(parsedOrigin) || isUniversityDomain(parsedOrigin))) return parsedOrigin;
+  if (
+    parsedOrigin &&
+    (isLocalDevelopmentOrigin(parsedOrigin) || isUniversityDomain(parsedOrigin))
+  ) return parsedOrigin;
   if (parsedOrigin && allowed.includes(parsedOrigin)) return parsedOrigin;
   return allowed[0] || "https://universocc.com.br";
 };
 
-export const buildCorsHeaders = (request?: Request | null, options: CorsOptions = {}) => {
+export const buildCorsHeaders = (
+  request?: Request | null,
+  options: CorsOptions = {},
+) => {
   const methods = options.methods || "POST, OPTIONS";
   const requestOrigin = request?.headers.get("origin");
   const requestedHeaders = mergeRequestedHeaders(request);
@@ -180,7 +190,11 @@ type RateLimitBucket = {
 
 const rateLimitBuckets = new Map<string, RateLimitBucket>();
 
-export const isRateLimitExceeded = (key: string, maxRequests: number, windowMs: number) => {
+export const isRateLimitExceeded = (
+  key: string,
+  maxRequests: number,
+  windowMs: number,
+) => {
   const now = Date.now();
   const bucket = rateLimitBuckets.get(key);
   if (!bucket || now >= bucket.resetAt) {
@@ -195,4 +209,5 @@ export const isRateLimitExceeded = (key: string, maxRequests: number, windowMs: 
   return false;
 };
 
-export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+export const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;

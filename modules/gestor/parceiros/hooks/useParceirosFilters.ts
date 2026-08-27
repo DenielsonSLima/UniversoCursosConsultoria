@@ -83,32 +83,6 @@ export const useParceirosFilters = (allPartners: any[], activeTab: ParceirosTabT
     return sorted;
   }, [filteredPartners, sortOrder]);
 
-  const kpis = useMemo(() => {
-    const totalParceiros = filteredPartners.length;
-    const totalParceirosAtivos = filteredPartners.filter(p => p.status?.toLowerCase() === 'ativo').length;
-
-    const alunos = filteredPartners.filter(p => p.tipo === 'Aluno');
-    const totalAlunosVinculados = alunos.length;
-    const totalAlunosAtivos = alunos.filter(p => p.status?.toLowerCase() === 'ativo').length;
-    const totalAlunosInativos = alunos.filter(p => ['inativo', 'cancelado', 'desistente'].includes(p.status?.toLowerCase() || '')).length;
-
-    const professores = filteredPartners.filter(p => p.tipo === 'Professor');
-    const totalProfessoresVinculados = professores.length;
-    const totalProfessoresAtivos = professores.filter(p => p.status?.toLowerCase() === 'ativo').length;
-    const totalProfessoresInativos = professores.filter(p => p.status?.toLowerCase() === 'inativo').length;
-
-    return {
-      totalParceiros,
-      totalParceirosAtivos,
-      totalAlunosVinculados,
-      totalAlunosAtivos,
-      totalAlunosInativos,
-      totalProfessoresVinculados,
-      totalProfessoresAtivos,
-      totalProfessoresInativos
-    };
-  }, [filteredPartners]);
-
   return {
     searchTerm,
     statusFilter,
@@ -121,6 +95,5 @@ export const useParceirosFilters = (allPartners: any[], activeTab: ParceirosTabT
     handleSearch: setSearchTerm,
     handleSort: setSortOrder,
     sortedAndFilteredPartners,
-    kpis,
   };
 };

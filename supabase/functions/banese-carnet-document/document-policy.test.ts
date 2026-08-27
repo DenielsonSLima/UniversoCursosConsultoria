@@ -3,8 +3,11 @@ import { baneseDocumentFixtureAt } from "../banese/internal/testing/document-fix
 import {
   type BaneseCarnetReceivableRow,
   isAllowedBaneseLogoUrl,
+  isRegisteredBaneseDocumentRow,
   readBaneseCarnetScope,
   selectBaneseCarnetDocumentRows,
+  selectBaneseDocumentGroupRows,
+  takeRegisteredBaneseCarnetCandidateRows,
 } from "./document-policy.ts";
 
 const CLIENT_ID = "22222222-2222-4222-8222-222222222222";
@@ -70,6 +73,29 @@ Deno.test("seleciona ao menos tres parcelas registradas e ordena o carne", () =>
   assert.deepEqual(rows.map((row) => row.parcela_numero), [1, 2, 3]);
 });
 
+Deno.test("catálogo documental aceita um boleto sem relaxar validação bancária", () => {
+  const selected = rowAt(0);
+  assert.deepEqual(
+    selectBaneseDocumentGroupRows(selected, [selected]).map((row) => row.id),
+    [selected.id],
+  );
+  assert.equal(isRegisteredBaneseDocumentRow(selected), true);
+  assert.equal(
+    isRegisteredBaneseDocumentRow(
+      rowAt(1, { gateway_financial_terms_confirmed_at: null }),
+    ),
+    false,
+  );
+  assert.throws(
+    () =>
+      selectBaneseDocumentGroupRows(
+        selected,
+        [selected, rowAt(1, { gateway_boleto_codigo_barras: "invalido" })],
+      ),
+    /código de barras|codigo de barras|boleto/i,
+  );
+});
+
 Deno.test("exclui encerrados e nunca mistura Asaas ou outro emissor", () => {
   const selected = rowAt(0);
   const rows = selectBaneseCarnetDocumentRows(selected, [
@@ -88,6 +114,28 @@ Deno.test("exclui encerrados e nunca mistura Asaas ou outro emissor", () => {
     rowAt(1).id,
     rowAt(2).id,
   ]);
+});
+
+Deno.test("títulos históricos encerrados não consomem o limite dos títulos atuais", () => {
+  const historical = Array.from({ length: 40 }, (_, index) =>
+    rowAt(index, {
+      status: index % 2 === 0 ? "CANCELADO" : "PAGO",
+      gateway_status: index % 2 === 0 ? "CANCELED" : "PAID",
+    }));
+  const current = [rowAt(40), rowAt(41), rowAt(42), rowAt(43)];
+  const candidates = takeRegisteredBaneseCarnetCandidateRows([
+    ...historical,
+    ...current,
+  ]);
+
+  assert.deepEqual(
+    candidates.map((row) => row.id),
+    current.map((row) => row.id),
+  );
+  assert.deepEqual(
+    selectBaneseCarnetDocumentRows(current[0], candidates).map((row) => row.id),
+    current.map((row) => row.id),
+  );
 });
 
 Deno.test("matricula e cobranca individual nunca originam carne", () => {

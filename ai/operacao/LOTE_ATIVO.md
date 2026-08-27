@@ -1,131 +1,46 @@
 # Lote ativo
 
-Estado: `PUBLICADO_PRODUCAO_4_8_7`
+Estado: `PUBLICADO_PARCIAL_BACKEND_BANESE_AGUARDANDO_DEMAIS_ETAPAS`
 
-## Lote: 2026-08-26-bolepix-e-notificacoes-financeiras-seguras
+## Lote: 2026-08-26-carnes-alunos-e-baixa-rapida
 
-- Pedido: revisar todas as alterações com três agentes e publicar GitHub, Supabase, Edge Functions e sistema web em Produção.
-- Registro: `ai/operacao/registros/alteracoes/2026-08-26-bolepix-e-notificacoes-financeiras-seguras.md`.
-- Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-26-bolepix-e-notificacoes-financeiras-seguras.md`.
-- Autorização: Produção solicitada explicitamente pelo titular em 2026-08-26, condicionada à revisão e aos gates.
-- Base remota: `main` `6bbadbeb4eeee8758e33467dd0c8600a46f84534` (`4.8.5`). O HEAD Git local histórico não é base de publicação.
-- Versão funcional publicada: `4.8.6`; fechamento operacional: `4.8.7`.
+- Pedido: separar a emissão documental de carnês Banese dos recebimentos da Secretaria e permitir baixa manual no modal rápido "Financeiro do aluno" do Início.
+- Registro: `ai/operacao/registros/alteracoes/2026-08-26-carnes-alunos-e-baixa-rapida.md`.
+- Manifesto explícito: `ai/operacao/registros/alteracoes/2026-08-26-carnes-alunos-e-baixa-rapida.md`.
+- Autorização: em 2026-08-26 foi autorizado e concluído somente o deploy das três Edge Functions documentais Banese (`secretaria-banese-document-groups`, `banese-boleto-document` e `banese-carnet-document`). Migration, `asaas-api`, frontend, baixa real e demais operações remotas continuam fora da autorização.
+- Risco: crítico, por envolver financeiro, autorização, PDF bancário em produção e ação de baixa.
 
-### Contratos do lote
+### Contratos preservados
 
-1. Trancamento preserva dívidas vencidas na data efetiva e suspende somente títulos futuros; aviso de cobrança exige `data_pagamento IS NULL` e status `PENDENTE` ou `VENCIDO`.
-2. WhatsApp, Push e inbox revalidam título e identidade antes do efeito externo. A ordem de locks é `contas_receber → job → delivery`.
-3. Financeiro do Aluno e jornada Cursos recebem somente opções EAD roteáveis, sem credenciais nem composição de rota no frontend.
-4. BolePix usa um título Banese `BOLETO`. A apresentação Pix só abre com payload ou imagem oficial; sem isso, backend e UI rebaixam para o PDF do mesmo boleto.
-5. Reuso de checkout exige o mesmo recebível, aluno, matrícula, turma, descrição, valor, vencimento, status local cobrável, ausência de pagamento e identidade remota válida; a revalidação ocorre antes, entre e depois dos reparos assíncronos.
-6. PIX Banese direto permanece bloqueado em sandbox e produção antes de qualquer leitura de configuração; o bloqueio não alcança o Pix devolvido dentro do BolePix.
+1. `Recebimentos` continua sendo o único submódulo da Secretaria que altera o estado financeiro. `Carnês dos alunos` é separado e estritamente documental.
+2. O catálogo usa somente cobranças Banese existentes, registradas e confirmadas. Não cria, reemite, sincroniza, recalcula nem registra cobrança no banco ou no Banese.
+3. Boleto individual e carnê reutilizam os compositores Banese validados em produção: boleto em uma página A4 e carnê do mesmo pagador, matrícula, polo, ambiente, emissor, convênio e agência.
+4. Os modos individual, lote e personalizado selecionam grupos documentais; nunca misturam matrículas ou escopos bancários incompatíveis.
+5. A baixa no Início reutiliza o fluxo canônico, mantém confirmação explícita e exige `Financeiro > Receber`. Consultar ou emitir documentos não concede baixa.
+6. O contexto da ação rápida aceita somente títulos existentes de tipo conhecido e suprime geração ou sincronização de parcelas futuras, inclusive em replay.
+7. Nenhum smoke confirma baixa real e nenhuma operação remota é executada sem nova autorização explícita.
 
-### Reunião e aceite técnico
+### Resultado local
 
-- Três frentes independentes revisaram notificações, EAD/BolePix e segurança/release.
-- O veredito inicial foi `NO-GO` por inversão de locks, reapresentação de título não cobrável e painel Pix sem payload.
-- Os P1 foram corrigidos antes de qualquer alteração remota: migration de runtime separada, revalidação fail-closed nos dois checkouts e downgrade canônico para boleto.
-- Suíte focada: `80/80`; TypeScript global, ESLint focado e `deno check` dos seis entrypoints Edge aprovados.
-- Todos os 53 arquivos do manifesto têm no máximo 500 linhas; `provider-checkout.ts` foi dividido de 544 para 427 linhas.
-- Lint global, versão, operação, teto de linhas, TypeScript e build local foram aprovados; CI, Vercel Preview, preflight Supabase e smokes fail-closed também concluíram.
+- A Secretaria possui cards e rotas distintos para `Recebimentos` e `Carnês dos alunos`.
+- O novo submódulo possui seleção individual, em lote e personalizada, com prévia, download e impressão do mesmo Blob PDF vetorial.
+- O catálogo agrupa `1–2` parcelas como boletos individuais e `3–30` como carnê; títulos históricos encerrados não consomem o limite dos títulos atuais.
+- O modal rápido do Início abre a confirmação canônica, atualiza seus caches e permanece na mesma tela.
+- RBAC documental, baixa, polo e RPC foram revisados de forma independente; os dois achados encontrados foram corrigidos e o parecer final foi não bloqueador.
+- Testes focados, TypeScript, ESLint, Deno fmt/check, PDFs canônicos e build Vite isolado foram aprovados.
 
-### Ordem remota concluída
+### Publicação remota parcial
 
-1. Branch criada exclusivamente da `main` remota e manifesto atômico publicado. `CONCLUIDO`.
-2. PR, Controle de versão, Qualidade e Vercel Preview aprovados. `CONCLUIDO_PR_97`.
-3. Migrations `20260826213000`, `20260826213050` e `20260826213100` aplicadas em ordem via MCP Supabase. `CONCLUIDO_3_DE_3`.
-4. `push-notification-dispatcher` e `whatsapp-automation-agent` publicados com `verify_jwt=false` e autenticação interna preservada. `CONCLUIDO`.
-5. Roteador compartilhado publicado nas quatro consumidoras, preservando o `verify_jwt` de cada função. `CONCLUIDO_4_DE_4`.
-6. Smokes sem cobrança, destinatário ou dado artificial, merge e Vercel Production concluídos. `CONCLUIDO_PRODUCAO_4_8_6`.
+- Projeto confirmado: `kfekgwyqozhicpfuunpo`.
+- `banese-boleto-document` foi atualizado da versão 13 para 14 e `banese-carnet-document` da versão 11 para 12; `secretaria-banese-document-groups` foi publicada na versão 1.
+- As três funções estão `ACTIVE`, com `verify_jwt=true`, e o código remoto foi relido depois do deploy.
+- Os renderizadores foram publicados em bundle híbrido controlado: 15 arquivos de cada bundle oficial anterior foram preservados byte a byte e somente as guardas/seleções documentais autorizadas foram substituídas.
+- O catálogo possui oito arquivos, é estruturalmente somente leitura e não contém criação, atualização, reemissão, sincronização ou reserva de cobrança.
+- Nenhum `POST` autenticado, UUID real, PDF, baixa ou operação bancária foi usado no smoke remoto.
 
-### Evidências de publicação
+### Pendências obrigatórias
 
-- A PR `#97` partiu da `main` `6bbadbeb4eeee8758e33467dd0c8600a46f84534`; o head `1eeb9f8f03c332cea104185d1d1ee2e5a05a5741` alterou exatamente os 53 arquivos declarados, sem extras ou ausências.
-- Workflows `32975291726` e `32975291777` e Vercel Preview `Jo4BSYaxaYEJvh2fpN17KSWSn2as` aprovados; merge squash `f3e5ffb3a69a575c227bf74af66b3ffa970a94bc`.
-- Migrations remotas `20260826134030`, `20260826134110` e `20260826134202`; SHAs locais `23116678`, `d0738ad2` e `24ddab35` preservados no registro.
-- Edge Functions ativas: `payment-checkout` v21, `checkout-api` v16, `asaas-api` v81, `dependencia-banese-checkout` v8, `push-notification-dispatcher` v15 e `whatsapp-automation-agent` v12. Fontes runtime remotas idênticas ao workspace e `verify_jwt` preservado.
-- Vercel Production `HhtcN2UxPbybTwkNKQRuyQu5NmwQ` pronta; `/`, `/login` e `/sistema/login` responderam `200`; `main-aZE9Pt1f.js` confirmou `4.8.6` e os chunks públicos confirmaram o fallback BolePix.
-- Push v15 respondeu `200` pelo cron restaurado. WhatsApp v12 recusou com segurança o modo de teste incompleto, sem destinatário efetivo nem mensagem enviada.
-- Safari carregou início e login. O smoke autenticado parou no Turnstile da Cloudflare, pois CAPTCHA exige intervenção humana.
-- Nenhum usuário, recebível, cobrança, matrícula ou mensagem artificial foi criado; as filas permaneceram vazias.
-
-### Manifesto explícito — 53 arquivos
-
-#### Operação e versão
-
-- `ai/operacao/LOTE_ATIVO.md`
-- `ai/operacao/qualidade/limite-linhas-manifestos.json`
-- `ai/operacao/rag/index.json`
-- `ai/operacao/registros/alteracoes/2026-08-26-bolepix-e-notificacoes-financeiras-seguras.md`
-- `internal/versioning/CHANGELOG.md`
-- `internal/versioning/changelog/2026-08-05-parte-1.md`
-- `internal/versioning/system-version.json`
-
-#### Portais do aluno
-
-- `modules/aluno/cursos/hooks/useCourseCheckout.ts`
-- `modules/aluno/cursos/eadCheckoutOptions.test.ts`
-- `modules/aluno/financeiro/AlunoEadPaymentChoiceModal.tsx`
-- `modules/aluno/financeiro/FinanceiroPage.tsx`
-- `modules/aluno/financeiro/alunoEadPaymentOptions.ts`
-- `modules/aluno/financeiro/alunoEadPaymentOptions.test.ts`
-- `modules/aluno/financeiro/useAlunoEadPayment.ts`
-- `modules/ead/components/EadPaymentModal.tsx`
-- `modules/asaas/asaas.service.ts`
-- `modules/gestor/comunicacao/automacoes-multicanal/multichannel-automation.test.ts`
-- `scripts/test-banese-payment-ui.mjs`
-
-#### Checkout e roteamento
-
-- `supabase/functions/gateways/router-adapter-runtime.ts`
-- `supabase/functions/gateways/router.test.ts`
-- `supabase/functions/gateways/checkout-api/provider-checkout.ts`
-- `supabase/functions/gateways/checkout-api/provider-reuse.ts`
-- `supabase/functions/gateways/checkout-api/provider-reuse.test.ts`
-- `supabase/functions/gateways/checkout/ead-context.ts`
-- `supabase/functions/gateways/checkout/ead-context.test.ts`
-- `supabase/functions/gateways/checkout/ead-enrollment.ts`
-- `supabase/functions/gateways/checkout/ead-finance.ts`
-- `supabase/functions/gateways/checkout/ead-finance.test.ts`
-- `supabase/functions/gateways/checkout/gateway-creation-fence.ts`
-- `supabase/functions/gateways/checkout/gateway-creation-fence.test.ts`
-- `supabase/functions/gateways/checkout/index.ts`
-- `supabase/functions/gateways/checkout/payment-options.ts`
-- `supabase/functions/gateways/checkout/payment-options.test.ts`
-- `supabase/functions/gateways/checkout/types.ts`
-- `supabase/functions/gateways/checkout/providers/gateway-charge-input.ts`
-- `supabase/functions/gateways/checkout/providers/gateway-receivable.ts`
-- `supabase/functions/gateways/checkout/providers/gateway-receivable.test.ts`
-- `supabase/functions/gateways/checkout/providers/gateway-reuse.ts`
-- `supabase/functions/gateways/checkout/providers/gateway-reuse.test.ts`
-- `supabase/functions/gateways/checkout/providers/gateway-view.ts`
-- `supabase/functions/gateways/checkout/providers/gateway-view.test.ts`
-- `supabase/functions/gateways/checkout/providers/gateway.ts`
-
-#### Notificações e banco
-
-- `supabase/functions/push-notification-dispatcher/firebase.ts`
-- `supabase/functions/push-notification-dispatcher/index.ts`
-- `supabase/functions/push-notification-dispatcher/index.test.ts`
-- `supabase/functions/push-notification-dispatcher/push-assets.ts`
-- `supabase/functions/push-notification-dispatcher/types.ts`
-- `supabase/functions/whatsapp-automation-agent/index.ts`
-- `supabase/migrations/20260826213000_harden_push_financial_notification_eligibility.sql`
-- `supabase/migrations/20260826213050_harden_push_financial_notification_runtime.sql`
-- `supabase/migrations/20260826213100_harden_whatsapp_financial_notification_claim.sql`
-- `supabase/tests/financial_notification_eligibility.contract.test.ts`
-- `supabase/tests/push_rich_backend_hardening.contract.test.ts`
-
-Todo arquivo não listado, inclusive caches, build, temporários, lockfiles e alterações paralelas, permanece fora da publicação. Migrations aplicadas se tornam imutáveis.
-
-### Manifesto do fechamento operacional — 7 arquivos
-
-- `ai/operacao/LOTE_ATIVO.md`
-- `ai/operacao/rag/index.json`
-- `ai/operacao/registros/ALTERACOES.md`
-- `ai/operacao/registros/alteracoes/2026-08-26-bolepix-e-notificacoes-financeiras-seguras.md`
-- `internal/versioning/CHANGELOG.md`
-- `internal/versioning/changelog/2026-08-05-parte-1.md`
-- `internal/versioning/system-version.json`
-
-Histórico: `ai/operacao/registros/ALTERACOES.md` e `ai/operacao/registros/alteracoes/`.
+- O smoke interativo autenticado permanece pendente porque o navegador interno e uma sessão de gestor reutilizável não estavam disponíveis. Não foi substituído por uma baixa simulada em dados reais.
+- A migration e `asaas-api` permanecem apenas no workspace local; o catálogo e os dois renderizadores Banese já estão publicados.
+- A publicação futura restante continua backend-first: migration, `asaas-api` e somente então frontend. Publicar o frontend contra a Edge Asaas antiga é proibido, pois o contexto de supressão não existiria no backend antigo.
+- O manifesto exato e as evidências estão no registro do lote. Alterações paralelas já presentes em arquivos compartilhados foram preservadas e não são atribuídas silenciosamente a este lote.

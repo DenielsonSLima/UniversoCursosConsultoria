@@ -59,15 +59,14 @@ export const fitBaneseFontSize = (
   preferredSize: number,
   minimumSize: number,
   maxWidth: number,
+  errorMessage = "Linha digitavel Banese nao cabe integralmente no documento.",
 ) => {
   let size = preferredSize;
   while (size > minimumSize && font.widthOfTextAtSize(text, size) > maxWidth) {
     size -= 0.2;
   }
   if (font.widthOfTextAtSize(text, size) > maxWidth) {
-    throw new Error(
-      "Linha digitavel Banese nao cabe integralmente no documento.",
-    );
+    throw new Error(errorMessage);
   }
   return size;
 };

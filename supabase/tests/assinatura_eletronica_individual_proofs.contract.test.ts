@@ -6,12 +6,12 @@ const migrationUrl = new URL(
   "../migrations/20260820010500_add_individual_signature_proofs_v1.sql",
   import.meta.url,
 );
-const artifactsUrl = new URL(
-  "../functions/assinatura-eletronica-diario-artefatos/artifacts.ts",
+const participantValidationUrl = new URL(
+  "../functions/assinatura-eletronica-diario-artefatos/artifact-participant-validation.ts",
   import.meta.url,
 );
-const adapterUrl = new URL(
-  "../functions/assinatura-eletronica-diario-artefatos/supabase-adapter.ts",
+const adapterNormalizersUrl = new URL(
+  "../functions/assinatura-eletronica-diario-artefatos/supabase-adapter-normalizers.ts",
   import.meta.url,
 );
 const cpfValidatorUrl = new URL(
@@ -20,8 +20,8 @@ const cpfValidatorUrl = new URL(
 );
 
 const sql = await Deno.readTextFile(migrationUrl);
-const artifacts = await Deno.readTextFile(artifactsUrl);
-const adapter = await Deno.readTextFile(adapterUrl);
+const participantValidation = await Deno.readTextFile(participantValidationUrl);
+const adapterNormalizers = await Deno.readTextFile(adapterNormalizersUrl);
 const cpfValidator = await Deno.readTextFile(cpfValidatorUrl);
 
 const functionBlock = (signature: string) => {
@@ -121,19 +121,19 @@ Deno.test("prova histórica v1 mantém hash individual; Edge v5 exige uma prova 
   // alterar nem reaplicar esta migration.
   assert.match(proofs, /v_total_valido <> 2/i);
   assert.match(
-    artifacts,
+    participantValidation,
     /preflight\.participants\.length < 1[\s\S]*?ELECTRONIC_SIGNATURE_STAMP_MAX_SIGNERS/,
   );
   assert.match(
-    artifacts,
+    participantValidation,
     /new Set\(preflight\.participants\.map\(\(item\) => item\.signatureEventId\)\)[\s\S]*?\.size !== preflight\.participants\.length/,
   );
   assert.match(
-    artifacts,
+    participantValidation,
     /event\.signatureHash === participant\.signatureHash/,
   );
   assert.match(
-    adapter,
+    adapterNormalizers,
     /signatureHash:\s*requiredSha256\(event, "signatureHash"\)/,
   );
 });
