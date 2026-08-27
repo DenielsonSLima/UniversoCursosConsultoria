@@ -161,3 +161,11 @@ export interface BanesePollingErrorSummary {
     'id' | 'modality' | 'result' | 'error_class' | 'http_status' | 'created_at'
   >>;
 }
+
+export interface BanesePollingAttemptsPage {
+  items: BanesePollingAttempt[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+}

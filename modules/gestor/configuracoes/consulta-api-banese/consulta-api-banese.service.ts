@@ -1,11 +1,13 @@
 import { supabase } from '../../../../lib/supabase';
 import type {
+  BanesePollingAttemptsPage,
   BanesePollingDashboard,
   BanesePollingErrorSummary,
   BanesePollingMode,
   BanesePollingRunsFilters,
   BanesePollingRunsPage,
 } from './consulta-api-banese.types';
+import type { BaneseAttemptsContext } from './banese-attempt-feed';
 
 export const banesePollingQueryKey = ['configuracoes', 'consulta-api-banese'] as const;
 
@@ -71,5 +73,25 @@ export const consultaApiBaneseService = {
       lastErrorAt: null,
       lastErrors: [],
     }) as BanesePollingErrorSummary;
+  },
+
+  async getAttemptsPage(
+    context: BaneseAttemptsContext,
+    page: number = 1,
+    pageSize: number = 20,
+  ): Promise<BanesePollingAttemptsPage> {
+    const { data, error } = await supabase.rpc('get_banese_reconciliation_attempts_page', {
+      p_context: context,
+      p_page: page,
+      p_page_size: pageSize,
+    });
+    if (error) throw new Error(error.message || 'Não foi possível carregar os registros da consulta Banese.');
+    return (data || {
+      items: [],
+      page,
+      pageSize,
+      totalCount: 0,
+      totalPages: 0,
+    }) as BanesePollingAttemptsPage;
   },
 };

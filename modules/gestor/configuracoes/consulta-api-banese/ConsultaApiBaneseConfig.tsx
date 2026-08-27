@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Activity from 'lucide-react/dist/esm/icons/activity';
 import AlertTriangle from 'lucide-react/dist/esm/icons/alert-triangle';
 import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle-2';
@@ -25,16 +25,21 @@ import {
   profileScaleExample,
 } from './banese-profile-examples';
 import { BaneseStatusPill, formatBaneseDateTime } from './banese-display';
-import { selectBaneseAttemptFeed } from './banese-attempt-feed';
 import type { BanesePollingMode } from './consulta-api-banese.types';
 
 const ConsultaApiBaneseConfig = () => {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<BaneseTabId>('overview');
+  const [attemptsPage, setAttemptsPage] = useState(1);
   const [draftMode, setDraftMode] = useState<BanesePollingMode>('AUTOMATIC');
   const [draftProfile, setDraftProfile] = useState(6);
   const [reason, setReason] = useState('');
   const [feedback, setFeedback] = useState('');
+
+  const handleTabChange = (tab: BaneseTabId) => {
+    setActiveTab(tab);
+    setAttemptsPage(1);
+  };
 
   const dashboardQuery = useQuery({
     queryKey: banesePollingQueryKey,
@@ -50,6 +55,18 @@ const ConsultaApiBaneseConfig = () => {
     queryFn: consultaApiBaneseService.getErrorSummary,
     enabled: dashboard?.available === true,
     refetchInterval: 30_000,
+  });
+
+  const isAttemptTab = ['queries', 'settlements', 'errors'].includes(activeTab);
+  const attemptsQuery = useQuery({
+    queryKey: [...banesePollingQueryKey, 'attempts', activeTab, attemptsPage],
+    queryFn: () => consultaApiBaneseService.getAttemptsPage(
+      activeTab as 'queries' | 'settlements' | 'errors',
+      attemptsPage,
+      20,
+    ),
+    enabled: isAttemptTab && dashboard?.available === true,
+    placeholderData: keepPreviousData,
   });
 
   useEffect(() => {
@@ -69,6 +86,10 @@ const ConsultaApiBaneseConfig = () => {
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'banese_reconciliation_transitions' }, () => {
         void queryClient.invalidateQueries({ queryKey: banesePollingQueryKey });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'banese_reconciliation_attempts' }, () => {
+        void queryClient.invalidateQueries({ queryKey: [...banesePollingQueryKey, 'attempts'] });
+        void queryClient.invalidateQueries({ queryKey: [...banesePollingQueryKey, 'error-summary'] });
       })
       .subscribe();
     return () => {
@@ -90,11 +111,6 @@ const ConsultaApiBaneseConfig = () => {
     },
     onError: (error) => setFeedback(error instanceof Error ? error.message : 'Não foi possível salvar.'),
   });
-
-  const filteredAttempts = useMemo(() => {
-    if (!['queries', 'settlements', 'errors'].includes(activeTab)) return [];
-    return selectBaneseAttemptFeed(dashboard, activeTab as 'queries' | 'settlements' | 'errors');
-  }, [activeTab, dashboard]);
 
   if (dashboardQuery.isLoading) {
     return (
@@ -147,7 +163,7 @@ const ConsultaApiBaneseConfig = () => {
         previousProfileId={previousProfileId}
       />
 
-      <BaneseTabsNav activeTab={activeTab} onChange={setActiveTab} />
+      <BaneseTabsNav activeTab={activeTab} onChange={handleTabChange} />
 
       {activeTab === 'overview' ? (
         <div className="space-y-6">
@@ -425,11 +441,18 @@ const ConsultaApiBaneseConfig = () => {
       <div className={activeTab === 'runs' ? 'block' : 'hidden'}>
         <BaneseRunsPanel active={activeTab === 'runs'} />
       </div>
-      {activeTab === 'queries' || activeTab === 'settlements' || activeTab === 'errors' ? (
+      {isAttemptTab ? (
         <BaneseAttemptsTable
-          attempts={filteredAttempts}
-          context={activeTab}
+          attempts={attemptsQuery.data?.items || []}
+          context={activeTab as 'queries' | 'settlements' | 'errors'}
           canViewReceivableDetails={dashboard.canViewReceivableDetails === true}
+          page={attemptsPage}
+          totalPages={attemptsQuery.data?.totalPages || 0}
+          totalCount={attemptsQuery.data?.totalCount || 0}
+          pageSize={attemptsQuery.data?.pageSize || 20}
+          onPageChange={setAttemptsPage}
+          isLoading={attemptsQuery.isLoading}
+          isFetching={attemptsQuery.isFetching}
         />
       ) : null}
       {activeTab === 'audit' ? (

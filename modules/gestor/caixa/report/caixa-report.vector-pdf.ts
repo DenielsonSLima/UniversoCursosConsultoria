@@ -5,6 +5,7 @@ import {
   formatCaixaCurrency,
   formatCaixaDate,
   formatCaixaInstallment,
+  formatCaixaPercent,
 } from '../caixa.formatters';
 import {
   drawCanonicalInstitutionalHeader,
@@ -444,7 +445,7 @@ const drawSummaryPage = (pdf: jsPDF, report: CaixaDetailedReport, contentTop: nu
     { column: 3, row: 0, label: 'Saídas pagas', value: formatCaixaCurrency(report.totaisDespesas.valorFinal), description: `${report.totaisDespesas.quantidade} pagamento(s) confirmado(s)`, tone: 'rose' },
     { column: 0, row: 1, label: 'Saldo contábil registrado', value: formatCaixaCurrency(report.resumo.saldosHoje.registradoTotal), description: 'Posição contábil do sistema; não é consulta ao extrato', tone: 'neutral' },
     { column: 1, row: 1, label: resultLabel, value: formatCaixaCurrency(report.resumo.resumoCompetencia.resultado), description: 'Entradas menos saídas confirmadas no período', tone: report.resumo.resumoCompetencia.resultado >= 0 ? 'emerald' : 'rose' },
-    { column: 2, row: 1, label: 'A receber', value: formatCaixaCurrency(report.resumo.compromissos.aReceber), description: `Em atraso: ${formatCaixaCurrency(report.resumo.compromissos.receberVencido)}`, tone: report.resumo.compromissos.receberVencido > 0 ? 'amber' : 'neutral' },
+    { column: 2, row: 1, label: 'A receber', value: formatCaixaCurrency(report.resumo.compromissos.aReceber), description: report.resumo.compromissos.margemInadimplencia > 0 ? `Inadimplência: ${formatCaixaCurrency(report.resumo.compromissos.receberVencido)} (${formatCaixaPercent(report.resumo.compromissos.margemInadimplencia)})` : `Em atraso: ${formatCaixaCurrency(report.resumo.compromissos.receberVencido)}`, tone: report.resumo.compromissos.receberVencido > 0 ? 'amber' : 'neutral' },
     { column: 3, row: 1, label: 'A pagar', value: formatCaixaCurrency(report.resumo.compromissos.aPagar), description: `Vencidas: ${formatCaixaCurrency(report.resumo.compromissos.pagarVencido)}`, tone: report.resumo.compromissos.pagarVencido > 0 ? 'rose' : 'neutral' },
   ] as const;
   cards.forEach((card) => {
@@ -702,7 +703,6 @@ const drawSummaryPanels = (pdf: jsPDF, report: CaixaDetailedReport, y: number) =
   const half = (CONTENT_WIDTH - gap) / 2;
   const panelHeight = Math.min(62, FOOTER_TOP - y - 7);
   const modalityStep = Math.min(10.5, (panelHeight - 19) / 4);
-  const courseStep = Math.min(9, (panelHeight - 18) / 5);
   const drawPanel = (x: number, eyebrow: string, title: string) => {
     pdf.setFillColor(COLORS.white);
     pdf.setDrawColor(COLORS.slate200);
@@ -740,19 +740,36 @@ const drawSummaryPanels = (pdf: jsPDF, report: CaixaDetailedReport, y: number) =
     drawText(pdf, 'Nenhum curso parcelado possui previsão, recebimento ou atraso nesta competência.', courseX + (half / 2), y + 15 + (emptyStateHeight / 2), half - 18, { align: 'center', maxLines: 2 });
     return;
   }
-  report.resumoCursos.itens.slice(0, 5).forEach((item, index) => {
-    const rowY = y + 14 + (index * courseStep);
+
+  const headerY = y + 13.5;
+  setText(pdf, COLORS.slate500, 4.8, 'bold');
+  drawText(pdf, 'CURSO', courseX + 3, headerY);
+  drawText(pdf, 'PREVISTO', courseX + half - 45, headerY, undefined, { align: 'right' });
+  drawText(pdf, 'RECEBIDO', courseX + half - 24, headerY, undefined, { align: 'right' });
+  drawText(pdf, 'EM ATRASO', courseX + half - 3, headerY, undefined, { align: 'right' });
+  pdf.setDrawColor(COLORS.slate100);
+  pdf.line(courseX + 3, headerY + 2.5, courseX + half - 3, headerY + 2.5);
+
+  const courseRows = report.resumoCursos.itens.slice(0, 4);
+  const courseStep = Math.min(8.8, (panelHeight - 24) / Math.max(courseRows.length, 1));
+  courseRows.forEach((item, index) => {
+    const rowY = y + 19 + (index * courseStep);
     setText(pdf, COLORS.slate700, 5.8, 'bold');
-    drawText(pdf, item.curso, courseX + 3, rowY, half - 53, { maxLines: 1 });
-    setText(pdf, COLORS.slate500, 5);
-    drawText(pdf, `${item.modalidade} · ${item.quantidadeTurmas} turma(s) · ${item.quantidadeAlunos} aluno(s)`, courseX + 3, rowY + 3.5, half - 53, { maxLines: 1 });
+    drawText(pdf, item.curso, courseX + 3, rowY, half - 52, { maxLines: 1 });
+    setText(pdf, COLORS.slate500, 4.8);
+    drawText(pdf, `${item.modalidade} · ${item.quantidadeTurmas} turma(s) · ${item.quantidadeAlunos} aluno(s)`, courseX + 3, rowY + 3.2, half - 52, { maxLines: 1 });
     setText(pdf, COLORS.slate700, 5.5, 'bold');
-    drawText(pdf, formatCaixaCurrency(item.previstoNoMes), courseX + half - 35, rowY + 1, undefined, { align: 'right' });
+    drawText(pdf, formatCaixaCurrency(item.previstoNoMes), courseX + half - 45, rowY + 0.8, undefined, { align: 'right' });
     setText(pdf, COLORS.emerald700, 5.5, 'bold');
-    drawText(pdf, formatCaixaCurrency(item.recebidoNoMes), courseX + half - 19, rowY + 1, undefined, { align: 'right' });
+    drawText(pdf, formatCaixaCurrency(item.recebidoNoMes), courseX + half - 24, rowY + 0.8, undefined, { align: 'right' });
     setText(pdf, item.emAtraso > 0 ? COLORS.amber700 : COLORS.slate400, 5.5, 'bold');
-    drawText(pdf, formatCaixaCurrency(item.emAtraso), courseX + half - 3, rowY + 1, undefined, { align: 'right' });
+    drawText(pdf, formatCaixaCurrency(item.emAtraso), courseX + half - 3, rowY + 0.8, undefined, { align: 'right' });
   });
+
+  if (report.resumoCursos.quantidadeOmitidas > 0) {
+    setText(pdf, COLORS.slate400, 4.8, 'bold');
+    drawText(pdf, `+ ${report.resumoCursos.quantidadeOmitidas} curso(s) na Seção 4`, courseX + half - 3, y + panelHeight - 2.5, undefined, { align: 'right' });
+  }
 };
 
 const drawSectionHeading = (pdf: jsPDF, title: string, description: string, page: number, tone: Tone, contentTop: number) => {

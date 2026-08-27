@@ -11,12 +11,13 @@ const [page, table, tabs, types] = await Promise.all([
   readFile(new URL('./consulta-api-banese.types.ts', import.meta.url), 'utf8'),
 ]);
 
-test('Baixas e Erros usam séries próprias do backend', () => {
-  assert.match(page, /selectBaneseAttemptFeed/);
+test('Baixas e Erros usam séries próprias paginadas do backend', () => {
+  assert.match(page, /consultaApiBaneseService\.getAttemptsPage/);
+  assert.match(page, /attemptsPage/);
+  assert.match(page, /pageSize=\{attemptsQuery\.data\?\.pageSize \|\| 20\}/);
   assert.doesNotMatch(page, /\.filter\(.*current_receivable_status/);
   assert.doesNotMatch(page, /\.filter\(.*THROTTLED/);
-  assert.match(types, /lastSettlements\?: BanesePollingAttempt\[\]/);
-  assert.match(types, /lastErrorAttempts\?: BanesePollingAttempt\[\]/);
+  assert.match(types, /BanesePollingAttemptsPage/);
   assert.match(page, /canViewReceivableDetails=\{dashboard\.canViewReceivableDetails === true\}/);
   assert.doesNotMatch(page, /canViewReceivableDetails !== false/);
 });

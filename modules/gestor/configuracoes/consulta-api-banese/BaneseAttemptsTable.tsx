@@ -1,3 +1,6 @@
+import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left';
+import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
+import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
 import type { BaneseAttemptsContext } from './banese-attempt-feed';
 import type { BanesePollingAttempt } from './consulta-api-banese.types';
 
@@ -5,6 +8,13 @@ interface BaneseAttemptsTableProps {
   attempts: BanesePollingAttempt[];
   context: BaneseAttemptsContext;
   canViewReceivableDetails: boolean;
+  page: number;
+  totalPages: number;
+  totalCount: number;
+  pageSize: number;
+  onPageChange: (newPage: number) => void;
+  isLoading?: boolean;
+  isFetching?: boolean;
 }
 
 const contextCopy: Record<BaneseAttemptsContext, string> = {
@@ -132,17 +142,43 @@ const BaneseAttemptsTable = ({
   attempts,
   context,
   canViewReceivableDetails,
+  page,
+  totalPages,
+  totalCount,
+  pageSize,
+  onPageChange,
+  isLoading,
+  isFetching,
 }: BaneseAttemptsTableProps) => (
   <section className="space-y-3" aria-label="Histórico de consultas de boletos Banese">
-    <p className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs font-semibold leading-relaxed text-blue-950">
-      {contextCopy[context]}
-    </p>
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <p className="min-w-0 flex-1 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs font-semibold leading-relaxed text-blue-950">
+        {contextCopy[context]}
+      </p>
+      <div className="flex items-center gap-2">
+        {isFetching ? (
+          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600">
+            <RefreshCw className="animate-spin" size={13} />
+            Atualizando...
+          </span>
+        ) : null}
+        <span className="rounded-full bg-slate-100 px-3 py-1.5 text-[10px] font-black uppercase text-slate-600">
+          {totalCount} {totalCount === 1 ? 'registro' : 'registros'}
+        </span>
+      </div>
+    </div>
     {!canViewReceivableDetails ? (
       <p role="status" className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-900">
         A identidade do aluno e os valores exigem a permissão Financeiro › Contas a receber.
       </p>
     ) : null}
-    {!attempts.length ? <EmptyState /> : (
+    {isLoading ? (
+      <div className="flex min-h-[220px] items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white text-xs font-bold text-slate-500">
+        <RefreshCw className="animate-spin" size={16} /> Carregando registros...
+      </div>
+    ) : !attempts.length ? (
+      <EmptyState />
+    ) : (
       <>
         <div className="space-y-3 xl:hidden">
           {attempts.map((attempt) => {
@@ -203,6 +239,33 @@ const BaneseAttemptsTable = ({
             </tbody>
           </table>
         </div>
+
+        {totalCount > 0 ? (
+          <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-3">
+            <button
+              type="button"
+              disabled={page <= 1}
+              onClick={() => onPageChange(Math.max(1, page - 1))}
+              className="inline-flex min-h-10 items-center gap-1 rounded-xl border border-slate-200 px-3 text-[10px] font-black uppercase text-slate-600 transition hover:border-blue-300 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <ChevronLeft size={15} /> Mais recentes
+            </button>
+            <p className="text-center text-[10px] font-black uppercase text-slate-500">
+              Página {page} de {Math.max(1, totalPages)}
+              <span className="block font-semibold normal-case text-slate-400">
+                {totalCount} registro{totalCount === 1 ? '' : 's'} • {pageSize} por página
+              </span>
+            </p>
+            <button
+              type="button"
+              disabled={!totalPages || page >= totalPages}
+              onClick={() => onPageChange(page + 1)}
+              className="inline-flex min-h-10 items-center gap-1 rounded-xl border border-slate-200 px-3 text-[10px] font-black uppercase text-slate-600 transition hover:border-blue-300 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Mais antigos <ChevronRight size={15} />
+            </button>
+          </div>
+        ) : null}
       </>
     )}
   </section>

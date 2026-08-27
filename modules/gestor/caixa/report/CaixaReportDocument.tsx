@@ -6,6 +6,7 @@ import {
   formatCaixaCanonicalCurrency,
   formatCaixaCurrency,
   formatCaixaDate,
+  formatCaixaPercent,
 } from '../caixa.formatters';
 import { buildCaixaReportPages } from './caixa-report.pagination';
 import {
@@ -137,7 +138,9 @@ const SummaryPage: React.FC<{ report: CaixaDetailedReport }> = ({ report }) => {
         <ExecutiveMetric
           label="A receber"
           value={statement.compromissos.aReceber}
-          helper={`Em atraso: ${formatCaixaCurrency(statement.compromissos.receberVencido)}`}
+          helper={statement.compromissos.margemInadimplencia > 0
+            ? `Inadimplência: ${formatCaixaCurrency(statement.compromissos.receberVencido)} (${formatCaixaPercent(statement.compromissos.margemInadimplencia)})`
+            : `Em atraso: ${formatCaixaCurrency(statement.compromissos.receberVencido)}`}
           tone={statement.compromissos.receberVencido > 0 ? 'amber' : 'navy'}
         />
         <ExecutiveMetric
