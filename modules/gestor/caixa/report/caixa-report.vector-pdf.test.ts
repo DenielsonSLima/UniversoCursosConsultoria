@@ -367,12 +367,24 @@ test('usa a posição total recebida do backend sem recompor valores no PDF', ()
 });
 
 test('reutiliza exclusivamente o compositor institucional canônico', async () => {
-  const [source, documentSource, positionsPreviewSource, modalSource] = await Promise.all([
+  const [
+    sourceMain,
+    summarySource,
+    nonOperationalSource,
+    sharedSource,
+    documentSource,
+    positionsPreviewSource,
+    modalSource,
+  ] = await Promise.all([
     readFile(resolve('modules/gestor/caixa/report/caixa-report.vector-pdf.ts'), 'utf8'),
+    readFile(resolve('modules/gestor/caixa/report/caixa-report.vector-pdf.summary.ts'), 'utf8'),
+    readFile(resolve('modules/gestor/caixa/report/caixa-report.vector-pdf.non-operational.ts'), 'utf8'),
+    readFile(resolve('modules/gestor/caixa/report/caixa-report.vector-pdf.shared.ts'), 'utf8'),
     readFile(resolve('modules/gestor/caixa/report/CaixaReportDocument.tsx'), 'utf8'),
     readFile(resolve('modules/gestor/caixa/report/CaixaReportNonOperationalPositions.tsx'), 'utf8'),
     readFile(resolve('modules/gestor/caixa/report/CaixaReportPreviewModal.tsx'), 'utf8'),
   ]);
+  const source = `${sourceMain}\n${summarySource}\n${nonOperationalSource}\n${sharedSource}`;
 
   assert.match(source, /drawCanonicalInstitutionalHeader/);
   assert.match(source, /normalizeCanonicalInstitutionalHeader/);

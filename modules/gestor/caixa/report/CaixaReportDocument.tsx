@@ -30,7 +30,7 @@ import type { CaixaReportPosicaoTotal } from './caixa-report.posicao-total';
 
 const ExecutiveMetric: React.FC<{
   label: string;
-  value: number;
+  value: number | string;
   helper: string;
   tone?: 'navy' | 'emerald' | 'rose' | 'amber';
 }> = ({ label, value, helper, tone = 'navy' }) => {
@@ -41,10 +41,12 @@ const ExecutiveMetric: React.FC<{
     amber: 'border-amber-200 bg-amber-50 text-amber-800',
   };
   return (
-    <div className={`rounded-xl border p-2 ${tones[tone]}`}>
-      <p className="text-[8px] font-black uppercase tracking-wide text-slate-600">{label}</p>
-      <p className="mt-0.5 text-[14px] font-black leading-none">{formatCaixaCurrency(value)}</p>
-      <p className="mt-0.5 text-[7.5px] leading-3 text-slate-600">{helper}</p>
+    <div className={`rounded-lg border p-1.5 ${tones[tone]}`}>
+      <p className="text-[7px] font-black uppercase tracking-wide text-slate-600">{label}</p>
+      <p className="mt-0.5 text-[11px] font-black leading-none">
+        {typeof value === 'number' ? formatCaixaCurrency(value) : value}
+      </p>
+      <p className="mt-0.5 text-[6.5px] leading-tight text-slate-600 truncate">{helper}</p>
     </div>
   );
 };
@@ -54,10 +56,10 @@ const PositionTotalMetric: React.FC<{
 }> = ({ position }) => {
   if (!position?.disponivel) {
     return (
-      <div className="col-span-2 rounded-xl border border-amber-200 bg-amber-50 p-2 text-amber-900">
-        <p className="text-[8px] font-black uppercase tracking-wide">Posição total no corte</p>
-        <p className="mt-0.5 text-[14px] font-black leading-none">Indisponível</p>
-        <p className="mt-0.5 text-[7.5px] leading-3 text-amber-800">
+      <div className="rounded-lg border border-amber-200 bg-amber-50 p-1.5 text-amber-900">
+        <p className="text-[7px] font-black uppercase tracking-wide">Posição total no corte</p>
+        <p className="mt-0.5 text-[11px] font-black leading-none">Indisponível</p>
+        <p className="mt-0.5 text-[6.5px] leading-tight text-amber-800 truncate">
           {getCaixaReportPosicaoTotalUnavailableMessage(position)}
         </p>
       </div>
@@ -67,24 +69,21 @@ const PositionTotalMetric: React.FC<{
   const { dados } = position;
   const totalIsNegative = dados.valorTotalLiquido.startsWith('-');
   return (
-    <div className="col-span-2 rounded-xl border border-[#0b365d] bg-[#001a33] p-2 text-white">
-      <div className="flex items-start justify-between gap-3">
+    <div className="rounded-lg border border-[#0b365d] bg-[#001a33] p-1.5 text-white">
+      <div className="flex items-start justify-between gap-1">
         <div className="min-w-0">
-          <p className="text-[8px] font-black uppercase tracking-wide text-blue-100">
+          <p className="text-[7px] font-black uppercase tracking-wide text-blue-100">
             Posição total no corte
           </p>
-          <p className={`mt-0.5 text-[15px] font-black leading-none ${
+          <p className={`mt-0.5 text-[11px] font-black leading-none ${
             totalIsNegative ? 'text-rose-300' : 'text-emerald-300'
           }`}>
             {formatCaixaCanonicalCurrency(dados.valorTotalLiquido)}
           </p>
         </div>
-        <p className="max-w-[42%] text-right text-[7px] font-semibold leading-3 text-blue-100">
-          Caixa + patrimônio a custo − empréstimos a pagar
-        </p>
       </div>
-      <p className="mt-1 border-t border-blue-400/30 pt-1 text-[7px] leading-3 text-blue-100">
-        Corte {formatCaixaDate(position.dataCorte)} · Caixa: {formatCaixaCanonicalCurrency(dados.saldoCaixaRegistrado)} · Patrimônio: {formatCaixaCanonicalCurrency(dados.valorPatrimonialCusto)} · Empréstimos: {formatCaixaCanonicalCurrency(dados.saldoEmprestimosAPagar)}
+      <p className="mt-0.5 text-[6px] leading-tight text-blue-200 truncate">
+        Corte {formatCaixaDate(position.dataCorte)} · Caixa: {formatCaixaCanonicalCurrency(dados.saldoCaixaRegistrado)} · Patr: {formatCaixaCanonicalCurrency(dados.valorPatrimonialCusto)} · Emp: {formatCaixaCanonicalCurrency(dados.saldoEmprestimosAPagar)}
       </p>
     </div>
   );
@@ -110,7 +109,7 @@ const SummaryPage: React.FC<{ report: CaixaDetailedReport }> = ({ report }) => {
         </p>
       </div>
 
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-4 gap-1.5">
         <PositionTotalMetric position={posicaoTotal} />
         <ExecutiveMetric
           label="Entradas recebidas"
@@ -125,28 +124,42 @@ const SummaryPage: React.FC<{ report: CaixaDetailedReport }> = ({ report }) => {
           tone="rose"
         />
         <ExecutiveMetric
-          label="Saldo contábil registrado"
-          value={statement.saldosHoje.registradoTotal}
-          helper="Posição contábil do sistema; não é consulta ao extrato"
-        />
-        <ExecutiveMetric
           label={resultLabel}
           value={statement.resumoCompetencia.resultado}
           helper="Entradas menos saídas confirmadas no período"
           tone={statement.resumoCompetencia.resultadoStatus === 'NEGATIVO' ? 'rose' : 'emerald'}
         />
+      </div>
+
+      <div className="grid grid-cols-5 gap-1.5">
         <ExecutiveMetric
-          label="A receber"
+          label="Receitas futuras"
           value={statement.compromissos.aReceber}
-          helper={statement.compromissos.margemInadimplencia > 0
-            ? `Inadimplência: ${formatCaixaCurrency(statement.compromissos.receberVencido)} (${formatCaixaPercent(statement.compromissos.margemInadimplencia)})`
-            : `Em atraso: ${formatCaixaCurrency(statement.compromissos.receberVencido)}`}
+          helper="Compromisso em aberto hoje"
+          tone="navy"
+        />
+        <ExecutiveMetric
+          label="Inadimplência"
+          value={statement.compromissos.receberVencido}
+          helper="Valor vencido ainda não liquidado"
           tone={statement.compromissos.receberVencido > 0 ? 'amber' : 'navy'}
         />
         <ExecutiveMetric
-          label="A pagar"
+          label="Margem de inadimplência"
+          value={formatCaixaPercent(statement.compromissos.margemInadimplencia)}
+          helper="Sobre a carteira a receber"
+          tone={statement.compromissos.margemInadimplencia > 0 ? 'amber' : 'navy'}
+        />
+        <ExecutiveMetric
+          label="Obrigações futuras"
           value={statement.compromissos.aPagar}
-          helper={`Vencidas: ${formatCaixaCurrency(statement.compromissos.pagarVencido)}`}
+          helper="Compromisso em aberto hoje"
+          tone={statement.compromissos.aPagar > 0 ? 'rose' : 'navy'}
+        />
+        <ExecutiveMetric
+          label="Obrigações vencidas"
+          value={statement.compromissos.pagarVencido}
+          helper="Valor vencido ainda não liquidado"
           tone={statement.compromissos.pagarVencido > 0 ? 'rose' : 'navy'}
         />
       </div>

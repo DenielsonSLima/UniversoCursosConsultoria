@@ -50,6 +50,11 @@ ALTER TABLE public.matriculas
 ALTER TABLE public.matriculas
   DISABLE TRIGGER protect_matricula_control_fields_trigger;
 
+ALTER TABLE public.matricula_movimentacoes
+  DISABLE TRIGGER stamp_academic_responsavel_movimentacao;
+ALTER TABLE public.matricula_movimentacoes
+  DISABLE TRIGGER ajustar_financeiro_movimentacao_matricula_trigger;
+
 DO $migration$
 DECLARE
   v_turma_id uuid := 'a4b64394-bc0d-4518-bba5-af00465ae43d';
@@ -62,9 +67,7 @@ BEGIN
       AND m.status = 'PENDENTE'
   LOOP
     UPDATE public.matriculas
-    SET
-      status = 'ATIVO',
-      updated_at = now()
+    SET status = 'ATIVO'
     WHERE id = v_rec.matricula_id;
 
     INSERT INTO public.matricula_movimentacoes (
@@ -97,6 +100,11 @@ BEGIN
   END LOOP;
 END;
 $migration$;
+
+ALTER TABLE public.matricula_movimentacoes
+  ENABLE TRIGGER ajustar_financeiro_movimentacao_matricula_trigger;
+ALTER TABLE public.matricula_movimentacoes
+  ENABLE TRIGGER stamp_academic_responsavel_movimentacao;
 
 ALTER TABLE public.matriculas
   ENABLE TRIGGER protect_matricula_control_fields_trigger;
