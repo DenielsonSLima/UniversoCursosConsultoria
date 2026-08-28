@@ -10,7 +10,6 @@ import {
   boletoSnapshot,
   fakeAdmin,
   type FakeRow,
-  NOSSO_NUMERO,
   RECEIVABLE_ID,
   receivableFixture,
 } from "./banese-test-harness.ts";

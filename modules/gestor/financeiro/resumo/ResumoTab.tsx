@@ -21,11 +21,9 @@ import BaneseApiHealthCard from './BaneseApiHealthCard';
 import { resumoFinanceiroService } from './resumo-financeiro.service';
 import {
   formatResumoDate,
-  formatResumoRange,
   getResumoOverdueRange,
   getResumoPresetRange,
   getResumoThreeMonthPeriods,
-  type ResumoPeriodPreset,
   type ResumoPeriodRange,
   validateResumoCustomRange,
 } from './resumo-period';

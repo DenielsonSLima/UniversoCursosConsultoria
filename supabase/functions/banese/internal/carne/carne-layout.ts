@@ -20,7 +20,6 @@ import {
   drawBaneseBarcode as drawBarcode,
   drawBaneseBox as drawBox,
   drawBaneseCompanyLogo as drawCompanyLogo,
-  drawBaneseImageContain as drawImageContain,
   drawBaneseText as drawText,
 } from "../pdf/primitives.ts";
 import { presentBaneseFinancialTerms } from "../pdf/financial-terms.ts";

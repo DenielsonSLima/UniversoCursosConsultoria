@@ -106,7 +106,7 @@ Restabelecer a emissão e a recuperação segura do Pix oficial dos boletos Bane
 
 ## Manifesto explícito
 
-Total: 83 arquivos
+Total: 88 arquivos
 
 - `.gitignore`
 - `ai/operacao/LOTE_ATIVO.md`
@@ -117,6 +117,7 @@ Total: 83 arquivos
 - `internal/versioning/CHANGELOG.md`
 - `internal/versioning/changelog/2026-08-05-parte-1.md`
 - `internal/versioning/system-version.json`
+- `modules/gestor/caixa/components/CaixaLinhaCorteCard.tsx`
 - `modules/gestor/financeiro/receber/banese/gestor-banese-payment.service.ts`
 - `modules/gestor/financeiro/receber/components/modalidade-receber/ReceivableItemPresentation.tsx`
 - `modules/gestor/financeiro/receber/components/modalidade-receber/modalidade-receber.presentation.contract.test.ts`
@@ -124,6 +125,7 @@ Total: 83 arquivos
 - `modules/gestor/financeiro/receber/components/modalidade-receber/modalidade-receber.utils.ts`
 - `modules/gestor/financeiro/receber/components/modalidade-receber/useModalidadeReceberOperations.ts`
 - `modules/gestor/financeiro/receber/components/modalidade-receber/useModalidadeReceberReport.tsx`
+- `modules/gestor/financeiro/resumo/ResumoTab.tsx`
 - `modules/gestor/secretaria/carnes-alunos/carnes-alunos.contract.test.ts`
 - `modules/gestor/secretaria/carnes-alunos/carnes-alunos.safe-catalog.test.ts`
 - `modules/gestor/secretaria/carnes-alunos/carnes-alunos.service.ts`
@@ -132,6 +134,7 @@ Total: 83 arquivos
 - `supabase/functions/banese-boleto-document/document-policy.test.ts`
 - `supabase/functions/banese-carnet-document/README.md`
 - `supabase/functions/banese-carnet-document/document-policy.test.ts`
+- `supabase/functions/banese-cancellation-worker/worker.ts`
 - `supabase/functions/banese-reconciliation-worker/error-classification.test.ts`
 - `supabase/functions/banese-reconciliation-worker/error-classification.ts`
 - `supabase/functions/banese-reconciliation-worker/incident-recovery-contract.ts`
@@ -161,6 +164,8 @@ Total: 83 arquivos
 - `supabase/functions/banese/core/adapter/utils.ts`
 - `supabase/functions/banese/internal/financial-terms-response.test.ts`
 - `supabase/functions/banese/internal/financial-terms-response.ts`
+- `supabase/functions/banese/internal/boletos/boleto-layout.ts`
+- `supabase/functions/banese/internal/carne/carne-layout.ts`
 - `supabase/functions/gateways/api/banese-bank-numbers.test.ts`
 - `supabase/functions/gateways/api/banese-intent-reconciliation.test.ts`
 - `supabase/functions/gateways/api/banese-pix-persistence.ts`

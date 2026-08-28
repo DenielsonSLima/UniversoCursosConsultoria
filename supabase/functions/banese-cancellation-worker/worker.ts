@@ -55,7 +55,7 @@ type HandlerDependencies = {
   createAdmin: (url: string, serviceRoleKey: string) => AdminClient;
   getEnv?: (name: string) => string | undefined;
   cancelBoleto?: CancelBoleto;
-  logger?: Pick<Console, "error">;
+  logger?: { error: (...data: unknown[]) => void };
 };
 
 type FailureDecision = {
@@ -88,7 +88,7 @@ const safeEqual = (left: string, right: string) => {
 const readSmallBody = async (req: Request) => {
   if (!req.body) return "";
   const reader = req.body.getReader();
-  const decoder = new TextDecoder();
+  const decoder = new globalThis.TextDecoder();
   let totalBytes = 0;
   let text = "";
   while (true) {

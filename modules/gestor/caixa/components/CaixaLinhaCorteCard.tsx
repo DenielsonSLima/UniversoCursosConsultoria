@@ -3,7 +3,6 @@ import {
   Activity,
   AlertCircle,
   AlertTriangle,
-  ArrowDownRight,
   ArrowUpRight,
   CheckCircle2,
   HelpCircle,

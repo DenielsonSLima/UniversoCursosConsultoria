@@ -109,15 +109,10 @@ export const createBaneseBoletoCharge = async (
   convenio = reservation.convenio;
   agencia = reservation.agencia;
 
-  let token: BaneseAccessToken;
-  try {
-    token = await requestBaneseBoletoAccessToken(
-      input.admin,
-      input.environment,
-    );
-  } catch (error) {
-    throw error;
-  }
+  const token: BaneseAccessToken = await requestBaneseBoletoAccessToken(
+    input.admin,
+    input.environment,
+  );
   if (reservation.recoveryPending) {
     const recovery = await recoverBaneseIncidentReservation({
       charge: input,

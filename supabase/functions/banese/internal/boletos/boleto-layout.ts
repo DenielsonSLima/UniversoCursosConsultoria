@@ -19,7 +19,6 @@ import {
   drawBaneseBarcode as drawBarcode,
   drawBaneseBox as drawBox,
   drawBaneseCompanyLogo as drawCompanyLogo,
-  drawBaneseImageContain as drawImageContain,
   drawBaneseText as drawText,
   fitBaneseFontSize as fitFontSize,
   wrapBaneseText as wrapText,
