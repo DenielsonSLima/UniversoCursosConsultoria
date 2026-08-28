@@ -16,6 +16,12 @@ const CarnesSelectionSummary = ({ controller }: CarnesSelectionSummaryProps) => 
     (total, group) => total + group.totalAmount,
     0,
   );
+  const titleCount = controller.selectedGroups.reduce(
+    (total, group) => total + group.installmentCount,
+    0,
+  );
+  const enrollmentLabel = controller.selectedGroups.length === 1 ? 'matrícula' : 'matrículas';
+  const titleLabel = titleCount === 1 ? 'título' : 'títulos';
   const progressLabel = controller.progress.total
     ? `${controller.progress.current} de ${controller.progress.total}`
     : null;
@@ -26,7 +32,7 @@ const CarnesSelectionSummary = ({ controller }: CarnesSelectionSummaryProps) => 
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-200">Seleção atual</p>
           <p className="mt-1 text-sm font-bold">
-            {controller.selectedGroups.length} matrícula(s) · {formatBaneseCurrency(totalAmount)}
+            {controller.selectedGroups.length} {enrollmentLabel} · {titleCount} {titleLabel} · {formatBaneseCurrency(totalAmount)}
           </p>
         </div>
         {controller.selectedGroups.length > 0 ? (
@@ -73,10 +79,10 @@ const CarnesSelectionSummary = ({ controller }: CarnesSelectionSummaryProps) => 
 
         <div className="grid gap-2 text-[10px] font-bold sm:grid-cols-3">
           <p className="rounded-xl bg-emerald-50 px-3 py-2 text-emerald-800">
-            Carnês: {controller.requestCounts.carnetRequests}/{MAX_CARNET_REQUESTS} requisições
+            Arquivos de carnê: {controller.requestCounts.carnetRequests}/{MAX_CARNET_REQUESTS}
           </p>
           <p className="rounded-xl bg-cyan-50 px-3 py-2 text-cyan-800">
-            Boletos: {controller.requestCounts.boletoRequests}/{MAX_BOLETO_REQUESTS} requisições
+            Boletos avulsos: {controller.requestCounts.boletoRequests}/{MAX_BOLETO_REQUESTS}
           </p>
           <p className="rounded-xl bg-indigo-50 px-3 py-2 text-indigo-800">
             Páginas estimadas: {controller.requestCounts.estimatedPages}/{MAX_ESTIMATED_DOCUMENT_PAGES}

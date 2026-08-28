@@ -27,6 +27,14 @@ const BaneseDocumentGroupCard = ({
   const documentLabel = group.documentType === 'carnet'
     ? 'Carnê Banese'
     : `${group.installmentCount} boleto${group.installmentCount === 1 ? '' : 's'} A4`;
+  const titleComposition = [
+    group.reenrollmentCount
+      ? `${group.reenrollmentCount} rematrícula${group.reenrollmentCount === 1 ? '' : 's'}`
+      : '',
+    group.monthlyCount
+      ? `${group.monthlyCount} mensalidade${group.monthlyCount === 1 ? '' : 's'}`
+      : '',
+  ].filter(Boolean).join(' + ');
   const actionLabel = selected
     ? 'Remover da seleção'
     : mode === 'custom'
@@ -44,7 +52,7 @@ const BaneseDocumentGroupCard = ({
               <FileStack size={12} /> {documentLabel}
             </span>
             <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-slate-600">
-              {group.installmentCount} parcela{group.installmentCount === 1 ? '' : 's'}
+              {titleComposition}
             </span>
           </div>
 

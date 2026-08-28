@@ -252,6 +252,41 @@
       "remoteId": "20260828125105",
       "sha256": "47fb5c8bad6a7eb9b2c2e06b4adc00f9f4fbe3beed7f6949135bc41d78869f7b",
       "reason": "Migration aplicada em Produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260828143000_create_banese_discount_removal_correction.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260828150349",
+      "sha256": "c85910a5704c77370cb25eb617ecc6bfe5d6176f4cc70e5472f3baa9c7cce0ce",
+      "reason": "Migration aplicada em Produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260828143100_correct_t42_reenrollment_discount.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260828150557",
+      "sha256": "d13e4a9520279a872452efeb501ba97ce654efe1fc794f1da7ae9241c20269e8",
+      "reason": "Migration aplicada em Produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260828143200_fix_banese_discount_correction_fingerprint.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260828152802",
+      "sha256": "e08a5eaa4f663ff82a5bac10c6b75129d42c479f35bbbd040f0603921e215475",
+      "reason": "Migration aplicada em Produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260828143300_fix_banese_discount_correction_service_role_guard.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260828153112",
+      "sha256": "0439e86506b940da892c6c75d209711b69f5f68778f7b7d8f7894d9556828f0e",
+      "reason": "Migration aplicada em Produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260828143400_accept_banese_empty_discount_tombstone.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260828153545",
+      "sha256": "eb16fc98d9b546be692ff77663c1277023f6b35735bf67db542d0377ca3b0100",
+      "reason": "Migration aplicada em Produção; histórico imutável."
     }
   ]
 }

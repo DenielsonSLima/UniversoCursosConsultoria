@@ -40,6 +40,8 @@ const groupFixture = (
     classId: id(4_000 + (index % 3)),
     className: `Turma ${index % 3}`,
     installmentCount,
+    reenrollmentCount: 0,
+    monthlyCount: installmentCount,
     totalAmount: installmentCount * 100,
     firstDueDate: '2026-09-10',
     lastDueDate: '2026-12-10',
@@ -83,18 +85,19 @@ test('seleção coletiva é atômica no limite conservador de 20 boletos e remov
   assert.deepEqual(removeDocumentGroups(accepted, page), current);
 });
 
-test('limita a estimativa agregada a 80 páginas antes de solicitar os PDFs', () => {
-  const base = Array.from(
-    { length: 5 },
+test('estima três títulos por página e respeita o teto agregado de 80 páginas', () => {
+  const carnets = Array.from(
+    { length: 6 },
     (_, index) => groupFixture(index + 1, 'carnet', 30),
   );
-  const accepted = [...base, groupFixture(6, 'carnet', 10)];
+  const boletos = Array.from(
+    { length: 20 },
+    (_, index) => groupFixture(100 + index, 'boletos', 1),
+  );
+  const accepted = [...carnets, ...boletos];
   assert.equal(countDocumentRequests(accepted).estimatedPages, 80);
   assert.doesNotThrow(() => assertDocumentGenerationLimits(accepted));
-  assert.throws(
-    () => assertDocumentGenerationLimits([...base, groupFixture(6, 'carnet', 12)]),
-    /mais de 80 páginas.*Divida a seleção/i,
-  );
+  assert.equal(countDocumentRequests([groupFixture(200, 'carnet', 13)]).estimatedPages, 5);
 });
 
 test('limita os bytes vetoriais recebidos a 24 MiB antes da fusão', () => {

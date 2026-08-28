@@ -91,6 +91,7 @@ const lineFromBarcode = (barcode: string) => {
 export const baneseDocumentFixtureAt = (
   index: number,
   dueDate = BANESE_DOCUMENT_FIXTURE.dueDate,
+  nominalAmount = BANESE_DOCUMENT_FIXTURE.amount,
 ): BaneseBoletoDocumentInput => {
   const numberWithoutDigit = String(468 + index).padStart(8, "0");
   const ourNumber = `${numberWithoutDigit}${
@@ -110,7 +111,7 @@ export const baneseDocumentFixtureAt = (
     calculateBaneseAsbaceDoubleDigit(asbaceBase)
   }`;
   const amount = String(
-    Math.round(BANESE_DOCUMENT_FIXTURE.amount * 100),
+    Math.round(nominalAmount * 100),
   ).padStart(10, "0");
   const withPlaceholder = `04790${
     baneseDueDateFactor(dueDate)
@@ -126,9 +127,11 @@ export const baneseDocumentFixtureAt = (
     documentNumber: `PARC-${String(index + 1).padStart(2, "0")}`,
     ourNumber,
     dueDate,
+    amount: nominalAmount,
     financialTerms: BANESE_DOCUMENT_FIXTURE.financialTerms
       ? {
         ...BANESE_DOCUMENT_FIXTURE.financialTerms,
+        nominalAmount,
         dueDate,
       }
       : null,

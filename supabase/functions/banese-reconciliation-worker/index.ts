@@ -24,6 +24,10 @@ import {
   recoverBaneseIncidentBatch,
   shouldPauseNormalReconciliationForIncident,
 } from "./incident-recovery.ts";
+import {
+  discountRepairDiagnosticCode,
+  repairMarkedBaneseDiscountBeforeBatch,
+} from "./discount-removal-maintenance.ts";
 
 type CachedToken = { token: BaneseAccessToken; expiresAt: number };
 
@@ -131,6 +135,22 @@ Deno.serve(async (req: Request) => {
     await readRequestBody(req);
   } catch {
     return json({ error: "Requisição inválida." }, 400);
+  }
+
+  try {
+    const discountRepair = await repairMarkedBaneseDiscountBeforeBatch(
+      admin,
+      reconcileBaneseReceivable,
+    );
+    if (discountRepair) {
+      return json({ success: true, discountRepair });
+    }
+  } catch (error) {
+    console.error("banese marked discount repair failed", {
+      errorClass: "DISCOUNT_REPAIR_ERROR",
+      diagnosticCode: discountRepairDiagnosticCode(error),
+    });
+    return json({ error: "Não foi possível corrigir o desconto Banese." }, 500);
   }
 
   let incidentRecovery;

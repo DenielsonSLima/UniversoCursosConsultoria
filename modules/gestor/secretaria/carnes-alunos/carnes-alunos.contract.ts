@@ -29,6 +29,14 @@ const positiveInteger = (value: unknown, field: string) => {
   return normalized;
 };
 
+const nonNegativeInteger = (value: unknown, field: string) => {
+  const normalized = Number(value);
+  if (!Number.isInteger(normalized) || normalized < 0) {
+    throw new Error(`O catálogo de carnês retornou ${field} inválido.`);
+  }
+  return normalized;
+};
+
 const date = (value: unknown, field: string) => {
   const normalized = nonEmptyText(value, field).slice(0, 10);
   if (!ISO_DATE_RE.test(normalized)) {
@@ -51,10 +59,13 @@ const parseGroup = (value: unknown): BaneseDocumentGroup => {
     throw new Error('O catálogo de carnês retornou um identificador de grupo fora do escopo Banese.');
   }
   const installmentCount = positiveInteger(row.installmentCount, 'a quantidade de parcelas');
+  const reenrollmentCount = nonNegativeInteger(row.reenrollmentCount, 'a quantidade de rematrículas');
+  const monthlyCount = nonNegativeInteger(row.monthlyCount, 'a quantidade de mensalidades');
   const documentType = row.documentType === 'carnet' || row.documentType === 'boletos'
     ? row.documentType
     : null;
-  if (!documentType || receivableIds.length !== installmentCount) {
+  if (!documentType || receivableIds.length !== installmentCount
+    || reenrollmentCount + monthlyCount !== installmentCount) {
     throw new Error('O catálogo de carnês retornou uma composição documental inconsistente.');
   }
   if (!receivableIds.includes(representativeReceivableId)) {
@@ -88,6 +99,8 @@ const parseGroup = (value: unknown): BaneseDocumentGroup => {
     classId: uuid(row.classId, 'a turma'),
     className: nonEmptyText(row.className, 'o nome da turma'),
     installmentCount,
+    reenrollmentCount,
+    monthlyCount,
     totalAmount,
     firstDueDate: date(row.firstDueDate, 'a primeira data de vencimento'),
     lastDueDate: date(row.lastDueDate, 'a última data de vencimento'),

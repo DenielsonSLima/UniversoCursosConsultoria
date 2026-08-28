@@ -28,6 +28,10 @@ import {
   throwBanesePostSettlementPending,
 } from "./banese-post-settlement.ts";
 import { completeBanesePostSettlement } from "./banese-post-settlement-projection.ts";
+import {
+  BANESE_DISCOUNT_REMOVAL_PENDING,
+  repairMarkedBaneseReenrollmentDiscount,
+} from "./banese-discount-removal.ts";
 
 export {
   baneseReceivableTitleFilter,
@@ -39,6 +43,7 @@ export {
 type ReconcileBaneseDependencies = {
   queryBoleto?: typeof queryBaneseBoleto;
   persistReconciliation?: typeof persistBaneseReconciliationSnapshot;
+  repairDiscountRemoval?: typeof repairMarkedBaneseReenrollmentDiscount;
   syncFutureInstallments?: (
     matriculaId: string,
     environment: Environment,
@@ -72,6 +77,16 @@ export const reconcileBaneseReceivable = async (
     String(receivable.gateway_payment_method || "").toUpperCase() !== "BOLETO"
   ) {
     throw new Error("A conciliacao Banese disponivel atende somente boletos.");
+  }
+  if (
+    String(receivable.gateway_last_error || "") ===
+      BANESE_DISCOUNT_REMOVAL_PENDING
+  ) {
+    return await (dependencies.repairDiscountRemoval ??
+      repairMarkedBaneseReenrollmentDiscount)(admin, {
+        receivable,
+        actorId: null,
+      });
   }
 
   const environment: Environment = requireGatewayEnvironment(

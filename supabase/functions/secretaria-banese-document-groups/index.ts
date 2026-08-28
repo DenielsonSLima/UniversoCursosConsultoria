@@ -15,6 +15,7 @@ import {
 } from "../_shared/http.ts";
 import { BANESE_DOCUMENT_SECURITY_HEADERS } from "../banese-boleto-document/document-policy.ts";
 import {
+  BANESE_CARNET_ALLOWED_LAUNCH_TYPES,
   BANESE_DOCUMENT_PAYABLE_LOCAL_STATUSES,
   type BaneseCarnetReceivableRow,
   isRegisteredBaneseDocumentRow,
@@ -126,7 +127,8 @@ const parseRequest = async (req: Request): Promise<CatalogRequest> => {
     throw new HttpError(400, "A consulta possui campos não permitidos.");
   }
   const rawPoloId = text(record.poloId);
-  const isTodosPolo = rawPoloId === "todos" || rawPoloId === "all" || rawPoloId === "";
+  const isTodosPolo = rawPoloId === "todos" || rawPoloId === "all" ||
+    rawPoloId === "";
   if (!isTodosPolo && !UUID_RE.test(rawPoloId)) {
     throw new HttpError(400, "Polo inválido.");
   }
@@ -190,7 +192,7 @@ const readReceivables = async (
       .select(RECEIVABLE_SELECT)
       .eq("gateway_provider", "banese_card")
       .eq("gateway_payment_method", "BOLETO")
-      .eq("tipo_lancamento", "PARCELA")
+      .in("tipo_lancamento", [...BANESE_CARNET_ALLOWED_LAUNCH_TYPES])
       .in("status", [...BANESE_DOCUMENT_PAYABLE_LOCAL_STATUSES])
       .not("gateway_boleto_issued_at", "is", null)
       .not("gateway_financial_terms_confirmed_at", "is", null)
@@ -320,7 +322,10 @@ Deno.serve(async (req: Request) => {
     if (input.poloId !== "todos") {
       requireGestorForPolo(gestor, input.poloId);
     } else if (!gestor.isGlobal && gestor.poloIds.length === 0) {
-      throw new HttpError(403, "Sem permissão para consultar documentos deste polo.");
+      throw new HttpError(
+        403,
+        "Sem permissão para consultar documentos deste polo.",
+      );
     }
     return jsonResponse(req, await loadCatalog(admin, input, gestor));
   } catch (error) {

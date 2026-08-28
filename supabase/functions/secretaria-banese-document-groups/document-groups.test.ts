@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
-import { baneseDocumentFixtureAt } from "../banese/internal/testing/document-fixture.ts";
+import {
+  BANESE_DOCUMENT_FIXTURE,
+  baneseDocumentFixtureAt,
+} from "../banese/internal/testing/document-fixture.ts";
 import type { BaneseCarnetReceivableRow } from "../banese-carnet-document/document-policy.ts";
 import {
   buildBaneseDocumentFilters,
@@ -27,8 +30,10 @@ const OTHER_COURSE_ID = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
 const rowAt = (
   index: number,
   overrides: Partial<BaneseCarnetReceivableRow> = {},
+  nominalAmount = BANESE_DOCUMENT_FIXTURE.amount,
+  dueDate = BANESE_DOCUMENT_FIXTURE.dueDate,
 ): BaneseCarnetReceivableRow => {
-  const bank = baneseDocumentFixtureAt(index);
+  const bank = baneseDocumentFixtureAt(index, dueDate, nominalAmount);
   return {
     id: bank.receivableId,
     cliente_id: STUDENT_ID,
@@ -125,6 +130,101 @@ Deno.test("agrupa exatamente por matrícula, polo e vínculo bancário", () => {
       .every((group) => group.documentType === "boletos"),
   );
   assert.ok(groups.every((group) => group.id.startsWith("banese:")));
+});
+
+Deno.test("agrupa rematricula confirmada sem desconto com as mensalidades", () => {
+  const input = buildInput();
+  const rematricula = rowAt(11, {
+    tipo_lancamento: "REMATRICULA",
+    parcela_numero: 0,
+    descricao: "Rematrícula",
+    gateway_financial_terms: {
+      ...rowAt(11).gateway_financial_terms,
+      discount: null,
+    },
+  });
+  const groups = buildBaneseDocumentGroups({
+    ...input,
+    receivables: [...input.receivables, rematricula],
+  });
+  const enrollmentGroup = groups.find((group) =>
+    group.enrollmentId === ENROLLMENT_ID && group.installmentCount === 4
+  );
+
+  assert.ok(enrollmentGroup);
+  assert.equal(enrollmentGroup.totalAmount, 80_000);
+  assert.ok(enrollmentGroup.receivableIds.includes(rematricula.id));
+  assert.equal(enrollmentGroup.representativeReceivableId, rematricula.id);
+  assert.equal(
+    enrollmentGroup.firstDueDate,
+    [rowAt(0), rowAt(1), rowAt(2), rematricula]
+      .map((row) => String(row.data_vencimento).slice(0, 10))
+      .sort()[0],
+  );
+});
+
+Deno.test("cenário T42 monta exatamente rematricula mais 12 mensalidades e ignora legado incompleto", () => {
+  const rematricula = rowAt(
+    20,
+    {
+      tipo_lancamento: "REMATRICULA",
+      parcela_numero: 0,
+      descricao: "Rematrícula",
+      data_vencimento: "2026-10-15",
+      gateway_boleto_issued_at: "2026-08-28T12:00:00Z",
+      gateway_financial_terms: {
+        ...baneseDocumentFixtureAt(20, "2026-10-15", 100).financialTerms,
+        discount: null,
+      },
+    },
+    100,
+    "2026-10-15",
+  );
+  const mensalidades = Array.from({ length: 12 }, (_, index) => {
+    const monthIndex = 10 + index;
+    const year = 2026 + Math.floor(monthIndex / 12);
+    const month = String((monthIndex % 12) + 1).padStart(2, "0");
+    const dueDate = `${year}-${month}-15`;
+    const bank = baneseDocumentFixtureAt(21 + index, dueDate, 279.9);
+    return rowAt(
+      21 + index,
+      {
+        parcela_numero: index + 1,
+        descricao: `Mensalidade ${index + 1}/12`,
+        data_vencimento: dueDate,
+        gateway_boleto_issued_at: "2026-08-28T12:00:00Z",
+        gateway_financial_terms: bank.financialTerms as Record<string, unknown>,
+      },
+      279.9,
+      dueDate,
+    );
+  });
+  const legacyWithoutBankIdentity = rowAt(40, {
+    gateway_provider: null,
+    gateway_payment_method: null,
+    gateway_boleto_nosso_numero: null,
+    gateway_boleto_linha_digitavel: null,
+    gateway_boleto_codigo_barras: null,
+    gateway_financial_terms_confirmed_at: null,
+  }, 279.9);
+  const input = buildInput();
+  const groups = buildBaneseDocumentGroups({
+    ...input,
+    receivables: [legacyWithoutBankIdentity, ...mensalidades, rematricula],
+  });
+
+  assert.equal(groups.length, 1);
+  assert.equal(groups[0].installmentCount, 13);
+  assert.equal(groups[0].reenrollmentCount, 1);
+  assert.equal(groups[0].monthlyCount, 12);
+  assert.equal(groups[0].totalAmount, 3_458.8);
+  assert.equal(groups[0].representativeReceivableId, rematricula.id);
+  assert.equal(
+    groups[0].receivableIds.includes(legacyWithoutBankIdentity.id),
+    false,
+  );
+  assert.equal(groups[0].firstDueDate, "2026-10-15");
+  assert.equal(groups[0].lastDueDate, "2027-10-15");
 });
 
 Deno.test("escopo autenticado falha fechado para cobrança ou turma de outro polo", () => {

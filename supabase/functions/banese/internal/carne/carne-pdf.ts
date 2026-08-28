@@ -6,10 +6,12 @@ import {
   type BaneseDocumentBranding,
   normalizeBaneseBoletoDocument,
 } from "../types.ts";
-import { drawBaneseCarnetSlip } from "./carne-layout.ts";
+import {
+  BANESE_CARNET_FIXED_LAYOUT_V1,
+  drawBaneseCarnetSlip,
+} from "./carne-layout.ts";
 
 export type BaneseCarnetPdfOptions = {
-  itemsPerPage?: 2 | 3;
   maxItems?: number;
   branding?: BaneseDocumentBranding;
 };
@@ -22,12 +24,6 @@ export const buildBaneseCarnetPdf = async (
   const maxItems = Number.isFinite(configuredMaxItems)
     ? Math.max(1, Math.min(60, Math.trunc(configuredMaxItems)))
     : 30;
-  if (
-    options.itemsPerPage !== undefined &&
-    ![2, 3].includes(Number(options.itemsPerPage))
-  ) {
-    throw new Error("Quantidade de parcelas por pagina do carne e invalida.");
-  }
   if (!Array.isArray(rawItems) || rawItems.length < 3) {
     throw new Error(
       "O carne Banese exige ao menos 3 parcelas registradas. Matricula e cobrancas com ate 2 parcelas devem ser emitidas individualmente.",
@@ -52,10 +48,7 @@ export const buildBaneseCarnetPdf = async (
         pix: null,
       });
     }
-  }).sort((left, right) =>
-    left.dueDate.localeCompare(right.dueDate) ||
-    left.documentNumber.localeCompare(right.documentNumber)
-  );
+  });
   const payerDocuments = new Set(items.map((item) => item.payer.document));
   if (payerDocuments.size !== 1) {
     throw new Error("Um carne Banese deve conter boletos de um unico pagador.");
@@ -119,29 +112,27 @@ export const buildBaneseCarnetPdf = async (
         );
       }
     }
-    const txids = items.map((item) => item.pix?.txid).filter(Boolean);
-    if (
-      txids.length > 0 &&
-      (txids.length !== items.length || new Set(txids).size !== items.length)
-    ) {
+    // Em cobranças Pix dinâmicas, o Banese usa "***" no campo 62.05 como
+    // placeholder de TXID. A identidade de cada cobrança continua protegida
+    // pelo payload copia-e-cola, QR, Nosso Número, linha e código exclusivos.
+    const concreteTxids = items.map((item) => item.pix?.txid)
+      .filter((txid): txid is string => Boolean(txid) && txid !== "***");
+    if (new Set(concreteTxids).size !== concreteTxids.length) {
       throw new Error("Cada parcela do carne deve possuir TXID Pix exclusivo.");
     }
   }
-  if (options.itemsPerPage === 3 && effectiveOfficialPix) {
-    throw new Error(
-      "Carne Banese com Pix oficial aceita no maximo 2 parcelas por pagina.",
-    );
-  }
-
   const pdf = await PDFDocument.create();
   pdf.setTitle("Carne Banese - Universo Cursos e Consultoria");
   pdf.setSubject("Carne de boletos registrados no Banese");
   pdf.setCreator("Universo Cursos e Consultoria");
   const fonts = await baneseDocumentFonts(pdf);
   const assets = await embedBaneseBrandAssets(pdf, options.branding);
-  const itemsPerPage = options.itemsPerPage || (effectiveOfficialPix ? 2 : 3);
-  const margin = 14;
-  const gap = 9;
+  const {
+    itemsPerPage,
+    pageMargin: margin,
+    pageGap: gap,
+    slotVerticalInset,
+  } = BANESE_CARNET_FIXED_LAYOUT_V1;
   const slotHeight = (BANESE_PDF_PAGE.height - margin * 2 -
     gap * (itemsPerPage - 1)) / itemsPerPage;
 
@@ -165,9 +156,9 @@ export const buildBaneseCarnetPdf = async (
 
     await drawBaneseCarnetSlip(page, pdf, fonts, item, {
       x: margin,
-      y: y + 4,
+      y: y + slotVerticalInset,
       width: BANESE_PDF_PAGE.width - margin * 2,
-      height: slotHeight - 8,
+      height: slotHeight - slotVerticalInset * 2,
     }, assets);
 
     if (slotIndex < itemsPerPage - 1 && index < items.length - 1) {

@@ -16,6 +16,7 @@ import {
 } from "../banese-boleto-document/document-policy.ts";
 import { buildBaneseCarnetPdf } from "../banese/internal/carne/carne-pdf.ts";
 import {
+  BANESE_CARNET_ALLOWED_LAUNCH_TYPES,
   BANESE_CARNET_MAX_ITEMS,
   BANESE_DOCUMENT_PAYABLE_LOCAL_STATUSES,
   BaneseCarnetPolicyError,
@@ -185,7 +186,7 @@ const readRegisteredCarnetCandidates = async (
       .eq("gateway_provider", "banese_card")
       .eq("gateway_environment", scope.environment)
       .eq("gateway_payment_method", "BOLETO")
-      .eq("tipo_lancamento", "PARCELA")
+      .in("tipo_lancamento", [...BANESE_CARNET_ALLOWED_LAUNCH_TYPES])
       .eq("gateway_issuer_polo_id", scope.issuerId)
       .eq("gateway_boleto_convenio", scope.agreement)
       .in("gateway_boleto_agencia", [

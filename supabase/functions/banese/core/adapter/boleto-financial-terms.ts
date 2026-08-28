@@ -52,6 +52,7 @@ export const confirmBaneseBoletoFinancialTerms = async (input: {
   payload: BaneseFinancialPayload;
   currentRaw?: unknown;
   repairMismatch: boolean;
+  allowDiscountRemoval?: boolean;
 }) => {
   const expected = baneseFinancialTermsFromPayload(
     input.payload,
@@ -69,50 +70,65 @@ export const confirmBaneseBoletoFinancialTerms = async (input: {
     raw = current.raw;
   }
 
+  const actual = baneseFinancialTermsFromPayload(
+    raw,
+    input.payload.ValorNominal,
+    input.payload.DataVencimento,
+  );
   try {
     assertBaneseFinancialTermsEqual(
       expected,
-      baneseFinancialTermsFromPayload(
-        raw,
-        input.payload.ValorNominal,
-        input.payload.DataVencimento,
-      ),
+      actual,
     );
     return raw;
   } catch (error) {
-    if (!input.repairMismatch) throw error;
-  }
+    const rawRecord = asRecord(raw);
+    const remoteDiscounts = rawRecord.Desconto ?? rawRecord.desconto;
+    const discountRemovalOnly = input.allowDiscountRemoval === true &&
+      expected.discount === null && actual.discount !== null &&
+      Array.isArray(remoteDiscounts) && remoteDiscounts.length === 1 &&
+      JSON.stringify({ ...expected, discount: null }) ===
+        JSON.stringify({ ...actual, discount: null });
+    if (!input.repairMismatch && !discountRemovalOnly) throw error;
 
-  const rawRecord = asRecord(raw);
-  const situationCode = Number(
-    rawRecord.CodigoSituacaoBoleto ?? rawRecord.codigoSituacaoBoleto,
-  );
-  if (situationCode !== 2) {
-    throw new BaneseAdapterError(
-      "Termos financeiros divergentes so podem ser corrigidos em titulo Banese pendente.",
+    const situationCode = Number(
+      rawRecord.CodigoSituacaoBoleto ?? rawRecord.codigoSituacaoBoleto,
     );
-  }
-  const updatePayload = boletoFinancialTermsPayload(input.payload);
-  if (!Object.keys(updatePayload).length) {
-    throw new BaneseAdapterError(
-      "Titulo Banese possui termos inesperados e a remocao automatica foi bloqueada.",
-    );
-  }
-  const updateResponse = await fetch(input.endpoint, {
-    method: "PUT",
-    headers: {
-      Authorization: `${input.token.tokenType} ${input.token.accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(updatePayload),
-  });
-  const updateRaw = await readResponseBody(updateResponse);
-  if (!updateResponse.ok) {
-    throw new BaneseAdapterError(
-      `Banese recusou a correcao dos termos do boleto (${updateResponse.status}): ${
-        typeof updateRaw === "string" ? updateRaw : JSON.stringify(updateRaw)
-      }`,
-    );
+    if (situationCode !== 2) {
+      throw new BaneseAdapterError(
+        "Termos financeiros divergentes so podem ser corrigidos em titulo Banese pendente.",
+      );
+    }
+    const updatePayload = discountRemovalOnly
+      ? {
+        Desconto: [{
+          TipoDesconto: 0,
+          Valor: 0,
+          Data: input.payload.DataVencimento,
+        }],
+      }
+      : boletoFinancialTermsPayload(input.payload);
+    if (!Object.keys(updatePayload).length) {
+      throw new BaneseAdapterError(
+        "Titulo Banese possui termos inesperados e a remocao automatica foi bloqueada.",
+      );
+    }
+    const updateResponse = await fetch(input.endpoint, {
+      method: "PUT",
+      headers: {
+        Authorization: `${input.token.tokenType} ${input.token.accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(updatePayload),
+    });
+    const updateRaw = await readResponseBody(updateResponse);
+    if (!updateResponse.ok) {
+      throw new BaneseAdapterError(
+        `Banese recusou a correcao dos termos do boleto (${updateResponse.status}): ${
+          typeof updateRaw === "string" ? updateRaw : JSON.stringify(updateRaw)
+        }`,
+      );
+    }
   }
 
   const confirmed = await readBaneseBoletoAt(input.endpoint, input.token);
@@ -141,6 +157,7 @@ export const ensureBaneseBoletoFinancialTerms = async (
     nominalAmount: number;
     dueDate: string;
     financialTerms: BaneseFinancialTermsInput;
+    allowDiscountRemoval?: boolean;
   },
 ) => {
   assertEnvironment(environment);
@@ -197,6 +214,7 @@ export const ensureBaneseBoletoFinancialTerms = async (
     payload,
     currentRaw: current.raw,
     repairMismatch: environment === "sandbox",
+    allowDiscountRemoval: input.allowDiscountRemoval,
   });
   return {
     financialTerms,

@@ -71,7 +71,7 @@ export const countDocumentRequests = (
   uniqueGroups(groups).forEach((group) => {
     if (group.documentType === 'carnet') {
       carnetRequests += 1;
-      estimatedPages += Math.ceil(group.installmentCount / 2);
+      estimatedPages += Math.ceil(group.installmentCount / 3);
     } else {
       boletoRequests += group.receivableIds.length;
       estimatedPages += group.receivableIds.length;
