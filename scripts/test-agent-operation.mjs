@@ -27,7 +27,18 @@ const activeLot = read('ai/operacao/LOTE_ATIVO.md');
 const protocol = read('ai/operacao/PROTOCOLO_DE_LOTES.md');
 const pdfPolicy = read('ai/operacao/politicas/PDFS_OFICIAIS.md');
 const manifest = JSON.parse(read('ai/operacao/rag/manifesto.json'));
-const ragIndexText = read('ai/operacao/rag/index.json');
+const ragIndexPath = 'ai/operacao/rag/index.json';
+if (!existsSync(ragIndexPath)) {
+  const generation = spawnSync(
+    process.execPath,
+    ['scripts/agent-memory-rag.mjs', 'index'],
+    { encoding: 'utf8' },
+  );
+  if (generation.status !== 0) {
+    throw new Error(`Não foi possível gerar o índice RAG: ${generation.stderr.trim() || 'erro desconhecido'}`);
+  }
+}
+const ragIndexText = read(ragIndexPath);
 const ragIndex = JSON.parse(ragIndexText);
 const tsconfig = JSON.parse(read('tsconfig.json'));
 const lineLimitConfig = JSON.parse(read('ai/operacao/qualidade/limite-linhas.json'));
@@ -120,7 +131,7 @@ const search = spawnSync(
   { encoding: 'utf8' },
 );
 const searchElapsedMs = performance.now() - searchStartedAt;
-const hashAfter = sha256(read('ai/operacao/rag/index.json'));
+const hashAfter = sha256(read(ragIndexPath));
 
 assert(search.status === 0, `Busca RAG falhou: ${search.stderr.trim() || 'erro desconhecido'}`);
 assert(hashBefore === hashAfter, 'Busca RAG alterou o índice.');
