@@ -67,6 +67,7 @@ export const validInput = {
   paymentMethod: "BOLETO" as const,
   receivable: {
     id: "11111111-1111-4111-8111-111111111111",
+    gateway_creation_token: "22222222-2222-4222-8222-222222222222",
     baneseAgencia: "033",
     baneseNossoNumero: "000000015",
     baneseCodigoEspecie: 21,
@@ -95,6 +96,7 @@ export const validInput = {
 export const adminForBaneseReservation = (
   alreadyReserved: boolean,
   bankRangeConfirmed = true,
+  collisionPreflightEnabled = false,
 ) => ({
   rpc: async (fn: string) => {
     if (fn === "reserve_banese_nosso_numero_for_receivable") {
@@ -105,6 +107,7 @@ export const adminForBaneseReservation = (
           agencia: BANESE_DOCUMENT_FIXTURE.beneficiary.agency,
           alreadyReserved,
           bankRangeConfirmed,
+          collisionPreflightEnabled,
         },
         error: null,
       };
@@ -119,9 +122,14 @@ export const adminForBaneseReservation = (
 export const reservedBoletoInput = (
   alreadyReserved: boolean,
   bankRangeConfirmed = true,
+  collisionPreflightEnabled = false,
 ) => ({
   ...validInput,
-  admin: adminForBaneseReservation(alreadyReserved, bankRangeConfirmed),
+  admin: adminForBaneseReservation(
+    alreadyReserved,
+    bankRangeConfirmed,
+    collisionPreflightEnabled,
+  ),
   receivable: {
     ...validInput.receivable,
     id: BANESE_DOCUMENT_FIXTURE.receivableId,

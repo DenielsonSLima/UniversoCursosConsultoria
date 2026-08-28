@@ -8,6 +8,14 @@ Estado: hotfix concluído em produção e publicado pelo manifesto atômico dest
 
 Restabelecer a emissão e a recuperação segura do Pix oficial dos boletos Banese, corrigir a apresentação da rematrícula e esclarecer os 13 recebíveis emitidos localmente sem prova do POST bancário, sem fabricar, trocar ou reaproveitar identidade de outro título.
 
+## Retificação final após a reunião de recuperação
+
+- O conjunto correto possui dois fluxos independentes: 312 títulos históricos importados de Radiologia, válidos sem Pix, e 13 títulos da Adenize emitidos pelo sistema, que exigem Pix oficial.
+- Os históricos continuam exatamente na faixa 9356–9715, com 312 linhas digitáveis, 312 códigos de barras e 312 transações. Eles não foram reenviados, não receberam Pix fabricado e voltam a abrir pelo documento local.
+- Os 13 títulos da Adenize foram recuperados automaticamente depois da quarentena inicial. A consulta dos candidatos antigos impediu associação indevida; a sequência foi posicionada acima do último histórico e o Banese registrou 13 identidades exclusivas na faixa 9716–9728.
+- Todos os 13 possuem Nosso Número, linha de 47 dígitos, barras de 44 dígitos, valor codificado compatível, payload e imagem Pix oficiais, termos confirmados, status `API_REGISTERED` e exatamente uma transação.
+- Esta retificação substitui as pendências intermediárias abaixo que diziam que os 13 permaneceriam sem identidade ou dependeriam de ação manual do operador.
+
 ## Conclusão da reunião técnica em três frentes
 
 ### 1. Contrato bancário e evidência
@@ -36,10 +44,11 @@ Restabelecer a emissão e a recuperação segura do Pix oficial dos boletos Bane
 
 ## Correção dos 13 recebíveis
 
-- As 13 identidades locais sem prova bancária foram removidas por comparação exata e colocadas em quarentena.
-- Permaneceram intactas 12 parcelas de R$ 279,90 e uma rematrícula de R$ 100,00, com seus vínculos acadêmicos, turmas, vencimentos e status.
-- As filas correspondentes foram encerradas com diagnóstico seguro de identidade bancária quarentenada.
-- Nenhuma baixa, transação, liquidação, linha digitável, código de barras ou Pix de 2018 foi copiado para esses recebíveis.
+- As 13 identidades locais sem prova bancária foram removidas por comparação exata e colocadas temporariamente em quarentena.
+- A recuperação fechada consultou somente os 13 IDs auditados, descartou candidatos incompatíveis e emitiu automaticamente novos títulos após o piso histórico comprovado.
+- Permaneceram intactas 12 parcelas de R$ 279,90 e uma rematrícula de R$ 100,00, com matrícula, turma, vencimentos, descontos, multa, juros e status.
+- Nenhuma baixa, liquidação, linha, código de barras ou Pix de 2018 foi copiado; cada recebível recebeu a resposta oficial do seu próprio POST Banese.
+- A quarentena, o token de criação e o erro transitório foram removidos somente depois da persistência atômica da identidade completa.
 - A migration local `20260827172000_register_banese_boletos_adenize_cycle2.sql`, que havia atribuído 12 identidades sem prova do POST, foi excluída do lote, adicionada ao `.gitignore` e nunca será publicada no GitHub.
 
 ## Guardas mantidas
@@ -56,9 +65,10 @@ Restabelecer a emissão e a recuperação segura do Pix oficial dos boletos Bane
 
 ### Edge Functions
 
-- `asaas-api` v88: `ACTIVE`, `verify_jwt=true`, SHA-256 `b2ca242bbbbe322edebf7d1f22b27340972e63bcda619e4c823c8ca78c2d439a`.
-- `banese-reconciliation-worker` v49: `ACTIVE`, autenticação por segredo próprio, SHA-256 `f6124a5f4b3fca1cb32ee18a98c4f512fae227d64b887a6eea70edb0ec9d71fc`.
-- Os logs do worker v49 confirmaram execução HTTP 200 depois da publicação.
+- `banese-reconciliation-worker` v54: `ACTIVE`; concluiu os 13 alvos sem colisão e sem duplicar transações.
+- `asaas-api` v89, `payment-gateway-api` v18, `payment-checkout` v22, `checkout-api` v17, `dependencia-banese-checkout` v9 e `banese-cancellation-worker` v2: `ACTIVE` com o mesmo adaptador protegido.
+- `secretaria-banese-document-groups` v3: `ACTIVE`, com catálogo documental somente leitura e tipagem validada.
+- Requisições `OPTIONS` confirmaram inicialização HTTP 200 nos endpoints web; o worker de cancelamento respondeu 405 ao método não suportado, confirmando inicialização sem executar cancelamento.
 
 ### Migrations
 
@@ -72,28 +82,31 @@ Restabelecer a emissão e a recuperação segura do Pix oficial dos boletos Bane
 - `20260827224642_harden_banese_reconciliation_provenance.sql` → `20260828050800`.
 - `20260827224643_finalize_banese_recovered_pix_provenance.sql` → `20260828050808`.
 - A migration anterior `20260827222743_repair_banese_automatic_profile_floor` permanece aplicada e registrada no ledger, totalizando dez migrations remotas auditadas no ciclo.
+- `20260828093000_enable_banese_collision_preflight_allocation` restaurou o piso 9715 e ativou a consulta preventiva de colisão.
+- `20260828094000_recover_unlinked_banese_incident_titles` restringiu a recuperação aos 13 IDs auditados e encerrou todos os alvos.
 
 ## Estado operacional obrigatório
 
-- Emissão Banese: `PAUSED`.
-- Reconciliador Banese: `PAUSED`.
-- Não emitir, reemitir, reservar nem enviar novo POST enquanto o Banese não confirmar formalmente uma faixa exclusiva de Nosso Número.
-- Solicitar ao banco os três Nossos Números que correspondem aos três QR Codes informados no atendimento; consultar cada um e associar somente se a identidade integral dos recebíveis conferir.
+- Emissão Banese: `ATIVA` em produção, com preflight GET e sequência monotônica acima do piso histórico.
+- Reconciliador geral Banese: `PAUSED` de forma conservadora para não consultar em massa os 225 históricos enfileirados; isso não bloqueia emissão, abertura, PDF ou carnê.
+- Títulos existentes nunca entram no ramo `Enviar/Reenviar ao banco`; históricos sem Pix continuam abrindo e emissões próprias só liberam documento depois da identidade completa.
 
 ## Validação
 
-- 151 testes de adaptador/gateway aprovados.
-- 16 testes do worker aprovados.
+- 148 testes de adaptador/gateway aprovados.
+- 23 testes do worker aprovados.
 - 35 testes de `test:banese-ui` aprovados.
-- 11 testes adicionais de `modalidade-receber` aprovados, focados na apresentação da rematrícula.
+- 51 testes focados de documento/carnê, Secretaria e apresentação aprovados.
+- Total focado: 257 testes aprovados, zero falhas.
 - TypeScript `--noEmit` aprovado.
-- Dois `deno check` aprovados: gateway `asaas-api` e worker de reconciliação.
+- `deno check` aprovado para gateway, worker, boleto, carnê e catálogo da Secretaria.
 - Revisão independente concluída com parecer `APPROVE`, sem achados P0, P1 ou P2 restantes.
-- Build Vite de produção e teto de 500 linhas aprovados antes da publicação do manifesto no GitHub.
+- Auditoria remota confirmou 312/312 históricos íntegros e 13/13 Adenize registrados com Pix, sem colisão e com valores codificados compatíveis.
+- O navegador controlável não possuía sessão autenticada reutilizável e redirecionou para login; nenhuma credencial foi extraída e nenhum usuário artificial foi criado para fabricar o smoke.
 
 ## Manifesto explícito
 
-Total: 64 arquivos
+Total: 81 arquivos
 
 - `.gitignore`
 - `ai/operacao/LOTE_ATIVO.md`
@@ -106,23 +119,37 @@ Total: 64 arquivos
 - `internal/versioning/system-version.json`
 - `modules/gestor/financeiro/receber/banese/gestor-banese-payment.service.ts`
 - `modules/gestor/financeiro/receber/components/modalidade-receber/ReceivableItemPresentation.tsx`
+- `modules/gestor/financeiro/receber/components/modalidade-receber/modalidade-receber.presentation.contract.test.ts`
 - `modules/gestor/financeiro/receber/components/modalidade-receber/modalidade-receber.utils.test.ts`
 - `modules/gestor/financeiro/receber/components/modalidade-receber/modalidade-receber.utils.ts`
 - `modules/gestor/financeiro/receber/components/modalidade-receber/useModalidadeReceberOperations.ts`
 - `modules/gestor/financeiro/receber/components/modalidade-receber/useModalidadeReceberReport.tsx`
+- `modules/gestor/secretaria/carnes-alunos/carnes-alunos.contract.test.ts`
+- `modules/gestor/secretaria/carnes-alunos/carnes-alunos.safe-catalog.test.ts`
+- `modules/gestor/secretaria/carnes-alunos/carnes-alunos.service.ts`
+- `supabase/functions/banese-boleto-document/document-policy.test.ts`
+- `supabase/functions/banese-carnet-document/README.md`
+- `supabase/functions/banese-carnet-document/document-policy.test.ts`
 - `supabase/functions/banese-reconciliation-worker/error-classification.test.ts`
 - `supabase/functions/banese-reconciliation-worker/error-classification.ts`
+- `supabase/functions/banese-reconciliation-worker/incident-recovery-contract.ts`
+- `supabase/functions/banese-reconciliation-worker/incident-recovery.test.ts`
+- `supabase/functions/banese-reconciliation-worker/incident-recovery.ts`
 - `supabase/functions/banese-reconciliation-worker/index.ts`
 - `supabase/functions/banese-reconciliation-worker/query-token-retry.test.ts`
 - `supabase/functions/banese-reconciliation-worker/query-token-retry.ts`
 - `supabase/functions/banese/core/adapter-cancellation.test.ts`
+- `supabase/functions/banese/core/adapter-boleto-collision.test.ts`
 - `supabase/functions/banese/core/adapter-create-pix.test.ts`
+- `supabase/functions/banese/core/adapter-incident-recovery.test.ts`
 - `supabase/functions/banese/core/adapter-payload.test.ts`
 - `supabase/functions/banese/core/adapter-reservation.test.ts`
 - `supabase/functions/banese/core/adapter-response.test.ts`
 - `supabase/functions/banese/core/adapter-test-fixtures.ts`
 - `supabase/functions/banese/core/adapter.test.ts` (removido)
 - `supabase/functions/banese/core/adapter/auth.ts`
+- `supabase/functions/banese/core/adapter/boleto-collision.ts`
+- `supabase/functions/banese/core/adapter/boleto-incident-recovery.ts`
 - `supabase/functions/banese/core/adapter/boleto-payment-query.ts`
 - `supabase/functions/banese/core/adapter/boleto-pix-response.ts`
 - `supabase/functions/banese/core/adapter/boleto-query-pix.test.ts`
@@ -149,6 +176,7 @@ Total: 64 arquivos
 - `supabase/functions/gateways/api/banese-transaction-routing.test.ts`
 - `supabase/functions/gateways/api/banese.test.ts` (removido)
 - `supabase/functions/gateways/api/banese.ts`
+- `supabase/functions/secretaria-banese-document-groups/index.ts`
 - `supabase/migrations/20260827222743_repair_banese_automatic_profile_floor.sql`
 - `supabase/migrations/20260827224500_persist_banese_recovered_pix_atomically.sql`
 - `supabase/migrations/20260827224600_persist_banese_reconciliation_atomically.sql`
@@ -159,6 +187,8 @@ Total: 64 arquivos
 - `supabase/migrations/20260827224641_quarantine_unproven_banese_titles.sql`
 - `supabase/migrations/20260827224642_harden_banese_reconciliation_provenance.sql`
 - `supabase/migrations/20260827224643_finalize_banese_recovered_pix_provenance.sql`
+- `supabase/migrations/20260828093000_enable_banese_collision_preflight_allocation.sql`
+- `supabase/migrations/20260828094000_recover_unlinked_banese_incident_titles.sql`
 
 ## Exclusões explícitas
 

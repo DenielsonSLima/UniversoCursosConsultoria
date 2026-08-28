@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { buildBaneseBoletoPdf } from "../banese/internal/boletos/boleto-pdf.ts";
+import { BANESE_DOCUMENT_FIXTURE } from "../banese/internal/testing/document-fixture.ts";
+import { normalizeBaneseBoletoDocument } from "../banese/internal/types.ts";
 import {
   allowedBaneseLogoUrl,
   BANESE_DOCUMENT_SECURITY_HEADERS,
@@ -6,6 +9,44 @@ import {
   isEligibleBaneseStudentOwner,
   isUniqueEligibleBaneseStudentOwner,
 } from "./document-policy.ts";
+
+Deno.test("Radiologia importada mantém boleto íntegro em produção sem Pix ou URL externa", async () => {
+  const historicalInput = {
+    ...BANESE_DOCUMENT_FIXTURE,
+    environment: "production" as const,
+    instructions: [
+      "Mensalidade histórica - Técnico em Radiologia - RAD T-01 INT",
+    ],
+    pix: null,
+  };
+
+  const normalized = normalizeBaneseBoletoDocument(historicalInput);
+  assert.equal(normalized.pix, null);
+  assert.equal(normalized.ourNumber, BANESE_DOCUMENT_FIXTURE.ourNumber);
+  assert.equal(normalized.digitableLine, BANESE_DOCUMENT_FIXTURE.digitableLine);
+  assert.equal(normalized.barcode, BANESE_DOCUMENT_FIXTURE.barcode);
+  assert.deepEqual(
+    normalized.financialTerms,
+    {
+      ...BANESE_DOCUMENT_FIXTURE.financialTerms,
+      discount: {
+        ...BANESE_DOCUMENT_FIXTURE.financialTerms?.discount,
+        validUntil: BANESE_DOCUMENT_FIXTURE.dueDate,
+      },
+      interest: {
+        ...BANESE_DOCUMENT_FIXTURE.financialTerms?.interest,
+        startsOn: "2026-08-16",
+      },
+      penalty: {
+        ...BANESE_DOCUMENT_FIXTURE.financialTerms?.penalty,
+        startsOn: "2026-08-16",
+      },
+    },
+  );
+
+  const pdf = await buildBaneseBoletoPdf(historicalInput);
+  assert.equal(String.fromCharCode(...pdf.slice(0, 4)), "%PDF");
+});
 
 Deno.test("autoriza aluno elegivel dono do boleto", () => {
   const payer = {

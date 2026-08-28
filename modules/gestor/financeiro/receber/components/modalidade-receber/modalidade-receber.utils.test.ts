@@ -2,11 +2,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { ContasReceber } from '../../../financeiro.service';
 import {
+  canOpenBaneseDocument,
   formatReceivableDate,
   formatNextPendingDueDate,
   formatOptionalCurrency,
   getPersistedGatewayFee,
   getPersistedGatewayNet,
+  isBaneseIdentityQuarantined,
   isPaidThroughAsaas,
   paymentGatewayCode,
   paymentGatewayLabel,
@@ -75,6 +77,53 @@ test('reconhece link legado do portal como boleto Banese', () => {
 
   assert.equal(paymentGatewayCode(baneseLegacyLink), 'banese_card');
   assert.equal(paymentGatewayLabel(baneseLegacyLink), 'Banese');
+});
+
+test('separa Banese importado apto à montagem local da identidade em quarentena', () => {
+  const quarantined = receivable({
+    gatewayProvider: 'banese_card',
+    asaasPaymentId: '000000139',
+    asaasBankSlipUrl: 'https://universocc.com.br/aluno?module=financeiro&banesePayment=receivable-id',
+    asaasLastError: 'BANESE_IDENTITY_QUARANTINED: identidade local sem prova do POST',
+  });
+  const importedRadiology = receivable({
+    gatewayProvider: 'banese_card',
+    origemPagamento: 'BANESE_IMPORTADO',
+    nossoNumeroAsaas: '000000087',
+    cursoNome: 'Técnico em Radiologia',
+    turmaNome: 'RAD T-01 INT',
+    asaasPaymentId: undefined,
+    asaasInvoiceUrl: undefined,
+    asaasBankSlipUrl: undefined,
+  });
+  const automaticallyRecovered = receivable({
+    gatewayProvider: 'banese_card',
+    asaasPaymentId: '000000140',
+    asaasBankSlipUrl: 'https://universocc.com.br/aluno?module=financeiro&banesePayment=receivable-id',
+  });
+  const markerOutsidePrefix = receivable({
+    gatewayProvider: 'banese_card',
+    asaasLastError: 'Aviso: BANESE_IDENTITY_QUARANTINED: fora do prefixo',
+  });
+  const nonBanese = receivable({
+    gatewayProvider: 'asaas',
+    asaasLastError: 'BANESE_IDENTITY_QUARANTINED: marcador indevido',
+  });
+  const baneseWithoutReceivableId = receivable({
+    id: undefined,
+    gatewayProvider: 'banese_card',
+    origemPagamento: 'BANESE_IMPORTADO',
+    nossoNumeroAsaas: '000000088',
+  });
+
+  assert.equal(isBaneseIdentityQuarantined(quarantined), true);
+  assert.equal(canOpenBaneseDocument(quarantined), false);
+  assert.equal(canOpenBaneseDocument(importedRadiology), true);
+  assert.equal(canOpenBaneseDocument(automaticallyRecovered), true);
+  assert.equal(isBaneseIdentityQuarantined(markerOutsidePrefix), false);
+  assert.equal(canOpenBaneseDocument(markerOutsidePrefix), true);
+  assert.equal(canOpenBaneseDocument(nonBanese), false);
+  assert.equal(canOpenBaneseDocument(baneseWithoutReceivableId), false);
 });
 
 test('não apresenta comprovante Asaas para cobrança paga de outro provedor', () => {

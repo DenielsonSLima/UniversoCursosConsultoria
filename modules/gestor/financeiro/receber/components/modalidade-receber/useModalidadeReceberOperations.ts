@@ -70,8 +70,23 @@ export const useModalidadeReceberOperations = (toast: OperationToast) => {
 
   const syncMutation = useMutation({
     mutationFn: (receivableId: string) => asaasIntegrationService.syncReceivable(receivableId),
-    onSuccess: async () => {
+    onSuccess: async (result) => {
       await queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.receivablesRoot });
+      const normalizedResult = result as typeof result & {
+        skipped?: boolean;
+        skippedReason?: string | null;
+      };
+      const skipped = normalizedResult.skipped === true
+        || normalizedResult.receivable?.asaas_sync_skipped === true;
+      if (skipped) {
+        toast.info(
+          'Cobrança não enviada',
+          normalizedResult.skippedReason
+            || normalizedResult.receivable?.asaas_skip_reason
+            || 'A cobrança não atende aos critérios atuais para envio ao banco.',
+        );
+        return;
+      }
       toast.success('Cobrança enviada', 'O banco confirmou o processamento da cobrança.');
     },
     onError: (error: any) => toast.error(

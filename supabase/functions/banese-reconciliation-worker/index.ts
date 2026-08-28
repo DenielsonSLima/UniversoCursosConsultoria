@@ -20,6 +20,10 @@ import {
   guardBaneseErrorStatusUpdate,
   shouldHaltBaneseReconciliationBatch,
 } from "./error-classification.ts";
+import {
+  recoverBaneseIncidentBatch,
+  shouldPauseNormalReconciliationForIncident,
+} from "./incident-recovery.ts";
 
 type CachedToken = { token: BaneseAccessToken; expiresAt: number };
 
@@ -129,6 +133,27 @@ Deno.serve(async (req: Request) => {
     return json({ error: "Requisição inválida." }, 400);
   }
 
+  let incidentRecovery;
+  try {
+    incidentRecovery = await recoverBaneseIncidentBatch(admin, supabaseUrl);
+  } catch {
+    console.error("banese incident recovery failed", {
+      errorClass: "INCIDENT_RECOVERY_ERROR",
+    });
+    return json(
+      { error: "Não foi possível executar a recuperação Banese segura." },
+      500,
+    );
+  }
+  if (shouldPauseNormalReconciliationForIncident(incidentRecovery)) {
+    return json({
+      success: incidentRecovery.failed === 0,
+      skipped: true,
+      reason: "INCIDENT_RECOVERY_PENDING",
+      incidentRecovery,
+    }, incidentRecovery.failed > 0 ? 503 : 200);
+  }
+
   const startedAt = Date.now();
   const { data: runConfig, error: prepareError } = await admin.rpc(
     "prepare_banese_reconciliation_batch_v3",
@@ -156,6 +181,7 @@ Deno.serve(async (req: Request) => {
       success: true,
       skipped: true,
       reason: String(runConfig?.reason || "DISABLED"),
+      incidentRecovery,
     });
   }
 
@@ -446,5 +472,6 @@ Deno.serve(async (req: Request) => {
     oauthRequests: oauthMetrics.requests,
     oauthReused: oauthMetrics.reused,
     decision: finishResult?.decision || null,
+    incidentRecovery,
   });
 });

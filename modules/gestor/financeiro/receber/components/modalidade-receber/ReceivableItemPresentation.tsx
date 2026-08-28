@@ -11,9 +11,11 @@ import {
 import type { ContasReceber } from '../../../financeiro.service';
 import { formatEnrollment } from './modalidade-receber.enrollment';
 import {
+  canOpenBaneseDocument,
   canReverseManualSettlement,
   formatCurrency,
   formatReceivableDate,
+  isBaneseIdentityQuarantined,
   isPaidThroughAsaas,
   paymentGatewayCode,
   paymentGatewayLabel,
@@ -144,6 +146,8 @@ export const ReceivableActionButtons: React.FC<ItemProps> = ({ item, actions }) 
     && actions.baneseDetailsReceivableId === item.id;
   const gatewayCode = paymentGatewayCode(item);
   const isBanese = ['banese_card', 'banese'].includes(gatewayCode || '');
+  const isBaneseIdentityQuarantine = isBanese && isBaneseIdentityQuarantined(item);
+  const canOpenBanese = canOpenBaneseDocument(item);
   const hasExternalChargeUrl = !isBanese
     && Boolean(item.asaasInvoiceUrl || item.asaasBankSlipUrl);
 
@@ -157,7 +161,7 @@ export const ReceivableActionButtons: React.FC<ItemProps> = ({ item, actions }) 
       >
         Receber
       </button>
-      {hasExternalChargeUrl || isBanese ? (
+      {isBaneseIdentityQuarantine ? null : hasExternalChargeUrl || canOpenBanese ? (
         <>
           {hasExternalChargeUrl ? (
             <button
@@ -174,7 +178,7 @@ export const ReceivableActionButtons: React.FC<ItemProps> = ({ item, actions }) 
             onClick={() => actions.onOpenCharge(item)}
             disabled={loadingBaneseDetails}
             className={`${hasExternalChargeUrl ? '' : 'col-span-2'} flex items-center justify-center gap-1 rounded-xl border border-blue-200 px-2 py-2 text-[10px] font-black uppercase text-blue-600 hover:bg-blue-50`}
-            title={isBanese ? 'Abrir o PDF do boleto Banese em uma nova aba para imprimir' : 'Abrir cobrança'}
+            title={canOpenBanese ? 'Abrir o PDF do boleto Banese em uma nova aba para imprimir' : 'Abrir cobrança'}
           >
             {loadingBaneseDetails
               ? <Loader2 className="animate-spin" size={12} />
@@ -193,7 +197,7 @@ export const ReceivableActionButtons: React.FC<ItemProps> = ({ item, actions }) 
             </button>
           ) : null}
         </>
-      ) : (
+      ) : isBanese ? null : (
         <button
           type="button"
           onClick={() => actions.onSync(item.id!)}

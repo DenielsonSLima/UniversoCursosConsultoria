@@ -4,6 +4,19 @@ Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente
 
 Histórico anterior: [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
 
+## [4.8.11] - 2026-08-28
+
+### Corrigido
+
+- Os 13 títulos da Adenize — 12 mensalidades e uma rematrícula — foram recuperados automaticamente com Nosso Número exclusivo, linha digitável, código de barras e Pix oficial do Banese.
+- Os 312 títulos históricos importados de Radiologia continuam válidos sem Pix e voltam a oferecer somente `Abrir`, sem `Enviar/Reenviar ao banco`.
+- O catálogo da Secretaria volta a montar o carnê a partir dos títulos Banese já registrados, mantendo a rematrícula identificada separadamente.
+
+### Segurança e qualidade
+
+- A emissão consulta o Nosso Número antes do POST, avança a sequência sem colisão e nunca associa linha, barras ou Pix de outro título.
+- Recuperação, emissão e persistência foram validadas por 257 testes focados, checagem de tipos, documentos bancários e auditoria dos 325 títulos envolvidos.
+
 ## [4.8.10] - 2026-08-28
 
 - Os 13 recebíveis atuais foram preservados e suas identidades Banese sem prova foram quarentenadas após o GET revelar títulos de 2018/R$ 200; emissão e reconciliação seguem pausadas até o banco confirmar uma faixa exclusiva, com preflight e proveniência reforçados para impedir nova colisão.
@@ -480,21 +493,3 @@ Histórico anterior: [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md)
 - RPCs acadêmicas, financeiras e documentais validam identidade, polo, vínculo, estado, revisão esperada e idempotência no backend; títulos emitidos e documentos concluídos mantêm snapshots imutáveis.
 - TanStack Query e Realtime foram limitados ao escopo afetado, com supressão segura de ecos locais e recuperação após reconexão.
 - As migrations foram aplicadas e auditadas pelo MCP Supabase; TypeScript, ESLint, build, contratos focados e auditorias de PDF vetorial foram aprovados antes desta publicação.
-
-## [2.3.0-beta.1] - 2026-08-06
-
-### Adicionado
-
-- O Gestor passa a ter o módulo Patrimônio, organizado por polo, com cadastro de aquisição, item, quantidade, valor unitário, total canônico, série, observação, busca e visualização em cards ou tabela.
-- Financeiro ganha a aba Empréstimos: o crédito entra na Matriz, as parcelas geram uma única Conta a Pagar física e o custo é rateado de forma canônica entre todos ou apenas os polos selecionados.
-- O Caixa exibe separadamente o resumo de financiamento e rateios, sem misturar crédito ou amortização ao resultado operacional.
-
-### Alterado
-
-- O submódulo Despesas passa a se chamar Contas a Pagar, mantendo as abas de despesas fixas e variáveis e os lançamentos existentes.
-- Contas a Pagar permite desdobrar o valor total de um lançamento parcelado no backend, ou manter o valor informado por parcela em aberto para baixa posterior.
-
-### Segurança e qualidade
-
-- Patrimônio, empréstimos, baixas e rateio usam RPCs idempotentes, RLS por empresa/polo, Realtime direcionado e invalidação TanStack Query por escopo.
-- Valores, parcelas, rateios e indicadores financeiros permanecem calculados exclusivamente no backend.

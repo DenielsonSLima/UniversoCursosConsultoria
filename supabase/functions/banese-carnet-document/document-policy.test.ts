@@ -1,5 +1,10 @@
 import assert from "node:assert/strict";
-import { baneseDocumentFixtureAt } from "../banese/internal/testing/document-fixture.ts";
+import { buildBaneseCarnetPdf } from "../banese/internal/carne/carne-pdf.ts";
+import {
+  BANESE_DOCUMENT_FIXTURE,
+  baneseDocumentFixtureAt,
+} from "../banese/internal/testing/document-fixture.ts";
+import { buildBaneseCarnetDocumentInputs } from "./document-input.ts";
 import {
   type BaneseCarnetReceivableRow,
   isAllowedBaneseLogoUrl,
@@ -50,6 +55,59 @@ const rowAt = (
     ...overrides,
   };
 };
+
+Deno.test("Radiologia importada mantém carnê íntegro em produção sem Pix ou URL externa", async () => {
+  const rows = selectBaneseCarnetDocumentRows(
+    rowAt(0, { gateway_environment: "production" }),
+    [0, 1, 2].map((index) =>
+      rowAt(index, {
+        gateway_environment: "production",
+        gateway_pix_payload: null,
+        gateway_pix_encoded_image: null,
+        descricao: `Mensalidade histórica ${index + 1} - Técnico em Radiologia`,
+      })
+    ),
+  );
+  const payer = {
+    nome: BANESE_DOCUMENT_FIXTURE.payer.name,
+    cpf_cnpj: BANESE_DOCUMENT_FIXTURE.payer.document,
+    endereco: BANESE_DOCUMENT_FIXTURE.payer.address.street,
+    bairro: BANESE_DOCUMENT_FIXTURE.payer.address.district,
+    cidade: BANESE_DOCUMENT_FIXTURE.payer.address.city,
+    uf: BANESE_DOCUMENT_FIXTURE.payer.address.state,
+    cep: BANESE_DOCUMENT_FIXTURE.payer.address.postalCode,
+  };
+  const issuer = {
+    nome: BANESE_DOCUMENT_FIXTURE.beneficiary.name,
+    cnpj: BANESE_DOCUMENT_FIXTURE.beneficiary.document,
+    endereco: BANESE_DOCUMENT_FIXTURE.beneficiary.address.street,
+    bairro: BANESE_DOCUMENT_FIXTURE.beneficiary.address.district,
+    cidade: BANESE_DOCUMENT_FIXTURE.beneficiary.address.city,
+    estado: BANESE_DOCUMENT_FIXTURE.beneficiary.address.state,
+    cep: BANESE_DOCUMENT_FIXTURE.beneficiary.address.postalCode,
+  };
+  const inputs = buildBaneseCarnetDocumentInputs(rows, payer, issuer, {
+    baneseBeneficiarioNome: BANESE_DOCUMENT_FIXTURE.beneficiary.name,
+    baneseBeneficiarioInscricao: BANESE_DOCUMENT_FIXTURE.beneficiary.document,
+    baneseConta: BANESE_DOCUMENT_FIXTURE.beneficiary.account,
+    baneseCodigoBeneficiario:
+      BANESE_DOCUMENT_FIXTURE.beneficiary.beneficiaryCode,
+    baneseCarteira: BANESE_DOCUMENT_FIXTURE.beneficiary.wallet,
+  });
+
+  assert.equal(inputs.length, 3);
+  for (const [index, input] of inputs.entries()) {
+    assert.equal(input.pix, null);
+    assert.equal(input.ourNumber, rows[index].gateway_boleto_nosso_numero);
+    assert.equal(input.digitableLine, rows[index].gateway_boleto_linha_digitavel);
+    assert.equal(input.barcode, rows[index].gateway_boleto_codigo_barras);
+    assert.equal(input.financialTerms?.nominalAmount, Number(rows[index].valor));
+    assert.equal(input.financialTerms?.dueDate, rows[index].data_vencimento);
+  }
+
+  const pdf = await buildBaneseCarnetPdf(inputs);
+  assert.equal(String.fromCharCode(...pdf.slice(0, 4)), "%PDF");
+});
 
 Deno.test("deriva escopo bancario exclusivamente do titulo selecionado", () => {
   assert.deepEqual(readBaneseCarnetScope(rowAt(0)), {

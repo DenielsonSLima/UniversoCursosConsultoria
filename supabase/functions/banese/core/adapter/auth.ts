@@ -140,6 +140,7 @@ export const reserveBaneseNossoNumero = async (
     environment: Environment;
     convenio: string;
     agencia: string;
+    expectedCreationToken: string;
   },
 ) => {
   const { data, error } = await admin.rpc(
@@ -149,11 +150,11 @@ export const reserveBaneseNossoNumero = async (
       p_environment: input.environment,
       p_convenio: input.convenio,
       p_agencia: input.agencia,
+      p_expected_creation_token: input.expectedCreationToken,
     },
   );
   if (error) throw error;
   const result = asRecord(data);
-  const nossoNumero = onlyDigits(result.nossoNumero ?? result.nosso_numero);
   const convenio = onlyDigits(result.convenio ?? input.convenio);
   const agencia = onlyDigits(result.agencia ?? input.agencia)
     .padStart(3, "0").slice(-3);
@@ -162,6 +163,39 @@ export const reserveBaneseNossoNumero = async (
       "Snapshot de convenio/agencia da reserva Banese e invalido.",
     );
   }
+  const recoveryPending = result.recoveryPending === true ||
+    result.recovery_pending === true;
+  if (recoveryPending) {
+    const recoveryCandidateStart = Number(
+      result.recoveryCandidateStart ?? result.recovery_candidate_start,
+    );
+    const recoveryCandidateEnd = Number(
+      result.recoveryCandidateEnd ?? result.recovery_candidate_end,
+    );
+    if (
+      !Number.isSafeInteger(recoveryCandidateStart) ||
+      !Number.isSafeInteger(recoveryCandidateEnd) ||
+      recoveryCandidateStart < 1 ||
+      recoveryCandidateEnd < recoveryCandidateStart ||
+      recoveryCandidateEnd - recoveryCandidateStart > 100
+    ) {
+      throw new BaneseAdapterConfigurationError(
+        "Conjunto de recuperacao Banese invalido.",
+      );
+    }
+    return {
+      nossoNumero: "",
+      convenio,
+      agencia,
+      alreadyReserved: false,
+      bankRangeConfirmed: false,
+      collisionPreflightEnabled: false,
+      recoveryPending: true as const,
+      recoveryCandidateStart,
+      recoveryCandidateEnd,
+    };
+  }
+  const nossoNumero = onlyDigits(result.nossoNumero ?? result.nosso_numero);
   if (!/^\d{9}$/.test(nossoNumero)) {
     throw new BaneseAdapterConfigurationError(
       "Nao foi possivel reservar o Nosso Numero Banese no recebivel.",
@@ -184,7 +218,138 @@ export const reserveBaneseNossoNumero = async (
     bankRangeConfirmed: input.environment !== "production" ||
       result.bankRangeConfirmed === true ||
       result.bank_range_confirmed === true,
+    collisionPreflightEnabled: input.environment !== "production" ||
+      result.collisionPreflightEnabled === true ||
+      result.collision_preflight_enabled === true,
+    recoveryPending: false as const,
   };
+};
+
+const parseBaneseReservationResult = (
+  data: unknown,
+  input: {
+    environment: Environment;
+    convenio: string;
+    agencia: string;
+  },
+) => {
+  const result = asRecord(data);
+  const nossoNumero = onlyDigits(result.nossoNumero ?? result.nosso_numero);
+  const convenio = onlyDigits(result.convenio ?? input.convenio);
+  const agencia = onlyDigits(result.agencia ?? input.agencia)
+    .padStart(3, "0").slice(-3);
+  if (
+    !/^\d{9}$/.test(nossoNumero) || !convenio || agencia === "000" ||
+    calculateBaneseNossoNumero(agencia, nossoNumero.slice(0, 8)) !==
+      nossoNumero
+  ) {
+    throw new BaneseAdapterConfigurationError(
+      "Reserva retornada pela operacao Banese e invalida.",
+    );
+  }
+  return {
+    nossoNumero,
+    convenio,
+    agencia,
+    alreadyReserved: result.alreadyReserved === true ||
+      result.already_reserved === true,
+    bankRangeConfirmed: input.environment !== "production" ||
+      result.bankRangeConfirmed === true ||
+      result.bank_range_confirmed === true,
+    collisionPreflightEnabled: input.environment !== "production" ||
+      result.collisionPreflightEnabled === true ||
+      result.collision_preflight_enabled === true,
+    recoveryPending: false as const,
+  };
+};
+
+const incidentRecoveryReservation = async (
+  admin: SupabaseAdminRpcClient,
+  rpc:
+    | "claim_banese_incident_recovered_title"
+    | "finish_banese_incident_recovery_scan",
+  input: {
+    receivableId: string;
+    environment: Environment;
+    convenio: string;
+    agencia: string;
+    expectedCreationToken: string;
+    nossoNumero?: string;
+  },
+) => {
+  const { data, error } = await admin.rpc(rpc, {
+    p_receivable_id: input.receivableId,
+    p_environment: input.environment,
+    p_convenio: input.convenio,
+    p_agencia: input.agencia,
+    p_expected_creation_token: input.expectedCreationToken,
+    ...(input.nossoNumero ? { p_nosso_numero: input.nossoNumero } : {}),
+  });
+  if (error) throw error;
+  return parseBaneseReservationResult(data, input);
+};
+
+export const claimBaneseIncidentRecoveredTitle = async (
+  admin: SupabaseAdminRpcClient,
+  input: {
+    receivableId: string;
+    environment: Environment;
+    convenio: string;
+    agencia: string;
+    expectedCreationToken: string;
+    nossoNumero: string;
+  },
+) =>
+  incidentRecoveryReservation(
+    admin,
+    "claim_banese_incident_recovered_title",
+    input,
+  );
+
+export const finishBaneseIncidentRecoveryScan = async (
+  admin: SupabaseAdminRpcClient,
+  input: {
+    receivableId: string;
+    environment: Environment;
+    convenio: string;
+    agencia: string;
+    expectedCreationToken: string;
+  },
+) =>
+  incidentRecoveryReservation(
+    admin,
+    "finish_banese_incident_recovery_scan",
+    input,
+  );
+
+export const advanceBaneseNossoNumeroAfterCollision = async (
+  admin: SupabaseAdminRpcClient,
+  input: {
+    receivableId: string;
+    environment: Environment;
+    convenio: string;
+    agencia: string;
+    expectedNossoNumero: string;
+    collisionStage: "PREFLIGHT_GET" | "POST_DUPLICATE_GET";
+    responseFingerprint: string;
+    expectedCreationToken: string;
+  },
+) => {
+  const { data, error } = await admin.rpc(
+    "advance_banese_nosso_numero_after_collision",
+    {
+      p_receivable_id: input.receivableId,
+      p_environment: input.environment,
+      p_convenio: input.convenio,
+      p_agencia: input.agencia,
+      p_expected_nosso_numero: input.expectedNossoNumero,
+      p_collision_stage: input.collisionStage,
+      p_response_fingerprint: input.responseFingerprint,
+      p_expected_creation_token: input.expectedCreationToken,
+    },
+  );
+  if (error) throw error;
+  return parseBaneseReservationResult(data, input);
 };
 
 export const getBanesePixCredentials = async (

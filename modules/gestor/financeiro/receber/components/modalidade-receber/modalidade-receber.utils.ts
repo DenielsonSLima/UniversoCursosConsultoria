@@ -26,6 +26,8 @@ const paymentGatewayLabels: Record<string, string> = {
   gateway: 'Gateway bancário',
 };
 
+const BANESE_IDENTITY_QUARANTINED_PREFIX = 'BANESE_IDENTITY_QUARANTINED:';
+
 export const paymentGatewayCode = (item: ContasReceber): string | null => {
   const chargeUrl = String(item.asaasBankSlipUrl || item.asaasInvoiceUrl || '');
   if (chargeUrl.includes('banesePayment=')) return 'banese_card';
@@ -44,6 +46,21 @@ export const paymentGatewayCode = (item: ContasReceber): string | null => {
   if (item.asaasPaymentId) return 'asaas';
   return null;
 };
+
+export const isBaneseIdentityQuarantined = (
+  item: Pick<ContasReceber, 'asaasLastError'>,
+) => String(item.asaasLastError || '').trim().startsWith(
+  BANESE_IDENTITY_QUARANTINED_PREFIX,
+);
+
+// O documento Banese é montado/consultado pelo endpoint autenticado usando o
+// ID do recebível. Títulos históricos/CNAB não dependem de URL, paymentId ou Pix
+// expostos na listagem; a quarentena explícita continua sendo o bloqueio local.
+export const canOpenBaneseDocument = (item: ContasReceber) => (
+  ['banese_card', 'banese'].includes(paymentGatewayCode(item) || '')
+  && Boolean(item.id)
+  && !isBaneseIdentityQuarantined(item)
+);
 
 export const paymentGatewayLabel = (item: ContasReceber) => {
   const providerCode = paymentGatewayCode(item);

@@ -25,8 +25,9 @@ ambiente, emissor, convênio e agência persistidos no título selecionado.
 - carrega logos somente por HTTPS/443, sem redirecionamento, a partir do Storage
   do projeto ou de `/logos/` em `universocc.com.br`;
 - devolve `application/pdf` com `Cache-Control: private, no-store`.
-- em produção, falha fechado se alguma parcela não tiver o BolePix oficial
-  completo devolvido pelo Banese.
+- em produção, aceita títulos históricos sem Pix quando Nosso Número, linha,
+  código de barras e snapshot financeiro permanecem íntegros; quando houver
+  Pix, ele precisa ser o retorno oficial completo devolvido pelo Banese.
 
 O PDF é montado por `buildBaneseCarnetPdf`; o endpoint não registra PII nem
 identificadores de cobrança nos logs de erro.

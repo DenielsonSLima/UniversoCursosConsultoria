@@ -2,6 +2,7 @@
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 import {
   authorizationErrorHttpStatus,
+  type GestorAutorizado,
   requireFinanceDocumentReadAccess,
   requireGestorAtivo,
   requireGestorForPolo,

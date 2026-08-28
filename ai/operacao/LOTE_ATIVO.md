@@ -20,24 +20,22 @@ Estado: `CONCLUIDO`
 
 ### Resultado confirmado
 
-- Os 13 Nossos Números atribuídos localmente não identificavam os 13 recebíveis de 2026/27: o GET oficial devolveu títulos Banese de 2018 no valor de R$ 200,00.
-- Nenhum desses códigos de barras, linhas digitáveis ou Pix foi associado aos recebíveis atuais. As 13 identidades locais sem prova de POST foram quarentenadas por CAS, preservando 12 parcelas de R$ 279,90 e uma rematrícula de R$ 100,00, além de matrícula, turma, vencimento e status.
-- O gateway agora faz preflight GET antes de qualquer POST, bloqueia colisão e valida identidade completa antes de persistir dados bancários. Um POST novo continua aceitando a resposta mínima oficial e preserva o `QrCode` devolvido.
-- A recuperação futura pelo GET do Nosso Número persiste o par Pix somente quando proveniência, banco, identidade, valor e vencimento/fator confirmam o mesmo título.
+- A reunião técnica separou definitivamente os dois fluxos: 312 títulos históricos importados de Radiologia, válidos sem Pix, e 13 emissões próprias da Adenize que exigem Pix oficial.
+- Os 312 históricos permaneceram intactos na faixa 9356–9715, todos com Nosso Número, linha de 47 dígitos, código de barras de 44 dígitos e uma transação; nenhum foi enviado ou reenviado.
+- Os 13 recebíveis da Adenize foram recuperados automaticamente: 12 parcelas de R$ 279,90 e uma rematrícula de R$ 100,00 agora possuem Nosso Número exclusivo, linha, barras, payload/imagem Pix, termos confirmados e uma única transação.
+- A sequência de produção foi restaurada ao piso comprovado 9715 e avançou sem colisão até 9728. Toda emissão nova executa preflight GET antes do POST e só persiste a resposta bancária compatível.
 - Tela e relatório priorizam o rótulo `Rematrícula`; o fluxo não apresenta mais esse lançamento como `Parcela 0`.
-- `TipoJuroMora = 3` é tratado como juros isentos quando o valor é nulo ou zero; divergências continuam falhando fechadas.
-- Worker e gateway mantêm isolamento por título, persistência atômica, locks, CAS integral e retomada pós-baixa pelo marcador servidor autorizado.
-- A revisão independente encerrou sem achados P0/P1/P2 e emitiu parecer `APPROVE`.
+- Títulos Banese existentes sempre oferecem `Abrir`; o ramo `Enviar/Reenviar ao banco` não é exibido para históricos nem para títulos já registrados.
+- Worker, gateway e documentos mantêm isolamento por título, persistência atômica, locks, CAS e validação de identidade bancária.
 
 ### Produção e pendências
 
-- `asaas-api` v88 está `ACTIVE`, SHA-256 `b2ca242bbbbe322edebf7d1f22b27340972e63bcda619e4c823c8ca78c2d439a`.
-- `banese-reconciliation-worker` v49 está `ACTIVE`, SHA-256 `f6124a5f4b3fca1cb32ee18a98c4f512fae227d64b887a6eea70edb0ec9d71fc`; os logs da versão 49 registraram execução HTTP 200.
-- As nove migrations do hotfix, de `20260827224500` a `20260827224643`, foram aplicadas sob os IDs remotos `20260828024316`, `20260828024319`, `20260828024321`, `20260828030305`, `20260828031759`, `20260828050448`, `20260828050650`, `20260828050800` e `20260828050808`.
+- `banese-reconciliation-worker` v54 concluiu os 13 alvos; `asaas-api` v89, `payment-gateway-api` v18, `payment-checkout` v22, `checkout-api` v17, `dependencia-banese-checkout` v9, `banese-cancellation-worker` v2 e `secretaria-banese-document-groups` v3 estão `ACTIVE`.
+- As migrations `20260828093000_enable_banese_collision_preflight_allocation` e `20260828094000_recover_unlinked_banese_incident_titles` foram aplicadas após as migrations anteriores do hotfix.
 - A migration local `20260827172000_register_banese_boletos_adenize_cycle2.sql`, que atribuía identidades sem prova bancária, foi excluída do lote, ignorada explicitamente e nunca será publicada no GitHub.
-- Emissão Banese e reconciliador permanecem `PAUSED`. Não haverá POST, reemissão ou nova reserva até o banco confirmar formalmente uma faixa exclusiva de Nosso Número e identificar os três títulos citados no atendimento.
-- Foram aprovados 151 testes de adaptador/gateway, 16 do worker, 35 de `test:banese-ui` e mais 11 testes focados de `modalidade-receber` para a apresentação da rematrícula, além de TypeScript `--noEmit`, dois `deno check`, build de produção, teto de 500 linhas e revisão independente. A publicação no GitHub usa o manifesto atômico registrado neste lote.
-- O smoke autenticado de PDF continua pendente por indisponibilidade de sessão controlável; nenhum dado financeiro foi criado ou alterado para fabricar evidência.
+- A emissão Banese está habilitada em produção com consulta preventiva de colisão. O reconciliador geral permanece pausado para não consultar em massa os 225 históricos enfileirados; isso não bloqueia abertura, PDF, carnê nem novas emissões.
+- Foram aprovados 257 testes focados, TypeScript `--noEmit`, `deno check`, contratos de boleto/carnê e auditoria remota dos 312 históricos e 13 títulos Adenize.
+- O smoke autenticado de clique permanece limitado pela ausência de sessão reutilizável no navegador controlado; a origem de produção redirecionou ao login e nenhuma credencial foi extraída ou usuário artificial criado.
 - O erro CNAB por EDI7 e decisões de recriação, vencimento, valor ou regra comercial não pertencem a este hotfix.
 
 ## Lote anterior preservado: 2026-08-26-carnes-alunos-e-baixa-rapida

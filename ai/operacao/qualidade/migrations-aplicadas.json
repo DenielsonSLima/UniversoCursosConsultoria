@@ -238,6 +238,20 @@
       "remoteId": "20260828050808",
       "sha256": "f4e760af6c1a8a17e6e496e55850d9633d32197c08623065dd24957fffd5149c",
       "reason": "Migration aplicada em Produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260828093000_enable_banese_collision_preflight_allocation.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260828125057",
+      "sha256": "7d707dc4b4cc9cb674297daca1aa373f97ea704fa79a65c41bec03581785b9e3",
+      "reason": "Migration aplicada em Produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260828094000_recover_unlinked_banese_incident_titles.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260828125105",
+      "sha256": "47fb5c8bad6a7eb9b2c2e06b4adc00f9f4fbe3beed7f6949135bc41d78869f7b",
+      "reason": "Migration aplicada em Produção; histórico imutável."
     }
   ]
 }

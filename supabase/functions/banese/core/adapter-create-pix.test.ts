@@ -14,7 +14,7 @@ import {
   reservedBoletoInput,
 } from "./adapter-test-fixtures.ts";
 
-Deno.test("producao aceita valor comercial acima de 10 e retorno sem pix", async () => {
+Deno.test("POST sem Pix recupera QrCode em um único GET e não repete POST", async () => {
   const originalFetch = globalThis.fetch;
   const amount = 149.9;
   const response = makeBaneseTitleResponse(
@@ -27,7 +27,16 @@ Deno.test("producao aceita valor comercial acima de 10 e retorno sem pix", async
       NossoNumeroSemDv: BANESE_DOCUMENT_FIXTURE.ourNumber.slice(0, 8),
     },
   );
-  const { calls, fetcher } = creationFetch(response);
+  const officialQrCode = buildBanesePixPayloadFixture(
+    "QR-RECUPERADO",
+    amount,
+  );
+  const recovered = makeBaneseTitleResponse(
+    amount,
+    BANESE_DOCUMENT_FIXTURE.dueDate,
+    { QrCode: officialQrCode },
+  );
+  const { calls, fetcher } = creationFetch(response, recovered);
   globalThis.fetch = fetcher as typeof fetch;
 
   try {
@@ -37,16 +46,53 @@ Deno.test("producao aceita valor comercial acima de 10 e retorno sem pix", async
       amount,
       financialTerms: null,
     });
-    assert.equal(result.id, BANESE_DOCUMENT_FIXTURE.ourNumber);
-    assert.equal(result.bankSlipOurNumber, BANESE_DOCUMENT_FIXTURE.ourNumber);
-    assert.equal(result.pixPayload, null);
-    assert.equal(result.pixEncodedImage, null);
+    assert.equal(result.pixPayload, officialQrCode);
+    assert.match(result.pixEncodedImage ?? "", /^data:image\/png;base64,/);
     assert.deepEqual(
       calls.filter((call) => call.url.includes("/boletos")).map((call) =>
         call.method
       ),
-      ["GET", "POST"],
+      ["GET", "POST", "GET"],
     );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+Deno.test("GET exato sem QrCode preserva o titulo e nao envia POST", async () => {
+  const originalFetch = globalThis.fetch;
+  const bankMethods: string[] = [];
+  globalThis.fetch = async (input, init) => {
+    const url = input instanceof Request ? input.url : String(input);
+    const method = String(
+      init?.method || (input instanceof Request ? input.method : "GET"),
+    ).toUpperCase();
+    if (url.includes("/autenticacao/")) {
+      return new Response(
+        JSON.stringify({ access_token: "token", token_type: "Bearer" }),
+        { status: 200 },
+      );
+    }
+    bankMethods.push(method);
+    return new Response(JSON.stringify(makeBaneseTitleResponse()), {
+      status: 200,
+    });
+  };
+
+  try {
+    await assert.rejects(
+      () =>
+        createBaneseBoletoCharge({
+          ...reservedBoletoInput(true),
+          environment: "production",
+        }),
+      (error: any) => {
+        assert.equal(error?.remotePaymentCreated, true);
+        assert.match(String(error?.message || error), /QrCode Pix valido/i);
+        return true;
+      },
+    );
+    assert.deepEqual(bankMethods, ["GET"]);
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -238,7 +284,7 @@ Deno.test("aceita espaços permitidos pelo EMV no nome do recebedor Banese", () 
   assert.equal(normalized.payload, payload);
 });
 
-Deno.test("descarta retorno de pix no formato de linha/barras", async () => {
+Deno.test("producao fecha quando o suposto Pix e linha de barras", async () => {
   const originalFetch = globalThis.fetch;
   const amount = 8.5;
   const response = makeBaneseTitleResponse(
@@ -249,18 +295,30 @@ Deno.test("descarta retorno de pix no formato de linha/barras", async () => {
       qrcode: `data:image/png;base64,${buildBanesePixImageFixture(1)}`,
     },
   );
-  const { fetcher } = creationFetch(response);
+  const { calls, fetcher } = creationFetch(response);
   globalThis.fetch = fetcher as typeof fetch;
 
   try {
-    const result = await createBaneseBoletoCharge({
-      ...reservedBoletoInput(false),
-      environment: "production",
-      amount,
-      financialTerms: null,
-    });
-    assert.equal(result.pixPayload, null);
-    assert.equal(result.pixEncodedImage, null);
+    await assert.rejects(
+      () =>
+        createBaneseBoletoCharge({
+          ...reservedBoletoInput(false),
+          environment: "production",
+          amount,
+          financialTerms: null,
+        }),
+      (error: any) => {
+        assert.equal(error?.remotePaymentCreated, true);
+        assert.match(String(error?.message || error), /QrCode Pix valido/i);
+        return true;
+      },
+    );
+    assert.deepEqual(
+      calls.filter((call) => call.url.includes("/boletos")).map((call) =>
+        call.method
+      ),
+      ["GET", "POST", "GET"],
+    );
   } finally {
     globalThis.fetch = originalFetch;
   }

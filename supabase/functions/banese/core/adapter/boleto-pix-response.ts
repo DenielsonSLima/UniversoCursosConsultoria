@@ -3,7 +3,8 @@ import {
   normalizeBanesePixQrImage,
 } from "../../internal/pix-validation.ts";
 import { renderOfficialBanesePixQr } from "../../internal/official-pix-qr.ts";
-import { asRecord } from "./utils.ts";
+import { type AdapterCreateChargeResult, BaneseAdapterError } from "./types.ts";
+import { asRecord, markRemotePaymentMayExist } from "./utils.ts";
 
 const PIX_PAYLOAD_FIELD_NAMES = new Set([
   "brcodeemv",
@@ -155,6 +156,29 @@ export const normalizeBanesePixFromResponses = async (
       source: null,
       complete: false,
       attempts: diagnostics,
+    },
+  };
+};
+
+export const withRequiredBaneseProductionPix = (
+  result: AdapterCreateChargeResult,
+  pix: Awaited<ReturnType<typeof normalizeBanesePixFromResponses>>,
+): AdapterCreateChargeResult => {
+  if (!pix.pixPayload || !pix.pixEncodedImage) {
+    throw markRemotePaymentMayExist(
+      new BaneseAdapterError(
+        "O titulo Banese existe, mas o retorno oficial ainda nao trouxe um QrCode Pix valido. A cobranca permanece pendente de conciliacao e nenhum novo POST deve ser enviado.",
+      ),
+    );
+  }
+  return {
+    ...result,
+    pixPayload: pix.pixPayload,
+    pixEncodedImage: pix.pixEncodedImage,
+    raw: {
+      ...asRecord(result.raw),
+      // Diagnóstico deliberadamente sem payload, imagem ou credenciais.
+      pixDiagnostic: pix.diagnostic,
     },
   };
 };

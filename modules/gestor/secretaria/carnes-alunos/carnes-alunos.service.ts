@@ -92,30 +92,12 @@ export const carnesAlunosService = {
     signal?: AbortSignal,
   ): Promise<BaneseDocumentGroupsResponse> {
     throwIfAborted(signal);
-
-    const effectivePoloId = request.poloId && request.poloId !== 'todos' ? request.poloId : null;
-    const { data: rpcData, error: rpcError } = await supabase.rpc(
-      'get_secretaria_banese_document_groups_secure',
-      {
-        p_polo_id: effectivePoloId,
-        p_search: request.search?.trim() || null,
-        p_course_id: request.courseId || null,
-        p_class_id: request.classId || null,
-        p_page: request.page || 1,
-        p_page_size: request.pageSize || 20,
-      },
-    );
-
-    if (!rpcError && rpcData) {
-      return parseDocumentGroupsResponse(rpcData);
-    }
-
     const { data, error } = await supabase.functions.invoke(
       'secretaria-banese-document-groups',
       { body: request, signal },
     );
     if (error) {
-      throw new Error(await readFunctionError(rpcError || error, 'Não foi possível consultar os carnês dos alunos.'));
+      throw new Error(await readFunctionError(error, 'Não foi possível consultar os carnês dos alunos.'));
     }
     return parseDocumentGroupsResponse(data);
   },

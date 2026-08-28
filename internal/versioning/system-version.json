@@ -1,8 +1,8 @@
 {
-  "version": "4.8.10",
+  "version": "4.8.11",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 19,
+  "revision": 20,
   "releasedAt": "2026-08-28",
-  "summary": "Quarentena segura de identidades Banese e bloqueio de colisões BolePix"
+  "summary": "BolePix Adenize recuperado e boletos históricos Banese reabertos sem reenvio"
 }

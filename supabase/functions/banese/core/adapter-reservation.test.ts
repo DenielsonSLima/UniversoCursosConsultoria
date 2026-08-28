@@ -132,15 +132,15 @@ Deno.test("recuperacao por GET exige documento, titulo da empresa e pagador", as
   const cases = [
     {
       override: { NumeroDocumento: "outro-documento" },
-      expected: /NumeroDocumento.*diverge/i,
+      expected: /identidade nao pode ser determinada/i,
     },
     {
       override: { IdTituloEmpresa: "outro-titulo" },
-      expected: /IdTituloEmpresa.*diverge/i,
+      expected: /identidade nao pode ser determinada/i,
     },
     {
       override: { Pagador: { NumeroCPFCNPJ: 99999999999 } },
-      expected: /CPF\/CNPJ.*diverge/i,
+      expected: /identidade nao pode ser determinada/i,
     },
   ];
 
@@ -197,7 +197,7 @@ Deno.test("retry valida identidade antes de qualquer correcao financeira", async
           ...reservedBoletoInput(true),
           financialTerms: BANESE_DOCUMENT_FIXTURE.financialTerms,
         }),
-      /NumeroDocumento.*diverge/i,
+      /identidade nao pode ser determinada/i,
     );
     assert.deepEqual(bankMethods, ["GET"]);
   } finally {
@@ -205,7 +205,7 @@ Deno.test("retry valida identidade antes de qualquer correcao financeira", async
   }
 });
 
-Deno.test("Nosso Numero novo colidido bloqueia emissao sem enviar POST", async () => {
+Deno.test("Nosso Numero novo com MATCH recupera sem enviar POST", async () => {
   const originalFetch = globalThis.fetch;
   const bankMethods: string[] = [];
   globalThis.fetch = async (input, init) => {
@@ -221,17 +221,9 @@ Deno.test("Nosso Numero novo colidido bloqueia emissao sem enviar POST", async (
   };
 
   try {
-    await assert.rejects(
-      () => createBaneseBoletoCharge(reservedBoletoInput(false)),
-      (error: any) => {
-        assert.equal(error?.remotePaymentCreated, true);
-        assert.match(
-          String(error?.message || error),
-          /recem-reservado ja existe/i,
-        );
-        return true;
-      },
-    );
+    const result = await createBaneseBoletoCharge(reservedBoletoInput(false));
+    assert.equal(result.bankSlipOurNumber, BANESE_DOCUMENT_FIXTURE.ourNumber);
+    assert.equal((result.raw as { recovered?: boolean }).recovered, true);
     assert.deepEqual(bankMethods, ["GET"]);
   } finally {
     globalThis.fetch = originalFetch;
@@ -263,7 +255,7 @@ Deno.test("retry nao envia POST sem faixa exclusiva confirmada", async () => {
         }),
       (error: any) => {
         assert.notEqual(error?.remotePaymentCreated, true);
-        assert.match(String(error?.message || error), /faixa exclusiva/i);
+        assert.match(String(error?.message || error), /alocacao segura/i);
         return true;
       },
     );
@@ -317,7 +309,7 @@ Deno.test("RPC antiga sem flag de faixa falha fechada em producao", async () => 
           admin,
           environment: "production",
         }),
-      /faixa exclusiva/i,
+      /alocacao segura/i,
     );
     assert.deepEqual(bankMethods, ["GET"]);
   } finally {

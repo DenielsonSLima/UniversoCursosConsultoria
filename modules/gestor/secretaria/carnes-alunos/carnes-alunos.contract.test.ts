@@ -265,6 +265,8 @@ test('Lote usa facetas completas e oferece seleção coletiva explícita', async
 test('serviço documental não contém rotas de criação, reemissão ou sincronização', async () => {
   const source = await readFile(new URL('./carnes-alunos.service.ts', import.meta.url), 'utf8');
   assert.match(source, /secretaria-banese-document-groups/);
+  assert.doesNotMatch(source, /get_secretaria_banese_document_groups_secure/);
+  assert.doesNotMatch(source, /supabase\.rpc\(/);
   assert.match(source, /banese-carnet-document/);
   assert.match(source, /banese-boleto-document/);
   assert.match(source, /signal,/);
