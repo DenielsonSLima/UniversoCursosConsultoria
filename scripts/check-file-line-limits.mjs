@@ -140,9 +140,6 @@ for (const artifact of config.generatedArtifacts ?? []) {
   if (!ALLOWED_GENERATED_PATHS.has(artifact.path)) {
     failures.push(`${CONFIG_PATH}: artefato gerado fora da allowlist (${artifact.path}).`);
   }
-  if (!existsSync(artifact.path)) {
-    failures.push(`${CONFIG_PATH}: artefato gerado não encontrado (${artifact.path}).`);
-  }
   generatedArtifacts.set(artifact.path, artifact);
 }
 

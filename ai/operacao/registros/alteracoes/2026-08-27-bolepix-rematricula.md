@@ -106,7 +106,7 @@ Restabelecer a emissão e a recuperação segura do Pix oficial dos boletos Bane
 
 ## Manifesto explícito
 
-Total: 81 arquivos
+Total: 82 arquivos
 
 - `.gitignore`
 - `ai/operacao/LOTE_ATIVO.md`
@@ -127,6 +127,7 @@ Total: 81 arquivos
 - `modules/gestor/secretaria/carnes-alunos/carnes-alunos.contract.test.ts`
 - `modules/gestor/secretaria/carnes-alunos/carnes-alunos.safe-catalog.test.ts`
 - `modules/gestor/secretaria/carnes-alunos/carnes-alunos.service.ts`
+- `scripts/check-file-line-limits.mjs`
 - `supabase/functions/banese-boleto-document/document-policy.test.ts`
 - `supabase/functions/banese-carnet-document/README.md`
 - `supabase/functions/banese-carnet-document/document-policy.test.ts`
