@@ -5,6 +5,10 @@ import {
 import { normalizeBaneseFinancialTerms } from "../banese/internal/financial-terms.ts";
 
 export const BANESE_CARNET_MAX_ITEMS = 30;
+export const BANESE_CARNET_ALLOWED_LAUNCH_TYPES = [
+  "PARCELA",
+  "REMATRICULA",
+] as const;
 export const BANESE_DOCUMENT_PAYABLE_LOCAL_STATUSES = [
   "PENDENTE",
   "VENCIDO",
@@ -16,6 +20,9 @@ const UUID_RE =
 
 const PAYABLE_LOCAL_STATUSES = new Set<string>(
   BANESE_DOCUMENT_PAYABLE_LOCAL_STATUSES,
+);
+const ALLOWED_LAUNCH_TYPES = new Set<string>(
+  BANESE_CARNET_ALLOWED_LAUNCH_TYPES,
 );
 const PAYABLE_BANK_STATUSES = new Set([
   "",
@@ -139,9 +146,9 @@ const confirmedAt = (value: unknown) => {
 export const readBaneseCarnetScope = (
   selected: BaneseCarnetReceivableRow,
 ): BaneseCarnetScope => {
-  if (upper(selected.tipo_lancamento) !== "PARCELA") {
+  if (!ALLOWED_LAUNCH_TYPES.has(upper(selected.tipo_lancamento))) {
     throw new BaneseCarnetPolicyError(
-      "Somente parcelas mensais podem compor um carnê Banese.",
+      "Somente rematrícula e parcelas mensais podem compor um carnê Banese.",
     );
   }
   if (
@@ -193,7 +200,7 @@ const matchesScope = (
   (text(row.polo_id) || null) === scope.poloId &&
   text(row.gateway_provider).toLowerCase() === "banese_card" &&
   upper(row.gateway_payment_method) === "BOLETO" &&
-  upper(row.tipo_lancamento) === "PARCELA" &&
+  ALLOWED_LAUNCH_TYPES.has(upper(row.tipo_lancamento)) &&
   text(row.gateway_environment).toLowerCase() === scope.environment &&
   text(row.gateway_issuer_polo_id) === scope.issuerId &&
   digits(row.gateway_boleto_convenio) === scope.agreement &&
@@ -239,20 +246,11 @@ const assertRegisteredAndConfirmed = (row: BaneseCarnetReceivableRow) => {
       "Uma parcela não possui snapshot financeiro confirmado.",
     );
   }
-  const financialTerms = normalizeBaneseFinancialTerms({
+  normalizeBaneseFinancialTerms({
     ...row.gateway_financial_terms,
     nominalAmount: amount,
     dueDate,
   });
-  if (
-    !financialTerms.discount || !financialTerms.penalty ||
-    !financialTerms.interest ||
-    financialTerms.discount.validUntil !== dueDate
-  ) {
-    throw new BaneseCarnetPolicyError(
-      "Cada parcela do carnê precisa ter desconto até o vencimento, multa e juros confirmados pelo Banese.",
-    );
-  }
 };
 
 export const isRegisteredBaneseDocumentRow = (
@@ -275,6 +273,7 @@ export const takeRegisteredBaneseCarnetCandidateRows = (
     .slice(0, BANESE_CARNET_MAX_ITEMS + 1);
 
 const installmentOrder = (row: BaneseCarnetReceivableRow) => {
+  if (upper(row.tipo_lancamento) === "REMATRICULA") return 0;
   const value = Number(row.parcela_numero);
   return Number.isInteger(value) && value > 0 ? value : Number.MAX_SAFE_INTEGER;
 };

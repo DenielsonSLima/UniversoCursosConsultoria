@@ -2,7 +2,25 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
-Histórico anterior: [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+Histórico anterior: [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+
+## [4.8.12] - 2026-08-28
+
+### Corrigido
+
+- O carnê Banese da Adenize passa a reunir a rematrícula de R$ 100,00 e as 12 mensalidades de R$ 279,90, totalizando 13 títulos e R$ 3.458,80, todos da mesma matrícula e com identidade bancária confirmada.
+- A rematrícula mantém seu tipo próprio e deixa de receber o desconto de pontualidade reservado às mensalidades; o boleto existente foi corrigido no banco sem cancelamento, reemissão ou novo POST.
+- Os títulos históricos importados de Radiologia continuam válidos, sem exigência retroativa de Pix e fora do reparo da T42.
+- O carnê volta ao modelo fixo de três títulos por página A4 mesmo com Pix oficial; os 13 títulos ocupam cinco páginas, com QR compacto e legível, sem alterar o layout separado do boleto individual.
+- O recibo lateral do carnê passa a usar fundo branco, preservando bordas e conteúdo e reduzindo a cobertura de tinta na impressão.
+- O resumo da Secretaria passa a informar uma rematrícula e 12 mensalidades, 13 títulos, um arquivo de carnê e cinco páginas, em vez de expor contadores internos de requisições.
+
+### Segurança e qualidade
+
+- O reparo de desconto aceita somente o marcador exato da rematrícula T42, valida título, transação, Pix, valor, vencimento e estado pendente, executa GET → PUT → GET e persiste o resultado por RPC auditada.
+- Catálogo e carnê aceitam apenas `REMATRICULA` e `PARCELA` Banese registradas do mesmo pagador, matrícula, polo, ambiente, emissor, convênio e agência; títulos pagos, Asaas, legados sem registro e identidades divergentes permanecem excluídos.
+- As cinco migrations do reparo foram auditadas; a validação final aprovou 112/112 testes, 10/10 `deno check`, 36/36 arquivos no `deno fmt --check`, todos os arquivos manuais no limite de 500 linhas e mais 17/17 testes depois da formatação.
+- O smoke específico gerou 3+3+3+3+1 títulos em cinco páginas A4 e decodificou os 13 QRs rasterizados com correspondência exata aos 13 payloads.
 
 ## [4.8.11] - 2026-08-28
 
@@ -438,58 +456,3 @@ Histórico anterior: [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md)
 
 - Histórico de migrations foi reconciliado com o banco remoto sem reaplicar versões já existentes.
 - RPCs legadas de empréstimos receberam `search_path` vazio e grants restritos a `service_role`; as fontes locais usam os IDs efetivamente registrados pelo banco.
-
-## [4.2.0-beta.1] - 2026-08-10
-
-### Adicionado
-
-- Patrimônio passa a ter catálogo empresarial de tipos, edição, baixa parcial ou total por perda, exclusão lógica auditável e posição patrimonial isolada no Caixa.
-- A criação de turma técnica passa a ter cinco etapas, vencimento inicial obrigatório, fim previsto sugerido em 24 meses e código de autorização para condições individuais.
-- A matrícula técnica passa a ter quatro etapas, com sequência completa do curso, vencimento herdado e editável, bolsa/incentivo autorizado e simulações canônicas de pagamento em dia ou em atraso.
-
-### Alterado
-
-- O total técnico apresenta o curso completo: matrícula, dois ciclos de mensalidades e uma rematrícula quando configurada.
-- Valores financeiros usam entrada formatada em real brasileiro; controles internos de gateway e financeiro legado deixam de ser expostos ao usuário final.
-- Contratos técnicos e Plano de Curso recebem os refinamentos locais concluídos nos lotes de 10 de agosto.
-
-### Segurança e qualidade
-
-- O código de condição individual fica somente como hash bcrypt, com RBAC financeiro, auditoria, redefinição sem recuperação do segredo e limite de tentativas por gestor e turma.
-- O backend impede alteração individual de ciclos, vencimento, juros, multa ou texto do boleto e encerra a sequência financeira no segundo ciclo.
-- Publicação organizada em expansão compatível e endurecimento pós-deploy para evitar interrupção entre Supabase e frontend.
-
-## [2.3.0-beta.3] - 2026-08-09
-
-### Corrigido
-
-- O selo do cabeçalho institucional passa a identificar todos os polos pela cidade — Aquidabã, Porto da Folha e Propriá — mantendo `MATRIZ` para Japoatã.
-
-### Qualidade
-
-- A identificação das quatro unidades foi validada em PDFs vetoriais reais, nas orientações retrato e paisagem, com extração de texto e inspeção das páginas renderizadas.
-
-## [2.3.0-beta.2] - 2026-08-09
-
-### Adicionado
-
-- Professores passam a preencher o Plano de Curso das disciplinas atribuídas com aulas planejadas; a Gestão acompanha os estados ausente, rascunho e concluído diretamente na grade.
-- O cadastro do aluno e seus documentos oficiais passam a contemplar zona, seção, data de emissão e UF do título eleitoral, além da apresentação formatada de CPF e CEP.
-- O Financeiro Técnico passa a permitir pré-vínculo sem cobrança, ativação individual, em lote ou agendada e regras flexíveis por turma e aluno.
-- A criação de turma técnica passa a usar quatro etapas — turma, inscrições, financeiro e revisão — com matrícula e rematrícula opcionais.
-- Modelos de Documentos ganha uma prévia somente leitura do cabeçalho institucional para matriz e polos, em retrato e paisagem, com a marca-d'água configurada da unidade.
-
-### Corrigido
-
-- A seleção de docentes na grade foi convertida em diálogo compacto, com atualização imediata, Realtime restrito e planejamento de aula autorizado pela regra acadêmica correta.
-- O Financeiro Técnico voltou ao visual completo anterior e deixou de fixar matrícula, rematrícula, quantidade de mensalidades, descontos, juros, multas ou políticas de aplicação.
-- Ficha Cadastral, Ficha de Matrícula e Pasta de Identificação preservam o modelo configurado, os campos eleitorais e o snapshot histórico durante emissão e reimpressão.
-- O Contrato do Aluno passa a usar obrigatoriamente a revisão ativa e juridicamente aprovada, com marca institucional na camada correta e replay do snapshot original.
-- A prévia, o download e a impressão da Pasta e da Ficha usam o mesmo PDF vetorial, inclusive no Safari, sem imagem A4 rasterizada.
-- Relatórios, documentos elegíveis da Secretaria, Caixa, Financeiro e Parceiros passam a usar o mesmo cabeçalho institucional, com três linhas por coluna, e-mail oficial e espaçamento protegido para textos longos.
-
-### Segurança e qualidade
-
-- RPCs acadêmicas, financeiras e documentais validam identidade, polo, vínculo, estado, revisão esperada e idempotência no backend; títulos emitidos e documentos concluídos mantêm snapshots imutáveis.
-- TanStack Query e Realtime foram limitados ao escopo afetado, com supressão segura de ecos locais e recuperação após reconexão.
-- As migrations foram aplicadas e auditadas pelo MCP Supabase; TypeScript, ESLint, build, contratos focados e auditorias de PDF vetorial foram aprovados antes desta publicação.

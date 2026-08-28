@@ -36,6 +36,17 @@ const isEmptyRemoteTerm = (term: Record<string, unknown>, type: unknown) => {
     (!date || date === "0001-01-01");
 };
 
+const isDiscountRemovalTombstone = (
+  term: Record<string, unknown>,
+  type: unknown,
+  dueDate: string,
+) => {
+  const amountValue = term.Valor ?? term.valor;
+  const date = String(term.Data ?? term.data ?? "").slice(0, 10);
+  return isNumeric(type) && Number(type) === 0 &&
+    isNumeric(amountValue) && Number(amountValue) === 0 && date === dueDate;
+};
+
 const isExemptRemoteInterest = (
   term: Record<string, unknown>,
   type: unknown,
@@ -66,6 +77,11 @@ export const baneseFinancialTermsFromPayload = (
       !isEmptyRemoteTerm(
         discount,
         discount.TipoDesconto ?? discount.tipoDesconto,
+      ) &&
+      !isDiscountRemovalTombstone(
+        discount,
+        discount.TipoDesconto ?? discount.tipoDesconto,
+        dueDate,
       )
     );
   if (discounts.length > 1) {

@@ -18,10 +18,9 @@ export const buildBanesePixPayloadFixture = (
   txid: string,
   amount = 20_000,
   gui = "BR.GOV.BCB.PIX",
+  accountReference = "12345678901",
 ) => {
-  const merchantAccount = `${tlv("00", gui)}${
-    tlv("01", "12345678901")
-  }`;
+  const merchantAccount = `${tlv("00", gui)}${tlv("01", accountReference)}`;
   const additionalData = tlv("05", txid);
   const withoutChecksum = [
     tlv("00", "01"),

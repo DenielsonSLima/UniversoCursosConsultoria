@@ -43,11 +43,10 @@ antes da liberacao em producao.
 `beneficiary.beneficiaryCode` e obrigatorio e deve ser confirmado pelo Banese. O
 gerador nao presume silenciosamente que esse codigo seja igual a conta.
 
-Quando o Pix for liberado em producao, cada parcela do carne deve receber seu
+Quando o Pix for liberado em producao, cada titulo do carne deve receber seu
 proprio payload EMV/QR associado ao mesmo titulo. Nao use um unico QR para o
-valor total do carne. O carne usa tres parcelas por A4 sem Pix e reduz
-automaticamente para duas quando houver QR oficial, preservando a leitura.
-Informar explicitamente `itemsPerPage: 3` nesse cenario e rejeitado.
+valor total do carne. O modelo fixo do carne usa tres titulos por pagina A4,
+com ou sem Pix oficial.
 
 ## Condicoes financeiras
 

@@ -15,6 +15,8 @@ export interface BaneseDocumentGroup {
   classId: string;
   className: string;
   installmentCount: number;
+  reenrollmentCount: number;
+  monthlyCount: number;
   totalAmount: number;
   firstDueDate: string;
   lastDueDate: string;

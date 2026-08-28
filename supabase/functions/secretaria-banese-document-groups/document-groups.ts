@@ -45,6 +45,8 @@ export type BaneseDocumentGroup = {
   classId: string;
   className: string;
   installmentCount: number;
+  reenrollmentCount: number;
+  monthlyCount: number;
   totalAmount: number;
   firstDueDate: string;
   lastDueDate: string;
@@ -201,10 +203,16 @@ const buildGroup = (
     ])
   ) return null;
 
-  const dueDates = rows.map((row) => text(row.data_vencimento).slice(0, 10));
+  const dueDates = rows.map((row) => text(row.data_vencimento).slice(0, 10))
+    .sort((left, right) => left.localeCompare(right));
   const totalAmount = Math.round(
     rows.reduce((total, row) => total + Number(row.valor), 0) * 100,
   ) / 100;
+  const reenrollmentCount =
+    rows.filter((row) =>
+      text(row.tipo_lancamento).toUpperCase() === "REMATRICULA"
+    ).length;
+  const monthlyCount = rows.length - reenrollmentCount;
   const representativeReceivableId = rows[0].id;
   return {
     id: `banese:${representativeReceivableId}`,
@@ -219,6 +227,8 @@ const buildGroup = (
     classId: classRow.id,
     className,
     installmentCount: rows.length,
+    reenrollmentCount,
+    monthlyCount,
     totalAmount,
     firstDueDate: dueDates[0],
     lastDueDate: dueDates[dueDates.length - 1],

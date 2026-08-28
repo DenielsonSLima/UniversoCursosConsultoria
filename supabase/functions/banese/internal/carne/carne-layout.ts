@@ -24,6 +24,13 @@ import {
 } from "../pdf/primitives.ts";
 import { presentBaneseFinancialTerms } from "../pdf/financial-terms.ts";
 
+export const BANESE_CARNET_FIXED_LAYOUT_V1 = Object.freeze({
+  itemsPerPage: 3 as const,
+  pageMargin: 14,
+  pageGap: 9,
+  slotVerticalInset: 4,
+});
+
 export const baneseCarnetPartyDetails = (
   party: BaneseBoletoDocumentInput["payer"],
 ) =>
@@ -93,7 +100,7 @@ export const drawBaneseCarnetSlip = async (
     y: box.y,
     width: stubWidth,
     height: box.height,
-    color: COLORS.lightBlue,
+    color: COLORS.white,
     borderColor: COLORS.navy,
     borderWidth: 0.7,
   });
@@ -150,13 +157,20 @@ export const drawBaneseCarnetSlip = async (
     fonts,
     { x: innerX, y: stubTop - 24, width: halfStubWidth, height: 24 },
     "Parcela",
-    input.installment ? `${input.installment.current}/${input.installment.total}` : "1/1",
+    input.installment
+      ? `${input.installment.current}/${input.installment.total}`
+      : "1/1",
     { valueSize: 6.5, bold: true },
   );
   drawBox(
     page,
     fonts,
-    { x: innerX + halfStubWidth, y: stubTop - 24, width: innerWidth - halfStubWidth, height: 24 },
+    {
+      x: innerX + halfStubWidth,
+      y: stubTop - 24,
+      width: innerWidth - halfStubWidth,
+      height: 24,
+    },
     "Nº Documento",
     input.documentNumber,
     { valueSize: 6, bold: true },

@@ -8,7 +8,9 @@ import {
   buildBanesePixImageFixture,
   buildBanesePixPayloadFixture,
 } from "../testing/pix-fixture.ts";
+import { renderOfficialBanesePixQr } from "../official-pix-qr.ts";
 import {
+  BANESE_CARNET_FIXED_LAYOUT_V1,
   baneseCarnetInstallmentDocument,
   baneseCarnetPartyDetails,
   baneseCarnetReceiptInstitutionDetails,
@@ -61,13 +63,18 @@ Deno.test("inclui parcela atual e total no recibo lateral do carne Banese", () =
   );
 });
 
-for (const [count, expectedPages] of [[3, 1], [4, 2], [10, 4]]) {
+for (const [count, expectedPages] of [[3, 1], [4, 2], [10, 4], [13, 5]]) {
   Deno.test(`gera carne Banese com ${count} boleto(s) em ${expectedPages} pagina(s)`, async () => {
     const bytes = await buildBaneseCarnetPdf(items(count));
     const pdf = await PDFDocument.load(bytes);
     assert.equal(pdf.getPageCount(), expectedPages);
   });
 }
+
+Deno.test("fixa o modelo do carne Banese em tres titulos por A4", () => {
+  assert.equal(Object.isFrozen(BANESE_CARNET_FIXED_LAYOUT_V1), true);
+  assert.equal(BANESE_CARNET_FIXED_LAYOUT_V1.itemsPerPage, 3);
+});
 
 Deno.test("bloqueia carne Banese com menos de 3 parcelas", async () => {
   await assert.rejects(
@@ -124,20 +131,30 @@ Deno.test("bloqueia parcelas com o mesmo titulo bancario", async () => {
   );
 });
 
-Deno.test("bloqueia tres parcelas por pagina quando houver Pix oficial", async () => {
-  const productionPix = items(3).map((item, index) => ({
-    ...item,
-    environment: "production" as const,
-    pix: {
-      copyAndPaste: buildBanesePixPayloadFixture(`TXID-OFICIAL-${index}`),
-      qrCodeBase64: buildBanesePixImageFixture(index),
-      txid: `TXID-OFICIAL-${index}`,
-    },
-  }));
-  await assert.rejects(
-    () => buildBaneseCarnetPdf(productionPix, { itemsPerPage: 3 }),
-    /maximo 2 parcelas por pagina/i,
+Deno.test("mantem tres titulos por pagina quando houver Pix oficial", async () => {
+  const productionPix = await Promise.all(
+    items(3).map(async (item, index) => {
+      const copyAndPaste = buildBanesePixPayloadFixture(
+        `TXID-OFICIAL-${index}`,
+      );
+      return {
+        ...item,
+        environment: "production" as const,
+        pix: {
+          copyAndPaste,
+          qrCodeBase64: await renderOfficialBanesePixQr(copyAndPaste),
+          txid: `TXID-OFICIAL-${index}`,
+        },
+      };
+    }),
   );
+  const bytes = await buildBaneseCarnetPdf(productionPix);
+  const pdf = await PDFDocument.load(bytes);
+  assert.equal(pdf.getPageCount(), 1);
+  assert.deepEqual(pdf.getPage(0).getSize(), {
+    width: 595.28,
+    height: 841.89,
+  });
 });
 
 Deno.test("bloqueia Pix repetido entre parcelas do carne", async () => {
@@ -154,4 +171,34 @@ Deno.test("bloqueia Pix repetido entre parcelas do carne", async () => {
     () => buildBaneseCarnetPdf(productionPix),
     /Pix copia e cola exclusivo/i,
   );
+});
+
+Deno.test("aceita placeholder TXID dinamico do Banese quando Pix e titulos sao exclusivos", async () => {
+  const productionPix = await Promise.all(
+    items(13).map(async (item, index) => {
+      const copyAndPaste = buildBanesePixPayloadFixture(
+        "***",
+        item.amount,
+        "BR.GOV.BCB.PIX",
+        `1234567890${index}`,
+      );
+      return {
+        ...item,
+        environment: "production" as const,
+        pix: {
+          copyAndPaste,
+          qrCodeBase64: await renderOfficialBanesePixQr(copyAndPaste),
+          txid: "***",
+        },
+      };
+    }),
+  );
+
+  const pdf = await buildBaneseCarnetPdf(productionPix);
+  assert.equal(String.fromCharCode(...pdf.slice(0, 4)), "%PDF");
+  const loaded = await PDFDocument.load(pdf);
+  assert.equal(loaded.getPageCount(), 5);
+  loaded.getPages().forEach((page) => {
+    assert.deepEqual(page.getSize(), { width: 595.28, height: 841.89 });
+  });
 });

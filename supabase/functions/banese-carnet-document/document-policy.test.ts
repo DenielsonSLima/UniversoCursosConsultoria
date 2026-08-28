@@ -99,9 +99,15 @@ Deno.test("Radiologia importada mantém carnê íntegro em produção sem Pix ou
   for (const [index, input] of inputs.entries()) {
     assert.equal(input.pix, null);
     assert.equal(input.ourNumber, rows[index].gateway_boleto_nosso_numero);
-    assert.equal(input.digitableLine, rows[index].gateway_boleto_linha_digitavel);
+    assert.equal(
+      input.digitableLine,
+      rows[index].gateway_boleto_linha_digitavel,
+    );
     assert.equal(input.barcode, rows[index].gateway_boleto_codigo_barras);
-    assert.equal(input.financialTerms?.nominalAmount, Number(rows[index].valor));
+    assert.equal(
+      input.financialTerms?.nominalAmount,
+      Number(rows[index].valor),
+    );
     assert.equal(input.financialTerms?.dueDate, rows[index].data_vencimento);
   }
 
@@ -129,6 +135,31 @@ Deno.test("seleciona ao menos tres parcelas registradas e ordena o carne", () =>
     rowAt(1),
   ]);
   assert.deepEqual(rows.map((row) => row.parcela_numero), [1, 2, 3]);
+});
+
+Deno.test("inclui rematricula sem desconto no mesmo grupo seguro das mensalidades", () => {
+  const selected = rowAt(0);
+  const rematricula = rowAt(3, {
+    tipo_lancamento: "REMATRICULA",
+    parcela_numero: 0,
+    descricao: "Rematrícula",
+    gateway_financial_terms: {
+      ...rowAt(3).gateway_financial_terms,
+      discount: null,
+    },
+  });
+  const rows = selectBaneseCarnetDocumentRows(selected, [
+    rowAt(2),
+    rematricula,
+    selected,
+    rowAt(1),
+  ]);
+
+  assert.deepEqual(
+    rows.map((row) => row.tipo_lancamento),
+    ["REMATRICULA", "PARCELA", "PARCELA", "PARCELA"],
+  );
+  assert.equal(isRegisteredBaneseDocumentRow(rematricula), true);
 });
 
 Deno.test("catálogo documental aceita um boleto sem relaxar validação bancária", () => {
@@ -203,7 +234,7 @@ Deno.test("matricula e cobranca individual nunca originam carne", () => {
         rowAt(0, { tipo_lancamento: "MATRICULA" }),
         [rowAt(0), rowAt(1), rowAt(2)],
       ),
-    /Somente parcelas mensais/i,
+    /Somente rematrícula e parcelas mensais/i,
   );
   assert.throws(
     () => selectBaneseCarnetDocumentRows(rowAt(0), [rowAt(0), rowAt(1)]),
@@ -232,26 +263,25 @@ Deno.test("falha fechada se qualquer parcela nao tiver snapshot confirmado", () 
   );
 });
 
-Deno.test("exige desconto ate o vencimento, multa e juros em cada parcela", () => {
+Deno.test("aceita termos confirmados sem desconto, multa ou juros", () => {
   const cases = [
     { discount: null },
     { penalty: null },
     { interest: null },
   ];
   for (const financialTerms of cases) {
-    assert.throws(
-      () =>
-        selectBaneseCarnetDocumentRows(rowAt(0), [
-          rowAt(0),
-          rowAt(1, {
-            gateway_financial_terms: {
-              ...rowAt(1).gateway_financial_terms,
-              ...financialTerms,
-            },
-          }),
-          rowAt(2),
-        ]),
-      /desconto até o vencimento, multa e juros/i,
+    assert.equal(
+      selectBaneseCarnetDocumentRows(rowAt(0), [
+        rowAt(0),
+        rowAt(1, {
+          gateway_financial_terms: {
+            ...rowAt(1).gateway_financial_terms,
+            ...financialTerms,
+          },
+        }),
+        rowAt(2),
+      ]).length,
+      3,
     );
   }
 });

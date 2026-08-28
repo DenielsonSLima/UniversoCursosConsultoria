@@ -162,11 +162,28 @@ Deno.test("trata o marcador de desconto nulo real do Banese como ausente", () =>
   );
 });
 
+Deno.test("aceita tombstone oficial de remocao de desconto na data do vencimento", () => {
+  assert.equal(
+    baneseFinancialTermsFromPayload(
+      {
+        Desconto: [{
+          TipoDesconto: 0,
+          Data: "2026-08-15T00:00:00",
+          Valor: 0,
+        }],
+      },
+      99.9,
+      "2026-08-15",
+    ).discount,
+    null,
+  );
+});
+
 Deno.test("rejeita marcador remoto invalido com conteudo financeiro", () => {
   for (
     const invalidDiscount of [
       { TipoDesconto: 0, Data: null, Valor: 10 },
-      { TipoDesconto: 0, Data: "2026-08-15", Valor: 0 },
+      { TipoDesconto: 0, Data: "2026-08-14", Valor: 0 },
       { TipoDesconto: 0, Data: "2026-08-15", Valor: 10 },
     ]
   ) {
