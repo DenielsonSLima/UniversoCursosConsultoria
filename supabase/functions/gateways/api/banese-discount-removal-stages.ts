@@ -36,6 +36,7 @@ export const withRepairStage = async <T>(
   } catch (cause) {
     throw new Error(
       `DISCOUNT_REPAIR_STAGE:${stage}:${classifyRepairCause(cause)}`,
+      { cause },
     );
   }
 };
