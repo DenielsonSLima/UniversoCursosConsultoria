@@ -1,6 +1,6 @@
 # Lote ativo
 
-Estado: `PUBLICADO_COM_PENDENCIA_BANCARIA_HISTORICA`
+Estado: `CONCLUIDO`
 
 ## Lote: 2026-08-27-bolepix-rematricula
 
@@ -12,29 +12,33 @@ Estado: `PUBLICADO_COM_PENDENCIA_BANCARIA_HISTORICA`
 
 ### Contratos preservados
 
-1. O sistema aceita somente o payload Pix oficial devolvido pelo Banese; nenhum QR Code ou código bancário é fabricado.
-2. A consulta de recuperação não cria nem reemite boleto e só completa o mesmo título depois de validar identidade e termos financeiros.
-3. Uma divergência por título fica isolada em revisão e não interrompe as demais cobranças do lote.
-4. A rematrícula é identificada por `tipo_lancamento`, sem convertê-la em mensalidade zero.
-5. Alterações locais paralelas, migrations não publicadas e mudanças comerciais ficam fora do manifesto.
+1. O usuário está correto sobre o contrato em princípio: o GET oficial por convênio e Nosso Número pode devolver código de barras, linha digitável e o `QrCode` fixo do mesmo boleto.
+2. O sistema aceita somente o Pix oficial devolvido pelo Banese e só o associa depois de validar a identidade bancária completa; nenhuma consulta cria ou reemite boleto.
+3. A emissão falha fechada antes do POST quando o Nosso Número já pertence a outro título. Em produção, uma nova reserva também exige faixa exclusiva formalmente confirmada pelo banco.
+4. A rematrícula continua identificada por `tipo_lancamento`, sem ser convertida em mensalidade zero e sem perder seus dados acadêmicos ou financeiros.
+5. Alterações paralelas, migrations não autorizadas e decisões comerciais ficam fora do manifesto.
 
-### Resultado
+### Resultado confirmado
 
-- O worker voltou a autenticar o agendamento e executar com resposta 200.
-- O gateway preserva o `QrCode` exato do POST e aceita completá-lo por consulta somente se o banco também devolver o campo; payload e imagem são persistidos de forma atômica.
-- Linha digitável inválida só é reparada quando o código de barras oficial prova que se trata do mesmo título.
-- Tela e relatório exibem `Rematrícula`; a sincronização possui retorno visível e uma falha de PDF não fecha silenciosamente a aba preparada.
-- A migration remota restaurou o automático P3–P9 e endureceu contratos e permissões dos RPCs sem alterar os perfis manuais P17–P20.
-- 202 testes focados, TypeScript, Deno check, build e limite de linhas foram aprovados.
+- Os 13 Nossos Números atribuídos localmente não identificavam os 13 recebíveis de 2026/27: o GET oficial devolveu títulos Banese de 2018 no valor de R$ 200,00.
+- Nenhum desses códigos de barras, linhas digitáveis ou Pix foi associado aos recebíveis atuais. As 13 identidades locais sem prova de POST foram quarentenadas por CAS, preservando 12 parcelas de R$ 279,90 e uma rematrícula de R$ 100,00, além de matrícula, turma, vencimento e status.
+- O gateway agora faz preflight GET antes de qualquer POST, bloqueia colisão e valida identidade completa antes de persistir dados bancários. Um POST novo continua aceitando a resposta mínima oficial e preserva o `QrCode` devolvido.
+- A recuperação futura pelo GET do Nosso Número persiste o par Pix somente quando proveniência, banco, identidade, valor e vencimento/fator confirmam o mesmo título.
+- Tela e relatório priorizam o rótulo `Rematrícula`; o fluxo não apresenta mais esse lançamento como `Parcela 0`.
+- `TipoJuroMora = 3` é tratado como juros isentos quando o valor é nulo ou zero; divergências continuam falhando fechadas.
+- Worker e gateway mantêm isolamento por título, persistência atômica, locks, CAS integral e retomada pós-baixa pelo marcador servidor autorizado.
+- A revisão independente encerrou sem achados P0/P1/P2 e emitiu parecer `APPROVE`.
 
-### Publicação e pendências
+### Produção e pendências
 
-- `banese-reconciliation-worker` v34 e `asaas-api` v84 estão `ACTIVE` no projeto `kfekgwyqozhicpfuunpo`.
-- A migration remota registrada como `20260827222743_repair_banese_automatic_profile_floor` foi aplicada e validada.
-- O cron em P3 processou 15 títulos, manteve 2 pendentes e isolou 13 com `REMOTE_INTEREST_TYPE_INVALID`; nenhum título diferente foi associado e nenhum QR Code foi fabricado.
-- Os 13 retornos POST históricos continuam sem par Pix persistido. O GET público documentado não fornece QR; a recuperação exige o retorno exato do banco por título ou autorização explícita para reemissão individual.
-- O smoke autenticado permanece pendente pela indisponibilidade de uma sessão controlável; o fechamento não criou cobrança nem alterou dado financeiro para teste.
-- O erro CNAB por EDI7 e decisões de recriação ou regra comercial não pertencem a este hotfix.
+- `asaas-api` v88 está `ACTIVE`, SHA-256 `b2ca242bbbbe322edebf7d1f22b27340972e63bcda619e4c823c8ca78c2d439a`.
+- `banese-reconciliation-worker` v49 está `ACTIVE`, SHA-256 `f6124a5f4b3fca1cb32ee18a98c4f512fae227d64b887a6eea70edb0ec9d71fc`; os logs da versão 49 registraram execução HTTP 200.
+- As nove migrations do hotfix, de `20260827224500` a `20260827224643`, foram aplicadas sob os IDs remotos `20260828024316`, `20260828024319`, `20260828024321`, `20260828030305`, `20260828031759`, `20260828050448`, `20260828050650`, `20260828050800` e `20260828050808`.
+- A migration local `20260827172000_register_banese_boletos_adenize_cycle2.sql`, que atribuía identidades sem prova bancária, foi excluída do lote, ignorada explicitamente e nunca será publicada no GitHub.
+- Emissão Banese e reconciliador permanecem `PAUSED`. Não haverá POST, reemissão ou nova reserva até o banco confirmar formalmente uma faixa exclusiva de Nosso Número e identificar os três títulos citados no atendimento.
+- Foram aprovados 151 testes de adaptador/gateway, 16 do worker, 35 de `test:banese-ui` e mais 11 testes focados de `modalidade-receber` para a apresentação da rematrícula, além de TypeScript `--noEmit`, dois `deno check`, build de produção, teto de 500 linhas e revisão independente. A publicação no GitHub usa o manifesto atômico registrado neste lote.
+- O smoke autenticado de PDF continua pendente por indisponibilidade de sessão controlável; nenhum dado financeiro foi criado ou alterado para fabricar evidência.
+- O erro CNAB por EDI7 e decisões de recriação, vencimento, valor ou regra comercial não pertencem a este hotfix.
 
 ## Lote anterior preservado: 2026-08-26-carnes-alunos-e-baixa-rapida
 

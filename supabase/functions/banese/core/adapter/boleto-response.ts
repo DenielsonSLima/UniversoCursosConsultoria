@@ -38,6 +38,10 @@ export const boletoResultFromResponse = (
     ourNumber: payload.NossoNumero,
     amount: payload.ValorNominal,
     dueDate: payload.DataVencimento,
+    documentNumber: payload.NumeroDocumento,
+    companyTitleId: payload.IdTituloEmpresa,
+    payerDocument: payload.Pagador.NumeroCPFCNPJ,
+    requireRemoteTitleIdentity: recovered,
     agency,
     account: metadata.baneseConta ?? metadata.baneseContaDisplay,
   };
@@ -99,6 +103,77 @@ type BaneseBoletoResponseExpectation = {
   dueDate: unknown;
   agency?: unknown;
   account?: unknown;
+  requireRemoteFinancialIdentity?: boolean;
+  requireRemoteTitleIdentity?: boolean;
+  documentNumber?: unknown;
+  companyTitleId?: unknown;
+  payerDocument?: unknown;
+};
+
+const assertBaneseReturnedIdentity = (
+  rawRecord: Record<string, unknown>,
+  expected: BaneseBoletoResponseExpectation,
+) => {
+  const expectedDocumentNumber = firstString(expected.documentNumber);
+  const remoteDocumentNumber = firstString(
+    rawRecord.NumeroDocumento,
+    rawRecord.numeroDocumento,
+  );
+  if (
+    expectedDocumentNumber &&
+    (
+      (expected.requireRemoteTitleIdentity && !remoteDocumentNumber) ||
+      (remoteDocumentNumber &&
+        remoteDocumentNumber.toLowerCase() !==
+          expectedDocumentNumber.toLowerCase())
+    )
+  ) {
+    throw new Error(
+      "NumeroDocumento retornado pelo Banese diverge do recebivel solicitado.",
+    );
+  }
+
+  const expectedCompanyTitleId = firstString(expected.companyTitleId);
+  const remoteCompanyTitleId = firstString(
+    rawRecord.IdTituloEmpresa,
+    rawRecord.idTituloEmpresa,
+  );
+  if (
+    expectedCompanyTitleId &&
+    (
+      (expected.requireRemoteTitleIdentity && !remoteCompanyTitleId) ||
+      (remoteCompanyTitleId &&
+        remoteCompanyTitleId.toLowerCase() !==
+          expectedCompanyTitleId.toLowerCase())
+    )
+  ) {
+    throw new Error(
+      "IdTituloEmpresa retornado pelo Banese diverge do recebivel solicitado.",
+    );
+  }
+
+  const expectedPayerDocument = onlyDigits(expected.payerDocument);
+  if (expectedPayerDocument) {
+    if (![11, 14].includes(expectedPayerDocument.length)) {
+      throw new Error("CPF/CNPJ esperado do pagador Banese e invalido.");
+    }
+    const payer = asRecord(rawRecord.Pagador ?? rawRecord.pagador);
+    const remotePayerDigits = onlyDigits(
+      payer.NumeroCPFCNPJ ?? payer.numeroCPFCNPJ ?? payer.numeroCpfCnpj,
+    );
+    const remotePayerDocument = remotePayerDigits.length <=
+        expectedPayerDocument.length
+      ? remotePayerDigits.padStart(expectedPayerDocument.length, "0")
+      : remotePayerDigits;
+    if (
+      (expected.requireRemoteTitleIdentity && !remotePayerDigits) ||
+      (remotePayerDigits && remotePayerDocument !== expectedPayerDocument)
+    ) {
+      throw new Error(
+        "CPF/CNPJ do pagador retornado pelo Banese diverge do recebivel solicitado.",
+      );
+    }
+  }
 };
 
 export const validateBaneseBoletoResponse = (
@@ -146,19 +221,47 @@ export const validateBaneseBoletoResponse = (
       );
     }
 
+    assertBaneseReturnedIdentity(rawRecord, expected);
+
     const expectedAmountCents = Math.round(Number(expected.amount) * 100);
+    const remoteAmountValue = rawRecord.ValorNominal ??
+      rawRecord.valorNominal;
+    const remoteAmount = Number(remoteAmountValue);
+    const remoteAmountCents = Math.round(remoteAmount * 100);
     const encodedAmountCents = Number(codigoBarras.slice(9, 19));
     if (
       !Number.isSafeInteger(expectedAmountCents) ||
       expectedAmountCents <= 0 ||
-      encodedAmountCents !== expectedAmountCents
+      encodedAmountCents !== expectedAmountCents ||
+      (expected.requireRemoteFinancialIdentity &&
+        (!Number.isSafeInteger(remoteAmountCents) ||
+          remoteAmountCents !== expectedAmountCents)) ||
+      (!expected.requireRemoteFinancialIdentity &&
+        remoteAmountValue !== undefined && remoteAmountValue !== null &&
+        (!Number.isSafeInteger(remoteAmountCents) ||
+          remoteAmountCents !== expectedAmountCents))
     ) {
       throw new Error(
-        "Valor codificado no retorno Banese diverge do titulo solicitado.",
+        "ValorNominal ou valor codificado retornado pelo Banese diverge do titulo solicitado.",
       );
     }
 
-    assertBaneseDueDateFactor(codigoBarras, String(expected.dueDate || ""));
+    const expectedDueDate = String(expected.dueDate || "").slice(0, 10);
+    const remoteDueDateValue = rawRecord.DataVencimento ??
+      rawRecord.dataVencimento;
+    const remoteDueDate = String(remoteDueDateValue || "").slice(0, 10);
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(expectedDueDate) ||
+      (expected.requireRemoteFinancialIdentity &&
+        remoteDueDate !== expectedDueDate) ||
+      (!expected.requireRemoteFinancialIdentity && remoteDueDateValue &&
+        remoteDueDate !== expectedDueDate)
+    ) {
+      throw new Error(
+        "DataVencimento retornada pelo Banese diverge do titulo solicitado.",
+      );
+    }
+    assertBaneseDueDateFactor(codigoBarras, expectedDueDate);
 
     const trustedAgency = onlyDigits(expected.agency);
     const trustedAccount = onlyDigits(expected.account);

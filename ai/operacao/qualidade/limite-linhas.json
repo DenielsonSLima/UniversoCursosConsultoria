@@ -455,6 +455,16 @@
       "path": "modules/gestor/gestao/tecnicos/detalhes/components/diarios/DiarioPrintStyles.tsx",
       "retiredInManifest": "ai/operacao/registros/alteracoes/2026-08-23-fidelidade-diario-assinaturas-acessos-4-7-3.md",
       "reason": "Compositor raster genérico removido em favor do gerador vetorial canônico orientado pelo modelo salvo."
+    },
+    {
+      "path": "supabase/functions/gateways/api/banese.test.ts",
+      "retiredInManifest": "ai/operacao/registros/alteracoes/2026-08-27-bolepix-rematricula.md",
+      "reason": "Suíte monolítica repartida em harness e testes temáticos menores, preservando a cobertura da conciliação Banese."
+    },
+    {
+      "path": "supabase/functions/banese/core/adapter.test.ts",
+      "retiredInManifest": "ai/operacao/registros/alteracoes/2026-08-27-bolepix-rematricula.md",
+      "reason": "Suíte monolítica do adaptador repartida em fixtures e testes temáticos menores, preservando a cobertura da emissão e consulta Banese."
     }
   ],
   "generatedArtifacts": [

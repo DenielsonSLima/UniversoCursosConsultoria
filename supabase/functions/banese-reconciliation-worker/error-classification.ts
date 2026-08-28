@@ -1,3 +1,5 @@
+import { BANESE_POST_SETTLEMENT_PENDING_PREFIX } from "../gateways/api/banese-post-settlement.ts";
+
 const reviewDiagnosticCode = (message: string) => {
   if (/Cobranca invalida para conciliacao Banese/i.test(message)) {
     return "LOCAL_RECEIVABLE_ID_INVALID";
@@ -7,6 +9,12 @@ const reviewDiagnosticCode = (message: string) => {
   }
   if (/Nosso Numero Banese invalido para trava/i.test(message)) {
     return "LOCAL_TITLE_NUMBER_INVALID";
+  }
+  if (/Identificadores locais do titulo Banese divergem/i.test(message)) {
+    return "LOCAL_TITLE_IDENTITY_DIVERGENCE";
+  }
+  if (/Transacao Banese possui identificador divergente/i.test(message)) {
+    return "TRANSACTION_TITLE_IDENTITY_DIVERGENCE";
   }
   if (/nao possui o pedido financeiro canonico persistido/i.test(message)) {
     return "LOCAL_FINANCIAL_TERMS_MISSING";
@@ -74,6 +82,67 @@ const reviewDiagnosticCode = (message: string) => {
   if (/Pedido financeiro canonico.*diverge/i.test(message)) {
     return "LOCAL_FINANCIAL_TERMS_DIVERGENCE";
   }
+  if (/Valor codificado no retorno Banese diverge/i.test(message)) {
+    return "REMOTE_BANK_AMOUNT_DIVERGENCE";
+  }
+  if (/Fator de vencimento.*diverge/i.test(message)) {
+    return "REMOTE_BANK_DUE_FACTOR_DIVERGENCE";
+  }
+  if (/Valor ou vencimento do codigo de barras Banese diverge/i.test(message)) {
+    return "RPC_BANK_AMOUNT_DUE_DIVERGENCE";
+  }
+  if (/ValorNominal.*REMOTE_MINOR_UNITS_MATCH_BARCODE_AMOUNT/i.test(message)) {
+    return "REMOTE_NOMINAL_MINOR_UNITS_MATCH_BARCODE_AMOUNT";
+  }
+  if (/ValorNominal.*REMOTE_MINOR_UNITS/i.test(message)) {
+    return "REMOTE_NOMINAL_AMOUNT_MINOR_UNITS";
+  }
+  if (/ValorNominal.*REMOTE_MATCHES_CANONICAL_DUE_AMOUNT/i.test(message)) {
+    return "REMOTE_NOMINAL_MATCHES_CANONICAL_DUE_AMOUNT";
+  }
+  if (/ValorNominal.*REMOTE_MATCHES_BARCODE_AMOUNT/i.test(message)) {
+    return "REMOTE_NOMINAL_MATCHES_BARCODE_AMOUNT";
+  }
+  if (/ValorNominal.*REMOTE_ZERO/i.test(message)) {
+    return "REMOTE_NOMINAL_AMOUNT_ZERO";
+  }
+  if (/ValorNominal.*REMOTE_LOWER_THAN_EXPECTED/i.test(message)) {
+    return "REMOTE_NOMINAL_AMOUNT_LOWER";
+  }
+  if (/ValorNominal retornado pelo Banese diverge/i.test(message)) {
+    return "REMOTE_NOMINAL_AMOUNT_DIVERGENCE";
+  }
+  if (/DataVencimento retornada pelo Banese diverge/i.test(message)) {
+    return "REMOTE_DUE_DATE_DIVERGENCE";
+  }
+  if (/Snapshot da consulta Banese invalido/i.test(message)) {
+    return "RPC_QUERY_SNAPSHOT_INVALID";
+  }
+  if (
+    /ValorNominal ou DataVencimento da consulta Banese diverge/i.test(message)
+  ) {
+    return "RPC_QUERY_FINANCIAL_DIVERGENCE";
+  }
+  if (
+    /Linha digitavel e codigo de barras Banese nao representam o mesmo titulo/i
+      .test(message)
+  ) {
+    return "REMOTE_BANK_PAIR_INCONSISTENT";
+  }
+  if (
+    /Digito (?:verificador de campo|geral modulo 11).*invalido/i.test(message)
+  ) {
+    return "REMOTE_BANK_CHECK_DIGIT_INVALID";
+  }
+  if (/(?:Agencia|Conta).*diverge da chave ASBACE/i.test(message)) {
+    return "REMOTE_ASBACE_BENEFICIARY_DIVERGENCE";
+  }
+  if (/Duplo digito da chave ASBACE Banese e invalido/i.test(message)) {
+    return "REMOTE_ASBACE_CHECK_DIGIT_INVALID";
+  }
+  if (/Numeros bancarios retornados pelo Banese divergem/i.test(message)) {
+    return "LOCAL_BANK_NUMBERS_DIVERGENCE";
+  }
   if (/Linha digitavel.*diverge|Codigo de barras.*diverge/i.test(message)) {
     return "BANK_NUMBERS_DIVERGENCE";
   }
@@ -93,6 +162,16 @@ export const classifyBaneseReconciliationError = (error: unknown) => {
   const diagnosticCode = reviewDiagnosticCode(message);
   const statusMatch = message.match(/\((\d{3})\)/);
   const httpStatus = statusMatch ? Number(statusMatch[1]) : null;
+  if (message.startsWith(BANESE_POST_SETTLEMENT_PENDING_PREFIX)) {
+    return {
+      result: "ERROR" as const,
+      errorClass: "POST_SETTLEMENT_PENDING",
+      diagnosticCode: "POST_SETTLEMENT_PENDING",
+      httpStatus: null,
+      publicMessage:
+        `${BANESE_POST_SETTLEMENT_PENDING_PREFIX} baixa confirmada; conclusão interna aguardando nova tentativa.`,
+    };
+  }
   if (httpStatus === 429) {
     return {
       result: "THROTTLED" as const,
@@ -196,3 +275,17 @@ const SYSTEMIC_ERROR_CLASSES = new Set([
 
 export const shouldHaltBaneseReconciliationBatch = (errorClass: string) =>
   SYSTEMIC_ERROR_CLASSES.has(errorClass);
+
+export const guardBaneseErrorStatusUpdate = (
+  query: {
+    eq: (column: string, value: unknown) => any;
+    neq: (
+      column: string,
+      value: unknown,
+    ) => any;
+  },
+  errorClass: string,
+) =>
+  errorClass === "POST_SETTLEMENT_PENDING"
+    ? query.eq("status", "PAGO")
+    : query.neq("status", "PAGO");

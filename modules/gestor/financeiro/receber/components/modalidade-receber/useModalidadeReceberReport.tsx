@@ -121,7 +121,7 @@ export const useModalidadeReceberReport = ({
         <p className="font-black text-[#001a33]">
           {receivableLaunchLabel(item, 'fraction')}
         </p>
-        {item.tipoLancamento && item.tipoLancamento !== 'PARCELA' && item.tipoLancamento !== 'MATRICULA' ? (
+        {item.tipoLancamento && !['PARCELA', 'MATRICULA', 'REMATRICULA', 'DEPENDENCIA'].includes(item.tipoLancamento) ? (
           <p className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-slate-400">
             {item.tipoLancamento}
           </p>

@@ -4,14 +4,6 @@ import {
   normalizeBaneseFinancialTerms,
 } from "../../banese/internal/financial-terms.ts";
 import { assertBaneseFinancialTermsEqual } from "../../banese/internal/financial-terms-response.ts";
-import {
-  activateEnrollmentAfterPayment,
-  syncOnlineInscriptionPayment,
-} from "../webhook/domain/ead-enrollment.ts";
-import {
-  applyReceivableSnapshotFields,
-  applyRemoteIdentitySnapshot,
-} from "../checkout/remote-title-guard.ts";
 import type { Environment } from "./config.ts";
 import { requireGatewayEnvironment } from "./environment.ts";
 import {
@@ -19,28 +11,34 @@ import {
   isDependencyReceivable,
 } from "../../banese/internal/dependency-billing.ts";
 import {
+  assertBaneseReceivableTitleCompatible,
+  assertBaneseReconciliationProvenance,
   assertBaneseTitleNumber,
   banesePaymentDate,
-  baneseReceivableTitleFilter,
-  baneseTransactionTitleFilter,
   classifyBaneseSettlementMethod,
-  loadCompatibleBaneseTransactions,
-  onlyBaneseDigits,
   sumBanesePaymentValues,
-  validateBaneseRecoveredBankNumbers,
 } from "./banese-reconciliation-contract.ts";
+import { recoverBanesePixBeforeFinancialReconciliation } from "./banese-pix-recovery.ts";
+import {
+  loadBaneseExpectedTransactions,
+  persistBaneseReconciliationSnapshot,
+} from "./banese-reconciliation-persistence.ts";
+import {
+  BANESE_POST_SETTLEMENT_PENDING_PREFIX,
+  throwBanesePostSettlementPending,
+} from "./banese-post-settlement.ts";
+import { completeBanesePostSettlement } from "./banese-post-settlement-projection.ts";
 
 export {
   baneseReceivableTitleFilter,
   baneseTransactionTitleFilter,
   classifyBaneseSettlementMethod,
   sumBanesePaymentValues,
-  validateBaneseRecoveredBankNumbers,
 } from "./banese-reconciliation-contract.ts";
-export type { BaneseSettlementMethod } from "./banese-reconciliation-contract.ts";
 
 type ReconcileBaneseDependencies = {
   queryBoleto?: typeof queryBaneseBoleto;
+  persistReconciliation?: typeof persistBaneseReconciliationSnapshot;
   syncFutureInstallments?: (
     matriculaId: string,
     environment: Environment,
@@ -80,6 +78,36 @@ export const reconcileBaneseReceivable = async (
     receivable.gateway_environment,
     "titulo Banese",
   );
+  const nossoNumero = assertBaneseReceivableTitleCompatible(receivable);
+  const postSettlementRetry =
+    String(receivable.status || "").toUpperCase() === "PAGO" &&
+    String(receivable.gateway_last_error || "").startsWith(
+      BANESE_POST_SETTLEMENT_PENDING_PREFIX,
+    );
+  if (postSettlementRetry) {
+    try {
+      const completion = await completeBanesePostSettlement(admin, {
+        receivable,
+        environment,
+        nossoNumero,
+        settlementMethod: String(
+          receivable.gateway_settlement_channel ||
+            receivable.forma_pagamento || "BOLETO",
+        ),
+        syncFutureInstallments: dependencies.syncFutureInstallments,
+      });
+      return {
+        success: true,
+        receivable: completion.updated,
+        remoteStatus: receivable.gateway_status,
+        paid: true,
+        payments: 0,
+        futureSyncWarning: completion.futureSyncWarning,
+      };
+    } catch (error) {
+      await throwBanesePostSettlementPending(admin, receivable, error);
+    }
+  }
   const { data: credential, error: credentialError } = await admin
     .from("payment_gateway_credentials")
     .select("metadata")
@@ -94,10 +122,6 @@ export const reconcileBaneseReceivable = async (
       : {};
   const convenio = receivable.gateway_boleto_convenio ||
     metadata.baneseBoletoConvenio || metadata.baneseConvenio;
-  const nossoNumero = assertBaneseTitleNumber(
-    receivable.gateway_boleto_nosso_numero ||
-      receivable.gateway_payment_id,
-  );
   if (
     !receivable.gateway_financial_terms ||
     typeof receivable.gateway_financial_terms !== "object"
@@ -133,10 +157,10 @@ export const reconcileBaneseReceivable = async (
       "Titulo Banese ambiguo possui canal de submissao inconsistente; a conciliacao automatica foi bloqueada.",
     );
   }
-  const persistedPixPayload = String(
+  let persistedPixPayload = String(
     receivable.gateway_pix_payload || "",
   ).trim();
-  const persistedPixEncodedImage = String(
+  let persistedPixEncodedImage = String(
     receivable.gateway_pix_encoded_image || "",
   ).trim();
   if (Boolean(persistedPixPayload) !== Boolean(persistedPixEncodedImage)) {
@@ -144,6 +168,28 @@ export const reconcileBaneseReceivable = async (
       "Titulo Banese possui snapshot Pix incompleto; a conciliacao automatica foi bloqueada.",
     );
   }
+  let expectedTransactions = await loadBaneseExpectedTransactions(admin, {
+    receivableId,
+    environment,
+  });
+  assertBaneseReconciliationProvenance(
+    receivable,
+    expectedTransactions,
+    nossoNumero,
+  );
+  const { data: payer, error: payerError } = await admin
+    .from("parceiros")
+    .select("cpf_cnpj")
+    .eq("id", receivable.cliente_id)
+    .maybeSingle();
+  if (payerError) throw payerError;
+  const payerDocument = String(payer?.cpf_cnpj || "").replace(/\D/g, "");
+  if (![11, 14].includes(payerDocument.length)) {
+    throw new Error(
+      "Titulo Banese nao possui CPF/CNPJ canonico do pagador para validar a consulta.",
+    );
+  }
+  const externalReference = String(receivable.id);
   const snapshot = await (dependencies.queryBoleto ?? queryBaneseBoleto)(
     admin,
     environment,
@@ -151,6 +197,15 @@ export const reconcileBaneseReceivable = async (
       convenio,
       nossoNumero,
       recoverPix: !persistedPixPayload,
+      validateTitleIdentity: true,
+      expectedAmount: confirmedFinancialTerms.nominalAmount,
+      expectedDueDate: confirmedFinancialTerms.dueDate,
+      expectedAgency: receivable.gateway_boleto_agencia ||
+        metadata.baneseAgencia,
+      expectedAccount: metadata.baneseConta || metadata.baneseContaDisplay,
+      expectedDocumentNumber: externalReference.slice(0, 15),
+      expectedCompanyTitleId: externalReference.slice(0, 25),
+      expectedPayerDocument: payerDocument,
     },
   );
   const snapshotNossoNumero = assertBaneseTitleNumber(snapshot.nossoNumero);
@@ -159,15 +214,33 @@ export const reconcileBaneseReceivable = async (
       "Nosso Numero retornado pelo Banese diverge do titulo conciliado.",
     );
   }
+  const pixRecovery = await recoverBanesePixBeforeFinancialReconciliation(
+    admin,
+    {
+      receivable,
+      environment,
+      convenio,
+      nossoNumero: snapshotNossoNumero,
+      snapshot,
+      persistedPixPayload,
+      persistedPixEncodedImage,
+    },
+  );
+  const recoveredBankNumbers = pixRecovery.bankNumbers;
+  persistedPixPayload = pixRecovery.pixPayload;
+  persistedPixEncodedImage = pixRecovery.pixEncodedImage;
+  if (pixRecovery.persisted) {
+    expectedTransactions = await loadBaneseExpectedTransactions(admin, {
+      receivableId,
+      environment,
+    });
+  }
+  if (snapshot.financialTermsError) throw snapshot.financialTermsError;
   assertBaneseFinancialTermsEqual(
     confirmedFinancialTerms,
-    snapshot.financialTerms,
+    snapshot.financialTerms!,
   );
-  if (Boolean(snapshot.pixPayload) !== Boolean(snapshot.pixEncodedImage)) {
-    throw new Error(
-      "Banese retornou snapshot Pix incompleto; nenhuma alteracao foi aplicada.",
-    );
-  }
+  if (snapshot.paymentsError) throw snapshot.paymentsError;
 
   const paymentTotal = sumBanesePaymentValues(snapshot.payments);
   const paymentDates = snapshot.payments.map(banesePaymentDate).sort();
@@ -194,66 +267,14 @@ export const reconcileBaneseReceivable = async (
       );
     }
   }
-  const syncedAt = new Date().toISOString();
-  const recoveredBankNumbers = validateBaneseRecoveredBankNumbers(
-    snapshot.raw,
-    {
-      digitableLine: receivable.gateway_boleto_linha_digitavel,
-      barcode: receivable.gateway_boleto_codigo_barras,
-      expectedOurNumber: nossoNumero,
-      pixPayload: snapshot.pixPayload,
-    },
-  );
+  const postSettlementRequired = snapshot.paid;
+  const effectiveRemoteStatus = snapshot.remoteStatus;
   const candidatePixPayload = persistedPixPayload || snapshot.pixPayload || "";
   const candidatePixEncodedImage = persistedPixEncodedImage ||
     snapshot.pixEncodedImage || "";
-  const transactionRows = await loadCompatibleBaneseTransactions(admin, {
-    receivableId: receivable.id,
-    environment,
-    nossoNumero: snapshotNossoNumero,
-    pixPayload: candidatePixPayload,
-    pixEncodedImage: candidatePixEncodedImage,
-  });
-  const receivableUpdate: Record<string, unknown> = {
-    gateway_payment_id: snapshotNossoNumero,
-    gateway_status: snapshot.remoteStatus,
-    gateway_financial_terms: confirmedFinancialTerms,
-    gateway_financial_terms_confirmed_at:
-      receivable.gateway_financial_terms_confirmed_at || syncedAt,
-    gateway_synced_at: syncedAt,
-    gateway_last_error: null,
-    updated_at: syncedAt,
-  };
   const shouldConfirmApiSubmission = ["", "API"].includes(
     submissionChannel,
   ) && ["", "API_AMBIGUOUS", "API_REGISTERED"].includes(submissionStatus);
-  if (shouldConfirmApiSubmission) {
-    receivableUpdate.gateway_creation_token = null;
-    receivableUpdate.gateway_submission_channel = "API";
-    receivableUpdate.gateway_submission_status = "API_REGISTERED";
-  }
-  if (!receivable.gateway_boleto_nosso_numero) {
-    receivableUpdate.gateway_boleto_nosso_numero = snapshotNossoNumero;
-  }
-  if (
-    (!receivable.gateway_boleto_linha_digitavel ||
-      recoveredBankNumbers?.replacePersistedDigitableLine) &&
-    recoveredBankNumbers?.hasRemoteDigitableLine
-  ) {
-    receivableUpdate.gateway_boleto_linha_digitavel =
-      recoveredBankNumbers.digitableLine;
-  }
-  if (
-    !receivable.gateway_boleto_codigo_barras &&
-    recoveredBankNumbers?.hasRemoteBarcode
-  ) {
-    receivableUpdate.gateway_boleto_codigo_barras =
-      recoveredBankNumbers.barcode;
-  }
-  if (!persistedPixPayload && snapshot.pixPayload && snapshot.pixEncodedImage) {
-    receivableUpdate.gateway_pix_payload = snapshot.pixPayload;
-    receivableUpdate.gateway_pix_encoded_image = snapshot.pixEncodedImage;
-  }
   const shouldSettle = snapshot.paid &&
     String(receivable.status || "").toUpperCase() !== "PAGO";
   const settlementMethod = classifyBaneseSettlementMethod(snapshot.payments);
@@ -268,231 +289,56 @@ export const reconcileBaneseReceivable = async (
       "Cobrança de disciplina aceita liquidação somente por boleto Banese; o retorno Pix exige revisão.",
     );
   }
-  if (snapshot.paid) {
-    receivableUpdate.gateway_settlement_channel = settlementMethod;
-    receivableUpdate.gateway_settlement_source = "API";
-    receivableUpdate.gateway_settlement_evidence = {
-      classification: settlementMethod,
-      paymentCount: snapshot.payments.length,
-      documentedFields: ["BancoRecebedor", "DataPagamento", "ValorPago"],
-    };
-    receivableUpdate.gateway_settlement_recorded_at = syncedAt;
-  }
-  if (shouldSettle) {
-    receivableUpdate.status = "PAGO";
-    receivableUpdate.valor_pago = Number(paymentTotal.toFixed(2));
-    receivableUpdate.data_pagamento = paymentDates.at(-1);
-    receivableUpdate.forma_pagamento = settlementMethod === "PIX"
-      ? "PIX"
-      : "BOLETO";
-    receivableUpdate.origem_pagamento = "BANESE";
-  }
-
-  let updateQuery = admin
-    .from("contas_receber")
-    .update(receivableUpdate)
-    .eq("id", receivable.id)
-    .eq("gateway_provider", "banese_card")
-    .eq("gateway_environment", environment)
-    .eq("gateway_payment_method", "BOLETO")
-    .or(baneseReceivableTitleFilter(snapshotNossoNumero));
-  if (shouldSettle) {
-    updateQuery = updateQuery.in("status", [
-      "PENDENTE",
-      "VENCIDO",
-      "AGUARDANDO_CONFIRMACAO",
-    ]);
-  }
-  updateQuery = applyRemoteIdentitySnapshot(updateQuery, receivable);
-  updateQuery = applyReceivableSnapshotFields(updateQuery, receivable, [
-    "status",
-    "origem_pagamento",
-    "forma_pagamento",
-    "valor",
-    "data_vencimento",
-    "gateway_status",
-    "gateway_creation_token",
-    "gateway_financial_terms",
-    "gateway_financial_terms_confirmed_at",
-    "gateway_submission_channel",
-    "gateway_submission_status",
-    "gateway_cnab_file_id",
-    "gateway_boleto_convenio",
-    "gateway_boleto_agencia",
-    "gateway_boleto_linha_digitavel",
-    "gateway_boleto_codigo_barras",
-    "gateway_pix_payload",
-    "gateway_pix_encoded_image",
-    "updated_at",
-  ]);
-  const { data: updatedRow, error: updateError } = await updateQuery
-    .select()
-    .maybeSingle();
-  if (updateError) throw updateError;
-  if (!updatedRow) {
-    throw new Error("Cobranca mudou durante a conciliacao Banese.");
-  }
-  const updated = updatedRow;
-
-  const transactionSnapshot = {
-    reconciliation: snapshot.raw,
-    payments: snapshot.payments,
-    convenio: onlyBaneseDigits(convenio),
-    nossoNumero: snapshotNossoNumero,
-    financialTerms: confirmedFinancialTerms,
-    settlementMethod,
-    pixRecovered: Boolean(snapshot.pixPayload),
-  };
-  const transactionPix = updated.gateway_pix_payload &&
-      updated.gateway_pix_encoded_image
-    ? {
-      pix_payload: updated.gateway_pix_payload,
-      pix_encoded_image: updated.gateway_pix_encoded_image,
-    }
-    : {};
-  const transactionPayload = {
-    remote_status: snapshot.remoteStatus,
-    last_error: null,
-    synced_at: syncedAt,
-    updated_at: syncedAt,
-  };
-  const recoveredTransactionBankNumbers = recoveredBankNumbers
-    ? {
-      bank_slip_digitable_line: recoveredBankNumbers.digitableLine,
-      bank_slip_barcode: recoveredBankNumbers.barcode,
-    }
-    : {};
-  if (transactionRows?.length) {
-    const updates = await Promise.all(
-      transactionRows.map((transaction: any) =>
-        admin
-          .from("payment_gateway_transactions")
-          .update({
-            ...transactionPayload,
-            ...recoveredTransactionBankNumbers,
-            ...transactionPix,
-            remote_payment_id: snapshotNossoNumero,
-            bank_slip_our_number: snapshotNossoNumero,
-            raw_payload: {
-              ...(transaction.raw_payload &&
-                  typeof transaction.raw_payload === "object"
-                ? transaction.raw_payload
-                : {}),
-              ...transactionSnapshot,
-            },
-          })
-          .eq("id", transaction.id)
-          .eq("receivable_id", receivable.id)
-          .eq("provider_code", "banese_card")
-          .eq("environment", environment)
-          .eq("payment_method", "BOLETO")
-          .or(baneseTransactionTitleFilter(snapshotNossoNumero))
-          .select("id")
-          .maybeSingle()
-      ),
-    );
-    const failedUpdate = updates.find((result: any) => result.error);
-    if (failedUpdate?.error) throw failedUpdate.error;
-    if (updates.some((result: any) => !result.data)) {
-      throw new Error(
-        "Transacao mudou durante a conciliacao Banese.",
-      );
-    }
-  } else {
-    const { error: repairError } = await admin
-      .from("payment_gateway_transactions")
-      .insert({
-        receivable_id: receivable.id,
-        provider_code: "banese_card",
-        environment,
-        payment_method: "BOLETO",
-        origin_polo_id: receivable.polo_id || null,
-        issuer_polo_id: receivable.gateway_issuer_polo_id || null,
-        installments: Number(receivable.gateway_installments || 1),
-        remote_payment_id: snapshotNossoNumero,
-        amount: Number(receivable.valor || 0),
-        invoice_url: receivable.gateway_invoice_url || null,
-        bank_slip_url: receivable.gateway_bank_slip_url || null,
-        bank_slip_digitable_line: recoveredBankNumbers?.digitableLine ||
-          updated.gateway_boleto_linha_digitavel || null,
-        bank_slip_barcode: recoveredBankNumbers?.barcode ||
-          updated.gateway_boleto_codigo_barras || null,
-        bank_slip_our_number: snapshotNossoNumero,
-        ...transactionPix,
-        ...transactionPayload,
-        raw_payload: transactionSnapshot,
-      });
-    if (repairError) throw repairError;
-  }
-
-  let futureSyncWarning: string | null = null;
-  if (snapshot.paid && String(updated.status || "").toUpperCase() === "PAGO") {
-    // A liberação acadêmica decorre diretamente do pagamento confirmado pelo
-    // banco. Falhas na projeção auxiliar de inscricoes_online devem permanecer
-    // auditáveis, mas não podem impedir o acesso de EAD/Livre/Especialização.
-    await activateEnrollmentAfterPayment({ admin } as any, updated);
-    await syncOnlineInscriptionPayment({ admin } as any, {
-      receivable: updated,
-      gatewayProvider: "banese_card",
+  let updated = await (dependencies.persistReconciliation ??
+    persistBaneseReconciliationSnapshot)(admin, {
+      receivable,
       environment,
-      paymentId: snapshotNossoNumero,
-      paymentLinkId: null,
-      localStatus: "PAGO",
-      legacyPaymentMethod: String(updated.forma_pagamento || settlementMethod),
-      pendingStatus: "AGUARDANDO_PAGAMENTO",
+      convenio,
+      nossoNumero: snapshotNossoNumero,
+      remoteStatus: effectiveRemoteStatus,
+      financialTerms: confirmedFinancialTerms,
+      confirmApiSubmission: shouldConfirmApiSubmission,
+      remotePaid: snapshot.paid,
+      postSettlementRequired,
+      shouldSettle,
+      paymentTotal,
+      paymentDate: paymentDates.at(-1) || null,
+      settlementMethod,
+      pixPayload: candidatePixPayload,
+      pixEncodedImage: candidatePixEncodedImage,
+      bankNumbers: recoveredBankNumbers,
+      snapshot,
+      expectedTransactions,
     });
 
+  let futureSyncWarning: string | null = null;
+  try {
     if (
-      dependencies.syncFutureInstallments &&
-      updated.matricula_id &&
-      String(updated.tipo_lancamento || "").toUpperCase() === "MATRICULA"
+      postSettlementRequired &&
+      String(updated.status || "").toUpperCase() === "PAGO"
     ) {
-      const { data: matricula, error: matriculaError } = await admin
-        .from("matriculas")
-        .select(
-          "gerar_cobranca_futura, sincronizar_asaas, turmas(gerar_cobrancas_futuras, sincronizar_asaas_futuro)",
-        )
-        .eq("id", updated.matricula_id)
-        .maybeSingle();
-      if (matriculaError) throw matriculaError;
-      const turma = Array.isArray(matricula?.turmas)
-        ? matricula.turmas[0]
-        : matricula?.turmas;
-      const gerarFutura = matricula?.gerar_cobranca_futura ??
-        turma?.gerar_cobrancas_futuras ?? false;
-      const syncEnabled = matricula?.sincronizar_asaas ??
-        turma?.sincronizar_asaas_futuro ?? true;
-      if (gerarFutura && syncEnabled) {
-        try {
-          await dependencies.syncFutureInstallments(
-            updated.matricula_id,
-            environment,
-          );
-        } catch (syncError) {
-          futureSyncWarning = syncError instanceof Error
-            ? syncError.message
-            : String(syncError);
-          const { error: warningError } = await admin
-            .from("contas_receber")
-            .update({
-              gateway_last_error:
-                `Pagamento Banese conciliado; parcelas futuras pendentes: ${futureSyncWarning}`,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", updated.id)
-            .eq("status", "PAGO")
-            .eq("gateway_provider", "banese_card");
-          if (warningError) throw warningError;
-        }
-      }
+      const completion = await completeBanesePostSettlement(admin, {
+        receivable: updated,
+        environment,
+        nossoNumero: snapshotNossoNumero,
+        settlementMethod,
+        syncFutureInstallments: dependencies.syncFutureInstallments,
+      });
+      updated = completion.updated;
+      futureSyncWarning = completion.futureSyncWarning;
     }
+  } catch (error) {
+    if (String(updated.status || "").toUpperCase() === "PAGO") {
+      await throwBanesePostSettlementPending(admin, updated, error);
+    }
+    throw error;
   }
 
   return {
     success: true,
     receivable: updated,
-    remoteStatus: snapshot.remoteStatus,
-    paid: snapshot.paid,
+    remoteStatus: effectiveRemoteStatus,
+    paid: postSettlementRequired,
     payments: snapshot.payments.length,
     futureSyncWarning,
   };

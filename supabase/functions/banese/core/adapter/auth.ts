@@ -181,6 +181,9 @@ export const reserveBaneseNossoNumero = async (
     agencia,
     alreadyReserved: result.alreadyReserved === true ||
       result.already_reserved === true,
+    bankRangeConfirmed: input.environment !== "production" ||
+      result.bankRangeConfirmed === true ||
+      result.bank_range_confirmed === true,
   };
 };
 

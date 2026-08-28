@@ -36,6 +36,7 @@ export const sanitizedBoletoSnapshot = (value: unknown) =>
     "DataVencimento",
     "ValorNominal",
     "NumeroDocumento",
+    "IdTituloEmpresa",
     "CodigoEspecie",
     "QuantidadeDiasBaixaDevolucao",
     "Desconto",

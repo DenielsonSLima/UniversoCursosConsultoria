@@ -1,4 +1,3 @@
-import { baneseFinancialTermsFromPayload } from "../../internal/financial-terms-response.ts";
 import {
   requestBaneseBoletoAccessToken,
   reserveBaneseNossoNumero,
@@ -7,7 +6,11 @@ import {
   buildBaneseBoletoPayload,
   validateBaneseBoletoPayloadInput,
 } from "./boleto-payload.ts";
-import { boletoResultFromResponse } from "./boleto-response.ts";
+import {
+  boletoResultFromResponse,
+  validateBaneseBoletoResponse,
+} from "./boleto-response.ts";
+import { queryBaneseBoleto } from "./boleto-query.ts";
 import { confirmBaneseBoletoFinancialTerms } from "./boleto-financial-terms.ts";
 import {
   type AdapterCreateChargeInput,
@@ -29,12 +32,10 @@ import {
   metadataFrom,
   onlyDigits,
   readResponseBody,
-  sanitizedBoletoSnapshot,
 } from "./utils.ts";
-import {
-  normalizeBanesePixFromResponse,
-  normalizeBanesePixFromResponses,
-} from "./boleto-pix-response.ts";
+import { normalizeBanesePixFromResponses } from "./boleto-pix-response.ts";
+
+export { queryBaneseBoleto } from "./boleto-query.ts";
 
 const isProduction = (environment: Environment) => environment === "production";
 
@@ -130,7 +131,10 @@ export const createBaneseBoletoCharge = async (
     BANESE_BOLETO_ENDPOINTS[input.environment].baseUrl
   }/convenios/${convenio}/boletos`;
 
-  if (reservation.alreadyReserved) {
+  // Todo Nosso Numero reservado e consultado antes do POST. Isso impede que
+  // uma sequencia local desatualizada sobrescreva um titulo ja existente no
+  // mesmo convenio, inclusive quando outro emissor compartilha a faixa.
+  {
     let recoveryResponse: Response;
     try {
       recoveryResponse = await fetch(`${endpoint}/${nossoNumero}`, {
@@ -141,6 +145,25 @@ export const createBaneseBoletoCharge = async (
     }
     const recoveryRaw = await readResponseBody(recoveryResponse);
     if (recoveryResponse.ok) {
+      if (!reservation.alreadyReserved) {
+        throw markRemotePaymentMayExist(
+          new BaneseAdapterError(
+            "Nosso Numero recem-reservado ja existe no Banese. Nenhum POST foi enviado; a emissao foi bloqueada para corrigir a faixa autorizada.",
+          ),
+        );
+      }
+      validateBaneseBoletoResponse(recoveryRaw, {
+        ourNumber: payload.NossoNumero,
+        amount: payload.ValorNominal,
+        dueDate: payload.DataVencimento,
+        agency: agencia,
+        account: metadata.baneseConta ?? metadata.baneseContaDisplay,
+        documentNumber: payload.NumeroDocumento,
+        companyTitleId: payload.IdTituloEmpresa,
+        payerDocument: payload.Pagador.NumeroCPFCNPJ,
+        requireRemoteFinancialIdentity: true,
+        requireRemoteTitleIdentity: true,
+      });
       let confirmedRaw = recoveryRaw;
       if (input.financialTerms) {
         try {
@@ -188,6 +211,11 @@ export const createBaneseBoletoCharge = async (
         new BaneseAdapterError(
           `Nao foi possivel conciliar o Nosso Numero reservado antes de tentar novo registro Banese (${recoveryResponse.status}).`,
         ),
+      );
+    }
+    if (isProduction(input.environment) && !reservation.bankRangeConfirmed) {
+      throw new BaneseAdapterConfigurationError(
+        "A faixa exclusiva de Nosso Numero ainda nao foi confirmada pelo Banese. Nenhum POST foi enviado.",
       );
     }
   }
@@ -258,127 +286,6 @@ export const createBaneseBoletoCharge = async (
   }
 
   return result;
-};
-
-export const queryBaneseBoleto = async (
-  admin: SupabaseAdminRpcClient,
-  environment: Environment,
-  input: {
-    convenio: unknown;
-    nossoNumero: unknown;
-    accessToken?: BaneseAccessToken;
-    recoverPix?: boolean;
-    signal?: AbortSignal;
-  },
-) => {
-  assertEnvironment(environment);
-  const convenio = onlyDigits(input.convenio);
-  const nossoNumero = onlyDigits(input.nossoNumero);
-  if (!convenio || !/^\d{9}$/.test(nossoNumero)) {
-    throw new BaneseAdapterConfigurationError(
-      "Consulta Banese requer convenio e Nosso Numero validos.",
-    );
-  }
-
-  const token = input.accessToken ??
-    await requestBaneseBoletoAccessToken(admin, environment);
-  const baseEndpoint = `${
-    BANESE_BOLETO_ENDPOINTS[environment].baseUrl
-  }/convenios/${convenio}/boletos/${nossoNumero}`;
-  const response = await fetch(baseEndpoint, {
-    headers: { Authorization: `${token.tokenType} ${token.accessToken}` },
-    signal: input.signal,
-  });
-  const raw = await readResponseBody(response);
-  if (!response.ok) {
-    throw new BaneseAdapterError(
-      `Banese recusou consulta do boleto (${response.status}): ${
-        typeof raw === "string" ? raw : JSON.stringify(raw)
-      }`,
-    );
-  }
-
-  const boleto = asRecord(raw);
-  const remoteNossoNumeroValue = boleto.NossoNumero ?? boleto.nossoNumero;
-  const remoteNossoNumeroDigits = onlyDigits(remoteNossoNumeroValue);
-  const remoteNossoNumero = remoteNossoNumeroDigits &&
-      remoteNossoNumeroDigits.length <= 9
-    ? remoteNossoNumeroDigits.padStart(9, "0")
-    : remoteNossoNumeroDigits;
-  if (
-    remoteNossoNumeroValue !== undefined &&
-    remoteNossoNumeroValue !== null &&
-    remoteNossoNumero !== nossoNumero
-  ) {
-    throw new BaneseAdapterError(
-      "Nosso Numero retornado pelo Banese diverge do titulo consultado.",
-    );
-  }
-  const nominalAmount = Number(
-    boleto.ValorNominal ?? boleto.valorNominal,
-  );
-  const dueDate = firstString(
-    boleto.DataVencimento,
-    boleto.dataVencimento,
-  ).slice(0, 10);
-  const financialTerms = baneseFinancialTermsFromPayload(
-    boleto,
-    nominalAmount,
-    dueDate,
-  );
-  const situationCode = Number(
-    boleto.CodigoSituacaoBoleto ?? boleto.codigoSituacaoBoleto,
-  );
-  const remoteStatus = BANESE_BOLETO_STATUS[situationCode] || "UNKNOWN";
-  let payments: Array<Record<string, unknown>>;
-
-  // O banco confirmou por e-mail que PagamentosEfetivados prevalece sobre
-  // CodigoSituacaoBoleto. Por isso a consulta não pode depender do código 3.
-  const paymentResponse = await fetch(
-    `${baseEndpoint}/pagamentos/efetivados`,
-    {
-      headers: { Authorization: `${token.tokenType} ${token.accessToken}` },
-      signal: input.signal,
-    },
-  );
-  const paymentRaw = await readResponseBody(paymentResponse);
-  if (paymentResponse.ok) {
-    const paymentRecord = asRecord(paymentRaw);
-    const paymentItems = Array.isArray(paymentRaw)
-      ? paymentRaw
-      : paymentRecord.PagamentosEfetivados ??
-        paymentRecord.pagamentosEfetivados ??
-        [];
-    payments = Array.isArray(paymentItems)
-      ? paymentItems.map(asRecord).filter((item) =>
-        Object.keys(item).length > 0
-      )
-      : [];
-  } else {
-    throw new BaneseAdapterError(
-      `A consulta canônica de PagamentosEfetivados do Banese falhou (${paymentResponse.status}); o estado financeiro do boleto não pôde ser confirmado.`,
-    );
-  }
-  const paid = payments.length > 0;
-  const recoveredPix = isProduction(environment) && input.recoverPix
-    ? await normalizeBanesePixFromResponse(boleto, nominalAmount)
-    : null;
-
-  return {
-    convenio,
-    nossoNumero: remoteNossoNumero || nossoNumero,
-    situationCode,
-    remoteStatus: paid ? BANESE_BOLETO_STATUS[3] || "PAID" : remoteStatus,
-    paid,
-    payments,
-    financialTerms,
-    pixPayload: recoveredPix?.pixPayload ?? null,
-    pixEncodedImage: recoveredPix?.pixEncodedImage ?? null,
-    raw: {
-      ...sanitizedBoletoSnapshot(boleto),
-      ...(recoveredPix ? { pixDiagnostic: recoveredPix.diagnostic } : {}),
-    },
-  };
 };
 
 export const cancelBaneseBoleto = async (

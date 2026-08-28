@@ -6,12 +6,17 @@ import {
 export const onlyBaneseDigits = (value: unknown) =>
   String(value || "").replace(/\D/g, "");
 
-type BaneseRecoveredBankNumbers = {
+const comparableBaneseTitleNumber = (value: unknown) => {
+  const digits = onlyBaneseDigits(value);
+  return digits && digits.length <= 9 ? digits.padStart(9, "0") : digits;
+};
+
+export type BaneseRecoveredBankNumbers = {
   digitableLine: string;
   barcode: string;
   hasRemoteDigitableLine: boolean;
   hasRemoteBarcode: boolean;
-  replacePersistedDigitableLine: boolean;
+  replacePersistedBankNumbers: boolean;
 };
 
 const hasBankNumberValue = (value: unknown) =>
@@ -138,6 +143,29 @@ export const assertBaneseTitleNumber = (value: unknown) => {
   return nossoNumero;
 };
 
+export const assertBaneseReceivableTitleCompatible = (
+  receivable: Record<string, unknown>,
+) => {
+  const bankSlipOurNumber = comparableBaneseTitleNumber(
+    receivable.gateway_boleto_nosso_numero,
+  );
+  const remotePaymentId = comparableBaneseTitleNumber(
+    receivable.gateway_payment_id,
+  );
+  const canonical = assertBaneseTitleNumber(
+    bankSlipOurNumber || remotePaymentId,
+  );
+  if (
+    (bankSlipOurNumber && bankSlipOurNumber !== canonical) ||
+    (remotePaymentId && remotePaymentId !== canonical)
+  ) {
+    throw new Error(
+      "Identificadores locais do titulo Banese divergem entre si.",
+    );
+  }
+  return canonical;
+};
+
 export const baneseReceivableTitleFilter = (value: unknown) => {
   const nossoNumero = assertBaneseTitleNumber(value);
   return `gateway_boleto_nosso_numero.eq.${nossoNumero},and(gateway_boleto_nosso_numero.is.null,gateway_payment_id.eq.${nossoNumero})`;
@@ -168,7 +196,8 @@ export const assertBaneseTransactionPixCompatible = (
       ).trim();
       if (Boolean(persisted) !== Boolean(persistedImage)) return true;
       if (!persisted) return false;
-      return !canonicalPayload || persisted !== canonicalPayload;
+      return !canonicalPayload || persisted !== canonicalPayload ||
+        persistedImage !== canonicalImage;
     })
   ) {
     throw new Error(
@@ -177,38 +206,114 @@ export const assertBaneseTransactionPixCompatible = (
   }
 };
 
-export const loadCompatibleBaneseTransactions = async (
-  admin: any,
-  input: {
-    receivableId: string;
-    environment: string;
-    nossoNumero: string;
-    pixPayload: unknown;
-    pixEncodedImage: unknown;
-  },
+export const assertBaneseTransactionTitleCompatible = (
+  transactions: Array<Record<string, unknown>> | null | undefined,
+  nossoNumero: unknown,
 ) => {
-  const { data, error } = await admin
-    .from("payment_gateway_transactions")
-    .select("id, raw_payload, pix_payload, pix_encoded_image")
-    .eq("receivable_id", input.receivableId)
-    .eq("provider_code", "banese_card")
-    .eq("environment", input.environment)
-    .eq("payment_method", "BOLETO")
-    .or(baneseTransactionTitleFilter(input.nossoNumero));
-  if (error) throw error;
-  assertBaneseTransactionPixCompatible(
-    data,
-    input.pixPayload,
-    input.pixEncodedImage,
-  );
-  return data;
+  const canonical = assertBaneseTitleNumber(nossoNumero);
+  if (
+    transactions?.some((transaction) => {
+      const bankSlipOurNumber = comparableBaneseTitleNumber(
+        transaction.bank_slip_our_number,
+      );
+      const remotePaymentId = comparableBaneseTitleNumber(
+        transaction.remote_payment_id,
+      );
+      return (bankSlipOurNumber && bankSlipOurNumber !== canonical) ||
+        (remotePaymentId && remotePaymentId !== canonical);
+    })
+  ) {
+    throw new Error(
+      "Transacao Banese possui identificador divergente; a conciliacao foi bloqueada.",
+    );
+  }
 };
 
-const canReplaceInvalidPersistedLine = (
+export const assertBaneseReconciliationProvenance = (
+  receivable: Record<string, unknown>,
+  transactions: Array<Record<string, unknown>>,
+  nossoNumero: string,
+) => {
+  const submissionStatus = String(
+    receivable.gateway_submission_status || "",
+  ).trim().toUpperCase();
+  const submissionChannel = String(
+    receivable.gateway_submission_channel || "",
+  ).trim().toUpperCase();
+  const cnabFileId = String(receivable.gateway_cnab_file_id || "").trim();
+  const creationToken = String(receivable.gateway_creation_token || "").trim();
+  const gatewayStatus = String(receivable.gateway_status || "")
+    .trim().toUpperCase();
+
+  if (
+    submissionChannel !== "API" || cnabFileId ||
+    !["API_REGISTERED", "API_AMBIGUOUS"].includes(submissionStatus)
+  ) {
+    throw new Error(
+      "Titulo Banese nao possui proveniencia exclusiva de POST API; a consulta automatica foi bloqueada.",
+    );
+  }
+
+  if (submissionStatus === "API_AMBIGUOUS") {
+    if (!creationToken || gatewayStatus !== "CREATING") {
+      throw new Error(
+        "Titulo Banese ambiguo nao possui tentativa de POST canonica ativa; a consulta automatica foi bloqueada.",
+      );
+    }
+    if (transactions.length > 1) {
+      throw new Error(
+        "Titulo Banese ambiguo possui mais de uma transacao; a consulta automatica foi bloqueada.",
+      );
+    }
+    assertBaneseTransactionTitleCompatible(transactions, nossoNumero);
+    if (
+      transactions[0] &&
+      Math.round(Number(transactions[0].amount) * 100) !==
+        Math.round(Number(receivable.valor) * 100)
+    ) {
+      throw new Error(
+        "Transacao da tentativa ambigua Banese diverge do valor do recebivel.",
+      );
+    }
+    return;
+  }
+
+  if (transactions.length !== 1) {
+    throw new Error(
+      "Titulo Banese registrado nao possui exatamente uma transacao canonica do POST; a consulta automatica foi bloqueada.",
+    );
+  }
+  const transaction = transactions[0];
+  assertBaneseTransactionTitleCompatible(transactions, nossoNumero);
+  const transactionOurNumber = comparableBaneseTitleNumber(
+    transaction.bank_slip_our_number,
+  );
+  const transactionPaymentId = comparableBaneseTitleNumber(
+    transaction.remote_payment_id,
+  );
+  if (
+    transactionOurNumber !== nossoNumero &&
+    transactionPaymentId !== nossoNumero
+  ) {
+    throw new Error(
+      "Transacao canonica do POST Banese nao comprova o Nosso Numero conciliado.",
+    );
+  }
+  if (
+    Math.round(Number(transaction.amount) * 100) !==
+      Math.round(Number(receivable.valor) * 100)
+  ) {
+    throw new Error(
+      "Transacao canonica do POST Banese diverge do valor do recebivel.",
+    );
+  }
+};
+
+function canReplaceInvalidPersistedLine(
   persistedDigitableLine: string,
   persistedBarcode: string,
   recovered: { digitableLine: string; barcode: string },
-) => {
+) {
   if (!persistedDigitableLine || persistedBarcode !== recovered.barcode) {
     return false;
   }
@@ -226,6 +331,65 @@ const canReplaceInvalidPersistedLine = (
     // já inválida pode ser substituída. Divergência entre títulos segue fechada.
     return true;
   }
+}
+
+export const assertBaneseTransactionBankNumbersCompatible = (
+  transactions: Array<Record<string, unknown>> | null | undefined,
+  recovered: BaneseRecoveredBankNumbers | null,
+) => {
+  if (!recovered) return;
+  if (
+    transactions?.some((transaction) => {
+      const digitableLine = onlyBaneseDigits(
+        transaction.bank_slip_digitable_line,
+      );
+      const barcode = onlyBaneseDigits(transaction.bank_slip_barcode);
+      if (barcode && barcode !== recovered.barcode) return true;
+      if (!digitableLine || digitableLine === recovered.digitableLine) {
+        return false;
+      }
+      return !canReplaceInvalidPersistedLine(
+        digitableLine,
+        barcode,
+        recovered,
+      );
+    })
+  ) {
+    throw new Error(
+      "Transacao Banese possui numeros bancarios divergentes; a conciliacao foi bloqueada.",
+    );
+  }
+};
+
+export const loadCompatibleBaneseTransactions = async (
+  admin: any,
+  input: {
+    receivableId: string;
+    environment: string;
+    nossoNumero: string;
+    pixPayload: unknown;
+    pixEncodedImage: unknown;
+    bankNumbers: BaneseRecoveredBankNumbers | null;
+  },
+) => {
+  const { data, error } = await admin
+    .from("payment_gateway_transactions")
+    .select(
+      "id, raw_payload, pix_payload, pix_encoded_image, bank_slip_digitable_line, bank_slip_barcode, bank_slip_our_number, remote_payment_id, updated_at",
+    )
+    .eq("receivable_id", input.receivableId)
+    .eq("provider_code", "banese_card")
+    .eq("environment", input.environment)
+    .eq("payment_method", "BOLETO");
+  if (error) throw error;
+  assertBaneseTransactionTitleCompatible(data, input.nossoNumero);
+  assertBaneseTransactionPixCompatible(
+    data,
+    input.pixPayload,
+    input.pixEncodedImage,
+  );
+  assertBaneseTransactionBankNumbersCompatible(data, input.bankNumbers);
+  return data;
 };
 
 export const validateBaneseRecoveredBankNumbers = (
@@ -303,29 +467,27 @@ export const validateBaneseRecoveredBankNumbers = (
     }
   }
 
-  let replacePersistedDigitableLine = false;
-  if (
-    hasRemoteDigitableLine && persistedDigitableLine &&
-    persistedDigitableLine !== validated.digitableLine
-  ) {
-    replacePersistedDigitableLine = hasRemoteBarcode &&
-      canReplaceInvalidPersistedLine(
-        persistedDigitableLine,
-        persistedBarcode,
-        validated,
-      );
-    if (!replacePersistedDigitableLine) {
-      throw new Error(
-        "Linha digitavel retornada pelo Banese diverge do titulo persistido.",
-      );
-    }
-  }
   if (
     hasRemoteBarcode && persistedBarcode &&
     persistedBarcode !== validated.barcode
   ) {
     throw new Error(
-      "Codigo de barras retornado pelo Banese diverge do titulo persistido.",
+      "Numeros bancarios retornados pelo Banese divergem do titulo persistido.",
+    );
+  }
+  const persistedLineDiffers = Boolean(
+    hasRemoteDigitableLine && persistedDigitableLine &&
+      persistedDigitableLine !== validated.digitableLine,
+  );
+  const replacePersistedBankNumbers = persistedLineDiffers &&
+    canReplaceInvalidPersistedLine(
+      persistedDigitableLine,
+      persistedBarcode,
+      validated,
+    );
+  if (persistedLineDiffers && !replacePersistedBankNumbers) {
+    throw new Error(
+      "Numeros bancarios retornados pelo Banese divergem do titulo persistido.",
     );
   }
 
@@ -333,6 +495,6 @@ export const validateBaneseRecoveredBankNumbers = (
     ...validated,
     hasRemoteDigitableLine,
     hasRemoteBarcode,
-    replacePersistedDigitableLine,
+    replacePersistedBankNumbers,
   };
 };

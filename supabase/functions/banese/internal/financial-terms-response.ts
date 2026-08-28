@@ -36,6 +36,20 @@ const isEmptyRemoteTerm = (term: Record<string, unknown>, type: unknown) => {
     (!date || date === "0001-01-01");
 };
 
+const isExemptRemoteInterest = (
+  term: Record<string, unknown>,
+  type: unknown,
+) => {
+  if (!isNumeric(type) || Number(type) !== 3) return false;
+  const amountValue = term.Valor ?? term.valor;
+  const date = String(term.Data ?? term.data ?? "").slice(0, 10);
+  const hasNoAmount = amountValue === null || amountValue === undefined ||
+    (isNumeric(amountValue) && Number(amountValue) === 0);
+  const hasValidOptionalDate = !date || date === "0001-01-01" ||
+    /^\d{4}-\d{2}-\d{2}$/.test(date);
+  return hasNoAmount && hasValidOptionalDate;
+};
+
 export const baneseFinancialTermsFromPayload = (
   value: unknown,
   nominalAmount: number,
@@ -46,7 +60,7 @@ export const baneseFinancialTermsFromPayload = (
   if (discountValue != null && !Array.isArray(discountValue)) {
     throw new Error("Formato de desconto retornado pelo Banese e invalido.");
   }
-  const discounts = (discountValue ?? [])
+  const discounts = (Array.isArray(discountValue) ? discountValue : [])
     .map((item: unknown) => remoteTermRecord(item, "desconto"))
     .filter((discount: Record<string, unknown>) =>
       !isEmptyRemoteTerm(
@@ -74,10 +88,11 @@ export const baneseFinancialTermsFromPayload = (
     )
     ? {}
     : rawPenalty;
-  const interest = !rawInterest || isEmptyRemoteTerm(
-      rawInterest,
-      rawInterest.TipoJuroMora ?? rawInterest.tipoJuroMora,
-    )
+  const interestTypeValue = rawInterest?.TipoJuroMora ??
+    rawInterest?.tipoJuroMora;
+  const interest = !rawInterest ||
+      isEmptyRemoteTerm(rawInterest, interestTypeValue) ||
+      isExemptRemoteInterest(rawInterest, interestTypeValue)
     ? {}
     : rawInterest;
   const discountType = Number(

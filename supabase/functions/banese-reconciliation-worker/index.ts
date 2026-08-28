@@ -12,7 +12,12 @@ import {
 } from "./pacing.ts";
 import { readRequestBody, safeEqual } from "./request-guards.ts";
 import {
+  createLazyAsyncValue,
+  queryWithSingleBaneseAuthRetry,
+} from "./query-token-retry.ts";
+import {
   classifyBaneseReconciliationError,
+  guardBaneseErrorStatusUpdate,
   shouldHaltBaneseReconciliationBatch,
 } from "./error-classification.ts";
 
@@ -259,52 +264,37 @@ Deno.serve(async (req: Request) => {
       remainingMs,
     );
     try {
-      let token = await getSharedToken(
-        admin,
-        environment,
-        refreshMarginSeconds,
-        oauthMetrics,
-        queryController.signal,
+      const token = createLazyAsyncValue(() =>
+        getSharedToken(
+          admin,
+          environment,
+          refreshMarginSeconds,
+          oauthMetrics,
+          queryController.signal,
+        )
       );
-      let renewedAfterUnauthorized = false;
       const queryWithSharedToken = async (
         queryAdmin: any,
         queryEnvironment: Environment,
-        input: {
-          convenio: unknown;
-          nossoNumero: unknown;
-          recoverPix?: boolean;
-        },
+        input: Omit<
+          Parameters<typeof queryBaneseBoleto>[2],
+          "accessToken" | "signal"
+        >,
       ) => {
-        try {
-          return await queryBaneseBoleto(queryAdmin, queryEnvironment, {
-            ...input,
-            accessToken: token,
-            signal: queryController.signal,
-          });
-        } catch (error) {
-          const classification = classifyBaneseReconciliationError(error);
-          if (
-            classification.errorClass !== "AUTH" ||
-            renewedAfterUnauthorized
-          ) {
-            throw error;
-          }
-          renewedAfterUnauthorized = true;
-          invalidateToken(queryEnvironment);
-          token = await getSharedToken(
-            queryAdmin,
-            queryEnvironment,
-            refreshMarginSeconds,
-            oauthMetrics,
-            queryController.signal,
-          );
-          return await queryBaneseBoleto(queryAdmin, queryEnvironment, {
-            ...input,
-            accessToken: token,
-            signal: queryController.signal,
-          });
-        }
+        return await queryWithSingleBaneseAuthRetry({
+          query: async () =>
+            queryBaneseBoleto(queryAdmin, queryEnvironment, {
+              ...input,
+              accessToken: await token.get(),
+              signal: queryController.signal,
+            }),
+          renew: async () => {
+            invalidateToken(queryEnvironment);
+            token.reset();
+            await token.get();
+          },
+          deferredError: (snapshot) => snapshot.paymentsError,
+        });
       };
 
       const result = await reconcileBaneseReceivable(admin, receivableId, {
@@ -360,7 +350,7 @@ Deno.serve(async (req: Request) => {
         httpStatus: classification.httpStatus,
       });
       if (classification.errorClass !== "AUDIT_WRITE") {
-        const { error: updateError } = await admin
+        let errorUpdate = admin
           .from("contas_receber")
           .update({
             gateway_last_error: classification.publicMessage,
@@ -369,6 +359,13 @@ Deno.serve(async (req: Request) => {
           })
           .eq("id", receivableId)
           .eq("gateway_provider", "banese_card");
+        // Nunca marque outro estado com erro pós-baixa nem apague o prefixo
+        // recuperável de um título que já esteja PAGO.
+        errorUpdate = guardBaneseErrorStatusUpdate(
+          errorUpdate,
+          classification.errorClass,
+        );
+        const { error: updateError } = await errorUpdate;
         if (updateError) {
           auditFailure = true;
           halted = true;

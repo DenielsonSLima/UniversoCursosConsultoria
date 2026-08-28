@@ -1,8 +1,8 @@
 {
-  "version": "4.8.8",
+  "version": "4.8.10",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 17,
-  "releasedAt": "2026-08-27",
-  "summary": "Recuperação segura do BolePix Banese e identificação correta da rematrícula"
+  "revision": 19,
+  "releasedAt": "2026-08-28",
+  "summary": "Quarentena segura de identidades Banese e bloqueio de colisões BolePix"
 }

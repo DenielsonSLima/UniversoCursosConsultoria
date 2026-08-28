@@ -4,6 +4,26 @@ Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente
 
 Histórico anterior: [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
 
+## [4.8.10] - 2026-08-28
+
+- Os 13 recebíveis atuais foram preservados e suas identidades Banese sem prova foram quarentenadas após o GET revelar títulos de 2018/R$ 200; emissão e reconciliação seguem pausadas até o banco confirmar uma faixa exclusiva, com preflight e proveniência reforçados para impedir nova colisão.
+
+## [4.8.9] - 2026-08-27
+
+### Corrigido
+
+- A consulta oficial pelo Nosso Número passa a extrair e persistir o `QrCode` antes da conciliação de juros e pagamentos, sem criar nem reemitir boleto.
+- `TipoJuroMora = 3` passa a ser reconhecido como juros isentos, conforme os manuais API Cobrança e CNAB240 do Banese.
+- Uma divergência de juros ou uma indisponibilidade de `PagamentosEfetivados` continua bloqueando baixa e status financeiro, mas não descarta o Pix validado do mesmo título.
+- A retomada de matrícula ou rematrícula após uma baixa confirmada deixa de depender de novo token OAuth ou GET bancário.
+
+### Segurança e qualidade
+
+- O par Pix é gravado atomicamente no recebível e na transação somente após validar Nosso Número, banco 047, linha, código de barras, valor, fator de vencimento, dígitos verificadores e EMV oficial.
+- Os 13 registros foram reclassificados corretamente: 12 títulos vinculados/importados e uma rematrícula, não 13 retornos POST perdidos.
+- A conciliação usa locks e CAS do recebível e da transação; mudanças concorrentes são preservadas e fazem a tentativa falhar fechada.
+- Uma pós-baixa incompleta volta à fila somente pelo marcador servidor `BANESE_POST_SETTLEMENT_PENDING:`, removido após concluir as projeções internas.
+
 ## [4.8.8] - 2026-08-27
 
 ### Corrigido
@@ -478,15 +498,3 @@ Histórico anterior: [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md)
 
 - Patrimônio, empréstimos, baixas e rateio usam RPCs idempotentes, RLS por empresa/polo, Realtime direcionado e invalidação TanStack Query por escopo.
 - Valores, parcelas, rateios e indicadores financeiros permanecem calculados exclusivamente no backend.
-
-## [2.2.3-beta.29] - 2026-08-05
-
-### Corrigido
-
-- A Pasta de Identificação em lote passa a usar o mesmo seletor compacto da Carteirinha, com escolha por turma ou por todos os alunos ativos do polo.
-- Turmas sem alunos ativos deixam de aparecer no seletor e a quantidade do lote é atualizada conforme a seleção.
-- O serviço de emissão restringe o lote geral à Pasta de Identificação e mantém outros documentos protegidos contra ampliação acidental do escopo.
-
-### Qualidade
-
-- O fluxo foi validado no Safari com lote geral e turma específica, além de contrato automatizado, TypeScript, ESLint e build de produção.

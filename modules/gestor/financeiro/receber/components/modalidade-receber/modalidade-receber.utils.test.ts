@@ -15,7 +15,7 @@ import {
   receivableCourseTitle,
   receivableLaunchLabel,
   statusScopeLabels,
-} from './modalidade-receber.utils';
+} from './modalidade-receber.utils.ts';
 
 const receivable = (overrides: Partial<ContasReceber> = {}): ContasReceber => ({
   id: 'receivable-id',
