@@ -217,6 +217,15 @@ export const classifyBaneseReconciliationError = (error: unknown) => {
       publicMessage: "A consulta ocorreu, mas a auditoria interna falhou.",
     };
   }
+  if (/Acesso negado a persistencia da conciliacao Banese/i.test(message)) {
+    return {
+      result: "ERROR" as const,
+      errorClass: "AUDIT_WRITE",
+      diagnosticCode: "RECONCILIATION_PERSISTENCE_DENIED",
+      httpStatus,
+      publicMessage: "A consulta ocorreu, mas a auditoria interna falhou.",
+    };
+  }
   if (
     /fetch failed|network|dns|getaddrinfo|econn(?:refused|reset)|connection (?:refused|reset)|socket|tls|certificate/i
       .test(message)

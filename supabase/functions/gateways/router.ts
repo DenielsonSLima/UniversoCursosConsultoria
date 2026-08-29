@@ -248,11 +248,27 @@ export const repairGatewayTransactionFromReceivable = async (
   const findExistingTransaction = () =>
     admin
       .from("payment_gateway_transactions")
-      .select("id")
+      .select("id, raw_payload")
+      .eq("receivable_id", input.receivable.id)
       .eq("provider_code", input.providerCode)
       .eq("environment", input.environment)
       .eq("remote_payment_id", remotePaymentId)
       .maybeSingle();
+
+  // Um boleto Banese só pode ganhar auditoria a partir da resposta remota
+  // recebida no POST/GET canônico. Reconstruí-la dos campos locais faria um
+  // lançamento importado ou gravado por SQL parecer uma emissão comprovada.
+  if (input.providerCode === "banese_card") {
+    const { data: existing, error } = await findExistingTransaction();
+    if (error) throw error;
+    if (
+      existing?.raw_payload?.importSource ===
+        "BANESE_API_LEGACY_DISCOVERY"
+    ) {
+      return false;
+    }
+    return Boolean(existing?.id);
+  }
 
   try {
     await persistGatewayTransaction(admin, input, { insertOnly: true });

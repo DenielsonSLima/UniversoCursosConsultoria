@@ -51,6 +51,19 @@ Deno.test("interrompe lote somente em falha sistêmica", () => {
   }
 });
 
+Deno.test("bloqueio da RPC de persistência interrompe o lote sem nova baixa", () => {
+  const classification = classifyBaneseReconciliationError(
+    new Error("Acesso negado a persistencia da conciliacao Banese."),
+  );
+
+  assert.equal(classification.errorClass, "AUDIT_WRITE");
+  assert.equal(
+    classification.diagnosticCode,
+    "RECONCILIATION_PERSISTENCE_DENIED",
+  );
+  assert.equal(shouldHaltBaneseReconciliationBatch(classification.errorClass), true);
+});
+
 Deno.test("isola título ausente ou inválido e preserva o restante do lote", () => {
   for (
     const message of [

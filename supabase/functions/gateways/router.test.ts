@@ -192,6 +192,78 @@ Deno.test("reparo preserva auditoria existente sem executar update", async () =>
   assert.equal(writes, 0);
 });
 
+Deno.test("reparo Banese sem auditoria canônica não fabrica prova de POST", async () => {
+  let writes = 0;
+  const builder = {
+    select: () => builder,
+    eq: () => builder,
+    maybeSingle: async () => ({ data: null, error: null }),
+    insert: async () => {
+      writes += 1;
+      return { error: null };
+    },
+  };
+
+  assert.equal(
+    await repairGatewayTransactionFromReceivable(
+      { from: () => builder },
+      repairableReceivable,
+    ),
+    false,
+  );
+  assert.equal(writes, 0);
+});
+
+Deno.test("reparo Banese exige auditoria do mesmo recebível", async () => {
+  const filters: Record<string, unknown> = {};
+  const builder = {
+    select: () => builder,
+    eq: (field: string, value: unknown) => {
+      filters[field] = value;
+      return builder;
+    },
+    maybeSingle: async () => ({ data: null, error: null }),
+    insert: async () => ({ error: null }),
+  };
+
+  assert.equal(
+    await repairGatewayTransactionFromReceivable(
+      { from: () => builder },
+      repairableReceivable,
+    ),
+    false,
+  );
+  assert.equal(filters.receivable_id, repairableReceivable.id);
+});
+
+Deno.test("reparo Banese recusa auditoria originada de importação legada", async () => {
+  let writes = 0;
+  const builder = {
+    select: () => builder,
+    eq: () => builder,
+    maybeSingle: async () => ({
+      data: {
+        id: "legacy-import",
+        raw_payload: { importSource: "BANESE_API_LEGACY_DISCOVERY" },
+      },
+      error: null,
+    }),
+    insert: async () => {
+      writes += 1;
+      return { error: null };
+    },
+  };
+
+  assert.equal(
+    await repairGatewayTransactionFromReceivable(
+      { from: () => builder },
+      repairableReceivable,
+    ),
+    false,
+  );
+  assert.equal(writes, 0);
+});
+
 Deno.test("reparo concorrente aceita auditoria criada por outra requisicao", async () => {
   let lookups = 0;
   let inserts = 0;
@@ -214,7 +286,11 @@ Deno.test("reparo concorrente aceita auditoria criada por outra requisicao", asy
   assert.equal(
     await repairGatewayTransactionFromReceivable(
       admin,
-      repairableReceivable,
+      {
+        ...repairableReceivable,
+        gateway_provider: "asaas",
+        gateway_payment_id: "pay_repairable",
+      },
     ),
     true,
   );
