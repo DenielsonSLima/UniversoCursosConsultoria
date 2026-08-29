@@ -301,6 +301,13 @@
       "remoteId": "20260829224800",
       "sha256": "e6c92e110241a7f337c87a50d35988ee5171c64e6c81db8b189a098521c38678",
       "reason": "Migration aplicada em Produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260829203000_restore_verified_banese_imports_to_reconciliation.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260829203000",
+      "sha256": "e2be35f892e873cef1707005347e4d6d039c7c225b78e0becbcdfbdceab2f8fb",
+      "reason": "Migration aplicada em Produção; histórico imutável."
     }
   ]
 }
