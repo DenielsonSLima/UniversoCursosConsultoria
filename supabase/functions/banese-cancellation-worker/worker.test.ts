@@ -37,6 +37,7 @@ const fakeAdmin = (options: {
   failError?: unknown;
   failAck?: boolean;
   secret?: string;
+  secretError?: unknown;
 } = {}) => {
   const calls: RpcCall[] = [];
   const completionErrors = [...(options.completionErrors ?? [])];
@@ -47,7 +48,7 @@ const fakeAdmin = (options: {
       if (name === "get_banese_reconciliation_worker_secret") {
         return Promise.resolve({
           data: options.secret ?? WORKER_SECRET,
-          error: null,
+          error: options.secretError ?? null,
         });
       }
       if (name === "claim_banese_cancellation_batch") {
@@ -370,6 +371,28 @@ Deno.test("handler rejeita token incorreto antes de reservar jobs", async () => 
 
   assert.equal(response.status, 401);
   assert.equal(callsNamed(calls, "claim_banese_cancellation_batch").length, 0);
+});
+
+Deno.test("handler distingue segredo indisponível de token inválido", async () => {
+  const { admin, calls } = fakeAdmin({
+    secretError: { code: "PGRST002" },
+  });
+  const logged: unknown[][] = [];
+  const handler = createBaneseCancellationWorkerHandler({
+    createAdmin: () => admin,
+    getEnv: (name) => name === "SUPABASE_URL" ? "https://project.test" : "key",
+    logger: { error: (...args) => logged.push(args) },
+  });
+  const response = await handler(
+    new Request("https://worker.test", {
+      method: "POST",
+      headers: { "X-Banese-Worker-Token": WORKER_SECRET },
+    }),
+  );
+
+  assert.equal(response.status, 503);
+  assert.equal(callsNamed(calls, "claim_banese_cancellation_batch").length, 0);
+  assert.equal(logged[0]?.[0], "banese cancellation worker secret unavailable");
 });
 
 Deno.test("handler corta corpo acima de 1 KiB sem depender de Content-Length", async () => {

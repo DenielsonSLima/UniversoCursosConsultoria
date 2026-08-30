@@ -358,10 +358,13 @@ async (req: Request) => {
   const requestSecret = String(
     req.headers.get("X-Banese-Worker-Token") ?? "",
   ).trim();
-  if (
-    secretError || expectedSecret.length < 32 ||
-    !safeEqual(requestSecret, expectedSecret)
-  ) {
+  if (secretError || expectedSecret.length < 32) {
+    dependencies.logger?.error("banese cancellation worker secret unavailable", {
+      errorClass: "SECRET_UNAVAILABLE",
+    });
+    return json({ error: "Configuração indisponível." }, 503);
+  }
+  if (!safeEqual(requestSecret, expectedSecret)) {
     return json({ error: "Não autorizado." }, 401);
   }
 
