@@ -126,6 +126,21 @@ export const readResponseBody = async (response: Response) => {
   }
 };
 
+// Alguns proxies podem manter a promise de fetch/corpo aberta após abortar a
+// conexão. Para consultas GET, a corrida com o sinal encerra a etapa local sem
+// permitir que uma resposta tardia avance para qualquer mutação financeira.
+export const awaitBaneseRead = async <T>(promise: Promise<T>, signal?: AbortSignal) => {
+  if (!signal) return await promise;
+  if (signal.aborted) throw signal.reason;
+  return await new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(signal.reason);
+    signal.addEventListener("abort", onAbort, { once: true });
+    promise.then(resolve, reject).finally(() => {
+      signal.removeEventListener("abort", onAbort);
+    });
+  });
+};
+
 export const metadataFrom = (receivable: AdapterReceivable) => {
   const direct = asRecord(receivable);
   return {

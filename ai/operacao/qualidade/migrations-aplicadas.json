@@ -305,9 +305,37 @@
     {
       "path": "supabase/migrations/20260829203000_restore_verified_banese_imports_to_reconciliation.sql",
       "kind": "applied-migration",
-      "remoteId": "20260829203000",
+      "remoteId": "20260829234201",
       "sha256": "e2be35f892e873cef1707005347e4d6d039c7c225b78e0becbcdfbdceab2f8fb",
       "reason": "Migration aplicada em Produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260829234500_requeue_banese_quarantine_after_normalized_recheck.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260830003344",
+      "sha256": "add8162666efaa9996f20430e61d342564c3152dc757fa895d495e121da0b492",
+      "reason": "Migration aplicada em Produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260830014000_bound_banese_reconciliation_snapshot_locks.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260830013801",
+      "sha256": "d674f61aaafb07224073320c333b210484275dc4fe6b1f4283668a53928ede79",
+      "reason": "Migration aplicada em Produção; histórico imutável."
+    },
+    {
+      "path": "supabase/migrations/20260830020000_verify_banese_worker_token_without_secret_read.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260830014642",
+      "sha256": "fa5493902885e5cec3b56eecc10c28ad7c6c584b8d19345112c5468f156cd19d",
+      "reason": "Migration aplicada em Produção; histórico imutável e revertida pela migration seguinte."
+    },
+    {
+      "path": "supabase/migrations/20260830021500_remove_temporary_banese_worker_token_verifier.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260830020112",
+      "sha256": "faafd6c02e84c5ede20179a1051958d401d84ad4df3a04de4641743d7084ebf8",
+      "reason": "Migration aplicada em Produção; remove superfície temporária de diagnóstico."
     }
   ]
 }

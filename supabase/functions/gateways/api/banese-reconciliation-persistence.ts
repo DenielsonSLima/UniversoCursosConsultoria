@@ -1,4 +1,5 @@
 import { onlyBaneseDigits } from "./banese-reconciliation-contract.ts";
+import { awaitBaneseRead } from "../../banese/core/adapter/utils.ts";
 
 type BankNumbers = {
   digitableLine: string;
@@ -41,11 +42,33 @@ export const loadBaneseExpectedTransactions = async (
       "Titulo Banese possui estado transacional ambiguo para conciliacao.",
     );
   }
-  return data.map((row) =>
-    Object.fromEntries(
+  return data.map((row) => {
+    const base = Object.fromEntries(
       TRANSACTION_CAS_KEYS.map((key) => [key, row[key] ?? null]),
-    )
-  );
+    );
+    const rawPayload = row.raw_payload;
+    let payload: Record<string, unknown> | null = rawPayload &&
+        typeof rawPayload === "object" && !Array.isArray(rawPayload)
+      ? rawPayload as Record<string, unknown>
+      : null;
+    if (!payload && typeof rawPayload === "string") {
+      try {
+        const parsed = JSON.parse(rawPayload);
+        payload = parsed && typeof parsed === "object" && !Array.isArray(parsed)
+          ? parsed as Record<string, unknown>
+          : null;
+      } catch {
+        payload = null;
+      }
+    }
+    const importSource = String(payload?.importSource ?? "");
+    // Boletos importados do legado não passaram pelo fluxo normal de POST API,
+    // portanto NumeroDocumento e IdTituloEmpresa ficam em branco no Banese.
+    // O campo abaixo permite que a conciliação desabilite a validação de
+    // identidade de título para esses boletos sem alterar a tabela.
+    base.is_legacy_import = importSource === "BANESE_API_LEGACY_DISCOVERY";
+    return base;
+  });
 };
 
 export const persistBaneseReconciliationSnapshot = async (
@@ -69,6 +92,7 @@ export const persistBaneseReconciliationSnapshot = async (
     bankNumbers: BankNumbers;
     snapshot: Record<string, any>;
     expectedTransactions: Array<Record<string, any>>;
+    signal?: AbortSignal;
   },
 ) => {
   const { receivable, snapshot } = input;
@@ -81,7 +105,7 @@ export const persistBaneseReconciliationSnapshot = async (
     settlementMethod: input.settlementMethod,
     pixRecovered: Boolean(snapshot.pixPayload),
   };
-  const { data, error } = await admin.rpc(
+  const rpcRequest = admin.rpc(
     "persist_banese_reconciliation_snapshot",
     {
       p_receivable_id: receivable.id,
@@ -138,6 +162,13 @@ export const persistBaneseReconciliationSnapshot = async (
       p_transaction_snapshot: transactionSnapshot,
       p_expected_transactions: input.expectedTransactions,
     },
+  );
+  const request = input.signal && typeof rpcRequest?.abortSignal === "function"
+    ? rpcRequest.abortSignal(input.signal)
+    : rpcRequest;
+  const { data, error } = await awaitBaneseRead(
+    Promise.resolve(request),
+    input.signal,
   );
   if (error) throw error;
   const updated = data?.receivable;

@@ -43,11 +43,23 @@ export {
 type ReconcileBaneseDependencies = {
   queryBoleto?: typeof queryBaneseBoleto;
   persistReconciliation?: typeof persistBaneseReconciliationSnapshot;
+  signal?: AbortSignal;
   repairDiscountRemoval?: typeof repairMarkedBaneseReenrollmentDiscount;
   syncFutureInstallments?: (
     matriculaId: string,
     environment: Environment,
   ) => Promise<unknown>;
+};
+
+// O retorno de consulta do Banese pode suprimir zeros à esquerda do Nosso
+// Número. A cobrança local continua canônica com nove dígitos; somente a
+// resposta remota é normalizada antes da comparação e das demais validações.
+export const normalizeBaneseRemoteTitleNumber = (value: unknown) => {
+  const digits = String(value ?? "").replace(/\D/g, "");
+  if (!/^\d{1,9}$/.test(digits)) {
+    throw new Error("Nosso Numero retornado pelo Banese e invalido.");
+  }
+  return digits.padStart(9, "0");
 };
 
 export const reconcileBaneseReceivable = async (
@@ -204,6 +216,7 @@ export const reconcileBaneseReceivable = async (
       "Titulo Banese nao possui CPF/CNPJ canonico do pagador para validar a consulta.",
     );
   }
+  const isLegacyImport = Boolean(expectedTransactions[0]?.is_legacy_import);
   const externalReference = String(receivable.id);
   const snapshot = await (dependencies.queryBoleto ?? queryBaneseBoleto)(
     admin,
@@ -212,18 +225,38 @@ export const reconcileBaneseReceivable = async (
       convenio,
       nossoNumero,
       recoverPix: !persistedPixPayload,
-      validateTitleIdentity: true,
+      skipEffectivePaymentsWhenOfficiallyUnpaid: isLegacyImport,
+      // Boletos de importação legada não possuem NumeroDocumento/IdTituloEmpresa
+      // registrados no Banese. Desabilitamos a validação estrita de identidade de
+      // título para eles; as demais travas (Nosso Número, Valor, Vencimento, CPF,
+      // ASBACE) continuam obrigatórias.
+      validateTitleIdentity: !isLegacyImport,
       expectedAmount: confirmedFinancialTerms.nominalAmount,
       expectedDueDate: confirmedFinancialTerms.dueDate,
-      expectedAgency: receivable.gateway_boleto_agencia ||
-        metadata.baneseAgencia,
-      expectedAccount: metadata.baneseConta || metadata.baneseContaDisplay,
-      expectedDocumentNumber: externalReference.slice(0, 15),
-      expectedCompanyTitleId: externalReference.slice(0, 25),
+      // O legado importado foi provado pela resposta oficial por Nosso Número,
+      // valor, vencimento e CPF/CNPJ. A conta/agência gravada no arquivo
+      // antigo não é uma pré-condição da consulta e não pode bloquear a baixa.
+      // Cobranças emitidas pelo fluxo atual continuam exigindo ASBACE local.
+      expectedAgency: isLegacyImport
+        ? undefined
+        : receivable.gateway_boleto_agencia || metadata.baneseAgencia,
+      expectedAccount: isLegacyImport
+        ? undefined
+        : metadata.baneseConta || metadata.baneseContaDisplay,
+      // Omitimos NumeroDocumento e IdTituloEmpresa para boletos legados pois
+      // o Banese devolve em branco e a validação bloquearia a conciliação.
+      expectedDocumentNumber: isLegacyImport
+        ? undefined
+        : externalReference.slice(0, 15),
+      expectedCompanyTitleId: isLegacyImport
+        ? undefined
+        : externalReference.slice(0, 25),
       expectedPayerDocument: payerDocument,
     },
   );
-  const snapshotNossoNumero = assertBaneseTitleNumber(snapshot.nossoNumero);
+  const snapshotNossoNumero = normalizeBaneseRemoteTitleNumber(
+    snapshot.nossoNumero,
+  );
   if (snapshotNossoNumero !== nossoNumero) {
     throw new Error(
       "Nosso Numero retornado pelo Banese diverge do titulo conciliado.",
@@ -239,6 +272,8 @@ export const reconcileBaneseReceivable = async (
       snapshot,
       persistedPixPayload,
       persistedPixEncodedImage,
+      allowLegacyImportedBankNumbersMismatch: isLegacyImport,
+      skipLegacyImportedPixPersistence: isLegacyImport,
     },
   );
   const recoveredBankNumbers = pixRecovery.bankNumbers;
@@ -284,6 +319,24 @@ export const reconcileBaneseReceivable = async (
   }
   const postSettlementRequired = snapshot.paid;
   const effectiveRemoteStatus = snapshot.remoteStatus;
+
+  // A importação legada é consultada exclusivamente pelo Nosso Número para
+  // descobrir uma baixa que ainda não chegou ao sistema. Quando o Banese
+  // confirma que o título continua em aberto, não existe alteração local a
+  // persistir. Evitar a RPC de snapshot neste caso elimina uma espera de lock
+  // sem reduzir as validações acima nem relaxar a rota de baixa: qualquer
+  // retorno pago continua exigindo o detalhe efetivado e a persistência
+  // atômica antes de alterar o recebível.
+  if (isLegacyImport && !snapshot.paid) {
+    return {
+      success: true,
+      receivable,
+      remoteStatus: effectiveRemoteStatus,
+      paid: false,
+      payments: snapshot.payments.length,
+      futureSyncWarning: null,
+    };
+  }
   const candidatePixPayload = persistedPixPayload || snapshot.pixPayload || "";
   const candidatePixEncodedImage = persistedPixEncodedImage ||
     snapshot.pixEncodedImage || "";
@@ -324,6 +377,7 @@ export const reconcileBaneseReceivable = async (
       bankNumbers: recoveredBankNumbers,
       snapshot,
       expectedTransactions,
+      signal: dependencies.signal,
     });
 
   let futureSyncWarning: string | null = null;

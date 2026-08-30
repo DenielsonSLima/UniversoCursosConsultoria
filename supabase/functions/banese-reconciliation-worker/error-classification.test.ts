@@ -3,6 +3,7 @@ import {
   classifyBaneseReconciliationError,
   guardBaneseErrorStatusUpdate,
   shouldHaltBaneseReconciliationBatch,
+  shouldWriteBaneseReceivableError,
 } from "./error-classification.ts";
 
 Deno.test("grava erro somente no estado financeiro compatível", () => {
@@ -224,4 +225,17 @@ Deno.test("mantem baixa confirmada na fila quando a pos-baixa ficar pendente", (
     "BANESE_POST_SETTLEMENT_PENDING: baixa confirmada; conclusão interna aguardando nova tentativa.",
   );
   assert.doesNotMatch(classification.publicMessage, /detalhe interno/i);
+});
+
+Deno.test("timeout fica na auditoria sem virar revisão financeira do título", () => {
+  const timeout = classifyBaneseReconciliationError(
+    new DOMException("Timeout", "TimeoutError"),
+  );
+  const review = classifyBaneseReconciliationError(
+    new Error("Valor pago no Banese diverge dos termos confirmados do titulo."),
+  );
+
+  assert.equal(timeout.errorClass, "TIMEOUT");
+  assert.equal(shouldWriteBaneseReceivableError(timeout.errorClass), false);
+  assert.equal(shouldWriteBaneseReceivableError(review.errorClass), true);
 });

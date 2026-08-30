@@ -209,6 +209,56 @@ Deno.test("consulta comum evita renderizar QR quando o snapshot ja existe", asyn
   });
 });
 
+Deno.test("importação legada confirmada como não paga não consulta pagamentos efetivados", async () => {
+  const response = {
+    NossoNumero: BANESE_DOCUMENT_FIXTURE.ourNumber,
+    NumeroLinhaDigitavel: BANESE_DOCUMENT_FIXTURE.digitableLine,
+    NumeroCodigoBarras: BANESE_DOCUMENT_FIXTURE.barcode,
+    ValorNominal: BANESE_DOCUMENT_FIXTURE.amount,
+    DataVencimento: BANESE_DOCUMENT_FIXTURE.dueDate,
+    CodigoSituacaoBoleto: 2,
+  };
+
+  await withBaneseQueryFetch(response, async (methods) => {
+    const result = await queryBaneseBoleto(
+      { rpc: async () => ({ data: null, error: null }) },
+      "production",
+      {
+        convenio: BANESE_DOCUMENT_FIXTURE.beneficiary.agreement,
+        nossoNumero: BANESE_DOCUMENT_FIXTURE.ourNumber,
+        accessToken,
+        skipEffectivePaymentsWhenOfficiallyUnpaid: true,
+      },
+    );
+
+    assert.equal(result.paid, false);
+    assert.equal(result.remoteStatus, "PENDING");
+    assert.deepEqual(methods, ["GET"]);
+  });
+});
+
+Deno.test("consulta abandona GET que ignora o sinal de cancelamento", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = () => new Promise<Response>(() => {});
+  const controller = new AbortController();
+  try {
+    const query = queryBaneseBoleto(
+      { rpc: async () => ({ data: null, error: null }) },
+      "production",
+      {
+        convenio: BANESE_DOCUMENT_FIXTURE.beneficiary.agreement,
+        nossoNumero: BANESE_DOCUMENT_FIXTURE.ourNumber,
+        accessToken,
+        signal: controller.signal,
+      },
+    );
+    controller.abort(new DOMException("Banese query timeout", "TimeoutError"));
+    await assert.rejects(query, /Banese query timeout/i);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 Deno.test("consulta com Pix persistido ainda valida a identidade completa", async () => {
   const receivableId = BANESE_DOCUMENT_FIXTURE.receivableId;
   const response = {
@@ -336,7 +386,10 @@ Deno.test("recuperacao exige identidade do recebivel e do pagador", async () => 
         expectedPayerDocument: payerDocument,
       },
     );
-    assert.equal((result.raw as any).IdTituloEmpresa, receivableId.slice(0, 25));
+    assert.equal(
+      (result.raw as any).IdTituloEmpresa,
+      receivableId.slice(0, 25),
+    );
     assert.ok(result.pixPayload);
   });
 });

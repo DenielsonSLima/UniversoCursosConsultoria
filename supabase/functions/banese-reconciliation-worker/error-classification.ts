@@ -285,6 +285,13 @@ const SYSTEMIC_ERROR_CLASSES = new Set([
 export const shouldHaltBaneseReconciliationBatch = (errorClass: string) =>
   SYSTEMIC_ERROR_CLASSES.has(errorClass);
 
+// Erros transitórios são telemetria da execução, não divergência financeira
+// do título. Mantê-los em gateway_last_error faz a tela chamar uma simples
+// nova tentativa de "revisão", mesmo sem qualquer evidência de pagamento.
+export const shouldWriteBaneseReceivableError = (errorClass: string) =>
+  errorClass === "POST_SETTLEMENT_PENDING" ||
+  !SYSTEMIC_ERROR_CLASSES.has(errorClass);
+
 export const guardBaneseErrorStatusUpdate = (
   query: {
     eq: (column: string, value: unknown) => any;

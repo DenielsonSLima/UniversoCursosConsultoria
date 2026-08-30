@@ -1,6 +1,6 @@
 import type { BaneseAccessToken } from "./types.ts";
 import { BaneseAdapterError } from "./types.ts";
-import { asRecord, readResponseBody } from "./utils.ts";
+import { asRecord, awaitBaneseRead, readResponseBody } from "./utils.ts";
 
 export const queryBaneseEffectivePayments = async (input: {
   baseEndpoint: string;
@@ -9,7 +9,7 @@ export const queryBaneseEffectivePayments = async (input: {
   allowFailure: boolean;
 }) => {
   try {
-    const response = await fetch(
+    const response = await awaitBaneseRead(fetch(
       `${input.baseEndpoint}/pagamentos/efetivados`,
       {
         headers: {
@@ -17,8 +17,13 @@ export const queryBaneseEffectivePayments = async (input: {
         },
         signal: input.signal,
       },
-    );
-    const raw = await readResponseBody(response);
+    ), input.signal);
+    // HTTP 404 significa que nenhum pagamento foi efetuado ainda (boleto pendente).
+    // Não é um erro de consulta — o titulo está ativo e em aberto no banco.
+    if (response.status === 404) {
+      return { payments: [] as Array<Record<string, unknown>>, error: null };
+    }
+    const raw = await awaitBaneseRead(readResponseBody(response), input.signal);
     if (!response.ok) {
       throw new BaneseAdapterError(
         `A consulta canônica de PagamentosEfetivados do Banese falhou (${response.status}); o estado financeiro do boleto não pôde ser confirmado.`,

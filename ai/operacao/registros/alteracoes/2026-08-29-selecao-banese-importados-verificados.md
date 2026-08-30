@@ -1,63 +1,89 @@
-# Banese — seleção segura dos importados verificados
+# Banese — conciliação segura de importados e T42
 
 Data: 2026-08-29  
-Estado: concluído com publicação atômica deste manifesto
+Estado: concluído; Edge Function v83 ativa em produção
 
-## Conclusão da reunião
+## Diagnóstico confirmado
 
-Os 32 itens exibidos no painel não representam 32 pagamentos perdidos. Eles
-estão em `QUARANTINED`, portanto fora da baixa automática: 19 são títulos de
-Radiologia cujo retorno Banese reduziu zeros à esquerda do Nosso Número, e 13
-são títulos T42 que registraram a antiga falha interna de persistência. Não
-houve reabertura, baixa, emissão ou cancelamento neste lote.
+Os 32 itens não eram 32 baixas pendentes: eram 19 boletos importados pela API
+Banese na turma de Radiologia e 13 cobranças vigentes da T42. Os 13 títulos da
+Adenize (uma rematrícula e 12 parcelas) continuam pendentes; o histórico
+`SISTEMA_ANTERIOR` é separado e não entra na conciliação.
 
-Os 13 títulos novos de Adenize correspondem a uma rematrícula e 12 parcelas.
-Permanecem pendentes, sem pagamento, sem baixa e sem duplicidade. O histórico
-`SISTEMA_ANTERIOR` dessa matrícula é separado e não é alvo da conciliação.
+Não há recebimento Banese para os importados de Radiologia entre 26 e 29 de
+agosto de 2026. Das 19 reconsultas, 17 tiveram retorno oficial `PENDING`. Os
+dois que ficaram sem resposta (`000096578` e `000096691`) permanecem
+`PENDENTE/PENDING`, em `READY`, sem baixa nem quarentena.
 
-## Correção aplicada
+## Causa e correção
 
-A exclusão genérica pela origem `BANESE_API_LEGACY_DISCOVERY` impedia também
-os 196 boletos de Radiologia realmente importados pela API Banese. A regra foi
-substituída por prova positiva antes da consulta: título em aberto, Nosso
-Número de nove dígitos, `API` e `API_REGISTERED`, termos financeiros
-confirmados e transação Banese com Nosso Número, linha digitável e código de
-barras iguais aos do título.
+O retorno Banese pode remover zeros à esquerda do Nosso Número dos importados.
+Depois da normalização, a persistência de snapshot ainda podia exceder a janela
+do worker e deixar conexões REST órfãs; essas conexões esgotaram o pool do
+PostgREST e geraram tentativas repetidas (`RUN_FAILED`). O volume de importação
+não era a causa: importação e consulta são fluxos diferentes.
 
-A migration não atualiza `contas_receber`, transações nem fila. Ela preserva
-`QUARANTINED`, a reserva atômica, `SKIP LOCKED`, invocador seguro e execução
-exclusiva por `service_role`.
+A correção preserva a baixa automática somente para retorno bancário pago com
+detalhe validado. Para legado confirmado como pendente, valida a identidade
+necessária e encerra sem gravar snapshot histórico. GET Banese e a RPC de
+persistência respeitam cancelamento, a RPC tem limite de lock/duração e timeout
+ou rede ficam apenas na auditoria, sem mensagem de revisão financeira no título.
 
-## Validação em produção
+O pool REST foi reinicializado de modo controlado após confirmar que as
+conexões eram requisições órfãs de persistência. As transações em andamento
+sofreram rollback; dois runs incompletos foram fechados tecnicamente e seus
+títulos retornaram à fila sem mutação financeira.
 
-- seleção por origem removida da RPC: confirmada;
-- evidência financeira completa exigida: confirmada;
-- importados API de Radiologia aptos pela prova: 196;
-- estado da fila após a migration: 206 `READY`, 32 `QUARANTINED`, 27 `DONE`;
-- testes focados de contrato: 6 aprovados.
+## Validação e limites
 
-Os títulos serão consultados somente quando alcançarem `next_check_at`; o lote
-não força consulta nem baixa. Assim, o progresso P3 conta consultas reais e
-seguras, não o total bruto de títulos agendados.
+- 35 testes Deno e 1 contrato Node do fluxo passaram antes da publicação;
+  11 testes adicionais passaram depois da guarda de timeout.
+- Edge Function `banese-reconciliation-worker` v83 foi publicada.
+- `000096578` e `000096691` não foram baixados nem alterados para pago. A
+  consulta de `000096691` excedeu 40 segundos e será tentada pela fila; isso
+  é uma indisponibilidade transitória de consulta, não evidência financeira.
+- Os registros antigos de erro continuam na auditoria por rastreabilidade; o
+  contador de revisão operacional considera apenas estado ativo, que ficou em
+  zero.
 
-## Migration aplicada
+## Migrations aplicadas
 
-| Arquivo | ID remoto | SHA-256 |
-| --- | --- | --- |
-| `20260829203000_restore_verified_banese_imports_to_reconciliation.sql` | `20260829203000` | `e2be35f892e873cef1707005347e4d6d039c7c225b78e0becbcdfbdceab2f8fb` |
+| Arquivo | ID remoto |
+| --- | --- |
+| `20260829234500_requeue_banese_quarantine_after_normalized_recheck.sql` | `20260830003344` |
+| `20260830014000_bound_banese_reconciliation_snapshot_locks.sql` | `20260830013801` |
+| `20260830020000_verify_banese_worker_token_without_secret_read.sql` | `20260830014642` |
+| `20260830021500_remove_temporary_banese_worker_token_verifier.sql` | `20260830020112` |
 
 ## Manifesto explícito
 
-Total: 6 arquivos (3 modificados, 3 adicionados, 0 removidos)
-
-### Modificados
+Total: 28 arquivos
 
 - `ai/operacao/LOTE_ATIVO.md`
 - `ai/operacao/qualidade/limite-linhas-manifestos.json`
 - `ai/operacao/qualidade/migrations-aplicadas.json`
-
-### Adicionados
-
 - `ai/operacao/registros/alteracoes/2026-08-29-selecao-banese-importados-verificados.md`
+- `supabase/functions/banese/core/adapter/boleto-payment-query.ts`
+- `supabase/functions/banese/core/adapter/boleto-query.ts`
+- `supabase/functions/banese/core/adapter/boleto-query-pix.test.ts`
+- `supabase/functions/banese/core/adapter/utils.ts`
+- `supabase/functions/banese-reconciliation-worker/error-classification.test.ts`
+- `supabase/functions/banese-reconciliation-worker/error-classification.ts`
+- `supabase/functions/banese-reconciliation-worker/index.ts`
+- `supabase/functions/banese-reconciliation-worker/response.ts`
+- `supabase/functions/gateways/api/banese-legacy-import-reconciliation.test.ts`
+- `supabase/functions/gateways/api/banese-pix-reconciliation.fixture.ts`
+- `supabase/functions/gateways/api/banese-pix-reconciliation.test.ts`
+- `supabase/functions/gateways/api/banese-pix-recovery-legacy.test.ts`
+- `supabase/functions/gateways/api/banese-pix-recovery.ts`
+- `supabase/functions/gateways/api/banese-reconciliation-persistence.test.ts`
+- `supabase/functions/gateways/api/banese-reconciliation-persistence.ts`
+- `supabase/functions/gateways/api/banese-remote-title-number.test.ts`
+- `supabase/functions/gateways/api/banese.ts`
 - `supabase/migrations/20260829203000_restore_verified_banese_imports_to_reconciliation.sql`
-- `supabase/tests/banese_verified_import_queue_selection.contract.test.ts`
+- `supabase/migrations/20260829234500_requeue_banese_quarantine_after_normalized_recheck.sql`
+- `supabase/migrations/20260830014000_bound_banese_reconciliation_snapshot_locks.sql`
+- `supabase/migrations/20260830020000_verify_banese_worker_token_without_secret_read.sql`
+- `supabase/migrations/20260830021500_remove_temporary_banese_worker_token_verifier.sql`
+- `supabase/tests/banese_quarantine_normalized_recheck.contract.test.ts`
+- `supabase/tests/banese_reconciliation_persistence_timeout.contract.test.ts`

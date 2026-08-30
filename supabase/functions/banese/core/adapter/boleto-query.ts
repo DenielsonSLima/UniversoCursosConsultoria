@@ -17,6 +17,7 @@ import {
   assertEnvironment,
   firstString,
   onlyDigits,
+  awaitBaneseRead,
   readResponseBody,
   sanitizedBoletoSnapshot,
 } from "./utils.ts";
@@ -31,6 +32,7 @@ export const queryBaneseBoleto = async (
     nossoNumero: unknown;
     accessToken?: BaneseAccessToken;
     recoverPix?: boolean;
+    skipEffectivePaymentsWhenOfficiallyUnpaid?: boolean;
     validateTitleIdentity?: boolean;
     expectedAmount?: unknown;
     expectedDueDate?: unknown;
@@ -55,11 +57,11 @@ export const queryBaneseBoleto = async (
     await requestBaneseBoletoAccessToken(admin, environment);
   const baseEndpoint = `${BANESE_BOLETO_ENDPOINTS[environment].baseUrl}` +
     `/convenios/${convenio}/boletos/${nossoNumero}`;
-  const response = await fetch(baseEndpoint, {
+  const response = await awaitBaneseRead(fetch(baseEndpoint, {
     headers: { Authorization: `${token.tokenType} ${token.accessToken}` },
     signal: input.signal,
-  });
-  const raw = await readResponseBody(response);
+  }), input.signal);
+  const raw = await awaitBaneseRead(readResponseBody(response), input.signal);
   if (!response.ok) {
     throw new BaneseAdapterError(
       `Banese recusou consulta do boleto (${response.status}): ${
@@ -140,16 +142,20 @@ export const queryBaneseBoleto = async (
     boleto.CodigoSituacaoBoleto ?? boleto.codigoSituacaoBoleto,
   );
   const remoteStatus = BANESE_BOLETO_STATUS[situationCode] || "UNKNOWN";
-  const { payments, error: paymentsError } = await queryBaneseEffectivePayments(
-    {
+  const officiallyUnpaid = [2, 4, 5, 6, 7, 8].includes(situationCode);
+  const skipPayments =
+    input.skipEffectivePaymentsWhenOfficiallyUnpaid === true &&
+    officiallyUnpaid;
+  const { payments, error: paymentsError } = skipPayments
+    ? { payments: [] as Array<Record<string, unknown>>, error: null }
+    : await queryBaneseEffectivePayments({
       baseEndpoint,
       token,
       signal: input.signal,
       allowFailure: Boolean(
         recoveredPix?.pixPayload && recoveredPix.pixEncodedImage,
       ),
-    },
-  );
+    });
   const paid = payments.length > 0;
 
   return {

@@ -11,6 +11,7 @@ import {
   scheduledLaunchAt,
 } from "./pacing.ts";
 import { readRequestBody, safeEqual } from "./request-guards.ts";
+import { json } from "./response.ts";
 import {
   createLazyAsyncValue,
   queryWithSingleBaneseAuthRetry,
@@ -19,6 +20,7 @@ import {
   classifyBaneseReconciliationError,
   guardBaneseErrorStatusUpdate,
   shouldHaltBaneseReconciliationBatch,
+  shouldWriteBaneseReceivableError,
 } from "./error-classification.ts";
 import {
   recoverBaneseIncidentBatch,
@@ -33,16 +35,6 @@ type CachedToken = { token: BaneseAccessToken; expiresAt: number };
 
 const tokenCache = new Map<Environment, CachedToken>();
 const tokenRequests = new Map<Environment, Promise<BaneseAccessToken>>();
-
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      "Cache-Control": "no-store",
-      "X-Content-Type-Options": "nosniff",
-    },
-  });
 
 const wait = (milliseconds: number, signal?: AbortSignal) =>
   new Promise<void>((resolve) => {
@@ -120,14 +112,19 @@ Deno.serve(async (req: Request) => {
   const { data: configuredSecret, error: secretError } = await admin.rpc(
     "get_banese_reconciliation_worker_secret",
   );
+  if (secretError || typeof configuredSecret !== "string" || configuredSecret.length < 32) {
+    const errorCode = String(
+      (secretError as { code?: unknown } | null)?.code || "RPC",
+    );
+    console.error("banese reconciliation worker secret unavailable", {
+      code: errorCode,
+    });
+    return json({ error: "Configuração indisponível.", code: errorCode }, 500);
+  }
   const requestSecret = String(
     req.headers.get("X-Banese-Worker-Token") ?? "",
   ).trim();
-  const expectedSecret = String(configuredSecret ?? "").trim();
-  if (
-    secretError || expectedSecret.length < 32 ||
-    !safeEqual(requestSecret, expectedSecret)
-  ) {
+  if (!safeEqual(requestSecret, configuredSecret)) {
     return json({ error: "Não autorizado." }, 401);
   }
 
@@ -300,7 +297,7 @@ Deno.serve(async (req: Request) => {
     });
     const remainingMs = Math.max(
       250,
-      Math.min(8_000, pacing.queryDeadline - Date.now()),
+      Math.min(items.length <= 2 ? 40_000 : 8_000, pacing.queryDeadline - Date.now()),
     );
     const timeout = setTimeout(
       () =>
@@ -345,6 +342,7 @@ Deno.serve(async (req: Request) => {
 
       const result = await reconcileBaneseReceivable(admin, receivableId, {
         queryBoleto: queryWithSharedToken,
+        signal: queryController.signal,
       });
       if (Date.now() > pacing.hardDeadline) {
         // A reconciliação pode já ter aplicado a baixa e ativado o EAD.
@@ -395,7 +393,7 @@ Deno.serve(async (req: Request) => {
           classification.errorClass,
         httpStatus: classification.httpStatus,
       });
-      if (classification.errorClass !== "AUDIT_WRITE") {
+      if (shouldWriteBaneseReceivableError(classification.errorClass)) {
         let errorUpdate = admin
           .from("contas_receber")
           .update({
