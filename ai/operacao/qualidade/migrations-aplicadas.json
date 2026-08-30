@@ -357,6 +357,13 @@
       "remoteId": "20260830135741",
       "sha256": "a265ecf88037336ba6358ad9e26876f9ea732d1d4ef0c0ce77802190de27d290",
       "reason": "Migration aplicada em Produção; conflito CAS Banese retorna HTTP 409 sem retry serializável."
+    },
+    {
+      "path": "supabase/migrations/20260830154500_cap_banese_automatic_profile_at_p6.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260830185530",
+      "sha256": "080e20f0b28812f0ecb0f9a9ef6ffd05c3bf7f0ae5aa65e812385a93b55f09a4",
+      "reason": "Migration aplicada em Produção; limita a escada automática Banese a P3-P6 sem elevar o perfil efetivo P3."
     }
   ]
 }

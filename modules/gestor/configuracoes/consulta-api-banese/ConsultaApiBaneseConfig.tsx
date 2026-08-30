@@ -187,14 +187,14 @@ const ConsultaApiBaneseConfig = () => {
               <p className="text-[9px] font-black uppercase tracking-widest text-blue-600">Exemplo do seletor atual</p>
               <h3 className="mt-2 text-lg font-black">
                 {config.mode === 'AUTOMATIC'
-                  ? `Automático P3 → P9: P${config.effective_profile_id} agora`
+                  ? `Automático P3 → P6: P${config.effective_profile_id} agora`
                   : config.mode === 'MANUAL'
                     ? `Manual: P${config.effective_profile_id}`
                     : `Pausado no P${config.effective_profile_id}`}
               </h3>
               <p className="mt-2 text-xs font-semibold leading-relaxed">
                 {config.mode === 'AUTOMATIC'
-                  ? 'O marcador acompanha o perfil efetivo entre o piso P3 e o teto P9. O sistema avança gradualmente nessa faixa e recua se detectar erro ou HTTP 429.'
+                  ? 'O marcador acompanha o perfil efetivo entre o piso P3 e o teto P6. O sistema avança gradualmente nessa faixa e recua se detectar erro ou HTTP 429.'
                   : config.mode === 'MANUAL'
                     ? 'O perfil escolhido é aplicado diretamente e permanece fixo até nova alteração auditada.'
                     : 'Nenhum novo título é reservado enquanto a operação estiver pausada.'}
@@ -271,7 +271,7 @@ const ConsultaApiBaneseConfig = () => {
                         checked={draftMode === value}
                         onChange={() => {
                           setDraftMode(value);
-                          if (value === 'AUTOMATIC') setDraftProfile(9);
+                          if (value === 'AUTOMATIC') setDraftProfile(6);
                         }}
                       />
                       {value === 'PAUSED' ? <PauseCircle size={15} /> : <Activity size={15} />}
@@ -285,7 +285,7 @@ const ConsultaApiBaneseConfig = () => {
                   <p className="font-black uppercase tracking-wider text-blue-700">Perfil controlado pelo automático</p>
                   <p className="mt-2 text-lg font-black text-[#001a33]">P{config.effective_profile_id} — {effective?.name}</p>
                   <p className="mt-1 text-sm font-semibold text-slate-600">
-                    O usuário não altera o perfil enquanto este modo estiver ativo. O sistema avança sozinho do piso P3 ao teto P9 após a amostra estável e retorna ao fallback anterior ao detectar qualquer erro.
+                    O usuário não altera o perfil enquanto este modo estiver ativo. O sistema avança sozinho do piso P3 ao teto P6 após a amostra estável e retorna ao fallback anterior ao detectar qualquer erro.
                   </p>
                 </div>
               ) : null}
@@ -326,7 +326,7 @@ const ConsultaApiBaneseConfig = () => {
                 <div className="flex gap-3"><AlertTriangle className="shrink-0" size={22} /><div>
                   <h3 className="font-black">Autopiloto conservador</h3>
                   <p className="mt-1 text-xs font-semibold leading-relaxed">
-                    Na escada automática P3 → P9, a promoção exige uma hora e amostra real sem erros. Qualquer erro recua para o fallback seguro; HTTP 429 também interrompe o lote e abre resfriamento de uma hora.
+                    Na escada automática P3 → P6, a promoção exige uma hora e amostra real sem erros. Qualquer erro recua para o fallback seguro; HTTP 429 também interrompe o lote e abre resfriamento de uma hora.
                   </p>
                 </div></div>
               </article>
@@ -348,7 +348,7 @@ const ConsultaApiBaneseConfig = () => {
       {activeTab === 'profiles' ? (
         <section className="space-y-4">
           <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4 text-xs font-semibold leading-relaxed text-blue-900">
-            No automático, o marcador acompanha o perfil efetivo e fica bloqueado para edição. A escada vai do piso P3 ao teto P9, com avanço condicionado a amostra real estável. P10–P16 são testes manuais temporários e P17–P20 permanecem bloqueados aguardando retorno.
+            No automático, o marcador acompanha o perfil efetivo e fica bloqueado para edição. A escada vai do piso P3 ao teto P6, com avanço condicionado a amostra real estável. P1–P2 e P7–P20 permanecem disponíveis somente no modo manual; perfis temporários expiram automaticamente.
           </div>
           <fieldset>
             <legend className="sr-only">Perfis operacionais da consulta Banese</legend>

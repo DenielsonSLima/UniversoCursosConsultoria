@@ -2,97 +2,100 @@
 
 Estado: `CONCLUÍDO`
 
-## Lote: 2026-08-30-hotfix-banese-timeout-pool
+## Lote: 2026-08-30-conciliacao-banese-filtros-teto-p6
 
-- Pedido: descobrir a origem da CPU a 100% depois da conciliação Banese,
-  corrigir sem upgrade e publicar o hotfix em produção/GitHub.
+- Pedido: corrigir os filtros da conciliação, publicar o hotfix e limitar o
+  piloto automático Banese ao teto P6 sem elevar o perfil efetivo diretamente.
 - Manifesto explícito:
-  `ai/operacao/registros/alteracoes/2026-08-30-hotfix-banese-timeout-pool.md`.
-- Autorização: o usuário autorizou correção financeira, produção e GitHub.
-- Risco: crítico — consulta bancária, baixa automática e infraestrutura.
+  `ai/operacao/registros/alteracoes/2026-08-30-conciliacao-banese-filtros-teto-p6.md`.
+- Autorização: o usuário autorizou GitHub, produção e teto automático P6.
+- Risco: crítico — financeiro, Supabase e publicação.
 
 ### Diagnóstico confirmado
 
-1. O volume do Banese não era o gargalo. A fila tem somente recebíveis Banese
-   pendentes com Nosso Número e identidade conciliável; histórico com
-   `origem_pagamento = SISTEMA_ANTERIOR` permanece fora.
-2. O worker P3 cortava consultas em oito segundos e podia abandonar RPCs
-   PostgREST. Isso deixava runs incompletos e conexões repetindo transações.
-3. O campo derivado `is_legacy_import` era enviado por engano no snapshot CAS.
-   Quando o Banese indicava pagamento, a RPC detectava uma falsa mudança e
-   lançava SQLSTATE `40001`; a cadeia CAS/PostgREST repetia o contexto
-   transacional em laço, elevando a CPU e degradando o Auth.
-4. A indicação genérica `orders` do painel não corresponde a tabela, cron ou
-   rotina deste projeto.
+1. Os botões Todos, Pago, Pendente e Vencido alteravam o estado, mas a lista
+   mantinha os dados anteriores com `keepPreviousData` enquanto a nova consulta
+   executava. Isso fazia filtros diferentes parecerem idênticos.
+2. Cada troca de filtro também disparava indicadores, histórico completo de
+   transações e diagnóstico RPC. O histórico pesado sofreu timeout PostgREST e
+   podia degradar a tela inteira.
+3. Eventos Realtime invalidavam todas essas consultas em rajada, inclusive
+   diagnósticos que não estavam visíveis.
+4. O teto automático configurado era P9. O perfil efetivo de produção continuava
+   P3; portanto, mudar somente o teto para P6 não exige salto de ritmo.
+5. O `main` remoto tinha seis falhas mecânicas de lint deixadas pelo hotfix
+   anterior. Elas foram isoladas em quatro arquivos Banese sem mudança de regra.
 
-### Correção em produção
+### Correção do lote
 
-- Edge Function `banese-reconciliation-worker` v89 ativa.
-- O deadline local cancela somente OAuth/GET do Banese; não abandona RPC de
-  persistência. A espera artificial de drenagem foi removida.
-- O snapshot CAS contém somente as 13 chaves canônicas; marcadores derivados
-  de importação não entram na comparação financeira.
-- Os três conflitos CAS da RPC agora retornam `PT409`, sem retry automático.
-- RPCs críticas mantêm `lock_timeout = 2s` e `statement_timeout = 7s`.
-- Timeout/rede continuam auditáveis, sem virar baixa ou revisão financeira.
-- Uma resposta pendente válida de boleto importado limpa por CAS somente os
-  dois marcadores genéricos de conciliação; baixa, status, valor e auditoria
-  histórica não são alterados.
-- Todos os crons críticos, inclusive conciliação e cancelamento Banese, foram
-  restaurados depois da observação e dos canários aprovados.
+- A lista filtrada, os oito indicadores e os diagnósticos pesados usam consultas
+  independentes.
+- A aba de diagnóstico é a única que habilita histórico de transações e RPC de
+  sincronização; falha parcial não apaga a lista.
+- A lista não reaproveita linhas do filtro anterior. Estados bancários são
+  mapeados explicitamente e Pendente exclui Pago e Vencido.
+- Realtime separa invalidação de recebíveis e diagnósticos e agrupa rajadas por
+  dois segundos.
+- A interface deixa de prometer webhook Banese inexistente e informa claramente
+  indisponibilidade temporária do histórico.
+- A migration `20260830154500` torna P3–P6 a única escada automática,
+  preserva P3 efetivo, estabilidade, cooldown e estado, e mantém P7–P20 somente
+  no modo manual.
+- A migration falha fechada se encontrar perfil automático efetivo ou estável
+  acima de P6 e não altera títulos, baixas, fila ou tentativas.
+- Os quatro reparos de lint qualificam globals Deno por `globalThis` e removem
+  uma importação não usada; a lógica financeira permanece idêntica.
 
-### Validação atual
+### Aceite e validação
 
-- 32 testes do worker, 28 do fluxo focado de persistência/importação, 49
-  contratos Banese e 11 testes Node passaram; `deno check` e `deno fmt --check`
-  aprovados. A simulação local também confirmou 60 sucessos e o tratamento de
-  HTTP 429 sem medir o limite real do banco.
-- Função remota verificada: 3 guardas `PT409`, 0 guardas `40001`,
-  `SECURITY DEFINER` e limites de 2s/7s preservados.
-- Após encerrar somente as conexões órfãs do canário, a taxa anormal caiu de
-  cerca de 1.760 chamadas/s para 0,0; sem transação ociosa ou bloqueio.
-- Dois canários finais concluíram 2/2 em 2,15 s e 2/2 em 1,68 s, ambos com uma
-  resposta pendente, uma paga e zero falha. Os importados de Radiologia
-  `000096578` e `000096691` foram baixados pela resposta oficial do Banese:
-  pagamento em 28/08/2026, R$ 240,00 cada, sem baixa manual.
-- Encerrada a estabilidade, o cron real concluiu 18/18 em 10,63 s e zero
-  falha. A v89 reconsultou os 17 marcadores antigos em 9,97 s: 17 pendentes,
-  zero pago, zero falha e zero throttling. O estado final ficou com 0 marcador
-  atual, 0 em revisão, 0 pago na fila, 0 lease e 0 lock esperando.
-- As tentativas antigas continuam na auditoria. O cartão “última hora” perde
-  cada timeout automaticamente aos 60 minutos; são 444 tentativas históricas,
-  2 ainda dentro da última hora e 0 novo erro depois do hotfix. Esse histórico
-  não representa nova consulta de título já pago.
-- A suíte adjacente de roteamento ficou em 25/27 por dois testes antigos de
-  fallback quando não existe Nosso Número. Esses arquivos não foram alterados;
-  a seleção de produção exige Nosso Número explícito, como solicitado.
-- Os 19 arquivos do manifesto respeitam o teto de 500 linhas. O verificador
-  global ainda aponta somente o arquivo ativo preexistente
-  `banese-reconciliation-contract.ts`, com 503 linhas; ele não foi apagado nem
-  misturado ao hotfix financeiro.
-- Observação final concluída após 11:29:16 BRT, sem nova pressão no banco; os
-  cinco crons críticos verificados estão ativos.
+- Trocar o status refaz apenas a lista e nunca mantém linhas do filtro anterior.
+- Diagnóstico pesado não executa fora da aba correspondente.
+- P6 é somente teto; o perfil efetivo permanece P3 e sobe gradualmente pelas
+  condições existentes de amostra real e uma hora estável.
+- 20 contratos Node focados, 25 testes Deno e 11 testes do controle Banese
+  passaram.
+- ESLint global, TypeScript, build de produção e teto global de 500 linhas
+  passaram.
+- Smoke autenticado da interface permanece pendente porque nenhuma sessão de
+  navegador foi disponibilizada ao agente; a validação de produção será feita
+  por checks, endpoint e estado remoto.
+- A migration foi aplicada em produção como `20260830185530`: teto P6,
+  efetivo P3, último estável P3, estado `OBSERVING`, estabilidade preservada e
+  duas auditorias `SYSTEM_POLICY` com perfil efetivo 3 → 3.
+- A primeira tentativa falhou antes do commit por conflito com a constraint P9;
+  a transação reverteu por completo. A ordem foi corrigida, revisada de forma
+  independente e reaplicada atomicamente.
+- As oito execuções produtivas mais recentes depois da mudança concluíram em
+  P3 com `SUCCESS`, zero falha e zero throttling, entre 0,86 s e 1,15 s.
+- Os advisors não apontaram vulnerabilidade ou regressão criada pelo teto P6;
+  avisos preexistentes de RLS, índices e funções administrativas permanecem
+  fora deste lote e não foram ampliados silenciosamente.
 
 ### Manifesto explícito
 
-Total: 19 arquivos
+Total: 24 arquivos
 
 - `ai/operacao/LOTE_ATIVO.md`
 - `ai/operacao/qualidade/limite-linhas-manifestos.json`
 - `ai/operacao/qualidade/migrations-aplicadas.json`
-- `ai/operacao/registros/alteracoes/2026-08-30-hotfix-banese-timeout-pool.md`
+- `ai/operacao/registros/alteracoes/2026-08-30-conciliacao-banese-filtros-teto-p6.md`
+- `internal/versioning/CHANGELOG.md`
+- `internal/versioning/system-version.json`
 - `scripts/test-banese-reconciliation-control.mjs`
+- `modules/gestor/configuracoes/consulta-api-banese/BaneseAutopilotProgress.tsx`
+- `modules/gestor/configuracoes/consulta-api-banese/ConsultaApiBaneseConfig.tsx`
+- `modules/gestor/configuracoes/consulta-api-banese/banese-autopilot-cooldown.contract.test.ts`
+- `modules/gestor/financeiro/conciliacao-bancaria/ConciliacaoBancariaTab.tsx`
+- `modules/gestor/financeiro/conciliacao-bancaria/components/ConciliacaoOrigemBaixaPanel.tsx`
+- `modules/gestor/financeiro/conciliacao-bancaria/components/ConciliacaoTransactionsPanel.tsx`
+- `modules/gestor/financeiro/conciliacao-bancaria/conciliacao-bancaria.fetch.ts`
+- `modules/gestor/financeiro/conciliacao-bancaria/conciliacao-bancaria.filter-state.contract.test.ts`
+- `modules/gestor/financeiro/conciliacao-bancaria/conciliacao-bancaria.filters.test.ts`
+- `modules/gestor/financeiro/conciliacao-bancaria/conciliacao-bancaria.filters.ts`
+- `modules/gestor/financeiro/conciliacao-bancaria/hooks/useBaneseConciliacaoQueries.ts`
 - `supabase/functions/banese-reconciliation-worker/error-classification.test.ts`
-- `supabase/functions/banese-reconciliation-worker/error-classification.ts`
-- `supabase/functions/banese-reconciliation-worker/index.ts`
-- `supabase/functions/banese-reconciliation-worker/pacing.test.ts`
-- `supabase/functions/banese-reconciliation-worker/pacing.ts`
+- `supabase/functions/banese/core/adapter/boleto-query-pix.test.ts`
 - `supabase/functions/gateways/api/banese-reconciliation-persistence.test.ts`
-- `supabase/functions/gateways/api/banese-reconciliation-persistence.ts`
-- `supabase/functions/gateways/api/banese-legacy-import-reconciliation.test.ts`
 - `supabase/functions/gateways/api/banese.ts`
-- `supabase/migrations/20260830104000_harden_banese_timeout_drain.sql`
-- `supabase/migrations/20260830105000_reclassify_banese_canary_postgrest_timeouts.sql`
-- `supabase/migrations/20260830112000_stop_banese_cas_retry_loop.sql`
-- `supabase/tests/banese_reconciliation_cas_retry.contract.test.ts`
-- `supabase/tests/banese_reconciliation_timeout_drain.contract.test.ts`
+- `supabase/migrations/20260830154500_cap_banese_automatic_profile_at_p6.sql`
+- `supabase/tests/banese_automatic_p3_p6_ceiling.contract.test.ts`

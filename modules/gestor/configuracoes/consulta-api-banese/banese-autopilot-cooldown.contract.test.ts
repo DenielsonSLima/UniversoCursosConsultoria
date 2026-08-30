@@ -27,20 +27,21 @@ test('cooldown futuro interrompe a leitura visual de minutos estáveis', () => {
 
 test('cooldown informa pausa, retomada e horário final de forma acessível', () => {
   assert.match(progress, /Nenhum novo título é reservado durante este período\./);
-  assert.match(progress, /A contagem de 60 minutos estáveis[\s\S]+recomeça do zero na retomada da escada automática P3 → P9/);
+  assert.match(progress, /A contagem de 60 minutos estáveis[\s\S]+recomeça do zero na retomada da escada automática P3 → P6/);
   assert.match(progress, /Resfriamento até/);
   assert.match(progress, /<time dateTime=\{cooldownUntil \|\| undefined\}>/);
   assert.match(progress, /role="status"/);
   assert.match(progress, /aria-live="polite"/);
 });
 
-test('cópias delimitam a escada automática entre o piso P3 e o teto P9', () => {
-  assert.match(page, /Automático P3 → P9/);
-  assert.match(page, /piso P3 e o teto P9/);
-  assert.match(page, /P10–P16 são testes manuais temporários/);
-  assert.match(page, /if \(value === 'AUTOMATIC'\) setDraftProfile\(9\)/);
-  assert.match(progress, /Teto automático P9 alcançado/);
+test('cópias delimitam a escada automática entre o piso P3 e o teto P6', () => {
+  assert.match(page, /Automático P3 → P6/);
+  assert.match(page, /piso P3 e o teto P6/);
+  assert.match(page, /P1–P2 e P7–P20 permanecem disponíveis somente no modo manual/);
+  assert.match(page, /if \(value === 'AUTOMATIC'\) setDraftProfile\(6\)/);
+  assert.match(progress, /Teto automático P6 alcançado/);
   assert.doesNotMatch(page, /O teto é P10/);
+  assert.doesNotMatch(page, /setDraftProfile\(9\)/);
   assert.doesNotMatch(page, /setDraftProfile\(10\)/);
 });
 

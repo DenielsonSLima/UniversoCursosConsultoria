@@ -3,8 +3,14 @@ import { AlertCircle } from 'lucide-react';
 import type { BaneseTransaction } from '../conciliacao-bancaria.fetch';
 import { formatConciliacaoDate } from '../conciliacao-bancaria.formatters';
 
-const ConciliacaoTransactionsPanel: React.FC<{ transactions: BaneseTransaction[] }> = ({
+interface ConciliacaoTransactionsPanelProps {
+  transactions: BaneseTransaction[];
+  isUnavailable?: boolean;
+}
+
+const ConciliacaoTransactionsPanel: React.FC<ConciliacaoTransactionsPanelProps> = ({
   transactions,
+  isUnavailable = false,
 }) => (
   <section className="rounded-[2rem] border border-slate-100 bg-white p-6 shadow-sm">
     <div className="mb-4 flex items-center gap-2">
@@ -24,7 +30,11 @@ const ConciliacaoTransactionsPanel: React.FC<{ transactions: BaneseTransaction[]
         <tbody className="divide-y divide-slate-50">
           {transactions.length === 0 ? (
             <tr>
-              <td colSpan={4} className="p-4 text-xs text-slate-500">Ainda sem retorno registrado.</td>
+              <td colSpan={4} className="p-4 text-xs text-slate-500">
+                {isUnavailable
+                  ? 'Histórico temporariamente indisponível.'
+                  : 'Ainda sem retorno registrado.'}
+              </td>
             </tr>
           ) : transactions.map((row) => (
             <tr key={row.id} className="hover:bg-slate-50">

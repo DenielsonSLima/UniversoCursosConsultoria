@@ -1,8 +1,8 @@
 {
-  "version": "4.8.12",
+  "version": "4.8.13",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 21,
-  "releasedAt": "2026-08-28",
-  "summary": "Carnê Banese T42 com 13 títulos, Pix oficial e modelo fixo de 3 por A4"
+  "revision": 22,
+  "releasedAt": "2026-08-30",
+  "summary": "Conciliação Banese com filtros fiéis, consultas isoladas e teto automático P6"
 }

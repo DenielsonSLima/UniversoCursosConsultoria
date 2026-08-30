@@ -29,7 +29,7 @@ const profilePolicyMigrationPath = new URL(
   import.meta.url,
 );
 const activeProfilePolicyMigrationPath = new URL(
-  '../supabase/migrations/20260827005500_define_banese_automatic_p3_p9_policy.sql',
+  '../supabase/migrations/20260830154500_cap_banese_automatic_profile_at_p6.sql',
   import.meta.url,
 );
 const atomicReservationMigrationPath = new URL(
@@ -147,27 +147,27 @@ test('preserva como histórico a política P10 que antecedeu a faixa ativa', () 
   assert.match(profilePolicyMigration, /group_name = 'AWAITING_BANESE'/);
 });
 
-test('política ativa limita o automático a P3-P9 e mantém rollback gradual', () => {
-  assert.match(activeProfilePolicyMigration, /set automatic_selectable = id between 3 and 9/i);
+test('política ativa limita o automático a P3-P6 e mantém rollback gradual', () => {
+  assert.match(activeProfilePolicyMigration, /automatic_selectable = id between 3 and 6/i);
   assert.match(
     activeProfilePolicyMigration,
-    /banese_reconciliation_config_automatic_range_check check[\s\S]+selected_profile_id = 9[\s\S]+effective_profile_id between 3 and 9[\s\S]+last_stable_profile_id between 3 and 9/i,
+    /banese_reconciliation_config_automatic_range_check check[\s\S]+selected_profile_id = 6[\s\S]+effective_profile_id between 3 and 6[\s\S]+last_stable_profile_id between 3 and 6/i,
   );
   assert.match(
     activeProfilePolicyMigration,
-    /v_new_target constant text :=[\s\S]+v_target_profile := case when v_mode = 'AUTOMATIC' then 9 else p_profile_id end/i,
+    /v_new_target constant text :=[\s\S]+v_target_profile := case when v_mode = 'AUTOMATIC' then 6 else p_profile_id end/i,
   );
   assert.match(
     activeProfilePolicyMigration,
-    /when v_mode = 'AUTOMATIC' then 3[\s\S]+v_new_rollback constant text :=[\s\S]+when v_config\.mode = 'AUTOMATIC' then greatest\([\s\S]+3,[\s\S]+least\([\s\S]+9,/i,
+    /v_new_effective constant text :=[\s\S]+greatest\(3, least\(6, effective_profile_id\)\)/i,
   );
   assert.match(
     activeProfilePolicyMigration,
-    /v_to_profile := least\(9, v_config\.selected_profile_id, v_from_profile \+ 1\)/i,
+    /v_to_profile := least\(6, v_config\.selected_profile_id, v_from_profile \+ 1\)/i,
   );
   assert.match(
     activeProfilePolicyMigration,
-    /Teste temporário expirado; reinício no P3 com teto automático P9/i,
+    /teto automático P6/i,
   );
 });
 
