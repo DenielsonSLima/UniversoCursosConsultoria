@@ -4,6 +4,28 @@ Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente
 
 Histórico anterior: [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
 
+## [4.8.13] - 2026-08-30
+
+### Corrigido
+
+- Os filtros Todos, Pago, Pendente e Vencido da conciliação Banese passam a
+  carregar somente o estado selecionado, sem manter linhas da consulta anterior.
+- Lista, indicadores e diagnósticos pesados usam consultas independentes; o
+  histórico completo só executa na aba correspondente e falhas parciais não
+  apagam os títulos visíveis.
+- Invalidações Realtime são agrupadas e direcionadas, reduzindo leituras
+  repetidas no Supabase.
+
+### Segurança e qualidade
+
+- O piloto automático Banese fica limitado à escada P3–P6; produção preserva o
+  perfil efetivo P3 e só avança pelas condições existentes de amostra real e
+  estabilidade.
+- A migration preserva títulos, pagamentos, baixas, filas, tentativas,
+  estabilidade e cooldown, mantendo P7–P20 disponíveis somente no modo manual.
+- A validação aprovou 20 contratos Node, 25 testes Deno, 11 testes do controle
+  Banese, ESLint, TypeScript, build e o teto global de 500 linhas.
+
 ## [4.8.12] - 2026-08-28
 
 ### Corrigido

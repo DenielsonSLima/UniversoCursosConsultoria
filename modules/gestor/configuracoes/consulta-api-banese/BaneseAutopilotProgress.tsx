@@ -40,7 +40,7 @@ const BaneseAutopilotProgress = ({
             <h3 className="mt-2 text-xl font-black">Consultas temporariamente pausadas</h3>
             <p className="mt-2 max-w-3xl text-sm font-semibold leading-relaxed">
               Nenhum novo título é reservado durante este período. A contagem de 60 minutos estáveis
-              recomeça do zero na retomada da escada automática P3 → P9; depois disso, o perfil ainda precisa reunir
+              recomeça do zero na retomada da escada automática P3 → P6; depois disso, o perfil ainda precisa reunir
               {' '}{autopilot.requiredTitles} consultas reais sem erro para avançar.
             </p>
           </div>
@@ -68,12 +68,12 @@ const BaneseAutopilotProgress = ({
           <h3 className="mt-2 text-xl font-black">
             {autopilot.nextProfileId
               ? `${autopilot.validTitles} de ${autopilot.requiredTitles} títulos válidos`
-              : 'Teto automático P9 alcançado'}
+              : 'Teto automático P6 alcançado'}
           </h3>
           <p className="mt-2 max-w-3xl text-sm font-semibold leading-relaxed">
             {autopilot.nextProfileId
               ? `O avanço do P${autopilot.currentProfileId} exige duas condições ao mesmo tempo: ${autopilot.requiredTitles} consultas reais de títulos sem erro e 1 hora de estabilidade. Execuções com fila vazia não contam.`
-              : 'O perfil efetivo já está no P9, teto da escada automática conservadora.'}
+              : 'O perfil efetivo já está no P6, teto da escada automática conservadora.'}
           </p>
         </div>
         <span className={`rounded-full px-3 py-2 font-black ${

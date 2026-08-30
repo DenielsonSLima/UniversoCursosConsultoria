@@ -131,14 +131,14 @@ Deno.test("remove marcador derivado do import legado antes do CAS", async () => 
 
 Deno.test("abandona persistencia pendurada quando o prazo da consulta expira", async () => {
   const title = receivable();
-  const controller = new AbortController();
+  const controller = new globalThis.AbortController();
   const admin = { rpc: () => new Promise(() => {}) };
   const pending = persistBaneseReconciliationSnapshot(admin, {
     ...inputFor(title),
     signal: controller.signal,
   });
 
-  controller.abort(new DOMException("Timeout", "TimeoutError"));
+  controller.abort(new globalThis.DOMException("Timeout", "TimeoutError"));
   await assert.rejects(pending, /Timeout/);
   assert.equal(title.updated_at, "2026-08-27T20:00:00.000Z");
 });

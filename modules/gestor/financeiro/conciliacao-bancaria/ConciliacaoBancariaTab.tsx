@@ -48,6 +48,7 @@ const ConciliacaoBancariaTab: React.FC<ConciliacaoBancariaTabProps> = ({ poloId 
     search: debouncedSearch,
     status: selectedStatus,
     canal: selectedCanal,
+    diagnosticsEnabled: activeSubTab === 'diagnostico',
   });
 
   const cnabReady = queries.cnabOverviewQuery.data?.edi7Configured === true;
@@ -204,6 +205,12 @@ const ConciliacaoBancariaTab: React.FC<ConciliacaoBancariaTabProps> = ({ poloId 
       {/* Sub-Tab 1: Conciliação & Baixas */}
       {activeSubTab === 'conciliacao' && (
         <div className="space-y-6">
+          {queries.overviewError ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-800">
+              <p className="font-black uppercase tracking-wide">Indicadores temporariamente indisponíveis</p>
+              <p className="mt-1">{queries.overviewError}</p>
+            </div>
+          ) : null}
           <ConciliacaoOrigemBaixaPanel
             rows={queries.receivables}
             searchTerm={searchTerm}
@@ -253,6 +260,18 @@ const ConciliacaoBancariaTab: React.FC<ConciliacaoBancariaTabProps> = ({ poloId 
       {/* Sub-Tab 4: Diagnóstico & Resumo API */}
       {activeSubTab === 'diagnostico' && (
         <div className="space-y-6">
+          {queries.overviewError ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-800">
+              <p className="font-black uppercase tracking-wide">Indicadores temporariamente indisponíveis</p>
+              <p className="mt-1">{queries.overviewError}</p>
+            </div>
+          ) : null}
+          {queries.diagnosticsError ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-800">
+              <p className="font-black uppercase tracking-wide">Diagnóstico parcialmente indisponível</p>
+              <p className="mt-1">{queries.diagnosticsError}</p>
+            </div>
+          ) : null}
           <ConciliacaoBancariaResumo
             totalPendentes={queries.summary.totalPendentes}
             valorPendentes={queries.summary.valorPendentes}
@@ -262,7 +281,10 @@ const ConciliacaoBancariaTab: React.FC<ConciliacaoBancariaTabProps> = ({ poloId 
             cnab240Sync={queries.summary.cnab240Sync}
           />
 
-          <ConciliacaoTransactionsPanel transactions={queries.transactions} />
+          <ConciliacaoTransactionsPanel
+            transactions={queries.transactions}
+            isUnavailable={Boolean(queries.transactionsError)}
+          />
         </div>
       )}
 

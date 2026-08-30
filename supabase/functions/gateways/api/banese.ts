@@ -13,7 +13,6 @@ import {
 import {
   assertBaneseReceivableTitleCompatible,
   assertBaneseReconciliationProvenance,
-  assertBaneseTitleNumber,
   banesePaymentDate,
   classifyBaneseSettlementMethod,
   sumBanesePaymentValues,

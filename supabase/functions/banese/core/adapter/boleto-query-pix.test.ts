@@ -240,7 +240,7 @@ Deno.test("importação legada confirmada como não paga não consulta pagamento
 Deno.test("consulta abandona GET que ignora o sinal de cancelamento", async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = () => new Promise<Response>(() => {});
-  const controller = new AbortController();
+  const controller = new globalThis.AbortController();
   try {
     const query = queryBaneseBoleto(
       { rpc: async () => ({ data: null, error: null }) },
@@ -252,7 +252,9 @@ Deno.test("consulta abandona GET que ignora o sinal de cancelamento", async () =
         signal: controller.signal,
       },
     );
-    controller.abort(new DOMException("Banese query timeout", "TimeoutError"));
+    controller.abort(
+      new globalThis.DOMException("Banese query timeout", "TimeoutError"),
+    );
     await assert.rejects(query, /Banese query timeout/i);
   } finally {
     globalThis.fetch = originalFetch;

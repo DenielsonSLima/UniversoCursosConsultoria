@@ -166,7 +166,7 @@ export const ConciliacaoOrigemBaixaPanel: React.FC<ConciliacaoOrigemBaixaPanelPr
               Sincronização 100% Automática em Segundo Plano
             </h4>
             <p className="mt-1 text-xs leading-relaxed text-blue-800">
-              A API Banese consulta os retornos e aplica as baixas financeiras automaticamente via <strong>Webhooks</strong> e <strong>Worker de Conciliação em Background</strong>. Não é necessário clicar de aluno em aluno! O botão abaixo serve apenas como recurso opcional para forçar a verificação imediata em lote de todas as parcelas pendentes.
+              O <strong>Worker de Conciliação em Segundo Plano</strong> consulta a API Banese e aplica automaticamente as baixas financeiras confirmadas. Não é necessário verificar aluno por aluno. O botão abaixo é um recurso opcional para antecipar a consulta das parcelas pendentes visíveis.
             </p>
           </div>
         </div>

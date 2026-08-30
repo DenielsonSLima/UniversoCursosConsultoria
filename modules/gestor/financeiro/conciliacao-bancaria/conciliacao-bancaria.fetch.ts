@@ -1,6 +1,11 @@
 import { supabase } from '../../../../lib/supabase';
 import type { GatewayEnvironment } from '../../configuracoes/integracao-bancaria/integracao-bancaria.service';
 import {
+  BANESE_PENDING_STATUSES,
+  BANESE_RECONCILIATION_STATUSES,
+  resolveConciliacaoStatusFilter,
+} from './conciliacao-bancaria.filters';
+import {
   BaneseSyncSummary,
   type CanalBaixaConciliacao,
   EMPTY_API_SYNC_SUMMARY,
@@ -61,14 +66,31 @@ export interface ConciliacaoChannelCounts {
   mpCount: number;
 }
 
-export interface ConciliacaoDataResponse {
+export interface ConciliacaoListDataResponse {
   receivables: BaneseReceivable[];
-  transactions: BaneseTransaction[];
-  summary: ConciliacaoSummary;
-  channelCounts: ConciliacaoChannelCounts;
   totalCount: number;
   page: number;
   pageSize: number;
+}
+
+export interface ConciliacaoOverviewDataResponse {
+  summary: ConciliacaoSummary;
+  channelCounts: ConciliacaoChannelCounts;
+}
+
+export interface ConciliacaoDiagnosticsDataResponse {
+  transactions: BaneseTransaction[];
+  apiSync: BaneseSyncSummary;
+  cnab240Sync: BaneseSyncSummary;
+  transactionsError: string | null;
+  syncError: string | null;
+  error: string | null;
+}
+
+export interface ConciliacaoDataResponse
+  extends ConciliacaoListDataResponse, ConciliacaoOverviewDataResponse {
+  transactions: BaneseTransaction[];
+  diagnosticsError: string | null;
 }
 
 const toSafeText = (value: unknown) => (value === null || value === undefined ? '' : String(value));
@@ -89,15 +111,6 @@ const normalizeString = (value: unknown) => {
   return str || '-';
 };
 
-const BANESE_PENDING_STATUSES = [
-  'PENDENTE',
-  'VENCIDO',
-  'AGUARDANDO_CONFIRMACAO',
-  'AGUARDANDO_PAGAMENTO',
-] as const;
-
-const BANESE_RECONCILIATION_STATUSES = [...BANESE_PENDING_STATUSES, 'PAGO'] as const;
-
 const createReceivableCountQuery = (environment: GatewayEnvironment) => supabase
   .from('contas_receber')
   .select('id', { count: 'exact', head: true })
@@ -105,9 +118,9 @@ const createReceivableCountQuery = (environment: GatewayEnvironment) => supabase
   .eq('gateway_environment', environment)
   .eq('gateway_payment_method', 'BOLETO');
 
-export const fetchConciliacaoData = async (
+export const fetchConciliacaoListData = async (
   input: GatewayEnvironment | FetchConciliacaoParams,
-): Promise<ConciliacaoDataResponse> => {
+): Promise<ConciliacaoListDataResponse> => {
   const params: FetchConciliacaoParams = typeof input === 'string'
     ? { environment: input }
     : input;
@@ -124,18 +137,11 @@ export const fetchConciliacaoData = async (
     .eq('gateway_environment', environment)
     .eq('gateway_payment_method', 'BOLETO');
 
-  if (params.status && params.status !== 'TODOS') {
-    if (params.status === 'PAGO') {
-      listQuery = listQuery.eq('status', 'PAGO');
-    } else if (params.status === 'PENDENTE') {
-      listQuery = listQuery.in('status', ['PENDENTE', 'AGUARDANDO_CONFIRMACAO', 'AGUARDANDO_PAGAMENTO']);
-    } else if (params.status === 'VENCIDO') {
-      listQuery = listQuery.eq('status', 'VENCIDO');
-    } else {
-      listQuery = listQuery.eq('status', params.status);
-    }
+  const statusFilter = resolveConciliacaoStatusFilter(params.status);
+  if (statusFilter.operator === 'eq') {
+    listQuery = listQuery.eq('status', statusFilter.statuses[0]);
   } else {
-    listQuery = listQuery.in('status', [...BANESE_RECONCILIATION_STATUSES]);
+    listQuery = listQuery.in('status', statusFilter.statuses);
   }
 
   if (params.search && params.search.trim()) {
@@ -174,6 +180,51 @@ export const fetchConciliacaoData = async (
     .order('updated_at', { ascending: false })
     .range(from, to);
 
+  const listResult = await listQuery;
+  if (listResult.error) throw listResult.error;
+
+  const receivables: BaneseReceivable[] = (listResult.data || []).map((row: any) => {
+    const status = normalizeString(row.status).toUpperCase();
+    const syncedAt = normalizeString(row.gateway_synced_at) === '-' ? undefined : toSafeText(row.gateway_synced_at);
+    const canalBaixa = classifySettlementChannel({
+      status,
+      origemPagamento: row.origem_pagamento,
+      manualSettlementId: row.manual_settlement_id,
+      manualSettlementReversedAt: row.manual_settlement_reversed_at,
+      gatewayProvider: row.gateway_provider,
+      gatewayPaymentMethod: row.gateway_payment_method,
+      gatewayStatus: row.gateway_status,
+      gatewaySubmissionChannel: row.gateway_submission_channel,
+    });
+
+    return {
+      id: toSafeText(row.id),
+      descricao: normalizeString(row.descricao),
+      status,
+      valor: Number(row.valor || 0),
+      dataVencimento: normalizeString(row.data_vencimento),
+      dataPagamento: row.data_pagamento || undefined,
+      valorPago: row.valor_pago != null ? Number(row.valor_pago) : undefined,
+      gatewaySyncedAt: syncedAt,
+      gatewayLastError: normalizeString(row.gateway_last_error),
+      gatewayStatus: normalizeString(row.gateway_status),
+      nossoNumero: normalizeString(row.gateway_boleto_nosso_numero || row.gateway_payment_id || ''),
+      canalBaixa,
+    };
+  });
+
+  return {
+    receivables,
+    totalCount: Number(listResult.count || 0),
+    page,
+    pageSize,
+  };
+};
+
+export const fetchConciliacaoOverviewData = async (
+  environment: GatewayEnvironment,
+): Promise<ConciliacaoOverviewDataResponse> => {
+
   const totalCountQuery = createReceivableCountQuery(environment)
     .in('status', [...BANESE_RECONCILIATION_STATUSES]);
 
@@ -209,21 +260,7 @@ export const fetchConciliacaoData = async (
     .eq('status', 'PAGO')
     .or('origem_pagamento.eq.PRESENCIAL,manual_settlement_id.not.is.null');
 
-  const transactionsQuery = supabase
-    .from('payment_gateway_transactions')
-    .select('id, receivable_id, remote_payment_id, remote_status, created_at, updated_at')
-    .eq('provider_code', 'banese_card')
-    .eq('environment', environment)
-    .order('updated_at', { ascending: false })
-    .limit(20);
-
-  const syncSummaryQuery = supabase.rpc(
-    'get_banese_reconciliation_sync_summary_secure',
-    { p_environment: environment },
-  );
-
   const [
-    listResult,
     totalCountResult,
     pendingCountResult,
     paidTodayCountResult,
@@ -232,10 +269,7 @@ export const fetchConciliacaoData = async (
     cnabCountResult,
     mpCountResult,
     caixaCountResult,
-    transactionsResult,
-    syncSummaryResult,
   ] = await Promise.all([
-    listQuery,
     totalCountQuery,
     pendingCountQuery,
     paidTodayCountQuery,
@@ -244,11 +278,8 @@ export const fetchConciliacaoData = async (
     cnabCountQuery,
     mpCountQuery,
     caixaCountQuery,
-    transactionsQuery,
-    syncSummaryQuery,
   ]);
 
-  if (listResult.error) throw listResult.error;
   if (totalCountResult.error) throw totalCountResult.error;
   if (pendingCountResult.error) throw pendingCountResult.error;
   if (paidTodayCountResult.error) throw paidTodayCountResult.error;
@@ -257,47 +288,6 @@ export const fetchConciliacaoData = async (
   if (cnabCountResult.error) throw cnabCountResult.error;
   if (mpCountResult.error) throw mpCountResult.error;
   if (caixaCountResult.error) throw caixaCountResult.error;
-  if (transactionsResult.error) throw transactionsResult.error;
-  if (syncSummaryResult.error) throw syncSummaryResult.error;
-
-  const receivables: BaneseReceivable[] = (listResult.data || []).map((row: any) => {
-    const status = normalizeString(row.status).toUpperCase();
-    const syncedAt = normalizeString(row.gateway_synced_at) === '-' ? undefined : toSafeText(row.gateway_synced_at);
-    const canalBaixa = classifySettlementChannel({
-      status,
-      origemPagamento: row.origem_pagamento,
-      manualSettlementId: row.manual_settlement_id,
-      manualSettlementReversedAt: row.manual_settlement_reversed_at,
-      gatewayProvider: row.gateway_provider,
-      gatewayPaymentMethod: row.gateway_payment_method,
-      gatewayStatus: row.gateway_status,
-      gatewaySubmissionChannel: row.gateway_submission_channel,
-    });
-
-    return {
-      id: toSafeText(row.id),
-      descricao: normalizeString(row.descricao),
-      status,
-      valor: Number(row.valor || 0),
-      dataVencimento: normalizeString(row.data_vencimento),
-      dataPagamento: row.data_pagamento || undefined,
-      valorPago: row.valor_pago != null ? Number(row.valor_pago) : undefined,
-      gatewaySyncedAt: syncedAt,
-      gatewayLastError: normalizeString(row.gateway_last_error),
-      gatewayStatus: normalizeString(row.gateway_status),
-      nossoNumero: normalizeString(row.gateway_boleto_nosso_numero || row.gateway_payment_id || ''),
-      canalBaixa,
-    };
-  });
-
-  const transactions: BaneseTransaction[] = (transactionsResult.data || []).map((row: any) => ({
-    id: toSafeText(row.id),
-    receivableId: toSafeText(row.receivable_id),
-    remotePaymentId: normalizeString(row.remote_payment_id),
-    remoteStatus: normalizeString(row.remote_status),
-    createdAt: normalizeString(row.created_at),
-    updatedAt: normalizeString(row.updated_at),
-  }));
 
   const summary: ConciliacaoSummary = {
     totalPendentes: Number(pendingCountResult.count || 0),
@@ -307,11 +297,6 @@ export const fetchConciliacaoData = async (
     apiSync: { ...EMPTY_API_SYNC_SUMMARY },
     cnab240Sync: { ...EMPTY_API_SYNC_SUMMARY },
   };
-  const syncPayload = syncSummaryResult.data && typeof syncSummaryResult.data === 'object'
-    ? syncSummaryResult.data as Record<string, BaneseSyncSummary>
-    : {};
-  const apiSync = syncPayload.apiSync || { ...EMPTY_API_SYNC_SUMMARY };
-  const cnab240Sync = syncPayload.cnab240Sync || { ...EMPTY_API_SYNC_SUMMARY };
 
   const channelCounts: ConciliacaoChannelCounts = {
     totalCount: Number(totalCountResult.count || 0),
@@ -323,16 +308,84 @@ export const fetchConciliacaoData = async (
   };
 
   return {
-    receivables,
-    transactions,
-    summary: {
-      ...summary,
-      apiSync,
-      cnab240Sync,
-    },
+    summary,
     channelCounts,
-    totalCount: Number(listResult.count || 0),
-    page,
-    pageSize,
+  };
+};
+
+export const fetchConciliacaoDiagnosticsData = async (
+  environment: GatewayEnvironment,
+): Promise<ConciliacaoDiagnosticsDataResponse> => {
+  const [transactionsResult, syncSummaryResult] = await Promise.all([
+    supabase
+      .from('payment_gateway_transactions')
+      .select('id, receivable_id, remote_payment_id, remote_status, created_at, updated_at')
+      .eq('provider_code', 'banese_card')
+      .eq('environment', environment)
+      .order('updated_at', { ascending: false })
+      .limit(20),
+    supabase.rpc(
+      'get_banese_reconciliation_sync_summary_secure',
+      { p_environment: environment },
+    ),
+  ]);
+
+  const transactions: BaneseTransaction[] = transactionsResult.error
+    ? []
+    : (transactionsResult.data || []).map((row: any) => ({
+      id: toSafeText(row.id),
+      receivableId: toSafeText(row.receivable_id),
+      remotePaymentId: normalizeString(row.remote_payment_id),
+      remoteStatus: normalizeString(row.remote_status),
+      createdAt: normalizeString(row.created_at),
+      updatedAt: normalizeString(row.updated_at),
+    }));
+
+  const syncPayload = !syncSummaryResult.error
+    && syncSummaryResult.data
+    && typeof syncSummaryResult.data === 'object'
+    ? syncSummaryResult.data as Record<string, BaneseSyncSummary>
+    : {};
+  const transactionsError = transactionsResult.error
+    ? 'O histórico recente de transações não pôde ser carregado por timeout ou indisponibilidade.'
+    : null;
+  const syncError = syncSummaryResult.error
+    ? 'O resumo operacional da sincronização não pôde ser carregado.'
+    : null;
+  const errors = [transactionsError, syncError]
+    .filter((message): message is string => Boolean(message));
+
+  return {
+    transactions,
+    apiSync: syncPayload.apiSync || { ...EMPTY_API_SYNC_SUMMARY },
+    cnab240Sync: syncPayload.cnab240Sync || { ...EMPTY_API_SYNC_SUMMARY },
+    transactionsError,
+    syncError,
+    error: errors.length > 0 ? errors.join(' ') : null,
+  };
+};
+
+export const fetchConciliacaoData = async (
+  input: GatewayEnvironment | FetchConciliacaoParams,
+): Promise<ConciliacaoDataResponse> => {
+  const params: FetchConciliacaoParams = typeof input === 'string'
+    ? { environment: input }
+    : input;
+  const [list, overview, diagnostics] = await Promise.all([
+    fetchConciliacaoListData(params),
+    fetchConciliacaoOverviewData(params.environment),
+    fetchConciliacaoDiagnosticsData(params.environment),
+  ]);
+
+  return {
+    ...list,
+    ...overview,
+    transactions: diagnostics.transactions,
+    diagnosticsError: diagnostics.error,
+    summary: {
+      ...overview.summary,
+      apiSync: diagnostics.apiSync,
+      cnab240Sync: diagnostics.cnab240Sync,
+    },
   };
 };

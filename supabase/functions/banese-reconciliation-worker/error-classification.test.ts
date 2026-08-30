@@ -232,7 +232,7 @@ Deno.test("mantem baixa confirmada na fila quando a pos-baixa ficar pendente", (
 
 Deno.test("timeout fica na auditoria sem virar revisão financeira do título", () => {
   const timeout = classifyBaneseReconciliationError(
-    new DOMException("Timeout", "TimeoutError"),
+    new globalThis.DOMException("Timeout", "TimeoutError"),
   );
   const review = classifyBaneseReconciliationError(
     new Error("Valor pago no Banese diverge dos termos confirmados do titulo."),
