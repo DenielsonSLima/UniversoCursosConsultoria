@@ -157,8 +157,18 @@ const reviewDiagnosticCode = (message: string) => {
 };
 
 export const classifyBaneseReconciliationError = (error: unknown) => {
-  const message = error instanceof Error ? error.message : String(error ?? "");
-  const name = error instanceof Error ? error.name : "";
+  const errorRecord = error && typeof error === "object"
+    ? error as Record<string, unknown>
+    : null;
+  const message = error instanceof Error
+    ? error.message
+    : [errorRecord?.message, errorRecord?.details, errorRecord?.hint]
+      .map((value) => String(value ?? "").trim())
+      .filter(Boolean)
+      .join(" ") || String(error ?? "");
+  const name = error instanceof Error
+    ? error.name
+    : String(errorRecord?.name ?? "");
   const diagnosticCode = reviewDiagnosticCode(message);
   const statusMatch = message.match(/\((\d{3})\)/);
   const httpStatus = statusMatch ? Number(statusMatch[1]) : null;

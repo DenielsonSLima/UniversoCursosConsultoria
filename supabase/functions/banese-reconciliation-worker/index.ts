@@ -1,5 +1,5 @@
-import { createClient } from "npm:@supabase/supabase-js@2";
 import { reconcileBaneseReceivable } from "../gateways/api/banese.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   queryBaneseBoleto,
   requestBaneseBoletoAccessToken,
@@ -8,6 +8,7 @@ import type { BaneseAccessToken, Environment } from "../banese/core/adapter.ts";
 import {
   canLaunchAt,
   createLaunchPacing,
+  remainingBaneseQueryBudgetMs,
   scheduledLaunchAt,
 } from "./pacing.ts";
 import { readRequestBody, safeEqual } from "./request-guards.ts";
@@ -112,7 +113,10 @@ Deno.serve(async (req: Request) => {
   const { data: configuredSecret, error: secretError } = await admin.rpc(
     "get_banese_reconciliation_worker_secret",
   );
-  if (secretError || typeof configuredSecret !== "string" || configuredSecret.length < 32) {
+  if (
+    secretError || typeof configuredSecret !== "string" ||
+    configuredSecret.length < 32
+  ) {
     const errorCode = String(
       (secretError as { code?: unknown } | null)?.code || "RPC",
     );
@@ -272,7 +276,6 @@ Deno.serve(async (req: Request) => {
   let launched = 0;
   let auditFailure = false;
   const oauthMetrics = { requests: 0, reused: false };
-  const batchController = new globalThis.AbortController();
   const pacing = createLaunchPacing(startedAt, Date.now(), targetTitles);
   let cursor = 0;
 
@@ -281,24 +284,13 @@ Deno.serve(async (req: Request) => {
     index: number,
   ) => {
     const scheduledAt = scheduledLaunchAt(pacing, index);
-    await wait(Math.max(0, scheduledAt - Date.now()), batchController.signal);
-    if (
-      halted || batchController.signal.aborted ||
-      !canLaunchAt(pacing, Date.now())
-    ) return;
+    await wait(Math.max(0, scheduledAt - Date.now()));
+    if (halted || !canLaunchAt(pacing, Date.now())) return;
     const { receivableId } = item;
     launched += 1;
     const attemptStartedAt = Date.now();
     const queryController = new globalThis.AbortController();
-    const abortQuery = () =>
-      queryController.abort(batchController.signal.reason);
-    batchController.signal.addEventListener("abort", abortQuery, {
-      once: true,
-    });
-    const remainingMs = Math.max(
-      250,
-      Math.min(items.length <= 2 ? 40_000 : 8_000, pacing.queryDeadline - Date.now()),
-    );
+    const remainingMs = remainingBaneseQueryBudgetMs(pacing, Date.now());
     const timeout = setTimeout(
       () =>
         queryController.abort(
@@ -340,9 +332,11 @@ Deno.serve(async (req: Request) => {
         });
       };
 
+      // O prazo local cancela apenas OAuth/GET no Banese. A persistência
+      // PostgREST termina pelo statement_timeout do PostgreSQL e devolve o
+      // erro ao worker, sem abandonar uma transação no servidor.
       const result = await reconcileBaneseReceivable(admin, receivableId, {
         queryBoleto: queryWithSharedToken,
-        signal: queryController.signal,
       });
       if (Date.now() > pacing.hardDeadline) {
         // A reconciliação pode já ter aplicado a baixa e ativado o EAD.
@@ -375,16 +369,11 @@ Deno.serve(async (req: Request) => {
         throw new Error("SUPABASE_AUDIT_WRITE");
       }
     } catch (error) {
-      const cancelledByPeer = halted &&
-        batchController.signal.aborted &&
-        queryController.signal.aborted;
-      if (cancelledByPeer) return;
       failed += 1;
       const classification = classifyBaneseReconciliationError(error);
       throttled ||= classification.result === "THROTTLED";
       if (shouldHaltBaneseReconciliationBatch(classification.errorClass)) {
         halted = true;
-        batchController.abort(classification.errorClass);
       }
       console.error("banese reconciliation item failed", {
         receivableId,
@@ -413,33 +402,29 @@ Deno.serve(async (req: Request) => {
         if (updateError) {
           auditFailure = true;
           halted = true;
-          batchController.abort("AUDIT_WRITE");
         }
-
-        const { error: attemptError } = await admin.rpc(
-          "record_banese_reconciliation_attempt",
-          {
-            p_run_id: runId,
-            p_receivable_id: receivableId,
-            p_result: classification.result,
-            p_remote_status: null,
-            p_error_class: classification.errorClass,
-            p_http_status: classification.httpStatus,
-            p_duration_ms: Date.now() - attemptStartedAt,
-          },
-        );
-        if (attemptError) {
-          auditFailure = true;
-          halted = true;
-          batchController.abort("AUDIT_WRITE");
-        }
-      } else {
+      }
+      // Falha técnica continua sendo uma tentativa auditável da execução,
+      // mas não transforma o recebível em revisão financeira.
+      const { error: attemptError } = await admin.rpc(
+        "record_banese_reconciliation_attempt",
+        {
+          p_run_id: runId,
+          p_receivable_id: receivableId,
+          p_result: classification.result,
+          p_remote_status: null,
+          p_error_class: classification.errorClass,
+          p_http_status: classification.httpStatus,
+          p_duration_ms: Date.now() - attemptStartedAt,
+        },
+      );
+      if (attemptError) {
         auditFailure = true;
+        halted = true;
       }
       return;
     } finally {
       clearTimeout(timeout);
-      batchController.signal.removeEventListener("abort", abortQuery);
     }
   };
 

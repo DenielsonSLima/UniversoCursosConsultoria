@@ -336,6 +336,27 @@
       "remoteId": "20260830020112",
       "sha256": "faafd6c02e84c5ede20179a1051958d401d84ad4df3a04de4641743d7084ebf8",
       "reason": "Migration aplicada em Produção; remove superfície temporária de diagnóstico."
+    },
+    {
+      "path": "supabase/migrations/20260830104000_harden_banese_timeout_drain.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260830133312",
+      "sha256": "14d20155858829d7dbba3ebc44e720900c1ad0cbeba007ccb4a2d8391ba9ad5b",
+      "reason": "Migration aplicada em Produção; limita RPCs e impede quarentena por falha transitória."
+    },
+    {
+      "path": "supabase/migrations/20260830105000_reclassify_banese_canary_postgrest_timeouts.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260830133832",
+      "sha256": "d82816e87c0539ca412b8f6252e53b9c4eb4dd121f4f8238ee7c4f9718c49bf1",
+      "reason": "Migration aplicada em Produção; corrige somente a classificação técnica do canário v85."
+    },
+    {
+      "path": "supabase/migrations/20260830112000_stop_banese_cas_retry_loop.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260830135741",
+      "sha256": "a265ecf88037336ba6358ad9e26876f9ea732d1d4ef0c0ce77802190de27d290",
+      "reason": "Migration aplicada em Produção; conflito CAS Banese retorna HTTP 409 sem retry serializável."
     }
   ]
 }

@@ -73,6 +73,10 @@ const boletoAdapterPath = new URL(
   '../supabase/functions/banese/core/adapter/boleto.ts',
   import.meta.url,
 );
+const boletoQueryPath = new URL(
+  '../supabase/functions/banese/core/adapter/boleto-query.ts',
+  import.meta.url,
+);
 const authAdapterPath = new URL(
   '../supabase/functions/banese/core/adapter/auth.ts',
   import.meta.url,
@@ -82,7 +86,7 @@ const eadModalPath = new URL(
   import.meta.url,
 );
 
-const [migration, profileExpansionMigration, historyHardeningMigration, healthGuardMigration, priorityProfilesMigration, profilePolicyMigration, activeProfilePolicyMigration, atomicReservationMigration, entrypointHardeningMigration, financialCycleMigration, worker, workerPacing, boletoAdapter, authAdapter, eadModal, baneseConsole, baneseAutopilotProgress, rootStyles] = await Promise.all([
+const [migration, profileExpansionMigration, historyHardeningMigration, healthGuardMigration, priorityProfilesMigration, profilePolicyMigration, activeProfilePolicyMigration, atomicReservationMigration, entrypointHardeningMigration, financialCycleMigration, worker, workerPacing, boletoAdapter, boletoQuery, authAdapter, eadModal, baneseConsole, baneseAutopilotProgress, rootStyles] = await Promise.all([
   readFile(migrationPath, 'utf8'),
   readFile(profileExpansionMigrationPath, 'utf8'),
   readFile(historyHardeningMigrationPath, 'utf8'),
@@ -96,6 +100,7 @@ const [migration, profileExpansionMigration, historyHardeningMigration, healthGu
   readFile(workerPath, 'utf8'),
   readFile(workerPacingPath, 'utf8'),
   readFile(boletoAdapterPath, 'utf8'),
+  readFile(boletoQueryPath, 'utf8'),
   readFile(authAdapterPath, 'utf8'),
   readFile(eadModalPath, 'utf8'),
   readFile(baneseConsolePath, 'utf8'),
@@ -215,15 +220,16 @@ test('worker consulta títulos existentes sem importar ou sincronizar parcelas f
   assert.match(worker, /createLaunchPacing\(startedAt, Date\.now\(\), targetTitles\)/);
   assert.match(worker, /scheduledLaunchAt\(pacing, index\)/);
   assert.match(worker, /canLaunchAt\(pacing, Date\.now\(\)\)/);
-  assert.match(workerPacing, /QUERY_DEADLINE_MS = 40_000/);
+  assert.match(workerPacing, /QUERY_DEADLINE_MS = 34_000/);
   assert.match(workerPacing, /HARD_DEADLINE_MS = 50_000/);
   assert.match(workerPacing, /LAUNCH_DRIFT_MARGIN_MS = 2_000/);
   assert.match(workerPacing, /pacedWindowMs \/ boundedTarget/);
-  assert.match(worker, /batchController = new globalThis\.AbortController/);
-  assert.match(worker, /cancelledByPeer/);
+  assert.doesNotMatch(worker, /batchController/);
+  assert.doesNotMatch(worker, /cancelledByPeer/);
+  assert.doesNotMatch(worker, /HALTED_POSTGREST_DRAIN_MS/);
   assert.match(worker, /SUPABASE_AUDIT_WRITE/);
   assert.match(worker, /Math\.min\(25, Number\(runConfig\.maxConcurrency/);
-  assert.match(boletoAdapter, /signal: input\.signal/);
+  assert.match(boletoQuery, /signal: input\.signal/);
   assert.match(authAdapter, /options: \{ signal\?: AbortSignal \}/);
 });
 

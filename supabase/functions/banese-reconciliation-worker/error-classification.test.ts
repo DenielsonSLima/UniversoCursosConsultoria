@@ -62,7 +62,10 @@ Deno.test("bloqueio da RPC de persistência interrompe o lote sem nova baixa", (
     classification.diagnosticCode,
     "RECONCILIATION_PERSISTENCE_DENIED",
   );
-  assert.equal(shouldHaltBaneseReconciliationBatch(classification.errorClass), true);
+  assert.equal(
+    shouldHaltBaneseReconciliationBatch(classification.errorClass),
+    true,
+  );
 });
 
 Deno.test("isola título ausente ou inválido e preserva o restante do lote", () => {
@@ -238,4 +241,15 @@ Deno.test("timeout fica na auditoria sem virar revisão financeira do título", 
   assert.equal(timeout.errorClass, "TIMEOUT");
   assert.equal(shouldWriteBaneseReceivableError(timeout.errorClass), false);
   assert.equal(shouldWriteBaneseReceivableError(review.errorClass), true);
+});
+
+Deno.test("timeout PostgREST em objeto simples continua sendo falha técnica", () => {
+  const timeout = classifyBaneseReconciliationError({
+    code: "PGRST003",
+    message: "Timed out acquiring connection from connection pool.",
+  });
+
+  assert.equal(timeout.errorClass, "TIMEOUT");
+  assert.equal(shouldHaltBaneseReconciliationBatch(timeout.errorClass), true);
+  assert.equal(shouldWriteBaneseReceivableError(timeout.errorClass), false);
 });

@@ -62,6 +62,48 @@ export const normalizeBaneseRemoteTitleNumber = (value: unknown) => {
   return digits.padStart(9, "0");
 };
 
+const RESOLVED_RECONCILIATION_ERRORS = new Set([
+  "Consulta Banese requer revisão financeira.",
+  "Não foi possível confirmar o título no Banese.",
+]);
+
+const clearResolvedLegacyReconciliationError = async (
+  admin: any,
+  receivable: Record<string, any>,
+  environment: Environment,
+) => {
+  const previousError = String(receivable.gateway_last_error || "");
+  const previousStatus = String(receivable.status || "").toUpperCase();
+  if (
+    !RESOLVED_RECONCILIATION_ERRORS.has(previousError) ||
+    !["PENDENTE", "VENCIDO"].includes(previousStatus)
+  ) {
+    return receivable;
+  }
+
+  const updatedAt = new Date().toISOString();
+  const { data, error } = await admin
+    .from("contas_receber")
+    .update({
+      gateway_last_error: null,
+      updated_at: updatedAt,
+    })
+    .eq("id", receivable.id)
+    .eq("gateway_provider", "banese_card")
+    .eq("gateway_environment", environment)
+    .eq("gateway_payment_method", "BOLETO")
+    .eq("status", previousStatus)
+    .eq("gateway_last_error", previousError)
+    .eq("updated_at", receivable.updated_at)
+    .select("*")
+    .maybeSingle();
+  if (error) throw error;
+
+  // Uma alteração concorrente apenas impede a limpeza; nunca sobrescrevemos
+  // o novo estado nem transformamos a consulta bancária válida em falha.
+  return data || receivable;
+};
+
 export const reconcileBaneseReceivable = async (
   admin: any,
   receivableIdValue: unknown,
@@ -328,9 +370,14 @@ export const reconcileBaneseReceivable = async (
   // retorno pago continua exigindo o detalhe efetivado e a persistência
   // atômica antes de alterar o recebível.
   if (isLegacyImport && !snapshot.paid) {
+    const updated = await clearResolvedLegacyReconciliationError(
+      admin,
+      receivable,
+      environment,
+    );
     return {
       success: true,
-      receivable,
+      receivable: updated,
       remoteStatus: effectiveRemoteStatus,
       paid: false,
       payments: snapshot.payments.length,

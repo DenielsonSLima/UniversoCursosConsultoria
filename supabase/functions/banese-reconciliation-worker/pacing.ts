@@ -1,6 +1,7 @@
-const QUERY_DEADLINE_MS = 40_000;
+const QUERY_DEADLINE_MS = 34_000;
 const HARD_DEADLINE_MS = 50_000;
 const QUERY_RESERVE_MS = 8_000;
+const MIN_QUERY_TIMEOUT_MS = 250;
 const MAX_LAUNCH_WINDOW_MS = 30_000;
 const LAUNCH_DRIFT_MARGIN_MS = 2_000;
 const MAX_TARGET_TITLES = 9_000;
@@ -63,3 +64,8 @@ export const canLaunchAt = (
   pacing: BaneseLaunchPacing,
   now: number,
 ) => now < pacing.launchDeadline;
+
+export const remainingBaneseQueryBudgetMs = (
+  pacing: BaneseLaunchPacing,
+  now: number,
+) => Math.max(MIN_QUERY_TIMEOUT_MS, pacing.queryDeadline - now);

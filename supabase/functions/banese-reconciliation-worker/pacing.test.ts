@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   canLaunchAt,
   createLaunchPacing,
+  remainingBaneseQueryBudgetMs,
   scheduledLaunchAt,
 } from "./pacing.ts";
 
@@ -46,8 +47,8 @@ Deno.test("agenda P1, P2, P3, P9 e P10 como robustez extra", () => {
 Deno.test("P2 lança o segundo título no meio da janela, longe do deadline", () => {
   const { pacing, lastLaunchAt } = assertProfileSchedule(2);
 
-  assert.equal(pacing.launchIntervalMs, 14_000);
-  assert.equal(lastLaunchAt, pacing.processingStartedAt + 14_000);
+  assert.equal(pacing.launchIntervalMs, 11_500);
+  assert.equal(lastLaunchAt, pacing.processingStartedAt + 11_500);
   assert.equal(canLaunchAt(pacing, lastLaunchAt + 2_000), true);
 });
 
@@ -74,4 +75,24 @@ Deno.test("não lança quando a preparação consumiu a janela de consulta", () 
     assert.equal(scheduledLaunchAt(pacing, 0), processingStartedAt);
     assert.equal(canLaunchAt(pacing, processingStartedAt), false);
   }
+});
+
+Deno.test("P3 usa a janela global restante sem cortar cada consulta em 8 segundos", () => {
+  const pacing = createLaunchPacing(
+    STARTED_AT,
+    PROCESSING_STARTED_AT,
+    40,
+  );
+
+  assert.equal(
+    remainingBaneseQueryBudgetMs(pacing, PROCESSING_STARTED_AT),
+    33_000,
+  );
+  assert.ok(
+    remainingBaneseQueryBudgetMs(pacing, pacing.launchDeadline - 1) > 8_000,
+  );
+  assert.equal(
+    remainingBaneseQueryBudgetMs(pacing, pacing.queryDeadline + 1),
+    250,
+  );
 });

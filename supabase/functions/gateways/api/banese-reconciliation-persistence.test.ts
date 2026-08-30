@@ -100,6 +100,35 @@ Deno.test("rejeita resposta da RPC atomica sem o recebivel esperado", async () =
   );
 });
 
+Deno.test("remove marcador derivado do import legado antes do CAS", async () => {
+  const title = receivable();
+  const calls: Array<Record<string, any>> = [];
+  const admin = {
+    rpc: (_name: string, args: Record<string, any>) => {
+      calls.push(args);
+      return Promise.resolve({
+        data: { receivable: title },
+        error: null,
+      });
+    },
+  };
+
+  await persistBaneseReconciliationSnapshot(admin, {
+    ...inputFor(title),
+    expectedTransactions: [{
+      id: "transacao-legada",
+      updated_at: "2026-08-27T20:00:00.000Z",
+      synced_at: null,
+      is_legacy_import: true,
+    }],
+  });
+
+  const snapshot = calls[0]?.p_expected_transactions?.[0];
+  assert.equal(snapshot.id, "transacao-legada");
+  assert.equal(Object.hasOwn(snapshot, "is_legacy_import"), false);
+  assert.equal(Object.keys(snapshot).length, 13);
+});
+
 Deno.test("abandona persistencia pendurada quando o prazo da consulta expira", async () => {
   const title = receivable();
   const controller = new AbortController();

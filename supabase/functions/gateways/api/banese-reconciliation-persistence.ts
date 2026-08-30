@@ -22,6 +22,11 @@ const TRANSACTION_CAS_KEYS = [
   "updated_at",
 ] as const;
 
+const transactionCasSnapshot = (row: Record<string, any>) =>
+  Object.fromEntries(
+    TRANSACTION_CAS_KEYS.map((key) => [key, row[key] ?? null]),
+  );
+
 export const loadBaneseExpectedTransactions = async (
   admin: any,
   input: {
@@ -160,7 +165,11 @@ export const persistBaneseReconciliationSnapshot = async (
       p_remote_digitable_line: input.bankNumbers?.digitableLine || null,
       p_remote_barcode: input.bankNumbers?.barcode || null,
       p_transaction_snapshot: transactionSnapshot,
-      p_expected_transactions: input.expectedTransactions,
+      // Campos derivados, como is_legacy_import, orientam a consulta mas não
+      // pertencem ao snapshot CAS persistido e nunca devem provocar conflito.
+      p_expected_transactions: input.expectedTransactions.map(
+        transactionCasSnapshot,
+      ),
     },
   );
   const request = input.signal && typeof rpcRequest?.abortSignal === "function"
