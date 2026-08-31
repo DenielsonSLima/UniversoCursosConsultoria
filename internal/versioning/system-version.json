@@ -1,8 +1,8 @@
 {
-  "version": "4.8.16",
+  "version": "4.8.17",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 25,
+  "revision": 26,
   "releasedAt": "2026-08-31",
-  "summary": "Conta integral e desconto Banese em recebíveis"
+  "summary": "Layout de valor e desconto em Contas a Receber"
 }

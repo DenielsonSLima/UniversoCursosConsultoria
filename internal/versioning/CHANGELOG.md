@@ -4,6 +4,21 @@ Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente
 
 Histórico anterior: [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
 
+## [4.8.17] - 2026-08-31
+
+### Corrigido
+
+- Contas a Receber reserva espaço próprio para o valor, desconto e ações na
+  tabela desktop, impedindo que as informações do boleto avancem sobre os
+  botões.
+- A tipografia auxiliar fica mais compacta somente na tabela; os cards
+  responsivos preservam o tamanho e o espaçamento anteriores.
+
+### Qualidade
+
+- Um contrato de apresentação protege as proporções da grade e diferencia o
+  resumo compacto do desktop da apresentação regular em cards.
+
 ## [4.8.16] - 2026-08-31
 
 ### Alterado

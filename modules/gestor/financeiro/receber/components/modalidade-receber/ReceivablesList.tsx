@@ -140,19 +140,24 @@ export const ReceivablesList: React.FC<ReceivablesListProps> = ({
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[960px] table-fixed text-left">
+          <table className="w-full min-w-[1080px] table-fixed text-left">
             <colgroup>
               <col className="w-[18%]" />
-              <col className="w-[26%]" />
-              <col className="w-[18%]" />
-              <col className="w-[14%]" />
+              <col className="w-[23%]" />
+              <col className="w-[17%]" />
               <col className="w-[11%]" />
-              <col className="w-[13%]" />
+              <col className="w-[17%]" />
+              <col className="w-[14%]" />
             </colgroup>
             <thead className="bg-slate-50">
               <tr>
-                {['Aluno / lançamento', 'Curso / turma', 'Recebimento', 'Datas', 'Valor', 'Ações'].map((label) => (
-                  <th key={label} className="px-5 py-4 text-[10px] font-black uppercase tracking-wider text-slate-500">{label}</th>
+                {['Aluno / lançamento', 'Curso / turma', 'Recebimento', 'Datas', 'Valor', 'Ações'].map((label, index) => (
+                  <th
+                    key={label}
+                    className={`${index >= 4 ? 'pl-3 pr-2' : 'px-5'} py-4 text-[10px] font-black uppercase tracking-wider text-slate-500`}
+                  >
+                    {label}
+                  </th>
                 ))}
               </tr>
             </thead>

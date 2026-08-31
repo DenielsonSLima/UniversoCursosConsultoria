@@ -1,70 +1,48 @@
 # Lote ativo
 
-Estado: `PUBLICADO EM PRODUÇÃO`
+Estado: `PUBLICAÇÃO EM PRODUÇÃO AUTORIZADA VIA PR #103`
 
-## Lote: 2026-08-31-conta-integral-e-desconto-banese-recebiveis
+## Lote: 2026-08-31-hotfix-layout-valor-desconto-recebiveis
 
-- Pedido: na visão do gestor, mostrar a conta recebedora completa, remover a
-  repetição de empresa/polo e exibir abaixo do valor nominal o desconto dos
-  boletos Banese identificados por nosso número.
-- Autorização atual: o usuário autorizou explicitamente as três migrations,
-  publicação no GitHub e deploy de produção após revisão por três agentes.
-- Risco: crítico — financeiro, dados bancários, Supabase/RPC e eventual
-  publicação.
+- Pedido: corrigir a sobreposição do valor e dos textos de desconto com as
+  ações na tabela desktop de Contas a Receber.
+- Autorização atual: o usuário autorizou explicitamente o merge do PR #103 e a
+  publicação em produção em 31/08/2026.
+- Risco: crítico — apresentação de informações financeiras e publicação.
 - Manifesto explícito:
-  `ai/operacao/registros/alteracoes/2026-08-31-conta-integral-e-desconto-banese-recebiveis.md`.
+  `ai/operacao/registros/alteracoes/2026-08-31-hotfix-layout-valor-desconto-recebiveis.md`.
 
 ### Escopo implementado
 
-1. Exibir banco, agência e conta completos somente no feed financeiro seguro
-   do gestor autorizado, preservando CPF mascarado e o escopo da conta por
-   polo.
-2. Remover `Empresa / polo` do detalhe da conciliação, pois o contexto já é
-   definido pelo seletor superior; os IDs continuam no payload e nas guardas.
-3. Exibir desconto configurado apenas em boleto Banese confirmado com nosso
-   número canônico; diferenciar desconto vigente, expirado e efetivamente
-   aplicado em título pago.
-4. Não alterar cálculo, baixa manual, totalizadores, cobrança nem dados
-   existentes.
+1. Aumentar a largura mínima da tabela desktop de 960 para 1080 pixels.
+2. Aproximar `Valor` de `Datas`, reservar 17% para o resumo financeiro e 14%
+   para as ações.
+3. Reduzir discretamente a tipografia auxiliar do desconto e de sua validade.
+4. Preservar cards responsivos, cálculos, baixas, boletos, valores e regras do
+   backend.
 
 ### Diagnóstico confirmado
 
-- A máscara de agência/conta era produzida deliberadamente pela RPC segura
-  anterior, e não pela apresentação React.
-- A empresa/polo era repetida em cada recebimento apesar do seletor global.
-- O snapshot confirmado de `gateway_financial_terms` é a fonte do desconto do
-  boleto; usar a configuração atual da turma/aluno poderia reescrever a leitura
-  histórica.
-- Em produção há 325 títulos Banese com nosso número canônico; 324 têm desconto
-  confirmado no snapshot. Esta verificação foi somente leitura.
-- As migrations remotas `20260831043316`, `20260831043336` e
-  `20260831043524` foram aplicadas na ordem prevista.
+- A coluna `Valor` recebia 11% da grade e o texto era impedido de quebrar
+  linha; o conteúdo avançava sobre os botões da coluna `Ações`.
+- As cinco capturas fornecidas reproduzem o problema em títulos pendentes e
+  pagos. Os valores exibidos estão corretos; a falha é exclusivamente visual.
+- O `main` remoto de origem é
+  `4f316c624238b0cf0c83ea9537682a8801165b5c`.
 
 ### Validação local
 
-- Contratos focados de interface, serviço e migrations: aprovados.
-- ESLint dos arquivos tocados, TypeScript, RPC financeiro e build: aprovados.
+- 18 testes focados: aprovados.
+- ESLint dos três arquivos do produto: aprovado.
+- `npx tsc --noEmit`: aprovado.
 - Limite de 500 linhas do manifesto: aprovado.
-- A revisão independente adicionou vínculo obrigatório conta/polo e
-  baixa-manual/recebível antes de liberar a identificação integral, além de
-  fechar o helper das RPCs v3 por módulo Financeiro e aba Receber.
-- Smoke remoto das RPCs: aprovado. A consulta técnica retornou 691 recebíveis;
-  na primeira página, 137 tinham desconto configurado, 28 desconto aplicado e
-  nenhum desconto apareceu sem nosso número. Um usuário sem permissão recebeu
-  `42501`, e o feed seguro retornou agência/conta sem máscara.
-- Preview Vercel do PR #102: aprovado.
-- Smoke visual autenticado: não executado porque esta sessão não possui
-  navegador conectado; pendência registrada sem substituir o smoke por testes
-  não relacionados.
+- Smoke visual autenticado: pendente porque esta sessão não possui navegador
+  conectado.
 
-### Aceite para publicação
+### Aceite para publicação em produção
 
-- Agência e conta aparecem completas apenas para gestor com Financeiro >
-  Receber e polo autorizado.
-- Uma conta sem vínculo com o polo do recebível não é enriquecida nem exposta.
-- Um gestor sem Financeiro > Receber não executa as RPCs, mesmo que pertença ao
-  polo consultado.
-- `Empresa / polo` não aparece no detalhe da conciliação.
-- O desconto aparece sob o valor nominal somente quando há nosso número e
-  snapshot Banese íntegro; títulos pagos mostram somente desconto aplicado.
-- Nenhum valor é pré-preenchido ou alterado na baixa manual.
+- O resumo de valor e desconto não invade a coluna de ações na grade desktop.
+- `Desconto do boleto` usa 10 pixels e `Válido até` usa 9 pixels.
+- A alteração não modifica dados nem regras financeiras.
+- O PR #103 possui um commit atômico, revisão independente aprovada, CI verde e
+  Preview Vercel aprovada antes do merge.
