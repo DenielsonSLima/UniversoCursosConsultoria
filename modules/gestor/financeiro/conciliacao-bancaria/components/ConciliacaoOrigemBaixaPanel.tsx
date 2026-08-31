@@ -1,16 +1,13 @@
 import React, { useState } from 'react';
 import {
+  Archive,
   Zap,
   Building2,
-  CheckCircle2,
+  CircleHelp,
   CreditCard,
   FileCheck,
   Globe,
-  HelpCircle,
   Loader2,
-  RefreshCw,
-  Search,
-  ShieldAlert,
   Wallet,
   Sparkles,
 } from 'lucide-react';
@@ -19,12 +16,9 @@ import type {
   CanalBaixaConciliacao,
   ConciliacaoChannelCounts,
 } from '../conciliacao-bancaria.fetch';
-import {
-  conciliacaoStatusClass,
-  formatConciliacaoCurrency,
-  formatConciliacaoDate,
-} from '../conciliacao-bancaria.formatters';
 import ConciliacaoPagination from './ConciliacaoPagination';
+import ConciliacaoRecebimentoFilters from './ConciliacaoRecebimentoFilters';
+import ConciliacaoRecebimentoRows from './ConciliacaoRecebimentoRows';
 
 interface ConciliacaoOrigemBaixaPanelProps {
   rows: BaneseReceivable[];
@@ -45,6 +39,11 @@ interface ConciliacaoOrigemBaixaPanelProps {
   onSelectCanal: (canal: CanalBaixaConciliacao | 'TODOS') => void;
   selectedStatus: string;
   onSelectStatus: (status: string) => void;
+  settlementStartDate: string;
+  settlementEndDate: string;
+  onSettlementStartDateChange: (value: string) => void;
+  onSettlementEndDateChange: (value: string) => void;
+  onClearSettlementPeriod: () => void;
   channelCounts: ConciliacaoChannelCounts;
 }
 
@@ -66,6 +65,11 @@ export const ConciliacaoOrigemBaixaPanel: React.FC<ConciliacaoOrigemBaixaPanelPr
   onSelectCanal,
   selectedStatus,
   onSelectStatus,
+  settlementStartDate,
+  settlementEndDate,
+  onSettlementStartDateChange,
+  onSettlementEndDateChange,
+  onClearSettlementPeriod,
   channelCounts,
 }) => {
   const [isBatchSyncing, setIsBatchSyncing] = useState(false);
@@ -98,59 +102,6 @@ export const ConciliacaoOrigemBaixaPanel: React.FC<ConciliacaoOrigemBaixaPanelPr
       setIsBatchSyncing(false);
       setBatchProgress(null);
     }
-  };
-
-  const renderOrigemBadge = (row: BaneseReceivable) => {
-    if (row.status !== 'PAGO') {
-      return (
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-800">
-          <HelpCircle size={12} className="text-amber-600" />
-          Aguardando Baixa
-        </span>
-      );
-    }
-
-    switch (row.canalBaixa) {
-      case 'API_BANESE':
-        return (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[10px] font-extrabold text-blue-700">
-            <Globe size={12} className="text-blue-600" />
-            API Banese (Online)
-          </span>
-        );
-      case 'CNAB240':
-        return (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-purple-200 bg-purple-50 px-2.5 py-1 text-[10px] font-extrabold text-purple-700">
-            <FileCheck size={12} className="text-purple-600" />
-            CNAB240 (Retorno)
-          </span>
-        );
-      case 'MERCADO_PAGO':
-        return (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[10px] font-extrabold text-sky-700">
-            <CreditCard size={12} className="text-sky-600" />
-            Mercado Pago (Cartão)
-          </span>
-        );
-      case 'CAIXA_MANUAL':
-      default:
-        return (
-          <span className="inline-flex flex-col items-start gap-1">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-extrabold text-emerald-800">
-              <Building2 size={12} className="text-emerald-600" />
-              Caixa / Manual
-            </span>
-            {['CANCELED', 'CANCELLED', 'DELETED'].includes(String(row.gatewayStatus || '').toUpperCase()) ? (
-              <span className="text-[9px] font-bold text-slate-500">Título Banese cancelado</span>
-            ) : null}
-          </span>
-        );
-    }
-  };
-
-  const formatErrorText = (err?: string) => {
-    if (!err || err === '-' || err === '[object Object]') return null;
-    return err;
   };
 
   return (
@@ -209,10 +160,11 @@ export const ConciliacaoOrigemBaixaPanel: React.FC<ConciliacaoOrigemBaixaPanelPr
       </div>
 
       {/* KPI Cards por Canal de Baixa */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-7">
         <button
           type="button"
           onClick={() => onSelectCanal('TODOS')}
+          aria-pressed={selectedCanal === 'TODOS'}
           className={`flex flex-col rounded-2xl border p-4 text-left transition-all ${
             selectedCanal === 'TODOS'
               ? 'border-slate-800 bg-slate-900 text-white shadow-md'
@@ -224,12 +176,15 @@ export const ConciliacaoOrigemBaixaPanel: React.FC<ConciliacaoOrigemBaixaPanelPr
             <Wallet size={16} />
           </div>
           <span className="mt-2 text-2xl font-black">{channelCounts.totalCount}</span>
-          <span className="text-[10px] opacity-75">Títulos monitorados</span>
+          <span className="text-[10px] opacity-75">
+            {selectedStatus === 'PAGO' ? 'Recebimentos encontrados' : 'Títulos monitorados'}
+          </span>
         </button>
 
         <button
           type="button"
           onClick={() => onSelectCanal('API_BANESE')}
+          aria-pressed={selectedCanal === 'API_BANESE'}
           className={`flex flex-col rounded-2xl border p-4 text-left transition-all ${
             selectedCanal === 'API_BANESE'
               ? 'border-blue-600 bg-blue-600 text-white shadow-md'
@@ -247,6 +202,7 @@ export const ConciliacaoOrigemBaixaPanel: React.FC<ConciliacaoOrigemBaixaPanelPr
         <button
           type="button"
           onClick={() => onSelectCanal('CNAB240')}
+          aria-pressed={selectedCanal === 'CNAB240'}
           className={`flex flex-col rounded-2xl border p-4 text-left transition-all ${
             selectedCanal === 'CNAB240'
               ? 'border-purple-600 bg-purple-600 text-white shadow-md'
@@ -264,6 +220,7 @@ export const ConciliacaoOrigemBaixaPanel: React.FC<ConciliacaoOrigemBaixaPanelPr
         <button
           type="button"
           onClick={() => onSelectCanal('CAIXA_MANUAL')}
+          aria-pressed={selectedCanal === 'CAIXA_MANUAL'}
           className={`flex flex-col rounded-2xl border p-4 text-left transition-all ${
             selectedCanal === 'CAIXA_MANUAL'
               ? 'border-emerald-600 bg-emerald-600 text-white shadow-md'
@@ -281,6 +238,7 @@ export const ConciliacaoOrigemBaixaPanel: React.FC<ConciliacaoOrigemBaixaPanelPr
         <button
           type="button"
           onClick={() => onSelectCanal('MERCADO_PAGO')}
+          aria-pressed={selectedCanal === 'MERCADO_PAGO'}
           className={`flex flex-col rounded-2xl border p-4 text-left transition-all ${
             selectedCanal === 'MERCADO_PAGO'
               ? 'border-sky-600 bg-sky-600 text-white shadow-md'
@@ -294,132 +252,67 @@ export const ConciliacaoOrigemBaixaPanel: React.FC<ConciliacaoOrigemBaixaPanelPr
           <span className="mt-2 text-2xl font-black">{channelCounts.mpCount}</span>
           <span className="text-[10px] opacity-80">Cartão de Crédito</span>
         </button>
+
+        <button
+          type="button"
+          onClick={() => onSelectCanal('HISTORICO_MIGRADO')}
+          aria-pressed={selectedCanal === 'HISTORICO_MIGRADO'}
+          className={`flex flex-col rounded-2xl border p-4 text-left transition-all ${
+            selectedCanal === 'HISTORICO_MIGRADO'
+              ? 'border-slate-600 bg-slate-700 text-white shadow-md'
+              : 'border-slate-200 bg-slate-100/70 text-slate-800 hover:border-slate-300'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black uppercase tracking-wider opacity-90">Histórico</span>
+            <Archive size={16} aria-hidden="true" />
+          </div>
+          <span className="mt-2 text-2xl font-black">{channelCounts.historicoCount}</span>
+          <span className="text-[10px] opacity-80">Migrado do sistema anterior</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onSelectCanal('OUTRO')}
+          aria-pressed={selectedCanal === 'OUTRO'}
+          className={`flex flex-col rounded-2xl border p-4 text-left transition-all ${
+            selectedCanal === 'OUTRO'
+              ? 'border-amber-600 bg-amber-600 text-white shadow-md'
+              : 'border-amber-100 bg-amber-50/50 text-amber-900 hover:border-amber-200'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black uppercase tracking-wider opacity-90">Outras</span>
+            <CircleHelp size={16} aria-hidden="true" />
+          </div>
+          <span className="mt-2 text-2xl font-black">{channelCounts.outroCount}</span>
+          <span className="text-[10px] opacity-80">Origem não classificada</span>
+        </button>
       </div>
 
-      {/* Filter Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50/80 p-3">
-        <div className="relative flex-1 min-w-[240px]">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => onSearchTermChange(e.target.value)}
-            placeholder="Buscar por aluno, descrição, nosso número..."
-            className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-4 text-xs outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-          />
-        </div>
+      <ConciliacaoRecebimentoFilters
+        searchTerm={searchTerm}
+        selectedStatus={selectedStatus}
+        settlementStartDate={settlementStartDate}
+        settlementEndDate={settlementEndDate}
+        totalItems={totalItems}
+        onSearchTermChange={onSearchTermChange}
+        onSelectStatus={onSelectStatus}
+        onSettlementStartDateChange={onSettlementStartDateChange}
+        onSettlementEndDateChange={onSettlementEndDateChange}
+        onClearSettlementPeriod={onClearSettlementPeriod}
+      />
 
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[10px] font-bold uppercase text-slate-400">Status:</span>
-          {['TODOS', 'PAGO', 'PENDENTE', 'VENCIDO'].map((st) => (
-            <button
-              key={st}
-              type="button"
-              onClick={() => onSelectStatus(st)}
-              className={`rounded-lg px-2.5 py-1 text-[10px] font-black uppercase transition-colors ${
-                selectedStatus === st
-                  ? 'bg-slate-800 text-white shadow-sm'
-                  : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
-              }`}
-            >
-              {st}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Table */}
       <div className="overflow-hidden rounded-2xl border border-slate-100">
-        <div className="overflow-x-auto">
-          {isLoading ? (
-            <div className="py-12 text-center text-xs font-semibold text-slate-500">
-              <Loader2 size={20} className="mx-auto mb-2 animate-spin text-blue-600" />
-              Carregando dados de conciliação bancária...
-            </div>
-          ) : isError ? (
-            <div className="p-6 text-center text-xs font-semibold text-rose-700 bg-rose-50">
-              Não foi possível recuperar os lançamentos do ambiente bancário ativo.
-            </div>
-          ) : (
-            <table className="w-full text-left">
-              <thead className="bg-slate-50 text-[10px] font-black uppercase text-slate-500 border-b border-slate-100">
-                <tr>
-                  <th className="p-3.5">Descrição / Título</th>
-                  <th className="p-3.5">Nosso Número</th>
-                  <th className="p-3.5">Vencimento</th>
-                  <th className="p-3.5">Valor Nominal</th>
-                  <th className="p-3.5">Status Título</th>
-                  <th className="p-3.5">Canal & Origem da Baixa</th>
-                  <th className="p-3.5 text-right">Ação Opcional</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-xs">
-                {rows.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="p-10 text-center text-xs font-bold uppercase text-slate-400">
-                      Nenhum lançamento encontrado para os filtros selecionados.
-                    </td>
-                  </tr>
-                ) : (
-                  rows.map((row) => {
-                    const isRefreshing = refreshingIds.includes(row.id);
-                    const errorText = formatErrorText(row.gatewayLastError);
-                    return (
-                      <tr key={row.id} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="p-3.5">
-                          <p className="font-bold text-slate-800">{row.descricao}</p>
-                          {errorText ? (
-                            <p className="mt-1 flex items-center gap-1 text-[10px] font-medium text-rose-600">
-                              <ShieldAlert size={12} /> {errorText}
-                            </p>
-                          ) : null}
-                        </td>
-                        <td className="p-3.5 font-mono text-[11px] font-bold text-slate-600">
-                          {row.nossoNumero || '-'}
-                        </td>
-                        <td className="p-3.5 text-slate-600">
-                          {formatConciliacaoDate(row.dataVencimento)}
-                        </td>
-                        <td className="p-3.5 font-black text-slate-800">
-                          {formatConciliacaoCurrency(row.valor)}
-                        </td>
-                        <td className="p-3.5">
-                          <span className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase ${conciliacaoStatusClass(row.status)}`}>
-                            {row.status}
-                          </span>
-                        </td>
-                        <td className="p-3.5">
-                          {renderOrigemBadge(row)}
-                        </td>
-                        <td className="p-3.5 text-right">
-                          {row.status === 'PAGO' ? (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-700">
-                              <CheckCircle2 size={13} />
-                              {row.canalBaixa === 'CAIXA_MANUAL' ? 'Baixa manual registrada' : 'Conciliado'}
-                            </span>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => onRefresh(row.id)}
-                              disabled={isRefreshing || isBatchSyncing}
-                              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[10px] font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-50 transition-all"
-                              title="Verificação individual opcional via API Banese"
-                            >
-                              <RefreshCw size={11} className={isRefreshing ? 'animate-spin text-blue-600' : ''} />
-                              {isRefreshing ? 'Verificando...' : 'Re-verificar'}
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          )}
-        </div>
+        <ConciliacaoRecebimentoRows
+          rows={rows}
+          refreshingIds={refreshingIds}
+          isLoading={isLoading}
+          isError={isError}
+          isBatchSyncing={isBatchSyncing}
+          onRefresh={onRefresh}
+        />
 
-        {/* Pagination Controls */}
         {!isLoading && !isError && totalItems > 0 && (
           <ConciliacaoPagination
             page={page}

@@ -1,8 +1,8 @@
 {
-  "version": "4.8.13",
+  "version": "4.8.14",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 22,
+  "revision": 23,
   "releasedAt": "2026-08-30",
-  "summary": "Conciliação Banese com filtros fiéis, consultas isoladas e teto automático P6"
+  "summary": "Recebimentos detalhados e filtros seguros na conciliação financeira"
 }

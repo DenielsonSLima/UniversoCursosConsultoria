@@ -31,7 +31,9 @@ const ConciliacaoBancariaTab: React.FC<ConciliacaoBancariaTabProps> = ({ poloId 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [selectedCanal, setSelectedCanal] = useState<CanalBaixaConciliacao | 'TODOS'>('TODOS');
-  const [selectedStatus, setSelectedStatus] = useState<string>('TODOS');
+  const [selectedStatus, setSelectedStatus] = useState<string>('PAGO');
+  const [settlementStartDate, setSettlementStartDate] = useState('');
+  const [settlementEndDate, setSettlementEndDate] = useState('');
   const [refreshingIds, setRefreshingIds] = useState<string[]>([]);
 
   useEffect(() => {
@@ -48,6 +50,9 @@ const ConciliacaoBancariaTab: React.FC<ConciliacaoBancariaTabProps> = ({ poloId 
     search: debouncedSearch,
     status: selectedStatus,
     canal: selectedCanal,
+    poloId,
+    settlementStartDate,
+    settlementEndDate,
     diagnosticsEnabled: activeSubTab === 'diagnostico',
   });
 
@@ -91,16 +96,42 @@ const ConciliacaoBancariaTab: React.FC<ConciliacaoBancariaTabProps> = ({ poloId 
 
   const handleSelectCanal = (canal: CanalBaixaConciliacao | 'TODOS') => {
     setSelectedCanal(canal);
+    if (canal !== 'TODOS' && canal !== 'PENDENTE') {
+      setSelectedStatus('PAGO');
+    }
     setPage(1);
   };
 
   const handleSelectStatus = (status: string) => {
     setSelectedStatus(status);
+    if (status !== 'PAGO') {
+      setSelectedCanal('TODOS');
+      setSettlementStartDate('');
+      setSettlementEndDate('');
+    }
     setPage(1);
   };
 
   const handlePageSizeChange = (newPageSize: number) => {
     setPageSize(newPageSize);
+    setPage(1);
+  };
+
+  const handleSettlementStartDateChange = (value: string) => {
+    setSelectedStatus('PAGO');
+    setSettlementStartDate(value);
+    setPage(1);
+  };
+
+  const handleSettlementEndDateChange = (value: string) => {
+    setSelectedStatus('PAGO');
+    setSettlementEndDate(value);
+    setPage(1);
+  };
+
+  const handleClearSettlementPeriod = () => {
+    setSettlementStartDate('');
+    setSettlementEndDate('');
     setPage(1);
   };
 
@@ -198,7 +229,9 @@ const ConciliacaoBancariaTab: React.FC<ConciliacaoBancariaTabProps> = ({ poloId 
       {/* Polo Scope Banner */}
       {poloId ? (
         <div className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs font-semibold text-blue-800">
-          <strong>Escopo global:</strong> a troca de arquivos CNAB usa um único convênio empresarial. O polo selecionado não restringe títulos, arquivos ou históricos nesta aba.
+          <strong>Escopos protegidos:</strong> a troca de arquivos CNAB usa o
+          convênio empresarial global; a visão de recebimentos respeita o polo
+          selecionado e as permissões financeiras do gestor.
         </div>
       ) : null}
 
@@ -229,6 +262,11 @@ const ConciliacaoBancariaTab: React.FC<ConciliacaoBancariaTabProps> = ({ poloId 
             selectedStatus={selectedStatus}
             onSelectStatus={handleSelectStatus}
             channelCounts={queries.channelCounts}
+            settlementStartDate={settlementStartDate}
+            settlementEndDate={settlementEndDate}
+            onSettlementStartDateChange={handleSettlementStartDateChange}
+            onSettlementEndDateChange={handleSettlementEndDateChange}
+            onClearSettlementPeriod={handleClearSettlementPeriod}
           />
         </div>
       )}

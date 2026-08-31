@@ -9,7 +9,9 @@ export type CanalBaixaConciliacao =
   | 'API_BANESE'
   | 'CNAB240'
   | 'CAIXA_MANUAL'
+  | 'HISTORICO_MIGRADO'
   | 'MERCADO_PAGO'
+  | 'OUTRO'
   | 'PENDENTE';
 
 interface SettlementChannelEvidence {
@@ -37,6 +39,9 @@ export const classifySettlementChannel = (
   if (String(evidence.status || '').toUpperCase() !== 'PAGO') return 'PENDENTE';
 
   const paymentOrigin = String(evidence.origemPagamento || '').toUpperCase();
+  if (paymentOrigin === 'SISTEMA_ANTERIOR') {
+    return 'HISTORICO_MIGRADO';
+  }
   const hasActiveManualSettlement = Boolean(
     evidence.manualSettlementId && !evidence.manualSettlementReversedAt,
   );
@@ -59,7 +64,7 @@ export const classifySettlementChannel = (
     return 'API_BANESE';
   }
 
-  return 'CAIXA_MANUAL';
+  return 'OUTRO';
 };
 
 export interface BaneseSyncSummary {

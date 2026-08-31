@@ -22,6 +22,9 @@ export interface UseBaneseConciliacaoQueriesParams {
   search?: string;
   status?: string;
   canal?: CanalBaixaConciliacao | 'TODOS';
+  poloId?: string | null;
+  settlementStartDate?: string;
+  settlementEndDate?: string;
   diagnosticsEnabled?: boolean;
 }
 
@@ -31,7 +34,9 @@ const DEFAULT_CHANNEL_COUNTS: ConciliacaoChannelCounts = {
   apiCount: 0,
   cnabCount: 0,
   caixaCount: 0,
+  historicoCount: 0,
   mpCount: 0,
+  outroCount: 0,
 };
 
 const CONCILIACAO_OVERVIEW_QUERY_KEY = [
@@ -47,9 +52,14 @@ export const useBaneseConciliacaoQueries = (params?: UseBaneseConciliacaoQueries
   const search = params?.search ?? '';
   const status = params?.status ?? 'TODOS';
   const canal = params?.canal ?? 'TODOS';
+  const poloId = params?.poloId ?? null;
+  const settlementStartDate = params?.settlementStartDate ?? '';
+  const settlementEndDate = params?.settlementEndDate ?? '';
   const diagnosticsEnabled = params?.diagnosticsEnabled === true;
+  const receivablesRealtimeFilter = status === 'PAGO'
+    ? 'status=eq.PAGO'
+    : 'gateway_provider=eq.banese_card';
   const receivablesInvalidationTimerRef = useRef<number | null>(null);
-  const diagnosticsInvalidationTimerRef = useRef<number | null>(null);
 
   const bankingOverviewQuery = useQuery({
     queryKey: ['integracao_bancaria'],
@@ -74,8 +84,21 @@ export const useBaneseConciliacaoQueries = (params?: UseBaneseConciliacaoQueries
       search.trim(),
       status,
       canal,
+      poloId || 'all-authorized-polos',
+      settlementStartDate,
+      settlementEndDate,
     ] as const,
-    [activeEnvironment, page, pageSize, search, status, canal],
+    [
+      activeEnvironment,
+      page,
+      pageSize,
+      search,
+      status,
+      canal,
+      poloId,
+      settlementStartDate,
+      settlementEndDate,
+    ],
   );
 
   const dataQuery = useQuery({
@@ -87,6 +110,9 @@ export const useBaneseConciliacaoQueries = (params?: UseBaneseConciliacaoQueries
       search,
       status,
       canal,
+      poloId,
+      settlementStartDate,
+      settlementEndDate,
     }),
     enabled: Boolean(activeEnvironment),
     refetchOnWindowFocus: true,
@@ -98,7 +124,7 @@ export const useBaneseConciliacaoQueries = (params?: UseBaneseConciliacaoQueries
       activeEnvironment || 'environment-pending',
     ],
     queryFn: () => fetchConciliacaoOverviewData(activeEnvironment!),
-    enabled: Boolean(activeEnvironment),
+    enabled: Boolean(activeEnvironment) && (status !== 'PAGO' || diagnosticsEnabled),
     staleTime: 30_000,
     retry: false,
     refetchOnWindowFocus: true,
@@ -129,6 +155,11 @@ export const useBaneseConciliacaoQueries = (params?: UseBaneseConciliacaoQueries
     ]);
   }, [queryClient]);
 
+  const invalidateActiveList = useCallback(() => queryClient.invalidateQueries({
+    queryKey: financeiroQueryKeys.conciliacaoBancariaItems(null),
+    refetchType: 'active',
+  }), [queryClient]);
+
   const invalidateDiagnostics = useCallback(() => queryClient.invalidateQueries({
     queryKey: financeiroQueryKeys.conciliacaoBancariaTransacoes(null),
     refetchType: 'active',
@@ -147,19 +178,9 @@ export const useBaneseConciliacaoQueries = (params?: UseBaneseConciliacaoQueries
     }
     receivablesInvalidationTimerRef.current = window.setTimeout(() => {
       receivablesInvalidationTimerRef.current = null;
-      void invalidateListAndOverview();
+      void invalidateActiveList();
     }, REALTIME_INVALIDATION_DEBOUNCE_MS);
-  }, [invalidateListAndOverview]);
-
-  const scheduleDiagnosticsInvalidation = useCallback(() => {
-    if (diagnosticsInvalidationTimerRef.current !== null) {
-      window.clearTimeout(diagnosticsInvalidationTimerRef.current);
-    }
-    diagnosticsInvalidationTimerRef.current = window.setTimeout(() => {
-      diagnosticsInvalidationTimerRef.current = null;
-      void invalidateDiagnostics();
-    }, REALTIME_INVALIDATION_DEBOUNCE_MS);
-  }, [invalidateDiagnostics]);
+  }, [invalidateActiveList]);
 
   const invalidateCnabOverview = useCallback(() => queryClient.invalidateQueries({
     queryKey: BANESE_CNAB240_OVERVIEW_QUERY_KEY,
@@ -181,30 +202,10 @@ export const useBaneseConciliacaoQueries = (params?: UseBaneseConciliacaoQueries
         {
           event: '*',
           schema: 'public',
-          table: 'payment_gateway_transactions',
-          filter: 'provider_code=eq.banese_card',
-        },
-        scheduleDiagnosticsInvalidation,
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
           table: 'contas_receber',
-          filter: 'gateway_provider=eq.banese_card',
+          filter: receivablesRealtimeFilter,
         },
         scheduleReceivablesInvalidation,
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'payment_gateway_cnab_files',
-          filter: 'provider_code=eq.banese_card',
-        },
-        () => { void invalidateAll(); },
       );
 
     channel.subscribe();
@@ -213,13 +214,9 @@ export const useBaneseConciliacaoQueries = (params?: UseBaneseConciliacaoQueries
         window.clearTimeout(receivablesInvalidationTimerRef.current);
         receivablesInvalidationTimerRef.current = null;
       }
-      if (diagnosticsInvalidationTimerRef.current !== null) {
-        window.clearTimeout(diagnosticsInvalidationTimerRef.current);
-        diagnosticsInvalidationTimerRef.current = null;
-      }
       void supabase.removeChannel(channel);
     };
-  }, [invalidateAll, scheduleDiagnosticsInvalidation, scheduleReceivablesInvalidation]);
+  }, [receivablesRealtimeFilter, scheduleReceivablesInvalidation]);
 
   const overviewSummary = overviewDataQuery.data?.summary || {
     totalPendentes: 0,
@@ -249,7 +246,9 @@ export const useBaneseConciliacaoQueries = (params?: UseBaneseConciliacaoQueries
     invalidateConciliacao,
     receivables: dataQuery.data?.receivables || [],
     transactions: diagnosticsDataQuery.data?.transactions || [],
-    channelCounts: overviewDataQuery.data?.channelCounts || DEFAULT_CHANNEL_COUNTS,
+    channelCounts: dataQuery.data?.receiptChannelCounts
+      || overviewDataQuery.data?.channelCounts
+      || DEFAULT_CHANNEL_COUNTS,
     totalCount: dataQuery.data?.totalCount || 0,
     page: dataQuery.data?.page || page,
     pageSize: dataQuery.data?.pageSize || pageSize,

@@ -12,6 +12,10 @@ import {
   classifySettlementChannel,
   getMaceioDateKey,
 } from './conciliacao-bancaria.utils';
+import {
+  fetchFinancialReceipts,
+  shouldUseFinancialReceiptsFeed,
+} from './conciliacao-recebimentos.fetch';
 
 export type { CanalBaixaConciliacao } from './conciliacao-bancaria.utils';
 
@@ -28,6 +32,30 @@ export interface BaneseReceivable {
   gatewayStatus?: string;
   nossoNumero?: string;
   canalBaixa?: CanalBaixaConciliacao;
+  empresaId?: string;
+  empresaNome?: string;
+  poloId?: string;
+  poloNome?: string;
+  clienteNome?: string;
+  clienteDocumentoMascarado?: string;
+  baixaRegistradaEm?: string;
+  baixaTempoProveniencia?: string;
+  cursoNome?: string;
+  turmaNome?: string;
+  matriculaCodigo?: string;
+  parcelaLabel?: string;
+  jurosAplicados?: number | null;
+  multaAplicada?: number | null;
+  acrescimoAplicado?: number | null;
+  descontoAplicado?: number | null;
+  diferencaNaoDiscriminada?: number | null;
+  composicaoStatus?: string;
+  composicaoProveniencia?: string;
+  formaPagamento?: string;
+  origemRecebimento?: string;
+  operadorNome?: string;
+  contaRecebedoraNome?: string;
+  comprovanteUrl?: string;
 }
 
 export interface BaneseTransaction {
@@ -55,6 +83,10 @@ export interface FetchConciliacaoParams {
   search?: string;
   status?: string;
   canal?: CanalBaixaConciliacao | 'TODOS';
+  poloId?: string | null;
+  companyId?: string | null;
+  settlementStartDate?: string;
+  settlementEndDate?: string;
 }
 
 export interface ConciliacaoChannelCounts {
@@ -63,7 +95,9 @@ export interface ConciliacaoChannelCounts {
   apiCount: number;
   cnabCount: number;
   caixaCount: number;
+  historicoCount: number;
   mpCount: number;
+  outroCount: number;
 }
 
 export interface ConciliacaoListDataResponse {
@@ -71,6 +105,7 @@ export interface ConciliacaoListDataResponse {
   totalCount: number;
   page: number;
   pageSize: number;
+  receiptChannelCounts?: ConciliacaoChannelCounts;
 }
 
 export interface ConciliacaoOverviewDataResponse {
@@ -124,6 +159,9 @@ export const fetchConciliacaoListData = async (
   const params: FetchConciliacaoParams = typeof input === 'string'
     ? { environment: input }
     : input;
+  if (shouldUseFinancialReceiptsFeed(params)) {
+    return fetchFinancialReceipts(params);
+  }
   const { environment } = params;
   const page = Math.max(1, params.page || 1);
   const pageSize = Math.max(1, params.pageSize || 20);
@@ -304,7 +342,9 @@ export const fetchConciliacaoOverviewData = async (
     apiCount: Number(apiCountResult.count || 0),
     cnabCount: Number(cnabCountResult.count || 0),
     caixaCount: Number(caixaCountResult.count || 0),
+    historicoCount: 0,
     mpCount: Number(mpCountResult.count || 0),
+    outroCount: 0,
   };
 
   return {

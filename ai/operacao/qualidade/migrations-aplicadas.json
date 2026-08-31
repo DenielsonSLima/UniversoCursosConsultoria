@@ -364,6 +364,13 @@
       "remoteId": "20260830185530",
       "sha256": "080e20f0b28812f0ecb0f9a9ef6ffd05c3bf7f0ae5aa65e812385a93b55f09a4",
       "reason": "Migration aplicada em Produção; limita a escada automática Banese a P3-P6 sem elevar o perfil efetivo P3."
+    },
+    {
+      "path": "supabase/migrations/20260830215000_create_secure_financial_receipts_feed.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260831010512",
+      "sha256": "ca59adfd0d6cd13c57c4257e6054d8141bbb54270a027ecf8f0189769dcc6f8a",
+      "reason": "Migration aplicada em Produção; cria feed paginado de recebimentos com RBAC, mascaramento e proveniência canônica."
     }
   ]
 }

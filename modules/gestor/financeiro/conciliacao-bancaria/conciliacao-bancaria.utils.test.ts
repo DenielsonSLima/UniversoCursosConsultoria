@@ -41,7 +41,7 @@ test('só classifica API Banese quando o status bancário confirma pagamento', (
     gatewayPaymentMethod: 'BOLETO',
     gatewayStatus: 'CANCELED',
     gatewaySubmissionChannel: 'API',
-  }), 'CAIXA_MANUAL');
+  }), 'OUTRO');
 });
 
 test('explica o bloqueio do CNAB por falta de EDI7 sem marcar a API como indisponível', () => {

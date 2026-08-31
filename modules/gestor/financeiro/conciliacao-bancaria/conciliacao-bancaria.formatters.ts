@@ -18,6 +18,24 @@ export const formatConciliacaoDate = (value?: string | null) => {
   });
 };
 
+export const formatConciliacaoDateTime = (value?: string | null) => {
+  if (!value) return 'Não informado';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return `${formatConciliacaoDate(value)} · horário não disponível`;
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Não informado';
+  const formattedDate = date.toLocaleDateString('pt-BR', {
+    timeZone: BANESE_RECONCILIATION_TIME_ZONE,
+  });
+  const formattedTime = date.toLocaleTimeString('pt-BR', {
+    timeZone: BANESE_RECONCILIATION_TIME_ZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  return `${formattedDate} às ${formattedTime}`;
+};
+
 export const formatCnabFileSize = (value: number) => {
   if (value < 1024) return `${value} bytes`;
   if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
