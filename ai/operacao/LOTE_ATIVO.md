@@ -1,54 +1,70 @@
 # Lote ativo
 
-Estado: `EM VALIDAÇÃO PARA PUBLICAÇÃO`
+Estado: `PUBLICADO EM PRODUÇÃO`
 
-## Lote: 2026-08-31-filtro-turmas-ativas-recebiveis
+## Lote: 2026-08-31-conta-integral-e-desconto-banese-recebiveis
 
-- Pedido: substituir em `Financeiro > Contas a Receber` a opção de agrupar por
-  um filtro que liste as turmas em andamento da modalidade aberta e publicar no
-  GitHub/produção.
-- Autorização: implementação, GitHub e produção aprovados explicitamente pelo
-  usuário em 31/08/2026.
-- Risco: crítico — financeiro, Supabase/RPC, dados pessoais e publicação.
+- Pedido: na visão do gestor, mostrar a conta recebedora completa, remover a
+  repetição de empresa/polo e exibir abaixo do valor nominal o desconto dos
+  boletos Banese identificados por nosso número.
+- Autorização atual: o usuário autorizou explicitamente as três migrations,
+  publicação no GitHub e deploy de produção após revisão por três agentes.
+- Risco: crítico — financeiro, dados bancários, Supabase/RPC e eventual
+  publicação.
 - Manifesto explícito:
-  `ai/operacao/registros/alteracoes/2026-08-31-filtro-turmas-ativas-recebiveis.md`.
+  `ai/operacao/registros/alteracoes/2026-08-31-conta-integral-e-desconto-banese-recebiveis.md`.
 
-### Escopo aprovado
+### Escopo implementado
 
-1. Manter a lista organizada por aluno e remover da interface o seletor de
-   agrupamento.
-2. Exibir somente turmas com status `EM_ANDAMENTO` da modalidade e do polo
-   atuais como opções de filtro.
-3. Aplicar a turma selecionada no servidor para página, grupos, indicadores e
-   exportação/PDF, preservando polo, modalidade e autorização existentes.
-4. Preservar as demais telas financeiras e publicar um único lote atômico.
+1. Exibir banco, agência e conta completos somente no feed financeiro seguro
+   do gestor autorizado, preservando CPF mascarado e o escopo da conta por
+   polo.
+2. Remover `Empresa / polo` do detalhe da conciliação, pois o contexto já é
+   definido pelo seletor superior; os IDs continuam no payload e nas guardas.
+3. Exibir desconto configurado apenas em boleto Banese confirmado com nosso
+   número canônico; diferenciar desconto vigente, expirado e efetivamente
+   aplicado em título pago.
+4. Não alterar cálculo, baixa manual, totalizadores, cobrança nem dados
+   existentes.
 
 ### Diagnóstico confirmado
 
-- O seletor antigo alternava agrupamento por aluno, turma ou sem agrupamento,
-  embora a modalidade já seja definida pela aba da tela.
-- Produção possui 65 turmas em andamento; o filtro deve usar somente esse
-  conjunto por modalidade/polo, mas a visão sem filtro continua mostrando o
-  histórico financeiro permitido.
-- As RPCs de página, grupos e resumo não recebiam turma, portanto um filtro
-  somente visual deixaria totais e PDF incoerentes.
+- A máscara de agência/conta era produzida deliberadamente pela RPC segura
+  anterior, e não pela apresentação React.
+- A empresa/polo era repetida em cada recebimento apesar do seletor global.
+- O snapshot confirmado de `gateway_financial_terms` é a fonte do desconto do
+  boleto; usar a configuração atual da turma/aluno poderia reescrever a leitura
+  histórica.
+- Em produção há 325 títulos Banese com nosso número canônico; 324 têm desconto
+  confirmado no snapshot. Esta verificação foi somente leitura.
+- As migrations remotas `20260831043316`, `20260831043336` e
+  `20260831043524` foram aplicadas na ordem prevista.
 
-### Implementação e validação realizada
+### Validação local
 
-- A tela fixa o agrupamento interno por aluno e mostra o seletor `Todas as
-  turmas`, populado por turma ativa da aba aberta.
-- O filtro selecionado acompanha paginação, expansão do aluno, KPIs e extrato.
-- A migration aplicada em produção como `20260831031926` criou as três RPCs
-  v3 protegidas e recarregou o schema PostgREST.
-- Uma turma ativa real confirmou 353 títulos tanto na contagem bruta quanto na
-  página, nos grupos e no resumo remoto.
-- ESLint focal, TypeScript e o contrato Deno da migration foram aprovados.
+- Contratos focados de interface, serviço e migrations: aprovados.
+- ESLint dos arquivos tocados, TypeScript, RPC financeiro e build: aprovados.
+- Limite de 500 linhas do manifesto: aprovado.
+- A revisão independente adicionou vínculo obrigatório conta/polo e
+  baixa-manual/recebível antes de liberar a identificação integral, além de
+  fechar o helper das RPCs v3 por módulo Financeiro e aba Receber.
+- Smoke remoto das RPCs: aprovado. A consulta técnica retornou 691 recebíveis;
+  na primeira página, 137 tinham desconto configurado, 28 desconto aplicado e
+  nenhum desconto apareceu sem nosso número. Um usuário sem permissão recebeu
+  `42501`, e o feed seguro retornou agência/conta sem máscara.
+- Preview Vercel do PR #102: aprovado.
+- Smoke visual autenticado: não executado porque esta sessão não possui
+  navegador conectado; pendência registrada sem substituir o smoke por testes
+  não relacionados.
 
 ### Aceite para publicação
 
-- Não há a opção visual de agrupar; há apenas filtro por turmas ativas da
-  modalidade atual.
-- Uma turma escolhida retorna o mesmo conjunto na lista, cartões e extrato.
-- O filtro não expõe dados entre polos nem muda valores ou títulos.
-- Arquivos do manifesto permanecem no teto de 500 linhas, salvo migrations
-  aplicadas registradas como exceções imutáveis.
+- Agência e conta aparecem completas apenas para gestor com Financeiro >
+  Receber e polo autorizado.
+- Uma conta sem vínculo com o polo do recebível não é enriquecida nem exposta.
+- Um gestor sem Financeiro > Receber não executa as RPCs, mesmo que pertença ao
+  polo consultado.
+- `Empresa / polo` não aparece no detalhe da conciliação.
+- O desconto aparece sob o valor nominal somente quando há nosso número e
+  snapshot Banese íntegro; títulos pagos mostram somente desconto aplicado.
+- Nenhum valor é pré-preenchido ou alterado na baixa manual.

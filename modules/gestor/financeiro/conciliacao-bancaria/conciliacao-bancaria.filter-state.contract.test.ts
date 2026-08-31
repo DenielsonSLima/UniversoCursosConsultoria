@@ -2,13 +2,14 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-const [queryHook, fetcher, panel, tab, receiptFetcher, receiptFilters] = await Promise.all([
+const [queryHook, fetcher, panel, tab, receiptFetcher, receiptFilters, receiptRows] = await Promise.all([
   readFile(new URL('./hooks/useBaneseConciliacaoQueries.ts', import.meta.url), 'utf8'),
   readFile(new URL('./conciliacao-bancaria.fetch.ts', import.meta.url), 'utf8'),
   readFile(new URL('./components/ConciliacaoOrigemBaixaPanel.tsx', import.meta.url), 'utf8'),
   readFile(new URL('./ConciliacaoBancariaTab.tsx', import.meta.url), 'utf8'),
   readFile(new URL('./conciliacao-recebimentos.fetch.ts', import.meta.url), 'utf8'),
   readFile(new URL('./components/ConciliacaoRecebimentoFilters.tsx', import.meta.url), 'utf8'),
+  readFile(new URL('./components/ConciliacaoRecebimentoRows.tsx', import.meta.url), 'utf8'),
 ]);
 const transactionsPanel = await readFile(
   new URL('./components/ConciliacaoTransactionsPanel.tsx', import.meta.url),
@@ -82,11 +83,17 @@ test('visão de recebimentos abre em Pago e envia escopo, período e paginação
   assert.match(tab, /useState<string>\('PAGO'\)/);
   assert.match(tab, /status !== 'PAGO'[\s\S]*setSettlementStartDate\(''\)[\s\S]*setSettlementEndDate\(''\)/);
   assert.match(receiptFilters, /disabled=\{!settlementFilterEnabled\}/);
-  assert.match(receiptFetcher, /list_financial_receipts_secure/);
+  assert.match(receiptFetcher, /list_financial_receipts_v2_secure/);
   assert.match(receiptFetcher, /p_polo_id: params\.poloId \|\| null/);
   assert.match(receiptFetcher, /p_payment_start: params\.settlementStartDate \|\| null/);
   assert.match(receiptFetcher, /p_payment_end: params\.settlementEndDate \|\| null/);
   assert.match(receiptFetcher, /p_environment: params\.environment/);
+});
+
+test('detalhe exibe a conta recebedora sem repetir empresa e polo já selecionados', () => {
+  assert.match(receiptRows, /field\('Conta recebedora'/);
+  assert.doesNotMatch(receiptRows, /field\(\s*'Empresa \/ polo'/);
+  assert.match(receiptRows, /2xl:grid-cols-9/);
 });
 
 test('visão paga não aceita fallback parcial para a consulta Banese anterior', () => {

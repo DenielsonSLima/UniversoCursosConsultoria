@@ -129,6 +129,42 @@ export const formatReceivableDate = (value: string) => {
   return parsed.toLocaleDateString('pt-BR', { timeZone: 'America/Maceio' });
 };
 
+export interface ReceivableDiscountPresentation {
+  kind: 'APLICADO' | 'BOLETO_VIGENTE' | 'BOLETO_EXPIRADO';
+  value: number;
+  validUntil?: string;
+}
+
+const positiveMoney = (value?: number): value is number => (
+  typeof value === 'number' && Number.isFinite(value) && value > 0
+);
+
+export const receivableDiscountPresentation = (
+  item: ContasReceber,
+): ReceivableDiscountPresentation | null => {
+  if (item.status === 'PAGO') {
+    return item.boletoNossoNumero && positiveMoney(item.descontoAplicado)
+      ? { kind: 'APLICADO', value: item.descontoAplicado }
+      : null;
+  }
+
+  if (!['PENDENTE', 'VENCIDO', 'SUSPENSO'].includes(item.status)
+    || !item.boletoNossoNumero
+    || !positiveMoney(item.boletoDescontoConfigurado)
+    || !item.boletoDescontoValidoAte
+    || !['VIGENTE', 'EXPIRADO'].includes(item.boletoDescontoSituacao || '')) {
+    return null;
+  }
+
+  return {
+    kind: item.boletoDescontoSituacao === 'VIGENTE'
+      ? 'BOLETO_VIGENTE'
+      : 'BOLETO_EXPIRADO',
+    value: item.boletoDescontoConfigurado,
+    validUntil: item.boletoDescontoValidoAte,
+  };
+};
+
 const courseModalityLabels: Record<string, string> = {
   EAD: 'EAD',
   LIVRE: 'Livre',

@@ -20,7 +20,7 @@ export const fetchFinancialReceipts = async (
   const pageSize = Math.min(100, Math.max(1, params.pageSize || 20));
   const search = params.search?.trim() || null;
 
-  const { data, error } = await supabase.rpc('list_financial_receipts_secure', {
+  const { data, error } = await supabase.rpc('list_financial_receipts_v2_secure', {
     p_company_id: params.companyId || null,
     p_polo_id: params.poloId || null,
     p_payment_start: params.settlementStartDate || null,

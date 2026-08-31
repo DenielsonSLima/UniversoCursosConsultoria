@@ -4,6 +4,24 @@ Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente
 
 Histórico anterior: [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
 
+## [4.8.16] - 2026-08-31
+
+### Alterado
+
+- A Conciliação & Baixas mostra banco, agência e conta completos para gestores
+  autorizados e remove a repetição de empresa/polo do detalhe de cada baixa.
+- Contas a Receber mostra abaixo do valor nominal o desconto confirmado dos
+  boletos Banese com nosso número, distinguindo oferta vigente, expirada e
+  desconto efetivamente aplicado.
+
+### Segurança e qualidade
+
+- A conta integral exige Financeiro > Receber, polo autorizado, vínculo entre
+  conta e polo e, nas baixas manuais, vínculo entre a baixa e o recebível.
+- O desconto exige snapshot Banese íntegro e nosso número canônico; títulos
+  pagos sem essa identidade não expõem desconto, e chamadas sem RBAC recebem
+  `42501`.
+
 ## [4.8.15] - 2026-08-31
 
 ### Alterado

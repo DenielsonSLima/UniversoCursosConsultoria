@@ -15,6 +15,7 @@ import {
   paymentMethodLabel,
   receivableClassLabel,
   receivableCourseTitle,
+  receivableDiscountPresentation,
   receivableLaunchLabel,
   statusScopeLabels,
 } from './modalidade-receber.utils.ts';
@@ -204,4 +205,77 @@ test('prioriza rematrícula sobre o número sentinela zero', () => {
   assert.equal(receivableLaunchLabel(reenrollment, 'fraction'), 'Rematrícula');
   assert.equal(receivableLaunchLabel(installment), 'Parcela 12');
   assert.equal(receivableLaunchLabel(installment, 'fraction'), '12/12');
+});
+
+test('apresenta desconto confirmado do boleto sem tratá-lo como baixa', () => {
+  const current = receivable({
+    gatewayProvider: 'banese_card',
+    gatewayPaymentMethod: 'BOLETO',
+    boletoNossoNumero: '000096691',
+    boletoDescontoConfigurado: 39.9,
+    boletoDescontoValidoAte: '2026-09-15',
+    boletoDescontoSituacao: 'VIGENTE',
+  });
+  const expired = receivable({
+    ...current,
+    status: 'VENCIDO',
+    boletoDescontoSituacao: 'EXPIRADO',
+  });
+
+  assert.deepEqual(receivableDiscountPresentation(current), {
+    kind: 'BOLETO_VIGENTE',
+    value: 39.9,
+    validUntil: '2026-09-15',
+  });
+  assert.deepEqual(receivableDiscountPresentation(expired), {
+    kind: 'BOLETO_EXPIRADO',
+    value: 39.9,
+    validUntil: '2026-09-15',
+  });
+});
+
+test('pago mostra somente desconto efetivamente aplicado', () => {
+  const offeredButNotUsed = receivable({
+    status: 'PAGO',
+    boletoNossoNumero: '000096691',
+    boletoDescontoConfigurado: 39.9,
+    boletoDescontoValidoAte: '2026-09-15',
+    boletoDescontoSituacao: 'VIGENTE',
+  });
+  const applied = receivable({
+    ...offeredButNotUsed,
+    descontoAplicado: 39.9,
+  });
+  const appliedWithoutOurNumber = receivable({
+    status: 'PAGO',
+    descontoAplicado: 39.9,
+  });
+
+  assert.equal(receivableDiscountPresentation(offeredButNotUsed), null);
+  assert.equal(receivableDiscountPresentation(appliedWithoutOurNumber), null);
+  assert.deepEqual(receivableDiscountPresentation(applied), {
+    kind: 'APLICADO',
+    value: 39.9,
+  });
+});
+
+test('não exibe desconto de boleto sem nosso número canônico', () => {
+  const withoutNumber = receivable({
+    boletoDescontoConfigurado: 19.9,
+    boletoDescontoValidoAte: '2026-09-15',
+    boletoDescontoSituacao: 'VIGENTE',
+  });
+  const canceled = receivable({
+    ...withoutNumber,
+    status: 'CANCELADO',
+    boletoNossoNumero: '000096691',
+  });
+  const reversed = receivable({
+    ...canceled,
+    status: 'ESTORNADO',
+  });
+
+  assert.equal(receivableDiscountPresentation(withoutNumber), null);
+  assert.equal(receivableDiscountPresentation(canceled), null);
+  assert.equal(receivableDiscountPresentation(reversed), null);
 });

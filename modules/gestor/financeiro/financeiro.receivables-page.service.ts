@@ -58,6 +58,13 @@ const mapReceivableRpcRow = (row: any): ContasReceber => ({
   gatewaySettlementSource: row.gateway_settlement_source || undefined,
   contaBancariaId: row.conta_bancaria_id || undefined,
   nossoNumeroAsaas: row.nosso_numero_asaas || undefined,
+  boletoNossoNumero: row.boleto_nosso_numero || undefined,
+  boletoDescontoConfigurado: row.boleto_desconto_configurado === null
+    || row.boleto_desconto_configurado === undefined
+    ? undefined
+    : Number(row.boleto_desconto_configurado),
+  boletoDescontoValidoAte: row.boleto_desconto_valido_ate || undefined,
+  boletoDescontoSituacao: row.boleto_desconto_situacao || undefined,
   asaasPaymentId: row.asaas_payment_id || undefined,
   asaasPaymentLinkId: row.asaas_payment_link_id || undefined,
   asaasInvoiceUrl: row.asaas_invoice_url || undefined,

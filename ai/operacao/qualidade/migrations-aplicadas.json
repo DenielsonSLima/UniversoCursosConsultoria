@@ -378,6 +378,27 @@
       "remoteId": "20260831031926",
       "sha256": "02f11aab2780cdd297107ac5825260ca8df2b886cd7e4f518a7b11578ec5f769",
       "reason": "Migration aplicada em Produção; filtra recebíveis por turma ativa sem ampliar o escopo de polo ou modalidade."
+    },
+    {
+      "path": "supabase/migrations/20260831134000_add_secure_full_receiving_account_feed_v2.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260831043316",
+      "sha256": "6aa36c05cd49e080a0996e916726143c12f47ab16966c32830559ea4c744ff26",
+      "reason": "Migration aplicada em Produção; expõe banco, agência e conta integrais somente no feed financeiro autorizado."
+    },
+    {
+      "path": "supabase/migrations/20260831134030_harden_receivables_filter_scope_rbac.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260831043336",
+      "sha256": "4483693028db703053ac20c52ca7b35313472bbeebcb539f210fc29c0253d2d1",
+      "reason": "Migration aplicada em Produção; exige módulo Financeiro, aba Receber e escopo de polo nas RPCs de recebíveis."
+    },
+    {
+      "path": "supabase/migrations/20260831134100_expose_banese_boleto_discount_receivables.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260831043524",
+      "sha256": "8a7bb1bb0780cd71d03d2abf04f2f979d098ec490619b503af7b2f94a510c560",
+      "reason": "Migration aplicada em Produção; expõe desconto Banese confirmado somente com nosso número canônico e separa a oferta da baixa efetiva."
     }
   ]
 }

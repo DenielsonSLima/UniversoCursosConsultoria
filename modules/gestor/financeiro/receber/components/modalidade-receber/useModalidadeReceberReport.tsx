@@ -23,6 +23,7 @@ import {
   paymentOriginLabel,
   receivableClassLabel,
   receivableCourseTitle,
+  receivableDiscountPresentation,
   receivableLaunchLabel,
   statusScopeLabels,
 } from './modalidade-receber.utils';
@@ -101,9 +102,13 @@ export const useModalidadeReceberReport = ({
     { label: 'Valor', align: 'right' },
   ], []);
 
-  const rows = useMemo<FinancialReportRow[]>(() => (receivables || []).map((item) => ({
-    id: item.id || `${item.clienteId}-${item.dataVencimento}-${item.descricao}`,
-    cells: [
+  const rows = useMemo<FinancialReportRow[]>(() => (receivables || []).map((item) => {
+    const discount = receivableDiscountPresentation(item);
+    const discountExpired = discount?.kind === 'BOLETO_EXPIRADO';
+
+    return {
+      id: item.id || `${item.clienteId}-${item.dataVencimento}-${item.descricao}`,
+      cells: [
       <div>
         <p className="font-black text-[#001a33]">{item.clienteNome || 'Aluno não informado'}</p>
         <p className="mt-0.5 text-slate-500">CPF: {item.clienteCpfCnpj || 'não informado'}</p>
@@ -142,9 +147,15 @@ export const useModalidadeReceberReport = ({
       <FinancialReportStatusBadge status={item.status} />,
       <div>
         <p className="font-black text-[#001a33]">{formatCurrency(item.valor)}</p>
-        {typeof item.descontoAplicado === 'number' && item.descontoAplicado > 0 ? (
-          <p className="mt-1 text-[9px] font-bold text-emerald-700">
-            Desconto: {formatCurrency(item.descontoAplicado)}
+        {discount ? (
+          <p className={`mt-1 text-[9px] font-bold ${discountExpired ? 'text-amber-700' : 'text-emerald-700'}`}>
+            {discount.kind === 'APLICADO'
+              ? 'Desconto aplicado'
+              : discountExpired ? 'Desconto expirado' : 'Desconto do boleto'}:
+            {' '}{formatCurrency(discount.value)}
+            {discount.validUntil
+              ? ` · ${discountExpired ? 'em' : 'até'} ${formatReceivableDate(discount.validUntil)}`
+              : ''}
           </p>
         ) : null}
         {typeof item.jurosAplicados === 'number' && item.jurosAplicados > 0 ? (
@@ -163,8 +174,9 @@ export const useModalidadeReceberReport = ({
           </p>
         ) : null}
       </div>,
-    ],
-  })), [receivables]);
+      ],
+    };
+  }), [receivables]);
 
   const expectedCount = receivables?.length ?? (
     statusScope === 'pending'
