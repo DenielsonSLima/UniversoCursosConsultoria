@@ -1,8 +1,8 @@
 {
-  "version": "4.8.14",
+  "version": "4.8.15",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 23,
-  "releasedAt": "2026-08-30",
-  "summary": "Recebimentos detalhados e filtros seguros na conciliação financeira"
+  "revision": 24,
+  "releasedAt": "2026-08-31",
+  "summary": "Filtro seguro por turma ativa em Contas a Receber"
 }

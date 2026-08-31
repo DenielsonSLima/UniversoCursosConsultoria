@@ -2,7 +2,19 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
-Histórico anterior: [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+Histórico anterior: [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+
+## [4.8.15] - 2026-08-31
+
+### Alterado
+
+- Contas a Receber substitui o seletor de agrupamento pelo filtro de turmas em andamento da modalidade aberta; a listagem permanece organizada por aluno.
+- Página, grupos, indicadores e extrato/PDF aplicam a mesma turma selecionada, sem misturar Técnico, EAD, Livre ou Especialização.
+
+### Segurança e qualidade
+
+- As RPCs verificam polo autorizado e aplicam a turma no servidor; funções novas usam `search_path` vazio e execução somente para usuários autenticados ou serviço.
+- O serviço financeiro foi dividido por responsabilidade para manter todos os arquivos manuais dentro do teto de 500 linhas.
 
 ## [4.8.14] - 2026-08-30
 
@@ -407,90 +419,3 @@ Histórico anterior: [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-
 - A marca institucional vem exclusivamente do registro `watermark_landscape_<polo_id>` de Modelos de Documentos, inclusive quando seu recurso canônico é uma data URI; não existe fallback genérico ou edição de marca no editor de assinatura.
 - Migrations incrementais v4–v7, Edge Functions com JWT obrigatório e o acervo de assinaturas foram revisados no projeto de produção. A migration já aplicada de provas individuais foi preservada sem edição ou reaplicação.
 - Contratos de assinatura, Edge e PDF vetorial, além do build de produção, foram aprovados. A política jurídica do Diário continua desabilitada; por isso não foi criada assinatura real durante a validação.
-
-## [4.3.3] - 2026-08-14
-
-### Adicionado
-
-- Uma pessoa vinculada como Professor e Gestor pode escolher o perfil institucional ao entrar, sem que um redirecionamento do outro portal anule sua escolha.
-- O cadastro de Professor consegue reutilizar, de forma controlada, a identidade institucional já existente de um Gestor com CPF e e-mail correspondentes.
-
-### Segurança e qualidade
-
-- A autorização do vínculo usa o UID canônico da sessão, exige escopo do parceiro, acesso global e Configurações, e não aceita identificador Auth enviado pelo navegador.
-- O vínculo valida CPF e e-mail, evita colisão com outro Professor e trata concorrência sem concluir o cadastro indevidamente.
-- Os contratos de login, autorização e vínculo foram adicionados aos gates de qualidade.
-
-## [4.3.2] - 2026-08-13
-
-### Corrigido
-
-- A conciliação Banese deixa de criar uma execução financeira quando não há título elegível na fila.
-- A reserva da fila e a criação da execução passam a ocorrer na mesma transação, evitando ciclos vazios e corridas entre workers.
-
-### Segurança e qualidade
-
-- Execuções vazias legadas e telemetria técnica bem-sucedida recebem retenção estrita após 48 horas; pagamentos, tentativas, transições e falhas continuam preservados.
-- O novo entrypoint funciona com os privilégios mínimos do `service_role`, o prune fica restrito ao cron e os entrypoints legados de início e claim foram revogados.
-- Três migrations, worker v26, smoke real de fila vazia, teste focal 9/9, `deno check` e revisão independente foram validados antes da publicação.
-
-## [4.3.1] - 2026-08-12
-
-### Adicionado
-
-- Dependências acadêmicas passam a gerar uma única cobrança avulsa para a disciplina refeita, sem transferir o aluno, alterar a matrícula técnica ou criar um novo cronograma do curso.
-- A Secretaria configura valor proporcional, desconto de pontualidade, juros e multa em política própria da dependência; cada título congela esses termos em snapshot imutável.
-- A prévia mostra disciplina, valor, vencimento e encargos antes da confirmação, e o boleto identifica somente `Disciplina: nome`.
-
-### Segurança e qualidade
-
-- O boleto Banese permanece exclusivo, sem Pix, com baixa bancária e aviso alinhados em 60 dias após o vencimento; baixas presenciais e estornos exigem trilha auditável.
-- Turma, curso, reprovação e matrícula deixam de aparecer na apresentação nova ao aluno, no boleto e no resumo do pagamento.
-- Títulos históricos mantêm o contrato anterior; cobranças novas exigem uma parcela, `matricula_id` nula, snapshot próprio e liberação acadêmica somente após pagamento comprovado.
-- Migration, 11 Edge Functions, contratos Deno, TypeScript, ESLint, `deno check` e build de produção foram validados antes da publicação.
-
-## [4.3.0] - 2026-08-12
-
-### Adicionado
-
-- A Central de Relatórios passa a oferecer resumo por categoria, composição das entradas, fluxo de caixa realizado versus projetado e inadimplência por faixas de atraso.
-- Receitas e despesas continuam por competência, enquanto entradas e saídas representam o caixa realizado; os resumos consideram todo o resultado filtrado, sem depender da prévia paginada.
-
-### Segurança e qualidade
-
-- As novas consultas são RPCs protegidas por permissão de Relatórios e polo, com cálculo de agregações e saldo residual no backend.
-- A inadimplência passa a respeitar data de corte, descontos, baixas parciais e estornos manuais; a Central deixa de carregar status ou links específicos do gateway de cobrança.
-- Foram aprovados contratos financeiros, cache/Realtime, TypeScript, ESLint focal, verificação da Edge Function e build de produção.
-
-## [4.2.0] - 2026-08-12
-
-### Estabilização de produção
-
-- Os cinco relatórios financeiros separados passam a gerar PDF nativo vetorial, com cabeçalho institucional canônico e um único Blob reutilizado na prévia, no download e na impressão.
-- Criação e baixa de empréstimos passam a usar a data civil de Maceió, evitando avanço indevido de dia pelo relógio UTC.
-- Os runtimes de checkout, cobrança, webhook, CNAB e reconciliação Banese foram republicados com as regras do plano financeiro único já migradas no banco.
-- A versão estável consolida a entrega `4.2.0-beta.2`, mantendo as migrations, contratos e históricos publicados sem regravação.
-
-### Qualidade
-
-- O novo exportador foi validado com texto extraível, inspeção de recursos sem imagem A4, renderização das páginas e contratos de Blob único.
-- Node local foi alinhado a `24.x`, a versão exigida pelo projeto e usada nas validações de publicação.
-
-## [4.2.0-beta.2] - 2026-08-11
-
-### Adicionado
-
-- Cursos livres e especializações passam a ter plano financeiro único, com parcelas variáveis, snapshots imutáveis e matrícula idempotente.
-- Caixa recebe posições operacional, líquida e total; empréstimos ganham liquidação, ajustes, exportação paisagem e separação do crédito do resultado operacional.
-- A Central de Relatórios passa a oferecer extrato, entradas, saídas, receitas e despesas por contrato financeiro canônico.
-
-### Corrigido
-
-- Contas a Pagar preserva lançamento, fornecedor, categoria, turma, recibo vetorial e os fluxos auditáveis de edição, cancelamento e estorno.
-- A política de Realtime mantém o acesso autorizado à aba Outros Créditos durante a publicação dos relatórios financeiros.
-- O extrato financeiro passa a expor corretamente o indicador de conta ativa em todos os retornos da RPC canônica.
-
-### Segurança e qualidade
-
-- Histórico de migrations foi reconciliado com o banco remoto sem reaplicar versões já existentes.
-- RPCs legadas de empréstimos receberam `search_path` vazio e grants restritos a `service_role`; as fontes locais usam os IDs efetivamente registrados pelo banco.

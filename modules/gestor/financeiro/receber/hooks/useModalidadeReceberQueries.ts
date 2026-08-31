@@ -12,6 +12,7 @@ export function useModalidadeReceberQueries(
   const isGrouped = filters.groupMode !== 'none';
   const summaryFilters = {
     poloId: filters.poloId,
+    turmaId: filters.turmaId,
     search: filters.search,
     dueStart: filters.dueStart,
     dueEnd: filters.dueEnd,
@@ -43,9 +44,18 @@ export function useModalidadeReceberQueries(
     gcTime: 30 * 60_000,
   });
 
+  const activeClassesQuery = useQuery({
+    queryKey: financeiroQueryKeys.receivablesActiveClassesByModality(modality, filters.poloId),
+    queryFn: () => financeiroService.getActiveReceivablesClassesByModality(modality, filters.poloId),
+    enabled: Boolean(filters.poloId),
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
+  });
+
   return {
     receivablesQuery,
     groupsQuery,
     summaryQuery,
+    activeClassesQuery,
   };
 }

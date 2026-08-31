@@ -3,7 +3,6 @@ import { LayoutGrid, Search, Table2 } from 'lucide-react';
 import FinancialReportExportButton from '../../../components/FinancialReportPreview';
 import type {
   CourseModality,
-  GroupMode,
   ReceivableKpis,
   ReceivableStatusCounts,
   StatusScope,
@@ -25,7 +24,9 @@ interface ModalidadeReceberToolbarProps {
   search: string;
   dueStart: string;
   dueEnd: string;
-  groupMode: GroupMode;
+  turmaId: string;
+  turmas: Array<{ id: string; nome: string; codigo?: string | null }>;
+  turmasLoading: boolean;
   viewMode: ViewMode;
   report: ModalidadeReceberReport;
   isLoading: boolean;
@@ -33,7 +34,7 @@ interface ModalidadeReceberToolbarProps {
   onSearchChange: (search: string) => void;
   onDueStartChange: (date: string) => void;
   onDueEndChange: (date: string) => void;
-  onGroupModeChange: (groupMode: GroupMode) => void;
+  onTurmaIdChange: (turmaId: string) => void;
   onViewModeChange: (viewMode: ViewMode) => void;
   onClearFilters: () => void;
 }
@@ -50,7 +51,9 @@ export const ModalidadeReceberToolbar: React.FC<ModalidadeReceberToolbarProps> =
   search,
   dueStart,
   dueEnd,
-  groupMode,
+  turmaId,
+  turmas,
+  turmasLoading,
   viewMode,
   report,
   isLoading,
@@ -58,7 +61,7 @@ export const ModalidadeReceberToolbar: React.FC<ModalidadeReceberToolbarProps> =
   onSearchChange,
   onDueStartChange,
   onDueEndChange,
-  onGroupModeChange,
+  onTurmaIdChange,
   onViewModeChange,
   onClearFilters,
 }) => (
@@ -130,16 +133,22 @@ export const ModalidadeReceberToolbar: React.FC<ModalidadeReceberToolbarProps> =
         title="Vencimento Final"
       />
       <select
-        value={groupMode}
-        onChange={(event) => onGroupModeChange(event.target.value as GroupMode)}
+        value={turmaId}
+        onChange={(event) => onTurmaIdChange(event.target.value)}
+        disabled={turmasLoading}
         className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-semibold outline-none transition-all focus:ring-2 focus:ring-emerald-500"
+        title="Filtrar por turma ativa"
+        aria-label="Filtrar por turma ativa"
       >
-        <option value="student">Agrupar por aluno</option>
-        <option value="class">Agrupar por turma</option>
-        <option value="none">Sem agrupamento</option>
+        <option value="">{turmasLoading ? 'Carregando turmas...' : 'Todas as turmas'}</option>
+        {turmas.map((turma) => (
+          <option key={turma.id} value={turma.id}>
+            {turma.codigo ? `${turma.nome} · ${turma.codigo}` : turma.nome}
+          </option>
+        ))}
       </select>
 
-      {search || dueStart || dueEnd ? (
+      {search || dueStart || dueEnd || turmaId ? (
         <button
           type="button"
           onClick={onClearFilters}
