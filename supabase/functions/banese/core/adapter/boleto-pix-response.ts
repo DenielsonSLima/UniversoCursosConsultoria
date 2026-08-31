@@ -40,6 +40,11 @@ const pixReturnCandidates = (raw: unknown) => {
     }
     visited += 1;
 
+    if (Array.isArray(value)) {
+      for (const child of value) visit(child, parentPath, depth + 1);
+      return;
+    }
+
     for (const [key, child] of Object.entries(asRecord(value))) {
       const normalizedKey = normalizedFieldName(key);
       const path = [...parentPath, normalizedKey];
@@ -50,6 +55,16 @@ const pixReturnCandidates = (raw: unknown) => {
       if (typeof child === "string") {
         const candidate = child.trim();
         if (!candidate) continue;
+
+        // O GET do Banese pode embrulhar o BolePix em objetos com nomes de
+        // folha diferentes dos usados no POST (por exemplo, texto/conteudo).
+        // Dentro de um ramo inequivocamente Pix/QR, encaminhamos o texto aos
+        // dois validadores. Eles continuam sendo a fronteira de seguranca:
+        // somente EMV oficial valido ou imagem QR valida e aceita abaixo.
+        if (pixScoped) {
+          payloadCandidates.push(candidate);
+          imageCandidates.push(candidate);
+        }
 
         if (
           PIX_PAYLOAD_FIELD_NAMES.has(normalizedKey) ||
