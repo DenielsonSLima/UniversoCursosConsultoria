@@ -50,17 +50,20 @@ const hasPositiveAmount = (value?: number): value is number => (
   typeof value === 'number' && Number.isFinite(value) && value > 0
 );
 
-const ReceivableAmountSummary: React.FC<{ item: ContasReceber }> = ({ item }) => {
+const ReceivableAmountSummary: React.FC<{
+  item: ContasReceber;
+  compact?: boolean;
+}> = ({ item, compact = false }) => {
   const discount = receivableDiscountPresentation(item);
   const discountExpired = discount?.kind === 'BOLETO_EXPIRADO';
 
   return (
-    <div className="space-y-1">
+    <div className={`${compact ? 'min-w-0 ' : ''}space-y-1`}>
       <p className="whitespace-nowrap text-sm font-black text-[#001a33]">
         {formatCurrency(item.valor)}
       </p>
       {discount ? (
-        <p className={`text-[11px] font-bold ${discountExpired ? 'text-amber-700' : 'text-emerald-700'}`}>
+        <p className={`${compact ? 'text-[10px] leading-tight' : 'text-[11px]'} font-bold ${discountExpired ? 'text-amber-700' : 'text-emerald-700'}`}>
           <span className="whitespace-nowrap">
             {discount.kind === 'APLICADO'
               ? 'Desconto aplicado'
@@ -68,7 +71,7 @@ const ReceivableAmountSummary: React.FC<{ item: ContasReceber }> = ({ item }) =>
             {' '}{formatCurrency(discount.value)}
           </span>
           {discount.validUntil ? (
-            <span className="block whitespace-nowrap text-[10px]">
+            <span className={`block whitespace-nowrap ${compact ? 'mt-0.5 text-[9px]' : 'text-[10px]'}`}>
               {discountExpired ? 'Expirou em' : 'Válido até'}{' '}
               {formatReceivableDate(discount.validUntil)}
             </span>
@@ -76,17 +79,17 @@ const ReceivableAmountSummary: React.FC<{ item: ContasReceber }> = ({ item }) =>
         </p>
       ) : null}
       {hasPositiveAmount(item.jurosAplicados) ? (
-        <p className="whitespace-nowrap text-[11px] font-bold text-amber-700">
+        <p className={`whitespace-nowrap ${compact ? 'text-[10px]' : 'text-[11px]'} font-bold text-amber-700`}>
           Juros: {formatCurrency(item.jurosAplicados)}
         </p>
       ) : null}
       {hasPositiveAmount(item.multaAplicada) ? (
-        <p className="whitespace-nowrap text-[11px] font-bold text-rose-700">
+        <p className={`whitespace-nowrap ${compact ? 'text-[10px]' : 'text-[11px]'} font-bold text-rose-700`}>
           Multa: {formatCurrency(item.multaAplicada)}
         </p>
       ) : null}
       {item.valorPago !== undefined ? (
-        <p className="whitespace-nowrap text-[11px] font-black text-emerald-700">
+        <p className={`whitespace-nowrap ${compact ? 'text-[10px]' : 'text-[11px]'} font-black text-emerald-700`}>
           Recebido: {formatCurrency(item.valorPago)}
         </p>
       ) : null}
@@ -310,10 +313,10 @@ export const ReceivableRow: React.FC<ReceivableRowProps> = ({
         ) : null}
       </div>
     </td>
-    <td className="px-5 py-5">
-      <ReceivableAmountSummary item={item} />
+    <td className="py-5 pl-3 pr-2">
+      <ReceivableAmountSummary item={item} compact />
     </td>
-    <td className="px-5 py-5"><ReceivableActionButtons item={item} actions={actions} /></td>
+    <td className="py-5 pl-2 pr-3"><ReceivableActionButtons item={item} actions={actions} /></td>
   </tr>
 );
 
