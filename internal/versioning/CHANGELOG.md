@@ -4,6 +4,24 @@ Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente
 
 Histórico anterior: [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
 
+## [4.8.19] - 2026-08-31
+
+### Corrigido
+
+- A consulta de recuperação Banese passa a inspecionar, sem cache, tanto o
+  boleto quanto o envelope de pagamentos efetivados e aproveita o Pix oficial
+  quando ele estiver presente, sempre no mesmo convênio e Nosso Número.
+- O retorno original da emissão continua sendo a fonte canônica do BolePix; a
+  recuperação usa somente GET e nunca cria, cancela ou duplica cobrança.
+
+### Segurança e qualidade
+
+- Os diagnósticos registram apenas formato e tipo dos campos encontrados, sem
+  persistir payload bancário bruto, CPF, linha digitável ou conteúdo Pix.
+- A auditoria real confirmou que o GET atual não repetiu o Pix nem para um
+  título Técnico que já possuía QR oficial; 63 testes focados e o `deno check`
+  dos adaptadores afetados foram aprovados.
+
 ## [4.8.18] - 2026-08-31
 
 ### Corrigido

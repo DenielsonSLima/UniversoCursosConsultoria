@@ -32,6 +32,7 @@ const normalizedFieldName = (value: string) =>
 const pixReturnCandidates = (raw: unknown) => {
   const payloadCandidates: string[] = [];
   const imageCandidates: string[] = [];
+  const pixFieldShapes = new Set<string>();
   let visited = 0;
 
   const visit = (value: unknown, parentPath: string[], depth: number) => {
@@ -51,6 +52,14 @@ const pixReturnCandidates = (raw: unknown) => {
       const pixScoped = path.some((part) =>
         /pix|qr|brcode|emv|copia/.test(part)
       );
+      if (pixScoped && pixFieldShapes.size < 40) {
+        const valueType = child === null
+          ? "null"
+          : Array.isArray(child)
+          ? "array"
+          : typeof child;
+        pixFieldShapes.add(`${path.join(".")}:${valueType}`);
+      }
 
       if (typeof child === "string") {
         const candidate = child.trim();
@@ -91,14 +100,19 @@ const pixReturnCandidates = (raw: unknown) => {
   };
 
   visit(raw, [], 0);
-  return { payloadCandidates, imageCandidates };
+  return {
+    payloadCandidates,
+    imageCandidates,
+    pixFieldShapes: [...pixFieldShapes],
+  };
 };
 
 export const normalizeBanesePixFromResponse = async (
   raw: unknown,
   amount: number,
 ) => {
-  const { payloadCandidates, imageCandidates } = pixReturnCandidates(raw);
+  const { payloadCandidates, imageCandidates, pixFieldShapes } =
+    pixReturnCandidates(raw);
   let pixPayload: string | null = null;
   let pixEncodedImage: string | null = null;
 
@@ -137,6 +151,8 @@ export const normalizeBanesePixFromResponse = async (
       imageValid: Boolean(pixEncodedImage),
       imageSource,
       complete,
+      // Somente nomes normalizados/categorias de tipo; nunca conteúdo Pix.
+      pixFieldShapes,
     },
   };
 };
