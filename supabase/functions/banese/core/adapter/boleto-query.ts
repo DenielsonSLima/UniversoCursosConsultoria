@@ -15,9 +15,9 @@ import {
 import {
   asRecord,
   assertEnvironment,
+  awaitBaneseRead,
   firstString,
   onlyDigits,
-  awaitBaneseRead,
   readResponseBody,
   sanitizedBoletoSnapshot,
 } from "./utils.ts";
@@ -54,13 +54,22 @@ export const queryBaneseBoleto = async (
   }
 
   const token = input.accessToken ??
-    await requestBaneseBoletoAccessToken(admin, environment);
+    await requestBaneseBoletoAccessToken(admin, environment, {
+      signal: input.signal,
+    });
   const baseEndpoint = `${BANESE_BOLETO_ENDPOINTS[environment].baseUrl}` +
     `/convenios/${convenio}/boletos/${nossoNumero}`;
-  const response = await awaitBaneseRead(fetch(baseEndpoint, {
-    headers: { Authorization: `${token.tokenType} ${token.accessToken}` },
-    signal: input.signal,
-  }), input.signal);
+  const response = await awaitBaneseRead(
+    fetch(baseEndpoint, {
+      headers: {
+        Authorization: `${token.tokenType} ${token.accessToken}`,
+        Accept: "application/json",
+        "Cache-Control": "no-cache",
+      },
+      signal: input.signal,
+    }),
+    input.signal,
+  );
   const raw = await awaitBaneseRead(readResponseBody(response), input.signal);
   if (!response.ok) {
     throw new BaneseAdapterError(
@@ -95,9 +104,11 @@ export const queryBaneseBoleto = async (
   const expectedAmount = Number(input.expectedAmount ?? nominalAmount);
   const expectedDueDate = firstString(input.expectedDueDate, dueDate)
     .slice(0, 10);
-  let recoveredPix:
-    | Awaited<ReturnType<typeof normalizeBanesePixFromResponse>>
-    | null = null;
+  let recoveredPix: {
+    pixPayload: string | null;
+    pixEncodedImage: string | null;
+    diagnostic: Record<string, unknown>;
+  } | null = null;
   if (
     isProduction(environment) &&
     (input.validateTitleIdentity || input.recoverPix)
@@ -146,8 +157,12 @@ export const queryBaneseBoleto = async (
   const skipPayments =
     input.skipEffectivePaymentsWhenOfficiallyUnpaid === true &&
     officiallyUnpaid;
-  const { payments, error: paymentsError } = skipPayments
-    ? { payments: [] as Array<Record<string, unknown>>, error: null }
+  const { payments, raw: paymentsRaw, error: paymentsError } = skipPayments
+    ? {
+      payments: [] as Array<Record<string, unknown>>,
+      raw: null,
+      error: null,
+    }
     : await queryBaneseEffectivePayments({
       baseEndpoint,
       token,
@@ -156,6 +171,29 @@ export const queryBaneseBoleto = async (
         recoveredPix?.pixPayload && recoveredPix.pixEncodedImage,
       ),
     });
+  if (
+    isProduction(environment) && input.recoverPix &&
+    (!recoveredPix?.pixPayload || !recoveredPix.pixEncodedImage) &&
+    paymentsRaw
+  ) {
+    const paymentEnvelopePix = await normalizeBanesePixFromResponse(
+      paymentsRaw,
+      expectedAmount,
+    );
+    if (
+      paymentEnvelopePix.pixPayload && paymentEnvelopePix.pixEncodedImage
+    ) {
+      recoveredPix = paymentEnvelopePix;
+    } else if (recoveredPix) {
+      recoveredPix = {
+        ...recoveredPix,
+        diagnostic: {
+          ...recoveredPix.diagnostic,
+          paymentEnvelope: paymentEnvelopePix.diagnostic,
+        },
+      };
+    }
+  }
   const paid = payments.length > 0;
 
   return {

@@ -1,8 +1,8 @@
 {
-  "version": "4.8.18",
+  "version": "4.8.19",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 27,
+  "revision": 28,
   "releasedAt": "2026-08-31",
-  "summary": "Recuperação segura do Pix oficial em boletos EAD"
+  "summary": "Consulta BolePix sem cache e preservação do retorno oficial"
 }

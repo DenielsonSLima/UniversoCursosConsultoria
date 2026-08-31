@@ -9,19 +9,29 @@ export const queryBaneseEffectivePayments = async (input: {
   allowFailure: boolean;
 }) => {
   try {
-    const response = await awaitBaneseRead(fetch(
-      `${input.baseEndpoint}/pagamentos/efetivados`,
-      {
-        headers: {
-          Authorization: `${input.token.tokenType} ${input.token.accessToken}`,
+    const response = await awaitBaneseRead(
+      fetch(
+        `${input.baseEndpoint}/pagamentos/efetivados`,
+        {
+          headers: {
+            Authorization:
+              `${input.token.tokenType} ${input.token.accessToken}`,
+            Accept: "application/json",
+            "Cache-Control": "no-cache",
+          },
+          signal: input.signal,
         },
-        signal: input.signal,
-      },
-    ), input.signal);
+      ),
+      input.signal,
+    );
     // HTTP 404 significa que nenhum pagamento foi efetuado ainda (boleto pendente).
     // Não é um erro de consulta — o titulo está ativo e em aberto no banco.
     if (response.status === 404) {
-      return { payments: [] as Array<Record<string, unknown>>, error: null };
+      return {
+        payments: [] as Array<Record<string, unknown>>,
+        raw: null,
+        error: null,
+      };
     }
     const raw = await awaitBaneseRead(readResponseBody(response), input.signal);
     if (!response.ok) {
@@ -37,12 +47,17 @@ export const queryBaneseEffectivePayments = async (input: {
       payments: Array.isArray(items)
         ? items.map(asRecord).filter((item) => Object.keys(item).length > 0)
         : [],
+      // O envelope oficial pode repetir dados BolePix do mesmo título. O
+      // chamador o inspeciona apenas com os validadores de Pix/identidade e
+      // nunca o persiste integralmente.
+      raw,
       error: null,
     };
   } catch (error) {
     if (!input.allowFailure) throw error;
     return {
       payments: [] as Array<Record<string, unknown>>,
+      raw: null,
       error: error instanceof Error ? error : new BaneseAdapterError(
         String(error || "Consulta de pagamentos falhou."),
       ),
