@@ -10,7 +10,6 @@ import {
 } from '../../../components/FinancialReportPreview';
 import type {
   CourseModality,
-  GroupMode,
   ReceivableKpis,
   ReceivableStatusCounts,
   StatusScope,
@@ -19,7 +18,6 @@ import { formatEnrollment } from './modalidade-receber.enrollment';
 import {
   formatCurrency,
   formatReceivableDate,
-  groupModeLabels,
   paymentGatewayLabel,
   paymentMethodLabel,
   paymentOriginLabel,
@@ -42,7 +40,8 @@ interface UseModalidadeReceberReportParams {
   dueStart: string;
   dueEnd: string;
   statusScope: StatusScope;
-  groupMode: GroupMode;
+  turmaId: string;
+  turmaLabel: string;
   kpis: ReceivableKpis;
   statusCounts: ReceivableStatusCounts;
   toast: ReportToast;
@@ -57,7 +56,8 @@ export const useModalidadeReceberReport = ({
   dueStart,
   dueEnd,
   statusScope,
-  groupMode,
+  turmaId,
+  turmaLabel,
   kpis,
   statusCounts,
   toast,
@@ -66,12 +66,13 @@ export const useModalidadeReceberReport = ({
 
   useEffect(() => {
     setReceivables(null);
-  }, [debouncedSearch, dueStart, dueEnd, statusScope, modality, poloId]);
+  }, [debouncedSearch, dueStart, dueEnd, statusScope, turmaId, modality, poloId]);
 
   const loadReceivables = useCallback(async () => {
     try {
       const rows = await financeiroService.getReceivablesExportByModality(modality, {
         poloId: poloId || undefined,
+        turmaId: turmaId || undefined,
         search: search.trim(),
         dueStart,
         dueEnd,
@@ -82,7 +83,7 @@ export const useModalidadeReceberReport = ({
       toast.error('Erro ao preparar o extrato', error?.message || 'Não foi possível carregar todos os registros do relatório.');
       throw error;
     }
-  }, [dueEnd, dueStart, modality, poloId, search, statusScope, toast]);
+  }, [dueEnd, dueStart, modality, poloId, search, statusScope, toast, turmaId]);
 
   const reportPoloId = useMemo(() => {
     if (poloId && poloId !== 'todos') return poloId;
@@ -184,10 +185,10 @@ export const useModalidadeReceberReport = ({
       { label: 'Situação', value: statusScopeLabels[statusScope] },
       { label: 'Busca', value: search.trim() || 'Todos os alunos' },
       { label: 'Vencimento', value: `${filterDate(dueStart)} até ${filterDate(dueEnd)}` },
-      { label: 'Agrupamento', value: groupModeLabels[groupMode] },
+      { label: 'Turma', value: turmaLabel || 'Todas as turmas' },
       { label: 'Registros', value: `${expectedCount} cobrança(s)` },
     ];
-  }, [dueEnd, dueStart, expectedCount, groupMode, search, statusScope, title]);
+  }, [dueEnd, dueStart, expectedCount, search, statusScope, title, turmaLabel]);
 
   const summaryCards = useMemo<FinancialReportSummaryCard[]>(() => [
     { label: 'Total previsto', value: formatCurrency(kpis.total), tone: 'slate' },

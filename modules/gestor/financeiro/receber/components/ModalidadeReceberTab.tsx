@@ -18,7 +18,6 @@ import {
 import { ReceivablesList } from './modalidade-receber/ReceivablesList';
 import type {
   GroupItemsState,
-  GroupMode,
   ModalidadeReceberTabProps,
   ReceivableKpis,
   ReceivableStatusCounts,
@@ -43,7 +42,8 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
   const [search, setSearch] = useState('');
   const [statusScope, setStatusScope] = useState<StatusScope>('pending');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
-  const [groupMode, setGroupMode] = useState<GroupMode>('student');
+  const groupMode = 'student' as const;
+  const [turmaId, setTurmaId] = useState('');
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [groupPages, setGroupPages] = useState<Record<string, number>>({});
   const [dueStart, setDueStart] = useState('');
@@ -61,6 +61,7 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
 
   const pageFilters = useMemo<ReceivablesPageFilters>(() => ({
     poloId: poloId || undefined,
+    turmaId: turmaId || undefined,
     search: debouncedSearch,
     dueStart,
     dueEnd,
@@ -68,19 +69,20 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
     groupMode,
     page,
     pageSize: PAGE_SIZE,
-  }), [debouncedSearch, dueEnd, dueStart, groupMode, page, poloId, statusScope]);
+  }), [debouncedSearch, dueEnd, dueStart, groupMode, page, poloId, statusScope, turmaId]);
 
   const {
-    receivablesQuery,
     groupsQuery,
     summaryQuery,
+    activeClassesQuery,
   } = useModalidadeReceberQueries(modality, pageFilters);
   const { accountsQuery } = useFinanceiroSharedQueries({ accounts: true, polos: false, partners: false });
-  const receivables = receivablesQuery.data?.rows || [];
+  const receivables = [];
   const groups = groupsQuery.data?.groups || [];
   const accounts = accountsQuery.data || [];
-  const isLoading = groupMode === 'none' ? receivablesQuery.isLoading : groupsQuery.isLoading;
-  const isPageFetching = groupMode === 'none' ? receivablesQuery.isFetching : groupsQuery.isFetching;
+  const activeClasses = activeClassesQuery.data || [];
+  const isLoading = groupsQuery.isLoading;
+  const isPageFetching = groupsQuery.isFetching;
 
   const groupItemQueries = useQueries({
     queries: groups.map((group) => {
@@ -133,14 +135,22 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
     aReceber: summaryQuery.data?.pendingValue || 0,
     vencidos: summaryQuery.data?.overdueCount || 0,
   };
-  const totalItems = groupMode === 'none'
-    ? receivablesQuery.data?.totalItems || 0
-    : groupsQuery.data?.totalItems || 0;
+  const totalItems = groupsQuery.data?.totalItems || 0;
   const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
 
   useEffect(() => {
     setPage(1);
-  }, [search, dueStart, dueEnd, statusScope, groupMode, modality]);
+  }, [search, dueStart, dueEnd, statusScope, turmaId, modality]);
+
+  useEffect(() => {
+    setTurmaId('');
+  }, [modality, poloId]);
+
+  useEffect(() => {
+    if (turmaId && activeClassesQuery.isSuccess && !activeClasses.some((turma) => turma.id === turmaId)) {
+      setTurmaId('');
+    }
+  }, [activeClasses, activeClassesQuery.isSuccess, turmaId]);
 
   useEffect(() => {
     if (page > totalPages) setPage(totalPages);
@@ -149,7 +159,7 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
   useEffect(() => {
     setExpandedGroups(new Set());
     setGroupPages({});
-  }, [search, dueStart, dueEnd, statusScope, groupMode, modality, page]);
+  }, [search, dueStart, dueEnd, statusScope, turmaId, modality, page]);
 
   const toggleGroup = (key: string) => {
     const willOpen = !expandedGroups.has(key);
@@ -175,7 +185,8 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
     dueStart,
     dueEnd,
     statusScope,
-    groupMode,
+    turmaId,
+    turmaLabel: activeClasses.find((turma) => turma.id === turmaId)?.nome || '',
     kpis,
     statusCounts,
     toast,
@@ -211,7 +222,9 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
         search={search}
         dueStart={dueStart}
         dueEnd={dueEnd}
-        groupMode={groupMode}
+        turmaId={turmaId}
+        turmas={activeClasses}
+        turmasLoading={activeClassesQuery.isLoading}
         viewMode={viewMode}
         report={report}
         isLoading={isLoading}
@@ -219,12 +232,13 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
         onSearchChange={setSearch}
         onDueStartChange={setDueStart}
         onDueEndChange={setDueEnd}
-        onGroupModeChange={setGroupMode}
+        onTurmaIdChange={setTurmaId}
         onViewModeChange={setViewMode}
         onClearFilters={() => {
           setSearch('');
           setDueStart('');
           setDueEnd('');
+          setTurmaId('');
         }}
       />
       <ReceivablesList
