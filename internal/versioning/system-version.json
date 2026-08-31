@@ -1,8 +1,8 @@
 {
-  "version": "4.8.17",
+  "version": "4.8.18",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 26,
+  "revision": 27,
   "releasedAt": "2026-08-31",
-  "summary": "Layout de valor e desconto em Contas a Receber"
+  "summary": "Recuperação segura do Pix oficial em boletos EAD"
 }

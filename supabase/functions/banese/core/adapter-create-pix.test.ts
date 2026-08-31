@@ -59,6 +59,49 @@ Deno.test("POST sem Pix recupera QrCode em um único GET e não repete POST", as
   }
 });
 
+Deno.test("GET recupera BolePix aninhado mesmo quando a folha muda de nome", async () => {
+  const originalFetch = globalThis.fetch;
+  const amount = 149.9;
+  const response = makeBaneseTitleResponse(
+    amount,
+    BANESE_DOCUMENT_FIXTURE.dueDate,
+  );
+  const officialQrCode = buildBanesePixPayloadFixture(
+    "QR-ANINHADO",
+    amount,
+  );
+  const recovered = makeBaneseTitleResponse(
+    amount,
+    BANESE_DOCUMENT_FIXTURE.dueDate,
+    {
+      BolePix: {
+        qrCodes: [{ conteudo: officialQrCode }],
+      },
+    },
+  );
+  const { calls, fetcher } = creationFetch(response, recovered);
+  globalThis.fetch = fetcher as typeof fetch;
+
+  try {
+    const result = await createBaneseBoletoCharge({
+      ...reservedBoletoInput(false),
+      environment: "production",
+      amount,
+      financialTerms: null,
+    });
+    assert.equal(result.pixPayload, officialQrCode);
+    assert.match(result.pixEncodedImage ?? "", /^data:image\/png;base64,/);
+    assert.deepEqual(
+      calls.filter((call) => call.url.includes("/boletos")).map((call) =>
+        call.method
+      ),
+      ["GET", "POST", "GET"],
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 Deno.test("GET exato sem QrCode preserva o titulo e nao envia POST", async () => {
   const originalFetch = globalThis.fetch;
   const bankMethods: string[] = [];
