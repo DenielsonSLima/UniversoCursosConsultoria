@@ -4,6 +4,23 @@ Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente
 
 Histórico anterior: [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
 
+## [4.8.18] - 2026-08-31
+
+### Corrigido
+
+- O checkout EAD passa a reconhecer o Pix oficial quando a consulta Banese
+  devolve o BolePix em objetos ou listas aninhadas com nomes de folha
+  diferentes do retorno original de emissão.
+- A recuperação continua vinculada ao mesmo convênio e Nosso Número e não
+  envia novo POST, não reemite e não duplica o boleto.
+
+### Segurança e qualidade
+
+- Somente um EMV oficial com CRC e valor válidos é aceito; a imagem do QR Code
+  é montada exclusivamente a partir desse payload bancário confirmado.
+- A regressão aprovou 247 testes de Banese, EAD e Técnico e o `deno check` dos
+  seis entrypoints afetados.
+
 ## [4.8.17] - 2026-08-31
 
 ### Corrigido
