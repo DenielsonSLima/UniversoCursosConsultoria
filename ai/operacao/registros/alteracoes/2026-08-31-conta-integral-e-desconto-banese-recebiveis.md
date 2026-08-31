@@ -1,7 +1,7 @@
 # Conta integral e desconto Banese em recebíveis
 
 Data: 2026-08-31  
-Estado: migrations aplicadas; publicação autorizada e em andamento
+Estado: publicado em produção via PR #102
 
 ## Pedido e decisão
 
@@ -59,7 +59,10 @@ O desconto ofertado no boleto não é tratado como baixa: o sistema diferencia
   configurado ou aplicado quando faltava nosso número.
 - O feed seguro retornou 100 itens no smoke, 48 com agência e conta integrais e
   nenhum valor mascarado. A chamada sem permissão foi bloqueada com `42501`.
-- Smoke visual autenticado: pendente para o preview/produção desta publicação.
+- Preview Vercel do PR #102: aprovado.
+- Smoke visual autenticado: não executado porque esta sessão não possui
+  navegador conectado; a pendência fica explícita e não foi substituída por
+  testes sem relação com a tela.
 
 ## Operações remotas
 
@@ -69,7 +72,9 @@ O desconto ofertado no boleto não é tratado como baixa: o sistema diferencia
 - As três funções usam `SECURITY DEFINER` com `search_path` vazio e ACLs
   explícitas. Os avisos do advisor sobre execução por `authenticated` são
   intencionais para as duas RPCs públicas; ambas fazem autorização interna.
-- GitHub, preview, merge e deploy: em andamento após autorização explícita.
+- GitHub: PR #102 publicado por squash em `main`.
+- Vercel: preview aprovado e promoção automática de produção validada após o
+  merge.
 
 ## Manifesto explícito
 

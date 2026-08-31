@@ -1,6 +1,6 @@
 # Lote ativo
 
-Estado: `MIGRATIONS APLICADAS — EM PUBLICAÇÃO`
+Estado: `PUBLICADO EM PRODUÇÃO`
 
 ## Lote: 2026-08-31-conta-integral-e-desconto-banese-recebiveis
 
@@ -52,7 +52,10 @@ Estado: `MIGRATIONS APLICADAS — EM PUBLICAÇÃO`
   na primeira página, 137 tinham desconto configurado, 28 desconto aplicado e
   nenhum desconto apareceu sem nosso número. Um usuário sem permissão recebeu
   `42501`, e o feed seguro retornou agência/conta sem máscara.
-- Smoke visual autenticado: pendente para o preview/produção desta publicação.
+- Preview Vercel do PR #102: aprovado.
+- Smoke visual autenticado: não executado porque esta sessão não possui
+  navegador conectado; pendência registrada sem substituir o smoke por testes
+  não relacionados.
 
 ### Aceite para publicação
 
