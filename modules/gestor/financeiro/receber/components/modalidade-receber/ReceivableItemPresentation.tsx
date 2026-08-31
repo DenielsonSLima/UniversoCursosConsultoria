@@ -21,6 +21,7 @@ import {
   paymentGatewayLabel,
   paymentMethodLabel,
   paymentOriginLabel,
+  receivableDiscountPresentation,
   receivableClassLabel,
   receivableCourseTitle,
   receivableLaunchLabel,
@@ -49,33 +50,49 @@ const hasPositiveAmount = (value?: number): value is number => (
   typeof value === 'number' && Number.isFinite(value) && value > 0
 );
 
-const ReceivableAmountSummary: React.FC<{ item: ContasReceber }> = ({ item }) => (
-  <div className="space-y-1">
-    <p className="whitespace-nowrap text-sm font-black text-[#001a33]">
-      {formatCurrency(item.valor)}
-    </p>
-    {hasPositiveAmount(item.descontoAplicado) ? (
-      <p className="whitespace-nowrap text-[11px] font-bold text-emerald-700">
-        Desconto: {formatCurrency(item.descontoAplicado)}
+const ReceivableAmountSummary: React.FC<{ item: ContasReceber }> = ({ item }) => {
+  const discount = receivableDiscountPresentation(item);
+  const discountExpired = discount?.kind === 'BOLETO_EXPIRADO';
+
+  return (
+    <div className="space-y-1">
+      <p className="whitespace-nowrap text-sm font-black text-[#001a33]">
+        {formatCurrency(item.valor)}
       </p>
-    ) : null}
-    {hasPositiveAmount(item.jurosAplicados) ? (
-      <p className="whitespace-nowrap text-[11px] font-bold text-amber-700">
-        Juros: {formatCurrency(item.jurosAplicados)}
-      </p>
-    ) : null}
-    {hasPositiveAmount(item.multaAplicada) ? (
-      <p className="whitespace-nowrap text-[11px] font-bold text-rose-700">
-        Multa: {formatCurrency(item.multaAplicada)}
-      </p>
-    ) : null}
-    {item.valorPago !== undefined ? (
-      <p className="whitespace-nowrap text-[11px] font-black text-emerald-700">
-        Recebido: {formatCurrency(item.valorPago)}
-      </p>
-    ) : null}
-  </div>
-);
+      {discount ? (
+        <p className={`text-[11px] font-bold ${discountExpired ? 'text-amber-700' : 'text-emerald-700'}`}>
+          <span className="whitespace-nowrap">
+            {discount.kind === 'APLICADO'
+              ? 'Desconto aplicado'
+              : discountExpired ? 'Desconto expirado' : 'Desconto do boleto'}:
+            {' '}{formatCurrency(discount.value)}
+          </span>
+          {discount.validUntil ? (
+            <span className="block whitespace-nowrap text-[10px]">
+              {discountExpired ? 'Expirou em' : 'Válido até'}{' '}
+              {formatReceivableDate(discount.validUntil)}
+            </span>
+          ) : null}
+        </p>
+      ) : null}
+      {hasPositiveAmount(item.jurosAplicados) ? (
+        <p className="whitespace-nowrap text-[11px] font-bold text-amber-700">
+          Juros: {formatCurrency(item.jurosAplicados)}
+        </p>
+      ) : null}
+      {hasPositiveAmount(item.multaAplicada) ? (
+        <p className="whitespace-nowrap text-[11px] font-bold text-rose-700">
+          Multa: {formatCurrency(item.multaAplicada)}
+        </p>
+      ) : null}
+      {item.valorPago !== undefined ? (
+        <p className="whitespace-nowrap text-[11px] font-black text-emerald-700">
+          Recebido: {formatCurrency(item.valorPago)}
+        </p>
+      ) : null}
+    </div>
+  );
+};
 
 export const ReceivableStatusBadge: React.FC<{ item: ContasReceber }> = ({ item }) => (
   <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[9px] font-black uppercase ${

@@ -73,6 +73,10 @@ export interface ContasReceber {
   gatewaySettlementSource?: 'API' | 'CNAB240' | 'MANUAL';
   contaBancariaId?: string;
   nossoNumeroAsaas?: string;
+  boletoNossoNumero?: string;
+  boletoDescontoConfigurado?: number;
+  boletoDescontoValidoAte?: string;
+  boletoDescontoSituacao?: 'VIGENTE' | 'EXPIRADO';
   asaasPaymentId?: string;
   asaasPaymentLinkId?: string;
   asaasInvoiceUrl?: string;

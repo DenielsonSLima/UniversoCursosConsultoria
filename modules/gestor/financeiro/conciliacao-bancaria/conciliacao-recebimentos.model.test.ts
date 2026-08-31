@@ -48,6 +48,7 @@ test('mapeia baixa manual sem recalcular a composição no cliente', () => {
     acrescimo_aplicado: 0,
     desconto_aplicado: 0,
     composicao_status: 'COMPOSICAO_EXPLICITA',
+    conta_recebedora_nome: 'BANESE · Ag. 004 · Conta 00006490-0',
   });
 
   assert.equal(receipt.status, 'PAGO');
@@ -56,6 +57,7 @@ test('mapeia baixa manual sem recalcular a composição no cliente', () => {
   assert.equal(receipt.valorPago, 284.9);
   assert.equal(receipt.jurosAplicados, 2);
   assert.equal(receipt.multaAplicada, 3);
+  assert.equal(receipt.contaRecebedoraNome, 'BANESE · Ag. 004 · Conta 00006490-0');
 });
 
 test('preserva ausência de hora e composição no histórico migrado', () => {

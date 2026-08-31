@@ -201,7 +201,7 @@ const SettlementDetails: React.FC<{
 
   return (
     <div className="space-y-3">
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-10">
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-9">
         {field('Baixa registrada', (
           <span className="block">
             <time className="block" dateTime={row.baixaRegistradaEm || row.dataPagamento}>
@@ -219,10 +219,6 @@ const SettlementDetails: React.FC<{
         {field('Acréscimos', signedOptionalCurrency(row.acrescimoAplicado, '+'), 'text-indigo-700')}
         {field('Forma', paymentMethodLabel(row.formaPagamento))}
         {field('Conta recebedora', row.contaRecebedoraNome || 'Não informada')}
-        {field(
-          'Empresa / polo',
-          [row.empresaNome, row.poloNome].filter(Boolean).join(' · ') || 'Não informado',
-        )}
         {field('Responsável', isHistorical(row) ? 'Histórico migrado' : row.operadorNome || 'Sistema')}
       </dl>
 
