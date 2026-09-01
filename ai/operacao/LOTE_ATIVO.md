@@ -1,6 +1,6 @@
 # Lote ativo
 
-Estado: `BACKEND PRODUTIVO CONCLUÍDO — PR FINAL EM VALIDAÇÃO`
+Estado: `PUBLICAÇÃO CONCLUÍDA — PR #106 MERGEADO`
 
 ## Lote: 2026-09-01-reemissao-bolepix-ead-banese
 
@@ -51,5 +51,5 @@ Estado: `BACKEND PRODUTIVO CONCLUÍDO — PR FINAL EM VALIDAÇÃO`
   Pix próprios; o título antigo fica baixado no Banese e arquivado localmente.
 - O PDF autenticado abre e o QR é visualmente legível para cada retorno Pix.
 - Cobranças e transações Técnicas permanecem sem alteração no rollout.
-- PR final contém somente o manifesto e recebe CI/Preview aprovados antes do
-  merge em `main`.
+- O PR #106 contém exatamente os 75 arquivos do manifesto, recebeu CI/Preview
+  aprovados, foi integrado por squash e está publicado em produção.
