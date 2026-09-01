@@ -5,6 +5,32 @@ import { PlanoFinanceiroUnicoInput, Turma } from './gestao.types';
 export type CreateTurmaInput = Omit<Turma, 'id' | 'alunosMatriculados'> & {
   codigoCondicaoIndividual?: string;
   planoFinanceiroUnico?: PlanoFinanceiroUnicoInput;
+  cicloFinanceiroTecnico?: {
+    modo: 'MANUAL';
+    estadoInicial: 'NOVA' | 'IMPORTADA_CICLO_1' | 'IMPORTADA_CONCLUIDA';
+    baselineCycle: 0 | 1 | 2;
+    maxCycle: 2;
+    eligibilityRule: 'QUITACAO_TOTAL' | 'PENULTIMA_SEM_ATRASO';
+  };
+};
+
+const requireTechnicalCyclePolicy = (turma: CreateTurmaInput) => {
+  const policy = turma.cicloFinanceiroTecnico;
+  const expectedBaseline = {
+    NOVA: 0,
+    IMPORTADA_CICLO_1: 1,
+    IMPORTADA_CONCLUIDA: 2,
+  } as const;
+  if (
+    !policy
+    || policy.modo !== 'MANUAL'
+    || policy.maxCycle !== 2
+    || expectedBaseline[policy.estadoInicial] !== policy.baselineCycle
+    || !['QUITACAO_TOTAL', 'PENULTIMA_SEM_ATRASO'].includes(policy.eligibilityRule)
+  ) {
+    throw new Error('A política financeira manual da turma técnica está incompleta ou inconsistente.');
+  }
+  return policy;
 };
 
 export async function createTurma(
@@ -16,6 +42,7 @@ export async function createTurma(
   }
 
   const isTechnical = turma.modalidade === 'TECNICO';
+  const technicalCyclePolicy = isTechnical ? requireTechnicalCyclePolicy(turma) : null;
   const isSinglePlanClass = turma.modalidade === 'LIVRE'
     || turma.modalidade === 'ESPECIALIZACAO';
 
@@ -62,13 +89,15 @@ export async function createTurma(
     juros_atraso: Number(turma.jurosAtraso ?? 0),
     multa_atraso: Number(turma.multaAtraso ?? 0),
     dia_vencimento_padrao: Number(turma.diaVencimentoPadrao || 10),
-    primeiro_vencimento_padrao: turma.primeiroVencimentoPadrao || turma.dataInicio || null,
+    primeiro_vencimento_padrao: technicalCyclePolicy?.estadoInicial === 'IMPORTADA_CONCLUIDA'
+      ? null
+      : turma.primeiroVencimentoPadrao || turma.dataInicio || null,
     cronograma_financeiro: Array.isArray(turma.cronogramaFinanceiro) ? turma.cronogramaFinanceiro : [],
     vagas_totais: Number(turma.vagasTotais) || 40,
     origem_financeira: turma.origemFinanceira || 'NORMAL',
     financeiro_herdado: turma.financeiroHerdado || false,
-    gerar_cobrancas_futuras: turma.gerarCobrancasFuturas ?? isTechnical,
-    sincronizar_asaas_futuro: turma.sincronizarAsaasFuturo ?? (isTechnical ? false : true),
+    gerar_cobrancas_futuras: isTechnical ? false : turma.gerarCobrancasFuturas ?? false,
+    sincronizar_asaas_futuro: isTechnical ? false : turma.sincronizarAsaasFuturo ?? true,
     obs_financeira_origem: turma.obsFinanceiraOrigem || null,
     ...(isTechnical ? {
       cobrar_matricula: turma.cobrarMatricula ?? Number(turma.valorMatricula || 0) > 0,
@@ -81,6 +110,7 @@ export async function createTurma(
       aplicar_desconto_rematricula: turma.aplicarDescontoRematricula ?? false,
       aplicar_multa_juros_rematricula: turma.aplicarMultaJurosRematricula ?? false,
       instrucao_boleto_carne: turma.instrucaoBoletoCarne?.trim(),
+      ciclo_financeiro_tecnico: technicalCyclePolicy,
     } : {}),
   };
 
