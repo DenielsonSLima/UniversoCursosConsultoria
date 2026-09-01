@@ -1,7 +1,7 @@
 # Hotfix de emissão integrada do ciclo manual da Turma 42
 
 Data: 2026-09-01
-Estado: backend publicado; GitHub e frontend em promoção controlada
+Estado: publicação concluída em produção
 
 ## Objetivo
 
@@ -133,3 +133,17 @@ Total: 48 arquivos
   obrigatório e closure local completa.
 - A matrícula-alvo permaneceu elegível e intocada: zero run, recebível,
   autorização ou transação do ciclo 2; prévia de 13 itens e R$ 3.458,80.
+
+## Evidência de publicação
+
+- PR #114 integrado por squash em `main` no commit
+  `d5f0e5abd6706080c0aeac36ba3c94e883751f1f`.
+- Controle de versão `33572042927` e qualidade `33572042926` aprovados no PR.
+- Preview Vercel `2JtHczdVAoqtre8n1QH2hNW9Bodh` concluída com sucesso.
+- Pipeline da `main` `33572239860`, incluindo regressões BolePix e build,
+  concluído com sucesso.
+- Produção Vercel `4FWnRv9kZtckssbwX29ZynhQcGm3` pronta; o domínio respondeu
+  HTTP 200 após a promoção.
+- O runtime não possuía navegador autenticado conectado. O smoke permaneceu
+  não destrutivo: pós-check Supabase e HTTP foram executados, sem acionar a
+  confirmação final da Adryelle e sem criar cobrança, título ou transação.

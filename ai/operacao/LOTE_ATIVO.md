@@ -1,6 +1,6 @@
 # Lote ativo
 
-Estado: `BACKEND PUBLICADO — GITHUB E FRONTEND EM PROMOÇÃO`
+Estado: `PUBLICAÇÃO CONCLUÍDA — PR #114 MERGEADO`
 
 ## Lote: 2026-09-01-hotfix-emissao-integrada-ciclo-t42
 
@@ -54,5 +54,15 @@ Estado: `BACKEND PUBLICADO — GITHUB E FRONTEND EM PROMOÇÃO`
 
 1. Migrations `120600` a `120715`: concluídas na ordem cronológica.
 2. Edge `technical-manual-cycle-issuance`: ativa na versão 1 com JWT.
-3. Publicar o frontend via PR auditado e promoção Vercel.
-4. Só então executar smoke autenticado sem emitir cobranças para a Adryelle.
+3. Frontend publicado pelo PR #114 no commit `d5f0e5a`.
+4. Produção Vercel promovida e smoke HTTP aprovado sem emitir cobranças.
+
+### Evidência de publicação
+
+- PR #114 integrado por squash em `main` no commit `d5f0e5a`.
+- Workflows do PR `33572042927` e `33572042926` aprovados.
+- Preview Vercel `2JtHczdVAoqtre8n1QH2hNW9Bodh` pronta.
+- Pipeline pós-merge `33572239860` aprovado integralmente.
+- Produção Vercel `4FWnRv9kZtckssbwX29ZynhQcGm3` pronta; domínio respondeu HTTP 200.
+- O navegador autenticado não estava conectado nesta sessão; não houve
+  tentativa de contornar a autenticação nem emissão real no smoke.
