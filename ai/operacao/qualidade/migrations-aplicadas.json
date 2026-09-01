@@ -1,5 +1,8 @@
 {
   "version": 1,
+  "registries": [
+    "ai/operacao/qualidade/migrations-aplicadas-2026-09-ciclos-manuais.json"
+  ],
   "exemptions": [
     {
       "path": "supabase/migrations/20260824235000_create_professor_financial_portal_read.sql",
