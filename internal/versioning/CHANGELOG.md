@@ -2,7 +2,33 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
-Histórico anterior: [21/08/2026 — parte 1](./changelog/2026-08-21-parte-1.md), [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+Histórico anterior: [21/08/2026 a 22/08/2026 — parte 2](./changelog/2026-08-21-a-2026-08-22-parte-2.md), [21/08/2026 — parte 1](./changelog/2026-08-21-parte-1.md), [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+
+## [4.8.23] - 2026-09-01
+
+### Corrigido
+
+- O modal de geração manual ocupa a viewport real, sem ficar preso ao layout
+  da página ou deixar uma folga superior.
+- A elegibilidade deixa de expor códigos internos e o fluxo passa a separar
+  vencimento, composição das cobranças e revisão final em três etapas.
+- A composição lista rematrícula, parcelas, vencimentos, valores e a aplicação
+  de desconto, multa e juros antes da confirmação.
+- A ação final passa a se chamar `Gerar cobranças`.
+
+### Segurança e integridade
+
+- Dados, valores e cronograma vêm exclusivamente da prévia canônica do backend;
+  nenhuma cobrança é criada antes da confirmação final.
+- O hotfix não emite boleto Banese e não altera banco, Edge Function, Turma 42,
+  Adenize ou recebíveis existentes.
+
+### Qualidade
+
+- Contratos do wizard, parser e prévia, TypeScript, ESLint, teto de 500 linhas
+  e build de produção foram aprovados.
+- O smoke visual autenticado permaneceu pendente porque não havia navegador
+  conectado à sessão de validação.
 
 ## [4.8.22] - 2026-09-01
 
@@ -446,43 +472,3 @@ Histórico anterior: [21/08/2026 — parte 1](./changelog/2026-08-21-parte-1.md)
 - Mutações e conclusão EAD foram serializadas, e os indicadores dos cards técnicos passaram a falhar de modo explícito diante de payload incompleto.
 - Fotografias parciais de prova e contagens acadêmicas vazias ou apenas coercíveis também passam a falhar fechadas no cliente.
 - Contratos acadêmicos, financeiros e de interface, TypeScript, ESLint, limite de linhas e build de produção foram validados antes da publicação.
-
-## [4.6.1] - 2026-08-22
-
-### Adicionado
-
-- O modal de Novo Registro em Parceiros passa a oferecer também o cadastro de Responsável.
-- Gestores, Professores e Responsáveis convidados recebem uma tela de criação de senha coerente com os portais atuais.
-
-### Corrigido
-
-- O cadastro de usuário Gestor valida e-mail e CPF antes de enviar o convite, evitando identidade Auth órfã quando os dados internos já colidem.
-- O primeiro clique no convite deixa de ser informado como expirado quando a validação falha internamente; somente a expiração real do token usa essa mensagem.
-- O retorno do convite usa a rota de recuperação já autorizada em produção e reconhece o tipo assinado pelo Supabase para abrir diretamente a criação de senha.
-
-### Segurança e qualidade
-
-- O acesso institucional fica bloqueado até a criação real da senha, com estado explícito, ledger privado e autorização revalidada no banco e nas Edge Functions.
-- Convites pendentes são reconciliados por prova HMAC e operações idempotentes; uma falha interna preserva a identidade para tratamento seguro, sem exclusão automática.
-- A identidade órfã do teste reportado foi excluída somente após validação de ausência de senha, sessão, token e vínculos internos.
-- Migrations, 20 Edge Functions, contratos focados, TypeScript e build de produção foram validados antes da publicação.
-
-## [4.6.0] - 2026-08-21
-
-### Adicionado
-
-- O Gestor acompanha a confirmação do e-mail do Responsável, pode validar a titularidade por um canal independente, reenviar o primeiro acesso e gerar uma senha temporária exibida somente uma vez.
-- O Responsável recebeu primeiro acesso próprio: senha temporária exige troca, os Termos de Uso vigentes são obrigatórios e os dependentes permanecem bloqueados até a conclusão.
-- O portal e a administração de Responsáveis foram separados em componentes, hooks, serviços e chaves de consulta do próprio domínio.
-
-### Corrigido
-
-- Depois de criar a senha pelo convite ou pela recuperação, uma conta somente de Responsável volta ao login público compatível, em vez de ser enviada ao login institucional.
-- Um convite apagado ou expirado pode ser substituído por um novo e-mail de recuperação sem expor links ou tokens ao Gestor.
-
-### Segurança e qualidade
-
-- A emissão assistida usa marcador Auth exclusivo, reserva serializada, reconciliação, auditoria sem segredo e resposta `no-store`; emissões do Aluno e do Responsável não compartilham o mesmo identificador técnico.
-- Reenvios preservam o mesmo identificador até a conclusão canônica, evitando e-mail duplicado quando a confirmação externa fica ambígua; respostas de login com tokens também são explicitamente `no-store`.
-- Banco, Edge Function, login, primeiro acesso e interface administrativa possuem contratos focados no fluxo completo do Responsável.
-- Os arquivos ativos deste lote foram modularizados por responsabilidade e passaram a obedecer ao teto verificável de 500 linhas; migrations já aplicadas permanecem imutáveis e auditadas como exceção.

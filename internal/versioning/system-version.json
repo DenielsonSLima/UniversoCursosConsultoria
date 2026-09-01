@@ -1,8 +1,8 @@
 {
-  "version": "4.8.22",
+  "version": "4.8.23",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 31,
+  "revision": 32,
   "releasedAt": "2026-09-01",
-  "summary": "Ciclos financeiros manuais dos cursos técnicos"
+  "summary": "Prévia em três etapas dos ciclos financeiros manuais"
 }

@@ -1,4 +1,7 @@
-import type { MatriculaTecnicaCicloManual } from './matricula-tecnica-ciclo-manual.types';
+import type {
+  MatriculaTecnicaCicloManual,
+  MatriculaTecnicaCicloManualCriterio,
+} from './matricula-tecnica-ciclo-manual.types';
 
 const MANUAL_STATES = [
   'ELEGIVEL',
@@ -9,12 +12,19 @@ const MANUAL_STATES = [
   'NAO_HABILITADO',
 ] as const;
 
+const ELIGIBILITY_LABELS: Record<MatriculaTecnicaCicloManualCriterio, string> = {
+  QUITACAO_TOTAL: 'Ciclo anterior totalmente quitado',
+  PENULTIMA_SEM_ATRASO: 'Penúltima parcela paga e nenhuma cobrança vencida',
+};
+
 const isRecord = (value: unknown): value is Record<string, unknown> => (
   Boolean(value) && typeof value === 'object' && !Array.isArray(value)
 );
 
-const isNullableString = (value: unknown): value is string | null => (
-  value === null || typeof value === 'string'
+const isNullableEligibilityCriterion = (
+  value: unknown,
+): value is MatriculaTecnicaCicloManualCriterio | null => (
+  value === null || Object.hasOwn(ELIGIBILITY_LABELS, String(value))
 );
 
 const isNullableInteger = (value: unknown): value is number | null => (
@@ -28,6 +38,10 @@ const isDecimalString = (value: unknown): value is string => (
 const isNonEmptyString = (value: unknown): value is string => (
   typeof value === 'string' && value.trim().length > 0
 );
+
+export const getCriterioElegibilidadeLabel = (
+  value: MatriculaTecnicaCicloManualCriterio | null,
+) => value === null ? null : ELIGIBILITY_LABELS[value];
 
 export const requireMatriculaTecnicaCicloManual = (
   value: unknown,
@@ -79,7 +93,7 @@ export const requireMatriculaTecnicaCicloManual = (
     && isNullableInteger(value.cicloBaseHistorico)
     && isNullableInteger(value.cicloMaximo)
     && isNullableInteger(value.proximoCicloNumero)
-    && isNullableString(value.criterioElegibilidade)
+    && isNullableEligibilityCriterion(value.criterioElegibilidade)
     && MANUAL_STATES.includes(state as typeof MANUAL_STATES[number])
     && typeof value.podeGerar === 'boolean'
     && blockValid
