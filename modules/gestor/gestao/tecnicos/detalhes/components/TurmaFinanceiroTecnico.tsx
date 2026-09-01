@@ -41,6 +41,7 @@ const TurmaFinanceiroTecnico: React.FC<TurmaFinanceiroTecnicoProps> = ({ turma }
       <FinanceiroAlunosList
         turma={turma}
         regra={workspaceQuery.data.regra}
+        resumo={workspaceQuery.data.resumo}
         alunos={workspaceQuery.data.matriculas}
         isLoading={false}
         isError={false}
@@ -52,4 +53,3 @@ const TurmaFinanceiroTecnico: React.FC<TurmaFinanceiroTecnicoProps> = ({ turma }
 };
 
 export default TurmaFinanceiroTecnico;
-
