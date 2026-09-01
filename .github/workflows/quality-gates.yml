@@ -158,6 +158,7 @@ jobs:
             supabase/functions/portal-user-management/handlers/ensure-responsavel-access.test.ts \
             supabase/functions/portal-user-management/handlers/ensure-responsavel-access-reconciliation.test.ts \
             supabase/tests/ead_assessment_mutations.contract.test.ts \
+            supabase/tests/ead_paid_inscription_receivable_guard.contract.test.ts \
             supabase/tests/partner_gestor_polo_scope_fail_closed.contract.test.ts \
             supabase/tests/portal_partner_auth_checkout.contract.test.ts \
             supabase/tests/portal_partner_auth_multi_role.contract.test.ts \

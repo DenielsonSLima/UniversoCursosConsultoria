@@ -31,13 +31,15 @@ Estado: `BACKEND PRODUTIVO CONCLUÍDO — PR FINAL EM VALIDAÇÃO`
   uma emissão EAD nova concluída com Pix na tela e no PDF do mesmo título.
 - `000097299` recebeu confirmação bancária de pagamento integral via API antes
   da substituição; por contrato, permaneceu pago e não foi cancelado/reemitido.
+  A projeção EAD deixou de regravar recebíveis já pagos; após duas retentativas
+  transacionais sem alteração financeira, o pós-baixa concluiu e a fila ficou
+  `DONE`, sem marcador pendente.
 - `000097302` continuou pendente e sem Pix, passou no dry-run com `ROLLBACK` e
   foi substituído uma única vez pelo Nosso Número `000097329`.
 - O novo título possui linha/código 047 coerentes, Pix EMV/CRC válido, imagem
   PNG gerada do `QrCode` oficial e uma única transação/inscrição canônicas.
-- Nove migrations e oito Edge Functions foram publicadas. A auditoria de
-  segurança permaneceu no baseline; os dois índices novos aparecem apenas como
-  informativos de uso zero porque o arquivo acabou de ser criado.
+- Dez migrations e oito Edge Functions foram publicadas. A auditoria de
+  segurança permaneceu no baseline e a migration final não criou alerta novo.
 - Validação local: 8 `deno check`, 152 testes integrados, TypeScript global,
   build de produção, controle de versão 4.8.20 e teto de 500 linhas aprovados.
 - Técnico preservado: 691 recebíveis e 325 transações; nenhuma linha Técnica

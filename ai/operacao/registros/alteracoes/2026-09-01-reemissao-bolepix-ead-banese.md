@@ -80,11 +80,12 @@ o recebível.
 
 ## Manifesto explícito
 
-Total: 72 arquivos — 30 de implementação, 22 testes, 12 migrations e 8
+Total: 75 arquivos — 31 de implementação/CI, 23 testes, 13 migrations e 8
 documentos/versionamento. Mudanças paralelas de recuperação T42, CNAB e PDF
 são excluídas.
 
 - `eslint.config.js`
+- `.github/workflows/quality-gates.yml`
 - `ai/operacao/LOTE_ATIVO.md`
 - `ai/operacao/qualidade/limite-linhas-manifestos.json`
 - `ai/operacao/qualidade/migrations-aplicadas.json`
@@ -144,6 +145,7 @@ são excluídas.
 - `supabase/functions/gateways/ead-banese-pix-recovery.test.ts`
 - `supabase/functions/gateways/ead-banese-pix-recovery.ts`
 - `supabase/functions/gateways/router-adapter-runtime.ts`
+- `supabase/tests/ead_paid_inscription_receivable_guard.contract.test.ts`
 - `supabase/migrations/20260831174500_claim_banese_api_submission_before_post.sql`
 - `supabase/migrations/20260831182500_reconcile_ead_ambiguous_banese_once.sql`
 - `supabase/migrations/20260831210000_harden_banese_pix_only_persistence_cas.sql`
@@ -156,13 +158,17 @@ são excluídas.
 - `supabase/migrations/20260901000550_validate_ead_banese_reissued_paid.sql`
 - `supabase/migrations/20260901000600_finish_ead_banese_title_replacement.sql`
 - `supabase/migrations/20260901000700_harden_banese_ead_replacement_advisors.sql`
+- `supabase/migrations/20260901000800_preserve_paid_ead_receivable_on_inscription_projection.sql`
 
 ## Evidência de produção
 
 - `000097299`: a conciliação oficial registrou pagamento integral via API, com
   uma evidência de pagamento e estados canônicos `PAGO`/`PAID`. O fluxo de
   substituição falhou fechado antes do enqueue; nenhuma baixa ou reemissão foi
-  permitida e o título permaneceu sem Pix, como exige a regra para pago.
+  permitida e o título permaneceu sem Pix, como exige a regra para pago. A
+  projeção EAD foi cercada para não sobrescrever recebível já pago; o smoke
+  transacional preservou valor efetivo e `updated_at` em duas retentativas, e a
+  reconciliação seguinte limpou o marcador com fila `DONE`.
 - `000097302`: permaneceu pendente, sem pagamento e sem Pix. O dry-run
   transacional percorreu enqueue, claim, fence, intenção, arquivo e preparação
   e terminou em `ROLLBACK`. Em seguida, o worker consultou título/pagamentos,
@@ -178,13 +184,13 @@ são excluídas.
   assinatura PNG e é idêntica no recebível e na transação.
 - Migrations produtivas novas: `20260901041425`, `20260901041427`,
   `20260901041431`, `20260901041434`, `20260901041437`, `20260901041441`,
-  `20260901041443`, `20260901041445` e `20260901041838`.
+  `20260901041443`, `20260901041445`, `20260901041838` e `20260901045618`.
 - Edge Functions ativas: `payment-checkout` v27, `checkout-api` v21,
   `payment-gateway-api` v29, `asaas-api` v93,
   `dependencia-banese-checkout` v13, `banese-student-payment` v12,
   `banese-reconciliation-worker` v98 e `banese-cancellation-worker` v5.
-- Segurança retornou ao baseline de 489 avisos, sem novo item. Performance
-  mantém dois informativos esperados de índices recém-criados ainda sem uso.
+- Segurança permaneceu no baseline de 489 avisos, sem novo item; performance
+  também não recebeu alerta novo da migration final.
 - Técnico permaneceu com 691 recebíveis e 325 transações; zero linhas foram
   atualizadas desde o início do rollout.
 - PR #106 teve lint, TypeScript, contratos, testes, build e Preview Vercel

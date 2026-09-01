@@ -483,6 +483,13 @@
       "remoteId": "20260901041838",
       "sha256": "d6f47c6c0cfb85b24d5b7968d497039022151e212643e6155030761646fa62e8",
       "reason": "Migration aplicada em Produção; nega clientes por RLS, revoga trigger SECURITY DEFINER e indexa o arquivo EAD."
+    },
+    {
+      "path": "supabase/migrations/20260901000800_preserve_paid_ead_receivable_on_inscription_projection.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260901045618",
+      "sha256": "16be7b0f7daaec239bf7f91759e9bc3aab1f53d845fd8ed843a9eb6e7c6e643d",
+      "reason": "Migration aplicada em Produção; impede a projeção da inscrição EAD de sobrescrever um recebível já pago."
     }
   ]
 }
