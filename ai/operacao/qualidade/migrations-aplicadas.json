@@ -420,6 +420,69 @@
       "remoteId": "20260901010034",
       "sha256": "e2c4ce190e3afa9be79dd4667b7c78f32ddd5b2956232f8fa56670547376575f",
       "reason": "Migration aplicada em Produção; protege a persistência Pix-only com CAS do estado pagável."
+    },
+    {
+      "path": "supabase/migrations/20260831231500_create_ead_banese_title_replacement_schema.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260901041425",
+      "sha256": "4531638589ca5d02fd9cb6e8cc91d5079798487016142605c80842e1a761db4d",
+      "reason": "Migration aplicada em Produção; cria fila e arquivo imutável da substituição excepcional BolePix EAD."
+    },
+    {
+      "path": "supabase/migrations/20260831231600_fence_ead_banese_title_replacement.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260901041427",
+      "sha256": "4f504c3625068f6963d4c5e66ef0411f13c414e1fc3e20fe670c9dc50c252cc0",
+      "reason": "Migration aplicada em Produção; cerca recebível, transação, inscrição e fila durante a substituição EAD."
+    },
+    {
+      "path": "supabase/migrations/20260831231700_claim_ead_banese_title_replacement.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260901041431",
+      "sha256": "1cdcb0c49b08c1edd0a2e765b347d4efc01285c83cc7b610139576d80711a98d",
+      "reason": "Migration aplicada em Produção; valida elegibilidade EAD e serializa enqueue e claim com lease."
+    },
+    {
+      "path": "supabase/migrations/20260831231800_fence_ead_banese_remote_cancel.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260901041434",
+      "sha256": "f299f3f01a2e9d4c07f351b4121e169f69e463de9721477d9abac38d8dadeddb",
+      "reason": "Migration aplicada em Produção; registra intenção durável antes da baixa Banese."
+    },
+    {
+      "path": "supabase/migrations/20260901000400_guard_and_persist_ead_banese_replacement_pix.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260901041437",
+      "sha256": "0449c59bdda313b902ea690c7ff128e3d8743c2cd4a423c2660d58b3fe9c9ca4",
+      "reason": "Migration aplicada em Produção; persiste somente o primeiro par Pix oficial do mesmo título."
+    },
+    {
+      "path": "supabase/migrations/20260901000500_prepare_ead_banese_title_reissue.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260901041441",
+      "sha256": "cbf81c55341ab2b6fb5ad6833626108254e10f2759246438f8df6d1b564352ec",
+      "reason": "Migration aplicada em Produção; confirma a baixa, arquiva a identidade antiga e prepara um único novo POST."
+    },
+    {
+      "path": "supabase/migrations/20260901000550_validate_ead_banese_reissued_paid.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260901041443",
+      "sha256": "6725b57238f591eb66112bf48888c81531e7abeabe103dacf4f2e9e07e65f490",
+      "reason": "Migration aplicada em Produção; valida integralmente a identidade de substituição já liquidada."
+    },
+    {
+      "path": "supabase/migrations/20260901000600_finish_ead_banese_title_replacement.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260901041445",
+      "sha256": "c4e7957912cc5ab7f62ba61659c72200594e51ec26e05eca7ace8c63dae7e6a9",
+      "reason": "Migration aplicada em Produção; conclui a substituição somente com identidade bancária, Pix e projeções coerentes."
+    },
+    {
+      "path": "supabase/migrations/20260901000700_harden_banese_ead_replacement_advisors.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260901041838",
+      "sha256": "d6f47c6c0cfb85b24d5b7968d497039022151e212643e6155030761646fa62e8",
+      "reason": "Migration aplicada em Produção; nega clientes por RLS, revoga trigger SECURITY DEFINER e indexa o arquivo EAD."
     }
   ]
 }
