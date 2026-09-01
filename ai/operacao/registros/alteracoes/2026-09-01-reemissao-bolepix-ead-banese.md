@@ -72,17 +72,18 @@ o recebível.
 - 152/152 testes integrados Banese/EAD/Técnico aprovados.
 - `npx tsc --noEmit` e build Vite de produção aprovados.
 - Controle de versão 4.8.20 aprovado.
-- 65 arquivos manuais auditados, todos com até 500 linhas.
+- 66 arquivos manuais auditados, todos com até 500 linhas.
 - Baseline produtivo: os dois alvos pendentes, sem Pix e sem pagamento; uma
   transação local cada.
 - Checksum Técnico capturado antes do rollout para comparação posterior.
 
 ## Manifesto explícito
 
-Total: 70 arquivos — 29 de implementação, 22 testes, 11 migrations e 8
+Total: 71 arquivos — 30 de implementação, 22 testes, 11 migrations e 8
 documentos/versionamento. Mudanças paralelas de recuperação T42, CNAB e PDF
 são excluídas.
 
+- `eslint.config.js`
 - `ai/operacao/LOTE_ATIVO.md`
 - `ai/operacao/qualidade/limite-linhas-manifestos.json`
 - `ai/operacao/qualidade/migrations-aplicadas.json`
