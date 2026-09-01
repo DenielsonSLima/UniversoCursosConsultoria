@@ -1,3 +1,5 @@
+import type { MatriculaTecnicaCicloManual } from './matricula-tecnica-ciclo-manual.types';
+
 export type MatriculaTecnicaFinanceiroStatus =
   | 'NAO_CONFIGURADO'
   | 'PENDENTE'
@@ -151,6 +153,26 @@ export interface MatriculaTecnicaOverride {
   };
 }
 
+export type MatriculaTecnicaCicloFinanceiroEstadoInicial =
+  | 'NOVA'
+  | 'IMPORTADA_CICLO_1'
+  | 'IMPORTADA_CONCLUIDA';
+
+export type MatriculaTecnicaCicloFinanceiroCriterio =
+  | 'QUITACAO_TOTAL'
+  | 'PENULTIMA_SEM_ATRASO';
+
+export interface MatriculaTecnicaCicloFinanceiroPolicy {
+  habilitado: boolean;
+  modo: 'MANUAL' | null;
+  estadoInicial: MatriculaTecnicaCicloFinanceiroEstadoInicial | null;
+  cicloBaseHistorico: number | null;
+  cicloMaximo: number | null;
+  criterioElegibilidade: MatriculaTecnicaCicloFinanceiroCriterio | null;
+  revisao: number | null;
+  fingerprint: string | null;
+}
+
 export interface PreVinculoAlunoTecnicoContexto {
   turma: {
     turmaId: string;
@@ -158,6 +180,7 @@ export interface PreVinculoAlunoTecnicoContexto {
     nome: string;
     poloId: string;
     status: string;
+    cicloFinanceiroTecnico: MatriculaTecnicaCicloFinanceiroPolicy;
   };
   aluno: {
     alunoId: string;
@@ -193,6 +216,7 @@ export interface MatriculaTecnicaFinanceiroRow {
   };
   override: MatriculaTecnicaOverride | null;
   regraEfetiva: MatriculaTecnicaRegra | null;
+  cicloManual: MatriculaTecnicaCicloManual;
   financeiro: {
     status: MatriculaTecnicaFinanceiroStatus;
     primeiroVencimento: string | null;
@@ -213,6 +237,7 @@ export interface MatriculaTecnicaFinanceiroWorkspace {
     nome: string;
     poloId: string;
     status: string;
+    cicloFinanceiroTecnico: MatriculaTecnicaCicloFinanceiroPolicy;
   };
   regra: MatriculaTecnicaRegra;
   resumo: {
