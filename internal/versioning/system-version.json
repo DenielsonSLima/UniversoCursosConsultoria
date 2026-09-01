@@ -1,8 +1,8 @@
 {
-  "version": "4.8.21",
+  "version": "4.8.22",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 30,
+  "revision": 31,
   "releasedAt": "2026-09-01",
-  "summary": "Gate de regressão BolePix Banese no CI"
+  "summary": "Ciclos financeiros manuais dos cursos técnicos"
 }
