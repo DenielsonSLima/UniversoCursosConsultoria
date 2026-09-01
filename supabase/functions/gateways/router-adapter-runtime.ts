@@ -52,7 +52,9 @@ export type GatewayChargeResult = {
   rawPayload: Record<string, unknown>;
 };
 
-const paymentIssuer = async (admin: any): Promise<GatewayIssuer> => {
+export const resolveGatewayIssuer = async (
+  admin: any,
+): Promise<GatewayIssuer> => {
   const { data: config, error: configError } = await admin
     .from("payment_gateway_issuer_config")
     .select("issuer_polo_id, active, applies_to_all_polos")
@@ -129,8 +131,16 @@ export const withProviderMetadata = async (
       input.environment,
       input.credentialId,
     ),
-    paymentIssuer(input.admin),
+    resolveGatewayIssuer(input.admin),
   ]);
+  const claimedIssuerPoloId = String(
+    input.receivable?.gateway_issuer_polo_id || "",
+  ).trim();
+  if (claimedIssuerPoloId && claimedIssuerPoloId !== issuer.id) {
+    throw new Error(
+      "O emissor financeiro do recebível divergiu da Matriz antes do envio ao banco.",
+    );
+  }
   return {
     ...input,
     issuer,

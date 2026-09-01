@@ -447,7 +447,6 @@ verify_jwt = true
 
 [functions.secretaria-banese-document-groups]
 verify_jwt = true
-
 [functions.banese-reconciliation-worker]
 verify_jwt = false
 [functions.banese-cancellation-worker]
@@ -456,7 +455,8 @@ verify_jwt = false
 verify_jwt = true
 [functions.dependencia-banese-checkout]
 verify_jwt = true
-
+[functions.technical-manual-cycle-issuance]
+verify_jwt = true
 [functions.whatsapp-webhook]
 verify_jwt = false
 

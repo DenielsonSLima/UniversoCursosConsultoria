@@ -23,6 +23,7 @@ import FinanceiroAtivacaoLegacyDialog, {
 } from './FinanceiroAtivacaoLegacyDialog';
 import FinanceiroCicloManualDialog from './FinanceiroCicloManualDialog';
 import FinanceiroCicloManualStatus, {
+  getFinanceiroSituationLabel as situationLabel,
   MatriculaAcademicaBadge,
 } from './FinanceiroCicloManualStatus';
 import type {
@@ -37,12 +38,19 @@ import {
   useAtivarFinanceiroMatriculaTecnica,
   useAtivarFinanceiroMatriculasTecnicasLote,
 } from './hooks/useMatriculaTecnicaFinanceiro';
-import { useGerarCicloFinanceiroTecnicoManual } from './hooks/useMatriculaTecnicaCicloManual';
+import {
+  useGerarCicloFinanceiroTecnicoManual,
+  useRetomarEmissaoCicloFinanceiroTecnicoManual,
+} from './hooks/useMatriculaTecnicaCicloManual';
 import {
   isFinanceiroDateRejected,
   isRegraFinanceiraConflict,
 } from './matricula-tecnica-financeiro.service';
-import { requireMatriculaTecnicaCicloManual } from './matricula-tecnica-ciclo-manual.service';
+import {
+  getCicloFinanceiroTecnicoManualRecoveryGuidance,
+  isCicloFinanceiroTecnicoManualIssuanceError,
+  requireMatriculaTecnicaCicloManual,
+} from './matricula-tecnica-ciclo-manual.service';
 
 interface FinanceiroAlunosListProps {
   turma: Turma;
@@ -68,33 +76,6 @@ const formatMoney = (value: string | null | undefined) => {
 const formatDateTime = (value: string | null) => value
   ? new Date(value).toLocaleString('pt-BR')
   : 'Não informado';
-
-const situationLabel = (row: MatriculaTecnicaFinanceiroRow) => {
-  if (row.cicloManual.habilitado && row.cicloManual.modo === 'MANUAL') {
-    const generatedCycle = row.cicloManual.cicloGerado?.numero;
-    if (row.cicloManual.estado === 'PROTEGIDO_EXISTENTE') {
-      return `${generatedCycle || 2}º ciclo gerado e emitido`;
-    }
-    if (row.cicloManual.estado === 'JA_GERADO') {
-      return `${generatedCycle || row.cicloManual.cicloMaximo || 2}º ciclo gerado no sistema`;
-    }
-    if (row.cicloManual.estado === 'ELEGIVEL') {
-      return `Elegível para gerar ${row.cicloManual.proximoCicloNumero}º ciclo`;
-    }
-    if (row.cicloManual.estado === 'BLOQUEADO') {
-      return `${row.cicloManual.proximoCicloNumero || ''}º ciclo bloqueado`.trim();
-    }
-    if (row.cicloManual.estado === 'CICLOS_CONCLUIDOS') return 'Ciclos concluídos';
-    return 'Geração manual indisponível';
-  }
-  if (row.financeiro.status === 'NAO_CONFIGURADO') return 'Não configurado';
-  if (row.financeiro.status === 'PENDENTE') return 'Pendente';
-  if (row.financeiro.status === 'AGENDADA') return 'Agendada';
-  if (row.financeiro.status === 'ATIVADA') return 'Ativada';
-  return row.situacaoFinanceira === 'INADIMPLENTE'
-    ? 'Gerada · Inadimplente'
-    : 'Gerada';
-};
 
 const statusBadge = (row: MatriculaTecnicaFinanceiroRow) => {
   if (row.financeiro.status === 'NAO_CONFIGURADO') {
@@ -140,9 +121,11 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
   const individualMutation = useAtivarFinanceiroMatriculaTecnica();
   const batchMutation = useAtivarFinanceiroMatriculasTecnicasLote();
   const manualCycleMutation = useGerarCicloFinanceiroTecnicoManual();
+  const resumeCycleMutation = useRetomarEmissaoCicloFinanceiroTecnicoManual();
   const pending = individualMutation.isPending
     || batchMutation.isPending
-    || manualCycleMutation.isPending;
+    || manualCycleMutation.isPending
+    || resumeCycleMutation.isPending;
 
   const closeActionDialog = () => {
     setPendingAction(null);
@@ -312,10 +295,18 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
       requestIds.current.delete(key);
       setManualCycleMatriculaId(null);
       toast.success(
-        `${result.ciclo.numero}º ciclo gerado`,
-        `${result.ciclo.quantidadeItens} cobranças foram registradas no sistema. Nenhum boleto Banese foi emitido.`,
+        `${result.ciclo.numero}º ciclo gerado e emitido`,
+        `${result.ciclo.quantidadeItens} cobranças e ${result.ciclo.emitidosBanese} títulos BolePix Banese já estão disponíveis em Financeiro.`,
       );
     } catch (error) {
+      if (isCicloFinanceiroTecnicoManualIssuanceError(error) && error.progress) {
+        setManualCycleMatriculaId(null);
+        toast.warning(
+          'Emissão interrompida',
+          `${error.message} ${error.progress.emitidosBanese}/${error.progress.quantidadeItens} títulos emitidos. ${getCicloFinanceiroTecnicoManualRecoveryGuidance(error)}`,
+        );
+        return;
+      }
       if (isRegraFinanceiraConflict(error)) {
         setManualCycleMatriculaId(null);
         onRetry();
@@ -332,8 +323,8 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
         return;
       }
       toast.error(
-        'Ciclo não gerado',
-        `${error instanceof Error ? error.message : 'O servidor não confirmou a operação.'} Nenhum retry criará cobranças duplicadas.`,
+        'Ciclo não emitido',
+        `${error instanceof Error ? error.message : 'O servidor não confirmou a operação.'} A mesma solicitação pode ser repetida sem duplicar cobranças.`,
       );
     }
   };
@@ -435,10 +426,14 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
                             cicloManual={row.cicloManual}
                             disabled={pending}
                             onGenerate={() => setManualCycleMatriculaId(row.matriculaId)}
-                            onOpenReceivables={() => toast.info(
-                              'Emissão manual no Banese',
-                              `Abra Financeiro › A Receber, selecione a modalidade Técnico e filtre pela turma ${turma.codigo || turma.nome}.`,
-                            )}
+                            onResume={() => resumeCycleMutation.mutate({
+                              turmaId: turma.id,
+                              matriculaId: row.matriculaId,
+                              cicloNumero: row.cicloManual.cicloGerado!.numero,
+                            }, {
+                              onSuccess: (result) => toast.success('Emissão retomada', `${result.ciclo.emitidosBanese}/${result.ciclo.quantidadeItens} títulos BolePix emitidos e disponíveis em Financeiro.`),
+                              onError: (error) => toast.error('Emissão não concluída', `${error instanceof Error ? error.message : 'O banco não confirmou todos os títulos.'} O progresso foi preservado. ${getCicloFinanceiroTecnicoManualRecoveryGuidance(error)}`),
+                            })}
                           />
                         ) : null}
                         <button type="button" onClick={() => setSelectedMatriculaId(row.matriculaId)} title="Extrato Financeiro" className="rounded-lg border border-blue-100 bg-blue-50 p-2 text-blue-600 transition-colors hover:bg-blue-100"><FileText size={16} /></button>

@@ -25,6 +25,24 @@ Deno.test("bloqueia substituicao de titulo remoto ativo", () => {
   );
 });
 
+Deno.test("Pix ou QR órfão continuam sendo evidência remota", () => {
+  for (
+    const receivable of [
+      { gateway_provider: "banese_card", gateway_pix_payload: "pix-oficial" },
+      {
+        gateway_provider: "banese_card",
+        gateway_pix_encoded_image: "data:image/png;base64,iVBORw0KGgo",
+      },
+    ]
+  ) {
+    assert.equal(hasActiveRemoteTitleReference(receivable), true);
+    assert.throws(
+      () => assertGatewayTitleCanBeReset(receivable),
+      /titulo bancario ativo/i,
+    );
+  }
+});
+
 Deno.test("permite recuperacao idempotente do mesmo titulo Banese", () => {
   assert.doesNotThrow(() =>
     assertGatewayTitleCanBeReset({

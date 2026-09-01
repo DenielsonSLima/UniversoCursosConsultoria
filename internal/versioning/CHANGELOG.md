@@ -4,6 +4,25 @@ Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente
 
 Histórico anterior: [21/08/2026 a 22/08/2026 — parte 2](./changelog/2026-08-21-a-2026-08-22-parte-2.md), [21/08/2026 — parte 1](./changelog/2026-08-21-parte-1.md), [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
 
+## [4.8.24] - 2026-09-01
+
+### Alterado
+
+- Uma única confirmação passa a criar os 13 recebíveis do ciclo técnico,
+  emitir seus BolePix Banese e atualizar o Financeiro sem segunda ação.
+- Falha parcial apresenta o progresso e retoma somente os itens incompletos.
+
+### Corrigido
+
+- A Turma 42 passa a usar multa única de 2%, preservando juros de 2% ao mês,
+  rematrícula sem desconto e desconto de R$ 19,90 nas mensalidades.
+
+### Segurança e integridade
+
+- Resposta ambígua é retomada exclusivamente por GET e nunca libera novo POST.
+- Snapshot, identidade bancária, Pix oficial e transação são validados e
+  persistidos atomicamente; evidência de liquidação bloqueia qualquer mutação.
+
 ## [4.8.23] - 2026-09-01
 
 ### Corrigido

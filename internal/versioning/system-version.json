@@ -1,8 +1,8 @@
 {
-  "version": "4.8.23",
+  "version": "4.8.24",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 32,
+  "revision": 33,
   "releasedAt": "2026-09-01",
-  "summary": "Prévia em três etapas dos ciclos financeiros manuais"
+  "summary": "Emissão integrada BolePix do ciclo técnico manual"
 }

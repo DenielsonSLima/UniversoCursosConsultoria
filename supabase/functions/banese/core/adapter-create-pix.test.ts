@@ -8,11 +8,35 @@ import {
 } from "../internal/testing/pix-fixture.ts";
 import { normalizeBanesePixPayload } from "../internal/pix-validation.ts";
 import { createBaneseBoletoCharge } from "./adapter.ts";
+import { normalizeBanesePixFromResponse } from "./adapter/boleto-pix-response.ts";
 import {
   creationFetch,
   makeBaneseTitleResponse,
   reservedBoletoInput,
 } from "./adapter-test-fixtures.ts";
+
+Deno.test("imagem QR persistida é sempre renderizada do EMV oficial", async () => {
+  const amount = 100;
+  const payload = buildBanesePixPayloadFixture("QR-CORRELACIONADO", amount);
+  const bankImage = `data:image/png;base64,${buildBanesePixImageFixture(9)}`;
+  const first = await normalizeBanesePixFromResponse(
+    { brCodeEMV: payload, qrcode: bankImage },
+    amount,
+  );
+  const second = await normalizeBanesePixFromResponse(
+    {
+      brCodeEMV: payload,
+      qrcode: `data:image/png;base64,${buildBanesePixImageFixture(4)}`,
+    },
+    amount,
+  );
+
+  assert.equal(first.pixPayload, payload);
+  assert.equal(first.pixEncodedImage, second.pixEncodedImage);
+  assert.notEqual(first.pixEncodedImage, bankImage);
+  assert.equal(first.diagnostic.imageSource, "generated_from_official_emv");
+  assert.equal(first.diagnostic.bankImageValid, true);
+});
 
 Deno.test("POST sem Pix recupera QrCode em um único GET e não repete POST", async () => {
   const originalFetch = globalThis.fetch;
