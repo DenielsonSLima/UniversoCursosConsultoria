@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { transform } from 'esbuild';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import test from 'node:test';
@@ -16,6 +17,52 @@ const financialPreviewServiceSource = read('turma-tecnico-financeiro-preview.ser
 const dataStepSource = read('TurmaTecnicoDadosStep.tsx');
 const enrollmentSettingsSource = read('../TechnicalEnrollmentSettings.tsx');
 const gestaoServiceSource = read('../../../gestao.service.ts');
+const createTurmaServiceSource = read('../../../gestao-create-turma.service.ts');
+
+let scheduleFixture = [];
+const { code: financialPreviewServiceCode } = await transform(
+  financialPreviewServiceSource,
+  { loader: 'ts', format: 'cjs', target: 'es2022' },
+);
+const financialPreviewServiceModule = { exports: {} };
+new Function('module', 'exports', 'require', financialPreviewServiceCode)(
+  financialPreviewServiceModule,
+  financialPreviewServiceModule.exports,
+  () => ({
+    supabase: {
+      rpc: async (name) => name === 'calculate_gestao_technical_financial_preview'
+        ? {
+            data: {
+              desconto_aplicado: '0.00',
+              juros_calculados: '0.00',
+              juros_percentual_dia: '0.00',
+              juros_valor_dia: '0.00',
+              multa_aplicada: '0.00',
+              valor_com_desconto: '100.00',
+              valor_com_atraso: '100.00',
+            },
+            error: null,
+          }
+        : { data: scheduleFixture, error: null },
+    },
+  }),
+);
+const { getTurmaTecnicoFinanceiroPreview } = financialPreviewServiceModule.exports;
+const financialPreviewInput = {
+  dataInicio: '2026-09-10',
+  cobrarMatricula: true,
+  valorMatricula: 150,
+  cobrarRematricula: true,
+  valorRematricula: 50,
+  qtdParcelas: 2,
+  valorParcela: 100,
+  descontoPontualidade: 0,
+  jurosAtraso: 0,
+  multaAtrasoPercentual: 0,
+  aplicarDescontoMensalidade: false,
+  aplicarMultaJurosMensalidade: false,
+  diaVencimentoPadrao: 10,
+};
 
 test('formulário técnico fica isolado em pasta própria e usa cinco etapas', () => {
   assert.equal(existsSync(resolve(baseDir, '../TurmaTecnicoForm.tsx')), false);
@@ -33,7 +80,7 @@ test('formulário técnico fica isolado em pasta própria e usa cinco etapas', (
 });
 
 test('etapa financeira cobre regra flexível e matrícula inicial opcional', () => {
-  assert.match(financialStepSource, /Gerar cobrança de matrícula/);
+  assert.match(financialStepSource, /Incluir matrícula no 1º ciclo/);
   assert.match(financialStepSource, /checked=\{formData\.cobrarMatricula\}/);
   assert.match(financialStepSource, /cobrarMatricula: enabled/);
   assert.match(financialStepSource, /cobrarRematricula/);
@@ -48,8 +95,10 @@ test('etapa financeira cobre regra flexível e matrícula inicial opcional', () 
   assert.match(financialStepSource, /Composição financeira do curso/);
   assert.match(financialStepSource, /Total nominal do curso/);
   assert.match(financialStepSource, /divididas em 2 ciclos/);
-  assert.match(financialStepSource, /mensalidades antes e/);
-  assert.match(financialPreviewServiceSource, /totalCurso: totalPrimeiroCiclo \+ totalMensalidadesSegundoCiclo/);
+  assert.match(financialStepSource, /cada geração manual cria somente a composição do ciclo escolhido/);
+  assert.match(financialStepSource, /2º ciclo ainda pode gerar/);
+  assert.match(financialStepSource, /1ª mensalidade/);
+  assert.match(financialPreviewServiceSource, /totalCurso: totalCronograma/);
   assert.match(financialStepSource, /inputMode="numeric"/);
   assert.match(financialStepSource, /parseCurrencyBRLInput/);
   assert.match(financialStepSource, /Array\.from\(\{ length: 31 \}/);
@@ -59,6 +108,33 @@ test('etapa financeira cobre regra flexível e matrícula inicial opcional', () 
   assert.doesNotMatch(financialStepSource, /Liberar próximas cobranças após cada baixa/i);
   assert.doesNotMatch(financialStepSource, /sequência financeira continua sendo gerada pelo backend/i);
   assert.doesNotMatch(financialStepSource, /\bbackend\b|\bservidor\b/i);
+});
+
+test('total nominal soma uma única vez o cronograma canônico com e sem rematrícula', async () => {
+  scheduleFixture = [
+    { tipo: 'MATRICULA', valor: '150.00' },
+    { tipo: 'PARCELA', valor: '100.00' },
+    { tipo: 'PARCELA', valor: '100.00' },
+    { tipo: 'REMATRICULA', valor: '50.00' },
+    { tipo: 'PARCELA', valor: '100.00' },
+    { tipo: 'PARCELA', valor: '100.00' },
+  ];
+  const withReenrollment = await getTurmaTecnicoFinanceiroPreview(financialPreviewInput);
+  assert.equal(withReenrollment.totalCurso, 600);
+
+  scheduleFixture = [
+    { tipo: 'MATRICULA', valor: '150.00' },
+    { tipo: 'PARCELA', valor: '100.00' },
+    { tipo: 'PARCELA', valor: '100.00' },
+    { tipo: 'PARCELA', valor: '100.00' },
+    { tipo: 'PARCELA', valor: '100.00' },
+  ];
+  const withoutReenrollment = await getTurmaTecnicoFinanceiroPreview({
+    ...financialPreviewInput,
+    cobrarRematricula: false,
+    valorRematricula: 0,
+  });
+  assert.equal(withoutReenrollment.totalCurso, 550);
 });
 
 test('data inicial sugere 24 meses e mantém o fim previsto editável', () => {
@@ -93,6 +169,21 @@ test('defaults e validação refletem o contrato financeiro atual', () => {
   assert.match(validationSource, /formData\.qtdParcelas > 60/);
   assert.match(validationSource, /instructionLength < 1 \|\| instructionLength > 180/);
   assert.match(validationSource, /formData\.cobrarMatricula/);
+  assert.match(constantsSource, /estadoFinanceiroInicial: 'NOVA'/);
+  assert.match(constantsSource, /criterioElegibilidadeCiclo: 'PENULTIMA_SEM_ATRASO'/);
+  assert.match(constantsSource, /gerarCobrancasFuturas: false/);
+});
+
+test('três estados iniciais deixam geração exclusivamente manual', () => {
+  for (const state of ['NOVA', 'IMPORTADA_CICLO_1', 'IMPORTADA_CONCLUIDA']) {
+    assert.match(constantsSource, new RegExp(`value: '${state}'`));
+  }
+  assert.match(financialStepSource, /Nenhuma opção gera recebíveis ao criar a turma ou adicionar um aluno/);
+  assert.match(financialStepSource, /estadoFinanceiroInicial: option\.value/);
+  assert.match(financialStepSource, /gerarCobrancasFuturas: false/);
+  assert.match(formSource, /sincronizarAsaasFuturo: false/);
+  assert.match(validationSource, /estadoFinanceiroInicial !== 'IMPORTADA_CONCLUIDA'/);
+  assert.match(formSource, /cicloFinanceiroTecnico: buildTurmaTecnicoCyclePolicy\(formData\)/);
 });
 
 test('criação transacional envia intenção, vencimento e hash é tratado somente no backend', () => {
@@ -108,13 +199,17 @@ test('criação transacional envia intenção, vencimento e hash é tratado some
     'aplicar_multa_juros_rematricula',
     'instrucao_boleto_carne',
     'primeiro_vencimento_padrao',
-  ]) assert.match(gestaoServiceSource, new RegExp(column));
-  assert.match(gestaoServiceSource, /criar_turma_tecnica_com_codigo_condicao_secure/);
-  assert.match(gestaoServiceSource, /p_codigo: turma\.codigoCondicaoIndividual/);
-  assert.doesNotMatch(gestaoServiceSource, /codigo_hash|crypt\(/);
+  ]) assert.match(createTurmaServiceSource, new RegExp(column));
+  assert.match(createTurmaServiceSource, /criar_turma_tecnica_com_codigo_condicao_secure/);
+  assert.match(createTurmaServiceSource, /p_codigo: turma\.codigoCondicaoIndividual/);
+  assert.doesNotMatch(createTurmaServiceSource, /codigo_hash|crypt\(/);
   assert.match(formSource, /multaAtraso: 0/);
   assert.match(formSource, /sincronizarAsaasFuturo: false/);
-  assert.match(formSource, /gerarCobrancasFuturas: formData\.origemFinanceira !== 'LEGADO'/);
+  assert.match(formSource, /gerarCobrancasFuturas: false/);
+  assert.match(createTurmaServiceSource, /ciclo_financeiro_tecnico: technicalCyclePolicy/);
+  assert.match(createTurmaServiceSource, /gerar_cobrancas_futuras: isTechnical \? false/);
+  assert.match(createTurmaServiceSource, /sincronizar_asaas_futuro: isTechnical \? false/);
+  assert.match(createTurmaServiceSource, /technicalCyclePolicy\?\.estadoInicial === 'IMPORTADA_CONCLUIDA'/);
   assert.match(financialPreviewServiceSource, /Promise\.all/);
   assert.match(financialPreviewServiceSource, /calculate_gestao_technical_financial_preview/);
   assert.match(financialPreviewServiceSource, /build_gestao_financial_schedule/);
