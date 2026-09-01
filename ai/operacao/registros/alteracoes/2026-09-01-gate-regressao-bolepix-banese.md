@@ -1,7 +1,7 @@
 # Gate de regressão BolePix Banese
 
 Data: 2026-09-01  
-Estado: validação local concluída; aguardando publicação
+Estado: publicado em produção pelo PR #108
 
 ## Objetivo
 
@@ -61,8 +61,17 @@ Total: 8 arquivos.
   adapter e três guardas da recuperação auditada.
 - Teto de 500 linhas, controle operacional e versão 4.8.21 aprovados.
 - Índice RAG reindexado após o patch final e contrato operacional reaprovado.
-- CI e Preview: pendentes do PR.
+- CI do PR e do `push` de `main`, Preview e build: aprovados.
 
 ## Evidência de produção
 
-Pendente do PR, checks, Preview, merge e deployment deste manifesto.
+- [PR #108](https://github.com/DenielsonSLima/UniversoCursosConsultoria/pull/108)
+  contém exatamente os oito arquivos do manifesto e um commit antes do squash.
+- Head validado: `0c2dbaf`; merge em `main`: `6649a14`.
+- O controle de versão, a qualidade completa e o novo gate de 71 testes foram
+  aprovados no PR. A Preview Vercel `GihpQBungEYvMvpAWb7EGjYuV1mR` ficou pronta.
+- O workflow de `push` [#33501640744](https://github.com/DenielsonSLima/UniversoCursosConsultoria/actions/runs/33501640744)
+  concluiu com sucesso, incluindo TypeScript, lint, testes e build.
+- O deployment de produção Vercel `CbCMxbgX9PKpV4E1DvumRoVU83AV` concluiu com
+  status `success` sobre o commit `6649a14`.
+- Nenhuma migration, Edge Function, cobrança ou dado financeiro foi alterado.

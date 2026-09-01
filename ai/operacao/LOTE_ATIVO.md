@@ -1,6 +1,6 @@
 # Lote ativo
 
-Estado: `VALIDAÇÃO LOCAL CONCLUÍDA — AGUARDANDO PUBLICAÇÃO`
+Estado: `PUBLICAÇÃO CONCLUÍDA — PR #108 MERGEADO`
 
 ## Lote: 2026-09-01-gate-regressao-bolepix-banese
 
@@ -24,8 +24,8 @@ Estado: `VALIDAÇÃO LOCAL CONCLUÍDA — AGUARDANDO PUBLICAÇÃO`
 
 ### Aceite para encerramento
 
-- 71 testes focados Banese aprovados no workspace e no CI.
-- Manifesto e teto de 500 linhas aprovados.
-- Controle de versão 4.8.21 aprovado.
-- Preview Vercel concluída, PR integrado por squash e `main` publicado em
-  produção sem mudança funcional do bundle.
+- 71 testes focados Banese aprovados no workspace, no PR e no `push` de `main`.
+- Manifesto, teto de 500 linhas, versão 4.8.21 e build aprovados.
+- PR #108 integrado por squash no commit `6649a14` e publicado em produção
+  pela Vercel, sem mudança funcional do fluxo financeiro.
+- Nenhuma migration, Edge Function ou operação Supabase executada neste lote.
