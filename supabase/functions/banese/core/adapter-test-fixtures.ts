@@ -99,6 +99,9 @@ export const adminForBaneseReservation = (
   collisionPreflightEnabled = false,
 ) => ({
   rpc: async (fn: string) => {
+    if (fn === "claim_banese_api_submission_attempt") {
+      return { data: true, error: null };
+    }
     if (fn === "reserve_banese_nosso_numero_for_receivable") {
       return {
         data: {
