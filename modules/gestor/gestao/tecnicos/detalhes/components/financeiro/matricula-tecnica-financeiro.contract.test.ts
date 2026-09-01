@@ -10,21 +10,35 @@ import {
   isFinanceiroRequestReconciled,
   markFinanceiroRequestReconciled,
 } from "./matricula-tecnica-financeiro.echo";
+import { requireMatriculaTecnicaCicloFinanceiroPolicy } from "./matricula-tecnica-ciclo-financeiro-policy";
 
 const baseDir = resolve(
   process.cwd(),
   "modules/gestor/gestao/tecnicos/detalhes/components/financeiro",
 );
-const serviceSource = readFileSync(
+const parserSource = readFileSync(
   resolve(baseDir, "matricula-tecnica-financeiro.service.ts"),
   "utf8",
 );
+const clientSource = readFileSync(
+  resolve(baseDir, "matricula-tecnica-financeiro.client.ts"),
+  "utf8",
+);
+const typesSource = readFileSync(
+  resolve(baseDir, "matricula-tecnica-financeiro.types.ts"),
+  "utf8",
+);
+const serviceSource = `${parserSource}\n${clientSource}`;
 const alunosSource = readFileSync(
   resolve(baseDir, "../TurmaAlunos.tsx"),
   "utf8",
 );
 const modalSource = readFileSync(
   resolve(baseDir, "../alunos/ConfirmarMatriculaModal.tsx"),
+  "utf8",
+);
+const enrollmentConfirmationSource = readFileSync(
+  resolve(baseDir, "../alunos/useTechnicalEnrollmentConfirmation.ts"),
   "utf8",
 );
 const overrideDialogSource = readFileSync(
@@ -43,6 +57,10 @@ const listSource = readFileSync(
   resolve(baseDir, "FinanceiroAlunosList.tsx"),
   "utf8",
 );
+const legacyActivationDialogSource = readFileSync(
+  resolve(baseDir, "FinanceiroAtivacaoLegacyDialog.tsx"),
+  "utf8",
+);
 const configSource = readFileSync(
   resolve(baseDir, "FinanceiroConfig.tsx"),
   "utf8",
@@ -57,6 +75,10 @@ const configEditorSource = readFileSync(
 );
 const realtimeHookSource = readFileSync(
   resolve(baseDir, "hooks/useMatriculaTecnicaFinanceiroRealtime.ts"),
+  "utf8",
+);
+const financeiroHookSource = readFileSync(
+  resolve(baseDir, "hooks/useMatriculaTecnicaFinanceiro.ts"),
   "utf8",
 );
 const accessibleDialogSource = readFileSync(
@@ -120,6 +142,50 @@ test("service usa contexto RBAC, workspace e mutações canônicas sem enviar va
   );
 });
 
+test("prelink e workspace exigem projeção canônica de ciclos e falham fechado", () => {
+  const manualPolicy = {
+    habilitado: true,
+    modo: "MANUAL",
+    estadoInicial: "IMPORTADA_CICLO_1",
+    cicloBaseHistorico: 1,
+    cicloMaximo: 2,
+    criterioElegibilidade: "PENULTIMA_SEM_ATRASO",
+    revisao: 3,
+    fingerprint: "b".repeat(64),
+  };
+  assert.deepEqual(
+    requireMatriculaTecnicaCicloFinanceiroPolicy(manualPolicy),
+    manualPolicy,
+  );
+  assert.doesNotThrow(() => requireMatriculaTecnicaCicloFinanceiroPolicy({
+    habilitado: false,
+    modo: null,
+    estadoInicial: null,
+    cicloBaseHistorico: null,
+    cicloMaximo: null,
+    criterioElegibilidade: null,
+    revisao: null,
+    fingerprint: null,
+  }));
+  assert.throws(
+    () => requireMatriculaTecnicaCicloFinanceiroPolicy({ ...manualPolicy, habilitado: null }),
+    /política de ciclos/i,
+  );
+  assert.throws(
+    () => requireMatriculaTecnicaCicloFinanceiroPolicy({ ...manualPolicy, modo: "AUTOMATICO" }),
+    /política manual de ciclos/i,
+  );
+  assert.throws(
+    () => requireMatriculaTecnicaCicloFinanceiroPolicy({ ...manualPolicy, cicloBaseHistorico: 0 }),
+    /política manual de ciclos/i,
+  );
+  assert.match(typesSource, /cicloFinanceiroTecnico: MatriculaTecnicaCicloFinanceiroPolicy/g);
+  assert.equal(
+    parserSource.match(/requireMatriculaTecnicaCicloFinanceiroPolicy\(/g)?.length,
+    2,
+  );
+});
+
 test("editor flexível usa somente preview/save canônicos e preserva todas as políticas", () => {
   assert.match(configSource, /usePreverRegraFinanceiraTecnica/);
   assert.match(configSource, /useSalvarRegraFinanceiraTecnica/);
@@ -147,9 +213,9 @@ test("editor flexível usa somente preview/save canônicos e preserva todas as p
 
 test("matrícula técnica começa pendente e não usa cálculo ou gateway no browser", () => {
   assert.match(modalSource, /useState<EnrollmentFinanceIntent>\('PENDENTE'\)/);
-  assert.match(alunosSource, /preLink\.cobrancaGerada/);
+  assert.match(enrollmentConfirmationSource, /preLink\.cobrancaGerada/);
   assert.doesNotMatch(
-    alunosSource,
+    `${alunosSource}\n${enrollmentConfirmationSource}`,
     /Asaas|useFinanceiroRulesCalculation|valorMatricula|descontoPontualidade|jurosAtraso/,
   );
   assert.doesNotMatch(
@@ -180,6 +246,21 @@ test("matrícula técnica começa pendente e não usa cálculo ou gateway no bro
   );
 });
 
+test("pré-vínculo invalida o workspace em vez de cachear a linha parcial", () => {
+  const preVinculoHook = financeiroHookSource.slice(
+    financeiroHookSource.indexOf("export const usePreVincularAlunoTecnico"),
+    financeiroHookSource.indexOf("export const useSalvarRegraFinanceiraTecnica"),
+  );
+
+  assert.match(preVinculoHook, /markFinanceiroRequestReconciled\(result\.requestId\)/);
+  assert.match(preVinculoHook, /await queryClient\.invalidateQueries/);
+  assert.match(
+    preVinculoHook,
+    /matriculaTecnicaFinanceiroKeys\.turma\(input\.turmaId\)/,
+  );
+  assert.doesNotMatch(preVinculoHook, /setQueriesData|reconcileRow/);
+});
+
 test("condição individual exige código no modal, na edição posterior e no RPC final", () => {
   assert.match(modalSource, /Código de autorização/);
   assert.match(modalSource, /useValidateTechnicalConditionCode/);
@@ -204,8 +285,8 @@ test("wizard explica dois ciclos, exige vencimento e simula pontualidade e atras
   assert.match(modalSource, /Juros de \{formatPercent\(effectiveRule\?\.encargos\.jurosAtrasoPercentual/);
   assert.match(modalSource, /Multa única: \{formatPercent\(effectiveRule\?\.encargos\.multaAtrasoPercentual/);
   assert.match(modalSource, /Primeiro vencimento desta matrícula/);
-  assert.match(alunosSource, /if \(canManageFinanceiro && !primeiroVencimento\)/);
-  assert.match(alunosSource, /effectiveMatricula = overrideResult\.matricula/);
+  assert.match(enrollmentConfirmationSource, /if \(canManageFinanceiro && !primeiroVencimento\)/);
+  assert.match(enrollmentConfirmationSource, /effectiveMatricula = overrideResult\.matricula/);
   assert.match(serviceSource, /value\.continuidade\.recorrente !== false/);
   assert.match(serviceSource, /value\.continuidade\.maxCiclos !== \(value\.cobranca\.rematricula\.habilitada \? 2 : 1\)/);
 });
@@ -221,15 +302,15 @@ test("geração imediata exige confirmação e modais preservam ciclo de foco", 
     listSource,
     /setPendingAction\(\{ matriculaIds: \[row\.matriculaId\], label: row\.alunoNome, modo: 'AGORA' \}\)/,
   );
-  assert.match(listSource, /Confirmar geração inicial/);
-  assert.match(listSource, /actionRule\.cobranca\.matricula\.habilitada/);
+  assert.match(legacyActivationDialogSource, /Confirmar geração inicial/);
+  assert.match(legacyActivationDialogSource, /rule\.cobranca\.matricula\.habilitada/);
   assert.match(listSource, /row\.regraEfetiva/);
   assert.match(listSource, /row\.financeiro\.status === 'ATIVADA'/);
   assert.match(listSource, /> Gerada</);
   assert.match(listSource, /value\.trim\(\) === ''\) return '—'/);
-  assert.match(listSource, /Primeiro ciclo:.*mensalidades/);
+  assert.match(legacyActivationDialogSource, /Primeiro ciclo:.*mensalidades/);
   assert.doesNotMatch(
-    listSource,
+    `${listSource}\n${legacyActivationDialogSource}`,
     /somente o título local da matrícula inicial será gerado agora/,
   );
   assert.match(accessibleDialogSource, /event\.key === 'Escape'/);
@@ -337,7 +418,7 @@ test("nova turma coleta a regra flexível sem duplicar a criação financeira", 
   assert.match(technicalClassFormConstantsSource, /valorRematricula: 150/);
   assert.match(technicalClassFormConstantsSource, /qtdParcelas: 12/);
   assert.match(technicalClassFormConstantsSource, /valorParcela: 279\.9/);
-  assert.match(technicalClassFinancialStepSource, /Gerar cobrança de matrícula/);
+  assert.match(technicalClassFinancialStepSource, /Incluir matrícula no 1º ciclo/);
   assert.match(technicalClassFinancialStepSource, /cobrarMatricula: enabled/);
   assert.match(technicalClassFormSource, /multaAtraso: 0/);
   assert.match(technicalClassFormSource, /cronogramaFinanceiro: \[\]/);
@@ -352,7 +433,7 @@ test("nova turma coleta a regra flexível sem duplicar a criação financeira", 
   );
   assert.match(
     technicalClassFormSource,
-    /gerarCobrancasFuturas: formData\.origemFinanceira !== 'LEGADO'/,
+    /gerarCobrancasFuturas: false/,
   );
   assert.match(
     technicalClassFinancialPreviewServiceSource,
