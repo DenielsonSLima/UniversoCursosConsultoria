@@ -2,6 +2,7 @@ import React from 'react';
 import { CalendarDays, CheckCircle2, FileText, GraduationCap, MapPin, ReceiptText, Users2, WalletCards } from 'lucide-react';
 import type { StatusTurma } from '../../../gestao.types';
 import TechnicalAcademicSettings from '../TechnicalAcademicSettings';
+import { TURMA_TECNICO_FINANCIAL_STATE_OPTIONS } from './turma-tecnico-form.constants';
 import type {
   TurmaTecnicoCourseOption,
   TurmaTecnicoFormData,
@@ -79,13 +80,16 @@ const TurmaTecnicoReviewStep: React.FC<TurmaTecnicoReviewStepProps> = ({
         <div className="rounded-xl bg-white p-3"><p className="flex items-center gap-2 text-[9px] font-black uppercase text-slate-400"><ReceiptText size={12} /> Matrícula</p><p className="mt-1 text-sm font-black text-[#001a33]">{formData.cobrarMatricula ? formatCurrencyBRL(formData.valorMatricula) : 'Não gerar'}</p></div>
         <div className="rounded-xl bg-white p-3"><p className="text-[9px] font-black uppercase text-slate-400">Mensalidades por ciclo</p><p className="mt-1 text-sm font-black text-[#001a33]">{formData.qtdParcelas}x de {formatCurrencyBRL(formData.valorParcela)}</p></div>
         <div className="rounded-xl bg-white p-3"><p className="text-[9px] font-black uppercase text-slate-400">Rematrícula</p><p className="mt-1 text-sm font-black text-[#001a33]">{formData.cobrarRematricula ? formatCurrencyBRL(formData.valorRematricula) : 'Não cobrar'}</p></div>
-        <div className="rounded-xl bg-white p-3"><p className="text-[9px] font-black uppercase text-slate-400">Primeiro vencimento</p><p className="mt-1 text-sm font-black text-[#001a33]">{formData.primeiroVencimentoPadrao || '—'}</p><p className="mt-1 text-[9px] font-semibold text-slate-400">Depois, todo dia {String(formData.diaVencimentoPadrao).padStart(2, '0')}</p></div>
+        <div className="rounded-xl bg-white p-3"><p className="text-[9px] font-black uppercase text-slate-400">Primeiro vencimento</p><p className="mt-1 text-sm font-black text-[#001a33]">{formData.estadoFinanceiroInicial === 'IMPORTADA_CONCLUIDA' ? 'Não se aplica' : formData.primeiroVencimentoPadrao || '—'}</p><p className="mt-1 text-[9px] font-semibold text-slate-400">{formData.estadoFinanceiroInicial === 'IMPORTADA_CONCLUIDA' ? 'Sem novo ciclo financeiro' : `Depois, todo dia ${String(formData.diaVencimentoPadrao).padStart(2, '0')}`}</p></div>
       </div>
-      <p className="mt-3 rounded-xl border border-blue-100 bg-white px-3 py-2.5 text-[10px] font-semibold leading-relaxed text-blue-700">
-        {formData.cobrarRematricula
-          ? `Após a rematrícula paga, o segundo e último ciclo repete ${formData.qtdParcelas} mensalidades.`
-          : `Sem rematrícula, o plano termina após as ${formData.qtdParcelas} mensalidades deste ciclo.`}
-      </p>
+      <div className="mt-3 rounded-xl border border-blue-100 bg-white px-3 py-3">
+        <p className="text-[9px] font-black uppercase text-blue-500">Fluxo manual · sem cobrança ao adicionar aluno</p>
+        <p className="mt-1 text-[11px] font-black text-blue-900">{TURMA_TECNICO_FINANCIAL_STATE_OPTIONS.find((option) => option.value === formData.estadoFinanceiroInicial)?.title}</p>
+        <p className="mt-1 text-[10px] font-semibold leading-relaxed text-blue-700">{TURMA_TECNICO_FINANCIAL_STATE_OPTIONS.find((option) => option.value === formData.estadoFinanceiroInicial)?.nextAction}</p>
+        {formData.estadoFinanceiroInicial !== 'IMPORTADA_CONCLUIDA' ? (
+          <p className="mt-2 text-[10px] font-semibold text-slate-500">Elegibilidade: {formData.criterioElegibilidadeCiclo === 'PENULTIMA_SEM_ATRASO' ? 'penúltima paga e nenhuma parcela vencida' : 'quitação total do ciclo anterior'}.</p>
+        ) : null}
+      </div>
       <div className="mt-3 grid gap-3 md:grid-cols-3">
         <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3"><p className="text-[9px] font-black uppercase text-emerald-700">Desconto</p><p className="mt-1 text-xs font-black text-emerald-800">{formatCurrencyBRL(formData.descontoPontualidade)}</p></div>
         <div className="rounded-xl border border-rose-100 bg-rose-50 p-3"><p className="text-[9px] font-black uppercase text-rose-600">Juros proporcional</p><p className="mt-1 text-xs font-black text-rose-700">{formData.jurosAtraso}% ao mês</p></div>
