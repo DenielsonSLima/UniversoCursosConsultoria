@@ -1,7 +1,7 @@
 # Ciclos financeiros manuais dos cursos técnicos
 
 Data: 2026-09-01
-Estado: pronto para publicação
+Estado: publicado em produção pelo PR #110
 
 ## Objetivo e contrato entregue
 
@@ -82,6 +82,22 @@ Estado: pronto para publicação
 - O smoke visual autenticado ficou pendente porque não havia sessão de navegador
   conectada; nenhum teste automatizado foi apresentado como substituto desse
   limite real.
+
+## Evidência de publicação
+
+- [PR #110](https://github.com/DenielsonSLima/UniversoCursosConsultoria/pull/110)
+  comparado com `main` contendo exatamente os 68 arquivos do manifesto.
+- Head validado: `5d58e2b`; merge por squash em `main`: `48a5c0d`.
+- Os workflows de PR
+  [Controle de versão #33527199426](https://github.com/DenielsonSLima/UniversoCursosConsultoria/actions/runs/33527199426)
+  e
+  [Qualidade do produto #33527199480](https://github.com/DenielsonSLima/UniversoCursosConsultoria/actions/runs/33527199480)
+  concluíram com sucesso.
+- O deployment de Preview Vercel `DHh7gnZgzBRQ8TfyL2j4dZBC9s5D` e o deployment
+  de produção `F6vYJieNKjEx3iRtyeS6nKfZQgdr` concluíram com sucesso.
+- Banco, Edge Functions e a auditoria estrutural da Turma 42 já estavam
+  concluídos antes do merge; a publicação não executou geração nem emissão de
+  cobrança.
 
 ## Manifesto explícito
 

@@ -1,6 +1,6 @@
 # Lote ativo
 
-Estado: `PRONTO PARA PUBLICAÇÃO`
+Estado: `PUBLICAÇÃO CONCLUÍDA — PR #110 MERGEADO`
 
 ## Lote: 2026-09-01-ciclos-financeiros-manuais-tecnico
 
@@ -44,3 +44,5 @@ Estado: `PRONTO PARA PUBLICAÇÃO`
 - RBAC, idempotência, RLS, teto de 500 linhas, TypeScript, lint e build aprovados.
 - Migrations aplicadas e validadas via MCP Supabase.
 - Manifesto atômico publicado via MCP GitHub e verificado no PR.
+- PR #110 integrado por squash no commit `48a5c0d`, com os dois workflows do
+  PR e os deployments Preview/produção da Vercel aprovados.
