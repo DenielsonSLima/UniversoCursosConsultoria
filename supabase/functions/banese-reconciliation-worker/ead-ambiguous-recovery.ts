@@ -73,12 +73,12 @@ export const recoverEadAmbiguousTitlesOnce = async (
     }
 
     report.claimed += 1;
-    let success = false;
-    const controller = new AbortController();
+    let success: boolean;
+    const controller = new globalThis.AbortController();
     const timeout = setTimeout(
       () =>
         controller.abort(
-          new DOMException("Banese GET timeout", "TimeoutError"),
+          new globalThis.DOMException("Banese GET timeout", "TimeoutError"),
         ),
       25_000,
     );
