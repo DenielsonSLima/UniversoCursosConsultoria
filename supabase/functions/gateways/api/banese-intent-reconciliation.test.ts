@@ -129,7 +129,7 @@ Deno.test("encaminha AbortSignal ao GET de conciliacao Banese", async () => {
     gateway_financial_terms_confirmed_at: null,
   });
   const admin = fakeAdmin(receivable);
-  const controller = new AbortController();
+  const controller = new globalThis.AbortController();
   let receivedSignal: AbortSignal | undefined;
 
   const result = await reconcileBaneseReceivable(admin, RECEIVABLE_ID, {
