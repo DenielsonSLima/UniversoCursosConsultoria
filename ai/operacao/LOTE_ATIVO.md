@@ -1,6 +1,6 @@
 # Lote ativo
 
-Estado: `PUBLICAÇÃO EM PRODUÇÃO AUTORIZADA — VALIDAÇÃO FINAL`
+Estado: `BACKEND PRODUTIVO CONCLUÍDO — PR FINAL EM VALIDAÇÃO`
 
 ## Lote: 2026-09-01-reemissao-bolepix-ead-banese
 
@@ -25,22 +25,29 @@ Estado: `PUBLICAÇÃO EM PRODUÇÃO AUTORIZADA — VALIDAÇÃO FINAL`
 4. POST ambíguo nunca é repetido; a retomada usa somente GET.
 5. Técnico, CNAB, históricos e PDFs compartilhados ficam fora da mutação.
 
-### Evidência antes da publicação
+### Evidência de produção
 
 - As seis imagens mostram proteção contra duplicidade no título EAD antigo e
   uma emissão EAD nova concluída com Pix na tela e no PDF do mesmo título.
-- Produção mantém os dois alvos pendentes, sem Pix local, sem pagamento e com
-  uma transação canônica cada; nenhuma mutação remota foi feita na preparação.
+- `000097299` recebeu confirmação bancária de pagamento integral via API antes
+  da substituição; por contrato, permaneceu pago e não foi cancelado/reemitido.
+- `000097302` continuou pendente e sem Pix, passou no dry-run com `ROLLBACK` e
+  foi substituído uma única vez pelo Nosso Número `000097329`.
+- O novo título possui linha/código 047 coerentes, Pix EMV/CRC válido, imagem
+  PNG gerada do `QrCode` oficial e uma única transação/inscrição canônicas.
+- Nove migrations e oito Edge Functions foram publicadas. A auditoria de
+  segurança permaneceu no baseline; os dois índices novos aparecem apenas como
+  informativos de uso zero porque o arquivo acabou de ser criado.
 - Validação local: 8 `deno check`, 152 testes integrados, TypeScript global,
   build de produção, controle de versão 4.8.20 e teto de 500 linhas aprovados.
-- Processamento obrigatório: concluir e validar o primeiro título antes de
-  enfileirar o segundo.
+- Técnico preservado: 691 recebíveis e 325 transações; nenhuma linha Técnica
+  foi atualizada durante o rollout.
 
 ### Aceite para encerramento
 
-- Cada título novo, quando necessário, possui identidade bancária e Pix
-  próprios; o título antigo fica baixado no Banese e arquivado localmente.
+- Título pago não é substituído. Título elegível recebe identidade bancária e
+  Pix próprios; o título antigo fica baixado no Banese e arquivado localmente.
 - O PDF autenticado abre e o QR é visualmente legível para cada retorno Pix.
-- Checksums das cobranças e transações Técnicas permanecem idênticos.
+- Cobranças e transações Técnicas permanecem sem alteração no rollout.
 - PR final contém somente o manifesto e recebe CI/Preview aprovados antes do
   merge em `main`.
