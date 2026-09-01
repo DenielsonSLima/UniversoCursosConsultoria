@@ -166,5 +166,11 @@ jobs:
             supabase/tests/portal_partner_auth_rollout_safety.contract.test.ts \
             supabase/tests/portal_partner_invite_reconciliation.contract.test.ts
 
+      - name: Testar regressões BolePix Banese
+        run: |
+          deno test --allow-read --allow-env \
+            supabase/functions/banese/core/adapter-*.test.ts \
+            supabase/tests/banese_incident_recovery_safety.contract.test.ts
+
       - name: Gerar build de produção
         run: npm run build

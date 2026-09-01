@@ -4,6 +4,20 @@ Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente
 
 Histórico anterior: [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
 
+## [4.8.21] - 2026-09-01
+
+### Segurança e qualidade
+
+- O CI passa a executar 71 contratos BolePix/Banese, incluindo o claim durável
+  exigido antes de qualquer POST e as guardas CAS da recuperação auditada.
+- O fixture de emissão simula a intenção persistida e impede que regressões do
+  contrato bancário permaneçam ocultas por uma suíte não exercitada no gate.
+
+### Escopo
+
+- A versão não altera runtime financeiro, banco, Edge Functions, PDFs ou
+  cobranças; o avanço registra exclusivamente o reforço de testes e CI.
+
 ## [4.8.20] - 2026-09-01
 
 ### Corrigido
