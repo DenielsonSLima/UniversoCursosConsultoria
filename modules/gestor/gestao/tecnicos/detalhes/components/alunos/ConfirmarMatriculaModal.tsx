@@ -55,6 +55,7 @@ interface ConfirmarMatriculaModalProps {
   student: { id: string; nome: string };
   regra?: MatriculaTecnicaRegraIdentidade;
   canManageFinanceiro: boolean;
+  manualFinanceMode: boolean;
   loading: boolean;
   error: boolean;
   retrying: boolean;
@@ -135,6 +136,7 @@ const ConfirmarMatriculaModal: React.FC<ConfirmarMatriculaModalProps> = ({
   student,
   regra,
   canManageFinanceiro,
+  manualFinanceMode,
   loading,
   error,
   retrying,
@@ -167,6 +169,12 @@ const ConfirmarMatriculaModal: React.FC<ConfirmarMatriculaModalProps> = ({
     setPrimeiroVencimento((current) => current || regraCompleta.primeiroVencimentoSugerido);
     setDraft((current) => current || createTechnicalEnrollmentConditionDraft(regraCompleta));
   }, [regraCompleta]);
+
+  useEffect(() => {
+    if (!manualFinanceMode) return;
+    setIntent('PENDENTE');
+    setAtivarEm('');
+  }, [manualFinanceMode]);
 
   const previewInput = useMemo(() => {
     if (!regraCompleta || !draft) return null;
@@ -203,14 +211,9 @@ const ConfirmarMatriculaModal: React.FC<ConfirmarMatriculaModalProps> = ({
     : null;
   const monthlySimulation = effectiveRule?.cronogramaCiclo.find((item) => item.tipo === 'MENSALIDADE');
   const nominalCourseTotal = regraCompleta
-    ? Number(regraCompleta.curso?.totalNominal ?? (
-      (regraCompleta.cobranca.matricula.habilitada ? Number(regraCompleta.valorMatricula) : 0)
-      + (regraCompleta.mensalidadesPorCiclo * Number(regraCompleta.valorMensalidade))
-      + (regraCompleta.cobranca.rematricula.habilitada
-        ? Number(regraCompleta.valorRematricula)
-          + (regraCompleta.mensalidadesPorCiclo * Number(regraCompleta.valorMensalidade))
-        : 0)
-    ))
+    ? (regraCompleta.cobranca.matricula.habilitada ? Number(regraCompleta.valorMatricula) : 0)
+      + (2 * regraCompleta.mensalidadesPorCiclo * Number(regraCompleta.valorMensalidade))
+      + (regraCompleta.cobranca.rematricula.habilitada ? Number(regraCompleta.valorRematricula) : 0)
     : 0;
 
   const validateCurrentStep = () => {
@@ -229,7 +232,7 @@ const ConfirmarMatriculaModal: React.FC<ConfirmarMatriculaModalProps> = ({
     if (step === 2 && canManageFinanceiro && !primeiroVencimento) {
       return 'Informe o primeiro vencimento desta matrícula.';
     }
-    if (step === 3 && intent === 'AGENDADA' && !ativarEm) {
+    if (step === 3 && !manualFinanceMode && intent === 'AGENDADA' && !ativarEm) {
       return 'Informe quando a cobrança inicial deve ser gerada.';
     }
     return null;
@@ -286,9 +289,9 @@ const ConfirmarMatriculaModal: React.FC<ConfirmarMatriculaModalProps> = ({
       return;
     }
     onConfirm({
-      intent: canManageFinanceiro ? intent : 'PENDENTE',
+      intent: canManageFinanceiro && !manualFinanceMode ? intent : 'PENDENTE',
       primeiroVencimento: canManageFinanceiro ? primeiroVencimento : '',
-      ativarEm: canManageFinanceiro ? ativarEm : '',
+      ativarEm: canManageFinanceiro && !manualFinanceMode ? ativarEm : '',
       override: individual && override && hasTechnicalEnrollmentOverride(override) ? override : null,
       codigoAutorizacao: individual ? codigo : null,
       motivo: individual ? motivo : null,
@@ -309,7 +312,7 @@ const ConfirmarMatriculaModal: React.FC<ConfirmarMatriculaModalProps> = ({
               ['1', 'Matrícula', regraCompleta.cobranca.matricula.habilitada ? formatMoney(regraCompleta.cobranca.matricula.valor) : 'Isenta'],
               ['2', `Ciclo 1 · ${regraCompleta.mensalidadesPorCiclo} mens.`, `${regraCompleta.mensalidadesPorCiclo}x ${formatMoney(regraCompleta.valorMensalidade)}`],
               ['3', 'Rematrícula', regraCompleta.cobranca.rematricula.habilitada ? formatMoney(regraCompleta.valorRematricula) : 'Não cobrar'],
-              ['4', `Ciclo 2 · ${regraCompleta.mensalidadesPorCiclo} mens.`, regraCompleta.cobranca.rematricula.habilitada ? `${regraCompleta.mensalidadesPorCiclo}x ${formatMoney(regraCompleta.valorMensalidade)}` : 'Curso encerra no ciclo 1'],
+              ['4', `Ciclo 2 · ${regraCompleta.mensalidadesPorCiclo} mens.`, `${regraCompleta.mensalidadesPorCiclo}x ${formatMoney(regraCompleta.valorMensalidade)}`],
             ].map(([number, title, value]) => (
               <div key={number} className="relative rounded-2xl border border-slate-200 bg-white p-4">
                 <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#001a33] text-[10px] font-black text-white">{number}</span>
@@ -320,7 +323,7 @@ const ConfirmarMatriculaModal: React.FC<ConfirmarMatriculaModalProps> = ({
           </div>
           <div className="rounded-2xl bg-[#001a33] p-5 text-white">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-              <div><p className="text-[10px] font-black uppercase tracking-wider text-blue-200">Composição do curso</p><p className="mt-1 text-xs font-semibold text-slate-300">A rematrícula separa os dois ciclos e não abre um terceiro ciclo.</p></div>
+              <div><p className="text-[10px] font-black uppercase tracking-wider text-blue-200">Composição do curso</p><p className="mt-1 text-xs font-semibold text-slate-300">O curso tem dois ciclos manuais. No segundo, a rematrícula é cobrada somente quando habilitada; sem ela, o ciclo começa pela mensalidade 1 e não abre um terceiro ciclo.</p></div>
               <div className="sm:text-right"><p className="text-[9px] font-black uppercase text-blue-200">Total nominal do curso</p><p className="mt-1 text-2xl font-black">{formatMoney(nominalCourseTotal)}</p></div>
             </div>
           </div>
@@ -419,26 +422,33 @@ const ConfirmarMatriculaModal: React.FC<ConfirmarMatriculaModalProps> = ({
 
   const renderConfirmation = () => (
     <div className="space-y-5">
-      <fieldset>
-        <legend className="text-[10px] font-black uppercase tracking-wider text-slate-500">O que fazer ao concluir?</legend>
-        <div className="mt-3 grid gap-3 md:grid-cols-3">
-          {intentOptions.filter((option) => canManageFinanceiro || option.value === 'PENDENTE').map((option) => (
-            <label key={option.value} className={`cursor-pointer rounded-2xl border p-4 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-blue-500 has-[:focus-visible]:ring-offset-2 ${intent === option.value ? 'border-blue-500 bg-blue-50 text-blue-800' : 'border-slate-200 text-slate-600 hover:border-blue-200'}`}>
-              <input type="radio" name="finance-intent" value={option.value} checked={intent === option.value} onChange={() => setIntent(option.value)} className="sr-only" />
-              <span className="flex items-center gap-2 text-xs font-black uppercase">{option.icon}{option.title}</span>
-              <span className="mt-2 block text-[10px] font-semibold leading-relaxed">{option.description}</span>
-            </label>
-          ))}
+      {manualFinanceMode ? (
+        <div role="status" className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+          <p className="flex items-center gap-2 text-xs font-black uppercase text-emerald-800"><ShieldCheck size={18} /> Vínculo pendente · geração manual</p>
+          <p className="mt-2 text-[11px] font-semibold leading-relaxed text-emerald-900">Ao confirmar, a matrícula acadêmica e a configuração deste aluno serão salvas sem criar cobrança de matrícula, rematrícula, mensalidade, boleto ou agendamento. O ciclo disponível aparecerá depois como uma ação separada para o gestor.</p>
         </div>
-      </fieldset>
-      {intent === 'AGENDADA' ? <label className="block max-w-md space-y-2"><span className="text-[10px] font-black uppercase text-slate-500">Gerar cobrança inicial em</span><input type="datetime-local" value={ativarEm} onChange={(event) => setAtivarEm(event.target.value)} className="w-full rounded-xl border border-slate-200 p-3 text-sm font-bold outline-none focus:border-blue-500" /></label> : null}
+      ) : (
+        <fieldset>
+          <legend className="text-[10px] font-black uppercase tracking-wider text-slate-500">O que fazer ao concluir?</legend>
+          <div className="mt-3 grid gap-3 md:grid-cols-3">
+            {intentOptions.filter((option) => canManageFinanceiro || option.value === 'PENDENTE').map((option) => (
+              <label key={option.value} className={`cursor-pointer rounded-2xl border p-4 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-blue-500 has-[:focus-visible]:ring-offset-2 ${intent === option.value ? 'border-blue-500 bg-blue-50 text-blue-800' : 'border-slate-200 text-slate-600 hover:border-blue-200'}`}>
+                <input type="radio" name="finance-intent" value={option.value} checked={intent === option.value} onChange={() => setIntent(option.value)} className="sr-only" />
+                <span className="flex items-center gap-2 text-xs font-black uppercase">{option.icon}{option.title}</span>
+                <span className="mt-2 block text-[10px] font-semibold leading-relaxed">{option.description}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      )}
+      {!manualFinanceMode && intent === 'AGENDADA' ? <label className="block max-w-md space-y-2"><span className="text-[10px] font-black uppercase text-slate-500">Gerar cobrança inicial em</span><input type="datetime-local" value={ativarEm} onChange={(event) => setAtivarEm(event.target.value)} className="w-full rounded-xl border border-slate-200 p-3 text-sm font-bold outline-none focus:border-blue-500" /></label> : null}
       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
         <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">Revisão final</p>
         <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-xl bg-white p-3"><p className="text-[9px] font-black uppercase text-slate-400">Aluno</p><p className="mt-1 text-xs font-black text-[#001a33]">{student.nome}</p></div>
           <div className="rounded-xl bg-white p-3"><p className="text-[9px] font-black uppercase text-slate-400">Condição</p><p className="mt-1 text-xs font-black text-[#001a33]">{individual ? motivoLabels[motivo] : 'Regra da turma'}</p></div>
           <div className="rounded-xl bg-white p-3"><p className="text-[9px] font-black uppercase text-slate-400">Primeiro vencimento</p><p className="mt-1 text-xs font-black text-[#001a33]">{primeiroVencimento || 'Definido pelo servidor'}</p></div>
-          <div className="rounded-xl bg-white p-3"><p className="text-[9px] font-black uppercase text-slate-400">Ação</p><p className="mt-1 text-xs font-black text-[#001a33]">{intentOptions.find((item) => item.value === intent)?.title}</p></div>
+          <div className="rounded-xl bg-white p-3"><p className="text-[9px] font-black uppercase text-slate-400">Ação</p><p className="mt-1 text-xs font-black text-[#001a33]">{manualFinanceMode ? 'Salvar pendente, sem cobrança' : intentOptions.find((item) => item.value === intent)?.title}</p></div>
         </div>
       </div>
     </div>
@@ -460,7 +470,7 @@ const ConfirmarMatriculaModal: React.FC<ConfirmarMatriculaModalProps> = ({
           {loading ? <div className="flex min-h-64 items-center justify-center gap-3 text-sm font-bold text-slate-500"><Loader2 className="animate-spin text-blue-600" size={22} /> Carregando regra oficial da turma...</div> : error || !regra ? <div className="rounded-2xl border border-rose-100 bg-rose-50 p-6 text-center"><p className="text-sm font-black text-rose-800">Regra financeira indisponível</p><p className="mt-1 text-xs font-semibold text-rose-600">A matrícula foi bloqueada para não usar valores ou vencimentos antigos.</p><button type="button" onClick={onRetry} disabled={retrying} className="mt-4 inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-white px-4 py-2 text-[10px] font-black uppercase text-rose-700 disabled:opacity-50"><RefreshCw size={14} className={retrying ? 'animate-spin' : ''} /> Tentar novamente</button></div> : content()}
           {stepError ? <p role="alert" className="mt-5 rounded-xl border border-rose-100 bg-rose-50 p-3 text-xs font-bold text-rose-700">{stepError}</p> : null}
         </div>
-        {!loading && !error && regra ? <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-slate-100 bg-white p-4 sm:px-6"><button type="button" onClick={step === 0 ? onClose : () => { setStepError(''); setStep((current) => current - 1); }} disabled={isPending} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-3 text-[10px] font-black uppercase text-slate-600 disabled:opacity-50">{step > 0 ? <ArrowLeft size={14} /> : null}{step === 0 ? 'Cancelar' : 'Voltar'}</button>{step < STEPS.length - 1 ? <button type="button" onClick={advance} disabled={isPending} className="inline-flex items-center gap-2 rounded-xl bg-[#001a33] px-6 py-3 text-[10px] font-black uppercase text-white disabled:opacity-50">Avançar <ArrowRight size={14} /></button> : <button type="button" onClick={submit} disabled={isPending} className="inline-flex min-w-48 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-[10px] font-black uppercase text-white disabled:opacity-50">{isPending ? <Loader2 size={14} className="animate-spin" /> : null}{intent === 'PENDENTE' ? 'Vincular sem cobrança' : intent === 'AGORA' ? 'Vincular e gerar matrícula' : 'Vincular e agendar'}</button>}</footer> : null}
+        {!loading && !error && regra ? <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-slate-100 bg-white p-4 sm:px-6"><button type="button" onClick={step === 0 ? onClose : () => { setStepError(''); setStep((current) => current - 1); }} disabled={isPending} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-3 text-[10px] font-black uppercase text-slate-600 disabled:opacity-50">{step > 0 ? <ArrowLeft size={14} /> : null}{step === 0 ? 'Cancelar' : 'Voltar'}</button>{step < STEPS.length - 1 ? <button type="button" onClick={advance} disabled={isPending} className="inline-flex items-center gap-2 rounded-xl bg-[#001a33] px-6 py-3 text-[10px] font-black uppercase text-white disabled:opacity-50">Avançar <ArrowRight size={14} /></button> : <button type="button" onClick={submit} disabled={isPending} className="inline-flex min-w-48 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-[10px] font-black uppercase text-white disabled:opacity-50">{isPending ? <Loader2 size={14} className="animate-spin" /> : null}{manualFinanceMode || intent === 'PENDENTE' ? 'Vincular sem cobrança' : intent === 'AGORA' ? 'Vincular e gerar matrícula' : 'Vincular e agendar'}</button>}</footer> : null}
       </div>
     </div>
   );

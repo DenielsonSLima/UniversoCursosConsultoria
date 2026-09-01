@@ -13,7 +13,6 @@ import {
 import type {
   AtivarFinanceiroMatriculaTecnicaInput,
   AtivarFinanceiroMatriculasTecnicasLoteInput,
-  MatriculaTecnicaFinanceiroRow,
   MatriculaTecnicaFinanceiroWorkspace,
   PreverRegraFinanceiraTecnicaInput,
   PreVincularAlunoTecnicoInput,
@@ -92,36 +91,17 @@ const reconcileWorkspace = (
   );
 };
 
-const reconcileRow = (
-  queryClient: QueryClient,
-  turmaId: string,
-  row: MatriculaTecnicaFinanceiroRow,
-) => {
-  queryClient.setQueriesData<MatriculaTecnicaFinanceiroWorkspace>(
-    { queryKey: matriculaTecnicaFinanceiroKeys.turma(turmaId) },
-    (current) => {
-      if (!current) return current;
-      const existingIndex = current.matriculas.findIndex((item) => item.matriculaId === row.matriculaId);
-      const matriculas = existingIndex < 0
-        ? [...current.matriculas, row]
-        : current.matriculas.map((item) => item.matriculaId === row.matriculaId ? row : item);
-      return {
-        ...current,
-        matriculas,
-      };
-    },
-  );
-};
-
 export const usePreVincularAlunoTecnico = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: PreVincularAlunoTecnicoInput) => (
       matriculaTecnicaFinanceiroService.preVincular(input)
     ),
-    onSuccess: (result, input) => {
-      reconcileRow(queryClient, input.turmaId, result.matricula);
+    onSuccess: async (result, input) => {
       markFinanceiroRequestReconciled(result.requestId);
+      await queryClient.invalidateQueries({
+        queryKey: matriculaTecnicaFinanceiroKeys.turma(input.turmaId),
+      });
     },
   });
 };

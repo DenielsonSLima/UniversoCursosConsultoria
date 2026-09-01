@@ -2,7 +2,40 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
-Histórico anterior: [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+Histórico anterior: [21/08/2026 — parte 1](./changelog/2026-08-21-parte-1.md), [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+
+## [4.8.22] - 2026-09-01
+
+### Alterado
+
+- Toda nova turma técnica passa a declarar um de três estados financeiros:
+  nova, importada com o primeiro ciclo histórico ou importada concluída.
+- Adicionar aluno a uma turma técnica manual apenas salva o vínculo e a regra
+  financeira como pendentes; nenhum recebível, boleto ou agendamento é criado.
+- A aba Financeiro mostra a prévia e gera, por confirmação individual, no
+  máximo dois ciclos com os valores, encargos e quantidade configurados.
+- O primeiro vencimento do segundo ciclo é individual; com rematrícula, as
+  mensalidades começam no mês seguinte, e sem rematrícula a primeira parcela
+  usa a própria data informada.
+
+### Segurança e integridade
+
+- A Turma 42 inicia no segundo ciclo, e a matrícula que já possui rematrícula
+  mais 12 parcelas fica protegida estruturalmente contra duplicação ou reemissão.
+- Inadimplência, ciclo anterior incompleto e status `TRANCADO` bloqueiam a nova
+  geração no backend; o pagamento não dispara ciclo futuro automaticamente.
+- A geração cria apenas recebíveis locais. A emissão Banese continua posterior,
+  explícita por recebível e sem webhook.
+
+### Corrigido
+
+- O bundle das APIs financeiras voltou a exportar o helper de leitura Banese,
+  eliminando o erro de inicialização que zerava a tela de conciliação.
+
+### Qualidade
+
+- O lote adiciona contratos para os três estados de turma, dois ciclos, prévia,
+  idempotência, RBAC, Turma 42, alunos trancados e guardas Asaas/Banese/CNAB.
 
 ## [4.8.21] - 2026-09-01
 
@@ -453,41 +486,3 @@ Histórico anterior: [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-
 - Reenvios preservam o mesmo identificador até a conclusão canônica, evitando e-mail duplicado quando a confirmação externa fica ambígua; respostas de login com tokens também são explicitamente `no-store`.
 - Banco, Edge Function, login, primeiro acesso e interface administrativa possuem contratos focados no fluxo completo do Responsável.
 - Os arquivos ativos deste lote foram modularizados por responsabilidade e passaram a obedecer ao teto verificável de 500 linhas; migrations já aplicadas permanecem imutáveis e auditadas como exceção.
-
-## [4.5.1] - 2026-08-21
-
-### Adicionado
-
-- O Gestor pode validar administrativamente o e-mail informado pelo aluno e emitir uma senha temporária exibida uma única vez, somente após confirmação explícita e com trilha de auditoria.
-- O primeiro login com senha temporária obriga o aluno a criar uma senha própria antes de aceitar os termos vigentes e acessar o portal.
-- A documentação operacional e funcional do sistema foi consolidada, incluindo integrações, módulos, ambiente local, testes e publicação.
-- Três novas capas de cursos EAD foram incorporadas ao catálogo público.
-
-### Corrigido
-
-- O relatório do Caixa alinha a prévia ao PDF vetorial, simplifica a posição líquida, reutiliza o mesmo Blob na visualização e apresenta textos operacionais sem expor detalhes internos.
-- A criação de turmas com plano financeiro único ganhou um seletor de curso acessível e consistente com os demais formulários.
-
-### Segurança e qualidade
-
-- A senha temporária não é persistida nem repetida na resposta, invalida emissões concorrentes, força troca no primeiro acesso e usa respostas sem cache.
-- O gate do GitHub passa a testar confirmação de e-mail, emissão de senha temporária, contrato de runtime e fluxo completo de primeiro acesso.
-- O snapshot foi reconciliado por hash com o `main` remoto: arquivos já publicados foram deduplicados e migrations obsoletas substituídas permaneceram fora do commit.
-
-## [4.5.0] - 2026-08-21
-
-### Adicionado
-
-- Acesso multiperfil consistente para Aluno, Responsável, Professor, Coordenador e Gestor, com seleção explícita de contexto e redirecionamento revalidado pelo servidor.
-- Primeiro acesso do aluno passa a exigir confirmação de e-mail, aceite vigente e troca de senha antes de abrir o portal ou iniciar checkout próprio.
-- Crachá de Preceptor ganha layout CR80 vertical, template fechado por allowlist e snapshot canônico de emissão.
-
-### Corrigido
-
-- O editor e o comprovante de assinatura eletrônica passaram a preservar a tipografia segura, a marca institucional e a geometria canônica da coluna de validação.
-- O checkout revalida o contexto do aluno no servidor e não permite que uma exceção administrativa contorne o primeiro acesso do próprio gestor.
-
-### Segurança e qualidade
-
-- As funções de autenticação e checkout preservam seus gates de JWT e validam o contexto retornado pelas RPCs canônicas; respostas de falha permanecem fechadas.
-- TypeScript, ESLint, build de produção, testes de acesso, PDF, contratos Supabase e checks Deno dos entrypoints alterados foram aprovados antes da publicação.

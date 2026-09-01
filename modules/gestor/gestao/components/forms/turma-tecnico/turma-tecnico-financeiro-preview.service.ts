@@ -86,18 +86,10 @@ export const getTurmaTecnicoFinanceiroPreview = async (
     throw new Error('O servidor não retornou a prévia financeira completa.');
   }
 
-  const totalPrimeiroCiclo = schedule.reduce(
+  const totalCronograma = schedule.reduce(
     (total, item) => total + finiteNumber(item.valor, 'o valor do cronograma'),
     0,
   );
-  const totalMensalidadesSegundoCiclo = input.cobrarRematricula
-    ? schedule
-      .filter((item) => String(item.tipo || '').toUpperCase() === 'PARCELA')
-      .reduce(
-        (total, item) => total + finiteNumber(item.valor, 'o valor da mensalidade do segundo ciclo'),
-        0,
-      )
-    : 0;
 
   return {
     descontoAplicado: finiteNumber(previewRow.desconto_aplicado, 'o desconto'),
@@ -107,6 +99,6 @@ export const getTurmaTecnicoFinanceiroPreview = async (
     multaAplicada: finiteNumber(previewRow.multa_aplicada, 'a multa'),
     valorComDesconto: finiteNumber(previewRow.valor_com_desconto, 'o valor com desconto'),
     valorComAtraso: finiteNumber(previewRow.valor_com_atraso, 'o valor com atraso'),
-    totalCurso: totalPrimeiroCiclo + totalMensalidadesSegundoCiclo,
+    totalCurso: totalCronograma,
   };
 };

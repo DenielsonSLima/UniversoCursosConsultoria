@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Turma } from '../../../gestao.types';
 import ToastNotification, { useToast } from '../../../../parceiros/components/shared/ToastNotification';
@@ -30,19 +30,12 @@ import { getTechnicalEnrollmentMissingFields } from '../../../../../shared/utils
 import { getMaceioIsoDate } from '../../technicalClassDates';
 import { academicLifecycleKeys } from '../academic-lifecycle.keys';
 import {
-  createFinanceiroRequestId,
-  useAtivarFinanceiroMatriculaTecnica,
   useMatriculaTecnicaFinanceiroWorkspace,
   usePreVinculoAlunoTecnicoContexto,
-  usePreVincularAlunoTecnico,
-  useSalvarOverrideFinanceiroTecnico,
 } from './financeiro/hooks/useMatriculaTecnicaFinanceiro';
 import { useMatriculaTecnicaFinanceiroRealtime } from './financeiro/hooks/useMatriculaTecnicaFinanceiroRealtime';
-import { matriculaTecnicaFinanceiroKeys } from './financeiro/matricula-tecnica-financeiro.keys';
-import {
-  isFinanceiroDateRejected,
-  isRegraFinanceiraConflict,
-} from './financeiro/matricula-tecnica-financeiro.service';
+import { isManualTechnicalCycleContext } from './alunos/technical-enrollment-manual-policy';
+import { useTechnicalEnrollmentConfirmation } from './alunos/useTechnicalEnrollmentConfirmation';
 
 interface TurmaAlunosProps {
   turma: Turma;
@@ -53,9 +46,6 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma, canManageFinanceiro = 
   const queryClient = useQueryClient();
   const [showMatricularModal, setShowMatricularModal] = useState(false);
   const [pendingEnrollment, setPendingEnrollment] = useState<any>(null);
-  const preLinkRequestIds = useRef(new Map<string, string>());
-  const overrideRequestIds = useRef(new Map<string, string>());
-  const activationRequestIds = useRef(new Map<string, string>());
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<AcademicStudent | null>(null);
   const [studentToRemove, setStudentToRemove] = useState<AcademicStudent | null>(null);
@@ -126,11 +116,35 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma, canManageFinanceiro = 
   );
   const destinationClasses = destinationClassesQuery.data || [];
   const invalidateAcademicData = useTurmaAcademicInvalidation(turma.id);
-  const preLinkMutation = usePreVincularAlunoTecnico();
-  const saveOverrideMutation = useSalvarOverrideFinanceiroTecnico();
-  const activateFinanceMutation = useAtivarFinanceiroMatriculaTecnica();
   const legacyEnrollMutation = useMutation({
     mutationFn: (alunoId: string) => academicLifecycleService.matricularAluno(turma.id, alunoId),
+  });
+  const confirmedRule = canManageFinanceiro
+    ? enrollmentWorkspaceQuery.data?.regra
+    : preVinculoContextoQuery.data?.regra;
+  const financialContextError = canManageFinanceiro
+    ? enrollmentWorkspaceQuery.isError
+    : preVinculoContextoQuery.isError;
+  const financialContext = canManageFinanceiro
+    ? enrollmentWorkspaceQuery.data
+    : preVinculoContextoQuery.data;
+  const manualFinanceMode = financialContext
+    ? isManualTechnicalCycleContext(financialContext)
+    : true;
+  const technicalEnrollmentConfirmation = useTechnicalEnrollmentConfirmation({
+    turmaId: turma.id,
+    alunoId: pendingEnrollment?.id,
+    canEnroll,
+    canManageFinanceiro,
+    contextError: financialContextError,
+    manualFinanceMode,
+    regra: confirmedRule,
+    onSuccess: () => {
+      setShowMatricularModal(false);
+      setSearchTerm('');
+      setPendingEnrollment(null);
+    },
+    toast,
   });
   const confirmEnrollment = (student: any) => {
     if (!canEnroll) {
@@ -156,168 +170,19 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma, canManageFinanceiro = 
   };
   const confirmEnrollmentFinance = async (submission?: EnrollmentFinanceSubmission) => {
     if (!pendingEnrollment) return;
-    if (!requireTechnicalProfile) {
-      try {
-        await legacyEnrollMutation.mutateAsync(pendingEnrollment.id);
-        await queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.alunos(turma.id) });
-        setSearchTerm('');
-        closeEnrollmentConfirmation();
-        toast.success('Aluno vinculado', 'O vínculo acadêmico foi confirmado sem criar uma nova cobrança automática.');
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'O servidor não confirmou o vínculo.';
-        toast.error('Matrícula não realizada', message);
-      }
+    if (requireTechnicalProfile) {
+      if (submission) await technicalEnrollmentConfirmation.confirm(submission);
       return;
     }
-    const confirmedRule = canManageFinanceiro
-      ? enrollmentWorkspaceQuery.data?.regra
-      : preVinculoContextoQuery.data?.regra;
-    const financialContextError = canManageFinanceiro
-      ? enrollmentWorkspaceQuery.isError
-      : preVinculoContextoQuery.isError;
-    if (!canEnroll || financialContextError || !confirmedRule) {
-      toast.error('Regra não carregada', 'Recarregue o workspace financeiro oficial antes de confirmar.');
-      return;
-    }
-    const effectiveIntent = canManageFinanceiro ? submission?.intent || 'PENDENTE' : 'PENDENTE';
-    const primeiroVencimento = canManageFinanceiro ? submission?.primeiroVencimento || '' : '';
-    const ativarEm = canManageFinanceiro ? submission?.ativarEm || '' : '';
-    if (canManageFinanceiro && !primeiroVencimento) {
-      toast.error('Vencimento obrigatório', 'Informe o primeiro vencimento desta matrícula.');
-      return;
-    }
-    if (effectiveIntent === 'AGENDADA' && !ativarEm) {
-      toast.error('Agendamento obrigatório', 'Informe quando a geração financeira deve ser executada.');
-      return;
-    }
-    const preLinkKey = `${pendingEnrollment.id}:${primeiroVencimento || 'CANONICO'}:${confirmedRule.revisao}:${confirmedRule.fingerprint}`;
-    const currentPreLinkRequestId = preLinkRequestIds.current.get(preLinkKey)
-      || createFinanceiroRequestId();
-    preLinkRequestIds.current.set(preLinkKey, currentPreLinkRequestId);
-    let preLinkConfirmed = false;
     try {
-      const preLink = await preLinkMutation.mutateAsync({
-        turmaId: turma.id,
-        alunoId: pendingEnrollment.id,
-        requestId: currentPreLinkRequestId,
-        expectedRegraRevisao: confirmedRule.revisao,
-        expectedRegraFingerprint: confirmedRule.fingerprint,
-        primeiroVencimento: canManageFinanceiro ? primeiroVencimento || null : null,
-      });
-      if (preLink.cobrancaGerada) {
-        throw new Error('O pré-vínculo retornou uma cobrança inesperada.');
-      }
-      preLinkConfirmed = true;
+      await legacyEnrollMutation.mutateAsync(pendingEnrollment.id);
       await queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.alunos(turma.id) });
-
-      let effectiveMatricula = preLink.matricula;
-      if (submission?.override) {
-        if (!submission.codigoAutorizacao || !submission.motivo) {
-          throw new Error('A condição individual não possui autorização válida.');
-        }
-        const effectiveRule = effectiveMatricula.regraEfetiva;
-        const currentOverride = effectiveMatricula.override;
-        if (!effectiveRule || !currentOverride) {
-          throw new Error('O servidor não retornou a identidade financeira para aplicar a condição individual.');
-        }
-        const overrideKey = JSON.stringify({
-          matriculaId: effectiveMatricula.matriculaId,
-          override: submission.override,
-          motivo: submission.motivo,
-          justificativa: submission.justificativa,
-          expected: effectiveRule.identidade,
-        });
-        const overrideRequestId = overrideRequestIds.current.get(overrideKey)
-          || createFinanceiroRequestId();
-        overrideRequestIds.current.set(overrideKey, overrideRequestId);
-        const overrideResult = await saveOverrideMutation.mutateAsync({
-          turmaId: turma.id,
-          matriculaId: effectiveMatricula.matriculaId,
-          requestId: overrideRequestId,
-          expectedTurmaRevisao: effectiveRule.identidade.turmaRevisao,
-          expectedTurmaFingerprint: effectiveRule.identidade.turmaFingerprint,
-          expectedOverrideRevisao: currentOverride.identidade.revisao,
-          expectedOverrideFingerprint: currentOverride.identidade.fingerprint,
-          override: submission.override,
-          codigoAutorizacao: submission.codigoAutorizacao,
-          motivo: submission.motivo,
-          justificativa: submission.justificativa,
-        });
-        overrideRequestIds.current.delete(overrideKey);
-        effectiveMatricula = overrideResult.matricula;
-      }
-
-      if (effectiveIntent !== 'PENDENTE') {
-        const effectiveRule = effectiveMatricula.regraEfetiva;
-        const currentOverride = effectiveMatricula.override;
-        if (!effectiveRule || !currentOverride) {
-          throw new Error('O servidor não retornou a identidade financeira efetiva da matrícula.');
-        }
-        const activationKey = `${effectiveMatricula.matriculaId}:${effectiveIntent}:${ativarEm || 'AGORA'}:${effectiveRule.identidade.efetivaFingerprint}`;
-        const currentActivationRequestId = activationRequestIds.current.get(activationKey)
-          || createFinanceiroRequestId();
-        activationRequestIds.current.set(activationKey, currentActivationRequestId);
-        await activateFinanceMutation.mutateAsync({
-          turmaId: turma.id,
-          matriculaId: effectiveMatricula.matriculaId,
-          modo: effectiveIntent,
-          requestId: currentActivationRequestId,
-          expectedTurmaRevisao: effectiveRule.identidade.turmaRevisao,
-          expectedTurmaFingerprint: effectiveRule.identidade.turmaFingerprint,
-          expectedOverrideRevisao: currentOverride.identidade.revisao,
-          expectedOverrideFingerprint: currentOverride.identidade.fingerprint,
-          expectedEfetivaFingerprint: effectiveRule.identidade.efetivaFingerprint,
-          ativarEm: effectiveIntent === 'AGENDADA'
-            ? new Date(ativarEm).toISOString()
-            : null,
-        });
-      }
-
-      setShowMatricularModal(false);
       setSearchTerm('');
-      preLinkRequestIds.current.clear();
-      overrideRequestIds.current.clear();
-      activationRequestIds.current.clear();
       closeEnrollmentConfirmation();
-      if (effectiveIntent === 'PENDENTE') {
-        toast.success('Aluno pré-vinculado', 'Nenhuma cobrança foi gerada. O financeiro ficou pendente para uma ação posterior.');
-      } else if (effectiveIntent === 'AGORA') {
-        toast.success('Cobrança inicial gerada', 'O servidor confirmou o vínculo e criou somente o título inicial local.');
-      } else {
-        toast.success('Financeiro agendado', 'O vínculo foi confirmado e a geração ficou agendada pelo servidor.');
-      }
+      toast.success('Aluno vinculado', 'O vínculo acadêmico foi confirmado sem criar uma nova cobrança automática.');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'O servidor não confirmou a operação.';
-      if (isRegraFinanceiraConflict(error)) {
-        void queryClient.invalidateQueries({
-          queryKey: matriculaTecnicaFinanceiroKeys.turma(turma.id),
-          refetchType: 'active',
-        });
-        toast.warning(
-          preLinkConfirmed ? 'Vínculo confirmado; regra alterada' : 'Regra financeira alterada',
-          'A regra da turma mudou durante a confirmação. Revise os novos valores e confirme novamente.',
-        );
-        return;
-      }
-      if (isFinanceiroDateRejected(error)) {
-        toast.warning(
-          preLinkConfirmed ? 'Aluno vinculado; data não aceita' : 'Data não aceita pelo servidor',
-          'A data informada já venceu ou não é válida. O financeiro permanece pendente; corrija o vencimento e tente novamente.',
-        );
-        return;
-      }
-      if (preLinkConfirmed) {
-        void queryClient.invalidateQueries({
-          queryKey: matriculaTecnicaFinanceiroKeys.turma(turma.id),
-          refetchType: 'active',
-        });
-        toast.warning(
-          'Aluno vinculado; financeiro pendente',
-          `${message} A ativação não foi confirmada. Tente novamente; o mesmo identificador será reutilizado com segurança.`,
-        );
-      } else {
-        toast.error('Matrícula não realizada', `${message} Tente novamente; o mesmo identificador será reutilizado com segurança.`);
-      }
+      const message = error instanceof Error ? error.message : 'O servidor não confirmou o vínculo.';
+      toast.error('Matrícula não realizada', message);
     }
   };
   const movementMutation = useMovementMutation(
@@ -420,7 +285,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma, canManageFinanceiro = 
         <MatricularAlunoModal
           searchTerm={searchTerm}
           loadingAvailable={availableStudentsQuery.isLoading}
-          enrollPending={preLinkMutation.isPending || saveOverrideMutation.isPending || activateFinanceMutation.isPending || legacyEnrollMutation.isPending}
+          enrollPending={technicalEnrollmentConfirmation.isPending || legacyEnrollMutation.isPending}
           loadError={availableStudentsQuery.isError
             ? 'A busca de alunos falhou. Nenhuma matrícula pode ser iniciada com dados incompletos.'
             : null}
@@ -442,6 +307,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma, canManageFinanceiro = 
             ? enrollmentWorkspaceQuery.data?.regra
             : preVinculoContextoQuery.data?.regra}
           canManageFinanceiro={canManageFinanceiro}
+          manualFinanceMode={manualFinanceMode}
           loading={canManageFinanceiro
             ? enrollmentWorkspaceQuery.isLoading
             : preVinculoContextoQuery.isLoading}
@@ -451,7 +317,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma, canManageFinanceiro = 
           retrying={canManageFinanceiro
             ? enrollmentWorkspaceQuery.isFetching
             : preVinculoContextoQuery.isFetching}
-          isPending={preLinkMutation.isPending || saveOverrideMutation.isPending || activateFinanceMutation.isPending}
+          isPending={technicalEnrollmentConfirmation.isPending}
           onRetry={() => {
             if (canManageFinanceiro) void enrollmentWorkspaceQuery.refetch();
             else void preVinculoContextoQuery.refetch();

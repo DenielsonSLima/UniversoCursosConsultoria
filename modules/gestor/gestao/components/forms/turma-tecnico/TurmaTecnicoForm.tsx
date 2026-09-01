@@ -12,6 +12,7 @@ import type {
   TurmaTecnicoSubmission,
 } from './turma-tecnico-form.types';
 import {
+  buildTurmaTecnicoCyclePolicy,
   buildTurmaTecnicoIdentity,
   getFriendlyTechnicalClassSubmitError,
 } from './turma-tecnico-form.utils';
@@ -154,13 +155,16 @@ const TurmaTecnicoForm: React.FC<TurmaTecnicoFormProps> = ({
     aplicarDescontoRematricula: formData.aplicarDescontoRematricula,
     aplicarMultaJurosRematricula: formData.aplicarMultaJurosRematricula,
     diaVencimentoPadrao: formData.diaVencimentoPadrao,
-    primeiroVencimentoPadrao: formData.primeiroVencimentoPadrao,
+    primeiroVencimentoPadrao: formData.estadoFinanceiroInicial === 'IMPORTADA_CONCLUIDA'
+      ? ''
+      : formData.primeiroVencimentoPadrao,
     codigoCondicaoIndividual: formData.codigoCondicaoIndividual,
     instrucaoBoletoCarne: formData.instrucaoBoletoCarne.trim(),
-    origemFinanceira: formData.origemFinanceira,
-    financeiroHerdado: formData.origemFinanceira === 'LEGADO',
-    gerarCobrancasFuturas: formData.origemFinanceira !== 'LEGADO',
+    origemFinanceira: formData.estadoFinanceiroInicial === 'NOVA' ? 'NORMAL' : 'LEGADO',
+    financeiroHerdado: formData.estadoFinanceiroInicial !== 'NOVA',
+    gerarCobrancasFuturas: false,
     sincronizarAsaasFuturo: false,
+    cicloFinanceiroTecnico: buildTurmaTecnicoCyclePolicy(formData),
     cronogramaFinanceiro: [],
   });
 

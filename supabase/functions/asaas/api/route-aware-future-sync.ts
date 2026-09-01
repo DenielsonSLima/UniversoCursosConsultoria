@@ -3,6 +3,7 @@ import {
   baseUrlFor,
   type Environment,
 } from "../core/runtime.ts";
+import { shouldSkipTechnicalManualFutureSync } from "../../_shared/technical-manual-future-sync.ts";
 import { createAsaasBillingService } from "./billing.service.ts";
 
 const anyNotificationChannelEnabled = (config: any) =>
@@ -16,6 +17,16 @@ export const syncRouteAwareFutureInstallments = async (
   matriculaId: string,
   environment: Environment,
 ) => {
+  if (await shouldSkipTechnicalManualFutureSync(admin, matriculaId)) {
+    return {
+      success: true,
+      skipped: true,
+      count: 0,
+      reason:
+        "Emissão automática futura desativada pela política manual do curso técnico.",
+    };
+  }
+
   const { data: config, error: configError } = await admin
     .from("asaas_config")
     .select("*")

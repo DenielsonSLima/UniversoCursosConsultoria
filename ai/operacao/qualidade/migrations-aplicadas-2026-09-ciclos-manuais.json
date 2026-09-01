@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "exemptions": [
+    {
+      "path": "supabase/migrations/20260901120000_create_manual_technical_cycle_policy.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260901151207",
+      "sha256": "5e88ba98a5b11881da47500b653ad52464133af5f4a50146701704ca83f6671b",
+      "reason": "Migration aplicada em Produção; cria a política manual e protege estruturalmente os 13 títulos existentes da Turma 42."
+    },
+    {
+      "path": "supabase/migrations/20260901120050_create_manual_technical_cycle_state.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260901151210",
+      "sha256": "24922faaac19a7d9d4d1ab5cba613253c6aa8c06e0ac944f535fff54e211850d",
+      "reason": "Migration aplicada em Produção; calcula o estágio e a elegibilidade individual dos dois ciclos técnicos."
+    },
+    {
+      "path": "supabase/migrations/20260901120100_create_manual_technical_cycle_preview.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260901151213",
+      "sha256": "e26c4b0b803153cc3e11e3162020f9372d577ea810247ebe212abe12eda4488d",
+      "reason": "Migration aplicada em Produção; expõe a prévia sem efeitos colaterais do ciclo técnico manual."
+    },
+    {
+      "path": "supabase/migrations/20260901120200_create_manual_technical_cycle_generation.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260901151215",
+      "sha256": "dc21d5dbd1fb833dd319e73b80c40eaf54c6537eb8eec771ca70282ccc16c75c",
+      "reason": "Migration aplicada em Produção; gera recebíveis locais somente após confirmação explícita e idempotente."
+    },
+    {
+      "path": "supabase/migrations/20260901120250_gate_legacy_technical_cycle_generators.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260901151217",
+      "sha256": "fa8f974e19d6c1a0926eb5c9de4211a6aefa36d4144b10c989c6d50a4777d2ba",
+      "reason": "Migration aplicada em Produção; desativa geradores automáticos para turmas técnicas que aderiram à política manual."
+    },
+    {
+      "path": "supabase/migrations/20260901120300_project_manual_cycle_in_technical_workspace.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260901151220",
+      "sha256": "71ab2baa5d9eba085fc52c091d4805f4099da2d350de70aece2a9e6cd65ef71a",
+      "reason": "Migration aplicada em Produção; projeta a política e o estado manual no workspace técnico autorizado."
+    },
+    {
+      "path": "supabase/migrations/20260901120400_authorize_manual_technical_receivable_issuance.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260901151326",
+      "sha256": "cb02e618ee1dbc7883902189930e77384b979b4d5c8d898e0342f27bdeedc7aa",
+      "reason": "Migration aplicada em Produção; exige consentimento durável por recebível antes do primeiro claim bancário."
+    },
+    {
+      "path": "supabase/migrations/20260901120450_guard_manual_technical_future_sync.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260901151225",
+      "sha256": "ed7308e0894649ebd3308318a2ac4749b7569699fa80611b3bd699f4eb18ee1b",
+      "reason": "Migration aplicada em Produção; fornece a guarda de supressão da sincronização financeira futura automática."
+    },
+    {
+      "path": "supabase/migrations/20260901120500_index_manual_technical_cycle_foreign_keys.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260901151915",
+      "sha256": "3df471d0018588d769893bf73b26adc645c8de34475487fcfa91f293b9a3f8dd",
+      "reason": "Migration aplicada em Produção; indexa as chaves estrangeiras criadas pelo fluxo técnico manual."
+    }
+  ]
+}

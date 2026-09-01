@@ -1,9 +1,26 @@
 import type {
+  TurmaTecnicoCicloFinanceiroPolicy,
   TurmaTecnicoCourseOption,
   TurmaTecnicoFormData,
   TurmaTecnicoIdentity,
   TurmaTecnicoPoloOption,
 } from './turma-tecnico-form.types';
+
+const BASELINE_BY_FINANCIAL_STATE = {
+  NOVA: 0,
+  IMPORTADA_CICLO_1: 1,
+  IMPORTADA_CONCLUIDA: 2,
+} as const;
+
+export const buildTurmaTecnicoCyclePolicy = (
+  formData: Pick<TurmaTecnicoFormData, 'estadoFinanceiroInicial' | 'criterioElegibilidadeCiclo'>,
+): TurmaTecnicoCicloFinanceiroPolicy => ({
+  modo: 'MANUAL',
+  estadoInicial: formData.estadoFinanceiroInicial,
+  baselineCycle: BASELINE_BY_FINANCIAL_STATE[formData.estadoFinanceiroInicial],
+  maxCycle: 2,
+  eligibilityRule: formData.criterioElegibilidadeCiclo,
+});
 
 export const formatCurrencyBRL = (value: number) => new Intl.NumberFormat('pt-BR', {
   style: 'currency',

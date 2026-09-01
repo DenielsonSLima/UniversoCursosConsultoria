@@ -18,22 +18,31 @@ import type { Turma } from '../../../../gestao.types';
 import TechnicalDataError from '../TechnicalDataError';
 import AlunoFinanceiroExtrato from './extrato/AlunoFinanceiroExtrato';
 import FinanceiroAlunoOverrideDialog from './FinanceiroAlunoOverrideDialog';
+import FinanceiroAtivacaoLegacyDialog, {
+  type FinanceiroAtivacaoLegacyAction,
+} from './FinanceiroAtivacaoLegacyDialog';
+import FinanceiroCicloManualDialog from './FinanceiroCicloManualDialog';
+import FinanceiroCicloManualStatus, {
+  MatriculaAcademicaBadge,
+} from './FinanceiroCicloManualStatus';
 import type {
   MatriculaTecnicaAtivacaoModo,
   MatriculaTecnicaFinanceiroRow,
   MatriculaTecnicaFinanceiroWorkspace,
   MatriculaTecnicaRegra,
 } from './matricula-tecnica-financeiro.types';
+import type { CicloFinanceiroTecnicoManualPreview } from './matricula-tecnica-ciclo-manual.types';
 import {
   createFinanceiroRequestId,
   useAtivarFinanceiroMatriculaTecnica,
   useAtivarFinanceiroMatriculasTecnicasLote,
 } from './hooks/useMatriculaTecnicaFinanceiro';
-import { useAccessibleDialog } from './hooks/useAccessibleDialog';
+import { useGerarCicloFinanceiroTecnicoManual } from './hooks/useMatriculaTecnicaCicloManual';
 import {
   isFinanceiroDateRejected,
   isRegraFinanceiraConflict,
 } from './matricula-tecnica-financeiro.service';
+import { requireMatriculaTecnicaCicloManual } from './matricula-tecnica-ciclo-manual.service';
 
 interface FinanceiroAlunosListProps {
   turma: Turma;
@@ -44,12 +53,6 @@ interface FinanceiroAlunosListProps {
   isError: boolean;
   isFetching: boolean;
   onRetry: () => void;
-}
-
-interface PendingAction {
-  matriculaIds: string[];
-  label: string;
-  modo: MatriculaTecnicaAtivacaoModo;
 }
 
 const formatMoney = (value: string | null | undefined) => {
@@ -67,6 +70,23 @@ const formatDateTime = (value: string | null) => value
   : 'Não informado';
 
 const situationLabel = (row: MatriculaTecnicaFinanceiroRow) => {
+  if (row.cicloManual.habilitado && row.cicloManual.modo === 'MANUAL') {
+    const generatedCycle = row.cicloManual.cicloGerado?.numero;
+    if (row.cicloManual.estado === 'PROTEGIDO_EXISTENTE') {
+      return `${generatedCycle || 2}º ciclo gerado e emitido`;
+    }
+    if (row.cicloManual.estado === 'JA_GERADO') {
+      return `${generatedCycle || row.cicloManual.cicloMaximo || 2}º ciclo gerado localmente`;
+    }
+    if (row.cicloManual.estado === 'ELEGIVEL') {
+      return `Elegível para gerar ${row.cicloManual.proximoCicloNumero}º ciclo`;
+    }
+    if (row.cicloManual.estado === 'BLOQUEADO') {
+      return `${row.cicloManual.proximoCicloNumero || ''}º ciclo bloqueado`.trim();
+    }
+    if (row.cicloManual.estado === 'CICLOS_CONCLUIDOS') return 'Ciclos concluídos';
+    return 'Geração manual indisponível';
+  }
   if (row.financeiro.status === 'NAO_CONFIGURADO') return 'Não configurado';
   if (row.financeiro.status === 'PENDENTE') return 'Pendente';
   if (row.financeiro.status === 'AGENDADA') return 'Agendada';
@@ -111,40 +131,58 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMatriculaId, setSelectedMatriculaId] = useState<string | null>(null);
   const [selectedPending, setSelectedPending] = useState<string[]>([]);
-  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
+  const [pendingAction, setPendingAction] = useState<FinanceiroAtivacaoLegacyAction | null>(null);
   const [ativarEm, setAtivarEm] = useState('');
   const [actionMenuId, setActionMenuId] = useState<string | null>(null);
   const [overrideMatriculaId, setOverrideMatriculaId] = useState<string | null>(null);
+  const [manualCycleMatriculaId, setManualCycleMatriculaId] = useState<string | null>(null);
   const requestIds = useRef(new Map<string, string>());
   const individualMutation = useAtivarFinanceiroMatriculaTecnica();
   const batchMutation = useAtivarFinanceiroMatriculasTecnicasLote();
-  const pending = individualMutation.isPending || batchMutation.isPending;
+  const manualCycleMutation = useGerarCicloFinanceiroTecnicoManual();
+  const pending = individualMutation.isPending
+    || batchMutation.isPending
+    || manualCycleMutation.isPending;
 
   const closeActionDialog = () => {
     setPendingAction(null);
     setAtivarEm('');
   };
-  const { dialogRef, initialFocusRef } = useAccessibleDialog(
-    Boolean(pendingAction),
-    closeActionDialog,
-    pending,
-  );
-
   const filteredAlunos = useMemo(() => {
     const search = searchTerm.trim().toLocaleLowerCase('pt-BR');
     if (!search) return alunos;
     return alunos.filter((row) => row.alunoNome.toLocaleLowerCase('pt-BR').includes(search)
       || row.matriculaExibicao.toLocaleLowerCase('pt-BR').includes(search));
   }, [alunos, searchTerm]);
-  const pendingRows = alunos.filter((row) => row.financeiro.status === 'PENDENTE');
+  const manualContractError = useMemo(() => {
+    try {
+      alunos.forEach((row) => requireMatriculaTecnicaCicloManual(row.cicloManual));
+      return null;
+    } catch (error) {
+      return error instanceof Error ? error : new Error('Estado manual inválido.');
+    }
+  }, [alunos]);
+  if (!isLoading && !isError && manualContractError) {
+    return (
+      <TechnicalDataError
+        title="Ciclos financeiros não carregados"
+        message={`${manualContractError.message} A lista foi bloqueada para impedir uma geração permissiva.`}
+        retrying={isFetching}
+        onRetry={onRetry}
+      />
+    );
+  }
+  const pendingRows = alunos.filter((row) => (
+    row.financeiro.status === 'PENDENTE'
+    && !(row.cicloManual.habilitado && row.cicloManual.modo === 'MANUAL')
+  ));
   const pendingIds = new Set(pendingRows.map((row) => row.matriculaId));
   const eligibleSelected = selectedPending.filter((id) => pendingIds.has(id));
-  const actionRows = pendingAction?.matriculaIds
-    .map((id) => alunos.find((row) => row.matriculaId === id))
-    .filter((row): row is MatriculaTecnicaFinanceiroRow => Boolean(row)) || [];
-  const actionRule = actionRows.length === 1 ? actionRows[0].regraEfetiva : null;
   const currentOverrideRow = overrideMatriculaId
     ? alunos.find((row) => row.matriculaId === overrideMatriculaId) || null
+    : null;
+  const currentManualCycleRow = manualCycleMatriculaId
+    ? alunos.find((row) => row.matriculaId === manualCycleMatriculaId) || null
     : null;
 
   const exportRows = filteredAlunos.map((row) => ({
@@ -154,7 +192,7 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
       <span key="matricula" className="font-mono text-[9px]">{row.matriculaExibicao}</span>,
       <div key="valores"><p className="font-black text-emerald-700">Mat. {formatMoney(row.valorMatriculaEfetivo)}</p><p className="mt-0.5 font-bold text-slate-500">Mens. {formatMoney(row.valorMensalidadeEfetivo)}</p></div>,
       <span key="progresso" className="font-black text-[#001a33]">{row.parcelasPagas}/{row.totalParcelas}</span>,
-      <span key="status" className="font-black uppercase text-slate-600">{situationLabel(row)}</span>,
+      <span key="status" className="font-black uppercase text-slate-600">Matrícula {row.statusAcademico} · Cobrança {situationLabel(row)}</span>,
     ],
   }));
 
@@ -245,6 +283,61 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
     }
   };
 
+  const generateManualCycle = async (
+    row: MatriculaTecnicaFinanceiroRow,
+    preview: CicloFinanceiroTecnicoManualPreview,
+    primeiroVencimento: string | null,
+  ) => {
+    const key = [
+      'ciclo-manual',
+      row.matriculaId,
+      preview.cicloNumero,
+      primeiroVencimento || 'turma',
+      preview.regraEfetivaFingerprint,
+      preview.politicaFingerprint,
+      preview.cronogramaFingerprint,
+    ].join(':');
+    const requestId = getRequestId(key);
+    try {
+      const result = await manualCycleMutation.mutateAsync({
+        turmaId: turma.id,
+        matriculaId: row.matriculaId,
+        cicloNumero: preview.cicloNumero,
+        primeiroVencimento,
+        requestId,
+        expectedRegraFingerprint: preview.regraEfetivaFingerprint,
+        expectedPoliticaFingerprint: preview.politicaFingerprint,
+        expectedCronogramaFingerprint: preview.cronogramaFingerprint,
+      });
+      requestIds.current.delete(key);
+      setManualCycleMatriculaId(null);
+      toast.success(
+        `${result.ciclo.numero}º ciclo criado localmente`,
+        `${result.ciclo.quantidadeItens} recebíveis foram criados. Nenhum boleto Banese foi emitido.`,
+      );
+    } catch (error) {
+      if (isRegraFinanceiraConflict(error)) {
+        setManualCycleMatriculaId(null);
+        onRetry();
+        toast.warning('Prévia desatualizada', 'A regra ou o cronograma mudou. Abra novamente e confirme a nova prévia.');
+        return;
+      }
+      if (isFinanceiroDateRejected(error)) {
+        toast.warning(
+          'Vencimento não aceito',
+          preview.cicloNumero === 2
+            ? 'Informe uma data individual futura válida para o 2º ciclo e confirme novamente.'
+            : 'Revise a data individual ou use as datas configuradas na turma.',
+        );
+        return;
+      }
+      toast.error(
+        'Ciclo não gerado',
+        `${error instanceof Error ? error.message : 'O servidor não confirmou a operação.'} Nenhum retry criará cobranças duplicadas.`,
+      );
+    }
+  };
+
   if (isLoading) {
     return <div className="flex items-center justify-center rounded-[2rem] border border-slate-100 bg-white py-10 shadow-sm"><Loader2 className="animate-spin text-[#001a33]" size={24} /><span className="ml-2 text-sm font-bold text-slate-500">Carregando listagem financeira...</span></div>;
   }
@@ -295,7 +388,7 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
+          <table className="w-full min-w-[1100px] text-left">
             <thead className="border-b border-slate-100 bg-slate-50">
               <tr>
                 <th className="px-6 py-4 text-xs font-black uppercase tracking-wider text-slate-500">Aluno</th>
@@ -310,7 +403,12 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
               {filteredAlunos.length === 0 ? (
                 <tr><td colSpan={6} className="px-6 py-12 text-center text-sm text-slate-400"><XCircle size={32} className="mx-auto mb-2 text-slate-300 opacity-50" /><p className="font-bold">Nenhum aluno matriculado na turma.</p></td></tr>
               ) : filteredAlunos.map((row) => {
-                const canActivate = row.financeiro.status === 'PENDENTE' && Boolean(row.regraEfetiva);
+                const manualMode = row.cicloManual.habilitado && row.cicloManual.modo === 'MANUAL';
+                const canActivate = !manualMode
+                  && row.financeiro.status === 'PENDENTE'
+                  && Boolean(row.regraEfetiva);
+                const protectedExisting = manualMode
+                  && row.cicloManual.estado === 'PROTEGIDO_EXISTENTE';
                 return (
                   <tr key={row.matriculaId} onClick={() => setSelectedMatriculaId(row.matriculaId)} className="group cursor-pointer transition-colors hover:bg-blue-50/30" title="Abrir extrato financeiro do aluno">
                     <td className="px-6 py-4">
@@ -323,13 +421,30 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
                     <td className="px-6 py-4 font-mono text-sm text-slate-500">{row.matriculaExibicao}</td>
                     <td className="px-6 py-4"><div className="space-y-1"><p className="text-[10px] font-black uppercase text-emerald-700">Mat. {formatMoney(row.valorMatriculaEfetivo)}</p><p className="text-[10px] font-bold uppercase text-slate-500">Mens. {formatMoney(row.valorMensalidadeEfetivo)}</p></div></td>
                     <td className="px-6 py-4"><div className="flex items-center gap-2"><div className="h-2 w-24 flex-1 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${row.situacaoFinanceira === 'INADIMPLENTE' ? 'bg-red-500' : 'bg-blue-500'}`} style={{ width: `${row.progressoPercentual}%` }} /></div><span className="text-[10px] font-bold text-slate-500">{row.parcelasPagas}/{row.totalParcelas}</span></div></td>
-                    <td className="px-6 py-4">{statusBadge(row)}{row.financeiro.status === 'AGENDADA' ? <p className="mt-1 text-[8px] font-bold text-blue-600">{formatDateTime(row.financeiro.ativarEm)}</p> : null}</td>
+                    <td className="px-6 py-4">
+                      <div className="space-y-2">
+                        <MatriculaAcademicaBadge status={row.statusAcademico} />
+                        {manualMode ? <p className="text-[9px] font-black uppercase text-slate-600">Cobrança: {situationLabel(row)}</p> : statusBadge(row)}
+                        {!manualMode && row.financeiro.status === 'AGENDADA' ? <p className="text-[8px] font-bold text-blue-600">{formatDateTime(row.financeiro.ativarEm)}</p> : null}
+                      </div>
+                    </td>
                     <td className="px-6 py-4 text-right">
                       <div className="relative flex items-center justify-end gap-2" onClick={(event) => event.stopPropagation()}>
+                        {manualMode ? (
+                          <FinanceiroCicloManualStatus
+                            cicloManual={row.cicloManual}
+                            disabled={pending}
+                            onGenerate={() => setManualCycleMatriculaId(row.matriculaId)}
+                            onOpenReceivables={() => toast.info(
+                              'Emissão manual no Banese',
+                              `Abra Financeiro › A Receber, selecione a modalidade Técnico e filtre pela turma ${turma.codigo || turma.nome}.`,
+                            )}
+                          />
+                        ) : null}
                         <button type="button" onClick={() => setSelectedMatriculaId(row.matriculaId)} title="Extrato Financeiro" className="rounded-lg border border-blue-100 bg-blue-50 p-2 text-blue-600 transition-colors hover:bg-blue-100"><FileText size={16} /></button>
-                        <button type="button" onClick={() => setOverrideMatriculaId(row.matriculaId)} title="Configuração individual" className="rounded-lg border border-violet-100 bg-violet-50 p-2 text-violet-600 transition-colors hover:bg-violet-100"><Settings2 size={16} /></button>
-                        <button type="button" onClick={() => setActionMenuId((current) => current === row.matriculaId ? null : row.matriculaId)} title="Mais opções" className="rounded-lg border border-transparent p-2 text-slate-400 transition-colors hover:border-slate-200 hover:bg-slate-100 hover:text-slate-600"><MoreHorizontal size={16} /></button>
-                        {actionMenuId === row.matriculaId ? (
+                        {!protectedExisting ? <button type="button" onClick={() => setOverrideMatriculaId(row.matriculaId)} title="Configuração individual" className="rounded-lg border border-violet-100 bg-violet-50 p-2 text-violet-600 transition-colors hover:bg-violet-100"><Settings2 size={16} /></button> : null}
+                        {!manualMode ? <button type="button" onClick={() => setActionMenuId((current) => current === row.matriculaId ? null : row.matriculaId)} title="Mais opções" className="rounded-lg border border-transparent p-2 text-slate-400 transition-colors hover:border-slate-200 hover:bg-slate-100 hover:text-slate-600"><MoreHorizontal size={16} /></button> : null}
+                        {!manualMode && actionMenuId === row.matriculaId ? (
                           <div className="absolute right-0 top-10 z-20 w-44 rounded-xl border border-slate-100 bg-white p-2 text-left shadow-xl">
                             {canActivate ? <><button type="button" disabled={pending} onClick={() => { setActionMenuId(null); setPendingAction({ matriculaIds: [row.matriculaId], label: row.alunoNome, modo: 'AGORA' }); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[10px] font-black uppercase text-emerald-700 hover:bg-emerald-50"><ReceiptText size={14} /> Gerar agora</button><button type="button" disabled={pending} onClick={() => { setActionMenuId(null); setPendingAction({ matriculaIds: [row.matriculaId], label: row.alunoNome, modo: 'AGENDADA' }); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[10px] font-black uppercase text-blue-700 hover:bg-blue-50"><CalendarClock size={14} /> Agendar</button></> : <p className="px-3 py-2 text-[10px] font-bold text-slate-400">Sem ação pendente.</p>}
                           </div>
@@ -345,20 +460,32 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
       </section>
 
       {pendingAction ? (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
-          <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="schedule-finance-title" tabIndex={-1} className="w-full max-w-md rounded-[2rem] bg-white p-6 shadow-2xl">
-            <h3 id="schedule-finance-title" className="text-lg font-black text-[#001a33]">{pendingAction.modo === 'AGORA' ? 'Confirmar geração inicial' : 'Agendar geração'}</h3>
-            <p className="mt-1 text-xs font-semibold text-slate-500">{pendingAction.label}.</p>
-            <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-xs font-semibold text-emerald-800">
-              <strong className="block text-[10px] font-black uppercase">Regra efetiva confirmada pelo servidor</strong>
-              {actionRule
-                ? `${actionRows[0].overrideAtivo ? 'Regra individual. ' : 'Regra da turma. '}${actionRule.cobranca.matricula.habilitada ? `Matrícula inicial: ${formatMoney(actionRule.cobranca.matricula.valor)}.` : `Primeiro ciclo: ${actionRule.cobranca.mensalidade.quantidade} mensalidades de ${formatMoney(actionRule.cobranca.mensalidade.valor)}.`}`
-                : 'Cada aluno do lote será validado com sua própria regra efetiva (turma mais eventuais configurações individuais).'}
-            </div>
-            {pendingAction.modo === 'AGENDADA' ? <label className="mt-5 block space-y-2"><span className="text-[10px] font-black uppercase text-slate-500">Executar em</span><input type="datetime-local" value={ativarEm} onChange={(event) => setAtivarEm(event.target.value)} className="w-full rounded-xl border border-slate-200 p-3 text-sm font-bold outline-none focus:border-blue-500" /></label> : null}
-            <div className="mt-5 flex gap-3"><button ref={(node) => { initialFocusRef.current = node; }} type="button" disabled={pending} onClick={closeActionDialog} className="flex-1 rounded-xl border border-slate-200 py-3 text-[10px] font-black uppercase text-slate-500">Cancelar</button><button type="button" disabled={pending || (pendingAction.modo === 'AGENDADA' && !ativarEm)} onClick={() => { void activate(pendingAction.matriculaIds, pendingAction.modo, pendingAction.modo === 'AGENDADA' ? new Date(ativarEm).toISOString() : undefined); }} className="flex-1 rounded-xl bg-blue-600 py-3 text-[10px] font-black uppercase text-white disabled:opacity-50">{pending ? 'Processando...' : 'Confirmar'}</button></div>
-          </div>
-        </div>
+        <FinanceiroAtivacaoLegacyDialog
+          action={pendingAction}
+          alunos={alunos}
+          ativarEm={ativarEm}
+          pending={pending}
+          onAtivarEmChange={setAtivarEm}
+          onClose={closeActionDialog}
+          onConfirm={() => {
+            void activate(
+              pendingAction.matriculaIds,
+              pendingAction.modo,
+              pendingAction.modo === 'AGENDADA' ? new Date(ativarEm).toISOString() : undefined,
+            );
+          }}
+        />
+      ) : null}
+
+      {currentManualCycleRow ? (
+        <FinanceiroCicloManualDialog
+          row={currentManualCycleRow}
+          pending={manualCycleMutation.isPending}
+          onClose={() => setManualCycleMatriculaId(null)}
+          onConfirm={(preview, primeiroVencimento) => {
+            void generateManualCycle(currentManualCycleRow, preview, primeiroVencimento);
+          }}
+        />
       ) : null}
 
       {currentOverrideRow ? <FinanceiroAlunoOverrideDialog row={currentOverrideRow} regraTurma={regra} turmaId={turma.id} onClose={() => setOverrideMatriculaId(null)} /> : null}
