@@ -1,7 +1,7 @@
 # BolePix EAD Banese — captura persistente e substituição segura
 
 Data: 2026-09-01  
-Estado: backend produtivo concluído; PR final e smoke autenticado em fechamento
+Estado: publicado em produção pelo PR #106; smoke autenticado exato pendente
 
 ## Pedido e diagnóstico
 
