@@ -1,4 +1,5 @@
 import { syncRouteAwareFutureInstallments } from "../asaas/api/route-aware-future-sync.ts";
+import { shouldSkipTechnicalManualFutureSync } from "../_shared/technical-manual-future-sync.ts";
 import {
   activateEnrollmentAfterPayment,
   syncOnlineInscriptionPayment,
@@ -14,6 +15,12 @@ const syncFutureInstallmentsAfterPayment = async (
   if (
     !receivable.matricula_id ||
     String(receivable.tipo_lancamento || "").toUpperCase() !== "MATRICULA"
+  ) return;
+  if (
+    await shouldSkipTechnicalManualFutureSync(
+      admin,
+      receivable.matricula_id,
+    )
   ) return;
 
   const { data: matricula, error: matriculaError } = await admin
