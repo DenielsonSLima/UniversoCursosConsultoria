@@ -3,6 +3,7 @@ import {
   activateEnrollmentAfterPayment,
   syncOnlineInscriptionPayment,
 } from "../webhook/domain/ead-enrollment.ts";
+import { shouldSkipTechnicalManualFutureSync } from "../../_shared/technical-manual-future-sync.ts";
 import { clearBanesePostSettlementPending } from "./banese-post-settlement.ts";
 
 export const completeBanesePostSettlement = async (
@@ -38,6 +39,15 @@ export const completeBanesePostSettlement = async (
     updated.matricula_id &&
     String(updated.tipo_lancamento || "").toUpperCase() === "MATRICULA"
   ) {
+    const skipAutomaticFutureSync = await shouldSkipTechnicalManualFutureSync(
+      admin,
+      updated.matricula_id,
+    );
+    if (skipAutomaticFutureSync) {
+      updated = await clearBanesePostSettlementPending(admin, updated, null);
+      return { updated, futureSyncWarning };
+    }
+
     const { data: matricula, error: matriculaError } = await admin
       .from("matriculas")
       .select(
