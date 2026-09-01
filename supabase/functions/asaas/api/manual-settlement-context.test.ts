@@ -54,7 +54,10 @@ const dependencies = (
     }),
   };
   return {
-    admin: { from: () => builder },
+    admin: {
+      rpc: async () => ({ data: false, error: null }),
+      from: () => builder,
+    },
     actor: {} as ManualSettlementServiceDependencies["actor"],
     body: {},
     requirePoloAccess: () => {},
@@ -68,6 +71,32 @@ const dependencies = (
     },
   };
 };
+
+Deno.test("política técnica manual conclui baixa sem sync ou warning", async () => {
+  let futureSyncCalls = 0;
+  let enrollmentReads = 0;
+  const deps = dependencies(() => {
+    futureSyncCalls += 1;
+  });
+  deps.admin.rpc = async () => ({ data: true, error: null });
+  const originalFrom = deps.admin.from;
+  deps.admin.from = (...args: unknown[]) => {
+    enrollmentReads += 1;
+    return originalFrom(...args);
+  };
+
+  const settled = await syncManualSettlementFutureCharges(
+    deps,
+    request(MANUAL_SETTLEMENT_CONTEXT_STANDARD),
+    { matricula_id: "55555555-5555-4555-8555-555555555555" },
+    result,
+  );
+
+  assert.equal(settled, result);
+  assert.equal(settled.futureSyncWarning, undefined);
+  assert.equal(futureSyncCalls, 0);
+  assert.equal(enrollmentReads, 0);
+});
 
 Deno.test("ação rápida nunca chama sincronização ou geração futura", async () => {
   let futureSyncCalls = 0;
