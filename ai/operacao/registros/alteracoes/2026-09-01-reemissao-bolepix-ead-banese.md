@@ -1,7 +1,7 @@
 # BolePix EAD Banese — captura persistente e substituição segura
 
 Data: 2026-09-01  
-Estado: validação final autorizada; sem mutação bancária na preparação
+Estado: backend produtivo concluído; PR final e smoke autenticado em fechamento
 
 ## Pedido e diagnóstico
 
@@ -72,14 +72,15 @@ o recebível.
 - 152/152 testes integrados Banese/EAD/Técnico aprovados.
 - `npx tsc --noEmit` e build Vite de produção aprovados.
 - Controle de versão 4.8.20 aprovado.
-- 66 arquivos manuais auditados, todos com até 500 linhas.
+- Manifesto explícito auditado, com todos os arquivos manuais dentro do teto de
+  500 linhas e migrations aplicadas registradas por hash.
 - Baseline produtivo: os dois alvos pendentes, sem Pix e sem pagamento; uma
   transação local cada.
 - Checksum Técnico capturado antes do rollout para comparação posterior.
 
 ## Manifesto explícito
 
-Total: 71 arquivos — 30 de implementação, 22 testes, 11 migrations e 8
+Total: 72 arquivos — 30 de implementação, 22 testes, 12 migrations e 8
 documentos/versionamento. Mudanças paralelas de recuperação T42, CNAB e PDF
 são excluídas.
 
@@ -154,8 +155,41 @@ são excluídas.
 - `supabase/migrations/20260901000500_prepare_ead_banese_title_reissue.sql`
 - `supabase/migrations/20260901000550_validate_ead_banese_reissued_paid.sql`
 - `supabase/migrations/20260901000600_finish_ead_banese_title_replacement.sql`
+- `supabase/migrations/20260901000700_harden_banese_ead_replacement_advisors.sql`
 
 ## Evidência de produção
 
-Será preenchida no fechamento após migrations, oito Edge Functions, os dois
-processamentos sequenciais, validação dos PDFs, CI/Preview e merge.
+- `000097299`: a conciliação oficial registrou pagamento integral via API, com
+  uma evidência de pagamento e estados canônicos `PAGO`/`PAID`. O fluxo de
+  substituição falhou fechado antes do enqueue; nenhuma baixa ou reemissão foi
+  permitida e o título permaneceu sem Pix, como exige a regra para pago.
+- `000097302`: permaneceu pendente, sem pagamento e sem Pix. O dry-run
+  transacional percorreu enqueue, claim, fence, intenção, arquivo e preparação
+  e terminou em `ROLLBACK`. Em seguida, o worker consultou título/pagamentos,
+  confirmou a ausência de Pix e pagamento, baixou o título com situação 5 e o
+  arquivou com fingerprint sanitizado.
+- A única reemissão criou o Nosso Número `000097329`. O POST oficial trouxe o
+  campo `QrCode` no corpo de criação; o diagnóstico persistido registra o
+  caminho normalizado `qrcode:string`, origem `creation`, payload válido e
+  imagem `generated_from_official_emv`, sem armazenar resposta bruta em logs.
+- A prova pós-operação confirmou banco 047, convênio/agência, valor, vencimento,
+  linha/código, beneficiário, vínculo EAD, uma transação e uma inscrição. O EMV
+  passou estrutura, moeda BRL, país BR, GUI Pix, valor e CRC; a imagem possui
+  assinatura PNG e é idêntica no recebível e na transação.
+- Migrations produtivas novas: `20260901041425`, `20260901041427`,
+  `20260901041431`, `20260901041434`, `20260901041437`, `20260901041441`,
+  `20260901041443`, `20260901041445` e `20260901041838`.
+- Edge Functions ativas: `payment-checkout` v27, `checkout-api` v21,
+  `payment-gateway-api` v29, `asaas-api` v93,
+  `dependencia-banese-checkout` v13, `banese-student-payment` v12,
+  `banese-reconciliation-worker` v98 e `banese-cancellation-worker` v5.
+- Segurança retornou ao baseline de 489 avisos, sem novo item. Performance
+  mantém dois informativos esperados de índices recém-criados ainda sem uso.
+- Técnico permaneceu com 691 recebíveis e 325 transações; zero linhas foram
+  atualizadas desde o início do rollout.
+- PR #106 teve lint, TypeScript, contratos, testes, build e Preview Vercel
+  aprovados antes da operação. O smoke visual do título exato ficou pendente
+  porque a sessão aberta no Safari é de Gestor e redireciona a rota do Aluno;
+  nenhum segredo de sessão foi extraído. A integridade do PDF/QR foi comprovada
+  pelo contrato persistido e pelo mesmo compositor EAD já validado nas imagens
+  fornecidas pelo usuário.
