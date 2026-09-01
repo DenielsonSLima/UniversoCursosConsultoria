@@ -1,8 +1,8 @@
 {
-  "version": "4.8.19",
+  "version": "4.8.20",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 28,
-  "releasedAt": "2026-08-31",
-  "summary": "Consulta BolePix sem cache e preservação do retorno oficial"
+  "revision": 29,
+  "releasedAt": "2026-09-01",
+  "summary": "BolePix EAD persistente e substituição bancária segura"
 }

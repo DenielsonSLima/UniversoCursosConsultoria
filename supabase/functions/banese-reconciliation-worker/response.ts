@@ -7,3 +7,12 @@ export const json = (body: unknown, status = 200) =>
       "X-Content-Type-Options": "nosniff",
     },
   });
+
+export const titleReplacementJson = (titleReplacement: {
+  result?: unknown;
+}) => {
+  const result = String(titleReplacement.result || "");
+  const success = !["REVIEW_REQUIRED", "REVIEW_FENCED"].includes(result) &&
+    !result.endsWith("_RETRY");
+  return json({ success, titleReplacement });
+};

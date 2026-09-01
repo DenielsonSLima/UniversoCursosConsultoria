@@ -10,6 +10,7 @@ import type { EadCheckoutContext } from "../types.ts";
 import { paymentMethodForLegacyField } from "../utils.ts";
 import { revalidateGatewayCheckoutReceivable } from "./gateway-receivable.ts";
 import { shouldReuseReceivable } from "./gateway-view.ts";
+import { recoverMissingEadBanesePix } from "../../ead-banese-pix-recovery.ts";
 
 export const repairCheckoutInscricao = async (
   context: EadCheckoutContext,
@@ -44,6 +45,7 @@ export const repairAndRevalidateGatewayReuse = async (
       receivable: any,
       requireGatewayTransaction: boolean,
     ) => Promise<unknown>;
+    recoverEadBanesePix?: typeof recoverMissingEadBanesePix;
   } = {
     repairGatewayTransaction: repairGatewayTransactionFromReceivable,
     repairInscricao: repairCheckoutInscricao,
@@ -71,6 +73,18 @@ export const repairAndRevalidateGatewayReuse = async (
     validatedReceivable,
   );
   validatedReceivable = await revalidate();
+  if (
+    providerCode === "banese_card" &&
+    context.charge.method === "BOLETO" &&
+    String(context.course?.modalidade ?? "").trim().toUpperCase() === "EAD"
+  ) {
+    const recovery = await (dependencies.recoverEadBanesePix ??
+      recoverMissingEadBanesePix)(context.admin, {
+        courseModality: context.course.modalidade,
+        receivable: validatedReceivable,
+      });
+    if (recovery.refreshRecommended) validatedReceivable = await revalidate();
+  }
   await dependencies.repairInscricao(context, validatedReceivable, true);
   return await revalidate();
 };

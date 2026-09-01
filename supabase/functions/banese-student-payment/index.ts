@@ -13,9 +13,11 @@ import {
   UUID_RE,
 } from "./payment-dto.ts";
 import type { BaneseStudentPaymentRow } from "./types.ts";
+import { recoverMissingEadBanesePix } from "../gateways/ead-banese-pix-recovery.ts";
 
 const PAYMENT_SELECT = `
   id,
+  created_at,
   cliente_id,
   matricula_id,
   turma_id,
@@ -32,11 +34,15 @@ const PAYMENT_SELECT = `
   gateway_environment,
   gateway_payment_method,
   gateway_status,
+  gateway_synced_at,
+  gateway_last_error,
+  updated_at,
   gateway_pix_payload,
   gateway_pix_encoded_image,
   gateway_boleto_linha_digitavel,
   gateway_boleto_codigo_barras,
   gateway_boleto_nosso_numero,
+  gateway_boleto_issued_at,
   gateway_boleto_convenio,
   gateway_boleto_agencia,
   gateway_issuer_polo_id,
@@ -150,6 +156,15 @@ const readGroupCandidates = async (
   );
 };
 
+const firstRelation = <T>(value: T | T[] | null | undefined): T | null =>
+  Array.isArray(value) ? value[0] ?? null : value ?? null;
+
+const paymentCourseModality = (payment: BaneseStudentPaymentRow) => {
+  const turma = firstRelation(payment.turmas);
+  const curso = firstRelation(turma?.cursos);
+  return String(curso?.modalidade ?? "").trim().toUpperCase();
+};
+
 Deno.serve(async (req: Request) => {
   const corsHeaders = buildCorsHeaders(req, { methods: "POST, OPTIONS" });
   if (req.method === "OPTIONS") {
@@ -203,11 +218,25 @@ Deno.serve(async (req: Request) => {
     }
 
     const student = await readStudentProfile(client, email);
-    const selected = await readSelectedPayment(
+    let selected = await readSelectedPayment(
       client,
       receivableId,
       student.id,
     );
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (serviceRoleKey) {
+      // O service role só nasce depois de provar sessão e titularidade com RLS.
+      const admin = createClient(supabaseUrl, serviceRoleKey, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+      const recovery = await recoverMissingEadBanesePix(admin, {
+        courseModality: paymentCourseModality(selected),
+        receivable: selected,
+      });
+      selected = recovery.refreshRecommended
+        ? await readSelectedPayment(client, receivableId, student.id)
+        : recovery.receivable as BaneseStudentPaymentRow;
+    }
     const installments = await readGroupCandidates(client, selected);
     const isCarnet = installments.length >= 3;
     const groupScope = isCarnet

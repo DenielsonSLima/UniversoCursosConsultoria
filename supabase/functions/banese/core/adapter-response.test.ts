@@ -4,7 +4,13 @@ import {
   baneseDocumentFixtureAt,
 } from "../internal/testing/document-fixture.ts";
 import { validateBaneseBoletoResponse } from "./adapter.ts";
-import { baneseResponseIdentity, validInput } from "./adapter-test-fixtures.ts";
+import {
+  baneseResponseIdentity,
+  reservedBoletoInput,
+  validInput,
+} from "./adapter-test-fixtures.ts";
+import { buildBaneseBoletoPayload } from "./adapter/boleto-payload.ts";
+import { boletoResultFromResponse } from "./adapter/boleto-response.ts";
 
 const validResponseExpectation = {
   ourNumber: BANESE_DOCUMENT_FIXTURE.ourNumber,
@@ -43,6 +49,62 @@ Deno.test("aceita retorno Banese correspondente ao titulo solicitado", () => {
 
   assert.equal(result.codigoBarras, BANESE_DOCUMENT_FIXTURE.barcode);
   assert.equal(result.linhaDigitavel, BANESE_DOCUMENT_FIXTURE.digitableLine);
+});
+
+Deno.test("aceita CPF iniciado em zero depois da serializacao numerica Banese", () => {
+  const base = reservedBoletoInput(false);
+  const input = {
+    ...base,
+    payer: { ...base.payer, document: "08496821501" },
+    receivable: {
+      ...base.receivable,
+      baneseNossoNumero: BANESE_DOCUMENT_FIXTURE.ourNumber,
+    },
+  };
+  const payload = buildBaneseBoletoPayload(input);
+  const response = {
+    ...validResponse,
+    Pagador: { NumeroCPFCNPJ: 8496821501 },
+  };
+
+  const result = boletoResultFromResponse(
+    input,
+    payload,
+    BANESE_DOCUMENT_FIXTURE.beneficiary.agreement,
+    BANESE_DOCUMENT_FIXTURE.beneficiary.agency,
+    response,
+    false,
+  );
+
+  assert.equal(result.bankSlipOurNumber, BANESE_DOCUMENT_FIXTURE.ourNumber);
+});
+
+Deno.test("aceita CNPJ iniciado em zeros somente com tipo juridico inequivoco", () => {
+  validateBaneseBoletoResponse({
+    ...validResponse,
+    Pagador: { TipoPessoa: "J", NumeroCPFCNPJ: "12345678901" },
+  }, {
+    ...validResponseExpectation,
+    payerDocument: "00012345678901",
+  });
+});
+
+Deno.test("rejeita CPF remoto quando o esperado e CNPJ com mesmos digitos", () => {
+  const cases = [
+    { Pagador: { TipoPessoa: "F", NumeroCPFCNPJ: "12345678901" } },
+    { Pagador: { NumeroCPFCNPJ: "12345678901" } },
+  ];
+
+  for (const response of cases) {
+    assertRemoteValidationFailure(
+      () =>
+        validateBaneseBoletoResponse({ ...validResponse, ...response }, {
+          ...validResponseExpectation,
+          payerDocument: "00012345678901",
+        }),
+      /CPF\/CNPJ.*diverge/i,
+    );
+  }
 });
 
 Deno.test("recuperacao exige a identidade remota completa do titulo", () => {

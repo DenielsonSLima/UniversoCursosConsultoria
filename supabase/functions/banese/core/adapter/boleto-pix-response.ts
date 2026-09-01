@@ -194,8 +194,23 @@ export const normalizeBanesePixFromResponses = async (
 export const withRequiredBaneseProductionPix = (
   result: AdapterCreateChargeResult,
   pix: Awaited<ReturnType<typeof normalizeBanesePixFromResponses>>,
+  options: { allowPendingBolePix?: boolean } = {},
 ): AdapterCreateChargeResult => {
   if (!pix.pixPayload || !pix.pixEncodedImage) {
+    if (options.allowPendingBolePix === true) {
+      return {
+        ...result,
+        pixPayload: null,
+        pixEncodedImage: null,
+        raw: {
+          ...asRecord(result.raw),
+          pixDiagnostic: {
+            ...pix.diagnostic,
+            pendingOfficialQrCode: true,
+          },
+        },
+      };
+    }
     throw markRemotePaymentMayExist(
       new BaneseAdapterError(
         "O titulo Banese existe, mas o retorno oficial ainda nao trouxe um QrCode Pix valido. A cobranca permanece pendente de conciliacao e nenhum novo POST deve ser enviado.",

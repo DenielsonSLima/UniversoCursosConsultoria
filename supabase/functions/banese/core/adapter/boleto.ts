@@ -1,29 +1,28 @@
 import {
   advanceBaneseNossoNumeroAfterCollision,
+  claimBaneseApiSubmissionAttempt,
   requestBaneseBoletoAccessToken,
   reserveBaneseNossoNumero,
 } from "./auth.ts";
 import {
   buildBaneseBoletoPayload,
+  canonicalBanesePayerDocument,
   validateBaneseBoletoPayloadInput,
 } from "./boleto-payload.ts";
 import {
   boletoResultFromResponse,
   validateBaneseBoletoResponse,
 } from "./boleto-response.ts";
-import { queryBaneseBoleto } from "./boleto-query.ts";
+import { assertBanesePixRecoveryEligible } from "./boleto-pix-recovery-eligibility.ts";
 import { confirmBaneseBoletoFinancialTerms } from "./boleto-financial-terms.ts";
 import {
   type AdapterCreateChargeInput,
   type AdapterCreateChargeResult,
   BANESE_BOLETO_ENDPOINTS,
-  BANESE_BOLETO_STATUS,
   type BaneseAccessToken,
   BaneseAdapterConfigurationError,
   BaneseAdapterError,
-  BaneseCancellationRequiresReviewError,
   type Environment,
-  type SupabaseAdminRpcClient,
 } from "./types.ts";
 import {
   assertEnvironment,
@@ -152,7 +151,7 @@ export const createBaneseBoletoCharge = async (
     account: metadata.baneseConta ?? metadata.baneseContaDisplay,
     documentNumber: payload.NumeroDocumento,
     companyTitleId: payload.IdTituloEmpresa,
-    payerDocument: payload.Pagador.NumeroCPFCNPJ,
+    payerDocument: canonicalBanesePayerDocument(input.payer),
   });
   const recoveredResult = async (
     raw: unknown,
@@ -163,6 +162,13 @@ export const createBaneseBoletoCharge = async (
       requireRemoteFinancialIdentity: true,
       requireRemoteTitleIdentity: true,
     });
+    if (input.allowPendingBolePix === true) {
+      await assertBanesePixRecoveryEligible({
+        raw,
+        baseEndpoint: `${endpoint}/${payload.NossoNumero}`,
+        token,
+      });
+    }
     let confirmedRaw = raw;
     if (input.financialTerms) {
       try {
@@ -190,7 +196,9 @@ export const createBaneseBoletoCharge = async (
       [{ source: "confirmation", raw: confirmedRaw }],
       input.amount,
     );
-    return withRequiredBaneseProductionPix(result, pix);
+    return withRequiredBaneseProductionPix(result, pix, {
+      allowPendingBolePix: input.allowPendingBolePix === true,
+    });
   };
   const advanceCollision = async (
     raw: unknown,
@@ -269,9 +277,25 @@ export const createBaneseBoletoCharge = async (
       );
     }
 
-    let response: Response;
     try {
-      response = await fetch(endpoint, {
+      await claimBaneseApiSubmissionAttempt(input.admin, {
+        receivableId,
+        environment: input.environment,
+        convenio,
+        agencia,
+        nossoNumero,
+        amount: payload.ValorNominal,
+        dueDate: payload.DataVencimento,
+        expectedCreationToken,
+      });
+    } catch (error) {
+      // O COMMIT do claim pode ter ocorrido mesmo se a resposta RPC se perder.
+      // O caller deve preservar CREATING/token e confirmar por conciliacao.
+      throw markRemotePaymentMayExist(error);
+    }
+
+    try {
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: {
           Authorization: `${token.tokenType} ${token.accessToken}`,
@@ -279,19 +303,15 @@ export const createBaneseBoletoCharge = async (
         },
         body: JSON.stringify(payload),
       });
-    } catch (error) {
-      throw markRemotePaymentMayExist(error);
-    }
-    const raw = await readResponseBody(response);
-    if (!response.ok) {
-      const rawText = typeof raw === "string" ? raw : JSON.stringify(raw);
-      const error = new BaneseAdapterError(
-        `Banese Card recusou criacao do boleto (${response.status}): ${rawText}`,
-      );
-      const duplicate = response.status === 409 ||
-        /JA_EXISTE|J[AÁ] EXISTE|DUPLIC/i.test(rawText);
-      if (duplicate) {
-        try {
+      const raw = await readResponseBody(response);
+      if (!response.ok) {
+        const rawText = typeof raw === "string" ? raw : JSON.stringify(raw);
+        const error = new BaneseAdapterError(
+          `Banese Card recusou criacao do boleto (${response.status}): ${rawText}`,
+        );
+        const duplicate = response.status === 409 ||
+          /JA_EXISTE|J[AÁ] EXISTE|DUPLIC/i.test(rawText);
+        if (duplicate) {
           const duplicateQuery = await fetch(`${endpoint}/${nossoNumero}`, {
             headers: {
               Authorization: `${token.tokenType} ${token.accessToken}`,
@@ -299,36 +319,30 @@ export const createBaneseBoletoCharge = async (
           });
           const duplicateRaw = await readResponseBody(duplicateQuery);
           if (!duplicateQuery.ok) throw error;
-          const collision = await advanceCollision(
+          const collision = await classifyBaneseBoletoCollision(
             duplicateRaw,
-            payload,
-            "POST_DUPLICATE_GET",
+            expectationFor(payload),
           );
-          if (collision.result) return collision.result;
-          continue;
-        } catch (cause) {
-          throw markRemotePaymentMayExist(cause);
+          if (collision.classification === "MATCH") {
+            return await recoveredResult(duplicateRaw, payload);
+          }
+          throw new BaneseAdapterError(
+            "O POST Banese encontrou um titulo sem identidade comprovada; a tentativa ficou em conciliacao e nenhum segundo POST foi enviado.",
+          );
         }
+        throw error;
       }
-      if (
-        [408, 425, 429].includes(response.status) || response.status >= 500
-      ) {
-        throw markRemotePaymentMayExist(error);
-      }
-      throw error;
-    }
 
-    const creationPix = isProduction(input.environment)
-      ? await normalizeBanesePixFromResponses(
-        [{ source: "creation", raw }],
-        input.amount,
-      )
-      : null;
-    let postLookupRaw: unknown | undefined;
-    if (
-      creationPix && (!creationPix.pixPayload || !creationPix.pixEncodedImage)
-    ) {
-      try {
+      const creationPix = isProduction(input.environment)
+        ? await normalizeBanesePixFromResponses(
+          [{ source: "creation", raw }],
+          input.amount,
+        )
+        : null;
+      let postLookupRaw: unknown | undefined;
+      if (
+        creationPix && (!creationPix.pixPayload || !creationPix.pixEncodedImage)
+      ) {
         const lookup = await fetch(`${endpoint}/${nossoNumero}`, {
           headers: {
             Authorization: `${token.tokenType} ${token.accessToken}`,
@@ -345,14 +359,10 @@ export const createBaneseBoletoCharge = async (
           requireRemoteFinancialIdentity: true,
           requireRemoteTitleIdentity: true,
         });
-      } catch (error) {
-        throw markRemotePaymentMayExist(error);
       }
-    }
 
-    let confirmedRaw = postLookupRaw ?? raw;
-    if (input.financialTerms) {
-      try {
+      let confirmedRaw = postLookupRaw ?? raw;
+      if (input.financialTerms) {
         confirmedRaw = await confirmBaneseBoletoFinancialTerms({
           endpoint: `${endpoint}/${nossoNumero}`,
           token,
@@ -360,113 +370,40 @@ export const createBaneseBoletoCharge = async (
           currentRaw: isProduction(input.environment) ? postLookupRaw : raw,
           repairMismatch: false,
         });
-      } catch (error) {
-        throw markRemotePaymentMayExist(error);
       }
+      const result = boletoResultFromResponse(
+        input,
+        payload,
+        convenio,
+        agencia,
+        confirmedRaw,
+        false,
+      );
+      if (!isProduction(input.environment)) return result;
+      const pix = creationPix?.pixPayload && creationPix.pixEncodedImage
+        ? creationPix
+        : await normalizeBanesePixFromResponses([
+          { source: "creation", raw },
+          { source: "confirmation", raw: confirmedRaw },
+        ], input.amount);
+      if (
+        input.allowPendingBolePix === true &&
+        (!pix.pixPayload || !pix.pixEncodedImage)
+      ) {
+        await assertBanesePixRecoveryEligible({
+          raw: confirmedRaw,
+          baseEndpoint: `${endpoint}/${nossoNumero}`,
+          token,
+        });
+      }
+      return withRequiredBaneseProductionPix(result, pix, {
+        allowPendingBolePix: input.allowPendingBolePix === true,
+      });
+    } catch (error) {
+      throw markRemotePaymentMayExist(error);
     }
-    const result = boletoResultFromResponse(
-      input,
-      payload,
-      convenio,
-      agencia,
-      confirmedRaw,
-      false,
-    );
-    if (!isProduction(input.environment)) return result;
-    const pix = creationPix?.pixPayload && creationPix.pixEncodedImage
-      ? creationPix
-      : await normalizeBanesePixFromResponses([
-        { source: "creation", raw },
-        { source: "confirmation", raw: confirmedRaw },
-      ], input.amount);
-    return withRequiredBaneseProductionPix(result, pix);
   }
   throw new BaneseAdapterError(
     "O limite seguro de colisoes de Nosso Numero Banese foi atingido; nenhum titulo foi sobrescrito.",
   );
-};
-
-export const cancelBaneseBoleto = async (
-  admin: SupabaseAdminRpcClient,
-  environment: Environment,
-  input: {
-    convenio: unknown;
-    nossoNumero: unknown;
-    onMutationStart?: () => void;
-  },
-) => {
-  assertEnvironment(environment);
-  const convenio = onlyDigits(input.convenio);
-  const nossoNumero = onlyDigits(input.nossoNumero);
-  if (!convenio || !/^\d{9}$/.test(nossoNumero)) {
-    throw new BaneseAdapterConfigurationError(
-      "Baixa Banese requer convenio e Nosso Numero validos.",
-    );
-  }
-
-  const current = await queryBaneseBoleto(admin, environment, {
-    convenio,
-    nossoNumero,
-  });
-  if (current.paid) {
-    throw new BaneseCancellationRequiresReviewError(
-      "O Banese ja confirmou o pagamento deste boleto. Atualize a conciliacao antes da baixa manual.",
-    );
-  }
-  if (current.situationCode === 5) {
-    return {
-      convenio,
-      nossoNumero,
-      situationCode: 5,
-      remoteStatus: BANESE_BOLETO_STATUS[5],
-      alreadyCanceled: true,
-      raw: current.raw,
-    };
-  }
-  if (current.situationCode !== 2) {
-    const ErrorType = current.situationCode === 0
-      ? BaneseAdapterError
-      : BaneseCancellationRequiresReviewError;
-    throw new ErrorType(
-      `Boleto Banese nao pode ser baixado na situacao ${current.situationCode} (${current.remoteStatus}).`,
-    );
-  }
-
-  const token = await requestBaneseBoletoAccessToken(admin, environment);
-  const endpoint = `${
-    BANESE_BOLETO_ENDPOINTS[environment].baseUrl
-  }/convenios/${convenio}/boletos/${nossoNumero}/baixa`;
-  input.onMutationStart?.();
-  const response = await fetch(endpoint, {
-    method: "PUT",
-    headers: { Authorization: `${token.tokenType} ${token.accessToken}` },
-  });
-  await readResponseBody(response);
-
-  const confirmed = await queryBaneseBoleto(admin, environment, {
-    convenio,
-    nossoNumero,
-  });
-  if (confirmed.paid) {
-    throw new BaneseAdapterError(
-      "O Banese confirmou pagamento durante a tentativa de baixa. O recebimento manual nao foi registrado.",
-    );
-  }
-  if (confirmed.situationCode !== 5) {
-    const requestStatus = response.ok
-      ? "aceita"
-      : `recusada (${response.status})`;
-    throw new BaneseAdapterError(
-      `Baixa Banese ${requestStatus}, mas o titulo nao foi confirmado como cancelado. Tente novamente apos atualizar a cobranca.`,
-    );
-  }
-
-  return {
-    convenio,
-    nossoNumero,
-    situationCode: 5,
-    remoteStatus: BANESE_BOLETO_STATUS[5],
-    alreadyCanceled: false,
-    raw: confirmed.raw,
-  };
 };

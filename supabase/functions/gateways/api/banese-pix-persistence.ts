@@ -19,11 +19,20 @@ export const persistBaneseRecoveredPix = async (
     convenio: unknown;
     bankNumbers: RecoveredBankNumbers;
     snapshot: RecoveredPixSnapshot;
+    requirePayableStateCas?: boolean;
   },
 ) => {
   const { receivable, bankNumbers, snapshot } = input;
   const expectedConvenio = String(input.convenio || "").replace(/\D/g, "");
-  const { data, error } = await admin.rpc("persist_banese_recovered_pix", {
+  if (input.requirePayableStateCas && !receivable.updated_at) {
+    throw new Error(
+      "Snapshot temporal Banese ausente para persistencia Pix segura.",
+    );
+  }
+  const rpcName = input.requirePayableStateCas
+    ? "persist_banese_recovered_pix_v2"
+    : "persist_banese_recovered_pix";
+  const rpcArgs: Record<string, unknown> = {
     p_receivable_id: receivable.id,
     p_environment: input.environment,
     p_nosso_numero: snapshot.nossoNumero,
@@ -43,7 +52,19 @@ export const persistBaneseRecoveredPix = async (
       nossoNumero: snapshot.nossoNumero,
       response: snapshot.raw,
     },
-  });
+  };
+  if (input.requirePayableStateCas) {
+    Object.assign(rpcArgs, {
+      p_expected_updated_at: receivable.updated_at,
+      p_expected_status: receivable.status,
+      p_expected_gateway_status: receivable.gateway_status ?? null,
+      p_expected_gateway_last_error: receivable.gateway_last_error ?? null,
+      p_expected_financial_terms: receivable.gateway_financial_terms,
+      p_expected_financial_terms_confirmed_at:
+        receivable.gateway_financial_terms_confirmed_at,
+    });
+  }
+  const { data, error } = await admin.rpc(rpcName, rpcArgs);
   if (error) throw error;
   if (!data || data.persisted !== true) {
     throw new Error(

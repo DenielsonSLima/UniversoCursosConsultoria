@@ -12,7 +12,7 @@ import {
   scheduledLaunchAt,
 } from "./pacing.ts";
 import { readRequestBody, safeEqual } from "./request-guards.ts";
-import { json } from "./response.ts";
+import { json, titleReplacementJson } from "./response.ts";
 import {
   createLazyAsyncValue,
   queryWithSingleBaneseAuthRetry,
@@ -31,6 +31,11 @@ import {
   discountRepairDiagnosticCode,
   repairMarkedBaneseDiscountBeforeBatch,
 } from "./discount-removal-maintenance.ts";
+import {
+  handledEadAmbiguousRecovery,
+  recoverEadAmbiguousTitlesOnce,
+} from "./ead-ambiguous-recovery.ts";
+import { processOneBaneseEadTitleReplacement } from "./ead-title-replacement.ts";
 
 type CachedToken = { token: BaneseAccessToken; expiresAt: number };
 
@@ -136,6 +141,19 @@ Deno.serve(async (req: Request) => {
     await readRequestBody(req);
   } catch {
     return json({ error: "Requisição inválida." }, 400);
+  }
+
+  const titleReplacement = await processOneBaneseEadTitleReplacement(admin, supabaseUrl);
+  if (titleReplacement.handled) {
+    return titleReplacementJson(titleReplacement);
+  }
+
+  const eadRecovery = await recoverEadAmbiguousTitlesOnce(
+    admin,
+    reconcileBaneseReceivable,
+  );
+  if (handledEadAmbiguousRecovery(eadRecovery)) {
+    return json({ success: eadRecovery.failedFinal === 0, eadRecovery });
   }
 
   try {

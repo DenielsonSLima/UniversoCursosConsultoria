@@ -261,6 +261,60 @@ Deno.test("consulta abandona GET que ignora o sinal de cancelamento", async () =
   }
 });
 
+Deno.test("consulta encaminha AbortSignal para o OAuth Banese", async () => {
+  const originalFetch = globalThis.fetch;
+  const controller = new globalThis.AbortController();
+  let oauthSignal: AbortSignal | null | undefined;
+  const response = {
+    NossoNumero: BANESE_DOCUMENT_FIXTURE.ourNumber,
+    NumeroLinhaDigitavel: BANESE_DOCUMENT_FIXTURE.digitableLine,
+    NumeroCodigoBarras: BANESE_DOCUMENT_FIXTURE.barcode,
+    ValorNominal: BANESE_DOCUMENT_FIXTURE.amount,
+    DataVencimento: BANESE_DOCUMENT_FIXTURE.dueDate,
+    CodigoSituacaoBoleto: 2,
+  };
+  globalThis.fetch = async (input, init) => {
+    const method = String(
+      init?.method || (input instanceof Request ? input.method : "GET"),
+    ).toUpperCase();
+    if (method === "POST") {
+      oauthSignal = init?.signal;
+      return new Response(
+        JSON.stringify({
+          access_token: "token-oauth",
+          token_type: "Bearer",
+          expires_in: 3600,
+        }),
+        { status: 200 },
+      );
+    }
+    return new Response(JSON.stringify(response), { status: 200 });
+  };
+  const admin = {
+    rpc: (_name: string, params?: Record<string, unknown>) =>
+      Promise.resolve({
+        data: String(params?.p_secret_name || "").includes("client_id")
+          ? "client-id"
+          : "client-secret",
+        error: null,
+      }),
+  };
+
+  try {
+    const result = await queryBaneseBoleto(admin, "production", {
+      convenio: BANESE_DOCUMENT_FIXTURE.beneficiary.agreement,
+      nossoNumero: BANESE_DOCUMENT_FIXTURE.ourNumber,
+      skipEffectivePaymentsWhenOfficiallyUnpaid: true,
+      signal: controller.signal,
+    });
+
+    assert.equal(result.remoteStatus, "PENDING");
+    assert.strictEqual(oauthSignal, controller.signal);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 Deno.test("consulta com Pix persistido ainda valida a identidade completa", async () => {
   const receivableId = BANESE_DOCUMENT_FIXTURE.receivableId;
   const response = {

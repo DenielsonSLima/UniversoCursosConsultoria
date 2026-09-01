@@ -68,6 +68,7 @@ export default [
         RequestInfo: "readonly",
         RequestInit: "readonly",
         Response: "readonly",
+        AbortController: "readonly",
         AbortSignal: "readonly",
         crypto: "readonly",
         btoa: "readonly",

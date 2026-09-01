@@ -2,12 +2,17 @@ import {
   claimBaneseIncidentRecoveredTitle,
   finishBaneseIncidentRecoveryScan,
 } from "./auth.ts";
-import { buildBaneseBoletoPayload } from "./boleto-payload.ts";
+import {
+  buildBaneseBoletoPayload,
+  canonicalBanesePayerDocument,
+} from "./boleto-payload.ts";
 import {
   boletoResultFromResponse,
   validateBaneseBoletoResponse,
 } from "./boleto-response.ts";
-import { normalizeBaneseFinancialTerms } from "../../internal/financial-terms.ts";
+import { confirmBaneseBoletoFinancialTerms } from "./boleto-financial-terms.ts";
+import { classifyBaneseBoletoCollision } from "./boleto-collision.ts";
+import { assertBanesePixRecoveryEligible } from "./boleto-pix-recovery-eligibility.ts";
 import {
   normalizeBanesePixFromResponses,
   withRequiredBaneseProductionPix,
@@ -40,48 +45,69 @@ const recoveredIncidentResult = async (
   charge: AdapterCreateChargeInput,
   convenio: string,
   agencia: string,
+  endpoint: string,
+  token: BaneseAccessToken,
   raw: unknown,
   payload: ReturnType<typeof buildBaneseBoletoPayload>,
 ): Promise<AdapterCreateChargeResult | null> => {
   const metadata = metadataFrom(charge.receivable || {});
-  try {
-    validateBaneseBoletoResponse(raw, {
-      ourNumber: payload.NossoNumero,
-      amount: payload.ValorNominal,
-      dueDate: payload.DataVencimento,
-      agency: agencia,
-      account: metadata.baneseConta ?? metadata.baneseContaDisplay,
-      documentNumber: payload.NumeroDocumento,
-      companyTitleId: payload.IdTituloEmpresa,
-      payerDocument: payload.Pagador.NumeroCPFCNPJ,
+  const expectedResponse = {
+    ourNumber: payload.NossoNumero,
+    amount: payload.ValorNominal,
+    dueDate: payload.DataVencimento,
+    agency: agencia,
+    account: metadata.baneseConta ?? metadata.baneseContaDisplay,
+    documentNumber: payload.NumeroDocumento,
+    companyTitleId: payload.IdTituloEmpresa,
+    payerDocument: canonicalBanesePayerDocument(charge.payer),
+    requireRemoteFinancialIdentity: true,
+    requireRemoteTitleIdentity: true,
+  };
+  const collision = await classifyBaneseBoletoCollision(raw, expectedResponse);
+  if (collision.classification === "FOREIGN") return null;
+  if (collision.classification !== "MATCH") {
+    throw new BaneseAdapterError(
+      "A resposta da consulta de recuperacao Banese tem identidade indeterminada; a varredura nao foi avancada.",
+    );
+  }
+  if (charge.allowPendingBolePix === true) {
+    await assertBanesePixRecoveryEligible({
+      raw,
+      baseEndpoint: endpoint,
+      token,
     });
-  } catch {
-    return null;
   }
   const pix = await normalizeBanesePixFromResponses(
     [{ source: "confirmation", raw }],
     charge.amount,
   );
-  if (!pix.pixPayload || !pix.pixEncodedImage) return null;
+  const confirmedRaw = await confirmBaneseBoletoFinancialTerms({
+    endpoint,
+    token,
+    payload,
+    currentRaw: raw,
+    repairMismatch: false,
+    allowDiscountRemoval: charge.environment === "production",
+  });
+  validateBaneseBoletoResponse(confirmedRaw, expectedResponse);
   const result = boletoResultFromResponse(
-    { ...charge, financialTerms: null },
+    charge,
     payload,
     convenio,
     agencia,
-    raw,
-    false,
+    confirmedRaw,
+    true,
   );
   return withRequiredBaneseProductionPix({
     ...result,
-    financialTerms: charge.financialTerms
-      ? normalizeBaneseFinancialTerms(charge.financialTerms)
-      : null,
     raw: {
       ...asRecord(result.raw),
       recovered: true,
-      recoveryEvidence: "BANK_NUMBERS_AND_OFFICIAL_PIX",
+      recoveryEvidence: pix.pixPayload && pix.pixEncodedImage
+        ? "BANK_NUMBERS_AND_OFFICIAL_PIX"
+        : "FULL_TITLE_IDENTITY_WITH_PIX_PENDING",
     },
-  }, pix);
+  }, pix, { allowPendingBolePix: charge.allowPendingBolePix === true });
 };
 
 export const recoverBaneseIncidentReservation = async (input: {
@@ -142,10 +168,13 @@ export const recoverBaneseIncidentReservation = async (input: {
       );
     }
 
+    const candidateEndpoint = `${endpoint}/${nossoNumero}`;
     const recoveredResult = await recoveredIncidentResult(
       input.charge,
       input.convenio,
       input.agencia,
+      candidateEndpoint,
+      input.token,
       raw,
       payload,
     );

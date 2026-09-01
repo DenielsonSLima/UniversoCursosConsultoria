@@ -31,6 +31,7 @@ export type GatewayChargeInput = {
   pendingUrl?: string | null;
   issuer?: GatewayIssuer | null;
   financialTerms?: BaneseFinancialTermsInput | null;
+  allowPendingBolePix?: boolean;
 };
 
 export type GatewayChargeResult = {

@@ -30,6 +30,7 @@ const rowAt = (
   const bank = baneseDocumentFixtureAt(index);
   return {
     id: bank.receivableId,
+    created_at: "2026-07-16T12:00:00Z",
     cliente_id: CLIENT_ID,
     matricula_id: ENROLLMENT_ID,
     turma_id: "55555555-5555-4555-8555-555555555555",
@@ -46,11 +47,15 @@ const rowAt = (
     gateway_environment: "sandbox",
     gateway_payment_method: "BOLETO",
     gateway_status: "2",
+    gateway_synced_at: "2026-07-16T12:00:00Z",
+    gateway_last_error: null,
+    updated_at: "2026-07-16T12:00:00Z",
     gateway_pix_payload: null,
     gateway_pix_encoded_image: null,
     gateway_boleto_linha_digitavel: bank.digitableLine,
     gateway_boleto_codigo_barras: bank.barcode,
     gateway_boleto_nosso_numero: bank.ourNumber,
+    gateway_boleto_issued_at: "2026-07-16T12:00:00Z",
     gateway_boleto_convenio: "15528",
     gateway_boleto_agencia: "033",
     gateway_issuer_polo_id: ISSUER_ID,
