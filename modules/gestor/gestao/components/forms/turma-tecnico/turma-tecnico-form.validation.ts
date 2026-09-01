@@ -42,7 +42,13 @@ export const validateTurmaTecnicoStep = (
   }
 
   if (step === 'FINANCEIRO') {
-    if (!formData.primeiroVencimentoPadrao) {
+    if (!['NOVA', 'IMPORTADA_CICLO_1', 'IMPORTADA_CONCLUIDA'].includes(formData.estadoFinanceiroInicial)) {
+      return 'Selecione como começa o histórico financeiro da turma.';
+    }
+    if (!['QUITACAO_TOTAL', 'PENULTIMA_SEM_ATRASO'].includes(formData.criterioElegibilidadeCiclo)) {
+      return 'Selecione o critério para liberar o próximo ciclo.';
+    }
+    if (formData.estadoFinanceiroInicial !== 'IMPORTADA_CONCLUIDA' && !formData.primeiroVencimentoPadrao) {
       return 'Informe o primeiro vencimento financeiro da turma.';
     }
     if (!isFiniteNumber(formData.valorMatricula) || formData.valorMatricula < 0) {
@@ -79,8 +85,8 @@ export const validateTurmaTecnicoStep = (
     if (instructionLength < 1 || instructionLength > 180) {
       return 'A instrução do boleto deve ter entre 1 e 180 caracteres.';
     }
-    if (formData.origemFinanceira === 'LEGADO' && formData.gerarCobrancasFuturas) {
-      return 'Turmas com histórico financeiro anterior não podem gerar novas cobranças automaticamente.';
+    if (formData.gerarCobrancasFuturas || formData.sincronizarAsaasFuturo) {
+      return 'Turmas técnicas manuais não podem gerar ou sincronizar cobranças automaticamente.';
     }
   }
 
