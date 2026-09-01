@@ -34,6 +34,12 @@ const manifests = [
 const migrationExemptionsRegistry = existsSync(MIGRATION_EXEMPTIONS_PATH)
   ? JSON.parse(read(MIGRATION_EXEMPTIONS_PATH))
   : { version: 1, exemptions: [] };
+const additionalMigrationExemptionRegistries = (
+  migrationExemptionsRegistry.registries ?? []
+).map(path => ({
+  path,
+  registry: existsSync(path) ? JSON.parse(read(path)) : null,
+}));
 const failures = [];
 
 const countPhysicalLines = content => {
@@ -90,10 +96,20 @@ if (!activeLotManifest) {
 if (migrationExemptionsRegistry.version !== 1) {
   failures.push(`${MIGRATION_EXEMPTIONS_PATH}: version deve ser exatamente 1.`);
 }
+for (const entry of additionalMigrationExemptionRegistries) {
+  if (!entry.registry) {
+    failures.push(`Registro de migrations aplicadas não encontrado: ${entry.path}`);
+  } else if (entry.registry.version !== 1) {
+    failures.push(`${entry.path}: version deve ser exatamente 1.`);
+  }
+}
 
 const exemptionEntries = [
   ...(config.exemptions ?? []),
   ...(migrationExemptionsRegistry.exemptions ?? []),
+  ...additionalMigrationExemptionRegistries.flatMap(
+    entry => entry.registry?.exemptions ?? [],
+  ),
 ];
 const exemptions = new Map();
 for (const exemption of exemptionEntries) {
