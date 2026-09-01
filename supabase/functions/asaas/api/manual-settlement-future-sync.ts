@@ -6,6 +6,7 @@ import {
   type NormalizedManualSettlementRequest,
 } from "./manual-settlement.types.ts";
 import { createManualSettlementRepository } from "./manual-settlement.repository.ts";
+import { shouldSkipTechnicalManualFutureSync } from "../../_shared/technical-manual-future-sync.ts";
 
 const errorMessage = (error: unknown) =>
   error instanceof Error ? error.message : String(error);
@@ -42,6 +43,13 @@ export const syncManualSettlementFutureCharges = async (
 
   let warning: string | null = null;
   try {
+    if (
+      await shouldSkipTechnicalManualFutureSync(
+        dependencies.admin,
+        receivable.matricula_id,
+      )
+    ) return result;
+
     const { data: enrollment, error } = await dependencies.admin
       .from("matriculas")
       .select(
