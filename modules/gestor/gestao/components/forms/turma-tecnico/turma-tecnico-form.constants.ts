@@ -1,5 +1,6 @@
 import { DEFAULT_INSTRUCAO_BOLETO_CARNE } from '../../../tecnicos/detalhes/components/financeiro/financeiro-config.service';
 import type {
+  TurmaTecnicoEstadoFinanceiroInicial,
   TurmaTecnicoFormData,
   TurmaTecnicoStep,
 } from './turma-tecnico-form.types';
@@ -61,6 +62,8 @@ export const createInitialTurmaTecnicoFormData = (
   vagasTotais: 40,
   frequenciaMinimaPercent: 75,
   mediaMinima: 6,
+  estadoFinanceiroInicial: 'NOVA',
+  criterioElegibilidadeCiclo: 'PENULTIMA_SEM_ATRASO',
   cobrarMatricula: true,
   valorMatricula: 150,
   cobrarRematricula: true,
@@ -80,9 +83,39 @@ export const createInitialTurmaTecnicoFormData = (
   instrucaoBoletoCarne: DEFAULT_INSTRUCAO_BOLETO_CARNE,
   origemFinanceira: 'NORMAL',
   financeiroHerdado: false,
-  gerarCobrancasFuturas: true,
+  gerarCobrancasFuturas: false,
   sincronizarAsaasFuturo: false,
 });
+
+export const TURMA_TECNICO_FINANCIAL_STATE_OPTIONS: Array<{
+  value: TurmaTecnicoEstadoFinanceiroInicial;
+  title: string;
+  eyebrow: string;
+  description: string;
+  nextAction: string;
+}> = [
+  {
+    value: 'NOVA',
+    title: 'Turma nova',
+    eyebrow: 'Nenhum ciclo no histórico',
+    description: 'Adicionar o aluno apenas salva a configuração financeira como pendente.',
+    nextAction: 'O gestor poderá gerar manualmente o 1º ciclo por aluno.',
+  },
+  {
+    value: 'IMPORTADA_CICLO_1',
+    title: 'Importada · 1º ciclo concluído',
+    eyebrow: 'Ciclo 1 reconhecido como histórico',
+    description: 'Use para turma em andamento trazida de outro sistema, sem recriar títulos antigos.',
+    nextAction: 'O gestor poderá gerar manualmente apenas o 2º ciclo por aluno elegível.',
+  },
+  {
+    value: 'IMPORTADA_CONCLUIDA',
+    title: 'Importada · 2 ciclos concluídos',
+    eyebrow: 'Histórico financeiro completo',
+    description: 'Reconhece os dois ciclos anteriores e preserva somente o histórico.',
+    nextAction: 'Nenhum novo ciclo financeiro ficará disponível.',
+  },
+];
 
 export const FINANCIAL_POLICY_OPTIONS = [
   {
