@@ -22,6 +22,15 @@ const isNonEmptyString = (value: unknown): value is string => (
   typeof value === 'string' && value.trim().length > 0
 );
 
+const isIsoCalendarDate = (value: unknown): value is string => {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split('-').map(Number);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return parsed.getUTCFullYear() === year
+    && parsed.getUTCMonth() === month - 1
+    && parsed.getUTCDate() === day;
+};
+
 const isApplicationItem = (value: unknown) => (
   isRecord(value)
   && typeof value.desconto === 'boolean'
@@ -51,7 +60,7 @@ const requirePreview = (value: unknown): CicloFinanceiroTecnicoManualPreview => 
     && Number(item.numero) >= 0
     && isNonEmptyString(item.descricao)
     && isDecimalString(item.valor)
-    && isNonEmptyString(item.vencimento)
+    && isIsoCalendarDate(item.vencimento)
   ));
   const validTerms = isRecord(terms)
     && isDecimalString(terms.descontoPontualidade)
@@ -62,18 +71,39 @@ const requirePreview = (value: unknown): CicloFinanceiroTecnicoManualPreview => 
     && isApplicationItem(terms.aplicacao.matricula)
     && isApplicationItem(terms.aplicacao.mensalidade)
     && isApplicationItem(terms.aplicacao.rematricula);
+  const cycleNumber = Number(value.cicloNumero);
+  const typedItems = validItems
+    ? items as Array<Record<string, unknown>>
+    : [];
+  const keys = typedItems.map((item) => String(item.chave));
+  const installments = typedItems.filter((item) => item.tipo === 'PARCELA');
+  const leadItems = typedItems.filter((item) => item.tipo !== 'PARCELA');
+  const expectedLeadType = cycleNumber === 1 ? 'MATRICULA' : 'REMATRICULA';
+  const coherentComposition = validItems
+    && installments.length > 0
+    && leadItems.length <= 1
+    && leadItems.every((item) => item.tipo === expectedLeadType && item.numero === 0)
+    && (leadItems.length === 0 || typedItems[0]?.tipo === expectedLeadType)
+    && typedItems.slice(leadItems.length).every((item) => item.tipo === 'PARCELA')
+    && installments.every((item, index) => item.numero === index + 1)
+    && typedItems.every((item, index) => (
+      index === 0 || String(typedItems[index - 1].vencimento) <= String(item.vencimento)
+    ))
+    && new Set(keys).size === keys.length
+    && typedItems[0]?.vencimento === value.primeiroVencimento;
   if (
     !Number.isInteger(value.cicloNumero)
-    || Number(value.cicloNumero) < 1
+    || cycleNumber < 1
+    || cycleNumber > 2
     || !['TURMA', 'INDIVIDUAL'].includes(String(value.sourceVencimento))
     || (Number(value.cicloNumero) === 2 && value.sourceVencimento !== 'INDIVIDUAL')
-    || !isNonEmptyString(value.dataOrigem)
-    || !isNonEmptyString(value.primeiroVencimento)
+    || !isIsoCalendarDate(value.dataOrigem)
+    || !isIsoCalendarDate(value.primeiroVencimento)
     || !Number.isInteger(value.quantidadeItens)
     || Number(value.quantidadeItens) < 1
     || value.quantidadeItens !== items.length
     || !isDecimalString(value.total)
-    || !validItems
+    || !coherentComposition
     || !validTerms
     || !isNonEmptyString(value.regraEfetivaFingerprint)
     || !isNonEmptyString(value.politicaFingerprint)
@@ -181,7 +211,10 @@ export const matriculaTecnicaCicloManualService = {
       )
       || (
         input.primeiroVencimento !== null
-        && result.preview.primeiroVencimento !== input.primeiroVencimento
+        && (
+          result.preview.primeiroVencimento !== input.primeiroVencimento
+          || result.preview.dataOrigem !== input.primeiroVencimento
+        )
       )
       || result.cicloManual.estado !== 'ELEGIVEL'
       || !result.cicloManual.podeGerar

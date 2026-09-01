@@ -37,7 +37,7 @@ const GeneratedCycleStatus: React.FC<{
         fullyIssued ? 'bg-emerald-100 text-emerald-800' : 'bg-cyan-100 text-cyan-800'
       }`}>
         {fullyIssued ? <CheckCircle2 size={12} /> : <ReceiptText size={12} />}
-        {cycleLabel(generated.numero)} {fullyIssued ? 'já gerado e emitido' : 'gerado localmente'}
+        {cycleLabel(generated.numero)} {fullyIssued ? 'já gerado e emitido' : 'gerado no sistema'}
       </span>
       <p className="text-[9px] font-bold text-slate-500">
         {generated.emitidosBanese}/{generated.quantidadeItens} emitidos

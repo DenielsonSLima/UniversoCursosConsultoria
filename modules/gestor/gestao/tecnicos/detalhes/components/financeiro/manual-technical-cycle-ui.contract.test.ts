@@ -199,7 +199,7 @@ test("ciclo 1 mantém escolha de vencimento e ciclo 2 exige data individual", ()
   assert.match(dialogSource, /usePreviewCicloFinanceiroTecnicoManual/);
   assert.match(dialogSource, /Usar datas da turma/);
   assert.match(dialogSource, /Definir primeira data/);
-  assert.match(dialogSource, /O servidor recalcula todo o cronograma/);
+  assert.match(dialogSource, /O sistema recalcula todo o cronograma/);
   assert.match(dialogSource, /const requiresIndividualDate = cycleNumber === 2/);
   assert.match(
     dialogSource,
@@ -241,15 +241,18 @@ test("prévia canônica lista 1+N, termos efetivos e 0 Banese", () => {
   assert.match(typesSource, /matricula: \{ desconto: boolean; multaJuros: boolean \}/);
   assert.match(typesSource, /mensalidade: \{ desconto: boolean; multaJuros: boolean \}/);
   assert.match(typesSource, /rematricula: \{ desconto: boolean; multaJuros: boolean \}/);
-  assert.match(dialogSource, /Termos financeiros da regra efetiva/);
+  assert.match(
+    dialogSource,
+    /(?:Termos financeiros da regra efetiva|Condições da configuração efetiva)/,
+  );
   assert.match(dialogSource, /Desconto: \{application\.desconto \? 'aplica' : 'não aplica'\}/);
   assert.match(dialogSource, /Multa\/juros: \{application\.multaJuros \? 'aplica' : 'não aplica'\}/);
   assert.match(serviceSource, /const validTerms = isRecord\(terms\)/);
   assert.match(
     dialogSource,
-    /recebíveis locais<\/strong> e <strong>0 boletos Banese/,
+    /Nenhum boleto Banese será emitido nesta etapa/,
   );
-  assert.match(dialogSource, /A emissão bancária continuará manual/);
+  assert.match(dialogSource, /Emissão bancária continua separada/);
   assert.doesNotMatch(dialogSource, /supabase|functions\.invoke|gateway/i);
 });
 

@@ -6,13 +6,17 @@ export type MatriculaTecnicaCicloManualEstado =
   | 'CICLOS_CONCLUIDOS'
   | 'NAO_HABILITADO';
 
+export type MatriculaTecnicaCicloManualCriterio =
+  | 'QUITACAO_TOTAL'
+  | 'PENULTIMA_SEM_ATRASO';
+
 export interface MatriculaTecnicaCicloManual {
   habilitado: boolean;
   modo: 'MANUAL' | null;
   cicloBaseHistorico: number | null;
   cicloMaximo: number | null;
   proximoCicloNumero: number | null;
-  criterioElegibilidade: string | null;
+  criterioElegibilidade: MatriculaTecnicaCicloManualCriterio | null;
   estado: MatriculaTecnicaCicloManualEstado;
   podeGerar: boolean;
   bloqueio: {

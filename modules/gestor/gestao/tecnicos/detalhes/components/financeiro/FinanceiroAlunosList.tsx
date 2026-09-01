@@ -76,7 +76,7 @@ const situationLabel = (row: MatriculaTecnicaFinanceiroRow) => {
       return `${generatedCycle || 2}º ciclo gerado e emitido`;
     }
     if (row.cicloManual.estado === 'JA_GERADO') {
-      return `${generatedCycle || row.cicloManual.cicloMaximo || 2}º ciclo gerado localmente`;
+      return `${generatedCycle || row.cicloManual.cicloMaximo || 2}º ciclo gerado no sistema`;
     }
     if (row.cicloManual.estado === 'ELEGIVEL') {
       return `Elegível para gerar ${row.cicloManual.proximoCicloNumero}º ciclo`;
@@ -312,8 +312,8 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
       requestIds.current.delete(key);
       setManualCycleMatriculaId(null);
       toast.success(
-        `${result.ciclo.numero}º ciclo criado localmente`,
-        `${result.ciclo.quantidadeItens} recebíveis foram criados. Nenhum boleto Banese foi emitido.`,
+        `${result.ciclo.numero}º ciclo gerado`,
+        `${result.ciclo.quantidadeItens} cobranças foram registradas no sistema. Nenhum boleto Banese foi emitido.`,
       );
     } catch (error) {
       if (isRegraFinanceiraConflict(error)) {
