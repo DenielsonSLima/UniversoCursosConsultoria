@@ -1,6 +1,6 @@
 # Lote ativo
 
-Estado: `PUBLICAÇÃO AUTORIZADA — AGUARDANDO PR/CI/PRODUÇÃO`
+Estado: `PUBLICAÇÃO CONCLUÍDA — PR #112 MERGEADO`
 
 ## Lote: 2026-09-01-hotfix-previa-ciclos-financeiros-manuais-tecnico
 
@@ -37,3 +37,11 @@ Estado: `PUBLICAÇÃO AUTORIZADA — AGUARDANDO PR/CI/PRODUÇÃO`
 - Preview, workflows do PR e produção Vercel confirmados.
 - Smoke visual autenticado registrado como pendente se o navegador continuar
   indisponível.
+
+### Evidência de publicação
+
+- PR #112 integrado por squash em `main` no commit `a9392f6`.
+- Workflows do PR `33533328236` e `33533328287` aprovados.
+- Preview Vercel `Gzjc15Vu48p3YEJsk3SfCLMnbCDT` pronta.
+- Produção Vercel `BSEkwa6yqt6n4G4a3UNSJQipQfDS` pronta.
+- Pipeline pós-merge `33533605779` aprovado integralmente.

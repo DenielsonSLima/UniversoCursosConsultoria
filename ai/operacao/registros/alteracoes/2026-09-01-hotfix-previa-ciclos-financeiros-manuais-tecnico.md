@@ -1,7 +1,7 @@
 # Hotfix da prévia dos ciclos financeiros manuais técnicos
 
 Data: 2026-09-01
-Estado: publicação autorizada; aguardando PR, CI e produção
+Estado: publicado em produção pelo PR #112
 
 ## Objetivo e contrato entregue
 
@@ -41,10 +41,11 @@ Estado: publicação autorizada; aguardando PR, CI e produção
 
 ## Manifesto explícito
 
-Total: 15 arquivos
+Total: 16 arquivos
 
 - `ai/operacao/LOTE_ATIVO.md`
 - `ai/operacao/qualidade/limite-linhas-manifestos.json`
+- `ai/operacao/registros/COMMITS_E_DEPLOYS.md`
 - `ai/operacao/registros/alteracoes/2026-09-01-hotfix-previa-ciclos-financeiros-manuais-tecnico.md`
 - `internal/versioning/CHANGELOG.md`
 - `internal/versioning/changelog/2026-08-21-a-2026-08-22-parte-2.md`
@@ -61,4 +62,20 @@ Total: 15 arquivos
 
 ## Evidência de publicação
 
-- Pendente de preenchimento após PR, workflows, Preview e produção.
+- [PR #112](https://github.com/DenielsonSLima/UniversoCursosConsultoria/pull/112)
+  comparado com `main`, contendo exatamente 15 arquivos no commit funcional.
+- Head validado: `85232e9`; merge por squash em `main`: `a9392f6`.
+- Os workflows de PR
+  [Controle de versão #33533328236](https://github.com/DenielsonSLima/UniversoCursosConsultoria/actions/runs/33533328236)
+  e
+  [Qualidade do produto #33533328287](https://github.com/DenielsonSLima/UniversoCursosConsultoria/actions/runs/33533328287)
+  concluíram com sucesso.
+- A
+  [Preview Vercel](https://universo-cursos-consultoria-git-ba1fbf-denielson-limas-projects.vercel.app)
+  (`Gzjc15Vu48p3YEJsk3SfCLMnbCDT`) ficou pronta antes do merge.
+- O deployment de produção `BSEkwa6yqt6n4G4a3UNSJQipQfDS` foi marcado como
+  pronto pela Vercel, e o
+  [pipeline pós-merge #33533605779](https://github.com/DenielsonSLima/UniversoCursosConsultoria/actions/runs/33533605779)
+  também concluiu com sucesso.
+- A publicação não executou geração de ciclo, emissão Banese, mutation no
+  Supabase nem alteração em Turma 42, Adenize ou recebíveis existentes.
