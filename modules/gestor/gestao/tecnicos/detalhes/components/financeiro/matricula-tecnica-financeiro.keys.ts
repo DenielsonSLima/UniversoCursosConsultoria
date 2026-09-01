@@ -24,6 +24,19 @@ export const matriculaTecnicaFinanceiroKeys = {
       fingerprint,
     ] as const
   ),
+  previewCicloManual: (
+    matriculaId: string,
+    cicloNumero: number,
+    primeiroVencimento: string | null,
+  ) => (
+    [
+      ...matriculaTecnicaFinanceiroKeys.all,
+      'preview-ciclo-manual',
+      matriculaId,
+      cicloNumero,
+      primeiroVencimento || 'turma',
+    ] as const
+  ),
   conditionCodeStatus: (turmaId: string) => (
     [...matriculaTecnicaFinanceiroKeys.turma(turmaId), 'condition-code-status'] as const
   ),
