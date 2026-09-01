@@ -3,6 +3,10 @@ import {
   buildEnrollmentSyncPayload,
   type GatewayPaymentMethod,
 } from './enrollment-sync';
+import {
+  createReceivableIssuanceRequestId,
+  syncAfterExplicitReceivableIssuanceAuthorization,
+} from './manual-technical-receivable-issuance';
 
 export type { GatewayPaymentMethod } from './enrollment-sync';
 
@@ -26,6 +30,26 @@ const invokeFunction = async <T>(functionName: string, payload: Record<string, u
 
 const invokeAdmin = async <T>(action: string, payload: Record<string, unknown> = {}): Promise<T> => {
   return invokeFunction<T>('asaas-api', { action, ...payload });
+};
+
+const authorizeManualTechnicalReceivableIssuance = async (
+  receivableId: string,
+  requestId: string,
+) => {
+  const { data, error } = await (supabase.rpc as any)(
+    'authorize_technical_manual_receivable_issuance_secure',
+    {
+      p_receivable_id: receivableId,
+      p_request_id: requestId,
+    },
+  );
+  if (error) throw new Error(error.message || 'Não foi possível autorizar a emissão.');
+  if (
+    !data || typeof data !== 'object' || typeof data.required !== 'boolean' ||
+    (data.required === true && data.authorized !== true)
+  ) {
+    throw new Error('A autorização da emissão retornou um estado inválido.');
+  }
 };
 
 export interface CheckoutPaymentSelection {
@@ -93,7 +117,15 @@ export const asaasIntegrationService = {
   },
 
   async syncReceivable(receivableId: string) {
-    return invokeAdmin<{ success: boolean; receivable: any }>('sync-receivable', { receivableId });
+    return syncAfterExplicitReceivableIssuanceAuthorization({
+      receivableId,
+      requestId: createReceivableIssuanceRequestId(),
+      authorize: authorizeManualTechnicalReceivableIssuance,
+      sync: (id) => invokeAdmin<{ success: boolean; receivable: any }>(
+        'sync-receivable',
+        { receivableId: id },
+      ),
+    });
   },
 
   async createOtherCredit(input: {
