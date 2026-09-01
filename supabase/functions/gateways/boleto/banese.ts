@@ -107,5 +107,6 @@ export const createBaneseBoletoCharge = async (input: GatewayChargeInput) => {
     successUrl: input.successUrl,
     pendingUrl: input.pendingUrl,
     financialTerms: intended.financialTerms,
+    allowPendingBolePix: input.allowPendingBolePix === true,
   });
 };

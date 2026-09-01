@@ -38,5 +38,9 @@ export const buildGatewayChargeInput = (
     failureUrl: `${baseUrl}/aluno?gateway=failure`,
     pendingUrl: `${baseUrl}/aluno?gateway=pending`,
     financialTerms,
+    // Este builder pertence exclusivamente ao checkout EAD. O opt-in ainda e
+    // restrito ao BolePix Banese para nao relaxar nenhum outro adaptador.
+    allowPendingBolePix: context.route.providerCode === "banese_card" &&
+      context.charge.method === "BOLETO",
   };
 };

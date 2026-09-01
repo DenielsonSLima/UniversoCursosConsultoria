@@ -293,6 +293,7 @@ export const reconcileBaneseReceivable = async (
         ? undefined
         : externalReference.slice(0, 25),
       expectedPayerDocument: payerDocument,
+      signal: dependencies.signal,
     },
   );
   const snapshotNossoNumero = normalizeBaneseRemoteTitleNumber(

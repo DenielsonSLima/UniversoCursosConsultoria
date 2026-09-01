@@ -40,6 +40,11 @@ export type AdapterCreateChargeInput = {
   successUrl?: string | null;
   pendingUrl?: string | null;
   financialTerms?: BaneseFinancialTermsInput | null;
+  /**
+   * Permite que o EAD preserve um boleto validado quando o Banese ainda nao
+   * repetiu o QrCode oficial. Outros consumidores continuam falhando fechado.
+   */
+  allowPendingBolePix?: boolean;
 };
 
 export type AdapterCreateChargeResult = {

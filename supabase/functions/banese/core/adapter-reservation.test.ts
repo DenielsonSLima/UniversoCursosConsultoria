@@ -127,6 +127,39 @@ Deno.test("reserva existente recupera boleto por GET sem novo POST", async () =>
   }
 });
 
+Deno.test("retry recupera CPF iniciado em zero sem emitir outro boleto", async () => {
+  const originalFetch = globalThis.fetch;
+  const bankMethods: string[] = [];
+  const payerDocument = "08496821501";
+  const response = makeBaneseTitleResponse(
+    BANESE_DOCUMENT_FIXTURE.amount,
+    BANESE_DOCUMENT_FIXTURE.dueDate,
+    { Pagador: { NumeroCPFCNPJ: Number(payerDocument) } },
+  );
+  globalThis.fetch = async (input, init) => {
+    const url = input instanceof Request ? input.url : String(input);
+    const method = String(
+      init?.method || (input instanceof Request ? input.method : "GET"),
+    ).toUpperCase();
+    if (url.includes("/autenticacao/")) return authenticatedResponse();
+    bankMethods.push(method);
+    return new Response(JSON.stringify(response), { status: 200 });
+  };
+
+  try {
+    const base = reservedBoletoInput(true);
+    const result = await createBaneseBoletoCharge({
+      ...base,
+      payer: { ...base.payer, document: payerDocument },
+    });
+
+    assert.equal(result.bankSlipOurNumber, BANESE_DOCUMENT_FIXTURE.ourNumber);
+    assert.deepEqual(bankMethods, ["GET"]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 Deno.test("recuperacao por GET exige documento, titulo da empresa e pagador", async () => {
   const originalFetch = globalThis.fetch;
   const cases = [

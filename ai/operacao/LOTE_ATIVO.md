@@ -1,48 +1,46 @@
 # Lote ativo
 
-Estado: `PUBLICAÇÃO EM PRODUÇÃO AUTORIZADA VIA PR #103`
+Estado: `PUBLICAÇÃO EM PRODUÇÃO AUTORIZADA — VALIDAÇÃO FINAL`
 
-## Lote: 2026-08-31-hotfix-layout-valor-desconto-recebiveis
+## Lote: 2026-09-01-reemissao-bolepix-ead-banese
 
-- Pedido: corrigir a sobreposição do valor e dos textos de desconto com as
-  ações na tabela desktop de Contas a Receber.
-- Autorização atual: o usuário autorizou explicitamente o merge do PR #103 e a
-  publicação em produção em 31/08/2026.
-- Risco: crítico — apresentação de informações financeiras e publicação.
+- Pedido: padronizar a captura do BolePix Banese, recuperar os títulos EAD já
+  emitidos sem Pix e, somente quando o GET oficial continuar sem `QrCode`,
+  cancelar e substituir `000097299` e `000097302` um por vez.
+- Autorização: GitHub, Produção, baixa dos dois títulos antigos e reemissão
+  explícitas pelo usuário em 01/09/2026.
+- Risco: crítico — financeiro, Supabase, Edge Functions, PDF e publicação.
 - Manifesto explícito:
-  `ai/operacao/registros/alteracoes/2026-08-31-hotfix-layout-valor-desconto-recebiveis.md`.
+  `ai/operacao/registros/alteracoes/2026-09-01-reemissao-bolepix-ead-banese.md`.
 
-### Escopo implementado
+### Contrato do lote
 
-1. Aumentar a largura mínima da tabela desktop de 960 para 1080 pixels.
-2. Aproximar `Valor` de `Datas`, reservar 17% para o resumo financeiro e 14%
-   para as ações.
-3. Reduzir discretamente a tipografia auxiliar do desconto e de sua validade.
-4. Preservar cards responsivos, cálculos, baixas, boletos, valores e regras do
-   backend.
+1. O retorno original do POST é preservado atomicamente; `QrCode` oficial é
+   validado como EMV/CRC e convertido em imagem sem fabricar conteúdo.
+2. Boleto existente usa GET no próprio convênio/Nosso Número e consulta de
+   pagamentos; identidade divergente, situação terminal ou pagamento bloqueiam
+   qualquer recuperação e qualquer baixa.
+3. A substituição excepcional é restrita a EAD, usa lease/CAS, registra a
+   intenção antes do PUT, confirma situação 5 e usa um novo Nosso Número.
+4. POST ambíguo nunca é repetido; a retomada usa somente GET.
+5. Técnico, CNAB, históricos e PDFs compartilhados ficam fora da mutação.
 
-### Diagnóstico confirmado
+### Evidência antes da publicação
 
-- A coluna `Valor` recebia 11% da grade e o texto era impedido de quebrar
-  linha; o conteúdo avançava sobre os botões da coluna `Ações`.
-- As cinco capturas fornecidas reproduzem o problema em títulos pendentes e
-  pagos. Os valores exibidos estão corretos; a falha é exclusivamente visual.
-- O `main` remoto de origem é
-  `4f316c624238b0cf0c83ea9537682a8801165b5c`.
+- As seis imagens mostram proteção contra duplicidade no título EAD antigo e
+  uma emissão EAD nova concluída com Pix na tela e no PDF do mesmo título.
+- Produção mantém os dois alvos pendentes, sem Pix local, sem pagamento e com
+  uma transação canônica cada; nenhuma mutação remota foi feita na preparação.
+- Validação local: 8 `deno check`, 152 testes integrados, TypeScript global,
+  build de produção, controle de versão 4.8.20 e teto de 500 linhas aprovados.
+- Processamento obrigatório: concluir e validar o primeiro título antes de
+  enfileirar o segundo.
 
-### Validação local
+### Aceite para encerramento
 
-- 18 testes focados: aprovados.
-- ESLint dos três arquivos do produto: aprovado.
-- `npx tsc --noEmit`: aprovado.
-- Limite de 500 linhas do manifesto: aprovado.
-- Smoke visual autenticado: pendente porque esta sessão não possui navegador
-  conectado.
-
-### Aceite para publicação em produção
-
-- O resumo de valor e desconto não invade a coluna de ações na grade desktop.
-- `Desconto do boleto` usa 10 pixels e `Válido até` usa 9 pixels.
-- A alteração não modifica dados nem regras financeiras.
-- O PR #103 possui um commit atômico, revisão independente aprovada, CI verde e
-  Preview Vercel aprovada antes do merge.
+- Cada título novo, quando necessário, possui identidade bancária e Pix
+  próprios; o título antigo fica baixado no Banese e arquivado localmente.
+- O PDF autenticado abre e o QR é visualmente legível para cada retorno Pix.
+- Checksums das cobranças e transações Técnicas permanecem idênticos.
+- PR final contém somente o manifesto e recebe CI/Preview aprovados antes do
+  merge em `main`.

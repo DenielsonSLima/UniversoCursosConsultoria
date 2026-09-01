@@ -1,4 +1,7 @@
-import { validateBaneseBoletoResponse } from "./boleto-response.ts";
+import {
+  compareBanesePayerDocument,
+  validateBaneseBoletoResponse,
+} from "./boleto-response.ts";
 import { asRecord, onlyDigits } from "./utils.ts";
 
 export type BaneseBoletoCollisionKind =
@@ -124,10 +127,11 @@ export const classifyBaneseBoletoCollision = async (
   const expectedPayerDocument = normalizedPayerDocument(
     expected.payerDocument,
   );
-  const remotePayerDocument = normalizedPayerDocument(
-    remotePayer.NumeroCPFCNPJ ?? remotePayer.numeroCPFCNPJ ??
-      remotePayer.numeroCpfCnpj,
+  const payerComparison = compareBanesePayerDocument(
+    remotePayer,
+    expectedPayerDocument,
   );
+  const remotePayerDocument = payerComparison.remoteDocument;
   const expectedAmount = amountInCents(expected.amount);
   const remoteAmount = amountInCents(
     remote.ValorNominal ?? remote.valorNominal,
@@ -156,7 +160,11 @@ export const classifyBaneseBoletoCollision = async (
       remoteDocumentNumber,
     ),
     companyTitleId: relation(expectedCompanyTitleId, remoteCompanyTitleId),
-    payerDocument: relation(expectedPayerDocument, remotePayerDocument),
+    payerDocument: payerComparison.status === "MATCH"
+      ? "MATCH"
+      : payerComparison.status === "DIFFERENT"
+      ? "DIFFERENT"
+      : "MISSING",
     amount: relation(expectedAmount, remoteAmount),
     dueDate: relation(expectedDueDate, remoteDueDate),
   } satisfies BaneseBoletoCollisionAudit["relations"];

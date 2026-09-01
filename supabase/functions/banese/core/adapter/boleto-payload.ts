@@ -25,6 +25,16 @@ import {
   todayIsoDate,
 } from "./utils.ts";
 
+export const canonicalBanesePayerDocument = (
+  payer: AdapterCreateChargeInput["payer"] | null | undefined,
+) => {
+  const source = payer || {};
+  return onlyDigits(
+    source.cpfCnpj ?? source.cpf_cnpj ?? source.cpf ?? source.cnpj ??
+      source.document,
+  );
+};
+
 export const validateBaneseBoletoPayloadInput = (
   input: AdapterCreateChargeInput,
 ) => {
@@ -36,10 +46,7 @@ export const validateBaneseBoletoPayloadInput = (
   const metadata = metadataFrom(input.receivable || {});
   const payer = input.payer || {};
 
-  const payerDocument = onlyDigits(
-    payer.cpfCnpj ?? payer.cpf_cnpj ?? payer.cpf ?? payer.cnpj ??
-      payer.document,
-  );
+  const payerDocument = canonicalBanesePayerDocument(payer);
   const payerName = firstString(payer.name, payer.nome);
   if (![11, 14].includes(payerDocument.length) || !payerName) {
     throw new BaneseAdapterError(

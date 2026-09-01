@@ -225,6 +225,40 @@ export const reserveBaneseNossoNumero = async (
   };
 };
 
+export const claimBaneseApiSubmissionAttempt = async (
+  admin: SupabaseAdminRpcClient,
+  input: {
+    receivableId: string;
+    environment: Environment;
+    convenio: string;
+    agencia: string;
+    nossoNumero: string;
+    amount: number;
+    dueDate: string;
+    expectedCreationToken: string;
+  },
+) => {
+  const { data, error } = await admin.rpc(
+    "claim_banese_api_submission_attempt",
+    {
+      p_receivable_id: input.receivableId,
+      p_environment: input.environment,
+      p_convenio: input.convenio,
+      p_agencia: input.agencia,
+      p_nosso_numero: input.nossoNumero,
+      p_expected_amount: input.amount,
+      p_expected_due_date: input.dueDate,
+      p_expected_creation_token: input.expectedCreationToken,
+    },
+  );
+  if (error) throw error;
+  if (data !== true) {
+    throw new BaneseAdapterConfigurationError(
+      "A intencao duravel do POST Banese nao foi confirmada; nenhum titulo foi enviado.",
+    );
+  }
+};
+
 const parseBaneseReservationResult = (
   data: unknown,
   input: {

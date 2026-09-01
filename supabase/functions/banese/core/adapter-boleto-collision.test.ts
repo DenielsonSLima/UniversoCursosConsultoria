@@ -43,6 +43,55 @@ Deno.test("classificador reconhece MATCH somente apos validacao integral", async
   ]);
 });
 
+Deno.test("classificador preserva zero inicial do CPF retornado como numero", async () => {
+  const payerDocument = "08496821501";
+  const result = await classifyBaneseBoletoCollision(
+    makeBaneseTitleResponse(
+      BANESE_DOCUMENT_FIXTURE.amount,
+      BANESE_DOCUMENT_FIXTURE.dueDate,
+      { Pagador: { NumeroCPFCNPJ: Number(payerDocument) } },
+    ),
+    { ...expected, payerDocument },
+  );
+
+  assert.equal(result.classification, "MATCH");
+  assert.equal(result.audit.relations.payerDocument, "MATCH");
+});
+
+Deno.test("classificador exige tipo juridico para CNPJ numericamente ambiguo", async () => {
+  const payerDocument = "00012345678901";
+  const matching = await classifyBaneseBoletoCollision(
+    makeBaneseTitleResponse(
+      BANESE_DOCUMENT_FIXTURE.amount,
+      BANESE_DOCUMENT_FIXTURE.dueDate,
+      { Pagador: { TipoPessoa: "J", NumeroCPFCNPJ: "12345678901" } },
+    ),
+    { ...expected, payerDocument },
+  );
+  const wrongType = await classifyBaneseBoletoCollision(
+    makeBaneseTitleResponse(
+      BANESE_DOCUMENT_FIXTURE.amount,
+      BANESE_DOCUMENT_FIXTURE.dueDate,
+      { Pagador: { TipoPessoa: "F", NumeroCPFCNPJ: "12345678901" } },
+    ),
+    { ...expected, payerDocument },
+  );
+  const missingType = await classifyBaneseBoletoCollision(
+    makeBaneseTitleResponse(
+      BANESE_DOCUMENT_FIXTURE.amount,
+      BANESE_DOCUMENT_FIXTURE.dueDate,
+      { Pagador: { NumeroCPFCNPJ: "12345678901" } },
+    ),
+    { ...expected, payerDocument },
+  );
+
+  assert.equal(matching.classification, "MATCH");
+  assert.equal(wrongType.classification, "INDETERMINATE");
+  assert.equal(wrongType.audit.relations.payerDocument, "DIFFERENT");
+  assert.equal(missingType.classification, "INDETERMINATE");
+  assert.equal(missingType.audit.relations.payerDocument, "MISSING");
+});
+
 Deno.test("classificador reconhece FOREIGN somente com identidades fortes completas divergentes", async () => {
   const result = await classifyBaneseBoletoCollision(
     makeBaneseTitleResponse(
@@ -51,7 +100,6 @@ Deno.test("classificador reconhece FOREIGN somente com identidades fortes comple
       {
         NumeroDocumento: "documento-remoto-antigo",
         IdTituloEmpresa: "titulo-remoto-antigo",
-        Pagador: { NumeroCPFCNPJ: 98765432100 },
       },
     ),
     expected,
@@ -61,6 +109,23 @@ Deno.test("classificador reconhece FOREIGN somente com identidades fortes comple
   assert.equal(result.audit.reason, "STRONG_TITLE_IDENTITIES_DIVERGE");
   assert.equal(result.audit.remoteComplete, true);
   assert.equal(result.audit.internallyConsistent, true);
+});
+
+Deno.test("resposta completa internamente inconsistente nunca vira FOREIGN", async () => {
+  const anotherTitle = baneseDocumentFixtureAt(1);
+  const result = await classifyBaneseBoletoCollision(
+    makeBaneseTitleResponse(
+      BANESE_DOCUMENT_FIXTURE.amount,
+      BANESE_DOCUMENT_FIXTURE.dueDate,
+      { NumeroCodigoBarras: anotherTitle.barcode },
+    ),
+    expected,
+  );
+
+  assert.equal(result.classification, "INDETERMINATE");
+  assert.equal(result.audit.reason, "REMOTE_RESPONSE_INCONSISTENT");
+  assert.equal(result.audit.remoteComplete, true);
+  assert.equal(result.audit.internallyConsistent, false);
 });
 
 Deno.test("campo remoto ausente ou malformado permanece INDETERMINATE", async () => {

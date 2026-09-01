@@ -37,6 +37,10 @@ import {
 } from "./gateway-view.ts";
 import { buildGatewayChargeInput } from "./gateway-charge-input.ts";
 import {
+  isEadBaneseBoletoCheckout,
+  persistEadBaneseCheckoutResult,
+} from "./ead-banese-checkout-persistence.ts";
+import {
   isGatewayReceivableLocallyPayable,
   loadGatewayCheckoutReceivable,
 } from "./gateway-receivable.ts";
@@ -381,56 +385,68 @@ export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
       expectedBankSlipOurNumber: gatewayResult.bankSlipOurNumber,
     });
 
-    let persistQuery = context.admin
-      .from("contas_receber")
-      .update({
-        ...gatewayReceivableUpdate({
-          providerCode,
-          environment: context.environment,
-          paymentMethod: context.charge.method,
-          installments: context.charge.installmentCount,
-          result: gatewayResult,
-        }),
-        gateway_creation_token: null,
-        gateway_submission_channel: "API",
-        gateway_submission_status: "API_REGISTERED",
-      })
-      .eq("id", lockedReceivable.id)
-      .eq("gateway_provider", providerCode)
-      .eq("gateway_environment", context.environment)
-      .eq("gateway_payment_method", context.charge.method)
-      .eq("gateway_status", "CREATING")
-      .in("status", [...CHECKOUT_MUTABLE_RECEIVABLE_STATUSES])
-      .is("gateway_payment_id", null);
-    persistQuery = applyCheckoutAttemptSnapshot(
-      persistQuery,
-      postCreateSnapshot,
-    );
-    const { data, error: updateGatewayError } = await persistQuery.select()
-      .maybeSingle();
-    if (updateGatewayError) throw updateGatewayError;
-    if (!data) {
-      throw new Error(
-        "Cobranca mudou antes de persistir o titulo criado no gateway.",
+    const atomicEadBanese = isEadBaneseBoletoCheckout(context);
+    if (atomicEadBanese) {
+      updatedReceivable = await persistEadBaneseCheckoutResult(
+        context,
+        postCreateSnapshot,
+        gatewayResult,
       );
+    } else {
+      let persistQuery = context.admin
+        .from("contas_receber")
+        .update({
+          ...gatewayReceivableUpdate({
+            providerCode,
+            environment: context.environment,
+            paymentMethod: context.charge.method,
+            installments: context.charge.installmentCount,
+            result: gatewayResult,
+          }),
+          gateway_creation_token: null,
+          gateway_submission_channel: "API",
+          gateway_submission_status: "API_REGISTERED",
+        })
+        .eq("id", lockedReceivable.id)
+        .eq("gateway_provider", providerCode)
+        .eq("gateway_environment", context.environment)
+        .eq("gateway_payment_method", context.charge.method)
+        .eq("gateway_status", "CREATING")
+        .in("status", [...CHECKOUT_MUTABLE_RECEIVABLE_STATUSES])
+        .is("gateway_payment_id", null);
+      persistQuery = applyCheckoutAttemptSnapshot(
+        persistQuery,
+        postCreateSnapshot,
+      );
+      const { data, error: updateGatewayError } = await persistQuery.select()
+        .maybeSingle();
+      if (updateGatewayError) throw updateGatewayError;
+      if (!data) {
+        throw new Error(
+          "Cobranca mudou antes de persistir o titulo criado no gateway.",
+        );
+      }
+      updatedReceivable = data;
     }
-    updatedReceivable = data;
 
     const inscricaoOnline = await repairCheckoutInscricao(
       context,
       updatedReceivable,
+      atomicEadBanese,
     );
 
-    await persistGatewayTransaction(context.admin, {
-      receivable: updatedReceivable,
-      inscricaoOnlineId: inscricaoOnline?.id || null,
-      providerCode,
-      environment: context.environment,
-      paymentMethod: context.charge.method,
-      amount: context.charge.value,
-      installments: context.charge.installmentCount,
-      result: gatewayResult,
-    });
+    if (!atomicEadBanese) {
+      await persistGatewayTransaction(context.admin, {
+        receivable: updatedReceivable,
+        inscricaoOnlineId: inscricaoOnline?.id || null,
+        providerCode,
+        environment: context.environment,
+        paymentMethod: context.charge.method,
+        amount: context.charge.value,
+        installments: context.charge.installmentCount,
+        result: gatewayResult,
+      });
+    }
   } catch (error) {
     throw markRemotePaymentCreated(error);
   }

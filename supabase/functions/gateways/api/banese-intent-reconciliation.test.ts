@@ -120,6 +120,30 @@ Deno.test("GET Banese positivo confirma submissao ambigua por CAS", async () => 
   );
 });
 
+Deno.test("encaminha AbortSignal ao GET de conciliacao Banese", async () => {
+  const receivable: FakeRow = receivableFixture({
+    gateway_status: "CREATING",
+    gateway_creation_token: "attempt-with-timeout",
+    gateway_submission_channel: "API",
+    gateway_submission_status: "API_AMBIGUOUS",
+    gateway_financial_terms_confirmed_at: null,
+  });
+  const admin = fakeAdmin(receivable);
+  const controller = new AbortController();
+  let receivedSignal: AbortSignal | undefined;
+
+  const result = await reconcileBaneseReceivable(admin, RECEIVABLE_ID, {
+    signal: controller.signal,
+    queryBoleto: (_admin, _environment, input) => {
+      receivedSignal = input.signal;
+      return Promise.resolve(boletoSnapshot() as any);
+    },
+  });
+
+  assert.equal(result.success, true);
+  assert.strictEqual(receivedSignal, controller.signal);
+});
+
 Deno.test("API_AMBIGUOUS recupera Pix com par bancario local ausente", async () => {
   const receivable: FakeRow = receivableFixture({
     gateway_status: "CREATING",

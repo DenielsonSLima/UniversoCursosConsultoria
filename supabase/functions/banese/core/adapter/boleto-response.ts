@@ -8,7 +8,10 @@ import {
 } from "../../internal/financial-terms-response.ts";
 import { normalizeBaneseFinancialTerms } from "../../internal/financial-terms.ts";
 import { assertBaneseBankNumbers } from "../../internal/types.ts";
-import type { BaneseBoletoPayload } from "./boleto-payload.ts";
+import {
+  type BaneseBoletoPayload,
+  canonicalBanesePayerDocument,
+} from "./boleto-payload.ts";
 import {
   type AdapterCreateChargeInput,
   type AdapterCreateChargeResult,
@@ -40,7 +43,10 @@ export const boletoResultFromResponse = (
     dueDate: payload.DataVencimento,
     documentNumber: payload.NumeroDocumento,
     companyTitleId: payload.IdTituloEmpresa,
-    payerDocument: payload.Pagador.NumeroCPFCNPJ,
+    // O contrato Banese exige NumeroCPFCNPJ numérico no JSON e, portanto,
+    // remove zeros à esquerda. A identidade local continua sendo a string
+    // canônica recebida antes da serialização bancária.
+    payerDocument: canonicalBanesePayerDocument(input.payer),
     requireRemoteTitleIdentity: recovered,
     agency,
     account: metadata.baneseConta ?? metadata.baneseContaDisplay,
@@ -110,6 +116,55 @@ type BaneseBoletoResponseExpectation = {
   payerDocument?: unknown;
 };
 
+export type BanesePayerDocumentComparison = {
+  status: "MATCH" | "DIFFERENT" | "MISSING" | "AMBIGUOUS";
+  remoteDocument: string;
+};
+
+export const compareBanesePayerDocument = (
+  rawPayer: unknown,
+  expectedValue: unknown,
+): BanesePayerDocumentComparison => {
+  const expectedDocument = onlyDigits(expectedValue);
+  const payer = asRecord(rawPayer);
+  const remoteDigits = onlyDigits(
+    payer.NumeroCPFCNPJ ?? payer.numeroCPFCNPJ ?? payer.numeroCpfCnpj,
+  );
+  if (!remoteDigits) return { status: "MISSING", remoteDocument: "" };
+
+  const expectedType = expectedDocument.length === 14 ? "J" : "F";
+  const remoteTypeValue = firstString(
+    payer.TipoPessoa,
+    payer.tipoPessoa,
+  ).toUpperCase();
+  if (remoteTypeValue && !["F", "J"].includes(remoteTypeValue)) {
+    return { status: "DIFFERENT", remoteDocument: "" };
+  }
+
+  if (
+    !remoteTypeValue && expectedType === "J" && remoteDigits.length <= 11 &&
+    remoteDigits.padStart(14, "0") === expectedDocument
+  ) {
+    // Sem TipoPessoa, 11 dígitos (ou menos) podem representar tanto um CPF
+    // quanto um CNPJ que perdeu zeros na serialização numérica.
+    return { status: "AMBIGUOUS", remoteDocument: "" };
+  }
+
+  const remoteType = remoteTypeValue ||
+    (remoteDigits.length > 11 ? "J" : expectedType);
+  const remoteLength = remoteType === "J" ? 14 : 11;
+  if (remoteDigits.length > remoteLength) {
+    return { status: "DIFFERENT", remoteDocument: remoteDigits };
+  }
+  const remoteDocument = remoteDigits.padStart(remoteLength, "0");
+  return {
+    status: remoteType === expectedType && remoteDocument === expectedDocument
+      ? "MATCH"
+      : "DIFFERENT",
+    remoteDocument,
+  };
+};
+
 const assertBaneseReturnedIdentity = (
   rawRecord: Record<string, unknown>,
   expected: BaneseBoletoResponseExpectation,
@@ -157,17 +212,14 @@ const assertBaneseReturnedIdentity = (
     if (![11, 14].includes(expectedPayerDocument.length)) {
       throw new Error("CPF/CNPJ esperado do pagador Banese e invalido.");
     }
-    const payer = asRecord(rawRecord.Pagador ?? rawRecord.pagador);
-    const remotePayerDigits = onlyDigits(
-      payer.NumeroCPFCNPJ ?? payer.numeroCPFCNPJ ?? payer.numeroCpfCnpj,
+    const comparison = compareBanesePayerDocument(
+      rawRecord.Pagador ?? rawRecord.pagador,
+      expectedPayerDocument,
     );
-    const remotePayerDocument = remotePayerDigits.length <=
-        expectedPayerDocument.length
-      ? remotePayerDigits.padStart(expectedPayerDocument.length, "0")
-      : remotePayerDigits;
     if (
-      (expected.requireRemoteTitleIdentity && !remotePayerDigits) ||
-      (remotePayerDigits && remotePayerDocument !== expectedPayerDocument)
+      (expected.requireRemoteTitleIdentity &&
+        comparison.status === "MISSING") ||
+      !["MATCH", "MISSING"].includes(comparison.status)
     ) {
       throw new Error(
         "CPF/CNPJ do pagador retornado pelo Banese diverge do recebivel solicitado.",

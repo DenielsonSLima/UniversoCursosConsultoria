@@ -13,6 +13,7 @@ export const recoverBanesePixBeforeFinancialReconciliation = async (
     persistedPixEncodedImage: string;
     allowLegacyImportedBankNumbersMismatch?: boolean;
     skipLegacyImportedPixPersistence?: boolean;
+    requirePayableStateCas?: boolean;
   },
 ) => {
   const { receivable, snapshot } = input;
@@ -75,6 +76,7 @@ export const recoverBanesePixBeforeFinancialReconciliation = async (
         pixEncodedImage: snapshot.pixEncodedImage,
         raw: snapshot.raw,
       },
+      requirePayableStateCas: input.requirePayableStateCas,
     });
     pixPayload = snapshot.pixPayload;
     pixEncodedImage = snapshot.pixEncodedImage;

@@ -51,6 +51,7 @@ const buildContext = (rows: Array<Record<string, any>>) => ({
   matricula: { id: MATRICULA_ID },
   aluno: { id: "33333333-3333-4333-8333-333333333333" },
   turma: { id: "44444444-4444-4444-8444-444444444444" },
+  course: { modalidade: "EAD" },
   environment: "production",
   charge: {
     method: "BOLETO",
@@ -59,6 +60,58 @@ const buildContext = (rows: Array<Record<string, any>>) => ({
     dueDate: "2026-09-01",
     description: "Curso EAD",
   },
+});
+
+Deno.test("reuse EAD tenta recuperar Pix antes de devolver o boleto", async () => {
+  const rows = [buildReceivable()];
+  let recoveryCalls = 0;
+  const result = await repairAndRevalidateGatewayReuse(
+    buildContext(rows) as any,
+    rows[0],
+    "banese_card",
+    {
+      repairGatewayTransaction: () => Promise.resolve(null),
+      repairInscricao: () => Promise.resolve(null),
+      recoverEadBanesePix: (_admin, input) => {
+        recoveryCalls += 1;
+        rows[0].gateway_pix_payload = "000201-pix-oficial";
+        rows[0].gateway_pix_encoded_image = "data:image/png;base64,oficial";
+        return Promise.resolve({
+          receivable: { ...input.receivable, ...rows[0] },
+          attempted: true,
+          recovered: true,
+          refreshRecommended: true,
+          reviewRequired: false,
+        });
+      },
+    },
+  );
+
+  assert.equal(recoveryCalls, 1);
+  assert.equal(result.gateway_pix_payload, "000201-pix-oficial");
+});
+
+Deno.test("reuse fora da modalidade EAD nao consulta Pix do Banese", async () => {
+  const rows = [buildReceivable()];
+  let recoveryCalls = 0;
+  const context = buildContext(rows);
+  context.course.modalidade = "TECNICO";
+
+  await repairAndRevalidateGatewayReuse(
+    context as any,
+    rows[0],
+    "banese_card",
+    {
+      repairGatewayTransaction: () => Promise.resolve(null),
+      repairInscricao: () => Promise.resolve(null),
+      recoverEadBanesePix: () => {
+        recoveryCalls += 1;
+        return Promise.reject(new Error("nao deveria consultar"));
+      },
+    },
+  );
+
+  assert.equal(recoveryCalls, 0);
 });
 
 Deno.test("reuse revalida depois do repair e nao devolve titulo suspenso", async () => {

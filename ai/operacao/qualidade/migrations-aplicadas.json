@@ -399,6 +399,27 @@
       "remoteId": "20260831043524",
       "sha256": "8a7bb1bb0780cd71d03d2abf04f2f979d098ec490619b503af7b2f94a510c560",
       "reason": "Migration aplicada em Produção; expõe desconto Banese confirmado somente com nosso número canônico e separa a oferta da baixa efetiva."
+    },
+    {
+      "path": "supabase/migrations/20260831174500_claim_banese_api_submission_before_post.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260831180840",
+      "sha256": "67f6bf2db01d67fd0c8e6c0d51da110a80faaf9bee3e30851ac8050fd1e0e3ce",
+      "reason": "Migration aplicada em Produção; grava a intenção durável antes do POST Banese."
+    },
+    {
+      "path": "supabase/migrations/20260831182500_reconcile_ead_ambiguous_banese_once.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260831185212",
+      "sha256": "ae26c73f6f1b8738de4c3e850b36b24329b186f4a3c7dd44e1d6df525f2ac58f",
+      "reason": "Migration aplicada em Produção; reconcilia submissões EAD ambíguas por GET único."
+    },
+    {
+      "path": "supabase/migrations/20260831210000_harden_banese_pix_only_persistence_cas.sql",
+      "kind": "applied-migration",
+      "remoteId": "20260901010034",
+      "sha256": "e2c4ce190e3afa9be79dd4667b7c78f32ddd5b2956232f8fa56670547376575f",
+      "reason": "Migration aplicada em Produção; protege a persistência Pix-only com CAS do estado pagável."
     }
   ]
 }

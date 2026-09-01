@@ -6,6 +6,7 @@ import {
   validateBanesePixChargeInput,
 } from "./adapter.ts";
 import { validInput } from "./adapter-test-fixtures.ts";
+import { canonicalBanesePayerDocument } from "./adapter/boleto-payload.ts";
 
 Deno.test("calcula DV do Nosso Numero Banese com agencia", () => {
   assert.equal(calculateBaneseNossoNumero("033", "00000001"), "000000015");
@@ -45,6 +46,14 @@ Deno.test("payload boleto preserva campos financeiros validados", () => {
     Valor: 1,
     TipoMulta: 1,
   });
+});
+
+Deno.test("payload bancario numerico nao apaga a identidade canonica do CPF", () => {
+  const payer = { ...validInput.payer, document: "08496821501" };
+  const payload = buildBaneseBoletoPayload({ ...validInput, payer });
+
+  assert.equal(payload.Pagador.NumeroCPFCNPJ, 8496821501);
+  assert.equal(canonicalBanesePayerDocument(payer), "08496821501");
 });
 
 Deno.test("boleto de disciplina fixa baixa bancária em 60 dias", () => {

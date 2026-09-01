@@ -2,6 +2,7 @@ export type BaneseEnvironment = "sandbox" | "production";
 
 export type BaneseStudentPaymentRow = {
   id: string;
+  created_at: string | null;
   cliente_id: string | null;
   matricula_id: string | null;
   turma_id: string | null;
@@ -18,11 +19,15 @@ export type BaneseStudentPaymentRow = {
   gateway_environment: string | null;
   gateway_payment_method: string | null;
   gateway_status: string | null;
+  gateway_synced_at: string | null;
+  gateway_last_error: string | null;
+  updated_at: string | null;
   gateway_pix_payload: string | null;
   gateway_pix_encoded_image: string | null;
   gateway_boleto_linha_digitavel: string | null;
   gateway_boleto_codigo_barras: string | null;
   gateway_boleto_nosso_numero: string | null;
+  gateway_boleto_issued_at: string | null;
   gateway_boleto_convenio: string | null;
   gateway_boleto_agencia: string | null;
   gateway_issuer_polo_id: string | null;

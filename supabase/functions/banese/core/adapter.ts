@@ -17,10 +17,10 @@ export {
   reserveBaneseNossoNumero,
 } from "./adapter/auth.ts";
 export {
-  cancelBaneseBoleto,
   createBaneseBoletoCharge,
   queryBaneseBoleto,
 } from "./adapter/boleto.ts";
+export { cancelBaneseBoleto } from "./adapter/boleto-cancellation.ts";
 export {
   buildBaneseBoletoPayload,
   validateBaneseBoletoPayloadInput,
