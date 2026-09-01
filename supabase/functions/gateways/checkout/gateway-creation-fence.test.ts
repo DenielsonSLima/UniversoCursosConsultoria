@@ -77,6 +77,32 @@ Deno.test("Banese API_AMBIGUOUS expirado nunca adquire nova trava", async () => 
   assert.equal(admin.row().updated_at, "2026-07-21T09:00:00.000Z");
 });
 
+Deno.test("Banese API_REVIEW terminal nunca adquire nova trava", async () => {
+  const snapshot = {
+    id: "receivable-banese-review",
+    status: "PENDENTE",
+    updated_at: "2026-07-21T09:00:00.000Z",
+    gateway_creation_token: "attempt-original",
+    gateway_provider: "banese_card",
+    gateway_environment: "production",
+    gateway_payment_method: "BOLETO",
+    gateway_status: "CREATING",
+    gateway_submission_channel: "API",
+    gateway_submission_status: "API_REVIEW",
+  };
+  const admin = concurrentAdmin(snapshot);
+  const claimed = await claimExistingGatewayCheckout({
+    admin,
+    receivable: snapshot,
+    receivablePayload: {},
+    providerCode: "banese_card",
+    attemptToken: "attempt-retry",
+    staleCreatingBefore: "2026-07-21T10:00:00.000Z",
+  });
+  assert.equal(claimed, null);
+  assert.equal(admin.row().gateway_creation_token, "attempt-original");
+});
+
 Deno.test("Banese CREATING sem marcador remoto pode usar a janela explicita", async () => {
   const snapshot = {
     id: "receivable-banese-local-stale",
@@ -107,6 +133,39 @@ Deno.test("Banese CREATING sem marcador remoto pode usar a janela explicita", as
 
   assert.equal(claimed?.gateway_creation_token, "attempt-retry");
   assert.equal(admin.row().gateway_submission_status, null);
+});
+
+Deno.test("status Banese isolado nunca e sobrescrito por nova tentativa", async () => {
+  for (const gatewayStatus of ["PENDING", "OPEN", "PAID", "CANCELED"]) {
+    const snapshot = {
+      id: `receivable-banese-${gatewayStatus}`,
+      status: "PENDENTE",
+      updated_at: "2026-07-21T09:00:00.000Z",
+      gateway_creation_token: null,
+      gateway_provider: "banese_card",
+      gateway_environment: "production",
+      gateway_payment_method: "BOLETO",
+      gateway_status: gatewayStatus,
+      gateway_payment_id: null,
+      gateway_payment_link_id: null,
+      gateway_boleto_nosso_numero: null,
+      gateway_submission_channel: null,
+      gateway_submission_status: null,
+    };
+    const admin = concurrentAdmin(snapshot);
+    const claimed = await claimExistingGatewayCheckout({
+      admin,
+      receivable: snapshot,
+      receivablePayload: {},
+      providerCode: "banese_card",
+      attemptToken: "attempt-retry",
+      claimedAt: "2026-07-21T10:05:00.000Z",
+      staleCreatingBefore: "2026-07-21T10:00:00.000Z",
+    });
+    assert.equal(claimed, null);
+    assert.equal(admin.row().gateway_status, gatewayStatus);
+    assert.equal(admin.row().gateway_creation_token, null);
+  }
 });
 
 Deno.test("API_AMBIGUOUS sem CREATING tambem permanece fail-closed", async () => {
@@ -194,8 +253,8 @@ Deno.test("snapshot do checkout inclui estado, identidade e termos canonicos", (
     ["eq", "data_vencimento", "2026-08-30"],
     ["eq", "descricao", "Inscricao EAD"],
     ["eq", "origem_pagamento", "GATEWAY_ONLINE"],
+    ["is", "forma_pagamento", null],
     ["eq", "updated_at", "2026-07-21T10:00:00.000Z"],
-    ["is", "gateway_creation_token", null],
   ]);
   assert.equal(
     filters.some(([kind, field, value]) =>
@@ -347,6 +406,13 @@ Deno.test("CAS rejeita drift de identidade, pagamento e termos sem depender de u
     { valor: 109.9 },
     { data_vencimento: "2026-09-15" },
     { descricao: "Titulo substituido" },
+    { gateway_pix_payload: "pix-oficial-concorrente" },
+    { gateway_pix_encoded_image: "data:image/png;base64,iVBORw0KGgo" },
+    { gateway_boleto_issued_at: "2026-08-26T10:04:00.000Z" },
+    { gateway_financial_terms_confirmed_at: "2026-08-26T10:04:00.000Z" },
+    { gateway_transaction_receipt_url: "https://bank.example/receipt" },
+    { valor_pago: 100 },
+    { gateway_settlement_recorded_at: "2026-08-26T10:04:00.000Z" },
   ];
 
   for (const drift of drifts) {

@@ -100,9 +100,11 @@ test("composição lista rematrícula, parcelas, valores, vencimentos e termos",
   assert.match(dialogSource, /Juros/i);
 });
 
-test("revisão usa o CTA de produto e não expõe implementação local", () => {
-  assert.match(dialogSource, /(?:>\s*Gerar cobranças\s*<|['"]Gerar cobranças['"])/);
+test("revisão usa um único CTA de geração e emissão bancária", () => {
+  assert.match(dialogSource, /Gerar e emitir BolePix/);
+  assert.match(dialogSource, /Geração e emissão em uma única ação/);
   assert.doesNotMatch(dialogSource, /Criar(?:\s+\$\{[^}]*\})?\s+recebíveis locais/i);
+  assert.doesNotMatch(dialogSource, /Emissão bancária continua separada|Nenhum boleto Banese/i);
 });
 
 test("foco, Escape, rolagem e restauração permanecem protegidos", () => {

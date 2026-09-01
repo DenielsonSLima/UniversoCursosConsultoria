@@ -5,6 +5,70 @@ import {
   normalizeGatewayAdapterResult,
   repairGatewayTransactionFromReceivable,
 } from "./router.ts";
+import { withProviderMetadata } from "./router-adapter-runtime.ts";
+
+const gatewayMetadataAdmin = (issuerPoloId: string) => ({
+  from(table: string) {
+    const builder: any = {
+      select: () => builder,
+      eq: () => builder,
+      maybeSingle: async () => {
+        if (table === "payment_gateway_credentials") {
+          return { data: { metadata: {} }, error: null };
+        }
+        if (table === "payment_gateway_issuer_config") {
+          return {
+            data: {
+              issuer_polo_id: issuerPoloId,
+              active: true,
+              applies_to_all_polos: true,
+            },
+            error: null,
+          };
+        }
+        if (table === "polos") {
+          return {
+            data: {
+              id: issuerPoloId,
+              company_id: "company-matriz",
+              nome: "Matriz",
+              cnpj: "13278137000154",
+              cidade: "Japoatã",
+              estado: "SE",
+              status: "ativo",
+              is_matriz: true,
+            },
+            error: null,
+          };
+        }
+        return { data: null, error: null };
+      },
+    };
+    return builder;
+  },
+});
+
+Deno.test("router bloqueia drift do emissor antes de chamar o adapter", async () => {
+  const issuerPoloId = "11111111-1111-4111-8111-111111111111";
+  await assert.rejects(
+    () =>
+      withProviderMetadata({
+        admin: gatewayMetadataAdmin(issuerPoloId),
+        supabaseUrl: "https://example.supabase.co",
+        providerCode: "banese_card",
+        environment: "production",
+        paymentMethod: "BOLETO",
+        receivable: {
+          id: "receivable-emissor",
+          gateway_issuer_polo_id: "22222222-2222-4222-8222-222222222222",
+        },
+        payer: {},
+        amount: 100,
+        description: "Rematrícula",
+      }),
+    /emissor financeiro.*divergiu da Matriz/i,
+  );
+});
 
 for (const environment of ["sandbox", "production"] as const) {
   Deno.test(`facade bloqueia Pix Banese direto em ${environment} antes de consultar configuracao`, async () => {

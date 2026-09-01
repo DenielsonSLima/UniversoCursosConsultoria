@@ -29,6 +29,13 @@ export const hasRemoteTitleReference = (receivable: any) =>
       receivable?.gateway_boleto_linha_digitavel ||
       receivable?.gateway_boleto_codigo_barras ||
       receivable?.gateway_boleto_nosso_numero ||
+      receivable?.gateway_pix_payload ||
+      receivable?.gateway_pix_encoded_image ||
+      receivable?.gateway_invoice_url ||
+      receivable?.gateway_bank_slip_url ||
+      receivable?.gateway_transaction_receipt_url ||
+      receivable?.gateway_boleto_issued_at ||
+      receivable?.gateway_financial_terms_confirmed_at ||
       receivable?.asaas_payment_id ||
       receivable?.asaas_payment_link_id,
   );
@@ -37,6 +44,10 @@ export const hasAmbiguousGatewaySubmission = (receivable: any) =>
   String(
     receivable?.gateway_submission_status || "",
   ).trim().toUpperCase() === "API_AMBIGUOUS";
+
+export const hasGatewaySubmissionReview = (receivable: any) =>
+  String(receivable?.gateway_submission_status || "")
+    .trim().toUpperCase() === "API_REVIEW";
 
 const ambiguousGatewaySubmissionError = (receivable: any) => {
   const provider = String(receivable?.gateway_provider || "")
@@ -68,11 +79,17 @@ export const hasAmbiguousRemoteCreation = (receivable: any) => {
     receivable?.asaas_status,
   ].some((value) => String(value || "").trim().toUpperCase() === "CREATING");
   return hasAmbiguousGatewaySubmission(receivable) ||
+    hasGatewaySubmissionReview(receivable) ||
     (hasCreatingStatus && !hasRemoteTitleReference(receivable));
 };
 
 export const assertNoAmbiguousRemoteCreation = (receivable: any) => {
   if (hasAmbiguousRemoteCreation(receivable)) {
+    if (hasGatewaySubmissionReview(receivable)) {
+      throw new Error(
+        "A criação do título bancário está bloqueada para revisão e não pode ser retomada automaticamente.",
+      );
+    }
     if (hasAmbiguousGatewaySubmission(receivable)) {
       throw ambiguousGatewaySubmissionError(receivable);
     }

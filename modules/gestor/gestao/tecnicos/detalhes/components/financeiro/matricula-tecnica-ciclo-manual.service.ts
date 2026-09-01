@@ -1,10 +1,12 @@
 import { supabase } from '../../../../../../../lib/supabase';
 import type {
+  CicloFinanceiroTecnicoManualEmissaoProgress,
   CicloFinanceiroTecnicoManualPreview,
   GerarCicloFinanceiroTecnicoManualInput,
   GerarCicloFinanceiroTecnicoManualResult,
   PreviewCicloFinanceiroTecnicoManualInput,
   PreviewCicloFinanceiroTecnicoManualResult,
+  RetomarEmissaoCicloFinanceiroTecnicoManualInput,
 } from './matricula-tecnica-ciclo-manual.types';
 import { requireMatriculaTecnicaCicloManual } from './matricula-tecnica-ciclo-manual.parser';
 
@@ -118,7 +120,7 @@ const requireGenerationResult = (
   value: unknown,
 ): GerarCicloFinanceiroTecnicoManualResult => {
   if (!isRecord(value) || !isRecord(value.ciclo) || !Array.isArray(value.ciclo.recebiveis)) {
-    throw new Error('O servidor não confirmou a geração local do ciclo.');
+    throw new Error('O servidor não confirmou a geração e emissão do ciclo.');
   }
   const cycle = value.ciclo;
   const receivables = cycle.recebiveis as unknown[];
@@ -131,33 +133,154 @@ const requireGenerationResult = (
     && Number(item.numero) >= 0
     && isNonEmptyString(item.descricao)
     && isDecimalString(item.valor)
-    && isNonEmptyString(item.vencimento)
-    && item.status === 'PENDENTE'
-    && item.emissaoBanese === 'NAO_EMITIDO'
+    && isIsoCalendarDate(item.vencimento)
+    && ['PENDENTE', 'VENCIDO'].includes(String(item.status))
+    && item.emissaoBanese === 'EMITIDO'
   ));
+  const typedReceivables = validReceivables
+    ? receivables as Array<Record<string, unknown>>
+    : [];
   if (
-    value.operacao !== 'GERACAO_CICLO_TECNICO_MANUAL'
+    value.success !== true
     || !isNonEmptyString(value.requestId)
     || typeof value.replayed !== 'boolean'
     || !Number.isInteger(cycle.numero)
     || Number(cycle.numero) < 1
-    || cycle.status !== 'CRIADO_LOCAL'
-    || !Number.isInteger(cycle.quantidadeItens)
-    || Number(cycle.quantidadeItens) < 1
+    || cycle.status !== 'EMITIDO_BANESE'
+    || cycle.quantidadeItens !== 13
     || cycle.quantidadeItens !== receivables.length
     || !isDecimalString(cycle.total)
+    || cycle.emitidosBanese !== 13
+    || cycle.pendentesEmissao !== 0
+    || cycle.emRevisao !== 0
     || !validReceivables
+    || new Set(typedReceivables.map((item) => String(item.id))).size !== 13
+    || new Set(typedReceivables.map((item) => String(item.chave))).size !== 13
   ) {
-    throw new Error('O servidor retornou uma geração local de ciclo incompleta.');
+    throw new Error('O servidor não confirmou as 13 cobranças e os 13 BolePix Banese.');
   }
   const cicloManual = requireMatriculaTecnicaCicloManual(value.cicloManual);
   return {
-    operacao: value.operacao,
+    success: true,
     requestId: value.requestId,
     replayed: value.replayed,
     ciclo: cycle as unknown as GerarCicloFinanceiroTecnicoManualResult['ciclo'],
     cicloManual,
   };
+};
+
+const readIssuanceProgress = (
+  value: unknown,
+): CicloFinanceiroTecnicoManualEmissaoProgress | null => {
+  if (!isRecord(value)) return null;
+  const fields = [
+    value.cicloNumero,
+    value.quantidadeItens,
+    value.emitidosBanese,
+    value.pendentesEmissao,
+    value.emRevisao,
+  ];
+  if (
+    !fields.every(Number.isInteger)
+    || Number(value.cicloNumero) < 1
+    || Number(value.quantidadeItens) < 1
+    || Number(value.emitidosBanese) < 0
+    || Number(value.pendentesEmissao) < 0
+    || Number(value.emRevisao) < 0
+    || Number(value.emitidosBanese) + Number(value.pendentesEmissao)
+      + Number(value.emRevisao) > Number(value.quantidadeItens)
+  ) return null;
+  return value as unknown as CicloFinanceiroTecnicoManualEmissaoProgress;
+};
+
+export class CicloFinanceiroTecnicoManualIssuanceError extends Error {
+  constructor(
+    message: string,
+    readonly progress: CicloFinanceiroTecnicoManualEmissaoProgress | null,
+  ) {
+    super(message);
+    this.name = 'CicloFinanceiroTecnicoManualIssuanceError';
+  }
+}
+
+export const isCicloFinanceiroTecnicoManualIssuanceError = (
+  error: unknown,
+): error is CicloFinanceiroTecnicoManualIssuanceError => (
+  error instanceof CicloFinanceiroTecnicoManualIssuanceError
+);
+
+export const getCicloFinanceiroTecnicoManualRecoveryGuidance = (
+  error: unknown,
+) => {
+  const progress = isCicloFinanceiroTecnicoManualIssuanceError(error)
+    ? error.progress
+    : null;
+  if (progress && progress.emRevisao > 0 && progress.pendentesEmissao === 0) {
+    return 'Revisão manual necessária; não tente uma nova emissão.';
+  }
+  return 'Use “Retomar emissão”; não gere o ciclo novamente.';
+};
+
+const createIssuanceError = (body: unknown, fallback: unknown) => {
+  const message = isRecord(body) && isNonEmptyString(body.error)
+    ? body.error
+    : fallback instanceof Error && isNonEmptyString(fallback.message)
+      ? fallback.message
+      : 'Não foi possível concluir a emissão BolePix Banese.';
+  const error = new CicloFinanceiroTecnicoManualIssuanceError(
+    message,
+    isRecord(body) ? readIssuanceProgress(body.progress) : null,
+  );
+  if (isRecord(body) && isNonEmptyString(body.code)) {
+    Object.assign(error, { code: body.code });
+  }
+  return error;
+};
+
+const readFunctionError = async (error: unknown) => {
+  const context = isRecord(error) && isRecord(error.context)
+    ? error.context as { json?: () => Promise<unknown> }
+    : null;
+  const body = context?.json ? await context.json().catch(() => null) : null;
+  return createIssuanceError(body, error);
+};
+
+const invokeIssuance = async (
+  body: Record<string, unknown>,
+): Promise<GerarCicloFinanceiroTecnicoManualResult> => {
+  const { data, error } = await supabase.functions.invoke(
+    'technical-manual-cycle-issuance',
+    { body },
+  );
+  if (error) throw await readFunctionError(error);
+  if (isRecord(data) && isNonEmptyString(data.error)) {
+    throw createIssuanceError(data, null);
+  }
+  return requireGenerationResult(data);
+};
+
+const reconcileIssuedCycle = (
+  result: GerarCicloFinanceiroTecnicoManualResult,
+  cycleNumber: number,
+) => {
+  const generated = result.cicloManual.cicloGerado;
+  const finalCycle = cycleNumber === result.cicloManual.cicloMaximo;
+  const validTransition = finalCycle
+    ? result.cicloManual.estado === 'JA_GERADO'
+      && !result.cicloManual.podeGerar
+    : ['BLOQUEADO', 'ELEGIVEL'].includes(result.cicloManual.estado)
+      && result.cicloManual.proximoCicloNumero === cycleNumber + 1;
+  if (
+    result.ciclo.numero !== cycleNumber
+    || !validTransition
+    || generated?.numero !== cycleNumber
+    || generated.quantidadeItens !== result.ciclo.quantidadeItens
+    || generated.emitidosBanese !== result.ciclo.quantidadeItens
+    || generated.pendentesEmissao !== 0
+    || generated.emRevisao !== 0
+  ) {
+    throw new Error('O servidor não reconciliou o ciclo emitido solicitado.');
+  }
 };
 
 const requirePreviewResult = (
@@ -229,36 +352,32 @@ export const matriculaTecnicaCicloManualService = {
       input.cicloNumero,
       input.primeiroVencimento,
     );
-    const result = await unwrap(
-      supabase.rpc('gerar_ciclo_financeiro_tecnico_manual_secure', {
-        p_matricula_id: input.matriculaId,
-        p_ciclo_numero: input.cicloNumero,
-        p_primeiro_vencimento: input.primeiroVencimento,
-        p_request_id: input.requestId,
-        p_expected_regra_fingerprint: input.expectedRegraFingerprint,
-        p_expected_politica_fingerprint: input.expectedPoliticaFingerprint,
-        p_expected_cronograma_fingerprint: input.expectedCronogramaFingerprint,
-      }),
-      requireGenerationResult,
-    );
-    const generated = result.cicloManual.cicloGerado;
-    const finalCycle = input.cicloNumero === result.cicloManual.cicloMaximo;
-    const validTransition = finalCycle
-      ? result.cicloManual.estado === 'JA_GERADO'
-        && !result.cicloManual.podeGerar
-      : ['BLOQUEADO', 'ELEGIVEL'].includes(result.cicloManual.estado)
-        && result.cicloManual.proximoCicloNumero === input.cicloNumero + 1;
-    if (
-      result.requestId !== input.requestId
-      || result.ciclo.numero !== input.cicloNumero
-      || !validTransition
-      || generated?.numero !== input.cicloNumero
-      || generated.quantidadeItens !== result.ciclo.quantidadeItens
-      || generated.pendentesEmissao !== result.ciclo.quantidadeItens
-      || generated.emitidosBanese !== 0
-    ) {
-      throw new Error('O servidor não reconciliou o ciclo local solicitado.');
+    const result = await invokeIssuance({
+      action: 'generate',
+      matriculaId: input.matriculaId,
+      cicloNumero: input.cicloNumero,
+      ...(input.primeiroVencimento
+        ? { primeiroVencimento: input.primeiroVencimento }
+        : {}),
+      requestId: input.requestId,
+      expectedRegraFingerprint: input.expectedRegraFingerprint,
+      expectedPoliticaFingerprint: input.expectedPoliticaFingerprint,
+      expectedCronogramaFingerprint: input.expectedCronogramaFingerprint,
+    });
+    if (result.requestId !== input.requestId) {
+      throw new Error('O servidor não reconciliou o identificador da emissão.');
     }
+    reconcileIssuedCycle(result, input.cicloNumero);
+    return result;
+  },
+
+  async resume(input: RetomarEmissaoCicloFinanceiroTecnicoManualInput) {
+    const result = await invokeIssuance({
+      action: 'resume',
+      matriculaId: input.matriculaId,
+      cicloNumero: input.cicloNumero,
+    });
+    reconcileIssuedCycle(result, input.cicloNumero);
     return result;
   },
 };

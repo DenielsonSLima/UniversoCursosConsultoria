@@ -2,6 +2,7 @@ import type { GatewayProviderCode } from "../router.ts";
 import {
   applyReceivableSnapshotFields,
   hasAmbiguousGatewaySubmission,
+  hasGatewaySubmissionReview,
 } from "./remote-title-guard.ts";
 
 export const CHECKOUT_MUTABLE_RECEIVABLE_STATUSES = [
@@ -20,17 +21,40 @@ const CHECKOUT_ATTEMPT_SNAPSHOT_FIELDS = [
   "data_vencimento",
   "descricao",
   "origem_pagamento",
+  "forma_pagamento",
   "updated_at",
+  "valor_pago",
+  "manual_settlement_id",
+  "manual_settlement_principal_cents",
+  "manual_settlement_interest_cents",
+  "manual_settlement_penalty_cents",
+  "manual_settlement_addition_cents",
+  "manual_settlement_discount_cents",
+  "manual_settlement_received_cents",
+  "manual_settlement_reversed_at",
   "gateway_creation_token",
   "gateway_provider",
   "gateway_environment",
   "gateway_payment_method",
+  "gateway_issuer_polo_id",
+  "gateway_installments",
   "gateway_status",
   "gateway_payment_id",
   "gateway_payment_link_id",
+  "gateway_invoice_url",
+  "gateway_bank_slip_url",
+  "gateway_pix_payload",
+  "gateway_pix_encoded_image",
   "gateway_boleto_linha_digitavel",
   "gateway_boleto_codigo_barras",
   "gateway_boleto_nosso_numero",
+  "gateway_boleto_issued_at",
+  "gateway_financial_terms_confirmed_at",
+  "gateway_transaction_receipt_url",
+  "gateway_settlement_channel",
+  "gateway_settlement_source",
+  "gateway_settlement_evidence",
+  "gateway_settlement_recorded_at",
   "gateway_submission_channel",
   "gateway_submission_status",
   "gateway_cnab_file_id",
@@ -74,12 +98,22 @@ export const claimExistingGatewayCheckout = async (input: {
   // identidade tenha sido persistida localmente. Esse estado nunca expira
   // para uma nova emissao: somente uma reconciliacao canonica/manual pode
   // alterar o snapshot e liberar outra tentativa.
-  if (hasAmbiguousGatewaySubmission(input.receivable)) return null;
+  if (
+    hasAmbiguousGatewaySubmission(input.receivable) ||
+    hasGatewaySubmissionReview(input.receivable)
+  ) return null;
   const snapshotHasAsaasCreationInProgress = isAsaas && [
     input.receivable?.gateway_status,
     input.receivable?.asaas_status,
   ].some((value) => String(value || "").toUpperCase() === "CREATING");
   if (snapshotHasAsaasCreationInProgress) return null;
+  const baneseGatewayStatus = input.providerCode === "banese_card"
+    ? String(input.receivable?.gateway_status || "").trim().toUpperCase()
+    : "";
+  // CREATING sem marcador API ainda é a fase local recuperável do protocolo.
+  // Qualquer outro status Banese pode representar um título remoto cuja
+  // identidade local ficou parcial e jamais pode ser sobrescrito por novo POST.
+  if (baneseGatewayStatus && baneseGatewayStatus !== "CREATING") return null;
 
   let query = input.admin
     .from("contas_receber")

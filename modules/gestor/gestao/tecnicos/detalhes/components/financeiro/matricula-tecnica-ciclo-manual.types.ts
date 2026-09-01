@@ -97,6 +97,20 @@ export interface GerarCicloFinanceiroTecnicoManualInput {
   expectedCronogramaFingerprint: string;
 }
 
+export interface RetomarEmissaoCicloFinanceiroTecnicoManualInput {
+  turmaId: string;
+  matriculaId: string;
+  cicloNumero: number;
+}
+
+export interface CicloFinanceiroTecnicoManualEmissaoProgress {
+  cicloNumero: number;
+  quantidadeItens: number;
+  emitidosBanese: number;
+  pendentesEmissao: number;
+  emRevisao: number;
+}
+
 export interface CicloFinanceiroTecnicoManualRecebivel {
   id: string;
   chave: string;
@@ -105,19 +119,22 @@ export interface CicloFinanceiroTecnicoManualRecebivel {
   descricao: string;
   valor: string;
   vencimento: string;
-  status: 'PENDENTE';
-  emissaoBanese: 'NAO_EMITIDO';
+  status: 'PENDENTE' | 'VENCIDO';
+  emissaoBanese: 'EMITIDO';
 }
 
 export interface GerarCicloFinanceiroTecnicoManualResult {
-  operacao: 'GERACAO_CICLO_TECNICO_MANUAL';
+  success: true;
   requestId: string;
   replayed: boolean;
   ciclo: {
     numero: number;
-    status: 'CRIADO_LOCAL';
+    status: 'EMITIDO_BANESE';
     quantidadeItens: number;
     total: string;
+    emitidosBanese: number;
+    pendentesEmissao: number;
+    emRevisao: number;
     recebiveis: CicloFinanceiroTecnicoManualRecebivel[];
   };
   cicloManual: MatriculaTecnicaCicloManual;

@@ -227,7 +227,7 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
                   <ol className="mt-4 space-y-4 text-xs font-semibold text-slate-600">
                     <li className="flex gap-3"><span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-blue-100 font-black text-blue-700">1</span><span>Você informa o vencimento inicial.</span></li>
                     <li className="flex gap-3"><span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-slate-100 font-black text-slate-600">2</span><span>Confere rematrícula, mensalidades, descontos, juros e multa.</span></li>
-                    <li className="flex gap-3"><span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-slate-100 font-black text-slate-600">3</span><span>Revisa o resumo e confirma a geração.</span></li>
+                    <li className="flex gap-3"><span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-slate-100 font-black text-slate-600">3</span><span>Confirma a criação das cobranças e a emissão BolePix.</span></li>
                   </ol>
                 </aside>
               </div>
@@ -289,7 +289,7 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
             <section aria-labelledby="manual-cycle-step-3">
               <p className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-600">Etapa 3 de 3</p>
               <h3 id="manual-cycle-step-3" className="mt-1 text-2xl font-black text-[#001a33]">Revisão e confirmação</h3>
-              <p className="mt-1 text-sm font-medium text-slate-500">Revise o resumo final antes de registrar as cobranças do aluno.</p>
+              <p className="mt-1 text-sm font-medium text-slate-500">Revise o resumo final antes de criar as cobranças e emitir os títulos Banese.</p>
 
               <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
                 <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -313,11 +313,11 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
                 <aside className="space-y-4">
                   <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs font-semibold leading-relaxed text-amber-950">
                     <p className="flex items-center gap-2 font-black"><AlertTriangle size={16} /> Confirmação necessária</p>
-                    <p className="mt-2">Ao confirmar, o sistema registrará {preview.quantidadeItens} cobranças para este ciclo. Revise os valores e vencimentos antes de continuar.</p>
+                    <p className="mt-2">Ao confirmar, o sistema criará {preview.quantidadeItens} cobranças e emitirá {preview.quantidadeItens} títulos BolePix Banese. Revise os valores e vencimentos antes de continuar.</p>
                   </div>
-                  <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4 text-xs font-semibold leading-relaxed text-blue-950">
-                    <p className="font-black">Emissão bancária continua separada</p>
-                    <p className="mt-2">Nenhum boleto Banese será emitido nesta etapa. Depois, o gestor poderá emitir cada cobrança em Financeiro › A Receber.</p>
+                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-xs font-semibold leading-relaxed text-emerald-950">
+                    <p className="font-black">Geração e emissão em uma única ação</p>
+                    <p className="mt-2">As cobranças ficarão listadas em Financeiro com QR Pix, linha digitável, código de barras e PDF oficial Banese disponíveis, sem uma segunda emissão.</p>
                   </div>
                   <details className="rounded-2xl border border-slate-200 bg-white p-4 text-[9px] text-slate-500">
                     <summary className="flex cursor-pointer items-center gap-1.5 font-black uppercase text-slate-500"><Fingerprint size={13} /> Auditoria da prévia</summary>
@@ -339,7 +339,7 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
               <button type="button" disabled={pending || !preview || previewQuery.isFetching} onClick={() => goToStep((step + 1) as WizardStep)} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-[10px] font-black uppercase text-white transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-40 sm:flex-none">{step === 1 ? 'Ver composição' : 'Revisar geração'} <ChevronRight size={14} /></button>
             ) : (
               <button type="button" disabled={pending || !preview || previewQuery.isFetching} onClick={() => preview && onConfirm(preview, firstDueDate)} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-[10px] font-black uppercase text-white transition hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:opacity-40 sm:flex-none">
-                {pending ? <><Loader2 className="animate-spin" size={14} /> Gerando cobranças...</> : <><ReceiptText size={14} /> Gerar cobranças</>}
+                {pending ? <><Loader2 className="animate-spin" size={14} /> Gerando e emitindo BolePix...</> : <><ReceiptText size={14} /> Gerar e emitir BolePix</>}
               </button>
             )}
           </div>

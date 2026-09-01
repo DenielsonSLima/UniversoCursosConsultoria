@@ -115,6 +115,7 @@ export const normalizeBanesePixFromResponse = async (
     pixReturnCandidates(raw);
   let pixPayload: string | null = null;
   let pixEncodedImage: string | null = null;
+  let bankImageValid = false;
 
   for (const candidate of payloadCandidates) {
     try {
@@ -126,19 +127,23 @@ export const normalizeBanesePixFromResponse = async (
   }
   for (const candidate of imageCandidates) {
     try {
-      pixEncodedImage = normalizeBanesePixQrImage(candidate);
+      normalizeBanesePixQrImage(candidate);
+      bankImageValid = true;
       break;
     } catch {
       // O diagnóstico persiste apenas presença/validade, nunca o conteúdo.
     }
   }
 
-  let imageSource: "bank" | "generated_from_official_emv" | null =
-    pixEncodedImage ? "bank" : null;
-  if (pixPayload && !pixEncodedImage) {
+  // A imagem devolvida pelo banco não prova, sozinha, qual EMV codifica.
+  // Renderizamos sempre o QR a partir do payload oficial já validado, evitando
+  // persistir uma imagem pertencente a outro título.
+  if (pixPayload) {
     pixEncodedImage = await renderOfficialBanesePixQr(pixPayload);
-    imageSource = "generated_from_official_emv";
   }
+  const imageSource = pixEncodedImage
+    ? "generated_from_official_emv" as const
+    : null;
 
   const complete = Boolean(pixPayload && pixEncodedImage);
   return {
@@ -149,6 +154,7 @@ export const normalizeBanesePixFromResponse = async (
       imageCandidatePresent: imageCandidates.length > 0,
       payloadValid: Boolean(pixPayload),
       imageValid: Boolean(pixEncodedImage),
+      bankImageValid,
       imageSource,
       complete,
       // Somente nomes normalizados/categorias de tipo; nunca conteúdo Pix.

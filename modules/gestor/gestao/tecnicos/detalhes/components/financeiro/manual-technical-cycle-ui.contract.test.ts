@@ -30,7 +30,7 @@ const between = (source: string, startMarker: string, endMarker: string) => {
 };
 
 test("T42 recebe ação dinâmica de 2º ciclo e não expõe geração inicial ou ciclo 3", () => {
-  assert.match(statusSource, /Gerar \{cycleLabel\(cicloManual\.proximoCicloNumero\)\}/);
+  assert.match(statusSource, /Gerar e emitir \{cycleLabel\(cicloManual\.proximoCicloNumero\)\}/);
   assert.match(dialogSource, /Gerar \{cycleNumber\}º ciclo/);
   assert.match(dialogSource, /Ciclo \{cycleNumber\} de \{row\.cicloManual\.cicloMaximo\}/);
   assert.doesNotMatch(
@@ -56,8 +56,22 @@ test("baseline zero preserva ciclo 1 gerado e mostra separadamente o estado do c
   assert.match(eligibleBranch, /cycleLabel\(cicloManual\.proximoCicloNumero\).*elegível/);
   assert.match(blockedBranch, /generated \? <GeneratedCycleStatus/);
   assert.match(blockedBranch, /cycleLabel\(cicloManual\.proximoCicloNumero\).*bloqueado/);
-  assert.match(statusSource, /generated\.pendentesEmissao > 0/);
-  assert.match(statusSource, /Emitir no Banese em Contas a Receber/);
+  assert.match(statusSource, /generated\.pendentesEmissao > 0 \? \(/);
+  assert.doesNotMatch(
+    statusSource,
+    /generated\.pendentesEmissao > 0 \|\| generated\.emRevisao > 0/,
+  );
+  assert.match(
+    statusSource,
+    /Revisão manual necessária; emissão automática bloqueada para evitar duplicidade\./,
+  );
+  assert.match(statusSource, /Retomar emissão/);
+  assert.doesNotMatch(statusSource, /Emitir no Banese em Contas a Receber/);
+  assert.ok(
+    statusSource.indexOf("if (generated && !isFullyIssued(generated))")
+      < statusSource.indexOf("if (cicloManual.estado === 'ELEGIVEL'"),
+    "um ciclo incompleto precisa bloquear a geração do próximo ciclo",
+  );
 });
 
 test("parser aceita transição 1 para 2 e rejeita qualquer ciclo 3", () => {
@@ -74,7 +88,7 @@ test("parser aceita transição 1 para 2 e rejeita qualquer ciclo 3", () => {
   );
   assert.match(
     serviceSource,
-    /\['BLOQUEADO', 'ELEGIVEL'\]\.includes\(result\.cicloManual\.estado\)[\s\S]*?proximoCicloNumero === input\.cicloNumero \+ 1/,
+    /\['BLOQUEADO', 'ELEGIVEL'\]\.includes\(result\.cicloManual\.estado\)[\s\S]*?proximoCicloNumero === cycleNumber \+ 1/,
   );
   assert.match(
     serviceSource,
@@ -148,12 +162,12 @@ test("matrícula protegida não tem botão de gerar, emitir, reemitir ou configu
   const protectedBranch = between(
     statusSource,
     "if (cicloManual.estado === 'PROTEGIDO_EXISTENTE')",
-    "if (cicloManual.estado === 'JA_GERADO'",
+    "if (generated && !isFullyIssued(generated))",
   );
   assert.match(protectedBranch, /Protegido contra novas cobranças/);
   assert.doesNotMatch(
     protectedBranch,
-    /<button|onGenerate|onOpenReceivables|Emitir|Reemitir/i,
+    /<button|onGenerate|onResume|Emitir|Reemitir/i,
   );
   assert.match(
     listSource,
@@ -222,7 +236,7 @@ test("ciclo 1 mantém escolha de vencimento e ciclo 2 exige data individual", ()
   );
 });
 
-test("prévia canônica lista 1+N, termos efetivos e 0 Banese", () => {
+test("prévia canônica lista 1+N e a confirmação comunica emissão BolePix única", () => {
   assert.match(dialogSource, /preview\.itens\.map/);
   assert.match(dialogSource, /preview\.quantidadeItens/);
   assert.match(dialogSource, /preview\.total/);
@@ -248,40 +262,41 @@ test("prévia canônica lista 1+N, termos efetivos e 0 Banese", () => {
   assert.match(dialogSource, /Desconto: \{application\.desconto \? 'aplica' : 'não aplica'\}/);
   assert.match(dialogSource, /Multa\/juros: \{application\.multaJuros \? 'aplica' : 'não aplica'\}/);
   assert.match(serviceSource, /const validTerms = isRecord\(terms\)/);
-  assert.match(
-    dialogSource,
-    /Nenhum boleto Banese será emitido nesta etapa/,
-  );
-  assert.match(dialogSource, /Emissão bancária continua separada/);
+  assert.match(dialogSource, /Geração e emissão em uma única ação/);
+  assert.match(dialogSource, /QR Pix, linha digitável, código de barras e PDF oficial Banese/);
+  assert.match(dialogSource, /Gerar e emitir BolePix/);
+  assert.doesNotMatch(dialogSource, /Nenhum boleto Banese|Emissão bancária continua separada/);
   assert.doesNotMatch(dialogSource, /supabase|functions\.invoke|gateway/i);
 });
 
-test("frontend envia apenas identidade canônica e reconcilia 0 emissão bancária", () => {
+test("frontend usa uma única Edge para gerar ou retomar e só aceita 13 de 13 emitidos", () => {
   assert.match(
     serviceSource,
     /supabase\.rpc\('preview_ciclo_financeiro_tecnico_manual_secure'/,
   );
   assert.match(
     serviceSource,
-    /supabase\.rpc\('gerar_ciclo_financeiro_tecnico_manual_secure'/,
+    /supabase\.functions\.invoke\([\s\S]*?'technical-manual-cycle-issuance'/,
   );
+  assert.doesNotMatch(serviceSource, /gerar_ciclo_financeiro_tecnico_manual_secure/);
+  assert.match(serviceSource, /action: 'generate'/);
+  assert.match(serviceSource, /action: 'resume'/);
   for (
     const parameter of [
-      "p_expected_regra_fingerprint",
-      "p_expected_politica_fingerprint",
-      "p_expected_cronograma_fingerprint",
+      "expectedRegraFingerprint",
+      "expectedPoliticaFingerprint",
+      "expectedCronogramaFingerprint",
     ]
   ) assert.match(serviceSource, new RegExp(parameter));
-  assert.match(serviceSource, /item\.emissaoBanese === 'NAO_EMITIDO'/);
-  assert.match(serviceSource, /generated\.emitidosBanese !== 0/);
-  assert.match(
-    serviceSource,
-    /generated\.pendentesEmissao !== result\.ciclo\.quantidadeItens/,
-  );
-  const rpcCalls = serviceSource.slice(serviceSource.indexOf("export const matriculaTecnicaCicloManualService"));
+  assert.match(serviceSource, /item\.emissaoBanese === 'EMITIDO'/);
+  assert.match(serviceSource, /cycle\.quantidadeItens !== 13/);
+  assert.match(serviceSource, /cycle\.emitidosBanese !== 13/);
+  assert.match(serviceSource, /cycle\.pendentesEmissao !== 0/);
+  assert.match(serviceSource, /cycle\.status !== 'EMITIDO_BANESE'/);
+  const calls = serviceSource.slice(serviceSource.indexOf("export const matriculaTecnicaCicloManualService"));
   assert.doesNotMatch(
-    rpcCalls,
-    /p_valor|p_parcela|p_multa|p_juros|p_desconto|functions\.invoke|checkout|createBanese/i,
+    calls,
+    /p_valor|p_parcela|p_multa|p_juros|p_desconto|checkout|createBanese/i,
   );
 });
 
@@ -298,22 +313,29 @@ test("fingerprints e requestId impedem retry ou prévia silenciosamente diferent
   }
   assert.match(listSource, /const requestId = getRequestId\(key\)/);
   assert.match(listSource, /requestIds\.current\.delete\(key\)/);
-  const catchBlock = between(
-    listSource,
-    "} catch (error) {\n      if (isRegraFinanceiraConflict(error)) {\n        setManualCycleMatriculaId(null);",
-    "  };\n\n  if (isLoading)",
-  );
+  const manualMutation = between(listSource, "const generateManualCycle = async", "if (isLoading)");
+  const catchBlock = manualMutation.slice(manualMutation.indexOf("} catch (error)"));
   assert.doesNotMatch(catchBlock, /requestIds\.current\.delete/);
-  assert.match(listSource, /Nenhum retry criará cobranças duplicadas/);
+  assert.match(listSource, /sem duplicar cobranças/);
 });
 
-test("query e mutação invalidam somente o workspace técnico relacionado", () => {
+test("geração e retomada atualizam workspace e listas financeiras inclusive em falha parcial", () => {
   assert.match(hookSource, /previewCicloManual\(/);
   assert.match(hookSource, /retry: false/);
   assert.match(hookSource, /matriculaTecnicaCicloManualService\.generate\(input\)/);
-  assert.match(
-    hookSource,
-    /invalidateQueries\(\{[\s\S]*?matriculaTecnicaFinanceiroKeys\.turma\(input\.turmaId\)/,
-  );
+  assert.match(hookSource, /matriculaTecnicaCicloManualService\.resume\(input\)/);
+  assert.match(hookSource, /onSettled:[\s\S]*?invalidateIssuanceQueries/);
+  assert.match(hookSource, /matriculaTecnicaFinanceiroKeys\.turma\(turmaId\)/);
+  assert.match(hookSource, /financeiroQueryKeys\.receivablesRoot/);
+  assert.match(hookSource, /financeiroQueryKeys\.alunoReceivables/);
+  assert.match(hookSource, /financeiroQueryKeys\.resumoKpis/);
   assert.match(hookSource, /markFinanceiroRequestReconciled\(result\.requestId\)/);
+  assert.match(serviceSource, /body\.progress/);
+  assert.match(
+    serviceSource,
+    /progress\.emRevisao > 0 && progress\.pendentesEmissao === 0/,
+  );
+  assert.match(serviceSource, /Revisão manual necessária; não tente uma nova emissão\./);
+  assert.match(serviceSource, /Use “Retomar emissão”/);
+  assert.match(listSource, /getCicloFinanceiroTecnicoManualRecoveryGuidance\(error\)/);
 });
