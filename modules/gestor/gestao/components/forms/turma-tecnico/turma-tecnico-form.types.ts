@@ -23,6 +23,23 @@ export interface TurmaTecnicoPoloOption {
   cidade: string;
 }
 
+export type TurmaTecnicoEstadoFinanceiroInicial =
+  | 'NOVA'
+  | 'IMPORTADA_CICLO_1'
+  | 'IMPORTADA_CONCLUIDA';
+
+export type TurmaTecnicoElegibilidadeCiclo =
+  | 'QUITACAO_TOTAL'
+  | 'PENULTIMA_SEM_ATRASO';
+
+export interface TurmaTecnicoCicloFinanceiroPolicy {
+  modo: 'MANUAL';
+  estadoInicial: TurmaTecnicoEstadoFinanceiroInicial;
+  baselineCycle: 0 | 1 | 2;
+  maxCycle: 2;
+  eligibilityRule: TurmaTecnicoElegibilidadeCiclo;
+}
+
 export type TurmaTecnicoFormData = TechnicalEnrollmentSettingsValue
   & Omit<FinanceiroConfigData, 'cronogramaFinanceiro'>
   & {
@@ -37,6 +54,8 @@ export type TurmaTecnicoFormData = TechnicalEnrollmentSettingsValue
     vagasTotais: number;
     frequenciaMinimaPercent: number;
     mediaMinima: number;
+    estadoFinanceiroInicial: TurmaTecnicoEstadoFinanceiroInicial;
+    criterioElegibilidadeCiclo: TurmaTecnicoElegibilidadeCiclo;
     origemFinanceira: 'NORMAL' | 'LEGADO';
     financeiroHerdado: boolean;
     gerarCobrancasFuturas: boolean;
@@ -50,6 +69,7 @@ export interface TurmaTecnicoIdentity {
 
 export type TurmaTecnicoSubmission = Omit<Turma, 'id' | 'alunosMatriculados'> & {
   codigoCondicaoIndividual: string;
+  cicloFinanceiroTecnico: TurmaTecnicoCicloFinanceiroPolicy;
 };
 
 export interface TurmaTecnicoFormProps {
