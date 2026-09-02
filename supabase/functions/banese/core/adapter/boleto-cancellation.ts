@@ -1,6 +1,12 @@
 import { requestBaneseBoletoAccessToken } from "./auth.ts";
 import { queryBaneseBoleto } from "./boleto-query.ts";
 import {
+  assertBaneseFinancialTermsEqual,
+} from "../../internal/financial-terms-response.ts";
+import type {
+  BaneseFinancialTermsInput,
+} from "../../internal/financial-terms.ts";
+import {
   BANESE_BOLETO_ENDPOINTS,
   BANESE_BOLETO_STATUS,
   BaneseAdapterConfigurationError,
@@ -12,6 +18,7 @@ import {
 import {
   asRecord,
   assertEnvironment,
+  awaitBaneseRead,
   onlyDigits,
   readResponseBody,
 } from "./utils.ts";
@@ -30,6 +37,8 @@ export type CancelBaneseBoletoInput = {
   expectedPayerDocument?: unknown;
   expectedDigitableLine?: unknown;
   expectedBarcode?: unknown;
+  expectedFinancialTerms?: BaneseFinancialTermsInput;
+  signal?: AbortSignal;
 };
 
 const identityOptions = (input: CancelBaneseBoletoInput) => ({
@@ -42,6 +51,7 @@ const identityOptions = (input: CancelBaneseBoletoInput) => ({
   expectedDocumentNumber: input.expectedDocumentNumber,
   expectedCompanyTitleId: input.expectedCompanyTitleId,
   expectedPayerDocument: input.expectedPayerDocument,
+  signal: input.signal,
 });
 
 const assertLocalBankNumbers = (
@@ -67,6 +77,28 @@ const assertLocalBankNumbers = (
   }
 };
 
+const assertExpectedFinancialTerms = (
+  snapshot: Awaited<ReturnType<typeof queryBaneseBoleto>>,
+  input: CancelBaneseBoletoInput,
+) => {
+  if (input.expectedFinancialTerms === undefined) return;
+  if (snapshot.financialTermsError || !snapshot.financialTerms) {
+    throw new BaneseCancellationRequiresReviewError(
+      "Termos financeiros do boleto Banese não foram confirmados antes da baixa.",
+    );
+  }
+  try {
+    assertBaneseFinancialTermsEqual(
+      input.expectedFinancialTerms,
+      snapshot.financialTerms,
+    );
+  } catch {
+    throw new BaneseCancellationRequiresReviewError(
+      "Desconto, multa ou juros do boleto Banese divergem antes da baixa.",
+    );
+  }
+};
+
 export const cancelBaneseBoleto = async (
   admin: SupabaseAdminRpcClient,
   environment: Environment,
@@ -87,6 +119,7 @@ export const cancelBaneseBoleto = async (
     ...identityOptions(input),
   });
   assertLocalBankNumbers(current.raw, input);
+  assertExpectedFinancialTerms(current, input);
   if (current.paymentsError) {
     throw new BaneseAdapterError(
       "Nao foi possivel confirmar PagamentosEfetivados antes da baixa Banese.",
@@ -137,15 +170,21 @@ export const cancelBaneseBoleto = async (
     );
   }
 
-  const token = await requestBaneseBoletoAccessToken(admin, environment);
+  const token = await requestBaneseBoletoAccessToken(admin, environment, {
+    signal: input.signal,
+  });
   const endpoint = `${BANESE_BOLETO_ENDPOINTS[environment].baseUrl}` +
     `/convenios/${convenio}/boletos/${nossoNumero}/baixa`;
   await input.onMutationStart?.();
-  const response = await fetch(endpoint, {
-    method: "PUT",
-    headers: { Authorization: `${token.tokenType} ${token.accessToken}` },
-  });
-  await readResponseBody(response);
+  const response = await awaitBaneseRead(
+    fetch(endpoint, {
+      method: "PUT",
+      headers: { Authorization: `${token.tokenType} ${token.accessToken}` },
+      signal: input.signal,
+    }),
+    input.signal,
+  );
+  await awaitBaneseRead(readResponseBody(response), input.signal);
 
   const confirmed = await queryBaneseBoleto(admin, environment, {
     convenio,
@@ -153,6 +192,7 @@ export const cancelBaneseBoleto = async (
     ...identityOptions({ ...input, stopWhenPixAvailable: false }),
   });
   assertLocalBankNumbers(confirmed.raw, input);
+  assertExpectedFinancialTerms(confirmed, input);
   if (confirmed.paymentsError) {
     throw new BaneseAdapterError(
       "Nao foi possivel confirmar PagamentosEfetivados depois da baixa Banese.",

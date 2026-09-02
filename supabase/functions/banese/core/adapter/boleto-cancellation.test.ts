@@ -42,22 +42,32 @@ const cancellationInput = () => ({
   expectedPayerDocument: BANESE_DOCUMENT_FIXTURE.payer.document,
   expectedDigitableLine: BANESE_DOCUMENT_FIXTURE.digitableLine,
   expectedBarcode: BANESE_DOCUMENT_FIXTURE.barcode,
+  expectedFinancialTerms: {
+    nominalAmount: BANESE_DOCUMENT_FIXTURE.amount,
+    dueDate: BANESE_DOCUMENT_FIXTURE.dueDate,
+  },
 });
 
 const withMockedBanese = async (
   title: (canceled: boolean) => Record<string, unknown>,
-  test: (methods: string[]) => Promise<void>,
+  test: (
+    methods: string[],
+    signals: Array<AbortSignal | null>,
+  ) => Promise<void>,
   paymentStatus = 200,
 ) => {
   const originalFetch = globalThis.fetch;
   let canceled = false;
   const methods: string[] = [];
+  const signals: Array<AbortSignal | null> = [];
   globalThis.fetch = async (input, init) => {
     const url = input instanceof Request ? input.url : String(input);
     const method = String(
       init?.method || (input instanceof Request ? input.method : "GET"),
     ).toUpperCase();
     methods.push(method);
+    signals.push(init?.signal || null);
+    if (init?.signal?.aborted) throw init.signal.reason;
     if (method === "POST") {
       return new Response(
         JSON.stringify({
@@ -80,7 +90,7 @@ const withMockedBanese = async (
     return new Response(JSON.stringify(title(canceled)), { status: 200 });
   };
   try {
-    await test(methods);
+    await test(methods, signals);
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -101,6 +111,45 @@ Deno.test("baixa para e recupera o Pix oficial antes de qualquer PUT", async () 
       );
       assert.equal(result.pixAvailable, true);
       assert.equal(result.mutationAttempted, false);
+      assert.equal(methods.includes("PUT"), false);
+    },
+  );
+});
+
+Deno.test("baixa propaga um único AbortSignal a todas as chamadas Banese", async () => {
+  const controller = new AbortController();
+  await withMockedBanese(
+    (canceled) => titleResponse(canceled ? 5 : 2),
+    async (methods, signals) => {
+      const result = await cancelBaneseBoleto(admin, "production", {
+        ...cancellationInput(),
+        signal: controller.signal,
+      });
+      assert.equal(result.situationCode, 5);
+      assert.equal(methods.includes("PUT"), true);
+      assert.equal(signals.length, methods.length);
+      assert.equal(
+        signals.every((signal) => signal === controller.signal),
+        true,
+      );
+    },
+  );
+});
+
+Deno.test("baixa abortada não alcança o PUT bancário", async () => {
+  const controller = new AbortController();
+  controller.abort(new DOMException("deadline", "AbortError"));
+  await withMockedBanese(
+    () => titleResponse(2),
+    async (methods) => {
+      await assert.rejects(
+        () =>
+          cancelBaneseBoleto(admin, "production", {
+            ...cancellationInput(),
+            signal: controller.signal,
+          }),
+        /deadline/,
+      );
       assert.equal(methods.includes("PUT"), false);
     },
   );
@@ -178,6 +227,34 @@ Deno.test("baixa recusa linha local divergente antes do PUT", async () => {
           }),
         /Linha digitavel ou codigo de barras diverge/i,
       );
+      assert.equal(methods.includes("PUT"), false);
+    },
+  );
+});
+
+Deno.test("baixa recusa termos remotos divergentes antes do PUT", async () => {
+  let mutationStarts = 0;
+  await withMockedBanese(
+    () => ({
+      ...titleResponse(2),
+      Multa: {
+        TipoMulta: 2,
+        Valor: 2,
+        Data: "2026-08-16",
+      },
+    }),
+    async (methods) => {
+      await assert.rejects(
+        () =>
+          cancelBaneseBoleto(admin, "production", {
+            ...cancellationInput(),
+            onMutationStart: () => {
+              mutationStarts += 1;
+            },
+          }),
+        /desconto, multa ou juros.*divergem/i,
+      );
+      assert.equal(mutationStarts, 0);
       assert.equal(methods.includes("PUT"), false);
     },
   );

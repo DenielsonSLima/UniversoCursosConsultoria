@@ -41,6 +41,11 @@ export type IssuanceScope = {
   credentialId: string;
 };
 
+type AuthorizationResult = {
+  data: Record<string, unknown> | null;
+  error: unknown;
+};
+
 const PROVIDER = "banese_card" as const;
 const ENVIRONMENT = "production" as const;
 const PAYMENT_METHOD = "BOLETO" as const;
@@ -309,6 +314,10 @@ export const createReceivableIssuer = (input: {
   userClient: Client;
   supabaseUrl: string;
   getScope: () => IssuanceScope | null;
+  authorizeReceivable?: (
+    receivableId: string,
+    requestId: string,
+  ) => Promise<AuthorizationResult>;
 }) =>
 async (context: ManualCycleContext, receivableId: string) => {
   const scope = input.getScope();
@@ -328,13 +337,15 @@ async (context: ManualCycleContext, receivableId: string) => {
     context.requestId,
     receivableId,
   );
-  const authorization = await input.userClient.rpc(
-    "authorize_technical_manual_receivable_issuance_secure",
-    {
-      p_receivable_id: receivableId,
-      p_request_id: authorizationRequestId,
-    },
-  );
+  const authorization = input.authorizeReceivable
+    ? await input.authorizeReceivable(receivableId, authorizationRequestId)
+    : await input.userClient.rpc(
+      "authorize_technical_manual_receivable_issuance_secure",
+      {
+        p_receivable_id: receivableId,
+        p_request_id: authorizationRequestId,
+      },
+    );
   if (authorization.error || authorization.data?.authorized !== true) {
     throw authorization.error || new Error(
       "O recebível não foi autorizado para emissão Banese.",
