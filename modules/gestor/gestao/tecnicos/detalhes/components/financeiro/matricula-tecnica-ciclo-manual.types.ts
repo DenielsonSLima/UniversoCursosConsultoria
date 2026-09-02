@@ -16,6 +16,7 @@ export interface MatriculaTecnicaCicloManual {
   cicloBaseHistorico: number | null;
   cicloMaximo: number | null;
   proximoCicloNumero: number | null;
+  primeiroVencimentoSugerido: string | null;
   criterioElegibilidade: MatriculaTecnicaCicloManualCriterio | null;
   estado: MatriculaTecnicaCicloManualEstado;
   podeGerar: boolean;

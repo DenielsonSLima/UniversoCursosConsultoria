@@ -26,6 +26,7 @@ const stateParserSource = readSource(
 );
 const hookSource = readSource("hooks/useMatriculaTecnicaCicloManual.ts");
 const typesSource = readSource("matricula-tecnica-ciclo-manual.types.ts");
+const keysSource = readSource("matricula-tecnica-financeiro.keys.ts");
 
 const between = (source: string, startMarker: string, endMarker: string) => {
   const start = source.indexOf(startMarker);
@@ -130,6 +131,7 @@ test("parser rejeita estados terminais anteriores ao ciclo máximo", () => {
     cicloBaseHistorico: 0,
     cicloMaximo: 2,
     proximoCicloNumero: null,
+    primeiroVencimentoSugerido: null,
     criterioElegibilidade: "PENULTIMA_SEM_ATRASO",
     estado: "JA_GERADO",
     podeGerar: false,
@@ -259,6 +261,31 @@ test("ciclo 1 mantém escolha de vencimento e ciclo 2 exige data individual", ()
   assert.match(dialogSource, /Data individual obrigatória no 2º ciclo/);
   assert.match(dialogSource, /vencimento da rematrícula — ou do primeiro item/);
   assert.match(dialogSource, /mensalidade 1 vencerá no mês seguinte/);
+  assert.match(
+    dialogSource,
+    /useState\([\s\S]*?row\.cicloManual\.primeiroVencimentoSugerido \?\? ''/,
+  );
+  assert.match(
+    dialogSource,
+    /type="date" value=\{individualDate\} onChange=\{\(event\) => setIndividualDate\(event\.target\.value\)\}/,
+  );
+  const dateInput = dialogSource.match(/<input type="date"[^>]*>/)?.[0];
+  assert.ok(dateInput);
+  assert.doesNotMatch(dateInput, /disabled|readOnly/);
+  assert.match(dialogSource, /um mês após o último boleto do ciclo anterior/);
+  assert.match(
+    listSource,
+    /<FinanceiroCicloManualDialog\s+key=\{currentManualCycleRow\.matriculaId\}/,
+  );
+  assert.match(
+    keysSource,
+    /previewCicloManual:[\s\S]*?matriculaId,[\s\S]*?cicloNumero,[\s\S]*?primeiroVencimento \|\| 'turma'/,
+  );
+  assert.match(typesSource, /primeiroVencimentoSugerido: string \| null/);
+  assert.match(
+    stateParserSource,
+    /isNullableIsoCalendarDate\(value\.primeiroVencimentoSugerido\)/,
+  );
   assert.match(
     serviceSource,
     /cycleNumber === 2 && firstDueDate === null/,

@@ -39,6 +39,19 @@ const isNonEmptyString = (value: unknown): value is string => (
   typeof value === 'string' && value.trim().length > 0
 );
 
+const isIsoCalendarDate = (value: unknown): value is string => {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+  const parsed = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(parsed.getTime())
+    && parsed.toISOString().slice(0, 10) === value;
+};
+
+const isNullableIsoCalendarDate = (value: unknown): value is string | null => (
+  value === null || isIsoCalendarDate(value)
+);
+
 export const getCriterioElegibilidadeLabel = (
   value: MatriculaTecnicaCicloManualCriterio | null,
 ) => value === null ? null : ELIGIBILITY_LABELS[value];
@@ -93,6 +106,7 @@ export const requireMatriculaTecnicaCicloManual = (
     && isNullableInteger(value.cicloBaseHistorico)
     && isNullableInteger(value.cicloMaximo)
     && isNullableInteger(value.proximoCicloNumero)
+    && isNullableIsoCalendarDate(value.primeiroVencimentoSugerido)
     && isNullableEligibilityCriterion(value.criterioElegibilidade)
     && MANUAL_STATES.includes(state as typeof MANUAL_STATES[number])
     && typeof value.podeGerar === 'boolean'
