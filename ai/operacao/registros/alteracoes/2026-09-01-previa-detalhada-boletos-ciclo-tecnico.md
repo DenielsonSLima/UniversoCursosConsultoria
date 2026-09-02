@@ -77,10 +77,11 @@ etapas Composição e Revisão.
 
 ## Manifesto explícito
 
-Total: 14 arquivos
+Total: 15 arquivos
 
 - `ai/operacao/registros/alteracoes/2026-09-01-previa-detalhada-boletos-ciclo-tecnico.md`
 - `internal/versioning/CHANGELOG.md`
+- `internal/versioning/changelog/2026-08-22-a-2026-08-23.md`
 - `internal/versioning/system-version.json`
 - `modules/gestor/gestao/tecnicos/detalhes/components/financeiro/FinanceiroCicloManualChargeRows.tsx`
 - `modules/gestor/gestao/tecnicos/detalhes/components/financeiro/FinanceiroCicloManualDialog.tsx`
