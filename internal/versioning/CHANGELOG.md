@@ -4,6 +4,25 @@ Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente
 
 Histórico anterior: [21/08/2026 a 22/08/2026 — parte 2](./changelog/2026-08-21-a-2026-08-22-parte-2.md), [21/08/2026 — parte 1](./changelog/2026-08-21-parte-1.md), [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
 
+## [4.8.25] - 2026-09-01
+
+### Alterado
+
+- Cada cobrança do ciclo técnico passa a aparecer em duas faixas nas etapas de
+  composição e revisão, com valor nominal, valor em dia, desconto, multa em
+  reais, juros por dia e as três mensagens acadêmicas do boleto.
+
+### Segurança e integridade
+
+- Os valores detalhados são calculados pelo backend canônico, integram o
+  fingerprint da prévia e são rejeitados pelo frontend quando incompletos ou
+  incoerentes; o React não replica fórmulas financeiras.
+
+### Qualidade
+
+- A migration `20260902013930`, contratos focados, TypeScript, lint, limite de
+  linhas e build de produção foram aprovados antes da publicação.
+
 ## [4.8.24] - 2026-09-01
 
 ### Alterado
