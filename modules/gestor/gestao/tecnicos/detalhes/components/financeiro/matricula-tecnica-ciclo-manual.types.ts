@@ -1,18 +1,18 @@
 export type MatriculaTecnicaCicloManualEstado =
-  | 'ELEGIVEL'
-  | 'BLOQUEADO'
-  | 'JA_GERADO'
-  | 'PROTEGIDO_EXISTENTE'
-  | 'CICLOS_CONCLUIDOS'
-  | 'NAO_HABILITADO';
+  | "ELEGIVEL"
+  | "BLOQUEADO"
+  | "JA_GERADO"
+  | "PROTEGIDO_EXISTENTE"
+  | "CICLOS_CONCLUIDOS"
+  | "NAO_HABILITADO";
 
 export type MatriculaTecnicaCicloManualCriterio =
-  | 'QUITACAO_TOTAL'
-  | 'PENULTIMA_SEM_ATRASO';
+  | "QUITACAO_TOTAL"
+  | "PENULTIMA_SEM_ATRASO";
 
 export interface MatriculaTecnicaCicloManual {
   habilitado: boolean;
-  modo: 'MANUAL' | null;
+  modo: "MANUAL" | null;
   cicloBaseHistorico: number | null;
   cicloMaximo: number | null;
   proximoCicloNumero: number | null;
@@ -40,11 +40,31 @@ export interface MatriculaTecnicaCicloManual {
 
 export interface CicloFinanceiroTecnicoManualPreviewItem {
   chave: string;
-  tipo: 'MATRICULA' | 'REMATRICULA' | 'PARCELA';
+  tipo: "MATRICULA" | "REMATRICULA" | "PARCELA";
   numero: number;
   descricao: string;
   valor: string;
   vencimento: string;
+  detalhesBoleto: {
+    valorNominal: string;
+    valorEmDia: string;
+    desconto: {
+      valor: string;
+      validoAte: string;
+    } | null;
+    multa: {
+      percentual: string;
+      valor: string;
+      iniciaEm: string;
+    } | null;
+    juros: {
+      percentualMes: string;
+      valorDia: string;
+      iniciaEm: string;
+    } | null;
+    instrucaoBoleto: string;
+    mensagensBoleto: string[];
+  };
 }
 
 export interface CicloFinanceiroTecnicoManualTermos {
@@ -61,7 +81,7 @@ export interface CicloFinanceiroTecnicoManualTermos {
 
 export interface CicloFinanceiroTecnicoManualPreview {
   cicloNumero: number;
-  sourceVencimento: 'TURMA' | 'INDIVIDUAL';
+  sourceVencimento: "TURMA" | "INDIVIDUAL";
   dataOrigem: string;
   primeiroVencimento: string;
   quantidadeItens: number;
@@ -114,13 +134,13 @@ export interface CicloFinanceiroTecnicoManualEmissaoProgress {
 export interface CicloFinanceiroTecnicoManualRecebivel {
   id: string;
   chave: string;
-  tipo: 'MATRICULA' | 'REMATRICULA' | 'PARCELA';
+  tipo: "MATRICULA" | "REMATRICULA" | "PARCELA";
   numero: number;
   descricao: string;
   valor: string;
   vencimento: string;
-  status: 'PENDENTE' | 'VENCIDO';
-  emissaoBanese: 'EMITIDO';
+  status: "PENDENTE" | "VENCIDO";
+  emissaoBanese: "EMITIDO";
 }
 
 export interface GerarCicloFinanceiroTecnicoManualResult {
@@ -129,7 +149,7 @@ export interface GerarCicloFinanceiroTecnicoManualResult {
   replayed: boolean;
   ciclo: {
     numero: number;
-    status: 'EMITIDO_BANESE';
+    status: "EMITIDO_BANESE";
     quantidadeItens: number;
     total: string;
     emitidosBanese: number;

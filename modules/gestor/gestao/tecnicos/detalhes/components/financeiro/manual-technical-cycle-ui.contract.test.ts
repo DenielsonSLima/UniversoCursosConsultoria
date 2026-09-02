@@ -8,16 +8,22 @@ const baseDir = resolve(
   process.cwd(),
   "modules/gestor/gestao/tecnicos/detalhes/components/financeiro",
 );
-const readSource = (relativePath: string) => readFileSync(
-  resolve(baseDir, relativePath),
-  "utf8",
-);
+const readSource = (relativePath: string) =>
+  readFileSync(
+    resolve(baseDir, relativePath),
+    "utf8",
+  );
 
 const listSource = readSource("FinanceiroAlunosList.tsx");
 const statusSource = readSource("FinanceiroCicloManualStatus.tsx");
 const dialogSource = readSource("FinanceiroCicloManualDialog.tsx");
 const serviceSource = readSource("matricula-tecnica-ciclo-manual.service.ts");
-const stateParserSource = readSource("matricula-tecnica-ciclo-manual.parser.ts");
+const previewParserSource = readSource(
+  "matricula-tecnica-ciclo-manual-preview.parser.ts",
+);
+const stateParserSource = readSource(
+  "matricula-tecnica-ciclo-manual.parser.ts",
+);
 const hookSource = readSource("hooks/useMatriculaTecnicaCicloManual.ts");
 const typesSource = readSource("matricula-tecnica-ciclo-manual.types.ts");
 
@@ -30,9 +36,15 @@ const between = (source: string, startMarker: string, endMarker: string) => {
 };
 
 test("T42 recebe ação dinâmica de 2º ciclo e não expõe geração inicial ou ciclo 3", () => {
-  assert.match(statusSource, /Gerar e emitir \{cycleLabel\(cicloManual\.proximoCicloNumero\)\}/);
+  assert.match(
+    statusSource,
+    /Gerar e emitir \{cycleLabel\(cicloManual\.proximoCicloNumero\)\}/,
+  );
   assert.match(dialogSource, /Gerar \{cycleNumber\}º ciclo/);
-  assert.match(dialogSource, /Ciclo \{cycleNumber\} de \{row\.cicloManual\.cicloMaximo\}/);
+  assert.match(
+    dialogSource,
+    /Ciclo \{cycleNumber\} de \{row\.cicloManual\.cicloMaximo\}/,
+  );
   assert.doesNotMatch(
     `${statusSource}\n${dialogSource}`,
     /Gerar 1º ciclo|Gerar 3º ciclo/i,
@@ -53,9 +65,15 @@ test("baseline zero preserva ciclo 1 gerado e mostra separadamente o estado do c
     "if (cicloManual.estado === 'CICLOS_CONCLUIDOS'",
   );
   assert.match(eligibleBranch, /generated \? <GeneratedCycleStatus/);
-  assert.match(eligibleBranch, /cycleLabel\(cicloManual\.proximoCicloNumero\).*elegível/);
+  assert.match(
+    eligibleBranch,
+    /cycleLabel\(cicloManual\.proximoCicloNumero\).*elegível/,
+  );
   assert.match(blockedBranch, /generated \? <GeneratedCycleStatus/);
-  assert.match(blockedBranch, /cycleLabel\(cicloManual\.proximoCicloNumero\).*bloqueado/);
+  assert.match(
+    blockedBranch,
+    /cycleLabel\(cicloManual\.proximoCicloNumero\).*bloqueado/,
+  );
   assert.match(statusSource, /generated\.pendentesEmissao > 0 \? \(/);
   assert.doesNotMatch(
     statusSource,
@@ -68,8 +86,8 @@ test("baseline zero preserva ciclo 1 gerado e mostra separadamente o estado do c
   assert.match(statusSource, /Retomar emissão/);
   assert.doesNotMatch(statusSource, /Emitir no Banese em Contas a Receber/);
   assert.ok(
-    statusSource.indexOf("if (generated && !isFullyIssued(generated))")
-      < statusSource.indexOf("if (cicloManual.estado === 'ELEGIVEL'"),
+    statusSource.indexOf("if (generated && !isFullyIssued(generated))") <
+      statusSource.indexOf("if (cicloManual.estado === 'ELEGIVEL'"),
     "um ciclo incompleto precisa bloquear a geração do próximo ciclo",
   );
 });
@@ -88,11 +106,11 @@ test("parser aceita transição 1 para 2 e rejeita qualquer ciclo 3", () => {
   );
   assert.match(
     serviceSource,
-    /\['BLOQUEADO', 'ELEGIVEL'\]\.includes\(result\.cicloManual\.estado\)[\s\S]*?proximoCicloNumero === cycleNumber \+ 1/,
+    /\[['"]BLOQUEADO['"], ['"]ELEGIVEL['"]\]\.includes\(result\.cicloManual\.estado\)[\s\S]*?proximoCicloNumero === cycleNumber \+ 1/,
   );
   assert.match(
     serviceSource,
-    /finalCycle[\s\S]*?result\.cicloManual\.estado === 'JA_GERADO'/,
+    /finalCycle[\s\S]*?result\.cicloManual\.estado === ['"]JA_GERADO['"]/,
   );
 });
 
@@ -122,38 +140,45 @@ test("parser rejeita estados terminais anteriores ao ciclo máximo", () => {
 
   assert.doesNotThrow(() => requireMatriculaTecnicaCicloManual(terminalState));
   assert.throws(
-    () => requireMatriculaTecnicaCicloManual({
-      ...terminalState,
-      cicloGerado: { ...generatedCycle, numero: 1 },
-    }),
+    () =>
+      requireMatriculaTecnicaCicloManual({
+        ...terminalState,
+        cicloGerado: { ...generatedCycle, numero: 1 },
+      }),
     /estado manual de ciclo incoerente/i,
   );
-  assert.doesNotThrow(() => requireMatriculaTecnicaCicloManual({
-    ...terminalState,
-    estado: "CICLOS_CONCLUIDOS",
-  }));
+  assert.doesNotThrow(() =>
+    requireMatriculaTecnicaCicloManual({
+      ...terminalState,
+      estado: "CICLOS_CONCLUIDOS",
+    })
+  );
   assert.throws(
-    () => requireMatriculaTecnicaCicloManual({
+    () =>
+      requireMatriculaTecnicaCicloManual({
+        ...terminalState,
+        cicloBaseHistorico: 2,
+        estado: "CICLOS_CONCLUIDOS",
+        cicloGerado: { ...generatedCycle, numero: 1 },
+      }),
+    /estado manual de ciclo incoerente/i,
+  );
+  assert.doesNotThrow(() =>
+    requireMatriculaTecnicaCicloManual({
       ...terminalState,
       cicloBaseHistorico: 2,
       estado: "CICLOS_CONCLUIDOS",
-      cicloGerado: { ...generatedCycle, numero: 1 },
-    }),
-    /estado manual de ciclo incoerente/i,
-  );
-  assert.doesNotThrow(() => requireMatriculaTecnicaCicloManual({
-    ...terminalState,
-    cicloBaseHistorico: 2,
-    estado: "CICLOS_CONCLUIDOS",
-    cicloGerado: null,
-  }));
-  assert.throws(
-    () => requireMatriculaTecnicaCicloManual({
-      ...terminalState,
-      cicloBaseHistorico: 1,
-      estado: "CICLOS_CONCLUIDOS",
       cicloGerado: null,
-    }),
+    })
+  );
+  assert.throws(
+    () =>
+      requireMatriculaTecnicaCicloManual({
+        ...terminalState,
+        cicloBaseHistorico: 1,
+        estado: "CICLOS_CONCLUIDOS",
+        cicloGerado: null,
+      }),
     /estado manual de ciclo incoerente/i,
   );
 });
@@ -186,7 +211,10 @@ test("status acadêmico TRANCADO fica explícito e independente da cobrança", (
     /\['TRANCADO', 'CANCELADO', 'TRANSFERIDO', 'CONCLUIDO'\]\.includes\(normalized\)/,
   );
   assert.match(statusSource, /Matrícula \{normalized \|\| 'NÃO INFORMADA'\}/);
-  assert.match(listSource, /MatriculaAcademicaBadge status=\{row\.statusAcademico\}/);
+  assert.match(
+    listSource,
+    /MatriculaAcademicaBadge status=\{row\.statusAcademico\}/,
+  );
   assert.match(listSource, /Cobrança: \{situationLabel\(row\)\}/);
 });
 
@@ -196,8 +224,14 @@ test("modo manual sai integralmente da ativação AGORA, AGENDADA e lote legados
     /row\.financeiro\.status === 'PENDENTE'[\s\S]*?!\(row\.cicloManual\.habilitado && row\.cicloManual\.modo === 'MANUAL'\)/,
   );
   assert.match(listSource, /const canActivate = !manualMode/);
-  assert.match(listSource, /\{!manualMode && actionMenuId === row\.matriculaId/);
-  assert.match(listSource, /\{manualMode \? \([\s\S]*?<FinanceiroCicloManualStatus/);
+  assert.match(
+    listSource,
+    /\{!manualMode && actionMenuId === row\.matriculaId/,
+  );
+  assert.match(
+    listSource,
+    /\{manualMode \? \([\s\S]*?<FinanceiroCicloManualStatus/,
+  );
   const manualMutation = between(
     listSource,
     "const generateManualCycle = async",
@@ -214,7 +248,10 @@ test("ciclo 1 mantém escolha de vencimento e ciclo 2 exige data individual", ()
   assert.match(dialogSource, /Usar datas da turma/);
   assert.match(dialogSource, /Definir primeira data/);
   assert.match(dialogSource, /O sistema recalcula todo o cronograma/);
-  assert.match(dialogSource, /const requiresIndividualDate = cycleNumber === 2/);
+  assert.match(
+    dialogSource,
+    /const requiresIndividualDate = cycleNumber === 2/,
+  );
   assert.match(
     dialogSource,
     /requiresIndividualDate \? 'INDIVIDUAL' : 'TURMA'/,
@@ -227,8 +264,8 @@ test("ciclo 1 mantém escolha de vencimento e ciclo 2 exige data individual", ()
     /cycleNumber === 2 && firstDueDate === null/,
   );
   assert.match(
-    serviceSource,
-    /Number\(value\.cicloNumero\) === 2 && value\.sourceVencimento !== 'INDIVIDUAL'/,
+    previewParserSource,
+    /Number\(value\.cicloNumero\) === 2[\s\S]*?value\.sourceVencimento !== ['"]INDIVIDUAL['"]/,
   );
   assert.match(
     listSource,
@@ -252,35 +289,59 @@ test("prévia canônica lista 1+N e a confirmação comunica emissão BolePix ú
     assert.match(typesSource, new RegExp(`${field}: string`));
     assert.match(dialogSource, new RegExp(`preview\\.termos\\.${field}`));
   }
-  assert.match(typesSource, /matricula: \{ desconto: boolean; multaJuros: boolean \}/);
-  assert.match(typesSource, /mensalidade: \{ desconto: boolean; multaJuros: boolean \}/);
-  assert.match(typesSource, /rematricula: \{ desconto: boolean; multaJuros: boolean \}/);
+  assert.match(
+    typesSource,
+    /matricula: \{ desconto: boolean; multaJuros: boolean \}/,
+  );
+  assert.match(
+    typesSource,
+    /mensalidade: \{ desconto: boolean; multaJuros: boolean \}/,
+  );
+  assert.match(
+    typesSource,
+    /rematricula: \{ desconto: boolean; multaJuros: boolean \}/,
+  );
   assert.match(
     dialogSource,
     /(?:Termos financeiros da regra efetiva|Condições da configuração efetiva)/,
   );
-  assert.match(dialogSource, /Desconto: \{application\.desconto \? 'aplica' : 'não aplica'\}/);
-  assert.match(dialogSource, /Multa\/juros: \{application\.multaJuros \? 'aplica' : 'não aplica'\}/);
-  assert.match(serviceSource, /const validTerms = isRecord\(terms\)/);
+  assert.match(
+    dialogSource,
+    /Desconto: \{application\.desconto \? 'aplica' : 'não aplica'\}/,
+  );
+  assert.match(
+    dialogSource,
+    /Multa\/juros: \{application\.multaJuros \? 'aplica' : 'não aplica'\}/,
+  );
+  assert.match(previewParserSource, /const validTerms = isRecord\(terms\)/);
   assert.match(dialogSource, /Geração e emissão em uma única ação/);
-  assert.match(dialogSource, /QR Pix, linha digitável, código de barras e PDF oficial Banese/);
+  assert.match(
+    dialogSource,
+    /QR Pix, linha digitável, código de barras e PDF oficial Banese/,
+  );
   assert.match(dialogSource, /Gerar e emitir BolePix/);
-  assert.doesNotMatch(dialogSource, /Nenhum boleto Banese|Emissão bancária continua separada/);
+  assert.doesNotMatch(
+    dialogSource,
+    /Nenhum boleto Banese|Emissão bancária continua separada/,
+  );
   assert.doesNotMatch(dialogSource, /supabase|functions\.invoke|gateway/i);
 });
 
 test("frontend usa uma única Edge para gerar ou retomar e só aceita 13 de 13 emitidos", () => {
   assert.match(
     serviceSource,
-    /supabase\.rpc\('preview_ciclo_financeiro_tecnico_manual_secure'/,
+    /supabase\.rpc\(['"]preview_ciclo_financeiro_tecnico_manual_secure['"]/,
   );
   assert.match(
     serviceSource,
-    /supabase\.functions\.invoke\([\s\S]*?'technical-manual-cycle-issuance'/,
+    /supabase\.functions\.invoke\([\s\S]*?['"]technical-manual-cycle-issuance['"]/,
   );
-  assert.doesNotMatch(serviceSource, /gerar_ciclo_financeiro_tecnico_manual_secure/);
-  assert.match(serviceSource, /action: 'generate'/);
-  assert.match(serviceSource, /action: 'resume'/);
+  assert.doesNotMatch(
+    serviceSource,
+    /gerar_ciclo_financeiro_tecnico_manual_secure/,
+  );
+  assert.match(serviceSource, /action: ['"]generate['"]/);
+  assert.match(serviceSource, /action: ['"]resume['"]/);
   for (
     const parameter of [
       "expectedRegraFingerprint",
@@ -288,12 +349,14 @@ test("frontend usa uma única Edge para gerar ou retomar e só aceita 13 de 13 e
       "expectedCronogramaFingerprint",
     ]
   ) assert.match(serviceSource, new RegExp(parameter));
-  assert.match(serviceSource, /item\.emissaoBanese === 'EMITIDO'/);
+  assert.match(serviceSource, /item\.emissaoBanese === ['"]EMITIDO['"]/);
   assert.match(serviceSource, /cycle\.quantidadeItens !== 13/);
   assert.match(serviceSource, /cycle\.emitidosBanese !== 13/);
   assert.match(serviceSource, /cycle\.pendentesEmissao !== 0/);
-  assert.match(serviceSource, /cycle\.status !== 'EMITIDO_BANESE'/);
-  const calls = serviceSource.slice(serviceSource.indexOf("export const matriculaTecnicaCicloManualService"));
+  assert.match(serviceSource, /cycle\.status !== ['"]EMITIDO_BANESE['"]/);
+  const calls = serviceSource.slice(
+    serviceSource.indexOf("export const matriculaTecnicaCicloManualService"),
+  );
   assert.doesNotMatch(
     calls,
     /p_valor|p_parcela|p_multa|p_juros|p_desconto|checkout|createBanese/i,
@@ -313,8 +376,14 @@ test("fingerprints e requestId impedem retry ou prévia silenciosamente diferent
   }
   assert.match(listSource, /const requestId = getRequestId\(key\)/);
   assert.match(listSource, /requestIds\.current\.delete\(key\)/);
-  const manualMutation = between(listSource, "const generateManualCycle = async", "if (isLoading)");
-  const catchBlock = manualMutation.slice(manualMutation.indexOf("} catch (error)"));
+  const manualMutation = between(
+    listSource,
+    "const generateManualCycle = async",
+    "if (isLoading)",
+  );
+  const catchBlock = manualMutation.slice(
+    manualMutation.indexOf("} catch (error)"),
+  );
   assert.doesNotMatch(catchBlock, /requestIds\.current\.delete/);
   assert.match(listSource, /sem duplicar cobranças/);
 });
@@ -322,20 +391,35 @@ test("fingerprints e requestId impedem retry ou prévia silenciosamente diferent
 test("geração e retomada atualizam workspace e listas financeiras inclusive em falha parcial", () => {
   assert.match(hookSource, /previewCicloManual\(/);
   assert.match(hookSource, /retry: false/);
-  assert.match(hookSource, /matriculaTecnicaCicloManualService\.generate\(input\)/);
-  assert.match(hookSource, /matriculaTecnicaCicloManualService\.resume\(input\)/);
+  assert.match(
+    hookSource,
+    /matriculaTecnicaCicloManualService\.generate\(input\)/,
+  );
+  assert.match(
+    hookSource,
+    /matriculaTecnicaCicloManualService\.resume\(input\)/,
+  );
   assert.match(hookSource, /onSettled:[\s\S]*?invalidateIssuanceQueries/);
   assert.match(hookSource, /matriculaTecnicaFinanceiroKeys\.turma\(turmaId\)/);
   assert.match(hookSource, /financeiroQueryKeys\.receivablesRoot/);
   assert.match(hookSource, /financeiroQueryKeys\.alunoReceivables/);
   assert.match(hookSource, /financeiroQueryKeys\.resumoKpis/);
-  assert.match(hookSource, /markFinanceiroRequestReconciled\(result\.requestId\)/);
+  assert.match(
+    hookSource,
+    /markFinanceiroRequestReconciled\(result\.requestId\)/,
+  );
   assert.match(serviceSource, /body\.progress/);
   assert.match(
     serviceSource,
     /progress\.emRevisao > 0 && progress\.pendentesEmissao === 0/,
   );
-  assert.match(serviceSource, /Revisão manual necessária; não tente uma nova emissão\./);
+  assert.match(
+    serviceSource,
+    /Revisão manual necessária; não tente uma nova emissão\./,
+  );
   assert.match(serviceSource, /Use “Retomar emissão”/);
-  assert.match(listSource, /getCicloFinanceiroTecnicoManualRecoveryGuidance\(error\)/);
+  assert.match(
+    listSource,
+    /getCicloFinanceiroTecnicoManualRecoveryGuidance\(error\)/,
+  );
 });

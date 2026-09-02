@@ -2,7 +2,26 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
-Histórico anterior: [21/08/2026 a 22/08/2026 — parte 2](./changelog/2026-08-21-a-2026-08-22-parte-2.md), [21/08/2026 — parte 1](./changelog/2026-08-21-parte-1.md), [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+Histórico anterior: [22/08/2026 a 23/08/2026](./changelog/2026-08-22-a-2026-08-23.md), [21/08/2026 a 22/08/2026 — parte 2](./changelog/2026-08-21-a-2026-08-22-parte-2.md), [21/08/2026 — parte 1](./changelog/2026-08-21-parte-1.md), [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+
+## [4.8.25] - 2026-09-01
+
+### Alterado
+
+- Cada cobrança do ciclo técnico passa a aparecer em duas faixas nas etapas de
+  composição e revisão, com valor nominal, valor em dia, desconto, multa em
+  reais, juros por dia e as três mensagens acadêmicas do boleto.
+
+### Segurança e integridade
+
+- Os valores detalhados são calculados pelo backend canônico, integram o
+  fingerprint da prévia e são rejeitados pelo frontend quando incompletos ou
+  incoerentes; o React não replica fórmulas financeiras.
+
+### Qualidade
+
+- A migration `20260902013930`, contratos focados, TypeScript, lint, limite de
+  linhas e build de produção foram aprovados antes da publicação.
 
 ## [4.8.24] - 2026-09-01
 
@@ -409,85 +428,3 @@ Histórico anterior: [21/08/2026 a 22/08/2026 — parte 2](./changelog/2026-08-2
 
 - Novas emissões congelam a capa no manifesto V3 por URL, MIME, dimensões, tamanho e SHA-256, mantendo a finalização dos manifestos V1/V2 históricos.
 - A migration V3, a Edge Function v14 e a aplicação web foram publicadas em Produção pela PR #85; o contrato remoto preserva V1/V2 históricos, exige V3 para novas emissões e mantém JWT/ACLs restritivos.
-
-## [4.7.4] - 2026-08-23
-
-### Alterado
-
-- O fechamento operacional da entrega 4.7.3 foi sincronizado no lote ativo, no registro de alterações e no índice RAG versionado.
-
-### Segurança e qualidade
-
-- A publicação funcional permanece inalterada; esta revisão registra CI, Vercel Produção, rotas públicas e a versão estável exibida pelos portais.
-
-## [4.7.3] - 2026-08-23
-
-### Corrigido
-
-- As turmas técnicas e livres temporárias voltaram a aparecer no Gestor pelo contrato acadêmico canônico, sem coerção incorreta dos indicadores numéricos.
-- O portal do Professor passou a reutilizar o mesmo Diário do Gestor, com frequência, conteúdo, notas, fechamento, prévia oficial e assinatura eletrônica.
-- Capa, contracapa, campos, marca d’água e posições de assinatura do Diário agora são consumidos diretamente de Modelos de Documentos e Configurações, com falha explícita para capa raster legada incompatível.
-
-### Adicionado
-
-- Professores com atribuição de coordenação recebem, no próprio portal, a caixa de revisão e a segunda assinatura do Diário; o papel de acesso continua sendo Professor.
-- O Gestor recebeu o módulo Assinaturas com cards de Diários, Contratos e Matrículas, filtros, caixa/acervo, documentos finais, comprovantes e atalhos para o Diário assinado dentro da turma; categorias sem pipeline próprio permanecem explicitamente indisponíveis.
-- O Diário assinado termina automaticamente com duas páginas vetoriais de evidências, além do comprovante independente para validação.
-- Uma skill operacional permanente obriga novos geradores de PDF a reutilizarem os modelos e a marca d’água configurados antes de qualquer fallback.
-
-### Segurança e qualidade
-
-- O fluxo continua Professor → Coordenador, exige reautenticação e preserva provas individuais, manifesto semântico, hashes e compatibilidade histórica; divergências de papel, posição ou geometria do modelo falham antes da emissão.
-- Os testes temporários cobrem Professor, Professor coordenador, Aluno e Responsável; nenhuma cobrança, boleto ou operação Banese é criada.
-
-## [4.7.2] - 2026-08-23
-
-### Corrigido
-
-- Logout, retorno dos seletores de perfil e primeiro acesso agora limpam a sessão local com segurança, preservando outros dispositivos apenas nos encerramentos automáticos.
-- A grade técnica ganhou rótulos explícitos, horários sugeridos coerentes e remoção da sugestão ao trocar para outra carga; a Ficha de Matrícula repara a grade eleitoral sem danificar estruturas externas.
-
-### Adicionado
-
-- O atalho “Novo Registro” do Dashboard passa a oferecer Responsável pelo fluxo canônico existente.
-
-### Segurança e qualidade
-
-- O escopo RLS de Parceiros falha fechado para polo nulo, a reconciliação de convites foi reforçada e os contratos críticos passaram a integrar o gate do GitHub.
-
-## [4.7.1] - 2026-08-22
-
-### Alterado
-
-- O fechamento operacional da entrega 4.7.0 foi sincronizado no lote ativo, no histórico de alterações e no índice RAG versionado.
-
-### Segurança e qualidade
-
-- A publicação funcional já validada permanece inalterada; esta revisão atualiza somente os registros operacionais e a versão exibida pelos portais.
-
-## [4.7.0] - 2026-08-22
-
-### Adicionado
-
-- Cursos Livres passam a usar uma jornada presencial completa, com turma, professor responsável único, grade, aulas e diário integrados.
-- A Gestão pode preparar e publicar uma avaliação final com banco mínimo de 50 questões; cada tentativa recebe dez questões únicas sorteadas no servidor.
-- O Portal do Aluno reúne resumo acadêmico, diário, atividades, notas, prova final e certificado do Curso Livre.
-- Cada aluno pode herdar o plano financeiro padrão da turma ou receber uma condição individual de 1 a 60 parcelas, com descontos, juros e multa autorizados.
-- As avaliações EAD passam a preservar rascunhos, confirmar respostas pelo servidor e exibir o retorno correto somente no momento autorizado.
-- Os cards de Cursos Técnicos mostram a quantidade de disciplinas e o progresso acadêmico canônico de cada turma.
-
-### Alterado
-
-- A conclusão de Curso Livre, o resultado da prova e a solicitação do certificado passam a ocorrer atomicamente no backend.
-- A Gestão pode vincular o aluno sem títulos ou gerar os títulos locais no vínculo; a emissão bancária permanece uma ação posterior e separada no Financeiro.
-- O Curso Livre de Informática Básica recebeu nove matérias, resumos e conteúdos, carga total de 80 horas e avaliação publicada com 50 questões válidas.
-- Os gabaritos dos 63 cursos EAD foram removidos do JSON público e armazenados em cofre privado, com reconstituição exclusiva pelas RPCs autorizadas da Gestão.
-
-### Segurança e qualidade
-
-- Sorteio, correção, elegibilidade, cálculo financeiro, rateio de centavos e conclusão permanecem exclusivamente em RPCs autorizadas, idempotentes e auditáveis.
-- Novas tabelas usam RLS e menor privilégio; RPCs críticas usam `SECURITY DEFINER`, `search_path` vazio, locks determinísticos e grants explícitos.
-- A revisão final fechou a máscara do primeiro retorno financeiro, serializou início e entrega da prova por matrícula e passou a exigir soma exata da grade antes de concluir o salvamento.
-- Mutações e conclusão EAD foram serializadas, e os indicadores dos cards técnicos passaram a falhar de modo explícito diante de payload incompleto.
-- Fotografias parciais de prova e contagens acadêmicas vazias ou apenas coercíveis também passam a falhar fechadas no cliente.
-- Contratos acadêmicos, financeiros e de interface, TypeScript, ESLint, limite de linhas e build de produção foram validados antes da publicação.

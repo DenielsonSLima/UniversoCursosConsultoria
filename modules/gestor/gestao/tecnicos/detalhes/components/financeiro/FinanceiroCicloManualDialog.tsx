@@ -16,8 +16,8 @@ import {
 import type { MatriculaTecnicaFinanceiroRow } from './matricula-tecnica-financeiro.types';
 import type {
   CicloFinanceiroTecnicoManualPreview,
-  CicloFinanceiroTecnicoManualPreviewItem,
 } from './matricula-tecnica-ciclo-manual.types';
+import FinanceiroCicloManualChargeRows from './FinanceiroCicloManualChargeRows';
 import { getCriterioElegibilidadeLabel } from './matricula-tecnica-ciclo-manual.parser';
 import { usePreviewCicloFinanceiroTecnicoManual } from './hooks/useMatriculaTecnicaCicloManual';
 import { useAccessibleDialog } from './hooks/useAccessibleDialog';
@@ -51,21 +51,6 @@ const formatPercent = (value: string) => `${new Intl.NumberFormat('pt-BR', {
   minimumFractionDigits: 0,
   maximumFractionDigits: 2,
 }).format(Number(value))}%`;
-
-const getItemApplication = (
-  preview: CicloFinanceiroTecnicoManualPreview,
-  item: CicloFinanceiroTecnicoManualPreviewItem,
-) => {
-  if (item.tipo === 'MATRICULA') return preview.termos.aplicacao.matricula;
-  if (item.tipo === 'REMATRICULA') return preview.termos.aplicacao.rematricula;
-  return preview.termos.aplicacao.mensalidade;
-};
-
-const itemTypeLabel = (item: CicloFinanceiroTecnicoManualPreviewItem) => {
-  if (item.tipo === 'MATRICULA') return 'Matrícula';
-  if (item.tipo === 'REMATRICULA') return 'Rematrícula';
-  return `Mensalidade ${item.numero}`;
-};
 
 const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = ({
   row,
@@ -246,23 +231,18 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
                 <div className="rounded-2xl border border-violet-100 bg-violet-50 p-4"><p className="text-[9px] font-black uppercase text-violet-600">Primeiro vencimento</p><p className="mt-1 text-lg font-black text-violet-950">{formatDate(preview.primeiroVencimento)}</p></div>
               </div>
 
-              <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" role="table" aria-label="Lista completa das cobranças do ciclo">
-                <div className="hidden grid-cols-[minmax(12rem,1.6fr)_8rem_8rem_minmax(11rem,1fr)_minmax(12rem,1fr)] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-[9px] font-black uppercase tracking-wider text-slate-500 lg:grid" role="row">
-                  <span role="columnheader">Cobrança</span><span role="columnheader">Vencimento</span><span role="columnheader">Valor</span><span role="columnheader">Desconto em dia</span><span role="columnheader">Após o vencimento</span>
+              <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" aria-label="Lista completa das cobranças do ciclo">
+                <div className="hidden grid-cols-[minmax(0,1fr)_8rem_9rem] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-[9px] font-black uppercase tracking-wider text-slate-500 sm:grid">
+                  <span>Cobrança</span><span>Vencimento</span><span className="text-right">Valor nominal</span>
                 </div>
                 <div className="divide-y divide-slate-100">
-                  {preview.itens.map((item) => {
-                    const application = getItemApplication(preview, item);
-                    return (
-                      <div key={item.chave} className="grid gap-3 px-4 py-4 text-xs lg:grid-cols-[minmax(12rem,1.6fr)_8rem_8rem_minmax(11rem,1fr)_minmax(12rem,1fr)] lg:items-center" role="row">
-                        <div role="cell"><p className="font-black text-[#001a33]">{item.descricao}</p><p className="mt-1 text-[9px] font-black uppercase text-slate-400">{itemTypeLabel(item)}</p></div>
-                        <div role="cell"><p className="text-[9px] font-black uppercase text-slate-400 lg:hidden">Vencimento</p><p className="mt-0.5 font-bold text-slate-700">{formatDate(item.vencimento)}</p></div>
-                        <div role="cell"><p className="text-[9px] font-black uppercase text-slate-400 lg:hidden">Valor</p><p className="mt-0.5 font-black text-[#001a33]">{formatMoney(item.valor)}</p></div>
-                        <div role="cell"><p className="text-[9px] font-black uppercase text-slate-400 lg:hidden">Desconto em dia</p><p className={`mt-0.5 font-bold ${application.desconto ? 'text-emerald-700' : 'text-slate-400'}`}>{application.desconto ? `${formatMoney(preview.termos.descontoPontualidade)} de desconto` : 'Não se aplica'}</p></div>
-                        <div role="cell"><p className="text-[9px] font-black uppercase text-slate-400 lg:hidden">Após o vencimento</p><p className={`mt-0.5 font-bold ${application.multaJuros ? 'text-rose-600' : 'text-slate-400'}`}>{application.multaJuros ? `Juros de ${formatPercent(preview.termos.jurosAtrasoPercentual)} ao mês + multa de ${formatPercent(preview.termos.multaAtrasoPercentual)}` : 'Não se aplica'}</p></div>
-                      </div>
-                    );
-                  })}
+                  {preview.itens.map((item) => (
+                    <FinanceiroCicloManualChargeRows
+                      key={item.chave}
+                      item={item}
+                      variant="composition"
+                    />
+                  ))}
                 </div>
               </div>
 
@@ -306,7 +286,15 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
                   </dl>
                   <div className="border-t border-slate-100 px-4 py-3">
                     <p className="text-[9px] font-black uppercase text-slate-400">Itens conferidos</p>
-                    <div className="mt-2 divide-y divide-slate-100">{preview.itens.map((item) => <div key={item.chave} className="flex items-center justify-between gap-3 py-2 text-xs"><div><p className="font-bold text-slate-700">{item.descricao}</p><p className="text-[9px] font-bold uppercase text-slate-400">{formatDate(item.vencimento)}</p></div><span className="font-black text-[#001a33]">{formatMoney(item.valor)}</span></div>)}</div>
+                    <div className="mt-2 divide-y divide-slate-100">
+                      {preview.itens.map((item) => (
+                        <FinanceiroCicloManualChargeRows
+                          key={item.chave}
+                          item={item}
+                          variant="review"
+                        />
+                      ))}
+                    </div>
                   </div>
                 </div>
 
