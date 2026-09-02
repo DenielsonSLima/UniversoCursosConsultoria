@@ -63,7 +63,7 @@ const loadReceivable = async (
   const receivable = receivableResult.data as Record<string, unknown>;
   const [payerResult, transactionResult] = await Promise.all([
     admin.from("parceiros").select(
-      "id, nome, email, cpf_cnpj, telefone, endereco, numero, complemento, cep, bairro, cidade, uf, estado, status",
+      "id, nome, email, cpf_cnpj, telefone, endereco, numero, complemento, cep, bairro, cidade, uf, status",
     ).eq("id", String(receivable.cliente_id || "")).maybeSingle(),
     admin.from("payment_gateway_transactions").select("*")
       .eq("receivable_id", receivableId).eq("provider_code", PROVIDER)
@@ -93,7 +93,7 @@ const payerForGateway = (payer: Record<string, unknown>) => ({
   postalCode: payer.cep,
   district: payer.bairro,
   city: payer.cidade,
-  state: payer.uf ?? payer.estado,
+  state: payer.uf,
 });
 
 const ownsAttempt = (
