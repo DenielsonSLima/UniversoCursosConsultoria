@@ -64,7 +64,9 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
   const [dateSource, setDateSource] = useState<'TURMA' | 'INDIVIDUAL'>(
     requiresIndividualDate ? 'INDIVIDUAL' : 'TURMA',
   );
-  const [individualDate, setIndividualDate] = useState('');
+  const [individualDate, setIndividualDate] = useState(
+    () => row.cicloManual.primeiroVencimentoSugerido ?? '',
+  );
   const firstDueDate = dateSource === 'INDIVIDUAL' ? individualDate || null : null;
   const previewEnabled = cycleNumber !== null
     && row.cicloManual.estado === 'ELEGIVEL'
@@ -193,6 +195,9 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
                     <label className="mt-4 block space-y-2">
                       <span className="text-[10px] font-black uppercase text-slate-500">{requiresIndividualDate ? 'Vencimento da rematrícula / primeiro item' : 'Primeiro vencimento individual'}</span>
                       <input type="date" value={individualDate} onChange={(event) => setIndividualDate(event.target.value)} className="w-full rounded-xl border border-slate-200 p-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
+                      {row.cicloManual.primeiroVencimentoSugerido ? (
+                        <span className="block text-[10px] font-semibold text-slate-500">Sugestão automática: um mês após o último boleto do ciclo anterior. Você pode alterar esta data.</span>
+                      ) : null}
                     </label>
                   ) : null}
 

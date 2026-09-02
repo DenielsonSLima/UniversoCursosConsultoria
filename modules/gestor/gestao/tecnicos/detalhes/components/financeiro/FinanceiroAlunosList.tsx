@@ -474,6 +474,7 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
 
       {currentManualCycleRow ? (
         <FinanceiroCicloManualDialog
+          key={currentManualCycleRow.matriculaId}
           row={currentManualCycleRow}
           pending={manualCycleMutation.isPending}
           onClose={() => setManualCycleMatriculaId(null)}

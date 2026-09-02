@@ -1,8 +1,8 @@
 {
-  "version": "4.8.25",
+  "version": "4.8.26",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 34,
+  "revision": 35,
   "releasedAt": "2026-09-01",
-  "summary": "Prévia completa dos boletos do ciclo técnico"
+  "summary": "Vencimento sugerido pelo último boleto do ciclo técnico"
 }

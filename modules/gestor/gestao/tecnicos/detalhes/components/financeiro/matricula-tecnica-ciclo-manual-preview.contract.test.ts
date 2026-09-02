@@ -13,6 +13,7 @@ const eligibleState = {
   cicloBaseHistorico: 1,
   cicloMaximo: 2,
   proximoCicloNumero: 2,
+  primeiroVencimentoSugerido: "2026-10-15",
   criterioElegibilidade: "PENULTIMA_SEM_ATRASO",
   estado: "ELEGIVEL",
   podeGerar: true,
@@ -35,6 +36,14 @@ test("traduz os critérios canônicos de elegibilidade sem expor código técnic
 
 test("estado manual falha fechado para critério de elegibilidade desconhecido", () => {
   assert.doesNotThrow(() => requireMatriculaTecnicaCicloManual(eligibleState));
+  assert.throws(
+    () =>
+      requireMatriculaTecnicaCicloManual({
+        ...eligibleState,
+        primeiroVencimentoSugerido: "2026-02-30",
+      }),
+    /estado manual de ciclo incompleto/i,
+  );
   assert.throws(
     () =>
       requireMatriculaTecnicaCicloManual({
