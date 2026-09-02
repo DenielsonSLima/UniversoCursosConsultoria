@@ -365,11 +365,22 @@ export const validateBaneseGatewayResult = (
   };
 };
 
-export const errorMessage = (error: unknown) =>
-  (error instanceof Error
-    ? error.message
-    : String(error || "Erro desconhecido"))
-    .slice(0, 2_000);
+export const errorMessage = (error: unknown) => {
+  if (error instanceof Error) return error.message.slice(0, 2_000);
+  const record = asRecord(error);
+  const message = [
+    record?.message,
+    record?.details,
+    record?.hint,
+    record?.error_description,
+    record?.error,
+  ].map(stringValue).find(Boolean);
+  const code = stringValue(record?.code);
+  const fallback = record
+    ? "Erro estruturado sem mensagem."
+    : stringValue(error) || "Erro desconhecido";
+  return `${message || fallback}${code ? ` (${code})` : ""}`.slice(0, 2_000);
+};
 
 export const remotePaymentMayExist = (error: unknown) =>
   Boolean(

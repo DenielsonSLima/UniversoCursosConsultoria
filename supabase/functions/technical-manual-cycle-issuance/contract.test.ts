@@ -7,6 +7,7 @@ import {
 import type { GatewayChargeResult } from "../gateways/router.ts";
 import {
   deterministicReceivableRequestId,
+  errorMessage,
   parseCycleContext,
   parseIssuanceRequest,
   validateBaneseGatewayResult,
@@ -15,6 +16,18 @@ import {
 const RECEIVABLE_ID = "11111111-1111-4111-8111-111111111111";
 const REQUEST_ID = "22222222-2222-4222-8222-222222222222";
 const LEGACY_DATABASE_UUID = "33333333-3333-4333-4333-333333333333";
+
+Deno.test("normaliza erros estruturados sem object Object", () => {
+  assert.equal(
+    errorMessage({ code: "42703", message: "Coluna inválida." }),
+    "Coluna inválida. (42703)",
+  );
+  assert.equal(errorMessage({}), "Erro estruturado sem mensagem.");
+  assert.doesNotMatch(
+    errorMessage({ details: "Detalhe conhecido." }),
+    /object Object/,
+  );
+});
 
 Deno.test("requisição generate exige os três fingerprints e vencimento do ciclo 2", () => {
   const parsed = parseIssuanceRequest({

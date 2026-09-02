@@ -140,6 +140,25 @@ Deno.test("falha parcial devolve progresso e resume apenas os itens restantes", 
   assert.equal(result.replayed, true);
 });
 
+Deno.test("falha PostgREST estruturada nunca vira object Object", async () => {
+  const scenario = dependenciesAt({ initial: 0 });
+  scenario.dependencies.issueReceivable = () =>
+    Promise.reject({
+      code: "42703",
+      message: "Cadastro do pagador incompatível.",
+    });
+  await assert.rejects(
+    () => runManualCycleIssuance(request, scenario.dependencies),
+    (error: unknown) => {
+      assert.ok(error instanceof IssuanceHttpError);
+      assert.match(error.message, /Cadastro do pagador incompatível/);
+      assert.match(error.message, /42703/);
+      assert.doesNotMatch(error.message, /\[object Object\]/);
+      return true;
+    },
+  );
+});
+
 Deno.test("revisão manual não dispara emissão nem bloqueia os itens retomáveis", async () => {
   const initial = contextAt(0);
   initial.ciclo.recebiveis[0].emissaoBanese = "REVISAO_MANUAL";

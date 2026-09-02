@@ -138,3 +138,15 @@ Deno.test("termos canônicos são comprovados antes de chamar o criador", async 
     /persistence\.data\?\.success !== true[\s\S]*?status !== "EMITIDO"/,
   );
 });
+
+Deno.test("pagador técnico usa somente a coluna canônica uf", async () => {
+  const source = await Deno.readTextFile(
+    new URL("./receivable-issuance.ts", import.meta.url),
+  );
+  const payerSelect = source.match(
+    /admin\.from\("parceiros"\)\.select\(\s*"([^"]+)"/,
+  )?.[1] || "";
+  assert.match(payerSelect, /(?:^|,\s*)uf(?:,|$)/);
+  assert.doesNotMatch(payerSelect, /(?:^|,\s*)estado(?:,|$)/);
+  assert.match(source, /state:\s*payer\.uf/);
+});

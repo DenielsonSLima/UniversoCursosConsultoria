@@ -1,4 +1,5 @@
 import {
+  errorMessage,
   IssuanceHttpError,
   type ManualCycleContext,
   type ManualCycleIssuanceRequest,
@@ -101,12 +102,9 @@ const partialError = async (
   if (original instanceof IssuanceHttpError && original.progress) {
     return original;
   }
-  const detail = original instanceof Error
-    ? original.message
-    : String(original);
   return new IssuanceHttpError(
     409,
-    `A emissão foi interrompida com segurança. ${detail}`,
+    `A emissão foi interrompida com segurança. ${errorMessage(original)}`,
     "CYCLE_ISSUANCE_PARTIAL",
     progress,
   );

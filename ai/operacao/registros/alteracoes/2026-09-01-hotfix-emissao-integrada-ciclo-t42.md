@@ -169,3 +169,28 @@ Total: 48 arquivos
   arquivos de runtime validados.
 - O smoke bancário final permanece reservado ao clique explícito do gestor;
   nenhum título real foi emitido durante o hotfix.
+
+## Hotfix pós-criação local de 02/09/2026
+
+- A tentativa real seguinte criou atomicamente o run e os 13 recebíveis, mas
+  parou em `0/13` antes do primeiro claim e antes do adapter Banese.
+- Os logs Postgres dos três disparos confirmaram SQLSTATE `42703`: o carregador
+  técnico consultava `parceiros.estado`, enquanto o cadastro canônico possui
+  somente `parceiros.uf`. O EAD não reproduzia a falha porque usa outra projeção
+  do pagador e só depois converge no mesmo adapter Banese.
+- A projeção técnica agora usa exclusivamente `uf`. A mensagem parcial extrai
+  os campos estruturados do PostgREST e possui fallback textual que nunca rende
+  `[object Object]`.
+- A perícia remota comprovou 13 recebíveis `LOCAL_CREATED`, 13 pendentes, zero
+  token de criação, submissão, Nosso Número, identidade remota, linha digitável,
+  código de barras, Pix ou transação; a retomada não possui título para duplicar.
+- Os 13 snapshots foram reconstruídos pela função canônica: rematrícula de
+  R$ 100,00 sem desconto e 12 mensalidades de R$ 279,90 com desconto de
+  R$ 19,90, juros de 2% e multa de 2%. Valor e vencimento coincidem em todos os
+  itens, e o pagador possui os campos obrigatórios do payload Banese.
+- Foram aprovados 24 testes focados, `deno check`, formato, teto de 500 linhas e
+  duas revisões independentes sem achados. A Edge foi relida em produção na
+  versão 3, `ACTIVE`, com JWT obrigatório e os três arquivos corrigidos.
+- O gestor autorizou concluir os títulos já existentes. A execução autenticada
+  permanece pendente porque nenhuma sessão de navegador está conectada a este
+  agente; não foi criado atalho de serviço nem removida a auditoria do ator.
