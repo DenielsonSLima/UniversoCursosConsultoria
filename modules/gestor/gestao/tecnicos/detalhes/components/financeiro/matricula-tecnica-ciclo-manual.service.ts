@@ -1,170 +1,107 @@
-import { supabase } from '../../../../../../../lib/supabase';
+import { supabase } from "../../../../../../../lib/supabase";
 import type {
   CicloFinanceiroTecnicoManualEmissaoProgress,
-  CicloFinanceiroTecnicoManualPreview,
   GerarCicloFinanceiroTecnicoManualInput,
   GerarCicloFinanceiroTecnicoManualResult,
   PreviewCicloFinanceiroTecnicoManualInput,
   PreviewCicloFinanceiroTecnicoManualResult,
   RetomarEmissaoCicloFinanceiroTecnicoManualInput,
-} from './matricula-tecnica-ciclo-manual.types';
-import { requireMatriculaTecnicaCicloManual } from './matricula-tecnica-ciclo-manual.parser';
+} from "./matricula-tecnica-ciclo-manual.types";
+import { requireMatriculaTecnicaCicloManual } from "./matricula-tecnica-ciclo-manual.parser";
+import {
+  requireCicloFinanceiroTecnicoManualPreview,
+} from "./matricula-tecnica-ciclo-manual-preview.parser";
 
-export { requireMatriculaTecnicaCicloManual } from './matricula-tecnica-ciclo-manual.parser';
+export { requireMatriculaTecnicaCicloManual } from "./matricula-tecnica-ciclo-manual.parser";
 
 const isRecord = (value: unknown): value is Record<string, unknown> => (
-  Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+  Boolean(value) && typeof value === "object" && !Array.isArray(value)
 );
 
 const isDecimalString = (value: unknown): value is string => (
-  typeof value === 'string' && /^-?\d+(?:\.\d+)?$/.test(value)
+  typeof value === "string" && /^-?\d+(?:\.\d+)?$/.test(value)
 );
 
 const isNonEmptyString = (value: unknown): value is string => (
-  typeof value === 'string' && value.trim().length > 0
+  typeof value === "string" && value.trim().length > 0
 );
 
 const isIsoCalendarDate = (value: unknown): value is string => {
-  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const [year, month, day] = value.split('-').map(Number);
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+  const [year, month, day] = value.split("-").map(Number);
   const parsed = new Date(Date.UTC(year, month - 1, day));
-  return parsed.getUTCFullYear() === year
-    && parsed.getUTCMonth() === month - 1
-    && parsed.getUTCDate() === day;
+  return parsed.getUTCFullYear() === year &&
+    parsed.getUTCMonth() === month - 1 &&
+    parsed.getUTCDate() === day;
 };
-
-const isApplicationItem = (value: unknown) => (
-  isRecord(value)
-  && typeof value.desconto === 'boolean'
-  && typeof value.multaJuros === 'boolean'
-);
 
 const requireIndividualSecondCycleDate = (
   cycleNumber: number,
   firstDueDate: string | null,
 ) => {
   if (cycleNumber === 2 && firstDueDate === null) {
-    throw new Error('O 2º ciclo exige o vencimento individual do primeiro item.');
+    throw new Error(
+      "O 2º ciclo exige o vencimento individual do primeiro item.",
+    );
   }
-};
-
-const requirePreview = (value: unknown): CicloFinanceiroTecnicoManualPreview => {
-  if (!isRecord(value) || !Array.isArray(value.itens)) {
-    throw new Error('O servidor não retornou a prévia canônica do ciclo.');
-  }
-  const items = value.itens as unknown[];
-  const terms = value.termos;
-  const validItems = items.every((item) => (
-    isRecord(item)
-    && isNonEmptyString(item.chave)
-    && ['MATRICULA', 'REMATRICULA', 'PARCELA'].includes(String(item.tipo))
-    && Number.isInteger(item.numero)
-    && Number(item.numero) >= 0
-    && isNonEmptyString(item.descricao)
-    && isDecimalString(item.valor)
-    && isIsoCalendarDate(item.vencimento)
-  ));
-  const validTerms = isRecord(terms)
-    && isDecimalString(terms.descontoPontualidade)
-    && isDecimalString(terms.jurosAtrasoPercentual)
-    && isDecimalString(terms.multaAtrasoPercentual)
-    && typeof terms.instrucaoBoleto === 'string'
-    && isRecord(terms.aplicacao)
-    && isApplicationItem(terms.aplicacao.matricula)
-    && isApplicationItem(terms.aplicacao.mensalidade)
-    && isApplicationItem(terms.aplicacao.rematricula);
-  const cycleNumber = Number(value.cicloNumero);
-  const typedItems = validItems
-    ? items as Array<Record<string, unknown>>
-    : [];
-  const keys = typedItems.map((item) => String(item.chave));
-  const installments = typedItems.filter((item) => item.tipo === 'PARCELA');
-  const leadItems = typedItems.filter((item) => item.tipo !== 'PARCELA');
-  const expectedLeadType = cycleNumber === 1 ? 'MATRICULA' : 'REMATRICULA';
-  const coherentComposition = validItems
-    && installments.length > 0
-    && leadItems.length <= 1
-    && leadItems.every((item) => item.tipo === expectedLeadType && item.numero === 0)
-    && (leadItems.length === 0 || typedItems[0]?.tipo === expectedLeadType)
-    && typedItems.slice(leadItems.length).every((item) => item.tipo === 'PARCELA')
-    && installments.every((item, index) => item.numero === index + 1)
-    && typedItems.every((item, index) => (
-      index === 0 || String(typedItems[index - 1].vencimento) <= String(item.vencimento)
-    ))
-    && new Set(keys).size === keys.length
-    && typedItems[0]?.vencimento === value.primeiroVencimento;
-  if (
-    !Number.isInteger(value.cicloNumero)
-    || cycleNumber < 1
-    || cycleNumber > 2
-    || !['TURMA', 'INDIVIDUAL'].includes(String(value.sourceVencimento))
-    || (Number(value.cicloNumero) === 2 && value.sourceVencimento !== 'INDIVIDUAL')
-    || !isIsoCalendarDate(value.dataOrigem)
-    || !isIsoCalendarDate(value.primeiroVencimento)
-    || !Number.isInteger(value.quantidadeItens)
-    || Number(value.quantidadeItens) < 1
-    || value.quantidadeItens !== items.length
-    || !isDecimalString(value.total)
-    || !coherentComposition
-    || !validTerms
-    || !isNonEmptyString(value.regraEfetivaFingerprint)
-    || !isNonEmptyString(value.politicaFingerprint)
-    || !isNonEmptyString(value.cronogramaFingerprint)
-  ) {
-    throw new Error('O servidor retornou uma prévia de ciclo incompleta.');
-  }
-  return value as unknown as CicloFinanceiroTecnicoManualPreview;
 };
 
 const requireGenerationResult = (
   value: unknown,
 ): GerarCicloFinanceiroTecnicoManualResult => {
-  if (!isRecord(value) || !isRecord(value.ciclo) || !Array.isArray(value.ciclo.recebiveis)) {
-    throw new Error('O servidor não confirmou a geração e emissão do ciclo.');
+  if (
+    !isRecord(value) || !isRecord(value.ciclo) ||
+    !Array.isArray(value.ciclo.recebiveis)
+  ) {
+    throw new Error("O servidor não confirmou a geração e emissão do ciclo.");
   }
   const cycle = value.ciclo;
   const receivables = cycle.recebiveis as unknown[];
   const validReceivables = receivables.every((item) => (
-    isRecord(item)
-    && isNonEmptyString(item.id)
-    && isNonEmptyString(item.chave)
-    && ['MATRICULA', 'REMATRICULA', 'PARCELA'].includes(String(item.tipo))
-    && Number.isInteger(item.numero)
-    && Number(item.numero) >= 0
-    && isNonEmptyString(item.descricao)
-    && isDecimalString(item.valor)
-    && isIsoCalendarDate(item.vencimento)
-    && ['PENDENTE', 'VENCIDO'].includes(String(item.status))
-    && item.emissaoBanese === 'EMITIDO'
+    isRecord(item) &&
+    isNonEmptyString(item.id) &&
+    isNonEmptyString(item.chave) &&
+    ["MATRICULA", "REMATRICULA", "PARCELA"].includes(String(item.tipo)) &&
+    Number.isInteger(item.numero) &&
+    Number(item.numero) >= 0 &&
+    isNonEmptyString(item.descricao) &&
+    isDecimalString(item.valor) &&
+    isIsoCalendarDate(item.vencimento) &&
+    ["PENDENTE", "VENCIDO"].includes(String(item.status)) &&
+    item.emissaoBanese === "EMITIDO"
   ));
   const typedReceivables = validReceivables
     ? receivables as Array<Record<string, unknown>>
     : [];
   if (
-    value.success !== true
-    || !isNonEmptyString(value.requestId)
-    || typeof value.replayed !== 'boolean'
-    || !Number.isInteger(cycle.numero)
-    || Number(cycle.numero) < 1
-    || cycle.status !== 'EMITIDO_BANESE'
-    || cycle.quantidadeItens !== 13
-    || cycle.quantidadeItens !== receivables.length
-    || !isDecimalString(cycle.total)
-    || cycle.emitidosBanese !== 13
-    || cycle.pendentesEmissao !== 0
-    || cycle.emRevisao !== 0
-    || !validReceivables
-    || new Set(typedReceivables.map((item) => String(item.id))).size !== 13
-    || new Set(typedReceivables.map((item) => String(item.chave))).size !== 13
+    value.success !== true ||
+    !isNonEmptyString(value.requestId) ||
+    typeof value.replayed !== "boolean" ||
+    !Number.isInteger(cycle.numero) ||
+    Number(cycle.numero) < 1 ||
+    cycle.status !== "EMITIDO_BANESE" ||
+    cycle.quantidadeItens !== 13 ||
+    cycle.quantidadeItens !== receivables.length ||
+    !isDecimalString(cycle.total) ||
+    cycle.emitidosBanese !== 13 ||
+    cycle.pendentesEmissao !== 0 ||
+    cycle.emRevisao !== 0 ||
+    !validReceivables ||
+    new Set(typedReceivables.map((item) => String(item.id))).size !== 13 ||
+    new Set(typedReceivables.map((item) => String(item.chave))).size !== 13
   ) {
-    throw new Error('O servidor não confirmou as 13 cobranças e os 13 BolePix Banese.');
+    throw new Error(
+      "O servidor não confirmou as 13 cobranças e os 13 BolePix Banese.",
+    );
   }
   const cicloManual = requireMatriculaTecnicaCicloManual(value.cicloManual);
   return {
     success: true,
     requestId: value.requestId,
     replayed: value.replayed,
-    ciclo: cycle as unknown as GerarCicloFinanceiroTecnicoManualResult['ciclo'],
+    ciclo: cycle as unknown as GerarCicloFinanceiroTecnicoManualResult["ciclo"],
     cicloManual,
   };
 };
@@ -181,14 +118,14 @@ const readIssuanceProgress = (
     value.emRevisao,
   ];
   if (
-    !fields.every(Number.isInteger)
-    || Number(value.cicloNumero) < 1
-    || Number(value.quantidadeItens) < 1
-    || Number(value.emitidosBanese) < 0
-    || Number(value.pendentesEmissao) < 0
-    || Number(value.emRevisao) < 0
-    || Number(value.emitidosBanese) + Number(value.pendentesEmissao)
-      + Number(value.emRevisao) > Number(value.quantidadeItens)
+    !fields.every(Number.isInteger) ||
+    Number(value.cicloNumero) < 1 ||
+    Number(value.quantidadeItens) < 1 ||
+    Number(value.emitidosBanese) < 0 ||
+    Number(value.pendentesEmissao) < 0 ||
+    Number(value.emRevisao) < 0 ||
+    Number(value.emitidosBanese) + Number(value.pendentesEmissao) +
+          Number(value.emRevisao) > Number(value.quantidadeItens)
   ) return null;
   return value as unknown as CicloFinanceiroTecnicoManualEmissaoProgress;
 };
@@ -199,7 +136,7 @@ export class CicloFinanceiroTecnicoManualIssuanceError extends Error {
     readonly progress: CicloFinanceiroTecnicoManualEmissaoProgress | null,
   ) {
     super(message);
-    this.name = 'CicloFinanceiroTecnicoManualIssuanceError';
+    this.name = "CicloFinanceiroTecnicoManualIssuanceError";
   }
 }
 
@@ -216,17 +153,17 @@ export const getCicloFinanceiroTecnicoManualRecoveryGuidance = (
     ? error.progress
     : null;
   if (progress && progress.emRevisao > 0 && progress.pendentesEmissao === 0) {
-    return 'Revisão manual necessária; não tente uma nova emissão.';
+    return "Revisão manual necessária; não tente uma nova emissão.";
   }
-  return 'Use “Retomar emissão”; não gere o ciclo novamente.';
+  return "Use “Retomar emissão”; não gere o ciclo novamente.";
 };
 
 const createIssuanceError = (body: unknown, fallback: unknown) => {
   const message = isRecord(body) && isNonEmptyString(body.error)
     ? body.error
     : fallback instanceof Error && isNonEmptyString(fallback.message)
-      ? fallback.message
-      : 'Não foi possível concluir a emissão BolePix Banese.';
+    ? fallback.message
+    : "Não foi possível concluir a emissão BolePix Banese.";
   const error = new CicloFinanceiroTecnicoManualIssuanceError(
     message,
     isRecord(body) ? readIssuanceProgress(body.progress) : null,
@@ -249,7 +186,7 @@ const invokeIssuance = async (
   body: Record<string, unknown>,
 ): Promise<GerarCicloFinanceiroTecnicoManualResult> => {
   const { data, error } = await supabase.functions.invoke(
-    'technical-manual-cycle-issuance',
+    "technical-manual-cycle-issuance",
     { body },
   );
   if (error) throw await readFunctionError(error);
@@ -266,20 +203,20 @@ const reconcileIssuedCycle = (
   const generated = result.cicloManual.cicloGerado;
   const finalCycle = cycleNumber === result.cicloManual.cicloMaximo;
   const validTransition = finalCycle
-    ? result.cicloManual.estado === 'JA_GERADO'
-      && !result.cicloManual.podeGerar
-    : ['BLOQUEADO', 'ELEGIVEL'].includes(result.cicloManual.estado)
-      && result.cicloManual.proximoCicloNumero === cycleNumber + 1;
+    ? result.cicloManual.estado === "JA_GERADO" &&
+      !result.cicloManual.podeGerar
+    : ["BLOQUEADO", "ELEGIVEL"].includes(result.cicloManual.estado) &&
+      result.cicloManual.proximoCicloNumero === cycleNumber + 1;
   if (
-    result.ciclo.numero !== cycleNumber
-    || !validTransition
-    || generated?.numero !== cycleNumber
-    || generated.quantidadeItens !== result.ciclo.quantidadeItens
-    || generated.emitidosBanese !== result.ciclo.quantidadeItens
-    || generated.pendentesEmissao !== 0
-    || generated.emRevisao !== 0
+    result.ciclo.numero !== cycleNumber ||
+    !validTransition ||
+    generated?.numero !== cycleNumber ||
+    generated.quantidadeItens !== result.ciclo.quantidadeItens ||
+    generated.emitidosBanese !== result.ciclo.quantidadeItens ||
+    generated.pendentesEmissao !== 0 ||
+    generated.emRevisao !== 0
   ) {
-    throw new Error('O servidor não reconciliou o ciclo emitido solicitado.');
+    throw new Error("O servidor não reconciliou o ciclo emitido solicitado.");
   }
 };
 
@@ -287,14 +224,14 @@ const requirePreviewResult = (
   value: unknown,
 ): PreviewCicloFinanceiroTecnicoManualResult => {
   if (
-    !isRecord(value)
-    || !isNonEmptyString(value.matriculaId)
-    || !isNonEmptyString(value.turmaId)
+    !isRecord(value) ||
+    !isNonEmptyString(value.matriculaId) ||
+    !isNonEmptyString(value.turmaId)
   ) {
-    throw new Error('O servidor não confirmou o contexto da prévia do ciclo.');
+    throw new Error("O servidor não confirmou o contexto da prévia do ciclo.");
   }
   const cicloManual = requireMatriculaTecnicaCicloManual(value.cicloManual);
-  const preview = requirePreview(value.preview);
+  const preview = requireCicloFinanceiroTecnicoManualPreview(value.preview);
   return {
     matriculaId: value.matriculaId,
     turmaId: value.turmaId,
@@ -319,7 +256,7 @@ export const matriculaTecnicaCicloManualService = {
       input.primeiroVencimento,
     );
     const result = await unwrap(
-      supabase.rpc('preview_ciclo_financeiro_tecnico_manual_secure', {
+      supabase.rpc("preview_ciclo_financeiro_tecnico_manual_secure", {
         p_matricula_id: input.matriculaId,
         p_ciclo_numero: input.cicloNumero,
         p_primeiro_vencimento: input.primeiroVencimento,
@@ -327,22 +264,24 @@ export const matriculaTecnicaCicloManualService = {
       requirePreviewResult,
     );
     if (
-      result.matriculaId !== input.matriculaId
-      || result.preview.cicloNumero !== input.cicloNumero
-      || result.preview.sourceVencimento !== (
-        input.primeiroVencimento === null ? 'TURMA' : 'INDIVIDUAL'
-      )
-      || (
-        input.primeiroVencimento !== null
-        && (
-          result.preview.primeiroVencimento !== input.primeiroVencimento
-          || result.preview.dataOrigem !== input.primeiroVencimento
+      result.matriculaId !== input.matriculaId ||
+      result.preview.cicloNumero !== input.cicloNumero ||
+      result.preview.sourceVencimento !== (
+          input.primeiroVencimento === null ? "TURMA" : "INDIVIDUAL"
+        ) ||
+      (
+        input.primeiroVencimento !== null &&
+        (
+          result.preview.primeiroVencimento !== input.primeiroVencimento ||
+          result.preview.dataOrigem !== input.primeiroVencimento
         )
-      )
-      || result.cicloManual.estado !== 'ELEGIVEL'
-      || !result.cicloManual.podeGerar
+      ) ||
+      result.cicloManual.estado !== "ELEGIVEL" ||
+      !result.cicloManual.podeGerar
     ) {
-      throw new Error('O servidor não reconciliou a prévia do ciclo solicitado.');
+      throw new Error(
+        "O servidor não reconciliou a prévia do ciclo solicitado.",
+      );
     }
     return result;
   },
@@ -353,7 +292,7 @@ export const matriculaTecnicaCicloManualService = {
       input.primeiroVencimento,
     );
     const result = await invokeIssuance({
-      action: 'generate',
+      action: "generate",
       matriculaId: input.matriculaId,
       cicloNumero: input.cicloNumero,
       ...(input.primeiroVencimento
@@ -365,7 +304,7 @@ export const matriculaTecnicaCicloManualService = {
       expectedCronogramaFingerprint: input.expectedCronogramaFingerprint,
     });
     if (result.requestId !== input.requestId) {
-      throw new Error('O servidor não reconciliou o identificador da emissão.');
+      throw new Error("O servidor não reconciliou o identificador da emissão.");
     }
     reconcileIssuedCycle(result, input.cicloNumero);
     return result;
@@ -373,7 +312,7 @@ export const matriculaTecnicaCicloManualService = {
 
   async resume(input: RetomarEmissaoCicloFinanceiroTecnicoManualInput) {
     const result = await invokeIssuance({
-      action: 'resume',
+      action: "resume",
       matriculaId: input.matriculaId,
       cicloNumero: input.cicloNumero,
     });
