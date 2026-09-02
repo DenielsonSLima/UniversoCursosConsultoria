@@ -417,10 +417,8 @@ enabled = true
 
 [functions.payment-checkout]
 verify_jwt = false
-
 [functions.checkout-api]
 verify_jwt = false
-
 [functions.asaas-api]
 verify_jwt = true
 
@@ -457,6 +455,8 @@ verify_jwt = true
 verify_jwt = true
 [functions.technical-manual-cycle-issuance]
 verify_jwt = true
+[functions.technical-manual-cycle-recovery-worker]
+verify_jwt = false
 [functions.whatsapp-webhook]
 verify_jwt = false
 

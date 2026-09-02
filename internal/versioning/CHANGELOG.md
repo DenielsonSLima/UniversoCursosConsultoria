@@ -2,7 +2,30 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
-Histórico anterior: [22/08/2026 a 23/08/2026](./changelog/2026-08-22-a-2026-08-23.md), [21/08/2026 a 22/08/2026 — parte 2](./changelog/2026-08-21-a-2026-08-22-parte-2.md), [21/08/2026 — parte 1](./changelog/2026-08-21-parte-1.md), [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+Histórico anterior: [24/08/2026 — versões 4.7.5 a 4.7.7](./changelog/2026-08-24-parte-1.md), [22/08/2026 a 23/08/2026](./changelog/2026-08-22-a-2026-08-23.md), [21/08/2026 a 22/08/2026 — parte 2](./changelog/2026-08-21-a-2026-08-22-parte-2.md), [21/08/2026 — parte 1](./changelog/2026-08-21-parte-1.md), [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+
+## [4.8.29] - 2026-09-02
+
+### Corrigido
+
+- O ciclo técnico aceita o GUI Pix oficial do Banese sem depender de caixa
+  alta e persiste o retorno bancário completo de forma atômica.
+- Uma emissão interrompida pode ser recuperada internamente por consulta,
+  cancelamento confirmado e substituição única, sem recriar os recebíveis e
+  sem repetir uma mutação bancária ambígua.
+
+### Segurança e integridade
+
+- Leases, CAS, cooldown e fingerprints cercam cancelamento e reemissão; o
+  título antigo é arquivado e não pode voltar a uma cobrança ativa.
+- A recuperação real concluiu 13/13 títulos da matrícula afetada com Nosso
+  Número distinto, Pix, linha digitável, código de barras, termos confirmados
+  e exatamente uma transação por recebível.
+
+### Qualidade
+
+- A correção passou por 40 testes focados, checagem/formatação Deno e revisão
+  independente antes da migration e da retomada em produção.
 
 ## [4.8.28] - 2026-09-02
 
@@ -460,33 +483,3 @@ Histórico anterior: [22/08/2026 a 23/08/2026](./changelog/2026-08-22-a-2026-08-
 - O compartilhamento exige CPF válido e e-mail canônico iguais em todos os perfis, preserva a senha existente e rejeita colisões ou divergências antes do vínculo.
 - Travas transacionais, constraints diferíveis e limpeza conservadora de Auth protegem vínculos e exclusões concorrentes.
 - Recuperação de senha, primeiro acesso, checkout, convites assinados e Edge Function foram revisados em conjunto, com contratos multiperfil incorporados ao gate do GitHub.
-
-## [4.7.7] - 2026-08-24
-
-### Corrigido
-
-- O card do aluno agora reconhece a validação administrativa do e-mail com check verde e rótulo próprio, sem confundi-la com a confirmação independente do Supabase Auth.
-
-## [4.7.6] - 2026-08-24
-
-### Corrigido
-
-- A Caixa de Assinaturas da Secretaria volta a consultar os documentos da Matriz, cujo UUID legado é válido no PostgreSQL, sem falhar antes da chamada remota.
-
-### Segurança e qualidade
-
-- A fronteira das RPCs continua rejeitando identificadores malformados; autorização, escopo, banco e funções remotas permanecem inalterados.
-- A PR #87 foi integrada na `main`, a Vercel Production ficou pronta e o smoke autenticado da Caixa da Matriz concluiu sem erro.
-
-## [4.7.5] - 2026-08-24
-
-### Corrigido
-
-- A emissão do Diário volta a respeitar a capa visual configurada em Modelos de Documentos, sem reconstruir uma capa genérica nem duplicar logo, título, marca d'água ou slogan.
-- Capa e contracapa possuem destinos independentes, e o gerador relê o modelo autoritativo antes de compor o PDF para não reutilizar a arte antiga em cache.
-- Professor e Coordenador voltam a ter slots digitais explícitos e posicionáveis na página de validação.
-
-### Segurança e qualidade
-
-- Novas emissões congelam a capa no manifesto V3 por URL, MIME, dimensões, tamanho e SHA-256, mantendo a finalização dos manifestos V1/V2 históricos.
-- A migration V3, a Edge Function v14 e a aplicação web foram publicadas em Produção pela PR #85; o contrato remoto preserva V1/V2 históricos, exige V3 para novas emissões e mantém JWT/ACLs restritivos.

@@ -1,8 +1,8 @@
 {
-  "version": "4.8.28",
+  "version": "4.8.29",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 37,
+  "revision": 38,
   "releasedAt": "2026-09-02",
-  "summary": "Pagador canônico na emissão BolePix do ciclo técnico"
+  "summary": "Recuperação idempotente da emissão BolePix técnica"
 }

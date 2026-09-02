@@ -106,8 +106,14 @@ const assertProductionRoute = async (admin: Client) => {
 export const createManualCycleIssuanceDependencies = (input: {
   admin: Client;
   userClient: Client;
-  gestor: GestorAutorizado;
+  gestor?: GestorAutorizado;
   supabaseUrl: string;
+  internalRecovery?: {
+    expectedMatriculaId: string;
+    expectedCycleNumber: number;
+    expectedCycleRequestId: string;
+    expectedItemCount: number;
+  };
 }): ManualCycleIssuanceDependencies => {
   let scope: IssuanceScope | null = null;
   const issueReceivable = createReceivableIssuer({
@@ -115,6 +121,25 @@ export const createManualCycleIssuanceDependencies = (input: {
     userClient: input.userClient,
     supabaseUrl: input.supabaseUrl,
     getScope: () => scope,
+    authorizeReceivable: input.internalRecovery
+      ? async (receivableId, requestId) => {
+        const { data, error } = await input.admin.rpc(
+          "authorize_technical_manual_receivable_issuance_recovery_service",
+          {
+            p_receivable_id: receivableId,
+            p_request_id: requestId,
+            p_expected_matricula_id: input.internalRecovery
+              ?.expectedMatriculaId,
+            p_expected_cycle_number: input.internalRecovery
+              ?.expectedCycleNumber,
+            p_expected_cycle_request_id: input.internalRecovery
+              ?.expectedCycleRequestId,
+            p_expected_item_count: input.internalRecovery?.expectedItemCount,
+          },
+        );
+        return { data, error };
+      }
+      : undefined,
   });
 
   const loadContext = async (request: ManualCycleIssuanceRequest) => {
@@ -137,17 +162,41 @@ export const createManualCycleIssuanceDependencies = (input: {
 
   return {
     async preflight(request) {
-      requireGestorTab(input.gestor, "financeiro", "receber");
+      if (input.internalRecovery) {
+        const { data, error } = await input.admin.rpc(
+          "assert_technical_manual_cycle_recovery_service",
+          {
+            p_matricula_id: request.matriculaId,
+            p_ciclo_numero: request.cicloNumero,
+            p_expected_cycle_request_id:
+              input.internalRecovery.expectedCycleRequestId,
+            p_expected_item_count: input.internalRecovery.expectedItemCount,
+          },
+        );
+        if (error || data?.authorized !== true) {
+          throw error || new Error(
+            "A recuperação interna do ciclo não foi autorizada.",
+          );
+        }
+      } else {
+        if (!input.gestor) throw new Error("Gestor da emissão não informado.");
+        requireGestorTab(input.gestor, "financeiro", "receber");
+      }
       const [baseScope, credentialId, issuer] = await Promise.all([
         loadEnrollmentScope(input.admin, request.matriculaId),
         assertProductionRoute(input.admin),
         resolveGatewayIssuer(input.admin),
       ]);
-      requireGestorForPolo(input.gestor, baseScope.poloId);
+      if (input.gestor) requireGestorForPolo(input.gestor, baseScope.poloId);
       scope = { ...baseScope, credentialId, issuerPoloId: issuer.id };
     },
 
     async prepare(request) {
+      if (input.internalRecovery) {
+        throw new Error(
+          "A recuperação interna não pode preparar um novo ciclo.",
+        );
+      }
       if (!scope) throw new Error("Escopo da emissão não foi validado.");
       const { data, error } = await input.userClient.rpc(
         "preparar_emissao_ciclo_financeiro_tecnico_manual_secure",
