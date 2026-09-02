@@ -268,4 +268,15 @@ Total: 65 arquivos
 - Revisão independente confirmou a comparação null-safe, o replay GET-only do
   título cancelado e a preservação das guardas de `API_REGISTERED`.
 - As migrations foram aplicadas via MCP e a Edge de recuperação está ativa na
-  versão 4. A publicação GitHub/Vercel será registrada após o merge.
+  versão 4.
+
+### Evidência final de publicação
+
+- PR #122 integrado por squash em `main` no commit
+  `1ef97cffd2f67414dc7e9716a9f55c8909179259`.
+- No PR, controle de versão `33642644371` e qualidade `33642644474` foram
+  aprovados; a Preview Vercel `6VeWHMnNVB3mHTBEP2vmUdfbfyqX` ficou pronta.
+- O pipeline da `main` `33642910848` concluiu TypeScript, lint, contratos,
+  regressões BolePix e build com sucesso.
+- A produção Vercel `HLbkTxJykvdCMaqRtUYcmsK6P4gE` ficou pronta e o domínio
+  `universocc.com.br` respondeu normalmente após o deploy.

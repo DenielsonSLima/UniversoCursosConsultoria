@@ -1,6 +1,6 @@
 # Lote ativo
 
-Estado: `RECUPERAÇÃO BANESE CONCLUÍDA — PUBLICAÇÃO GITHUB EM ANDAMENTO`
+Estado: `PUBLICAÇÃO CONCLUÍDA — PR #122 MERGEADO`
 
 ## Lote: 2026-09-01-hotfix-emissao-integrada-ciclo-t42
 
@@ -51,5 +51,7 @@ Estado: `RECUPERAÇÃO BANESE CONCLUÍDA — PUBLICAÇÃO GITHUB EM ANDAMENTO`
 - Migration final `20260902091600` aplicada em produção.
 - Edge `technical-manual-cycle-recovery-worker` ativa na versão 4, com
   autenticação interna própria e tempo de execução menor que o lease.
-- Publicação atômica no GitHub e validação do pipeline permanecem como a etapa
-  final deste lote.
+- PR #122 integrado por squash na `main` no commit `1ef97cff`; controle de
+  versão, qualidade completa, regressões BolePix, build e Vercel passaram.
+- Produção Vercel `HLbkTxJykvdCMaqRtUYcmsK6P4gE` ficou pronta e o domínio
+  público respondeu normalmente após a publicação.
