@@ -138,7 +138,7 @@ Deno.test("baixa propaga um único AbortSignal a todas as chamadas Banese", asyn
 
 Deno.test("baixa abortada não alcança o PUT bancário", async () => {
   const controller = new AbortController();
-  controller.abort(new DOMException("deadline", "AbortError"));
+  controller.abort(new Error("deadline"));
   await withMockedBanese(
     () => titleResponse(2),
     async (methods) => {
