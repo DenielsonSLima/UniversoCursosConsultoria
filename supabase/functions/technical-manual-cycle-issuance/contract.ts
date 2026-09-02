@@ -9,8 +9,10 @@ import {
   normalizeBanesePixQrImage,
 } from "../banese/internal/pix-validation.ts";
 
-export const UUID_RE =
+export const REQUEST_UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+export const DATABASE_UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const FINGERPRINT_RE = /^[0-9a-f]{64}$/;
 
 export type ManualCycleIssuanceRequest = {
@@ -91,9 +93,13 @@ const validIsoDate = (value: unknown) => {
     parsed.getUTCMonth() === month - 1 && parsed.getUTCDate() === day;
 };
 
-const requiredUuid = (value: unknown, field: string) => {
+const requiredUuid = (
+  value: unknown,
+  field: string,
+  pattern: RegExp,
+) => {
   const candidate = stringValue(value);
-  if (!UUID_RE.test(candidate)) {
+  if (!pattern.test(candidate)) {
     throw new IssuanceHttpError(400, `${field} inválido.`, "INVALID_REQUEST");
   }
   return candidate;
@@ -118,7 +124,11 @@ export const parseIssuanceRequest = (
   if (action !== "generate" && action !== "resume") {
     throw new IssuanceHttpError(400, "Ação inválida.", "INVALID_REQUEST");
   }
-  const matriculaId = requiredUuid(body.matriculaId, "Matrícula");
+  const matriculaId = requiredUuid(
+    body.matriculaId,
+    "Matrícula",
+    DATABASE_UUID_RE,
+  );
   const cicloNumero = Number(body.cicloNumero);
   if (!Number.isInteger(cicloNumero) || cicloNumero < 1 || cicloNumero > 2) {
     throw new IssuanceHttpError(400, "Ciclo inválido.", "INVALID_REQUEST");
@@ -153,7 +163,11 @@ export const parseIssuanceRequest = (
     matriculaId,
     cicloNumero,
     primeiroVencimento,
-    requestId: requiredUuid(body.requestId, "Identificador da requisição"),
+    requestId: requiredUuid(
+      body.requestId,
+      "Identificador da requisição",
+      REQUEST_UUID_RE,
+    ),
     expectedRegraFingerprint: optionalFingerprint(
       body.expectedRegraFingerprint,
       "Fingerprint da regra",
@@ -198,7 +212,7 @@ const parseReceivableSummary = (
   const type = stringValue(item?.tipo).toUpperCase();
   const number = Number(item?.numero);
   if (
-    !item || !UUID_RE.test(stringValue(item.id)) ||
+    !item || !DATABASE_UUID_RE.test(stringValue(item.id)) ||
     !stringValue(item.chave) ||
     !["MATRICULA", "REMATRICULA", "PARCELA"].includes(type) ||
     !Number.isInteger(number) || number < 0 ||
@@ -231,10 +245,10 @@ export const parseCycleContext = (value: unknown): ManualCycleContext => {
   const turmaId = stringValue(envelope?.turmaId);
   const poloId = stringValue(envelope?.poloId);
   if (
-    !envelope || !cycle || !UUID_RE.test(requestId) ||
-    (matriculaId && !UUID_RE.test(matriculaId)) ||
-    (turmaId && !UUID_RE.test(turmaId)) ||
-    (poloId && !UUID_RE.test(poloId)) ||
+    !envelope || !cycle || !REQUEST_UUID_RE.test(requestId) ||
+    (matriculaId && !DATABASE_UUID_RE.test(matriculaId)) ||
+    (turmaId && !DATABASE_UUID_RE.test(turmaId)) ||
+    (poloId && !DATABASE_UUID_RE.test(poloId)) ||
     !decimalValue(cycle.total) || receivables.length < 1 ||
     new Set(receivables.map((item) => item.id)).size !== receivables.length ||
     new Set(receivables.map((item) => item.chave)).size !== receivables.length
@@ -330,7 +344,7 @@ export const validateBaneseGatewayResult = (
     Math.round(financialTerms.nominalAmount * 100) !==
       Math.round(amount * 100) ||
     financialTerms.dueDate !== dueDate || value.remoteStatus !== "PENDING" ||
-    !UUID_RE.test(stringValue(value.issuerPoloId)) ||
+    !DATABASE_UUID_RE.test(stringValue(value.issuerPoloId)) ||
     value.issuerPoloId !== stringValue(receivable.gateway_issuer_polo_id)
   ) {
     throw new Error(

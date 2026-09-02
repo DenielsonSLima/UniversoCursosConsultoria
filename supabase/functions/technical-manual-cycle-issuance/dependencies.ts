@@ -9,9 +9,9 @@ import {
 import { getGatewayRuntimeConfig } from "../gateways/runtime-config.ts";
 import { resolveGatewayIssuer } from "../gateways/router-adapter-runtime.ts";
 import {
+  DATABASE_UUID_RE,
   type ManualCycleIssuanceRequest,
   parseCycleContext,
-  UUID_RE,
 } from "./contract.ts";
 import type { ManualCycleIssuanceDependencies } from "./orchestrator.ts";
 import {
@@ -63,8 +63,8 @@ const loadEnrollmentScope = async (
   const poloId = String(classRow.polo_id || "");
   const alunoId = String(enrollment.aluno_id || "");
   if (
-    modalidade !== "TECNICO" || !UUID_RE.test(turmaId) ||
-    !UUID_RE.test(poloId) || !UUID_RE.test(alunoId)
+    modalidade !== "TECNICO" || !DATABASE_UUID_RE.test(turmaId) ||
+    !DATABASE_UUID_RE.test(poloId) || !DATABASE_UUID_RE.test(alunoId)
   ) throw new Error("A matrícula não possui o escopo técnico completo.");
   return { matriculaId, turmaId, alunoId, poloId };
 };
