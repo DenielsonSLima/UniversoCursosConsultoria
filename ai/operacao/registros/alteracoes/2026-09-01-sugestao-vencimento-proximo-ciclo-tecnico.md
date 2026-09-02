@@ -1,7 +1,7 @@
 # Sugestão do vencimento do próximo ciclo técnico
 
 Data: 2026-09-01
-Estado: backend aplicado; frontend autorizado para produção; smoke visual delegado
+Estado: publicação concluída em produção; smoke visual delegado
 
 ## Objetivo
 
@@ -64,6 +64,18 @@ soberana na prévia, criação das cobranças e emissão BolePix.
   preservou a data escolhida em todo o payload, sem criar recebível ou título.
 - A função auxiliar permanece sem execução para `anon`, `authenticated` e
   `service_role`; os advisors não apontaram alerta relacionado ao ajuste.
+
+## Evidência de publicação
+
+- PR #118 integrada por squash na `main` no commit
+  `e68a419291e750fb702bb233fd808ea929833459`.
+- Controle de versão `33584940578` e qualidade `33584940530` aprovados,
+  incluindo contratos financeiros/BolePix e build de produção.
+- Preview Vercel `D9x5QoVqhSZ7AqcBjwpS8stZnaTE` concluída com sucesso.
+- Produção Vercel `7i64nsXQKfSU8cVtCwmGMBaTrsLC` pronta; o domínio
+  `universocc.com.br` respondeu HTTP 200 e serviu o bundle da versão 4.8.26.
+- Nenhuma cobrança real foi emitida durante a validação; o teste autenticado de
+  emissão permanece sob responsabilidade manual do usuário.
 
 ## Limites
 
