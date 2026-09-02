@@ -1,7 +1,7 @@
 # Prévia detalhada do boleto no ciclo técnico manual
 
 Data: 2026-09-01
-Estado: backend aplicado; frontend autorizado para produção; smoke visual delegado
+Estado: publicação concluída em produção; smoke visual delegado
 
 ## Objetivo
 
@@ -22,7 +22,7 @@ etapas Composição e Revisão.
 
 ## Solução
 
-- Uma migration futura estende a prévia por item com `detalhesBoleto` antes do
+- A migration aplicada estende a prévia por item com `detalhesBoleto` antes do
   cálculo de `cronogramaFingerprint`.
 - Cada detalhe inclui as três linhas acadêmicas do boleto: descrição,
   identificação da turma e instrução integral normalizada.
@@ -74,6 +74,20 @@ etapas Composição e Revisão.
   R$ 2,00 e juros de R$ 0,07 ao dia, com três mensagens de boleto por item.
 - A função auxiliar permanece sem permissão de execução para `anon`,
   `authenticated` e `service_role`.
+- Os advisors pós-aplicação não apontaram alerta de segurança ou desempenho
+  relacionado às duas funções alteradas.
+
+## Evidência de publicação
+
+- PR #116 integrada por squash na `main` no commit
+  `1dba9a8dba21f5ab34c4b48346d89a50a68547de`.
+- Controle de versão `33580868773` e qualidade `33580868520` aprovados,
+  incluindo TypeScript, lint, contratos financeiros/BolePix e build.
+- Preview Vercel `CkEkvSSBYf66Duv4yqQpJEetmhQM` concluída com sucesso.
+- Produção Vercel `4wv5bs1b6CiQFKzdm6kNyS2BZsM6` pronta; o domínio
+  `universocc.com.br` respondeu normalmente após a promoção.
+- Nenhuma cobrança real foi emitida durante a validação; a conferência
+  autenticada da tela será executada manualmente pelo usuário.
 
 ## Manifesto explícito
 
