@@ -147,3 +147,25 @@ Total: 48 arquivos
 - O runtime não possuía navegador autenticado conectado. O smoke permaneceu
   não destrutivo: pós-check Supabase e HTTP foram executados, sem acionar a
   confirmação final da Adryelle e sem criar cobrança, título ou transação.
+
+## Hotfix complementar de 02/09/2026
+
+- Duas tentativas reais do ciclo técnico falharam no preflight com o escopo
+  completo presente, antes da criação de recebíveis e antes de qualquer POST ao
+  Banese. O checkout EAD no mesmo período emitiu BolePix completo, confirmando
+  que credencial, rota bancária, PDF e Pix estavam operacionais.
+- A causa foi a aplicação indevida da regex RFC de IDs novos ao `polo_id`
+  legado já aceito pela coluna PostgreSQL `uuid`. A correção separa IDs
+  persistidos de `requestId`: banco usa o formato estrutural `8-4-4-4-12`, e o
+  token idempotente preserva versão e variante RFC estritas.
+- A proteção foi aplicada ao preflight, contexto de retomada, recebíveis e
+  emissor retornado pelo Banese para evitar que a falha apenas mudasse de etapa
+  depois do primeiro título.
+- Os 22 testes focados, `deno check`, teto de 500 linhas e revisão independente
+  foram aprovados. Não houve migration nem alteração em valores, juros, multa,
+  desconto, payload bancário ou autorização.
+- A Edge `technical-manual-cycle-issuance` foi publicada via MCP na versão 2,
+  permanece `ACTIVE` e exige JWT. O bundle remoto relido corresponde aos dois
+  arquivos de runtime validados.
+- O smoke bancário final permanece reservado ao clique explícito do gestor;
+  nenhum título real foi emitido durante o hotfix.

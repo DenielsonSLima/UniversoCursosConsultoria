@@ -1,8 +1,8 @@
 {
-  "version": "4.8.26",
+  "version": "4.8.27",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 35,
-  "releasedAt": "2026-09-01",
-  "summary": "Vencimento sugerido pelo último boleto do ciclo técnico"
+  "revision": 36,
+  "releasedAt": "2026-09-02",
+  "summary": "Compatibilidade do polo legado na emissão BolePix técnica"
 }
