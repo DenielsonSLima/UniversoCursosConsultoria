@@ -478,9 +478,9 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
           row={currentManualCycleRow}
           pending={manualCycleMutation.isPending}
           onClose={() => setManualCycleMatriculaId(null)}
-          onConfirm={(preview, primeiroVencimento) => {
-            void generateManualCycle(currentManualCycleRow, preview, primeiroVencimento);
-          }}
+          onConfirm={(preview, primeiroVencimento) => (
+            generateManualCycle(currentManualCycleRow, preview, primeiroVencimento)
+          )}
         />
       ) : null}
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   AlertTriangle,
@@ -18,6 +18,7 @@ import type {
   CicloFinanceiroTecnicoManualPreview,
 } from './matricula-tecnica-ciclo-manual.types';
 import FinanceiroCicloManualChargeRows from './FinanceiroCicloManualChargeRows';
+import FinanceiroCicloManualIssuanceProgress from './FinanceiroCicloManualIssuanceProgress';
 import { getCriterioElegibilidadeLabel } from './matricula-tecnica-ciclo-manual.parser';
 import { usePreviewCicloFinanceiroTecnicoManual } from './hooks/useMatriculaTecnicaCicloManual';
 import { useAccessibleDialog } from './hooks/useAccessibleDialog';
@@ -29,7 +30,7 @@ interface FinanceiroCicloManualDialogProps {
   onConfirm: (
     preview: CicloFinanceiroTecnicoManualPreview,
     primeiroVencimento: string | null,
-  ) => void;
+  ) => Promise<void>;
 }
 
 type WizardStep = 1 | 2 | 3;
@@ -67,6 +68,10 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
   const [individualDate, setIndividualDate] = useState(
     () => row.cicloManual.primeiroVencimentoSugerido ?? '',
   );
+  const [issuanceSnapshot, setIssuanceSnapshot] = useState<
+    CicloFinanceiroTecnicoManualPreview | null
+  >(null);
+  const issuanceStartedRef = useRef(false);
   const firstDueDate = dateSource === 'INDIVIDUAL' ? individualDate || null : null;
   const previewEnabled = cycleNumber !== null
     && row.cicloManual.estado === 'ELEGIVEL'
@@ -88,9 +93,22 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
   );
   const { dialogRef, initialFocusRef } = useAccessibleDialog(true, onClose, pending);
 
+  useEffect(() => {
+    if (pending) dialogRef.current?.focus();
+  }, [dialogRef, pending]);
+
   const goToStep = (nextStep: WizardStep) => {
     if (pending || (nextStep > 1 && !preview)) return;
     setStep(nextStep);
+  };
+
+  const startIssuance = () => {
+    if (!preview || issuanceStartedRef.current) return;
+    issuanceStartedRef.current = true;
+    setIssuanceSnapshot(preview);
+    void onConfirm(preview, firstDueDate).finally(() => {
+      issuanceStartedRef.current = false;
+    });
   };
 
   const dialog = (
@@ -104,6 +122,21 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
       tabIndex={-1}
       className="fixed inset-0 z-[2147483000] flex h-[100dvh] w-screen flex-col overflow-hidden bg-slate-100 text-slate-900 outline-none"
     >
+      {pending ? (
+        <FinanceiroCicloManualIssuanceProgress
+          alunoNome={row.alunoNome}
+          matriculaExibicao={row.matriculaExibicao}
+          cicloNumero={issuanceSnapshot?.cicloNumero
+            ?? preview?.cicloNumero
+            ?? row.cicloManual.cicloGerado?.numero
+            ?? cycleNumber}
+          quantidadeItens={issuanceSnapshot?.quantidadeItens
+            ?? preview?.quantidadeItens
+            ?? null}
+          total={issuanceSnapshot?.total ?? preview?.total ?? null}
+        />
+      ) : (
+        <>
       <header className="shrink-0 border-b border-slate-200 bg-white px-4 py-3 shadow-sm sm:px-6 lg:px-8">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
@@ -331,13 +364,15 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
             {step < 3 ? (
               <button type="button" disabled={pending || !preview || previewQuery.isFetching} onClick={() => goToStep((step + 1) as WizardStep)} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-[10px] font-black uppercase text-white transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-40 sm:flex-none">{step === 1 ? 'Ver composição' : 'Revisar geração'} <ChevronRight size={14} /></button>
             ) : (
-              <button type="button" disabled={pending || !preview || previewQuery.isFetching} onClick={() => preview && onConfirm(preview, firstDueDate)} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-[10px] font-black uppercase text-white transition hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:opacity-40 sm:flex-none">
+              <button type="button" disabled={pending || !preview || previewQuery.isFetching} onClick={startIssuance} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-[10px] font-black uppercase text-white transition hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:opacity-40 sm:flex-none">
                 {pending ? <><Loader2 className="animate-spin" size={14} /> Gerando e emitindo BolePix...</> : <><ReceiptText size={14} /> Gerar e emitir BolePix</>}
               </button>
             )}
           </div>
         </div>
       </footer>
+        </>
+      )}
     </div>
   );
 

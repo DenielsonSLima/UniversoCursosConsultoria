@@ -140,6 +140,15 @@ jobs:
       - name: Testar relatório do Caixa
         run: npm run test:caixa-report
 
+      - name: Testar geração manual dos ciclos técnicos
+        run: |
+          deno test --allow-read \
+            modules/gestor/gestao/tecnicos/detalhes/components/financeiro/manual-technical-cycle-issuance-progress.contract.test.ts \
+            modules/gestor/gestao/tecnicos/detalhes/components/financeiro/manual-technical-cycle-modal-ux.contract.test.ts \
+            modules/gestor/gestao/tecnicos/detalhes/components/financeiro/manual-technical-cycle-ui.contract.test.ts \
+            modules/gestor/gestao/tecnicos/detalhes/components/financeiro/matricula-tecnica-ciclo-manual-preview.contract.test.ts \
+            modules/gestor/gestao/tecnicos/detalhes/components/financeiro/matricula-tecnica-ciclo-manual-preview.parser.test.ts
+
       - name: Testar validação documental
         run: npm run test:document-validation
 
