@@ -177,6 +177,31 @@ Deno.test("autoriza leitura documental em Financeiro/Receber e Caixa", () => {
   );
 });
 
+Deno.test("autoriza leitura documental na aba financeira da gestão da turma", () => {
+  assert.doesNotThrow(() =>
+    requireFinanceDocumentReadAccess(
+      actor({
+        perfil: "Gestor",
+        modules: ["inicio", "gestao"],
+        financeiroTabs: [],
+        tabs: { gestao: ["financeiro"] },
+      }),
+    )
+  );
+  assert.throws(
+    () =>
+      requireFinanceDocumentReadAccess(
+        actor({
+          perfil: "Gestor",
+          modules: ["inicio", "gestao"],
+          financeiroTabs: [],
+          tabs: { gestao: ["alunos"] },
+        }),
+      ),
+    /documentos financeiros.*nao autorizado/i,
+  );
+});
+
 Deno.test("autoriza Secretaria somente nas abas financeiras documentais", () => {
   for (
     const tab of ["consulta-financeira", "recebimentos", "carnes-alunos"]

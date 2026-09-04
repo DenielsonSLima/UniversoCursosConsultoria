@@ -29,7 +29,7 @@ test("a emissão pendente substitui o wizard por uma tela cheia de progresso", (
     dialogSource,
     /pending\s*\?\s*\(\s*<FinanceiroCicloManualIssuanceProgress/,
   );
-  assert.match(dialogSource, /aria-busy=\{pending\}/);
+  assert.doesNotMatch(dialogSource, /aria-busy=\{pending\}/);
   assert.match(progressSource, /data-testid="manual-cycle-issuance-progress"/);
   assert.match(progressSource, /role="status"/);
   assert.match(progressSource, /aria-live="polite"/);
@@ -63,17 +63,21 @@ test("uma trava síncrona impede dois envios antes do estado pending renderizar"
   );
 });
 
-test("a barra é indeterminada e não inventa percentual do Banese", () => {
+test("a barra exibe somente o progresso persistido pelo Banese", () => {
   const progressBar = progressSource.match(
     /<div\s+role="progressbar"[\s\S]*?<\/div>/,
   )?.[0] || "";
-  assert.match(progressBar, /aria-label="Geração e emissão BolePix em andamento"/);
+  assert.match(progressBar, /aria-label="Progresso real da emissão BolePix"/);
   assert.match(progressBar, /aria-valuetext=/);
-  assert.doesNotMatch(progressBar, /aria-valuenow|aria-valuemin|aria-valuemax/);
+  assert.match(progressBar, /aria-valuenow=\{progressPercent\}/);
+  assert.match(progressBar, /aria-valuemin=\{0\}/);
+  assert.match(progressBar, /aria-valuemax=\{100\}/);
   assert.doesNotMatch(progressBar, /elapsedSeconds/);
-  assert.match(progressSource, /não representa um percentual estimado/i);
-  assert.match(progressSource, /animate-pulse/);
-  assert.match(progressSource, /motion-reduce:animate-none/);
+  assert.match(progressSource, /emitidosBanese/);
+  assert.match(progressSource, /emittedCount \/ itemCount/);
+  assert.match(progressSource, /style=\{\{ width: `\$\{progressPercent\}%` \}\}/);
+  assert.doesNotMatch(progressSource, /não representa um percentual estimado/i);
+  assert.doesNotMatch(progressSource, /w-2\/3|animate-pulse/);
 });
 
 test("a tela explica as três etapas reais e o resultado esperado", () => {
@@ -91,6 +95,7 @@ test("a tela explica as três etapas reais e o resultado esperado", () => {
   }
   assert.match(progressSource, /quantidadeItens/);
   assert.match(progressSource, /formatMoney\(total\)/);
+  assert.match(progressSource, /preparacaoConcluida \? 'complete' : 'active'/);
 });
 
 test("o tempo decorrido é real, limpo no unmount e anunciado sem ruído", () => {
@@ -102,7 +107,7 @@ test("o tempo decorrido é real, limpo no unmount e anunciado sem ruído", () =>
   const liveRegion = progressSource.match(
     /<p role="status"[\s\S]*?<\/p>/,
   )?.[0] || "";
-  assert.match(liveRegion, /Emissão BolePix iniciada/);
+  assert.match(liveRegion, /progressLabel/);
   assert.doesNotMatch(liveRegion, /elapsedSeconds|formatElapsed/);
 });
 

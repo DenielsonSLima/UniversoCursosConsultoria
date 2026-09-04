@@ -2,7 +2,27 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
-Histórico anterior: [24/08/2026 — versões 4.7.5 a 4.7.7](./changelog/2026-08-24-parte-1.md), [22/08/2026 a 23/08/2026](./changelog/2026-08-22-a-2026-08-23.md), [21/08/2026 a 22/08/2026 — parte 2](./changelog/2026-08-21-a-2026-08-22-parte-2.md), [21/08/2026 — parte 1](./changelog/2026-08-21-parte-1.md), [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+Histórico anterior: [24/08/2026 — versões 4.8.0 a 4.8.1](./changelog/2026-08-24-parte-2.md), [24/08/2026 — versões 4.7.5 a 4.7.7](./changelog/2026-08-24-parte-1.md), [22/08/2026 a 23/08/2026](./changelog/2026-08-22-a-2026-08-23.md), [21/08/2026 a 22/08/2026 — parte 2](./changelog/2026-08-21-a-2026-08-22-parte-2.md), [21/08/2026 — parte 1](./changelog/2026-08-21-parte-1.md), [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+
+## [4.8.31] - 2026-09-04
+
+### Alterado
+
+- A emissão manual do ciclo técnico passa a mostrar percentual e contagem reais
+  dos títulos BolePix já validados e persistidos, começando em `0/total`.
+- A situação financeira da turma reúne CPF e matrícula abaixo do aluno, remove
+  a coluna redundante e alterna as faixas visuais entre estudantes.
+- O carnê dos títulos Banese já emitidos pode ser aberto diretamente na tabela
+  financeira da turma pelo compositor oficial existente.
+
+### Segurança e qualidade
+
+- O progresso é acordado apenas nas transições bancárias confirmada ou de
+  revisão, sem estimativa temporal, novo POST ou reemissão de título.
+- O botão de carnê exige matrícula exata e emissão completa, falha fechado para
+  grupos ambíguos e mantém RBAC e escopo de polo.
+- Três revisões independentes, 83 contratos, TypeScript, lint, formatação, teto
+  de linhas e build de produção foram aprovados.
 
 ## [4.8.30] - 2026-09-03
 
@@ -472,26 +492,3 @@ Histórico anterior: [24/08/2026 — versões 4.7.5 a 4.7.7](./changelog/2026-08
 - As novas RPCs confirmam a identidade e o escopo no banco, usam grants mínimos e preservam pagamento zero ou parcial, data civil de Maceió e exclusão de títulos cancelados ou estornados.
 - Os acessos multiperfil continuam separados por audiência: Aluno/Responsável no login público e Gestor/Professor no institucional, com seleção somente quando houver mais de um perfil compatível.
 - Contratos de Auth, SQL, PDF, Banese, Realtime e chaves TanStack foram incorporados ao gate obrigatório de CI.
-
-## [4.8.1] - 2026-08-24
-
-### Alterado
-
-- O fechamento da identidade multiperfil registra os ledgers reais, a Edge Function v35, o merge, o deploy web e os smokes de Produção no lote ativo, no histórico operacional e no índice RAG.
-
-### Segurança e qualidade
-
-- O patch não altera o contrato funcional 4.8.0; apenas preserva evidências imutáveis de CI, rollout e limitações do smoke autenticado sem criar usuário artificial.
-
-## [4.8.0] - 2026-08-24
-
-### Adicionado
-
-- Uma mesma identidade autenticada pode reunir, de forma controlada, os perfis Gestor, Professor, Aluno e Responsável.
-- O login público oferece somente Aluno e Responsável; o login institucional oferece somente Gestor e Professor. Quando há um único perfil na audiência, o acesso é automático; quando há dois, a pessoa escolhe o contexto.
-
-### Segurança e qualidade
-
-- O compartilhamento exige CPF válido e e-mail canônico iguais em todos os perfis, preserva a senha existente e rejeita colisões ou divergências antes do vínculo.
-- Travas transacionais, constraints diferíveis e limpeza conservadora de Auth protegem vínculos e exclusões concorrentes.
-- Recuperação de senha, primeiro acesso, checkout, convites assinados e Edge Function foram revisados em conjunto, com contratos multiperfil incorporados ao gate do GitHub.

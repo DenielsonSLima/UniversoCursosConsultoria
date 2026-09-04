@@ -16,7 +16,7 @@ const readSource = (relativePath: string) =>
 
 const dialogSource = readSource("FinanceiroCicloManualDialog.tsx");
 const chargeRowsSource = readSource("FinanceiroCicloManualChargeRows.tsx");
-const listSource = readSource("FinanceiroAlunosList.tsx");
+const listSource = `${readSource("FinanceiroAlunosList.tsx")}\n${readSource("FinanceiroAlunosTable.tsx")}`;
 const statusSource = readSource("FinanceiroCicloManualStatus.tsx");
 const accessibleDialogSource = readSource("hooks/useAccessibleDialog.ts");
 const parserSource = readSource("matricula-tecnica-ciclo-manual.parser.ts");

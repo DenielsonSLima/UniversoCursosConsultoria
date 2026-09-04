@@ -14,7 +14,7 @@ const readSource = (relativePath: string) =>
     "utf8",
   );
 
-const listSource = readSource("FinanceiroAlunosList.tsx");
+const listSource = `${readSource("FinanceiroAlunosList.tsx")}\n${readSource("FinanceiroAlunosTable.tsx")}`;
 const statusSource = readSource("FinanceiroCicloManualStatus.tsx");
 const dialogSource = readSource("FinanceiroCicloManualDialog.tsx");
 const serviceSource = readSource("matricula-tecnica-ciclo-manual.service.ts");

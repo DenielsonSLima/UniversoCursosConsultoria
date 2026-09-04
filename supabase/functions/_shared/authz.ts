@@ -300,6 +300,11 @@ const hasFinanceDocumentReadAccess = (gestor: GestorAutorizado) =>
     )
   );
 
+const hasClassFinancialDocumentReadAccess = (gestor: GestorAutorizado) =>
+  isFinanceWriteProfile(gestor.perfil) &&
+  gestor.modules.includes("gestao") &&
+  normalizeStringArray(gestor.tabs?.gestao).includes("financeiro");
+
 const secretariaFinancialDocumentTabs = (gestor: GestorAutorizado) =>
   gestor.modules.includes("secretaria")
     ? normalizeStringArray(gestor.tabs?.secretaria).filter((tab) =>
@@ -315,9 +320,10 @@ export const requireFinanceDocumentReadAccess = (
   gestor: GestorAutorizado,
 ) => {
   const financeiroAllowed = hasFinanceDocumentReadAccess(gestor);
+  const classFinancialAllowed = hasClassFinancialDocumentReadAccess(gestor);
   const secretariaAllowed = secretariaFinancialDocumentTabs(gestor).length > 0;
 
-  if (!financeiroAllowed && !secretariaAllowed) {
+  if (!financeiroAllowed && !classFinancialAllowed && !secretariaAllowed) {
     throw new Error(
       "Acesso aos documentos financeiros de alunos nao autorizado.",
     );

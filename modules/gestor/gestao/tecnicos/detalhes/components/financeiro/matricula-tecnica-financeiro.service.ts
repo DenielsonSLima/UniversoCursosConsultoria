@@ -256,6 +256,7 @@ const requireMatricula = (value: unknown): MatriculaTecnicaFinanceiroRow => {
     typeof value.matriculaId !== 'string'
     || typeof value.alunoId !== 'string'
     || typeof value.alunoNome !== 'string'
+    || typeof value.alunoCpf !== 'string'
     || typeof value.matriculaExibicao !== 'string'
     || typeof value.statusAcademico !== 'string'
     || !requireNullableDecimal(value.valorMatriculaEfetivo)
