@@ -13,6 +13,8 @@ interface FinanceiroCicloManualIssuanceProgressProps {
   matriculaExibicao: string;
   cicloNumero: number | null;
   quantidadeItens: number | null;
+  emitidosBanese: number;
+  preparacaoConcluida: boolean;
   total: string | null;
 }
 
@@ -37,6 +39,8 @@ const FinanceiroCicloManualIssuanceProgress: React.FC<
   matriculaExibicao,
   cicloNumero,
   quantidadeItens,
+  emitidosBanese,
+  preparacaoConcluida,
   total,
 }) => {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -54,6 +58,15 @@ const FinanceiroCicloManualIssuanceProgress: React.FC<
   const quantityLabel = quantidadeItens === null
     ? 'as cobranças revisadas'
     : `${quantidadeItens} cobranças`;
+  const itemCount = quantidadeItens && quantidadeItens > 0 ? quantidadeItens : 0;
+  const emittedCount = Math.min(itemCount, Math.max(0, emitidosBanese));
+  const progressPercent = itemCount > 0
+    ? Math.round((emittedCount / itemCount) * 100)
+    : 0;
+  const emissionFinished = itemCount > 0 && emittedCount === itemCount;
+  const progressLabel = itemCount > 0
+    ? `${emittedCount}/${itemCount} títulos emitidos`
+    : 'Preparando cobranças';
 
   return (
     <main
@@ -66,7 +79,7 @@ const FinanceiroCicloManualIssuanceProgress: React.FC<
         className="mx-auto w-full max-w-4xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-300/40"
       >
         <p role="status" aria-live="polite" aria-atomic="true" className="sr-only">
-          Emissão BolePix iniciada. Aguarde a confirmação do sistema.
+          {progressLabel}. {progressPercent}% concluído.
         </p>
         <div className="bg-[#001a33] px-5 py-6 text-white sm:px-8 sm:py-7">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
@@ -99,17 +112,31 @@ const FinanceiroCicloManualIssuanceProgress: React.FC<
             </div>
           </div>
 
+          <div className="mt-6 flex items-end justify-between gap-4">
+            <div>
+              <p className="text-sm font-black text-white">{progressLabel}</p>
+              <p className="mt-0.5 text-[10px] font-semibold text-slate-300">
+                Cada avanço confirma um título validado e salvo pelo sistema.
+              </p>
+            </div>
+            <p className="shrink-0 text-2xl font-black tabular-nums text-emerald-300">
+              {progressPercent}%
+            </p>
+          </div>
           <div
             role="progressbar"
-            aria-label="Geração e emissão BolePix em andamento"
-            aria-valuetext={`Processando ${quantityLabel}`}
-            className="mt-6 h-2 overflow-hidden rounded-full bg-white/15"
+            aria-label="Progresso real da emissão BolePix"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={progressPercent}
+            aria-valuetext={`${progressLabel}, ${progressPercent}% concluído`}
+            className="mt-3 h-3 overflow-hidden rounded-full bg-white/15"
           >
-            <div className="h-full w-2/3 animate-pulse rounded-full bg-gradient-to-r from-emerald-400 via-cyan-300 to-emerald-400 motion-reduce:animate-none" />
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-cyan-300 transition-[width] duration-500 ease-out motion-reduce:transition-none"
+              style={{ width: `${progressPercent}%` }}
+            />
           </div>
-          <p className="mt-2 text-[10px] font-semibold text-slate-300">
-            A barra permanece em movimento enquanto esta tentativa estiver em andamento; ela não representa um percentual estimado.
-          </p>
         </div>
 
         <div className="p-5 sm:p-8">
@@ -120,6 +147,7 @@ const FinanceiroCicloManualIssuanceProgress: React.FC<
                 number: '1',
                 title: 'Preparar cobranças',
                 description: `Criar ou reutilizar ${quantityLabel}.`,
+                state: preparacaoConcluida ? 'complete' : 'active',
               },
               {
                 icon: Landmark,
@@ -128,18 +156,36 @@ const FinanceiroCicloManualIssuanceProgress: React.FC<
                 description: quantidadeItens === null
                   ? 'Registrar os títulos BolePix no Banese, um por vez.'
                   : `Registrar os ${quantidadeItens} títulos BolePix, um por vez.`,
+                state: emissionFinished
+                  ? 'complete'
+                  : preparacaoConcluida
+                    ? 'active'
+                    : 'pending',
               },
               {
                 icon: FileCheck2,
                 number: '3',
                 title: 'Conferir o retorno',
                 description: 'Validar Pix, linha digitável e código de barras.',
+                state: emissionFinished ? 'active' : 'pending',
               },
-            ].map(({ icon: Icon, number, title, description }) => (
-              <div key={number} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            ].map(({ icon: Icon, number, title, description, state }) => (
+              <div
+                key={number}
+                className={`rounded-2xl border p-4 ${state === 'active'
+                  ? 'border-blue-200 bg-blue-50 shadow-sm'
+                  : state === 'complete'
+                    ? 'border-emerald-200 bg-emerald-50'
+                    : 'border-slate-200 bg-slate-50'}`}
+              >
                 <div className="flex items-center gap-2">
-                  <span className="grid h-7 w-7 place-items-center rounded-full bg-blue-100 text-[10px] font-black text-blue-700">
-                    {number}
+                  <span className={`grid h-7 w-7 place-items-center rounded-full text-[10px] font-black ${state === 'complete'
+                    ? 'bg-emerald-600 text-white'
+                    : state === 'active'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-200 text-slate-500'}`}
+                  >
+                    {state === 'complete' ? <FileCheck2 size={14} /> : number}
                   </span>
                   <Icon aria-hidden="true" size={16} className="text-slate-500" />
                 </div>

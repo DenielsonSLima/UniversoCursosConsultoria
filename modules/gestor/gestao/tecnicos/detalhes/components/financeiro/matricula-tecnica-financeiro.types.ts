@@ -193,6 +193,7 @@ export interface MatriculaTecnicaFinanceiroRow {
   matriculaId: string;
   alunoId: string;
   alunoNome: string;
+  alunoCpf: string;
   matriculaExibicao: string;
   statusAcademico: string;
   valorMatriculaEfetivo: string | null;

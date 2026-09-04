@@ -83,6 +83,13 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
     primeiroVencimento: firstDueDate,
   }, previewEnabled);
   const preview = previewQuery.data?.preview;
+  const issuanceCycleNumber = issuanceSnapshot?.cicloNumero
+    ?? preview?.cicloNumero
+    ?? row.cicloManual.cicloGerado?.numero
+    ?? cycleNumber;
+  const persistedIssuance = row.cicloManual.cicloGerado?.numero === issuanceCycleNumber
+    ? row.cicloManual.cicloGerado
+    : null;
   const appliedTerms = preview ? ([
     ['MATRICULA', 'Matrícula', preview.termos.aplicacao.matricula],
     ['REMATRICULA', 'Rematrícula', preview.termos.aplicacao.rematricula],
@@ -118,7 +125,6 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
       aria-modal="true"
       aria-labelledby="manual-cycle-title"
       aria-describedby="manual-cycle-description"
-      aria-busy={pending}
       tabIndex={-1}
       className="fixed inset-0 z-[2147483000] flex h-[100dvh] w-screen flex-col overflow-hidden bg-slate-100 text-slate-900 outline-none"
     >
@@ -126,13 +132,12 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
         <FinanceiroCicloManualIssuanceProgress
           alunoNome={row.alunoNome}
           matriculaExibicao={row.matriculaExibicao}
-          cicloNumero={issuanceSnapshot?.cicloNumero
-            ?? preview?.cicloNumero
-            ?? row.cicloManual.cicloGerado?.numero
-            ?? cycleNumber}
+          cicloNumero={issuanceCycleNumber}
           quantidadeItens={issuanceSnapshot?.quantidadeItens
             ?? preview?.quantidadeItens
             ?? null}
+          emitidosBanese={persistedIssuance?.emitidosBanese ?? 0}
+          preparacaoConcluida={persistedIssuance !== null}
           total={issuanceSnapshot?.total ?? preview?.total ?? null}
         />
       ) : (

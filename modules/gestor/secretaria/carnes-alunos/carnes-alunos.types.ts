@@ -28,6 +28,7 @@ export interface BaneseDocumentGroupsRequest {
   search?: string;
   courseId?: string;
   classId?: string;
+  enrollmentId?: string;
   page?: number;
   pageSize?: number;
 }

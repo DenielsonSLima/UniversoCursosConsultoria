@@ -53,10 +53,10 @@ const authorizationServiceSource = readFileSync(
   resolve(baseDir, "technical-condition-authorization.service.ts"),
   "utf8",
 );
-const listSource = readFileSync(
-  resolve(baseDir, "FinanceiroAlunosList.tsx"),
-  "utf8",
-);
+const listSource = [
+  "FinanceiroAlunosList.tsx",
+  "FinanceiroAlunosTable.tsx",
+].map((fileName) => readFileSync(resolve(baseDir, fileName), "utf8")).join("\n");
 const legacyActivationDialogSource = readFileSync(
   resolve(baseDir, "FinanceiroAtivacaoLegacyDialog.tsx"),
   "utf8",

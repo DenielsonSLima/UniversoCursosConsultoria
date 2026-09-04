@@ -46,6 +46,7 @@ const ALLOWED_INPUT_KEYS = new Set([
   "search",
   "courseId",
   "classId",
+  "enrollmentId",
   "page",
   "pageSize",
 ]);
@@ -57,6 +58,7 @@ type CatalogRequest = {
   search?: string;
   courseId?: string;
   classId?: string;
+  enrollmentId?: string;
   page: number;
   pageSize: number;
 };
@@ -86,7 +88,7 @@ const jsonError = (req: Request, status: number, message: string) =>
 
 const optionalUuid = (
   body: Record<string, unknown>,
-  key: "courseId" | "classId",
+  key: "courseId" | "classId" | "enrollmentId",
 ) => {
   if (body[key] === undefined || body[key] === null) return undefined;
   const value = text(body[key]);
@@ -143,6 +145,7 @@ const parseRequest = async (req: Request): Promise<CatalogRequest> => {
     search: search || undefined,
     courseId: optionalUuid(record, "courseId"),
     classId: optionalUuid(record, "classId"),
+    enrollmentId: optionalUuid(record, "enrollmentId"),
     page: positiveInteger(record.page, 1, 100_000),
     pageSize: positiveInteger(record.pageSize, 20, 50),
   };
@@ -203,6 +206,9 @@ const readReceivables = async (
       query = query.eq("polo_id", input.poloId);
     } else if (!gestor.isGlobal && gestor.poloIds.length > 0) {
       query = query.in("polo_id", gestor.poloIds);
+    }
+    if (input.enrollmentId) {
+      query = query.eq("matricula_id", input.enrollmentId);
     }
 
     const { data, error } = await query;

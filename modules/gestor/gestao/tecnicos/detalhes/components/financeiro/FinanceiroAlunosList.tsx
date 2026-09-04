@@ -1,17 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import {
-  AlertTriangle,
-  CalendarClock,
-  CheckCircle2,
-  Clock3,
-  FileText,
-  Loader2,
-  MoreHorizontal,
-  ReceiptText,
-  Search,
-  Settings2,
-  XCircle,
-} from 'lucide-react';
+import { Loader2, Search } from 'lucide-react';
 import ToastNotification, { useToast } from '../../../../../parceiros/components/shared/ToastNotification';
 import FinancialReportExportButton from '../../../../../financeiro/components/FinancialReportPreview';
 import type { Turma } from '../../../../gestao.types';
@@ -22,10 +10,10 @@ import FinanceiroAtivacaoLegacyDialog, {
   type FinanceiroAtivacaoLegacyAction,
 } from './FinanceiroAtivacaoLegacyDialog';
 import FinanceiroCicloManualDialog from './FinanceiroCicloManualDialog';
-import FinanceiroCicloManualStatus, {
-  getFinanceiroSituationLabel as situationLabel,
-  MatriculaAcademicaBadge,
-} from './FinanceiroCicloManualStatus';
+import FinanceiroAlunosTable, {
+  formatStudentDocument,
+} from './FinanceiroAlunosTable';
+import { getFinanceiroSituationLabel as situationLabel } from './FinanceiroCicloManualStatus';
 import type {
   MatriculaTecnicaAtivacaoModo,
   MatriculaTecnicaFinanceiroRow,
@@ -73,31 +61,6 @@ const formatMoney = (value: string | null | undefined) => {
   }).format(parsed);
 };
 
-const formatDateTime = (value: string | null) => value
-  ? new Date(value).toLocaleString('pt-BR')
-  : 'Não informado';
-
-const statusBadge = (row: MatriculaTecnicaFinanceiroRow) => {
-  if (row.financeiro.status === 'NAO_CONFIGURADO') {
-    return <span className="flex items-center gap-1 rounded bg-slate-100 px-2 py-1 text-[10px] font-bold uppercase text-slate-500"><AlertTriangle size={12} /> Não configurado</span>;
-  }
-  if (row.financeiro.status === 'PENDENTE') {
-    return <span className="flex items-center gap-1 rounded bg-amber-100 px-2 py-1 text-[10px] font-bold uppercase text-amber-700"><Clock3 size={12} /> Pendente</span>;
-  }
-  if (row.financeiro.status === 'AGENDADA') {
-    return <span className="flex items-center gap-1 rounded bg-blue-100 px-2 py-1 text-[10px] font-bold uppercase text-blue-700"><CalendarClock size={12} /> Agendada</span>;
-  }
-  if (row.financeiro.status === 'ATIVADA') {
-    return <span className="flex items-center gap-1 rounded bg-cyan-100 px-2 py-1 text-[10px] font-bold uppercase text-cyan-700"><CheckCircle2 size={12} /> Ativada</span>;
-  }
-  return (
-    <div>
-      <span className="flex items-center gap-1 rounded bg-emerald-100 px-2 py-1 text-[10px] font-bold uppercase text-emerald-700"><CheckCircle2 size={12} /> Gerada</span>
-      {row.situacaoFinanceira === 'INADIMPLENTE' ? <p className="mt-1 text-[8px] font-black uppercase text-red-600">Inadimplente</p> : null}
-    </div>
-  );
-};
-
 const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
   turma,
   regra,
@@ -134,8 +97,10 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
   const filteredAlunos = useMemo(() => {
     const search = searchTerm.trim().toLocaleLowerCase('pt-BR');
     if (!search) return alunos;
+    const searchDigits = search.replace(/\D/g, '');
     return alunos.filter((row) => row.alunoNome.toLocaleLowerCase('pt-BR').includes(search)
-      || row.matriculaExibicao.toLocaleLowerCase('pt-BR').includes(search));
+      || row.matriculaExibicao.toLocaleLowerCase('pt-BR').includes(search)
+      || (searchDigits.length > 0 && row.alunoCpf.replace(/\D/g, '').includes(searchDigits)));
   }, [alunos, searchTerm]);
   const manualContractError = useMemo(() => {
     try {
@@ -171,8 +136,7 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
   const exportRows = filteredAlunos.map((row) => ({
     id: row.matriculaId,
     cells: [
-      <div key="aluno"><p className="font-black text-[#001a33]">{row.alunoNome}</p><p className="mt-0.5 text-[8px] font-bold uppercase text-slate-400">{situationLabel(row)}</p></div>,
-      <span key="matricula" className="font-mono text-[9px]">{row.matriculaExibicao}</span>,
+      <div key="aluno"><p className="font-black text-[#001a33]">{row.alunoNome}</p><p className="mt-0.5 text-[8px] font-bold text-slate-500">CPF: {formatStudentDocument(row.alunoCpf)} · Matrícula: {row.matriculaExibicao}</p><p className="mt-0.5 text-[8px] font-bold uppercase text-slate-400">{situationLabel(row)}</p></div>,
       <div key="valores"><p className="font-black text-emerald-700">Mat. {formatMoney(row.valorMatriculaEfetivo)}</p><p className="mt-0.5 font-bold text-slate-500">Mens. {formatMoney(row.valorMensalidadeEfetivo)}</p></div>,
       <span key="progresso" className="font-black text-[#001a33]">{row.parcelasPagas}/{row.totalParcelas}</span>,
       <span key="status" className="font-black uppercase text-slate-600">Matrícula {row.statusAcademico} · Cobrança {situationLabel(row)}</span>,
@@ -329,6 +293,23 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
     }
   };
 
+  const resumeManualCycle = (row: MatriculaTecnicaFinanceiroRow) => {
+    resumeCycleMutation.mutate({
+      turmaId: turma.id,
+      matriculaId: row.matriculaId,
+      cicloNumero: row.cicloManual.cicloGerado!.numero,
+    }, {
+      onSuccess: (result) => toast.success(
+        'Emissão retomada',
+        `${result.ciclo.emitidosBanese}/${result.ciclo.quantidadeItens} títulos BolePix emitidos e disponíveis em Financeiro.`,
+      ),
+      onError: (error) => toast.error(
+        'Emissão não concluída',
+        `${error instanceof Error ? error.message : 'O banco não confirmou todos os títulos.'} O progresso foi preservado. ${getCicloFinanceiroTecnicoManualRecoveryGuidance(error)}`,
+      ),
+    });
+  };
+
   if (isLoading) {
     return <div className="flex items-center justify-center rounded-[2rem] border border-slate-100 bg-white py-10 shadow-sm"><Loader2 className="animate-spin text-[#001a33]" size={24} /><span className="ml-2 text-sm font-bold text-slate-500">Carregando listagem financeira...</span></div>;
   }
@@ -369,7 +350,7 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
               fileName={`situacao-financeira-${turma.codigo || turma.nome}`}
               poloId={turma.poloId}
               tone="blue"
-              columns={[{ label: 'Aluno' }, { label: 'Matrícula' }, { label: 'Valores' }, { label: 'Pagas / total', align: 'center' }, { label: 'Status', align: 'center' }]}
+              columns={[{ label: 'Aluno / CPF / Matrícula' }, { label: 'Valores' }, { label: 'Pagas / total', align: 'center' }, { label: 'Status', align: 'center' }]}
               rows={exportRows}
               filters={[{ label: 'Turma', value: `${turma.nome}${turma.codigo ? ` (${turma.codigo})` : ''}` }, { label: 'Curso', value: turma.cursoNome }, { label: 'Unidade / Polo', value: turma.poloNome || 'Matriz' }]}
               summaryCards={[{ label: 'Plano lançado', value: formatMoney(resumo.total), tone: 'blue' }, { label: 'Recebido', value: formatMoney(resumo.recebido), tone: 'emerald' }, { label: 'Inadimplência', value: formatMoney(resumo.inadimplencia), tone: Number(resumo.inadimplencia) > 0 ? 'rose' : 'slate' }]}
@@ -378,80 +359,35 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[1100px] text-left">
-            <thead className="border-b border-slate-100 bg-slate-50">
-              <tr>
-                <th className="px-6 py-4 text-xs font-black uppercase tracking-wider text-slate-500">Aluno</th>
-                <th className="px-6 py-4 text-xs font-black uppercase tracking-wider text-slate-500">Matrícula</th>
-                <th className="px-6 py-4 text-xs font-black uppercase tracking-wider text-slate-500">Valores</th>
-                <th className="px-6 py-4 text-xs font-black uppercase tracking-wider text-slate-500">Progresso Pagto.</th>
-                <th className="px-6 py-4 text-xs font-black uppercase tracking-wider text-slate-500">Status</th>
-                <th className="px-6 py-4 text-right text-xs font-black uppercase tracking-wider text-slate-500">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {filteredAlunos.length === 0 ? (
-                <tr><td colSpan={6} className="px-6 py-12 text-center text-sm text-slate-400"><XCircle size={32} className="mx-auto mb-2 text-slate-300 opacity-50" /><p className="font-bold">Nenhum aluno matriculado na turma.</p></td></tr>
-              ) : filteredAlunos.map((row) => {
-                const manualMode = row.cicloManual.habilitado && row.cicloManual.modo === 'MANUAL';
-                const canActivate = !manualMode
-                  && row.financeiro.status === 'PENDENTE'
-                  && Boolean(row.regraEfetiva);
-                const protectedExisting = manualMode
-                  && row.cicloManual.estado === 'PROTEGIDO_EXISTENTE';
-                return (
-                  <tr key={row.matriculaId} onClick={() => setSelectedMatriculaId(row.matriculaId)} className="group cursor-pointer transition-colors hover:bg-blue-50/30" title="Abrir extrato financeiro do aluno">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        {canActivate ? <input type="checkbox" aria-label={`Selecionar ${row.alunoNome}`} checked={eligibleSelected.includes(row.matriculaId)} onClick={(event) => event.stopPropagation()} onChange={(event) => setSelectedPending((current) => event.target.checked ? [...new Set([...current, row.matriculaId])] : current.filter((id) => id !== row.matriculaId))} /> : null}
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-slate-200 text-xs font-bold text-slate-500 shadow-sm">{row.alunoNome.charAt(0)}</div>
-                        <div><span className="text-sm font-bold text-[#001a33]">{row.alunoNome}</span>{row.overrideAtivo ? <p className="mt-0.5 text-[8px] font-black uppercase text-violet-600">Regra individual</p> : null}</div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 font-mono text-sm text-slate-500">{row.matriculaExibicao}</td>
-                    <td className="px-6 py-4"><div className="space-y-1"><p className="text-[10px] font-black uppercase text-emerald-700">Mat. {formatMoney(row.valorMatriculaEfetivo)}</p><p className="text-[10px] font-bold uppercase text-slate-500">Mens. {formatMoney(row.valorMensalidadeEfetivo)}</p></div></td>
-                    <td className="px-6 py-4"><div className="flex items-center gap-2"><div className="h-2 w-24 flex-1 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${row.situacaoFinanceira === 'INADIMPLENTE' ? 'bg-red-500' : 'bg-blue-500'}`} style={{ width: `${row.progressoPercentual}%` }} /></div><span className="text-[10px] font-bold text-slate-500">{row.parcelasPagas}/{row.totalParcelas}</span></div></td>
-                    <td className="px-6 py-4">
-                      <div className="space-y-2">
-                        <MatriculaAcademicaBadge status={row.statusAcademico} />
-                        {manualMode ? <p className="text-[9px] font-black uppercase text-slate-600">Cobrança: {situationLabel(row)}</p> : statusBadge(row)}
-                        {!manualMode && row.financeiro.status === 'AGENDADA' ? <p className="text-[8px] font-bold text-blue-600">{formatDateTime(row.financeiro.ativarEm)}</p> : null}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="relative flex items-center justify-end gap-2" onClick={(event) => event.stopPropagation()}>
-                        {manualMode ? (
-                          <FinanceiroCicloManualStatus
-                            cicloManual={row.cicloManual}
-                            disabled={pending}
-                            onGenerate={() => setManualCycleMatriculaId(row.matriculaId)}
-                            onResume={() => resumeCycleMutation.mutate({
-                              turmaId: turma.id,
-                              matriculaId: row.matriculaId,
-                              cicloNumero: row.cicloManual.cicloGerado!.numero,
-                            }, {
-                              onSuccess: (result) => toast.success('Emissão retomada', `${result.ciclo.emitidosBanese}/${result.ciclo.quantidadeItens} títulos BolePix emitidos e disponíveis em Financeiro.`),
-                              onError: (error) => toast.error('Emissão não concluída', `${error instanceof Error ? error.message : 'O banco não confirmou todos os títulos.'} O progresso foi preservado. ${getCicloFinanceiroTecnicoManualRecoveryGuidance(error)}`),
-                            })}
-                          />
-                        ) : null}
-                        <button type="button" onClick={() => setSelectedMatriculaId(row.matriculaId)} title="Extrato Financeiro" className="rounded-lg border border-blue-100 bg-blue-50 p-2 text-blue-600 transition-colors hover:bg-blue-100"><FileText size={16} /></button>
-                        {!protectedExisting ? <button type="button" onClick={() => setOverrideMatriculaId(row.matriculaId)} title="Configuração individual" className="rounded-lg border border-violet-100 bg-violet-50 p-2 text-violet-600 transition-colors hover:bg-violet-100"><Settings2 size={16} /></button> : null}
-                        {!manualMode ? <button type="button" onClick={() => setActionMenuId((current) => current === row.matriculaId ? null : row.matriculaId)} title="Mais opções" className="rounded-lg border border-transparent p-2 text-slate-400 transition-colors hover:border-slate-200 hover:bg-slate-100 hover:text-slate-600"><MoreHorizontal size={16} /></button> : null}
-                        {!manualMode && actionMenuId === row.matriculaId ? (
-                          <div className="absolute right-0 top-10 z-20 w-44 rounded-xl border border-slate-100 bg-white p-2 text-left shadow-xl">
-                            {canActivate ? <><button type="button" disabled={pending} onClick={() => { setActionMenuId(null); setPendingAction({ matriculaIds: [row.matriculaId], label: row.alunoNome, modo: 'AGORA' }); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[10px] font-black uppercase text-emerald-700 hover:bg-emerald-50"><ReceiptText size={14} /> Gerar agora</button><button type="button" disabled={pending} onClick={() => { setActionMenuId(null); setPendingAction({ matriculaIds: [row.matriculaId], label: row.alunoNome, modo: 'AGENDADA' }); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[10px] font-black uppercase text-blue-700 hover:bg-blue-50"><CalendarClock size={14} /> Agendar</button></> : <p className="px-3 py-2 text-[10px] font-bold text-slate-400">Sem ação pendente.</p>}
-                          </div>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <FinanceiroAlunosTable
+          turma={turma}
+          rows={filteredAlunos}
+          eligibleSelected={eligibleSelected}
+          pending={pending}
+          actionMenuId={actionMenuId}
+          onActionMenuChange={setActionMenuId}
+          onSelectionChange={(row, checked) => setSelectedPending((current) => (
+            checked
+              ? [...new Set([...current, row.matriculaId])]
+              : current.filter((id) => id !== row.matriculaId)
+          ))}
+          onOpenStatement={setSelectedMatriculaId}
+          onOpenOverride={setOverrideMatriculaId}
+          onOpenManualCycle={setManualCycleMatriculaId}
+          onActivateNow={(row) => {
+            setActionMenuId(null);
+            setPendingAction({ matriculaIds: [row.matriculaId], label: row.alunoNome, modo: 'AGORA' });
+          }}
+          onSchedule={(row) => {
+            setActionMenuId(null);
+            setPendingAction({ matriculaIds: [row.matriculaId], label: row.alunoNome, modo: 'AGENDADA' });
+          }}
+          onResumeCycle={resumeManualCycle}
+          onCarnetFeedback={(tone, title, message) => {
+            if (tone === 'info') toast.info(title, message);
+            else toast.error(title, message);
+          }}
+        />
       </section>
 
       {pendingAction ? (

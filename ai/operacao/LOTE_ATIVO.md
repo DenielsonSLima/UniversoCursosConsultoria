@@ -1,42 +1,29 @@
 # Lote ativo
 
-Estado: `PUBLICADO EM PRODUÇÃO — VALIDAÇÃO CONCLUÍDA`
+Estado: `BACKEND APLICADO — PUBLICAÇÃO GITHUB/VERCEL EM ANDAMENTO`
 
-## Lote: 2026-09-02-feedback-progresso-emissao-ciclo-tecnico
+## Lote: 2026-09-04-progresso-real-e-carne-no-financeiro-tecnico
 
-- Pedido: substituir a tela vazia durante a emissão do ciclo técnico por uma
-  experiência em tela cheia que informe claramente que o sistema continua
-  trabalhando, mostre etapas, tempo decorrido e o resultado final.
-- Autorização: implementação, GitHub e produção autorizados explicitamente pelo
-  gestor em 02/09/2026.
-- Risco: crítico por estar no fluxo financeiro, embora o patch não altere banco,
-  Edge Function, payload ou contrato Banese.
-- Registro:
-  `ai/operacao/registros/alteracoes/2026-09-02-feedback-progresso-emissao-ciclo-tecnico.md`.
-- Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-02-feedback-progresso-emissao-ciclo-tecnico.md`.
+- Pedido: tornar a emissão do ciclo técnico mensurável com percentual e contagem
+  reais; reorganizar a identidade do aluno na tabela financeira; alternar as
+  faixas visuais; e permitir abrir o carnê Banese diretamente em Gestão.
+- Autorização: implementação, aplicação e publicação em produção autorizadas
+  pelo gestor em 04/09/2026.
+- Risco: crítico por envolver financeiro, Realtime, projeção Supabase e leitura
+  dos documentos oficiais Banese.
+- Registro e manifesto:
+  `ai/operacao/registros/alteracoes/2026-09-04-progresso-real-e-carne-no-financeiro-tecnico.md`.
+- Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-04-progresso-real-e-carne-no-financeiro-tecnico.md`
 
-### Contrato preservado
+### Contrato de aceite
 
-1. A emissão continua sendo uma única operação idempotente e retomável.
-2. Nenhum percentual bancário é inventado; a barra é indeterminada.
-3. A prévia canônica permanece visível por snapshot enquanto a lista atualiza.
-4. Um bloqueio síncrono impede clique duplo antes do estado React renderizar.
-5. Sucesso, falha e interrupção continuam usando notificações visuais do portal.
-
-### Validação local
-
-- 40 testes focados do ciclo técnico aprovados.
-- ESLint focado, TypeScript e teto de 500 linhas aprovados.
-- Build de produção aprovado com 3.960 módulos transformados.
-- Revisão em três frentes concluída sem achado bloqueador.
-- O smoke visual não executará nova emissão bancária real apenas para validar a
-  apresentação; a resposta controlada cobre o estado de espera com segurança.
-
-### Publicação
-
-- PR `#124` aprovado e integrado à `main` pelo commit
-  `813016a77abbc7dcdcce272107b6073c874fe6b9`.
-- Preview Vercel `5Xu7QiK1N5RtRhRMoatXFREszVUq`: aprovado.
-- Produção Vercel `GZi2VbCwoEQtbrcrd2UCEacfQ8zo`: aprovada.
-- Workflow de qualidade da `main` `33831458173`: concluído com sucesso.
-- `https://universocc.com.br` respondeu HTTP 200 após a implantação.
+1. A barra começa em 0% e avança somente quando cada título BolePix for validado
+   e persistido pelo backend, exibindo também `emitidos/total`.
+2. Nenhum avanço é estimado pelo tempo e nenhuma chamada bancária é repetida
+   para calcular progresso.
+3. A tabela exibe CPF e matrícula abaixo do nome, sem coluna separada, com
+   alternância visual acessível entre alunos.
+4. O botão de carnê consulta pelo UUID exato da matrícula e reutiliza o mesmo
+   catálogo, compositor vetorial e modal da Secretaria.
+5. Carnê incompleto, ambíguo ou com menos de três títulos falha fechado; a ação
+   nunca cria nem reemite cobranças.
