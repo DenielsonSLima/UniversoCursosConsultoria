@@ -1,8 +1,8 @@
 {
-  "version": "4.8.29",
+  "version": "4.8.30",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 38,
-  "releasedAt": "2026-09-02",
-  "summary": "Recuperação idempotente da emissão BolePix técnica"
+  "revision": 39,
+  "releasedAt": "2026-09-03",
+  "summary": "Progresso visível na emissão BolePix técnica"
 }

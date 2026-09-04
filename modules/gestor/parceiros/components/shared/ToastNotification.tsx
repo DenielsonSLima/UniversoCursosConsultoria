@@ -3,9 +3,9 @@
 
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { CheckCircle2, XCircle, Info, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, XCircle, Info, X } from 'lucide-react';
 
-export type ToastType = 'success' | 'error' | 'info';
+export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
 export interface Toast {
   id: string;
@@ -66,6 +66,12 @@ const ToastItem: React.FC<{ toast: Toast; onRemove: (id: string) => void }> = ({
       border: 'border-l-4 border-l-blue-500',
       icon: <Info className="text-blue-500" size={22} />,
       titleColor: 'text-blue-700',
+    },
+    warning: {
+      bg: 'bg-white',
+      border: 'border-l-4 border-l-amber-500',
+      icon: <AlertTriangle className="text-amber-500" size={22} />,
+      titleColor: 'text-amber-700',
     },
   }[toast.type];
 
@@ -140,6 +146,7 @@ export function useToast() {
     success: (title: string, message?: string, options?: Omit<Toast, 'id' | 'type' | 'title' | 'message'>) => addToast('success', title, message, options),
     error: (title: string, message?: string, options?: Omit<Toast, 'id' | 'type' | 'title' | 'message'>) => addToast('error', title, message, options),
     info: (title: string, message?: string, options?: Omit<Toast, 'id' | 'type' | 'title' | 'message'>) => addToast('info', title, message, options),
+    warning: (title: string, message?: string, options?: Omit<Toast, 'id' | 'type' | 'title' | 'message'>) => addToast('warning', title, message, options),
   }), [addToast]);
 
   return { toasts, removeToast, toast };

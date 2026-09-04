@@ -4,6 +4,18 @@ Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente
 
 Histórico anterior: [24/08/2026 — versões 4.7.5 a 4.7.7](./changelog/2026-08-24-parte-1.md), [22/08/2026 a 23/08/2026](./changelog/2026-08-22-a-2026-08-23.md), [21/08/2026 a 22/08/2026 — parte 2](./changelog/2026-08-21-a-2026-08-22-parte-2.md), [21/08/2026 — parte 1](./changelog/2026-08-21-parte-1.md), [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
 
+## [4.8.30] - 2026-09-03
+
+### Alterado
+
+- A emissão do ciclo técnico passa a ocupar a tela com barra animada, tempo decorrido e as etapas de preparação, registro Banese e conferência do retorno.
+- Aluno, matrícula, ciclo, quantidade e total permanecem visíveis a partir da prévia revisada, mesmo quando a lista financeira é atualizada durante a requisição.
+
+### Segurança e qualidade
+
+- A barra é explicitamente indeterminada, sem inventar percentual bancário; uma trava síncrona impede clique duplo e mantém o pedido idempotente.
+- O contrato Banese não foi alterado, e testes focados cobrem progresso, acessibilidade, snapshot e feedback de interrupção.
+
 ## [4.8.29] - 2026-09-02
 
 ### Corrigido
