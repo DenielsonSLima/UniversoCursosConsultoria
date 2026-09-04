@@ -1,7 +1,7 @@
 # Feedback de progresso na emissão do ciclo técnico
 
 Data: 2026-09-03
-Estado: pronto para publicação; validação local concluída
+Estado: publicado em produção; validação concluída
 
 ## Objetivo
 
@@ -50,7 +50,15 @@ retornos. A espera passa a ter uma tela cheia informativa e acessível.
 - `npm run check:file-lines`: aprovado.
 - Build de produção aprovado com 3.960 módulos transformados.
 - Revisão independente em três frentes concluída sem achado bloqueador.
-- CI, Preview e produção serão anexados após a publicação.
+- PR `#124` integrado à `main` pelo commit
+  `813016a77abbc7dcdcce272107b6073c874fe6b9`.
+- Workflows do PR: versão `33831312968` e qualidade `33831313002`, ambos
+  concluídos com sucesso.
+- Preview Vercel `5Xu7QiK1N5RtRhRMoatXFREszVUq`: aprovado.
+- Produção Vercel `GZi2VbCwoEQtbrcrd2UCEacfQ8zo`: aprovada.
+- Workflow de qualidade pós-merge `33831458173`: concluído com sucesso.
+- Smoke público: `https://universocc.com.br` respondeu HTTP 200 após a
+  implantação.
 - Nenhum título Banese real foi criado apenas para testar esta alteração visual.
 
 ## Manifesto explícito

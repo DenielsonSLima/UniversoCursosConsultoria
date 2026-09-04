@@ -1,6 +1,6 @@
 # Lote ativo
 
-Estado: `PRONTO PARA PUBLICAÇÃO — VALIDAÇÃO LOCAL CONCLUÍDA`
+Estado: `PUBLICADO EM PRODUÇÃO — VALIDAÇÃO CONCLUÍDA`
 
 ## Lote: 2026-09-02-feedback-progresso-emissao-ciclo-tecnico
 
@@ -31,3 +31,12 @@ Estado: `PRONTO PARA PUBLICAÇÃO — VALIDAÇÃO LOCAL CONCLUÍDA`
 - Revisão em três frentes concluída sem achado bloqueador.
 - O smoke visual não executará nova emissão bancária real apenas para validar a
   apresentação; a resposta controlada cobre o estado de espera com segurança.
+
+### Publicação
+
+- PR `#124` aprovado e integrado à `main` pelo commit
+  `813016a77abbc7dcdcce272107b6073c874fe6b9`.
+- Preview Vercel `5Xu7QiK1N5RtRhRMoatXFREszVUq`: aprovado.
+- Produção Vercel `GZi2VbCwoEQtbrcrd2UCEacfQ8zo`: aprovada.
+- Workflow de qualidade da `main` `33831458173`: concluído com sucesso.
+- `https://universocc.com.br` respondeu HTTP 200 após a implantação.
