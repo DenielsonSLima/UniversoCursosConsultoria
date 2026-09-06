@@ -7,6 +7,7 @@ import { build } from 'esbuild';
 const root = resolve(import.meta.dirname, '..');
 const outputDirectory = mkdtempSync(join(tmpdir(), 'caixa-report-tests-'));
 const tests = [
+  'modules/gestor/financeiro/conciliacao-bancaria/components/ConciliacaoRecebimentoRows.test.tsx',
   'modules/gestor/caixa/caixa-data-scope.test.ts',
   'modules/gestor/caixa/caixa-financiamento-resumo.test.ts',
   'modules/gestor/caixa/caixa-linha-corte.test.ts',
@@ -23,13 +24,14 @@ const tests = [
 try {
   const outputs = [];
   for (const [index, entry] of tests.entries()) {
-    const output = join(outputDirectory, `test-${index}.mjs`);
+    const format = entry.endsWith('.tsx') ? 'cjs' : 'esm';
+    const output = join(outputDirectory, `test-${index}.${format === 'cjs' ? 'cjs' : 'mjs'}`);
     await build({
       entryPoints: [resolve(root, entry)],
       outfile: output,
       bundle: true,
       platform: 'node',
-      format: 'esm',
+      format,
       define: {
         'import.meta.env': JSON.stringify({
           VITE_SUPABASE_URL: 'http://localhost',

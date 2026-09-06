@@ -68,10 +68,7 @@ const isHistorical = (row: ConciliacaoRecebimentoRow) => (
 
 const settlementDateTimeLabel = (row: ConciliacaoRecebimentoRow) => {
   if (row.baixaRegistradaEm) return formatConciliacaoDateTime(row.baixaRegistradaEm);
-  if (row.dataPagamento) {
-    return `${formatConciliacaoDate(row.dataPagamento)} · horário não disponível`;
-  }
-  return 'Não informada';
+  return 'Registro não disponível';
 };
 
 const settlementTimeSourceLabel = (row: ConciliacaoRecebimentoRow) => {
@@ -79,7 +76,7 @@ const settlementTimeSourceLabel = (row: ConciliacaoRecebimentoRow) => {
     case 'MANUAL_CONCLUSAO': return 'Conclusão da baixa manual';
     case 'SISTEMA_REGISTRO': return 'Registro da confirmação no sistema';
     case 'HISTORICO_SEM_HORA': return 'Histórico sem horário de origem';
-    default: return 'Data disponível no financeiro';
+    default: return 'Registro da baixa no sistema';
   }
 };
 
@@ -201,17 +198,31 @@ const SettlementDetails: React.FC<{
 
   return (
     <div className="space-y-3">
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-9">
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 xl:grid-cols-5">
+        {field('Data do pagamento', (
+          <span className="block">
+            {row.dataPagamento ? (
+              <time className="block" dateTime={row.dataPagamento}>
+                {formatConciliacaoDate(row.dataPagamento)}
+              </time>
+            ) : 'Não informada'}
+            <span className="mt-0.5 block text-[9px] font-medium text-slate-500">
+              Data usada no Caixa
+            </span>
+          </span>
+        ), 'text-emerald-800')}
         {field('Baixa registrada', (
           <span className="block">
-            <time className="block" dateTime={row.baixaRegistradaEm || row.dataPagamento}>
-              {settlementDateTimeLabel(row)}
-            </time>
+            {row.baixaRegistradaEm ? (
+              <time className="block" dateTime={row.baixaRegistradaEm}>
+                {settlementDateTimeLabel(row)}
+              </time>
+            ) : settlementDateTimeLabel(row)}
             <span className="mt-0.5 block text-[9px] font-medium text-slate-500">
               {settlementTimeSourceLabel(row)}
             </span>
           </span>
-        ), 'text-emerald-800')}
+        ))}
         {field('Valor pago', optionalCurrency(row.valorPago), 'text-emerald-700')}
         {field('Desconto', signedOptionalCurrency(row.descontoAplicado, '−'), 'text-emerald-700')}
         {field('Juros', signedOptionalCurrency(row.jurosAplicados, '+'), 'text-amber-700')}

@@ -2,7 +2,17 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
-Histórico anterior: [24/08/2026 — versões 4.8.0 a 4.8.1](./changelog/2026-08-24-parte-2.md), [24/08/2026 — versões 4.7.5 a 4.7.7](./changelog/2026-08-24-parte-1.md), [22/08/2026 a 23/08/2026](./changelog/2026-08-22-a-2026-08-23.md), [21/08/2026 a 22/08/2026 — parte 2](./changelog/2026-08-21-a-2026-08-22-parte-2.md), [21/08/2026 — parte 1](./changelog/2026-08-21-parte-1.md), [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+Histórico anterior: [25/08/2026 — versões 4.8.2 a 4.8.5](./changelog/2026-08-25-parte-1.md), [24/08/2026 — versões 4.8.0 a 4.8.1](./changelog/2026-08-24-parte-2.md), [24/08/2026 — versões 4.7.5 a 4.7.7](./changelog/2026-08-24-parte-1.md), [22/08/2026 a 23/08/2026](./changelog/2026-08-22-a-2026-08-23.md), [21/08/2026 a 22/08/2026 — parte 2](./changelog/2026-08-21-a-2026-08-22-parte-2.md), [21/08/2026 — parte 1](./changelog/2026-08-21-parte-1.md), [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+
+## [4.8.32] - 2026-09-06
+
+### Corrigido
+
+- A Conciliação mostra a data efetiva do pagamento usada no Caixa separada
+  da data e hora em que a confirmação foi registrada pelo sistema.
+- Recebimentos antigos e futuros usam a mesma apresentação em desktop e celular;
+  a ausência de registro não é preenchida com a data do pagamento.
+- Datas bancárias, valores e competências financeiras permanecem preservados.
 
 ## [4.8.31] - 2026-09-04
 
@@ -453,42 +463,3 @@ Histórico anterior: [24/08/2026 — versões 4.8.0 a 4.8.1](./changelog/2026-08
 
 - A guarda compartilhada bloqueia `banese_card + PIX` direto antes de consultar configuração, em sandbox e produção, sem bloquear o Pix oficial retornado dentro de uma cobrança `BOLETO`.
 - A ordem de locks financeiros foi normalizada para `contas_receber → job → delivery`, com revalidação de identidade e testes de corrida para impedir reapresentação ou envio após trancamento e pagamento.
-
-## [4.8.5] - 2026-08-25
-
-### Alterado
-
-- O fechamento operacional registra migration, revisão cruzada, PR/merge, CI, Vercel Preview/Production, smoke público e limitações sem alterar o contrato funcional publicado em 4.8.4.
-
-## [4.8.4] - 2026-08-25
-
-### Corrigido
-
-- A remoção ou troca de matrícula do Aluno passa a sincronizar por uma outbox autorizada, sem depender de DELETE filtrado do Postgres Changes, com refetch canônico ao reconectar ou retomar o aplicativo.
-- O card financeiro usa somente status, elegibilidade de recibo e resumo calculados pelo backend; a página deixa de manter uma segunda assinatura Realtime para o mesmo evento financeiro.
-
-### Segurança e qualidade
-
-- A audiência `ALUNO` é autorizada pela identidade corrente, preservando o OID do autorizador, a policy RLS, os grants mínimos e os tópicos sem payload acadêmico sensível.
-- Os quatro perfis continuam disponíveis na mesma identidade, separados entre os logins público e institucional, com seletor apenas quando há mais de um acesso compatível na audiência.
-
-## [4.8.3] - 2026-08-25
-
-### Alterado
-
-- O fechamento operacional registra ledgers e hashes das 11 migrations, PR/merge, CI, Vercel Preview/Production, smoke HTTP e limitações de autenticação sem criar usuários, pagamentos ou lançamentos artificiais; o contrato funcional publicado em 4.8.2 permanece inalterado.
-
-## [4.8.2] - 2026-08-25
-
-### Corrigido
-
-- Os Financeiros do Professor e do Aluno passam a receber do backend valores pagos, saldos, atraso, filtros, totais e paginação, sem tratar valor previsto como pagamento nem mascarar falha de consulta como saldo zerado.
-- Recibos manuais usam snapshot autorizado e PDF vetorial institucional; prévia, download e impressão compartilham o mesmo arquivo, enquanto comprovantes oficiais de gateway permanecem preservados.
-- O portal do Professor revalida os polos em toda montagem, mantém a sessão em falha transitória e nunca libera módulos com autorização apenas em cache.
-- Realtime e TanStack refazem as leituras canônicas na assinatura e reconexão, com debounce, limpeza e invalidações direcionadas para matrícula, vacinas, calendário, comunicação e financeiro.
-
-### Segurança e qualidade
-
-- As novas RPCs confirmam a identidade e o escopo no banco, usam grants mínimos e preservam pagamento zero ou parcial, data civil de Maceió e exclusão de títulos cancelados ou estornados.
-- Os acessos multiperfil continuam separados por audiência: Aluno/Responsável no login público e Gestor/Professor no institucional, com seleção somente quando houver mais de um perfil compatível.
-- Contratos de Auth, SQL, PDF, Banese, Realtime e chaves TanStack foram incorporados ao gate obrigatório de CI.
