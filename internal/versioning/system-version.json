@@ -1,8 +1,8 @@
 {
-  "version": "4.8.31",
+  "version": "4.8.32",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 40,
-  "releasedAt": "2026-09-04",
-  "summary": "Progresso real e carnê no financeiro técnico"
+  "revision": 41,
+  "releasedAt": "2026-09-06",
+  "summary": "Data do pagamento e confirmação separadas na Conciliação"
 }
