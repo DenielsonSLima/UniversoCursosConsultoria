@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import type { ContasReceber } from '../../../financeiro.service';
 import { formatEnrollment } from './modalidade-receber.enrollment';
+import { ManualSettlementAudit } from './ManualSettlementAudit';
 import {
   canOpenBaneseDocument,
   canReverseManualSettlement,
@@ -282,6 +283,7 @@ export const ReceivableRow: React.FC<ReceivableRowProps> = ({
         <ReceivableStatusBadge item={item} />
         <p className="text-[10px] font-bold text-slate-500">Forma: {paymentMethodLabel(item)}</p>
         <p className="text-[10px] font-bold text-slate-500">Origem: {paymentOriginLabel(item)}</p>
+        <ManualSettlementAudit item={item} />
         {['DELETED', 'CANCELED'].includes(String(item.asaasStatus || '').toUpperCase()) ? (
           <p className="text-[10px] font-bold text-rose-600">
             Cobrança cancelada/excluída no {paymentGatewayLabel(item)} após baixa manual.
@@ -361,6 +363,7 @@ export const ReceivableCard: React.FC<ItemProps> = ({ item, actions }) => (
     <div className="mt-4 rounded-xl border border-slate-100 px-3 py-2">
       <p className="text-[10px] font-bold text-slate-500">Forma: {paymentMethodLabel(item)}</p>
       <p className="mt-1 text-[10px] font-bold text-slate-500">Origem: {paymentOriginLabel(item)}</p>
+      <ManualSettlementAudit item={item} />
     </div>
     <div className="mt-4 border-t border-slate-100 pt-3">
       <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Unidade</p>
