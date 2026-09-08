@@ -4,6 +4,7 @@ import {
   financeiroService,
   isContaDisponivelNoPolo,
   type ReceivablesPageFilters,
+  type ReceivablesSummaryFilters,
 } from '../../financeiro.service';
 import ToastNotification, { useToast } from '../../../components/ToastNotification';
 import { financeiroQueryKeys } from '../../financeiro.queryKeys';
@@ -21,11 +22,16 @@ import type {
   ModalidadeReceberTabProps,
   ReceivableKpis,
   ReceivableStatusCounts,
-  StatusScope,
   ViewMode,
 } from './modalidade-receber/modalidade-receber.types';
 import { useModalidadeReceberOperations } from './modalidade-receber/useModalidadeReceberOperations';
 import { useModalidadeReceberReport } from './modalidade-receber/useModalidadeReceberReport';
+import {
+  getReceivablesPeriod,
+  getReceivablesListScope,
+  validateReceivablesPeriod,
+  type ReceivablesScope,
+} from './modalidade-receber/receivables-period';
 
 const PAGE_SIZE = 20;
 const GROUP_ITEMS_PAGE_SIZE = 25;
@@ -40,14 +46,15 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
 }) => {
   const { toasts, removeToast, toast } = useToast();
   const [search, setSearch] = useState('');
-  const [statusScope, setStatusScope] = useState<StatusScope>('pending');
+  const [statusScope, setStatusScope] = useState<ReceivablesScope>('pending');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const groupMode = 'student' as const;
   const [turmaId, setTurmaId] = useState('');
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [groupPages, setGroupPages] = useState<Record<string, number>>({});
-  const [dueStart, setDueStart] = useState('');
-  const [dueEnd, setDueEnd] = useState('');
+  const [period, setPeriod] = useState(() => getReceivablesPeriod());
+  const { start: dueStart, end: dueEnd } = period;
+  const periodError = validateReceivablesPeriod(period);
   const [page, setPage] = useState(1);
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const operations = useModalidadeReceberOperations(toast);
@@ -59,23 +66,27 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
     return () => window.clearTimeout(timeoutId);
   }, [search]);
 
-  const pageFilters = useMemo<ReceivablesPageFilters>(() => ({
+  const summaryFilters = useMemo<ReceivablesSummaryFilters>(() => ({
     poloId: poloId || undefined,
     turmaId: turmaId || undefined,
     search: debouncedSearch,
     dueStart,
     dueEnd,
-    statusScope,
+  }), [debouncedSearch, dueEnd, dueStart, poloId, turmaId]);
+
+  const pageFilters: ReceivablesPageFilters = {
+    ...getReceivablesListScope(statusScope, summaryFilters),
     groupMode,
     page,
     pageSize: PAGE_SIZE,
-  }), [debouncedSearch, dueEnd, dueStart, groupMode, page, poloId, statusScope, turmaId]);
+  };
 
   const {
     groupsQuery,
     summaryQuery,
+    upcomingSummaryQuery,
     activeClassesQuery,
-  } = useModalidadeReceberQueries(modality, pageFilters);
+  } = useModalidadeReceberQueries(modality, pageFilters, summaryFilters, !periodError);
   const { accountsQuery } = useFinanceiroSharedQueries({ accounts: true, polos: false, partners: false });
   const receivables = [];
   const groups = groupsQuery.data?.groups || [];
@@ -95,7 +106,7 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
       return {
         queryKey: financeiroQueryKeys.receivablesGroupItems(modality, filters),
         queryFn: () => financeiroService.getReceivablesPageByModality(modality, filters),
-        enabled: expandedGroups.has(group.key),
+        enabled: !periodError && expandedGroups.has(group.key),
         placeholderData: keepPreviousData,
         staleTime: 5 * 60_000,
         gcTime: 30 * 60_000,
@@ -129,18 +140,19 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
     canceled: summaryQuery.data?.canceledCount || 0,
     all: summaryQuery.data?.allCount || 0,
   };
+  const reportSummary = statusScope === 'upcoming' ? upcomingSummaryQuery.data : summaryQuery.data;
   const kpis: ReceivableKpis = {
-    total: summaryQuery.data?.allValue || 0,
-    recebido: summaryQuery.data?.receivedValue || 0,
-    aReceber: summaryQuery.data?.pendingValue || 0,
-    vencidos: summaryQuery.data?.overdueCount || 0,
+    total: reportSummary?.allValue || 0,
+    recebido: reportSummary?.receivedValue || 0,
+    aReceber: reportSummary?.pendingValue || 0,
+    vencidos: reportSummary?.overdueCount || 0,
   };
   const totalItems = groupsQuery.data?.totalItems || 0;
   const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
 
   useEffect(() => {
     setPage(1);
-  }, [search, dueStart, dueEnd, statusScope, turmaId, modality]);
+  }, [debouncedSearch, dueStart, dueEnd, statusScope, turmaId, modality, poloId]);
 
   useEffect(() => {
     setTurmaId('');
@@ -159,7 +171,7 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
   useEffect(() => {
     setExpandedGroups(new Set());
     setGroupPages({});
-  }, [search, dueStart, dueEnd, statusScope, turmaId, modality, page]);
+  }, [debouncedSearch, dueStart, dueEnd, statusScope, turmaId, modality, poloId, page]);
 
   const toggleGroup = (key: string) => {
     const willOpen = !expandedGroups.has(key);
@@ -182,13 +194,19 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
     title,
     search,
     debouncedSearch,
-    dueStart,
-    dueEnd,
-    statusScope,
+    dueStart: pageFilters.dueStart || '',
+    dueEnd: pageFilters.dueEnd || '',
+    statusScope: pageFilters.statusScope,
     turmaId,
     turmaLabel: activeClasses.find((turma) => turma.id === turmaId)?.nome || '',
     kpis,
-    statusCounts,
+    statusCounts: {
+      pending: reportSummary?.pendingCount || 0,
+      received: reportSummary?.receivedCount || 0,
+      overdue: reportSummary?.overdueCount || 0,
+      canceled: reportSummary?.canceledCount || 0,
+      all: reportSummary?.allCount || 0,
+    },
     toast,
   });
 
@@ -207,7 +225,7 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="space-y-4 animate-fadeIn">
       <ToastNotification toasts={toasts} onRemove={removeToast} />
       <ModalidadeReceberOverlays operations={operations} settlementAccounts={activeSettlementAccounts} />
       <ModalidadeReceberToolbar
@@ -216,12 +234,21 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
         description={description}
         icon={icon}
         accentLabel={accentLabel}
-        kpis={kpis}
+        summary={{
+          data: summaryQuery.data,
+          loading: summaryQuery.isPending || summaryQuery.isFetching || search.trim() !== debouncedSearch,
+          error: summaryQuery.isError,
+        }}
+        upcoming={{
+          data: upcomingSummaryQuery.data,
+          loading: upcomingSummaryQuery.isPending || upcomingSummaryQuery.isFetching || search.trim() !== debouncedSearch,
+          error: upcomingSummaryQuery.isError,
+        }}
+        period={period}
+        periodError={periodError}
         statusCounts={statusCounts}
         statusScope={statusScope}
         search={search}
-        dueStart={dueStart}
-        dueEnd={dueEnd}
         turmaId={turmaId}
         turmas={activeClasses}
         turmasLoading={activeClassesQuery.isLoading}
@@ -230,18 +257,17 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
         isLoading={isLoading}
         onStatusScopeChange={setStatusScope}
         onSearchChange={setSearch}
-        onDueStartChange={setDueStart}
-        onDueEndChange={setDueEnd}
+        onPeriodChange={setPeriod}
         onTurmaIdChange={setTurmaId}
         onViewModeChange={setViewMode}
         onClearFilters={() => {
           setSearch('');
-          setDueStart('');
-          setDueEnd('');
+          setPeriod(getReceivablesPeriod());
           setTurmaId('');
+          setStatusScope('pending');
         }}
       />
-      <ReceivablesList
+      {!periodError ? <ReceivablesList
         viewMode={viewMode}
         groupMode={groupMode}
         isLoading={isLoading}
@@ -261,7 +287,7 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
         onToggleGroup={toggleGroup}
         onChangeGroupPage={changeGroupPage}
         onChangePage={setPage}
-      />
+      /> : null}
     </div>
   );
 };
