@@ -1,6 +1,6 @@
 # Recebíveis: período e indicadores operacionais
 
-Estado: publicação em produção autorizada explicitamente em 07/09/2026; validação da entrega em andamento. Versão 4.8.33.
+Estado: publicado em produção em 07/09/2026. Versão 4.8.33; smoke parcial registrado abaixo.
 
 ## Objetivo e escopo
 
@@ -50,3 +50,14 @@ Total: 13 arquivos.
 
 - Exercitar na sessão autenticada: presets, turma, busca, clique nos três indicadores, abas, personalizado inválido, redefinição e exportação com os filtros aplicados; desktop e celular.
 - Publicação autorizada pelo gestor após ciência da limitação do smoke. Conferir Preview, CI e produção para o commit exato do manifesto.
+
+## Entrega confirmada
+
+- PR #128, merge `694d36cb0f4249348f5f7b07551df5f54b5ba7b4`.
+- CI de produção aprovado: run `34178265351`; Vercel concluído com sucesso.
+- Safari autenticado confirmou versão 4.8.33, mês atual, clique Recebido/A vencer,
+  quantidades e totais contextuais correspondentes, lista agrupada e expansão.
+- Preview compilou, mas apresentou tela vazia por ausência das variáveis públicas
+  Supabase no ambiente Preview, problema confirmado no console e informado ao gestor.
+- Demais passos de smoke acima permanecem pendentes; nova solicitação de auditoria
+  da baixa manual sucedeu a validação. Não foram declarados como executados.

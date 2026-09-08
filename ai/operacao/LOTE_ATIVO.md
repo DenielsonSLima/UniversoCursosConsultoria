@@ -1,19 +1,18 @@
 # Lote ativo
 
-Estado: `PUBLICAÇÃO AUTORIZADA — VALIDAÇÃO DA ENTREGA EM ANDAMENTO`
+Estado: `IMPLEMENTAÇÃO VALIDADA — AUDITORIA DE BAIXA MANUAL`
 
-## Lote: 2026-09-07-recebiveis-periodo-indicadores
+## Lote: 2026-09-07-recebiveis-auditoria-baixa-manual
 
-- Pedido: tornar os indicadores de A Receber úteis ao mês e aos filtros, incluindo atalhos de período.
-- Risco: apresentação financeira e coordenação de filtros; valores permanecem nas RPCs existentes.
-- Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-07-recebiveis-periodo-indicadores.md`
-- GitHub e produção autorizados explicitamente pelo gestor em 07/09/2026, reiterando que cálculos financeiros pertencem ao backend.
+- Pedido: mostrar quem deu baixa manual, com data e hora, na tela A Receber.
+- Continuação da entrega de A Receber com GitHub e publicação solicitados nesta conversa.
+- Risco: projeção de auditoria financeira e publicação; sem alteração de saldos.
+- Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-07-recebiveis-auditoria-baixa-manual.md`
 
 ### Aceite
 
-1. Abrir no mês atual e oferecer mês anterior, últimos 30 dias, todo o período e personalizado.
-2. Recebido, A vencer e Em atraso acompanham busca, turma e vencimento.
-3. Clique no indicador filtra a lista; o total contextual acompanha a situação selecionada.
-4. Datas usam o dia civil de Maceió; datas inválidas bloqueiam consultas de cobranças e exportação.
-5. Carregamento e erro não aparecem como saldo zero; manter totais canônicos e alterações locais anteriores.
-6. Validar a entrega e registrar qualquer limitação real do smoke autenticado, já informada ao gestor antes da autorização de publicação.
+1. Nome do operador vem da baixa persistida no servidor.
+2. Mostrar conclusão com data, hora e segundos em Maceió, separada do pagamento.
+3. Mesma informação em linhas e cartões, sem inventar dados históricos ausentes.
+4. Preservar autorização, filtros, valores e paginação; excluir auditoria estornada.
+5. Validar contrato remoto e tela; publicar somente o manifesto revisado.

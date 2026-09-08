@@ -126,6 +126,8 @@ jobs:
         run: |
           node --test \
             modules/gestor/financeiro/receber/components/modalidade-receber/receivables-period.test.ts \
+            scripts/test-manual-settlement-audit.mjs \
+            supabase/tests/receivables_manual_settlement_audit.contract.test.ts \
             modules/aluno/financeiro/financeiro.contract.test.ts \
             modules/aluno/financeiro/aluno-financeiro-receipt.pdf.test.ts \
             modules/gestor/parceiros/governance-query-keys.test.ts \

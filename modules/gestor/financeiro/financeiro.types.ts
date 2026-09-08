@@ -67,6 +67,8 @@ export interface ContasReceber {
   turmaId?: string;
   formaPagamento?: 'BOLETO' | 'PIX' | 'CARTAO' | 'DINHEIRO';
   origemPagamento?: string;
+  manualSettlementActorName?: string;
+  manualSettlementCompletedAt?: string;
   gatewayProvider?: string;
   gatewayPaymentMethod?: string;
   gatewaySettlementChannel?: 'PIX' | 'BOLETO' | 'NAO_IDENTIFICADO' | 'MISTO';

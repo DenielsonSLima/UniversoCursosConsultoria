@@ -52,6 +52,8 @@ const mapReceivableRpcRow = (row: any): ContasReceber => ({
   cursoModalidade: row.curso_modalidade || '',
   formaPagamento: row.forma_pagamento || undefined,
   origemPagamento: row.origem_pagamento || undefined,
+  manualSettlementActorName: row.manual_settlement_actor_name || undefined,
+  manualSettlementCompletedAt: row.manual_settlement_completed_at || undefined,
   gatewayProvider: row.gateway_provider || undefined,
   gatewayPaymentMethod: row.gateway_payment_method || undefined,
   gatewaySettlementChannel: row.gateway_settlement_channel || undefined,
@@ -92,7 +94,7 @@ const getReceivablesPageByModality = async (
   modality: CourseModality,
   filters: ReceivablesPageFilters,
 ): Promise<ReceivablesPage> => {
-  const { data, error } = await supabase.rpc('get_receivables_modality_page_v3_secure', {
+  const { data, error } = await supabase.rpc('get_receivables_modality_page_v4_secure', {
     p_modality: modality,
     p_polo_id: filters.poloId && filters.poloId !== 'todos' ? filters.poloId : null,
     p_turma_id: filters.turmaId || null,
