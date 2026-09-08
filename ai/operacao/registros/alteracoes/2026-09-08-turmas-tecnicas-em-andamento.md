@@ -84,3 +84,4 @@ Total: 38 arquivos.
 - Publicação em produção autorizada em 08/09/2026 pelo usuário após apresentação das regras e validações. Revisão final independente do SQL aprovada, sem novos bloqueadores. Versão 4.8.36.
 - Fechamento de publicação: 18 testes Node, 47 Deno (9 subpassos), TypeScript, build 4.8.36, versão e teto de linhas aprovados. Entradas 4.8.6–4.8.7 do changelog movidas integralmente ao arquivo histórico para respeitar o teto.
 - Resultados de CI, Preview, produção e smoke posterior serão registrados no PR da versão; testes de emissão bancária real não fazem parte deste lote.
+- CI inicial detectou contrato estrutural da trava de duplo envio. A conferência do histórico externo foi separada da trava existente, preservando ambas as guardas e o contrato de progresso da emissão.

@@ -112,7 +112,8 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
   };
 
   const startIssuance = () => {
-    if (!preview || issuanceStartedRef.current || (externalHistory && !externalHistoryConfirmed)) return;
+    if (externalHistory && !externalHistoryConfirmed) return;
+    if (!preview || issuanceStartedRef.current) return;
     issuanceStartedRef.current = true;
     setIssuanceSnapshot(preview);
     void onConfirm(preview, firstDueDate).finally(() => {
