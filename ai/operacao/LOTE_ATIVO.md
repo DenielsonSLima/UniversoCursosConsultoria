@@ -1,18 +1,18 @@
 # Lote ativo
 
-Estado: `IMPLEMENTAÇÃO VALIDADA — AUDITORIA DE BAIXA MANUAL`
+Estado: `CORREÇÃO EM VALIDAÇÃO — RECUPERAÇÃO DOS RECEBÍVEIS`
 
-## Lote: 2026-09-07-recebiveis-auditoria-baixa-manual
+## Lote: 2026-09-08-recebiveis-recuperacao-carregamento
 
-- Pedido: mostrar quem deu baixa manual, com data e hora, na tela A Receber.
-- Continuação da entrega de A Receber com GitHub e publicação solicitados nesta conversa.
-- Risco: projeção de auditoria financeira e publicação; sem alteração de saldos.
-- Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-07-recebiveis-auditoria-baixa-manual.md`
+- Pedido: revisar travamento após a versão 4.8.34 e corrigir recuperação da tela.
+- Risco: leitura financeira e publicação, sem alterações de banco ou valores.
+- Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-08-recebiveis-recuperacao-carregamento.md`
+- Evidência: timeouts 57014 e HTTP503/PGRST002 às 00:21 em America/Maceio.
 
 ### Aceite
 
-1. Nome do operador vem da baixa persistida no servidor.
-2. Mostrar conclusão com data, hora e segundos em Maceió, separada do pagamento.
-3. Mesma informação em linhas e cartões, sem inventar dados históricos ausentes.
-4. Preservar autorização, filtros, valores e paginação; excluir auditoria estornada.
-5. Validar contrato remoto e tela; publicar somente o manifesto revisado.
+1. Nenhuma leitura fica pendente indefinidamente no cliente.
+2. Erro/timeout oferece nova tentativa preservando filtros, inclusive detalhes.
+3. Falha inicial não aparece como lista vazia; mostrar suspensão offline.
+4. Preservar escopo autorizado, auditoria da baixa e cálculos no backend.
+5. Revisão, testes focados, build e smoke proporcional antes do fechamento.

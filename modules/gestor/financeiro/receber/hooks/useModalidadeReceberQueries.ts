@@ -1,4 +1,5 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { receivablesReadQueryOptions } from '../../financeiro.receivables-request';
 import {
   financeiroService,
   ReceivablesPageFilters,
@@ -23,8 +24,9 @@ export function useModalidadeReceberQueries(
   };
 
   const receivablesQuery = useQuery({
+    ...receivablesReadQueryOptions,
     queryKey: financeiroQueryKeys.receivablesPageByModality(modality, filters),
-    queryFn: () => financeiroService.getReceivablesPageByModality(modality, filters),
+    queryFn: ({ signal }) => financeiroService.getReceivablesPageByModality(modality, filters, signal),
     enabled: enabled && Boolean(filters.poloId) && !isGrouped,
     placeholderData: keepPreviousData,
     staleTime: 5 * 60_000,
@@ -32,8 +34,9 @@ export function useModalidadeReceberQueries(
   });
 
   const groupsQuery = useQuery({
+    ...receivablesReadQueryOptions,
     queryKey: financeiroQueryKeys.receivablesGroupsByModality(modality, filters),
-    queryFn: () => financeiroService.getReceivablesGroupsPageByModality(modality, filters),
+    queryFn: ({ signal }) => financeiroService.getReceivablesGroupsPageByModality(modality, filters, signal),
     enabled: enabled && Boolean(filters.poloId) && isGrouped,
     placeholderData: keepPreviousData,
     staleTime: 5 * 60_000,
@@ -41,8 +44,9 @@ export function useModalidadeReceberQueries(
   });
 
   const summaryQuery = useQuery({
+    ...receivablesReadQueryOptions,
     queryKey: financeiroQueryKeys.receivablesModalitySummary(modality, summaryFilters),
-    queryFn: () => financeiroService.getReceivablesModalitySummary(modality, summaryFilters),
+    queryFn: ({ signal }) => financeiroService.getReceivablesModalitySummary(modality, summaryFilters, signal),
     enabled: enabled && Boolean(filters.poloId),
     staleTime: 5 * 60_000,
     gcTime: 30 * 60_000,
@@ -50,16 +54,18 @@ export function useModalidadeReceberQueries(
 
   const upcomingFilters = getUpcomingReceivablesFilters(summaryFilters);
   const upcomingSummaryQuery = useQuery({
+    ...receivablesReadQueryOptions,
     queryKey: financeiroQueryKeys.receivablesModalitySummary(modality, upcomingFilters),
-    queryFn: () => financeiroService.getReceivablesModalitySummary(modality, upcomingFilters),
+    queryFn: ({ signal }) => financeiroService.getReceivablesModalitySummary(modality, upcomingFilters, signal),
     enabled: enabled && Boolean(filters.poloId),
     staleTime: 5 * 60_000,
     gcTime: 30 * 60_000,
   });
 
   const activeClassesQuery = useQuery({
+    ...receivablesReadQueryOptions,
     queryKey: financeiroQueryKeys.receivablesActiveClassesByModality(modality, filters.poloId),
-    queryFn: () => financeiroService.getActiveReceivablesClassesByModality(modality, filters.poloId),
+    queryFn: ({ signal }) => financeiroService.getActiveReceivablesClassesByModality(modality, filters.poloId, signal),
     enabled: Boolean(filters.poloId),
     staleTime: 5 * 60_000,
     gcTime: 30 * 60_000,

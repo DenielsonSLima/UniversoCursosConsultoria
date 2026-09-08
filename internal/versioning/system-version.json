@@ -1,8 +1,8 @@
 {
-  "version": "4.8.34",
+  "version": "4.8.35",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 43,
-  "releasedAt": "2026-09-07",
-  "summary": "Recebíveis com usuário, data e hora da baixa manual a partir da auditoria do servidor"
+  "revision": 44,
+  "releasedAt": "2026-09-08",
+  "summary": "Recebíveis com espera limitada e recuperação de consultas sem recarregar a página"
 }
