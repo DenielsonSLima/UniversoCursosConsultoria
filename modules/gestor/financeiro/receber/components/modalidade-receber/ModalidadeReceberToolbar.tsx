@@ -3,14 +3,14 @@ import { LayoutGrid, Search, Table2 } from 'lucide-react';
 import FinancialReportExportButton from '../../../components/FinancialReportPreview';
 import type {
   CourseModality,
-  ReceivableKpis,
   ReceivableStatusCounts,
-  StatusScope,
   ViewMode,
 } from './modalidade-receber.types';
 import type { ModalidadeReceberReport } from './useModalidadeReceberReport';
-import { formatCurrency } from './modalidade-receber.utils';
 import FinancialUnderlineTabs from '../../../components/FinancialUnderlineTabs';
+import { ReceivablesPeriodFilter } from './ReceivablesPeriodFilter';
+import { ReceivablesSummaryCards, ReceivablesResultTotal, type ReceivablesSummaryState } from './ReceivablesSummaryCards';
+import type { ReceivablesPeriod, ReceivablesScope } from './receivables-period';
 
 interface ModalidadeReceberToolbarProps {
   modality: CourseModality;
@@ -18,22 +18,22 @@ interface ModalidadeReceberToolbarProps {
   description: string;
   icon: ReactNode;
   accentLabel: string;
-  kpis: ReceivableKpis;
+  summary: ReceivablesSummaryState;
+  upcoming: ReceivablesSummaryState;
+  period: ReceivablesPeriod;
+  periodError: string | null;
   statusCounts: ReceivableStatusCounts;
-  statusScope: StatusScope;
+  statusScope: ReceivablesScope;
   search: string;
-  dueStart: string;
-  dueEnd: string;
   turmaId: string;
   turmas: Array<{ id: string; nome: string; codigo?: string | null }>;
   turmasLoading: boolean;
   viewMode: ViewMode;
   report: ModalidadeReceberReport;
   isLoading: boolean;
-  onStatusScopeChange: (statusScope: StatusScope) => void;
+  onStatusScopeChange: (statusScope: ReceivablesScope) => void;
   onSearchChange: (search: string) => void;
-  onDueStartChange: (date: string) => void;
-  onDueEndChange: (date: string) => void;
+  onPeriodChange: (period: ReceivablesPeriod) => void;
   onTurmaIdChange: (turmaId: string) => void;
   onViewModeChange: (viewMode: ViewMode) => void;
   onClearFilters: () => void;
@@ -45,12 +45,13 @@ export const ModalidadeReceberToolbar: React.FC<ModalidadeReceberToolbarProps> =
   description,
   icon,
   accentLabel,
-  kpis,
+  summary,
+  upcoming,
+  period,
+  periodError,
   statusCounts,
   statusScope,
   search,
-  dueStart,
-  dueEnd,
   turmaId,
   turmas,
   turmasLoading,
@@ -59,8 +60,7 @@ export const ModalidadeReceberToolbar: React.FC<ModalidadeReceberToolbarProps> =
   isLoading,
   onStatusScopeChange,
   onSearchChange,
-  onDueStartChange,
-  onDueEndChange,
+  onPeriodChange,
   onTurmaIdChange,
   onViewModeChange,
   onClearFilters,
@@ -77,34 +77,7 @@ export const ModalidadeReceberToolbar: React.FC<ModalidadeReceberToolbarProps> =
       </div>
     </div>
 
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      {[
-        { label: 'Total Previsto', value: formatCurrency(kpis.total), color: 'text-[#001a33]' },
-        { label: 'Recebido', value: formatCurrency(kpis.recebido), color: 'text-emerald-600' },
-        { label: 'A Receber', value: formatCurrency(kpis.aReceber), color: 'text-amber-600' },
-        { label: 'Vencidos', value: `${kpis.vencidos}`, color: 'text-rose-600' },
-      ].map((kpi) => (
-        <div key={kpi.label} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-          <p className="mb-1 text-[9px] font-black uppercase tracking-wider text-slate-400">{kpi.label}</p>
-          <p className={`text-lg font-black ${kpi.color}`}>{kpi.value}</p>
-        </div>
-      ))}
-    </div>
-
-    <FinancialUnderlineTabs
-      items={[
-        { id: 'pending' as const, label: 'Pendentes', badge: statusCounts.pending, badgeClassName: 'bg-emerald-50 text-emerald-700' },
-        { id: 'received' as const, label: 'Recebidos', badge: statusCounts.received, badgeClassName: 'bg-emerald-50 text-emerald-700' },
-        { id: 'overdue' as const, label: 'Vencidos', badge: statusCounts.overdue, badgeClassName: 'bg-emerald-50 text-emerald-700' },
-        { id: 'canceled' as const, label: 'Cancelados', badge: statusCounts.canceled, badgeClassName: 'bg-emerald-50 text-emerald-700' },
-        { id: 'all' as const, label: 'Todos', badge: statusCounts.all, badgeClassName: 'bg-emerald-50 text-emerald-700' },
-      ]}
-      value={statusScope}
-      onChange={onStatusScopeChange}
-      ariaLabel="Situação das contas a receber"
-      indicatorClassName="bg-emerald-600"
-      activeIconClassName="text-emerald-600"
-    />
+    <ReceivablesPeriodFilter period={period} error={periodError} onChange={onPeriodChange} />
 
     <div className="flex flex-wrap items-center gap-3">
       <div className="relative min-w-[220px] flex-1">
@@ -118,25 +91,11 @@ export const ModalidadeReceberToolbar: React.FC<ModalidadeReceberToolbarProps> =
         />
       </div>
 
-      <input
-        type="date"
-        value={dueStart}
-        onChange={(event) => onDueStartChange(event.target.value)}
-        className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-semibold outline-none transition-all focus:ring-2 focus:ring-emerald-500"
-        title="Vencimento Inicial"
-      />
-      <input
-        type="date"
-        value={dueEnd}
-        onChange={(event) => onDueEndChange(event.target.value)}
-        className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-semibold outline-none transition-all focus:ring-2 focus:ring-emerald-500"
-        title="Vencimento Final"
-      />
       <select
         value={turmaId}
         onChange={(event) => onTurmaIdChange(event.target.value)}
         disabled={turmasLoading}
-        className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-semibold outline-none transition-all focus:ring-2 focus:ring-emerald-500"
+        className="w-full min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-semibold outline-none transition-all focus:ring-2 focus:ring-emerald-500 sm:w-auto sm:max-w-[280px]"
         title="Filtrar por turma ativa"
         aria-label="Filtrar por turma ativa"
       >
@@ -148,13 +107,13 @@ export const ModalidadeReceberToolbar: React.FC<ModalidadeReceberToolbarProps> =
         ))}
       </select>
 
-      {search || dueStart || dueEnd || turmaId ? (
+      {search || period.preset !== 'CURRENT_MONTH' || turmaId || statusScope !== 'pending' ? (
         <button
           type="button"
           onClick={onClearFilters}
           className="rounded-xl bg-slate-100 px-4 py-2.5 text-xs font-bold uppercase text-slate-500 transition-colors hover:bg-slate-200"
         >
-          Limpar
+          Redefinir filtros
         </button>
       ) : null}
 
@@ -172,7 +131,7 @@ export const ModalidadeReceberToolbar: React.FC<ModalidadeReceberToolbarProps> =
           poloId={report.reportPoloId}
           tone="emerald"
           onBeforeOpen={report.loadReceivables}
-          disabled={isLoading}
+          disabled={isLoading || Boolean(periodError) || summary.loading || summary.error || !summary.data || (statusScope === 'upcoming' && (upcoming.loading || upcoming.error || !upcoming.data))}
         />
         <div className="flex gap-1 rounded-xl bg-slate-100 p-1">
           <button
@@ -194,5 +153,30 @@ export const ModalidadeReceberToolbar: React.FC<ModalidadeReceberToolbarProps> =
         </div>
       </div>
     </div>
+
+    <ReceivablesSummaryCards
+      summary={summary}
+      upcoming={upcoming}
+      scope={statusScope}
+      disabled={Boolean(periodError)}
+      onScopeChange={onStatusScopeChange}
+    />
+
+    <FinancialUnderlineTabs
+      items={[
+        { id: 'pending' as const, label: 'Pendentes', badge: summary.loading || summary.error || periodError ? undefined : statusCounts.pending },
+        { id: 'upcoming' as const, label: 'A vencer', badge: upcoming.loading || upcoming.error || periodError ? undefined : upcoming.data?.pendingCount },
+        { id: 'received' as const, label: 'Recebidos', badge: summary.loading || summary.error || periodError ? undefined : statusCounts.received },
+        { id: 'overdue' as const, label: 'Vencidos', badge: summary.loading || summary.error || periodError ? undefined : statusCounts.overdue },
+        { id: 'canceled' as const, label: 'Cancelados', badge: summary.loading || summary.error || periodError ? undefined : statusCounts.canceled },
+        { id: 'all' as const, label: 'Todos', badge: summary.loading || summary.error || periodError ? undefined : statusCounts.all },
+      ]}
+      value={statusScope}
+      onChange={onStatusScopeChange}
+      ariaLabel="Situação das contas a receber"
+      indicatorClassName="bg-emerald-600"
+      activeIconClassName="text-emerald-600"
+    />
+    {!periodError ? <ReceivablesResultTotal scope={statusScope} state={statusScope === 'upcoming' ? upcoming : summary} /> : null}
   </>
 );

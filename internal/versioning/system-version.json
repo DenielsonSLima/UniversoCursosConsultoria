@@ -1,8 +1,8 @@
 {
-  "version": "4.8.32",
+  "version": "4.8.33",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 41,
-  "releasedAt": "2026-09-06",
-  "summary": "Data do pagamento e confirmação separadas na Conciliação"
+  "revision": 42,
+  "releasedAt": "2026-09-07",
+  "summary": "Recebíveis com períodos rápidos e indicadores operacionais calculados no backend"
 }

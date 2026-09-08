@@ -125,6 +125,7 @@ jobs:
       - name: Testar Financeiros e sincronização dos portais
         run: |
           node --test \
+            modules/gestor/financeiro/receber/components/modalidade-receber/receivables-period.test.ts \
             modules/aluno/financeiro/financeiro.contract.test.ts \
             modules/aluno/financeiro/aluno-financeiro-receipt.pdf.test.ts \
             modules/gestor/parceiros/governance-query-keys.test.ts \

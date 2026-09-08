@@ -1,18 +1,19 @@
 # Lote ativo
 
-Estado: `VALIDADO LOCALMENTE — PUBLICAÇÃO AUTORIZADA`
+Estado: `PUBLICAÇÃO AUTORIZADA — VALIDAÇÃO DA ENTREGA EM ANDAMENTO`
 
-## Lote: 2026-09-06-datas-pagamento-confirmacao
+## Lote: 2026-09-07-recebiveis-periodo-indicadores
 
-- Pedido: esclarecer a diferença entre recebimento e confirmação na Conciliação.
-- Produção autorizada explicitamente pelo gestor nesta conversa em 06/09/2026.
-- Risco: publicação de apresentação financeira; sem mutação bancária ou de dados.
-- Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-06-datas-pagamento-confirmacao.md`
+- Pedido: tornar os indicadores de A Receber úteis ao mês e aos filtros, incluindo atalhos de período.
+- Risco: apresentação financeira e coordenação de filtros; valores permanecem nas RPCs existentes.
+- Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-07-recebiveis-periodo-indicadores.md`
+- GitHub e produção autorizados explicitamente pelo gestor em 07/09/2026, reiterando que cálculos financeiros pertencem ao backend.
 
 ### Aceite
 
-1. Data do pagamento identifica a data canônica usada no Caixa.
-2. Baixa registrada mostra separadamente o registro da confirmação no sistema.
-3. Dados ausentes não são preenchidos com a outra data.
-4. Desktop e celular apresentam a mesma informação para registros antigos e futuros.
-5. Datas bancárias, valores, RPCs e competências permanecem preservados.
+1. Abrir no mês atual e oferecer mês anterior, últimos 30 dias, todo o período e personalizado.
+2. Recebido, A vencer e Em atraso acompanham busca, turma e vencimento.
+3. Clique no indicador filtra a lista; o total contextual acompanha a situação selecionada.
+4. Datas usam o dia civil de Maceió; datas inválidas bloqueiam consultas de cobranças e exportação.
+5. Carregamento e erro não aparecem como saldo zero; manter totais canônicos e alterações locais anteriores.
+6. Validar a entrega e registrar qualquer limitação real do smoke autenticado, já informada ao gestor antes da autorização de publicação.
