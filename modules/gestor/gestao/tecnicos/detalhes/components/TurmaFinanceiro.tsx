@@ -76,7 +76,7 @@ const TurmaFinanceiro: React.FC<TurmaFinanceiroProps> = ({ turma }) => {
         </div>
       )}
 
-      {workspace ? <FinanceiroConfig turma={turma} regra={workspace.regra} /> : null}
+      {workspace ? <FinanceiroConfig turma={turma} regra={workspace.regra} policy={workspace.turma.cicloFinanceiroTecnico} /> : null}
 
       {workspace ? (
         <FinanceiroAlunosList

@@ -160,7 +160,8 @@ export type MatriculaTecnicaCicloFinanceiroEstadoInicial =
 
 export type MatriculaTecnicaCicloFinanceiroCriterio =
   | 'QUITACAO_TOTAL'
-  | 'PENULTIMA_SEM_ATRASO';
+  | 'PENULTIMA_SEM_ATRASO'
+  | 'HISTORICO_EXTERNO';
 
 export interface MatriculaTecnicaCicloFinanceiroPolicy {
   habilitado: boolean;

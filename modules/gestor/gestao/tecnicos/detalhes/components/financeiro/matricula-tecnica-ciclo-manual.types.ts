@@ -8,7 +8,8 @@ export type MatriculaTecnicaCicloManualEstado =
 
 export type MatriculaTecnicaCicloManualCriterio =
   | "QUITACAO_TOTAL"
-  | "PENULTIMA_SEM_ATRASO";
+  | "PENULTIMA_SEM_ATRASO"
+  | "HISTORICO_EXTERNO";
 
 export interface MatriculaTecnicaCicloManual {
   habilitado: boolean;

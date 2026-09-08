@@ -16,6 +16,7 @@ interface FinanceiroConfigEditorProps {
   formData: FinanceiroConfigData;
   isSaving: boolean;
   turmaLabel: string;
+  somenteSegundoCiclo?: boolean;
   onCancel: () => void;
   onDragEnd: () => void;
   onDragEnter: (index: number) => void;
@@ -33,6 +34,7 @@ const FinanceiroConfigEditor: React.FC<FinanceiroConfigEditorProps> = ({
   formData,
   isSaving,
   turmaLabel,
+  somenteSegundoCiclo = false,
   onCancel,
   onDragEnd,
   onDragEnter,
@@ -75,6 +77,7 @@ const FinanceiroConfigEditor: React.FC<FinanceiroConfigEditorProps> = ({
                 <span className="inline-flex items-center gap-1 text-[9px] normal-case">
                   <input
                     type="checkbox"
+                    disabled={somenteSegundoCiclo}
                     checked={formData.cobrarMatricula}
                     onChange={(event) => setFormData((previous) => ({ ...previous, cobrarMatricula: event.target.checked }))}
                   /> Cobrar
@@ -83,7 +86,7 @@ const FinanceiroConfigEditor: React.FC<FinanceiroConfigEditorProps> = ({
               <input
                 type="text" name="valorMatricula"
                 value={formatCurrencyBRL(formData.valorMatricula)} onChange={handleCurrencyChange}
-                disabled={!formData.cobrarMatricula}
+                disabled={somenteSegundoCiclo || !formData.cobrarMatricula}
                 className="w-full p-3 rounded-xl border border-slate-300 outline-none focus:border-blue-500 font-bold text-slate-700 bg-white"
               />
             </div>
@@ -315,10 +318,16 @@ const FinanceiroConfigEditor: React.FC<FinanceiroConfigEditorProps> = ({
             onClick={onGenerate}
             className="w-full py-4 bg-slate-800 text-white rounded-xl font-bold uppercase tracking-widest hover:bg-slate-900 transition-colors flex items-center justify-center gap-2"
           >
-            <RefreshCw size={16} /> Gerar / Resetar Cronograma
+            <RefreshCw size={16} /> Atualizar prévia
           </button>
         </div>
 
+        {somenteSegundoCiclo ? (
+          <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5 text-sm text-blue-900">
+            Apenas rematrícula e mensalidades do 2º ciclo poderão ser geradas.
+            A prévia de cada aluno confirmará o total e os vencimentos antes da emissão.
+          </div>
+        ) : (
         <div className="flex flex-col h-full">
           <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-200 pb-2 mb-4 flex justify-between items-center">
             <span>2. Cronograma do ciclo</span>
@@ -344,10 +353,11 @@ const FinanceiroConfigEditor: React.FC<FinanceiroConfigEditorProps> = ({
           </div>
           {cronograma.length > 0 ? (
             <div className="mt-2 text-[10px] text-slate-500 text-center">
-              * A matrícula é criada primeiro; mensalidades e rematrícula são liberadas por baixa de pagamento.
+              * Esta é uma projeção da regra financeira. A geração respeita o modo de cobrança configurado para a turma.
             </div>
           ) : null}
         </div>
+        )}
       </div>
 
       <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-slate-200">

@@ -74,10 +74,17 @@ const TurmaTecnicoReviewStep: React.FC<TurmaTecnicoReviewStepProps> = ({
       </div>
     </div>
 
+    {formData.estadoFinanceiroInicial === 'IMPORTADA_CONCLUIDA' ? (
+      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
+        <h4 className="text-sm font-black text-amber-900">Turma em andamento · sem novas cobranças</h4>
+        <p className="mt-2 text-xs text-amber-800">Matrícula, 1º e 2º ciclos não serão gerados aqui. Valores e encargos ficam bloqueados.
+          Boletos e pagamentos permanecem administrados no sistema anterior; este cadastro não informa quitação.</p>
+      </div>
+    ) : (
     <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-5">
       <div className="flex items-center gap-2"><WalletCards size={17} className="text-blue-600" /><p className="text-xs font-black uppercase tracking-wide text-[#001a33]">Plano financeiro</p></div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-xl bg-white p-3"><p className="flex items-center gap-2 text-[9px] font-black uppercase text-slate-400"><ReceiptText size={12} /> Matrícula</p><p className="mt-1 text-sm font-black text-[#001a33]">{formData.cobrarMatricula ? formatCurrencyBRL(formData.valorMatricula) : 'Não gerar'}</p></div>
+        <div className="rounded-xl bg-white p-3"><p className="flex items-center gap-2 text-[9px] font-black uppercase text-slate-400"><ReceiptText size={12} /> Matrícula</p><p className="mt-1 text-sm font-black text-[#001a33]">{formData.estadoFinanceiroInicial !== 'NOVA' ? 'Sistema anterior' : formData.cobrarMatricula ? formatCurrencyBRL(formData.valorMatricula) : 'Não gerar'}</p></div>
         <div className="rounded-xl bg-white p-3"><p className="text-[9px] font-black uppercase text-slate-400">Mensalidades por ciclo</p><p className="mt-1 text-sm font-black text-[#001a33]">{formData.qtdParcelas}x de {formatCurrencyBRL(formData.valorParcela)}</p></div>
         <div className="rounded-xl bg-white p-3"><p className="text-[9px] font-black uppercase text-slate-400">Rematrícula</p><p className="mt-1 text-sm font-black text-[#001a33]">{formData.cobrarRematricula ? formatCurrencyBRL(formData.valorRematricula) : 'Não cobrar'}</p></div>
         <div className="rounded-xl bg-white p-3"><p className="text-[9px] font-black uppercase text-slate-400">Primeiro vencimento</p><p className="mt-1 text-sm font-black text-[#001a33]">{formData.estadoFinanceiroInicial === 'IMPORTADA_CONCLUIDA' ? 'Não se aplica' : formData.primeiroVencimentoPadrao || '—'}</p><p className="mt-1 text-[9px] font-semibold text-slate-400">{formData.estadoFinanceiroInicial === 'IMPORTADA_CONCLUIDA' ? 'Sem novo ciclo financeiro' : `Depois, todo dia ${String(formData.diaVencimentoPadrao).padStart(2, '0')}`}</p></div>
@@ -87,7 +94,7 @@ const TurmaTecnicoReviewStep: React.FC<TurmaTecnicoReviewStepProps> = ({
         <p className="mt-1 text-[11px] font-black text-blue-900">{TURMA_TECNICO_FINANCIAL_STATE_OPTIONS.find((option) => option.value === formData.estadoFinanceiroInicial)?.title}</p>
         <p className="mt-1 text-[10px] font-semibold leading-relaxed text-blue-700">{TURMA_TECNICO_FINANCIAL_STATE_OPTIONS.find((option) => option.value === formData.estadoFinanceiroInicial)?.nextAction}</p>
         {formData.estadoFinanceiroInicial !== 'IMPORTADA_CONCLUIDA' ? (
-          <p className="mt-2 text-[10px] font-semibold text-slate-500">Elegibilidade: {formData.criterioElegibilidadeCiclo === 'PENULTIMA_SEM_ATRASO' ? 'penúltima paga e nenhuma parcela vencida' : 'quitação total do ciclo anterior'}.</p>
+          <p className="mt-2 text-[10px] font-semibold text-slate-500">Elegibilidade: {formData.criterioElegibilidadeCiclo === 'HISTORICO_EXTERNO' ? '1º ciclo no sistema anterior; conferir que o 2º ainda não foi emitido antes de gerar' : formData.criterioElegibilidadeCiclo === 'PENULTIMA_SEM_ATRASO' ? 'penúltima paga e nenhuma parcela vencida' : 'quitação total do ciclo anterior'}.</p>
         ) : null}
       </div>
       <div className="mt-3 grid gap-3 md:grid-cols-3">
@@ -101,9 +108,11 @@ const TurmaTecnicoReviewStep: React.FC<TurmaTecnicoReviewStepProps> = ({
       </div>
     </div>
 
+    )}
+
     <div className="rounded-2xl border border-violet-100 bg-violet-50 p-4">
       <p className="text-[10px] font-black uppercase tracking-wide text-violet-700">Condições individuais protegidas</p>
-      <p className="mt-1 text-xs font-semibold leading-relaxed text-violet-900">Um código de autorização foi definido para liberar bolsa, incentivo ou valor especial. O código não será exibido após a criação.</p>
+      <p className="mt-1 text-xs font-semibold leading-relaxed text-violet-900">{formData.estadoFinanceiroInicial === 'IMPORTADA_CONCLUIDA' ? 'O cadastro mantém um código protegido, mas a alteração de condições financeiras permanece bloqueada nesta turma.' : 'Um código de autorização foi definido para liberar bolsa, incentivo ou valor especial. O código não será exibido após a criação.'}</p>
     </div>
   </section>
 );

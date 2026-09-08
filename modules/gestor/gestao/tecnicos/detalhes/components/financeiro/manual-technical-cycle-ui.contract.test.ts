@@ -202,7 +202,7 @@ test("matrícula protegida não tem botão de gerar, emitir, reemitir ou configu
   );
   assert.match(
     listSource,
-    /\{!protectedExisting \? <button[\s\S]*?Configuração individual/,
+    /\{!protectedExisting && row.cicloManual.estado !== 'CICLOS_CONCLUIDOS' \? <button[\s\S]*?Configuração individual/,
   );
   assert.match(listSource, /\{!manualMode \? <button[\s\S]*?Mais opções/);
 });

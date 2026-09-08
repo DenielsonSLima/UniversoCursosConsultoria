@@ -45,7 +45,8 @@ export const requireMatriculaTecnicaCicloFinanceiroPolicy = (
     || !(initialState in INITIAL_BASELINES)
     || value.cicloBaseHistorico !== INITIAL_BASELINES[initialState]
     || value.cicloMaximo !== 2
-    || !['QUITACAO_TOTAL', 'PENULTIMA_SEM_ATRASO'].includes(String(value.criterioElegibilidade))
+    || !['QUITACAO_TOTAL', 'PENULTIMA_SEM_ATRASO', 'HISTORICO_EXTERNO'].includes(String(value.criterioElegibilidade))
+    || (value.criterioElegibilidade === 'HISTORICO_EXTERNO' && initialState !== 'IMPORTADA_CICLO_1')
     || !Number.isInteger(value.revisao)
     || Number(value.revisao) < 1
     || !isSha256(value.fingerprint)

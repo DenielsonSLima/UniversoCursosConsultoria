@@ -139,7 +139,7 @@ test('total nominal soma uma única vez o cronograma canônico com e sem rematr�
 
 test('data inicial sugere 24 meses e mantém o fim previsto editável', () => {
   assert.match(dataStepSource, /addMonthsToISODate\(event\.target\.value, 24\)/);
-  assert.match(dataStepSource, /primeiroVencimentoPadrao: event\.target\.value/);
+  assert.match(dataStepSource, /primeiroVencimentoPadrao: formData.estadoFinanceiroInicial === 'NOVA'/);
   assert.match(dataStepSource, /Sugerido em 24 meses; você pode alterar\./);
   assert.match(dataStepSource, /onChange\(\{ dataPrevisaoTermino: event\.target\.value \}\)/);
 });
@@ -178,11 +178,11 @@ test('três estados iniciais deixam geração exclusivamente manual', () => {
   for (const state of ['NOVA', 'IMPORTADA_CICLO_1', 'IMPORTADA_CONCLUIDA']) {
     assert.match(constantsSource, new RegExp(`value: '${state}'`));
   }
-  assert.match(financialStepSource, /Nenhuma opção gera recebíveis ao criar a turma ou adicionar um aluno/);
-  assert.match(financialStepSource, /estadoFinanceiroInicial: option\.value/);
-  assert.match(financialStepSource, /gerarCobrancasFuturas: false/);
+  assert.match(read('TurmaTecnicoOrigemFields.tsx'), /Criar a turma ou adicionar alunos não emite cobranças/);
+  assert.match(read('turma-tecnico-origem.ts'), /estadoFinanceiroInicial: state/);
+  assert.match(read('turma-tecnico-origem.ts'), /gerarCobrancasFuturas: false/);
   assert.match(formSource, /sincronizarAsaasFuturo: false/);
-  assert.match(validationSource, /estadoFinanceiroInicial !== 'IMPORTADA_CONCLUIDA'/);
+  assert.match(validationSource, /estadoFinanceiroInicial === 'IMPORTADA_CONCLUIDA'/);
   assert.match(formSource, /cicloFinanceiroTecnico: buildTurmaTecnicoCyclePolicy\(formData\)/);
 });
 
@@ -214,4 +214,22 @@ test('criação transacional envia intenção, vencimento e hash é tratado some
   assert.match(financialPreviewServiceSource, /calculate_gestao_technical_financial_preview/);
   assert.match(financialPreviewServiceSource, /build_gestao_financial_schedule/);
   assert.doesNotMatch(financialStepSource, /Asaas|calculate_gestao|valor_com_atraso/);
+});
+
+test('prévia do legado soma somente segundo ciclo com ou sem rematrícula', async () => {
+  scheduleFixture = [
+    { id: 'matricula', tipo: 'MATRICULA', valor: '150.00' },
+    { id: 'parc-1', tipo: 'PARCELA', valor: '100.00' },
+    { id: 'parc-2', tipo: 'PARCELA', valor: '100.00' },
+    { id: 'rem-apos-ciclo', tipo: 'REMATRICULA', valor: '50.00' },
+    { id: 'ciclo-2-parc-1', tipo: 'PARCELA', valor: '100.00' },
+    { id: 'ciclo-2-parc-2', tipo: 'PARCELA', valor: '100.00' },
+  ];
+  assert.equal((await getTurmaTecnicoFinanceiroPreview({
+    ...financialPreviewInput, somenteSegundoCiclo: true,
+  })).totalCurso, 250);
+  scheduleFixture = scheduleFixture.filter((item) => item.tipo !== 'REMATRICULA');
+  assert.equal((await getTurmaTecnicoFinanceiroPreview({
+    ...financialPreviewInput, somenteSegundoCiclo: true, cobrarRematricula: false,
+  })).totalCurso, 200);
 });

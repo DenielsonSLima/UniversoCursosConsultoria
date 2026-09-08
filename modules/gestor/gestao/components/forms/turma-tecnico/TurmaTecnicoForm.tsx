@@ -85,7 +85,8 @@ const TurmaTecnicoForm: React.FC<TurmaTecnicoFormProps> = ({
     () => buildTurmaTecnicoIdentity(formData, selectedCourse, selectedPolo),
     [formData, selectedCourse, selectedPolo],
   );
-  const initialStatus = formData.dataInicio ? getInitialTechnicalStatus(formData) : 'PLANEJADA';
+  const initialStatus = formData.estadoFinanceiroInicial !== 'NOVA'
+    ? 'EM_ANDAMENTO' : formData.dataInicio ? getInitialTechnicalStatus(formData) : 'PLANEJADA';
   const activeStep = TURMA_TECNICO_STEPS[currentStep];
 
   const updateForm = useCallback((patch: Partial<TurmaTecnicoFormData>) => {
@@ -255,11 +256,19 @@ const TurmaTecnicoForm: React.FC<TurmaTecnicoFormProps> = ({
                   <h4 id="enrollment-step-title" className="mt-1 text-lg font-black uppercase tracking-tight text-[#001a33]">Divulgação e inscrições</h4>
                   <p className="mt-1 text-xs font-medium text-slate-500">Configure a entrada de alunos. A cobrança de matrícula será definida somente na próxima etapa.</p>
                 </div>
+                {formData.estadoFinanceiroInicial !== 'NOVA' ? (
+                  <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                    Turma em andamento: divulgação e inscrições online ficam desabilitadas.
+                    Adicione os alunos existentes pela gestão da turma, sem gerar cobranças ao vinculá-los.
+                  </p>
+                ) : null}
+                <fieldset disabled={formData.estadoFinanceiroInicial !== 'NOVA'} className={formData.estadoFinanceiroInicial !== 'NOVA' ? 'opacity-50' : ''}>
                 <TechnicalEnrollmentSettings
                   value={formData}
                   showEnrollmentPaymentRule={false}
                   onChange={updateForm}
                 />
+                </fieldset>
               </section>
             ) : activeStep.id === 'FINANCEIRO' ? (
               <TurmaTecnicoFinanceiroStep formData={formData} onChange={updateForm} />

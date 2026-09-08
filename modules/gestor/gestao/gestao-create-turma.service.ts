@@ -10,7 +10,7 @@ export type CreateTurmaInput = Omit<Turma, 'id' | 'alunosMatriculados'> & {
     estadoInicial: 'NOVA' | 'IMPORTADA_CICLO_1' | 'IMPORTADA_CONCLUIDA';
     baselineCycle: 0 | 1 | 2;
     maxCycle: 2;
-    eligibilityRule: 'QUITACAO_TOTAL' | 'PENULTIMA_SEM_ATRASO';
+    eligibilityRule: 'QUITACAO_TOTAL' | 'PENULTIMA_SEM_ATRASO' | 'HISTORICO_EXTERNO';
   };
 };
 
@@ -25,8 +25,9 @@ const requireTechnicalCyclePolicy = (turma: CreateTurmaInput) => {
     !policy
     || policy.modo !== 'MANUAL'
     || policy.maxCycle !== 2
+    || (policy.eligibilityRule === 'HISTORICO_EXTERNO' && policy.estadoInicial !== 'IMPORTADA_CICLO_1')
     || expectedBaseline[policy.estadoInicial] !== policy.baselineCycle
-    || !['QUITACAO_TOTAL', 'PENULTIMA_SEM_ATRASO'].includes(policy.eligibilityRule)
+    || !['QUITACAO_TOTAL', 'PENULTIMA_SEM_ATRASO', 'HISTORICO_EXTERNO'].includes(policy.eligibilityRule)
   ) {
     throw new Error('A política financeira manual da turma técnica está incompleta ou inconsistente.');
   }

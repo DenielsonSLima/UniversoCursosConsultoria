@@ -13,6 +13,7 @@ const MANUAL_STATES = [
 ] as const;
 
 const ELIGIBILITY_LABELS: Record<MatriculaTecnicaCicloManualCriterio, string> = {
+  HISTORICO_EXTERNO: '1º ciclo administrado no sistema anterior; sem informação de quitação',
   QUITACAO_TOTAL: 'Ciclo anterior totalmente quitado',
   PENULTIMA_SEM_ATRASO: 'Penúltima parcela paga e nenhuma cobrança vencida',
 };

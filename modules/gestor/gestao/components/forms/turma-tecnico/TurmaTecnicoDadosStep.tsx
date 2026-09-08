@@ -1,3 +1,4 @@
+import TurmaTecnicoOrigemFields from './TurmaTecnicoOrigemFields';
 import React, { useId, useState } from 'react';
 import { Building2, CalendarDays, Check, ChevronDown, Clock3, Layers3, LockKeyhole, MapPin, Users2 } from 'lucide-react';
 import type { StatusTurma, Turno } from '../../../gestao.types';
@@ -58,6 +59,8 @@ const TurmaTecnicoDadosStep: React.FC<TurmaTecnicoDadosStepProps> = ({
       <h4 id="turma-step-title" className="mt-1 text-lg font-black uppercase tracking-tight text-[#001a33]">Identificação da turma</h4>
       <p className="mt-1 text-xs font-medium text-slate-500">Defina a base acadêmica e o calendário. Nome e código serão montados automaticamente.</p>
     </div>
+
+    <TurmaTecnicoOrigemFields formData={formData} onChange={onChange} />
 
     <div className="grid gap-4 md:grid-cols-2">
       <div className="relative space-y-2" onKeyDown={handleCourseMenuKeyDown}>
@@ -146,7 +149,7 @@ const TurmaTecnicoDadosStep: React.FC<TurmaTecnicoDadosStepProps> = ({
           onChange={(event) => onChange({
             dataInicio: event.target.value,
             dataPrevisaoTermino: addMonthsToISODate(event.target.value, 24),
-            primeiroVencimentoPadrao: event.target.value,
+            primeiroVencimentoPadrao: formData.estadoFinanceiroInicial === 'NOVA' ? event.target.value : formData.primeiroVencimentoPadrao,
           })}
         />
       </label>

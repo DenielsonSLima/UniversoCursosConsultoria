@@ -22,7 +22,7 @@ const TurmaTecnicoAutorizacaoStep: React.FC<TurmaTecnicoAutorizacaoStepProps> = 
       <div>
         <p className="text-[10px] font-black uppercase tracking-[0.22em] text-violet-600">Etapa 4</p>
         <h4 id="authorization-step-title" className="mt-1 text-lg font-black uppercase tracking-tight text-[#001a33]">Proteção de condições individuais</h4>
-        <p className="mt-1 text-xs font-medium text-slate-500">Este código será solicitado antes de liberar bolsa, incentivo, convênio ou valor especial para um aluno.</p>
+        <p className="mt-1 text-xs font-medium text-slate-500">{formData.estadoFinanceiroInicial === 'IMPORTADA_CONCLUIDA' ? 'O cadastro mantém a proteção por código. Nesta turma, as condições financeiras permanecem bloqueadas mesmo com o código.' : 'Este código será solicitado antes de liberar bolsa, incentivo, convênio ou valor especial para um aluno.'}</p>
       </div>
 
       <div className="rounded-2xl border border-violet-100 bg-violet-50/70 p-5">

@@ -60,6 +60,8 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
   onConfirm,
 }) => {
   const cycleNumber = row.cicloManual.proximoCicloNumero;
+  const externalHistory = row.cicloManual.criterioElegibilidade === 'HISTORICO_EXTERNO';
+  const [externalHistoryConfirmed, setExternalHistoryConfirmed] = useState(false);
   const requiresIndividualDate = cycleNumber === 2;
   const [step, setStep] = useState<WizardStep>(1);
   const [dateSource, setDateSource] = useState<'TURMA' | 'INDIVIDUAL'>(
@@ -110,7 +112,7 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
   };
 
   const startIssuance = () => {
-    if (!preview || issuanceStartedRef.current) return;
+    if (!preview || issuanceStartedRef.current || (externalHistory && !externalHistoryConfirmed)) return;
     issuanceStartedRef.current = true;
     setIssuanceSnapshot(preview);
     void onConfirm(preview, firstDueDate).finally(() => {
@@ -344,6 +346,14 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
                 <aside className="space-y-4">
                   <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs font-semibold leading-relaxed text-amber-950">
                     <p className="flex items-center gap-2 font-black"><AlertTriangle size={16} /> Confirmação necessária</p>
+                    {externalHistory ? (
+                      <label className="mt-4 flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs font-semibold text-amber-900">
+                        <input type="checkbox" className="mt-0.5" checked={externalHistoryConfirmed}
+                          onChange={(event) => setExternalHistoryConfirmed(event.target.checked)} />
+                        Conferi o sistema anterior: o 2º ciclo deste aluno ainda não foi emitido.
+                        O 1º ciclo continua administrado lá; esta confirmação não registra pagamento.
+                      </label>
+                    ) : null}
                     <p className="mt-2">Ao confirmar, o sistema criará {preview.quantidadeItens} cobranças e emitirá {preview.quantidadeItens} títulos BolePix Banese. Revise os valores e vencimentos antes de continuar.</p>
                   </div>
                   <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-xs font-semibold leading-relaxed text-emerald-950">
@@ -369,7 +379,7 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
             {step < 3 ? (
               <button type="button" disabled={pending || !preview || previewQuery.isFetching} onClick={() => goToStep((step + 1) as WizardStep)} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-[10px] font-black uppercase text-white transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-40 sm:flex-none">{step === 1 ? 'Ver composição' : 'Revisar geração'} <ChevronRight size={14} /></button>
             ) : (
-              <button type="button" disabled={pending || !preview || previewQuery.isFetching} onClick={startIssuance} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-[10px] font-black uppercase text-white transition hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:opacity-40 sm:flex-none">
+              <button type="button" disabled={pending || !preview || previewQuery.isFetching || (externalHistory && !externalHistoryConfirmed)} onClick={startIssuance} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-[10px] font-black uppercase text-white transition hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:opacity-40 sm:flex-none">
                 {pending ? <><Loader2 className="animate-spin" size={14} /> Gerando e emitindo BolePix...</> : <><ReceiptText size={14} /> Gerar e emitir BolePix</>}
               </button>
             )}
