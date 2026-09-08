@@ -1,8 +1,11 @@
 import type { TurmaTecnicoEstadoFinanceiroInicial, TurmaTecnicoFormData } from './turma-tecnico-form.types';
+import { TURMA_TECNICO_FINANCIAL_DEFAULTS } from './turma-tecnico-form.constants';
 
 export const selectTurmaTecnicoOrigem = (
   state: TurmaTecnicoEstadoFinanceiroInicial,
 ): Partial<TurmaTecnicoFormData> => ({
+  // Hidden reference fields still pass the server's canonical financial validator.
+  ...(state === 'IMPORTADA_CONCLUIDA' ? TURMA_TECNICO_FINANCIAL_DEFAULTS : {}),
   estadoFinanceiroInicial: state,
   origemFinanceira: state === 'NOVA' ? 'NORMAL' : 'LEGADO',
   financeiroHerdado: state !== 'NOVA',

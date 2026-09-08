@@ -32,6 +32,22 @@ const { requireMatriculaTecnicaCicloFinanceiroPolicy: parsePolicy } = await load
 const initial = () => ({ ...createInitialTurmaTecnicoFormData('qa'), cursoId: 'qa',
   dataInicio: '2025-01-01', dataPrevisaoTermino: '2027-01-01', primeiroVencimentoPadrao: '2026-10-10' });
 const identity = { nome: 'Turma QA', codigo: 'QA' };
+test('sem cobranças descarta rascunho financeiro inválido sem apagar os dados acadêmicos', () => {
+  const dirty = { ...initial(), valorParcela: 0, qtdParcelas: 0,
+    valorRematricula: -10, descontoPontualidade: -1, jurosAtraso: 101,
+    multaAtrasoPercentual: 101, diaVencimentoPadrao: 0, instrucaoBoletoCarne: '' };
+  const closed = { ...dirty, ...selectTurmaTecnicoOrigem('IMPORTADA_CONCLUIDA') };
+  assert.equal(closed.cursoId, dirty.cursoId);
+  assert.equal(closed.dataInicio, dirty.dataInicio);
+  assert.equal(closed.dataPrevisaoTermino, dirty.dataPrevisaoTermino);
+  assert.equal(closed.cobrarMatricula, false);
+  assert.equal(closed.valorMatricula, 0);
+  assert.equal(closed.primeiroVencimentoPadrao, '');
+  // The server validates reference values even when this mode cannot issue titles.
+  const financialReferences = { ...closed,
+    ...selectTurmaTecnicoOrigem('IMPORTADA_CICLO_1'), primeiroVencimentoPadrao: '2026-10-10' };
+  assert.equal(validateTurmaTecnicoStep('FINANCEIRO', financialReferences, identity), null);
+});
 test('mudar para legado elimina matrícula e data histórica de cobrança; voltar restaura matrícula nova', () => {
   const external = { ...initial(), ...selectTurmaTecnicoOrigem('IMPORTADA_CICLO_1') };
   assert.equal(external.cobrarMatricula, false);
@@ -44,6 +60,16 @@ test('mudar para legado elimina matrícula e data histórica de cobrança; volta
   assert.equal(fresh.cobrarMatricula, true);
   assert.equal(fresh.valorMatricula, 150);
   assert.equal(fresh.criterioElegibilidadeCiclo, 'PENULTIMA_SEM_ATRASO');
+});
+test('selecionar nova ou segundo ciclo preserva mensalidades e encargos personalizados', () => {
+  const draft = { ...initial(), qtdParcelas: 8, valorParcela: 350,
+    descontoPontualidade: 25, jurosAtraso: 1.5, multaAtrasoPercentual: 2.5 };
+  for (const state of ['NOVA', 'IMPORTADA_CICLO_1']) {
+    const result = { ...draft, ...selectTurmaTecnicoOrigem(state) };
+    for (const key of ['qtdParcelas', 'valorParcela', 'descontoPontualidade', 'jurosAtraso', 'multaAtrasoPercentual']) {
+      assert.equal(result[key], draft[key]);
+    }
+  }
 });
 test('legado exige início histórico e data explícita para segundo ciclo, nunca para sem cobrança', () => {
   const external = { ...initial(), ...selectTurmaTecnicoOrigem('IMPORTADA_CICLO_1') };

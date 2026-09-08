@@ -1,8 +1,8 @@
 {
-  "version": "4.8.36",
+  "version": "4.8.37",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 45,
+  "revision": 46,
   "releasedAt": "2026-09-08",
-  "summary": "Turmas técnicas em andamento com segundo ciclo externo ou bloqueio de novas cobranças"
+  "summary": "Cadastro sem novas cobranças protegido contra valores inválidos de um rascunho anterior"
 }
