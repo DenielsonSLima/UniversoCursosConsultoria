@@ -37,4 +37,8 @@ export interface ReceivableKpis {
 export interface GroupItemsState {
   rows: ContasReceber[];
   isLoading: boolean;
+  isError?: boolean;
+  isPaused?: boolean;
+  isFetching?: boolean;
+  onRetry?: () => void;
 }

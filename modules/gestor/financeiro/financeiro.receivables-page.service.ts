@@ -1,4 +1,5 @@
 import { supabase } from '../../../lib/supabase';
+import { readReceivablesRequest } from './financeiro.receivables-request';
 import type {
   ActiveReceivablesClass,
   ContasReceber,
@@ -93,8 +94,9 @@ const mapReceivableRpcRow = (row: any): ContasReceber => ({
 const getReceivablesPageByModality = async (
   modality: CourseModality,
   filters: ReceivablesPageFilters,
+  signal?: AbortSignal,
 ): Promise<ReceivablesPage> => {
-  const { data, error } = await supabase.rpc('get_receivables_modality_page_v4_secure', {
+  const { data, error } = await readReceivablesRequest((requestSignal) => supabase.rpc('get_receivables_modality_page_v4_secure', {
     p_modality: modality,
     p_polo_id: filters.poloId && filters.poloId !== 'todos' ? filters.poloId : null,
     p_turma_id: filters.turmaId || null,
@@ -106,7 +108,7 @@ const getReceivablesPageByModality = async (
     p_group_key: filters.groupKey || null,
     p_page: filters.page,
     p_page_size: filters.pageSize,
-  });
+  }).abortSignal(requestSignal), signal);
 
   if (error) {
     console.error(`Erro ao buscar página de recebíveis da modalidade ${modality}:`, error);
@@ -128,8 +130,9 @@ export const financeiroReceivablesPageServiceMethods = {
   async getReceivablesGroupsPageByModality(
     modality: CourseModality,
     filters: ReceivablesPageFilters,
+    signal?: AbortSignal,
   ): Promise<ReceivablesGroupsPage> {
-    const { data, error } = await supabase.rpc('get_receivables_modality_groups_page_v3_secure', {
+    const { data, error } = await readReceivablesRequest((requestSignal) => supabase.rpc('get_receivables_modality_groups_page_v3_secure', {
       p_modality: modality,
       p_polo_id: filters.poloId && filters.poloId !== 'todos' ? filters.poloId : null,
       p_turma_id: filters.turmaId || null,
@@ -140,7 +143,7 @@ export const financeiroReceivablesPageServiceMethods = {
       p_group_mode: filters.groupMode,
       p_page: filters.page,
       p_page_size: filters.pageSize,
-    });
+    }).abortSignal(requestSignal), signal);
 
     if (error) {
       console.error(`Erro ao buscar grupos de recebíveis da modalidade ${modality}:`, error);
@@ -192,15 +195,16 @@ export const financeiroReceivablesPageServiceMethods = {
   async getReceivablesModalitySummary(
     modality: CourseModality,
     filters: ReceivablesSummaryFilters = {},
+    signal?: AbortSignal,
   ): Promise<ReceivablesSummary> {
-    const { data, error } = await supabase.rpc('get_receivables_modality_summary_v3_secure', {
+    const { data, error } = await readReceivablesRequest((requestSignal) => supabase.rpc('get_receivables_modality_summary_v3_secure', {
       p_modality: modality,
       p_polo_id: filters.poloId && filters.poloId !== 'todos' ? filters.poloId : null,
       p_turma_id: filters.turmaId || null,
       p_search: filters.search?.trim() || null,
       p_due_start: filters.dueStart || null,
       p_due_end: filters.dueEnd || null,
-    });
+    }).abortSignal(requestSignal), signal);
 
     if (error) {
       console.error(`Erro ao buscar resumo de recebíveis da modalidade ${modality}:`, error);
@@ -213,6 +217,7 @@ export const financeiroReceivablesPageServiceMethods = {
   async getActiveReceivablesClassesByModality(
     modality: CourseModality,
     poloId?: string,
+    signal?: AbortSignal,
   ): Promise<ActiveReceivablesClass[]> {
     let query = supabase
       .from('turmas')
@@ -222,7 +227,9 @@ export const financeiroReceivablesPageServiceMethods = {
 
     if (poloId && poloId !== 'todos') query = query.eq('polo_id', poloId);
 
-    const { data, error } = await query.order('nome', { ascending: true });
+    const { data, error } = await readReceivablesRequest(
+      (requestSignal) => query.order('nome', { ascending: true }).abortSignal(requestSignal), signal,
+    );
     if (error) {
       console.error(`Erro ao buscar turmas ativas de ${modality}:`, error);
       throw error;

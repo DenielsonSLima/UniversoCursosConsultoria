@@ -8,6 +8,8 @@ import {
 } from '../../financeiro.service';
 import ToastNotification, { useToast } from '../../../components/ToastNotification';
 import { financeiroQueryKeys } from '../../financeiro.queryKeys';
+import { receivablesReadQueryOptions } from '../../financeiro.receivables-request';
+import { ReceivablesQueryRecovery } from './modalidade-receber/ReceivablesQueryRecovery';
 import { useFinanceiroRealtime } from '../../hooks/useFinanceiroRealtime';
 import { useFinanceiroSharedQueries } from '../../hooks/useFinanceiroSharedQueries';
 import { useModalidadeReceberQueries } from '../hooks/useModalidadeReceberQueries';
@@ -104,8 +106,9 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
         pageSize: GROUP_ITEMS_PAGE_SIZE,
       };
       return {
+        ...receivablesReadQueryOptions,
         queryKey: financeiroQueryKeys.receivablesGroupItems(modality, filters),
-        queryFn: () => financeiroService.getReceivablesPageByModality(modality, filters),
+        queryFn: ({ signal }: { signal: AbortSignal }) => financeiroService.getReceivablesPageByModality(modality, filters, signal),
         enabled: !periodError && expandedGroups.has(group.key),
         placeholderData: keepPreviousData,
         staleTime: 5 * 60_000,
@@ -121,6 +124,10 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
       result.set(group.key, {
         rows: query?.data?.rows || [],
         isLoading: Boolean(query?.isLoading),
+        isError: Boolean(query?.isError),
+        isPaused: query?.fetchStatus === 'paused',
+        isFetching: Boolean(query?.isFetching),
+        onRetry: () => { void query?.refetch(); },
       });
     });
     return result;
@@ -132,6 +139,10 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
       && isContaDisponivelNoPolo(account, operations.selected?.poloId)
     )
   ), [accounts, operations.selected?.poloId]);
+
+  const readQueries = [groupsQuery, summaryQuery, upcomingSummaryQuery, activeClassesQuery];
+  const failedQueries = readQueries.filter((query) => query.isError);
+  const isReadPaused = readQueries.some((query) => query.fetchStatus === 'paused');
 
   const statusCounts: ReceivableStatusCounts = {
     pending: summaryQuery.data?.pendingCount || 0,
@@ -165,8 +176,8 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
   }, [activeClasses, activeClassesQuery.isSuccess, turmaId]);
 
   useEffect(() => {
-    if (page > totalPages) setPage(totalPages);
-  }, [page, totalPages]);
+    if (groupsQuery.isSuccess && !groupsQuery.isPlaceholderData && page > totalPages) setPage(totalPages);
+  }, [groupsQuery.isSuccess, groupsQuery.isPlaceholderData, page, totalPages]);
 
   useEffect(() => {
     setExpandedGroups(new Set());
@@ -267,7 +278,14 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
           setStatusScope('pending');
         }}
       />
-      {!periodError ? <ReceivablesList
+      {!periodError && (failedQueries.length > 0 || isReadPaused) ? (
+        <ReceivablesQueryRecovery
+          offline={isReadPaused}
+          retrying={failedQueries.some((query) => query.isFetching)}
+          onRetry={() => { failedQueries.forEach((query) => { void query.refetch(); }); }}
+        />
+      ) : null}
+      {!periodError && !((groupsQuery.isError || groupsQuery.fetchStatus === 'paused') && !groupsQuery.data) ? <ReceivablesList
         viewMode={viewMode}
         groupMode={groupMode}
         isLoading={isLoading}

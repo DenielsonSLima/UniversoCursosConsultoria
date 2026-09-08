@@ -16,6 +16,7 @@ import type {
 } from './modalidade-receber.types';
 import { formatEnrollment } from './modalidade-receber.enrollment';
 import { formatNextPendingDueDate } from './modalidade-receber.utils';
+import { ReceivablesQueryRecovery } from './ReceivablesQueryRecovery';
 
 interface ReceivablesListProps {
   viewMode: ViewMode;
@@ -116,6 +117,9 @@ export const ReceivablesList: React.FC<ReceivablesListProps> = ({
                 </button>
                 {isExpanded ? (
                   <>
+                    {detail?.isError || detail?.isPaused ? (
+                      <ReceivablesQueryRecovery offline={detail.isPaused} retrying={detail.isFetching} onRetry={() => detail.onRetry?.()} />
+                    ) : null}
                     {detail?.isLoading ? (
                       <div className="flex items-center justify-center gap-2 py-8 text-xs font-bold text-slate-400">
                         <Loader2 className="animate-spin" size={16} /> Carregando cobranças...
@@ -218,6 +222,11 @@ export const ReceivablesList: React.FC<ReceivablesListProps> = ({
                   </tr>
                   {isExpanded && detail?.isLoading ? (
                     <tr><td colSpan={6} className="py-8 text-center text-xs font-bold text-slate-400"><Loader2 className="mr-2 inline animate-spin" size={14} />Carregando cobranças...</td></tr>
+                  ) : null}
+                  {isExpanded && (detail?.isError || detail?.isPaused) ? (
+                    <tr><td colSpan={6} className="p-4">
+                      <ReceivablesQueryRecovery offline={detail.isPaused} retrying={detail.isFetching} onRetry={() => detail.onRetry?.()} />
+                    </td></tr>
                   ) : null}
                   {isExpanded ? (detail?.rows || []).map((item, index) => (
                     <ReceivableRow
