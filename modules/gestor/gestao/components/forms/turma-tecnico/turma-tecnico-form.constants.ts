@@ -103,16 +103,16 @@ export const TURMA_TECNICO_FINANCIAL_STATE_OPTIONS: Array<{
   },
   {
     value: 'IMPORTADA_CICLO_1',
-    title: 'Importada · 1º ciclo concluído',
-    eyebrow: 'Ciclo 1 reconhecido como histórico',
-    description: 'Use para turma em andamento trazida de outro sistema, sem recriar títulos antigos.',
+    title: 'Em andamento · gerar só o 2º ciclo',
+    eyebrow: '1º ciclo no sistema anterior',
+    description: 'Os boletos do 1º ciclo ficam no sistema anterior. O 2º ciclo ainda não foi emitido.',
     nextAction: 'O gestor poderá gerar manualmente apenas o 2º ciclo por aluno elegível.',
   },
   {
     value: 'IMPORTADA_CONCLUIDA',
-    title: 'Importada · 2 ciclos concluídos',
-    eyebrow: 'Histórico financeiro completo',
-    description: 'Reconhece os dois ciclos anteriores e preserva somente o histórico.',
+    title: 'Em andamento · sem novas cobranças',
+    eyebrow: 'Cobranças no sistema anterior',
+    description: 'Use quando o 2º ciclo já foi emitido fora, está em andamento ou já terminou. Não informa quitação.',
     nextAction: 'Nenhum novo ciclo financeiro ficará disponível.',
   },
 ];

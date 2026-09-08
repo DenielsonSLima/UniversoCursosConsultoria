@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { BadgeDollarSign, Calculator, CalendarDays, FileText, History, Info, Loader2, ReceiptText, Repeat2, WalletCards } from 'lucide-react';
+import { BadgeDollarSign, Calculator, CalendarDays, FileText, Info, Loader2, ReceiptText, Repeat2, WalletCards } from 'lucide-react';
 import {
   FINANCIAL_POLICY_OPTIONS,
-  TURMA_TECNICO_FINANCIAL_STATE_OPTIONS,
 } from './turma-tecnico-form.constants';
 import {
   getTurmaTecnicoFinanceiroPreview,
@@ -45,7 +44,8 @@ const TurmaTecnicoFinanceiroStep: React.FC<TurmaTecnicoFinanceiroStepProps> = ({
   const [preview, setPreview] = useState<TurmaTecnicoFinanceiroPreview | null>(null);
   const [previewError, setPreviewError] = useState('');
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
-  const ciclosDoCurso = 2;
+  const externo = formData.estadoFinanceiroInicial === 'IMPORTADA_CICLO_1';
+  const ciclosDoCurso = externo ? 1 : 2;
   const totalMensalidadesCurso = formData.qtdParcelas * ciclosDoCurso;
 
   useEffect(() => {
@@ -73,6 +73,7 @@ const TurmaTecnicoFinanceiroStep: React.FC<TurmaTecnicoFinanceiroStepProps> = ({
     const timeoutId = window.setTimeout(() => {
       getTurmaTecnicoFinanceiroPreview({
         dataInicio: formData.primeiroVencimentoPadrao,
+        somenteSegundoCiclo: externo,
         cobrarMatricula: formData.cobrarMatricula,
         valorMatricula: formData.valorMatricula,
         cobrarRematricula: formData.cobrarRematricula,
@@ -140,12 +141,24 @@ const TurmaTecnicoFinanceiroStep: React.FC<TurmaTecnicoFinanceiroStepProps> = ({
     } : {}),
   });
 
+  if (formData.estadoFinanceiroInicial === 'IMPORTADA_CONCLUIDA') return (
+    <section className="space-y-4" aria-labelledby="financial-step-title">
+      <h4 id="financial-step-title" className="text-lg font-black text-[#001a33]">Financeiro bloqueado para novas cobranças</h4>
+      <p className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm leading-relaxed text-amber-900">
+        Os boletos permanecem no sistema anterior. Matrícula, rematrícula e mensalidades não serão geradas aqui.
+        Valor, desconto, juros, multa e vencimento não se aplicam a novas cobranças nesta turma.
+      </p>
+      <p className="text-xs text-slate-500">A turma será cadastrada em andamento. Esta escolha não informa que os alunos estão quites nem importa boletos ou pagamentos.</p>
+      <p className="text-xs font-bold text-slate-600">Para mudar a opção antes de criar, volte à etapa Turma.</p>
+    </section>
+  );
+
   return (
     <section aria-labelledby="financial-step-title" className="space-y-6">
       <div>
         <p className="text-[10px] font-black uppercase tracking-[0.22em] text-blue-600">Etapa 3</p>
         <h4 id="financial-step-title" className="mt-1 text-lg font-black uppercase tracking-tight text-[#001a33]">Regra financeira da turma</h4>
-        <p className="mt-1 text-xs font-medium text-slate-500">Defina matrícula, ciclos, rematrícula, vencimento e encargos da turma.</p>
+        <p className="mt-1 text-xs font-medium text-slate-500">{externo ? 'Configure apenas o 2º ciclo: rematrícula opcional, mensalidades e encargos. O 1º ciclo permanece no sistema anterior.' : 'Defina matrícula, ciclos, rematrícula, vencimento e encargos da turma.'}</p>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -153,18 +166,19 @@ const TurmaTecnicoFinanceiroStep: React.FC<TurmaTecnicoFinanceiroStepProps> = ({
           <label className="flex items-start gap-3">
             <input
               type="checkbox"
+              disabled={externo}
               checked={formData.cobrarMatricula}
               onChange={(event) => toggleMatricula(event.target.checked)}
               className="mt-0.5 h-4 w-4 rounded border-emerald-300 text-emerald-600"
             />
             <span>
-              <span className="flex items-center gap-2 text-xs font-black uppercase text-[#001a33]"><ReceiptText size={15} className="text-emerald-600" /> Incluir matrícula no 1º ciclo</span>
+              <span className="flex items-center gap-2 text-xs font-black uppercase text-[#001a33]"><ReceiptText size={15} className="text-emerald-600" /> {externo ? 'Matrícula no sistema anterior' : 'Incluir matrícula no 1º ciclo'}</span>
               <span className="mt-1 block text-[10px] font-semibold leading-relaxed text-slate-500">Define a composição do ciclo. O título só será criado quando o gestor gerar o ciclo do aluno.</span>
             </span>
           </label>
           <label className="mt-4 block space-y-2">
             <span className="text-[10px] font-black uppercase text-slate-500">Valor da matrícula</span>
-            <CurrencyInput disabled={!formData.cobrarMatricula} value={formData.valorMatricula} onValueChange={(value) => onChange({ valorMatricula: value })} />
+            <CurrencyInput disabled={externo || !formData.cobrarMatricula} value={formData.valorMatricula} onValueChange={(value) => onChange({ valorMatricula: value })} />
           </label>
         </div>
 
@@ -206,10 +220,10 @@ const TurmaTecnicoFinanceiroStep: React.FC<TurmaTecnicoFinanceiroStepProps> = ({
       <div className="rounded-2xl border border-blue-200 bg-[#001a33] p-5 text-white">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-blue-100"><Calculator size={16} /> Composição financeira do curso</p>
+            <p className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-blue-100"><Calculator size={16} /> {externo ? 'Composição do 2º ciclo' : 'Composição financeira do curso'}</p>
             <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-300">
               {formData.cobrarMatricula ? `${formatCurrencyBRL(formData.valorMatricula)} de matrícula + ` : ''}
-              {totalMensalidadesCurso} mensalidades de {formatCurrencyBRL(formData.valorParcela)}, divididas em 2 ciclos de {formData.qtdParcelas}
+              {totalMensalidadesCurso} mensalidades de {formatCurrencyBRL(formData.valorParcela)}{externo ? ' no 2º ciclo' : ', divididas em 2 ciclos de ' + formData.qtdParcelas}
               {formData.cobrarRematricula ? ` + ${formatCurrencyBRL(formData.valorRematricula)} de rematrícula` : ''}.
             </p>
             <p className="mt-2 text-[10px] font-semibold leading-relaxed text-blue-200">
@@ -219,7 +233,7 @@ const TurmaTecnicoFinanceiroStep: React.FC<TurmaTecnicoFinanceiroStepProps> = ({
             </p>
           </div>
           <div className="min-w-[190px] rounded-xl border border-white/15 bg-white/10 px-4 py-3 sm:text-right">
-            <p className="text-[9px] font-black uppercase tracking-wider text-blue-200">Total nominal do curso</p>
+            <p className="text-[9px] font-black uppercase tracking-wider text-blue-200">{externo ? 'Total nominal do 2º ciclo' : 'Total nominal do curso'}</p>
             <p className="mt-1 text-xl font-black">
               {isPreviewLoading ? <Loader2 size={20} className="inline animate-spin" /> : preview ? formatCurrencyBRL(preview.totalCurso) : '—'}
             </p>
@@ -235,7 +249,7 @@ const TurmaTecnicoFinanceiroStep: React.FC<TurmaTecnicoFinanceiroStepProps> = ({
             <p className="text-xs font-black uppercase text-[#001a33]">Vencimento padrão</p>
           </div>
           <label className="mt-4 block space-y-2">
-            <span className="text-[10px] font-black uppercase text-slate-500">Primeiro vencimento</span>
+            <span className="text-[10px] font-black uppercase text-slate-500">{externo ? 'Primeiro vencimento do 2º ciclo' : 'Primeiro vencimento'}</span>
             <input
               type="date"
               disabled={formData.estadoFinanceiroInicial === 'IMPORTADA_CONCLUIDA'}
@@ -356,38 +370,9 @@ const TurmaTecnicoFinanceiroStep: React.FC<TurmaTecnicoFinanceiroStepProps> = ({
         <div className="mt-2 flex justify-between gap-4 text-[10px] font-semibold text-slate-500"><span>Esta orientação fica destacada nos documentos.</span><span>{formData.instrucaoBoletoCarne.length}/180</span></div>
       </div>
 
+      {formData.estadoFinanceiroInicial === 'NOVA' ? (
       <fieldset className="rounded-2xl border border-slate-200 bg-white p-4">
-        <legend className="px-2 text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Como esta turma começa no financeiro?</legend>
-        <div className="flex items-start gap-3">
-          <History size={17} className="mt-0.5 shrink-0 text-slate-500" />
-          <p className="text-[10px] font-semibold leading-relaxed text-slate-500">Escolha o histórico real. Nenhuma opção gera recebíveis ao criar a turma ou adicionar um aluno.</p>
-        </div>
-        <div className="mt-4 grid gap-3 lg:grid-cols-3">
-          {TURMA_TECNICO_FINANCIAL_STATE_OPTIONS.map((option) => {
-            const selected = formData.estadoFinanceiroInicial === option.value;
-            return (
-              <label key={option.value} className={`cursor-pointer rounded-2xl border p-4 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-blue-500 ${selected ? 'border-blue-500 bg-blue-50' : 'border-slate-200 bg-white hover:border-blue-200'}`}>
-                <input
-                  type="radio"
-                  name="estado-financeiro-inicial"
-                  value={option.value}
-                  checked={selected}
-                  onChange={() => onChange({
-                    estadoFinanceiroInicial: option.value,
-                    origemFinanceira: option.value === 'NOVA' ? 'NORMAL' : 'LEGADO',
-                    financeiroHerdado: option.value !== 'NOVA',
-                    gerarCobrancasFuturas: false,
-                  })}
-                  className="sr-only"
-                />
-                <span className="block text-[9px] font-black uppercase tracking-wide text-blue-600">{option.eyebrow}</span>
-                <span className="mt-1 block text-xs font-black uppercase text-[#001a33]">{option.title}</span>
-                <span className="mt-2 block text-[10px] font-semibold leading-relaxed text-slate-500">{option.description}</span>
-                <span className="mt-3 block rounded-lg bg-white/80 px-2.5 py-2 text-[10px] font-bold leading-relaxed text-blue-800">{option.nextAction}</span>
-              </label>
-            );
-          })}
-        </div>
+        <legend className="px-2 text-xs font-bold text-slate-600">Liberação do 2º ciclo</legend>
         <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
           <p className="text-[10px] font-black uppercase text-[#001a33]">Critério para liberar o próximo ciclo por aluno</p>
           <div className="mt-3 grid gap-3 md:grid-cols-2">
@@ -403,6 +388,7 @@ const TurmaTecnicoFinanceiroStep: React.FC<TurmaTecnicoFinanceiroStepProps> = ({
           {formData.estadoFinanceiroInicial === 'IMPORTADA_CONCLUIDA' ? <p className="mt-3 text-[10px] font-bold text-slate-500">A turma concluída não oferece próximo ciclo; o critério fica registrado apenas no contrato.</p> : null}
         </div>
       </fieldset>
+      ) : null}
     </section>
   );
 };

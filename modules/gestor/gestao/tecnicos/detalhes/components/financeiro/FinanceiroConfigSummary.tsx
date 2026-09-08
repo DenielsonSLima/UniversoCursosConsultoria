@@ -14,6 +14,7 @@ interface FinanceiroConfigSummaryProps {
   cronograma: CronogramaItem[];
   onEdit: () => void;
   turmaLabel: string;
+  somenteSegundoCiclo?: boolean;
 }
 
 const FinanceiroConfigSummary: React.FC<FinanceiroConfigSummaryProps> = ({
@@ -22,6 +23,7 @@ const FinanceiroConfigSummary: React.FC<FinanceiroConfigSummaryProps> = ({
   cronograma,
   onEdit,
   turmaLabel,
+  somenteSegundoCiclo = false,
 }) => {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
@@ -30,7 +32,7 @@ const FinanceiroConfigSummary: React.FC<FinanceiroConfigSummaryProps> = ({
         <div className="flex justify-between items-start mb-8">
           <div>
             <h3 className="text-lg font-black text-[#001a33] uppercase tracking-tight">Regras Financeiras</h3>
-            <p className="text-slate-500 text-sm">Parâmetros aplicados a todos os alunos desta turma.</p>
+            <p className="text-slate-500 text-sm">{somenteSegundoCiclo ? 'Valores e encargos somente para o 2º ciclo. O 1º ciclo permanece no sistema anterior.' : 'Parâmetros aplicados a todos os alunos desta turma.'}</p>
           </div>
           <button
             onClick={onEdit}
@@ -171,6 +173,13 @@ const FinanceiroConfigSummary: React.FC<FinanceiroConfigSummaryProps> = ({
       </div>
     </div>
 
+    {somenteSegundoCiclo ? (
+      <div className="rounded-2xl border border-blue-100 bg-blue-50 p-6">
+        <h4 className="font-black text-[#001a33]">Somente o 2º ciclo</h4>
+        <p className="mt-2 text-sm text-slate-600">O 1º ciclo permanece no sistema anterior.
+          Confira as datas e o total na prévia individual ao gerar o 2º ciclo.</p>
+      </div>
+    ) : (
     <div className="bg-white border border-slate-100 rounded-[2rem] p-8 shadow-sm hover:shadow-md transition-shadow flex flex-col max-h-[500px]">
       <div className="mb-4">
         <h3 className="text-lg font-black text-[#001a33] uppercase tracking-tight">Cronograma de Cobrança</h3>
@@ -218,6 +227,7 @@ const FinanceiroConfigSummary: React.FC<FinanceiroConfigSummaryProps> = ({
         })}
       </div>
     </div>
+    )}
     </div>
   );
 };

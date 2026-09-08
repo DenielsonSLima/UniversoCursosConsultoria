@@ -30,7 +30,8 @@ export type TurmaTecnicoEstadoFinanceiroInicial =
 
 export type TurmaTecnicoElegibilidadeCiclo =
   | 'QUITACAO_TOTAL'
-  | 'PENULTIMA_SEM_ATRASO';
+  | 'PENULTIMA_SEM_ATRASO'
+  | 'HISTORICO_EXTERNO';
 
 export interface TurmaTecnicoCicloFinanceiroPolicy {
   modo: 'MANUAL';

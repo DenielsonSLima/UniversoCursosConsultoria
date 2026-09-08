@@ -49,7 +49,7 @@ export const getFinanceiroSituationLabel = (row: MatriculaTecnicaFinanceiroRow) 
     if (row.cicloManual.estado === 'BLOQUEADO') {
       return `${row.cicloManual.proximoCicloNumero || ''}º ciclo bloqueado`.trim();
     }
-    if (row.cicloManual.estado === 'CICLOS_CONCLUIDOS') return 'Ciclos concluídos';
+    if (row.cicloManual.estado === 'CICLOS_CONCLUIDOS') return 'Sem novas cobranças';
     return 'Geração manual indisponível';
   }
   if (row.financeiro.status === 'NAO_CONFIGURADO') return 'Não configurado';
@@ -191,7 +191,7 @@ const FinanceiroCicloManualStatus: React.FC<FinanceiroCicloManualStatusProps> = 
       <div className="space-y-2" role="status">
         {generated ? <GeneratedCycleStatus generated={generated} disabled={disabled} onResume={onResume} /> : null}
         <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-1 text-[9px] font-black uppercase text-slate-600">
-          <CheckCircle2 size={12} /> Ciclos concluídos
+          <CheckCircle2 size={12} /> Sem novas cobranças
         </span>
       </div>
     );

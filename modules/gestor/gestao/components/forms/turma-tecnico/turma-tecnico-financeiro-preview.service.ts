@@ -2,6 +2,7 @@ import { supabase } from '../../../../../../lib/supabase';
 
 export interface TurmaTecnicoFinanceiroPreviewInput {
   dataInicio: string;
+  somenteSegundoCiclo?: boolean;
   cobrarMatricula: boolean;
   valorMatricula: number;
   cobrarRematricula: boolean;
@@ -38,6 +39,7 @@ interface FinancialPreviewRow {
 }
 
 interface FinancialScheduleItem {
+  id?: unknown;
   tipo?: unknown;
   valor?: unknown;
 }
@@ -86,7 +88,10 @@ export const getTurmaTecnicoFinanceiroPreview = async (
     throw new Error('O servidor não retornou a prévia financeira completa.');
   }
 
-  const totalCronograma = schedule.reduce(
+  const applicableSchedule = input.somenteSegundoCiclo
+    ? schedule.filter((item) => String(item.id).startsWith('ciclo-2-parc-') || item.tipo === 'REMATRICULA')
+    : schedule;
+  const totalCronograma = applicableSchedule.reduce(
     (total, item) => total + finiteNumber(item.valor, 'o valor do cronograma'),
     0,
   );

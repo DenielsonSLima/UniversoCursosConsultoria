@@ -42,7 +42,7 @@ const TurmaConfiguracoes: React.FC<TurmaConfiguracoesProps> = ({ turma, onTurmaU
     bloquearMatriculasAposCompletarVagas: turma.bloquearMatriculasAposCompletarVagas ?? true,
     origemFinanceira: turma.origemFinanceira || 'NORMAL',
     financeiroHerdado: turma.financeiroHerdado || false,
-    gerarCobrancasFuturas: true,
+    gerarCobrancasFuturas: turma.gerarCobrancasFuturas ?? false,
     sincronizarAsaasFuturo: false,
   });
 

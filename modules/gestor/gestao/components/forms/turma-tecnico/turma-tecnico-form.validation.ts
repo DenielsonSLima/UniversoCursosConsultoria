@@ -1,3 +1,4 @@
+import { getMaceioIsoDate } from '../../../tecnicos/technicalClassDates';
 import type {
   TurmaTecnicoFormData,
   TurmaTecnicoIdentity,
@@ -15,6 +16,9 @@ export const validateTurmaTecnicoStep = (
     if (!formData.cursoId) return 'Selecione o curso técnico.';
     if (!formData.poloId) return 'Selecione o polo responsável pela turma.';
     if (!formData.dataInicio) return 'Informe a data de início.';
+    if (formData.estadoFinanceiroInicial !== 'NOVA' && formData.dataInicio > getMaceioIsoDate()) {
+      return 'Turma em andamento precisa de uma data de início igual ou anterior a hoje.';
+    }
     if (!formData.dataPrevisaoTermino) return 'Informe a data prevista de término.';
     if (formData.dataPrevisaoTermino < formData.dataInicio) {
       return 'A data prevista de término deve ser posterior à data de início.';
@@ -45,10 +49,21 @@ export const validateTurmaTecnicoStep = (
     if (!['NOVA', 'IMPORTADA_CICLO_1', 'IMPORTADA_CONCLUIDA'].includes(formData.estadoFinanceiroInicial)) {
       return 'Selecione como começa o histórico financeiro da turma.';
     }
-    if (!['QUITACAO_TOTAL', 'PENULTIMA_SEM_ATRASO'].includes(formData.criterioElegibilidadeCiclo)) {
+    if (!['QUITACAO_TOTAL', 'PENULTIMA_SEM_ATRASO', 'HISTORICO_EXTERNO'].includes(formData.criterioElegibilidadeCiclo)) {
       return 'Selecione o critério para liberar o próximo ciclo.';
     }
-    if (formData.estadoFinanceiroInicial !== 'IMPORTADA_CONCLUIDA' && !formData.primeiroVencimentoPadrao) {
+    if (formData.gerarCobrancasFuturas || formData.sincronizarAsaasFuturo) {
+      return 'Turmas técnicas manuais não podem gerar ou sincronizar cobranças automaticamente.';
+    }
+    if (formData.estadoFinanceiroInicial !== 'NOVA' && formData.cobrarMatricula) {
+      return 'A matrícula do 1º ciclo pertence ao sistema anterior.';
+    }
+    if ((formData.criterioElegibilidadeCiclo === 'HISTORICO_EXTERNO')
+      !== (formData.estadoFinanceiroInicial === 'IMPORTADA_CICLO_1')) {
+      return 'Confira o histórico financeiro selecionado na primeira etapa.';
+    }
+    if (formData.estadoFinanceiroInicial === 'IMPORTADA_CONCLUIDA') return null;
+    if (!formData.primeiroVencimentoPadrao) {
       return 'Informe o primeiro vencimento financeiro da turma.';
     }
     if (!isFiniteNumber(formData.valorMatricula) || formData.valorMatricula < 0) {

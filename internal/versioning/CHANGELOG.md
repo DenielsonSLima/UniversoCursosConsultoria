@@ -2,7 +2,19 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
-Histórico anterior: [25/08/2026 — versões 4.8.2 a 4.8.5](./changelog/2026-08-25-parte-1.md), [24/08/2026 — versões 4.8.0 a 4.8.1](./changelog/2026-08-24-parte-2.md), [24/08/2026 — versões 4.7.5 a 4.7.7](./changelog/2026-08-24-parte-1.md), [22/08/2026 a 23/08/2026](./changelog/2026-08-22-a-2026-08-23.md), [21/08/2026 a 22/08/2026 — parte 2](./changelog/2026-08-21-a-2026-08-22-parte-2.md), [21/08/2026 — parte 1](./changelog/2026-08-21-parte-1.md), [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+Histórico anterior: [26/08/2026 — versões 4.8.6 a 4.8.7](./changelog/2026-08-26.md), [25/08/2026 — versões 4.8.2 a 4.8.5](./changelog/2026-08-25-parte-1.md), [24/08/2026 — versões 4.8.0 a 4.8.1](./changelog/2026-08-24-parte-2.md), [24/08/2026 — versões 4.7.5 a 4.7.7](./changelog/2026-08-24-parte-1.md), [22/08/2026 a 23/08/2026](./changelog/2026-08-22-a-2026-08-23.md), [21/08/2026 a 22/08/2026 — parte 2](./changelog/2026-08-21-a-2026-08-22-parte-2.md), [21/08/2026 — parte 1](./changelog/2026-08-21-parte-1.md), [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+
+## [4.8.36] - 2026-09-08
+
+### Adicionado
+
+- Cadastro de turma técnica em andamento com opção de gerar apenas o 2º ciclo
+  ou manter todas as cobranças no sistema anterior.
+- Matrícula antiga e geração automática bloqueadas; histórico externo não
+  registra quitação nem recria boletos anteriores.
+- Valores, desconto, juros e multa ficam disponíveis somente para novas
+  emissões permitidas, com conferência do histórico antes de gerar o 2º ciclo.
+- Turmas novas mantêm suas regras; cadastro e vínculo de aluno não emitem cobranças.
 
 ## [4.8.35] - 2026-09-08
 
@@ -474,22 +486,3 @@ Histórico anterior: [25/08/2026 — versões 4.8.2 a 4.8.5](./changelog/2026-08
 - Nenhum QR Code, payload EMV ou número bancário é fabricado; divergências válidas continuam bloqueadas e o exemplo bancário não é associado a títulos com valor ou vencimento diferente.
 - O automático Banese foi restaurado à faixa P3–P9 com RPCs e permissões endurecidos; o worker e o gateway publicados foram validados com testes focados, checagem de tipos e limite de 500 linhas.
 - Títulos históricos sem o retorno POST permanecem isolados: o sistema não reconstrói QR Code e não aceita tipo de juros remoto fora do contrato financeiro confirmado.
-
-## [4.8.7] - 2026-08-26
-
-### Alterado
-
-- O fechamento operacional registra reunião, correções, migrations, Edge Functions, CI, Vercel, smokes e limitações da entrega funcional 4.8.6 sem mudar seu contrato.
-
-## [4.8.6] - 2026-08-26
-
-### Corrigido
-
-- Avisos financeiros Push, inbox e WhatsApp passam a revalidar o recebível antes do efeito externo; títulos suspensos, cancelados, estornados, devolvidos ou pagos não recebem lembretes de cobrança.
-- O checkout EAD e o checkout legado reutilizam somente o mesmo título `PENDENTE` ou `VENCIDO`, sem pagamento, e repetem a validação entre reparos assíncronos e imediatamente antes de devolver a URL.
-- O BolePix continua sendo emitido como `BOLETO` Banese. Quando o banco não devolve QR ou payload Pix oficial, backend e portais rebaixam a apresentação para o PDF do boleto sem fabricar nem exibir um Pix vazio.
-
-### Segurança e qualidade
-
-- A guarda compartilhada bloqueia `banese_card + PIX` direto antes de consultar configuração, em sandbox e produção, sem bloquear o Pix oficial retornado dentro de uma cobrança `BOLETO`.
-- A ordem de locks financeiros foi normalizada para `contas_receber → job → delivery`, com revalidação de identidade e testes de corrida para impedir reapresentação ou envio após trancamento e pagamento.

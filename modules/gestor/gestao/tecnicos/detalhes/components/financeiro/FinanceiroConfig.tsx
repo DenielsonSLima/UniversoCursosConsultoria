@@ -11,7 +11,7 @@ import {
   mapRegraTecnicaCronograma,
   mapRegraTecnicaToConfig,
 } from './financeiro-config.service';
-import type { MatriculaTecnicaRegra } from './matricula-tecnica-financeiro.types';
+import type { MatriculaTecnicaRegra, MatriculaTecnicaCicloFinanceiroPolicy } from './matricula-tecnica-financeiro.types';
 import {
   createFinanceiroRequestId,
   usePreverRegraFinanceiraTecnica,
@@ -22,13 +22,16 @@ import { isRegraFinanceiraConflict } from './matricula-tecnica-financeiro.servic
 interface FinanceiroConfigProps {
   turma: Turma;
   regra: MatriculaTecnicaRegra;
+  policy: MatriculaTecnicaCicloFinanceiroPolicy;
 }
 
 const inputFingerprint = (data: FinanceiroConfigData) => JSON.stringify(
   mapConfigToRegraTecnicaInput(data),
 );
 
-const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma, regra }) => {
+const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma, regra, policy }) => {
+  const blocked = policy.habilitado && policy.estadoInicial === 'IMPORTADA_CONCLUIDA';
+  const external = policy.habilitado && policy.criterioElegibilidade === 'HISTORICO_EXTERNO';
   const { toasts, removeToast, toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<FinanceiroConfigData>(() => mapRegraTecnicaToConfig(regra));
@@ -106,6 +109,7 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma, regra }) => 
   };
 
   const openEditor = () => {
+    if (blocked) return;
     const next = mapRegraTecnicaToConfig(regra);
     setFormData(next);
     setPreviewForm(next);
@@ -117,6 +121,7 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma, regra }) => 
   };
 
   const handleSave = async () => {
+    if (blocked) return;
     if (conflict) {
       toast.warning('Regra alterada em outra sessão', 'Descarte este rascunho e revise a versão atual antes de salvar.');
       return;
@@ -154,6 +159,15 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma, regra }) => 
     }
   };
 
+  if (blocked) return (
+    <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-6">
+      <h3 className="text-lg font-black text-[#001a33]">Sem novas cobranças neste sistema</h3>
+      <p className="mt-2 text-sm text-amber-900">Esta turma veio em andamento com as cobranças administradas no sistema anterior.
+        A geração e a edição de valores, desconto, juros e multa ficam bloqueadas.</p>
+      <p className="mt-2 text-xs text-slate-600">O histórico já registrado continua disponível. Esta configuração não informa quitação.</p>
+    </div>
+  );
+
   if (!isEditing) {
     return (
       <>
@@ -163,6 +177,7 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma, regra }) => 
           cronograma={mapRegraTecnicaCronograma(regra)}
           onEdit={openEditor}
           turmaLabel={turmaLabel}
+          somenteSegundoCiclo={external}
         />
         <ToastNotification toasts={toasts} onRemove={removeToast} />
       </>
@@ -187,6 +202,7 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma, regra }) => 
         formData={formData}
         isSaving={saveMutation.isPending || previewQuery.isFetching}
         turmaLabel={turmaLabel}
+        somenteSegundoCiclo={external}
         onCancel={closeEditor}
         onDragEnd={() => undefined}
         onDragEnter={() => undefined}

@@ -95,6 +95,7 @@ const FinanceiroAlunoOverrideDialog: React.FC<FinanceiroAlunoOverrideDialogProps
   onClose,
 }) => {
   const { toasts, removeToast, toast } = useToast();
+  const externalHistory = row.cicloManual.criterioElegibilidade === 'HISTORICO_EXTERNO';
   const [form, setForm] = useState<MatriculaTecnicaOverrideInput>(() => overrideToInput(row));
   const [dirty, setDirty] = useState(false);
   const [conflict, setConflict] = useState(false);
@@ -321,7 +322,7 @@ const FinanceiroAlunoOverrideDialog: React.FC<FinanceiroAlunoOverrideDialogProps
           <div className="mt-6">
             <p className="flex items-center gap-2 text-[10px] font-black uppercase text-emerald-700"><CheckCircle2 size={15} /> Código validado · valores liberados</p>
             <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <div>{currencyField('valorMatricula', 'Matrícula individual', regraTurma.valorMatricula, !cobrarMatricula)}<label className="mt-2 flex items-center gap-2 text-[10px] font-bold text-slate-600"><input type="checkbox" checked={!cobrarMatricula} onChange={(event) => updateField('cobrarMatricula', !event.target.checked)} /> Isentar matrícula</label></div>
+              <div>{currencyField('valorMatricula', 'Matrícula individual', regraTurma.valorMatricula, externalHistory || !cobrarMatricula)}<label className="mt-2 flex items-center gap-2 text-[10px] font-bold text-slate-600"><input type="checkbox" disabled={externalHistory} checked={!cobrarMatricula} onChange={(event) => updateField('cobrarMatricula', !event.target.checked)} /> Isentar matrícula</label></div>
               {currencyField('valorMensalidade', 'Mensalidade individual', regraTurma.valorMensalidade)}
               <div>{currencyField('valorRematricula', 'Rematrícula individual', regraTurma.valorRematricula, !regraTurma.cobranca.rematricula.habilitada)}<span className="mt-2 block text-[9px] font-semibold text-slate-400">Pode reduzir o valor; a rematrícula mantém o segundo ciclo.</span></div>
               <div className="sm:col-span-2">{currencyField('descontoPontualidade', 'Desconto adicional pagando em dia', regraTurma.encargos.descontoPontualidade)}</div>

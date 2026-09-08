@@ -1,8 +1,8 @@
 {
-  "version": "4.8.35",
+  "version": "4.8.36",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 44,
+  "revision": 45,
   "releasedAt": "2026-09-08",
-  "summary": "Recebíveis com espera limitada e recuperação de consultas sem recarregar a página"
+  "summary": "Turmas técnicas em andamento com segundo ciclo externo ou bloqueio de novas cobranças"
 }
