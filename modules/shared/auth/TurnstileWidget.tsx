@@ -16,7 +16,7 @@ type TurnstileApi = {
     options: {
       sitekey: string;
       action: TurnstileAction;
-      language: 'pt-BR';
+      language: 'pt-br';
       theme: 'light';
       size: 'flexible';
       appearance: 'always' | 'interaction-only';
@@ -42,6 +42,7 @@ const SCRIPT_URL =
   'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
 const SITE_KEY = String(import.meta.env.VITE_TURNSTILE_SITE_KEY || '').trim();
 const SCRIPT_LOAD_TIMEOUT_MS = 12_000;
+const VERIFICATION_FEEDBACK_TIMEOUT_MS = 20_000;
 const RETRY_INTERVAL_MS = 3_000;
 const RETRY_FEEDBACK_TIMEOUT_MS = 8_000;
 
@@ -136,6 +137,8 @@ const TurnstileWidget: React.FC<Props> = ({
   useEffect(() => {
     let cancelled = false;
     let retryFeedbackTimeoutId = 0;
+    let verificationTimeoutId = 0;
+    let recoveryRequired = false;
 
     const reportStatus = (nextStatus: TurnstileStatus) => {
       if (cancelled) return;
@@ -146,13 +149,28 @@ const TurnstileWidget: React.FC<Props> = ({
       window.clearTimeout(retryFeedbackTimeoutId);
       retryFeedbackTimeoutId = 0;
     };
-    const reportRetrying = () => {
+    const clearFeedbackTimeouts = () => {
       clearRetryFeedbackTimeout();
+      window.clearTimeout(verificationTimeoutId);
+      verificationTimeoutId = 0;
+    };
+    const requireRecovery = () => {
+      if (cancelled) return;
+      clearFeedbackTimeouts();
+      recoveryRequired = true;
+      onTokenChangeRef.current('');
+      reportStatus('error');
+    };
+    const reportRetrying = () => {
+      if (cancelled || recoveryRequired) return;
       reportStatus('retrying');
-      retryFeedbackTimeoutId = window.setTimeout(
-        () => reportStatus('error'),
-        RETRY_FEEDBACK_TIMEOUT_MS,
-      );
+      // Erros sucessivos não podem adiar a recuperação manual indefinidamente.
+      if (!retryFeedbackTimeoutId) {
+        retryFeedbackTimeoutId = window.setTimeout(
+          requireRecovery,
+          RETRY_FEEDBACK_TIMEOUT_MS,
+        );
+      }
     };
 
     const renderWidget = async () => {
@@ -171,10 +189,16 @@ const TurnstileWidget: React.FC<Props> = ({
         if (cancelled || !containerRef.current || !turnstile) return;
 
         reportStatus('verifying');
+        // Oferece recuperação mesmo se o iframe não emitir nenhum callback.
+        // O prazo só muda o feedback; não interrompe o desafio em andamento.
+        verificationTimeoutId = window.setTimeout(
+          requireRecovery,
+          VERIFICATION_FEEDBACK_TIMEOUT_MS,
+        );
         widgetIdRef.current = turnstile.render(containerRef.current, {
           sitekey: SITE_KEY,
           action,
-          language: 'pt-BR',
+          language: 'pt-br',
           theme: 'light',
           size: 'flexible',
           // Mantém o desafio visível em todos os ambientes. Além de dar retorno
@@ -188,28 +212,36 @@ const TurnstileWidget: React.FC<Props> = ({
           'feedback-enabled': false,
           'offlabel-show-help': false,
           callback: (token) => {
-            clearRetryFeedbackTimeout();
+            if (cancelled) return;
+            clearFeedbackTimeouts();
+            recoveryRequired = false;
             onTokenChangeRef.current(token);
             reportStatus('verified');
           },
           'expired-callback': () => {
+            if (cancelled) return;
             onTokenChangeRef.current('');
             reportRetrying();
           },
           'before-interactive-callback': () => {
-            clearRetryFeedbackTimeout();
+            if (cancelled || recoveryRequired) return;
             reportStatus('interaction-required');
           },
           'timeout-callback': () => {
+            if (cancelled) return;
             onTokenChangeRef.current('');
             reportRetrying();
           },
           'unsupported-callback': () => {
+            if (cancelled) return;
+            clearFeedbackTimeouts();
+            recoveryRequired = true;
             onTokenChangeRef.current('');
             reportStatus('unsupported');
             onErrorRef.current?.('unsupported-browser');
           },
           'error-callback': (errorCode) => {
+            if (cancelled) return true;
             onTokenChangeRef.current('');
             reportRetrying();
             onErrorRef.current?.(errorCode);
@@ -219,6 +251,7 @@ const TurnstileWidget: React.FC<Props> = ({
         });
       } catch {
         if (!cancelled) {
+          clearFeedbackTimeouts();
           reportStatus('error');
           onErrorRef.current?.();
         }
@@ -229,7 +262,7 @@ const TurnstileWidget: React.FC<Props> = ({
 
     return () => {
       cancelled = true;
-      clearRetryFeedbackTimeout();
+      clearFeedbackTimeouts();
       const turnstile = getTurnstile();
       if (widgetIdRef.current && turnstile) {
         turnstile.remove(widgetIdRef.current);
@@ -251,7 +284,7 @@ const TurnstileWidget: React.FC<Props> = ({
     'interaction-required': 'Confirme abaixo que você é humano.',
     verified: 'Verificação de segurança concluída.',
     retrying: 'Reconectando à verificação de segurança…',
-    error: 'Não foi possível carregar a verificação de segurança.',
+    error: 'A verificação não foi concluída. Tente novamente.',
     unsupported: 'Este navegador não é compatível com a verificação de segurança.',
   };
 
