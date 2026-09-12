@@ -171,6 +171,8 @@ export const ReceivableActionButtons: React.FC<ItemProps> = ({ item, actions }) 
   const canOpenBanese = canOpenBaneseDocument(item);
   const hasExternalChargeUrl = !isBanese
     && Boolean(item.asaasInvoiceUrl || item.asaasBankSlipUrl);
+  const externalHistoryWithoutGateway = !gatewayCode
+    && item.origemPagamento === 'SISTEMA_ANTERIOR';
 
   return (
     <div className="grid w-full max-w-[180px] grid-cols-2 gap-2">
@@ -218,7 +220,11 @@ export const ReceivableActionButtons: React.FC<ItemProps> = ({ item, actions }) 
             </button>
           ) : null}
         </>
-      ) : isBanese ? null : (
+      ) : isBanese ? null : externalHistoryWithoutGateway ? (
+        <span className="col-span-2 rounded-xl bg-slate-50 px-3 py-2 text-center text-[10px] font-bold text-slate-500">
+          Cobrança do sistema anterior
+        </span>
+      ) : (
         <button
           type="button"
           onClick={() => actions.onSync(item.id!)}

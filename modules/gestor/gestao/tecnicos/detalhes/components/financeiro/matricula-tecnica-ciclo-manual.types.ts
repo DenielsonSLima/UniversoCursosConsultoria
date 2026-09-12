@@ -32,6 +32,8 @@ export interface MatriculaTecnicaCicloManual {
   cicloGerado: {
     numero: number;
     status: string;
+    origemEmissao?: "PROESC";
+    abrangencia?: "CONTRATO_COMPLETO";
     quantidadeItens: number;
     total: string;
     emitidosBanese: number;

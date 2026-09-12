@@ -30,12 +30,18 @@ const isFullyIssued = (generated: GeneratedCycle) => (
   && generated.emRevisao === 0
 );
 
+const isIssuedInProesc = (generated: GeneratedCycle | null) => (
+  generated?.origemEmissao === 'PROESC'
+  && generated.abrangencia === 'CONTRATO_COMPLETO'
+);
+
 export const getFinanceiroSituationLabel = (row: MatriculaTecnicaFinanceiroRow) => {
   if (row.cicloManual.habilitado && row.cicloManual.modo === 'MANUAL') {
     const generated = row.cicloManual.cicloGerado;
     const generatedCycle = generated?.numero;
     const fullyIssued = generated ? isFullyIssued(generated) : false;
     if (row.cicloManual.estado === 'PROTEGIDO_EXISTENTE') {
+      if (isIssuedInProesc(generated)) return `${generatedCycle}º ciclo já emitido no Proesc`;
       return `${generatedCycle || 2}º ciclo gerado e emitido`;
     }
     if (row.cicloManual.estado === 'JA_GERADO') {
@@ -128,9 +134,9 @@ const FinanceiroCicloManualStatus: React.FC<FinanceiroCicloManualStatusProps> = 
     return (
       <div className="space-y-1.5" role="status">
         <span className="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-1 text-[9px] font-black uppercase text-emerald-800">
-          <ShieldCheck size={12} /> {generatedLabel} já gerado e emitido
+          <ShieldCheck size={12} /> {generatedLabel} {isIssuedInProesc(generated) ? 'já emitido no Proesc' : 'já gerado e emitido'}
         </span>
-        <p className="text-[9px] font-bold text-slate-500">Protegido contra novas cobranças.</p>
+        <p className="text-[9px] font-bold text-slate-500">{isIssuedInProesc(generated) ? 'Contrato completo protegido contra novas cobranças.' : 'Protegido contra novas cobranças.'}</p>
       </div>
     );
   }

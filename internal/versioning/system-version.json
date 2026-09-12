@@ -1,8 +1,8 @@
 {
-  "version": "4.8.44",
+  "version": "4.8.45",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 53,
+  "revision": 54,
   "releasedAt": "2026-09-12",
-  "summary": "Teste de token Proesc e contas operacionais por polo"
+  "summary": "Proteção de ciclos emitidos no Proesc e histórico individual"
 }
