@@ -4,6 +4,17 @@ Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente
 
 Histórico anterior: [27/08/2026 a 31/08/2026 — versões 4.8.8 a 4.8.19](./changelog/2026-08-27-a-2026-08-31.md), [26/08/2026 — versões 4.8.6 a 4.8.7](./changelog/2026-08-26.md), [25/08/2026 — versões 4.8.2 a 4.8.5](./changelog/2026-08-25-parte-1.md), [24/08/2026 — versões 4.8.0 a 4.8.1](./changelog/2026-08-24-parte-2.md), [24/08/2026 — versões 4.7.5 a 4.7.7](./changelog/2026-08-24-parte-1.md), [22/08/2026 a 23/08/2026](./changelog/2026-08-22-a-2026-08-23.md), [21/08/2026 a 22/08/2026 — parte 2](./changelog/2026-08-21-a-2026-08-22-parte-2.md), [21/08/2026 — parte 1](./changelog/2026-08-21-parte-1.md), [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
 
+## [4.8.46] - 2026-09-12
+
+### Melhorado
+
+- Histórico Proesc da T42 vinculado à Conta Proesc, com recebimentos e datas
+  conciliados individualmente e títulos Banese preservados.
+- Consulta automática acompanha obrigações confirmadas e registra pagamentos
+  comprovados, com proteção contra duplicação e revisão de casos ambíguos.
+- Testar token reconhece o contrato V1 e verifica acesso às cobranças, sem
+  inferir descontos ou encargos quando a composição não estiver comprovada.
+
 ## [4.8.45] - 2026-09-12
 
 ### Corrigido
@@ -52,6 +63,24 @@ Histórico anterior: [27/08/2026 a 31/08/2026 — versões 4.8.8 a 4.8.19](./cha
   histórico financeiro importado do sistema anterior.
 - Matrículas trancadas e segundos ciclos já emitidos continuam protegidos.
   Valores, pagamentos, boletos existentes e Radiologia são preservados.
+
+## [4.8.40] - 2026-09-12
+
+### Corrigido
+
+- Recebidos passa a considerar a data do pagamento no período selecionado,
+  alinhando indicador, grupos, parcelas e exportação ao critério do Caixa.
+- Pendentes, vencidos, cancelados e Todos mantêm o filtro por vencimento.
+- Os filtros e o PDF indicam a data usada; o cache anterior é renovado.
+
+## [4.8.39] - 2026-09-12
+
+### Corrigido
+
+- Recebimentos do sistema anterior mostram sua origem histórica e deixam de
+  apresentar uma baixa manual sem auditoria registrada.
+- O card Parcelas recebidas esclarece o filtro por vencimento e informa que o
+  Caixa considera o mês da data do pagamento, inclusive em antecipações.
 
 ## [4.8.38] - 2026-09-09
 

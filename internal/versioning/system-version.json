@@ -1,8 +1,8 @@
 {
-  "version": "4.8.45",
+  "version": "4.8.46",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 54,
+  "revision": 55,
   "releasedAt": "2026-09-12",
-  "summary": "Proteção de ciclos emitidos no Proesc e histórico individual"
+  "summary": "Conciliação do legado Proesc e consulta automática de pagamentos confirmados"
 }

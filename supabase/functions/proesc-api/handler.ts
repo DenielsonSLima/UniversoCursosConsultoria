@@ -4,6 +4,7 @@ import {
 import { buildCorsHeaders, isRateLimitExceeded, json } from '../_shared/http.ts';
 import { object, ProescError } from './contract.ts';
 import { testProescToken } from './test-token.ts';
+import { runProescSync } from './sync-worker.ts';
 
 type Admin = Parameters<typeof requireGestorAtivo>[1];
 const publicActions = new Set(['status', 'save_token', 'remove_token', 'class_history', 'class_events', 'test_token']);
@@ -25,7 +26,15 @@ export const createHandler = (admin: Admin, transport: typeof fetch = fetch) => 
     try { body = object(JSON.parse(text)); } catch { throw new ProescError('Solicitação inválida.'); }
     const action = typeof body.action === 'string' ? body.action : '';
     let actorId: string;
-    if (action === 'internal_probe') {
+    if (action === 'internal_sync') {
+      const key = req.headers.get('X-Proesc-Sync-Secret') || '';
+      if (!/^[0-9a-f]{64}$/.test(key)) throw new ProescError('Acesso interno não autorizado.', 403);
+      const { data, error } = await admin.rpc('proesc_sync_runtime_service', {
+        p_action: 'authorize', p_payload: { key },
+      });
+      if (error || typeof data?.actorId !== 'string') throw new ProescError('Acesso interno não autorizado.', 403);
+      return respond(await runProescSync(admin, data.actorId, transport));
+    } else if (action === 'internal_probe') {
       const key = req.headers.get('X-Proesc-Worker-Secret') || '';
       if (!/^[0-9a-f]{64}$/.test(key)) throw new ProescError('Acesso interno não autorizado.', 403);
       const { data, error } = await admin.rpc('proesc_internal_probe_service', {
