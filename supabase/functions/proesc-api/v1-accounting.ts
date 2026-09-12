@@ -122,6 +122,7 @@ const optionalInteger = (value: unknown, min: number, max: number): number | nul
 const paymentMethod = (value: unknown): string | null => {
   if (value === undefined || value === null || value === '') return null;
   if (typeof value === 'number' && Number.isSafeInteger(value) && value >= 0) return String(value);
+  // eslint-disable-next-line no-control-regex -- Rejeita deliberadamente controles ASCII no texto remoto.
   if (typeof value !== 'string' || value.length > 120 || /[\x00-\x1f\x7f]/.test(value)) invalid();
   return value as string;
 };

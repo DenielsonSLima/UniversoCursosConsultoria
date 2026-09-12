@@ -1,3 +1,4 @@
+/* global ReadableStream: readonly -- API Web disponível no runtime Deno dos testes. */
 import { createProescV1Client, ProescV1ReadError } from './v1-client.ts';
 
 function assert(value: unknown, message = 'assertion failed'): asserts value { if (!value) throw new Error(message); }

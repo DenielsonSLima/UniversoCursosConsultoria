@@ -1,3 +1,4 @@
+/* global ReadableStreamDefaultReader: readonly, TextDecoder: readonly -- APIs Web disponíveis no runtime Deno. */
 import {
   parseProescV1Accounting,
   PROESC_V1_MAX_ROWS,
@@ -73,6 +74,7 @@ function configuration(payload: Record<string, unknown>, maxRows: number): Proes
     const result = values.map((value: unknown) => {
       if (!isRecord(value)) throw new ProescV1ReadError('INVALID_RESPONSE', 200);
       const name = key === 'units' ? value.unidade ?? value.name : value.name;
+      // eslint-disable-next-line no-control-regex -- Rejeita deliberadamente controles ASCII nos nomes remotos.
       if (typeof name !== 'string' || !name.trim() || name.length > 300 || /[\x00-\x1f\x7f]/.test(name)) {
         throw new ProescV1ReadError('INVALID_RESPONSE', 200);
       }
@@ -88,6 +90,7 @@ function configuration(payload: Record<string, unknown>, maxRows: number): Proes
 
 export function createProescV1Client(options: ProescV1ClientOptions) {
   if (typeof options.token !== 'string' || options.token.length < 12 || options.token.length > 8192
+    // eslint-disable-next-line no-control-regex -- Credenciais não podem conter espaços nem controles ASCII.
     || /[\s\x00-\x1f\x7f]/.test(options.token)) throw new ProescV1ReadError('INVALID_REQUEST');
   const transport = options.transport ?? fetch;
   const timeoutMs = boundedInteger(options.timeoutMs ?? 12_000, 1, 30_000);
