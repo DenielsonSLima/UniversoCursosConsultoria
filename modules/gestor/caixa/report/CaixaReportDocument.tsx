@@ -91,6 +91,7 @@ const PositionTotalMetric: React.FC<{
 
 const SummaryPage: React.FC<{ report: CaixaDetailedReport }> = ({ report }) => {
   const statement = report.resumo;
+  const monthly = statement.compromissos.inadimplenciaMensal;
   const posicaoTotal = getCaixaReportPosicaoTotal(report);
   const resultLabel = statement.resumoCompetencia.resultadoStatus === 'NEGATIVO'
     ? 'Déficit do mês'
@@ -139,15 +140,15 @@ const SummaryPage: React.FC<{ report: CaixaDetailedReport }> = ({ report }) => {
           tone="navy"
         />
         <ExecutiveMetric
-          label="Inadimplência"
+          label="Inadimplência do mês"
           value={statement.compromissos.receberVencido}
-          helper="Valor vencido ainda não liquidado"
+          helper={`Não recebido até ${formatCaixaDate(monthly.dataCorte)}`}
           tone={statement.compromissos.receberVencido > 0 ? 'amber' : 'navy'}
         />
         <ExecutiveMetric
-          label="Margem de inadimplência"
+          label="Margem de inadimplência do mês"
           value={formatCaixaPercent(statement.compromissos.margemInadimplencia)}
-          helper="Sobre a carteira a receber"
+          helper="Sobre cobranças com vencimento no mês"
           tone={statement.compromissos.margemInadimplencia > 0 ? 'amber' : 'navy'}
         />
         <ExecutiveMetric
@@ -215,9 +216,14 @@ const SummaryPage: React.FC<{ report: CaixaDetailedReport }> = ({ report }) => {
       </div>
 
       <div className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-1 text-[7.5px] leading-3 text-blue-900">
-        <strong>Leitura correta:</strong> o resultado mensal representa o fluxo de caixa confirmado,
-        não lucro contábil por competência. O saldo Banese é a posição contábil do sistema; a integração
-        atual não consulta o extrato bancário.
+        {!monthly.completo ? (
+          <><strong>Indicadores mensais incompletos:</strong> {monthly.quantidadeEmConferencia} cobrança(s) em conferência não incluída(s).
+            {' '}Base do mês: {formatCaixaCurrency(monthly.baseElegivel)}. Posição até {formatCaixaDate(monthly.dataCorte)}.</>
+        ) : (
+          <><strong>Leitura correta:</strong> o resultado mensal representa o fluxo de caixa confirmado,
+            não lucro contábil por competência. O saldo Banese é a posição contábil do sistema; a integração
+            atual não consulta o extrato bancário.</>
+        )}
       </div>
 
       <CaixaReportSummaryBreakdowns report={report} />

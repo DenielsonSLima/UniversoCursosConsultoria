@@ -30,7 +30,6 @@ import type { CaixaPolo } from './caixa-polos';
 import {
   formatCaixaCompetencia,
   formatCaixaCurrency,
-  formatCaixaPercent,
 } from './caixa.formatters';
 import {
   CaixaBreakdownList,
@@ -39,6 +38,8 @@ import {
 import { CaixaReportLauncher } from './report/CaixaReportLauncher';
 import { CaixaReconciliationCard } from './components/CaixaReconciliationCard';
 import { CaixaFinanciamentoResumoCard } from './components/CaixaFinanciamentoResumoCard';
+import { CaixaCompromissosCards } from './components/CaixaCompromissosCards';
+import { CaixaMovimentacaoChart } from './components/CaixaMovimentacaoChart';
 import { CaixaLinhaCorteCard } from './components/CaixaLinhaCorteCard';
 import { caixaLinhaCorteQueryOptions } from './caixa-linha-corte.service';
 import { CaixaPatrimonioResumoCard } from './components/CaixaPatrimonioResumoCard';
@@ -147,21 +148,6 @@ const CaixaPage: React.FC<CaixaPageProps> = ({
 
   const isCurrentCompetencia = competencia === currentCompetencia;
   const isConsolidated = selectedPolo === 'todos';
-  const chartMonths = statement?.serieMensal.slice(-3) ?? [];
-  const hasChartMovement = chartMonths.some(
-    (month) => month.entradas !== 0 || month.saidas !== 0,
-  );
-  const chartResultMax = Math.max(
-    1,
-    ...chartMonths.map((month) => Math.abs(month.resultado)),
-  );
-  const getChartResultY = (result: number) => 50 - ((result / chartResultMax) * 35);
-  const chartResultPoints = chartMonths
-    .map((month, index) => {
-      const x = ((index + 0.5) / chartMonths.length) * 100;
-      return `${x},${getChartResultY(month.resultado)}`;
-    })
-    .join(' ');
 
   if (isLoading) {
     return (
@@ -338,132 +324,10 @@ const CaixaPage: React.FC<CaixaPageProps> = ({
         />
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="grid grid-cols-2 divide-x divide-y divide-slate-100 sm:grid-cols-3 md:grid-cols-5 md:divide-y-0">
-          {[
-            { label: 'Receitas futuras', value: formatCaixaCurrency(statement.compromissos.aReceber), color: 'text-emerald-700', helper: 'Compromisso em aberto hoje' },
-            { label: 'Inadimplência', value: formatCaixaCurrency(statement.compromissos.receberVencido), color: 'text-amber-600', helper: 'Valor vencido ainda não liquidado' },
-            { label: 'Margem de inadimplência', value: formatCaixaPercent(statement.compromissos.margemInadimplencia), color: 'text-amber-600', helper: 'Sobre a carteira a receber' },
-            { label: 'Obrigações futuras', value: formatCaixaCurrency(statement.compromissos.aPagar), color: 'text-rose-600', helper: 'Compromisso em aberto hoje' },
-            { label: 'Obrigações vencidas', value: formatCaixaCurrency(statement.compromissos.pagarVencido), color: 'text-rose-700', helper: 'Valor vencido ainda não liquidado' },
-          ].map((item) => (
-            <div key={item.label} className="px-4 py-3.5">
-              <p className="text-[11px] font-medium text-slate-500">{item.label}</p>
-              <p className={`mt-1 text-lg font-bold ${item.color}`}>{item.value}</p>
-              <p className="mt-0.5 text-[10px] text-slate-400">{item.helper}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+      <CaixaCompromissosCards compromissos={statement.compromissos} />
 
       <section className="grid grid-cols-1 gap-5 lg:grid-cols-5">
-        <div className="flex min-h-0 flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <h2 className="text-base font-bold text-slate-900">Movimentação operacional</h2>
-              <p className="mt-0.5 text-xs text-slate-500">
-                Receitas, despesas e resultado dos últimos três meses
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-3 text-[10px] font-medium text-slate-500 sm:justify-end">
-              <span className="flex items-center gap-1.5">
-                <i className="h-2.5 w-2.5 rounded-sm bg-emerald-500" /> Receitas
-              </span>
-              <span className="flex items-center gap-1.5">
-                <i className="h-2.5 w-2.5 rounded-sm bg-rose-500" /> Despesas
-              </span>
-              <span
-                className="flex items-center gap-1.5"
-                title="Resultado operacional: receitas menos despesas"
-              >
-                <i className="w-3 border-t-2 border-blue-500" /> Resultado operacional
-              </span>
-            </div>
-          </div>
-
-          {hasChartMovement ? (
-            <div className="relative mt-5 flex min-h-[11rem] flex-1 items-end border-b border-slate-100 px-1 pb-2">
-              <svg
-                className="pointer-events-none absolute inset-x-1 top-0 z-10 h-[calc(100%-1.75rem)] w-[calc(100%-0.5rem)] overflow-visible"
-                viewBox="0 0 100 100"
-                preserveAspectRatio="none"
-                aria-hidden="true"
-              >
-                <line
-                  x1="0"
-                  y1="50"
-                  x2="100"
-                  y2="50"
-                  stroke="#cbd5e1"
-                  strokeDasharray="3 4"
-                  vectorEffect="non-scaling-stroke"
-                />
-                <polyline
-                  points={chartResultPoints}
-                  fill="none"
-                  stroke="#3b82f6"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  vectorEffect="non-scaling-stroke"
-                />
-              </svg>
-              {chartMonths.map((month) => (
-                <div
-                  key={month.competencia}
-                  className="group/month relative flex h-full min-w-0 flex-1 cursor-help flex-col justify-end border-l border-slate-100 px-1.5 outline-none transition-colors first:border-l-0 hover:bg-slate-50/60 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 sm:px-2.5"
-                  role="img"
-                  tabIndex={0}
-                  aria-label={`${month.rotulo}: entradas ${formatCaixaCurrency(month.entradas)}; saídas ${formatCaixaCurrency(month.saidas)}; resultado ${formatCaixaCurrency(month.resultado)}`}
-                >
-                  <span className="pointer-events-none absolute left-1/2 top-0 z-30 hidden -translate-x-1/2 whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1.5 text-[10px] font-medium text-white shadow-lg group-hover/month:block group-focus/month:block">
-                    Receitas {formatCaixaCurrency(month.entradas)} · Despesas{' '}
-                    {formatCaixaCurrency(month.saidas)} · Resultado operacional{' '}
-                    {formatCaixaCurrency(month.resultado)}
-                  </span>
-                  <div className="relative flex flex-1 items-end justify-center gap-1.5">
-                    <span
-                      className={`pointer-events-none absolute left-1/2 z-20 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-sm ${
-                        month.resultadoStatus === 'POSITIVO'
-                          ? 'bg-emerald-500'
-                          : month.resultadoStatus === 'NEGATIVO'
-                            ? 'bg-rose-500'
-                            : 'bg-blue-500'
-                      }`}
-                      style={{ top: `${getChartResultY(month.resultado)}%` }}
-                      aria-hidden="true"
-                    />
-                    <div
-                      className="group relative min-h-0 w-3 rounded-t bg-emerald-500 transition hover:bg-emerald-600 sm:w-5"
-                      style={{ height: `${month.entradasEscalaPercentual}%` }}
-                      aria-hidden="true"
-                    >
-                      <span className="pointer-events-none absolute -top-8 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded bg-slate-900 px-2 py-1 text-[9px] text-white group-hover:block">
-                        {formatCaixaCurrency(month.entradas)}
-                      </span>
-                    </div>
-                    <div
-                      className="group relative min-h-0 w-3 rounded-t bg-rose-500 transition hover:bg-rose-600 sm:w-5"
-                      style={{ height: `${month.saidasEscalaPercentual}%` }}
-                      aria-hidden="true"
-                    >
-                      <span className="pointer-events-none absolute -top-8 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded bg-slate-900 px-2 py-1 text-[9px] text-white group-hover:block">
-                        {formatCaixaCurrency(month.saidas)}
-                      </span>
-                    </div>
-                  </div>
-                  <p className="mt-2 truncate text-center text-[10px] font-medium text-slate-500">
-                    {month.rotulo}
-                  </p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="mt-5 flex min-h-28 flex-1 items-center justify-center rounded-xl bg-slate-50 text-sm text-slate-400">
-              Nenhuma movimentação confirmada neste período.
-            </div>
-          )}
-        </div>
+        <CaixaMovimentacaoChart serieMensal={statement.serieMensal} />
 
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
           <div className="flex items-start justify-between gap-3">

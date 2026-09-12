@@ -1,6 +1,6 @@
 # Conciliação por origem — 4.8.50
 
-Estado: implementação, aplicação das RPCs e validação real aprovadas; publicação e smoke de produção pendentes.
+Estado: versão 4.8.50 publicada e confirmada por HTTP; smoke autenticado final em andamento.
 
 Base publicada: PR143, squash 58a6675fcc531d4e907987b0d5281698fb6ad7e6, versão 4.8.49/revisão 58. Nova revisão prevista: 4.8.50/59.
 
@@ -38,9 +38,9 @@ O frontend coleta a seleção e apresenta o retorno. Origem, filtro, paginação
 - Sessão autenticada na base 4.8.49 reproduziu o botão Atualizar Dados, textos Mercado Pago e ausência do filtro de origem. A sessão Safari está disponível para o smoke após a publicação.
 - Teste financial_reconciliation_sources.readonly.sql executado no banco real por MCP em 7,85 segundos, incluindo overhead: todos os asserts aprovados. Nove chamadas conferiram negativas de autorização/escopo, paginação, origem, pagos, pendentes, REVIEW/VENCIDO e paridade de valores, datas, composição e conta com a projeção V2.
 - Projeção real de pagamentos em todos os polos: 3.821 no total, 3.740 Proesc e 56 Banese (55 pela API e um manual). Outras 25 baixas manuais permanecem na opção Todas; paridade com V2 aprovada.
-- Publicação e smoke de produção ainda pendentes; não confundir as validações aprovadas com publicação concluída.
+- PR144 incorporado após autorização explícita do usuário, squash 4b513e085dcb6c0dcf133cf9c0975f28a0023caf. Vercel SUCCESS no deployment J7mkS62Avibmi9AXPuR42EGj3jpE; produção HTTP 200 no asset main-B8U4uhUw.js com versão 4.8.50 confirmada. Smoke autenticado final em andamento pelo coordenador.
 
-Publicação e reindexação RAG ficam com o coordenador, somente após o fechamento. Nenhuma reindexação foi feita na preparação; a 4.8.49 já foi indexada uma vez pelo coordenador.
+Publicação executada pelo coordenador. O RAG da 4.8.50 foi reindexado uma vez por ele, com 11 fontes e 71 chunks; não repetir nesta continuação documental.
 
 ## Manifesto explícito
 

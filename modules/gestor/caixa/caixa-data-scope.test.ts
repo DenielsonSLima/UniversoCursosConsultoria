@@ -124,7 +124,7 @@ test('rejeita resposta de outro polo, consolidado ou competência', () => {
   );
 });
 
-test('mapeia a margem de inadimplência retornada pelo backend ou calculada no domínio', () => {
+test('exibe a inadimplência mensal somente com os valores e critérios da RPC', () => {
   const basePayload = {
     versao: 2,
     meta: {
@@ -159,6 +159,12 @@ test('mapeia a margem de inadimplência retornada pelo backend ou calculada no d
       a_receber: 63257.4,
       receber_vencido: 5038.2,
       margem_inadimplencia: 7.96,
+      inadimplencia_mensal: {
+        periodo_inicio: '2026-08-01', periodo_fim_exclusivo: '2026-09-01',
+        data_corte: '2026-08-27', base_elegivel: 10000, quantidade_elegiveis: 40,
+        quantidade_em_conferencia: 2, valor_nominal_em_conferencia: 500,
+        completo: false, criterio: 'VENCIMENTO_MENSAL_POSICAO_NO_CORTE',
+      },
       a_pagar: 0,
       pagar_vencido: 0,
     },
@@ -172,16 +178,55 @@ test('mapeia a margem de inadimplência retornada pelo backend ou calculada no d
   assert.equal(parsedWithBackendMargin.compromissos.margemInadimplencia, 7.96);
   assert.equal(formatCaixaPercent(parsedWithBackendMargin.compromissos.margemInadimplencia), '7,96%');
 
-  const parsedWithoutBackendMargin = mapCaixaStatement({
+  assert.equal(parsedWithBackendMargin.compromissos.inadimplenciaMensal.baseElegivel, 10000);
+  assert.equal(parsedWithBackendMargin.compromissos.inadimplenciaMensal.quantidadeEmConferencia, 2);
+  assert.equal(parsedWithBackendMargin.compromissos.inadimplenciaMensal.completo, false);
+  for (const invalidMargin of [undefined, null, NaN]) {
+    assert.throws(() => mapCaixaStatement({
+      ...basePayload,
+      compromissos: { ...basePayload.compromissos, margem_inadimplencia: invalidMargin },
+    }), /Contrato inválido/);
+  }
+  for (const invalidMetadata of [undefined, {
+    ...basePayload.compromissos.inadimplencia_mensal, periodo_inicio: '2026-07-01',
+  }, { ...basePayload.compromissos.inadimplencia_mensal, quantidade_em_conferencia: null }]) {
+    assert.throws(() => mapCaixaStatement({
+      ...basePayload,
+      compromissos: { ...basePayload.compromissos, inadimplencia_mensal: invalidMetadata },
+    }), /Contrato inválido/);
+  }
+  const noVerifiedBase = mapCaixaStatement({
     ...basePayload,
     compromissos: {
-      a_receber: 100,
-      receber_vencido: 15,
-      a_pagar: 0,
-      pagar_vencido: 0,
+      ...basePayload.compromissos, receber_vencido: 0, margem_inadimplencia: 0,
+      inadimplencia_mensal: {
+        ...basePayload.compromissos.inadimplencia_mensal, base_elegivel: 0, quantidade_elegiveis: 0,
+      },
     },
   });
-  assert.equal(parsedWithoutBackendMargin.compromissos.margemInadimplencia, 15);
-  assert.equal(formatCaixaPercent(parsedWithoutBackendMargin.compromissos.margemInadimplencia), '15,0%');
-});
+  assert.equal(noVerifiedBase.compromissos.margemInadimplencia, 0);
+  assert.equal(noVerifiedBase.compromissos.inadimplenciaMensal.completo, false);
 
+  const seriesItem = {
+    competencia: '2026-08-01', rotulo: 'Ago/2026', entradas: 1000, saidas: 200,
+    resultado: 800, resultado_status: 'POSITIVO', entradas_escala_percentual: 40,
+    saidas_escala_percentual: 8, inadimplencia: 2500, inadimplencia_escala_percentual: 100,
+    inadimplencia_quantidade_em_conferencia: 2, inadimplencia_completo: false,
+    resultado_posicao_percentual: 68, inadimplencia_posicao_percentual: 0,
+    grafico_zero_posicao_percentual: 100,
+  };
+  const series = mapCaixaStatement({ ...basePayload, serie_mensal: [seriesItem] }).serieMensal;
+  assert.equal(series[0].inadimplencia, 2500);
+  assert.equal(series[0].inadimplenciaCompleto, false);
+  assert.equal(series[0].resultadoPosicaoPercentual, 68);
+  assert.equal(series[0].inadimplenciaPosicaoPercentual, 0);
+  assert.equal(series[0].graficoZeroPosicaoPercentual, 100);
+  for (const invalid of [
+    { ...seriesItem, inadimplencia: undefined },
+    { ...seriesItem, inadimplencia_completo: undefined },
+    { ...seriesItem, resultado_posicao_percentual: 101 },
+    { ...seriesItem, inadimplencia_quantidade_em_conferencia: -1 },
+  ]) {
+    assert.throws(() => mapCaixaStatement({ ...basePayload, serie_mensal: [invalid] }), /Contrato inválido/);
+  }
+});

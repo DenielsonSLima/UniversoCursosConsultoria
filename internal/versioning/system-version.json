@@ -1,8 +1,8 @@
 {
-  "version": "4.8.50",
+  "version": "4.8.51",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 59,
+  "revision": 60,
   "releasedAt": "2026-09-12",
-  "summary": "Conciliação com filtro de origem Proesc e Banese e identificação consistente"
+  "summary": "Indicadores de inadimplência e margem do Caixa por mês e polo selecionados"
 }

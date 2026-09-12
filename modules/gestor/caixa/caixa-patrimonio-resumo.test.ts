@@ -154,8 +154,8 @@ test('exibe posição total, posição líquida, patrimônio, financiamento e cu
     'utf8',
   );
   const resumoOperacionalIndex = pageSource.indexOf('label="Entradas operacionais no mês"');
-  const compromissosIndex = pageSource.indexOf("{ label: 'Receitas futuras'");
-  const graficoIndex = pageSource.indexOf('Movimentação operacional');
+  const compromissosIndex = pageSource.indexOf('<CaixaCompromissosCards');
+  const graficoIndex = pageSource.indexOf('<CaixaMovimentacaoChart');
   const conciliacaoIndex = pageSource.indexOf('<CaixaReconciliationCard');
   const posicaoTotalIndex = pageSource.indexOf('<CaixaPosicaoTotalResumoCard');
   const posicaoLiquidaIndex = pageSource.indexOf('<CaixaPosicaoLiquidaResumoCard');

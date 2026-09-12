@@ -89,7 +89,14 @@ const makeReport = (): CaixaDetailedReport => ({
     },
     saldosHoje: { registradoTotal: 15.8, bancarioRegistrado: 15.8, caixaLocal: 0, compartilhadoTotal: 15.8, posicaoCompartilhadaEscopo: 15.8, naoAtribuido: 0 },
     resumoCompetencia: { entradasRecebidasBrutas: 0.9, tarifasBancariasConfirmadas: 0, saidasPagas: 0, resultado: 0.9, resultadoStatus: 'POSITIVO', quantidadeRecebimentos: 1, quantidadePagamentos: 0 },
-    compromissos: { aReceber: 0, receberVencido: 0, margemInadimplencia: 0, aPagar: 0, pagarVencido: 0 },
+    compromissos: {
+      aReceber: 0, receberVencido: 0, margemInadimplencia: 0, aPagar: 0, pagarVencido: 0,
+      inadimplenciaMensal: {
+        periodoInicio: '2026-08-01', periodoFimExclusivo: '2026-09-01', dataCorte: '2026-08-06',
+        baseElegivel: 0, quantidadeElegiveis: 0, quantidadeEmConferencia: 0,
+        valorNominalEmConferencia: 0, completo: true, criterio: 'VENCIMENTO_MENSAL_POSICAO_NO_CORTE',
+      },
+    },
     receitasPorModalidade: [
       { codigo: 'EAD', rotulo: 'Cursos EAD', valor: 0.9, quantidade: 1, percentual: 100 },
       { codigo: 'ESPECIALIZACAO', rotulo: 'Especialização', valor: 0, quantidade: 0, percentual: 0 },
@@ -420,4 +427,29 @@ test('reutiliza exclusivamente o compositor institucional canônico', async () =
   assert.match(modalSource, /<iframe/);
   assert.match(modalSource, /downloadPdfBlob\(preparedPdf\.blob, preparedPdf\.fileName\)/);
   assert.doesNotMatch(modalSource, /CaixaReportDocument/);
+});
+
+test('indicadores mensais em conferência preservam paginação e exportação vetorial', async () => {
+  const report = makeReport();
+  report.resumo.compromissos.receberVencido = 1250;
+  report.resumo.compromissos.margemInadimplencia = 25;
+  report.resumo.compromissos.inadimplenciaMensal = {
+    periodoInicio: '2026-08-01', periodoFimExclusivo: '2026-09-01', dataCorte: '2026-08-06',
+    baseElegivel: 5000, quantidadeElegiveis: 20, quantidadeEmConferencia: 3,
+    valorNominalEmConferencia: 750, completo: false, criterio: 'VENCIMENTO_MENSAL_POSICAO_NO_CORTE',
+  };
+  const fonts = await Promise.all([
+    ['regular', 'Regular'], ['medium', 'Medium'], ['semiBold', 'SemiBold'],
+    ['bold', 'Bold'], ['extraBold', 'ExtraBold'], ['black', 'Black'],
+  ].map(async ([key, suffix]) => {
+    const bytes = await readFile(resolve(`public/fonts/Inter-${suffix}.ttf`));
+    return [`${key}FontBuffer`, bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)];
+  }));
+  const pdf = await createCaixaReportPdfDocument(report, undefined, Object.fromEntries(fonts));
+  const pages = inspectCaixaPdfOperatorsForTest(pdf);
+  assert.equal(pages.length, 5);
+  assert.ok(pages.every((page) => page.hasTextOperator && page.imageDrawCount === 0));
+  if (process.env.CAIXA_PDF_FIXTURE_OUTPUT) {
+    await writeFile(`${process.env.CAIXA_PDF_FIXTURE_OUTPUT}.review.pdf`, new Uint8Array(pdf.output('arraybuffer')));
+  }
 });
