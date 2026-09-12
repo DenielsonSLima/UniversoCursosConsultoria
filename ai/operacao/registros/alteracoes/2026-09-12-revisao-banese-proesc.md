@@ -6,7 +6,7 @@
 - Diagnóstico autenticado isolado faz consultas GET e não executa manutenção ou conciliação.
 - Caixa, recebíveis e recebimentos usam composição Proesc confirmada por evidência histórica e pagamento API compatíveis. Evidência posterior conflitante invalida a anterior; omissão de componentes na API não apaga prova anterior.
 - Ausência de componentes permanece nula, inclusive quando recebido e principal são iguais. Banese/manual continuam pelo contrato existente.
-- Duas comprovações históricas preparadas; gravação somente após interface publicada. Demais encargos Proesc ainda não discriminados integralmente.
+- Duas comprovações históricas gravadas após a interface 4.8.47 entrar em produção: ambas VERIFIED, desconto de R$ 19,90, juros e multa zero. As duas projeções retornam CONCILIADO_POR_CONFERENCIA_PROESC; recebíveis preservados e replay idempotente confirmado. Demais encargos Proesc ainda não discriminados integralmente.
 
 ## Validação
 
@@ -19,7 +19,10 @@
 ## Limitações e sequência
 
 - Calendário automático validado somente para2026; anos sem calendário não recebem extensão presumida. Feriados locais não presumidos.
-- Publicação GitHub/Vercel e registro definitivo das duas evidências pendentes no fechamento deste registro.
+- PR 141 incorporado por squash e026a0f56c301f86ba9aee30c263042d97ff1631. Vercel success; produção conferida pelo coordenador com HTTP 200 e versão 4.8.47 no ativo público main-BeqyXds2.js.
+- GitHub Actions do HEAD 17e83e67 permaneceu QUEUED sem runner: runs 34717154177/178, nenhuma etapa executada. Os testes locais e ensaios SQL acima passaram; não houve aprovação desses jobs de CI. A branch main não tinha checks obrigatórios configurados na consulta realizada.
+- Auditoria pós-gravação somente leitura: T42 mantém 346 vínculos, 204 pagos, 142 abertos e R$ 53.813,57 recebidos. Radiologia: título revisado PAGO por R$ 260,00 em 08/09/2026, vencimento original 06/09/2026.
+- Registro definitivo das duas evidências concluído; novas turmas e ampliação financeira pertencem ao lote próprio.
 - Novo pedido do usuário retomou nove turmas por XLS durante este lote. Preparação independente em arquivos privados; nenhuma importação das novas turmas pertence a este manifesto.
 
 ## Registro remoto

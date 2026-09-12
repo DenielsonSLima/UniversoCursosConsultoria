@@ -1,6 +1,6 @@
 # Memória canônica do projeto
 
-Atualizada em: 2026-08-22
+Atualizada em: 2026-09-12
 
 ## Finalidade
 
@@ -40,3 +40,19 @@ Este arquivo é um índice curto de contexto durável. Ajustes rápidos não pre
 - search lê somente o índice existente e nunca grava ou reindexa.
 - index é executado explicitamente uma vez no fechamento de lote relevante.
 - Embeddings e OpenContext são opcionais e nunca bloqueiam a operação.
+
+## Entrega financeira publicada — 2026-09-12 (4.8.47)
+
+- PR 141: squash e026a0f56c301f86ba9aee30c263042d97ff1631; Vercel success e versão pública 4.8.47 confirmada. GitHub Actions ficou QUEUED sem runner; não confundir testes locais aprovados com CI concluído.
+- Banese reconhece o próximo dia útil nacional comprovado de 2026, sem alterar os termos. Título revisado da Radiologia pago por R$ 260,00 em 08/09/2026.
+- Composição Proesc exige prova compatível com principal, recebido e data; evidência posterior conflitante invalida a prova. Desconhecido permanece nulo. Duas provas históricas foram gravadas com desconto de R$ 19,90 cada e recebíveis preservados.
+- Auditoria da T42 após essas provas: 346 vínculos, 204 pagos, 142 abertos, R$ 53.813,57 recebidos. A importação de outras turmas possui lote e conferência próprios; não inferir cobertura de ciclos pelo número da turma.
+- Registro: registros/alteracoes/2026-09-12-revisao-banese-proesc.md.
+
+## Importação Proesc por XLS — 2026-09-12
+
+- Cadastros por CPF canônico preservam pessoas existentes; estado acadêmico pertence à matrícula, não ao cadastro global. Reuso em outro polo acrescenta visibilidade sem mover o polo original.
+- A fonte XLS comprova cadastro, turma e situação acadêmica; os pagamentos são conferidos pela API. Turno, data final, ID nativo e cobertura financeira não são inferidos quando ausentes.
+- Etapa aplicada: 385 pessoas (382 novas, 3 reutilizadas), quatro turmas INTEGRAL de Japoatã e 207 matrículas; histórico com 2.940 cobranças e 1.854 pagamentos, total recebido de R$ 470.746,72. Cinco turmas SEM aguardam turno e um cadastro aguarda CPF.
+- Cobertura financeira é individual e permanece em revisão até prova suficiente. Sincronizar pagamento confirmado não autoriza criar outro ciclo ou boleto. T42 e Radiologia mantêm as regras existentes.
+- Fechamento local 4.8.48 em validação; não presumir publicação ou CI concluídos. Registro: registros/alteracoes/2026-09-12-proesc-importacao-xls.md.

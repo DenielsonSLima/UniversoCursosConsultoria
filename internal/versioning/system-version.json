@@ -1,8 +1,8 @@
 {
-  "version": "4.8.47",
+  "version": "4.8.48",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 56,
+  "revision": 57,
   "releasedAt": "2026-09-12",
-  "summary": "Conciliação Banese em dia útil e discriminação comprovada de recebimentos Proesc"
+  "summary": "Importação acadêmica Proesc com histórico financeiro e proteção individual de ciclos"
 }
