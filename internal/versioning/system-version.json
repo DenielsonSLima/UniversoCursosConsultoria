@@ -1,8 +1,8 @@
 {
-  "version": "4.8.42",
+  "version": "4.8.43",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 51,
+  "revision": 52,
   "releasedAt": "2026-09-12",
-  "summary": "Consulta Proesc em Configurações para conferência de histórico financeiro"
+  "summary": "Proesc com configuração do token e histórico por turma"
 }

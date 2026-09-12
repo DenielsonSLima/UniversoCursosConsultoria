@@ -1,41 +1,35 @@
 import { supabase } from '../../../../lib/supabase';
 
-export interface ProescRun {
-  id: string;
-  resource: 'people' | 'invoices';
-  filters: { unitId: string; start: string; end: string };
-  status: 'running' | 'complete';
-  pages: number;
-  records: number;
-  created_at: string;
-  updated_at: string;
-  cursor: { year: number; month: number; page: number } | null;
-}
 export interface ProescStatus {
   configured: boolean;
   updatedAt: string | null;
-  consultations: ProescRun[];
-  totalConsultations: number;
 }
-export interface LegacyStudent {
-  enrollmentId: string;
-  studentName: string;
+export interface ProescClassHistory {
+  classId: string;
+  classCode: string;
+  className: string;
+  operation: string;
+  source: string;
   status: string;
-  receivables: Array<{
-    id: string; description: string; dueDate: string; amount: number;
-    paidAmount: number | null; paymentDate: string | null; status: string; legacyId: string;
-  }>;
+  lastEventAt: string | null;
+  eventsCount: number;
+  records: number;
 }
-export interface ProescPage {
-  run: ProescRun;
-  page: { records: Record<string, unknown>[]; consultedAt: string; period: string | null } | null;
+export interface ProescHistoryEvent {
+  id: string;
+  operation: string;
+  status: string;
+  source: string;
+  occurredAt: string | null;
+  records: number;
+  summary: string;
 }
 
-// Credenciais são enviadas uma vez; não entram em query keys, storage ou mutation cache.
+// Token enviado uma vez; não entra em storage, query keys ou cache de mutations.
 async function invoke<T>(action: string, payload: object = {}): Promise<T> {
   const { data, error } = await supabase.functions.invoke('proesc-api', { body: { action, ...payload } });
   if (error) {
-    let message = 'Não foi possível acessar o Proesc. Confira sua conexão e as permissões.';
+    let message = 'Não foi possível acessar a configuração Proesc.';
     if (error.context instanceof Response) {
       const body = await error.context.json().catch(() => null);
       if (typeof body?.error === 'string') message = body.error;
@@ -47,17 +41,14 @@ async function invoke<T>(action: string, payload: object = {}): Promise<T> {
 }
 
 export const proescKeys = {
-  status: ['configuracoes', 'proesc', 'status'] as const,
-  history: ['configuracoes', 'proesc', 't42-history'] as const,
-  page: (id: string, position: number) => ['configuracoes', 'proesc', 'page', id, position] as const,
+  status: ['configuracoes', 'proesc', 'connection-v2'] as const,
+  classes: (offset: number) => ['configuracoes', 'proesc', 'classes', offset] as const,
+  events: (classId: string, offset: number) => ['configuracoes', 'proesc', 'events', classId, offset] as const,
 };
 export const proescService = {
-  status: (offset = 0) => invoke<ProescStatus>('status', { offset }),
+  status: () => invoke<ProescStatus>('status'),
   saveToken: (token: string) => invoke('save_token', { token }),
   removeToken: () => invoke('remove_token'),
-  test: () => invoke<{ message: string }>('test'),
-  history: () => invoke<{ classCode: string; students: LegacyStudent[] }>('history_t42'),
-  start: (resource: ProescRun['resource'], filters: ProescRun['filters']) => invoke<ProescRun>('start', { resource, filters }),
-  advance: (id: string) => invoke<ProescRun>('advance', { id }),
-  page: (id: string, position: number) => invoke<ProescPage>('page', { id, position }),
+  classes: (offset = 0) => invoke<{ classes: ProescClassHistory[]; totalClasses: number }>('class_history', { offset }),
+  events: (classId: string, offset = 0) => invoke<{ events: ProescHistoryEvent[]; totalEvents: number }>('class_events', { classId, offset }),
 };

@@ -99,7 +99,7 @@ const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({
     { id: 'mensageria', title: 'WhatsApp API', desc: 'Meta Cloud API e webhooks', icon: <MessageCircle size={24} />, color: 'bg-green-500' },
     { id: 'templates-mensagens', title: 'Templates', desc: 'Textos de notificação', icon: <FileCode2 size={24} />, color: 'bg-blue-400' },
     { id: 'integracao-bancaria', title: 'Integração Bancária', desc: 'Rotas de pagamento', icon: <CreditCard size={24} />, color: 'bg-rose-500' },
-    { id: 'proesc', title: 'Proesc', desc: 'Conexão e conferência do histórico da T42', icon: <Server size={24} />, color: 'bg-cyan-700' },
+    { id: 'proesc', title: 'Proesc', desc: 'Token de acesso e histórico por turma', icon: <Server size={24} />, color: 'bg-cyan-700' },
     ...(banesePollingQuery.data?.available ? [{
       id: 'consulta-api-banese',
       title: 'Consulta API Banese',
