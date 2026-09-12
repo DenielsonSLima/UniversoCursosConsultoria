@@ -81,6 +81,14 @@ const settlementTimeSourceLabel = (row: ConciliacaoRecebimentoRow) => {
 };
 
 const settlementOriginBadge = (row: ConciliacaoRecebimentoRow) => {
+  if (row.sourceSystem === 'PROESC') {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[10px] font-extrabold text-sky-700">
+        <Globe size={12} aria-hidden="true" />
+        {row.sourceLabel || 'Proesc'}
+      </span>
+    );
+  }
   if (row.status !== 'PAGO') {
     return (
       <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-800">
@@ -139,7 +147,7 @@ const settlementOriginBadge = (row: ConciliacaoRecebimentoRow) => {
 
 const statusBadge = (row: ConciliacaoRecebimentoRow) => (
   <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-black uppercase ${conciliacaoStatusClass(row.status)}`}>
-    {row.status}
+    {row.statusLabel || row.status}
   </span>
 );
 
@@ -167,9 +175,9 @@ const SettlementDetails: React.FC<{
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">Baixa financeira</p>
-          <p className="mt-0.5 text-xs font-semibold text-slate-600">Ainda sem baixa registrada.</p>
+          <p className="mt-0.5 text-xs font-semibold text-slate-600">{row.statusLabel || 'Ainda sem baixa registrada.'}</p>
         </div>
-        <button
+        {row.sourceSystem === 'BANESE' ? <button
           type="button"
           onClick={() => onRefresh(row.id)}
           disabled={isRefreshing || isBatchSyncing}
@@ -178,7 +186,7 @@ const SettlementDetails: React.FC<{
         >
           <RefreshCw size={12} aria-hidden="true" className={isRefreshing ? 'animate-spin text-blue-600' : ''} />
           {isRefreshing ? 'Verificando...' : 'Re-verificar'}
-        </button>
+        </button> : null}
       </div>
     );
   }
@@ -319,7 +327,7 @@ const ConciliacaoRecebimentoRows: React.FC<ConciliacaoRecebimentoRowsProps> = ({
   if (isError) {
     return (
       <div role="alert" className="bg-rose-50 p-6 text-center text-xs font-semibold text-rose-700">
-        Não foi possível recuperar os lançamentos do ambiente bancário ativo.
+        Não foi possível recuperar os lançamentos da conciliação.
       </div>
     );
   }
@@ -381,9 +389,9 @@ const ConciliacaoRecebimentoRows: React.FC<ConciliacaoRecebimentoRowsProps> = ({
           const isRefreshing = refreshingIds.includes(row.id);
           return (
             <article key={row.id} aria-labelledby={`conciliacao-cobranca-${row.id}-mobile`} className="space-y-4 p-4">
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-col items-start justify-between gap-3 sm:flex-row">
                 <RowIdentity row={row} titleId={`conciliacao-cobranca-${row.id}-mobile`} />
-                <span className="shrink-0">{statusBadge(row)}</span>
+                <span className="max-w-full">{statusBadge(row)}</span>
               </div>
               <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl border border-slate-100 bg-white p-3 sm:grid-cols-4">
                 {field('Nosso Número', row.nossoNumero || '-')}

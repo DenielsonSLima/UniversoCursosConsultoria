@@ -1,13 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Archive,
-  Zap,
   Building2,
   CircleHelp,
-  CreditCard,
+  BookOpen,
   FileCheck,
   Globe,
-  Loader2,
   Wallet,
   Sparkles,
 } from 'lucide-react';
@@ -15,6 +13,7 @@ import type {
   BaneseReceivable,
   CanalBaixaConciliacao,
   ConciliacaoChannelCounts,
+  SourceSystemConciliacao,
 } from '../conciliacao-bancaria.fetch';
 import ConciliacaoPagination from './ConciliacaoPagination';
 import ConciliacaoRecebimentoFilters from './ConciliacaoRecebimentoFilters';
@@ -23,16 +22,18 @@ import ConciliacaoRecebimentoRows from './ConciliacaoRecebimentoRows';
 interface ConciliacaoOrigemBaixaPanelProps {
   rows: BaneseReceivable[];
   searchTerm: string;
+  sourceSystemFilter: SourceSystemConciliacao;
+  onChangeSourceSystem: (source: SourceSystemConciliacao) => void;
   refreshingIds: string[];
   isLoading: boolean;
   isError: boolean;
   onSearchTermChange: (value: string) => void;
   onRefresh: (receivableId: string) => void;
-  onBatchRefresh?: (ids: string[]) => Promise<void>;
   // Pagination & Filter props
   page: number;
   pageSize: number;
   totalItems: number;
+  totalPages: number;
   onPageChange: (newPage: number) => void;
   onPageSizeChange?: (newPageSize: number) => void;
   selectedCanal: CanalBaixaConciliacao | 'TODOS';
@@ -50,15 +51,17 @@ interface ConciliacaoOrigemBaixaPanelProps {
 export const ConciliacaoOrigemBaixaPanel: React.FC<ConciliacaoOrigemBaixaPanelProps> = ({
   rows,
   searchTerm,
+  sourceSystemFilter,
+  onChangeSourceSystem,
   refreshingIds,
   isLoading,
   isError,
   onSearchTermChange,
   onRefresh,
-  onBatchRefresh,
   page,
   pageSize,
   totalItems,
+  totalPages,
   onPageChange,
   onPageSizeChange,
   selectedCanal,
@@ -72,38 +75,6 @@ export const ConciliacaoOrigemBaixaPanel: React.FC<ConciliacaoOrigemBaixaPanelPr
   onClearSettlementPeriod,
   channelCounts,
 }) => {
-  const [isBatchSyncing, setIsBatchSyncing] = useState(false);
-  const [batchProgress, setBatchProgress] = useState<{ current: number; total: number } | null>(null);
-
-  const pendingReceivableIds = rows
-    .filter((r) => r.status !== 'PAGO')
-    .map((r) => r.id);
-
-  const handleBatchSync = async () => {
-    if (pendingReceivableIds.length === 0 || isBatchSyncing) return;
-    setIsBatchSyncing(true);
-    setBatchProgress({ current: 0, total: pendingReceivableIds.length });
-
-    try {
-      if (onBatchRefresh) {
-        await onBatchRefresh(pendingReceivableIds);
-      } else {
-        for (let i = 0; i < pendingReceivableIds.length; i += 1) {
-          const id = pendingReceivableIds[i];
-          setBatchProgress({ current: i + 1, total: pendingReceivableIds.length });
-          try {
-            await onRefresh(id);
-          } catch {
-            // continue batch
-          }
-        }
-      }
-    } finally {
-      setIsBatchSyncing(false);
-      setBatchProgress(null);
-    }
-  };
-
   return (
     <section className="space-y-6 rounded-[2rem] border border-slate-100 bg-white p-6 shadow-sm">
       {/* Informative Banner on API Automation */}
@@ -114,10 +85,10 @@ export const ConciliacaoOrigemBaixaPanel: React.FC<ConciliacaoOrigemBaixaPanelPr
           </div>
           <div className="flex-1">
             <h4 className="text-xs font-black uppercase tracking-wider text-blue-900">
-              Sincronização 100% Automática em Segundo Plano
+              Conciliação automática · Banese e Proesc
             </h4>
             <p className="mt-1 text-xs leading-relaxed text-blue-800">
-              O <strong>Worker de Conciliação em Segundo Plano</strong> consulta a API Banese e aplica automaticamente as baixas financeiras confirmadas. Não é necessário verificar aluno por aluno. O botão abaixo é um recurso opcional para antecipar a consulta das parcelas pendentes visíveis.
+              Os pagamentos confirmados no <strong>Banese e no Proesc</strong> são consultados e conciliados automaticamente. Acompanhe aqui as cobranças e a origem de cada baixa.
             </p>
           </div>
         </div>
@@ -130,33 +101,11 @@ export const ConciliacaoOrigemBaixaPanel: React.FC<ConciliacaoOrigemBaixaPanelPr
             Painel de Conciliação e Origem das Baixas
           </h3>
           <p className="mt-1 text-xs text-slate-500">
-            Rastreamento unificado de lançamentos conciliados via API Banese, Arquivo CNAB240, Caixa e Mercado Pago.
+            Recebimentos Banese e Proesc, retornos CNAB240, baixas no Caixa e histórico migrado.
           </p>
         </div>
 
-        {/* Batch Sync All Button */}
-        {pendingReceivableIds.length > 0 ? (
-          <button
-            type="button"
-            onClick={() => { void handleBatchSync(); }}
-            disabled={isBatchSyncing}
-            className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-md hover:bg-blue-700 disabled:opacity-50 transition-all"
-          >
-            {isBatchSyncing ? (
-              <>
-                <Loader2 size={16} className="animate-spin" />
-                <span>
-                  Sincronizando {batchProgress ? `${batchProgress.current}/${batchProgress.total}` : 'Lote'}...
-                </span>
-              </>
-            ) : (
-              <>
-                <Zap size={16} className="text-amber-300" />
-                <span>Sincronizar Visíveis em Lote ({pendingReceivableIds.length})</span>
-              </>
-            )}
-          </button>
-        ) : null}
+
       </div>
 
       {/* KPI Cards por Canal de Baixa */}
@@ -196,7 +145,7 @@ export const ConciliacaoOrigemBaixaPanel: React.FC<ConciliacaoOrigemBaixaPanelPr
             <Globe size={16} />
           </div>
           <span className="mt-2 text-2xl font-black">{channelCounts.apiCount}</span>
-          <span className="text-[10px] opacity-80">Baixas online diretas</span>
+          <span className="text-[10px] opacity-80">Conciliação via API</span>
         </button>
 
         <button
@@ -237,20 +186,20 @@ export const ConciliacaoOrigemBaixaPanel: React.FC<ConciliacaoOrigemBaixaPanelPr
 
         <button
           type="button"
-          onClick={() => onSelectCanal('MERCADO_PAGO')}
-          aria-pressed={selectedCanal === 'MERCADO_PAGO'}
+          onClick={() => onSelectCanal('PROESC')}
+          aria-pressed={selectedCanal === 'PROESC'}
           className={`flex flex-col rounded-2xl border p-4 text-left transition-all ${
-            selectedCanal === 'MERCADO_PAGO'
+            selectedCanal === 'PROESC'
               ? 'border-sky-600 bg-sky-600 text-white shadow-md'
               : 'border-sky-100 bg-sky-50/50 text-sky-900 hover:border-sky-200'
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase tracking-wider opacity-90">Mercado Pago</span>
-            <CreditCard size={16} />
+            <span className="text-[10px] font-black uppercase tracking-wider opacity-90">Proesc</span>
+            <BookOpen size={16} />
           </div>
-          <span className="mt-2 text-2xl font-black">{channelCounts.mpCount}</span>
-          <span className="text-[10px] opacity-80">Cartão de Crédito</span>
+          <span className="mt-2 text-2xl font-black">{channelCounts.proescCount}</span>
+          <span className="text-[10px] opacity-80">Registros do Proesc</span>
         </button>
 
         <button
@@ -292,6 +241,8 @@ export const ConciliacaoOrigemBaixaPanel: React.FC<ConciliacaoOrigemBaixaPanelPr
 
       <ConciliacaoRecebimentoFilters
         searchTerm={searchTerm}
+        sourceSystemFilter={sourceSystemFilter}
+        onChangeSourceSystem={onChangeSourceSystem}
         selectedStatus={selectedStatus}
         settlementStartDate={settlementStartDate}
         settlementEndDate={settlementEndDate}
@@ -309,7 +260,7 @@ export const ConciliacaoOrigemBaixaPanel: React.FC<ConciliacaoOrigemBaixaPanelPr
           refreshingIds={refreshingIds}
           isLoading={isLoading}
           isError={isError}
-          isBatchSyncing={isBatchSyncing}
+          isBatchSyncing={false}
           onRefresh={onRefresh}
         />
 
@@ -318,6 +269,7 @@ export const ConciliacaoOrigemBaixaPanel: React.FC<ConciliacaoOrigemBaixaPanelPr
             page={page}
             pageSize={pageSize}
             totalItems={totalItems}
+            totalPages={totalPages}
             onPageChange={onPageChange}
             onPageSizeChange={onPageSizeChange}
           />

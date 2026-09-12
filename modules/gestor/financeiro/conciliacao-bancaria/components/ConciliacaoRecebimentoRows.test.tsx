@@ -8,6 +8,7 @@ import { mapFinancialReceipt } from '../conciliacao-recebimentos.model';
 const renderReceipt = (overrides: Record<string, unknown> = {}) => {
   const row = mapFinancialReceipt({
     id: 'receipt-test',
+    status: 'PAGO',
     cliente_nome: 'Pagador de teste',
     origem: 'AUTOMATICA_BANESE',
     data_pagamento: '2026-08-31',
@@ -88,4 +89,34 @@ test('baixa manual mantém as duas datas recebidas do backend', () => {
   });
   assert.match(fieldContents(html, 'Data do pagamento')[0], /31\/08\/2026/);
   assert.match(fieldContents(html, 'Baixa registrada')[0], /Conclusão da baixa manual/);
+});
+
+test('Proesc em conferência exibe rótulo do servidor e não oferece consulta Banese', () => {
+  const html = renderReceipt({
+    status: 'PENDENTE',
+    source_system: 'PROESC',
+    source_label: 'Proesc',
+    status_label: 'Histórico Proesc em conferência',
+    origem: 'PROESC',
+  });
+  assert.match(html, /Histórico Proesc em conferência/);
+  assert.doesNotMatch(html, /Re-verificar|na API Banese|Automática · Banese/);
+});
+
+test('Proesc pago preserva valor e componentes desconhecidos recebidos do servidor', () => {
+  const html = renderReceipt({
+    status: 'PAGO', source_system: 'PROESC', source_label: 'Proesc',
+    status_label: 'Pago', origem: 'PROESC', valor_pago: 260,
+    desconto_aplicado: null, juros_aplicados: null, multa_aplicada: null,
+  });
+  assert.match(html, /Proesc/);
+  assert.match(fieldContents(html, 'Valor pago')[0], /260,00/);
+  assert.match(fieldContents(html, 'Desconto')[0], /Não informado/);
+  assert.doesNotMatch(html, /Manual · Caixa|Histórico migrado|Re-verificar/);
+});
+
+test('consulta individual permanece disponível somente para cobrança Banese pendente', () => {
+  const html = renderReceipt({ status: 'PENDENTE', source_system: 'BANESE', status_label: 'Pendente' });
+  assert.match(html, /Re-verificar/);
+  assert.match(html, /na API Banese/);
 });

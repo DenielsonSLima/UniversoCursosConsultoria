@@ -5,7 +5,6 @@ import {
   ArrowUpRight,
   FileSpreadsheet,
   Layers,
-  RefreshCw,
 } from 'lucide-react';
 import { integracaoBancariaService } from '../../configuracoes/integracao-bancaria/integracao-bancaria.service';
 import BaneseCnabRemittancePanel from './BaneseCnabRemittancePanel';
@@ -13,7 +12,7 @@ import ConciliacaoBancariaResumo from './ConciliacaoBancariaResumo';
 import BaneseCnabReturnPanel from './components/BaneseCnabReturnPanel';
 import ConciliacaoOrigemBaixaPanel from './components/ConciliacaoOrigemBaixaPanel';
 import ConciliacaoTransactionsPanel from './components/ConciliacaoTransactionsPanel';
-import type { CanalBaixaConciliacao } from './conciliacao-bancaria.fetch';
+import type { CanalBaixaConciliacao, SourceSystemConciliacao } from './conciliacao-bancaria.fetch';
 import { useBaneseCnabReturn } from './hooks/useBaneseCnabReturn';
 import { useBaneseConciliacaoQueries } from './hooks/useBaneseConciliacaoQueries';
 import FinancialUnderlineTabs from '../components/FinancialUnderlineTabs';
@@ -31,6 +30,7 @@ const ConciliacaoBancariaTab: React.FC<ConciliacaoBancariaTabProps> = ({ poloId 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [selectedCanal, setSelectedCanal] = useState<CanalBaixaConciliacao | 'TODOS'>('TODOS');
+  const [sourceSystemFilter, setSourceSystemFilter] = useState<SourceSystemConciliacao>('ALL');
   const [selectedStatus, setSelectedStatus] = useState<string>('PAGO');
   const [settlementStartDate, setSettlementStartDate] = useState('');
   const [settlementEndDate, setSettlementEndDate] = useState('');
@@ -50,6 +50,7 @@ const ConciliacaoBancariaTab: React.FC<ConciliacaoBancariaTabProps> = ({ poloId 
     search: debouncedSearch,
     status: selectedStatus,
     canal: selectedCanal,
+    sourceSystem: sourceSystemFilter,
     poloId,
     settlementStartDate,
     settlementEndDate,
@@ -102,6 +103,12 @@ const ConciliacaoBancariaTab: React.FC<ConciliacaoBancariaTabProps> = ({ poloId 
     setPage(1);
   };
 
+  const handleChangeSourceSystem = (source: SourceSystemConciliacao) => {
+    setSourceSystemFilter(source);
+    setSelectedCanal('TODOS');
+    setPage(1);
+  };
+
   const handleSelectStatus = (status: string) => {
     setSelectedStatus(status);
     if (status !== 'PAGO') {
@@ -147,25 +154,16 @@ const ConciliacaoBancariaTab: React.FC<ConciliacaoBancariaTabProps> = ({ poloId 
               </span>
               <div>
                 <h2 className="text-xl font-black tracking-tight text-slate-800">
-                  Conciliação Bancária & CNAB240 Banese
+                  Conciliação · Banese e Proesc
                 </h2>
                 <p className="text-xs font-semibold text-slate-500">
-                  Gestão integrada de remessas, retornos e origens de baixa (API Online, CNAB240, Caixa e Mercado Pago)
+                  Pagamentos, origens de baixa e acompanhamento automático de cobranças Banese e Proesc.
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => { void queries.invalidateAll(); }}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors"
-            >
-              <RefreshCw size={14} className={queries.dataQuery.isFetching ? 'animate-spin' : ''} />
-              Atualizar Dados
-            </button>
-          </div>
+
         </div>
 
         <div className="mt-6">
@@ -247,6 +245,8 @@ const ConciliacaoBancariaTab: React.FC<ConciliacaoBancariaTabProps> = ({ poloId 
           <ConciliacaoOrigemBaixaPanel
             rows={queries.receivables}
             searchTerm={searchTerm}
+            sourceSystemFilter={sourceSystemFilter}
+            onChangeSourceSystem={handleChangeSourceSystem}
             refreshingIds={refreshingIds}
             isLoading={queries.bankingOverviewQuery.isLoading || queries.dataQuery.isLoading}
             isError={queries.bankingOverviewQuery.isError || queries.dataQuery.isError}
@@ -255,6 +255,7 @@ const ConciliacaoBancariaTab: React.FC<ConciliacaoBancariaTabProps> = ({ poloId 
             page={page}
             pageSize={pageSize}
             totalItems={queries.totalCount}
+            totalPages={queries.totalPages}
             onPageChange={setPage}
             onPageSizeChange={handlePageSizeChange}
             selectedCanal={selectedCanal}
@@ -330,7 +331,7 @@ const ConciliacaoBancariaTab: React.FC<ConciliacaoBancariaTabProps> = ({ poloId 
       <div className="rounded-[2rem] border border-emerald-100 bg-emerald-50 px-5 py-4 text-xs text-emerald-700">
         <p className="font-black uppercase tracking-wide">Observação do fluxo</p>
         <p className="mt-1 leading-relaxed">
-          A API Banese é o canal principal para geração e retorno das cobranças. O CNAB240 permanece como contingência controlada, com prévia e confirmação explícita; a tela apresenta somente identificadores, status e resultados operacionais, sem expor payloads internos.
+          Os pagamentos confirmados no Banese e no Proesc são conciliados automaticamente. O CNAB240 permanece disponível para remessas e retornos Banese, com prévia e confirmação.
         </p>
       </div>
     </div>

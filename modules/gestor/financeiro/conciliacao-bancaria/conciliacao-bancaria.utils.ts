@@ -6,6 +6,7 @@ import type {
 import type { GatewayEnvironment } from '../../configuracoes/integracao-bancaria/integracao-bancaria.service';
 
 export type CanalBaixaConciliacao =
+  | 'PROESC'
   | 'API_BANESE'
   | 'CNAB240'
   | 'CAIXA_MANUAL'

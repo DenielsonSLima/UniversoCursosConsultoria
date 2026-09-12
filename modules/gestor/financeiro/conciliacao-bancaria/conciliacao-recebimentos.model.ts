@@ -7,15 +7,6 @@ import type { CanalBaixaConciliacao } from './conciliacao-bancaria.utils';
 
 type JsonRecord = Record<string, unknown>;
 
-const RECEIPT_CHANNELS = new Set<CanalBaixaConciliacao>([
-  'API_BANESE',
-  'CNAB240',
-  'CAIXA_MANUAL',
-  'HISTORICO_MIGRADO',
-  'MERCADO_PAGO',
-  'OUTRO',
-]);
-
 export const asReceiptRecord = (value: unknown): JsonRecord => (
   value && typeof value === 'object' && !Array.isArray(value)
     ? value as JsonRecord
@@ -43,6 +34,8 @@ const originToChannel = (value: unknown): CanalBaixaConciliacao => {
     case 'AUTOMATICA_BANESE': return 'API_BANESE';
     case 'MANUAL': return 'CAIXA_MANUAL';
     case 'HISTORICO_MIGRADO': return 'HISTORICO_MIGRADO';
+    case 'PROESC': return 'PROESC';
+    case 'PENDENTE': return 'PENDENTE';
     case 'CNAB240': return 'CNAB240';
     case 'MERCADO_PAGO': return 'MERCADO_PAGO';
     default: return 'OUTRO';
@@ -56,21 +49,14 @@ export const channelToFinancialReceiptOrigin = (
     case 'API_BANESE': return 'AUTOMATICA_BANESE';
     case 'CAIXA_MANUAL': return 'MANUAL';
     case 'HISTORICO_MIGRADO': return 'HISTORICO_MIGRADO';
+    case 'PROESC': return 'PROESC';
+    case 'PENDENTE': return 'PENDENTE';
     case 'CNAB240': return 'CNAB240';
     case 'MERCADO_PAGO': return 'MERCADO_PAGO';
     case 'OUTRO': return 'OUTRO';
     default: return 'TODOS';
   }
 };
-
-export const shouldUseFinancialReceiptsFeed = (
-  params: FetchConciliacaoParams,
-) => (
-  String(params.status || '').toUpperCase() === 'PAGO'
-  || (params.canal !== undefined
-    && params.canal !== 'TODOS'
-    && RECEIPT_CHANNELS.has(params.canal))
-);
 
 export const mapFinancialReceipt = (value: unknown): BaneseReceivable => {
   const row = asReceiptRecord(value);
@@ -79,7 +65,14 @@ export const mapFinancialReceipt = (value: unknown): BaneseReceivable => {
   return {
     id: asString(row.id) || '',
     descricao: asString(row.descricao) || 'Recebimento',
-    status: 'PAGO',
+    status: asString(row.status) || 'PENDENTE',
+    sourceSystem: asString(row.source_system),
+    sourceLabel: asString(row.source_label),
+    statusLabel: asString(row.status_label),
+    sourceVerification: asString(row.source_verification),
+    gatewaySyncedAt: asString(row.gateway_synced_at),
+    gatewayLastError: asString(row.gateway_last_error),
+    gatewayStatus: asString(row.gateway_status),
     valor: asNumber(row.valor_nominal),
     dataVencimento: asString(row.data_vencimento) || '',
     dataPagamento: asString(row.data_pagamento),
@@ -119,11 +112,12 @@ export const mapFinancialReceiptCounts = (
   const counts = asReceiptRecord(value);
   return {
     totalCount: asNumber(counts.total),
-    pendenteCount: 0,
+    pendenteCount: asNumber(counts.pendente),
     apiCount: asNumber(counts.automatica_banese),
     cnabCount: asNumber(counts.cnab240),
     caixaCount: asNumber(counts.manual),
     historicoCount: asNumber(counts.historico_migrado),
+    proescCount: asNumber(counts.proesc),
     mpCount: asNumber(counts.mercado_pago),
     outroCount: asNumber(counts.outro),
   };

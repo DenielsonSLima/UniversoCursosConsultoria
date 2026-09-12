@@ -3,26 +3,27 @@ import type { GatewayEnvironment } from '../../configuracoes/integracao-bancaria
 import {
   BANESE_PENDING_STATUSES,
   BANESE_RECONCILIATION_STATUSES,
-  resolveConciliacaoStatusFilter,
 } from './conciliacao-bancaria.filters';
 import {
   BaneseSyncSummary,
   type CanalBaixaConciliacao,
   EMPTY_API_SYNC_SUMMARY,
-  classifySettlementChannel,
   getMaceioDateKey,
 } from './conciliacao-bancaria.utils';
-import {
-  fetchFinancialReceipts,
-  shouldUseFinancialReceiptsFeed,
-} from './conciliacao-recebimentos.fetch';
+import { fetchFinancialReceipts } from './conciliacao-recebimentos.fetch';
 
 export type { CanalBaixaConciliacao } from './conciliacao-bancaria.utils';
+
+export type SourceSystemConciliacao = 'ALL' | 'PROESC' | 'BANESE';
 
 export interface BaneseReceivable {
   id: string;
   descricao: string;
   status: string;
+  sourceSystem?: string;
+  sourceLabel?: string;
+  statusLabel?: string;
+  sourceVerification?: string;
   valor: number;
   dataVencimento: string;
   dataPagamento?: string;
@@ -83,6 +84,7 @@ export interface FetchConciliacaoParams {
   search?: string;
   status?: string;
   canal?: CanalBaixaConciliacao | 'TODOS';
+  sourceSystem?: SourceSystemConciliacao;
   poloId?: string | null;
   companyId?: string | null;
   settlementStartDate?: string;
@@ -96,6 +98,7 @@ export interface ConciliacaoChannelCounts {
   cnabCount: number;
   caixaCount: number;
   historicoCount: number;
+  proescCount: number;
   mpCount: number;
   outroCount: number;
 }
@@ -105,6 +108,7 @@ export interface ConciliacaoListDataResponse {
   totalCount: number;
   page: number;
   pageSize: number;
+  totalPages: number;
   receiptChannelCounts?: ConciliacaoChannelCounts;
 }
 
@@ -159,104 +163,7 @@ export const fetchConciliacaoListData = async (
   const params: FetchConciliacaoParams = typeof input === 'string'
     ? { environment: input }
     : input;
-  if (shouldUseFinancialReceiptsFeed(params)) {
-    return fetchFinancialReceipts(params);
-  }
-  const { environment } = params;
-  const page = Math.max(1, params.page || 1);
-  const pageSize = Math.max(1, params.pageSize || 20);
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
-
-  let listQuery = supabase
-    .from('contas_receber')
-    .select('id, descricao, status, valor, data_vencimento, data_pagamento, valor_pago, origem_pagamento, forma_pagamento, manual_settlement_id, manual_settlement_reversed_at, gateway_provider, gateway_status, gateway_synced_at, gateway_last_error, gateway_boleto_nosso_numero, gateway_payment_id, gateway_payment_method, gateway_submission_channel, updated_at', { count: 'exact' })
-    .eq('gateway_provider', 'banese_card')
-    .eq('gateway_environment', environment)
-    .eq('gateway_payment_method', 'BOLETO');
-
-  const statusFilter = resolveConciliacaoStatusFilter(params.status);
-  if (statusFilter.operator === 'eq') {
-    listQuery = listQuery.eq('status', statusFilter.statuses[0]);
-  } else {
-    listQuery = listQuery.in('status', statusFilter.statuses);
-  }
-
-  if (params.search && params.search.trim()) {
-    const cleanSearch = params.search.trim().replace(/[%_]/g, '');
-    if (cleanSearch) {
-      listQuery = listQuery.or(`descricao.ilike.%${cleanSearch}%,gateway_boleto_nosso_numero.ilike.%${cleanSearch}%,gateway_payment_id.ilike.%${cleanSearch}%`);
-    }
-  }
-
-  if (params.canal && params.canal !== 'TODOS') {
-    if (params.canal === 'PENDENTE') {
-      listQuery = listQuery.neq('status', 'PAGO');
-    } else if (params.canal === 'API_BANESE') {
-      listQuery = listQuery
-        .eq('status', 'PAGO')
-        .eq('gateway_provider', 'banese_card')
-        .in('gateway_status', ['PAID', 'PAGO', 'RECEIVED', 'CONFIRMED', 'LIQUIDATED'])
-        .neq('origem_pagamento', 'PRESENCIAL')
-        .is('manual_settlement_id', null);
-    } else if (params.canal === 'CNAB240') {
-      listQuery = listQuery
-        .eq('status', 'PAGO')
-        .eq('gateway_submission_channel', 'CNAB');
-    } else if (params.canal === 'MERCADO_PAGO') {
-      listQuery = listQuery
-        .eq('status', 'PAGO')
-        .or('gateway_provider.eq.mercado_pago,gateway_payment_method.eq.CREDIT_CARD');
-    } else if (params.canal === 'CAIXA_MANUAL') {
-      listQuery = listQuery
-        .eq('status', 'PAGO')
-        .or('origem_pagamento.eq.PRESENCIAL,manual_settlement_id.not.is.null');
-    }
-  }
-
-  listQuery = listQuery
-    .order('updated_at', { ascending: false })
-    .range(from, to);
-
-  const listResult = await listQuery;
-  if (listResult.error) throw listResult.error;
-
-  const receivables: BaneseReceivable[] = (listResult.data || []).map((row: any) => {
-    const status = normalizeString(row.status).toUpperCase();
-    const syncedAt = normalizeString(row.gateway_synced_at) === '-' ? undefined : toSafeText(row.gateway_synced_at);
-    const canalBaixa = classifySettlementChannel({
-      status,
-      origemPagamento: row.origem_pagamento,
-      manualSettlementId: row.manual_settlement_id,
-      manualSettlementReversedAt: row.manual_settlement_reversed_at,
-      gatewayProvider: row.gateway_provider,
-      gatewayPaymentMethod: row.gateway_payment_method,
-      gatewayStatus: row.gateway_status,
-      gatewaySubmissionChannel: row.gateway_submission_channel,
-    });
-
-    return {
-      id: toSafeText(row.id),
-      descricao: normalizeString(row.descricao),
-      status,
-      valor: Number(row.valor || 0),
-      dataVencimento: normalizeString(row.data_vencimento),
-      dataPagamento: row.data_pagamento || undefined,
-      valorPago: row.valor_pago != null ? Number(row.valor_pago) : undefined,
-      gatewaySyncedAt: syncedAt,
-      gatewayLastError: normalizeString(row.gateway_last_error),
-      gatewayStatus: normalizeString(row.gateway_status),
-      nossoNumero: normalizeString(row.gateway_boleto_nosso_numero || row.gateway_payment_id || ''),
-      canalBaixa,
-    };
-  });
-
-  return {
-    receivables,
-    totalCount: Number(listResult.count || 0),
-    page,
-    pageSize,
-  };
+  return fetchFinancialReceipts(params);
 };
 
 export const fetchConciliacaoOverviewData = async (
@@ -343,6 +250,7 @@ export const fetchConciliacaoOverviewData = async (
     cnabCount: Number(cnabCountResult.count || 0),
     caixaCount: Number(caixaCountResult.count || 0),
     historicoCount: 0,
+    proescCount: 0,
     mpCount: Number(mpCountResult.count || 0),
     outroCount: 0,
   };
