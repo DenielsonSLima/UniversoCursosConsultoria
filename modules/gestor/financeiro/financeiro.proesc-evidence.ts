@@ -2,6 +2,7 @@ export interface ProescReceivableEvidence {
   sourceStatus: 'UNKNOWN' | 'OPEN' | 'PAID' | 'CANCELED';
   verification: 'REVIEW' | 'VERIFIED';
   observedAt: string | null;
+  obligationLabel?: string;
 }
 
 // This field is projected by the authorized receivables RPC from a real Proesc
@@ -17,7 +18,10 @@ export const parseProescReceivableEvidence = (value: unknown): ProescReceivableE
     && /^\d{4}-\d{2}-\d{2}T/.test(input.observedAt)
     && input.observedAt.length <= 40 && Number.isFinite(Date.parse(input.observedAt))
     ? input.observedAt : null;
-  return { sourceStatus, verification, observedAt };
+  const obligationLabel = typeof input.obligationLabel === 'string'
+    && input.obligationLabel.trim().length > 0 && input.obligationLabel.length <= 80
+    ? input.obligationLabel : undefined;
+  return { sourceStatus, verification, observedAt, ...(obligationLabel ? { obligationLabel } : {}) };
 };
 
 type ReceivableEvidence = {
