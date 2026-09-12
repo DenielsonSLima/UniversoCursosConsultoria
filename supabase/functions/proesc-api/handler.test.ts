@@ -128,3 +128,32 @@ Deno.test('credenciais inválidas e caracteres de controle nunca chegam à RPC',
     assert(response.status === 400 && calls.length === 0);
   }
 });
+
+Deno.test('testar token usa credencial do servidor e ignora parâmetros operacionais do cliente', async () => {
+  const { admin, calls } = fixture({ result: { token: 'synthetic-server-token', revision: 'revision-a' } });
+  let networkCalls = 0;
+  const transport: typeof fetch = (url, options) => {
+    networkCalls++;
+    assert(String(url).startsWith('https://api.proesc.com/api/v2/'));
+    assert(new Headers(options?.headers).get('Authorization') === 'Bearer synthetic-server-token');
+    return Promise.resolve(Response.json({ data: [] }));
+  };
+  const response = await createHandler(admin, transport)(request({ action: 'test_token', token: 'forged-client-token',
+    resource: 'debits', p_action: 'commit_page', filters: { start: '2000-01' } }));
+  const body = await response.json();
+  assert(response.status === 200 && body.ok && networkCalls === 2);
+  assert(calls.length === 2 && calls.every((call) => call.action === 'token' && Object.keys(call.payload).length === 0));
+  assert(!JSON.stringify(body).includes('synthetic-server-token'));
+});
+
+Deno.test('probe interno exige segredo validado pela RPC privada antes de acessar a credencial', async () => {
+  for (const key of ['', 'forged', 'a'.repeat(64)]) {
+    const { admin, calls } = fixture({ dbError: true });
+    let networkCalls = 0;
+    const req = request({ action: 'internal_probe', internal: true, role: 'service_role' });
+    req.headers.set('X-Proesc-Worker-Secret', key);
+    const response = await createHandler(admin, () => { networkCalls++; throw new Error('forbidden'); })(req);
+    assert(response.status === 403 && networkCalls === 0);
+    assert(!calls.some((call) => call.action === 'token'));
+  }
+});

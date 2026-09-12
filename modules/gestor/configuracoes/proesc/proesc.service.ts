@@ -4,6 +4,17 @@ export interface ProescStatus {
   configured: boolean;
   updatedAt: string | null;
 }
+export interface ProescTokenTest {
+  ok: boolean;
+  checkedAt: string;
+  checks: Array<{
+    resource: 'people' | 'invoices';
+    ok: boolean;
+    status: number;
+    message: string;
+  }>;
+  message: string;
+}
 export interface ProescClassHistory {
   classId: string;
   classCode: string;
@@ -49,6 +60,7 @@ export const proescService = {
   status: () => invoke<ProescStatus>('status'),
   saveToken: (token: string) => invoke('save_token', { token }),
   removeToken: () => invoke('remove_token'),
+  testToken: () => invoke<ProescTokenTest>('test_token'),
   classes: (offset = 0) => invoke<{ classes: ProescClassHistory[]; totalClasses: number }>('class_history', { offset }),
   events: (classId: string, offset = 0) => invoke<{ events: ProescHistoryEvent[]; totalEvents: number }>('class_events', { classId, offset }),
 };

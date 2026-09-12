@@ -237,10 +237,12 @@ const CompanyAccountsManager: React.FC<CompanyAccountsManagerProps> = ({ company
                   <p className="text-xs font-bold uppercase tracking-widest opacity-80">{account.banco}</p>
                   <p className="text-[10px] font-medium opacity-60">{account.tipo}</p>
                   <p className="mt-1 text-[9px] font-black uppercase tracking-wider text-white/80">
-                    {account.systemManaged
-                      ? 'Gerenciada pela integração Banese'
-                      : account.natureza === 'CAIXA_INTERNO'
+                    {account.natureza === 'CAIXA_INTERNO'
                       ? 'Caixa individual'
+                      : account.codigoInterno?.startsWith('INTEGRATION:PROESC:')
+                      ? 'Controle Proesc · compartilhada'
+                      : account.systemManaged && account.banco === 'BANESE'
+                      ? 'Banese · compartilhada'
                       : account.polosUso?.length > 1
                         ? `Compartilhada com ${account.polosUso.length} unidades`
                         : 'Uso exclusivo'}
@@ -248,7 +250,7 @@ const CompanyAccountsManager: React.FC<CompanyAccountsManagerProps> = ({ company
                 </div>
                 
                 {/* Ações Rápidas (Sempre visíveis mas discretas) */}
-                {!account.systemManaged && (
+                {!account.systemManaged && account.poloId === company.id && (
                   <div className="flex gap-2">
                   <button 
                     onClick={(e) => { e.stopPropagation(); confirmToggleStatus(account); }}
@@ -291,11 +293,11 @@ const CompanyAccountsManager: React.FC<CompanyAccountsManagerProps> = ({ company
                 <div className="flex items-center gap-4 mb-1">
                    <div>
                      <p className="text-[10px] uppercase tracking-wider opacity-60">Agência</p>
-                     <p className="font-mono font-bold text-lg tracking-wide">{account.agencia}</p>
+                     <p className="font-mono font-bold text-lg tracking-wide">{account.agencia || '—'}</p>
                    </div>
                    <div>
                      <p className="text-[10px] uppercase tracking-wider opacity-60">Conta</p>
-                     <p className="font-mono font-bold text-lg tracking-wide">{account.conta}</p>
+                     <p className="font-mono font-bold text-lg tracking-wide">{account.conta || '—'}</p>
                    </div>
                 </div>
               </div>

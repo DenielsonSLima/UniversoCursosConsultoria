@@ -17,6 +17,7 @@ function mapAccountToFrontend(db: any) {
     dataSaldo: db.data_saldo,
     ativo: db.ativo,
     natureza: db.natureza || 'BANCARIA',
+    codigoInterno: db.codigo_interno,
     systemManaged: db.system_managed === true,
     polosUso: (db.contas_bancarias_polos || []).map((item: any) => item.polo_id),
   };
@@ -37,7 +38,7 @@ export const contasBancariasService = {
         estado,
         status,
         is_matriz,
-        contas_bancarias:contas_bancarias!contas_bancarias_polo_id_fkey(count)
+        contas_bancarias_polos(count)
       `)
       .order('is_matriz', { ascending: false })
       .order('nome', { ascending: true });
@@ -55,7 +56,7 @@ export const contasBancariasService = {
       estado: p.estado,
       isMatriz: p.is_matriz === true,
       ativo: p.status === 'ativo',
-      contasCount: p.contas_bancarias?.[0]?.count || 0
+      contasCount: p.contas_bancarias_polos?.[0]?.count || 0
     }));
   },
 
@@ -65,8 +66,8 @@ export const contasBancariasService = {
   async getAccountsByCompany(poloId: string): Promise<any[]> {
     const { data, error } = await supabase
       .from('contas_bancarias')
-      .select('*, contas_bancarias_polos(polo_id)')
-      .eq('polo_id', poloId)
+      .select('*, contas_bancarias_polos(polo_id), acesso_polo:contas_bancarias_polos!inner(polo_id)')
+      .eq('acesso_polo.polo_id', poloId)
       .order('banco', { ascending: true });
 
     if (error) {
