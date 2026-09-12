@@ -1,8 +1,8 @@
 {
-  "version": "4.8.38",
+  "version": "4.8.41",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 47,
-  "releasedAt": "2026-09-09",
-  "summary": "Recuperação do Turnstile após espera prolongada ou erros repetidos na verificação de acesso"
+  "revision": 50,
+  "releasedAt": "2026-09-12",
+  "summary": "Segundo ciclo manual da Enfermagem T42 liberado com histórico antigo apenas para consulta"
 }
