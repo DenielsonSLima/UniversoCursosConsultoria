@@ -1,8 +1,8 @@
 {
-  "version": "4.8.38",
+  "version": "4.8.40",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 47,
-  "releasedAt": "2026-09-09",
-  "summary": "Recuperação do Turnstile após espera prolongada ou erros repetidos na verificação de acesso"
+  "revision": 49,
+  "releasedAt": "2026-09-12",
+  "summary": "Recebidos por data de pagamento alinhados ao Caixa, com lista e relatório consistentes"
 }

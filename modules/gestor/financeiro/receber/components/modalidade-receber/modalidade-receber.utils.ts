@@ -224,6 +224,7 @@ export const receivableLaunchLabel = (
 };
 
 export const paymentOriginLabel = (item: ContasReceber) => {
+  if (item.origemPagamento === 'SISTEMA_ANTERIOR') return 'Sistema anterior';
   if (item.origemPagamento === 'PRESENCIAL') {
     return ['DELETED', 'CANCELED'].includes(String(item.asaasStatus || '').toUpperCase())
       ? `Manual, cobrança ${paymentGatewayLabel(item)} cancelada`

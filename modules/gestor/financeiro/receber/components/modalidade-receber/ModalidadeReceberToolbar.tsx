@@ -77,7 +77,7 @@ export const ModalidadeReceberToolbar: React.FC<ModalidadeReceberToolbarProps> =
       </div>
     </div>
 
-    <ReceivablesPeriodFilter period={period} error={periodError} onChange={onPeriodChange} />
+    <ReceivablesPeriodFilter period={period} scope={statusScope} error={periodError} onChange={onPeriodChange} />
 
     <div className="flex flex-wrap items-center gap-3">
       <div className="relative min-w-[220px] flex-1">

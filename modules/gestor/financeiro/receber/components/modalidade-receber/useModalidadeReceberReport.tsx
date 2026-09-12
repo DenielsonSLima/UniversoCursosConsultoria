@@ -196,18 +196,24 @@ export const useModalidadeReceberReport = ({
       { label: 'Modalidade', value: title },
       { label: 'Situação', value: statusScopeLabels[statusScope] },
       { label: 'Busca', value: search.trim() || 'Todos os alunos' },
-      { label: 'Vencimento', value: `${filterDate(dueStart)} até ${filterDate(dueEnd)}` },
+      { label: statusScope === 'received' ? 'Pagamento' : 'Vencimento', value: `${filterDate(dueStart)} até ${filterDate(dueEnd)}` },
       { label: 'Turma', value: turmaLabel || 'Todas as turmas' },
       { label: 'Registros', value: `${expectedCount} cobrança(s)` },
     ];
   }, [dueEnd, dueStart, expectedCount, search, statusScope, title, turmaLabel]);
 
-  const summaryCards = useMemo<FinancialReportSummaryCard[]>(() => [
-    { label: 'Total previsto', value: formatCurrency(kpis.total), tone: 'slate' },
-    { label: 'Recebido', value: formatCurrency(kpis.recebido), tone: 'emerald' },
-    { label: 'A receber', value: formatCurrency(kpis.aReceber), tone: 'amber' },
-    { label: 'Vencidos', value: kpis.vencidos, tone: 'rose' },
-  ], [kpis]);
+  const summaryCards = useMemo<FinancialReportSummaryCard[]>(() => {
+    const received: FinancialReportSummaryCard = {
+      label: 'Recebido pela data do pagamento', value: formatCurrency(kpis.recebido), tone: 'emerald',
+    };
+    if (statusScope === 'received') return [received];
+    return [
+      { label: 'Total previsto por vencimento', value: formatCurrency(kpis.total), tone: 'slate' },
+      received,
+      { label: 'A receber por vencimento', value: formatCurrency(kpis.aReceber), tone: 'amber' },
+      { label: 'Vencidos', value: kpis.vencidos, tone: 'rose' },
+    ];
+  }, [kpis, statusScope]);
 
   return {
     columns,

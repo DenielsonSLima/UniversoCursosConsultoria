@@ -4,18 +4,22 @@ import {
   RECEIVABLES_PERIODS,
   getReceivablesPeriod,
   type ReceivablesPeriod,
+  type ReceivablesScope,
 } from './receivables-period';
 
 interface Props {
   period: ReceivablesPeriod;
+  scope: ReceivablesScope;
   error: string | null;
   onChange: (period: ReceivablesPeriod) => void;
 }
 
-export function ReceivablesPeriodFilter({ period, error, onChange }: Props) {
+export function ReceivablesPeriodFilter({ period, scope, error, onChange }: Props) {
+  const dateLabel = scope === 'received' ? 'Pagamento' : 'Vencimento';
+  const pluralLabel = scope === 'received' ? 'Pagamentos' : 'Vencimentos';
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Período de vencimento">
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label={`Período de ${dateLabel.toLowerCase()}`}>
         {RECEIVABLES_PERIODS.map(({ id, label }) => (
           <button
             key={id}
@@ -32,10 +36,10 @@ export function ReceivablesPeriodFilter({ period, error, onChange }: Props) {
         <div className="flex flex-wrap gap-3">
           {(['start', 'end'] as const).map((key) => (
             <label key={key} className="flex items-center gap-2 text-xs font-semibold text-slate-500">
-              {key === 'start' ? 'Vencimento de' : 'Até'}
+              {key === 'start' ? `${dateLabel} de` : 'Até'}
               <input
                 type="date"
-                aria-label={key === 'start' ? 'Vencimento inicial' : 'Vencimento final'}
+                aria-label={`${dateLabel} ${key === 'start' ? 'inicial' : 'final'}`}
                 aria-invalid={Boolean(error)}
                 value={period[key]}
                 onChange={(event) => onChange({ ...period, [key]: event.target.value })}
@@ -47,7 +51,7 @@ export function ReceivablesPeriodFilter({ period, error, onChange }: Props) {
       ) : null}
       {error ? <p role="alert" className="text-xs font-semibold text-rose-600">{error}</p> : (
         <p className="text-xs font-semibold text-slate-500">
-          {period.preset === 'ALL' ? 'Vencimentos de todo o período' : `Vencimentos de ${formatResumoRange(period)}`}
+          {period.preset === 'ALL' ? `${pluralLabel} de todo o período` : `${pluralLabel} de ${formatResumoRange(period)}`}
         </p>
       )}
     </div>

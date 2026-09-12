@@ -19,7 +19,7 @@ interface Props {
 }
 
 const cards = [
-  { scope: 'received' as const, label: 'Recebido', detail: 'Pago das parcelas do período', tone: 'text-emerald-700', selected: 'border-emerald-600 bg-emerald-50' },
+  { scope: 'received' as const, label: 'Recebido no período', detail: 'Pela data do pagamento', tone: 'text-emerald-700', selected: 'border-emerald-600 bg-emerald-50' },
   { scope: 'upcoming' as const, label: 'A vencer', detail: 'Em aberto, vence hoje ou depois', tone: 'text-amber-700', selected: 'border-amber-500 bg-amber-50' },
   { scope: 'overdue' as const, label: 'Em atraso', detail: 'Parcelas vencidas no período', tone: 'text-rose-600', selected: 'border-rose-500 bg-rose-50' },
 ];
@@ -55,7 +55,7 @@ export function ReceivablesSummaryCards({ summary, upcoming, scope, disabled, on
         })}
       </div>
       <p className="text-[11px] text-slate-500">
-        Valores conforme aluno, turma e vencimento. Clique para filtrar a lista. Recebido considera o vencimento da parcela, não a data do pagamento.
+        Valores conforme aluno e turma. Recebidos considera a data do pagamento, como no Caixa. As demais situações consideram o vencimento. Clique para filtrar a lista.
       </p>
     </div>
   );

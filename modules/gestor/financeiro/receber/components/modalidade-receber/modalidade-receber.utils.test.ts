@@ -13,6 +13,7 @@ import {
   paymentGatewayCode,
   paymentGatewayLabel,
   paymentMethodLabel,
+  paymentOriginLabel,
   receivableClassLabel,
   receivableCourseTitle,
   receivableDiscountPresentation,
@@ -68,6 +69,17 @@ test('identifica os provedores somente para apresentação e ações da cobranç
   assert.equal(paymentGatewayLabel(banese), 'Banese');
   assert.equal(paymentGatewayCode(mercadoPago), 'mercado_pago');
   assert.equal(paymentGatewayLabel(mercadoPago), 'Mercado Pago');
+});
+
+test('identifica pagamento do sistema anterior sem confundir com baixa manual', () => {
+  const legacy = receivable({ status: 'PAGO', origemPagamento: 'SISTEMA_ANTERIOR' });
+  const manual = receivable({ status: 'PAGO', origemPagamento: 'PRESENCIAL' });
+  const bank = receivable({ status: 'PAGO', gatewayProvider: 'banese_card' });
+
+  assert.equal(paymentOriginLabel(legacy), 'Sistema anterior');
+  assert.equal(paymentOriginLabel(manual), 'Manual');
+  assert.equal(paymentOriginLabel(bank), 'Banese');
+  assert.equal(paymentOriginLabel(receivable({ origemPagamento: 'LOCAL' })), 'Local');
 });
 
 test('reconhece link legado do portal como boleto Banese', () => {
