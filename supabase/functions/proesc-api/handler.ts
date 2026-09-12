@@ -2,11 +2,14 @@ import {
   authorizationErrorHttpStatus, requireGestorAtivo, requireGestorGlobal, requireGestorModule,
 } from '../_shared/authz.ts';
 import { buildCorsHeaders, isRateLimitExceeded, json } from '../_shared/http.ts';
-import { object, ProescError, queryProesc, validateConsultation } from './contract.ts';
-import type { Cursor, Filters, Resource } from './contract.ts';
+import { object, ProescError } from './contract.ts';
 
 type Admin = Parameters<typeof requireGestorAtivo>[1];
-export const createHandler = (admin: Admin, transport: typeof fetch = fetch) => async (req: Request) => {
+const publicActions = new Set(['status', 'save_token', 'remove_token', 'class_history', 'class_events']);
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// O transporte opcional mantém compatibilidade de testes; este handler nunca consulta o Proesc.
+export const createHandler = (admin: Admin, _transport?: typeof fetch) => async (req: Request) => {
   const respond = (body: unknown, status = 200) => {
     const response = json(body, status, req);
     response.headers.set('Cache-Control', 'no-store');
@@ -25,56 +28,38 @@ export const createHandler = (admin: Admin, transport: typeof fetch = fetch) => 
     if (text.length > 12000) throw new ProescError('Solicitação muito grande.');
     let body;
     try { body = object(JSON.parse(text)); } catch { throw new ProescError('Solicitação inválida.'); }
-    const rpc = async (action: string, payload: unknown = {}) => {
-      const { data, error } = await admin.rpc('proesc_workspace_service', {
+    const action = typeof body.action === 'string' ? body.action : '';
+    if (!publicActions.has(action)) throw new ProescError('Ação não permitida neste painel.', 403);
+    const rpc = async (name: string, action: string, payload: unknown = {}) => {
+      const { data, error } = await admin.rpc(name, {
         p_action: action, p_actor_id: gestor.id, p_payload: payload,
       });
       // Erros de banco nunca retornam argumentos ou conteúdo de credenciais.
       if (error) throw new ProescError('Não foi possível concluir a operação. Atualize a tela e tente novamente.', 409);
       return data;
     };
-    const action = String(body.action || '');
     if (action === 'status') {
-      const offset = body.offset ?? 0;
-      if (!Number.isInteger(offset) || Number(offset) < 0 || Number(offset) > 100000) throw new ProescError('Página de consultas inválida.');
-      return respond(await rpc(action, { offset }));
+      const result = object(await rpc('proesc_workspace_service', action));
+      return respond({ configured: result.configured === true,
+        updatedAt: typeof result.updatedAt === 'string' ? result.updatedAt : null });
     }
-    if (action === 'history_t42' || action === 'remove_token') {
-      return respond(await rpc(action));
+    if (action === 'remove_token') {
+      await rpc('proesc_workspace_service', action);
+      return respond({ configured: false });
     }
     if (action === 'save_token') {
       const token = String(body.token || '').trim().replace(/^Bearer\s+/i, '');
-      if (token.length < 12 || token.length > 8192 || /\s/.test(token)) throw new ProescError('Informe um token Proesc válido.');
-      return respond(await rpc(action, { token }));
+      if (token.length < 12 || token.length > 8192 || (/\s/.test(token) || [...token].some((char) => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127))) throw new ProescError('Informe um token Proesc válido.');
+      await rpc('proesc_workspace_service', action, { token });
+      return respond({ configured: true });
     }
-    if (action === 'start') return respond(await rpc(action, validateConsultation(body)));
-    if (action === 'test') {
-      const secret = await rpc('token');
-      const filters = { unitId: '', start: '2025-01', end: '2025-01' };
-      await queryProesc(secret.token, 'people', filters, { year: 2025, month: 1, page: 1 }, transport);
-      return respond({ ok: true, message: 'Acesso a pessoas confirmado. Consulte as cobranças para validar a permissão financeira.' });
+    const offset = body.offset ?? 0;
+    if (!Number.isInteger(offset) || Number(offset) < 0 || Number(offset) > 100000) throw new ProescError('Página de histórico inválida.');
+    if (action === 'class_history') {
+      return respond(await rpc('proesc_class_history_service', 'list', { offset }));
     }
-    if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(String(body.id || ''))) throw new ProescError('Consulta inválida.');
-    if (action === 'page') {
-      if (!Number.isInteger(body.position) || Number(body.position) < 1) throw new ProescError('Página inválida.');
-      return respond(await rpc(action, { id: body.id, position: body.position }));
-    }
-    if (action === 'advance') {
-      const run = await rpc('context', { id: body.id });
-      if (run.status === 'complete') {
-        const { revision: _revision, created_by: _actor, ...safeRun } = run;
-        return respond(safeRun);
-      }
-      const secret = await rpc('token');
-      if (secret.revision !== run.revision) throw new ProescError('Token alterado. Inicie uma nova consulta.', 409);
-      const page = await queryProesc(secret.token, run.resource as Resource,
-        run.filters as Filters, run.cursor as Cursor, transport);
-      return respond(await rpc('commit_page', {
-        id: run.id, revision: run.revision, expectedPages: run.pages,
-        cursor: run.cursor, result: page, nextCursor: page.nextCursor,
-      }));
-    }
-    throw new ProescError('Ação não permitida.');
+    if (typeof body.classId !== 'string' || !uuidPattern.test(body.classId)) throw new ProescError('Turma inválida.');
+    return respond(await rpc('proesc_class_history_service', 'events', { classId: body.classId, offset }));
   } catch (error) {
     if (error instanceof ProescError) return respond({ error: error.message }, error.status);
     const status = authorizationErrorHttpStatus(error instanceof Error ? error.message : '');
