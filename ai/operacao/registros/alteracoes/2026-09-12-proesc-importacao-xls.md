@@ -60,6 +60,8 @@ Base: 4.8.48/revisão 57 publicada pelo PR142, squash b5b185e5067e5a7ea02075edfb
 
 ## Manifesto explícito da revisão 4.8.49
 
+Total: 12 arquivos.
+
 Somente os 12 arquivos alterados sobre b5b185e5067e5a7ea02075edfb6667ddcb5fb72b entram nesta revisão. O utilitário de apresentação usa uma cópia de publicação baseada nesse commit, preservando a alteração local paralela fora da entrega. O registro de manifestos remoto já inclui este lote e não exige nova alteração.
 
 - `supabase/migrations/20260912230000_proesc_summary_linked_history.sql`
