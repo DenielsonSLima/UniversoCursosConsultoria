@@ -35,13 +35,17 @@ const FinanceiroAlunoCarneAction = ({
   const abortRef = useRef<AbortController | null>(null);
   const inFlightRef = useRef(false);
   const generatedCycle = row.cicloManual.cicloGerado;
-  const incompleteIssuance = Boolean(generatedCycle && (
+  const issuedInProesc = generatedCycle?.origemEmissao === 'PROESC'
+    && generatedCycle.abrangencia === 'CONTRATO_COMPLETO';
+  const incompleteIssuance = Boolean(!issuedInProesc && generatedCycle && (
     generatedCycle.emitidosBanese !== generatedCycle.quantidadeItens
     || generatedCycle.pendentesEmissao > 0
     || generatedCycle.emRevisao > 0
   ));
-  const blocked = disabled || pending || incompleteIssuance;
-  const title = incompleteIssuance
+  const blocked = disabled || pending || incompleteIssuance || issuedInProesc;
+  const title = issuedInProesc
+    ? 'Títulos emitidos no Proesc. Consulte o extrato financeiro.'
+    : incompleteIssuance
     ? 'Conclua ou retome a emissão antes de montar o carnê.'
     : pending
       ? `Montando carnê${progress?.total ? ` (${progress.current}/${progress.total})` : '...'}`

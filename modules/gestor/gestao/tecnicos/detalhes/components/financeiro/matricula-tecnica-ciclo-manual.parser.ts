@@ -75,8 +75,24 @@ export const requireMatriculaTecnicaCicloManual = (
     && isNonEmptyString(value.bloqueio.mensagem)
   );
   const generated = value.cicloGerado;
+  const hasExternalOrigin = isRecord(generated) && (
+    generated.origemEmissao !== undefined
+    || generated.abrangencia !== undefined
+    || generated.status === 'EXTERNAL_COVERAGE'
+  );
+  const generatedOriginValid = !hasExternalOrigin || (
+    isRecord(generated)
+    && generated.origemEmissao === 'PROESC'
+    && generated.abrangencia === 'CONTRATO_COMPLETO'
+    && generated.status === 'EXTERNAL_COVERAGE'
+    && value.estado === 'PROTEGIDO_EXISTENTE'
+    && generated.emitidosBanese === 0
+    && generated.pendentesEmissao === 0
+    && generated.emRevisao === 0
+  );
   const generatedValid = generated === null || (
     isRecord(generated)
+    && generatedOriginValid
     && Number.isInteger(generated.numero)
     && Number(generated.numero) > 0
     && isNonEmptyString(generated.status)

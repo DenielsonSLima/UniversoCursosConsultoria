@@ -1,15 +1,15 @@
 # Lote ativo
 
-Estado: `VALIDADO — PUBLICAÇÃO EM ANDAMENTO`
+Estado: `APLICADO NO BANCO — INTERFACE EM PREPARAÇÃO`
 
-## Lote: 2026-09-12-proesc-t42-contas-polos
+## Lote: 2026-09-12-proesc-cobertura-individual
 
-- Entrega 4.8.44: testar token Proesc, visual padronizado e contas por polo.
-- Caixa individual automático; Proesc e Banese compartilhadas.
-- Legado T42 e Banese segundo ciclo preservados; nenhum recebível alterado.
-- Conferência externa/automação pendentes: HTTP 403 no banco e runtime Edge.
-- Usuário informou ticket Proesc #166788 aberto.
-- Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-12-proesc-t42-contas-polos.md`.
-- Migrations 20260912154809 e 20260912154818 aplicadas; Edge v3 ativa.
-- Base main d629b64de2e4f1d448d2a18e06b87e50201abd5a; preservar PR 134.
-- Smoke visual pendente por bloqueio automático do Safari, já documentado.
+- Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-12-proesc-cobertura-individual.md`.
+- Uma matrícula tem 24 mensalidades e rematrícula comprovadas no Proesc.
+- Cinco cobranças faltantes importadas; segundo ciclo duplicado bloqueado no servidor.
+- Vinte registros existentes e demais alunos preservados no ensaio com rollback.
+- Histórico integral e sincronização da T42 continuam em conferência individual.
+- Nove turmas seguintes apenas depois da conclusão T42; não recriar T42/Radiologia.
+- Datas e polos informados: `ai/operacao/integracoes/proesc/references/turmas-polos-inicio-informado.md`.
+- Frontend atual 4.8.44; interface 4.8.45 validada para publicação.
+- Preservar alterações paralelas do PR 134.
