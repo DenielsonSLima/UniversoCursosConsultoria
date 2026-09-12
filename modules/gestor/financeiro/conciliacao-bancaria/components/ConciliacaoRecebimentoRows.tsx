@@ -192,9 +192,11 @@ const SettlementDetails: React.FC<{
     ? 'Composição informada na baixa manual.'
     : compositionStatus === 'CONCILIADO_POR_FORMULA_BANESE'
       ? 'Composição reconciliada pelas regras financeiras do título.'
-      : compositionStatus === 'SEM_DIFERENCA_FINANCEIRA'
-        ? 'Valor recebido sem diferença financeira.'
-        : 'Composição não informada.';
+      : compositionStatus === 'CONCILIADO_POR_CONFERENCIA_PROESC'
+        ? 'Composição conferida no Proesc.'
+        : compositionStatus === 'SEM_DIFERENCA_FINANCEIRA'
+          ? 'Valor recebido sem diferença financeira.'
+          : 'Composição não informada.';
 
   return (
     <div className="space-y-3">

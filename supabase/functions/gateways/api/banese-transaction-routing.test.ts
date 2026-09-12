@@ -13,6 +13,15 @@ import {
   receivableFixture,
 } from "./banese-test-harness.ts";
 
+const allowAutomaticFutureSync = (admin: ReturnType<typeof fakeAdmin>) => {
+  const originalRpc = admin.rpc.bind(admin);
+  (admin as any).rpc = (name: string, args: Record<string, unknown>) =>
+    name === "should_skip_technical_manual_future_sync"
+      ? Promise.resolve({ data: false, error: null })
+      : originalRpc(name, args);
+  return admin;
+};
+
 Deno.test("isola transacao pelo ambiente e pelo titulo Banese", async () => {
   const target = {
     id: "tx-target",
@@ -116,7 +125,7 @@ Deno.test("legado PAGO sem transacao preserva status liquidado", async () => {
     status: "PAGO",
     gateway_status: "PAID",
     gateway_last_error: null,
-    data_pagamento: "2026-08-16",
+    data_pagamento: "2026-08-18",
   });
   const admin = fakeAdmin(receivable);
 
@@ -194,12 +203,12 @@ Deno.test("pagamento Banese inicial dispara parcelas futuras pelo roteador", asy
   const turmaId = "33333333-3333-4333-8333-333333333333";
   const alunoId = "44444444-4444-4444-8444-444444444444";
   const cursoId = "55555555-5555-4555-8555-555555555555";
-  const admin = fakeAdmin(receivableFixture({
+  const admin = allowAutomaticFutureSync(fakeAdmin(receivableFixture({
     matricula_id: matriculaId,
     turma_id: turmaId,
     cliente_id: alunoId,
     tipo_lancamento: "MATRICULA",
-  }));
+  })));
   admin.tables.inscricoes_online = [];
   admin.tables.matriculas = [{
     id: matriculaId,
@@ -229,8 +238,8 @@ Deno.test("pagamento Banese inicial dispara parcelas futuras pelo roteador", asy
         remoteStatus: "PAID",
         paid: true,
         payments: [{
-          ValorPago: 20_038.33,
-          DataPagamento: "2026-08-16",
+          ValorPago: 20_105,
+          DataPagamento: "2026-08-18",
         }],
       }) as any),
     syncFutureInstallments: (id, environment) => {
@@ -254,7 +263,7 @@ Deno.test("falha nas parcelas futuras preserva baixa e grava warning duravel", a
     cliente_id: alunoId,
     tipo_lancamento: "MATRICULA",
   });
-  const admin = fakeAdmin(receivable);
+  const admin = allowAutomaticFutureSync(fakeAdmin(receivable));
   admin.tables.inscricoes_online = [];
   admin.tables.matriculas = [{
     id: matriculaId,
@@ -283,8 +292,8 @@ Deno.test("falha nas parcelas futuras preserva baixa e grava warning duravel", a
         remoteStatus: "PAID",
         paid: true,
         payments: [{
-          ValorPago: 20_038.33,
-          DataPagamento: "2026-08-16",
+          ValorPago: 20_105,
+          DataPagamento: "2026-08-18",
         }],
       }) as any),
     syncFutureInstallments: () =>
