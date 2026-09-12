@@ -1,8 +1,8 @@
 {
-  "version": "4.8.46",
+  "version": "4.8.47",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 55,
+  "revision": 56,
   "releasedAt": "2026-09-12",
-  "summary": "Conciliação do legado Proesc e consulta automática de pagamentos confirmados"
+  "summary": "Conciliação Banese em dia útil e discriminação comprovada de recebimentos Proesc"
 }

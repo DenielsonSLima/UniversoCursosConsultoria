@@ -11,7 +11,8 @@ import {
   remainingBaneseQueryBudgetMs,
   scheduledLaunchAt,
 } from "./pacing.ts";
-import { readRequestBody, safeEqual } from "./request-guards.ts";
+import { safeEqual } from "./request-guards.ts";
+import { handleDiagnosticRequest } from "./diagnostic.ts";
 import { json, titleReplacementJson } from "./response.ts";
 import {
   createLazyAsyncValue,
@@ -137,11 +138,8 @@ Deno.serve(async (req: Request) => {
     return json({ error: "Não autorizado." }, 401);
   }
 
-  try {
-    await readRequestBody(req);
-  } catch {
-    return json({ error: "Requisição inválida." }, 400);
-  }
+  const diagnostic = await handleDiagnosticRequest(req, admin);
+  if (diagnostic) return diagnostic;
 
   const titleReplacement = await processOneBaneseEadTitleReplacement(admin, supabaseUrl);
   if (titleReplacement.handled) {

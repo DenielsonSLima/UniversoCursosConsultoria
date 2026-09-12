@@ -11,7 +11,8 @@ export type CaixaCompositionStatus =
   | 'SEM_DIFERENCA_FINANCEIRA'
   | 'NAO_DISCRIMINADA'
   | 'NAO_DISCRIMINADA_PELO_GATEWAY'
-  | 'CONCILIADO_POR_FORMULA_BANESE';
+  | 'CONCILIADO_POR_FORMULA_BANESE'
+  | 'CONCILIADO_POR_CONFERENCIA_PROESC';
 
 export interface CaixaReportInstitution {
   id: string | null;

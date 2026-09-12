@@ -1,8 +1,8 @@
 import { queryBaneseBoleto } from "../../banese/core/adapter.ts";
 import {
-  calculateBaneseAcceptablePaymentRange,
   normalizeBaneseFinancialTerms,
 } from "../../banese/internal/financial-terms.ts";
+import { calculateBaneseSettlementRange } from "../../banese/internal/settlement-range.ts";
 import { assertBaneseFinancialTermsEqual } from "../../banese/internal/financial-terms-response.ts";
 import type { Environment } from "./config.ts";
 import { requireGatewayEnvironment } from "./environment.ts";
@@ -346,7 +346,7 @@ export const reconcileBaneseReceivable = async (
     );
   }
   if (snapshot.paid) {
-    const paymentRange = calculateBaneseAcceptablePaymentRange(
+    const paymentRange = calculateBaneseSettlementRange(
       confirmedFinancialTerms,
       paymentDates.at(-1)!,
     );

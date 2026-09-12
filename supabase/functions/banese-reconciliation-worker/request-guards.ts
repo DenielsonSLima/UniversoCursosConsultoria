@@ -13,5 +13,5 @@ export const readRequestBody = async (req: Request) => {
   const text = await req.text();
   if (!text) return;
   if (text.length > 1_024) throw new Error("Corpo da requisição inválido.");
-  JSON.parse(text);
+  return JSON.parse(text) as unknown;
 };

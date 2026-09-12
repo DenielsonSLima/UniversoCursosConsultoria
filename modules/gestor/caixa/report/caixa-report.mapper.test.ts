@@ -397,3 +397,28 @@ test('recusa contagem incompatível e IDs duplicados', () => {
   });
   assert.throws(() => mapCaixaDetailedReport(duplicateCourse), /IDs duplicados/);
 });
+
+
+test('preserva a composição conferida no Proesc e o recebido sem inferir desconto no cliente', () => {
+  const payload = makePayload();
+  Object.assign(payload.recebimentos[0], {
+    valor_base: 300, valor_recebido: 280, juros: 0, multa: 0, acrescimo: 0,
+    desconto: 20, diferenca_nao_discriminada: 0,
+    composicao_status: 'CONCILIADO_POR_CONFERENCIA_PROESC',
+  });
+  const item = mapCaixaDetailedReport(payload).recebimentos[0];
+  assert.equal(item.composicaoStatus, 'CONCILIADO_POR_CONFERENCIA_PROESC');
+  assert.equal(item.desconto, 20);
+  assert.equal(item.valorRecebido, 280);
+  assert.equal(item.juros, 0);
+  assert.equal(item.multa, 0);
+  assert.equal(item.diferencaNaoDiscriminada, 0);
+
+  Object.assign(payload.recebimentos[0], {
+    desconto: null, juros: null, multa: null, acrescimo: null,
+    diferenca_nao_discriminada: -20, composicao_status: 'NAO_DISCRIMINADA',
+  });
+  const unknown = mapCaixaDetailedReport(payload).recebimentos[0];
+  assert.equal(unknown.desconto, null);
+  assert.equal(unknown.diferencaNaoDiscriminada, -20);
+});

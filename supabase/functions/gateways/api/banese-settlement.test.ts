@@ -14,7 +14,7 @@ Deno.test("aceita liquidacao com desconto ou acrescimos confirmados", async () =
   for (
     const [paymentDate, paymentValue] of [
       ["2026-08-15", 19_980.1],
-      ["2026-08-16", 20_038.33],
+      ["2026-08-18", 20_105],
     ] as const
   ) {
     const admin = fakeAdmin(receivableFixture());
@@ -80,8 +80,8 @@ Deno.test("liquidacao API com motivo canonico 61 contabiliza PIX", async () => {
         remoteStatus: "PAID",
         paid: true,
         payments: [{
-          ValorPago: 20_038.33,
-          DataPagamento: "2026-08-16",
+          ValorPago: 20_105,
+          DataPagamento: "2026-08-18",
           CodigoMotivoLiquidacao: "61",
         }],
       }) as any),
@@ -118,8 +118,8 @@ Deno.test("dependência nova não libera quando Banese informa BolePix", async (
             remoteStatus: "PAID",
             paid: true,
             payments: [{
-              ValorPago: 20_038.33,
-              DataPagamento: "2026-08-16",
+              ValorPago: 20_105,
+              DataPagamento: "2026-08-18",
               CodigoMotivoLiquidacao: "61",
             }],
           }) as any),
@@ -183,8 +183,8 @@ Deno.test("liquidacao canonica Banese libera curso EAD automaticamente", async (
         remoteStatus: "PAID",
         paid: true,
         payments: [{
-          ValorPago: 20_038.33,
-          DataPagamento: "2026-08-16",
+          ValorPago: 20_105,
+          DataPagamento: "2026-08-18",
           FormaLiquidacao: "BOLETO",
         }],
       }) as any),
@@ -192,7 +192,7 @@ Deno.test("liquidacao canonica Banese libera curso EAD automaticamente", async (
 
   assert.equal(receivable.status, "PAGO");
   assert.equal(receivable.gateway_payment_id, NOSSO_NUMERO);
-  assert.equal(receivable.data_pagamento, "2026-08-16");
+  assert.equal(receivable.data_pagamento, "2026-08-18");
   assert.equal(admin.tables.inscricoes_online[0].status, "PAGO");
   assert.equal(
     admin.tables.inscricoes_online[0].gateway_payment_id,
@@ -200,7 +200,7 @@ Deno.test("liquidacao canonica Banese libera curso EAD automaticamente", async (
   );
   assert.equal(
     admin.tables.inscricoes_online[0].pago_em,
-    "2026-08-16",
+    "2026-08-18",
   );
   assert.equal(admin.tables.matriculas[0].status, "ATIVO");
   assert.equal(
@@ -266,7 +266,7 @@ Deno.test("replay pos-baixa conclui projecoes sem depender de novo GET", async (
     cliente_id: alunoId,
     tipo_lancamento: "MATRICULA",
     forma_pagamento: "BOLETO",
-    data_pagamento: "2026-08-16",
+    data_pagamento: "2026-08-18",
   });
   const admin = fakeAdmin(receivable, [{
     id: "77777777-7777-4777-8777-777777777777",
