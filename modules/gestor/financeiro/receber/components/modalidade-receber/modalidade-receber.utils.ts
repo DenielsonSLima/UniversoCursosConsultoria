@@ -1,4 +1,5 @@
 import type { ContasReceber } from '../../../financeiro.service';
+import { hasProescEvidence } from '../../../financeiro.proesc-evidence';
 import type { GroupMode, StatusScope } from './modalidade-receber.types';
 
 export const statusScopeLabels: Record<StatusScope, string> = {
@@ -208,6 +209,11 @@ export const receivableLaunchLabel = (
   item: ContasReceber,
   format: 'name' | 'fraction' = 'name',
 ) => {
+  // The RPC supplies the source's proven label; the UI does not infer tuition
+  // or contract position from a legacy PARCELA compatibility field.
+  if (hasProescEvidence(item) && item.proescEvidence?.obligationLabel) {
+    return item.proescEvidence.obligationLabel;
+  }
   const launchType = String(item.tipoLancamento || '').trim().toUpperCase();
   const fixedLabels: Record<string, string> = {
     MATRICULA: 'Matrícula',
@@ -224,6 +230,7 @@ export const receivableLaunchLabel = (
 };
 
 export const paymentOriginLabel = (item: ContasReceber) => {
+  if (hasProescEvidence(item)) return 'Proesc';
   if (item.origemPagamento === 'PRESENCIAL') {
     return ['DELETED', 'CANCELED'].includes(String(item.asaasStatus || '').toUpperCase())
       ? `Manual, cobrança ${paymentGatewayLabel(item)} cancelada`
