@@ -52,6 +52,7 @@ import ArmazenamentoConfig from './armazenamento/ArmazenamentoConfig';
 import DispositivosAppConfig from './dispositivos-app/DispositivosAppConfig';
 import PushNotificationsConfig from './push-notifications/PushNotificationsConfig';
 import TiposProdutosConfig from './tipos-produtos/TiposProdutosConfig';
+const ProescConfig = React.lazy(() => import('./proesc/ProescConfig'));
 import {
   banesePollingQueryKey,
   consultaApiBaneseService,
@@ -98,6 +99,7 @@ const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({
     { id: 'mensageria', title: 'WhatsApp API', desc: 'Meta Cloud API e webhooks', icon: <MessageCircle size={24} />, color: 'bg-green-500' },
     { id: 'templates-mensagens', title: 'Templates', desc: 'Textos de notificação', icon: <FileCode2 size={24} />, color: 'bg-blue-400' },
     { id: 'integracao-bancaria', title: 'Integração Bancária', desc: 'Rotas de pagamento', icon: <CreditCard size={24} />, color: 'bg-rose-500' },
+    { id: 'proesc', title: 'Proesc', desc: 'Conexão e conferência do histórico da T42', icon: <Server size={24} />, color: 'bg-cyan-700' },
     ...(banesePollingQuery.data?.available ? [{
       id: 'consulta-api-banese',
       title: 'Consulta API Banese',
@@ -132,6 +134,7 @@ const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({
       case 'mensageria': return <MensageriaConfig />;
       case 'templates-mensagens': return <TemplatesMensagensConfig />;
       case 'integracao-bancaria': return <IntegracaoBancariaConfig />;
+      case 'proesc': return <React.Suspense fallback={<p role="status">Carregando Proesc…</p>}><ProescConfig /></React.Suspense>;
       case 'consulta-api-banese': return <ConsultaApiBaneseConfig />;
       case 'api': return <ApiStatusConfig />;
       default: return null;

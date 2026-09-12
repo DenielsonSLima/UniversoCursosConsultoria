@@ -1,18 +1,16 @@
 # Lote ativo
 
-Estado: `PUBLICAÇÃO AUTORIZADA — 4.8.41`
+Estado: `PUBLICAÇÃO AUTORIZADA — EM ANDAMENTO`
 
-## Lote: 2026-09-12-t42-segundo-ciclo-manual
+## Lote: 2026-09-12-proesc-consulta-t42
 
-- Pedido: abrir geração manual do segundo ciclo T42, exceto trancados e já emitidos.
-- Risco: elegibilidade financeira; histórico externo apenas consultivo.
-- Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-12-t42-segundo-ciclo-manual.md`
-- Aceite: 27 elegíveis, seis protegidos, dois trancados; nenhuma emissão automática.
-- Preservar recebíveis, pagamentos, valores, runs, matrículas e Radiologia.
-- Usuário autorizou publicar no GitHub e produção em 12/09/2026.
-- Publicar somente o manifesto T42, com metadados de versão; não integrar o PR 134.
-- Lote anterior independente: https://github.com/DenielsonSLima/UniversoCursosConsultoria/pull/134.
-
-- MCP Supabase: migration `20260912140336` aplicada e contrato real aprovado.
-- Validação: 30 testes focados; 27 prévias; 27 elegíveis / seis protegidos / dois trancados.
-- Safari autenticado em uso concorrente; conferência visual pendente.
+- Pedido: Configurações > Proesc no gestor, token protegido e consultas para confrontar histórico T42.
+- Escopo: consulta de pessoas e cobranças, com período explícito e registro privado das páginas.
+- Histórico T42 é referência a conferir; não realizar baixa, importação ou alteração automática.
+- Preservar ciclo 2 Banese e todas as demais turmas.
+- Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-12-proesc-consulta-t42.md`.
+- Risco crítico: credencial, autorização e dados financeiros; token somente no Vault/backend.
+- Consulta real depende de token informado pelo gestor na tela; não solicitar segredo no chat.
+- Publicação GitHub/produção e estrutura Supabase autorizadas pelo usuário em 12/09/2026.
+- Lote anterior T42 ciclo 2 concluído em produção 4.8.41 (PR 135).
+- Preservar trabalho independente do PR 134 e seus arquivos locais.

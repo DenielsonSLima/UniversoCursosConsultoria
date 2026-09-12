@@ -1,8 +1,8 @@
 {
-  "version": "4.8.41",
+  "version": "4.8.42",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 50,
+  "revision": 51,
   "releasedAt": "2026-09-12",
-  "summary": "Segundo ciclo manual da Enfermagem T42 liberado com histórico antigo apenas para consulta"
+  "summary": "Consulta Proesc em Configurações para conferência de histórico financeiro"
 }
