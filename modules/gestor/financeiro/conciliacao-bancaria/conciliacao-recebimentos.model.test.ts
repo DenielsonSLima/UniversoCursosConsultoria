@@ -5,31 +5,24 @@ import {
   channelToFinancialReceiptOrigin,
   mapFinancialReceipt,
   mapFinancialReceiptCounts,
-  shouldUseFinancialReceiptsFeed,
 } from './conciliacao-recebimentos.model.ts';
 
-const baseParams = {
-  environment: 'production' as const,
-  page: 1,
-  pageSize: 20,
-};
-
-test('usa o feed unificado somente para recebimentos e origens de baixa', () => {
-  assert.equal(shouldUseFinancialReceiptsFeed({
-    ...baseParams,
-    status: 'PAGO',
-    canal: 'TODOS',
-  }), true);
-  assert.equal(shouldUseFinancialReceiptsFeed({
-    ...baseParams,
-    status: 'TODOS',
-    canal: 'HISTORICO_MIGRADO',
-  }), true);
-  assert.equal(shouldUseFinancialReceiptsFeed({
-    ...baseParams,
-    status: 'VENCIDO',
-    canal: 'TODOS',
-  }), false);
+test('preserva origem e pendência de conferência recebidas do servidor', () => {
+  const receipt = mapFinancialReceipt({
+    id: 'obligation-example', origem: 'PROESC', status: 'PENDENTE',
+    source_system: 'PROESC', source_label: 'Proesc',
+    status_label: 'Em conferência (Proesc)', source_verification: 'REVIEW',
+    valor_nominal: 279.9, valor_pago: null, desconto_aplicado: null,
+  });
+  assert.equal(receipt.status, 'PENDENTE');
+  assert.equal(receipt.sourceSystem, 'PROESC');
+  assert.equal(receipt.statusLabel, 'Em conferência (Proesc)');
+  assert.equal(receipt.sourceVerification, 'REVIEW');
+  assert.equal(receipt.canalBaixa, 'PROESC');
+  assert.equal(receipt.valorPago, undefined);
+  assert.equal(receipt.descontoAplicado, null);
+  assert.equal(mapFinancialReceipt({}).status, 'PENDENTE');
+  assert.equal(channelToFinancialReceiptOrigin('PROESC'), 'PROESC');
 });
 
 test('mapeia baixa manual sem recalcular a composição no cliente', () => {
@@ -37,6 +30,7 @@ test('mapeia baixa manual sem recalcular a composição no cliente', () => {
     id: '10000000-0000-4000-8000-000000000001',
     descricao: 'Mensalidade 2/12',
     origem: 'MANUAL',
+    status: 'PAGO',
     cliente_nome: 'Aluno Teste',
     cliente_cpf_cnpj: '***.***.***-12',
     data_pagamento: '2026-08-30',
@@ -64,6 +58,7 @@ test('preserva ausência de hora e composição no histórico migrado', () => {
   const receipt = mapFinancialReceipt({
     id: '10000000-0000-4000-8000-000000000002',
     origem: 'HISTORICO_MIGRADO',
+    status: 'PAGO',
     data_pagamento: '2026-01-10',
     baixa_registrada_em: null,
     valor_nominal: 100,
@@ -87,7 +82,9 @@ test('preserva ausência de hora e composição no histórico migrado', () => {
 
 test('mapeia contagens e filtros de origem sem misturar histórico com manual', () => {
   const counts = mapFinancialReceiptCounts({
-    total: 263,
+    total: 283,
+    proesc: 20,
+    pendente: 7,
     automatica_banese: 48,
     manual: 26,
     historico_migrado: 189,
@@ -96,8 +93,10 @@ test('mapeia contagens e filtros de origem sem misturar histórico com manual', 
     outro: 0,
   });
 
-  assert.equal(counts.totalCount, 263);
+  assert.equal(counts.totalCount, 283);
   assert.equal(counts.apiCount, 48);
+  assert.equal(counts.proescCount, 20);
+  assert.equal(counts.pendenteCount, 7);
   assert.equal(counts.caixaCount, 26);
   assert.equal(counts.historicoCount, 189);
   assert.equal(channelToFinancialReceiptOrigin('HISTORICO_MIGRADO'), 'HISTORICO_MIGRADO');

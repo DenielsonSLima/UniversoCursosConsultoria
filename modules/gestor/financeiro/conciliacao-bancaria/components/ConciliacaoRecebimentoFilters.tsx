@@ -1,8 +1,11 @@
 import React from 'react';
 import { CalendarDays, Search, X } from 'lucide-react';
+import type { SourceSystemConciliacao } from '../conciliacao-bancaria.fetch';
 
 interface ConciliacaoRecebimentoFiltersProps {
   searchTerm: string;
+  sourceSystemFilter: SourceSystemConciliacao;
+  onChangeSourceSystem: (source: SourceSystemConciliacao) => void;
   selectedStatus: string;
   settlementStartDate: string;
   settlementEndDate: string;
@@ -18,6 +21,8 @@ const STATUS_OPTIONS = ['TODOS', 'PAGO', 'PENDENTE', 'VENCIDO'] as const;
 
 const ConciliacaoRecebimentoFilters: React.FC<ConciliacaoRecebimentoFiltersProps> = ({
   searchTerm,
+  sourceSystemFilter,
+  onChangeSourceSystem,
   selectedStatus,
   settlementStartDate,
   settlementEndDate,
@@ -39,25 +44,42 @@ const ConciliacaoRecebimentoFilters: React.FC<ConciliacaoRecebimentoFiltersProps
   return (
     <div className="space-y-3 rounded-2xl border border-slate-100 bg-slate-50/80 p-3">
       <div className="flex flex-col gap-3 xl:flex-row xl:items-end">
-        <label className="min-w-[240px] flex-1">
-          <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-500">
-            Buscar cobrança
-          </span>
-          <span className="relative block">
-            <Search
-              size={16}
-              aria-hidden="true"
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-            />
-            <input
-              type="search"
-              value={searchTerm}
-              onChange={(event) => onSearchTermChange(event.target.value)}
-              placeholder="Aluno, CPF, descrição ou nosso número..."
-              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-xs outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-            />
-          </span>
-        </label>
+        <div className="flex min-w-0 flex-1 items-end gap-3">
+          <label className="min-w-0 flex-1">
+            <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-500">
+              Buscar cobrança
+            </span>
+            <span className="relative block">
+              <Search
+                size={16}
+                aria-hidden="true"
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+              <input
+                type="search"
+                value={searchTerm}
+                onChange={(event) => onSearchTermChange(event.target.value)}
+                placeholder="Aluno, CPF, descrição ou nosso número..."
+                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-xs outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              />
+            </span>
+          </label>
+
+          <label className="w-28 shrink-0 sm:w-36">
+            <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-500">
+              Origem
+            </span>
+            <select
+              value={sourceSystemFilter}
+              onChange={(event) => onChangeSourceSystem(event.target.value as SourceSystemConciliacao)}
+              className="min-h-10 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            >
+              <option value="ALL">Todas</option>
+              <option value="PROESC">Proesc</option>
+              <option value="BANESE">Banese</option>
+            </select>
+          </label>
+        </div>
 
         <fieldset className="min-w-0">
           <legend className="mb-1.5 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-slate-500">

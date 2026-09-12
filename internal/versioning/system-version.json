@@ -1,8 +1,8 @@
 {
-  "version": "4.8.49",
+  "version": "4.8.50",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 58,
+  "revision": 59,
   "releasedAt": "2026-09-12",
-  "summary": "Resumo financeiro Proesc completo e identificação de cobranças pela origem"
+  "summary": "Conciliação com filtro de origem Proesc e Banese e identificação consistente"
 }

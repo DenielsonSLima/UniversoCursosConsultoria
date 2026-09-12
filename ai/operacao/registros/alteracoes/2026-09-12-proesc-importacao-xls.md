@@ -1,6 +1,6 @@
 # Importação Proesc com cadastros dos XLS — 4.8.49
 
-Estado: importação das nove turmas, auditoria de dados e habilitação do monitor concluídas; publicação 4.8.49 em andamento.
+Estado: entrega 4.8.49 concluída e confirmada em produção.
 
 Base: 4.8.48/revisão 57 publicada pelo PR142, squash b5b185e5067e5a7ea02075edfb6667ddcb5fb72b, com CI, Vercel e versão pública confirmados.
 
@@ -28,7 +28,7 @@ Base: 4.8.48/revisão 57 publicada pelo PR142, squash b5b185e5067e5a7ea02075edfb
 - Turmas legadas guardam espelhos financeiros neutros e condições em conferência; edição acadêmica não fabrica plano, publicação ou calendário. Geração permanece bloqueada até prova individual.
 - Migrations 00–07, 30/40/45/50/60/65/70/75 e extensões 76/78 aplicadas por MCP; fontes aplicadas são imutáveis.
 - Edge Proesc v6 publicado pelo coordenador, com paridade dos 11 arquivos conferida. A sincronização processa lotes maiores com concorrência limitada e avança somente o prefixo efetivamente concluído; itens fora de ordem podem repetir com idempotência.
-- Quatro eventos de histórico registrados como IMPORTACAO/PARCIAL/PROESC_API, com replay aprovado e conferência residual preservada. A publicação 4.8.48 foi confirmada; a continuação registrou mais cinco eventos PARCIAL/PROESC_API, com replay aprovado para todos. A publicação 4.8.49 depende do fechamento atual.
+- Quatro eventos de histórico registrados como IMPORTACAO/PARCIAL/PROESC_API, com replay aprovado e conferência residual preservada. A publicação 4.8.48 foi confirmada; a continuação registrou mais cinco eventos PARCIAL/PROESC_API, com replay aprovado para todos. A publicação 4.8.49 foi confirmada no PR143, squash 58a6675fcc531d4e907987b0d5281698fb6ad7e6.
 
 ## Validação
 
@@ -40,7 +40,7 @@ Base: 4.8.48/revisão 57 publicada pelo PR142, squash b5b185e5067e5a7ea02075edfb
 - Os 75 blocos de auditoria compararam integralmente principal, vencimento, identidade, linhas contábeis, data/valor de pagamento e recibos: nenhuma divergência. Recebimentos foram conferidos por mês de pagamento.
 - Build completo 4.8.48 aprovado. Smoke funcional V4 com a identidade Auth real e páginas de 25 confirmou as quatro turmas e separação pago/conferência. O erro 53100 ocorreu no harness amplo que repetia páginas JSON na ordenação; a correção ficou no teste privado, sem alteração adicional do produto.
 - Sete testes do worker aprovados; ensaio SQL do cursor por prefixo concluído aprovado pelo coordenador. Novo teste de escala protege falha intermediária e retomada idempotente.
-- Interface: 10 testes focados aprovados, TypeScript e ESLint sem diagnósticos no escopo. Smoke sintético do componente real aprovado em Chromium desktop e mobile, sem overflow e com estados Proesc/Banese preservados. Smoke da continuação 4.8.49 e validação integrada de fechamento continuam sob responsabilidade do coordenador.
+- Interface: 10 testes focados aprovados, TypeScript e ESLint sem diagnósticos no escopo. Smoke sintético do componente real aprovado em Chromium desktop e mobile, sem overflow e com estados Proesc/Banese preservados. A continuação 4.8.49 teve validação integrada e acesso autenticado confirmados pelo coordenador após a publicação.
 - Os testes acadêmicos sintéticos exigem banco anterior à importação real e rollback externo; não devem ser executados agora sobre o lote aplicado. O teste individual usa o operador confirmado do escopo, sem representá-lo como usuário Auth.
 - Controle de versão 4.8.48/revisão 57 e check:file-lines aprovados; manifesto de 40 arquivos, todos abaixo de 500 linhas. O registro de manifestos para publicação usa a base remota e026a0f mais este lote, preservando referências locais paralelas fora do commit.
 - PR 141/4.8.47 é entrega anterior independente. Seu registro foi encerrado neste lote documental: Vercel/produção confirmados; GitHub Actions permaneceu na fila sem runner, sem alegação de CI aprovado.
@@ -51,12 +51,12 @@ Base: 4.8.48/revisão 57 publicada pelo PR142, squash b5b185e5067e5a7ea02075edfb
 - A lista apresentava Mensalidade para obrigação Proesc de classificação desconhecida. A classificação e o rótulo são resolvidos no backend; o frontend não infere tipo, parcelas, recebimentos ou totais.
 - Somente novas migrations 20260912230000/230001 e seus consumidores/testes entram nesta revisão. Migrations aplicadas de 4.8.48 permanecem imutáveis.
 - As duas migrations corretivas foram aplicadas e os testes RPC somente leitura passaram, inclusive a repetição do resumo e dos rótulos após a conclusão das nove turmas. A correção também remove a identificação indevida de baixa manual em recebimento Proesc. Nenhum cálculo financeiro foi acrescentado no frontend.
-- Revisão focada: 16 testes Node aprovados, TypeScript e ESLint sem diagnósticos, smoke sintético desktop/mobile da fonte de publicação aprovado. Build completo 4.8.49 aprovado; janela autenticada indisponível para smoke visual.
+- Revisão focada: 16 testes Node aprovados, TypeScript e ESLint sem diagnósticos, smoke sintético desktop/mobile da fonte de publicação aprovado. Build completo 4.8.49 aprovado; a janela estava indisponível no teste visual inicial. Após a publicação, a árvore de acessibilidade autenticada confirmou a versão 4.8.49.
 - Histórico das cinco turmas registrado como PARCIAL/PROESC_API, conferindo 3.131 títulos, 1.682 pagos e 1.449 registros em revisão; todos os replays retornaram o mesmo evento. No conjunto das nove turmas permanecem 2.535 revisões e o caso sem CPF.
 - Auditoria integral das nove turmas aprovada: identidade, principal, vencimentos, valores recebidos e dados originais exatos; 3.536 snapshots VERIFIED, zero contas incorretas, zero guardas de ciclo ausentes e zero divergências entre os pagamentos atuais e os snapshots verificados. T42 e Radiologia mantiveram hashes idênticos à linha de base.
 - Monitor adicional habilitado em 34 blocos para os 3.131 vínculos das cinco turmas. Auditoria global: 6.071 novos vínculos habilitados e 346 da T42, totalizando 6.417, uma Conta Proesc compartilhada e zero vínculos inelegíveis ou em conta incorreta. Novo acionamento do cron confirmado com HTTP 200: execução adquirida, 60 obrigações consultadas, 60 sem alteração, zero falhas, zero revisões e sem timeout.
 - Auditoria acadêmica final: nove turmas, 392 matrículas e 385 alunos; zero divergências de CPF/status, perda de visibilidade entre polos, notificações/push, Auth criado ou flags indevidas de geração. Todas as turmas estão INTEGRAL e com as datas autorizadas.
-- Total recebido consolidado das nove turmas: R$ 898.688,99 em 3.536 cobranças pagas. O valor de R$ 470.746,72 da etapa anterior não deve ser somado novamente. Publicação e smoke autenticado da continuação ainda não foram confirmados.
+- Total recebido consolidado das nove turmas: R$ 898.688,99 em 3.536 cobranças pagas. O valor de R$ 470.746,72 da etapa anterior não deve ser somado novamente. PR143 incorporado por squash 58a6675fcc531d4e907987b0d5281698fb6ad7e6, todos os checks GitHub SUCCESS, Vercel SUCCESS e produção HTTP 200 no asset main-BVVN6ra3.js com versão 4.8.49. Acesso autenticado confirmado pela árvore de acessibilidade. O coordenador reindexou o RAG uma vez no fechamento.
 
 ## Manifesto explícito da revisão 4.8.49
 

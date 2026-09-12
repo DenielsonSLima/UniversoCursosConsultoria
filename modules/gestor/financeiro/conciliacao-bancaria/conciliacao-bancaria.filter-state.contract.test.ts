@@ -34,7 +34,7 @@ test('troca de filtro refaz somente a lista e não as consultas auxiliares', () 
   assert.match(overviewQuery, /fetchConciliacaoOverviewData/);
   assert.doesNotMatch(overviewQueryKey, /\bstatus\b|\bcanal\b|\bsearch\b|\bpage\b|\bpageSize\b/);
   assert.match(overviewQuery, /retry: false/);
-  assert.match(overviewQuery, /status !== 'PAGO' \|\| diagnosticsEnabled/);
+  assert.match(overviewQuery, /enabled: Boolean\(activeEnvironment\) && diagnosticsEnabled/);
 });
 
 test('diagnóstico pesado só é habilitado pela aba correspondente', () => {
@@ -70,8 +70,8 @@ test('realtime agrupa recebíveis sem assinar tabelas auxiliares de alto custo',
   assert.doesNotMatch(queryHook, /table: 'payment_gateway_transactions'/);
   assert.doesNotMatch(queryHook, /table: 'payment_gateway_cnab_files'/);
   assert.match(queryHook, /contas_receber[\s\S]*scheduleReceivablesInvalidation/);
-  assert.match(queryHook, /status === 'PAGO'[\s\S]*status=eq\.PAGO/);
-  assert.match(queryHook, /gateway_provider=eq\.banese_card/);
+  assert.match(queryHook, /poloId \? `polo_id=eq\.\$\{poloId\}` : undefined/);
+  assert.doesNotMatch(queryHook, /gateway_provider=eq\.banese_card/);
   assert.match(queryHook, /filter: receivablesRealtimeFilter/);
   assert.match(queryHook, /REALTIME_INVALIDATION_DEBOUNCE_MS = 2_000/);
   assert.match(queryHook, /window\.setTimeout\([\s\S]*REALTIME_INVALIDATION_DEBOUNCE_MS/);
@@ -83,7 +83,7 @@ test('visão de recebimentos abre em Pago e envia escopo, período e paginação
   assert.match(tab, /useState<string>\('PAGO'\)/);
   assert.match(tab, /status !== 'PAGO'[\s\S]*setSettlementStartDate\(''\)[\s\S]*setSettlementEndDate\(''\)/);
   assert.match(receiptFilters, /disabled=\{!settlementFilterEnabled\}/);
-  assert.match(receiptFetcher, /list_financial_receipts_v2_secure/);
+  assert.match(receiptFetcher, /list_financial_reconciliation_secure/);
   assert.match(receiptFetcher, /p_polo_id: params\.poloId \|\| null/);
   assert.match(receiptFetcher, /p_payment_start: params\.settlementStartDate \|\| null/);
   assert.match(receiptFetcher, /p_payment_end: params\.settlementEndDate \|\| null/);
@@ -93,17 +93,22 @@ test('visão de recebimentos abre em Pago e envia escopo, período e paginação
 test('detalhe exibe a conta recebedora sem repetir empresa e polo já selecionados', () => {
   assert.match(receiptRows, /field\('Conta recebedora'/);
   assert.doesNotMatch(receiptRows, /field\(\s*'Empresa \/ polo'/);
-  assert.match(receiptRows, /2xl:grid-cols-9/);
 });
 
-test('visão paga não aceita fallback parcial para a consulta Banese anterior', () => {
-  assert.match(fetcher, /shouldUseFinancialReceiptsFeed\(params\)[\s\S]*return fetchFinancialReceipts\(params\)/);
+test('todos os status usam a mesma RPC sem fallback parcial Banese', () => {
+  const listFetcher = fetcher.split('export const fetchConciliacaoListData')[1].split('export const fetchConciliacaoOverviewData')[0];
+  assert.match(listFetcher, /return fetchFinancialReceipts\(params\)/);
+  assert.doesNotMatch(listFetcher, /\.from\(|\.range\(|Math\./);
+  assert.match(receiptFetcher, /p_source_system: params\.sourceSystem/);
+  assert.match(receiptFetcher, /p_status: params\.status/);
+  assert.match(receiptFetcher, /totalPages: receiptNumber\(payload\.total_pages/);
   assert.doesNotMatch(fetcher, /PGRST202/);
 });
 
-test('painel descreve a conciliação Banese por worker sem prometer webhook inexistente', () => {
-  assert.match(panel, /Worker de Conciliação em Segundo Plano/);
-  assert.match(panel, /consulta a API Banese/);
-  assert.doesNotMatch(panel, /Webhooks/);
-  assert.match(panel, /parcelas pendentes visíveis/);
+test('painel informa consulta automática sem comando manual em lote', () => {
+  assert.match(panel, /Banese e Proesc/);
+  assert.doesNotMatch(panel, /Webhooks|Worker de Conciliação|Sincronizar Visíveis|Mercado Pago/);
+  assert.doesNotMatch(tab, /Atualizar Dados/);
+  assert.match(receiptFilters, /Todas|Banese|Proesc/);
+  assert.match(queryHook, /sourceSystem,/);
 });

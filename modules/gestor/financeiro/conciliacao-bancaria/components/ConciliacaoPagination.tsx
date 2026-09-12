@@ -10,6 +10,7 @@ interface ConciliacaoPaginationProps {
   page: number;
   pageSize: number;
   totalItems: number;
+  totalPages?: number;
   onPageChange: (newPage: number) => void;
   onPageSizeChange?: (newPageSize: number) => void;
   className?: string;
@@ -19,11 +20,12 @@ export const ConciliacaoPagination: React.FC<ConciliacaoPaginationProps> = ({
   page,
   pageSize,
   totalItems,
+  totalPages: serverTotalPages,
   onPageChange,
   onPageSizeChange,
   className = '',
 }) => {
-  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const totalPages = serverTotalPages ?? Math.max(1, Math.ceil(totalItems / pageSize));
   const startItem = totalItems === 0 ? 0 : (page - 1) * pageSize + 1;
   const endItem = Math.min(page * pageSize, totalItems);
 

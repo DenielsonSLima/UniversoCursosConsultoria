@@ -9,6 +9,7 @@ import {
   fetchConciliacaoOverviewData,
   type CanalBaixaConciliacao,
   type ConciliacaoChannelCounts,
+  type SourceSystemConciliacao,
 } from '../conciliacao-bancaria.fetch';
 import {
   BANESE_CNAB240_OVERVIEW_QUERY_KEY,
@@ -22,6 +23,7 @@ export interface UseBaneseConciliacaoQueriesParams {
   search?: string;
   status?: string;
   canal?: CanalBaixaConciliacao | 'TODOS';
+  sourceSystem?: SourceSystemConciliacao;
   poloId?: string | null;
   settlementStartDate?: string;
   settlementEndDate?: string;
@@ -35,6 +37,7 @@ const DEFAULT_CHANNEL_COUNTS: ConciliacaoChannelCounts = {
   cnabCount: 0,
   caixaCount: 0,
   historicoCount: 0,
+  proescCount: 0,
   mpCount: 0,
   outroCount: 0,
 };
@@ -52,13 +55,12 @@ export const useBaneseConciliacaoQueries = (params?: UseBaneseConciliacaoQueries
   const search = params?.search ?? '';
   const status = params?.status ?? 'TODOS';
   const canal = params?.canal ?? 'TODOS';
+  const sourceSystem = params?.sourceSystem ?? 'ALL';
   const poloId = params?.poloId ?? null;
   const settlementStartDate = params?.settlementStartDate ?? '';
   const settlementEndDate = params?.settlementEndDate ?? '';
   const diagnosticsEnabled = params?.diagnosticsEnabled === true;
-  const receivablesRealtimeFilter = status === 'PAGO'
-    ? 'status=eq.PAGO'
-    : 'gateway_provider=eq.banese_card';
+  const receivablesRealtimeFilter = poloId ? `polo_id=eq.${poloId}` : undefined;
   const receivablesInvalidationTimerRef = useRef<number | null>(null);
 
   const bankingOverviewQuery = useQuery({
@@ -84,6 +86,7 @@ export const useBaneseConciliacaoQueries = (params?: UseBaneseConciliacaoQueries
       search.trim(),
       status,
       canal,
+      sourceSystem,
       poloId || 'all-authorized-polos',
       settlementStartDate,
       settlementEndDate,
@@ -95,6 +98,7 @@ export const useBaneseConciliacaoQueries = (params?: UseBaneseConciliacaoQueries
       search,
       status,
       canal,
+      sourceSystem,
       poloId,
       settlementStartDate,
       settlementEndDate,
@@ -110,6 +114,7 @@ export const useBaneseConciliacaoQueries = (params?: UseBaneseConciliacaoQueries
       search,
       status,
       canal,
+      sourceSystem,
       poloId,
       settlementStartDate,
       settlementEndDate,
@@ -124,7 +129,7 @@ export const useBaneseConciliacaoQueries = (params?: UseBaneseConciliacaoQueries
       activeEnvironment || 'environment-pending',
     ],
     queryFn: () => fetchConciliacaoOverviewData(activeEnvironment!),
-    enabled: Boolean(activeEnvironment) && (status !== 'PAGO' || diagnosticsEnabled),
+    enabled: Boolean(activeEnvironment) && diagnosticsEnabled,
     staleTime: 30_000,
     retry: false,
     refetchOnWindowFocus: true,
@@ -247,11 +252,11 @@ export const useBaneseConciliacaoQueries = (params?: UseBaneseConciliacaoQueries
     receivables: dataQuery.data?.receivables || [],
     transactions: diagnosticsDataQuery.data?.transactions || [],
     channelCounts: dataQuery.data?.receiptChannelCounts
-      || overviewDataQuery.data?.channelCounts
       || DEFAULT_CHANNEL_COUNTS,
     totalCount: dataQuery.data?.totalCount || 0,
     page: dataQuery.data?.page || page,
     pageSize: dataQuery.data?.pageSize || pageSize,
+    totalPages: dataQuery.data?.totalPages || 1,
     overviewError,
     diagnosticsError,
     transactionsError: diagnosticsDataQuery.data?.transactionsError || null,
