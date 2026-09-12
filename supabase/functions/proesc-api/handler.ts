@@ -3,13 +3,14 @@ import {
 } from '../_shared/authz.ts';
 import { buildCorsHeaders, isRateLimitExceeded, json } from '../_shared/http.ts';
 import { object, ProescError } from './contract.ts';
+import { testProescToken } from './test-token.ts';
 
 type Admin = Parameters<typeof requireGestorAtivo>[1];
-const publicActions = new Set(['status', 'save_token', 'remove_token', 'class_history', 'class_events']);
+const publicActions = new Set(['status', 'save_token', 'remove_token', 'class_history', 'class_events', 'test_token']);
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// O transporte opcional mantém compatibilidade de testes; este handler nunca consulta o Proesc.
-export const createHandler = (admin: Admin, _transport?: typeof fetch) => async (req: Request) => {
+// Testes de conexão nunca importam dados nem alteram cobranças.
+export const createHandler = (admin: Admin, transport: typeof fetch = fetch) => async (req: Request) => {
   const respond = (body: unknown, status = 200) => {
     const response = json(body, status, req);
     response.headers.set('Cache-Control', 'no-store');
@@ -18,26 +19,47 @@ export const createHandler = (admin: Admin, _transport?: typeof fetch) => async 
   if (req.method === 'OPTIONS') return new Response('ok', { headers: buildCorsHeaders(req) });
   if (req.method !== 'POST') return respond({ error: 'Método não permitido.' }, 405);
   try {
-    const gestor = await requireGestorAtivo(req, admin);
-    requireGestorGlobal(gestor);
-    requireGestorModule(gestor, 'configuracoes');
-    if (isRateLimitExceeded(`proesc:${gestor.id}`, 100, 60000)) {
-      return respond({ error: 'Muitas consultas. Aguarde um minuto e retome.' }, 429);
-    }
     const text = await req.text();
     if (text.length > 12000) throw new ProescError('Solicitação muito grande.');
     let body;
     try { body = object(JSON.parse(text)); } catch { throw new ProescError('Solicitação inválida.'); }
     const action = typeof body.action === 'string' ? body.action : '';
-    if (!publicActions.has(action)) throw new ProescError('Ação não permitida neste painel.', 403);
+    let actorId: string;
+    if (action === 'internal_probe') {
+      const key = req.headers.get('X-Proesc-Worker-Secret') || '';
+      if (!/^[0-9a-f]{64}$/.test(key)) throw new ProescError('Acesso interno não autorizado.', 403);
+      const { data, error } = await admin.rpc('proesc_internal_probe_service', {
+        p_action: 'authorize', p_payload: { key },
+      });
+      if (error || typeof data?.actorId !== 'string') throw new ProescError('Acesso interno não autorizado.', 403);
+      actorId = data.actorId;
+    } else {
+      const gestor = await requireGestorAtivo(req, admin);
+      requireGestorGlobal(gestor);
+      requireGestorModule(gestor, 'configuracoes');
+      if (!publicActions.has(action)) throw new ProescError('Ação não permitida neste painel.', 403);
+      actorId = gestor.id;
+    }
+    if (isRateLimitExceeded(`proesc:${actorId}`, 100, 60000)) {
+      return respond({ error: 'Muitas consultas. Aguarde um minuto e retome.' }, 429);
+    }
     const rpc = async (name: string, action: string, payload: unknown = {}) => {
       const { data, error } = await admin.rpc(name, {
-        p_action: action, p_actor_id: gestor.id, p_payload: payload,
+        p_action: action, p_actor_id: actorId, p_payload: payload,
       });
       // Erros de banco nunca retornam argumentos ou conteúdo de credenciais.
       if (error) throw new ProescError('Não foi possível concluir a operação. Atualize a tela e tente novamente.', 409);
       return data;
     };
+    if (action === 'test_token' || action === 'internal_probe') {
+      if (isRateLimitExceeded(`proesc-test:${actorId}`, 5, 60000)) throw new ProescError('Aguarde um minuto antes de testar novamente.', 429);
+      const credential = object(await rpc('proesc_workspace_service', 'token'));
+      if (typeof credential.token !== 'string' || !credential.token) throw new ProescError('Cadastre o token antes de testar.');
+      const result = await testProescToken(credential.token, transport);
+      const current = object(await rpc('proesc_workspace_service', 'token'));
+      if (current.revision !== credential.revision) throw new ProescError('O token foi alterado durante o teste. Teste novamente.', 409);
+      return respond(result);
+    }
     if (action === 'status') {
       const result = object(await rpc('proesc_workspace_service', action));
       return respond({ configured: result.configured === true,

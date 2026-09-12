@@ -1,8 +1,8 @@
 {
-  "version": "4.8.43",
+  "version": "4.8.44",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 52,
+  "revision": 53,
   "releasedAt": "2026-09-12",
-  "summary": "Proesc com configuração do token e histórico por turma"
+  "summary": "Teste de token Proesc e contas operacionais por polo"
 }
