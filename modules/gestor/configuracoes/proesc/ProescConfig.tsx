@@ -114,7 +114,7 @@ export default function ProescConfig() {
           <div className="flex items-start gap-3">
             <div className="rounded-xl bg-emerald-50 p-3 text-emerald-600"><Wifi size={20} /></div>
             <div><h3 className="text-lg font-black uppercase tracking-tight text-[#001a33]">Testar conexão</h3>
-              <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">Verifique se o token salvo permite acessar pessoas e parcelas no Proesc.</p></div>
+              <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">Verifique os acessos disponíveis para o token salvo no Proesc.</p></div>
           </div>
           <button type="button" disabled={configUnavailable || !configured} onClick={() => void testToken()} className={`${buttonClass} w-full bg-[#001a33] text-white hover:bg-blue-950`}>
             {operation === 'test' ? <Loader2 size={16} className="animate-spin" /> : <Wifi size={16} />}{operation === 'test' ? 'Testando token…' : 'Testar token'}

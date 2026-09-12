@@ -1,6 +1,37 @@
 import { buildQueryUrl, object, type Resource } from './contract.ts';
+import { createProescV1Client, ProescV1ReadError } from './v1-client.ts';
 
 type ProbeCheck = { resource: Resource; ok: boolean; status: number; message: string };
+
+async function probeV1Token(token: string, transport: typeof fetch, now: Date) {
+  const client = createProescV1Client({ token, transport });
+  let stage: 'configuration' | 'accounting' = 'configuration';
+  let check: ProbeCheck;
+  try {
+    const configuration = await client.configurationData();
+    if (configuration.units.length !== 1) {
+      check = { resource: 'invoices', ok: false, status: 200,
+        message: 'Não foi possível confirmar uma única unidade no Proesc. A consulta de cobranças não foi executada.' };
+    } else {
+      stage = 'accounting';
+      await client.accountingData({ unitId: configuration.units[0].id,
+        year: now.getUTCFullYear(), month: now.getUTCMonth() + 1 });
+      check = { resource: 'invoices', ok: true, status: 200,
+        message: 'Acesso confirmado à configuração da unidade e à consulta de cobranças Proesc V1.' };
+    }
+  } catch (error) {
+    const status = error instanceof ProescV1ReadError ? error.upstreamStatus : 0;
+    const prefix = stage === 'configuration'
+      ? 'Não foi possível confirmar a unidade no Proesc. A consulta de cobranças não foi executada.'
+      : 'O Proesc não confirmou acesso às cobranças.';
+    const reason = status === 401 ? 'Confira o token e a validade.'
+      : status === 403 ? 'Consulta negada (403). Verifique a permissão do recurso e a liberação da integração.'
+      : status === 429 ? 'Limite de consultas atingido. Aguarde antes de testar novamente.'
+      : error instanceof ProescV1ReadError ? error.message : 'Tente novamente mais tarde.';
+    check = { resource: 'invoices', ok: false, status, message: `${prefix} ${reason}` };
+  }
+  return { ok: check.ok, checkedAt: now.toISOString(), checks: [check], message: check.message };
+}
 
 async function probeResource(token: string, resource: Resource, transport: typeof fetch, now: Date): Promise<ProbeCheck> {
   const month = now.toISOString().slice(0, 7);
@@ -51,6 +82,7 @@ async function probeResource(token: string, resource: Resource, transport: typeo
 
 // Valida somente acesso. Nunca retorna pessoas, parcelas, token ou resposta externa bruta.
 export async function testProescToken(token: string, transport: typeof fetch = fetch, now = new Date()) {
+  if (/^[0-9a-f]{32}$/i.test(token)) return probeV1Token(token, transport, now);
   const checks = await Promise.all((['people', 'invoices'] as const).map((resource) => probeResource(token, resource, transport, now)));
   const ok = checks.every((check) => check.ok);
   return { ok, checkedAt: now.toISOString(), checks,

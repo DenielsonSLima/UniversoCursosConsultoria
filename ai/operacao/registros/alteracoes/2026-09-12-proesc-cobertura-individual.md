@@ -1,6 +1,6 @@
 # Cobertura individual de ciclo já emitido no Proesc
 
-Data: 12/09/2026. Mudança crítica financeira. Estado: APLICADA NO BANCO; PUBLICAÇÃO DA INTERFACE EM PREPARAÇÃO.
+Data: 12/09/2026. Mudança crítica financeira. Estado: PUBLICADO — PR 139, versão 4.8.45, SHA abreviado `3d8c14`; Vercel concluída. Smoke visual autenticado confirmado.
 
 ## Pedido e aceite
 
@@ -35,7 +35,12 @@ Data: 12/09/2026. Mudança crítica financeira. Estado: APLICADA NO BANCO; PUBLI
 - Build de produção e teto de linhas aprovados. Aplicação definitiva confirmada: 25 cobranças, dez pagamentos preservados e 15 pendentes.
 - Hashes dos 78 títulos Banese e dos 340 registros legados preservados.
 - Evento de importação concluída registrado no histórico da turma.
-- Smoke visual e publicação da interface pendentes.
+- Publicação da interface concluída no PR 139, versão 4.8.45, SHA abreviado `3d8c14`; Vercel com sucesso.
+- Smoke Safari autenticado após recarga em 4.8.45: contrato individual mostra
+  “2º ciclo já emitido no Proesc”; duas matrículas trancadas bloqueadas, ciclo
+  Banese permanece 13/13 e demais matrículas mantêm geração manual.
+- Conferência posterior: Caixa/Conta Proesc e recebido da T42 exibem
+  R$ 53.813,57, iguais ao backend conciliado.
 
 ## Manifesto explícito
 
@@ -63,7 +68,8 @@ Total: 18 arquivos.
 ## Continuidade
 
 - Conferência integral da T42, composição de recebimentos e consulta automática
-  permanecem em andamento; não confundir este bloqueio individual com automação concluída.
+  foram tratadas no lote posterior `2026-09-12-proesc-conciliacao-automatica.md`;
+  o escopo original desta publicação permanece o bloqueio individual.
 - Mapeamento acadêmico solicitado posteriormente registrado separadamente em
   `ai/operacao/integracoes/proesc/references/turmas-polos-inicio-informado.md`.
 - Nove novas turmas somente depois de concluir a T42; T42 e Radiologia não recriar.

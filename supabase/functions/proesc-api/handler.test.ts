@@ -157,3 +157,25 @@ Deno.test('probe interno exige segredo validado pela RPC privada antes de acessa
     assert(!calls.some((call) => call.action === 'token'));
   }
 });
+
+Deno.test('sincronização exige segredo próprio e autorização interna antes de obter lote ou token', async () => {
+  for (const key of ['', 'forged', 'a'.repeat(64)]) {
+    const { admin, calls } = fixture({ dbError: true });
+    const req = request({ action: 'internal_sync', internal: true, role: 'service_role' });
+    req.headers.set('X-Proesc-Sync-Secret', key);
+    const response = await createHandler(admin, () => { throw new Error('Rede proibida'); })(req);
+    assert(response.status === 403);
+    assert(calls.every((call) => call.name === 'proesc_sync_runtime_service' && call.action === 'authorize'));
+    assert(!calls.some((call) => ['token', 'claim'].includes(call.action)));
+  }
+  const { admin, calls } = fixture();
+  const baseRpc = admin.rpc;
+  admin.rpc = (name, args) => args.p_action === 'authorize'
+    ? Promise.resolve({ data: { actorId: 'worker-actor' } })
+    : args.p_action === 'claim' ? Promise.resolve({ data: { claimed: false } }) : baseRpc(name, args);
+  const req = request({ action: 'internal_sync' }, false);
+  req.headers.set('X-Proesc-Sync-Secret', 'a'.repeat(64));
+  const response = await createHandler(admin, () => { throw new Error('Rede proibida'); })(req);
+  assert(response.status === 200 && JSON.stringify(await response.json()) === '{"claimed":false}');
+  assert(!calls.some((call) => call.action === 'token'));
+});
