@@ -9,6 +9,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import type { ContasReceber } from '../../../financeiro.service';
+import { hasProescEvidence, isProescPaymentUnderReview } from '../../../financeiro.proesc-evidence';
 import { formatEnrollment } from './modalidade-receber.enrollment';
 import { ManualSettlementAudit } from './ManualSettlementAudit';
 import {
@@ -98,9 +99,11 @@ const ReceivableAmountSummary: React.FC<{
   );
 };
 
-export const ReceivableStatusBadge: React.FC<{ item: ContasReceber }> = ({ item }) => (
-  <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[9px] font-black uppercase ${
-    item.status === 'PAGO'
+export const ReceivableStatusBadge: React.FC<{ item: ContasReceber }> = ({ item }) => {
+  const underReview = isProescPaymentUnderReview(item);
+  return (
+  <span title={underReview ? 'A situação de pagamento ainda aguarda confirmação na origem.' : undefined} className={`inline-flex max-w-[220px] items-center gap-1 rounded-full px-2.5 py-1 text-[9px] font-black uppercase ${
+    underReview ? 'bg-amber-50 text-amber-700' : item.status === 'PAGO'
       ? 'bg-emerald-50 text-emerald-700'
       : item.status === 'VENCIDO'
         ? 'bg-rose-50 text-rose-600 font-black'
@@ -111,9 +114,10 @@ export const ReceivableStatusBadge: React.FC<{ item: ContasReceber }> = ({ item 
             : 'bg-amber-50 text-amber-700'
   }`}>
     {item.status === 'PAGO' ? <CheckCircle2 size={11} /> : <Clock3 size={11} />}
-    {item.status}
+    {underReview ? 'Histórico Proesc em conferência' : item.status}
   </span>
-);
+  );
+};
 
 export const ReceivableActionButtons: React.FC<ItemProps> = ({ item, actions }) => {
   if (item.status === 'PAGO') {
@@ -222,7 +226,7 @@ export const ReceivableActionButtons: React.FC<ItemProps> = ({ item, actions }) 
         </>
       ) : isBanese ? null : externalHistoryWithoutGateway ? (
         <span className="col-span-2 rounded-xl bg-slate-50 px-3 py-2 text-center text-[10px] font-bold text-slate-500">
-          Cobrança do sistema anterior
+          {hasProescEvidence(item) ? 'Histórico Proesc' : 'Cobrança do sistema anterior'}
         </span>
       ) : (
         <button
@@ -288,7 +292,7 @@ export const ReceivableRow: React.FC<ReceivableRowProps> = ({
       <div className="space-y-2">
         <ReceivableStatusBadge item={item} />
         <p className="text-[10px] font-bold text-slate-500">Forma: {paymentMethodLabel(item)}</p>
-        <p className="text-[10px] font-bold text-slate-500">Origem: {paymentOriginLabel(item)}</p>
+        <p className="text-[10px] font-bold text-slate-500">Origem: {hasProescEvidence(item) ? 'Proesc' : paymentOriginLabel(item)}</p>
         <ManualSettlementAudit item={item} />
         {['DELETED', 'CANCELED'].includes(String(item.asaasStatus || '').toUpperCase()) ? (
           <p className="text-[10px] font-bold text-rose-600">
@@ -368,7 +372,7 @@ export const ReceivableCard: React.FC<ItemProps> = ({ item, actions }) => (
     </div>
     <div className="mt-4 rounded-xl border border-slate-100 px-3 py-2">
       <p className="text-[10px] font-bold text-slate-500">Forma: {paymentMethodLabel(item)}</p>
-      <p className="mt-1 text-[10px] font-bold text-slate-500">Origem: {paymentOriginLabel(item)}</p>
+      <p className="mt-1 text-[10px] font-bold text-slate-500">Origem: {hasProescEvidence(item) ? 'Proesc' : paymentOriginLabel(item)}</p>
       <ManualSettlementAudit item={item} />
     </div>
     <div className="mt-4 border-t border-slate-100 pt-3">

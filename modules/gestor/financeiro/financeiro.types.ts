@@ -1,3 +1,5 @@
+import type { ProescReceivableEvidence } from './financeiro.proesc-evidence';
+
 export interface ContaBancaria {
   id?: string;
   banco: string;
@@ -67,6 +69,7 @@ export interface ContasReceber {
   turmaId?: string;
   formaPagamento?: 'BOLETO' | 'PIX' | 'CARTAO' | 'DINHEIRO';
   origemPagamento?: string;
+  proescEvidence?: ProescReceivableEvidence;
   manualSettlementActorName?: string;
   manualSettlementCompletedAt?: string;
   gatewayProvider?: string;

@@ -1,33 +1,31 @@
 # Lote ativo
 
-Estado: REVISAO - RADIOLOGIA BANESE E COMPOSICAO PROESC T42
+Estado: IMPORTACAO PROESC POR XLS — FECHAMENTO 4.8.48 EM VALIDACAO
 
-## Lote: 2026-09-12-revisao-banese-proesc
+## Lote: 2026-09-12-proesc-importacao-xls
+
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-12-proesc-importacao-xls.md`
+
+- Importação autorizada das nove turmas fornecidas; T42 e Radiologia preservadas.
+- Cadastros concluídos: 385 pessoas, sendo 382 novas e 3 reutilizadas, sem sobrescrever identidade existente ou criar Auth/convites.
+- Quatro turmas INTEGRAL de Japoatã criadas: T35, T38, T40 e T43, com 207 matrículas e situação acadêmica comprovada na fonte.
+- Histórico dessas quatro turmas: 2.940 cobranças e 1.854 pagamentos importados, total recebido de R$ 470.746,72; vencimentos, valores recebidos e datas efetivas preservados.
+- Cinco turmas SEM de Aquidabã/Porto da Folha aguardam confirmação de turno, com 185 matrículas previstas. Um cadastro permanece pendente por falta de CPF.
+- Cobertura de ciclos exige prova individual; histórico importado não autoriza geração do segundo ciclo. Canceladas e obrigações sem vínculo seguro permanecem no manifesto privado de conferência.
+- Banco acadêmico/financeiro e extensões de visibilidade/sincronização aplicados por MCP; quatro eventos de histórico PARCIAL registrados. Consulta real v6 processou 60 obrigações sem falhas; habilitação do monitor por blocos e smoke público acompanhados pelo coordenador.
+- Versão local preparada: 4.8.48, revisão 57. Publicação, CI e auditoria final ainda não concluídos neste registro.
+- Payloads, CPFs, planilhas extraídas e executores reais permanecem privados fora do repositório.
+
+## Entrega anterior: 2026-09-12-revisao-banese-proesc
 
 Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-12-revisao-banese-proesc.md`
 
-- Pedido: revisar a cobranca Radiologia em quarentena e a discriminacao de desconto, juros e multa do financeiro Proesc T42.
-- Radiologia usa Banese. T42 possui 346 vinculos Proesc e 78 boletos Banese C2. Nao emitir, cancelar ou duplicar titulos.
-- Banese: diagnosticar causa e retomar somente por consulta da identidade existente.
-- Proesc: principal, recebido e data efetiva preservados; composicao exige evidencia explicita ou conferencia comprovada, nunca diferenca presumida.
-- Componentes desconhecidos continuam desconhecidos; nao inventar desconto em recebimento parcial.
-- Agentes: diagnostico Banese, contratos/dados Proesc, revisao SQL; root integra e valida.
-- Manifesto inicial: migrations 20260912220080-84; teste proesc_verified_composition.transaction.sql; mapper/types/validation/test do Caixa; rotulo em ConciliacaoRecebimentoRows.
-- SQL restaurado do rascunho cancelado somente para esta revisao. Ensaio remoto com rollback aprovado; migrations 80-84 aplicadas. O ensaio gerou registro de ledger sem DDL persistida, representado pela migration noop 20260912200535.
-- Testes Caixa: 53 aprovados; TypeScript e ESLint focado aprovados. Smoke PDF em preparacao.
-- Banese: diagnostico GET isolado publicado no worker v99, validou pagamento com desconto no primeiro dia util apos domingo e feriado. Correcao de calendario e projecao em preparo.
-- Proesc: duas composicoes sustentadas por prova preexistente de beneficio e data/valor da API; payload em preparo, ainda sem nova gravacao. Nao alegar composicao integral de todos os pagamentos.
-- Publicacao somente do manifesto final confirmado; preservar alteracoes paralelas.
+- Entrega 4.8.47 concluída: PR 141 incorporado por squash e026a0f56c301f86ba9aee30c263042d97ff1631, Vercel success e versão pública confirmada pelo coordenador com HTTP 200 em main-BeqyXds2.js.
+- Radiologia/Banese: pagamento no primeiro dia útil nacional de 2026 reconhecido sem alterar termos ou emitir novo título. Auditoria posterior confirmou PAGO por R$ 260,00 em 08/09/2026, com vencimento original em 06/09/2026.
+- T42/Proesc: 346 vínculos, 204 pagos, 142 abertos e R$ 53.813,57 recebidos preservados. Duas provas históricas gravadas após a publicação; ambas VERIFIED e projetadas como CONCILIADO_POR_CONFERENCIA_PROESC, com desconto de R$ 19,90 cada, juros e multa zero. Recebíveis intactos e replay idempotente.
+- Componentes desconhecidos continuam nulos; nenhum desconto inferido de diferença ou recebimento parcial. Calendário bancário limitado ao ano de 2026 comprovado.
+- Validação local: 53 testes Caixa, 43 testes Deno, TypeScript, ESLint focado e build aprovados; ensaios SQL com rollback e PDF nativo renderizado aprovados.
+- GitHub Actions do HEAD 17e83e67 permaneceu QUEUED sem runner ou etapas executadas, runs 34717154177/178. Não registrar CI aprovado. A consulta da branch main mostrou checks obrigatórios desativados.
+- Worker100, payment-gateway-api32 e asaas-api96 publicados por MCP; migrations de composição/calendário aplicadas permanecem imutáveis. Detalhes e manifesto no registro anterior.
+- A importação das nove turmas por XLS pertence ao lote corrente acima e não integra o PR 141.
 
-## Nova importação solicitada durante esta revisão
-
-- O usuário retomou expressamente a importação das nove turmas, fornecendo XLS de 2024, 2025 e 2026. A preparação roda em paralelo; sua aplicação terá lote próprio após esta revisão.
-- SQL bootstrap/financeiro 20260912220000-75 permanece arquivado em /tmp/proesc-turmas-conferencia-20260912/cancelled-draft; nao aplicar.
-- Consultas API anteriores obtiveram 299 observacoes academicas e 20.917 linhas contabeis; nenhuma nova importacao foi gravada em producao.
-- Consulta financeira continua pela API. Arquivos XLS servem para cadastro, status e vínculo de turma/polo; não substituem o histórico de cobranças Proesc.
-
-## Base publicada
-
-- PR 140: cc7a803e424448ec8a599d34aecbd46352f7359b, versao 4.8.46; Vercel concluida.
-- Edge Proesc v5 e sincronizacao ativos: 346 vinculos, 204 pagos, 142 abertos, recebido 53813.57.
-- Composicao completa dos encargos Proesc nao foi publicada em 4.8.46.
