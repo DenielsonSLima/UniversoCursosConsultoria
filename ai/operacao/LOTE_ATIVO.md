@@ -1,19 +1,22 @@
 # Lote ativo
 
-Estado: REVISADO — PUBLICAÇÃO AUTORIZADA EM EXECUÇÃO (4.8.61)
+Estado: VALIDADO — CONFERÊNCIA AUTOMÁTICA DE CICLOS (4.8.64)
 
-## Lote: 2026-09-13-proesc-regras-ciclos-composicao
+## Lote: 2026-09-13-proesc-ciclos-automaticos
 
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-13-proesc-regras-ciclos-composicao.md`.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-13-proesc-ciclos-automaticos.md`.
 
-- Três agentes: cobertura de ciclos; erro do resumo; composição dos pagamentos Proesc. Coordenador cuida regras comerciais e integração.
-- Conferir todas as turmas importadas e exceções por matrícula. T42 em diante: segundo ciclo Banese se não emitido Proesc; anteriores mantêm legado conforme prova.
-- Padrão informado: matrícula200 e rematrícula100 sem desconto, 12 mensalidades por ciclo de279,90 com desconto19,90 até vencimento; multa2% única e juros2%a.m proporcionais como T42. Preservar exceções e títulos existentes.
-- Não emitir cobranças em massa. Leitura remota e preparação primeiro; alterações com pré/pós-condições, idempotência e evidência.
-- Composição compartilhada em Caixa, Contas a Receber, conciliação, extrato e Outros Créditos. Usuário autorizou calcular os componentes ausentes; identificar regra calculada, preservar prova explícita e recebido real, exibir divergências.
-- Regras e configuração prospectiva aplicadas às nove turmas; 392 configurações pendentes, nenhuma nova emissão. Dez workspaces financeiros conferidos, incluindo T42.
-- Consulta de ciclos somente via API, com cache por unidade/janela e prova individual antes da geração. Não usar navegador conforme pedido do usuário.
+- Consulta automática pelo worker existente e ao abrir o financeiro; botão de conferência removido.
+- Rodada real concluída: 427 matrículas, 60 GETs, zero falhas; 122 elegíveis, 149 protegidas e 156 sem prova suficiente de elegibilidade.
+- T42: 15 elegíveis e 7 ciclos protegidos; trancados/transferidos continuam bloqueados.
+- Fonte incompleta não comprova ausência de segundo ciclo. Identidade e período são avaliados por matrícula.
+- Consulta preservou matrículas, recebíveis, pagamentos e títulos bancários, com hashes idênticos.
+- Plano individual de C2 Proesc identificado: 13 títulos existentes, sem alteração acadêmica. Registro SEGUNDO_CICLO somente após publicação do frontend compatível.
+- Prévia e geração exigem prova recente automaticamente no servidor; a classificação exibida persiste enquanto o manifesto coincidir.
+- Banco aplicado em cinco migrations; Edge Proesc v16 ativa e conferida. Frontend 4.8.64 validado para publicação autorizada via MCP GitHub, após CI/Preview.
+- 62 testes Edge, 12 testes frontend, ensaios SQL reais com rollback, TypeScript, lint e build passaram.
+- Três frentes independentes concluíram backend, contratos da interface e revisão financeira. Manifesto: 41 arquivos; alterações paralelas preservadas.
 
 ## Entrega anterior
 
-- Diário4.8.60 publicado PR153, squash b87c419c4a20e72f03aee98dbea1e2002d6db982; CI/Vercel/HTTP e versão confirmados. Smoke autenticado final pendente por navegação concorrente.
+- 4.8.61 / PR 154 corrigiu regras financeiras, resumo e composição nos módulos financeiros. Este lote conclui a conferência automática solicitada, sem modificar aqueles valores.

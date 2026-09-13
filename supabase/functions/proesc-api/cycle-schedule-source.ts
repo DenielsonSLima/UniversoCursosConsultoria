@@ -9,6 +9,8 @@ export interface CycleSourceObligation {
   dueDate: string;
   createdDate: string | null;
   unsafe: boolean;
+  ambiguity?: 'MISSING_CLASS_ID' | 'CONFLICTING_IDENTITY';
+  unidentifiedGroupLatestDate?: string;
 }
 
 export async function cycleSourceObligations(
@@ -42,14 +44,33 @@ export async function cycleSourceObligations(
     // Explicitly canceled principal is no longer an issued liability. Keep
     // mixed/unknown cancellation states for review instead of guessing.
     if (principals.length > 0 && principals.every((row) => row.cancelled === true)) continue;
-    // Missing principal class identity cannot be silently assigned or omitted.
-    if (principals.some((row) => !row.identity.classId)) {
-      throw new ProescError('Há obrigações sem turma identificada na API. A conferência automática ficou incompleta.', 409);
-    }
     const groupClasses = new Set(group.map((row) => row.identity.classId));
-    if ((!principals.length && groupClasses.has(null))
-      || (groupClasses.size > 1 && group.some((row) => row.identity.classId && classes.has(row.identity.classId)))) {
-      throw new ProescError('Uma obrigação possui identificação de turma ausente ou divergente na API.', 409);
+    const documents = new Set(group.map((row) => row.identity.studentDocument));
+    if (groupClasses.has(null) || groupClasses.size > 1 || documents.size > 1) {
+      // Preserve the ambiguity by possible owner, rather than dropping an
+      // obligation or failing every unrelated enrollment in the whole unit.
+      // A null person remains a class-wide blocker in the SQL evaluator.
+      const possibleClasses = groupClasses.has(null) ? [...classes]
+        : [...groupClasses].filter((id): id is string => id !== null && classes.has(id));
+      const primary = principals[0] ?? group[0];
+      // Only a wholly anonymous, otherwise coherent group can be considered
+      // outside a class that did not exist at any of its observed dates.
+      const anonymous = groupClasses.size === 1 && groupClasses.has(null)
+        && documents.size === 1 && documents.has(null) && principals.length === 1
+        && group.every((row) => row.createdDate !== null && row.cancelled === false
+          && row.renegotiationPayment === false);
+      const latestDate = anonymous
+        ? group.flatMap((row) => [row.dueDate, row.createdDate!]).sort().at(-1) : undefined;
+      for (const classId of possibleClasses) for (const document of documents) {
+        result.push({
+          key: primary.externalKey, classId, personHash: await hashDocument(document),
+          amountCents: Math.max(0, primary.amountCents), dueDate: primary.dueDate,
+          createdDate: primary.createdDate, unsafe: true,
+          ambiguity: groupClasses.has(null) ? 'MISSING_CLASS_ID' : 'CONFLICTING_IDENTITY',
+          ...(latestDate ? { unidentifiedGroupLatestDate: latestDate } : {}),
+        });
+      }
+      continue;
     }
     const classId = principals[0]?.identity.classId ?? group[0]?.identity.classId;
     if (!classId || !classes.has(classId)) continue;

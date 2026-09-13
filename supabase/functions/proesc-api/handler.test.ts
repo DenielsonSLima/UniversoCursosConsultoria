@@ -1,4 +1,5 @@
 import { createHandler } from './handler.ts';
+import { sha256 } from './sync-observation.ts';
 
 function assert(condition: unknown, message = 'assertion failed'): asserts condition {
   if (!condition) throw new Error(message);
@@ -11,7 +12,7 @@ function fixture(options: { profile?: string; modules?: string[]; allPolos?: boo
       id: 'gestor-fixture', email: 'fixture@example.test', perfil: options.profile || 'gestor', status: 'ativo',
       permissoes: { modules: options.modules || ['configuracoes'], allPolos: options.allPolos ?? true },
     } }) }) }) }),
-    rpc: (name: string, parameters: Record<string, unknown>) => {
+    rpc: (name: string, parameters: Record<string, unknown>): Promise<{ data?: unknown; error?: { message: string } }> => {
       if (name === 'portal_identidade_institucional_acesso_liberado') return Promise.resolve({ data: true });
       const action = String(parameters.p_action);
       calls.push({ name, action, actor: parameters.p_actor_id, payload: parameters.p_payload as Record<string, unknown> });
@@ -161,21 +162,87 @@ Deno.test('probe interno exige segredo validado pela RPC privada antes de acessa
 Deno.test('sincronização exige segredo próprio e autorização interna antes de obter lote ou token', async () => {
   for (const key of ['', 'forged', 'a'.repeat(64)]) {
     const { admin, calls } = fixture({ dbError: true });
+    let networkCalls = 0;
     const req = request({ action: 'internal_sync', internal: true, role: 'service_role' });
     req.headers.set('X-Proesc-Sync-Secret', key);
-    const response = await createHandler(admin, () => { throw new Error('Rede proibida'); })(req);
-    assert(response.status === 403);
+    const response = await createHandler(admin, () => { networkCalls++; throw new Error('Rede proibida'); })(req);
+    assert(response.status === 403 && networkCalls === 0);
     assert(calls.every((call) => call.name === 'proesc_sync_runtime_service' && call.action === 'authorize'));
     assert(!calls.some((call) => ['token', 'claim'].includes(call.action)));
   }
   const { admin, calls } = fixture();
   const baseRpc = admin.rpc;
-  admin.rpc = (name, args) => args.p_action === 'authorize'
-    ? Promise.resolve({ data: { actorId: 'worker-actor' } })
-    : args.p_action === 'claim' ? Promise.resolve({ data: { claimed: false } }) : baseRpc(name, args);
+  const claims: string[] = [];
+  admin.rpc = (name, args) => {
+    if (name === 'proesc_sync_runtime_service' && args.p_action === 'authorize') {
+      return Promise.resolve({ data: { actorId: 'worker-actor' } });
+    }
+    if (args.p_action === 'claim') {
+      assert(args.p_actor_id === 'worker-actor');
+      claims.push(name);
+      return Promise.resolve({ data: { claimed: false } });
+    }
+    return baseRpc(name, args);
+  };
   const req = request({ action: 'internal_sync' }, false);
   req.headers.set('X-Proesc-Sync-Secret', 'a'.repeat(64));
   const response = await createHandler(admin, () => { throw new Error('Rede proibida'); })(req);
-  assert(response.status === 200 && JSON.stringify(await response.json()) === '{"claimed":false}');
+  assert(response.status === 200
+    && JSON.stringify(await response.json()) === '{"claimed":false,"cycleReview":{"claimed":false}}');
+  assert(claims.sort().join(',') === 'proesc_cycle_review_runtime_service,proesc_sync_runtime_service');
   assert(!calls.some((call) => call.action === 'token'));
+});
+
+Deno.test('falha do worker de ciclos não interrompe a sincronização normal nem expõe erro interno', async () => {
+  const { admin } = fixture();
+  const calls: Array<{ name: string; args: Record<string, unknown> }> = [];
+  const token = 'b'.repeat(32);
+  const personHash = await sha256('12345678901');
+  admin.rpc = (name, args) => {
+    calls.push({ name, args });
+    if (name === 'proesc_sync_runtime_service' && args.p_action === 'authorize') {
+      return Promise.resolve({ data: { actorId: 'worker-actor' } });
+    }
+    assert(args.p_actor_id === 'worker-actor', 'As duas rotinas devem usar o ator autorizado no servidor');
+    if (name === 'proesc_cycle_review_runtime_service') {
+      assert(args.p_action === 'claim');
+      return Promise.reject(new Error('SECRET_CYCLE_DATABASE_ARGUMENT'));
+    }
+    if (name === 'proesc_sync_runtime_service' && args.p_action === 'claim') {
+      return Promise.resolve({ data: { claimed: true, leaseId: 'sync-lease', lastId: 'link', links: [{
+        linkId: 'link', classId: 'class', unitId: '1', sourceClassId: '2', externalKey: '3',
+        receivableId: 'receipt', personHash, dueDate: '2025-01-15', principalCents: 10000,
+        status: 'PENDENTE', paidCents: 0, paymentDate: null, expectedBefore: 'before-hash',
+      }] } });
+    }
+    if (name === 'proesc_workspace_service') return Promise.resolve({ data: { token, revision: 'one' } });
+    if (name === 'proesc_record_financial_snapshot_service') return Promise.resolve({ data: { snapshotId: 'snapshot' } });
+    if (name === 'proesc_apply_financial_snapshot_service') return Promise.resolve({ data: { result: 'APPLIED' } });
+    assert(name === 'proesc_sync_runtime_service' && args.p_action === 'finish');
+    return Promise.resolve({ data: { finished: true } });
+  };
+  const transport: typeof fetch = (input, init) => {
+    const url = new URL(String(input));
+    assert(url.origin === 'https://app.proesc.com' && url.pathname === '/api/v1/accounting_data');
+    assert(init?.method === 'GET' && init.redirect === 'error' && url.searchParams.get('token') === token);
+    const common = { chave_id: '3', unidade_id: '1', turma_id: '2', aluno_cpf: '12345678901',
+      data_vencimento: '2025-01-15', registro_cancelado: false, pagamento_renegociacao: false };
+    const originalPeriod = url.searchParams.get('ano_letivo') === '2025' && url.searchParams.get('mes') === '01';
+    return Promise.resolve(Response.json({ status: 'success', data: originalPeriod ? [
+      { ...common, id: 1, valor: '100.00', data_pagamento: null },
+      { ...common, id: 2, valor: '100.00', data_pagamento: '2025-01-10' },
+    ] : [] }));
+  };
+  const req = request({ action: 'internal_sync' }, false);
+  req.headers.set('X-Proesc-Sync-Secret', 'a'.repeat(64));
+  const response = await createHandler(admin, transport)(req);
+  const body = await response.json();
+  assert(response.status === 200 && body.claimed && body.consulted === 1 && body.applied === 1 && body.failed === 0);
+  assert(body.cycleReview.success === false && body.cycleReview.message === 'A consulta automática será retomada.');
+  const finish = calls.find((call) => call.name === 'proesc_sync_runtime_service' && call.args.p_action === 'finish');
+  const payload = finish?.args.p_payload as Record<string, unknown>;
+  assert(payload.success === true && payload.completedCount === 1 && payload.leaseId === 'sync-lease');
+  for (const forbidden of [token, '12345678901', 'SECRET_CYCLE_DATABASE_ARGUMENT']) {
+    assert(!JSON.stringify(body).includes(forbidden));
+  }
 });

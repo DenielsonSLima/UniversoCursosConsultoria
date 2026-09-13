@@ -13,17 +13,6 @@ import type {
   RetomarEmissaoCicloFinanceiroTecnicoManualInput,
 } from '../matricula-tecnica-ciclo-manual.types';
 import { markFinanceiroRequestReconciled } from '../matricula-tecnica-financeiro.echo';
-import { reviewProescCycles } from '../proesc-cycle-review.service';
-
-export const useReviewProescCycles = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ matriculaId }: { matriculaId: string; turmaId: string }) => reviewProescCycles(matriculaId),
-    onSettled: (_result, _error, input) => queryClient.invalidateQueries({
-      queryKey: matriculaTecnicaFinanceiroKeys.turma(input.turmaId),
-    }),
-  });
-};
 
 export const usePreviewCicloFinanceiroTecnicoManual = (
   input: PreviewCicloFinanceiroTecnicoManualInput,

@@ -83,7 +83,7 @@ export const requireMatriculaTecnicaCicloManual = (
   const generatedOriginValid = !hasExternalOrigin || (
     isRecord(generated)
     && generated.origemEmissao === 'PROESC'
-    && generated.abrangencia === 'CONTRATO_COMPLETO'
+    && (generated.abrangencia === 'CONTRATO_COMPLETO' || generated.abrangencia === 'SEGUNDO_CICLO')
     && generated.status === 'EXTERNAL_COVERAGE'
     && value.estado === 'PROTEGIDO_EXISTENTE'
     && generated.emitidosBanese === 0

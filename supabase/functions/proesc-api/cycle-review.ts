@@ -3,13 +3,21 @@ import { createProescV1Client } from './v1-client.ts';
 import type { ProescV1AccountingPage, ProescV1AccountingSource } from './v1-accounting.ts';
 import { cycleSourceObligations } from './cycle-schedule-source.ts';
 
-type Admin = { rpc: (name: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: unknown }> };
+export type CycleReviewAdmin = { rpc: (name: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: unknown }> };
+export type CycleReviewReadOptions = {
+  pages?: Map<string, Promise<ProescV1AccountingPage>>;
+  observedAt?: string;
+  signal?: AbortSignal;
+};
 // Requests sharing a worker wait on the same unit/window fetch. Database leases
 // also prevent duplicate fan-out across separate Edge workers.
 const inFlight = new Map<string, Promise<void>>();
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export async function reviewProescCycles(admin: Admin, actorId: string, matriculaId: unknown, transport = fetch) {
+export async function ensureProescCycleCache(
+  admin: CycleReviewAdmin, actorId: string, matriculaId: unknown, transport = fetch,
+  options: CycleReviewReadOptions = {},
+) {
   if (typeof matriculaId !== 'string' || !uuid.test(matriculaId)) throw new ProescError('Matrícula inválida.');
   const rpc = async (name: string, payload: Record<string, unknown>) => {
     const { data, error } = await admin.rpc(name, payload);
@@ -46,7 +54,7 @@ export async function reviewProescCycles(admin: Admin, actorId: string, matricul
       if (typeof credential.token !== 'string' || credential.revision !== start.tokenRevision) {
         throw new ProescError('A conexão Proesc mudou. Confira novamente.', 409);
       }
-      const client = createProescV1Client({ token: credential.token, transport });
+      const client = createProescV1Client({ token: credential.token, transport, signal: options.signal });
       const queries: ProescV1AccountingSource[] = [];
       for (let year = firstYear; year <= lastYear; year++) for (let month = 1; month <= 12; month++) {
         queries.push({ unitId: context.unitId as string, year, month });
@@ -57,7 +65,16 @@ export async function reviewProescCycles(admin: Admin, actorId: string, matricul
       const workers = await Promise.allSettled(Array.from({ length: 4 }, async () => {
         while (!failed && next < queries.length) {
           const index = next++;
-          try { pages[index] = await client.accountingData(queries[index]); }
+          try {
+            const query = queries[index];
+            const key = `${credential.revision}:${query.unitId}:${query.year}:${query.month}`;
+            let pending = options.pages?.get(key);
+            if (!pending) {
+              pending = client.accountingData(query);
+              options.pages?.set(key, pending);
+            }
+            pages[index] = await pending;
+          }
           catch (error) { failed = true; throw error; }
         }
       }));
@@ -66,14 +83,26 @@ export async function reviewProescCycles(admin: Admin, actorId: string, matricul
       const obligations = await cycleSourceObligations(pages, context.classIds as string[]);
       await cacheRpc('complete', {
         cacheId, lease: start.lease, obligations,
+        ...(options.observedAt ? { sourceObservedAt: options.observedAt } : {}),
         periods: pages.map((page) => ({ year: page.source.year, month: page.source.month, complete: true })),
       });
     };
     const promise = run();
     inFlight.set(cacheId, promise);
-    try { await promise; } finally { inFlight.delete(cacheId); }
+    try { await promise; }
+    catch (error) {
+      await cacheRpc('abort', { cacheId, lease: start.lease }).catch(() => undefined);
+      throw error;
+    } finally { inFlight.delete(cacheId); }
   }
-  return rpc('proesc_record_api_cycle_review_service', {
+  return cacheId;
+}
+
+export async function reviewProescCycles(admin: CycleReviewAdmin, actorId: string, matriculaId: unknown, transport = fetch) {
+  const cacheId = await ensureProescCycleCache(admin, actorId, matriculaId, transport);
+  const { data, error } = await admin.rpc('proesc_record_api_cycle_review_service', {
     p_actor_id: actorId, p_matricula_id: matriculaId, p_cache_id: cacheId,
   });
+  if (error) throw new ProescError('Não foi possível confirmar os ciclos. Atualize a tela e confira novamente.', 409);
+  return object(data);
 }

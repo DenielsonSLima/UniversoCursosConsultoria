@@ -36,7 +36,7 @@ const FinanceiroAlunoCarneAction = ({
   const inFlightRef = useRef(false);
   const generatedCycle = row.cicloManual.cicloGerado;
   const issuedInProesc = generatedCycle?.origemEmissao === 'PROESC'
-    && generatedCycle.abrangencia === 'CONTRATO_COMPLETO';
+    && (generatedCycle.abrangencia === 'CONTRATO_COMPLETO' || generatedCycle.abrangencia === 'SEGUNDO_CICLO');
   const incompleteIssuance = Boolean(!issuedInProesc && generatedCycle && (
     generatedCycle.emitidosBanese !== generatedCycle.quantidadeItens
     || generatedCycle.pendentesEmissao > 0

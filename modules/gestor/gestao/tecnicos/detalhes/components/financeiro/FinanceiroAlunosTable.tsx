@@ -24,6 +24,7 @@ interface FinanceiroAlunosTableProps {
   rows: MatriculaTecnicaFinanceiroRow[];
   eligibleSelected: string[];
   pending: boolean;
+  reviewingProesc?: boolean;
   actionMenuId: string | null;
   onActionMenuChange: (matriculaId: string | null) => void;
   onSelectionChange: (row: MatriculaTecnicaFinanceiroRow, checked: boolean) => void;
@@ -33,7 +34,6 @@ interface FinanceiroAlunosTableProps {
   onActivateNow: (row: MatriculaTecnicaFinanceiroRow) => void;
   onSchedule: (row: MatriculaTecnicaFinanceiroRow) => void;
   onResumeCycle: (row: MatriculaTecnicaFinanceiroRow) => void;
-  onReviewProesc?: (row: MatriculaTecnicaFinanceiroRow) => void;
   onCarnetFeedback: FinanceiroAlunoCarneFeedback;
 }
 
@@ -91,6 +91,7 @@ const FinanceiroAlunosTable = ({
   rows,
   eligibleSelected,
   pending,
+  reviewingProesc,
   actionMenuId,
   onActionMenuChange,
   onSelectionChange,
@@ -100,7 +101,6 @@ const FinanceiroAlunosTable = ({
   onActivateNow,
   onSchedule,
   onResumeCycle,
-  onReviewProesc,
   onCarnetFeedback,
 }: FinanceiroAlunosTableProps) => (
   <div className="overflow-x-auto">
@@ -194,9 +194,9 @@ const FinanceiroAlunosTable = ({
                     <FinanceiroCicloManualStatus
                       cicloManual={row.cicloManual}
                       disabled={pending}
+                      reviewingProesc={reviewingProesc && row.cicloManual.conferenciaProesc?.necessaria}
                       onGenerate={() => onOpenManualCycle(row.matriculaId)}
                       onResume={() => onResumeCycle(row)}
-                      onReviewProesc={onReviewProesc ? () => onReviewProesc(row) : undefined}
                     />
                   ) : null}
                   <FinanceiroAlunoCarneAction

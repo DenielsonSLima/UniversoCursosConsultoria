@@ -1,8 +1,8 @@
 {
-  "version": "4.8.63",
+  "version": "4.8.64",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 72,
+  "revision": 73,
   "releasedAt": "2026-09-13",
-  "summary": "Legenda avaliativa completa em todas as páginas de notas dos diários"
+  "summary": "Conferência automática Proesc e cobertura comprovada do segundo ciclo"
 }

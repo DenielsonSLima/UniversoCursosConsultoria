@@ -44,7 +44,7 @@ Deno.test('V1 usa somente GET nos dois recursos fixos, token query e parâmetros
   assert(paths.length === 2 && config.units[0].name === 'UNIDADE SINTETICA');
   assert(page.rows.length === 1 && page.rows[0].dueDate === '2030-02-01');
   assert(!JSON.stringify({ config, page }).includes(token));
-  assert(Object.keys(client).sort().join(',') === 'accountingData,configurationData');
+  assert(Object.keys(client).sort().join(',') === 'accountingData,accountingIdentityData,configurationData');
 });
 
 Deno.test('query inválida falha antes de transportar, sem permitir host ou chave alternativa', async () => {
@@ -54,6 +54,7 @@ Deno.test('query inválida falha antes de transportar, sem permitir host ou chav
     { ...query, externalKey: 'https://other.invalid' }]) {
     await rejected(() => client.accountingData(input), 'INVALID_REQUEST');
   }
+  await rejected(() => client.accountingIdentityData(query as typeof query & { externalKey: string }), 'INVALID_REQUEST');
   assert(requests === 0);
   await rejected(() => createProescV1Client({ token: `${token}\n` }), 'INVALID_REQUEST');
 });

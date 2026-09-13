@@ -41,7 +41,7 @@ test('resposta ausente, sem origem comprovada ou com validade excessiva falha fe
   ]) assert.throws(() => requireProescCycleReview(invalid), /conferência válida/);
 });
 
-test('bloqueio de importação oferece somente conferir; geração só aparece após elegibilidade canônica', () => {
+test('conferência automática não acrescenta botão; geração só aparece após elegibilidade canônica', () => {
   const blocked = {
     habilitado: true, modo: 'MANUAL', cicloBaseHistorico: 1, cicloMaximo: 2,
     proximoCicloNumero: 2, primeiroVencimentoSugerido: null, criterioElegibilidade: 'HISTORICO_EXTERNO',
@@ -57,13 +57,50 @@ test('bloqueio de importação oferece somente conferir; geração só aparece a
       cicloManual: state, disabled: false,
       onGenerate: () => assert.fail('Não pode gerar ao renderizar'),
       onResume: () => assert.fail('Não pode retomar ao renderizar'),
-      onReviewProesc: () => assert.fail('Não pode consultar ao renderizar'),
     }));
-    assert.match(html, /Conferir ciclos Proesc/);
+    assert.doesNotMatch(html, /Conferir ciclos Proesc/);
+    assert.equal((html.match(/<button\b/g) || []).length, eligible ? 1 : 0);
     if (eligible) assert.match(html, /Gerar e emitir 2º ciclo/);
     else assert.doesNotMatch(html, /Gerar e emitir/);
   }
   assert.throws(() => requireMatriculaTecnicaCicloManual({
     ...blocked, conferenciaProesc: { necessaria: false },
   }), /estado manual de ciclo incompleto/);
+});
+
+test('conferência automática bloqueia nova geração sem bloquear retomada de emissão existente', () => {
+  const eligible = requireMatriculaTecnicaCicloManual({
+    habilitado: true, modo: 'MANUAL', cicloBaseHistorico: 1, cicloMaximo: 2,
+    proximoCicloNumero: 2, primeiroVencimentoSugerido: null, criterioElegibilidade: 'HISTORICO_EXTERNO',
+    estado: 'ELEGIVEL', podeGerar: true, bloqueio: null,
+    politica: { revisao: 1, fingerprint: 'synthetic' }, cicloGerado: null,
+    conferenciaProesc: { necessaria: true },
+  });
+  const generated = requireMatriculaTecnicaCicloManual({
+    ...eligible, conferenciaProesc: undefined,
+    estado: 'JA_GERADO', podeGerar: false, proximoCicloNumero: null,
+    cicloGerado: {
+      numero: 2, status: 'EMISSAO_PARCIAL', quantidadeItens: 13, total: '3458.80',
+      emitidosBanese: 4, pendentesEmissao: 9, emRevisao: 0,
+    },
+  });
+  const render = (state: typeof eligible, reviewingProesc: boolean, disabled = false) => (
+    renderToStaticMarkup(createElement(FinanceiroCicloManualStatus, {
+      cicloManual: state, disabled, reviewingProesc,
+      onGenerate: () => assert.fail('Renderização não pode emitir'),
+      onResume: () => assert.fail('Renderização não pode retomar'),
+    }))
+  );
+  const generating = render(eligible, true);
+  assert.match(generating, /Gerar e emitir 2º ciclo/);
+  assert.match(generating.match(/<button\b[^>]*>/)?.[0] ?? '', /\bdisabled=""/);
+  assert.doesNotMatch(render(eligible, false).match(/<button\b[^>]*>/)?.[0] ?? '', /\bdisabled=/);
+
+  const recovering = render(generated, true);
+  assert.match(recovering, /Retomar emissão/);
+  assert.doesNotMatch(recovering, /Gerar e emitir/);
+  assert.doesNotMatch(recovering.match(/<button\b[^>]*>/)?.[0] ?? '', /\bdisabled=/,
+    'A consulta Proesc de outros alunos não bloqueia títulos já gerados');
+  assert.match(render(generated, true, true).match(/<button\b[^>]*>/)?.[0] ?? '', /\bdisabled=""/,
+    'Uma operação de emissão em andamento continua protegendo contra acionamento repetido');
 });

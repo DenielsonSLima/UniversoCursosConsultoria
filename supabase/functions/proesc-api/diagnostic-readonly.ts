@@ -11,6 +11,12 @@ function periodsFromBody(body: unknown): ProescV1AccountingQuery[] {
   if (input.includeStatement !== undefined && typeof input.includeStatement !== 'boolean') {
     throw new ProescError('Opção de extrato inválida para o diagnóstico.');
   }
+  if (input.includeIdentities !== undefined && typeof input.includeIdentities !== 'boolean') {
+    throw new ProescError('Opção de identidade inválida para o diagnóstico.');
+  }
+  if (input.includeIdentities === true && (!Array.isArray(input.periods) || input.periods.length === 0)) {
+    throw new ProescError('Informe a chave de cada título para consultar os nomes.');
+  }
   if (input.periods === undefined) return [];
   if (!Array.isArray(input.periods) || input.periods.length > 4) {
     throw new ProescError('Informe até quatro consultas contábeis para o diagnóstico.');
@@ -22,7 +28,8 @@ function periodsFromBody(body: unknown): ProescV1AccountingQuery[] {
         || typeof period.year !== 'number' || !Number.isInteger(period.year)
         || period.year < 1900 || period.year > 2200
         || typeof period.month !== 'number' || !Number.isInteger(period.month)
-        || period.month < 1 || period.month > 12) throw new Error();
+        || period.month < 1 || period.month > 12
+        || (input.includeIdentities === true && period.externalKey === undefined)) throw new Error();
       return {
         unitId: proescV1Identifier(period.unitId),
         year: period.year,
@@ -113,6 +120,9 @@ function summarize(rows: ProescV1AccountingRow[], query: ProescV1AccountingQuery
   let cancelledCount = 0;
   let renegotiationCount = 0;
   let unconfirmedFlagsCount = 0;
+  let missingClassPrincipalCount = 0;
+  let missingClassAndDocumentPrincipalCount = 0;
+  const missingClassPrincipalCourseCounts: Record<string, number> = {};
   for (const row of rows) {
     blockCounts[row.blockId] = (blockCounts[row.blockId] ?? 0) + 1;
     sums[row.blockId] = (sums[row.blockId] ?? 0n) + BigInt(row.amountCents);
@@ -121,6 +131,12 @@ function summarize(rows: ProescV1AccountingRow[], query: ProescV1AccountingQuery
     if (row.cancelled === true) cancelledCount++;
     if (row.renegotiationPayment === true) renegotiationCount++;
     if (row.cancelled === null || row.renegotiationPayment === null) unconfirmedFlagsCount++;
+    if (row.blockId === '1' && !row.identity.classId && row.cancelled !== true) {
+      missingClassPrincipalCount++;
+      if (!row.identity.studentDocument) missingClassAndDocumentPrincipalCount++;
+      const course = row.identity.courseId ?? 'UNIDENTIFIED';
+      missingClassPrincipalCourseCounts[course] = (missingClassPrincipalCourseCounts[course] ?? 0) + 1;
+    }
     identities.add(JSON.stringify(row.identity));
   }
   return {
@@ -133,6 +149,9 @@ function summarize(rows: ProescV1AccountingRow[], query: ProescV1AccountingQuery
     cancelledCount,
     renegotiationCount,
     unconfirmedFlagsCount,
+    missingClassPrincipalCount,
+    missingClassAndDocumentPrincipalCount,
+    missingClassPrincipalCourseCounts,
     // Compara somente as linhas entre si; não afirma vínculo com uma pessoa local.
     identityCoherent: rows.length > 0 && identities.size === 1
       && rows.every((row) => row.identity.classId !== null && row.identity.studentDocument !== null),
@@ -141,7 +160,7 @@ function summarize(rows: ProescV1AccountingRow[], query: ProescV1AccountingQuery
   };
 }
 
-/** Leitura interna agregada: não grava snapshots, baixas, vínculos ou credenciais. */
+/** Leitura interna; identidade exige opção explícita e chave. Não grava dados. */
 export async function runProescReadOnlyDiagnostic(
   admin: Admin,
   actorId: string,
@@ -169,8 +188,13 @@ export async function runProescReadOnlyDiagnostic(
     }
     const summaries = [];
     for (const [index, query] of periods.entries()) {
-      const result = await client.accountingData(query);
-      summaries.push(summarize(result.rows, query, index));
+      if (object(body).includeIdentities === true) {
+        const result = await client.accountingIdentityData({ ...query, externalKey: query.externalKey! });
+        summaries.push({ ...summarize(result.rows, query, index), identities: result.identities });
+      } else {
+        const result = await client.accountingData(query);
+        summaries.push(summarize(result.rows, query, index));
+      }
     }
     const statement = object(body).includeStatement === true
       ? await statementSummary(saved.token, config.units[0].id, periods[0]?.year ?? new Date().getUTCFullYear(), transport)
