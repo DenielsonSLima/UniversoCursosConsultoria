@@ -1,8 +1,8 @@
 {
-  "version": "4.8.53",
+  "version": "4.8.54",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 62,
+  "revision": 63,
   "releasedAt": "2026-09-13",
-  "summary": "Recuperação limitada da leitura interna de configuração dos workers"
+  "summary": "Consulta de diários históricos com evidências e pendências acadêmicas preservadas"
 }

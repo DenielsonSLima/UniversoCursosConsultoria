@@ -10,6 +10,8 @@ import DiarioElectronicSignaturePanel from './DiarioElectronicSignaturePanel';
 import DiarioClasseTabs, { type EditableGradeField } from './DiarioClasseTabs';
 import DiarioExportModal from './export/DiarioExportModal';
 import TechnicalDataError from '../TechnicalDataError';
+import DiarioHistoricoBoundary from './historico/DiarioHistoricoBoundary';
+import { EMPTY_DIARIO_GRADE, EMPTY_DIARIO_ROWS } from './diario-classe.defaults';
 import {
   useDiarioAttendance,
   useDiarioAulas,
@@ -32,7 +34,6 @@ import { useDiarioRealtime } from './hooks/useDiarioRealtime';
 import {
   DiarioClasseProps,
   DiarioActiveTab,
-  DiarioGradeResult,
   AttendanceStatus,
 } from './diario-classe.types';
 import { getStudentStats } from './diario-classe.utils';
@@ -42,25 +43,7 @@ import {
   isAcademicContextEditable,
 } from '../../academic-access.utils';
 
-const EMPTY_DIARIO_GRADE: DiarioGradeResult = {
-  p: null,
-  ti: null,
-  tg: null,
-  s: null,
-  cq: null,
-  o: null,
-  rec: null,
-  total_aulas: 0,
-  total_faltas: 0,
-  frequencia_percent: null,
-  media_parcial: null,
-  media_final: null,
-  resultado_final: 'SEM_LANCAMENTO',
-};
-
-const EMPTY_DIARIO_ROWS: never[] = [];
-
-const DiarioClasse: React.FC<DiarioClasseProps> = ({
+const DiarioClasseOperacional: React.FC<DiarioClasseProps> = ({
   disciplina,
   moduloNome,
   turma,
@@ -491,5 +474,11 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
     </div>
   );
 };
+
+const DiarioClasse: React.FC<DiarioClasseProps> = (props) => (
+  <DiarioHistoricoBoundary {...props}>
+    <DiarioClasseOperacional {...props} />
+  </DiarioHistoricoBoundary>
+);
 
 export default DiarioClasse;
