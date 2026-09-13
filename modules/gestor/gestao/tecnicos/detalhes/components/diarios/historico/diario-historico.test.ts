@@ -6,6 +6,11 @@ import DiarioHistoricoTabs from './DiarioHistoricoTabs';
 import TurmaDiarioCard from '../TurmaDiarioCard';
 import type { TurmaDiarioDisciplina } from '../turma-diarios.types';
 import type { DiarioHistorico, HistoricalField } from './diario-historico.types';
+import { DiarioDocumentaryProvider } from './DiarioDocumentaryContext';
+import { buildDocumentaryEvidence, buildDocumentaryAttendanceMap } from './diario-documentary.presentation';
+import DiarioResultadoTab from '../DiarioResultadoTab';
+import DiarioFrequenciaTab from '../DiarioFrequenciaTab';
+import { buildGradesMap, buildPraticasMap } from '../diario-classe.utils';
 import {
   historicalDiaryCardsKey, historicalDiaryKey, historicalFieldNeedsReview, historicalFieldText, parseDiarioHistorico,
 } from './diario-historico.presentation';
@@ -138,4 +143,73 @@ test('card histórico mostra evidências importadas com período planejado e nã
   assert.ok(operational.includes('Sem lançamento'));
   assert.ok(operational.includes('PDF em branco'));
   assert.doesNotMatch(operational, /Histórico em conferência/);
+  const materialized = renderToStaticMarkup(createElement(TurmaDiarioCard, {
+    disciplina: { ...discipline, horasRealizadas: 20, progressoPercent: 100,
+      historico: { ...discipline.historico!, readOnly: false, estado: 'MATERIALIZADO',
+        materialization: { status: 'MATERIALIZADO' } } },
+    onOpen: () => {}, onOpenPdf: () => {},
+  }));
+  assert.ok(materialized.includes('20h / 20h'));
+  assert.ok(materialized.includes('PDF preenchido'));
+  assert.doesNotMatch(materialized, /Importado do diário|Histórico em conferência|DOCX/);
+  assert.doesNotMatch(materialized, /Visualizar histórico|PDF preenchido aguarda/);
+});
+
+test('materialização libera o fluxo normal somente quando a confirmação e readOnly são coerentes', () => {
+  const completed = { ...history, readOnly: false, materialization: { status: 'MATERIALIZADO' } };
+  assert.equal(parseDiarioHistorico(completed), completed);
+  assert.throws(() => parseDiarioHistorico({ ...completed, readOnly: true }));
+  assert.throws(() => parseDiarioHistorico({ ...completed, materialization: { status: 'PENDENTE' } }));
+});
+
+test('diário normal exibe instrumentos P/P sem somar e mostra média documental enviada pelo servidor', () => {
+  const html = renderToStaticMarkup(createElement(DiarioDocumentaryProvider, { history,
+    children: createElement(DiarioResultadoTab, {
+      students: [{ id: 'student-a', nome: 'Aluno sintético', matricula: 'M1', status: 'CURSANDO' }],
+      localGrades: {}, isReadOnly: false,
+      activeInstruments: { p: true, ti: true, tg: true, s: true, cq: true, o: true },
+      onToggleInstrument() {}, onGradeChange() {}, onSaveGrade() {},
+      getStats: () => ({ mediaParcial: 7.5, mediaFinal: 7.5, faltas: 0, frequencia: 100, resultado: 'APROVADO' }),
+    }),
+  }));
+  assert.ok(html.includes('P: 7,8 | P: 8,9'));
+  assert.ok(html.includes('7.5'));
+  assert.doesNotMatch(html, /16\.7|somando os pontos|Registros importados|DOCX/);
+  for (const input of html.match(/<input[^>]*>/g) || []) assert.ok(input.includes('disabled='));
+});
+
+test('diário normal e payload PDF preservam AT, FJ e traço sem transformar em presença', () => {
+  const materialized: DiarioHistorico = { ...history, lessons: ['AT', 'FJ', '-'].map((mark) => ({
+    ...history.lessons[0], id: mark, operationalLessonId: `op-${mark}`, date: '2026-01-01',
+  })), students: [{ ...history.students[0], attendance: ['AT', 'FJ', '-'].map((mark) => ({
+    lessonId: mark, status: null, state: 'EM_CONFERENCIA', source: field(mark, null),
+  })) }] };
+  const evidence = buildDocumentaryEvidence(materialized);
+  assert.deepEqual(buildDocumentaryAttendanceMap(evidence, {})['student-a'], {
+    'op-AT': 'AT', 'op-FJ': 'FJ', 'op--': '-',
+  });
+  assert.equal(buildDocumentaryAttendanceMap(evidence, { 'student-a': { 'op-AT': 'P' } })['student-a']['op-AT'], undefined);
+  const html = renderToStaticMarkup(createElement(DiarioDocumentaryProvider, { history: materialized,
+    children: createElement(DiarioFrequenciaTab, {
+      students: [{ id: 'student-a', nome: 'Aluno sintético', matricula: 'M1', status: 'CURSANDO' }],
+      aulas: materialized.lessons.map((lesson) => ({ id: lesson.operationalLessonId!, titulo: 'Conteúdo',
+        cargaHoraria: 4, dataLabel: '01/01', sessoes: [{ id: lesson.operationalLessonId!, periodo: 'U', cargaHoraria: 4 }] })),
+      attendanceMap: {}, isReadOnly: false, onToggleAttendance() {},
+      getStats: () => ({ mediaParcial: null, mediaFinal: null, faltas: 0, frequencia: null, resultado: 'EM_CONFERENCIA' }),
+    }),
+  }));
+  for (const mark of ['AT', 'FJ', '-']) assert.ok(html.includes(`>${mark}</button>`), mark);
+  for (const button of html.match(/<button[^>]*>/g) || []) assert.ok(button.includes('disabled='));
+});
+
+test('dados documentais ausentes não se tornam zero faltas ou prática padrão', () => {
+  const students = [{ id: 's1', nome: 'Aluno sintético', matricula: 'M1', status: 'CURSANDO' }];
+  const aulas = [{ id: 'a1', titulo: 'Conteúdo', cargaHoraria: 4, dataLabel: '01/01',
+    sessoes: [{ id: 'a1', periodo: 'U' as const, cargaHoraria: 4 }] }];
+  const grade = { aluno_id: 's1', total_faltas: null, total_aulas: 1 };
+  assert.equal(buildGradesMap(students, aulas, [grade], true).s1.total_faltas, null);
+  assert.equal(buildGradesMap(students, aulas, [{ ...grade, total_faltas: 0 }], true).s1.total_faltas, 0);
+  assert.equal(buildGradesMap(students, aulas, [grade]).s1.total_faltas, 0);
+  assert.equal(buildPraticasMap(aulas, [], '').a1, '');
+  assert.equal(buildPraticasMap(aulas, []).a1, 'Aula expositiva / Prática padrão');
 });

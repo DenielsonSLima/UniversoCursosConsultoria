@@ -15,6 +15,7 @@ import {
   DiarioExportMode,
   TurmaDiarioDisciplina,
 } from './turma-diarios.types';
+import { isHistoricalDiaryMaterialized } from './historico/diario-historico.presentation';
 import DiarioHistoricoCardResumo from './historico/DiarioHistoricoCardResumo';
 
 interface TurmaDiarioCardProps {
@@ -49,6 +50,8 @@ const TurmaDiarioCard: React.FC<TurmaDiarioCardProps> = ({
   const isExcess = disciplina.horasStatus === 'EXCESSO';
   const signedArtifactLoading = signedPdfLoading || evidenceReceiptLoading;
   const history = disciplina.historico;
+  const materialized = isHistoricalDiaryMaterialized(history);
+  const pendingHistory = history && !materialized;
 
   return (
     <article className="group flex min-h-[342px] flex-col overflow-hidden rounded-[1.6rem] border border-slate-200/80 bg-white shadow-[0_12px_34px_-24px_rgba(15,23,42,0.45)] transition duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-[0_22px_50px_-28px_rgba(37,99,235,0.45)]">
@@ -59,7 +62,7 @@ const TurmaDiarioCard: React.FC<TurmaDiarioCardProps> = ({
             <BookOpen size={19} />
           </div>
           <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.14em] ${
-            history
+            pendingHistory
               ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-100'
               : isClosed
                 ? 'bg-slate-100 text-slate-600'
@@ -69,8 +72,8 @@ const TurmaDiarioCard: React.FC<TurmaDiarioCardProps> = ({
                   ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-100'
                   : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100'
           }`}>
-            {(history || isClosed) && <LockKeyhole size={10} />}
-            {history ? 'Histórico em conferência' : isClosed ? 'Fechado' : isReview ? 'Em revisão' : isAwaitingReview ? 'Aguardando revisão' : 'Em andamento'}
+            {(pendingHistory || isClosed) && <LockKeyhole size={10} />}
+            {pendingHistory ? 'Histórico em conferência' : isClosed ? 'Fechado' : isReview ? 'Em revisão' : isAwaitingReview ? 'Aguardando revisão' : 'Em andamento'}
           </span>
         </div>
 
@@ -88,7 +91,7 @@ const TurmaDiarioCard: React.FC<TurmaDiarioCardProps> = ({
           </span>
         </div>
 
-        {history ? (
+        {pendingHistory ? (
           <DiarioHistoricoCardResumo history={history} />
         ) : (
           <>
@@ -144,6 +147,7 @@ const TurmaDiarioCard: React.FC<TurmaDiarioCardProps> = ({
           </>
         )}
 
+
         <div className="mt-auto pt-4">
           <button
             type="button"
@@ -151,9 +155,9 @@ const TurmaDiarioCard: React.FC<TurmaDiarioCardProps> = ({
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#001a33] px-3 py-2.5 text-[10px] font-black uppercase tracking-[0.12em] text-white transition hover:bg-blue-800"
           >
             <BookOpen size={13} />
-            {history ? 'Visualizar histórico' : isClosed ? 'Visualizar diário' : 'Acessar diário'}
+            {pendingHistory ? 'Visualizar histórico' : isClosed ? 'Visualizar diário' : 'Acessar diário'}
           </button>
-          {history ? (
+          {pendingHistory ? (
             <p className="mt-2 text-center text-[10px] text-amber-700">PDF preenchido aguarda conferência.</p>
           ) : (
             <div className="mt-2 grid grid-cols-2 gap-2">

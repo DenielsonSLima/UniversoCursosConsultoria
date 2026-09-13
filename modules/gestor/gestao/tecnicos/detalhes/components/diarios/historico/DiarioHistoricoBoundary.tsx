@@ -6,7 +6,8 @@ import TechnicalDataError from '../../TechnicalDataError';
 import DiarioClasseHeader from '../DiarioClasseHeader';
 import type { DiarioActiveTab, DiarioClasseProps } from '../diario-classe.types';
 import DiarioHistoricoTabs from './DiarioHistoricoTabs';
-import { historicalDiaryKey, parseDiarioHistorico } from './diario-historico.presentation';
+import { historicalDiaryKey, isHistoricalDiaryMaterialized, parseDiarioHistorico } from './diario-historico.presentation';
+import { DiarioDocumentaryProvider } from './DiarioDocumentaryContext';
 
 const DiarioHistoricoBoundary = ({ children, ...props }: DiarioClasseProps & { children: ReactNode }) => {
   const { turma, disciplina, moduloNome, onBack, accessMode = 'GESTOR', gestorContextId = '' } = props;
@@ -57,7 +58,7 @@ const DiarioHistoricoBoundary = ({ children, ...props }: DiarioClasseProps & { c
       <div className="mx-auto max-w-[1400px] py-8">
         <TechnicalDataError
           title="Diário não carregado"
-          message="Não foi possível confirmar o histórico deste diário. A edição fica protegida até a consulta ser restabelecida."
+          message="Não foi possível carregar os registros deste diário. Tente novamente."
           retrying={historyQuery.isFetching}
           onRetry={() => {
             if (!actorId) setSessionAttempt((attempt) => attempt + 1);
@@ -71,16 +72,19 @@ const DiarioHistoricoBoundary = ({ children, ...props }: DiarioClasseProps & { c
   if (!sessionReady || historyQuery.isPending || (historyQuery.data === null && historyQuery.isFetching)) {
     return (
       <div role="status" className="flex items-center justify-center gap-3 py-20 text-sm font-bold text-slate-500">
-        <Loader2 size={28} className="animate-spin text-[#001a33]" /> Conferindo o histórico do diário...
+        <Loader2 size={28} className="animate-spin text-[#001a33]" /> Carregando diário...
       </div>
     );
   }
-  // Only a successful, explicit null may mount the normal editor/export hooks.
+  // Absence or completed server materialization may mount normal editor/export hooks.
   if (historyQuery.data === null) return children;
   if (!historyQuery.data) return (
-    <TechnicalDataError title="Histórico indisponível"
-      message="Não foi possível confirmar os registros deste diário."
+    <TechnicalDataError title="Diário indisponível"
+      message="Não foi possível carregar os registros deste diário."
       retrying={historyQuery.isFetching} onRetry={() => { void historyQuery.refetch(); }} />
+  );
+  if (isHistoricalDiaryMaterialized(historyQuery.data)) return (
+    <DiarioDocumentaryProvider history={historyQuery.data}>{children}</DiarioDocumentaryProvider>
   );
   return (
     <div className="mx-auto max-w-[1400px]">

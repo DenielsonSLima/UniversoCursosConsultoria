@@ -1,24 +1,20 @@
 # Lote ativo
 
-Estado: DIÁRIOS ACADÊMICOS — HISTÓRICO MIGRADO; PUBLICAÇÃO E SMOKE AUTENTICADO PENDENTES
+Estado: DIÁRIOS T41/T42 — TRANSCRIÇÃO NO DIÁRIO OPERACIONAL EM EXECUÇÃO
 
-## Lote: 2026-09-13-diarios-academicos
+## Lote: 2026-09-13-diarios-operacionais
 
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-13-diarios-academicos.md`
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-13-diarios-operacionais.md`.
 
-- Pedido: analisar os DOCX, conferir cronograma e cadastros, migrar aulas/conteúdos/frequências/notas e revisar individualmente.
-- Versão preparada: 4.8.54, revisão 63. Somente o manifesto explícito integra a publicação.
-- Quatro frentes: coordenação, análise independente de fontes, contrato acadêmico e consulta histórica. Conversão OOXML interna, sem Word ou navegação nos documentos.
-- 17 arquivos correspondem a 14 diários únicos: 12 T41 e dois T42. Três cópias idênticas foram deduplicadas por hash.
-- Migração histórica concluída por RPC: 14 fontes, 122 aulas documentais, 369 vínculos aluno/diário de 389 ocorrências; 3.218 marcações vinculadas, sendo 3.006 conferidas; 284 notas conferidas e 85 em revisão.
-- Onze docentes cadastrados somente com nome; 14 atribuições, sendo 12 T41 e duas T42. Grade T41 regularizada com 27 disciplinas em três períodos PLANEJADO, sem inventar datas de calendário.
-- Treze migrations de estrutura/contrato aplicadas e dois registros de ensaio sem efeito persistente. Ensaios SQL completos e replay das 14 fontes passaram; cards históricos validados em T41/T42 com preservação do getter operacional e acesso sem identidade negado.
-- Hashes de 67 matrículas e 1.132 cobranças permaneceram idênticos antes e depois. Sem promoção, conclusão, dispensa ou emissão financeira pela importação.
-- Pendências: quatro identidades em 20 ocorrências, oito diários com carga divergente e 113 datas em revisão, além das regras de médias/calendário ainda sem resposta. Fontes e valores desconhecidos preservados; fechamento e PDF histórico protegidos.
-- Oito testes da UI, TypeScript, build completo e dez renderizações das cinco abas com duas respostas RPC reais passaram. Smoke visual autenticado no Safari pendente de sessão de acesso; publicação do frontend ainda não confirmada.
+- Corrigir a entrega histórica da 4.8.54: os 14 documentos devem preencher aulas, frequência, notas e conteúdo no diário normal e na grade.
+- Abrangência: 12 diários T41 e Anatomia/Ética T42. Manter datas, notas, símbolos e resultados escritos; ajustar somente horas para a carga oficial de aulas (teoria + prática), preservando estágio separado.
+- Originais e ledger histórico imutáveis. Conversão interna, sem Word. Sem novos vínculos presumidos, matrícula, promoção, fechamento ou movimentação financeira.
+- Quatro frentes: coordenação/projeção, aulas/CH, notas/frequência e interface/PDF de prévia.
+- Aceite: 122 encontros operacionais, horas exatas por disciplina, registros vinculados íntegros, replay sem duplicação e validação real T41/T42 no diário normal.
+- Quatro identidades sem vínculo conclusivo permanecem separadas; não bloqueiam as demais transcrições.
+- Três testes SQL com rollback aprovados para as 14 fontes, incluindo transcrição completa, replay e autorização. Onze migrations aplicadas e versionadas. Dados operacionais aguardam a interface compatível em produção; publicação e smoke final em execução.
 
-## Entrega anterior concluída
+## Entrega anterior
 
-- 4.8.53: PR147/squash 7312be4227ef4ff6dc8bb0483982dd967a8653ba, CI/Vercel e HTTP200 confirmados. Três workers publicados, 14 execuções naturais HTTP200, incluindo duas recuperações internas de504. A causa da instabilidade externa permanece inconclusiva. Registro: `ai/operacao/registros/alteracoes/2026-09-13-workers-configuracao-resiliente.md`.
-- 4.8.52: PR146/squash b2b11a5c, CI/Vercel e HTTP200 confirmados. Smoke autenticado em produção confirmou Configurações, cinco abas Proesc, Caixa/linha laranja, Recebíveis e filtros Proesc/Banese. Registro: `ai/operacao/registros/alteracoes/2026-09-12-consulta-api-proesc-banese.md`.
-- A conferência financeira residual e o EDI7 ausente continuam descritos nos registros anteriores; este lote não modifica esses estados.
+- 4.8.54, PR148, main `7bef66d058308344cd3fefc95cfcf4209c7ae6f1`: histórico privado importado, docentes/grade cadastrados. Smoke autenticado confirmou que o diário normal permaneceu vazio; este lote corrige essa lacuna.
+- Regras financeiras e workers publicados anteriormente ficam fora deste lote.

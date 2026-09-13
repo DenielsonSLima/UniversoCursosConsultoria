@@ -85,41 +85,17 @@ export const diarioClasseService = {
   },
 
   async getAulas(turmaId: string, disciplinaId: string): Promise<DiarioAula[]> {
-    const { data, error } = await supabase
-      .from('aulas_turma')
-      .select('id, titulo, carga_horaria, data_aula, sessao, created_at')
-      .eq('turma_id', turmaId)
-      .eq('disciplina_id', disciplinaId);
-
-    if (error) throw error;
-
-    const encontros: DiarioAula[] = [];
-    sortAulas(data || []).forEach((aula: any, idx: number) => {
-      const sessao: DiarioSessao = {
-        id: aula.id,
-        periodo: (aula.sessao || 'U') as DiarioSessaoPeriodo,
-        cargaHoraria: parseFloat(aula.carga_horaria),
-      };
-      const existente = encontros.find((item) => item.dataAula === aula.data_aula);
-      if (existente) {
-        existente.sessoes.push(sessao);
-        existente.cargaHoraria += sessao.cargaHoraria;
-        return;
-      }
-      encontros.push({
-        id: aula.id,
-        titulo: aula.titulo,
-        cargaHoraria: sessao.cargaHoraria,
-        dataAula: aula.data_aula,
-        dataLabel: aula.data_aula
-          ? new Date(`${aula.data_aula}T00:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
-          : aula.created_at
-            ? new Date(aula.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
-            : `Aula ${idx + 1}`,
-        sessoes: [sessao],
-      });
+    const { data, error } = await supabase.rpc('get_aulas_diario_agrupadas', {
+      p_turma_id: turmaId, p_disciplina_id: disciplinaId,
     });
-    return encontros;
+    if (error) throw error;
+    if (!Array.isArray(data)) throw new Error('O banco não retornou os encontros do diário.');
+    return data.map((aula: Omit<DiarioAula, 'dataLabel'>) => ({
+      ...aula,
+      dataLabel: aula.dataAula
+        ? new Date(`${aula.dataAula}T00:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+        : 'Data não informada',
+    }));
   },
 
   async addAula(turmaId: string, disciplinaId: string, input: DiarioAulaInput): Promise<DiarioAula> {

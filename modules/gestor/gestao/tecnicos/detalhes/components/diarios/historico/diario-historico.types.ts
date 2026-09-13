@@ -31,6 +31,7 @@ export interface HistoricalGradeRow {
 
 export interface HistoricalLesson {
   id: string;
+  operationalLessonId?: string | null;
   sourceKey: string;
   date: string | null;
   dateField?: HistoricalField;
@@ -75,7 +76,8 @@ export interface DiarioHistorico {
   sourceName: string;
   sourceSha256: string;
   importedAt: string;
-  readOnly: true;
+  readOnly: boolean;
+  materialization?: { status: 'PENDENTE' | 'MATERIALIZADO'; completedAt?: string | null };
   officialHours: number | null;
   officialClassHours: number | null;
   reportedClassHours: number | null;
