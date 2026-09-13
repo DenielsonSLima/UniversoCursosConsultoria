@@ -100,7 +100,7 @@ const TurmaDiarios: React.FC<TurmaDiariosProps> = ({ turma, gestorContextId = ''
     null,
   );
   const { toasts, removeToast, toast } = useToast();
-  const diariosQuery = useTurmaDiarios(turma.id);
+  const diariosQuery = useTurmaDiarios(turma.id, gestorContextId, turma.poloId || '');
   const modules = diariosQuery.data || [];
   const poloId = turma.poloId || '';
   const signedDiariesQuery = useQuery({
@@ -185,7 +185,7 @@ const TurmaDiarios: React.FC<TurmaDiariosProps> = ({ turma, gestorContextId = ''
     }
   };
 
-  if (diariosQuery.isLoading) {
+  if (diariosQuery.isPending) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="animate-spin text-[#001a33]" size={32} />

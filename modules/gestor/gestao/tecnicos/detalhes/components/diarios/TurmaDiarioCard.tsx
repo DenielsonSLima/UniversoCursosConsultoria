@@ -15,6 +15,7 @@ import {
   DiarioExportMode,
   TurmaDiarioDisciplina,
 } from './turma-diarios.types';
+import DiarioHistoricoCardResumo from './historico/DiarioHistoricoCardResumo';
 
 interface TurmaDiarioCardProps {
   disciplina: TurmaDiarioDisciplina;
@@ -47,6 +48,7 @@ const TurmaDiarioCard: React.FC<TurmaDiarioCardProps> = ({
   const isAwaitingReview = !isClosed && !isReview && disciplina.progressoPercent >= 100;
   const isExcess = disciplina.horasStatus === 'EXCESSO';
   const signedArtifactLoading = signedPdfLoading || evidenceReceiptLoading;
+  const history = disciplina.historico;
 
   return (
     <article className="group flex min-h-[342px] flex-col overflow-hidden rounded-[1.6rem] border border-slate-200/80 bg-white shadow-[0_12px_34px_-24px_rgba(15,23,42,0.45)] transition duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-[0_22px_50px_-28px_rgba(37,99,235,0.45)]">
@@ -57,16 +59,18 @@ const TurmaDiarioCard: React.FC<TurmaDiarioCardProps> = ({
             <BookOpen size={19} />
           </div>
           <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.14em] ${
-            isClosed
-              ? 'bg-slate-100 text-slate-600'
+            history
+              ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-100'
+              : isClosed
+                ? 'bg-slate-100 text-slate-600'
               : isReview
                 ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-100'
                 : isAwaitingReview
                   ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-100'
                   : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100'
           }`}>
-            {isClosed && <LockKeyhole size={10} />}
-            {isClosed ? 'Fechado' : isReview ? 'Em revisão' : isAwaitingReview ? 'Aguardando revisão' : 'Em andamento'}
+            {(history || isClosed) && <LockKeyhole size={10} />}
+            {history ? 'Histórico em conferência' : isClosed ? 'Fechado' : isReview ? 'Em revisão' : isAwaitingReview ? 'Aguardando revisão' : 'Em andamento'}
           </span>
         </div>
 
@@ -84,55 +88,61 @@ const TurmaDiarioCard: React.FC<TurmaDiarioCardProps> = ({
           </span>
         </div>
 
-        <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50/80 p-3">
-          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
-            <CalendarRange size={13} className="text-blue-600" />
-            Período das aulas
-          </div>
-          <div className="mt-1.5 grid grid-cols-[1fr_auto_1fr] items-end gap-2 text-xs font-bold text-slate-700">
-            <span>
-              <span className="block text-[8px] font-black uppercase tracking-wider text-slate-400">
-                Primeira aula
-              </span>
-              {formatDate(disciplina.primeiraAula)}
-            </span>
-            <span className="h-px flex-1 bg-slate-200" />
-            <span className="text-right">
-              <span className="block text-[8px] font-black uppercase tracking-wider text-slate-400">
-                Última aula
-              </span>
-              {formatDate(disciplina.ultimaAula)}
-            </span>
-          </div>
-        </div>
-
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <div className="rounded-xl border border-slate-100 px-3 py-2">
-            <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-slate-400">
-              <Gauge size={11} /> Presença geral
+        {history ? (
+          <DiarioHistoricoCardResumo history={history} />
+        ) : (
+          <>
+            <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50/80 p-3">
+              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
+                <CalendarRange size={13} className="text-blue-600" />
+                Período das aulas
+              </div>
+              <div className="mt-1.5 grid grid-cols-[1fr_auto_1fr] items-end gap-2 text-xs font-bold text-slate-700">
+                <span>
+                  <span className="block text-[8px] font-black uppercase tracking-wider text-slate-400">
+                    Primeira aula
+                  </span>
+                  {formatDate(disciplina.primeiraAula)}
+                </span>
+                <span className="h-px flex-1 bg-slate-200" />
+                <span className="text-right">
+                  <span className="block text-[8px] font-black uppercase tracking-wider text-slate-400">
+                    Última aula
+                  </span>
+                  {formatDate(disciplina.ultimaAula)}
+                </span>
+              </div>
             </div>
-            <p className="mt-1 text-sm font-black text-[#001a33]">
-              {disciplina.presencaGeralPercent === null
-                ? 'Sem lançamento'
-                : `${disciplina.presencaGeralPercent}%`}
-            </p>
-          </div>
-          <div className="rounded-xl border border-slate-100 px-3 py-2">
-            <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Carga lançada</p>
-            <p className={`mt-1 text-sm font-black ${isExcess ? 'text-rose-600' : 'text-[#001a33]'}`}>
-              {disciplina.horasRealizadas}h / {disciplina.cargaHoraria}h
-            </p>
-          </div>
-        </div>
 
-        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100">
-          <div
-            className={`h-full rounded-full transition-[width] duration-700 ${
-              isExcess ? 'bg-rose-500' : 'bg-blue-600'
-            }`}
-            style={{ width: `${disciplina.progressoPercent}%` }}
-          />
-        </div>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <div className="rounded-xl border border-slate-100 px-3 py-2">
+                <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-slate-400">
+                  <Gauge size={11} /> Presença geral
+                </div>
+                <p className="mt-1 text-sm font-black text-[#001a33]">
+                  {disciplina.presencaGeralPercent === null
+                    ? 'Sem lançamento'
+                    : `${disciplina.presencaGeralPercent}%`}
+                </p>
+              </div>
+              <div className="rounded-xl border border-slate-100 px-3 py-2">
+                <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Carga lançada</p>
+                <p className={`mt-1 text-sm font-black ${isExcess ? 'text-rose-600' : 'text-[#001a33]'}`}>
+                  {disciplina.horasRealizadas}h / {disciplina.cargaHoraria}h
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100">
+              <div
+                className={`h-full rounded-full transition-[width] duration-700 ${
+                  isExcess ? 'bg-rose-500' : 'bg-blue-600'
+                }`}
+                style={{ width: `${disciplina.progressoPercent}%` }}
+              />
+            </div>
+          </>
+        )}
 
         <div className="mt-auto pt-4">
           <button
@@ -141,9 +151,12 @@ const TurmaDiarioCard: React.FC<TurmaDiarioCardProps> = ({
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#001a33] px-3 py-2.5 text-[10px] font-black uppercase tracking-[0.12em] text-white transition hover:bg-blue-800"
           >
             <BookOpen size={13} />
-            {isClosed ? 'Visualizar diário' : 'Acessar diário'}
+            {history ? 'Visualizar histórico' : isClosed ? 'Visualizar diário' : 'Acessar diário'}
           </button>
-          <div className="mt-2 grid grid-cols-2 gap-2">
+          {history ? (
+            <p className="mt-2 text-center text-[10px] text-amber-700">PDF preenchido aguarda conferência.</p>
+          ) : (
+            <div className="mt-2 grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() => onOpenPdf('PREENCHIDO')}
@@ -158,7 +171,8 @@ const TurmaDiarioCard: React.FC<TurmaDiarioCardProps> = ({
             >
               <FilePlus2 size={12} /> PDF em branco
             </button>
-          </div>
+            </div>
+          )}
           {onOpenSignedPdf || onOpenEvidenceReceipt ? (
             <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
               {onOpenSignedPdf ? (

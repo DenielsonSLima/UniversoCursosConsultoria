@@ -1,5 +1,22 @@
 export type DiarioExportMode = 'PREENCHIDO' | 'EM_BRANCO';
 
+export interface TurmaDiarioHistoricoResumo {
+  id: string;
+  origem: 'DOCX_HISTORICO';
+  sourceName: string;
+  readOnly: true;
+  estado: 'EM_CONFERENCIA';
+  aulasDocumentadas: number;
+  horasDocumentadas: number | null;
+  horasOficiais: number;
+  horasEstado: 'CONFERIDO' | 'EM_CONFERENCIA';
+  datasEstado: 'CONFERIDO' | 'EM_CONFERENCIA';
+  primeiraAula: string | null;
+  ultimaAula: string | null;
+  frequenciasRegistradas: number;
+  frequenciasConferidas: number;
+}
+
 export interface TurmaDiarioRpcRow {
   modulo_id: string;
   modulo_nome: string;
@@ -15,6 +32,7 @@ export interface TurmaDiarioRpcRow {
   primeira_aula: string | null;
   ultima_aula: string | null;
   presenca_geral_percent: number | string | null;
+  historico?: TurmaDiarioHistoricoResumo | null;
 }
 
 export interface TurmaDiarioDisciplina {
@@ -31,6 +49,7 @@ export interface TurmaDiarioDisciplina {
   ultimaAula: string | null;
   presencaGeralPercent: number | null;
   bloqueioDiario: 'ABERTO' | 'PROFESSOR' | 'TOTAL';
+  historico?: TurmaDiarioHistoricoResumo | null;
 }
 
 export interface TurmaDiarioModulo {

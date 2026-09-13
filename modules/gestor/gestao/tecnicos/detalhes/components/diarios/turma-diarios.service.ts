@@ -24,6 +24,7 @@ const toDisciplina = (
     ? null
     : Number(row.presenca_geral_percent),
   bloqueioDiario,
+  historico: row.historico ?? null,
 });
 
 const groupByModulo = (
@@ -48,7 +49,7 @@ const groupByModulo = (
 export const turmaDiariosService = {
   async getByTurma(turmaId: string): Promise<TurmaDiarioModulo[]> {
     const [diariosResult, locksResult] = await Promise.all([
-      supabase.rpc('get_diarios_turma', { p_turma_id: turmaId }),
+      supabase.rpc('get_diarios_turma_com_historico', { p_turma_id: turmaId }),
       supabase
         .from('turmas_disciplinas')
         .select('disciplina_id, bloqueio_diario')
@@ -56,6 +57,9 @@ export const turmaDiariosService = {
     ]);
     if (diariosResult.error) throw diariosResult.error;
     if (locksResult.error) throw locksResult.error;
+    if (!Array.isArray(diariosResult.data)) {
+      throw new Error('A lista de diários não retornou o formato esperado.');
+    }
     const locks = new Map<string, 'ABERTO' | 'PROFESSOR' | 'TOTAL'>(
       (locksResult.data || []).map((row: any) => [
         row.disciplina_id,
