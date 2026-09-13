@@ -1,8 +1,8 @@
 {
-  "version": "4.8.61",
+  "version": "4.8.63",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 70,
+  "revision": 72,
   "releasedAt": "2026-09-13",
-  "summary": "Regras das turmas importadas, conferência de ciclos e composição Proesc no financeiro"
+  "summary": "Legenda avaliativa completa em todas as páginas de notas dos diários"
 }

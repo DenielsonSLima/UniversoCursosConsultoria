@@ -182,16 +182,14 @@ export const drawResultPages = (
   const studentGroups = chunks(props.students, studentsPerPage);
   const defaultRowHeight =
     (STANDARD_CONTENT_BOTTOM - STANDARD_CONTENT_TOP - RESULT_TABLE_HEADER_HEIGHT) / studentsPerPage;
-  const finalTableBottomLimit = 174;
+  // Reserve the legend area on every results page, including continuation pages.
+  const tableBottomLimit = 174;
 
   studentGroups.forEach((students, groupIndex) => {
-    const isLastGroup = groupIndex === studentGroups.length - 1;
-    const finalPageRowHeight = students.length > 0
-      ? (finalTableBottomLimit - STANDARD_CONTENT_TOP - RESULT_TABLE_HEADER_HEIGHT) / students.length
+    const availableRowHeight = students.length > 0
+      ? (tableBottomLimit - STANDARD_CONTENT_TOP - RESULT_TABLE_HEADER_HEIGHT) / students.length
       : defaultRowHeight;
-    const rowHeight = isLastGroup
-      ? Math.min(defaultRowHeight, finalPageRowHeight)
-      : defaultRowHeight;
+    const rowHeight = Math.min(defaultRowHeight, availableRowHeight);
 
     drawStandardPage(
       pdf,
@@ -256,24 +254,17 @@ export const drawResultPages = (
       rowHeight,
     });
 
-    if (isLastGroup) {
-      const legendY = STANDARD_CONTENT_TOP + RESULT_TABLE_HEADER_HEIGHT + students.length * rowHeight + 5;
-      pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(6.4);
-      setTextColor(pdf, NAVY);
-      pdf.text(DIARIO_RESULT_LEGEND_TITLE, CONTENT_LEFT, legendY);
-      pdf.setFont("helvetica", "normal");
-      pdf.setFontSize(6.2);
-      const legendLines = pdf.splitTextToSize(
-        documentary
-          ? 'As avaliações registradas aparecem separadas. Médias, frequência e resultado são informados pelo sistema.'
-          : DIARIO_RESULT_LEGEND_TEXT,
-        CONTENT_WIDTH,
-      );
-      pdf.text(legendLines, CONTENT_LEFT, legendY + 4.2, {
-        lineHeightFactor: 1.35,
-      });
-    }
+    const legendY = STANDARD_CONTENT_TOP + RESULT_TABLE_HEADER_HEIGHT + students.length * rowHeight + 5;
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(6.4);
+    setTextColor(pdf, NAVY);
+    pdf.text(DIARIO_RESULT_LEGEND_TITLE, CONTENT_LEFT, legendY);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(6.2);
+    const legendLines = pdf.splitTextToSize(DIARIO_RESULT_LEGEND_TEXT, CONTENT_WIDTH);
+    pdf.text(legendLines, CONTENT_LEFT, legendY + 4.2, {
+      lineHeightFactor: 1.35,
+    });
   });
 };
 
