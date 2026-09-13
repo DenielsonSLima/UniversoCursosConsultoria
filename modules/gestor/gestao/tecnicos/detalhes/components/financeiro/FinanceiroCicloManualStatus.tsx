@@ -5,7 +5,6 @@ import {
   Landmark,
   LockKeyhole,
   ReceiptText,
-  RefreshCw,
   ShieldCheck,
 } from 'lucide-react';
 import type { MatriculaTecnicaFinanceiroRow } from './matricula-tecnica-financeiro.types';
@@ -16,9 +15,9 @@ type GeneratedCycle = NonNullable<MatriculaTecnicaCicloManual['cicloGerado']>;
 interface FinanceiroCicloManualStatusProps {
   cicloManual: MatriculaTecnicaCicloManual;
   disabled: boolean;
+  reviewingProesc?: boolean;
   onGenerate: () => void;
   onResume: () => void;
-  onReviewProesc?: () => void;
 }
 
 const cycleLabel = (cycle: number | null | undefined) => (
@@ -34,7 +33,7 @@ const isFullyIssued = (generated: GeneratedCycle) => (
 
 const isIssuedInProesc = (generated: GeneratedCycle | null) => (
   generated?.origemEmissao === 'PROESC'
-  && generated.abrangencia === 'CONTRATO_COMPLETO'
+  && (generated.abrangencia === 'CONTRATO_COMPLETO' || generated.abrangencia === 'SEGUNDO_CICLO')
 );
 
 export const getFinanceiroSituationLabel = (row: MatriculaTecnicaFinanceiroRow) => {
@@ -126,31 +125,25 @@ const FinanceiroCicloManualStatus: React.FC<FinanceiroCicloManualStatusProps> = 
   disabled,
   onGenerate,
   onResume,
-  onReviewProesc,
+  reviewingProesc,
 }) => {
   const generated = cicloManual.cicloGerado;
   const generatedLabel = cycleLabel(generated?.numero);
 
   if (!cicloManual.habilitado || cicloManual.modo !== 'MANUAL') return null;
 
-  const reviewAction = cicloManual.conferenciaProesc?.necessaria && onReviewProesc ? (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onReviewProesc}
-      className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-2 text-[9px] font-black uppercase text-blue-700 hover:bg-blue-100 disabled:opacity-50"
-    >
-      <RefreshCw size={12} /> Conferir ciclos Proesc
-    </button>
-  ) : null;
-
   if (cicloManual.estado === 'PROTEGIDO_EXISTENTE') {
+    const protectionMessage = isIssuedInProesc(generated)
+      ? generated?.abrangencia === 'SEGUNDO_CICLO'
+        ? 'Segundo ciclo protegido contra novas cobranças.'
+        : 'Contrato completo protegido contra novas cobranças.'
+      : 'Protegido contra novas cobranças.';
     return (
       <div className="space-y-1.5" role="status">
         <span className="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-1 text-[9px] font-black uppercase text-emerald-800">
           <ShieldCheck size={12} /> {generatedLabel} {isIssuedInProesc(generated) ? 'já emitido no Proesc' : 'já gerado e emitido'}
         </span>
-        <p className="text-[9px] font-bold text-slate-500">{isIssuedInProesc(generated) ? 'Contrato completo protegido contra novas cobranças.' : 'Protegido contra novas cobranças.'}</p>
+        <p className="text-[9px] font-bold text-slate-500">{protectionMessage}</p>
       </div>
     );
   }
@@ -179,13 +172,12 @@ const FinanceiroCicloManualStatus: React.FC<FinanceiroCicloManualStatusProps> = 
           </span>
           <button
             type="button"
-            disabled={disabled}
+            disabled={disabled || reviewingProesc}
             onClick={onGenerate}
             className="mt-1.5 block rounded-lg bg-emerald-600 px-3 py-2 text-[9px] font-black uppercase text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
           >
             Gerar e emitir {cycleLabel(cicloManual.proximoCicloNumero)}
           </button>
-          {reviewAction}
         </div>
       </div>
     );
@@ -202,7 +194,6 @@ const FinanceiroCicloManualStatus: React.FC<FinanceiroCicloManualStatusProps> = 
           <p className="mt-1.5 text-[9px] font-semibold leading-relaxed text-rose-700">
             {cicloManual.bloqueio?.mensagem || 'O servidor não liberou a geração deste ciclo.'}
           </p>
-          {reviewAction}
         </div>
       </div>
     );

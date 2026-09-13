@@ -168,3 +168,80 @@ Deno.test('categoria que ecoa segredo ou URL não é devolvida', async () => {
       Response.json({ ...config(), categories: [{ id: 10482, name }] })));
   }
 });
+
+Deno.test('diagnóstico agrega principal sem turma e documento sem expor a pessoa', async () => {
+  const result = await runProescReadOnlyDiagnostic(makeAdmin(), 'actor', { periods: [query] },
+    successfulTransport([
+      { ...row(1), turma_id: null } as unknown as ReturnType<typeof row>,
+      { ...row(1), turma_id: null, aluno_cpf: null, curso: null } as unknown as ReturnType<typeof row>,
+      { ...row(1), turma_id: null, registro_cancelado: true } as unknown as ReturnType<typeof row>,
+    ]));
+  const summary = result.summaries[0];
+  assert(summary.missingClassPrincipalCount === 2 && summary.missingClassAndDocumentPrincipalCount === 1);
+  assert(summary.missingClassPrincipalCourseCounts['3'] === 1);
+  assert(summary.missingClassPrincipalCourseCounts.UNIDENTIFIED === 1);
+  assert(!JSON.stringify(result).includes('12345678901'));
+});
+
+Deno.test('identidade exige opção booleana explícita, uma a quatro consultas e chave antes da credencial', async () => {
+  for (const body of [
+    { includeIdentities: 'true', periods: [query] },
+    { includeIdentities: true },
+    { includeIdentities: true, periods: [] },
+    { includeIdentities: true, periods: [{ ...query, externalKey: undefined }] },
+    { includeIdentities: true, periods: Array.from({ length: 5 }, () => query) },
+  ]) {
+    const admin = makeAdmin();
+    await rejected(() => runProescReadOnlyDiagnostic(admin, 'actor', body, successfulTransport()));
+    assert(admin.actions.length === 0);
+  }
+  const result = await runProescReadOnlyDiagnostic(makeAdmin(), 'actor', {
+    includeIdentities: false, periods: [query],
+  }, successfulTransport());
+  assert(!('identities' in result.summaries[0]) && !JSON.stringify(result).includes('STUDENT_NAME'));
+});
+
+Deno.test('identidade original usa a mesma leitura restrita e informa formatos dos dois CPFs sem números', async () => {
+  const raw = [
+    { ...row(1, '279.90', null), aluno_cpf: null, responsavel_nome: 'RESPONSIBLE_NAME', responsavel_cpf: '012.345.678-90' },
+    { ...row(2, '-19.90'), aluno_cpf: 1234567890, aluno_nome: '', responsavel_nome: 'RESPONSIBLE_NAME', responsavel_cpf: null },
+    { ...row(), responsavel_nome: null, responsavel_cpf: 'incomplete' },
+  ] as unknown as Array<ReturnType<typeof row>>;
+  let requests = 0;
+  const transport = successfulTransport(raw);
+  const result = await runProescReadOnlyDiagnostic(makeAdmin(), 'actor', {
+    includeIdentities: true, periods: [query],
+  }, (input, init) => { requests++; return transport(input, init); });
+  assert(requests === 2, 'Uma configuração e uma leitura contábil, sem segunda busca de nomes');
+  const summary = result.summaries[0];
+  assert('identities' in summary && Array.isArray(summary.identities));
+  const [student, responsible, formatted] = summary.identities;
+  assert(student.chave === '8001' && student.aluno_nome === 'STUDENT_NAME');
+  assert(student.tipo_nome === 'ALUNO' && student.responsavel_nome === 'RESPONSIBLE_NAME');
+  assert(student.bloco === '1' && student.vencimento === '2026-09-10' && student.valor === '279.90');
+  assert(student.estado_cpf === 'AUSENTE' && student.estado_cpf_responsavel === 'VALIDO');
+  assert(responsible.aluno_nome === null && responsible.tipo_nome === 'RESPONSAVEL');
+  assert(responsible.estado_cpf === 'INVALIDO' && responsible.estado_cpf_responsavel === 'AUSENTE');
+  assert(responsible.valor === '-19.90');
+  assert(formatted.estado_cpf === 'VALIDO' && formatted.estado_cpf_responsavel === 'INVALIDO');
+  assert(Object.keys(student).sort().join(',') === [
+    'chave', 'aluno_nome', 'responsavel_nome', 'tipo_nome', 'bloco', 'vencimento', 'valor',
+    'estado_cpf', 'estado_cpf_responsavel',
+  ].sort().join(','));
+  for (const forbidden of [token, '12345678901', '012.345.678-90', '1234567890', 'https://', 'aluno_cpf', 'responsavel_cpf']) {
+    assert(!JSON.stringify(result).includes(forbidden), 'Identidade expôs campo fora do contrato');
+  }
+});
+
+Deno.test('identidade não mostra nomes de outra chave nem nomes que ecoam segredo, URL ou CPF', async () => {
+  const body = { includeIdentities: true, periods: [query] };
+  await rejected(() => runProescReadOnlyDiagnostic(makeAdmin(), 'actor', body,
+    successfulTransport([{ ...row(), chave_id: '9000', aluno_nome: 'OTHER_STUDENT' }])));
+  for (const unsafe of [token, 'https://other.invalid', '123.456.789-01', '12345678901', 'unsafe\nname']) {
+    await rejected(() => runProescReadOnlyDiagnostic(makeAdmin(), 'actor', body,
+      successfulTransport([{ ...row(), aluno_nome: unsafe }])));
+    await rejected(() => runProescReadOnlyDiagnostic(makeAdmin(), 'actor', body,
+      successfulTransport([{ ...row(), responsavel_nome: unsafe } as ReturnType<typeof row>])));
+  }
+  await rejected(() => runProescReadOnlyDiagnostic(makeAdmin(true), 'actor', body, successfulTransport()), 'credencial mudou');
+});

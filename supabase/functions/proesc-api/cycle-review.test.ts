@@ -29,9 +29,9 @@ Deno.test('source preflight hashes identity and retains conflicts, missing ident
     [row('100', { turma_id: '9' }), row('100')],
     [row('100', { id: '2', turma_id: null })],
   ]) {
-    let rejected = false;
-    try { await cycleSourceObligations([page(ambiguous)], ['2']); } catch { rejected = true; }
-    assert(rejected, 'Ambiguous class identity must not be filtered out');
+    const markers = await cycleSourceObligations([page(ambiguous)], ['2']);
+    assert(markers.length === 1 && markers[0].unsafe && markers[0].ambiguity,
+      'Ambiguous class identity must remain a blocker for the possible owner');
   }
 });
 
@@ -100,4 +100,55 @@ Deno.test('unauthorized enrollment stops before accessing credentials or Proesc'
     } }, 'actor', enrollment, () => { throw new Error('Unexpected API call'); });
   } catch { rejected = true; }
   assert(rejected && names.join(',') === 'proesc_cycle_review_cache_service');
+});
+
+Deno.test('missing class is preserved by possible person without contaminating unrelated identities', async () => {
+  const result = await cycleSourceObligations([page([
+    row('100'), row('101', { turma_id: null, aluno_cpf: '98765432100' }),
+    row('102', { turma_id: '9', aluno_cpf: null }),
+  ])], ['2', '3']);
+  assert(result.length === 3);
+  const normal = result.find((item) => item.key === '100')!;
+  const ambiguous = result.filter((item) => item.key === '101');
+  assert(ambiguous.length === 2 && ambiguous.every((item) => item.unsafe
+    && item.personHash !== normal.personHash && item.ambiguity === 'MISSING_CLASS_ID'));
+  assert(!result.some((item) => item.key === '102'), 'Identified outside class must stay outside scope');
+});
+
+Deno.test('missing person blocks every possible class and conflicting people remain separate unsafe markers', async () => {
+  const unknown = await cycleSourceObligations([page([row('100', { turma_id: null, aluno_cpf: null })])], ['2', '3']);
+  assert(unknown.length === 2 && unknown.every((item) => item.personHash === null && item.unsafe));
+  const conflicting = await cycleSourceObligations([page([
+    row('100', { turma_id: '9' }), row('100', { aluno_cpf: '98765432100' }),
+  ])], ['2', '3']);
+  assert(conflicting.length === 2 && conflicting.every((item) => item.classId === '2' && item.unsafe));
+  assert(new Set(conflicting.map((item) => item.personHash)).size === 2);
+});
+
+Deno.test('conflicting person in the same class keeps both possible owners blocked', async () => {
+  const result = await cycleSourceObligations([page([
+    row('100', { aluno_cpf: '98765432100' }), row('100', { id: '2' }),
+  ])], ['2']);
+  assert(result.length === 2 && result.every((item) => item.unsafe && item.classId === '2'));
+  const knownTarget = (await cycleSourceObligations([page([row('101')])], ['2']))[0].personHash;
+  assert(result.some((item) => item.personHash === knownTarget), 'Secondary owner must not disappear');
+});
+
+Deno.test('temporal evidence requires every group row anonymous, dated and free of renegotiation', async () => {
+  const anonymous = (change = {}) => row('100', { turma_id: null, aluno_cpf: null, ...change });
+  const normalized = async (rows: unknown[]) => (await cycleSourceObligations([page(rows)], ['2']))[0];
+  assert((await normalized([anonymous()])).unidentifiedGroupLatestDate === '2026-01-15');
+  const later = await normalized([anonymous(), anonymous({ id: '2', data_vencimento: '2026-09-15' })]);
+  assert(later.unidentifiedGroupLatestDate === '2026-09-15', 'Secondary date cannot be hidden by the primary');
+  const laterCreation = await normalized([anonymous(), anonymous({ id: '2', data_cricao: '2026-10-01' })]);
+  assert(laterCreation.unidentifiedGroupLatestDate === '2026-10-01');
+  for (const rows of [
+    [anonymous(), row('100', { id: '2' })],
+    [anonymous(), anonymous({ id: '2', turma_id: '2' })],
+    [anonymous(), anonymous({ id: '2', aluno_cpf: '12345678901' })],
+    [anonymous(), anonymous({ id: '2', data_cricao: null })],
+    [anonymous({ pagamento_renegociacao: true })],
+    [anonymous(), anonymous()],
+  ]) assert(!(await normalized(rows)).unidentifiedGroupLatestDate,
+    'Mixed identity, absent dates and conflicting principals must retain the full blocker');
 });

@@ -7,6 +7,7 @@ import { testProescToken } from './test-token.ts';
 import { runProescSync } from './sync-worker.ts';
 import { runProescReadOnlyDiagnostic } from './diagnostic-readonly.ts';
 import { reviewProescCycles } from './cycle-review.ts';
+import { reviewProescClassCycles, runProescCycleReviewWorker } from './cycle-review-batch.ts';
 
 type Admin = Parameters<typeof requireGestorAtivo>[1];
 const publicActions = new Set(['status', 'save_token', 'remove_token', 'class_history', 'class_events', 'test_token']);
@@ -35,7 +36,13 @@ export const createHandler = (admin: Admin, transport: typeof fetch = fetch) => 
         p_action: 'authorize', p_payload: { key },
       });
       if (error || typeof data?.actorId !== 'string') throw new ProescError('Acesso interno não autorizado.', 403);
-      return respond(await runProescSync(admin, data.actorId, transport));
+      const [sync, cycleReview] = await Promise.allSettled([
+        runProescSync(admin, data.actorId, transport),
+        runProescCycleReviewWorker(admin, data.actorId, transport),
+      ]);
+      if (sync.status === 'rejected') throw new ProescError('Não foi possível concluir a atualização Proesc.', 409);
+      return respond({ ...sync.value, cycleReview: cycleReview.status === 'fulfilled'
+        ? cycleReview.value : { success: false, message: 'A consulta automática será retomada.' } });
     } else if (action === 'internal_probe' || action === 'internal_accounting_probe') {
       const key = req.headers.get('X-Proesc-Worker-Secret') || '';
       if (!/^[0-9a-f]{64}$/.test(key)) throw new ProescError('Acesso interno não autorizado.', 403);
@@ -46,6 +53,13 @@ export const createHandler = (admin: Admin, transport: typeof fetch = fetch) => 
       actorId = data.actorId;
     } else {
       const gestor = await requireGestorAtivo(req, admin);
+      if (action === 'review_class_cycles') {
+        if (typeof body.turmaId !== 'string' || !uuidPattern.test(body.turmaId)) throw new ProescError('Turma inválida.');
+        if (isRateLimitExceeded(`proesc-class-cycle-review:${gestor.id}`, 8, 60000)) {
+          return respond({ error: 'A atualização automática está em andamento. Aguarde alguns instantes.' }, 429);
+        }
+        return respond(await reviewProescClassCycles(admin, gestor.id, body.turmaId, transport));
+      }
       if (action === 'review_cycles') {
         // The service reuses can_operate_turma_academics + gestor_has_tab for
         // this exact enrollment, including the actor's current polo scope.

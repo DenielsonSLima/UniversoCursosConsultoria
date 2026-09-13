@@ -6,6 +6,7 @@ import {
   type ProescV1AccountingPage,
   type ProescV1AccountingSource,
 } from './v1-accounting.ts';
+import { accountingIdentityDiagnostic } from './diagnostic-accounting-identity.ts';
 
 type ReadErrorCode = 'INVALID_REQUEST' | 'HTTP_ERROR' | 'REDIRECT' | 'TIMEOUT'
   | 'ABORTED' | 'TRANSPORT_ERROR' | 'RESPONSE_LIMIT' | 'INVALID_RESPONSE' | 'SEMANTIC_ERROR';
@@ -183,23 +184,37 @@ export function createProescV1Client(options: ProescV1ClientOptions) {
     }
   }
 
+  const readAccounting = <T>(
+    input: ProescV1AccountingQuery,
+    project: (payload: Record<string, unknown>, page: ProescV1AccountingPage, query: ProescV1AccountingQuery) => T,
+  ): Promise<T> => {
+    const query = requireSource(input);
+    const params: Record<string, string> = {
+      unidade_id: query.unitId,
+      ano_letivo: String(query.year),
+      mes: String(query.month).padStart(2, '0'),
+      ...(query.externalKey === undefined ? {} : { id_chave: query.externalKey }),
+    };
+    return read('accounting_data', params, (payload) => {
+      const page = parseProescV1Accounting(payload, query, maxRows);
+      if (query.externalKey !== undefined && page.rows.some((row) => row.externalKey !== query.externalKey)) {
+        throw new ProescV1ReadError('INVALID_RESPONSE', 200);
+      }
+      return project(payload, page, query);
+    });
+  };
+
   return {
     configurationData: (): Promise<ProescV1Configuration> => read('configuration_data', {}, (payload) => configuration(payload, maxRows)),
-    accountingData: (input: ProescV1AccountingQuery): Promise<ProescV1AccountingPage> => {
-      const query = requireSource(input);
-      const params: Record<string, string> = {
-        unidade_id: query.unitId,
-        ano_letivo: String(query.year),
-        mes: String(query.month).padStart(2, '0'),
-        ...(query.externalKey === undefined ? {} : { id_chave: query.externalKey }),
-      };
-      return read('accounting_data', params, (payload) => {
-        const page = parseProescV1Accounting(payload, query, maxRows);
-        if (query.externalKey !== undefined && page.rows.some((row) => row.externalKey !== query.externalKey)) {
-          throw new ProescV1ReadError('INVALID_RESPONSE', 200);
-        }
-        return page;
-      });
+    accountingData: (input: ProescV1AccountingQuery): Promise<ProescV1AccountingPage> => (
+      readAccounting(input, (_payload, page) => page)
+    ),
+    accountingIdentityData: (input: ProescV1AccountingQuery & { externalKey: string }) => {
+      if (input.externalKey === undefined) throw new ProescV1ReadError('INVALID_REQUEST');
+      return readAccounting(input, (payload, page, query) => ({
+        ...page,
+        identities: accountingIdentityDiagnostic(payload, page, query.externalKey!, options.token),
+      }));
     },
   };
 }

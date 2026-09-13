@@ -34,7 +34,7 @@ export interface MatriculaTecnicaCicloManual {
     numero: number;
     status: string;
     origemEmissao?: "PROESC";
-    abrangencia?: "CONTRATO_COMPLETO";
+    abrangencia?: "CONTRATO_COMPLETO" | "SEGUNDO_CICLO";
     quantidadeItens: number;
     total: string;
     emitidosBanese: number;
