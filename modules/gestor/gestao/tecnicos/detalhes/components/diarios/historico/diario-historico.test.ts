@@ -172,8 +172,12 @@ test('diário normal exibe instrumentos P/P sem somar e mostra média documental
       getStats: () => ({ mediaParcial: 7.5, mediaFinal: 7.5, faltas: 0, frequencia: 100, resultado: 'APROVADO' }),
     }),
   }));
-  assert.ok(html.includes('P: 7,8 | P: 8,9'));
-  assert.ok(html.includes('7.5'));
+  for (const label of ['P1', 'P2']) assert.ok(html.includes(`>${label}</th>`), label);
+  for (const value of ['7,8', '8,9']) assert.ok(html.includes(`>${value}</td>`), value);
+  assert.ok(html.includes('colSpan="2"'));
+  assert.doesNotMatch(html, /P: 7,8|P: 8,9|\|/);
+  assert.ok(html.includes('7,5'));
+  assert.equal((html.match(/INSTRUMENTOS AVALIATIVOS/g) || []).length, 1);
   assert.doesNotMatch(html, /16\.7|somando os pontos|Registros importados|DOCX/);
   for (const input of html.match(/<input[^>]*>/g) || []) assert.ok(input.includes('disabled='));
 });
@@ -212,4 +216,42 @@ test('dados documentais ausentes não se tornam zero faltas ou prática padrão'
   assert.equal(buildGradesMap(students, aulas, [grade]).s1.total_faltas, 0);
   assert.equal(buildPraticasMap(aulas, [], '').a1, '');
   assert.equal(buildPraticasMap(aulas, []).a1, 'Aula expositiva / Prática padrão');
+});
+
+test('diário normal mostra apenas instrumentos ativos e mantém médias de duas casas do servidor', () => {
+  const html = renderToStaticMarkup(createElement(DiarioResultadoTab, {
+    students: [{ id: 's1', nome: 'Aluno sintético', matricula: 'M1', status: 'CURSANDO' }],
+    localGrades: {}, isReadOnly: false,
+    activeInstruments: { p: true, ti: false, tg: false, s: false, cq: true, o: false },
+    onToggleInstrument() {}, onGradeChange() {}, onSaveGrade() {},
+    getStats: () => ({ mediaParcial: 9.05, mediaFinal: 9.13, faltas: 0, frequencia: 100, resultado: 'APROVADO' }),
+  }));
+  assert.ok(html.includes('9,05'));
+  assert.ok(html.includes('9,13'));
+  assert.equal((html.match(/<input/g) || []).length, 3); // P, CQ and recovery.
+  assert.equal((html.match(/INSTRUMENTOS AVALIATIVOS/g) || []).length, 1);
+  const tableHead = html.slice(html.indexOf('<thead>'), html.indexOf('</thead>'));
+  for (const hidden of ['TI', 'TG', 'S', 'O']) assert.ok(!tableHead.includes(`>${hidden}</span>`), hidden);
+  assert.ok(tableHead.includes('>P</span>'));
+  assert.ok(tableHead.includes('>CQ</span>'));
+});
+
+test('aluno sem fonte no diário documental não herda P canônica como P1', () => {
+  const html = renderToStaticMarkup(createElement(DiarioDocumentaryProvider, { history,
+    children: createElement(DiarioResultadoTab, {
+      students: [{ id: 'extra', nome: 'Aluno sem fonte', matricula: 'M2', status: 'CURSANDO' }],
+      localGrades: { extra: { p: 9, ti: null, tg: null, s: null, cq: null, o: null, rec: null,
+        total_aulas: 0, total_faltas: null, frequencia_percent: null,
+        media_parcial: null, media_final: null, resultado_final: 'SEM_LANCAMENTO' } },
+      isReadOnly: false,
+      activeInstruments: { p: true, ti: true, tg: true, s: true, cq: true, o: true },
+      onToggleInstrument() {}, onGradeChange() {}, onSaveGrade() {},
+      getStats: () => ({ mediaParcial: null, mediaFinal: null, faltas: null,
+        frequencia: null, resultado: 'SEM_LANCAMENTO' }),
+    }),
+  }));
+  const body = html.slice(html.indexOf('<tbody'), html.indexOf('</tbody>'));
+  const cells = [...body.matchAll(/<td[^>]*>(.*?)<\/td>/g)].map((match) => match[1]);
+  assert.deepEqual(cells.slice(2, 4), ['—', '—']);
+  assert.doesNotMatch(body, />9<|value="9"/);
 });

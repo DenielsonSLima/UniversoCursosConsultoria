@@ -185,5 +185,24 @@ jobs:
             supabase/functions/banese/core/adapter-*.test.ts \
             supabase/tests/banese_incident_recovery_safety.contract.test.ts
 
+      - name: Testar colunas de notas dos diários
+        run: |
+          node --test modules/gestor/gestao/tecnicos/detalhes/components/diarios/historico/diario-documentary-columns.test.ts
+          node --input-type=module <<'JS'
+          import { build } from 'esbuild';
+          await build({
+            entryPoints: ['modules/gestor/gestao/tecnicos/detalhes/components/diarios/historico/diario-historico.test.ts'],
+            bundle: true, platform: 'node', format: 'cjs', jsx: 'automatic',
+            outfile: '/tmp/diario-ui.test.cjs',
+            define: {
+              'import.meta.env.VITE_SUPABASE_URL': '"https://example.supabase.co"',
+              'import.meta.env.VITE_SUPABASE_ANON_KEY': '"synthetic"',
+              'import.meta.env': '{}',
+            },
+          });
+          JS
+          node --test /tmp/diario-ui.test.cjs
+          deno test --allow-read --allow-env modules/gestor/gestao/tecnicos/detalhes/components/diarios/diario-pdf-documentary.test.ts modules/gestor/gestao/tecnicos/detalhes/components/diarios/diario-pdf-server-boundary.test.ts
+
       - name: Gerar build de produção
         run: npm run build

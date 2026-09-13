@@ -2,8 +2,9 @@ import React from 'react';
 import { AlertCircle, SlidersHorizontal } from 'lucide-react';
 import { DiarioStudent } from './diario-classe.service';
 import { ActiveInstruments, DiarioStudentStats, GradesMap } from './diario-classe.types';
+import type { HistoricalStudent } from './historico/diario-historico.types';
 import { useDiarioDocumentary } from './historico/DiarioDocumentaryContext';
-import { documentaryGradeText } from './historico/diario-documentary.presentation';
+import { buildDocumentaryGradeColumns, documentaryGradeCellText, diaryGradeNumberText } from './historico/diario-documentary.presentation';
 
 type GradeField = 'p' | 'ti' | 'tg' | 's' | 'cq' | 'o' | 'rec';
 
@@ -38,6 +39,12 @@ const DiarioResultadoTab: React.FC<DiarioResultadoTabProps> = ({
     { key: 'o', label: 'O', fullTitle: 'Outros Instrumentos' },
   ];
 
+  const visibleInstruments = instrumentsList.filter((instrument) => activeInstruments[instrument.key]);
+  const documentaryColumns = documentary
+    ? buildDocumentaryGradeColumns(Object.values<HistoricalStudent>(documentary.students).map((student) => student.gradeRows))
+    : null;
+  const instrumentColumnCount = documentaryColumns?.length ?? visibleInstruments.length;
+
   return (
     <div>
       {/* Barra de controle dos Instrumentos Avaliativos */}
@@ -47,7 +54,11 @@ const DiarioResultadoTab: React.FC<DiarioResultadoTabProps> = ({
           <span>Instrumentos Avaliativos da Disciplina:</span>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          {instrumentsList.map((inst) => {
+          {documentaryColumns ? documentaryColumns.map((column) => (
+            <span key={column.key} className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-[11px] font-bold text-blue-700">
+              {column.label}
+            </span>
+          )) : instrumentsList.map((inst) => {
             const active = activeInstruments[inst.key];
             return (
               <button
@@ -85,8 +96,7 @@ const DiarioResultadoTab: React.FC<DiarioResultadoTabProps> = ({
               <tr>
                 <th className="p-4 border-b border-slate-200 border-r w-12 text-xs font-black text-slate-400" rowSpan={2}>Nº</th>
                 <th className="p-4 border-b border-slate-200 border-r min-w-[250px] text-xs font-black text-[#001a33] uppercase text-left" rowSpan={2}>Nome do Aluno</th>
-                <th className="p-2 border-b border-slate-200 border-r text-xs font-black text-blue-700 bg-blue-50/50" colSpan={6}>INSTRUMENTOS AVALIATIVOS (0.0 a 10.0)</th>
-                {documentary && <th className="p-3 border-b border-r border-slate-200 min-w-[220px] text-xs font-black text-blue-800 bg-blue-50" rowSpan={2}>INSTRUMENTOS AVALIATIVOS</th>}
+                {instrumentColumnCount > 0 && <th className="p-2 border-b border-slate-200 border-r text-xs font-black text-blue-700 bg-blue-50/50" colSpan={instrumentColumnCount}>INSTRUMENTOS AVALIATIVOS (0.0 a 10.0)</th>}
                 <th className="p-4 border-b border-slate-200 border-r text-[10px] font-black text-slate-500 bg-slate-50" rowSpan={2}>MÉDIA PARCIAL</th>
                 <th className="p-4 border-b border-slate-200 border-r text-[10px] font-black text-slate-500 bg-slate-50" rowSpan={2}>REC<br /><span className="font-bold text-slate-400">SUBST.</span></th>
                 <th className="p-4 border-b border-slate-200 border-r text-[10px] font-black text-slate-500 bg-slate-50" rowSpan={2}>MÉDIA FINAL</th>
@@ -94,7 +104,11 @@ const DiarioResultadoTab: React.FC<DiarioResultadoTabProps> = ({
                 <th className="p-4 border-b border-slate-200 text-xs font-black text-[#001a33] uppercase" rowSpan={2}>RESULTADO FINAL</th>
               </tr>
               <tr>
-                {instrumentsList.map((inst) => (
+                {documentaryColumns ? documentaryColumns.map((column) => (
+                  <th key={column.key} scope="col" className="min-w-14 border-b border-r border-slate-200 bg-blue-50/70 p-2 text-[10px] font-bold text-blue-700">
+                    {column.label}
+                  </th>
+                )) : visibleInstruments.map((inst) => (
                   <GradeHeader
                     key={inst.key}
                     title={inst.fullTitle}
@@ -123,17 +137,24 @@ const DiarioResultadoTab: React.FC<DiarioResultadoTabProps> = ({
                   <tr key={aluno.id} className={`transition-colors ${isCredited ? 'bg-violet-50/60' : 'hover:bg-slate-50/50'}`}>
                     <td className="p-2 text-center border-r border-slate-100 text-slate-400 font-mono text-xs">{String(idx + 1).padStart(2, '0')}</td>
                     <td className="p-2 border-r border-slate-100 font-bold text-xs text-[#001a33] text-left truncate max-w-[200px]">{aluno.nome}</td>
-                    <GradeInput {...commonInputProps} field="p" value={studentGrades.p} disabled={gradeReadOnly || isCredited || !activeInstruments.p} />
-                    <GradeInput {...commonInputProps} field="ti" value={studentGrades.ti} disabled={gradeReadOnly || isCredited || !activeInstruments.ti} />
-                    <GradeInput {...commonInputProps} field="tg" value={studentGrades.tg} disabled={gradeReadOnly || isCredited || !activeInstruments.tg} />
-                    <GradeInput {...commonInputProps} field="s" value={studentGrades.s} disabled={gradeReadOnly || isCredited || !activeInstruments.s} />
-                    <GradeInput {...commonInputProps} field="cq" value={studentGrades.cq} disabled={gradeReadOnly || isCredited || !activeInstruments.cq} />
-                    <GradeInput {...commonInputProps} field="o" value={studentGrades.o} disabled={gradeReadOnly || isCredited || !activeInstruments.o} />
-                    {documentary && <td className="p-3 border-r border-slate-100 text-left text-xs text-slate-700 whitespace-pre-wrap">
-                      {documentaryGradeText(documentary.students[aluno.id]?.gradeRows)}
-                    </td>}
+                    {documentaryColumns ? documentaryColumns.map((column) => {
+                      const source = documentary?.students[aluno.id];
+                      return (
+                        <td key={column.key} className="border-r border-slate-100 p-2 text-xs font-bold text-slate-700">
+                          {documentaryGradeCellText(source?.gradeRows, column)}
+                        </td>
+                      );
+                    }) : visibleInstruments.map((instrument) => (
+                      <GradeInput
+                        key={instrument.key}
+                        {...commonInputProps}
+                        field={instrument.key}
+                        value={studentGrades[instrument.key]}
+                        disabled={gradeReadOnly || isCredited || !activeInstruments[instrument.key]}
+                      />
+                    ))}
                     <td className="p-2 border-r border-slate-100 font-black text-xs bg-slate-50/80 text-blue-900">
-                      {stats.mediaParcial === null ? '—' : stats.mediaParcial.toFixed(1)}
+                      {diaryGradeNumberText(stats.mediaParcial)}
                     </td>
                     <GradeInput
                       {...commonInputProps}
@@ -143,7 +164,7 @@ const DiarioResultadoTab: React.FC<DiarioResultadoTabProps> = ({
                       disabled={gradeReadOnly || isCredited || (stats.mediaParcial !== null && stats.mediaParcial >= 6)}
                     />
                     <td className="p-2 border-r border-slate-100 font-black text-sm bg-slate-50 text-[#001a33]">
-                      {stats.mediaFinal === null ? '—' : stats.mediaFinal.toFixed(1)}
+                      {diaryGradeNumberText(stats.mediaFinal)}
                     </td>
                     <td className="p-2 border-r border-slate-100 font-bold text-xs text-red-600">{stats.faltas ?? '—'}</td>
                     <td className="p-2 border-r border-slate-100 font-bold text-xs">
@@ -171,12 +192,18 @@ const DiarioResultadoTab: React.FC<DiarioResultadoTabProps> = ({
       <div className="p-6 bg-slate-50 border-t border-slate-200">
         <p className="text-xs font-bold text-slate-500 mb-2">LEGENDA - Instrumentos Avaliativos:</p>
         <div className="flex flex-wrap gap-x-6 gap-y-2 text-[10px] font-medium text-slate-600">
-          <span className={activeInstruments.p ? 'font-bold text-blue-900' : 'line-through text-slate-400'}><strong>P</strong> - Prova Escrita</span>
-          <span className={activeInstruments.ti ? 'font-bold text-blue-900' : 'line-through text-slate-400'}><strong>TI</strong> - Trabalho Individual</span>
-          <span className={activeInstruments.tg ? 'font-bold text-blue-900' : 'line-through text-slate-400'}><strong>TG</strong> - Trabalho em Grupo</span>
-          <span className={activeInstruments.s ? 'font-bold text-blue-900' : 'line-through text-slate-400'}><strong>S</strong> - Seminário</span>
-          <span className={activeInstruments.cq ? 'font-bold text-blue-900' : 'line-through text-slate-400'}><strong>CQ</strong> - Critérios Qualitativos</span>
-          <span className={activeInstruments.o ? 'font-bold text-blue-900' : 'line-through text-slate-400'}><strong>O</strong> - Outros / Atividades Práticas</span>
+          {documentaryColumns ? documentaryColumns.map((column) => {
+            const standard = instrumentsList.find((instrument) => instrument.label === column.category);
+            return (
+              <span key={column.key} className="font-bold text-blue-900">
+                <strong>{column.label}</strong>{standard ? ` - ${column.category === 'P' ? 'Prova' : standard.fullTitle}` : ''}
+              </span>
+            );
+          }) : visibleInstruments.map((instrument) => (
+            <span key={instrument.key} className="font-bold text-blue-900">
+              <strong>{instrument.label}</strong> - {instrument.fullTitle}
+            </span>
+          ))}
           <span><strong>REC</strong> - Recuperação Semestral</span>
         </div>
         <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-[11px] font-bold leading-relaxed text-blue-900">

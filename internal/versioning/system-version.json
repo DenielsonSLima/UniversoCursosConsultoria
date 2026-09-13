@@ -1,8 +1,8 @@
 {
-  "version": "4.8.58",
+  "version": "4.8.59",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 67,
+  "revision": 68,
   "releasedAt": "2026-09-13",
-  "summary": "Caixa distingue obrigações confirmadas e Proesc preserva pagamentos fora da competência"
+  "summary": "Notas do diário em colunas separadas, somente com os instrumentos utilizados"
 }
