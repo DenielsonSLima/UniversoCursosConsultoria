@@ -13,8 +13,8 @@ export const CaixaCompromissosCards: React.FC<CaixaCompromissosCardsProps> = ({ 
     <div className="grid grid-cols-2 divide-x divide-y divide-slate-100 sm:grid-cols-3 md:grid-cols-5 md:divide-y-0">
       {[
         { label: 'Receitas futuras', value: formatCaixaCurrency(compromissos.aReceber), color: 'text-emerald-700', helper: 'Compromisso em aberto hoje' },
-        { label: 'Inadimplência do mês', value: formatCaixaCurrency(compromissos.receberVencido), color: 'text-amber-600', helper: `Não recebido até ${formatCaixaDate(monthly.dataCorte)}` },
-        { label: 'Margem de inadimplência do mês', value: formatCaixaPercent(compromissos.margemInadimplencia), color: 'text-amber-600', helper: 'Sobre cobranças com vencimento no mês' },
+        { label: `Inadimplência do mês${monthly.completo ? '' : ' (parcial)'}`, value: formatCaixaCurrency(compromissos.receberVencido), color: 'text-amber-600', helper: `${monthly.completo ? 'Não recebido' : 'Apurado na base conferida'} até ${formatCaixaDate(monthly.dataCorte)}` },
+        { label: `Margem de inadimplência do mês${monthly.completo ? '' : ' (parcial)'}`, value: formatCaixaPercent(compromissos.margemInadimplencia), color: 'text-amber-600', helper: monthly.completo ? 'Sobre cobranças com vencimento no mês' : 'Sobre a base conferida do mês' },
         { label: 'Obrigações futuras', value: formatCaixaCurrency(compromissos.aPagar), color: 'text-rose-600', helper: 'Compromisso em aberto hoje' },
         { label: 'Obrigações vencidas', value: formatCaixaCurrency(compromissos.pagarVencido), color: 'text-rose-700', helper: 'Valor vencido ainda não liquidado' },
       ].map((item) => (
@@ -26,10 +26,11 @@ export const CaixaCompromissosCards: React.FC<CaixaCompromissosCardsProps> = ({ 
       ))}
     </div>
     <div className="border-t border-slate-100 px-4 py-2.5 text-[11px] text-slate-500">
-      <p>Base da margem: {formatCaixaCurrency(monthly.baseElegivel)} em cobranças com vencimento no mês.</p>
+      <p>{monthly.completo ? 'Base da margem' : 'Base conferida da margem'}: {formatCaixaCurrency(monthly.baseElegivel)} em cobranças com vencimento no mês.</p>
       {!monthly.completo && (
         <p className="mt-1 font-medium text-amber-700">
-          Indicadores incompletos: {monthly.quantidadeEmConferencia} cobrança(s) em conferência não incluída(s).
+          Indicadores incompletos: {monthly.quantidadeEmConferencia} cobrança(s) em conferência não incluída(s),
+          {' '}{formatCaixaCurrency(monthly.valorNominalEmConferencia)} em valor nominal. Esse valor ainda não representa inadimplência confirmada.
         </p>
       )}
     </div>
