@@ -96,3 +96,18 @@ Deno.test("P3 usa a janela global restante sem cortar cada consulta em 8 segundo
     250,
   );
 });
+
+
+Deno.test("atraso no segredo reduz lançamentos sem acelerar o intervalo nominal", () => {
+  const prepareStartedAt = 12_000;
+  const processingStartedAt = 13_000;
+  const previous = createLaunchPacing(prepareStartedAt, processingStartedAt, 100);
+  const residual = createLaunchPacing(0, processingStartedAt, 100, prepareStartedAt);
+  assert.equal(residual.queryDeadline, 34_000);
+  assert.equal(residual.hardDeadline, 50_000);
+  assert.equal(residual.launchIntervalMs, previous.launchIntervalMs);
+  const countLaunches = (pacing: ReturnType<typeof createLaunchPacing>) =>
+    Array.from({ length: 100 }, (_, index) => scheduledLaunchAt(pacing, index))
+      .filter((at) => canLaunchAt(pacing, at)).length;
+  assert.ok(countLaunches(residual) < countLaunches(previous));
+});

@@ -1,6 +1,6 @@
 # Memória canônica do projeto
 
-Atualizada em: 2026-09-12
+Atualizada em: 2026-09-13
 
 ## Finalidade
 
@@ -61,7 +61,7 @@ Este arquivo é um índice curto de contexto durável. Ajustes rápidos não pre
 
 - Remover Atualizar Dados e textos indevidos de Mercado Pago; acrescentar filtro Proesc/Banese junto à busca.
 - Origem, filtro, paginação e totais pertencem à RPC, mantendo autorização por polo. Não desligar monitores nem alterar fatos financeiros ao remover a ação visual.
-- Versão 4.8.50/revisão 59 publicada no PR144/squash 4b513e085dcb6c0dcf133cf9c0975f28a0023caf, com Vercel SUCCESS e HTTP200 asset main-B8U4uhUw.js; smoke autenticado final em andamento. Duas migrations aplicadas e imutáveis. RAG indexado uma vez pelo coordenador, 11 fontes/71 chunks. Proesc REVIEW não implica vencimento confirmado nem permite consulta Banese. Registro: registros/alteracoes/2026-09-12-conciliacao-origem-proesc-banese.md.
+- Versão 4.8.50/revisão 59 publicada no PR144/squash 4b513e085dcb6c0dcf133cf9c0975f28a0023caf, com Vercel SUCCESS e HTTP200 asset main-B8U4uhUw.js; smoke autenticado dos filtros confirmado em produção na 4.8.52. Duas migrations aplicadas e imutáveis. RAG indexado uma vez pelo coordenador, 11 fontes/71 chunks. Proesc REVIEW não implica vencimento confirmado nem permite consulta Banese. Registro: registros/alteracoes/2026-09-12-conciliacao-origem-proesc-banese.md.
 
 ## Caixa mensal publicado — 4.8.51
 
@@ -74,5 +74,12 @@ Este arquivo é um índice curto de contexto durável. Ajustes rápidos não pre
 - Painel separado de Token/Histórico, apenas leitura de RPC. Execuções futuras reais e sanitizadas; observações, importações e baixas automáticas são conceitos distintos.
 - Banese mantém os erros históricos e informa recuperação posterior e estado atual separadamente; nenhum reprocessamento é autorizado pela simples existência de erro antigo.
 - Sete migrations Proesc e uma Banese aplicadas, Edge Proesc v7 ativa e duas execuções reais de 60 cobranças concluídas com telemetria completa. Seis unidades SQL isoladas aprovadas; índices resolvem contagem pesada. Financeiro/Caixa recuperados e preservados após timeouts, com smoke autenticado. Frontend não repete consultas após erro.
-- Safari autenticado confirmou as cinco abas, paginação/polo e recuperação Banese, filtros de Conciliação e aviso EDI7. Build final aprovado; commit de publicação mantém manifesto isolado.
+- PR146 publicado, squash b2b11a5cbd5fba8e4fd8fdea8d76b537e9add785, CI/Vercel/HTTP200 aprovados. Safari autenticado em produção confirmou as cinco abas, Caixa/Recebíveis e filtros de Conciliação. Aviso EDI7 conferido anteriormente.
 - Usuário renovou autorização para corrigir e publicar em 12/09 às21:09. Registro: registros/alteracoes/2026-09-12-consulta-api-proesc-banese.md.
+
+## Recuperação de configuração dos workers — 4.8.53 em publicação
+
+- HTTP504 intermitente nos getters de configuração precede operações bancárias; getter SQL direto em 2,740 ms. Causa exata na camada de API ainda inconclusiva.
+- Patch restrito à leitura dos segredos Banese/Push, usado em três workers, com uma repetição, prazo total e metadados sanitizados. Sem alteração de dados financeiros, credenciais ou cron.
+- Edge conciliação v101, Push v16 e cancelamento v6 publicadas via MCP. 45 testes e revisão aprovados; tipagem cancelamento mantém erro preexistente reproduzido no remoto, sem alteração financeira. Smoke natural: 14 execuções HTTP200; duas falhas504 internas recuperadas na segunda tentativa. A instabilidade externa não foi declarada eliminada.
+- Registro: registros/alteracoes/2026-09-13-workers-configuracao-resiliente.md.

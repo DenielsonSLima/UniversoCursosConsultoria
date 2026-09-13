@@ -1,8 +1,8 @@
 {
-  "version": "4.8.52",
+  "version": "4.8.53",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 61,
-  "releasedAt": "2026-09-12",
-  "summary": "Acompanhamento da API Proesc e recuperação de consultas Banese"
+  "revision": 62,
+  "releasedAt": "2026-09-13",
+  "summary": "Recuperação limitada da leitura interna de configuração dos workers"
 }

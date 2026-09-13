@@ -1,4 +1,4 @@
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.112.3";
 import { createBaneseCancellationWorkerHandler } from "./worker.ts";
 
 const handler = createBaneseCancellationWorkerHandler({

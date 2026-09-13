@@ -2,9 +2,9 @@
 
 ## Estado da entrega
 
-Entrega 4.8.52 validada localmente e autorizada pelo usuário para publicação. O ledger de execuções Proesc já foi aplicado no banco. A projeção de recuperação do histórico Banese também foi aplicada e conferida, sem alteração de títulos, pagamentos ou filas.
+Entrega 4.8.52 publicada no PR146, squash b2b11a5cbd5fba8e4fd8fdea8d76b537e9add785, com CI e Vercel aprovados. O ledger de execuções Proesc já foi aplicado no banco. A projeção de recuperação do histórico Banese também foi aplicada e conferida, sem alteração de títulos, pagamentos ou filas.
 
-Seis unidades SQL isoladas passaram após otimização dos índices. Instrumentação Edge v7 publicada via MCP; interface validada no Safari autenticado. Publicação da interface segue pelo commit atômico deste manifesto, com CI, Vercel e verificação pública antes de declarar conclusão.
+Seis unidades SQL isoladas passaram após otimização dos índices. Instrumentação Edge v7 publicada via MCP; interface validada no Safari autenticado. Interface em produção conferida por HTTP200 e Safari autenticado, incluindo Caixa, Recebíveis e os filtros Proesc/Banese.
 
 ## Resultado preparado
 
@@ -127,7 +127,7 @@ Publicar somente estes caminhos sobre 02409544d1def71a655e2831c0a6c72cd30fc891. 
 
 ## Publicação e limites
 
-Usuário renovou autorização para corrigir e publicar em 12/09 às 21:09. Base 4.8.51/02409544; revisão 61/4.8.52. CI/Preview e produção serão verificados pelo coordenador no commit atômico deste manifesto.
+Usuário renovou autorização para corrigir e publicar em 12/09 às 21:09. Base 4.8.51/02409544; revisão 61/4.8.52. CI/Preview e produção aprovados no commit atômico deste manifesto; versão pública 4.8.52 confirmada no Safari autenticado.
 
 - Diagnóstico CNAB autenticado confirmou Configuração CNAB240 pendente por ausência do EDI7 real. A integração API Banese permanece independente. Nenhuma credencial foi alterada.
 - As exclusões mensais 56/110 do Caixa permanecem: fonte Proesc UNKNOWN/REVIEW não comprova baixa nem aberto integral. Em setembro, 20 dessas cobranças venceram e 90 ainda não. Nenhum valor foi inventado para remover o aviso.
