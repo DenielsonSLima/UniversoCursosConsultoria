@@ -114,7 +114,7 @@ export const drawComposition = (
     ['Multa', totals.multaIdentificada],
     ['Acréscimo', totals.acrescimoIdentificado],
     ['Desconto', totals.descontoIdentificado],
-    ['Não discrim.', totals.diferencaNaoDiscriminada],
+    ['Diferença a conferir', totals.diferencaNaoDiscriminada],
   ] as const;
   const columnWidth = (width - 5) / values.length;
   values.forEach(([label, value], index) => {

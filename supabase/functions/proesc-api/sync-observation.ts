@@ -52,13 +52,21 @@ export async function observeLinkedObligation(
   })).sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right)));
   const reviewReasons = [...issues].sort();
   const verified = reviewReasons.length === 0;
+  // O contrato da RPC já confere os blocos 3/4 como juros/multa explícitos.
+  // A ausência, multiplicidade ou data incompatível não comprova valor zero.
+  const explicitComponent = (blockId: string): number | null => {
+    const matches = rows.filter((row) => row.blockId === blockId);
+    return verified && matches.length === 1 && matches[0].paymentDate === payment?.paymentDate
+      && matches[0].amountCents >= 0 ? matches[0].amountCents : null;
+  };
   const value = {
     linkId: link.linkId, principalCents: link.principalCents,
     receivedCents: payment?.amountCents ?? null, paymentDate: payment?.paymentDate ?? null,
     sourceStatus: rows.some((row) => row.cancelled) ? 'CANCELED' : payment ? 'PAID' : 'UNKNOWN',
     verification: verified ? 'VERIFIED' : 'REVIEW',
     evidenceKind: verified ? 'API_PAYMENT_TOTAL' : 'UNRESOLVED',
-    components: { interestCents: null, penaltyCents: null, discountCents: null, additionCents: null },
+    components: { interestCents: explicitComponent('3'), penaltyCents: explicitComponent('4'),
+      discountCents: null, additionCents: null },
     lines, reviewReasons,
   };
   // Mantém multiplicidade, mas não depende de CPF, nome ou posição na resposta mensal.

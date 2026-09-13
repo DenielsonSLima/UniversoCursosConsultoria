@@ -119,6 +119,12 @@ export const requireMatriculaTecnicaCicloManual = (
   const generatedNumber = isRecord(generated) ? Number(generated.numero) : null;
   const baseValid = (
     typeof value.habilitado === 'boolean'
+    && (value.conferenciaProesc === undefined || (
+      isRecord(value.conferenciaProesc)
+      && value.conferenciaProesc.necessaria === true
+      && ['ELEGIVEL', 'BLOQUEADO'].includes(state)
+      && generated === null
+    ))
     && (value.modo === 'MANUAL' || value.modo === null)
     && isNullableInteger(value.cicloBaseHistorico)
     && isNullableInteger(value.cicloMaximo)

@@ -86,7 +86,7 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma, regra, polic
     turmaId: turma.id,
     regra: mapConfigToRegraTecnicaInput(previewForm),
   }), [previewForm, turma.id]);
-  const previewQuery = usePreverRegraFinanceiraTecnica(previewInput, isEditing && !conflict);
+  const previewQuery = usePreverRegraFinanceiraTecnica(previewInput, isEditing && !conflict && !blocked);
   const previewReady = Boolean(
     previewQuery.data
     && !previewQuery.isFetching
@@ -159,25 +159,17 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma, regra, polic
     }
   };
 
-  if (blocked) return (
-    <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-6">
-      <h3 className="text-lg font-black text-[#001a33]">Sem novas cobranças neste sistema</h3>
-      <p className="mt-2 text-sm text-amber-900">Esta turma veio em andamento com as cobranças administradas no sistema anterior.
-        A geração e a edição de valores, desconto, juros e multa ficam bloqueadas.</p>
-      <p className="mt-2 text-xs text-slate-600">O histórico já registrado continua disponível. Esta configuração não informa quitação.</p>
-    </div>
-  );
-
-  if (!isEditing) {
+  if (blocked || !isEditing) {
     return (
       <>
         <FinanceiroConfigSummary
           calculo={mapRegraTecnicaCalculo(regra)}
           config={mapRegraTecnicaToConfig(regra)}
           cronograma={mapRegraTecnicaCronograma(regra)}
-          onEdit={openEditor}
+          onEdit={blocked ? undefined : openEditor}
           turmaLabel={turmaLabel}
           somenteSegundoCiclo={external}
+          somenteConsulta={blocked}
         />
         <ToastNotification toasts={toasts} onRemove={removeToast} />
       </>

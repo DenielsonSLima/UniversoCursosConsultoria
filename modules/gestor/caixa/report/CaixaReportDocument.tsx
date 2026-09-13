@@ -186,7 +186,7 @@ const SummaryPage: React.FC<{ report: CaixaDetailedReport }> = ({ report }) => {
             <p>Multa<br /><strong>{formatCaixaCurrency(report.totaisRecebimentos.multaIdentificada)}</strong></p>
             <p>Acréscimo<br /><strong>{formatCaixaCurrency(report.totaisRecebimentos.acrescimoIdentificado)}</strong></p>
             <p>Desconto<br /><strong>{formatCaixaCurrency(report.totaisRecebimentos.descontoIdentificado)}</strong></p>
-            <p>Não discrim.<br /><strong>{formatCaixaCurrency(report.totaisRecebimentos.diferencaNaoDiscriminada)}</strong></p>
+            <p>Diferença a conferir<br /><strong>{formatCaixaCurrency(report.totaisRecebimentos.diferencaNaoDiscriminada)}</strong></p>
           </div>
         </div>
 
@@ -210,7 +210,7 @@ const SummaryPage: React.FC<{ report: CaixaDetailedReport }> = ({ report }) => {
             <p>Multa<br /><strong>{formatCaixaCurrency(report.totaisDespesas.multaIdentificada)}</strong></p>
             <p>Acréscimo<br /><strong>{formatCaixaCurrency(report.totaisDespesas.acrescimoIdentificado)}</strong></p>
             <p>Desconto<br /><strong>{formatCaixaCurrency(report.totaisDespesas.descontoIdentificado)}</strong></p>
-            <p>Não discrim.<br /><strong>{formatCaixaCurrency(report.totaisDespesas.diferencaNaoDiscriminada)}</strong></p>
+            <p>Diferença a conferir<br /><strong>{formatCaixaCurrency(report.totaisDespesas.diferencaNaoDiscriminada)}</strong></p>
           </div>
         </div>
       </div>

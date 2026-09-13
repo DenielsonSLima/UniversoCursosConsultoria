@@ -120,3 +120,37 @@ test('consulta individual permanece disponível somente para cobrança Banese pe
   assert.match(html, /Re-verificar/);
   assert.match(html, /na API Banese/);
 });
+
+test('composição Proesc parcial mostra valores explícitos e informa conferência dos demais', () => {
+  const html = renderReceipt({
+    status: 'PAGO', source_system: 'PROESC', source_label: 'Proesc', origem: 'PROESC',
+    composicao_status: 'PARCIAL_POR_API_PROESC',
+    valor_nominal: 279.9, valor_pago: 260, juros_aplicados: 1.71, multa_aplicada: 5.2,
+    desconto_aplicado: null, acrescimo_aplicado: null, diferenca_nao_discriminada: -26.81,
+  });
+  assert.match(html, /Componentes informados pelo Proesc/);
+  assert.match(fieldContents(html, 'Juros')[0], /1,71/);
+  assert.match(fieldContents(html, 'Multa')[0], /5,20/);
+  assert.match(fieldContents(html, 'Desconto')[0], /Não informado/);
+  assert.match(html, /Diferença não discriminada:.*26,81/);
+  assert.doesNotMatch(html, /Composição conferida no Proesc/);
+});
+
+test('regras calculadas e mistas exibem origem e diferença sem afirmar conferência Proesc', () => {
+  for (const [status, label] of [
+    ['CALCULADO_REGRA_INFORMADA_PROESC', 'Calculado pelas regras informadas'],
+    ['API_E_REGRA_INFORMADA_PROESC', 'Dados Proesc complementados pelas regras informadas'],
+  ]) {
+    const html = renderReceipt({
+      status: 'PAGO', source_system: 'PROESC', source_label: 'Proesc', origem: 'PROESC',
+      composicao_status: status, valor_nominal: 279.9, valor_pago: 260,
+      desconto_aplicado: 19.9, juros_aplicados: 1.71, multa_aplicada: 5.2,
+      acrescimo_aplicado: 0, diferenca_nao_discriminada: -6.91,
+    });
+    assert.ok(html.includes(label));
+    assert.match(fieldContents(html, 'Valor pago')[0], /260,00/);
+    assert.match(fieldContents(html, 'Desconto')[0], /19,90/);
+    assert.match(html, /Diferença não discriminada:.*6,91/);
+    assert.doesNotMatch(html, /Composição conferida no Proesc|266,91/);
+  }
+});

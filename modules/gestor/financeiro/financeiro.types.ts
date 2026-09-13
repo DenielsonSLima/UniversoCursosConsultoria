@@ -95,6 +95,10 @@ export interface ContasReceber {
   descontoAplicado?: number;
   jurosAplicados?: number;
   multaAplicada?: number;
+  acrescimoAplicado?: number;
+  diferencaNaoDiscriminada?: number;
+  composicaoStatus?: string;
+  composicaoProveniencia?: string;
   createdAt?: string;
   tipoLancamento?: 'MATRICULA' | 'PARCELA' | 'REMATRICULA' | 'DEPENDENCIA';
   parcelaNumero?: number;

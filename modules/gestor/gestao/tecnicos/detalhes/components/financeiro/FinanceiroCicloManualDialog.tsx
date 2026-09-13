@@ -24,6 +24,7 @@ import { usePreviewCicloFinanceiroTecnicoManual } from './hooks/useMatriculaTecn
 import { useAccessibleDialog } from './hooks/useAccessibleDialog';
 
 interface FinanceiroCicloManualDialogProps {
+  turmaId: string;
   row: MatriculaTecnicaFinanceiroRow;
   pending: boolean;
   onClose: () => void;
@@ -54,6 +55,7 @@ const formatPercent = (value: string) => `${new Intl.NumberFormat('pt-BR', {
 }).format(Number(value))}%`;
 
 const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = ({
+  turmaId,
   row,
   pending,
   onClose,
@@ -80,6 +82,8 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
     && row.cicloManual.podeGerar
     && (dateSource === 'TURMA' || Boolean(individualDate));
   const previewQuery = usePreviewCicloFinanceiroTecnicoManual({
+    turmaId,
+    conferirProesc: row.cicloManual.conferenciaProesc?.necessaria === true,
     matriculaId: row.matriculaId,
     cicloNumero: cycleNumber || 0,
     primeiroVencimento: firstDueDate,

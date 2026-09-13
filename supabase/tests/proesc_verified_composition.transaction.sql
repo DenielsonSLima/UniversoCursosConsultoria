@@ -1,6 +1,7 @@
 -- Rehearsal only. Apply the composition migrations inside BEGIN before this
 -- script and ROLLBACK afterwards. The inner subtransaction also rolls fixtures back.
 -- Include the later preserve_unknown_proesc_components migration in the rehearsal.
+-- Include proesc_explicit_payment_components for the API components contract.
 do $composition_contract$
 declare
   v_receipt public.contas_receber%rowtype;
@@ -28,6 +29,9 @@ begin
       and r.categoria='MENSALIDADE'
       and r.manual_settlement_id is null and r.gateway_provider is null
       and r.gateway_payment_id is null and r.valor > r.valor_pago and r.valor_pago > 0
+      and not exists (select 1 from internal_proesc.financial_snapshots s
+        where s.link_id=l.id and s.verification='VERIFIED' and s.source_status='PAID'
+          and internal_proesc.explicit_discount_component(s.accounting_lines,l.source_unit_id,r.data_pagamento) is not null)
     order by r.id limit 1;
     select * into strict v_link from internal_proesc.obligation_links where receivable_id=v_receipt.id;
     select auth_user_id into strict v_auth_user from public.usuarios_sistema where id=v_link.confirmed_by;
@@ -44,9 +48,10 @@ begin
     select * into v_result from public.resolve_integrated_receivable_financial_composition(
       v_receipt.id,v_receipt.valor,v_receipt.valor_pago,v_receipt.data_vencimento,
       v_receipt.data_pagamento,null,null,null,null,null,null,null,null,null);
-    assert v_result.desconto is null
-      and v_result.diferenca_nao_discriminada=v_receipt.valor_pago-v_receipt.valor,
-      'Difference alone was incorrectly classified as a discount';
+    assert v_result.composicao_status is distinct from 'CONCILIADO_POR_CONFERENCIA_PROESC'
+      and v_result.diferenca_nao_discriminada=v_receipt.valor_pago-v_receipt.valor
+        -coalesce(v_result.juros,0)-coalesce(v_result.multa,0)+coalesce(v_result.desconto,0),
+      'Calculated components were presented as portal proof or lost the residual';
 
     insert into internal_proesc.financial_snapshots(link_id,observed_at,source_fingerprint,
       principal_cents,received_cents,payment_date,source_status,verification,evidence_kind,
@@ -188,10 +193,16 @@ begin
   select r.* into strict v_receipt from public.contas_receber r
   join internal_proesc.obligation_links l on l.receivable_id=r.id
   where r.status='PAGO' and r.valor=r.valor_pago
+    and r.valor not in (100,200,279.90)
     and r.gateway_provider is null and r.manual_settlement_id is null
     and not exists (select 1 from internal_proesc.financial_snapshots s
       where s.link_id=l.id and s.evidence_kind='PORTAL_CONFIRMED'
         and s.components->>'discountCents' is not null)
+    and not exists (select 1 from internal_proesc.financial_snapshots s
+      where s.link_id=l.id and s.verification='VERIFIED' and s.source_status='PAID'
+        and (internal_proesc.explicit_payment_component(s.accounting_lines,'3',r.data_pagamento) is not null
+          or internal_proesc.explicit_payment_component(s.accounting_lines,'4',r.data_pagamento) is not null
+          or internal_proesc.explicit_discount_component(s.accounting_lines,l.source_unit_id,r.data_pagamento) is not null))
   order by r.id limit 1;
   select * into v_composition from public.resolve_integrated_receivable_financial_composition(
     v_receipt.id,v_receipt.valor,v_receipt.valor_pago,v_receipt.data_vencimento,

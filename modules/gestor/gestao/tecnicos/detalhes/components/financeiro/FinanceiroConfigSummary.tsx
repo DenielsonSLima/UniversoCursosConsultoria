@@ -12,9 +12,10 @@ interface FinanceiroConfigSummaryProps {
   calculo?: FinanceiroRulesCalculation;
   config: FinanceiroConfigData;
   cronograma: CronogramaItem[];
-  onEdit: () => void;
+  onEdit?: () => void;
   turmaLabel: string;
   somenteSegundoCiclo?: boolean;
+  somenteConsulta?: boolean;
 }
 
 const FinanceiroConfigSummary: React.FC<FinanceiroConfigSummaryProps> = ({
@@ -24,6 +25,7 @@ const FinanceiroConfigSummary: React.FC<FinanceiroConfigSummaryProps> = ({
   onEdit,
   turmaLabel,
   somenteSegundoCiclo = false,
+  somenteConsulta = false,
 }) => {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
@@ -32,14 +34,18 @@ const FinanceiroConfigSummary: React.FC<FinanceiroConfigSummaryProps> = ({
         <div className="flex justify-between items-start mb-8">
           <div>
             <h3 className="text-lg font-black text-[#001a33] uppercase tracking-tight">Regras Financeiras</h3>
-            <p className="text-slate-500 text-sm">{somenteSegundoCiclo ? 'Valores e encargos somente para o 2º ciclo. O 1º ciclo permanece no sistema anterior.' : 'Parâmetros aplicados a todos os alunos desta turma.'}</p>
+            <p className="text-slate-500 text-sm">{somenteConsulta
+              ? 'Condições cadastradas para consulta. Os títulos já emitidos seguem os valores do sistema de origem.'
+              : somenteSegundoCiclo
+                ? 'Valores e encargos somente para o 2º ciclo. O 1º ciclo permanece no sistema anterior.'
+                : 'Parâmetros aplicados a todos os alunos desta turma.'}</p>
           </div>
-          <button
+          {!somenteConsulta && onEdit ? <button
             onClick={onEdit}
             className="flex items-center gap-2 px-4 py-2 bg-slate-50 text-blue-600 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-blue-50 transition-colors border border-slate-100"
           >
             <Edit2 size={14} /> Editar
-          </button>
+          </button> : null}
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
@@ -173,7 +179,14 @@ const FinanceiroConfigSummary: React.FC<FinanceiroConfigSummaryProps> = ({
       </div>
     </div>
 
-    {somenteSegundoCiclo ? (
+    {somenteConsulta ? (
+      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
+        <h3 className="text-lg font-black text-[#001a33]">Sem novas cobranças neste sistema</h3>
+        <p className="mt-2 text-sm text-amber-900">Esta turma veio em andamento com as cobranças administradas no sistema anterior.
+          A geração e a edição de valores, desconto, juros e multa ficam bloqueadas.</p>
+        <p className="mt-2 text-xs text-slate-600">O histórico já registrado continua disponível. Esta configuração não informa quitação.</p>
+      </div>
+    ) : somenteSegundoCiclo ? (
       <div className="rounded-2xl border border-blue-100 bg-blue-50 p-6">
         <h4 className="font-black text-[#001a33]">Somente o 2º ciclo</h4>
         <p className="mt-2 text-sm text-slate-600">O 1º ciclo permanece no sistema anterior.

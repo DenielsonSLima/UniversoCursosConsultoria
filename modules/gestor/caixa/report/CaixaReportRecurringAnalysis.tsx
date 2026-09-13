@@ -14,7 +14,7 @@ const VALUE_COLUMNS = [
   ['Multa', 'multa', 'text-slate-600'],
   ['Acrésc.', 'acrescimo', 'text-slate-600'],
   ['Desconto', 'desconto', 'text-blue-700'],
-  ['Não discr.', 'diferencaNaoDiscriminada', 'text-slate-500'],
+  ['A conferir', 'diferencaNaoDiscriminada', 'text-slate-500'],
 ] as const satisfies ReadonlyArray<readonly [
   string,
   keyof CaixaReportRecurringBreakdown,
@@ -57,7 +57,7 @@ export const CaixaReportRecurringAnalysis: React.FC<{
           Acompanhamento por modalidade e turma
         </h2>
         <p className="mt-0.5 text-[8px] text-slate-500">
-          Valores previstos, recebidos, vencidos e ajustes confirmados na competência.
+          Valores previstos, recebidos, vencidos e composição financeira na competência.
         </p>
       </div>
       <span className="text-[8px] font-black uppercase tracking-widest text-slate-500">

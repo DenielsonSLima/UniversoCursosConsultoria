@@ -15,6 +15,7 @@ import type {
   StatusScope,
 } from './modalidade-receber.types';
 import { formatEnrollment } from './modalidade-receber.enrollment';
+import { ReceivableAmountSummary } from './ReceivableAmountSummary';
 import {
   formatCurrency,
   formatReceivableDate,
@@ -23,7 +24,6 @@ import {
   paymentOriginLabel,
   receivableClassLabel,
   receivableCourseTitle,
-  receivableDiscountPresentation,
   receivableLaunchLabel,
   statusScopeLabels,
 } from './modalidade-receber.utils';
@@ -103,9 +103,6 @@ export const useModalidadeReceberReport = ({
   ], []);
 
   const rows = useMemo<FinancialReportRow[]>(() => (receivables || []).map((item) => {
-    const discount = receivableDiscountPresentation(item);
-    const discountExpired = discount?.kind === 'BOLETO_EXPIRADO';
-
     return {
       id: item.id || `${item.clienteId}-${item.dataVencimento}-${item.descricao}`,
       cells: [
@@ -145,35 +142,7 @@ export const useModalidadeReceberReport = ({
         ) : null}
       </div>,
       <FinancialReportStatusBadge status={item.status} />,
-      <div>
-        <p className="font-black text-[#001a33]">{formatCurrency(item.valor)}</p>
-        {discount ? (
-          <p className={`mt-1 text-[9px] font-bold ${discountExpired ? 'text-amber-700' : 'text-emerald-700'}`}>
-            {discount.kind === 'APLICADO'
-              ? 'Desconto aplicado'
-              : discountExpired ? 'Desconto expirado' : 'Desconto do boleto'}:
-            {' '}{formatCurrency(discount.value)}
-            {discount.validUntil
-              ? ` · ${discountExpired ? 'em' : 'até'} ${formatReceivableDate(discount.validUntil)}`
-              : ''}
-          </p>
-        ) : null}
-        {typeof item.jurosAplicados === 'number' && item.jurosAplicados > 0 ? (
-          <p className="text-[9px] font-bold text-amber-700">
-            Juros: {formatCurrency(item.jurosAplicados)}
-          </p>
-        ) : null}
-        {typeof item.multaAplicada === 'number' && item.multaAplicada > 0 ? (
-          <p className="text-[9px] font-bold text-rose-700">
-            Multa: {formatCurrency(item.multaAplicada)}
-          </p>
-        ) : null}
-        {item.valorPago !== undefined ? (
-          <p className="mt-1 whitespace-nowrap text-[10px] font-bold text-emerald-700">
-            Recebido: {formatCurrency(item.valorPago)}
-          </p>
-        ) : null}
-      </div>,
+      <ReceivableAmountSummary item={item} compact />,
       ],
     };
   }), [receivables]);

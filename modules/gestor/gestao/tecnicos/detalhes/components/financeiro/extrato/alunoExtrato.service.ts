@@ -1,7 +1,8 @@
 import { supabase } from '../../../../../../../../lib/supabase';
 import { formatMatricula } from '../../../../../../../../lib/academicUtils';
+import { mapReceivableFinancialComposition } from '../../../../../../financeiro/financeiro.composition-presentation';
 
-export interface AlunoExtratoRecebivel {
+export interface AlunoExtratoRecebivel extends Partial<ReturnType<typeof mapReceivableFinancialComposition>> {
   id: string;
   descricao: string;
   valor: number;
@@ -49,7 +50,8 @@ export const alunoExtratoService = {
       id: item.id,
       descricao: item.descricao,
       valor: Number(item.valor || 0),
-      valorPago: item.valor_pago === null ? undefined : Number(item.valor_pago),
+      valorPago: item.valor_pago == null ? undefined : Number(item.valor_pago),
+      ...mapReceivableFinancialComposition(item),
       dataVencimento: item.data_vencimento,
       dataPagamento: item.data_pagamento || undefined,
       status: item.status,

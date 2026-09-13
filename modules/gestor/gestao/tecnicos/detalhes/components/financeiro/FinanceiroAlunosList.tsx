@@ -14,6 +14,7 @@ import FinanceiroAlunosTable, {
   formatStudentDocument,
 } from './FinanceiroAlunosTable';
 import { getFinanceiroSituationLabel as situationLabel } from './FinanceiroCicloManualStatus';
+import { requireEligibleProescCycleReview } from './proesc-cycle-review.parser';
 import type {
   MatriculaTecnicaAtivacaoModo,
   MatriculaTecnicaFinanceiroRow,
@@ -29,6 +30,7 @@ import {
 import {
   useGerarCicloFinanceiroTecnicoManual,
   useRetomarEmissaoCicloFinanceiroTecnicoManual,
+  useReviewProescCycles,
 } from './hooks/useMatriculaTecnicaCicloManual';
 import {
   isFinanceiroDateRejected,
@@ -85,10 +87,26 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
   const batchMutation = useAtivarFinanceiroMatriculasTecnicasLote();
   const manualCycleMutation = useGerarCicloFinanceiroTecnicoManual();
   const resumeCycleMutation = useRetomarEmissaoCicloFinanceiroTecnicoManual();
+  const reviewProescMutation = useReviewProescCycles();
   const pending = individualMutation.isPending
     || batchMutation.isPending
     || manualCycleMutation.isPending
-    || resumeCycleMutation.isPending;
+    || resumeCycleMutation.isPending
+    || reviewProescMutation.isPending;
+
+  const reviewCycles = async (row: MatriculaTecnicaFinanceiroRow, openPreview = false) => {
+    try {
+      const result = await reviewProescMutation.mutateAsync({ matriculaId: row.matriculaId, turmaId: turma.id });
+      if (openPreview && result.eligible) {
+        requireEligibleProescCycleReview(result);
+        setManualCycleMatriculaId(row.matriculaId);
+      }
+      else if (result.eligible) toast.success('Conferência Proesc concluída', result.reason);
+      else toast.info('Ciclos conferidos no Proesc', result.reason);
+    } catch (error) {
+      toast.error('Conferência Proesc não concluída', error instanceof Error ? error.message : 'Tente novamente.');
+    }
+  };
 
   const closeActionDialog = () => {
     setPendingAction(null);
@@ -255,6 +273,7 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
         expectedRegraFingerprint: preview.regraEfetivaFingerprint,
         expectedPoliticaFingerprint: preview.politicaFingerprint,
         expectedCronogramaFingerprint: preview.cronogramaFingerprint,
+        conferirProesc: row.cicloManual.conferenciaProesc?.necessaria === true,
       });
       requestIds.current.delete(key);
       setManualCycleMatriculaId(null);
@@ -359,6 +378,11 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
           </div>
         </div>
 
+        {reviewProescMutation.isPending ? (
+          <div className="flex items-center gap-2 border-b border-blue-100 bg-blue-50 px-6 py-3 text-xs font-bold text-blue-800" role="status">
+            <Loader2 className="animate-spin" size={16} /> Conferindo os ciclos do aluno no Proesc...
+          </div>
+        ) : null}
         <FinanceiroAlunosTable
           turma={turma}
           rows={filteredAlunos}
@@ -373,7 +397,12 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
           ))}
           onOpenStatement={setSelectedMatriculaId}
           onOpenOverride={setOverrideMatriculaId}
-          onOpenManualCycle={setManualCycleMatriculaId}
+          onOpenManualCycle={(matriculaId) => {
+            const row = alunos.find((item) => item.matriculaId === matriculaId);
+            if (row?.cicloManual.conferenciaProesc?.necessaria) void reviewCycles(row, true);
+            else setManualCycleMatriculaId(matriculaId);
+          }}
+          onReviewProesc={(row) => { void reviewCycles(row); }}
           onActivateNow={(row) => {
             setActionMenuId(null);
             setPendingAction({ matriculaIds: [row.matriculaId], label: row.alunoNome, modo: 'AGORA' });
@@ -412,6 +441,7 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
         <FinanceiroCicloManualDialog
           key={currentManualCycleRow.matriculaId}
           row={currentManualCycleRow}
+          turmaId={turma.id}
           pending={manualCycleMutation.isPending}
           onClose={() => setManualCycleMatriculaId(null)}
           onConfirm={(preview, primeiroVencimento) => (
