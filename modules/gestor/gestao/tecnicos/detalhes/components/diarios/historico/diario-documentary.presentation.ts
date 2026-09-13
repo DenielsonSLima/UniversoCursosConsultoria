@@ -14,11 +14,72 @@ export const documentaryRawText = (field?: HistoricalField): string => {
   return typeof value === 'string' ? value.trim() : '—';
 };
 
+export const diaryGradeNumberText = (value: number | null | undefined): string => (
+  typeof value === 'number' && Number.isFinite(value)
+    ? value.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 })
+    : '—'
+);
+
 export const documentaryGradeText = (rows?: HistoricalGradeRow[] | null): string => (
   rows?.map((row) => row.grades.map((grade) =>
     `${documentaryRawText(grade.category) || '—'}: ${documentaryRawText(grade.value) || '—'}`,
   ).join(' | ')).join('\n') || '—'
 );
+
+export interface DocumentaryGradeColumn {
+  key: string;
+  category: string;
+  label: string;
+  occurrence: number;
+}
+
+const documentaryGradeCategory = (grade: HistoricalGradeRow['grades'][number]): string | null => {
+  const label = documentaryRawText(grade.category);
+  if (label && !/^[-–—]+$/.test(label)) return label.toUpperCase();
+  const value = documentaryRawText(grade.value);
+  // Unlabelled empty template cells are not assessment instruments.
+  return value && !/^[-–—]+$/.test(value) ? `SEM_ROTULO_${grade.columnOrdinal}` : null;
+};
+
+export const buildDocumentaryGradeColumns = (
+  studentRows: Array<HistoricalGradeRow[] | null | undefined>,
+): DocumentaryGradeColumn[] => {
+  const occurrences = new Map<string, number>();
+  for (const rows of studentRows) {
+    const inStudent = new Map<string, number>();
+    for (const row of rows || []) {
+      for (const grade of row.grades) {
+        const category = documentaryGradeCategory(grade);
+        if (!category) continue;
+        const occurrence = (inStudent.get(category) || 0) + 1;
+        inStudent.set(category, occurrence);
+        if (occurrence > (occurrences.get(category) || 0)) occurrences.set(category, occurrence);
+      }
+    }
+  }
+  return [...occurrences].flatMap(([category, count]) => {
+    const label = category.startsWith('SEM_ROTULO_')
+      ? `Instrumento ${category.slice('SEM_ROTULO_'.length)}` : category;
+    return Array.from({ length: count }, (_, index) => ({
+      key: `${category}:${index + 1}`, category, occurrence: index + 1,
+      label: count > 1 ? `${label}${index + 1}` : label,
+    }));
+  });
+};
+
+export const documentaryGradeCellText = (
+  rows: HistoricalGradeRow[] | null | undefined, column: DocumentaryGradeColumn,
+): string => {
+  let occurrence = 0;
+  for (const row of rows || []) {
+    for (const grade of row.grades) {
+      if (documentaryGradeCategory(grade) !== column.category) continue;
+      occurrence += 1;
+      if (occurrence === column.occurrence) return documentaryRawText(grade.value);
+    }
+  }
+  return '—';
+};
 
 export const buildDocumentaryEvidence = (history: DiarioHistorico) => {
   const lessonIds = new Map(history.lessons.map((lesson) => [lesson.id, lesson.operationalLessonId]));

@@ -1,5 +1,9 @@
 import type { jsPDF } from "jspdf";
-import { documentaryGradeText } from './historico/diario-documentary.presentation.ts';
+import {
+  buildDocumentaryGradeColumns,
+  diaryGradeNumberText,
+  documentaryGradeCellText,
+} from './historico/diario-documentary.presentation.ts';
 
 import type {
   DiarioPdfLessonSnapshot,
@@ -162,9 +166,17 @@ export const drawResultPages = (
 ) => {
   const active = props.activeInstruments;
   const isBlank = props.exportMode === "EM_BRANCO";
-  const documentary = !isBlank && Object.values(props.gradesMap).some(
+  const documentary = Object.values(props.gradesMap).some(
     (grade) => grade.instrumentos_documentais !== undefined,
   );
+  const documentaryColumns = documentary ? buildDocumentaryGradeColumns(
+    props.students.map((student) => props.gradesMap[student.id]?.instrumentos_documentais),
+  ) : [];
+  const normalInstrumentKeys = (['p', 'ti', 'tg', 's', 'cq', 'o'] as const)
+    .filter((key) => active[key]);
+  const instrumentHeaders = documentary
+    ? documentaryColumns.map((column) => column.label)
+    : normalInstrumentKeys.map((key) => key.toUpperCase());
   const studentsPerPage = 18;
   const studentGroups = chunks(props.students, studentsPerPage);
   const defaultRowHeight =
@@ -193,7 +205,7 @@ export const drawResultPages = (
       isBlank
         ? ""
         : enabled && grade !== null && grade !== undefined
-        ? Number(grade).toFixed(1)
+        ? diaryGradeNumberText(Number(grade))
         : "—";
     const rows = students.map((student, index) => {
       const grade: DiarioGradeResult | undefined = props.gradesMap[student.id];
@@ -203,30 +215,28 @@ export const drawResultPages = (
         );
       }
       const stats = getStudentStats(props.gradesMap, student.id);
+      const instrumentValues = documentary ? documentaryColumns.map((column) =>
+        isBlank ? "" : documentaryGradeCellText(grade.instrumentos_documentais, column)
+      ) : normalInstrumentKeys.map((key) => value(active[key], grade[key]));
       return [
         String(groupIndex * studentsPerPage + index + 1),
         student.nome,
-        ...(documentary ? [documentaryGradeText(grade.instrumentos_documentais)] : [value(active.p, grade.p),
-        value(active.ti, grade.ti),
-        value(active.tg, grade.tg),
-        value(active.s, grade.s),
-        value(active.cq, grade.cq),
-        value(active.o, grade.o)]),
+        ...instrumentValues,
         isBlank
           ? ""
           : stats.mediaParcial === null
           ? "—"
-          : stats.mediaParcial.toFixed(1),
+          : diaryGradeNumberText(stats.mediaParcial),
         isBlank
           ? ""
           : grade.rec === null || grade.rec === undefined
           ? "—"
-          : Number(grade.rec).toFixed(1),
+          : diaryGradeNumberText(Number(grade.rec)),
         isBlank
           ? ""
           : stats.mediaFinal === null
           ? "—"
-          : stats.mediaFinal.toFixed(1),
+          : diaryGradeNumberText(stats.mediaFinal),
         isBlank ? "" : stats.faltas === null ? "—" : String(stats.faltas),
         isBlank ? "" : stats.frequencia === null ? "—" : `${stats.frequencia}%`,
         isBlank ? "" : stats.resultado.replaceAll("_", " "),
@@ -234,12 +244,11 @@ export const drawResultPages = (
     });
     drawTable(pdf, {
       headers: [
-        "Nº", "Aluno(a)", ...(documentary ? ["Instrumentos avaliativos"] : ["P", "TI", "TG", "S", "CQ", "O"]), "Média",
+        "Nº", "Aluno(a)", ...instrumentHeaders, "Média",
         "Rec.", "Final", "Faltas", "Freq.", "Resultado",
       ],
       rows,
-      widths: [7, 75, ...(documentary ? [72] : [12, 12, 12, 12, 12, 12]), 13, 13, 13, 12, 14, 35],
-      wrapColumns: documentary ? [2] : [],
+      widths: [7, 75, ...instrumentHeaders.map(() => 72 / instrumentHeaders.length), 13, 13, 13, 12, 14, 35],
       startY: STANDARD_CONTENT_TOP,
       fontSize: 5.4,
       rowHeight,
