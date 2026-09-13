@@ -28,6 +28,7 @@ export interface UseBaneseConciliacaoQueriesParams {
   settlementStartDate?: string;
   settlementEndDate?: string;
   diagnosticsEnabled?: boolean;
+  cnabEnabled?: boolean;
 }
 
 const DEFAULT_CHANNEL_COUNTS: ConciliacaoChannelCounts = {
@@ -74,6 +75,7 @@ export const useBaneseConciliacaoQueries = (params?: UseBaneseConciliacaoQueries
     queryFn: baneseCnab240Service.getOverview,
     staleTime: 30_000,
     retry: false,
+    enabled: params?.cnabEnabled === true,
   });
 
   const activeEnvironment = bankingOverviewQuery.data?.activeEnvironment;

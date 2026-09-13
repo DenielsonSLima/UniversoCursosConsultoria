@@ -63,8 +63,16 @@ Este arquivo é um índice curto de contexto durável. Ajustes rápidos não pre
 - Origem, filtro, paginação e totais pertencem à RPC, mantendo autorização por polo. Não desligar monitores nem alterar fatos financeiros ao remover a ação visual.
 - Versão 4.8.50/revisão 59 publicada no PR144/squash 4b513e085dcb6c0dcf133cf9c0975f28a0023caf, com Vercel SUCCESS e HTTP200 asset main-B8U4uhUw.js; smoke autenticado final em andamento. Duas migrations aplicadas e imutáveis. RAG indexado uma vez pelo coordenador, 11 fontes/71 chunks. Proesc REVIEW não implica vencimento confirmado nem permite consulta Banese. Registro: registros/alteracoes/2026-09-12-conciliacao-origem-proesc-banese.md.
 
-## Lote corrente — Caixa 4.8.51
+## Caixa mensal publicado — 4.8.51
 
 - Inadimplência e margem devem representar o mês e polo selecionados, com numerador, denominador e resultado canônico calculados no backend/RPC.
 - Base é o principal elegível com vencimento no mês; atraso usa posição no corte atual/encerramento. Pagamento posterior preserva atraso histórico; desconto não cria saldo residual. Proesc sem prova fica fora das bases com metadados de conferência. Nenhum cálculo financeiro no frontend.
-- Versão 4.8.51/revisão 60 preparada sobre 4b513e0; migration aplicada e SQL real/dashboard/PDF aprovados, testes focados e UI/PDF sintéticos aprovados. Build inicial aprovado; Caixa setembro autenticado confirmou RPC novo R$ 4.288,30/25,98%. Linha laranja de inadimplência no gráfico dos últimos três meses implementada com série RPC; segunda migration aplicada e imutável. Série/relatório, 64 testes e build final aprovados; smoke autenticado dos novos rótulos/linha em 4.8.51 pendente após deploy. Negativa específica por polo restrito sem fixture ativa; guarda original preservada. Aprovação de produção somente após PR pronto. Registro: registros/alteracoes/2026-09-12-caixa-indicadores-mensais.md.
+- PR145 publicado após autorização renovada, squash 02409544d1def71a655e2831c0a6c72cd30fc891; CI/Vercel/HTTP200 confirmados. Asset main-C8lAX0ye.js, rótulos/linha laranja observados nas imagens do usuário em produção. Duas migrations imutáveis, 64 testes, SQL real e PDF aprovados. Smoke autenticado do PDF final e teste com usuário restrito ainda sem fixture. Registro: registros/alteracoes/2026-09-12-caixa-indicadores-mensais.md.
+
+## Consulta API Proesc e Banese — 4.8.52
+
+- Painel separado de Token/Histórico, apenas leitura de RPC. Execuções futuras reais e sanitizadas; observações, importações e baixas automáticas são conceitos distintos.
+- Banese mantém os erros históricos e informa recuperação posterior e estado atual separadamente; nenhum reprocessamento é autorizado pela simples existência de erro antigo.
+- Sete migrations Proesc e uma Banese aplicadas, Edge Proesc v7 ativa e duas execuções reais de 60 cobranças concluídas com telemetria completa. Seis unidades SQL isoladas aprovadas; índices resolvem contagem pesada. Financeiro/Caixa recuperados e preservados após timeouts, com smoke autenticado. Frontend não repete consultas após erro.
+- Safari autenticado confirmou as cinco abas, paginação/polo e recuperação Banese, filtros de Conciliação e aviso EDI7. Build final aprovado; commit de publicação mantém manifesto isolado.
+- Usuário renovou autorização para corrigir e publicar em 12/09 às21:09. Registro: registros/alteracoes/2026-09-12-consulta-api-proesc-banese.md.

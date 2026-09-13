@@ -1,6 +1,6 @@
 # Caixa: inadimplência e margem mensais — 4.8.51
 
-Estado: implementação, banco, build e validação focada concluídos; publicação e smoke autenticado da versão 4.8.51 pendentes.
+Estado: publicado pelo PR145; banco, build, validação focada e smoke autenticado do Caixa em produção concluídos. PDF final autenticado não repetido.
 
 Base publicada: PR144, squash 4b513e085dcb6c0dcf133cf9c0975f28a0023caf, versão 4.8.50/revisão 59. Revisão preparada: 4.8.51/60.
 
@@ -38,11 +38,11 @@ A mudança é crítica por envolver indicadores financeiros, RPC e sua apresenta
 - PDF nativo validado: cinco páginas, fonte Inter incorporada, conteúdo vetorial e primeira página completa/em conferência inspecionada. Interface sintética em 1280 e 390 sem overflow.
 - Teste SQL da série aprovado no banco real em 2,2 segundos, incluindo helper privado, negativas, valor zero, meses e paridade do relatório. Consultas de três/seis meses concluíram em 512/278 ms. Julho R$ 8.676,90, agosto R$ 4.198,50 e setembro R$ 4.288,30; registros em conferência respectivamente 39, 56 e 110.
 - Build final aprovado em 7,42 segundos. Gráfico e tooltip inspecionados em PNG desktop/mobile, sem overflow.
-- A sessão autenticada foi recuperada: Caixa setembro na versão pública 4.8.50 confirmou os novos dados RPC de R$ 4.288,30 e 25,98%. O smoke autenticado dos novos rótulos e da linha na versão 4.8.51 permanece pendente após publicação; não confundir a confirmação de dados anterior com o novo visual.
+- A sessão autenticada foi recuperada: Caixa setembro na versão pública 4.8.50 confirmou os novos dados RPC de R$ 4.288,30 e 25,98%. Após publicação, o coordenador conferiu o Caixa em produção: rótulos mensais, linha laranja, setembro R$ 4.288,30/25,98% e bases em conferência corretos; Recebíveis carregou R$ 11.937,07 recebidos e 93 cobranças a vencer.
 
 ## Publicação
 
-Manifesto final restrito ao pedido. Aprovação de produção será solicitada somente com PR concreto e pronto. O responsável coordena publicação e RAG no fechamento; nenhuma reindexação desta revisão foi feita pelo agente documental.
+PR145 publicado após autorização renovada do usuário, squash `02409544d1def71a655e2831c0a6c72cd30fc891`. Vercel SUCCESS e HTTP200 confirmados, asset `main-C8lAX0ye.js` contém 4.8.51. As imagens do usuário às21:15 confirmam os novos rótulos, a linha laranja e os valores mensais em produção/setembro e localhost/agosto. O teste autenticado do PDF final ainda não foi repetido; o compositor e sua paridade RPC foram validados antes da publicação. RAG final deste lote:11fontes/68chunks; bootstrap17867bytes após compactar referências históricas do lote ativo.
 
 ## Manifesto explícito
 

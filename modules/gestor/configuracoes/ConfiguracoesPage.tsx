@@ -53,6 +53,7 @@ import DispositivosAppConfig from './dispositivos-app/DispositivosAppConfig';
 import PushNotificationsConfig from './push-notifications/PushNotificationsConfig';
 import TiposProdutosConfig from './tipos-produtos/TiposProdutosConfig';
 const ProescConfig = React.lazy(() => import('./proesc/ProescConfig'));
+const ConsultaApiProescConfig = React.lazy(() => import('./consulta-api-proesc/ConsultaApiProescConfig'));
 import {
   banesePollingQueryKey,
   consultaApiBaneseService,
@@ -100,6 +101,7 @@ const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({
     { id: 'templates-mensagens', title: 'Templates', desc: 'Textos de notificação', icon: <FileCode2 size={24} />, color: 'bg-blue-400' },
     { id: 'integracao-bancaria', title: 'Integração Bancária', desc: 'Rotas de pagamento', icon: <CreditCard size={24} />, color: 'bg-rose-500' },
     { id: 'proesc', title: 'Proesc', desc: 'Token de acesso e histórico por turma', icon: <Server size={24} />, color: 'bg-cyan-700' },
+    { id: 'consulta-api-proesc', title: 'Consulta API Proesc', desc: 'Execuções, consultas, baixas e erros', icon: <Activity size={24} />, color: 'bg-cyan-700' },
     ...(banesePollingQuery.data?.available ? [{
       id: 'consulta-api-banese',
       title: 'Consulta API Banese',
@@ -136,6 +138,7 @@ const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({
       case 'integracao-bancaria': return <IntegracaoBancariaConfig />;
       case 'proesc': return <React.Suspense fallback={<p role="status">Carregando Proesc…</p>}><ProescConfig /></React.Suspense>;
       case 'consulta-api-banese': return <ConsultaApiBaneseConfig />;
+      case 'consulta-api-proesc': return <React.Suspense fallback={<p role="status">Carregando consulta Proesc…</p>}><ConsultaApiProescConfig /></React.Suspense>;
       case 'api': return <ApiStatusConfig />;
       default: return null;
     }
