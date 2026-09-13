@@ -1,3 +1,4 @@
+import { readWorkerSecret, logWorkerSecretRead } from "../_shared/worker-secret-read.ts";
 import { cancelBaneseBoleto } from "../banese/core/adapter.ts";
 import {
   BaneseCancellationRequiresReviewError,
@@ -55,7 +56,8 @@ type HandlerDependencies = {
   createAdmin: (url: string, serviceRoleKey: string) => AdminClient;
   getEnv?: (name: string) => string | undefined;
   cancelBoleto?: CancelBoleto;
-  logger?: { error: (...data: unknown[]) => void };
+  readSecret?: typeof readWorkerSecret;
+  logger?: { error: (...data: unknown[]) => void; info?: (...data: unknown[]) => void };
 };
 
 type FailureDecision = {
@@ -351,19 +353,18 @@ async (req: Request) => {
   }
 
   const admin = dependencies.createAdmin(supabaseUrl, serviceRoleKey);
-  const { data: configuredSecret, error: secretError } = await admin.rpc(
-    "get_banese_reconciliation_worker_secret",
+  const secret = await (dependencies.readSecret ?? readWorkerSecret)(
+    admin, "get_banese_reconciliation_worker_secret", {
+      minimumLength: 32,
+      trimForValidation: true,
+      logger: (metadata) => dependencies.logger && logWorkerSecretRead("banese cancellation worker secret read", metadata, dependencies.logger),
+    },
   );
-  const expectedSecret = String(configuredSecret ?? "").trim();
+  if (!secret.ok) return json({ error: "Configuração indisponível." }, 503);
+  const expectedSecret = secret.secret.trim();
   const requestSecret = String(
     req.headers.get("X-Banese-Worker-Token") ?? "",
   ).trim();
-  if (secretError || expectedSecret.length < 32) {
-    dependencies.logger?.error("banese cancellation worker secret unavailable", {
-      errorClass: "SECRET_UNAVAILABLE",
-    });
-    return json({ error: "Configuração indisponível." }, 503);
-  }
   if (!safeEqual(requestSecret, expectedSecret)) {
     return json({ error: "Não autorizado." }, 401);
   }

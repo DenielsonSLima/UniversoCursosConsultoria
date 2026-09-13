@@ -8,7 +8,7 @@ import {
   publicPushImageUrl,
   pushConsentFailureCode,
   requiredPushConsentPurpose,
-} from "./index.ts";
+} from "./handler.ts";
 
 const delivery = (
   overrides: Partial<ClaimedDelivery> = {},
@@ -178,7 +178,7 @@ Deno.test("revalidação financeira antes do FCM falha fechada", () => {
 
 Deno.test("parâmetro de auditoria do provedor aparece uma única vez", async () => {
   const source = await Deno.readTextFile(
-    new URL("./index.ts", import.meta.url),
+    new URL("./handler.ts", import.meta.url),
   );
   assert.equal(source.match(/p_provider_message_id:/g)?.length, 1);
   assert.match(

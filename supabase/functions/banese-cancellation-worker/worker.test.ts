@@ -46,9 +46,14 @@ const fakeAdmin = (options: {
     rpc: (name: string, args?: Record<string, unknown>) => {
       calls.push({ name, args });
       if (name === "get_banese_reconciliation_worker_secret") {
-        return Promise.resolve({
+        const result = Promise.resolve({
           data: options.secret ?? WORKER_SECRET,
           error: options.secretError ?? null,
+          status: options.secretError ? 400 : 200,
+        });
+        return Object.assign(result, {
+          retry: () => result,
+          abortSignal: () => result,
         });
       }
       if (name === "claim_banese_cancellation_batch") {
@@ -392,7 +397,7 @@ Deno.test("handler distingue segredo indisponível de token inválido", async ()
 
   assert.equal(response.status, 503);
   assert.equal(callsNamed(calls, "claim_banese_cancellation_batch").length, 0);
-  assert.equal(logged[0]?.[0], "banese cancellation worker secret unavailable");
+  assert.equal(logged[0]?.[0], "banese cancellation worker secret read");
 });
 
 Deno.test("handler corta corpo acima de 1 KiB sem depender de Content-Length", async () => {

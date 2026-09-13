@@ -54,7 +54,7 @@ const financialCycleMigrationPath = new URL(
   import.meta.url,
 );
 const workerPath = new URL(
-  '../supabase/functions/banese-reconciliation-worker/index.ts',
+  '../supabase/functions/banese-reconciliation-worker/handler.ts',
   import.meta.url,
 );
 const workerPacingPath = new URL(
@@ -217,7 +217,7 @@ test('worker consulta títulos existentes sem importar ou sincronizar parcelas f
   assert.match(worker, /queryBaneseBoleto/);
   assert.match(worker, /record_banese_reconciliation_attempt/);
   assert.match(worker, /halted = true/);
-  assert.match(worker, /createLaunchPacing\(startedAt, Date\.now\(\), targetTitles\)/);
+  assert.match(worker, /createLaunchPacing\(startedAt, Date\.now\(\), targetTitles, prepareStartedAt\)/);
   assert.match(worker, /scheduledLaunchAt\(pacing, index\)/);
   assert.match(worker, /canLaunchAt\(pacing, Date\.now\(\)\)/);
   assert.match(workerPacing, /QUERY_DEADLINE_MS = 34_000/);
