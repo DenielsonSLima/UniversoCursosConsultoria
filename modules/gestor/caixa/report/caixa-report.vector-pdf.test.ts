@@ -360,7 +360,23 @@ test('preserva rótulo do resultado e diferença financeira não discriminada', 
   assert.equal(getCaixaResultLabel('NEUTRO'), 'Resultado do mês');
   const receipt = makeReport().recebimentos[0];
   receipt.diferencaNaoDiscriminada = 7.25;
-  assert.deepEqual(buildCaixaAdjustmentLines(receipt).at(-1), 'Não discrim.: R$\u00a07,25');
+  assert.deepEqual(buildCaixaAdjustmentLines(receipt).at(-1), 'Diferença a conferir: R$\u00a07,25');
+});
+
+test('PDF diferencia cálculo informado, dados API e prova Proesc sem ocultar o residual', () => {
+  const receipt = makeReport().recebimentos[0];
+  for (const [status, label] of [
+    ['CALCULADO_REGRA_INFORMADA_PROESC', 'Calculado pelas regras informadas'],
+    ['API_E_REGRA_INFORMADA_PROESC', 'API Proesc + cálculo pelas regras'],
+    ['PARCIAL_POR_API_PROESC', 'Dados explícitos da API Proesc'],
+    ['CONCILIADO_POR_CONFERENCIA_PROESC', 'Conferido no Proesc'],
+  ] as const) {
+    receipt.composicaoStatus = status;
+    receipt.diferencaNaoDiscriminada = -19.9;
+    const lines = buildCaixaAdjustmentLines(receipt);
+    assert.equal(lines[0], label);
+    assert.match(lines.at(-1)!, /Diferença a conferir: -R\$\s19,90/);
+  }
 });
 
 test('usa a posição total recebida do backend sem recompor valores no PDF', () => {

@@ -1,5 +1,6 @@
 import { supabase } from '../../../lib/supabase';
 import { parseProescReceivableEvidence } from './financeiro.proesc-evidence';
+import { mapReceivableFinancialComposition } from './financeiro.composition-presentation';
 import { readReceivablesRequest } from './financeiro.receivables-request';
 import type {
   ActiveReceivablesClass,
@@ -80,12 +81,7 @@ const mapReceivableRpcRow = (row: any): ContasReceber => ({
   asaasLastError: row.asaas_last_error || undefined,
   taxa: row.taxa === null || row.taxa === undefined ? undefined : Number(row.taxa),
   valorLiquido: row.valor_liquido === null || row.valor_liquido === undefined ? undefined : Number(row.valor_liquido),
-  descontoAplicado: row.desconto_aplicado === null || row.desconto_aplicado === undefined
-    ? undefined : Number(row.desconto_aplicado),
-  jurosAplicados: row.juros_aplicados === null || row.juros_aplicados === undefined
-    ? undefined : Number(row.juros_aplicados),
-  multaAplicada: row.multa_aplicada === null || row.multa_aplicada === undefined
-    ? undefined : Number(row.multa_aplicada),
+  ...mapReceivableFinancialComposition(row),
   createdAt: row.created_at || undefined,
   tipoLancamento: row.tipo_lancamento || undefined,
   parcelaNumero: row.parcela_numero === null || row.parcela_numero === undefined

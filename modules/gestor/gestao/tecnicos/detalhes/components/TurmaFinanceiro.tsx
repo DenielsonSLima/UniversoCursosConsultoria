@@ -8,6 +8,7 @@ import { Turma } from '../../../gestao.types';
 import TechnicalDataError from './TechnicalDataError';
 import { useMatriculaTecnicaFinanceiroWorkspace } from './financeiro/hooks/useMatriculaTecnicaFinanceiro';
 import { useMatriculaTecnicaFinanceiroRealtime } from './financeiro/hooks/useMatriculaTecnicaFinanceiroRealtime';
+import { getFinancialWorkspaceErrorPresentation } from './financeiro/financial-workspace-error';
 
 interface TurmaFinanceiroProps {
   turma: Turma;
@@ -26,6 +27,7 @@ const TurmaFinanceiro: React.FC<TurmaFinanceiroProps> = ({ turma }) => {
   useMatriculaTecnicaFinanceiroRealtime(turma.id);
   const workspace = workspaceQuery.data;
   const summary = workspace?.resumo;
+  const loadError = getFinancialWorkspaceErrorPresentation(workspaceQuery.error);
 
   return (
     <div className=" space-y-8">
@@ -36,8 +38,8 @@ const TurmaFinanceiro: React.FC<TurmaFinanceiroProps> = ({ turma }) => {
         </div>
       ) : workspaceQuery.isError || !workspace ? (
         <TechnicalDataError
-          title="Resumo financeiro não carregado"
-          message="Os totais foram ocultados para não apresentar receita, recebimentos ou inadimplência como zero por engano."
+          title={loadError.title}
+          message={loadError.message}
           retrying={workspaceQuery.isFetching}
           onRetry={() => { void workspaceQuery.refetch(); }}
         />

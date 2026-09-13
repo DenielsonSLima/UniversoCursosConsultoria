@@ -55,12 +55,16 @@ export const getCaixaResultLabel = (
     : 'Resultado do mês';
 
 export const buildCaixaAdjustmentLines = (row: CaixaReportReceipt | CaixaReportExpense) => [
+  ...(row.composicaoStatus === 'CALCULADO_REGRA_INFORMADA_PROESC' ? ['Calculado pelas regras informadas']
+    : row.composicaoStatus === 'API_E_REGRA_INFORMADA_PROESC' ? ['API Proesc + cálculo pelas regras']
+      : row.composicaoStatus === 'PARCIAL_POR_API_PROESC' ? ['Dados explícitos da API Proesc']
+        : row.composicaoStatus === 'CONCILIADO_POR_CONFERENCIA_PROESC' ? ['Conferido no Proesc'] : []),
   `Juros: ${row.juros === null ? 'Não discriminado' : formatCaixaCurrency(row.juros)}`,
   `Multa: ${row.multa === null ? 'Não discriminado' : formatCaixaCurrency(row.multa)}`,
   `Acrésc.: ${row.acrescimo === null ? 'Não discriminado' : formatCaixaCurrency(row.acrescimo)}`,
   `Desconto: ${row.desconto === null ? 'Não discriminado' : formatCaixaCurrency(row.desconto)}`,
   ...(row.diferencaNaoDiscriminada !== 0
-    ? [`Não discrim.: ${formatCaixaCurrency(row.diferencaNaoDiscriminada)}`]
+    ? [`Diferença a conferir: ${formatCaixaCurrency(row.diferencaNaoDiscriminada)}`]
     : []),
 ];
 

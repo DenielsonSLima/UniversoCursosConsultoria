@@ -33,6 +33,7 @@ interface FinanceiroAlunosTableProps {
   onActivateNow: (row: MatriculaTecnicaFinanceiroRow) => void;
   onSchedule: (row: MatriculaTecnicaFinanceiroRow) => void;
   onResumeCycle: (row: MatriculaTecnicaFinanceiroRow) => void;
+  onReviewProesc?: (row: MatriculaTecnicaFinanceiroRow) => void;
   onCarnetFeedback: FinanceiroAlunoCarneFeedback;
 }
 
@@ -99,6 +100,7 @@ const FinanceiroAlunosTable = ({
   onActivateNow,
   onSchedule,
   onResumeCycle,
+  onReviewProesc,
   onCarnetFeedback,
 }: FinanceiroAlunosTableProps) => (
   <div className="overflow-x-auto">
@@ -194,6 +196,7 @@ const FinanceiroAlunosTable = ({
                       disabled={pending}
                       onGenerate={() => onOpenManualCycle(row.matriculaId)}
                       onResume={() => onResumeCycle(row)}
+                      onReviewProesc={onReviewProesc ? () => onReviewProesc(row) : undefined}
                     />
                   ) : null}
                   <FinanceiroAlunoCarneAction

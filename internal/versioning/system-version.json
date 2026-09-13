@@ -1,8 +1,8 @@
 {
-  "version": "4.8.60",
+  "version": "4.8.61",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 69,
+  "revision": 70,
   "releasedAt": "2026-09-13",
-  "summary": "Cabeçalho agrupado dos instrumentos avaliativos e siglas fiéis ao diário"
+  "summary": "Regras das turmas importadas, conferência de ciclos e composição Proesc no financeiro"
 }

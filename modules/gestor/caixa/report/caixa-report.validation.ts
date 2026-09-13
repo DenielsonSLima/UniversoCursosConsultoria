@@ -61,9 +61,11 @@ export const composition = (value: unknown): CaixaCompositionStatus => {
     && value !== 'NAO_DISCRIMINADA_PELO_GATEWAY'
     && value !== 'CONCILIADO_POR_FORMULA_BANESE'
     && value !== 'CONCILIADO_POR_CONFERENCIA_PROESC'
+    && value !== 'PARCIAL_POR_API_PROESC'
+    && value !== 'CALCULADO_REGRA_INFORMADA_PROESC'
+    && value !== 'API_E_REGRA_INFORMADA_PROESC'
   ) {
     throw new Error('Contrato inválido do relatório do Caixa: composicao_status.');
   }
   return value;
 };
-

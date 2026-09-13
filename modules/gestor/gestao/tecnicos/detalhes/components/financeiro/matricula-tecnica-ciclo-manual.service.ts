@@ -1,4 +1,6 @@
 import { supabase } from "../../../../../../../lib/supabase";
+import { reviewProescCycles } from './proesc-cycle-review.service';
+import { requireEligibleProescCycleReview } from './proesc-cycle-review.parser';
 import type {
   CicloFinanceiroTecnicoManualEmissaoProgress,
   GerarCicloFinanceiroTecnicoManualInput,
@@ -251,6 +253,7 @@ const unwrap = async <T>(
 
 export const matriculaTecnicaCicloManualService = {
   async preview(input: PreviewCicloFinanceiroTecnicoManualInput) {
+    if (input.conferirProesc) requireEligibleProescCycleReview(await reviewProescCycles(input.matriculaId));
     requireIndividualSecondCycleDate(
       input.cicloNumero,
       input.primeiroVencimento,
@@ -287,6 +290,7 @@ export const matriculaTecnicaCicloManualService = {
   },
 
   async generate(input: GerarCicloFinanceiroTecnicoManualInput) {
+    if (input.conferirProesc) requireEligibleProescCycleReview(await reviewProescCycles(input.matriculaId));
     requireIndividualSecondCycleDate(
       input.cicloNumero,
       input.primeiroVencimento,

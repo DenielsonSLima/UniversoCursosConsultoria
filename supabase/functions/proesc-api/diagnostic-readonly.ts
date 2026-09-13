@@ -179,7 +179,7 @@ export async function runProescReadOnlyDiagnostic(
     if (current.revision !== saved.revision || current.token !== saved.token) {
       throw new ProescError('A credencial mudou durante o diagnóstico. Consulte novamente.', 409);
     }
-    const categories = config.categories.filter((category) => ['1', '2', '10482'].includes(category.id));
+    const categories = config.categories.filter((category) => ['1', '2', '3', '4', '6', '7', '10482'].includes(category.id));
     if (categories.some((category) => category.name.includes(saved.token) || /https?:\/\//i.test(category.name))) {
       throw new ProescError('A resposta de categorias não pôde ser apresentada com segurança.', 502);
     }

@@ -5,6 +5,7 @@ import {
   Landmark,
   LockKeyhole,
   ReceiptText,
+  RefreshCw,
   ShieldCheck,
 } from 'lucide-react';
 import type { MatriculaTecnicaFinanceiroRow } from './matricula-tecnica-financeiro.types';
@@ -17,6 +18,7 @@ interface FinanceiroCicloManualStatusProps {
   disabled: boolean;
   onGenerate: () => void;
   onResume: () => void;
+  onReviewProesc?: () => void;
 }
 
 const cycleLabel = (cycle: number | null | undefined) => (
@@ -124,11 +126,23 @@ const FinanceiroCicloManualStatus: React.FC<FinanceiroCicloManualStatusProps> = 
   disabled,
   onGenerate,
   onResume,
+  onReviewProesc,
 }) => {
   const generated = cicloManual.cicloGerado;
   const generatedLabel = cycleLabel(generated?.numero);
 
   if (!cicloManual.habilitado || cicloManual.modo !== 'MANUAL') return null;
+
+  const reviewAction = cicloManual.conferenciaProesc?.necessaria && onReviewProesc ? (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onReviewProesc}
+      className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-2 text-[9px] font-black uppercase text-blue-700 hover:bg-blue-100 disabled:opacity-50"
+    >
+      <RefreshCw size={12} /> Conferir ciclos Proesc
+    </button>
+  ) : null;
 
   if (cicloManual.estado === 'PROTEGIDO_EXISTENTE') {
     return (
@@ -171,6 +185,7 @@ const FinanceiroCicloManualStatus: React.FC<FinanceiroCicloManualStatusProps> = 
           >
             Gerar e emitir {cycleLabel(cicloManual.proximoCicloNumero)}
           </button>
+          {reviewAction}
         </div>
       </div>
     );
@@ -187,6 +202,7 @@ const FinanceiroCicloManualStatus: React.FC<FinanceiroCicloManualStatusProps> = 
           <p className="mt-1.5 text-[9px] font-semibold leading-relaxed text-rose-700">
             {cicloManual.bloqueio?.mensagem || 'O servidor não liberou a geração deste ciclo.'}
           </p>
+          {reviewAction}
         </div>
       </div>
     );

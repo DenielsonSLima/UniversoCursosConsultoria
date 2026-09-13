@@ -12,6 +12,7 @@ export type MatriculaTecnicaCicloManualCriterio =
   | "HISTORICO_EXTERNO";
 
 export interface MatriculaTecnicaCicloManual {
+  conferenciaProesc?: { necessaria: true };
   habilitado: boolean;
   modo: "MANUAL" | null;
   cicloBaseHistorico: number | null;
@@ -98,6 +99,8 @@ export interface CicloFinanceiroTecnicoManualPreview {
 }
 
 export interface PreviewCicloFinanceiroTecnicoManualInput {
+  turmaId?: string;
+  conferirProesc?: boolean;
   matriculaId: string;
   cicloNumero: number;
   primeiroVencimento: string | null;
@@ -111,6 +114,7 @@ export interface PreviewCicloFinanceiroTecnicoManualResult {
 }
 
 export interface GerarCicloFinanceiroTecnicoManualInput {
+  conferirProesc?: boolean;
   turmaId: string;
   matriculaId: string;
   cicloNumero: number;

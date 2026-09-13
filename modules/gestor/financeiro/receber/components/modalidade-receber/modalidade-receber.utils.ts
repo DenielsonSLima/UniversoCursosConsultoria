@@ -1,5 +1,6 @@
 import type { ContasReceber } from '../../../financeiro.service';
 import { hasProescEvidence } from '../../../financeiro.proesc-evidence';
+import { isProescFinancialComposition } from '../../../financeiro.composition-presentation';
 import type { GroupMode, StatusScope } from './modalidade-receber.types';
 
 export const statusScopeLabels: Record<StatusScope, string> = {
@@ -141,10 +142,13 @@ const positiveMoney = (value?: number): value is number => (
 );
 
 export const receivableDiscountPresentation = (
-  item: ContasReceber,
+  item: Pick<ContasReceber,
+    'boletoNossoNumero' | 'boletoDescontoConfigurado' | 'boletoDescontoValidoAte'
+    | 'boletoDescontoSituacao' | 'descontoAplicado' | 'composicaoStatus'> & { status: string },
 ): ReceivableDiscountPresentation | null => {
   if (item.status === 'PAGO') {
-    return item.boletoNossoNumero && positiveMoney(item.descontoAplicado)
+    return (item.boletoNossoNumero || isProescFinancialComposition(item.composicaoStatus))
+      && positiveMoney(item.descontoAplicado)
       ? { kind: 'APLICADO', value: item.descontoAplicado }
       : null;
   }
@@ -231,6 +235,7 @@ export const receivableLaunchLabel = (
 
 export const paymentOriginLabel = (item: ContasReceber) => {
   if (hasProescEvidence(item)) return 'Proesc';
+  if (item.origemPagamento === 'SISTEMA_ANTERIOR') return 'Sistema anterior';
   if (item.origemPagamento === 'PRESENCIAL') {
     return ['DELETED', 'CANCELED'].includes(String(item.asaasStatus || '').toUpperCase())
       ? `Manual, cobrança ${paymentGatewayLabel(item)} cancelada`

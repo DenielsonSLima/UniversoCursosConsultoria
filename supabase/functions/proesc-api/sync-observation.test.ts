@@ -28,6 +28,23 @@ Deno.test('pagamento parcial segue o Proesc sem fabricar desconto ou respeitar v
   assert(result.verification === 'VERIFIED' && result.receivedCents === 5000);
   assert(result.components.discountCents === null && result.principalCents === 27990);
 });
+Deno.test('preserva juros e multa explícitos da mesma liquidação sem completar componentes ausentes', async () => {
+  const charge = (block: string, amount: number) => ({ ...row(block, amount, 9), paymentDate: '2026-09-12' });
+  const result = await observeLinkedObligation(await link(), [row('1', 27990, 1),
+    row('2', 28558, 9), charge('3', 9), charge('4', 559), charge('7', 250)], now);
+  assert(result.verification === 'VERIFIED' && result.receivedCents === 28558);
+  assert(result.components.interestCents === 9 && result.components.penaltyCents === 559);
+  assert(result.components.discountCents === null && result.components.additionCents === null);
+});
+Deno.test('ausência, repetição ou data divergente dos encargos não vira zero nem soma presumida', async () => {
+  const current = await link();
+  const interest = { ...row('3', 9, 9), paymentDate: '2026-09-12' };
+  for (const charges of [[], [interest, interest], [{ ...interest, paymentDate: '2026-09-11' }]]) {
+    const result = await observeLinkedObligation(current, [row('1', 27990, 1), row('2', 26000, 9), ...charges], now);
+    assert(result.components.interestCents === null && result.components.penaltyCents === null);
+    assert(result.components.discountCents === null && result.verification === 'VERIFIED');
+  }
+});
 Deno.test('ausência no recorte não indica estorno; identidade diferente e cópia entre meses exigem revisão', async () => {
   const current = await link();
   const absent = await observeLinkedObligation(current, [row('1', 27990, 1)], now);

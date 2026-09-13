@@ -127,7 +127,7 @@ export const drawMovementTable = (
   pdf.rect(x, footerY, CONTENT_WIDTH, footerHeight, 'F');
   setText(pdf, COLORS.slate700, 6.2, 'black');
   const undiscriminatedLabel = totals.quantidadeNaoDiscriminada > 0
-    ? ` · ${totals.quantidadeNaoDiscriminada} COM DIFERENÇA NÃO DISCRIMINADA`
+    ? ` · ${totals.quantidadeNaoDiscriminada} COM DIFERENÇA A CONFERIR`
     : '';
   drawText(pdf, `${tone === 'emerald' ? 'TOTAL RECEBIDO' : 'TOTAL PAGO'} · ${totals.quantidade} MOVIMENTO(S)${undiscriminatedLabel}`, x + 2, footerY + 6, 165, { maxLines: 2 });
   drawText(pdf, formatCaixaCurrency(totals.valorBase), x + 207, footerY + 6, undefined, { align: 'right' });
@@ -138,7 +138,7 @@ export const drawMovementTable = (
     `Acrésc. ${formatCaixaCurrency(totals.acrescimoIdentificado)}`,
     `Desc. ${formatCaixaCurrency(totals.descontoIdentificado)}`,
     ...(totals.diferencaNaoDiscriminada !== 0
-      ? [`Não discrim. ${formatCaixaCurrency(totals.diferencaNaoDiscriminada)}`]
+      ? [`Diferença a conferir ${formatCaixaCurrency(totals.diferencaNaoDiscriminada)}`]
       : []),
   ];
   adjustmentTotals.forEach((line, index) => {
@@ -156,7 +156,7 @@ const recurringFields: Array<[string, keyof CaixaReportRecurringBreakdown]> = [
   ['Multa', 'multa'],
   ['Acrésc.', 'acrescimo'],
   ['Desconto', 'desconto'],
-  ['Não discr.', 'diferencaNaoDiscriminada'],
+  ['A conferir', 'diferencaNaoDiscriminada'],
 ];
 
 export const drawRecurringTable = (
@@ -173,7 +173,7 @@ export const drawRecurringTable = (
   setText(pdf, COLORS.navy, 14, 'black');
   drawText(pdf, 'ACOMPANHAMENTO POR MODALIDADE E TURMA', CONTENT_LEFT, contentTop + 4);
   setText(pdf, COLORS.slate500, 6);
-  drawText(pdf, 'Valores previstos, recebidos, vencidos e ajustes confirmados na competência.', CONTENT_LEFT, contentTop + 10);
+  drawText(pdf, 'Valores previstos, recebidos, vencidos e composição financeira na competência.', CONTENT_LEFT, contentTop + 10);
   setText(pdf, COLORS.slate500, 6, 'black');
   drawText(pdf, `PÁGINA DA SEÇÃO ${page}`, CONTENT_RIGHT, contentTop + 8, undefined, { align: 'right' });
 

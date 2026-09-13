@@ -28,7 +28,7 @@ const Adjustments: React.FC<{
     <p>Desconto: <strong>{moneyOrDash(desconto)}</strong></p>
     {difference !== 0 && (
       <p className="font-bold text-amber-700">
-        Diferença não discriminada: {formatCaixaCurrency(difference)}
+        Diferença a conferir: {formatCaixaCurrency(difference)}
       </p>
     )}
   </div>
@@ -53,7 +53,7 @@ const TotalsFooter: React.FC<{
         {label} · {totals.quantidade} movimento(s)
         {totals.quantidadeNaoDiscriminada > 0 && (
           <span className="ml-2 text-amber-700">
-            · {totals.quantidadeNaoDiscriminada} com diferença não discriminada
+            · {totals.quantidadeNaoDiscriminada} com diferença a conferir
           </span>
         )}
       </td>
@@ -71,7 +71,7 @@ const TotalsFooter: React.FC<{
         {totals.diferencaNaoDiscriminada !== 0 && (
           <>
             <br />
-            Não discrim. {formatCaixaCurrency(totals.diferencaNaoDiscriminada)}
+            Diferença a conferir {formatCaixaCurrency(totals.diferencaNaoDiscriminada)}
           </>
         )}
       </td>

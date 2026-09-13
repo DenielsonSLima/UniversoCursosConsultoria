@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { alunoExtratoService, AlunoExtratoRecebivel } from './alunoExtrato.service';
 import ToastNotification, { useToast } from '../../../../../../parceiros/components/shared/ToastNotification';
+import { ReceivableAmountSummary } from '../../../../../../financeiro/receber/components/modalidade-receber/ReceivableAmountSummary';
+import { isProescFinancialComposition } from '../../../../../../financeiro/financeiro.composition-presentation';
 
 interface AlunoFinanceiroExtratoProps {
   matriculaId: string;
@@ -26,6 +28,8 @@ const formatDate = (value?: string) =>
   value ? new Date(`${value}T00:00:00`).toLocaleDateString('pt-BR') : '—';
 
 const paymentOriginLabel = (item: AlunoExtratoRecebivel) => {
+  if (isProescFinancialComposition(item.composicaoStatus)) return 'Proesc';
+  if (item.origemPagamento === 'SISTEMA_ANTERIOR') return 'Sistema anterior';
   if (item.origemPagamento === 'ASAAS' || item.asaasPaymentId) return 'Asaas';
   if (item.origemPagamento === 'PRESENCIAL') return 'Manual';
   return item.status === 'PAGO' ? 'Manual' : 'Aguardando';
@@ -178,7 +182,7 @@ const AlunoFinanceiroExtrato: React.FC<AlunoFinanceiroExtratoProps> = ({ matricu
           <table className="w-full min-w-[920px] text-left">
             <thead className="bg-slate-50">
               <tr>
-                {['Cobrança', 'Vencimento', 'Valor', 'Recebimento', 'Asaas', 'Ações'].map((label) => (
+                {['Cobrança', 'Vencimento', 'Valor', 'Recebimento', 'Vínculo de cobrança', 'Ações'].map((label) => (
                   <th key={label} className="px-5 py-4 text-[10px] font-black uppercase tracking-wider text-slate-500">{label}</th>
                 ))}
               </tr>
@@ -194,8 +198,7 @@ const AlunoFinanceiroExtrato: React.FC<AlunoFinanceiroExtratoProps> = ({ matricu
                   </td>
                   <td className="px-5 py-4 text-xs font-bold text-slate-600">{formatDate(item.dataVencimento)}</td>
                   <td className="px-5 py-4">
-                    <p className="text-sm font-black text-[#001a33]">{formatCurrency(item.valor)}</p>
-                    {item.valorPago !== undefined && <p className="text-[10px] font-bold text-emerald-700">Recebido: {formatCurrency(item.valorPago)}</p>}
+                    <ReceivableAmountSummary item={item} compact />
                   </td>
                   <td className="px-5 py-4">
                     <div className="space-y-1.5">
@@ -207,7 +210,9 @@ const AlunoFinanceiroExtrato: React.FC<AlunoFinanceiroExtratoProps> = ({ matricu
                   </td>
                   <td className="px-5 py-4">
                     <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-wider ${asaasStatusClass(item.asaasStatus)}`}>
-                      {asaasStatusLabel(item.asaasStatus)}
+                      {item.origemPagamento === 'SISTEMA_ANTERIOR'
+                        ? isProescFinancialComposition(item.composicaoStatus) ? 'Histórico Proesc' : 'Sistema anterior'
+                        : asaasStatusLabel(item.asaasStatus)}
                     </span>
                     {item.asaasPaymentId && (
                       <p className="mt-2 max-w-[170px] truncate text-[10px] font-mono text-slate-400">

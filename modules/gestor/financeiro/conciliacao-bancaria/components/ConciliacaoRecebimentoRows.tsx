@@ -13,6 +13,7 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import type { BaneseReceivable } from '../conciliacao-bancaria.fetch';
+import { getFinancialCompositionPresentation } from '../../financeiro.composition-presentation';
 import {
   conciliacaoStatusClass,
   formatConciliacaoCurrency,
@@ -196,15 +197,10 @@ const SettlementDetails: React.FC<{
   const compositionNeedsContext = compositionStatus === 'NAO_DISCRIMINADA_PELO_GATEWAY';
   const compositionIsNeutral = !compositionStatus
     || compositionStatus === 'HISTORICO_SEM_COMPOSICAO';
-  const compositionResolvedLabel = compositionStatus === 'COMPOSICAO_EXPLICITA'
-    ? 'Composição informada na baixa manual.'
-    : compositionStatus === 'CONCILIADO_POR_FORMULA_BANESE'
-      ? 'Composição reconciliada pelas regras financeiras do título.'
-      : compositionStatus === 'CONCILIADO_POR_CONFERENCIA_PROESC'
-        ? 'Composição conferida no Proesc.'
-        : compositionStatus === 'SEM_DIFERENCA_FINANCEIRA'
-          ? 'Valor recebido sem diferença financeira.'
-          : 'Composição não informada.';
+  const composition = getFinancialCompositionPresentation(compositionStatus);
+  const compositionResolvedLabel = composition?.label || 'Composição não informada.';
+  const hasResidual = typeof row.diferencaNaoDiscriminada === 'number'
+    && Number.isFinite(row.diferencaNaoDiscriminada) && row.diferencaNaoDiscriminada !== 0;
 
   return (
     <div className="space-y-3">
@@ -258,11 +254,18 @@ const SettlementDetails: React.FC<{
                 : 'Composição não informada na origem.'}
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-700">
-              <CheckCircle2 size={12} aria-hidden="true" />
+            <span className={`inline-flex items-center gap-1 text-[10px] font-extrabold ${composition?.tone === 'confirmed' ? 'text-emerald-700' : 'text-amber-800'}`}>
+              {composition?.tone === 'confirmed'
+                ? <CheckCircle2 size={12} aria-hidden="true" />
+                : <HelpCircle size={12} aria-hidden="true" />}
               {compositionResolvedLabel}
             </span>
           )}
+          {!compositionNeedsContext && hasResidual ? (
+            <span className="text-[10px] font-semibold text-amber-800">
+              Diferença não discriminada: {optionalCurrency(row.diferencaNaoDiscriminada)}.
+            </span>
+          ) : null}
         </div>
         {receiptUrl ? (
           <a

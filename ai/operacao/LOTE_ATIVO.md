@@ -1,17 +1,19 @@
 # Lote ativo
 
-Estado: REVISADO — PUBLICAÇÃO AUTORIZADA EM EXECUÇÃO (4.8.60)
+Estado: REVISADO — PUBLICAÇÃO AUTORIZADA EM EXECUÇÃO (4.8.61)
 
-## Lote: 2026-09-13-diario-cabecalho-instrumentos
+## Lote: 2026-09-13-proesc-regras-ciclos-composicao
 
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-13-diario-cabecalho-instrumentos.md`.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-13-proesc-regras-ciclos-composicao.md`.
 
-- Reproduzir cabeçalho do modelo: Instrumentos Avaliativos acima das siglas pertinentes, sem P1/P2 inventados.
-- Manter P/P documentais como duas colunas distintas com o mesmo rótulo original; não recalcular notas.
-- PDF preenchido e em branco com agrupamento de instrumentos e frequência; seleção normal preservada.
-- Três frentes: conferência XML, UI/helper e PDF; coordenador revisa o resultado renderizado.
-- Testes, inspeção renderizada, revisão independente e build aprovados. Usuário autorizou publicar; sessão autenticada recuperada e conferência final após deploy em execução.
+- Três agentes: cobertura de ciclos; erro do resumo; composição dos pagamentos Proesc. Coordenador cuida regras comerciais e integração.
+- Conferir todas as turmas importadas e exceções por matrícula. T42 em diante: segundo ciclo Banese se não emitido Proesc; anteriores mantêm legado conforme prova.
+- Padrão informado: matrícula200 e rematrícula100 sem desconto, 12 mensalidades por ciclo de279,90 com desconto19,90 até vencimento; multa2% única e juros2%a.m proporcionais como T42. Preservar exceções e títulos existentes.
+- Não emitir cobranças em massa. Leitura remota e preparação primeiro; alterações com pré/pós-condições, idempotência e evidência.
+- Composição compartilhada em Caixa, Contas a Receber, conciliação, extrato e Outros Créditos. Usuário autorizou calcular os componentes ausentes; identificar regra calculada, preservar prova explícita e recebido real, exibir divergências.
+- Regras e configuração prospectiva aplicadas às nove turmas; 392 configurações pendentes, nenhuma nova emissão. Dez workspaces financeiros conferidos, incluindo T42.
+- Consulta de ciclos somente via API, com cache por unidade/janela e prova individual antes da geração. Não usar navegador conforme pedido do usuário.
 
 ## Entrega anterior
 
-- 4.8.59, PR152, merge aaa43314afe713a6212d88d230a7274839898985: colunas separadas publicadas; usuário identificou divergência no cabeçalho e siglas.
+- Diário4.8.60 publicado PR153, squash b87c419c4a20e72f03aee98dbea1e2002d6db982; CI/Vercel/HTTP e versão confirmados. Smoke autenticado final pendente por navegação concorrente.

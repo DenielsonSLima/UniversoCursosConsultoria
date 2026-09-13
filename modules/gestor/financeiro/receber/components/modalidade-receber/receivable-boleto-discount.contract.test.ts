@@ -2,12 +2,13 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-const [types, mapper, presentation, report, list] = await Promise.all([
+const [types, mapper, presentation, report, list, amountSummary] = await Promise.all([
   readFile(new URL('../../../financeiro.types.ts', import.meta.url), 'utf8'),
   readFile(new URL('../../../financeiro.receivables-page.service.ts', import.meta.url), 'utf8'),
   readFile(new URL('./ReceivableItemPresentation.tsx', import.meta.url), 'utf8'),
   readFile(new URL('./useModalidadeReceberReport.tsx', import.meta.url), 'utf8'),
   readFile(new URL('./ReceivablesList.tsx', import.meta.url), 'utf8'),
+  readFile(new URL('./ReceivableAmountSummary.tsx', import.meta.url), 'utf8'),
 ]);
 
 test('contrato diferencia desconto do boleto e desconto aplicado', () => {
@@ -37,9 +38,9 @@ test('tabela reserva espaço entre valor, desconto e ações', () => {
     /w-\[11%\][\s\S]*?w-\[17%\][\s\S]*?w-\[14%\]/,
     'Datas, Valor e Ações devem reservar 11%, 17% e 14% da tabela.',
   );
-  assert.match(presentation, /compact \? 'min-w-0 ' : ''/);
-  assert.match(presentation, /compact \? 'text-\[10px\] leading-tight' : 'text-\[11px\]'/);
-  assert.match(presentation, /compact \? 'mt-0\.5 text-\[9px\]' : 'text-\[10px\]'/);
+  assert.match(amountSummary, /compact \? 'min-w-0 ' : ''/);
+  assert.match(amountSummary, /compact \? 'text-\[10px\] leading-tight' : 'text-\[11px\]'/);
+  assert.match(amountSummary, /compact \? 'mt-0\.5 text-\[9px\]' : 'text-\[10px\]'/);
   assert.match(
     presentation,
     /<td className="py-5 pl-3 pr-2">[\s\S]*?<ReceivableAmountSummary item=\{item\} compact \/>/,
@@ -61,12 +62,11 @@ test('tabela reserva espaço entre valor, desconto e ações', () => {
 });
 
 test('tela e extrato usam a mesma apresentação canônica do desconto', () => {
-  assert.match(presentation, /receivableDiscountPresentation\(item\)/);
-  assert.match(report, /receivableDiscountPresentation\(item\)/);
+  assert.match(amountSummary, /receivableDiscountPresentation\(item\)/);
+  assert.match(presentation, /<ReceivableAmountSummary item=\{item\}/);
+  assert.match(report, /<ReceivableAmountSummary item=\{item\}/);
 
-  for (const source of [presentation, report]) {
-    assert.match(source, /Desconto aplicado/);
-    assert.match(source, /Desconto do boleto/);
-    assert.match(source, /Desconto expirado/);
-  }
+  assert.match(amountSummary, /Desconto aplicado/);
+  assert.match(amountSummary, /Desconto do boleto/);
+  assert.match(amountSummary, /Desconto expirado/);
 });

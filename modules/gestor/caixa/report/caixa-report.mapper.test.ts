@@ -428,3 +428,20 @@ test('preserva a composição conferida no Proesc e o recebido sem inferir desco
   assert.equal(unknown.desconto, null);
   assert.equal(unknown.diferencaNaoDiscriminada, -20);
 });
+
+test('preserva componentes Proesc parciais e o residual sem completar valores ausentes', () => {
+  const payload = makePayload();
+  Object.assign(payload.recebimentos[0], {
+    valor_base: 279.9, valor_recebido: 260, juros: 1.71, multa: 5.2,
+    acrescimo: null, desconto: null, diferenca_nao_discriminada: -26.81,
+    composicao_status: 'PARCIAL_POR_API_PROESC',
+  });
+  const item = mapCaixaDetailedReport(payload).recebimentos[0];
+  assert.equal(item.composicaoStatus, 'PARCIAL_POR_API_PROESC');
+  assert.equal(item.juros, 1.71);
+  assert.equal(item.multa, 5.2);
+  assert.equal(item.desconto, null);
+  assert.equal(item.acrescimo, null);
+  assert.equal(item.diferencaNaoDiscriminada, -26.81);
+  assert.equal(item.valorRecebido, 260);
+});

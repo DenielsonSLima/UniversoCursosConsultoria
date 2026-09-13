@@ -6,6 +6,7 @@ import { object, ProescError } from './contract.ts';
 import { testProescToken } from './test-token.ts';
 import { runProescSync } from './sync-worker.ts';
 import { runProescReadOnlyDiagnostic } from './diagnostic-readonly.ts';
+import { reviewProescCycles } from './cycle-review.ts';
 
 type Admin = Parameters<typeof requireGestorAtivo>[1];
 const publicActions = new Set(['status', 'save_token', 'remove_token', 'class_history', 'class_events', 'test_token']);
@@ -45,6 +46,14 @@ export const createHandler = (admin: Admin, transport: typeof fetch = fetch) => 
       actorId = data.actorId;
     } else {
       const gestor = await requireGestorAtivo(req, admin);
+      if (action === 'review_cycles') {
+        // The service reuses can_operate_turma_academics + gestor_has_tab for
+        // this exact enrollment, including the actor's current polo scope.
+        if (isRateLimitExceeded(`proesc-cycle-review:${gestor.id}`, 12, 60000)) {
+          return respond({ error: 'Muitas conferências. Aguarde um minuto e retome.' }, 429);
+        }
+        return respond(await reviewProescCycles(admin, gestor.id, body.matriculaId, transport));
+      }
       requireGestorGlobal(gestor);
       requireGestorModule(gestor, 'configuracoes');
       if (!publicActions.has(action)) throw new ProescError('Ação não permitida neste painel.', 403);
@@ -101,7 +110,7 @@ export const createHandler = (admin: Admin, transport: typeof fetch = fetch) => 
   } catch (error) {
     if (error instanceof ProescError) return respond({ error: error.message }, error.status);
     const status = authorizationErrorHttpStatus(error instanceof Error ? error.message : '');
-    return respond({ error: status ? 'Acesso restrito ao gestor global autorizado em Configurações.'
+    return respond({ error: status ? 'Acesso restrito ao gestor autorizado.'
       : 'Falha ao consultar a integração Proesc. Tente novamente.' }, status || 500);
   }
 };

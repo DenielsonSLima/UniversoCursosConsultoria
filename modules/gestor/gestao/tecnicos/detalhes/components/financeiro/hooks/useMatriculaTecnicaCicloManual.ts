@@ -13,25 +13,47 @@ import type {
   RetomarEmissaoCicloFinanceiroTecnicoManualInput,
 } from '../matricula-tecnica-ciclo-manual.types';
 import { markFinanceiroRequestReconciled } from '../matricula-tecnica-financeiro.echo';
+import { reviewProescCycles } from '../proesc-cycle-review.service';
+
+export const useReviewProescCycles = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ matriculaId }: { matriculaId: string; turmaId: string }) => reviewProescCycles(matriculaId),
+    onSettled: (_result, _error, input) => queryClient.invalidateQueries({
+      queryKey: matriculaTecnicaFinanceiroKeys.turma(input.turmaId),
+    }),
+  });
+};
 
 export const usePreviewCicloFinanceiroTecnicoManual = (
   input: PreviewCicloFinanceiroTecnicoManualInput,
   enabled: boolean,
-) => useQuery({
+) => {
+  const queryClient = useQueryClient();
+  return useQuery({
   queryKey: matriculaTecnicaFinanceiroKeys.previewCicloManual(
     input.matriculaId,
     input.cicloNumero,
     input.primeiroVencimento,
   ),
-  queryFn: () => matriculaTecnicaCicloManualService.preview(input),
+  queryFn: async () => {
+    try {
+      return await matriculaTecnicaCicloManualService.preview(input);
+    } finally {
+      if (input.conferirProesc && input.turmaId) {
+        void queryClient.invalidateQueries({ queryKey: matriculaTecnicaFinanceiroKeys.turma(input.turmaId) });
+      }
+    }
+  },
   enabled: enabled
     && Boolean(input.matriculaId)
     && Number.isInteger(input.cicloNumero)
     && input.cicloNumero > 0,
-  staleTime: 15_000,
+  staleTime: input.conferirProesc ? 0 : 15_000,
   gcTime: 5 * 60_000,
   retry: false,
-});
+  });
+};
 
 const invalidateIssuanceQueries = (
   queryClient: QueryClient,

@@ -7,6 +7,8 @@ const revision = 'revision-one';
 const query = { unitId: '1', year: 2026, month: 9, externalKey: '8001' };
 const config = () => ({ status: 'success', units: [{ id: 1, unidade: 'INSTITUTION_NAME' }],
   academic_years: [], categories: [{ id: 1, name: 'Principal' }, { id: 2, name: 'Recebimento' },
+    { id: 3, name: 'Encargo observado A' }, { id: 4, name: 'Encargo observado B' },
+    { id: 6, name: 'Cancelamento' }, { id: 7, name: 'Tarifa' },
     { id: 10482, name: 'Desconto' }, { id: 999, name: 'OTHER_CATEGORY' }] });
 const row = (block = 2, amount = '100.00', date: string | null = '2025-09-10') => ({
   chave_id: '8001', id: block, valor: amount, unidade_id: 1, turma_id: 2, curso: 3,
@@ -56,7 +58,7 @@ Deno.test('diagnóstico individual conserva blocos e data fora do mês sem mutar
   const result = await runProescReadOnlyDiagnostic(admin, 'actor', { periods: [query] }, successfulTransport());
   assert(admin.actions.join(',') === 'token,token');
   assert(result.readOnly && result.summaries.length === 1);
-  assert(result.categories.map((category) => category.id).join(',') === '1,2,10482');
+  assert(result.categories.map((category) => category.id).join(',') === '1,2,3,4,6,7,10482');
   const summary = result.summaries[0];
   assert(summary.index === 0 && summary.rowCount === 3);
   assert(summary.blockCounts['2'] === 1 && summary.blockAmountCents['2'] === '10000');
@@ -117,7 +119,7 @@ Deno.test('redirecionamento, erro lógico e falhas RPC nunca expõem segredo ou 
 
 Deno.test('consulta sem períodos retorna só categorias e credencial V2 não é enviada para V1', async () => {
   const result = await runProescReadOnlyDiagnostic(makeAdmin(), 'actor', {}, successfulTransport());
-  assert(result.summaries.length === 0 && result.categories.length === 3);
+  assert(result.summaries.length === 0 && result.categories.length === 7);
   let transported = false;
   await rejected(() => runProescReadOnlyDiagnostic({ rpc: async () => ({
     data: { token: 'jwt-token-test', revision }, error: null,
