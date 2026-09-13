@@ -172,7 +172,11 @@ test('diário normal exibe instrumentos P/P sem somar e mostra média documental
       getStats: () => ({ mediaParcial: 7.5, mediaFinal: 7.5, faltas: 0, frequencia: 100, resultado: 'APROVADO' }),
     }),
   }));
-  for (const label of ['P1', 'P2']) assert.ok(html.includes(`>${label}</th>`), label);
+  const tableHead = html.slice(html.indexOf('<thead>'), html.indexOf('</thead>'));
+  assert.equal((tableHead.match(/>P<\/th>/g) || []).length, 2);
+  assert.equal((tableHead.match(/<tr>/g) || []).length, 2);
+  assert.ok(tableHead.includes('colSpan="2">INSTRUMENTOS AVALIATIVOS</th>'));
+  assert.doesNotMatch(tableHead, />P1<|>P2<|>TI<|>TG<|>S<|>CQ<|>O</);
   for (const value of ['7,8', '8,9']) assert.ok(html.includes(`>${value}</td>`), value);
   assert.ok(html.includes('colSpan="2"'));
   assert.doesNotMatch(html, /P: 7,8|P: 8,9|\|/);
@@ -236,7 +240,7 @@ test('diário normal mostra apenas instrumentos ativos e mantém médias de duas
   assert.ok(tableHead.includes('>CQ</span>'));
 });
 
-test('aluno sem fonte no diário documental não herda P canônica como P1', () => {
+test('aluno sem fonte no diário documental não herda P canônica em coluna documental', () => {
   const html = renderToStaticMarkup(createElement(DiarioDocumentaryProvider, { history,
     children: createElement(DiarioResultadoTab, {
       students: [{ id: 'extra', nome: 'Aluno sem fonte', matricula: 'M2', status: 'CURSANDO' }],

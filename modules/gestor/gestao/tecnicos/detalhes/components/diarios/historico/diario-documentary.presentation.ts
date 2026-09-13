@@ -35,7 +35,7 @@ export interface DocumentaryGradeColumn {
 
 const documentaryGradeCategory = (grade: HistoricalGradeRow['grades'][number]): string | null => {
   const label = documentaryRawText(grade.category);
-  if (label && !/^[-–—]+$/.test(label)) return label.toUpperCase();
+  if (label && !/^[-–—]+$/.test(label)) return label;
   const value = documentaryRawText(grade.value);
   // Unlabelled empty template cells are not assessment instruments.
   return value && !/^[-–—]+$/.test(value) ? `SEM_ROTULO_${grade.columnOrdinal}` : null;
@@ -62,7 +62,7 @@ export const buildDocumentaryGradeColumns = (
       ? `Instrumento ${category.slice('SEM_ROTULO_'.length)}` : category;
     return Array.from({ length: count }, (_, index) => ({
       key: `${category}:${index + 1}`, category, occurrence: index + 1,
-      label: count > 1 ? `${label}${index + 1}` : label,
+      label,
     }));
   });
 };

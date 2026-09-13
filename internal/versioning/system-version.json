@@ -1,8 +1,8 @@
 {
-  "version": "4.8.59",
+  "version": "4.8.60",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 68,
+  "revision": 69,
   "releasedAt": "2026-09-13",
-  "summary": "Notas do diário em colunas separadas, somente com os instrumentos utilizados"
+  "summary": "Cabeçalho agrupado dos instrumentos avaliativos e siglas fiéis ao diário"
 }

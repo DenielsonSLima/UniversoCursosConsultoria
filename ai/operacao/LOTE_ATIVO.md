@@ -1,20 +1,17 @@
 # Lote ativo
 
-Estado: EM CORREÇÃO — COLUNAS DOS INSTRUMENTOS DO DIÁRIO
+Estado: REVISADO — PUBLICAÇÃO AUTORIZADA EM EXECUÇÃO (4.8.60)
 
-## Lote: 2026-09-13-diario-colunas-notas
+## Lote: 2026-09-13-diario-cabecalho-instrumentos
 
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-13-diario-colunas-notas.md`.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-13-diario-cabecalho-instrumentos.md`.
 
-- Corrigir a regressão da 4.8.57 que concatenou instrumentos no PDF e duplicou o grupo de notas na tela.
-- Exibir apenas instrumentos selecionados ou usados no documento, uma avaliação por coluna; repetir P como P1/P2 e preservar categorias combinadas.
-- Manter notas, médias, recuperação e frequência fornecidas pelo servidor, incluindo zero, vazio e precisão decimal.
-- Escopo: apresentação da tabela e do PDF nativo; banco, fonte, assinatura e fechamento preservados.
-- Três frentes: interface/helper, compositor PDF e revisão independente das 14 fontes.
-- Aceite: cabeçalho único, seleções fiéis, colunas alinhadas, casos P/P1-P2/P+PP/TG-CQ, smoke visual e PDF renderizado.
-- Publicação autorizada explicitamente pelo usuário nesta conversa.
+- Reproduzir cabeçalho do modelo: Instrumentos Avaliativos acima das siglas pertinentes, sem P1/P2 inventados.
+- Manter P/P documentais como duas colunas distintas com o mesmo rótulo original; não recalcular notas.
+- PDF preenchido e em branco com agrupamento de instrumentos e frequência; seleção normal preservada.
+- Três frentes: conferência XML, UI/helper e PDF; coordenador revisa o resultado renderizado.
+- Testes, inspeção renderizada, revisão independente e build aprovados. Usuário autorizou publicar; sessão autenticada recuperada e conferência final após deploy em execução.
 
 ## Entrega anterior
 
-- 4.8.57, PR150: 14 diários materializados, 122 aulas, 369 notas e 3.218 frequências; replay sem novas inserções.
-- Registro completo: `ai/operacao/registros/alteracoes/2026-09-13-diarios-operacionais.md`.
+- 4.8.59, PR152, merge aaa43314afe713a6212d88d230a7274839898985: colunas separadas publicadas; usuário identificou divergência no cabeçalho e siglas.
