@@ -1,8 +1,8 @@
 {
-  "version": "4.8.54",
+  "version": "4.8.56",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 63,
+  "revision": 65,
   "releasedAt": "2026-09-13",
-  "summary": "Consulta de diários históricos com evidências e pendências acadêmicas preservadas"
+  "summary": "Caixa reconhece o histórico Proesc e identifica indicadores parciais"
 }

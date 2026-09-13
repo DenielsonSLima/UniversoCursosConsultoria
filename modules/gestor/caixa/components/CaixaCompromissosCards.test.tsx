@@ -39,8 +39,26 @@ test('explicita mês, data de referência, base e registros ainda em conferênci
   const html = renderCards(125, 17.23, false);
   assert.match(html, /Inadimplência do mês/);
   assert.match(html, /Margem de inadimplência do mês/);
-  assert.match(html, /Não recebido até 31\/07\/2026/);
+  assert.match(html, /Apurado na base conferida até 31\/07\/2026/);
+  assert.match(html, /Inadimplência do mês \(parcial\)/);
+  assert.match(html, /Margem de inadimplência do mês \(parcial\)/);
+  assert.match(html, /Base conferida da margem/);
+  assert.match(html, /Sobre a base conferida do mês/);
   assert.match(html, /1.500,00/);
   assert.match(html, /2 cobrança\(s\) em conferência não incluída\(s\)/);
+  assert.match(html, /500,00 em valor nominal/);
+  assert.match(html, /Esse valor ainda não representa inadimplência confirmada/);
   assert.doesNotMatch(renderCards(125, 17.23), /Indicadores incompletos/);
+});
+
+test('zero parcial não parece ausência definitiva de inadimplência', () => {
+  const html = renderCards(0, 0, false);
+  assert.match(html, /0,00/);
+  assert.match(html, /0%/);
+  assert.match(html, /Inadimplência do mês \(parcial\)/);
+  assert.match(html, /Margem de inadimplência do mês \(parcial\)/);
+  assert.match(html, /500,00 em valor nominal/);
+  const complete = renderCards(0, 0);
+  assert.doesNotMatch(complete, /\(parcial\)|em valor nominal|base conferida/);
+  assert.match(complete, /Não recebido até 31\/07\/2026/);
 });
