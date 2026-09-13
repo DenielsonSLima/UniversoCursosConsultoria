@@ -78,7 +78,7 @@ async function statementSummary(token: string, unitId: string, year: number, tra
     const bytes = new Uint8Array(size);
     let offset = 0;
     for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
-    const payload: unknown = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+    const payload: unknown = JSON.parse(new globalThis.TextDecoder('utf-8', { fatal: true }).decode(bytes));
     const root = object(Array.isArray(payload) && payload.length === 1
       && Array.isArray(object(payload[0]).data) ? payload[0] : payload);
     const safeKeys = (value: unknown) => Object.keys(object(value)).filter((key) =>
