@@ -1,6 +1,7 @@
 import { DiarioTemplate } from '../../../../../cadastros/modelos-documentos/diarios/diarios.service';
 import { DiarioAula, DiarioStudent } from './diario-classe.service';
 import { DiarioExportMode } from './turma-diarios.types';
+import type { HistoricalGradeRow } from './historico/diario-historico.types';
 
 export type DiarioActiveTab = 'frequencia' | 'resultado' | 'conteudo' | 'observacoes' | 'fechamento';
 export type DiarioLockScope = 'ABERTO' | 'PROFESSOR' | 'TOTAL';
@@ -33,6 +34,7 @@ export type AttendanceStatus = 'P' | 'F' | 'J' | null;
 export type AttendanceMap = Record<string, Record<string, AttendanceStatus>>;
 
 export interface DiarioGradeResult {
+  instrumentos_documentais?: HistoricalGradeRow[] | null;
   p: number | null;
   ti: number | null;
   tg: number | null;
@@ -41,7 +43,7 @@ export interface DiarioGradeResult {
   o: number | null;
   rec: number | null;
   total_aulas: number;
-  total_faltas: number;
+  total_faltas: number | null;
   frequencia_percent: number | null;
   media_parcial: number | null;
   media_final: number | null;
@@ -51,7 +53,7 @@ export interface DiarioGradeResult {
 export type GradesMap = Record<string, DiarioGradeResult>;
 
 export interface DiarioStudentStats {
-  faltas: number;
+  faltas: number | null;
   frequencia: number | null;
   mediaParcial: number | null;
   mediaFinal: number | null;
@@ -78,6 +80,7 @@ export interface DiarioPrintDocumentProps {
   students: DiarioStudent[];
   aulas: DiarioAula[];
   attendanceMap: AttendanceMap;
+  documentaryAttendanceMap?: Record<string, Record<string, string>>;
   gradesMap: GradesMap;
   praticasMap: Record<string, string>;
   observacoes: string;

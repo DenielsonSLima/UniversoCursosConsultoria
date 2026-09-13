@@ -1,3 +1,5 @@
+import type { HistoricalGradeRow } from './historico/diario-historico.types';
+
 export type DiarioPdfExportMode = "PREENCHIDO" | "EM_BRANCO";
 
 export interface DiarioPdfCoverField {
@@ -54,6 +56,8 @@ export interface DiarioPdfLessonSnapshot {
 }
 
 export interface DiarioPdfRenderableGradeSnapshot {
+  /** Source-only evidence for the normal preview; never a substitute for signed snapshot validation. */
+  instrumentos_documentais?: HistoricalGradeRow[] | null;
   p: number | null;
   ti: number | null;
   tg: number | null;
@@ -62,7 +66,7 @@ export interface DiarioPdfRenderableGradeSnapshot {
   o: number | null;
   rec: number | null;
   total_aulas: number;
-  total_faltas: number;
+  total_faltas: number | null;
   frequencia_percent: number | null;
   media_parcial: number | null;
   media_final: number | null;
@@ -72,9 +76,10 @@ export interface DiarioPdfRenderableGradeSnapshot {
 export interface DiarioPdfGradeSnapshot extends
   Omit<
     DiarioPdfRenderableGradeSnapshot,
-    "frequencia_percent" | "resultado_final"
+    "frequencia_percent" | "resultado_final" | "total_faltas"
   > {
   frequencia_percent: number;
+  total_faltas: number;
   resultado_final:
     | "APROVEITADO"
     | "SEM_LANCAMENTO"
@@ -140,6 +145,7 @@ export interface DiarioPdfRenderableData {
   students: DiarioPdfStudentSnapshot[];
   aulas: DiarioPdfLessonSnapshot[];
   attendanceMap: Record<string, Record<string, "P" | "F" | "J" | null>>;
+  documentaryAttendanceMap?: Record<string, Record<string, string>>;
   gradesMap: Record<string, DiarioPdfRenderableGradeSnapshot>;
   praticasMap: Record<string, string>;
   observacoes: string;

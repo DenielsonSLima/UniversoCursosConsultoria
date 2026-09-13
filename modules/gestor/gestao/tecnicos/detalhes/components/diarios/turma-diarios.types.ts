@@ -4,8 +4,9 @@ export interface TurmaDiarioHistoricoResumo {
   id: string;
   origem: 'DOCX_HISTORICO';
   sourceName: string;
-  readOnly: true;
-  estado: 'EM_CONFERENCIA';
+  readOnly: boolean;
+  materialization?: { status: 'PENDENTE' | 'MATERIALIZADO'; completedAt?: string | null };
+  estado: 'EM_CONFERENCIA' | 'MATERIALIZADO';
   aulasDocumentadas: number;
   horasDocumentadas: number | null;
   horasOficiais: number;

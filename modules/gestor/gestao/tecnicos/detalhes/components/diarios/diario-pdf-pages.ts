@@ -1,4 +1,5 @@
 import type { jsPDF } from "jspdf";
+import { documentaryGradeText } from './historico/diario-documentary.presentation.ts';
 
 import type {
   DiarioPdfLessonSnapshot,
@@ -114,10 +115,11 @@ export const drawFrequencyPages = (
               (sessao) =>
                 isBlank
                   ? ""
-                  : props.attendanceMap[student.id]?.[sessao.id] ?? "",
+                  : props.documentaryAttendanceMap?.[student.id]?.[sessao.id]
+                    ?? props.attendanceMap[student.id]?.[sessao.id] ?? "",
             )
           ),
-          isBlank ? "" : String(grade.total_faltas),
+          isBlank ? "" : grade.total_faltas === null ? "—" : String(grade.total_faltas),
         ];
       });
       drawGroupedFrequencyTable(pdf, {
@@ -160,6 +162,9 @@ export const drawResultPages = (
 ) => {
   const active = props.activeInstruments;
   const isBlank = props.exportMode === "EM_BRANCO";
+  const documentary = !isBlank && Object.values(props.gradesMap).some(
+    (grade) => grade.instrumentos_documentais !== undefined,
+  );
   const studentsPerPage = 18;
   const studentGroups = chunks(props.students, studentsPerPage);
   const defaultRowHeight =
@@ -201,12 +206,12 @@ export const drawResultPages = (
       return [
         String(groupIndex * studentsPerPage + index + 1),
         student.nome,
-        value(active.p, grade.p),
+        ...(documentary ? [documentaryGradeText(grade.instrumentos_documentais)] : [value(active.p, grade.p),
         value(active.ti, grade.ti),
         value(active.tg, grade.tg),
         value(active.s, grade.s),
         value(active.cq, grade.cq),
-        value(active.o, grade.o),
+        value(active.o, grade.o)]),
         isBlank
           ? ""
           : stats.mediaParcial === null
@@ -222,18 +227,19 @@ export const drawResultPages = (
           : stats.mediaFinal === null
           ? "—"
           : stats.mediaFinal.toFixed(1),
-        isBlank ? "" : String(stats.faltas),
+        isBlank ? "" : stats.faltas === null ? "—" : String(stats.faltas),
         isBlank ? "" : stats.frequencia === null ? "—" : `${stats.frequencia}%`,
         isBlank ? "" : stats.resultado.replaceAll("_", " "),
       ];
     });
     drawTable(pdf, {
       headers: [
-        "Nº", "Aluno(a)", "P", "TI", "TG", "S", "CQ", "O", "Média",
+        "Nº", "Aluno(a)", ...(documentary ? ["Instrumentos avaliativos"] : ["P", "TI", "TG", "S", "CQ", "O"]), "Média",
         "Rec.", "Final", "Faltas", "Freq.", "Resultado",
       ],
       rows,
-      widths: [7, 75, 12, 12, 12, 12, 12, 12, 13, 13, 13, 12, 14, 35],
+      widths: [7, 75, ...(documentary ? [72] : [12, 12, 12, 12, 12, 12]), 13, 13, 13, 12, 14, 35],
+      wrapColumns: documentary ? [2] : [],
       startY: STANDARD_CONTENT_TOP,
       fontSize: 5.4,
       rowHeight,
@@ -248,7 +254,9 @@ export const drawResultPages = (
       pdf.setFont("helvetica", "normal");
       pdf.setFontSize(6.2);
       const legendLines = pdf.splitTextToSize(
-        DIARIO_RESULT_LEGEND_TEXT,
+        documentary
+          ? 'As avaliações registradas aparecem separadas. Médias, frequência e resultado são informados pelo sistema.'
+          : DIARIO_RESULT_LEGEND_TEXT,
         CONTENT_WIDTH,
       );
       pdf.text(legendLines, CONTENT_LEFT, legendY + 4.2, {

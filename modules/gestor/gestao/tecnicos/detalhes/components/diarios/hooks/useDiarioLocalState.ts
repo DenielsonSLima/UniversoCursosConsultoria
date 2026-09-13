@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { AttendanceMap, AttendanceStatus, GradesMap } from '../diario-classe.types';
+import { useDiarioDocumentary } from '../historico/DiarioDocumentaryContext';
 import {
   buildAttendanceMap,
   buildGradesMap,
@@ -23,17 +24,18 @@ export const useDiarioLocalState = ({
   dbPraticas,
   dbObservacoes,
 }: UseDiarioLocalStateInput) => {
+  const documentary = useDiarioDocumentary();
   const attendanceMap = useMemo(
     () => buildAttendanceMap(students, aulas, dbAttendance),
     [students, aulas, dbAttendance],
   );
   const gradesMap = useMemo(
-    () => buildGradesMap(students, aulas, dbGrades),
-    [students, aulas, dbGrades],
+    () => buildGradesMap(students, aulas, dbGrades, Boolean(documentary)),
+    [students, aulas, dbGrades, documentary],
   );
   const praticasMap = useMemo(
-    () => buildPraticasMap(aulas, dbPraticas),
-    [aulas, dbPraticas],
+    () => buildPraticasMap(aulas, dbPraticas, documentary ? '' : undefined),
+    [aulas, dbPraticas, documentary],
   );
   const [localAttendance, setLocalAttendance] = useState<AttendanceMap>({});
   const [localGrades, setLocalGrades] = useState<GradesMap>({});

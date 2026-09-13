@@ -2,6 +2,8 @@ import React from 'react';
 import { AlertCircle, SlidersHorizontal } from 'lucide-react';
 import { DiarioStudent } from './diario-classe.service';
 import { ActiveInstruments, DiarioStudentStats, GradesMap } from './diario-classe.types';
+import { useDiarioDocumentary } from './historico/DiarioDocumentaryContext';
+import { documentaryGradeText } from './historico/diario-documentary.presentation';
 
 type GradeField = 'p' | 'ti' | 'tg' | 's' | 'cq' | 'o' | 'rec';
 
@@ -26,6 +28,7 @@ const DiarioResultadoTab: React.FC<DiarioResultadoTabProps> = ({
   onGradeChange,
   onSaveGrade,
 }) => {
+  const documentary = useDiarioDocumentary();
   const instrumentsList: { key: keyof ActiveInstruments; label: string; fullTitle: string }[] = [
     { key: 'p', label: 'P', fullTitle: 'Prova Escrita' },
     { key: 'ti', label: 'TI', fullTitle: 'Trabalho Individual' },
@@ -50,8 +53,8 @@ const DiarioResultadoTab: React.FC<DiarioResultadoTabProps> = ({
               <button
                 key={inst.key}
                 type="button"
-                onClick={() => !isReadOnly && onToggleInstrument(inst.key)}
-                disabled={isReadOnly}
+                onClick={() => !isReadOnly && !documentary && onToggleInstrument(inst.key)}
+                disabled={isReadOnly || Boolean(documentary)}
                 className={`px-3 py-1.5 rounded-xl font-bold text-[11px] transition-all border flex items-center gap-1.5 cursor-pointer ${
                   active
                     ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 shadow-sm'
@@ -83,6 +86,7 @@ const DiarioResultadoTab: React.FC<DiarioResultadoTabProps> = ({
                 <th className="p-4 border-b border-slate-200 border-r w-12 text-xs font-black text-slate-400" rowSpan={2}>Nº</th>
                 <th className="p-4 border-b border-slate-200 border-r min-w-[250px] text-xs font-black text-[#001a33] uppercase text-left" rowSpan={2}>Nome do Aluno</th>
                 <th className="p-2 border-b border-slate-200 border-r text-xs font-black text-blue-700 bg-blue-50/50" colSpan={6}>INSTRUMENTOS AVALIATIVOS (0.0 a 10.0)</th>
+                {documentary && <th className="p-3 border-b border-r border-slate-200 min-w-[220px] text-xs font-black text-blue-800 bg-blue-50" rowSpan={2}>INSTRUMENTOS AVALIATIVOS</th>}
                 <th className="p-4 border-b border-slate-200 border-r text-[10px] font-black text-slate-500 bg-slate-50" rowSpan={2}>MÉDIA PARCIAL</th>
                 <th className="p-4 border-b border-slate-200 border-r text-[10px] font-black text-slate-500 bg-slate-50" rowSpan={2}>REC<br /><span className="font-bold text-slate-400">SUBST.</span></th>
                 <th className="p-4 border-b border-slate-200 border-r text-[10px] font-black text-slate-500 bg-slate-50" rowSpan={2}>MÉDIA FINAL</th>
@@ -95,7 +99,7 @@ const DiarioResultadoTab: React.FC<DiarioResultadoTabProps> = ({
                     key={inst.key}
                     title={inst.fullTitle}
                     active={activeInstruments[inst.key]}
-                    onToggle={() => !isReadOnly && onToggleInstrument(inst.key)}
+                    onToggle={() => !isReadOnly && !documentary && onToggleInstrument(inst.key)}
                   >
                     {inst.label}
                   </GradeHeader>
@@ -108,6 +112,7 @@ const DiarioResultadoTab: React.FC<DiarioResultadoTabProps> = ({
               {students.map((aluno, idx) => {
                 const stats = getStats(aluno.id);
                 const isCredited = stats.resultado === 'APROVEITADO';
+                const gradeReadOnly = isReadOnly || Boolean(documentary);
                 const studentGrades = localGrades[aluno.id] || { p: null, ti: null, tg: null, s: null, cq: null, o: null, rec: null };
                 const commonInputProps = {
                   studentId: aluno.id,
@@ -118,12 +123,15 @@ const DiarioResultadoTab: React.FC<DiarioResultadoTabProps> = ({
                   <tr key={aluno.id} className={`transition-colors ${isCredited ? 'bg-violet-50/60' : 'hover:bg-slate-50/50'}`}>
                     <td className="p-2 text-center border-r border-slate-100 text-slate-400 font-mono text-xs">{String(idx + 1).padStart(2, '0')}</td>
                     <td className="p-2 border-r border-slate-100 font-bold text-xs text-[#001a33] text-left truncate max-w-[200px]">{aluno.nome}</td>
-                    <GradeInput {...commonInputProps} field="p" value={studentGrades.p} disabled={isReadOnly || isCredited || !activeInstruments.p} />
-                    <GradeInput {...commonInputProps} field="ti" value={studentGrades.ti} disabled={isReadOnly || isCredited || !activeInstruments.ti} />
-                    <GradeInput {...commonInputProps} field="tg" value={studentGrades.tg} disabled={isReadOnly || isCredited || !activeInstruments.tg} />
-                    <GradeInput {...commonInputProps} field="s" value={studentGrades.s} disabled={isReadOnly || isCredited || !activeInstruments.s} />
-                    <GradeInput {...commonInputProps} field="cq" value={studentGrades.cq} disabled={isReadOnly || isCredited || !activeInstruments.cq} />
-                    <GradeInput {...commonInputProps} field="o" value={studentGrades.o} disabled={isReadOnly || isCredited || !activeInstruments.o} />
+                    <GradeInput {...commonInputProps} field="p" value={studentGrades.p} disabled={gradeReadOnly || isCredited || !activeInstruments.p} />
+                    <GradeInput {...commonInputProps} field="ti" value={studentGrades.ti} disabled={gradeReadOnly || isCredited || !activeInstruments.ti} />
+                    <GradeInput {...commonInputProps} field="tg" value={studentGrades.tg} disabled={gradeReadOnly || isCredited || !activeInstruments.tg} />
+                    <GradeInput {...commonInputProps} field="s" value={studentGrades.s} disabled={gradeReadOnly || isCredited || !activeInstruments.s} />
+                    <GradeInput {...commonInputProps} field="cq" value={studentGrades.cq} disabled={gradeReadOnly || isCredited || !activeInstruments.cq} />
+                    <GradeInput {...commonInputProps} field="o" value={studentGrades.o} disabled={gradeReadOnly || isCredited || !activeInstruments.o} />
+                    {documentary && <td className="p-3 border-r border-slate-100 text-left text-xs text-slate-700 whitespace-pre-wrap">
+                      {documentaryGradeText(documentary.students[aluno.id]?.gradeRows)}
+                    </td>}
                     <td className="p-2 border-r border-slate-100 font-black text-xs bg-slate-50/80 text-blue-900">
                       {stats.mediaParcial === null ? '—' : stats.mediaParcial.toFixed(1)}
                     </td>
@@ -132,12 +140,12 @@ const DiarioResultadoTab: React.FC<DiarioResultadoTabProps> = ({
                       field="rec"
                       value={studentGrades.rec}
                       recovery
-                      disabled={isReadOnly || isCredited || (stats.mediaParcial !== null && stats.mediaParcial >= 6)}
+                      disabled={gradeReadOnly || isCredited || (stats.mediaParcial !== null && stats.mediaParcial >= 6)}
                     />
                     <td className="p-2 border-r border-slate-100 font-black text-sm bg-slate-50 text-[#001a33]">
                       {stats.mediaFinal === null ? '—' : stats.mediaFinal.toFixed(1)}
                     </td>
-                    <td className="p-2 border-r border-slate-100 font-bold text-xs text-red-600">{stats.faltas}</td>
+                    <td className="p-2 border-r border-slate-100 font-bold text-xs text-red-600">{stats.faltas ?? '—'}</td>
                     <td className="p-2 border-r border-slate-100 font-bold text-xs">
                       {stats.frequencia === null ? '—' : `${stats.frequencia}%`}
                     </td>
@@ -145,7 +153,7 @@ const DiarioResultadoTab: React.FC<DiarioResultadoTabProps> = ({
                       <span className={`inline-block px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${
                         ['APROVADO', 'APROVEITADO'].includes(stats.resultado)
                           ? 'bg-emerald-100 text-emerald-800'
-                          : ['EM_RECUPERACAO', 'FREQUENCIA_PENDENTE', 'SEM_LANCAMENTO'].includes(stats.resultado)
+                          : ['EM_RECUPERACAO', 'FREQUENCIA_PENDENTE', 'SEM_LANCAMENTO', 'EM_CONFERENCIA'].includes(stats.resultado)
                             ? 'bg-amber-100 text-amber-800'
                             : 'bg-red-100 text-red-800'
                       }`}>
@@ -172,7 +180,9 @@ const DiarioResultadoTab: React.FC<DiarioResultadoTabProps> = ({
           <span><strong>REC</strong> - Recuperação Semestral</span>
         </div>
         <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-[11px] font-bold leading-relaxed text-blue-900">
-          A Média Parcial é calculada somando os pontos obtidos nos instrumentos ativos da disciplina (limitada a 10.0). Instrumentos anulados são desconsiderados do cálculo e da exibição.
+          {documentary
+            ? 'As avaliações registradas aparecem separadas. Médias, frequência e resultado são informados pelo sistema.'
+            : 'A Média Parcial é calculada somando os pontos obtidos nos instrumentos ativos da disciplina (limitada a 10.0). Instrumentos anulados são desconsiderados do cálculo e da exibição.'}
         </div>
       </div>
     </div>

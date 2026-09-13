@@ -314,6 +314,7 @@ const normalizeBrowserRenderableData = (
       };
     }),
     attendanceMap: props.attendanceMap,
+    documentaryAttendanceMap: props.documentaryAttendanceMap,
     gradesMap: props.gradesMap,
     praticasMap: props.praticasMap,
     observacoes: props.observacoes,

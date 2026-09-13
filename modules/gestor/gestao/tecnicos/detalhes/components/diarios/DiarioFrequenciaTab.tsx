@@ -2,6 +2,8 @@ import React from 'react';
 import { AlertCircle, Calendar } from 'lucide-react';
 import { DiarioAula, DiarioStudent } from './diario-classe.service';
 import { AttendanceMap, DiarioStudentStats } from './diario-classe.types';
+import { useDiarioDocumentary } from './historico/DiarioDocumentaryContext';
+import { documentaryAttendanceText } from './historico/diario-documentary.presentation';
 
 interface DiarioFrequenciaTabProps {
   students: DiarioStudent[];
@@ -20,6 +22,7 @@ const DiarioFrequenciaTab: React.FC<DiarioFrequenciaTabProps> = ({
   onToggleAttendance,
   getStats,
 }) => {
+  const documentary = useDiarioDocumentary();
   const totalSessoes = aulas.reduce((total, aula) => total + aula.sessoes.length, 0);
 
   return (
@@ -138,6 +141,7 @@ const DiarioFrequenciaTab: React.FC<DiarioFrequenciaTabProps> = ({
                   </td>
                   {aulas.flatMap((aula) => aula.sessoes.map((sessao) => {
                     const attendanceStatus = attendanceMap[aluno.id]?.[sessao.id] || null;
+                    const documentMark = documentaryAttendanceText(documentary?.attendance[aluno.id]?.[sessao.id], attendanceStatus);
                     const foiFalta = attendanceStatus === 'F';
                     const foiPresente = attendanceStatus === 'P';
                     const foiJustificada = attendanceStatus === 'J';
@@ -153,7 +157,7 @@ const DiarioFrequenciaTab: React.FC<DiarioFrequenciaTabProps> = ({
                         ) : (
                           <button
                             onClick={() => onToggleAttendance(aluno.id, sessao.id)}
-                            disabled={isReadOnly}
+                            disabled={isReadOnly || Boolean(documentary)}
                             className={`w-8 h-8 rounded-lg flex items-center justify-center mx-auto text-xs font-bold transition-all ${
                               foiFalta
                                 ? 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100'
@@ -163,9 +167,9 @@ const DiarioFrequenciaTab: React.FC<DiarioFrequenciaTabProps> = ({
                                     ? 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100'
                                     : 'bg-slate-50 text-slate-400 border border-slate-200 hover:bg-slate-100'
                             } disabled:cursor-not-allowed disabled:opacity-70`}
-                            title={foiJustificada ? 'Falta justificada' : foiFalta ? 'Falta' : foiPresente ? 'Presença' : 'Sem lançamento'}
+                            title={documentMark !== undefined ? `Marcação no documento: ${documentMark || 'célula vazia'}` : foiJustificada ? 'Falta justificada' : foiFalta ? 'Falta' : foiPresente ? 'Presença' : 'Sem lançamento'}
                           >
-                            {foiFalta ? 'F' : foiPresente ? 'P' : foiJustificada ? 'J' : '—'}
+                            {documentMark !== undefined ? documentMark : foiFalta ? 'F' : foiPresente ? 'P' : foiJustificada ? 'J' : '—'}
                           </button>
                         )}
                       </td>
@@ -178,7 +182,7 @@ const DiarioFrequenciaTab: React.FC<DiarioFrequenciaTabProps> = ({
                       </span>
                     ) : (
                       <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm ${totalFaltas > 0 ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-500'}`}>
-                        {totalFaltas}
+                        {totalFaltas ?? '—'}
                       </span>
                     )}
                   </td>

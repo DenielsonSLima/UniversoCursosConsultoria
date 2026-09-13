@@ -43,11 +43,12 @@ export const buildGradesMap = (
   students: DiarioStudent[],
   aulas: DiarioAula[],
   dbGrades: any[],
+  preserveUnknown = false,
 ): GradesMap => {
   const map: GradesMap = {};
   const totalSessoes = aulas.reduce((total, aula) => total + aula.sessoes.length, 0);
   students.forEach((student) => {
-    map[student.id] = emptyGrade(totalSessoes);
+    map[student.id] = { ...emptyGrade(totalSessoes), total_faltas: preserveUnknown ? null : 0 };
   });
   dbGrades.forEach((grade) => {
     if (!map[grade.aluno_id]) return;
@@ -60,7 +61,7 @@ export const buildGradesMap = (
       o: grade.nota_o === null ? null : parseFloat(grade.nota_o),
       rec: grade.nota_rec !== null ? parseFloat(grade.nota_rec) : null,
       total_aulas: parseInt(grade.total_aulas || 0),
-      total_faltas: parseInt(grade.total_faltas || 0),
+      total_faltas: preserveUnknown && grade.total_faltas == null ? null : parseInt(grade.total_faltas || 0),
       frequencia_percent: grade.frequencia_percent === null ? null : parseFloat(grade.frequencia_percent),
       media_parcial: grade.media_parcial === null ? null : parseFloat(grade.media_parcial),
       media_final: grade.media_final === null ? null : parseFloat(grade.media_final),
@@ -70,16 +71,18 @@ export const buildGradesMap = (
   return map;
 };
 
-export const buildPraticasMap = (aulas: DiarioAula[], dbPraticas: any[]): Record<string, string> => {
+export const buildPraticasMap = (
+  aulas: DiarioAula[], dbPraticas: any[], defaultPractice = 'Aula expositiva / Prática padrão',
+): Record<string, string> => {
   const map: Record<string, string> = {};
   const encontroPorSessao = new Map<string, string>();
   aulas.forEach((aula) => {
-    map[aula.id] = 'Aula expositiva / Prática padrão';
+    map[aula.id] = defaultPractice;
     aula.sessoes.forEach((sessao) => encontroPorSessao.set(sessao.id, aula.id));
   });
   dbPraticas.forEach((practice) => {
     const encontroId = encontroPorSessao.get(practice.aula_id);
-    if (encontroId) map[encontroId] = practice.pratica_pedagogica;
+    if (encontroId) map[encontroId] = practice.pratica_pedagogica ?? '';
   });
   return map;
 };

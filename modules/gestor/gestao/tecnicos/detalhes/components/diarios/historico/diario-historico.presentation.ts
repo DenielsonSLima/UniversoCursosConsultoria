@@ -10,6 +10,12 @@ export const historicalDiaryKey = (
   turmaId: string, disciplinaId: string, accessMode: string, contextId: string, poloId: string,
 ) => ['diario-historico-importado', turmaId, disciplinaId, accessMode, contextId, poloId] as const;
 
+export const isHistoricalDiaryMaterialized = (history: {
+  readOnly: boolean; materialization?: { status: string };
+} | null | undefined): boolean => (
+  history?.readOnly === false && history.materialization?.status === 'MATERIALIZADO'
+);
+
 export const historicalNumber = (value: unknown): string => (
   typeof value === 'number' && Number.isFinite(value)
     ? value.toLocaleString('pt-BR', { maximumFractionDigits: 2 })
@@ -60,7 +66,9 @@ export const parseDiarioHistorico = (value: unknown): DiarioHistorico | null => 
     throw new Error('Histórico do diário indisponível.');
   }
   const result = value as Partial<DiarioHistorico>;
-  if (result.readOnly !== true || typeof result.id !== 'string'
+  if ((result.readOnly !== true && !isHistoricalDiaryMaterialized(result as DiarioHistorico))
+    || (result.materialization?.status === 'MATERIALIZADO' && result.readOnly !== false)
+    || typeof result.id !== 'string'
     || !Array.isArray(result.lessons) || !Array.isArray(result.students)
     || !Array.isArray(result.unresolvedStudents) || !Array.isArray(result.issues)) {
     throw new Error('A consulta retornou um histórico incompleto.');

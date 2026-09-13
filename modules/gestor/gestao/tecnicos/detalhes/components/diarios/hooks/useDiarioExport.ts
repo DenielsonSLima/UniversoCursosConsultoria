@@ -4,6 +4,8 @@ import type {
 } from '../diario-classe.types';
 import type { DiarioExportMode } from '../turma-diarios.types';
 import { useDiarioPdfDownload } from './useDiarioPdfDownload';
+import { useDiarioDocumentary } from '../historico/DiarioDocumentaryContext';
+import { buildDocumentaryAttendanceMap } from '../historico/diario-documentary.presentation';
 
 interface DiarioExportToastApi {
   error: (title: string, message?: string) => void;
@@ -49,6 +51,7 @@ export const useDiarioExport = ({
   onBack,
   toast,
 }: UseDiarioExportInput) => {
+  const documentary = useDiarioDocumentary();
   const [isExportModalOpen, setIsExportModalOpen] = useState(Boolean(initialExportMode));
   const [exportMode, setExportMode] = useState<DiarioExportMode>(
     initialExportMode || 'PREENCHIDO',
@@ -63,7 +66,10 @@ export const useDiarioExport = ({
       students,
       aulas,
       attendanceMap,
-      gradesMap,
+      gradesMap: documentary ? Object.fromEntries(Object.entries(gradesMap).map(([id, grade]) => [
+        id, { ...grade, instrumentos_documentais: documentary.students[id]?.gradeRows ?? null },
+      ])) : gradesMap,
+      documentaryAttendanceMap: documentary ? buildDocumentaryAttendanceMap(documentary, attendanceMap) : undefined,
       praticasMap,
       observacoes,
       activeInstruments,
@@ -71,6 +77,7 @@ export const useDiarioExport = ({
       exportMode,
     };
   }, [
+    documentary,
     activeInstruments,
     attendanceMap,
     aulas,
