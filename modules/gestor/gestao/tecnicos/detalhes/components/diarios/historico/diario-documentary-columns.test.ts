@@ -12,11 +12,12 @@ const row = (values: Array<[string, string | number | null]>): HistoricalGradeRo
   })),
 }];
 
-test('P repetidas ocupam P1 e P2; mantém apenas usadas e associação por aluno', () => {
+test('P repetidas mantêm rótulo literal e colunas distintas por aluno', () => {
   const first = row([['P', '4,4'], ['P', '5,0'], ['TG', '1,2']]);
   const second = row([['TG', '2,0'], ['P', '6,1']]);
   const columns = buildDocumentaryGradeColumns([first, second]);
-  assert.deepEqual(columns.map((column) => column.label), ['P1', 'P2', 'TG']);
+  assert.deepEqual(columns.map((column) => column.label), ['P', 'P', 'TG']);
+  assert.deepEqual(columns.map((column) => column.key), ['P:1', 'P:2', 'TG:1']);
   assert.deepEqual(columns.map((column) => documentaryGradeCellText(first, column)), ['4,4', '5,0', '1,2']);
   assert.deepEqual(columns.slice(0, 2).map((column) => documentaryGradeCellText(second, column)), ['6,1', '—']);
 });

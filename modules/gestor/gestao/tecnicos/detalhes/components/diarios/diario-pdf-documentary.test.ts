@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { composeDiarioPdf, composeDiarioPdfWithManifest } from './diario-pdf.ts';
 import { createSnapshot, loadAssets, IDS } from './diario-pdf-server-boundary.fixtures.ts';
+import { buildResultHeaderCells } from './diario-pdf-result-table.ts';
 import type { DiarioPdfRenderableData } from './diario-pdf.contract.ts';
 
 declare const Deno: { test: (name: string, fn: () => Promise<void>) => void };
@@ -20,12 +21,13 @@ const pageCommands = (pdf: Awaited<ReturnType<typeof composeDiarioPdf>>) => (
   pdf.internal as unknown as { pages: string[][] }
 ).pages.slice(1).map((page) => page.join('\n'));
 
-Deno.test('PDF normal separa P1/P2, preserva médias escritas e marcação documental', async () => {
+Deno.test('PDF agrupa instrumentos com rótulos da fonte, preservando médias e marcação documental', async () => {
   const pdf = await composeDiarioPdf(documentaryPreview(), await loadAssets());
   const commands = pageCommands(pdf).join('\n');
-  for (const header of ['P1', 'P2']) {
-    assert.ok(commands.includes(`(${header}) Tj`), `Coluna ausente: ${header}`);
-  }
+  const resultPage = pageCommands(pdf).find((page) => page.includes('(INSTRUMENTOS AVALIATIVOS) Tj'));
+  assert.ok(resultPage, 'Cabeçalho agrupado ausente');
+  assert.equal(resultPage.match(/\(P\) Tj/g)?.length, 2, 'Duas subcolunas P devem preservar os rótulos originais');
+  for (const invented of ['P1', 'P2']) assert.ok(!commands.includes(`(${invented}) Tj`));
   for (const unused of ['TI', 'TG', 'S', 'CQ', 'O']) {
     assert.ok(!commands.includes(`(${unused}) Tj`), `Coluna não utilizada: ${unused}`);
   }
@@ -33,7 +35,9 @@ Deno.test('PDF normal separa P1/P2, preserva médias escritas e marcação docum
   assert.ok(commands.includes('(5,0) Tj'));
   assert.ok(commands.includes('(9,5) Tj'));
   assert.ok(commands.includes('(FJ) Tj'));
-  assert.ok(!commands.includes('(INSTRUMENTOS AVALIATIVOS) Tj'));
+  assert.ok(commands.includes('(INSTRUMENTOS AVALIATIVOS) Tj'));
+  assert.ok(commands.includes('(PARCIAL) Tj'));
+  assert.ok(commands.includes('(RESULTADO FINAL) Tj'));
   assert.ok(!commands.includes('P: 4,4 | P: 5,0'));
   assert.ok(!commands.includes('(9,4) Tj'));
   assert.ok(!commands.includes('(null) Tj'));
@@ -61,14 +65,15 @@ Deno.test('materialização documental não contorna a validação de snapshot a
   await assert.rejects(async () => composeDiarioPdfWithManifest(documentaryPreview(), await loadAssets()));
 });
 
-Deno.test('PDF não substitui P1/P2 ausentes por nota canônica agregada', async () => {
+Deno.test('PDF não substitui instrumentos documentais ausentes por nota canônica agregada', async () => {
   const props = documentaryPreview();
   const missingId = 'synthetic-without-source';
   props.students.push({ id: missingId, nome: 'Aluno sem avaliação na fonte', matricula: 'M-002' });
   props.gradesMap[missingId] = { ...createSnapshot().gradesMap[IDS.student], p: 9.17 };
   const commands = pageCommands(await composeDiarioPdf(props, await loadAssets())).join('\n');
-  assert.ok(commands.includes('(P1) Tj'));
-  assert.ok(commands.includes('(P2) Tj'));
+  assert.ok(commands.includes('(P) Tj'));
+  assert.ok(commands.includes('(INSTRUMENTOS AVALIATIVOS) Tj'));
+  for (const invented of ['P1', 'P2']) assert.ok(!commands.includes(`(${invented}) Tj`));
   assert.ok(!commands.includes('(9,17) Tj'));
 });
 
@@ -109,8 +114,27 @@ Deno.test('colunas documentais preservam páginas configuradas e fluxo de PDF em
   assert.deepEqual(pageCommands(base).slice(0, 2), pageCommands(documentary).slice(0, 2));
   assert.ok(!pageCommands(blank).join('\n').includes('(4,4) Tj'));
   assert.ok(!pageCommands(blank).join('\n').includes('(5,0) Tj'));
-  for (const header of ['P1', 'P2']) assert.ok(pageCommands(blank).join('\n').includes(`(${header}) Tj`));
+  const blankResult = pageCommands(blank).find((page) => page.includes('(INSTRUMENTOS AVALIATIVOS) Tj'));
+  assert.ok(blankResult);
+  assert.equal(blankResult.match(/\(P\) Tj/g)?.length, 2);
+  for (const invented of ['P1', 'P2']) assert.ok(!blankResult.includes(`(${invented}) Tj`));
   for (const unused of ['TI', 'TG', 'S', 'CQ', 'O']) {
     assert.ok(!pageCommands(blank).join('\n').includes(`(${unused}) Tj`));
+  }
+});
+
+Deno.test('cabeçalho oficial agrupa instrumentos e frequência sem dividir as outras células', async () => {
+  for (const instruments of [['P'], ['P', 'P'], ['P', 'TI', 'TG', 'S', 'CQ', 'O']]) {
+    const headers = ['Nº', 'Nome do aluno', ...instruments, 'Média\nparcial', 'Rec', 'Média\nfinal', 'Falta', '%', 'Resultado final'];
+    const cells = buildResultHeaderCells(headers, instruments.length);
+    assert.deepEqual(cells.find((cell) => cell.label === 'INSTRUMENTOS AVALIATIVOS'), {
+      label: 'INSTRUMENTOS AVALIATIVOS', column: 2, colSpan: instruments.length, rowSpan: 1, row: 0,
+    });
+    assert.deepEqual(cells.find((cell) => cell.label === 'FREQUÊNCIA'), {
+      label: 'FREQUÊNCIA', column: instruments.length + 5, colSpan: 2, rowSpan: 1, row: 0,
+    });
+    assert.deepEqual(cells.filter((cell) => cell.row === 1).map((cell) => cell.label), [...instruments, 'Falta', '%']);
+    assert.deepEqual(cells.filter((cell) => cell.rowSpan === 2).map((cell) => cell.label),
+      ['Nº', 'Nome do aluno', 'Média\nparcial', 'Rec', 'Média\nfinal', 'Resultado final']);
   }
 });

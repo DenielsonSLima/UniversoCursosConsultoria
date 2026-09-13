@@ -20,6 +20,7 @@ import {
   drawTable,
   measureTableRowHeights,
 } from "./diario-pdf-table.ts";
+import { drawGroupedResultTable, RESULT_TABLE_HEADER_HEIGHT } from './diario-pdf-result-table.ts';
 import type { PdfImage } from "./diario-pdf-image.core.ts";
 import type { CanonicalInstitutionalHeader } from "../../../../../secretaria/shared/canonical-institutional-header-pdf.ts";
 import {
@@ -180,13 +181,13 @@ export const drawResultPages = (
   const studentsPerPage = 18;
   const studentGroups = chunks(props.students, studentsPerPage);
   const defaultRowHeight =
-    (STANDARD_CONTENT_BOTTOM - STANDARD_CONTENT_TOP - 8) / studentsPerPage;
+    (STANDARD_CONTENT_BOTTOM - STANDARD_CONTENT_TOP - RESULT_TABLE_HEADER_HEIGHT) / studentsPerPage;
   const finalTableBottomLimit = 174;
 
   studentGroups.forEach((students, groupIndex) => {
     const isLastGroup = groupIndex === studentGroups.length - 1;
     const finalPageRowHeight = students.length > 0
-      ? (finalTableBottomLimit - STANDARD_CONTENT_TOP - 8) / students.length
+      ? (finalTableBottomLimit - STANDARD_CONTENT_TOP - RESULT_TABLE_HEADER_HEIGHT) / students.length
       : defaultRowHeight;
     const rowHeight = isLastGroup
       ? Math.min(defaultRowHeight, finalPageRowHeight)
@@ -242,11 +243,12 @@ export const drawResultPages = (
         isBlank ? "" : stats.resultado.replaceAll("_", " "),
       ];
     });
-    drawTable(pdf, {
+    drawGroupedResultTable(pdf, {
       headers: [
-        "Nº", "Aluno(a)", ...instrumentHeaders, "Média",
-        "Rec.", "Final", "Faltas", "Freq.", "Resultado",
+        "Nº", "Nome do aluno", ...instrumentHeaders, "Média\nparcial",
+        "Rec", "Média\nfinal", "Falta", "%", "Resultado final",
       ],
+      instrumentCount: instrumentHeaders.length,
       rows,
       widths: [7, 75, ...instrumentHeaders.map(() => 72 / instrumentHeaders.length), 13, 13, 13, 12, 14, 35],
       startY: STANDARD_CONTENT_TOP,
@@ -255,7 +257,7 @@ export const drawResultPages = (
     });
 
     if (isLastGroup) {
-      const legendY = STANDARD_CONTENT_TOP + 8 + students.length * rowHeight + 5;
+      const legendY = STANDARD_CONTENT_TOP + RESULT_TABLE_HEADER_HEIGHT + students.length * rowHeight + 5;
       pdf.setFont("helvetica", "bold");
       pdf.setFontSize(6.4);
       setTextColor(pdf, NAVY);
