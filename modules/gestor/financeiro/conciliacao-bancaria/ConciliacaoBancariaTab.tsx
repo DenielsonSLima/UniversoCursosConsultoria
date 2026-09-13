@@ -55,6 +55,7 @@ const ConciliacaoBancariaTab: React.FC<ConciliacaoBancariaTabProps> = ({ poloId 
     settlementStartDate,
     settlementEndDate,
     diagnosticsEnabled: activeSubTab === 'diagnostico',
+    cnabEnabled: activeSubTab !== 'conciliacao',
   });
 
   const cnabReady = queries.cnabOverviewQuery.data?.edi7Configured === true;
@@ -299,6 +300,15 @@ const ConciliacaoBancariaTab: React.FC<ConciliacaoBancariaTabProps> = ({ poloId 
       {/* Sub-Tab 4: Diagnóstico & Resumo API */}
       {activeSubTab === 'diagnostico' && (
         <div className="space-y-6">
+          {overviewError ? (
+            <div role="status" className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-800">
+              <p className="font-black uppercase tracking-wide">
+                {/EDI7|Convênio de cobrança Banese não configurado/i.test(overviewError)
+                  ? 'Configuração CNAB240 pendente' : 'Consulta CNAB240 indisponível'}
+              </p>
+              <p className="mt-1">{overviewError}</p>
+            </div>
+          ) : null}
           {queries.overviewError ? (
             <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-800">
               <p className="font-black uppercase tracking-wide">Indicadores temporariamente indisponíveis</p>

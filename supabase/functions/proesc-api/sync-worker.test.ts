@@ -44,3 +44,38 @@ Deno.test('erro de consulta não aplica pagamento nem avança o cursor', async (
   const finish = f.calls.find((call) => call.args.p_action === 'finish');
   assert((finish?.args.p_payload as Record<string, unknown>)?.success === false);
 });
+
+Deno.test('telemetria separa GET mensal de obrigação e não inclui token, CPF ou corpo', async () => {
+  const f = await fixture();
+  await runProescSync(f.admin, 'actor', f.transport, now);
+  const payload = f.calls.find((call) => call.args.p_action === 'finish')?.args.p_payload as Record<string, unknown>;
+  const telemetry = payload.telemetry as { http: Array<{ httpStatus: number }>; items: Array<{ result: string }> };
+  assert(telemetry.http.length === 2 && telemetry.items.length === 1);
+  assert(telemetry.http.every((item) => item.httpStatus === 200) && telemetry.items[0].result === 'APPLIED');
+  const serialized = JSON.stringify(telemetry);
+  assert(!serialized.includes(token) && !serialized.includes('12345678901') && !serialized.includes('https://'));
+});
+Deno.test('403 fica HTTP_ERROR sanitizado e não simula obrigações consultadas', async () => {
+  const f = await fixture();
+  await runProescSync(f.admin, 'actor', () => Promise.resolve(new Response(`token=${token}`, { status: 403 })), now);
+  const payload = f.calls.find((call) => call.args.p_action === 'finish')?.args.p_payload as Record<string, unknown>;
+  const telemetry = payload.telemetry as { http: Array<{ httpStatus: number; errorCode: string }>; items: unknown[]; errorCode: string };
+  assert(telemetry.errorCode === 'HTTP_ERROR' && telemetry.items.length === 0);
+  assert(telemetry.http.some((row) => row.httpStatus === 403 && row.errorCode === 'HTTP_ERROR'));
+  assert(!JSON.stringify(telemetry).includes(token));
+});
+Deno.test('erro bruto de transporte não entra no histórico de execução', async () => {
+  const f = await fixture();
+  await runProescSync(f.admin, 'actor', () => Promise.reject(new Error(`https://proesc.invalid/?token=${token}&cpf=12345678901`)), now);
+  const payload = f.calls.find((call) => call.args.p_action === 'finish')?.args.p_payload as Record<string, unknown>;
+  assert((payload.telemetry as { errorCode: string }).errorCode === 'TRANSPORT_ERROR');
+  assert(!JSON.stringify(payload.telemetry).includes(token) && !JSON.stringify(payload.telemetry).includes('12345678901'));
+});
+Deno.test('200 sem prova financeira registra REVIEW, sem classificar como falha HTTP', async () => {
+  const f = await fixture();
+  await runProescSync(f.admin, 'actor', () => Promise.resolve(Response.json({ status: 'success', data: [] })), now);
+  const payload = f.calls.find((call) => call.args.p_action === 'finish')?.args.p_payload as Record<string, unknown>;
+  const telemetry = payload.telemetry as { http: Array<{ errorCode: string | null }>; items: Array<{ result: string }>; errorCode: string | null };
+  assert(telemetry.http.every((row) => row.errorCode === null));
+  assert(telemetry.items[0].result === 'REVIEW' && telemetry.errorCode === null);
+});

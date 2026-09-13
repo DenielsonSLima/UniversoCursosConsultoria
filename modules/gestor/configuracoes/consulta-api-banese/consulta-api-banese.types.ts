@@ -55,6 +55,19 @@ export interface BanesePollingRun {
   finished_at?: string | null;
 }
 
+export interface BaneseAttemptRecovery {
+  status: 'RECOVERED_AFTER_QUERY' | 'SETTLED_CURRENT' | 'TERMINAL_CURRENT' | 'AWAITING_NEW_QUERY';
+  label: string;
+  currentQueryLabel: string;
+  recoveredAt: string | null;
+  latestQueryAt: string | null;
+  latestQueryResult: BanesePollingAttempt['result'];
+  latestQueryErrorClass: string | null;
+  queueState: string | null;
+  queueLabel: string;
+  nextCheckAt: string | null;
+}
+
 export interface BanesePollingAttempt {
   id: number | string;
   run_id?: string | null;
@@ -76,6 +89,7 @@ export interface BanesePollingAttempt {
   current_gateway_status?: string | null;
   paid_at?: string | null;
   amount_paid?: number | null;
+  recovery?: BaneseAttemptRecovery | null;
 }
 
 export interface BanesePollingTransition {

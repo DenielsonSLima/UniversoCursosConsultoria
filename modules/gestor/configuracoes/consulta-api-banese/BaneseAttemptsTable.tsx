@@ -18,9 +18,9 @@ interface BaneseAttemptsTableProps {
 }
 
 const contextCopy: Record<BaneseAttemptsContext, string> = {
-  queries: 'Consultas recentes, uma por boleto. O resultado da tentativa fica separado da situação atual do título.',
+  queries: 'Histórico de tentativas de consulta. Um boleto pode ter vários registros; a situação atual aparece separadamente.',
   settlements: 'Baixas confirmadas pela API, uma por título. Elas não somem quando novas consultas entram no histórico.',
-  errors: 'Erros recentes em lista própria. Um erro continua visível mesmo quando o título aparece atualmente como pago.',
+  errors: 'Histórico de erros de consulta. Eventos antigos permanecem auditáveis; a recuperação e a última consulta mostram se a falha foi superada.',
 };
 
 const dateTime = (value?: string | null) => value
@@ -107,8 +107,6 @@ const AttemptResult = ({ attempt }: { attempt: BanesePollingAttempt }) => (
 );
 
 const CurrentTitle = ({ attempt }: { attempt: BanesePollingAttempt }) => {
-  const failedButPaid = attempt.result === 'ERROR'
-    && attempt.current_receivable_status === 'PAGO';
   return (
     <div>
       <StatusPill value={attempt.current_receivable_status} />
@@ -123,10 +121,16 @@ const CurrentTitle = ({ attempt }: { attempt: BanesePollingAttempt }) => {
           Pago em {civilDate(attempt.paid_at)} • {money(attempt.amount_paid)}
         </p>
       ) : null}
-      {failedButPaid ? (
-        <p className="mt-1 text-[10px] font-bold text-amber-700">
-          A tentativa falhou; o título está pago atualmente.
-        </p>
+      {attempt.recovery ? (
+        <div className="mt-2 space-y-1 border-t border-slate-100 pt-2 text-[10px] font-semibold text-slate-600">
+          <p className="font-bold text-[#001a33]">{attempt.recovery.label}</p>
+          {attempt.recovery.recoveredAt ? <p>Consulta recuperada em {dateTime(attempt.recovery.recoveredAt)}</p> : null}
+          <p>{attempt.recovery.currentQueryLabel}</p>
+          {attempt.recovery.latestQueryAt ? <p>Última tentativa em {dateTime(attempt.recovery.latestQueryAt)}</p> : null}
+          {attempt.recovery.latestQueryErrorClass ? <p className="text-red-700">{attempt.recovery.latestQueryErrorClass}</p> : null}
+          <p>Fila: {attempt.recovery.queueLabel}</p>
+          {attempt.recovery.nextCheckAt ? <p>Próxima consulta em {dateTime(attempt.recovery.nextCheckAt)}</p> : null}
+        </div>
       ) : null}
     </div>
   );
@@ -163,7 +167,7 @@ const BaneseAttemptsTable = ({
           </span>
         ) : null}
         <span className="rounded-full bg-slate-100 px-3 py-1.5 text-[10px] font-black uppercase text-slate-600">
-          {totalCount} {totalCount === 1 ? 'registro' : 'registros'}
+          {totalCount} {context === 'errors' ? 'eventos históricos' : totalCount === 1 ? 'registro' : 'registros'}
         </span>
       </div>
     </div>

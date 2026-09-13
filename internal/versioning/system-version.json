@@ -1,8 +1,8 @@
 {
-  "version": "4.8.51",
+  "version": "4.8.52",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 60,
+  "revision": 61,
   "releasedAt": "2026-09-12",
-  "summary": "Indicadores de inadimplência e margem do Caixa por mês e polo selecionados"
+  "summary": "Acompanhamento da API Proesc e recuperação de consultas Banese"
 }
