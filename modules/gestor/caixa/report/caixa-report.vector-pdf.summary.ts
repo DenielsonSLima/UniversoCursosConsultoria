@@ -201,6 +201,7 @@ export const drawSummaryPanels = (pdf: jsPDF, report: CaixaDetailedReport, y: nu
 };
 
 export const drawSummaryPage = (pdf: jsPDF, report: CaixaDetailedReport, contentTop: number) => {
+  const monthly = report.resumo.compromissos.inadimplenciaMensal;
   setText(pdf, COLORS.navy, 15, 'black');
   drawText(pdf, 'PRESTAÇÃO DE CONTAS MENSAL', CONTENT_LEFT, contentTop);
   setText(pdf, COLORS.slate500, 6.2);
@@ -283,16 +284,16 @@ export const drawSummaryPage = (pdf: jsPDF, report: CaixaDetailedReport, content
     },
     {
       column: 1,
-      label: 'Inadimplência',
+      label: 'Inadimplência do mês',
       value: formatCaixaCurrency(report.resumo.compromissos.receberVencido),
-      description: 'Valor vencido ainda não liquidado',
+      description: `Não recebido até ${formatCaixaDate(monthly.dataCorte)}`,
       tone: (report.resumo.compromissos.receberVencido > 0 ? 'amber' : 'neutral') as Tone,
     },
     {
       column: 2,
-      label: 'Margem de inadimplência',
+      label: 'Margem de inadimplência do mês',
       value: formatCaixaPercent(report.resumo.compromissos.margemInadimplencia),
-      description: 'Sobre a carteira a receber',
+      description: 'Sobre cobranças com vencimento no mês',
       tone: (report.resumo.compromissos.margemInadimplencia > 0 ? 'amber' : 'neutral') as Tone,
     },
     {
@@ -335,7 +336,10 @@ export const drawSummaryPage = (pdf: jsPDF, report: CaixaDetailedReport, content
   pdf.setDrawColor('#dbeafe');
   pdf.roundedRect(CONTENT_LEFT, noticeTop, CONTENT_WIDTH, 5.5, 1.8, 1.8, 'FD');
   setText(pdf, '#1e3a8a', 5.3, 'bold');
-  drawText(pdf, 'Leitura correta: o resultado mensal representa o fluxo de caixa confirmado, não lucro contábil por competência. O saldo Banese é a posição contábil do sistema; a integração atual não consulta o extrato bancário.', CONTENT_LEFT + 3, noticeTop + 1.4, CONTENT_WIDTH - 6, { maxLines: 1 });
+  const notice = !monthly.completo
+    ? `Indicadores mensais incompletos: ${monthly.quantidadeEmConferencia} cobrança(s) em conferência não incluída(s). Base do mês: ${formatCaixaCurrency(monthly.baseElegivel)}. Posição até ${formatCaixaDate(monthly.dataCorte)}.`
+    : 'Leitura correta: o resultado mensal representa o fluxo de caixa confirmado, não lucro contábil por competência. O saldo Banese é a posição contábil do sistema; a integração atual não consulta o extrato bancário.';
+  drawText(pdf, notice, CONTENT_LEFT + 3, noticeTop + 1.4, CONTENT_WIDTH - 6, { maxLines: 1 });
 
   drawSummaryPanels(pdf, report, noticeTop + 7.5);
 };

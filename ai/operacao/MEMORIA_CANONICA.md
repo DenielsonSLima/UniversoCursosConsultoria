@@ -57,8 +57,14 @@ Este arquivo é um índice curto de contexto durável. Ajustes rápidos não pre
 - Cobertura financeira é individual e permanece em revisão até prova suficiente. Sincronizar pagamento confirmado não autoriza criar outro ciclo ou boleto. T42 e Radiologia mantêm as regras existentes.
 - Base 4.8.48 publicada no PR142, squash b5b185e5067e5a7ea02075edfb6667ddcb5fb72b, com CI/Vercel e versão pública confirmados. 4.8.49/revisão 58 publicada no PR143/squash 58a6675fcc531d4e907987b0d5281698fb6ad7e6: CI/Vercel SUCCESS, HTTP200 com asset main-BVVN6ra3.js e acesso autenticado confirmados. Resumo e classificação financeira vêm do backend, sem cálculo no frontend. RAG indexado uma vez no fechamento pelo coordenador. Registro: registros/alteracoes/2026-09-12-proesc-importacao-xls.md.
 
-## Lote corrente — Conciliação 4.8.50
+## Conciliação publicada — 4.8.50
 
 - Remover Atualizar Dados e textos indevidos de Mercado Pago; acrescentar filtro Proesc/Banese junto à busca.
 - Origem, filtro, paginação e totais pertencem à RPC, mantendo autorização por polo. Não desligar monitores nem alterar fatos financeiros ao remover a ação visual.
-- Versão 4.8.50/revisão 59 preparada sobre 58a6675; implementação, testes focados, build e teste real das RPCs aprovados; duas migrations aplicadas e imutáveis. Publicação e smoke de produção pendentes. Proesc REVIEW não implica vencimento confirmado nem permite consulta Banese. Registro: registros/alteracoes/2026-09-12-conciliacao-origem-proesc-banese.md.
+- Versão 4.8.50/revisão 59 publicada no PR144/squash 4b513e085dcb6c0dcf133cf9c0975f28a0023caf, com Vercel SUCCESS e HTTP200 asset main-B8U4uhUw.js; smoke autenticado final em andamento. Duas migrations aplicadas e imutáveis. RAG indexado uma vez pelo coordenador, 11 fontes/71 chunks. Proesc REVIEW não implica vencimento confirmado nem permite consulta Banese. Registro: registros/alteracoes/2026-09-12-conciliacao-origem-proesc-banese.md.
+
+## Lote corrente — Caixa 4.8.51
+
+- Inadimplência e margem devem representar o mês e polo selecionados, com numerador, denominador e resultado canônico calculados no backend/RPC.
+- Base é o principal elegível com vencimento no mês; atraso usa posição no corte atual/encerramento. Pagamento posterior preserva atraso histórico; desconto não cria saldo residual. Proesc sem prova fica fora das bases com metadados de conferência. Nenhum cálculo financeiro no frontend.
+- Versão 4.8.51/revisão 60 preparada sobre 4b513e0; migration aplicada e SQL real/dashboard/PDF aprovados, testes focados e UI/PDF sintéticos aprovados. Build inicial aprovado; Caixa setembro autenticado confirmou RPC novo R$ 4.288,30/25,98%. Linha laranja de inadimplência no gráfico dos últimos três meses implementada com série RPC; segunda migration aplicada e imutável. Série/relatório, 64 testes e build final aprovados; smoke autenticado dos novos rótulos/linha em 4.8.51 pendente após deploy. Negativa específica por polo restrito sem fixture ativa; guarda original preservada. Aprovação de produção somente após PR pronto. Registro: registros/alteracoes/2026-09-12-caixa-indicadores-mensais.md.

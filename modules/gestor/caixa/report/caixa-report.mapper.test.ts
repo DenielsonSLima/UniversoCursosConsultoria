@@ -47,6 +47,12 @@ const summary = {
   compromissos: {
     a_receber: 0,
     receber_vencido: 0,
+    margem_inadimplencia: 0,
+    inadimplencia_mensal: {
+      periodo_inicio: '2026-07-01', periodo_fim_exclusivo: '2026-08-01', data_corte: '2026-07-27',
+      base_elegivel: 0, quantidade_elegiveis: 0, quantidade_em_conferencia: 0,
+      valor_nominal_em_conferencia: 0, completo: true, criterio: 'VENCIMENTO_MENSAL_POSICAO_NO_CORTE',
+    },
     a_pagar: 0,
     pagar_vencido: 0,
   },
