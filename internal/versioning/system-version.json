@@ -1,8 +1,8 @@
 {
-  "version": "4.8.57",
+  "version": "4.8.58",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 66,
+  "revision": 67,
   "releasedAt": "2026-09-13",
-  "summary": "Diários T41 e T42 preenchidos com aulas, notas e frequências dos documentos"
+  "summary": "Caixa distingue obrigações confirmadas e Proesc preserva pagamentos fora da competência"
 }

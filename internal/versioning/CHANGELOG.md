@@ -2,7 +2,13 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
-Histórico anterior: [27/08/2026 a 31/08/2026 — versões 4.8.8 a 4.8.19](./changelog/2026-08-27-a-2026-08-31.md), [26/08/2026 — versões 4.8.6 a 4.8.7](./changelog/2026-08-26.md), [25/08/2026 — versões 4.8.2 a 4.8.5](./changelog/2026-08-25-parte-1.md), [24/08/2026 — versões 4.8.0 a 4.8.1](./changelog/2026-08-24-parte-2.md), [24/08/2026 — versões 4.7.5 a 4.7.7](./changelog/2026-08-24-parte-1.md), [22/08/2026 a 23/08/2026](./changelog/2026-08-22-a-2026-08-23.md), [21/08/2026 a 22/08/2026 — parte 2](./changelog/2026-08-21-a-2026-08-22-parte-2.md), [21/08/2026 — parte 1](./changelog/2026-08-21-parte-1.md), [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+Histórico anterior: [01/09/2026 — versões 4.8.20 a 4.8.22](./changelog/2026-09-01-versoes-4-8-20-a-4-8-22.md), [27/08/2026 a 31/08/2026 — versões 4.8.8 a 4.8.19](./changelog/2026-08-27-a-2026-08-31.md), [26/08/2026 — versões 4.8.6 a 4.8.7](./changelog/2026-08-26.md), [25/08/2026 — versões 4.8.2 a 4.8.5](./changelog/2026-08-25-parte-1.md), [24/08/2026 — versões 4.8.0 a 4.8.1](./changelog/2026-08-24-parte-2.md), [24/08/2026 — versões 4.7.5 a 4.7.7](./changelog/2026-08-24-parte-1.md), [22/08/2026 a 23/08/2026](./changelog/2026-08-22-a-2026-08-23.md), [21/08/2026 a 22/08/2026 — parte 2](./changelog/2026-08-21-a-2026-08-22-parte-2.md), [21/08/2026 — parte 1](./changelog/2026-08-21-parte-1.md), [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+
+## [4.8.58] - 2026-09-13
+
+- Proesc preserva pagamentos comprovados fora da competência consultada e continua bloqueando conjuntos repetidos entre períodos.
+- Receitas futuras do Caixa considera somente obrigações abertas comprovadas e informa a quantidade em conferência.
+- Diagnóstico interno guarda motivos específicos de revisão de forma sanitizada, sem alterar a decisão financeira nem o histórico.
 
 ## [4.8.57] - 2026-09-13
 
@@ -432,69 +438,3 @@ Histórico anterior: [27/08/2026 a 31/08/2026 — versões 4.8.8 a 4.8.19](./cha
   e build de produção foram aprovados.
 - O smoke visual autenticado permaneceu pendente porque não havia navegador
   conectado à sessão de validação.
-
-## [4.8.22] - 2026-09-01
-
-### Alterado
-
-- Toda nova turma técnica passa a declarar um de três estados financeiros:
-  nova, importada com o primeiro ciclo histórico ou importada concluída.
-- Adicionar aluno a uma turma técnica manual apenas salva o vínculo e a regra
-  financeira como pendentes; nenhum recebível, boleto ou agendamento é criado.
-- A aba Financeiro mostra a prévia e gera, por confirmação individual, no
-  máximo dois ciclos com os valores, encargos e quantidade configurados.
-- O primeiro vencimento do segundo ciclo é individual; com rematrícula, as
-  mensalidades começam no mês seguinte, e sem rematrícula a primeira parcela
-  usa a própria data informada.
-
-### Segurança e integridade
-
-- A Turma 42 inicia no segundo ciclo, e a matrícula que já possui rematrícula
-  mais 12 parcelas fica protegida estruturalmente contra duplicação ou reemissão.
-- Inadimplência, ciclo anterior incompleto e status `TRANCADO` bloqueiam a nova
-  geração no backend; o pagamento não dispara ciclo futuro automaticamente.
-- A geração cria apenas recebíveis locais. A emissão Banese continua posterior,
-  explícita por recebível e sem webhook.
-
-### Corrigido
-
-- O bundle das APIs financeiras voltou a exportar o helper de leitura Banese,
-  eliminando o erro de inicialização que zerava a tela de conciliação.
-
-### Qualidade
-
-- O lote adiciona contratos para os três estados de turma, dois ciclos, prévia,
-  idempotência, RBAC, Turma 42, alunos trancados e guardas Asaas/Banese/CNAB.
-
-## [4.8.21] - 2026-09-01
-
-### Segurança e qualidade
-
-- O CI passa a executar 71 contratos BolePix/Banese, incluindo o claim durável
-  exigido antes de qualquer POST e as guardas CAS da recuperação auditada.
-- O fixture de emissão simula a intenção persistida e impede que regressões do
-  contrato bancário permaneçam ocultas por uma suíte não exercitada no gate.
-
-### Escopo
-
-- A versão não altera runtime financeiro, banco, Edge Functions, PDFs ou
-  cobranças; o avanço registra exclusivamente o reforço de testes e CI.
-
-## [4.8.20] - 2026-09-01
-
-### Corrigido
-
-- O BolePix EAD passa a preservar atomicamente o retorno oficial do POST,
-  inclusive o payload e a imagem Pix, sem descartar a resposta bancária por
-  diferença de formatação local do CPF.
-- Títulos EAD já emitidos sem Pix ganham recuperação GET-only e uma substituição
-  excepcional cercada por identidade bancária, ausência de pagamento, baixa
-  remota confirmada, novo Nosso Número e proibição de segundo POST ambíguo.
-
-### Segurança e qualidade
-
-- O fluxo de substituição é exclusivo para EAD, usa lease/CAS, arquiva a
-  identidade antiga e nunca copia Pix, linha digitável ou código de barras de
-  outro título; cobranças Técnicas permanecem fora da rota.
-- A imagem QR é gerada apenas a partir do EMV oficial validado, com CRC e valor
-  compatíveis, e a primeira persistência do par Pix ocorre de forma atômica.

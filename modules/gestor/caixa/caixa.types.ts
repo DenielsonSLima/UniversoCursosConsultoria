@@ -34,6 +34,14 @@ export interface CaixaMonthlyStatement {
   };
   compromissos: {
     aReceber: number;
+    receitasFuturas?: {
+      valorConfirmado: number;
+      quantidadeElegiveis: number;
+      quantidadeEmConferencia: number;
+      valorNominalEmConferencia: number;
+      completo: boolean;
+      criterio: 'OBRIGACOES_ABERTAS_COMPROVADAS_POSICAO_ATUAL';
+    };
     receberVencido: number;
     margemInadimplencia: number;
     inadimplenciaMensal: {

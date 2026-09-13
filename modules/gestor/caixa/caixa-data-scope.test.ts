@@ -175,12 +175,36 @@ test('exibe a inadimplência mensal somente com os valores e critérios da RPC',
   };
 
   const parsedWithBackendMargin = mapCaixaStatement(basePayload);
+  assert.equal(parsedWithBackendMargin.compromissos.receitasFuturas, undefined);
   assert.equal(parsedWithBackendMargin.compromissos.margemInadimplencia, 7.96);
   assert.equal(formatCaixaPercent(parsedWithBackendMargin.compromissos.margemInadimplencia), '7,96%');
 
   assert.equal(parsedWithBackendMargin.compromissos.inadimplenciaMensal.baseElegivel, 10000);
   assert.equal(parsedWithBackendMargin.compromissos.inadimplenciaMensal.quantidadeEmConferencia, 2);
   assert.equal(parsedWithBackendMargin.compromissos.inadimplenciaMensal.completo, false);
+  const futuras = {
+    valor_confirmado: '0.00', quantidade_elegiveis: 0, quantidade_em_conferencia: 7,
+    valor_nominal_em_conferencia: '1750.00', completo: false,
+    criterio: 'OBRIGACOES_ABERTAS_COMPROVADAS_POSICAO_ATUAL',
+  };
+  const parsedFuture = mapCaixaStatement({ ...basePayload, compromissos: {
+    ...basePayload.compromissos, receitas_futuras: futuras,
+  } });
+  assert.deepEqual(parsedFuture.compromissos.receitasFuturas, {
+    valorConfirmado: 0, quantidadeElegiveis: 0, quantidadeEmConferencia: 7,
+    valorNominalEmConferencia: 1750, completo: false,
+    criterio: 'OBRIGACOES_ABERTAS_COMPROVADAS_POSICAO_ATUAL',
+  });
+  assert.equal(parsedFuture.compromissos.aReceber, basePayload.compromissos.a_receber);
+  for (const invalidFuture of [null, {}, { ...futuras, valor_confirmado: null },
+    { ...futuras, valor_confirmado: true }, { ...futuras, valor_confirmado: -1 },
+    { ...futuras, valor_nominal_em_conferencia: ' ' }, { ...futuras, quantidade_elegiveis: 0.5 },
+    { ...futuras, quantidade_em_conferencia: null }, { ...futuras, completo: 'false' },
+    { ...futuras, criterio: 'VENCIMENTO_MENSAL_POSICAO_NO_CORTE' }]) {
+    assert.throws(() => mapCaixaStatement({ ...basePayload, compromissos: {
+      ...basePayload.compromissos, receitas_futuras: invalidFuture,
+    } }), /Contrato inválido das receitas futuras/);
+  }
   for (const invalidMargin of [undefined, null, NaN]) {
     assert.throws(() => mapCaixaStatement({
       ...basePayload,

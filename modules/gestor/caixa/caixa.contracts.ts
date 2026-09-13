@@ -78,6 +78,24 @@ export const assertStatementPayload = (payload: RawItem) => {
   const resumo = payload.resumo_competencia;
   const compromissos = payload.compromissos;
   const mensal = isRecord(compromissos) ? compromissos.inadimplencia_mensal : undefined;
+  const futuras = isRecord(compromissos) ? compromissos.receitas_futuras : undefined;
+  const nonNegativeNumber = (value: unknown) => (
+    (typeof value === 'number' || (typeof value === 'string' && value.trim() !== ''))
+    && isNumericValue(value) && Number(value) >= 0
+  );
+  if (futuras !== undefined && (
+    !isRecord(futuras)
+    || !nonNegativeNumber(futuras.valor_confirmado)
+    || !nonNegativeNumber(futuras.valor_nominal_em_conferencia)
+    || !nonNegativeNumber(futuras.quantidade_elegiveis)
+    || !isNonNegativeSafeInteger(futuras.quantidade_elegiveis)
+    || !nonNegativeNumber(futuras.quantidade_em_conferencia)
+    || !isNonNegativeSafeInteger(futuras.quantidade_em_conferencia)
+    || typeof futuras.completo !== 'boolean'
+    || futuras.criterio !== 'OBRIGACOES_ABERTAS_COMPROVADAS_POSICAO_ATUAL'
+  )) {
+    throw new Error('Contrato inválido das receitas futuras do Caixa.');
+  }
 
   const hasRequiredArrays = [
     payload.receitas_por_modalidade,
