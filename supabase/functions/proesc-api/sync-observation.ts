@@ -23,18 +23,22 @@ export async function observeLinkedObligation(
       || !row.identity.studentDocument
       || await sha256(row.identity.studentDocument) !== link.personHash) issues.add('IDENTITY_REQUIRES_REVIEW');
     if (row.cancelled !== false || row.renegotiationPayment !== false) issues.add('SOURCE_STATE_REQUIRES_REVIEW');
-    if (row.blockId === '2' && row.paymentDate?.slice(0, 7)
-      !== `${row.source.year}-${String(row.source.month).padStart(2, '0')}`) issues.add('PAYMENT_REPEATED_OUTSIDE_ITS_PERIOD');
   }
   const principal = rows.filter((row) => row.blockId === '1');
   const payments = rows.filter((row) => row.blockId === '2');
+  // O período seleciona a consulta, não a data econômica do pagamento.
+  // Uma resposta pode conter pagamento de outro mês/ano. Já conjuntos de
+  // respostas distintas podem repetir o mesmo fato: não somar nem deduplicar.
+  const paymentPeriods = new Set(payments.map((row) => `${row.source.year}-${row.source.month}`));
+  if (paymentPeriods.size > 1) issues.add('PAYMENT_OBSERVED_IN_MULTIPLE_PERIODS');
   if (principal.length !== 1 || principal[0].amountCents !== link.principalCents) issues.add('PRINCIPAL_REQUIRES_REVIEW');
   if (!payments.length) issues.add('NO_PAYMENT_IN_OBSERVED_PERIODS');
   const dates = new Set(payments.map((row) => row.paymentDate));
   if (dates.size > 1) issues.add('PAYMENTS_ON_MULTIPLE_DATES_REQUIRE_REVIEW');
-  const receivedCents = payments.reduce((sum, row) => sum + row.amountCents, 0);
-  if (!Number.isSafeInteger(receivedCents)) issues.add('PAYMENT_AMOUNT_EXCEEDS_SAFE_RANGE');
-  const payment = payments.length && dates.size === 1
+  const receivedCents = paymentPeriods.size > 1 ? null
+    : payments.reduce((sum, row) => sum + row.amountCents, 0);
+  if (receivedCents !== null && !Number.isSafeInteger(receivedCents)) issues.add('PAYMENT_AMOUNT_EXCEEDS_SAFE_RANGE');
+  const payment = payments.length && dates.size === 1 && receivedCents !== null
     ? { amountCents: receivedCents, paymentDate: payments[0].paymentDate } : null;
   if (payment && (!payment.paymentDate || payment.paymentDate > now.toISOString().slice(0, 10)
     || payment.amountCents <= 0)) issues.add('PAYMENT_REQUIRES_REVIEW');

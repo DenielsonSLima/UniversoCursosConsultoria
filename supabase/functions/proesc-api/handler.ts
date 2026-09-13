@@ -5,6 +5,7 @@ import { buildCorsHeaders, isRateLimitExceeded, json } from '../_shared/http.ts'
 import { object, ProescError } from './contract.ts';
 import { testProescToken } from './test-token.ts';
 import { runProescSync } from './sync-worker.ts';
+import { runProescReadOnlyDiagnostic } from './diagnostic-readonly.ts';
 
 type Admin = Parameters<typeof requireGestorAtivo>[1];
 const publicActions = new Set(['status', 'save_token', 'remove_token', 'class_history', 'class_events', 'test_token']);
@@ -34,7 +35,7 @@ export const createHandler = (admin: Admin, transport: typeof fetch = fetch) => 
       });
       if (error || typeof data?.actorId !== 'string') throw new ProescError('Acesso interno não autorizado.', 403);
       return respond(await runProescSync(admin, data.actorId, transport));
-    } else if (action === 'internal_probe') {
+    } else if (action === 'internal_probe' || action === 'internal_accounting_probe') {
       const key = req.headers.get('X-Proesc-Worker-Secret') || '';
       if (!/^[0-9a-f]{64}$/.test(key)) throw new ProescError('Acesso interno não autorizado.', 403);
       const { data, error } = await admin.rpc('proesc_internal_probe_service', {
@@ -51,6 +52,12 @@ export const createHandler = (admin: Admin, transport: typeof fetch = fetch) => 
     }
     if (isRateLimitExceeded(`proesc:${actorId}`, 100, 60000)) {
       return respond({ error: 'Muitas consultas. Aguarde um minuto e retome.' }, 429);
+    }
+    if (action === 'internal_accounting_probe') {
+      if (isRateLimitExceeded(`proesc-accounting-probe:${actorId}`, 5, 60000)) {
+        throw new ProescError('Aguarde um minuto antes de consultar novamente.', 429);
+      }
+      return respond(await runProescReadOnlyDiagnostic(admin, actorId, body, transport));
     }
     const rpc = async (name: string, action: string, payload: unknown = {}) => {
       const { data, error } = await admin.rpc(name, {

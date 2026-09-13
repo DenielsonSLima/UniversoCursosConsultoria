@@ -147,10 +147,10 @@ Deno.test('testar token usa credencial do servidor e ignora parâmetros operacio
 });
 
 Deno.test('probe interno exige segredo validado pela RPC privada antes de acessar a credencial', async () => {
-  for (const key of ['', 'forged', 'a'.repeat(64)]) {
+  for (const action of ['internal_probe', 'internal_accounting_probe']) for (const key of ['', 'forged', 'a'.repeat(64)]) {
     const { admin, calls } = fixture({ dbError: true });
     let networkCalls = 0;
-    const req = request({ action: 'internal_probe', internal: true, role: 'service_role' });
+    const req = request({ action, internal: true, role: 'service_role' });
     req.headers.set('X-Proesc-Worker-Secret', key);
     const response = await createHandler(admin, () => { networkCalls++; throw new Error('forbidden'); })(req);
     assert(response.status === 403 && networkCalls === 0);

@@ -26,6 +26,7 @@ export const mapCaixaStatement = (value: unknown): CaixaMonthlyStatement => {
   const saldos = asRecord(payload.saldos_hoje);
   const resumo = asRecord(payload.resumo_competencia);
   const compromissos = asRecord(payload.compromissos);
+  const futuras = asRecord(compromissos.receitas_futuras);
   const mensal = asRecord(compromissos.inadimplencia_mensal);
   const classificacao = asRecord(payload.classificacao);
   const conciliacao = asRecord(payload.conciliacao);
@@ -63,6 +64,16 @@ export const mapCaixaStatement = (value: unknown): CaixaMonthlyStatement => {
     },
     compromissos: {
       aReceber: asNumber(compromissos.a_receber),
+      ...(compromissos.receitas_futuras === undefined ? {} : {
+        receitasFuturas: {
+          valorConfirmado: asNumber(futuras.valor_confirmado),
+          quantidadeElegiveis: asNumber(futuras.quantidade_elegiveis),
+          quantidadeEmConferencia: asNumber(futuras.quantidade_em_conferencia),
+          valorNominalEmConferencia: asNumber(futuras.valor_nominal_em_conferencia),
+          completo: futuras.completo === true,
+          criterio: 'OBRIGACOES_ABERTAS_COMPROVADAS_POSICAO_ATUAL' as const,
+        },
+      }),
       receberVencido: asNumber(compromissos.receber_vencido),
       margemInadimplencia: asNumber(compromissos.margem_inadimplencia),
       inadimplenciaMensal: {

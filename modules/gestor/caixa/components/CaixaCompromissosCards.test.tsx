@@ -3,10 +3,13 @@ import test from 'node:test';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { CaixaCompromissosCards } from './CaixaCompromissosCards';
+import type { CaixaMonthlyStatement } from '../caixa.types';
 
-const renderCards = (receberVencido: number, margemInadimplencia: number, completo = true) => (
+const renderCards = (receberVencido: number, margemInadimplencia: number, completo = true,
+  receitasFuturas?: CaixaMonthlyStatement['compromissos']['receitasFuturas']) => (
   renderToStaticMarkup(<CaixaCompromissosCards compromissos={{
     aReceber: 100000, receberVencido, margemInadimplencia, aPagar: 200, pagarVencido: 30,
+    receitasFuturas,
     inadimplenciaMensal: {
       periodoInicio: '2026-07-01', periodoFimExclusivo: '2026-08-01', dataCorte: '2026-07-31',
       baseElegivel: 1500, quantidadeElegiveis: 10, quantidadeEmConferencia: completo ? 0 : 2,
@@ -61,4 +64,25 @@ test('zero parcial não parece ausência definitiva de inadimplência', () => {
   const complete = renderCards(0, 0);
   assert.doesNotMatch(complete, /\(parcial\)|em valor nominal|base conferida/);
   assert.match(complete, /Não recebido até 31\/07\/2026/);
+});
+
+test('receitas futuras usa valor confirmado canônico, inclusive zero, e distingue conferência atual da mensal', () => {
+  const future = {
+    valorConfirmado: 0, quantidadeElegiveis: 0, quantidadeEmConferencia: 7,
+    valorNominalEmConferencia: 1750, completo: false,
+    criterio: 'OBRIGACOES_ABERTAS_COMPROVADAS_POSICAO_ATUAL' as const,
+  };
+  const html = renderCards(125, 17.23, false, future);
+  assert.match(html, /Receitas futuras confirmadas/);
+  assert.match(html, /Obrigações abertas hoje · 7 cobrança\(s\) em conferência/);
+  assert.match(html, /0,00/);
+  assert.doesNotMatch(html, /100.000,00|1.750,00/);
+  assert.match(html, /2 cobrança\(s\) em conferência não incluída\(s\)/);
+  const complete = renderCards(125, 17.23, true, { ...future,
+    valorConfirmado: 350, quantidadeElegiveis: 2, quantidadeEmConferencia: 0,
+    valorNominalEmConferencia: 0, completo: true,
+  });
+  assert.match(complete, /350,00/);
+  assert.doesNotMatch(complete, /cobrança\(s\) em conferência|100.000,00/);
+  assert.doesNotMatch(renderCards(125, 17.23), /Receitas futuras confirmadas/);
 });
