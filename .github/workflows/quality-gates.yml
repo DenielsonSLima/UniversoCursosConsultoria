@@ -152,6 +152,12 @@ jobs:
             supabase/functions/asaas/api/manual-settlement-remote.test.ts \
             supabase/functions/asaas/api/manual-settlement-money.test.ts
 
+      - name: Testar recuperação de timeout e filtros da conciliação
+        run: |
+          node --test \
+            lib/database-query-retry.test.ts \
+            modules/gestor/financeiro/conciliacao-bancaria/conciliacao-bancaria.filter-state.contract.test.ts
+
       - name: Testar relatório do Caixa
         run: npm run test:caixa-report
 

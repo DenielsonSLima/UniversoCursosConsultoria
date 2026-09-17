@@ -1,4 +1,5 @@
 import { queryOptions } from '@tanstack/react-query';
+import { retryDatabaseRead } from '../../../lib/database-query-retry';
 import {
   dashboardService,
   type DashboardKpiRequirements,
@@ -31,6 +32,7 @@ export const dashboardKpisQueryOptions = (poloId: string, accessKey = 'legacy') 
   return queryOptions({
     queryKey: dashboardQueryKeys.kpis(poloId, accessKey),
     queryFn: () => dashboardService.getKpis(poloId, requirements),
+    retry: retryDatabaseRead,
   });
 };
 
