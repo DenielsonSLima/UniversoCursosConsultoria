@@ -1,8 +1,8 @@
 {
-  "version": "4.8.67",
+  "version": "4.8.68",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 76,
+  "revision": 77,
   "releasedAt": "2026-09-16",
-  "summary": "Composição financeira Proesc preservada na conciliação"
+  "summary": "Referência da consulta à API Proesc separada do horário da baixa"
 }

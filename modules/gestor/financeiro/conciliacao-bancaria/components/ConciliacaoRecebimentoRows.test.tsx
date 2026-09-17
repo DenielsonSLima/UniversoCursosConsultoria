@@ -203,3 +203,78 @@ test('origem Proesc com horário efetivamente informado preserva o registro reto
     assert.doesNotMatch(confirmation, /Horário não disponível na integração Proesc/);
   }
 });
+
+test('consulta comprovada tem rótulo próprio em desktop e celular sem modificar a data do pagamento', () => {
+  const html = renderReceipt({
+    source_system: 'PROESC', origem: 'PROESC', baixa_registrada_em: null,
+    proesc_evidence: { apiConsultedAt: '2026-09-16T18:20:00Z' },
+  });
+  const consultations = fieldContents(html, 'Consulta à API');
+  assert.equal(consultations.length, 2);
+  for (const consultation of consultations) {
+    assert.match(consultation, /16\/09\/2026 às 15:20/);
+    assert.match(consultation, /dateTime="2026-09-16T18:20:00Z"/i);
+    assert.match(consultation, /Horário de referência da consulta; não é o horário da baixa/);
+  }
+  assert.equal(fieldContents(html, 'Baixa registrada').length, 0);
+  for (const payment of fieldContents(html, 'Data do pagamento')) {
+    assert.match(payment, /31\/08\/2026/);
+    assert.doesNotMatch(payment, /16\/09\/2026/);
+  }
+});
+
+test('horário real da baixa tem prioridade sobre a referência da consulta à API', () => {
+  const html = renderReceipt({
+    source_system: 'PROESC', origem: 'PROESC',
+    proesc_evidence: { apiConsultedAt: '2026-09-16T18:20:00Z' },
+  });
+  assert.equal(fieldContents(html, 'Consulta à API').length, 0);
+  for (const confirmation of fieldContents(html, 'Baixa registrada')) {
+    assert.match(confirmation, /01\/09\/2026 às 01:14/);
+    assert.doesNotMatch(confirmation, /16\/09\/2026|15:20/);
+  }
+});
+
+test('consulta ausente ou inválida preserva a mensagem sem inventar hora a partir da observação', () => {
+  for (const apiConsultedAt of [null, undefined, '', 'inválido', '2026-02-30T15:20:00Z']) {
+    const html = renderReceipt({
+      source_system: 'PROESC', origem: 'PROESC', baixa_registrada_em: null,
+      proesc_evidence: { observedAt: '2026-09-16T18:20:00Z', apiConsultedAt },
+      gateway_synced_at: '2026-09-16T18:21:00Z',
+    });
+    assert.equal(fieldContents(html, 'Consulta à API').length, 0);
+    for (const confirmation of fieldContents(html, 'Baixa registrada')) {
+      assert.match(confirmation, /Horário não disponível na integração Proesc/);
+      assert.doesNotMatch(confirmation, /<time|Invalid Date|16\/09\/2026/);
+    }
+  }
+});
+
+test('nova resposta da API atualiza a referência exibida sem congelar a primeira consulta', () => {
+  for (const [timestamp, expected, old] of [
+    ['2026-09-16T18:20:00Z', /16\/09\/2026 às 15:20/, /17\/09\/2026 às 07:40/],
+    ['2026-09-17T10:40:00Z', /17\/09\/2026 às 07:40/, /16\/09\/2026 às 15:20/],
+  ] as const) {
+    const html = renderReceipt({
+      source_system: 'PROESC', origem: 'PROESC', baixa_registrada_em: null,
+      proesc_evidence: { apiConsultedAt: timestamp },
+    });
+    for (const consultation of fieldContents(html, 'Consulta à API')) {
+      assert.match(consultation, expected);
+      assert.doesNotMatch(consultation, old);
+    }
+  }
+});
+
+test('consulta da API não promove composição Proesc em conferência para confirmada', () => {
+  const html = renderReceipt({
+    source_system: 'PROESC', origem: 'PROESC', baixa_registrada_em: null,
+    source_verification: 'REVIEW', composicao_status: 'PARCIAL_POR_API_PROESC',
+    proesc_evidence: { verification: 'REVIEW', apiConsultedAt: '2026-09-16T18:20:00Z' },
+    desconto_aplicado: null, juros_aplicados: null,
+  });
+  assert.equal(fieldContents(html, 'Consulta à API').length, 2);
+  assert.match(html, /Os demais valores continuam em conferência/);
+  assert.doesNotMatch(html, /Composição conferida no Proesc/);
+  for (const discount of fieldContents(html, 'Desconto')) assert.match(discount, /Não informado/);
+});

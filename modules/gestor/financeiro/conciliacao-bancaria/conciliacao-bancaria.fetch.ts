@@ -41,6 +41,7 @@ export interface BaneseReceivable {
   clienteDocumentoMascarado?: string;
   baixaRegistradaEm?: string;
   baixaTempoProveniencia?: string;
+  proescConsultadoEm?: string;
   cursoNome?: string;
   turmaNome?: string;
   matriculaCodigo?: string;

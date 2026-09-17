@@ -102,3 +102,32 @@ test('mapeia contagens e filtros de origem sem misturar histórico com manual', 
   assert.equal(channelToFinancialReceiptOrigin('HISTORICO_MIGRADO'), 'HISTORICO_MIGRADO');
   assert.equal(channelToFinancialReceiptOrigin('CAIXA_MANUAL'), 'MANUAL');
 });
+
+test('consulta à API usa somente campo canônico Proesc sem substituir a baixa ou pagamento', () => {
+  const timestamp = '2026-09-16T18:20:00.123456+00:00';
+  const receipt = mapFinancialReceipt({
+    source_system: 'PROESC', proesc_evidence: { apiConsultedAt: timestamp },
+    baixa_registrada_em: null, data_pagamento: '2026-08-31',
+  });
+  assert.equal(receipt.proescConsultadoEm, timestamp);
+  assert.equal(receipt.baixaRegistradaEm, undefined);
+  assert.equal(receipt.dataPagamento, '2026-08-31');
+  assert.equal(mapFinancialReceipt({
+    source_system: 'BANESE', proesc_evidence: { apiConsultedAt: timestamp },
+  }).proescConsultadoEm, undefined);
+});
+
+test('observação genérica ou timestamp inválido não vira horário de consulta à API', () => {
+  for (const apiConsultedAt of [
+    undefined, null, '', 'not-a-date', '2026-09-16', '2026-09-16T18:20:00',
+    '2026-02-30T18:20:00Z', '2026-09-16T25:20:00Z', 0, {},
+  ]) {
+    const receipt = mapFinancialReceipt({
+      source_system: 'PROESC',
+      proesc_evidence: { observedAt: '2026-09-16T18:20:00Z', apiConsultedAt },
+      gateway_synced_at: '2026-09-16T18:21:00Z',
+    });
+    assert.equal(receipt.proescConsultadoEm, undefined);
+    assert.equal(receipt.baixaRegistradaEm, undefined);
+  }
+});
