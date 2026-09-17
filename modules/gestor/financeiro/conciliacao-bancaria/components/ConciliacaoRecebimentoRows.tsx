@@ -69,6 +69,7 @@ const isHistorical = (row: ConciliacaoRecebimentoRow) => (
 
 const settlementDateTimeLabel = (row: ConciliacaoRecebimentoRow) => {
   if (row.baixaRegistradaEm) return formatConciliacaoDateTime(row.baixaRegistradaEm);
+  if (row.sourceSystem === 'PROESC') return 'Horário não disponível na integração Proesc';
   return 'Registro não disponível';
 };
 
