@@ -194,6 +194,9 @@ const SettlementDetails: React.FC<{
   }
 
   const receiptUrl = safeReceiptUrl(row.comprovanteUrl);
+  const consultationAt = row.sourceSystem === 'PROESC' && !row.baixaRegistradaEm
+    ? row.proescConsultadoEm : undefined;
+  const displayedTimestamp = row.baixaRegistradaEm || consultationAt;
   const compositionStatus = row.composicaoStatus || '';
   const compositionNeedsContext = compositionStatus === 'NAO_DISCRIMINADA_PELO_GATEWAY';
   const compositionIsNeutral = !compositionStatus
@@ -218,15 +221,17 @@ const SettlementDetails: React.FC<{
             </span>
           </span>
         ), 'text-emerald-800')}
-        {field('Baixa registrada', (
+        {field(consultationAt ? 'Consulta à API' : 'Baixa registrada', (
           <span className="block">
-            {row.baixaRegistradaEm ? (
-              <time className="block" dateTime={row.baixaRegistradaEm}>
-                {settlementDateTimeLabel(row)}
+            {displayedTimestamp ? (
+              <time className="block" dateTime={displayedTimestamp}>
+                {formatConciliacaoDateTime(displayedTimestamp)}
               </time>
             ) : settlementDateTimeLabel(row)}
             <span className="mt-0.5 block text-[9px] font-medium text-slate-500">
-              {settlementTimeSourceLabel(row)}
+              {consultationAt
+                ? 'Horário de referência da consulta; não é o horário da baixa.'
+                : settlementTimeSourceLabel(row)}
             </span>
           </span>
         ))}

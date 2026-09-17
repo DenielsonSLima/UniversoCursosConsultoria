@@ -29,6 +29,14 @@ const asNullableNumber = (value: unknown) => (
   value === null || value === undefined ? null : asNumber(value)
 );
 
+const asApiTimestamp = (value: unknown): string | undefined => {
+  if (typeof value !== 'string'
+    || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/.test(value)
+    || !Number.isFinite(Date.parse(value))) return undefined;
+  const date = value.slice(0, 10);
+  return new Date(`${date}T00:00:00Z`).toISOString().slice(0, 10) === date ? value : undefined;
+};
+
 const originToChannel = (value: unknown): CanalBaixaConciliacao => {
   switch (asString(value)?.toUpperCase()) {
     case 'AUTOMATICA_BANESE': return 'API_BANESE';
@@ -87,6 +95,9 @@ export const mapFinancialReceipt = (value: unknown): BaneseReceivable => {
     clienteDocumentoMascarado: asString(row.cliente_cpf_cnpj),
     baixaRegistradaEm: asString(row.baixa_registrada_em),
     baixaTempoProveniencia: asString(row.baixa_tempo_proveniencia),
+    proescConsultadoEm: row.source_system === 'PROESC'
+      ? asApiTimestamp(asReceiptRecord(row.proesc_evidence).apiConsultedAt)
+      : undefined,
     cursoNome: asString(row.curso_nome),
     turmaNome: asString(row.turma_nome),
     matriculaCodigo: asString(row.matricula_codigo),

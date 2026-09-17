@@ -1,19 +1,18 @@
 # Lote ativo
 
-Estado: BANCO CORRIGIDO — EM PUBLICAÇÃO — COMPOSIÇÃO PROESC NA CONCILIAÇÃO (4.8.67)
+Estado: BACKEND VALIDADO — EM PUBLICAÇÃO — REFERÊNCIA DA CONSULTA PROESC NA CONCILIAÇÃO (4.8.68)
 
-## Lote: 2026-09-16-conciliacao-composicao-proesc
+## Lote: 2026-09-16-conciliacao-horario-consulta
 
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-16-conciliacao-composicao-proesc.md`.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-16-conciliacao-horario-consulta.md`.
 
-- Corrigir a composição ausente na conciliação quando o Caixa já possui detalhamento canônico Proesc.
-- Usuário solicitou análise e correção, mantendo validação interna sem navegador.
-- Preservar os resultados do resolver compartilhado: composição conferida, parcial, calculada ou mista mantém sua proveniência.
-- Valores desconhecidos não viram zero; diferenças permanecem em conferência. Não inferir horário, forma ou conta ausentes.
-- Hidratação permanece após a paginação; nenhuma alteração em valores financeiros, filtros, autorização ou no PDF do Caixa.
-- Dois arquivos de interface, dois SQL e seis de operação/CI compõem o manifesto de dez arquivos.
-- Dezesseis testes de mapper/renderização e lint focado aprovados; revisão independente da interface sem achados.
-- Onze cenários SQL, dezesseis testes de interface, TypeScript, lint, build e teto do manifesto aprovados.
-- Migration aplicada; RPC autenticada confirma composição igual ao Caixa. Resolver, relatório, listagem e ACLs preservados.
-- Versão 4.8.67 / revisão 76 em publicação; CI/Preview/deploy e fechamento serão registrados no PR.
-- Entrega anterior fechada: 4.8.66 / PR158. Registro anterior e memória preservados.
+- Usuário solicitou reunião, revisão, implantação em produção e revisão posterior; validação permanece interna, sem navegador.
+- Exibir referência temporal da consulta somente quando a origem API estiver comprovada e faltar horário real de baixa.
+- Campo canônico independente distingue horário da observação/lote de consulta de pagamento e baixa; observação genérica não serve de fallback.
+- Consulta não confirma composição financeira. Datas econômicas, valores, campos desconhecidos e autorização permanecem intactos.
+- Cinco arquivos frontend, dois SQL e cinco de operação compõem o manifesto de doze arquivos; CI existente já cobre os testes.
+- Vinte e três testes de mapper/renderização, onze cenários SQL e lint focado aprovados; revisão independente da interface sem achados. TypeScript, build e teto aprovados.
+- Horário real tem prioridade; timestamp ausente, inválido ou sem fuso mantém a ausência. Referência exibida acompanha cada nova resposta canônica.
+- Backend aplicado e revisão independente posterior aprovada: consulta em campo próprio, data de pagamento e composição preservadas; desempenho e permissões conferidos.
+- Versão 4.8.68 / revisão 77 em publicação; CI, Preview, deploy e conferência final do domínio registrados no PR.
+- Entrega anterior: 4.8.67. Histórico anterior e memória preservados.
