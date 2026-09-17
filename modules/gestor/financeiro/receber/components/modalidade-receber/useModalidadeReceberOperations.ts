@@ -231,6 +231,7 @@ export const useModalidadeReceberOperations = (toast: OperationToast) => {
   };
 
   const openReversal = (item: ContasReceber) => {
+    reversalMutation.reset();
     setReversalItem(item);
     setReversalReason('');
     setRecreateAsaas(Boolean(item.asaasPaymentId));
@@ -249,7 +250,10 @@ export const useModalidadeReceberOperations = (toast: OperationToast) => {
     reversalMutation,
     setReversalReason,
     setRecreateAsaas,
-    openPayment: setSelected,
+    openPayment: (item: ContasReceber) => {
+      paymentMutation.reset();
+      setSelected(item);
+    },
     closePaymentModal,
     closeReceiptModal,
     closeReversalModal,

@@ -1,22 +1,18 @@
 # Lote ativo
 
-Estado: VALIDADO — CONFERÊNCIA AUTOMÁTICA DE CICLOS (4.8.64)
+Estado: VALIDADO — GITHUB/PREVIEW; PRODUÇÃO PENDENTE — BAIXA MANUAL APÓS REVISÃO (4.8.65)
 
-## Lote: 2026-09-13-proesc-ciclos-automaticos
+## Lote: 2026-09-16-baixa-manual-revisao
 
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-13-proesc-ciclos-automaticos.md`.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-16-baixa-manual-revisao.md`.
 
-- Consulta automática pelo worker existente e ao abrir o financeiro; botão de conferência removido.
-- Rodada real concluída: 427 matrículas, 60 GETs, zero falhas; 122 elegíveis, 149 protegidas e 156 sem prova suficiente de elegibilidade.
-- T42: 15 elegíveis e 7 ciclos protegidos; trancados/transferidos continuam bloqueados.
-- Fonte incompleta não comprova ausência de segundo ciclo. Identidade e período são avaliados por matrícula.
-- Consulta preservou matrículas, recebíveis, pagamentos e títulos bancários, com hashes idênticos.
-- Plano individual de C2 Proesc identificado: 13 títulos existentes, sem alteração acadêmica. Registro SEGUNDO_CICLO somente após publicação do frontend compatível.
-- Prévia e geração exigem prova recente automaticamente no servidor; a classificação exibida persiste enquanto o manifesto coincidir.
-- Banco aplicado em cinco migrations; Edge Proesc v16 ativa e conferida. Frontend 4.8.64 validado para publicação autorizada via MCP GitHub, após CI/Preview.
-- 62 testes Edge, 12 testes frontend, ensaios SQL reais com rollback, TypeScript, lint e build passaram.
-- Três frentes independentes concluíram backend, contratos da interface e revisão financeira. Manifesto: 41 arquivos; alterações paralelas preservadas.
+- Corrigir conflito indevido entre o contexto auditável da baixa e o snapshot financeiro.
+- Preservar identidade, composição, conta, idempotência e histórico de tentativas.
+- Encerrar tentativa errada somente mediante revisão delimitada e auditada; nova baixa usa nova chave.
+- Três agentes solicitados: interface, backend e revisão financeira independente.
+- Usuário determinou validação exclusivamente interna, sem navegador.
+- GitHub autorizado. Aplicação em produção e saneamento do registro real dependem da confirmação final do procedimento concreto.
+- Entrega anterior: 4.8.64 / PR 156, main `0945ca1bea60253915bdfe49d4fa1fa426f1b801`.
 
-## Entrega anterior
-
-- 4.8.61 / PR 154 corrigiu regras financeiras, resumo e composição nos módulos financeiros. Este lote conclui a conferência automática solicitada, sem modificar aqueles valores.
+- Validação: 43 testes Deno, 27 cenários SQL com rollback/clones temporários, harness real de mutation, TypeScript, lint focado, build e teto de linhas aprovados.
+- Ordem remota preparada: duas migrations, Edge, encerramento auditado e nova baixa pelo fluxo canônico.

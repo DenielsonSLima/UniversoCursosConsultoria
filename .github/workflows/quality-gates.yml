@@ -141,6 +141,17 @@ jobs:
           deno test --allow-read --allow-env \
             modules/aluno/shared/aluno-course-access.queries.test.ts
 
+      - name: Testar baixa manual e encerramento auditado
+        run: |
+          deno test --allow-read --allow-env \
+            supabase/functions/asaas/api/manual-settlement-errors.test.ts \
+            supabase/functions/asaas/api/manual-settlement-snapshot-migration.test.ts \
+            supabase/functions/asaas/api/manual-settlement-review-cancellation.test.ts \
+            supabase/functions/asaas/api/manual-settlement.service.test.ts \
+            supabase/functions/asaas/api/manual-settlement-context.test.ts \
+            supabase/functions/asaas/api/manual-settlement-remote.test.ts \
+            supabase/functions/asaas/api/manual-settlement-money.test.ts
+
       - name: Testar relatório do Caixa
         run: npm run test:caixa-report
 
