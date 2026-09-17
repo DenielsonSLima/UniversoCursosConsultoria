@@ -158,6 +158,19 @@ jobs:
             lib/database-query-retry.test.ts \
             modules/gestor/financeiro/conciliacao-bancaria/conciliacao-bancaria.filter-state.contract.test.ts
 
+      - name: Testar composição Proesc na conciliação
+        run: |
+          node --input-type=module <<'JS'
+          import { build } from 'esbuild';
+          await build({
+            entryPoints: ['modules/gestor/financeiro/conciliacao-bancaria/components/ConciliacaoRecebimentoRows.test.tsx'],
+            bundle: true, platform: 'node', format: 'cjs',
+            outfile: '/tmp/conciliacao-recebimentos.test.cjs',
+          });
+          JS
+          node --test /tmp/conciliacao-recebimentos.test.cjs \
+            modules/gestor/financeiro/conciliacao-bancaria/conciliacao-recebimentos.model.test.ts
+
       - name: Testar relatório do Caixa
         run: npm run test:caixa-report
 

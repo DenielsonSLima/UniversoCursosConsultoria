@@ -1,8 +1,8 @@
 {
-  "version": "4.8.66",
+  "version": "4.8.67",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 75,
+  "revision": 76,
   "releasedAt": "2026-09-16",
-  "summary": "Consulta de conciliação mais rápida e tratamento de timeout nas leituras financeiras"
+  "summary": "Composição financeira Proesc preservada na conciliação"
 }

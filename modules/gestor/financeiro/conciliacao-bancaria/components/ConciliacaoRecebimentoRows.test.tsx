@@ -154,3 +154,52 @@ test('regras calculadas e mistas exibem origem e diferença sem afirmar conferê
     assert.doesNotMatch(html, /Composição conferida no Proesc|266,91/);
   }
 });
+
+test('composição completa do servidor aparece nas duas apresentações sem fabricar metadados Proesc', () => {
+  for (const [status, label] of [
+    ['CALCULADO_REGRA_INFORMADA_PROESC', 'Calculado pelas regras informadas'],
+    ['API_E_REGRA_INFORMADA_PROESC', 'Dados Proesc complementados pelas regras informadas'],
+    ['CONCILIADO_POR_CONFERENCIA_PROESC', 'Composição conferida no Proesc'],
+  ]) {
+    const html = renderReceipt({
+      status: 'PAGO', source_system: 'PROESC', source_label: 'Proesc', origem: 'PROESC',
+      composicao_status: status, valor_nominal: 279.9, valor_pago: 260,
+      desconto_aplicado: 19.9, juros_aplicados: 0, multa_aplicada: 0,
+      acrescimo_aplicado: 0, diferenca_nao_discriminada: 0,
+      baixa_registrada_em: null, baixa_tempo_proveniencia: 'HISTORICO_SEM_HORA',
+      gateway_synced_at: '2026-09-16T18:20:00Z', forma_pagamento: null,
+      conta_recebedora_nome: null,
+    });
+    assert.ok(html.includes(label));
+    for (const [field, expected] of [
+      ['Valor pago', /260,00/], ['Desconto', /19,90/], ['Juros', /0,00/],
+      ['Multa', /0,00/], ['Acréscimos', /0,00/],
+    ] as const) {
+      const values = fieldContents(html, field);
+      assert.equal(values.length, 2, `${field}: desktop e celular`);
+      for (const value of values) {
+        assert.match(value, expected);
+        assert.doesNotMatch(value, /Não informado/);
+      }
+    }
+    for (const confirmation of fieldContents(html, 'Baixa registrada')) {
+      assert.match(confirmation, /Horário não disponível na integração Proesc/);
+      assert.doesNotMatch(confirmation, /<time|16\/09\/2026|18:20|15:20/);
+    }
+    for (const field of ['Forma', 'Conta recebedora']) {
+      for (const value of fieldContents(html, field)) assert.match(value, /Não informada/);
+    }
+    assert.doesNotMatch(html, /Diferença não discriminada|Composição não informada/);
+    if (status !== 'CONCILIADO_POR_CONFERENCIA_PROESC') {
+      assert.doesNotMatch(html, /Composição conferida no Proesc/);
+    }
+  }
+});
+
+test('origem Proesc com horário efetivamente informado preserva o registro retornado', () => {
+  const html = renderReceipt({ source_system: 'PROESC', origem: 'PROESC' });
+  for (const confirmation of fieldContents(html, 'Baixa registrada')) {
+    assert.match(confirmation, /01\/09\/2026 às 01:14/);
+    assert.doesNotMatch(confirmation, /Horário não disponível na integração Proesc/);
+  }
+});
