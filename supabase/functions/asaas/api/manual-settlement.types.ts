@@ -20,6 +20,7 @@ export type ManualSettlementState =
   | "FAILED_SAFE"
   | "REVIEW_REQUIRED"
   | "COMPLETED"
+  | "CANCELED_AFTER_REVIEW"
   | "REVERSED";
 
 export interface ManualSettlementBreakdown {

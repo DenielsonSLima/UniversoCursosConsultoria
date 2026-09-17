@@ -10,6 +10,7 @@ import {
 } from "../../banese/internal/dependency-billing.ts";
 import { RemoteCancellationPreflightError } from "../../gateways/api/remote-cancellation-errors.ts";
 import { syncManualSettlementAcademicEffects } from "./manual-settlement-academic.ts";
+import { manualSettlementErrorMessage as errorMessage } from "./manual-settlement-errors.ts";
 import { syncManualSettlementFutureCharges } from "./manual-settlement-future-sync.ts";
 import {
   manualSettlementFingerprint,
@@ -33,9 +34,6 @@ import type {
 const LEASE_MILLISECONDS = 2 * 60 * 1000;
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-const errorMessage = (error: unknown) =>
-  error instanceof Error ? error.message : String(error);
 
 const duplicateKeyError = (error: any) => String(error?.code || "") === "23505";
 
@@ -253,9 +251,9 @@ const resolveAttempt = async (
         }`,
       );
     }
-    if (current.state === "REVERSED") {
+    if (["REVERSED", "CANCELED_AFTER_REVIEW"].includes(current.state)) {
       throw new Error(
-        "Esta tentativa já foi estornada. Feche e abra uma nova baixa para gerar outra chave idempotente.",
+        "Esta tentativa já foi encerrada. Feche e abra uma nova baixa para gerar outra chave idempotente.",
       );
     }
     if (attemptLeaseIsActive(current, now)) {
