@@ -1,4 +1,5 @@
 import { queryOptions } from '@tanstack/react-query';
+import { retryDatabaseRead } from '../../../lib/database-query-retry';
 import { supabase } from '../../../lib/supabase';
 import { orderCaixaPolosByCreation } from './caixa-polos';
 import type { CaixaPolo } from './caixa-polos';
@@ -267,6 +268,7 @@ export const caixaDashboardQueryOptions = (
 ) => queryOptions({
   queryKey: caixaQueryKeys.statement(poloId, competencia),
   queryFn: () => caixaService.getMonthlyStatement(poloId, competencia),
+  retry: retryDatabaseRead,
   staleTime: 30_000,
   gcTime: 30 * 60_000,
   refetchOnWindowFocus: true,

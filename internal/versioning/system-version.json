@@ -1,8 +1,8 @@
 {
-  "version": "4.8.65",
+  "version": "4.8.66",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 74,
+  "revision": 75,
   "releasedAt": "2026-09-16",
-  "summary": "Correção da baixa manual e retomada auditada após revisão"
+  "summary": "Consulta de conciliação mais rápida e tratamento de timeout nas leituras financeiras"
 }

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { retryDatabaseRead } from '../../../../../lib/database-query-retry';
 import { supabase } from '../../../../../lib/supabase';
 import { integracaoBancariaService } from '../../../configuracoes/integracao-bancaria/integracao-bancaria.service';
 import { financeiroQueryKeys } from '../../financeiro.queryKeys';
@@ -109,6 +110,7 @@ export const useBaneseConciliacaoQueries = (params?: UseBaneseConciliacaoQueries
 
   const dataQuery = useQuery({
     queryKey: conciliacaoQueryKey,
+    retry: retryDatabaseRead,
     queryFn: () => fetchConciliacaoListData({
       environment: activeEnvironment!,
       page,
