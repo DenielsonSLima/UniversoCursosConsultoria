@@ -293,32 +293,32 @@ const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
   };
 
   return (
-    <div className="space-y-7 ">
+    <div className="space-y-5 ">
       <ToastNotification toasts={toasts} onRemove={removeToast} />
-      <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-4 border-b border-slate-100 pb-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div className="flex items-center gap-2 text-blue-600">
             <ClipboardList size={20} />
-            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Linha do tempo acadêmica</span>
+            <span className="text-xs font-semibold">Linha do tempo acadêmica</span>
           </div>
-          <h3 className="mt-2 text-xl font-black uppercase text-[#001a33]">Matrículas e movimentações</h3>
-          <p className="mt-1 text-xs text-slate-500">Cada turma mantém um registro próprio, sem apagar vínculos anteriores.</p>
+          <h3 className="mt-2 text-lg font-semibold text-[#001a33]">Matrículas e movimentações</h3>
+          <p className="mt-1 text-sm text-slate-500">Cada turma mantém um registro próprio, sem apagar vínculos anteriores.</p>
         </div>
-        <button onClick={() => setShowNew(true)} className="flex items-center justify-center gap-2 rounded-xl bg-[#001a33] px-5 py-3 text-xs font-black uppercase tracking-wider text-white">
+        <button onClick={() => setShowNew(true)} className="flex items-center justify-center gap-2 rounded-xl bg-[#001a33] px-5 py-3 text-sm font-semibold text-white">
           <Plus size={15} /> Nova matrícula
         </button>
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-20"><Loader2 className="animate-spin text-blue-600" /></div>
+        <div className="flex justify-center py-12"><Loader2 className="animate-spin text-blue-600" /></div>
       ) : isError ? (
         <div className="rounded-2xl border border-red-100 bg-red-50 px-5 py-8 text-center">
-          <p className="text-sm font-bold text-red-700">Não foi possível carregar as matrículas.</p>
-          <p className="mt-1 text-xs text-red-500">{matriculasError instanceof Error ? matriculasError.message : 'Tente novamente em instantes.'}</p>
+          <p className="text-sm font-medium text-red-700">Não foi possível carregar as matrículas.</p>
+          <p className="mt-1 text-sm text-red-500">{matriculasError instanceof Error ? matriculasError.message : 'Tente novamente em instantes.'}</p>
           <button
             type="button"
             onClick={() => { void refetchMatriculas(); }}
-            className="mt-4 rounded-xl bg-white px-4 py-2 text-[10px] font-black uppercase tracking-wider text-red-700 shadow-sm"
+            className="mt-4 rounded-xl bg-white px-4 py-2 text-xs font-semibold text-red-700 shadow-sm"
           >
             Tentar novamente
           </button>
@@ -331,39 +331,39 @@ const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
               .sort((a: any, b: any) => Number(a.ordem) - Number(b.ordem))
               .find((period: any) => period.status !== 'FECHADO');
             return (
-              <article key={matricula.id} className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm">
+              <article key={matricula.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className={`rounded-full border px-2.5 py-1 text-[9px] font-black uppercase ${enrollmentStatusStyle[matricula.status] || 'bg-slate-50 text-slate-600'}`}>{matricula.status}</span>
-                      <span className="text-[10px] font-bold text-slate-400">{formatMatricula(matricula.id, matricula.data_matricula, turma.polo_id)}</span>
+                      <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${enrollmentStatusStyle[matricula.status] || 'bg-slate-50 text-slate-600'}`}>{matricula.status}</span>
+                      <span className="text-xs font-medium text-slate-500">{formatMatricula(matricula.id, matricula.data_matricula, turma.polo_id)}</span>
                     </div>
-                    <h4 className="mt-3 text-lg font-black text-[#001a33]">{turma.cursos?.nome || 'Curso'}</h4>
-                    <p className="mt-1 text-xs font-bold text-slate-500">
+                    <h4 className="mt-3 text-lg font-semibold text-[#001a33]">{turma.cursos?.nome || 'Curso'}</h4>
+                    <p className="mt-1 text-sm font-medium text-slate-500">
                       Turma: {turma.nome || 'Não informada'}{turma.turno ? ` · Turno: ${turma.turno}` : ''}
                     </p>
-                    <p className="mt-1 text-[10px] text-slate-400">{turma.polos?.nome} · {turma.polos?.cidade}/{turma.polos?.estado}</p>
+                    <p className="mt-1 text-xs text-slate-500">{turma.polos?.nome} · {turma.polos?.cidade}/{turma.polos?.estado}</p>
                     <EnrollmentContinuitySummary enrollment={matricula} />
                   </div>
-                  <div className="grid min-w-[300px] grid-cols-2 gap-3">
+                  <div className="grid min-w-0 grid-cols-2 gap-3 lg:min-w-[280px] lg:max-w-md">
                     <div className="rounded-2xl bg-slate-50 p-3">
-                      <span className="text-[9px] font-black uppercase text-slate-400">Ingresso</span>
-                      <p className="mt-1 text-xs font-black text-slate-700">{formatEnrollmentDate(matricula.data_matricula)}</p>
+                      <span className="text-xs font-semibold text-slate-500">Ingresso</span>
+                      <p className="mt-1 text-sm font-semibold text-slate-700">{formatEnrollmentDate(matricula.data_matricula)}</p>
                     </div>
                     <div className="rounded-2xl bg-slate-50 p-3">
-                      <span className="text-[9px] font-black uppercase text-slate-400">Etapa atual</span>
-                      <p className="mt-1 text-xs font-black text-slate-700">{currentPeriod?.nome || 'Sem etapa aberta'}</p>
+                      <span className="text-xs font-semibold text-slate-500">Etapa atual</span>
+                      <p className="mt-1 text-sm font-semibold text-slate-700">{currentPeriod?.nome || 'Sem etapa aberta'}</p>
                     </div>
                   </div>
                 </div>
-                <div className="mt-5 flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-4">
+                <div className="mt-4 flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-3">
                   {!['TRANSFERIDO', 'CONCLUIDO'].includes(matricula.status) && (
-                    <button onClick={() => openOperation(matricula, 'MOVIMENTACAO')} className="flex items-center gap-2 rounded-xl bg-amber-50 px-4 py-2.5 text-[10px] font-black uppercase text-amber-700">
+                    <button onClick={() => openOperation(matricula, 'MOVIMENTACAO')} className="flex items-center gap-2 rounded-xl bg-amber-50 px-4 py-2.5 text-xs font-semibold text-amber-700">
                       {matricula.status === 'ATIVO' ? <PauseCircle size={14} /> : <RotateCcw size={14} />} Movimentar
                     </button>
                   )}
                   {!['TRANSFERIDO', 'CONCLUIDO'].includes(matricula.status) && (
-                    <button onClick={() => openOperation(matricula, 'TRANSFERENCIA')} className="flex items-center gap-2 rounded-xl bg-violet-50 px-4 py-2.5 text-[10px] font-black uppercase text-violet-700">
+                    <button onClick={() => openOperation(matricula, 'TRANSFERENCIA')} className="flex items-center gap-2 rounded-xl bg-violet-50 px-4 py-2.5 text-xs font-semibold text-violet-700">
                       <ArrowRightLeft size={14} /> Transferir / continuar
                     </button>
                   )}
@@ -371,26 +371,26 @@ const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
               </article>
             );
           })}
-          {!matriculas.length && <p className="py-16 text-center text-sm text-slate-400">Nenhuma matrícula registrada.</p>}
+          {!matriculas.length && <p className="py-10 text-center text-sm text-slate-500">Nenhuma matrícula registrada.</p>}
         </div>
       )}
 
       <section>
         <div className="mb-4 flex items-center gap-2">
-          <CalendarClock size={17} className="text-slate-400" />
-          <h4 className="text-xs font-black uppercase tracking-wider text-[#001a33]">Histórico de movimentações</h4>
+          <CalendarClock size={17} className="text-slate-500" />
+          <h4 className="text-sm font-semibold text-[#001a33]">Histórico de movimentações</h4>
         </div>
         <div className="space-y-2">
           {movements.map((movement) => (
             <div key={movement.id} className="flex gap-4 rounded-2xl border border-slate-100 bg-slate-50 p-4">
               <div className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-blue-500" />
               <div className="min-w-0">
-                <p className="text-xs font-black text-[#001a33]">{movement.tipo.replaceAll('_', ' ')}</p>
-                <p className="mt-1 text-[10px] font-bold text-slate-500">{formatEnrollmentDate(movement.data_movimentacao)} · {movement.status_anterior || 'INÍCIO'} → {movement.status_novo}</p>
-                <p className="mt-1 text-xs text-slate-600">{movement.motivo}</p>
+                <p className="text-sm font-semibold text-[#001a33]">{movement.tipo.replaceAll('_', ' ')}</p>
+                <p className="mt-1 text-xs font-medium text-slate-500">{formatEnrollmentDate(movement.data_movimentacao)} · {movement.status_anterior || 'INÍCIO'} → {movement.status_novo}</p>
+                <p className="mt-1 text-sm text-slate-600">{movement.motivo}</p>
                 {movement.observacao && (
-                  <p className="mt-2 whitespace-pre-wrap rounded-lg bg-white px-3 py-2 text-xs text-slate-600">
-                    <span className="font-black text-slate-400">Observação: </span>{movement.observacao}
+                  <p className="mt-2 whitespace-pre-wrap rounded-lg bg-white px-3 py-2 text-sm text-slate-600">
+                    <span className="font-semibold text-slate-500">Observação: </span>{movement.observacao}
                   </p>
                 )}
               </div>

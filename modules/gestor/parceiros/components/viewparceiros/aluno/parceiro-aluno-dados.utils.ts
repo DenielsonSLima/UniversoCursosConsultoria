@@ -1,3 +1,4 @@
+import { normalizeAlunoSexo, normalizeAlunoOrgao } from './parceiro-aluno-edicao';
 import { formatPhone, onlyDigits } from '../../../../../../lib/documentFormatters';
 import { TECHNICAL_DOCUMENT_TYPE_OPTIONS } from '../../../../../shared/utils/technicalEnrollmentRequirements';
 import { uppercaseAlunoTextFields } from '../../../utils/aluno-formatters';
@@ -80,6 +81,8 @@ export const normalizeAlunoFormData = (data: any) => {
     || (normalized.escolaridadeAnterior === 'ENSINO MÉDIO COMPLETO' ? 'CONCLUIDO' : '');
   return {
     ...normalized,
+    ...normalizeAlunoOrgao(normalized.orgaoEmissor, normalized.rgUfEmissao),
+    sexo: normalizeAlunoSexo(normalized.sexo),
     cpf: maskCpf(normalized.cpf || normalized.cpf_cnpj),
     cep: maskCep(normalized.cep),
     dataNascimento: maskDate(normalized.dataNascimento),

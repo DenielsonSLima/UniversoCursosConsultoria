@@ -1,9 +1,6 @@
 import React, { useState } from 'react';
-import { BookOpenCheck, FileStack, Loader2, ShieldCheck } from 'lucide-react';
-import type {
-  MatriculaTecnicaPendenteDocumento,
-  MatriculaTecnicaWorkflowBloqueio,
-} from '../../../documentos-aluno.service';
+import { Loader2 } from 'lucide-react';
+import type { MatriculaTecnicaPendenteDocumento } from '../../../documentos-aluno.service';
 import type {
   DocumentoAlunoChecklistItem,
   DocumentoAlunoDecisaoRevisao,
@@ -18,35 +15,26 @@ import DocumentoLegacyReceiptModal from './documentos/DocumentoLegacyReceiptModa
 import DocumentoPreviewHistoryModal from './documentos/DocumentoPreviewHistoryModal';
 import DocumentoReviewModal from './documentos/DocumentoReviewModal';
 import DocumentosChecklist from './documentos/DocumentosChecklist';
+import DocumentosPendingLots from './documentos/DocumentosPendingLots';
 import MatriculaImplantacaoDialog from './documentos/MatriculaImplantacaoDialog';
+import MatriculaTecnicaAccessSection from './documentos/MatriculaTecnicaAccessSection';
 import PdfUnicoMappingModal from './documentos/PdfUnicoMappingModal';
 import { useParceiroAlunoDocumentosWorkflow } from './useParceiroAlunoDocumentosWorkflow';
 
 interface ParceiroAlunoDocumentosProps {
   alunoId: string;
+  toast: {
+    success: (title: string, message?: string) => void;
+  };
 }
 
 const errorMessage = (error: unknown) =>
   error instanceof Error ? error.message : 'Não foi possível concluir a operação.';
 
-const workflowBlockerLabels: Record<MatriculaTecnicaWorkflowBloqueio, string> = {
-  SEM_PERMISSAO: 'Seu perfil não pode executar esta ação.',
-  FLUXO_NAO_REGULAR: 'A matrícula está no fluxo de implantação.',
-  STATUS_INCOMPATIVEL: 'O status atual da matrícula não permite esta ação.',
-  TURMA_FORA_DE_ANDAMENTO: 'A turma ainda não está em andamento.',
-  PAGAMENTO_PENDENTE: 'O pagamento ainda não foi confirmado.',
-  DOCUMENTACAO_INCOMPLETA: 'Há documentos obrigatórios pendentes.',
-  DADOS_PESSOAIS_INCOMPLETOS: 'Complete sexo e data de nascimento do aluno.',
-  ENVIO_DOCUMENTAL_EM_ANDAMENTO: 'Há um envio documental ainda em processamento.',
-  COBRANCA_EXISTENTE: 'Já existe vínculo financeiro com esta matrícula.',
-  LIBERACAO_JA_ATIVA: 'O acesso acadêmico de implantação já está liberado.',
-  LIBERACAO_INATIVA_OU_SEM_PERMISSAO: 'Não há liberação ativa que possa ser revogada.',
-};
-
-const describeBlockers = (blockers: MatriculaTecnicaWorkflowBloqueio[]) =>
-  blockers.map((blocker) => workflowBlockerLabels[blocker]).join(' ');
-
-const ParceiroAlunoDocumentos: React.FC<ParceiroAlunoDocumentosProps> = ({ alunoId }) => {
+const ParceiroAlunoDocumentos: React.FC<ParceiroAlunoDocumentosProps> = ({
+  alunoId,
+  toast,
+}) => {
   const workflow = useParceiroAlunoDocumentosWorkflow(alunoId);
   const painel = workflow.painelQuery.data;
   const matriculas = workflow.matriculasQuery.data || [];
@@ -75,15 +63,15 @@ const ParceiroAlunoDocumentos: React.FC<ParceiroAlunoDocumentosProps> = ({ aluno
 
   if (workflow.painelQuery.isError) {
     return (
-      <div className="rounded-3xl border border-red-100 bg-white p-8 text-center shadow-sm">
-        <p className="text-sm font-black text-red-700">Não foi possível carregar os documentos.</p>
-        <p className="mt-2 text-xs font-medium text-slate-500">
+      <div className="rounded-2xl border border-red-100 bg-white p-5 text-center shadow-sm">
+        <p className="text-sm font-semibold text-red-700">Não foi possível carregar os documentos.</p>
+        <p className="mt-2 text-sm font-medium text-slate-500">
           {errorMessage(workflow.painelQuery.error)}
         </p>
         <button
           type="button"
           onClick={() => void workflow.painelQuery.refetch()}
-          className="mt-5 min-h-11 rounded-xl bg-[#001a33] px-5 text-[10px] font-black uppercase tracking-wider text-white"
+          className="mt-5 min-h-11 rounded-xl bg-[#001a33] px-5 text-xs font-semibold text-white"
         >
           Tentar novamente
         </button>
@@ -93,7 +81,7 @@ const ParceiroAlunoDocumentos: React.FC<ParceiroAlunoDocumentosProps> = ({ aluno
 
   if (workflow.painelQuery.isLoading || !painel) {
     return (
-      <div className="flex items-center justify-center gap-2 py-20 text-xs font-bold text-slate-400">
+      <div className="flex items-center justify-center gap-2 py-12 text-sm font-medium text-slate-500">
         <Loader2 className="animate-spin" size={16} /> Carregando documentos
       </div>
     );
@@ -189,168 +177,43 @@ const ParceiroAlunoDocumentos: React.FC<ParceiroAlunoDocumentosProps> = ({ aluno
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <AlunoDocumentosSummary itens={painel.itens} />
       {operationError ? (
         <p
           role="alert"
-          className="rounded-2xl border border-red-100 bg-red-50 p-4 text-xs font-bold text-red-700"
+          className="rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-medium text-red-700"
         >
           {operationError}
         </p>
       ) : null}
 
-      {preparingLots.length > 0 ? (
-        <section className="rounded-3xl border border-amber-100 bg-amber-50 p-5">
-          <h3 className="text-sm font-black uppercase tracking-wide text-amber-950">
-            Envios incompletos
-          </h3>
-          <p className="mt-1 text-xs font-semibold text-amber-800">
-            Estes lotes ainda não foram finalizados. Cancele para liberar o checklist e limpar os arquivos reservados.
-          </p>
-          <div className="mt-4 space-y-2">
-            {preparingLots.map((lote) => (
-              <div
-                key={lote.id}
-                className="flex flex-col gap-3 rounded-2xl border border-amber-100 bg-white p-4 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-xs font-black text-[#001a33]">
-                    {lote.arquivos[0]?.nome || 'Envio sem arquivo confirmado'}
-                  </p>
-                  <p className="mt-1 text-[9px] font-bold uppercase tracking-wider text-slate-400">
-                    {lote.modo === 'pdf_unico' ? 'PDF consolidado' : 'Documentos separados'}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  disabled={workflow.cancelPdfMutation.isPending}
-                  onClick={() => {
-                    const motivo = window.prompt(
-                      'Informe o motivo do cancelamento deste envio incompleto:',
-                    )?.trim();
-                    if (!motivo) return;
-                    setOperationError(null);
-                    void workflow.cancelPdfMutation.mutateAsync({
-                      loteId: lote.id,
-                      arquivoIds: lote.arquivos.map((arquivo) => arquivo.id),
-                      motivo,
-                    }).catch((error) => setOperationError(errorMessage(error)));
-                  }}
-                  className="min-h-10 rounded-xl bg-amber-700 px-4 text-[10px] font-black uppercase tracking-wider text-white disabled:opacity-50"
-                >
-                  Cancelar e limpar
-                </button>
-              </div>
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      {awaitingMappings.length > 0 ? (
-        <section className="rounded-3xl border border-blue-100 bg-blue-50 p-5">
-          <div className="flex items-start gap-3">
-            <FileStack className="mt-0.5 shrink-0 text-blue-700" size={20} />
-            <div className="min-w-0 flex-1">
-              <h3 className="text-sm font-black uppercase tracking-wide text-blue-950">
-                PDFs aguardando organização
-              </h3>
-              <p className="mt-1 text-xs font-semibold leading-relaxed text-blue-800">
-                Informe o total de páginas e associe cada intervalo ao item correto do checklist.
-              </p>
-              <div className="mt-4 space-y-2">
-                {awaitingMappings.map((lote) => (
-                  <div
-                    key={lote.id}
-                    className="flex flex-col gap-3 rounded-2xl border border-blue-100 bg-white p-4 sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-xs font-black text-[#001a33]">
-                        {lote.arquivos[0]?.nome || 'PDF consolidado'}
-                      </p>
-                      <p className="mt-1 text-[9px] font-bold uppercase tracking-wider text-slate-400">
-                        {lote.documentoIds.length} itens disponíveis para mapeamento
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        disabled={workflow.pagesMutation.isPending}
-                        onClick={() => void openMapping(lote).catch((error) =>
-                          setOperationError(errorMessage(error)))}
-                        className="min-h-10 rounded-xl bg-blue-600 px-4 text-[10px] font-black uppercase tracking-wider text-white transition hover:bg-blue-700 disabled:opacity-50"
-                      >
-                        Mapear páginas
-                      </button>
-                      <button
-                        type="button"
-                        disabled={workflow.cancelPdfMutation.isPending}
-                        onClick={() => {
-                          const motivo = window.prompt(
-                            'Informe por que este PDF deve ser recusado e removido:',
-                          )?.trim();
-                          if (!motivo) return;
-                          setOperationError(null);
-                          void workflow.cancelPdfMutation.mutateAsync({
-                            loteId: lote.id,
-                            arquivoIds: lote.arquivos.map((arquivo) => arquivo.id),
-                            motivo,
-                          }).catch((error) => setOperationError(errorMessage(error)));
-                        }}
-                        className="min-h-10 rounded-xl border border-red-100 bg-red-50 px-4 text-[10px] font-black uppercase tracking-wider text-red-700 transition hover:bg-red-100 disabled:opacity-50"
-                      >
-                        Recusar PDF
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-      ) : null}
-
-      {cancelledCleanupLots.length > 0 ? (
-        <section className="rounded-3xl border border-amber-100 bg-amber-50 p-5">
-          <h3 className="text-sm font-black uppercase tracking-wide text-amber-950">
-            Limpezas administrativas pendentes
-          </h3>
-          <p className="mt-1 text-xs font-semibold text-amber-800">
-            O lote já foi cancelado; tente novamente a exclusão física dos arquivos.
-          </p>
-          <div className="mt-4 space-y-2">
-            {cancelledCleanupLots.map((lote) => {
-              const pendingIds = lote.arquivos
-                .filter((arquivo) => arquivo.status !== 'excluido')
-                .map((arquivo) => arquivo.id);
-              return (
-                <div
-                  key={lote.id}
-                  className="flex flex-col gap-3 rounded-2xl border border-amber-100 bg-white p-4 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <p className="truncate text-xs font-black text-[#001a33]">
-                    {lote.arquivos[0]?.nome || 'PDF cancelado'}
-                  </p>
-                  <button
-                    type="button"
-                    disabled={workflow.deleteMutation.isPending}
-                    onClick={() => {
-                      setOperationError(null);
-                      void workflow.deleteMutation.mutateAsync({
-                        arquivoIds: pendingIds,
-                        motivo: 'Nova tentativa de limpeza de PDF cancelado.',
-                      }).catch((error) => setOperationError(errorMessage(error)));
-                    }}
-                    className="min-h-10 rounded-xl bg-amber-700 px-4 text-[10px] font-black uppercase tracking-wider text-white disabled:opacity-50"
-                  >
-                    Tentar limpeza novamente
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      ) : null}
+      <DocumentosPendingLots
+        preparingLots={preparingLots}
+        awaitingMappings={awaitingMappings}
+        cancelledCleanupLots={cancelledCleanupLots}
+        cancelPending={workflow.cancelPdfMutation.isPending}
+        pagesPending={workflow.pagesMutation.isPending}
+        deletePending={workflow.deleteMutation.isPending}
+        onOpenMapping={(lot) => {
+          void openMapping(lot).catch((error) => setOperationError(errorMessage(error)));
+        }}
+        onCancelPdf={(lot, reason) => {
+          setOperationError(null);
+          void workflow.cancelPdfMutation.mutateAsync({
+            loteId: lot.id,
+            arquivoIds: lot.arquivos.map((file) => file.id),
+            motivo: reason,
+          }).catch((error) => setOperationError(errorMessage(error)));
+        }}
+        onRetryCleanup={(fileIds) => {
+          setOperationError(null);
+          void workflow.deleteMutation.mutateAsync({
+            arquivoIds: fileIds,
+            motivo: 'Nova tentativa de limpeza de PDF cancelado.',
+          }).catch((error) => setOperationError(errorMessage(error)));
+        }}
+      />
 
       <DocumentosChecklist
         itens={painel.itens}
@@ -399,193 +262,51 @@ const ParceiroAlunoDocumentos: React.FC<ParceiroAlunoDocumentosProps> = ({ aluno
 
       {workflow.matriculasQuery.isError ? (
         <section className="rounded-2xl border border-red-100 bg-red-50 p-5">
-          <p className="text-xs font-black uppercase tracking-wide text-red-800">
+          <p className="text-sm font-semibold text-red-800">
             Não foi possível carregar o fluxo das matrículas técnicas.
           </p>
-          <p className="mt-1 text-xs font-semibold text-red-700">
+          <p className="mt-1 text-sm font-semibold text-red-700">
             {errorMessage(workflow.matriculasQuery.error)}
           </p>
           <button
             type="button"
             onClick={() => void workflow.matriculasQuery.refetch()}
-            className="mt-3 min-h-10 rounded-xl bg-red-700 px-4 text-[10px] font-black uppercase tracking-wider text-white"
+            className="mt-3 min-h-10 rounded-xl bg-red-700 px-4 text-xs font-semibold text-white"
           >
             Tentar novamente
           </button>
         </section>
       ) : null}
 
-      {matriculas.length > 0 ? (
-        <section className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
-          <div className="flex items-start gap-3">
-            <ShieldCheck className="mt-0.5 shrink-0 text-emerald-700" size={20} />
-            <div className="min-w-0 flex-1">
-              <h4 className="text-sm font-black uppercase tracking-wide text-emerald-900">
-                Análise e acesso da matrícula
-              </h4>
-              <p className="mt-1 text-xs font-semibold leading-relaxed text-emerald-800">
-                Matrículas regulares exigem pagamento confirmado e todos os
-                documentos obrigatórios concluídos, por anexo aprovado ou
-                registro administrativo sem anexo.
-              </p>
-              <div className="mt-4 space-y-3">
-                {matriculas.map((matricula) => {
-                  const regularBlockers = describeBlockers(
-                    matricula.acoes.ativarRegular.bloqueios,
-                  );
-                  const implantationBlockers = describeBlockers(
-                    matricula.acoes.liberarImplantacao.bloqueios,
-                  );
-
-                  return (
-                    <div
-                      key={matricula.matriculaId}
-                      className="flex flex-col gap-4 rounded-xl border border-emerald-100 bg-white p-4 lg:flex-row lg:items-center lg:justify-between"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-xs font-black text-slate-800">{matricula.cursoNome}</p>
-                        <p className="mt-0.5 text-[10px] font-semibold text-slate-500">{matricula.turmaNome}</p>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          <span className="rounded-full bg-slate-100 px-2 py-1 text-[8px] font-black uppercase tracking-wider text-slate-600">
-                            {matricula.status}
-                          </span>
-                          <span
-                            className={`rounded-full px-2 py-1 text-[8px] font-black uppercase tracking-wider ${
-                              matricula.fluxo === 'IMPLANTACAO'
-                                ? 'bg-amber-100 text-amber-800'
-                                : 'bg-blue-50 text-blue-700'
-                            }`}
-                          >
-                            {matricula.fluxo === 'IMPLANTACAO'
-                              ? 'Aluno de implantação'
-                              : 'Matrícula regular'}
-                          </span>
-                          <span className="rounded-full bg-emerald-50 px-2 py-1 text-[8px] font-black uppercase tracking-wider text-emerald-700">
-                            Documentos {matricula.documentacao.concluidos}/{matricula.documentacao.obrigatoriosTotal}
-                          </span>
-                        </div>
-                        {matricula.liberacaoAcademica ? (
-                          <p className="mt-2 text-[10px] font-semibold text-amber-700">
-                            Acesso liberado por {matricula.liberacaoAcademica.liberadoPorNome || 'gestor'}
-                            {' em '}
-                            {new Date(matricula.liberacaoAcademica.liberadoEm).toLocaleString('pt-BR')}.
-                          </p>
-                        ) : null}
-                      </div>
-
-                      {matricula.status === 'ATIVO' ? (
-                        <span className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-emerald-100 px-4 text-[10px] font-black uppercase tracking-wider text-emerald-800">
-                          <ShieldCheck size={14} /> Matrícula ativa
-                        </span>
-                      ) : matricula.liberacaoAcademica ? (
-                        <div className="flex flex-col items-stretch gap-1 lg:items-end">
-                          <span className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-amber-100 px-4 text-[10px] font-black uppercase tracking-wider text-amber-800">
-                            <BookOpenCheck size={14} /> Acesso de implantação liberado
-                          </span>
-                          <button
-                            type="button"
-                            disabled={
-                              workflow.implantationRevokeMutation.isPending
-                              || !matricula.acoes.revogarLiberacao.permitida
-                            }
-                            onClick={() => {
-                              const motivo = window.prompt(
-                                'Informe o motivo da revogação (mínimo de 10 caracteres):',
-                              )?.trim();
-                              if (!motivo) return;
-                              if (motivo.length < 10) {
-                                setOperationError('O motivo da revogação deve ter pelo menos 10 caracteres.');
-                                return;
-                              }
-                              setOperationError(null);
-                              void workflow.implantationRevokeMutation.mutateAsync({
-                                matriculaId: matricula.matriculaId,
-                                motivo,
-                              }).catch((error) => setOperationError(errorMessage(error)));
-                            }}
-                            className="text-[9px] font-black uppercase tracking-wider text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            Revogar acesso
-                          </button>
-                        </div>
-                      ) : matricula.fluxo === 'IMPLANTACAO' ? (
-                        <div className="flex flex-col items-stretch gap-1 md:items-end">
-                          <button
-                            type="button"
-                            title={implantationBlockers || 'Reliberar acesso de implantação'}
-                            disabled={
-                              workflow.implantationReleaseMutation.isPending
-                              || !matricula.acoes.liberarImplantacao.permitida
-                            }
-                            onClick={() => {
-                              setOperationError(null);
-                              setImplantationReason('');
-                              setImplantationEnrollment(matricula);
-                            }}
-                            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 text-[10px] font-black uppercase tracking-wider text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            <BookOpenCheck size={14} />
-                            Reliberar acesso de implantação
-                          </button>
-                          <span className="max-w-64 text-[9px] font-semibold text-amber-700 md:text-right">
-                            {implantationBlockers || 'Sem cobrança · nova liberação auditada.'}
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col gap-3 md:flex-row">
-                          <div className="flex flex-col items-stretch gap-1 md:items-end">
-                            <button
-                              type="button"
-                              title={regularBlockers || 'Ativar matrícula regular'}
-                              disabled={
-                                workflow.activateMutation.isPending
-                                || !matricula.acoes.ativarRegular.permitida
-                              }
-                              onClick={() =>
-                                void workflow.activateMutation
-                                  .mutateAsync(matricula.matriculaId)
-                                  .then(() => alert('Matrícula técnica ativada.'))
-                                  .catch((error) => setOperationError(errorMessage(error)))}
-                              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 text-[10px] font-black uppercase tracking-wider text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                              <ShieldCheck size={14} /> Ativar matrícula regular
-                            </button>
-                            <span className="max-w-64 text-[9px] font-semibold text-slate-500 md:text-right">
-                              {regularBlockers || 'Pagamento e documentação confirmados pelo servidor.'}
-                            </span>
-                          </div>
-                          <div className="flex flex-col items-stretch gap-1 md:items-end">
-                            <button
-                              type="button"
-                              title={implantationBlockers || 'Liberar acesso sem financeiro'}
-                              disabled={
-                                workflow.implantationReleaseMutation.isPending
-                                || !matricula.acoes.liberarImplantacao.permitida
-                              }
-                              onClick={() => {
-                                setOperationError(null);
-                                setImplantationReason('');
-                                setImplantationEnrollment(matricula);
-                              }}
-                              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 text-[10px] font-black uppercase tracking-wider text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                              <BookOpenCheck size={14} />
-                              Converter e liberar implantação
-                            </button>
-                            <span className="max-w-64 text-[9px] font-semibold text-amber-700 md:text-right">
-                              {implantationBlockers || 'Sem cobrança · acesso acadêmico auditado.'}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </section>
-      ) : null}
+      <MatriculaTecnicaAccessSection
+        enrollments={matriculas}
+        activatePending={workflow.activateMutation.isPending}
+        implantationReleasePending={workflow.implantationReleaseMutation.isPending}
+        implantationRevokePending={workflow.implantationRevokeMutation.isPending}
+        onActivate={(enrollment) => {
+          setOperationError(null);
+          void workflow.activateMutation
+            .mutateAsync(enrollment.matriculaId)
+            .then(() => toast.success(
+              'Matrícula técnica ativada',
+              `${enrollment.cursoNome} teve o acesso regular liberado com sucesso.`,
+            ))
+            .catch((error) => setOperationError(errorMessage(error)));
+        }}
+        onOpenImplantation={(enrollment) => {
+          setOperationError(null);
+          setImplantationReason('');
+          setImplantationEnrollment(enrollment);
+        }}
+        onRevokeImplantation={(enrollment, reason) => {
+          setOperationError(null);
+          void workflow.implantationRevokeMutation.mutateAsync({
+            matriculaId: enrollment.matriculaId,
+            motivo: reason,
+          }).catch((error) => setOperationError(errorMessage(error)));
+        }}
+        onValidationError={setOperationError}
+      />
 
       <DocumentoPreviewHistoryModal
         open={Boolean(previewItem)}
@@ -678,7 +399,10 @@ const ParceiroAlunoDocumentos: React.FC<ParceiroAlunoDocumentosProps> = ({ aluno
             motivo: implantationReason,
           }).then(() => {
             setImplantationEnrollment(null);
-            alert('Aluno liberado para o acesso acadêmico sem gerar financeiro.');
+            toast.success(
+              'Acesso acadêmico liberado',
+              'O aluno foi liberado sem gerar financeiro.',
+            );
           }).catch((error) => setOperationError(errorMessage(error)));
         }}
         onClose={() => setImplantationEnrollment(null)}
