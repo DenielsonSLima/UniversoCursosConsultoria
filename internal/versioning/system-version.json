@@ -1,8 +1,8 @@
 {
-  "version": "4.8.70",
+  "version": "4.8.71",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 79,
+  "revision": 80,
   "releasedAt": "2026-09-19",
-  "summary": "Pasta de identificação: foto opcional e documentos formatados"
+  "summary": "Ficha do aluno: layout compacto e edição com rascunho protegido"
 }

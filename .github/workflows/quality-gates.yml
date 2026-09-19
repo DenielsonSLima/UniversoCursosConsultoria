@@ -253,5 +253,10 @@ jobs:
             modules/gestor/secretaria/historico-emissoes/emission-pasta-photo.pdf.test.ts \
             modules/gestor/secretaria/historico-emissoes/emission-document.pdf.contract.test.ts
 
+      - name: Testar preservação do rascunho do aluno
+        run: |
+          node --test \
+            modules/gestor/parceiros/components/viewparceiros/aluno/parceiro-aluno-edicao.test.ts
+
       - name: Gerar build de produção
         run: npm run build

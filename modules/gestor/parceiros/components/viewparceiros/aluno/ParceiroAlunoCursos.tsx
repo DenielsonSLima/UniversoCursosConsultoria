@@ -51,18 +51,18 @@ const ParceiroAlunoCursos: React.FC<Props> = ({ alunoId }) => {
   });
 
   if (isLoading) {
-    return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-blue-600" /></div>;
+    return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-blue-600" /></div>;
   }
 
   return (
-    <div className="space-y-6 ">
-      <div className="border-b border-slate-100 pb-5">
+    <div className="space-y-5 ">
+      <div className="border-b border-slate-100 pb-4">
         <div className="flex items-center gap-2 text-blue-600">
           <BookOpen size={20} />
-          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Visão acadêmica consolidada</span>
+          <span className="text-xs font-semibold">Visão acadêmica consolidada</span>
         </div>
-        <h3 className="mt-2 text-xl font-black uppercase text-[#001a33]">Cursos do aluno</h3>
-        <p className="mt-1 text-xs text-slate-500">
+        <h3 className="mt-2 text-lg font-semibold text-[#001a33]">Cursos do aluno</h3>
+        <p className="mt-1 text-sm text-slate-500">
           Aqui o curso aparece uma vez. Trocas de turma, trancamentos e retornos ficam na aba Matrículas.
         </p>
       </div>
@@ -72,31 +72,31 @@ const ParceiroAlunoCursos: React.FC<Props> = ({ alunoId }) => {
           const active = course.matriculas.find((item: any) => item.status === 'ATIVO');
           const concluded = course.matriculas.some((item: any) => item.status === 'CONCLUIDO');
           return (
-            <article key={course.id} className="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm">
+            <article key={course.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <div className="flex items-start justify-between gap-4">
                 <div className="rounded-2xl bg-blue-50 p-3 text-blue-600"><GraduationCap size={22} /></div>
-                <span className={`rounded-full px-2.5 py-1 text-[9px] font-black uppercase ${concluded ? 'bg-emerald-50 text-emerald-700' : active ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-600'}`}>
+                <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${concluded ? 'bg-emerald-50 text-emerald-700' : active ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-600'}`}>
                   {concluded ? 'Concluído' : active ? 'Em andamento' : 'Histórico'}
                 </span>
               </div>
-              <h4 className="mt-5 text-lg font-black text-[#001a33]">{course.nome}</h4>
-              <p className="mt-1 text-[10px] font-black uppercase tracking-wider text-slate-400">{course.modalidade} · {course.carga_horaria || 0}h</p>
+              <h4 className="mt-5 text-lg font-semibold text-[#001a33]">{course.nome}</h4>
+              <p className="mt-1 text-xs font-semibold text-slate-500">{course.modalidade} · {course.carga_horaria || 0}h</p>
 
               <div className="mt-5 grid grid-cols-2 gap-3">
                 <div className="rounded-2xl bg-slate-50 p-3">
-                  <Layers3 size={14} className="text-slate-400" />
-                  <p className="mt-2 text-xl font-black text-[#001a33]">{course.matriculas.length}</p>
-                  <span className="text-[9px] font-black uppercase text-slate-400">Vínculos em turmas</span>
+                  <Layers3 size={14} className="text-slate-500" />
+                  <p className="mt-2 text-lg font-semibold text-[#001a33]">{course.matriculas.length}</p>
+                  <span className="text-xs font-semibold text-slate-500">Vínculos em turmas</span>
                 </div>
                 <div className="rounded-2xl bg-slate-50 p-3">
                   <CheckCircle2 size={14} className="text-emerald-500" />
-                  <p className="mt-2 text-xl font-black text-[#001a33]">{course.aproveitamentos}</p>
-                  <span className="text-[9px] font-black uppercase text-slate-400">Aproveitamentos</span>
+                  <p className="mt-2 text-lg font-semibold text-[#001a33]">{course.aproveitamentos}</p>
+                  <span className="text-xs font-semibold text-slate-500">Aproveitamentos</span>
                 </div>
               </div>
 
               {active && (
-                <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 p-3 text-xs font-bold text-blue-800">
+                <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 p-3 text-sm font-medium text-blue-800">
                   Turma atual: {active.turmas?.nome} · {active.turmas?.polos?.nome}
                 </div>
               )}
@@ -104,7 +104,7 @@ const ParceiroAlunoCursos: React.FC<Props> = ({ alunoId }) => {
           );
         })}
       </div>
-      {!courses.length && <p className="py-16 text-center text-sm text-slate-400">Nenhum curso registrado para este aluno.</p>}
+      {!courses.length && <p className="py-10 text-center text-sm text-slate-500">Nenhum curso registrado para este aluno.</p>}
     </div>
   );
 };

@@ -32,15 +32,15 @@ type DoseDraft = {
 
 const getStatusBadge = (status?: VacinaStatus) => {
   if (status === 'aprovado') {
-    return <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-700"><CheckCircle2 size={11} /> Aprovado</span>;
+    return <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700"><CheckCircle2 size={11} /> Aprovado</span>;
   }
   if (status === 'reprovado') {
-    return <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-red-700"><XCircle size={11} /> Reprovado</span>;
+    return <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700"><XCircle size={11} /> Reprovado</span>;
   }
   if (status === 'em_analise') {
-    return <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-blue-700"><Clock size={11} /> Em análise</span>;
+    return <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700"><Clock size={11} /> Em análise</span>;
   }
-  return <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-slate-600"><AlertCircle size={11} /> Pendente</span>;
+  return <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-600"><AlertCircle size={11} /> Pendente</span>;
 };
 
 const ParceiroAlunoVacinas: React.FC<ParceiroAlunoVacinasProps> = ({ alunoId }) => {
@@ -184,27 +184,27 @@ const ParceiroAlunoVacinas: React.FC<ParceiroAlunoVacinasProps> = ({ alunoId }) 
   const isLoading = loadingContexts || loadingRegistros;
 
   if (isLoading) {
-    return <div className="py-20 text-center text-sm font-bold text-slate-400">Carregando vacinas...</div>;
+    return <div className="py-12 text-center text-sm font-medium text-slate-500">Carregando vacinas...</div>;
   }
 
   return (
-    <div className=" space-y-6">
-      <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 md:flex-row md:items-center md:justify-between">
+    <div className=" space-y-5">
+      <div className="flex flex-col gap-4 border-b border-slate-100 pb-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h3 className="text-xl font-black uppercase tracking-tight text-[#001a33]">Vacinas do aluno</h3>
-          <p className="mt-1 text-xs font-semibold text-slate-500">Valide carteirinha, doses e pendências para liberação de estágio.</p>
+          <h3 className="text-lg font-semibold tracking-tight text-[#001a33]">Vacinas do aluno</h3>
+          <p className="mt-1 text-sm font-semibold text-slate-500">Valide carteirinha, doses e pendências para liberação de estágio.</p>
         </div>
         <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-emerald-800">
-          <p className="text-[9px] font-black uppercase tracking-widest">Controle de estágio</p>
-          <p className="mt-1 text-xs font-bold">Aprovação manual pela secretaria</p>
+          <p className="text-xs font-semibold">Controle de estágio</p>
+          <p className="mt-1 text-sm font-medium">Aprovação manual pela secretaria</p>
         </div>
       </div>
 
       {contexts.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-10 text-center">
           <ShieldCheck className="mx-auto text-slate-300" size={42} />
-          <p className="mt-3 text-sm font-black text-[#001a33]">Nenhuma exigência de vacina para as matrículas atuais.</p>
-          <p className="mt-1 text-xs font-semibold text-slate-500">Configure a exigência no cadastro do curso técnico.</p>
+          <p className="mt-3 text-sm font-semibold text-[#001a33]">Nenhuma exigência de vacina para as matrículas atuais.</p>
+          <p className="mt-1 text-sm font-semibold text-slate-500">Configure a exigência no cadastro do curso técnico.</p>
         </div>
       ) : (
         contexts.map((context) => (
@@ -214,16 +214,16 @@ const ParceiroAlunoVacinas: React.FC<ParceiroAlunoVacinasProps> = ({ alunoId }) 
                 <Syringe size={20} />
               </div>
               <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Curso com exigência</p>
-                <h4 className="text-base font-black text-[#001a33]">{context.cursoNome}</h4>
-                <p className="mt-1 text-xs font-bold text-slate-500">{context.turmaNome || 'Turma vinculada'}</p>
+                <p className="text-xs font-semibold text-emerald-600">Curso com exigência</p>
+                <h4 className="text-base font-semibold text-[#001a33]">{context.cursoNome}</h4>
+                <p className="mt-1 text-sm font-medium text-slate-500">{context.turmaNome || 'Turma vinculada'}</p>
               </div>
             </div>
 
             <div className="space-y-4">
               {context.config.vacinas.filter((vacina) => vacina.obrigatoria).map((vacina) => (
                 <div key={vacina.codigo} className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
-                  <p className="text-sm font-black text-[#001a33]">{vacina.nome}</p>
+                  <p className="text-sm font-semibold text-[#001a33]">{vacina.nome}</p>
                   <div className="mt-4 space-y-3">
                     {vacina.doses.map((dose) => {
                       const key = getVacinaDoseKey(context.cursoId, vacina.codigo, dose.numero);
@@ -239,19 +239,31 @@ const ParceiroAlunoVacinas: React.FC<ParceiroAlunoVacinasProps> = ({ alunoId }) 
                         <div key={key} className="rounded-2xl border border-slate-200 bg-white p-4">
                           <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                             <div className="flex items-center gap-2">
-                              <span className="text-xs font-black uppercase tracking-widest text-slate-700">{dose.label}</span>
+                              <span className="text-sm font-semibold text-slate-700">{dose.label}</span>
                               {getStatusBadge(registro?.status)}
                             </div>
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                            <span className="text-xs font-medium text-slate-500">
                               Origem: {registro?.origem === 'secretaria' ? 'Secretaria' : registro?.origem === 'aluno' ? 'Aluno' : 'Não enviado'}
                             </span>
                           </div>
 
                           <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-                            <input type="date" value={draft.dataAplicacao} onChange={(e) => updateDraft(key, { dataAplicacao: e.target.value })} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:border-emerald-300" />
-                            <input type="text" value={draft.lote} onChange={(e) => updateDraft(key, { lote: e.target.value })} placeholder="Lote" className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:border-emerald-300" />
-                            <input type="text" value={draft.localAplicacao} onChange={(e) => updateDraft(key, { localAplicacao: e.target.value })} placeholder="Local" className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:border-emerald-300" />
-                            <input type="text" value={draft.observacao} onChange={(e) => updateDraft(key, { observacao: e.target.value })} placeholder="Observação" className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:border-emerald-300" />
+                            <label className="space-y-1 text-xs font-medium text-slate-600">
+                              <span>Data de aplicação</span>
+                              <input type="date" value={draft.dataAplicacao} onChange={(e) => updateDraft(key, { dataAplicacao: e.target.value })} className="min-h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-base sm:text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
+                            </label>
+                            <label className="space-y-1 text-xs font-medium text-slate-600">
+                              <span>Lote</span>
+                              <input type="text" value={draft.lote} onChange={(e) => updateDraft(key, { lote: e.target.value })} placeholder="Lote" className="min-h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-base sm:text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
+                            </label>
+                            <label className="space-y-1 text-xs font-medium text-slate-600">
+                              <span>Local de aplicação</span>
+                              <input type="text" value={draft.localAplicacao} onChange={(e) => updateDraft(key, { localAplicacao: e.target.value })} placeholder="Local" className="min-h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-base sm:text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
+                            </label>
+                            <label className="space-y-1 text-xs font-medium text-slate-600">
+                              <span>Observação</span>
+                              <input type="text" value={draft.observacao} onChange={(e) => updateDraft(key, { observacao: e.target.value })} placeholder="Observação" className="min-h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-base sm:text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
+                            </label>
                           </div>
 
                           <div className="mt-4 flex flex-wrap gap-2">
@@ -262,12 +274,12 @@ const ParceiroAlunoVacinas: React.FC<ParceiroAlunoVacinasProps> = ({ alunoId }) 
                                 const input = buildInput(context, vacina, dose);
                                 if (input) saveMutation.mutate(input);
                               }}
-                              className="inline-flex items-center gap-2 rounded-xl bg-[#001a33] px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-blue-900 disabled:opacity-60"
+                              className="inline-flex items-center gap-2 rounded-xl bg-[#001a33] px-3 py-2 text-xs font-semibold text-white hover:bg-blue-900 disabled:opacity-60"
                             >
                               <FileText size={13} /> Registrar
                             </button>
 
-                            <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-emerald-300 hover:text-emerald-700">
+                            <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:border-emerald-300 hover:text-emerald-700">
                               <Upload size={13} /> Anexar
                               <input
                                 type="file"
@@ -284,7 +296,7 @@ const ParceiroAlunoVacinas: React.FC<ParceiroAlunoVacinasProps> = ({ alunoId }) 
                             </label>
 
                             {registro?.arquivoUrl && (
-                              <a href={registro.arquivoUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-blue-700">
+                              <a href={registro.arquivoUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700">
                                 <Eye size={13} /> Visualizar
                               </a>
                             )}
@@ -295,7 +307,7 @@ const ParceiroAlunoVacinas: React.FC<ParceiroAlunoVacinasProps> = ({ alunoId }) 
                                   type="button"
                                   disabled={statusMutation.isPending}
                                   onClick={() => statusMutation.mutate({ id: registro.id!, status: 'aprovado', observacao: draft.observacao })}
-                                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-emerald-700 disabled:opacity-60"
+                                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
                                 >
                                   <CheckCircle2 size={13} /> Aprovar
                                 </button>
@@ -303,7 +315,7 @@ const ParceiroAlunoVacinas: React.FC<ParceiroAlunoVacinasProps> = ({ alunoId }) 
                                   type="button"
                                   disabled={statusMutation.isPending}
                                   onClick={() => statusMutation.mutate({ id: registro.id!, status: 'reprovado', observacao: draft.observacao || 'Documento ou informação precisa ser corrigido.' })}
-                                  className="inline-flex items-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-red-700 hover:bg-red-100 disabled:opacity-60"
+                                  className="inline-flex items-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-60"
                                 >
                                   <XCircle size={13} /> Reprovar
                                 </button>

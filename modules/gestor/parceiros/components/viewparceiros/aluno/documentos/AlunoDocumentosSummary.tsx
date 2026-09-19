@@ -21,19 +21,19 @@ const AlunoDocumentosSummary: React.FC<AlunoDocumentosSummaryProps> = ({ itens }
   ];
 
   return (
-    <section aria-labelledby="documentos-resumo-title" className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-      <div className="flex flex-col gap-5 bg-[#001a33] px-5 py-5 text-white sm:flex-row sm:items-end sm:justify-between sm:px-6">
+    <section aria-labelledby="documentos-resumo-title" className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="flex flex-col gap-4 border-b border-slate-200 bg-slate-50 px-4 py-4 text-[#001a33] sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-[9px] font-black uppercase tracking-[0.22em] text-blue-300">Conferência documental</p>
-          <h3 id="documentos-resumo-title" className="mt-1 text-lg font-black tracking-tight">
+          <p className="text-xs font-medium text-blue-700">Conferência documental</p>
+          <h3 id="documentos-resumo-title" className="mt-1 text-lg font-semibold tracking-tight">
             Visão geral do checklist
           </h3>
-          <p className="mt-1 text-xs font-medium text-slate-300">
+          <p className="mt-1 text-sm text-slate-500">
             {analisados} de {resumo.total} itens já receberam decisão.
           </p>
         </div>
         <div className="min-w-48">
-          <div className="mb-2 flex items-center justify-between text-[9px] font-black uppercase tracking-wider text-slate-300">
+          <div className="mb-2 flex items-center justify-between text-xs font-medium text-slate-600">
             <span>Progresso</span>
             <span>{progresso}%</span>
           </div>
@@ -43,9 +43,9 @@ const AlunoDocumentosSummary: React.FC<AlunoDocumentosSummaryProps> = ({ itens }
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={progresso}
-            className="h-2 overflow-hidden rounded-full bg-white/15"
+            className="h-1.5 overflow-hidden rounded-full bg-slate-200"
           >
-            <div className="h-full rounded-full bg-blue-400 transition-[width]" style={{ width: `${progresso}%` }} />
+            <div className="h-full rounded-full bg-blue-600 transition-[width]" style={{ width: `${progresso}%` }} />
           </div>
         </div>
       </div>
@@ -57,8 +57,8 @@ const AlunoDocumentosSummary: React.FC<AlunoDocumentosSummaryProps> = ({ itens }
               <Icon aria-hidden="true" size={16} />
             </span>
             <div>
-              <dt className="text-[8px] font-black uppercase tracking-wider text-slate-400">{label}</dt>
-              <dd className="mt-0.5 text-lg font-black leading-none text-[#001a33]">{value}</dd>
+              <dt className="text-xs font-semibold text-slate-500">{label}</dt>
+              <dd className="mt-0.5 text-lg font-semibold leading-none text-[#001a33]">{value}</dd>
             </div>
           </div>
         ))}
