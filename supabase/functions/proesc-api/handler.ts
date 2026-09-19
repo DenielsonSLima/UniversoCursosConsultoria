@@ -3,7 +3,9 @@ import {
 } from '../_shared/authz.ts';
 import { buildCorsHeaders, isRateLimitExceeded, json } from '../_shared/http.ts';
 import { object, ProescError } from './contract.ts';
-import { testProescToken } from './test-token.ts';
+import { testProescV1Token } from './test-token.ts';
+import { connectionActions, handleConnectionAction } from './connections.ts';
+import { connectionToken } from './connection-contract.ts';
 import { runProescSync } from './sync-worker.ts';
 import { runProescReadOnlyDiagnostic } from './diagnostic-readonly.ts';
 import { reviewProescCycles } from './cycle-review.ts';
@@ -43,7 +45,7 @@ export const createHandler = (admin: Admin, transport: typeof fetch = fetch) => 
       if (sync.status === 'rejected') throw new ProescError('Não foi possível concluir a atualização Proesc.', 409);
       return respond({ ...sync.value, cycleReview: cycleReview.status === 'fulfilled'
         ? cycleReview.value : { success: false, message: 'A consulta automática será retomada.' } });
-    } else if (action === 'internal_probe' || action === 'internal_accounting_probe') {
+    } else if (action === 'internal_probe' || action === 'internal_accounting_probe' || action === 'internal_data_probe') {
       const key = req.headers.get('X-Proesc-Worker-Secret') || '';
       if (!/^[0-9a-f]{64}$/.test(key)) throw new ProescError('Acesso interno não autorizado.', 403);
       const { data, error } = await admin.rpc('proesc_internal_probe_service', {
@@ -70,11 +72,24 @@ export const createHandler = (admin: Admin, transport: typeof fetch = fetch) => 
       }
       requireGestorGlobal(gestor);
       requireGestorModule(gestor, 'configuracoes');
-      if (!publicActions.has(action)) throw new ProescError('Ação não permitida neste painel.', 403);
+      if (!publicActions.has(action) && !connectionActions.has(action)) throw new ProescError('Ação não permitida neste painel.', 403);
       actorId = gestor.id;
     }
     if (isRateLimitExceeded(`proesc:${actorId}`, 100, 60000)) {
       return respond({ error: 'Muitas consultas. Aguarde um minuto e retome.' }, 429);
+    }
+    if (connectionActions.has(action)) {
+      if (action === 'test_connection' && isRateLimitExceeded(`proesc-test:${actorId}`, 5, 60000)) {
+        throw new ProescError('Aguarde um minuto antes de testar novamente.', 429);
+      }
+      return respond(await handleConnectionAction(admin, actorId, body, transport));
+    }
+    if (action === 'internal_data_probe') {
+      if (isRateLimitExceeded(`proesc-test:${actorId}`, 5, 60000)) {
+        throw new ProescError('Aguarde um minuto antes de testar novamente.', 429);
+      }
+      return respond(await handleConnectionAction(admin, actorId,
+        { action: 'test_connection', version: 'v2' }, transport));
     }
     if (action === 'internal_accounting_probe') {
       if (isRateLimitExceeded(`proesc-accounting-probe:${actorId}`, 5, 60000)) {
@@ -94,7 +109,7 @@ export const createHandler = (admin: Admin, transport: typeof fetch = fetch) => 
       if (isRateLimitExceeded(`proesc-test:${actorId}`, 5, 60000)) throw new ProescError('Aguarde um minuto antes de testar novamente.', 429);
       const credential = object(await rpc('proesc_workspace_service', 'token'));
       if (typeof credential.token !== 'string' || !credential.token) throw new ProescError('Cadastre o token antes de testar.');
-      const result = await testProescToken(credential.token, transport);
+      const result = await testProescV1Token(credential.token, transport);
       const current = object(await rpc('proesc_workspace_service', 'token'));
       if (current.revision !== credential.revision) throw new ProescError('O token foi alterado durante o teste. Teste novamente.', 409);
       return respond(result);
@@ -109,8 +124,7 @@ export const createHandler = (admin: Admin, transport: typeof fetch = fetch) => 
       return respond({ configured: false });
     }
     if (action === 'save_token') {
-      const token = String(body.token || '').trim().replace(/^Bearer\s+/i, '');
-      if (token.length < 12 || token.length > 8192 || (/\s/.test(token) || [...token].some((char) => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127))) throw new ProescError('Informe um token Proesc válido.');
+      const token = connectionToken('v1', body.token);
       await rpc('proesc_workspace_service', action, { token });
       return respond({ configured: true });
     }

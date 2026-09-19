@@ -4,6 +4,11 @@ export interface ProescStatus {
   configured: boolean;
   updatedAt: string | null;
 }
+export type ProescVersion = 'v1' | 'v2';
+export interface ProescConnectionStatus extends ProescStatus {
+  version: ProescVersion;
+  wafConfigured: boolean;
+}
 export interface ProescTokenTest {
   ok: boolean;
   checkedAt: string;
@@ -53,10 +58,17 @@ async function invoke<T>(action: string, payload: object = {}): Promise<T> {
 
 export const proescKeys = {
   status: ['configuracoes', 'proesc', 'connection-v2'] as const,
+  connection: (version: ProescVersion) => ['configuracoes', 'proesc', 'connection', version] as const,
   classes: (offset: number) => ['configuracoes', 'proesc', 'classes', offset] as const,
   events: (classId: string, offset: number) => ['configuracoes', 'proesc', 'events', classId, offset] as const,
 };
 export const proescService = {
+  connectionStatus: (version: ProescVersion) => invoke<ProescConnectionStatus>('connection_status', { version }),
+  saveConnection: (version: ProescVersion, token: string, wafHeader?: string) => invoke<ProescConnectionStatus>(
+    'save_connection', { version, token, ...(version === 'v2' && wafHeader?.trim() ? { wafHeader: wafHeader.trim() } : {}) },
+  ),
+  removeConnection: (version: ProescVersion) => invoke<ProescConnectionStatus>('remove_connection', { version }),
+  testConnection: (version: ProescVersion) => invoke<ProescTokenTest>('test_connection', { version }),
   status: () => invoke<ProescStatus>('status'),
   saveToken: (token: string) => invoke('save_token', { token }),
   removeToken: () => invoke('remove_token'),

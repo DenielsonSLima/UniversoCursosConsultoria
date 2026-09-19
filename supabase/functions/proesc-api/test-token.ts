@@ -1,9 +1,11 @@
 import { buildQueryUrl, object, type Resource } from './contract.ts';
 import { createProescV1Client, ProescV1ReadError } from './v1-client.ts';
+import { connectionToken, v2Headers } from './connection-contract.ts';
 
 type ProbeCheck = { resource: Resource; ok: boolean; status: number; message: string };
 
-async function probeV1Token(token: string, transport: typeof fetch, now: Date) {
+export async function testProescV1Token(token: string, transport: typeof fetch = fetch, now = new Date()) {
+  connectionToken('v1', token);
   const client = createProescV1Client({ token, transport });
   let stage: 'configuration' | 'accounting' = 'configuration';
   let check: ProbeCheck;
@@ -33,7 +35,7 @@ async function probeV1Token(token: string, transport: typeof fetch, now: Date) {
   return { ok: check.ok, checkedAt: now.toISOString(), checks: [check], message: check.message };
 }
 
-async function probeResource(token: string, resource: Resource, transport: typeof fetch, now: Date): Promise<ProbeCheck> {
+async function probeResource(token: string, resource: Resource, transport: typeof fetch, now: Date, wafHeader?: string): Promise<ProbeCheck> {
   const month = now.toISOString().slice(0, 7);
   const url = buildQueryUrl(resource, { unitId: '', start: month, end: month },
     { year: now.getUTCFullYear(), month: now.getUTCMonth() + 1, page: 1 });
@@ -41,8 +43,7 @@ async function probeResource(token: string, resource: Resource, transport: typeo
   try {
     response = await transport(url, {
       method: 'GET', redirect: 'error', signal: AbortSignal.timeout(12000),
-      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json',
-        'User-Agent': 'UniversoCursos-Integration/1.0' },
+      headers: v2Headers(token, wafHeader),
     });
   } catch {
     return { resource, ok: false, status: 0, message: 'Não foi possível conectar ao Proesc dentro do tempo limite.' };
@@ -72,7 +73,8 @@ async function probeResource(token: string, resource: Resource, transport: typeo
     for (const chunk of chunks) { bytes.set(chunk, position); position += chunk.byteLength; }
     const payload = JSON.parse(new globalThis.TextDecoder().decode(bytes));
     const root = object(Array.isArray(payload) && payload.length === 1 ? payload[0] : payload);
-    if (root.success === false || root.sucess === false || !Array.isArray(root.data)) throw new Error('response format');
+    if (root.success === false || root.sucess === false || root.status === 'error' || root.error
+      || !Array.isArray(root.data)) throw new Error('response format');
     return { resource, ok: true, status: response.status, message: 'Acesso confirmado.' };
   } catch {
     return { resource, ok: false, status: response.status,
@@ -81,10 +83,10 @@ async function probeResource(token: string, resource: Resource, transport: typeo
 }
 
 // Valida somente acesso. Nunca retorna pessoas, parcelas, token ou resposta externa bruta.
-export async function testProescToken(token: string, transport: typeof fetch = fetch, now = new Date()) {
-  if (/^[0-9a-f]{32}$/i.test(token)) return probeV1Token(token, transport, now);
-  const checks = await Promise.all((['people', 'invoices'] as const).map((resource) => probeResource(token, resource, transport, now)));
+export async function testProescV2Token(token: string, wafHeader?: string, transport: typeof fetch = fetch, now = new Date()) {
+  v2Headers(token, wafHeader);
+  const checks = await Promise.all((['people'] as const).map((resource) => probeResource(token, resource, transport, now, wafHeader)));
   const ok = checks.every((check) => check.ok);
   return { ok, checkedAt: now.toISOString(), checks,
-    message: ok ? 'Token validado para pessoas e parcelas.' : 'O teste não confirmou todos os acessos ao Proesc.' };
+    message: ok ? 'Token V2 validado para consulta de pessoas.' : 'O teste não confirmou o acesso aos dados de pessoas.' };
 }

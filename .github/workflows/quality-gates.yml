@@ -234,5 +234,15 @@ jobs:
           node --test /tmp/diario-ui.test.cjs
           deno test --allow-read --allow-env modules/gestor/gestao/tecnicos/detalhes/components/diarios/diario-pdf-documentary.test.ts modules/gestor/gestao/tecnicos/detalhes/components/diarios/diario-pdf-server-boundary.test.ts
 
+      - name: Testar conexões Proesc V1 e V2
+        run: |
+          deno test --allow-read --allow-env \
+            supabase/functions/proesc-api/handler.test.ts \
+            supabase/functions/proesc-api/contract.test.ts \
+            supabase/functions/proesc-api/test-token.test.ts \
+            supabase/functions/proesc-api/test-token-v1.test.ts \
+            supabase/functions/proesc-api/versioned-connections.test.ts
+          node --test modules/gestor/configuracoes/proesc/proesc.service.test.mjs
+
       - name: Gerar build de produção
         run: npm run build
