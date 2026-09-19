@@ -244,5 +244,14 @@ jobs:
             supabase/functions/proesc-api/versioned-connections.test.ts
           node --test modules/gestor/configuracoes/proesc/proesc.service.test.mjs
 
+      - name: Testar apresentação da pasta de identificação
+        run: |
+          deno test --allow-read --allow-env --unstable-sloppy-imports \
+            modules/gestor/cadastros/ficha-matricula/pasta-student-photo.test.ts \
+            modules/gestor/cadastros/ficha-matricula/registration-document-formatters.test.ts \
+            modules/gestor/secretaria/historico-emissoes/emission-registration-fields.test.ts \
+            modules/gestor/secretaria/historico-emissoes/emission-pasta-photo.pdf.test.ts \
+            modules/gestor/secretaria/historico-emissoes/emission-document.pdf.contract.test.ts
+
       - name: Gerar build de produção
         run: npm run build

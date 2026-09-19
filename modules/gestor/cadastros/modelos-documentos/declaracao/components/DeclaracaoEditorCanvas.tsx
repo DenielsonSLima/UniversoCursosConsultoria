@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { AlignJustify, GripVertical, MoveDiagonal2, Trash2 } from 'lucide-react';
 import DocumentHeader from '../../../../components/DocumentHeader';
 import { escapeHtmlText, sanitizedHtml } from '../../../../../../lib/htmlSanitizer';
 import { LocalQrCodeImage } from '../../../../../shared/qrcode/LocalQrCodeImage';
 import type { AbsoluteField } from './declaracao-editor.types';
 import { PAGE_HEIGHT, PAGE_WIDTH } from './declaracao-editor.utils';
+import { adaptPastaTemplateForStudentPhoto } from '../../../ficha-matricula/pasta-template-geometry';
 
 interface EnrollmentFormPreview {
   customFields: Array<{ id?: string | number; label?: string }>;
@@ -88,6 +89,7 @@ interface DeclaracaoAbsoluteFieldProps {
   selected: boolean;
   validationCode: string;
   readOnly?: boolean;
+  onImageError?: (url: string) => void;
 }
 
 const DeclaracaoAbsoluteField: React.FC<DeclaracaoAbsoluteFieldProps> = ({
@@ -101,6 +103,7 @@ const DeclaracaoAbsoluteField: React.FC<DeclaracaoAbsoluteFieldProps> = ({
   selected,
   validationCode,
   readOnly = false,
+  onImageError,
 }) => {
   const pageTop = Number(field.y || 0) - (pageIndex * PAGE_HEIGHT);
 
@@ -154,6 +157,9 @@ const DeclaracaoAbsoluteField: React.FC<DeclaracaoAbsoluteFieldProps> = ({
         <img
           src={field.value === '{{ALUNO_FOTO_URL}}' ? '/sem-foto-aluno.svg' : field.value}
           alt={field.value === '{{ALUNO_FOTO_URL}}' ? 'Foto do aluno' : 'Elemento visual'}
+          onError={() => {
+            if (field.id === 'student_photo') onImageError?.(field.value);
+          }}
           className={`w-full pointer-events-none ${field.height ? 'h-full' : 'h-auto'}`}
           style={{
             display: 'block',
@@ -256,6 +262,26 @@ const DeclaracaoEditorCanvas: React.FC<DeclaracaoEditorCanvasProps> = ({
   watermark,
   readOnly = false,
 }) => {
+  const studentPhotoUrl = absoluteFields.find(field => field.id === 'student_photo')?.value;
+  const [photoPreview, setPhotoPreview] = useState({
+    url: studentPhotoUrl, readOnly, failedUrl: null as string | null,
+  });
+  const samePhotoPreview = photoPreview.url === studentPhotoUrl && photoPreview.readOnly === readOnly;
+  if (!samePhotoPreview) {
+    setPhotoPreview({ url: studentPhotoUrl, readOnly, failedUrl: null });
+  }
+  const failedStudentPhoto = samePhotoPreview ? photoPreview.failedUrl : null;
+  const handleStudentPhotoError = (url: string) => {
+    if (readOnly && url === studentPhotoUrl) {
+      setPhotoPreview({ url: studentPhotoUrl, readOnly, failedUrl: url });
+    }
+  };
+  const renderedFields = readOnly
+    ? adaptPastaTemplateForStudentPhoto(
+        { absoluteFields },
+        studentPhotoUrl === failedStudentPhoto ? null : studentPhotoUrl,
+      ).absoluteFields
+    : absoluteFields;
   const pageIndexForField = (field: AbsoluteField) => Math.max(
     0,
     Math.min(pageCount - 1, Math.floor(Number(field.y || 0) / PAGE_HEIGHT)),
@@ -379,7 +405,7 @@ const DeclaracaoEditorCanvas: React.FC<DeclaracaoEditorCanvasProps> = ({
                 />
               </div>
 
-              {absoluteFields
+              {renderedFields
                 .filter(field => pageIndexForField(field) === pageIndex)
                 .map(field => (
                   <DeclaracaoAbsoluteField
@@ -394,6 +420,7 @@ const DeclaracaoEditorCanvas: React.FC<DeclaracaoEditorCanvasProps> = ({
                     selected={selectedField?.id === field.id}
                     validationCode={validationCode}
                     readOnly={readOnly}
+                    onImageError={handleStudentPhotoError}
                   />
                 ))}
             </div>

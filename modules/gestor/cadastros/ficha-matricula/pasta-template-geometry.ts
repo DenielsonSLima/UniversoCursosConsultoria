@@ -58,3 +58,47 @@ export const stripRedundantPastaFooter = (template: any) => {
     absoluteFields: fields.filter((field: any) => field !== footerFields[0]),
   };
 };
+
+export const hasPastaStudentPhoto = (photoUrl: unknown): boolean => {
+  const normalizedPhoto = String(photoUrl ?? '').trim();
+  return Boolean(normalizedPhoto
+    && !/(?:^|\/)sem-foto-aluno\.svg(?:[?#].*)?$/i.test(normalizedPhoto),
+  );
+};
+
+/** Adapta somente a cópia de apresentação; o slot continua salvo no modelo. */
+export const adaptPastaTemplateForStudentPhoto = <T extends { absoluteFields?: any[] }>(
+  template: T,
+  photoUrl: unknown,
+): T => {
+  if (hasPastaStudentPhoto(photoUrl) || !Array.isArray(template?.absoluteFields)) return template;
+
+  const fields = template.absoluteFields;
+  const identity = fields.find(field => field?.id === 'pasta_identificacao');
+  const photos = fields.filter(field => field?.id === 'student_photo' && field.type === 'image');
+  if (!identity || photos.length !== 1) return template;
+
+  const photo = photos[0];
+  const photoX = asFiniteNumber(photo.x);
+  const photoY = asFiniteNumber(photo.y);
+  const photoWidth = asFiniteNumber(photo.width);
+  const photoHeight = asFiniteNumber(photo.height);
+  const identityX = asFiniteNumber(identity.x);
+  const identityWidth = asFiniteNumber(identity.width);
+  const canExpand = photoX !== null && photoY !== null
+    && photoWidth !== null && photoWidth > 0
+    && photoHeight !== null && photoHeight > 0
+    && identityX !== null && identityWidth !== null && identityWidth > 0
+    && photoX + photoWidth <= identityX
+    && photoY === asFiniteNumber(identity.y)
+    && photoHeight === asFiniteNumber(identity.height);
+
+  return {
+    ...template,
+    absoluteFields: fields.filter(field => field !== photo).map(field => (
+      field === identity && canExpand
+        ? { ...field, x: photoX, width: identityX + identityWidth - photoX }
+        : field
+    )),
+  };
+};
