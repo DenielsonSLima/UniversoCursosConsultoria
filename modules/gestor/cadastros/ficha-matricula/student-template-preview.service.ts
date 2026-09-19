@@ -2,6 +2,11 @@ import { formatMatricula } from '../../../../lib/academicUtils';
 import { formatCpf } from '../../../../lib/documentFormatters';
 import { supabase } from '../../../../lib/supabase';
 import { formatCep } from '../../../shared/utils/brazilianCep';
+import {
+  formatRegistrationIssuerState,
+  formatRegistrationReservist,
+  formatRegistrationVoterId,
+} from './registration-document-formatters';
 
 export interface StudentTemplatePreview {
   enrollmentId: string;
@@ -63,6 +68,9 @@ const normalizeStudentPreview = (enrollment: any, referencePolo: any): StudentTe
     enrollmentId: enrollment.id,
     label: `${studentName} · ${displayValue(course.nome)}`,
     replacements: {
+      '{{ALUNO_RG_ORGAO}} / {{ALUNO_RG_UF}}': displayValue(
+        formatRegistrationIssuerState(student.orgao_emissor, student.rg_uf_emissao),
+      ),
       '{{ALUNO_NOME}}': studentName,
       '{{ALUNO_FOTO_URL}}': student.foto_url || '/sem-foto-aluno.svg',
       '{{ALUNO_NOME_SOCIAL}}': displayValue(student.nome_social || student.nome),
@@ -90,12 +98,12 @@ const normalizeStudentPreview = (enrollment: any, referencePolo: any): StudentTe
       '{{ALUNO_RG_ORGAO}}': displayValue(student.orgao_emissor),
       '{{ALUNO_RG_UF}}': displayValue(student.rg_uf_emissao),
       '{{ALUNO_RG_EMISSAO}}': formatDate(student.rg_data_emissao),
-      '{{ALUNO_TITULO_ELEITOR}}': displayValue(student.titulo_eleitor),
+      '{{ALUNO_TITULO_ELEITOR}}': displayValue(formatRegistrationVoterId(student.titulo_eleitor)),
       '{{ALUNO_TITULO_ZONA}}': displayValue(student.titulo_eleitor_zona),
       '{{ALUNO_TITULO_SECAO}}': displayValue(student.titulo_eleitor_secao),
       '{{ALUNO_TITULO_EMISSAO}}': formatDate(student.titulo_eleitor_data_emissao),
       '{{ALUNO_TITULO_UF}}': displayValue(student.titulo_eleitor_uf),
-      '{{ALUNO_RESERVISTA}}': displayValue(student.reservista),
+      '{{ALUNO_RESERVISTA}}': displayValue(formatRegistrationReservist(student.reservista, student.sexo)),
       '{{ALUNO_PCD}}': student.pcd ? 'SIM' : 'NÃO',
       '{{ALUNO_PCD_TIPO}}': displayValue(student.pcd_tipo),
       '{{ALUNO_RESPONSAVEL}}': displayValue(responsibleName),

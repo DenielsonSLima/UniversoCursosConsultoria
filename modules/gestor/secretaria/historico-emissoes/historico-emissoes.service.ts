@@ -9,7 +9,8 @@ import { boletimService } from '../../cadastros/modelos-documentos/boletim/bolet
 import { historicoService } from '../../cadastros/modelos-documentos/historico/historico.service';
 import { transferenciaService } from '../../cadastros/modelos-documentos/transferencia/transferencia.service';
 import { pastaIdentificacaoService, fichaMatriculaDefaultTemplate } from '../../cadastros/ficha-matricula/document-layouts';
-import { stripRedundantPastaFooter } from '../../cadastros/ficha-matricula/pasta-template-geometry';
+import { adaptPastaTemplateForStudentPhoto, stripRedundantPastaFooter } from '../../cadastros/ficha-matricula/pasta-template-geometry';
+import { snapshotFirst } from './voter-snapshot';
 import { fichasMatriculaService } from '../../cadastros/ficha-matricula/fichas-matricula.service';
 import { academicosService } from '../../configuracoes/academicos/academicos.service';
 import { marcaDaguaService } from '../../configuracoes/marca-dagua/marca-dagua.service';
@@ -309,7 +310,11 @@ const loadPreviewBatch = async (
       throw new Error('O certificado acadêmico finalizado não foi localizado para esta emissão.');
     }
     const preview = {
-      template,
+      template: emission.documento === 'pasta_identificacao'
+        ? adaptPastaTemplateForStudentPhoto(template, snapshotFirst(
+            emission.dados_emissao || {}, 'studentPhotoUrl', emission.aluno?.foto_url,
+          ))
+        : template,
       watermark: hasSnapshotKey(emission, 'watermarkSnapshot')
         ? emission.dados_emissao.watermarkSnapshot
         : watermarks.find((item) => item.id === poloId) || null,

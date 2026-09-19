@@ -5,6 +5,12 @@ import { formatCep } from '../../../shared/utils/brazilianCep';
 import { amountInWords } from '../../../shared/secretaria/document-template.helpers';
 import type { AcademicPreviewData, EmissionLog } from './historico-emissoes.types';
 import { snapshotFirst } from './voter-snapshot';
+import {
+  formatRegistrationIssuerState,
+  formatRegistrationReservist,
+  formatRegistrationVoterId,
+  replaceRegistrationIssuerState,
+} from '../../cadastros/ficha-matricula/registration-document-formatters';
 
 interface TemplateParserContext {
   academicData: AcademicPreviewData | null;
@@ -179,7 +185,7 @@ export const parseEmissionTemplate = (
     [/{{ALUNO_RG_EMISSAO}}/g, formatDate(emissionData.studentRgIssueDate)],
     [
       /{{ALUNO_TITULO_ELEITOR}}/g,
-      snapshotFirst(emissionData, 'studentVoterId', data.aluno?.titulo_eleitor) || '—',
+      formatRegistrationVoterId(snapshotFirst(emissionData, 'studentVoterId', data.aluno?.titulo_eleitor)) || '—',
     ],
     [
       /{{ALUNO_TITULO_ZONA}}/g,
@@ -201,7 +207,10 @@ export const parseEmissionTemplate = (
       /{{ALUNO_TITULO_UF}}/g,
       snapshotFirst(emissionData, 'studentVoterState', data.aluno?.titulo_eleitor_uf) || '—',
     ],
-    [/{{ALUNO_RESERVISTA}}/g, emissionData.studentReservist || data.aluno?.reservista || '—'],
+    [/{{ALUNO_RESERVISTA}}/g, formatRegistrationReservist(
+      snapshotFirst(emissionData, 'studentReservist', data.aluno?.reservista),
+      snapshotFirst(emissionData, 'studentSex', data.aluno?.sexo),
+    ) || '—'],
     [/{{ALUNO_RESPONSAVEL}}/g, emissionData.studentResponsibleName || 'Não informado'],
     [/{{ALUNO_RESPONSAVEL_CPF}}/g, formatCpf(emissionData.studentResponsibleCpf) || 'Não informado'],
     [/{{ALUNO_RESPONSAVEL_PARENTESCO}}/g, emissionData.studentResponsibleRelation || 'Não informado'],
@@ -282,6 +291,9 @@ export const parseEmissionTemplate = (
 
   return replacements.reduce(
     (parsed, [pattern, value]) => parsed.replace(pattern, value),
-    htmlText
+    replaceRegistrationIssuerState(htmlText, formatRegistrationIssuerState(
+      snapshotFirst(emissionData, 'studentRgIssuer', data.aluno?.orgao_emissor),
+      snapshotFirst(emissionData, 'studentRgState', ''),
+    ) || '—')
   );
 };
