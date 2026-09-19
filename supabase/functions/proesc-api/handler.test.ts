@@ -37,14 +37,36 @@ Deno.test('bloqueia anônimo, sessão inválida, usuário restrito, perfil finan
   assert(response.status === 401 && calls.length === 0);
 });
 
+Deno.test('configurações versionadas exigem gestor global antes de qualquer RPC ou acesso V2', async () => {
+  for (const action of ['connection_status', 'save_connection', 'remove_connection', 'test_connection']) {
+    for (const options of [{ noAuth: true }, { allPolos: false }, { profile: 'financeiro' }, { modules: [] }]) {
+      const { admin, calls } = fixture(options);
+      const response = await createHandler(admin, () => { throw new Error('network prohibited'); })(
+        request({ action, version: 'v2', token: 'synthetic-v2-token' }));
+      assert(response.status >= 400 && calls.length === 0);
+    }
+  }
+});
+
+Deno.test('endpoint versionado usa serviço próprio e legado não sobrescreve V1 com Bearer V2', async () => {
+  const { admin, calls } = fixture({ result: { configured: true, wafConfigured: true, token: 'PRIVATE' } });
+  const response = await createHandler(admin)(request({ action: 'connection_status', version: 'v2' }));
+  assert(response.status === 200 && calls[0].name === 'proesc_connection_service');
+  assert((calls[0].payload as { version: string }).version === 'v2');
+  assert(!(await response.text()).includes('PRIVATE'));
+  const legacy = fixture();
+  const invalid = await createHandler(legacy.admin)(request({ action: 'save_token', token: 'synthetic-v2-token' }));
+  assert(invalid.status === 400 && legacy.calls.length === 0);
+});
+
 Deno.test('credencial nunca é retornada no cadastro e nenhum erro do banco expõe parâmetros', async () => {
   const { admin, calls } = fixture({ result: { token: 'synthetic-token', secret_id: 'secret', configured: true } });
-  const response = await createHandler(admin)(request({ action: 'save_token', token: 'Bearer synthetic-token' }));
+  const response = await createHandler(admin)(request({ action: 'save_token', token: 'Bearer ' + 'a'.repeat(32) }));
   assert(response.status === 200);
-  assert(calls[0].payload.token === 'synthetic-token');
+  assert(calls[0].payload.token === 'a'.repeat(32));
   assert(!(await response.text()).includes('synthetic-token'));
   for (const action of ['save_token', 'remove_token', 'status', 'class_history']) {
-    const failure = await createHandler(fixture({ dbError: true }).admin)(request({ action, token: 'synthetic-token' }));
+    const failure = await createHandler(fixture({ dbError: true }).admin)(request({ action, token: 'a'.repeat(32) }));
     assert(failure.status === 409 && !(await failure.text()).includes('SECRET_DATABASE'));
   }
 });
@@ -131,24 +153,27 @@ Deno.test('credenciais inválidas e caracteres de controle nunca chegam à RPC',
 });
 
 Deno.test('testar token usa credencial do servidor e ignora parâmetros operacionais do cliente', async () => {
-  const { admin, calls } = fixture({ result: { token: 'synthetic-server-token', revision: 'revision-a' } });
+  const { admin, calls } = fixture({ result: { token: 'b'.repeat(32), revision: 'revision-a' } });
   let networkCalls = 0;
   const transport: typeof fetch = (url, options) => {
     networkCalls++;
-    assert(String(url).startsWith('https://api.proesc.com/api/v2/'));
-    assert(new Headers(options?.headers).get('Authorization') === 'Bearer synthetic-server-token');
-    return Promise.resolve(Response.json({ data: [] }));
+    assert(String(url).startsWith('https://app.proesc.com/api/v1/'));
+    assert(new Headers(options?.headers).get('Authorization') === null);
+    assert(new URL(String(url)).searchParams.get('token') === 'b'.repeat(32));
+    return Promise.resolve(Response.json(networkCalls === 1
+      ? { status: 'success', units: [{ id: 1, unidade: 'Synthetic' }], academic_years: [], categories: [] }
+      : { status: 'success', data: [] }));
   };
   const response = await createHandler(admin, transport)(request({ action: 'test_token', token: 'forged-client-token',
     resource: 'debits', p_action: 'commit_page', filters: { start: '2000-01' } }));
   const body = await response.json();
   assert(response.status === 200 && body.ok && networkCalls === 2);
   assert(calls.length === 2 && calls.every((call) => call.action === 'token' && Object.keys(call.payload).length === 0));
-  assert(!JSON.stringify(body).includes('synthetic-server-token'));
+  assert(!JSON.stringify(body).includes('b'.repeat(32)));
 });
 
 Deno.test('probe interno exige segredo validado pela RPC privada antes de acessar a credencial', async () => {
-  for (const action of ['internal_probe', 'internal_accounting_probe']) for (const key of ['', 'forged', 'a'.repeat(64)]) {
+  for (const action of ['internal_probe', 'internal_accounting_probe', 'internal_data_probe']) for (const key of ['', 'forged', 'a'.repeat(64)]) {
     const { admin, calls } = fixture({ dbError: true });
     let networkCalls = 0;
     const req = request({ action, internal: true, role: 'service_role' });
@@ -157,6 +182,26 @@ Deno.test('probe interno exige segredo validado pela RPC privada antes de acessa
     assert(response.status === 403 && networkCalls === 0);
     assert(!calls.some((call) => call.action === 'token'));
   }
+});
+
+Deno.test('probe de dados interno usa V2 pessoas e ignora versão ou operação financeira forjada', async () => {
+  const { admin } = fixture();
+  admin.rpc = (name, args) => {
+    if (name === 'proesc_internal_probe_service') return Promise.resolve({ data: { actorId: 'worker-actor' } });
+    assert(name === 'proesc_connection_service' && args.p_actor_id === 'worker-actor');
+    assert(args.p_action === 'credential' && (args.p_payload as { version: string }).version === 'v2');
+    return Promise.resolve({ data: { token: 'synthetic-v2-token', revision: 'r1', wafHeader: null } });
+  };
+  let calls = 0;
+  const transport: typeof fetch = (input) => {
+    calls++;
+    assert(new URL(String(input)).pathname === '/api/v2/people');
+    return Promise.resolve(Response.json({ data: [] }));
+  };
+  const req = request({ action: 'internal_data_probe', version: 'v1', resource: 'invoices' }, false);
+  req.headers.set('X-Proesc-Worker-Secret', 'a'.repeat(64));
+  const response = await createHandler(admin, transport)(req);
+  assert(response.status === 200 && (await response.json()).ok && calls === 1);
 });
 
 Deno.test('sincronização exige segredo próprio e autorização interna antes de obter lote ou token', async () => {

@@ -1,4 +1,4 @@
-import { testProescToken } from './test-token.ts';
+import { testProescV1Token } from './test-token.ts';
 
 function assert(value: unknown, message = 'assertion failed'): asserts value { if (!value) throw new Error(message); }
 const token = '0123456789abcdef0123456789abcdef';
@@ -14,7 +14,7 @@ const accounting = () => ({ status: 'success', data: [{
 
 Deno.test('token geral 32hex usa V1 configuração e contabilidade sequenciais, sem prometer acesso a pessoas', async () => {
   const requests: string[] = [];
-  const result = await testProescToken(token, (input, options) => {
+  const result = await testProescV1Token(token, (input, options) => {
     const url = new URL(String(input));
     assert(url.origin === 'https://app.proesc.com' && options?.method === 'GET' && options.redirect === 'error');
     assert(url.searchParams.get('token') === token && !new Headers(options.headers).has('Authorization'));
@@ -34,7 +34,7 @@ Deno.test('token geral 32hex usa V1 configuração e contabilidade sequenciais, 
 
 Deno.test('configuração com erro lógico HTTP200 interrompe teste financeiro e omite corpo externo', async () => {
   let calls = 0;
-  const result = await testProescToken(token, () => {
+  const result = await testProescV1Token(token, () => {
     calls++;
     return Promise.resolve(Response.json({ status: 'error', description: `unit id required ${token}` }));
   }, now);
@@ -45,7 +45,7 @@ Deno.test('configuração com erro lógico HTTP200 interrompe teste financeiro e
 Deno.test('unidade ausente ou ambígua não autoriza escolher uma unidade automaticamente', async () => {
   for (const units of [[], [{ id: 9001, unidade: 'A' }, { id: 9002, unidade: 'B' }]]) {
     let calls = 0;
-    const result = await testProescToken(token, () => { calls++; return Promise.resolve(Response.json(configuration(units))); }, now);
+    const result = await testProescV1Token(token, () => { calls++; return Promise.resolve(Response.json(configuration(units))); }, now);
     assert(!result.ok && calls === 1 && result.message.includes('única unidade'));
   }
 });
@@ -56,7 +56,7 @@ Deno.test('sucesso de configuração não oculta erro semântico nem recusa HTTP
     () => new Response(`SECRET_BODY ${token}`, { status: 403 }),
   ]) {
     let calls = 0;
-    const result = await testProescToken(token, () => {
+    const result = await testProescV1Token(token, () => {
       calls++;
       return Promise.resolve(calls === 1 ? Response.json(configuration()) : response());
     }, now);
@@ -68,20 +68,20 @@ Deno.test('sucesso de configuração não oculta erro semântico nem recusa HTTP
 
 Deno.test('coleção contábil vazia confirmada valida acesso sem declarar pagamentos ou importação', async () => {
   let calls = 0;
-  const result = await testProescToken(token.toUpperCase(), () => Promise.resolve(++calls === 1
+  const result = await testProescV1Token(token.toUpperCase(), () => Promise.resolve(++calls === 1
     ? Response.json(configuration()) : Response.json({ status: 'success', data: [] })), now);
   assert(result.ok && calls === 2 && !result.message.includes('pagamento') && !result.message.includes('importa'));
 });
 
-Deno.test('credencial fora do formato geral mantém as duas leituras V2', async () => {
-  const paths: string[] = [];
-  const result = await testProescToken('synthetic-jwt-like-token', (input, options) => {
-    const url = new URL(String(input));
-    paths.push(url.pathname);
-    assert(url.origin === 'https://api.proesc.com');
-    assert(new Headers(options?.headers).get('Authorization') === 'Bearer synthetic-jwt-like-token');
-    assert(!url.searchParams.has('token'));
-    return Promise.resolve(Response.json({ data: [] }));
-  }, now);
-  assert(result.ok && result.checks.length === 2 && paths.includes('/api/v2/people') && paths.includes('/api/v2/invoices'));
+Deno.test('V1 rejeita token V2 antes de consultar rede', async () => {
+  let calls = 0;
+  try {
+    await testProescV1Token('synthetic-v2-token', () => {
+      calls++;
+      return Promise.resolve(Response.json({ data: [] }));
+    }, now);
+    throw new Error('expected version rejection');
+  } catch (error) {
+    assert(error instanceof Error && error.message.includes('V1') && calls === 0);
+  }
 });

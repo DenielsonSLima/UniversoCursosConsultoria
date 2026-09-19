@@ -2,7 +2,13 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
-Histórico anterior: [01/09/2026 — versões 4.8.20 a 4.8.22](./changelog/2026-09-01-versoes-4-8-20-a-4-8-22.md), [27/08/2026 a 31/08/2026 — versões 4.8.8 a 4.8.19](./changelog/2026-08-27-a-2026-08-31.md), [26/08/2026 — versões 4.8.6 a 4.8.7](./changelog/2026-08-26.md), [25/08/2026 — versões 4.8.2 a 4.8.5](./changelog/2026-08-25-parte-1.md), [24/08/2026 — versões 4.8.0 a 4.8.1](./changelog/2026-08-24-parte-2.md), [24/08/2026 — versões 4.7.5 a 4.7.7](./changelog/2026-08-24-parte-1.md), [22/08/2026 a 23/08/2026](./changelog/2026-08-22-a-2026-08-23.md), [21/08/2026 a 22/08/2026 — parte 2](./changelog/2026-08-21-a-2026-08-22-parte-2.md), [21/08/2026 — parte 1](./changelog/2026-08-21-parte-1.md), [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+Histórico anterior: [01/09/2026 — versões 4.8.23 a 4.8.26](./changelog/2026-09-01-versoes-4-8-23-a-4-8-26.md), [01/09/2026 — versões 4.8.20 a 4.8.22](./changelog/2026-09-01-versoes-4-8-20-a-4-8-22.md), [27/08/2026 a 31/08/2026 — versões 4.8.8 a 4.8.19](./changelog/2026-08-27-a-2026-08-31.md), [26/08/2026 — versões 4.8.6 a 4.8.7](./changelog/2026-08-26.md), [25/08/2026 — versões 4.8.2 a 4.8.5](./changelog/2026-08-25-parte-1.md), [24/08/2026 — versões 4.8.0 a 4.8.1](./changelog/2026-08-24-parte-2.md), [24/08/2026 — versões 4.7.5 a 4.7.7](./changelog/2026-08-24-parte-1.md), [22/08/2026 a 23/08/2026](./changelog/2026-08-22-a-2026-08-23.md), [21/08/2026 a 22/08/2026 — parte 2](./changelog/2026-08-21-a-2026-08-22-parte-2.md), [21/08/2026 — parte 1](./changelog/2026-08-21-parte-1.md), [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+
+## [4.8.69] - 2026-09-18
+
+- Proesc possui configurações independentes para V1 e V2, com salvar, remover e testar por conexão.
+- V1 preserva legado, parcelas e conciliação; V2 consulta dados de pessoas com token próprio e liberação do suporte.
+- Segredos permanecem protegidos no servidor; erro em uma versão não troca automaticamente a fonte de dados.
 
 ## [4.8.68] - 2026-09-16
 
@@ -413,86 +419,3 @@ Histórico anterior: [01/09/2026 — versões 4.8.20 a 4.8.22](./changelog/2026-
 
 - Os 22 testes do fluxo técnico, o `deno check` da Edge Function e uma revisão
   independente sem achados críticos ou importantes foram aprovados.
-
-## [4.8.26] - 2026-09-01
-
-### Alterado
-
-- O vencimento inicial do próximo ciclo técnico passa a sugerir um mês após a
-  última parcela oficial do ciclo anterior, preservando o dia quando possível.
-- A data permanece editável e a escolha do gestor continua soberana na prévia,
-  na criação das cobranças e na emissão BolePix.
-
-### Segurança e integridade
-
-- Matrícula, rematrícula, avulsas e parcelas fora da estrutura oficial não
-  participam da data-base; sem histórico confiável, o campo permanece vazio.
-
-### Qualidade
-
-- Migration `20260902024657`, contratos focados, TypeScript, lint, limite de
-  linhas, build e duas revisões independentes foram aprovados.
-
-## [4.8.25] - 2026-09-01
-
-### Alterado
-
-- Cada cobrança do ciclo técnico passa a aparecer em duas faixas nas etapas de
-  composição e revisão, com valor nominal, valor em dia, desconto, multa em
-  reais, juros por dia e as três mensagens acadêmicas do boleto.
-
-### Segurança e integridade
-
-- Os valores detalhados são calculados pelo backend canônico, integram o
-  fingerprint da prévia e são rejeitados pelo frontend quando incompletos ou
-  incoerentes; o React não replica fórmulas financeiras.
-
-### Qualidade
-
-- A migration `20260902013930`, contratos focados, TypeScript, lint, limite de
-  linhas e build de produção foram aprovados antes da publicação.
-
-## [4.8.24] - 2026-09-01
-
-### Alterado
-
-- Uma única confirmação passa a criar os 13 recebíveis do ciclo técnico,
-  emitir seus BolePix Banese e atualizar o Financeiro sem segunda ação.
-- Falha parcial apresenta o progresso e retoma somente os itens incompletos.
-
-### Corrigido
-
-- A Turma 42 passa a usar multa única de 2%, preservando juros de 2% ao mês,
-  rematrícula sem desconto e desconto de R$ 19,90 nas mensalidades.
-
-### Segurança e integridade
-
-- Resposta ambígua é retomada exclusivamente por GET e nunca libera novo POST.
-- Snapshot, identidade bancária, Pix oficial e transação são validados e
-  persistidos atomicamente; evidência de liquidação bloqueia qualquer mutação.
-
-## [4.8.23] - 2026-09-01
-
-### Corrigido
-
-- O modal de geração manual ocupa a viewport real, sem ficar preso ao layout
-  da página ou deixar uma folga superior.
-- A elegibilidade deixa de expor códigos internos e o fluxo passa a separar
-  vencimento, composição das cobranças e revisão final em três etapas.
-- A composição lista rematrícula, parcelas, vencimentos, valores e a aplicação
-  de desconto, multa e juros antes da confirmação.
-- A ação final passa a se chamar `Gerar cobranças`.
-
-### Segurança e integridade
-
-- Dados, valores e cronograma vêm exclusivamente da prévia canônica do backend;
-  nenhuma cobrança é criada antes da confirmação final.
-- O hotfix não emite boleto Banese e não altera banco, Edge Function, Turma 42,
-  Adenize ou recebíveis existentes.
-
-### Qualidade
-
-- Contratos do wizard, parser e prévia, TypeScript, ESLint, teto de 500 linhas
-  e build de produção foram aprovados.
-- O smoke visual autenticado permaneceu pendente porque não havia navegador
-  conectado à sessão de validação.

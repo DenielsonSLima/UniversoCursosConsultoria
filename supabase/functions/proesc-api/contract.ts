@@ -99,12 +99,18 @@ export function normalizeRecord(resource: Resource, value: unknown): RecordValue
 export function parsePage(payload: unknown, resource: Resource, filters: Filters, cursor: Cursor) {
   // A documentação descreve tanto envelope quanto array contendo o envelope.
   const root = object(Array.isArray(payload) && payload.length === 1 ? payload[0] : payload);
-  if (root.success === false || root.sucess === false || !Array.isArray(root.data)) {
+  if (root.success === false || root.sucess === false || root.status === 'error' || root.error || !Array.isArray(root.data)) {
     throw new ProescError('Formato Proesc não reconhecido. A consulta ficou pendente para conferência.', 502);
   }
   if (root.data.length > 2000) throw new ProescError('Página Proesc excedeu o limite de consulta.', 502);
-  const currentPage = integer(root.current_page, 1, 10000);
-  const lastPage = integer(root.last_page, 1, 10000);
+  // A resposta V2 observada usa {data, links, meta}; o contrato anterior usa a raiz.
+  const meta = object(root.meta);
+  if ((root.current_page !== undefined && meta.current_page !== undefined && root.current_page !== meta.current_page)
+    || (root.last_page !== undefined && meta.last_page !== undefined && root.last_page !== meta.last_page)) {
+    throw new ProescError('Paginação Proesc conflitante. Consulta pendente para conferência.', 502);
+  }
+  const currentPage = integer(root.current_page ?? meta.current_page, 1, 10000);
+  const lastPage = integer(root.last_page ?? meta.last_page, 1, 10000);
   if (currentPage !== cursor.page || lastPage < currentPage) {
     throw new ProescError('Paginação Proesc inconsistente. Nenhuma conclusão foi presumida.', 502);
   }

@@ -1,8 +1,8 @@
 {
-  "version": "4.8.68",
+  "version": "4.8.69",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 77,
-  "releasedAt": "2026-09-16",
-  "summary": "Referência da consulta à API Proesc separada do horário da baixa"
+  "revision": 78,
+  "releasedAt": "2026-09-18",
+  "summary": "Conexões Proesc separadas: V1 para legado e V2 para dados de pessoas"
 }
