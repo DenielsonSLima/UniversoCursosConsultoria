@@ -15,13 +15,15 @@ O usuário solicitou publicar no GitHub, revisar o sistema e conferir regressõe
 
 ## Revisão e mudanças desta publicação
 
-- 54 arquivos dos dois manifestos operacionais, mais versão/changelog, CI, configuração Edge, exemplos opcionais da configuração e este registro: 60 arquivos.
+- 54 arquivos dos dois manifestos operacionais, mais versão/changelog, CI, configuração Edge, exemplos opcionais da configuração, configuração do linter e este registro: 61 arquivos.
 - Todas as 24 migrations coincidem em nome/versão com o ledger. Fontes aplicadas permanecem imutáveis; esta publicação não reaplica SQL nem refaz a transferência.
 - Código dos entrypoints/módulos publicados coincide com `proesc-api` v18 e `proesc-history-archive` v2 ACTIVE. Os 17 módulos existentes fora do patch também coincidem com a base GitHub e a produção.
 - Revisão detectou ausência de configuração declarativa: `verify_jwt=false` agora explícito para ambas as funções. Elas continuam validando a autorização própria antes dos dados/Storage; isso registra o comportamento já ativo, sem abrir endpoint anônimo.
 - Exemplos comentados de Passkey/WebAuthn separados em `supabase/config-template-examples.md`, preservando documentação e configurações ativas. O TOML continua com 500 linhas.
 - CI passa a executar codec, worker, replay, drain, observação e sincronização Proesc. Os arquivos de versão avançam para 4.8.72/revisão 81; histórico anterior preservado.
 - Registro de limites reconciliado sobre a base remota, recebendo somente estes três registros. Alterações locais de outros lotes permanecem fora da publicação.
+
+- CI identificou globals nativos do Deno ausentes no linter. Declarações adicionadas somente ao escopo do arquivador, mantendo as regras de lint e sem alterar o código em produção.
 
 ## Validação de publicação
 
@@ -41,6 +43,7 @@ O usuário solicitou publicar no GitHub, revisar o sistema e conferir regressõe
 
 ## Manifesto explícito
 
+- `eslint.config.js`
 - `.github/workflows/quality-gates.yml`
 - `ai/operacao/LOTE_ATIVO.md`
 - `ai/operacao/qualidade/limite-linhas-manifestos.json`
@@ -102,4 +105,4 @@ O usuário solicitou publicar no GitHub, revisar o sistema e conferir regressõe
 - `supabase/tests/proesc_settled_polling.transaction.sql`
 - `supabase/tests/proesc_storage_noop.transaction.sql`
 
-Total: 60 arquivos.
+Total: 61 arquivos.

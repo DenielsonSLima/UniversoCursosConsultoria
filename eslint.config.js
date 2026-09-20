@@ -13,6 +13,20 @@ export default [
   },
   js.configs.recommended,
   {
+    files: ["supabase/functions/proesc-history-archive/**/*.ts"],
+    languageOptions: {
+      globals: {
+        BufferSource: "readonly",
+        BlobPart: "readonly",
+        ReadableStream: "readonly",
+        CompressionStream: "readonly",
+        DecompressionStream: "readonly",
+        TextDecoder: "readonly",
+        performance: "readonly"
+      }
+    }
+  },
+  {
     files: ["**/*.{js,jsx,mjs,cjs,ts,tsx}"],
     languageOptions: {
       parser: tsParser,
