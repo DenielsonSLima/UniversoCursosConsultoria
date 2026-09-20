@@ -258,5 +258,16 @@ jobs:
           node --test \
             modules/gestor/parceiros/components/viewparceiros/aluno/parceiro-aluno-edicao.test.ts
 
+      - name: Testar arquivo privado e replay Proesc
+        run: |
+          deno test --no-config --no-lock --node-modules-dir=none --allow-read \
+            supabase/functions/proesc-history-archive/codec.test.ts \
+            supabase/functions/proesc-history-archive/worker.test.ts \
+            supabase/functions/proesc-history-archive/replay.test.ts \
+            supabase/functions/proesc-history-archive/drain.test.ts \
+            supabase/functions/proesc-api/sync-observation.test.ts \
+            supabase/functions/proesc-api/sync-worker.test.ts \
+            supabase/functions/proesc-api/sync-worker.scale.test.ts
+
       - name: Gerar build de produção
         run: npm run build

@@ -1,8 +1,8 @@
 {
-  "version": "4.8.71",
+  "version": "4.8.72",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 80,
+  "revision": 81,
   "releasedAt": "2026-09-19",
-  "summary": "Ficha do aluno: layout compacto e edição com rascunho protegido"
+  "summary": "Arquivo Proesc privado, redução do banco e menor repetição de consultas"
 }

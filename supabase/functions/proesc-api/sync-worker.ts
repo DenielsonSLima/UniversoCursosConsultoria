@@ -2,10 +2,9 @@ import { createProescV1Client } from './v1-client.ts';
 import type { ProescV1AccountingRow } from './v1-accounting.ts';
 import { observeLinkedObligation, type SyncLink } from './sync-observation.ts';
 import { createSyncTelemetry, markSyncFailure, safeSyncError, SyncTelemetryError, type SyncStage } from './sync-telemetry.ts';
+import { rpcWithArchiveReplay, type ArchiveReplayAdmin } from '../_shared/proesc-archive-replay.ts';
 
-type RpcResult = { data: unknown; error: unknown };
-type RpcRequest = PromiseLike<RpcResult> & { abortSignal?: (signal: AbortSignal) => PromiseLike<RpcResult> };
-type RpcAdmin = { rpc(name: string, args: Record<string, unknown>): RpcRequest };
+type RpcAdmin = ArchiveReplayAdmin;
 type Claim = { claimed: boolean; leaseId: string; lastId: string; links: SyncLink[] };
 type Options = { deadlineMs?: number };
 
@@ -15,8 +14,7 @@ export async function runProescSync(
 ) {
   const rpc = async (name: string, args: Record<string, unknown>, signal?: AbortSignal) => {
     if (signal?.aborted) throw new SyncTelemetryError('TIMEOUT');
-    const request = admin.rpc(name, args);
-    return await (signal && request.abortSignal ? request.abortSignal(signal) : request);
+    return await rpcWithArchiveReplay(admin, name, args, signal);
   };
   const runtime = async (action: string, payload: object = {}) => {
     const { data, error } = await rpc('proesc_sync_runtime_service', {
