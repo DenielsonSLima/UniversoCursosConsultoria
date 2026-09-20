@@ -8,7 +8,7 @@ Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-19-publicacao-ar
 
 - Usuário solicitou revisão de regressões e publicação no GitHub após a conclusão remota.
 - Entrega reúne somente as duas etapas coesas de armazenamento, já aplicadas no Supabase.
-- Banco medido em 476,7 MB no encerramento operacional; financeiro e histórico preservados. Margem curta, crescimento deve ser medido em 24 horas.
+- Compactação e arquivo privado preservam o histórico útil; crescimento residual exige acompanhamento.
 - Arquivo privado, replay seguro e menor repetição de consultas Proesc; Banese concluído já excluído da fila.
 - 24 migrations aplicadas e imutáveis conferidas no ledger; código Edge coincide com produção.
 - Versão 4.8.72/revisão 81, autenticação Edge registrada no config e 53 testes isolados aprovados. Duas verificações de entrypoint aprovadas.

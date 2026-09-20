@@ -4,14 +4,12 @@ Estado: VALIDADO E AUTORIZADO PARA PUBLICAÇÃO. Versão 4.8.72, revisão 81.
 
 O usuário solicitou publicar no GitHub, revisar o sistema e conferir regressões. A entrega reúne somente as duas etapas coesas de armazenamento já aplicadas em produção, cuja primeira etapa também ainda não estava no repositório. Base remota conferida: `b0943b3a3fff7133d6606a1855cb7e3d21bbdf76`.
 
-## Resultado operacional já validado
+## Resultado e limites
 
-- Banco de 476.655.793 bytes incluindo templates; aplicação de 461.540.499 bytes. Storage de 67.253.123 bytes, dos quais 48.458.894 bytes/716 objetos são o arquivo privado Proesc. Medição em 20/09/2026 às 01:25 UTC (19/09 às 22:25 local).
-- 356.995 recibos frios; zero overlap quente/frio e zero PREPARED. A diferença entre 356.996 linhas originais e localizadores corresponde ao piloto restaurado.
-- Mesmos 6.837 recebíveis, principal de R$ 1.876.839,27, pago de R$ 986.200,19 e 16.280 eventos relevantes com hash preservado. Nenhum dado pessoal, documento de aluno, credencial ou dump pertence ao manifesto.
-- Quatro rotinas automáticas ativas com ciclos naturais aprovados; financeiro às 01:20/01:22/01:24 SUCCEEDED, com 60 consultas/60 UNCHANGED/zero falhas.
-- Proesc: cadência de 24 horas para pagamento comprovado/inalterado e três horas para aberto elegível; mudanças, erros, revisão e cache ausente não recebem adiamento. Fila e indisponibilidade podem alongar a consulta efetiva. Banese já excluía pagos/cancelados concluídos.
-- Folga de 23,3 MB; sustentabilidade permanente do Free não demonstrada. Medir novamente em 24 horas. Arquivamento depende do banco e dos objetos privados e não substitui backup externo.
+- Arquivo privado, replay e compactação preservam o histórico e o contrato financeiro. Métricas internas e totais financeiros não pertencem ao registro público.
+- Proesc: cadência de 24 horas para pagamento comprovado/inalterado e três horas para aberto elegível; mudanças, erros, revisão e cache ausente não recebem adiamento.
+- Banese exclui pagos/cancelados concluídos. Fila e indisponibilidade podem alongar a consulta efetiva.
+- Crescimento residual exige acompanhamento. Arquivamento depende do banco e dos objetos privados e não substitui backup externo.
 
 ## Revisão e mudanças desta publicação
 
@@ -30,7 +28,7 @@ O usuário solicitou publicar no GitHub, revisar o sistema e conferir regressõe
 - 53 testes passaram em diretório temporário isolado, com dependências lidas do commit remoto e somente o patch desta entrega sobreposto; zero falhas.
 - Typecheck dos dois entrypoints e controle de versão aprovados. Revisão independente reconstruiu e conferiu os hashes intermediários dos patches SQL; nenhuma dependência intermediária ausente foi encontrada.
 - Os ensaios SQL, autorizações, corrupção/indisponibilidade, replay, preservação financeira, monitores autenticados e cron real estão detalhados nos registros operacionais anteriores.
-- CI/build e Preview são verificados no PR antes do merge; os resultados finais e o SHA publicado ficam no histórico/checks do próprio PR. Testes aprovados não equivalem a garantia de ausência absoluta de bugs.
+- CI completo e build/Preview aprovados antes da revisão documental de publicação. Checks do commit final serão conferidos antes do merge. Preview exige autenticação Vercel; navegador indisponível impediu smoke visual nesta sessão. Testes aprovados não equivalem a garantia de ausência absoluta de bugs.
 
 ## Implantação e reconstrução
 
