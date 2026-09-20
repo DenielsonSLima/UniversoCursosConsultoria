@@ -1,13 +1,16 @@
 # Lote ativo
 
-Estado: REVISADO E AUTORIZADO PARA PUBLICAÇÃO — REMODELAÇÃO DA FICHA DO ALUNO
+Estado: VALIDADO E AUTORIZADO PARA PUBLICAÇÃO — ARMAZENAMENTO SUPABASE 4.8.72
 
-## Lote: 2026-09-19-ficha-aluno-remodelacao
+## Lote: 2026-09-19-publicacao-armazenamento-supabase
 
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-19-ficha-aluno-remodelacao.md`.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-19-publicacao-armazenamento-supabase.md`.
 
-- Usuário aprovou a proposta e solicitou implementação em etapas com três agentes, preservando todos os campos e funcionalidades.
-- Etapas: estrutura/navegação; formulário e segurança do rascunho; coerência visual das demais abas.
-- Sem mudança de banco, cálculo financeiro, documentos gerados ou concessão de permissões.
-- Validação: 48 campos preservados (+2 agora explícitos), testes focados e smoke dos componentes reais em desktop/celular; Safari real confirmou a correção dos seletores.
-- Usuário autorizou revisão e publicação; versão 4.8.71/revisão 80. Revisão independente, testes e smoke local aprovados. Smoke autenticado com backend real depende de sessão disponível.
+- Usuário solicitou revisão de regressões e publicação no GitHub após a conclusão remota.
+- Entrega reúne somente as duas etapas coesas de armazenamento, já aplicadas no Supabase.
+- Compactação e arquivo privado preservam o histórico útil; crescimento residual exige acompanhamento.
+- Arquivo privado, replay seguro e menor repetição de consultas Proesc; Banese concluído já excluído da fila.
+- 24 migrations aplicadas e imutáveis conferidas no ledger; código Edge coincide com produção.
+- Versão 4.8.72/revisão 81, autenticação Edge registrada no config e 53 testes isolados aprovados. Duas verificações de entrypoint aprovadas.
+- Publicação por MCP GitHub, commit atômico e Preview; checks/produção acompanhados no PR. Não reaplicar migrations nem redeployar Edge sem mudança.
+- Histórico operacional preservado nos dois registros de armazenamento de 19/09.

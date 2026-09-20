@@ -1,0 +1,187 @@
+CREATE OR REPLACE FUNCTION public.get_proesc_reconciliation_dashboard(p_polo_id uuid DEFAULT NULL::uuid, p_started_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_started_to timestamp with time zone DEFAULT NULL::timestamp with time zone)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare v_polos uuid[]; v_from timestamptz; v_to timestamptz; v_result jsonb;
+begin
+  v_polos:=internal_proesc.monitor_scope(p_polo_id);
+  select started_from,started_to into v_from,v_to from internal_proesc.monitor_period(p_started_from,p_started_to);
+  with links as materialized(select * from internal_proesc.monitor_links(v_polos)),
+  observations as materialized(select s.id,s.verification from internal_proesc.financial_observation_history s
+    join links l on l.link_id=s.link_id where s.observed_at>=v_from and s.observed_at<=v_to),
+  runs as materialized(select r.* from internal_proesc.sync_runs r
+    where r.started_at>=v_from and r.started_at<=v_to
+      and exists(select 1 from internal_proesc.sync_run_items i where i.run_id=r.id and i.polo_id=any(v_polos))),
+  events as materialized(select e.mode,'APPLIED'::text result from internal_proesc.reconciliation_events e
+    join links l on l.link_id=e.link_id where e.result='APPLIED' and e.mode in ('AUTO','IMPORT','CORRECTION')
+      and e.recorded_at>=v_from and e.recorded_at<=v_to
+      and e.after_state->>'status'='PAGO' and exists(select 1 from internal_proesc.financial_snapshots s
+        where s.id=e.snapshot_id and s.source_status='PAID' and s.verification='VERIFIED'))
+  select jsonb_build_object('available',true,
+    'configured',exists(select 1 from internal_proesc.connection where id and secret_id is not null),
+    'canViewReceivableDetails',public.gestor_has_module('financeiro') and public.gestor_has_financeiro_tab('receber'),
+    'selectedPoloId',p_polo_id,'period',jsonb_build_object('startedFrom',v_from,'startedTo',v_to),
+    'polos',(select coalesce(jsonb_agg(jsonb_build_object('id',p.id,'name',concat_ws(' · ',p.nome,p.cidade)) order by p.cidade),'[]'::jsonb)
+      from public.polos p where p.id=any(public.gestor_allowed_polo_ids())),
+    'historyStartedAt',(select min(started_at) from internal_proesc.sync_runs),
+    'monitor',(select jsonb_build_object('enabled',r.enabled,
+      'schedule',(select schedule from cron.job where jobname='proesc-confirmed-obligations' limit 1),
+      'running',coalesce(r.lease_until>now(),false),'leaseExpired',coalesce(r.lease_until<=now(),false),
+      'lastStartedAt',r.last_started_at,'lastFinishedAt',r.last_finished_at,
+      'lastDurationMs',case when r.last_finished_at>=r.last_started_at
+        then round(extract(epoch from r.last_finished_at-r.last_started_at)*1000) end,
+      'lastCounts',case when p_polo_id is null then jsonb_build_object(
+        'consulted',r.last_result->'consulted','applied',r.last_result->'applied','unchanged',r.last_result->'unchanged',
+        'review',r.last_result->'review','failed',r.last_result->'failed') end,
+      'metricsScope','GLOBAL_SHARED_WORKER') from internal_proesc.sync_runtime r where id),
+    'totals',jsonb_build_object('monitored',(select count(*) from links),
+      'autoEnabled',(select count(*) from links where auto_enabled),
+      'observations',(select count(*) from observations),'review',(select count(*) from observations where verification='REVIEW'),
+      'appliedAuto',(select count(*) from events where result='APPLIED' and mode='AUTO'),
+      'appliedImport',(select count(*) from events where result='APPLIED' and mode in ('IMPORT','CORRECTION')),
+      'failedRuns',(select count(*) from runs where status in ('FAILED','PARTIAL','ABANDONED')),
+      'httpRequests',case when p_polo_id is null then (select count(*) from internal_proesc.sync_run_http h join runs r on r.id=h.run_id) end),
+    'capabilities',jsonb_build_object('runHistory',true,'httpHistory',true,'observationHistory',true,'settlementHistory',true,
+      'historicalRunsReconstructed',false,'httpMetricsScope','GLOBAL_SHARED_WORKER')
+  ) into v_result;
+  return v_result;
+end;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.get_proesc_reconciliation_feed_page(p_context text DEFAULT 'runs'::text, p_polo_id uuid DEFAULT NULL::uuid, p_run_id uuid DEFAULT NULL::uuid, p_started_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_started_to timestamp with time zone DEFAULT NULL::timestamp with time zone, p_page integer DEFAULT 1, p_page_size integer DEFAULT 20)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare
+  v_polos uuid[]; v_from timestamptz; v_to timestamptz;
+  v_context text:=lower(coalesce(p_context,'runs'));
+  v_page integer:=greatest(1,coalesce(p_page,1));
+  v_size integer:=greatest(1,least(100,coalesce(p_page_size,20)));
+  v_details boolean; v_items jsonb:='[]'; v_total bigint:=0;
+begin
+  v_polos:=internal_proesc.monitor_scope(p_polo_id);
+  select started_from,started_to into v_from,v_to from internal_proesc.monitor_period(p_started_from,p_started_to);
+  v_details:=public.gestor_has_module('financeiro') and public.gestor_has_financeiro_tab('receber');
+  if v_context not in ('runs','observations','settlements','errors') or v_page>100000 then
+    raise exception 'Filtro de consulta inválido.' using errcode='22023'; end if;
+
+  if v_context='runs' then
+    with filtered as materialized(
+      select r.* from internal_proesc.sync_runs r
+      where r.started_at>=v_from and r.started_at<=v_to and (p_run_id is null or r.id=p_run_id)
+        and exists(select 1 from internal_proesc.sync_run_items i where i.run_id=r.id and i.polo_id=any(v_polos))
+    ), page as materialized(select * from filtered order by started_at desc,id desc limit v_size offset (v_page::bigint-1)*v_size)
+    select (select count(*) from filtered),coalesce(jsonb_agg(jsonb_build_object(
+      'id',r.id,'startedAt',r.started_at,'finishedAt',r.finished_at,'status',r.status,'durationMs',r.duration_ms,
+      'claimed',case when p_polo_id is null then r.claimed else scoped.claimed end,
+      'consulted',case when p_polo_id is null then r.consulted else scoped.consulted end,
+      'applied',case when p_polo_id is null then r.applied else scoped.applied end,
+      'unchanged',case when p_polo_id is null then r.unchanged else scoped.unchanged end,
+      'review',case when p_polo_id is null then r.review else scoped.review end,
+      'failed',case when p_polo_id is null then r.failed else scoped.failed end,
+      'httpRequests',case when p_polo_id is null and (r.telemetry_complete or http.total>0) then http.total end,
+      'httpFailed',case when p_polo_id is null and (r.telemetry_complete or http.total>0) then http.failed end,
+      'errorCode',r.error_code,'errorMessage',internal_proesc.sync_error_message(r.error_code),'stage',r.stage,
+      'telemetryComplete',r.telemetry_complete,'metricsScope',case when p_polo_id is null then 'GLOBAL' else 'POLO_ITEMS_SHARED_EXECUTION' end
+    ) order by r.started_at desc,r.id desc),'[]'::jsonb) into v_total,v_items
+    from page r
+    cross join lateral(select count(*) claimed,count(*) filter(where snapshot_id is not null) consulted,
+      count(*) filter(where result='APPLIED') applied,count(*) filter(where result='UNCHANGED') unchanged,
+      count(*) filter(where result='REVIEW') review,count(*) filter(where result='FAILED') failed
+      from internal_proesc.sync_run_items i where i.run_id=r.id and i.polo_id=any(v_polos)) scoped
+    cross join lateral(select count(*) total,count(*) filter(where error_code is not null) failed
+      from internal_proesc.sync_run_http h where h.run_id=r.id) http;
+
+  elsif v_context='observations' then
+    with links as materialized(select * from internal_proesc.monitor_links(v_polos)),
+    filtered as materialized(select s.id,s.link_id,s.observed_at from internal_proesc.financial_observation_history s
+      join links l on l.link_id=s.link_id
+      where s.observed_at>=v_from and s.observed_at<=v_to
+        and (p_run_id is null or exists(select 1 from internal_proesc.sync_run_items i where i.run_id=p_run_id and coalesce(i.original_snapshot_id,i.snapshot_id)=s.id))),
+    page as materialized(select * from filtered order by observed_at desc,id desc limit v_size offset (v_page::bigint-1)*v_size)
+    select (select count(*) from filtered),coalesce(jsonb_agg(jsonb_build_object(
+      'id',s.id,'observedAt',s.observed_at,'recordedAt',s.recorded_at,
+      'runId',(select i.run_id from internal_proesc.sync_run_items i join internal_proesc.sync_runs r on r.id=i.run_id
+        where coalesce(i.original_snapshot_id,i.snapshot_id)=s.id order by r.started_at desc limit 1),
+      'classId',t.id,'classCode',t.codigo,'className',t.nome,'poloId',p.id,'poloName',concat_ws(' · ',p.nome,p.cidade),
+      'sourceStatus',s.source_status,'verification',s.verification,
+      'reviewReasons',(select coalesce(jsonb_agg(reason),'[]'::jsonb) from jsonb_array_elements_text(s.review_reasons) reason
+        where reason in ('PRINCIPAL_DIVERGENTE','ESTADO_REQUER_REVISAO','PAGAMENTO_INCOMPLETO',
+          'MULTIPLICIDADE_OU_AUSENCIA_PAGAMENTO','PRINCIPAL_NAO_CONFIRMADO','PAGAMENTO_NAO_CONFIRMADO',
+          'COMPONENTES_NAO_COMPROVADOS','ABERTO_COM_PAGAMENTO_INCOERENTE','HISTORICO_ABERTO_NAO_COMPROVADO','SEM_CONFIRMACAO'))
+    ) || case when v_details then jsonb_build_object('receivableId',l.receivable_id,
+      'studentName',student.nome,'description',c.descricao,'externalKey',source_link.source_key,
+      'principalAmount',s.principal_cents::numeric/100,
+      'receivedAmount',case when s.verification='VERIFIED' then s.received_cents::numeric/100 end,
+      'paymentDate',case when s.verification='VERIFIED' then s.payment_date end)
+      else '{}'::jsonb end order by s.observed_at desc,s.id desc),'[]'::jsonb) into v_total,v_items
+    from page selected join internal_proesc.financial_observation_history s on s.id=selected.id
+    join links l on l.link_id=s.link_id join public.turmas t on t.id=l.class_id join public.polos p on p.id=l.polo_id
+    join internal_proesc.obligation_links source_link on source_link.id=l.link_id
+    join public.contas_receber c on c.id=l.receivable_id
+    left join public.matriculas m on m.id=c.matricula_id left join public.parceiros student on student.id=m.aluno_id;
+
+  elsif v_context='settlements' then
+    with links as materialized(select * from internal_proesc.monitor_links(v_polos)),
+    filtered as materialized(select e.id,e.link_id,e.recorded_at from internal_proesc.reconciliation_events e
+      join links l on l.link_id=e.link_id
+      where e.result='APPLIED' and e.mode in ('AUTO','IMPORT','CORRECTION')
+        and e.after_state->>'status'='PAGO' and exists(select 1 from internal_proesc.financial_snapshots s
+          where s.id=e.snapshot_id and s.source_status='PAID' and s.verification='VERIFIED')
+        and e.recorded_at>=v_from and e.recorded_at<=v_to
+        and (p_run_id is null or exists(select 1 from internal_proesc.sync_run_items i where i.run_id=p_run_id
+          and coalesce(i.original_snapshot_id,i.snapshot_id)=coalesce(e.original_snapshot_id,e.snapshot_id)))),
+    page as materialized(select * from filtered order by recorded_at desc,id desc limit v_size offset (v_page::bigint-1)*v_size)
+    select (select count(*) from filtered),coalesce(jsonb_agg(jsonb_build_object(
+      'id',e.id,'recordedAt',e.recorded_at,'mode',e.mode,'result',e.result,
+      'classCode',t.codigo,'poloName',concat_ws(' · ',p.nome,p.cidade)
+    ) || case when v_details then jsonb_build_object('receivableId',l.receivable_id,
+      'studentName',student.nome,'description',c.descricao,'externalKey',source_link.source_key,
+      'principalAmount',e.after_state->'valor','receivedAmount',e.after_state->'valor_pago','paymentDate',e.after_state->'data_pagamento')
+      else '{}'::jsonb end order by e.recorded_at desc,e.id desc),'[]'::jsonb) into v_total,v_items
+    from page selected join internal_proesc.reconciliation_events e on e.id=selected.id
+    join links l on l.link_id=e.link_id join public.turmas t on t.id=l.class_id join public.polos p on p.id=l.polo_id
+    join internal_proesc.obligation_links source_link on source_link.id=l.link_id
+    join public.contas_receber c on c.id=l.receivable_id
+    left join public.matriculas m on m.id=c.matricula_id left join public.parceiros student on student.id=m.aluno_id;
+
+  else
+    with runs as materialized(select r.* from internal_proesc.sync_runs r
+      where (p_run_id is null or r.id=p_run_id)
+        and exists(select 1 from internal_proesc.sync_run_items i where i.run_id=r.id and i.polo_id=any(v_polos))),
+    errors as materialized(
+      select concat(h.run_id,':http:',h.source_unit_id,':',h.source_year,':',h.source_month) id,h.run_id,
+        h.recorded_at,'FETCH'::text stage,h.error_code,h.http_status,h.duration_ms,null::uuid class_id,null::uuid polo_id,null::uuid link_id
+      from internal_proesc.sync_run_http h join runs r on r.id=h.run_id where h.error_code is not null
+      union all
+      select concat(i.run_id,':item:',i.link_id),i.run_id,i.recorded_at,i.stage,i.error_code,null::integer,null::integer,i.class_id,i.polo_id,i.link_id
+      from internal_proesc.sync_run_items i join runs r on r.id=i.run_id where i.error_code is not null and i.polo_id=any(v_polos)
+      union all
+      select concat(r.id,':run'),r.id,coalesce(r.finished_at,r.abandoned_at),r.stage,r.error_code,null::integer,r.duration_ms,null::uuid,null::uuid,null::uuid
+      from runs r where r.error_code is not null
+        and not exists(select 1 from internal_proesc.sync_run_http h where h.run_id=r.id and h.error_code is not null)
+        and not exists(select 1 from internal_proesc.sync_run_items i where i.run_id=r.id and i.error_code is not null)
+    ), filtered as materialized(select * from errors where recorded_at>=v_from and recorded_at<=v_to),
+    page as materialized(select * from filtered order by recorded_at desc,id desc limit v_size offset (v_page::bigint-1)*v_size)
+    select (select count(*) from filtered),coalesce(jsonb_agg(jsonb_build_object(
+      'id',e.id,'runId',e.run_id,'recordedAt',e.recorded_at,'stage',e.stage,'errorCode',e.error_code,
+      'errorMessage',internal_proesc.sync_error_message(e.error_code),'httpStatus',e.http_status,'durationMs',e.duration_ms,
+      'classCode',t.codigo,'poloName',case when p.id is not null then concat_ws(' · ',p.nome,p.cidade) end,
+      'metricsScope',case when e.polo_id is null then 'GLOBAL_SHARED_WORKER' else 'OBLIGATION' end
+    ) || case when v_details and e.link_id is not null then jsonb_build_object(
+      'receivableId',source_link.receivable_id,'studentName',student.nome,'description',c.descricao,'externalKey',source_link.source_key)
+      else '{}'::jsonb end order by e.recorded_at desc,e.id desc),'[]'::jsonb) into v_total,v_items
+    from page e left join public.turmas t on t.id=e.class_id left join public.polos p on p.id=e.polo_id
+    left join internal_proesc.obligation_links source_link on source_link.id=e.link_id
+    left join public.contas_receber c on c.id=source_link.receivable_id
+    left join public.matriculas m on m.id=c.matricula_id left join public.parceiros student on student.id=m.aluno_id;
+  end if;
+  return jsonb_build_object('items',v_items,'page',v_page,'pageSize',v_size,'totalCount',v_total,
+    'totalPages',greatest(1,ceil(v_total::numeric/v_size)::integer),'context',v_context,
+    'period',jsonb_build_object('startedFrom',v_from,'startedTo',v_to),'canViewReceivableDetails',v_details);
+end;
+$function$;
