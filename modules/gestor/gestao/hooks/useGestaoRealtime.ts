@@ -21,12 +21,12 @@ export const useGestaoRealtime = (poloId?: string) => {
     };
 
     const eventConfig: {
-      event: '*';
+      event: 'INSERT';
       schema: 'public';
       table: 'gestao_realtime_events';
       filter?: string;
     } = {
-      event: '*',
+      event: 'INSERT',
       schema: 'public',
       table: 'gestao_realtime_events',
     };

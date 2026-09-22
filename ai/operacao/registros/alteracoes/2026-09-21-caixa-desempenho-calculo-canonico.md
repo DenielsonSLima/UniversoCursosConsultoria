@@ -1,6 +1,6 @@
 # Caixa: desempenho e cálculo canônico
 
-Estado: IMPLEMENTADO — VALIDAÇÃO DE ENTREGA.
+Estado: PUBLICADO — 4.8.75, PR #167.
 
 ## Objetivo e autorização
 
@@ -53,9 +53,10 @@ Total: 26 arquivos.
 - Testes focados de transporte, cancelamento, escopo, renderização, acesso e revisão independente aprovados.
 - Medidas e valores financeiros privados não são publicados neste repositório.
 - Migrations aplicadas pelo MCP com versões 20260922013628, 20260922013637 e 20260922013646; hashes e grants conferidos.
-- Smoke autenticado após o SQL confirmou abertura do Caixa com os mesmos resultados visíveis da Matriz; validação da interface nova será realizada na publicação.
+- Smoke autenticado após o SQL e na interface publicada confirmou resultados equivalentes na Matriz e em Aquidabã, preservando a competência escolhida.
 - Build e limite de linhas aprovados; suíte Caixa 82/82 e acesso do gestor 30/30.
-- Publicação e smoke da interface nova ainda pendentes.
+- PR #167 integrado após autorização explícita; árvore publicada idêntica à validada. CI do main e deploy Vercel concluídos com sucesso.
+- Safari autenticado confirmou a versão 4.8.75, o mês atual e anterior, troca de polo, posição total e linha de corte. A inspeção visual do fluxo exercitado não identificou regressão.
 
 ## Limitações
 

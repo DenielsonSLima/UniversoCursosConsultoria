@@ -213,7 +213,7 @@ export const useTurmaTecnicoRealtime = (turmaId: string) => {
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'gestao_realtime_events', filter: `turma_id=eq.${turmaId}` },
+        { event: 'INSERT', schema: 'public', table: 'gestao_realtime_events', filter: `turma_id=eq.${turmaId}` },
         scheduleGestaoRealtimeRefresh,
       )
       .on(
