@@ -46,13 +46,15 @@ export {
 } from './caixa.contracts';
 
 export const caixaService = {
-  async getPolos(): Promise<CaixaPolo[]> {
-    const { data, error } = await supabase
+  async getPolos(signal?: AbortSignal): Promise<CaixaPolo[]> {
+    const request = supabase
       .from('polos')
       .select('id, nome, cidade, estado, is_matriz, created_at')
       .eq('status', 'ativo')
       .order('created_at', { ascending: true, nullsFirst: false })
       .order('id', { ascending: true });
+    if (signal) request.abortSignal(signal);
+    const { data, error } = await request;
 
     if (error) {
       console.error('Erro ao buscar os polos do Caixa:', error);
@@ -65,13 +67,16 @@ export const caixaService = {
   async getMonthlyStatement(
     poloId: string | null | undefined,
     competencia: string,
+    signal?: AbortSignal,
   ): Promise<CaixaMonthlyStatement> {
     const normalizedPoloId = normalizeCaixaPoloId(poloId);
-    const { data, error } = await supabase.rpc('get_caixa_prestacao_mensal_secure', {
+    const request = supabase.rpc('get_caixa_prestacao_mensal_secure', {
       p_polo_id: normalizedPoloId,
       p_competencia: competencia,
       p_meses_historico: 6,
     });
+    if (signal) request.abortSignal(signal);
+    const { data, error } = await request;
 
     if (error) {
       console.error('Erro ao buscar a prestação mensal do Caixa:', error);
@@ -86,11 +91,14 @@ export const caixaService = {
   async getFinanciamentoResumo(
     poloId: string | null | undefined,
     competencia: string,
+    signal?: AbortSignal,
   ): Promise<CaixaFinanciamentoResumo> {
-    const { data, error } = await supabase.rpc('get_caixa_financiamento_resumo_secure', {
+    const request = supabase.rpc('get_caixa_financiamento_resumo_secure', {
       p_polo_id: normalizeCaixaPoloId(poloId),
       p_competencia: competencia,
     });
+    if (signal) request.abortSignal(signal);
+    const { data, error } = await request;
 
     if (error) {
       console.error('Erro ao buscar o resumo de financiamento do Caixa:', error);
@@ -105,12 +113,15 @@ export const caixaService = {
   async getCustosOperacionais(
     poloId: string | null | undefined,
     competencia: string,
+    signal?: AbortSignal,
   ): Promise<CaixaCustosOperacionais> {
     const normalizedPoloId = normalizeCaixaPoloId(poloId);
-    const { data, error } = await supabase.rpc('get_caixa_custos_operacionais_secure', {
+    const request = supabase.rpc('get_caixa_custos_operacionais_secure', {
       p_polo_id: normalizedPoloId,
       p_competencia: competencia,
     });
+    if (signal) request.abortSignal(signal);
+    const { data, error } = await request;
 
     if (error) {
       console.error('Erro ao buscar os custos operacionais do Caixa:', error);
@@ -125,12 +136,15 @@ export const caixaService = {
   async getPatrimonioResumo(
     poloId: string | null | undefined,
     competencia: string,
+    signal?: AbortSignal,
   ): Promise<CaixaPatrimonioResumo> {
     const normalizedPoloId = normalizeCaixaPoloId(poloId);
-    const { data, error } = await supabase.rpc('get_caixa_patrimonio_resumo_secure', {
+    const request = supabase.rpc('get_caixa_patrimonio_resumo_secure', {
       p_polo_id: normalizedPoloId,
       p_competencia: competencia,
     });
+    if (signal) request.abortSignal(signal);
+    const { data, error } = await request;
 
     if (error) {
       console.error('Erro ao buscar o resumo patrimonial do Caixa:', error);
@@ -145,12 +159,15 @@ export const caixaService = {
   async getPosicaoLiquidaResumo(
     poloId: string | null | undefined,
     competencia: string,
+    signal?: AbortSignal,
   ): Promise<CaixaPosicaoLiquidaResumo> {
     const normalizedPoloId = normalizeCaixaPoloId(poloId);
-    const { data, error } = await supabase.rpc('get_caixa_posicao_liquida_resumo_secure', {
+    const request = supabase.rpc('get_caixa_posicao_liquida_resumo_secure', {
       p_polo_id: normalizedPoloId,
       p_competencia: competencia,
     });
+    if (signal) request.abortSignal(signal);
+    const { data, error } = await request;
 
     if (error) {
       console.error('Erro ao buscar a posição líquida do Caixa:', error);
@@ -165,12 +182,15 @@ export const caixaService = {
   async getPosicaoTotalResumo(
     poloId: string | null | undefined,
     competencia: string,
+    signal?: AbortSignal,
   ): Promise<CaixaPosicaoTotalResumo> {
     const normalizedPoloId = normalizeCaixaPoloId(poloId);
-    const { data, error } = await supabase.rpc('get_caixa_posicao_total_resumo_secure', {
+    const request = supabase.rpc('get_caixa_posicao_total_resumo_secure', {
       p_polo_id: normalizedPoloId,
       p_competencia: competencia,
     });
+    if (signal) request.abortSignal(signal);
+    const { data, error } = await request;
 
     if (error) {
       console.error('Erro ao buscar a posição total do Caixa:', error);
@@ -256,7 +276,7 @@ export const caixaQueryKeys = {
 
 export const caixaPolosQueryOptions = () => queryOptions({
   queryKey: caixaQueryKeys.polos,
-  queryFn: caixaService.getPolos,
+  queryFn: ({ signal }) => caixaService.getPolos(signal),
   staleTime: 0,
   gcTime: 60 * 60_000,
   refetchOnMount: 'always' as const,
@@ -267,7 +287,7 @@ export const caixaDashboardQueryOptions = (
   competencia = getCurrentCaixaCompetencia(),
 ) => queryOptions({
   queryKey: caixaQueryKeys.statement(poloId, competencia),
-  queryFn: () => caixaService.getMonthlyStatement(poloId, competencia),
+  queryFn: ({ signal }) => caixaService.getMonthlyStatement(poloId, competencia, signal),
   retry: retryDatabaseRead,
   staleTime: 30_000,
   gcTime: 30 * 60_000,
@@ -279,7 +299,8 @@ export const caixaFinanciamentoResumoQueryOptions = (
   competencia = getCurrentCaixaCompetencia(),
 ) => queryOptions({
   queryKey: caixaQueryKeys.financiamentoResumo(poloId, competencia),
-  queryFn: () => caixaService.getFinanciamentoResumo(poloId, competencia),
+  queryFn: ({ signal }) => caixaService.getFinanciamentoResumo(poloId, competencia, signal),
+  retry: retryDatabaseRead,
   staleTime: 30_000,
   gcTime: 30 * 60_000,
   refetchOnWindowFocus: true,
@@ -290,7 +311,8 @@ export const caixaCustosOperacionaisQueryOptions = (
   competencia = getCurrentCaixaCompetencia(),
 ) => queryOptions({
   queryKey: caixaQueryKeys.custosOperacionaisResumo(poloId, competencia),
-  queryFn: () => caixaService.getCustosOperacionais(poloId, competencia),
+  queryFn: ({ signal }) => caixaService.getCustosOperacionais(poloId, competencia, signal),
+  retry: retryDatabaseRead,
   staleTime: 30_000,
   gcTime: 30 * 60_000,
   refetchOnWindowFocus: true,
@@ -301,7 +323,8 @@ export const caixaPatrimonioResumoQueryOptions = (
   competencia = getCurrentCaixaCompetencia(),
 ) => queryOptions({
   queryKey: caixaQueryKeys.patrimonioResumo(poloId, competencia),
-  queryFn: () => caixaService.getPatrimonioResumo(poloId, competencia),
+  queryFn: ({ signal }) => caixaService.getPatrimonioResumo(poloId, competencia, signal),
+  retry: retryDatabaseRead,
   staleTime: 30_000,
   gcTime: 30 * 60_000,
   refetchOnWindowFocus: true,
@@ -312,7 +335,8 @@ export const caixaPosicaoLiquidaResumoQueryOptions = (
   competencia = getCurrentCaixaCompetencia(),
 ) => queryOptions({
   queryKey: caixaQueryKeys.posicaoLiquida(poloId, competencia),
-  queryFn: () => caixaService.getPosicaoLiquidaResumo(poloId, competencia),
+  queryFn: ({ signal }) => caixaService.getPosicaoLiquidaResumo(poloId, competencia, signal),
+  retry: retryDatabaseRead,
   staleTime: 30_000,
   gcTime: 30 * 60_000,
   refetchOnWindowFocus: true,
@@ -323,7 +347,8 @@ export const caixaPosicaoTotalResumoQueryOptions = (
   competencia = getCurrentCaixaCompetencia(),
 ) => queryOptions({
   queryKey: caixaQueryKeys.posicaoTotal(poloId, competencia),
-  queryFn: () => caixaService.getPosicaoTotalResumo(poloId, competencia),
+  queryFn: ({ signal }) => caixaService.getPosicaoTotalResumo(poloId, competencia, signal),
+  retry: retryDatabaseRead,
   staleTime: 30_000,
   gcTime: 30 * 60_000,
   refetchOnWindowFocus: true,

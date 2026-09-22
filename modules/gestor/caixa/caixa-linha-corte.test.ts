@@ -1,8 +1,15 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import test from 'node:test';
-import { mapCaixaLinhaCorte } from './caixa-linha-corte.service';
+import test, { mock } from 'node:test';
+import { QueryClient, isCancelledError } from '@tanstack/react-query';
+import { supabase } from '../../../lib/supabase';
+import {
+  assertCaixaLinhaCorteRequest,
+  caixaLinhaCorteQueryOptions,
+  getCaixaLinhaCorte,
+  mapCaixaLinhaCorte,
+} from './caixa-linha-corte.service';
 
 test('mapeia payload completo de linha de corte com inadimplência e histórico', () => {
   const payload = {
@@ -11,6 +18,7 @@ test('mapeia payload completo de linha de corte com inadimplência e histórico'
     receitas: {
       realizadas: 5450,
       previstas: 1200,
+      previstas_a_vencer: 350,
       totais: 6650,
     },
     inadimplencia: {
@@ -62,6 +70,7 @@ test('mapeia payload completo de linha de corte com inadimplência e histórico'
   assert.equal(result.competencia, '2026-08-01');
   assert.equal(result.poloId, 'polo-123');
   assert.equal(result.receitas.realizadas, 5450);
+  assert.equal(result.receitas.previstasAVencer, 350);
   assert.equal(result.receitas.totais, 6650);
   assert.equal(result.inadimplencia.valorVencido, 850);
   assert.equal(result.inadimplencia.quantidadeTitulos, 5);
@@ -85,6 +94,7 @@ test('aplica fallback inteligente para polo novo ou sem histórico anterior', ()
     receitas: {
       realizadas: 0,
       previstas: 0,
+      previstas_a_vencer: 0,
       totais: 0,
     },
     inadimplencia: {
@@ -135,6 +145,7 @@ test('aplica fallback inteligente para polo novo ou sem histórico anterior', ()
 
   assert.equal(result.cobertura.statusOperacional, 'SEM_MOVIMENTO');
   assert.equal(result.inadimplencia.valorVencido, 0);
+  assert.equal(result.receitas.previstasAVencer, 0);
   assert.equal(result.historico.mesesAmostra, 0);
   assert.equal(result.historico.rotuloAmostra, 'Mês inaugural — sem histórico anterior');
   assert.equal(result.historico.mesAnterior.rotulo, null);
@@ -145,10 +156,84 @@ test('mapeia com resiliência payload nulo ou indefinido', () => {
   const result = mapCaixaLinhaCorte(null);
 
   assert.equal(result.receitas.realizadas, 0);
+  assert.equal(result.receitas.previstasAVencer, null);
   assert.equal(result.inadimplencia.valorVencido, 0);
   assert.equal(result.despesas.linhaCorteTotal, 0);
   assert.equal(result.cobertura.statusOperacional, 'SEM_MOVIMENTO');
   assert.equal(result.historico.mesesAmostra, 0);
+});
+
+test('saldo a vencer vem somente do backend e distingue ausência de zero', () => {
+  for (const missing of [undefined, null, '', ' ', 'inválido', NaN, Infinity, false, -1]) {
+    const result = mapCaixaLinhaCorte({
+      receitas: { previstas: 500, previstas_a_vencer: missing },
+      inadimplencia: { valor_vencido: 100 },
+    });
+    assert.equal(result.receitas.previstasAVencer, null);
+  }
+  for (const [value, expected] of [[0, 0], ['0.00', 0], ['19.97', 19.97], [1.05, 1.05]] as const) {
+    const result = mapCaixaLinhaCorte({
+      receitas: { previstas: 500, previstas_a_vencer: value },
+      inadimplencia: { valor_vencido: 100 },
+    });
+    assert.equal(result.receitas.previstasAVencer, expected);
+  }
+});
+
+test('linha de corte valida polo e competência antes de aceitar resposta', () => {
+  const payload = { polo_id: 'polo-a', competencia: '2026-09-01' };
+  assert.doesNotThrow(() => assertCaixaLinhaCorteRequest(payload, 'polo-a', '2026-09-01'));
+  assert.doesNotThrow(() => assertCaixaLinhaCorteRequest({ ...payload, polo_id: null }, null));
+  for (const invalid of [null, {}, [], { ...payload, polo_id: 'polo-b' },
+    { ...payload, polo_id: null }, { ...payload, competencia: '2026-08-01' },
+    { ...payload, competencia: '2026-09-22' }, { ...payload, competencia: '2026-13-01' }]) {
+    assert.throws(() => assertCaixaLinhaCorteRequest(invalid, 'polo-a', '2026-09-01'), /escopo diferente/);
+  }
+  assert.throws(() => assertCaixaLinhaCorteRequest(payload, null, '2026-09-01'), /escopo diferente/);
+});
+
+test('cache de linha de corte separa escopo e não repete timeout SQL', () => {
+  const a = caixaLinhaCorteQueryOptions('polo-a', '2026-09-01');
+  const b = caixaLinhaCorteQueryOptions('polo-b', '2026-08-01');
+  assert.notDeepEqual(a.queryKey, b.queryKey);
+  assert.equal(typeof a.retry, 'function');
+  if (typeof a.retry === 'function') {
+    assert.equal(a.retry(0, Object.assign(new Error('timeout'), { code: '57014' })), false);
+  }
+});
+
+test('cancelar a query propaga AbortSignal até o request da RPC', async () => {
+  let receivedSignal: AbortSignal | undefined;
+  const pending = new Promise(() => {});
+  const builder = {
+    abortSignal(signal: AbortSignal) { receivedSignal = signal; return this; },
+    then: pending.then.bind(pending),
+  };
+  const rpc = mock.method(supabase, 'rpc', () => builder as unknown as ReturnType<typeof supabase.rpc>);
+  const client = new QueryClient();
+  const options = caixaLinhaCorteQueryOptions('polo-a', '2026-09-01');
+  try {
+    const result = client.fetchQuery(options).catch((error: unknown) => error);
+    await Promise.resolve();
+    assert.ok(receivedSignal);
+    await client.cancelQueries({ queryKey: options.queryKey });
+    assert.equal(receivedSignal.aborted, true);
+    assert.equal(isCancelledError(await result), true);
+  } finally {
+    rpc.mock.restore();
+    client.clear();
+  }
+});
+
+test('serviço rejeita resposta de outro polo antes do mapper', async () => {
+  const rpc = mock.method(supabase, 'rpc', () => Promise.resolve({
+    data: { polo_id: 'polo-b', competencia: '2026-09-01' }, error: null,
+  }) as unknown as ReturnType<typeof supabase.rpc>);
+  try {
+    await assert.rejects(getCaixaLinhaCorte('polo-a', '2026-09-01'), /escopo diferente/);
+  } finally {
+    rpc.mock.restore();
+  }
 });
 
 test('CaixaPage monta CaixaLinhaCorteCard preservando a integridade dos demais cards', () => {
@@ -159,8 +244,12 @@ test('CaixaPage monta CaixaLinhaCorteCard preservando a integridade dos demais c
 
   assert.match(pageSource, /<CaixaLinhaCorteCard/);
   assert.match(pageSource, /caixaLinhaCorteQueryOptions/);
-  assert.match(pageSource, /<CaixaMetricCard/);
-  assert.match(pageSource, /<CaixaReconciliationCard/);
+  assert.match(pageSource, /<CaixaStatementSection/);
+  const statementSource = readFileSync(
+    join(process.cwd(), 'modules/gestor/caixa/components/CaixaStatementSection.tsx'), 'utf8',
+  );
+  assert.match(statementSource, /<CaixaMetricCard/);
+  assert.match(statementSource, /<CaixaReconciliationCard/);
   assert.match(pageSource, /<CaixaFinanciamentoResumoCard/);
   assert.match(pageSource, /<CaixaPatrimonioResumoCard/);
   assert.match(pageSource, /<CaixaPosicaoLiquidaResumoCard/);

@@ -1,5 +1,6 @@
 import { queryOptions } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
+import { retryDatabaseRead } from '../../../lib/database-query-retry';
 
 export type CaixaLinhaCorteStatusOperacional =
   | 'LUCRO'
@@ -15,6 +16,7 @@ export type CaixaLinhaCorteImpactoInadimplencia =
 export interface CaixaLinhaCorteReceitas {
   realizadas: number;
   previstas: number;
+  previstasAVencer: number | null;
   totais: number;
 }
 
@@ -88,7 +90,7 @@ const asNumber = (value: unknown, fallback = 0): number => {
 const asNullableNumber = (value: unknown): number | null => {
   if (value === null || value === undefined) return null;
   if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string') {
+  if (typeof value === 'string' && value.trim() !== '') {
     const parsed = Number(value.replace(',', '.'));
     return Number.isFinite(parsed) ? parsed : null;
   }
@@ -131,6 +133,7 @@ export const mapCaixaLinhaCorte = (value: unknown): CaixaLinhaCorteResumo => {
     impactoRaw === 'RECUPERAVEL' ||
     impactoRaw === 'CRITICO'
   ) ? impactoRaw : 'SEGURO';
+  const previstasAVencer = asNullableNumber(receitas.previstas_a_vencer);
 
   return {
     competencia: asString(root.competencia, new Date().toISOString().slice(0, 10)),
@@ -138,6 +141,7 @@ export const mapCaixaLinhaCorte = (value: unknown): CaixaLinhaCorteResumo => {
     receitas: {
       realizadas: asNumber(receitas.realizadas),
       previstas: asNumber(receitas.previstas),
+      previstasAVencer: previstasAVencer !== null && previstasAVencer >= 0 ? previstasAVencer : null,
       totais: asNumber(receitas.totais),
     },
     inadimplencia: {
@@ -185,22 +189,41 @@ export const mapCaixaLinhaCorte = (value: unknown): CaixaLinhaCorteResumo => {
   };
 };
 
+export const assertCaixaLinhaCorteRequest = (
+  payload: unknown,
+  poloId: string | null,
+  competencia?: string,
+): void => {
+  const root = payload && typeof payload === 'object' && !Array.isArray(payload)
+    ? payload as Record<string, unknown>
+    : null;
+  if (!root || root.polo_id !== poloId
+    || typeof root.competencia !== 'string'
+    || !/^\d{4}-(0[1-9]|1[0-2])-01$/.test(root.competencia)
+    || (competencia !== undefined && root.competencia !== competencia)) {
+    throw new Error('A linha de corte retornou dados de um escopo diferente do solicitado.');
+  }
+};
+
 export const getCaixaLinhaCorte = async (
   poloId?: string | null,
   competencia?: string,
+  signal?: AbortSignal,
 ): Promise<CaixaLinhaCorteResumo> => {
   const normalizedPoloId = !poloId || poloId === 'todos' ? null : poloId;
   const normalizedCompetencia = competencia ? `${competencia.slice(0, 7)}-01` : undefined;
 
-  const { data, error } = await supabase.rpc('get_caixa_linha_corte_secure', {
+  const request = supabase.rpc('get_caixa_linha_corte_secure', {
     p_polo_id: normalizedPoloId,
     p_competencia: normalizedCompetencia,
   });
+  const { data, error } = await (signal ? request.abortSignal(signal) : request);
 
   if (error) {
     throw error;
   }
 
+  assertCaixaLinhaCorteRequest(data, normalizedPoloId, normalizedCompetencia);
   return mapCaixaLinhaCorte(data);
 };
 
@@ -213,7 +236,8 @@ export const caixaLinhaCorteQueryOptions = (
 
   return queryOptions({
     queryKey: ['caixa', 'linha-corte', normalizedPoloId, normalizedCompetencia],
-    queryFn: () => getCaixaLinhaCorte(poloId, competencia),
+    queryFn: ({ signal }) => getCaixaLinhaCorte(poloId, competencia, signal),
     staleTime: 60 * 1000,
+    retry: retryDatabaseRead,
   });
 };
