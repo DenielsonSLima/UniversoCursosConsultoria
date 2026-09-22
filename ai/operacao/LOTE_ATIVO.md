@@ -1,18 +1,18 @@
 # Lote ativo
 
-Estado: IMPLEMENTADO — VALIDAÇÃO DE ENTREGA DO CAIXA
+Estado: IMPLEMENTADO — VALIDAÇÃO DE ENTREGA REALTIME
 
-## Lote: 2026-09-21-caixa-desempenho-calculo-canonico
+## Lote: 2026-09-21-realtime-retencao-efetiva
 
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-21-caixa-desempenho-calculo-canonico.md`.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-21-realtime-retencao-efetiva.md`.
 
-- Usuário autorizou corrigir lentidão e cálculos do Caixa, com três agentes e validação na sessão autenticada.
-- Reduzir trabalho repetido das RPCs mensais preservando saldos, escopo, histórico e autorização.
-- Manter filtros visíveis e impedir consulta de competência errada ou resultado de polo anterior durante a troca.
-- Receitas previstas a vencer vêm do backend; frontend somente formata o resultado canônico.
-- Reprodução autenticada confirmou bloqueio de toda a tela ao mudar a competência na versão anterior.
-- Validação inclui equivalência SQL isolada, testes de transporte/escopo, smoke autenticado e publicação MCP restrita ao manifesto.
-- Arquivamento Proesc já concluído em lote anterior. Nova análise de retenção de logs é planejamento separado; nenhum expurgo novo integra este lote.
+- Continuação do pedido de corrigir crescimento técnico desnecessário em produção, preservando dados úteis.
+- A retenção existente de 24 horas depende da emissão de eventos com IDs específicos e deixa sinais antigos acumulados.
+- Tornar a retenção independente de novos eventos, com manutenção limitada e agendamento horário.
+- Ajustar assinaturas de sinais de Gestão para INSERT antes da ativação, evitando invalidação por expiração técnica.
+- Escopo restrito às três tabelas de sinais efêmeros; nenhum pagamento, baixa, prova financeira ou registro de acesso integra a limpeza.
+- Validar fronteira temporal, lote, autorização, concorrência e reexecução, com revisão independente e leitura remota antes/depois.
+- O Caixa 4.8.75 foi publicado no PR #167 e conferido em sessão autenticada; seu registro é atualizado somente para fechar a entrega anterior.
+- Expurgo genérico de logs após 90 dias e agregação das reservas Proesc continuam no planejamento separado.
 
-- Três migrations aplicadas, hashes e grants conferidos. Smoke autenticado do SQL preservou resultados da Matriz no mês atual e anterior.
-- Testes isolados e suites focadas aprovados, com revisão independente. Entrega passa por CI/Preview e conferência final na interface publicada.
+- Instalação remota inativa confirmada; testes SQL e frontend, build e revisão independente aprovados. Publicação precede ativação e drenagem.
