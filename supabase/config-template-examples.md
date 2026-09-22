@@ -17,3 +17,17 @@ Estes exemplos comentados foram separados de `config.toml` para manter a configu
 ```
 
 Referência do template: https://supabase.com/docs/guides/local-development/cli/config
+
+## Hooks Auth
+
+```toml
+# This hook runs before a new user is created and allows developers to reject the request based on the incoming user object.
+# [auth.hook.before_user_created]
+# enabled = true
+# uri = "pg-functions://postgres/auth/before-user-created-hook"
+
+# This hook runs before a token is issued and allows you to add additional claims based on the authentication method used.
+# [auth.hook.custom_access_token]
+# enabled = true
+# uri = "pg-functions://<database>/<schema>/<hook_name>"
+```

@@ -19,7 +19,7 @@ const modeLabels: Record<ProescSettlement['mode'], string> = {
 };
 const headings: Record<ProescFeedContext, [string, string]> = {
   runs: ['Execuções', 'Lotes processados pela automação. Consultadas indica cobranças; HTTP indica requisições à API.'],
-  observations: ['Consultas', 'Observações registradas por cobrança. Uma requisição à API pode consultar várias cobranças.'],
+  observations: ['Consultas', 'Evidências registradas por cobrança. Conferências sem novidade aparecem nos totais das execuções.'],
   settlements: ['Baixas', 'Pagamentos aplicados no sistema, com a origem da baixa identificada.'],
   errors: ['Erros', 'Falhas registradas nas execuções e requisições. Evidências em conferência aparecem na aba Consultas.'],
 };

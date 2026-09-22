@@ -1,8 +1,8 @@
 {
-  "version": "4.8.72",
+  "version": "4.8.73",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 81,
-  "releasedAt": "2026-09-19",
-  "summary": "Arquivo Proesc privado, redução do banco e menor repetição de consultas"
+  "revision": 82,
+  "releasedAt": "2026-09-21",
+  "summary": "Reutilização de evidências e arquivo privado do histórico técnico Proesc"
 }

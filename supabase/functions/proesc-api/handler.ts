@@ -10,9 +10,10 @@ import { runProescSync } from './sync-worker.ts';
 import { runProescReadOnlyDiagnostic } from './diagnostic-readonly.ts';
 import { reviewProescCycles } from './cycle-review.ts';
 import { reviewProescClassCycles, runProescCycleReviewWorker } from './cycle-review-batch.ts';
+import { readProescTechnicalHistory } from '../_shared/proesc-technical-history.ts';
 
 type Admin = Parameters<typeof requireGestorAtivo>[1];
-const publicActions = new Set(['status', 'save_token', 'remove_token', 'class_history', 'class_events', 'test_token']);
+const publicActions = new Set(['status', 'save_token', 'remove_token', 'class_history', 'class_events', 'test_token', 'technical_history']);
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Testes de conexão nunca importam dados nem alteram cobranças.
@@ -83,6 +84,9 @@ export const createHandler = (admin: Admin, transport: typeof fetch = fetch) => 
         throw new ProescError('Aguarde um minuto antes de testar novamente.', 429);
       }
       return respond(await handleConnectionAction(admin, actorId, body, transport));
+    }
+    if (action === 'technical_history') {
+      return respond(await readProescTechnicalHistory(admin, actorId, body));
     }
     if (action === 'internal_data_probe') {
       if (isRateLimitExceeded(`proesc-test:${actorId}`, 5, 60000)) {

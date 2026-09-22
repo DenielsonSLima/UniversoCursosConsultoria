@@ -91,6 +91,24 @@ export async function runProescSync(
       try {
         const observation = await observeLinkedObligation(link, allRows, now);
         itemStage = 'SNAPSHOT';
+        const reuse = await rpc('proesc_try_reuse_observation_service', {
+          p_actor_id: actorId, p_lease_id: claim.leaseId,
+          p_credential_revision: saved.revision,
+          p_expected_before: link.expectedBefore, p_observation: observation,
+        }, controller.signal);
+        if (reuse.error) throw new SyncTelemetryError('SNAPSHOT_REJECTED');
+        const reused = reuse.data as { reused?: boolean; snapshotId?: string; stage?: SyncStage } | null;
+        if (reused?.reused === true) {
+          if (!reused.snapshotId || !['SNAPSHOT', 'APPLY'].includes(reused.stage ?? '')) {
+            throw new SyncTelemetryError('SNAPSHOT_REJECTED');
+          }
+          snapshotId = reused.snapshotId;
+          counts.consulted++; counts.unchanged++;
+          telemetry.items.push({ linkId: link.linkId, snapshotId, result: 'UNCHANGED',
+            stage: reused.stage as SyncStage, errorCode: null });
+          return;
+        }
+        if (reused?.reused !== false) throw new SyncTelemetryError('SNAPSHOT_REJECTED');
         const snapshot = await rpc('proesc_record_financial_snapshot_service', {
           p_actor_id: actorId, p_request_id: crypto.randomUUID(), p_payload: observation,
         }, controller.signal);

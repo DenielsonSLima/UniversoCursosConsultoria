@@ -269,5 +269,12 @@ jobs:
             supabase/functions/proesc-api/sync-worker.test.ts \
             supabase/functions/proesc-api/sync-worker.scale.test.ts
 
+      - name: Testar arquivo técnico e leitura autorizada Proesc
+        run: |
+          deno test --no-config --no-lock --node-modules-dir=none --allow-read \
+            supabase/functions/proesc-technical-history-archive/codec.test.ts \
+            supabase/functions/proesc-technical-history-archive/worker.test.ts \
+            supabase/functions/_shared/proesc-technical-history.test.ts
+
       - name: Gerar build de produção
         run: npm run build
