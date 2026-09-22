@@ -26,6 +26,26 @@ const request = (body: unknown, authenticated = true) => new Request('https://lo
   method: 'POST', headers: authenticated ? { Authorization: 'Bearer synthetic-session' } : {}, body: JSON.stringify(body),
 });
 
+Deno.test('histórico técnico exige sessão e gestor global de Configurações antes de buscar arquivo', async () => {
+  for (const options of [{ noAuth: true }, { allPolos: false }, { profile: 'financeiro' }, { modules: [] }]) {
+    const { admin, calls } = fixture(options);
+    const response = await createHandler(admin)(request({ action: 'technical_history',
+      runId: '11111111-1111-4111-8111-111111111111' }));
+    assert(response.status >= 400 && calls.length === 0);
+  }
+});
+
+Deno.test('histórico técnico usa ator autenticado e não repassa parâmetros de serviço forjados', async () => {
+  const runId = '11111111-1111-4111-8111-111111111111';
+  const { admin, calls } = fixture({ result: { runId, poloId: null, items: [], http: [], reusedCounts: [] } });
+  const response = await createHandler(admin)(request({ action: 'technical_history', runId,
+    p_actor_id: 'forged', p_payload_text: 'forged', bucket: 'public' }));
+  assert(response.status === 200 && calls.length === 1);
+  assert(calls[0].name === 'proesc_technical_history_service' && calls[0].actor === 'gestor-fixture');
+  const body = await response.json();
+  assert(body.runId === runId && body.archive === undefined && response.headers.get('Cache-Control') === 'no-store');
+});
+
 Deno.test('bloqueia anônimo, sessão inválida, usuário restrito, perfil financeiro e gestor sem Configurações antes da RPC', async () => {
   for (const options of [{ noAuth: true }, { allPolos: false }, { profile: 'financeiro' }, { modules: [] }]) {
     const { admin, calls } = fixture(options);
@@ -261,6 +281,7 @@ Deno.test('falha do worker de ciclos não interrompe a sincronização normal ne
       }] } });
     }
     if (name === 'proesc_workspace_service') return Promise.resolve({ data: { token, revision: 'one' } });
+    if (name === 'proesc_try_reuse_observation_service') return Promise.resolve({ data: { reused: false } });
     if (name === 'proesc_record_financial_snapshot_service') return Promise.resolve({ data: { snapshotId: 'snapshot' } });
     if (name === 'proesc_apply_financial_snapshot_service') return Promise.resolve({ data: { result: 'APPLIED' } });
     assert(name === 'proesc_sync_runtime_service' && args.p_action === 'finish');

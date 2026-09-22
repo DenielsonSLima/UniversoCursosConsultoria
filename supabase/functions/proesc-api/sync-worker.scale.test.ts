@@ -6,7 +6,7 @@ const now = new Date('2026-09-12T17:00:00Z');
 const token = 'a'.repeat(32);
 type Result = { data: unknown; error: unknown };
 type RecordCall = { name: string; args: Record<string, unknown> };
-type Scenario = { count: number; delayMs?: number; failIndex?: number; failApplyIndex?: number; rotate?: boolean };
+type Scenario = { count: number; delayMs?: number; failIndex?: number; failApplyIndex?: number; rotate?: boolean; reuse?: boolean };
 
 async function fixture(scenario: Scenario) {
   const calls: RecordCall[] = [];
@@ -58,6 +58,9 @@ async function fixture(scenario: Scenario) {
       return delayed({ error: failed ? 'synthetic failure' : null,
         data: failed ? null : { snapshotId: `snapshot-${index}` } }, failed ? 12 : scenario.delayMs ?? 2);
     }
+    if (name === 'proesc_try_reuse_observation_service') return Promise.resolve({ error: null,
+      data: scenario.reuse ? { reused: true, snapshotId: `canonical-${(args.p_observation as { linkId: string }).linkId}`, stage: 'APPLY' }
+        : { reused: false } });
     if (name === 'proesc_apply_financial_snapshot_service') {
       const index = Number((args.p_payload as { snapshotId: string }).snapshotId.split('-').at(-1));
       return delayed({ error: index === scenario.failApplyIndex ? 'CAS_REVIEW' : null,
@@ -127,4 +130,12 @@ Deno.test('one APPLY guard failure remains review while the other links finish',
   assert('applied' in result && result.applied === 11 && result.review === 1 && result.failed === 0);
   assert(f.finish().completedCount === 12 && f.finish().completedLastId === f.links[11].linkId && f.finish().success);
   assert(f.stats().active === 0 && f.stats().maxActive <= 3);
+});
+
+Deno.test('60 proven no-ops finish with old evidence IDs and no financial snapshot or receipt calls', async () => {
+  const f = await fixture({ count: 60, reuse: true });
+  const result = await runProescSync(f.admin, 'actor', f.transport, now);
+  assert('unchanged' in result && result.unchanged === 60 && result.consulted === 60 && result.failed === 0);
+  assert(!f.calls.some((call) => ['proesc_record_financial_snapshot_service', 'proesc_apply_financial_snapshot_service'].includes(call.name)));
+  assert(f.finish().success && f.finish().completedCount === 60 && f.stats().reads === 2);
 });

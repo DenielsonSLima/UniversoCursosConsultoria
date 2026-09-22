@@ -4,7 +4,7 @@ import { sha256 } from './sync-observation.ts';
 const assert = (value: unknown, message = 'Assertion failed') => { if (!value) throw new Error(message); };
 const now = new Date('2026-09-12T17:00:00Z');
 const token = 'a'.repeat(32);
-async function fixture() {
+async function fixture(reuseResponse: { data: unknown; error: unknown } = { data: { reused: false }, error: null }) {
   const calls: Array<{ name: string; args: Record<string, unknown> }> = [];
   const personHash = await sha256('12345678901');
   const admin = { rpc: async (name: string, args: Record<string, unknown>) => {
@@ -15,6 +15,7 @@ async function fixture() {
         principalCents: 10000, status: 'PENDENTE', paidCents: 0, paymentDate: null, expectedBefore: 'hash' }],
     } };
     if (name === 'proesc_workspace_service') return { error: null, data: { token, revision: 'revision' } };
+    if (name === 'proesc_try_reuse_observation_service') return reuseResponse;
     if (name === 'proesc_record_financial_snapshot_service') return { error: null, data: { snapshotId: 'snapshot' } };
     if (name === 'proesc_apply_financial_snapshot_service') return { error: null, data: { result: 'APPLIED' } };
     return { error: null, data: { finished: true } };
@@ -78,4 +79,42 @@ Deno.test('200 sem prova financeira registra REVIEW, sem classificar como falha 
   const telemetry = payload.telemetry as { http: Array<{ errorCode: string | null }>; items: Array<{ result: string }>; errorCode: string | null };
   assert(telemetry.http.every((row) => row.errorCode === null));
   assert(telemetry.items[0].result === 'REVIEW' && telemetry.errorCode === null);
+});
+
+Deno.test('prova UNCHANGED do servidor reutiliza evidência sem criar snapshot nem recibo APPLY', async () => {
+  const f = await fixture({ error: null, data: { reused: true, snapshotId: 'old-canonical', stage: 'APPLY' } });
+  const result = await runProescSync(f.admin, 'actor', f.transport, now);
+  assert('unchanged' in result && result.unchanged === 1 && result.consulted === 1 && result.failed === 0);
+  assert(!f.calls.some((call) => ['proesc_record_financial_snapshot_service', 'proesc_apply_financial_snapshot_service'].includes(call.name)));
+  const proof = f.calls.find((call) => call.name === 'proesc_try_reuse_observation_service');
+  assert(proof?.args.p_lease_id === 'lease' && proof.args.p_expected_before === 'hash'
+    && proof.args.p_credential_revision === 'revision');
+  const finish = f.calls.find((call) => call.args.p_action === 'finish')?.args.p_payload as {
+    completedCount: number; success: boolean; telemetry: { items: Array<{ snapshotId: string; stage: string }> };
+  };
+  assert(finish.success && finish.completedCount === 1);
+  assert(finish.telemetry.items[0].snapshotId === 'old-canonical' && finish.telemetry.items[0].stage === 'APPLY');
+});
+
+Deno.test('erro ou resposta incompleta de reuse falha fechado sem criação alternativa', async () => {
+  for (const response of [
+    { error: 'CAS_CHANGED', data: null }, { error: null, data: {} },
+    { error: null, data: { reused: true, stage: 'APPLY' } },
+    { error: null, data: { reused: true, snapshotId: 'old', stage: 'FETCH' } },
+  ]) {
+    const f = await fixture(response); const result = await runProescSync(f.admin, 'actor', f.transport, now);
+    assert('failed' in result && result.failed === 1 && result.consulted === 0);
+    assert(!f.calls.some((call) => ['proesc_record_financial_snapshot_service', 'proesc_apply_financial_snapshot_service'].includes(call.name)));
+    const finish = f.calls.find((call) => call.args.p_action === 'finish')?.args.p_payload as { completedCount: number; success: boolean };
+    assert(finish.completedCount === 0 && !finish.success);
+  }
+});
+
+Deno.test('aberto sem alteração conserva classificação SNAPSHOT ao reutilizar evidência', async () => {
+  const f = await fixture({ error: null, data: { reused: true, snapshotId: 'old-open', stage: 'SNAPSHOT' } });
+  await runProescSync(f.admin, 'actor', f.transport, now);
+  const payload = f.calls.find((call) => call.args.p_action === 'finish')?.args.p_payload as {
+    telemetry: { items: Array<{ result: string; stage: string }> };
+  };
+  assert(payload.telemetry.items[0].result === 'UNCHANGED' && payload.telemetry.items[0].stage === 'SNAPSHOT');
 });

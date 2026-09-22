@@ -13,7 +13,11 @@ export default [
   },
   js.configs.recommended,
   {
-    files: ["supabase/functions/proesc-history-archive/**/*.ts"],
+    files: [
+      "supabase/functions/proesc-history-archive/**/*.ts",
+      "supabase/functions/proesc-technical-history-archive/**/*.ts",
+      "supabase/functions/_shared/proesc-technical-history*.ts"
+    ],
     languageOptions: {
       globals: {
         BufferSource: "readonly",

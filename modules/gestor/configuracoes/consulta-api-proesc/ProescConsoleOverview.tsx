@@ -37,7 +37,7 @@ export default function ProescConsoleOverview({ data }: { data: ProescDashboard 
   const cards = [
     ['Cobranças acompanhadas', data.totals.monitored, 'Vínculos do polo selecionado'],
     ['Consulta automática ativa', data.totals.autoEnabled, 'Cobranças habilitadas'],
-    ['Observações no período', data.totals.observations, 'Registros por cobrança'],
+    ['Observações no período', data.totals.observations, 'Evidências registradas; conferências repetidas constam nas execuções'],
     ['Baixas automáticas', data.totals.appliedAuto, 'Aplicadas pela automação no período'],
     ['Importações e correções', data.totals.appliedImport, 'Baixas com outras origens no período'],
     ['Observações em conferência', data.totals.review, 'Registros do período que precisam de conferência'],
