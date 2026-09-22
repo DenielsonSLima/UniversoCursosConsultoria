@@ -1,17 +1,15 @@
 # Lote ativo
 
-Estado: CORREÇÃO INSTALADA E PILOTO CONCLUÍDO — ARQUIVAMENTO AUTOMÁTICO DESLIGADO
+Estado: APLICADO E VALIDADO — ARQUIVO TÉCNICO PROESC ATIVO
 
-## Lote: 2026-09-21-proesc-historico-tecnico-sustentavel
+## Lote: 2026-09-21-proesc-ativacao-arquivo-tecnico
 
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-21-proesc-historico-tecnico-sustentavel.md`.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-21-proesc-ativacao-arquivo-tecnico.md`.
 
-- Usuário autorizou corrigir o crescimento após diagnóstico e revisão de três agentes.
-- Evitar cópias de evidência estritamente idêntica, preservando mudanças, revisão, identidade, autorização, CAS e idempotência.
-- Transferir detalhes técnicos antigos de itens/HTTP ao Storage privado, mantendo consulta autorizada, paginação, escopos e contadores.
-- Preservar fatos financeiros e todos os IDs/replays legados. Nenhuma exclusão de origem antes da verificação do arquivo e dos leitores.
-- Aplicar somente por MCP Supabase no projeto explicitamente identificado. Publicação posterior limitada ao manifesto, sem dados operacionais privados.
-- Aceite: contratos/testes focados, piloto real recuperável, conferência financeira antes/depois e ciclos naturais. Não prometer estabilidade de longo prazo a partir de uma única medição.
-- Fonte anterior: versão 4.8.72; migrations já aplicadas permanecem imutáveis.
-
-- Instalação e piloto limitado autorizados expressamente; leitura fria e restauração reais aprovadas, com integridade financeira preservada. Sem transferência em massa e sem cron técnico.
+- Usuário autorizou transferir histórico técnico antigo em lotes de até 25 execuções e ativar a rotina, após piloto real aprovado.
+- Preservar autorização, integridade, restauração, pagamentos, cobranças, auditoria e referências históricas.
+- Executar lotes limitados, conferir respostas e medir o espaço efetivo; nenhuma remoção de origem sem arquivo privado verificado.
+- Validar manutenção física somente nas relações técnicas afetadas, com guardas e bloqueio limitado; nunca ampliar a limpeza a dados financeiros.
+- Publicação MCP limitada ao manifesto, sem métricas privadas ou identificadores de produção.
+- Arquivo automático ativo, estoque elegível drenado e manutenção física técnica concluída com conteúdo preservado. Conferências de arquivo, referências e financeiro sem divergências.
+- Análise do Caixa concluída separadamente por três agentes; não houve implementação ou publicação de correções desse módulo. Medição pela interface permanece pendente.
