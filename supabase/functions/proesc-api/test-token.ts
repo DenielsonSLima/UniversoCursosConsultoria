@@ -85,8 +85,8 @@ async function probeResource(token: string, resource: Resource, transport: typeo
 // Valida somente acesso. Nunca retorna pessoas, parcelas, token ou resposta externa bruta.
 export async function testProescV2Token(token: string, wafHeader?: string, transport: typeof fetch = fetch, now = new Date()) {
   v2Headers(token, wafHeader);
-  const checks = await Promise.all((['people'] as const).map((resource) => probeResource(token, resource, transport, now, wafHeader)));
+  const checks = await Promise.all((['people', 'invoices'] as const).map((resource) => probeResource(token, resource, transport, now, wafHeader)));
   const ok = checks.every((check) => check.ok);
   return { ok, checkedAt: now.toISOString(), checks,
-    message: ok ? 'Token V2 validado para consulta de pessoas.' : 'O teste não confirmou o acesso aos dados de pessoas.' };
+    message: ok ? 'Token V2 validado para consulta de pessoas e cobranças.' : 'O teste não confirmou o acesso a todos os recursos: pessoas e cobranças.' };
 }

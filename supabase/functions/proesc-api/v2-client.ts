@@ -2,7 +2,7 @@ import { queryProesc, type Cursor, type Filters, type Resource } from './contrac
 import { v2Headers } from './connection-contract.ts';
 
 /** V2 é somente leitura. URLs de paginação externas nunca são seguidas. */
-export function createProescV2Client(options: { token: string; wafHeader?: string; transport?: typeof fetch }) {
+export function createProescV2Client(options: { token: string; wafHeader?: string; transport?: typeof fetch; signal?: AbortSignal }) {
   const headers = v2Headers(options.token, options.wafHeader);
   const transport = options.transport ?? fetch;
   const authenticated: typeof fetch = (input, init) => transport(input, {
@@ -10,7 +10,7 @@ export function createProescV2Client(options: { token: string; wafHeader?: strin
   });
   return {
     readPage(resource: Resource, filters: Filters, cursor: Cursor) {
-      return queryProesc(options.token, resource, filters, cursor, authenticated);
+      return queryProesc(options.token, resource, filters, cursor, authenticated, options.signal);
     },
   };
 }

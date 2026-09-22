@@ -3,6 +3,8 @@ import type { ProescV1AccountingRow } from './v1-accounting.ts';
 import { observeLinkedObligation, type SyncLink } from './sync-observation.ts';
 import { createSyncTelemetry, markSyncFailure, safeSyncError, SyncTelemetryError, type SyncStage } from './sync-telemetry.ts';
 import { rpcWithArchiveReplay, type ArchiveReplayAdmin } from '../_shared/proesc-archive-replay.ts';
+import { collectInvoiceEvidence, invoiceScope } from './invoice-evidence.ts';
+import { needsInvoiceEvidence, resolveInvoiceObservation, type InvoiceObservation } from './invoice-observation.ts';
 
 type RpcAdmin = ArchiveReplayAdmin;
 type Claim = { claimed: boolean; leaseId: string; lastId: string; links: SyncLink[] };
@@ -83,13 +85,36 @@ export async function runProescSync(
     if (currentCredential.error || (currentCredential.data as { revision?: string })?.revision !== saved.revision) {
       throw new SyncTelemetryError('CREDENTIAL_CHANGED');
     }
+    const observations = new Map(await Promise.all(claim.links.map(async (link) =>
+      [link.linkId, await observeLinkedObligation(link, allRows, now)] as const)));
+    const invoiceEvidence = await collectInvoiceEvidence(admin, actorId,
+      claim.links.filter((link) => needsInvoiceEvidence(observations.get(link.linkId)!)), transport, controller.signal);
     let writePosition = 0;
     let stopped = false;
     const processLink = async (link: SyncLink) => {
       let itemStage: SyncStage = 'OBSERVE';
       let snapshotId: string | null = null;
       try {
-        const observation = await observeLinkedObligation(link, allRows, now);
+        let observation: InvoiceObservation = observations.get(link.linkId)!;
+        if (observation.lines.length === 0) {
+          counts.review++;
+          telemetry.items.push({ linkId: link.linkId, snapshotId: null,
+            result: 'REVIEW', stage: itemStage, errorCode: null });
+          return;
+        }
+        if (needsInvoiceEvidence(observation)) {
+          const invoices = invoiceEvidence.scopes.get(invoiceScope(link));
+          const resolution = invoices ? await resolveInvoiceObservation(link, observation, invoices, invoiceEvidence.revision) : null;
+          if (!resolution || resolution.kind === 'unavailable') {
+            // A failed/partial consultation is an attempt, not a new financial fact.
+            // Preserve a previous OPEN/PAID proof instead of replacing it with UNKNOWN.
+            counts.review++;
+            telemetry.items.push({ linkId: link.linkId, snapshotId: null,
+              result: 'REVIEW', stage: itemStage, errorCode: null });
+            return;
+          }
+          observation = resolution.observation;
+        }
         itemStage = 'SNAPSHOT';
         const reuse = await rpc('proesc_try_reuse_observation_service', {
           p_actor_id: actorId, p_lease_id: claim.leaseId,
@@ -99,11 +124,13 @@ export async function runProescSync(
         if (reuse.error) throw new SyncTelemetryError('SNAPSHOT_REJECTED');
         const reused = reuse.data as { reused?: boolean; snapshotId?: string; stage?: SyncStage } | null;
         if (reused?.reused === true) {
-          if (!reused.snapshotId || !['SNAPSHOT', 'APPLY'].includes(reused.stage ?? '')) {
+          if (!reused.snapshotId || observation.verification !== 'VERIFIED'
+            || !['SNAPSHOT', 'APPLY'].includes(reused.stage ?? '')) {
             throw new SyncTelemetryError('SNAPSHOT_REJECTED');
           }
           snapshotId = reused.snapshotId;
-          counts.consulted++; counts.unchanged++;
+          counts.consulted++;
+          counts.unchanged++;
           telemetry.items.push({ linkId: link.linkId, snapshotId, result: 'UNCHANGED',
             stage: reused.stage as SyncStage, errorCode: null });
           return;
@@ -116,11 +143,17 @@ export async function runProescSync(
         snapshotId = (snapshot.data as { snapshotId?: string })?.snapshotId ?? null;
         if (!snapshotId) throw new SyncTelemetryError('SNAPSHOT_REJECTED');
         counts.consulted++;
+        if (observation.sourceStatus === 'OPEN') {
+          // AUTO apply accepts payment evidence only. OPEN is established by the
+          // canonical snapshot, without reopening a title or generating a receipt.
+          const outcome = (snapshot.data as { verification?: string })?.verification === 'VERIFIED' ? 'UNCHANGED' : 'REVIEW';
+          if (outcome === 'UNCHANGED') counts.unchanged++; else counts.review++;
+          telemetry.items.push({ linkId: link.linkId, snapshotId, result: outcome, stage: itemStage, errorCode: null });
+          return;
+        }
         if (observation.verification !== 'VERIFIED') {
-          const result = observation.reviewReasons.length === 1
-            && observation.reviewReasons[0] === 'NO_PAYMENT_IN_OBSERVED_PERIODS' ? 'UNCHANGED' : 'REVIEW';
-          if (result === 'UNCHANGED') counts.unchanged++; else counts.review++;
-          telemetry.items.push({ linkId: link.linkId, snapshotId, result, stage: itemStage, errorCode: null });
+          counts.review++;
+          telemetry.items.push({ linkId: link.linkId, snapshotId, result: 'REVIEW', stage: itemStage, errorCode: null });
           return;
         }
         itemStage = 'APPLY';

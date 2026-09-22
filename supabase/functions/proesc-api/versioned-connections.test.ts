@@ -86,7 +86,7 @@ Deno.test('teste V2 usa token e WAF do servidor, com ou sem WAF, sem revelar reg
     };
     const result = await handleConnectionAction(admin, 'actor', { action: 'test_connection', version: 'v2',
       token: 'forged', wafHeader: 'forged' }, transport);
-    assert((result as { ok: boolean }).ok && requests === 1 && calls.length === 2);
+    assert((result as { ok: boolean }).ok && requests === 2 && calls.length === 2);
     assert(!JSON.stringify(result).includes('PRIVATE') && !JSON.stringify(result).includes(v2));
     assert(calls.every((call) => (call.p_payload as { version: string }).version === 'v2'));
   }

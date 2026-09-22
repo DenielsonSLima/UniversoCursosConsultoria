@@ -63,6 +63,10 @@ const scalar = (value: unknown) =>
 const pick = (row: RecordValue, keys: string[]) => Object.fromEntries(
   keys.filter((key) => key in row).map((key) => [key, scalar(row[key])]),
 );
+// Invalid payment dates must not collapse into null (explicit absence of payment).
+const paymentDate = (row: RecordValue) => Object.hasOwn(row, 'payment_date')
+  ? { payment_date: row.payment_date === null || typeof row.payment_date === 'string'
+    ? row.payment_date : false } : {};
 const linkage = ['student_id', 'person_id', 'enrollment_id', 'matricula_id', 'aluno_id', 'pessoa_id'];
 const invoiceKeys = ['invoice_id', 'entidade_id', 'description', 'order', 'invoice_group_id',
   'invoice_group_type_id', 'invoice_group_type_name', 'invoice_group_total', 'status',
@@ -87,8 +91,12 @@ export function normalizeRecord(resource: Resource, value: unknown): RecordValue
   const slip = object(row.bank_slip ?? discounts.bank_slip);
   return {
     ...pick(row, invoiceKeys),
+    ...paymentDate(row),
+    pessoa: pick(object(row.pessoa), ['id', 'cadastro_nacional']),
+    matricula: pick(object(row.matricula), ['id', 'turma_id']),
     discounts: {
       ...pick(discounts, ['fixed_discount_amount', 'updated_invoice_amount', 'paid_invoice_amount', 'payment_date']),
+      ...paymentDate(discounts),
       late_payment_fees: pick(object(discounts.late_payment_fees), ['fine', 'interest']),
     },
     bank_slip: pick(slip, ['external_gateway_id', 'barcode_line']),
@@ -132,12 +140,13 @@ export function parsePage(payload: unknown, resource: Resource, filters: Filters
 
 export async function queryProesc(
   token: string, resource: Resource, filters: Filters, cursor: Cursor,
-  transport: typeof fetch = fetch,
+  transport: typeof fetch = fetch, signal?: AbortSignal,
 ) {
   let response: Response;
   try {
     response = await transport(buildQueryUrl(resource, filters, cursor), {
-      method: 'GET', redirect: 'error', signal: AbortSignal.timeout(20000),
+      method: 'GET', redirect: 'error', signal: signal
+        ? AbortSignal.any([signal, AbortSignal.timeout(20000)]) : AbortSignal.timeout(20000),
       headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
     });
   } catch {
