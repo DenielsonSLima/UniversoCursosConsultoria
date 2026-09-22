@@ -1,15 +1,18 @@
 # Lote ativo
 
-Estado: APLICADO E VALIDADO — ARQUIVO TÉCNICO PROESC ATIVO
+Estado: IMPLEMENTADO — VALIDAÇÃO DE ENTREGA DO CAIXA
 
-## Lote: 2026-09-21-proesc-ativacao-arquivo-tecnico
+## Lote: 2026-09-21-caixa-desempenho-calculo-canonico
 
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-21-proesc-ativacao-arquivo-tecnico.md`.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-21-caixa-desempenho-calculo-canonico.md`.
 
-- Usuário autorizou transferir histórico técnico antigo em lotes de até 25 execuções e ativar a rotina, após piloto real aprovado.
-- Preservar autorização, integridade, restauração, pagamentos, cobranças, auditoria e referências históricas.
-- Executar lotes limitados, conferir respostas e medir o espaço efetivo; nenhuma remoção de origem sem arquivo privado verificado.
-- Validar manutenção física somente nas relações técnicas afetadas, com guardas e bloqueio limitado; nunca ampliar a limpeza a dados financeiros.
-- Publicação MCP limitada ao manifesto, sem métricas privadas ou identificadores de produção.
-- Arquivo automático ativo, estoque elegível drenado e manutenção física técnica concluída com conteúdo preservado. Conferências de arquivo, referências e financeiro sem divergências.
-- Análise do Caixa concluída separadamente por três agentes; não houve implementação ou publicação de correções desse módulo. Medição pela interface permanece pendente.
+- Usuário autorizou corrigir lentidão e cálculos do Caixa, com três agentes e validação na sessão autenticada.
+- Reduzir trabalho repetido das RPCs mensais preservando saldos, escopo, histórico e autorização.
+- Manter filtros visíveis e impedir consulta de competência errada ou resultado de polo anterior durante a troca.
+- Receitas previstas a vencer vêm do backend; frontend somente formata o resultado canônico.
+- Reprodução autenticada confirmou bloqueio de toda a tela ao mudar a competência na versão anterior.
+- Validação inclui equivalência SQL isolada, testes de transporte/escopo, smoke autenticado e publicação MCP restrita ao manifesto.
+- Arquivamento Proesc já concluído em lote anterior. Nova análise de retenção de logs é planejamento separado; nenhum expurgo novo integra este lote.
+
+- Três migrations aplicadas, hashes e grants conferidos. Smoke autenticado do SQL preservou resultados da Matriz no mês atual e anterior.
+- Testes isolados e suites focadas aprovados, com revisão independente. Entrega passa por CI/Preview e conferência final na interface publicada.

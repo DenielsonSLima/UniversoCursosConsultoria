@@ -213,7 +213,11 @@ export const CaixaLinhaCorteCard: React.FC<CaixaLinhaCorteCardProps> = ({
           <div className="mt-2 border-t border-slate-50 pt-2 text-[11px] text-slate-500 space-y-1">
             <div className="flex items-center justify-between text-[11px]">
               <span>Previstas a vencer:</span>
-              <strong className="text-slate-700">{formatCaixaCurrency(receitas.previstas - inadimplencia.valorVencido > 0 ? receitas.previstas - inadimplencia.valorVencido : 0)}</strong>
+              <strong className="text-slate-700">
+                {receitas.previstasAVencer === null
+                  ? 'Indisponível'
+                  : formatCaixaCurrency(receitas.previstasAVencer)}
+              </strong>
             </div>
             {inadimplencia.valorVencido > 0 && (
               <div className="flex items-center justify-between text-[10px] text-amber-700 font-semibold">

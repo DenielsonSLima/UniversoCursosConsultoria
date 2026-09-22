@@ -153,10 +153,15 @@ test('exibe posição total, posição líquida, patrimônio, financiamento e cu
     join(process.cwd(), 'modules/gestor/caixa/CaixaPage.tsx'),
     'utf8',
   );
-  const resumoOperacionalIndex = pageSource.indexOf('label="Entradas operacionais no mês"');
-  const compromissosIndex = pageSource.indexOf('<CaixaCompromissosCards');
-  const graficoIndex = pageSource.indexOf('<CaixaMovimentacaoChart');
-  const conciliacaoIndex = pageSource.indexOf('<CaixaReconciliationCard');
+  const monthlySource = readFileSync(
+    join(process.cwd(), 'modules/gestor/caixa/components/CaixaStatementSection.tsx'),
+    'utf8',
+  );
+  const monthlySectionIndex = pageSource.indexOf('<CaixaStatementSection');
+  const resumoOperacionalIndex = monthlySource.indexOf('label="Entradas operacionais no mês"');
+  const compromissosIndex = monthlySource.indexOf('<CaixaCompromissosCards');
+  const graficoIndex = monthlySource.indexOf('<CaixaMovimentacaoChart');
+  const conciliacaoIndex = monthlySource.indexOf('<CaixaReconciliationCard');
   const posicaoTotalIndex = pageSource.indexOf('<CaixaPosicaoTotalResumoCard');
   const posicaoLiquidaIndex = pageSource.indexOf('<CaixaPosicaoLiquidaResumoCard');
   const patrimonioIndex = pageSource.indexOf('<CaixaPatrimonioResumoCard');
@@ -167,7 +172,8 @@ test('exibe posição total, posição líquida, patrimônio, financiamento e cu
   assert.ok(compromissosIndex > resumoOperacionalIndex);
   assert.ok(graficoIndex > compromissosIndex);
   assert.ok(conciliacaoIndex > graficoIndex);
-  assert.ok(posicaoTotalIndex > conciliacaoIndex);
+  assert.ok(monthlySectionIndex >= 0);
+  assert.ok(posicaoTotalIndex > monthlySectionIndex);
   assert.ok(posicaoLiquidaIndex > posicaoTotalIndex);
   assert.ok(patrimonioIndex > posicaoLiquidaIndex);
   assert.ok(financiamentoIndex > patrimonioIndex);
