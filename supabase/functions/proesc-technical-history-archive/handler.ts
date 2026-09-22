@@ -3,6 +3,7 @@ import { ArchiveError } from './codec.ts';
 import { drainTechnicalArchive } from './worker.ts';
 
 export const createTechnicalArchiveHandler = (admin: ArchiveAdmin) => async (request: Request) => {
+  const deadline = performance.now() + 100000;
   const respond = (body: unknown, status = 200) => Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
   if (request.method !== 'POST') return respond({ error: 'METHOD_NOT_ALLOWED' }, 405);
   const key = request.headers.get('X-Proesc-Sync-Secret') || '';
@@ -12,6 +13,7 @@ export const createTechnicalArchiveHandler = (admin: ArchiveAdmin) => async (req
     if (authorization.error || typeof (authorization.data as { actorId?: unknown } | null)?.actorId !== 'string') {
       return respond({ error: 'TECHNICAL_ARCHIVE_UNAUTHORIZED' }, 403);
     }
+    const actorId = (authorization.data as { actorId: string }).actorId;
     const text = await request.text();
     if (text.length > 256) return respond({ error: 'TECHNICAL_ARCHIVE_INVALID_REQUEST' }, 400);
     let body: { limit?: number; maxBatches?: number; verifyRestore?: boolean } = {};
@@ -26,7 +28,8 @@ export const createTechnicalArchiveHandler = (admin: ArchiveAdmin) => async (req
         return respond({ error: 'TECHNICAL_ARCHIVE_INVALID_REQUEST' }, 400);
       }
     }
-    return respond(await drainTechnicalArchive(admin, body.limit ?? 25, body.maxBatches ?? 1, body.verifyRestore ?? false));
+    return respond(await drainTechnicalArchive(admin, body.limit ?? 25, body.maxBatches ?? 1, body.verifyRestore ?? false,
+      undefined, body.verifyRestore ? actorId : undefined, deadline));
   } catch (error) {
     return respond({ error: error instanceof ArchiveError ? error.code : 'TECHNICAL_ARCHIVE_UNAVAILABLE' }, 409);
   }

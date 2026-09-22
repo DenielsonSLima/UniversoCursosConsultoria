@@ -12,7 +12,9 @@ export const classId = '55555555-5555-4555-8555-555555555555';
 export const makeDocument = (reusedOnly = false) => ({
   formatVersion: 1, kind: 'proesc-technical-history', runs: [{ runId,
     items: reusedOnly ? null : { run_id: runId, row_count: 1,
-      records: [{ result: 'UNCHANGED', recorded_at: '2026-01-01T10:00:00Z' }],
+      records: [{ link_id: '88888888-8888-4888-8888-888888888888', position: 1, polo_id: poloId,
+        class_id: classId, snapshot_id: '99999999-9999-4999-8999-999999999999', original_snapshot_id: null,
+        stage: 'APPLY', error_code: null, result: 'UNCHANGED', recorded_at: '2026-01-01T10:00:00.123456Z' }],
       polo_ids: [poloId], original_snapshot_ids: [], scoped_counts: [], error_records: [],
       content_sha256: 'c'.repeat(64), packed_at: '2026-01-02T10:00:00Z' },
     http: { run_id: runId, row_count: 1, records: [{ http_status: 200, duration_ms: 37 }],
@@ -31,9 +33,11 @@ export async function fixture(reusedOnly = false) {
   const calls: Array<{ name: string; args?: Record<string, unknown> }> = [];
   const state = { object: null as Uint8Array | null, unavailable: false, public: false,
     commitError: '', batchStatus: 'PREPARED', denyAuth: false, empty: false, oversizedAbove: 25,
-    restoreFailure: false, commitCount: 1, committed: false };
+    restoreFailure: false, commitCount: 1, committed: false, readerFailure: false, readerMismatch: false,
+    warmExtras: false, readerTimezoneVariant: false, readerTimeMismatch: false,
+    lostCommitResponse: false, stateUnavailable: false, throwCommitResponse: false };
   const admin: ArchiveAdmin = {
-    rpc(name, args) {
+    async rpc(name, args) {
       calls.push({ name, args });
       if (name === 'proesc_sync_runtime_service') return Promise.resolve({
         data: state.denyAuth ? null : { actorId: poloId }, error: state.denyAuth ? { code: '42501' } : null,
@@ -42,17 +46,40 @@ export async function fixture(reusedOnly = false) {
         Number(args.p_limit) > state.oversizedAbove ? { data: null, error: { code: '54000' } }
           : { data: state.empty ? { status: 'EMPTY' } : source, error: null });
       if (name === 'proesc_technical_archive_state_service') {
+        if (state.stateUnavailable) return { data: null, error: { code: 'TIMEOUT' } };
         if (args.p_abort) state.batchStatus = 'ABORTED';
-        return Promise.resolve({ data: { ...source, status: state.batchStatus }, error: null });
+        return Promise.resolve({ data: { ...source, status: state.batchStatus,
+          compressedSha256: state.object ? await sha256(state.object) : null,
+          compressedBytes: state.object?.byteLength ?? null }, error: null });
       }
       if (name === 'proesc_restore_technical_archive_service') return Promise.resolve({
         data: state.restoreFailure ? null : { restored: true, runId: args.p_run_id },
         error: state.restoreFailure ? { secret: 'never-return-me' } : null,
       });
+      if (name === 'proesc_technical_history_service') {
+        assert(state.committed && args.p_actor_id === poloId);
+        if (state.readerFailure) return { data: null, error: { code: 'XX000', secret: 'never-return-me' } };
+        if (args.p_payload_text === null) return { data: { archive: { ...source, status: 'COMMITTED',
+          compressedSha256: await sha256(state.object!), compressedBytes: state.object!.byteLength } }, error: null };
+        assert(args.p_payload_text === source.payloadText);
+        const run = JSON.parse(source.payloadText).runs[0];
+        const items = (run.items?.records ?? []).map((item: Record<string, unknown>) => ({ ...item, run_id: run.runId }));
+        const http = (run.http?.records ?? []).map((item: Record<string, unknown>) => ({ ...item, run_id: run.runId, error_code: null }));
+        if (state.readerMismatch && http.length) http[0].duration_ms = -1;
+        if (state.readerTimezoneVariant && items.length) items[0].recorded_at = items[0].recorded_at.replace('Z', '+00:00');
+        if (state.readerTimeMismatch && items.length) items[0].recorded_at = items[0].recorded_at.replace('123456', '123457');
+        if (state.warmExtras) {
+          items.push({ run_id: run.runId, result: 'APPLIED', link_id: classId });
+          http.push({ run_id: run.runId, error_code: 'HTTP_TIMEOUT', http_status: 504 });
+        }
+        return { data: { runId: run.runId, poloId: null, items, http, reusedCounts: run.reusedCounts }, error: null };
+      }
       assert(name === 'proesc_commit_technical_archive_service');
-      state.committed = !state.commitError;
+      state.committed = !state.commitError || state.batchStatus === 'COMMITTED' || state.lostCommitResponse;
+      if (state.lostCommitResponse) state.batchStatus = 'COMMITTED';
+      if (state.throwCommitResponse) { state.committed = true; state.batchStatus = 'COMMITTED'; throw new Error('transport lost'); }
       return Promise.resolve({ data: { status: 'COMMITTED', runCount: 1, archivedRuns: state.commitCount },
-        error: state.commitError ? { secret: 'never-return-me', code: state.commitError } : null });
+        error: state.commitError || state.lostCommitResponse ? { secret: 'never-return-me', code: state.commitError || 'TIMEOUT' } : null });
     },
     storage: {
       getBucket: () => Promise.resolve({ data: { public: state.public }, error: null }),

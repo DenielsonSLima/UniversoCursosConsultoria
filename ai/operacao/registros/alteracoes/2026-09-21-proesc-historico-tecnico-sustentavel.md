@@ -1,6 +1,6 @@
 # Histórico técnico Proesc sustentável
 
-Estado: IMPLEMENTADO LOCALMENTE — VALIDAÇÃO INTEGRADA E PRODUÇÃO PENDENTES.
+Estado: CORREÇÃO INSTALADA E PILOTO RECUPERÁVEL CONCLUÍDO — ARQUIVAMENTO AUTOMÁTICO DESLIGADO.
 
 ## Problema e comportamento proposto
 
@@ -32,16 +32,16 @@ Falhas transitórias de consulta recebem espera progressiva limitada, sem avanç
 - `supabase/config-template-examples.md`
 - `modules/gestor/configuracoes/consulta-api-proesc/ProescOperationsFeed.tsx`
 - `modules/gestor/configuracoes/consulta-api-proesc/ProescConsoleOverview.tsx`
-- `supabase/migrations/20260922000100_proesc_reuse_unchanged_observations.sql`
-- `supabase/migrations/20260922000110_proesc_reused_observation_finish.sql`
-- `supabase/migrations/20260922000120_proesc_fetch_failure_backoff.sql`
-- `supabase/migrations/20260922000200_proesc_technical_archive_schema.sql`
-- `supabase/migrations/20260922000201_proesc_technical_archive_commit.sql`
-- `supabase/migrations/20260922000202_proesc_technical_archive_restore.sql`
-- `supabase/migrations/20260922000203_proesc_technical_archive_operations.sql`
-- `supabase/migrations/20260922000300_proesc_technical_history_readers.sql`
-- `supabase/migrations/20260922000301_proesc_technical_history_service.sql`
-- `supabase/migrations/20260922000302_proesc_technical_readers_ready.sql`
+- `supabase/migrations/20260922001248_proesc_reuse_unchanged_observations.sql`
+- `supabase/migrations/20260922001348_proesc_reused_observation_finish.sql`
+- `supabase/migrations/20260922001351_proesc_fetch_failure_backoff.sql`
+- `supabase/migrations/20260922001353_proesc_technical_archive_schema.sql`
+- `supabase/migrations/20260922001411_proesc_technical_archive_commit.sql`
+- `supabase/migrations/20260922001413_proesc_technical_archive_restore.sql`
+- `supabase/migrations/20260922001416_proesc_technical_archive_operations.sql`
+- `supabase/migrations/20260922001451_proesc_technical_history_readers.sql`
+- `supabase/migrations/20260922001454_proesc_technical_history_service.sql`
+- `supabase/migrations/20260922001457_proesc_technical_readers_ready.sql`
 - `supabase/functions/proesc-technical-history-archive/codec.test.ts`
 - `supabase/functions/proesc-technical-history-archive/codec.ts`
 - `supabase/functions/proesc-technical-history-archive/fixtures.test.ts`
@@ -63,22 +63,24 @@ Falhas transitórias de consulta recebem espera progressiva limitada, sem avanç
 
 Total: 39 arquivos.
 
-## Validação e limitações
+## Validação e limites
 
 - Revisão dividida entre três agentes: geração, arquivamento e leitores.
-- Testes locais: 85 do backend e 13 de apresentação passaram.
-- TypeScript, lint focado, build, teto de linhas e contrato operacional aprovados. Índice operacional regenerado localmente, sem publicação de artefatos gerados.
-- Ensaio inicial das migrations foi revertido; a última revisão de credenciais/backoff não foi reexecutada no banco.
-- Nenhuma migration deste lote foi aplicada permanentemente; nenhuma nova Edge Function foi implantada.
-- Ensaios SQL que modificam fixtures ou credenciais devem usar ambiente isolado representativo, nunca produção.
-- Leitura real do arquivo, restauração e comparação dos feeds permanecem pendentes. Respostas simuladas dos testes não substituem essas provas.
-- Ativação do cron, transferência do acervo, recuperação física de espaço e observação de ciclos naturais permanecem pendentes.
-- Smoke visual autenticado pendente; a alteração no painel é somente explicativa, com renderização coberta pelos testes existentes.
+- Testes focados: cobertura de backend, apresentação, autorização, corrupção, resposta de commit perdida e restauração; a cadeia final de arquivo/leitor passou em 39 testes locais.
+- TypeScript, lint, build, teto de linhas e contrato operacional aprovados na validação anterior; CI do fechamento confere os arquivos finais.
+- Dez migrations aplicadas, com nomes locais alinhados ao ledger e conteúdo preservado. Proesc API e arquivador técnico implantados.
+- Regra de reutilização exercitada no SQL em transação somente leitura; espera progressiva conferida no SQL e no ciclo operacional.
+- Piloto real de uma execução: upload imutável, download/hash, commit, leitura fria autorizada, comparação integral e restauração concluídos.
+- Envelope restaurado idêntico ao original; comparativos das fontes SQL e financeiro sem diferenças. Nenhum metadado de Storage foi simulado.
+- Arquivo privado do piloto preservado; payload temporário limpo e localizador frio retirado após restauração.
+- Ensaios que modificam fixtures ou credenciais permanecem exclusivos de ambiente isolado; não foram executados nesta implantação.
+- Confirmação de reutilização em um ciclo natural bem-sucedido permanece pendente. Os testes de contrato não são apresentados como substituto desse acompanhamento.
+- Smoke visual autenticado pendente; a alteração no painel é somente explicativa e passou nos testes de renderização existentes.
 
-## Sequência de implantação pendente
+## Escopo aplicado e próximas etapas
 
-1. Validar o contrato SQL final em ambiente isolado e conferir drift remoto somente por leitura.
-2. Aplicar migrations em ordem, preservando a rotina de arquivo desativada, e publicar os leitores/worker compatíveis.
-3. Executar piloto de uma execução técnica encerrada, com download, hash, restauração e comparação antes/depois. Não simular metadados de Storage em produção.
-4. Somente após o piloto íntegro, ativar rotina limitada e transferir o acervo em lotes pequenos.
-5. Medir espaço efetivo e geração por ciclo; fatos financeiros e referências históricas permanecem no banco.
+- Usuário confirmou instalação e piloto limitado. A rotina automática permanece desligada e não há cron técnico criado.
+- Não houve transferência em massa do acervo nem recuperação física de espaço neste piloto. Ele comprova leitura e recuperação de uma execução.
+- A geração de evidências sem novidade passa pela prova de reutilização; falhas transitórias respeitam espera progressiva limitada.
+- Próxima etapa operacional: ativação controlada e transferência do acervo, com métricas de espaço e crescimento, mantendo fatos financeiros e referências históricas no banco.
+- Não reaplicar as migrations instaladas nem reexecutar o piloto selecionando outra execução sem necessidade.
