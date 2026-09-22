@@ -3,7 +3,7 @@ import { testProescV2Token } from './test-token.ts';
 function assert(value: unknown, message = 'assertion failed'): asserts value { if (!value) throw new Error(message); }
 const now = new Date('2026-09-12T15:00:00Z');
 
-Deno.test('teste usa somente GET fixo de pessoas sem consultar parcelas e devolve apenas diagnóstico', async () => {
+Deno.test('teste confirma pessoas e parcelas por GET fixo e devolve apenas diagnóstico', async () => {
   const requests: URL[] = [];
   const fetcher: typeof fetch = (input, options) => {
     const url = new URL(String(input)); requests.push(url);
@@ -14,8 +14,9 @@ Deno.test('teste usa somente GET fixo de pessoas sem consultar parcelas e devolv
       data: [{ id: 'private-fixture-id', name: 'PRIVATE_FIXTURE_NAME', token: 'SECRET_RESPONSE' }] }));
   };
   const result = await testProescV2Token('synthetic-proesc-secret', undefined, fetcher, now);
-  assert(result.ok && result.checks.length === 1 && requests.length === 1);
+  assert(result.ok && result.checks.length === 2 && requests.length === 2);
   assert(requests[0].pathname === '/api/v2/people' && requests[0].searchParams.get('page') === '1');
+  assert(requests[1].pathname === '/api/v2/invoices' && requests[1].searchParams.get('expiration_month') === '9');
   const text = JSON.stringify(result);
   assert(!text.includes('PRIVATE') && !text.includes('SECRET') && !text.includes('synthetic-proesc-secret'));
 });
@@ -41,5 +42,5 @@ Deno.test('erro lógico, HTML 200, rede, payload excessivo e erro semântico nã
   assert(!network.ok && network.checks.every((check) => check.status === 0));
   const partial = await testProescV2Token('synthetic-proesc-secret', undefined, (url) => Promise.resolve(
     String(url).includes('/people?') ? Response.json([{ data: [] }]) : new Response('', { status: 403 })), now);
-  assert(partial.ok && partial.checks.length === 1 && partial.checks[0].ok);
+  assert(!partial.ok && partial.checks.length === 2 && partial.checks[0].ok && !partial.checks[1].ok);
 });

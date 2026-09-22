@@ -1,18 +1,14 @@
 # Lote ativo
 
-Estado: IMPLEMENTADO — VALIDAÇÃO DE ENTREGA REALTIME
+Estado: IMPLEMENTADO LOCALMENTE — BLOQUEADO PARA VALIDAÇÃO REMOTA
 
-## Lote: 2026-09-21-realtime-retencao-efetiva
+## Lote: 2026-09-22-caixa-evidencia-financeira-v2
 
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-21-realtime-retencao-efetiva.md`.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-22-caixa-evidencia-financeira-v2.md`.
 
-- Continuação do pedido de corrigir crescimento técnico desnecessário em produção, preservando dados úteis.
-- A retenção existente de 24 horas depende da emissão de eventos com IDs específicos e deixa sinais antigos acumulados.
-- Tornar a retenção independente de novos eventos, com manutenção limitada e agendamento horário.
-- Ajustar assinaturas de sinais de Gestão para INSERT antes da ativação, evitando invalidação por expiração técnica.
-- Escopo restrito às três tabelas de sinais efêmeros; nenhum pagamento, baixa, prova financeira ou registro de acesso integra a limpeza.
-- Validar fronteira temporal, lote, autorização, concorrência e reexecução, com revisão independente e leitura remota antes/depois.
-- O Caixa 4.8.75 foi publicado no PR #167 e conferido em sessão autenticada; seu registro é atualizado somente para fechar a entrega anterior.
-- Expurgo genérico de logs após 90 dias e agregação das reservas Proesc continuam no planejamento separado.
-
-- Instalação remota inativa confirmada; testes SQL e frontend, build e revisão independente aprovados. Publicação precede ativação e drenagem.
+- Pedido: corrigir as cobranças permanentemente em conferência no Caixa.
+- Integração V2 de situação explícita, preservação de evidências e teste real do recurso financeiro implementados em rascunho.
+- Testes focados e checagem de tipos passaram; produção ainda não alterada.
+- Acesso Supabase somente leitura impede prova real do contrato e reprocessamento.
+- Antes de liberar continuamente, confirmar IDs entre versões, adequar reutilização/polling OPEN e verificar o Caixa por polo/mês.
+- O lote anterior permanece documentado em `ai/operacao/registros/alteracoes/2026-09-21-realtime-retencao-efetiva.md`; esta entrega não modifica suas rotinas.
