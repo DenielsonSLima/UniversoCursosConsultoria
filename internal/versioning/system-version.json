@@ -1,8 +1,8 @@
 {
-  "version": "4.8.81",
+  "version": "4.8.82",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 90,
+  "revision": 91,
   "releasedAt": "2026-09-24",
-  "summary": "Datas explícitas e matrícula local sem boleto nos ciclos técnicos"
+  "summary": "Revisão auditada da baixa e do estorno da matrícula local"
 }

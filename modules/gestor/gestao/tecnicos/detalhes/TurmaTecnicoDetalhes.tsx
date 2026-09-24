@@ -17,6 +17,7 @@ import TurmaVacinas from './components/TurmaVacinas';
 import AtividadesExtraClasse from './components/AtividadesExtraClasse';
 import { useTurmaTecnicoRealtime } from './hooks/useTurmaTecnicoRealtime';
 import { matriculaTecnicaFinanceiroWorkspaceQueryOptions } from './components/financeiro/hooks/useMatriculaTecnicaFinanceiro';
+import { canUseManualEnrollmentSettlement } from './components/financeiro/ciclo-manual-settlement-account';
 import { turmaVacinasQueryOptions } from './components/vacinas/useTurmaVacinas';
 import {
   atividadesExtraClasseService,
@@ -24,8 +25,6 @@ import {
 import { academicLifecycleKeys } from './academic-lifecycle.keys';
 import {
   canAccessGestaoTurmaTab,
-  canAccessFinanceiroTab,
-  canAccessGestorModule,
   getEffectiveGestaoTurmaTabs,
   type GestorPermissions,
 } from '../../../access-control';
@@ -49,10 +48,7 @@ const TurmaTecnicoDetalhes: React.FC<TurmaTecnicoDetalhesProps> = ({
   const queryClient = useQueryClient();
   const canViewAtividades = canAccessGestaoTurmaTab(permissions, 'atividades');
   const canViewFinanceiro = canAccessGestaoTurmaTab(permissions, 'financeiro');
-  const canSettleEnrollment = (canAccessGestorModule(permissions, 'financeiro')
-    && canAccessFinanceiroTab(permissions, 'receber'))
-    || (canAccessGestorModule(permissions, 'secretaria')
-      && (permissions.tabs?.secretaria || []).some((tab) => ['recebimentos', 'consulta-financeira'].includes(tab)));
+  const canSettleEnrollment = canUseManualEnrollmentSettlement(permissions);
   const canViewAulas = canAccessGestaoTurmaTab(permissions, 'grade')
     || canAccessGestaoTurmaTab(permissions, 'diarios');
   const activityAvailabilityQuery = useQuery({

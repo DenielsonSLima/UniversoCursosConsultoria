@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { asaasIntegrationService } from '../../../../../asaas/asaas.service';
 import { copyTextToClipboard } from '../../../../../../lib/clipboard';
 import { financeiroQueryKeys } from '../../../financeiro.queryKeys';
+import { matriculaTecnicaFinanceiroKeys } from '../../../../gestao/tecnicos/detalhes/components/financeiro/matricula-tecnica-financeiro.keys';
 import type { ContasReceber } from '../../../financeiro.service';
 import { financeiroService } from '../../../financeiro.service';
 import { gestorBanesePaymentService } from '../../banese/gestor-banese-payment.service';
@@ -48,6 +49,9 @@ export const useModalidadeReceberOperations = (toast: OperationToast) => {
         queryClient.invalidateQueries({ queryKey: ['aluno-financeiro'] }),
         selected?.turmaId
           ? queryClient.invalidateQueries({ queryKey: ['turma-financeiro', selected.turmaId] })
+          : Promise.resolve(),
+        selected?.turmaId
+          ? queryClient.invalidateQueries({ queryKey: matriculaTecnicaFinanceiroKeys.turma(selected.turmaId) })
           : Promise.resolve(),
       ]);
       toast.success(
@@ -128,6 +132,7 @@ export const useModalidadeReceberOperations = (toast: OperationToast) => {
     mutationFn: () => financeiroService.reverseManualSettlement(reversalItem!.id!, {
       recreateAsaas,
       reason: reversalReason,
+      expectedSettlementId: reversalItem!.manualSettlementId,
     }),
     onSuccess: async (result) => {
       const reversedReceivable = reversalItem;
@@ -145,6 +150,9 @@ export const useModalidadeReceberOperations = (toast: OperationToast) => {
         queryClient.invalidateQueries({ queryKey: ['aluno-financeiro'] }),
         reversedReceivable?.turmaId
           ? queryClient.invalidateQueries({ queryKey: ['turma-financeiro', reversedReceivable.turmaId] })
+          : Promise.resolve(),
+        reversedReceivable?.turmaId
+          ? queryClient.invalidateQueries({ queryKey: matriculaTecnicaFinanceiroKeys.turma(reversedReceivable.turmaId) })
           : Promise.resolve(),
       ]);
       toast.success(
