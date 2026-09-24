@@ -36,6 +36,23 @@ const between = (source: string, startMarker: string, endMarker: string) => {
   return source.slice(start, end);
 };
 
+test("histórico protegido informa o bloqueio sem presumir emissão nem oferecer ações", () => {
+  const summary = between(statusSource,
+    "if (row.cicloManual.estado === 'PROTEGIDO_EXISTENTE')",
+    "if (row.cicloManual.estado === 'JA_GERADO')");
+  assert.match(summary, /bloqueio\?\.codigo === 'HISTORICO_FINANCEIRO_EXISTENTE'[\s\S]*?return 'Histórico financeiro existente'/);
+  assert.ok(summary.indexOf('if (isIssuedInProesc(generated))') < summary.indexOf('HISTORICO_FINANCEIRO_EXISTENTE'));
+  assert.match(summary, /&& !fullyIssued/);
+  const badge = between(statusSource,
+    "if (cicloManual.estado === 'PROTEGIDO_EXISTENTE')",
+    "if (generated && !isFullyIssued(generated))");
+  assert.match(badge, /individualHistory = cicloManual\.bloqueio\?\.codigo === 'HISTORICO_FINANCEIRO_EXISTENTE'/);
+  assert.match(badge, /&& !isIssuedInProesc\(generated\)\s*&& \(!generated \|\| !isFullyIssued\(generated\)\)/);
+  assert.match(badge, /individualHistory\s*\? cicloManual\.bloqueio!\.mensagem/);
+  assert.match(badge, /individualHistory\s*\? 'Histórico financeiro existente'/);
+  assert.doesNotMatch(badge, /<button|onGenerate|onResume|<GeneratedCycleStatus/);
+});
+
 test("T42 recebe ação dinâmica de 2º ciclo e não expõe geração inicial ou ciclo 3", () => {
   assert.match(
     statusSource,

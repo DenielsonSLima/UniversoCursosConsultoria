@@ -22,6 +22,95 @@ const eligibleState = {
   cicloGerado: null,
 };
 
+const protectedIndividualHistory = {
+  ...eligibleState,
+  cicloBaseHistorico: null,
+  proximoCicloNumero: null,
+  primeiroVencimentoSugerido: null,
+  criterioElegibilidade: null,
+  estado: "PROTEGIDO_EXISTENTE",
+  podeGerar: false,
+  bloqueio: {
+    codigo: "HISTORICO_FINANCEIRO_EXISTENTE",
+    mensagem: "Há histórico financeiro vinculado ao aluno.",
+  },
+  politica: null,
+};
+
+test("histórico individual bloqueado sem ciclo comprovado não derruba a lista da turma", () => {
+  const rows = [
+    protectedIndividualHistory,
+    {
+      ...protectedIndividualHistory,
+      cicloBaseHistorico: 1,
+      criterioElegibilidade: "HISTORICO_EXTERNO",
+      politica: eligibleState.politica,
+    },
+    eligibleState,
+    {
+      ...eligibleState,
+      cicloBaseHistorico: 0,
+      proximoCicloNumero: 1,
+      criterioElegibilidade: "MANUAL_APOS_EMISSAO",
+    },
+  ];
+  const parsed = rows.map(requireMatriculaTecnicaCicloManual);
+  assert.deepEqual(parsed.map((row) => row.podeGerar), [false, false, true, true]);
+  for (const row of parsed.slice(0, 2)) {
+    assert.equal(row.cicloGerado, null);
+    assert.equal(row.proximoCicloNumero, null);
+    assert.equal(row.bloqueio?.codigo, "HISTORICO_FINANCEIRO_EXISTENTE");
+  }
+});
+
+test("histórico individual protegido nunca aceita intenção de emissão ou metadados inválidos", () => {
+  for (const change of [
+    { podeGerar: true },
+    { proximoCicloNumero: 1 },
+    { primeiroVencimentoSugerido: "2026-10-20" },
+    { habilitado: false },
+    { modo: null },
+    { estado: "ELEGIVEL" },
+    { cicloMaximo: null },
+    { cicloMaximo: 1 },
+    { cicloBaseHistorico: -1 },
+    { cicloBaseHistorico: 3 },
+    { criterioElegibilidade: "DESCONHECIDO" },
+    { politica: { revisao: 0, fingerprint: "" } },
+    { bloqueio: null },
+    { bloqueio: { codigo: "OUTRO", mensagem: "Bloqueado" } },
+    { cicloGerado: {} },
+  ]) {
+    assert.throws(() => requireMatriculaTecnicaCicloManual({
+      ...protectedIndividualHistory,
+      ...change,
+    }), /estado manual de ciclo (incompleto|incoerente)/i);
+  }
+});
+
+test("proteção individual preserva conferência Proesc e ciclo anterior sem liberar ações", () => {
+  const pendingReview = { ...protectedIndividualHistory, conferenciaProesc: { necessaria: true } };
+  assert.equal(requireMatriculaTecnicaCicloManual(pendingReview).podeGerar, false);
+  const previousCycle = {
+    ...pendingReview,
+    cicloBaseHistorico: 0,
+    politica: eligibleState.politica,
+    cicloGerado: {
+      numero: 1, status: "LOCAL_CREATED", quantidadeItens: 13, total: "3500.00",
+      emitidosBanese: 1, pendentesEmissao: 11, emRevisao: 1,
+    },
+  };
+  const parsed = requireMatriculaTecnicaCicloManual(previousCycle);
+  assert.equal(parsed.podeGerar, false);
+  assert.equal(parsed.proximoCicloNumero, null);
+  assert.deepEqual(parsed.cicloGerado, previousCycle.cicloGerado);
+  for (const numero of [0, 3]) {
+    assert.throws(() => requireMatriculaTecnicaCicloManual({
+      ...previousCycle, cicloGerado: { ...previousCycle.cicloGerado, numero },
+    }), /estado manual de ciclo (incompleto|incoerente)/i);
+  }
+});
+
 test("traduz os critérios canônicos de elegibilidade sem expor código técnico", () => {
   assert.equal(
     getCriterioElegibilidadeLabel("PENULTIMA_SEM_ATRASO"),

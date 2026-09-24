@@ -118,13 +118,26 @@ export const requireMatriculaTecnicaCicloManual = (
   const next = Number.isInteger(value.proximoCicloNumero)
     ? Number(value.proximoCicloNumero) : null;
   const generatedNumber = isRecord(generated) ? Number(generated.numero) : null;
+  // Individual history can prevent generation without proving a complete cycle
+  // or supplying a class policy. This state is display-only, never actionable.
+  const protectedHistoryOnly = state === 'PROTEGIDO_EXISTENTE'
+    && isRecord(value.bloqueio)
+    && value.bloqueio.codigo === 'HISTORICO_FINANCEIRO_EXISTENTE'
+    && value.habilitado === true
+    && value.modo === 'MANUAL'
+    && value.podeGerar === false
+    && value.proximoCicloNumero === null
+    && value.primeiroVencimentoSugerido === null
+    && maximum === 2
+    && (baseline === null || (baseline >= 0 && baseline <= maximum))
+    && (generated === null || (generatedNumber! >= 1 && generatedNumber! <= maximum));
   const baseValid = (
     typeof value.habilitado === 'boolean'
     && (value.conferenciaProesc === undefined || (
       isRecord(value.conferenciaProesc)
       && value.conferenciaProesc.necessaria === true
-      && ['ELEGIVEL', 'BLOQUEADO'].includes(state)
-      && generated === null
+      && (protectedHistoryOnly || (['ELEGIVEL', 'BLOQUEADO'].includes(state)
+        && generated === null))
     ))
     && (value.modo === 'MANUAL' || value.modo === null)
     && isNullableInteger(value.cicloBaseHistorico)
@@ -140,6 +153,9 @@ export const requireMatriculaTecnicaCicloManual = (
   );
   if (!baseValid) {
     throw new Error('O servidor retornou um estado manual de ciclo incompleto.');
+  }
+  if (protectedHistoryOnly) {
+    return value as unknown as MatriculaTecnicaCicloManual;
   }
   if (
     (state === 'NAO_HABILITADO' && (value.habilitado || value.podeGerar))

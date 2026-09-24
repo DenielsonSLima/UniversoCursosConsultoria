@@ -1,8 +1,8 @@
 {
-  "version": "4.8.78",
+  "version": "4.8.79",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 87,
+  "revision": 88,
   "releasedAt": "2026-09-24",
-  "summary": "Ciclos técnicos individuais com revisão das cobranças e proteção do histórico importado"
+  "summary": "Restaurar listas financeiras das turmas com histórico protegido"
 }
