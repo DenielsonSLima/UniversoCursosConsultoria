@@ -1,18 +1,17 @@
 # Lote ativo
 
-Estado: IMPLEMENTADO — VALIDAÇÃO DE ENTREGA REALTIME
+Estado: VALIDADO — PUBLICAÇÃO EM ANDAMENTO — Ciclos técnicos individuais
 
-## Lote: 2026-09-21-realtime-retencao-efetiva
+## Lote: 2026-09-24-ciclos-tecnicos-individuais
 
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-21-realtime-retencao-efetiva.md`.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-24-ciclos-tecnicos-individuais.md`.
 
-- Continuação do pedido de corrigir crescimento técnico desnecessário em produção, preservando dados úteis.
-- A retenção existente de 24 horas depende da emissão de eventos com IDs específicos e deixa sinais antigos acumulados.
-- Tornar a retenção independente de novos eventos, com manutenção limitada e agendamento horário.
-- Ajustar assinaturas de sinais de Gestão para INSERT antes da ativação, evitando invalidação por expiração técnica.
-- Escopo restrito às três tabelas de sinais efêmeros; nenhum pagamento, baixa, prova financeira ou registro de acesso integra a limpeza.
-- Validar fronteira temporal, lote, autorização, concorrência e reexecução, com revisão independente e leitura remota antes/depois.
-- O Caixa 4.8.75 foi publicado no PR #167 e conferido em sessão autenticada; seu registro é atualizado somente para fechar a entrega anterior.
-- Expurgo genérico de logs após 90 dias e agregação das reservas Proesc continuam no planejamento separado.
+- Usuário solicitou análise com três agentes, correção e publicação em produção.
+- Aceite: aluno novo sem histórico próprio/importado pode iniciar ciclo 1 em turma em andamento ou transferência; origem financeira vinculada permanece protegida.
+- Prévia revisável por item, matrícula opcional no boleto, doze mensalidades e segundo ciclo por ação explícita após emissão integral do primeiro.
+- Valores e datas partem da configuração canônica; matrícula sem valor exige revisão ou exclusão, sem inferência de pagamento.
+- Preservar importados Banese/Proesc, retomada de títulos ambíguos, autenticação, idempotência e snapshots imutáveis.
+- Publicar apenas o manifesto deste lote por MCP GitHub e Supabase.
+- Trabalho anterior do Caixa/Proesc preservado no registro `2026-09-22-caixa-conferencia-proesc.md`; arquivos paralelos não pertencem a esta entrega.
 
-- Instalação remota inativa confirmada; testes SQL e frontend, build e revisão independente aprovados. Publicação precede ativação e drenagem.
+- Backend aplicado e conferido; PR #170 aguardando CI final e merge. Smoke autenticado da interface permanece pendente da autenticação local do responsável.

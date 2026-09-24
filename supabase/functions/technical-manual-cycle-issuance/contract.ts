@@ -1,4 +1,5 @@
 import type { GatewayChargeResult } from "../gateways/router.ts";
+import { parseManualCycleRevision, type ManualCycleRevision } from './revision.ts';
 import {
   assertBaneseBankNumbers,
   assertBaneseDueDateFactor,
@@ -16,6 +17,7 @@ export const DATABASE_UUID_RE =
 export const FINGERPRINT_RE = /^[0-9a-f]{64}$/;
 
 export type ManualCycleIssuanceRequest = {
+  revisao?: ManualCycleRevision | null;
   action: "generate" | "resume";
   matriculaId: string;
   cicloNumero: number;
@@ -158,7 +160,14 @@ export const parseIssuanceRequest = (
   if (primeiroVencimento !== null && !validIsoDate(primeiroVencimento)) {
     throw new IssuanceHttpError(400, "Vencimento inválido.", "INVALID_REQUEST");
   }
+  let revisao: ManualCycleRevision | null;
+  try {
+    revisao = parseManualCycleRevision(body.revisao);
+  } catch (error) {
+    throw new IssuanceHttpError(400, error instanceof Error ? error.message : 'Revisão inválida.', 'INVALID_REQUEST');
+  }
   return {
+    revisao,
     action,
     matriculaId,
     cicloNumero,

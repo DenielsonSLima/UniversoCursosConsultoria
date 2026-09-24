@@ -137,7 +137,7 @@ export const requireCicloFinanceiroTecnicoManualPreview = (
       { desconto: boolean; multaJuros: boolean }
     >
     : null;
-  const validItems = Boolean(application) && items.every((item) => {
+  const isValidItem = (item: unknown) => {
     if (!isRecord(item)) return false;
     const applicationKey = item.tipo === "MATRICULA"
       ? "matricula"
@@ -151,13 +151,24 @@ export const requireCicloFinanceiroTecnicoManualPreview = (
       isNonEmptyString(item.descricao) &&
       isDecimalString(item.valor) &&
       isIsoCalendarDate(item.vencimento) &&
+      (item.aplicacao === undefined || isApplicationItem(item.aplicacao)) &&
       isBoletoPreviewDetails(
         item.detalhesBoleto,
         item,
-        application?.[applicationKey] ?? { desconto: false, multaJuros: false },
+        isApplicationItem(item.aplicacao) ? item.aplicacao
+          : application?.[applicationKey] ?? { desconto: false, multaJuros: false },
         (terms as Record<string, unknown>).instrucaoBoleto,
       );
-  });
+  };
+  const validItems = Boolean(application) && items.every(isValidItem);
+  const omittedEnrollmentValid = value.matriculaSemBoleto === undefined
+    || value.matriculaSemBoleto === null
+    || (isRecord(value.matriculaSemBoleto) && value.cicloNumero === 1
+      && value.matriculaSemBoleto.tipo === 'MATRICULA'
+      && value.matriculaSemBoleto.numero === 0
+      && isValidItem(value.matriculaSemBoleto)
+      && items.every((item) => isRecord(item) && item.tipo === 'PARCELA'
+        && item.chave !== (value.matriculaSemBoleto as Record<string, unknown>).chave));
   const cycleNumber = Number(value.cicloNumero);
   const typedItems = validItems ? items as Array<Record<string, unknown>> : [];
   const keys = typedItems.map((item) => String(item.chave));
@@ -196,6 +207,7 @@ export const requireCicloFinanceiroTecnicoManualPreview = (
     !isDecimalString(value.total) ||
     !coherentComposition ||
     !validTerms ||
+    !omittedEnrollmentValid ||
     !isNonEmptyString(value.regraEfetivaFingerprint) ||
     !isNonEmptyString(value.politicaFingerprint) ||
     !isNonEmptyString(value.cronogramaFingerprint)

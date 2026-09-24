@@ -1,9 +1,12 @@
 import React from "react";
 import type { CicloFinanceiroTecnicoManualPreviewItem } from "./matricula-tecnica-ciclo-manual.types";
+import FinanceiroCicloManualItemEditor, { type CicloManualItemEditorProps } from './FinanceiroCicloManualItemEditor';
 
 interface FinanceiroCicloManualChargeRowsProps {
   item: CicloFinanceiroTecnicoManualPreviewItem;
   variant: "composition" | "review";
+  editor?: CicloManualItemEditorProps;
+  excluded?: boolean;
 }
 
 const formatMoney = (value: string) =>
@@ -32,7 +35,7 @@ const itemTypeLabel = (item: CicloFinanceiroTecnicoManualPreviewItem) => {
 
 const FinanceiroCicloManualChargeRows: React.FC<
   FinanceiroCicloManualChargeRowsProps
-> = ({ item, variant }) => {
+> = ({ item, variant, editor, excluded = false }) => {
   const details = item.detalhesBoleto;
   const titleId = `manual-cycle-charge-${item.chave}`;
 
@@ -53,6 +56,7 @@ const FinanceiroCicloManualChargeRows: React.FC<
           <p className="mt-1 text-[9px] font-black uppercase text-slate-400">
             {itemTypeLabel(item)}
           </p>
+          {excluded ? <p className="mt-1 text-[10px] font-bold text-blue-700">Matrícula sem boleto neste ciclo. Não incluída no total a emitir.</p> : null}
         </div>
         <div>
           <p className="text-[9px] font-black uppercase text-slate-400">
@@ -138,6 +142,7 @@ const FinanceiroCicloManualChargeRows: React.FC<
           </dd>
         </div>
       </dl>
+      {variant === 'composition' && editor ? <FinanceiroCicloManualItemEditor {...editor} /> : null}
     </article>
   );
 };

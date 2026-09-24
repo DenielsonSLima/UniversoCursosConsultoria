@@ -9,6 +9,7 @@ export type MatriculaTecnicaCicloManualEstado =
 export type MatriculaTecnicaCicloManualCriterio =
   | "QUITACAO_TOTAL"
   | "PENULTIMA_SEM_ATRASO"
+  | "MANUAL_APOS_EMISSAO"
   | "HISTORICO_EXTERNO";
 
 export interface MatriculaTecnicaCicloManual {
@@ -44,6 +45,7 @@ export interface MatriculaTecnicaCicloManual {
 }
 
 export interface CicloFinanceiroTecnicoManualPreviewItem {
+  aplicacao?: { desconto: boolean; multaJuros: boolean };
   chave: string;
   tipo: "MATRICULA" | "REMATRICULA" | "PARCELA";
   numero: number;
@@ -85,6 +87,7 @@ export interface CicloFinanceiroTecnicoManualTermos {
 }
 
 export interface CicloFinanceiroTecnicoManualPreview {
+  matriculaSemBoleto?: CicloFinanceiroTecnicoManualPreviewItem | null;
   cicloNumero: number;
   sourceVencimento: "TURMA" | "INDIVIDUAL";
   dataOrigem: string;
@@ -104,6 +107,21 @@ export interface PreviewCicloFinanceiroTecnicoManualInput {
   matriculaId: string;
   cicloNumero: number;
   primeiroVencimento: string | null;
+  revisao?: CicloFinanceiroTecnicoManualRevisao | null;
+}
+
+export interface CicloFinanceiroTecnicoManualRevisaoItem {
+  chave: string;
+  valor: string;
+  vencimento: string;
+  descontoPontualidade: string;
+  jurosAtrasoPercentual: string;
+  multaAtrasoPercentual: string;
+}
+
+export interface CicloFinanceiroTecnicoManualRevisao {
+  emitirMatricula: boolean;
+  itens: CicloFinanceiroTecnicoManualRevisaoItem[];
 }
 
 export interface PreviewCicloFinanceiroTecnicoManualResult {
@@ -114,6 +132,7 @@ export interface PreviewCicloFinanceiroTecnicoManualResult {
 }
 
 export interface GerarCicloFinanceiroTecnicoManualInput {
+  revisao?: CicloFinanceiroTecnicoManualRevisao | null;
   conferirProesc?: boolean;
   turmaId: string;
   matriculaId: string;

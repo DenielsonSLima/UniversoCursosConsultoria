@@ -39,7 +39,7 @@ test("a emissão pendente substitui o wizard por uma tela cheia de progresso", (
 test("a prévia revisada é preservada antes do início da mutation", () => {
   assert.match(
     dialogSource,
-    /setIssuanceSnapshot\(preview\);\s*void onConfirm\(preview, firstDueDate\)/,
+    /setIssuanceSnapshot\(preview\);\s*void onConfirm\(preview, firstDueDate, revisionState\.revision\)/,
   );
   assert.match(
     dialogSource,
@@ -53,13 +53,13 @@ test("uma trava síncrona impede dois envios antes do estado pending renderizar"
   assert.match(dialogSource, /const issuanceStartedRef = useRef\(false\)/);
   assert.match(
     dialogSource,
-    /if \(!preview \|\| issuanceStartedRef\.current\) return;/,
+    /if \(!preview \|\| !previewReady \|\| !positiveAmounts \|\| issuanceStartedRef\.current\) return;/,
   );
   assert.match(dialogSource, /issuanceStartedRef\.current = true;/);
   assert.match(dialogSource, /onClick=\{startIssuance\}/);
   assert.match(
     dialogSource,
-    /onConfirm\(preview, firstDueDate\)\.finally\(\(\) => \{\s*issuanceStartedRef\.current = false;/,
+    /onConfirm\(preview, firstDueDate, revisionState\.revision\)\.finally\(\(\) => \{\s*issuanceStartedRef\.current = false;/,
   );
 });
 
