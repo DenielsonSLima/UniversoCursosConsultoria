@@ -1,8 +1,8 @@
 {
-  "version": "4.8.79",
+  "version": "4.8.80",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 88,
+  "revision": 89,
   "releasedAt": "2026-09-24",
-  "summary": "Restaurar listas financeiras das turmas com histórico protegido"
+  "summary": "Preservar emissão comprovada, vencimentos revisados e navegação dos ciclos técnicos"
 }

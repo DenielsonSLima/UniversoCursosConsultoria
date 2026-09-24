@@ -246,3 +246,38 @@ Deno.test("quantidade 12 não mascara mensalidade faltante ou repetida", async (
   await assert.rejects(() => runManualCycleIssuance(request, dependencies), /cobranças revisadas/);
   assert.equal(emitted, false);
 });
+
+Deno.test("retomada reconhece boleto pago com emissão histórica comprovada sem novo POST", async () => {
+  const paid = contextAt(13);
+  paid.ciclo.recebiveis[0].status = "PAGO";
+  paid.ciclo.recebiveis[0].emissaoHistoricaComprovada = true;
+  let calls = 0;
+  const dependencies: ManualCycleIssuanceDependencies = {
+    preflight: () => Promise.resolve(), prepare: () => Promise.resolve(paid),
+    resume: () => Promise.resolve(paid), reload: () => Promise.resolve(paid),
+    issueReceivable: () => { calls += 1; return Promise.resolve(); },
+  };
+  const result = await runManualCycleIssuance({ ...request, action: "resume" }, dependencies);
+  assert.equal(result.ciclo.emitidosBanese, 13);
+  assert.equal(result.ciclo.recebiveis[0].emissaoHistoricaComprovada, true);
+  assert.equal(calls, 0);
+});
+
+Deno.test("pago sem prova, revisão e cancelado interrompem antes de qualquer emissão", async () => {
+  for (const patch of [
+    { status: "PAGO", emissaoBanese: "EMITIDO", emissaoHistoricaComprovada: false },
+    { status: "PAGO", emissaoBanese: "REVISAO_MANUAL", emissaoHistoricaComprovada: true },
+    { status: "CANCELADO", emissaoBanese: "EMITIDO", emissaoHistoricaComprovada: true },
+  ]) {
+    const invalid = contextAt(1);
+    Object.assign(invalid.ciclo.recebiveis[0], patch);
+    let calls = 0;
+    const dependencies: ManualCycleIssuanceDependencies = {
+      preflight: () => Promise.resolve(), prepare: () => Promise.resolve(invalid),
+      resume: () => Promise.resolve(invalid), reload: () => Promise.resolve(invalid),
+      issueReceivable: () => { calls += 1; return Promise.resolve(); },
+    };
+    await assert.rejects(() => runManualCycleIssuance({ ...request, action: "resume" }, dependencies), /cobranças revisadas/);
+    assert.equal(calls, 0);
+  }
+});
