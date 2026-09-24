@@ -48,6 +48,26 @@ Deno.test("requisição generate exige os três fingerprints e vencimento do cic
   );
 });
 
+Deno.test("contexto preserva somente prova histórica booleana do servidor", () => {
+  const context = (proof: unknown) => parseCycleContext({
+    requestId: REQUEST_ID,
+    matriculaId: RECEIVABLE_ID,
+    ciclo: {
+      numero: 1, quantidadeItens: 1, emitidosBanese: 1,
+      pendentesEmissao: 0, emRevisao: 0, total: "100.00", status: "EMITIDO_BANESE",
+      recebiveis: [{
+        id: RECEIVABLE_ID, chave: "ciclo-1-matricula", tipo: "MATRICULA", numero: 0,
+        descricao: "Matrícula sintética", valor: "100.00", vencimento: "2027-01-15",
+        status: "PAGO", emissaoBanese: "EMITIDO", emissaoHistoricaComprovada: proof,
+      }],
+    },
+  });
+  assert.equal(context(true).ciclo.recebiveis[0].emissaoHistoricaComprovada, true);
+  for (const proof of [false, undefined, null, "true", 1]) {
+    assert.equal(context(proof).ciclo.recebiveis[0].emissaoHistoricaComprovada, false);
+  }
+});
+
 Deno.test("id determinístico por recebível é estável e não colide no ciclo", async () => {
   const first = await deterministicReceivableRequestId(
     REQUEST_ID,

@@ -39,6 +39,11 @@ const progressFrom = (context: ManualCycleContext): ManualCycleProgress => ({
   emRevisao: context.ciclo.emRevisao,
 });
 
+const isHistoricallyIssuedPaidItem = (
+  item: ManualCycleContext['ciclo']['recebiveis'][number],
+) => item.status === 'PAGO' && item.emissaoBanese === 'EMITIDO'
+  && item.emissaoHistoricaComprovada === true;
+
 const assertRequestedContext = (
   request: ManualCycleIssuanceRequest,
   context: ManualCycleContext,
@@ -57,6 +62,8 @@ const assertRequestedContext = (
     leadItems.some((item) => item.tipo !== expectedLead || item.numero !== 0) ||
     new Set(installments.map((item) => item.numero)).size !== 12 ||
     installments.some((item) => item.numero < 1 || item.numero > 12) ||
+    context.ciclo.recebiveis.some((item) => !['PENDENTE', 'VENCIDO'].includes(item.status)
+      && !isHistoricallyIssuedPaidItem(item)) ||
     (expectedCount !== null && context.ciclo.quantidadeItens !== expectedCount)
   ) {
     throw new IssuanceHttpError(
@@ -81,7 +88,7 @@ const assertRequestedContext = (
 const assertFullyIssued = (context: ManualCycleContext) => {
   const emitted = context.ciclo.recebiveis.filter((item) =>
     item.emissaoBanese === "EMITIDO" &&
-    ["PENDENTE", "VENCIDO"].includes(item.status)
+    (["PENDENTE", "VENCIDO"].includes(item.status) || isHistoricallyIssuedPaidItem(item))
   );
   if (
     context.ciclo.emitidosBanese !== context.ciclo.quantidadeItens ||

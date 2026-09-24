@@ -46,6 +46,7 @@ export type ManualCycleReceivableSummary = {
   vencimento: string;
   status: string;
   emissaoBanese: string;
+  emissaoHistoricaComprovada?: boolean;
 };
 
 export type ManualCycleContext = {
@@ -240,6 +241,7 @@ const parseReceivableSummary = (
     vencimento: stringValue(item.vencimento),
     status: stringValue(item.status).toUpperCase(),
     emissaoBanese: stringValue(item.emissaoBanese).toUpperCase(),
+    emissaoHistoricaComprovada: item.emissaoHistoricaComprovada === true,
   };
 };
 

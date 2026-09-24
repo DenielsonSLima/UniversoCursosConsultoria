@@ -64,7 +64,8 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
   onClose,
   onConfirm,
 }) => {
-  const cycleNumber = row.cicloManual.proximoCicloNumero;
+  const requestedCycleNumber = row.cicloManual.proximoCicloNumero;
+  const [cycleNumber, setCycleNumber] = useState(requestedCycleNumber);
   const externalHistory = row.cicloManual.criterioElegibilidade === 'HISTORICO_EXTERNO';
   const [externalHistoryConfirmed, setExternalHistoryConfirmed] = useState(false);
   const requiresIndividualDate = cycleNumber === 2;
@@ -80,10 +81,21 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
   >(null);
   const issuanceStartedRef = useRef(false);
   const firstDueDate = dateSource === 'INDIVIDUAL' ? individualDate || null : null;
-  const revisionContext = `${dateSource}:${individualDate}`;
+  const cycleIdentityChanged = requestedCycleNumber !== cycleNumber;
+  const revisionContext = `${row.matriculaId}:${cycleNumber}:${dateSource}:${individualDate}`;
   const revisionState = useCicloManualRevision(revisionContext);
   const lastPreviewRef = useRef<{ context: string; preview: CicloFinanceiroTecnicoManualPreview } | null>(null);
-  const previewEnabled = cycleNumber !== null
+  useEffect(() => {
+    if (pending || !cycleIdentityChanged) return;
+    setCycleNumber(requestedCycleNumber);
+    setStep(1);
+    setDateSource(requestedCycleNumber === 2 ? 'INDIVIDUAL' : 'TURMA');
+    setIndividualDate(row.cicloManual.primeiroVencimentoSugerido ?? '');
+    setExternalHistoryConfirmed(false);
+    setIssuanceSnapshot(null);
+    lastPreviewRef.current = null;
+  }, [pending, cycleIdentityChanged, requestedCycleNumber, row.cicloManual.primeiroVencimentoSugerido]);
+  const previewEnabled = !pending && !cycleIdentityChanged && cycleNumber !== null
     && row.cicloManual.estado === 'ELEGIVEL'
     && row.cicloManual.podeGerar
     && (dateSource === 'TURMA' || Boolean(individualDate));
@@ -132,7 +144,7 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
   }, [dialogRef, pending]);
 
   const goToStep = (nextStep: WizardStep) => {
-    if (pending || (nextStep > 1 && !previewReady) || (nextStep === 3 && !positiveAmounts)) return;
+    if (pending || (nextStep > step && (!previewReady || (nextStep === 3 && !positiveAmounts)))) return;
     setStep(nextStep);
   };
 

@@ -166,8 +166,9 @@ export interface CicloFinanceiroTecnicoManualRecebivel {
   descricao: string;
   valor: string;
   vencimento: string;
-  status: "PENDENTE" | "VENCIDO";
+  status: "PENDENTE" | "VENCIDO" | "PAGO";
   emissaoBanese: "EMITIDO";
+  emissaoHistoricaComprovada?: boolean;
 }
 
 export interface GerarCicloFinanceiroTecnicoManualResult {

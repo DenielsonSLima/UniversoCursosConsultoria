@@ -71,7 +71,8 @@ const requireGenerationResult = (
     isNonEmptyString(item.descricao) &&
     isDecimalString(item.valor) &&
     isIsoCalendarDate(item.vencimento) &&
-    ["PENDENTE", "VENCIDO"].includes(String(item.status)) &&
+    (["PENDENTE", "VENCIDO"].includes(String(item.status))
+      || (item.status === 'PAGO' && item.emissaoHistoricaComprovada === true)) &&
     item.emissaoBanese === "EMITIDO"
   ));
   const typedReceivables = validReceivables
