@@ -321,6 +321,10 @@ export const createReceivableIssuer = (input: {
 }) =>
 async (context: ManualCycleContext, receivableId: string) => {
   const scope = input.getScope();
+  const item = context.ciclo.recebiveis.find((row) => row.id === receivableId);
+  if (item?.destinoCobranca === 'LOCAL' || item?.emissaoBanese === 'NAO_APLICAVEL') {
+    throw new Error('A matrícula local sem boleto não pode ser enviada ao gateway.');
+  }
   if (
     !scope || !context.ciclo.recebiveis.some((row) => row.id === receivableId)
   ) {

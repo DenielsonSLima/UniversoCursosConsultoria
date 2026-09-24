@@ -1,3 +1,4 @@
+import { isIssuedCycleReceivable, readCycleQuantities } from './matricula-tecnica-ciclo-manual-destination';
 import { supabase } from "../../../../../../../lib/supabase";
 import { reviewProescCycles } from './proesc-cycle-review.service';
 import { requireEligibleProescCycleReview } from './proesc-cycle-review.parser';
@@ -61,6 +62,7 @@ const requireGenerationResult = (
   }
   const cycle = value.ciclo;
   const receivables = cycle.recebiveis as unknown[];
+  const quantities = readCycleQuantities(cycle);
   const validReceivables = receivables.every((item) => (
     isRecord(item) &&
     isNonEmptyString(item.id) &&
@@ -71,9 +73,7 @@ const requireGenerationResult = (
     isNonEmptyString(item.descricao) &&
     isDecimalString(item.valor) &&
     isIsoCalendarDate(item.vencimento) &&
-    (["PENDENTE", "VENCIDO"].includes(String(item.status))
-      || (item.status === 'PAGO' && item.emissaoHistoricaComprovada === true)) &&
-    item.emissaoBanese === "EMITIDO"
+    isIssuedCycleReceivable(item, Number(cycle.numero))
   ));
   const typedReceivables = validReceivables
     ? receivables as Array<Record<string, unknown>>
@@ -89,7 +89,9 @@ const requireGenerationResult = (
     ![12, 13].includes(Number(cycle.quantidadeItens)) ||
     cycle.quantidadeItens !== receivables.length ||
     !isDecimalString(cycle.total) ||
-    cycle.emitidosBanese !== cycle.quantidadeItens ||
+    !quantities ||
+    cycle.emitidosBanese !== quantities.bank ||
+    typedReceivables.filter((item) => item.destinoCobranca === 'LOCAL').length !== quantities.local ||
     cycle.pendentesEmissao !== 0 ||
     cycle.emRevisao !== 0 ||
     !validReceivables ||
@@ -114,6 +116,7 @@ const readIssuanceProgress = (
   value: unknown,
 ): CicloFinanceiroTecnicoManualEmissaoProgress | null => {
   if (!isRecord(value)) return null;
+  const quantities = readCycleQuantities(value);
   const fields = [
     value.cicloNumero,
     value.quantidadeItens,
@@ -122,14 +125,14 @@ const readIssuanceProgress = (
     value.emRevisao,
   ];
   if (
-    !fields.every(Number.isInteger) ||
+    !quantities || !fields.every(Number.isInteger) ||
     Number(value.cicloNumero) < 1 ||
     Number(value.quantidadeItens) < 1 ||
     Number(value.emitidosBanese) < 0 ||
     Number(value.pendentesEmissao) < 0 ||
     Number(value.emRevisao) < 0 ||
     Number(value.emitidosBanese) + Number(value.pendentesEmissao) +
-          Number(value.emRevisao) > Number(value.quantidadeItens)
+          Number(value.emRevisao) > quantities.bank
   ) return null;
   return value as unknown as CicloFinanceiroTecnicoManualEmissaoProgress;
 };
@@ -216,7 +219,9 @@ const reconcileIssuedCycle = (
     !validTransition ||
     generated?.numero !== cycleNumber ||
     generated.quantidadeItens !== result.ciclo.quantidadeItens ||
-    generated.emitidosBanese !== result.ciclo.quantidadeItens ||
+    generated.emitidosBanese !== (result.ciclo.quantidadeBancaria ?? result.ciclo.quantidadeItens) ||
+    (generated.quantidadeBancaria ?? generated.quantidadeItens) !== (result.ciclo.quantidadeBancaria ?? result.ciclo.quantidadeItens) ||
+    (generated.quantidadeLocal ?? 0) !== (result.ciclo.quantidadeLocal ?? 0) ||
     generated.pendentesEmissao !== 0 ||
     generated.emRevisao !== 0
   ) {
@@ -318,8 +323,12 @@ export const matriculaTecnicaCicloManualService = {
     if (result.requestId !== input.requestId) {
       throw new Error("O servidor não reconciliou o identificador da emissão.");
     }
-    if (input.cicloNumero === 1
-      && result.ciclo.quantidadeItens !== (input.revisao?.emitirMatricula === false ? 12 : 13)) {
+    const mode = input.revisao?.modoMatricula
+      ?? (input.revisao?.emitirMatricula === false ? 'OMITIR' : 'BOLETO');
+    if (input.cicloNumero === 1 && (
+      result.ciclo.quantidadeItens !== (mode === 'OMITIR' ? 12 : 13)
+      || (result.ciclo.quantidadeLocal ?? 0) !== (mode === 'REGISTRO_SEM_BOLETO' ? 1 : 0)
+    )) {
       throw new Error('A emissão não reconciliou a escolha do boleto de matrícula.');
     }
     reconcileIssuedCycle(result, input.cicloNumero);

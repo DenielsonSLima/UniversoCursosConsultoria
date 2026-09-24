@@ -68,6 +68,55 @@ Deno.test("contexto preserva somente prova histórica booleana do servidor", () 
   }
 });
 
+Deno.test("contexto local preserva destino e separa contadores sem fingir emissão bancária", () => {
+  const fee = {
+    id: RECEIVABLE_ID, chave: "ciclo-1-matricula", tipo: "MATRICULA", numero: 0,
+    descricao: "Matrícula local", valor: "100.00", vencimento: "2027-01-15",
+    status: "PAGO", emissaoBanese: "NAO_APLICAVEL", destinoCobranca: "LOCAL",
+    localSemBoletoComprovado: true,
+  };
+  const envelope = {
+    requestId: REQUEST_ID, matriculaId: RECEIVABLE_ID,
+    ciclo: {
+      numero: 1, quantidadeItens: 2, quantidadeBancaria: 1, quantidadeLocal: 1,
+      emitidosBanese: 1, pendentesEmissao: 0, emRevisao: 0, total: "200.00", status: "EMITIDO_BANESE",
+      recebiveis: [fee, {
+        ...fee, id: LEGACY_DATABASE_UUID, chave: "ciclo-1-parc-1", tipo: "PARCELA", numero: 1,
+        status: "PENDENTE", emissaoBanese: "EMITIDO", destinoCobranca: "BANESE", localSemBoletoComprovado: false,
+      }],
+    },
+  };
+  const parsed = parseCycleContext(envelope);
+  assert.equal(parsed.ciclo.quantidadeItens, 2);
+  assert.equal(parsed.ciclo.quantidadeBancaria, 1);
+  assert.equal(parsed.ciclo.quantidadeLocal, 1);
+  assert.equal(parsed.ciclo.recebiveis[0].localSemBoletoComprovado, true);
+  assert.equal(parsed.ciclo.recebiveis[0].emissaoHistoricaComprovada, false);
+  for (const patch of [{ quantidadeLocal: 0 }, { quantidadeBancaria: 2 }, { emitidosBanese: 2 }]) {
+    assert.throws(() => parseCycleContext({ ...envelope, ciclo: { ...envelope.ciclo, ...patch } }), /inválido|diverge/);
+  }
+  assert.throws(() => parseCycleContext({
+    ...envelope, ciclo: { ...envelope.ciclo, recebiveis: [{ ...fee, destinoCobranca: "OUTRO" }] },
+  }), /inválido/);
+});
+
+Deno.test("segundo ciclo não aceita modo de matrícula local nem omitida", () => {
+  const base = {
+    action: "generate", matriculaId: RECEIVABLE_ID, cicloNumero: 2,
+    primeiroVencimento: "2027-01-15", requestId: REQUEST_ID,
+    expectedRegraFingerprint: "a".repeat(64), expectedPoliticaFingerprint: "b".repeat(64),
+    expectedCronogramaFingerprint: "c".repeat(64),
+  };
+  for (const modoMatricula of ["REGISTRO_SEM_BOLETO", "OMITIR"]) {
+    assert.throws(() => parseIssuanceRequest({ ...base, revisao: {
+      emitirMatricula: false, modoMatricula, itens: [{
+        chave: "ciclo-1-matricula", valor: "100.00", vencimento: "2027-01-15",
+        descontoPontualidade: "0", jurosAtrasoPercentual: "0", multaAtrasoPercentual: "0",
+      }],
+    } }), /somente ao primeiro ciclo/);
+  }
+});
+
 Deno.test("id determinístico por recebível é estável e não colide no ciclo", async () => {
   const first = await deterministicReceivableRequestId(
     REQUEST_ID,

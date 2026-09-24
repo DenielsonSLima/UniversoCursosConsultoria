@@ -281,3 +281,93 @@ Deno.test("pago sem prova, revisão e cancelado interrompem antes de qualquer em
     assert.equal(calls, 0);
   }
 });
+
+const localEnrollmentContext = (issued: number, localStatus = "PENDENTE") => {
+  const context = contextAt(0);
+  Object.assign(context.ciclo, {
+    numero: 1, cicloNumero: 1, quantidadeBancaria: 12, quantidadeLocal: 1,
+    emitidosBanese: issued, pendentesEmissao: 12 - issued,
+  });
+  context.ciclo.recebiveis = context.ciclo.recebiveis.map((item, index) => ({
+    ...item, tipo: index === 0 ? "MATRICULA" : "PARCELA",
+    chave: index === 0 ? "ciclo-1-matricula" : `ciclo-1-parc-${index}`,
+    destinoCobranca: index === 0 ? "LOCAL" : "BANESE",
+    localSemBoletoComprovado: index === 0,
+    status: index === 0 ? localStatus : "PENDENTE",
+    emissaoBanese: index === 0 ? "NAO_APLICAVEL" : index <= issued ? "EMITIDO" : "PENDENTE",
+  }));
+  return context;
+};
+
+const localRequest: ManualCycleIssuanceRequest = {
+  ...request, cicloNumero: 1,
+  revisao: { emitirMatricula: false, modoMatricula: "REGISTRO_SEM_BOLETO", itens: [] },
+};
+
+Deno.test("matrícula local cria treze recebíveis e emite somente doze boletos", async () => {
+  let issued = 0;
+  const calls: string[] = [];
+  const load = () => Promise.resolve(localEnrollmentContext(issued));
+  const dependencies: ManualCycleIssuanceDependencies = {
+    preflight: () => Promise.resolve(), prepare: load, resume: load, reload: load,
+    issueReceivable: (_context, id) => { calls.push(id); issued += 1; return Promise.resolve(); },
+  };
+  const result = await runManualCycleIssuance(localRequest, dependencies);
+  assert.equal(result.ciclo.quantidadeItens, 13);
+  assert.equal(result.ciclo.quantidadeBancaria, 12);
+  assert.equal(result.ciclo.quantidadeLocal, 1);
+  assert.equal(result.ciclo.emitidosBanese, 12);
+  assert.equal(result.ciclo.recebiveis[0].emissaoBanese, "NAO_APLICAVEL");
+  assert.equal(result.ciclo.recebiveis[0].status, "PENDENTE");
+  assert.equal(calls.length, 12);
+  assert.ok(!calls.includes(result.ciclo.recebiveis[0].id));
+});
+
+Deno.test("retomada e replay ignoram matrícula local pendente ou baixada manualmente", async () => {
+  for (const initial of [4, 12]) for (const localStatus of ["PENDENTE", "VENCIDO", "PAGO"]) {
+    let issued = initial;
+    let calls = 0;
+    const load = () => Promise.resolve(localEnrollmentContext(issued, localStatus));
+    const dependencies: ManualCycleIssuanceDependencies = {
+      preflight: () => Promise.resolve(), prepare: load, resume: load, reload: load,
+      issueReceivable: (_context, id) => {
+        assert.notEqual(id, receivables[0].id);
+        calls += 1; issued += 1; return Promise.resolve();
+      },
+    };
+    const result = await runManualCycleIssuance({ ...localRequest, action: "resume" }, dependencies);
+    assert.equal(calls, 12 - initial);
+    assert.equal(result.ciclo.emitidosBanese, 12);
+    assert.equal(result.ciclo.recebiveis[0].status, localStatus);
+    assert.notEqual(result.ciclo.recebiveis[0].emissaoHistoricaComprovada, true);
+  }
+});
+
+Deno.test("registro local sem prova ou fora da matrícula C1 bloqueia antes de qualquer POST", async () => {
+  const cases: Array<(context: ManualCycleContext) => void> = [
+    (c) => { c.ciclo.recebiveis[0].localSemBoletoComprovado = false; },
+    (c) => { c.ciclo.recebiveis[0].destinoCobranca = "BANESE"; },
+    (c) => { c.ciclo.recebiveis[0].emissaoBanese = "EMITIDO"; },
+    (c) => { c.ciclo.recebiveis[0].emissaoHistoricaComprovada = true; },
+    (c) => { c.ciclo.recebiveis[0].status = "CANCELADO"; },
+    (c) => { c.ciclo.recebiveis[0].tipo = "PARCELA"; },
+    (c) => { c.ciclo.recebiveis[0].numero = 1; },
+    (c) => { c.ciclo.quantidadeLocal = 0; },
+    (c) => { c.ciclo.quantidadeBancaria = 13; },
+    (c) => { c.ciclo.numero = 2; c.ciclo.recebiveis[0].tipo = "REMATRICULA"; },
+  ];
+  for (const mutate of cases) {
+    const context = localEnrollmentContext(0, "PAGO");
+    mutate(context);
+    let calls = 0;
+    const load = () => Promise.resolve(context);
+    const dependencies: ManualCycleIssuanceDependencies = {
+      preflight: () => Promise.resolve(), prepare: load, resume: load, reload: load,
+      issueReceivable: () => { calls += 1; return Promise.resolve(); },
+    };
+    await assert.rejects(() => runManualCycleIssuance({
+      ...localRequest, action: "resume", cicloNumero: context.ciclo.numero,
+    }, dependencies), /cobranças revisadas/);
+    assert.equal(calls, 0);
+  }
+});

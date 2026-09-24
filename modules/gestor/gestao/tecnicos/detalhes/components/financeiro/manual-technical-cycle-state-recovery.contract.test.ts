@@ -6,6 +6,7 @@ import test from 'node:test';
 const base = resolve(process.cwd(), 'modules/gestor/gestao/tecnicos/detalhes/components/financeiro');
 const dialog = readFileSync(resolve(base, 'FinanceiroCicloManualDialog.tsx'), 'utf8');
 const service = readFileSync(resolve(base, 'matricula-tecnica-ciclo-manual.service.ts'), 'utf8');
+const destination = readFileSync(resolve(base, 'matricula-tecnica-ciclo-manual-destination.ts'), 'utf8');
 
 // Executa o próprio guard do componente, sem copiar sua implementação.
 const navigationBody = dialog.split('const goToStep = (nextStep: WizardStep) => {')[1]?.split('\n  };')[0];
@@ -42,7 +43,8 @@ test('mudança ociosa C1 para C2 reinicia datas e confirmação sem reaproveitar
 });
 
 test('cliente exige emissão histórica comprovada para aceitar título pago', () => {
-  assert.match(service, /item\.status === 'PAGO' && item\.emissaoHistoricaComprovada === true/);
-  assert.match(service, /item\.emissaoBanese === "EMITIDO"/);
+  assert.match(service, /isIssuedCycleReceivable\(item, Number\(cycle\.numero\)\)/);
+  assert.match(destination, /item\.status === 'PAGO' && item\.emissaoHistoricaComprovada === true/);
+  assert.match(destination, /item\.emissaoBanese === 'EMITIDO'/);
   assert.doesNotMatch(service, /\["PENDENTE", "VENCIDO", "PAGO"\]\.includes/);
 });

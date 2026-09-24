@@ -1,3 +1,4 @@
+import { isCycleEnrollmentMode, readCycleQuantities } from './matricula-tecnica-ciclo-manual-destination';
 import type {
   CicloFinanceiroTecnicoManualPreview,
 } from "./matricula-tecnica-ciclo-manual.types";
@@ -121,6 +122,7 @@ export const requireCicloFinanceiroTecnicoManualPreview = (
     throw new Error("O servidor não retornou a prévia canônica do ciclo.");
   }
   const items = value.itens as unknown[];
+  const quantities = readCycleQuantities(value);
   const terms = value.termos;
   const validTerms = isRecord(terms) &&
     isDecimalString(terms.descontoPontualidade) &&
@@ -144,7 +146,10 @@ export const requireCicloFinanceiroTecnicoManualPreview = (
       : item.tipo === "REMATRICULA"
       ? "rematricula"
       : "mensalidade";
-    return isNonEmptyString(item.chave) &&
+    return (item.destinoCobranca === undefined || item.destinoCobranca === 'BANESE'
+      || (item.destinoCobranca === 'LOCAL' && value.cicloNumero === 1
+        && item.tipo === 'MATRICULA' && item.numero === 0)) &&
+      isNonEmptyString(item.chave) &&
       ["MATRICULA", "REMATRICULA", "PARCELA"].includes(String(item.tipo)) &&
       Number.isInteger(item.numero) &&
       Number(item.numero) >= 0 &&
@@ -192,7 +197,17 @@ export const requireCicloFinanceiroTecnicoManualPreview = (
     )) &&
     new Set(keys).size === keys.length &&
     typedItems[0]?.vencimento === value.primeiroVencimento;
+  const localItems = typedItems.filter((item) => item.destinoCobranca === 'LOCAL');
+  const modeValid = value.modoMatricula === undefined
+    ? localItems.length === 0
+    : isCycleEnrollmentMode(value.modoMatricula)
+      && (value.modoMatricula === 'REGISTRO_SEM_BOLETO'
+        ? cycleNumber === 1 && localItems.length === 1 && !value.matriculaSemBoleto
+        : localItems.length === 0)
+      && (cycleNumber !== 1 || (value.modoMatricula === 'OMITIR'
+        ? leadItems.length === 0 : leadItems.length === 1));
   if (
+    !quantities || localItems.length !== quantities.local || !modeValid ||
     !Number.isInteger(value.cicloNumero) ||
     cycleNumber < 1 ||
     cycleNumber > 2 ||

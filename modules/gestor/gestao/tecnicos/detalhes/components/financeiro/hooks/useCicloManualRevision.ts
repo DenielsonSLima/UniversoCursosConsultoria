@@ -3,12 +3,14 @@ import type {
   CicloFinanceiroTecnicoManualPreview,
   CicloFinanceiroTecnicoManualRevisao,
   CicloFinanceiroTecnicoManualRevisaoItem,
+  CicloManualModoMatricula,
 } from '../matricula-tecnica-ciclo-manual.types';
 
 export const revisionFromPreview = (
   preview: CicloFinanceiroTecnicoManualPreview,
 ): CicloFinanceiroTecnicoManualRevisao => ({
-  emitirMatricula: !preview.matriculaSemBoleto,
+  modoMatricula: preview.modoMatricula ?? (preview.matriculaSemBoleto ? 'OMITIR' : 'BOLETO'),
+  emitirMatricula: (preview.modoMatricula ?? (preview.matriculaSemBoleto ? 'OMITIR' : 'BOLETO')) === 'BOLETO',
   itens: [...preview.itens, ...(preview.matriculaSemBoleto ? [preview.matriculaSemBoleto] : [])].map((item) => ({
     chave: item.chave,
     valor: item.valor,
@@ -48,6 +50,7 @@ export const useCicloManualRevision = (contextKey: string) => {
       return {
         ...existing,
         draft: {
+          modoMatricula: canonical.modoMatricula,
           emitirMatricula: canonical.emitirMatricula,
           itens: [
             ...canonical.itens,
@@ -73,9 +76,9 @@ export const useCicloManualRevision = (contextKey: string) => {
     } : previous);
   };
 
-  const changeEnrollmentIssuance = (emitirMatricula: boolean) => {
+  const changeEnrollmentMode = (modoMatricula: CicloManualModoMatricula) => {
     setState((previous) => previous.draft ? {
-      ...previous, dirty: true, draft: { ...previous.draft, emitirMatricula },
+      ...previous, dirty: true, draft: { ...previous.draft, modoMatricula, emitirMatricula: modoMatricula === 'BOLETO' },
     } : previous);
   };
 
@@ -85,5 +88,5 @@ export const useCicloManualRevision = (contextKey: string) => {
     } : previous);
   };
 
-  return { ...current, apply, changeItem, changeEnrollmentIssuance, seedPreview };
+  return { ...current, apply, changeItem, changeEnrollmentMode, seedPreview };
 };

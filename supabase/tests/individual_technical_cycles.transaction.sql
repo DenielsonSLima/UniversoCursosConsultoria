@@ -36,6 +36,10 @@ create function pg_temp.individual_rule(p_id uuid) returns jsonb
 language sql as $$ select '{"cobranca":{"mensalidade":{"quantidade":12}}}'::jsonb $$;
 create function pg_temp.individual_old_state(p_id uuid) returns jsonb
 language sql as $$ select state from pg_temp.individual_fallback $$;
+create function pg_temp.individual_local_fee_summary(p_id uuid) returns jsonb
+language sql as $$ select null::jsonb $$;
+create function pg_temp.individual_local_fee_complete(p_row pg_temp.individual_receivable) returns boolean
+language sql as $$ select false $$;
 
 do $copy_functions$
 declare v_name text; v_definition text; v_pair text[];
@@ -45,13 +49,17 @@ begin
     'internal_academic.technical_cycle_history_outside_enrollment(uuid)',
     'internal_academic.technical_local_cycle_eligible(uuid)',
     'internal_academic.technical_manual_cycle_state_before_external_history(uuid)',
+    'internal_academic.technical_manual_cycle_state_before_local_fee(uuid)',
     'internal_academic.technical_manual_cycle_state(uuid)'
   ] loop
     v_definition:=pg_get_functiondef(v_name::regprocedure);
     foreach v_pair slice 1 in array array[
       ['internal_academic.technical_manual_cycle_state_before_external_history','pg_temp.individual_base_state'],
       ['internal_academic.technical_manual_cycle_state_before_individual_admission','pg_temp.individual_old_state'],
+      ['internal_academic.technical_manual_cycle_state_before_local_fee','pg_temp.individual_state_before_local_fee'],
       ['internal_academic.technical_manual_cycle_state','pg_temp.individual_state'],
+      ['internal_academic.manual_cycle_local_fee_summary','pg_temp.individual_local_fee_summary'],
+      ['internal_academic.manual_cycle_local_receivable_complete','pg_temp.individual_local_fee_complete'],
       ['internal_academic.technical_manual_cycle_policy_projection','pg_temp.individual_policy_projection'],
       ['internal_academic.technical_financial_effective_rule','pg_temp.individual_rule'],
       ['internal_academic.is_manual_technical_enrollment','pg_temp.individual_is_technical'],

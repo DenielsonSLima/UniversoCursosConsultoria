@@ -12,7 +12,7 @@ declare
   v_review jsonb:='{"emitirMatricula":false,"itens":[]}'::jsonb;
   v_due date:=timezone('America/Maceio',now())::date+7;
   v_row public.contas_receber%rowtype; v_altered public.contas_receber%rowtype;
-  v_patch jsonb; v_actor uuid; v_candidate uuid; v_frozen jsonb;
+  v_patch jsonb; v_actor uuid; v_candidate uuid;
 begin
   select m.id into strict v_id from public.matriculas m
   where internal_academic.technical_local_cycle_eligible(m.id)
@@ -91,24 +91,14 @@ begin
   exception when check_violation then null;
   end;
 
-  -- A mismatched stored review fails before first authorization and on terms.
-  select reviewed_items into strict v_frozen from internal_academic.technical_manual_cycle_runs
-    where matricula_id=v_id and cycle_number=1;
-  update internal_academic.technical_manual_cycle_runs
-    set reviewed_items=jsonb_set(reviewed_items,'{0,vencimento}',to_jsonb((v_row.data_vencimento+5)::text))
-    where matricula_id=v_id and cycle_number=1;
+  -- The reviewed run itself cannot be changed after local creation.
   begin
-    perform public.authorize_technical_manual_receivable_issuance_secure(v_row.id,gen_random_uuid());
-    raise exception 'Authorization accepted mismatched review' using errcode='P0001';
+    update internal_academic.technical_manual_cycle_runs
+      set reviewed_items=jsonb_set(reviewed_items,'{0,vencimento}',to_jsonb((v_row.data_vencimento+5)::text))
+      where matricula_id=v_id and cycle_number=1;
+    raise exception 'Stored review mutation accepted' using errcode='P0001';
   exception when check_violation then null;
   end;
-  begin
-    perform public.technical_manual_banese_expected_terms_service(v_row.id);
-    raise exception 'Terms accepted mismatched review' using errcode='P0001';
-  exception when check_violation then null;
-  end;
-  update internal_academic.technical_manual_cycle_runs set reviewed_items=v_frozen
-    where matricula_id=v_id and cycle_number=1;
   perform public.authorize_technical_manual_receivable_issuance_secure(v_row.id,gen_random_uuid());
   perform public.technical_manual_banese_expected_terms_service(v_row.id);
   if exists(select 1 from public.contas_receber where matricula_id=v_id
