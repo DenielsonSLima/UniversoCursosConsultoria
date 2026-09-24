@@ -6,6 +6,7 @@ import { normalizeBaneseFinancialTerms } from "../banese/internal/financial-term
 
 export const BANESE_CARNET_MAX_ITEMS = 30;
 export const BANESE_CARNET_ALLOWED_LAUNCH_TYPES = [
+  "MATRICULA",
   "PARCELA",
   "REMATRICULA",
 ] as const;
@@ -60,6 +61,7 @@ export type BaneseCarnetReceivableRow = {
   gateway_issuer_polo_id: string | null;
   gateway_financial_terms: Record<string, unknown> | null;
   gateway_financial_terms_confirmed_at: string | null;
+  regra_financeira_tecnica_snapshot?: Record<string, unknown> | null;
 };
 
 export type BaneseCarnetScope = {
@@ -77,6 +79,18 @@ export class BaneseCarnetPolicyError extends Error {}
 const text = (value: unknown) => String(value ?? "").trim();
 const digits = (value: unknown) => text(value).replace(/\D/g, "");
 const upper = (value: unknown) => text(value).toUpperCase();
+
+const isAllowedLaunch = (row: BaneseCarnetReceivableRow) => {
+  const kind = upper(row.tipo_lancamento);
+  if (kind !== "MATRICULA") return ALLOWED_LAUNCH_TYPES.has(kind);
+  const snapshot = row.regra_financeira_tecnica_snapshot;
+  const cycle = snapshot?.cicloManual as Record<string, unknown> | undefined;
+  return snapshot?.versao === 2 && snapshot.tipoLancamento === "MATRICULA" &&
+    cycle?.cicloNumero === 1 && UUID_RE.test(text(cycle.requestId)) &&
+    UUID_RE.test(text(row.turma_id)) &&
+    ["regraFingerprint", "politicaFingerprint", "cronogramaFingerprint"]
+      .every((key) => /^[0-9a-f]{64}$/.test(text(cycle[key])));
+};
 
 export const isAllowedBaneseLogoUrl = (
   rawUrl: unknown,
@@ -146,9 +160,9 @@ const confirmedAt = (value: unknown) => {
 export const readBaneseCarnetScope = (
   selected: BaneseCarnetReceivableRow,
 ): BaneseCarnetScope => {
-  if (!ALLOWED_LAUNCH_TYPES.has(upper(selected.tipo_lancamento))) {
+  if (!isAllowedLaunch(selected)) {
     throw new BaneseCarnetPolicyError(
-      "Somente rematrícula e parcelas mensais podem compor um carnê Banese.",
+      "Somente rematrícula e parcelas mensais, ou matrícula do primeiro ciclo técnico manual, podem compor um carnê Banese.",
     );
   }
   if (
@@ -200,7 +214,7 @@ const matchesScope = (
   (text(row.polo_id) || null) === scope.poloId &&
   text(row.gateway_provider).toLowerCase() === "banese_card" &&
   upper(row.gateway_payment_method) === "BOLETO" &&
-  ALLOWED_LAUNCH_TYPES.has(upper(row.tipo_lancamento)) &&
+  isAllowedLaunch(row) &&
   text(row.gateway_environment).toLowerCase() === scope.environment &&
   text(row.gateway_issuer_polo_id) === scope.issuerId &&
   digits(row.gateway_boleto_convenio) === scope.agreement &&
@@ -273,7 +287,7 @@ export const takeRegisteredBaneseCarnetCandidateRows = (
     .slice(0, BANESE_CARNET_MAX_ITEMS + 1);
 
 const installmentOrder = (row: BaneseCarnetReceivableRow) => {
-  if (upper(row.tipo_lancamento) === "REMATRICULA") return 0;
+  if (["MATRICULA", "REMATRICULA"].includes(upper(row.tipo_lancamento))) return 0;
   const value = Number(row.parcela_numero);
   return Number.isInteger(value) && value > 0 ? value : Number.MAX_SAFE_INTEGER;
 };

@@ -98,6 +98,33 @@ test("aceita a prévia canônica completa retornada pelo backend", () => {
   assert.equal(requireCicloFinanceiroTecnicoManualPreview(preview), preview);
 });
 
+test("condições individuais canônicas prevalecem sem relaxar flags legadas", () => {
+  const preview = canonicalPreview();
+  preview.termos.aplicacao.mensalidade = { desconto: false, multaJuros: false };
+  assert.throws(() => requireCicloFinanceiroTecnicoManualPreview(preview), /incompleta/);
+  Object.assign(preview.itens[1], { aplicacao: { desconto: true, multaJuros: true } });
+  assert.doesNotThrow(() => requireCicloFinanceiroTecnicoManualPreview(preview));
+  Object.assign(preview.itens[1], { aplicacao: { desconto: 'sim', multaJuros: true } });
+  assert.throws(() => requireCicloFinanceiroTecnicoManualPreview(preview), /incompleta/);
+});
+
+test("matrícula sem boleto preserva referência canônica separada dos itens a emitir", () => {
+  const original = canonicalPreview();
+  const omitted = { ...original.itens[0], tipo: 'MATRICULA', aplicacao: { desconto: false, multaJuros: true } };
+  const preview = {
+    ...original, cicloNumero: 1, quantidadeItens: 1,
+    primeiroVencimento: original.itens[1].vencimento,
+    itens: [original.itens[1]], matriculaSemBoleto: omitted,
+  };
+  assert.doesNotThrow(() => requireCicloFinanceiroTecnicoManualPreview(preview));
+  assert.throws(() => requireCicloFinanceiroTecnicoManualPreview({
+    ...preview, matriculaSemBoleto: { ...omitted, tipo: 'PARCELA' },
+  }), /incompleta/);
+  assert.throws(() => requireCicloFinanceiroTecnicoManualPreview({
+    ...preview, cicloNumero: 2,
+  }), /incompleta/);
+});
+
 test("aceita descrição e instrução brutas equivalentes às linhas normalizadas do boleto", () => {
   const preview = canonicalPreview();
   preview.itens[0].descricao = "  Rematrícula   - Ciclo 2 - ENF\nT-42 INT  ";

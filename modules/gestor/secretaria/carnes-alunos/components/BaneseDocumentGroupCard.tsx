@@ -28,6 +28,9 @@ const BaneseDocumentGroupCard = ({
     ? 'Carnê Banese'
     : `${group.installmentCount} boleto${group.installmentCount === 1 ? '' : 's'} A4`;
   const titleComposition = [
+    group.enrollmentCount
+      ? `${group.enrollmentCount} matrícula${group.enrollmentCount === 1 ? '' : 's'}`
+      : '',
     group.reenrollmentCount
       ? `${group.reenrollmentCount} rematrícula${group.reenrollmentCount === 1 ? '' : 's'}`
       : '',

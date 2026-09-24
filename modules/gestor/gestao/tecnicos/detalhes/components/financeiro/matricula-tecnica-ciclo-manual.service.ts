@@ -84,18 +84,19 @@ const requireGenerationResult = (
     !Number.isInteger(cycle.numero) ||
     Number(cycle.numero) < 1 ||
     cycle.status !== "EMITIDO_BANESE" ||
-    cycle.quantidadeItens !== 13 ||
+    !Number.isInteger(cycle.quantidadeItens) ||
+    ![12, 13].includes(Number(cycle.quantidadeItens)) ||
     cycle.quantidadeItens !== receivables.length ||
     !isDecimalString(cycle.total) ||
-    cycle.emitidosBanese !== 13 ||
+    cycle.emitidosBanese !== cycle.quantidadeItens ||
     cycle.pendentesEmissao !== 0 ||
     cycle.emRevisao !== 0 ||
     !validReceivables ||
-    new Set(typedReceivables.map((item) => String(item.id))).size !== 13 ||
-    new Set(typedReceivables.map((item) => String(item.chave))).size !== 13
+    new Set(typedReceivables.map((item) => String(item.id))).size !== cycle.quantidadeItens ||
+    new Set(typedReceivables.map((item) => String(item.chave))).size !== cycle.quantidadeItens
   ) {
     throw new Error(
-      "O servidor não confirmou as 13 cobranças e os 13 BolePix Banese.",
+      "O servidor não confirmou todas as cobranças e os títulos Banese do ciclo revisado.",
     );
   }
   const cicloManual = requireMatriculaTecnicaCicloManual(value.cicloManual);
@@ -247,7 +248,12 @@ const unwrap = async <T>(
   parser: (value: unknown) => T,
 ) => {
   const { data, error } = await request;
-  if (error) throw error;
+  if (error) {
+    if (isRecord(error) && isNonEmptyString(error.message)) {
+      throw Object.assign(new Error(error.message), { code: error.code });
+    }
+    throw error;
+  }
   return parser(data);
 };
 
@@ -263,6 +269,7 @@ export const matriculaTecnicaCicloManualService = {
         p_matricula_id: input.matriculaId,
         p_ciclo_numero: input.cicloNumero,
         p_primeiro_vencimento: input.primeiroVencimento,
+        p_revisao: input.revisao ?? null,
       }),
       requirePreviewResult,
     );
@@ -275,7 +282,6 @@ export const matriculaTecnicaCicloManualService = {
       (
         input.primeiroVencimento !== null &&
         (
-          result.preview.primeiroVencimento !== input.primeiroVencimento ||
           result.preview.dataOrigem !== input.primeiroVencimento
         )
       ) ||
@@ -306,9 +312,14 @@ export const matriculaTecnicaCicloManualService = {
       expectedRegraFingerprint: input.expectedRegraFingerprint,
       expectedPoliticaFingerprint: input.expectedPoliticaFingerprint,
       expectedCronogramaFingerprint: input.expectedCronogramaFingerprint,
+      revisao: input.revisao ?? null,
     });
     if (result.requestId !== input.requestId) {
       throw new Error("O servidor não reconciliou o identificador da emissão.");
+    }
+    if (input.cicloNumero === 1
+      && result.ciclo.quantidadeItens !== (input.revisao?.emitirMatricula === false ? 12 : 13)) {
+      throw new Error('A emissão não reconciliou a escolha do boleto de matrícula.');
     }
     reconcileIssuedCycle(result, input.cicloNumero);
     return result;

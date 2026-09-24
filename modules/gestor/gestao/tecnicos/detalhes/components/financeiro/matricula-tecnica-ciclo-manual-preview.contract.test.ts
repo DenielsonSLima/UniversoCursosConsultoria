@@ -32,6 +32,10 @@ test("traduz os critérios canônicos de elegibilidade sem expor código técnic
     "Ciclo anterior totalmente quitado",
   );
   assert.equal(getCriterioElegibilidadeLabel(null), null);
+  assert.equal(
+    getCriterioElegibilidadeLabel("MANUAL_APOS_EMISSAO"),
+    "Geração manual por ciclo",
+  );
 });
 
 test("estado manual falha fechado para critério de elegibilidade desconhecido", () => {

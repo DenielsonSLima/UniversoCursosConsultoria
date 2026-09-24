@@ -210,6 +210,23 @@ test('mapeia exatamente um carnê representativo ou um boleto por título', () =
   );
 });
 
+test('catálogo aceita matrícula e doze mensalidades sem inferir pagamento', () => {
+  const group = { ...groupFixture(1, 'carnet', 13), enrollmentCount: 1, monthlyCount: 12 };
+  const payload = {
+    groups: [group], total: 1, page: 1, pageSize: 20,
+    filters: {
+      courses: [{ id: group.courseId, name: group.courseName }],
+      classes: [{ id: group.classId, name: group.className, courseId: group.courseId }],
+    },
+  };
+  const parsed = parseDocumentGroupsResponse(payload).groups[0];
+  assert.equal(parsed.enrollmentCount, 1);
+  assert.equal(parsed.monthlyCount, 12);
+  assert.throws(() => parseDocumentGroupsResponse({
+    ...payload, groups: [{ ...group, enrollmentCount: 0 }],
+  }), /composição documental inconsistente/i);
+});
+
 test('permissão nova herda consulta/legado sem conceder baixa no sentido inverso', () => {
   const granular = normalizeSecretariaAccessTabs(['consulta-financeira']);
   assert.equal(granular.includes('consulta-financeira'), true);

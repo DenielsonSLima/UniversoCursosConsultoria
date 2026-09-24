@@ -204,6 +204,7 @@ export const createManualCycleIssuanceDependencies = (input: {
           p_matricula_id: request.matriculaId,
           p_ciclo_numero: request.cicloNumero,
           p_primeiro_vencimento: request.primeiroVencimento,
+          p_revisao: request.revisao ?? null,
           p_request_id: request.requestId,
           p_expected_regra_fingerprint: request.expectedRegraFingerprint,
           p_expected_politica_fingerprint: request.expectedPoliticaFingerprint,

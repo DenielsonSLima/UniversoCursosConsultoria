@@ -45,6 +45,7 @@ export type BaneseDocumentGroup = {
   classId: string;
   className: string;
   installmentCount: number;
+  enrollmentCount: number;
   reenrollmentCount: number;
   monthlyCount: number;
   totalAmount: number;
@@ -212,7 +213,10 @@ const buildGroup = (
     rows.filter((row) =>
       text(row.tipo_lancamento).toUpperCase() === "REMATRICULA"
     ).length;
-  const monthlyCount = rows.length - reenrollmentCount;
+  const enrollmentCount = rows.filter((row) =>
+    text(row.tipo_lancamento).toUpperCase() === "MATRICULA"
+  ).length;
+  const monthlyCount = rows.length - reenrollmentCount - enrollmentCount;
   const representativeReceivableId = rows[0].id;
   return {
     id: `banese:${representativeReceivableId}`,
@@ -227,6 +231,7 @@ const buildGroup = (
     classId: classRow.id,
     className,
     installmentCount: rows.length,
+    enrollmentCount,
     reenrollmentCount,
     monthlyCount,
     totalAmount,

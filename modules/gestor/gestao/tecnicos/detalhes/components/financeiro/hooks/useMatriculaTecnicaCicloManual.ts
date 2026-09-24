@@ -24,6 +24,7 @@ export const usePreviewCicloFinanceiroTecnicoManual = (
     input.matriculaId,
     input.cicloNumero,
     input.primeiroVencimento,
+    input.revisao,
   ),
   queryFn: async () => {
     try {
@@ -40,6 +41,7 @@ export const usePreviewCicloFinanceiroTecnicoManual = (
     && input.cicloNumero > 0,
   staleTime: input.conferirProesc ? 0 : 15_000,
   gcTime: 5 * 60_000,
+  placeholderData: (previousData) => previousData,
   retry: false,
   });
 };

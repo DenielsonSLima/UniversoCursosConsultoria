@@ -204,3 +204,45 @@ Deno.test("revisão manual não dispara emissão nem bloqueia os itens retomáve
   assert.equal(calls.length, 12);
   assert.ok(!calls.includes(initial.ciclo.recebiveis[0].id));
 });
+
+Deno.test("ciclo 1 sem boleto de matrícula emite apenas as 12 mensalidades", async () => {
+  let calls = 0;
+  const context = () => {
+    const value = contextAt(0);
+    value.ciclo.numero = 1;
+    value.ciclo.cicloNumero = 1;
+    value.ciclo.quantidadeItens = 12;
+    value.ciclo.emitidosBanese = calls;
+    value.ciclo.pendentesEmissao = 12 - calls;
+    value.ciclo.recebiveis = receivables.slice(1).map((item, index) => ({
+      ...item, emissaoBanese: index < calls ? "EMITIDO" : "PENDENTE",
+    }));
+    return value;
+  };
+  const dependencies: ManualCycleIssuanceDependencies = {
+    preflight: () => Promise.resolve(), prepare: () => Promise.resolve(context()),
+    resume: () => Promise.resolve(context()), reload: () => Promise.resolve(context()),
+    issueReceivable: () => { calls += 1; return Promise.resolve(); },
+  };
+  const result = await runManualCycleIssuance({
+    ...request, cicloNumero: 1, revisao: { emitirMatricula: false, itens: [] },
+  }, dependencies);
+  assert.equal(result.ciclo.emitidosBanese, 12);
+  assert.equal(calls, 12);
+  assert.equal(result.ciclo.recebiveis.some((item) => item.tipo === "MATRICULA"), false);
+});
+
+Deno.test("quantidade 12 não mascara mensalidade faltante ou repetida", async () => {
+  let emitted = false;
+  const incomplete = contextAt(0);
+  incomplete.ciclo.quantidadeItens = 12;
+  incomplete.ciclo.pendentesEmissao = 12;
+  incomplete.ciclo.recebiveis = incomplete.ciclo.recebiveis.slice(0, 12);
+  const dependencies: ManualCycleIssuanceDependencies = {
+    preflight: () => Promise.resolve(), prepare: () => Promise.resolve(incomplete),
+    resume: () => Promise.resolve(incomplete), reload: () => Promise.resolve(incomplete),
+    issueReceivable: () => { emitted = true; return Promise.resolve(); },
+  };
+  await assert.rejects(() => runManualCycleIssuance(request, dependencies), /cobranças revisadas/);
+  assert.equal(emitted, false);
+});

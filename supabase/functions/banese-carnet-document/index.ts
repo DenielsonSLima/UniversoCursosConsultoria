@@ -33,14 +33,14 @@ const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const RECEIVABLE_SELECT = `
-  id, cliente_id, matricula_id, polo_id, descricao, tipo_lancamento,
+  id, cliente_id, matricula_id, turma_id, polo_id, descricao, tipo_lancamento,
   parcela_numero, valor, data_vencimento, status, gateway_provider,
   gateway_environment, gateway_payment_method, gateway_status,
   gateway_pix_payload, gateway_pix_encoded_image, gateway_boleto_issued_at,
   gateway_boleto_linha_digitavel, gateway_boleto_codigo_barras,
   gateway_boleto_nosso_numero, gateway_boleto_convenio,
   gateway_boleto_agencia, gateway_issuer_polo_id, gateway_financial_terms,
-  gateway_financial_terms_confirmed_at
+  gateway_financial_terms_confirmed_at, regra_financeira_tecnica_snapshot
 `;
 const CANDIDATE_QUERY_PAGE_SIZE = 100;
 const MAX_CANDIDATE_ROWS_SCANNED = 10_000;

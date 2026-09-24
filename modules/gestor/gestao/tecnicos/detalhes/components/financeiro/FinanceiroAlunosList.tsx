@@ -20,7 +20,7 @@ import type {
   MatriculaTecnicaFinanceiroWorkspace,
   MatriculaTecnicaRegra,
 } from './matricula-tecnica-financeiro.types';
-import type { CicloFinanceiroTecnicoManualPreview } from './matricula-tecnica-ciclo-manual.types';
+import type { CicloFinanceiroTecnicoManualPreview, CicloFinanceiroTecnicoManualRevisao } from './matricula-tecnica-ciclo-manual.types';
 import {
   createFinanceiroRequestId,
   useAtivarFinanceiroMatriculaTecnica,
@@ -237,6 +237,7 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
     row: MatriculaTecnicaFinanceiroRow,
     preview: CicloFinanceiroTecnicoManualPreview,
     primeiroVencimento: string | null,
+    revisao: CicloFinanceiroTecnicoManualRevisao | null,
   ) => {
     const key = [
       'ciclo-manual',
@@ -254,6 +255,7 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
         matriculaId: row.matriculaId,
         cicloNumero: preview.cicloNumero,
         primeiroVencimento,
+        revisao,
         requestId,
         expectedRegraFingerprint: preview.regraEfetivaFingerprint,
         expectedPoliticaFingerprint: preview.politicaFingerprint,
@@ -430,8 +432,8 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
           turmaId={turma.id}
           pending={manualCycleMutation.isPending}
           onClose={() => setManualCycleMatriculaId(null)}
-          onConfirm={(preview, primeiroVencimento) => (
-            generateManualCycle(currentManualCycleRow, preview, primeiroVencimento)
+          onConfirm={(preview, primeiroVencimento, revisao) => (
+            generateManualCycle(currentManualCycleRow, preview, primeiroVencimento, revisao)
           )}
         />
       ) : null}

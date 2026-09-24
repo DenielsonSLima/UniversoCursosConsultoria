@@ -16,12 +16,14 @@ import {
 import type { MatriculaTecnicaFinanceiroRow } from './matricula-tecnica-financeiro.types';
 import type {
   CicloFinanceiroTecnicoManualPreview,
+  CicloFinanceiroTecnicoManualRevisao,
 } from './matricula-tecnica-ciclo-manual.types';
 import FinanceiroCicloManualChargeRows from './FinanceiroCicloManualChargeRows';
 import FinanceiroCicloManualIssuanceProgress from './FinanceiroCicloManualIssuanceProgress';
 import { getCriterioElegibilidadeLabel } from './matricula-tecnica-ciclo-manual.parser';
 import { usePreviewCicloFinanceiroTecnicoManual } from './hooks/useMatriculaTecnicaCicloManual';
 import { useAccessibleDialog } from './hooks/useAccessibleDialog';
+import { useCicloManualRevision } from './hooks/useCicloManualRevision';
 
 interface FinanceiroCicloManualDialogProps {
   turmaId: string;
@@ -31,6 +33,7 @@ interface FinanceiroCicloManualDialogProps {
   onConfirm: (
     preview: CicloFinanceiroTecnicoManualPreview,
     primeiroVencimento: string | null,
+    revisao: CicloFinanceiroTecnicoManualRevisao | null,
   ) => Promise<void>;
 }
 
@@ -77,6 +80,9 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
   >(null);
   const issuanceStartedRef = useRef(false);
   const firstDueDate = dateSource === 'INDIVIDUAL' ? individualDate || null : null;
+  const revisionContext = `${dateSource}:${individualDate}`;
+  const revisionState = useCicloManualRevision(revisionContext);
+  const lastPreviewRef = useRef<{ context: string; preview: CicloFinanceiroTecnicoManualPreview } | null>(null);
   const previewEnabled = cycleNumber !== null
     && row.cicloManual.estado === 'ELEGIVEL'
     && row.cicloManual.podeGerar
@@ -87,8 +93,23 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
     matriculaId: row.matriculaId,
     cicloNumero: cycleNumber || 0,
     primeiroVencimento: firstDueDate,
+    revisao: revisionState.revision,
   }, previewEnabled);
-  const preview = previewQuery.data?.preview;
+  const preview = previewQuery.data?.preview
+    ?? (lastPreviewRef.current?.context === revisionContext ? lastPreviewRef.current.preview : undefined);
+  const seedPreview = revisionState.seedPreview;
+  useEffect(() => {
+    if (!previewQuery.isPlaceholderData && !previewQuery.isFetching && !previewQuery.isError && preview) {
+      lastPreviewRef.current = { context: revisionContext, preview };
+      seedPreview(preview);
+    }
+  }, [preview, revisionContext, previewQuery.isPlaceholderData, previewQuery.isFetching, previewQuery.isError, seedPreview]);
+  const positiveAmounts = preview?.itens.every((item) => Number(item.valor) > 0) === true;
+  const compositionItems = preview
+    ? [...(preview.matriculaSemBoleto ? [preview.matriculaSemBoleto] : []), ...preview.itens]
+    : [];
+  const previewReady = previewEnabled && Boolean(preview) && !previewQuery.isFetching && !previewQuery.isError
+    && !previewQuery.isPlaceholderData && !revisionState.dirty;
   const issuanceCycleNumber = issuanceSnapshot?.cicloNumero
     ?? preview?.cicloNumero
     ?? row.cicloManual.cicloGerado?.numero
@@ -111,16 +132,16 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
   }, [dialogRef, pending]);
 
   const goToStep = (nextStep: WizardStep) => {
-    if (pending || (nextStep > 1 && !preview)) return;
+    if (pending || (nextStep > 1 && !previewReady) || (nextStep === 3 && !positiveAmounts)) return;
     setStep(nextStep);
   };
 
   const startIssuance = () => {
     if (externalHistory && !externalHistoryConfirmed) return;
-    if (!preview || issuanceStartedRef.current) return;
+    if (!preview || !previewReady || !positiveAmounts || issuanceStartedRef.current) return;
     issuanceStartedRef.current = true;
     setIssuanceSnapshot(preview);
-    void onConfirm(preview, firstDueDate).finally(() => {
+    void onConfirm(preview, firstDueDate, revisionState.revision).finally(() => {
       issuanceStartedRef.current = false;
     });
   };
@@ -201,7 +222,7 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
               <div className="mb-5">
                 <p className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-600">Etapa 1 de 3</p>
                 <h3 id="manual-cycle-step-1" className="mt-1 text-2xl font-black text-[#001a33]">Dados e vencimento</h3>
-                <p className="mt-1 max-w-2xl text-sm font-medium text-slate-500">Defina a data inicial. O sistema calculará a rematrícula e todas as mensalidades antes de permitir a geração.</p>
+                <p className="mt-1 max-w-2xl text-sm font-medium text-slate-500">Defina a data inicial. O sistema apresentará a {cycleNumber === 1 ? 'matrícula' : 'rematrícula'} e as mensalidades para revisão antes de emitir.</p>
               </div>
 
               {eligibilityLabel ? (
@@ -251,7 +272,7 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
                   ) : previewQuery.isLoading || previewQuery.isFetching ? (
                     <div className="mt-4 flex items-center justify-center rounded-xl border border-slate-100 bg-slate-50 py-6 text-sm font-bold text-slate-500" role="status"><Loader2 className="mr-2 animate-spin" size={18} /> Calculando cobranças no sistema...</div>
                   ) : previewQuery.isError || !preview ? (
-                    <div className="mt-4 rounded-xl border border-rose-100 bg-rose-50 p-4 text-xs font-semibold text-rose-700" role="alert"><div className="flex items-start gap-2"><AlertTriangle className="mt-0.5 shrink-0" size={16} /><span>Não foi possível validar a composição. Nenhuma cobrança será gerada.</span></div><button type="button" onClick={() => { void previewQuery.refetch(); }} className="mt-3 rounded-lg bg-white px-3 py-2 text-[9px] font-black uppercase text-rose-700">Tentar novamente</button></div>
+                    <div className="mt-4 rounded-xl border border-rose-100 bg-rose-50 p-4 text-xs font-semibold text-rose-700" role="alert"><div className="flex items-start gap-2"><AlertTriangle className="mt-0.5 shrink-0" size={16} /><span>{previewQuery.error instanceof Error ? previewQuery.error.message : 'Não foi possível validar a composição.'} Nenhuma cobrança será gerada.</span></div><button type="button" onClick={() => { void previewQuery.refetch(); }} className="mt-3 rounded-lg bg-white px-3 py-2 text-[9px] font-black uppercase text-rose-700">Tentar novamente</button></div>
                   ) : (
                     <div className="mt-4 flex items-center gap-3 rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-xs font-bold text-emerald-800"><ShieldCheck size={18} /><span>Composição calculada. Avance para conferir cada cobrança.</span></div>
                   )}
@@ -273,7 +294,14 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
             <section aria-labelledby="manual-cycle-step-2">
               <p className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-600">Etapa 2 de 3</p>
               <h3 id="manual-cycle-step-2" className="mt-1 text-2xl font-black text-[#001a33]">Composição das cobranças</h3>
-              <p className="mt-1 text-sm font-medium text-slate-500">Confira todos os itens e as condições financeiras calculadas pela configuração da turma.</p>
+              <p className="mt-1 text-sm font-medium text-slate-500">Revise cada cobrança. Os valores iniciais vêm da turma; alterações serão recalculadas pelo sistema antes da confirmação.</p>
+              {cycleNumber === 1 ? (
+                <label className="mt-4 flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50 p-4 text-xs font-semibold text-blue-950">
+                  <input type="checkbox" className="mt-0.5" checked={revisionState.draft?.emitirMatricula ?? true} disabled={previewQuery.isFetching || !revisionState.draft} onChange={(event) => revisionState.changeEnrollmentIssuance(event.target.checked)} />
+                  <span><strong>Emitir boleto da matrícula</strong><span className="mt-1 block">Desmarque para gerar somente as mensalidades. Esta escolha não registra pagamento; valores recebidos em mãos devem constar no Caixa.</span></span>
+                </label>
+              ) : null}
+              {!positiveAmounts ? <p className="mt-3 text-xs font-semibold text-amber-800" role="alert">Informe um valor maior que zero em cada cobrança ou desmarque a emissão da matrícula.</p> : null}
 
               <div className="mt-5 grid gap-3 sm:grid-cols-3">
                 <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4"><p className="text-[9px] font-black uppercase text-blue-600">Cobranças</p><p className="mt-1 text-lg font-black text-blue-950">{preview.quantidadeItens} itens</p></div>
@@ -286,19 +314,32 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
                   <span>Cobrança</span><span>Vencimento</span><span className="text-right">Valor nominal</span>
                 </div>
                 <div className="divide-y divide-slate-100">
-                  {preview.itens.map((item) => (
+                  {compositionItems.map((item) => (
                     <FinanceiroCicloManualChargeRows
                       key={item.chave}
                       item={item}
                       variant="composition"
+                      excluded={preview.matriculaSemBoleto?.chave === item.chave}
+                      editor={revisionState.draft?.itens.find((draft) => draft.chave === item.chave) ? {
+                        draft: revisionState.draft.itens.find((draft) => draft.chave === item.chave)!,
+                        disabled: previewQuery.isFetching,
+                        onChange: (field, value) => revisionState.changeItem(item.chave, field, value),
+                      } : undefined}
                     />
                   ))}
                 </div>
               </div>
 
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <button type="button" disabled={(!revisionState.dirty && !previewQuery.isError) || previewQuery.isFetching} onClick={() => revisionState.dirty ? revisionState.apply() : void previewQuery.refetch()} className="rounded-xl bg-blue-600 px-4 py-3 text-[10px] font-black uppercase text-white disabled:opacity-40">Aplicar alterações e recalcular</button>
+                <p className="text-xs font-semibold text-slate-500" role="status">{previewQuery.isFetching ? 'Recalculando a composição...' : revisionState.dirty ? 'Há alterações aguardando revisão. A emissão está bloqueada até recalcular.' : 'Composição conferida pelo sistema.'}</p>
+              </div>
+              {previewQuery.isError ? <p role="alert" className="mt-3 text-xs font-semibold text-rose-700">{previewQuery.error instanceof Error ? previewQuery.error.message : 'A revisão não foi aceita. Confira os campos e tente novamente.'}</p> : null}
+
               <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_22rem]">
                 <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <p className="text-[10px] font-black uppercase tracking-wider text-slate-600">Termos financeiros da regra efetiva</p>
+                  <p className="text-[10px] font-black uppercase tracking-wider text-slate-600">Condições padrão da turma</p>
+                  <p className="mt-2 text-xs font-medium text-slate-500">Os ajustes individuais constam em cada cobrança acima. Estes valores mostram a configuração original.</p>
                   <div className="mt-3 grid gap-2 sm:grid-cols-3">
                     <div className="rounded-xl bg-emerald-50 p-3"><p className="text-[9px] font-black uppercase text-emerald-600">Desconto em dia</p><p className="mt-1 text-sm font-black text-[#001a33]">{formatMoney(preview.termos.descontoPontualidade)}</p></div>
                     <div className="rounded-xl bg-rose-50 p-3"><p className="text-[9px] font-black uppercase text-rose-500">Juros ao mês</p><p className="mt-1 text-sm font-black text-[#001a33]">{formatPercent(preview.termos.jurosAtrasoPercentual)}</p></div>
@@ -320,6 +361,7 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
               <p className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-600">Etapa 3 de 3</p>
               <h3 id="manual-cycle-step-3" className="mt-1 text-2xl font-black text-[#001a33]">Revisão e confirmação</h3>
               <p className="mt-1 text-sm font-medium text-slate-500">Revise o resumo final antes de criar as cobranças e emitir os títulos Banese.</p>
+              {cycleNumber === 1 && revisionState.revision?.emitirMatricula === false ? <p className="mt-3 rounded-xl bg-blue-50 p-3 text-xs font-semibold text-blue-900">O boleto de matrícula não será emitido. Esta escolha não registra pagamento.</p> : null}
 
               <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
                 <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -382,9 +424,9 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
           <div className="flex gap-2">
             {step > 1 ? <button type="button" disabled={pending} onClick={() => goToStep((step - 1) as WizardStep)} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 px-5 py-3 text-[10px] font-black uppercase text-slate-600 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-40 sm:flex-none"><ArrowLeft size={14} /> Voltar</button> : null}
             {step < 3 ? (
-              <button type="button" disabled={pending || !preview || previewQuery.isFetching} onClick={() => goToStep((step + 1) as WizardStep)} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-[10px] font-black uppercase text-white transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-40 sm:flex-none">{step === 1 ? 'Ver composição' : 'Revisar geração'} <ChevronRight size={14} /></button>
+              <button type="button" disabled={pending || !previewReady || (step === 2 && !positiveAmounts)} onClick={() => goToStep((step + 1) as WizardStep)} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-[10px] font-black uppercase text-white transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-40 sm:flex-none">{step === 1 ? 'Ver composição' : 'Revisar geração'} <ChevronRight size={14} /></button>
             ) : (
-              <button type="button" disabled={pending || !preview || previewQuery.isFetching || (externalHistory && !externalHistoryConfirmed)} onClick={startIssuance} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-[10px] font-black uppercase text-white transition hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:opacity-40 sm:flex-none">
+              <button type="button" disabled={pending || !previewReady || !positiveAmounts || (externalHistory && !externalHistoryConfirmed)} onClick={startIssuance} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-[10px] font-black uppercase text-white transition hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:opacity-40 sm:flex-none">
                 {pending ? <><Loader2 className="animate-spin" size={14} /> Gerando e emitindo BolePix...</> : <><ReceiptText size={14} /> Gerar e emitir BolePix</>}
               </button>
             )}

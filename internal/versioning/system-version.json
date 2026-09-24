@@ -1,8 +1,8 @@
 {
-  "version": "4.8.76",
+  "version": "4.8.78",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 85,
-  "releasedAt": "2026-09-21",
-  "summary": "Retenção periódica dos sinais internos de atualização das telas"
+  "revision": 87,
+  "releasedAt": "2026-09-24",
+  "summary": "Ciclos técnicos individuais com revisão das cobranças e proteção do histórico importado"
 }

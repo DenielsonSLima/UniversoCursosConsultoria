@@ -39,7 +39,7 @@ const RECEIVABLE_SELECT = `
   gateway_boleto_codigo_barras, gateway_boleto_nosso_numero,
   gateway_boleto_convenio, gateway_boleto_agencia,
   gateway_issuer_polo_id, gateway_financial_terms,
-  gateway_financial_terms_confirmed_at
+  gateway_financial_terms_confirmed_at, regra_financeira_tecnica_snapshot
 `;
 const ALLOWED_INPUT_KEYS = new Set([
   "poloId",

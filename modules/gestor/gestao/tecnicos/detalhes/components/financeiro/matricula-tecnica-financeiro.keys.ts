@@ -28,6 +28,7 @@ export const matriculaTecnicaFinanceiroKeys = {
     matriculaId: string,
     cicloNumero: number,
     primeiroVencimento: string | null,
+    revisao?: unknown,
   ) => (
     [
       ...matriculaTecnicaFinanceiroKeys.all,
@@ -35,6 +36,7 @@ export const matriculaTecnicaFinanceiroKeys = {
       matriculaId,
       cicloNumero,
       primeiroVencimento || 'turma',
+      revisao ?? null,
     ] as const
   ),
   conditionCodeStatus: (turmaId: string) => (

@@ -59,13 +59,14 @@ const parseGroup = (value: unknown): BaneseDocumentGroup => {
     throw new Error('O catálogo de carnês retornou um identificador de grupo fora do escopo Banese.');
   }
   const installmentCount = positiveInteger(row.installmentCount, 'a quantidade de parcelas');
+  const enrollmentCount = nonNegativeInteger(row.enrollmentCount ?? 0, 'a quantidade de matrículas');
   const reenrollmentCount = nonNegativeInteger(row.reenrollmentCount, 'a quantidade de rematrículas');
   const monthlyCount = nonNegativeInteger(row.monthlyCount, 'a quantidade de mensalidades');
   const documentType = row.documentType === 'carnet' || row.documentType === 'boletos'
     ? row.documentType
     : null;
   if (!documentType || receivableIds.length !== installmentCount
-    || reenrollmentCount + monthlyCount !== installmentCount) {
+    || enrollmentCount + reenrollmentCount + monthlyCount !== installmentCount) {
     throw new Error('O catálogo de carnês retornou uma composição documental inconsistente.');
   }
   if (!receivableIds.includes(representativeReceivableId)) {
@@ -99,6 +100,7 @@ const parseGroup = (value: unknown): BaneseDocumentGroup => {
     classId: uuid(row.classId, 'a turma'),
     className: nonEmptyText(row.className, 'o nome da turma'),
     installmentCount,
+    ...(row.enrollmentCount === undefined ? {} : { enrollmentCount }),
     reenrollmentCount,
     monthlyCount,
     totalAmount,

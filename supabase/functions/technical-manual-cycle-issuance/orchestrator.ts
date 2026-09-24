@@ -43,15 +43,25 @@ const assertRequestedContext = (
   request: ManualCycleIssuanceRequest,
   context: ManualCycleContext,
 ) => {
+  const installments = context.ciclo.recebiveis.filter((item) => item.tipo === 'PARCELA');
+  const leadItems = context.ciclo.recebiveis.filter((item) => item.tipo !== 'PARCELA');
+  const expectedLead = request.cicloNumero === 1 ? 'MATRICULA' : 'REMATRICULA';
+  const expectedCount = request.action === 'generate' && request.cicloNumero === 1
+    ? (request.revisao?.emitirMatricula === false ? 12 : 13) : null;
   if (
     context.ciclo.numero !== request.cicloNumero ||
     (context.matriculaId && context.matriculaId !== request.matriculaId) ||
-    context.ciclo.quantidadeItens !== 13 ||
-    context.ciclo.recebiveis.length !== 13
+    ![12, 13].includes(context.ciclo.quantidadeItens) ||
+    context.ciclo.recebiveis.length !== context.ciclo.quantidadeItens ||
+    installments.length !== 12 || leadItems.length > 1 ||
+    leadItems.some((item) => item.tipo !== expectedLead || item.numero !== 0) ||
+    new Set(installments.map((item) => item.numero)).size !== 12 ||
+    installments.some((item) => item.numero < 1 || item.numero > 12) ||
+    (expectedCount !== null && context.ciclo.quantidadeItens !== expectedCount)
   ) {
     throw new IssuanceHttpError(
       409,
-      "O ciclo persistido não corresponde às 13 cobranças revisadas.",
+      "O ciclo persistido não corresponde às cobranças revisadas.",
       "CYCLE_CONTEXT_MISMATCH",
       progressFrom(context),
     );
@@ -74,14 +84,13 @@ const assertFullyIssued = (context: ManualCycleContext) => {
     ["PENDENTE", "VENCIDO"].includes(item.status)
   );
   if (
-    context.ciclo.quantidadeItens !== 13 ||
-    context.ciclo.emitidosBanese !== 13 ||
+    context.ciclo.emitidosBanese !== context.ciclo.quantidadeItens ||
     context.ciclo.pendentesEmissao !== 0 ||
-    context.ciclo.emRevisao !== 0 || emitted.length !== 13
+    context.ciclo.emRevisao !== 0 || emitted.length !== context.ciclo.quantidadeItens
   ) {
     throw new IssuanceHttpError(
       409,
-      "A emissão foi preservada, mas ainda não há 13 BolePix completos.",
+      "A emissão foi preservada, mas ainda há títulos Banese incompletos.",
       "CYCLE_ISSUANCE_INCOMPLETE",
       progressFrom(context),
     );
