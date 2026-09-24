@@ -43,6 +43,10 @@ export const getFinanceiroSituationLabel = (row: MatriculaTecnicaFinanceiroRow) 
     const fullyIssued = generated ? isFullyIssued(generated) : false;
     if (row.cicloManual.estado === 'PROTEGIDO_EXISTENTE') {
       if (isIssuedInProesc(generated)) return `${generatedCycle}º ciclo já emitido no Proesc`;
+      if (row.cicloManual.bloqueio?.codigo === 'HISTORICO_FINANCEIRO_EXISTENTE'
+        && !fullyIssued) {
+        return 'Histórico financeiro existente';
+      }
       return `${generatedCycle || 2}º ciclo gerado e emitido`;
     }
     if (row.cicloManual.estado === 'JA_GERADO') {
@@ -133,7 +137,12 @@ const FinanceiroCicloManualStatus: React.FC<FinanceiroCicloManualStatusProps> = 
   if (!cicloManual.habilitado || cicloManual.modo !== 'MANUAL') return null;
 
   if (cicloManual.estado === 'PROTEGIDO_EXISTENTE') {
-    const protectionMessage = isIssuedInProesc(generated)
+    const individualHistory = cicloManual.bloqueio?.codigo === 'HISTORICO_FINANCEIRO_EXISTENTE'
+      && !isIssuedInProesc(generated)
+      && (!generated || !isFullyIssued(generated));
+    const protectionMessage = individualHistory
+      ? cicloManual.bloqueio!.mensagem
+      : isIssuedInProesc(generated)
       ? generated?.abrangencia === 'SEGUNDO_CICLO'
         ? 'Segundo ciclo protegido contra novas cobranças.'
         : 'Contrato completo protegido contra novas cobranças.'
@@ -141,7 +150,9 @@ const FinanceiroCicloManualStatus: React.FC<FinanceiroCicloManualStatusProps> = 
     return (
       <div className="space-y-1.5" role="status">
         <span className="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-1 text-[9px] font-black uppercase text-emerald-800">
-          <ShieldCheck size={12} /> {generatedLabel} {isIssuedInProesc(generated) ? 'já emitido no Proesc' : 'já gerado e emitido'}
+          <ShieldCheck size={12} /> {individualHistory
+            ? 'Histórico financeiro existente'
+            : `${generatedLabel} ${isIssuedInProesc(generated) ? 'já emitido no Proesc' : 'já gerado e emitido'}`}
         </span>
         <p className="text-[9px] font-bold text-slate-500">{protectionMessage}</p>
       </div>
