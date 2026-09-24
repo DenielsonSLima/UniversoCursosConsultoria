@@ -38,7 +38,7 @@ const FinanceiroAlunoCarneAction = ({
   const issuedInProesc = generatedCycle?.origemEmissao === 'PROESC'
     && (generatedCycle.abrangencia === 'CONTRATO_COMPLETO' || generatedCycle.abrangencia === 'SEGUNDO_CICLO');
   const incompleteIssuance = Boolean(!issuedInProesc && generatedCycle && (
-    generatedCycle.emitidosBanese !== generatedCycle.quantidadeItens
+    generatedCycle.emitidosBanese !== (generatedCycle.quantidadeBancaria ?? generatedCycle.quantidadeItens)
     || generatedCycle.pendentesEmissao > 0
     || generatedCycle.emRevisao > 0
   ));

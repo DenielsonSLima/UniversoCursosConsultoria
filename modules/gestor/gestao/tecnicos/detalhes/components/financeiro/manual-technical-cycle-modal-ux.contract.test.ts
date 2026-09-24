@@ -236,7 +236,7 @@ test("React apenas apresenta valores bancários e preserva todas as mensagens no
   assert.match(chargeRowsSource, /sm:grid-cols-/);
   assert.match(chargeRowsSource, /(?:xl|lg|md):grid-cols-/);
   const instructionBlock = chargeRowsSource.match(
-    /<dt[^>]*>\s*Mensagem do boleto\s*<\/dt>([\s\S]*?)<\/div>/,
+    /<dt[^>]*>[^<]*Mensagem do boleto[^<]*<\/dt>([\s\S]*?)<\/div>/,
   )?.[1] || "";
   assert.match(instructionBlock, /details\.mensagensBoleto\.map\s*\(/);
   assert.match(instructionBlock, /\{mensagem\}/);

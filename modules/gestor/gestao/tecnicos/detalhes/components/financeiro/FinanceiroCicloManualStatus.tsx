@@ -26,7 +26,7 @@ const cycleLabel = (cycle: number | null | undefined) => (
 
 const isFullyIssued = (generated: GeneratedCycle) => (
   generated.quantidadeItens > 0
-  && generated.emitidosBanese === generated.quantidadeItens
+  && generated.emitidosBanese === (generated.quantidadeBancaria ?? generated.quantidadeItens)
   && generated.pendentesEmissao === 0
   && generated.emRevisao === 0
 );
@@ -87,7 +87,8 @@ const GeneratedCycleStatus: React.FC<{
         {cycleLabel(generated.numero)} {fullyIssued ? 'já gerado e emitido' : 'com emissão incompleta'}
       </span>
       <p className="text-[9px] font-bold text-slate-500">
-        {generated.emitidosBanese}/{generated.quantidadeItens} emitidos
+        {generated.emitidosBanese}/{generated.quantidadeBancaria ?? generated.quantidadeItens} títulos emitidos
+        {generated.quantidadeLocal ? ` · ${generated.quantidadeLocal} registro sem boleto` : ''}
         {generated.pendentesEmissao > 0 ? ` · ${generated.pendentesEmissao} pendentes` : ''}
         {generated.emRevisao > 0 ? ` · ${generated.emRevisao} em revisão` : ''}
       </p>

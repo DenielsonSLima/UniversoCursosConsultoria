@@ -10,6 +10,9 @@ import FinanceiroAtivacaoLegacyDialog, {
   type FinanceiroAtivacaoLegacyAction,
 } from './FinanceiroAtivacaoLegacyDialog';
 import FinanceiroCicloManualDialog from './FinanceiroCicloManualDialog';
+import FinanceiroCicloManualSettlement from './FinanceiroCicloManualSettlement';
+import { useCicloManualEnrollmentSettlement } from './hooks/useCicloManualEnrollmentSettlement';
+import type { CicloManualMatriculaLocal } from './matricula-tecnica-ciclo-manual.types';
 import FinanceiroAlunosTable, {
   formatStudentDocument,
 } from './FinanceiroAlunosTable';
@@ -43,6 +46,7 @@ import {
 
 interface FinanceiroAlunosListProps {
   turma: Turma;
+  canSettleEnrollment?: boolean;
   regra: MatriculaTecnicaRegra;
   resumo: MatriculaTecnicaFinanceiroWorkspace['resumo'];
   alunos: MatriculaTecnicaFinanceiroRow[];
@@ -64,6 +68,7 @@ const formatMoney = (value: string | null | undefined) => {
 
 const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
   turma,
+  canSettleEnrollment = false,
   regra,
   resumo,
   alunos,
@@ -73,6 +78,7 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
   onRetry,
 }) => {
   const { toasts, removeToast, toast } = useToast();
+  const settlement = useCicloManualEnrollmentSettlement({ turmaId: turma.id, poloId: turma.poloId, canSettle: canSettleEnrollment, toast });
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMatriculaId, setSelectedMatriculaId] = useState<string | null>(null);
   const [selectedPending, setSelectedPending] = useState<string[]>([]);
@@ -91,7 +97,7 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
   const pending = individualMutation.isPending
     || batchMutation.isPending
     || manualCycleMutation.isPending
-    || resumeCycleMutation.isPending;
+    || resumeCycleMutation.isPending || settlement.pending;
 
   const closeActionDialog = () => {
     setPendingAction(null);
@@ -238,6 +244,7 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
     preview: CicloFinanceiroTecnicoManualPreview,
     primeiroVencimento: string | null,
     revisao: CicloFinanceiroTecnicoManualRevisao | null,
+    abrirRecebimento: boolean,
   ) => {
     const key = [
       'ciclo-manual',
@@ -264,16 +271,18 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
       });
       requestIds.current.delete(key);
       setManualCycleMatriculaId(null);
+      const local = result.ciclo.recebiveis.find((item) => item.destinoCobranca === 'LOCAL');
+      if (abrirRecebimento && local) settlement.open(row, local as CicloManualMatriculaLocal);
       toast.success(
         `${result.ciclo.numero}º ciclo gerado e emitido`,
-        `${result.ciclo.quantidadeItens} cobranças e ${result.ciclo.emitidosBanese} títulos BolePix Banese já estão disponíveis em Financeiro.`,
+        `${result.ciclo.quantidadeItens} registros financeiros e ${result.ciclo.emitidosBanese} títulos BolePix Banese disponíveis.${result.ciclo.quantidadeLocal ? ' A matrícula sem boleto aguarda recebimento separado.' : ''}`,
       );
     } catch (error) {
       if (isCicloFinanceiroTecnicoManualIssuanceError(error) && error.progress) {
         setManualCycleMatriculaId(null);
         toast.warning(
           'Emissão interrompida',
-          `${error.message} ${error.progress.emitidosBanese}/${error.progress.quantidadeItens} títulos emitidos. ${getCicloFinanceiroTecnicoManualRecoveryGuidance(error)}`,
+          `${error.message} ${error.progress.emitidosBanese}/${error.progress.quantidadeBancaria ?? error.progress.quantidadeItens} títulos emitidos. ${getCicloFinanceiroTecnicoManualRecoveryGuidance(error)}`,
         );
         return;
       }
@@ -307,7 +316,7 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
     }, {
       onSuccess: (result) => toast.success(
         'Emissão retomada',
-        `${result.ciclo.emitidosBanese}/${result.ciclo.quantidadeItens} títulos BolePix emitidos e disponíveis em Financeiro.`,
+        `${result.ciclo.emitidosBanese}/${result.ciclo.quantidadeBancaria ?? result.ciclo.quantidadeItens} títulos BolePix emitidos e disponíveis em Financeiro.`,
       ),
       onError: (error) => toast.error(
         'Emissão não concluída',
@@ -400,6 +409,7 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
             setPendingAction({ matriculaIds: [row.matriculaId], label: row.alunoNome, modo: 'AGENDADA' });
           }}
           onResumeCycle={resumeManualCycle}
+          onSettleEnrollment={canSettleEnrollment ? settlement.open : undefined}
           onCarnetFeedback={(tone, title, message) => {
             if (tone === 'info') toast.info(title, message);
             else toast.error(title, message);
@@ -431,14 +441,16 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
           row={currentManualCycleRow}
           turmaId={turma.id}
           pending={manualCycleMutation.isPending}
+          canSettleEnrollment={canSettleEnrollment}
           onClose={() => setManualCycleMatriculaId(null)}
-          onConfirm={(preview, primeiroVencimento, revisao) => (
-            generateManualCycle(currentManualCycleRow, preview, primeiroVencimento, revisao)
+          onConfirm={(preview, primeiroVencimento, revisao, abrirRecebimento) => (
+            generateManualCycle(currentManualCycleRow, preview, primeiroVencimento, revisao, abrirRecebimento)
           )}
         />
       ) : null}
 
       {currentOverrideRow ? <FinanceiroAlunoOverrideDialog row={currentOverrideRow} regraTurma={regra} turmaId={turma.id} onClose={() => setOverrideMatriculaId(null)} /> : null}
+      <FinanceiroCicloManualSettlement controller={settlement} />
       <ToastNotification toasts={toasts} onRemove={removeToast} />
     </>
   );

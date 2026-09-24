@@ -56,7 +56,8 @@ const FinanceiroCicloManualChargeRows: React.FC<
           <p className="mt-1 text-[9px] font-black uppercase text-slate-400">
             {itemTypeLabel(item)}
           </p>
-          {excluded ? <p className="mt-1 text-[10px] font-bold text-blue-700">Matrícula sem boleto neste ciclo. Não incluída no total a emitir.</p> : null}
+          {item.destinoCobranca === 'LOCAL' ? <p className="mt-1 text-[10px] font-bold text-blue-700">Registro financeiro sem boleto. O pagamento será confirmado separadamente.</p> : null}
+          {excluded ? <p className="mt-1 text-[10px] font-bold text-blue-700">Matrícula não incluída neste ciclo. Nenhum registro financeiro será criado.</p> : null}
         </div>
         <div>
           <p className="text-[9px] font-black uppercase text-slate-400">
@@ -126,10 +127,10 @@ const FinanceiroCicloManualChargeRows: React.FC<
         </div>
         <div className="bg-slate-50 p-3">
           <dt className="font-black uppercase text-slate-500">
-            Mensagem do boleto
+            {item.destinoCobranca === 'LOCAL' ? 'Condição do registro' : 'Mensagem do boleto'}
           </dt>
           <dd className="mt-1 break-words whitespace-normal font-bold leading-relaxed text-slate-700">
-            {details.mensagensBoleto.length > 0
+            {item.destinoCobranca === 'LOCAL' ? <span>Sem emissão bancária para esta matrícula.</span> : details.mensagensBoleto.length > 0
               ? details.mensagensBoleto.map((mensagem, index) => (
                 <span
                   key={`${item.chave}-mensagem-boleto-${index}`}

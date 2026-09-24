@@ -34,6 +34,7 @@ interface FinanceiroAlunosTableProps {
   onActivateNow: (row: MatriculaTecnicaFinanceiroRow) => void;
   onSchedule: (row: MatriculaTecnicaFinanceiroRow) => void;
   onResumeCycle: (row: MatriculaTecnicaFinanceiroRow) => void;
+  onSettleEnrollment?: (row: MatriculaTecnicaFinanceiroRow) => void;
   onCarnetFeedback: FinanceiroAlunoCarneFeedback;
 }
 
@@ -101,6 +102,7 @@ const FinanceiroAlunosTable = ({
   onActivateNow,
   onSchedule,
   onResumeCycle,
+  onSettleEnrollment,
   onCarnetFeedback,
 }: FinanceiroAlunosTableProps) => (
   <div className="overflow-x-auto">
@@ -199,6 +201,13 @@ const FinanceiroAlunosTable = ({
                       onResume={() => onResumeCycle(row)}
                     />
                   ) : null}
+                  {row.cicloManual.matriculaLocal && onSettleEnrollment
+                    && ['PENDENTE', 'VENCIDO'].includes(row.cicloManual.matriculaLocal.status) ? (
+                      <button type="button" disabled={pending} onClick={() => onSettleEnrollment(row)}
+                        className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[9px] font-black uppercase text-emerald-800 disabled:opacity-50">
+                        Registrar recebimento da matrícula
+                      </button>
+                    ) : null}
                   <FinanceiroAlunoCarneAction
                     row={row}
                     poloId={turma.poloId}

@@ -9,6 +9,7 @@ export type ManualCycleRevisionItem = {
 
 export type ManualCycleRevision = {
   emitirMatricula: boolean;
+  modoMatricula?: "BOLETO" | "REGISTRO_SEM_BOLETO" | "OMITIR";
   itens: ManualCycleRevisionItem[];
 };
 
@@ -28,9 +29,14 @@ const validDate = (value: unknown) => {
 export const parseManualCycleRevision = (value: unknown): ManualCycleRevision | null => {
   if (value === undefined || value === null) return null;
   if (!isRecord(value) || typeof value.emitirMatricula !== "boolean"
-    || Object.keys(value).some((key) => !["emitirMatricula", "itens"].includes(key))
+    || Object.keys(value).some((key) => !["emitirMatricula", "modoMatricula", "itens"].includes(key))
     || !Array.isArray(value.itens) || value.itens.length < 1 || value.itens.length > 13) {
     throw new Error("Revisão das cobranças inválida.");
+  }
+  const mode = value.modoMatricula;
+  if (mode !== undefined && (!["BOLETO", "REGISTRO_SEM_BOLETO", "OMITIR"].includes(String(mode))
+    || value.emitirMatricula !== (mode === "BOLETO"))) {
+    throw new Error("Modo de matrícula incompatível com a emissão revisada.");
   }
   const items = value.itens.map((item) => {
     if (!isRecord(item) || Object.keys(item).some((key) => !fields.includes(key))
@@ -47,5 +53,9 @@ export const parseManualCycleRevision = (value: unknown): ManualCycleRevision | 
   if (new Set(items.map((item) => item.chave)).size !== items.length) {
     throw new Error("A revisão repete uma cobrança.");
   }
-  return { emitirMatricula: value.emitirMatricula, itens: items };
+  return {
+    emitirMatricula: value.emitirMatricula,
+    ...(mode === undefined ? {} : { modoMatricula: mode as ManualCycleRevision["modoMatricula"] }),
+    itens: items,
+  };
 };

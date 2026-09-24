@@ -12,7 +12,24 @@ export type MatriculaTecnicaCicloManualCriterio =
   | "MANUAL_APOS_EMISSAO"
   | "HISTORICO_EXTERNO";
 
+export type CicloManualModoMatricula = "BOLETO" | "REGISTRO_SEM_BOLETO" | "OMITIR";
+
+export interface CicloManualMatriculaLocal {
+  id: string;
+  tipo: "MATRICULA";
+  numero: 0;
+  emissaoBanese: "NAO_APLICAVEL";
+  emissaoHistoricaComprovada?: false;
+  descricao: string;
+  valor: string;
+  vencimento: string;
+  status: "PENDENTE" | "VENCIDO" | "PAGO";
+  destinoCobranca: "LOCAL";
+  localSemBoletoComprovado: true;
+}
+
 export interface MatriculaTecnicaCicloManual {
+  matriculaLocal?: CicloManualMatriculaLocal | null;
   conferenciaProesc?: { necessaria: true };
   habilitado: boolean;
   modo: "MANUAL" | null;
@@ -37,6 +54,8 @@ export interface MatriculaTecnicaCicloManual {
     origemEmissao?: "PROESC";
     abrangencia?: "CONTRATO_COMPLETO" | "SEGUNDO_CICLO";
     quantidadeItens: number;
+    quantidadeBancaria?: number;
+    quantidadeLocal?: number;
     total: string;
     emitidosBanese: number;
     pendentesEmissao: number;
@@ -45,6 +64,7 @@ export interface MatriculaTecnicaCicloManual {
 }
 
 export interface CicloFinanceiroTecnicoManualPreviewItem {
+  destinoCobranca?: "BANESE" | "LOCAL";
   aplicacao?: { desconto: boolean; multaJuros: boolean };
   chave: string;
   tipo: "MATRICULA" | "REMATRICULA" | "PARCELA";
@@ -87,6 +107,9 @@ export interface CicloFinanceiroTecnicoManualTermos {
 }
 
 export interface CicloFinanceiroTecnicoManualPreview {
+  modoMatricula?: CicloManualModoMatricula;
+  quantidadeBancaria?: number;
+  quantidadeLocal?: number;
   matriculaSemBoleto?: CicloFinanceiroTecnicoManualPreviewItem | null;
   cicloNumero: number;
   sourceVencimento: "TURMA" | "INDIVIDUAL";
@@ -120,6 +143,7 @@ export interface CicloFinanceiroTecnicoManualRevisaoItem {
 }
 
 export interface CicloFinanceiroTecnicoManualRevisao {
+  modoMatricula?: CicloManualModoMatricula;
   emitirMatricula: boolean;
   itens: CicloFinanceiroTecnicoManualRevisaoItem[];
 }
@@ -151,6 +175,8 @@ export interface RetomarEmissaoCicloFinanceiroTecnicoManualInput {
 }
 
 export interface CicloFinanceiroTecnicoManualEmissaoProgress {
+  quantidadeBancaria?: number;
+  quantidadeLocal?: number;
   cicloNumero: number;
   quantidadeItens: number;
   emitidosBanese: number;
@@ -167,7 +193,9 @@ export interface CicloFinanceiroTecnicoManualRecebivel {
   valor: string;
   vencimento: string;
   status: "PENDENTE" | "VENCIDO" | "PAGO";
-  emissaoBanese: "EMITIDO";
+  emissaoBanese: "EMITIDO" | "NAO_APLICAVEL";
+  destinoCobranca?: "BANESE" | "LOCAL";
+  localSemBoletoComprovado?: boolean;
   emissaoHistoricaComprovada?: boolean;
 }
 
@@ -179,6 +207,8 @@ export interface GerarCicloFinanceiroTecnicoManualResult {
     numero: number;
     status: "EMITIDO_BANESE";
     quantidadeItens: number;
+    quantidadeBancaria?: number;
+    quantidadeLocal?: number;
     total: string;
     emitidosBanese: number;
     pendentesEmissao: number;

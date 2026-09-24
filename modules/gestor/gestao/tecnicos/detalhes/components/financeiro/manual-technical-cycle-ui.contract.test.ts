@@ -18,6 +18,7 @@ const listSource = `${readSource("FinanceiroAlunosList.tsx")}\n${readSource("Fin
 const statusSource = readSource("FinanceiroCicloManualStatus.tsx");
 const dialogSource = readSource("FinanceiroCicloManualDialog.tsx");
 const serviceSource = readSource("matricula-tecnica-ciclo-manual.service.ts");
+const destinationSource = readSource("matricula-tecnica-ciclo-manual-destination.ts");
 const previewParserSource = readSource(
   "matricula-tecnica-ciclo-manual-preview.parser.ts",
 );
@@ -361,7 +362,7 @@ test("prévia canônica lista 1+N e a confirmação comunica emissão BolePix ú
   assert.match(dialogSource, /Geração e emissão em uma única ação/);
   assert.match(
     dialogSource,
-    /QR Pix, linha digitável, código de barras e PDF oficial Banese/,
+    /QR Pix, linha digitável, código de barras e PDF Banese/,
   );
   assert.match(dialogSource, /Gerar e emitir BolePix/);
   assert.doesNotMatch(
@@ -393,9 +394,9 @@ test("frontend usa uma única Edge e exige emissão completa da composição de 
       "expectedCronogramaFingerprint",
     ]
   ) assert.match(serviceSource, new RegExp(parameter));
-  assert.match(serviceSource, /item\.emissaoBanese === ['"]EMITIDO['"]/);
+  assert.match(destinationSource, /item\.emissaoBanese === ['"]EMITIDO['"]/);
   assert.match(serviceSource, /\[12, 13\]\.includes\(Number\(cycle\.quantidadeItens\)\)/);
-  assert.match(serviceSource, /cycle\.emitidosBanese !== cycle\.quantidadeItens/);
+  assert.match(serviceSource, /cycle\.emitidosBanese !== quantities\.bank/);
   assert.match(serviceSource, /cycle\.pendentesEmissao !== 0/);
   assert.match(serviceSource, /cycle\.status !== ['"]EMITIDO_BANESE['"]/);
   const calls = serviceSource.slice(

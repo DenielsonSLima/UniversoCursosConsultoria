@@ -1,5 +1,24 @@
 import assert from "node:assert/strict";
 
+Deno.test("conclusão do worker distingue treze recebíveis de doze boletos", async () => {
+  const source = await Deno.readTextFile(new URL("./index.ts", import.meta.url));
+  const expression = source.match(/success: (result\.ciclo\.status[\s\S]*?),\n {6}replayed:/)?.[1];
+  assert.ok(expression, "contrato de conclusão ausente");
+  const complete = new Function("result", "internal", `return (${expression});`);
+  const cycle = {
+    status: "EMITIDO_BANESE", quantidadeItens: 13, quantidadeBancaria: 12,
+    quantidadeLocal: 1, emitidosBanese: 12, pendentesEmissao: 0, emRevisao: 0,
+  };
+  assert.equal(complete({ ciclo: cycle }, { expectedItemCount: 13 }), true);
+  assert.equal(complete({ ciclo: cycle }, { expectedItemCount: 12 }), false);
+  for (const patch of [{ emitidosBanese: 11 }, { pendentesEmissao: 1 }, { emRevisao: 1 }]) {
+    assert.equal(complete({ ciclo: { ...cycle, ...patch } }, { expectedItemCount: 13 }), false);
+  }
+  assert.equal(complete({ ciclo: {
+    ...cycle, quantidadeBancaria: undefined, quantidadeLocal: undefined, emitidosBanese: 13,
+  } }, { expectedItemCount: 13 }), true);
+});
+
 Deno.test("worker interno retoma o run e nunca prepara um ciclo novo", async () => {
   const source = await Deno.readTextFile(
     new URL("./index.ts", import.meta.url),

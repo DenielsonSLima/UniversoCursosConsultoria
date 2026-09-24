@@ -107,7 +107,8 @@ Deno.serve(async (request: Request) => {
     });
     return json({
       success: result.ciclo.status === "EMITIDO_BANESE" &&
-        result.ciclo.emitidosBanese === internal.expectedItemCount &&
+        result.ciclo.quantidadeItens === internal.expectedItemCount &&
+        result.ciclo.emitidosBanese === (result.ciclo.quantidadeBancaria ?? result.ciclo.quantidadeItens) &&
         result.ciclo.pendentesEmissao === 0 && result.ciclo.emRevisao === 0,
       replayed: result.replayed,
       reviewedRecovered,
@@ -116,6 +117,8 @@ Deno.serve(async (request: Request) => {
         numero: result.ciclo.numero,
         status: result.ciclo.status,
         quantidadeItens: result.ciclo.quantidadeItens,
+        quantidadeBancaria: result.ciclo.quantidadeBancaria ?? result.ciclo.quantidadeItens,
+        quantidadeLocal: result.ciclo.quantidadeLocal ?? 0,
         emitidosBanese: result.ciclo.emitidosBanese,
         pendentesEmissao: result.ciclo.pendentesEmissao,
         emRevisao: result.ciclo.emRevisao,

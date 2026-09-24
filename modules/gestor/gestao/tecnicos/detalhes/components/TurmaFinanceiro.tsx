@@ -12,6 +12,7 @@ import { getFinancialWorkspaceErrorPresentation } from './financeiro/financial-w
 
 interface TurmaFinanceiroProps {
   turma: Turma;
+  canSettleEnrollment?: boolean;
 }
 
 const formatCurrency = (value?: string) => {
@@ -22,7 +23,7 @@ const formatCurrency = (value?: string) => {
   }).format(Number.isFinite(parsed) ? parsed : 0);
 };
 
-const TurmaFinanceiro: React.FC<TurmaFinanceiroProps> = ({ turma }) => {
+const TurmaFinanceiro: React.FC<TurmaFinanceiroProps> = ({ turma, canSettleEnrollment = false }) => {
   const workspaceQuery = useMatriculaTecnicaFinanceiroWorkspace(turma.id);
   useMatriculaTecnicaFinanceiroRealtime(turma.id);
   const workspace = workspaceQuery.data;
@@ -83,6 +84,7 @@ const TurmaFinanceiro: React.FC<TurmaFinanceiroProps> = ({ turma }) => {
       {workspace ? (
         <FinanceiroAlunosList
           turma={turma}
+          canSettleEnrollment={canSettleEnrollment}
           regra={workspace.regra}
           alunos={workspace.matriculas}
           resumo={workspace.resumo}

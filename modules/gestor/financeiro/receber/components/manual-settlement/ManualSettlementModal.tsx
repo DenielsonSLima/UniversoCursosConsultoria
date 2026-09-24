@@ -12,6 +12,8 @@ interface ManualSettlementModalProps {
   accounts: ContaBancaria[];
   initialAccountId?: string;
   pending: boolean;
+  submitDisabled?: boolean;
+  enrollmentNotice?: string;
   error?: string | null;
   onClose: () => void;
   onConfirm: (payload: ManualSettlementPayload) => void;
@@ -55,6 +57,8 @@ export const ManualSettlementModal: React.FC<ManualSettlementModalProps> = ({
   accounts,
   initialAccountId = '',
   pending,
+  submitDisabled = false,
+  enrollmentNotice,
   error,
   onClose,
   onConfirm,
@@ -92,7 +96,7 @@ export const ManualSettlementModal: React.FC<ManualSettlementModalProps> = ({
 
         {receivable.tipoLancamento === 'MATRICULA' && (
           <div className="mb-5 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-xs font-semibold text-blue-800">
-            Ao confirmar esta matrícula, o sistema criará as parcelas futuras conforme o cronograma e a rota bancária configurada.
+            {enrollmentNotice ?? 'Ao confirmar esta matrícula, o sistema criará as parcelas futuras conforme o cronograma e a rota bancária configurada.'}
           </div>
         )}
 
@@ -106,7 +110,7 @@ export const ManualSettlementModal: React.FC<ManualSettlementModalProps> = ({
           Valor principal da parcela: <strong className="text-[#001a33]">{formatCurrency(receivable.valor)}</strong>. Informe separadamente juros, multa, desconto e outros acréscimos. O servidor validará a composição exata antes da baixa.
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <fieldset disabled={pending} className="grid gap-4 sm:grid-cols-2">
           <label className="text-[10px] font-black uppercase text-slate-500">
             Conta bancária / caixa
             <select
@@ -147,7 +151,7 @@ export const ManualSettlementModal: React.FC<ManualSettlementModalProps> = ({
           <CurrencyField label="Multa recebida" value={form.penaltyValue} onChange={form.setPenaltyValue} />
           <CurrencyField label="Desconto concedido" value={form.discountValue} onChange={form.setDiscountValue} />
           <CurrencyField label="Outros acréscimos" value={form.additionValue} onChange={form.setAdditionValue} />
-        </div>
+        </fieldset>
 
         {!accounts.length && (
           <p className="mt-4 rounded-2xl border border-amber-100 bg-amber-50 p-3 text-xs font-bold text-amber-700">
@@ -160,7 +164,7 @@ export const ManualSettlementModal: React.FC<ManualSettlementModalProps> = ({
         <button
           type="button"
           onClick={() => onConfirm(form.payload)}
-          disabled={!form.canSubmit || pending}
+          disabled={!form.canSubmit || pending || submitDisabled}
           className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3.5 text-xs font-black uppercase tracking-wider text-white hover:bg-emerald-700 disabled:opacity-50"
         >
           {pending ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}

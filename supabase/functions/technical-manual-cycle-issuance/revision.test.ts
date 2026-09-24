@@ -22,3 +22,14 @@ Deno.test("revisão rejeita duplicidade, datas impossíveis e entradas não deci
     assert.throws(() => parseManualCycleRevision({ emitirMatricula: true, itens: [{ ...item, ...patch }] }), /inválidos/);
   }
 });
+
+Deno.test("modo de matrícula distingue registro local de omissão sem presumir pagamento", () => {
+  for (const modoMatricula of ["BOLETO", "REGISTRO_SEM_BOLETO", "OMITIR"]) {
+    const revision = { emitirMatricula: modoMatricula === "BOLETO", modoMatricula, itens: [item] };
+    assert.deepEqual(parseManualCycleRevision(revision), revision);
+    assert.throws(() => parseManualCycleRevision({ ...revision, emitirMatricula: !revision.emitirMatricula }), /incompatível/);
+  }
+  for (const modoMatricula of [null, "LOCAL", true, 1]) {
+    assert.throws(() => parseManualCycleRevision({ emitirMatricula: false, modoMatricula, itens: [item] }), /incompatível/);
+  }
+});

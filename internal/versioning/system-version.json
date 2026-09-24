@@ -1,8 +1,8 @@
 {
-  "version": "4.8.80",
+  "version": "4.8.81",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 89,
+  "revision": 90,
   "releasedAt": "2026-09-24",
-  "summary": "Preservar emissão comprovada, vencimentos revisados e navegação dos ciclos técnicos"
+  "summary": "Datas explícitas e matrícula local sem boleto nos ciclos técnicos"
 }

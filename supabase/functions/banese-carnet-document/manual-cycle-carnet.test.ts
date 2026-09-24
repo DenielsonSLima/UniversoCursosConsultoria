@@ -115,3 +115,19 @@ Deno.test("matrícula EAD ou legada sem ciclo técnico completo permanece fora d
   assert.equal(rows.length, 3);
   assert.ok(rows.every((row) => row.tipo_lancamento === "PARCELA"));
 });
+
+Deno.test("matrícula registrada localmente nunca entra no carnê dos doze boletos", () => {
+  const fee = {
+    ...rowAt(0), gateway_provider: null, gateway_payment_method: null,
+    gateway_boleto_nosso_numero: null, gateway_boleto_linha_digitavel: null,
+    gateway_boleto_codigo_barras: null, gateway_status: null,
+  };
+  for (const status of ["PENDENTE", "VENCIDO", "PAGO"]) {
+    const local = { ...fee, status };
+    assert.equal(isRegisteredBaneseDocumentRow(local), false);
+    const monthly = Array.from({ length: 12 }, (_, index) => rowAt(index + 1));
+    const rows = selectBaneseCarnetDocumentRows(monthly[0], [local, ...monthly]);
+    assert.equal(rows.length, 12);
+    assert.ok(rows.every((row) => row.tipo_lancamento === "PARCELA"));
+  }
+});

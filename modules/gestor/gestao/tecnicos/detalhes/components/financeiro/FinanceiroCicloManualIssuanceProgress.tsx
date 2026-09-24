@@ -13,6 +13,7 @@ interface FinanceiroCicloManualIssuanceProgressProps {
   matriculaExibicao: string;
   cicloNumero: number | null;
   quantidadeItens: number | null;
+  quantidadeBancaria?: number;
   emitidosBanese: number;
   preparacaoConcluida: boolean;
   total: string | null;
@@ -39,6 +40,7 @@ const FinanceiroCicloManualIssuanceProgress: React.FC<
   matriculaExibicao,
   cicloNumero,
   quantidadeItens,
+  quantidadeBancaria,
   emitidosBanese,
   preparacaoConcluida,
   total,
@@ -58,7 +60,8 @@ const FinanceiroCicloManualIssuanceProgress: React.FC<
   const quantityLabel = quantidadeItens === null
     ? 'as cobranças revisadas'
     : `${quantidadeItens} cobranças`;
-  const itemCount = quantidadeItens && quantidadeItens > 0 ? quantidadeItens : 0;
+  const bankCount = quantidadeBancaria ?? quantidadeItens;
+  const itemCount = bankCount && bankCount > 0 ? bankCount : 0;
   const emittedCount = Math.min(itemCount, Math.max(0, emitidosBanese));
   const progressPercent = itemCount > 0
     ? Math.round((emittedCount / itemCount) * 100)
@@ -153,9 +156,9 @@ const FinanceiroCicloManualIssuanceProgress: React.FC<
                 icon: Landmark,
                 number: '2',
                 title: 'Emitir no Banese',
-                description: quantidadeItens === null
+                description: bankCount === null
                   ? 'Registrar os títulos BolePix no Banese, um por vez.'
-                  : `Registrar os ${quantidadeItens} títulos BolePix, um por vez.`,
+                  : `Registrar os ${bankCount} títulos BolePix, um por vez.`,
                 state: emissionFinished
                   ? 'complete'
                   : preparacaoConcluida

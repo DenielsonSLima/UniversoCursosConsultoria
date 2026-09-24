@@ -31,6 +31,8 @@ export type ManualCycleIssuanceRequest = {
 export type ManualCycleProgress = {
   cicloNumero: number;
   quantidadeItens: number;
+  quantidadeBancaria?: number;
+  quantidadeLocal?: number;
   emitidosBanese: number;
   pendentesEmissao: number;
   emRevisao: number;
@@ -47,6 +49,8 @@ export type ManualCycleReceivableSummary = {
   status: string;
   emissaoBanese: string;
   emissaoHistoricaComprovada?: boolean;
+  destinoCobranca?: "BANESE" | "LOCAL";
+  localSemBoletoComprovado?: boolean;
 };
 
 export type ManualCycleContext = {
@@ -164,6 +168,9 @@ export const parseIssuanceRequest = (
   let revisao: ManualCycleRevision | null;
   try {
     revisao = parseManualCycleRevision(body.revisao);
+    if (cicloNumero === 2 && revisao?.modoMatricula && revisao.modoMatricula !== 'BOLETO') {
+      throw new Error('O modo de matrícula local ou omitida pertence somente ao primeiro ciclo.');
+    }
   } catch (error) {
     throw new IssuanceHttpError(400, error instanceof Error ? error.message : 'Revisão inválida.', 'INVALID_REQUEST');
   }
@@ -197,6 +204,8 @@ const parseProgress = (value: Record<string, unknown>): ManualCycleProgress => {
   const progress = {
     cicloNumero: Number(value.cicloNumero ?? value.numero),
     quantidadeItens: Number(value.quantidadeItens),
+    quantidadeBancaria: Number(value.quantidadeBancaria ?? value.quantidadeItens),
+    quantidadeLocal: Number(value.quantidadeLocal ?? 0),
     emitidosBanese: Number(value.emitidosBanese ?? 0),
     pendentesEmissao: Number(value.pendentesEmissao ?? 0),
     emRevisao: Number(value.emRevisao ?? 0),
@@ -205,10 +214,12 @@ const parseProgress = (value: Record<string, unknown>): ManualCycleProgress => {
     !Object.values(progress).every(Number.isInteger) ||
     progress.cicloNumero < 1 || progress.cicloNumero > 2 ||
     progress.quantidadeItens < 1 || progress.quantidadeItens > 61 ||
+    progress.quantidadeBancaria < 1 || progress.quantidadeLocal < 0 || progress.quantidadeLocal > 1 ||
+    progress.quantidadeBancaria + progress.quantidadeLocal !== progress.quantidadeItens ||
     progress.emitidosBanese < 0 || progress.pendentesEmissao < 0 ||
     progress.emRevisao < 0 ||
     progress.emitidosBanese + progress.pendentesEmissao +
-          progress.emRevisao !== progress.quantidadeItens
+          progress.emRevisao !== progress.quantidadeBancaria
   ) {
     throw new Error("Progresso do ciclo manual inválido.");
   }
@@ -221,10 +232,12 @@ const parseReceivableSummary = (
   const item = asRecord(value);
   const type = stringValue(item?.tipo).toUpperCase();
   const number = Number(item?.numero);
+  const destination = item?.destinoCobranca === undefined ? "BANESE" : item.destinoCobranca;
   if (
     !item || !DATABASE_UUID_RE.test(stringValue(item.id)) ||
     !stringValue(item.chave) ||
     !["MATRICULA", "REMATRICULA", "PARCELA"].includes(type) ||
+    !["BANESE", "LOCAL"].includes(String(destination)) ||
     !Number.isInteger(number) || number < 0 ||
     !stringValue(item.descricao) || !decimalValue(item.valor) ||
     !validIsoDate(item.vencimento)
@@ -242,6 +255,8 @@ const parseReceivableSummary = (
     status: stringValue(item.status).toUpperCase(),
     emissaoBanese: stringValue(item.emissaoBanese).toUpperCase(),
     emissaoHistoricaComprovada: item.emissaoHistoricaComprovada === true,
+    destinoCobranca: destination as "BANESE" | "LOCAL",
+    localSemBoletoComprovado: item.localSemBoletoComprovado === true,
   };
 };
 
@@ -269,9 +284,10 @@ export const parseCycleContext = (value: unknown): ManualCycleContext => {
   const progress = parseProgress({
     ...cycle,
     pendentesEmissao: cycle.pendentesEmissao ??
-      receivables.filter((item) => item.emissaoBanese !== "EMITIDO").length,
+      receivables.filter((item) => item.destinoCobranca !== "LOCAL" && item.emissaoBanese !== "EMITIDO").length,
   });
-  if (progress.quantidadeItens !== receivables.length) {
+  if (progress.quantidadeItens !== receivables.length
+    || progress.quantidadeLocal !== receivables.filter((item) => item.destinoCobranca === "LOCAL").length) {
     throw new Error("Quantidade de recebíveis do ciclo manual diverge.");
   }
   return {

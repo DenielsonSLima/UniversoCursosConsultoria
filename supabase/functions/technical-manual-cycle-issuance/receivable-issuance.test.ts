@@ -1,8 +1,28 @@
 import assert from "node:assert/strict";
-import { requiresBaneseReconciliation } from "./receivable-issuance.ts";
+import { createReceivableIssuer, requiresBaneseReconciliation } from "./receivable-issuance.ts";
+import type { ManualCycleContext } from "./contract.ts";
 import { hasUnsafePartialBaneseEvidence } from "./receivable-state.ts";
 
 const ATTEMPT = "22222222-2222-4222-8222-222222222222";
+
+Deno.test("emissor rejeita matrícula local antes de consultar, autorizar ou chamar banco", async () => {
+  const unexpectedClient = new Proxy({}, {
+    get: () => assert.fail("matrícula local não pode iniciar persistência ou emissão"),
+  });
+  const issue = createReceivableIssuer({
+    admin: unexpectedClient as Parameters<typeof createReceivableIssuer>[0]["admin"],
+    userClient: unexpectedClient as Parameters<typeof createReceivableIssuer>[0]["userClient"],
+    supabaseUrl: "https://example.invalid", getScope: () => null,
+  });
+  for (const state of [
+    { destinoCobranca: "LOCAL", emissaoBanese: "NAO_APLICAVEL" },
+    { destinoCobranca: "LOCAL", emissaoBanese: "PENDENTE" },
+    { destinoCobranca: "BANESE", emissaoBanese: "NAO_APLICAVEL" },
+  ]) {
+    const context = { ciclo: { recebiveis: [{ id: ATTEMPT, ...state }] } } as ManualCycleContext;
+    await assert.rejects(() => issue(context, ATTEMPT), /não pode ser enviada ao gateway/);
+  }
+});
 
 Deno.test("API_AMBIGUOUS da tentativa atual segue somente para conciliação", () => {
   assert.equal(

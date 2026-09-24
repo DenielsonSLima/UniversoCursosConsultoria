@@ -1,3 +1,4 @@
+import { isProvenLocalEnrollment, readCycleQuantities } from './matricula-tecnica-ciclo-manual-destination';
 import type {
   MatriculaTecnicaCicloManual,
   MatriculaTecnicaCicloManualCriterio,
@@ -76,6 +77,7 @@ export const requireMatriculaTecnicaCicloManual = (
     && isNonEmptyString(value.bloqueio.mensagem)
   );
   const generated = value.cicloGerado;
+  const quantities = isRecord(generated) ? readCycleQuantities(generated) : null;
   const hasExternalOrigin = isRecord(generated) && (
     generated.origemEmissao !== undefined
     || generated.abrangencia !== undefined
@@ -94,6 +96,7 @@ export const requireMatriculaTecnicaCicloManual = (
   const generatedValid = generated === null || (
     isRecord(generated)
     && generatedOriginValid
+    && quantities !== null
     && Number.isInteger(generated.numero)
     && Number(generated.numero) > 0
     && isNonEmptyString(generated.status)
@@ -108,7 +111,7 @@ export const requireMatriculaTecnicaCicloManual = (
     && Number(generated.emRevisao) >= 0
     && Number(generated.emitidosBanese)
       + Number(generated.pendentesEmissao)
-      + Number(generated.emRevisao) <= Number(generated.quantidadeItens)
+      + Number(generated.emRevisao) <= quantities!.bank
   );
   const state = String(value.estado);
   const baseline = Number.isInteger(value.cicloBaseHistorico)
@@ -132,7 +135,9 @@ export const requireMatriculaTecnicaCicloManual = (
     && (baseline === null || (baseline >= 0 && baseline <= maximum))
     && (generated === null || (generatedNumber! >= 1 && generatedNumber! <= maximum));
   const baseValid = (
-    typeof value.habilitado === 'boolean'
+    (value.matriculaLocal === undefined || value.matriculaLocal === null
+      || isProvenLocalEnrollment(value.matriculaLocal))
+    && typeof value.habilitado === 'boolean'
     && (value.conferenciaProesc === undefined || (
       isRecord(value.conferenciaProesc)
       && value.conferenciaProesc.necessaria === true

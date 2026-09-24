@@ -10,7 +10,6 @@ import {
   Fingerprint,
   Loader2,
   ReceiptText,
-  ShieldCheck,
   X,
 } from 'lucide-react';
 import type { MatriculaTecnicaFinanceiroRow } from './matricula-tecnica-financeiro.types';
@@ -18,7 +17,9 @@ import type {
   CicloFinanceiroTecnicoManualPreview,
   CicloFinanceiroTecnicoManualRevisao,
 } from './matricula-tecnica-ciclo-manual.types';
+import FinanceiroCicloManualEnrollmentOptions from './FinanceiroCicloManualEnrollmentOptions';
 import FinanceiroCicloManualChargeRows from './FinanceiroCicloManualChargeRows';
+import FinanceiroCicloManualDatesSummary from './FinanceiroCicloManualDatesSummary';
 import FinanceiroCicloManualIssuanceProgress from './FinanceiroCicloManualIssuanceProgress';
 import { getCriterioElegibilidadeLabel } from './matricula-tecnica-ciclo-manual.parser';
 import { usePreviewCicloFinanceiroTecnicoManual } from './hooks/useMatriculaTecnicaCicloManual';
@@ -29,11 +30,13 @@ interface FinanceiroCicloManualDialogProps {
   turmaId: string;
   row: MatriculaTecnicaFinanceiroRow;
   pending: boolean;
+  canSettleEnrollment?: boolean;
   onClose: () => void;
   onConfirm: (
     preview: CicloFinanceiroTecnicoManualPreview,
     primeiroVencimento: string | null,
     revisao: CicloFinanceiroTecnicoManualRevisao | null,
+    abrirRecebimento: boolean,
   ) => Promise<void>;
 }
 
@@ -61,6 +64,7 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
   turmaId,
   row,
   pending,
+  canSettleEnrollment = false,
   onClose,
   onConfirm,
 }) => {
@@ -69,6 +73,7 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
   const externalHistory = row.cicloManual.criterioElegibilidade === 'HISTORICO_EXTERNO';
   const [externalHistoryConfirmed, setExternalHistoryConfirmed] = useState(false);
   const requiresIndividualDate = cycleNumber === 2;
+  const [openSettlement, setOpenSettlement] = useState(false);
   const [step, setStep] = useState<WizardStep>(1);
   const [dateSource, setDateSource] = useState<'TURMA' | 'INDIVIDUAL'>(
     requiresIndividualDate ? 'INDIVIDUAL' : 'TURMA',
@@ -89,6 +94,7 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
     if (pending || !cycleIdentityChanged) return;
     setCycleNumber(requestedCycleNumber);
     setStep(1);
+    setOpenSettlement(false);
     setDateSource(requestedCycleNumber === 2 ? 'INDIVIDUAL' : 'TURMA');
     setIndividualDate(row.cicloManual.primeiroVencimentoSugerido ?? '');
     setExternalHistoryConfirmed(false);
@@ -153,7 +159,8 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
     if (!preview || !previewReady || !positiveAmounts || issuanceStartedRef.current) return;
     issuanceStartedRef.current = true;
     setIssuanceSnapshot(preview);
-    void onConfirm(preview, firstDueDate, revisionState.revision).finally(() => {
+    void onConfirm(preview, firstDueDate, revisionState.revision,
+      canSettleEnrollment && preview.modoMatricula === 'REGISTRO_SEM_BOLETO' && openSettlement).finally(() => {
       issuanceStartedRef.current = false;
     });
   };
@@ -176,6 +183,7 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
           quantidadeItens={issuanceSnapshot?.quantidadeItens
             ?? preview?.quantidadeItens
             ?? null}
+          quantidadeBancaria={issuanceSnapshot?.quantidadeBancaria ?? preview?.quantidadeBancaria}
           emitidosBanese={persistedIssuance?.emitidosBanese ?? 0}
           preparacaoConcluida={persistedIssuance !== null}
           total={issuanceSnapshot?.total ?? preview?.total ?? null}
@@ -286,7 +294,7 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
                   ) : previewQuery.isError || !preview ? (
                     <div className="mt-4 rounded-xl border border-rose-100 bg-rose-50 p-4 text-xs font-semibold text-rose-700" role="alert"><div className="flex items-start gap-2"><AlertTriangle className="mt-0.5 shrink-0" size={16} /><span>{previewQuery.error instanceof Error ? previewQuery.error.message : 'Não foi possível validar a composição.'} Nenhuma cobrança será gerada.</span></div><button type="button" onClick={() => { void previewQuery.refetch(); }} className="mt-3 rounded-lg bg-white px-3 py-2 text-[9px] font-black uppercase text-rose-700">Tentar novamente</button></div>
                   ) : (
-                    <div className="mt-4 flex items-center gap-3 rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-xs font-bold text-emerald-800"><ShieldCheck size={18} /><span>Composição calculada. Avance para conferir cada cobrança.</span></div>
+                    <FinanceiroCicloManualDatesSummary preview={preview} />
                   )}
                 </div>
 
@@ -308,12 +316,16 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
               <h3 id="manual-cycle-step-2" className="mt-1 text-2xl font-black text-[#001a33]">Composição das cobranças</h3>
               <p className="mt-1 text-sm font-medium text-slate-500">Revise cada cobrança. Os valores iniciais vêm da turma; alterações serão recalculadas pelo sistema antes da confirmação.</p>
               {cycleNumber === 1 ? (
-                <label className="mt-4 flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50 p-4 text-xs font-semibold text-blue-950">
-                  <input type="checkbox" className="mt-0.5" checked={revisionState.draft?.emitirMatricula ?? true} disabled={previewQuery.isFetching || !revisionState.draft} onChange={(event) => revisionState.changeEnrollmentIssuance(event.target.checked)} />
-                  <span><strong>Emitir boleto da matrícula</strong><span className="mt-1 block">Desmarque para gerar somente as mensalidades. Esta escolha não registra pagamento; valores recebidos em mãos devem constar no Caixa.</span></span>
-                </label>
+                <FinanceiroCicloManualEnrollmentOptions
+                  mode={revisionState.draft?.modoMatricula ?? 'BOLETO'}
+                  disabled={previewQuery.isFetching || !revisionState.draft}
+                  canSettle={canSettleEnrollment}
+                  openSettlement={openSettlement}
+                  onModeChange={revisionState.changeEnrollmentMode}
+                  onOpenSettlementChange={setOpenSettlement}
+                />
               ) : null}
-              {!positiveAmounts ? <p className="mt-3 text-xs font-semibold text-amber-800" role="alert">Informe um valor maior que zero em cada cobrança ou desmarque a emissão da matrícula.</p> : null}
+              {!positiveAmounts ? <p className="mt-3 text-xs font-semibold text-amber-800" role="alert">Informe um valor maior que zero em cada cobrança ou escolha não incluir a matrícula.</p> : null}
 
               <div className="mt-5 grid gap-3 sm:grid-cols-3">
                 <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4"><p className="text-[9px] font-black uppercase text-blue-600">Cobranças</p><p className="mt-1 text-lg font-black text-blue-950">{preview.quantidadeItens} itens</p></div>
@@ -413,11 +425,11 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
                         O 1º ciclo continua administrado lá; esta confirmação não registra pagamento.
                       </label>
                     ) : null}
-                    <p className="mt-2">Ao confirmar, o sistema criará {preview.quantidadeItens} cobranças e emitirá {preview.quantidadeItens} títulos BolePix Banese. Revise os valores e vencimentos antes de continuar.</p>
+                    <p className="mt-2">Ao confirmar, o sistema criará {preview.quantidadeItens} cobranças e emitirá {preview.quantidadeBancaria ?? preview.quantidadeItens} títulos BolePix Banese. Revise os valores e vencimentos antes de continuar.</p>
                   </div>
                   <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-xs font-semibold leading-relaxed text-emerald-950">
                     <p className="font-black">Geração e emissão em uma única ação</p>
-                    <p className="mt-2">As cobranças ficarão listadas em Financeiro com QR Pix, linha digitável, código de barras e PDF oficial Banese disponíveis, sem uma segunda emissão.</p>
+                    <p className="mt-2">Os títulos bancários ficarão disponíveis em Financeiro com QR Pix, linha digitável, código de barras e PDF Banese. A matrícula registrada sem boleto permanece pendente até a confirmação do recebimento.</p>
                   </div>
                   <details className="rounded-2xl border border-slate-200 bg-white p-4 text-[9px] text-slate-500">
                     <summary className="flex cursor-pointer items-center gap-1.5 font-black uppercase text-slate-500"><Fingerprint size={13} /> Auditoria da prévia</summary>

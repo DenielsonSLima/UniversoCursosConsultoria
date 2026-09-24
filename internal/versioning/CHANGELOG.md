@@ -4,6 +4,13 @@ Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente
 
 Histórico anterior: [01/09/2026 — versões 4.8.23 a 4.8.26](./changelog/2026-09-01-versoes-4-8-23-a-4-8-26.md), [01/09/2026 — versões 4.8.20 a 4.8.22](./changelog/2026-09-01-versoes-4-8-20-a-4-8-22.md), [27/08/2026 a 31/08/2026 — versões 4.8.8 a 4.8.19](./changelog/2026-08-27-a-2026-08-31.md), [26/08/2026 — versões 4.8.6 a 4.8.7](./changelog/2026-08-26.md), [25/08/2026 — versões 4.8.2 a 4.8.5](./changelog/2026-08-25-parte-1.md), [24/08/2026 — versões 4.8.0 a 4.8.1](./changelog/2026-08-24-parte-2.md), [24/08/2026 — versões 4.7.5 a 4.7.7](./changelog/2026-08-24-parte-1.md), [22/08/2026 a 23/08/2026](./changelog/2026-08-22-a-2026-08-23.md), [21/08/2026 a 22/08/2026 — parte 2](./changelog/2026-08-21-a-2026-08-22-parte-2.md), [21/08/2026 — parte 1](./changelog/2026-08-21-parte-1.md), [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
 
+## [4.8.81] - 2026-09-24
+
+- A primeira etapa do ciclo mostra a data inicial e o vencimento da primeira mensalidade.
+- Matrícula pode ser emitida com boleto, registrada sem boleto para baixa manual ou omitida do ciclo.
+- Registro sem boleto permite confirmar recebimento com data, conta, forma, valor e ajustes pelo fluxo financeiro existente.
+- Retomada, progresso, carnê e segundo ciclo distinguem a matrícula local dos 12 títulos bancários, sem duplicação.
+
 ## [4.8.80] - 2026-09-24
 
 - Pagamento bancário comprovado preserva o reconhecimento da emissão do ciclo, sem permitir nova emissão de parcela paga.
