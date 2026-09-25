@@ -45,6 +45,7 @@ const TurmaTecnicoDetalhes: React.FC<TurmaTecnicoDetalhesProps> = ({
   gestorContextId,
 }) => {
   const [activeTab, setActiveTab] = useState('resumo');
+  const [financialTarget, setFinancialTarget] = useState<{ turmaId: string; matriculaId: string } | null>(null);
   const queryClient = useQueryClient();
   const canViewAtividades = canAccessGestaoTurmaTab(permissions, 'atividades');
   const canViewFinanceiro = canAccessGestaoTurmaTab(permissions, 'financeiro');
@@ -124,7 +125,8 @@ const TurmaTecnicoDetalhes: React.FC<TurmaTecnicoDetalhesProps> = ({
       case 'grade': return <TurmaGrade turma={turma} />;
       case 'atividades': return <AtividadesExtraClasse turmaId={turma.id} cursoId={turma.cursoId} modo="GESTOR" />;
       case 'diarios': return <TurmaDiarios turma={turma} gestorContextId={gestorContextId} />;
-      case 'financeiro': return <TurmaFinanceiro turma={turma} canSettleEnrollment={canSettleEnrollment} />;
+      case 'financeiro': return <TurmaFinanceiro key={turma.id} turma={turma} canSettleEnrollment={canSettleEnrollment}
+        initialMatriculaId={financialTarget?.turmaId === turma.id ? financialTarget.matriculaId : undefined} />;
       case 'vacinas': return <TurmaVacinas turma={turma} />;
       case 'estagio': return (
         <TurmaEstagio
@@ -140,6 +142,10 @@ const TurmaTecnicoDetalhes: React.FC<TurmaTecnicoDetalhesProps> = ({
           turma={turma}
           onTurmaUpdated={onTurmaUpdated}
           onTurmaFinalizada={onBack}
+          onOpenFinanceiro={canViewFinanceiro ? (matriculaId) => {
+            setFinancialTarget({ turmaId: turma.id, matriculaId });
+            setActiveTab('financeiro');
+          } : undefined}
         />
       );
       case 'configuracoes': return <TurmaConfiguracoes turma={turma} onTurmaUpdated={onTurmaUpdated} canManageFinanceiro={canViewFinanceiro} />;
@@ -193,7 +199,10 @@ const TurmaTecnicoDetalhes: React.FC<TurmaTecnicoDetalhesProps> = ({
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setActiveTab(tab.locked ? 'grade' : tab.id)}
+                onClick={() => {
+                  setFinancialTarget(null);
+                  setActiveTab(tab.locked ? 'grade' : tab.id);
+                }}
                 disabled={tab.pending}
                 onMouseEnter={() => prefetchTab(tab.id)}
                 onFocus={() => prefetchTab(tab.id)}

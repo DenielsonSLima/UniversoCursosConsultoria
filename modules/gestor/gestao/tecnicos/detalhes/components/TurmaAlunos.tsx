@@ -23,7 +23,6 @@ import {
   useMovementMutation,
   useRemoveEnrollmentMutation,
   useReturnEnrollmentMutation,
-  useTransferMutation,
   useTurmaAcademicInvalidation,
 } from '../hooks/useTurmaAlunosMutations';
 import { getTechnicalEnrollmentMissingFields } from '../../../../../shared/utils/technicalEnrollmentRequirements';
@@ -36,6 +35,9 @@ import {
 import { useMatriculaTecnicaFinanceiroRealtime } from './financeiro/hooks/useMatriculaTecnicaFinanceiroRealtime';
 import { isManualTechnicalCycleContext } from './alunos/technical-enrollment-manual-policy';
 import { useTechnicalEnrollmentConfirmation } from './alunos/useTechnicalEnrollmentConfirmation';
+import { useTransferFinancialReview } from '../hooks/useTransferFinancialReview';
+import { transferFinanceKeys } from '../transfer-finance.service';
+import TransferFinancialHistory from './alunos/TransferFinancialHistory';
 
 interface TurmaAlunosProps {
   turma: Turma;
@@ -194,14 +196,28 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma, canManageFinanceiro = 
     (error: any) => toast.error('Movimentação não realizada', error.message),
   );
 
-  const transferMutation = useTransferMutation(
-    async (_result, input) => {
-      await invalidateAcademicData(input.turmaDestinoId);
+  const transferReview = useTransferFinancialReview(selectedStudent && operationMode === 'TRANSFERENCIA' ? {
+    matriculaId: selectedStudent.matricula_id, tipo: transferType, motivo: reason,
+    dataTransferencia: operationDate, observacao: notes,
+    turmaDestinoId: transferType === 'EXTERNA_ENVIADA' ? undefined : destinationClassId,
+    instituicaoDestino: transferType === 'EXTERNA_ENVIADA' ? destinationInstitution : undefined,
+  } : null, {
+    onSuccess: async (result, input) => {
       closeOperationModal();
-      toast.success('Transferência concluída', 'A matrícula de origem foi preservada no histórico.');
+      toast.success('Transferência acadêmica registrada', result.financeiro.banesePendentes || result.financeiro.revisaoExterna
+        ? 'Confira as baixas bancárias e revisões pendentes em Financeiro das transferências.'
+        : 'O histórico e os pagamentos foram preservados conforme a prévia.');
+      try {
+        await invalidateAcademicData(input.turmaDestinoId);
+        await queryClient.invalidateQueries({ queryKey: transferFinanceKeys.history(turma.id) });
+        if (input.turmaDestinoId) await queryClient.invalidateQueries({ queryKey: transferFinanceKeys.history(input.turmaDestinoId) });
+      } catch {
+        toast.error('Transferência registrada', 'A atualização da tela falhou. Recarregue para conferir o resultado.');
+      }
     },
-    (error: any) => toast.error('Transferência não realizada', error.message),
-  );
+    onError: (error) => toast.error('Confirmação não concluída', error.message),
+  });
+  const transferMutation = transferReview.mutation;
 
   const returnMutation = useReturnEnrollmentMutation(
     async (_result, input) => {
@@ -281,6 +297,8 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma, canManageFinanceiro = 
         />
       </div>
 
+      {canManageFinanceiro && <TransferFinancialHistory turmaId={turma.id} />}
+
       {showMatricularModal && (
         <MatricularAlunoModal
           searchTerm={searchTerm}
@@ -355,6 +373,12 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma, canManageFinanceiro = 
           returnPending={returnMutation.isPending}
           destinationError={destinationClassesQuery.isError}
           destinationRetrying={destinationClassesQuery.isFetching}
+          financialPreview={transferReview.query.data}
+          financialLoading={transferReview.query.isFetching}
+          financialError={transferReview.query.isError ? transferReview.query.error.message : null}
+          financialLocked={transferReview.locked}
+          financialCanConfirm={transferReview.canConfirm}
+          onRetryFinancial={() => { void transferReview.query.refetch(); }}
           onOperationModeChange={setOperationMode}
           onMovementTypeChange={setMovementType}
           onTransferTypeChange={setTransferType}
@@ -386,15 +410,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma, canManageFinanceiro = 
             : transferType !== 'EXTERNA_ENVIADA'
               && (destinationClassesQuery.isError || destinationClassesQuery.isLoading)
               ? toast.error('Destino não carregado', 'Recarregue as turmas de destino antes de transferir.')
-              : transferMutation.mutate({
-              matriculaId: selectedStudent.matricula_id,
-              tipo: transferType,
-              motivo: reason,
-              turmaDestinoId: transferType === 'EXTERNA_ENVIADA' ? undefined : destinationClassId,
-              instituicaoDestino: transferType === 'EXTERNA_ENVIADA' ? destinationInstitution : undefined,
-              observacao: notes,
-              dataTransferencia: operationDate,
-            })}
+              : transferReview.confirm()}
         />
       )}
 

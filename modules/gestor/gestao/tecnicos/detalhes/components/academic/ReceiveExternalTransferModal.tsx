@@ -1,14 +1,8 @@
 import React from 'react';
 import { AlertTriangle, Loader2, X } from 'lucide-react';
-import { ExternalTransferCredit } from '../../academic-lifecycle.service';
+import type { ExternalCreditDraft } from './external-transfer-draft';
+export type { ExternalCreditDraft } from './external-transfer-draft';
 import { getMaceioIsoDate } from '../../../technicalClassDates';
-
-export interface ExternalCreditDraft {
-  selected: boolean;
-  mediaFinal: string;
-  frequenciaPercent: string;
-  situacao: NonNullable<ExternalTransferCredit['situacao']>;
-}
 
 interface ReceiveExternalTransferModalProps {
   students: any[];
@@ -17,6 +11,12 @@ interface ReceiveExternalTransferModalProps {
   loadError: boolean;
   retrying: boolean;
   pending: boolean;
+  locked: boolean;
+  canClose: boolean;
+  canConfirm: boolean;
+  uncertain: boolean;
+  error: string | null;
+  financialSection: React.ReactNode;
   selectedStudentId: string;
   originInstitution: string;
   originCourse: string;
@@ -50,6 +50,12 @@ const ReceiveExternalTransferModal: React.FC<ReceiveExternalTransferModalProps> 
   loadError,
   retrying,
   pending,
+  locked,
+  canClose,
+  canConfirm,
+  uncertain,
+  error,
+  financialSection,
   selectedStudentId,
   originInstitution,
   originCourse,
@@ -83,10 +89,11 @@ const ReceiveExternalTransferModal: React.FC<ReceiveExternalTransferModalProps> 
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-violet-200">Entrada acadêmica</p>
             <h3 className="mt-1 text-xl font-black">Receber transferência externa</h3>
           </div>
-          <button onClick={onClose} className="rounded-full p-2 hover:bg-white/10"><X size={18} /></button>
+          <button disabled={!canClose} aria-label="Fechar recebimento" onClick={onClose} className="rounded-full p-2 hover:bg-white/10"><X size={18} /></button>
         </header>
 
         <div className="space-y-4 p-6">
+          <fieldset disabled={locked} className="space-y-4">
           {loadError ? (
             <div className="rounded-xl border border-red-100 bg-red-50 p-4 text-xs font-bold text-red-700">
               <p>Alunos ou disciplinas não foram carregados. O recebimento foi bloqueado.</p>
@@ -151,9 +158,13 @@ const ReceiveExternalTransferModal: React.FC<ReceiveExternalTransferModalProps> 
             </div>
           </section>
 
-          <button onClick={onConfirm} disabled={loading || loadError || !selectedStudentId || !originInstitution.trim() || !reason.trim() || !transferDate || transferDate > getMaceioIsoDate() || pending} className="flex w-full items-center justify-center gap-2 rounded-xl bg-violet-700 py-3 text-xs font-black uppercase text-white disabled:opacity-40">
+          {financialSection}
+          </fieldset>
+          {error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-xs text-red-700">{error}</p>}
+          {uncertain && <p className="rounded-xl bg-amber-50 p-3 text-xs text-amber-800">O resultado ainda não foi confirmado. Repita a mesma operação para conferir o recebimento, sem criar outro pedido.</p>}
+          <button onClick={onConfirm} disabled={pending || (!uncertain && (!canConfirm || loading || loadError || !selectedStudentId || !originInstitution.trim() || !reason.trim() || !transferDate || transferDate > getMaceioIsoDate()))} className="flex w-full items-center justify-center gap-2 rounded-xl bg-violet-700 py-3 text-xs font-black uppercase text-white disabled:opacity-40">
             {pending && <Loader2 size={14} className="animate-spin" />}
-            {pending ? 'Registrando...' : 'Registrar recebimento'}
+            {pending ? 'Registrando...' : uncertain ? 'Conferir a mesma operação' : 'Registrar recebimento e plano'}
           </button>
         </div>
       </div>

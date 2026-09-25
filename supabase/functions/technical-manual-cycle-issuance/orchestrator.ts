@@ -65,28 +65,35 @@ const assertRequestedContext = (
   const localCount = context.ciclo.quantidadeLocal ?? 0;
   const bankCount = context.ciclo.quantidadeBancaria ?? context.ciclo.quantidadeItens;
   const localRequested = request.revisao?.modoMatricula === 'REGISTRO_SEM_BOLETO';
-  const expectedCount = request.action === 'generate' && request.cicloNumero === 1
-    ? (request.revisao?.emitirMatricula === false && !localRequested ? 12 : 13) : null;
+  const expectedLeadCount = request.action === 'generate' && request.cicloNumero === 1
+    ? (request.revisao?.emitirMatricula === false && !localRequested ? 0 : 1) : null;
+  const reviewedInstallments = request.revisao?.itens.filter((item) =>
+    item.chave.startsWith(`ciclo-${request.cicloNumero}-parc-`));
   if (
     context.ciclo.numero !== request.cicloNumero ||
     (context.matriculaId && context.matriculaId !== request.matriculaId) ||
-    ![12, 13].includes(context.ciclo.quantidadeItens) ||
+    !Number.isInteger(context.ciclo.quantidadeItens) ||
+    context.ciclo.quantidadeItens < 1 || context.ciclo.quantidadeItens > 61 ||
     context.ciclo.recebiveis.length !== context.ciclo.quantidadeItens ||
     !Number.isInteger(bankCount) || !Number.isInteger(localCount) ||
     bankCount + localCount !== context.ciclo.quantidadeItens ||
     localCount !== localItems.length || localCount > 1 ||
-    (localCount > 0 && (context.ciclo.numero !== 1 || bankCount !== 12)) ||
+    (localCount > 0 && (context.ciclo.numero !== 1 || bankCount !== installments.length)) ||
     context.ciclo.recebiveis.some((item) => (
       item.destinoCobranca === 'LOCAL' || item.localSemBoletoComprovado === true || item.emissaoBanese === 'NAO_APLICAVEL'
     ) && !isProvenLocalEnrollment(item, context.ciclo.numero)) ||
-    installments.length !== 12 || leadItems.length > 1 ||
+    installments.length < 1 || installments.length > 60 || leadItems.length > 1 ||
     leadItems.some((item) => item.tipo !== expectedLead || item.numero !== 0) ||
-    new Set(installments.map((item) => item.numero)).size !== 12 ||
-    installments.some((item) => item.numero < 1 || item.numero > 12) ||
+    new Set(installments.map((item) => item.numero)).size !== installments.length ||
+    installments.some((item) => !Number.isInteger(item.numero) || item.numero < 1 || item.numero > installments.length) ||
+    new Set(context.ciclo.recebiveis.map((item) => item.id)).size !== context.ciclo.quantidadeItens ||
+    new Set(context.ciclo.recebiveis.map((item) => item.chave)).size !== context.ciclo.quantidadeItens ||
+    (reviewedInstallments !== undefined
+      && reviewedInstallments.some((item) => !installments.some((persisted) => persisted.chave === item.chave))) ||
     context.ciclo.recebiveis.some((item) => !['PENDENTE', 'VENCIDO'].includes(item.status)
       && !isHistoricallyIssuedPaidItem(item) && !isProvenLocalEnrollment(item, context.ciclo.numero)) ||
     (request.action === 'generate' && localCount !== (localRequested ? 1 : 0)) ||
-    (expectedCount !== null && context.ciclo.quantidadeItens !== expectedCount)
+    (expectedLeadCount !== null && leadItems.length !== expectedLeadCount)
   ) {
     throw new IssuanceHttpError(
       409,

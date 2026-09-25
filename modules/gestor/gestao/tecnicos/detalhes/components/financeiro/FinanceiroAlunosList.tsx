@@ -47,6 +47,7 @@ import {
 interface FinanceiroAlunosListProps {
   turma: Turma;
   canSettleEnrollment?: boolean;
+  initialMatriculaId?: string;
   regra: MatriculaTecnicaRegra;
   resumo: MatriculaTecnicaFinanceiroWorkspace['resumo'];
   alunos: MatriculaTecnicaFinanceiroRow[];
@@ -69,6 +70,7 @@ const formatMoney = (value: string | null | undefined) => {
 const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
   turma,
   canSettleEnrollment = false,
+  initialMatriculaId,
   regra,
   resumo,
   alunos,
@@ -80,6 +82,7 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
   const { toasts, removeToast, toast } = useToast();
   const settlement = useCicloManualEnrollmentSettlement({ turmaId: turma.id, poloId: turma.poloId, canSettle: canSettleEnrollment, toast });
   const [searchTerm, setSearchTerm] = useState('');
+  const [focusedMatriculaId, setFocusedMatriculaId] = useState(initialMatriculaId);
   const [selectedMatriculaId, setSelectedMatriculaId] = useState<string | null>(null);
   const [selectedPending, setSelectedPending] = useState<string[]>([]);
   const [pendingAction, setPendingAction] = useState<FinanceiroAtivacaoLegacyAction | null>(null);
@@ -104,13 +107,14 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
     setAtivarEm('');
   };
   const filteredAlunos = useMemo(() => {
+    if (focusedMatriculaId) return alunos.filter((row) => row.matriculaId === focusedMatriculaId);
     const search = searchTerm.trim().toLocaleLowerCase('pt-BR');
     if (!search) return alunos;
     const searchDigits = search.replace(/\D/g, '');
     return alunos.filter((row) => row.alunoNome.toLocaleLowerCase('pt-BR').includes(search)
       || row.matriculaExibicao.toLocaleLowerCase('pt-BR').includes(search)
       || (searchDigits.length > 0 && row.alunoCpf.replace(/\D/g, '').includes(searchDigits)));
-  }, [alunos, searchTerm]);
+  }, [alunos, searchTerm, focusedMatriculaId]);
   const manualContractError = useMemo(() => {
     try {
       alunos.forEach((row) => requireMatriculaTecnicaCicloManual(row.cicloManual));
@@ -352,7 +356,10 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
             ) : null}
             <div className="relative min-w-56 flex-1 md:w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Buscar aluno..." className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-700 outline-none transition-all focus:border-blue-500" />
+              <input value={searchTerm} onChange={(event) => {
+                setFocusedMatriculaId(undefined);
+                setSearchTerm(event.target.value);
+              }} placeholder="Buscar aluno..." className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-700 outline-none transition-all focus:border-blue-500" />
             </div>
             <FinancialReportExportButton
               buttonLabel="Exportar"
@@ -369,11 +376,17 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
               rows={exportRows}
               filters={[{ label: 'Turma', value: `${turma.nome}${turma.codigo ? ` (${turma.codigo})` : ''}` }, { label: 'Curso', value: turma.cursoNome }, { label: 'Unidade / Polo', value: turma.poloNome || 'Matriz' }]}
               summaryCards={[{ label: 'Plano lançado', value: formatMoney(resumo.total), tone: 'blue' }, { label: 'Recebido', value: formatMoney(resumo.recebido), tone: 'emerald' }, { label: 'Inadimplência', value: formatMoney(resumo.inadimplencia), tone: Number(resumo.inadimplencia) > 0 ? 'rose' : 'slate' }]}
-              footerNote={searchTerm ? `Relatório filtrado pela busca: "${searchTerm}".` : 'Relação completa dos alunos exibidos na situação financeira da turma.'}
+              footerNote={focusedMatriculaId ? 'Relatório do aluno recebido por transferência.' : searchTerm ? `Relatório filtrado pela busca: "${searchTerm}".` : 'Relação completa dos alunos exibidos na situação financeira da turma.'}
             />
           </div>
         </div>
 
+        {focusedMatriculaId ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-blue-100 bg-blue-50 px-6 py-3 text-sm text-blue-900">
+            <span>Financeiro do aluno recebido por transferência. Revise o ciclo antes de emitir.</span>
+            <button type="button" disabled={pending} onClick={() => setFocusedMatriculaId(undefined)} className="font-bold underline disabled:opacity-50">Mostrar todos os alunos</button>
+          </div>
+        ) : null}
         {automaticReview.isFetching ? (
           <div className="flex items-center gap-2 border-b border-blue-100 bg-blue-50 px-6 py-3 text-xs font-bold text-blue-800" role="status">
             <Loader2 className="animate-spin" size={16} /> Conferindo automaticamente os ciclos dos alunos...

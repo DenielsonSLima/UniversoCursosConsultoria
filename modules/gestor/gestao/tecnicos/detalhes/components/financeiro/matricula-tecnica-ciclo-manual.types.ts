@@ -10,7 +10,17 @@ export type MatriculaTecnicaCicloManualCriterio =
   | "QUITACAO_TOTAL"
   | "PENULTIMA_SEM_ATRASO"
   | "MANUAL_APOS_EMISSAO"
+  | "TRANSFERENCIA_PLANEJADA"
+  | "TRANSFERENCIA_INTERNA_CANONICA"
   | "HISTORICO_EXTERNO";
+
+export interface CicloManualPlanoEntrada {
+  cicloInicial: 1 | 2;
+  quantidadeParcelas: number;
+  primeiroVencimento: string;
+  justificativaCiclo2: string | null;
+  requestId: string;
+}
 
 export type CicloManualModoMatricula = "BOLETO" | "REGISTRO_SEM_BOLETO" | "OMITIR";
 
@@ -29,6 +39,15 @@ export interface CicloManualMatriculaLocal {
 }
 
 export interface MatriculaTecnicaCicloManual {
+  planoEntrada?: CicloManualPlanoEntrada | null;
+  continuidadeFinanceira?: {
+    matriculaOrigemId: string;
+    cadeiaOrigemIds: string[];
+    transferenciaId: string;
+    cicloOrigem: 1 | null;
+    origemCompleta: boolean;
+    semHistoricoFinanceiro: boolean;
+  } | null;
   matriculaLocal?: CicloManualMatriculaLocal | null;
   conferenciaProesc?: { necessaria: true };
   habilitado: boolean;

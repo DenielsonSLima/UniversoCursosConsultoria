@@ -18,6 +18,8 @@ const ELIGIBILITY_LABELS: Record<MatriculaTecnicaCicloManualCriterio, string> = 
   QUITACAO_TOTAL: 'Ciclo anterior totalmente quitado',
   PENULTIMA_SEM_ATRASO: 'Penúltima parcela paga e nenhuma cobrança vencida',
   MANUAL_APOS_EMISSAO: 'Geração manual por ciclo',
+  TRANSFERENCIA_PLANEJADA: 'Ciclo inicial definido na transferência; sem presumir pagamento de ciclo anterior',
+  TRANSFERENCIA_INTERNA_CANONICA: 'Continuidade do 1º ciclo emitido na matrícula de origem',
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> => (
@@ -121,6 +123,42 @@ export const requireMatriculaTecnicaCicloManual = (
   const next = Number.isInteger(value.proximoCicloNumero)
     ? Number(value.proximoCicloNumero) : null;
   const generatedNumber = isRecord(generated) ? Number(generated.numero) : null;
+  const entry = value.planoEntrada;
+  const entryValid = isRecord(entry)
+    && [1, 2].includes(Number(entry.cicloInicial)) && Number.isInteger(entry.cicloInicial)
+    && Number.isInteger(entry.quantidadeParcelas)
+    && Number(entry.quantidadeParcelas) >= 1 && Number(entry.quantidadeParcelas) <= 60
+    && isIsoCalendarDate(entry.primeiroVencimento)
+    && typeof entry.requestId === 'string'
+    && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entry.requestId)
+    && (entry.cicloInicial === 2 ? isNonEmptyString(entry.justificativaCiclo2)
+      : entry.justificativaCiclo2 === null);
+  const plannedInitialCycle = value.criterioElegibilidade === 'TRANSFERENCIA_PLANEJADA';
+  const plannedTransitionValid = plannedInitialCycle && entryValid
+    && generated === null && baseline === 0 && maximum === 2
+    && state === 'ELEGIVEL' && value.podeGerar === true
+    && value.bloqueio === null && next === entry.cicloInicial
+    && value.primeiroVencimentoSugerido === entry.primeiroVencimento;
+  const continuity = value.continuidadeFinanceira;
+  const continuityValid = isRecord(continuity)
+    && [continuity.matriculaOrigemId, continuity.transferenciaId].every((id) =>
+      typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
+    && Array.isArray(continuity.cadeiaOrigemIds)
+    && continuity.cadeiaOrigemIds.length >= 1 && continuity.cadeiaOrigemIds.length <= 32
+    && continuity.cadeiaOrigemIds[0] === continuity.matriculaOrigemId
+    && new Set(continuity.cadeiaOrigemIds).size === continuity.cadeiaOrigemIds.length
+    && continuity.cadeiaOrigemIds.every((id) => typeof id === 'string'
+      && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
+    && (continuity.cicloOrigem === null || continuity.cicloOrigem === 1)
+    && typeof continuity.origemCompleta === 'boolean'
+    && typeof continuity.semHistoricoFinanceiro === 'boolean'
+    && (!continuity.origemCompleta || (continuity.cicloOrigem === 1 && !continuity.semHistoricoFinanceiro));
+  const internalInitialCycle = value.criterioElegibilidade === 'TRANSFERENCIA_INTERNA_CANONICA';
+  const internalTransitionValid = internalInitialCycle && continuityValid
+    && continuity.origemCompleta === true && generated === null
+    && baseline === 0 && maximum === 2 && next === 2
+    && state === 'ELEGIVEL' && value.podeGerar === true && value.bloqueio === null
+    && isIsoCalendarDate(value.primeiroVencimentoSugerido);
   // Individual history can prevent generation without proving a complete cycle
   // or supplying a class policy. This state is display-only, never actionable.
   const protectedHistoryOnly = state === 'PROTEGIDO_EXISTENTE'
@@ -135,7 +173,11 @@ export const requireMatriculaTecnicaCicloManual = (
     && (baseline === null || (baseline >= 0 && baseline <= maximum))
     && (generated === null || (generatedNumber! >= 1 && generatedNumber! <= maximum));
   const baseValid = (
-    (value.matriculaLocal === undefined || value.matriculaLocal === null
+    (entry === undefined || entry === null || entryValid)
+    && (continuity === undefined || continuity === null || continuityValid)
+    && (!plannedInitialCycle || plannedTransitionValid)
+    && (!internalInitialCycle || internalTransitionValid)
+    && (value.matriculaLocal === undefined || value.matriculaLocal === null
       || isProvenLocalEnrollment(value.matriculaLocal))
     && typeof value.habilitado === 'boolean'
     && (value.conferenciaProesc === undefined || (
@@ -189,6 +231,7 @@ export const requireMatriculaTecnicaCicloManual = (
     || (
       generatedNumber === null
       && ['ELEGIVEL', 'BLOQUEADO'].includes(state)
+      && !plannedTransitionValid && !internalTransitionValid
       && next !== baseline! + 1
     )
     || (

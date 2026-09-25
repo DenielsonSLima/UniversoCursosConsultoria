@@ -63,6 +63,11 @@ const contextAt = (issued: number): ManualCycleContext => ({
   },
 });
 
+const revisionItems = (context: ManualCycleContext) => context.ciclo.recebiveis.map((item) => ({
+  chave: item.chave, valor: item.valor, vencimento: item.vencimento,
+  descontoPontualidade: '0', jurosAtrasoPercentual: '0', multaAtrasoPercentual: '0',
+}));
+
 const dependenciesAt = (input: {
   initial: number;
   failAt?: number;
@@ -215,7 +220,7 @@ Deno.test("ciclo 1 sem boleto de matrícula emite apenas as 12 mensalidades", as
     value.ciclo.emitidosBanese = calls;
     value.ciclo.pendentesEmissao = 12 - calls;
     value.ciclo.recebiveis = receivables.slice(1).map((item, index) => ({
-      ...item, emissaoBanese: index < calls ? "EMITIDO" : "PENDENTE",
+      ...item, chave: `ciclo-1-parc-${index + 1}`, emissaoBanese: index < calls ? "EMITIDO" : "PENDENTE",
     }));
     return value;
   };
@@ -225,7 +230,7 @@ Deno.test("ciclo 1 sem boleto de matrícula emite apenas as 12 mensalidades", as
     issueReceivable: () => { calls += 1; return Promise.resolve(); },
   };
   const result = await runManualCycleIssuance({
-    ...request, cicloNumero: 1, revisao: { emitirMatricula: false, itens: [] },
+    ...request, cicloNumero: 1, revisao: { emitirMatricula: false, itens: revisionItems(context()) },
   }, dependencies);
   assert.equal(result.ciclo.emitidosBanese, 12);
   assert.equal(calls, 12);
@@ -243,7 +248,9 @@ Deno.test("quantidade 12 não mascara mensalidade faltante ou repetida", async (
     resume: () => Promise.resolve(incomplete), reload: () => Promise.resolve(incomplete),
     issueReceivable: () => { emitted = true; return Promise.resolve(); },
   };
-  await assert.rejects(() => runManualCycleIssuance(request, dependencies), /cobranças revisadas/);
+  await assert.rejects(() => runManualCycleIssuance({ ...request,
+    revisao: { emitirMatricula: true, itens: revisionItems(contextAt(0)) },
+  }, dependencies), /cobranças revisadas/);
   assert.equal(emitted, false);
 });
 
@@ -301,7 +308,7 @@ const localEnrollmentContext = (issued: number, localStatus = "PENDENTE") => {
 
 const localRequest: ManualCycleIssuanceRequest = {
   ...request, cicloNumero: 1,
-  revisao: { emitirMatricula: false, modoMatricula: "REGISTRO_SEM_BOLETO", itens: [] },
+  revisao: { emitirMatricula: false, modoMatricula: "REGISTRO_SEM_BOLETO", itens: revisionItems(localEnrollmentContext(0)) },
 };
 
 Deno.test("matrícula local cria treze recebíveis e emite somente doze boletos", async () => {

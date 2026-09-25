@@ -42,7 +42,7 @@ create function pg_temp.individual_local_fee_complete(p_row pg_temp.individual_r
 language sql as $$ select false $$;
 
 do $copy_functions$
-declare v_name text; v_definition text; v_pair text[];
+declare v_name text; v_source_name text; v_definition text; v_pair text[];
 begin
   foreach v_name in array array[
     'internal_academic.is_manual_technical_enrollment(uuid)',
@@ -52,7 +52,18 @@ begin
     'internal_academic.technical_manual_cycle_state_before_local_fee(uuid)',
     'internal_academic.technical_manual_cycle_state(uuid)'
   ] loop
-    v_definition:=pg_get_functiondef(v_name::regprocedure);
+    -- Entry/continuity wrappers are covered by their own transactional tests.
+    -- Keep this fixture focused on the live individual-admission implementation.
+    v_source_name:=v_name;
+    if v_name='internal_academic.technical_local_cycle_eligible(uuid)'
+      and to_regprocedure('internal_academic.technical_local_cycle_eligible_before_internal_transfer(uuid)') is not null then
+      v_source_name:='internal_academic.technical_local_cycle_eligible_before_internal_transfer(uuid)';
+    elsif v_name='internal_academic.technical_manual_cycle_state(uuid)'
+      and to_regprocedure('internal_academic.technical_manual_cycle_state_before_transfer_entry(uuid)') is not null then
+      v_source_name:='internal_academic.technical_manual_cycle_state_before_transfer_entry(uuid)';
+    end if;
+    v_definition:=pg_get_functiondef(v_source_name::regprocedure);
+    v_definition:=replace(v_definition,split_part(v_source_name,'(',1),split_part(v_name,'(',1));
     foreach v_pair slice 1 in array array[
       ['internal_academic.technical_manual_cycle_state_before_external_history','pg_temp.individual_base_state'],
       ['internal_academic.technical_manual_cycle_state_before_individual_admission','pg_temp.individual_old_state'],
