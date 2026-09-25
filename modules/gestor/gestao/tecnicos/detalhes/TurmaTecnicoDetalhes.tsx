@@ -18,6 +18,7 @@ import AtividadesExtraClasse from './components/AtividadesExtraClasse';
 import { useTurmaTecnicoRealtime } from './hooks/useTurmaTecnicoRealtime';
 import { matriculaTecnicaFinanceiroWorkspaceQueryOptions } from './components/financeiro/hooks/useMatriculaTecnicaFinanceiro';
 import { canUseManualEnrollmentSettlement } from './components/financeiro/ciclo-manual-settlement-account';
+import { canReceivePlannedExternalTransfer } from './components/academic/external-transfer-access';
 import { turmaVacinasQueryOptions } from './components/vacinas/useTurmaVacinas';
 import {
   atividadesExtraClasseService,
@@ -50,6 +51,7 @@ const TurmaTecnicoDetalhes: React.FC<TurmaTecnicoDetalhesProps> = ({
   const canViewAtividades = canAccessGestaoTurmaTab(permissions, 'atividades');
   const canViewFinanceiro = canAccessGestaoTurmaTab(permissions, 'financeiro');
   const canSettleEnrollment = canUseManualEnrollmentSettlement(permissions);
+  const canReceiveExternalTransfer = canReceivePlannedExternalTransfer(permissions);
   const canViewAulas = canAccessGestaoTurmaTab(permissions, 'grade')
     || canAccessGestaoTurmaTab(permissions, 'diarios');
   const activityAvailabilityQuery = useQuery({
@@ -140,6 +142,7 @@ const TurmaTecnicoDetalhes: React.FC<TurmaTecnicoDetalhesProps> = ({
       case 'academico': return (
         <TurmaAcademico
           turma={turma}
+          canReceiveExternalTransfer={canReceiveExternalTransfer}
           onTurmaUpdated={onTurmaUpdated}
           onTurmaFinalizada={onBack}
           onOpenFinanceiro={canViewFinanceiro ? (matriculaId) => {

@@ -194,6 +194,8 @@ jobs:
         run: |
           deno test --allow-read --allow-env=NODE_ENV \
             modules/gestor/gestao/tecnicos/detalhes/components/academic/external-transfer.test.ts \
+            modules/gestor/gestao/tecnicos/detalhes/components/academic/external-transfer-access.test.ts \
+            modules/gestor/gestao/tecnicos/detalhes/hooks/transfer-financial-attempt.test.ts \
             modules/gestor/gestao/tecnicos/detalhes/transfer-finance.contract.test.ts \
             modules/gestor/gestao/tecnicos/detalhes/components/financeiro/manual-cycle-transfer-state.test.ts \
             supabase/tests/transfer_credits_period_closing.contract.test.ts

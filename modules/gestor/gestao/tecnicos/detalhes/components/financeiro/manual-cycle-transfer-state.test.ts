@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import FinanceiroCicloManualStatus from './FinanceiroCicloManualStatus';
 import { requireMatriculaTecnicaCicloManual } from './matricula-tecnica-ciclo-manual.parser';
 
 const planned = (cycle: 1 | 2) => ({
@@ -67,4 +70,51 @@ test('C2 interno exige vínculo de origem completo; histórico protegido continu
     bloqueio: { codigo: 'HISTORICO_FINANCEIRO_EXISTENTE', mensagem: 'Confira as cobranças da origem.' },
     continuidadeFinanceira: { ...continuity, origemCompleta: false } };
   assert.equal(requireMatriculaTecnicaCicloManual(protectedState).podeGerar, false);
+});
+
+const partialCycle = (cycle: 1 | 2) => requireMatriculaTecnicaCicloManual({
+  ...planned(1), planoEntrada: null, criterioElegibilidade: 'MANUAL_APOS_EMISSAO',
+  estado: cycle === 1 ? 'BLOQUEADO' : 'JA_GERADO', podeGerar: false,
+  proximoCicloNumero: cycle === 1 ? 2 : null,
+  bloqueio: cycle === 1 ? { codigo: 'CICLO_ANTERIOR_EMISSAO_PENDENTE', mensagem: 'Conclua a emissão anterior.' } : null,
+  cicloGerado: { numero: cycle, status: 'EMISSAO_PENDENTE', quantidadeItens: 6, total: '600.00',
+    emitidosBanese: 5, pendentesEmissao: 1, emRevisao: 0 },
+});
+const renderPartial = (cycle: 1 | 2, statusAcademico: string) => renderToStaticMarkup(
+  React.createElement(FinanceiroCicloManualStatus, {
+    cicloManual: partialCycle(cycle), statusAcademico, disabled: false,
+    onGenerate: () => {}, onResume: () => {},
+  }),
+);
+
+test('origem transferida não oferece retomada de C1/C2 parcial, preservando contadores', () => {
+  for (const cycle of [1, 2] as const) {
+    for (const status of ['TRANSFERIDO', 'CANCELADO', 'TRANCADO', 'CONCLUIDO']) {
+      const markup = renderPartial(cycle, status);
+      assert.doesNotMatch(markup, /Retomar emissão|Gerar e emitir/);
+      assert.match(markup, /situação acadêmica não permite/);
+      assert.match(markup, /5\/6 títulos emitidos/);
+    }
+  }
+});
+
+test('aluno ativo ou pendente mantém retomada de ciclo parcial sem liberar ciclo seguinte', () => {
+  for (const cycle of [1, 2] as const) {
+    for (const status of ['ATIVO', 'PENDENTE']) {
+      const markup = renderPartial(cycle, status);
+      assert.match(markup, /Retomar emissão/);
+      assert.doesNotMatch(markup, / disabled="|Gerar e emitir/);
+    }
+  }
+});
+
+test('bloqueio acadêmico canônico também prevalece se status da linha estiver defasado', () => {
+  const state = partialCycle(1);
+  state.bloqueio = { codigo: 'STATUS_ACADEMICO', mensagem: 'Confira a situação acadêmica atual.' };
+  const markup = renderToStaticMarkup(React.createElement(FinanceiroCicloManualStatus, {
+    cicloManual: state, statusAcademico: 'ATIVO', disabled: false,
+    onGenerate: () => {}, onResume: () => {},
+  }));
+  assert.doesNotMatch(markup, /Retomar emissão/);
+  assert.match(markup, /Confira a situação acadêmica atual/);
 });

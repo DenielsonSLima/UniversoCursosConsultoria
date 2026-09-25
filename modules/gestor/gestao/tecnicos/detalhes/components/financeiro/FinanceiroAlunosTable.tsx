@@ -202,6 +202,7 @@ const FinanceiroAlunosTable = ({
                   {manualMode ? (
                     <FinanceiroCicloManualStatus
                       cicloManual={row.cicloManual}
+                      statusAcademico={row.statusAcademico}
                       disabled={pending}
                       reviewingProesc={reviewingProesc && row.cicloManual.conferenciaProesc?.necessaria}
                       onGenerate={() => onOpenManualCycle(row.matriculaId)}

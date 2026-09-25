@@ -14,6 +14,7 @@ type GeneratedCycle = NonNullable<MatriculaTecnicaCicloManual['cicloGerado']>;
 
 interface FinanceiroCicloManualStatusProps {
   cicloManual: MatriculaTecnicaCicloManual;
+  statusAcademico?: string;
   disabled: boolean;
   reviewingProesc?: boolean;
   onGenerate: () => void;
@@ -72,11 +73,12 @@ export const getFinanceiroSituationLabel = (row: MatriculaTecnicaFinanceiroRow) 
     : 'Gerada';
 };
 
-const GeneratedCycleStatus: React.FC<{
+const GeneratedCycleStatus = ({ generated, disabled, allowResume = true, onResume }: {
   generated: GeneratedCycle;
   disabled: boolean;
+  allowResume?: boolean;
   onResume: () => void;
-}> = ({ generated, disabled, onResume }) => {
+}) => {
   const fullyIssued = isFullyIssued(generated);
   return (
     <div className="space-y-2" role="status">
@@ -98,7 +100,7 @@ const GeneratedCycleStatus: React.FC<{
           Revisão manual necessária; emissão automática bloqueada para evitar duplicidade.
         </p>
       ) : null}
-      {generated.pendentesEmissao > 0 ? (
+      {generated.pendentesEmissao > 0 && allowResume ? (
         <button
           type="button"
           disabled={disabled}
@@ -112,7 +114,7 @@ const GeneratedCycleStatus: React.FC<{
   );
 };
 
-export const MatriculaAcademicaBadge: React.FC<{ status: string }> = ({ status }) => {
+export const MatriculaAcademicaBadge = ({ status }: { status: string }) => {
   const normalized = status.trim().toUpperCase();
   const blocked = ['TRANCADO', 'CANCELADO', 'TRANSFERIDO', 'CONCLUIDO'].includes(normalized);
   return (
@@ -125,13 +127,14 @@ export const MatriculaAcademicaBadge: React.FC<{ status: string }> = ({ status }
   );
 };
 
-const FinanceiroCicloManualStatus: React.FC<FinanceiroCicloManualStatusProps> = ({
+const FinanceiroCicloManualStatus = ({
   cicloManual,
+  statusAcademico,
   disabled,
   onGenerate,
   onResume,
   reviewingProesc,
-}) => {
+}: FinanceiroCicloManualStatusProps) => {
   const generated = cicloManual.cicloGerado;
   const generatedLabel = cycleLabel(generated?.numero);
 
@@ -156,6 +159,22 @@ const FinanceiroCicloManualStatus: React.FC<FinanceiroCicloManualStatusProps> = 
             : `${generatedLabel} ${isIssuedInProesc(generated) ? 'já emitido no Proesc' : 'já gerado e emitido'}`}
         </span>
         <p className="text-[9px] font-bold text-slate-500">{protectionMessage}</p>
+      </div>
+    );
+  }
+
+  const academicBlocked = cicloManual.bloqueio?.codigo === 'STATUS_ACADEMICO'
+    || (statusAcademico !== undefined && !['PENDENTE', 'ATIVO'].includes(statusAcademico.trim().toUpperCase()));
+  if (academicBlocked) {
+    return (
+      <div className="max-w-56 space-y-2" role="status">
+        {generated ? <GeneratedCycleStatus generated={generated} disabled={disabled} allowResume={false} onResume={onResume} /> : null}
+        <p className="text-[9px] font-semibold leading-relaxed text-rose-700">
+          <LockKeyhole size={12} className="mr-1 inline" />
+          {cicloManual.bloqueio?.codigo === 'STATUS_ACADEMICO'
+            ? cicloManual.bloqueio.mensagem
+            : 'A situação acadêmica não permite emitir cobranças. Os títulos existentes permanecem disponíveis para consulta.'}
+        </p>
       </div>
     );
   }

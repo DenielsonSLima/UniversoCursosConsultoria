@@ -29,6 +29,7 @@ interface TurmaAcademicoProps {
   onTurmaUpdated?: (turma: Turma) => void;
   onTurmaFinalizada?: () => void;
   onOpenFinanceiro?: (matriculaId: string) => void;
+  canReceiveExternalTransfer?: boolean;
 }
 
 const MOVEMENTS_PAGE_SIZE = 10;
@@ -38,6 +39,7 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({
   onTurmaUpdated,
   onTurmaFinalizada,
   onOpenFinanceiro,
+  canReceiveExternalTransfer = false,
 }) => {
   const { toasts, removeToast, toast } = useToast();
   const queryClient = useQueryClient();
@@ -166,7 +168,11 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({
   });
   const today = getMaceioIsoDate();
   const canStartClass = Boolean(turma.dataInicio && turma.dataInicio <= today);
-  const canReceiveTransfer = turma.status === 'EM_ANDAMENTO';
+  const canReceiveTransfer = canReceiveExternalTransfer && turma.status === 'EM_ANDAMENTO';
+  const receiveTransferHint = !canReceiveExternalTransfer
+    ? 'O recebimento exige acesso ao Financeiro da turma e a Financeiro > Receber.'
+    : canReceiveTransfer ? 'Receber transferência externa'
+      : 'Transferências só podem ser recebidas com a turma em andamento.';
 
   return (
     <div className="space-y-7 ">
@@ -184,7 +190,7 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({
             <button
               onClick={() => { if (canReceiveTransfer) setShowReceiveTransfer(true); }}
               disabled={!canReceiveTransfer}
-              title={canReceiveTransfer ? 'Receber transferência externa' : 'Transferências só podem ser recebidas com a turma em andamento.'}
+              title={receiveTransferHint}
               className="px-4 py-3 rounded-xl bg-white/10 border border-white/15 text-[10px] font-black uppercase flex items-center gap-2 hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-35"
             >
               <ArrowDownToLine size={15} /> Receber transferência

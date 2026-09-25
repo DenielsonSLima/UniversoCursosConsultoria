@@ -44,7 +44,7 @@ export const parseInternalCycleRecoveryRequest = (
   }
   if (
     !Number.isInteger(expectedItemCount) || expectedItemCount < 1 ||
-    expectedItemCount > 60
+    expectedItemCount > 61
   ) {
     throw new InternalCycleRecoveryRequestError(
       "Quantidade esperada de itens inválida.",

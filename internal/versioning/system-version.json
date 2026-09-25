@@ -1,8 +1,8 @@
 {
-  "version": "4.8.84",
+  "version": "4.8.85",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 93,
-  "releasedAt": "2026-09-24",
-  "summary": "Transferências técnicas com plano individual, histórico preservado e revisão financeira da saída"
+  "revision": 94,
+  "releasedAt": "2026-09-25",
+  "summary": "Revisão das transferências: retomada segura, histórico por movimento e proteção da recuperação bancária"
 }
