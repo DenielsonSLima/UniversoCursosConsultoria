@@ -24,7 +24,6 @@ O envio genérico também era indevido: poderia alcançar o banco sem o contrato
 - `ai/operacao/LOTE_ATIVO.md`
 - `ai/operacao/qualidade/limite-linhas-manifestos.json`
 - `ai/operacao/registros/alteracoes/2026-09-25-emissao-ciclos-permissoes.md`
-- `docs/decisions/ciclos-tecnicos-cobrancas.md`
 - `internal/versioning/CHANGELOG.md`
 - `internal/versioning/system-version.json`
 - `modules/gestor/financeiro/financeiro.types.ts`
@@ -46,7 +45,7 @@ O envio genérico também era indevido: poderia alcançar o banco sem o contrato
 - `supabase/migrations/20260925133000_project_receivable_cycle_bank_actions.sql`
 - `supabase/tests/local_reversal_invoker_roles.rollback.sql`
 
-Total: 25 arquivos.
+Total: 24 arquivos.
 
 ## Validação
 
