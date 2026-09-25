@@ -1,6 +1,6 @@
 # Emissão dos ciclos: permissões e origem única — 25/09/2026
 
-Estado: VALIDADO — SQL/Edge aplicados; publicação web em andamento.
+Estado: PUBLICADO — versão 4.8.86, PR178, commit 0497263797346b25f16b3c844383fe3ded083e84.
 
 ## Pedido e causa
 
@@ -71,4 +71,6 @@ Total: 24 arquivos.
 
 As 12 parcelas existentes continuam pendentes e sem identidade/transação bancária. Tentativa de acionar o worker canônico pela conexão SQL foi recusada por falta de EXECUTE em get_banese_reconciliation_worker_secret; nenhum HTTP foi enviado por essa tentativa. Não substituir essa restrição por acesso direto ao vault, nova credencial, endpoint auxiliar ou operação bancária escondida em migration. Emissão real permanece pendente de sessão de execução autorizada.
 
-Publicação web 4.8.86 aguarda CI/Preview e conferência final. Dados identificáveis da aluna não integram este registro.
+Publicação web 4.8.86 confirmada por CI/Preview, Vercel produção e asset no domínio. Em verificação posterior às 13:58 UTC, as 12 parcelas já estavam API_REGISTERED, com 12 identidades distintas, 12 linhas/códigos e 12 transações. A execução não foi iniciada pelo agente. A pendência acima descreve a tentativa anterior recusada; não reemitir.
+
+A investigação de lentidão subsequente encontrou repetição PostgREST 14 de conflitos 40001 nessa rotina; ver registro 2026-09-25-lentidao-repeticao-emissao.md. Dados identificáveis e credenciais não integram os registros.

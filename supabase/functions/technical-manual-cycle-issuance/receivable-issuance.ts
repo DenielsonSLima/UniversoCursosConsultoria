@@ -431,7 +431,8 @@ async (context: ManualCycleContext, receivableId: string) => {
     const current = await loadReceivable(input.admin, receivableId).catch(
       () => loaded,
     );
-    if (!skipManualCycleFailureMutation(error)) {
+    if (ownsAttempt(current.receivable, authorizationRequestId) &&
+        !skipManualCycleFailureMutation(error)) {
       await markFailure(input.admin, {
         receivableId,
         authorizationRequestId,

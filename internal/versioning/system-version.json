@@ -1,8 +1,8 @@
 {
-  "version": "4.8.86",
+  "version": "4.8.87",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 95,
+  "revision": 96,
   "releasedAt": "2026-09-25",
-  "summary": "Emissão de ciclos pela turma, retomada corrigida e ações financeiras coerentes"
+  "summary": "Conflitos de emissão encerram sem repetição infinita que sobrecarrega o acesso"
 }
