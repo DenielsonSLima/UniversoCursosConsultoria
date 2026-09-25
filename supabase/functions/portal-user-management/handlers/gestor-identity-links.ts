@@ -43,11 +43,9 @@ export const findGestorIdentityConflict = async (
         .select("id, cpf, email")
         .eq("auth_user_id", authUserId)
         .limit(10),
-      admin
-        .from("responsaveis_legais")
-        .select("id, cpf_normalizado, email")
-        .eq("auth_user_id", authUserId)
-        .limit(10),
+      admin.rpc("portal_identidade_listar_responsaveis_vinculados", {
+        p_auth_user_id: authUserId,
+      }),
     ]);
   } catch (error) {
     logPortalHandlerFailure(
@@ -64,7 +62,7 @@ export const findGestorIdentityConflict = async (
 
   const queryError = partnerResult.error || systemUserResult.error ||
     responsavelResult.error;
-  if (queryError) {
+  if (queryError || !Array.isArray(responsavelResult.data)) {
     logPortalHandlerFailure(
       "upsert-gestor-user",
       "load-linked-identities",

@@ -22,6 +22,10 @@ const makeFixture = (options: { auditFailureAt?: number | null } = {}) => {
     },
     rpc: async (name: string, args?: Record<string, unknown>) => {
       rpcCalls.push({ name, args });
+      if (name === "portal_identidade_listar_responsaveis_vinculados") {
+        assert.deepEqual(args, { p_auth_user_id: "auth-1" });
+        return { data: [], error: null };
+      }
       if (name === "portal_identidade_termos_versao_vigente") {
         return { data: "2026-08-05", error: null };
       }
@@ -31,6 +35,7 @@ const makeFixture = (options: { auditFailureAt?: number | null } = {}) => {
       return { data: null, error: { message: `RPC inesperada: ${name}` } };
     },
     from: (table: string) => {
+      assert.notEqual(table, "responsaveis_legais", "Tabela privada exige RPC");
       if (table === "sistema_eventos") {
         return {
           insert: async (row: Record<string, unknown>) => {
@@ -94,11 +99,12 @@ Deno.test("gestor registra validação administrativa do e-mail sem confirmar o 
   assert.deepEqual(
     fixture.rpcCalls.map((call) => call.name),
     [
+      "portal_identidade_listar_responsaveis_vinculados",
       "portal_identidade_termos_versao_vigente",
       "portal_validar_email_aluno_por_gestor",
     ],
   );
-  assert.deepEqual(fixture.rpcCalls[1].args, {
+  assert.deepEqual(fixture.rpcCalls[2].args, {
     p_partner_id: "partner-1",
     p_actor_auth_user_id: GESTOR_AUTH_USER_ID,
   });

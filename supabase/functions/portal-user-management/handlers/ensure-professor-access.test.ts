@@ -75,7 +75,12 @@ const makeFixture = (options: FixtureOptions = {}) => {
   let partnerConflictQueries = 0;
 
   const admin = {
-    rpc: () => ({ data: "a".repeat(64), error: null }),
+    rpc: (name: string) => ({
+      data: name === "portal_identidade_listar_responsaveis_vinculados"
+        ? options.responsavelConflicts || []
+        : "a".repeat(64),
+      error: null,
+    }),
     from: (table: string) => {
       if (table === "usuarios_sistema") {
         return {
@@ -148,21 +153,6 @@ const makeFixture = (options: FixtureOptions = {}) => {
                   },
             };
             return updateQuery;
-          },
-        };
-      }
-
-      if (table === "responsaveis_legais") {
-        return {
-          select: () => {
-            const query: any = {
-              eq: () => query,
-              limit: () => ({
-                data: options.responsavelConflicts || [],
-                error: null,
-              }),
-            };
-            return query;
           },
         };
       }

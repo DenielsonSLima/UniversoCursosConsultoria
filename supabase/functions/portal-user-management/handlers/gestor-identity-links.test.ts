@@ -9,8 +9,19 @@ const makeAdmin = (
   rows: Record<string, Array<Record<string, unknown>>>,
   failingTable?: string,
 ) => ({
+  rpc: async (name: string, args: Record<string, unknown>) => {
+    assert.equal(name, "portal_identidade_listar_responsaveis_vinculados");
+    assert.deepEqual(args, { p_auth_user_id: AUTH_ID });
+    return {
+      data: rows.responsaveis_legais || [],
+      error: failingTable === "responsaveis_legais"
+        ? { message: "lookup failed" }
+        : null,
+    };
+  },
   from: (table: string) => ({
     select: () => {
+      assert.notEqual(table, "responsaveis_legais");
       const query: any = {
         eq: () => query,
         limit: async () => ({

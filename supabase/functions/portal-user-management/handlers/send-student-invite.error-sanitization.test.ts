@@ -18,7 +18,12 @@ type FailureMode = "throw-list" | "processing-db" | "invite-result";
 const makeContext = (mode: FailureMode) => {
   let updateCalls = 0;
   const admin = {
-    rpc: () => ({ data: "a".repeat(64), error: null }),
+    rpc: (name: string) => ({
+      data: name === "portal_identidade_listar_responsaveis_vinculados"
+        ? []
+        : "a".repeat(64),
+      error: null,
+    }),
     from: () => ({
       update: () => ({
         eq: () => {

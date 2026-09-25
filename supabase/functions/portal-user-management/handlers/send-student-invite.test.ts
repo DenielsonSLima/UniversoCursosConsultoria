@@ -43,8 +43,10 @@ const makeAdmin = (
   let generateLinkCalls = 0;
   let listUsersCalls = 0;
   const admin = {
-    rpc: async () =>
-      fixtureOptions.rpcUnavailable
+    rpc: async (name: string) =>
+      name === "portal_identidade_listar_responsaveis_vinculados"
+        ? { data: identityConflicts.responsaveis_legais || [], error: null }
+        : fixtureOptions.rpcUnavailable
         ? { data: null, error: { message: "detalhe interno" } }
         : { data: "a".repeat(64), error: null },
     from: (

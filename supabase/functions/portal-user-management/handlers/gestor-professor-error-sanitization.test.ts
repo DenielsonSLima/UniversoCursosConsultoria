@@ -124,6 +124,7 @@ Deno.test("Professor sanitiza exceção inesperada durante o vínculo", async ()
   };
   const context: HandlerContext = {
     admin: {
+      rpc: async () => ({ data: [], error: null }),
       from: (table: string) => ({
         select: () => {
           const query: any = {

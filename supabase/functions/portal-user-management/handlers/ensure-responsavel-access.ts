@@ -95,17 +95,16 @@ const hasSafeMultiProfileOwnership = async (
         .select("id, cpf, email")
         .eq("auth_user_id", authUserId)
         .limit(10),
-      context.admin
-        .from("responsaveis_legais")
-        .select("id, cpf_normalizado, email")
-        .eq("auth_user_id", authUserId)
-        .limit(10),
+      context.admin.rpc("portal_identidade_listar_responsaveis_vinculados", {
+        p_auth_user_id: authUserId,
+      }),
     ]);
   } catch {
     return { matches: false, lookupFailed: true };
   }
   if (
-    partnersResult.error || gestoresResult.error || responsaveisResult.error
+    partnersResult.error || gestoresResult.error || responsaveisResult.error ||
+    !Array.isArray(responsaveisResult.data)
   ) {
     return { matches: false, lookupFailed: true };
   }

@@ -69,6 +69,9 @@ const makeFixture = (options: FixtureOptions = {}) => {
 
   const admin = {
     rpc: async (name: string, args: Record<string, unknown>) => {
+      if (name === "portal_identidade_listar_responsaveis_vinculados") {
+        return { data: options.responsavelLinks || [], error: null };
+      }
       rpcCalls.push({ name, args });
       if (name === "portal_validar_unicidade_usuario_sistema") {
         return options.preflightError
@@ -130,12 +133,6 @@ const makeFixture = (options: FixtureOptions = {}) => {
               }),
             };
           },
-        };
-      }
-
-      if (table === "responsaveis_legais") {
-        return {
-          select: () => identityQuery(options.responsavelLinks || [], () => {}),
         };
       }
 
