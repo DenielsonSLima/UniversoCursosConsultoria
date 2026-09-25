@@ -27,11 +27,20 @@ Deno.test("rejeita geração, UUID inválido e cardinalidade fora do limite", ()
       { ...valid, action: "generate" },
       { ...valid, matriculaId: "C541964C" },
       { ...valid, expectedItemCount: 0 },
+      { ...valid, expectedItemCount: 62 },
     ]
   ) {
     assert.throws(
       () => parseInternalCycleRecoveryRequest(body),
       InternalCycleRecoveryRequestError,
     );
+  }
+});
+
+Deno.test("retomada aceita 60 parcelas mais taxa, preservando CAS da quantidade total", () => {
+  for (const cicloNumero of [1, 2]) {
+    assert.equal(parseInternalCycleRecoveryRequest({
+      ...valid, cicloNumero, expectedItemCount: 61,
+    }).expectedItemCount, 61);
   }
 });

@@ -19,6 +19,13 @@ import type { InternalCycleRecoveryRequest } from "./contract.ts";
 
 type Client = SupabaseClient;
 type BaneseSnapshot = Awaited<ReturnType<typeof queryBaneseBoleto>>;
+type RecoveryBankOperations = {
+  query: typeof queryBaneseBoleto;
+  cancel: typeof cancelBaneseBoleto;
+};
+const bankOperations: RecoveryBankOperations = {
+  query: queryBaneseBoleto, cancel: cancelBaneseBoleto,
+};
 const REMOTE_RECOVERY_TIMEOUT_MS = 45_000;
 
 const asRecord = (value: unknown): Record<string, unknown> =>
@@ -185,6 +192,7 @@ const recoverReviewedReceivableWithinDeadline = async (
   cycleRequestId: string,
   receivableId: string,
   signal: AbortSignal,
+  bank: RecoveryBankOperations,
 ) => {
   const recoveryRequestId = await deterministicReceivableRequestId(
     cycleRequestId,
@@ -260,7 +268,7 @@ const recoverReviewedReceivableWithinDeadline = async (
       .gateway_financial_terms as BaneseFinancialTermsInput,
   };
   const queryExactTitle = () =>
-    queryBaneseBoleto(admin as never, "production", {
+    bank.query(admin as never, "production", {
       ...bankIdentity,
       recoverPix: true,
       validateTitleIdentity: true,
@@ -282,6 +290,27 @@ const recoverReviewedReceivableWithinDeadline = async (
     return;
   }
 
+  const authorizeReplacement = async () => {
+    const authorized = await requiredRecord(admin.rpc(
+      "authorize_technical_manual_receivable_issuance_recovery_service",
+      {
+        p_receivable_id: receivableId, p_request_id: recoveryRequestId,
+        p_expected_matricula_id: internal.matriculaId,
+        p_expected_cycle_number: internal.cicloNumero,
+        p_expected_cycle_request_id: internal.expectedCycleRequestId,
+        p_expected_item_count: internal.expectedItemCount,
+      },
+    ), "A substituição Banese não foi autorizada para a matrícula atual.");
+    if (authorized.authorized !== true || authorized.required !== true
+      || authorized.internalRecovery !== true || authorized.receivableId !== receivableId
+      || authorized.cycleNumber !== internal.cicloNumero
+      || authorized.cycleRequestId !== internal.expectedCycleRequestId) {
+      throw new Error("A autorização de substituição divergiu do recebível e do ciclo.");
+    }
+  };
+  // GET can reconcile an existing title after transfer. Cancel/reissue must
+  // still be authorized for the current enrollment before any bank mutation.
+  await authorizeReplacement();
   const fenced = await requiredRecord(
     admin.rpc(
       "begin_technical_manual_cycle_banese_review_cancel_service",
@@ -303,7 +332,7 @@ const recoverReviewedReceivableWithinDeadline = async (
     throw new Error("O fence Banese não corresponde ao título consultado.");
   }
 
-  const cancelResult = await cancelBaneseBoleto(
+  const cancelResult = await bank.cancel(
     admin as never,
     "production",
     {
@@ -313,6 +342,7 @@ const recoverReviewedReceivableWithinDeadline = async (
       expectedBarcode: receivable.gateway_boleto_codigo_barras,
       signal,
       onMutationStart: async () => {
+        await authorizeReplacement();
         const intent = await requiredRecord(
           admin.rpc(
             "mark_technical_manual_cycle_banese_cancel_intent_service",
@@ -377,6 +407,7 @@ const recoverReviewedReceivable = async (
   internal: InternalCycleRecoveryRequest,
   cycleRequestId: string,
   receivableId: string,
+  bank: RecoveryBankOperations,
 ) => {
   const controller = new AbortController();
   const timeout = setTimeout(
@@ -393,6 +424,7 @@ const recoverReviewedReceivable = async (
       cycleRequestId,
       receivableId,
       controller.signal,
+      bank,
     );
   } finally {
     clearTimeout(timeout);
@@ -402,6 +434,7 @@ const recoverReviewedReceivable = async (
 export const recoverReviewedCycleItems = async (
   admin: Client,
   internal: InternalCycleRecoveryRequest,
+  bank: RecoveryBankOperations = bankOperations,
 ) => {
   const { data, error } = await admin.rpc(
     "obter_emissao_ciclo_financeiro_tecnico_manual_service",
@@ -425,6 +458,7 @@ export const recoverReviewedCycleItems = async (
       internal,
       context.requestId,
       item.id,
+      bank,
     );
   }
   return reviewed.length;

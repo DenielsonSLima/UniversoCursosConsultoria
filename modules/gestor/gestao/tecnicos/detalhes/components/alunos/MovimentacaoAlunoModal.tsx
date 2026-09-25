@@ -47,6 +47,7 @@ interface MovimentacaoAlunoModalProps {
   financialError?: string | null;
   financialLocked?: boolean;
   financialCanConfirm?: boolean;
+  financialCanReplay?: boolean;
   onRetryFinancial?: () => void;
   onOperationModeChange: (mode: OperationMode) => void;
   onMovementTypeChange: (type: AcademicMovementType) => void;
@@ -84,6 +85,7 @@ const MovimentacaoAlunoModal: React.FC<MovimentacaoAlunoModalProps> = ({
   financialError = null,
   financialLocked = false,
   financialCanConfirm = false,
+  financialCanReplay = false,
   onRetryFinancial = () => {},
   onOperationModeChange,
   onMovementTypeChange,
@@ -103,16 +105,16 @@ const MovimentacaoAlunoModal: React.FC<MovimentacaoAlunoModalProps> = ({
   const invalidOperationDate = !operationDate
     || operationDate > today
     || Boolean(enrollmentDate && operationDate < enrollmentDate);
-  const disabled = !reason.trim()
-    || invalidOperationDate
-    || movementPending
+  const replayingTransfer = operationMode === 'TRANSFERENCIA' && financialCanReplay;
+  const disabled = movementPending
     || transferPending
     || returnPending
     || (operationMode === 'TRANSFERENCIA' && !financialCanConfirm)
-    || (operationMode === 'TRANSFERENCIA'
+    || (!replayingTransfer && (!reason.trim() || invalidOperationDate))
+    || (!replayingTransfer && operationMode === 'TRANSFERENCIA'
       && transferType !== 'EXTERNA_ENVIADA'
       && (!destinationClassId || destinationError || destinationRetrying))
-    || (operationMode === 'TRANSFERENCIA'
+    || (!replayingTransfer && operationMode === 'TRANSFERENCIA'
       && transferType === 'EXTERNA_ENVIADA'
       && !destinationInstitution.trim())
     || (operationMode === 'RETORNO'

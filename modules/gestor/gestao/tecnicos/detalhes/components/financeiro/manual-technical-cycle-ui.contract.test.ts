@@ -46,7 +46,7 @@ test("histórico protegido informa o bloqueio sem presumir emissão nem oferecer
   assert.match(summary, /&& !fullyIssued/);
   const badge = between(statusSource,
     "if (cicloManual.estado === 'PROTEGIDO_EXISTENTE')",
-    "if (generated && !isFullyIssued(generated))");
+    "const academicBlocked =");
   assert.match(badge, /individualHistory = cicloManual\.bloqueio\?\.codigo === 'HISTORICO_FINANCEIRO_EXISTENTE'/);
   assert.match(badge, /&& !isIssuedInProesc\(generated\)\s*&& \(!generated \|\| !isFullyIssued\(generated\)\)/);
   assert.match(badge, /individualHistory\s*\? cicloManual\.bloqueio!\.mensagem/);
@@ -93,7 +93,7 @@ test("baseline zero preserva ciclo 1 gerado e mostra separadamente o estado do c
     blockedBranch,
     /cycleLabel\(cicloManual\.proximoCicloNumero\).*bloqueado/,
   );
-  assert.match(statusSource, /generated\.pendentesEmissao > 0 \? \(/);
+  assert.match(statusSource, /generated\.pendentesEmissao > 0 && allowResume \? \(/);
   assert.doesNotMatch(
     statusSource,
     /generated\.pendentesEmissao > 0 \|\| generated\.emRevisao > 0/,
@@ -207,7 +207,7 @@ test("matrícula protegida não tem botão de gerar, emitir, reemitir ou configu
   const protectedBranch = between(
     statusSource,
     "if (cicloManual.estado === 'PROTEGIDO_EXISTENTE')",
-    "if (generated && !isFullyIssued(generated))",
+    "const academicBlocked =",
   );
   assert.match(protectedBranch, /Protegido contra novas cobranças/);
   assert.doesNotMatch(

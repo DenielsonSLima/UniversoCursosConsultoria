@@ -1,16 +1,23 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { transferFinanceService } from '../transfer-finance.service';
 import type { TransferFinancialResult, TransferIntent } from '../transfer-finance.contract';
+import { TransferFinancialAttempt, type TransferFinancialAttemptInput } from './transfer-financial-attempt';
 
-type Attempt = TransferIntent & { requestId: string; fingerprint: string };
 export function useTransferFinancialReview(input: TransferIntent | null, options: {
   onSuccess: (result: TransferFinancialResult, input: TransferIntent) => Promise<void> | void;
   onError: (error: Error) => void;
 }) {
-  const attempt = useRef<Attempt | null>(null);
-  const inFlight = useRef(false);
+  const attempt = useRef(new TransferFinancialAttempt());
   const [locked, setLocked] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
+  useEffect(() => {
+    if (input === null && !attempt.current.busy && !attempt.current.uncertain) {
+      attempt.current = new TransferFinancialAttempt();
+      setLocked(false);
+      setConfirmed(false);
+    }
+  }, [input]);
   const query = useQuery({
     queryKey: ['transfer-finance-preview', input?.matriculaId, input?.tipo, input?.dataTransferencia, input?.turmaDestinoId],
     queryFn: () => transferFinanceService.preview(input!),
@@ -18,33 +25,34 @@ export function useTransferFinancialReview(input: TransferIntent | null, options
     staleTime: 0, retry: false,
   });
   const mutation = useMutation({
-    mutationFn: (draft: Attempt) => transferFinanceService.confirm(draft),
-    onSuccess: async (result, draft) => {
-      attempt.current = null;
-      setLocked(false);
-      await options.onSuccess(result, draft);
-    },
-    onError: (error: Error & { code?: string }) => {
-      // These database errors explicitly rolled the transaction back. A lost
-      // response keeps the same request and reviewed payload for safe replay.
-      if (['40001', '22023', '23514', '42501', 'P0001', '23505', '55P03'].includes(error.code || '')) {
-        attempt.current = null;
-        setLocked(false);
-        void query.refetch();
-      }
-      options.onError(error);
-    },
-    onSettled: () => { inFlight.current = false; },
+    mutationFn: (draft: TransferFinancialAttemptInput) => transferFinanceService.confirm(draft),
+    retry: false,
   });
-  const confirm = () => {
-    if (inFlight.current || mutation.isPending) return;
-    if (attempt.current) { inFlight.current = true; mutation.mutate(attempt.current); return; }
-    if (!input || !query.data || query.isError || query.isFetching) return;
-    attempt.current = { ...input, requestId: crypto.randomUUID(), fingerprint: query.data.fingerprint };
-    inFlight.current = true;
+  const confirm = async () => {
+    if (attempt.current.busy || attempt.current.confirmed || mutation.isPending) return;
+    if (!attempt.current.hasInput && (!input || !query.data || query.isError || query.isFetching)) return;
     setLocked(true);
-    mutation.mutate(attempt.current);
+    let submitted!: TransferFinancialAttemptInput;
+    try {
+      const result = await attempt.current.run(
+        () => ({ ...input!, requestId: crypto.randomUUID(), fingerprint: query.data!.fingerprint }),
+        (draft) => { submitted = draft; return mutation.mutateAsync(draft); },
+      );
+      if (!result) return;
+      setConfirmed(true);
+      setLocked(false);
+      try { await options.onSuccess(result, submitted); }
+      catch {
+        options.onError(new Error('Transferência registrada. A atualização da tela falhou; recarregue para conferir o resultado.'));
+      }
+    } catch (error) {
+      setLocked(attempt.current.uncertain);
+      if (!attempt.current.hasInput) void query.refetch();
+      options.onError(error as Error);
+    }
   };
-  return { query, mutation, confirm, locked,
-    canConfirm: !mutation.isPending && (locked || Boolean(query.data && !query.isError && !query.isFetching)) };
+  const canReplay = attempt.current.hasInput && attempt.current.uncertain;
+  return { query, mutation, confirm, locked, canReplay,
+    canConfirm: !confirmed && !mutation.isPending
+      && (canReplay || Boolean(query.data && !query.isError && !query.isFetching)) };
 }

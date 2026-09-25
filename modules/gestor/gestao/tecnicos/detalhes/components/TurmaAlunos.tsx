@@ -378,6 +378,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma, canManageFinanceiro = 
           financialError={transferReview.query.isError ? transferReview.query.error.message : null}
           financialLocked={transferReview.locked}
           financialCanConfirm={transferReview.canConfirm}
+          financialCanReplay={transferReview.canReplay}
           onRetryFinancial={() => { void transferReview.query.refetch(); }}
           onOperationModeChange={setOperationMode}
           onMovementTypeChange={setMovementType}
@@ -408,6 +409,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma, canManageFinanceiro = 
                 dataRetorno: operationDate,
               })
             : transferType !== 'EXTERNA_ENVIADA'
+              && !transferReview.canReplay
               && (destinationClassesQuery.isError || destinationClassesQuery.isLoading)
               ? toast.error('Destino não carregado', 'Recarregue as turmas de destino antes de transferir.')
               : transferReview.confirm()}
