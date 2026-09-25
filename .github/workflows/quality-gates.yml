@@ -199,7 +199,7 @@ jobs:
             'modules/gestor/financeiro/financeiro.receivable-issuance.test.ts',
             'modules/gestor/financeiro/receber/components/modalidade-receber/receivable-external-history-actions.test.ts',
           ].entries()) {
-            await build({ entryPoints: [entry], bundle: true, platform: 'node', format: 'cjs', outfile: `/tmp/cycle-actions-${index}.test.cjs` });
+            await build({ entryPoints: [entry], bundle: true, platform: 'node', format: 'cjs', define: { 'import.meta.env': JSON.stringify({ VITE_SUPABASE_URL: 'https://test.invalid', VITE_SUPABASE_ANON_KEY: 'synthetic' }) }, outfile: `/tmp/cycle-actions-${index}.test.cjs` });
           }
           JS
           node --test /tmp/cycle-actions-*.test.cjs
