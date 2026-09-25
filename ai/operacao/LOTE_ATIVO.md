@@ -1,14 +1,13 @@
 # Lote ativo
 
-Estado: VALIDADO — PUBLICAÇÃO EM ANDAMENTO
+Estado: CONCLUÍDO — DOCUMENTAÇÃO VALIDADA
 
-## Lote: 2026-09-24-revisao-baixa-matricula-local
+## Lote: 2026-09-24-contrato-ciclos-financeiros
 
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-24-revisao-baixa-matricula-local.md`.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-24-contrato-ciclos-financeiros.md`.
 
-- Revisão solicitada com três agentes após 4.8.81.
-- Corrigir ofertas de conta incompatíveis com a autorização da baixa e erro de recarga com cache.
-- Preservar prova canônica da matrícula local após estorno auditável, com ou sem motivo.
-- Manter barreiras de emissão bancária, congelamento, replay e C2.
-- Não alterar cobranças reais; testar com fixtures e rollback.
-- Memória/governança será consolidada em lote operacional separado após estas correções.
+- Lote operacional separado da correção financeira publicada na 4.8.82/PR174.
+- Contrato durável de elegibilidade individual, origens importadas, datas, modos da matrícula, baixa, estorno auditado e C2.
+- Memória e política financeira apontam para a decisão; histórico corrige a distinção entre falha anterior e posterior ao commit.
+- Nenhuma mudança de execução financeira, banco ou Edge neste lote.
+- Validação documental, links, teto e RAG registrados no manifesto. Publicação via MCP GitHub após as verificações.

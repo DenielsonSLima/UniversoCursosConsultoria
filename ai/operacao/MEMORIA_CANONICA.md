@@ -1,6 +1,6 @@
 # Memória canônica do projeto
 
-Atualizada em: 2026-09-13
+Atualizada em: 2026-09-24
 
 ## Finalidade
 
@@ -40,6 +40,10 @@ Este arquivo é um índice curto de contexto durável. Ajustes rápidos não pre
 - search lê somente o índice existente e nunca grava ou reindexa.
 - index é executado explicitamente uma vez no fechamento de lote relevante.
 - Embeddings e OpenContext são opcionais e nunca bloqueiam a operação.
+
+## Ciclos técnicos e matrícula local — 2026-09-24
+
+Contrato vigente: [ciclos financeiros técnicos](../../docs/decisions/ciclos-tecnicos-cobrancas.md). Consultar antes de alterar elegibilidade, datas, matrícula sem boleto, baixa, estorno ou C2. Preservar origens Banese/Proesc, prova individual, destino LOCAL e replay da mesma operação. Revisão com três agentes publicada na 4.8.82/PR174; evidências em [registro da revisão](registros/alteracoes/2026-09-24-revisao-baixa-matricula-local.md).
 
 ## Entrega financeira publicada — 2026-09-12 (4.8.47)
 
