@@ -93,7 +93,7 @@ test('baixa usa serviço canônico, trava síncrona, permissão e ação persist
   assert.match(hook, /financeiroService\.markReceivablePaid\(receivableId, payload\)/);
   assert.match(hook, /if \(!canSettle\) throw new Error/);
   assert.match(hook, /inFlight\.current = true;\s*mutation\.mutate/);
-  assert.match(hook, /account\.ativo !== false[\s\S]*?isContaDisponivelNoPolo/);
+  assert.match(hook, /isManualEnrollmentSettlementAccount\(account, poloId\)/);
   assert.doesNotMatch(hook, /\.update\(|\.insert\(|gerar_ciclo|settlementContext|setStatus/);
   assert.match(table, /matriculaLocal[\s\S]*?Registrar recebimento da matrícula/);
   assert.match(options, /Esta escolha não registra pagamento/);

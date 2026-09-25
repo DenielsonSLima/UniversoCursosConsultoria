@@ -1,15 +1,14 @@
 # Lote ativo
 
-Estado: EM IMPLEMENTAÇÃO
+Estado: VALIDADO — PUBLICAÇÃO EM ANDAMENTO
 
-## Lote: 2026-09-24-matricula-local-sem-boleto
+## Lote: 2026-09-24-revisao-baixa-matricula-local
 
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-24-matricula-local-sem-boleto.md`.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-24-revisao-baixa-matricula-local.md`.
 
-- Mostrar datas canônicas já na primeira etapa do modal.
-- Permitir matrícula como recebível local sem boleto, com baixa manual pelo fluxo auditável existente.
-- Distinguir itens bancários e locais na prévia, geração, retomada, progresso e conclusão.
-- Preservar os modos anteriores (boleto/omissão), histórico importado e bloqueios de duplicação.
-- Matrícula local nunca recebe POST bancário; baixa exige confirmação dos dados do recebimento pelo usuário.
-- Publicação pela autorização vigente após contrato real, smoke e revisão independente.
-- Alterações paralelas do Caixa preservadas e excluídas.
+- Revisão solicitada com três agentes após 4.8.81.
+- Corrigir ofertas de conta incompatíveis com a autorização da baixa e erro de recarga com cache.
+- Preservar prova canônica da matrícula local após estorno auditável, com ou sem motivo.
+- Manter barreiras de emissão bancária, congelamento, replay e C2.
+- Não alterar cobranças reais; testar com fixtures e rollback.
+- Memória/governança será consolidada em lote operacional separado após estas correções.

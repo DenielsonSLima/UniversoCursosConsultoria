@@ -2,7 +2,13 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
-Histórico anterior: [01/09/2026 — versões 4.8.23 a 4.8.26](./changelog/2026-09-01-versoes-4-8-23-a-4-8-26.md), [01/09/2026 — versões 4.8.20 a 4.8.22](./changelog/2026-09-01-versoes-4-8-20-a-4-8-22.md), [27/08/2026 a 31/08/2026 — versões 4.8.8 a 4.8.19](./changelog/2026-08-27-a-2026-08-31.md), [26/08/2026 — versões 4.8.6 a 4.8.7](./changelog/2026-08-26.md), [25/08/2026 — versões 4.8.2 a 4.8.5](./changelog/2026-08-25-parte-1.md), [24/08/2026 — versões 4.8.0 a 4.8.1](./changelog/2026-08-24-parte-2.md), [24/08/2026 — versões 4.7.5 a 4.7.7](./changelog/2026-08-24-parte-1.md), [22/08/2026 a 23/08/2026](./changelog/2026-08-22-a-2026-08-23.md), [21/08/2026 a 22/08/2026 — parte 2](./changelog/2026-08-21-a-2026-08-22-parte-2.md), [21/08/2026 — parte 1](./changelog/2026-08-21-parte-1.md), [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+Histórico anterior: [02/09/2026 — versões 4.8.27 a 4.8.29](./changelog/2026-09-02-versoes-4-8-27-a-4-8-29.md), [01/09/2026 — versões 4.8.23 a 4.8.26](./changelog/2026-09-01-versoes-4-8-23-a-4-8-26.md), [01/09/2026 — versões 4.8.20 a 4.8.22](./changelog/2026-09-01-versoes-4-8-20-a-4-8-22.md), [27/08/2026 a 31/08/2026 — versões 4.8.8 a 4.8.19](./changelog/2026-08-27-a-2026-08-31.md), [26/08/2026 — versões 4.8.6 a 4.8.7](./changelog/2026-08-26.md), [25/08/2026 — versões 4.8.2 a 4.8.5](./changelog/2026-08-25-parte-1.md), [24/08/2026 — versões 4.8.0 a 4.8.1](./changelog/2026-08-24-parte-2.md), [24/08/2026 — versões 4.7.5 a 4.7.7](./changelog/2026-08-24-parte-1.md), [22/08/2026 a 23/08/2026](./changelog/2026-08-22-a-2026-08-23.md), [21/08/2026 a 22/08/2026 — parte 2](./changelog/2026-08-21-a-2026-08-22-parte-2.md), [21/08/2026 — parte 1](./changelog/2026-08-21-parte-1.md), [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+
+## [4.8.82] - 2026-09-24
+
+- Recebimento da matrícula local oferece contas compatíveis com o polo e bloqueia confirmação quando a consulta falha.
+- Estorno local registra operador, motivo e baixa exata, preservando o ciclo e impedindo que uma repetição desfaça um pagamento posterior.
+- Testes de recuperação protegem a matrícula sem boleto e mantêm as consultas e emissões bancárias existentes.
 
 ## [4.8.81] - 2026-09-24
 
@@ -422,69 +428,3 @@ Histórico anterior: [01/09/2026 — versões 4.8.23 a 4.8.26](./changelog/2026-
 
 - A barra é explicitamente indeterminada, sem inventar percentual bancário; uma trava síncrona impede clique duplo e mantém o pedido idempotente.
 - O contrato Banese não foi alterado, e testes focados cobrem progresso, acessibilidade, snapshot e feedback de interrupção.
-
-## [4.8.29] - 2026-09-02
-
-### Corrigido
-
-- O ciclo técnico aceita o GUI Pix oficial do Banese sem depender de caixa
-  alta e persiste o retorno bancário completo de forma atômica.
-- Uma emissão interrompida pode ser recuperada internamente por consulta,
-  cancelamento confirmado e substituição única, sem recriar os recebíveis e
-  sem repetir uma mutação bancária ambígua.
-
-### Segurança e integridade
-
-- Leases, CAS, cooldown e fingerprints cercam cancelamento e reemissão; o
-  título antigo é arquivado e não pode voltar a uma cobrança ativa.
-- A recuperação real concluiu 13/13 títulos da matrícula afetada com Nosso
-  Número distinto, Pix, linha digitável, código de barras, termos confirmados
-  e exatamente uma transação por recebível.
-
-### Qualidade
-
-- A correção passou por 40 testes focados, checagem/formatação Deno e revisão
-  independente antes da migration e da retomada em produção.
-
-## [4.8.28] - 2026-09-02
-
-### Corrigido
-
-- A emissão integrada do ciclo técnico carrega o estado do pagador pela coluna
-  canônica `uf`, eliminando a falha que interrompia o fluxo antes do Banese.
-- Erros estruturados do PostgREST passam a apresentar mensagem e código
-  legíveis, inclusive quando o objeto não contém uma mensagem conhecida.
-
-### Segurança e integridade
-
-- A retomada reutiliza os 13 recebíveis já preparados e mantém intactas as
-  guardas de autorização, idempotência, conciliação por GET e bloqueio de POST
-  duplicado.
-- A perícia confirmou zero identidade bancária, transação, Pix ou Nosso Número
-  na tentativa interrompida; nenhum título remoto foi criado por ela.
-
-### Qualidade
-
-- Os 24 testes focados, o `deno check`, a validação dos termos canônicos e duas
-  revisões independentes foram aprovados antes do deploy da Edge versão 3.
-
-## [4.8.27] - 2026-09-02
-
-### Corrigido
-
-- A emissão integrada do ciclo técnico passa a aceitar identificadores legados
-  de polo que já são válidos e persistidos como `uuid` pelo PostgreSQL.
-- O carregamento inicial, o contexto retomável, os recebíveis e a confirmação
-  do emissor Banese usam a mesma validação estrutural de IDs do banco.
-
-### Segurança e integridade
-
-- O identificador idempotente da requisição continua sujeito à validação RFC
-  estrita; autorização por polo, fingerprints e contrato BolePix não mudaram.
-- As tentativas bloqueadas antes do hotfix não criaram ciclo, recebível, Nosso
-  Número, transação ou título remoto e podem ser repetidas sem duplicação.
-
-### Qualidade
-
-- Os 22 testes do fluxo técnico, o `deno check` da Edge Function e uma revisão
-  independente sem achados críticos ou importantes foram aprovados.

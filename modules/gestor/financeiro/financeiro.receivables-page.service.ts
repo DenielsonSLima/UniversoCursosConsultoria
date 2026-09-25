@@ -58,6 +58,7 @@ const mapReceivableRpcRow = (row: any): ContasReceber => ({
   proescEvidence: parseProescReceivableEvidence(row.proesc_evidence),
   manualSettlementActorName: row.manual_settlement_actor_name || undefined,
   manualSettlementCompletedAt: row.manual_settlement_completed_at || undefined,
+  manualSettlementId: row.manual_settlement_id || undefined,
   gatewayProvider: row.gateway_provider || undefined,
   gatewayPaymentMethod: row.gateway_payment_method || undefined,
   gatewaySettlementChannel: row.gateway_settlement_channel || undefined,

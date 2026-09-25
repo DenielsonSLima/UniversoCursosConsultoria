@@ -12,7 +12,7 @@ const FinanceiroCicloManualSettlement: React.FC<{ controller: CicloManualEnrollm
       accounts={controller.accounts}
       enrollmentNotice="O ciclo já foi criado. Esta ação confirma somente o recebimento da matrícula, sem gerar boleto ou novas mensalidades."
       pending={controller.pending}
-      submitDisabled={controller.accountsLoading || controller.accounts.length === 0}
+      submitDisabled={controller.accountsLoading || controller.accountsUnavailable || controller.accounts.length === 0}
       error={controller.error}
       onClose={controller.close}
       onConfirm={controller.confirm}

@@ -1,11 +1,12 @@
 import { useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { financeiroQueryKeys } from '../../../../../../financeiro/financeiro.queryKeys';
-import { financeiroService, isContaDisponivelNoPolo, type ContasReceber } from '../../../../../../financeiro/financeiro.service';
+import { financeiroService, type ContasReceber } from '../../../../../../financeiro/financeiro.service';
 import type { ManualSettlementPayload } from '../../../../../../financeiro/receber/components/manual-settlement/useManualSettlementForm';
 import type { MatriculaTecnicaFinanceiroRow } from '../matricula-tecnica-financeiro.types';
 import { isProvenLocalEnrollment } from '../matricula-tecnica-ciclo-manual-destination';
 import { matriculaTecnicaFinanceiroKeys } from '../matricula-tecnica-financeiro.keys';
+import { isManualEnrollmentSettlementAccount, manualEnrollmentAccountsErrorMessage } from '../ciclo-manual-settlement-account';
 
 interface Options {
   turmaId: string;
@@ -29,7 +30,7 @@ export const useCicloManualEnrollmentSettlement = ({ turmaId, poloId, canSettle,
     retry: false,
   });
   const accounts = useMemo(() => (accountsQuery.data || []).filter((account) =>
-    account.ativo !== false && Boolean(account.id) && isContaDisponivelNoPolo(account, poloId)
+    isManualEnrollmentSettlementAccount(account, poloId)
   ), [accountsQuery.data, poloId]);
   const invalidate = () => Promise.all([
     queryClient.invalidateQueries({ queryKey: matriculaTecnicaFinanceiroKeys.turma(turmaId) }),
@@ -72,8 +73,9 @@ export const useCicloManualEnrollmentSettlement = ({ turmaId, poloId, canSettle,
     selected, accounts, open,
     pending: mutation.isPending,
     accountsLoading: accountsQuery.isFetching,
+    accountsUnavailable: accountsQuery.isError,
     error: mutation.error instanceof Error ? mutation.error.message
-      : accountsQuery.error instanceof Error ? accountsQuery.error.message : null,
+      : accountsQuery.isError ? manualEnrollmentAccountsErrorMessage(accountsQuery.error) : null,
     close: () => { if (!inFlight.current) { mutation.reset(); setSelected(null); } },
     confirm: (payload: ManualSettlementPayload) => {
       if (!selected?.id || !canSettle || inFlight.current || accountsQuery.isFetching || accountsQuery.isError) return;

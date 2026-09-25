@@ -71,6 +71,7 @@ export interface ContasReceber {
   origemPagamento?: string;
   proescEvidence?: ProescReceivableEvidence;
   manualSettlementActorName?: string;
+  manualSettlementId?: string;
   manualSettlementCompletedAt?: string;
   gatewayProvider?: string;
   gatewayPaymentMethod?: string;

@@ -176,7 +176,9 @@ jobs:
 
       - name: Testar geração manual dos ciclos técnicos
         run: |
-          deno test --allow-read \
+          deno test --allow-read --allow-env=NODE_ENV \
+            modules/gestor/financeiro/financeiro.local-enrollment-reversal.test.ts \
+            modules/gestor/gestao/tecnicos/detalhes/components/financeiro/ciclo-manual-settlement-account.test.ts \
             modules/gestor/gestao/tecnicos/detalhes/components/financeiro/manual-technical-cycle-issuance-progress.contract.test.ts \
             modules/gestor/gestao/tecnicos/detalhes/components/financeiro/manual-technical-cycle-modal-ux.contract.test.ts \
             modules/gestor/gestao/tecnicos/detalhes/components/financeiro/manual-technical-cycle-state-recovery.contract.test.ts \
@@ -185,7 +187,8 @@ jobs:
             modules/gestor/gestao/tecnicos/detalhes/components/financeiro/matricula-tecnica-ciclo-manual-preview.contract.test.ts \
             modules/gestor/gestao/tecnicos/detalhes/components/financeiro/matricula-tecnica-ciclo-manual-preview.parser.test.ts
           deno test --allow-read --allow-env \
-            supabase/functions/technical-manual-cycle-issuance/
+            supabase/functions/technical-manual-cycle-issuance/ \
+            supabase/functions/technical-manual-cycle-recovery-worker/
 
       - name: Testar validação documental
         run: npm run test:document-validation

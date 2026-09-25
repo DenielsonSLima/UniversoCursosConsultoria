@@ -10,6 +10,7 @@ create temporary table local_fee_run (like internal_academic.technical_manual_cy
 create temporary table local_fee_receivable (like public.contas_receber) on commit drop;
 create temporary table local_fee_transaction (like public.payment_gateway_transactions) on commit drop;
 create temporary table local_fee_settlement (like public.receivable_manual_settlements) on commit drop;
+create temporary table local_fee_event (like public.receivable_manual_settlement_events) on commit drop;
 do $nullable$
 declare c record;
 begin
@@ -30,6 +31,7 @@ begin
     'internal_academic.manual_cycle_has_local_intent(public.contas_receber)',
     'internal_academic.manual_cycle_has_bank_fields(public.contas_receber)',
     'internal_academic.assert_manual_cycle_reviewed_receivable(public.contas_receber)',
+    'internal_academic.manual_cycle_local_reversed_receivable_complete(public.contas_receber)',
     'internal_academic.manual_cycle_local_receivable_complete(public.contas_receber)',
     'internal_academic.technical_manual_cycle_state_before_external_history(uuid)'
   ] loop
@@ -43,10 +45,12 @@ begin
       ['internal_academic.manual_cycle_has_bank_fields','pg_temp.local_fee_bank_fields'],
       ['internal_academic.assert_manual_cycle_reviewed_receivable','pg_temp.local_fee_assert_review'],
       ['internal_academic.manual_cycle_local_receivable_complete','pg_temp.local_fee_complete'],
+      ['internal_academic.manual_cycle_local_reversed_receivable_complete','pg_temp.local_fee_reversed_complete'],
       ['internal_academic.technical_manual_cycle_policies','pg_temp.local_fee_policy'],
       ['internal_academic.technical_manual_cycle_runs','pg_temp.local_fee_run'],
       ['public.matriculas_tecnicas_financeiro_config','pg_temp.local_fee_config'],
       ['public.receivable_manual_settlements','pg_temp.local_fee_settlement'],
+      ['public.receivable_manual_settlement_events','pg_temp.local_fee_event'],
       ['public.payment_gateway_transactions','pg_temp.local_fee_transaction'],
       ['public.contas_receber','pg_temp.local_fee_receivable'],
       ['p_receivable contas_receber','p_receivable pg_temp.local_fee_receivable'],
@@ -64,6 +68,7 @@ declare
   v_course uuid:=gen_random_uuid(); v_request uuid:=gen_random_uuid(); v_fee uuid:=gen_random_uuid();
   v_settlement uuid:=gen_random_uuid(); v_account uuid:=gen_random_uuid();
   v_snapshot jsonb; v_items jsonb; v_state jsonb; v_fee_row pg_temp.local_fee_receivable%rowtype;
+  v_reversed_at timestamptz:=clock_timestamp();
 begin
   insert into pg_temp.local_fee_course(id,modalidade) values(v_course,'TECNICO');
   insert into pg_temp.local_fee_class(id,curso_id,polo_id) values(v_class,v_course,v_class);
@@ -109,6 +114,20 @@ begin
     values(v_settlement,v_fee,'COMPLETED',false,v_class,v_account,'DINHEIRO',current_date,10000,0,0,0,0,10000);
   assert pg_temp.local_fee_state(v_enrollment)->>'podeGerar'='true',
     'A proven local settlement preserves cycle-two eligibility';
+  update pg_temp.local_fee_settlement set state='REVERSED',completed_at=v_reversed_at-interval '1 minute',
+    reversed_at=v_reversed_at where id=v_settlement;
+  insert into pg_temp.local_fee_event(settlement_id,event_type,details)
+    values(v_settlement,'LOCAL_SETTLEMENT_REVERSED',jsonb_build_object('operation','LOCAL_ENROLLMENT_REVERSAL',
+      'receivableId',v_fee,'reversedAt',v_reversed_at::text));
+  update pg_temp.local_fee_receivable set status='PENDENTE',data_pagamento=null,valor_pago=null,
+    origem_pagamento='LOCAL',conta_bancaria_id=null,forma_pagamento=null,
+    manual_settlement_reversed_at=v_reversed_at where id=v_fee;
+  assert pg_temp.local_fee_state(v_enrollment)->>'podeGerar'='true',
+    'A proven reversed local fee does not require payment before cycle two';
+  update pg_temp.local_fee_settlement set reversed_at=v_reversed_at+interval '1 second' where id=v_settlement;
+  assert pg_temp.local_fee_state(v_enrollment)->>'podeGerar'='false',
+    'A reversal marker without a matching ledger fails closed';
+  update pg_temp.local_fee_settlement set reversed_at=v_reversed_at where id=v_settlement;
   update pg_temp.local_fee_receivable set gateway_submission_status='API_AMBIGUOUS' where parcela_numero=1;
   assert pg_temp.local_fee_state(v_enrollment)->>'podeGerar'='false','An ambiguous bank item still blocks cycle two';
   update pg_temp.local_fee_receivable set gateway_submission_status='API_REGISTERED' where parcela_numero=1;
