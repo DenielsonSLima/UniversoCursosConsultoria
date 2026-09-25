@@ -230,7 +230,7 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
     onCopyInvoiceUrl: operations.copyInvoiceUrl,
     onOpenCharge: operations.openCharge,
     onRefresh: (receivableId) => operations.refreshMutation.mutate(receivableId),
-    onSync: (receivableId) => operations.syncMutation.mutate(receivableId),
+    onSync: (item) => operations.syncMutation.mutate(item),
     onOpenPaidReceipt: operations.openPaidReceipt,
     onOpenReversal: operations.openReversal,
   };

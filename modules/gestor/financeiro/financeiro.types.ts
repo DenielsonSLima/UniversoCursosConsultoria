@@ -69,6 +69,9 @@ export interface ContasReceber {
   turmaId?: string;
   formaPagamento?: 'BOLETO' | 'PIX' | 'CARTAO' | 'DINHEIRO';
   origemPagamento?: string;
+  destinoCobranca?: 'LOCAL' | 'BANESE';
+  emissaoGerenciadaTurma?: boolean;
+  emissaoCicloStatus?: 'EMITIDO' | 'PENDENTE' | 'REVISAO' | 'REVISAO_MANUAL' | 'NAO_APLICAVEL';
   proescEvidence?: ProescReceivableEvidence;
   manualSettlementActorName?: string;
   manualSettlementId?: string;

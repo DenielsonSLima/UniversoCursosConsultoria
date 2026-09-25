@@ -1,8 +1,8 @@
 {
-  "version": "4.8.85",
+  "version": "4.8.86",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 94,
+  "revision": 95,
   "releasedAt": "2026-09-25",
-  "summary": "Revisão das transferências: retomada segura, histórico por movimento e proteção da recuperação bancária"
+  "summary": "Emissão de ciclos pela turma, retomada corrigida e ações financeiras coerentes"
 }

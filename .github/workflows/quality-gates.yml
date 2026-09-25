@@ -187,8 +187,22 @@ jobs:
             modules/gestor/gestao/tecnicos/detalhes/components/financeiro/matricula-tecnica-ciclo-manual-preview.contract.test.ts \
             modules/gestor/gestao/tecnicos/detalhes/components/financeiro/matricula-tecnica-ciclo-manual-preview.parser.test.ts
           deno test --allow-read --allow-env \
+            supabase/functions/gateways/checkout/gateway-technical-cycle-claim.test.ts \
             supabase/functions/technical-manual-cycle-issuance/ \
             supabase/functions/technical-manual-cycle-recovery-worker/
+
+      - name: Testar ações financeiras dos ciclos técnicos
+        run: |
+          node --input-type=module <<'JS'
+          import { build } from 'esbuild';
+          for (const [index, entry] of [
+            'modules/gestor/financeiro/financeiro.receivable-issuance.test.ts',
+            'modules/gestor/financeiro/receber/components/modalidade-receber/receivable-external-history-actions.test.ts',
+          ].entries()) {
+            await build({ entryPoints: [entry], bundle: true, platform: 'node', format: 'cjs', define: { 'import.meta.env': JSON.stringify({ VITE_SUPABASE_URL: 'https://test.invalid', VITE_SUPABASE_ANON_KEY: 'synthetic' }) }, outfile: `/tmp/cycle-actions-${index}.test.cjs` });
+          }
+          JS
+          node --test /tmp/cycle-actions-*.test.cjs
 
       - name: Testar transferências técnicas e planos individuais
         run: |

@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import type { ContasReceber } from '../../../financeiro.service';
 import { hasProescEvidence, isProescPaymentUnderReview } from '../../../financeiro.proesc-evidence';
+import { receivableIssuanceNotice } from '../../../financeiro.receivable-issuance';
 import { formatEnrollment } from './modalidade-receber.enrollment';
 import { ManualSettlementAudit } from './ManualSettlementAudit';
 import { ReceivableAmountSummary } from './ReceivableAmountSummary';
@@ -37,7 +38,7 @@ export interface ReceivableActionsContext {
   onCopyInvoiceUrl: (item: ContasReceber) => void | Promise<void>;
   onOpenCharge: (item: ContasReceber) => void;
   onRefresh: (receivableId: string) => void;
-  onSync: (receivableId: string) => void;
+  onSync: (item: ContasReceber) => void;
   onOpenPaidReceipt: (item: ContasReceber) => void;
   onOpenReversal: (item: ContasReceber) => void;
 }
@@ -124,7 +125,8 @@ export const ReceivableActionButtons: React.FC<ItemProps> = ({ item, actions }) 
   const hasExternalChargeUrl = !isBanese
     && Boolean(item.asaasInvoiceUrl || item.asaasBankSlipUrl);
   const externalHistoryWithoutGateway = !gatewayCode
-    && item.origemPagamento === 'SISTEMA_ANTERIOR';
+    && (item.origemPagamento === 'SISTEMA_ANTERIOR' || hasProescEvidence(item));
+  const issuanceNotice = receivableIssuanceNotice(item);
 
   return (
     <div className="grid w-full max-w-[180px] grid-cols-2 gap-2">
@@ -136,7 +138,12 @@ export const ReceivableActionButtons: React.FC<ItemProps> = ({ item, actions }) 
       >
         Receber
       </button>
-      {isBaneseIdentityQuarantine ? null : hasExternalChargeUrl || canOpenBanese ? (
+      {issuanceNotice ? (
+        <div className="col-span-2 rounded-xl bg-slate-50 px-3 py-2 text-center" role="status">
+          <p className="text-[10px] font-black text-slate-700">{issuanceNotice.title}</p>
+          <p className="mt-1 text-[10px] font-medium leading-relaxed text-slate-500">{issuanceNotice.message}</p>
+        </div>
+      ) : isBaneseIdentityQuarantine ? null : hasExternalChargeUrl || canOpenBanese ? (
         <>
           {hasExternalChargeUrl ? (
             <button
@@ -176,10 +183,14 @@ export const ReceivableActionButtons: React.FC<ItemProps> = ({ item, actions }) 
         <span className="col-span-2 rounded-xl bg-slate-50 px-3 py-2 text-center text-[10px] font-bold text-slate-500">
           {hasProescEvidence(item) ? 'Histórico Proesc' : 'Cobrança do sistema anterior'}
         </span>
+      ) : item.emissaoGerenciadaTurma ? (
+        <span className="col-span-2 rounded-xl bg-slate-50 px-3 py-2 text-center text-[10px] font-bold text-slate-500" role="status">
+          Boleto emitido. Atualize a tela para consultar.
+        </span>
       ) : (
         <button
           type="button"
-          onClick={() => actions.onSync(item.id!)}
+          onClick={() => actions.onSync(item)}
           disabled={actions.syncPending}
           className="col-span-2 flex items-center justify-center gap-1 rounded-xl border border-slate-200 px-3 py-2.5 text-[10px] font-black uppercase text-slate-600 disabled:opacity-50"
         >

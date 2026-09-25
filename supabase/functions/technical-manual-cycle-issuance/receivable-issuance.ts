@@ -268,6 +268,7 @@ const claimOrRecover = async (input: {
   admin: Client;
   loaded: LoadedReceivable;
   authorizationRequestId: string;
+  cycleRequestId: string;
   scope: IssuanceScope;
 }) => {
   const current = input.loaded.receivable;
@@ -287,6 +288,7 @@ const claimOrRecover = async (input: {
     receivable: current,
     providerCode: PROVIDER,
     attemptToken: input.authorizationRequestId,
+    technicalCycleRequestId: input.cycleRequestId,
     receivablePayload: {
       forma_pagamento: PAYMENT_METHOD,
       gateway_provider: PROVIDER,
@@ -364,6 +366,7 @@ async (context: ManualCycleContext, receivableId: string) => {
       admin: input.admin,
       loaded,
       authorizationRequestId,
+      cycleRequestId: context.requestId,
       scope,
     });
     if (!claim.locked) return;

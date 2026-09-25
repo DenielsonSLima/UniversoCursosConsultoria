@@ -1,47 +1,34 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { ReceivableActionButtons, type ReceivableActionsContext } from './ReceivableItemPresentation';
+import type { ContasReceber } from '../../../financeiro.types';
 
-const [presentationSource, operationsSource] = await Promise.all([
-  readFile(new URL('./ReceivableItemPresentation.tsx', import.meta.url), 'utf8'),
-  readFile(new URL('./useModalidadeReceberOperations.ts', import.meta.url), 'utf8'),
-]);
+const operationsSource = await readFile(new URL('./useModalidadeReceberOperations.ts', import.meta.url), 'utf8');
+const noop = () => {};
+const actions: ReceivableActionsContext = {
+  baneseDetailsPending: false, refreshPending: false, syncPending: false,
+  onOpenPayment: noop, onCopyInvoiceUrl: noop, onOpenCharge: noop, onRefresh: noop,
+  onSync: noop, onOpenPaidReceipt: noop, onOpenReversal: noop,
+};
+const renderActions = (overrides: Partial<ContasReceber> = {}) => renderToStaticMarkup(createElement(
+  ReceivableActionButtons, { actions, item: {
+    id: 'test', poloId: 'polo', descricao: 'Parcela', valor: 100, dataVencimento: '2030-01-01',
+    status: 'PENDENTE', categoria: 'MENSALIDADE', gatewayProvider: 'banese_card', ...overrides,
+  } },
+));
 
-test('quarentena não oferece ação manual nem libera o documento', () => {
-  const branchStart = presentationSource.indexOf('{isBaneseIdentityQuarantine ?');
-  const branchEnd = presentationSource.indexOf(
-    ': hasExternalChargeUrl || canOpenBanese ? (',
-    branchStart,
-  );
-  assert.notEqual(branchStart, -1);
-  assert.notEqual(branchEnd, -1);
-
-  const quarantineBranch = presentationSource.slice(branchStart, branchEnd);
-  assert.match(quarantineBranch, /isBaneseIdentityQuarantine \? null/);
-  assert.doesNotMatch(
-    quarantineBranch,
-    /Consultar|Regularizar|Reemitir|onSync|onOpenCharge|>\s*Abrir\s*</i,
-  );
+test('quarentena não oferece envio bancário nem libera o documento', () => {
+  const html = renderActions({ asaasLastError: 'BANESE_IDENTITY_QUARANTINED: teste' });
+  assert.doesNotMatch(html, /Enviar ao banco|Regularizar|Reemitir|>Abrir</);
 });
 
 test('título Banese existente nunca cai na ação de enviar ao banco', () => {
-  const openBranch = presentationSource.indexOf(
-    'hasExternalChargeUrl || canOpenBanese ? (',
-  );
-  const baneseClosedBranch = presentationSource.indexOf(
-    ') : isBanese ? null : (',
-    openBranch,
-  );
-  const syncAction = presentationSource.indexOf(
-    'actions.onSync(item.id!)',
-    baneseClosedBranch,
-  );
-
-  assert.notEqual(openBranch, -1);
-  assert.notEqual(baneseClosedBranch, -1);
-  assert.notEqual(syncAction, -1);
-  assert.ok(openBranch < baneseClosedBranch);
-  assert.ok(baneseClosedBranch < syncAction);
+  const html = renderActions();
+  assert.match(html, /Abrir/);
+  assert.doesNotMatch(html, /Enviar ao banco/);
 });
 
 test('sincronização ignorada não apresenta confirmação bancária falsa', () => {
