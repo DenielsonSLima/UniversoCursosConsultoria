@@ -86,7 +86,7 @@ const requireGenerationResult = (
     Number(cycle.numero) < 1 ||
     cycle.status !== "EMITIDO_BANESE" ||
     !Number.isInteger(cycle.quantidadeItens) ||
-    ![12, 13].includes(Number(cycle.quantidadeItens)) ||
+    Number(cycle.quantidadeItens) < 1 || Number(cycle.quantidadeItens) > 61 ||
     cycle.quantidadeItens !== receivables.length ||
     !isDecimalString(cycle.total) ||
     !quantities ||
@@ -326,10 +326,16 @@ export const matriculaTecnicaCicloManualService = {
     const mode = input.revisao?.modoMatricula
       ?? (input.revisao?.emitirMatricula === false ? 'OMITIR' : 'BOLETO');
     if (input.cicloNumero === 1 && (
-      result.ciclo.quantidadeItens !== (mode === 'OMITIR' ? 12 : 13)
+      result.ciclo.recebiveis.filter((item) => item.tipo === 'MATRICULA').length !== (mode === 'OMITIR' ? 0 : 1)
       || (result.ciclo.quantidadeLocal ?? 0) !== (mode === 'REGISTRO_SEM_BOLETO' ? 1 : 0)
     )) {
       throw new Error('A emissão não reconciliou a escolha do boleto de matrícula.');
+    }
+    const reviewedInstallments = input.revisao?.itens.filter((item) => item.chave.startsWith(`ciclo-${input.cicloNumero}-parc-`));
+    const issuedInstallments = result.ciclo.recebiveis.filter((item) => item.tipo === 'PARCELA');
+    if (reviewedInstallments
+      && reviewedInstallments.some((item) => !issuedInstallments.some((issued) => issued.chave === item.chave))) {
+      throw new Error('A emissão não reconciliou as mensalidades revisadas.');
     }
     reconcileIssuedCycle(result, input.cicloNumero);
     return result;

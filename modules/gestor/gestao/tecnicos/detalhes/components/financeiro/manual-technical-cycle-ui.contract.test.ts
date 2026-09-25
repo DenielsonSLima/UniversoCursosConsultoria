@@ -372,7 +372,7 @@ test("prévia canônica lista 1+N e a confirmação comunica emissão BolePix ú
   assert.doesNotMatch(dialogSource, /supabase|functions\.invoke|gateway/i);
 });
 
-test("frontend usa uma única Edge e exige emissão completa da composição de 12 ou 13 itens", () => {
+test("frontend usa uma única Edge e exige emissão completa da composição revisada", () => {
   assert.match(
     serviceSource,
     /supabase\.rpc\(['"]preview_ciclo_financeiro_tecnico_manual_secure['"]/,
@@ -395,7 +395,8 @@ test("frontend usa uma única Edge e exige emissão completa da composição de 
     ]
   ) assert.match(serviceSource, new RegExp(parameter));
   assert.match(destinationSource, /item\.emissaoBanese === ['"]EMITIDO['"]/);
-  assert.match(serviceSource, /\[12, 13\]\.includes\(Number\(cycle\.quantidadeItens\)\)/);
+  assert.match(serviceSource, /Number\(cycle\.quantidadeItens\) < 1 \|\| Number\(cycle\.quantidadeItens\) > 61/);
+  assert.match(serviceSource, /reviewedInstallments\.some\(\(item\) => !issuedInstallments\.some/);
   assert.match(serviceSource, /cycle\.emitidosBanese !== quantities\.bank/);
   assert.match(serviceSource, /cycle\.pendentesEmissao !== 0/);
   assert.match(serviceSource, /cycle\.status !== ['"]EMITIDO_BANESE['"]/);

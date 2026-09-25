@@ -33,3 +33,19 @@ Deno.test("modo de matrícula distingue registro local de omissão sem presumir 
     assert.throws(() => parseManualCycleRevision({ emitirMatricula: false, modoMatricula, itens: [item] }), /incompatível/);
   }
 });
+
+Deno.test("transporte aceita quantidade variável e limita a 60 mensalidades mais taxa", () => {
+  const revision = (count: number) => ({
+    emitirMatricula: true,
+    itens: Array.from({ length: count }, (_, index) => ({
+      ...item,
+      chave: index === 0 ? "ciclo-1-matricula" : `ciclo-1-parcela-${index}`,
+    })),
+  });
+  for (const count of [1, 7, 13, 14, 61]) {
+    assert.equal(parseManualCycleRevision(revision(count))?.itens.length, count);
+  }
+  for (const count of [0, 62]) {
+    assert.throws(() => parseManualCycleRevision(revision(count)), /inválida/);
+  }
+});

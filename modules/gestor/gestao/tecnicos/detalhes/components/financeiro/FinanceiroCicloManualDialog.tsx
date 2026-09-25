@@ -72,7 +72,8 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
   const [cycleNumber, setCycleNumber] = useState(requestedCycleNumber);
   const externalHistory = row.cicloManual.criterioElegibilidade === 'HISTORICO_EXTERNO';
   const [externalHistoryConfirmed, setExternalHistoryConfirmed] = useState(false);
-  const requiresIndividualDate = cycleNumber === 2;
+  const plannedEntry = row.cicloManual.criterioElegibilidade === 'TRANSFERENCIA_PLANEJADA';
+  const requiresIndividualDate = cycleNumber === 2 || plannedEntry;
   const [openSettlement, setOpenSettlement] = useState(false);
   const [step, setStep] = useState<WizardStep>(1);
   const [dateSource, setDateSource] = useState<'TURMA' | 'INDIVIDUAL'>(
@@ -95,12 +96,12 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
     setCycleNumber(requestedCycleNumber);
     setStep(1);
     setOpenSettlement(false);
-    setDateSource(requestedCycleNumber === 2 ? 'INDIVIDUAL' : 'TURMA');
+    setDateSource(requestedCycleNumber === 2 || plannedEntry ? 'INDIVIDUAL' : 'TURMA');
     setIndividualDate(row.cicloManual.primeiroVencimentoSugerido ?? '');
     setExternalHistoryConfirmed(false);
     setIssuanceSnapshot(null);
     lastPreviewRef.current = null;
-  }, [pending, cycleIdentityChanged, requestedCycleNumber, row.cicloManual.primeiroVencimentoSugerido]);
+  }, [pending, cycleIdentityChanged, requestedCycleNumber, plannedEntry, row.cicloManual.primeiroVencimentoSugerido]);
   const previewEnabled = !pending && !cycleIdentityChanged && cycleNumber !== null
     && row.cicloManual.estado === 'ELEGIVEL'
     && row.cicloManual.podeGerar
@@ -256,8 +257,10 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
                 <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
                   {requiresIndividualDate ? (
                     <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-blue-700">Data individual obrigatória no 2º ciclo</p>
-                      <p className="mt-2 text-xs font-semibold leading-relaxed text-blue-900">A data será o vencimento da rematrícula — ou do primeiro item, se ela não for cobrada. Quando houver rematrícula, a mensalidade 1 vencerá no mês seguinte.</p>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-blue-700">{plannedEntry ? 'Vencimento definido na transferência' : 'Data individual obrigatória no 2º ciclo'}</p>
+                      <p className="mt-2 text-xs font-semibold leading-relaxed text-blue-900">{plannedEntry
+                        ? `Plano de entrada: ${row.cicloManual.planoEntrada?.quantidadeParcelas} mensalidades no ${cycleNumber}º ciclo. Confira a data e cada cobrança antes de emitir.`
+                        : 'A data será o vencimento da rematrícula — ou do primeiro item, se ela não for cobrada. Quando houver rematrícula, a mensalidade 1 vencerá no mês seguinte.'}</p>
                     </div>
                   ) : (
                     <fieldset>
@@ -279,10 +282,10 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
 
                   {dateSource === 'INDIVIDUAL' ? (
                     <label className="mt-4 block space-y-2">
-                      <span className="text-[10px] font-black uppercase text-slate-500">{requiresIndividualDate ? 'Vencimento da rematrícula / primeiro item' : 'Primeiro vencimento individual'}</span>
+                      <span className="text-[10px] font-black uppercase text-slate-500">{cycleNumber === 2 ? 'Vencimento da rematrícula / primeiro item' : 'Primeiro vencimento individual'}</span>
                       <input type="date" value={individualDate} onChange={(event) => setIndividualDate(event.target.value)} className="w-full rounded-xl border border-slate-200 p-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
                       {row.cicloManual.primeiroVencimentoSugerido ? (
-                        <span className="block text-[10px] font-semibold text-slate-500">Sugestão automática: um mês após o último boleto do ciclo anterior. Você pode alterar esta data.</span>
+                        <span className="block text-[10px] font-semibold text-slate-500">{plannedEntry ? 'Data registrada no plano de entrada. Você pode revisar antes da emissão.' : 'Sugestão automática: um mês após o último boleto do ciclo anterior. Você pode alterar esta data.'}</span>
                       ) : null}
                     </label>
                   ) : null}

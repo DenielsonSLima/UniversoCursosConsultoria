@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 import { AcademicMovementType, AcademicStudent } from '../../academic-lifecycle.service';
 import { getMaceioIsoDate } from '../../../technicalClassDates';
+import TransferFinancialPreview from './TransferFinancialPreview';
+import type { TransferFinancialPreview as FinancialPreview } from '../../transfer-finance.contract';
 
 export type OperationMode = 'MOVIMENTACAO' | 'TRANSFERENCIA' | 'RETORNO';
 export type TransferType = 'INTERNA_TURMA' | 'INTERNA_POLO' | 'EXTERNA_ENVIADA';
@@ -40,6 +42,12 @@ interface MovimentacaoAlunoModalProps {
   returnPending: boolean;
   destinationError?: boolean;
   destinationRetrying?: boolean;
+  financialPreview?: FinancialPreview;
+  financialLoading?: boolean;
+  financialError?: string | null;
+  financialLocked?: boolean;
+  financialCanConfirm?: boolean;
+  onRetryFinancial?: () => void;
   onOperationModeChange: (mode: OperationMode) => void;
   onMovementTypeChange: (type: AcademicMovementType) => void;
   onTransferTypeChange: (type: TransferType) => void;
@@ -71,6 +79,12 @@ const MovimentacaoAlunoModal: React.FC<MovimentacaoAlunoModalProps> = ({
   returnPending,
   destinationError = false,
   destinationRetrying = false,
+  financialPreview,
+  financialLoading = false,
+  financialError = null,
+  financialLocked = false,
+  financialCanConfirm = false,
+  onRetryFinancial = () => {},
   onOperationModeChange,
   onMovementTypeChange,
   onTransferTypeChange,
@@ -94,6 +108,7 @@ const MovimentacaoAlunoModal: React.FC<MovimentacaoAlunoModalProps> = ({
     || movementPending
     || transferPending
     || returnPending
+    || (operationMode === 'TRANSFERENCIA' && !financialCanConfirm)
     || (operationMode === 'TRANSFERENCIA'
       && transferType !== 'EXTERNA_ENVIADA'
       && (!destinationClassId || destinationError || destinationRetrying))
@@ -105,18 +120,19 @@ const MovimentacaoAlunoModal: React.FC<MovimentacaoAlunoModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/55 backdrop-blur-sm">
-      <div className="bg-white rounded-[2rem] w-full max-w-xl shadow-2xl overflow-hidden">
+      <div className="bg-white rounded-[2rem] w-full max-w-2xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
         <div className="p-6 bg-[#001a33] text-white flex justify-between items-start">
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-300">Movimentação acadêmica</p>
             <h3 className="font-black text-xl mt-1">{student.nome}</h3>
           </div>
-          <button onClick={onClose} className="p-2 text-blue-200 hover:bg-white/10 rounded-full">
+          <button onClick={onClose} disabled={financialLocked} className="p-2 text-blue-200 hover:bg-white/10 rounded-full disabled:opacity-40">
             <X size={20} />
           </button>
         </div>
 
-        <div className="p-6 space-y-5">
+        <div className="p-6 space-y-5 overflow-y-auto">
+          <fieldset disabled={financialLocked || movementPending || transferPending || returnPending} className="space-y-5">
           <div className="grid grid-cols-3 gap-2 p-1 bg-slate-100 rounded-xl">
             <button
               onClick={() => onOperationModeChange('MOVIMENTACAO')}
@@ -292,9 +308,14 @@ const MovimentacaoAlunoModal: React.FC<MovimentacaoAlunoModalProps> = ({
             placeholder="Observações adicionais (opcional)"
             className="w-full min-h-24 p-3.5 border border-slate-200 rounded-xl outline-none focus:border-blue-500 resize-none"
           />
+          </fieldset>
+
+          {operationMode === 'TRANSFERENCIA' && <TransferFinancialPreview
+            preview={financialPreview} loading={financialLoading} error={financialError}
+            locked={financialLocked} onRetry={onRetryFinancial} />}
 
           <div className="flex gap-3 pt-2">
-            <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-500 font-black uppercase text-xs">
+            <button onClick={onClose} disabled={financialLocked} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-500 font-black uppercase text-xs disabled:opacity-40">
               Cancelar
             </button>
             <button

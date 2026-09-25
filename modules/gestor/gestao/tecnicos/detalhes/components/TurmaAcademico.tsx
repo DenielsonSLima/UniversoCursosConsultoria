@@ -15,12 +15,11 @@ import { Turma } from '../../../gestao.types';
 import ToastNotification, { useToast } from '../../../../parceiros/components/shared/ToastNotification';
 import { academicLifecycleKeys } from '../academic-lifecycle.keys';
 import { AcademicPeriod, academicLifecycleService } from '../academic-lifecycle.service';
-import { supabase } from '../../../../../../lib/supabase';
 import AcademicPeriodCard from './academic/AcademicPeriodCard';
 import AcademicMovementsSection from './academic/AcademicMovementsSection';
 import { getMaceioIsoDate } from '../../technicalClassDates';
 import TechnicalDataError from './TechnicalDataError';
-import ReceiveExternalTransferModal, { ExternalCreditDraft } from './academic/ReceiveExternalTransferModal';
+import ReceiveExternalTransferController from './academic/ReceiveExternalTransferController';
 import { gestaoQueryKeys } from '../../../gestao.query-keys';
 import { invalidateSiteTickerQueries } from '../../../../../public/siteTicker.keys';
 import { invalidateTechnicalLandingQueries } from '../../../../../public/landing-pages/cursos-tecnicos/technicalLanding.keys';
@@ -29,6 +28,7 @@ interface TurmaAcademicoProps {
   turma: Turma;
   onTurmaUpdated?: (turma: Turma) => void;
   onTurmaFinalizada?: () => void;
+  onOpenFinanceiro?: (matriculaId: string) => void;
 }
 
 const MOVEMENTS_PAGE_SIZE = 10;
@@ -37,19 +37,13 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({
   turma,
   onTurmaUpdated,
   onTurmaFinalizada,
+  onOpenFinanceiro,
 }) => {
   const { toasts, removeToast, toast } = useToast();
   const queryClient = useQueryClient();
   const [reopenPeriod, setReopenPeriod] = useState<AcademicPeriod | null>(null);
   const [reopenReason, setReopenReason] = useState('');
   const [showReceiveTransfer, setShowReceiveTransfer] = useState(false);
-  const [selectedStudentId, setSelectedStudentId] = useState('');
-  const [originInstitution, setOriginInstitution] = useState('');
-  const [originCourse, setOriginCourse] = useState('');
-  const [transferReason, setTransferReason] = useState('');
-  const [transferNotes, setTransferNotes] = useState('');
-  const [transferDate, setTransferDate] = useState(getMaceioIsoDate());
-  const [externalCredits, setExternalCredits] = useState<Record<string, ExternalCreditDraft>>({});
   const [movementsPage, setMovementsPage] = useState(1);
 
   const periodsQuery = useQuery({
@@ -84,37 +78,6 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({
       setMovementsPage(movementsTotalPages);
     }
   }, [movementsPage, movementsTotalPages]);
-
-  const allStudentsQuery = useQuery({
-    queryKey: [...academicLifecycleKeys.turma(turma.id), 'alunos-recebimento'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('parceiros')
-        .select('id, nome, cpf_cnpj')
-        .eq('tipo', 'Aluno')
-        .order('nome');
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: showReceiveTransfer,
-  });
-  const allStudents = allStudentsQuery.data || [];
-  const disciplinesQuery = useQuery({
-    queryKey: [...academicLifecycleKeys.turma(turma.id), 'disciplinas-aproveitamento'],
-    queryFn: () => academicLifecycleService.getDisciplinasAproveitamento(turma.id),
-    enabled: showReceiveTransfer,
-  });
-
-  const closeReceiveTransfer = () => {
-    setShowReceiveTransfer(false);
-    setSelectedStudentId('');
-    setOriginInstitution('');
-    setOriginCourse('');
-    setTransferReason('');
-    setTransferNotes('');
-    setTransferDate(getMaceioIsoDate());
-    setExternalCredits({});
-  };
 
   const invalidate = async () => {
     await Promise.all([
@@ -186,43 +149,6 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({
       onTurmaFinalizada?.();
     },
     onError: (error: any) => toast.error('Turma não finalizada', error.message),
-  });
-
-  const receiveTransferMutation = useMutation({
-    mutationFn: () => {
-      if (turma.status !== 'EM_ANDAMENTO') {
-        throw new Error('Transferências só podem ser recebidas com a turma em andamento.');
-      }
-      if (allStudentsQuery.isError || !allStudentsQuery.data) {
-        throw new Error('Recarregue a lista de alunos antes de receber a transferência.');
-      }
-      if (disciplinesQuery.isError || !disciplinesQuery.data) {
-        throw new Error('Recarregue as disciplinas antes de receber a transferência.');
-      }
-      return academicLifecycleService.receberTransferencia({
-        alunoId: selectedStudentId,
-        turmaDestinoId: turma.id,
-        instituicaoOrigem: originInstitution,
-        cursoOrigem: originCourse,
-        motivo: transferReason,
-        observacao: transferNotes,
-        dataTransferencia: transferDate,
-        aproveitamentos: (Object.entries(externalCredits) as Array<[string, ExternalCreditDraft]>)
-          .filter(([, credit]) => credit.selected)
-          .map(([disciplinaId, credit]) => ({
-            disciplinaId,
-            mediaFinal: credit.mediaFinal === '' ? null : Number(credit.mediaFinal),
-            frequenciaPercent: credit.frequenciaPercent === '' ? null : Number(credit.frequenciaPercent),
-            situacao: credit.situacao,
-          })),
-      });
-    },
-    onSuccess: async () => {
-      await invalidate();
-      closeReceiveTransfer();
-      toast.success('Transferência recebida', 'A matrícula e a origem acadêmica foram registradas.');
-    },
-    onError: (error: any) => toast.error('Transferência não recebida', error.message),
   });
 
   const allPeriodsClosed = periods.length > 0 && periods.every((period) => period.status === 'FECHADO');
@@ -407,30 +333,13 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({
       )}
 
       {showReceiveTransfer && (
-        <ReceiveExternalTransferModal
-          students={allStudents}
-          disciplines={disciplinesQuery.data || []}
-          loading={allStudentsQuery.isLoading || disciplinesQuery.isLoading}
-          loadError={allStudentsQuery.isError || disciplinesQuery.isError}
-          retrying={allStudentsQuery.isFetching || disciplinesQuery.isFetching}
-          pending={receiveTransferMutation.isPending}
-          selectedStudentId={selectedStudentId}
-          originInstitution={originInstitution}
-          originCourse={originCourse}
-          reason={transferReason}
-          notes={transferNotes}
-          transferDate={transferDate}
-          credits={externalCredits}
-          onStudentChange={setSelectedStudentId}
-          onInstitutionChange={setOriginInstitution}
-          onCourseChange={setOriginCourse}
-          onReasonChange={setTransferReason}
-          onNotesChange={setTransferNotes}
-          onTransferDateChange={setTransferDate}
-          onCreditsChange={setExternalCredits}
-          onRetry={() => { void Promise.all([allStudentsQuery.refetch(), disciplinesQuery.refetch()]); }}
-          onClose={closeReceiveTransfer}
-          onConfirm={() => receiveTransferMutation.mutate()}
+        <ReceiveExternalTransferController
+          key={turma.id}
+          turmaId={turma.id}
+          canReceive={canReceiveTransfer}
+          onClose={() => setShowReceiveTransfer(false)}
+          onSaved={async () => { await invalidate(); }}
+          onOpenFinanceiro={onOpenFinanceiro}
         />
       )}
 

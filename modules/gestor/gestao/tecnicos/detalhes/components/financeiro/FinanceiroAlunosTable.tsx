@@ -159,6 +159,13 @@ const FinanceiroAlunosTable = ({
                       CPF: {formatStudentDocument(row.alunoCpf)} · Matrícula: {row.matriculaExibicao}
                     </p>
                     {row.overrideAtivo ? <p className="mt-0.5 text-[8px] font-black uppercase text-violet-600">Regra individual</p> : null}
+                    {row.cicloManual.continuidadeFinanceira?.cadeiaOrigemIds.map((originId, index, origins) => (
+                      <button type="button" className="mt-1 text-xs font-semibold text-blue-700 underline"
+                        key={originId}
+                        onClick={(event) => { event.stopPropagation(); onOpenStatement(originId); }}>
+                        Consultar financeiro da matrícula de origem{origins.length > 1 ? ` ${index + 1}` : ''}
+                      </button>
+                    ))}
                   </div>
                 </div>
               </td>

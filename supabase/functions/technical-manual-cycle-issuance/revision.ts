@@ -18,6 +18,9 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const MONEY_RE = /^\d{1,10}(?:\.\d{1,2})?$/;
 const RATE_RE = /^\d{1,3}(?:\.\d{1,6})?$/;
+// Limite do transporte: até 60 mensalidades da regra e uma taxa.
+// A RPC confere as chaves e a quantidade exata da prévia canônica.
+const MAX_REVISION_ITEMS = 61;
 const fields = ["chave", "valor", "vencimento", "descontoPontualidade", "jurosAtrasoPercentual", "multaAtrasoPercentual"];
 
 const validDate = (value: unknown) => {
@@ -30,7 +33,7 @@ export const parseManualCycleRevision = (value: unknown): ManualCycleRevision | 
   if (value === undefined || value === null) return null;
   if (!isRecord(value) || typeof value.emitirMatricula !== "boolean"
     || Object.keys(value).some((key) => !["emitirMatricula", "modoMatricula", "itens"].includes(key))
-    || !Array.isArray(value.itens) || value.itens.length < 1 || value.itens.length > 13) {
+    || !Array.isArray(value.itens) || value.itens.length < 1 || value.itens.length > MAX_REVISION_ITEMS) {
     throw new Error("Revisão das cobranças inválida.");
   }
   const mode = value.modoMatricula;
