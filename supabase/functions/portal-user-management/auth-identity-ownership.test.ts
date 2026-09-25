@@ -22,8 +22,21 @@ type FixtureOptions = {
 };
 
 const makeAdmin = (options: FixtureOptions = {}) => ({
+  rpc: async (name: string, args: Record<string, unknown>) => {
+    assert.equal(name, "portal_identidade_listar_responsaveis_vinculados");
+    assert.deepEqual(args, { p_auth_user_id: AUTH_ID });
+    return {
+      data: options.malformedTable === "responsaveis_legais"
+        ? null
+        : options.rows?.responsaveis_legais || [],
+      error: options.failingTable === "responsaveis_legais"
+        ? { message: "lookup failed" }
+        : null,
+    };
+  },
   from: (table: string) => ({
     select: () => {
+      assert.notEqual(table, "responsaveis_legais");
       const query: any = {
         eq: () => query,
         neq: () => query,

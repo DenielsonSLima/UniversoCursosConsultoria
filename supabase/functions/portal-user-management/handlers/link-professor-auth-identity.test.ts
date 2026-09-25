@@ -43,6 +43,10 @@ const makeFixture = (options: FixtureOptions = {}) => {
   };
 
   const admin = {
+    rpc: async (name: string) => {
+      assert.equal(name, "portal_identidade_listar_responsaveis_vinculados");
+      return { data: rows.responsaveis_legais || [], error: null };
+    },
     from: (table: string) => ({
       select: () => {
         const query: any = {

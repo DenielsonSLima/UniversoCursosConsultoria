@@ -76,8 +76,10 @@ const makeFixture = (options: FixtureOptions) => {
 
   const emptyRows = () => ({ data: [], error: null });
   const admin = {
-    rpc: () =>
-      options.rpcUnavailable
+    rpc: (name: string) =>
+      name === "portal_identidade_listar_responsaveis_vinculados"
+        ? { data: [], error: null }
+        : options.rpcUnavailable
         ? { data: null, error: { message: "RPC indisponível" } }
         : { data: PROOF, error: null },
     from: (table: string) => {

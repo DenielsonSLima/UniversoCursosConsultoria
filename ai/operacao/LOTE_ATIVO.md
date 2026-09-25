@@ -2,12 +2,14 @@
 
 Estado: VALIDADO — BACKEND APLICADO; VERSIONAMENTO EM PUBLICAÇÃO
 
-## Lote: 2026-09-25-lentidao-repeticao-emissao
+## Lote: 2026-09-25-validacao-email-identidade
 
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-25-lentidao-repeticao-emissao.md`.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-25-validacao-email-identidade.md`.
 
-- Eliminar repetição ilimitada de conflitos permanentes na marcação de falha BolePix.
-- Preservar autorização, ownership, dados financeiros e emissão idempotente.
-- SQL e emissor/worker v9 aplicados; 65 testes e regressão SQL real aprovados.
-- Boletos do caso anterior confirmados completos; não reemitir.
-- Teste de acesso pelo usuário; revisão interna sem login, conforme solicitado.
+- Corrigir consulta de titularidade à tabela privada de responsáveis no gerenciamento de acesso.
+- RPC mínima por UID, exclusiva do serviço; preservar conflitos de CPF/e-mail e auditoria.
+- Regressão comportamental reproduziu HTTP 500 antes do patch.
+- Papéis efetivos validados; RPC e Edge v36 aplicadas. Publicação 4.8.88 em andamento.
+- 207 testes de acesso aprovados; tabela privada preservada.
+- Validação individual pendente de acionamento pelo gestor: conexão interna somente leitura.
+- Revisão interna sem login, conforme solicitado. Lote anterior publicado na 4.8.87.

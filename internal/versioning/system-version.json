@@ -1,8 +1,8 @@
 {
-  "version": "4.8.87",
+  "version": "4.8.88",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 96,
+  "revision": 97,
   "releasedAt": "2026-09-25",
-  "summary": "Conflitos de emissão encerram sem repetição infinita que sobrecarrega o acesso"
+  "summary": "Validação de e-mail consulta vínculos de identidade pelo serviço autorizado"
 }

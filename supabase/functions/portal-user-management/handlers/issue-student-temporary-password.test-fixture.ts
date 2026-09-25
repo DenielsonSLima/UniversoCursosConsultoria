@@ -98,6 +98,9 @@ export const makeFixture = (options: {
       },
     },
     rpc: async (name: string, args?: Record<string, unknown>) => {
+      if (name === "portal_identidade_listar_responsaveis_vinculados") {
+        return { data: [], error: null };
+      }
       rpcCalls.push({ name, args });
       events.push(`rpc:${name}`);
       if (name === "portal_identidade_termos_versao_vigente") {

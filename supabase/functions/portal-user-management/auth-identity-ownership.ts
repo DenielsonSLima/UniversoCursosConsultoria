@@ -85,11 +85,9 @@ export const findAuthIdentityConflict = async (
         .select("id, cpf, email")
         .eq("auth_user_id", authUserId)
         .limit(1000),
-      admin
-        .from("responsaveis_legais")
-        .select("id, cpf_normalizado, email")
-        .eq("auth_user_id", authUserId)
-        .limit(1000),
+      admin.rpc("portal_identidade_listar_responsaveis_vinculados", {
+        p_auth_user_id: authUserId,
+      }),
     ]);
   } catch {
     return ownershipError(IDENTITY_LOOKUP_ERROR);

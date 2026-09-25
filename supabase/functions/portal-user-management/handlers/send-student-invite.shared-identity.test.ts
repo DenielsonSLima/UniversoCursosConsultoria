@@ -58,6 +58,9 @@ const makeFixture = (options: FixtureOptions = {}) => {
 
   const admin = {
     rpc: async (name: string, args: Record<string, unknown>) => {
+      if (name === "portal_identidade_listar_responsaveis_vinculados") {
+        return { data: rows.responsaveis_legais || [], error: null };
+      }
       rpcCalls.push({ name, args });
       return options.credentialLookupFails
         ? { data: null, error: { message: "lookup failed" } }

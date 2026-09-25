@@ -1,6 +1,6 @@
 # Lentidão de acesso ligada à repetição de falha BolePix — 25/09/2026
 
-Estado: VALIDADO — backend aplicado; versionamento 4.8.87 em publicação.
+Estado: PUBLICADO — backend aplicado e versão 4.8.87 em produção (PR #179).
 
 ## Evidência e causa
 

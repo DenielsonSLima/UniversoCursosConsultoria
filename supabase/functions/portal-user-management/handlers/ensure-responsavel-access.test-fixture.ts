@@ -76,6 +76,9 @@ export const makeFixture = (options: FixtureOptions = {}) => {
 
   const admin = {
     rpc: async (name: string, args: Record<string, unknown>) => {
+      if (name === "portal_identidade_listar_responsaveis_vinculados") {
+        return { data: options.responsaveis || [], error: null };
+      }
       rpcCalls.push({ name, args });
       if (name === "responsavel_legal_acesso_preparar") {
         return options.prepareError
