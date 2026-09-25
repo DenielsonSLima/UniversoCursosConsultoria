@@ -6,6 +6,7 @@ import { financeiroQueryKeys } from '../../../financeiro.queryKeys';
 import { matriculaTecnicaFinanceiroKeys } from '../../../../gestao/tecnicos/detalhes/components/financeiro/matricula-tecnica-financeiro.keys';
 import type { ContasReceber } from '../../../financeiro.service';
 import { financeiroService } from '../../../financeiro.service';
+import { receivableIssuanceNotice, submitReceivableFromFinanceiro } from '../../../financeiro.receivable-issuance';
 import { gestorBanesePaymentService } from '../../banese/gestor-banese-payment.service';
 import type { ManualSettlementPayload } from '../manual-settlement/useManualSettlementForm';
 import {
@@ -73,7 +74,9 @@ export const useModalidadeReceberOperations = (toast: OperationToast) => {
   });
 
   const syncMutation = useMutation({
-    mutationFn: (receivableId: string) => asaasIntegrationService.syncReceivable(receivableId),
+    mutationFn: (item: ContasReceber) => submitReceivableFromFinanceiro(
+      item, (receivableId) => asaasIntegrationService.syncReceivable(receivableId),
+    ),
     onSuccess: async (result) => {
       await queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.receivablesRoot });
       const normalizedResult = result as typeof result & {
@@ -200,6 +203,11 @@ export const useModalidadeReceberOperations = (toast: OperationToast) => {
   };
 
   const openCharge = (item: ContasReceber) => {
+    const issuanceNotice = receivableIssuanceNotice(item);
+    if (issuanceNotice) {
+      toast.info(issuanceNotice.title, issuanceNotice.message);
+      return;
+    }
     if (['banese_card', 'banese'].includes(paymentGatewayCode(item) || '')) {
       if (!item.id) return;
       const preparedTab = window.open('about:blank', '_blank');

@@ -87,9 +87,29 @@ export const claimExistingGatewayCheckout = async (input: {
   receivablePayload: Record<string, unknown>;
   providerCode: GatewayProviderCode;
   attemptToken: string;
+  technicalCycleRequestId?: string;
   claimedAt?: string;
   staleCreatingBefore?: string;
 }) => {
+  const snapshot = input.receivable?.regra_financeira_tecnica_snapshot;
+  const cycle = snapshot?.cicloManual;
+  if (snapshot?.destinoCobranca === "LOCAL") {
+    throw new Error("A matrícula local sem boleto não pode ser enviada ao banco.");
+  }
+  // Ciclos precisam do emissor que preserva a operação e conclui boleto +
+  // transação atomicamente. O envio genérico não possui esse contrato.
+  if (cycle !== undefined || input.technicalCycleRequestId !== undefined) {
+    if (
+      !cycle || typeof cycle !== "object" || Array.isArray(cycle) ||
+      typeof cycle.requestId !== "string" || !cycle.requestId ||
+      cycle.requestId !== input.technicalCycleRequestId ||
+      input.providerCode !== "banese_card"
+    ) {
+      throw Object.assign(new Error(
+        "Esta cobrança pertence a um ciclo técnico. Use Retomar emissão na turma para concluir os boletos do mesmo ciclo.",
+      ), { code: "TECHNICAL_CYCLE_ISSUANCE_REQUIRED" });
+    }
+  }
   const claimedAt = input.claimedAt || new Date().toISOString();
   const staleCreatingBefore = input.staleCreatingBefore ||
     new Date(Date.now() - 2 * 60 * 1000).toISOString();

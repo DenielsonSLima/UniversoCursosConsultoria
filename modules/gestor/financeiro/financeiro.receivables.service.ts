@@ -2,6 +2,7 @@ import { supabase } from '../../../lib/supabase';
 import { asaasIntegrationService } from '../../asaas/asaas.service';
 import type { ContasReceber, ReceivablesSummary, ReceivablesSummaryFilters } from './financeiro.types';
 import { mapReceivableFinancialComposition } from './financeiro.composition-presentation';
+import { mapReceivableIssuance } from './financeiro.receivable-issuance';
 import { reverseSettlementWithLocalGuard, type ReversalOptions } from './financeiro.local-enrollment-reversal';
 
 const mapReceivablesSummary = (row: any = {}): ReceivablesSummary => ({
@@ -45,6 +46,7 @@ const mapReceivableRpcRow = (row: any): ContasReceber => ({
   cursoModalidade: row.curso_modalidade || '',
   formaPagamento: row.forma_pagamento || undefined,
   origemPagamento: row.origem_pagamento || undefined,
+  ...mapReceivableIssuance(row),
   manualSettlementId: row.manual_settlement_id || undefined,
   gatewayProvider: row.gateway_provider || undefined,
   gatewayPaymentMethod: row.gateway_payment_method || undefined,
@@ -97,6 +99,7 @@ const mapReceivable = (cr: any): ContasReceber => ({
   cursoModalidade: cr.turmas?.cursos?.modalidade || '',
   formaPagamento: cr.forma_pagamento,
   origemPagamento: cr.origem_pagamento,
+  ...mapReceivableIssuance(cr),
   manualSettlementId: cr.manual_settlement_id || undefined,
   gatewayProvider: cr.gateway_provider,
   contaBancariaId: cr.conta_bancaria_id,

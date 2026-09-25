@@ -59,3 +59,41 @@ test('cobrança nova sem gateway mantém envio ao banco', () => {
   assert.match(html, /Enviar ao banco/);
   assert.doesNotMatch(html, /Cobrança do sistema anterior/);
 });
+
+test('parcela gerada pela turma orienta retomada e nunca oferece envio avulso ou abertura prematura', () => {
+  for (const emissaoCicloStatus of ['PENDENTE', 'REVISAO', undefined] as const) {
+    for (const gatewayProvider of [undefined, 'banese_card']) {
+      const html = renderActions(receivable({
+        emissaoGerenciadaTurma: true, emissaoCicloStatus, gatewayProvider,
+      }));
+      assert.match(html, /Emissão não concluída/);
+      assert.match(html, /Gestão → Turma → Financeiro/);
+      assert.match(html, /Retomar emissão/);
+      assert.match(html, /Receber/);
+      assert.doesNotMatch(html, /Enviar ao banco|>Abrir</);
+    }
+  }
+});
+
+test('matrícula local continua recebível sem oferecer qualquer emissão bancária', () => {
+  const html = renderActions(receivable({ destinoCobranca: 'LOCAL', emissaoGerenciadaTurma: true }));
+  assert.match(html, /Sem boleto|Receber/);
+  assert.doesNotMatch(html, /Enviar ao banco|Retomar emissão|>Abrir</);
+});
+
+test('ciclo em revisão informa acompanhamento sem sugerir repetir emissão bancária', () => {
+  const html = renderActions(receivable({ emissaoGerenciadaTurma: true, emissaoCicloStatus: 'REVISAO_MANUAL' }));
+  assert.match(html, /Emissão em revisão/);
+  assert.match(html, /Acompanhe esta cobrança/);
+  assert.doesNotMatch(html, /Enviar ao banco|Retomar emissão/);
+});
+
+test('boleto nativo concluído mantém abertura e jamais reapresenta envio genérico', () => {
+  for (const gatewayProvider of ['banese_card', undefined]) {
+    const html = renderActions(receivable({
+      emissaoGerenciadaTurma: true, emissaoCicloStatus: 'EMITIDO', gatewayProvider,
+    }));
+    assert.match(html, gatewayProvider ? /Abrir/ : /Boleto emitido/);
+    assert.doesNotMatch(html, /Enviar ao banco|Retomar emissão/);
+  }
+});

@@ -1,6 +1,7 @@
 import { supabase } from '../../../lib/supabase';
 import { parseProescReceivableEvidence } from './financeiro.proesc-evidence';
 import { mapReceivableFinancialComposition } from './financeiro.composition-presentation';
+import { mapReceivableIssuance } from './financeiro.receivable-issuance';
 import { readReceivablesRequest } from './financeiro.receivables-request';
 import type {
   ActiveReceivablesClass,
@@ -55,6 +56,7 @@ const mapReceivableRpcRow = (row: any): ContasReceber => ({
   cursoModalidade: row.curso_modalidade || '',
   formaPagamento: row.forma_pagamento || undefined,
   origemPagamento: row.origem_pagamento || undefined,
+  ...mapReceivableIssuance(row),
   proescEvidence: parseProescReceivableEvidence(row.proesc_evidence),
   manualSettlementActorName: row.manual_settlement_actor_name || undefined,
   manualSettlementCompletedAt: row.manual_settlement_completed_at || undefined,

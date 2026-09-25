@@ -2,14 +2,11 @@
 
 Estado: VALIDADO — PUBLICAÇÃO EM ANDAMENTO
 
-## Lote: 2026-09-25-revisao-transferencias-tecnicas
+## Lote: 2026-09-25-emissao-ciclos-permissoes
 
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-25-revisao-transferencias-tecnicas.md`.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-25-emissao-ciclos-permissoes.md`.
 
-- Usuário pediu nova revisão em etapas; autorização anterior de ajustes e publicação permanece.
-- Etapa 1: entrada, permissões e plano individual.
-- Etapa 2: saída/interna, resposta incerta e vínculo do histórico.
-- Etapa 3: continuidade e proteção da retomada Banese após transferência.
-- Etapa 4: integração, provas transacionais, smoke e revisão cruzada.
-- Não emitir/cancelar boletos reais para testar. Preservar Caixa paralelo e migrations já aplicadas.
-- Lote anterior publicado: 4.8.84, PR176, main `ff8b9dafcdfbdb0060b5cb0fe62dce1fad05c5ba`.
+- Corrigir emissão/retomada com papéis SQL reais e centralizar emissão dos ciclos na turma.
+- Preservar matrícula LOCAL, histórico importado, dados financeiros e recuperação idempotente.
+- SQL com teste revertido e Edge aplicados; web 4.8.86 em publicação.
+- Emissão real solicitada permanece pendente: conexão de consulta recusou a credencial interna do worker. Não contornar a permissão.
