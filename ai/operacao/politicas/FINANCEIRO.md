@@ -7,12 +7,13 @@ Carregue esta política somente para financeiro, Caixa, patrimônio, empréstimo
 - Cálculos, valores, parcelas, juros, multa, desconto, saldo e rateio pertencem ao backend/RPC.
 - O frontend coleta entradas e exibe o resultado canônico.
 - Toda mutação é autorizada por escopo, idempotente, auditável e conciliada por TanStack Query/Realtime.
+- Ciclos técnicos seguem o [contrato de elegibilidade, matrícula local, baixa, estorno e C2](../../../docs/decisions/ciclos-tecnicos-cobrancas.md); origem importada não autoriza nova emissão.
 
 ## Gateways
 
 - Novas cobranças usam Banese para boleto/Pix e Mercado Pago para cartão.
 - Banese não processa cartão.
-- Pix Banese permanece bloqueado em produção até liberação formal.
+- BolePix (boleto com QR Pix vinculado) segue o contrato homologado e já publicado. Pix Banese avulso permanece bloqueado até liberação formal; não confundir as duas operações.
 - Mercado Pago permanece bloqueado para cobrança real até homologação de cartão, webhook, idempotência e recuperação ambígua.
 - Asaas e Banco Inter não podem ser selecionados para novas cobranças; preserve somente o histórico necessário.
 - API Banese é o fluxo principal. CNAB240 é contingência e exige EDI7 real.

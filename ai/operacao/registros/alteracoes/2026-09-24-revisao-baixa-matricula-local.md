@@ -1,6 +1,6 @@
 # Revisão da baixa e do estorno da matrícula local
 
-Estado: validado; preparado para publicação 4.8.82. Continuidade autorizada da revisão financeira.
+Estado: concluído e publicado em produção 4.8.82. Continuidade autorizada da revisão financeira.
 
 ## Pedido e achados reproduzidos
 
@@ -56,6 +56,7 @@ Total: 25 arquivos.
 - Migrations novas aplicadas em ordem via MCP: 190000→20260924235204,190100→20260924235224,190200→20260924235236. Sem alteração de cobranças na aplicação.
 - Rollbacks reais: `local_enrollment_reversal.rollback.sql`, `local_enrollment_cycle_state.transaction.sql`, `local_enrollment_fee.rollback.sql`, `reviewed_manual_cycle_identity.rollback.sql`. RPC authenticated/finalizer canônicos, estorno com/sem motivo, replay, rebaixa, CAS antigo, auditoria, bloqueio legado e C2 comprovados.
 - Smoke interativo local com hook/modal reais e serviços simulados: apenas contas do polo/global ativas; erro PostgREST com cache visível e botão bloqueado; recuperação da consulta; ausência de permissão impede abrir; clique duplo confirma uma única baixa simulada.
+- Advisors conservaram as categorias preexistentes. RPC de estorno acrescenta uma concessão authenticated (432→433), com autorização interna e helpers privados revisados; nenhum grant anon novo.
 - Releitura de 11 turmas/454 matrículas: zero mudança nos estados acadêmicos e de ciclo. Baseline preservada: 6837 recebíveis, total nominal R$ 1.876.839,27, 395 transações de gateway, 6 runs e zero matrículas LOCAL.
 - Bundles remotos conferidos: emissor v6, worker v5, carnê v25 e grupo v7. Nenhum redeploy Edge necessário. Não foram emitidos, pagos ou estornados títulos reais.
 - Recuperação negativa após resposta ambígua não autoriza nova emissão/pagamento; primeiro reconciliar o estado canônico. Falha pós-commit pode ocorrer depois de baixa confirmada.
@@ -66,4 +67,7 @@ LOCAL conserva destino/termos congelados e nunca ganha campos, claims ou transa�
 
 ## Publicação
 
-Manifesto isolado de 25 arquivos sobre main 4.8.81. Alterações paralelas do Caixa excluídas. Atualização da memória será realizada em lote operacional separado após esta correção. CI, Preview e produção devem ser conferidas na PR deste lote.
+Manifesto isolado de 25 arquivos sobre main 4.8.81. Alterações paralelas do Caixa excluídas. Atualização da memória será realizada em lote operacional separado após esta correção. PR174 concluída; Qualidade #518 e Controle de versão #372 aprovados. Squash `58a32927ea78b824d27c9d9935a4c28323fc3f00`; Preview e produção Vercel aprovadas. Domínio confirmou `main-BWdEzZje.js` com 4.8.82.
+
+- PR: https://github.com/DenielsonSLima/UniversoCursosConsultoria/pull/174
+- Produção: https://vercel.com/denielson-limas-projects/universo-cursos-consultoria/4ozNHUn8uBgxJTkZueaNjZUV3bqd

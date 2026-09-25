@@ -1,6 +1,6 @@
 # Matrícula local sem boleto e datas explícitas
 
-Estado: validado; publicação em andamento. Continuidade do fluxo financeiro técnico autorizado.
+Estado: concluído e publicado em produção 4.8.81. Continuidade do fluxo financeiro técnico autorizado.
 
 ## Pedido e aceite
 
@@ -10,7 +10,7 @@ Estado: validado; publicação em andamento. Continuidade do fluxo financeiro t�
 - Preservar boleto de matrícula e omissão como opções distintas, além dos contratos antigos.
 - No modo local, 13 registros e somente 12 títulos bancários; matrícula fora do carnê e de qualquer POST bancário.
 - Retomada e C2 reconhecem a matrícula local íntegra sem exigir sua quitação e sem reaplicá-la.
-- Falha na baixa preserva a matrícula pendente e permite retomá-la sem gerar outro ciclo.
+- Falha anterior ao commit preserva a matrícula pendente. Falha na resposta/projeção posterior pode ocorrer após a baixa; reconciliar o estado e repetir a mesma chave da operação, sem criar outro ciclo ou presumir pagamento ausente.
 - Histórico Proesc/Banese e alterações paralelas preservados.
 
 ## Manifesto explícito
@@ -94,7 +94,7 @@ Total: 52 arquivos. Migrations anteriores aplicadas permanecem imutáveis.
 - Workspace real de 11 turmas/454 matrículas validado pelos parsers completos, sem erros. Comparação por matrícula confirmou zero mudanças em estados, elegibilidade, bloqueios, datas, parcelas e totais; 122 elegíveis antes/depois.
 - Edge emissão v6 (JWT ligado, 70 arquivos) e worker retomada v5 (JWT preservado desligado, 72 arquivos) ativos; bundles remotos iguais aos manifestos preparados. Dependências alheias preservadas.
 - Nenhum boleto ou recebimento real executado; harness simulado e SQL com rollback. Revisão cruzada por três agentes concluída.
-- Publicação GitHub/Preview/produção pendente neste registro.
+- GitHub/Preview/produção concluídos: PR #173, main `e0160141951fab6d9b63a054e358aa550230bd03`; CI Qualidade #516 e Versão #371 aprovados.
 
 Baseline preservado: 6.837 recebíveis, R$ 1.876.839,27, 395 transações bancárias e seis ciclos; aluna de referência continua sem cobranças geradas.
 
@@ -103,3 +103,11 @@ Baseline preservado: 6.837 recebíveis, R$ 1.876.839,27, 395 transações bancá
 - `180000` → `20260924230338`; `180100` → `20260924230349`; `180200` → `20260924230352`.
 - `180300` → `20260924230354`; `180400` → `20260924230357`; `180500` → `20260924230400`.
 - Advisors de segurança preservaram a linha de base: RLS sem policy111, search_path1, grants anon14/autenticados432 e proteção de senhas1. Nenhum novo aviso.
+
+## Publicação concluída
+
+- PR: https://github.com/DenielsonSLima/UniversoCursosConsultoria/pull/173
+- Produção: https://vercel.com/denielson-limas-projects/universo-cursos-consultoria/pBA2spgPERo7VdHdJ6Xci646tiot
+- Domínio público confirmou `main-DOhbOI7I.js` com 4.8.81 e `GestaoTecnicos-Bo900_G4.js` com datas explícitas, três modos e abertura opcional do recebimento.
+- Primeira rodada de CI encontrou somente no-regex-spaces no teste do worker; correção local lint+seis testes aprovada e suíte completa repetida antes do merge. Código produtivo e migrations aplicadas não foram alterados nessa correção.
+- Nenhum registro financeiro gerado para a aluna de referência durante validação. Abas e rascunho do usuário preservados.
