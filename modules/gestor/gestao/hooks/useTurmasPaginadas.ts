@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { gestaoQueryKeys } from '../gestao.query-keys';
 import { gestaoService } from '../gestao.service';
@@ -17,6 +17,17 @@ export const useTurmasPaginadas = (modalidade: Turma['modalidade'], poloId?: str
   const [pageState, setPageState] = useState({ scopeKey, page: 1 });
   const page = pageState.scopeKey === scopeKey ? pageState.page : 1;
   const setPage = (next: number) => setPageState({ scopeKey, page: next });
+
+  useEffect(() => {
+    const nextSearch = search.trim();
+    if (nextSearch === applied.search) return;
+
+    const timeout = setTimeout(() => {
+      setPageState({ scopeKey, page: 1 });
+      setApplied(previous => ({ ...previous, search: nextSearch }));
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [search, applied.search, scopeKey]);
 
   const filters = useMemo(() => ({
     modalidade,
@@ -52,7 +63,8 @@ export const useTurmasPaginadas = (modalidade: Turma['modalidade'], poloId?: str
 
   return {
     turmas: query.data?.data || [], total: query.data?.total || 0,
-    loading: query.isPending, refreshing: query.isFetching && !query.isPending,
+    loading: query.isPending || query.isPlaceholderData,
+    refreshing: query.isFetching && !query.isPending,
     error: query.error instanceof Error ? query.error : null,
     page, pageSize: PAGE_SIZE, status, sortBy,
     search, dataInicial, dataFinal, setSearch: changeSearch, setDataInicial, setDataFinal,

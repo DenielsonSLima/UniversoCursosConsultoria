@@ -1,6 +1,6 @@
 # Validação de e-mail e consulta de identidade — 25/09/2026
 
-Estado: BACKEND APLICADO — publicação 4.8.88 em validação.
+Estado: PUBLICADO — backend aplicado; 4.8.88 em produção (PR #180), CI e Preview aprovadas.
 
 ## Causa, escopo e aceite
 

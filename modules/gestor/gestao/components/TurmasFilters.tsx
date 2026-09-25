@@ -10,6 +10,7 @@ interface TurmasFiltersProps {
   page: number;
   total: number;
   pageSize: number;
+  loading?: boolean;
   onSearchChange: (value: string) => void;
   onDataInicialChange: (value: string) => void;
   onDataFinalChange: (value: string) => void;
@@ -19,7 +20,7 @@ interface TurmasFiltersProps {
 }
 
 const TurmasFilters: React.FC<TurmasFiltersProps> = ({
-  search, dataInicial, dataFinal, sortBy, page, total, pageSize,
+  search, dataInicial, dataFinal, sortBy, page, total, pageSize, loading = false,
   onSearchChange, onDataInicialChange, onDataFinalChange, onSortByChange, onApply, onPageChange,
 }) => {
   const pages = Math.max(1, Math.ceil(total / pageSize));
@@ -34,7 +35,7 @@ const TurmasFilters: React.FC<TurmasFiltersProps> = ({
       <div className="grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-white p-4 xl:grid-cols-[1fr_auto_auto_auto_auto]">
         <div className="relative">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input value={search} onChange={e => onSearchChange(e.target.value)}
+          <input aria-label="Buscar turma ou código" value={search} onChange={e => onSearchChange(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && onApply()} placeholder="Buscar turma ou código..."
             className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-3 text-sm font-semibold outline-none focus:border-blue-500" />
         </div>
@@ -75,11 +76,11 @@ const TurmasFilters: React.FC<TurmasFiltersProps> = ({
         </button>
       </div>
       <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400">
-        <span>{total} turma(s) encontrada(s)</span>
+        <span role="status" aria-live="polite">{loading ? 'Buscando turmas...' : `${total} turma(s) encontrada(s)`}</span>
         <div className="flex items-center gap-2">
-          <button onClick={() => onPageChange(page - 1)} disabled={page <= 1} className="rounded-lg border bg-white p-2 disabled:opacity-30"><ChevronLeft size={14}/></button>
+          <button title="Página anterior" onClick={() => onPageChange(page - 1)} disabled={loading || page <= 1} className="rounded-lg border bg-white p-2 disabled:opacity-30"><ChevronLeft size={14}/></button>
           <span>Página {page} de {pages}</span>
-          <button onClick={() => onPageChange(page + 1)} disabled={page >= pages} className="rounded-lg border bg-white p-2 disabled:opacity-30"><ChevronRight size={14}/></button>
+          <button title="Próxima página" onClick={() => onPageChange(page + 1)} disabled={loading || page >= pages} className="rounded-lg border bg-white p-2 disabled:opacity-30"><ChevronRight size={14}/></button>
         </div>
       </div>
     </div>
