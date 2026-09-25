@@ -1,12 +1,13 @@
 # Lote ativo
 
-Estado: VALIDADO — PUBLICAÇÃO EM ANDAMENTO
+Estado: VALIDADO — BACKEND APLICADO; VERSIONAMENTO EM PUBLICAÇÃO
 
-## Lote: 2026-09-25-emissao-ciclos-permissoes
+## Lote: 2026-09-25-lentidao-repeticao-emissao
 
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-25-emissao-ciclos-permissoes.md`.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-25-lentidao-repeticao-emissao.md`.
 
-- Corrigir emissão/retomada com papéis SQL reais e centralizar emissão dos ciclos na turma.
-- Preservar matrícula LOCAL, histórico importado, dados financeiros e recuperação idempotente.
-- SQL com teste revertido e Edge aplicados; web 4.8.86 em publicação.
-- Emissão real solicitada permanece pendente: conexão de consulta recusou a credencial interna do worker. Não contornar a permissão.
+- Eliminar repetição ilimitada de conflitos permanentes na marcação de falha BolePix.
+- Preservar autorização, ownership, dados financeiros e emissão idempotente.
+- SQL e emissor/worker v9 aplicados; 65 testes e regressão SQL real aprovados.
+- Boletos do caso anterior confirmados completos; não reemitir.
+- Teste de acesso pelo usuário; revisão interna sem login, conforme solicitado.

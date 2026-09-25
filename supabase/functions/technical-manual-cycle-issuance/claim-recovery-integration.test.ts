@@ -30,6 +30,7 @@ const fixture = () => {
   let denyClaim = true;
   let updates = 0;
   let termChecks = 0;
+  let failureMarks = 0;
   const authorizations: string[] = [];
   let row: Record<string, unknown> = {
     id: RECEIVABLE, matricula_id: ENROLLMENT, turma_id: CLASS, polo_id: POLO,
@@ -78,6 +79,7 @@ const fixture = () => {
         return Promise.resolve({ data: null, error: { message: "STOP_BEFORE_BANK" } });
       }
       assert.equal(name, "mark_technical_manual_cycle_banese_failure");
+      failureMarks += 1;
       return Promise.resolve({ data: {}, error: null });
     },
   };
@@ -95,7 +97,8 @@ const fixture = () => {
         poloId: POLO, issuerPoloId: POLO, credentialId: POLO }),
     }),
     releaseClaim: () => { denyClaim = false; },
-    row: () => row, updates: () => updates, termChecks: () => termChecks, authorizations,
+    row: () => row, updates: () => updates, termChecks: () => termChecks,
+    failureMarks: () => failureMarks, authorizations,
   };
 };
 
@@ -134,6 +137,7 @@ Deno.test("gerar encadeia claim; falha ACL preserva ciclo e retomar reutiliza op
     });
     assert.equal(test.row().gateway_creation_token, undefined);
     assert.equal(test.termChecks(), 0);
+    assert.equal(test.failureMarks(), 0, "sem claim não se marca falha de uma tentativa inexistente");
     test.releaseClaim();
     await assert.rejects(() => runManualCycleIssuance({
       ...request, action: "resume", requestId: null, revisao: undefined,
@@ -145,6 +149,7 @@ Deno.test("gerar encadeia claim; falha ACL preserva ciclo e retomar reutiliza op
     assert.equal(resumes, 1);
     assert.equal(test.updates(), 2);
     assert.equal(test.termChecks(), 1);
+    assert.equal(test.failureMarks(), 1, "falha após claim próprio continua auditada");
   } finally {
     globalThis.fetch = originalFetch;
   }

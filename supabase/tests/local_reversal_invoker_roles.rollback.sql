@@ -37,7 +37,7 @@ declare
   v_local public.contas_receber%rowtype; v_bank public.contas_receber%rowtype;
   v_noncycle public.contas_receber%rowtype;
   v_settlement uuid; v_lease uuid := gen_random_uuid(); v_snapshot jsonb;
-  v_token uuid := gen_random_uuid(); v_count integer; v_message text;
+  v_token uuid := gen_random_uuid(); v_auth_request uuid := gen_random_uuid(); v_count integer; v_message text;
 begin
   assert not exists (
     select 1 from pg_proc where oid in (
@@ -180,7 +180,7 @@ begin
   update public.contas_receber set updated_at = updated_at where id = v_bank.id;
   get diagnostics v_count = row_count;
   assert v_count = 1, 'RLS must allow exactly the scoped synthetic receivable';
-  v_result := public.authorize_technical_manual_receivable_issuance_secure(v_bank.id, gen_random_uuid());
+  v_result := public.authorize_technical_manual_receivable_issuance_secure(v_bank.id, v_auth_request);
   assert v_result->>'authorized' = 'true', 'The bank installment must be explicitly authorized';
   execute 'reset role';
 
@@ -189,6 +189,13 @@ begin
   perform set_config('request.jwt.claim.role', 'service_role', true);
   execute 'set local role service_role';
   assert current_user = 'service_role', 'Bank claim must use the actual service_role database role';
+  begin
+    perform public.mark_technical_manual_cycle_banese_failure(
+      v_bank.id, v_auth_request, v_token, false, false, 'TEST_BEFORE_CLAIM', 'Synthetic failure');
+    raise exception 'Failure marking without a claim must be refused';
+  exception when others then
+    assert sqlstate = 'PT409', 'A permanent conflict must return PT409, never retryable 40001';
+  end;
   update public.contas_receber set gateway_creation_token = v_token,
     gateway_provider = 'banese_card', gateway_environment = 'production',
     gateway_payment_method = 'BOLETO', forma_pagamento = 'BOLETO',
@@ -203,6 +210,21 @@ begin
     where receivable_id = v_bank.id), 'The claim authorization must be consumed exactly once';
   assert not exists(select 1 from public.payment_gateway_transactions
     where receivable_id = v_bank.id), 'A local claim must not create an external bank transaction';
+
+  execute 'set local role service_role';
+  begin
+    perform public.mark_technical_manual_cycle_banese_failure(
+      v_bank.id, v_auth_request, gen_random_uuid(), false, false, 'TEST_WRONG_OWNER', 'Synthetic failure');
+    raise exception 'Failure marking by a different attempt must be refused';
+  exception when others then
+    assert sqlstate = 'PT409', 'Stale ownership must return one conflict without changing the title';
+  end;
+  v_result := public.mark_technical_manual_cycle_banese_failure(
+    v_bank.id, v_auth_request, v_token, false, false, 'TEST_OWNED_FAILURE', 'Synthetic failure');
+  assert v_result->>'state' = 'PENDENTE_RETOMADA', 'Owned pre-bank failure must remain recoverable';
+  execute 'reset role';
+  assert (select gateway_creation_token is null and gateway_status is null
+    from public.contas_receber where id=v_bank.id), 'Owned pre-bank failure must release only its claim';
 
   -- Create only a synthetic local settlement and finish it through the real RPC.
   v_snapshot := jsonb_build_object('status', v_local.status, 'valor_cents', 12550,
