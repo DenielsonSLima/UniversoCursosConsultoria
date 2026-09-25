@@ -1,8 +1,8 @@
 {
-  "version": "4.8.88",
+  "version": "4.8.89",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 97,
+  "revision": 98,
   "releasedAt": "2026-09-25",
-  "summary": "Validação de e-mail consulta vínculos de identidade pelo serviço autorizado"
+  "summary": "Busca de turmas atualiza resultados e contador durante a digitação"
 }
