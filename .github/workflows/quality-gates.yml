@@ -298,7 +298,19 @@ jobs:
             supabase/functions/proesc-history-archive/drain.test.ts \
             supabase/functions/proesc-api/sync-observation.test.ts \
             supabase/functions/proesc-api/sync-worker.test.ts \
-            supabase/functions/proesc-api/sync-worker.scale.test.ts
+            supabase/functions/proesc-api/sync-worker.scale.test.ts \
+            supabase/functions/proesc-api/sync-worker-rate-limit.test.ts \
+            supabase/functions/proesc-api/sync-worker-period-budget.test.ts
+
+      - name: Testar coordenação das consultas Proesc
+        run: |
+          deno test --no-config --no-lock --node-modules-dir=none --allow-read --allow-env \
+            supabase/functions/proesc-api/v1-paced-transport.test.ts \
+            supabase/functions/proesc-api/handler-sync-coordination.test.ts \
+            supabase/functions/proesc-api/cycle-review-abort.test.ts \
+            supabase/functions/proesc-api/cycle-review.test.ts \
+            supabase/functions/proesc-api/cycle-review-batch.test.ts \
+            supabase/functions/proesc-api/diagnostic-invoices.test.ts
 
       - name: Testar arquivo técnico e leitura autorizada Proesc
         run: |

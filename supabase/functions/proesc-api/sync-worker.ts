@@ -5,7 +5,7 @@ import { createSyncTelemetry, markSyncFailure, safeSyncError, SyncTelemetryError
 import { rpcWithArchiveReplay, type ArchiveReplayAdmin } from '../_shared/proesc-archive-replay.ts';
 
 type RpcAdmin = ArchiveReplayAdmin;
-type Claim = { claimed: boolean; leaseId: string; lastId: string; links: SyncLink[] };
+type Claim = { claimed: boolean; leaseId: string; lastId: string; links: SyncLink[]; referenceTime?: unknown };
 type Options = { deadlineMs?: number };
 
 export async function runProescSync(
@@ -35,6 +35,17 @@ export async function runProescSync(
   try {
     if (!Array.isArray(claim.links) || claim.links.length < 1 || claim.links.length > 60
       || claim.links.at(-1)?.linkId !== claim.lastId) throw new Error('Lote de consulta inválido.');
+    // The claim budgets periods in UTC. Keep that exact window across a month
+    // boundary; older claim responses remain compatible with the worker clock.
+    let periodNow = now;
+    if ('referenceTime' in claim) {
+      if (typeof claim.referenceTime !== 'string'
+        || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/.test(claim.referenceTime)) {
+        throw new Error('Referência temporal da consulta inválida.');
+      }
+      periodNow = new Date(claim.referenceTime);
+      if (!Number.isFinite(periodNow.getTime())) throw new Error('Referência temporal da consulta inválida.');
+    }
     const credential = await rpc('proesc_workspace_service', {
       p_action: 'token', p_actor_id: actorId, p_payload: {},
     }, controller.signal);
@@ -46,9 +57,9 @@ export async function runProescSync(
     const client = createProescV1Client({ token: saved.token, transport, signal: controller.signal, timeoutMs: 12000 });
     const periods = new Map<string, { unitId: string; year: number; month: number }>();
     const allowedKeys = new Set(claim.links.map((link) => `${link.unitId}:${link.externalKey}`));
-    const previous = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+    const previous = new Date(Date.UTC(periodNow.getUTCFullYear(), periodNow.getUTCMonth() - 1, 1));
     for (const link of claim.links) {
-      for (const date of [link.dueDate, link.paymentDate, now.toISOString(), previous.toISOString()]) {
+      for (const date of [link.dueDate, link.paymentDate, periodNow.toISOString(), previous.toISOString()]) {
         if (!date) continue;
         const [year, month] = date.slice(0, 7).split('-').map(Number);
         periods.set(`${link.unitId}:${year}:${month}`, { unitId: link.unitId, year, month });
@@ -57,7 +68,8 @@ export async function runProescSync(
     const allRows: ProescV1AccountingRow[] = [];
     const tasks = [...periods.values()];
     let readPosition = 0;
-    const readers = Array.from({ length: Math.min(3, tasks.length) }, async () => {
+    // Avoid concurrent monthly GET bursts against the provider's rate limit.
+    const readers = Array.from({ length: Math.min(1, tasks.length) }, async () => {
       while (readPosition < tasks.length && !controller.signal.aborted) {
         const period = tasks[readPosition++];
         const started = Date.now();

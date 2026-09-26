@@ -1,12 +1,13 @@
 # Lote ativo
 
-Estado: PUBLICAÇÃO — REDUÇÃO DE CHAMADAS OCIOSAS 4.8.91
+Estado: PUBLICAÇÃO AUTORIZADA — CAIXA / CONFERÊNCIA PROESC
 
-## Lote: 2026-09-25-reducao-chamadas-ociosas
+## Lote: 2026-09-25-caixa-conferencia-proesc
 
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-25-reducao-chamadas-ociosas.md`.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-25-caixa-conferencia-proesc.md`.
 
-- Migration `20260926004328` aplicada; 39 cenários, quatro pós-checagens e três execuções naturais aprovados. Manifesto de oito arquivos.
-- Auth 4.8.90 publicado pelo PR182; 81 testes aprovados. Rastreio e manifesto original: `ai/operacao/registros/alteracoes/2026-09-25-incidente-login-logs.md`.
-- Login recuperado; causa física posterior ao loop encaminhada ao suporte SU-485772. Cota de logs e folga do banco permanecem limitações.
-- Preservar dados financeiros, migrations aplicadas e alterações paralelas; publicar somente o manifesto.
+- 19 arquivos, versão 4.8.92; produção autorizada, GitHub pendente.
+- Cinco pagamentos conciliados por RPC: 83 pendências passaram a 78, R$ 21.931,40 nominais. A V1 não comprova estado aberto dos restantes.
+- Migration 20260926013605 e Edge v23 conferidas. Fila compartilhada corrige a concorrência que persistia no smoke v22 (200 seguido de 429).
+- 76 testes e 20 cenários SQL aprovados. Backoff até 26/09 02:07:35 UTC; smoke do cron 02:08 pendente. Não declarar normalização.
+- V1 financeiro, V2 alunos; preservar evidência, cursor e prazos. Nenhuma emissão, baixa bancária ou inferência de dívida aberta.
