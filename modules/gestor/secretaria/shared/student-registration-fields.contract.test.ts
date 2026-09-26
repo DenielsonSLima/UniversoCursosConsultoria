@@ -48,7 +48,7 @@ test('ficha cadastral, ficha de matrícula e pasta expõem o bloco eleitoral sem
     readFile(new URL('../../cadastros/ficha-matricula/fichas-matricula.service.ts', import.meta.url), 'utf8'),
     readFile(new URL('../../cadastros/modelos-documentos/shared/documentVariables.ts', import.meta.url), 'utf8'),
     readFile(new URL('../historico-emissoes/template-parser.ts', import.meta.url), 'utf8'),
-    readFile(new URL('./secretaria-documentos.service.ts', import.meta.url), 'utf8'),
+    readFile(new URL('./secretaria-registration-snapshot.ts', import.meta.url), 'utf8'),
     readFile(new URL('../historico-emissoes/historico-emissoes.service.ts', import.meta.url), 'utf8'),
   ]);
 
