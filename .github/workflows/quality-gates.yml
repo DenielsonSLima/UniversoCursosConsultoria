@@ -322,5 +322,23 @@ jobs:
             supabase/functions/proesc-technical-history-archive/worker.test.ts \
             supabase/functions/_shared/proesc-technical-history.test.ts
 
+      - name: Testar tipografia da Pasta e Ficha com modelos completos
+        run: |
+          node --input-type=module <<'JS'
+          import { build } from 'esbuild';
+          await build({
+            entryPoints: ['modules/gestor/secretaria/historico-emissoes/emission-registration-typography.pdf.test.ts'],
+            outfile: 'tmp/registration-typography.test.mjs',
+            bundle: true, platform: 'node', format: 'esm', packages: 'external',
+            define: {
+              'import.meta.env': JSON.stringify({
+                VITE_SUPABASE_URL: 'https://example.invalid',
+                VITE_SUPABASE_ANON_KEY: 'fixture',
+              }),
+            },
+          });
+          JS
+          node --test tmp/registration-typography.test.mjs
+
       - name: Gerar build de produção
         run: npm run build

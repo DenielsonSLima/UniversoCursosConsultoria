@@ -302,7 +302,10 @@ const drawField = (
     : field.value;
   const parsed = resolveEmissionVectorTemplate(visual.source, fieldValue);
   assertNoResidualTemplateTokens(parsed, `O campo “${fieldKey}”`);
-  if (drawRegistrationGrid(pdf, parsed, x, y, width, height, `O campo “${fieldKey}”`)) return;
+  if (drawRegistrationGrid(
+    pdf, parsed, x, y, width, height, `O campo “${fieldKey}”`,
+    REGISTRATION_VECTOR_DOCUMENTS.has(visual.source.emission.documento),
+  )) return;
   const text = emissionHtmlToVectorText(parsed);
   if (!text) return;
   const configuredFontSize = Number.parseFloat(String(style.fontSize || '10'));
