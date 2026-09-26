@@ -28,6 +28,7 @@ import { PortalContextServiceError } from './portal-context.service';
 import { getInstitutionalOAuthErrorMessage, InstitutionalLoginClock } from './components/InstitutionalLoginPresentation';
 import { resetProfileSelectionSession } from './profile-selection-session';
 import ProfessorPoloSelector from './components/ProfessorPoloSelector';
+import { checkAuthRequest, withAuthDeadline } from './auth-request';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -52,6 +53,9 @@ const LoginPage: React.FC = () => {
   const [pendingProfileKey, setPendingProfileKey] = useState<string | null>(null);
   const [profileSelectionError, setProfileSelectionError] = useState('');
   const profileSelectionInFlightRef = useRef(false);
+  const loginAttemptRef = useRef<AbortController | null>(null);
+
+  useEffect(() => () => loginAttemptRef.current?.abort(), []);
 
   const decodeRedirectPath = () => {
     const redirect =
@@ -70,14 +74,16 @@ const LoginPage: React.FC = () => {
     return resolveProfilePostLoginRoute(profile.tipo, decodeRedirectPath());
   };
 
-  const handleAuthenticatedProfile = async (profile: PortalAuthProfile): Promise<boolean> => {
+  const handleAuthenticatedProfile = async (profile: PortalAuthProfile, signal?: AbortSignal): Promise<boolean> => {
+    checkAuthRequest(signal);
     let profileToAuthenticate = profile;
 
     if (requiresProfessorPoloSelection(profile)) {
-      const { data: polosData, error: polosError } = await supabase
+      const { data: polosData, error: polosError } = await withAuthDeadline(requestSignal => supabase
         .from('polos')
         .select('id, nome')
-        .in('id', profile.poloIds || []);
+        .in('id', profile.poloIds || []).retry(false).abortSignal(requestSignal), { signal, timeoutMs: 8_000 });
+      checkAuthRequest(signal);
 
       if (polosError) {
         throw new PortalContextServiceError(polosError.message, polosError.code);
@@ -114,8 +120,10 @@ const LoginPage: React.FC = () => {
 
   const resolveInstitutionalAccess = async (
     authenticatedUser?: User | null,
+    signal?: AbortSignal,
   ) => {
     const profiles = await getInstitutionalProfiles(authenticatedUser);
+    checkAuthRequest(signal);
     if (profiles.length === 0) return null;
     if (profiles.length === 1) return profiles[0];
     setInstitutionalProfiles(profiles);
@@ -134,6 +142,7 @@ const LoginPage: React.FC = () => {
 
   useEffect(() => {
     let mounted = true;
+    const controller = new AbortController();
 
     const finishGoogleReturn = async () => {
       let isLeavingLoginPage = false;
@@ -151,7 +160,10 @@ const LoginPage: React.FC = () => {
 
         // O cliente Supabase já processa o callback durante a inicialização.
         // getSession aguarda esse processamento e evita uma segunda troca PKCE.
-        const { data, error: sessionError } = await supabase.auth.getSession();
+        const { data, error: sessionError } = await withAuthDeadline(
+          () => supabase.auth.getSession(),
+          { signal: controller.signal },
+        );
         if (sessionError) {
           throw new Error(sessionError.message);
         }
@@ -162,17 +174,18 @@ const LoginPage: React.FC = () => {
           return;
         }
 
-        const profile = await resolveInstitutionalAccess(session.user);
+        const profile = await resolveInstitutionalAccess(session.user, controller.signal);
         if (!mounted) return;
 
         if (profile === undefined) return;
         if (!profile) {
           await loginService.logout();
+          checkAuthRequest(controller.signal);
           setErrorMessage('Conta Google autenticada, mas sem vínculo com perfil no portal institucional. Entre com outro e-mail/senha ou solicite o vínculo no suporte.');
           return;
         }
 
-        isLeavingLoginPage = await handleAuthenticatedProfile(profile);
+        isLeavingLoginPage = await handleAuthenticatedProfile(profile, controller.signal);
       } catch (error) {
         if (!mounted) return;
         console.error(
@@ -197,31 +210,40 @@ const LoginPage: React.FC = () => {
     finishGoogleReturn();
     return () => {
       mounted = false;
+      controller.abort();
     };
   }, [hasExternalAuthReturn]);
 
   const handleLogin = async (credentials: LoginCredentials) => {
+    if (loginAttemptRef.current) return;
+    const attempt = new AbortController();
+    loginAttemptRef.current = attempt;
     setIsLoading(true);
     setErrorMessage('');
 
     try {
-      const { error, user } = await loginService.login(credentials);
-      if (error) {
-        setErrorMessage(error);
-        return;
-      }
+      await withAuthDeadline(async signal => {
+        const { error, user } = await loginService.login(credentials, signal);
+        checkAuthRequest(signal);
+        if (error) {
+          setErrorMessage(error);
+          return;
+        }
 
-      const profile = await resolveInstitutionalAccess(user);
-      if (profile === undefined) return;
-      if (!profile) {
-        await loginService.logout();
-        const message = 'Usuário autenticado, mas sem perfil válido para acesso. Verifique o cadastro do e-mail em parceiros/usuários do sistema.';
-        setErrorMessage(message);
-        return;
-      }
+        const profile = await resolveInstitutionalAccess(user, signal);
+        if (profile === undefined) return;
+        if (!profile) {
+          await loginService.logout();
+          checkAuthRequest(signal);
+          const message = 'Usuário autenticado, mas sem perfil válido para acesso. Verifique o cadastro do e-mail em parceiros/usuários do sistema.';
+          setErrorMessage(message);
+          return;
+        }
 
-      await handleAuthenticatedProfile(profile);
+        await handleAuthenticatedProfile(profile, signal);
+      }, { signal: attempt.signal, timeoutMs: 45_000 });
     } catch (error) {
+      if (attempt.signal.aborted) return;
       console.error(
         'Falha ao resolver acesso institucional:',
         getPortalAccessErrorLog(error),
@@ -231,6 +253,7 @@ const LoginPage: React.FC = () => {
         'Não foi possível autenticar.',
       ));
     } finally {
+      if (loginAttemptRef.current === attempt) loginAttemptRef.current = null;
       setIsLoading(false);
     }
   };

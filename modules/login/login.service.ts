@@ -1,6 +1,7 @@
 
 import {
   forceClearPersistedSupabaseSession,
+  requestPublicPortalAuth,
   supabase,
 } from '../../lib/supabase';
 import { Capacitor } from '@capacitor/core';
@@ -15,6 +16,7 @@ import {
   performPortalLogout,
   type PortalLogoutScope,
 } from './portal-logout-flow';
+import { checkAuthRequest, withAuthDeadline } from './auth-request';
 
 const AUTH_GENERIC_ERROR = 'Não foi possível autenticar com as credenciais informadas. Verifique seus dados e tente novamente.';
 const AUTH_EMAIL_CONFIRMATION_REQUIRED_ERROR = 'Confirme o e-mail enviado para ativar sua conta. Verifique também Spam ou Lixo eletrônico.';
@@ -24,6 +26,11 @@ const AUTH_SERVICE_ERROR = 'O serviço de autenticação está temporariamente i
 const RECOVERY_GENERIC_MESSAGE = 'Se existir uma conta vinculada aos dados informados, enviaremos as instruções de recuperação.';
 
 export type { PortalLogoutScope } from './portal-logout-flow';
+
+// setSession não aceita cancelamento. Uma gravação ainda pendente não pode
+// concorrer com outra tentativa e sobrescrever a sessão mais recente.
+let pendingSessionCommit: ReturnType<typeof supabase.auth.setSession> | null = null;
+const pendingLogouts = new Set<ReturnType<typeof performPortalLogout>>();
 
 const getFriendlyOAuthError = (message: string) => {
   if (message.includes('Manual linking is disabled')) {
@@ -50,7 +57,7 @@ const readPortalAuthFailure = async (error: unknown) => {
 
   if (typeof context?.clone === 'function') {
     try {
-      const body = await context.clone().json() as { code?: unknown };
+      const body = await withAuthDeadline(() => context.clone!().json()) as { code?: unknown };
       code = typeof body?.code === 'string' ? body.code : '';
     } catch {
       // A categoria HTTP ainda permite uma mensagem segura e útil.
@@ -79,7 +86,7 @@ const getPortalAuthFailureMessage = (
   if (failure.status === 403 || failure.code === 'challenge_failed') {
     return AUTH_CHALLENGE_ERROR;
   }
-  if (failure.status === 503 || failure.code === 'service_unavailable') {
+  if ((failure.status && failure.status >= 500) || failure.code === 'service_unavailable') {
     return AUTH_SERVICE_ERROR;
   }
   if (failure.transportFailure) {
@@ -89,20 +96,25 @@ const getPortalAuthFailureMessage = (
 };
 
 export const loginService = {
+  assertAuthMutationAvailable() {
+    if (pendingSessionCommit || pendingLogouts.size) throw new Error(AUTH_SERVICE_ERROR);
+  },
+
   async login({
     email,
     password,
     turnstileToken,
-  }: LoginCredentials): Promise<AuthResponse> {
-    const { data, error } = await supabase.functions.invoke('portal-auth', {
-      body: {
-        action: 'login',
-        identifier: email.trim(),
-        password,
-        turnstileToken,
-        challengeContext: Capacitor.isNativePlatform() ? 'native' : 'web',
-      },
-    });
+  }: LoginCredentials, signal?: AbortSignal): Promise<AuthResponse> {
+    if (pendingSessionCommit || pendingLogouts.size) {
+      return { user: null, session: null, error: AUTH_SERVICE_ERROR };
+    }
+    const { data, error } = await requestPublicPortalAuth({
+      action: 'login',
+      identifier: email.trim(),
+      password,
+      turnstileToken,
+      challengeContext: Capacitor.isNativePlatform() ? 'native' : 'web',
+    }, signal);
 
     if (error) {
       const failure = await readPortalAuthFailure(error);
@@ -119,10 +131,27 @@ export const loginService = {
       return { user: null, session: null, error: AUTH_GENERIC_ERROR };
     }
 
-    const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+    // Limite a inicialização separadamente: se ela ficar presa no refresh de
+    // uma sessão antiga, a tentativa expirada nunca enfileira um setSession.
+    await withAuthDeadline(() => supabase.auth.initialize(), { signal });
+    checkAuthRequest(signal);
+    if (pendingSessionCommit || pendingLogouts.size) {
+      return { user: null, session: null, error: AUTH_SERVICE_ERROR };
+    }
+    const commit = supabase.auth.setSession({
       access_token: accessToken,
       refresh_token: refreshToken,
     });
+    pendingSessionCommit = commit;
+    const clearCommit = () => {
+      if (pendingSessionCommit === commit) pendingSessionCommit = null;
+    };
+    void commit.then(clearCommit, clearCommit);
+    const { data: sessionData, error: sessionError } = await withAuthDeadline(
+      () => commit,
+      { signal },
+    );
+    checkAuthRequest(signal);
     if (sessionError || !sessionData.session || !sessionData.user) {
       return { user: null, session: null, error: AUTH_GENERIC_ERROR };
     }
@@ -137,10 +166,14 @@ export const loginService = {
   async logout(scope: PortalLogoutScope = 'local') {
     clearPortalSession();
 
-    const result = await performPortalLogout(scope, {
+    const logout = performPortalLogout(scope, {
       signOut: (requestedScope) => supabase.auth.signOut({ scope: requestedScope }),
       forceClearLocal: forceClearPersistedSupabaseSession,
     });
+    pendingLogouts.add(logout);
+    const clearLogout = () => pendingLogouts.delete(logout);
+    void logout.then(clearLogout, clearLogout);
+    const result = await withAuthDeadline(() => logout);
     if (result.status === 'local-only') {
       console.warn(
         'Token local removido; não foi possível revogar as outras sessões.',
@@ -153,6 +186,7 @@ export const loginService = {
     callbackPath = '/sistema/login',
     postLoginRedirectPath: string | null = null,
   ) {
+    loginService.assertAuthMutationAvailable();
     rememberPendingOAuthReturn('institucional', postLoginRedirectPath);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
@@ -183,14 +217,12 @@ export const loginService = {
     turnstileToken: string,
     redirectPath = '/recuperar-senha',
   ) {
-    const { error } = await supabase.functions.invoke('portal-auth', {
-      body: {
-        action: 'recover',
-        identifier: identifier.trim(),
-        turnstileToken,
-        redirectTo: buildAuthRedirectUrl(redirectPath),
-        challengeContext: Capacitor.isNativePlatform() ? 'native' : 'web',
-      },
+    const { error } = await requestPublicPortalAuth({
+      action: 'recover',
+      identifier: identifier.trim(),
+      turnstileToken,
+      redirectTo: buildAuthRedirectUrl(redirectPath),
+      challengeContext: Capacitor.isNativePlatform() ? 'native' : 'web',
     });
 
     if (error) {
@@ -198,7 +230,7 @@ export const loginService = {
       if (
         failure.status === 403
         || failure.status === 429
-        || failure.status === 503
+        || (failure.status && failure.status >= 500)
         || failure.transportFailure
       ) {
         throw new Error(getPortalAuthFailureMessage(failure));

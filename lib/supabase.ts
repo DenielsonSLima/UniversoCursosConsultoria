@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { Capacitor } from '@capacitor/core';
+import { createPortalAuthRequest } from './portal-auth-client';
 import {
   buildSupabaseAuthStorageKey,
   clearSupabaseAuthStorage,
@@ -45,6 +46,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 const SUPABASE_AUTH_STORAGE_KEY = buildSupabaseAuthStorageKey(supabaseUrl);
+
+export const requestPublicPortalAuth = createPortalAuthRequest(supabaseUrl, supabaseAnonKey);
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
