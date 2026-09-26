@@ -1,8 +1,8 @@
 {
-  "version": "4.8.94",
+  "version": "4.8.96",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 103,
+  "revision": 105,
   "releasedAt": "2026-09-26",
-  "summary": "Caixa preserva confirmação explícita Proesc após consultas inconclusivas"
+  "summary": "Secretaria: Pasta e Ficha em lote por nome, somente com matrículas ativas"
 }

@@ -244,7 +244,9 @@ export const documentValidationService = {
     }
 
     const { data, error } = await (supabase.rpc as any)(
-      'reemitir_fichas_validacao_lote_portal',
+      input.activeAlphabeticalBatch
+        ? 'reemitir_fichas_ativas_lote_portal'
+        : 'reemitir_fichas_validacao_lote_portal',
       {
         p_documento: input.type,
         p_matricula_ids: input.enrollmentIds,
@@ -257,14 +259,17 @@ export const documentValidationService = {
 
     const rows = ((data || []) as IssueDocumentBatchRpcRow[])
       .sort((a, b) => a.ordem_solicitacao - b.ordem_solicitacao);
-    if (rows.length !== input.enrollmentIds.length || rows.some(row => !row.codigo)) {
+    const requestedIds = new Set(input.enrollmentIds);
+    if ((!input.activeAlphabeticalBatch && rows.length !== input.enrollmentIds.length)
+      || rows.some(row => !row.codigo || !requestedIds.has(row.matricula_id))
+      || new Set(rows.map(row => row.matricula_id)).size !== rows.length) {
       throw new Error('O banco não confirmou todas as emissões solicitadas no lote.');
     }
     const snapshots = await loadSnapshots(rows.map((row) => row.codigo));
-    return rows.map((row) => mapIssuedDocument(
-      row,
-      snapshots.get(row.codigo.trim().toUpperCase())!,
-    ));
+    return rows.map((row) => ({
+      ...mapIssuedDocument(row, snapshots.get(row.codigo.trim().toUpperCase())!),
+      enrollmentId: row.matricula_id,
+    }));
   },
 
   async getSnapshot(code: string): Promise<{

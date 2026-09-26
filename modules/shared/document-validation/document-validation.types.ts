@@ -48,9 +48,11 @@ export interface ReissueDocumentInput
 export interface ReissueDocumentBatchInput
   extends Omit<IssueDocumentBatchInput, 'idempotencyKey' | 'registerReissue'> {
   idempotencyKey: string;
+  activeAlphabeticalBatch?: boolean;
 }
 
 export interface IssuedDocumentValidation {
+  enrollmentId?: string;
   code: string;
   type: ValidatableDocumentType;
   issuedAt: string;

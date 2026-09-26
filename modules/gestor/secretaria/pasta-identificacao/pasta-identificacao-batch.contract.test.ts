@@ -23,9 +23,10 @@ test('pasta em lote segue o seletor compacto da carteirinha e permite todo o pol
   assert.match(service, /if \(input\.allStudentsInPolo\)/);
   assert.match(service, /input\.documento !== 'pasta_identificacao'/);
   assert.match(service, /query = query\.eq\('turma_id', input\.turmaId\)/);
-  assert.match(service, /input\.documento === 'pasta_identificacao' && input\.modo === 'lote'/);
-  assert.match(service, /input\.activeEnrollmentOnly \|\| isActiveFolderBatch/);
-  assert.match(service, /modalidadeFilter\?: string \| null/);
+  assert.match(service, /input\.modo === 'lote' &&/);
+  assert.match(service, /input\.activeEnrollmentOnly \|\| isActiveRegistrationBatch/);
+  const catalog = await readFile(new URL('../shared/secretaria-documentos.catalogo.ts', import.meta.url), 'utf8');
+  assert.match(catalog, /modalidadeFilter\?: string \| null/);
 });
 
 test('lote geral não amplia silenciosamente outros documentos', async () => {
