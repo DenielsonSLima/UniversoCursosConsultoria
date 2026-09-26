@@ -22,6 +22,9 @@ function fakeAdmin(failRecord=false) {
       assert(size<=20);
       return {data:{success:true,reviewed:size,failed:0,c1:size,full:0,unknown:0,protected:0,eligible:size},error:null};
     }
+    if (name === 'proesc_cycle_review_pages_service') return { data: args.p_action === 'read'
+      ? { version: 1, unitId: '1', tokenRevision: 'revision', pages: [] }
+      : { saved: true, reused: false, hash: 'a'.repeat(64) }, error: null };
     if(name==='proesc_workspace_service') return {data:{token:'a'.repeat(32),revision:'revision'},error:null};
     assert(name==='proesc_cycle_review_cache_service','Unexpected financial operation');
     if(args.p_action==='begin') {

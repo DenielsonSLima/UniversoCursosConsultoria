@@ -12,6 +12,9 @@ function fixture(busy = false) {
   const actions: string[] = [];
   return { actions, rpc: async (name: string, args: Record<string, unknown>) => {
     const action = String(args.p_action); actions.push(action);
+    if (name === 'proesc_cycle_review_pages_service') return { data: args.p_action === 'read'
+      ? { version: 1, unitId: '1', tokenRevision: 'revision', pages: [] }
+      : { saved: true, reused: false, hash: 'a'.repeat(64) }, error: null };
     if (name === 'proesc_workspace_service') {
       return { data: { token: 'a'.repeat(32), revision: 'revision' }, error: null };
     }
@@ -68,7 +71,7 @@ Deno.test('aborting after all twelve bodies during source normalization never co
     const failed = await rejected(ensureProescCycleCache(admin, 'actor', id(1), async (input) => {
       reads++;
       const month = new URL(String(input)).searchParams.get('mes');
-      return Response.json({ status: 'success', data: month === '01' ? [{
+      return Response.json({ status: 'success', data: month === '12' ? [{
         chave_id: '3', id: '1', valor: '100.00', unidade_id: '1', turma_id: '2',
         aluno_cpf: '12345678901', data_vencimento: '2026-01-15', data_cricao: '2026-01-01',
         data_pagamento: null, registro_cancelado: false, pagamento_renegociacao: false,

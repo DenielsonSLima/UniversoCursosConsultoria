@@ -7,6 +7,7 @@ import {
   type ProescV1AccountingSource,
 } from './v1-accounting.ts';
 import { accountingIdentityDiagnostic } from './diagnostic-accounting-identity.ts';
+import { runProescV1Transport } from './v1-paced-transport.ts';
 
 type ReadErrorCode = 'INVALID_REQUEST' | 'HTTP_ERROR' | 'REDIRECT' | 'TIMEOUT'
   | 'ABORTED' | 'TRANSPORT_ERROR' | 'RESPONSE_LIMIT' | 'INVALID_RESPONSE' | 'SEMANTIC_ERROR';
@@ -110,7 +111,11 @@ export function createProescV1Client(options: ProescV1ClientOptions) {
       controller.abort();
       rejectAbort(new ProescV1ReadError(timedOut ? 'TIMEOUT' : 'ABORTED'));
     };
-    const timer = setTimeout(() => { timedOut = true; onAbort(); }, timeoutMs);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const startHttpDeadline = () => {
+      if (controller.signal.aborted) throw new ProescV1ReadError('ABORTED');
+      if (timer === undefined) timer = setTimeout(() => { timedOut = true; onAbort(); }, timeoutMs);
+    };
     options.signal?.addEventListener('abort', onAbort, { once: true });
 
     const perform = async () => {
@@ -119,10 +124,10 @@ export function createProescV1Client(options: ProescV1ClientOptions) {
       url.search = new URLSearchParams({ ...params, token: options.token }).toString();
       let response: Response;
       try {
-        response = await transport(url, {
+        response = await runProescV1Transport(transport, url, {
           method: 'GET', redirect: 'error', signal: controller.signal,
           headers: { Accept: 'application/json' },
-        });
+        }, startHttpDeadline);
       } catch {
         throw new ProescV1ReadError(timedOut ? 'TIMEOUT' : controller.signal.aborted ? 'ABORTED' : 'TRANSPORT_ERROR');
       }

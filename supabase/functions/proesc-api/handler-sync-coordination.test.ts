@@ -35,6 +35,9 @@ function fixture(failAt = 0) {
         cacheId: id(20), lease: id(21), cached: false, tokenRevision: 'revision',
         context: { unitId: '1', firstYear: 2026, lastYear: 2026, classIds: ['2'] },
       };
+      else if (name === 'proesc_cycle_review_pages_service') data = action === 'read'
+        ? { version: 1, unitId: '1', tokenRevision: 'revision', pages: [] }
+        : { saved: true, reused: false, hash: 'a'.repeat(64) };
       else if (name === 'proesc_workspace_service') data = { token: 'a'.repeat(32), revision: 'revision' };
       else if (name === 'proesc_cycle_review_cache_service') {
         if (action === 'complete') assert((payload.periods as unknown[]).length === 12,

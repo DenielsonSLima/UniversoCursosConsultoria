@@ -45,6 +45,9 @@ function fakeAdmin(cached = false) {
         context: { unitId: '1', firstYear: 2026, lastYear: 2028, classIds: ['2'] },
       } : { cacheId: cache, complete: true }, error: null };
     }
+    if (name === 'proesc_cycle_review_pages_service') return { data: args.p_action === 'read'
+      ? { version: 1, unitId: '1', tokenRevision: 'revision', pages: [] }
+      : { saved: true, reused: false, hash: 'a'.repeat(64) }, error: null };
     if (name === 'proesc_workspace_service') return { data: { token, revision: 'revision' }, error: null };
     assert(name === 'proesc_record_api_cycle_review_service', 'Unexpected financial mutation');
     return { data: { classification: 'UNKNOWN', eligible: false, source: 'API_SCHEDULE_REVIEW' }, error: null };

@@ -1,8 +1,8 @@
 {
-  "version": "4.8.92",
+  "version": "4.8.93",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 101,
-  "releasedAt": "2026-09-25",
-  "summary": "Consultas Proesc coordenadas e lotes menores para reduzir recusas da API, preservando a conferência financeira"
+  "revision": 102,
+  "releasedAt": "2026-09-26",
+  "summary": "Consultas Proesc com prazo após a fila e retomada segura de conferências longas"
 }

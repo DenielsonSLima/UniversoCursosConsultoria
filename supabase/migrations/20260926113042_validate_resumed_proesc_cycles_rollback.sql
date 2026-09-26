@@ -1,0 +1,5 @@
+-- Remote validation ledger 20260926113042.
+-- Proposed page/cache/runtime definitions and transactional fixtures were tested
+-- then rolled back in one MCP migration; no application state persisted.
+-- Permanent changes follow in 20260926113107 and 20260926113109.
+-- Contract source: supabase/tests/proesc_cycle_pages.transaction.sql.

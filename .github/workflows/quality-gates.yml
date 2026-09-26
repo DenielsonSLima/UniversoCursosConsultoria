@@ -306,6 +306,9 @@ jobs:
         run: |
           deno test --no-config --no-lock --node-modules-dir=none --allow-read --allow-env \
             supabase/functions/proesc-api/v1-paced-transport.test.ts \
+            supabase/functions/proesc-api/v1-queue-deadline.test.ts \
+            supabase/functions/proesc-api/cycle-page-evidence.test.ts \
+            supabase/functions/proesc-api/cycle-review-resume.test.ts \
             supabase/functions/proesc-api/handler-sync-coordination.test.ts \
             supabase/functions/proesc-api/cycle-review-abort.test.ts \
             supabase/functions/proesc-api/cycle-review.test.ts \

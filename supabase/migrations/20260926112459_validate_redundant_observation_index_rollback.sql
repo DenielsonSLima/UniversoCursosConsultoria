@@ -1,0 +1,6 @@
+-- Immutable ledger marker: validate_redundant_observation_index_rollback.
+-- Supabase MCP registered version 20260926112459 for a validation transaction
+-- that explicitly ended with ROLLBACK. The DROP did not persist in this entry.
+-- Intentionally no executable SQL: replay must preserve the original no-op result.
+-- The actual committed change is version 20260926112510.
+-- Evidence: ai/operacao/registros/alteracoes/2026-09-26-recuperacao-espaco-tecnico.md.

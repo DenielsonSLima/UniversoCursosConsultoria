@@ -1,13 +1,14 @@
 import { object, ProescError } from './contract.ts';
 import { ensureProescCycleCache, type CycleReviewAdmin } from './cycle-review.ts';
-import type { ProescV1AccountingPage } from './v1-accounting.ts';
+import type { CycleEvidencePage } from './cycle-page-evidence.ts';
+import { CycleCollectionPending, cycleCollectionBudget, type CycleCollectionBudget } from './cycle-review-pages.ts';
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const countKeys = ['reviewed', 'failed', 'c1', 'full', 'unknown', 'protected', 'eligible'] as const;
 
 export async function reviewProescClassCycles(
   admin: CycleReviewAdmin, actorId: string, turmaId: unknown, transport = fetch,
-  signal?: AbortSignal, workerLease?: string,
+  signal?: AbortSignal, workerLease?: string, budget: CycleCollectionBudget = cycleCollectionBudget(),
 ) {
   if (turmaId !== null && (typeof turmaId !== 'string' || !uuid.test(turmaId))) {
     throw new ProescError('Turma inválida.');
@@ -23,7 +24,9 @@ export async function reviewProescClassCycles(
   const target = await rpc('targets');
   if (!Array.isArray(target.groups) || target.groups.length > 20) throw new ProescError('Lote automático inválido.', 409);
   const counts = { reviewed: 0, failed: 0, c1: 0, full: 0, unknown: 0, protected: 0, eligible: 0 };
-  const pages = new Map<string, Promise<ProescV1AccountingPage>>();
+  const pages = new Map<string, Promise<CycleEvidencePage>>();
+  const stats = { sourceRequests: 0, progressiveCount: 0, sourceFailed: false };
+  let pending = 0;
   const errors = new Set<string>();
   const observedAt = new Date().toISOString();
   for (const raw of target.groups) {
@@ -35,9 +38,12 @@ export async function reviewProescClassCycles(
     }
     const ids = group.matriculaIds as string[];
     let position = 0;
+    if (stats.sourceFailed) { counts.failed += ids.length; continue; }
     try {
+      // A large unfinished window must not block smaller windows already fully
+      // covered by saved pages. The collector stops new GETs at the soft limit.
       const cacheId = await ensureProescCycleCache(admin, actorId, group.representativeId, transport,
-        { pages, observedAt, signal });
+        { pages, stats, signal, budget });
       for (; position < ids.length; position += 20) {
         const result = await rpc('record', { cacheId, matriculaIds: ids.slice(position, position + 20),
           ...(workerLease ? { workerLease } : {}) });
@@ -50,13 +56,14 @@ export async function reviewProescClassCycles(
         }
       }
     } catch (error) {
+      if (error instanceof CycleCollectionPending) { pending += ids.length - position; continue; }
       counts.failed += ids.length - position;
       errors.add(error instanceof ProescError ? error.message : 'A API não concluiu a janela de consulta.');
     }
   }
-  return { success: counts.failed === 0, turmaId, ...counts, sourceRequests: pages.size,
+  return { success: counts.failed === 0 && pending === 0, turmaId, ...counts, pending, ...stats,
     observedAt, errors: [...errors].slice(0,3),
-    message: counts.failed > 0 ? 'Algumas matrículas aguardam a próxima consulta automática.' : null };
+    message: counts.failed > 0 || pending > 0 ? 'Algumas matrículas aguardam a próxima consulta automática.' : null };
 }
 
 export async function runProescCycleReviewWorker(admin: CycleReviewAdmin, actorId: string, transport = fetch) {

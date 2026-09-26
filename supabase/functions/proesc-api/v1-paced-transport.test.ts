@@ -93,12 +93,13 @@ Deno.test('consumer cancellation before EOF closes the gate and settles queued r
   assert(f.calls() === 1 && f.cancelled() === 1);
 });
 
-Deno.test('the existing client deadline removes a queued GET without a late network request', async () => {
+Deno.test('the global client deadline removes a queued GET without a late network request', async () => {
   const f = controlledSource(); const paced = createProescV1PacedTransport(f.transport);
   const first = await paced(source);
-  const client = createProescV1Client({ token: 'a'.repeat(32), transport: paced, timeoutMs: 10 });
+  const client = createProescV1Client({ token: 'a'.repeat(32), transport: paced,
+    timeoutMs: 10, signal: AbortSignal.timeout(10) });
   const error = await rejected(client.accountingData({ unitId: '1', year: 2026, month: 9 }));
-  assert(error instanceof ProescV1ReadError && error.code === 'TIMEOUT');
+  assert(error instanceof ProescV1ReadError && error.code === 'ABORTED');
   f.finish(); await first.text(); await tick(); assert(f.calls() === 1);
   await (await paced(source)).text(); assert(f.calls() === 2);
 });
