@@ -1,6 +1,24 @@
 /* global ReadableStream: readonly, ReadableStreamDefaultController: readonly */
+type DispatchRequest = (
+  input: Parameters<typeof fetch>[0], init: Parameters<typeof fetch>[1], onDispatch: () => void,
+) => ReturnType<typeof fetch>;
+const dispatchCapability = Symbol('proesc-v1-dispatch');
+type CoordinatedTransport = typeof fetch & { [dispatchCapability]?: DispatchRequest };
+
+/** Start network deadlines only after a coordinated transport acquires its slot. */
+export function runProescV1Transport(
+  transport: typeof fetch, input: Parameters<typeof fetch>[0],
+  init: Parameters<typeof fetch>[1], onDispatch: () => void,
+): ReturnType<typeof fetch> {
+  const dispatch = (transport as CoordinatedTransport)[dispatchCapability];
+  if (dispatch) return dispatch(input, init, onDispatch);
+  onDispatch();
+  return transport(input, init);
+}
+
 // One gate per internal_sync execution, shared by accounting and cycle review.
-// No provider quota is assumed. Waits remain inside each caller's own deadline.
+// No provider quota is assumed. Queue waits use the caller's global AbortSignal;
+// the client starts its HTTP budget at dispatch, retaining it through body EOF.
 export function createProescV1PacedTransport(
   transport: typeof fetch, options: { intervalMs?: number } = {},
 ): typeof fetch {
@@ -29,7 +47,7 @@ export function createProescV1PacedTransport(
     }
   };
 
-  return async (input, init) => {
+  const dispatch: DispatchRequest = async (input, init, onDispatch) => {
     const signal = init?.signal ?? (input instanceof Request ? input.signal : undefined);
     if (stopped.signal.aborted) throw blocked();
     if (signal?.aborted) throw cancelled();
@@ -56,7 +74,7 @@ export function createProescV1PacedTransport(
       }
       if (signal?.aborted || stopped.signal.aborted) throw cancelled();
       started = true;
-      const response = await transport(input, init);
+      const response = await runProescV1Transport(transport, input, init, onDispatch);
       if (response.status !== 200) stopped.abort();
       if (signal?.aborted) {
         await response.body?.cancel().catch(() => undefined);
@@ -116,4 +134,6 @@ export function createProescV1PacedTransport(
       throw signal?.aborted ? cancelled() : blocked();
     }
   };
+  const coordinated: typeof fetch = (input, init) => dispatch(input, init, () => undefined);
+  return Object.assign(coordinated, { [dispatchCapability]: dispatch });
 }

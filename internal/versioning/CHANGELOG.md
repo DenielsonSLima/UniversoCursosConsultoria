@@ -2,7 +2,13 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
-Histórico anterior: [02/09/2026 — versões 4.8.27 a 4.8.29](./changelog/2026-09-02-versoes-4-8-27-a-4-8-29.md), [01/09/2026 — versões 4.8.23 a 4.8.26](./changelog/2026-09-01-versoes-4-8-23-a-4-8-26.md), [01/09/2026 — versões 4.8.20 a 4.8.22](./changelog/2026-09-01-versoes-4-8-20-a-4-8-22.md), [27/08/2026 a 31/08/2026 — versões 4.8.8 a 4.8.19](./changelog/2026-08-27-a-2026-08-31.md), [26/08/2026 — versões 4.8.6 a 4.8.7](./changelog/2026-08-26.md), [25/08/2026 — versões 4.8.2 a 4.8.5](./changelog/2026-08-25-parte-1.md), [24/08/2026 — versões 4.8.0 a 4.8.1](./changelog/2026-08-24-parte-2.md), [24/08/2026 — versões 4.7.5 a 4.7.7](./changelog/2026-08-24-parte-1.md), [22/08/2026 a 23/08/2026](./changelog/2026-08-22-a-2026-08-23.md), [21/08/2026 a 22/08/2026 — parte 2](./changelog/2026-08-21-a-2026-08-22-parte-2.md), [21/08/2026 — parte 1](./changelog/2026-08-21-parte-1.md), [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+Histórico anterior: [03/09/2026 a 08/09/2026 — versões 4.8.30 a 4.8.36](./changelog/2026-09-03-a-2026-09-08-versoes-4-8-30-a-4-8-36.md), [02/09/2026 — versões 4.8.27 a 4.8.29](./changelog/2026-09-02-versoes-4-8-27-a-4-8-29.md), [01/09/2026 — versões 4.8.23 a 4.8.26](./changelog/2026-09-01-versoes-4-8-23-a-4-8-26.md), [01/09/2026 — versões 4.8.20 a 4.8.22](./changelog/2026-09-01-versoes-4-8-20-a-4-8-22.md), [27/08/2026 a 31/08/2026 — versões 4.8.8 a 4.8.19](./changelog/2026-08-27-a-2026-08-31.md), [26/08/2026 — versões 4.8.6 a 4.8.7](./changelog/2026-08-26.md), [25/08/2026 — versões 4.8.2 a 4.8.5](./changelog/2026-08-25-parte-1.md), [24/08/2026 — versões 4.8.0 a 4.8.1](./changelog/2026-08-24-parte-2.md), [24/08/2026 — versões 4.7.5 a 4.7.7](./changelog/2026-08-24-parte-1.md), [22/08/2026 a 23/08/2026](./changelog/2026-08-22-a-2026-08-23.md), [21/08/2026 a 22/08/2026 — parte 2](./changelog/2026-08-21-a-2026-08-22-parte-2.md), [21/08/2026 — parte 1](./changelog/2026-08-21-parte-1.md), [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+
+## [4.8.93] - 2026-09-26
+
+- O prazo da consulta Proesc começa após a espera na fila, preservando o cancelamento global.
+- Conferências longas retomam páginas completas já consultadas e só concluem com toda a janela válida.
+- Identidade, autorização, hashes, prazo de cinco minutos e pausa após falha da fonte permanecem exigidos.
 
 ## [4.8.92] - 2026-09-25
 
@@ -412,87 +418,3 @@ Histórico anterior: [02/09/2026 — versões 4.8.27 a 4.8.29](./changelog/2026-
   inválidos de um rascunho anterior, evitando erro ao salvar campos já ocultos.
 - Dados acadêmicos e bloqueios financeiros são preservados; turmas novas e
   segundo ciclo mantêm seus parâmetros quando selecionados diretamente.
-
-## [4.8.36] - 2026-09-08
-
-### Adicionado
-
-- Cadastro de turma técnica em andamento com opção de gerar apenas o 2º ciclo
-  ou manter todas as cobranças no sistema anterior.
-- Matrícula antiga e geração automática bloqueadas; histórico externo não
-  registra quitação nem recria boletos anteriores.
-- Valores, desconto, juros e multa ficam disponíveis somente para novas
-  emissões permitidas, com conferência do histórico antes de gerar o 2º ciclo.
-- Turmas novas mantêm suas regras; cadastro e vínculo de aluno não emitem cobranças.
-
-## [4.8.35] - 2026-09-08
-
-### Corrigido
-
-- A Receber limita a espera das consultas e oferece nova tentativa em falhas,
-  preservando período, turma, busca e página, inclusive nos grupos expandidos.
-- Erros não aparecem como lista vazia; filtros cancelam consultas anteriores.
-- Timeout do banco não inicia repetição automática prolongada.
-
-## [4.8.34] - 2026-09-07
-
-### Alterado
-
-- Baixas manuais em A Receber mostram o usuário responsável e a data e hora
-  da conclusão, com segundos, na lista e nos cartões.
-- A data do pagamento permanece separada da auditoria; informações históricas
-  ausentes são identificadas, sem inferência de horário ou operador.
-- Os dados vêm da consulta autorizada do servidor, preservando os cálculos financeiros.
-
-## [4.8.33] - 2026-09-07
-
-### Alterado
-
-- A Receber abre no mês atual e oferece mês anterior, últimos 30 dias,
-  todo o período e intervalo personalizado por vencimento.
-- Recebido, A vencer e Em atraso acompanham aluno, turma e período;
-  clicar em um indicador filtra a lista e seu total contextual.
-- Valores e quantidades permanecem calculados no backend. Datas inválidas,
-  carregamento e falhas de consulta não aparecem como saldo zero.
-
-## [4.8.32] - 2026-09-06
-
-### Corrigido
-
-- A Conciliação mostra a data efetiva do pagamento usada no Caixa separada
-  da data e hora em que a confirmação foi registrada pelo sistema.
-- Recebimentos antigos e futuros usam a mesma apresentação em desktop e celular;
-  a ausência de registro não é preenchida com a data do pagamento.
-- Datas bancárias, valores e competências financeiras permanecem preservados.
-
-## [4.8.31] - 2026-09-04
-
-### Alterado
-
-- A emissão manual do ciclo técnico passa a mostrar percentual e contagem reais
-  dos títulos BolePix já validados e persistidos, começando em `0/total`.
-- A situação financeira da turma reúne CPF e matrícula abaixo do aluno, remove
-  a coluna redundante e alterna as faixas visuais entre estudantes.
-- O carnê dos títulos Banese já emitidos pode ser aberto diretamente na tabela
-  financeira da turma pelo compositor oficial existente.
-
-### Segurança e qualidade
-
-- O progresso é acordado apenas nas transições bancárias confirmada ou de
-  revisão, sem estimativa temporal, novo POST ou reemissão de título.
-- O botão de carnê exige matrícula exata e emissão completa, falha fechado para
-  grupos ambíguos e mantém RBAC e escopo de polo.
-- Três revisões independentes, 83 contratos, TypeScript, lint, formatação, teto
-  de linhas e build de produção foram aprovados.
-
-## [4.8.30] - 2026-09-03
-
-### Alterado
-
-- A emissão do ciclo técnico passa a ocupar a tela com barra animada, tempo decorrido e as etapas de preparação, registro Banese e conferência do retorno.
-- Aluno, matrícula, ciclo, quantidade e total permanecem visíveis a partir da prévia revisada, mesmo quando a lista financeira é atualizada durante a requisição.
-
-### Segurança e qualidade
-
-- A barra é explicitamente indeterminada, sem inventar percentual bancário; uma trava síncrona impede clique duplo e mantém o pedido idempotente.
-- O contrato Banese não foi alterado, e testes focados cobrem progresso, acessibilidade, snapshot e feedback de interrupção.

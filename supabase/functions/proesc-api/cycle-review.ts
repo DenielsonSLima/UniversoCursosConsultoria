@@ -1,14 +1,9 @@
 import { object, ProescError } from './contract.ts';
-import { createProescV1Client } from './v1-client.ts';
-import type { ProescV1AccountingPage, ProescV1AccountingSource } from './v1-accounting.ts';
-import { cycleSourceObligations } from './cycle-schedule-source.ts';
+import { cycleEvidenceObligations } from './cycle-schedule-source.ts';
+import { collectCyclePages, type CycleReviewReadOptions } from './cycle-review-pages.ts';
+export type { CycleReviewReadOptions } from './cycle-review-pages.ts';
 
 export type CycleReviewAdmin = { rpc: (name: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: unknown }> };
-export type CycleReviewReadOptions = {
-  pages?: Map<string, Promise<ProescV1AccountingPage>>;
-  observedAt?: string;
-  signal?: AbortSignal;
-};
 // Requests sharing a worker wait on the same unit/window fetch. Database leases
 // also prevent duplicate fan-out across separate Edge workers.
 const inFlight = new Map<string, Promise<void>>();
@@ -73,38 +68,20 @@ export async function ensureProescCycleCache(
         throw new ProescError('A conexão Proesc mudou. Confira novamente.', 409);
       }
       assertActive();
-      const client = createProescV1Client({ token: credential.token, transport, signal: options.signal });
-      const queries: ProescV1AccountingSource[] = [];
-      for (let year = firstYear; year <= lastYear; year++) for (let month = 1; month <= 12; month++) {
-        queries.push({ unitId: context.unitId as string, year, month });
-      }
-      const pages: ProescV1AccountingPage[] = new Array(queries.length);
-      let next = 0;
-      let failed = false;
-      const workers = await Promise.allSettled(Array.from({ length: 1 }, async () => {
-        while (!failed && next < queries.length) {
-          const index = next++;
-          try {
-            const query = queries[index];
-            const key = `${credential.revision}:${query.unitId}:${query.year}:${query.month}`;
-            let pending = options.pages?.get(key);
-            if (!pending) {
-              pending = client.accountingData(query);
-              options.pages?.set(key, pending);
-            }
-            pages[index] = await pending;
-          }
-          catch (error) { failed = true; throw error; }
-        }
-      }));
-      const failure = workers.find((worker) => worker.status === 'rejected');
-      if (failure?.status === 'rejected') throw failure.reason;
-      const obligations = await cycleSourceObligations(pages, context.classIds as string[]);
+      if (typeof credential.revision !== 'string') throw new ProescError('Conexão Proesc inválida.', 409);
+      const pageRpc = (action: string, payload: Record<string, unknown>) => rpc('proesc_cycle_review_pages_service', {
+        p_action: action, p_actor_id: actorId, p_matricula_id: matriculaId, p_payload: payload,
+      });
+      const pages = await collectCyclePages({ unitId: context.unitId as string, firstYear, lastYear,
+        tokenRevision: credential.revision }, { cacheId, lease: start.lease as string },
+        credential.token, transport, pageRpc, assertActive, options);
+      const obligations = cycleEvidenceObligations(pages, context.classIds as string[]);
       assertActive();
       await cacheRpc('complete', {
-        cacheId, lease: start.lease, obligations,
-        ...(options.observedAt ? { sourceObservedAt: options.observedAt } : {}),
-        periods: pages.map((page) => ({ year: page.source.year, month: page.source.month, complete: true })),
+        cacheId, lease: start.lease, obligations, resumeVersion: 1,
+        sourceObservedAt: new Date(Math.min(...pages.map((page) => Date.parse(page.observedAt)))).toISOString(),
+        periods: pages.map((page) => ({ year: page.year, month: page.month, complete: true })),
+        pageHashes: pages.map((page) => ({ year: page.year, month: page.month, hash: page.hash })),
       });
     };
     const promise = run();
