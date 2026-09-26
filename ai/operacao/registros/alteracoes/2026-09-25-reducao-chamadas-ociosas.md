@@ -43,5 +43,7 @@ Total: 8 arquivos.
 ## Limites e acompanhamento
 
 - A economia se aplica às invocações sem trabalho desse dispatcher; outros crons e fontes de logs permanecem. Não há medição pós-alteração suficiente para prometer menos de 1 GB por ciclo.
-- Banco principal medido em 481,83 MB; soma com templates em 496,95 MB. O maior volume é histórico financeiro e seus índices, não cache descartável. Nenhuma exclusão ou recompactação de histórico foi executada; a folga física atual não estava confirmada para autorizar essa manutenção.
+- Banco principal medido em 481,83 MB; soma com templates em 496,95 MB. O maior volume é histórico financeiro e seus índices, não cache descartável. Retenção automática retomou às 00:43Z. VACUUM comum com SKIP_LOCKED concluiu às 00:49:43Z; 53.571 registros concluídos mantiveram o mesmo hash antes/depois. Cron permaneceu com 36.798.464 bytes e a soma dos bancos ficou em 497.143.985 bytes: espaço reutilizável, sem redução física comprovada. Nenhum VACUUM FULL ou exclusão extraordinária foi executado. A execução cron seguinte terminou normalmente.
 - Regressão futura deve atualizar conjuntamente o predicado e seus cenários quando o contrato de claim mudar. A migration aplicada deve permanecer imutável.
+
+- Suporte confirmou o chamado SU-485772. A resposta inicial não identifica a causa física nem aprova revisão do consumo.
