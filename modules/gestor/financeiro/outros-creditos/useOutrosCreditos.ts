@@ -26,9 +26,12 @@ export const useOutrosCreditos = (scopedPoloId?: string | null) => {
   const [groupMode, setGroupMode] = useState<OtherCreditGroupMode>('partner');
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isPdvOpen, setIsPdvOpen] = useState(false);
   const pageSize = 8;
 
   const [mode, setMode] = useState<CreditMode>('LOCAL_PAGO');
+  const [bankPresentation, setBankPresentation] = useState<'PDV' | 'LINK'>('PDV');
+  const [paymentReceivableId, setPaymentReceivableId] = useState<string | null>(null);
   const [description, setDescription] = useState('');
   const [value, setValue] = useState('');
   const [dueDate, setDueDate] = useState(today());
@@ -85,7 +88,7 @@ export const useOutrosCreditos = (scopedPoloId?: string | null) => {
     mutationFn: () => financeiroService.createOtherCredit({
       idempotencyKey: creationAttemptId,
       poloId: effectivePoloId,
-      descricao: description.trim(),
+      descricao: description.trim() || (isPdvOpen ? 'Crédito avulso' : ''),
       valor: parseCurrencyInput(value),
       dataVencimento: dueDate,
       clienteId: partnerId || undefined,
@@ -100,12 +103,18 @@ export const useOutrosCreditos = (scopedPoloId?: string | null) => {
         queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.resumoKpis }),
         queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos }),
       ]);
+      if (mode === 'GATEWAY' && bankPresentation === 'PDV' && created.id) {
+        setPaymentReceivableId(created.id);
+      }
       setIsModalOpen(false);
+      setIsPdvOpen(false);
       resetForm();
       setCreationAttemptId(generateSafeUuid());
       toast.success(
-        mode === 'GATEWAY' ? 'Crédito e link criados' : 'Crédito registrado',
-        mode === 'GATEWAY' && created.asaasInvoiceUrl
+        mode === 'GATEWAY' ? 'Cobrança criada' : 'Crédito registrado',
+        mode === 'GATEWAY' && bankPresentation === 'PDV'
+          ? 'O caixa está aberto com os dados desta cobrança.'
+          : mode === 'GATEWAY' && created.asaasInvoiceUrl
           ? 'A cobrança foi enviada para a rota bancária configurada e o link já está disponível.'
           : 'O lançamento foi salvo em Outros Créditos.',
       );
@@ -153,6 +162,7 @@ export const useOutrosCreditos = (scopedPoloId?: string | null) => {
 
   const resetForm = () => {
     setMode('LOCAL_PAGO');
+    setBankPresentation('PDV');
     setDescription('');
     setValue('');
     setDueDate(today());
@@ -166,14 +176,27 @@ export const useOutrosCreditos = (scopedPoloId?: string | null) => {
   };
 
   const openCreateModal = () => {
+    setIsPdvOpen(false);
     resetForm();
     setCreationAttemptId(generateSafeUuid());
     setIsModalOpen(true);
   };
 
+  const openPdv = () => {
+    resetForm();
+    setMode('GATEWAY');
+    setPaymentMethod('BOLETO');
+    setDueDate('');
+    setPaymentReceivableId(null);
+    setIsModalOpen(false);
+    setCreationAttemptId(generateSafeUuid());
+    setIsPdvOpen(true);
+  };
+
   const closeCreateModal = () => {
     if (createMutation.isPending) return;
     setIsModalOpen(false);
+    setIsPdvOpen(false);
     resetForm();
     setCreationAttemptId(generateSafeUuid());
   };
@@ -288,8 +311,9 @@ export const useOutrosCreditos = (scopedPoloId?: string | null) => {
 
   const validateAndSubmit = (event: FormEvent) => {
     event.preventDefault();
+    if (createMutation.isPending) return;
     const numericValue = parseCurrencyInput(value);
-    if (!description.trim()) {
+    if (!description.trim() && !isPdvOpen) {
       toast.warning('Descrição obrigatória', 'Informe a origem do crédito.');
       return;
     }
@@ -299,6 +323,10 @@ export const useOutrosCreditos = (scopedPoloId?: string | null) => {
     }
     if (!effectivePoloId) {
       toast.warning('Polo ativo obrigatório', 'Selecione uma unidade no topo do portal antes de lançar o crédito.');
+      return;
+    }
+    if (!dueDate || !/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) {
+      toast.warning('Vencimento obrigatório', 'Informe a data de vencimento da cobrança.');
       return;
     }
     if (mode === 'LOCAL_PAGO' && !accountId) {
@@ -326,6 +354,16 @@ export const useOutrosCreditos = (scopedPoloId?: string | null) => {
     }
     await navigator.clipboard.writeText(item.asaasInvoiceUrl);
     toast.success('Link copiado', 'Envie o link ao parceiro pelo canal de atendimento.');
+  };
+
+  useEffect(() => {
+    setPaymentReceivableId(null);
+    setIsPdvOpen(false);
+    setIsModalOpen(false);
+  }, [effectivePoloId]);
+
+  const openPaymentModal = (item: ContasReceber) => {
+    if (item.id) setPaymentReceivableId(item.id);
   };
 
   const openReceiveModal = (item: ContasReceber) => {
@@ -364,7 +402,10 @@ export const useOutrosCreditos = (scopedPoloId?: string | null) => {
   };
 
   return {
-    isModalOpen,
+    isModalOpen, isPdvOpen, openPdv, bankPresentation, setBankPresentation,
+    partnersLoading: partnersQuery.isLoading, partnersError: partnersQuery.isError,
+    retryPartners: partnersQuery.refetch,
+    paymentReceivableId, setPaymentReceivableId, openPaymentModal,
     toasts, removeToast, statusScope, setStatusScope, search, setSearch,
     startDate, setStartDate, endDate, setEndDate, categoryFilterId, setCategoryFilterId,
     setPage, groupMode, setGroupMode, expandedGroups, mode, setMode,

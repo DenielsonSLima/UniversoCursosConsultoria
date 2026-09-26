@@ -83,6 +83,27 @@ Deno.test("etapa ativa boleto Banese EAD em sandbox e producao", () => {
   );
 });
 
+Deno.test("libera apenas BolePix de Outros Creditos em producao sem ampliar as demais rotas", () => {
+  const modalidades = ["EAD", "TECNICO", "LIVRE", "ESPECIALIZACAO", "OUTROS_CREDITOS"] as const;
+  const methods = ["PIX", "BOLETO", "CREDIT_CARD"] as const;
+  const providers = ["asaas", "mercado_pago", "banco_inter", "banese_card"] as const;
+  const environments = ["sandbox", "production"] as const;
+  for (const modalidade of modalidades) {
+    for (const method of methods) {
+      for (const provider of providers) {
+        for (const environment of environments) {
+          const allowed = provider === "banese_card" && method === "BOLETO"
+            && (modalidade === "EAD" || (modalidade === "OUTROS_CREDITOS" && environment === "production"));
+          const call = () => assertHomologationStageRoute(modalidade, method, provider, environment);
+          const label = [modalidade, method, provider, environment].join("/");
+          if (allowed) assert.doesNotThrow(call, label);
+          else assert.throws(call, Error, label);
+        }
+      }
+    }
+  }
+});
+
 Deno.test("metadados fixos Banese preservam o convenio de cada ambiente", () => {
   assert.equal(
     enforceProviderFixedMetadata("banese_card", {}, "sandbox")

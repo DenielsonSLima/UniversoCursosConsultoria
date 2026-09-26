@@ -108,13 +108,14 @@ export const assertHomologationStageRoute = (
   environment: Environment,
 ) => {
   if (
-    modalidade === "EAD" &&
+    (modalidade === "EAD" ||
+      (modalidade === "OUTROS_CREDITOS" && environment === "production")) &&
     paymentMethod === "BOLETO" &&
     providerCode === "banese_card" &&
     (environment === "sandbox" || environment === "production")
   ) return;
   throw new Error(
-    "Nesta etapa, somente Cursos EAD com boleto Banese podem ser ativados. Em producao, o Pix e devolvido no proprio BolePix.",
+    "Nesta etapa, somente Cursos EAD com boleto Banese ou Outros Creditos com BolePix Banese em producao podem ser ativados. O Pix e devolvido no proprio boleto.",
   );
 };
 
