@@ -1,5 +1,7 @@
 import { buildAuthRedirectUrl } from '../../../lib/app-url';
+import type { User } from '@supabase/supabase-js';
 import { supabase } from '../../../lib/supabase';
+import { checkAuthRequest, withAuthDeadline } from '../../login/auth-request';
 import {
   getPortalAccessErrorLog,
   getPortalAccessErrorMessage,
@@ -20,10 +22,7 @@ import {
 } from '../../shared/auth/native-oauth';
 import { PUBLIC_ALUNO_EMAIL_CONFIRMATION_REQUIRED_MESSAGE } from './aluno-public-auth.contract';
 import { getFriendlyOAuthError, getSafePublicAlunoRedirectPath } from './aluno-public-auth.helpers';
-import {
-  clearUnconfirmedLocalSession,
-  hasConfirmedEmail,
-} from './aluno-public-auth-session.helpers';
+import { hasConfirmedEmail } from './aluno-public-auth-session.helpers';
 import { finalizePublicSignupFromMetadata } from './aluno-public-signup.service';
 
 const getExistingOrFinalizePublicAlunoProfile = async () => {
@@ -39,10 +38,17 @@ const getExistingOrFinalizePublicAlunoProfile = async () => {
   return finalizePublicSignupFromMetadata();
 };
 
-const getPublicLoginProfiles = async (): Promise<PortalAuthProfile[]> => {
+const getPublicLoginProfiles = async (
+  authenticatedUser?: User | null,
+  signal?: AbortSignal,
+): Promise<PortalAuthProfile[]> => {
   let profiles: PortalAuthProfile[];
   try {
-    profiles = await getPublicPortalProfiles();
+    profiles = await withAuthDeadline(() => getPublicPortalProfiles(authenticatedUser), {
+      signal,
+      timeoutMs: 8_000,
+    });
+    checkAuthRequest(signal);
   } catch (error) {
     console.error(
       'Falha ao resolver acesso público do aluno:',
@@ -62,7 +68,7 @@ const getPublicLoginProfiles = async (): Promise<PortalAuthProfile[]> => {
 
 const rejectUnconfirmedEmail = async (user: { email_confirmed_at?: string | null } | null) => {
   if (!user || hasConfirmedEmail(user)) return;
-  await clearUnconfirmedLocalSession();
+  await loginService.logout();
   throw new Error(PUBLIC_ALUNO_EMAIL_CONFIRMATION_REQUIRED_MESSAGE);
 };
 
@@ -97,20 +103,25 @@ export const loginPublicAlunoAndListProfiles = async (
   email: string,
   password: string,
   turnstileToken: string,
+  signal?: AbortSignal,
 ): Promise<PortalAuthProfile[]> => {
-  const { error, user } = await loginService.login({ email, password, turnstileToken });
+  const { error, user } = await loginService.login({ email, password, turnstileToken }, signal);
+  checkAuthRequest(signal);
   if (error) throw new Error(error);
   await rejectUnconfirmedEmail(user);
+  checkAuthRequest(signal);
 
   try {
-    return await getPublicLoginProfiles();
+    return await getPublicLoginProfiles(user, signal);
   } catch (profileError) {
+    checkAuthRequest(signal);
     await loginService.logout();
     throw profileError;
   }
 };
 
 export const loginPublicAlunoWithGoogle = async (redirectPath = '/aluno') => {
+  loginService.assertAuthMutationAvailable();
   const safeRedirectPath = getSafePublicAlunoRedirectPath(redirectPath);
 
   if (isNativeOAuthPlatform()) {
@@ -161,10 +172,14 @@ export const finishPublicAlunoExternalLogin = async () => {
   }
 };
 
-export const finishPublicAlunoExternalLoginAndListProfiles = async (): Promise<PortalAuthProfile[]> => {
+export const finishPublicAlunoExternalLoginAndListProfiles = async (
+  authenticatedUser?: User | null,
+  signal?: AbortSignal,
+): Promise<PortalAuthProfile[]> => {
   try {
-    return await getPublicLoginProfiles();
+    return await getPublicLoginProfiles(authenticatedUser, signal);
   } catch (profileError) {
+    checkAuthRequest(signal);
     await loginService.logout();
     throw profileError;
   }

@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase';
+import { withAuthDeadline } from './auth-request';
 import {
   PORTAL_CONTEXT_HOME_ROUTES,
   type PortalContext,
@@ -146,7 +147,10 @@ export const normalizePortalContext = (value: unknown): PortalContext => {
  * política de negócio são resolvidas exclusivamente pela RPC.
  */
 export const listPortalContexts = async (): Promise<readonly PortalContext[]> => {
-  const { data, error } = await supabase.rpc(RPC_NAME);
+  const { data, error } = await withAuthDeadline(
+    signal => supabase.rpc(RPC_NAME).retry(false).abortSignal(signal),
+    { timeoutMs: 8_000 },
+  );
   if (error) {
     throw new PortalContextServiceError(error.message, error.code);
   }

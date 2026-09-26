@@ -46,7 +46,7 @@ const resolvePublicApiKey = (serviceRoleKey: string) => {
 const resolveLoginIdentity = async (admin: any, identifier: string) => {
   const { data, error } = await admin.rpc("resolve_portal_login_identity", {
     p_identifier: identifier,
-  });
+  }).retry(false).abortSignal(AbortSignal.timeout(5_000));
   if (error) throw error;
   return typeof data === "string" && data.trim()
     ? data.trim().toLowerCase()
@@ -54,7 +54,7 @@ const resolveLoginIdentity = async (admin: any, identifier: string) => {
 };
 
 const readAuthResponse = async (response: Response) => {
-  const body = await response.json().catch(() => null);
+  const body = await response.json();
   return body && typeof body === "object"
     ? body as Record<string, unknown>
     : null;
@@ -238,7 +238,7 @@ Deno.serve(async (request: Request) => {
           p_cpf: cpf,
           p_exclude_auth_user_id: null,
         },
-      );
+      ).retry(false).abortSignal(AbortSignal.timeout(5_000));
       if (availabilityError) throw availabilityError;
       timings.identityMs = elapsedSince(identityStartedAt);
 
@@ -292,6 +292,7 @@ Deno.serve(async (request: Request) => {
       recoveryUrl.searchParams.set("redirect_to", redirect.redirectTo);
       await fetch(recoveryUrl, {
         method: "POST",
+        signal: AbortSignal.timeout(10_000),
         headers: {
           apikey: publicApiKey,
           Authorization: `Bearer ${publicApiKey}`,
@@ -318,6 +319,7 @@ Deno.serve(async (request: Request) => {
       `${supabaseUrl}/auth/v1/token?grant_type=password`,
       {
         method: "POST",
+        signal: AbortSignal.timeout(10_000),
         headers: {
           apikey: publicApiKey,
           Authorization: `Bearer ${publicApiKey}`,
@@ -331,6 +333,14 @@ Deno.serve(async (request: Request) => {
     );
     const authData = await readAuthResponse(authResponse);
     timings.authMs = elapsedSince(authStartedAt);
+
+    if (authResponse.status >= 500) {
+      logTiming("auth_unavailable");
+      return json({
+        error: "Serviço temporariamente indisponível.",
+        code: "service_unavailable",
+      }, 503);
+    }
 
     if (
       !authResponse.ok ||

@@ -80,7 +80,7 @@ const consumeRateLimit = async (
     p_bucket_key: bucketKey,
     p_limit: limit,
     p_window_seconds: windowSeconds,
-  });
+  }).retry(false).abortSignal(AbortSignal.timeout(5_000));
 
   if (error) throw error;
   const row = (Array.isArray(data) ? data[0] : data) as RateLimitResult | null;

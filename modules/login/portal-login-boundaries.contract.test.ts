@@ -54,12 +54,12 @@ test('separa os perfis públicos dos institucionais sem seletor único', () => {
 });
 
 test('senha e OAuth reutilizam o resolvedor da audiência correspondente', () => {
-  assert.match(publicSessionSource, /loginPublicAlunoAndListProfiles[\s\S]*getPublicLoginProfiles\(\)/);
-  assert.match(publicSessionSource, /finishPublicAlunoExternalLoginAndListProfiles[\s\S]*getPublicLoginProfiles\(\)/);
+  assert.match(publicSessionSource, /loginPublicAlunoAndListProfiles[\s\S]*getPublicLoginProfiles\(user, signal\)/);
+  assert.match(publicSessionSource, /finishPublicAlunoExternalLoginAndListProfiles[\s\S]*getPublicLoginProfiles\(authenticatedUser, signal\)/);
   assert.match(publicLoginHookSource, /loginAndListProfiles\(/);
-  assert.match(publicLoginHookSource, /finishExternalLoginAndListProfiles\(\)/);
-  assert.match(institutionalLoginSource, /resolveInstitutionalAccess\(user\)/);
-  assert.match(institutionalLoginSource, /resolveInstitutionalAccess\(session\.user\)/);
+  assert.match(publicLoginHookSource, /finishExternalLoginAndListProfiles\(\s*data\.session\.user,/);
+  assert.match(institutionalLoginSource, /resolveInstitutionalAccess\(user, signal\)/);
+  assert.match(institutionalLoginSource, /resolveInstitutionalAccess\(session\.user, controller\.signal\)/);
   assert.match(appLoginSource, /loginAndListProfiles\(/);
   assert.match(appLoginSource, /finishExternalLoginAndListProfiles\(\)/);
 });

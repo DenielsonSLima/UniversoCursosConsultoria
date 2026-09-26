@@ -243,8 +243,8 @@ test('authenticated user is reused while institutional access is resolved', () =
     portalSession,
     /getInstitutionalProfiles\s*=\s*async\s*\(\s*authenticatedUser\?:\s*User\s*\|\s*null/,
   )
-  assert.match(loginPage, /resolveInstitutionalAccess\(user\)/)
-  assert.match(loginPage, /resolveInstitutionalAccess\(session\.user\)/)
+  assert.match(loginPage, /resolveInstitutionalAccess\(user, signal\)/)
+  assert.match(loginPage, /resolveInstitutionalAccess\(session\.user, controller\.signal\)/)
   assert.doesNotMatch(loginPage, /\balert\(/)
 })
 

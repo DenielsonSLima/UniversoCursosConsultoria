@@ -4,6 +4,12 @@ Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente
 
 Histórico anterior: [02/09/2026 — versões 4.8.27 a 4.8.29](./changelog/2026-09-02-versoes-4-8-27-a-4-8-29.md), [01/09/2026 — versões 4.8.23 a 4.8.26](./changelog/2026-09-01-versoes-4-8-23-a-4-8-26.md), [01/09/2026 — versões 4.8.20 a 4.8.22](./changelog/2026-09-01-versoes-4-8-20-a-4-8-22.md), [27/08/2026 a 31/08/2026 — versões 4.8.8 a 4.8.19](./changelog/2026-08-27-a-2026-08-31.md), [26/08/2026 — versões 4.8.6 a 4.8.7](./changelog/2026-08-26.md), [25/08/2026 — versões 4.8.2 a 4.8.5](./changelog/2026-08-25-parte-1.md), [24/08/2026 — versões 4.8.0 a 4.8.1](./changelog/2026-08-24-parte-2.md), [24/08/2026 — versões 4.7.5 a 4.7.7](./changelog/2026-08-24-parte-1.md), [22/08/2026 a 23/08/2026](./changelog/2026-08-22-a-2026-08-23.md), [21/08/2026 a 22/08/2026 — parte 2](./changelog/2026-08-21-a-2026-08-22-parte-2.md), [21/08/2026 — parte 1](./changelog/2026-08-21-parte-1.md), [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
 
+## [4.8.90] - 2026-09-25
+
+- Login limita a espera e permite nova tentativa após indisponibilidade, sem continuar navegação de uma resposta antiga.
+- Autenticação pública não depende de recuperar uma sessão anterior; servidor interrompe consultas sem resposta preservando a verificação de segurança.
+- Validações financeiras permanentes restantes deixam de provocar repetição transacional, mantendo autorizações e cobranças existentes.
+
 ## [4.8.89] - 2026-09-25
 
 - Busca de turmas é aplicada automaticamente após uma breve pausa na digitação e retorna à primeira página.
@@ -78,6 +84,12 @@ Histórico anterior: [02/09/2026 — versões 4.8.27 a 4.8.29](./changelog/2026-
 - Carnê permite revisar valor, vencimento, desconto, juros e multa de cada cobrança e escolher se haverá boleto da matrícula, sem registrar pagamento automaticamente.
 - Segundo ciclo pode ser solicitado após a emissão integral do primeiro; retomadas preservam os títulos existentes.
 - Matrícula emitida pelo ciclo manual aparece no carnê, junto às mensalidades.
+
+## [4.8.77] - 2026-09-22
+
+- Caixa solicita somente os três meses apresentados no gráfico, preservando os valores e cálculos canônicos do período escolhido.
+- Diagnóstico interno de parcelas Proesc V2 preparado para conferir situação explícita, com leitura limitada e sem alterar cobranças.
+- Indicadores mantêm separadas as obrigações sem evidência suficiente; ausência de pagamento observado não é tratada como inadimplência confirmada.
 
 ## [4.8.76] - 2026-09-21
 

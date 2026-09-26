@@ -1,8 +1,8 @@
 {
-  "version": "4.8.89",
+  "version": "4.8.90",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 98,
+  "revision": 99,
   "releasedAt": "2026-09-25",
-  "summary": "Busca de turmas atualiza resultados e contador durante a digitação"
+  "summary": "Recuperação do login e interrupção de retentativas indevidas nas validações financeiras"
 }

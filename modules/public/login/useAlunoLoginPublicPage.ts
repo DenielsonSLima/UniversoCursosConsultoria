@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router';
 import { supabase } from '../../../lib/supabase';
+import { checkAuthRequest, withAuthDeadline } from '../../login/auth-request';
 import { PORTAL_CONTEXT_HOME_ROUTES } from '../../login/portal-context.contract';
 import { buildPortalFirstAccessPath } from '../../login/portal-first-access';
 import { resolveProfilePostLoginRoute } from '../../login/profile-selection';
@@ -66,6 +67,9 @@ export const useAlunoLoginPublicPage = () => {
   const [loginPassword, setLoginPassword] = useState('');
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const signup = useAlunoSignupForm({ setMessage });
+  const loginAttemptRef = useRef<AbortController | null>(null);
+
+  useEffect(() => () => loginAttemptRef.current?.abort(), []);
 
   const redirectPath = useMemo(() => {
     const redirect = searchParams.get('redirect') || pendingGoogleReturn?.redirectPath;
@@ -176,6 +180,7 @@ export const useAlunoLoginPublicPage = () => {
 
   useEffect(() => {
     let mounted = true;
+    const controller = new AbortController();
 
     const checkAuthRedirectReturn = async () => {
       let isLeavingLoginPage = false;
@@ -200,7 +205,10 @@ export const useAlunoLoginPublicPage = () => {
         // detectSessionInUrl ativo, o próprio supabase-js já troca o PKCE ou
         // restaura os tokens do fragmento; repetir exchangeCodeForSession aqui
         // consumiria o mesmo callback duas vezes.
-        const { data, error: sessionError } = await supabase.auth.getSession();
+        const { data, error: sessionError } = await withAuthDeadline(
+          () => supabase.auth.getSession(),
+          { signal: controller.signal },
+        );
         if (sessionError) {
           throw new Error(
             alunoPublicAuthService.getFriendlyAuthRedirectError(sessionError.message),
@@ -217,7 +225,10 @@ export const useAlunoLoginPublicPage = () => {
           return;
         }
 
-        const profiles = await alunoPublicAuthService.finishExternalLoginAndListProfiles();
+        const profiles = await alunoPublicAuthService.finishExternalLoginAndListProfiles(
+          data.session.user,
+          controller.signal,
+        );
         if (!mounted) return;
         isLeavingLoginPage = await continueWithProfiles(profiles);
       } catch (error) {
@@ -246,6 +257,7 @@ export const useAlunoLoginPublicPage = () => {
     void checkAuthRedirectReturn();
     return () => {
       mounted = false;
+      controller.abort();
     };
   }, [hasExternalAuthReturn]);
 
@@ -260,21 +272,30 @@ export const useAlunoLoginPublicPage = () => {
 
   const handleLogin = async (event: FormEvent, turnstileToken: string) => {
     event.preventDefault();
+    if (loginAttemptRef.current) return;
+    const attempt = new AbortController();
+    loginAttemptRef.current = attempt;
     setLoading(true);
     setMessage(null);
     try {
-      const profiles = await alunoPublicAuthService.loginAndListProfiles(
-        loginIdentifier,
-        loginPassword,
-        turnstileToken,
-      );
-      await continueWithProfiles(profiles);
+      await withAuthDeadline(async signal => {
+        const profiles = await alunoPublicAuthService.loginAndListProfiles(
+          loginIdentifier,
+          loginPassword,
+          turnstileToken,
+          signal,
+        );
+        checkAuthRequest(signal);
+        await continueWithProfiles(profiles);
+      }, { signal: attempt.signal, timeoutMs: 45_000 });
     } catch (error) {
+      if (attempt.signal.aborted) return;
       setMessage({
         tone: 'error',
         text: error instanceof Error ? error.message : 'Não foi possível entrar.',
       });
     } finally {
+      if (loginAttemptRef.current === attempt) loginAttemptRef.current = null;
       setLoading(false);
     }
   };
