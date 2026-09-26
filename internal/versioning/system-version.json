@@ -1,8 +1,8 @@
 {
-  "version": "4.8.100",
+  "version": "4.8.101",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 109,
+  "revision": 110,
   "releasedAt": "2026-09-26",
-  "summary": "PDV dedicado de Outros Créditos com BolePix e separação das cobranças acadêmicas"
+  "summary": "Pasta de Identificação e Ficha de Matrícula com fontes maiores e layout preservado"
 }
