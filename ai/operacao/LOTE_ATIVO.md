@@ -2,11 +2,11 @@
 
 Estado: VALIDADO — PUBLICAÇÃO EM ANDAMENTO
 
-## Lote: 2026-09-26-pdv-isencao-multa-realtime
+## Lote: 2026-09-26-pdv-substituicao-pix
 
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-26-pdv-isencao-multa-realtime.md`.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-26-pdv-substituicao-pix.md`.
 
-- Versão 4.8.103 / revisão 112.
-- Isenção oficial Banese, leitura automática do PDV, máscara monetária, data local e categoria inline.
-- 36 testes Deno e 29 UI/serviço; TypeScript e lint focado aprovados.
-- Boleto afetado recuperado sem novo POST; Pix ausente na consulta oficial permanece pendente.
+- Versão 4.8.104 / revisão 113.
+- Cancelamento confirmado e substituição única com Pix oficial presente.
+- 31 testes focados, Deno check e contratos SQL com rollback aprovados.
+- Smoke Safari confirmou QR oficial; PDF pendente; análise de CPU solicitada em frente independente.
