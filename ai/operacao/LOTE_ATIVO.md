@@ -1,12 +1,13 @@
 # Lote ativo
 
-Estado: VALIDADO PARA PUBLICAÇÃO — OUTROS CRÉDITOS / PDV
+Estado: REVISADO — PDV / OUTROS CRÉDITOS
 
-## Lote: 2026-09-26-outros-creditos-pdv
+## Lote: 2026-09-26-revisao-pdv-outros-creditos
 
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-26-outros-creditos-pdv.md`.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-26-revisao-pdv-outros-creditos.md`.
 
-- Versão 4.8.100: corrigir polo legado, habilitar somente BolePix de Outros Créditos e acrescentar caixa na tela.
-- Manter a cobrança única, os dados bancários oficiais e a confirmação pelo backend.
-- Produção solicitada pelo usuário; build, testes e smoke local no Safari aprovados. Backend aplicado e readback conferido; publicação pelo manifesto do registro.
-- Lote anterior Proesc 4.8.94 já publicado em main f1950b2. Nenhuma ampliação das 132 conferências neste lote.
+- Versão 4.8.102 / revisão 111, sobre a produção 4.8.101.
+- Reader do PDV rejeita cronogramas e tipos acadêmicos; conserva cobrança única, autorização e dados oficiais.
+- Backend v2 aplicado e readback conferido; 18 testes Deno e 25 testes de interface/Caixa aprovados.
+- Entrega anterior 4.8.100 publicada no PR #188 e conferida em produção pelo Safari.
+- Nenhuma cobrança real emitida; liquidação bancária ponta a ponta não exercitada.

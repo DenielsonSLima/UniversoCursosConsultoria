@@ -1,6 +1,6 @@
 # Outros Créditos: polo válido e recebimento na tela
 
-Estado: VALIDADO PARA PUBLICAÇÃO — produção solicitada pelo usuário na conversa.
+Estado: PUBLICADO — PR #188, produção 4.8.100 confirmada no Safari.
 Versão: 4.8.100 / revisão 109.
 
 ## Objetivo e diagnóstico
@@ -88,4 +88,4 @@ Total: 31 arquivos.
 
 ## Base de publicação
 
-Pacote recomposto sobre `b70042dbf342fa8293ddda0652ea159737b2d1a0`, preservando as versões 4.8.96, 4.8.97 e 4.8.99 publicadas em paralelo. Esta entrega usa 4.8.100 / revisão 109 e somente os 31 caminhos listados. Implementação, testes e migrations aplicadas permanecem idênticos ao pacote validado; apenas metadados foram reconciliados. Smoke local concluído. A conferência autenticada em produção aguarda o usuário completar o login no Safari; nenhuma cobrança real foi emitida.
+Pacote recomposto sobre `b70042dbf342fa8293ddda0652ea159737b2d1a0`, preservando as versões 4.8.96, 4.8.97 e 4.8.99 publicadas em paralelo. Esta entrega usa 4.8.100 / revisão 109 e somente os 31 caminhos listados. Implementação, testes e migrations aplicadas permanecem idênticos ao pacote validado; apenas metadados foram reconciliados. PR #188 integrado em `8e3c9dc9ca0d4d39c05919c491e0e610ed82bf47`. CI de qualidade/versão e Vercel aprovados; comparação dos blobs confirmou 31/31 arquivos do pacote. Smoke autenticado no Safari confirmou versão 4.8.100, lista avulsa sem parcelas acadêmicas, PDV vazio, busca/seleção do pagador, geração bloqueada até preencher os campos e novo atendimento limpo. Nenhuma cobrança real foi emitida; liquidação bancária ponta a ponta permanece não exercitada.

@@ -73,6 +73,7 @@ export const OTHER_CREDIT_PAYMENT_SELECT = [
   "cliente_id",
   "matricula_id",
   "turma_id",
+  "origem_cronograma_id",
   "categoria",
   "tipo_lancamento",
   "origem_pagamento",
@@ -186,6 +187,10 @@ export const assertOtherCreditScope = (row: OtherCreditRow) => {
     upper(row.gateway_provider) !== "BANESE_CARD" ||
     upper(row.gateway_payment_method) !== "BOLETO" ||
     row.matricula_id != null || row.turma_id != null ||
+    row.origem_cronograma_id != null ||
+    ["MATRICULA", "PARCELA", "REMATRICULA", "DEPENDENCIA"].includes(
+      upper(row.tipo_lancamento),
+    ) ||
     /PROESC|SISTEMA_ANTERIOR/.test(upper(row.origem_pagamento))
   ) {
     throw new PaymentReadError(
