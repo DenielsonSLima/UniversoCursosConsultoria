@@ -1,3 +1,4 @@
+/* global ReadableStream: readonly, ReadableStreamDefaultController: readonly */
 // One gate per internal_sync execution, shared by accounting and cycle review.
 // No provider quota is assumed. Waits remain inside each caller's own deadline.
 export function createProescV1PacedTransport(

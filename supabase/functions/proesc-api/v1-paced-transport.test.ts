@@ -1,3 +1,4 @@
+/* global ReadableStream: readonly, ReadableStreamDefaultController: readonly */
 import { createProescV1PacedTransport } from './v1-paced-transport.ts';
 import { createProescV1Client, ProescV1ReadError } from './v1-client.ts';
 

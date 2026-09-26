@@ -54,7 +54,7 @@ Validação final local: 76 testes focados aprovados, incluindo worker, escala, 
 
 ## Produção e pendências
 
-Usuário autorizou produção. Migration registrada como `20260926013605_bound_proesc_claim_monthly_periods` aplicada e conferida; SQL aplicado permanece imutável. Edge `proesc-api` v23 ACTIVE, com leitura posterior dos 27 arquivos coincidente com o pacote implantado: SHA-256 `9cbb2b99dc37ca498ae9fc684a0c529961240386415b6812bfe6584da93b5afe`. A versão 4.8.92 e o manifesto estão preparados; publicação GitHub ainda pendente.
+Usuário autorizou produção. Migration registrada como `20260926013605_bound_proesc_claim_monthly_periods` aplicada e conferida; SQL aplicado permanece imutável. Edge `proesc-api` v24 ACTIVE (mesmo comportamento da v23; apenas declaração dos globals para o lint), com leitura posterior dos 27 arquivos coincidente com o pacote implantado: SHA-256 `d070fc2eef4f7df0ce4c2fc385629b24ba5d6972e9f884023f92a6d17a79c479`. A versão 4.8.92 está em validação no PR184; publicação no domínio de produção ainda pendente.
 
 O backoff termina em 26/09 às 02:07:35 UTC, 23:07:35 de 25/09 no horário local. A execução cron das 02:08 UTC está aguardada; não antecipar nova consulta nem declarar normalização antes do smoke da v23. A fila é por invocação, sem garantia distribuída entre instâncias ou ações manuais. Janelas de ciclo de 36–60 meses ainda podem exceder o prazo de 105s; a janela permanece incompleta nesse caso, sem confirmar elegibilidade parcial. Um lease antigo em andamento não é alterado pela migration.
 

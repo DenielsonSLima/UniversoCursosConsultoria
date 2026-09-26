@@ -1,3 +1,4 @@
+/* global ReadableStream: readonly */
 import { createHandler } from './handler.ts';
 
 function assert(value: unknown, message = 'Assertion failed'): asserts value {
