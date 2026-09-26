@@ -4,6 +4,19 @@ import { baneseFinancialTermsFromPayload } from "./financial-terms-response.ts";
 const AMOUNT = 279.9;
 const DUE_DATE = "2027-01-15";
 
+Deno.test("TipoMulta 3 oficial representa isencao sem ocultar multa positiva", () => {
+  for (const value of [null, 0, "0"]) {
+    assert.equal(baneseFinancialTermsFromPayload({
+      Multa: { TipoMulta: 3, Valor: value, Data: "2027-01-16" },
+    }, AMOUNT, DUE_DATE).penalty, null);
+  }
+  for (const value of [1, "invalido", -1]) {
+    assert.throws(() => baneseFinancialTermsFromPayload({
+      Multa: { TipoMulta: 3, Valor: value, Data: null },
+    }, AMOUNT, DUE_DATE), /Tipo de multa.*invalido/i);
+  }
+});
+
 Deno.test("TipoJuroMora 3 vazio representa juros isentos", () => {
   const normalized = baneseFinancialTermsFromPayload(
     {

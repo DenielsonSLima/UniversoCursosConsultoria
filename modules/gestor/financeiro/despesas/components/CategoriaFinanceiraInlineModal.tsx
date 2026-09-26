@@ -64,6 +64,8 @@ const CategoriaFinanceiraInlineModal: React.FC<CategoriaFinanceiraInlineModalPro
           NOVA CATEGORIA {tipoLabel[tipo]}
         </span>
         <button
+          type="button"
+          aria-label="Fechar nova categoria"
           onClick={onClose}
           className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
         >
@@ -79,12 +81,13 @@ const CategoriaFinanceiraInlineModal: React.FC<CategoriaFinanceiraInlineModalPro
           value={nome}
           onChange={(e) => setNome(toUpper(e.target.value))}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') handleSave();
-            if (e.key === 'Escape') onClose();
+            if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); if (!createMutation.isPending) void handleSave(); }
+            if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); onClose(); }
           }}
           className={`flex-1 px-3 py-2 text-sm uppercase bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 outline-none transition-all ${accentClasses.focus}`}
         />
         <button
+          type="button"
           onClick={handleSave}
           disabled={!nome.trim() || createMutation.isPending}
           className={`flex items-center gap-1.5 px-4 py-2 text-white rounded-xl text-xs font-bold uppercase tracking-wide transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${accentClasses.button}`}

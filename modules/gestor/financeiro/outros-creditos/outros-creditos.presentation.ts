@@ -4,7 +4,14 @@ export type StatusScope = 'received' | 'pending' | 'canceled' | 'all';
 export type CreditMode = 'LOCAL_PAGO' | 'LOCAL_RECEBER' | 'GATEWAY';
 export type OtherCreditGroupMode = 'partner' | 'polo' | 'none';
 
-export const today = () => new Date().toISOString().slice(0, 10);
+export const today = (date = new Date()) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+export const formatPdvCurrencyInput = (value: string) => {
+  const digits = value.replace(/\D/g, '');
+  if (!digits) return '';
+  return (Number(digits) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
 
 export const PENDING_OUTROS_CREDIT_STATUSES: ReadonlySet<string> = new Set([
   'PENDENTE',
@@ -51,4 +58,3 @@ export const origemLabel = (item: ContasReceber) => {
 };
 
 export const isPendingOutrosCredito = (status: string) => PENDING_OUTROS_CREDIT_STATUSES.has(status);
-

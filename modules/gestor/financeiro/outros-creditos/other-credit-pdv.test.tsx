@@ -3,7 +3,8 @@ import test from 'node:test';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { PdvForm } from './OtherCreditPdvModal';
-import { findPdvPartners } from './PdvPartnerSearch';
+import { findPdvPartners, maskPdvDocument } from './PdvPartnerSearch';
+import { formatPdvCurrencyInput, parseCurrencyInput, today } from './outros-creditos.presentation';
 import type { OutrosCreditosModel } from './useOutrosCreditos';
 
 const partners = [
@@ -12,7 +13,7 @@ const partners = [
   { id: 'invalid', nome: 'João Inválido', tipo: 'Desconhecido' },
 ];
 const base = {
-  partners, partnerId: '', value: '', dueDate: '', categories: [], description: '', categoryId: '',
+  partners, partnerId: '', value: '', dueDate: today(), categories: [], description: '', categoryId: '',
   activePolo: { id: 'polo', nome: 'Unidade de teste' }, createMutation: { isPending: false },
   partnersLoading: false, partnersError: false,
   closeCreateModal() {}, validateAndSubmit() {}, setValue() {}, setDueDate() {},
@@ -28,10 +29,21 @@ test('busca unificada aceita aluno e empresa sem criar parceiro pelo texto digit
   assert.deepEqual(findPdvPartners(partners, 'não cadastrado'), []);
 });
 
-test('PDV começa sem pagador, valor ou vencimento e bloqueia a geração', () => {
+test('documento revela somente dois primeiros e três últimos dígitos', () => {
+  assert.equal(maskPdvDocument('123.456.789-01'), 'CPF 12******901');
+  assert.equal(maskPdvDocument('12.345.678/0001-90'), 'CNPJ 12*********190');
+  for (const value of ['', undefined, 'Nome indevido', '123']) {
+    assert.equal(maskPdvDocument(value), 'CPF/CNPJ não informado');
+  }
+  const html = render({ partnerId: 'student' });
+  assert.match(html, /CPF 00\*{6}001/);
+  assert.doesNotMatch(html, /00000000001|Cadastro selecionado/);
+});
+
+test('PDV começa com hoje, sem pagador ou valor e bloqueia a geração', () => {
   const html = render();
   assert.match(html, /Aguardando seleção/);
-  assert.match(html, /A definir/);
+  assert.ok(html.includes(`value="${today()}"`));
   assert.match(html, /name|Quem vai pagar/);
   assert.match(html, /<button[^>]+type="submit"[^>]+disabled=""/);
   assert.doesNotMatch(html, /João de Teste|Empresa de Teste|479\.030/);
@@ -50,4 +62,20 @@ test('envio em andamento desabilita novo envio e edição do atendimento', () =>
   assert.match(html, /<fieldset[^>]+disabled=""/);
   assert.match(html, /<button[^>]+type="submit"[^>]+disabled=""/);
   assert.match(html, /Gerando cobrança/);
+});
+
+
+test('valor formata centavos durante digitação, colagem e exclusão', () => {
+  for (const [input, expected] of [['5', '0,05'], ['0,050', '0,50'], ['0,500', '5,00'], ['123456', '1.234,56'], ['R$ 1.234,56', '1.234,56'], ['1.234,5', '123,45'], ['', '']]) {
+    assert.equal(formatPdvCurrencyInput(input), expected);
+  }
+  assert.equal(parseCurrencyInput(formatPdvCurrencyInput('123456')), 1234.56);
+});
+
+test('hoje usa data civil local e vencimento permanece editável', () => {
+  const local = new Date(2026, 8, 26, 23, 30);
+  assert.equal(today(local), '2026-09-26');
+  const html = render({ dueDate: '2026-10-15' });
+  assert.match(html, /type="date"[^>]+value="2026-10-15"/);
+  assert.match(html, /aria-label="Adicionar categoria"/);
 });

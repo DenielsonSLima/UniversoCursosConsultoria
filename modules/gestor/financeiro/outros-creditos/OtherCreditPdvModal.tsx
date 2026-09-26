@@ -1,9 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, ArrowRight, Building2, CalendarDays, Check, Loader2, QrCode, ReceiptText, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Building2, CalendarDays, Check, Loader2, Plus, QrCode, ReceiptText, X } from 'lucide-react';
 import type { OutrosCreditosModel } from './useOutrosCreditos';
-import { formatCurrency, formatCurrencyInput, formatDate, normalizeCurrencyInput, parseCurrencyInput } from './outros-creditos.presentation';
-import { PdvPartnerSearch } from './PdvPartnerSearch';
+import { formatCurrency, formatPdvCurrencyInput, formatDate, parseCurrencyInput } from './outros-creditos.presentation';
+import { maskPdvDocument, PdvPartnerSearch } from './PdvPartnerSearch';
+import CategoriaFinanceiraInlineModal from '../despesas/components/CategoriaFinanceiraInlineModal';
 
 export function OtherCreditPdvModal({ model }: { model: OutrosCreditosModel }) {
   if (!model.isPdvOpen || typeof document === 'undefined') return null;
@@ -53,7 +54,7 @@ export function PdvForm({ model }: { model: OutrosCreditosModel }) {
             <label className="block"><span className="mb-3 block text-sm font-bold text-slate-700">Valor da cobrança</span>
               <div className="flex h-[90px] items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-500/10">
                 <span className="text-lg font-bold text-slate-400">R$</span><input ref={amountRef} type="text" inputMode="decimal" required aria-label="Valor da cobrança" placeholder="0,00" value={model.value}
-                  onChange={event => model.setValue(normalizeCurrencyInput(event.target.value))} onBlur={() => model.setValue(current => formatCurrencyInput(current))}
+                  onChange={event => model.setValue(formatPdvCurrencyInput(event.target.value))}
                   className="w-full min-w-0 bg-transparent text-4xl font-semibold tracking-tight outline-none placeholder:text-slate-300" /></div>
             </label>
             <label className="block"><span className="mb-3 block text-sm font-bold text-slate-700">Vencimento</span>
@@ -67,7 +68,14 @@ export function PdvForm({ model }: { model: OutrosCreditosModel }) {
             <summary className="cursor-pointer text-sm font-semibold text-slate-600">Adicionar descrição e categoria <span className="font-normal text-slate-400">(opcional)</span></summary>
             <div className="mt-5 space-y-4">
               <label className="block text-xs font-bold text-slate-500">Descrição<input value={model.description} onChange={event => model.setDescription(event.target.value)} placeholder="Ex.: Segunda via de documento" className="mt-2 h-12 w-full rounded-xl border border-slate-200 px-4 text-sm font-normal outline-none focus:border-emerald-500" /></label>
-              <label className="block text-xs font-bold text-slate-500">Categoria<select value={model.categoryId} onChange={event => model.setCategoryId(event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-normal"><option value="">Outras entradas</option>{model.categories.map(category => <option key={category.id} value={category.id}>{category.nome}</option>)}</select></label>
+              <div className="relative">
+                <label htmlFor="pdv-category" className="block text-xs font-bold text-slate-500">Categoria</label>
+                <div className="mt-2 flex gap-2">
+                  <select id="pdv-category" value={model.categoryId} onChange={event => model.setCategoryId(event.target.value)} className="h-12 min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-4 text-sm"><option value="">Outras entradas</option>{model.categories.map(category => <option key={category.id} value={category.id}>{category.nome}</option>)}</select>
+                  <button type="button" aria-label="Adicionar categoria" aria-expanded={model.showCategoryModal} onClick={() => model.setShowCategoryModal(current => !current)} className="flex h-12 items-center gap-2 rounded-xl border border-emerald-200 px-4 font-bold text-emerald-700"><Plus size={20} /><span className="hidden sm:inline">Nova</span></button>
+                </div>
+                {model.showCategoryModal && <CategoriaFinanceiraInlineModal tipo="OUTRO_CREDITO" accent="emerald" onClose={() => model.setShowCategoryModal(false)} onCriada={id => { model.setCategoryId(id); model.setShowCategoryModal(false); }} />}
+              </div>
             </div>
           </details>
           <p className="flex items-start gap-2 text-xs leading-relaxed text-slate-500"><Building2 size={16} className="shrink-0" />{model.activePolo?.nome || 'Selecione uma unidade no portal'}{model.activePolo?.cidade ? ` · ${model.activePolo.cidade}` : ''}</p>
@@ -76,7 +84,7 @@ export function PdvForm({ model }: { model: OutrosCreditosModel }) {
           <div className="overflow-hidden rounded-[1.75rem] bg-[#001a33] text-white shadow-xl shadow-slate-900/10 lg:sticky lg:top-28">
             <div className="border-b border-white/10 px-7 py-6"><p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-emerald-300"><ReceiptText size={17} /> Seu atendimento</p></div>
             <div className="space-y-7 px-7 py-7">
-              <div><p className="text-xs text-slate-400">Pagador</p><p className={`mt-2 text-lg font-semibold ${selected ? 'text-white' : 'text-slate-500'}`}>{selected?.nome || 'Aguardando seleção'}</p></div>
+              <div><p className="text-xs text-slate-400">Pagador</p><p className={`mt-2 text-lg font-semibold ${selected ? 'text-white' : 'text-slate-500'}`}>{selected?.nome || 'Aguardando seleção'}</p>{selected && <p className="mt-1 text-xs text-slate-400">{maskPdvDocument(selected.cpf_cnpj)}</p>}</div>
               <div><p className="text-xs text-slate-400">Total a receber</p><p className="mt-2 break-words text-4xl font-semibold tracking-tight">{formatCurrency(amount)}</p></div>
               <div className="flex items-center justify-between gap-3 border-y border-dashed border-white/20 py-4 text-sm"><span className="text-slate-400">Vencimento</span><span className="font-semibold">{model.dueDate ? formatDate(model.dueDate) : 'A definir'}</span></div>
               <div className="flex items-center gap-3"><QrCode size={28} className="text-emerald-300" /><div><p className="text-sm font-semibold">Pix + boleto</p><p className="mt-1 text-xs text-slate-400">BolePix Banese · cobrança única</p></div></div>

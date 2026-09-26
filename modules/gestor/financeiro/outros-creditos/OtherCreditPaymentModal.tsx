@@ -74,7 +74,7 @@ export const OtherCreditPaymentModal: React.FC<{
             className="mt-6 min-h-12 rounded-xl bg-[#001a33] px-6 py-3 text-sm font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-4 disabled:opacity-40">{isFetching ? 'Consultando...' : 'Tentar consulta novamente'}</button>
         </div>}
         {usable && <OtherCreditPaymentContent data={data}
-          onRefresh={() => model.refresh.mutate()} refreshPending={model.refresh.isPending} isFetching={isFetching}
+          isFetching={isFetching}
           onOpenDocument={() => model.document.mutate()} documentPending={model.document.isPending} />}
         {model.actionMessage && <p role="status" aria-live="polite" className="mx-auto mb-6 w-[calc(100%-3rem)] max-w-5xl rounded-xl bg-slate-100 px-5 py-3 text-sm text-slate-600">{model.actionMessage}</p>}
       </main>

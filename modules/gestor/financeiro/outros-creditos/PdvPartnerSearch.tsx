@@ -6,6 +6,13 @@ import type { DespesaCredorTipo } from '../despesas/components/DespesaCredorPick
 type Partner = { id: string; nome: string; cpf_cnpj?: string; tipo: string };
 const types = new Set(['Aluno', 'Professor', 'PF', 'PJ']);
 
+export function maskPdvDocument(value?: string) {
+  const digits = String(value || '').replace(/\D/g, '');
+  if (![11, 14].includes(digits.length)) return 'CPF/CNPJ não informado';
+  const label = digits.length === 11 ? 'CPF' : 'CNPJ';
+  return `${label} ${digits.slice(0, 2)}${'*'.repeat(digits.length - 5)}${digits.slice(-3)}`;
+}
+
 export function findPdvPartners(partners: Partner[], search: string) {
   if (search.trim().length < 2) return [];
   return partners.filter(partner => types.has(partner.tipo)
@@ -31,7 +38,7 @@ export function PdvPartnerSearch({ partners, value, onSelect, loading, failed, o
     <div className="flex items-center gap-4 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5">
       <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-emerald-700 text-white"><UserRound size={22} /></span>
       <div className="min-w-0 flex-1"><p className="truncate font-bold text-[#001a33]">{selected.nome}</p>
-        <p className="mt-1 text-xs text-emerald-800">{selected.tipo} · Cadastro selecionado</p></div>
+        <p className="mt-1 text-xs text-emerald-800">{maskPdvDocument(selected.cpf_cnpj)}</p></div>
       <button type="button" onClick={() => { onSelect('', ''); setSearch(''); }} className="rounded-xl p-3 text-emerald-800 hover:bg-emerald-100" aria-label="Trocar pagador"><X size={18} /></button>
     </div>
   );
@@ -60,7 +67,7 @@ export function PdvPartnerSearch({ partners, value, onSelect, loading, failed, o
             <button type="button" tabIndex={-1} onClick={() => choose(partner)} onMouseEnter={() => setActive(index)}
               className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left ${active === index ? 'bg-emerald-50' : 'hover:bg-slate-50'}`}>
               <UserRound size={18} className="shrink-0 text-slate-400" /><span className="min-w-0 flex-1"><span className="block truncate text-sm font-bold text-[#001a33]">{partner.nome}</span>
-                <span className="mt-1 block text-xs text-slate-500">{partner.tipo}{partner.cpf_cnpj ? ` · documento final ${partner.cpf_cnpj.replace(/\D/g, '').slice(-4)}` : ''}</span></span>
+                <span className="mt-1 block text-xs text-slate-500">{maskPdvDocument(partner.cpf_cnpj)} · {partner.tipo}</span></span>
               {active === index && <Check size={16} className="text-emerald-700" />}
             </button>
           </li>)}

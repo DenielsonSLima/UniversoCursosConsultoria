@@ -47,7 +47,9 @@ const isDiscountRemovalTombstone = (
     isNumeric(amountValue) && Number(amountValue) === 0 && date === dueDate;
 };
 
-const isExemptRemoteInterest = (
+// Manual API Cobranca Banese: tipo 3 denotes exemption for interest and penalty.
+// An exemption with a nonzero/invalid amount must still fail closed.
+const isExemptRemoteTerm = (
   term: Record<string, unknown>,
   type: unknown,
 ) => {
@@ -101,14 +103,17 @@ export const baneseFinancialTermsFromPayload = (
   const penalty = !rawPenalty || isEmptyRemoteTerm(
       rawPenalty,
       rawPenalty.TipoMulta ?? rawPenalty.tipoMulta,
-    )
+    ) || (rawPenalty && isExemptRemoteTerm(
+      rawPenalty,
+      rawPenalty.TipoMulta ?? rawPenalty.tipoMulta,
+    ))
     ? {}
     : rawPenalty;
   const interestTypeValue = rawInterest?.TipoJuroMora ??
     rawInterest?.tipoJuroMora;
   const interest = !rawInterest ||
       isEmptyRemoteTerm(rawInterest, interestTypeValue) ||
-      isExemptRemoteInterest(rawInterest, interestTypeValue)
+      isExemptRemoteTerm(rawInterest, interestTypeValue)
     ? {}
     : rawInterest;
   const discountType = Number(
