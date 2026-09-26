@@ -1,8 +1,8 @@
 {
-  "version": "4.8.99",
+  "version": "4.8.100",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 108,
+  "revision": 109,
   "releasedAt": "2026-09-26",
-  "summary": "Matrícula técnica em turma iniciada libera o vínculo acadêmico sem depender de pagamento ou checklist documental"
+  "summary": "PDV dedicado de Outros Créditos com BolePix e separação das cobranças acadêmicas"
 }

@@ -9,7 +9,7 @@ import { useGestorPoloTransition } from '../hooks/useGestorPoloTransition';
 import {
   caixaDashboardQueryOptions, caixaFinanciamentoResumoQueryOptions,
   caixaPatrimonioResumoQueryOptions, caixaPosicaoLiquidaResumoQueryOptions,
-  caixaPosicaoTotalResumoQueryOptions, mapCaixaPosicaoTotalResumo,
+  caixaPosicaoTotalResumoQueryOptions, mapCaixaPosicaoTotalResumo, caixaService,
 } from './caixa.service';
 import { caixaLinhaCorteQueryOptions } from './caixa-linha-corte.service';
 import CaixaPage from './CaixaPage';
@@ -25,6 +25,48 @@ const factories = [
   caixaPosicaoTotalResumoQueryOptions, caixaLinhaCorteQueryOptions,
 ];
 const tick = () => new Promise<void>(resolve => setImmediate(resolve));
+
+test('cancelamento esperado das sete leituras mantém rejeição sem ruído e preserva erros reais', async t => {
+  const logged = t.mock.method(console, 'error', () => undefined);
+  const controller = new AbortController();
+  const aborted = { message: 'AbortError: This operation was aborted', code: '', details: '',
+    hint: 'Request was aborted (timeout or manual cancellation)' };
+  let responseError = aborted;
+  let seenSignal: AbortSignal | undefined;
+  const request = {
+    select() { return this; }, eq() { return this; }, order() { return this; },
+    abortSignal(signal: AbortSignal) { seenSignal = signal; return this; },
+    then(resolve: (value: unknown) => unknown) {
+      return Promise.resolve({ data: null, error: responseError }).then(resolve);
+    },
+  };
+  t.mock.method(supabase, 'rpc', () => request);
+  t.mock.method(supabase, 'from', () => request);
+  const reads = [
+    (signal: AbortSignal) => caixaService.getPolos(signal),
+    ...[caixaService.getMonthlyStatement, caixaService.getFinanciamentoResumo,
+      caixaService.getCustosOperacionais, caixaService.getPatrimonioResumo,
+      caixaService.getPosicaoLiquidaResumo, caixaService.getPosicaoTotalResumo]
+      .map(read => (signal: AbortSignal) => read('polo-a', '2026-09-01', signal)),
+  ];
+  controller.abort();
+  for (const read of reads) {
+    await assert.rejects(read(controller.signal), error => error === aborted);
+    assert.equal(seenSignal, controller.signal);
+  }
+  assert.equal(logged.mock.callCount(), 0, 'cancelamento solicitado não é falha operacional');
+
+  for (const code of ['42501', '57014']) {
+    responseError = { ...aborted, message: 'Falha real do banco', code, hint: '' };
+    await assert.rejects(reads[1](controller.signal), error => error === responseError);
+  }
+  responseError = { ...aborted, message: 'TypeError: Failed to fetch', hint: '' };
+  await assert.rejects(reads[1](controller.signal), error => error === responseError);
+  responseError = aborted;
+  await assert.rejects(reads[1](new AbortController().signal), error => error === aborted);
+  assert.equal(logged.mock.callCount(), 4, 'falha real ou cancelamento sem sinal permanece visível');
+});
+
 const unavailable = (poloId: string, competencia: string) => ({
   versao: 1, competencia, data_corte: '2026-07-31', escopo_tipo: 'POLO',
   polo_id: poloId, disponivel: false, motivo: 'HISTORICO_INSUFICIENTE',
@@ -57,7 +99,7 @@ test('seis resumos recebem o mês visível e AbortSignal, sem repetir timeout SQ
       assert.equal(call.args.p_competencia, '2026-07-01');
       assert.ok(call.signal instanceof AbortSignal);
     }
-    assert.equal(calls.find(call => call.name === 'get_caixa_prestacao_mensal_secure')?.args.p_meses_historico, 6);
+    assert.equal(calls.find(call => call.name === 'get_caixa_prestacao_mensal_secure')?.args.p_meses_historico, 3);
   } finally { client.clear(); }
 });
 

@@ -1,11 +1,13 @@
 import React from 'react';
-import { Banknote, ChevronDown, ChevronLeft, ChevronRight, Loader2, Plus, Search, WalletCards } from 'lucide-react';
+import { Banknote, ChevronDown, ChevronLeft, ChevronRight, Loader2, Plus, QrCode, Search, WalletCards } from 'lucide-react';
 import ToastNotification from '../../components/ToastNotification';
 import ManualSettlementModal from '../receber/components/manual-settlement/ManualSettlementModal';
 import FinancialUnderlineTabs from '../components/FinancialUnderlineTabs';
 import { useOutrosCreditos } from './useOutrosCreditos';
 import { OtherCreditRow } from './OtherCreditRow';
+import { OtherCreditPaymentModal } from './OtherCreditPaymentModal';
 import { OtherCreditCreateModal } from './OtherCreditCreateModal';
+import { OtherCreditPdvModal } from './OtherCreditPdvModal';
 import { formatCurrency, formatDate, type OtherCreditGroupMode } from './outros-creditos.presentation';
 
 interface OutrosCreditosTabProps { poloId?: string | null; }
@@ -32,21 +34,22 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId }) => {
           </p>
           <h3 className="text-2xl font-black uppercase tracking-tight text-[#001a33]">Outros Créditos</h3>
           <p className="mt-1 max-w-2xl text-sm font-medium text-slate-500">
-            Registre juros recebidos, rendimentos, entradas de caixa e créditos avulsos, com opção local ou link bancário.
+            Entradas avulsas, juros e rendimentos. Cobranças de cursos e matrículas são acompanhadas em A receber.
           </p>
         </div>
-        <button
+        <div className="flex flex-wrap gap-3"><button
           onClick={openCreateModal}
-          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg shadow-emerald-900/15 hover:bg-emerald-700"
+          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50"
         >
           <Plus size={16} /> Novo crédito
         </button>
+        <button onClick={model.openPdv} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-6 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg shadow-emerald-900/15 hover:bg-emerald-800"><QrCode size={18} /> Abrir PDV</button></div>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Total Previsto', value: formatCurrency(kpis.total), color: 'text-[#001a33]' },
+          { label: 'Total lançado', value: formatCurrency(kpis.total), color: 'text-[#001a33]' },
           { label: 'Recebido', value: formatCurrency(kpis.recebido), color: 'text-emerald-600' },
           { label: 'A Receber', value: formatCurrency(kpis.aReceber), color: 'text-amber-600' },
           { label: 'Vencidos', value: `${kpis.vencidos}`, color: 'text-rose-600' },
@@ -256,6 +259,15 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId }) => {
 
 
       <OtherCreditCreateModal model={model} />
+      <OtherCreditPdvModal model={model} />
+      {model.paymentReceivableId && (
+        <OtherCreditPaymentModal
+          key={model.paymentReceivableId}
+          receivableId={model.paymentReceivableId}
+          onClose={() => model.setPaymentReceivableId(null)}
+          onNewPayment={model.openPdv}
+        />
+      )}
 
       {receiveItem && (
         <ManualSettlementModal
