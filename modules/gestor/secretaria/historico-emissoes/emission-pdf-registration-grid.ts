@@ -131,6 +131,36 @@ const assertCellLines = (
   return lines;
 };
 
+// A célula conserva sua geometria. Só textos extensos voltam gradualmente
+// aos tamanhos anteriores; conteúdo que nem assim cabe continua sendo rejeitado.
+const fitCellTypography = (
+  pdf: jsPDF,
+  label: string,
+  value: string,
+  width: number,
+  height: number,
+  enlarged: boolean,
+) => {
+  for (let step = enlarged ? 0 : 24; step <= 24; step += 1) {
+    const scale = 1 - step / 24;
+    const labelSize = 4.8 + 1.2 * scale;
+    const valueSize = 6.2 + 2.3 * scale;
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(labelSize);
+    const labelLines = label ? pdf.splitTextToSize(normalizeCanonicalPdfText(label), width) as string[] : [];
+    pdf.setFont('times', 'normal');
+    pdf.setFontSize(valueSize);
+    const valueLines = value ? pdf.splitTextToSize(normalizeCanonicalPdfText(value), width) as string[] : [];
+    const labelHeight = labelLines.length ? labelLines.length * labelSize * 0.352778 * 1.1 + 0.45 : 0;
+    const valueHeight = valueLines.length * valueSize * 0.352778 * 1.12;
+    const labelFits = labelLines.length * labelSize * 0.352778 * 1.12 <= height + 0.3;
+    if (labelFits && labelLines.length <= 2 && valueLines.length <= 2 && labelHeight + valueHeight <= height + 0.3) {
+      return { labelSize, valueSize };
+    }
+  }
+  return { labelSize: 4.8, valueSize: 6.2 };
+};
+
 export const drawRegistrationGrid = (
   pdf: jsPDF,
   html: string,
@@ -139,6 +169,7 @@ export const drawRegistrationGrid = (
   width: number,
   height: number,
   context: string,
+  enlargedTypography = false,
 ) => {
   const sectionStart = html.search(/<section\b/i);
   if (sectionStart < 0) return false;
@@ -171,14 +202,23 @@ export const drawRegistrationGrid = (
     const text = emissionHtmlToVectorText(section.inner);
     if (!text) return true;
     pdf.setFont('times', 'normal');
-    pdf.setFontSize(7);
+    const textWidth = Math.max(1, width - paddingX * 2);
+    const textHeight = Math.max(1, height - paddingY * 2);
+    let fontSize = enlargedTypography ? 8.5 : 7;
+    while (fontSize > 7) {
+      pdf.setFontSize(fontSize);
+      const lineCount = (pdf.splitTextToSize(normalizeCanonicalPdfText(text), textWidth) as string[]).length;
+      if (lineCount * fontSize * 0.352778 * 1.2 <= textHeight + 0.3) break;
+      fontSize = Math.max(7, fontSize - 0.1);
+    }
+    pdf.setFontSize(fontSize);
     pdf.setTextColor(15, 23, 42);
     const lines = assertTextFits(
       pdf,
       text,
-      Math.max(1, width - paddingX * 2),
-      Math.max(1, height - paddingY * 2),
-      7,
+      textWidth,
+      textHeight,
+      fontSize,
       1.2,
       context,
     );
@@ -199,10 +239,17 @@ export const drawRegistrationGrid = (
     pdf.setDrawColor(219, 234, 254);
     pdf.line(x, y + headerHeight, x + width, y + headerHeight);
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(5.6);
+    const headerText = emissionHtmlToVectorText(header.inner).toUpperCase();
+    const headerWidth = width - pxToMmX(14);
+    let headerFontSize = enlargedTypography ? 7 : 5.6;
+    pdf.setFontSize(headerFontSize);
+    while (headerFontSize > 5.6 && pdf.getTextWidth(headerText) > headerWidth) {
+      headerFontSize = Math.max(5.6, headerFontSize - 0.1);
+      pdf.setFontSize(headerFontSize);
+    }
     pdf.setTextColor(0, 26, 51);
-    drawCanonicalPdfText(pdf, emissionHtmlToVectorText(header.inner).toUpperCase(), x + pxToMmX(7), y + pxToMmY(4), {
-      maxWidth: width - pxToMmX(14),
+    drawCanonicalPdfText(pdf, headerText, x + pxToMmX(7), y + pxToMmY(4), {
+      maxWidth: headerWidth,
       maxLines: 1,
     });
     gridY += headerHeight;
@@ -286,17 +333,21 @@ export const drawRegistrationGrid = (
       ? cellStyle['text-align']
       : inheritedTextAlign;
     let cursorY = cellY + paddingTop;
+    const { labelSize, valueSize } = fitCellTypography(
+      pdf, label.toUpperCase(), value, textWidth,
+      Math.max(0.5, cellY + rowHeight - cursorY), enlargedTypography,
+    );
 
     if (label) {
       pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(4.8);
+      pdf.setFontSize(labelSize);
       pdf.setTextColor(15, 23, 42);
       const labelLines = assertCellLines(
         pdf,
         label.toUpperCase(),
         textWidth,
         Math.max(0.5, cellY + rowHeight - cursorY),
-        4.8,
+        labelSize,
         2,
         `${context}, rótulo ${cellIndex + 1}`,
       );
@@ -310,14 +361,14 @@ export const drawRegistrationGrid = (
         baseline: 'top',
         lineHeightFactor: 1.1,
       });
-      cursorY += labelLines.length * 4.8 * 0.352778 * 1.1 + 0.45;
+      cursorY += labelLines.length * labelSize * 0.352778 * 1.1 + 0.45;
     }
     if (value) {
       pdf.setFont('times', 'normal');
-      pdf.setFontSize(6.2);
+      pdf.setFontSize(valueSize);
       pdf.setTextColor(51, 65, 85);
       const valueHeight = Math.max(0.5, cellY + rowHeight - cursorY);
-      const valueLines = assertCellLines(pdf, value, textWidth, valueHeight, 6.2, 2, `${context}, valor ${cellIndex + 1}`);
+      const valueLines = assertCellLines(pdf, value, textWidth, valueHeight, valueSize, 2, `${context}, valor ${cellIndex + 1}`);
       const valueX = cellTextAlign === 'center'
         ? cellX + cellWidth / 2
         : cellTextAlign === 'right'
@@ -332,4 +383,3 @@ export const drawRegistrationGrid = (
   });
   return true;
 };
-

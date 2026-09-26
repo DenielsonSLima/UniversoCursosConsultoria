@@ -1,8 +1,8 @@
 {
-  "version": "4.8.96",
+  "version": "4.8.97",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 105,
+  "revision": 106,
   "releasedAt": "2026-09-26",
-  "summary": "Secretaria: Pasta e Ficha em lote por nome, somente com matrículas ativas"
+  "summary": "Pasta de Identificação e Ficha de Matrícula com fontes maiores e layout preservado"
 }
