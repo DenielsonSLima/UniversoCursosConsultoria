@@ -1,5 +1,5 @@
 # Caixa: preservação de prova explícita Proesc
-Status: backend aplicado e validado em 26/09/2026; publicação deste manifesto pendente.
+Status: backend e conferência aplicados em 26/09/2026; publicação da versão 4.8.94 em preparação.
 Base de publicação: `13925bcef0c71dd3d11135a3a32afba239627425`.
 Classificação: mudança crítica de leitura financeira, sem baixa ou emissão.
 
@@ -12,14 +12,20 @@ Ingestão, histórico, cálculo de valores, autorização pública, escopo por p
 
 ## Aplicação e integridade
 Aplicada exclusivamente via MCP Supabase às 12:16:36 UTC:
+
 - Ledger: `20260926121636_preserve_explicit_caixa_proesc_evidence`.
 - SQL local idêntico ao ledger, SHA-256: `4e2cbf6f0d4ca64e4f5dec0bf94a80679a0275c127d92b3bf2aeaf47614c17a4`.
 - Transação com lock_timeout de 2s e statement_timeout de 8s.
 - Pós-aplicação: helpers sem SECURITY DEFINER e EXECUTE somente para o proprietário; leitores e agregados íntegros.
 
-Agregados antes/depois: agosto 54 títulos/R$15.183,70 em conferência; setembro 78/R$21.931,40; receitas futuras confirmadas R$84.659,80 em 308 títulos, com outros 1189 em conferência. Nenhuma prova dos 132 títulos foi registrada neste lote; a conferência do relatório oficial é separada.
+Agregados antes/depois da migration: agosto 54 títulos/R$15.183,70 em conferência; setembro 78/R$21.931,40; receitas futuras confirmadas R$84.659,80 em 308 títulos, com outros 1189 em conferência. A migration não registrou provas nem alterou cobranças.
+
+## Conferência operacional posterior
+
+O relatório oficial Proesc tinha 628 linhas, confrontadas com as 132 pendências de agosto e setembro. O coordenador registrou 126 provas OPEN/PORTAL_CONFIRMED e 126 eventos UNCHANGED pelas RPCs existentes, sem alterar `contas_receber`. Os avisos passaram de 54 para 3 títulos em agosto e de 78 para 3 em setembro; cada mês mantém R$839,70 em conferência. Os seis restantes não foram classificados sem prova suficiente. Esta etapa é distinta da seleção de evidência corrigida pela migration.
 
 ## Validação
+
 - 40 cenários sintéticos SELECT-only e 40 no Postgres isolado, usando os corpos reais.
 - Migration integral, drift, OIDs/ACLs, ausência de writes financeiros, escopo por polo e dois leitores testados.
 - Compactador vigente testado integralmente: preservou IDs das extremidades de cada bloco e toda a história; só duplicatas intermediárias foram movidas. A migration verifica seu hash antes de alterar leitores.
@@ -27,12 +33,16 @@ Agregados antes/depois: agosto 54 títulos/R$15.183,70 em conferência; setembro
 - Os tempos são amostras antes/depois sujeitas a cache, não garantia de aceleração geral. A variante inicial com chamadas por linha foi descartada por regressão; o teste final exige ausência de Function Scan.
 - Ensaios revertidos sem entradas no ledger. Smoke visual integrado e conferência individual do relatório ficam para o coordenador.
 
-## Manifesto
+## Manifesto explícito
+
+Total: 7 arquivos.
+
 - `supabase/migrations/20260926121636_preserve_explicit_caixa_proesc_evidence.sql`
 - `supabase/tests/caixa_proesc_effective_evidence.readonly.mjs`
 - `supabase/tests/caixa_proesc_effective_evidence.isolated.test.mjs`
 - `ai/operacao/registros/alteracoes/2026-09-26-caixa-prova-explicita-proesc.md`
 - `ai/operacao/qualidade/limite-linhas-manifestos.json`
+- `internal/versioning/system-version.json`
+- `internal/versioning/CHANGELOG.md`
 
-A registry de publicação parte integralmente do main indicado e acrescenta somente este registro. Sem alteração de versão frontend, AGENTS, skills ou memória.
-
+O cadastro de manifestos parte integralmente do main indicado e acrescenta somente este registro. O gate de produto exige a versão 4.8.94 e sua entrada de histórico; AGENTS, skills e memória permanecem fora do lote. O primeiro CI identificou essa exigência e o cabeçalho obrigatório do manifesto; ambos foram corrigidos antes do merge, sem alterar o SQL aplicado.
