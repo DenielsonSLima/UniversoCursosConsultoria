@@ -40,7 +40,7 @@ const makeSource = (photo: string | null): EmissionPdfSource => ({
 });
 
 const inspectPdf = async (source: EmissionPdfSource, artifact?: string) => {
-  const before = structuredClone(source);
+  const before = globalThis.structuredClone(source);
   const result = await createEmissionDocumentsPdf([source]);
   assert.deepEqual(source, before, 'modelo e snapshots permanecem imutáveis');
   const bytes = new Uint8Array(await result.blob.arrayBuffer());
