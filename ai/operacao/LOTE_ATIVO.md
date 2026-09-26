@@ -1,15 +1,12 @@
 # Lote ativo
 
-Estado: PUBLICAÇÃO AUTORIZADA — PROESC / RETOMADA DE CONFERÊNCIAS
+Estado: VALIDADO PARA PUBLICAÇÃO — OUTROS CRÉDITOS / PDV
 
-## Lote: 2026-09-26-proesc-retomada-conferencias
+## Lote: 2026-09-26-outros-creditos-pdv
 
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-26-proesc-retomada-conferencias.md`.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-26-outros-creditos-pdv.md`.
 
-- Versão 4.8.93 preparada: 26 arquivos de produto e cinco de manutenção, 30 caminhos distintos na publicação conjunta.
-- Cem testes integrados, 36 verificações SQL com ROLLBACK, build e validação de versão aprovados.
-- Ledger 20260926113042 registra ensaio revertido; migrations 20260926113107/113109 aplicadas. Edge v25 ACTIVE, 29 arquivos conferidos.
-- Smoke real de retomada da v25 pendente. A rodada de 427 matrículas concluída às 10:13 UTC ocorreu na v24 e não substitui esse aceite.
-- Preservar autorização, identidade, hashes, cinco minutos de validade e pausa após erro.
-- Manutenção documentada em `ai/operacao/registros/alteracoes/2026-09-26-recuperacao-espaco-tecnico.md`: banco em 486,89 MB, histórico cron integralmente preservado.
-- Backend atualizado e produção autorizada pelo usuário; publicação GitHub em preparação.
+- Versão 4.8.98: corrigir polo legado, habilitar somente BolePix de Outros Créditos e acrescentar caixa na tela.
+- Manter a cobrança única, os dados bancários oficiais e a confirmação pelo backend.
+- Produção solicitada pelo usuário; build, testes e smoke local no Safari aprovados. Backend aplicado e readback conferido; publicação pelo manifesto do registro.
+- Lote anterior Proesc 4.8.94 já publicado em main f1950b2. Nenhuma ampliação das 132 conferências neste lote.

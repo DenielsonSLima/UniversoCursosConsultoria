@@ -45,6 +45,17 @@ export {
   shiftCaixaCompetencia
 } from './caixa.contracts';
 
+const reportCaixaReadError = (
+  message: string,
+  error: { message: string; code?: string; name?: string },
+  signal?: AbortSignal,
+) => {
+  const isCancellation = error.name === 'AbortError' || error.code === 'ABORT_ERR'
+    || (!error.code && error.message.startsWith('AbortError:'));
+  if (signal?.aborted && isCancellation) return;
+  console.error(message, error);
+};
+
 export const caixaService = {
   async getPolos(signal?: AbortSignal): Promise<CaixaPolo[]> {
     const request = supabase
@@ -57,7 +68,7 @@ export const caixaService = {
     const { data, error } = await request;
 
     if (error) {
-      console.error('Erro ao buscar os polos do Caixa:', error);
+      reportCaixaReadError('Erro ao buscar os polos do Caixa:', error, signal);
       throw error;
     }
 
@@ -73,13 +84,14 @@ export const caixaService = {
     const request = supabase.rpc('get_caixa_prestacao_mensal_secure', {
       p_polo_id: normalizedPoloId,
       p_competencia: competencia,
-      p_meses_historico: 6,
+      // The chart displays three months; each requested month verifies its evidence.
+      p_meses_historico: 3,
     });
     if (signal) request.abortSignal(signal);
     const { data, error } = await request;
 
     if (error) {
-      console.error('Erro ao buscar a prestação mensal do Caixa:', error);
+      reportCaixaReadError('Erro ao buscar a prestação mensal do Caixa:', error, signal);
       throw error;
     }
 
@@ -101,7 +113,7 @@ export const caixaService = {
     const { data, error } = await request;
 
     if (error) {
-      console.error('Erro ao buscar o resumo de financiamento do Caixa:', error);
+      reportCaixaReadError('Erro ao buscar o resumo de financiamento do Caixa:', error, signal);
       throw error;
     }
 
@@ -124,7 +136,7 @@ export const caixaService = {
     const { data, error } = await request;
 
     if (error) {
-      console.error('Erro ao buscar os custos operacionais do Caixa:', error);
+      reportCaixaReadError('Erro ao buscar os custos operacionais do Caixa:', error, signal);
       throw error;
     }
 
@@ -147,7 +159,7 @@ export const caixaService = {
     const { data, error } = await request;
 
     if (error) {
-      console.error('Erro ao buscar o resumo patrimonial do Caixa:', error);
+      reportCaixaReadError('Erro ao buscar o resumo patrimonial do Caixa:', error, signal);
       throw error;
     }
 
@@ -170,7 +182,7 @@ export const caixaService = {
     const { data, error } = await request;
 
     if (error) {
-      console.error('Erro ao buscar a posição líquida do Caixa:', error);
+      reportCaixaReadError('Erro ao buscar a posição líquida do Caixa:', error, signal);
       throw error;
     }
 
@@ -193,7 +205,7 @@ export const caixaService = {
     const { data, error } = await request;
 
     if (error) {
-      console.error('Erro ao buscar a posição total do Caixa:', error);
+      reportCaixaReadError('Erro ao buscar a posição total do Caixa:', error, signal);
       throw error;
     }
 

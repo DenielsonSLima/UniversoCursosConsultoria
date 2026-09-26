@@ -15,7 +15,7 @@ const item = {
   composicaoStatus: 'CALCULADO_REGRA_INFORMADA_PROESC',
 } as ContasReceber;
 const model = {
-  openReceiveModal() {}, copyLink() {},
+  openReceiveModal() {}, openPaymentModal() {}, copyLink() {},
   syncMutation: { isPending: false, mutate() {} },
   refreshMutation: { isPending: false, mutate() {} },
 };
@@ -39,4 +39,16 @@ test('divergência calculada fica visível e não substitui o recebido', () => {
   assert.match(text, /Recebido: R\$ 250,00/);
   assert.match(text, /Diferença (?:não discriminada|a conferir): -R\$ 10,00/);
   assert.match(text, /Desconto: R\$ 19,90/);
+});
+
+
+test('cobrança importada pendente não oferece nova emissão ou caixa Banese', () => {
+  const text = render({ ...item, status: 'PENDENTE' });
+  assert.doesNotMatch(text, /Gerar link|Abrir caixa/);
+});
+
+test('cobrança Banese permite abrir o caixa existente', () => {
+  const text = render({ ...item, origemPagamento: 'BANESE', gatewayProvider: 'banese_card', asaasPaymentId: 'bank-id', status: 'PENDENTE' });
+  assert.match(text, /Abrir caixa/);
+  assert.doesNotMatch(text, /Gerar link/);
 });

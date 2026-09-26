@@ -32,6 +32,39 @@ const baneseRoute: OtherCreditRoute = {
   paymentMethod: "BOLETO",
 };
 
+Deno.test("identificadores persistidos aceitam UUID legado da Matriz", () => {
+  const legacyId = "44444444-4444-4444-4444-444444444444";
+  for (const mode of ["LOCAL_RECEBER", "LOCAL_PAGO", "GATEWAY"] as const) {
+    const input = normalizeOtherCreditRequest({
+      idempotencyKey: ID,
+      poloId: legacyId,
+      descricao: "Crédito de teste",
+      valor: 3,
+      dataVencimento: "2026-09-26",
+      clienteId: legacyId,
+      categoriaFinanceiraId: legacyId,
+      contaBancariaId: mode === "LOCAL_PAGO" ? legacyId : undefined,
+      formaPagamento: mode === "LOCAL_PAGO" ? "DINHEIRO" : mode === "GATEWAY" ? "BOLETO" : undefined,
+      mode,
+    });
+    assert.equal(input.poloId, legacyId);
+    assert.equal(input.clientId, legacyId);
+    assert.equal(input.categoryId, legacyId);
+    assert.equal(input.accountId, mode === "LOCAL_PAGO" ? legacyId : null);
+  }
+});
+
+Deno.test("identificadores legados nao dispensam formato nem chave idempotente", () => {
+  const base = {
+    idempotencyKey: ID, poloId: POLO_ID, descricao: "Crédito",
+    valor: 3, dataVencimento: "2026-09-26", mode: "LOCAL_RECEBER",
+  };
+  for (const poloId of ["todos", "", "44444444-4444-4444-4444-44444444444z", POLO_ID + "suffix"]) {
+    assert.throws(() => normalizeOtherCreditRequest({ ...base, poloId }), /Polo invalido/);
+  }
+  assert.throws(() => normalizeOtherCreditRequest({ ...base, idempotencyKey: "invalid" }), /Chave idempotente/);
+});
+
 Deno.test("Outros Creditos normaliza o contrato e rejeita combinacoes inseguras", () => {
   const request = gatewayRequest();
   assert.equal(request.value, 120.5);
