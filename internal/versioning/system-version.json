@@ -1,8 +1,8 @@
 {
-  "version": "4.8.101",
+  "version": "4.8.102",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 110,
+  "revision": 111,
   "releasedAt": "2026-09-26",
-  "summary": "Pasta de Identificação e Ficha de Matrícula com fontes maiores e layout preservado"
+  "summary": "PDV: bloqueio de cronogramas e tipos acadêmicos na leitura de Outros Créditos"
 }
