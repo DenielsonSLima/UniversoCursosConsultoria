@@ -45,12 +45,14 @@ type OtherCreditAttemptDependencies = {
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+// IDs persistidos incluem UUIDs legados; existencia e escopo sao validados abaixo.
+const ENTITY_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_DESCRIPTION_LENGTH = 500;
 
 const optionalUuid = (value: unknown, label: string) => {
   const normalized = String(value || "").trim();
   if (!normalized) return null;
-  if (!UUID_RE.test(normalized)) throw new Error(`${label} invalido.`);
+  if (!ENTITY_UUID_RE.test(normalized)) throw new Error(`${label} invalido.`);
   return normalized;
 };
 
@@ -96,7 +98,7 @@ export const normalizeOtherCreditRequest = (
   }
 
   const poloId = String(body.poloId || "").trim();
-  if (!UUID_RE.test(poloId)) throw new Error("Polo invalido.");
+  if (!ENTITY_UUID_RE.test(poloId)) throw new Error("Polo invalido.");
 
   const description = String(body.descricao || "").trim().replace(/\s+/g, " ");
   if (!description) throw new Error("Descricao obrigatoria.");

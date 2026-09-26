@@ -1,12 +1,15 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { Landmark, Link as LinkIcon, Loader2, Plus, Tag, WalletCards, X } from 'lucide-react';
+import { Landmark, Link as LinkIcon, Loader2, Plus, QrCode, Tag, WalletCards, X } from 'lucide-react';
 import DespesaCredorPicker from '../despesas/components/DespesaCredorPicker';
 import CategoriaFinanceiraInlineModal from '../despesas/components/CategoriaFinanceiraInlineModal';
 import type { OutrosCreditosModel } from './useOutrosCreditos';
 import { formatCurrency, formatCurrencyInput, normalizeCurrencyInput } from './outros-creditos.presentation';
 
 type ModalModel = Pick<OutrosCreditosModel,
+  | 'openPdv'
+  | 'bankPresentation'
+  | 'setBankPresentation'
   | 'mode'
   | 'setMode'
   | 'description'
@@ -39,7 +42,7 @@ type ModalModel = Pick<OutrosCreditosModel,
 
 export const OtherCreditCreateModal = ({ model }: { model: ModalModel }) => {
   const {
-    mode, setMode, description, setDescription, value, setValue,
+    bankPresentation, setBankPresentation, mode, setMode, description, setDescription, value, setValue,
     dueDate, setDueDate, categoryId, setCategoryId, partnerType, setPartnerType,
     partnerId, setPartnerId, accountId, setAccountId, paymentMethod, setPaymentMethod,
     showCategoryModal, setShowCategoryModal, partners, categories, activePolo, activeAccounts,
@@ -68,21 +71,25 @@ export const OtherCreditCreateModal = ({ model }: { model: ModalModel }) => {
               </button>
             </div>
 
-            <form onSubmit={validateAndSubmit} className="space-y-5">
-              <div className="grid gap-3 md:grid-cols-3">
+            <form onSubmit={validateAndSubmit}>
+              <fieldset disabled={createMutation.isPending} className="space-y-5 disabled:opacity-70">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {[
                   { id: 'LOCAL_PAGO' as const, label: 'Receber agora', desc: 'Entrada local no caixa/conta', icon: Landmark },
                   { id: 'LOCAL_RECEBER' as const, label: 'A receber local', desc: 'Cria conta pendente sem gateway', icon: WalletCards },
-                  { id: 'GATEWAY' as const, label: 'Link bancário', desc: 'Usa a rota da Integração Bancária', icon: LinkIcon },
+                  { id: 'GATEWAY' as const, presentation: 'PDV' as const, label: 'Receber na tela', desc: 'QR Pix e boleto no caixa', icon: QrCode },
+                  { id: 'GATEWAY' as const, presentation: 'LINK' as const, label: 'Link bancário', desc: 'Gerar e enviar ao pagador', icon: LinkIcon },
                 ].map((option) => {
                   const Icon = option.icon;
-                  const active = mode === option.id;
+                  const active = mode === option.id && (!option.presentation || bankPresentation === option.presentation);
                   return (
                     <button
-                      key={option.id}
+                      key={option.presentation || option.id}
                       type="button"
                       onClick={() => {
+                        if (option.presentation === 'PDV') { model.openPdv(); return; }
                         setMode(option.id);
+                        if (option.presentation) setBankPresentation(option.presentation);
                         if (option.id === 'GATEWAY') setPaymentMethod('BOLETO');
                       }}
                       className={`rounded-2xl border p-4 text-left transition-all ${
@@ -213,7 +220,7 @@ export const OtherCreditCreateModal = ({ model }: { model: ModalModel }) => {
                     )}
                     <label className="space-y-1">
                       <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                        {mode === 'GATEWAY' ? 'Forma do link bancário' : 'Forma de recebimento'}
+                        {mode === 'GATEWAY' ? 'Forma da cobrança' : 'Forma de recebimento'}
                       </span>
                       <select
                         value={paymentMethod}
@@ -257,9 +264,10 @@ export const OtherCreditCreateModal = ({ model }: { model: ModalModel }) => {
                   className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-6 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg shadow-emerald-900/15 disabled:opacity-50"
                 >
                   {createMutation.isPending ? <Loader2 className="animate-spin" size={16} /> : <Plus size={16} />}
-                  Salvar crédito
+                  {mode === 'GATEWAY' && bankPresentation === 'PDV' ? 'Gerar e abrir caixa' : 'Salvar crédito'}
                 </button>
               </div>
+            </fieldset>
             </form>
           </div>
         </div>

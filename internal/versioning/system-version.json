@@ -1,8 +1,8 @@
 {
-  "version": "4.8.97",
+  "version": "4.8.98",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 106,
+  "revision": 107,
   "releasedAt": "2026-09-26",
-  "summary": "Ficha de Matrícula incorpora a foto atual e preserva espaço para colagem quando ausente"
+  "summary": "PDV dedicado de Outros Créditos com BolePix e separação das cobranças acadêmicas"
 }
