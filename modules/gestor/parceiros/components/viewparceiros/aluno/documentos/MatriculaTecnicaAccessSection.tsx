@@ -54,12 +54,12 @@ const MatriculaTecnicaAccessSection: React.FC<MatriculaTecnicaAccessSectionProps
         <ShieldCheck className="mt-0.5 shrink-0 text-emerald-700" size={20} />
         <div className="min-w-0 flex-1">
           <h4 className="text-sm font-black uppercase tracking-wide text-emerald-900">
-            Análise e acesso da matrícula
+            Vínculo acadêmico e pendências
           </h4>
           <p className="mt-1 text-xs font-semibold leading-relaxed text-emerald-800">
-            Matrículas regulares exigem pagamento confirmado e todos os
-            documentos obrigatórios concluídos, por anexo aprovado ou registro
-            administrativo sem anexo.
+            A matrícula regular em turma iniciada ativa o vínculo acadêmico e
+            libera carteirinha e ficha de matrícula. Pagamento e conferência dos
+            documentos podem ser concluídos depois, sem bloquear essas emissões.
           </p>
           <div className="mt-4 space-y-3">
             {enrollments.map((enrollment) => {
@@ -95,10 +95,23 @@ const MatriculaTecnicaAccessSection: React.FC<MatriculaTecnicaAccessSectionProps
                           ? 'Aluno de implantação'
                           : 'Matrícula regular'}
                       </span>
-                      <span className="rounded-full bg-emerald-50 px-2 py-1 text-[8px] font-black uppercase tracking-wider text-emerald-700">
+                      <span
+                        className={`rounded-full px-2 py-1 text-[8px] font-black uppercase tracking-wider ${
+                          enrollment.documentacao.concluida
+                            ? 'bg-emerald-50 text-emerald-700'
+                            : 'bg-amber-50 text-amber-700'
+                        }`}
+                      >
                         Documentos {enrollment.documentacao.concluidos}/
                         {enrollment.documentacao.obrigatoriosTotal}
                       </span>
+                      {enrollment.fluxo === 'REGULAR' ? (
+                        <span className="rounded-full bg-slate-100 px-2 py-1 text-[8px] font-black uppercase tracking-wider text-slate-600">
+                          {enrollment.pagamento.estado === 'CONFIRMADO'
+                            ? 'Pagamento confirmado'
+                            : 'Pagamento a concluir'}
+                        </span>
+                      ) : null}
                     </div>
                     {enrollment.liberacaoAcademica ? (
                       <p className="mt-2 text-[10px] font-semibold text-amber-700">
@@ -176,7 +189,7 @@ const MatriculaTecnicaAccessSection: React.FC<MatriculaTecnicaAccessSectionProps
                           <ShieldCheck size={14} /> Ativar matrícula regular
                         </button>
                         <span className="max-w-64 text-[9px] font-semibold text-slate-500 md:text-right">
-                          {regularBlockers || 'Pagamento e documentação confirmados pelo servidor.'}
+                          {regularBlockers || 'Ativação acadêmica sem aguardar pagamento ou documentos.'}
                         </span>
                       </div>
                       <div className="flex flex-col items-stretch gap-1 md:items-end">

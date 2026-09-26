@@ -195,8 +195,10 @@ export const useTechnicalEnrollmentConfirmation = ({
       onSuccess();
       if (manualFinanceMode || effectiveIntent === "PENDENTE") {
         toast.success(
-          "Aluno pré-vinculado",
-          "Configuração salva como pendente. Nenhuma cobrança ou agendamento foi criado.",
+          "Aluno matriculado",
+          preLink.matricula.statusAcademico === "ATIVO"
+            ? "Vínculo acadêmico ativo. Carteirinha e ficha de matrícula liberadas; o financeiro pode ser concluído depois."
+            : "Matrícula registrada. O vínculo acadêmico será ativado quando a turma iniciar; o financeiro pode ser concluído depois.",
         );
       } else if (effectiveIntent === "AGORA") {
         toast.success(
