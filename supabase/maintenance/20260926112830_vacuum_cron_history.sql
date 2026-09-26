@@ -1,0 +1,12 @@
+-- Executed once through MCP execute_sql on 2026-09-26 at 11:28:30 UTC (4.7 s).
+-- Operational evidence, not an automatic migration or scheduled command.
+-- Do not wrap VACUUM in BEGIN/COMMIT or re-run it as a publication step.
+-- Before: cron.job_run_details 36,798,464 bytes; 60,975 rows; 10,853 failed.
+-- Verification cutoff runid=382785; table OID=23075; sequence last_value=382785.
+-- SHA-256 at that cutoff before and after:
+-- 08115570b80de92f31ff4318753689db9437828a01ba8ba0452948f5efc39ad2
+-- After: identical cutoff count/hash/failed/OID/sequence; relation 26,189,824 bytes.
+-- Physical reduction: 10,608,640 bytes. All database sizes sum to 486,887,601 bytes.
+-- No TRUNCATE, manual DELETE, retention change, or financial-state mutation.
+-- Evidence: ai/operacao/registros/alteracoes/2026-09-26-recuperacao-espaco-tecnico.md.
+VACUUM (FULL, ANALYZE, SKIP_LOCKED) cron.job_run_details;
