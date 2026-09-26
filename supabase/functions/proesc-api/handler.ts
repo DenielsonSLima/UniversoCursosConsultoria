@@ -8,9 +8,11 @@ import { connectionActions, handleConnectionAction } from './connections.ts';
 import { connectionToken } from './connection-contract.ts';
 import { runProescSync } from './sync-worker.ts';
 import { runProescReadOnlyDiagnostic } from './diagnostic-readonly.ts';
+import { runProescInvoiceDiagnostic } from './diagnostic-invoices.ts';
 import { reviewProescCycles } from './cycle-review.ts';
 import { reviewProescClassCycles, runProescCycleReviewWorker } from './cycle-review-batch.ts';
 import { readProescTechnicalHistory } from '../_shared/proesc-technical-history.ts';
+import { createProescV1PacedTransport } from './v1-paced-transport.ts';
 
 type Admin = Parameters<typeof requireGestorAtivo>[1];
 const publicActions = new Set(['status', 'save_token', 'remove_token', 'class_history', 'class_events', 'test_token', 'technical_history']);
@@ -39,14 +41,16 @@ export const createHandler = (admin: Admin, transport: typeof fetch = fetch) => 
         p_action: 'authorize', p_payload: { key },
       });
       if (error || typeof data?.actorId !== 'string') throw new ProescError('Acesso interno não autorizado.', 403);
+      const sharedTransport = createProescV1PacedTransport(transport);
       const [sync, cycleReview] = await Promise.allSettled([
-        runProescSync(admin, data.actorId, transport),
-        runProescCycleReviewWorker(admin, data.actorId, transport),
+        runProescSync(admin, data.actorId, sharedTransport),
+        runProescCycleReviewWorker(admin, data.actorId, sharedTransport),
       ]);
       if (sync.status === 'rejected') throw new ProescError('Não foi possível concluir a atualização Proesc.', 409);
       return respond({ ...sync.value, cycleReview: cycleReview.status === 'fulfilled'
         ? cycleReview.value : { success: false, message: 'A consulta automática será retomada.' } });
-    } else if (action === 'internal_probe' || action === 'internal_accounting_probe' || action === 'internal_data_probe') {
+    } else if (action === 'internal_probe' || action === 'internal_accounting_probe'
+      || action === 'internal_data_probe' || action === 'internal_invoice_probe') {
       const key = req.headers.get('X-Proesc-Worker-Secret') || '';
       if (!/^[0-9a-f]{64}$/.test(key)) throw new ProescError('Acesso interno não autorizado.', 403);
       const { data, error } = await admin.rpc('proesc_internal_probe_service', {
@@ -100,6 +104,12 @@ export const createHandler = (admin: Admin, transport: typeof fetch = fetch) => 
         throw new ProescError('Aguarde um minuto antes de consultar novamente.', 429);
       }
       return respond(await runProescReadOnlyDiagnostic(admin, actorId, body, transport));
+    }
+    if (action === 'internal_invoice_probe') {
+      if (isRateLimitExceeded(`proesc-invoice-probe:${actorId}`, 5, 60000)) {
+        throw new ProescError('Aguarde um minuto antes de consultar novamente.', 429);
+      }
+      return respond(await runProescInvoiceDiagnostic(admin, actorId, body, transport));
     }
     const rpc = async (name: string, action: string, payload: unknown = {}) => {
       const { data, error } = await admin.rpc(name, {

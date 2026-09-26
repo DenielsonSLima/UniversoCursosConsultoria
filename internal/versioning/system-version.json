@@ -1,8 +1,8 @@
 {
-  "version": "4.8.91",
+  "version": "4.8.92",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 100,
+  "revision": 101,
   "releasedAt": "2026-09-25",
-  "summary": "Redução de chamadas ociosas do dispatcher de notificações preservando a frequência e os contratos de entrega"
+  "summary": "Consultas Proesc coordenadas e lotes menores para reduzir recusas da API, preservando a conferência financeira"
 }

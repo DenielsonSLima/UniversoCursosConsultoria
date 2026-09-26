@@ -19,6 +19,9 @@ export async function ensureProescCycleCache(
   options: CycleReviewReadOptions = {},
 ) {
   if (typeof matriculaId !== 'string' || !uuid.test(matriculaId)) throw new ProescError('Matrícula inválida.');
+  const assertActive = () => {
+    if (options.signal?.aborted) throw new ProescError('A consulta automática será retomada.', 409);
+  };
   const rpc = async (name: string, payload: Record<string, unknown>) => {
     const { data, error } = await admin.rpc(name, payload);
     if (error) throw new ProescError('Não foi possível confirmar os ciclos. Atualize a tela e confira novamente.', 409);
@@ -27,12 +30,26 @@ export async function ensureProescCycleCache(
   const cacheRpc = (action: string, payload = {}) => rpc('proesc_cycle_review_cache_service', {
     p_action: action, p_actor_id: actorId, p_matricula_id: matriculaId, p_payload: payload,
   });
+  assertActive();
   let start = await cacheRpc('begin');
   // A second request may arrive while the shared source collection is running.
   if (start.busy === true) {
     const pending = [...inFlight.values()];
     if (pending.length) {
-      await Promise.allSettled(pending);
+      const waiting = Promise.allSettled(pending);
+      const signal = options.signal;
+      if (signal) {
+        await new Promise<void>((resolve, reject) => {
+          const abort = () => {
+            signal.removeEventListener('abort', abort);
+            reject(new ProescError('A consulta automática será retomada.', 409));
+          };
+          signal.addEventListener('abort', abort, { once: true });
+          waiting.then(() => { signal.removeEventListener('abort', abort); resolve(); });
+          if (signal.aborted) abort();
+        });
+      } else await waiting;
+      assertActive();
       start = await cacheRpc('begin');
     }
     if (start.busy === true) throw new ProescError('A conferência desta janela está em andamento. Aguarde alguns instantes e tente novamente.', 409);
@@ -48,12 +65,14 @@ export async function ensureProescCycleCache(
       || context.classIds.some((id) => typeof id !== 'string' || !/^\d+$/.test(id))
       || typeof start.lease !== 'string' || !uuid.test(start.lease)) throw new ProescError('Janela de conferência inválida.', 409);
     const run = async () => {
+      assertActive();
       const credential = await rpc('proesc_workspace_service', {
         p_action: 'token', p_actor_id: actorId, p_payload: {},
       });
       if (typeof credential.token !== 'string' || credential.revision !== start.tokenRevision) {
         throw new ProescError('A conexão Proesc mudou. Confira novamente.', 409);
       }
+      assertActive();
       const client = createProescV1Client({ token: credential.token, transport, signal: options.signal });
       const queries: ProescV1AccountingSource[] = [];
       for (let year = firstYear; year <= lastYear; year++) for (let month = 1; month <= 12; month++) {
@@ -62,7 +81,7 @@ export async function ensureProescCycleCache(
       const pages: ProescV1AccountingPage[] = new Array(queries.length);
       let next = 0;
       let failed = false;
-      const workers = await Promise.allSettled(Array.from({ length: 4 }, async () => {
+      const workers = await Promise.allSettled(Array.from({ length: 1 }, async () => {
         while (!failed && next < queries.length) {
           const index = next++;
           try {
@@ -81,6 +100,7 @@ export async function ensureProescCycleCache(
       const failure = workers.find((worker) => worker.status === 'rejected');
       if (failure?.status === 'rejected') throw failure.reason;
       const obligations = await cycleSourceObligations(pages, context.classIds as string[]);
+      assertActive();
       await cacheRpc('complete', {
         cacheId, lease: start.lease, obligations,
         ...(options.observedAt ? { sourceObservedAt: options.observedAt } : {}),
@@ -95,6 +115,7 @@ export async function ensureProescCycleCache(
       throw error;
     } finally { inFlight.delete(cacheId); }
   }
+  assertActive();
   return cacheId;
 }
 
