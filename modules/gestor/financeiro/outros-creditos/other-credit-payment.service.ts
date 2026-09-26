@@ -33,7 +33,30 @@ export function safeOtherCreditLink(value: unknown): string | null {
 }
 
 export function shouldWatchOtherCredit(data: OtherCreditPayment | undefined, failed: boolean, startedAt: number, now: number) {
-  return Boolean(data?.canPay && !failed && now - startedAt < 10 * 60_000);
+  return Boolean(data && !failed && now - startedAt < 10 * 60_000 &&
+    ['PENDENTE', 'VENCIDO', 'AGUARDANDO_CONFIRMACAO'].includes(data.payment.status));
+}
+
+export function watchOtherCreditPayment(receivableId: string, onChange: () => void) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const refresh = () => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(onChange, 300);
+  };
+  const channel = supabase.channel(`pdv-payment-${receivableId}`)
+    .on('postgres_changes', {
+      event: 'INSERT', schema: 'public', table: 'finance_realtime_events',
+      filter: `entity_id=eq.${receivableId}`,
+    }, payload => {
+      if (payload.new.source_table === 'contas_receber') refresh();
+    }).subscribe(status => {
+      // Catch changes between the first read and subscription/reconnection.
+      if (status === 'SUBSCRIBED') refresh();
+    });
+  return () => {
+    if (timer) clearTimeout(timer);
+    void supabase.removeChannel(channel);
+  };
 }
 
 export async function refreshOtherCreditPayment(receivableId: string) {

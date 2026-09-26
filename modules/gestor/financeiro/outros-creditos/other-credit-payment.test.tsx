@@ -3,7 +3,7 @@ import test from 'node:test';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { OtherCreditPaymentContent } from './OtherCreditPaymentModal';
-import { getOtherCreditPayment, refreshOtherCreditPayment, safeOtherCreditLink, shouldWatchOtherCredit, type OtherCreditPayment } from './other-credit-payment.service';
+import { getOtherCreditPayment, refreshOtherCreditPayment, safeOtherCreditLink, shouldWatchOtherCredit, watchOtherCreditPayment, type OtherCreditPayment } from './other-credit-payment.service';
 import { supabase } from '../../../../lib/supabase';
 import { buildBanesePixImageFixture, buildBanesePixPayloadFixture } from '../../../../supabase/functions/banese/internal/testing/pix-fixture';
 
@@ -133,10 +133,35 @@ test('acompanhamento para em erro, encerramento ou dez minutos; links inseguros 
   assert.equal(shouldWatchOtherCredit(base, false, 0, 599_999), true);
   assert.equal(shouldWatchOtherCredit(base, false, 0, 600_000), false);
   assert.equal(shouldWatchOtherCredit(base, true, 0, 1), false);
-  assert.equal(shouldWatchOtherCredit({ ...base, canPay: false }, false, 0, 1), false);
+  assert.equal(shouldWatchOtherCredit({ ...base, canPay: false }, false, 0, 1), true);
+  assert.equal(shouldWatchOtherCredit({ ...base, payment: { ...base.payment, status: 'PAGO' } }, false, 0, 1), false);
   assert.equal(shouldWatchOtherCredit(undefined, false, 0, 1), false);
   for (const value of ['javascript:alert(1)', 'http://example.com', 'https://user:secret@example.com', '/relative']) {
     assert.equal(safeOtherCreditLink(value), null);
   }
   assert.equal(safeOtherCreditLink('https://universocc.com.br/aluno'), 'https://universocc.com.br/aluno');
+});
+
+
+test('Realtime acompanha somente a cobrança aberta e remove assinatura ao fechar', async t => {
+  let callback: (payload: any) => void = () => {};
+  let onStatus: (status: string) => void = () => {};
+  let filter: any;
+  const channel = { on(_event: string, config: unknown, fn: typeof callback) { filter = config; callback = fn; return this; }, subscribe(fn: typeof onStatus) { onStatus = fn; return this; } };
+  t.mock.method(supabase, 'channel', () => channel);
+  const remove = t.mock.method(supabase, 'removeChannel', async () => 'ok');
+  let updates = 0;
+  const close = watchOtherCreditPayment(base.payment.id, () => updates++);
+  assert.equal(filter.filter, `entity_id=eq.${base.payment.id}`);
+  callback({new: {source_table:'contas_pagar'}});
+  await new Promise(resolve => setTimeout(resolve, 320));
+  assert.equal(updates, 0);
+  callback({new: {source_table:'contas_receber'}});
+  await new Promise(resolve => setTimeout(resolve, 320));
+  assert.equal(updates, 1);
+  onStatus('SUBSCRIBED');
+  close();
+  await new Promise(resolve => setTimeout(resolve, 320));
+  assert.equal(updates, 1);
+  assert.equal(remove.mock.callCount(), 1);
 });

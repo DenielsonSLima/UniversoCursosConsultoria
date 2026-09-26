@@ -69,7 +69,7 @@ export function OtherCreditPaymentContent({ data, onRefresh, refreshPending = fa
             <h3 className="mt-4 text-lg font-black text-[#001a33]">{closed ? 'Pagamento desativado' : 'Aguardando conferência'}</h3>
             <p className="mt-3 text-sm leading-6 text-slate-600">{closed
               ? 'Esta cobrança está encerrada. Nenhum código de pagamento será exibido.'
-              : 'Os dados bancários ainda não permitem receber com segurança. Verifique a situação da cobrança antes de continuar.'}</p>
+              : 'Estamos acompanhando a confirmação bancária. Esta tela será atualizada automaticamente quando os dados estiverem disponíveis.'}</p>
           </div>
         ) : (
           <div className="mt-8 w-full max-w-[360px]">
@@ -94,7 +94,7 @@ export function OtherCreditPaymentContent({ data, onRefresh, refreshPending = fa
                 <h3 className="mt-5 text-lg font-black text-[#001a33]">{data.pixState === 'sandbox-unavailable' ? 'Ambiente de homologação' : 'Pix ainda não disponível'}</h3>
                 <p className="mt-3 text-sm leading-6 text-slate-500">{data.pixState === 'sandbox-unavailable'
                   ? 'O Pix não opera neste ambiente. O boleto de teste permanece disponível.'
-                  : 'O QR Pix completo ainda não está disponível. Use o boleto validado ou verifique a situação do pagamento.'}</p>
+                  : 'Aguardando o QR Pix oficial do banco. Esta tela acompanha as atualizações automaticamente.'}</p>
               </div>
             )}
           </div>
@@ -134,7 +134,7 @@ export function OtherCreditPaymentContent({ data, onRefresh, refreshPending = fa
             <p className="mt-3 text-center text-xs leading-5 text-slate-500">Consulte o banco se o pagamento já foi realizado.</p>
           </div>
         )}
-        {payable && <p className="mt-6 flex items-start gap-2 text-xs leading-5 text-slate-400"><Clock3 size={14} className="mt-0.5 shrink-0" aria-hidden="true" /> A confirmação é acompanhada nesta tela por até 10 minutos.</p>}
+        {!paid && !closed && <p className="mt-6 flex items-start gap-2 text-xs leading-5 text-slate-400"><Clock3 size={14} className="mt-0.5 shrink-0" aria-hidden="true" /> A confirmação bancária aparece automaticamente nesta tela.</p>}
         {link && <div className="mt-6 border-t border-slate-200 pt-5">
           <a href={link} target="_blank" rel="noreferrer" className={`inline-flex min-h-10 items-center gap-1.5 rounded-lg text-xs font-bold text-slate-500 hover:text-[#001a33] ${focusRing}`}>Portal do Aluno <ArrowUpRight size={14} aria-hidden="true" /></a>
           <div className="mt-2"><CopyAction value={link} label="Copiar link do aluno" /></div>

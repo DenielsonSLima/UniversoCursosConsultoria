@@ -186,7 +186,7 @@ export const useOutrosCreditos = (scopedPoloId?: string | null) => {
     resetForm();
     setMode('GATEWAY');
     setPaymentMethod('BOLETO');
-    setDueDate('');
+    setDueDate(today());
     setPaymentReceivableId(null);
     setIsModalOpen(false);
     setCreationAttemptId(generateSafeUuid());

@@ -1,8 +1,8 @@
 {
-  "version": "4.8.102",
+  "version": "4.8.103",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 111,
+  "revision": 112,
   "releasedAt": "2026-09-26",
-  "summary": "PDV: bloqueio de cronogramas e tipos acadêmicos na leitura de Outros Créditos"
+  "summary": "PDV: multa isenta Banese, atualização automática e preenchimento facilitado"
 }

@@ -1,13 +1,12 @@
 # Lote ativo
 
-Estado: REVISADO — PDV / OUTROS CRÉDITOS
+Estado: VALIDADO — PUBLICAÇÃO EM ANDAMENTO
 
-## Lote: 2026-09-26-revisao-pdv-outros-creditos
+## Lote: 2026-09-26-pdv-isencao-multa-realtime
 
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-26-revisao-pdv-outros-creditos.md`.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-26-pdv-isencao-multa-realtime.md`.
 
-- Versão 4.8.102 / revisão 111, sobre a produção 4.8.101.
-- Reader do PDV rejeita cronogramas e tipos acadêmicos; conserva cobrança única, autorização e dados oficiais.
-- Backend v2 aplicado e readback conferido; 18 testes Deno e 25 testes de interface/Caixa aprovados.
-- Entrega anterior 4.8.100 publicada no PR #188 e conferida em produção pelo Safari.
-- Nenhuma cobrança real emitida; liquidação bancária ponta a ponta não exercitada.
+- Versão 4.8.103 / revisão 112.
+- Isenção oficial Banese, leitura automática do PDV, máscara monetária, data local e categoria inline.
+- 36 testes Deno e 29 UI/serviço; TypeScript e lint focado aprovados.
+- Boleto afetado recuperado sem novo POST; Pix ausente na consulta oficial permanece pendente.
