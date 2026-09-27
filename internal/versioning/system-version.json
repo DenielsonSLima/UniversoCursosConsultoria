@@ -1,8 +1,8 @@
 {
-  "version": "4.8.111",
+  "version": "4.8.112",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 120,
+  "revision": 121,
   "releasedAt": "2026-09-27",
-  "summary": "Controle mensal de recursos vinculados a convênios"
+  "summary": "Ficha do aluno sem atalho de impressão e com abas mais legíveis"
 }
