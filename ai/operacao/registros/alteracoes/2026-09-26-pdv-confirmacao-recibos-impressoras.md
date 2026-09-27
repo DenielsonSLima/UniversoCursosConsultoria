@@ -59,10 +59,10 @@ O avanço paralelo de 4.8.107 foi preservado no changelog; `OtherCreditPdvModal.
 
 ## Ajuste térmico solicitado após o smoke
 
-- Versão 4.8.109 / revisão 118 preparada sobre 4.8.108. Usuário pediu explicitamente retirar a marca d’água do recibo térmico; essa instrução prevalece sobre a preservação genérica do fundo institucional.
-- Patch restrito ao compositor `pdv-receipt.pdf.ts` e teste `pdv-receipt.test.ts`: não busca nem desenha o fundo, preserva logo, conteúdo e snapshot financeiro. Sem alteração no banco ou nas regras do pagamento.
-- 25 testes UI/PDF/cache aprovados; lint dos dois arquivos passou. PDFs de 58/80 mm extraídos e renderizados sem fundo; inspeção de recursos confirmou somente logo e sua máscara de transparência.
-- Manifesto desta correção: os dois arquivos acima, `internal/versioning/system-version.json`, `internal/versioning/CHANGELOG.md`, este registro e `ai/operacao/LOTE_ATIVO.md`. Todos já integram o manifesto original.
+- Versão 4.8.109 / revisão 118 preparada sobre 4.8.108. Usuário pediu explicitamente retirar a marca d’água e organizar o recibo como cupom térmico; essa instrução prevalece sobre a preservação genérica do fundo institucional.
+- Patch no compositor `pdv-receipt.pdf.ts`, somente na variante térmica de `canonical-institutional-header-pdf.ts` e no teste `pdv-receipt.test.ts`: fundo branco, cabeçalho compacto, corpo monoespaçado, separadores e colunas com total em destaque. Preserva logo, conteúdo e snapshot financeiro. Sem alteração no banco ou nas regras do pagamento.
+- 25 testes UI/PDF/cache aprovados; lint dos três arquivos passou. PDFs de 58/80 mm extraídos e renderizados sem fundo; inspeção de recursos confirmou somente logo e sua máscara de transparência.
+- Manifesto desta correção (sete arquivos, PR #199): os três arquivos acima, `internal/versioning/system-version.json`, `internal/versioning/CHANGELOG.md`, este registro e `ai/operacao/LOTE_ATIVO.md`. Todos já integram o manifesto original.
 
 ## Migrations aplicadas e correspondência do ledger
 

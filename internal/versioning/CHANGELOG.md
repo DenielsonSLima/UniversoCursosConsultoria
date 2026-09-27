@@ -6,7 +6,7 @@ Histórico anterior: [03/09/2026 a 08/09/2026 — versões 4.8.30 a 4.8.36](./ch
 
 ## [4.8.109] - 2026-09-26
 
-- Recibos térmicos de 58/80 mm usam fundo branco, sem marca d’água, mantendo logo e dados do pagamento.
+- Recibo do PDV ganha formato de cupom compacto em 58/80 mm, com cabeçalho reduzido, dados alinhados, total em destaque e fundo branco sem marca d’água.
 
 ## [4.8.108] - 2026-09-26
 

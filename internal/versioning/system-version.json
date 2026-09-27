@@ -4,5 +4,5 @@
   "stage": "stable",
   "revision": 118,
   "releasedAt": "2026-09-26",
-  "summary": "Recibo térmico do PDV com fundo branco e logo no cabeçalho"
+  "summary": "Recibo do PDV em formato de cupom térmico compacto"
 }
