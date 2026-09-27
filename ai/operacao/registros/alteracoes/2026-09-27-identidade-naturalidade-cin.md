@@ -29,6 +29,7 @@ Ensino Médio, EJA e documentação civil continuam informativos e não bloqueia
 - `modules/shared/utils/studentIdentityDocument.ts`
 - `modules/shared/utils/studentIdentityDocument.test.ts`
 - `modules/shared/utils/studentIdentityCatalogs.contract.test.ts`
+- `modules/shared/document-validation/document-validation-url.test.ts`
 - `modules/gestor/parceiros/components/formularioparceiros/aluno/ParceiroAlunoFormStepPersonal.tsx`
 - `modules/gestor/parceiros/components/formularioparceiros/aluno/ParceiroAlunoFormStepDocuments.tsx`
 - `modules/gestor/parceiros/components/formularioparceiros/aluno/ParceiroAlunoForm.tsx`
@@ -95,7 +96,7 @@ Ensino Médio, EJA e documentação civil continuam informativos e não bloqueia
 - `internal/versioning/system-version.json`
 - `internal/versioning/CHANGELOG.md`
 
-Total: 76 arquivos.
+Total: 77 arquivos.
 
 ## Validação
 
