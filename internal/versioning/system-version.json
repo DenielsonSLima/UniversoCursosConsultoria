@@ -1,8 +1,8 @@
 {
-  "version": "4.8.105",
+  "version": "4.8.106",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 114,
+  "revision": 115,
   "releasedAt": "2026-09-26",
-  "summary": "Consulta Banese sem rajadas e compactação ociosa reduzida"
+  "summary": "PDV com identidade Universo e atendimento compacto"
 }
