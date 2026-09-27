@@ -9,8 +9,11 @@ const types = new Set(['Aluno', 'Professor', 'PF', 'PJ']);
 export function maskPdvDocument(value?: string) {
   const digits = String(value || '').replace(/\D/g, '');
   if (![11, 14].includes(digits.length)) return 'CPF/CNPJ não informado';
-  const label = digits.length === 11 ? 'CPF' : 'CNPJ';
-  return `${label} ${digits.slice(0, 2)}${'*'.repeat(digits.length - 5)}${digits.slice(-3)}`;
+  const masked = `${digits.slice(0, 2)}${'*'.repeat(digits.length - 5)}${digits.slice(-3)}`;
+  if (digits.length === 11) {
+    return `CPF ${masked.slice(0, 3)}.${masked.slice(3, 6)}.${masked.slice(6, 9)}-${masked.slice(9)}`;
+  }
+  return `CNPJ ${masked.slice(0, 2)}.${masked.slice(2, 5)}.${masked.slice(5, 8)}/${masked.slice(8, 12)}-${masked.slice(12)}`;
 }
 
 export function findPdvPartners(partners: Partner[], search: string) {
@@ -19,10 +22,11 @@ export function findPdvPartners(partners: Partner[], search: string) {
     && textMatchesSearch(search, [partner.nome, partner.cpf_cnpj])).slice(0, 8);
 }
 
-export function PdvPartnerSearch({ partners, value, onSelect, loading, failed, onRetry }: {
+export function PdvPartnerSearch({ partners, value, onSelect, loading, failed, onRetry, location }: {
   partners: Partner[]; value: string;
   onSelect: (id: string, type: DespesaCredorTipo | '') => void;
   loading: boolean; failed: boolean; onRetry: () => void;
+  location?: string;
 }) {
   const [search, setSearch] = useState('');
   const [active, setActive] = useState(-1);
@@ -42,7 +46,7 @@ export function PdvPartnerSearch({ partners, value, onSelect, loading, failed, o
         <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-emerald-700 text-white shadow-lg shadow-emerald-700/20"><UserRound size={22} /></span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2"><p className="truncate font-black text-[#071b3f]">{selected.nome}</p><CircleCheckBig size={16} className="shrink-0 text-emerald-600" /></div>
-          <p className="mt-1 text-xs font-medium text-emerald-800">{maskPdvDocument(selected.cpf_cnpj)} <span className="px-1 text-emerald-300">•</span> {selected.tipo}</p>
+          <p className="mt-1 text-xs font-medium text-emerald-800">{maskPdvDocument(selected.cpf_cnpj)} <span className="px-1 text-emerald-300">•</span> {location || 'Cidade/UF não informada'}</p>
         </div>
         <button type="button" onClick={() => { onSelect('', ''); setSearch(''); }} className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-emerald-200 bg-white/80 text-emerald-800 transition hover:border-emerald-300 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600" aria-label="Trocar pagador"><X size={18} /></button>
       </div>
@@ -77,7 +81,7 @@ export function PdvPartnerSearch({ partners, value, onSelect, loading, failed, o
               className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition sm:px-4 ${active === index ? 'bg-blue-50 ring-1 ring-blue-100' : 'hover:bg-slate-50'}`}>
               <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${active === index ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-400'}`}><UserRound size={18} /></span>
               <span className="min-w-0 flex-1"><span className="block truncate text-sm font-bold text-[#071b3f]">{partner.nome}</span>
-                <span className="mt-1 block text-xs text-slate-500">{maskPdvDocument(partner.cpf_cnpj)} <span className="px-1 text-slate-300">•</span> {partner.tipo}</span></span>
+                <span className="mt-1 block text-xs text-slate-500">{maskPdvDocument(partner.cpf_cnpj)} <span className="px-1 text-slate-300">•</span> {location || 'Cidade/UF não informada'}</span></span>
               {active === index && <span className="grid h-7 w-7 place-items-center rounded-full bg-blue-700 text-white"><Check size={15} /></span>}
             </button>
           </li>)}

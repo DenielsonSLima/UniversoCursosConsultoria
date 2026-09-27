@@ -23,6 +23,7 @@ export function PdvForm({ model }: { model: OutrosCreditosModel }) {
   const busy = model.createMutation.isPending;
   const hasAmount = Number.isFinite(amount) && amount > 0;
   const complete = Boolean(selected && hasAmount && model.dueDate && model.activePolo);
+  const poloLocation = [model.activePolo?.cidade, model.activePolo?.estado || model.activePolo?.uf].filter(Boolean).join('/');
 
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
@@ -120,7 +121,7 @@ export function PdvForm({ model }: { model: OutrosCreditosModel }) {
               {selected && <span className="hidden items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700 sm:inline-flex"><CircleCheckBig size={13} /> Selecionado</span>}
             </div>
             <PdvPartnerSearch partners={model.partners} value={model.partnerId} loading={model.partnersLoading} failed={model.partnersError}
-              onRetry={() => void model.retryPartners()} onSelect={(id, type) => { model.setPartnerId(id); model.setPartnerType(type); }} />
+              location={poloLocation} onRetry={() => void model.retryPartners()} onSelect={(id, type) => { model.setPartnerId(id); model.setPartnerType(type); }} />
           </section>
 
           <section aria-labelledby="charge-section-title">

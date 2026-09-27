@@ -14,7 +14,7 @@ const partners = [
 ];
 const base = {
   partners, partnerId: '', value: '', dueDate: today(), categories: [], description: '', categoryId: '',
-  activePolo: { id: 'polo', nome: 'Unidade de teste' }, createMutation: { isPending: false },
+  activePolo: { id: 'polo', nome: 'Unidade de teste', cidade: 'Japoatã', estado: 'SE' }, createMutation: { isPending: false },
   partnersLoading: false, partnersError: false,
   closeCreateModal() {}, validateAndSubmit() {}, setValue() {}, setDueDate() {},
   setDescription() {}, setCategoryId() {}, retryPartners() {}, setPartnerId() {}, setPartnerType() {},
@@ -30,13 +30,15 @@ test('busca unificada aceita aluno e empresa sem criar parceiro pelo texto digit
 });
 
 test('documento revela somente dois primeiros e três últimos dígitos', () => {
-  assert.equal(maskPdvDocument('123.456.789-01'), 'CPF 12******901');
-  assert.equal(maskPdvDocument('12.345.678/0001-90'), 'CNPJ 12*********190');
+  assert.equal(maskPdvDocument('123.456.789-01'), 'CPF 12*.***.**9-01');
+  assert.equal(maskPdvDocument('12.345.678/0001-90'), 'CNPJ 12.***.***/***1-90');
   for (const value of ['', undefined, 'Nome indevido', '123']) {
     assert.equal(maskPdvDocument(value), 'CPF/CNPJ não informado');
   }
   const html = render({ partnerId: 'student' });
-  assert.match(html, /CPF 00\*{6}001/);
+  assert.match(html, /CPF 00\*\.\*{3}\.\*{2}0-01/);
+  assert.match(html, /Japoatã\/SE/);
+  assert.doesNotMatch(html, />Aluno</);
   assert.doesNotMatch(html, /00000000001|Cadastro selecionado/);
 });
 
