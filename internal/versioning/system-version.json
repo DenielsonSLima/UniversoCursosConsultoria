@@ -1,8 +1,8 @@
 {
-  "version": "4.8.116",
+  "version": "4.8.117",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 125,
+  "revision": 126,
   "releasedAt": "2026-09-27",
-  "summary": "Convênios selecionam somente faculdades parceiras cadastradas"
+  "summary": "Convênios usam busca personalizada de faculdades parceiras"
 }

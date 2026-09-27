@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-09-27T13:29:26.139Z",
+  "builtAt": "2026-09-27T13:48:26.843Z",
   "manifestVersion": 2,
-  "sourceSignature": "c2ce7352b36a6314ce6f4dafe158cfc05690970a266a9592504ba83c460ebddf",
+  "sourceSignature": "5b73b7a6e71c2a585a9c00a024c5d70a9d34392fc33792b7ba8b5de91dee09d7",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "f4830733f7a84b2d5d8d50ed82f0dede5190d1646b910bef70424bca45069d40"
+      "hash": "6e1cbca59232f05440a5c19864b47f13ec0e629d77003a890e32a88b958bda51"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -210,23 +210,23 @@
       "part": 1
     },
     {
-      "id": "d5225a3efbe19c6bae0a",
-      "hash": "d5225a3efbe19c6bae0ac391d303f37f32ef554c11d3ef3ecdba8851e15070e4",
+      "id": "b0a261b6b7de9ff22559",
+      "hash": "b0a261b6b7de9ff225596db19e9d38d932961ee7a040d8d555caf2a3a2582186",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-09-27-convenios-faculdades-parceiras",
-      "text": "Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-27-convenios-faculdades-parceiras.md`",
-      "normalizedText": "manifesto explicito ai operacao registros alteracoes 2026 09 27 convenios faculdades parceiras md",
+      "section": "Lote: 2026-09-27-convenios-seletor-personalizado",
+      "text": "Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-27-convenios-seletor-personalizado.md`",
+      "normalizedText": "manifesto explicito ai operacao registros alteracoes 2026 09 27 convenios seletor personalizado md",
       "tokenCount": 13,
       "part": 1
     },
     {
-      "id": "c940a72a565c501327f5",
-      "hash": "c940a72a565c501327f5eb613c2621e7ebc99d28cd1e537ac0286c244258b05c",
+      "id": "12555bfcacb92a010b60",
+      "hash": "12555bfcacb92a010b60f00990e0c95e7a61cbb09fe688dd4f345a6878d14c94",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-09-27-convenios-faculdades-parceiras",
-      "text": "- Novo Convênio seleciona uma PJ `FACULDADE PARCEIRA / AFILIADO`; nome livre e vínculo opcional deixam de existir. - A lista inclui somente cadastros ativos globais ou vinculados ao polo autorizado. - O backend deriva o nome canônico da PJ e rejeita outro tipo de parceiro ou parceiro fora do escopo. - O aviso sobre polo e primeiro aporte é removido do modal. - Produção autorizada explicitamente pelo usuário nesta conversa; migrations aplicadas e validadas, publicar a versão 4.8.116 e confirmar o smoke de interface.",
-      "normalizedText": "novo convenio seleciona uma pj faculdade parceira afiliado nome livre e vinculo opcional deixam de existir a lista inclui somente cadastros ativos globais ou vinculados ao polo autorizado o backend deriva o nome canonico da pj e rejeita outro tipo de parceiro ou parceiro fora do escopo o aviso sobre polo e primeiro aporte e removido do modal producao autorizada explicitamente pelo usuario nesta conversa migrations aplicadas e validadas publicar a versao 4 8 116 e confirmar o smoke de interface",
-      "tokenCount": 67,
+      "section": "Lote: 2026-09-27-convenios-seletor-personalizado",
+      "text": "- Novo Convênio troca o `<select>` nativo por combobox próprio pesquisável. - Clique ou foco com busca vazia lista todas as faculdades autorizadas; digitação filtra nome e CNPJ. - Seleção continua vinculada ao ID canônico da PJ e preserva as regras financeiras já publicadas. - A migração dos demais seletores será gradual, somente conforme novos pedidos. - Produção autorizada explicitamente pelo usuário nesta conversa; publicar a versão 4.8.117 e confirmar o smoke de interface.",
+      "normalizedText": "novo convenio troca o select nativo por combobox proprio pesquisavel clique ou foco com busca vazia lista todas as faculdades autorizadas digitacao filtra nome e cnpj selecao continua vinculada ao id canonico da pj e preserva as regras financeiras ja publicadas a migracao dos demais seletores sera gradual somente conforme novos pedidos producao autorizada explicitamente pelo usuario nesta conversa publicar a versao 4 8 117 e confirmar o smoke de interface",
+      "tokenCount": 62,
       "part": 1
     },
     {
