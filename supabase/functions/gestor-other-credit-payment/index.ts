@@ -4,11 +4,11 @@ import {
   getClientIp,
   isRateLimitExceeded,
 } from "../_shared/http.ts";
+import { PaymentReadError, readOtherCreditPayment } from "./payment-reader.ts";
 import {
-  parseOtherCreditRequest,
-  PaymentReadError,
-  readOtherCreditPayment,
-} from "./payment-reader.ts";
+  checkOtherCreditPayment,
+  parseOtherCreditAction,
+} from "./payment-check.ts";
 
 const respond = (req: Request, body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -50,26 +50,37 @@ Deno.serve(async (req: Request) => {
     } catch {
       throw new PaymentReadError(400, "Requisição inválida.");
     }
-    const id = parseOtherCreditRequest(body);
+    const { action, receivableId: id } = parseOtherCreditAction(body);
     const url = Deno.env.get("SUPABASE_URL");
     const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     if (!url || !key) {
       throw new PaymentReadError(503, "Consulta temporariamente indisponível.");
     }
-    const signal = AbortSignal.any([req.signal, AbortSignal.timeout(12_000)]);
+    // A check can have confirmed payment before the tab closes. Never cancel
+    // persistence/audit with the browser signal; its bank GETs have an 8 s limit.
+    const signal = action === "get"
+      ? AbortSignal.any([req.signal, AbortSignal.timeout(12_000)])
+      : null;
     const admin = createClient(url, key, {
       auth: { persistSession: false, autoRefreshToken: false },
       global: {
         fetch: (input, init) =>
           fetch(input, {
             ...init,
-            signal: init?.signal
+            signal: !signal
+              ? init?.signal
+              : init?.signal
               ? AbortSignal.any([signal, init.signal])
               : signal,
           }),
       },
     });
-    return respond(req, await readOtherCreditPayment(req, admin, id));
+    return respond(
+      req,
+      action === "check"
+        ? await checkOtherCreditPayment(req, admin, id)
+        : await readOtherCreditPayment(req, admin, id),
+    );
   } catch (error) {
     if (error instanceof PaymentReadError) {
       return respond(req, { error: error.message }, error.status);

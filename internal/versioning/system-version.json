@@ -1,8 +1,8 @@
 {
-  "version": "4.8.107",
+  "version": "4.8.108",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 116,
+  "revision": 117,
   "releasedAt": "2026-09-26",
-  "summary": "PDV imersivo e atendimento guiado"
+  "summary": "Confirmação ativa do PDV, recibos e configuração de impressoras"
 }

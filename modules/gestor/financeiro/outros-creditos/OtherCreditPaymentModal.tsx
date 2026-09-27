@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom';
 import { ArrowLeft, Loader2, Plus, ShieldCheck } from 'lucide-react';
 import { OtherCreditPaymentContent } from './OtherCreditPaymentContent';
 import { useOtherCreditPayment } from './useOtherCreditPayment';
+import { usePdvReceipt } from './usePdvReceipt';
+import { PdvReceiptActions } from './PdvReceiptActions';
 
 export { OtherCreditPaymentContent } from './OtherCreditPaymentContent';
 
@@ -16,6 +18,8 @@ export const OtherCreditPaymentModal: React.FC<{
   const dialogRef = useRef<HTMLDivElement>(null);
   const { data, isLoading, isError, error, isFetching } = model.query;
   const usable = data && !isError;
+  const receipt = usePdvReceipt(receivableId, Boolean(usable && data.payment.status === 'PAGO'));
+  const printing = receipt.state === 'printing';
 
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
@@ -34,16 +38,18 @@ export const OtherCreditPaymentModal: React.FC<{
     if (dialogRef.current && !dialogRef.current.contains(document.activeElement)) {
       closeRef.current?.focus();
     }
-  }, [data?.payment.status, data?.canPay, data?.canRefresh, isError, isLoading]);
+  }, [data?.payment.status, data?.canPay, data?.canRefresh, isError, isLoading, receipt.state]);
 
   if (typeof document === 'undefined') return null;
   return createPortal(
     <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="other-credit-payment-title"
       className="fixed inset-0 z-[130] flex h-[100dvh] flex-col overflow-y-auto bg-[#f3f5f9] text-[#0b1f4a]"
       onKeyDown={(event) => {
-        if (event.key === 'Escape') { event.stopPropagation(); onClose(); }
+        if (event.key === 'Escape') { event.stopPropagation(); if (!printing) onClose(); }
         if (event.key !== 'Tab') return;
-        const nodes = dialogRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], summary');
+        const nodes = Array.from<HTMLElement>(dialogRef.current?.querySelectorAll<HTMLElement>(
+          'button:not(:disabled), a[href], summary, input:not(:disabled), select:not(:disabled), textarea:not(:disabled)',
+        ) || []).filter(node => node.getClientRects().length > 0);
         if (!nodes?.length) return;
         const first = nodes[0]; const last = nodes[nodes.length - 1];
         if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
@@ -52,13 +58,13 @@ export const OtherCreditPaymentModal: React.FC<{
       <header className="sticky top-0 z-10 border-b border-slate-200 border-t-[3px] border-t-[#ed1c24] bg-white">
         <div className="mx-auto flex min-h-[76px] w-full max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:flex-nowrap sm:px-8">
           <div className="flex min-w-0 items-center gap-3 sm:gap-5">
-            <button ref={closeRef} type="button" onClick={onClose} aria-label="Fechar caixa"
+            <button ref={closeRef} type="button" onClick={onClose} disabled={printing} aria-label="Fechar caixa"
               className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-slate-200 text-slate-600 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"><ArrowLeft size={18} aria-hidden="true" /></button>
             <img src="/LogoUniverso.png" alt="Universo Cursos e Consultoria" className="h-auto w-[110px] shrink-0 object-contain sm:w-[138px]" />
             <div className="min-w-0 border-l border-slate-200 pl-3 sm:pl-5"><p className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500 sm:text-[10px]">Ponto de venda</p>
               <h2 id="other-credit-payment-title" className="mt-0.5 text-sm font-bold tracking-tight text-[#0b1f4a] sm:text-lg">Pagamento</h2></div>
           </div>
-          {onNewPayment && <button type="button" onClick={onNewPayment}
+          {onNewPayment && <button type="button" onClick={onNewPayment} disabled={printing}
             className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-[#0b1f4a] transition hover:border-blue-300 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 sm:px-4 sm:text-sm">
             <Plus size={16} aria-hidden="true" /><span>Novo atendimento</span>
           </button>}
@@ -66,6 +72,15 @@ export const OtherCreditPaymentModal: React.FC<{
       </header>
 
       <main className="flex flex-1 flex-col">
+        {usable && data.payment.status === 'PAGO' && <div className="pt-5 sm:pt-8">
+          <PdvReceiptActions behavior={receipt.query.data?.receipt.behavior || 'PERGUNTAR'}
+            automaticReady={receipt.query.data?.receipt.automaticReady === true}
+            state={receipt.state} error={receipt.error} receiptAvailable={Boolean(receipt.query.data)}
+            requiresReprint={receipt.requiresReprint} reprintReason={receipt.reprintReason}
+            onReprintReasonChange={receipt.setReprintReason}
+            onPrint={() => { void receipt.print().then(completed => { if (completed) onClose(); }); }}
+            onOpenReceipt={receipt.open} onRetry={receipt.retry} onComplete={onClose} />
+        </div>}
         {isLoading && <div role="status" className="flex flex-1 flex-col items-center justify-center gap-5 px-6 py-20 text-slate-500">
           <Loader2 size={28} className="animate-spin text-blue-700" aria-hidden="true" /><p className="text-sm font-semibold">Consultando cobrança...</p>
         </div>}

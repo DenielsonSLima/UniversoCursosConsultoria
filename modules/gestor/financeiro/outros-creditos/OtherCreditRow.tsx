@@ -85,7 +85,7 @@ export const OtherCreditRow: React.FC<{
               onClick={() => openPaymentModal(item)}
               className="inline-flex items-center gap-1 rounded-xl border border-emerald-200 px-3 py-2 text-[10px] font-black uppercase text-emerald-700 hover:bg-emerald-50"
             >
-              <QrCode size={13} /> Abrir caixa
+              <QrCode size={13} /> {item.status === 'PAGO' ? 'Comprovante' : 'Abrir caixa'}
             </button>
           )}
           <button

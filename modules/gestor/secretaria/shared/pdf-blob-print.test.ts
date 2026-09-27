@@ -126,6 +126,7 @@ Deno.test('impressão aguarda load, chama print uma vez e limpa iframe e URL', a
 
   try {
     await printPdfBlob(new Blob(['%PDF-1.7'], { type: 'application/pdf' }), {
+      requireAfterPrint: true,
       afterPrintFallbackMs: 50,
       loadTimeoutMs: 50,
       settleMs: 0,
@@ -310,3 +311,41 @@ Deno.test('modal imprime o mesmo PDF agregado preparado, sem reemissão', async 
     /assertPdfBlobReady\(blob, 'O PDF da emissão'\);\s+downloadPdfBlob\(blob, filename\);/,
   );
 });
+
+for (const requireAfterPrint of [false, true]) {
+  Deno.test(`ausência de afterprint ${requireAfterPrint ? 'rejeita no PDV' : 'mantém fallback legado'}`, async () => {
+    const previous = Object.fromEntries(['document', 'URL', 'window'].map(key =>
+      [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
+    const frameEvents = createEventHub();
+    const printEvents = createEventHub();
+    let prints = 0, removed = 0, revoked = 0;
+    const iframe = Object.assign(frameEvents, {
+      contentWindow: Object.assign(printEvents, {
+        focus: () => undefined, print: () => { prints++; },
+      }),
+      remove: () => { removed++; }, setAttribute: () => undefined,
+      src: '', style: {}, title: '',
+    });
+    Object.defineProperty(globalThis, 'window', { configurable: true,
+      value: { setTimeout: globalThis.setTimeout.bind(globalThis), clearTimeout: globalThis.clearTimeout.bind(globalThis) } });
+    Object.defineProperty(globalThis, 'URL', { configurable: true,
+      value: { createObjectURL: () => 'blob:pdv-no-afterprint', revokeObjectURL: () => { revoked++; } } });
+    Object.defineProperty(globalThis, 'document', { configurable: true,
+      value: { createElement: () => iframe, body: { appendChild: () => {
+        void Promise.resolve().then(() => frameEvents.dispatch('load')); return iframe;
+      } } } });
+    try {
+      const result = printPdfBlob(new Blob(['%PDF-1.7'], { type: 'application/pdf' }), {
+        requireAfterPrint, afterPrintFallbackMs: 10, loadTimeoutMs: 50, settleMs: 0,
+      });
+      if (requireAfterPrint) await assert.rejects(result, /confirmar o encerramento do diálogo/);
+      else await result;
+      assert.equal(prints, 1); assert.equal(removed, 1); assert.equal(revoked, 1);
+      // A late browser event must not cause a second completion or dispatch.
+      printEvents.dispatch('afterprint');
+      assert.equal(prints, 1); assert.equal(removed, 1);
+    } finally {
+      for (const key of ['document', 'URL', 'window'] as const) restoreGlobal(key, previous[key]);
+    }
+  });
+}

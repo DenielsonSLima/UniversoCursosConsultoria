@@ -393,3 +393,44 @@ export const drawCanonicalInstitutionalHeader = (
     contentTop: options.meta ? metaTop + 13.5 : bottom + 5,
   };
 };
+
+/** Variante térmica do mesmo cabeçalho; recibos não mantêm um desenho privado. */
+export const drawCanonicalThermalHeader = (
+  pdf: jsPDF,
+  institutionSource: CanonicalInstitutionalHeader | ResolvedInstitutionalHeader,
+  logo: CanonicalPdfImage | null,
+  options: { margin: number; fontSize: number; showLogo: boolean },
+): number => {
+  const institution = normalizeForDrawing(institutionSource);
+  const width = pdf.internal.pageSize.getWidth();
+  const available = width - options.margin * 2;
+  let y = options.margin;
+  pdf.setTextColor(0, 0, 0);
+  if (options.showLogo && logo) {
+    const properties = pdf.getImageProperties(logo.dataUrl);
+    const logoWidth = Math.min(38, available);
+    const logoHeight = logoWidth * properties.height / properties.width;
+    pdf.addImage(logo.dataUrl, logo.format, (width - logoWidth) / 2, y,
+      logoWidth, logoHeight, 'thermal-institutional-logo', 'FAST');
+    y += logoHeight + 3;
+  }
+  const line = (value: string, bold = false) => {
+    if (!value) return;
+    pdf.setFont('helvetica', bold ? 'bold' : 'normal');
+    pdf.setFontSize(options.fontSize);
+    const lines = pdf.splitTextToSize(value, available) as string[];
+    pdf.text(lines, width / 2, y, { align: 'center', baseline: 'top', lineHeightFactor: 1.25 });
+    y += lines.length * options.fontSize * 0.352778 * 1.25 + 1;
+  };
+  line(institution.name, true);
+  line(institution.unitLabel);
+  line(institution.cnpj ? `CNPJ: ${institution.cnpj}` : '');
+  line([institution.address, institution.number, institution.complement].filter(Boolean).join(', '));
+  line([institution.neighborhood, [institution.city, institution.state].filter(Boolean).join('/')].filter(Boolean).join(' - '));
+  line(institution.phone ? `Contato: ${institution.phone}` : '');
+  line(institution.email);
+  pdf.setDrawColor(0, 0, 0);
+  pdf.setLineWidth(0.2);
+  pdf.line(options.margin, y + 1, width - options.margin, y + 1);
+  return y + 4;
+};

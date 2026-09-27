@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { financeiroQueryKeys } from '../financeiro.queryKeys';
 import { gestorBanesePaymentService } from '../receber/banese/gestor-banese-payment.service';
-import { getOtherCreditPayment, shouldWatchOtherCredit, watchOtherCreditPayment } from './other-credit-payment.service';
+import { checkOtherCreditPayment, getOtherCreditPayment, shouldWatchOtherCredit, watchOtherCreditPayment } from './other-credit-payment.service';
+import { startPdvConfirmation } from './pdv-confirmation-loop';
 
 export function useOtherCreditPayment(receivableId: string) {
   const queryClient = useQueryClient();
@@ -16,13 +17,28 @@ export function useOtherCreditPayment(receivableId: string) {
     refetchOnWindowFocus: false, refetchOnReconnect: false, refetchIntervalInBackground: false,
     refetchInterval: (current) => shouldWatchOtherCredit(
       current.state.data, current.state.status === 'error', startedAt, Date.now(),
-    ) ? 15_000 : false,
+    ) ? 60_000 : false,
   });
   const previousStatus = useRef<string | null>(null);
   useEffect(() => watchOtherCreditPayment(receivableId, () => {
     void queryClient.invalidateQueries({ queryKey: [...financeiroQueryKeys.outrosCreditosRoot, 'payment', receivableId], exact: true });
   }), [receivableId, queryClient]);
   const status = query.data?.payment.status;
+  const active = Boolean(status && ['PENDENTE', 'VENCIDO', 'AGUARDANDO_CONFIRMACAO'].includes(status) && !query.isError);
+  useEffect(() => {
+    if (!active) return;
+    let current = true;
+    const key = [...financeiroQueryKeys.outrosCreditosRoot, 'payment', receivableId];
+    const stop = startPdvConfirmation({
+      active: () => globalThis.document.visibilityState === 'visible' && navigator.onLine,
+      check: signal => checkOtherCreditPayment(receivableId, signal),
+      onData: async data => {
+        await queryClient.cancelQueries({ queryKey: key, exact: true });
+        if (current) queryClient.setQueryData(key, data);
+      },
+    });
+    return () => { current = false; stop(); };
+  }, [receivableId, active, queryClient]);
   useEffect(() => {
     if (status && status !== previousStatus.current) {
       if (previousStatus.current) {
