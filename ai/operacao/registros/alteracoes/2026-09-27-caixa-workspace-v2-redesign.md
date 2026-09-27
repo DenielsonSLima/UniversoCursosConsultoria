@@ -76,8 +76,8 @@ Criar localmente um core privado do Workspace v2 com bases compartilhadas e dinh
 - A revisão cruzada acrescentou metadados de snapshot/histórico, fontes estruturadas, coerência de completude e testes reais de D0, D+7, D+8, escopo e entradas inválidas.
 - Pagamentos parciais comprometem apenas o saldo aberto; registros marcados pagos sem valor confirmado realizam `0.00`, declaram `PAGAMENTOS_SEM_VALOR` e deixam as seções afetadas incompletas.
 - Os 16 arquivos manuais do manifesto permanecem abaixo de 500 linhas; o índice RAG gerado possui 1.397 linhas e é artefato regenerável isento. `git diff --check` focado não apontou erro.
-- O verificador global local apontou 57 referências de alterações paralelas fora do manifesto; a árvore limpa do PR permanece como gate obrigatório para não absorver essa dívida no lote.
-- O índice de manifestos foi limitado ao registro deste lote, sem incorporar dívida histórica alheia ao escopo.
+- O primeiro CI limpo expôs 57 migrations/retiradas históricas já catalogadas, mas sem seus manifestos de origem no índice de auditoria.
+- O índice passou a registrar somente os 11 manifestos históricos que cobrem essas referências; nenhuma migration ou implementação antiga foi alterada. O verificador global então aprovou 917 arquivos manuais e 155 exceções/artefatos.
 - Changelog Supabase revisado: a mudança recente de PostgreSQL 15.19/17.11 não afeta este núcleo; extensões citadas no alerta não fazem parte do desenho.
 - Documentação oficial confirma `search_path` vazio para funções `SECURITY DEFINER` e revogação explícita de execução; o core privado continuará sem exposição cliente.
 - As migrations foram registradas remotamente como `20260927212124_create_caixa_workspace_v2_core` e `20260927212419_fix_caixa_workspace_v2_rateio_payment_quality`.
