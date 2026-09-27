@@ -6,7 +6,7 @@ Substituir o nome livre e o vínculo genérico do cadastro de Convênios por uma
 
 ## Manifesto explícito
 
-Total: 15 arquivos
+Total: 16 arquivos
 
 - `modules/gestor/financeiro/convenios/ConveniosTab.tsx`
 - `modules/gestor/financeiro/convenios/components/ConvenioFormModal.tsx`
@@ -22,6 +22,7 @@ Total: 15 arquivos
 - `internal/versioning/CHANGELOG.md`
 - `ai/operacao/LOTE_ATIVO.md`
 - `ai/operacao/qualidade/limite-linhas-manifestos.json`
+- `ai/operacao/rag/index.json`
 - `ai/operacao/registros/alteracoes/2026-09-27-convenios-faculdades-parceiras.md`
 
 ## Contrato entregue

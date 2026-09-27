@@ -1,580 +1,4 @@
-{
-  "schemaVersion": 1,
-  "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-09-27T13:04:03.684Z",
-  "manifestVersion": 2,
-  "sourceSignature": "a101b7cf8dd51d29909231324e2e0febd5b8f39bc9303ce7571f8db94cbe3e8a",
-  "sources": [
-    {
-      "path": "AGENTS.md",
-      "hash": "445165b2f5eeb04dee3c85f9cbdc250e6d4e12dad6dcd57a23799a50cd5b9f09"
-    },
-    {
-      "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "aea5805490b7a7487b43e8fade41ba3ac6d3e514f29db91e858f71e73413cf3d"
-    },
-    {
-      "path": "ai/operacao/MEMORIA_CANONICA.md",
-      "hash": "cb813d075e276c1696f58cf04efad04cd0bd68fe37f1fac0ff8de56e8b8d3704"
-    },
-    {
-      "path": "ai/operacao/PROTOCOLO_DE_LOTES.md",
-      "hash": "ba7c48f77d5700149052619e51d9aa2541ecfc71a398de9c4f1b873e4a29423f"
-    },
-    {
-      "path": "ai/operacao/politicas/FINANCEIRO.md",
-      "hash": "fc8f21ab0a9c2b736f8dca8d6e291eb7f4d1add0a4de779736621a8cc30dadac"
-    },
-    {
-      "path": "ai/operacao/politicas/INTERFACE.md",
-      "hash": "6a3c9e0f21c1214617647f63f6bb5a67af49d2a2b31a59d24deb371aa83d246e"
-    },
-    {
-      "path": "ai/operacao/politicas/PDFS_OFICIAIS.md",
-      "hash": "22fbefd4c156557445b2c97973455bc14c6365e673d7d319fdf78788cec165fa"
-    },
-    {
-      "path": "ai/operacao/politicas/PLANO_CURSO.md",
-      "hash": "c7587eb979f79296b7a311ac02db72f3a11323eb303a64b6b41b3f556034cff4"
-    },
-    {
-      "path": "ai/operacao/politicas/SUPABASE_E_SEGURANCA.md",
-      "hash": "f3bee8f4273a7f7e4ff5569b09316ee8ee6d2dfe598272dddcd4eb13fe96b465"
-    },
-    {
-      "path": "docs/decisions/2026-08-04-native-auth-and-rich-push.md",
-      "hash": "d586683ff323f8fd7785e81edd80da0a15e9e1008cee46f8de5507fddcc7252e"
-    },
-    {
-      "path": "docs/decisions/ciclos-tecnicos-cobrancas.md",
-      "hash": "9f4a5fdbf6e75d0bcc172382584a85999fe2f1d6fa8281e3702fcfc03ec42e95"
-    },
-    {
-      "path": "docs/decisions/patrimonio-contas-a-pagar-emprestimos.md",
-      "hash": "7a888d21c6756b741a5b3dbc5b3e5179db46ea5581c98ee762d07139d529a6cd"
-    },
-    {
-      "path": "docs/decisions/transferencias-tecnicas.md",
-      "hash": "54c211d52eb2858f7c0fe35026c2b05a69d5d16eda73734d75a58708d068c850"
-    }
-  ],
-  "chunks": [
-    {
-      "id": "3a74bb6089e8315bf042",
-      "hash": "3a74bb6089e8315bf042f1dc5767c8e5b471271988251071e322828e3270cb77",
-      "path": "AGENTS.md",
-      "section": "Autoridade local",
-      "text": "- Entre fontes deste reposit√≥rio, esta ordem prevalece: AGENTS.md, lote atual, pol√≠tica espec√≠fica do dom√≠nio, mem√≥ria recuperada e skill gen√©rica. - Se uma skill gen√©rica contrariar estas regras, descarte somente a instru√ß√£o conflitante. - Comece pelo pedido exato do usu√°rio e pelo menor caminho de c√≥digo capaz de atend√™-lo. N√£o amplie silenciosamente o escopo.",
-      "normalizedText": "entre fontes deste repositorio esta ordem prevalece agents md lote atual politica especifica do dominio memoria recuperada e skill generica se uma skill generica contrariar estas regras descarte somente a instrucao conflitante comece pelo pedido exato do usuario e pelo menor caminho de codigo capaz de atende lo nao amplie silenciosamente o escopo",
-      "tokenCount": 49,
-      "part": 1
-    },
-    {
-      "id": "77dc79f739191ad8a973",
-      "hash": "77dc79f739191ad8a973d611d80116f45ba788c04e96674d907ac28eff26977a",
-      "path": "AGENTS.md",
-      "section": "Ajuste r√°pido",
-      "text": "Use este fluxo quando a mudan√ßa estiver localizada em at√© dois arquivos de implementa√ß√£o e n√£o envolver banco, Auth, autoriza√ß√£o, financeiro, PDF gerado pelo produto, infraestrutura ou publica√ß√£o.",
-      "normalizedText": "use este fluxo quando a mudanca estiver localizada em ate dois arquivos de implementacao e nao envolver banco auth autorizacao financeiro pdf gerado pelo produto infraestrutura ou publicacao",
-      "tokenCount": 26,
-      "part": 1
-    },
-    {
-      "id": "f7ff9aa27e213162982d",
-      "hash": "f7ff9aa27e213162982d5171df591bbad7d3b7d3c87818ca8221cfad6d3ae6b8",
-      "path": "AGENTS.md",
-      "section": "Ajuste r√°pido",
-      "text": "- Use um √∫nico agente. - N√£o leia MEMORIA_CANONICA.md, LOTE_ATIVO.md, RAG, hist√≥ricos ou decis√µes. - N√£o abra lote, n√£o altere documenta√ß√£o operacional, vers√£o ou changelog. - Localize apenas o componente/fun√ß√£o indicada, reproduza ou confirme a causa, aplique o patch m√≠nimo e execute um teste focado ou smoke do fluxo. - Quando o pedido nomear m√≥dulo, tela ou documento, restrinja a primeira busca a essa pasta; amplie somente se n√£o houver resultado. - N√£o rode build, lint global ou su√≠te ampla por padr√£o. - Se o diagn√≥stico localizado n√£o convergir rapidamente ou o risco crescer, reclassifique a tarefa e informe o motivo; n√£o transforme um ajuste pequeno em auditoria ampla.",
-      "normalizedText": "use um unico agente nao leia memoria canonica md lote ativo md rag historicos ou decisoes nao abra lote nao altere documentacao operacional versao ou changelog localize apenas o componente funcao indicada reproduza ou confirme a causa aplique o patch minimo e execute um teste focado ou smoke do fluxo quando o pedido nomear modulo tela ou documento restrinja a primeira busca a essa pasta amplie somente se nao houver resultado nao rode build lint global ou suite ampla por padrao se o diagnostico localizado nao convergir rapidamente ou o risco crescer reclassifique a tarefa e informe o motivo nao transforme um ajuste pequeno em auditoria ampla",
-      "tokenCount": 95,
-      "part": 1
-    },
-    {
-      "id": "9c96c2a1581663ca89bf",
-      "hash": "9c96c2a1581663ca89bf97223a6b1e17128d90c78cd21402f5bc976a94096fed",
-      "path": "AGENTS.md",
-      "section": "Ajuste PDF focado",
-      "text": "Use quando a altera√ß√£o estiver em um compositor PDF nativo existente, limitada a at√© dois arquivos de implementa√ß√£o e apenas texto, estilo, espa√ßamento ou posi√ß√£o de recurso isolado.",
-      "normalizedText": "use quando a alteracao estiver em um compositor pdf nativo existente limitada a ate dois arquivos de implementacao e apenas texto estilo espacamento ou posicao de recurso isolado",
-      "tokenCount": 25,
-      "part": 1
-    },
-    {
-      "id": "a3fb38605ef82a71e4e7",
-      "hash": "a3fb38605ef82a71e4e7d07564d7543e1a6f8b3e7887cf97bdfa9a801b1b7649",
-      "path": "AGENTS.md",
-      "section": "Ajuste PDF focado",
-      "text": "- Use um agente e carregue somente `ai/operacao/politicas/PDFS_OFICIAIS.md`. - N√£o leia mem√≥ria, lote, RAG ou hist√≥rico e n√£o abra lote. - Valide apenas o contrato/exportador afetado, texto extra√≠do, recursos embutidos e a p√°gina relevante renderizada. - N√£o rode build global por padr√£o. - Reclassifique se houver altera√ß√£o de payload/backend, elegibilidade, c√°lculo, pagina√ß√£o, novo exportador, captura raster ou compositor compartilhado com impacto amplo.",
-      "normalizedText": "use um agente e carregue somente ai operacao politicas pdfs oficiais md nao leia memoria lote rag ou historico e nao abra lote valide apenas o contrato exportador afetado texto extraido recursos embutidos e a pagina relevante renderizada nao rode build global por padrao reclassifique se houver alteracao de payload backend elegibilidade calculo paginacao novo exportador captura raster ou compositor compartilhado com impacto amplo",
-      "tokenCount": 59,
-      "part": 1
-    },
-    {
-      "id": "19ffc7b3d143753afbc4",
-      "hash": "19ffc7b3d143753afbc4a7755ac0c2ccab4976d7c0705bd114ef3eb358ee7cd8",
-      "path": "AGENTS.md",
-      "section": "Mudan√ßa padr√£o",
-      "text": "Use quando a altera√ß√£o envolve um dom√≠nio e mais de dois arquivos, mas n√£o possui risco cr√≠tico.",
-      "normalizedText": "use quando a alteracao envolve um dominio e mais de dois arquivos mas nao possui risco critico",
-      "tokenCount": 15,
-      "part": 1
-    },
-    {
-      "id": "705eca2454b27c7d6984",
-      "hash": "705eca2454b27c7d6984eb716a244632ff69e136ae106ec5f46662766a8d6427",
-      "path": "AGENTS.md",
-      "section": "Mudan√ßa padr√£o",
-      "text": "- Leia MEMORIA_CANONICA.md e somente o bloco atual de LOTE_ATIVO.md. - Consulte o RAG apenas se uma decis√£o anterior for necess√°ria, com no m√°ximo dois resultados. - Use um agente por padr√£o. Delegue apenas uma frente realmente independente que economize tempo. - Abra lote somente para mudan√ßa coesa de produto, documenta√ß√£o operacional ou entrega que ser√° publicada.",
-      "normalizedText": "leia memoria canonica md e somente o bloco atual de lote ativo md consulte o rag apenas se uma decisao anterior for necessaria com no maximo dois resultados use um agente por padrao delegue apenas uma frente realmente independente que economize tempo abra lote somente para mudanca coesa de produto documentacao operacional ou entrega que sera publicada",
-      "tokenCount": 54,
-      "part": 1
-    },
-    {
-      "id": "9b98e516ed95c8ae03b7",
-      "hash": "9b98e516ed95c8ae03b770038f0a5fb6f94c1309e344b2d9908306e5474cf538",
-      "path": "AGENTS.md",
-      "section": "Mudan√ßa cr√≠tica",
-      "text": "Banco/Supabase, Auth/RLS, financeiro, mudan√ßa estrutural de PDF, infraestrutura e publica√ß√£o exigem a pol√≠tica espec√≠fica indicada abaixo.",
-      "normalizedText": "banco supabase auth rls financeiro mudanca estrutural de pdf infraestrutura e publicacao exigem a politica especifica indicada abaixo",
-      "tokenCount": 16,
-      "part": 1
-    },
-    {
-      "id": "a60b99cacbe31bc7f139",
-      "hash": "a60b99cacbe31bc7f1390f2dd6a78c1dc6ebbdfcf27d2fa7ef38e4611d0517fa",
-      "path": "AGENTS.md",
-      "section": "Mudan√ßa cr√≠tica",
-      "text": "- Um agente continua sendo o padr√£o; m√∫ltiplos agentes n√£o s√£o requisito. - Reproduza o fluxo real antes de implementar e valide o contrato diretamente afetado. - Use build completo somente quando o risco de integra√ß√£o justificar ou no fechamento para publica√ß√£o.",
-      "normalizedText": "um agente continua sendo o padrao multiplos agentes nao sao requisito reproduza o fluxo real antes de implementar e valide o contrato diretamente afetado use build completo somente quando o risco de integracao justificar ou no fechamento para publicacao",
-      "tokenCount": 34,
-      "part": 1
-    },
-    {
-      "id": "cc8762acc9560d4dc503",
-      "hash": "cc8762acc9560d4dc503823d7ecb66c72dbc7d72b1c2c96b7294000691539e78",
-      "path": "AGENTS.md",
-      "section": "Opera√ß√µes remotas",
-      "text": "- GitHub remoto √© somente via MCP GitHub. N√£o use git ou gh para criar branch, commit, push, pull request ou publica√ß√£o. - Supabase √© somente via MCP Supabase. N√£o execute Supabase CLI para consultas, migrations, banco, Auth, Storage, RLS, Realtime ou Edge Functions. - Preserve altera√ß√µes paralelas e publique apenas um manifesto expl√≠cito de arquivos do lote. - Produ√ß√£o exige pedido expl√≠cito do usu√°rio e crit√©rios de aceite confirmados.",
-      "normalizedText": "github remoto e somente via mcp github nao use git ou gh para criar branch commit push pull request ou publicacao supabase e somente via mcp supabase nao execute supabase cli para consultas migrations banco auth storage rls realtime ou edge functions preserve alteracoes paralelas e publique apenas um manifesto explicito de arquivos do lote producao exige pedido explicito do usuario e criterios de aceite confirmados",
-      "tokenCount": 62,
-      "part": 1
-    },
-    {
-      "id": "3f641c676f0cb79f5343",
-      "hash": "3f641c676f0cb79f53431f73994f3f969aba6202577a2c7264b30edf4ad372a3",
-      "path": "AGENTS.md",
-      "section": "Qualidade e escopo",
-      "text": "- A sequ√™ncia padr√£o √©: reprodu√ß√£o, teste/checagem espec√≠fica, patch m√≠nimo, smoke real e valida√ß√£o final proporcional. - Corre√ß√£o visual/interativa n√£o fica pronta sem smoke do fluxo correspondente; se a sess√£o autenticada estiver indispon√≠vel, registre a pend√™ncia sem substituir o smoke por dezenas de testes n√£o relacionados. - N√£o altere AGENTS, skills ou mem√≥ria dentro de um hotfix de produto. Mudan√ßas de governan√ßa pertencem a lote operacional separado. - Arquivos manuais de implementa√ß√£o, teste, documenta√ß√£o ativa, pol√≠tica ou skill t√™m teto de 500 linhas f√≠sicas. Se um arquivo tocado ultrapassar o teto, divida-o no mesmo lote por responsabilidade coesa; n√£o masque a viola√ß√£o comprimindo c√≥digo ou removendo legibilidade. - Migrations futuras devem ser divididas antes da aplica√ß√£o quando isso preservar atomicidade e ordem. Migrations j√° aplicadas s√£o imut√°veis e constituem exce√ß√£o auditada; arquivos gerados, lockfiles, bin√°rios e c√≥digo de terceiros tamb√©m n√£o entram no teto. - A ado√ß√£o do teto √© incremental: valide primeiro o manifesto expl√≠cito do lote atual e amplie o escopo auditado a cada lote, sem transformar a regra em varredura silenciosa de d√≠vida t√©cnica antiga. -",
-      "normalizedText": "a sequencia padrao e reproducao teste checagem especifica patch minimo smoke real e validacao final proporcional correcao visual interativa nao fica pronta sem smoke do fluxo correspondente se a sessao autenticada estiver indisponivel registre a pendencia sem substituir o smoke por dezenas de testes nao relacionados nao altere agents skills ou memoria dentro de um hotfix de produto mudancas de governanca pertencem a lote operacional separado arquivos manuais de implementacao teste documentacao ativa politica ou skill tem teto de 500 linhas fisicas se um arquivo tocado ultrapassar o teto divida o no mesmo lote por responsabilidade coesa nao masque a violacao comprimindo codigo ou removendo legibilidade migrations futuras devem ser divididas antes da aplicacao quando isso preservar atomicidade e ordem migrations ja aplicadas sao imutaveis e constituem excecao auditada arquivos gerados lockfiles binarios e codigo de terceiros tambem nao entram no teto a adocao do teto e incremental valide primeiro o manifesto explicito do lote atual e amplie o escopo auditado a cada lote sem transformar a regra em varredura silenciosa de divida tecnica antiga",
-      "tokenCount": 155,
-      "part": 1
-    },
-    {
-      "id": "dfe3a61c446e359fc392",
-      "hash": "dfe3a61c446e359fc3923704a5baa28961cd0a227fc861b6eff848dec1c92335",
-      "path": "AGENTS.md",
-      "section": "Qualidade e escopo",
-      "text": "Testes-fonte e migrations aplicadas permanecem versionados. Eles protegem regress√µes, auditoria, drift e reconstru√ß√£o de ambientes. - Caches, PDFs/PNGs gerados, relat√≥rios tempor√°rios, harnesses em tmp e sa√≠das de build s√£o regener√°veis e n√£o pertencem ao lote. - N√£o varra o reposit√≥rio inteiro nem use estado Git amplo como lista de trabalho.",
-      "normalizedText": "testes fonte e migrations aplicadas permanecem versionados eles protegem regressoes auditoria drift e reconstrucao de ambientes caches pdfs pngs gerados relatorios temporarios harnesses em tmp e saidas de build sao regeneraveis e nao pertencem ao lote nao varra o repositorio inteiro nem use estado git amplo como lista de trabalho",
-      "tokenCount": 45,
-      "part": 2
-    },
-    {
-      "id": "b0f660f70a489a371241",
-      "hash": "b0f660f70a489a371241ed5c0cf13617a8fcc8304be5af2c9824c7a452d2ba78",
-      "path": "AGENTS.md",
-      "section": "Pol√≠ticas carregadas somente por dom√≠nio",
-      "text": "- PDFs gerados pelo produto: ai/operacao/politicas/PDFS_OFICIAIS.md - Supabase, Auth e seguran√ßa: ai/operacao/politicas/SUPABASE_E_SEGURANCA.md - Financeiro e cobran√ßas: ai/operacao/politicas/FINANCEIRO.md - Plano de Curso: ai/operacao/politicas/PLANO_CURSO.md - Interface e notifica√ß√µes: ai/operacao/politicas/INTERFACE.md - Lotes, valida√ß√£o e publica√ß√£o: ai/operacao/PROTOCOLO_DE_LOTES.md",
-      "normalizedText": "pdfs gerados pelo produto ai operacao politicas pdfs oficiais md supabase auth e seguranca ai operacao politicas supabase e seguranca md financeiro e cobrancas ai operacao politicas financeiro md plano de curso ai operacao politicas plano curso md interface e notificacoes ai operacao politicas interface md lotes validacao e publicacao ai operacao protocolo de lotes md",
-      "tokenCount": 51,
-      "part": 1
-    },
-    {
-      "id": "f615aed5453dcd459d05",
-      "hash": "f615aed5453dcd459d05f166a45124fcb7a0ea54cfc25767bbfff8f4fab5d98c",
-      "path": "AGENTS.md",
-      "section": "Mem√≥ria e RAG",
-      "text": "- ai/operacao √© a fonte versionada; ai/memoria, ai/rag e ai/skil s√£o legados removidos. - A busca RAG √© opcional para ajustes r√°pidos e somente leitura. Reindexe explicitamente uma vez ao fechar um lote operacional ou de publica√ß√£o. - Nunca indexe segredos, dados pessoais, dumps, c√≥digo-fonte completo ou artefatos gerados.",
-      "normalizedText": "ai operacao e a fonte versionada ai memoria ai rag e ai skil sao legados removidos a busca rag e opcional para ajustes rapidos e somente leitura reindexe explicitamente uma vez ao fechar um lote operacional ou de publicacao nunca indexe segredos dados pessoais dumps codigo fonte completo ou artefatos gerados",
-      "tokenCount": 45,
-      "part": 1
-    },
-    {
-      "id": "9e158c8da980daaa84c3",
-      "hash": "9e158c8da980daaa84c377f08f83c1a96d1c3f29bc9979edcb66b80f65e17822",
-      "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote ativo",
-      "text": "Estado: VALIDADO ‚Äî PUBLICA√á√ÉO EM PRODU√á√ÉO AUTORIZADA",
-      "normalizedText": "estado validado publicacao em producao autorizada",
-      "tokenCount": 6,
-      "part": 1
-    },
-    {
-      "id": "0e871b604ce6e253c6cb",
-      "hash": "0e871b604ce6e253c6cb359c6e89bc653d82f9665002c9c26a0c7a9663dbeb51",
-      "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-09-27-matricula-tecnica-ativa-cadastro-minimo",
-      "text": "Manifesto expl√≠cito: `ai/operacao/registros/alteracoes/2026-09-27-matricula-tecnica-ativa-cadastro-minimo.md`",
-      "normalizedText": "manifesto explicito ai operacao registros alteracoes 2026 09 27 matricula tecnica ativa cadastro minimo md",
-      "tokenCount": 15,
-      "part": 1
-    },
-    {
-      "id": "eda1ad50cfe43610ecfe",
-      "hash": "eda1ad50cfe43610ecfe672d1a07840e2c66c12bcdf2ce018fe1d3c7d0ebcc4d",
-      "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-09-27-matricula-tecnica-ativa-cadastro-minimo",
-      "text": "- Matr√≠cula regular em turma t√©cnica `EM_ANDAMENTO` deve concluir a mesma transa√ß√£o como `ATIVO`. - Turma ainda n√£o iniciada mant√©m o v√≠nculo `PENDENTE` at√© o in√≠cio. - Documentos, checklist, pagamento e emiss√£o de boleto n√£o bloqueiam o status acad√™mico. - O ingresso exige cadastro pessoal e endere√ßo completos; m√£e e pai s√£o obrigat√≥rios. Ensino M√©dio √© informativo, n√£o bloqueia o v√≠nculo e aceita a op√ß√£o `EJA`. - Interface diferencia status cadastral, pend√™ncia acad√™mica e estados de sa√≠da, al√©m de atualizar os cards ap√≥s o v√≠nculo. - Produ√ß√£o autorizada explicitamente pelo usu√°rio; migration aplicada e validada, publicar a vers√£o 4.8.114 e confirmar o smoke de interface.",
-      "normalizedText": "matricula regular em turma tecnica em andamento deve concluir a mesma transacao como ativo turma ainda nao iniciada mantem o vinculo pendente ate o inicio documentos checklist pagamento e emissao de boleto nao bloqueiam o status academico o ingresso exige cadastro pessoal e endereco completos mae e pai sao obrigatorios ensino medio e informativo nao bloqueia o vinculo e aceita a opcao eja interface diferencia status cadastral pendencia academica e estados de saida alem de atualizar os cards apos o vinculo producao autorizada explicitamente pelo usuario migration aplicada e validada publicar a versao 4 8 114 e confirmar o smoke de interface",
-      "tokenCount": 82,
-      "part": 1
-    },
-    {
-      "id": "1d77a7e64f481d95ff49",
-      "hash": "1d77a7e64f481d95ff49a82d5846bac26c26cf74c3b99146810077f30c5f2fe3",
-      "path": "ai/operacao/MEMORIA_CANONICA.md",
-      "section": "Mem√≥ria can√¥nica do projeto",
-      "text": "Atualizada em: 2026-09-24",
-      "normalizedText": "atualizada em 2026 09 24",
-      "tokenCount": 5,
-      "part": 1
-    },
-    {
-      "id": "bd2eb0342526954d4783",
-      "hash": "bd2eb0342526954d47831d93c0966f6bcc9850bb7580238b05faf5feb116643f",
-      "path": "ai/operacao/MEMORIA_CANONICA.md",
-      "section": "Finalidade",
-      "text": "Este arquivo √© um √≠ndice curto de contexto dur√°vel. Ajustes r√°pidos n√£o precisam l√™-lo. Detalhes de dom√≠nio ficam nas pol√≠ticas espec√≠ficas e s√£o carregados somente quando a tarefa os envolve.",
-      "normalizedText": "este arquivo e um indice curto de contexto duravel ajustes rapidos nao precisam le lo detalhes de dominio ficam nas politicas especificas e sao carregados somente quando a tarefa os envolve",
-      "tokenCount": 28,
-      "part": 1
-    },
-    {
-      "id": "b1365f58d63f5a5e2b4a",
-      "hash": "b1365f58d63f5a5e2b4a33ef85d42f7aa283f94d68cdd3a27904102c0618f1ba",
-      "path": "ai/operacao/MEMORIA_CANONICA.md",
-      "section": "Opera√ß√£o",
-      "text": "- AGENTS.md define a classifica√ß√£o entre ajuste r√°pido, mudan√ßa padr√£o e mudan√ßa cr√≠tica. - LOTE_ATIVO.md cont√©m somente um lote corrente; hist√≥ricos ficam em ai/operacao/registros/. - Um agente √© o padr√£o. Delega√ß√£o s√≥ ocorre para frentes independentes e materialmente √∫teis. - A valida√ß√£o deve exercer o fluxo real afetado antes de build ou su√≠tes amplas. - Regras globais n√£o s√£o acrescentadas durante hotfix de produto.",
-      "normalizedText": "agents md define a classificacao entre ajuste rapido mudanca padrao e mudanca critica lote ativo md contem somente um lote corrente historicos ficam em ai operacao registros um agente e o padrao delegacao so ocorre para frentes independentes e materialmente uteis a validacao deve exercer o fluxo real afetado antes de build ou suites amplas regras globais nao sao acrescentadas durante hotfix de produto",
-      "tokenCount": 57,
-      "part": 1
-    },
-    {
-      "id": "7f4890b42587489a56e0",
-      "hash": "7f4890b42587489a56e05a17f8eb806c457d9ca822b6ea80bf583d8e6a66ca8f",
-      "path": "ai/operacao/MEMORIA_CANONICA.md",
-      "section": "Arquitetura e qualidade",
-      "text": "- O frontend React/TypeScript/Vite coleta inten√ß√£o e apresenta o retorno can√¥nico. - Regras acad√™micas, financeiras, autoriza√ß√£o, elegibilidade, valores e pagina√ß√£o pertencem ao backend/RPC quando aplic√°vel. - TanStack Query e Realtime usam invalida√ß√£o pelo menor escopo afetado. - O teto arquitetural √© de 500 linhas f√≠sicas por arquivo manual. Todo arquivo tocado acima disso deve ser modularizado no pr√≥prio lote; a ado√ß√£o √© incremental pelos manifestos auditados. - Migrations j√° aplicadas permanecem imut√°veis mesmo acima do teto. Novas migrations devem ser divididas antes da aplica√ß√£o quando a separa√ß√£o for tecnicamente segura; gerados, lockfiles, bin√°rios e terceiros ficam fora da contagem. - Testes-fonte e migrations permanecem no reposit√≥rio mesmo depois de executados. - tmp, caches, relat√≥rios e PDFs/PNGs de QA s√£o regener√°veis e podem ser limpos.",
-      "normalizedText": "o frontend react typescript vite coleta intencao e apresenta o retorno canonico regras academicas financeiras autorizacao elegibilidade valores e paginacao pertencem ao backend rpc quando aplicavel tanstack query e realtime usam invalidacao pelo menor escopo afetado o teto arquitetural e de 500 linhas fisicas por arquivo manual todo arquivo tocado acima disso deve ser modularizado no proprio lote a adocao e incremental pelos manifestos auditados migrations ja aplicadas permanecem imutaveis mesmo acima do teto novas migrations devem ser divididas antes da aplicacao quando a separacao for tecnicamente segura gerados lockfiles binarios e terceiros ficam fora da contagem testes fonte e migrations permanecem no repositorio mesmo depois de executados tmp caches relatorios e pdfs pngs de qa sao regeneraveis e podem ser limpos",
-      "tokenCount": 108,
-      "part": 1
-    },
-    {
-      "id": "292448c3fb8516d4214c",
-      "hash": "292448c3fb8516d4214c7679c57e9c1c4156cdf2da266bed2e59e2a2786a0063",
-      "path": "ai/operacao/MEMORIA_CANONICA.md",
-      "section": "Pol√≠ticas condicionais",
-      "text": "- PDFs gerados pelo produto: politicas/PDFS_OFICIAIS.md - Supabase e seguran√ßa: politicas/SUPABASE_E_SEGURANCA.md - Financeiro: politicas/FINANCEIRO.md - Plano de Curso: politicas/PLANO_CURSO.md - Interface: politicas/INTERFACE.md - Entrega e publica√ß√£o: PROTOCOLO_DE_LOTES.md",
-      "normalizedText": "pdfs gerados pelo produto politicas pdfs oficiais md supabase e seguranca politicas supabase e seguranca md financeiro politicas financeiro md plano de curso politicas plano curso md interface politicas interface md entrega e publicacao protocolo de lotes md",
-      "tokenCount": 35,
-      "part": 1
-    },
-    {
-      "id": "7e9bbbe323e87138a8f3",
-      "hash": "7e9bbbe323e87138a8f33c7e43639b77ca964aa64f7e051c6742b1f9b4daded4",
-      "path": "ai/operacao/MEMORIA_CANONICA.md",
-      "section": "RAG",
-      "text": "- Fontes padr√£o: AGENTS.md, esta mem√≥ria, lote corrente, protocolo, pol√≠ticas e docs/decisions/. - Registros hist√≥ricos n√£o entram no corpus padr√£o. - search l√™ somente o √≠ndice existente e nunca grava ou reindexa. - index √© executado explicitamente uma vez no fechamento de lote relevante. - Embeddings e OpenContext s√£o opcionais e nunca bloqueiam a opera√ß√£o.",
-      "normalizedText": "fontes padrao agents md esta memoria lote corrente protocolo politicas e docs decisions registros historicos nao entram no corpus padrao search le somente o indice existente e nunca grava ou reindexa index e executado explicitamente uma vez no fechamento de lote relevante embeddings e opencontext sao opcionais e nunca bloqueiam a operacao",
-      "tokenCount": 45,
-      "part": 1
-    },
-    {
-      "id": "f6d0f083fea40679380b",
-      "hash": "f6d0f083fea40679380ba2914f2422529e42763c9e9ee68b990b5d71982a2d7c",
-      "path": "ai/operacao/MEMORIA_CANONICA.md",
-      "section": "Ciclos t√©cnicos e matr√≠cula local ‚Äî 2026-09-24",
-      "text": "Contrato vigente: [ciclos financeiros t√©cnicos](../../docs/decisions/ciclos-tecnicos-cobrancas.md). Consultar antes de alterar elegibilidade, datas, matr√≠cula sem boleto, baixa, estorno ou C2. Preservar origens Banese/Proesc, prova individual, destino LOCAL e replay da mesma opera√ß√£o. Revis√£o com tr√™s agentes publicada na 4.8.82/PR174; evid√™ncias em [registro da revis√£o](registros/alteracoes/2026-09-24-revisao-baixa-matricula-local.md).",
-      "normalizedText": "contrato vigente ciclos financeiros tecnicos docs decisions ciclos tecnicos cobrancas md consultar antes de alterar elegibilidade datas matricula sem boleto baixa estorno ou c2 preservar origens banese proesc prova individual destino local e replay da mesma operacao revisao com tres agentes publicada na 4 8 82 pr174 evidencias em registro da revisao registros alteracoes 2026 09 24 revisao baixa matricula local md",
-      "tokenCount": 59,
-      "part": 1
-    },
-    {
-      "id": "310e072c314b24534737",
-      "hash": "310e072c314b245347370dbc44ae3332acc9eaf1a437f0bfa61a240f420877a0",
-      "path": "ai/operacao/MEMORIA_CANONICA.md",
-      "section": "Entrega financeira publicada ‚Äî 2026-09-12 (4.8.47)",
-      "text": "- PR 141: squash e026a0f56c301f86ba9aee30c263042d97ff1631; Vercel success e vers√£o p√∫blica 4.8.47 confirmada. GitHub Actions ficou QUEUED sem runner; n√£o confundir testes locais aprovados com CI conclu√≠do. - Banese reconhece o pr√≥ximo dia √∫til nacional comprovado de 2026, sem alterar os termos. T√≠tulo revisado da Radiologia pago por R$ 260,00 em 08/09/2026. - Composi√ß√£o Proesc exige prova compat√≠vel com principal, recebido e data; evid√™ncia posterior conflitante invalida a prova. Desconhecido permanece nulo. Duas provas hist√≥ricas foram gravadas com desconto de R$ 19,90 cada e receb√≠veis preservados. - Auditoria da T42 ap√≥s essas provas: 346 v√≠nculos, 204 pagos, 142 abertos, R$ 53.813,57 recebidos. A importa√ß√£o de outras turmas possui lote e confer√™ncia pr√≥prios; n√£o inferir cobertura de ciclos pelo n√∫mero da turma. - Registro: registros/alteracoes/2026-09-12-revisao-banese-proesc.md.",
-      "normalizedText": "pr 141 squash e026a0f56c301f86ba9aee30c263042d97ff1631 vercel success e versao publica 4 8 47 confirmada github actions ficou queued sem runner nao confundir testes locais aprovados com ci concluido banese reconhece o proximo dia util nacional comprovado de 2026 sem alterar os termos titulo revisado da radiologia pago por r 260 00 em 08 09 2026 composicao proesc exige prova compativel com principal recebido e data evidencia posterior conflitante invalida a prova desconhecido permanece nulo duas provas historicas foram gravadas com desconto de r 19 90 cada e recebiveis preservados auditoria da t42 apos essas provas 346 vinculos 204 pagos 142 abertos r 53 813 57 recebidos a importacao de outras turmas possui lote e conferencia proprios nao inferir cobertura de ciclos pelo numero da turma registro registros alteracoes 2026 09 12 revisao banese proesc md",
-      "tokenCount": 122,
-      "part": 1
-    },
-    {
-      "id": "9e5b5079b1a5b1dec2d7",
-      "hash": "9e5b5079b1a5b1dec2d74d1ef00afe076911be636f886863db86822e6a265987",
-      "path": "ai/operacao/MEMORIA_CANONICA.md",
-      "section": "Importa√ß√£o Proesc por XLS ‚Äî 2026-09-12",
-      "text": "- Cadastros por CPF can√¥nico preservam pessoas existentes; estado acad√™mico pertence √† matr√≠cula, n√£o ao cadastro global. Reuso em outro polo acrescenta visibilidade sem mover o polo original. - A fonte XLS comprova cadastro, turma e situa√ß√£o acad√™mica; os pagamentos s√£o conferidos pela API. Turno, data final, ID nativo e cobertura financeira n√£o s√£o inferidos quando ausentes. - Etapa aplicada: 385 pessoas (382 novas, 3 reutilizadas), quatro turmas INTEGRAL de Japoat√£ e 207 matr√≠culas; hist√≥rico com 2.940 cobran√ßas e 1.854 pagamentos, total recebido de R$ 470.746,72. As cinco turmas SEM tiveram INTEGRAL e aulas aos s√°bados confirmados pelo usu√°rio; nove turmas e 392 matr√≠culas conclu√≠das para os 385 alunos; financeiro adicional conclu√≠do. Total das nove turmas: 6.071 cobran√ßas, 3.536 pagamentos confirmados, R$ 898.688,99 recebidos e 2.535 registros em confer√™ncia, com identidade, datas e valores auditados sem diverg√™ncias. Nove eventos PARCIAL/PROESC_API preservam a confer√™ncia residual; monitor habilitado para os 6.071 novos v√≠nculos e os 346 da T42, com uma Conta Proesc compartilhada. Um cadastro aguarda CPF. - Cobertura financeira √© individual e permanece em revis√£o at√© prova",
-      "normalizedText": "cadastros por cpf canonico preservam pessoas existentes estado academico pertence a matricula nao ao cadastro global reuso em outro polo acrescenta visibilidade sem mover o polo original a fonte xls comprova cadastro turma e situacao academica os pagamentos sao conferidos pela api turno data final id nativo e cobertura financeira nao sao inferidos quando ausentes etapa aplicada 385 pessoas 382 novas 3 reutilizadas quatro turmas integral de japoata e 207 matriculas historico com 2 940 cobrancas e 1 854 pagamentos total recebido de r 470 746 72 as cinco turmas sem tiveram integral e aulas aos sabados confirmados pelo usuario nove turmas e 392 matriculas concluidas para os 385 alunos financeiro adicional concluido total das nove turmas 6 071 cobrancas 3 536 pagamentos confirmados r 898 688 99 recebidos e 2 535 registros em conferencia com identidade datas e valores auditados sem divergencias nove eventos parcial proesc api preservam a conferencia residual monitor habilitado para os 6 071 novos vinculos e os 346 da t42 com uma conta proesc compartilhada um cadastro aguarda cpf cobertura financeira e individual e permanece em revisao ate prova",
-      "tokenCount": 160,
-      "part": 1
-    },
-    {
-      "id": "a87bf94d85c92355d176",
-      "hash": "a87bf94d85c92355d176c242a8cd66bd87c1104afcef4e6d26538137597b6961",
-      "path": "ai/operacao/MEMORIA_CANONICA.md",
-      "section": "Importa√ß√£o Proesc por XLS ‚Äî 2026-09-12",
-      "text": "suficiente. Sincronizar pagamento confirmado n√£o autoriza criar outro ciclo ou boleto. T42 e Radiologia mant√™m as regras existentes. - Base 4.8.48 publicada no PR142, squash b5b185e5067e5a7ea02075edfb6667ddcb5fb72b, com CI/Vercel e vers√£o p√∫blica confirmados. 4.8.49/revis√£o 58 publicada no PR143/squash 58a6675fcc531d4e907987b0d5281698fb6ad7e6: CI/Vercel SUCCESS, HTTP200 com asset main-BVVN6ra3.js e acesso autenticado confirmados. Resumo e classifica√ß√£o financeira v√™m do backend, sem c√°lculo no frontend. RAG indexado uma vez no fechamento pelo coordenador. Registro: registros/alteracoes/2026-09-12-proesc-importacao-xls.md.",
-      "normalizedText": "suficiente sincronizar pagamento confirmado nao autoriza criar outro ciclo ou boleto t42 e radiologia mantem as regras existentes base 4 8 48 publicada no pr142 squash b5b185e5067e5a7ea02075edfb6667ddcb5fb72b com ci vercel e versao publica confirmados 4 8 49 revisao 58 publicada no pr143 squash 58a6675fcc531d4e907987b0d5281698fb6ad7e6 ci vercel success http200 com asset main bvvn6ra3 js e acesso autenticado confirmados resumo e classificacao financeira vem do backend sem calculo no frontend rag indexado uma vez no fechamento pelo coordenador registro registros alteracoes 2026 09 12 proesc importacao xls md",
-      "tokenCount": 78,
-      "part": 2
-    },
-    {
-      "id": "6dcd8021ce98b7ffc25e",
-      "hash": "6dcd8021ce98b7ffc25e2483155d0e3b72089660657ad6617df5802140eb7bfc",
-      "path": "ai/operacao/MEMORIA_CANONICA.md",
-      "section": "Concilia√ß√£o publicada ‚Äî 4.8.50",
-      "text": "- Remover Atualizar Dados e textos indevidos de Mercado Pago; acrescentar filtro Proesc/Banese junto √† busca. - Origem, filtro, pagina√ß√£o e totais pertencem √† RPC, mantendo autoriza√ß√£o por polo. N√£o desligar monitores nem alterar fatos financeiros ao remover a a√ß√£o visual. - Vers√£o 4.8.50/revis√£o 59 publicada no PR144/squash 4b513e085dcb6c0dcf133cf9c0975f28a0023caf, com Vercel SUCCESS e HTTP200 asset main-B8U4uhUw.js; smoke autenticado dos filtros confirmado em produ√ß√£o na 4.8.52. Duas migrations aplicadas e imut√°veis. RAG indexado uma vez pelo coordenador, 11 fontes/71 chunks. Proesc REVIEW n√£o implica vencimento confirmado nem permite consulta Banese. Registro: registros/alteracoes/2026-09-12-conciliacao-origem-proesc-banese.md.",
-      "normalizedText": "remover atualizar dados e textos indevidos de mercado pago acrescentar filtro proesc banese junto a busca origem filtro paginacao e totais pertencem a rpc mantendo autorizacao por polo nao desligar monitores nem alterar fatos financeiros ao remover a acao visual versao 4 8 50 revisao 59 publicada no pr144 squash 4b513e085dcb6c0dcf133cf9c0975f28a0023caf com vercel success e http200 asset main b8u4uhuw js smoke autenticado dos filtros confirmado em producao na 4 8 52 duas migrations aplicadas e imutaveis rag indexado uma vez pelo coordenador 11 fontes 71 chunks proesc review nao implica vencimento confirmado nem permite consulta banese registro registros alteracoes 2026 09 12 conciliacao origem proesc banese md",
-      "tokenCount": 96,
-      "part": 1
-    },
-    {
-      "id": "78b8bcddfdea5127aa43",
-      "hash": "78b8bcddfdea5127aa43391390c64ec0fad51039c262a0fce4333ed3bf052d0a",
-      "path": "ai/operacao/MEMORIA_CANONICA.md",
-      "section": "Caixa mensal publicado ‚Äî 4.8.51",
-      "text": "- Inadimpl√™ncia e margem devem representar o m√™s e polo selecionados, com numerador, denominador e resultado can√¥nico calculados no backend/RPC. - Base √© o principal eleg√≠vel com vencimento no m√™s; atraso usa posi√ß√£o no corte atual/encerramento. Pagamento posterior preserva atraso hist√≥rico; desconto n√£o cria saldo residual. Proesc sem prova fica fora das bases com metadados de confer√™ncia. Nenhum c√°lculo financeiro no frontend. - PR145 publicado ap√≥s autoriza√ß√£o renovada, squash 02409544d1def71a655e2831c0a6c72cd30fc891; CI/Vercel/HTTP200 confirmados. Asset main-C8lAX0ye.js, r√≥tulos/linha laranja observados nas imagens do usu√°rio em produ√ß√£o. Duas migrations imut√°veis, 64 testes, SQL real e PDF aprovados. Smoke autenticado do PDF final e teste com usu√°rio restrito ainda sem fixture. Registro: registros/alteracoes/2026-09-12-caixa-indicadores-mensais.md.",
-      "normalizedText": "inadimplencia e margem devem representar o mes e polo selecionados com numerador denominador e resultado canonico calculados no backend rpc base e o principal elegivel com vencimento no mes atraso usa posicao no corte atual encerramento pagamento posterior preserva atraso historico desconto nao cria saldo residual proesc sem prova fica fora das bases com metadados de conferencia nenhum calculo financeiro no frontend pr145 publicado apos autorizacao renovada squash 02409544d1def71a655e2831c0a6c72cd30fc891 ci vercel http200 confirmados asset main c8lax0ye js rotulos linha laranja observados nas imagens do usuario em producao duas migrations imutaveis 64 testes sql real e pdf aprovados smoke autenticado do pdf final e teste com usuario restrito ainda sem fixture registro registros alteracoes 2026 09 12 caixa indicadores mensais md",
-      "tokenCount": 112,
-      "part": 1
-    },
-    {
-      "id": "9cffa881c2fafe48a659",
-      "hash": "9cffa881c2fafe48a659fff4e84535699ebffbcf4ee540461020dd541a3928a7",
-      "path": "ai/operacao/MEMORIA_CANONICA.md",
-      "section": "Consulta API Proesc e Banese ‚Äî 4.8.52",
-      "text": "- Painel separado de Token/Hist√≥rico, apenas leitura de RPC. Execu√ß√µes futuras reais e sanitizadas; observa√ß√µes, importa√ß√µes e baixas autom√°ticas s√£o conceitos distintos. - Banese mant√©m os erros hist√≥ricos e informa recupera√ß√£o posterior e estado atual separadamente; nenhum reprocessamento √© autorizado pela simples exist√™ncia de erro antigo. - Sete migrations Proesc e uma Banese aplicadas, Edge Proesc v7 ativa e duas execu√ß√µes reais de 60 cobran√ßas conclu√≠das com telemetria completa. Seis unidades SQL isoladas aprovadas; √≠ndices resolvem contagem pesada. Financeiro/Caixa recuperados e preservados ap√≥s timeouts, com smoke autenticado. Frontend n√£o repete consultas ap√≥s erro. - PR146 publicado, squash b2b11a5cbd5fba8e4fd8fdea8d76b537e9add785, CI/Vercel/HTTP200 aprovados. Safari autenticado em produ√ß√£o confirmou as cinco abas, Caixa/Receb√≠veis e filtros de Concilia√ß√£o. Aviso EDI7 conferido anteriormente. - Usu√°rio renovou autoriza√ß√£o para corrigir e publicar em 12/09 √†s21:09. Registro: registros/alteracoes/2026-09-12-consulta-api-proesc-banese.md.",
-      "normalizedText": "painel separado de token historico apenas leitura de rpc execucoes futuras reais e sanitizadas observacoes importacoes e baixas automaticas sao conceitos distintos banese mantem os erros historicos e informa recuperacao posterior e estado atual separadamente nenhum reprocessamento e autorizado pela simples existencia de erro antigo sete migrations proesc e uma banese aplicadas edge proesc v7 ativa e duas execucoes reais de 60 cobrancas concluidas com telemetria completa seis unidades sql isoladas aprovadas indices resolvem contagem pesada financeiro caixa recuperados e preservados apos timeouts com smoke autenticado frontend nao repete consultas apos erro pr146 publicado squash b2b11a5cbd5fba8e4fd8fdea8d76b537e9add785 ci vercel http200 aprovados safari autenticado em producao confirmou as cinco abas caixa recebiveis e filtros de conciliacao aviso edi7 conferido anteriormente usuario renovou autorizacao para corrigir e publicar em 12 09 as21 09 registro registros alteracoes 2026 09 12 consulta api proesc banese md",
-      "tokenCount": 131,
-      "part": 1
-    },
-    {
-      "id": "74d732a84348ad19cd91",
-      "hash": "74d732a84348ad19cd91dd56ecdff79629a03b49b5efce358e9868c34a1e524b",
-      "path": "ai/operacao/MEMORIA_CANONICA.md",
-      "section": "Recupera√ß√£o de configura√ß√£o dos workers ‚Äî 4.8.53 em publica√ß√£o",
-      "text": "- HTTP504 intermitente nos getters de configura√ß√£o precede opera√ß√µes banc√°rias; getter SQL direto em 2,740 ms. Causa exata na camada de API ainda inconclusiva. - Patch restrito √† leitura dos segredos Banese/Push, usado em tr√™s workers, com uma repeti√ß√£o, prazo total e metadados sanitizados. Sem altera√ß√£o de dados financeiros, credenciais ou cron. - Edge concilia√ß√£o v101, Push v16 e cancelamento v6 publicadas via MCP. 45 testes e revis√£o aprovados; tipagem cancelamento mant√©m erro preexistente reproduzido no remoto, sem altera√ß√£o financeira. Smoke natural: 14 execu√ß√µes HTTP200; duas falhas504 internas recuperadas na segunda tentativa. A instabilidade externa n√£o foi declarada eliminada. - Registro: registros/alteracoes/2026-09-13-workers-configuracao-resiliente.md.",
-      "normalizedText": "http504 intermitente nos getters de configuracao precede operacoes bancarias getter sql direto em 2 740 ms causa exata na camada de api ainda inconclusiva patch restrito a leitura dos segredos banese push usado em tres workers com uma repeticao prazo total e metadados sanitizados sem alteracao de dados financeiros credenciais ou cron edge conciliacao v101 push v16 e cancelamento v6 publicadas via mcp 45 testes e revisao aprovados tipagem cancelamento mantem erro preexistente reproduzido no remoto sem alteracao financeira smoke natural 14 execucoes http200 duas falhas504 internas recuperadas na segunda tentativa a instabilidade externa nao foi declarada eliminada registro registros alteracoes 2026 09 13 workers configuracao resiliente md",
-      "tokenCount": 102,
-      "part": 1
-    },
-    {
-      "id": "7770a6e6ad8c0b4a3818",
-      "hash": "7770a6e6ad8c0b4a38183aeac270dab333ff5053fef0653296d0031fd15e7faf",
-      "path": "ai/operacao/PROTOCOLO_DE_LOTES.md",
-      "section": "1. Ajuste r√°pido",
-      "text": "Para corre√ß√£o localizada e sem risco cr√≠tico:",
-      "normalizedText": "para correcao localizada e sem risco critico",
-      "tokenCount": 6,
-      "part": 1
-    },
-    {
-      "id": "28768a42121c74aa3b36",
-      "hash": "28768a42121c74aa3b36e0204872b531189ed56381b6c4ceb4710c6834903a04",
-      "path": "ai/operacao/PROTOCOLO_DE_LOTES.md",
-      "section": "1. Ajuste r√°pido",
-      "text": "1. usar um agente; 2. abrir somente o arquivo do fluxo afetado e sua depend√™ncia direta; 3. reproduzir ou confirmar a causa; 4. aplicar o menor patch; 5. executar teste focado ou smoke; 6. entregar sem criar lote, registro, vers√£o, RAG ou build global.",
-      "normalizedText": "1 usar um agente 2 abrir somente o arquivo do fluxo afetado e sua dependencia direta 3 reproduzir ou confirmar a causa 4 aplicar o menor patch 5 executar teste focado ou smoke 6 entregar sem criar lote registro versao rag ou build global",
-      "tokenCount": 34,
-      "part": 1
-    },
-    {
-      "id": "8e6dfce2d8eb2a2c886c",
-      "hash": "8e6dfce2d8eb2a2c886c81320aa687a92e1f91a19e58251856abcb10a4a45794",
-      "path": "ai/operacao/PROTOCOLO_DE_LOTES.md",
-      "section": "1. Ajuste r√°pido",
-      "text": "Se o escopo ou risco crescer, reclassificar antes de continuar.",
-      "normalizedText": "se o escopo ou risco crescer reclassificar antes de continuar",
-      "tokenCount": 9,
-      "part": 1
-    },
-    {
-      "id": "77537ccf80cda3a312c5",
-      "hash": "77537ccf80cda3a312c53b377d7a43c12816291f0f3e0b98ef754effd5b609e1",
-      "path": "ai/operacao/PROTOCOLO_DE_LOTES.md",
-      "section": "2. Ajuste PDF focado",
-      "text": "- Altera√ß√£o visual localizada em compositor nativo existente usa um agente. - Carregar somente a pol√≠tica de PDFs; n√£o abrir mem√≥ria, lote ou RAG. - Validar exportador, texto, imagens isoladas e render da p√°gina afetada. - Payload, pagina√ß√£o, novo pipeline ou compositor compartilhado de impacto amplo saem desta faixa.",
-      "normalizedText": "alteracao visual localizada em compositor nativo existente usa um agente carregar somente a politica de pdfs nao abrir memoria lote ou rag validar exportador texto imagens isoladas e render da pagina afetada payload paginacao novo pipeline ou compositor compartilhado de impacto amplo saem desta faixa",
-      "tokenCount": 43,
-      "part": 1
-    },
-    {
-      "id": "c79a5620b2db48e4f381",
-      "hash": "c79a5620b2db48e4f381f7642b1e6e4ce7c301189aef93471e2ed3d484d070d1",
-      "path": "ai/operacao/PROTOCOLO_DE_LOTES.md",
-      "section": "3. Mudan√ßa padr√£o",
-      "text": "- Manter um dom√≠nio por lote. - Registrar objetivo, arquivos, aceite, risco e valida√ß√£o de forma curta. - Consultar RAG apenas quando hist√≥rico/decis√£o for necess√°rio, com at√© dois resultados. - Executar testes focados durante o trabalho e uma valida√ß√£o final proporcional.",
-      "normalizedText": "manter um dominio por lote registrar objetivo arquivos aceite risco e validacao de forma curta consultar rag apenas quando historico decisao for necessario com ate dois resultados executar testes focados durante o trabalho e uma validacao final proporcional",
-      "tokenCount": 35,
-      "part": 1
-    },
-    {
-      "id": "ab8b18e791e2db26dad1",
-      "hash": "ab8b18e791e2db26dad1e5adcfc4f1489e5694d89d03114760932cea66bd0e96",
-      "path": "ai/operacao/PROTOCOLO_DE_LOTES.md",
-      "section": "4. Mudan√ßa cr√≠tica",
-      "text": "Banco, Auth/RLS, financeiro, PDF estrutural, infraestrutura ou publica√ß√£o:",
-      "normalizedText": "banco auth rls financeiro pdf estrutural infraestrutura ou publicacao",
-      "tokenCount": 9,
-      "part": 1
-    },
-    {
-      "id": "28cf78c35791b70dd3a3",
-      "hash": "28cf78c35791b70dd3a3bb335e856e2af8660beb2f4437eaa114c0204742d44e",
-      "path": "ai/operacao/PROTOCOLO_DE_LOTES.md",
-      "section": "4. Mudan√ßa cr√≠tica",
-      "text": "- carregar somente a pol√≠tica do dom√≠nio; - reproduzir o fluxo real antes do patch; - validar contrato, autoriza√ß√£o e smoke diretamente afetados; - usar revis√£o adicional apenas se houver uma frente independente ou risco que a justifique.",
-      "normalizedText": "carregar somente a politica do dominio reproduzir o fluxo real antes do patch validar contrato autorizacao e smoke diretamente afetados usar revisao adicional apenas se houver uma frente independente ou risco que a justifique",
-      "tokenCount": 30,
-      "part": 1
-    },
-    {
-      "id": "e159a94077887ebdcf92",
-      "hash": "e159a94077887ebdcf92d6a8a37790f444d50b557ff632d005640c15efb90598",
-      "path": "ai/operacao/PROTOCOLO_DE_LOTES.md",
-      "section": "5. Fechamento",
-      "text": "1. conferir o manifesto de arquivos; 2. executar `npm run check:file-lines` e modularizar todo arquivo manual auditado acima de 500 linhas; 3. preservar migrations j√° aplicadas como exce√ß√µes imut√°veis identificadas pelo registro remoto; 4. executar a valida√ß√£o final uma vez; 5. registrar limita√ß√µes reais, inclusive smoke pendente; 6. atualizar o registro do lote; 7. executar node scripts/agent-memory-rag.mjs index uma vez se fontes RAG mudaram.",
-      "normalizedText": "1 conferir o manifesto de arquivos 2 executar npm run check file lines e modularizar todo arquivo manual auditado acima de 500 linhas 3 preservar migrations ja aplicadas como excecoes imutaveis identificadas pelo registro remoto 4 executar a validacao final uma vez 5 registrar limitacoes reais inclusive smoke pendente 6 atualizar o registro do lote 7 executar node scripts agent memory rag mjs index uma vez se fontes rag mudaram",
-      "tokenCount": 59,
-      "part": 1
-    },
-    {
-      "id": "664ec84a9a3c9b7eb5d6",
-      "hash": "664ec84a9a3c9b7eb5d634f7837c8febf3d39600c076d9d04d90e0aa57a4edfb",
-      "path": "ai/operacao/PROTOCOLO_DE_LOTES.md",
-      "section": "6. Publica√ß√£o",
-      "text": "- GitHub somente por MCP. - Um commit at√¥mico e uma Preview Vercel para o lote pronto. - N√£o consolidar dom√≠nios sem rela√ß√£o apenas por proximidade de data. - Produ√ß√£o somente por solicita√ß√£o expl√≠cita.",
-      "normalizedText": "github somente por mcp um commit atomico e uma preview vercel para o lote pronto nao consolidar dominios sem relacao apenas por proximidade de data producao somente por solicitacao explicita",
-      "tokenCount": 28,
-      "part": 1
-    },
-    {
-      "id": "0d999f1c983c309ad21c",
-      "hash": "0d999f1c983c309ad21c2d8f339ae8f64fc6c052d885fe225a1b38b69bae1fb2",
-      "path": "ai/operacao/politicas/FINANCEIRO.md",
-      "section": "Financeiro e cobran√ßas",
-      "text": "Carregue esta pol√≠tica somente para financeiro, Caixa, patrim√¥nio, empr√©stimos, contas a pagar ou cobran√ßa.",
-      "normalizedText": "carregue esta politica somente para financeiro caixa patrimonio emprestimos contas a pagar ou cobranca",
-      "tokenCount": 13,
-      "part": 1
-    },
-    {
-      "id": "1749b28561b2215c5962",
-      "hash": "1749b28561b2215c59627b3fa536811cf4851a4c2befd788b33830e2a736e831",
-      "path": "ai/operacao/politicas/FINANCEIRO.md",
-      "section": "Regras gerais",
-      "text": "- C√°lculos, valores, parcelas, juros, multa, desconto, saldo e rateio pertencem ao backend/RPC. - O frontend coleta entradas e exibe o resultado can√¥nico. - Toda muta√ß√£o √© autorizada por escopo, idempotente, audit√°vel e conciliada por TanStack Query/Realtime. - Ciclos t√©cnicos seguem o [contrato de elegibilidade, matr√≠cula local, baixa, estorno e C2](../../../docs/decisions/ciclos-tecnicos-cobrancas.md); origem importada n√£o autoriza nova emiss√£o.",
-      "normalizedText": "calculos valores parcelas juros multa desconto saldo e rateio pertencem ao backend rpc o frontend coleta entradas e exibe o resultado canonico toda mutacao e autorizada por escopo idempotente auditavel e conciliada por tanstack query realtime ciclos tecnicos seguem o contrato de elegibilidade matricula local baixa estorno e c2 docs decisions ciclos tecnicos cobrancas md origem importada nao autoriza nova emissao",
-      "tokenCount": 53,
-      "part": 1
-    },
-    {
-      "id": "9bbcbdf6099c146d542c",
-      "hash": "9bbcbdf6099c146d542cd1db6314f17163ba8b78c74244d82b625455cbec46dc",
-      "path": "ai/operacao/politicas/FINANCEIRO.md",
-      "section": "Gateways",
-      "text": "- Novas cobran√ßas usam Banese para boleto/Pix e Mercado Pago para cart√£o. - Banese n√£o processa cart√£o. - BolePix (boleto com QR Pix vinculado) segue o contrato homologado e j√° publicado. Pix Banese avulso permanece bloqueado at√© libera√ß√£o formal; n√£o confundir as duas opera√ß√µes. - Mercado Pago permanece bloqueado para cobran√ßa real at√© homologa√ß√£o de cart√£o, webhook, idempot√™ncia e recupera√ß√£o amb√≠gua. - Asaas e Banco Inter n√£o podem ser selecionados para novas cobran√ßas; preserve somente o hist√≥rico necess√°rio. - API Banese √© o fluxo principal. CNAB240 √© conting√™ncia e exige EDI7 real. - Boleto e carn√™ s√£o montados pelo sistema e entregues por rota privada/autenticada.",
-      "normalizedText": "novas cobrancas usam banese para boleto pix e mercado pago para cartao banese nao processa cartao bolepix boleto com qr pix vinculado segue o contrato homologado e ja publicado pix banese avulso permanece bloqueado ate liberacao formal nao confundir as duas operacoes mercado pago permanece bloqueado para cobranca real ate homologacao de cartao webhook idempotencia e recuperacao ambigua asaas e banco inter nao podem ser selecionados para novas cobrancas preserve somente o historico necessario api banese e o fluxo principal cnab240 e contingencia e exige edi7 real boleto e carne sao montados pelo sistema e entregues por rota privada autenticada",
-      "tokenCount": 88,
-      "part": 1
-    },
-    {
-      "id": "2c50805c64cbfcdc2ab0",
-      "hash": "2c50805c64cbfcdc2ab0ebf6cefbd67648b889466ab38a7c7a581346f6593a45",
-      "path": "ai/operacao/politicas/FINANCEIRO.md",
-      "section": "Ativa√ß√£o acad√™mica",
-      "text": "- Pagamento confirmado ativa automaticamente EAD, curso livre e especializa√ß√£o. - Curso t√©cnico continua aguardando an√°lise documental.",
-      "normalizedText": "pagamento confirmado ativa automaticamente ead curso livre e especializacao curso tecnico continua aguardando analise documental",
-      "tokenCount": 14,
-      "part": 1
-    },
-    {
-      "id": "1bfab99b17d4192a8dfa",
-      "hash": "1bfab99b17d4192a8dfa28d86ab14d8258bc5f514891ec2d067baff43f565215",
-      "path": "ai/operacao/politicas/FINANCEIRO.md",
-      "section": "Patrim√¥nio, contas e empr√©stimos",
-      "text": "- Patrim√¥nio √© cadastro por polo e seus totais s√£o calculados no banco. - Conta a Pagar rateada nasce fisicamente na Matriz; polos recebem somente aloca√ß√£o econ√¥mica, sem t√≠tulo ou baixa duplicada. - Empr√©stimo da Matriz usa TODOS ou SELECIONADOS; empr√©stimo de polo comum usa SEM_RATEIO. - Principal e quita√ß√£o pertencem a financiamento; juros/encargos podem aparecer como custo financeiro separado. - Caixa n√£o mistura financiamento ao resultado operacional.",
-      "normalizedText": "patrimonio e cadastro por polo e seus totais sao calculados no banco conta a pagar rateada nasce fisicamente na matriz polos recebem somente alocacao economica sem titulo ou baixa duplicada emprestimo da matriz usa todos ou selecionados emprestimo de polo comum usa sem rateio principal e quitacao pertencem a financiamento juros encargos podem aparecer como custo financeiro separado caixa nao mistura financiamento ao resultado operacional",
-      "tokenCount": 60,
-      "part": 1
-    },
-    {
-      "id": "fbd9274eb6d16bba7eaa",
-      "hash": "fbd9274eb6d16bba7eaa1378ef270c8757d81effebad5f9585e69373321f2945",
-      "path": "ai/operacao/politicas/INTERFACE.md",
-      "section": "Interface e notifica√ß√µes",
-      "text": "Carregue esta pol√≠tica somente para componentes visuais, intera√ß√£o, responsividade ou notifica√ß√µes.",
-      "normalizedText": "carregue esta politica somente para componentes visuais interacao responsividade ou notificacoes",
-      "tokenCount": 11,
-      "part": 1
-    },
-    {
-      "id": "0fb9c7c3876d516da261",
-      "hash": "0fb9c7c3876d516da261897e563c848c8244c7852c567acb507b91688095ad15",
-      "path": "ai/operacao/politicas/INTERFACE.md",
-      "section": "Interface e notifica√ß√µes",
-      "text": "- Em manuten√ß√£o visual, preserve o design system e o padr√£o j√° aprovado; n√£o aplique redesign criativo sem pedido expl√≠cito. - N√£o use alert, confirm, Notification.requestPermission ou notifica√ß√µes nativas para feedback comum. - Reutilize ToastNotification e useToast existentes no m√≥dulo correspondente. - Ajustes de texto, espa√ßamento, alinhamento, cor ou estado local seguem o modo r√°pido quando n√£o tocam dom√≠nio cr√≠tico. - Valide a viewport e a a√ß√£o realmente afetadas. Build ou dezenas de testes n√£o substituem o clique/smoke visual. - Se o navegador autenticado estiver indispon√≠vel, marque o smoke como pendente em vez de ampliar a implementa√ß√£o.",
-      "normalizedText": "em manutencao visual preserve o design system e o padrao ja aprovado nao aplique redesign criativo sem pedido explicito nao use alert confirm notification requestpermission ou notificacoes nativas para feedback comum reutilize toastnotification e usetoast existentes no modulo correspondente ajustes de texto espacamento alinhamento cor ou estado local seguem o modo rapido quando nao tocam dominio critico valide a viewport e a acao realmente afetadas build ou dezenas de testes nao substituem o clique smoke visual se o navegador autenticado estiver indisponivel marque o smoke como pendente em vez de ampliar a implementacao",
-      "tokenCount": 81,
-      "part": 1
-    },
-    {
-      "id": "6eb08a399befe2f390bc",
-      "hash": "6eb08a399befe2f390bc8adb6f651fbb8c2d2860a02ff0b2317a53e498b419cb",
-      "path": "ai/operacao/politicas/PDFS_OFICIAIS.md",
-      "section": "PDFs gerados pelo produto",
-      "text": "A regra vetorial desta pol√≠tica vale para todo PDF exportado pelo produto. As regras de Blob can√¥nico, cabe√ßalho institucional e payload de backend aplicam-se aos documentos oficiais, como contratos, carteirinhas, calend√°rios, boletins e declara√ß√µes.",
-      "normalizedText": "a regra vetorial desta politica vale para todo pdf exportado pelo produto as regras de blob canonico cabecalho institucional e payload de backend aplicam se aos documentos oficiais como contratos carteirinhas calendarios boletins e declaracoes",
-      "tokenCount": 32,
-      "part": 1
-    },
-    {
-      "id": "b036a4daaaf4fcc817dd",
-      "hash": "b036a4daaaf4fcc817dd6cee387d741951c017ad3f66ef6b3e897cc44bf2ada7",
-      "path": "ai/operacao/politicas/PDFS_OFICIAIS.md",
-      "section": "Fonte can√¥nica",
-      "text": "- Pr√©via, download e impress√£o reutilizam exatamente o mesmo Blob PDF. - Elegibilidade, dados, ordena√ß√£o, validade, QR e pagina√ß√£o v√™m do backend/RPC. - O frontend apenas solicita o payload e comp√µe a apresenta√ß√£o vetorial; conte√∫do incompat√≠vel deve falhar explicitamente.",
-      "normalizedText": "previa download e impressao reutilizam exatamente o mesmo blob pdf elegibilidade dados ordenacao validade qr e paginacao vem do backend rpc o frontend apenas solicita o payload e compoe a apresentacao vetorial conteudo incompativel deve falhar explicitamente",
-      "tokenCount": 30,
-      "part": 1
-    },
-    {
-      "id": "51ff0a606971c27ac290",
-      "hash": "51ff0a606971c27ac290097ebdbb8b72e04bae46e3187ae5f9b87d3778eec0cd",
-      "path": "ai/operacao/politicas/PDFS_OFICIAIS.md",
-      "section": "Fidelidade aos modelos configurados",
-      "text": "- Antes de alterar qualquer gerador, inventarie o modelo aplic√°vel em `Modelos Documentos` e a marca d'√°gua do polo em `Configura√ß√µes`, incluindo URL, opacidade, escala e rota√ß√£o. - Capa, contracapa, campos, coordenadas, estilos, imagens isoladas, slots de assinatura, QR, textos e pagina√ß√£o configurados integram o contrato do documento e devem atravessar todos os adapters at√© o compositor. - √â proibido substituir configura√ß√£o existente por capa, contracapa, marca d'√°gua, posi√ß√£o de assinatura ou layout gen√©rico hardcoded. - Um fallback s√≥ √© permitido quando n√£o existir configura√ß√£o aplic√°vel, deve coincidir com o fallback exibido pelo editor e precisa de teste de contrato. - Pr√©via, download, impress√£o e artefato assinado usam o mesmo snapshot do modelo e o mesmo compositor. - A publica√ß√£o fica bloqueada sem teste-fonte do encadeamento da configura√ß√£o e inspe√ß√£o renderizada da capa, p√°gina interna, contracapa e p√°ginas de assinatura aplic√°veis.",
-      "normalizedText": "antes de alterar qualquer gerador inventarie o modelo aplicavel em modelos documentos e a marca d agua do polo em configuracoes incluindo url opacidade escala e rotacao capa contracapa campos coordenadas estilos imagens isoladas slots de assinatura qr textos e paginacao configurados integram o contrato do documento e devem atravessar todos os adapters ate o compositor e proibido substituir configuracao existente por capa contracapa marca d agua posicao de assinatura ou layout generico hardcoded um fallback so e permitido quando nao existir configuracao aplicavel deve coincidir com o fallback exibido pelo editor e precisa de teste de contrato previa download impressao e artefato assinado usam o mesmo snapshot do modelo e o mesmo compositor a publicacao fica bloqueada sem teste fonte do encadeamento da configuracao e inspecao renderizada da capa pagina interna contracapa e paginas de assinatura aplicaveis",
-      "tokenCount": 117,
-      "part": 1
-    },
-    {
-      "id": "1cbc47b50fe43017c41a",
-      "hash": "1cbc47b50fe43017c41a748996f6b92b987949f32afcc871b761c47afc26f31e",
-      "path": "ai/operacao/politicas/PDFS_OFICIAIS.md",
-      "section": "Cabe√ßalho e marca",
-      "text": "- A refer√™ncia visual √© modules/gestor/components/DocumentHeader.tsx. - A √∫nica implementa√ß√£o de exporta√ß√£o √© modules/gestor/secretaria/shared/canonical-institutional-header-pdf.ts, nas variantes retrato e paisagem. - N√£o crie desenhador privado de cabe√ßalho nem reconstrua logo, nome, selo Matriz, CNPJ, contato, endere√ßo, e-mail, divisor ou √°rea √∫til dentro de exportador espec√≠fico. - A marca-d'√°gua √© camada de fundo separada, aplicada antes do conte√∫do.",
-      "normalizedText": "a referencia visual e modules gestor components documentheader tsx a unica implementacao de exportacao e modules gestor secretaria shared canonical institutional header pdf ts nas variantes retrato e paisagem nao crie desenhador privado de cabecalho nem reconstrua logo nome selo matriz cnpj contato endereco e mail divisor ou area util dentro de exportador especifico a marca d agua e camada de fundo separada aplicada antes do conteudo",
-      "tokenCount": 58,
-      "part": 1
-    },
-    {
-      "id": "9f188fe6a59328fb47f7",
-      "hash": "9f188fe6a59328fb47f7c2efc9d2fb56f50d1e34e2f9aaa474bb6dc104bb596c",
-      "path": "ai/operacao/politicas/PDFS_OFICIAIS.md",
-      "section": "Vetor e recursos",
-      "text": "- Nunca rasterize a p√°gina, folha, carteirinha ou documento inteiro com html2canvas, canvas, captura de DOM ou addImage. - Pipeline h√≠brido que coloca screenshot/PNG da p√°gina inteira e adiciona texto vetorial ou invis√≠vel por cima tamb√©m √© proibido: sele√ß√£o aparente n√£o corrige a perda de qualidade da arte rasterizada. - Texto vis√≠vel, tabelas, linhas, campos, bordas, fundos geom√©tricos e marca√ß√µes permanecem objetos nativos do PDF, selecion√°veis, pesquis√°veis e copi√°veis. - Zoom n√£o pode degradar texto, linhas ou tabelas. - Logo, marca-d'√°gua, QR, fotografia e assinatura podem ser imagens isoladas e posicionadas independentemente. Prefira SVG/vetor quando existir. - Canvas √© permitido apenas como buffer tempor√°rio para preparar um recurso isolado, como recorte de foto, transpar√™ncia de assinatura ou QR; nunca para capturar o cont√™iner/p√°gina. - Uma imagem de fundo ou marca-d'√°gua n√£o pode conter o texto, as linhas, as tabelas ou outros conte√∫dos do documento. - Nunca use uma imagem A4 que substitua o documento.",
+Y™Áäx-ÆÈ‹j◊ù¢Îi∫⁄+äßj[hëÈ‹¢ÈÌﬂùıÌ:-jZ.∂õ≠ñ)ﬁ≥W∞¢'66ÜV÷fW'6ñˆ‚#¢¿¢'&WG&ñWf¬#¢&∆WÜñ6¬÷&”#R◊vóFÇ◊6˜W&6R÷6óFFñˆÁ2"¿¢&'Vñ«DB#¢###b”í”#uC3£#ì£#b„3ï¢"¿¢&÷ÊñfW7EfW'6ñˆ‚#¢"¿¢'6˜W&6U6ñvÊGW&R#¢&3&6Ss3S&#3fc3F6SfcFFfSSÜ6f3Scììs#cfìSì#SF&É63CcV&FFb"¿¢'6˜W&6W2#¢∞¢∞¢'FÇ#¢$tTÂE2Ê÷B"¿¢&Ü6Ç#¢#CCScV#&cVVV#FFVS63ÉVcñ6&F3#SSfCFS&FCfF6CSv#3sìñS6CV#ñcí ¢“¿¢∞¢'FÇ#¢&íˆ˜W&6ÚÙƒıDUÙDïdÚÊ÷B"¿¢&Ü6Ç#¢&cCÉ3s36cvÉF#&CVCÜCSVCÉ&cFVFSSìCcCf#ì&VcsC#F&6CScñCC ¢“¿¢∞¢'FÇ#¢&íˆ˜W&6ÚÙ‘T‘ı$îÙ4‰Ù‰î4Ê÷B"¿¢&Ü6Ç#¢&6#É6CsVS#sf3cìfcSÜ6cFVfCF6C&CcÜfS3vcf3fcÜFSSfSÜ#ÜC3sB ¢“¿¢∞¢'FÇ#¢&íˆ˜W&6Úı$ıDÙ4ÙƒıÙDUÙƒıDU2Ê÷B"¿¢&Ü6Ç#¢&&v3CÜcsvCSsCìS#cñSSCñ#SCV6f3s3ìÜFSñ3Fc#És6SF#ìC#6b ¢“¿¢∞¢'FÇ#¢&íˆ˜W&6Ú˜ˆ∆óFñ62Ùdî‰‰4Tï$ÚÊ÷B"¿¢&Ü6Ç#¢&f3Üc##ñ3&#s3fcÜF6ÜCfS#ìV#vcFCFCFFSssìs3cc#Ü633FF2 ¢“¿¢∞¢'FÇ#¢&íˆ˜W&6Ú˜ˆ∆óFñ62ÙîÂDU$d4RÊ÷B"¿¢&Ü6Ç#¢#f63ñSc#3#CcscCvcc6cf&#VcvcCñC&&#3SñC#FFV#3sÉ6C#CfR ¢“¿¢∞¢'FÇ#¢&íˆ˜W&6Ú˜ˆ∆óFñ62ıDe5ÙÙdî4îï2Ê÷B"¿¢&Ü6Ç#¢##&f&VfCF3ScSSsCCV#&3ìsìs3CSV&3F3c3cVScs6CvC3ñfFcsÉsÉÜ6V3cVf ¢“¿¢∞¢'FÇ#¢&íˆ˜W&6Ú˜ˆ∆óFñ62ıƒ‰ıÙ5U%4ÚÊ÷B"¿¢&Ü6Ç#¢&3sSÉvV#ìsñcsì#ìf#v33&F#s&c63#6V#36cF#f#C#6cSSc3F6fcB ¢“¿¢∞¢'FÇ#¢&íˆ˜W&6Ú˜ˆ∆óFñ62ı5U$4UÙUı4TuU$‰4Ê÷B"¿¢&Ü6Ç#¢&c6&VSÜcC#s6vcvSFfcSScñ#ì3fVSÜVSfC&FfSSìÉ#s&FFF6CFV#6fSìf#CcR ¢“¿¢∞¢'FÇ#¢&Fˆ72ˆFV6ó6ñˆÁ2Û##b”Ç”B÷ÊFófR÷WFÇ÷ÊB◊&ñ6Ç◊W6ÇÊ÷B"¿¢&Ü6Ç#¢&CSÉccÉ6fc3#6cÜfCssÉVSÉVFCÉFVSñSÜ6VSCfcÜFSSSvfFF63s#S&R ¢“¿¢∞¢'FÇ#¢&Fˆ72ˆFV6ó6ñˆÁ2ˆ6ñ6∆˜2◊FV6Êñ6˜2÷6ˆ'&Ê62Ê÷B"¿¢&Ü6Ç#¢#ñcFVfF&cfSsVC&63s#3É#SÉFÉSììñfS&cCffÉ#ÉS3s&f6f36V3C&SìR ¢“¿¢∞¢'FÇ#¢&Fˆ72ˆFV6ó6ñˆÁ2˜G&ñ÷ˆÊñÚ÷6ˆÁF2÷◊v"÷V◊&W7Fñ÷˜2Ê÷B"¿¢&Ü6Ç#¢#vÉÉÜC#3csSf#sCV#6F&3V#6SSsñF#CfVSSÉ3ìÜVSsc&Cs3ñCS#ñf6B ¢“¿¢∞¢'FÇ#¢&Fˆ72ˆFV6ó6ñˆÁ2˜G&Á6fW&VÊ6ñ2◊FV6Êñ62Ê÷B"¿¢&Ü6Ç#¢#SF3#CS&V##ÉSÜcv3fS3S#f3&#VcñCVCfVFs3s3FCsVSÉsÜCcÜ3ÉS ¢–¢“¿¢&6áVÊ∑2#¢∞¢∞¢&ñB#¢#6sF&#cÉñSÉ3V&cC""¿¢&Ü6Ç#¢#6sF&#cÉñSÉ3V&cC&cF3Sscv3ÜSV#Cs#sìÉÉ#SsS3##É#ÜS3#s6#sr"¿¢'FÇ#¢$tTÂE2Ê÷B"¿¢'6V7Fñˆ‚#¢$WF˜&ñFFR∆ˆ6¬"¿¢'FWáB#¢"“VÁG&RfˆÁFW2FW7FR&W˜6óL;7&ñÚ¬W7F˜&FV“&Wf∆V6S¢tTÂE2Ê÷B¬∆˜FRGV¬¬ˆÃ:◊Fñ6W7V<:÷fñ6FÚFˆ‹:÷ÊñÚ¬÷V‹;7&ñ&V7WW&FR6∂ñ∆¬vVÏ:ó&ñ6‚“6RV÷6∂ñ∆¬vVÏ:ó&ñ66ˆÁG&&ñ"W7F2&Vw&2¬FW66'FR6ˆ÷VÁFRñÁ7G'\:|:6Ú6ˆÊf∆óFÁFR‚“6ˆ÷V6RV∆ÚVFñFÚWÜFÚFÚW7\:&ñÚRV∆Ú÷VÊ˜"6÷ñÊÜÚFR<;6FñvÚ6¢FRFVÊL:¢÷∆Ú‚Ï:6Ú◊∆ñR6ñ∆VÊ6ñ˜6÷VÁFRÚW66˜Ú‚"¿¢&Ê˜&÷∆ó¶VEFWáB#¢&VÁG&RfˆÁFW2FW7FR&W˜6óF˜&ñÚW7F˜&FV“&Wf∆V6RvVÁG2÷B∆˜FRGV¬ˆ∆óFñ6W7V6ñfñ6FÚFˆ÷ñÊñÚ÷V÷˜&ñ&V7WW&FR6∂ñ∆¬vVÊW&ñ66RV÷6∂ñ∆¬vVÊW&ñ66ˆÁG&&ñ"W7F2&Vw&2FW66'FR6ˆ÷VÁFRñÁ7G'V6Ú6ˆÊf∆óFÁFR6ˆ÷V6RV∆ÚVFñFÚWÜFÚFÚW7V&ñÚRV∆Ú÷VÊ˜"6÷ñÊÜÚFR6ˆFñvÚ6¢FRFVÊFR∆ÚÊÚ◊∆ñR6ñ∆VÊ6ñ˜6÷VÁFRÚW66˜Ú"¿¢'Fˆ∂V‰6˜VÁB#¢Cí¿¢''B#¢¢“¿¢∞¢&ñB#¢#svF3sñcs3ììCÜìs2"¿¢&Ü6Ç#¢#svF3sñcs3ììCÜìs6CcCÉfcCV&sÉÜ3FSìccsFCìv3#ÜVfc#cìsv"¿¢'FÇ#¢$tTÂE2Ê÷B"¿¢'6V7Fñˆ‚#¢$ßW7FR,:ñFÚ"¿¢'FWáB#¢%W6RW7FRf«WÜÚVÊFÚ◊VFÏ:vW7FófW"∆ˆ6∆ó¶FV“L:íFˆó2'Vóf˜2FRñ◊∆V÷VÁF:|:6ÚRÏ:6ÚVÁfˆ«fW"&Ê6Ú¬WFÇ¬WF˜&ó¶:|:6Ú¬fñÊÊ6Vó&Ú¬DbvW&FÚV∆Ú&ˆGWFÚ¬ñÊg&W7G'WGW&˜RV&∆ñ6:|:6Ú‚"¿¢&Ê˜&÷∆ó¶VEFWáB#¢'W6RW7FRf«WÜÚVÊFÚ◊VFÊ6W7FófW"∆ˆ6∆ó¶FV“FRFˆó2'Vóf˜2FRñ◊∆V÷VÁF6ÚRÊÚVÁfˆ«fW"&Ê6ÚWFÇWF˜&ó¶6ÚfñÊÊ6Vó&ÚFbvW&FÚV∆Ú&ˆGWFÚñÊg&W7G'WGW&˜RV&∆ñ66Ú"¿¢'Fˆ∂V‰6˜VÁB#¢#b¿¢''B#¢¢“¿¢∞¢&ñB#¢&cvfcñ#vS#3c#ìÉ&B"¿¢&Ü6Ç#¢&cvfcñ#vS#3c#ìÉ&CSsFcSì&&CvC6#vC63ÉsÉÜ6É##6fCfC6Sf#Ç"¿¢'FÇ#¢$tTÂE2Ê÷B"¿¢'6V7Fñˆ‚#¢$ßW7FR,:ñFÚ"¿¢'FWáB#¢"“W6RV“;¶Êñ6ÚvVÁFR‚“Ï:6Ú∆Vñ‘T‘ı$îÙ4‰Ù‰î4Ê÷B¬ƒıDUÙDïdÚÊ÷B¬$r¬Üó7L;7&ñ6˜2˜RFV6ó<;VW2‚“Ï:6Ú'&∆˜FR¬Ï:6Ú«FW&RFˆ7V÷VÁF:|:6Ú˜W&6ñˆÊ¬¬fW'<:6Ú˜R6ÜÊvV∆ˆr‚“∆ˆ6∆ó¶RVÊ2Ú6ˆ◊ˆÊVÁFRˆgVÏ:|:6ÚñÊFñ6F¬&W&ˆGW¶˜R6ˆÊfó&÷R6W6¬∆óVRÚF6Ç‹:÷Êñ÷ÚRWÜV7WFRV“FW7FRfˆ6FÚ˜R6÷ˆ∂RFÚf«WÜÚ‚“VÊFÚÚVFñFÚÊˆ÷V"‹;6GV∆Ú¬FV∆˜RFˆ7V÷VÁFÚ¬&W7G&ñÊ¶&ñ÷Vó&'W66W767F≤◊∆ñR6ˆ÷VÁFR6RÏ:6ÚÜ˜WfW"&W7V«FFÚ‚“Ï:6Ú&ˆFR'Vñ∆B¬∆ñÁBv∆ˆ&¬˜R7\:◊FR◊∆˜"G,:6Ú‚“6RÚFñvÏ;77Fñ6Ú∆ˆ6∆ó¶FÚÏ:6Ú6ˆÁfW&vó"&ñF÷VÁFR˜RÚ&ó66Ú7&W66W"¬&V6∆76ñfóVRF&VfRñÊf˜&÷RÚ÷˜FófÛ≤Ï:6ÚG&Á6f˜&÷RV“ßW7FRWVVÊÚV“VFóF˜&ñ◊∆‚"¿¢&Ê˜&÷∆ó¶VEFWáB#¢'W6RV“VÊñ6ÚvVÁFRÊÚ∆Vñ÷V÷˜&ñ6ÊˆÊñ6÷B∆˜FRFófÚ÷B&rÜó7F˜&ñ6˜2˜RFV6ó6ˆW2ÊÚ'&∆˜FRÊÚ«FW&RFˆ7V÷VÁF6Ú˜W&6ñˆÊ¬fW'6Ú˜R6ÜÊvV∆ˆr∆ˆ6∆ó¶RVÊ2Ú6ˆ◊ˆÊVÁFRgVÊ6ÚñÊFñ6F&W&ˆGW¶˜R6ˆÊfó&÷R6W6∆óVRÚF6Ç÷ñÊñ÷ÚRWÜV7WFRV“FW7FRfˆ6FÚ˜R6÷ˆ∂RFÚf«WÜÚVÊFÚÚVFñFÚÊˆ÷V"÷ˆGV∆ÚFV∆˜RFˆ7V÷VÁFÚ&W7G&ñÊ¶&ñ÷Vó&'W66W767F◊∆ñR6ˆ÷VÁFR6RÊÚÜ˜WfW"&W7V«FFÚÊÚ&ˆFR'Vñ∆B∆ñÁBv∆ˆ&¬˜R7VóFR◊∆˜"G&Ú6RÚFñvÊ˜7Fñ6Ú∆ˆ6∆ó¶FÚÊÚ6ˆÁfW&vó"&ñF÷VÁFR˜RÚ&ó66Ú7&W66W"&V6∆76ñfóVRF&VfRñÊf˜&÷RÚ÷˜FófÚÊÚG&Á6f˜&÷RV“ßW7FRWVVÊÚV“VFóF˜&ñ◊∆"¿¢'Fˆ∂V‰6˜VÁB#¢ìR¿¢''B#¢¢“¿¢∞¢&ñB#¢#ñ3ìf3&SÉcc66Éñ&b"¿¢&Ü6Ç#¢#ñ3ìf3&SÉcc66Éñ&cìs##6f#Ss#ÜCì3sÜ6C#C&cV&3ìsfìCìffVB"¿¢'FÇ#¢$tTÂE2Ê÷B"¿¢'6V7Fñˆ‚#¢$ßW7FRDbfˆ6FÚ"¿¢'FWáB#¢%W6RVÊFÚ«FW&:|:6ÚW7FófW"V“V“6ˆ◊˜6óF˜"DbÊFófÚWÜó7FVÁFR¬∆ñ÷óFFL:íFˆó2'Vóf˜2FRñ◊∆V÷VÁF:|:6ÚRVÊ2FWáFÚ¬W7Fñ∆Ú¬W7:v÷VÁFÚ˜R˜6ú:|:6ÚFR&V7W'6Úó6ˆ∆FÚ‚"¿¢&Ê˜&÷∆ó¶VEFWáB#¢'W6RVÊFÚ«FW&6ÚW7FófW"V“V“6ˆ◊˜6óF˜"FbÊFófÚWÜó7FVÁFR∆ñ÷óFFFRFˆó2'Vóf˜2FRñ◊∆V÷VÁF6ÚRVÊ2FWáFÚW7Fñ∆ÚW76÷VÁFÚ˜R˜6ñ6ÚFR&V7W'6Úó6ˆ∆FÚ"¿¢'Fˆ∂V‰6˜VÁB#¢#R¿¢''B#¢¢“¿¢∞¢&ñB#¢&6f#3ÉcVVcÉ&sSFSr"¿¢&Ü6Ç#¢&6f#3ÉcVVcÉ&sSFSvCsScFCsSC6SfcÜ#6SsÉÉv6cìv&FfñÉ##scCí"¿¢'FÇ#¢$tTÂE2Ê÷B"¿¢'6V7Fñˆ‚#¢$ßW7FRDbfˆ6FÚ"¿¢'FWáB#¢"“W6RV“vVÁFRR6'&VwVR6ˆ÷VÁFRíˆ˜W&6Ú˜ˆ∆óFñ62ıDe5ÙÙdî4îï2Ê÷F‚“Ï:6Ú∆Vñ÷V‹;7&ñ¬∆˜FR¬$r˜RÜó7L;7&ñ6ÚRÏ:6Ú'&∆˜FR‚“f∆ñFRVÊ2Ú6ˆÁG&FÚˆWá˜'FF˜"fWFFÚ¬FWáFÚWáG&:÷FÚ¬&V7W'6˜2V÷'WFñF˜2R:vñÊ&V∆WfÁFR&VÊFW&ó¶F‚“Ï:6Ú&ˆFR'Vñ∆Bv∆ˆ&¬˜"G,:6Ú‚“&V6∆76ñfóVR6RÜ˜WfW"«FW&:|:6ÚFRñ∆ˆBˆ&6∂VÊB¬V∆Vvñ&ñ∆ñFFR¬<:∆7V∆Ú¬vñÊ:|:6Ú¬Ê˜fÚWá˜'FF˜"¬6GW&&7FW"˜R6ˆ◊˜6óF˜"6ˆ◊'Fñ∆ÜFÚ6ˆ“ñ◊7FÚ◊∆Ú‚"¿¢&Ê˜&÷∆ó¶VEFWáB#¢'W6RV“vVÁFRR6'&VwVR6ˆ÷VÁFRí˜W&6Úˆ∆óFñ62Fg2ˆfñ6ñó2÷BÊÚ∆Vñ÷V÷˜&ñ∆˜FR&r˜RÜó7F˜&ñ6ÚRÊÚ'&∆˜FRf∆ñFRVÊ2Ú6ˆÁG&FÚWá˜'FF˜"fWFFÚFWáFÚWáG&ñFÚ&V7W'6˜2V÷'WFñF˜2RvñÊ&V∆WfÁFR&VÊFW&ó¶FÊÚ&ˆFR'Vñ∆Bv∆ˆ&¬˜"G&Ú&V6∆76ñfóVR6RÜ˜WfW"«FW&6ÚFRñ∆ˆB&6∂VÊBV∆Vvñ&ñ∆ñFFR6∆7V∆ÚvñÊ6ÚÊ˜fÚWá˜'FF˜"6GW&&7FW"˜R6ˆ◊˜6óF˜"6ˆ◊'Fñ∆ÜFÚ6ˆ“ñ◊7FÚ◊∆Ú"¿¢'Fˆ∂V‰6˜VÁB#¢Sí¿¢''B#¢¢“¿¢∞¢&ñB#¢#ñff3v#6CC3sS6f&3B"¿¢&Ü6Ç#¢#ñff3v#6CC3sS6f&3FssSV33&66#CìsfCv3sV&CFVc6V#3SÜVSv6CÇ"¿¢'FÇ#¢$tTÂE2Ê÷B"¿¢'6V7Fñˆ‚#¢$◊VFÏ:vG,:6Ú"¿¢'FWáB#¢%W6RVÊFÚ«FW&:|:6ÚVÁfˆ«fRV“Fˆ‹:÷ÊñÚR÷ó2FRFˆó2'Vóf˜2¬÷2Ï:6Ú˜77Ví&ó66Ú7,:◊Fñ6Ú‚"¿¢&Ê˜&÷∆ó¶VEFWáB#¢'W6RVÊFÚ«FW&6ÚVÁfˆ«fRV“Fˆ÷ñÊñÚR÷ó2FRFˆó2'Vóf˜2÷2ÊÚ˜77Ví&ó66Ú7&óFñ6Ú"¿¢'Fˆ∂V‰6˜VÁB#¢R¿¢''B#¢¢“¿¢∞¢&ñB#¢#sVV6#CSF##v3vCcìÉB"¿¢&Ü6Ç#¢#sVV6#CSF##v3vCcìÉFV#sf#CCc3&fccñS3fSfV3VcCccc#scfÜCcC#r"¿¢'FÇ#¢$tTÂE2Ê÷B"¿¢'6V7Fñˆ‚#¢$◊VFÏ:vG,:6Ú"¿¢'FWáB#¢"“∆Vñ‘T‘ı$îÙ4‰Ù‰î4Ê÷BR6ˆ÷VÁFRÚ&∆ˆ6ÚGV¬FRƒıDUÙDïdÚÊ÷B‚“6ˆÁ7V«FRÚ$rVÊ26RV÷FV6ó<:6ÚÁFW&ñ˜"f˜"ÊV6W7<:&ñ¬6ˆ“ÊÚ‹:Üñ÷ÚFˆó2&W7V«FF˜2‚“W6RV“vVÁFR˜"G,:6Ú‚FV∆VwVRVÊ2V÷g&VÁFR&V∆÷VÁFRñÊFWVÊFVÁFRVRV6ˆÊˆ÷ó¶RFV◊Ú‚“'&∆˜FR6ˆ÷VÁFR&◊VFÏ:v6ˆW6FR&ˆGWFÚ¬Fˆ7V÷VÁF:|:6Ú˜W&6ñˆÊ¬˜RVÁG&VvVR6W,:V&∆ñ6F‚"¿¢&Ê˜&÷∆ó¶VEFWáB#¢&∆Vñ÷V÷˜&ñ6ÊˆÊñ6÷BR6ˆ÷VÁFRÚ&∆ˆ6ÚGV¬FR∆˜FRFófÚ÷B6ˆÁ7V«FRÚ&rVÊ26RV÷FV6ó6ÚÁFW&ñ˜"f˜"ÊV6W76&ñ6ˆ“ÊÚ÷Üñ÷ÚFˆó2&W7V«FF˜2W6RV“vVÁFR˜"G&ÚFV∆VwVRVÊ2V÷g&VÁFR&V∆÷VÁFRñÊFWVÊFVÁFRVRV6ˆÊˆ÷ó¶RFV◊Ú'&∆˜FR6ˆ÷VÁFR&◊VFÊ66ˆW6FR&ˆGWFÚFˆ7V÷VÁF6Ú˜W&6ñˆÊ¬˜RVÁG&VvVR6W&V&∆ñ6F"¿¢'Fˆ∂V‰6˜VÁB#¢SB¿¢''B#¢¢“¿¢∞¢&ñB#¢#ñ#ìÜSSfVCìV3ÜS6#r"¿¢&Ü6Ç#¢#ñ#ìÜSSfVCìV3ÜS6#ss3ÜcVf#fcìF33ñS3CF#&CììÉ3fSSCsF6cS3Ç"¿¢'FÇ#¢$tTÂE2Ê÷B"¿¢'6V7Fñˆ‚#¢$◊VFÏ:v7,:◊Fñ6"¿¢'FWáB#¢$&Ê6Úı7W&6R¬WFÇı$≈2¬fñÊÊ6Vó&Ú¬◊VFÏ:vW7G'WGW&¬FRDb¬ñÊg&W7G'WGW&RV&∆ñ6:|:6ÚWÜñvV“ˆÃ:◊Fñ6W7V<:÷fñ6ñÊFñ6F&óÜÚ‚"¿¢&Ê˜&÷∆ó¶VEFWáB#¢&&Ê6Ú7W&6RWFÇ&«2fñÊÊ6Vó&Ú◊VFÊ6W7G'WGW&¬FRFbñÊg&W7G'WGW&RV&∆ñ66ÚWÜñvV“ˆ∆óFñ6W7V6ñfñ6ñÊFñ6F&óÜÚ"¿¢'Fˆ∂V‰6˜VÁB#¢b¿¢''B#¢¢“¿¢∞¢&ñB#¢&c#ìñ66&S3&3vc3í"¿¢&Ü6Ç#¢&c#ìñ66&S3&3vc3ìc&FCfsÜ3F3fV&&Ff6c#vC&fvVc3ÜSCcCSvf"¿¢'FÇ#¢$tTÂE2Ê÷B"¿¢'6V7Fñˆ‚#¢$◊VFÏ:v7,:◊Fñ6"¿¢'FWáB#¢"“V“vVÁFR6ˆÁFñÁV6VÊFÚÚG,:6Û≤‹;¶«Fó∆˜2vVÁFW2Ï:6Ú<:6Ú&WVó6óFÚ‚“&W&ˆGW¶Úf«WÜÚ&V¬ÁFW2FRñ◊∆V÷VÁF"Rf∆ñFRÚ6ˆÁG&FÚFó&WF÷VÁFRfWFFÚ‚“W6R'Vñ∆B6ˆ◊∆WFÚ6ˆ÷VÁFRVÊFÚÚ&ó66ÚFRñÁFVw&:|:6ÚßW7Fñfñ6"˜RÊÚfV6Ü÷VÁFÚ&V&∆ñ6:|:6Ú‚"¿¢&Ê˜&÷∆ó¶VEFWáB#¢'V“vVÁFR6ˆÁFñÁV6VÊFÚÚG&Ú◊V«Fó∆˜2vVÁFW2ÊÚ6Ú&WVó6óFÚ&W&ˆGW¶Úf«WÜÚ&V¬ÁFW2FRñ◊∆V÷VÁF"Rf∆ñFRÚ6ˆÁG&FÚFó&WF÷VÁFRfWFFÚW6R'Vñ∆B6ˆ◊∆WFÚ6ˆ÷VÁFRVÊFÚÚ&ó66ÚFRñÁFVw&6ÚßW7Fñfñ6"˜RÊÚfV6Ü÷VÁFÚ&V&∆ñ66Ú"¿¢'Fˆ∂V‰6˜VÁB#¢3B¿¢''B#¢¢“¿¢∞¢&ñB#¢&63Ésc&63ìScCFF3S2"¿¢&Ü6Ç#¢&63Ésc&63ìScCFF3S3É#6CvV6#cf3s&F&3vCs&#3&3ìf#s#ìCcìS3ñSsÇ"¿¢'FÇ#¢$tTÂE2Ê÷B"¿¢'6V7Fñˆ‚#¢$˜W&:|;VW2&V÷˜F2"¿¢'FWáB#¢"“vóDáV"&V÷˜FÚ:í6ˆ÷VÁFRfñ‘5vóDáV"‚Ï:6ÚW6RvóB˜RvÇ&7&ñ"'&Ê6Ç¬6ˆ÷÷óB¬W6Ç¬V∆¬&WVW7B˜RV&∆ñ6:|:6Ú‚“7W&6R:í6ˆ÷VÁFRfñ‘57W&6R‚Ï:6ÚWÜV7WFR7W&6R4ƒí&6ˆÁ7V«F2¬÷ñw&FñˆÁ2¬&Ê6Ú¬WFÇ¬7F˜&vR¬$≈2¬&V«Fñ÷R˜RVFvRgVÊ7FñˆÁ2‚“&W6W'fR«FW&:|;VW2&∆V∆2RV&∆óVRVÊ2V“÷ÊñfW7FÚWáÃ:÷6óFÚFR'Vóf˜2FÚ∆˜FR‚“&ˆG\:|:6ÚWÜñvRVFñFÚWáÃ:÷6óFÚFÚW7\:&ñÚR7&óL:ó&ñ˜2FR6VóFR6ˆÊfó&÷F˜2‚"¿¢&Ê˜&÷∆ó¶VEFWáB#¢&vóFáV"&V÷˜FÚR6ˆ÷VÁFRfñ÷7vóFáV"ÊÚW6RvóB˜RvÇ&7&ñ"'&Ê6Ç6ˆ÷÷óBW6ÇV∆¬&WVW7B˜RV&∆ñ66Ú7W&6RR6ˆ÷VÁFRfñ÷77W&6RÊÚWÜV7WFR7W&6R6∆í&6ˆÁ7V«F2÷ñw&FñˆÁ2&Ê6ÚWFÇ7F˜&vR&«2&V«Fñ÷R˜RVFvRgVÊ7FñˆÁ2&W6W'fR«FW&6ˆW2&∆V∆2RV&∆óVRVÊ2V“÷ÊñfW7FÚWá∆ñ6óFÚFR'Vóf˜2FÚ∆˜FR&ˆGV6ÚWÜñvRVFñFÚWá∆ñ6óFÚFÚW7V&ñÚR7&óFW&ñ˜2FR6VóFR6ˆÊfó&÷F˜2"¿¢'Fˆ∂V‰6˜VÁB#¢c"¿¢''B#¢¢“¿¢∞¢&ñB#¢#6ccC3csfc6#sñcS3C2"¿¢&Ü6Ç#¢#6ccC3csfc6#sñcS3C3cs3ììFc6cìcñ&c##Ssv&3s#cF#3VFcFC3s&2"¿¢'FÇ#¢$tTÂE2Ê÷B"¿¢'6V7Fñˆ‚#¢%V∆ñFFRRW66˜Ú"¿¢'FWáB#¢"“6W\:¶Ê6ñG,:6Ú:ì¢&W&ˆG\:|:6Ú¬FW7FRˆ6ÜV6vV“W7V<:÷fñ6¬F6Ç‹:÷Êñ÷Ú¬6÷ˆ∂R&V¬Rf∆ñF:|:6ÚfñÊ¬&˜˜&6ñˆÊ¬‚“6˜'&\:|:6Úfó7V¬ˆñÁFW&FófÏ:6Úfñ6&ˆÁF6V“6÷ˆ∂RFÚf«WÜÚ6˜'&W7ˆÊFVÁFS≤6R6W7<:6ÚWFVÁFñ6FW7FófW"ñÊFó7ˆÏ:◊fV¬¬&Vvó7G&RVÊL:¶Ê6ñ6V“7V'7FóGVó"Ú6÷ˆ∂R˜"FW¶VÊ2FRFW7FW2Ï:6Ú&V∆6ñˆÊF˜2‚“Ï:6Ú«FW&RtTÂE2¬6∂ñ∆«2˜R÷V‹;7&ñFVÁG&ÚFRV“Ü˜FfóÇFR&ˆGWFÚ‚◊VFÏ:v2FRv˜fW&ÊÏ:vW'FVÊ6V“∆˜FR˜W&6ñˆÊ¬6W&FÚ‚“'Vóf˜2÷ÁVó2FRñ◊∆V÷VÁF:|:6Ú¬FW7FR¬Fˆ7V÷VÁF:|:6ÚFóf¬ˆÃ:◊Fñ6˜R6∂ñ∆¬L:¶“FWFÚFRS∆ñÊÜ2l:◊6ñ62‚6RV“'VófÚFˆ6FÚV«G&76"ÚFWFÚ¬FófñF÷ÚÊÚ÷W6÷Ú∆˜FR˜"&W7ˆÁ6&ñ∆ñFFR6ˆW6≤Ï:6Ú÷7VRfñˆ∆:|:6Ú6ˆ◊&ñ÷ñÊFÚ<;6FñvÚ˜R&V÷˜fVÊFÚ∆Vvñ&ñ∆ñFFR‚“÷ñw&FñˆÁ2gWGW&2FWfV“6W"FófñFñF2ÁFW2F∆ñ6:|:6ÚVÊFÚó76Ú&W6W'f"Fˆ÷ñ6ñFFRR˜&FV“‚÷ñw&FñˆÁ2¨:∆ñ6F2<:6Úñ◊WL:fVó2R6ˆÁ7FóGVV“WÜ6\:|:6ÚVFóFF≤'Vóf˜2vW&F˜2¬∆ˆ6∂fñ∆W2¬&ñÏ:&ñ˜2R<;6FñvÚFRFW&6Vó&˜2F÷,:ñ“Ï:6ÚVÁG&“ÊÚFWFÚ‚“F¸:|:6ÚFÚFWFÚ:íñÊ7&V÷VÁF√¢f∆ñFR&ñ÷Vó&ÚÚ÷ÊñfW7FÚWáÃ:÷6óFÚFÚ∆˜FRGV¬R◊∆ñRÚW66˜ÚVFóFFÚ6F∆˜FR¬6V“G&Á6f˜&÷"&Vw&V“f'&VGW&6ñ∆VÊ6ñ˜6FRL:◊fñFL:ñ6Êñ6ÁFñv‚“"¿¢&Ê˜&÷∆ó¶VEFWáB#¢&6WVVÊ6ñG&ÚR&W&ˆGV6ÚFW7FR6ÜV6vV“W7V6ñfñ6F6Ç÷ñÊñ÷Ú6÷ˆ∂R&V¬Rf∆ñF6ÚfñÊ¬&˜˜&6ñˆÊ¬6˜'&V6Úfó7V¬ñÁFW&FófÊÚfñ6&ˆÁF6V“6÷ˆ∂RFÚf«WÜÚ6˜'&W7ˆÊFVÁFR6R6W76ÚWFVÁFñ6FW7FófW"ñÊFó7ˆÊófV¬&Vvó7G&RVÊFVÊ6ñ6V“7V'7FóGVó"Ú6÷ˆ∂R˜"FW¶VÊ2FRFW7FW2ÊÚ&V∆6ñˆÊF˜2ÊÚ«FW&RvVÁG26∂ñ∆«2˜R÷V÷˜&ñFVÁG&ÚFRV“Ü˜FfóÇFR&ˆGWFÚ◊VFÊ62FRv˜fW&ÊÊ6W'FVÊ6V“∆˜FR˜W&6ñˆÊ¬6W&FÚ'Vóf˜2÷ÁVó2FRñ◊∆V÷VÁF6ÚFW7FRFˆ7V÷VÁF6ÚFófˆ∆óFñ6˜R6∂ñ∆¬FV“FWFÚFRS∆ñÊÜ2fó6ñ626RV“'VófÚFˆ6FÚV«G&76"ÚFWFÚFófñFÚÊÚ÷W6÷Ú∆˜FR˜"&W7ˆÁ6&ñ∆ñFFR6ˆW6ÊÚ÷7VRfñˆ∆6Ú6ˆ◊&ñ÷ñÊFÚ6ˆFñvÚ˜R&V÷˜fVÊFÚ∆Vvñ&ñ∆ñFFR÷ñw&FñˆÁ2gWGW&2FWfV“6W"FófñFñF2ÁFW2F∆ñ66ÚVÊFÚó76Ú&W6W'f"Fˆ÷ñ6ñFFRR˜&FV“÷ñw&FñˆÁ2¶∆ñ6F26Úñ◊WFfVó2R6ˆÁ7FóGVV“WÜ6V6ÚVFóFF'Vóf˜2vW&F˜2∆ˆ6∂fñ∆W2&ñÊ&ñ˜2R6ˆFñvÚFRFW&6Vó&˜2F÷&V“ÊÚVÁG&“ÊÚFWFÚFˆ6ÚFÚFWFÚRñÊ7&V÷VÁF¬f∆ñFR&ñ÷Vó&ÚÚ÷ÊñfW7FÚWá∆ñ6óFÚFÚ∆˜FRGV¬R◊∆ñRÚW66˜ÚVFóFFÚ6F∆˜FR6V“G&Á6f˜&÷"&Vw&V“f'&VGW&6ñ∆VÊ6ñ˜6FRFófñFFV6Êñ6ÁFñv"¿¢'Fˆ∂V‰6˜VÁB#¢SR¿¢''B#¢¢“¿¢∞¢&ñB#¢&FfS6c3CCfS3Sñf33ì""¿¢&Ü6Ç#¢&FfS6c3CCfS3Sñf33ì#3sFV&#Éìc6C##vf3Éc#fVfcÉCÜFV33ì#33R"¿¢'FÇ#¢$tTÂE2Ê÷B"¿¢'6V7Fñˆ‚#¢%V∆ñFFRRW66˜Ú"¿¢'FWáB#¢%FW7FW2÷fˆÁFRR÷ñw&FñˆÁ2∆ñ6F2W&÷ÊV6V“fW'6ñˆÊF˜2‚V∆W2&˜FVvV“&Vw&W7<;VW2¬VFóF˜&ñ¬G&ñgBR&V6ˆÁ7G'\:|:6ÚFR÷&ñVÁFW2‚“66ÜW2¬Dg2ı‰w2vW&F˜2¬&V∆L;7&ñ˜2FV◊˜,:&ñ˜2¬Ü&ÊW76W2V“F◊R6:÷F2FR'Vñ∆B<:6Ú&VvVÊW,:fVó2RÏ:6ÚW'FVÊ6V“Ú∆˜FR‚“Ï:6Úf'&Ú&W˜6óL;7&ñÚñÁFVó&ÚÊV“W6RW7FFÚvóB◊∆Ú6ˆ÷Ú∆ó7FFRG&&∆ÜÚ‚"¿¢&Ê˜&÷∆ó¶VEFWáB#¢'FW7FW2fˆÁFRR÷ñw&FñˆÁ2∆ñ6F2W&÷ÊV6V“fW'6ñˆÊF˜2V∆W2&˜FVvV“&Vw&W76ˆW2VFóF˜&ñG&ñgBR&V6ˆÁ7G'V6ÚFR÷&ñVÁFW266ÜW2Fg2Êw2vW&F˜2&V∆F˜&ñ˜2FV◊˜&&ñ˜2Ü&ÊW76W2V“F◊R6ñF2FR'Vñ∆B6Ú&VvVÊW&fVó2RÊÚW'FVÊ6V“Ú∆˜FRÊÚf'&Ú&W˜6óF˜&ñÚñÁFVó&ÚÊV“W6RW7FFÚvóB◊∆Ú6ˆ÷Ú∆ó7FFRG&&∆ÜÚ"¿¢'Fˆ∂V‰6˜VÁB#¢CR¿¢''B#¢ ¢“¿¢∞¢&ñB#¢&#ccccsCÉñ3s#C"¿¢&Ü6Ç#¢&#ccccsCÉñ3s#CVCV36c3cvÜf63É3F&SVc&3ìÉ#F3vCS&C&&sÇ"¿¢'FÇ#¢$tTÂE2Ê÷B"¿¢'6V7Fñˆ‚#¢%ˆÃ:◊Fñ626'&VvF26ˆ÷VÁFR˜"Fˆ‹:÷ÊñÚ"¿¢'FWáB#¢"“Dg2vW&F˜2V∆Ú&ˆGWFÛ¢íˆ˜W&6Ú˜ˆ∆óFñ62ıDe5ÙÙdî4îï2Ê÷B“7W&6R¬WFÇR6VwW&Ï:v¢íˆ˜W&6Ú˜ˆ∆óFñ62ı5U$4UÙUı4TuU$‰4Ê÷B“fñÊÊ6Vó&ÚR6ˆ'&Ï:v3¢íˆ˜W&6Ú˜ˆ∆óFñ62Ùdî‰‰4Tï$ÚÊ÷B“∆ÊÚFR7W'6Û¢íˆ˜W&6Ú˜ˆ∆óFñ62ıƒ‰ıÙ5U%4ÚÊ÷B“ñÁFW&f6RRÊ˜Fñfñ6:|;VW3¢íˆ˜W&6Ú˜ˆ∆óFñ62ÙîÂDU$d4RÊ÷B“∆˜FW2¬f∆ñF:|:6ÚRV&∆ñ6:|:6Û¢íˆ˜W&6Úı$ıDÙ4ÙƒıÙDUÙƒıDU2Ê÷B"¿¢&Ê˜&÷∆ó¶VEFWáB#¢'Fg2vW&F˜2V∆Ú&ˆGWFÚí˜W&6Úˆ∆óFñ62Fg2ˆfñ6ñó2÷B7W&6RWFÇR6VwW&Ê6í˜W&6Úˆ∆óFñ627W&6RR6VwW&Ê6÷BfñÊÊ6Vó&ÚR6ˆ'&Ê62í˜W&6Úˆ∆óFñ62fñÊÊ6Vó&Ú÷B∆ÊÚFR7W'6Úí˜W&6Úˆ∆óFñ62∆ÊÚ7W'6Ú÷BñÁFW&f6RRÊ˜Fñfñ66ˆW2í˜W&6Úˆ∆óFñ62ñÁFW&f6R÷B∆˜FW2f∆ñF6ÚRV&∆ñ66Úí˜W&6Ú&˜Fˆ6ˆ∆ÚFR∆˜FW2÷B"¿¢'Fˆ∂V‰6˜VÁB#¢S¿¢''B#¢¢“¿¢∞¢&ñB#¢&ccVVCSCS6F6CCSñCR"¿¢&Ü6Ç#¢&ccVVCSCS6F6CCSñCVccfCS#Ff6#vVSF6f3#Sscv&&ffcÜcFf#VCìÜ2"¿¢'FÇ#¢$tTÂE2Ê÷B"¿¢'6V7Fñˆ‚#¢$÷V‹;7&ñR$r"¿¢'FWáB#¢"“íˆ˜W&6Ú:ífˆÁFRfW'6ñˆÊF≤íˆ÷V÷˜&ñ¬í˜&rRí˜6∂ñ¬<:6Ú∆VvF˜2&V÷˜fñF˜2‚“'W66$r:í˜6ñˆÊ¬&ßW7FW2,:ñF˜2R6ˆ÷VÁFR∆VóGW&‚&VñÊFWÜRWá∆ñ6óF÷VÁFRV÷fW¢ÚfV6Ü"V“∆˜FR˜W&6ñˆÊ¬˜RFRV&∆ñ6:|:6Ú‚“ÁVÊ6ñÊFWÜR6Vw&VF˜2¬FF˜2W76ˆó2¬GV◊2¬<;6FñvÚ÷fˆÁFR6ˆ◊∆WFÚ˜R'FVfF˜2vW&F˜2‚"¿¢&Ê˜&÷∆ó¶VEFWáB#¢&í˜W&6ÚRfˆÁFRfW'6ñˆÊFí÷V÷˜&ñí&rRí6∂ñ¬6Ú∆VvF˜2&V÷˜fñF˜2'W66&rR˜6ñˆÊ¬&ßW7FW2&ñF˜2R6ˆ÷VÁFR∆VóGW&&VñÊFWÜRWá∆ñ6óF÷VÁFRV÷fW¢ÚfV6Ü"V“∆˜FR˜W&6ñˆÊ¬˜RFRV&∆ñ66ÚÁVÊ6ñÊFWÜR6Vw&VF˜2FF˜2W76ˆó2GV◊26ˆFñvÚfˆÁFR6ˆ◊∆WFÚ˜R'FVfF˜2vW&F˜2"¿¢'Fˆ∂V‰6˜VÁB#¢CR¿¢''B#¢¢“¿¢∞¢&ñB#¢#ñSSÜ3ÜFìÉFÉF32"¿¢&Ü6Ç#¢#ñSSÜ3ÜFìÉFÉF33svcÜcÉ63ìfC36c#ñ&3ììsñVF6#cf#ÉccVSsÉ#""¿¢'FÇ#¢&íˆ˜W&6ÚÙƒıDUÙDïdÚÊ÷B"¿¢'6V7Fñˆ‚#¢$∆˜FRFófÚ"¿¢'FWáB#¢$W7FFÛ¢dƒîDDÚ(	BT$ƒî48|84ÚT“$ÙE\8|84ÚUDı$ï§D"¿¢&Ê˜&÷∆ó¶VEFWáB#¢&W7FFÚf∆ñFFÚV&∆ñ66ÚV“&ˆGV6ÚWF˜&ó¶F"¿¢'Fˆ∂V‰6˜VÁB#¢b¿¢''B#¢¢“¿¢∞¢&ñB#¢&CS##V6Vf&Sñ3f&S"¿¢&Ü6Ç#¢&CS##V6Vf&Sñ3f&S33ìC36c3vc3&VcSSF3C6Vc6V6F&ÉÉSSSsSB"¿¢'FÇ#¢&íˆ˜W&6ÚÙƒıDUÙDïdÚÊ÷B"¿¢'6V7Fñˆ‚#¢$∆˜FS¢##b”í”#r÷6ˆÁfVÊñ˜2÷f7V∆FFW2◊&6Vó&2"¿¢'FWáB#¢$÷ÊñfW7FÚWáÃ:÷6óFÛ¢íˆ˜W&6Ú˜&Vvó7G&˜2ˆ«FW&6ˆW2Û##b”í”#r÷6ˆÁfVÊñ˜2÷f7V∆FFW2◊&6Vó&2Ê÷F"¿¢&Ê˜&÷∆ó¶VEFWáB#¢&÷ÊñfW7FÚWá∆ñ6óFÚí˜W&6Ú&Vvó7G&˜2«FW&6ˆW2##bí#r6ˆÁfVÊñ˜2f7V∆FFW2&6Vó&2÷B"¿¢'Fˆ∂V‰6˜VÁB#¢2¿¢''B#¢¢“¿¢∞¢&ñB#¢&3ìCs&ScV3S3#vcR"¿¢&Ü6Ç#¢&3ìCs&ScV3S3#vcVV#c63#c#SvV&3ìñC#Ü6CSS3v3#Éf3#CC#SÜ#V2"¿¢'FÇ#¢&íˆ˜W&6ÚÙƒıDUÙDïdÚÊ÷B"¿¢'6V7Fñˆ‚#¢$∆˜FS¢##b”í”#r÷6ˆÁfVÊñ˜2÷f7V∆FFW2◊&6Vó&2"¿¢'FWáB#¢"“Ê˜fÚ6ˆÁl:¶ÊñÚ6V∆V6ñˆÊV÷¢d5TƒDDR$4Tï$ÚdîƒîDˆ≤Êˆ÷R∆óg&RRl:÷Ê7V∆Ú˜6ñˆÊ¬FVóÜ“FRWÜó7Fó"‚“∆ó7FñÊ6«Ví6ˆ÷VÁFR6F7G&˜2Fóf˜2v∆ˆ&ó2˜RfñÊ7V∆F˜2Úˆ∆ÚWF˜&ó¶FÚ‚“Ú&6∂VÊBFW&ófÚÊˆ÷R6Ï;FÊñ6ÚF¢R&V¶VóF˜WG&ÚFóÚFR&6Vó&Ú˜R&6Vó&Úf˜&FÚW66˜Ú‚“Úfó6Ú6ˆ'&Rˆ∆ÚR&ñ÷Vó&Ú˜'FR:í&V÷˜fñFÚFÚ÷ˆF¬‚“&ˆG\:|:6ÚWF˜&ó¶FWá∆ñ6óF÷VÁFRV∆ÚW7\:&ñÚÊW7F6ˆÁfW'6≤÷ñw&FñˆÁ2∆ñ6F2Rf∆ñFF2¬V&∆ñ6"fW'<:6ÚB„Ç„bR6ˆÊfó&÷"Ú6÷ˆ∂RFRñÁFW&f6R‚"¿¢&Ê˜&÷∆ó¶VEFWáB#¢&Ê˜fÚ6ˆÁfVÊñÚ6V∆V6ñˆÊV÷¢f7V∆FFR&6Vó&fñ∆ñFÚÊˆ÷R∆óg&RRfñÊ7V∆Ú˜6ñˆÊ¬FVóÜ“FRWÜó7Fó"∆ó7FñÊ6«Ví6ˆ÷VÁFR6F7G&˜2Fóf˜2v∆ˆ&ó2˜RfñÊ7V∆F˜2Úˆ∆ÚWF˜&ó¶FÚÚ&6∂VÊBFW&ófÚÊˆ÷R6ÊˆÊñ6ÚF¢R&V¶VóF˜WG&ÚFóÚFR&6Vó&Ú˜R&6Vó&Úf˜&FÚW66˜ÚÚfó6Ú6ˆ'&Rˆ∆ÚR&ñ÷Vó&Ú˜'FRR&V÷˜fñFÚFÚ÷ˆF¬&ˆGV6ÚWF˜&ó¶FWá∆ñ6óF÷VÁFRV∆ÚW7V&ñÚÊW7F6ˆÁfW'6÷ñw&FñˆÁ2∆ñ6F2Rf∆ñFF2V&∆ñ6"fW'6ÚBÇbR6ˆÊfó&÷"Ú6÷ˆ∂RFRñÁFW&f6R"¿¢'Fˆ∂V‰6˜VÁB#¢cr¿¢''B#¢¢“¿¢∞¢&ñB#¢#CsvvScFcCÉCìVfcCí"¿¢&Ü6Ç#¢#CsvvScFcCÉCìVfcCñÉ&CSÉCf&3#f3#f6csF36#ììCcÉsvc33Vc&fS2"¿¢'FÇ#¢&íˆ˜W&6ÚÙ‘T‘ı$îÙ4‰Ù‰î4Ê÷B"¿¢'6V7Fñˆ‚#¢$÷V‹;7&ñ6Ï;FÊñ6FÚ&ˆ¶WFÚ"¿¢'FWáB#¢$GV∆ó¶FV”¢##b”í”#B"¿¢&Ê˜&÷∆ó¶VEFWáB#¢&GV∆ó¶FV“##bí#B"¿¢'Fˆ∂V‰6˜VÁB#¢R¿¢''B#¢¢“¿¢∞¢&ñB#¢&&C&V#3C#S#cìSFCCsÉ2"¿¢&Ü6Ç#¢&&C&V#3C#S#cìSFCCsÉ3Cì63ìcfcf&63ìÉS&#sSÉ#3Ü#VfcVfV#ccC6b"¿¢'FÇ#¢&íˆ˜W&6ÚÙ‘T‘ı$îÙ4‰Ù‰î4Ê÷B"¿¢'6V7Fñˆ‚#¢$fñÊ∆ñFFR"¿¢'FWáB#¢$W7FR'VófÚ:íV“:÷ÊFñ6R7W'FÚFR6ˆÁFWáFÚGW,:fV¬‚ßW7FW2,:ñF˜2Ï:6Ú&V6ó6“Ã:¢÷∆Ú‚FWF∆ÜW2FRFˆ‹:÷ÊñÚfñ6“Ê2ˆÃ:◊Fñ62W7V<:÷fñ62R<:6Ú6'&VvF˜26ˆ÷VÁFRVÊFÚF&Vf˜2VÁfˆ«fR‚"¿¢&Ê˜&÷∆ó¶VEFWáB#¢&W7FR'VófÚRV“ñÊFñ6R7W'FÚFR6ˆÁFWáFÚGW&fV¬ßW7FW2&ñF˜2ÊÚ&V6ó6“∆R∆ÚFWF∆ÜW2FRFˆ÷ñÊñÚfñ6“Ê2ˆ∆óFñ62W7V6ñfñ62R6Ú6'&VvF˜26ˆ÷VÁFRVÊFÚF&Vf˜2VÁfˆ«fR"¿¢'Fˆ∂V‰6˜VÁB#¢#Ç¿¢''B#¢¢“¿¢∞¢&ñB#¢&#3cVcSÜCc6cVVS&#F"¿¢&Ü6Ç#¢&#3cVcSÜCc6cVVS&#F36VcÉVCC&cv#É6cìFCcÜ6FC6#sìC&3cÜc&"¿¢'FÇ#¢&íˆ˜W&6ÚÙ‘T‘ı$îÙ4‰Ù‰î4Ê÷B"¿¢'6V7Fñˆ‚#¢$˜W&:|:6Ú"¿¢'FWáB#¢"“tTÂE2Ê÷BFVfñÊR6∆76ñfñ6:|:6ÚVÁG&RßW7FR,:ñFÚ¬◊VFÏ:vG,:6ÚR◊VFÏ:v7,:◊Fñ6‚“ƒıDUÙDïdÚÊ÷B6ˆÁL:ñ“6ˆ÷VÁFRV“∆˜FR6˜'&VÁFS≤Üó7L;7&ñ6˜2fñ6“V“íˆ˜W&6Ú˜&Vvó7G&˜2Ú‚“V“vVÁFR:íÚG,:6Ú‚FV∆Vv:|:6Ú<;2ˆ6˜'&R&g&VÁFW2ñÊFWVÊFVÁFW2R÷FW&ñ∆÷VÁFR;ßFVó2‚“f∆ñF:|:6ÚFWfRWÜW&6W"Úf«WÜÚ&V¬fWFFÚÁFW2FR'Vñ∆B˜R7\:◊FW2◊∆2‚“&Vw&2v∆ˆ&ó2Ï:6Ú<:6Ú7&W66VÁFF2GW&ÁFRÜ˜FfóÇFR&ˆGWFÚ‚"¿¢&Ê˜&÷∆ó¶VEFWáB#¢&vVÁG2÷BFVfñÊR6∆76ñfñ66ÚVÁG&RßW7FR&ñFÚ◊VFÊ6G&ÚR◊VFÊ67&óFñ6∆˜FRFófÚ÷B6ˆÁFV“6ˆ÷VÁFRV“∆˜FR6˜'&VÁFRÜó7F˜&ñ6˜2fñ6“V“í˜W&6Ú&Vvó7G&˜2V“vVÁFRRÚG&ÚFV∆Vv6Ú6Úˆ6˜'&R&g&VÁFW2ñÊFWVÊFVÁFW2R÷FW&ñ∆÷VÁFRWFVó2f∆ñF6ÚFWfRWÜW&6W"Úf«WÜÚ&V¬fWFFÚÁFW2FR'Vñ∆B˜R7VóFW2◊∆2&Vw&2v∆ˆ&ó2ÊÚ6Ú7&W66VÁFF2GW&ÁFRÜ˜FfóÇFR&ˆGWFÚ"¿¢'Fˆ∂V‰6˜VÁB#¢Sr¿¢''B#¢¢“¿¢∞¢&ñB#¢#vcCÉì#C#SÉsCÉñSfS"¿¢&Ü6Ç#¢#vcCÉì#C#SÉsCÉñSfSVvcÜV#Éf3CSvCñ6É#&#fVÉ&cSÉ6CÜSfcf6Üb"¿¢'FÇ#¢&íˆ˜W&6ÚÙ‘T‘ı$îÙ4‰Ù‰î4Ê÷B"¿¢'6V7Fñˆ‚#¢$'VóFWGW&RV∆ñFFR"¿¢'FWáB#¢"“Úg&ˆÁFVÊB&V7BıGóU67&óBıfóFR6ˆ∆WFñÁFVÏ:|:6ÚR&W6VÁFÚ&WF˜&ÊÚ6Ï;FÊñ6Ú‚“&Vw&26L:¶÷ñ62¬fñÊÊ6Vó&2¬WF˜&ó¶:|:6Ú¬V∆Vvñ&ñ∆ñFFR¬f∆˜&W2RvñÊ:|:6ÚW'FVÊ6V“Ú&6∂VÊBı%2VÊFÚ∆ñ<:fV¬‚“FÂ7F6≤VW'íR&V«Fñ÷RW6“ñÁf∆ñF:|:6ÚV∆Ú÷VÊ˜"W66˜ÚfWFFÚ‚“ÚFWFÚ'VóFWGW&¬:íFRS∆ñÊÜ2l:◊6ñ62˜"'VófÚ÷ÁV¬‚FˆFÚ'VófÚFˆ6FÚ6ñ÷Fó76ÚFWfR6W"÷ˆGV∆&ó¶FÚÊÚ,;7&ñÚ∆˜FS≤F¸:|:6Ú:íñÊ7&V÷VÁF¬V∆˜2÷ÊñfW7F˜2VFóFF˜2‚“÷ñw&FñˆÁ2¨:∆ñ6F2W&÷ÊV6V“ñ◊WL:fVó2÷W6÷Ú6ñ÷FÚFWFÚ‚Ê˜f2÷ñw&FñˆÁ2FWfV“6W"FófñFñF2ÁFW2F∆ñ6:|:6ÚVÊFÚ6W&:|:6Úf˜"FV6Êñ6÷VÁFR6VwW&≤vW&F˜2¬∆ˆ6∂fñ∆W2¬&ñÏ:&ñ˜2RFW&6Vó&˜2fñ6“f˜&F6ˆÁFvV“‚“FW7FW2÷fˆÁFRR÷ñw&FñˆÁ2W&÷ÊV6V“ÊÚ&W˜6óL;7&ñÚ÷W6÷ÚFWˆó2FRWÜV7WFF˜2‚“F◊¬66ÜW2¬&V∆L;7&ñ˜2RDg2ı‰w2FR<:6Ú&VvVÊW,:fVó2RˆFV“6W"∆ñ◊˜2‚"¿¢&Ê˜&÷∆ó¶VEFWáB#¢&Úg&ˆÁFVÊB&V7BGóW67&óBfóFR6ˆ∆WFñÁFVÊ6ÚR&W6VÁFÚ&WF˜&ÊÚ6ÊˆÊñ6Ú&Vw&26FV÷ñ62fñÊÊ6Vó&2WF˜&ó¶6ÚV∆Vvñ&ñ∆ñFFRf∆˜&W2RvñÊ6ÚW'FVÊ6V“Ú&6∂VÊB'2VÊFÚ∆ñ6fV¬FÁ7F6≤VW'íR&V«Fñ÷RW6“ñÁf∆ñF6ÚV∆Ú÷VÊ˜"W66˜ÚfWFFÚÚFWFÚ'VóFWGW&¬RFRS∆ñÊÜ2fó6ñ62˜"'VófÚ÷ÁV¬FˆFÚ'VófÚFˆ6FÚ6ñ÷Fó76ÚFWfR6W"÷ˆGV∆&ó¶FÚÊÚ&˜&ñÚ∆˜FRFˆ6ÚRñÊ7&V÷VÁF¬V∆˜2÷ÊñfW7F˜2VFóFF˜2÷ñw&FñˆÁ2¶∆ñ6F2W&÷ÊV6V“ñ◊WFfVó2÷W6÷Ú6ñ÷FÚFWFÚÊ˜f2÷ñw&FñˆÁ2FWfV“6W"FófñFñF2ÁFW2F∆ñ66ÚVÊFÚ6W&6Úf˜"FV6Êñ6÷VÁFR6VwW&vW&F˜2∆ˆ6∂fñ∆W2&ñÊ&ñ˜2RFW&6Vó&˜2fñ6“f˜&F6ˆÁFvV“FW7FW2fˆÁFRR÷ñw&FñˆÁ2W&÷ÊV6V“ÊÚ&W˜6óF˜&ñÚ÷W6÷ÚFWˆó2FRWÜV7WFF˜2F◊66ÜW2&V∆F˜&ñ˜2RFg2Êw2FR6Ú&VvVÊW&fVó2RˆFV“6W"∆ñ◊˜2"¿¢'Fˆ∂V‰6˜VÁB#¢Ç¿¢''B#¢¢“¿¢∞¢&ñB#¢##ì#CCÜ36f#ÉSfCC#F2"¿¢&Ü6Ç#¢##ì#CCÜ36f#ÉSfCC#F3scsñ3SvSñ33CSf6Fc&F#cf&VC&SSñS&#sÉfc2"¿¢'FÇ#¢&íˆ˜W&6ÚÙ‘T‘ı$îÙ4‰Ù‰î4Ê÷B"¿¢'6V7Fñˆ‚#¢%ˆÃ:◊Fñ626ˆÊFñ6ñˆÊó2"¿¢'FWáB#¢"“Dg2vW&F˜2V∆Ú&ˆGWFÛ¢ˆ∆óFñ62ıDe5ÙÙdî4îï2Ê÷B“7W&6RR6VwW&Ï:v¢ˆ∆óFñ62ı5U$4UÙUı4TuU$‰4Ê÷B“fñÊÊ6Vó&Û¢ˆ∆óFñ62Ùdî‰‰4Tï$ÚÊ÷B“∆ÊÚFR7W'6Û¢ˆ∆óFñ62ıƒ‰ıÙ5U%4ÚÊ÷B“ñÁFW&f6S¢ˆ∆óFñ62ÙîÂDU$d4RÊ÷B“VÁG&VvRV&∆ñ6:|:6Û¢$ıDÙ4ÙƒıÙDUÙƒıDU2Ê÷B"¿¢&Ê˜&÷∆ó¶VEFWáB#¢'Fg2vW&F˜2V∆Ú&ˆGWFÚˆ∆óFñ62Fg2ˆfñ6ñó2÷B7W&6RR6VwW&Ê6ˆ∆óFñ627W&6RR6VwW&Ê6÷BfñÊÊ6Vó&Úˆ∆óFñ62fñÊÊ6Vó&Ú÷B∆ÊÚFR7W'6Úˆ∆óFñ62∆ÊÚ7W'6Ú÷BñÁFW&f6Rˆ∆óFñ62ñÁFW&f6R÷BVÁG&VvRV&∆ñ66Ú&˜Fˆ6ˆ∆ÚFR∆˜FW2÷B"¿¢'Fˆ∂V‰6˜VÁB#¢3R¿¢''B#¢¢“¿¢∞¢&ñB#¢#vSñ&&&S3#6SÉs3ÜÜc2"¿¢&Ü6Ç#¢#vSñ&&&S3#6SÉs3ÜÜc363vSC3c3ñ#sv6ìcFcFcvSS3csC&#cñ#FFFVCB"¿¢'FÇ#¢&íˆ˜W&6ÚÙ‘T‘ı$îÙ4‰Ù‰î4Ê÷B"¿¢'6V7Fñˆ‚#¢%$r"¿¢'FWáB#¢"“fˆÁFW2G,:6Û¢tTÂE2Ê÷B¬W7F÷V‹;7&ñ¬∆˜FR6˜'&VÁFR¬&˜Fˆ6ˆ∆Ú¬ˆÃ:◊Fñ62RFˆ72ˆFV6ó6ñˆÁ2Ú‚“&Vvó7G&˜2Üó7L;7&ñ6˜2Ï:6ÚVÁG&“ÊÚ6˜'W2G,:6Ú‚“6V&6ÇÃ:¢6ˆ÷VÁFRÚ:÷ÊFñ6RWÜó7FVÁFRRÁVÊ6w&f˜R&VñÊFWÜ‚“ñÊFWÇ:íWÜV7WFFÚWá∆ñ6óF÷VÁFRV÷fW¢ÊÚfV6Ü÷VÁFÚFR∆˜FR&V∆WfÁFR‚“V÷&VFFñÊw2R˜V‰6ˆÁFWáB<:6Ú˜6ñˆÊó2RÁVÊ6&∆˜VVñ“˜W&:|:6Ú‚"¿¢&Ê˜&÷∆ó¶VEFWáB#¢&fˆÁFW2G&ÚvVÁG2÷BW7F÷V÷˜&ñ∆˜FR6˜'&VÁFR&˜Fˆ6ˆ∆Úˆ∆óFñ62RFˆ72FV6ó6ñˆÁ2&Vvó7G&˜2Üó7F˜&ñ6˜2ÊÚVÁG&“ÊÚ6˜'W2G&Ú6V&6Ç∆R6ˆ÷VÁFRÚñÊFñ6RWÜó7FVÁFRRÁVÊ6w&f˜R&VñÊFWÜñÊFWÇRWÜV7WFFÚWá∆ñ6óF÷VÁFRV÷fW¢ÊÚfV6Ü÷VÁFÚFR∆˜FR&V∆WfÁFRV÷&VFFñÊw2R˜VÊ6ˆÁFWáB6Ú˜6ñˆÊó2RÁVÊ6&∆˜VVñ“˜W&6Ú"¿¢'Fˆ∂V‰6˜VÁB#¢CR¿¢''B#¢¢“¿¢∞¢&ñB#¢&cfCcÉ6fVCcsì3É""¿¢&Ü6Ç#¢&cfCcÉ6fVCcsì3É&#ìFc#C##S#ñSC#sc63ñSñVScÜ#ìì#VCsìÉ&&Cv2"¿¢'FÇ#¢&íˆ˜W&6ÚÙ‘T‘ı$îÙ4‰Ù‰î4Ê÷B"¿¢'6V7Fñˆ‚#¢$6ñ6∆˜2L:ñ6Êñ6˜2R÷G,:÷7V∆∆ˆ6¬(	B##b”í”#B"¿¢'FWáB#¢$6ˆÁG&FÚfñvVÁFS¢∂6ñ6∆˜2fñÊÊ6Vó&˜2L:ñ6Êñ6˜5“Ç‚‚Ú‚‚ˆFˆ72ˆFV6ó6ñˆÁ2ˆ6ñ6∆˜2◊FV6Êñ6˜2÷6ˆ'&Ê62Ê÷Bí‚6ˆÁ7V«F"ÁFW2FR«FW&"V∆Vvñ&ñ∆ñFFR¬FF2¬÷G,:÷7V∆6V“&ˆ∆WFÚ¬&óÜ¬W7F˜&ÊÚ˜R3"‚&W6W'f"˜&ñvVÁ2&ÊW6Rı&ˆW62¬&˜fñÊFófñGV¬¬FW7FñÊÚƒÙ4¬R&W∆íF÷W6÷˜W&:|:6Ú‚&Wfó<:6Ú6ˆ“G,:ß2vVÁFW2V&∆ñ6FÊB„Ç„É"ı#sC≤WfñL:¶Ê6ñ2V“∑&Vvó7G&ÚF&Wfó<:6ı“á&Vvó7G&˜2ˆ«FW&6ˆW2Û##b”í”#B◊&Wfó6Ú÷&óÜ÷÷G&ñ7V∆÷∆ˆ6¬Ê÷Bí‚"¿¢&Ê˜&÷∆ó¶VEFWáB#¢&6ˆÁG&FÚfñvVÁFR6ñ6∆˜2fñÊÊ6Vó&˜2FV6Êñ6˜2Fˆ72FV6ó6ñˆÁ26ñ6∆˜2FV6Êñ6˜26ˆ'&Ê62÷B6ˆÁ7V«F"ÁFW2FR«FW&"V∆Vvñ&ñ∆ñFFRFF2÷G&ñ7V∆6V“&ˆ∆WFÚ&óÜW7F˜&ÊÚ˜R3"&W6W'f"˜&ñvVÁ2&ÊW6R&ˆW62&˜fñÊFófñGV¬FW7FñÊÚ∆ˆ6¬R&W∆íF÷W6÷˜W&6Ú&Wfó6Ú6ˆ“G&W2vVÁFW2V&∆ñ6FÊBÇÉ"#sBWfñFVÊ6ñ2V“&Vvó7G&ÚF&Wfó6Ú&Vvó7G&˜2«FW&6ˆW2##bí#B&Wfó6Ú&óÜ÷G&ñ7V∆∆ˆ6¬÷B"¿¢'Fˆ∂V‰6˜VÁB#¢Sí¿¢''B#¢¢“¿¢∞¢&ñB#¢#3Ss&33F##CS3Cs3r"¿¢&Ü6Ç#¢#3Ss&33F##CS3Cs3sF&3CFS333&63ñVcC3vc&fc#CcC#Ésv"¿¢'FÇ#¢&íˆ˜W&6ÚÙ‘T‘ı$îÙ4‰Ù‰î4Ê÷B"¿¢'6V7Fñˆ‚#¢$VÁG&VvfñÊÊ6Vó&V&∆ñ6F(	B##b”í”"ÉB„Ç„Crí"¿¢'FWáB#¢"“"C¢7V6ÇS#fcSf33cÉf&ñVS33#c3C&Cìvfcc3≤fW&6V¬7V66W72RfW'<:6Ú;¶&∆ñ6B„Ç„Cr6ˆÊfó&÷F‚vóDáV"7FñˆÁ2fñ6˜RTUTTB6V“'VÊÊW#≤Ï:6Ú6ˆÊgVÊFó"FW7FW2∆ˆ6ó2&˜fF˜26ˆ“4í6ˆÊ6«\:÷FÚ‚“&ÊW6R&V6ˆÊÜV6RÚ,;7Üñ÷ÚFñ;ßFñ¬Ê6ñˆÊ¬6ˆ◊&˜fFÚFR##b¬6V“«FW&"˜2FW&÷˜2‚L:◊GV∆Ú&Wfó6FÚF&Fñˆ∆ˆvñvÚ˜""B#c√V“ÇÛíÛ##b‚“6ˆ◊˜6ú:|:6Ú&ˆW62WÜñvR&˜f6ˆ◊L:◊fV¬6ˆ“&ñÊ6ó¬¬&V6V&ñFÚRFF≤WfñL:¶Ê6ñ˜7FW&ñ˜"6ˆÊf∆óFÁFRñÁf∆ñF&˜f‚FW66ˆÊÜV6ñFÚW&÷ÊV6RÁV∆Ú‚GV2&˜f2Üó7L;7&ñ62f˜&“w&fF26ˆ“FW66ˆÁFÚFR"Bí√ì6FR&V6V,:◊fVó2&W6W'fF˜2‚“VFóF˜&ñFCC";72W762&˜f3¢3Cbl:÷Ê7V∆˜2¬#Bv˜2¬C"&W'F˜2¬"BS2„É2√Sr&V6V&ñF˜2‚ñ◊˜'F:|:6ÚFR˜WG&2GW&÷2˜77Ví∆˜FRR6ˆÊfW,:¶Ê6ñ,;7&ñ˜3≤Ï:6ÚñÊfW&ó"6ˆ&W'GW&FR6ñ6∆˜2V∆ÚÏ;¶÷W&ÚFGW&÷‚“&Vvó7G&Û¢&Vvó7G&˜2ˆ«FW&6ˆW2Û##b”í”"◊&Wfó6Ú÷&ÊW6R◊&ˆW62Ê÷B‚"¿¢&Ê˜&÷∆ó¶VEFWáB#¢'"C7V6ÇS#fcSf33cÉf&ñVS33#c3C&Cìvfcc3fW&6V¬7V66W72RfW'6ÚV&∆ñ6BÇCr6ˆÊfó&÷FvóFáV"7FñˆÁ2fñ6˜RVWVVB6V“'VÊÊW"ÊÚ6ˆÊgVÊFó"FW7FW2∆ˆ6ó2&˜fF˜26ˆ“6í6ˆÊ6«VñFÚ&ÊW6R&V6ˆÊÜV6RÚ&˜Üñ÷ÚFñWFñ¬Ê6ñˆÊ¬6ˆ◊&˜fFÚFR##b6V“«FW&"˜2FW&÷˜2FóGV∆Ú&Wfó6FÚF&Fñˆ∆ˆvñvÚ˜""#cV“Çí##b6ˆ◊˜6ñ6Ú&ˆW62WÜñvR&˜f6ˆ◊FófV¬6ˆ“&ñÊ6ó¬&V6V&ñFÚRFFWfñFVÊ6ñ˜7FW&ñ˜"6ˆÊf∆óFÁFRñÁf∆ñF&˜fFW66ˆÊÜV6ñFÚW&÷ÊV6RÁV∆ÚGV2&˜f2Üó7F˜&ñ62f˜&“w&fF26ˆ“FW66ˆÁFÚFR"íì6FR&V6V&ófVó2&W6W'fF˜2VFóF˜&ñFCC"˜2W762&˜f23CbfñÊ7V∆˜2#Bv˜2C"&W'F˜2"S2É2Sr&V6V&ñF˜2ñ◊˜'F6ÚFR˜WG&2GW&÷2˜77Ví∆˜FRR6ˆÊfW&VÊ6ñ&˜&ñ˜2ÊÚñÊfW&ó"6ˆ&W'GW&FR6ñ6∆˜2V∆ÚÁV÷W&ÚFGW&÷&Vvó7G&Ú&Vvó7G&˜2«FW&6ˆW2##bí"&Wfó6Ú&ÊW6R&ˆW62÷B"¿¢'Fˆ∂V‰6˜VÁB#¢#"¿¢''B#¢¢“¿¢∞¢&ñB#¢#ñSV#Ssñ#V#FV3&Cr"¿¢&Ü6Ç#¢#ñSV#Ssñ#V#FV3&CsFCVcfSscì&Sc3fcÉÉcÉc6F#ÉcÉ#&Sf#cSìÉr"¿¢'FÇ#¢&íˆ˜W&6ÚÙ‘T‘ı$îÙ4‰Ù‰î4Ê÷B"¿¢'6V7Fñˆ‚#¢$ñ◊˜'F:|:6Ú&ˆW62˜"Ñ≈2(	B##b”í”""¿¢'FWáB#¢"“6F7G&˜2˜"5b6Ï;FÊñ6Ú&W6W'f“W76ˆ2WÜó7FVÁFW3≤W7FFÚ6L:¶÷ñ6ÚW'FVÊ6R:÷G,:÷7V∆¬Ï:6ÚÚ6F7G&Úv∆ˆ&¬‚&WW6ÚV“˜WG&Úˆ∆Ú7&W66VÁFfó6ñ&ñ∆ñFFR6V“÷˜fW"Úˆ∆Ú˜&ñvñÊ¬‚“fˆÁFRÑ≈26ˆ◊&˜f6F7G&Ú¬GW&÷R6óGV:|:6Ú6L:¶÷ñ6≤˜2v÷VÁF˜2<:6Ú6ˆÊfW&ñF˜2V∆í‚GW&ÊÚ¬FFfñÊ¬¬îBÊFófÚR6ˆ&W'GW&fñÊÊ6Vó&Ï:6Ú<:6ÚñÊfW&ñF˜2VÊFÚW6VÁFW2‚“WF∆ñ6F¢3ÉRW76ˆ2É3É"Ê˜f2¬2&WWFñ∆ó¶F2í¬VG&ÚGW&÷2îÂDTu$¬FR¶ˆL:2R#r÷G,:÷7V∆3≤Üó7L;7&ñ6Ú6ˆ“"„ìC6ˆ'&Ï:v2R„ÉSBv÷VÁF˜2¬F˜F¬&V6V&ñFÚFR"BCs„sCb√s"‚26ñÊ6ÚGW&÷24T“FófW&“îÂDTu$¬RV∆2˜2<:&F˜26ˆÊfó&÷F˜2V∆ÚW7\:&ñÛ≤Ê˜fRGW&÷2R3ì"÷G,:÷7V∆26ˆÊ6«\:÷F2&˜23ÉR«VÊ˜3≤fñÊÊ6Vó&ÚFñ6ñˆÊ¬6ˆÊ6«\:÷FÚ‚F˜F¬F2Ê˜fRGW&÷3¢b„s6ˆ'&Ï:v2¬2„S3bv÷VÁF˜26ˆÊfó&÷F˜2¬"BÉìÇ„cÉÇ√ìí&V6V&ñF˜2R"„S3R&Vvó7G&˜2V“6ˆÊfW,:¶Ê6ñ¬6ˆ“ñFVÁFñFFR¬FF2Rf∆˜&W2VFóFF˜26V“FófW&|:¶Ê6ñ2‚Ê˜fRWfVÁF˜2$4î¬ı$ÙU45Ùí&W6W'f“6ˆÊfW,:¶Ê6ñ&W6ñGV√≤÷ˆÊóF˜"Ü&ñ∆óFFÚ&˜2b„sÊ˜f˜2l:÷Ê7V∆˜2R˜23CbFCC"¬6ˆ“V÷6ˆÁF&ˆW626ˆ◊'Fñ∆ÜF‚V“6F7G&ÚwV&F5b‚“6ˆ&W'GW&fñÊÊ6Vó&:íñÊFófñGV¬RW&÷ÊV6RV“&Wfó<:6ÚL:í&˜f"¿¢&Ê˜&÷∆ó¶VEFWáB#¢&6F7G&˜2˜"7b6ÊˆÊñ6Ú&W6W'f“W76ˆ2WÜó7FVÁFW2W7FFÚ6FV÷ñ6ÚW'FVÊ6R÷G&ñ7V∆ÊÚÚ6F7G&Úv∆ˆ&¬&WW6ÚV“˜WG&Úˆ∆Ú7&W66VÁFfó6ñ&ñ∆ñFFR6V“÷˜fW"Úˆ∆Ú˜&ñvñÊ¬fˆÁFRÜ«26ˆ◊&˜f6F7G&ÚGW&÷R6óGV6Ú6FV÷ñ6˜2v÷VÁF˜26Ú6ˆÊfW&ñF˜2V∆íGW&ÊÚFFfñÊ¬ñBÊFófÚR6ˆ&W'GW&fñÊÊ6Vó&ÊÚ6ÚñÊfW&ñF˜2VÊFÚW6VÁFW2WF∆ñ6F3ÉRW76ˆ23É"Ê˜f22&WWFñ∆ó¶F2VG&ÚGW&÷2ñÁFVw&¬FR¶ˆFR#r÷G&ñ7V∆2Üó7F˜&ñ6Ú6ˆ“"ìC6ˆ'&Ê62RÉSBv÷VÁF˜2F˜F¬&V6V&ñFÚFR"CssCbs"26ñÊ6ÚGW&÷26V“FófW&“ñÁFVw&¬RV∆2˜26&F˜26ˆÊfó&÷F˜2V∆ÚW7V&ñÚÊ˜fRGW&÷2R3ì"÷G&ñ7V∆26ˆÊ6«VñF2&˜23ÉR«VÊ˜2fñÊÊ6Vó&ÚFñ6ñˆÊ¬6ˆÊ6«VñFÚF˜F¬F2Ê˜fRGW&÷2bs6ˆ'&Ê622S3bv÷VÁF˜26ˆÊfó&÷F˜2"ÉìÇcÉÇìí&V6V&ñF˜2R"S3R&Vvó7G&˜2V“6ˆÊfW&VÊ6ñ6ˆ“ñFVÁFñFFRFF2Rf∆˜&W2VFóFF˜26V“FófW&vVÊ6ñ2Ê˜fRWfVÁF˜2&6ñ¬&ˆW62í&W6W'f“6ˆÊfW&VÊ6ñ&W6ñGV¬÷ˆÊóF˜"Ü&ñ∆óFFÚ&˜2bsÊ˜f˜2fñÊ7V∆˜2R˜23CbFCC"6ˆ“V÷6ˆÁF&ˆW626ˆ◊'Fñ∆ÜFV“6F7G&ÚwV&F7b6ˆ&W'GW&fñÊÊ6Vó&RñÊFófñGV¬RW&÷ÊV6RV“&Wfó6ÚFR&˜f"¿¢'Fˆ∂V‰6˜VÁB#¢c¿¢''B#¢¢“¿¢∞¢&ñB#¢&Év&cìFCÉV3ì#3SVCsb"¿¢&Ü6Ç#¢&Év&cìFCÉV3ì#3SVCsf3#C&Ü6Ccf&CÉv3Ff6VcFSfC#cS3É3sSìv#cìc"¿¢'FÇ#¢&íˆ˜W&6ÚÙ‘T‘ı$îÙ4‰Ù‰î4Ê÷B"¿¢'6V7Fñˆ‚#¢$ñ◊˜'F:|:6Ú&ˆW62˜"Ñ≈2(	B##b”í”""¿¢'FWáB#¢'7Vfñ6ñVÁFR‚6ñÊ7&ˆÊó¶"v÷VÁFÚ6ˆÊfó&÷FÚÏ:6ÚWF˜&ó¶7&ñ"˜WG&Ú6ñ6∆Ú˜R&ˆ∆WFÚ‚CC"R&Fñˆ∆ˆvñ÷ÁL:¶“2&Vw&2WÜó7FVÁFW2‚“&6RB„Ç„CÇV&∆ñ6FÊÚ#C"¬7V6Ç#V#ÉVSScvSVvV#sVVFf#cccvFF6#Vf#s&"¬6ˆ“4íıfW&6V¬RfW'<:6Ú;¶&∆ñ66ˆÊfó&÷F˜2‚B„Ç„Cí˜&Wfó<:6ÚSÇV&∆ñ6FÊÚ#C2˜7V6ÇSÜccsVf63S3CFSìsìÉv#CS#ÉcìÜf#fCvSc¢4íıfW&6V¬5T44U52¬ÖEE#6ˆ“76WB÷ñ‚‘%ed„g&2Êß2R6W76ÚWFVÁFñ6FÚ6ˆÊfó&÷F˜2‚&W7V÷ÚR6∆76ñfñ6:|:6ÚfñÊÊ6Vó&l:¶“FÚ&6∂VÊB¬6V“<:∆7V∆ÚÊÚg&ˆÁFVÊB‚$rñÊFWÜFÚV÷fW¢ÊÚfV6Ü÷VÁFÚV∆Ú6ˆ˜&FVÊF˜"‚&Vvó7G&Û¢&Vvó7G&˜2ˆ«FW&6ˆW2Û##b”í”"◊&ˆW62÷ñ◊˜'F6Ú◊Ü«2Ê÷B‚"¿¢&Ê˜&÷∆ó¶VEFWáB#¢'7Vfñ6ñVÁFR6ñÊ7&ˆÊó¶"v÷VÁFÚ6ˆÊfó&÷FÚÊÚWF˜&ó¶7&ñ"˜WG&Ú6ñ6∆Ú˜R&ˆ∆WFÚCC"R&Fñˆ∆ˆvñ÷ÁFV“2&Vw&2WÜó7FVÁFW2&6RBÇCÇV&∆ñ6FÊÚ#C"7V6Ç#V#ÉVSScvSVvV#sVVFf#cccvFF6#Vf#s&"6ˆ“6ífW&6V¬RfW'6ÚV&∆ñ66ˆÊfó&÷F˜2BÇCí&Wfó6ÚSÇV&∆ñ6FÊÚ#C27V6ÇSÜccsVf63S3CFSìsìÉv#CS#ÉcìÜf#fCvSb6ífW&6V¬7V66W72áGG#6ˆ“76WB÷ñ‚'gf„g&2ß2R6W76ÚWFVÁFñ6FÚ6ˆÊfó&÷F˜2&W7V÷ÚR6∆76ñfñ66ÚfñÊÊ6Vó&fV“FÚ&6∂VÊB6V“6∆7V∆ÚÊÚg&ˆÁFVÊB&rñÊFWÜFÚV÷fW¢ÊÚfV6Ü÷VÁFÚV∆Ú6ˆ˜&FVÊF˜"&Vvó7G&Ú&Vvó7G&˜2«FW&6ˆW2##bí"&ˆW62ñ◊˜'F6ÚÜ«2÷B"¿¢'Fˆ∂V‰6˜VÁB#¢sÇ¿¢''B#¢ ¢“¿¢∞¢&ñB#¢#fF6CÉ#6SìÜ#vff3#VR"¿¢&Ü6Ç#¢#fF6CÉ#6SìÜ#vff3#VS#CÉ3SVCS6#s#ÉìcccSvCccvFcSÉ#CV#v&f2"¿¢'FÇ#¢&íˆ˜W&6ÚÙ‘T‘ı$îÙ4‰Ù‰î4Ê÷B"¿¢'6V7Fñˆ‚#¢$6ˆÊ6ñ∆ñ:|:6ÚV&∆ñ6F(	BB„Ç„S"¿¢'FWáB#¢"“&V÷˜fW"GV∆ó¶"FF˜2RFWáF˜2ñÊFWfñF˜2FR÷W&6FÚvÛ≤7&W66VÁF"fñ«G&Ú&ˆW62Ù&ÊW6RßVÁFÚ:'W66‚“˜&ñvV“¬fñ«G&Ú¬vñÊ:|:6ÚRF˜Fó2W'FVÊ6V“:%2¬÷ÁFVÊFÚWF˜&ó¶:|:6Ú˜"ˆ∆Ú‚Ï:6ÚFW6∆ñv"÷ˆÊóF˜&W2ÊV“«FW&"fF˜2fñÊÊ6Vó&˜2Ú&V÷˜fW":|:6Úfó7V¬‚“fW'<:6ÚB„Ç„S˜&Wfó<:6ÚSíV&∆ñ6FÊÚ#CB˜7V6ÇF#S6SÉVF6#f3F6c366cñ3ìsVc#Ü#66b¬6ˆ“fW&6V¬5T44U52RÖEE#76WB÷ñ‚‘#ÖSGVÖWrÊß3≤6÷ˆ∂RWFVÁFñ6FÚF˜2fñ«G&˜26ˆÊfó&÷FÚV“&ˆG\:|:6ÚÊB„Ç„S"‚GV2÷ñw&FñˆÁ2∆ñ6F2Rñ◊WL:fVó2‚$rñÊFWÜFÚV÷fW¢V∆Ú6ˆ˜&FVÊF˜"¬fˆÁFW2Ûs6áVÊ∑2‚&ˆW62$UdîUrÏ:6Úñ◊∆ñ6fVÊ6ñ÷VÁFÚ6ˆÊfó&÷FÚÊV“W&÷óFR6ˆÁ7V«F&ÊW6R‚&Vvó7G&Û¢&Vvó7G&˜2ˆ«FW&6ˆW2Û##b”í”"÷6ˆÊ6ñ∆ñ6Ú÷˜&ñvV“◊&ˆW62÷&ÊW6RÊ÷B‚"¿¢&Ê˜&÷∆ó¶VEFWáB#¢'&V÷˜fW"GV∆ó¶"FF˜2RFWáF˜2ñÊFWfñF˜2FR÷W&6FÚvÚ7&W66VÁF"fñ«G&Ú&ˆW62&ÊW6RßVÁFÚ'W66˜&ñvV“fñ«G&ÚvñÊ6ÚRF˜Fó2W'FVÊ6V“'2÷ÁFVÊFÚWF˜&ó¶6Ú˜"ˆ∆ÚÊÚFW6∆ñv"÷ˆÊóF˜&W2ÊV“«FW&"fF˜2fñÊÊ6Vó&˜2Ú&V÷˜fW"6Úfó7V¬fW'6ÚBÇS&Wfó6ÚSíV&∆ñ6FÊÚ#CB7V6ÇF#S6SÉVF6#f3F6c366cñ3ìsVc#Ü#66b6ˆ“fW&6V¬7V66W72RáGG#76WB÷ñ‚#áSGVáWrß26÷ˆ∂RWFVÁFñ6FÚF˜2fñ«G&˜26ˆÊfó&÷FÚV“&ˆGV6ÚÊBÇS"GV2÷ñw&FñˆÁ2∆ñ6F2Rñ◊WFfVó2&rñÊFWÜFÚV÷fW¢V∆Ú6ˆ˜&FVÊF˜"fˆÁFW2s6áVÊ∑2&ˆW62&WfñWrÊÚñ◊∆ñ6fVÊ6ñ÷VÁFÚ6ˆÊfó&÷FÚÊV“W&÷óFR6ˆÁ7V«F&ÊW6R&Vvó7G&Ú&Vvó7G&˜2«FW&6ˆW2##bí"6ˆÊ6ñ∆ñ6Ú˜&ñvV“&ˆW62&ÊW6R÷B"¿¢'Fˆ∂V‰6˜VÁB#¢ìb¿¢''B#¢¢“¿¢∞¢&ñB#¢#sÜ#Ü&6FFfFVS#vC2"¿¢&Ü6Ç#¢#sÜ#Ü&6FFfFVS#vC33ì3ì3cFV3fCS3ñ3#c&f6SC336VC6&cS&C"¿¢'FÇ#¢&íˆ˜W&6ÚÙ‘T‘ı$îÙ4‰Ù‰î4Ê÷B"¿¢'6V7Fñˆ‚#¢$6óÜ÷VÁ6¬V&∆ñ6FÚ(	BB„Ç„S"¿¢'FWáB#¢"“ñÊFñ◊Ã:¶Ê6ñR÷&vV“FWfV“&W&W6VÁF"Ú‹:ß2Rˆ∆Ú6V∆V6ñˆÊF˜2¬6ˆ“ÁV÷W&F˜"¬FVÊˆ÷ñÊF˜"R&W7V«FFÚ6Ï;FÊñ6Ú6∆7V∆F˜2ÊÚ&6∂VÊBı%2‚“&6R:íÚ&ñÊ6ó¬V∆V|:◊fV¬6ˆ“fVÊ6ñ÷VÁFÚÊÚ‹:ß3≤G&6ÚW6˜6ú:|:6ÚÊÚ6˜'FRGV¬ˆVÊ6W'&÷VÁFÚ‚v÷VÁFÚ˜7FW&ñ˜"&W6W'fG&6ÚÜó7L;7&ñ6Û≤FW66ˆÁFÚÏ:6Ú7&ñ6∆FÚ&W6ñGV¬‚&ˆW626V“&˜ffñ6f˜&F2&6W26ˆ“÷WFFF˜2FR6ˆÊfW,:¶Ê6ñ‚ÊVÊáV“<:∆7V∆ÚfñÊÊ6Vó&ÚÊÚg&ˆÁFVÊB‚“#CRV&∆ñ6FÚ;72WF˜&ó¶:|:6Ú&VÊ˜fF¬7V6Ç#CìSCFCFVcscSVS#É33f3s&6C3f3Éì≤4íıfW&6V¬ÙÖEE#6ˆÊfó&÷F˜2‚76WB÷ñ‚‘3ÜƒÉñRÊß2¬,;7GV∆˜2ˆ∆ñÊÜ∆&Ê¶ˆ'6W'fF˜2Ê2ñ÷vVÁ2FÚW7\:&ñÚV“&ˆG\:|:6Ú‚GV2÷ñw&FñˆÁ2ñ◊WL:fVó2¬cBFW7FW2¬5¬&V¬RDb&˜fF˜2‚6÷ˆ∂RWFVÁFñ6FÚFÚDbfñÊ¬RFW7FR6ˆ“W7\:&ñÚ&W7G&óFÚñÊF6V“fóáGW&R‚&Vvó7G&Û¢&Vvó7G&˜2ˆ«FW&6ˆW2Û##b”í”"÷6óÜ÷ñÊFñ6F˜&W2÷÷VÁ6ó2Ê÷B‚"¿¢&Ê˜&÷∆ó¶VEFWáB#¢&ñÊFñ◊∆VÊ6ñR÷&vV“FWfV“&W&W6VÁF"Ú÷W2Rˆ∆Ú6V∆V6ñˆÊF˜26ˆ“ÁV÷W&F˜"FVÊˆ÷ñÊF˜"R&W7V«FFÚ6ÊˆÊñ6Ú6∆7V∆F˜2ÊÚ&6∂VÊB'2&6RRÚ&ñÊ6ó¬V∆VvófV¬6ˆ“fVÊ6ñ÷VÁFÚÊÚ÷W2G&6ÚW6˜6ñ6ÚÊÚ6˜'FRGV¬VÊ6W'&÷VÁFÚv÷VÁFÚ˜7FW&ñ˜"&W6W'fG&6ÚÜó7F˜&ñ6ÚFW66ˆÁFÚÊÚ7&ñ6∆FÚ&W6ñGV¬&ˆW626V“&˜ffñ6f˜&F2&6W26ˆ“÷WFFF˜2FR6ˆÊfW&VÊ6ñÊVÊáV“6∆7V∆ÚfñÊÊ6Vó&ÚÊÚg&ˆÁFVÊB#CRV&∆ñ6FÚ˜2WF˜&ó¶6Ú&VÊ˜fF7V6Ç#CìSCFCFVcscSVS#É33f3s&6C3f3Éì6ífW&6V¬áGG#6ˆÊfó&÷F˜276WB÷ñ‚3Ü∆ÉñRß2&˜GV∆˜2∆ñÊÜ∆&Ê¶ˆ'6W'fF˜2Ê2ñ÷vVÁ2FÚW7V&ñÚV“&ˆGV6ÚGV2÷ñw&FñˆÁ2ñ◊WFfVó2cBFW7FW27¬&V¬RFb&˜fF˜26÷ˆ∂RWFVÁFñ6FÚFÚFbfñÊ¬RFW7FR6ˆ“W7V&ñÚ&W7G&óFÚñÊF6V“fóáGW&R&Vvó7G&Ú&Vvó7G&˜2«FW&6ˆW2##bí"6óÜñÊFñ6F˜&W2÷VÁ6ó2÷B"¿¢'Fˆ∂V‰6˜VÁB#¢"¿¢''B#¢¢“¿¢∞¢&ñB#¢#ñ6ffÉÉ3&ffSCÜcSí"¿¢&Ü6Ç#¢#ñ6ffÉÉ3&ffSCÜcSñffcFSÉCS3ScìñV&ff&6cFVSSCCc#FCSC3ì#Ür"¿¢'FÇ#¢&íˆ˜W&6ÚÙ‘T‘ı$îÙ4‰Ù‰î4Ê÷B"¿¢'6V7Fñˆ‚#¢$6ˆÁ7V«Fí&ˆW62R&ÊW6R(	BB„Ç„S""¿¢'FWáB#¢"“ñÊV¬6W&FÚFRFˆ∂V‚ÙÜó7L;7&ñ6Ú¬VÊ2∆VóGW&FR%2‚WÜV7\:|;VW2gWGW&2&Vó2R6ÊóFó¶F3≤ˆ'6W'f:|;VW2¬ñ◊˜'F:|;VW2R&óÜ2WFˆ‹:Fñ62<:6Ú6ˆÊ6VóF˜2Fó7FñÁF˜2‚“&ÊW6R÷ÁL:ñ“˜2W'&˜2Üó7L;7&ñ6˜2RñÊf˜&÷&V7WW&:|:6Ú˜7FW&ñ˜"RW7FFÚGV¬6W&F÷VÁFS≤ÊVÊáV“&W&ˆ6W76÷VÁFÚ:íWF˜&ó¶FÚV∆6ñ◊∆W2WÜó7L:¶Ê6ñFRW'&ÚÁFñvÚ‚“6WFR÷ñw&FñˆÁ2&ˆW62RV÷&ÊW6R∆ñ6F2¬VFvR&ˆW62crFófRGV2WÜV7\:|;VW2&Vó2FRc6ˆ'&Ï:v26ˆÊ6«\:÷F26ˆ“FV∆V÷WG&ñ6ˆ◊∆WF‚6Vó2VÊñFFW25¬ó6ˆ∆F2&˜fF3≤:÷ÊFñ6W2&W6ˆ«fV“6ˆÁFvV“W6F‚fñÊÊ6Vó&ÚÙ6óÜ&V7WW&F˜2R&W6W'fF˜2;72Fñ÷V˜WG2¬6ˆ“6÷ˆ∂RWFVÁFñ6FÚ‚g&ˆÁFVÊBÏ:6Ú&WWFR6ˆÁ7V«F2;72W'&Ú‚“#CbV&∆ñ6FÚ¬7V6Ç#&#V6&CVf&ÜSFfCÜfFVÜCsf#S3vSñFCsÉR¬4íıfW&6V¬ÙÖEE#&˜fF˜2‚6f&íWFVÁFñ6FÚV“&ˆG\:|:6Ú6ˆÊfó&÷˜R26ñÊ6Ú&2¬6óÜı&V6V,:◊fVó2Rfñ«G&˜2FR6ˆÊ6ñ∆ñ:|:6Ú‚fó6ÚTDìr6ˆÊfW&ñFÚÁFW&ñ˜&÷VÁFR‚“W7\:&ñÚ&VÊ˜f˜RWF˜&ó¶:|:6Ú&6˜'&ñvó"RV&∆ñ6"V“"Ûí:3#£í‚&Vvó7G&Û¢&Vvó7G&˜2ˆ«FW&6ˆW2Û##b”í”"÷6ˆÁ7V«F÷í◊&ˆW62÷&ÊW6RÊ÷B‚"¿¢&Ê˜&÷∆ó¶VEFWáB#¢'ñÊV¬6W&FÚFRFˆ∂V‚Üó7F˜&ñ6ÚVÊ2∆VóGW&FR'2WÜV7V6ˆW2gWGW&2&Vó2R6ÊóFó¶F2ˆ'6W'f6ˆW2ñ◊˜'F6ˆW2R&óÜ2WFˆ÷Fñ626Ú6ˆÊ6VóF˜2Fó7FñÁF˜2&ÊW6R÷ÁFV“˜2W'&˜2Üó7F˜&ñ6˜2RñÊf˜&÷&V7WW&6Ú˜7FW&ñ˜"RW7FFÚGV¬6W&F÷VÁFRÊVÊáV“&W&ˆ6W76÷VÁFÚRWF˜&ó¶FÚV∆6ñ◊∆W2WÜó7FVÊ6ñFRW'&ÚÁFñvÚ6WFR÷ñw&FñˆÁ2&ˆW62RV÷&ÊW6R∆ñ6F2VFvR&ˆW62crFófRGV2WÜV7V6ˆW2&Vó2FRc6ˆ'&Ê626ˆÊ6«VñF26ˆ“FV∆V÷WG&ñ6ˆ◊∆WF6Vó2VÊñFFW27¬ó6ˆ∆F2&˜fF2ñÊFñ6W2&W6ˆ«fV“6ˆÁFvV“W6FfñÊÊ6Vó&Ú6óÜ&V7WW&F˜2R&W6W'fF˜2˜2Fñ÷V˜WG26ˆ“6÷ˆ∂RWFVÁFñ6FÚg&ˆÁFVÊBÊÚ&WWFR6ˆÁ7V«F2˜2W'&Ú#CbV&∆ñ6FÚ7V6Ç#&#V6&CVf&ÜSFfCÜfFVÜCsf#S3vSñFCsÉR6ífW&6V¬áGG#&˜fF˜26f&íWFVÁFñ6FÚV“&ˆGV6Ú6ˆÊfó&÷˜R26ñÊ6Ú&26óÜ&V6V&ófVó2Rfñ«G&˜2FR6ˆÊ6ñ∆ñ6Úfó6ÚVFìr6ˆÊfW&ñFÚÁFW&ñ˜&÷VÁFRW7V&ñÚ&VÊ˜f˜RWF˜&ó¶6Ú&6˜'&ñvó"RV&∆ñ6"V“"í3#í&Vvó7G&Ú&Vvó7G&˜2«FW&6ˆW2##bí"6ˆÁ7V«Fí&ˆW62&ÊW6R÷B"¿¢'Fˆ∂V‰6˜VÁB#¢3¿¢''B#¢¢“¿¢∞¢&ñB#¢#sFCs3&ÉC3CÜCñ6Cì"¿¢&Ü6Ç#¢#sFCs3&ÉC3CÜCñ6CìFCSfV6Ffcsìc#ñ6#Cñ#VVf6S3SÜSìÉcÜ33FSS#F""¿¢'FÇ#¢&íˆ˜W&6ÚÙ‘T‘ı$îÙ4‰Ù‰î4Ê÷B"¿¢'6V7Fñˆ‚#¢%&V7WW&:|:6ÚFR6ˆÊfñwW&:|:6ÚF˜2v˜&∂W'2(	BB„Ç„S2V“V&∆ñ6:|:6Ú"¿¢'FWáB#¢"“ÖEESBñÁFW&÷óFVÁFRÊ˜2vWGFW'2FR6ˆÊfñwW&:|:6Ú&V6VFR˜W&:|;VW2&Ê<:&ñ3≤vWGFW"5¬Fó&WFÚV“"√sC◊2‚6W6WÜFÊ6÷FFRíñÊFñÊ6ˆÊ6«W6óf‚“F6Ç&W7G&óFÚ:∆VóGW&F˜26Vw&VF˜2&ÊW6RıW6Ç¬W6FÚV“G,:ß2v˜&∂W'2¬6ˆ“V÷&WWFú:|:6Ú¬&¶ÚF˜F¬R÷WFFF˜26ÊóFó¶F˜2‚6V“«FW&:|:6ÚFRFF˜2fñÊÊ6Vó&˜2¬7&VFVÊ6ñó2˜R7&ˆ‚‚“VFvR6ˆÊ6ñ∆ñ:|:6Úc¬W6ÇcbR6Ê6V∆÷VÁFÚcbV&∆ñ6F2fñ‘5‚CRFW7FW2R&Wfó<:6Ú&˜fF˜3≤FóvV“6Ê6V∆÷VÁFÚ÷ÁL:ñ“W'&Ú&VWÜó7FVÁFR&W&ˆGW¶ñFÚÊÚ&V÷˜FÚ¬6V“«FW&:|:6ÚfñÊÊ6Vó&‚6÷ˆ∂RÊGW&√¢BWÜV7\:|;VW2ÖEE#≤GV2f∆Ü3SBñÁFW&Ê2&V7WW&F2Ê6VwVÊFFVÁFFóf‚ñÁ7F&ñ∆ñFFRWáFW&ÊÏ:6ÚfˆíFV6∆&FV∆ñ÷ñÊF‚“&Vvó7G&Û¢&Vvó7G&˜2ˆ«FW&6ˆW2Û##b”í”2◊v˜&∂W'2÷6ˆÊfñwW&6Ú◊&W6ñ∆ñVÁFRÊ÷B‚"¿¢&Ê˜&÷∆ó¶VEFWáB#¢&áGGSBñÁFW&÷óFVÁFRÊ˜2vWGFW'2FR6ˆÊfñwW&6Ú&V6VFR˜W&6ˆW2&Ê6&ñ2vWGFW"7¬Fó&WFÚV“"sC◊26W6WÜFÊ6÷FFRíñÊFñÊ6ˆÊ6«W6ófF6Ç&W7G&óFÚ∆VóGW&F˜26Vw&VF˜2&ÊW6RW6ÇW6FÚV“G&W2v˜&∂W'26ˆ“V÷&WWFñ6Ú&¶ÚF˜F¬R÷WFFF˜26ÊóFó¶F˜26V“«FW&6ÚFRFF˜2fñÊÊ6Vó&˜27&VFVÊ6ñó2˜R7&ˆ‚VFvR6ˆÊ6ñ∆ñ6ÚcW6ÇcbR6Ê6V∆÷VÁFÚcbV&∆ñ6F2fñ÷7CRFW7FW2R&Wfó6Ú&˜fF˜2FóvV“6Ê6V∆÷VÁFÚ÷ÁFV“W'&Ú&VWÜó7FVÁFR&W&ˆGW¶ñFÚÊÚ&V÷˜FÚ6V“«FW&6ÚfñÊÊ6Vó&6÷ˆ∂RÊGW&¬BWÜV7V6ˆW2áGG#GV2f∆Ü3SBñÁFW&Ê2&V7WW&F2Ê6VwVÊFFVÁFFófñÁ7F&ñ∆ñFFRWáFW&ÊÊÚfˆíFV6∆&FV∆ñ÷ñÊF&Vvó7G&Ú&Vvó7G&˜2«FW&6ˆW2##bí2v˜&∂W'26ˆÊfñwW&6Ú&W6ñ∆ñVÁFR÷B"¿¢'Fˆ∂V‰6˜VÁB#¢"¿¢''B#¢¢“¿¢∞¢&ñB#¢#sssfSfCÜ3#F3ÉÇ"¿¢&Ü6Ç#¢#sssfSfCÜ3#F3ÉÉ6V3#sF#336fcSS6fVccS3#ìfC3fCVSvfb"¿¢'FÇ#¢&íˆ˜W&6Úı$ıDÙ4ÙƒıÙDUÙƒıDU2Ê÷B"¿¢'6V7Fñˆ‚#¢#‚ßW7FR,:ñFÚ"¿¢'FWáB#¢%&6˜'&\:|:6Ú∆ˆ6∆ó¶FR6V“&ó66Ú7,:◊Fñ6Û¢"¿¢&Ê˜&÷∆ó¶VEFWáB#¢'&6˜'&V6Ú∆ˆ6∆ó¶FR6V“&ó66Ú7&óFñ6Ú"¿¢'Fˆ∂V‰6˜VÁB#¢b¿¢''B#¢¢“¿¢∞¢&ñB#¢##ÉscÜC##3sF6#3b"¿¢&Ü6Ç#¢##ÉscÜC##3sF6#3fS#CÉs&#S3ÉñVCSc3É#f3F6V#Cs3cÉ3Cì6B"¿¢'FÇ#¢&íˆ˜W&6Úı$ıDÙ4ÙƒıÙDUÙƒıDU2Ê÷B"¿¢'6V7Fñˆ‚#¢#‚ßW7FR,:ñFÚ"¿¢'FWáB#¢#‚W6"V“vVÁFS≤"‚'&ó"6ˆ÷VÁFRÚ'VófÚFÚf«WÜÚfWFFÚR7VFWVÊL:¶Ê6ñFó&WF≤2‚&W&ˆGW¶ó"˜R6ˆÊfó&÷"6W6≤B‚∆ñ6"Ú÷VÊ˜"F6É≤R‚WÜV7WF"FW7FRfˆ6FÚ˜R6÷ˆ∂S≤b‚VÁG&Vv"6V“7&ñ"∆˜FR¬&Vvó7G&Ú¬fW'<:6Ú¬$r˜R'Vñ∆Bv∆ˆ&¬‚"¿¢&Ê˜&÷∆ó¶VEFWáB#¢#W6"V“vVÁFR"'&ó"6ˆ÷VÁFRÚ'VófÚFÚf«WÜÚfWFFÚR7VFWVÊFVÊ6ñFó&WF2&W&ˆGW¶ó"˜R6ˆÊfó&÷"6W6B∆ñ6"Ú÷VÊ˜"F6ÇRWÜV7WF"FW7FRfˆ6FÚ˜R6÷ˆ∂RbVÁG&Vv"6V“7&ñ"∆˜FR&Vvó7G&ÚfW'6Ú&r˜R'Vñ∆Bv∆ˆ&¬"¿¢'Fˆ∂V‰6˜VÁB#¢3B¿¢''B#¢¢“¿¢∞¢&ñB#¢#ÜSfFf6S&CÜV#&&3ÉÉf2"¿¢&Ü6Ç#¢#ÜSfFf6S&CÜV#&&3ÉÉf3É3#cÉvì&ScìñSSÉ#SÉSf&6#FCSsìB"¿¢'FÇ#¢&íˆ˜W&6Úı$ıDÙ4ÙƒıÙDUÙƒıDU2Ê÷B"¿¢'6V7Fñˆ‚#¢#‚ßW7FR,:ñFÚ"¿¢'FWáB#¢%6RÚW66˜Ú˜R&ó66Ú7&W66W"¬&V6∆76ñfñ6"ÁFW2FR6ˆÁFñÁV"‚"¿¢&Ê˜&÷∆ó¶VEFWáB#¢'6RÚW66˜Ú˜R&ó66Ú7&W66W"&V6∆76ñfñ6"ÁFW2FR6ˆÁFñÁV""¿¢'Fˆ∂V‰6˜VÁB#¢í¿¢''B#¢¢“¿¢∞¢&ñB#¢#ssS3v66cÉ6F63&3R"¿¢&Ü6Ç#¢#ssS3v66cÉ6F63&3S6#3svCvC63#Éc#ìcc6S#ìÜVcsSFVffCV#cñS"¿¢'FÇ#¢&íˆ˜W&6Úı$ıDÙ4ÙƒıÙDUÙƒıDU2Ê÷B"¿¢'6V7Fñˆ‚#¢#"‚ßW7FRDbfˆ6FÚ"¿¢'FWáB#¢"“«FW&:|:6Úfó7V¬∆ˆ6∆ó¶FV“6ˆ◊˜6óF˜"ÊFófÚWÜó7FVÁFRW6V“vVÁFR‚“6'&Vv"6ˆ÷VÁFRˆÃ:◊Fñ6FRDg3≤Ï:6Ú'&ó"÷V‹;7&ñ¬∆˜FR˜R$r‚“f∆ñF"Wá˜'FF˜"¬FWáFÚ¬ñ÷vVÁ2ó6ˆ∆F2R&VÊFW"F:vñÊfWFF‚“ñ∆ˆB¬vñÊ:|:6Ú¬Ê˜fÚóV∆ñÊR˜R6ˆ◊˜6óF˜"6ˆ◊'Fñ∆ÜFÚFRñ◊7FÚ◊∆Ú6V“FW7FfóÜ‚"¿¢&Ê˜&÷∆ó¶VEFWáB#¢&«FW&6Úfó7V¬∆ˆ6∆ó¶FV“6ˆ◊˜6óF˜"ÊFófÚWÜó7FVÁFRW6V“vVÁFR6'&Vv"6ˆ÷VÁFRˆ∆óFñ6FRFg2ÊÚ'&ó"÷V÷˜&ñ∆˜FR˜R&rf∆ñF"Wá˜'FF˜"FWáFÚñ÷vVÁ2ó6ˆ∆F2R&VÊFW"FvñÊfWFFñ∆ˆBvñÊ6ÚÊ˜fÚóV∆ñÊR˜R6ˆ◊˜6óF˜"6ˆ◊'Fñ∆ÜFÚFRñ◊7FÚ◊∆Ú6V“FW7FfóÜ"¿¢'Fˆ∂V‰6˜VÁB#¢C2¿¢''B#¢¢“¿¢∞¢&ñB#¢&3sñSc##&F#CÜSFc3É"¿¢&Ü6Ç#¢&3sñSc##&F#CÜSFc3ÉcscC&#SfSF6Sv33ÉñVcì3CsS&VC6CCÉFCsC"¿¢'FÇ#¢&íˆ˜W&6Úı$ıDÙ4ÙƒıÙDUÙƒıDU2Ê÷B"¿¢'6V7Fñˆ‚#¢#2‚◊VFÏ:vG,:6Ú"¿¢'FWáB#¢"“÷ÁFW"V“Fˆ‹:÷ÊñÚ˜"∆˜FR‚“&Vvó7G&"ˆ&¶WFófÚ¬'Vóf˜2¬6VóFR¬&ó66ÚRf∆ñF:|:6ÚFRf˜&÷7W'F‚“6ˆÁ7V«F"$rVÊ2VÊFÚÜó7L;7&ñ6ÚˆFV6ó<:6Úf˜"ÊV6W7<:&ñÚ¬6ˆ“L:íFˆó2&W7V«FF˜2‚“WÜV7WF"FW7FW2fˆ6F˜2GW&ÁFRÚG&&∆ÜÚRV÷f∆ñF:|:6ÚfñÊ¬&˜˜&6ñˆÊ¬‚"¿¢&Ê˜&÷∆ó¶VEFWáB#¢&÷ÁFW"V“Fˆ÷ñÊñÚ˜"∆˜FR&Vvó7G&"ˆ&¶WFófÚ'Vóf˜26VóFR&ó66ÚRf∆ñF6ÚFRf˜&÷7W'F6ˆÁ7V«F"&rVÊ2VÊFÚÜó7F˜&ñ6ÚFV6ó6Úf˜"ÊV6W76&ñÚ6ˆ“FRFˆó2&W7V«FF˜2WÜV7WF"FW7FW2fˆ6F˜2GW&ÁFRÚG&&∆ÜÚRV÷f∆ñF6ÚfñÊ¬&˜˜&6ñˆÊ¬"¿¢'Fˆ∂V‰6˜VÁB#¢3R¿¢''B#¢¢“¿¢∞¢&ñB#¢&#Ü#ÜSsìS&F##fFC"¿¢&Ü6Ç#¢&#Ü#ÜSsìS&F##fFCSVF6f3FcCÉñSScìFCÉñC3Cscì3&6Vcf&CSìb"¿¢'FÇ#¢&íˆ˜W&6Úı$ıDÙ4ÙƒıÙDUÙƒıDU2Ê÷B"¿¢'6V7Fñˆ‚#¢#B‚◊VFÏ:v7,:◊Fñ6"¿¢'FWáB#¢$&Ê6Ú¬WFÇı$≈2¬fñÊÊ6Vó&Ú¬DbW7G'WGW&¬¬ñÊg&W7G'WGW&˜RV&∆ñ6:|:6Û¢"¿¢&Ê˜&÷∆ó¶VEFWáB#¢&&Ê6ÚWFÇ&«2fñÊÊ6Vó&ÚFbW7G'WGW&¬ñÊg&W7G'WGW&˜RV&∆ñ66Ú"¿¢'Fˆ∂V‰6˜VÁB#¢í¿¢''Nw◊ªhëÈÏ∂ªßq´^tassinatura podem ser imagens isoladas e posicionadas independentemente. Prefira SVG/vetor quando existir. - Canvas √© permitido apenas como buffer tempor√°rio para preparar um recurso isolado, como recorte de foto, transpar√™ncia de assinatura ou QR; nunca para capturar o cont√™iner/p√°gina. - Uma imagem de fundo ou marca-d'√°gua n√£o pode conter o texto, as linhas, as tabelas ou outros conte√∫dos do documento. - Nunca use uma imagem A4 que substitua o documento.",
       "normalizedText": "nunca rasterize a pagina folha carteirinha ou documento inteiro com html2canvas canvas captura de dom ou addimage pipeline hibrido que coloca screenshot png da pagina inteira e adiciona texto vetorial ou invisivel por cima tambem e proibido selecao aparente nao corrige a perda de qualidade da arte rasterizada texto visivel tabelas linhas campos bordas fundos geometricos e marcacoes permanecem objetos nativos do pdf selecionaveis pesquisaveis e copiaveis zoom nao pode degradar texto linhas ou tabelas logo marca d agua qr fotografia e assinatura podem ser imagens isoladas e posicionadas independentemente prefira svg vetor quando existir canvas e permitido apenas como buffer temporario para preparar um recurso isolado como recorte de foto transparencia de assinatura ou qr nunca para capturar o conteiner pagina uma imagem de fundo ou marca d agua nao pode conter o texto as linhas as tabelas ou outros conteudos do documento nunca use uma imagem a4 que substitua o documento",
       "tokenCount": 139,
       "part": 1
