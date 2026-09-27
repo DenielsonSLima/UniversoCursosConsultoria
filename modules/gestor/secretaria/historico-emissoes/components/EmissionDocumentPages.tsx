@@ -4,6 +4,7 @@ import { DocumentValidationQrCodeImage } from '../../../../shared/document-valid
 import DocumentHeader from '../../../components/DocumentHeader';
 import CertificadoPreview from '../../certificados/components/CertificadoPreview';
 import CarteirinhaPreview from '../../../cadastros/modelos-documentos/carteirinha/components/CarteirinhaPreview';
+import { formatCarteirinhaDate } from '../../../cadastros/modelos-documentos/carteirinha/carteirinha-date-formatters';
 import CrachaPreview from '../../../cadastros/modelos-documentos/cracha/components/CrachaPreview';
 import {
   PAGE_HEIGHT,
@@ -150,7 +151,7 @@ const EmissionDocumentPages: React.FC<EmissionDocumentPagesProps> = ({
                 polo: emission.dados_emissao?.unitName || '',
                 curso: emission.dados_emissao?.courseName || '',
                 validade: emission.validade_ate
-                  ? new Date(emission.validade_ate).toLocaleDateString('pt-BR')
+                  ? formatCarteirinhaDate(emission.validade_ate)
                   : 'Sem vencimento',
                 fotoUrl: emission.dados_emissao?.studentPhotoUrl || emission.aluno?.foto_url || null,
                 validationCode: emission.codigo,

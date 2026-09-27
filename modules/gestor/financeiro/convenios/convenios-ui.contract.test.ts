@@ -21,6 +21,23 @@ test('tela abre em cards, oferece status, busca, crédito e fechamento manual', 
   assert.match(tab, /Buscar convênio, parceiro ou competência/);
   assert.match(tab, /ConvenioCreditModal/);
   assert.match(tab, /ConvenioCloseMonthModal/);
+  assert.doesNotMatch(tab, /A virada do calendário não fecha competências/);
+});
+
+test('modal usa a viewport e a competência segue MM/AAAA', async () => {
+  const [shell, form] = await Promise.all([
+    read('./components/ConvenioModalShell.tsx'),
+    read('./components/ConvenioFormModal.tsx'),
+  ]);
+  assert.match(shell, /createPortal\(modal, document\.body\)/);
+  assert.match(shell, /min-h-\[100dvh\]/);
+  assert.match(shell, /document\.body\.style\.overflow = 'hidden'/);
+  assert.match(shell, /event\.key === 'Escape'/);
+  assert.match(shell, /event\.key !== 'Tab'/);
+  assert.match(shell, /previouslyFocused instanceof HTMLElement/);
+  assert.doesNotMatch(form, /type="month"/);
+  assert.match(form, /placeholder="MM\/AAAA"/);
+  assert.match(form, /parseConvenioMonthInput/);
 });
 
 test('serviço usa somente os cinco RPCs canônicos e Realtime por polo com debounce', async () => {

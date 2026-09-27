@@ -1,7 +1,11 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { Loader2, PlusCircle } from 'lucide-react';
 import type { CriarConvenioInput } from '../convenios.types';
-import { createConvenioRequestId } from '../convenios.presentation';
+import {
+  createConvenioRequestId,
+  formatConvenioMonthInput,
+  parseConvenioMonthInput,
+} from '../convenios.presentation';
 import ConvenioModalShell from './ConvenioModalShell';
 
 interface ParceiroOption {
@@ -42,7 +46,7 @@ const ConvenioFormModal: React.FC<ConvenioFormModalProps> = ({
 }) => {
   const [nome, setNome] = useState('');
   const [parceiroId, setParceiroId] = useState('');
-  const [competencia, setCompetencia] = useState(currentMonthInMaceio);
+  const [competencia, setCompetencia] = useState(() => formatConvenioMonthInput(currentMonthInMaceio()));
   const [observacao, setObservacao] = useState('');
   const requestIdRef = useRef(createConvenioRequestId());
   const options = useMemo(
@@ -54,13 +58,14 @@ const ConvenioFormModal: React.FC<ConvenioFormModalProps> = ({
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
-    if (!nome.trim() || !/^\d{4}-\d{2}$/.test(competencia)) return;
+    const competenciaCanonica = parseConvenioMonthInput(competencia);
+    if (!nome.trim() || !competenciaCanonica) return;
     onConfirm({
       requestId: requestIdRef.current,
       poloId,
       parceiroId: parceiroId || undefined,
       nome: nome.trim(),
-      competencia: `${competencia}-01`,
+      competencia: `${competenciaCanonica}-01`,
       observacao: observacao.trim() || undefined,
     });
   };
@@ -103,9 +108,14 @@ const ConvenioFormModal: React.FC<ConvenioFormModalProps> = ({
           <label className="block">
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">Primeiro mês *</span>
             <input
-              type="month"
+              type="text"
+              inputMode="numeric"
               value={competencia}
-              onChange={(event) => setCompetencia(event.target.value)}
+              onChange={(event) => setCompetencia(formatConvenioMonthInput(event.target.value))}
+              placeholder="MM/AAAA"
+              pattern="(0[1-9]|1[0-2])/[0-9]{4}"
+              title="Informe o mês no formato MM/AAAA"
+              maxLength={7}
               required
               className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-cyan-500"
             />

@@ -1,4 +1,5 @@
 import { formatMatricula } from '../../../../lib/academicUtils';
+import { formatCarteirinhaDate } from '../../cadastros/modelos-documentos/carteirinha/carteirinha-date-formatters';
 import {
   buildSelectablePdfBlobFromElements,
   createSelectablePdfBuilder,
@@ -11,22 +12,20 @@ import type { EmissionLog } from './historico-emissoes.types';
 
 export const getPreviewStudent = (emission: EmissionLog, poloInfo: any) => {
   const birthDate = emission.dados_emissao?.studentBirthDate || emission.aluno?.data_nascimento || '';
-  const birthParts = birthDate.split('T')[0]?.split('-') || [];
-  const expiresAt = emission.validade_ate ? new Date(emission.validade_ate) : null;
 
   return {
     id: emission.aluno_id,
     nome: emission.dados_emissao?.studentName || emission.aluno?.nome || '',
     cpf: emission.dados_emissao?.studentCpf || emission.aluno?.cpf_cnpj || '',
     rg: emission.aluno?.rg || '',
-    nascimento: birthParts.length === 3
-      ? `${birthParts[2]}/${birthParts[1]}/${birthParts[0]}`
-      : birthDate,
+    nascimento: formatCarteirinhaDate(birthDate),
     matricula: emission.dados_emissao?.studentMatricula
       || formatMatricula(emission.matricula_id, emission.emitido_em, emission.polo_id),
     curso: emission.dados_emissao?.courseName || '',
     instituicao: emission.dados_emissao?.institutionName || 'Universo Cursos e Consultoria',
-    validade: expiresAt ? expiresAt.toLocaleDateString('pt-BR') : 'Sem vencimento',
+    validade: emission.validade_ate
+      ? formatCarteirinhaDate(emission.validade_ate)
+      : 'Sem vencimento',
     fotoUrl: emission.dados_emissao?.studentPhotoUrl || emission.aluno?.foto_url || null,
     validationCode: emission.codigo,
     poloRazaoSocial: poloInfo?.nome,
