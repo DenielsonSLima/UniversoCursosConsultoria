@@ -58,6 +58,7 @@ export const DASHBOARD_WIDGET_IDS = [
 ] as const;
 
 export type DashboardWidgetId = typeof DASHBOARD_WIDGET_IDS[number];
+export type DashboardPreset = 'FINANCEIRO' | 'ACADEMICO' | 'MISTO';
 
 export interface GestorPermissions {
   modules: GestorModuleId[];
@@ -304,6 +305,41 @@ export const getEligibleDashboardWidgets = (
         return false;
     }
   });
+};
+
+export const canAccessDashboardPayables = (
+  permissions: GestorPermissions,
+) => canAccessGestorModule(permissions, 'inicio')
+  && (
+    canAccessGestorModule(permissions, 'caixa')
+    || (
+      canAccessGestorModule(permissions, 'financeiro')
+      && canAccessFinanceiroTab(permissions, 'despesas')
+    )
+  );
+
+export const getDashboardPayablesDestination = (
+  permissions: GestorPermissions,
+): 'financeiro' | 'caixa' | null => {
+  if (!canAccessDashboardPayables(permissions)) return null;
+  if (
+    canAccessGestorModule(permissions, 'financeiro')
+    && canAccessFinanceiroTab(permissions, 'despesas')
+  ) return 'financeiro';
+  return 'caixa';
+};
+
+export const getDashboardPreset = (
+  permissions: GestorPermissions,
+): DashboardPreset => {
+  const hasFinancialContext = canAccessDashboardPayables(permissions);
+  const hasAcademicContext = canAccessGestorModule(permissions, 'parceiros')
+    || canAccessGestorModule(permissions, 'gestao')
+    || canAccessSecretariaOperation(permissions.tabs, 'alunos');
+
+  if (hasFinancialContext && hasAcademicContext) return 'MISTO';
+  if (hasFinancialContext) return 'FINANCEIRO';
+  return 'ACADEMICO';
 };
 
 export const getAllowedDashboardWidgets = (

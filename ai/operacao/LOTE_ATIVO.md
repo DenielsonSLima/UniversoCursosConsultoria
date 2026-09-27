@@ -2,11 +2,11 @@
 
 Estado: VALIDADO — PUBLICAÇÃO AUTORIZADA
 
-## Lote: 2026-09-27-safari-acesso-remoto
+## Lote: 2026-09-27-caixa-contas-pagar-dashboard-financeiro
 
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-27-safari-acesso-remoto.md`
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-27-caixa-contas-pagar-dashboard-financeiro.md`
 
-- Acesso remoto à interface, smoke autenticado e automação CUA usam exclusivamente o Safari.
-- Google Chrome não deve ser aberto nem automatizado neste projeto.
-- Sem sessão útil no Safari, a pendência deve ser registrada sem troca de navegador.
-- A mesma regra foi incorporada à skill pessoal `universo-project-operations`.
+- Caixa separa compromissos de contas a pagar do realizado, sem calcular valores no frontend.
+- Início usa presets Acadêmico, Financeiro e Misto e mantém o Radar financeiro separado do calendário oficial.
+- Migration remota `20260927194749_create_caixa_contas_pagar_resumo` aplicada e validada no Supabase de produção.
+- Publicação da versão 4.8.121 autorizada explicitamente pelo usuário.

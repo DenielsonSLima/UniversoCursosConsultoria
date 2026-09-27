@@ -37,6 +37,19 @@ export const formatShortDate = (dateKey: string) => {
   return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '');
 };
 
+export const getDashboardCompetencia = (date: Date) => (
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-01`
+);
+
+export const formatDashboardCanonicalCurrency = (value: string) => {
+  if (!/^\d+(?:\.\d{1,2})?$/.test(value)) return 'R$ 0,00';
+  const [integerPart, fractionPart = ''] = value.split('.');
+  const groupedInteger = new Intl.NumberFormat('pt-BR', {
+    maximumFractionDigits: 0,
+  }).format(BigInt(integerPart));
+  return `R$ ${groupedInteger},${fractionPart.padEnd(2, '0')}`;
+};
+
 export const getEventTone = (typeId: string) => {
   if (typeId === 'fer') return 'bg-rose-500';
   if (typeId === 'fac') return 'bg-orange-500';

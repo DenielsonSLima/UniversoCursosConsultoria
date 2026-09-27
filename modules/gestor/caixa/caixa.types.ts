@@ -235,3 +235,37 @@ export type CaixaPosicaoTotalResumo =
     motivo: 'ACESSO_RESTRITO' | 'HISTORICO_INSUFICIENTE';
     observacao: string;
   });
+
+export interface CaixaContasPagarValorQuantidade {
+  valor: string;
+  quantidade: number;
+}
+
+export interface CaixaContasPagarResumo {
+  versao: 1;
+  competencia: string;
+  periodoInicio: string;
+  periodoFimExclusivo: string;
+  dataCorte: string;
+  escopoTipo: CaixaScopeType;
+  poloId: string | null;
+  criterio: 'POSICAO_REEXPRESSA_NO_CORTE';
+  contasCompetencia: CaixaContasPagarValorQuantidade;
+  pagasCompetencia: CaixaContasPagarValorQuantidade;
+  aVencerCompetencia: CaixaContasPagarValorQuantidade;
+  emAtraso: CaixaContasPagarValorQuantidade & {
+    dataMaisAntiga: string | null;
+  };
+  agendaFinanceira: {
+    hoje: CaixaContasPagarValorQuantidade & {
+      data: string;
+    };
+    proximosSeteDias: CaixaContasPagarValorQuantidade & {
+      periodoInicio: string;
+      periodoFimExclusivo: string;
+    };
+    dias: Array<CaixaContasPagarValorQuantidade & {
+      data: string;
+    }>;
+  };
+}

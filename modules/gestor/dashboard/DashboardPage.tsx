@@ -5,26 +5,33 @@ import { CalendarDays, Clock3, GraduationCap, Sparkles, Users } from 'lucide-rea
 import type { RecentActivityItem } from './dashboard.service';
 import {
   dashboardActivityQueryOptions,
+  dashboardFinancialRadarQueryOptions,
   dashboardKpisQueryOptions,
 } from './dashboard.queries';
 import { gestorCalendarQueryOptions } from '../calendario/calendario.queries';
 import { toDateKey } from '../calendario/calendario.official';
 import {
   buildDashboardAccessKey,
+  canAccessDashboardPayables,
   canAccessGestorModule,
+  getDashboardPayablesDestination,
+  getDashboardPreset,
   getAllowedDashboardWidgets,
   type DashboardWidgetId,
   type GestorPermissions,
 } from '../access-control';
 import DashboardAgendaSection from './components/DashboardAgendaSection';
 import DashboardFinancialShortcut from './components/DashboardFinancialShortcut';
+import DashboardFinancialRadar from './components/DashboardFinancialRadar';
 import DashboardMetricCard from './components/DashboardMetricCard';
+import DashboardOfficialCalendar from './components/DashboardOfficialCalendar';
 import DashboardQuickActionsHeader from './components/DashboardQuickActionsHeader';
 import DashboardQuickActionsModal from './components/DashboardQuickActionsModal';
 import DashboardRecentActivity from './components/DashboardRecentActivity';
 import {
   addDays,
   formatShortDate,
+  getDashboardCompetencia,
   startOfDay,
   startOfWeek,
   type DashboardDaySummary,
@@ -32,6 +39,7 @@ import {
   type DashboardQuickActionMode,
 } from './dashboard.presentation';
 import { getDashboardStudentFinanceAccess } from './student-finance/dashboard-student-finance.access';
+import { useDashboardFinancialRealtime } from './useDashboardFinancialRealtime';
 
 interface DashboardPageProps {
   poloId?: string | null;
@@ -53,11 +61,18 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   const weekStart = startOfWeek(today);
   const weekEnd = addDays(weekStart, 7);
   const activePoloId = poloId || '';
+  const competencia = getDashboardCompetencia(today);
 
   const allowedWidgets = getAllowedDashboardWidgets(permissions);
   const widgetSet = new Set<DashboardWidgetId>(allowedWidgets);
   const hasWidget = (widgetId: DashboardWidgetId) => widgetSet.has(widgetId);
   const dashboardAccessKey = buildDashboardAccessKey(permissions, cacheIdentity);
+  const preset = getDashboardPreset(permissions);
+  const canViewFinancialRadar = canAccessDashboardPayables(permissions);
+  const financialRadarDestination = getDashboardPayablesDestination(permissions);
+  const showAcademicWorkspace = preset !== 'FINANCEIRO';
+
+  useDashboardFinancialRealtime(canViewFinancialRadar, activePoloId, competencia);
 
   const showStudents = hasWidget('alunos-ativos');
   const showEnrollments = hasWidget('matriculas-mes');
@@ -90,6 +105,15 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   const { data: calendarData, isLoading: loadingCalendar } = useQuery({
     ...gestorCalendarQueryOptions(activePoloId),
     enabled: Boolean(activePoloId) && canUseCalendar,
+  });
+
+  const {
+    data: financialRadar,
+    isLoading: loadingFinancialRadar,
+    isError: financialRadarError,
+  } = useQuery({
+    ...dashboardFinancialRadarQueryOptions(activePoloId, competencia),
+    enabled: Boolean(activePoloId) && canViewFinancialRadar,
   });
 
   const eventTypes = useMemo(
@@ -128,6 +152,9 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   );
 
   const upcomingEvents = allEvents.filter((event) => event.date > todayKey).slice(0, 4);
+  const officialEvents = allEvents.filter(
+    (event) => event.date >= todayKey && ['fer', 'fac', 'inst', 'evt'].includes(event.typeId),
+  );
   const nextImportantDate = allEvents.find(
     (event) => event.date >= todayKey && ['fer', 'fac', 'inst', 'evt'].includes(event.typeId),
   );
@@ -141,6 +168,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
 
   const hasHomeContent = canUseCalendar
     || showAcademicKpis
+    || canViewFinancialRadar
     || showQuickActions
     || showRecentActivity
     || (canUseFinance && hasFinancialShortcut);
@@ -162,65 +190,88 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
         onOpenAction={setQuickActionMode}
       />
 
-      <section className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${metricGridClass}`}>
-        <DashboardMetricCard
-          label="Agenda do dia"
-          value={formatShortDate(todayKey)}
-          helper={today.toLocaleDateString('pt-BR', { weekday: 'long' })}
-          icon={Clock3}
-          tone="bg-blue-50 text-blue-600"
-          onClick={canUseCalendar ? openCalendar : undefined}
-        />
-        <DashboardMetricCard
-          label="Agenda semanal"
-          value={formatShortDate(toDateKey(weekStart))}
-          helper={`até ${formatShortDate(toDateKey(addDays(weekEnd, -1)))}`}
-          icon={CalendarDays}
-          tone="bg-amber-50 text-amber-600"
-          onClick={canUseCalendar ? openCalendar : undefined}
-        />
-        {showStudents && (
+      {showAcademicWorkspace ? (
+        <section className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${metricGridClass}`}>
           <DashboardMetricCard
-            label="Cadastros de alunos ativos"
-            value={kpis?.cadastrosAlunosAtivos.toLocaleString('pt-BR') ?? '—'}
-            helper={kpisError ? 'indicador indisponível' : 'perfis de aluno ativos no polo'}
-            icon={Users}
-            tone="bg-emerald-50 text-emerald-600"
-            loading={loadingKpis}
-            onClick={canCreatePartner ? () => onNavigate?.('parceiros') : undefined}
+            label="Agenda do dia"
+            value={formatShortDate(todayKey)}
+            helper={today.toLocaleDateString('pt-BR', { weekday: 'long' })}
+            icon={Clock3}
+            tone="bg-blue-50 text-blue-600"
+            onClick={canUseCalendar ? openCalendar : undefined}
           />
-        )}
-        {showEnrollments && (
           <DashboardMetricCard
-            label="Matrículas no mês"
-            value={kpis?.novasMatriculas || 0}
-            helper="novos alunos no período"
-            icon={GraduationCap}
-            tone="bg-indigo-50 text-indigo-600"
-            loading={loadingKpis}
-            onClick={canCreatePartner ? () => onNavigate?.('parceiros') : undefined}
+            label="Agenda semanal"
+            value={formatShortDate(toDateKey(weekStart))}
+            helper={`até ${formatShortDate(toDateKey(addDays(weekEnd, -1)))}`}
+            icon={CalendarDays}
+            tone="bg-amber-50 text-amber-600"
+            onClick={canUseCalendar ? openCalendar : undefined}
           />
-        )}
-      </section>
+          {showStudents && (
+            <DashboardMetricCard
+              label="Cadastros de alunos ativos"
+              value={kpis?.cadastrosAlunosAtivos.toLocaleString('pt-BR') ?? '—'}
+              helper={kpisError ? 'indicador indisponível' : 'perfis de aluno ativos no polo'}
+              icon={Users}
+              tone="bg-emerald-50 text-emerald-600"
+              loading={loadingKpis}
+              onClick={canCreatePartner ? () => onNavigate?.('parceiros') : undefined}
+            />
+          )}
+          {showEnrollments && (
+            <DashboardMetricCard
+              label="Matrículas no mês"
+              value={kpis?.novasMatriculas || 0}
+              helper="novos alunos no período"
+              icon={GraduationCap}
+              tone="bg-indigo-50 text-indigo-600"
+              loading={loadingKpis}
+              onClick={canCreatePartner ? () => onNavigate?.('parceiros') : undefined}
+            />
+          )}
+        </section>
+      ) : null}
 
-      <DashboardAgendaSection
-        weekStart={weekStart}
-        weekEnd={weekEnd}
-        weekDays={weekDays}
-        weekEvents={weekEvents}
-        upcomingEvents={upcomingEvents}
-        nextImportantDate={nextImportantDate}
-        eventTypes={eventTypes}
-        loading={loadingCalendar}
-        canUseCalendar={canUseCalendar}
-        onOpenCalendar={openCalendar}
-      />
+      {canViewFinancialRadar ? (
+        <DashboardFinancialRadar
+          radar={financialRadar}
+          loading={loadingFinancialRadar}
+          hasError={financialRadarError}
+          onOpenPayables={() => {
+            if (financialRadarDestination) onNavigate?.(financialRadarDestination);
+          }}
+        />
+      ) : null}
+
+      {showAcademicWorkspace ? (
+        <DashboardAgendaSection
+          weekStart={weekStart}
+          weekEnd={weekEnd}
+          weekDays={weekDays}
+          weekEvents={weekEvents}
+          upcomingEvents={upcomingEvents}
+          nextImportantDate={nextImportantDate}
+          eventTypes={eventTypes}
+          loading={loadingCalendar}
+          canUseCalendar={canUseCalendar}
+          onOpenCalendar={openCalendar}
+        />
+      ) : canUseCalendar ? (
+        <DashboardOfficialCalendar
+          events={officialEvents}
+          eventTypes={eventTypes}
+          loading={loadingCalendar}
+          canUseCalendar={canUseCalendar}
+          onOpenCalendar={openCalendar}
+        />
+      ) : null}
 
       {showRecentActivity && (
         <DashboardRecentActivity activities={recentActivity} loading={loadingActivity} now={now} />
       )}
 
-      {canUseFinance && hasFinancialShortcut && (
+      {canUseFinance && hasFinancialShortcut && !canViewFinancialRadar && (
         <DashboardFinancialShortcut
           labels={financialShortcutLabels}
           onOpen={() => onNavigate?.('financeiro')}

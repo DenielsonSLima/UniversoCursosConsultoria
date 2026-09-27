@@ -7,8 +7,11 @@ import {
   canAccessGestorModule,
   canAccessGestaoTurmaTab,
   canAccessFinanceiroTab,
+  canAccessDashboardPayables,
   DEFAULT_GESTAO_TURMA_TABS,
   getAllowedDashboardWidgets,
+  getDashboardPayablesDestination,
+  getDashboardPreset,
   getEffectiveGestaoTurmaTabs,
   getEffectiveFinanceiroTabs,
   type GestorPermissions,
@@ -300,4 +303,53 @@ test('chave do cache muda por identidade e por escopo de acesso', () => {
 
   assert.notEqual(buildDashboardAccessKey(first, 'perfil-a'), buildDashboardAccessKey(first, 'perfil-b'));
   assert.notEqual(buildDashboardAccessKey(first, 'perfil-a'), buildDashboardAccessKey(second, 'perfil-a'));
+});
+
+test('preset financeiro exige acesso explícito a Contas a Pagar', () => {
+  const financeiro = permissions({
+    modules: ['inicio', 'financeiro'],
+    financeiroTabs: ['despesas'],
+  });
+  const somenteResumo = permissions({
+    modules: ['inicio', 'financeiro'],
+    financeiroTabs: ['resumo'],
+  });
+
+  assert.equal(canAccessDashboardPayables(financeiro), true);
+  assert.equal(getDashboardPreset(financeiro), 'FINANCEIRO');
+  assert.equal(canAccessDashboardPayables(somenteResumo), false);
+  assert.equal(getDashboardPreset(somenteResumo), 'ACADEMICO');
+});
+
+test('perfil Início + Caixa recebe Radar e navega para Caixa', () => {
+  const caixa = permissions({
+    modules: ['inicio', 'caixa'],
+    financeiroTabs: [],
+  });
+  const financeiro = permissions({
+    modules: ['inicio', 'financeiro', 'caixa'],
+    financeiroTabs: ['despesas'],
+  });
+
+  assert.equal(canAccessDashboardPayables(caixa), true);
+  assert.equal(getDashboardPreset(caixa), 'FINANCEIRO');
+  assert.equal(getDashboardPayablesDestination(caixa), 'caixa');
+  assert.equal(getDashboardPayablesDestination(financeiro), 'financeiro');
+});
+
+test('preset misto combina contexto acadêmico e Contas a Pagar sem ampliar acesso', () => {
+  const misto = permissions({
+    modules: ['inicio', 'financeiro', 'gestao'],
+    financeiroTabs: ['despesas'],
+    tabs: { gestao: ['alunos'] },
+  });
+  const academico = permissions({
+    modules: ['inicio', 'secretaria'],
+    financeiroTabs: [],
+    tabs: { secretaria: ['alunos'] },
+  });
+
+  assert.equal(getDashboardPreset(misto), 'MISTO');
+  assert.equal(getDashboardPreset(academico), 'ACADEMICO');
+  assert.equal(canAccessDashboardPayables(academico), false);
 });

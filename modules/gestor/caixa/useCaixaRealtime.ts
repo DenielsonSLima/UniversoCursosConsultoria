@@ -40,6 +40,10 @@ export const useCaixaRealtime = () => {
           queryKey: caixaQueryKeys.custosOperacionais,
           refetchType,
         });
+        void queryClient.invalidateQueries({
+          queryKey: caixaQueryKeys.contasPagarResumos,
+          refetchType,
+        });
         void queryClient.invalidateQueries({ queryKey: caixaReportQueryKeys.monthly, refetchType });
         void queryClient.invalidateQueries({ queryKey: caixaConveniosQueryKeys.root, refetchType });
       } else {
@@ -62,6 +66,10 @@ export const useCaixaRealtime = () => {
           });
           void queryClient.invalidateQueries({
             queryKey: caixaQueryKeys.custosOperacionaisForPolo(scope),
+            refetchType,
+          });
+          void queryClient.invalidateQueries({
+            queryKey: caixaQueryKeys.contasPagarResumosForPolo(scope),
             refetchType,
           });
           void queryClient.invalidateQueries({

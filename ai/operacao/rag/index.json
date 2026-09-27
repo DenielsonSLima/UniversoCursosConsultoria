@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-09-27T14:43:43.742Z",
+  "builtAt": "2026-09-27T19:51:36.128Z",
   "manifestVersion": 2,
-  "sourceSignature": "b1f59c718f73059cb5ca6b858b2a6e6a1ab7f1dbec355d51559ec79ff263bf59",
+  "sourceSignature": "e2aa48b8860f55818c77d3d2cc62725fcbd6dc4a1e06077c9355175e7683fea0",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "d3795135ba89ba018e7a9432f3d1eb1eafc30ad982426a7fe2361bb1f94687f3"
+      "hash": "5fd849d2d636077086338ead04ccdf49838ba68d0e465cdc0f5d9c21f50c6299"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -210,23 +210,23 @@
       "part": 1
     },
     {
-      "id": "dadac4c38e2152d5c967",
-      "hash": "dadac4c38e2152d5c9671415d8f795efa28b581ee2c6b060bcc874fcce55a70a",
+      "id": "d4129c665a257264db72",
+      "hash": "d4129c665a257264db7283e397fb227303a1e9afa756733bd23b9e1efd51e43c",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-09-27-safari-acesso-remoto",
-      "text": "Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-27-safari-acesso-remoto.md`",
-      "normalizedText": "manifesto explicito ai operacao registros alteracoes 2026 09 27 safari acesso remoto md",
-      "tokenCount": 13,
+      "section": "Lote: 2026-09-27-caixa-contas-pagar-dashboard-financeiro",
+      "text": "Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-27-caixa-contas-pagar-dashboard-financeiro.md`",
+      "normalizedText": "manifesto explicito ai operacao registros alteracoes 2026 09 27 caixa contas pagar dashboard financeiro md",
+      "tokenCount": 15,
       "part": 1
     },
     {
-      "id": "a194be5a7cc866984635",
-      "hash": "a194be5a7cc866984635c6bfd7a9ad1f659041ec779fbca2fcf0a47cf9ac094b",
+      "id": "4fb869c9399a208abfa8",
+      "hash": "4fb869c9399a208abfa8812942ee2c790c07b997c35268947d95aae63cf44431",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-09-27-safari-acesso-remoto",
-      "text": "- Acesso remoto à interface, smoke autenticado e automação CUA usam exclusivamente o Safari. - Google Chrome não deve ser aberto nem automatizado neste projeto. - Sem sessão útil no Safari, a pendência deve ser registrada sem troca de navegador. - A mesma regra foi incorporada à skill pessoal `universo-project-operations`.",
-      "normalizedText": "acesso remoto a interface smoke autenticado e automacao cua usam exclusivamente o safari google chrome nao deve ser aberto nem automatizado neste projeto sem sessao util no safari a pendencia deve ser registrada sem troca de navegador a mesma regra foi incorporada a skill pessoal universo project operations",
-      "tokenCount": 42,
+      "section": "Lote: 2026-09-27-caixa-contas-pagar-dashboard-financeiro",
+      "text": "- Caixa separa compromissos de contas a pagar do realizado, sem calcular valores no frontend. - Início usa presets Acadêmico, Financeiro e Misto e mantém o Radar financeiro separado do calendário oficial. - Migration remota `20260927194749_create_caixa_contas_pagar_resumo` aplicada e validada no Supabase de produção. - Publicação da versão 4.8.121 autorizada explicitamente pelo usuário.",
+      "normalizedText": "caixa separa compromissos de contas a pagar do realizado sem calcular valores no frontend inicio usa presets academico financeiro e misto e mantem o radar financeiro separado do calendario oficial migration remota 20260927194749 create caixa contas pagar resumo aplicada e validada no supabase de producao publicacao da versao 4 8 121 autorizada explicitamente pelo usuario",
+      "tokenCount": 48,
       "part": 1
     },
     {
