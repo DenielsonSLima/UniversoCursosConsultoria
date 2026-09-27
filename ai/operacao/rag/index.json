@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-09-27T12:13:16.202Z",
+  "builtAt": "2026-09-27T12:30:36.347Z",
   "manifestVersion": 2,
-  "sourceSignature": "d2750ea394132f31d66a298a56c70301f1bab6a7ba8d7117726d16b03431eb99",
+  "sourceSignature": "6ddba5887ea7971e95443b37c0805739e3a7764cf0b6400041d1219a135848ab",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "f1fd06a99ff933219d8664002ff1d14367feaa46b197963ad00663d024774f09"
+      "hash": "0ef89a98b5766de3ed4c0d61af7b98c932bf388ac3e2cd617d5e4479c7cb9e30"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -200,33 +200,33 @@
       "part": 1
     },
     {
-      "id": "f9fd54812b012c3b6e94",
-      "hash": "f9fd54812b012c3b6e945a098463d826234369e7fcda33e222e43b6c868ca58c",
+      "id": "f4a51b1bb08af6d0a47a",
+      "hash": "f4a51b1bb08af6d0a47aecf87186499e7cc9f1a1fc9621345256385a93919fb6",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Lote ativo",
-      "text": "Estado: PUBLICADO EM PRODUÇÃO — VERSÃO 4.8.111",
-      "normalizedText": "estado publicado em producao versao 4 8 111",
-      "tokenCount": 6,
+      "text": "Estado: VALIDADO — PUBLICAÇÃO AUTORIZADA",
+      "normalizedText": "estado validado publicacao autorizada",
+      "tokenCount": 4,
       "part": 1
     },
     {
-      "id": "520df3263a1f29c279cb",
-      "hash": "520df3263a1f29c279cb8342e924327b45cb01932438461f9d964742f2ef1d49",
+      "id": "28e0e47387e34699592c",
+      "hash": "28e0e47387e34699592ce2fa1bc89079f1c6c2ecd6689fe4aca639b7edf950b7",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-09-27-convenios-financeiros",
-      "text": "Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-27-convenios-financeiros.md`",
-      "normalizedText": "manifesto explicito ai operacao registros alteracoes 2026 09 27 convenios financeiros md",
-      "tokenCount": 12,
+      "section": "Lote: 2026-09-27-ficha-aluno-abas",
+      "text": "Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-27-ficha-aluno-abas.md`",
+      "normalizedText": "manifesto explicito ai operacao registros alteracoes 2026 09 27 ficha aluno abas md",
+      "tokenCount": 13,
       "part": 1
     },
     {
-      "id": "f69a116eeec1b027983e",
-      "hash": "f69a116eeec1b027983e0f6b70dbbe72c8206c0d880dceacc10d0b3eb39958ae",
+      "id": "96a45ff8a525dbbf9775",
+      "hash": "96a45ff8a525dbbf9775ed3580a472051efdf9d38aac42d82a9838d1c51ae4bd",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-09-27-convenios-financeiros",
-      "text": "- Novo razão auxiliar mensal para recursos vinculados a convênios, sem duplicar entradas ou saídas no Caixa. - Competência fecha manualmente e pode carregar o saldo final para o mês seguinte sem reconhecer nova receita. - Contas a Pagar pode vincular a despesa atomicamente a uma competência aberta do mesmo polo. - Caixa e relatório v7 exibem a posição separada, mantendo os valores no total geral somente por seus lançamentos financeiros originais. - Nove migrations foram aplicadas no Supabase de produção; smoke transacional com rollback validou crédito, despesa, extrato, Caixa, fechamento e transporte sem deixar resíduos. - Publicação atômica registrada na versão 4.8.111; o aviso do advisor sobre a RPC `SECURITY DEFINER` é intencional, pois a função valida permissão e escopo antes de retornar dados.",
-      "normalizedText": "novo razao auxiliar mensal para recursos vinculados a convenios sem duplicar entradas ou saidas no caixa competencia fecha manualmente e pode carregar o saldo final para o mes seguinte sem reconhecer nova receita contas a pagar pode vincular a despesa atomicamente a uma competencia aberta do mesmo polo caixa e relatorio v7 exibem a posicao separada mantendo os valores no total geral somente por seus lancamentos financeiros originais nove migrations foram aplicadas no supabase de producao smoke transacional com rollback validou credito despesa extrato caixa fechamento e transporte sem deixar residuos publicacao atomica registrada na versao 4 8 111 o aviso do advisor sobre a rpc security definer e intencional pois a funcao valida permissao e escopo antes de retornar dados",
-      "tokenCount": 104,
+      "section": "Lote: 2026-09-27-ficha-aluno-abas",
+      "text": "- Base 4.8.111 financeira preservada integralmente. - Remove o botão “Imprimir ficha” da ficha detalhada do aluno, sem alterar o compositor ou os demais documentos. - Reforça o peso visual das abas Cadastro, Cursos, Matrículas e demais áreas, incluindo o seletor responsivo. - Manifesto de oito arquivos; não altera financeiro, banco, PDF, permissão ou dados acadêmicos. - ESLint focado, diff check e teto de 500 linhas aprovados. Smoke autenticado local pendente porque a origem local não compartilha a sessão de produção. - Produção autorizada explicitamente pelo usuário nesta conversa; Índice RAG regenerado uma vez no fechamento; Preview/CI e smoke de produção devem ser confirmados.",
+      "normalizedText": "base 4 8 111 financeira preservada integralmente remove o botao imprimir ficha da ficha detalhada do aluno sem alterar o compositor ou os demais documentos reforca o peso visual das abas cadastro cursos matriculas e demais areas incluindo o seletor responsivo manifesto de oito arquivos nao altera financeiro banco pdf permissao ou dados academicos eslint focado diff check e teto de 500 linhas aprovados smoke autenticado local pendente porque a origem local nao compartilha a sessao de producao producao autorizada explicitamente pelo usuario nesta conversa indice rag regenerado uma vez no fechamento preview ci e smoke de producao devem ser confirmados",
+      "tokenCount": 90,
       "part": 1
     },
     {
