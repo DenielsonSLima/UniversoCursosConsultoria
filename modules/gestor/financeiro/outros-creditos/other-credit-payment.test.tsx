@@ -31,9 +31,10 @@ test('QR sintético válido aparece em destaque com copia e cola, sem chamada de
   const text = html(data);
   assert.match(text, /<img[^>]+alt="QR Code Pix oficial desta cobrança Banese"/);
   assert.match(text, /data:image\/png;base64,/);
-  assert.match(text, /sm:h-\[280px\]/);
+  assert.match(text, /sm:h-\[250px\]/);
   assert.match(text, /Copiar Pix/);
   assert.match(text, /Resumo do atendimento/);
+  assert.match(text, /instabilidade do recebedor/);
   assert.ok(text.includes(data.payment.gateway_pix_payload!));
   assert.equal(fetch.mock.callCount(), 0);
 });

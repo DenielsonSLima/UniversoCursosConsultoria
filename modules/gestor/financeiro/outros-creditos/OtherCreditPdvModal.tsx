@@ -102,7 +102,7 @@ export function PdvForm({ model }: { model: OutrosCreditosModel }) {
           </nav>
         </div>
 
-        <fieldset disabled={busy} className="min-w-0 space-y-5 rounded-[28px] border border-white/70 bg-white p-5 shadow-[0_24px_70px_-28px_rgba(7,27,63,0.35)] disabled:opacity-60 sm:p-7 lg:p-8">
+        <fieldset disabled={busy} className="min-w-0 space-y-5 rounded-[28px] border border-white/70 bg-white p-5 shadow-[0_24px_70px_-28px_rgba(7,27,63,0.35)] sm:p-7 lg:p-8">
           <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-5">
             <div>
               <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-blue-700"><span className="h-1.5 w-1.5 rounded-full bg-[#ed1c24]" aria-hidden="true" /> Dados do atendimento</p>

@@ -21,7 +21,7 @@ function CopyAction({ value, label, primary = false }: { value: string; label: s
     <div>
       <button type="button" onClick={() => void copy(value)} disabled={!value}
         className={`inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-40 ${focusRing} ${primary
-          ? 'bg-[#0b1f4a] text-white hover:bg-[#163768]'
+          ? 'bg-[#ed1c24] text-white shadow-[0_14px_30px_-16px_rgba(237,28,36,0.75)] hover:bg-[#ff3038]'
           : 'border border-slate-200 bg-white text-[#0b1f4a] hover:border-blue-300 hover:bg-blue-50/40'}`}>
         {state === 'copied' ? <Check size={17} aria-hidden="true" /> : <Copy size={17} aria-hidden="true" />}
         {state === 'copied' ? 'Copiado' : label}
@@ -44,15 +44,15 @@ export function OtherCreditPaymentContent({ data, onRefresh, refreshPending = fa
   const statusLabel = paid ? 'Pagamento confirmado' : closed ? 'Cobrança encerrada' : payable ? 'Aguardando pagamento' : 'Cobrança em conferência';
 
   return (
-    <div className="mx-auto grid w-full max-w-6xl items-start gap-5 px-4 py-5 sm:px-8 sm:py-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-6">
-      <section className="flex min-w-0 flex-col items-center rounded-2xl border border-slate-200 bg-white px-4 py-6 text-center shadow-sm shadow-slate-900/[0.02] sm:px-8 sm:py-7" aria-label="Pagamento da cobrança">
+    <div className="mx-auto grid w-full max-w-7xl items-start gap-5 px-4 pb-8 pt-4 sm:px-8 sm:pt-5 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-7 lg:pb-10">
+      <section className="flex min-w-0 flex-col items-center rounded-[28px] border border-white/70 bg-white px-4 py-5 text-center shadow-[0_24px_70px_-28px_rgba(7,27,63,0.35)] sm:px-8 sm:py-6" aria-label="Pagamento da cobrança">
         <div role="status" className={`inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-bold ${paid
           ? 'bg-emerald-50 text-emerald-800' : closed || !payable ? 'bg-amber-50 text-amber-900' : 'bg-blue-50 text-blue-800'}`}>
           {paid ? <CheckCircle2 size={15} aria-hidden="true" /> : <Clock3 size={15} aria-hidden="true" />}
           {statusLabel}
         </div>
-        <p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Valor da cobrança</p>
-        <p className="mt-2 max-w-full break-words text-[clamp(2.4rem,5vw,3.5rem)] font-bold leading-none tracking-[-0.055em] text-[#0b1f4a]">
+        <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Valor da cobrança</p>
+        <p className="mt-1.5 max-w-full break-words text-[clamp(2.35rem,5vw,3.35rem)] font-black leading-none tracking-[-0.055em] text-[#071b3f]">
           {formatBaneseCurrency(record.valor)}
         </p>
 
@@ -72,12 +72,12 @@ export function OtherCreditPaymentContent({ data, onRefresh, refreshPending = fa
               : 'Estamos acompanhando a confirmação bancária. Esta tela será atualizada automaticamente quando os dados estiverem disponíveis.'}</p>
           </div>
         ) : (
-          <div className="mt-6 w-full max-w-[360px]">
+          <div className="mt-4 w-full max-w-[360px]">
             {pixAvailable ? (
               <>
-                <div className="relative mx-auto w-fit max-w-full rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_5px_24px_-14px_rgba(11,31,74,0.22)] sm:p-3">
+                <div className="relative mx-auto w-fit max-w-full rounded-[24px] border border-slate-200 bg-white p-3 shadow-[0_18px_45px_-24px_rgba(7,27,63,0.42)]">
                   <img src={pix.imageSource!} alt="QR Code Pix oficial desta cobrança Banese"
-                    className="h-[240px] w-[240px] max-w-full object-contain sm:h-[280px] sm:w-[280px]" />
+                    className="h-[230px] w-[230px] max-w-full object-contain sm:h-[250px] sm:w-[250px]" />
                 </div>
                 <h3 className="mt-4 text-sm font-bold text-[#0b1f4a]">Pague com Pix</h3>
                 <p className="mx-auto mt-1 max-w-xs text-xs leading-5 text-slate-500">Abra o aplicativo do banco e aponte a câmera para o QR Code.</p>
@@ -101,26 +101,30 @@ export function OtherCreditPaymentContent({ data, onRefresh, refreshPending = fa
         )}
       </section>
 
-      <aside className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white px-6 pb-6 shadow-sm shadow-slate-900/[0.02]" aria-label="Resumo do atendimento">
-        <p className="-mx-6 border-b border-[#152e5b] bg-[#0b1f4a] px-6 py-5 text-[10px] font-bold uppercase tracking-[0.18em] text-white">Resumo do atendimento</p>
-        <p className="mt-5 text-xs font-semibold text-slate-500">Pagador</p>
-        <h3 className="mt-2 break-words text-xl font-bold leading-tight tracking-tight text-[#0b1f4a]">{data.customerName}</h3>
-        <p className="mt-2 break-words text-xs leading-5 text-slate-500">{record.descricao}</p>
-        <dl className="mt-5 border-y border-slate-100 py-4 text-xs">
-          <div className="flex items-center justify-between gap-4"><dt className="flex items-center gap-2 text-slate-500"><CalendarDays size={15} aria-hidden="true" /> Vencimento</dt><dd className={`font-bold ${record.status === 'VENCIDO' ? 'text-amber-700' : 'text-[#001a33]'}`}>{formatBaneseDate(record.data_vencimento)}</dd></div>
-          <div className="mt-3 flex items-center justify-between gap-4"><dt className="text-slate-500">Forma de pagamento</dt><dd className="font-bold text-[#001a33]">BolePix Banese</dd></div>
+      <aside className="relative min-w-0 overflow-hidden rounded-[28px] border border-white/15 bg-[#071b3f] px-6 pb-6 text-white shadow-[0_26px_70px_-28px_rgba(7,27,63,0.72)]" aria-label="Resumo do atendimento">
+        <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-blue-500/25 blur-[70px]" aria-hidden="true" />
+        <p className="relative -mx-6 border-b border-white/10 px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-blue-100">Resumo do atendimento</p>
+        <p className="relative mt-5 text-[10px] font-bold uppercase tracking-[0.16em] text-blue-200/55">Pagador</p>
+        <h3 className="relative mt-2 break-words text-xl font-bold leading-tight tracking-tight text-white">{data.customerName}</h3>
+        <p className="relative mt-2 break-words text-xs leading-5 text-blue-100/55">{record.descricao}</p>
+        <dl className="relative mt-5 rounded-2xl border border-white/10 bg-white/[0.055] p-4 text-xs">
+          <div className="flex items-center justify-between gap-4"><dt className="flex items-center gap-2 text-blue-100/55"><CalendarDays size={15} aria-hidden="true" /> Vencimento</dt><dd className={`font-bold ${record.status === 'VENCIDO' ? 'text-amber-300' : 'text-white'}`}>{formatBaneseDate(record.data_vencimento)}</dd></div>
+          <div className="mt-3 flex items-center justify-between gap-4 border-t border-dashed border-white/10 pt-3"><dt className="text-blue-100/55">Forma de pagamento</dt><dd className="font-bold text-white">BolePix Banese</dd></div>
         </dl>
 
         {payable && data.boletoAvailable && (
           <section className="mt-5" aria-label="Boleto da mesma cobrança">
-            <h4 className="flex items-center gap-2 text-xs font-bold text-[#0b1f4a]"><Barcode size={18} aria-hidden="true" /> Boleto da mesma cobrança</h4>
-            <p className="mt-3 select-all break-all rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 font-mono text-[11px] leading-5 text-slate-600">{formatBaneseDigitableLine(line)}</p>
+            <h4 className="flex items-center gap-2 text-xs font-bold text-white"><Barcode size={18} className="text-blue-200" aria-hidden="true" /> Boleto da mesma cobrança</h4>
+            <p className="mt-3 select-all break-all rounded-xl border border-white/10 bg-white/[0.055] px-3 py-3 font-mono text-[11px] leading-5 text-blue-100/70">{formatBaneseDigitableLine(line)}</p>
             <div className="mt-3"><CopyAction value={line} label="Copiar linha digitável" /></div>
             {onOpenDocument && <button type="button" onClick={onOpenDocument} disabled={documentPending}
-              className={`mt-2 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-bold text-[#001a33] transition hover:bg-slate-200/60 disabled:opacity-40 ${focusRing}`}>
+              className={`mt-2 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-bold text-blue-100 transition hover:bg-white/10 disabled:opacity-40 ${focusRing}`}>
               <Download size={16} aria-hidden="true" /> {documentPending ? 'Preparando PDF...' : 'Abrir boleto PDF'}
             </button>}
-            <p className="mt-3 text-[11px] leading-5 text-slate-500">Use Pix ou boleto para pagar esta cobrança uma única vez.</p>
+            <p className="mt-3 text-[11px] leading-5 text-blue-100/55">Use Pix ou boleto para pagar esta cobrança uma única vez.</p>
+            <div className="mt-4 rounded-xl border border-amber-300/15 bg-amber-300/[0.07] px-3.5 py-3 text-[11px] leading-5 text-amber-100/80">
+              Se o aplicativo do banco informar instabilidade do recebedor, aguarde alguns minutos e tente novamente ou use o boleto. Não gere outra cobrança.
+            </div>
           </section>
         )}
 
@@ -134,9 +138,9 @@ export function OtherCreditPaymentContent({ data, onRefresh, refreshPending = fa
             <p className="mt-3 text-center text-xs leading-5 text-slate-500">Consulte o banco se o pagamento já foi realizado.</p>
           </div>
         )}
-        {!paid && !closed && <p className="mt-5 flex items-start gap-2 text-[11px] leading-5 text-slate-500"><Clock3 size={14} className="mt-0.5 shrink-0" aria-hidden="true" /> A confirmação bancária aparece automaticamente nesta tela.</p>}
-        {link && <div className="mt-5 border-t border-slate-100 pt-5">
-          <a href={link} target="_blank" rel="noreferrer" className={`inline-flex min-h-10 items-center gap-1.5 rounded-lg text-xs font-bold text-slate-500 hover:text-[#001a33] ${focusRing}`}>Portal do Aluno <ArrowUpRight size={14} aria-hidden="true" /></a>
+        {!paid && !closed && <p className="relative mt-5 flex items-start gap-2 text-[11px] leading-5 text-blue-100/55"><Clock3 size={14} className="mt-0.5 shrink-0" aria-hidden="true" /> A confirmação bancária aparece automaticamente nesta tela.</p>}
+        {link && <div className="relative mt-5 border-t border-white/10 pt-5">
+          <a href={link} target="_blank" rel="noreferrer" className={`inline-flex min-h-10 items-center gap-1.5 rounded-lg text-xs font-bold text-blue-100/60 hover:text-white ${focusRing}`}>Portal do Aluno <ArrowUpRight size={14} aria-hidden="true" /></a>
           <div className="mt-2"><CopyAction value={link} label="Copiar link do aluno" /></div>
         </div>}
       </aside>
