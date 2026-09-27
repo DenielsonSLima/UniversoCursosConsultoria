@@ -16,6 +16,7 @@ const tests = [
   'modules/gestor/caixa/caixa-patrimonio-resumo.test.ts',
   'modules/gestor/caixa/caixa-posicao-liquida-resumo.test.ts',
   'modules/gestor/caixa/caixa-posicao-total-resumo.test.ts',
+  'modules/gestor/caixa/caixa-convenios-resumo.test.ts',
   'modules/gestor/caixa/caixa-polos.test.ts',
   'modules/gestor/caixa/report/caixa-report.layout.test.ts',
   'modules/gestor/caixa/report/caixa-report.mapper.test.ts',

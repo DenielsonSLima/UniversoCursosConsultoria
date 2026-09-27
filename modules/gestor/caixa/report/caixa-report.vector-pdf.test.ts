@@ -45,7 +45,7 @@ const recurringTotals = {
 };
 
 const makeReport = (): CaixaDetailedReport => ({
-  versao: 6,
+  versao: 7,
   geradoEm: '2026-08-06T03:00:00Z',
   completo: true,
   confidencial: true,
@@ -173,6 +173,27 @@ const makeReport = (): CaixaDetailedReport => ({
       observacao: 'Caixa registrado no fechamento mais patrimônio a custo menos empréstimos a pagar.',
     },
   },
+  convenios: {
+    disponivel: true,
+    dados: {
+      versao: 1,
+      competencia: '2026-08-01',
+      escopoTipo: 'POLO',
+      poloId: null,
+      quantidadeConvenios: 1,
+      saldoInicial: 1000,
+      creditosRecebidos: 40000,
+      despesasPagas: 12000,
+      comprometidoAberto: 3000,
+      saldoDisponivel: 29000,
+      saldoProjetado: 26000,
+      itens: [{
+        convenioId: 'convenio-1', nome: 'Anhanguera', competencia: '2026-08-01', status: 'ABERTO',
+        saldoInicial: 1000, creditosRecebidos: 40000, despesasPagas: 12000,
+        comprometidoAberto: 3000, saldoDisponivel: 29000, saldoProjetado: 26000,
+      }],
+    },
+  },
   resumoCursos: { itens: [], quantidadeCursos: 0, quantidadeOmitidas: 0, totais: { previstoNoMes: 0, recebidoNoMes: 0, emAtraso: 0, quantidadeTurmas: 0, quantidadeAlunos: 0 } },
   analiseRecorrente: { modalidades: [], turmas: [], totais: recurringTotals },
   recebimentos: [{
@@ -246,7 +267,7 @@ test('gera páginas com texto vetorial visível, Inter incorporada e nenhuma cap
   const source = pdf.output();
 
   assert.equal(CAIXA_REPORT_PDF_PIPELINE, 'native-vector');
-  assert.equal(pages.length, 5);
+  assert.equal(pages.length, 6);
   assert.ok(pages.every((page) => page.hasTextOperator));
   assert.ok(pages.every((page) => page.imageDrawCount === 0));
   assert.doesNotMatch(source, /\b3\s+Tr\b/);
@@ -332,6 +353,7 @@ test('mantém a prestação operacional quando posições complementares não s�
     motivo: 'ACESSO_RESTRITO',
     observacao: 'Escopo complementar indisponível.',
   };
+  report.convenios = { disponivel: false, motivo: 'ACESSO_RESTRITO' };
 
   const pdf = await createCaixaReportPdfDocument(report, undefined, {
     regularFontBuffer: asArrayBuffer(regularFont),
@@ -343,7 +365,7 @@ test('mantém a prestação operacional quando posições complementares não s�
   });
   const pages = inspectCaixaPdfOperatorsForTest(pdf);
 
-  assert.equal(pages.length, 5);
+  assert.equal(pages.length, 6);
   assert.ok(pages.every((page) => page.hasTextOperator));
   assert.ok(pages.every((page) => page.imageDrawCount === 0));
   if (process.env.CAIXA_PDF_RESTRICTED_FIXTURE_OUTPUT) {
@@ -463,7 +485,7 @@ test('indicadores mensais em conferência preservam paginação e exportação v
   }));
   const pdf = await createCaixaReportPdfDocument(report, undefined, Object.fromEntries(fonts));
   const pages = inspectCaixaPdfOperatorsForTest(pdf);
-  assert.equal(pages.length, 5);
+  assert.equal(pages.length, 6);
   assert.ok(pages.every((page) => page.hasTextOperator && page.imageDrawCount === 0));
   if (process.env.CAIXA_PDF_FIXTURE_OUTPUT) {
     await writeFile(`${process.env.CAIXA_PDF_FIXTURE_OUTPUT}.review.pdf`, new Uint8Array(pdf.output('arraybuffer')));

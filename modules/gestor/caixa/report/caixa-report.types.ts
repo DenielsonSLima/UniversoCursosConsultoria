@@ -5,6 +5,7 @@ import type {
   CaixaPosicaoLiquidaResumo,
   CaixaPosicaoTotalDados,
 } from '../caixa.service';
+import type { CaixaReportConvenios } from './caixa-report.convenios';
 
 export type CaixaCompositionStatus =
   | 'COMPOSICAO_EXPLICITA'
@@ -186,7 +187,7 @@ export type CaixaReportPosicaoTotal =
   };
 
 export interface CaixaDetailedReport {
-  versao: 6;
+  versao: 7;
   geradoEm: string;
   completo: boolean;
   confidencial: boolean;
@@ -200,6 +201,7 @@ export interface CaixaDetailedReport {
   patrimonio: CaixaReportComplementaryPosition<CaixaPatrimonioResumo>;
   posicaoLiquida: CaixaReportComplementaryPosition<CaixaPosicaoLiquidaResumo>;
   posicaoTotal: CaixaReportPosicaoTotal;
+  convenios: CaixaReportConvenios;
   resumoCursos: CaixaReportCourseSummary;
   analiseRecorrente: CaixaReportRecurringAnalysis;
   recebimentos: CaixaReportReceipt[];

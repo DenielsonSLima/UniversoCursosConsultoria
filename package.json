@@ -34,6 +34,7 @@
     "test:caixa-report": "node scripts/test-caixa-report.mjs",
     "test:financeiro-rpc": "node --test scripts/test-financial-rpc-contract.mjs",
     "test:financial-report-pdf": "node scripts/test-financial-report-pdf.mjs",
+    "test:convenios-financeiros": "node --test modules/gestor/financeiro/convenios/convenios.mapper.test.ts modules/gestor/financeiro/convenios/convenios-ui.contract.test.ts modules/gestor/financeiro/despesas/despesas-convenios.test.ts supabase/tests/convenios_financeiros.contract.test.ts",
     "test:pdf-exports": "node scripts/test-selectable-pdf-exports.mjs",
     "test:agent-operations": "node scripts/test-agent-operation.mjs",
     "test:saldo-inicial": "node scripts/test-saldo-inicial.mjs",

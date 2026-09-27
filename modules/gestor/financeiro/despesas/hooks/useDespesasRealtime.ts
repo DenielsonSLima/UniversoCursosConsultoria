@@ -6,11 +6,13 @@ import { supabase } from '../../../../../lib/supabase';
 import { despesasQueryKeys } from '../despesas.queryKeys';
 import { financeiroQueryKeys } from '../../financeiro.queryKeys';
 import { caixaQueryKeys } from '../../../caixa/caixa.service';
+import { conveniosQueryKeys } from '../../convenios/convenios.queryKeys';
 
 export function useDespesasRealtime(poloId?: string | null) {
   const queryClient = useQueryClient();
 
   useEffect(() => {
+    const activePoloId = poloId && poloId !== 'todos' ? poloId : null;
     let refreshTimer: number | undefined;
     let expensesChanged = false;
     let balancesChanged = false;
@@ -21,13 +23,27 @@ export function useDespesasRealtime(poloId?: string | null) {
         void queryClient.invalidateQueries({ queryKey: despesasQueryKeys.lancamentosRoot });
         void queryClient.invalidateQueries({ queryKey: despesasQueryKeys.summaryRoot });
         void queryClient.invalidateQueries({ queryKey: despesasQueryKeys.groupSummaryRoot });
+        void queryClient.invalidateQueries({
+          queryKey: activePoloId
+            ? conveniosQueryKeys.listForPolo(activePoloId)
+            : conveniosQueryKeys.lists,
+        });
+        void queryClient.invalidateQueries({
+          queryKey: activePoloId
+            ? conveniosQueryKeys.detailsForPolo(activePoloId)
+            : conveniosQueryKeys.details,
+        });
       }
       if (balancesChanged) {
         void queryClient.invalidateQueries({
           queryKey: financeiroQueryKeys.contasBancariasSaldos,
         });
-        void queryClient.invalidateQueries({ queryKey: caixaQueryKeys.dashboards });
-        void queryClient.invalidateQueries({ queryKey: caixaQueryKeys.custosOperacionais });
+        void queryClient.invalidateQueries({
+          queryKey: caixaQueryKeys.statementsForPolo(activePoloId),
+        });
+        void queryClient.invalidateQueries({
+          queryKey: caixaQueryKeys.custosOperacionaisForPolo(activePoloId),
+        });
       }
       expensesChanged = false;
       balancesChanged = false;
@@ -44,7 +60,6 @@ export function useDespesasRealtime(poloId?: string | null) {
       schedule();
     };
 
-    const activePoloId = poloId && poloId !== 'todos' ? poloId : null;
     const channel = supabase
       .channel(`despesas_lancamentos_realtime_${activePoloId || 'todos'}`)
       .on(

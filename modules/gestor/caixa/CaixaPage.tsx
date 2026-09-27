@@ -31,6 +31,8 @@ import { caixaLinhaCorteQueryOptions } from './caixa-linha-corte.service';
 import { CaixaPatrimonioResumoCard } from './components/CaixaPatrimonioResumoCard';
 import { CaixaPosicaoLiquidaResumoCard } from './components/CaixaPosicaoLiquidaResumoCard';
 import { CaixaPosicaoTotalResumoCard } from './components/CaixaPosicaoTotalResumoCard';
+import { CaixaConveniosResumoCard } from './components/CaixaConveniosResumoCard';
+import { caixaConveniosResumoQueryOptions } from './caixa-convenios.service';
 
 interface CaixaPageProps {
   poloId?: string | null;
@@ -134,6 +136,15 @@ const CaixaScopePage: React.FC<CaixaScopePageProps> = ({
     enabled: Boolean(selectedPolo),
   });
 
+  const {
+    data: conveniosResumo,
+    isLoading: isConveniosLoading,
+    isError: hasConveniosError,
+  } = useQuery({
+    ...caixaConveniosResumoQueryOptions(selectedPolo, competencia),
+    enabled: Boolean(selectedPolo),
+  });
+
   const isCurrentCompetencia = competencia === currentCompetencia;
   const isConsolidated = selectedPolo === 'todos';
 
@@ -233,6 +244,12 @@ const CaixaScopePage: React.FC<CaixaScopePageProps> = ({
         hasError={Boolean(error)}
         isConsolidated={isConsolidated}
         onRetry={() => { void refetchStatement(); }}
+      />
+
+      <CaixaConveniosResumoCard
+        resumo={conveniosResumo}
+        isLoading={isConveniosLoading}
+        hasError={hasConveniosError}
       />
 
       <CaixaPosicaoTotalResumoCard

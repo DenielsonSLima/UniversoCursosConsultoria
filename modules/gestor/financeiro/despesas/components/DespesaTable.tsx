@@ -17,6 +17,7 @@ import {
   formatDespesaDate,
   getDespesaContaLabel,
 } from './despesaPresentation';
+import DespesaConvenioBadge from './DespesaConvenioBadge';
 
 const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
   const configs: Record<string, { label: string; className: string; Icon: React.ElementType }> = {
@@ -97,6 +98,7 @@ const DespesaTable: React.FC<DespesaTableProps> = ({
                 </td>
                 <td className="px-4 py-3 text-sm text-slate-700 max-w-[230px]">
                   <div className="font-semibold truncate">{item.descricao}</div>
+                  <DespesaConvenioBadge item={item} />
                   {item.isRateioDerived ? (
                     <div className="mt-0.5 text-[10px] font-bold text-indigo-600">
                       Rateio da Matriz{item.poloMatrizNome ? ` · ${item.poloMatrizNome}` : ''}
