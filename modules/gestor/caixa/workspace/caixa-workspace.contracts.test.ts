@@ -37,6 +37,7 @@ const consideredSources = () => ([
 const payloadV2 = () => ({
   versao: 2,
   meta: {
+    empresa_id: '33333333-3333-3333-3333-333333333333',
     competencia: '2026-09-01',
     periodo_inicio: '2026-09-01',
     periodo_fim_exclusivo: '2026-10-01',
@@ -76,6 +77,7 @@ const payloadV2 = () => ({
           fontes_indisponiveis: [],
           motivos_incompletude: [],
           criterio: 'POSICAO_REEXPRESSA_NO_CORTE',
+          unidade_quantidade: 'TITULO_FISICO_SEM_DUPLICACAO',
           contas_competencia: { valor: '9007199254740993.07', quantidade: 12 },
           pagas_competencia: {
             valor: '2500.00',
@@ -95,6 +97,7 @@ const payloadV2 = () => ({
           fontes_consideradas: consideredSources(),
           fontes_indisponiveis: [],
           motivos_incompletude: [],
+          unidade_quantidade: 'TITULO_FISICO_SEM_DUPLICACAO',
           hoje: { data: '2026-09-27', valor: '50.00', quantidade: 1 },
           proximos_sete_dias: {
             periodo_inicio: '2026-09-28',

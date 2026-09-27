@@ -59,6 +59,7 @@ export interface CaixaWorkspacePayablesData {
   fontes_indisponiveis: CaixaWorkspaceUnavailableSource[];
   motivos_incompletude: CaixaWorkspaceIncompleteCode[];
   criterio: 'POSICAO_REEXPRESSA_NO_CORTE';
+  unidade_quantidade: 'TITULO_FISICO_SEM_DUPLICACAO';
   contas_competencia: CaixaWorkspaceMoneyCount;
   pagas_competencia: CaixaWorkspaceMoneyCount & {
     criterio_quantidade: 'TITULO_TOTALMENTE_PAGO_NO_CORTE';
@@ -73,6 +74,7 @@ export interface CaixaWorkspaceAgendaData {
   fontes_consideradas: CaixaWorkspaceConsideredSource[];
   fontes_indisponiveis: CaixaWorkspaceUnavailableSource[];
   motivos_incompletude: CaixaWorkspaceIncompleteCode[];
+  unidade_quantidade: 'TITULO_FISICO_SEM_DUPLICACAO';
   hoje: CaixaWorkspaceMoneyCount & {
     data: string;
   };
@@ -115,6 +117,7 @@ export interface CaixaWorkspaceQualityData {
 }
 
 export interface CaixaWorkspaceMeta {
+  empresa_id: string;
   competencia: string;
   periodo_inicio: string;
   periodo_fim_exclusivo: string;

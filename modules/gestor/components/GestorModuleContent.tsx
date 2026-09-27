@@ -7,7 +7,7 @@ import { POLO_CADASTROS_ALLOWED } from '../gestor-navigation';
 import type { ParceiroFormType } from '../parceiros/ParceirosPage';
 
 export const loadSecretariaPage = () => import('../secretaria/SecretariaPage');
-export const loadCaixaPage = () => import('../caixa/CaixaPage');
+export const loadCaixaPage = () => import('../caixa/CaixaWorkspaceModule');
 const BibliotecaPage = lazy(() => import('../biblioteca/BibliotecaPage'));
 const CadastrosPage = lazy(() => import('../cadastros/CadastrosPage'));
 const ChecklistEstagioPage = lazy(() => import('../cadastros/checklist-estagio/ChecklistEstagioPage'));
