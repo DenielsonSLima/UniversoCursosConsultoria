@@ -249,7 +249,7 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({
       </div>
 
       <div className="mb-6 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs font-medium leading-relaxed text-blue-800">
-        Para concluir o cadastro inicial, informe os dados pessoais, endereço e contato. Documentação, filiação e escolaridade podem ser preenchidas depois e só serão exigidas ao iniciar uma matrícula técnica.
+        Para concluir o cadastro inicial, informe os dados pessoais, endereço e contato. Documentação, filiação e Ensino Médio podem ser preenchidos depois. Na matrícula técnica, a filiação e os dados pessoais e de endereço devem estar completos; o Ensino Médio permanece opcional e não bloqueia a ativação.
       </div>
 
       <div className="flex items-center justify-between mb-8 relative">
