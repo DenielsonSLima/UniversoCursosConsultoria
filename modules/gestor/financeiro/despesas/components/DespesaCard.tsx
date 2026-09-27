@@ -17,6 +17,7 @@ import {
   formatDespesaDate,
   getDespesaContaLabel,
 } from './despesaPresentation';
+import DespesaConvenioBadge from './DespesaConvenioBadge';
 
 const statusConfig: Record<string, { label: string; bg: string; text: string; border: string; Icon: React.ElementType }> = {
   PAGO: { label: 'Pago', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', Icon: CheckCircle2 },
@@ -68,6 +69,7 @@ const DespesaCard: React.FC<DespesaCardProps> = ({
             ) : (
               <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Sem categoria</p>
             )}
+            <DespesaConvenioBadge item={item} />
             {item.isRateioDerived ? (
               <p className="mt-1 text-[10px] font-bold text-indigo-600">
                 Rateio da Matriz{item.poloMatrizNome ? ` · ${item.poloMatrizNome}` : ''}

@@ -18,6 +18,8 @@ import {
 } from './caixa-report.vector-pdf.shared';
 import { drawSummaryPage } from './caixa-report.vector-pdf.summary';
 import { drawNonOperationalPositionsPage } from './caixa-report.vector-pdf.non-operational';
+import { drawConveniosPage } from './caixa-report.vector-pdf.convenios';
+import type { CaixaConvenioResumoItem } from '../caixa-convenios.service';
 import {
   drawMovementTable,
   drawRecurringTable,
@@ -94,7 +96,13 @@ export const createCaixaReportPdfDocument = async (
       ? Promise.resolve(testResources.backgroundDataUrl)
       : fetchAsDataUrl(report.institucional.landscape_watermark_url || fallbackArtworkUrl),
   ]);
-  const pages = buildCaixaReportPages(report.recebimentos, report.despesas, report.analiseRecorrente.turmas);
+  const convenioItems = report.convenios.disponivel ? report.convenios.dados.itens : [];
+  const pages = buildCaixaReportPages(
+    report.recebimentos,
+    report.despesas,
+    report.analiseRecorrente.turmas,
+    convenioItems,
+  );
   const institution = normalizeCanonicalInstitutionalHeader({
     ...report.institucional,
     uf: report.institucional.estado,
@@ -125,6 +133,15 @@ export const createCaixaReportPdfDocument = async (
     if (page.section === 'RESUMO') drawSummaryPage(pdf, report, contentTop);
     if (page.section === 'POSICOES_COMPLEMENTARES') {
       drawNonOperationalPositionsPage(pdf, report, contentTop);
+    }
+    if (page.section === 'CONVENIOS') {
+      drawConveniosPage(
+        pdf,
+        report,
+        page.rows as CaixaConvenioResumoItem[],
+        page.sectionPage,
+        contentTop,
+      );
     }
     if (page.section === 'RECEBIMENTOS') {
       drawSectionHeading(pdf, 'Recebimentos confirmados', 'Aluno/pagador, parcela, curso, turma, conta e composição financeira.', page.sectionPage, 'emerald', contentTop);

@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   ArrowRightLeft,
   FileText,
+  Handshake,
   Landmark,
   Layers,
   Lock,
@@ -17,6 +18,7 @@ import ResumoTab from './resumo/ResumoTab';
 import ReceberTab from './receber/ReceberTab';
 import DespesasTab from './despesas/DespesasTab';
 import EmprestimosTab from './emprestimos/EmprestimosTab';
+import ConveniosTab from './convenios/ConveniosTab';
 import TransferenciasTab from './transferencias/TransferenciasTab';
 import ConciliacaoBancariaTab from './conciliacao-bancaria/ConciliacaoBancariaTab';
 import OutrosDebitosTab from './outros-debitos/OutrosDebitosTab';
@@ -39,6 +41,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ poloId, isMatriz, allow
     { id: 'receber' as const, label: 'A Receber', icon: <TrendingUp size={14} /> },
     { id: 'despesas' as const, label: 'A Pagar', icon: <TrendingDown size={14} /> },
     { id: 'emprestimos' as const, label: 'Empréstimos', icon: <Landmark size={14} /> },
+    { id: 'convenios' as const, label: 'Convênios', icon: <Handshake size={14} /> },
     { id: 'transferencias' as const, label: 'Transferências', icon: <ArrowRightLeft size={14} /> },
     { id: 'conciliacao-bancaria' as const, label: 'Conciliação', icon: <FileText size={14} /> },
     { id: 'outros-debitos' as const, label: 'Outros Débitos', icon: <TrendingDown size={14} className="rotate-90" /> },
@@ -72,6 +75,8 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ poloId, isMatriz, allow
         return <DespesasTab poloId={poloId} />;
       case 'emprestimos':
         return <EmprestimosTab poloId={poloId} isMatriz={isMatriz} />;
+      case 'convenios':
+        return <ConveniosTab poloId={poloId} />;
       case 'transferencias':
         return <TransferenciasTab poloId={poloId} />;
       case 'conciliacao-bancaria':

@@ -18,6 +18,7 @@ test('fixa o resumo mensal na primeira página e as posições complementares de
   assert.deepEqual(pages.map((page) => page.section), [
     'RESUMO',
     'POSICOES_COMPLEMENTARES',
+    'CONVENIOS',
     'RECEBIMENTOS',
     'DESPESAS',
     'CARTEIRA_RECORRENTE',

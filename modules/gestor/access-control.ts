@@ -23,6 +23,7 @@ export const FINANCEIRO_TAB_IDS = [
   'receber',
   'despesas',
   'emprestimos',
+  'convenios',
   'transferencias',
   'conciliacao-bancaria',
   'outros-debitos',

@@ -155,8 +155,34 @@ const posicaoTotal = {
   },
 };
 
+const convenios = {
+  versao: 1,
+  competencia: '2026-07-01',
+  escopo_tipo: 'GLOBAL',
+  polo_id: null,
+  quantidade_convenios: 1,
+  saldo_inicial: 1000,
+  creditos_recebidos: 40000,
+  despesas_pagas: 12000,
+  comprometido_aberto: 3000,
+  saldo_disponivel: 29000,
+  saldo_projetado: 26000,
+  itens: [{
+    convenio_id: '66666666-6666-6666-6666-666666666666',
+    nome: 'Anhanguera',
+    competencia: '2026-07-01',
+    status: 'ABERTO',
+    saldo_inicial: 1000,
+    creditos_recebidos: 40000,
+    despesas_pagas: 12000,
+    comprometido_aberto: 3000,
+    saldo_disponivel: 29000,
+    saldo_projetado: 26000,
+  }],
+};
+
 const makePayload = () => ({
-  versao: 6,
+  versao: 7,
   gerado_em: '2026-07-27T23:00:00Z',
   completo: true,
   confidencial: true,
@@ -201,6 +227,10 @@ const makePayload = () => ({
     dados: { ...posicaoLiquida },
   },
   posicao_total: JSON.parse(JSON.stringify(posicaoTotal)) as typeof posicaoTotal,
+  convenios: {
+    disponivel: true,
+    dados: JSON.parse(JSON.stringify(convenios)) as typeof convenios,
+  },
   resumo_cursos: {
     itens: [{
       curso_id: '33333333-3333-3333-3333-333333333333',
@@ -299,7 +329,8 @@ test('aceita o contrato canônico completo sem recalcular valores', () => {
   assert.equal(report.patrimonio.disponivel, true);
   assert.equal(report.posicaoLiquida.disponivel, true);
   assert.equal(report.posicaoTotal.disponivel, true);
-  if (!report.financiamento.disponivel || !report.patrimonio.disponivel || !report.posicaoLiquida.disponivel || !report.posicaoTotal.disponivel) {
+  assert.equal(report.convenios.disponivel, true);
+  if (!report.financiamento.disponivel || !report.patrimonio.disponivel || !report.posicaoLiquida.disponivel || !report.posicaoTotal.disponivel || !report.convenios.disponivel) {
     throw new Error('As posições complementares deveriam estar disponíveis neste fixture.');
   }
   assert.equal(report.financiamento.dados.obrigacaoRateada, 450);
@@ -307,6 +338,7 @@ test('aceita o contrato canônico completo sem recalcular valores', () => {
   assert.equal(report.posicaoLiquida.dados.valorLiquido, '900.00');
   assert.equal(report.posicaoTotal.dataCorte, '2026-07-31');
   assert.equal(report.posicaoTotal.dados.valorTotalLiquido, '914.90');
+  assert.equal(report.convenios.dados.saldoProjetado, 26000);
 });
 
 test('recusa posições complementares ausentes ou fora da competência e escopo do relatório', () => {
@@ -321,6 +353,10 @@ test('recusa posições complementares ausentes ou fora da competência e escopo
   const missingPosicaoTotal = makePayload();
   delete (missingPosicaoTotal as { posicao_total?: unknown }).posicao_total;
   assert.throws(() => mapCaixaDetailedReport(missingPosicaoTotal), /Contrato inválido/);
+
+  const missingConvenios = makePayload();
+  delete (missingConvenios as { convenios?: unknown }).convenios;
+  assert.throws(() => mapCaixaDetailedReport(missingConvenios), /Contrato inválido/);
 
   const wrongCompetencia = makePayload();
   wrongCompetencia.financiamento.dados.competencia = '2026-08-01';
@@ -351,6 +387,7 @@ test('preserva a prestação operacional quando uma posição complementar não 
     motivo: 'ACESSO_RESTRITO',
     observacao: 'Escopo complementar indisponível.',
   } as any;
+  payload.convenios = { disponivel: false, motivo: 'ACESSO_RESTRITO' } as any;
 
   const report = mapCaixaDetailedReport(payload);
   assert.deepEqual(report.financiamento, { disponivel: false, motivo: 'ACESSO_RESTRITO' });
@@ -362,6 +399,7 @@ test('preserva a prestação operacional quando uma posição complementar não 
     motivo: 'ACESSO_RESTRITO',
     observacao: 'Escopo complementar indisponível.',
   });
+  assert.deepEqual(report.convenios, { disponivel: false, motivo: 'ACESSO_RESTRITO' });
   assert.equal(report.resumo.resumoCompetencia.resultado, 14.9);
 
   const invalidReason = makePayload();

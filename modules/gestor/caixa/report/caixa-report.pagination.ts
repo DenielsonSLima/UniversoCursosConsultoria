@@ -3,10 +3,12 @@ import type {
   CaixaReportReceipt,
   CaixaReportRecurringClass,
 } from './caixa-report.types';
+import type { CaixaConvenioResumoItem } from '../caixa-convenios.service';
 
 export type CaixaReportSection =
   | 'RESUMO'
   | 'POSICOES_COMPLEMENTARES'
+  | 'CONVENIOS'
   | 'RECEBIMENTOS'
   | 'DESPESAS'
   | 'CARTEIRA_RECORRENTE';
@@ -15,7 +17,7 @@ export interface CaixaReportPage {
   key: string;
   section: CaixaReportSection;
   sectionPage: number;
-  rows: CaixaReportReceipt[] | CaixaReportExpense[] | CaixaReportRecurringClass[];
+  rows: CaixaReportReceipt[] | CaixaReportExpense[] | CaixaReportRecurringClass[] | CaixaConvenioResumoItem[];
 }
 
 const chunk = <T,>(items: T[], size: number): T[][] => {
@@ -31,6 +33,7 @@ export const buildCaixaReportPages = (
   receipts: CaixaReportReceipt[],
   expenses: CaixaReportExpense[],
   recurringClasses: CaixaReportRecurringClass[],
+  convenios: CaixaConvenioResumoItem[] = [],
 ): CaixaReportPage[] => {
   const pages: CaixaReportPage[] = [{
     key: 'summary',
@@ -43,6 +46,15 @@ export const buildCaixaReportPages = (
     sectionPage: 1,
     rows: [],
   }];
+
+  chunk(convenios, 6).forEach((rows, index) => {
+    pages.push({
+      key: `convenios-${index + 1}`,
+      section: 'CONVENIOS',
+      sectionPage: index + 1,
+      rows,
+    });
+  });
 
   chunk(receipts, 5).forEach((rows, index) => {
     pages.push({

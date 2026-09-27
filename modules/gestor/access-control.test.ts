@@ -85,6 +85,21 @@ test('reconhece Patrimônio e Empréstimos apenas quando estão na permissão ex
   assert.equal(canAccessFinanceiroTab(permitido, 'despesas'), false);
 });
 
+test('Convênios exige permissão financeira explícita', () => {
+  const permitido = permissions({
+    modules: ['financeiro'],
+    financeiroTabs: ['convenios'],
+  });
+  assert.equal(canAccessFinanceiroTab(permitido, 'convenios'), true);
+  assert.equal(canAccessFinanceiroTab(permitido, 'emprestimos'), false);
+
+  const semModulo = permissions({
+    modules: ['inicio'],
+    financeiroTabs: ['convenios'],
+  });
+  assert.equal(canAccessGestorModule(semModulo, 'financeiro'), false);
+});
+
 test('respeita tabs.financeiro como escopo efetivo e não amplia com o campo legado', () => {
   const scoped = permissions({
     financeiroTabs: ['resumo'],

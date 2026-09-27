@@ -1,13 +1,10 @@
 import React from 'react';
-import { Building2, Check, Clock, Headphones, Info, Loader2, ShieldAlert } from 'lucide-react';
+import { Building2, Check, Clock, Headphones, Loader2, ShieldAlert } from 'lucide-react';
 import { PerfilSetorComunicacao } from './perfis-acesso.service';
-import { SECRETARIA_ACCESS_OPTIONS } from '../../secretaria/secretaria-access';
 import type { DashboardWidgetId } from '../../access-control';
 import DashboardWidgetsProfileSection from './DashboardWidgetsProfileSection';
-import {
-  GESTOR_CADASTRO_NAVIGATION,
-  GESTOR_MAIN_NAVIGATION,
-} from '../../gestor-navigation.config';
+import PerfilAcessoInternalTabsSection from './PerfilAcessoInternalTabsSection';
+import { GESTOR_MAIN_NAVIGATION } from '../../gestor-navigation.config';
 
 const DAYS_OF_WEEK = [
   { value: 1, label: 'Segunda-feira' },
@@ -23,38 +20,6 @@ const MODULE_OPTIONS = GESTOR_MAIN_NAVIGATION.map(item => ({
   id: item.id,
   label: item.id === 'inicio' ? 'Início (Dashboard)' : item.label,
 }));
-
-const CADASTROS_SUB_TABS = GESTOR_CADASTRO_NAVIGATION.map(item => ({ ...item }));
-
-const FINANCEIRO_TABS = [
-  { id: 'resumo', label: 'Resumo / Visão Geral' },
-  { id: 'receber', label: 'Contas a Receber' },
-  { id: 'despesas', label: 'Contas a Pagar' },
-  { id: 'emprestimos', label: 'Empréstimos (somente Matriz)' },
-  { id: 'transferencias', label: 'Transferências' },
-  { id: 'conciliacao-bancaria', label: 'Conciliação Bancária' },
-  { id: 'outros-debitos', label: 'Outros Débitos' },
-  { id: 'outros-creditos', label: 'Outros Créditos' }
-];
-
-const GESTAO_TURMA_TABS = [
-  { id: 'resumo', label: 'Resumo' },
-  { id: 'alunos', label: 'Alunos' },
-  { id: 'grade', label: 'Grade e Professores / Aulas' },
-  { id: 'atividades', label: 'Atividades' },
-  { id: 'diarios', label: 'Diários' },
-  { id: 'financeiro', label: 'Financeiro da Turma' },
-  { id: 'vacinas', label: 'Vacinas' },
-  { id: 'estagio', label: 'Estágio' },
-  { id: 'academico', label: 'Ciclo Acadêmico' },
-  { id: 'configuracoes', label: 'Configurações da Turma' },
-];
-
-const COMUNICACAO_TABS = [
-  { id: 'comunicacao-mensagem', label: 'Atendimento — Portal e app' },
-  { id: 'comunicacao-whatsapp', label: 'Atendimento — WhatsApp e operações' },
-  { id: 'comunicacao-automacoes', label: 'Automações multicanal' }
-];
 
 interface PerfilAcessoFormProps {
   editingId: string | null;
@@ -278,136 +243,11 @@ const PerfilAcessoForm: React.FC<PerfilAcessoFormProps> = ({
             )}
           </div>
 
-          {/* CONTROLE DE ABAS INTERNAS */}
-          {(selectedModules.includes('gestao') || selectedModules.includes('cadastros') || selectedModules.includes('financeiro') || selectedModules.includes('secretaria') || selectedModules.includes('comunicacao')) && (
-            <div className="space-y-6">
-              <h4 className="text-base font-bold text-[#001a33] border-b border-slate-100 pb-3 flex items-center gap-2">
-                <Info size={18} className="text-amber-500" />
-                Abas Internas e Submódulos
-              </h4>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {/* Abas das turmas no módulo Gestão */}
-                {selectedModules.includes('gestao') && (
-                  <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 space-y-4">
-                    <div>
-                      <h5 className="text-sm font-bold text-[#001a33]">Acesso Interno: Turmas da Gestão</h5>
-                      <p className="mt-1 text-xs font-medium text-slate-500">
-                        Aplicado às turmas técnicas, livres, de especialização e EAD.
-                      </p>
-                    </div>
-                    <div className="space-y-3">
-                      {GESTAO_TURMA_TABS.map(tab => {
-                        const isTabChecked = (selectedTabs.gestao || []).includes(tab.id);
-                        return (
-                          <label key={tab.id} className="flex items-center gap-3 cursor-pointer text-sm font-medium text-slate-700 select-none">
-                            <input
-                              type="checkbox"
-                              checked={isTabChecked}
-                              onChange={() => toggleTab('gestao', tab.id)}
-                              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
-                            />
-                            <span>{tab.label}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Abas do Financeiro */}
-                {selectedModules.includes('financeiro') && (
-                  <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 space-y-4">
-                    <h5 className="text-sm font-bold text-[#001a33]">Acesso Interno: Financeiro</h5>
-                    <div className="space-y-3">
-                      {FINANCEIRO_TABS.map(tab => {
-                        const isTabChecked = (selectedTabs['financeiro'] || []).includes(tab.id);
-                        return (
-                          <label key={tab.id} className="flex items-center gap-3 cursor-pointer text-sm font-medium text-slate-700 select-none">
-                            <input
-                              type="checkbox"
-                              checked={isTabChecked}
-                              onChange={() => toggleTab('financeiro', tab.id)}
-                              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
-                            />
-                            <span>{tab.label}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Abas da Secretaria */}
-                {selectedModules.includes('secretaria') && (
-                  <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 space-y-4">
-                    <h5 className="text-sm font-bold text-[#001a33]">Acesso Interno: Secretaria</h5>
-                    <div className="space-y-3">
-                      {SECRETARIA_ACCESS_OPTIONS.map(tab => {
-                        const isTabChecked = (selectedTabs['secretaria'] || []).includes(tab.id);
-                        return (
-                          <label key={tab.id} className="flex items-center gap-3 cursor-pointer text-sm font-medium text-slate-700 select-none">
-                            <input
-                              type="checkbox"
-                              checked={isTabChecked}
-                              onChange={() => toggleTab('secretaria', tab.id)}
-                              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
-                            />
-                            <span>{tab.label}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Abas do Cadastro */}
-                {selectedModules.includes('cadastros') && (
-                  <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 space-y-4">
-                    <h5 className="text-sm font-bold text-[#001a33]">Acesso Interno: Formações</h5>
-                    <div className="space-y-3">
-                      {CADASTROS_SUB_TABS.map(tab => {
-                        const isTabChecked = (selectedTabs['cadastros'] || []).includes(tab.id);
-                        return (
-                          <label key={tab.id} className="flex items-center gap-3 cursor-pointer text-sm font-medium text-slate-700 select-none">
-                            <input
-                              type="checkbox"
-                              checked={isTabChecked}
-                              onChange={() => toggleTab('cadastros', tab.id)}
-                              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
-                            />
-                            <span>{tab.label}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {selectedModules.includes('comunicacao') && (
-                  <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 space-y-4">
-                    <h5 className="text-sm font-bold text-[#001a33]">Áreas de Comunicação</h5>
-                    <div className="space-y-3">
-                      {COMUNICACAO_TABS.map(tab => {
-                        const isTabChecked = (selectedTabs.comunicacao || []).includes(tab.id);
-                        return (
-                          <label key={tab.id} className="flex items-center gap-3 cursor-pointer text-sm font-medium text-slate-700 select-none">
-                            <input
-                              type="checkbox"
-                              checked={isTabChecked}
-                              onChange={() => toggleTab('comunicacao', tab.id)}
-                              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
-                            />
-                            <span>{tab.label}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+          <PerfilAcessoInternalTabsSection
+            selectedModules={selectedModules}
+            selectedTabs={selectedTabs}
+            onToggleTab={toggleTab}
+          />
 
           {selectedModules.includes('comunicacao')
             && (selectedTabs.comunicacao || []).includes('comunicacao-whatsapp')

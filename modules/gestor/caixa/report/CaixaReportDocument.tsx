@@ -20,6 +20,8 @@ import {
 import { CaixaReportRecurringAnalysis } from './CaixaReportRecurringAnalysis';
 import { CaixaReportNonOperationalPositions } from './CaixaReportNonOperationalPositions';
 import { CaixaReportSummaryBreakdowns } from './CaixaReportSummaryBreakdowns';
+import { CaixaReportConvenios } from './CaixaReportConvenios';
+import type { CaixaConvenioResumoItem } from '../caixa-convenios.service';
 import type {
   CaixaDetailedReport,
   CaixaReportExpense,
@@ -258,8 +260,9 @@ export const CaixaReportDocument: React.FC<{
       report.recebimentos,
       report.despesas,
       report.analiseRecorrente.turmas,
+      report.convenios.disponivel ? report.convenios.dados.itens : [],
     ),
-    [report.analiseRecorrente.turmas, report.despesas, report.recebimentos],
+    [report.analiseRecorrente.turmas, report.convenios, report.despesas, report.recebimentos],
   );
   const polo = {
     ...report.institucional,
@@ -318,6 +321,13 @@ export const CaixaReportDocument: React.FC<{
               {page.section === 'RESUMO' && <SummaryPage report={report} />}
               {page.section === 'POSICOES_COMPLEMENTARES' && (
                 <CaixaReportNonOperationalPositions report={report} />
+              )}
+              {page.section === 'CONVENIOS' && (
+                <CaixaReportConvenios
+                  report={report}
+                  rows={page.rows as CaixaConvenioResumoItem[]}
+                  page={page.sectionPage}
+                />
               )}
               {page.section === 'RECEBIMENTOS' && (
                 <>

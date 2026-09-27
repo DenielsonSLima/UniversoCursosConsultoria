@@ -20,6 +20,7 @@ import type {
   CaixaReportRecurringBreakdown,
   CaixaReportTotals,
 } from './caixa-report.types';
+import { mapCaixaReportConvenios } from './caixa-report.convenios';
 
 const totals = (value: unknown, field: string): CaixaReportTotals => {
   const item = record(value, field);
@@ -316,7 +317,7 @@ const assertUnique = (keys: string[], field: string) => {
 
 export const mapCaixaDetailedReport = (value: unknown): CaixaDetailedReport => {
   const payload = record(Array.isArray(value) ? value[0] : value, 'payload');
-  if (requiredNumber(payload.versao, 'versao') !== 6 || payload.completo !== true) {
+  if (requiredNumber(payload.versao, 'versao') !== 7 || payload.completo !== true) {
     throw new Error('O relatório detalhado do Caixa está incompleto ou possui versão incompatível.');
   }
 
@@ -413,6 +414,11 @@ export const mapCaixaDetailedReport = (value: unknown): CaixaDetailedReport => {
       observacao: posicaoTotalResumo.observacao,
     };
   }
+  const convenios = mapCaixaReportConvenios(
+    payload.convenios,
+    resumo.meta.poloId,
+    resumo.meta.competencia,
+  );
   const resumoCursos = courseSummary(payload.resumo_cursos);
   const analiseRecorrente = recurringAnalysis(payload.analise_recorrente);
   const recebimentos = array(payload.recebimentos, 'recebimentos').map(receipt);
@@ -440,7 +446,7 @@ export const mapCaixaDetailedReport = (value: unknown): CaixaDetailedReport => {
   );
 
   return {
-    versao: 6,
+    versao: 7,
     geradoEm: string(payload.gerado_em, 'gerado_em'),
     completo: true,
     confidencial: boolean(payload.confidencial, 'confidencial'),
@@ -454,6 +460,7 @@ export const mapCaixaDetailedReport = (value: unknown): CaixaDetailedReport => {
     patrimonio,
     posicaoLiquida,
     posicaoTotal,
+    convenios,
     resumoCursos,
     analiseRecorrente,
     recebimentos,
