@@ -4,22 +4,45 @@ begin;
 set local statement_timeout='60s';
 set local lock_timeout='3s';
 set local plpgsql.check_asserts='on';
+create function pg_temp.synthetic_cpf()
+returns text language plpgsql as $function$
+declare v_digits text:=lpad(floor(random()*999999999)::bigint::text,9,'0');
+  v_sum integer; v_check integer; v_length integer; v_i integer;
+begin
+  for v_length in 9..10 loop
+    v_sum:=0;
+    for v_i in 1..v_length loop
+      v_sum:=v_sum+substring(v_digits,v_i,1)::integer*(v_length+2-v_i);
+    end loop;
+    v_check:=(v_sum*10)%11;
+    v_digits:=v_digits||case when v_check=10 then 0 else v_check end::text;
+  end loop;
+  return v_digits;
+end;
+$function$;
 do $test$
 declare
-  v_actor uuid; v_candidate record; v_student uuid; v_class uuid; v_course uuid;
+  v_actor uuid; v_candidate record; v_student uuid:=gen_random_uuid();
+  v_class uuid; v_course uuid; v_polo uuid;
   v_preview jsonb; v_result jsonb; v_replay jsonb; v_rule jsonb; v_plan jsonb;
   v_review jsonb; v_cycle_preview jsonb; v_state jsonb; v_response jsonb;
   v_request uuid; v_enrollment uuid; v_cycle integer; v_rejected boolean;
   v_emission_request uuid; v_receivable uuid;
   v_today date:=timezone('America/Maceio',now())::date;
 begin
-  select t.id,t.curso_id into strict v_class,v_course from internal_proesc.class_scopes s
+  select t.id,t.curso_id,t.polo_id into strict v_class,v_course,v_polo
+    from internal_proesc.class_scopes s
     join public.turmas t on t.id=s.turma_id
     where s.batch_id is not null and s.phase='CONFIRMED' and t.status='EM_ANDAMENTO' limit 1;
-  select p.id into strict v_student from public.parceiros p where p.tipo='Aluno'
-    and not internal_academic.transfer_entry_person_has_history(p.id)
-    and not exists(select 1 from public.matriculas m join public.turmas t on t.id=m.turma_id
-      where m.aluno_id=p.id and t.curso_id=v_course) limit 1;
+  insert into public.parceiros(
+    id,tipo,nome,cpf_cnpj,polo_id,nome_mae,nome_pai,
+    endereco,cep,bairro,cidade,uf,
+    situacao_ensino_medio,escola_ensino_medio,ano_conclusao_ensino_medio
+  ) values (
+    v_student,'Aluno','ALUNO SINTETICO TRANSFERENCIA',pg_temp.synthetic_cpf(),v_polo,
+    'MAE SINTETICA','PAI SINTETICO','RUA DE TESTE','49000000','CENTRO','ARACAJU','SE',
+    'CONCLUIDO','ESCOLA SINTETICA',2025
+  );
   for v_candidate in select auth_user_id,email from public.usuarios_sistema
     where auth_user_id is not null and public.is_active_status(status) loop
     perform set_config('request.jwt.claims',jsonb_build_object('role','authenticated','sub',v_candidate.auth_user_id,'email',v_candidate.email)::text,true);
@@ -44,7 +67,8 @@ begin
     execute 'reset role';
     assert v_result->>'cobrancaGerada'='false','Prelink cannot create a debt';
     assert exists(select 1 from public.matriculas where aluno_id=v_student and turma_id=v_class
-      and status='PENDENTE' and fluxo_operacional='REGULAR');
+      and status='ATIVO' and fluxo_operacional='REGULAR'),
+      'Regular admission to an ongoing class must be academically active';
     assert not exists(select 1 from internal_academic.regular_technical_admission_claims
       where transaction_id=txid_current()),'Admission claim must be consumed';
     raise exception 'ROLLBACK_FIXTURE' using errcode='ZX001';

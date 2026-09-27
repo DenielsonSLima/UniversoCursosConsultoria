@@ -47,7 +47,8 @@ export interface Turma {
   status: StatusTurma;
   alunosMatriculados: number;
   alunosAtivos?: number;
-  alunosInativos?: number;
+  alunosPendentes?: number;
+  alunosSaidas?: number;
   vagasTotais: number;
   cobrarMatricula?: boolean;
   valorMatricula: number;

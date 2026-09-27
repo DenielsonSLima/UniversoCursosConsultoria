@@ -134,8 +134,17 @@ begin
     end if;
 
     v_student := gen_random_uuid();
-    insert into public.parceiros(id, cpf_cnpj, tipo, nome)
-    values(v_student, pg_temp.synthetic_cpf(), 'Aluno', 'ALUNO SINTETICO SEM DADOS PESSOAIS ' || v_mode);
+    insert into public.parceiros(
+      id, cpf_cnpj, tipo, nome, nome_mae, nome_pai,
+      endereco, cep, bairro, cidade, uf,
+      situacao_ensino_medio, escola_ensino_medio, ano_conclusao_ensino_medio
+    ) values (
+      v_student, pg_temp.synthetic_cpf(), 'Aluno',
+      'ALUNO SINTETICO COM CADASTRO MINIMO ' || v_mode,
+      'MAE SINTETICA', 'PAI SINTETICO',
+      'RUA DE TESTE', '49000000', 'CENTRO', 'ARACAJU', 'SE',
+      'CONCLUIDO', 'ESCOLA SINTETICA', 2025
+    );
     v_rule := internal_academic.technical_financial_rule(v_class);
     v_result := public.pre_vincular_aluno_tecnico_secure(
       v_class, v_student, gen_random_uuid(), v_today + 40,
@@ -145,6 +154,12 @@ begin
     select id into strict v_enrollment from public.matriculas
     where turma_id = v_class and aluno_id = v_student;
     v_enrollments := array_append(v_enrollments, v_enrollment);
+    if (select status from public.matriculas where id=v_enrollment) is distinct from
+      (case when v_mode=0 then 'PENDENTE' else 'ATIVO' end)
+    then raise exception 'Academic status does not match the class phase'; end if;
+    if (select status_financeiro from public.matriculas_tecnicas_financeiro_config
+      where matricula_id=v_enrollment) is distinct from 'PENDENTE'
+    then raise exception 'Academic activation changed the financial state'; end if;
     if exists (select 1 from public.contas_receber where matricula_id = v_enrollment) then
       raise exception 'Creation/prelink unexpectedly created charges';
     end if;

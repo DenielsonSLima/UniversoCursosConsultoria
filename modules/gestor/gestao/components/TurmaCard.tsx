@@ -199,15 +199,20 @@ const TurmaCard: React.FC<TurmaCardProps> = ({
             <span className="font-black text-slate-700 flex items-center gap-1.5 text-sm">
               <Users size={16} className={colors.text} /> {turma.alunosMatriculados} <span className="text-slate-400 font-medium">/ {turma.vagasTotais} vagas</span>
             </span>
-            <div className="flex items-center gap-2 mt-1">
+            <div className="mt-1 flex flex-wrap items-center gap-2">
               {turma.alunosAtivos !== undefined && (
                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md flex items-center gap-1">
-                   Ocupados: {turma.alunosAtivos}
+                   Ativos: {turma.alunosAtivos}
                  </span>
               )}
-              {turma.alunosInativos !== undefined && turma.alunosInativos > 0 && (
+              {turma.alunosPendentes !== undefined && turma.alunosPendentes > 0 && (
+                 <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-md flex items-center gap-1">
+                   Pendentes: {turma.alunosPendentes}
+                 </span>
+              )}
+              {turma.alunosSaidas !== undefined && turma.alunosSaidas > 0 && (
                  <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded-md flex items-center gap-1">
-                   Inativos: {turma.alunosInativos}
+                   Saídas: {turma.alunosSaidas}
                  </span>
               )}
             </div>

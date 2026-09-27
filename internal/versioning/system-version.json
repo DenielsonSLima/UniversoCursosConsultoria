@@ -1,8 +1,8 @@
 {
-  "version": "4.8.113",
+  "version": "4.8.114",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 122,
+  "revision": 123,
   "releasedAt": "2026-09-27",
-  "summary": "Convênios em tela inteira e datas no padrão brasileiro"
+  "summary": "Matrícula técnica ativa com cadastro mínimo e opção EJA"
 }

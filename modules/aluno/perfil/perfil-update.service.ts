@@ -15,6 +15,7 @@ const integerToNull = (value: string) => {
 const toEditableAlunoPatch = (payload: PerfilUpdatePayload) => {
   const source = uppercaseAlunoTextFields(payload);
   const isStudyingHighSchool = source.situacaoEnsinoMedio === 'CURSANDO';
+  const hasCompletedHighSchool = source.situacaoEnsinoMedio === 'CONCLUIDO';
 
   return {
     telefone: emptyToNull(source.telefone),
@@ -39,9 +40,9 @@ const toEditableAlunoPatch = (payload: PerfilUpdatePayload) => {
     nome_pai: emptyToNull(source.nomePai),
     escolaridade_anterior: emptyToNull(source.escolaridadeAnterior),
     instituicao_origem: emptyToNull(source.instituicaoOrigem),
-    ano_conclusao_ensino_medio: isStudyingHighSchool
-      ? null
-      : emptyToNull(source.anoConclusaoEnsinoMedio),
+    ano_conclusao_ensino_medio: hasCompletedHighSchool
+      ? emptyToNull(source.anoConclusaoEnsinoMedio)
+      : null,
     situacao_ensino_medio: emptyToNull(source.situacaoEnsinoMedio),
     serie_ensino_medio_atual: isStudyingHighSchool
       ? integerToNull(source.serieEnsinoMedioAtual)

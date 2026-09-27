@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-09-27T12:56:41.422Z",
+  "builtAt": "2026-09-27T13:04:03.684Z",
   "manifestVersion": 2,
-  "sourceSignature": "ca0ab4c0521bf203501e0f9dc2ff0d3961df838b5b5c65647be1687155a31a19",
+  "sourceSignature": "a101b7cf8dd51d29909231324e2e0febd5b8f39bc9303ce7571f8db94cbe3e8a",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "247204451222f10c5a62199b335def6cbd8bf977f6f7bf56b3e7ce872ff037a5"
+      "hash": "aea5805490b7a7487b43e8fade41ba3ac6d3e514f29db91e858f71e73413cf3d"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -197,6 +197,36 @@
       "text": "- ai/operacao é a fonte versionada; ai/memoria, ai/rag e ai/skil são legados removidos. - A busca RAG é opcional para ajustes rápidos e somente leitura. Reindexe explicitamente uma vez ao fechar um lote operacional ou de publicação. - Nunca indexe segredos, dados pessoais, dumps, código-fonte completo ou artefatos gerados.",
       "normalizedText": "ai operacao e a fonte versionada ai memoria ai rag e ai skil sao legados removidos a busca rag e opcional para ajustes rapidos e somente leitura reindexe explicitamente uma vez ao fechar um lote operacional ou de publicacao nunca indexe segredos dados pessoais dumps codigo fonte completo ou artefatos gerados",
       "tokenCount": 45,
+      "part": 1
+    },
+    {
+      "id": "9e158c8da980daaa84c3",
+      "hash": "9e158c8da980daaa84c377f08f83c1a96d1c3f29bc9979edcb66b80f65e17822",
+      "path": "ai/operacao/LOTE_ATIVO.md",
+      "section": "Lote ativo",
+      "text": "Estado: VALIDADO — PUBLICAÇÃO EM PRODUÇÃO AUTORIZADA",
+      "normalizedText": "estado validado publicacao em producao autorizada",
+      "tokenCount": 6,
+      "part": 1
+    },
+    {
+      "id": "0e871b604ce6e253c6cb",
+      "hash": "0e871b604ce6e253c6cb359c6e89bc653d82f9665002c9c26a0c7a9663dbeb51",
+      "path": "ai/operacao/LOTE_ATIVO.md",
+      "section": "Lote: 2026-09-27-matricula-tecnica-ativa-cadastro-minimo",
+      "text": "Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-27-matricula-tecnica-ativa-cadastro-minimo.md`",
+      "normalizedText": "manifesto explicito ai operacao registros alteracoes 2026 09 27 matricula tecnica ativa cadastro minimo md",
+      "tokenCount": 15,
+      "part": 1
+    },
+    {
+      "id": "eda1ad50cfe43610ecfe",
+      "hash": "eda1ad50cfe43610ecfe672d1a07840e2c66c12bcdf2ce018fe1d3c7d0ebcc4d",
+      "path": "ai/operacao/LOTE_ATIVO.md",
+      "section": "Lote: 2026-09-27-matricula-tecnica-ativa-cadastro-minimo",
+      "text": "- Matrícula regular em turma técnica `EM_ANDAMENTO` deve concluir a mesma transação como `ATIVO`. - Turma ainda não iniciada mantém o vínculo `PENDENTE` até o início. - Documentos, checklist, pagamento e emissão de boleto não bloqueiam o status acadêmico. - O ingresso exige cadastro pessoal e endereço completos; mãe e pai são obrigatórios. Ensino Médio é informativo, não bloqueia o vínculo e aceita a opção `EJA`. - Interface diferencia status cadastral, pendência acadêmica e estados de saída, além de atualizar os cards após o vínculo. - Produção autorizada explicitamente pelo usuário; migration aplicada e validada, publicar a versão 4.8.114 e confirmar o smoke de interface.",
+      "normalizedText": "matricula regular em turma tecnica em andamento deve concluir a mesma transacao como ativo turma ainda nao iniciada mantem o vinculo pendente ate o inicio documentos checklist pagamento e emissao de boleto nao bloqueiam o status academico o ingresso exige cadastro pessoal e endereco completos mae e pai sao obrigatorios ensino medio e informativo nao bloqueia o vinculo e aceita a opcao eja interface diferencia status cadastral pendencia academica e estados de saida alem de atualizar os cards apos o vinculo producao autorizada explicitamente pelo usuario migration aplicada e validada publicar a versao 4 8 114 e confirmar o smoke de interface",
+      "tokenCount": 82,
       "part": 1
     },
     {
@@ -827,36 +857,6 @@
       "text": "Interna mantém títulos na origem: sem histórico inicia C1; C1 completo na origem imediata permite C2; parcial/importado/cadeia sem prova fica protegido. Saída preserva pagos e vencimentos até o corte; futuros locais elegíveis cancelam, Banese aguarda confirmação, Proesc/CNAB/ancestrais ficam em revisão. Histórico associa job ao movimento correto. Consulta bancária continua após saída; substituir título exige matrícula elegível e autorização atual. CANCEL_INTENT/CONFIRMED bloqueia saída até conciliação, mesmo com lease expirado; reset sem título novo exige concluir a substituição ou encerrar a obrigação. Intenção e situação acadêmica serializam por pessoa/matrícula. Estorno LOCAL futuro pago após saída exige revisão; no dia mantém regra auditada. Carnê mantém limite30, turmas atuais até13. Contratos/testes detalhados: [implementação](../../ai/operacao/registros/alteracoes/2026-09-24-transferencias-tecnicas.md) e [revisão](../../ai/operacao/registros/alteracoes/2026-09-25-revisao-transferencias-tecnicas.md). Nunca testar com emissão/transferência real.",
       "normalizedText": "interna mantem titulos na origem sem historico inicia c1 c1 completo na origem imediata permite c2 parcial importado cadeia sem prova fica protegido saida preserva pagos e vencimentos ate o corte futuros locais elegiveis cancelam banese aguarda confirmacao proesc cnab ancestrais ficam em revisao historico associa job ao movimento correto consulta bancaria continua apos saida substituir titulo exige matricula elegivel e autorizacao atual cancel intent confirmed bloqueia saida ate conciliacao mesmo com lease expirado reset sem titulo novo exige concluir a substituicao ou encerrar a obrigacao intencao e situacao academica serializam por pessoa matricula estorno local futuro pago apos saida exige revisao no dia mantem regra auditada carne mantem limite30 turmas atuais ate13 contratos testes detalhados implementacao ai operacao registros alteracoes 2026 09 24 transferencias tecnicas md e revisao ai operacao registros alteracoes 2026 09 25 revisao transferencias tecnicas md nunca testar com emissao transferencia real",
       "tokenCount": 139,
-      "part": 1
-    },
-    {
-      "id": "5a77f69906d5f213fee5",
-      "hash": "5a77f69906d5f213fee5cb56d9ad3f3cb334242de26fab002c6a1184dd74fa35",
-      "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote ativo",
-      "text": "Estado: PUBLICADO EM PRODUÇÃO — VERSÃO 4.8.113",
-      "normalizedText": "estado publicado em producao versao 4 8 113",
-      "tokenCount": 6,
-      "part": 1
-    },
-    {
-      "id": "f78001bda4d3e2a02fa4",
-      "hash": "f78001bda4d3e2a02fa4d51aae0158dd467a2a5e5effddf62308cc35e8dc4ae3",
-      "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-09-27-hotfix-convenios-datas-brasileiras",
-      "text": "Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-27-hotfix-convenios-datas-brasileiras.md`",
-      "normalizedText": "manifesto explicito ai operacao registros alteracoes 2026 09 27 hotfix convenios datas brasileiras md",
-      "tokenCount": 14,
-      "part": 1
-    },
-    {
-      "id": "dcd83ad3f81c434734b2",
-      "hash": "dcd83ad3f81c434734b2b864fcd8129102f9dabf02b0aa61d24523185d2b9b7e",
-      "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-09-27-hotfix-convenios-datas-brasileiras",
-      "text": "- Acesso a Convênios restaurado somente para usuários que já possuíam o Financeiro completo. - Aviso operacional removido da tela de Convênios. - Modal renderizado na viewport, com scroll e foco controlados. - Competências aparecem em `MM/AAAA`; carteirinhas usam `DD/MM/AAAA`. - Banco de produção validado com usuário real e migration registrada no ledger. - Testes focados, TypeScript, ESLint, build, Preview Vercel e smoke de produção aprovados.",
-      "normalizedText": "acesso a convenios restaurado somente para usuarios que ja possuiam o financeiro completo aviso operacional removido da tela de convenios modal renderizado na viewport com scroll e foco controlados competencias aparecem em mm aaaa carteirinhas usam dd mm aaaa banco de producao validado com usuario real e migration registrada no ledger testes focados typescript eslint build preview vercel e smoke de producao aprovados",
-      "tokenCount": 58,
       "part": 1
     }
   ]

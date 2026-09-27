@@ -12,7 +12,7 @@ const ParceiroAlunoFormStepEducation: React.FC<AlunoFormStepProps> = ({ formData
     </div>
 
     <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-xs font-medium leading-relaxed text-emerald-800">
-      Esta etapa é opcional no cadastro inicial. Os dados do Ensino Médio serão exigidos somente para matrícula em curso técnico.
+      Esta etapa é opcional e não bloqueia a matrícula. Use EJA quando essa for a modalidade de formação do aluno.
     </div>
 
     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -22,6 +22,7 @@ const ParceiroAlunoFormStepEducation: React.FC<AlunoFormStepProps> = ({ formData
           <option value="">Selecione...</option>
           <option value="CURSANDO">Cursando</option>
           <option value="CONCLUIDO">Concluído</option>
+          <option value="EJA">EJA</option>
         </select>
       </div>
 
@@ -64,7 +65,7 @@ const ParceiroAlunoFormStepEducation: React.FC<AlunoFormStepProps> = ({ formData
 
     <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
       <p className="text-xs font-medium leading-relaxed text-emerald-700">
-        Quando houver matrícula técnica, estes dados determinam a elegibilidade para ingresso concomitante ou subsequente.
+        Estes dados são informativos e podem ser completados ou atualizados posteriormente.
       </p>
     </div>
 

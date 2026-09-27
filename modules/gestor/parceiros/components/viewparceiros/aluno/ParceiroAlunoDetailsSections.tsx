@@ -255,7 +255,7 @@ const ParceiroAlunoEducationSection: React.FC<DetailsSectionsProps> = ({ formDat
     <div id="aluno-escolaridade" className="scroll-mt-28 space-y-4 border-t border-slate-100 pt-6">
       <div className="border-b border-slate-100 pb-2">
         <h4 className="text-base font-semibold text-[#001a33]">Ensino Médio</h4>
-        <p className="mt-1 text-xs text-slate-500">Dados obrigatórios para matrícula em cursos técnicos.</p>
+        <p className="mt-1 text-xs text-slate-500">Dados informativos; não bloqueiam a matrícula técnica.</p>
       </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {isEditing ? (
@@ -266,6 +266,7 @@ const ParceiroAlunoEducationSection: React.FC<DetailsSectionsProps> = ({ formDat
                 <option value="">Selecione...</option>
                 <option value="CURSANDO">CURSANDO</option>
                 <option value="CONCLUIDO">CONCLUÍDO</option>
+                <option value="EJA">EJA</option>
               </select>
             </div>
             {isStudying ? (

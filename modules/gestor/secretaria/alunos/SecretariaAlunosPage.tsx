@@ -14,6 +14,19 @@ interface SecretariaAlunosPageProps {
   poloId?: string | null;
 }
 
+const normalizeStatus = (status?: string | null) => String(status || '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .trim()
+  .toUpperCase();
+
+const enrollmentStatusTone = (status?: string | null) => {
+  const normalized = normalizeStatus(status);
+  if (normalized === 'ATIVO') return 'success' as const;
+  if (normalized === 'PENDENTE' || normalized.startsWith('AGUARDANDO_')) return 'warning' as const;
+  return 'neutral' as const;
+};
+
 const SecretariaAlunosPage: React.FC<SecretariaAlunosPageProps> = ({ poloId }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAluno, setSelectedAluno] = useState<any | null>(null);
@@ -102,6 +115,8 @@ const SecretariaAlunosPage: React.FC<SecretariaAlunosPageProps> = ({ poloId }) =
   if (selectedAluno) {
     const cursoNome = matriculas[0]?.turmas?.cursos?.nome || 'Nenhum curso registrado';
     const matriculaFormatada = matriculas[0]?.id ? formatMatricula(matriculas[0].id, matriculas[0].data_matricula, matriculas[0].turmas?.polo_id) : 'Não gerada';
+    const matriculaStatus = selectedAluno.matriculaStatus || matriculas[0]?.status || 'NÃO INFORMADO';
+    const cadastroStatus = selectedAluno.status || 'NÃO INFORMADO';
 
     return (
       <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl overflow-hidden animate-fadeIn min-h-[600px]">
@@ -114,7 +129,10 @@ const SecretariaAlunosPage: React.FC<SecretariaAlunosPageProps> = ({ poloId }) =
             <div>
                 <h3 className="text-2xl font-black text-[#001a33]">{selectedAluno.nome}</h3>
                 <p className="text-slate-500 font-bold uppercase text-xs tracking-wider mt-1">
-                    Matrícula: {matriculaFormatada} • <span className={selectedAluno.status === 'ATIVO' ? 'text-emerald-600' : 'text-red-500'}>{selectedAluno.status}</span>
+                    Matrícula: {matriculaFormatada} • <span className={enrollmentStatusTone(matriculaStatus) === 'success' ? 'text-emerald-600' : enrollmentStatusTone(matriculaStatus) === 'warning' ? 'text-amber-600' : 'text-slate-500'}>{matriculaStatus}</span>
+                </p>
+                <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Cadastro: <span className={normalizeStatus(cadastroStatus) === 'ATIVO' ? 'text-emerald-600' : 'text-slate-500'}>{cadastroStatus}</span>
                 </p>
                 <div className="flex items-center gap-2 mt-3">
                     <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-lg text-xs font-bold">{cursoNome}</span>
@@ -321,8 +339,8 @@ const SecretariaAlunosPage: React.FC<SecretariaAlunosPageProps> = ({ poloId }) =
                             turmaNome={aluno.turmaNome}
                             turmaCodigo={aluno.turmaCodigo}
                             matricula={aluno.matricula}
-                            statusLabel={aluno.status}
-                            statusTone={aluno.status === 'ATIVO' ? 'success' : 'warning'}
+                            statusLabel={aluno.matriculaStatus || 'SEM MATRÍCULA'}
+                            statusTone={enrollmentStatusTone(aluno.matriculaStatus)}
                             tone="blue"
                             onClick={() => setSelectedAluno(aluno)}
                         />

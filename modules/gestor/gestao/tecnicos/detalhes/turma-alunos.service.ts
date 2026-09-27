@@ -1,25 +1,20 @@
 import { supabase } from '../../../../../lib/supabase';
+import type { TechnicalEnrollmentProfile } from '../../../../shared/utils/technicalEnrollmentRequirements';
 import { getMaceioIsoDate } from '../technicalClassDates';
 
-export interface AvailableStudent {
+export interface AvailableStudent extends TechnicalEnrollmentProfile {
   id: string;
   nome: string;
   cpf_cnpj: string | null;
   telefone?: string | null;
   tipo_documento?: string | null;
   rg?: string | null;
-  nome_mae?: string | null;
   responsavel_nome?: string | null;
   responsavel_cpf?: string | null;
   responsavel_parentesco?: string | null;
   responsavel_telefone?: string | null;
   responsavel_email?: string | null;
   responsavel_financeiro?: boolean | null;
-  situacao_ensino_medio?: string | null;
-  serie_ensino_medio_atual?: number | null;
-  escola_ensino_medio?: string | null;
-  ano_conclusao_ensino_medio?: number | string | null;
-  ano_previsto_conclusao_ensino_medio?: number | null;
 }
 
 export interface TurmaFinanceiroMatriculaConfig {
