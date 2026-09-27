@@ -1,13 +1,14 @@
 # Lote ativo
 
-Estado: PUBLICADO — HOMOLOGAÇÃO FÍSICA PENDENTE
+Estado: VALIDADO — PUBLICAÇÃO DA IDENTIFICAÇÃO DO CUPOM
 
-## Lote: 2026-09-26-pdv-confirmacao-recibos-impressoras
+## Lote: 2026-09-26-pdv-identificacao-cupom
 
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-26-pdv-confirmacao-recibos-impressoras.md`
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-26-pdv-identificacao-cupom.md`
 
-- 4.8.108 publicada pelo PR198, CI e Safari aprovados. 4.8.109 / revisão 118 publicada pelo PR199 organiza o cupom térmico sem fundo por pedido explícito; manifesto de sete arquivos no registro.
-- Escopo: confirmação PDV, recibo canônico e impressoras/modelo. Reserva de três créditos por consulta no orçamento global de 60 segundos; autorização, polo, CAS/replay e financeiro no backend preservados.
-- Recibo somente PAGO; UNKNOWN não repete envio. PERGUNTAR pelo navegador; AUTOMÁTICO bloqueado até homologação física. Não emitir, cancelar, pagar ou imprimir para testes.
-- Cinco migrations e Edge v4 aplicadas; contratos, hashes, testes e smoke detalhados no registro. Lint, build e TypeScript final aprovados; Safari validou formulário, prévia e reimpressão condicionada ao motivo, sem despacho.
-- Safari validou Impressoras, Recebidos, PDF real anterior e versão 4.8.109. Cupom passou 25 testes e renderização 58/80 mm; pendentes reabertura do cupom real e homologação física. Artefatos regeneráveis ficam fora do manifesto.
+- Base 4.8.109 publicada no PR199 e encerrada no PR200. Usuário confirmou o cupom real e pediu documento pontuado e matrícula.
+- 4.8.110 / revisão 119: identidade vem da RPC; matrícula cadastral do aluno não associa o avulso a curso. Snapshot financeiro permanece imutável.
+- Registro privado de identidade por recibo; antigos exigem prova. CPF/CNPJ permanecem mascarados. Cliente confere conteúdo do trabalho antes de imprimir o Blob preparado.
+- 30 testes UI/PDF/cache/identidade, 11 checks SQL, TypeScript, ESLint e build aprovados. PDFs 58/80 mm inspecionados. Migration aplicada no ledger `20260927025500`; RPC autenticada confirmou documento e matrícula no recibo existente sem alterar o financeiro.
+- Manifesto de 17 arquivos no registro; preservar a compactação paralela publicada em `3089add1a3b957856d69176dcf6b212a3d095825`. Publicação e implantação rastreadas no PR da 4.8.110.
+- Não emitir, cancelar, pagar ou imprimir para testes. Impressão silenciosa depende de homologação física; artefatos em tmp ficam fora da publicação.

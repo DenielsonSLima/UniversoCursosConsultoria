@@ -47,6 +47,36 @@ interface PrintDependencies {
 }
 const dependencies: PrintDependencies = { rpc: call, print: printPdfBlob, requestId: () => crypto.randomUUID() };
 
+// Select fields in a fixed order: JSON key order and transient print state must
+// not affect equality. Every displayed identity/amount/date remains canonical;
+// this comparison never recalculates money or changes the prepared PDF Blob.
+const printableReceiptContract = (receipt: PdvReceipt) => ({
+  version: receipt.version, id: receipt.id, number: receipt.number,
+  receivableId: receipt.receivableId, poloId: receipt.poloId, issuedAt: receipt.issuedAt,
+  totalCents: receipt.totalCents, totalDisplay: receipt.totalDisplay,
+  paidAt: receipt.paidAt, paidAtDisplay: receipt.paidAtDisplay,
+  paymentMethod: receipt.paymentMethod, description: receipt.description,
+  payer: {
+    name: receipt.payer.name, documentMasked: receipt.payer.documentMasked ?? null,
+    documentLabel: receipt.payer.documentLabel ?? null,
+    enrollmentNumber: receipt.payer.enrollmentNumber ?? null,
+  },
+  issuer: {
+    id: receipt.issuer.id, name: receipt.issuer.name, cnpj: receipt.issuer.cnpj,
+    address: receipt.issuer.address, number: receipt.issuer.number,
+    complement: receipt.issuer.complement, neighborhood: receipt.issuer.neighborhood,
+    city: receipt.issuer.city, state: receipt.issuer.state, postalCode: receipt.issuer.postalCode,
+    phone: receipt.issuer.phone, email: receipt.issuer.email,
+    isHeadquarters: receipt.issuer.isHeadquarters, logoUrl: receipt.issuer.logoUrl,
+  },
+  template: {
+    version: receipt.template.version, widthMm: receipt.template.widthMm,
+    marginMm: receipt.template.marginMm, fontSize: receipt.template.fontSize,
+    showLogo: receipt.template.showLogo, footer: receipt.template.footer,
+    source: receipt.template.source,
+  },
+});
+
 /** An uncertain submission never creates another job or retries the print silently. */
 export async function printPreparedPdvReceipt(
   prepared: PreparedPdvReceipt,
@@ -64,9 +94,9 @@ export async function printPreparedPdvReceipt(
     p_reason: reprint || null, p_request_id: io.requestId(),
   });
   if (!job.canDispatch) return 'UNKNOWN';
-  if (job.receipt.id !== prepared.receipt.id || job.transport !== 'BROWSER'
-    || JSON.stringify(job.receipt.template) !== JSON.stringify(prepared.receipt.template)) {
-    throw new Error('A configuração do comprovante mudou. Prepare o comprovante novamente antes de imprimir.');
+  if (job.transport !== 'BROWSER'
+    || JSON.stringify(printableReceiptContract(job.receipt)) !== JSON.stringify(printableReceiptContract(prepared.receipt))) {
+    throw new Error('Os dados ou a configuração do comprovante mudaram. Prepare o comprovante novamente antes de imprimir.');
   }
   const claimed = await io.rpc<{ id: string; token?: string; status: string; canDispatch: boolean }>('claim_pdv_print_job', {
     p_job_id: job.id, p_request_id: io.requestId(),
