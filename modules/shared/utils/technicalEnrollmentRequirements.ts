@@ -38,8 +38,8 @@ export interface TechnicalEnrollmentProfile {
 
 export const TECHNICAL_DOCUMENT_TYPE_OPTIONS = [
   {
-    value: 'CARTEIRA NACIONAL DE IDENTIFICAÇÃO',
-    label: 'Carteira Nacional de Identificação (CIN)',
+    value: 'CARTEIRA DE IDENTIDADE NACIONAL',
+    label: 'CIN - Carteira de Identidade Nacional',
   },
   {
     value: 'CNH',
@@ -51,19 +51,14 @@ export const TECHNICAL_DOCUMENT_TYPE_OPTIONS = [
   },
 ] as const;
 
-const REQUIRED_TECHNICAL_DOCUMENT_TYPES = new Set([
-  'CARTEIRA NACIONAL DE IDENTIFICAÇÃO',
-  'CIN',
-  'CNI',
-  'CNH',
-  'RG',
-  'RG ANTIGO',
-  'RG (ANTIGO)',
-]);
+export const CIN_DOCUMENT_TYPE = TECHNICAL_DOCUMENT_TYPE_OPTIONS[0].value;
+export const CNH_DOCUMENT_TYPE = TECHNICAL_DOCUMENT_TYPE_OPTIONS[1].value;
+export const LEGACY_RG_DOCUMENT_TYPE = TECHNICAL_DOCUMENT_TYPE_OPTIONS[2].value;
+export const AMBIGUOUS_LEGACY_ID_DOCUMENT_TYPE = 'CARTEIRA NACIONAL DE IDENTIFICAÇÃO';
 
 const hasText = (value?: unknown) => String(value || '').trim().length > 0;
 
-const normalizeDocumentType = (value?: unknown) =>
+const normalizeDocumentTypeSearch = (value?: unknown) =>
   String(value || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -72,12 +67,57 @@ const normalizeDocumentType = (value?: unknown) =>
     .trim()
     .toUpperCase();
 
+export const normalizeTechnicalDocumentType = (value?: unknown): string => {
+  const original = String(value || '').trim();
+  const normalized = normalizeDocumentTypeSearch(original);
+  if (!normalized) return '';
+  if (normalized === normalizeDocumentTypeSearch(AMBIGUOUS_LEGACY_ID_DOCUMENT_TYPE)) {
+    return AMBIGUOUS_LEGACY_ID_DOCUMENT_TYPE;
+  }
+  if (
+    normalized === 'CIN'
+    || normalized === 'CNI'
+    || normalized.includes('CARTEIRA DE IDENTIDADE NACIONAL')
+    || normalized.includes('CARTEIRA NACIONAL DE IDENTIDADE')
+  ) return CIN_DOCUMENT_TYPE;
+  if (normalized.includes('CNH') || normalized.includes('CARTEIRA NACIONAL DE HABILITACAO')) {
+    return CNH_DOCUMENT_TYPE;
+  }
+  if (
+    normalized === 'RG'
+    || normalized === 'RG ANTIGO'
+    || normalized === 'IDENTIDADE'
+    || normalized === 'CARTEIRA DE IDENTIDADE'
+    || normalized.includes('REGISTRO GERAL')
+  ) return LEGACY_RG_DOCUMENT_TYPE;
+  return original;
+};
+
+export const isCinDocumentType = (value?: unknown) =>
+  normalizeTechnicalDocumentType(value) === CIN_DOCUMENT_TYPE;
+
+export const isCnhDocumentType = (value?: unknown) =>
+  normalizeTechnicalDocumentType(value) === CNH_DOCUMENT_TYPE;
+
+export const isLegacyRgDocumentType = (value?: unknown) =>
+  normalizeTechnicalDocumentType(value) === LEGACY_RG_DOCUMENT_TYPE;
+
+export const isAmbiguousLegacyIdDocumentType = (value?: unknown) =>
+  normalizeTechnicalDocumentType(value) === AMBIGUOUS_LEGACY_ID_DOCUMENT_TYPE;
+
+export const formatTechnicalDocumentTypeLabel = (value?: unknown) => {
+  const normalized = normalizeTechnicalDocumentType(value);
+  if (normalized === AMBIGUOUS_LEGACY_ID_DOCUMENT_TYPE) {
+    return 'Identificação legada — revisar CIN ou RG antigo';
+  }
+  return TECHNICAL_DOCUMENT_TYPE_OPTIONS.find((option) => option.value === normalized)?.label
+    || normalized;
+};
+
 export const isAcceptedTechnicalDocumentType = (value?: unknown) => {
-  const normalized = normalizeDocumentType(value);
-  if (!normalized) return false;
-  return Array.from(REQUIRED_TECHNICAL_DOCUMENT_TYPES).some((allowed) =>
-    normalized === normalizeDocumentType(allowed) || normalized.includes(normalizeDocumentType(allowed))
-  );
+  const normalized = normalizeTechnicalDocumentType(value);
+  return TECHNICAL_DOCUMENT_TYPE_OPTIONS.some((option) => option.value === normalized)
+    || [AMBIGUOUS_LEGACY_ID_DOCUMENT_TYPE, 'PASSAPORTE', 'CARTEIRA PROFISSIONAL'].includes(normalized);
 };
 
 export const getTechnicalEnrollmentMissingFields = (

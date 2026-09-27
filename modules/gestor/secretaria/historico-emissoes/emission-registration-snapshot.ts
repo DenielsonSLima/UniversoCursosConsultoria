@@ -10,6 +10,7 @@ import {
   formatRegistrationVoterId,
   replaceRegistrationIssuerState,
 } from '../../cadastros/ficha-matricula/registration-document-formatters';
+import { resolveStudentIdentityDocument } from '../../../shared/utils/studentIdentityDocument';
 
 /**
  * Interpolação limitada ao snapshot já persistido para Pasta/Ficha. Não busca
@@ -25,6 +26,7 @@ export const resolveRegistrationSnapshotTemplate = (
   const livePolo = canonicalAsRecord(preview.polo);
   const polo = canonicalAsRecord(snapshotFirst(data, 'institutionSnapshot', livePolo));
   const template = canonicalAsRecord(preview.template);
+  const liveIdentity = resolveStudentIdentityDocument(emission.aluno);
   const snapshotValue = (key: string, legacyValue: unknown = '') => snapshotFirst(
     data,
     key,
@@ -75,11 +77,11 @@ export const resolveRegistrationSnapshotTemplate = (
     FICHA_ASSINATURAS: signatures,
     ALUNO_NOME: snapshotText('studentName', emission.aluno?.nome).toUpperCase(),
     ALUNO_FOTO_URL: snapshotText('studentPhotoUrl', emission.aluno?.foto_url),
-    ALUNO_NOME_SOCIAL: snapshotText('studentSocialName'),
+    ALUNO_NOME_SOCIAL: snapshotText('studentSocialName', snapshotText('studentName', emission.aluno?.nome)),
     ALUNO_CPF: formatSnapshotCpf(snapshotValue('studentCpf', emission.aluno?.cpf_cnpj)),
-    ALUNO_DOCUMENTO_TIPO: snapshotText('studentDocumentType', 'RG'),
-    ALUNO_TIPO_DOCUMENTO: snapshotText('studentDocumentType', 'RG'),
-    ALUNO_RG: snapshotText('studentRg', emission.aluno?.rg),
+    ALUNO_DOCUMENTO_TIPO: snapshotText('studentDocumentType', liveIdentity.label),
+    ALUNO_TIPO_DOCUMENTO: snapshotText('studentDocumentType', liveIdentity.label),
+    ALUNO_RG: snapshotText('studentRg', liveIdentity.number),
     ALUNO_NASCIMENTO: formatSnapshotDate(snapshotValue('studentBirthDate', emission.aluno?.data_nascimento)),
     ALUNO_SEXO: snapshotText('studentSex', emission.aluno?.sexo),
     ALUNO_ESTADO_CIVIL: snapshotText('studentMaritalStatus'),
@@ -100,9 +102,9 @@ export const resolveRegistrationSnapshotTemplate = (
     ALUNO_CIDADE: snapshotText('studentCity'),
     ALUNO_UF: snapshotText('studentState'),
     ALUNO_CEP: snapshotText('studentZipCode'),
-    ALUNO_RG_ORGAO: snapshotText('studentRgIssuer', emission.aluno?.orgao_emissor),
-    ALUNO_RG_UF: snapshotText('studentRgState'),
-    ALUNO_RG_EMISSAO: formatSnapshotDate(snapshotValue('studentRgIssueDate')),
+    ALUNO_RG_ORGAO: snapshotText('studentRgIssuer', liveIdentity.issuer),
+    ALUNO_RG_UF: snapshotText('studentRgState', liveIdentity.state),
+    ALUNO_RG_EMISSAO: formatSnapshotDate(snapshotValue('studentRgIssueDate', liveIdentity.issueDate)),
     ALUNO_TITULO_ELEITOR: formatRegistrationVoterId(snapshotText('studentVoterId', emission.aluno?.titulo_eleitor)),
     ALUNO_TITULO_ZONA: snapshotText('studentVoterZone', emission.aluno?.titulo_eleitor_zona),
     ALUNO_TITULO_SECAO: snapshotText('studentVoterSection', emission.aluno?.titulo_eleitor_secao),
@@ -137,8 +139,8 @@ export const resolveRegistrationSnapshotTemplate = (
   };
 
   const issuerState = formatRegistrationIssuerState(
-    snapshotText('studentRgIssuer', emission.aluno?.orgao_emissor),
-    snapshotText('studentRgState'),
+    snapshotText('studentRgIssuer', liveIdentity.issuer),
+    snapshotText('studentRgState', liveIdentity.state),
   );
   const preparedSource = replaceRegistrationIssuerState(
     String(source || ''),
@@ -166,6 +168,7 @@ export const resolveAcademicSnapshotTemplate = (
 ) => {
   const { emission, preview } = source;
   const snapshot = canonicalAsRecord(emission.dados_emissao);
+  const identity = resolveStudentIdentityDocument(emission.aluno);
   const academic = preview.academicData;
   const polo = canonicalAsRecord(preview.polo);
   const emittedDateParts = String(emission.emitido_em || '').split('T')[0].split('-');
@@ -179,7 +182,7 @@ export const resolveAcademicSnapshotTemplate = (
   const replacements: Record<string, unknown> = {
     ALUNO_NOME: canonicalText(snapshot.studentName, emission.aluno?.nome).toUpperCase(),
     ALUNO_CPF: formatSnapshotCpf(snapshot.studentCpf ?? emission.aluno?.cpf_cnpj),
-    ALUNO_RG: canonicalText(snapshot.studentRg, emission.aluno?.rg),
+    ALUNO_RG: canonicalText(snapshot.studentRg, identity.number),
     ALUNO_MATRICULA: canonicalText(snapshot.studentMatricula, emission.matricula_id),
     CURSO_NOME: canonicalText(snapshot.courseName),
     TURMA_NOME: canonicalText(snapshot.className, emission.matricula?.turma?.nome),

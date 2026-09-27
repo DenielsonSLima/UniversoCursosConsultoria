@@ -25,7 +25,7 @@ export const certificadosService = {
         data_inscricao, data_conclusao, nota_final, certificado_numero, pagina_livro,
         livro_registro, validacao_sistec, ensino_medio_estabelecimento,
         ensino_medio_localidade_uf, ensino_medio_ano_conclusao, codigo_validacao, emitido_em,
-        aluno:parceiros!certificados_academicos_aluno_id_fkey(nome, cpf_cnpj, rg, data_nascimento, naturalidade),
+        aluno:parceiros!certificados_academicos_aluno_id_fkey(nome, cpf_cnpj, rg, tipo_documento, data_nascimento, naturalidade),
         turma:turmas!certificados_academicos_turma_id_fkey(nome, codigo),
         curso:cursos!certificados_academicos_curso_id_fkey(nome, carga_horaria, area, ead_config),
         polo:polos!certificados_academicos_polo_id_fkey(nome, cidade, estado)

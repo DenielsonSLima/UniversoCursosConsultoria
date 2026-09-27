@@ -120,7 +120,7 @@ Deno.test("endereço impresso recusa origem insegura", () => {
 
 Deno.test("emissores documentais usam somente o helper canônico", async () => {
   const sources = await Promise.all([
-    "../../gestor/secretaria/declaracao-matricula/SecretariaDeclaracaoMatriculaPage.tsx",
+    "../../gestor/secretaria/declaracao-matricula/SecretariaDeclaracaoDocumentPages.tsx",
     "../../gestor/cadastros/modelos-documentos/declaracao/components/DeclaracaoEditor.tsx",
     "../../gestor/cadastros/modelos-documentos/irpf/components/IRPFEditor.tsx",
     "../../gestor/cadastros/modelos-documentos/estagio/components/EstagioEditor.tsx",

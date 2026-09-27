@@ -1,8 +1,8 @@
 {
-  "version": "4.8.118",
+  "version": "4.8.119",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 127,
+  "revision": 128,
   "releasedAt": "2026-09-27",
-  "summary": "Despesas fixas ganham tabela imersiva, ações visíveis e exclusão em lote"
+  "summary": "Cadastro de alunos padroniza naturalidade, nacionalidade, nome social e CIN"
 }

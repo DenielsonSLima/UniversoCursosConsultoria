@@ -1,7 +1,12 @@
 import type React from 'react';
 
 import { formatCpf } from '../../../../../../lib/documentFormatters';
-import { TECHNICAL_DOCUMENT_TYPE_OPTIONS } from '../../../../../shared/utils/technicalEnrollmentRequirements';
+import {
+  isCinDocumentType,
+  isCnhDocumentType,
+  isLegacyRgDocumentType,
+  TECHNICAL_DOCUMENT_TYPE_OPTIONS,
+} from '../../../../../shared/utils/technicalEnrollmentRequirements';
 import { ESCOLARIDADES, UFS } from '../../formularioparceiros/aluno/parceiro-aluno-form.constants';
 import {
   CERTIDAO_CIVIL_MODEL_OPTIONS,
@@ -89,7 +94,17 @@ const ParceiroAlunoGuardianSection: React.FC<DetailsSectionsProps> = ({ formData
   </div>
 );
 
-const ParceiroAlunoDocumentsSection: React.FC<DetailsSectionsProps> = ({ formData, isEditing, onChange }) => (
+const ParceiroAlunoDocumentsSection: React.FC<DetailsSectionsProps> = ({
+  formData,
+  isEditing,
+  onChange,
+}) => {
+  const isCin = isCinDocumentType(formData.tipoDocumento);
+  const isCnh = isCnhDocumentType(formData.tipoDocumento);
+  const isLegacyRg = isLegacyRgDocumentType(formData.tipoDocumento);
+  const isOtherLegacyType = Boolean(formData.tipoDocumento) && !isCin && !isCnh && !isLegacyRg;
+
+  return (
   <div id="aluno-documentacao" className="scroll-mt-28 space-y-4 border-t border-slate-100 pt-6">
     <h4 className="text-base font-semibold text-[#001a33] border-b border-slate-100 pb-3">Documentação Civil</h4>
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -97,31 +112,48 @@ const ParceiroAlunoDocumentsSection: React.FC<DetailsSectionsProps> = ({ formDat
         <>
           <div className="space-y-1.5">
             <label htmlFor="aluno-tipoDocumento" className="block text-xs font-medium text-slate-600">Tipo de documento</label>
-            <select id="aluno-tipoDocumento" name="tipoDocumento" value={formData.tipoDocumento || 'CARTEIRA NACIONAL DE IDENTIFICAÇÃO'} onChange={onChange} className="w-full min-h-11 sm:min-h-10 px-3 py-2 text-base sm:text-sm bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none">
+            <select id="aluno-tipoDocumento" name="tipoDocumento" value={formData.tipoDocumento || ''} onChange={onChange} className="w-full min-h-11 sm:min-h-10 px-3 py-2 text-base sm:text-sm bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none">
+              <option value="">Selecione se quiser informar</option>
+              {isOtherLegacyType ? <option value={formData.tipoDocumento}>{formData.tipoDocumento}</option> : null}
               {TECHNICAL_DOCUMENT_TYPE_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>{option.label}</option>
               ))}
             </select>
           </div>
-          <div className="space-y-1.5">
-            <label htmlFor="aluno-rg" className="block text-xs font-medium text-slate-600">Número do documento</label>
-            <input id="aluno-rg" type="text" name="rg" value={formData.rg || ''} onChange={onChange} className="w-full min-h-11 sm:min-h-10 px-3 py-2 text-base sm:text-sm bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none" />
-          </div>
-          <div className="space-y-1.5">
-            <label htmlFor="aluno-orgaoEmissor" className="block text-xs font-medium text-slate-600">Órgão expedidor</label>
-            <input id="aluno-orgaoEmissor" type="text" name="orgaoEmissor" value={formData.orgaoEmissor || ''} onChange={onChange} className="w-full min-h-11 sm:min-h-10 px-3 py-2 text-base sm:text-sm bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none" />
-          </div>
-          <div className="space-y-1.5">
-            <label htmlFor="aluno-rgUfEmissao" className="block text-xs font-medium text-slate-600">UF de expedição</label>
-            <select id="aluno-rgUfEmissao" name="rgUfEmissao" value={formData.rgUfEmissao || ''} onChange={onChange} className="w-full min-h-11 sm:min-h-10 px-3 py-2 text-base sm:text-sm bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none">
-              <option value="">Selecione...</option>
-              {UFS.map((uf) => <option key={uf} value={uf}>{uf}</option>)}
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <label htmlFor="aluno-rgDataEmissao" className="block text-xs font-medium text-slate-600">Data de expedição</label>
-            <input id="aluno-rgDataEmissao" type="text" inputMode="numeric" maxLength={10} name="rgDataEmissao" value={formData.rgDataEmissao || ''} onChange={onChange} placeholder="DD/MM/AAAA" className="w-full min-h-11 sm:min-h-10 px-3 py-2 text-base sm:text-sm bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none" />
-          </div>
+          {isCin ? (
+            <div className="space-y-1.5 md:col-span-2">
+              <label htmlFor="aluno-cin-cpf" className="block text-xs font-medium text-slate-600">Número da CIN (CPF)</label>
+              <input id="aluno-cin-cpf" type="text" value={formData.cpf || ''} readOnly aria-readonly="true" className="w-full min-h-11 sm:min-h-10 px-3 py-2 text-base sm:text-sm bg-slate-100 border border-slate-200 rounded-lg text-slate-600 cursor-not-allowed" />
+              <p className="text-xs text-slate-500">A CIN usa o CPF como número único; não existe um segundo número de RG para preencher.</p>
+            </div>
+          ) : null}
+          {isCnh || isLegacyRg || isOtherLegacyType ? (
+            <div className="space-y-1.5">
+              <label htmlFor="aluno-rg" className="block text-xs font-medium text-slate-600">
+                {isCnh ? 'Número de registro da CNH' : isLegacyRg ? 'Número do RG antigo' : 'Número do documento'}
+              </label>
+              <input id="aluno-rg" type="text" name="rg" value={formData.rg || ''} onChange={onChange} className="w-full min-h-11 sm:min-h-10 px-3 py-2 text-base sm:text-sm bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none" />
+            </div>
+          ) : null}
+          {isLegacyRg || isOtherLegacyType ? (
+            <>
+              <div className="space-y-1.5">
+                <label htmlFor="aluno-orgaoEmissor" className="block text-xs font-medium text-slate-600">Órgão expedidor</label>
+                <input id="aluno-orgaoEmissor" type="text" name="orgaoEmissor" value={formData.orgaoEmissor || ''} onChange={onChange} className="w-full min-h-11 sm:min-h-10 px-3 py-2 text-base sm:text-sm bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none" />
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="aluno-rgUfEmissao" className="block text-xs font-medium text-slate-600">UF de expedição</label>
+                <select id="aluno-rgUfEmissao" name="rgUfEmissao" value={formData.rgUfEmissao || ''} onChange={onChange} className="w-full min-h-11 sm:min-h-10 px-3 py-2 text-base sm:text-sm bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none">
+                  <option value="">Selecione...</option>
+                  {UFS.map((uf) => <option key={uf} value={uf}>{uf}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="aluno-rgDataEmissao" className="block text-xs font-medium text-slate-600">Data de expedição</label>
+                <input id="aluno-rgDataEmissao" type="text" inputMode="numeric" maxLength={10} name="rgDataEmissao" value={formData.rgDataEmissao || ''} onChange={onChange} placeholder="DD/MM/AAAA" className="w-full min-h-11 sm:min-h-10 px-3 py-2 text-base sm:text-sm bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none" />
+              </div>
+            </>
+          ) : null}
           <div className="md:col-span-3 border-t border-slate-100 pt-4 text-sm font-medium text-slate-700">Dados eleitorais e origem</div>
           <div className="space-y-1.5">
             <label htmlFor="aluno-tituloEleitor" className="block text-xs font-medium text-slate-600">Título de Eleitor</label>
@@ -145,14 +177,6 @@ const ParceiroAlunoDocumentsSection: React.FC<DetailsSectionsProps> = ({ formDat
               <option value="">UF</option>
               {UFS.map((uf) => <option key={uf} value={uf}>{uf}</option>)}
             </select>
-          </div>
-          <div className="space-y-1.5">
-            <label htmlFor="aluno-nacionalidade" className="block text-xs font-medium text-slate-600">Nacionalidade</label>
-            <input id="aluno-nacionalidade" type="text" name="nacionalidade" value={formData.nacionalidade || 'BRASILEIRA'} onChange={onChange} className="w-full min-h-11 sm:min-h-10 px-3 py-2 text-base sm:text-sm bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none" />
-          </div>
-          <div className="space-y-1.5">
-            <label htmlFor="aluno-naturalidade" className="block text-xs font-medium text-slate-600">Naturalidade</label>
-            <input id="aluno-naturalidade" type="text" name="naturalidade" value={formData.naturalidade || ''} onChange={onChange} className="w-full min-h-11 sm:min-h-10 px-3 py-2 text-base sm:text-sm bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none" />
           </div>
           <div className="space-y-1.5">
             <label htmlFor="aluno-reservista" className="block text-xs font-medium text-slate-600">Reservista</label>
@@ -207,17 +231,22 @@ const ParceiroAlunoDocumentsSection: React.FC<DetailsSectionsProps> = ({ formDat
       ) : (
         <>
           <ParceiroAlunoDisplayField label="Tipo de documento" value={formatDocumentTypeLabel(formData.tipoDocumento)} />
-          <ParceiroAlunoDisplayField label="Número do documento" value={formData.rg} />
-          <ParceiroAlunoDisplayField label="Órgão expedidor" value={formData.orgaoEmissor} />
-          <ParceiroAlunoDisplayField label="UF de expedição" value={formData.rgUfEmissao} />
-          <ParceiroAlunoDisplayField label="Data de expedição" value={formData.rgDataEmissao} />
+          {isCin ? <ParceiroAlunoDisplayField label="Número da CIN (CPF)" value={formData.cpf} /> : null}
+          {isCnh || isLegacyRg || isOtherLegacyType ? (
+            <ParceiroAlunoDisplayField label={isCnh ? 'Número de registro da CNH' : isLegacyRg ? 'Número do RG antigo' : 'Número do documento'} value={formData.rg} />
+          ) : null}
+          {isLegacyRg || isOtherLegacyType ? (
+            <>
+              <ParceiroAlunoDisplayField label="Órgão expedidor" value={formData.orgaoEmissor} />
+              <ParceiroAlunoDisplayField label="UF de expedição" value={formData.rgUfEmissao} />
+              <ParceiroAlunoDisplayField label="Data de expedição" value={formData.rgDataEmissao} />
+            </>
+          ) : null}
           <ParceiroAlunoDisplayField label="Título de Eleitor" value={formData.tituloEleitor} />
           <ParceiroAlunoDisplayField label="Zona Eleitoral" value={formData.tituloEleitorZona} />
           <ParceiroAlunoDisplayField label="Seção Eleitoral" value={formData.tituloEleitorSecao} />
           <ParceiroAlunoDisplayField label="Emissão do Título" value={formData.tituloEleitorDataEmissao} />
           <ParceiroAlunoDisplayField label="UF do Título" value={formData.tituloEleitorUf} />
-          <ParceiroAlunoDisplayField label="Nacionalidade" value={formData.nacionalidade || 'BRASILEIRA'} />
-          <ParceiroAlunoDisplayField label="Naturalidade" value={formData.naturalidade} />
           <ParceiroAlunoDisplayField label="Reservista" value={formData.reservista} />
           <ParceiroAlunoDisplayField
             label="Tipo de certidão"
@@ -243,7 +272,8 @@ const ParceiroAlunoDocumentsSection: React.FC<DetailsSectionsProps> = ({ formDat
       )}
     </div>
   </div>
-);
+  );
+};
 
 const ParceiroAlunoEducationSection: React.FC<DetailsSectionsProps> = ({ formData, isEditing, onChange }) => {
   const isStudying = formData.situacaoEnsinoMedio === 'CURSANDO';

@@ -12,6 +12,9 @@ import { fichaCadastralService } from '../../../../../cadastros/modelos-document
 import { LocalQrCodeImage } from '../../../../../../shared/qrcode/LocalQrCodeImage';
 import { waitForQrCodeAssets } from '../../../../../../shared/qrcode/qr-code-assets';
 import { formatCep } from '../../../../../../shared/utils/brazilianCep';
+import { getPersonDisplayName } from '../../../../../../shared/utils/personDisplayName';
+import { resolveStudentIdentityDocument } from '../../../../../../shared/utils/studentIdentityDocument';
+import FichaAlunoPrintStyles from './FichaAlunoPrintStyles';
 
 interface FichaAlunoModalProps {
   aluno: any;
@@ -97,6 +100,8 @@ const FichaAlunoModal: React.FC<FichaAlunoModalProps> = ({ aluno, onClose }) => 
 
   const cursoLabel = enrollmentCurso?.nome || aluno?.curso || 'Não especificado';
   const turmaLabel = enrollmentTurma?.nome || aluno?.turmaNome || aluno?.turmaId || 'N/A';
+  const displayName = useMemo(() => getPersonDisplayName(aluno), [aluno]);
+  const identityDocument = useMemo(() => resolveStudentIdentityDocument(aluno), [aluno]);
 
   const { data: fichaTemplate } = useQuery<any>({
     queryKey: ['ficha-cadastral-aluno-template', documentPolo?.id || 'shared'],
@@ -108,9 +113,11 @@ const FichaAlunoModal: React.FC<FichaAlunoModalProps> = ({ aluno, onClose }) => 
   const templateVariables = useMemo(() => ({
     '{{ALUNO_NOME}}': aluno?.nome || 'Não informado',
     '{{ALUNO_FOTO_URL}}': aluno?.foto || `https://ui-avatars.com/api/?name=${encodeURIComponent(aluno?.nome || 'Aluno')}&background=E0F2FE&color=2563EB&bold=true`,
-    '{{ALUNO_NOME_SOCIAL}}': aluno?.nomeSocial || aluno?.nome || 'Não informado',
+    '{{ALUNO_NOME_SOCIAL}}': displayName || 'Não informado',
     '{{ALUNO_CPF}}': formatCpf(aluno?.cpf) || 'Não informado',
-    '{{ALUNO_RG}}': aluno?.rg || 'Não informado',
+    '{{ALUNO_DOCUMENTO_TIPO}}': identityDocument.label || 'Não informado',
+    '{{ALUNO_TIPO_DOCUMENTO}}': identityDocument.label || 'Não informado',
+    '{{ALUNO_RG}}': identityDocument.number || 'Não informado',
     '{{ALUNO_TITULO_ELEITOR}}': aluno?.tituloEleitor || 'Não informado',
     '{{ALUNO_TITULO_ZONA}}': aluno?.tituloEleitorZona || 'Não informado',
     '{{ALUNO_TITULO_SECAO}}': aluno?.tituloEleitorSecao || 'Não informado',
@@ -139,7 +146,7 @@ const FichaAlunoModal: React.FC<FichaAlunoModalProps> = ({ aluno, onClose }) => 
     '{{LOCAL_DOCUMENTO}}': documentLocation,
     '{{DATA_ATUAL}}': new Date().toLocaleDateString(),
     '{{DATA_GERACAO}}': new Date().toLocaleString(),
-  }), [aluno, company?.cidade, company?.nomeFantasia, cursoLabel, documentLocation, documentPolo, enderecoCompleto, matriculaLabel, turmaLabel]);
+  }), [aluno, company?.cidade, company?.nomeFantasia, cursoLabel, displayName, documentLocation, documentPolo, enderecoCompleto, identityDocument, matriculaLabel, turmaLabel]);
 
   const parseTemplate = (content = '') => Object.entries(templateVariables).reduce(
     (text, [key, value]) => text.split(key).join(String(value || '')),
@@ -360,15 +367,15 @@ const FichaAlunoModal: React.FC<FichaAlunoModalProps> = ({ aluno, onClose }) => 
               <div className="grid grid-cols-3 gap-y-3 gap-x-6 bg-white/[0.68] p-3 rounded-xl border border-slate-200 print:bg-white/[0.68]">
                 <div className="col-span-3">
                   <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Nome Social</p>
-                  <p className="text-xs font-bold text-slate-800">{aluno?.nomeSocial || 'Não informado'}</p>
+                  <p className="text-xs font-bold text-slate-800">{displayName || 'Não informado'}</p>
                 </div>
                 <div className="col-span-1">
                   <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">CPF</p>
                   <p className="text-xs font-bold text-slate-800">{aluno?.cpf || '000.000.000-00'}</p>
                 </div>
                 <div className="col-span-1">
-                  <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">RG</p>
-                  <p className="text-xs font-bold text-slate-800">{aluno?.rg || '0000000'}</p>
+                  <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{identityDocument.label || 'Documento'}</p>
+                  <p className="text-xs font-bold text-slate-800">{identityDocument.number || 'Não informado'}</p>
                 </div>
                 <div className="col-span-1">
                   <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Data de Nascimento</p>
@@ -472,28 +479,7 @@ const FichaAlunoModal: React.FC<FichaAlunoModalProps> = ({ aluno, onClose }) => 
         </div>
       </div>
       
-      <style>{`
-        @media print {
-          body * {
-            visibility: hidden;
-          }
-          #print-area, #print-area * {
-            visibility: visible;
-          }
-          #print-area {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-          .ficha-template-content * {
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-        }
-      `}</style>
+      <FichaAlunoPrintStyles />
     </div>
   );
 };

@@ -385,8 +385,8 @@ export const historicoEmissoesService = {
       .select(`
         *,
         aluno:parceiros(
-          id, nome, cpf_cnpj, rg, data_nascimento, foto_url, sexo,
-          nacionalidade, naturalidade, orgao_emissor, titulo_eleitor, titulo_eleitor_zona,
+          id, nome, cpf_cnpj, rg, tipo_documento, rg_uf_emissao, rg_data_emissao,
+          data_nascimento, foto_url, sexo, nacionalidade, naturalidade, orgao_emissor, titulo_eleitor, titulo_eleitor_zona,
           titulo_eleitor_secao, titulo_eleitor_data_emissao, titulo_eleitor_uf, reservista,
           nome_mae, nome_pai, escola_ensino_medio, ano_conclusao_ensino_medio
         ),

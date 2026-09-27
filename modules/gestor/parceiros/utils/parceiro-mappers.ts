@@ -1,6 +1,7 @@
 import { dateBrToDb, dateDbToBr } from './date-utils';
 import { ESTANCIA_LEGACY_POLO_ID, MATRIZ_POLO_ID, UUID_RE } from './parceiros.constants';
 import { uppercaseAlunoTextFields } from './aluno-formatters';
+import { normalizeTechnicalDocumentType } from '../../../shared/utils/technicalEnrollmentRequirements';
 
 const uniqueTruthy = <T,>(values: Array<T | null | undefined>) =>
   Array.from(new Set(values.filter(Boolean) as T[]));
@@ -83,7 +84,7 @@ export function toCamel(s: any) {
     sexo: s.sexo,
     racaCor: s.raca_cor,
     rg: s.rg,
-    tipoDocumento: s.tipo_documento || 'CARTEIRA NACIONAL DE IDENTIFICAÇÃO',
+    tipoDocumento: normalizeTechnicalDocumentType(s.tipo_documento),
     orgaoEmissor: s.orgao_emissor,
     rgUfEmissao: s.rg_uf_emissao,
     rgDataEmissao: dateDbToBr(s.rg_data_emissao),
@@ -94,7 +95,12 @@ export function toCamel(s: any) {
     certidaoLivro: s.certidao_livro,
     certidaoFolha: s.certidao_folha,
     nacionalidade: s.nacionalidade,
+    nacionalidadeCodigoIso3: s.nacionalidade_codigo_iso3,
     naturalidade: s.naturalidade,
+    naturalidadeCodigoIbge: s.naturalidade_codigo_ibge
+      ? String(s.naturalidade_codigo_ibge)
+      : '',
+    naturalidadeUf: s.naturalidade_uf,
     tituloEleitor: s.titulo_eleitor,
     tituloEleitorZona: s.titulo_eleitor_zona,
     tituloEleitorSecao: s.titulo_eleitor_secao,
@@ -166,6 +172,13 @@ export function toSnake(c: any) {
   if (!c) return null;
 
   const source = c.tipo === 'Aluno' ? uppercaseAlunoTextFields(c) : c;
+  const documentType = normalizeTechnicalDocumentType(
+    source.tipoDocumento || source.tipo_documento,
+  );
+  const nationality = source.nacionalidade || 'BRASILEIRA';
+  const nationalityCode = source.nacionalidadeCodigoIso3
+    || source.nacionalidade_codigo_iso3
+    || (/^BRASILEIR(?:A|O(?:\s*\(A\))?)$/i.test(nationality.trim()) ? 'BRA' : null);
 
   const poloId = resolvePoloId(source);
   const poloIds = uniqueTruthy<string>([
@@ -194,11 +207,7 @@ export function toSnake(c: any) {
     sexo: source.sexo || null,
     raca_cor: source.racaCor || source.raca_cor || null,
     rg: source.rg || null,
-    tipo_documento: source.tipoDocumento || source.tipo_documento || (
-      source.tipo === 'Aluno' && source.matricularAgora === false
-        ? null
-        : 'CARTEIRA NACIONAL DE IDENTIFICAÇÃO'
-    ),
+    tipo_documento: documentType || null,
     orgao_emissor: source.orgaoEmissor || null,
     rg_uf_emissao: source.rgUfEmissao || null,
     rg_data_emissao: dateBrToDb(source.rgDataEmissao),
@@ -208,8 +217,14 @@ export function toSnake(c: any) {
     certidao_termo: source.certidaoTermo || source.certidao_termo || null,
     certidao_livro: source.certidaoLivro || source.certidao_livro || null,
     certidao_folha: source.certidaoFolha || source.certidao_folha || null,
-    nacionalidade: source.nacionalidade || 'BRASILEIRA',
+    nacionalidade: nationality,
+    nacionalidade_codigo_iso3: nationalityCode,
     naturalidade: source.naturalidade || null,
+    naturalidade_codigo_ibge:
+      source.naturalidadeCodigoIbge || source.naturalidade_codigo_ibge
+        ? Number(source.naturalidadeCodigoIbge || source.naturalidade_codigo_ibge)
+        : null,
+    naturalidade_uf: source.naturalidadeUf || source.naturalidade_uf || null,
     titulo_eleitor: source.tituloEleitor || null,
     titulo_eleitor_zona: source.tituloEleitorZona || source.titulo_eleitor_zona || null,
     titulo_eleitor_secao: source.tituloEleitorSecao || source.titulo_eleitor_secao || null,

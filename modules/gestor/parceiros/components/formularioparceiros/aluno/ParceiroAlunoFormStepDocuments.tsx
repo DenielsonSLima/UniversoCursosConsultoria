@@ -1,7 +1,12 @@
 import type React from 'react';
 import { AlertCircle, Shield } from 'lucide-react';
 
-import { TECHNICAL_DOCUMENT_TYPE_OPTIONS } from '../../../../../shared/utils/technicalEnrollmentRequirements';
+import {
+  isCinDocumentType,
+  isCnhDocumentType,
+  isLegacyRgDocumentType,
+  TECHNICAL_DOCUMENT_TYPE_OPTIONS,
+} from '../../../../../shared/utils/technicalEnrollmentRequirements';
 import {
   CERTIDAO_CIVIL_MODEL_OPTIONS,
   CERTIDAO_CIVIL_TYPE_OPTIONS,
@@ -9,7 +14,12 @@ import {
 import { INPUT_CLS, LABEL_CLS, sectionHeaderCls, UFS } from './parceiro-aluno-form.constants';
 import type { AlunoFormStepProps } from './parceiro-aluno-form.types';
 
-const ParceiroAlunoFormStepDocuments: React.FC<AlunoFormStepProps> = ({ formData, onChange }) => (
+const ParceiroAlunoFormStepDocuments: React.FC<AlunoFormStepProps> = ({ formData, onChange }) => {
+  const isCin = isCinDocumentType(formData.tipoDocumento);
+  const isCnh = isCnhDocumentType(formData.tipoDocumento);
+  const isLegacyRg = isLegacyRgDocumentType(formData.tipoDocumento);
+
+  return (
   <div className="space-y-5 ">
     <div className={sectionHeaderCls('indigo')}>
       <Shield size={16} />
@@ -17,7 +27,7 @@ const ParceiroAlunoFormStepDocuments: React.FC<AlunoFormStepProps> = ({ formData
     </div>
 
     <div className="rounded-2xl border border-indigo-100 bg-indigo-50 p-4 text-xs font-medium leading-relaxed text-indigo-800">
-      Esta etapa é opcional no cadastro inicial. Preencha agora somente se já tiver os dados; eles serão exigidos ao iniciar uma matrícula em curso técnico.
+      Esta etapa é opcional e não bloqueia a ativação acadêmica. Se o documento for a CIN, o número oficial é o próprio CPF do aluno.
     </div>
 
     <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -31,31 +41,65 @@ const ParceiroAlunoFormStepDocuments: React.FC<AlunoFormStepProps> = ({ formData
         </select>
       </div>
 
-      <div className="md:col-span-2">
-        <label className={LABEL_CLS}>Número do Documento</label>
-        <input type="text" name="rg" value={formData.rg} onChange={onChange}
-          className={INPUT_CLS} placeholder="Número do documento de identificação" />
-      </div>
+      {isCin ? (
+        <div className="md:col-span-3">
+          <label className={LABEL_CLS}>Número da CIN (CPF)</label>
+          <input
+            type="text"
+            value={formData.cpf}
+            readOnly
+            aria-readonly="true"
+            className={`${INPUT_CLS} cursor-not-allowed bg-slate-100 font-mono`}
+          />
+          <p className="mt-1 ml-0.5 text-[10px] text-slate-400">
+            A Carteira de Identidade Nacional usa o CPF como número único. Não informe um RG separado.
+          </p>
+        </div>
+      ) : null}
 
-      <div>
-        <label className={LABEL_CLS}>Órgão Emissor</label>
-        <input type="text" name="orgaoEmissor" value={formData.orgaoEmissor} onChange={onChange}
-          className={INPUT_CLS} placeholder="SSP, IFP, DETRAN..." />
-      </div>
+      {isCnh ? (
+        <div className="md:col-span-3">
+          <label className={LABEL_CLS}>Número de Registro da CNH</label>
+          <input type="text" name="rg" value={formData.rg} onChange={onChange}
+            className={INPUT_CLS} placeholder="Número de registro da CNH" />
+        </div>
+      ) : null}
 
-      <div>
-        <label className={LABEL_CLS}>UF Emissão</label>
-        <select name="rgUfEmissao" value={formData.rgUfEmissao} onChange={onChange} className={INPUT_CLS}>
-          <option value="">UF</option>
-          {UFS.map((uf) => <option key={uf} value={uf}>{uf}</option>)}
-        </select>
-      </div>
+      {isLegacyRg ? (
+        <>
+          <div className="md:col-span-2">
+            <label className={LABEL_CLS}>Número do RG Antigo</label>
+            <input type="text" name="rg" value={formData.rg} onChange={onChange}
+              className={INPUT_CLS} placeholder="Número do RG" />
+          </div>
 
-      <div>
-        <label className={LABEL_CLS}>Data de Emissão do Documento</label>
-        <input type="text" name="rgDataEmissao" value={formData.rgDataEmissao} onChange={onChange}
-          maxLength={10} className={INPUT_CLS} placeholder="DD/MM/AAAA" />
-      </div>
+          <div>
+            <label className={LABEL_CLS}>Órgão Emissor</label>
+            <input type="text" name="orgaoEmissor" value={formData.orgaoEmissor} onChange={onChange}
+              className={INPUT_CLS} placeholder="SSP, IFP..." />
+          </div>
+
+          <div>
+            <label className={LABEL_CLS}>UF Emissão</label>
+            <select name="rgUfEmissao" value={formData.rgUfEmissao} onChange={onChange} className={INPUT_CLS}>
+              <option value="">UF</option>
+              {UFS.map((uf) => <option key={uf} value={uf}>{uf}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label className={LABEL_CLS}>Data de Emissão do RG</label>
+            <input type="text" name="rgDataEmissao" value={formData.rgDataEmissao} onChange={onChange}
+              maxLength={10} className={INPUT_CLS} placeholder="DD/MM/AAAA" />
+          </div>
+        </>
+      ) : null}
+
+      {!formData.tipoDocumento ? (
+        <p className="md:col-span-3 text-[10px] font-medium text-slate-400">
+          Selecione um tipo apenas quando tiver o documento em mãos.
+        </p>
+      ) : null}
 
       <div className="md:col-span-3"><div className="h-px bg-slate-100 my-1" /></div>
 
@@ -170,10 +214,11 @@ const ParceiroAlunoFormStepDocuments: React.FC<AlunoFormStepProps> = ({ formData
     <div className="bg-indigo-50 rounded-2xl p-4 border border-indigo-100 flex items-start gap-3">
       <AlertCircle size={16} className="text-indigo-400 mt-0.5 flex-shrink-0" />
       <p className="text-xs text-indigo-700 font-medium leading-relaxed">
-        Na matrícula em curso técnico, a identificação acadêmica deve ser feita com <strong>CIN</strong>, <strong>CNH</strong> ou <strong>RG</strong>. A certidão civil pode ser de <strong>nascimento</strong> ou <strong>casamento</strong>; documentos no modelo antigo permanecem aceitos. Os originais serão solicitados na conferência documental.
+        A identificação pode ser feita com <strong>CIN</strong>, <strong>CNH</strong> ou <strong>RG antigo</strong>. A certidão civil pode ser de <strong>nascimento</strong> ou <strong>casamento</strong>; documentos no modelo antigo permanecem aceitos. Os originais serão solicitados apenas na conferência documental.
       </p>
     </div>
   </div>
-);
+  );
+};
 
 export default ParceiroAlunoFormStepDocuments;

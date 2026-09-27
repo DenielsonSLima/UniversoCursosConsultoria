@@ -145,7 +145,7 @@ const EmissionDocumentPages: React.FC<EmissionDocumentPagesProps> = ({
               aluno={{
                 nome: emission.dados_emissao?.studentName || emission.aluno?.nome || '',
                 cpf: emission.dados_emissao?.studentCpf || emission.aluno?.cpf_cnpj || '',
-                rg: emission.aluno?.rg || '',
+                rg: cardStudent.rg,
                 matricula: emission.dados_emissao?.studentMatricula || '',
                 cargo: 'ESTUDANTE',
                 polo: emission.dados_emissao?.unitName || '',

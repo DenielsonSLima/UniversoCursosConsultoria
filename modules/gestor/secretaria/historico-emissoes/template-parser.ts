@@ -3,6 +3,7 @@ import { formatCpf } from '../../../../lib/documentFormatters';
 import { escapeHtmlText } from '../../../../lib/htmlSanitizer';
 import { formatCep } from '../../../shared/utils/brazilianCep';
 import { amountInWords } from '../../../shared/secretaria/document-template.helpers';
+import { resolveStudentIdentityDocument } from '../../../shared/utils/studentIdentityDocument';
 import type { AcademicPreviewData, EmissionLog } from './historico-emissoes.types';
 import { snapshotFirst } from './voter-snapshot';
 import {
@@ -60,6 +61,9 @@ export const parseEmissionTemplate = (
     ? `${String(expiresAt.getDate()).padStart(2, '0')}/${String(expiresAt.getMonth() + 1).padStart(2, '0')}/${expiresAt.getFullYear()}`
     : 'Sem vencimento';
   const emissionData = data.dados_emissao || {};
+  const liveIdentity = resolveStudentIdentityDocument(data.aluno);
+  const documentType = emissionData.studentDocumentType || liveIdentity.label || '';
+  const documentNumber = emissionData.studentRg || liveIdentity.number || '';
   const academicData = [
     'boletim',
     'atestado_conclusao_tecnico',
@@ -155,10 +159,10 @@ export const parseEmissionTemplate = (
       /{{ALUNO_FOTO_URL}}/g,
       emissionData.studentPhotoUrl || data.aluno?.foto_url || '/sem-foto-aluno.svg',
     ],
-    [/{{ALUNO_NOME_SOCIAL}}/g, emissionData.studentSocialName || 'Não informado'],
+    [/{{ALUNO_NOME_SOCIAL}}/g, emissionData.studentSocialName || emissionData.studentName || data.aluno?.nome || 'Não informado'],
     [/{{ALUNO_CPF}}/g, formatCpf(emissionData.studentCpf || data.aluno?.cpf_cnpj) || 'Não informado'],
-    [/{{ALUNO_DOCUMENTO_TIPO}}/g, 'RG'],
-    [/{{ALUNO_RG}}/g, emissionData.studentRg || data.aluno?.rg || 'Não informado'],
+    [/{{ALUNO_DOCUMENTO_TIPO}}/g, documentType || 'Não informado'],
+    [/{{ALUNO_RG}}/g, documentNumber || 'Não informado'],
     [/{{ALUNO_NASCIMENTO}}/g, formatDate(emissionData.studentBirthDate || data.aluno?.data_nascimento)],
     [/{{ALUNO_SEXO}}/g, emissionData.studentSex || data.aluno?.sexo || '—'],
     [/{{ALUNO_ESTADO_CIVIL}}/g, emissionData.studentMaritalStatus || 'Não informado'],
@@ -179,10 +183,10 @@ export const parseEmissionTemplate = (
     [/{{ALUNO_CIDADE}}/g, emissionData.studentCity || 'Não informada'],
     [/{{ALUNO_UF}}/g, emissionData.studentState || '—'],
     [/{{ALUNO_CEP}}/g, formatCep(emissionData.studentZipCode) || 'Não informado'],
-    [/{{ALUNO_TIPO_DOCUMENTO}}/g, emissionData.studentDocumentType || 'RG'],
-    [/{{ALUNO_RG_ORGAO}}/g, emissionData.studentRgIssuer || data.aluno?.orgao_emissor || '—'],
-    [/{{ALUNO_RG_UF}}/g, emissionData.studentRgState || '—'],
-    [/{{ALUNO_RG_EMISSAO}}/g, formatDate(emissionData.studentRgIssueDate)],
+    [/{{ALUNO_TIPO_DOCUMENTO}}/g, documentType || 'Não informado'],
+    [/{{ALUNO_RG_ORGAO}}/g, snapshotFirst(emissionData, 'studentRgIssuer', liveIdentity.issuer) || '—'],
+    [/{{ALUNO_RG_UF}}/g, snapshotFirst(emissionData, 'studentRgState', liveIdentity.state) || '—'],
+    [/{{ALUNO_RG_EMISSAO}}/g, formatDate(snapshotFirst(emissionData, 'studentRgIssueDate', liveIdentity.issueDate))],
     [
       /{{ALUNO_TITULO_ELEITOR}}/g,
       formatRegistrationVoterId(snapshotFirst(emissionData, 'studentVoterId', data.aluno?.titulo_eleitor)) || '—',
@@ -292,8 +296,8 @@ export const parseEmissionTemplate = (
   return replacements.reduce(
     (parsed, [pattern, value]) => parsed.replace(pattern, value),
     replaceRegistrationIssuerState(htmlText, formatRegistrationIssuerState(
-      snapshotFirst(emissionData, 'studentRgIssuer', data.aluno?.orgao_emissor),
-      snapshotFirst(emissionData, 'studentRgState', ''),
+      snapshotFirst(emissionData, 'studentRgIssuer', liveIdentity.issuer),
+      snapshotFirst(emissionData, 'studentRgState', liveIdentity.state),
     ) || '—')
   );
 };

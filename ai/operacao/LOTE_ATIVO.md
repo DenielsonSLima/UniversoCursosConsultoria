@@ -2,12 +2,12 @@
 
 Estado: VALIDADO — PUBLICAÇÃO EM PRODUÇÃO AUTORIZADA
 
-## Lote: 2026-09-27-despesas-fixas-tabela-exclusao
+## Lote: 2026-09-27-identidade-naturalidade-cin
 
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-27-despesas-fixas-tabela-exclusao.md`
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-27-identidade-naturalidade-cin.md`
 
-- Tabela de despesas sem rolagem horizontal, com descrição integral, duas faixas de informação e cores alternadas.
-- Ações Editar, Dar baixa, Prévia, Excluir e Estornar permanecem visíveis no próprio registro.
-- Seleção individual ou em lote exclui somente pendentes/vencidos, sem justificativa manual e com auditoria idempotente.
-- Modais financeiros usam portal no viewport para não ficarem presos ao contêiner animado.
-- Produção autorizada explicitamente pelo usuário nesta conversa; publicar a versão 4.8.118 e confirmar o smoke de interface.
+- Naturalidade e nacionalidade usam combobox editável, sugestões oficiais e texto livre.
+- Nome social vazio usa o nome completo apenas na exibição e nos documentos.
+- CIN usa o CPF; RG, CNH e registros legados são preservados sem reclassificação automática.
+- Ensino Médio, EJA e documentos permanecem informativos e sem bloqueio acadêmico.
+- Produção autorizada explicitamente pelo usuário nesta conversa; publicar a versão 4.8.119 após três pareceres finais favoráveis e confirmar o smoke.

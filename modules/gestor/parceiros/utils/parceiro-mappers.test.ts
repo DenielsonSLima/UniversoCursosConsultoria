@@ -148,6 +148,62 @@ test('mantém a documentação técnica pendente no cadastro inicial de aluno', 
   assert.equal(payload.certidao_folha, null);
 });
 
+test('não presume CIN quando o tipo de documento está vazio', () => {
+  const aluno = toCamel({
+    id: 'student-no-document',
+    tipo: 'Aluno',
+    nome: 'Aluno sem Documento',
+    tipo_documento: null,
+  });
+  const payload = toSnake({
+    tipo: 'Aluno',
+    nomeCompleto: 'Aluno sem Documento',
+    tipoDocumento: '',
+  });
+
+  assert.equal(aluno.tipoDocumento, '');
+  assert.equal(payload.tipo_documento, null);
+});
+
+test('padroniza CIN explícita e preserva o default ambíguo, RG e CNH', () => {
+  assert.equal(toCamel({ tipo: 'Aluno', tipo_documento: 'CNI' }).tipoDocumento, 'CARTEIRA DE IDENTIDADE NACIONAL');
+  assert.equal(toSnake({ tipo: 'Aluno', tipoDocumento: 'CARTEIRA NACIONAL DE IDENTIFICAÇÃO' }).tipo_documento, 'CARTEIRA NACIONAL DE IDENTIFICAÇÃO');
+  assert.equal(toSnake({ tipo: 'Aluno', tipoDocumento: 'RG' }).tipo_documento, 'RG (ANTIGO)');
+  assert.equal(toSnake({ tipo: 'Aluno', tipoDocumento: 'CNH' }).tipo_documento, 'CNH');
+});
+
+test('preserva texto e referências padronizadas de nacionalidade e naturalidade', () => {
+  const payload = toSnake({
+    tipo: 'Aluno',
+    nomeCompleto: 'Aluno de Teste',
+    nacionalidade: 'BRASILEIRA',
+    nacionalidadeCodigoIso3: 'BRA',
+    naturalidade: 'NEÓPOLIS/SE',
+    naturalidadeCodigoIbge: '2804409',
+    naturalidadeUf: 'SE',
+  });
+  const aluno = toCamel({
+    tipo: 'Aluno',
+    nome: 'Aluno de Teste',
+    nacionalidade: payload.nacionalidade,
+    nacionalidade_codigo_iso3: payload.nacionalidade_codigo_iso3,
+    naturalidade: payload.naturalidade,
+    naturalidade_codigo_ibge: payload.naturalidade_codigo_ibge,
+    naturalidade_uf: payload.naturalidade_uf,
+  });
+
+  assert.equal(payload.nacionalidade_codigo_iso3, 'BRA');
+  assert.equal(payload.naturalidade_codigo_ibge, 2804409);
+  assert.equal(payload.naturalidade_uf, 'SE');
+  assert.equal(aluno.nacionalidadeCodigoIso3, 'BRA');
+  assert.equal(aluno.naturalidadeCodigoIbge, '2804409');
+  assert.equal(aluno.naturalidadeUf, 'SE');
+
+  const defaultNationality = toSnake({ tipo: 'Aluno', nomeCompleto: 'Novo Aluno' });
+  assert.equal(defaultNationality.nacionalidade, 'BRASILEIRA');
+  assert.equal(defaultNationality.nacionalidade_codigo_iso3, 'BRA');
+});
+
 test('grava aluno e parceiro PF no polo ativo recebido pelo formulário', () => {
   const poloAtivo = '11111111-1111-4111-8111-111111111111';
 

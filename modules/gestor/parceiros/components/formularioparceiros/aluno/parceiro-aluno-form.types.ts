@@ -12,7 +12,10 @@ export interface AlunoFormData {
   racaCor: string;
   estadoCivil: string;
   nacionalidade: string;
+  nacionalidadeCodigoIso3: string;
   naturalidade: string;
+  naturalidadeCodigoIbge: string;
+  naturalidadeUf: string;
   pcd: boolean;
   pcdTipo: string;
   tipoDocumento: string;
@@ -59,6 +62,14 @@ export interface AlunoFormData {
   contato2: string;
   observacao: string;
 }
+
+export type AlunoCatalogPatch = Partial<Pick<AlunoFormData,
+  | 'nacionalidade'
+  | 'nacionalidadeCodigoIso3'
+  | 'naturalidade'
+  | 'naturalidadeCodigoIbge'
+  | 'naturalidadeUf'
+>>;
 
 export type AlunoFormChangeHandler = (
   event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,

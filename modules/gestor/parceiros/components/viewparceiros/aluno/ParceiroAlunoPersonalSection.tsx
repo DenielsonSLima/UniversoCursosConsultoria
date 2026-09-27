@@ -2,6 +2,14 @@ import type React from 'react';
 import { Camera, Loader2, User } from 'lucide-react';
 
 import { formatCpf } from '../../../../../../lib/documentFormatters';
+import {
+  MUNICIPALITY_FALLBACK_OPTIONS,
+  NATIONALITY_FALLBACK_OPTIONS,
+  searchMunicipalityCatalog,
+  searchNationalityCatalog,
+} from '../../../../../shared/catalogs/person-reference-catalog.service';
+import EditableCombobox from '../../../../../shared/components/EditableCombobox';
+import { getPersonDisplayName } from '../../../../../shared/utils/personDisplayName';
 import { RACA_COR_OPTIONS } from '../../../utils/parceiros.constants';
 import ParceiroAlunoDisplayField from './ParceiroAlunoDisplayField';
 
@@ -12,7 +20,7 @@ interface PersonalSectionProps {
   onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
   onPhotoUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onRemovePhoto: () => void;
-  onUseFullName: () => void;
+  onCatalogPatch: (patch: Record<string, string>) => void;
 }
 
 const ParceiroAlunoPersonalSection: React.FC<PersonalSectionProps> = ({
@@ -22,7 +30,7 @@ const ParceiroAlunoPersonalSection: React.FC<PersonalSectionProps> = ({
   onChange,
   onPhotoUpload,
   onRemovePhoto,
-  onUseFullName,
+  onCatalogPatch,
 }) => (
   <div id="aluno-pessoais" className="flex flex-col md:flex-row gap-5 scroll-mt-28">
     <div className="flex flex-col items-start md:items-center gap-2 shrink-0">
@@ -73,12 +81,9 @@ const ParceiroAlunoPersonalSection: React.FC<PersonalSectionProps> = ({
             <div className="md:col-span-1 space-y-1.5">
               <label htmlFor="aluno-nomeSocial" className="block text-xs font-medium text-slate-600">Nome social</label>
               <input id="aluno-nomeSocial" type="text" name="nomeSocial" value={formData.nomeSocial || ''} onChange={onChange} className="w-full min-h-11 sm:min-h-10 px-3 py-2 text-base sm:text-sm bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:border-blue-500 outline-none" placeholder="Informe, se houver" aria-describedby="aluno-nome-social-ajuda" />
-              <div className="flex items-center justify-between gap-2">
-                <p id="aluno-nome-social-ajuda" className="text-xs text-slate-500">Preencha apenas quando houver nome social.</p>
-                <button type="button" onClick={onUseFullName} className="min-h-11 shrink-0 rounded-lg px-2 text-xs font-medium text-blue-600 hover:underline focus-visible:ring-2 focus-visible:ring-blue-500">
-                  Copiar nome
-                </button>
-              </div>
+              <p id="aluno-nome-social-ajuda" className="text-xs leading-relaxed text-slate-500">
+                Opcional. Se ficar vazio, o nome completo será usado automaticamente na exibição, sem ser copiado para este campo.
+              </p>
             </div>
             <div className="space-y-1.5">
               <label htmlFor="aluno-cpf" className="block text-xs font-medium text-slate-600">CPF</label>
@@ -117,16 +122,51 @@ const ParceiroAlunoPersonalSection: React.FC<PersonalSectionProps> = ({
               </select>
               <p id="aluno-status-ajuda" className="text-xs text-slate-500">Situação da pessoa no cadastro. O vínculo acadêmico é gerenciado em Matrículas.</p>
             </div>
+            <div className="space-y-1.5">
+              <label htmlFor="aluno-nacionalidade" className="block text-xs font-medium text-slate-600">Nacionalidade</label>
+              <EditableCombobox
+                id="aluno-nacionalidade"
+                name="nacionalidade"
+                value={formData.nacionalidade || ''}
+                options={NATIONALITY_FALLBACK_OPTIONS}
+                loadOptions={searchNationalityCatalog}
+                onValueChange={(value, option) => onCatalogPatch({
+                  nacionalidade: value.toLocaleUpperCase('pt-BR'),
+                  nacionalidadeCodigoIso3: option?.metadata?.codigoIso3 || '',
+                })}
+                className="w-full min-h-11 sm:min-h-10 px-3 py-2 text-base sm:text-sm bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
+                placeholder="Digite para buscar ou informar livremente"
+              />
+            </div>
+            <div className="space-y-1.5 lg:col-span-2">
+              <label htmlFor="aluno-naturalidade" className="block text-xs font-medium text-slate-600">Naturalidade (Cidade/UF)</label>
+              <EditableCombobox
+                id="aluno-naturalidade"
+                name="naturalidade"
+                value={formData.naturalidade || ''}
+                options={MUNICIPALITY_FALLBACK_OPTIONS}
+                loadOptions={searchMunicipalityCatalog}
+                onValueChange={(value, option) => onCatalogPatch({
+                  naturalidade: value.toLocaleUpperCase('pt-BR'),
+                  naturalidadeCodigoIbge: option?.metadata?.codigoIbge || '',
+                  naturalidadeUf: option?.metadata?.uf || '',
+                })}
+                className="w-full min-h-11 sm:min-h-10 px-3 py-2 text-base sm:text-sm bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
+                placeholder="Digite a cidade para ver sugestões"
+              />
+            </div>
           </>
         ) : (
           <>
             <div className="md:col-span-2"><ParceiroAlunoDisplayField label="Nome Completo" value={formData.nome} /></div>
-            <ParceiroAlunoDisplayField label="Nome Social" value={formData.nomeSocial} />
+            <ParceiroAlunoDisplayField label="Nome de exibição" value={getPersonDisplayName(formData)} />
             <ParceiroAlunoDisplayField label="CPF" value={formatCpf(formData.cpf)} />
             <ParceiroAlunoDisplayField label="Data de Nascimento" value={formData.dataNascimento} />
             <ParceiroAlunoDisplayField label="Sexo" value={formData.sexo} />
             <ParceiroAlunoDisplayField label="Raça/Cor" value={formData.racaCor} />
             <ParceiroAlunoDisplayField label="Situação do cadastro" value={formData.status || 'ATIVO'} />
+            <ParceiroAlunoDisplayField label="Nacionalidade" value={formData.nacionalidade} />
+            <div className="lg:col-span-2"><ParceiroAlunoDisplayField label="Naturalidade" value={formData.naturalidade} /></div>
           </>
         )}
       </div>

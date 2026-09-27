@@ -32,7 +32,10 @@ export interface PerfilUpdatePayload {
   sexo: string;
   estadoCivil: string;
   nacionalidade: string;
+  nacionalidadeCodigoIso3: string;
   naturalidade: string;
+  naturalidadeCodigoIbge: string;
+  naturalidadeUf: string;
   tipoDocumento: string;
   rg: string;
   orgaoEmissor: string;

@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-09-27T13:55:18.284Z",
+  "builtAt": "2026-09-27T14:32:12.438Z",
   "manifestVersion": 2,
-  "sourceSignature": "15722ba8ce646f648b6d9f21566077eecfefb3a3ad016d67efc08fe8d6b3d92c",
+  "sourceSignature": "0c24848b9d1e38e6e6e4b4581f43e6adbecbc594419e3d51e38c0b55205deeee",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "69a7b93bd9b475be8cd0cab62ccddd39de80a7245d3837d9bb05eb33e540cd56"
+      "hash": "efe3f945a04011a263a99fb79023a0d19d4c2b697dd155d6d6b99cfa4d87f534"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -210,23 +210,23 @@
       "part": 1
     },
     {
-      "id": "48ebc8cb08fa5c269b1b",
-      "hash": "48ebc8cb08fa5c269b1bb9b51678d6c07aa2926038860ada726fd01ca7086a2d",
+      "id": "d413908fff5c6ee69f22",
+      "hash": "d413908fff5c6ee69f2258b3b26e390d2c792001c45cbfca3e361f7c6728eb9f",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-09-27-despesas-fixas-tabela-exclusao",
-      "text": "Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-27-despesas-fixas-tabela-exclusao.md`",
-      "normalizedText": "manifesto explicito ai operacao registros alteracoes 2026 09 27 despesas fixas tabela exclusao md",
-      "tokenCount": 14,
+      "section": "Lote: 2026-09-27-identidade-naturalidade-cin",
+      "text": "Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-27-identidade-naturalidade-cin.md`",
+      "normalizedText": "manifesto explicito ai operacao registros alteracoes 2026 09 27 identidade naturalidade cin md",
+      "tokenCount": 13,
       "part": 1
     },
     {
-      "id": "be5e109bf4c5a5b85608",
-      "hash": "be5e109bf4c5a5b85608664a0ce7de554a5610ec8016545cab3bd9db78364130",
+      "id": "e21f4ab1144a8f4e4810",
+      "hash": "e21f4ab1144a8f4e4810f016e9de0f3f1e27f29c0db53869e8effeae4b6180ee",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-09-27-despesas-fixas-tabela-exclusao",
-      "text": "- Tabela de despesas sem rolagem horizontal, com descrição integral, duas faixas de informação e cores alternadas. - Ações Editar, Dar baixa, Prévia, Excluir e Estornar permanecem visíveis no próprio registro. - Seleção individual ou em lote exclui somente pendentes/vencidos, sem justificativa manual e com auditoria idempotente. - Modais financeiros usam portal no viewport para não ficarem presos ao contêiner animado. - Produção autorizada explicitamente pelo usuário nesta conversa; publicar a versão 4.8.118 e confirmar o smoke de interface.",
-      "normalizedText": "tabela de despesas sem rolagem horizontal com descricao integral duas faixas de informacao e cores alternadas acoes editar dar baixa previa excluir e estornar permanecem visiveis no proprio registro selecao individual ou em lote exclui somente pendentes vencidos sem justificativa manual e com auditoria idempotente modais financeiros usam portal no viewport para nao ficarem presos ao conteiner animado producao autorizada explicitamente pelo usuario nesta conversa publicar a versao 4 8 118 e confirmar o smoke de interface",
-      "tokenCount": 69,
+      "section": "Lote: 2026-09-27-identidade-naturalidade-cin",
+      "text": "- Naturalidade e nacionalidade usam combobox editável, sugestões oficiais e texto livre. - Nome social vazio usa o nome completo apenas na exibição e nos documentos. - CIN usa o CPF; RG, CNH e registros legados são preservados sem reclassificação automática. - Ensino Médio, EJA e documentos permanecem informativos e sem bloqueio acadêmico. - Produção autorizada explicitamente pelo usuário nesta conversa; publicar a versão 4.8.119 após três pareceres finais favoráveis e confirmar o smoke.",
+      "normalizedText": "naturalidade e nacionalidade usam combobox editavel sugestoes oficiais e texto livre nome social vazio usa o nome completo apenas na exibicao e nos documentos cin usa o cpf rg cnh e registros legados sao preservados sem reclassificacao automatica ensino medio eja e documentos permanecem informativos e sem bloqueio academico producao autorizada explicitamente pelo usuario nesta conversa publicar a versao 4 8 119 apos tres pareceres finais favoraveis e confirmar o smoke",
+      "tokenCount": 58,
       "part": 1
     },
     {
