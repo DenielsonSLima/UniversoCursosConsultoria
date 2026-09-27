@@ -1,6 +1,6 @@
 # Memória canônica do projeto
 
-Atualizada em: 2026-09-24
+Atualizada em: 2026-09-27
 
 ## Finalidade
 
@@ -12,6 +12,7 @@ Este arquivo é um índice curto de contexto durável. Ajustes rápidos não pre
 - LOTE_ATIVO.md contém somente um lote corrente; históricos ficam em ai/operacao/registros/.
 - Um agente é o padrão. Delegação só ocorre para frentes independentes e materialmente úteis.
 - A validação deve exercer o fluxo real afetado antes de build ou suítes amplas.
+- Acesso remoto à interface, smoke autenticado e automação CUA deste projeto usam exclusivamente o Safari; nunca abrir nem automatizar o Google Chrome. Se o Safari não tiver uma sessão útil, registrar a pendência sem trocar de navegador.
 - Regras globais não são acrescentadas durante hotfix de produto.
 
 ## Arquitetura e qualidade
