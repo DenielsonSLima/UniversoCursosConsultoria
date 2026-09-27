@@ -17,7 +17,7 @@ export interface PerfilDocumento {
   observacao?: string | null;
 }
 
-export type PerfilSituacaoEnsinoMedio = '' | 'CURSANDO' | 'CONCLUIDO';
+export type PerfilSituacaoEnsinoMedio = '' | 'CURSANDO' | 'CONCLUIDO' | 'EJA';
 
 export interface PerfilUpdatePayload {
   telefone: string;

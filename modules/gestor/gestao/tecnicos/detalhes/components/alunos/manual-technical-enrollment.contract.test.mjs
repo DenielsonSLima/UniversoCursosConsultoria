@@ -107,7 +107,7 @@ test("handler rebaixa submissão manipulada e nunca ativa matrícula manual", ()
   );
   assert.match(hookSource, /if \(effectiveIntent !== ["']PENDENTE["']\)/);
   assert.match(hookSource, /if \(preLink\.cobrancaGerada\)/);
-  assert.match(hookSource, /Nenhuma cobrança ou agendamento foi criado/);
+  assert.match(hookSource, /financeiro pode ser concluído depois/);
   assert.match(turmaAlunosSource, /isManualTechnicalCycleContext/);
   assert.match(turmaAlunosSource, /const financialContext = canManageFinanceiro/);
   assert.match(turmaAlunosSource, /financialContext\s*\? isManualTechnicalCycleContext\(financialContext\)\s*:\s*true/);

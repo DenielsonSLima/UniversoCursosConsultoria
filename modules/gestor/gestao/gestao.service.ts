@@ -315,7 +315,8 @@ export const gestaoService = {
       ...mapped,
       alunosMatriculados: turma.alunosMatriculados,
       alunosAtivos: turma.alunosAtivos,
-      alunosInativos: turma.alunosInativos,
+      alunosPendentes: turma.alunosPendentes,
+      alunosSaidas: turma.alunosSaidas,
     };
   },
 

@@ -14,6 +14,7 @@ import {
 } from "../financeiro/matricula-tecnica-financeiro.service";
 import type { MatriculaTecnicaRegraIdentidade } from "../financeiro/matricula-tecnica-financeiro.types";
 import type { EnrollmentFinanceSubmission } from "./ConfirmarMatriculaModal";
+import { gestaoQueryKeys } from "../../../../gestao.query-keys";
 
 interface EnrollmentToast {
   error: (title: string, message: string) => void;
@@ -111,9 +112,20 @@ export const useTechnicalEnrollmentConfirmation = ({
         throw new Error("O pré-vínculo retornou uma cobrança inesperada.");
       }
       preLinkConfirmed = true;
-      await queryClient.invalidateQueries({
-        queryKey: academicLifecycleKeys.alunos(turmaId),
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: academicLifecycleKeys.alunos(turmaId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: gestaoQueryKeys.classesByModality("TECNICO"),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: gestaoQueryKeys.summaries(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: gestaoQueryKeys.activeClassesRoot(),
+        }),
+      ]);
 
       let effectiveMatricula = preLink.matricula;
       if (submission.override) {

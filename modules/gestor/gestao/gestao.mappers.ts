@@ -8,6 +8,19 @@ const normalizeStatus = (status?: string | null) => String(status || '')
   .trim();
 
 const EAD_ACTIVE_STATUSES = new Set(['ATIVO', 'CONCLUIDO']);
+const ENROLLMENT_PENDING_STATUSES = new Set([
+  'PENDENTE',
+  'AGUARDANDO_PAGAMENTO',
+  'AGUARDANDO_CONFIRMACAO',
+]);
+const ENROLLMENT_EXIT_STATUSES = new Set([
+  'TRANCADO',
+  'CANCELADO',
+  'CONCLUIDO',
+  'REPROVADO',
+  'DESISTENTE',
+  'TRANSFERIDO',
+]);
 
 type GestaoAcademicProgressRow = {
   turma_id: string;
@@ -48,12 +61,20 @@ const readCanonicalAcademicCount = (
 export const mapTurma = (t: any): Turma => {
   const matriculas = t.matriculas || [];
   const isEad = t.cursos?.modalidade === 'EAD';
+  const statuses = matriculas.map((matricula: any) => normalizeStatus(matricula.status));
+  const alunosAtivos = statuses.filter((status: string) => (
+    isEad ? EAD_ACTIVE_STATUSES.has(status) : status === 'ATIVO'
+  )).length;
+  const alunosPendentes = statuses.filter((status: string) => (
+    ENROLLMENT_PENDING_STATUSES.has(status)
+  )).length;
+  const alunosSaidas = statuses.filter((status: string) => (
+    ENROLLMENT_EXIT_STATUSES.has(status)
+    && !(isEad && EAD_ACTIVE_STATUSES.has(status))
+  )).length;
   const alunosMatriculados = isEad
-    ? matriculas.filter((m: any) => EAD_ACTIVE_STATUSES.has(normalizeStatus(m.status))).length
-    : matriculas.length;
-  const alunosAtivos = isEad
-    ? alunosMatriculados
-    : matriculas.filter((m: any) => m.status?.toUpperCase() === 'ATIVO').length;
+    ? alunosAtivos
+    : alunosAtivos + alunosPendentes;
 
   return {
     id: t.id,
@@ -85,7 +106,8 @@ export const mapTurma = (t: any): Turma => {
     status: t.status,
     alunosMatriculados,
     alunosAtivos,
-    alunosInativos: Math.max(0, matriculas.length - alunosAtivos),
+    alunosPendentes,
+    alunosSaidas,
     vagasTotais: t.vagas_totais,
     cobrarMatricula: t.cobrar_matricula ?? Number(t.valor_matricula || 0) > 0,
     valorMatricula: Number(t.valor_matricula),

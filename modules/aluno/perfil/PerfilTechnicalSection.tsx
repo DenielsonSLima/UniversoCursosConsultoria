@@ -18,7 +18,7 @@ const PerfilTechnicalSection: React.FC<Props> = ({ editing, form }) => (
       <IdCard size={14} className="text-blue-500" /> Dados complementares para cursos técnicos
     </h4>
     <p className="mb-4 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-[10px] font-semibold leading-relaxed text-blue-800">
-      Para curso técnico com inscrição online, informe sua situação atual no Ensino Médio, a escola e o ano de conclusão ou previsão de conclusão.
+      Os dados do Ensino Médio são informativos e podem ser atualizados depois. Se for o caso, selecione EJA.
     </p>
 
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -32,9 +32,13 @@ const PerfilTechnicalSection: React.FC<Props> = ({ editing, form }) => (
               form.setSituacaoEnsinoMedio(situation);
               if (situation === 'CURSANDO') {
                 form.setAnoConclusaoEnsinoMedio('');
+              } else if (situation === 'CONCLUIDO') {
+                form.setSerieEnsinoMedioAtual('');
+                form.setAnoPrevistoConclusaoEnsinoMedio('');
               } else {
                 form.setSerieEnsinoMedioAtual('');
                 form.setAnoPrevistoConclusaoEnsinoMedio('');
+                form.setAnoConclusaoEnsinoMedio('');
               }
             }}
             className={selectClassName}
@@ -42,6 +46,7 @@ const PerfilTechnicalSection: React.FC<Props> = ({ editing, form }) => (
             <option value="">Selecione...</option>
             <option value="CURSANDO">CURSANDO</option>
             <option value="CONCLUIDO">CONCLUÍDO</option>
+            <option value="EJA">EJA</option>
           </select>
         ) : (
           <p className={readOnlyClassName}>{form.situacaoEnsinoMedio === 'CONCLUIDO' ? 'CONCLUÍDO' : form.situacaoEnsinoMedio || '—'}</p>

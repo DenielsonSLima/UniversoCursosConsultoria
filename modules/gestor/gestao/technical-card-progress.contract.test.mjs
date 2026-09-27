@@ -26,7 +26,7 @@ const transpiledMapper = ts.transpileModule(executableMapper, {
     target: ts.ScriptTarget.ES2022,
   },
 }).outputText;
-const { enrichTechnicalAcademicProgress } = await import(
+const { enrichTechnicalAcademicProgress, mapTurma } = await import(
   `data:text/javascript;base64,${Buffer.from(transpiledMapper).toString('base64')}`
 );
 
@@ -67,6 +67,34 @@ test('card apenas apresenta concluídas/total com contexto acessível', () => {
   assert.match(card, /aria-label=\{progressoDisciplinasLabel\}/);
   assert.doesNotMatch(card, /(?:disciplinasConcluidas|totalDisciplinas) \?\? 0/);
   assert.doesNotMatch(card, /disciplinasConcluidas\s*[+*%-]/);
+});
+
+test('card separa matrículas ativas, pendentes e estados de saída', () => {
+  const turma = mapTurma({
+    cursos: { modalidade: 'TECNICO' },
+    matriculas: [
+      { status: 'ATIVO' },
+      { status: 'pendente' },
+      { status: 'AGUARDANDO_PAGAMENTO' },
+      { status: 'AGUARDANDO_CONFIRMACAO' },
+      { status: 'TRANCADO' },
+      { status: 'CONCLUIDO' },
+      { status: 'TRANSFERIDO' },
+      { status: 'DESISTENTE' },
+      { status: 'CANCELADO' },
+      { status: 'REPROVADO' },
+      { status: 'DESCONHECIDO' },
+    ],
+  });
+
+  assert.equal(turma.alunosAtivos, 1);
+  assert.equal(turma.alunosPendentes, 3);
+  assert.equal(turma.alunosSaidas, 6);
+  assert.equal(turma.alunosMatriculados, 4);
+  assert.doesNotMatch(card, /alunosInativos|Inativos:/);
+  assert.match(card, /Ativos: \{turma\.alunosAtivos\}/);
+  assert.match(card, /Pendentes: \{turma\.alunosPendentes\}/);
+  assert.match(card, /Saídas: \{turma\.alunosSaidas\}/);
 });
 
 test('falha do retrato acadêmico não se transforma em lista vazia e oferece retry', () => {
