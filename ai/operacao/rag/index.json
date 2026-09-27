@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-09-27T13:48:26.843Z",
+  "builtAt": "2026-09-27T13:55:18.284Z",
   "manifestVersion": 2,
-  "sourceSignature": "5b73b7a6e71c2a585a9c00a024c5d70a9d34392fc33792b7ba8b5de91dee09d7",
+  "sourceSignature": "15722ba8ce646f648b6d9f21566077eecfefb3a3ad016d67efc08fe8d6b3d92c",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "6e1cbca59232f05440a5c19864b47f13ec0e629d77003a890e32a88b958bda51"
+      "hash": "69a7b93bd9b475be8cd0cab62ccddd39de80a7245d3837d9bb05eb33e540cd56"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -210,23 +210,23 @@
       "part": 1
     },
     {
-      "id": "b0a261b6b7de9ff22559",
-      "hash": "b0a261b6b7de9ff225596db19e9d38d932961ee7a040d8d555caf2a3a2582186",
+      "id": "48ebc8cb08fa5c269b1b",
+      "hash": "48ebc8cb08fa5c269b1bb9b51678d6c07aa2926038860ada726fd01ca7086a2d",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-09-27-convenios-seletor-personalizado",
-      "text": "Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-27-convenios-seletor-personalizado.md`",
-      "normalizedText": "manifesto explicito ai operacao registros alteracoes 2026 09 27 convenios seletor personalizado md",
-      "tokenCount": 13,
+      "section": "Lote: 2026-09-27-despesas-fixas-tabela-exclusao",
+      "text": "Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-27-despesas-fixas-tabela-exclusao.md`",
+      "normalizedText": "manifesto explicito ai operacao registros alteracoes 2026 09 27 despesas fixas tabela exclusao md",
+      "tokenCount": 14,
       "part": 1
     },
     {
-      "id": "12555bfcacb92a010b60",
-      "hash": "12555bfcacb92a010b60f00990e0c95e7a61cbb09fe688dd4f345a6878d14c94",
+      "id": "be5e109bf4c5a5b85608",
+      "hash": "be5e109bf4c5a5b85608664a0ce7de554a5610ec8016545cab3bd9db78364130",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-09-27-convenios-seletor-personalizado",
-      "text": "- Novo Convênio troca o `<select>` nativo por combobox próprio pesquisável. - Clique ou foco com busca vazia lista todas as faculdades autorizadas; digitação filtra nome e CNPJ. - Seleção continua vinculada ao ID canônico da PJ e preserva as regras financeiras já publicadas. - A migração dos demais seletores será gradual, somente conforme novos pedidos. - Produção autorizada explicitamente pelo usuário nesta conversa; publicar a versão 4.8.117 e confirmar o smoke de interface.",
-      "normalizedText": "novo convenio troca o select nativo por combobox proprio pesquisavel clique ou foco com busca vazia lista todas as faculdades autorizadas digitacao filtra nome e cnpj selecao continua vinculada ao id canonico da pj e preserva as regras financeiras ja publicadas a migracao dos demais seletores sera gradual somente conforme novos pedidos producao autorizada explicitamente pelo usuario nesta conversa publicar a versao 4 8 117 e confirmar o smoke de interface",
-      "tokenCount": 62,
+      "section": "Lote: 2026-09-27-despesas-fixas-tabela-exclusao",
+      "text": "- Tabela de despesas sem rolagem horizontal, com descrição integral, duas faixas de informação e cores alternadas. - Ações Editar, Dar baixa, Prévia, Excluir e Estornar permanecem visíveis no próprio registro. - Seleção individual ou em lote exclui somente pendentes/vencidos, sem justificativa manual e com auditoria idempotente. - Modais financeiros usam portal no viewport para não ficarem presos ao contêiner animado. - Produção autorizada explicitamente pelo usuário nesta conversa; publicar a versão 4.8.118 e confirmar o smoke de interface.",
+      "normalizedText": "tabela de despesas sem rolagem horizontal com descricao integral duas faixas de informacao e cores alternadas acoes editar dar baixa previa excluir e estornar permanecem visiveis no proprio registro selecao individual ou em lote exclui somente pendentes vencidos sem justificativa manual e com auditoria idempotente modais financeiros usam portal no viewport para nao ficarem presos ao conteiner animado producao autorizada explicitamente pelo usuario nesta conversa publicar a versao 4 8 118 e confirmar o smoke de interface",
+      "tokenCount": 69,
       "part": 1
     },
     {

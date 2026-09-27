@@ -10,6 +10,7 @@ import {
   ContaBancaria,
   isContaDisponivelNoPolo,
 } from '../../financeiro.service';
+import DespesaModalPortal from './DespesaModalPortal';
 
 const parseCurrency = (value: string) => (
   Number(value.replace(/[^\d.,]/g, '').replace(/\./g, '').replace(',', '.') || 0)
@@ -102,11 +103,16 @@ const DespesaBaixaModal: React.FC<DespesaBaixaModalProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-[210] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-      <div className="max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-y-auto rounded-3xl bg-white p-7 shadow-2xl animate-fadeIn">
+    <DespesaModalPortal onClose={onClose}>
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="baixar-despesa-title"
+        className="max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-y-auto rounded-3xl bg-white p-7 shadow-2xl animate-fadeIn"
+      >
         <div className="mb-5 flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <h3 className="text-lg font-black uppercase tracking-tight text-[#001a33]">Dar Baixa</h3>
+            <h3 id="baixar-despesa-title" className="text-lg font-black uppercase tracking-tight text-[#001a33]">Dar Baixa</h3>
             <p className="mt-0.5 truncate text-xs font-medium text-slate-400">{item.descricao}</p>
           </div>
           <button
@@ -235,8 +241,8 @@ const DespesaBaixaModal: React.FC<DespesaBaixaModalProps> = ({
             Confirmar
           </button>
         </div>
-      </div>
-    </div>
+      </section>
+    </DespesaModalPortal>
   );
 };
 

@@ -7,6 +7,7 @@ import {
   UpdateDespesaInput,
 } from '../despesas.service';
 import { getDescricaoSemSufixoDeParcela } from './despesaPresentation';
+import DespesaModalPortal from './DespesaModalPortal';
 
 const parseCurrency = (value: string) => (
   Number(value.replace(/[^\d.,]/g, '').replace(/\./g, '').replace(',', '.') || 0)
@@ -110,7 +111,7 @@ const DespesaEditModal: React.FC<DespesaEditModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[220] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
+    <DespesaModalPortal onClose={onClose}>
       <form
         role="dialog"
         aria-modal="true"
@@ -265,7 +266,7 @@ const DespesaEditModal: React.FC<DespesaEditModalProps> = ({
           </button>
         </footer>
       </form>
-    </div>
+    </DespesaModalPortal>
   );
 };
 

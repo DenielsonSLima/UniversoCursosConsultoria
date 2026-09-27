@@ -8,6 +8,7 @@ import {
 import {
   cancelarOuEstornarDespesa,
   createDespesa,
+  excluirDespesasPendentes,
   getDespesaAnexoUrl,
   getDespesaReciboSnapshot,
   getDespesas,
@@ -27,20 +28,15 @@ export const createFinanceRequestId = () => (
       })
 );
 
-const cancelarDespesa = async (id: string, motivo = 'Cancelada pelo gestor') => (
-  cancelarOuEstornarDespesa(id, { requestId: createFinanceRequestId(), motivo })
-);
-
 export const despesasService = {
   getDespesas,
   createDespesa,
   markDespesaPaga,
   updateDespesa,
   cancelarOuEstornarDespesa,
+  excluirDespesasPendentes,
   getDespesaReciboSnapshot,
   getDespesaAnexoUrl,
-  cancelarDespesa,
-  deleteDespesa: (id: string) => cancelarDespesa(id, 'Cancelada pelo gestor'),
   getCategoriasFinanceiras,
   createCategoriaFinanceira,
   updateCategoriaFinanceira,

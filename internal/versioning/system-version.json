@@ -1,8 +1,8 @@
 {
-  "version": "4.8.117",
+  "version": "4.8.118",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 126,
+  "revision": 127,
   "releasedAt": "2026-09-27",
-  "summary": "Convênios usam busca personalizada de faculdades parceiras"
+  "summary": "Despesas fixas ganham tabela imersiva, ações visíveis e exclusão em lote"
 }

@@ -8,6 +8,7 @@ import {
   Pencil,
   Printer,
   RotateCcw,
+  Trash2,
   XCircle,
 } from 'lucide-react';
 import { ContaBancaria } from '../../financeiro.service';
@@ -32,8 +33,11 @@ interface DespesaCardProps {
   onPagar?: (item: DespesaLancamento) => void;
   onEditar?: (item: DespesaLancamento) => void;
   onCancelar?: (item: DespesaLancamento) => void;
+  onExcluir?: (items: DespesaLancamento[]) => void;
   onImprimir?: (item: DespesaLancamento) => void;
   onAnexo?: (item: DespesaLancamento) => void;
+  selected?: boolean;
+  onSelectionChange?: (item: DespesaLancamento, selected: boolean) => void;
 }
 
 const actionClass = 'inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1';
@@ -44,8 +48,11 @@ const DespesaCard: React.FC<DespesaCardProps> = ({
   onPagar,
   onEditar,
   onCancelar,
+  onExcluir,
   onImprimir,
   onAnexo,
+  selected = false,
+  onSelectionChange,
 }) => {
   const cfg = statusConfig[item.status] || statusConfig.PENDENTE;
   const isPago = item.status === 'PAGO';
@@ -53,15 +60,26 @@ const DespesaCard: React.FC<DespesaCardProps> = ({
   const isAberto = item.status === 'PENDENTE' || item.status === 'VENCIDO';
   const hasBaixaEstornada = isCancelado && Boolean(item.estornadoEm);
   const contaLabel = getDespesaContaLabel(item, contas);
+  const selectable = isAberto && !item.isRateioDerived && Boolean(onSelectionChange);
 
   return (
-    <article className={`relative overflow-hidden rounded-3xl border bg-white shadow-sm transition-shadow duration-300 hover:shadow-lg ${cfg.border}`}>
+    <article className={`relative overflow-hidden rounded-3xl border bg-white shadow-sm transition-all duration-300 hover:shadow-lg ${selected ? 'ring-2 ring-rose-300' : ''} ${cfg.border}`}>
       <div className={`h-1 w-full ${isPago ? 'bg-emerald-500' : item.status === 'VENCIDO' ? 'bg-rose-500' : isCancelado ? 'bg-slate-300' : 'bg-amber-400'}`} />
 
       <div className="p-5">
         <div className="mb-3 flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-black text-[#001a33]">{item.descricao}</p>
+          <div className="flex min-w-0 flex-1 items-start gap-3">
+            {selectable && (
+              <input
+                type="checkbox"
+                checked={selected}
+                onChange={(event) => onSelectionChange?.(item, event.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 accent-rose-600"
+                aria-label={`Selecionar ${item.descricao}`}
+              />
+            )}
+            <div className="min-w-0 flex-1">
+            <p className="break-words text-sm font-black leading-5 text-[#001a33]">{item.descricao}</p>
             {item.categoriaNome ? (
               <span className="mt-1 inline-block rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-rose-600">
                 {item.categoriaNome}
@@ -79,6 +97,7 @@ const DespesaCard: React.FC<DespesaCardProps> = ({
                 Custo rateado{item.rateioPolosQuantidade ? ` em ${item.rateioPolosQuantidade} polo${item.rateioPolosQuantidade === 1 ? '' : 's'}` : ''}
               </p>
             ) : null}
+            </div>
           </div>
           <span className={`inline-flex flex-shrink-0 items-center gap-1 rounded-xl border px-2.5 py-1 text-[10px] font-bold uppercase ${cfg.bg} ${cfg.text} ${cfg.border}`}>
             <cfg.Icon size={10} />
@@ -205,7 +224,17 @@ const DespesaCard: React.FC<DespesaCardProps> = ({
                 <Paperclip size={13} /> Anexo
               </button>
             )}
-            {onCancelar && (
+            {isAberto && onExcluir && (
+              <button
+                type="button"
+                onClick={() => onExcluir([item])}
+                className={`${actionClass} border border-rose-200 text-rose-700 hover:bg-rose-50 focus-visible:ring-rose-500`}
+                aria-label={`Excluir ${item.descricao}`}
+              >
+                <Trash2 size={13} /> Excluir
+              </button>
+            )}
+            {onCancelar && (isPago || !onExcluir) && (
               <button
                 type="button"
                 onClick={() => onCancelar(item)}
