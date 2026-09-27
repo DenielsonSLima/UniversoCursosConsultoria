@@ -1,8 +1,8 @@
 {
-  "version": "4.8.104",
+  "version": "4.8.105",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 113,
+  "revision": 114,
   "releasedAt": "2026-09-26",
-  "summary": "PDV: substituição autorizada e Pix oficial preservado"
+  "summary": "Consulta Banese sem rajadas e compactação ociosa reduzida"
 }

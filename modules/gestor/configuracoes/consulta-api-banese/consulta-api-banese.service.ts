@@ -12,14 +12,21 @@ import type { BaneseAttemptsContext } from './banese-attempt-feed';
 export const banesePollingQueryKey = ['configuracoes', 'consulta-api-banese'] as const;
 
 export const consultaApiBaneseService = {
-  async getDashboard(): Promise<BanesePollingDashboard> {
+  async getDashboard(input?: AbortSignal | { signal: AbortSignal }): Promise<BanesePollingDashboard> {
+    // Also preserve the existing direct queryFn consumer in ConfiguracoesPage.
+    const signal = !input ? undefined : 'signal' in input ? input.signal : input;
+    signal?.throwIfAborted();
+    const dashboardRequest = supabase.rpc('get_banese_reconciliation_dashboard');
+    const autopilotRequest = supabase.rpc('get_banese_reconciliation_autopilot_progress');
+    if (signal) { dashboardRequest.abortSignal(signal); autopilotRequest.abortSignal(signal); }
     const [
       { data, error },
       { data: autopilot, error: autopilotError },
     ] = await Promise.all([
-      supabase.rpc('get_banese_reconciliation_dashboard'),
-      supabase.rpc('get_banese_reconciliation_autopilot_progress'),
+      dashboardRequest,
+      autopilotRequest,
     ]);
+    signal?.throwIfAborted();
     if (error) throw new Error(error.message || 'Não foi possível carregar a consulta Banese.');
     return {
       ...(data || { available: false, environment: 'sandbox' }),
@@ -43,14 +50,18 @@ export const consultaApiBaneseService = {
     return data;
   },
 
-  async getRunsPage(filters: BanesePollingRunsFilters): Promise<BanesePollingRunsPage> {
-    const { data, error } = await supabase.rpc('get_banese_reconciliation_runs_page', {
+  async getRunsPage(filters: BanesePollingRunsFilters, signal?: AbortSignal): Promise<BanesePollingRunsPage> {
+    signal?.throwIfAborted();
+    const request = supabase.rpc('get_banese_reconciliation_runs_page', {
       p_page: filters.page,
       p_search: filters.search?.trim() || null,
       p_started_from: filters.startedFrom || null,
       p_started_to: filters.startedTo || null,
       p_errors_only: filters.errorsOnly,
     });
+    if (signal) request.abortSignal(signal);
+    const { data, error } = await request;
+    signal?.throwIfAborted();
     if (error) throw new Error(error.message || 'Não foi possível carregar as execuções Banese.');
     return (data || {
       items: [],
@@ -63,8 +74,12 @@ export const consultaApiBaneseService = {
     }) as BanesePollingRunsPage;
   },
 
-  async getErrorSummary(): Promise<BanesePollingErrorSummary> {
-    const { data, error } = await supabase.rpc('get_banese_reconciliation_error_summary');
+  async getErrorSummary(signal?: AbortSignal): Promise<BanesePollingErrorSummary> {
+    signal?.throwIfAborted();
+    const request = supabase.rpc('get_banese_reconciliation_error_summary');
+    if (signal) request.abortSignal(signal);
+    const { data, error } = await request;
+    signal?.throwIfAborted();
     if (error) throw new Error(error.message || 'Não foi possível carregar os erros da consulta Banese.');
     return (data || {
       attemptsLastHour: 0,
@@ -79,12 +94,17 @@ export const consultaApiBaneseService = {
     context: BaneseAttemptsContext,
     page: number = 1,
     pageSize: number = 20,
+    signal?: AbortSignal,
   ): Promise<BanesePollingAttemptsPage> {
-    const { data, error } = await supabase.rpc('get_banese_reconciliation_attempts_page', {
+    signal?.throwIfAborted();
+    const request = supabase.rpc('get_banese_reconciliation_attempts_page', {
       p_context: context,
       p_page: page,
       p_page_size: pageSize,
     });
+    if (signal) request.abortSignal(signal);
+    const { data, error } = await request;
+    signal?.throwIfAborted();
     if (error) throw new Error(error.message || 'Não foi possível carregar os registros da consulta Banese.');
     return (data || {
       items: [],

@@ -9,6 +9,7 @@ import {
   consultaApiBaneseService,
 } from './consulta-api-banese.service';
 import type { BanesePollingRun } from './consulta-api-banese.types';
+import { baneseReadInterval } from './banese-realtime-refresh';
 
 const operationalDateTime = (value?: string | null) => value
   ? new Intl.DateTimeFormat('pt-BR', {
@@ -95,9 +96,12 @@ export const BaneseRunsPanel = ({ active }: { active: boolean }) => {
   };
   const runsQuery = useQuery({
     queryKey: [...banesePollingQueryKey, 'runs', filters],
-    queryFn: () => consultaApiBaneseService.getRunsPage(filters),
+    queryFn: ({ signal }) => consultaApiBaneseService.getRunsPage(filters, signal),
     enabled: active && !invalidRange,
     placeholderData: keepPreviousData,
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchInterval: query => query.state.status === 'error' ? baneseReadInterval(query) : false,
   });
   const result = invalidRange ? undefined : runsQuery.data;
 
