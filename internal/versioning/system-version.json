@@ -1,8 +1,8 @@
 {
-  "version": "4.8.114",
+  "version": "4.8.115",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 123,
+  "revision": 124,
   "releasedAt": "2026-09-27",
-  "summary": "Matrícula técnica ativa com cadastro mínimo e opção EJA"
+  "summary": "Ensino Médio opcional explicitado no cadastro técnico"
 }
