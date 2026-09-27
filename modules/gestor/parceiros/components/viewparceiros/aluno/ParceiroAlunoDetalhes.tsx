@@ -2,7 +2,7 @@
 // File: modules/gestor/parceiros/components/detalhes/aluno/ParceiroAlunoDetalhes.tsx
 
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, FileBadge } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import ParceiroAlunoDados from './ParceiroAlunoDados';
 import ParceiroAlunoCursos from './ParceiroAlunoCursos';
@@ -10,7 +10,6 @@ import ParceiroAlunoMatriculas from './ParceiroAlunoMatriculas';
 import ParceiroAlunoDocumentos from './ParceiroAlunoDocumentos';
 import ParceiroAlunoFinanceiro from './ParceiroAlunoFinanceiro';
 import ParceiroAcesso from '../shared/ParceiroAcesso';
-import FichaAlunoModal from './ficha/FichaAlunoModal';
 import ParceiroAlunoSecretaria from './ParceiroAlunoSecretaria';
 import ParceiroAlunoVacinas from './ParceiroAlunoVacinas';
 import { parceirosService } from '../../../parceiros.service';
@@ -34,7 +33,6 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [pendingDestination, setPendingDestination] = useState<AlunoTab | 'back' | null>(null);
-  const [isFichaOpen, setIsFichaOpen] = useState(false);
   const scrollTopRef = useRef(onRequestScrollTop);
 
   useEffect(() => {
@@ -172,10 +170,6 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
                 </p>}
               </div>
             </div>
-            <button type="button" onClick={() => setIsFichaOpen(true)}
-              className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 outline-none hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-blue-500">
-              <FileBadge size={16} aria-hidden="true" /> Imprimir ficha
-            </button>
           </div>
           <ParceiroAlunoNavigation activeTab={activeTab} disabled={navigationDisabled} onSelect={requestNavigation} />
         </header>
@@ -225,13 +219,6 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
         onKeepEditing={() => setPendingDestination(null)}
         onDiscard={() => navigate(pendingDestination)}
       />}
-
-      {isFichaOpen && (
-        <FichaAlunoModal 
-          aluno={alunoData}
-          onClose={() => setIsFichaOpen(false)}
-        />
-      )}
 
       <ToastNotification toasts={toasts} onRemove={removeToast} />
 

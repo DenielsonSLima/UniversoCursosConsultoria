@@ -1,8 +1,8 @@
 {
-  "version": "4.8.110",
+  "version": "4.8.111",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 119,
-  "releasedAt": "2026-09-26",
-  "summary": "Documento pontuado e matrícula do aluno no recibo do PDV"
+  "revision": 120,
+  "releasedAt": "2026-09-27",
+  "summary": "Ficha do aluno sem atalho de impressão e com abas mais legíveis"
 }
