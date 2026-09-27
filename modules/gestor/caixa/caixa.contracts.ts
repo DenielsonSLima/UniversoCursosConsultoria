@@ -5,7 +5,8 @@ import type {
   CaixaCustosOperacionais,
   CaixaPatrimonioResumo,
   CaixaPosicaoLiquidaResumo,
-  CaixaPosicaoTotalResumo
+  CaixaPosicaoTotalResumo,
+  CaixaContasPagarResumo,
 } from './caixa.types';
 import {
   isCaixaCanonicalDecimalText,
@@ -273,6 +274,54 @@ export const assertPosicaoTotalResumoPayload = (payload: RawItem) => {
   }
 };
 
+const isContasPagarValorQuantidade = (value: unknown): boolean => (
+  isRecord(value)
+  && isCaixaCanonicalDecimalText(value.valor)
+  && isNonNegativeSafeInteger(value.quantidade)
+);
+
+export const assertContasPagarResumoPayload = (payload: RawItem) => {
+  const emAtraso = payload.em_atraso;
+  const agenda = payload.agenda_financeira;
+  const dias = isRecord(agenda) ? agenda.dias : undefined;
+
+  if (
+    payload.versao !== 1
+    || !isCaixaDate(payload.competencia)
+    || !isCaixaDate(payload.periodo_inicio)
+    || !isCaixaDate(payload.periodo_fim_exclusivo)
+    || !isCaixaDate(payload.data_corte)
+    || payload.periodo_inicio !== payload.competencia
+    || (payload.escopo_tipo !== 'GLOBAL' && payload.escopo_tipo !== 'POLO')
+    || (typeof payload.polo_id !== 'string' && payload.polo_id !== null)
+    || payload.criterio !== 'POSICAO_REEXPRESSA_NO_CORTE'
+    || !isContasPagarValorQuantidade(payload.contas_competencia)
+    || !isContasPagarValorQuantidade(payload.pagas_competencia)
+    || !isContasPagarValorQuantidade(payload.a_vencer_competencia)
+    || !isContasPagarValorQuantidade(emAtraso)
+    || !isRecord(emAtraso)
+    || (emAtraso.data_mais_antiga !== null && !isCaixaDate(emAtraso.data_mais_antiga))
+    || !isRecord(agenda)
+    || !isContasPagarValorQuantidade(agenda.hoje)
+    || !isRecord(agenda.hoje)
+    || !isCaixaDate(agenda.hoje.data)
+    || agenda.hoje.data !== payload.data_corte
+    || !isContasPagarValorQuantidade(agenda.proximos_sete_dias)
+    || !isRecord(agenda.proximos_sete_dias)
+    || !isCaixaDate(agenda.proximos_sete_dias.periodo_inicio)
+    || !isCaixaDate(agenda.proximos_sete_dias.periodo_fim_exclusivo)
+    || !Array.isArray(dias)
+    || dias.length !== 8
+    || !dias.every((item) => (
+      isContasPagarValorQuantidade(item)
+      && isRecord(item)
+      && isCaixaDate(item.data)
+    ))
+  ) {
+    throw new Error('Contrato inválido do resumo de contas a pagar do Caixa.');
+  }
+};
+
 export const getCurrentCaixaCompetencia = () => {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
@@ -371,5 +420,20 @@ export const assertCaixaPosicaoTotalResumoRequest = (
 
   if (!hasExpectedScope || resumo.competencia !== competencia) {
     throw new Error('A posição total retornou um escopo diferente do solicitado.');
+  }
+};
+
+export const assertCaixaContasPagarResumoRequest = (
+  resumo: CaixaContasPagarResumo,
+  poloId: string | null | undefined,
+  competencia: string,
+) => {
+  const expectedPoloId = normalizeCaixaPoloId(poloId);
+  const hasExpectedScope = expectedPoloId
+    ? resumo.escopoTipo === 'POLO' && resumo.poloId === expectedPoloId
+    : resumo.escopoTipo === 'GLOBAL' && resumo.poloId === null;
+
+  if (!hasExpectedScope || resumo.competencia !== competencia) {
+    throw new Error('O resumo de contas a pagar retornou um escopo diferente do solicitado.');
   }
 };

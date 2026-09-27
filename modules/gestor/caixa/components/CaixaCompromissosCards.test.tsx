@@ -25,8 +25,7 @@ test('indicadores exibem valor e percentual do servidor sem usar a carteira futu
   assert.match(html, /17,23%/);
   assert.doesNotMatch(html, /0,125%/);
   assert.match(html, /100.000,00/);
-  assert.match(html, /200,00/);
-  assert.match(html, /30,00/);
+  assert.doesNotMatch(html, /Obrigações futuras|Obrigações vencidas|200,00|30,00/);
 });
 
 test('novo payload do mês ou polo substitui os dois indicadores sem reaproveitar o anterior', () => {

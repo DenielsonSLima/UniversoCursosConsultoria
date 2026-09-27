@@ -14,6 +14,7 @@ import {
   caixaPatrimonioResumoQueryOptions,
   caixaPosicaoLiquidaResumoQueryOptions,
   caixaPosicaoTotalResumoQueryOptions,
+  caixaContasPagarResumoQueryOptions,
   caixaPolosQueryOptions,
   getCurrentCaixaCompetencia,
   shiftCaixaCompetencia,
@@ -33,6 +34,7 @@ import { CaixaPosicaoLiquidaResumoCard } from './components/CaixaPosicaoLiquidaR
 import { CaixaPosicaoTotalResumoCard } from './components/CaixaPosicaoTotalResumoCard';
 import { CaixaConveniosResumoCard } from './components/CaixaConveniosResumoCard';
 import { caixaConveniosResumoQueryOptions } from './caixa-convenios.service';
+import { CaixaContasPagarResumoCard } from './components/CaixaContasPagarResumoCard';
 
 interface CaixaPageProps {
   poloId?: string | null;
@@ -145,6 +147,15 @@ const CaixaScopePage: React.FC<CaixaScopePageProps> = ({
     enabled: Boolean(selectedPolo),
   });
 
+  const {
+    data: contasPagarResumo,
+    isLoading: isContasPagarLoading,
+    isError: hasContasPagarError,
+  } = useQuery({
+    ...caixaContasPagarResumoQueryOptions(selectedPolo, competencia),
+    enabled: Boolean(selectedPolo),
+  });
+
   const isCurrentCompetencia = competencia === currentCompetencia;
   const isConsolidated = selectedPolo === 'todos';
 
@@ -237,6 +248,12 @@ const CaixaScopePage: React.FC<CaixaScopePageProps> = ({
           })}
         </div>
       </div>
+
+      <CaixaContasPagarResumoCard
+        resumo={contasPagarResumo}
+        isLoading={isContasPagarLoading}
+        hasError={hasContasPagarError}
+      />
 
       <CaixaStatementSection
         statement={statement}

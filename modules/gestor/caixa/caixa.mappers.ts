@@ -4,7 +4,8 @@ import type {
   CaixaCustosOperacionais,
   CaixaPatrimonioResumo,
   CaixaPosicaoLiquidaResumo,
-  CaixaPosicaoTotalResumo
+  CaixaPosicaoTotalResumo,
+  CaixaContasPagarResumo,
 } from './caixa.types';
 import {
   asRecord,
@@ -17,7 +18,8 @@ import {
   assertCustosOperacionaisPayload,
   assertPatrimonioResumoPayload,
   assertPosicaoLiquidaResumoPayload,
-  assertPosicaoTotalResumoPayload
+  assertPosicaoTotalResumoPayload,
+  assertContasPagarResumoPayload,
 } from './caixa.contracts';
 export const mapCaixaStatement = (value: unknown): CaixaMonthlyStatement => {
   const payload = asRecord(Array.isArray(value) ? value[0] : value);
@@ -277,5 +279,57 @@ export const mapCaixaPosicaoTotalResumo = (value: unknown): CaixaPosicaoTotalRes
       ? 'ACESSO_RESTRITO'
       : 'HISTORICO_INSUFICIENTE',
     observacao: asString(payload.observacao),
+  };
+};
+
+export const mapCaixaContasPagarResumo = (value: unknown): CaixaContasPagarResumo => {
+  const payload = asRecord(Array.isArray(value) ? value[0] : value);
+  assertContasPagarResumoPayload(payload);
+  const contas = asRecord(payload.contas_competencia);
+  const pagas = asRecord(payload.pagas_competencia);
+  const aVencer = asRecord(payload.a_vencer_competencia);
+  const emAtraso = asRecord(payload.em_atraso);
+  const agenda = asRecord(payload.agenda_financeira);
+  const hoje = asRecord(agenda.hoje);
+  const proximosSeteDias = asRecord(agenda.proximos_sete_dias);
+
+  const mapValorQuantidade = (item: Record<string, unknown>) => ({
+    valor: asString(item.valor),
+    quantidade: asNumber(item.quantidade),
+  });
+
+  return {
+    versao: 1,
+    competencia: asString(payload.competencia),
+    periodoInicio: asString(payload.periodo_inicio),
+    periodoFimExclusivo: asString(payload.periodo_fim_exclusivo),
+    dataCorte: asString(payload.data_corte),
+    escopoTipo: payload.escopo_tipo === 'GLOBAL' ? 'GLOBAL' : 'POLO',
+    poloId: typeof payload.polo_id === 'string' ? payload.polo_id : null,
+    criterio: 'POSICAO_REEXPRESSA_NO_CORTE',
+    contasCompetencia: mapValorQuantidade(contas),
+    pagasCompetencia: mapValorQuantidade(pagas),
+    aVencerCompetencia: mapValorQuantidade(aVencer),
+    emAtraso: {
+      ...mapValorQuantidade(emAtraso),
+      dataMaisAntiga: typeof emAtraso.data_mais_antiga === 'string'
+        ? emAtraso.data_mais_antiga
+        : null,
+    },
+    agendaFinanceira: {
+      hoje: {
+        data: asString(hoje.data),
+        ...mapValorQuantidade(hoje),
+      },
+      proximosSeteDias: {
+        periodoInicio: asString(proximosSeteDias.periodo_inicio),
+        periodoFimExclusivo: asString(proximosSeteDias.periodo_fim_exclusivo),
+        ...mapValorQuantidade(proximosSeteDias),
+      },
+      dias: asArray(agenda.dias).map((item) => ({
+        data: asString(item.data),
+        ...mapValorQuantidade(item),
+      })),
+    },
   };
 };

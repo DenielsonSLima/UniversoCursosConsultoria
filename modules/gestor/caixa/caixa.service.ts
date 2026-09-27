@@ -9,7 +9,8 @@ import type {
   CaixaCustosOperacionais,
   CaixaPatrimonioResumo,
   CaixaPosicaoLiquidaResumo,
-  CaixaPosicaoTotalResumo
+  CaixaPosicaoTotalResumo,
+  CaixaContasPagarResumo,
 } from './caixa.types';
 import {
   getCurrentCaixaCompetencia,
@@ -20,7 +21,8 @@ import {
   assertCaixaCustosOperacionaisRequest,
   assertCaixaPatrimonioResumoRequest,
   assertCaixaPosicaoLiquidaResumoRequest,
-  assertCaixaPosicaoTotalResumoRequest
+  assertCaixaPosicaoTotalResumoRequest,
+  assertCaixaContasPagarResumoRequest,
 } from './caixa.contracts';
 import {
   mapCaixaStatement,
@@ -28,7 +30,8 @@ import {
   mapCaixaCustosOperacionais,
   mapCaixaPatrimonioResumo,
   mapCaixaPosicaoLiquidaResumo,
-  mapCaixaPosicaoTotalResumo
+  mapCaixaPosicaoTotalResumo,
+  mapCaixaContasPagarResumo,
 } from './caixa.mappers';
 
 export type * from './caixa.types';
@@ -42,6 +45,7 @@ export {
   assertCaixaPatrimonioResumoRequest,
   assertCaixaPosicaoLiquidaResumoRequest,
   assertCaixaPosicaoTotalResumoRequest,
+  assertCaixaContasPagarResumoRequest,
   shiftCaixaCompetencia
 } from './caixa.contracts';
 
@@ -213,6 +217,29 @@ export const caixaService = {
     assertCaixaPosicaoTotalResumoRequest(resumo, normalizedPoloId, competencia);
     return resumo;
   },
+
+  async getContasPagarResumo(
+    poloId: string | null | undefined,
+    competencia: string,
+    signal?: AbortSignal,
+  ): Promise<CaixaContasPagarResumo> {
+    const normalizedPoloId = normalizeCaixaPoloId(poloId);
+    const request = supabase.rpc('get_caixa_contas_pagar_resumo_secure', {
+      p_polo_id: normalizedPoloId,
+      p_competencia: competencia,
+    });
+    if (signal) request.abortSignal(signal);
+    const { data, error } = await request;
+
+    if (error) {
+      reportCaixaReadError('Erro ao buscar o resumo de contas a pagar do Caixa:', error, signal);
+      throw error;
+    }
+
+    const resumo = mapCaixaContasPagarResumo(data);
+    assertCaixaContasPagarResumoRequest(resumo, normalizedPoloId, competencia);
+    return resumo;
+  },
 };
 
 export const caixaQueryKeys = {
@@ -282,6 +309,16 @@ export const caixaQueryKeys = {
   ] as const,
   posicaoTotal: (poloId: string | null | undefined, competencia: string) => [
     ...caixaQueryKeys.posicoesTotaisForPolo(poloId),
+    competencia,
+  ] as const,
+  contasPagarResumos: ['caixa', 'contas-pagar-resumo'] as const,
+  contasPagarResumosForPolo: (poloId: string | null | undefined) => [
+    'caixa',
+    'contas-pagar-resumo',
+    getCaixaScopeKey(poloId),
+  ] as const,
+  contasPagarResumo: (poloId: string | null | undefined, competencia: string) => [
+    ...caixaQueryKeys.contasPagarResumosForPolo(poloId),
     competencia,
   ] as const,
 };
@@ -360,6 +397,18 @@ export const caixaPosicaoTotalResumoQueryOptions = (
 ) => queryOptions({
   queryKey: caixaQueryKeys.posicaoTotal(poloId, competencia),
   queryFn: ({ signal }) => caixaService.getPosicaoTotalResumo(poloId, competencia, signal),
+  retry: retryDatabaseRead,
+  staleTime: 30_000,
+  gcTime: 30 * 60_000,
+  refetchOnWindowFocus: true,
+});
+
+export const caixaContasPagarResumoQueryOptions = (
+  poloId?: string | null,
+  competencia = getCurrentCaixaCompetencia(),
+) => queryOptions({
+  queryKey: caixaQueryKeys.contasPagarResumo(poloId, competencia),
+  queryFn: ({ signal }) => caixaService.getContasPagarResumo(poloId, competencia, signal),
   retry: retryDatabaseRead,
   staleTime: 30_000,
   gcTime: 30 * 60_000,

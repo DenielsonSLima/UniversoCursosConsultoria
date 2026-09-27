@@ -14,13 +14,11 @@ export const CaixaCompromissosCards: React.FC<CaixaCompromissosCardsProps> = ({ 
     : 'Compromisso em aberto hoje';
   return (
   <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-    <div className="grid grid-cols-2 divide-x divide-y divide-slate-100 sm:grid-cols-3 md:grid-cols-5 md:divide-y-0">
+    <div className="grid grid-cols-1 divide-y divide-slate-100 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
       {[
         { label: future ? 'Receitas futuras confirmadas' : 'Receitas futuras', value: formatCaixaCurrency(future?.valorConfirmado ?? compromissos.aReceber), color: 'text-emerald-700', helper: futureHelper },
         { label: `Inadimplência do mês${monthly.completo ? '' : ' (parcial)'}`, value: formatCaixaCurrency(compromissos.receberVencido), color: 'text-amber-600', helper: `${monthly.completo ? 'Não recebido' : 'Apurado na base conferida'} até ${formatCaixaDate(monthly.dataCorte)}` },
         { label: `Margem de inadimplência do mês${monthly.completo ? '' : ' (parcial)'}`, value: formatCaixaPercent(compromissos.margemInadimplencia), color: 'text-amber-600', helper: monthly.completo ? 'Sobre cobranças com vencimento no mês' : 'Sobre a base conferida do mês' },
-        { label: 'Obrigações futuras', value: formatCaixaCurrency(compromissos.aPagar), color: 'text-rose-600', helper: 'Compromisso em aberto hoje' },
-        { label: 'Obrigações vencidas', value: formatCaixaCurrency(compromissos.pagarVencido), color: 'text-rose-700', helper: 'Valor vencido ainda não liquidado' },
       ].map((item) => (
         <div key={item.label} className="px-4 py-3.5">
           <p className="text-[11px] font-medium text-slate-500">{item.label}</p>
