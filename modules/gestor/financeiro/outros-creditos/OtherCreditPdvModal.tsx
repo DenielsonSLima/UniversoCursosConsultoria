@@ -1,9 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  ArrowLeft, ArrowRight, Banknote, Building2, CalendarDays, Check, ChevronDown,
+  ArrowLeft, ArrowRight, Banknote, CalendarDays, Check, ChevronDown,
   CircleCheckBig, Landmark, Loader2, LockKeyhole, Plus, QrCode, ReceiptText,
-  ShieldCheck, Sparkles, UserRound, X,
+  ShieldCheck, UserRound, X,
 } from 'lucide-react';
 import type { OutrosCreditosModel } from './useOutrosCreditos';
 import { formatCurrency, formatPdvCurrencyInput, formatDate, parseCurrencyInput } from './outros-creditos.presentation';
@@ -55,21 +55,27 @@ export function PdvForm({ model }: { model: OutrosCreditosModel }) {
         if (!event.shiftKey && document.activeElement === nodes[nodes.length - 1]) { event.preventDefault(); nodes[0].focus(); }
       }}>
       <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
-        <div className="absolute inset-x-0 top-0 h-[390px] bg-[#071b3f]" />
-        <div className="absolute -right-28 top-12 h-[440px] w-[440px] rounded-full bg-blue-500/20 blur-[110px]" />
-        <div className="absolute left-[8%] top-52 h-48 w-48 rounded-full bg-[#ed1c24]/10 blur-[80px]" />
-        <div className="absolute inset-x-0 top-[389px] h-px bg-gradient-to-r from-transparent via-blue-300/60 to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-[246px] bg-[#071b3f]" />
+        <div className="absolute -right-28 -top-8 h-[360px] w-[360px] rounded-full bg-blue-500/20 blur-[100px]" />
+        <div className="absolute left-[8%] top-36 h-40 w-40 rounded-full bg-[#ed1c24]/10 blur-[70px]" />
+        <div className="absolute inset-x-0 top-[245px] h-px bg-gradient-to-r from-transparent via-blue-300/60 to-transparent" />
       </div>
 
       <header className="sticky top-0 z-30 border-t-[3px] border-t-[#ed1c24] bg-[#071b3f]/90 text-white shadow-lg shadow-slate-950/10 backdrop-blur-xl">
         <div className="mx-auto flex min-h-[78px] max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-8">
-          <div className="flex min-w-0 items-center gap-4 sm:gap-6">
+          <div className="flex min-w-0 flex-1 items-center gap-4 sm:gap-6">
             <span className="flex h-11 w-[124px] shrink-0 items-center justify-center rounded-xl bg-white px-3 shadow-sm sm:h-12 sm:w-[154px]">
               <img src="/LogoUniverso.png" alt="Universo Cursos e Consultoria" className="h-auto w-full object-contain" />
             </span>
             <div className="min-w-0 border-l border-white/15 pl-4 sm:pl-6">
               <p className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.22em] text-blue-200 sm:text-[10px]"><span className="h-1.5 w-1.5 rounded-full bg-[#ed1c24] shadow-[0_0_0_4px_rgba(237,28,36,0.14)]" /> Ponto de venda</p>
               <h2 id="pdv-title" className="mt-1 truncate text-sm font-bold tracking-tight sm:text-lg">Novo recebimento</h2>
+            </div>
+            <div className="hidden min-w-0 max-w-sm border-l border-white/15 pl-6 md:block">
+              <p className="truncate text-[10px] font-bold uppercase tracking-[0.14em] text-white">
+                {model.activePolo?.nome || 'Unidade não selecionada'}{model.activePolo?.cidade ? ` · ${model.activePolo.cidade}` : ''}
+              </p>
+              <p className="mt-1 truncate text-[10px] font-medium tracking-wide text-blue-200/60">CNPJ {model.activePolo?.cnpj || 'não informado'}</p>
             </div>
           </div>
           <button type="button" onClick={model.closeCreateModal} disabled={busy} aria-label="Fechar caixa"
@@ -79,14 +85,9 @@ export function PdvForm({ model }: { model: OutrosCreditosModel }) {
         </div>
       </header>
 
-      <form onSubmit={model.validateAndSubmit} className="relative z-10 mx-auto grid w-full max-w-7xl content-start gap-x-7 px-4 pb-10 pt-7 sm:px-8 sm:pt-9 lg:grid-cols-[minmax(0,1fr)_380px] lg:pb-14">
-        <div className="mb-7 lg:col-span-2 lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:items-end lg:gap-7">
-          <div>
-            <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.24em] text-blue-200"><Sparkles size={14} className="text-[#ff5960]" /> Atendimento financeiro</p>
-            <h3 className="mt-3 max-w-2xl text-3xl font-black leading-[1.08] tracking-[-0.035em] text-white sm:text-[42px]">Receba com clareza.<br /><span className="text-blue-200">Conclua com confiança.</span></h3>
-            <p className="mt-3 max-w-xl text-sm leading-6 text-blue-100/70">Uma cobrança BolePix segura, conferida em tempo real e pronta para entregar ao pagador.</p>
-          </div>
-          <nav aria-label="Etapas do recebimento" className="mt-6 rounded-2xl border border-white/10 bg-white/[0.07] p-3 backdrop-blur-md lg:mt-0">
+      <form onSubmit={model.validateAndSubmit} className="relative z-10 mx-auto grid w-full max-w-7xl content-start gap-x-7 px-4 pb-8 pt-4 sm:px-8 sm:pt-5 lg:grid-cols-[minmax(0,1fr)_380px] lg:pb-10">
+        <div className="mb-4 lg:col-span-2 lg:flex lg:justify-end">
+          <nav aria-label="Etapas do recebimento" className="w-full rounded-2xl border border-white/10 bg-white/[0.07] p-2.5 backdrop-blur-md lg:w-[380px]">
             <ol className="grid grid-cols-3 gap-2">
               {steps.map(step => {
                 const done = progress > step.number;
@@ -100,8 +101,8 @@ export function PdvForm({ model }: { model: OutrosCreditosModel }) {
           </nav>
         </div>
 
-        <fieldset disabled={busy} className="min-w-0 space-y-7 rounded-[28px] border border-white/70 bg-white p-5 shadow-[0_24px_70px_-28px_rgba(7,27,63,0.35)] disabled:opacity-60 sm:p-8 lg:p-9">
-          <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-6">
+        <fieldset disabled={busy} className="min-w-0 space-y-5 rounded-[28px] border border-white/70 bg-white p-5 shadow-[0_24px_70px_-28px_rgba(7,27,63,0.35)] disabled:opacity-60 sm:p-7 lg:p-8">
+          <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-5">
             <div>
               <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-blue-700"><span className="h-1.5 w-1.5 rounded-full bg-[#ed1c24]" aria-hidden="true" /> Dados do atendimento</p>
               <h4 className="mt-2 text-2xl font-black tracking-[-0.025em] text-[#071b3f] sm:text-[30px]">Prepare a cobrança</h4>
@@ -164,10 +165,6 @@ export function PdvForm({ model }: { model: OutrosCreditosModel }) {
             </div>
           </details>
 
-          <div className="flex items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50/60 px-4 py-3.5 text-xs leading-relaxed text-slate-600">
-            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-white text-blue-800 shadow-sm"><Building2 size={16} /></span>
-            <div><p className="font-bold text-[#071b3f]">Unidade responsável</p><p className="mt-0.5">{model.activePolo?.nome || 'Selecione uma unidade no portal'}{model.activePolo?.cidade ? ` · ${model.activePolo.cidade}` : ''}</p></div>
-          </div>
         </fieldset>
 
         <aside className="mt-6 flex min-w-0 flex-col lg:mt-0">
