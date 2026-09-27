@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-09-27T14:41:43.478Z",
+  "builtAt": "2026-09-27T14:43:43.742Z",
   "manifestVersion": 2,
   "sourceSignature": "b1f59c718f73059cb5ca6b858b2a6e6a1ab7f1dbec355d51559ec79ff263bf59",
   "sources": [

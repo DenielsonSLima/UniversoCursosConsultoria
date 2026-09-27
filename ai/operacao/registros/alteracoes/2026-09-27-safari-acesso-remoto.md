@@ -15,8 +15,10 @@ Se o Safari não tiver uma sessão útil, o agente registra a pendência e não 
 - `ai/operacao/registros/alteracoes/2026-09-27-safari-acesso-remoto.md`
 - `ai/operacao/qualidade/limite-linhas-manifestos.json`
 - `ai/operacao/rag/index.json`
+- `internal/versioning/system-version.json`
+- `internal/versioning/CHANGELOG.md`
 
-Total: 5 arquivos.
+Total: 7 arquivos.
 
 ## Skill pessoal
 
@@ -27,4 +29,5 @@ A mesma regra foi adicionada a `/Users/denielson/.codex/skills/universo-project-
 - Regra conferida textualmente na skill e na memória canônica.
 - Frontmatter existente da skill foi preservado.
 - Índice RAG reconstruído após a atualização da memória e do lote ativo.
+- Versão operacional avançada para 4.8.120 conforme o gate obrigatório do repositório.
 - O validador oficial da skill não iniciou por ausência local do módulo `PyYAML`; nenhuma dependência foi instalada apenas para essa conferência.
