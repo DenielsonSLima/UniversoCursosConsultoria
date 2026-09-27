@@ -21,7 +21,7 @@ import {
   createInitialFormData,
   STEPS,
 } from './parceiro-aluno-form.constants';
-import type { AlunoFormData } from './parceiro-aluno-form.types';
+import type { AlunoCatalogPatch, AlunoFormData } from './parceiro-aluno-form.types';
 
 interface ParceiroAlunoFormProps {
   onCancel?: () => void;
@@ -56,6 +56,10 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({
     const file = event.target.files?.[0];
     event.target.value = '';
     if (file) setPendingPhotoFile(file);
+  };
+
+  const handleCatalogPatch = (patch: AlunoCatalogPatch) => {
+    setFormData((previous) => ({ ...previous, ...patch }));
   };
 
   const confirmPhotoUpload = async (file: File) => {
@@ -101,6 +105,12 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({
     }
     setFormData((previous) => {
       const next = { ...previous, [name]: finalValue };
+      if (name === 'tipoDocumento' && finalValue !== previous.tipoDocumento) {
+        next.rg = '';
+        next.orgaoEmissor = '';
+        next.rgUfEmissao = '';
+        next.rgDataEmissao = '';
+      }
       if (name === 'situacaoEnsinoMedio') {
         if (finalValue === 'CURSANDO') {
           next.anoConclusaoEnsinoMedio = '';
@@ -287,6 +297,7 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({
             formData={formData}
             isUploadingPhoto={isUploadingPhoto}
             onChange={handleChange}
+            onCatalogPatch={handleCatalogPatch}
             onPhotoUpload={handlePhotoUpload}
             onRemovePhoto={() => setFormData((previous) => ({ ...previous, foto: '' }))}
           />

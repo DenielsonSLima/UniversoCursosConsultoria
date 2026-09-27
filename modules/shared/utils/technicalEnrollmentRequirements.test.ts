@@ -1,8 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  CIN_DOCUMENT_TYPE,
   formatTechnicalEnrollmentMissingFields,
+  formatTechnicalDocumentTypeLabel,
   getTechnicalEnrollmentMissingFields,
+  isAcceptedTechnicalDocumentType,
+  isCinDocumentType,
+  normalizeTechnicalDocumentType,
 } from './technicalEnrollmentRequirements.ts';
 
 const completeProfile = {
@@ -91,4 +96,26 @@ test('Ensino Médio vazio ou informado como EJA não bloqueia a matrícula', () 
 
   assert.deepEqual(getTechnicalEnrollmentMissingFields(withoutHighSchool), []);
   assert.deepEqual(getTechnicalEnrollmentMissingFields(eja), []);
+});
+
+test('normaliza CIN explícita sem reclassificar o default legado ambíguo', () => {
+  assert.equal(normalizeTechnicalDocumentType(''), '');
+  assert.equal(normalizeTechnicalDocumentType(null), '');
+  assert.equal(normalizeTechnicalDocumentType('CIN'), CIN_DOCUMENT_TYPE);
+  assert.equal(normalizeTechnicalDocumentType('CNI'), CIN_DOCUMENT_TYPE);
+  assert.equal(
+    normalizeTechnicalDocumentType('CARTEIRA NACIONAL DE IDENTIFICAÇÃO'),
+    'CARTEIRA NACIONAL DE IDENTIFICAÇÃO',
+  );
+  assert.equal(isCinDocumentType('CARTEIRA NACIONAL DE IDENTIDADE'), true);
+  assert.equal(formatTechnicalDocumentTypeLabel('CNI'), 'CIN - Carteira de Identidade Nacional');
+  assert.equal(normalizeTechnicalDocumentType('IDENTIDADE'), 'RG (ANTIGO)');
+  assert.equal(normalizeTechnicalDocumentType('CNH DIGITAL'), 'CNH');
+});
+
+test('preserva tipo documental desconhecido para compatibilidade com cadastros existentes', () => {
+  assert.equal(normalizeTechnicalDocumentType('PASSAPORTE'), 'PASSAPORTE');
+  assert.equal(isAcceptedTechnicalDocumentType('PASSAPORTE'), true);
+  assert.equal(isAcceptedTechnicalDocumentType('CARTEIRA PROFISSIONAL'), true);
+  assert.equal(formatTechnicalDocumentTypeLabel('DOCUMENTO ESTRANGEIRO'), 'DOCUMENTO ESTRANGEIRO');
 });

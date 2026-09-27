@@ -24,6 +24,9 @@ export interface EmissionLog {
     nome: string;
     cpf_cnpj: string;
     rg?: string;
+    tipo_documento?: string;
+    rg_uf_emissao?: string;
+    rg_data_emissao?: string;
     data_nascimento?: string;
     foto_url?: string;
     sexo?: string;

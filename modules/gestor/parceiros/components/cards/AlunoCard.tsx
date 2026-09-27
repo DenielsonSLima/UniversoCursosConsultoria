@@ -6,6 +6,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { parceirosService } from '../../parceiros.service';
 import { formatMatricula } from '../../../../../lib/academicUtils';
 import { formatCpf, formatPhone } from '../../../../../lib/documentFormatters';
+import { getPersonDisplayName, hasDistinctSocialName } from '../../../../shared/utils/personDisplayName';
 import EmailConfirmationStatus from './EmailConfirmationStatus';
 
 interface AlunoCardProps {
@@ -32,6 +33,7 @@ const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick, onDelete }) => {
   const telefone = data.telefone || data.contato1;
   const matriculasAluno = Array.isArray(data.matriculasAluno) ? data.matriculasAluno : [];
   const matriculaAtual = matriculasAluno[0];
+  const displayName = getPersonDisplayName(data);
 
   const toggleStatusMutation = useMutation({
     mutationFn: () => parceirosService.update(data.id, { ...data, tipo: 'Aluno', status: isAtivo ? 'INATIVO' : 'ATIVO' }),
@@ -64,14 +66,14 @@ const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick, onDelete }) => {
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <div className="w-11 h-11 rounded-[14px] bg-blue-50 text-blue-600 flex items-center justify-center overflow-hidden border border-blue-100 shadow-sm shrink-0">
             <img
-              src={data.foto || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.nome)}&background=E0F2FE&color=2563EB&bold=true`}
-              alt={data.nome}
+              src={data.foto || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=E0F2FE&color=2563EB&bold=true`}
+              alt={displayName}
               className="w-full h-full object-cover"
             />
           </div>
           <div className="flex flex-col min-w-0">
-            <h3 className="line-clamp-1 text-xs font-bold leading-4 tracking-[-0.01em] text-slate-800 transition-colors group-hover:text-blue-600" title={data.nome}>
-              {data.nome}
+            <h3 className="line-clamp-1 text-xs font-bold leading-4 tracking-[-0.01em] text-slate-800 transition-colors group-hover:text-blue-600" title={displayName}>
+              {displayName}
             </h3>
             <div className="text-[11px] text-slate-400 font-medium font-mono flex items-center gap-1.5 flex-wrap">
               {data.cpf && <span>{formattedCpf}</span>}
@@ -80,8 +82,8 @@ const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick, onDelete }) => {
                 {formatMatricula(data.id, data.createdAt, data.poloId)}
               </span>
             </div>
-            {data.nomeSocial && (
-              <div className="text-[10px] text-blue-500 font-semibold mt-0.5 truncate">Social: {data.nomeSocial}</div>
+            {hasDistinctSocialName(data) && (
+              <div className="mt-0.5 truncate text-[10px] font-semibold text-slate-400">Nome civil: {data.nome}</div>
             )}
           </div>
         </div>

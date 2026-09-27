@@ -1,4 +1,5 @@
 import { getDocumentValidationUrl } from '../../../../shared/document-validation/document-validation.url';
+import { resolveStudentIdentityDocument } from '../../../../shared/utils/studentIdentityDocument';
 import { CertificadoAcademico } from '../certificados.types';
 
 const formatCertificateDate = (date?: string | null) =>
@@ -45,6 +46,7 @@ const buildCertificateTemplateVars = (certificado: CertificadoAcademico) => {
   const dataInicio = formatCertificateDate(certificado.data_inscricao);
   const dataFim = formatCertificateDate(certificado.data_conclusao);
   const dataFimExtenso = formatCertificateDateLong(certificado.data_conclusao);
+  const identity = resolveStudentIdentityDocument(certificado.aluno);
 
   return {
     nome_aluno: certificado.aluno?.nome || '',
@@ -52,7 +54,7 @@ const buildCertificateTemplateVars = (certificado: CertificadoAcademico) => {
     curso_nome: certificado.curso?.nome || '',
     curso_titulo: getTechnicalCourseTitle(certificado.curso?.nome),
     carga_horaria: String(certificado.curso?.carga_horaria || ''),
-    rg: certificado.aluno?.rg || '________________',
+    rg: identity.number || '________________',
     naturalidade: certificado.aluno?.naturalidade || '________________',
     data_nascimento: formatCertificateDate(certificado.aluno?.data_nascimento) || '________________',
     eixo_tecnologico: inferTechnologicalAxis(certificado),

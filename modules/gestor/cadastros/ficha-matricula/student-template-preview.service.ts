@@ -2,6 +2,7 @@ import { formatMatricula } from '../../../../lib/academicUtils';
 import { formatCpf } from '../../../../lib/documentFormatters';
 import { supabase } from '../../../../lib/supabase';
 import { formatCep } from '../../../shared/utils/brazilianCep';
+import { resolveStudentIdentityDocument } from '../../../shared/utils/studentIdentityDocument';
 import {
   formatRegistrationIssuerState,
   formatRegistrationReservist,
@@ -63,19 +64,20 @@ const normalizeStudentPreview = (enrollment: any, referencePolo: any): StudentTe
   const responsibleName = student.responsavel_nome || student.nome;
   const responsibleCpf = student.responsavel_cpf || student.cpf_cnpj;
   const responsiblePhone = student.responsavel_telefone || student.telefone;
+  const identity = resolveStudentIdentityDocument(student);
 
   return {
     enrollmentId: enrollment.id,
     label: `${studentName} · ${displayValue(course.nome)}`,
     replacements: {
       '{{ALUNO_RG_ORGAO}} / {{ALUNO_RG_UF}}': displayValue(
-        formatRegistrationIssuerState(student.orgao_emissor, student.rg_uf_emissao),
+        formatRegistrationIssuerState(identity.issuer, identity.state),
       ),
       '{{ALUNO_NOME}}': studentName,
       '{{ALUNO_FOTO_URL}}': student.foto_url || '/sem-foto-aluno.svg',
       '{{ALUNO_NOME_SOCIAL}}': displayValue(student.nome_social || student.nome),
       '{{ALUNO_CPF}}': displayValue(formatCpf(student.cpf_cnpj)),
-      '{{ALUNO_RG}}': displayValue(student.rg),
+      '{{ALUNO_RG}}': displayValue(identity.number),
       '{{ALUNO_NASCIMENTO}}': formatDate(student.data_nascimento),
       '{{ALUNO_SEXO}}': displayValue(student.sexo),
       '{{ALUNO_ESTADO_CIVIL}}': displayValue(student.estado_civil),
@@ -94,10 +96,11 @@ const normalizeStudentPreview = (enrollment: any, referencePolo: any): StudentTe
       '{{ALUNO_BAIRRO}}': displayValue(student.bairro),
       '{{ALUNO_CIDADE}}': displayValue(student.cidade),
       '{{ALUNO_UF}}': displayValue(student.uf),
-      '{{ALUNO_TIPO_DOCUMENTO}}': displayValue(student.tipo_documento),
-      '{{ALUNO_RG_ORGAO}}': displayValue(student.orgao_emissor),
-      '{{ALUNO_RG_UF}}': displayValue(student.rg_uf_emissao),
-      '{{ALUNO_RG_EMISSAO}}': formatDate(student.rg_data_emissao),
+      '{{ALUNO_DOCUMENTO_TIPO}}': displayValue(identity.label),
+      '{{ALUNO_TIPO_DOCUMENTO}}': displayValue(identity.label),
+      '{{ALUNO_RG_ORGAO}}': displayValue(identity.issuer),
+      '{{ALUNO_RG_UF}}': displayValue(identity.state),
+      '{{ALUNO_RG_EMISSAO}}': formatDate(identity.issueDate),
       '{{ALUNO_TITULO_ELEITOR}}': displayValue(formatRegistrationVoterId(student.titulo_eleitor)),
       '{{ALUNO_TITULO_ZONA}}': displayValue(student.titulo_eleitor_zona),
       '{{ALUNO_TITULO_SECAO}}': displayValue(student.titulo_eleitor_secao),

@@ -218,10 +218,14 @@ const ParceiroAlunoDados: React.FC<ParceiroAlunoDadosProps> = ({
         onChange={handleChange}
         onPhotoUpload={handlePhotoUpload}
         onRemovePhoto={() => setFormData((previous: any) => ({ ...previous, foto: '' }))}
-        onUseFullName={() => setFormData({ ...formData, nomeSocial: formData.nome })}
+        onCatalogPatch={(patch) => setFormData((previous: any) => ({ ...previous, ...patch }))}
       />
 
-      <ParceiroAlunoDetailsSections formData={formData} isEditing={isEditing} onChange={handleChange} />
+      <ParceiroAlunoDetailsSections
+        formData={formData}
+        isEditing={isEditing}
+        onChange={handleChange}
+      />
       <ParceiroAlunoAddressSection
         formData={formData}
         isEditing={isEditing}

@@ -1,5 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { AlertCircle, Mail, Phone, User } from 'lucide-react';
+import {
+  MUNICIPALITY_FALLBACK_OPTIONS,
+  NATIONALITY_FALLBACK_OPTIONS,
+  searchMunicipalityCatalog,
+  searchNationalityCatalog,
+} from '../../shared/catalogs/person-reference-catalog.service';
+import EditableCombobox from '../../shared/components/EditableCombobox';
 import { PerfilData, PerfilUpdatePayload } from './perfil.types';
 import PerfilAddressSection from './PerfilAddressSection';
 import PerfilPhotoCard from './PerfilPhotoCard';
@@ -23,6 +30,8 @@ const PerfilDadosTab: React.FC<PerfilDadosTabProps> = ({
   onSave,
   onPhotoUpload,
 }) => {
+  const personalInputClassName = 'min-h-12 w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-base font-bold text-slate-700 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 md:text-xs';
+  const personalReadOnlyClassName = 'min-w-0 break-words rounded-xl border border-slate-100 bg-slate-50/50 p-3 font-bold text-slate-850';
   const [editing, setEditing] = useState(false);
   const [pendingPhotoFile, setPendingPhotoFile] = useState<File | null>(null);
   const form = usePerfilDadosForm({ profile, editing, technicalEnrollmentNotice, onSave });
@@ -72,7 +81,7 @@ const PerfilDadosTab: React.FC<PerfilDadosTabProps> = ({
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.18em]">Inscrição técnica pendente</p>
                   <p className="mt-1 text-xs font-bold leading-relaxed">
-                    Para matricular-se em curso técnico com inscrição online, complete sua situação no Ensino Médio, a escola, a série atual e o ano de conclusão ou previsão.
+                    Complete somente os dados cadastrais obrigatórios indicados abaixo. Ensino Médio e documentos podem ser atualizados depois e não bloqueiam a ativação.
                   </p>
                   {form.technicalMissingFields.length > 0 && (
                     <p className="mt-2 text-[11px] font-black">
@@ -116,6 +125,49 @@ const PerfilDadosTab: React.FC<PerfilDadosTabProps> = ({
                   <Phone size={13} className="text-slate-400" />
                   {readProfileValue(profile?.telefone, 'Não Informado')}
                 </p>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <label htmlFor="perfil-nacionalidade" className="text-[10px] font-bold uppercase tracking-wider text-slate-400 md:text-[9px]">Nacionalidade</label>
+              {editing ? (
+                <EditableCombobox
+                  id="perfil-nacionalidade"
+                  name="nacionalidade"
+                  value={form.nacionalidade}
+                  options={NATIONALITY_FALLBACK_OPTIONS}
+                  loadOptions={searchNationalityCatalog}
+                  onValueChange={(value, option) => {
+                    form.setNacionalidade(value.toLocaleUpperCase('pt-BR'));
+                    form.setNacionalidadeCodigoIso3(option?.metadata?.codigoIso3 || '');
+                  }}
+                  className={personalInputClassName}
+                  placeholder="Digite para buscar ou informar livremente"
+                />
+              ) : (
+                <p className={personalReadOnlyClassName}>{form.nacionalidade || '—'}</p>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <label htmlFor="perfil-naturalidade" className="text-[10px] font-bold uppercase tracking-wider text-slate-400 md:text-[9px]">Naturalidade</label>
+              {editing ? (
+                <EditableCombobox
+                  id="perfil-naturalidade"
+                  name="naturalidade"
+                  value={form.naturalidade}
+                  options={MUNICIPALITY_FALLBACK_OPTIONS}
+                  loadOptions={searchMunicipalityCatalog}
+                  onValueChange={(value, option) => {
+                    form.setNaturalidade(value.toLocaleUpperCase('pt-BR'));
+                    form.setNaturalidadeCodigoIbge(option?.metadata?.codigoIbge || '');
+                    form.setNaturalidadeUf(option?.metadata?.uf || '');
+                  }}
+                  className={personalInputClassName}
+                  placeholder="Digite a cidade para ver sugestões"
+                />
+              ) : (
+                <p className={personalReadOnlyClassName}>{form.naturalidade || '—'}</p>
               )}
             </div>
           </div>

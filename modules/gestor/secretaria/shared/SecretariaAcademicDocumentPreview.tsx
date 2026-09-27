@@ -11,6 +11,7 @@ import { atestadoConclusaoService } from '../../cadastros/modelos-documentos/ate
 import { loadAcademicPreview } from '../historico-emissoes/academic-preview';
 import type { EmissionLog } from '../historico-emissoes/historico-emissoes.types';
 import { getSecretariaErrorMessage } from './secretaria-error';
+import { resolveStudentIdentityDocument } from '../../../shared/utils/studentIdentityDocument';
 
 interface Props {
   matriculaId: string;
@@ -52,7 +53,7 @@ const SecretariaAcademicDocumentPreview: React.FC<Props> = ({
         .from('matriculas')
         .select(`
           id, aluno_id, turma_id, status, data_matricula,
-          parceiros!inner(nome, cpf_cnpj, rg),
+          parceiros!inner(nome, cpf_cnpj, rg, tipo_documento),
           turmas!inner(
             nome, codigo, data_previsao_termino, polo_id,
             cursos!inner(id, nome, carga_horaria, modalidade),
@@ -95,10 +96,11 @@ const SecretariaAcademicDocumentPreview: React.FC<Props> = ({
   let parsedText = '';
   if (data) {
     const modules = data.academic.moduleNames.join(', ') || moduleName || 'Sem módulo selecionado';
+    const identity = resolveStudentIdentityDocument(data.aluno);
     const replacements: Record<string, string> = {
       '{{ALUNO_NOME}}': data.aluno.nome,
       '{{ALUNO_CPF}}': data.aluno.cpf_cnpj || 'Não informado',
-      '{{ALUNO_RG}}': data.aluno.rg || 'Não informado',
+      '{{ALUNO_RG}}': identity.number || 'Não informado',
       '{{ALUNO_MATRICULA}}': formatMatricula(
         data.matricula.id,
         data.matricula.data_matricula,

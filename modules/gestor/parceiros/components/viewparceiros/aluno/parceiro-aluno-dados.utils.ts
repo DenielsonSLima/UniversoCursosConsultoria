@@ -1,19 +1,11 @@
 import { normalizeAlunoSexo, normalizeAlunoOrgao } from './parceiro-aluno-edicao';
 import { formatPhone, onlyDigits } from '../../../../../../lib/documentFormatters';
-import { TECHNICAL_DOCUMENT_TYPE_OPTIONS } from '../../../../../shared/utils/technicalEnrollmentRequirements';
+import {
+  formatTechnicalDocumentTypeLabel,
+  normalizeTechnicalDocumentType,
+} from '../../../../../shared/utils/technicalEnrollmentRequirements';
 import { uppercaseAlunoTextFields } from '../../../utils/aluno-formatters';
 import { normalizeCertidaoMatricula } from '../../../utils/certidao-civil';
-
-export const DEFAULT_DOCUMENT_TYPE = 'CARTEIRA NACIONAL DE IDENTIFICAÇÃO';
-
-const normalizeText = (value?: unknown) =>
-  String(value || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^\w\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .toUpperCase();
 
 export const maskCpf = (value?: string | null) => {
   const digits = onlyDigits(value).slice(0, 11);
@@ -47,29 +39,11 @@ export const maskDate = (value?: string | null) => {
   return digits;
 };
 
-export const normalizeDocumentType = (value?: string | null) => {
-  const normalized = normalizeText(value);
-  if (!normalized) return DEFAULT_DOCUMENT_TYPE;
-  if (['CIN', 'CNI'].includes(normalized) || normalized.includes('CARTEIRA NACIONAL')) {
-    return DEFAULT_DOCUMENT_TYPE;
-  }
-  if (normalized.includes('CNH') || normalized.includes('HABILITACAO')) {
-    return 'CNH';
-  }
-  if (normalized === 'RG' || normalized.includes('REGISTRO GERAL') || normalized.includes('RG ANTIGO')) {
-    return 'RG (ANTIGO)';
-  }
+export const normalizeDocumentType = (value?: string | null) =>
+  normalizeTechnicalDocumentType(value);
 
-  const option = TECHNICAL_DOCUMENT_TYPE_OPTIONS.find((item) =>
-    normalizeText(item.value) === normalized || normalizeText(item.label) === normalized
-  );
-  return option?.value || String(value || DEFAULT_DOCUMENT_TYPE);
-};
-
-export const formatDocumentTypeLabel = (value?: string | null) => {
-  const normalizedValue = normalizeDocumentType(value);
-  return TECHNICAL_DOCUMENT_TYPE_OPTIONS.find((option) => option.value === normalizedValue)?.label || normalizedValue;
-};
+export const formatDocumentTypeLabel = (value?: string | null) =>
+  formatTechnicalDocumentTypeLabel(value);
 
 export const formatPhoneDisplay = (value?: string | null) => (value ? formatPhone(value) : '');
 

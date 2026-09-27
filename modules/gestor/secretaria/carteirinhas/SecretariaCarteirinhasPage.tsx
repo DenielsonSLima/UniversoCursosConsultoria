@@ -21,6 +21,7 @@ import SecretariaCarteirinhasPrintLayout, {
   type CarteirinhaLayoutType,
 } from './SecretariaCarteirinhasPrintLayout';
 import { matchesSecretariaSearch } from '../secretaria-search';
+import { resolveStudentIdentityDocument } from '../../../shared/utils/studentIdentityDocument';
 
 interface SecretariaCarteirinhasPageProps {
   poloId?: string | null;
@@ -80,12 +81,17 @@ const SecretariaCarteirinhasPage: React.FC<SecretariaCarteirinhasPageProps> = ({
     });
 
     const mapped = Array.from(primaryEnrollmentByStudent.values()).map((enrollment) => {
+      const identity = resolveStudentIdentityDocument({
+        cpf: enrollment.cpf,
+        rg: enrollment.rg,
+        tipoDocumento: enrollment.tipoDocumento,
+      });
       return {
         id: enrollment.alunoId,
         enrollmentId: enrollment.enrollmentId,
         nome: enrollment.alunoNome.toUpperCase(),
         cpf: enrollment.cpf,
-        rg: enrollment.rg,
+        rg: identity.number,
         nascimento: formatCarteirinhaDate(enrollment.nascimento),
         matricula: formatMatricula(enrollment.enrollmentId, enrollment.dataMatricula, enrollment.poloId),
         curso: enrollment.cursoNome,
@@ -94,7 +100,7 @@ const SecretariaCarteirinhasPage: React.FC<SecretariaCarteirinhasPageProps> = ({
         instituicao: 'Universo Cursos e Consultoria',
         validade: 'Sem vencimento',
         fotoUrl: enrollment.fotoUrl,
-        tipoDocumento: enrollment.tipoDocumento || 'CARTEIRA NACIONAL DE IDENTIFICAÇÃO',
+        tipoDocumento: enrollment.tipoDocumento || '',
         turmaIds: enrollmentIdsByStudent.get(enrollment.alunoId) || [enrollment.turmaId],
         poloRazaoSocial: institutionalData?.razaoSocial,
         poloCnpj: institutionalData?.cnpj,

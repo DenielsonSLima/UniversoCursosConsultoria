@@ -1,8 +1,14 @@
 import { formatMatricula } from '../../../../lib/academicUtils';
+import { getPersonDisplayName } from '../../../shared/utils/personDisplayName';
+import { resolveStudentIdentityDocument } from '../../../shared/utils/studentIdentityDocument';
 
-export const buildStudentRegistrationSnapshot = (matricula: any) => ({
+export const buildStudentRegistrationSnapshot = (matricula: any) => {
+  const student = matricula.parceiros || {};
+  const identity = resolveStudentIdentityDocument(student);
+
+  return ({
   studentName: matricula.parceiros?.nome || '',
-  studentSocialName: matricula.parceiros?.nome_social || '',
+  studentSocialName: getPersonDisplayName(student),
   studentCpf: matricula.parceiros?.cpf_cnpj || '',
   studentBirthDate: matricula.parceiros?.data_nascimento || '',
   studentPhotoUrl: matricula.parceiros?.foto_url || null,
@@ -11,11 +17,11 @@ export const buildStudentRegistrationSnapshot = (matricula: any) => ({
   studentSex: matricula.parceiros?.sexo || '',
   studentMaritalStatus: matricula.parceiros?.estado_civil || '',
   studentRaceColor: matricula.parceiros?.raca_cor || '',
-  studentRg: matricula.parceiros?.rg || '',
-  studentDocumentType: matricula.parceiros?.tipo_documento || '',
-  studentRgIssuer: matricula.parceiros?.orgao_emissor || '',
-  studentRgState: matricula.parceiros?.rg_uf_emissao || '',
-  studentRgIssueDate: matricula.parceiros?.rg_data_emissao || '',
+  studentRg: identity.number,
+  studentDocumentType: identity.label,
+  studentRgIssuer: identity.issuer,
+  studentRgState: identity.state,
+  studentRgIssueDate: identity.issueDate,
   studentNationality: matricula.parceiros?.nacionalidade || '',
   studentBirthplace: matricula.parceiros?.naturalidade || '',
   studentVoterId: matricula.parceiros?.titulo_eleitor || '',
@@ -59,5 +65,5 @@ export const buildStudentRegistrationSnapshot = (matricula: any) => ({
   unitName: matricula.turmas?.polos?.nome || '',
   enrollmentStatus: matricula.status || '',
   enrollmentDate: matricula.data_matricula || '',
-});
-
+  });
+};

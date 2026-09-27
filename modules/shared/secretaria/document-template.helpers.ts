@@ -1,4 +1,5 @@
 import { getDocumentValidationUrl } from '../document-validation/document-validation.url';
+import { resolveStudentIdentityDocument } from '../utils/studentIdentityDocument';
 
 interface DocumentVariableContext {
   aluno: any;
@@ -57,6 +58,7 @@ export const buildDocumentVariableReplacer = (context: DocumentVariableContext) 
   validity.setDate(validity.getDate() + validityDays);
   const alunoName = context.aluno?.nome || '';
   const alunoCpf = context.aluno?.cpf || context.aluno?.cpf_cnpj || '';
+  const identity = resolveStudentIdentityDocument(context.aluno);
   const responsibleName = context.aluno?.responsavel_financeiro && context.aluno?.responsavel_nome
     ? context.aluno.responsavel_nome
     : alunoName;
@@ -69,9 +71,14 @@ export const buildDocumentVariableReplacer = (context: DocumentVariableContext) 
   const replacements: Record<string, string> = {
     ALUNO_NOME: alunoName.toUpperCase(),
     ALUNO_CPF: alunoCpf,
+    ALUNO_DOCUMENTO_TIPO: identity.label,
+    ALUNO_TIPO_DOCUMENTO: identity.label,
     RESPONSAVEL_FINANCEIRO_NOME: responsibleName.toUpperCase(),
     RESPONSAVEL_FINANCEIRO_CPF: responsibleCpf,
-    ALUNO_RG: context.aluno?.rg || '',
+    ALUNO_RG: identity.number,
+    ALUNO_RG_ORGAO: identity.issuer,
+    ALUNO_RG_UF: identity.state,
+    ALUNO_RG_EMISSAO: identity.issueDate,
     ALUNO_MATRICULA: context.formattedEnrollment,
     CURSO_NOME: String(context.enrollment?.turmas?.cursos?.nome || '').toUpperCase(),
     TURMA_NOME: context.enrollment?.turmas?.nome || '',

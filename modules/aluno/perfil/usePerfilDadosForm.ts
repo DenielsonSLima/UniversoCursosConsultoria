@@ -1,6 +1,10 @@
 import { type ChangeEvent, type Dispatch, type SetStateAction, useEffect, useState } from 'react';
 import { formatCep, lookupBrazilianCep } from '../../shared/utils/brazilianCep';
-import { getTechnicalEnrollmentMissingFields } from '../../shared/utils/technicalEnrollmentRequirements';
+import { formatCpf } from '../../shared/utils/identityValidation';
+import {
+  getTechnicalEnrollmentMissingFields,
+  normalizeTechnicalDocumentType,
+} from '../../shared/utils/technicalEnrollmentRequirements';
 import { PerfilData, PerfilSituacaoEnsinoMedio, PerfilUpdatePayload } from './perfil.types';
 
 export type CepStatus = 'idle' | 'loading' | 'resolved' | 'not-found' | 'error';
@@ -35,8 +39,11 @@ export const usePerfilDadosForm = ({ profile, editing, technicalEnrollmentNotice
   const [sexo, setSexo] = useState('');
   const [estadoCivil, setEstadoCivil] = useState('');
   const [nacionalidade, setNacionalidade] = useState('');
+  const [nacionalidadeCodigoIso3, setNacionalidadeCodigoIso3] = useState('');
   const [naturalidade, setNaturalidade] = useState('');
-  const [tipoDocumento, setTipoDocumento] = useState('CARTEIRA NACIONAL DE IDENTIFICAÇÃO');
+  const [naturalidadeCodigoIbge, setNaturalidadeCodigoIbge] = useState('');
+  const [naturalidadeUf, setNaturalidadeUf] = useState('');
+  const [tipoDocumento, setTipoDocumento] = useState('');
   const [rg, setRg] = useState('');
   const [orgaoEmissor, setOrgaoEmissor] = useState('');
   const [rgUfEmissao, setRgUfEmissao] = useState('');
@@ -70,9 +77,16 @@ export const usePerfilDadosForm = ({ profile, editing, technicalEnrollmentNotice
     setDataNascimento(profile?.dataNascimento || '');
     setSexo(profile?.sexo || '');
     setEstadoCivil(profile?.estadoCivil || '');
-    setNacionalidade(profile?.nacionalidade || 'Brasileira');
+    const nationality = profile?.nacionalidade || 'BRASILEIRA';
+    setNacionalidade(nationality);
+    setNacionalidadeCodigoIso3(
+      profile?.nacionalidadeCodigoIso3
+      || (/^BRASILEIR(?:A|O(?:\s*\(A\))?)$/i.test(nationality.trim()) ? 'BRA' : ''),
+    );
     setNaturalidade(profile?.naturalidade || '');
-    setTipoDocumento(profile?.tipoDocumento || 'CARTEIRA NACIONAL DE IDENTIFICAÇÃO');
+    setNaturalidadeCodigoIbge(profile?.naturalidadeCodigoIbge || '');
+    setNaturalidadeUf(profile?.naturalidadeUf || '');
+    setTipoDocumento(normalizeTechnicalDocumentType(profile?.tipoDocumento));
     setRg(profile?.rg || '');
     setOrgaoEmissor(profile?.orgaoEmissor || '');
     setRgUfEmissao(profile?.rgUfEmissao || '');
@@ -150,11 +164,6 @@ export const usePerfilDadosForm = ({ profile, editing, technicalEnrollmentNotice
 
   const supplementalFields: TextFieldConfig[] = [
     { label: 'Data de nascimento', value: dataNascimento, setter: setDataNascimento, placeholder: 'DD/MM/AAAA' },
-    { label: 'Naturalidade', value: naturalidade, setter: setNaturalidade, placeholder: 'Cidade/UF' },
-    { label: 'Nacionalidade', value: nacionalidade, setter: setNacionalidade, placeholder: 'Brasileira' },
-    { label: 'Órgão emissor', value: orgaoEmissor, setter: setOrgaoEmissor, placeholder: 'SSP, DETRAN...' },
-    { label: 'UF emissão', value: rgUfEmissao, setter: setRgUfEmissao, placeholder: 'SE' },
-    { label: 'Data emissão', value: rgDataEmissao, setter: setRgDataEmissao, placeholder: 'DD/MM/AAAA' },
     { label: 'Nome da mãe', value: nomeMae, setter: setNomeMae, placeholder: 'Nome completo' },
     { label: 'Nome do pai', value: nomePai, setter: setNomePai, placeholder: 'Opcional' },
     { label: 'Responsável', value: responsavelNome, setter: setResponsavelNome, placeholder: 'Se aplicável' },
@@ -166,7 +175,8 @@ export const usePerfilDadosForm = ({ profile, editing, technicalEnrollmentNotice
   const getDraftProfile = (payload?: Partial<PerfilUpdatePayload>) => ({
     ...(profile || {}),
     telefone, cep, endereco, numero, complemento, bairro, cidade, uf,
-    dataNascimento, sexo, estadoCivil, nacionalidade, naturalidade,
+    dataNascimento, sexo, estadoCivil, nacionalidade, nacionalidadeCodigoIso3,
+    naturalidade, naturalidadeCodigoIbge, naturalidadeUf,
     tipoDocumento, rg, orgaoEmissor, rgUfEmissao, rgDataEmissao,
     nomeMae, nomePai, escolaridadeAnterior, instituicaoOrigem, anoConclusaoEnsinoMedio,
     situacaoEnsinoMedio, serieEnsinoMedioAtual, escolaEnsinoMedio,
@@ -186,11 +196,16 @@ export const usePerfilDadosForm = ({ profile, editing, technicalEnrollmentNotice
     setCepStatus('idle');
     setCep(formatCep(event.target.value));
   };
+  const handleDocumentTypeChange = (value: string) => {
+    const normalized = normalizeTechnicalDocumentType(value);
+    setTipoDocumento(normalized);
+  };
 
   const submit = () => {
     const payload = {
       telefone, cep, endereco, numero, complemento, bairro, cidade, uf,
-      dataNascimento, sexo, estadoCivil, nacionalidade, naturalidade,
+      dataNascimento, sexo, estadoCivil, nacionalidade, nacionalidadeCodigoIso3,
+      naturalidade, naturalidadeCodigoIbge, naturalidadeUf,
       tipoDocumento, rg, orgaoEmissor, rgUfEmissao, rgDataEmissao,
       nomeMae, nomePai, escolaridadeAnterior, instituicaoOrigem, anoConclusaoEnsinoMedio,
       situacaoEnsinoMedio, serieEnsinoMedioAtual, escolaEnsinoMedio,
@@ -211,8 +226,12 @@ export const usePerfilDadosForm = ({ profile, editing, technicalEnrollmentNotice
     telefone, setTelefone, cep, endereco, setEndereco, numero, setNumero,
     complemento, setComplemento, bairro, setBairro, cidade, setCidade, uf, setUf,
     cepStatus, handleCepChange, dataNascimento, sexo, setSexo, estadoCivil, setEstadoCivil,
-    nacionalidade, naturalidade, tipoDocumento, setTipoDocumento, rg, setRg,
-    orgaoEmissor, rgUfEmissao, rgDataEmissao, nomeMae, nomePai,
+    nacionalidade, setNacionalidade, nacionalidadeCodigoIso3, setNacionalidadeCodigoIso3,
+    naturalidade, setNaturalidade, naturalidadeCodigoIbge, setNaturalidadeCodigoIbge,
+    naturalidadeUf, setNaturalidadeUf, cpf: formatCpf(profile?.cpf || profile?.cpf_cnpj || ''),
+    tipoDocumento, setTipoDocumento, handleDocumentTypeChange, rg, setRg,
+    orgaoEmissor, setOrgaoEmissor, rgUfEmissao, setRgUfEmissao,
+    rgDataEmissao, setRgDataEmissao, nomeMae, nomePai,
     escolaridadeAnterior, setEscolaridadeAnterior, instituicaoOrigem,
     anoConclusaoEnsinoMedio, situacaoEnsinoMedio, setSituacaoEnsinoMedio,
     serieEnsinoMedioAtual, setSerieEnsinoMedioAtual, escolaEnsinoMedio,

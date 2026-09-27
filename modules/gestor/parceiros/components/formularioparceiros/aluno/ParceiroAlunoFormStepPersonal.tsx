@@ -2,25 +2,35 @@ import type React from 'react';
 import { Accessibility, Loader2, Upload, User } from 'lucide-react';
 
 import {
+  MUNICIPALITY_FALLBACK_OPTIONS,
+  NATIONALITY_FALLBACK_OPTIONS,
+  searchMunicipalityCatalog,
+  searchNationalityCatalog,
+} from '../../../../../shared/catalogs/person-reference-catalog.service';
+import EditableCombobox from '../../../../../shared/components/EditableCombobox';
+import { getPersonDisplayName } from '../../../../../shared/utils/personDisplayName';
+import {
   ESTADOS_CIVIS,
   INPUT_CLS,
   LABEL_CLS,
   PCD_TIPOS,
   sectionHeaderCls,
 } from './parceiro-aluno-form.constants';
-import type { AlunoFormStepProps } from './parceiro-aluno-form.types';
+import type { AlunoCatalogPatch, AlunoFormStepProps } from './parceiro-aluno-form.types';
 import { RACA_COR_OPTIONS } from '../../../utils/parceiros.constants';
 
 interface PersonalStepProps extends AlunoFormStepProps {
   isUploadingPhoto: boolean;
   onPhotoUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onRemovePhoto: () => void;
+  onCatalogPatch: (patch: AlunoCatalogPatch) => void;
 }
 
 const ParceiroAlunoFormStepPersonal: React.FC<PersonalStepProps> = ({
   formData,
   isUploadingPhoto,
   onChange,
+  onCatalogPatch,
   onPhotoUpload,
   onRemovePhoto,
 }) => (
@@ -86,9 +96,13 @@ const ParceiroAlunoFormStepPersonal: React.FC<PersonalStepProps> = ({
       </div>
 
       <div className="md:col-span-2">
-        <label className={LABEL_CLS}>Nome Social (Opcional)</label>
-        <input type="text" name="nomeSocial" value={formData.nomeSocial} onChange={onChange}
-          className={INPUT_CLS} placeholder="Nome pelo qual prefere ser chamado(a)" />
+        <label htmlFor="novo-aluno-nome-social" className={LABEL_CLS}>Nome Social (Opcional)</label>
+        <input id="novo-aluno-nome-social" type="text" name="nomeSocial" value={formData.nomeSocial} onChange={onChange}
+          aria-describedby="novo-aluno-nome-social-ajuda"
+          className={INPUT_CLS} placeholder="Preencha somente se houver nome social" />
+        <p id="novo-aluno-nome-social-ajuda" className="mt-1.5 text-xs leading-relaxed text-slate-500">
+          Se ficar vazio, o sistema exibirá <strong>{getPersonDisplayName(formData) || 'o nome completo'}</strong> automaticamente, sem duplicar o dado.
+        </p>
       </div>
 
       <div>
@@ -131,15 +145,38 @@ const ParceiroAlunoFormStepPersonal: React.FC<PersonalStepProps> = ({
       </div>
 
       <div>
-        <label className={LABEL_CLS}>Nacionalidade</label>
-        <input type="text" name="nacionalidade" value={formData.nacionalidade} onChange={onChange}
-          className={INPUT_CLS} placeholder="Brasileira" />
+        <label htmlFor="novo-aluno-nacionalidade" className={LABEL_CLS}>Nacionalidade</label>
+        <EditableCombobox
+          id="novo-aluno-nacionalidade"
+          name="nacionalidade"
+          value={formData.nacionalidade}
+          options={NATIONALITY_FALLBACK_OPTIONS}
+          loadOptions={searchNationalityCatalog}
+          onValueChange={(value, option) => onCatalogPatch({
+            nacionalidade: value.toLocaleUpperCase('pt-BR'),
+            nacionalidadeCodigoIso3: option?.metadata?.codigoIso3 || '',
+          })}
+          className={INPUT_CLS}
+          placeholder="Digite para buscar ou informar livremente"
+        />
       </div>
 
-      <div>
-        <label className={LABEL_CLS}>Naturalidade (Cidade/UF)</label>
-        <input type="text" name="naturalidade" value={formData.naturalidade} onChange={onChange}
-          className={INPUT_CLS} placeholder="Ex: Aracaju/SE" />
+      <div className="md:col-span-2">
+        <label htmlFor="novo-aluno-naturalidade" className={LABEL_CLS}>Naturalidade (Cidade/UF)</label>
+        <EditableCombobox
+          id="novo-aluno-naturalidade"
+          name="naturalidade"
+          value={formData.naturalidade}
+          options={MUNICIPALITY_FALLBACK_OPTIONS}
+          loadOptions={searchMunicipalityCatalog}
+          onValueChange={(value, option) => onCatalogPatch({
+            naturalidade: value.toLocaleUpperCase('pt-BR'),
+            naturalidadeCodigoIbge: option?.metadata?.codigoIbge || '',
+            naturalidadeUf: option?.metadata?.uf || '',
+          })}
+          className={INPUT_CLS}
+          placeholder="Digite a cidade para ver sugestões"
+        />
       </div>
     </div>
 
