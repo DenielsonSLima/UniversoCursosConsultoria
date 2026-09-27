@@ -39,7 +39,7 @@ export const OtherCreditPaymentModal: React.FC<{
   if (typeof document === 'undefined') return null;
   return createPortal(
     <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="other-credit-payment-title"
-      className="fixed inset-0 z-[130] flex h-[100dvh] flex-col overflow-y-auto bg-white text-[#001a33]"
+      className="fixed inset-0 z-[130] flex h-[100dvh] flex-col overflow-y-auto bg-[#f3f5f9] text-[#0b1f4a]"
       onKeyDown={(event) => {
         if (event.key === 'Escape') { event.stopPropagation(); onClose(); }
         if (event.key !== 'Tab') return;
@@ -49,29 +49,30 @@ export const OtherCreditPaymentModal: React.FC<{
         if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
         if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
       }}>
-      <header className="sticky top-0 z-10 border-b border-slate-100 bg-white/95 backdrop-blur-sm">
-        <div className="mx-auto flex min-h-20 w-full max-w-7xl items-center justify-between gap-4 px-5 py-4 sm:px-10">
-          <div className="flex min-w-0 items-center gap-4 sm:gap-6">
+      <header className="sticky top-0 z-10 border-b border-slate-200 border-t-[3px] border-t-[#ed1c24] bg-white">
+        <div className="mx-auto flex min-h-[76px] w-full max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:flex-nowrap sm:px-8">
+          <div className="flex min-w-0 items-center gap-3 sm:gap-5">
             <button ref={closeRef} type="button" onClick={onClose} aria-label="Fechar caixa"
-              className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-slate-200 text-slate-500 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"><ArrowLeft size={19} /></button>
-            <div className="min-w-0"><p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 sm:text-[10px]">Universo · Outros créditos</p>
-              <h2 id="other-credit-payment-title" className="mt-1 text-xl font-black tracking-tight sm:text-2xl">Caixa na tela</h2></div>
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-slate-200 text-slate-600 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"><ArrowLeft size={18} aria-hidden="true" /></button>
+            <img src="/LogoUniverso.png" alt="Universo Cursos e Consultoria" className="h-auto w-[110px] shrink-0 object-contain sm:w-[138px]" />
+            <div className="min-w-0 border-l border-slate-200 pl-3 sm:pl-5"><p className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500 sm:text-[10px]">Ponto de venda</p>
+              <h2 id="other-credit-payment-title" className="mt-0.5 text-sm font-bold tracking-tight text-[#0b1f4a] sm:text-lg">Pagamento</h2></div>
           </div>
           {onNewPayment && <button type="button" onClick={onNewPayment}
-            className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold transition hover:border-[#001a33] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 sm:px-4 sm:text-sm">
-            <Plus size={17} aria-hidden="true" /><span>Novo atendimento</span>
+            className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-[#0b1f4a] transition hover:border-blue-300 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 sm:px-4 sm:text-sm">
+            <Plus size={16} aria-hidden="true" /><span>Novo atendimento</span>
           </button>}
         </div>
       </header>
 
       <main className="flex flex-1 flex-col">
         {isLoading && <div role="status" className="flex flex-1 flex-col items-center justify-center gap-5 px-6 py-20 text-slate-500">
-          <Loader2 size={28} className="animate-spin text-emerald-600" aria-hidden="true" /><p className="text-sm font-semibold">Consultando cobrança...</p>
+          <Loader2 size={28} className="animate-spin text-blue-700" aria-hidden="true" /><p className="text-sm font-semibold">Consultando cobrança...</p>
         </div>}
         {isError && <div role="alert" className="mx-auto my-16 w-[calc(100%-3rem)] max-w-lg rounded-2xl border border-rose-200 bg-rose-50 p-8 text-center text-rose-900">
           <h3 className="text-lg font-black">Não foi possível consultar a cobrança</h3><p className="mt-3 text-sm leading-6">{error.message}</p>
           <button type="button" onClick={() => void model.query.refetch()} disabled={isFetching}
-            className="mt-6 min-h-12 rounded-xl bg-[#001a33] px-6 py-3 text-sm font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-4 disabled:opacity-40">{isFetching ? 'Consultando...' : 'Tentar consulta novamente'}</button>
+            className="mt-6 min-h-12 rounded-xl bg-[#001a33] px-6 py-3 text-sm font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-4 disabled:opacity-40">{isFetching ? 'Consultando...' : 'Tentar consulta novamente'}</button>
         </div>}
         {usable && <OtherCreditPaymentContent data={data}
           isFetching={isFetching}
@@ -79,8 +80,8 @@ export const OtherCreditPaymentModal: React.FC<{
         {model.actionMessage && <p role="status" aria-live="polite" className="mx-auto mb-6 w-[calc(100%-3rem)] max-w-5xl rounded-xl bg-slate-100 px-5 py-3 text-sm text-slate-600">{model.actionMessage}</p>}
       </main>
 
-      <footer className="mt-auto border-t border-slate-100 bg-white px-5 py-4 sm:px-10">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 text-[10px] font-medium text-slate-400 sm:text-xs">
+      <footer className="mt-auto border-t border-slate-200 bg-white px-4 py-3 sm:px-8">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 text-[10px] font-medium text-slate-500 sm:text-[11px]">
           <span className="inline-flex items-center gap-1.5"><ShieldCheck size={13} aria-hidden="true" /> BolePix Banese · Pix e boleto na mesma cobrança</span>
           <span>Situação exibida conforme o registro da cobrança.</span>
         </div>
