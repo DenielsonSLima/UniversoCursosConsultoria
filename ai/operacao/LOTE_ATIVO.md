@@ -1,11 +1,7 @@
 # Lote ativo
-
-Estado: ETAPA 2 APLICADA — PUBLICAÇÃO AUTORIZADA
-
 ## Lote: 2026-09-27-caixa-workspace-v2-redesign
-
+Estado: ETAPA 2 APLICADA — PUBLICAÇÃO AUTORIZADA
 Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-27-caixa-workspace-v2-redesign.md`
-
 - Etapa 0 confirmou o baseline remoto de dez RPCs atuais do Caixa sem escrever no Supabase.
 - Etapa 1 fechou o contrato semântico e o wireframe responsivo da mesa de tesouraria.
 - Todo cálculo financeiro, percentual, projeção, classificação e paginação permanece no backend/RPC.
