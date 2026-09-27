@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-09-27T21:40:20.882Z",
+  "builtAt": "2026-09-27T23:39:59.634Z",
   "manifestVersion": 2,
-  "sourceSignature": "1235d470094262ea488208047583148f613b7dcd288ea71e5b7553896735d75e",
+  "sourceSignature": "defdbdbd48aaecf2d93f8f4b2d1c01d98412d197b8cc04d86d8bd6e1d515c62d",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "b10661b34755803a5a31785a3ef2e339e0c71537885a42b6380d62b49ca1694a"
+      "hash": "f9bb6b62f08b96f6c562e116274ad9a1f256c420dc7196b4ad72316658209771"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -204,13 +204,13 @@
       "part": 1
     },
     {
-      "id": "6fcec8df3c7a8910ff70",
-      "hash": "6fcec8df3c7a8910ff7043a494fc39e29e697d021282adebe3764bc9ba9b1fa1",
+      "id": "a45eca63a202f3cf092c",
+      "hash": "a45eca63a202f3cf092cff91a130e42e193403066a4cd9c9a34875be01404bf9",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-09-27-caixa-workspace-v2-redesign",
-      "text": "Estado: ETAPA 2 APLICADA — PUBLICAÇÃO AUTORIZADA Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-27-caixa-workspace-v2-redesign.md` - Etapa 0 confirmou o baseline remoto de dez RPCs atuais do Caixa sem escrever no Supabase. - Etapa 1 fechou o contrato semântico e o wireframe responsivo da mesa de tesouraria. - Todo cálculo financeiro, percentual, projeção, classificação e paginação permanece no backend/RPC. - A Etapa 2 criou e validou o núcleo privado e os contratos tipados do Workspace v2. - As duas migrations foram aplicadas e verificadas no Supabase; o core permanece privado, sem `EXECUTE` para papéis clientes e sem impacto visual neste checkpoint. - O usuário autorizou publicar o lote atômico no GitHub como versão 4.8.122. - O próximo checkpoint continua sendo o wrapper seguro por escopo, sem cutover antecipado da interface.",
-      "normalizedText": "estado etapa 2 aplicada publicacao autorizada manifesto explicito ai operacao registros alteracoes 2026 09 27 caixa workspace v2 redesign md etapa 0 confirmou o baseline remoto de dez rpcs atuais do caixa sem escrever no supabase etapa 1 fechou o contrato semantico e o wireframe responsivo da mesa de tesouraria todo calculo financeiro percentual projecao classificacao e paginacao permanece no backend rpc a etapa 2 criou e validou o nucleo privado e os contratos tipados do workspace v2 as duas migrations foram aplicadas e verificadas no supabase o core permanece privado sem execute para papeis clientes e sem impacto visual neste checkpoint o usuario autorizou publicar o lote atomico no github como versao 4 8 122 o proximo checkpoint continua sendo o wrapper seguro por escopo sem cutover antecipado da interface",
-      "tokenCount": 109,
+      "section": "Lote: 2026-09-27-caixa-workspace-v2-integracao",
+      "text": "Estado: RPCs APLICADAS E VALIDADAS — CUTOVER CONTROLADO PRONTO PARA PUBLICAÇÃO Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-27-caixa-workspace-v2-integracao.md` - O core privado publicado na versão 4.8.122 permanece imutável. - A Etapa 3 aplicou o core por empresa, o wrapper seguro, o drill-down e a correção de unidade de contagem no Supabase. - A Etapa 3B adiciona transporte TanStack Query, validação pedido/resposta e invalidação Realtime por empresa/escopo. - A primeira dobra e o drill-down paginado entram no módulo Caixa pelo modo `Cockpit de tesouraria`. - `Cockpit de tesouraria` e `Análise mensal` são modos mutuamente exclusivos; somente o modo visível consulta dados e assina Realtime. - Gráficos sem série canônica continuam explicitamente indisponíveis; o frontend não calcula dinheiro, percentual, escala, classificação ou paginação. - `allPolos` conserva a autorização atual de administrador global do sistema. Um futuro isolamento por empresa exigirá vínculo gestor ↔ empresa explícito. - O cutover integral depende das séries canônicas restantes; este lote ativa o cockpit de contas a pagar e preserva o modo mensal.",
+      "normalizedText": "estado rpcs aplicadas e validadas cutover controlado pronto para publicacao manifesto explicito ai operacao registros alteracoes 2026 09 27 caixa workspace v2 integracao md o core privado publicado na versao 4 8 122 permanece imutavel a etapa 3 aplicou o core por empresa o wrapper seguro o drill down e a correcao de unidade de contagem no supabase a etapa 3b adiciona transporte tanstack query validacao pedido resposta e invalidacao realtime por empresa escopo a primeira dobra e o drill down paginado entram no modulo caixa pelo modo cockpit de tesouraria cockpit de tesouraria e analise mensal sao modos mutuamente exclusivos somente o modo visivel consulta dados e assina realtime graficos sem serie canonica continuam explicitamente indisponiveis o frontend nao calcula dinheiro percentual escala classificacao ou paginacao allpolos conserva a autorizacao atual de administrador global do sistema um futuro isolamento por empresa exigira vinculo gestor empresa explicito o cutover integral depende das series canonicas restantes este lote ativa o cockpit de contas a pagar e preserva o modo mensal",
+      "tokenCount": 143,
       "part": 1
     },
     {

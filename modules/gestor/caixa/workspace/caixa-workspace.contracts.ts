@@ -31,6 +31,7 @@ const payables = (value: unknown, field: string) => {
     'fontes_indisponiveis',
     'motivos_incompletude',
     'criterio',
+    'unidade_quantidade',
     'contas_competencia',
     'pagas_competencia',
     'a_vencer_competencia',
@@ -40,6 +41,9 @@ const payables = (value: unknown, field: string) => {
   unavailableSources(data.fontes_indisponiveis, `${field}.fontes_indisponiveis`);
   incompleteReasons(data.motivos_incompletude, `${field}.motivos_incompletude`);
   if (data.criterio !== 'POSICAO_REEXPRESSA_NO_CORTE') fail(`${field}.criterio`);
+  if (data.unidade_quantidade !== 'TITULO_FISICO_SEM_DUPLICACAO') {
+    fail(`${field}.unidade_quantidade`);
+  }
   moneyCount(data.contas_competencia, `${field}.contas_competencia`);
 
   const paid = record(data.pagas_competencia, `${field}.pagas_competencia`);
@@ -67,6 +71,7 @@ const agenda = (value: unknown, field: string, institutionalDate: string) => {
     'fontes_consideradas',
     'fontes_indisponiveis',
     'motivos_incompletude',
+    'unidade_quantidade',
     'hoje',
     'proximos_sete_dias',
     'dias',
@@ -78,6 +83,9 @@ const agenda = (value: unknown, field: string, institutionalDate: string) => {
     `${field}.fontes_indisponiveis`,
   );
   incompleteReasons(data.motivos_incompletude, `${field}.motivos_incompletude`);
+  if (data.unidade_quantidade !== 'TITULO_FISICO_SEM_DUPLICACAO') {
+    fail(`${field}.unidade_quantidade`);
+  }
 
   const today = record(data.hoje, `${field}.hoje`);
   exactKeys(today, ['data', 'valor', 'quantidade'], `${field}.hoje`);
@@ -201,6 +209,7 @@ export function assertCaixaWorkspaceV2Payload(
 
   const meta = record(payload.meta, 'meta');
   exactKeys(meta, [
+    'empresa_id',
     'competencia',
     'periodo_inicio',
     'periodo_fim_exclusivo',
@@ -216,6 +225,9 @@ export function assertCaixaWorkspaceV2Payload(
     'criterio_historico',
     'criterio_realizado',
   ], 'meta');
+  if (typeof meta.empresa_id !== 'string' || !UUID_PATTERN.test(meta.empresa_id)) {
+    fail('meta.empresa_id');
+  }
   const competence = date(meta.competencia, 'meta.competencia');
   const periodStart = date(meta.periodo_inicio, 'meta.periodo_inicio');
   const periodEnd = date(meta.periodo_fim_exclusivo, 'meta.periodo_fim_exclusivo');

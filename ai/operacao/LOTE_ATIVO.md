@@ -1,11 +1,12 @@
 # Lote ativo
-## Lote: 2026-09-27-caixa-workspace-v2-redesign
-Estado: ETAPA 2 APLICADA — PUBLICAÇÃO AUTORIZADA
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-27-caixa-workspace-v2-redesign.md`
-- Etapa 0 confirmou o baseline remoto de dez RPCs atuais do Caixa sem escrever no Supabase.
-- Etapa 1 fechou o contrato semântico e o wireframe responsivo da mesa de tesouraria.
-- Todo cálculo financeiro, percentual, projeção, classificação e paginação permanece no backend/RPC.
-- A Etapa 2 criou e validou o núcleo privado e os contratos tipados do Workspace v2.
-- As duas migrations foram aplicadas e verificadas no Supabase; o core permanece privado, sem `EXECUTE` para papéis clientes e sem impacto visual neste checkpoint.
-- O usuário autorizou publicar o lote atômico no GitHub como versão 4.8.122.
-- O próximo checkpoint continua sendo o wrapper seguro por escopo, sem cutover antecipado da interface.
+## Lote: 2026-09-27-caixa-workspace-v2-integracao
+Estado: RPCs APLICADAS E VALIDADAS — CUTOVER CONTROLADO PRONTO PARA PUBLICAÇÃO
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-27-caixa-workspace-v2-integracao.md`
+- O core privado publicado na versão 4.8.122 permanece imutável.
+- A Etapa 3 aplicou o core por empresa, o wrapper seguro, o drill-down e a correção de unidade de contagem no Supabase.
+- A Etapa 3B adiciona transporte TanStack Query, validação pedido/resposta e invalidação Realtime por empresa/escopo.
+- A primeira dobra e o drill-down paginado entram no módulo Caixa pelo modo `Cockpit de tesouraria`.
+- `Cockpit de tesouraria` e `Análise mensal` são modos mutuamente exclusivos; somente o modo visível consulta dados e assina Realtime.
+- Gráficos sem série canônica continuam explicitamente indisponíveis; o frontend não calcula dinheiro, percentual, escala, classificação ou paginação.
+- `allPolos` conserva a autorização atual de administrador global do sistema. Um futuro isolamento por empresa exigirá vínculo gestor ↔ empresa explícito.
+- O cutover integral depende das séries canônicas restantes; este lote ativa o cockpit de contas a pagar e preserva o modo mensal.
