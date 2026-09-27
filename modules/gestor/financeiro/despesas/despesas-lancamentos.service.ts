@@ -13,6 +13,8 @@ import type {
   DespesaBaixaParams,
   DespesaLancamento,
   DespesaReciboSnapshot,
+  ExcluirDespesasPendentesInput,
+  ExcluirDespesasPendentesResult,
   UpdateDespesaInput,
 } from './despesas.types';
 
@@ -69,7 +71,7 @@ export const getDespesas = async (
 
   let query = supabase.from('despesas_lancamentos').select(`
     *, polos(nome), categorias_financeiras(nome), parceiros(nome), turmas(nome)
-  `);
+  `).is('excluido_em', null);
   if (filters.tipo) query = query.eq('tipo', filters.tipo);
   if (scopedPoloId) query = query.eq('polo_id', scopedPoloId);
   if (filters.categoriaId) query = query.eq('categoria_financeira_id', filters.categoriaId);
@@ -243,6 +245,22 @@ export const cancelarOuEstornarDespesa = async (
   const row = Array.isArray(data) ? data[0] : data;
   if (!row) throw new Error('O cancelamento não retornou a despesa confirmada.');
   return mapLancamento(row);
+};
+
+export const excluirDespesasPendentes = async (
+  input: ExcluirDespesasPendentesInput,
+): Promise<ExcluirDespesasPendentesResult> => {
+  const { data, error } = await supabase.rpc('excluir_despesas_pendentes_lote_secure', {
+    p_request_id: input.requestId,
+    p_polo_id: input.poloId,
+    p_tipo: input.tipo,
+    p_despesa_ids: input.despesaIds,
+  });
+  if (error) throw error;
+  if (!data || typeof data !== 'object') {
+    throw new Error('A exclusão não retornou uma confirmação válida.');
+  }
+  return data as unknown as ExcluirDespesasPendentesResult;
 };
 
 export const getDespesaReciboSnapshot = async (

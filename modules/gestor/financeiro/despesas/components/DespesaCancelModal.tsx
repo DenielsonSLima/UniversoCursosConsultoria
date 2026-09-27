@@ -6,6 +6,7 @@ import {
   DespesaLancamento,
 } from '../despesas.service';
 import { formatDespesaCurrency } from './despesaPresentation';
+import DespesaModalPortal from './DespesaModalPortal';
 
 interface DespesaCancelModalProps {
   item: DespesaLancamento;
@@ -41,7 +42,7 @@ const DespesaCancelModal: React.FC<DespesaCancelModalProps> = ({
   const canConfirm = motivo.trim().length >= 3 && (!isPago || confirmouEstorno);
 
   return (
-    <div className="fixed inset-0 z-[220] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
+    <DespesaModalPortal onClose={onClose}>
       <section
         role="dialog"
         aria-modal="true"
@@ -129,7 +130,7 @@ const DespesaCancelModal: React.FC<DespesaCancelModalProps> = ({
           </button>
         </footer>
       </section>
-    </div>
+    </DespesaModalPortal>
   );
 };
 

@@ -19,8 +19,11 @@ interface DespesaGroupedViewProps {
   onPagar?: (item: DespesaLancamento) => void;
   onEditar?: (item: DespesaLancamento) => void;
   onCancelar?: (item: DespesaLancamento) => void;
+  onExcluir?: (items: DespesaLancamento[]) => void;
   onImprimir?: (item: DespesaLancamento) => void;
   onAnexo?: (item: DespesaLancamento) => void;
+  selectedIds?: ReadonlySet<string>;
+  onSelectionChange?: (ids: Set<string>) => void;
 }
 
 const DespesaGroupedView: React.FC<DespesaGroupedViewProps> = ({
@@ -31,8 +34,11 @@ const DespesaGroupedView: React.FC<DespesaGroupedViewProps> = ({
   onPagar,
   onEditar,
   onCancelar,
+  onExcluir,
   onImprimir,
   onAnexo,
+  selectedIds,
+  onSelectionChange,
 }) => {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
@@ -138,8 +144,11 @@ const DespesaGroupedView: React.FC<DespesaGroupedViewProps> = ({
                     onPagar={onPagar}
                     onEditar={onEditar}
                     onCancelar={onCancelar}
+                    onExcluir={onExcluir}
                     onImprimir={onImprimir}
                     onAnexo={onAnexo}
+                    selectedIds={selectedIds}
+                    onSelectionChange={onSelectionChange}
                   />
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -151,8 +160,16 @@ const DespesaGroupedView: React.FC<DespesaGroupedViewProps> = ({
                         onPagar={onPagar}
                         onEditar={onEditar}
                         onCancelar={onCancelar}
+                        onExcluir={onExcluir}
                         onImprimir={onImprimir}
                         onAnexo={onAnexo}
+                        selected={selectedIds?.has(item.id)}
+                        onSelectionChange={(selectedItem, selected) => {
+                          if (!onSelectionChange) return;
+                          const next = new Set(selectedIds || []);
+                          if (selected) next.add(selectedItem.id); else next.delete(selectedItem.id);
+                          onSelectionChange(next);
+                        }}
                       />
                     ))}
                   </div>

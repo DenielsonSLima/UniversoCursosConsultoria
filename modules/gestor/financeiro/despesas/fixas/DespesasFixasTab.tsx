@@ -18,38 +18,22 @@ import { useDespesasQueries } from '../hooks/useDespesasQueries';
 import { useDespesasRealtime } from '../hooks/useDespesasRealtime';
 import { useCategoriasFinanceirasQuery } from '../hooks/useCategoriasFinanceirasQuery';
 import DespesaForm from '../components/DespesaForm';
-import DespesaTable from '../components/DespesaTable';
-import DespesaCard from '../components/DespesaCard';
-import DespesaGroupedView from '../components/DespesaGroupedView';
+import DespesaListWorkspace from '../components/DespesaListWorkspace';
 import DespesaBaixaModal from '../components/DespesaBaixaModal';
 import DespesaEditModal from '../components/DespesaEditModal';
 import DespesaCancelModal from '../components/DespesaCancelModal';
 import DespesaReciboModal from '../components/DespesaReciboModal';
 import ToastNotification, { useToast } from '../../../components/ToastNotification';
 import { useFinanceiroSharedQueries } from '../../hooks/useFinanceiroSharedQueries';
-import FinancialReportExportButton, {
-  FinancialReportColumn,
-  FinancialReportFilter,
-  FinancialReportRow,
-  FinancialReportStatusBadge,
-  FinancialReportSummaryCard,
-} from '../../components/FinancialReportPreview';
+import FinancialReportExportButton from '../../components/FinancialReportPreview';
 import FinancialUnderlineTabs from '../../components/FinancialUnderlineTabs';
 import { financeiroQueryKeys } from '../../financeiro.queryKeys';
 import { caixaQueryKeys } from '../../../caixa/caixa.service';
 import { textMatchesSearch } from '../../../../../lib/search';
+import { useDespesasFixasReport } from './useDespesasFixasReport';
 
 const formatCurrency = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
-
-const formatDate = (value?: string) =>
-  value ? new Date(`${value}T00:00:00`).toLocaleDateString('pt-BR') : 'Sem limite';
-
-const statusScopeLabels: Record<DespesaStatusScope, string> = {
-  mes_atual: 'Mês atual',
-  em_aberto: 'Em aberto',
-  todos: 'Todos',
-};
 
 const DespesasFixasTab: React.FC<{ poloId?: string | null }> = ({ poloId: scopedPoloId }) => {
   const queryClient = useQueryClient();
@@ -128,54 +112,22 @@ const DespesasFixasTab: React.FC<{ poloId?: string | null }> = ({ poloId: scoped
     [poloId, polos],
   );
 
-  const reportColumns = useMemo<FinancialReportColumn[]>(() => [
-    { label: 'Vencimento' },
-    { label: 'Descrição' },
-    { label: 'Categoria' },
-    { label: 'Fornecedor' },
-    { label: 'Valor', align: 'right' },
-    { label: 'Parcela', align: 'center' },
-    { label: 'Status', align: 'center' },
-  ], []);
-
-  const reportRows = useMemo<FinancialReportRow[]>(() => filtered.map((item) => ({
-    id: item.id,
-    cells: [
-      <span className="font-bold text-slate-700">{formatDate(item.dataVencimento)}</span>,
-      <div>
-        <p className="font-black text-[#001a33]">{item.descricao}</p>
-        {item.turmaNome && <p className="mt-0.5 font-bold text-indigo-600">Turma: {item.turmaNome}</p>}
-        {item.observacao && <p className="mt-0.5 text-slate-500">{item.observacao}</p>}
-        {item.dataPagamento && <p className="mt-0.5 font-bold text-emerald-700">Pago em {formatDate(item.dataPagamento)}</p>}
-      </div>,
-      item.categoriaNome || 'Sem categoria',
-      item.fornecedorNome || 'Não informado',
-      <div>
-        <p className="font-black text-[#001a33]">{formatCurrency(item.valor)}</p>
-        {item.valorPago !== undefined && item.valorPago !== item.valor && (
-          <p className="text-[9px] font-bold text-emerald-700">Pago: {formatCurrency(item.valorPago)}</p>
-        )}
-      </div>,
-      item.totalParcelas > 1 ? `${item.parcelaNumero}/${item.totalParcelas}` : 'Única',
-      <FinancialReportStatusBadge status={item.status} />,
-    ],
-  })), [filtered]);
-
-  const reportFilters = useMemo<FinancialReportFilter[]>(() => [
-    { label: 'Escopo', value: statusScopeLabels[statusScope] },
-    { label: 'Busca', value: search.trim() || 'Todos os lançamentos' },
-    { label: 'Período', value: `${formatDate(dataInicio)} até ${formatDate(dataFim)}` },
-    { label: 'Categoria', value: selectedCategoriaLabel },
-    { label: 'Turma', value: selectedTurmaLabel },
-    { label: 'Polo', value: selectedPoloLabel },
-  ], [dataFim, dataInicio, search, selectedCategoriaLabel, selectedPoloLabel, selectedTurmaLabel, statusScope]);
-
-  const reportSummaryCards = useMemo<FinancialReportSummaryCard[]>(() => [
-    { label: 'Total previsto', value: formatCurrency(totals.total), tone: 'slate' },
-    { label: 'Pago', value: formatCurrency(totals.pago), tone: 'emerald' },
-    { label: 'A pagar', value: formatCurrency(totals.pendente), tone: 'amber' },
-    { label: 'Vencidos', value: totals.vencidos, tone: 'rose' },
-  ], [totals]);
+  const report = useDespesasFixasReport({
+    filtered,
+    totals: {
+      totalValue: totals.total,
+      paidValue: totals.pago,
+      pendingValue: totals.pendente,
+      vencidosCount: totals.vencidos,
+    },
+    statusScope,
+    search,
+    dataInicio,
+    dataFim,
+    categoriaLabel: selectedCategoriaLabel,
+    turmaLabel: selectedTurmaLabel,
+    poloLabel: selectedPoloLabel,
+  });
 
   const invalidateExpenseData = async (includeBalances = false) => {
     const invalidations = [
@@ -280,10 +232,10 @@ const DespesasFixasTab: React.FC<{ poloId?: string | null }> = ({ poloId: scoped
             rightTitle="Extrato de Despesas"
             rightType="Despesas fixas"
             fileName={`extrato-despesas-fixas-${new Date().toISOString().slice(0, 10)}`}
-            columns={reportColumns}
-            rows={reportRows}
-            filters={reportFilters}
-            summaryCards={reportSummaryCards}
+            columns={report.columns}
+            rows={report.rows}
+            filters={report.filters}
+            summaryCards={report.summaryCards}
             poloId={poloId}
             tone="rose"
             buttonLabel="Exportar PDF"
@@ -435,43 +387,26 @@ const DespesasFixasTab: React.FC<{ poloId?: string | null }> = ({ poloId: scoped
         <div className="rounded-2xl border border-rose-100 bg-rose-50 px-5 py-6 text-center text-sm font-bold text-rose-700">
           Não foi possível carregar os totais canônicos por categoria.
         </div>
-      ) : agrupar ? (
-        <DespesaGroupedView
+      ) : (
+        <DespesaListWorkspace
           items={filtered}
           summaries={groupSummaryQuery.data || []}
           viewMode={viewMode}
+          agrupar={agrupar}
           contas={contas}
+          poloId={poloId}
+          tipo="DESPESA_FIXA"
           onPagar={(item) => setBaixaItem(item)}
           onEditar={setEditItem}
           onCancelar={handleCancelar}
           onImprimir={handleImprimir}
           onAnexo={handleAnexo}
+          onDeleted={(quantity) => toast.success(
+            quantity === 1 ? 'Lançamento excluído' : `${quantity} lançamentos excluídos`,
+            'A seleção saiu das listas e a trilha de auditoria foi preservada.',
+          )}
+          onDeleteError={(message) => toast.error('Erro ao excluir lançamentos', message)}
         />
-      ) : viewMode === 'tabela' ? (
-        <DespesaTable
-          items={filtered}
-          contas={contas}
-          onPagar={(item) => setBaixaItem(item)}
-          onEditar={setEditItem}
-          onCancelar={handleCancelar}
-          onImprimir={handleImprimir}
-          onAnexo={handleAnexo}
-        />
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((item) => (
-            <DespesaCard
-              key={item.id}
-              item={item}
-              contas={contas}
-              onPagar={(i) => setBaixaItem(i)}
-              onEditar={setEditItem}
-              onCancelar={handleCancelar}
-              onImprimir={handleImprimir}
-              onAnexo={handleAnexo}
-            />
-          ))}
-        </div>
       )}
 
       {/* Form Modal */}

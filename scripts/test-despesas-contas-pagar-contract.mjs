@@ -8,8 +8,12 @@ const migration = readFileSync(
   resolve(root, 'supabase/migrations/20260811123901_harden_expense_corrections_and_detail_reads.sql'),
   'utf8',
 );
-const service = readFileSync(
-  resolve(root, 'modules/gestor/financeiro/despesas/despesas.service.ts'),
+const mapper = readFileSync(
+  resolve(root, 'modules/gestor/financeiro/despesas/despesas.mapper.ts'),
+  'utf8',
+);
+const lancamentosService = readFileSync(
+  resolve(root, 'modules/gestor/financeiro/despesas/despesas-lancamentos.service.ts'),
   'utf8',
 );
 const table = readFileSync(
@@ -22,6 +26,22 @@ const card = readFileSync(
 );
 const grouped = readFileSync(
   resolve(root, 'modules/gestor/financeiro/despesas/components/DespesaGroupedView.tsx'),
+  'utf8',
+);
+const listWorkspace = readFileSync(
+  resolve(root, 'modules/gestor/financeiro/despesas/components/DespesaListWorkspace.tsx'),
+  'utf8',
+);
+const deleteModal = readFileSync(
+  resolve(root, 'modules/gestor/financeiro/despesas/components/DespesaDeleteModal.tsx'),
+  'utf8',
+);
+const modalPortal = readFileSync(
+  resolve(root, 'modules/gestor/financeiro/despesas/components/DespesaModalPortal.tsx'),
+  'utf8',
+);
+const deletionMigration = readFileSync(
+  resolve(root, 'supabase/migrations/20260927150000_excluir_despesas_pendentes_lote.sql'),
   'utf8',
 );
 const receiptModal = readFileSync(
@@ -61,12 +81,15 @@ test('leitura preserva e apresenta categoria, fornecedor, turma e data real de l
     'fornecedorNome: row.fornecedor_nome ?? row.parceiros?.nome ?? undefined',
     'turmaNome: row.turma_nome ?? row.turmas?.nome ?? undefined',
     'listar_despesas_economicas_detalhadas_secure',
-    'enrichLegacyEconomicRowsWithLaunchDate',
+    'enrichLegacyRowsWithLaunchDate',
     '.filter((row) => !row.is_rateio_derivado)',
     ".select('id, data_lancamento')",
     'O lançamento não retornou nenhuma despesa confirmada.',
   ]) {
-    assert.ok(service.includes(fragment), `Mapper/serviço deve conter: ${fragment}`);
+    assert.ok(
+      mapper.includes(fragment) || lancamentosService.includes(fragment),
+      `Mapper/serviço deve conter: ${fragment}`,
+    );
   }
 
   const detailBody = functionBody('listar_despesas_economicas_detalhadas_secure');
@@ -82,17 +105,19 @@ test('leitura preserva e apresenta categoria, fornecedor, turma e data real de l
 
 test('tabela, cards e agrupamento exibem o contrato financeiro e ações corretas', () => {
   for (const fragment of [
-    'Lançamento:',
-    'Vencimento:',
-    'Valor pago:',
-    'Conta de saída:',
-    'Única (1/1)',
+    'table-fixed',
+    'index % 2 === 0',
+    'break-words',
+    'Dar baixa',
     'Editar lançamento',
-    'Estornar e cancelar',
+    'Excluir',
+    'Estornar',
     '<Printer',
   ]) {
     assert.ok(table.includes(fragment), `Tabela deve conter: ${fragment}`);
   }
+  assert.equal(table.includes('min-w-[1480px]'), false, 'Tabela não pode depender de rolagem horizontal para exibir ações.');
+  assert.equal(table.includes('hidden 2xl:inline'), false, 'Rótulos de ação devem permanecer visíveis.');
   assert.equal(table.includes('Edit2'), false, 'Ícone de editar não pode acionar impressão.');
 
   for (const fragment of [
@@ -101,10 +126,48 @@ test('tabela, cards e agrupamento exibem o contrato financeiro e ações correta
     'Valor pago:',
     'Conta de saída',
     'Estornar e cancelar',
+    'Excluir',
   ]) {
     assert.ok(card.includes(fragment), `Card deve conter: ${fragment}`);
   }
   assert.ok(grouped.includes('contas={contas}'), 'Visão agrupada deve preservar o rótulo da conta.');
+});
+
+test('exclusão pendente é em lote, sem justificativa manual, atômica e auditável', () => {
+  for (const fragment of [
+    'DespesaSelectionBar',
+    'useDespesaPendingDeletion',
+    'selectedIds',
+    'onExcluir',
+  ]) {
+    assert.ok(listWorkspace.includes(fragment), `Workspace deve conter: ${fragment}`);
+  }
+  assert.ok(deleteModal.includes('Excluir {count} lançamento'));
+  assert.equal(deleteModal.includes('<textarea'), false, 'Exclusão de pendente não deve exigir justificativa manual.');
+  assert.ok(lancamentosService.includes("supabase.rpc('excluir_despesas_pendentes_lote_secure'"));
+  for (const fragment of [
+    'SECURITY DEFINER',
+    "SET search_path TO ''",
+    'pg_advisory_xact_lock',
+    "status IN ('PENDENTE', 'VENCIDO')",
+    "cancelamento_motivo = 'Excluído pelo gestor antes da baixa'",
+    'exclusao_request_id = p_request_id',
+    'despesas_exclusoes_requisicoes',
+    'despesa.excluido_em IS NULL',
+  ]) {
+    assert.ok(deletionMigration.includes(fragment), `Migração de exclusão deve conter: ${fragment}`);
+  }
+  assert.equal(/DELETE\s+FROM\s+public\.despesas_lancamentos/i.test(deletionMigration), false, 'Exclusão não pode apagar fisicamente o lançamento.');
+});
+
+test('modais financeiros são portais do viewport e não ficam presos ao contêiner animado', () => {
+  assert.ok(modalPortal.includes('createPortal'));
+  assert.ok(modalPortal.includes('document.body'));
+  assert.ok(modalPortal.includes("document.body.style.overflow = 'hidden'"));
+  for (const modalName of ['DespesaBaixaModal.tsx', 'DespesaEditModal.tsx', 'DespesaCancelModal.tsx']) {
+    const modal = readFileSync(resolve(root, 'modules/gestor/financeiro/despesas/components', modalName), 'utf8');
+    assert.ok(modal.includes('DespesaModalPortal'), `${modalName} deve usar o portal de viewport.`);
+  }
 });
 
 test('edição e estorno são idempotentes, autorizados e auditáveis', () => {

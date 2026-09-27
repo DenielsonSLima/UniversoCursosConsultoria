@@ -142,6 +142,19 @@ export interface CancelarOuEstornarDespesaInput {
   confirmarEstorno?: boolean;
 }
 
+export interface ExcluirDespesasPendentesInput {
+  requestId: string;
+  poloId: string;
+  tipo: DespesaTipo;
+  despesaIds: string[];
+}
+
+export interface ExcluirDespesasPendentesResult {
+  requestId: string;
+  despesaIds: string[];
+  quantidade: number;
+}
+
 export interface DespesaRateioInput {
   modo: 'TODOS' | 'SELECIONADOS';
   poloIds?: string[];
