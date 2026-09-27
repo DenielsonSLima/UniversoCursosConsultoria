@@ -2,12 +2,12 @@
 
 Estado: VALIDADO — PUBLICAÇÃO EM PRODUÇÃO AUTORIZADA
 
-## Lote: 2026-09-27-convenios-faculdades-parceiras
+## Lote: 2026-09-27-convenios-seletor-personalizado
 
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-27-convenios-faculdades-parceiras.md`
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-27-convenios-seletor-personalizado.md`
 
-- Novo Convênio seleciona uma PJ `FACULDADE PARCEIRA / AFILIADO`; nome livre e vínculo opcional deixam de existir.
-- A lista inclui somente cadastros ativos globais ou vinculados ao polo autorizado.
-- O backend deriva o nome canônico da PJ e rejeita outro tipo de parceiro ou parceiro fora do escopo.
-- O aviso sobre polo e primeiro aporte é removido do modal.
-- Produção autorizada explicitamente pelo usuário nesta conversa; migrations aplicadas e validadas, publicar a versão 4.8.116 e confirmar o smoke de interface.
+- Novo Convênio troca o `<select>` nativo por combobox próprio pesquisável.
+- Clique ou foco com busca vazia lista todas as faculdades autorizadas; digitação filtra nome e CNPJ.
+- Seleção continua vinculada ao ID canônico da PJ e preserva as regras financeiras já publicadas.
+- A migração dos demais seletores será gradual, somente conforme novos pedidos.
+- Produção autorizada explicitamente pelo usuário nesta conversa; publicar a versão 4.8.117 e confirmar o smoke de interface.

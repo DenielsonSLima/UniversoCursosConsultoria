@@ -24,10 +24,11 @@ test('tela abre em cards, oferece status, busca, crédito e fechamento manual', 
   assert.doesNotMatch(tab, /A virada do calendário não fecha competências/);
 });
 
-test('modal usa a viewport e a competência segue MM/AAAA', async () => {
-  const [shell, form] = await Promise.all([
+test('modal usa a viewport, combobox próprio e competência em MM/AAAA', async () => {
+  const [shell, form, picker] = await Promise.all([
     read('./components/ConvenioModalShell.tsx'),
     read('./components/ConvenioFormModal.tsx'),
+    read('./components/ConvenioFaculdadePicker.tsx'),
   ]);
   assert.match(shell, /createPortal\(modal, document\.body\)/);
   assert.match(shell, /min-h-\[100dvh\]/);
@@ -38,12 +39,19 @@ test('modal usa a viewport e a competência segue MM/AAAA', async () => {
   assert.doesNotMatch(form, /type="month"/);
   assert.match(form, /placeholder="MM\/AAAA"/);
   assert.match(form, /parseConvenioMonthInput/);
-  assert.match(form, /Faculdade parceira \*/);
-  assert.match(form, /Selecione uma faculdade parceira/);
+  assert.match(form, /ConvenioFaculdadePicker/);
   assert.doesNotMatch(form, /Nome do convênio/);
   assert.doesNotMatch(form, /Parceiro vinculado/);
   assert.doesNotMatch(form, /O primeiro aporte será lançado/);
   assert.doesNotMatch(form, /setNome/);
+  assert.doesNotMatch(form, /<select/);
+  assert.match(picker, /role="combobox"/);
+  assert.match(picker, /type="search"/);
+  assert.match(picker, /role="listbox"/);
+  assert.match(picker, /if \(!query\.trim\(\)\) return options/);
+  assert.match(picker, /textMatchesSearch/);
+  assert.match(picker, /Faculdades disponíveis/);
+  assert.match(picker, /formatCnpj/);
 });
 
 test('serviço usa os seis RPCs canônicos e Realtime por polo com debounce', async () => {

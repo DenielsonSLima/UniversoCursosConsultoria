@@ -6,6 +6,7 @@ import {
   formatConvenioMonthInput,
   parseConvenioMonthInput,
 } from '../convenios.presentation';
+import ConvenioFaculdadePicker from './ConvenioFaculdadePicker';
 import ConvenioModalShell from './ConvenioModalShell';
 
 interface ConvenioFormModalProps {
@@ -66,32 +67,13 @@ const ConvenioFormModal: React.FC<ConvenioFormModalProps> = ({
       onClose={onClose}
     >
       <form onSubmit={submit} className="space-y-5 p-6">
-        <label className="block">
-          <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">Faculdade parceira *</span>
-          <select
-            value={parceiroId}
-            onChange={(event) => setParceiroId(event.target.value)}
-            disabled={parceirosLoading || parceirosError}
-            required
-            className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-[#001a33] outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 disabled:opacity-60"
-          >
-            <option value="">
-              {parceirosLoading
-                ? 'Carregando faculdades parceiras...'
-                : parceirosError
-                  ? 'Não foi possível carregar as faculdades'
-                  : 'Selecione uma faculdade parceira'}
-            </option>
-            {parceiros.map((item) => (
-              <option key={item.id} value={item.id}>{item.nome}</option>
-            ))}
-          </select>
-          {!parceirosLoading && !parceirosError && parceiros.length === 0 ? (
-            <span className="mt-2 block text-xs font-bold text-amber-700">
-              Nenhuma PJ classificada como Faculdade parceira / afiliado está disponível neste polo.
-            </span>
-          ) : null}
-        </label>
+        <ConvenioFaculdadePicker
+          options={parceiros}
+          value={parceiroId}
+          loading={parceirosLoading}
+          error={parceirosError}
+          onChange={setParceiroId}
+        />
 
         <div className="grid grid-cols-1 gap-4">
           <label className="block">
