@@ -1,13 +1,12 @@
 # Lote ativo
 
-Estado: VALIDADO — PUBLICAÇÃO EM PRODUÇÃO AUTORIZADA
+Estado: VALIDADO — PUBLICAÇÃO AUTORIZADA
 
-## Lote: 2026-09-27-identidade-naturalidade-cin
+## Lote: 2026-09-27-safari-acesso-remoto
 
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-27-identidade-naturalidade-cin.md`
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-27-safari-acesso-remoto.md`
 
-- Naturalidade e nacionalidade usam combobox editável, sugestões oficiais e texto livre.
-- Nome social vazio usa o nome completo apenas na exibição e nos documentos.
-- CIN usa o CPF; RG, CNH e registros legados são preservados sem reclassificação automática.
-- Ensino Médio, EJA e documentos permanecem informativos e sem bloqueio acadêmico.
-- Produção autorizada explicitamente pelo usuário nesta conversa; publicar a versão 4.8.119 após três pareceres finais favoráveis e confirmar o smoke.
+- Acesso remoto à interface, smoke autenticado e automação CUA usam exclusivamente o Safari.
+- Google Chrome não deve ser aberto nem automatizado neste projeto.
+- Sem sessão útil no Safari, a pendência deve ser registrada sem troca de navegador.
+- A mesma regra foi incorporada à skill pessoal `universo-project-operations`.

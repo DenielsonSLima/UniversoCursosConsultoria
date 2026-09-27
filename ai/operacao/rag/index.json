@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-09-27T14:32:12.438Z",
+  "builtAt": "2026-09-27T14:43:43.742Z",
   "manifestVersion": 2,
-  "sourceSignature": "0c24848b9d1e38e6e6e4b4581f43e6adbecbc594419e3d51e38c0b55205deeee",
+  "sourceSignature": "b1f59c718f73059cb5ca6b858b2a6e6a1ab7f1dbec355d51559ec79ff263bf59",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,11 +11,11 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "efe3f945a04011a263a99fb79023a0d19d4c2b697dd155d6d6b99cfa4d87f534"
+      "hash": "d3795135ba89ba018e7a9432f3d1eb1eafc30ad982426a7fe2361bb1f94687f3"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
-      "hash": "cb813d075e276c1696f58cf04efad04cd0bd68fe37f1fac0ff8de56e8b8d3704"
+      "hash": "c05804852b3800ff6fb10edcd7388164bd82df10752b9ae74aa365df81bf0956"
     },
     {
       "path": "ai/operacao/PROTOCOLO_DE_LOTES.md",
@@ -200,42 +200,42 @@
       "part": 1
     },
     {
-      "id": "9e158c8da980daaa84c3",
-      "hash": "9e158c8da980daaa84c377f08f83c1a96d1c3f29bc9979edcb66b80f65e17822",
+      "id": "f4a51b1bb08af6d0a47a",
+      "hash": "f4a51b1bb08af6d0a47aecf87186499e7cc9f1a1fc9621345256385a93919fb6",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Lote ativo",
-      "text": "Estado: VALIDADO — PUBLICAÇÃO EM PRODUÇÃO AUTORIZADA",
-      "normalizedText": "estado validado publicacao em producao autorizada",
-      "tokenCount": 6,
+      "text": "Estado: VALIDADO — PUBLICAÇÃO AUTORIZADA",
+      "normalizedText": "estado validado publicacao autorizada",
+      "tokenCount": 4,
       "part": 1
     },
     {
-      "id": "d413908fff5c6ee69f22",
-      "hash": "d413908fff5c6ee69f2258b3b26e390d2c792001c45cbfca3e361f7c6728eb9f",
+      "id": "dadac4c38e2152d5c967",
+      "hash": "dadac4c38e2152d5c9671415d8f795efa28b581ee2c6b060bcc874fcce55a70a",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-09-27-identidade-naturalidade-cin",
-      "text": "Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-27-identidade-naturalidade-cin.md`",
-      "normalizedText": "manifesto explicito ai operacao registros alteracoes 2026 09 27 identidade naturalidade cin md",
+      "section": "Lote: 2026-09-27-safari-acesso-remoto",
+      "text": "Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-27-safari-acesso-remoto.md`",
+      "normalizedText": "manifesto explicito ai operacao registros alteracoes 2026 09 27 safari acesso remoto md",
       "tokenCount": 13,
       "part": 1
     },
     {
-      "id": "e21f4ab1144a8f4e4810",
-      "hash": "e21f4ab1144a8f4e4810f016e9de0f3f1e27f29c0db53869e8effeae4b6180ee",
+      "id": "a194be5a7cc866984635",
+      "hash": "a194be5a7cc866984635c6bfd7a9ad1f659041ec779fbca2fcf0a47cf9ac094b",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-09-27-identidade-naturalidade-cin",
-      "text": "- Naturalidade e nacionalidade usam combobox editável, sugestões oficiais e texto livre. - Nome social vazio usa o nome completo apenas na exibição e nos documentos. - CIN usa o CPF; RG, CNH e registros legados são preservados sem reclassificação automática. - Ensino Médio, EJA e documentos permanecem informativos e sem bloqueio acadêmico. - Produção autorizada explicitamente pelo usuário nesta conversa; publicar a versão 4.8.119 após três pareceres finais favoráveis e confirmar o smoke.",
-      "normalizedText": "naturalidade e nacionalidade usam combobox editavel sugestoes oficiais e texto livre nome social vazio usa o nome completo apenas na exibicao e nos documentos cin usa o cpf rg cnh e registros legados sao preservados sem reclassificacao automatica ensino medio eja e documentos permanecem informativos e sem bloqueio academico producao autorizada explicitamente pelo usuario nesta conversa publicar a versao 4 8 119 apos tres pareceres finais favoraveis e confirmar o smoke",
-      "tokenCount": 58,
+      "section": "Lote: 2026-09-27-safari-acesso-remoto",
+      "text": "- Acesso remoto à interface, smoke autenticado e automação CUA usam exclusivamente o Safari. - Google Chrome não deve ser aberto nem automatizado neste projeto. - Sem sessão útil no Safari, a pendência deve ser registrada sem troca de navegador. - A mesma regra foi incorporada à skill pessoal `universo-project-operations`.",
+      "normalizedText": "acesso remoto a interface smoke autenticado e automacao cua usam exclusivamente o safari google chrome nao deve ser aberto nem automatizado neste projeto sem sessao util no safari a pendencia deve ser registrada sem troca de navegador a mesma regra foi incorporada a skill pessoal universo project operations",
+      "tokenCount": 42,
       "part": 1
     },
     {
-      "id": "1d77a7e64f481d95ff49",
-      "hash": "1d77a7e64f481d95ff49a82d5846bac26c26cf74c3b99146810077f30c5f2fe3",
+      "id": "bbb55ebbfc2c5954f51c",
+      "hash": "bbb55ebbfc2c5954f51c889afd4be26b4911d90e0ea0adb34e0924ba1b623caf",
       "path": "ai/operacao/MEMORIA_CANONICA.md",
       "section": "Memória canônica do projeto",
-      "text": "Atualizada em: 2026-09-24",
-      "normalizedText": "atualizada em 2026 09 24",
+      "text": "Atualizada em: 2026-09-27",
+      "normalizedText": "atualizada em 2026 09 27",
       "tokenCount": 5,
       "part": 1
     },
@@ -250,13 +250,13 @@
       "part": 1
     },
     {
-      "id": "b1365f58d63f5a5e2b4a",
-      "hash": "b1365f58d63f5a5e2b4a33ef85d42f7aa283f94d68cdd3a27904102c0618f1ba",
+      "id": "91925f51731cfac8d5ab",
+      "hash": "91925f51731cfac8d5ab9988b7c8d9d7bcf6c810197cd5d9a24584f33de655ab",
       "path": "ai/operacao/MEMORIA_CANONICA.md",
       "section": "Operação",
-      "text": "- AGENTS.md define a classificação entre ajuste rápido, mudança padrão e mudança crítica. - LOTE_ATIVO.md contém somente um lote corrente; históricos ficam em ai/operacao/registros/. - Um agente é o padrão. Delegação só ocorre para frentes independentes e materialmente úteis. - A validação deve exercer o fluxo real afetado antes de build ou suítes amplas. - Regras globais não são acrescentadas durante hotfix de produto.",
-      "normalizedText": "agents md define a classificacao entre ajuste rapido mudanca padrao e mudanca critica lote ativo md contem somente um lote corrente historicos ficam em ai operacao registros um agente e o padrao delegacao so ocorre para frentes independentes e materialmente uteis a validacao deve exercer o fluxo real afetado antes de build ou suites amplas regras globais nao sao acrescentadas durante hotfix de produto",
-      "tokenCount": 57,
+      "text": "- AGENTS.md define a classificação entre ajuste rápido, mudança padrão e mudança crítica. - LOTE_ATIVO.md contém somente um lote corrente; históricos ficam em ai/operacao/registros/. - Um agente é o padrão. Delegação só ocorre para frentes independentes e materialmente úteis. - A validação deve exercer o fluxo real afetado antes de build ou suítes amplas. - Acesso remoto à interface, smoke autenticado e automação CUA deste projeto usam exclusivamente o Safari; nunca abrir nem automatizar o Google Chrome. Se o Safari não tiver uma sessão útil, registrar a pendência sem trocar de navegador. - Regras globais não são acrescentadas durante hotfix de produto.",
+      "normalizedText": "agents md define a classificacao entre ajuste rapido mudanca padrao e mudanca critica lote ativo md contem somente um lote corrente historicos ficam em ai operacao registros um agente e o padrao delegacao so ocorre para frentes independentes e materialmente uteis a validacao deve exercer o fluxo real afetado antes de build ou suites amplas acesso remoto a interface smoke autenticado e automacao cua deste projeto usam exclusivamente o safari nunca abrir nem automatizar o google chrome se o safari nao tiver uma sessao util registrar a pendencia sem trocar de navegador regras globais nao sao acrescentadas durante hotfix de produto",
+      "tokenCount": 88,
       "part": 1
     },
     {
