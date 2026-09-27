@@ -1,12 +1,11 @@
 # Lote ativo
 
-Estado: VALIDADO — PUBLICAÇÃO EM ANDAMENTO
+Estado: VALIDAÇÃO FINAL
 
-## Lote: 2026-09-26-pdv-substituicao-pix
+## Lote: 2026-09-26-cpu-consultas-ociosas
 
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-26-pdv-substituicao-pix.md`.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-26-cpu-consultas-ociosas.md`.
 
-- Versão 4.8.104 / revisão 113.
-- Cancelamento confirmado e substituição única com Pix oficial presente.
-- 31 testes focados, Deno check e contratos SQL com rollback aprovados.
-- Smoke Safari confirmou QR oficial; PDF pendente; análise de CPU solicitada em frente independente.
+- Versão 4.8.105 / revisão 114.
+- Rajadas Realtime e leitura de histórico sem candidatos corrigidas; contratos focados aprovados.
+- Novo visual PDV e análise de impressoras permanecem em frentes separadas.

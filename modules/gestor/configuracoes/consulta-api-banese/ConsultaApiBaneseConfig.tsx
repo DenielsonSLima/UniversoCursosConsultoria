@@ -26,6 +26,7 @@ import {
 } from './banese-profile-examples';
 import { BaneseStatusPill, formatBaneseDateTime } from './banese-display';
 import type { BanesePollingMode } from './consulta-api-banese.types';
+import { baneseReadInterval, createBaneseRealtimeRefresh } from './banese-realtime-refresh';
 
 const ConsultaApiBaneseConfig = () => {
   const queryClient = useQueryClient();
@@ -43,8 +44,10 @@ const ConsultaApiBaneseConfig = () => {
 
   const dashboardQuery = useQuery({
     queryKey: banesePollingQueryKey,
-    queryFn: consultaApiBaneseService.getDashboard,
-    refetchInterval: 30_000,
+    queryFn: ({ signal }) => consultaApiBaneseService.getDashboard(signal),
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchInterval: baneseReadInterval,
   });
   const dashboard = dashboardQuery.data;
   const config = dashboard?.config;
@@ -52,21 +55,27 @@ const ConsultaApiBaneseConfig = () => {
   const configuredProfileId = config?.selected_profile_id;
   const errorSummaryQuery = useQuery({
     queryKey: [...banesePollingQueryKey, 'error-summary'],
-    queryFn: consultaApiBaneseService.getErrorSummary,
+    queryFn: ({ signal }) => consultaApiBaneseService.getErrorSummary(signal),
     enabled: dashboard?.available === true,
-    refetchInterval: 30_000,
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchInterval: baneseReadInterval,
   });
 
   const isAttemptTab = ['queries', 'settlements', 'errors'].includes(activeTab);
   const attemptsQuery = useQuery({
     queryKey: [...banesePollingQueryKey, 'attempts', activeTab, attemptsPage],
-    queryFn: () => consultaApiBaneseService.getAttemptsPage(
+    queryFn: ({ signal }) => consultaApiBaneseService.getAttemptsPage(
       activeTab as 'queries' | 'settlements' | 'errors',
       attemptsPage,
       20,
+      signal,
     ),
     enabled: isAttemptTab && dashboard?.available === true,
     placeholderData: keepPreviousData,
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchInterval: query => query.state.status === 'error' ? baneseReadInterval(query) : false,
   });
 
   useEffect(() => {
@@ -76,23 +85,25 @@ const ConsultaApiBaneseConfig = () => {
   }, [configMode, configuredProfileId]);
 
   useEffect(() => {
+    const refresh = createBaneseRealtimeRefresh(queryClient);
     const channel = supabase
       .channel('config-consulta-api-banese')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'banese_reconciliation_config' }, () => {
-        void queryClient.invalidateQueries({ queryKey: banesePollingQueryKey });
+        refresh.notify(banesePollingQueryKey);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'banese_reconciliation_runs' }, () => {
-        void queryClient.invalidateQueries({ queryKey: banesePollingQueryKey });
+        refresh.notify(banesePollingQueryKey);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'banese_reconciliation_transitions' }, () => {
-        void queryClient.invalidateQueries({ queryKey: banesePollingQueryKey });
+        refresh.notify(banesePollingQueryKey);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'banese_reconciliation_attempts' }, () => {
-        void queryClient.invalidateQueries({ queryKey: [...banesePollingQueryKey, 'attempts'] });
-        void queryClient.invalidateQueries({ queryKey: [...banesePollingQueryKey, 'error-summary'] });
+        refresh.notify([...banesePollingQueryKey, 'attempts']);
+        refresh.notify([...banesePollingQueryKey, 'error-summary']);
       })
       .subscribe();
     return () => {
+      refresh.dispose();
       void supabase.removeChannel(channel);
     };
   }, [queryClient]);
