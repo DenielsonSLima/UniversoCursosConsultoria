@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-09-27T19:51:36.128Z",
+  "builtAt": "2026-09-27T21:25:04.782Z",
   "manifestVersion": 2,
-  "sourceSignature": "e2aa48b8860f55818c77d3d2cc62725fcbd6dc4a1e06077c9355175e7683fea0",
+  "sourceSignature": "a68f746ee9be69778472e512b30972538f4770dfc85889d10db3086b77baa463",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "5fd849d2d636077086338ead04ccdf49838ba68d0e465cdc0f5d9c21f50c6299"
+      "hash": "c7b2b86948b55ea0697d97cfa4d923733eb3d398da4a57227919e0bf8bfb470b"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -44,6 +44,10 @@
     {
       "path": "docs/decisions/2026-08-04-native-auth-and-rich-push.md",
       "hash": "d586683ff323f8fd7785e81edd80da0a15e9e1008cee46f8de5507fddcc7252e"
+    },
+    {
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "hash": "e93b790eac66a592d00cc4a11385af421580cb37fefc498549190b67671aac6f"
     },
     {
       "path": "docs/decisions/ciclos-tecnicos-cobrancas.md",
@@ -200,33 +204,33 @@
       "part": 1
     },
     {
-      "id": "f4a51b1bb08af6d0a47a",
-      "hash": "f4a51b1bb08af6d0a47aecf87186499e7cc9f1a1fc9621345256385a93919fb6",
+      "id": "a0b38ef329a5477bb38a",
+      "hash": "a0b38ef329a5477bb38adf8188b42af391df8002cbcd1d70978a43a5afca7dad",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Lote ativo",
-      "text": "Estado: VALIDADO — PUBLICAÇÃO AUTORIZADA",
-      "normalizedText": "estado validado publicacao autorizada",
-      "tokenCount": 4,
+      "text": "Estado: ETAPA 2 APLICADA — PUBLICAÇÃO AUTORIZADA",
+      "normalizedText": "estado etapa 2 aplicada publicacao autorizada",
+      "tokenCount": 5,
       "part": 1
     },
     {
-      "id": "d4129c665a257264db72",
-      "hash": "d4129c665a257264db7283e397fb227303a1e9afa756733bd23b9e1efd51e43c",
+      "id": "f047380e9afa2f0980ee",
+      "hash": "f047380e9afa2f0980eebe6c8bd7f3ab2294c6f6d322ad3ff0922f371312a680",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-09-27-caixa-contas-pagar-dashboard-financeiro",
-      "text": "Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-27-caixa-contas-pagar-dashboard-financeiro.md`",
-      "normalizedText": "manifesto explicito ai operacao registros alteracoes 2026 09 27 caixa contas pagar dashboard financeiro md",
-      "tokenCount": 15,
+      "section": "Lote: 2026-09-27-caixa-workspace-v2-redesign",
+      "text": "Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-27-caixa-workspace-v2-redesign.md`",
+      "normalizedText": "manifesto explicito ai operacao registros alteracoes 2026 09 27 caixa workspace v2 redesign md",
+      "tokenCount": 14,
       "part": 1
     },
     {
-      "id": "4fb869c9399a208abfa8",
-      "hash": "4fb869c9399a208abfa8812942ee2c790c07b997c35268947d95aae63cf44431",
+      "id": "b96f1d49e7ba13ab4e4e",
+      "hash": "b96f1d49e7ba13ab4e4e6f3559b7abc003dfa754874f45125b3947bb5ec1f4bd",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-09-27-caixa-contas-pagar-dashboard-financeiro",
-      "text": "- Caixa separa compromissos de contas a pagar do realizado, sem calcular valores no frontend. - Início usa presets Acadêmico, Financeiro e Misto e mantém o Radar financeiro separado do calendário oficial. - Migration remota `20260927194749_create_caixa_contas_pagar_resumo` aplicada e validada no Supabase de produção. - Publicação da versão 4.8.121 autorizada explicitamente pelo usuário.",
-      "normalizedText": "caixa separa compromissos de contas a pagar do realizado sem calcular valores no frontend inicio usa presets academico financeiro e misto e mantem o radar financeiro separado do calendario oficial migration remota 20260927194749 create caixa contas pagar resumo aplicada e validada no supabase de producao publicacao da versao 4 8 121 autorizada explicitamente pelo usuario",
-      "tokenCount": 48,
+      "section": "Lote: 2026-09-27-caixa-workspace-v2-redesign",
+      "text": "- Etapa 0 confirmou o baseline remoto de dez RPCs atuais do Caixa sem escrever no Supabase. - Etapa 1 fechou o contrato semântico e o wireframe responsivo da mesa de tesouraria. - Todo cálculo financeiro, percentual, projeção, classificação e paginação permanece no backend/RPC. - A Etapa 2 criou e validou o núcleo privado e os contratos tipados do Workspace v2. - As duas migrations foram aplicadas e verificadas no Supabase; o core permanece privado, sem `EXECUTE` para papéis clientes e sem impacto visual neste checkpoint. - O usuário autorizou publicar o lote atômico no GitHub como versão 4.8.122. - O próximo checkpoint continua sendo o wrapper seguro por escopo, sem cutover antecipado da interface.",
+      "normalizedText": "etapa 0 confirmou o baseline remoto de dez rpcs atuais do caixa sem escrever no supabase etapa 1 fechou o contrato semantico e o wireframe responsivo da mesa de tesouraria todo calculo financeiro percentual projecao classificacao e paginacao permanece no backend rpc a etapa 2 criou e validou o nucleo privado e os contratos tipados do workspace v2 as duas migrations foram aplicadas e verificadas no supabase o core permanece privado sem execute para papeis clientes e sem impacto visual neste checkpoint o usuario autorizou publicar o lote atomico no github como versao 4 8 122 o proximo checkpoint continua sendo o wrapper seguro por escopo sem cutover antecipado da interface",
+      "tokenCount": 90,
       "part": 1
     },
     {
@@ -697,6 +701,536 @@
       "text": "- `modules/shared/auth/NativeAuthBridge.tsx` - `modules/aluno/native-app/native-app.bridge.ts` - `modules/aluno/notificacoes/` - `modules/gestor/comunicacao/notificacoes-push/` - `supabase/functions/push-notification-assets/` - `supabase/functions/push-notification-dispatcher/` - `ios/App/NotificationServiceExtension/` - `supabase/migrations/20260804145000_paginate_student_notification_inbox.sql` - `supabase/migrations/20260804151000_create_rich_push_and_birthday_settings.sql` - `supabase/migrations/20260804203000_separate_relationship_birthday_consent.sql`",
       "normalizedText": "modules shared auth nativeauthbridge tsx modules aluno native app native app bridge ts modules aluno notificacoes modules gestor comunicacao notificacoes push supabase functions push notification assets supabase functions push notification dispatcher ios app notificationserviceextension supabase migrations 20260804145000 paginate student notification inbox sql supabase migrations 20260804151000 create rich push and birthday settings sql supabase migrations 20260804203000 separate relationship birthday consent sql",
       "tokenCount": 60,
+      "part": 1
+    },
+    {
+      "id": "bae707628ef1c60ee09b",
+      "hash": "bae707628ef1c60ee09b251f26d2f6e272df384cc61061ca12cd924897d6d6e3",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Decisão: semântica do workspace Caixa v2",
+      "text": "Data: 2026-09-27",
+      "normalizedText": "data 2026 09 27",
+      "tokenCount": 4,
+      "part": 1
+    },
+    {
+      "id": "3f969c5aa764ea8d0f36",
+      "hash": "3f969c5aa764ea8d0f3651b0c9b938a6b1b09e5e2db2e370edd21755405025e8",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Decisão: semântica do workspace Caixa v2",
+      "text": "Status: contrato obrigatório vigente para as Etapas 0 a 2",
+      "normalizedText": "status contrato obrigatorio vigente para as etapas 0 a 2",
+      "tokenCount": 7,
+      "part": 1
+    },
+    {
+      "id": "c3c15ff83fb3ad874987",
+      "hash": "c3c15ff83fb3ad87498798f422f2595a8df13b1ca48a856bc952e7d16c6db760",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Objetivo",
+      "text": "O Caixa v2 deve permitir que o gestor responda, sem misturar regimes financeiros:",
+      "normalizedText": "o caixa v2 deve permitir que o gestor responda sem misturar regimes financeiros",
+      "tokenCount": 11,
+      "part": 1
+    },
+    {
+      "id": "5699e3d9fa3f40aa7975",
+      "hash": "5699e3d9fa3f40aa79755b1912eebdf36f9a74e9e2115e8c363d5b4ddff14fa1",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Objetivo",
+      "text": "1. quanto existe registrado agora; 2. quanto já foi realizado; 3. quanto está comprometido e quando vence; 4. se os recursos confirmados cobrem os próximos 7 e 30 dias; 5. qual é a estrutura patrimonial gerencial conhecida; 6. quão confiável e completa é cada resposta.",
+      "normalizedText": "1 quanto existe registrado agora 2 quanto ja foi realizado 3 quanto esta comprometido e quando vence 4 se os recursos confirmados cobrem os proximos 7 e 30 dias 5 qual e a estrutura patrimonial gerencial conhecida 6 quao confiavel e completa e cada resposta",
+      "tokenCount": 32,
+      "part": 1
+    },
+    {
+      "id": "7e490a27eb8178da9f30",
+      "hash": "7e490a27eb8178da9f309c06784bd0e8403d0914ecc4a748616e0c0f9eb64b3e",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Objetivo",
+      "text": "Todo cálculo, classificação, consolidação, rateio, corte temporal e indicador pertence à RPC. O frontend somente envia filtros, apresenta o payload canônico e formata valores já calculados.",
+      "normalizedText": "todo calculo classificacao consolidacao rateio corte temporal e indicador pertence a rpc o frontend somente envia filtros apresenta o payload canonico e formata valores ja calculados",
+      "tokenCount": 21,
+      "part": 1
+    },
+    {
+      "id": "55f087508532816d4731",
+      "hash": "55f087508532816d47313c2ae2113ccf48d36da55ea9d4d5ce71fae46848c995",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "`REALIZADO`",
+      "text": "Fluxo com liquidação confirmada. Entradas e saídas são reconhecidas pela data efetiva de recebimento ou pagamento e pelo valor efetivamente liquidado.",
+      "normalizedText": "fluxo com liquidacao confirmada entradas e saidas sao reconhecidas pela data efetiva de recebimento ou pagamento e pelo valor efetivamente liquidado",
+      "tokenCount": 19,
+      "part": 1
+    },
+    {
+      "id": "fbf788b1f419e3304e8b",
+      "hash": "fbf788b1f419e3304e8bd7db002d1aa53c3f4ec6c797a4805cf48ae51d188e2f",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "`REALIZADO`",
+      "text": "- altera o caixa registrado uma única vez; - não usa data de vencimento como substituta da data de liquidação; - pagamento estornado deixa de ser realizado e a obrigação volta a aberto; - pagamento parcial realiza somente a parcela efetivamente paga.",
+      "normalizedText": "altera o caixa registrado uma unica vez nao usa data de vencimento como substituta da data de liquidacao pagamento estornado deixa de ser realizado e a obrigacao volta a aberto pagamento parcial realiza somente a parcela efetivamente paga",
+      "tokenCount": 33,
+      "part": 1
+    },
+    {
+      "id": "4b86917554d89d31936f",
+      "hash": "4b86917554d89d31936fa72b188ff0d39d7cbb4ad1a77ea5adc4ce8167b2daba",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "`COMPROMETIDO`",
+      "text": "Obrigação registrada e ainda aberta na data de corte, classificada pelo vencimento.",
+      "normalizedText": "obrigacao registrada e ainda aberta na data de corte classificada pelo vencimento",
+      "tokenCount": 11,
+      "part": 1
+    },
+    {
+      "id": "9016e74c82e52606bd39",
+      "hash": "9016e74c82e52606bd3988ac7bc26bee7a7ac1add9e584be958c81cb10df0563",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "`COMPROMETIDO`",
+      "text": "- não reduz o caixa registrado antes da liquidação; - reduz a disponibilidade apenas em uma visão projetada; - inclui parcelas abertas e saldos remanescentes de pagamentos parciais; - deve distinguir vencido, vence hoje e a vencer.",
+      "normalizedText": "nao reduz o caixa registrado antes da liquidacao reduz a disponibilidade apenas em uma visao projetada inclui parcelas abertas e saldos remanescentes de pagamentos parciais deve distinguir vencido vence hoje e a vencer",
+      "tokenCount": 28,
+      "part": 1
+    },
+    {
+      "id": "027d64e51a4aee3e0e2a",
+      "hash": "027d64e51a4aee3e0e2a30356695113c7041591734f840e9bac99cf4002182df",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "`PROJETADO_CONFIRMADO`",
+      "text": "Projeção determinística formada somente por saldo registrado, entradas futuras confirmadas e obrigações abertas comprovadas no horizonte.",
+      "normalizedText": "projecao deterministica formada somente por saldo registrado entradas futuras confirmadas e obrigacoes abertas comprovadas no horizonte",
+      "tokenCount": 15,
+      "part": 1
+    },
+    {
+      "id": "f04ddcdd5a7328f1ac01",
+      "hash": "f04ddcdd5a7328f1ac017d4cd582fd26c10e413f18a8256042ee5647650df8f4",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "`PROJETADO_CONFIRMADO`",
+      "text": "- não é previsão estatística; - não é saldo bancário; - não inclui promessa, oportunidade comercial ou recebível sem elegibilidade confirmada; - deve declarar horizonte, corte e completude das fontes.",
+      "normalizedText": "nao e previsao estatistica nao e saldo bancario nao inclui promessa oportunidade comercial ou recebivel sem elegibilidade confirmada deve declarar horizonte corte e completude das fontes",
+      "tokenCount": 23,
+      "part": 1
+    },
+    {
+      "id": "7dba5d202ce488090718",
+      "hash": "7dba5d202ce488090718fdb6ece23e0105080f58d92d89518c0ecf3d153661f9",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "`PATRIMONIAL_A_CUSTO`",
+      "text": "Posição gerencial composta por caixa registrado, ativos cadastrados pelo custo e saldos de financiamento reconhecidos.",
+      "normalizedText": "posicao gerencial composta por caixa registrado ativos cadastrados pelo custo e saldos de financiamento reconhecidos",
+      "tokenCount": 14,
+      "part": 1
+    },
+    {
+      "id": "52d629bc80e3beb43891",
+      "hash": "52d629bc80e3beb4389152e70ca11f1667625ec1e07fd9502d936b30c6c1a1bc",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "`PATRIMONIAL_A_CUSTO`",
+      "text": "- não é patrimônio líquido contábil; - não inclui valorização de mercado, depreciação, provisões, tributos ou passivos não cadastrados; - contas a pagar abertas permanecem expostas como comprometido e não são abatidas novamente desta posição; - uma conta paga reduz o caixa uma vez, sem uma segunda dedução patrimonial.",
+      "normalizedText": "nao e patrimonio liquido contabil nao inclui valorizacao de mercado depreciacao provisoes tributos ou passivos nao cadastrados contas a pagar abertas permanecem expostas como comprometido e nao sao abatidas novamente desta posicao uma conta paga reduz o caixa uma vez sem uma segunda deducao patrimonial",
+      "tokenCount": 41,
+      "part": 1
+    },
+    {
+      "id": "eaa74747e2dffad92fc7",
+      "hash": "eaa74747e2dffad92fc70f03257cd997e0112a6107b04e1f1e131316e4c478bf",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "`REEXPRESSADO`",
+      "text": "Visão de uma data passada recalculada com o estado cadastral disponível no presente.",
+      "normalizedText": "visao de uma data passada recalculada com o estado cadastral disponivel no presente",
+      "tokenCount": 12,
+      "part": 1
+    },
+    {
+      "id": "439878d9a22ce4109330",
+      "hash": "439878d9a22ce41093301d554114a4131cd2c09764e80cdb2ac6e7a7490f4340",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "`REEXPRESSADO`",
+      "text": "- usa datas imutáveis de criação e datas comprovadas de liquidação quando disponíveis; - não promete fotografia histórica verdadeira quando cancelamentos, exclusões ou alterações não possuem vigência temporal; - toda consulta histórica afetada por essa limitação deve declarar `criterio = POSICAO_REEXPRESSA_NO_CORTE`.",
+      "normalizedText": "usa datas imutaveis de criacao e datas comprovadas de liquidacao quando disponiveis nao promete fotografia historica verdadeira quando cancelamentos exclusoes ou alteracoes nao possuem vigencia temporal toda consulta historica afetada por essa limitacao deve declarar criterio posicao reexpressa no corte",
+      "tokenCount": 39,
+      "part": 1
+    },
+    {
+      "id": "f3d3bce0abd8b563935c",
+      "hash": "f3d3bce0abd8b563935c8a2830552672cc896fa9587401e99bfd1c8fb89f9f9e",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Termos proibidos sem qualificação e prova contábil",
+      "text": "- `saldo disponível`; - `saldo bancário`; - `lucro`; - `patrimônio líquido`; - `posição contábil`; - `previsão` ou `previsto`; - `caixa livre`; - `histórico no corte`.",
+      "normalizedText": "saldo disponivel saldo bancario lucro patrimonio liquido posicao contabil previsao ou previsto caixa livre historico no corte",
+      "tokenCount": 17,
+      "part": 1
+    },
+    {
+      "id": "9f9abcfe61902a5cdd93",
+      "hash": "9f9abcfe61902a5cdd93d866a518e20b74c84d7e08b0e68e7768398989b07c87",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Termos permitidos",
+      "text": "- `saldo de caixa registrado`; - `entrada realizada` e `saída realizada`; - `obrigação comprometida`; - `vence hoje`, `em atraso` e `a vencer`; - `saldo projetado confirmado em 7 dias`; - `saldo projetado confirmado em 30 dias`; - `posição patrimonial a custo`; - `posição reexpressa no corte`; - `recursos vinculados identificados`; - `saldo livre comprovado`, somente quando a vinculação estiver completa; - `resultado operacional realizado`; - `cobertura de obrigações`.",
+      "normalizedText": "saldo de caixa registrado entrada realizada e saida realizada obrigacao comprometida vence hoje em atraso e a vencer saldo projetado confirmado em 7 dias saldo projetado confirmado em 30 dias posicao patrimonial a custo posicao reexpressa no corte recursos vinculados identificados saldo livre comprovado somente quando a vinculacao estiver completa resultado operacional realizado cobertura de obrigacoes",
+      "tokenCount": 50,
+      "part": 1
+    },
+    {
+      "id": "445d82b9f75eacb00e12",
+      "hash": "445d82b9f75eacb00e1227fe797840660150bc4bd082b471309483c962f8f0fd",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Termos permitidos",
+      "text": "Rótulos exibidos devem carregar regime e período. Exemplos: `Saídas realizadas em setembro`, `Obrigações a vencer nos próximos 7 dias` e `Posição patrimonial a custo em 27/09/2026`.",
+      "normalizedText": "rotulos exibidos devem carregar regime e periodo exemplos saidas realizadas em setembro obrigacoes a vencer nos proximos 7 dias e posicao patrimonial a custo em 27 09 2026",
+      "tokenCount": 23,
+      "part": 1
+    },
+    {
+      "id": "3f9fc665746642daf0cf",
+      "hash": "3f9fc665746642daf0cf8e8f0ffa6c7250358c2f4bf8a44e142767dfa6b9ddb8",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Contrato temporal",
+      "text": "- A data institucional é `timezone('America/Maceio', now())::date`. - A competência é normalizada para o primeiro dia do mês. - `periodo_inicio` é o primeiro dia da competência. - `periodo_fim_exclusivo` é o primeiro dia da competência seguinte. - `data_corte_competencia` é a menor data entre a data institucional e o último dia da competência. - A agenda operacional é sempre ancorada na data institucional, independentemente da competência consultada. - `proximos_sete_dias` significa D+1 até D+7. `vence_hoje` é D e não pode ser contado novamente nesse intervalo. - O horizonte de 7 dias exigível inclui vencidos, vence hoje e D+1 a D+7. - O horizonte de 30 dias exigível inclui vencidos, vence hoje e D+1 a D+30. - Datas são inclusivas apenas quando o nome do campo assim declarar; intervalos de competência usam fim exclusivo.",
+      "normalizedText": "a data institucional e timezone america maceio now date a competencia e normalizada para o primeiro dia do mes periodo inicio e o primeiro dia da competencia periodo fim exclusivo e o primeiro dia da competencia seguinte data corte competencia e a menor data entre a data institucional e o ultimo dia da competencia a agenda operacional e sempre ancorada na data institucional independentemente da competencia consultada proximos sete dias significa d 1 ate d 7 vence hoje e d e nao pode ser contado novamente nesse intervalo o horizonte de 7 dias exigivel inclui vencidos vence hoje e d 1 a d 7 o horizonte de 30 dias exigivel inclui vencidos vence hoje e d 1 a d 30 datas sao inclusivas apenas quando o nome do campo assim declarar intervalos de competencia usam fim exclusivo",
+      "tokenCount": 99,
+      "part": 1
+    },
+    {
+      "id": "e3df4f7dd25d418187f7",
+      "hash": "e3df4f7dd25d418187f791b1ac22356b48acae17dd3a29232e433ed653357c08",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Snapshot canônico",
+      "text": "A implementação posterior deve expor uma RPC orquestradora, conceitualmente:",
+      "normalizedText": "a implementacao posterior deve expor uma rpc orquestradora conceitualmente",
+      "tokenCount": 8,
+      "part": 1
+    },
+    {
+      "id": "ffa9a0a2af0055881fa5",
+      "hash": "ffa9a0a2af0055881fa57cd8b2e9ed54597e1ca0b9f30a89f7164267755b1edd",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Snapshot canônico",
+      "text": "```sql get_caixa_painel_gestao_secure( p_polo_id uuid, p_competencia date, p_horizonte_dias integer default 30 ) returns jsonb ```",
+      "normalizedText": "sql get caixa painel gestao secure p polo id uuid p competencia date p horizonte dias integer default 30 returns jsonb",
+      "tokenCount": 18,
+      "part": 1
+    },
+    {
+      "id": "6764b02d2b3391e53e23",
+      "hash": "6764b02d2b3391e53e23d6a61fcc567ab0b424e4c90e6efb4841c32bc1b9a58e",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Snapshot canônico",
+      "text": "O nome físico pode mudar, mas o contrato deve preservar:",
+      "normalizedText": "o nome fisico pode mudar mas o contrato deve preservar",
+      "tokenCount": 8,
+      "part": 1
+    },
+    {
+      "id": "b54ea92d347418253294",
+      "hash": "b54ea92d3474182532944a541ea23d213e528c57f606fe5ce2e758f5c7c5dfc0",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Snapshot canônico",
+      "text": "- uma única transação e um único snapshot MVCC para todas as seções; - `snapshot_id`, `gerado_em`, `data_institucional`, competência e cortes comuns; - escopo `GLOBAL` ou `POLO` explícito; - `criterio_historico` explícito; - versão do payload; - valores monetários serializados como texto decimal; - quantidades como inteiros; - indicadores de completude por seção e por métrica.",
+      "normalizedText": "uma unica transacao e um unico snapshot mvcc para todas as secoes snapshot id gerado em data institucional competencia e cortes comuns escopo global ou polo explicito criterio historico explicito versao do payload valores monetarios serializados como texto decimal quantidades como inteiros indicadores de completude por secao e por metrica",
+      "tokenCount": 47,
+      "part": 1
+    },
+    {
+      "id": "67f7fd8170572fa2f67f",
+      "hash": "67f7fd8170572fa2f67f3676e102a3d6261f6ad7d26605d6475684afe9fb7b99",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Snapshot canônico",
+      "text": "O frontend não pode somar respostas de RPCs independentes para formar um KPI do workspace.",
+      "normalizedText": "o frontend nao pode somar respostas de rpcs independentes para formar um kpi do workspace",
+      "tokenCount": 14,
+      "part": 1
+    },
+    {
+      "id": "172a14595a7d039b2e1d",
+      "hash": "172a14595a7d039b2e1dd7cf63e581a7c39f70053c769d467fe2be714e0c5201",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Caixa e exigibilidade",
+      "text": "- `saldo_caixa_registrado`: saldo derivado exclusivamente dos movimentos realizados elegíveis. - `recursos_vinculados_identificados`: parte do caixa com vínculo canônico comprovado. - `saldo_livre_comprovado`: `saldo_caixa_registrado - recursos_vinculados_identificados`, somente quando o universo de vínculos estiver completo; caso contrário, `null`. - `em_atraso`: saldo aberto com vencimento anterior a D. - `vence_hoje`: saldo aberto com vencimento igual a D. - `proximos_sete_dias`: saldo aberto com vencimento entre D+1 e D+7. - `proximos_trinta_dias`: saldo aberto com vencimento entre D+1 e D+30. - `exigivel_sete_dias`: `em_atraso + vence_hoje + proximos_sete_dias`. - `exigivel_trinta_dias`: `em_atraso + vence_hoje + proximos_trinta_dias`.",
+      "normalizedText": "saldo caixa registrado saldo derivado exclusivamente dos movimentos realizados elegiveis recursos vinculados identificados parte do caixa com vinculo canonico comprovado saldo livre comprovado saldo caixa registrado recursos vinculados identificados somente quando o universo de vinculos estiver completo caso contrario null em atraso saldo aberto com vencimento anterior a d vence hoje saldo aberto com vencimento igual a d proximos sete dias saldo aberto com vencimento entre d 1 e d 7 proximos trinta dias saldo aberto com vencimento entre d 1 e d 30 exigivel sete dias em atraso vence hoje proximos sete dias exigivel trinta dias em atraso vence hoje proximos trinta dias",
+      "tokenCount": 90,
+      "part": 1
+    },
+    {
+      "id": "1f4a05f67e4aea6b42dd",
+      "hash": "1f4a05f67e4aea6b42ddf3aa39421f13ba7ee2c30855c9f3a699afb7023ad198",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Caixa e exigibilidade",
+      "text": "Cada KPI de obrigação retorna ao menos `valor` e `quantidade`. Pagamento parcial usa o saldo remanescente no valor, enquanto a quantidade representa o título econômico ainda aberto uma única vez.",
+      "normalizedText": "cada kpi de obrigacao retorna ao menos valor e quantidade pagamento parcial usa o saldo remanescente no valor enquanto a quantidade representa o titulo economico ainda aberto uma unica vez",
+      "tokenCount": 26,
+      "part": 1
+    },
+    {
+      "id": "070c3f19670c0218c7df",
+      "hash": "070c3f19670c0218c7df2543b3065c89e3140b247b77fc57e864be92e72f3640",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Projeção confirmada",
+      "text": "- `entradas_confirmadas_7d`: entradas elegíveis com data entre D e D+7. - `entradas_confirmadas_30d`: entradas elegíveis com data entre D e D+30. - `recursos_confirmados_7d`: `saldo_caixa_registrado + entradas_confirmadas_7d`. - `recursos_confirmados_30d`: `saldo_caixa_registrado + entradas_confirmadas_30d`. - `saldo_projetado_confirmado_7d`: `recursos_confirmados_7d - exigivel_sete_dias`. - `saldo_projetado_confirmado_30d`: `recursos_confirmados_30d - exigivel_trinta_dias`. - `deficit_7d`: `greatest(-saldo_projetado_confirmado_7d, 0)`. - `sobra_7d`: `greatest(saldo_projetado_confirmado_7d, 0)`. - `deficit_30d`: `greatest(-saldo_projetado_confirmado_30d, 0)`. - `sobra_30d`: `greatest(saldo_projetado_confirmado_30d, 0)`. - `cobertura_7d_percentual`: `100 * recursos_confirmados_7d / exigivel_sete_dias`. - `cobertura_30d_percentual`: `100 * recursos_confirmados_30d / exigivel_trinta_dias`.",
+      "normalizedText": "entradas confirmadas 7d entradas elegiveis com data entre d e d 7 entradas confirmadas 30d entradas elegiveis com data entre d e d 30 recursos confirmados 7d saldo caixa registrado entradas confirmadas 7d recursos confirmados 30d saldo caixa registrado entradas confirmadas 30d saldo projetado confirmado 7d recursos confirmados 7d exigivel sete dias saldo projetado confirmado 30d recursos confirmados 30d exigivel trinta dias deficit 7d greatest saldo projetado confirmado 7d 0 sobra 7d greatest saldo projetado confirmado 7d 0 deficit 30d greatest saldo projetado confirmado 30d 0 sobra 30d greatest saldo projetado confirmado 30d 0 cobertura 7d percentual 100 recursos confirmados 7d exigivel sete dias cobertura 30d percentual 100 recursos confirmados 30d exigivel trinta dias",
+      "tokenCount": 103,
+      "part": 1
+    },
+    {
+      "id": "06f1a4905bc4ff63a2cd",
+      "hash": "06f1a4905bc4ff63a2cde0d4cd4e929a98e34796e26fae098faeff6e784e70bb",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Projeção confirmada",
+      "text": "Quando o denominador de cobertura for zero, o percentual é `null` e o estado é `SEM_OBRIGACOES`; não é `0%` nem `100%`.",
+      "normalizedText": "quando o denominador de cobertura for zero o percentual e null e o estado e sem obrigacoes nao e 0 nem 100",
+      "tokenCount": 14,
+      "part": 1
+    },
+    {
+      "id": "6a654be04c66b97464ea",
+      "hash": "6a654be04c66b97464eac47d03b054a7296f8b20d2f08306f7e6f7041b4593a1",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Agenda diária",
+      "text": "A agenda retorna D até D+30, ainda que a interface destaque somente D até D+7. Cada dia informa:",
+      "normalizedText": "a agenda retorna d ate d 30 ainda que a interface destaque somente d ate d 7 cada dia informa",
+      "tokenCount": 13,
+      "part": 1
+    },
+    {
+      "id": "f1f01495eca91f3b8743",
+      "hash": "f1f01495eca91f3b874374e3e003fe95cab42d930bc6773fb0fa037a6beddd57",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Agenda diária",
+      "text": "- data; - valor e quantidade a pagar; - valor e quantidade de entradas confirmadas; - saldo líquido diário confirmado; - saldo projetado confirmado acumulado; - completude e alertas aplicáveis.",
+      "normalizedText": "data valor e quantidade a pagar valor e quantidade de entradas confirmadas saldo liquido diario confirmado saldo projetado confirmado acumulado completude e alertas aplicaveis",
+      "tokenCount": 20,
+      "part": 1
+    },
+    {
+      "id": "fa388202878457eb1e0b",
+      "hash": "fa388202878457eb1e0bbcfb84b7563acddeb83905db3e2e70966703765d36c2",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Agenda diária",
+      "text": "Os vencidos aparecem em bloco próprio e não são redistribuídos artificialmente no dia atual.",
+      "normalizedText": "os vencidos aparecem em bloco proprio e nao sao redistribuidos artificialmente no dia atual",
+      "tokenCount": 13,
+      "part": 1
+    },
+    {
+      "id": "b0fb9e4234536c1cb638",
+      "hash": "b0fb9e4234536c1cb638acdf1f34d4adc05d9ff7c6fcc1e38a2d2ec1e682f2f8",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "KPIs da Competência",
+      "text": "- `entradas_realizadas`: valores efetivamente recebidos dentro da competência. - `saidas_realizadas`: valores efetivamente pagos dentro da competência. - `resultado_operacional_realizado`: `entradas_operacionais_realizadas - saidas_operacionais_realizadas`. - `contas_da_competencia`: obrigações cujo vencimento pertence à competência. - `pagas_na_competencia`: liquidações cuja data de pagamento pertence à competência, independentemente do vencimento original. - `abertas_da_competencia`: saldo aberto de obrigações com vencimento na competência. - `vencidas_da_competencia`: subconjunto aberto com vencimento anterior a D. - `vence_hoje_da_competencia`: subconjunto aberto com vencimento igual a D. - `a_vencer_da_competencia`: subconjunto aberto com vencimento posterior a D. - `inadimplencia_percentual`: `100 * valor_vencido_elegivel / valor_exigivel_elegivel`.",
+      "normalizedText": "entradas realizadas valores efetivamente recebidos dentro da competencia saidas realizadas valores efetivamente pagos dentro da competencia resultado operacional realizado entradas operacionais realizadas saidas operacionais realizadas contas da competencia obrigacoes cujo vencimento pertence a competencia pagas na competencia liquidacoes cuja data de pagamento pertence a competencia independentemente do vencimento original abertas da competencia saldo aberto de obrigacoes com vencimento na competencia vencidas da competencia subconjunto aberto com vencimento anterior a d vence hoje da competencia subconjunto aberto com vencimento igual a d a vencer da competencia subconjunto aberto com vencimento posterior a d inadimplencia percentual 100 valor vencido elegivel valor exigivel elegivel",
+      "tokenCount": 92,
+      "part": 1
+    },
+    {
+      "id": "dd49db3c023e17e21ba1",
+      "hash": "dd49db3c023e17e21ba1bf71b60f0e926ea189fd7f6f63f437a0909706dbd0b4",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "KPIs da Competência",
+      "text": "`a_vencer` é sempre estritamente posterior ao corte. Obrigações que vencem hoje nunca são classificadas como atrasadas nem como a vencer.",
+      "normalizedText": "a vencer e sempre estritamente posterior ao corte obrigacoes que vencem hoje nunca sao classificadas como atrasadas nem como a vencer",
+      "tokenCount": 18,
+      "part": 1
+    },
+    {
+      "id": "31637be2ae9e34119047",
+      "hash": "31637be2ae9e34119047911aac8416a1a7ae0d683f54ffc6147deea17b12a77d",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Linha de cobertura operacional",
+      "text": "Os buckets `fixas`, `variaveis` e `nao_classificadas` devem ser mutuamente exclusivos. Rateio é uma dimensão de alocação, não um quarto custo a ser somado novamente.",
+      "normalizedText": "os buckets fixas variaveis e nao classificadas devem ser mutuamente exclusivos rateio e uma dimensao de alocacao nao um quarto custo a ser somado novamente",
+      "tokenCount": 22,
+      "part": 1
+    },
+    {
+      "id": "fac1964e50cb4289353d",
+      "hash": "fac1964e50cb4289353d22686abbb666f49e4073ba37e6bc03c929add972ecc8",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Linha de cobertura operacional",
+      "text": "- `custos_operacionais_realizados`: `fixas_realizadas + variaveis_realizadas + nao_classificadas_realizadas`. - `margem_apos_fixas`: `entradas_operacionais_realizadas - fixas_realizadas`. - `margem_operacional_realizada`: `entradas_operacionais_realizadas - custos_operacionais_realizados`. - `cobertura_operacional_percentual`: `100 * entradas_operacionais_realizadas / custos_operacionais_realizados`.",
+      "normalizedText": "custos operacionais realizados fixas realizadas variaveis realizadas nao classificadas realizadas margem apos fixas entradas operacionais realizadas fixas realizadas margem operacional realizada entradas operacionais realizadas custos operacionais realizados cobertura operacional percentual 100 entradas operacionais realizadas custos operacionais realizados",
+      "tokenCount": 37,
+      "part": 1
+    },
+    {
+      "id": "b9e48d296a972558a02b",
+      "hash": "b9e48d296a972558a02bc4924a580a4fdafd4179e73bdb4a4658dc1e47b943a2",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Linha de cobertura operacional",
+      "text": "Estados permitidos:",
+      "normalizedText": "estados permitidos",
+      "tokenCount": 2,
+      "part": 1
+    },
+    {
+      "id": "b110ecfa3efb6d825f7b",
+      "hash": "b110ecfa3efb6d825f7ba6e1db96f8ac9d610a678f49438b336f7c8d47c162b1",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Linha de cobertura operacional",
+      "text": "- `ABAIXO_DA_LINHA`: entradas operacionais menores que custos fixos; - `COBRINDO_FIXAS`: entradas cobrem fixas, mas não todos os custos operacionais; - `LINHA_SUPERADA`: entradas cobrem todos os custos operacionais; - `SEM_BASE`: classificação ou completude insuficiente para concluir.",
+      "normalizedText": "abaixo da linha entradas operacionais menores que custos fixos cobrindo fixas entradas cobrem fixas mas nao todos os custos operacionais linha superada entradas cobrem todos os custos operacionais sem base classificacao ou completude insuficiente para concluir",
+      "tokenCount": 36,
+      "part": 1
+    },
+    {
+      "id": "01653a55fb9baf66a4de",
+      "hash": "01653a55fb9baf66a4de62923493ceb6c6ff84a9c1cbc419d79318720110312f",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Linha de cobertura operacional",
+      "text": "Crédito de empréstimo, amortização de principal e transferências internas não integram o resultado operacional. Juros e encargos podem integrar um bucket de custo financeiro separado, nunca disfarçados como custo operacional.",
+      "normalizedText": "credito de emprestimo amortizacao de principal e transferencias internas nao integram o resultado operacional juros e encargos podem integrar um bucket de custo financeiro separado nunca disfarcados como custo operacional",
+      "tokenCount": 27,
+      "part": 1
+    },
+    {
+      "id": "042c7c573252e5803291",
+      "hash": "042c7c573252e58032915da2f95c2ab96b999eabbcdeb2e7d6d534b9f9bd09f5",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "KPIs de Estrutura",
+      "text": "- `ativos_a_custo`: soma canônica de quantidade por valor de aquisição dos ativos elegíveis. - `saldo_devedor_financiamentos`: principal ainda devido nos contratos elegíveis. - `posicao_patrimonial_a_custo`: `saldo_caixa_registrado + ativos_a_custo - saldo_devedor_financiamentos`. - `servico_divida_30d`: principal, juros e encargos exigíveis até D+30, apresentados separadamente. - `recursos_vinculados_identificados`: recursos com vínculo canônico, incluindo convênios quando comprovados.",
+      "normalizedText": "ativos a custo soma canonica de quantidade por valor de aquisicao dos ativos elegiveis saldo devedor financiamentos principal ainda devido nos contratos elegiveis posicao patrimonial a custo saldo caixa registrado ativos a custo saldo devedor financiamentos servico divida 30d principal juros e encargos exigiveis ate d 30 apresentados separadamente recursos vinculados identificados recursos com vinculo canonico incluindo convenios quando comprovados",
+      "tokenCount": 55,
+      "part": 1
+    },
+    {
+      "id": "00ac898d5f03855e3f2d",
+      "hash": "00ac898d5f03855e3f2d88adf95453f4f5986ad2ea7fb65947f7c006931d1e7a",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "KPIs de Estrutura",
+      "text": "A estrutura não subtrai novamente contas já pagas. Contas a pagar abertas são exibidas como comprometido e projeção; não transformam esta métrica gerencial em patrimônio líquido contábil.",
+      "normalizedText": "a estrutura nao subtrai novamente contas ja pagas contas a pagar abertas sao exibidas como comprometido e projecao nao transformam esta metrica gerencial em patrimonio liquido contabil",
+      "tokenCount": 24,
+      "part": 1
+    },
+    {
+      "id": "6a90904a94793c034403",
+      "hash": "6a90904a94793c0344031693aac852a35919bcdb51cd0cadae8c816ce58217c7",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Regras de rateio e consolidação",
+      "text": "- Uma Conta a Pagar rateada nasce fisicamente na Matriz e tem uma única baixa física. - Polos recebem alocação econômica, sem título ou pagamento duplicado. - Valores devem permanecer por fração econômica para respeitar pagamentos parciais, datas distintas e cortes históricos. - Quantidades são consolidadas por título econômico: um título é pago somente quando todas as frações existentes no corte estiverem liquidadas. - Um título parcialmente pago pode contribuir com valor realizado e valor aberto no mesmo corte, mas não pode ser contado simultaneamente como um título totalmente pago e um título aberto. - No consolidado global, transferências internas entre polos se anulam. - No escopo de polo, entrada e saída de transferência podem aparecer, identificadas como transferência e fora do resultado operacional.",
+      "normalizedText": "uma conta a pagar rateada nasce fisicamente na matriz e tem uma unica baixa fisica polos recebem alocacao economica sem titulo ou pagamento duplicado valores devem permanecer por fracao economica para respeitar pagamentos parciais datas distintas e cortes historicos quantidades sao consolidadas por titulo economico um titulo e pago somente quando todas as fracoes existentes no corte estiverem liquidadas um titulo parcialmente pago pode contribuir com valor realizado e valor aberto no mesmo corte mas nao pode ser contado simultaneamente como um titulo totalmente pago e um titulo aberto no consolidado global transferencias internas entre polos se anulam no escopo de polo entrada e saida de transferencia podem aparecer identificadas como transferencia e fora do resultado operacional",
+      "tokenCount": 109,
+      "part": 1
+    },
+    {
+      "id": "e13b0e3ff381f8b5385e",
+      "hash": "e13b0e3ff381f8b5385e2b488df4f50e39919c520f7c2155dfa8a8cf2655cf06",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Invariantes",
+      "text": "1. Um evento financeiro afeta cada medida exatamente uma vez. 2. Obrigação aberta não reduz `saldo_caixa_registrado`. 3. Liquidação reduz o caixa pelo valor realizado; estorno desfaz esse efeito e reabre o saldo. 4. Cancelados e excluídos não integram a posição corrente. 5. Ausência de histórico temporal de cancelamento ou exclusão torna o passado reexpressado, nunca histórico verdadeiro. 6. Financiamento não contamina o resultado operacional. 7. Rateio não duplica título, baixa, caixa ou valor global. 8. Soma da agenda e dos detalhamentos deve reconciliar com os KPIs do mesmo corte e horizonte. 9. Todos os componentes do painel compartilham o mesmo snapshot e escopo. 10. Nenhuma fórmula monetária, percentual, classificação ou fallback financeiro existe no frontend. 11. Valores realizados usam valor efetivo. Valor programado só pode ser fallback quando uma regra canônica comprovar liquidação integral e expuser a origem do fallback. 12. Escopo global e escopo de polo usam as mesmas regras semânticas; muda apenas o universo autorizado.",
+      "normalizedText": "1 um evento financeiro afeta cada medida exatamente uma vez 2 obrigacao aberta nao reduz saldo caixa registrado 3 liquidacao reduz o caixa pelo valor realizado estorno desfaz esse efeito e reabre o saldo 4 cancelados e excluidos nao integram a posicao corrente 5 ausencia de historico temporal de cancelamento ou exclusao torna o passado reexpressado nunca historico verdadeiro 6 financiamento nao contamina o resultado operacional 7 rateio nao duplica titulo baixa caixa ou valor global 8 soma da agenda e dos detalhamentos deve reconciliar com os kpis do mesmo corte e horizonte 9 todos os componentes do painel compartilham o mesmo snapshot e escopo 10 nenhuma formula monetaria percentual classificacao ou fallback financeiro existe no frontend 11 valores realizados usam valor efetivo valor programado so pode ser fallback quando uma regra canonica comprovar liquidacao integral e expuser a origem do fallback 12 escopo global e escopo de polo usam as mesmas regras semanticas muda apenas o universo autorizado",
+      "tokenCount": 135,
+      "part": 1
+    },
+    {
+      "id": "9512a9fa8a7db542fe13",
+      "hash": "9512a9fa8a7db542fe131124264111e564f33af0832e81e92e7b2925ca0e4f21",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Incompletude, `null` e zero",
+      "text": "Zero significa que o universo elegível foi consultado integralmente e a soma comprovada é zero.",
+      "normalizedText": "zero significa que o universo elegivel foi consultado integralmente e a soma comprovada e zero",
+      "tokenCount": 11,
+      "part": 1
+    },
+    {
+      "id": "f1f7a132bf9595f5d138",
+      "hash": "f1f7a132bf9595f5d138f0a7c42014b1e4e0f043f23aa519e57c9036456ac7ae",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Incompletude, `null` e zero",
+      "text": "`null` significa que o sistema não possui base suficiente para afirmar o valor ou percentual. Nunca converter `null` em zero no backend ou frontend.",
+      "normalizedText": "null significa que o sistema nao possui base suficiente para afirmar o valor ou percentual nunca converter null em zero no backend ou frontend",
+      "tokenCount": 22,
+      "part": 1
+    },
+    {
+      "id": "4da0048aadd7b39f9734",
+      "hash": "4da0048aadd7b39f97348b0d8c3691eb2779196ca08d1dce037b42088b296147",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Incompletude, `null` e zero",
+      "text": "Cada seção deve informar:",
+      "normalizedText": "cada secao deve informar",
+      "tokenCount": 4,
+      "part": 1
+    },
+    {
+      "id": "5052f3997288646af38b",
+      "hash": "5052f3997288646af38b6d6009936d6fce004f64f9fb1a654c9da428216b9892",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Incompletude, `null` e zero",
+      "text": "- `completo`: booleano; - `motivos_incompletude`: códigos estáveis; - `fontes_consideradas`; - `fontes_indisponiveis`; - `itens_nao_classificados` e seu valor conhecido, quando aplicável.",
+      "normalizedText": "completo booleano motivos incompletude codigos estaveis fontes consideradas fontes indisponiveis itens nao classificados e seu valor conhecido quando aplicavel",
+      "tokenCount": 18,
+      "part": 1
+    },
+    {
+      "id": "a43f322fd64a14e3134b",
+      "hash": "a43f322fd64a14e3134bdab78f0926806a77d336f521d68e5b27cda815b0faa3",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Incompletude, `null` e zero",
+      "text": "Motivos mínimos:",
+      "normalizedText": "motivos minimos",
+      "tokenCount": 2,
+      "part": 1
+    },
+    {
+      "id": "1b54d2bd83e149eca6f8",
+      "hash": "1b54d2bd83e149eca6f84c87f014620ebeb5622020170b8102b398ed855dc0df",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Incompletude, `null` e zero",
+      "text": "- `SALDO_BANCARIO_NAO_INTEGRADO`; - `VINCULACAO_INCOMPLETA`; - `ENTRADAS_FUTURAS_NAO_CONFIRMADAS`; - `VALOR_REALIZADO_AUSENTE`; - `CLASSIFICACAO_OPERACIONAL_AUSENTE`; - `HISTORICO_TEMPORAL_INCOMPLETO`; - `SEM_OBRIGACOES`; - `SEM_BASE_ELEGIVEL`.",
+      "normalizedText": "saldo bancario nao integrado vinculacao incompleta entradas futuras nao confirmadas valor realizado ausente classificacao operacional ausente historico temporal incompleto sem obrigacoes sem base elegivel",
+      "tokenCount": 24,
+      "part": 1
+    },
+    {
+      "id": "a72d16536a83a73cd24a",
+      "hash": "a72d16536a83a73cd24a7ebadcdd1ef9ffa945cf0a8bab8f8a2cb421d74164aa",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Incompletude, `null` e zero",
+      "text": "Valor conhecido pode continuar visível como subtotal parcial, mas não pode receber rótulo de total completo.",
+      "normalizedText": "valor conhecido pode continuar visivel como subtotal parcial mas nao pode receber rotulo de total completo",
+      "tokenCount": 16,
+      "part": 1
+    },
+    {
+      "id": "01ea683df45434a61c3b",
+      "hash": "01ea683df45434a61c3bd531d15e1201fe51884d05711fe79454eafefff03b7a",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Casos críticos obrigatórios",
+      "text": "Os testes contratuais e executáveis devem cobrir:",
+      "normalizedText": "os testes contratuais e executaveis devem cobrir",
+      "tokenCount": 6,
+      "part": 1
+    },
+    {
+      "id": "77395d720d9a387fec4e",
+      "hash": "77395d720d9a387fec4e2f30ba784220bbc89d5f42f8c838f55f212de071742f",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Casos críticos obrigatórios",
+      "text": "1. virada de dia em UTC sem mudar prematuramente a data de Maceió; 2. competência passada, atual e futura; 3. pagamento posterior ao corte reabrindo corretamente a obrigação na posição reexpressa; 4. rateio de duas frações de R$ 50 pagas em meses diferentes; 5. rateio com uma fração paga e outra pendente; 6. pagamento parcial com saldo remanescente; 7. estorno de baixa; 8. cancelamento e exclusão, incluindo o aviso de reexpressão histórica; 9. obrigação vencendo hoje, sem classificá-la como atraso; 10. fronteiras D+7, D+8, D+30 e D+31; 11. escopo Matriz, polo e global; 12. transferência interna neutra no consolidado global; 13. crédito, principal, juros e encargos de financiamento em buckets distintos; 14. convênio sem duplicar caixa nem recurso vinculado; 15. denominador zero em percentuais; 16. saldo projetado negativo e positivo; 17. recebível não confirmado excluído da projeção; 18. dado ausente retornando `null` e motivo, nunca zero silencioso; 19. valores altos, centavos e arredondamento somente no banco; 20. identidade entre KPI, agenda e detalhamento; 21. leituras concorrentes preservando um único snapshot; 22. acesso permitido e negado por perfil, módulo, aba e polo.",
+      "normalizedText": "1 virada de dia em utc sem mudar prematuramente a data de maceio 2 competencia passada atual e futura 3 pagamento posterior ao corte reabrindo corretamente a obrigacao na posicao reexpressa 4 rateio de duas fracoes de r 50 pagas em meses diferentes 5 rateio com uma fracao paga e outra pendente 6 pagamento parcial com saldo remanescente 7 estorno de baixa 8 cancelamento e exclusao incluindo o aviso de reexpressao historica 9 obrigacao vencendo hoje sem classifica la como atraso 10 fronteiras d 7 d 8 d 30 e d 31 11 escopo matriz polo e global 12 transferencia interna neutra no consolidado global 13 credito principal juros e encargos de financiamento em buckets distintos 14 convenio sem duplicar caixa nem recurso vinculado 15 denominador zero em percentuais 16 saldo projetado negativo e positivo 17 recebivel nao confirmado excluido da projecao 18 dado ausente retornando null e motivo nunca zero silencioso 19 valores altos centavos e arredondamento somente no banco 20 identidade entre kpi agenda e detalhamento 21 leituras concorrentes preservando um unico snapshot 22 acesso permitido e negado por perfil modulo aba e polo",
+      "tokenCount": 155,
+      "part": 1
+    },
+    {
+      "id": "137a7a1efcd27db47f6f",
+      "hash": "137a7a1efcd27db47f6f2493145ad7739f5ad1f2148ecdb3a3ab3322028549b3",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Critérios de aceite da Etapa 1",
+      "text": "- O workspace responde Hoje, Competência e Estrutura com regimes visivelmente separados. - Todas as seções vêm de uma RPC orquestradora e do mesmo snapshot. - O frontend não contém soma, subtração, percentual, rateio, classificação temporal ou decisão de fallback. - Agenda, KPIs e detalhamento reconciliam exatamente para o mesmo filtro. - Pagamento afeta o caixa uma única vez; obrigação aberta afeta apenas comprometido e projeção. - Rateios preservam valores por fração e quantidades consolidadas por título. - Financiamentos e transferências ficam fora do resultado operacional. - Histórico limitado é rotulado `POSICAO_REEXPRESSA_NO_CORTE`. - Saldo bancário ou livre não é inferido sem integração e vínculo completos. - Toda métrica incompleta apresenta `null` ou subtotal parcial acompanhado de motivo explícito. - Valores monetários são texto decimal canônico; datas usam ISO 8601; percentuais vêm prontos do backend. - A RPC aplica autorização de identidade, empresa, módulo, aba e polo antes de ler dados, com grants mínimos. - Testes críticos passam para escopo global e de polo. - O orçamento de desempenho e o limite máximo de payload são definidos e medidos antes da publicação.",
+      "normalizedText": "o workspace responde hoje competencia e estrutura com regimes visivelmente separados todas as secoes vem de uma rpc orquestradora e do mesmo snapshot o frontend nao contem soma subtracao percentual rateio classificacao temporal ou decisao de fallback agenda kpis e detalhamento reconciliam exatamente para o mesmo filtro pagamento afeta o caixa uma unica vez obrigacao aberta afeta apenas comprometido e projecao rateios preservam valores por fracao e quantidades consolidadas por titulo financiamentos e transferencias ficam fora do resultado operacional historico limitado e rotulado posicao reexpressa no corte saldo bancario ou livre nao e inferido sem integracao e vinculo completos toda metrica incompleta apresenta null ou subtotal parcial acompanhado de motivo explicito valores monetarios sao texto decimal canonico datas usam iso 8601 percentuais vem prontos do backend a rpc aplica autorizacao de identidade empresa modulo aba e polo antes de ler dados com grants minimos testes criticos passam para escopo global e de polo o orcamento de desempenho e o limite maximo de payload sao definidos e medidos antes da publicacao",
+      "tokenCount": 150,
+      "part": 1
+    },
+    {
+      "id": "83c2a9f9507d71f520b7",
+      "hash": "83c2a9f9507d71f520b7b8b3e23d6cae3ffc91e03bbd28ec6aa544e819236bac",
+      "path": "docs/decisions/caixa-workspace-v2-semantica.md",
+      "section": "Fora da Etapa 1",
+      "text": "- saldo bancário conciliado sem integração bancária; - patrimônio líquido contábil; - previsão probabilística, sazonalidade ou aprendizado estatístico; - cenários otimista, base e pessimista; - orçamento versus realizado; - personalização livre do layout; - fotografia histórica verdadeira antes da temporalização de cancelamentos, exclusões e alterações relevantes.",
+      "normalizedText": "saldo bancario conciliado sem integracao bancaria patrimonio liquido contabil previsao probabilistica sazonalidade ou aprendizado estatistico cenarios otimista base e pessimista orcamento versus realizado personalizacao livre do layout fotografia historica verdadeira antes da temporalizacao de cancelamentos exclusoes e alteracoes relevantes",
+      "tokenCount": 37,
       "part": 1
     },
     {

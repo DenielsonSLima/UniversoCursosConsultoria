@@ -1,12 +1,15 @@
 # Lote ativo
 
-Estado: VALIDADO — PUBLICAÇÃO AUTORIZADA
+Estado: ETAPA 2 APLICADA — PUBLICAÇÃO AUTORIZADA
 
-## Lote: 2026-09-27-caixa-contas-pagar-dashboard-financeiro
+## Lote: 2026-09-27-caixa-workspace-v2-redesign
 
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-27-caixa-contas-pagar-dashboard-financeiro.md`
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-27-caixa-workspace-v2-redesign.md`
 
-- Caixa separa compromissos de contas a pagar do realizado, sem calcular valores no frontend.
-- Início usa presets Acadêmico, Financeiro e Misto e mantém o Radar financeiro separado do calendário oficial.
-- Migration remota `20260927194749_create_caixa_contas_pagar_resumo` aplicada e validada no Supabase de produção.
-- Publicação da versão 4.8.121 autorizada explicitamente pelo usuário.
+- Etapa 0 confirmou o baseline remoto de dez RPCs atuais do Caixa sem escrever no Supabase.
+- Etapa 1 fechou o contrato semântico e o wireframe responsivo da mesa de tesouraria.
+- Todo cálculo financeiro, percentual, projeção, classificação e paginação permanece no backend/RPC.
+- A Etapa 2 criou e validou o núcleo privado e os contratos tipados do Workspace v2.
+- As duas migrations foram aplicadas e verificadas no Supabase; o core permanece privado, sem `EXECUTE` para papéis clientes e sem impacto visual neste checkpoint.
+- O usuário autorizou publicar o lote atômico no GitHub como versão 4.8.122.
+- O próximo checkpoint continua sendo o wrapper seguro por escopo, sem cutover antecipado da interface.

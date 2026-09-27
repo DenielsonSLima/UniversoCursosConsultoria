@@ -1,8 +1,8 @@
 {
-  "version": "4.8.121",
+  "version": "4.8.122",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 130,
+  "revision": 131,
   "releasedAt": "2026-09-27",
-  "summary": "Caixa separa contas a pagar do realizado e Início ganha Radar financeiro"
+  "summary": "Caixa ganha núcleo privado e canônico do Workspace v2"
 }
