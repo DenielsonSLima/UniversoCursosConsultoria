@@ -8,6 +8,7 @@ import {
 } from './convenios.mapper';
 import type {
   ConvenioMesDetalhe,
+  ConvenioParceiroOption,
   ConvenioStatusScope,
   ConveniosListResult,
   CriarConvenioInput,
@@ -21,6 +22,23 @@ import type {
 const unwrap = (data: unknown) => Array.isArray(data) ? data[0] : data;
 
 export const conveniosService = {
+  async listarFaculdadesParceiras(
+    poloId: string,
+    signal?: AbortSignal,
+  ): Promise<ConvenioParceiroOption[]> {
+    const request = supabase.rpc('listar_faculdades_parceiras_convenio_secure', {
+      p_polo_id: poloId,
+    });
+    if (signal) request.abortSignal(signal);
+    const { data, error } = await request;
+    if (error) throw error;
+    return (Array.isArray(data) ? data : []).map((item: Record<string, unknown>) => ({
+      id: String(item.id),
+      nome: String(item.nome),
+      cpfCnpj: item.cpf_cnpj ? String(item.cpf_cnpj) : null,
+    }));
+  },
+
   async listar(
     poloId: string,
     statusScope: ConvenioStatusScope,

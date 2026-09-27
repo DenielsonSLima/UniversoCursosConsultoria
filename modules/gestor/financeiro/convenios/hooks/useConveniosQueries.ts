@@ -3,6 +3,13 @@ import { conveniosQueryKeys } from '../convenios.queryKeys';
 import { conveniosService } from '../convenios.service';
 import type { ConvenioStatusScope } from '../convenios.types';
 
+export const useConvenioPartnersQuery = (poloId: string) => useQuery({
+  queryKey: conveniosQueryKeys.partnerOptions(poloId),
+  queryFn: ({ signal }) => conveniosService.listarFaculdadesParceiras(poloId, signal),
+  enabled: Boolean(poloId),
+  staleTime: 5 * 60_000,
+});
+
 export const useConveniosListQuery = (
   poloId: string,
   status: ConvenioStatusScope,

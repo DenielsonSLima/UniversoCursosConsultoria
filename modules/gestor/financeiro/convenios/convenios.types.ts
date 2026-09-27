@@ -49,6 +49,12 @@ export interface ConveniosListResult {
   itens: ConvenioFinanceiroMes[];
 }
 
+export interface ConvenioParceiroOption {
+  id: string;
+  nome: string;
+  cpfCnpj: string | null;
+}
+
 export interface ConvenioMovimento {
   id: string;
   tipo: ConvenioMovimentoTipo;
