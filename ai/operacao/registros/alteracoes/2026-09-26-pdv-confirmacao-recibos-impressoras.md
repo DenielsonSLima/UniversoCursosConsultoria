@@ -2,7 +2,7 @@
 
 - Lote: `2026-09-26-pdv-confirmacao-recibos-impressoras`.
 - Classificação: mudança crítica financeira, banco, PDF e publicação; três frentes independentes com revisão cruzada.
-- Versão publicada: **4.8.108 / revisão 117**, em 26/09/2026, sobre a base publicada 4.8.107 / revisão 116 (`553786c33791b3f001be769fada7f5d76695c918`).
+- Versão inicial publicada: **4.8.108 / revisão 117**, em 26/09/2026, sobre a base publicada 4.8.107 / revisão 116 (`553786c33791b3f001be769fada7f5d76695c918`).
 - Estado: publicado em produção. PR #198 integrado em `badca6bd8dc3bfd1bd8fd6a9cc400f35510e115f`; CI de qualidade e versão aprovados, Vercel pronta e Safari autenticado confirmou 4.8.108. Comprovante real conferido no Safari; homologação física permanece pendente.
 - Autorização: usuário pediu implementação em etapas da confirmação no PDV, recibo após pagamento e Configurações > Impressoras, com escolha de impressão e modelo por impressora.
 
@@ -43,7 +43,7 @@ A revisão cruzada verificou autorização antes de replay, isolamento por polo/
 - Ensaio do script transacional de impressoras em PGlite aprovado; posteriormente **11 contratos passaram remotamente via MCP**, com ator autenticado explícito, rollback, financeiro preservado e zero despachos.
 - Claim remoto sobre a cobrança já paga retornou **INELIGIBLE**, sem criar runs; ACL restrita confirmada pelo coordenador.
 - CI inclui o runner de UI/PDF/cache, os testes Edge, o teste compartilhado de impressão e os dois contratos SQL isolados. Workflow composto sobre GitHub main preservando os steps remotos já publicados; PGlite fixado em 0.3.16 fora das dependências do produto.
-- PDFs de 58/80 mm aprovados pelo coordenador em texto extraído e renderização visual. Smoke local no Safari confirmou formulário real, edição do nome Epson TM-T20, modelo de 80 mm, prévia PDF real e escolha de comprovante após pagamento. Nenhuma impressão foi disparada; o smoke autenticado final de produção permanece pendente.
+- PDFs de 58/80 mm aprovados pelo coordenador em texto extraído e renderização visual. Smoke local no Safari confirmou formulário real, edição do nome Epson TM-T20, modelo de 80 mm, prévia PDF real e escolha de comprovante após pagamento. Nenhuma impressão foi disparada; o smoke autenticado de produção está descrito no rollout abaixo.
 - `gestor-other-credit-payment` **v4 ACTIVE**, `verify_jwt=true`, pacote conferido pelo coordenador: SHA-256 `648d53cc7f215e72bba1aef5ea04b77ea66b610b30a9d25d131092eee676ad8c`.
 
 ## Rollout e pendências
@@ -59,9 +59,10 @@ O avanço paralelo de 4.8.107 foi preservado no changelog; `OtherCreditPdvModal.
 
 ## Ajuste térmico solicitado após o smoke
 
-- Versão 4.8.109 / revisão 118 preparada sobre 4.8.108. Usuário pediu explicitamente retirar a marca d’água e organizar o recibo como cupom térmico; essa instrução prevalece sobre a preservação genérica do fundo institucional.
+- Versão 4.8.109 / revisão 118 publicada sobre 4.8.108 pelo PR #199, commit `6d97b42173ccaa7ef765af0958090d38f9fba7d2`. Usuário pediu explicitamente retirar a marca d’água e organizar o recibo como cupom térmico; essa instrução prevalece sobre a preservação genérica do fundo institucional.
 - Patch no compositor `pdv-receipt.pdf.ts`, somente na variante térmica de `canonical-institutional-header-pdf.ts` e no teste `pdv-receipt.test.ts`: fundo branco, cabeçalho compacto, corpo monoespaçado, separadores e colunas com total em destaque. Preserva logo, conteúdo e snapshot financeiro. Sem alteração no banco ou nas regras do pagamento.
 - 25 testes UI/PDF/cache aprovados; lint dos três arquivos passou. PDFs de 58/80 mm extraídos e renderizados sem fundo; inspeção de recursos confirmou somente logo e sua máscara de transparência.
+- Publicação confirmada: qualidade do PR `36288618668`, versão `36288618666` e qualidade da main `36288815198` aprovadas; Vercel `FZs8AS1srsoRmDkM4PhY5wQ37iPN` pronta. Safari autenticado carregou 4.8.109 e o cupom de exemplo foi conferido no navegador. A reabertura do PDF real no layout novo ficou pendente porque o clique remoto na ação da tabela não funcionou. Nenhuma impressão foi enviada.
 - Manifesto desta correção (sete arquivos, PR #199): os três arquivos acima, `internal/versioning/system-version.json`, `internal/versioning/CHANGELOG.md`, este registro e `ai/operacao/LOTE_ATIVO.md`. Todos já integram o manifesto original.
 
 ## Migrations aplicadas e correspondência do ledger
