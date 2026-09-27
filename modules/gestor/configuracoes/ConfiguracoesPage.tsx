@@ -24,7 +24,8 @@ import {
   Handshake,
   PackageOpen,
   Smartphone,
-  BellRing
+  BellRing,
+  Printer
 } from 'lucide-react';
 
 // Importação dos Submódulos
@@ -54,6 +55,7 @@ import PushNotificationsConfig from './push-notifications/PushNotificationsConfi
 import TiposProdutosConfig from './tipos-produtos/TiposProdutosConfig';
 const ProescConfig = React.lazy(() => import('./proesc/ProescConfig'));
 const ConsultaApiProescConfig = React.lazy(() => import('./consulta-api-proesc/ConsultaApiProescConfig'));
+const ImpressorasConfig = React.lazy(() => import('./impressoras/ImpressorasConfig'));
 import {
   banesePollingQueryKey,
   consultaApiBaneseService,
@@ -86,6 +88,7 @@ const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({
     { id: 'tipos-parceria', title: 'Tipos de Parceria', desc: 'Convênios e vínculos de pessoas jurídicas', icon: <Handshake size={24} />, color: 'bg-blue-700' },
     ...(canManageProductTypes ? [{ id: 'tipos-produtos', title: 'Tipos de produtos', desc: 'Catálogo usado no cadastro de patrimônio', icon: <PackageOpen size={24} />, color: 'bg-cyan-700' }] : []),
     { id: 'categorias-financeiras', title: 'Categorias Financeiras', desc: 'Adicionar, ativar e inativar', icon: <Wallet2 size={24} />, color: 'bg-rose-600' },
+    { id: 'impressoras', title: 'Impressoras', desc: 'Estações, impressão no PDV e modelo do recibo', icon: <Printer size={24} />, color: 'bg-blue-800' },
     { id: 'usuarios', title: 'Usuários e Permissões', desc: 'Gestão de acesso ao sistema', icon: <Users size={24} />, color: 'bg-indigo-500' },
     { id: 'dispositivos-app', title: 'Dispositivos do App', desc: 'Instalações, sessões e notificações por polo', icon: <Smartphone size={24} />, color: 'bg-blue-600' },
     { id: 'push-notifications', title: 'Políticas de Push', desc: 'Categorias, privacidade e horários de envio', icon: <BellRing size={24} />, color: 'bg-violet-600' },
@@ -122,6 +125,7 @@ const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({
       case 'tipos-parceria': return <TiposParceriaConfig />;
       case 'tipos-produtos': return canManageProductTypes ? <TiposProdutosConfig poloId={poloId} /> : null;
       case 'categorias-financeiras': return <CategoriasFinanceirasConfig />;
+      case 'impressoras': return <React.Suspense fallback={<p role="status">Carregando impressoras…</p>}><ImpressorasConfig key={poloId || 'sem-polo'} poloId={poloId} /></React.Suspense>;
       case 'usuarios': return <UsuariosConfig />;
       case 'dispositivos-app': return <DispositivosAppConfig />;
       case 'push-notifications': return <PushNotificationsConfig />;

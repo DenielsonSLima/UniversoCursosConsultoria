@@ -9,11 +9,18 @@ export type OtherCreditPayment = {
   boletoAvailable: boolean;
   pixState: 'available' | 'pending' | 'sandbox-unavailable';
   needsReview: boolean;
+  confirmation?: {
+    status: 'CHECKED' | 'WAITING' | 'STOPPED';
+    reason: string;
+    checkedAt: string | null;
+    nextCheckAt: string | null;
+    retryAfterMs: number | null;
+  };
 };
 
-export async function getOtherCreditPayment(receivableId: string, signal: AbortSignal): Promise<OtherCreditPayment> {
+async function readOtherCreditPayment(receivableId: string, signal: AbortSignal, action: 'get' | 'check'): Promise<OtherCreditPayment> {
   const { data, error } = await supabase.functions.invoke<OtherCreditPayment>('gestor-other-credit-payment', {
-    body: { action: 'get', receivableId }, signal,
+    body: { action, receivableId }, signal,
   });
   if (error) {
     const context = (error as { context?: Response }).context;
@@ -23,6 +30,9 @@ export async function getOtherCreditPayment(receivableId: string, signal: AbortS
   if (!data?.payment || data.payment.id !== receivableId) throw new Error('Cobrança não disponível para este caixa.');
   return data;
 }
+
+export const getOtherCreditPayment = (id: string, signal: AbortSignal) => readOtherCreditPayment(id, signal, 'get');
+export const checkOtherCreditPayment = (id: string, signal: AbortSignal) => readOtherCreditPayment(id, signal, 'check');
 
 export function safeOtherCreditLink(value: unknown): string | null {
   if (typeof value !== 'string') return null;

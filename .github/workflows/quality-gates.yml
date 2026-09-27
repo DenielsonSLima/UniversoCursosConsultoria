@@ -340,5 +340,22 @@ jobs:
           JS
           node --test tmp/registration-typography.test.mjs
 
+      - name: Testar confirmação, recibos e configuração de impressoras do PDV
+        run: |
+          node scripts/test-pdv-receipts.mjs
+          deno test --allow-read --allow-env \
+            modules/gestor/secretaria/shared/pdf-blob-print.test.ts \
+            supabase/functions/gestor-other-credit-payment/payment-reader.test.ts \
+            supabase/functions/gestor-other-credit-payment/payment-capabilities.test.ts \
+            supabase/functions/gestor-other-credit-payment/payment-check.test.ts \
+            supabase/functions/banese-reconciliation-worker/query-token-retry.test.ts
+
+      - name: Testar contratos SQL isolados do PDV
+        run: |
+          npm install --prefix /tmp/universo-pdv-sql --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.3.16
+          export PGLITE_MODULE_PATH=/tmp/universo-pdv-sql/node_modules/@electric-sql/pglite/dist/index.js
+          node supabase/tests/pdv-printing.isolated.test.mjs
+          node supabase/tests/banese_pdv_confirmation.isolated.test.mjs
+
       - name: Gerar build de produção
         run: npm run build

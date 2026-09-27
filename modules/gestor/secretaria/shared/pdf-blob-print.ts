@@ -2,6 +2,7 @@ interface PdfBlobPrintOptions {
   loadTimeoutMs?: number;
   settleMs?: number;
   afterPrintFallbackMs?: number;
+  requireAfterPrint?: boolean;
   title?: string;
 }
 
@@ -51,20 +52,25 @@ const createFrameLoadWaiter = (
 const createPrintCompletionWaiter = (
   printWindow: Pick<typeof window, 'addEventListener' | 'removeEventListener'>,
   fallbackMs: number,
+  requireAfterPrint: boolean,
 ): CancelableWaiter => {
   let cancel = () => undefined;
-  const promise = new Promise<void>((resolve) => {
+  const promise = new Promise<void>((resolve, reject) => {
     let settled = false;
-    const finish = () => {
+    const finish = (error?: Error) => {
       if (settled) return;
       settled = true;
       window.clearTimeout(fallback);
-      printWindow.removeEventListener('afterprint', finish);
-      resolve();
+      printWindow.removeEventListener('afterprint', afterPrint);
+      if (error) reject(error);
+      else resolve();
     };
-    const fallback = window.setTimeout(finish, fallbackMs);
-    cancel = finish;
-    printWindow.addEventListener('afterprint', finish, { once: true });
+    const afterPrint = () => finish();
+    const fallback = window.setTimeout(() => finish(requireAfterPrint
+      ? new Error('Não foi possível confirmar o encerramento do diálogo de impressão.')
+      : undefined), fallbackMs);
+    cancel = () => finish();
+    printWindow.addEventListener('afterprint', afterPrint, { once: true });
   });
   return { cancel, promise };
 };
@@ -98,6 +104,7 @@ export const printPdfBlob = async (
     loadTimeoutMs = 15_000,
     settleMs = 250,
     afterPrintFallbackMs = 5_000,
+    requireAfterPrint = false,
     title = 'Lote de documentos emitidos',
   } = options;
   const iframe = document.createElement('iframe');
@@ -129,7 +136,7 @@ export const printPdfBlob = async (
       throw new Error('O navegador não disponibilizou a janela do PDF agregado.');
     }
 
-    printWaiter = createPrintCompletionWaiter(printWindow, afterPrintFallbackMs);
+    printWaiter = createPrintCompletionWaiter(printWindow, afterPrintFallbackMs, requireAfterPrint);
     printWindow.focus();
     printWindow.print();
     await printWaiter.promise;
