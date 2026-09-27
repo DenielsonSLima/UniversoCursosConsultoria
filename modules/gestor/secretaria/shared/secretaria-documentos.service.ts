@@ -6,6 +6,7 @@ import {
   crachaPeriodoEleitoralService,
   isCrachaEleitoralTemplateAvailable,
 } from '../../cadastros/modelos-documentos/cracha-periodo-eleitoral/cracha-periodo-eleitoral.service';
+import { formatCarteirinhaDate } from '../../cadastros/modelos-documentos/carteirinha/carteirinha-date-formatters';
 import {
   fichasMatriculaService,
 } from '../../cadastros/ficha-matricula/fichas-matricula.service';
@@ -433,7 +434,7 @@ export const secretariaDocumentosService = {
         validationCode: records[index]?.code,
         validationPublic: records[index]?.validationPublic === true,
         validade: records[index]?.expiresAt
-          ? new Date(records[index].expiresAt!).toLocaleDateString('pt-BR')
+          ? formatCarteirinhaDate(records[index].expiresAt)
           : 'Sem vencimento',
       })),
     };

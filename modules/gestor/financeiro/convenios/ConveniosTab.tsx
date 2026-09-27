@@ -161,10 +161,6 @@ const ConveniosTab: React.FC<ConveniosTabProps> = ({ poloId: scopedPoloId }) => 
         <button type="button" onClick={() => setShowCreate(true)} disabled={!poloId} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-cyan-700 px-5 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg shadow-cyan-950/15 hover:bg-cyan-800 disabled:opacity-50"><Plus size={16} /> Novo convênio</button>
       </header>
 
-      <div className="rounded-2xl border border-cyan-100 bg-cyan-50/50 px-4 py-3 text-xs font-medium leading-relaxed text-slate-600">
-        <strong className="font-black text-cyan-800">Polo responsável:</strong> {poloNome}. A virada do calendário não fecha competências; somente a ação Finalizar mês cria um snapshot.
-      </div>
-
       {resumo ? <ConveniosKpis resumo={resumo} /> : null}
 
       <div className="flex flex-col gap-3 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm lg:flex-row lg:items-center">

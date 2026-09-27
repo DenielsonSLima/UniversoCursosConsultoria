@@ -5,6 +5,10 @@ import {
   mapConveniosList,
   mapFinalizarMesResult,
 } from './convenios.mapper.ts';
+import {
+  formatConvenioMonthInput,
+  parseConvenioMonthInput,
+} from './convenios.presentation.ts';
 
 const mes = {
   id: '11111111-1111-4111-8111-111111111111',
@@ -101,4 +105,12 @@ test('mapeia fechamento com sucessora opcional e idempotência explícita', () =
   assert.equal(result.replayed, false);
   assert.equal(result.mesFechado.status, 'FINALIZADO');
   assert.equal(result.proximaMes?.competencia, '2026-10-01');
+});
+
+test('exibe competência no padrão brasileiro e preserva o formato canônico no envio', () => {
+  assert.equal(formatConvenioMonthInput('2026-09'), '09/2026');
+  assert.equal(formatConvenioMonthInput('092026'), '09/2026');
+  assert.equal(parseConvenioMonthInput('09/2026'), '2026-09');
+  assert.equal(parseConvenioMonthInput('13/2026'), null);
+  assert.equal(parseConvenioMonthInput('2026-09'), null);
 });

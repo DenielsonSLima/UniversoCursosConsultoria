@@ -15,6 +15,7 @@ const expenseRead = migration('20260927030400_convenios_financeiros_expense_read
 const caixa = migration('20260927030500_convenios_financeiros_caixa_realtime.sql');
 const report = migration('20260927030600_convenios_financeiros_caixa_report_v7.sql');
 const otherCredits = migration('20260927030700_convenios_financeiros_separate_other_credits.sql');
+const fullAccessBackfill = migration('20260927030900_convenios_financeiros_full_access_backfill.sql');
 
 const functionBody = (source: string, name: string) => {
   const markers = [
@@ -157,4 +158,16 @@ test('Caixa e relatório v7 recebem recorte sem alterar totais físicos', () => 
   assert.match(report, /'versao', 7/);
   assert.match(report, /'convenios', v_convenios/);
   assert.match(report, /'motivo', 'ACESSO_RESTRITO'/);
+});
+
+test('backfill libera Convênios somente para acessos financeiros completos anteriores', () => {
+  assert.match(fullAccessBackfill, /UPDATE public\.perfis_acesso/);
+  assert.match(fullAccessBackfill, /UPDATE public\.usuarios_sistema/);
+  assert.match(fullAccessBackfill, /jsonb_build_array\('convenios'\)/);
+  assert.match(fullAccessBackfill, /NOT coalesce\([\s\S]*\? 'convenios'/);
+  assert.match(fullAccessBackfill, /'resumo', 'receber', 'despesas', 'emprestimos', 'transferencias'/);
+  assert.match(fullAccessBackfill, /'conciliacao-bancaria', 'outros-debitos', 'outros-creditos'/);
+  assert.match(fullAccessBackfill, /personalizar_permissoes/);
+  assert.doesNotMatch(fullAccessBackfill, /WHERE\s+true/i);
+  assert.doesNotMatch(fullAccessBackfill, /UPDATE public\.usuarios_sistema\s+SET[\s\S]*?;\s*COMMIT;/i);
 });

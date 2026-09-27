@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import { formatMatricula } from '../../../../lib/academicUtils';
+import { formatCarteirinhaDate } from '../../cadastros/modelos-documentos/carteirinha/carteirinha-date-formatters';
 import {
   createDocumentReissueKey,
   documentValidationService,
@@ -85,7 +86,7 @@ const SecretariaCarteirinhasPage: React.FC<SecretariaCarteirinhasPageProps> = ({
         nome: enrollment.alunoNome.toUpperCase(),
         cpf: enrollment.cpf,
         rg: enrollment.rg,
-        nascimento: enrollment.nascimento,
+        nascimento: formatCarteirinhaDate(enrollment.nascimento),
         matricula: formatMatricula(enrollment.enrollmentId, enrollment.dataMatricula, enrollment.poloId),
         curso: enrollment.cursoNome,
         turmaNome: enrollment.turmaNome,
@@ -215,7 +216,7 @@ const SecretariaCarteirinhasPage: React.FC<SecretariaCarteirinhasPageProps> = ({
   const alunosParaImprimir = rawAlunosParaImprimir.map((aluno, index) => {
     const snapshot = validationSnapshots[aluno.id];
     const validadeFormatada = snapshot?.expiresAt
-      ? new Date(snapshot.expiresAt).toLocaleDateString('pt-BR')
+      ? formatCarteirinhaDate(snapshot.expiresAt)
       : 'Sem vencimento';
     return {
       ...aluno,

@@ -29,6 +29,19 @@ export const formatConvenioDate = (value: string) => {
   return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
 };
 
+export const formatConvenioMonthInput = (value: string) => {
+  const canonical = value.match(/^(\d{4})-(\d{2})(?:-\d{2})?$/);
+  if (canonical) return `${canonical[2]}/${canonical[1]}`;
+
+  const digits = value.replace(/\D/g, '').slice(0, 6);
+  return digits.length <= 2 ? digits : `${digits.slice(0, 2)}/${digits.slice(2)}`;
+};
+
+export const parseConvenioMonthInput = (value: string) => {
+  const match = value.match(/^(0[1-9]|1[0-2])\/(\d{4})$/);
+  return match ? `${match[2]}-${match[1]}` : null;
+};
+
 export const convenioStatusLabel = (status: ConvenioMesStatus) => (
   status === 'ABERTO' ? 'Em aberto' : 'Finalizado'
 );

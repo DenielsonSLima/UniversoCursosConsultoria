@@ -16,13 +16,16 @@ import {
   STATUS_LABELS,
   SummaryCard,
 } from './RelatorioShared';
+import {
+  currentCompetenciaInMaceio,
+  formatCompetenciaInput,
+  parseCompetenciaInput,
+} from './relatorios.date-presentation';
 
 interface RelatorioFinanceiroTurmaMensalProps {
   company: any;
   polo: any;
 }
-
-const currentCompetencia = () => new Date().toISOString().slice(0, 7);
 
 const tipoLabels: Record<string, string> = {
   todos: 'Todos',
@@ -36,11 +39,15 @@ const RelatorioFinanceiroTurmaMensal: React.FC<RelatorioFinanceiroTurmaMensalPro
   const [items, setItems] = useState<RelatorioFinanceiroMensalItem[]>([]);
   const [turmas, setTurmas] = useState<RelatorioTurmaOption[]>([]);
   const [loading, setLoading] = useState(true);
-  const [competencia, setCompetencia] = useState(currentCompetencia());
+  const [competencia, setCompetencia] = useState(currentCompetenciaInMaceio);
+  const [competenciaInput, setCompetenciaInput] = useState(
+    () => formatCompetenciaInput(currentCompetenciaInMaceio()),
+  );
   const [modalidade, setModalidade] = useState<RelatorioModalidade>('todos');
   const [turmaId, setTurmaId] = useState('todos');
   const [status, setStatus] = useState<RelatorioFinanceiroStatus>('todos');
   const [tipoLancamento, setTipoLancamento] = useState<RelatorioTipoLancamento>('todos');
+  const competenciaInputValida = parseCompetenciaInput(competenciaInput) !== null;
 
   const poloId = polo?.id;
 
@@ -94,6 +101,7 @@ const RelatorioFinanceiroTurmaMensal: React.FC<RelatorioFinanceiroTurmaMensalPro
   return (
     <div className="flex flex-col lg:flex-row gap-6 h-full w-full">
       <ReportFilterPanel
+        printDisabled={!competenciaInputValida}
         summary={
           <>
             <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Resumo da competência</h4>
@@ -107,7 +115,33 @@ const RelatorioFinanceiroTurmaMensal: React.FC<RelatorioFinanceiroTurmaMensalPro
         }
       >
         <FilterField label="Competência">
-          <FilterInput type="month" value={competencia} onChange={(e) => setCompetencia(e.target.value)} />
+          <FilterInput
+            type="text"
+            inputMode="numeric"
+            value={competenciaInput}
+            placeholder="MM/AAAA"
+            pattern="(0[1-9]|1[0-2])/[0-9]{4}"
+            title="Informe o mês no formato MM/AAAA"
+            maxLength={7}
+            aria-invalid={!competenciaInputValida}
+            aria-describedby={!competenciaInputValida ? 'competencia-mensal-error' : undefined}
+            onChange={(event) => {
+              const visual = formatCompetenciaInput(event.target.value);
+              setCompetenciaInput(visual);
+              const canonical = parseCompetenciaInput(visual);
+              if (canonical) setCompetencia(canonical);
+            }}
+            onBlur={() => {
+              if (!parseCompetenciaInput(competenciaInput)) {
+                setCompetenciaInput(formatCompetenciaInput(competencia));
+              }
+            }}
+          />
+          {!competenciaInputValida ? (
+            <span id="competencia-mensal-error" className="px-1 text-[10px] font-semibold text-red-600">
+              Informe uma competência válida em MM/AAAA.
+            </span>
+          ) : null}
         </FilterField>
         <FilterField label="Modalidade">
           <FilterSelect value={modalidade} onChange={(e) => setModalidade(e.target.value as RelatorioModalidade)}>
