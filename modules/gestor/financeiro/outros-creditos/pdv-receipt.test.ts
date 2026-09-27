@@ -27,6 +27,38 @@ test('recibo vetorial respeita ambas as larguras e não altera dados canônicos'
   }
 });
 
+test('cupom imprime documento identificado e matrícula canônica somente quando fornecida', async () => {
+  const { getDocument } = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  for (const widthMm of [58, 80] as const) {
+    for (const payer of [
+      { name: 'ALUNO DE EXEMPLO', documentLabel: 'CPF' as const,
+        documentMasked: '12*.***.**9-01', enrollmentNumber: 'UNIV-A-00000001' },
+      { name: 'EMPRESA DE EXEMPLO', documentLabel: 'CNPJ' as const,
+        documentMasked: '12.***.***/***9-01', enrollmentNumber: null },
+      { name: 'PARCEIRO SEM DOCUMENTO', documentLabel: 'Documento' as const,
+        documentMasked: null, enrollmentNumber: null },
+    ]) {
+      const receipt = sample(); receipt.template.widthMm = widthMm; receipt.payer = payer;
+      const snapshot = JSON.stringify(receipt);
+      const { blob } = await createPdvReceiptPdf(receipt, { logo: null });
+      const loading = getDocument({ data: new Uint8Array(await blob.arrayBuffer()), useSystemFonts: true });
+      const pdf = await loading.promise;
+      try {
+        assert.equal(pdf.numPages, 1);
+        const content = await (await pdf.getPage(1)).getTextContent();
+        const text = content.items.flatMap(item => 'str' in item ? [item.str] : []).join(' ').replace(/\s+/g, ' ');
+        assert.ok(text.includes(payer.name));
+        if (payer.documentMasked) assert.ok(text.includes(`${payer.documentLabel}: ${payer.documentMasked}`), text);
+        else assert.doesNotMatch(text, /(?:CPF|CNPJ|Documento):/);
+        if (payer.enrollmentNumber) assert.ok(text.includes(`Matrícula: ${payer.enrollmentNumber}`));
+        else assert.doesNotMatch(text, /Matrícula:/);
+        assert.ok(text.includes(receipt.totalDisplay));
+        assert.equal(JSON.stringify(receipt), snapshot);
+      } finally { await pdf.destroy(); }
+    }
+  }
+});
+
 test('modelo personalizado altera apresentação e asset obrigatório ausente falha explicitamente', async () => {
   const original = sample();
   const custom = globalThis.structuredClone(original);

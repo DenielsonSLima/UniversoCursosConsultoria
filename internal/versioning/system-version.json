@@ -1,8 +1,8 @@
 {
-  "version": "4.8.109",
+  "version": "4.8.110",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 118,
+  "revision": 119,
   "releasedAt": "2026-09-26",
-  "summary": "Recibo do PDV em formato de cupom térmico compacto"
+  "summary": "Documento pontuado e matrícula do aluno no recibo do PDV"
 }

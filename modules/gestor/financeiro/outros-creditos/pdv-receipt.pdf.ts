@@ -78,7 +78,13 @@ function drawReceipt(pdf: jsPDF, receipt: PdvReceipt, assets: PdvReceiptAssets) 
   divider();
   text('PAGADOR', { bold: true, size: 7 });
   text(receipt.payer.name, { bold: true });
-  if (receipt.payer.documentMasked) text(`CPF/CNPJ: ${receipt.payer.documentMasked}`, { size: Math.max(7, model.fontSize - 1) });
+  if (receipt.payer.documentMasked) {
+    text(`${receipt.payer.documentLabel || 'Documento'}: ${receipt.payer.documentMasked}`,
+      { size: Math.max(7, model.fontSize - 1) });
+  }
+  if (receipt.payer.enrollmentNumber) {
+    text(`Matrícula: ${receipt.payer.enrollmentNumber}`, { size: Math.max(7, model.fontSize - 1) });
+  }
   divider();
   text('DESCRIÇÃO', { bold: true, size: 7 });
   text(receipt.description, { gap: 2 });

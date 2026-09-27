@@ -20,7 +20,12 @@ export interface PdvReceipt {
   paidAt: string;
   paidAtDisplay: string;
   paymentMethod: string;
-  payer: { name: string; documentMasked: string };
+  payer: {
+    name: string;
+    documentMasked: string | null;
+    documentLabel?: 'CPF' | 'CNPJ' | 'Documento';
+    enrollmentNumber?: string | null;
+  };
   description: string;
   issuer: {
     id: string; name: string; cnpj: string;
