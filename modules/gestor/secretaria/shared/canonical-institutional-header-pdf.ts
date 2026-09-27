@@ -408,29 +408,28 @@ export const drawCanonicalThermalHeader = (
   pdf.setTextColor(0, 0, 0);
   if (options.showLogo && logo) {
     const properties = pdf.getImageProperties(logo.dataUrl);
-    const logoWidth = Math.min(38, available);
+    const logoWidth = Math.min(30, available);
     const logoHeight = logoWidth * properties.height / properties.width;
     pdf.addImage(logo.dataUrl, logo.format, (width - logoWidth) / 2, y,
       logoWidth, logoHeight, 'thermal-institutional-logo', 'FAST');
-    y += logoHeight + 3;
+    y += logoHeight + 2;
   }
-  const line = (value: string, bold = false) => {
+  const line = (value: string, bold = false, size = Math.max(7, options.fontSize - 1)) => {
     if (!value) return;
     pdf.setFont('helvetica', bold ? 'bold' : 'normal');
-    pdf.setFontSize(options.fontSize);
+    pdf.setFontSize(size);
     const lines = pdf.splitTextToSize(value, available) as string[];
-    pdf.text(lines, width / 2, y, { align: 'center', baseline: 'top', lineHeightFactor: 1.25 });
-    y += lines.length * options.fontSize * 0.352778 * 1.25 + 1;
+    pdf.text(lines, width / 2, y, { align: 'center', baseline: 'top', lineHeightFactor: 1.1 });
+    y += lines.length * size * 0.352778 * 1.1 + 0.5;
   };
-  line(institution.name, true);
-  line(institution.unitLabel);
-  line(institution.cnpj ? `CNPJ: ${institution.cnpj}` : '');
+  line(institution.name, true, options.fontSize);
+  line([institution.unitLabel, institution.cnpj ? `CNPJ: ${institution.cnpj}` : ''].filter(Boolean).join(' · '));
   line([institution.address, institution.number, institution.complement].filter(Boolean).join(', '));
   line([institution.neighborhood, [institution.city, institution.state].filter(Boolean).join('/')].filter(Boolean).join(' - '));
-  line(institution.phone ? `Contato: ${institution.phone}` : '');
-  line(institution.email);
+  line(institution.phone ? `Tel.: ${institution.phone}` : '', false, 7);
+  line(institution.email, false, 7);
   pdf.setDrawColor(0, 0, 0);
-  pdf.setLineWidth(0.2);
+  pdf.setLineWidth(0.15);
   pdf.line(options.margin, y + 1, width - options.margin, y + 1);
-  return y + 4;
+  return y + 3;
 };

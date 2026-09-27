@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { PDFDocument } from 'pdf-lib';
+import { PDFDict, PDFDocument, PDFName } from 'pdf-lib';
 import { createPdvReceiptPdf } from './pdv-receipt.pdf';
 import { createPdvReceiptPreview } from './pdv-receipt-preview';
 import { printPreparedPdvReceipt } from './pdv-receipt.service';
@@ -18,7 +18,7 @@ test('recibo vetorial respeita ambas as larguras e não altera dados canônicos'
   for (const widthMm of [58, 80] as const) {
     const receipt = sample(); receipt.template.widthMm = widthMm;
     const snapshot = JSON.stringify(receipt);
-    const result = await createPdvReceiptPdf(receipt, { logo: null, watermark: null });
+    const result = await createPdvReceiptPdf(receipt, { logo: null });
     const doc = await PDFDocument.load(await result.blob.arrayBuffer());
     assert.equal(doc.getPageCount(), 1);
     assert.ok(Math.abs(doc.getPage(0).getWidth() - widthMm * 72 / 25.4) < 0.01);
@@ -33,13 +33,29 @@ test('modelo personalizado altera apresentação e asset obrigatório ausente fa
   custom.template.fontSize = 12;
   custom.template.marginMm = 6;
   custom.template.footer = 'Texto personalizado '.repeat(15);
-  const a = await createPdvReceiptPdf(original, { logo: null, watermark: null });
-  const b = await createPdvReceiptPdf(custom, { logo: null, watermark: null });
+  const a = await createPdvReceiptPdf(original, { logo: null });
+  const b = await createPdvReceiptPdf(custom, { logo: null });
   const height = async (blob: Blob) => (await PDFDocument.load(await blob.arrayBuffer())).getPage(0).getHeight();
   assert.ok(await height(b.blob) > await height(a.blob));
-  custom.issuer.watermarkUrl = 'https://invalid.example/watermark.png';
-  await assert.rejects(createPdvReceiptPdf(custom, { logo: null, watermark: null }), /Marca d’água/);
+  custom.template.showLogo = true;
+  custom.issuer.logoUrl = 'https://invalid.example/logo.png';
+  await assert.rejects(createPdvReceiptPdf(custom, { logo: null }), /Logo configurada/);
   await assert.rejects(createPdvReceiptPdf({ ...original, totalCents: 0 }), /comprovante de pagamento válido/);
+});
+
+
+test('recibo térmico ignora a marca d’água institucional sem alterar o snapshot', async () => {
+  for (const widthMm of [58, 80] as const) {
+    const receipt = sample(); receipt.template.widthMm = widthMm;
+    receipt.issuer.watermarkUrl = 'https://invalid.example/fundo-institucional.png';
+    const snapshot = JSON.stringify(receipt);
+    // Sem assets fornecidos: uma tentativa de buscar a marca faria a geração falhar.
+    const result = await createPdvReceiptPdf(receipt);
+    const doc = await PDFDocument.load(await result.blob.arrayBuffer());
+    const resources = doc.getPage(0).node.Resources();
+    assert.equal(resources?.lookupMaybe(PDFName.of('XObject'), PDFDict)?.keys().length ?? 0, 0);
+    assert.equal(JSON.stringify(receipt), snapshot);
+  }
 });
 
 function scenario(options: { claimReplay?: boolean; printFails?: boolean; ackFails?: boolean; jobFails?: boolean } = {}) {

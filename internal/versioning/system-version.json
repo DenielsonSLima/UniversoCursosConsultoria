@@ -1,8 +1,8 @@
 {
-  "version": "4.8.108",
+  "version": "4.8.109",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 117,
+  "revision": 118,
   "releasedAt": "2026-09-26",
-  "summary": "Confirmação ativa do PDV, recibos e configuração de impressoras"
+  "summary": "Recibo do PDV em formato de cupom térmico compacto"
 }

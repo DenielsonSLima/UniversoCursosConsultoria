@@ -2,8 +2,8 @@
 
 - Lote: `2026-09-26-pdv-confirmacao-recibos-impressoras`.
 - Classificação: mudança crítica financeira, banco, PDF e publicação; três frentes independentes com revisão cruzada.
-- Versão preparada: **4.8.108 / revisão 117**, em 26/09/2026, sobre a base publicada 4.8.107 / revisão 116 (`553786c33791b3f001be769fada7f5d76695c918`).
-- Estado: validação/publicação. Cinco migrations aplicadas via MCP, ensaio SQL remoto e deploy Edge conferidos; publicação GitHub/produção e smoke autenticado final ainda em andamento.
+- Versão publicada: **4.8.108 / revisão 117**, em 26/09/2026, sobre a base publicada 4.8.107 / revisão 116 (`553786c33791b3f001be769fada7f5d76695c918`).
+- Estado: publicado em produção. PR #198 integrado em `badca6bd8dc3bfd1bd8fd6a9cc400f35510e115f`; CI de qualidade e versão aprovados, Vercel pronta e Safari autenticado confirmou 4.8.108. Comprovante real conferido no Safari; homologação física permanece pendente.
 - Autorização: usuário pediu implementação em etapas da confirmação no PDV, recibo após pagamento e Configurações > Impressoras, com escolha de impressão e modelo por impressora.
 
 ## Problema e resultado preparado
@@ -21,7 +21,7 @@ A interface agrupa estações e impressoras, permite editar modelo de 58 ou 80 m
 - Recibo é autorizado por polo e só nasce de PAGO com baixa válida. Valor, pagador, data e emissor vêm do snapshot canônico; frontend não calcula pagamento, desconto ou receita.
 - Snapshot financeiro é imutável. Modelo e preferência são resolvidos para a estação autorizada; cada envio congela a versão efetivamente utilizada. Alterações valem para envios futuros.
 - Estação local é apenas um identificador de seleção. RPCs verificam ator, polo, permissões, versão esperada e replay; prontidão de transporte nunca é aceita do navegador.
-- Mesmo Blob vetorial é reutilizado em prévia, download e impressão. Logos e marca d’água seguem o cabeçalho institucional; recibos em 58/80 mm preservam dados canônicos.
+- Mesmo Blob vetorial é reutilizado em prévia, download e impressão. Logo segue o cabeçalho institucional; recibos em 58/80 mm preservam dados canônicos. A marca d’água foi retirada do compositor térmico por pedido explícito do usuário, sem alterar configurações de outros documentos.
 - Preparação, claim e conclusão do job são auditados. Replay não entrega segundo token; lease vencida e resultado incerto não redisparam. Reimpressão exige ação explícita e motivo de 5 a 240 caracteres.
 - Diálogo aberto/encerrado não comprova papel impresso. PDV exige sinal de encerramento do diálogo; ausência de confirmação mantém UNKNOWN. O comportamento padrão de outros exportadores permanece preservado.
 - Nenhum novo título, pagamento ou cancelamento foi criado para testar esta entrega. O ensaio transacional remoto usa pagamento existente, faz rollback e não despacha impressão; sequências PostgreSQL podem avançar mesmo com rollback.
@@ -51,11 +51,18 @@ A revisão cruzada verificou autorização antes de replay, isolamento por polo/
 1. As quatro migrations de impressoras e a migration de confirmação foram aplicadas via MCP pelo coordenador. Ledger conferido; os nomes locais foram preservados e a correspondência de versões está registrada abaixo. Migrations aplicadas são imutáveis.
 2. Teste transacional remoto concluído: 11 contratos aprovados, rollback, financeiro preservado e zero despachos; sequências podem avançar sem persistir o recibo.
 3. Edge v4 publicada e ACTIVE; `verify_jwt=true`, closure e SHA-256 conferidos pelo coordenador. Dependências existentes do main foram preservadas.
-4. Publicar somente o manifesto explícito após CI/build e validar produção. A atualização do registro global de manifestos é responsabilidade do coordenador.
-5. Smoke autenticado: configuração por polo/estação, prévia de modelo, recibo PAGO, PERGUNTAR/NÃO, download e resultado incerto sem repetição. Verificar foco, teclado e tela pequena.
+4. Manifesto de 46 arquivos publicado pelo PR #198, sobre 4.8.107. CI de qualidade do PR `36286744962` e da main `36287702409` aprovadas; implantação Vercel `FwBMV8qGNob5zC9eQfEcWGrNENRU` pronta. Registro de manifestos composto sobre a base remota, preservando entradas paralelas.
+5. Safari autenticado: versão 4.8.108, Configurações > Impressoras e leitura por polo carregadas; Outros créditos > Recebidos preserva R$ 0,50 e oferece Comprovante. Após o usuário abrir a ação da tabela, o Safari exibiu o PDF real PDV-00000002 com R$ 0,50, CPF mascarado e dados canônicos; nenhum envio à impressora. Formulário, prévia, PERGUNTAR e resultado incerto já passaram no Safari local; não houve despacho físico nem nova transação para medir latência.
 6. Homologação física pendente: modelo/interface real da impressora não confirmado. Cadastro QZ/ePOS não atesta transporte pronto; impressão automática/silenciosa não está liberada nesta etapa.
 
 O avanço paralelo de 4.8.107 foi preservado no changelog; `OtherCreditPdvModal.tsx` e `PdvPartnerSearch.tsx` pertencem à base remota e ficam fora deste lote. Não declarar publicação, normalização de latência ou impressão física concluídas sem evidência. Artefatos de teste, PDFs e harnesses em `tmp` são regeneráveis e ficam fora do lote.
+
+## Ajuste térmico solicitado após o smoke
+
+- Versão 4.8.109 / revisão 118 preparada sobre 4.8.108. Usuário pediu explicitamente retirar a marca d’água e organizar o recibo como cupom térmico; essa instrução prevalece sobre a preservação genérica do fundo institucional.
+- Patch no compositor `pdv-receipt.pdf.ts`, somente na variante térmica de `canonical-institutional-header-pdf.ts` e no teste `pdv-receipt.test.ts`: fundo branco, cabeçalho compacto, corpo monoespaçado, separadores e colunas com total em destaque. Preserva logo, conteúdo e snapshot financeiro. Sem alteração no banco ou nas regras do pagamento.
+- 25 testes UI/PDF/cache aprovados; lint dos três arquivos passou. PDFs de 58/80 mm extraídos e renderizados sem fundo; inspeção de recursos confirmou somente logo e sua máscara de transparência.
+- Manifesto desta correção (sete arquivos, PR #199): os três arquivos acima, `internal/versioning/system-version.json`, `internal/versioning/CHANGELOG.md`, este registro e `ai/operacao/LOTE_ATIVO.md`. Todos já integram o manifesto original.
 
 ## Migrations aplicadas e correspondência do ledger
 
