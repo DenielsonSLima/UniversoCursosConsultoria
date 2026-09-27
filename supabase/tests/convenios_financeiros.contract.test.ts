@@ -16,6 +16,8 @@ const caixa = migration('20260927030500_convenios_financeiros_caixa_realtime.sql
 const report = migration('20260927030600_convenios_financeiros_caixa_report_v7.sql');
 const otherCredits = migration('20260927030700_convenios_financeiros_separate_other_credits.sql');
 const fullAccessBackfill = migration('20260927030900_convenios_financeiros_full_access_backfill.sql');
+const partnerHardening = migration('20260927133000_convenios_faculdades_parceiras.sql');
+const partnerScope = migration('20260927134000_convenios_faculdades_parceiras_scope_global.sql');
 
 const functionBody = (source: string, name: string) => {
   const markers = [
@@ -52,13 +54,14 @@ test('schema mantém um mês aberto, sucessão única, RLS e trilha imutável', 
 
 test('RPCs públicas possuem nomes e shapes fechados combinados com o produto', () => {
   for (const name of [
+    'listar_faculdades_parceiras_convenio_secure',
     'listar_convenios_financeiros_meses_secure',
     'obter_convenio_financeiro_mes_secure',
     'criar_convenio_financeiro_secure',
     'lancar_credito_convenio_financeiro_secure',
     'finalizar_convenio_financeiro_mes_secure',
   ]) {
-    assert.ok([reads, mutations, expenses].some((source) => source.includes(`FUNCTION public.${name}(`)));
+    assert.ok([reads, mutations, expenses, partnerHardening, partnerScope].some((source) => source.includes(`FUNCTION public.${name}(`)));
   }
   for (const field of [
     'convenios_ativos', 'meses_abertos', 'meses_finalizados', 'saldo_inicial',
@@ -73,13 +76,30 @@ test('RPCs públicas possuem nomes e shapes fechados combinados com o produto', 
 });
 
 test('criação abre primeiro mês com saldo zero e replay compara o payload', () => {
-  const body = functionBody(mutations, 'criar_convenio_financeiro_secure');
+  const body = functionBody(partnerScope, 'criar_convenio_financeiro_secure');
   const authorization = body.indexOf("gestor_has_effective_financeiro_tab('convenios')");
   const replay = body.indexOf('SELECT * INTO v_replay');
   assert.ok(authorization >= 0 && replay > authorization);
   assert.match(body, /competencia, saldo_inicial,[\s\S]*v_competencia, 0,/);
   assert.match(body, /payload_hash <> v_hash/);
   assert.match(body, /jsonb_set\(v_replay\.resultado, '\{replayed\}'/);
+  assert.match(body, /SELECT parceiro\.nome INTO v_nome/);
+  assert.match(body, /parceiro\.tipo = 'PJ'/);
+  assert.match(body, /FACULDADE PARCEIRA \/ AFILIADO/);
+  assert.match(body, /parceiro\.polo_id IS NULL/);
+  assert.match(body, /parceiro\.polo_id = p_polo_id/);
+  assert.doesNotMatch(body, /v_nome text :=[^;]*p_nome/);
+});
+
+test('opções de convênio listam somente faculdades PJ no escopo autorizado', () => {
+  const body = functionBody(partnerScope, 'listar_faculdades_parceiras_convenio_secure');
+  assert.match(body, /gestor_has_effective_financeiro_tab\('convenios'\)/);
+  assert.match(body, /parceiro\.status = 'ATIVO'/);
+  assert.match(body, /parceiro\.tipo = 'PJ'/);
+  assert.match(body, /FACULDADE PARCEIRA \/ AFILIADO/);
+  assert.match(body, /parceiro\.polo_id IS NULL/);
+  assert.match(body, /parceiro\.polo_id = p_polo_id/);
+  assert.match(partnerHardening, /REVOKE ALL[\s\S]*listar_faculdades_parceiras_convenio_secure\(uuid\)[\s\S]*FROM PUBLIC, anon/);
 });
 
 test('crédito é recebimento físico pago e não duplica Outros Créditos', () => {

@@ -38,12 +38,19 @@ test('modal usa a viewport e a competência segue MM/AAAA', async () => {
   assert.doesNotMatch(form, /type="month"/);
   assert.match(form, /placeholder="MM\/AAAA"/);
   assert.match(form, /parseConvenioMonthInput/);
+  assert.match(form, /Faculdade parceira \*/);
+  assert.match(form, /Selecione uma faculdade parceira/);
+  assert.doesNotMatch(form, /Nome do convênio/);
+  assert.doesNotMatch(form, /Parceiro vinculado/);
+  assert.doesNotMatch(form, /O primeiro aporte será lançado/);
+  assert.doesNotMatch(form, /setNome/);
 });
 
-test('serviço usa somente os cinco RPCs canônicos e Realtime por polo com debounce', async () => {
+test('serviço usa os seis RPCs canônicos e Realtime por polo com debounce', async () => {
   const service = await read('./convenios.service.ts');
   const realtime = await read('./hooks/useConveniosRealtime.ts');
   for (const rpc of [
+    'listar_faculdades_parceiras_convenio_secure',
     'listar_convenios_financeiros_meses_secure',
     'obter_convenio_financeiro_mes_secure',
     'criar_convenio_financeiro_secure',

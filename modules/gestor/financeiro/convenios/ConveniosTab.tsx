@@ -20,7 +20,7 @@ import type {
   FinalizarConvenioMesInput,
   LancarConvenioCreditoInput,
 } from './convenios.types';
-import { useConvenioDetailQuery, useConveniosListQuery } from './hooks/useConveniosQueries';
+import { useConvenioDetailQuery, useConvenioPartnersQuery, useConveniosListQuery } from './hooks/useConveniosQueries';
 import { useConveniosRealtime } from './hooks/useConveniosRealtime';
 import ConvenioCloseMonthModal from './components/ConvenioCloseMonthModal';
 import ConvenioCreditModal from './components/ConvenioCreditModal';
@@ -52,13 +52,9 @@ const ConveniosTab: React.FC<ConveniosTabProps> = ({ poloId: scopedPoloId }) => 
   const shared = useFinanceiroSharedQueries({
     poloId,
     accounts: Boolean(poloId),
-    partners: Boolean(poloId),
+    partners: false,
     polos: true,
   });
-  const poloNome = useMemo(
-    () => shared.polosQuery.data?.find((polo) => polo.id === poloId)?.nome || 'Polo selecionado',
-    [poloId, shared.polosQuery.data],
-  );
   const contas = useMemo(
     () => (shared.accountsQuery.data || []).filter(
       (conta) => Boolean(conta.id) && conta.ativo !== false && isContaDisponivelNoPolo(conta, poloId),
@@ -67,6 +63,7 @@ const ConveniosTab: React.FC<ConveniosTabProps> = ({ poloId: scopedPoloId }) => 
   );
 
   const listQuery = useConveniosListQuery(poloId, statusScope, deferredSearch);
+  const partnersQuery = useConvenioPartnersQuery(poloId);
   const detailQuery = useConvenioDetailQuery(poloId, selectedMes?.id);
   useConveniosRealtime(poloId, Boolean(poloId));
 
@@ -200,7 +197,7 @@ const ConveniosTab: React.FC<ConveniosTabProps> = ({ poloId: scopedPoloId }) => 
         <ConvenioMonthsTable items={items} onOpen={setSelectedMes} onCloseMonth={setCloseMes} />
       )}
 
-      {showCreate ? <ConvenioFormModal poloId={poloId} poloNome={poloNome} parceiros={shared.partnersQuery.data || []} isPending={createMutation.isPending} error={createMutation.error as Error | null} onClose={() => { if (!createMutation.isPending) setShowCreate(false); }} onConfirm={(input) => createMutation.mutate(input)} /> : null}
+      {showCreate ? <ConvenioFormModal poloId={poloId} parceiros={partnersQuery.data || []} parceirosLoading={partnersQuery.isPending} parceirosError={partnersQuery.isError} isPending={createMutation.isPending} error={createMutation.error as Error | null} onClose={() => { if (!createMutation.isPending) setShowCreate(false); }} onConfirm={(input) => createMutation.mutate(input)} /> : null}
       {closeMes ? <ConvenioCloseMonthModal mes={closeMes} isPending={closeMutation.isPending} error={closeMutation.error as Error | null} onClose={() => { if (!closeMutation.isPending) setCloseMes(null); }} onConfirm={(input) => closeMutation.mutate(input)} /> : null}
     </div>
   );

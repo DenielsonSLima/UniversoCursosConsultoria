@@ -1,6 +1,6 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Loader2, PlusCircle } from 'lucide-react';
-import type { CriarConvenioInput } from '../convenios.types';
+import type { ConvenioParceiroOption, CriarConvenioInput } from '../convenios.types';
 import {
   createConvenioRequestId,
   formatConvenioMonthInput,
@@ -8,16 +8,11 @@ import {
 } from '../convenios.presentation';
 import ConvenioModalShell from './ConvenioModalShell';
 
-interface ParceiroOption {
-  id?: string;
-  nome?: string;
-  tipo?: string;
-}
-
 interface ConvenioFormModalProps {
   poloId: string;
-  poloNome: string;
-  parceiros: ParceiroOption[];
+  parceiros: ConvenioParceiroOption[];
+  parceirosLoading: boolean;
+  parceirosError: boolean;
   isPending: boolean;
   error?: Error | null;
   onClose: () => void;
@@ -37,34 +32,28 @@ const currentMonthInMaceio = () => {
 
 const ConvenioFormModal: React.FC<ConvenioFormModalProps> = ({
   poloId,
-  poloNome,
   parceiros,
+  parceirosLoading,
+  parceirosError,
   isPending,
   error,
   onClose,
   onConfirm,
 }) => {
-  const [nome, setNome] = useState('');
   const [parceiroId, setParceiroId] = useState('');
   const [competencia, setCompetencia] = useState(() => formatConvenioMonthInput(currentMonthInMaceio()));
   const [observacao, setObservacao] = useState('');
   const requestIdRef = useRef(createConvenioRequestId());
-  const options = useMemo(
-    () => parceiros
-      .filter((item): item is ParceiroOption & { id: string; nome: string } => Boolean(item.id && item.nome))
-      .sort((left, right) => left.nome.localeCompare(right.nome, 'pt-BR')),
-    [parceiros],
-  );
-
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
     const competenciaCanonica = parseConvenioMonthInput(competencia);
-    if (!nome.trim() || !competenciaCanonica) return;
+    const parceiro = parceiros.find((item) => item.id === parceiroId);
+    if (!parceiro || !competenciaCanonica) return;
     onConfirm({
       requestId: requestIdRef.current,
       poloId,
-      parceiroId: parceiroId || undefined,
-      nome: nome.trim(),
+      parceiroId: parceiro.id,
+      nome: parceiro.nome,
       competencia: `${competenciaCanonica}-01`,
       observacao: observacao.trim() || undefined,
     });
@@ -77,34 +66,34 @@ const ConvenioFormModal: React.FC<ConvenioFormModalProps> = ({
       onClose={onClose}
     >
       <form onSubmit={submit} className="space-y-5 p-6">
-        <div className="rounded-2xl border border-cyan-100 bg-cyan-50/70 px-4 py-3 text-xs font-medium text-cyan-900">
-          <strong className="font-black">Polo:</strong> {poloNome}. O primeiro aporte será lançado depois como crédito auditável.
-        </div>
-
         <label className="block">
-          <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">Nome do convênio *</span>
-          <input
-            value={nome}
-            onChange={(event) => setNome(event.target.value)}
-            placeholder="Ex.: Anhanguera"
-            maxLength={120}
+          <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">Faculdade parceira *</span>
+          <select
+            value={parceiroId}
+            onChange={(event) => setParceiroId(event.target.value)}
+            disabled={parceirosLoading || parceirosError}
             required
-            className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-[#001a33] outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
-          />
+            className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-[#001a33] outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 disabled:opacity-60"
+          >
+            <option value="">
+              {parceirosLoading
+                ? 'Carregando faculdades parceiras...'
+                : parceirosError
+                  ? 'Não foi possível carregar as faculdades'
+                  : 'Selecione uma faculdade parceira'}
+            </option>
+            {parceiros.map((item) => (
+              <option key={item.id} value={item.id}>{item.nome}</option>
+            ))}
+          </select>
+          {!parceirosLoading && !parceirosError && parceiros.length === 0 ? (
+            <span className="mt-2 block text-xs font-bold text-amber-700">
+              Nenhuma PJ classificada como Faculdade parceira / afiliado está disponível neste polo.
+            </span>
+          ) : null}
         </label>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <label className="block">
-            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">Parceiro vinculado</span>
-            <select
-              value={parceiroId}
-              onChange={(event) => setParceiroId(event.target.value)}
-              className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-cyan-500"
-            >
-              <option value="">Sem parceiro cadastrado</option>
-              {options.map((item) => <option key={item.id} value={item.id}>{item.nome}</option>)}
-            </select>
-          </label>
+        <div className="grid grid-cols-1 gap-4">
           <label className="block">
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">Primeiro mês *</span>
             <input
@@ -138,7 +127,7 @@ const ConvenioFormModal: React.FC<ConvenioFormModalProps> = ({
 
         <div className="flex justify-end gap-3 border-t border-slate-100 pt-5">
           <button type="button" onClick={onClose} disabled={isPending} className="rounded-xl border border-slate-200 px-5 py-3 text-xs font-black uppercase tracking-wide text-slate-600 disabled:opacity-50">Cancelar</button>
-          <button type="submit" disabled={isPending || !nome.trim()} className="inline-flex items-center gap-2 rounded-xl bg-cyan-700 px-5 py-3 text-xs font-black uppercase tracking-wide text-white shadow-lg shadow-cyan-950/15 hover:bg-cyan-800 disabled:opacity-50">
+          <button type="submit" disabled={isPending || !parceiroId || parceirosLoading || parceirosError} className="inline-flex items-center gap-2 rounded-xl bg-cyan-700 px-5 py-3 text-xs font-black uppercase tracking-wide text-white shadow-lg shadow-cyan-950/15 hover:bg-cyan-800 disabled:opacity-50">
             {isPending ? <Loader2 size={15} className="animate-spin" /> : <PlusCircle size={15} />}
             Criar convênio
           </button>

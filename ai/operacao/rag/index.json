@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-09-27T13:04:03.684Z",
+  "builtAt": "2026-09-27T13:29:26.139Z",
   "manifestVersion": 2,
-  "sourceSignature": "a101b7cf8dd51d29909231324e2e0febd5b8f39bc9303ce7571f8db94cbe3e8a",
+  "sourceSignature": "c2ce7352b36a6314ce6f4dafe158cfc05690970a266a9592504ba83c460ebddf",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "aea5805490b7a7487b43e8fade41ba3ac6d3e514f29db91e858f71e73413cf3d"
+      "hash": "f4830733f7a84b2d5d8d50ed82f0dede5190d1646b910bef70424bca45069d40"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -210,23 +210,23 @@
       "part": 1
     },
     {
-      "id": "0e871b604ce6e253c6cb",
-      "hash": "0e871b604ce6e253c6cb359c6e89bc653d82f9665002c9c26a0c7a9663dbeb51",
+      "id": "d5225a3efbe19c6bae0a",
+      "hash": "d5225a3efbe19c6bae0ac391d303f37f32ef554c11d3ef3ecdba8851e15070e4",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-09-27-matricula-tecnica-ativa-cadastro-minimo",
-      "text": "Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-27-matricula-tecnica-ativa-cadastro-minimo.md`",
-      "normalizedText": "manifesto explicito ai operacao registros alteracoes 2026 09 27 matricula tecnica ativa cadastro minimo md",
-      "tokenCount": 15,
+      "section": "Lote: 2026-09-27-convenios-faculdades-parceiras",
+      "text": "Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-27-convenios-faculdades-parceiras.md`",
+      "normalizedText": "manifesto explicito ai operacao registros alteracoes 2026 09 27 convenios faculdades parceiras md",
+      "tokenCount": 13,
       "part": 1
     },
     {
-      "id": "eda1ad50cfe43610ecfe",
-      "hash": "eda1ad50cfe43610ecfe672d1a07840e2c66c12bcdf2ce018fe1d3c7d0ebcc4d",
+      "id": "c940a72a565c501327f5",
+      "hash": "c940a72a565c501327f5eb613c2621e7ebc99d28cd1e537ac0286c244258b05c",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-09-27-matricula-tecnica-ativa-cadastro-minimo",
-      "text": "- Matrícula regular em turma técnica `EM_ANDAMENTO` deve concluir a mesma transação como `ATIVO`. - Turma ainda não iniciada mantém o vínculo `PENDENTE` até o início. - Documentos, checklist, pagamento e emissão de boleto não bloqueiam o status acadêmico. - O ingresso exige cadastro pessoal e endereço completos; mãe e pai são obrigatórios. Ensino Médio é informativo, não bloqueia o vínculo e aceita a opção `EJA`. - Interface diferencia status cadastral, pendência acadêmica e estados de saída, além de atualizar os cards após o vínculo. - Produção autorizada explicitamente pelo usuário; migration aplicada e validada, publicar a versão 4.8.114 e confirmar o smoke de interface.",
-      "normalizedText": "matricula regular em turma tecnica em andamento deve concluir a mesma transacao como ativo turma ainda nao iniciada mantem o vinculo pendente ate o inicio documentos checklist pagamento e emissao de boleto nao bloqueiam o status academico o ingresso exige cadastro pessoal e endereco completos mae e pai sao obrigatorios ensino medio e informativo nao bloqueia o vinculo e aceita a opcao eja interface diferencia status cadastral pendencia academica e estados de saida alem de atualizar os cards apos o vinculo producao autorizada explicitamente pelo usuario migration aplicada e validada publicar a versao 4 8 114 e confirmar o smoke de interface",
-      "tokenCount": 82,
+      "section": "Lote: 2026-09-27-convenios-faculdades-parceiras",
+      "text": "- Novo Convênio seleciona uma PJ `FACULDADE PARCEIRA / AFILIADO`; nome livre e vínculo opcional deixam de existir. - A lista inclui somente cadastros ativos globais ou vinculados ao polo autorizado. - O backend deriva o nome canônico da PJ e rejeita outro tipo de parceiro ou parceiro fora do escopo. - O aviso sobre polo e primeiro aporte é removido do modal. - Produção autorizada explicitamente pelo usuário nesta conversa; migrations aplicadas e validadas, publicar a versão 4.8.116 e confirmar o smoke de interface.",
+      "normalizedText": "novo convenio seleciona uma pj faculdade parceira afiliado nome livre e vinculo opcional deixam de existir a lista inclui somente cadastros ativos globais ou vinculados ao polo autorizado o backend deriva o nome canonico da pj e rejeita outro tipo de parceiro ou parceiro fora do escopo o aviso sobre polo e primeiro aporte e removido do modal producao autorizada explicitamente pelo usuario nesta conversa migrations aplicadas e validadas publicar a versao 4 8 116 e confirmar o smoke de interface",
+      "tokenCount": 67,
       "part": 1
     },
     {

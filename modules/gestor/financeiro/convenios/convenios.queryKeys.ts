@@ -33,4 +33,10 @@ export const conveniosQueryKeys = {
     'opcoes-abertas',
     scopeKey(poloId),
   ] as const,
+  partnerOptions: (poloId?: string | null) => [
+    'financeiro',
+    'convenios',
+    'faculdades-parceiras',
+    scopeKey(poloId),
+  ] as const,
 };
