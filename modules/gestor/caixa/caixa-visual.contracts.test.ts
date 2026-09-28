@@ -35,6 +35,8 @@ const payload = {
   }] },
 };
 
+const clonePayload = (): typeof payload => JSON.parse(JSON.stringify(payload));
+
 test('mapeia geometria canônica sem recompor valores ou percentuais', () => {
   const visual = mapCaixaVisualizacoes(payload);
   assert.equal(visual.movimentacao.meses[0].entradaY, 0);
@@ -44,7 +46,7 @@ test('mapeia geometria canônica sem recompor valores ou percentuais', () => {
 });
 
 test('rejeita payload sem geometria obrigatória', () => {
-  const invalid = structuredClone(payload);
+  const invalid = clonePayload();
   Reflect.deleteProperty(invalid.movimentacao.meses[0], 'entrada_y');
   assert.throws(
     () => mapCaixaVisualizacoes(invalid),
@@ -54,7 +56,7 @@ test('rejeita payload sem geometria obrigatória', () => {
 
 test('não converte ausência ou texto vazio em coordenada zero', () => {
   for (const invalidValue of [null, '']) {
-    const invalid = structuredClone(payload);
+    const invalid = clonePayload();
     invalid.movimentacao.meses[0].entrada_y = invalidValue as never;
     assert.throws(
       () => mapCaixaVisualizacoes(invalid),
