@@ -21,7 +21,6 @@ import {
   assertPosicaoTotalResumoPayload,
   assertContasPagarResumoPayload,
 } from './caixa.contracts';
-import { mapCaixaVisualizacoes } from './caixa-visual.contracts';
 export const mapCaixaStatement = (value: unknown): CaixaMonthlyStatement => {
   const payload = asRecord(Array.isArray(value) ? value[0] : value);
   assertStatementPayload(payload);
@@ -162,9 +161,6 @@ export const mapCaixaStatement = (value: unknown): CaixaMonthlyStatement => {
       receitasSemModalidade: asNumber(qualidade.receitas_sem_modalidade),
       tarifasEstimadasIgnoradas: asNumber(qualidade.tarifas_estimadas_ignoradas),
     },
-    ...(payload.visualizacoes === undefined
-      ? {}
-      : { visualizacoes: mapCaixaVisualizacoes(payload.visualizacoes) }),
   };
 };
 

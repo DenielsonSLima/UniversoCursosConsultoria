@@ -85,9 +85,11 @@ export const caixaService = {
     signal?: AbortSignal,
   ): Promise<CaixaMonthlyStatement> {
     const normalizedPoloId = normalizeCaixaPoloId(poloId);
-    const request = supabase.rpc('get_caixa_prestacao_mensal_visual_secure', {
+    const request = supabase.rpc('get_caixa_prestacao_mensal_secure', {
       p_polo_id: normalizedPoloId,
       p_competencia: competencia,
+      // The chart displays three months; each requested month verifies its evidence.
+      p_meses_historico: 3,
     });
     if (signal) request.abortSignal(signal);
     const { data, error } = await request;
@@ -99,9 +101,6 @@ export const caixaService = {
 
     const statement = mapCaixaStatement(data);
     assertCaixaStatementRequest(statement, normalizedPoloId, competencia);
-    if (!statement.visualizacoes) {
-      throw new Error('A RPC do Caixa não retornou as visualizações canônicas.');
-    }
     return statement;
   },
 

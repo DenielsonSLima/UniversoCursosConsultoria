@@ -2,70 +2,6 @@ export type CaixaResultStatus = 'POSITIVO' | 'NEGATIVO' | 'NEUTRO';
 export type CaixaScopeType = 'GLOBAL' | 'POLO';
 export type CaixaAccountValueType = 'SALDO_CONTA' | 'POSICAO_POLO';
 
-export interface CaixaVisualSegment {
-  codigo: string;
-  rotulo: string;
-  valor: string;
-  quantidade: number;
-  percentual: number;
-  inicioPercentual: number;
-  comprimentoPercentual: number;
-  offsetPercentual: number;
-  gapPercentual: number;
-}
-
-export interface CaixaVisualizacoes {
-  versao: 1;
-  janelaMeses: 6;
-  movimentacao: {
-    viewBox: '0 0 100 100';
-    dominioMinimo: string;
-    dominioMaximo: string;
-    baseY: number;
-    resultadoPontos: string;
-    inadimplenciaPontos: string;
-    meses: Array<{
-      competencia: string;
-      rotulo: string;
-      x: number;
-      baseY: number;
-      entradaX: number;
-      saidaX: number;
-      entradaY: number;
-      saidaY: number;
-      largura: number;
-      entradasValor: string;
-      saidasValor: string;
-      resultadoValor: string;
-      inadimplenciaValor: string;
-      entradasAltura: number;
-      saidasAltura: number;
-      resultadoY: number;
-      inadimplenciaY: number;
-    }>;
-  };
-  composicao: {
-    receitas: { total: string; itens: CaixaVisualSegment[] };
-    despesas: { total: string; itens: CaixaVisualSegment[] };
-  };
-  saldosPorConta: {
-    totalPositivo: string;
-    itens: Array<{
-      id: string;
-      banco: string;
-      conta: string;
-      titular: string;
-      natureza: 'BANCARIA' | 'CAIXA_INTERNO';
-      valor: string;
-      percentual: number;
-      inicioPercentual: number;
-      comprimentoPercentual: number;
-      offsetPercentual: number;
-      gapPercentual: number;
-    }>;
-  };
-}
-
 export interface CaixaMonthlyStatement {
   versao: number;
   meta: {
@@ -187,7 +123,6 @@ export interface CaixaMonthlyStatement {
     receitasSemModalidade: number;
     tarifasEstimadasIgnoradas: number;
   };
-  visualizacoes?: CaixaVisualizacoes;
 }
 
 /**

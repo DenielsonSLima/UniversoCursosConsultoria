@@ -236,7 +236,7 @@ test('serviço rejeita resposta de outro polo antes do mapper', async () => {
   }
 });
 
-test('CaixaPage mantém a linha de corte e os demais contratos na nova composição imersiva', () => {
+test('CaixaPage monta CaixaLinhaCorteCard preservando a integridade dos demais cards', () => {
   const pageSource = readFileSync(
     join(process.cwd(), 'modules/gestor/caixa/CaixaPage.tsx'),
     'utf8',
@@ -248,11 +248,8 @@ test('CaixaPage mantém a linha de corte e os demais contratos na nova composiç
   const statementSource = readFileSync(
     join(process.cwd(), 'modules/gestor/caixa/components/CaixaStatementSection.tsx'), 'utf8',
   );
-  assert.match(statementSource, /<CaixaExecutiveHero/);
-  assert.match(statementSource, /<CaixaImmersiveComboChart/);
-  assert.match(statementSource, /<CaixaImmersiveDonutChart/);
-  assert.match(pageSource, /<CaixaReconciliationCard/);
-  assert.match(pageSource, /<CaixaCompromissosCards/);
+  assert.match(statementSource, /<CaixaMetricCard/);
+  assert.match(statementSource, /<CaixaReconciliationCard/);
   assert.match(pageSource, /<CaixaFinanciamentoResumoCard/);
   assert.match(pageSource, /<CaixaPatrimonioResumoCard/);
   assert.match(pageSource, /<CaixaPosicaoLiquidaResumoCard/);

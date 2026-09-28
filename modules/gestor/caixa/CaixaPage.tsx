@@ -1,17 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
-  BarChart3,
-  Boxes,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
-  CircleGauge,
   Landmark,
   ReceiptText,
   Scale,
-  ShieldCheck,
-  WalletCards,
 } from 'lucide-react';
 import {
   caixaDashboardQueryOptions,
@@ -40,12 +35,6 @@ import { CaixaPosicaoTotalResumoCard } from './components/CaixaPosicaoTotalResum
 import { CaixaConveniosResumoCard } from './components/CaixaConveniosResumoCard';
 import { caixaConveniosResumoQueryOptions } from './caixa-convenios.service';
 import { CaixaContasPagarResumoCard } from './components/CaixaContasPagarResumoCard';
-import { CaixaCompromissosCards } from './components/CaixaCompromissosCards';
-import { CaixaReconciliationCard } from './components/CaixaReconciliationCard';
-import {
-  CaixaEditorialSection,
-  CaixaImmersiveNavigation,
-} from './components/immersive';
 
 interface CaixaPageProps {
   poloId?: string | null;
@@ -59,15 +48,6 @@ const formatPoloName = (polo?: CaixaPolo) => {
   if (!polo.cidade) return polo.nome;
   return `${polo.cidade}/${(polo.estado || 'SE').toUpperCase()}`;
 };
-
-const CAIXA_NAVIGATION_ITEMS = [
-  { id: 'caixa-visao', label: 'Visão', description: 'Resumo executivo', icon: <CircleGauge size={16} /> },
-  { id: 'caixa-fluxo', label: 'Fluxo', description: 'Movimento e saldos', icon: <BarChart3 size={16} /> },
-  { id: 'caixa-composicao', label: 'Composição', description: 'Origens e destinos', icon: <WalletCards size={16} /> },
-  { id: 'caixa-risco', label: 'Riscos', description: 'Compromissos e corte', icon: <ShieldCheck size={16} /> },
-  { id: 'caixa-estrutura', label: 'Estrutura', description: 'Patrimônio e crédito', icon: <Boxes size={16} /> },
-  { id: 'caixa-governanca', label: 'Governança', description: 'Conciliação do período', icon: <ReceiptText size={16} /> },
-] as const;
 
 interface CaixaScopePageProps extends CaixaPageProps {
   competencia: string;
@@ -234,7 +214,6 @@ const CaixaScopePage: React.FC<CaixaScopePageProps> = ({
             <button
               type="button"
               onClick={() => setSelectedPolo('todos')}
-              aria-pressed={isConsolidated}
               className={`relative flex items-center gap-2 px-3 pb-3 pt-2 text-sm font-semibold transition ${
                 isConsolidated ? 'text-blue-700' : 'text-slate-500 hover:text-slate-800'
               }`}
@@ -251,7 +230,6 @@ const CaixaScopePage: React.FC<CaixaScopePageProps> = ({
                 key={polo.id}
                 type="button"
                 onClick={() => setSelectedPolo(polo.id)}
-                aria-pressed={active}
                 disabled={!canViewConsolidated}
                 className={`relative flex items-center gap-2 px-3 pb-3 pt-2 text-sm font-semibold transition ${
                   active ? 'text-blue-700' : 'text-slate-500 hover:text-slate-800'
@@ -271,7 +249,11 @@ const CaixaScopePage: React.FC<CaixaScopePageProps> = ({
         </div>
       </div>
 
-      <CaixaImmersiveNavigation items={CAIXA_NAVIGATION_ITEMS} />
+      <CaixaContasPagarResumoCard
+        resumo={contasPagarResumo}
+        isLoading={isContasPagarLoading}
+        hasError={hasContasPagarError}
+      />
 
       <CaixaStatementSection
         statement={statement}
@@ -281,78 +263,41 @@ const CaixaScopePage: React.FC<CaixaScopePageProps> = ({
         onRetry={() => { void refetchStatement(); }}
       />
 
-      <CaixaEditorialSection
-        id="caixa-risco"
-        eyebrow="Obrigações e cobertura"
-        title="Compromissos sob controle"
-        description="Contas da competência, valores realizados e posições em aberto permanecem separados para uma leitura segura."
-        tone="soft"
-      >
-        <div className="space-y-5">
-          <CaixaContasPagarResumoCard
-            resumo={contasPagarResumo}
-            isLoading={isContasPagarLoading}
-            hasError={hasContasPagarError}
-          />
-          {statement && !error ? <CaixaCompromissosCards compromissos={statement.compromissos} /> : null}
-          <CaixaLinhaCorteCard
-            resumo={linhaCorteResumo}
-            isLoading={isLinhaCorteLoading}
-            hasError={hasLinhaCorteError}
-          />
-        </div>
-      </CaixaEditorialSection>
+      <CaixaConveniosResumoCard
+        resumo={conveniosResumo}
+        isLoading={isConveniosLoading}
+        hasError={hasConveniosError}
+      />
 
-      <CaixaEditorialSection
-        id="caixa-estrutura"
-        eyebrow="Estrutura financeira"
-        title="Posição, patrimônio e financiamento"
-        description="Camadas contábeis e patrimoniais preservadas em seus contratos próprios, sem misturar saldo, bens e obrigações."
-      >
-        <div className="space-y-5">
-          <CaixaPosicaoTotalResumoCard
-            resumo={posicaoTotalResumo}
-            isLoading={isPosicaoTotalLoading}
-            hasError={hasPosicaoTotalError}
-          />
-          <CaixaPosicaoLiquidaResumoCard
-            resumo={posicaoLiquidaResumo}
-            isLoading={isPosicaoLiquidaLoading}
-            hasError={hasPosicaoLiquidaError}
-          />
-          <CaixaPatrimonioResumoCard
-            resumo={patrimonioResumo}
-            isLoading={isPatrimonioLoading}
-            hasError={hasPatrimonioError}
-          />
-          <CaixaFinanciamentoResumoCard
-            resumo={financiamentoResumo}
-            isLoading={isFinanciamentoLoading}
-            hasError={hasFinanciamentoError}
-          />
-          <CaixaConveniosResumoCard
-            resumo={conveniosResumo}
-            isLoading={isConveniosLoading}
-            hasError={hasConveniosError}
-          />
-        </div>
-      </CaixaEditorialSection>
+      <CaixaPosicaoTotalResumoCard
+        resumo={posicaoTotalResumo}
+        isLoading={isPosicaoTotalLoading}
+        hasError={hasPosicaoTotalError}
+      />
 
-      <CaixaEditorialSection
-        id="caixa-governanca"
-        eyebrow="Rastreabilidade"
-        title="Conciliação e qualidade do período"
-        description="Indicadores de conferência que sustentam a leitura mensal apresentada acima."
-        tone="soft"
-      >
-        {statement && !error ? (
-          <CaixaReconciliationCard reconciliation={statement.conciliacao} />
-        ) : (
-          <p className="rounded-2xl border border-dashed border-slate-200 bg-white px-5 py-8 text-center text-sm text-slate-500">
-            A conciliação ficará disponível quando a prestação mensal for carregada.
-          </p>
-        )}
-      </CaixaEditorialSection>
+      <CaixaPosicaoLiquidaResumoCard
+        resumo={posicaoLiquidaResumo}
+        isLoading={isPosicaoLiquidaLoading}
+        hasError={hasPosicaoLiquidaError}
+      />
+
+      <CaixaPatrimonioResumoCard
+        resumo={patrimonioResumo}
+        isLoading={isPatrimonioLoading}
+        hasError={hasPatrimonioError}
+      />
+
+      <CaixaFinanciamentoResumoCard
+        resumo={financiamentoResumo}
+        isLoading={isFinanciamentoLoading}
+        hasError={hasFinanciamentoError}
+      />
+
+      <CaixaLinhaCorteCard
+        resumo={linhaCorteResumo}
+        isLoading={isLinhaCorteLoading}
+        hasError={hasLinhaCorteError}
+      />
 
       <footer className="flex items-start gap-2 px-1 text-[10px] leading-4 text-slate-400">
         <ReceiptText size={13} className="mt-0.5 shrink-0" />

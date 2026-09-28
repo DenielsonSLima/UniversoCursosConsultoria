@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-09-28T01:28:46.390Z",
+  "builtAt": "2026-09-28T00:40:12.330Z",
   "manifestVersion": 2,
-  "sourceSignature": "9c0678f3bfff10b39b4a7f726af72c91b04d0f18ed25f35bafe7797bda9a7a13",
+  "sourceSignature": "ef9be08614e87b1a07c6a5c3be09c0e50b6c443233c1c88141cad137ff9ef0c2",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "ac371247f1b52ea0fb001b84801d69d8df71f666fe637915d6da8a73c0ee093f"
+      "hash": "5ef49ea6156b9c26a5f8f443650a620141f8e0f5f20b30f2383fd620b9482ffe"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -204,13 +204,13 @@
       "part": 1
     },
     {
-      "id": "3b0f727822343c8eaf52",
-      "hash": "3b0f727822343c8eaf523066ad22f9406e27360462476fd50dffc4b0f898d2af",
+      "id": "0f5727b8781236730562",
+      "hash": "0f5727b87812367305625655599e98003f1825a6ce282aa0fa89ed6518b2320d",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-09-27-caixa-imersivo-v3",
-      "text": "Estado: MIGRATION REMOTA APLICADA — PUBLICAÇÃO 4.8.125 EM ANDAMENTO Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-27-caixa-imersivo-v3.md` - Reformular o Caixa mensal sem remover informações nem alterar regras financeiras. - Preservar Resultado geral, Matriz, Aquidabã, Porto da Folha e Propriá. - Organizar a página em visão executiva, fluxo, composição, riscos, estrutura e governança. - Renderizar barras, linhas, roscas e distribuição de saldo somente com valores, escalas e geometria canônicos entregues por RPC. - Manter pagamentos efetivos no realizado; compromissos abertos continuam posição. - Implementação e validação locais concluídas; a RPC visual foi aplicada e validada no Supabase, e a publicação 4.8.125 foi autorizada.",
-      "normalizedText": "estado migration remota aplicada publicacao 4 8 125 em andamento manifesto explicito ai operacao registros alteracoes 2026 09 27 caixa imersivo v3 md reformular o caixa mensal sem remover informacoes nem alterar regras financeiras preservar resultado geral matriz aquidaba porto da folha e propria organizar a pagina em visao executiva fluxo composicao riscos estrutura e governanca renderizar barras linhas roscas e distribuicao de saldo somente com valores escalas e geometria canonicos entregues por rpc manter pagamentos efetivos no realizado compromissos abertos continuam posicao implementacao e validacao locais concluidas a rpc visual foi aplicada e validada no supabase e a publicacao 4 8 125 foi autorizada",
-      "tokenCount": 90,
+      "section": "Lote: 2026-09-27-caixa-workspace-v2-integracao",
+      "text": "Estado: PUBLICADO NA VERSÃO 4.8.124 — AGUARDANDO SMOKE VISUAL FINAL Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-27-caixa-workspace-v2-integracao.md` - O core, as RPCs e as regras financeiras já publicados permanecem imutáveis. - O Caixa volta a abrir diretamente a análise mensal com consolidado e polos para a Matriz global. - A primeira dobra e o drill-down paginado passam a compor o `Resumo` do Financeiro no polo selecionado, acima dos indicadores já existentes. - O Radar financeiro foi removido do Início para evitar duplicidade com o Financeiro. - A apresentação do cockpit usa superfícies claras; funcionalidades sem contrato canônico deixam de ocupar a interface. - Gráficos sem série canônica continuam explicitamente indisponíveis; o frontend não calcula dinheiro, percentual, escala, classificação ou paginação. - `allPolos` conserva a autorização global vigente; o corte por polo continua explícito.",
+      "normalizedText": "estado publicado na versao 4 8 124 aguardando smoke visual final manifesto explicito ai operacao registros alteracoes 2026 09 27 caixa workspace v2 integracao md o core as rpcs e as regras financeiras ja publicados permanecem imutaveis o caixa volta a abrir diretamente a analise mensal com consolidado e polos para a matriz global a primeira dobra e o drill down paginado passam a compor o resumo do financeiro no polo selecionado acima dos indicadores ja existentes o radar financeiro foi removido do inicio para evitar duplicidade com o financeiro a apresentacao do cockpit usa superficies claras funcionalidades sem contrato canonico deixam de ocupar a interface graficos sem serie canonica continuam explicitamente indisponiveis o frontend nao calcula dinheiro percentual escala classificacao ou paginacao allpolos conserva a autorizacao global vigente o corte por polo continua explicito",
+      "tokenCount": 114,
       "part": 1
     },
     {
