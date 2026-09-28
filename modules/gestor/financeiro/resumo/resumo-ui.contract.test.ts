@@ -31,6 +31,9 @@ test('Resumo separa posição, vencidos e fluxo em consultas independentes', () 
 
 test('Navegação principal é responsiva, acessível e respeita as permissões disponíveis', () => {
   assert.match(page, /availableTabs=\{visibleTabIds\}/);
+  assert.match(page, /const effectiveActiveTab = visibleTabs\.some/);
+  assert.match(page, /switch \(effectiveActiveTab\)/);
+  assert.match(page, /value=\{effectiveActiveTab\}/);
   assert.match(page, /mobileMode="select"/);
   assert.match(page, /role="tabpanel"/);
   assert.match(tabs, /aria-controls/);

@@ -14,7 +14,7 @@ import {
 import { FinanceiroTabId } from '../access-control';
 
 // Submodule Tab Imports
-import ResumoTab from './resumo/ResumoTab';
+import FinanceiroResumoTab from './resumo/FinanceiroResumoTab';
 import ReceberTab from './receber/ReceberTab';
 import DespesasTab from './despesas/DespesasTab';
 import EmprestimosTab from './emprestimos/EmprestimosTab';
@@ -29,11 +29,12 @@ type FinancialTab = FinanceiroTabId;
 
 interface FinanceiroPageProps {
   poloId?: string | null;
+  poloName?: string;
   isMatriz: boolean;
   allowedTabs?: FinancialTab[];
 }
 
-const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ poloId, isMatriz, allowedTabs }) => {
+const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ poloId, poloName, isMatriz, allowedTabs }) => {
   const [activeTab, setActiveTab] = useState<FinancialTab>('resumo');
 
   const tabs = useMemo(() => [
@@ -52,19 +53,23 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ poloId, isMatriz, allow
     return tabs.filter(tab => allowedTabs.includes(tab.id));
   }, [allowedTabs, tabs]);
   const visibleTabIds = useMemo(() => visibleTabs.map((tab) => tab.id), [visibleTabs]);
+  const effectiveActiveTab = visibleTabs.some(tab => tab.id === activeTab)
+    ? activeTab
+    : visibleTabs[0]?.id || 'resumo';
 
   useEffect(() => {
-    if (!visibleTabs.some(tab => tab.id === activeTab)) {
-      setActiveTab(visibleTabs[0]?.id || 'resumo');
+    if (activeTab !== effectiveActiveTab) {
+      setActiveTab(effectiveActiveTab);
     }
-  }, [activeTab, visibleTabs]);
+  }, [activeTab, effectiveActiveTab]);
 
   const renderActiveTab = () => {
-    switch (activeTab) {
+    switch (effectiveActiveTab) {
       case 'resumo':
         return (
-          <ResumoTab
+          <FinanceiroResumoTab
             poloId={poloId}
+            poloName={poloName}
             availableTabs={visibleTabIds}
             onNavigate={setActiveTab}
           />
@@ -112,7 +117,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ poloId, isMatriz, allow
       <div className="mb-4 md:mb-6">
         <FinancialUnderlineTabs
           items={visibleTabs}
-          value={activeTab}
+          value={effectiveActiveTab}
           onChange={setActiveTab}
           ariaLabel="Seções do módulo financeiro"
           idPrefix="financeiro"
@@ -122,9 +127,9 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ poloId, isMatriz, allow
 
       {/* CONTEÚDO PRINCIPAL DAS ABAS */}
       <div
-        id={`financeiro-${activeTab}-panel`}
+        id={`financeiro-${effectiveActiveTab}-panel`}
         role="tabpanel"
-        aria-labelledby={`financeiro-${activeTab}-tab`}
+        aria-labelledby={`financeiro-${effectiveActiveTab}-tab`}
         tabIndex={0}
         className="min-h-[450px] rounded-3xl border border-slate-100 bg-slate-50/40 p-4 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 md:p-6"
       >

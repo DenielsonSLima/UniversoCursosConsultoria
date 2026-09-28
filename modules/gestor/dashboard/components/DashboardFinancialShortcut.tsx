@@ -4,9 +4,16 @@ import { ChevronRight, DollarSign } from 'lucide-react';
 interface DashboardFinancialShortcutProps {
   labels: string[];
   onOpen: () => void;
+  title?: string;
+  description?: string;
 }
 
-const DashboardFinancialShortcut: React.FC<DashboardFinancialShortcutProps> = ({ labels, onOpen }) => (
+const DashboardFinancialShortcut: React.FC<DashboardFinancialShortcutProps> = ({
+  labels,
+  onOpen,
+  title = 'Resumo financeiro',
+  description = 'Consulte os dados completos no módulo Financeiro.',
+}) => (
   <button
     type="button"
     onClick={onOpen}
@@ -16,8 +23,8 @@ const DashboardFinancialShortcut: React.FC<DashboardFinancialShortcutProps> = ({
       <DollarSign size={17} />
     </span>
     <span className="min-w-0 flex-1">
-      <span className="block text-xs font-bold text-[#001a33]">Resumo financeiro</span>
-      <span className="mt-0.5 block text-[11px] font-medium text-slate-500">Consulte os dados completos no módulo Financeiro.</span>
+      <span className="block text-xs font-bold text-[#001a33]">{title}</span>
+      <span className="mt-0.5 block text-[11px] font-medium text-slate-500">{description}</span>
       <span className="mt-2 flex flex-wrap gap-1.5">
         {labels.map((label) => (
           <span key={label} className="rounded-full bg-slate-100 px-2 py-1 text-[9px] font-bold uppercase tracking-wide text-slate-500">

@@ -206,15 +206,13 @@ test('zero canônico de atraso não sugere ausência de data', () => {
   assert.doesNotMatch(html, /sem data vencida informada/);
 });
 
-test('camadas futuras exibem indisponibilidade e nunca simulam gráficos ou zeros', () => {
+test('camadas futuras não ocupam a interface antes de terem contrato canônico', () => {
   const html = renderWorkspace();
 
-  assert.equal((html.match(/data-workspace-state="unavailable"/g) || []).length, 3);
-  assert.match(html, /Contas a receber: indisponível/);
-  assert.match(html, /Inadimplência: indisponível/);
-  assert.match(html, /Fluxo de caixa: indisponível/);
-  assert.match(html, /Série temporal não fornecida/);
-  assert.match(html, /Sem valor disponível/);
+  assert.doesNotMatch(html, /Camadas em preparação/);
+  assert.doesNotMatch(html, /Contas a receber: indisponível/);
+  assert.doesNotMatch(html, /Inadimplência: indisponível/);
+  assert.doesNotMatch(html, /Fluxo de caixa: indisponível/);
   assert.doesNotMatch(html, /<canvas|<svg[^>]+aria-label="Gráfico/);
 });
 

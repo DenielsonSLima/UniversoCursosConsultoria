@@ -45,21 +45,21 @@ const CaixaWorkspaceSkeleton = () => (
       </div>
     </div>
 
-    <div className="bg-[#001a33] p-4 sm:p-6 lg:p-8">
+    <div className="bg-[linear-gradient(135deg,#f8fbff_0%,#eef5ff_55%,#ffffff_100%)] p-4 sm:p-6 lg:p-8">
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.75fr)]">
         <div className="order-2 space-y-5 lg:order-1">
           <div className="space-y-3 motion-safe:animate-pulse">
-            <div className="h-3 w-24 rounded-full bg-blue-300/20" />
-            <div className="h-8 w-3/4 rounded-xl bg-white/10" />
-            <div className="h-4 w-1/2 rounded-full bg-white/[0.07]" />
+            <div className="h-3 w-24 rounded-full bg-blue-100" />
+            <div className="h-8 w-3/4 rounded-xl bg-slate-200" />
+            <div className="h-4 w-1/2 rounded-full bg-slate-100" />
           </div>
           <div className="grid gap-2 sm:grid-cols-3">
             {Array.from({ length: 3 }, (_, index) => (
-              <div key={index} className="h-28 rounded-2xl border border-white/10 bg-white/[0.055] motion-safe:animate-pulse" />
+              <div key={index} className="h-28 rounded-2xl border border-slate-200 bg-white motion-safe:animate-pulse" />
             ))}
           </div>
         </div>
-        <div className="order-1 min-h-52 rounded-2xl border border-white/10 bg-white/[0.045] motion-safe:animate-pulse lg:order-2" />
+        <div className="order-1 min-h-52 rounded-2xl border border-rose-100 bg-rose-50 motion-safe:animate-pulse lg:order-2" />
       </div>
 
       <div className="mt-6 flex gap-2 overflow-hidden sm:grid sm:grid-cols-4 xl:grid-cols-8">
@@ -67,17 +67,12 @@ const CaixaWorkspaceSkeleton = () => (
           <div
             key={index}
             data-skeleton-agenda-day
-            className="h-24 min-w-[136px] rounded-2xl border border-white/10 bg-white/[0.045] motion-safe:animate-pulse sm:min-w-0"
+            className="h-24 min-w-[136px] rounded-2xl border border-slate-200 bg-white motion-safe:animate-pulse sm:min-w-0"
           />
         ))}
       </div>
     </div>
 
-    <div className="grid gap-3 bg-[#f7f9fc] p-4 sm:p-6 md:grid-cols-3 lg:px-8">
-      {Array.from({ length: 3 }, (_, index) => (
-        <div key={index} className="h-28 rounded-2xl border border-slate-200 bg-slate-100 motion-safe:animate-pulse" />
-      ))}
-    </div>
   </section>
 );
 
