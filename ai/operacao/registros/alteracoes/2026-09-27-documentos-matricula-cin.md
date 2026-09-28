@@ -47,6 +47,9 @@ Aceite: preencher matrícula canônica; CIN explícita aparece uma vez, CPF redu
 - `modules/gestor/secretaria/historico-emissoes/historico-emissoes.service.ts`
 - `supabase/migrations/20260928021533_add_document_identity_versions.sql`
 - `supabase/tests/document_identity_versions.contract.test.ts`
+- `modules/gestor/secretaria/historico-emissoes/emission-document.pdf.contract.test.ts`
+- `modules/gestor/secretaria/historico-emissoes/emission-document.pdf.contract.fixtures.ts`
+- `modules/gestor/secretaria/historico-emissoes/emission-document.pdf.snapshot.contract.test.ts`
 
 ## Validação
 
@@ -69,3 +72,5 @@ O tipo antigo CARTEIRA NACIONAL DE IDENTIFICAÇÃO é ambíguo e não é convert
 A segunda via preserva o documento originalmente emitido. Atualizar identificação gera outra emissão, com código novo e cadastro atual. O exportador legado da carteirinha não foi substituído; a correção ocorre no renderer compartilhado entre prévia e saída. Não se declara validação de novo compositor nativo da carteirinha.
 
 Sem dados pessoais em fixtures ou neste registro. Artefatos de QA em tmp não pertencem ao lote. LOTE_ATIVO de outra frente preservado.
+
+CI identificou assert de localização antigo após extração de helper. Teste foi dividido por responsabilidade mantendo entrypoint e todas as proteções do pipeline nativo; 19 contratos PDF aprovados. Runner identidade: 49 testes aprovados (39 Node e 10 Deno). Consulta pública reconferida no Safari com campos pessoais mascarados e acadêmicos.
