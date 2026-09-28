@@ -152,8 +152,8 @@ const AcademicDocumentValidationCard: React.FC<AcademicDocumentValidationCardPro
           {visible('referencePeriod') && result.referencePeriod && (
             <p className="text-xs text-slate-500 mt-2">Período: <strong className="text-[#001a33]">{result.referencePeriod}</strong></p>
           )}
-          {visible('issueCount') && result.issueCount && result.issueCount > 1 && (
-            <p className="text-xs text-slate-500 mt-2">Reemissões registradas: <strong className="text-[#001a33]">{result.issueCount}</strong></p>
+          {visible('issueCount') && result.issueCount != null && result.issueCount >= 1 && (
+            <p className="text-xs text-slate-500 mt-2">Emissões registradas: <strong className="text-[#001a33]">{result.issueCount}</strong></p>
           )}
         </div>}
       </div>

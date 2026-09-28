@@ -126,7 +126,7 @@ const CarteirinhaValidationResult: React.FC<CarteirinhaValidationResultProps> = 
           {visible('issuedAt') && <p className="text-xs text-slate-500 mt-1">Emitida em: <strong className="text-[#001a33]">{result.issuedAt || 'Não informada'}</strong></p>}
           {visible('lastIssuedAt') && <p className="text-xs text-slate-500 mt-1">Última emissão: <strong className="text-[#001a33]">{result.lastIssuedAt || result.issuedAt || 'Não informada'}</strong></p>}
           {visible('expiresAt') && <p className="text-xs text-slate-500 mt-1">Validade estimada: <strong className="text-[#001a33]">{result.estimatedValidity || 'Não informada'}</strong></p>}
-          {visible('issueCount') && result.issueCount && result.issueCount > 1 && <p className="text-xs text-slate-500 mt-1">Emissões registradas: <strong className="text-[#001a33]">{result.issueCount}</strong></p>}
+          {visible('issueCount') && result.issueCount != null && result.issueCount >= 1 && <p className="text-xs text-slate-500 mt-1">Emissões registradas: <strong className="text-[#001a33]">{result.issueCount}</strong></p>}
         </div>}
       </div>
 

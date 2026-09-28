@@ -16,6 +16,11 @@ const historyTestBundle = join(
   outputDirectory,
   'document-validation-rendering.test.mjs',
 );
+const publicProfileTest = resolve(
+  root,
+  'modules/public/validator/validator-public-profile.rendering.test.tsx',
+);
+const publicProfileTestBundle = join(outputDirectory, 'public-profile.test.cjs');
 const denoTests = [
   'modules/shared/document-validation/document-validation-url.test.ts',
   'modules/shared/document-validation/document-validation-qrcode.test.ts',
@@ -32,6 +37,7 @@ const denoTests = [
   'modules/public/validator/validator.fields.test.ts',
   'modules/public/validator/validator-page.flow.test.ts',
   'supabase/tests/document_validation_public_profiles.contract.test.ts',
+  'supabase/tests/document_validation_effective_rpc.contract.test.ts',
   'supabase/tests/document_validation_policy_governance.contract.test.ts',
   'supabase/tests/document_validation_idempotent_reissue.contract.test.ts',
   'supabase/tests/document_validation_migration_ledger.contract.test.ts',
@@ -78,6 +84,17 @@ try {
   });
 
   runChecked(process.execPath, ['--test', historyTestBundle]);
+
+  await build({
+    entryPoints: [publicProfileTest],
+    outfile: publicProfileTestBundle,
+    bundle: true,
+    platform: 'node',
+    format: 'cjs',
+    target: 'node20',
+    logLevel: 'silent',
+  });
+  runChecked(process.execPath, ['--test', publicProfileTestBundle]);
 } catch (error) {
   process.exitCode = Number.isInteger(error?.exitCode)
     ? error.exitCode
