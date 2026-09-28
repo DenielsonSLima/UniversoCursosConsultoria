@@ -96,9 +96,14 @@ const loadTemplate = async (
     'documentTemplateSnapshot',
   );
   const frozenRegistrationTemplate = emission.dados_emissao?.documentTemplateSnapshot;
+  if (hasFrozenRegistrationTemplate && emission.documento === 'carteirinha'
+    && (!frozenRegistrationTemplate || typeof frozenRegistrationTemplate !== 'object'
+      || Array.isArray(frozenRegistrationTemplate))) {
+    throw new Error('O modelo congelado da carteirinha está inválido.');
+  }
   if (
     hasFrozenRegistrationTemplate
-    && ['pasta_identificacao', 'ficha_matricula'].includes(emission.documento)
+    && ['pasta_identificacao', 'ficha_matricula', 'carteirinha'].includes(emission.documento)
   ) {
     return emission.documento === 'pasta_identificacao'
       ? stripRedundantPastaFooter(frozenRegistrationTemplate)

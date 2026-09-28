@@ -164,7 +164,7 @@ const ParceiroAlunoSecretaria: React.FC<ParceiroAlunoSecretariaProps> = ({ aluno
   const variableEnrollment = irpfOpen ? irpfEnrollment : activeEnrollment;
   const variableEnrollmentNumber = irpfOpen ? formattedIrpfEnrollment : formattedEnrollment;
   const variableTemplate = irpfOpen ? irpfTemplate : declarationTemplate;
-  const replaceVariables = useMemo(() => buildDocumentVariableReplacer({ aluno, enrollment: variableEnrollment, polo, formattedEnrollment: variableEnrollmentNumber, template: variableTemplate, selectedYear: selectedIrpfYear, irpfPayments }), [aluno, variableEnrollment, polo, variableEnrollmentNumber, variableTemplate, selectedIrpfYear, irpfPayments]);
+  const replaceVariables = useMemo(() => buildDocumentVariableReplacer({ documentType: irpfOpen ? 'declaracao_irpf' : 'declaracao_matricula', aluno, enrollment: variableEnrollment, polo, formattedEnrollment: variableEnrollmentNumber, template: variableTemplate, selectedYear: selectedIrpfYear, irpfPayments }), [irpfOpen, aluno, variableEnrollment, polo, variableEnrollmentNumber, variableTemplate, selectedIrpfYear, irpfPayments]);
   const declarationCode = buildFallbackValidationCode({ prefix: 'DEC', registeredCode: declarationValidation.data?.code, pattern: declarationQr?.pattern, separator: declarationQr?.separator, enrollment: activeEnrollment, alunoCpf, formattedEnrollment });
   const irpfCode = buildFallbackValidationCode({ prefix: 'IRPF', registeredCode: irpfValidation.data?.code, pattern: irpfQr?.pattern, separator: irpfQr?.separator, enrollment: irpfEnrollment, alunoCpf, formattedEnrollment: formattedIrpfEnrollment });
   const declarationUrl = buildValidationUrl(declarationValidation.data?.code, declarationCode, academicConfigs?.validacaoUrl);

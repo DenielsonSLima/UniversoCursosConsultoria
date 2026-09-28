@@ -1,7 +1,9 @@
+import { prepareStudentIdentityTemplate } from '../utils/student-document-presentation';
 import { getDocumentValidationUrl } from '../document-validation/document-validation.url';
 import { resolveStudentIdentityDocument } from '../utils/studentIdentityDocument';
 
 interface DocumentVariableContext {
+  documentType?: string;
   aluno: any;
   enrollment: any;
   polo: any;
@@ -93,7 +95,7 @@ export const buildDocumentVariableReplacer = (context: DocumentVariableContext) 
     VALOR_TOTAL: new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(irpfTotal),
     VALOR_EXTENSO: amountInWords(irpfTotal),
   };
-  return Object.entries(replacements).reduce((text, [token, value]) => replaceToken(text, token, value), source);
+  return Object.entries(replacements).reduce((text, [token, value]) => replaceToken(text, token, value), prepareStudentIdentityTemplate(source, identity.isCin, context.documentType === 'declaracao_irpf'));
 };
 
 interface ValidationCodeContext {

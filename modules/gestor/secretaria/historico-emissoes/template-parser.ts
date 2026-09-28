@@ -1,3 +1,4 @@
+import { prepareStudentIdentityTemplate, resolveSnapshotStudentIdentity } from '../../../shared/utils/student-document-presentation';
 import { formatMatricula } from '../../../../lib/academicUtils';
 import { formatCpf } from '../../../../lib/documentFormatters';
 import { escapeHtmlText } from '../../../../lib/htmlSanitizer';
@@ -62,8 +63,9 @@ export const parseEmissionTemplate = (
     : 'Sem vencimento';
   const emissionData = data.dados_emissao || {};
   const liveIdentity = resolveStudentIdentityDocument(data.aluno);
-  const documentType = emissionData.studentDocumentType || liveIdentity.label || '';
-  const documentNumber = emissionData.studentRg || liveIdentity.number || '';
+  const identity = resolveSnapshotStudentIdentity(emissionData, data.aluno);
+  const documentType = identity.label;
+  const documentNumber = identity.isCin ? formatCpf(identity.number) : identity.number;
   const academicData = [
     'boletim',
     'atestado_conclusao_tecnico',
@@ -160,7 +162,7 @@ export const parseEmissionTemplate = (
       emissionData.studentPhotoUrl || data.aluno?.foto_url || '/sem-foto-aluno.svg',
     ],
     [/{{ALUNO_NOME_SOCIAL}}/g, emissionData.studentSocialName || emissionData.studentName || data.aluno?.nome || 'Não informado'],
-    [/{{ALUNO_CPF}}/g, formatCpf(emissionData.studentCpf || data.aluno?.cpf_cnpj) || 'Não informado'],
+    [/{{ALUNO_CPF}}/g, formatCpf(snapshotFirst(emissionData, 'studentCpf', data.aluno?.cpf_cnpj)) || 'Não informado'],
     [/{{ALUNO_DOCUMENTO_TIPO}}/g, documentType || 'Não informado'],
     [/{{ALUNO_RG}}/g, documentNumber || 'Não informado'],
     [/{{ALUNO_NASCIMENTO}}/g, formatDate(emissionData.studentBirthDate || data.aluno?.data_nascimento)],
@@ -184,9 +186,9 @@ export const parseEmissionTemplate = (
     [/{{ALUNO_UF}}/g, emissionData.studentState || '—'],
     [/{{ALUNO_CEP}}/g, formatCep(emissionData.studentZipCode) || 'Não informado'],
     [/{{ALUNO_TIPO_DOCUMENTO}}/g, documentType || 'Não informado'],
-    [/{{ALUNO_RG_ORGAO}}/g, snapshotFirst(emissionData, 'studentRgIssuer', liveIdentity.issuer) || '—'],
-    [/{{ALUNO_RG_UF}}/g, snapshotFirst(emissionData, 'studentRgState', liveIdentity.state) || '—'],
-    [/{{ALUNO_RG_EMISSAO}}/g, formatDate(snapshotFirst(emissionData, 'studentRgIssueDate', liveIdentity.issueDate))],
+    [/{{ALUNO_RG_ORGAO}}/g, identity.isCin ? '' : snapshotFirst(emissionData, 'studentRgIssuer', liveIdentity.issuer) || '—'],
+    [/{{ALUNO_RG_UF}}/g, identity.isCin ? '' : snapshotFirst(emissionData, 'studentRgState', liveIdentity.state) || '—'],
+    [/{{ALUNO_RG_EMISSAO}}/g, identity.isCin ? '' : formatDate(snapshotFirst(emissionData, 'studentRgIssueDate', liveIdentity.issueDate))],
     [
       /{{ALUNO_TITULO_ELEITOR}}/g,
       formatRegistrationVoterId(snapshotFirst(emissionData, 'studentVoterId', data.aluno?.titulo_eleitor)) || '—',
@@ -258,7 +260,7 @@ export const parseEmissionTemplate = (
     [/{{RESPONSAVEL_FINANCEIRO_NOME}}/g, (emissionData.responsibleName || emissionData.studentName || data.aluno?.nome || '').toUpperCase()],
     [/{{RESPONSAVEL_FINANCEIRO_CPF}}/g, formatCpf(emissionData.responsibleCpf || emissionData.studentCpf || data.aluno?.cpf_cnpj) || 'Não informado'],
     [/{{nome_aluno}}/g, (emissionData.studentName || data.aluno?.nome || '').toUpperCase()],
-    [/{{cpf}}/g, formatCpf(emissionData.studentCpf || data.aluno?.cpf_cnpj) || 'Não informado'],
+    [/{{cpf}}/g, formatCpf(snapshotFirst(emissionData, 'studentCpf', data.aluno?.cpf_cnpj)) || 'Não informado'],
     [/{{curso_nome}}/g, emissionData.courseName || ''],
     [/{{carga_horaria}}/g, String(emissionData.courseHours || '')],
     [/{{data_conclusao}}/g, formatDate(emissionData.completionDate)],
@@ -295,9 +297,9 @@ export const parseEmissionTemplate = (
 
   return replacements.reduce(
     (parsed, [pattern, value]) => parsed.replace(pattern, value),
-    replaceRegistrationIssuerState(htmlText, formatRegistrationIssuerState(
-      snapshotFirst(emissionData, 'studentRgIssuer', liveIdentity.issuer),
-      snapshotFirst(emissionData, 'studentRgState', liveIdentity.state),
+    replaceRegistrationIssuerState(prepareStudentIdentityTemplate(htmlText, identity.isCin, data.documento === 'declaracao_irpf'), formatRegistrationIssuerState(
+      identity.isCin ? '' : snapshotFirst(emissionData, 'studentRgIssuer', liveIdentity.issuer),
+      identity.isCin ? '' : snapshotFirst(emissionData, 'studentRgState', liveIdentity.state),
     ) || '—')
   );
 };

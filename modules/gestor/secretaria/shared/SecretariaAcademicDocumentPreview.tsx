@@ -1,3 +1,4 @@
+import { prepareStudentIdentityTemplate } from '../../../shared/utils/student-document-presentation';
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -125,7 +126,7 @@ const SecretariaAcademicDocumentPreview: React.FC<Props> = ({
       '{{SITUACAO_ACADEMICA}}': data.academic.situacaoAcademica,
     };
 
-    parsedText = data.template.textContent;
+    parsedText = prepareStudentIdentityTemplate(data.template.textContent, identity.isCin);
     Object.entries(replacements).forEach(([token, value]) => {
       parsedText = parsedText.replaceAll(token, value);
     });
