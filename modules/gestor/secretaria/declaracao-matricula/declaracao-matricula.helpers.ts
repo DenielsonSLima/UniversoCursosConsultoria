@@ -1,3 +1,4 @@
+import { prepareStudentIdentityTemplate } from '../../../shared/utils/student-document-presentation';
 import { onlyDigits } from '../../../../lib/documentFormatters';
 import { matchesSecretariaSearch } from '../secretaria-search';
 import { resolveStudentIdentityDocument } from '../../../shared/utils/studentIdentityDocument';
@@ -43,6 +44,7 @@ export const parseDeclaracaoTemplate = (
     return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : dataStr;
   };
   const identity = resolveStudentIdentityDocument(aluno);
+  parsed = prepareStudentIdentityTemplate(parsed, identity.isCin);
 
   parsed = parsed.replace(/{{ALUNO_NOME}}/g, aluno.nome.toUpperCase());
   parsed = parsed.replace(/{{ALUNO_CPF}}/g, aluno.cpf || 'Não informado');

@@ -13,13 +13,22 @@ import type { EmissionLog } from './historico-emissoes.types';
 
 export const getPreviewStudent = (emission: EmissionLog, poloInfo: any) => {
   const birthDate = emission.dados_emissao?.studentBirthDate || emission.aluno?.data_nascimento || '';
-  const identity = resolveStudentIdentityDocument(emission.aluno);
+  const snapshot = emission.dados_emissao || {};
+  const frozenOrLive = (key: string, fallback: unknown) => (
+    Object.prototype.hasOwnProperty.call(snapshot, key) ? snapshot[key] : fallback
+  );
+  const identity = resolveStudentIdentityDocument({
+    cpf: String(frozenOrLive('studentCpf', emission.aluno?.cpf_cnpj) || ''),
+    rg: String(frozenOrLive('studentRg', emission.aluno?.rg) || ''),
+    tipoDocumento: String(frozenOrLive('studentDocumentType', emission.aluno?.tipo_documento) || ''),
+  });
 
   return {
     id: emission.aluno_id,
     nome: emission.dados_emissao?.studentName || emission.aluno?.nome || '',
-    cpf: emission.dados_emissao?.studentCpf || emission.aluno?.cpf_cnpj || '',
-    rg: emission.dados_emissao?.studentRg || identity.number,
+    cpf: String(frozenOrLive('studentCpf', emission.aluno?.cpf_cnpj) || ''),
+    rg: identity.number,
+    tipoDocumento: identity.type,
     nascimento: formatCarteirinhaDate(birthDate),
     matricula: emission.dados_emissao?.studentMatricula
       || formatMatricula(emission.matricula_id, emission.emitido_em, emission.polo_id),

@@ -1,3 +1,4 @@
+import { prepareStudentIdentityTemplate } from '../../../../shared/utils/student-document-presentation';
 import { getDocumentValidationUrl } from '../../../../shared/document-validation/document-validation.url';
 import { resolveStudentIdentityDocument } from '../../../../shared/utils/studentIdentityDocument';
 import { CertificadoAcademico } from '../certificados.types';
@@ -113,7 +114,7 @@ const replaceCertificateVars = (
     new RegExp(`{{${key}}}`, 'g'),
     strong ? `<strong>${value}</strong>` : value,
   ),
-  text || '',
+  prepareStudentIdentityTemplate(text || '', resolveStudentIdentityDocument(certificado.aluno).isCin),
 );
 
 export const replaceVars = (

@@ -9,6 +9,7 @@ import type {
 import type { CertificadoAcademico } from '../../certificados/certificados.types';
 import EmissionDocumentPages from './EmissionDocumentPages';
 import { getEmissionRenderKey } from '../reissue-flow';
+import { canUpdateDocumentIdentity, useUpdateDocumentIdentity } from '../useUpdateDocumentIdentity';
 
 interface Props {
   emission: EmissionLog;
@@ -27,6 +28,7 @@ interface Props {
   onClose: () => void;
   onDownload: () => void;
   onPrint: () => void;
+  onIdentityUpdated?: (emission: EmissionLog) => void | Promise<void>;
   heading?: string;
   subtitle?: string;
   printLabel?: string;
@@ -57,6 +59,7 @@ const ReprintModal: React.FC<Props> = ({
   onClose,
   onDownload,
   onPrint,
+  onIdentityUpdated,
   heading = 'Segunda Via de Documento',
   subtitle,
   printLabel = 'Imprimir (Registrar 2ª Via)',
@@ -73,7 +76,8 @@ const ReprintModal: React.FC<Props> = ({
   const dialogRef = useRef<HTMLDivElement>(null);
   const isCertificate = isCertificateDocument(emission.documento);
   const isBlocked = Boolean(error) || (!isLoading && isCertificate && !certificatePreview);
-  const isOperationBusy = isDownloading || isReissuing;
+  const identityUpdate = useUpdateDocumentIdentity(emission, onIdentityUpdated);
+  const isOperationBusy = isDownloading || isReissuing || identityUpdate.isUpdating;
   const closeIfIdle = () => {
     if (!isOperationBusy) onClose();
   };
@@ -144,6 +148,17 @@ const ReprintModal: React.FC<Props> = ({
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {onIdentityUpdated && canUpdateDocumentIdentity(emission) && (
+              <button
+                type="button"
+                onClick={identityUpdate.updateIdentity}
+                disabled={isLoading || isOperationBusy}
+                title="Cria uma nova versão com a identificação do cadastro atual e preserva o documento anterior."
+                className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-700 disabled:opacity-50"
+              >
+                {identityUpdate.isUpdating ? 'Atualizando identificação...' : 'Atualizar identificação'}
+              </button>
+            )}
             {(onPrevious || onNext) && (
               <div className={`flex items-center gap-1 rounded-xl p-1 shadow-sm ${fullscreenViewer ? 'border border-white/15 bg-white/10' : 'border border-slate-200 bg-white'}`}>
                 <button
@@ -171,11 +186,11 @@ const ReprintModal: React.FC<Props> = ({
                 </button>
               </div>
             )}
-            <button type="button" onClick={onDownload} disabled={isDownloading || isReissuing || isLoading || isBlocked} className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-[10px] font-bold uppercase tracking-wider shadow-sm transition-colors disabled:opacity-50 ${fullscreenViewer ? 'border border-white/15 bg-white/10 text-white hover:bg-white/20 sm:px-5 sm:py-3 sm:text-xs' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}>
+            <button type="button" onClick={onDownload} disabled={isOperationBusy || isLoading || isBlocked} className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-[10px] font-bold uppercase tracking-wider shadow-sm transition-colors disabled:opacity-50 ${fullscreenViewer ? 'border border-white/15 bg-white/10 text-white hover:bg-white/20 sm:px-5 sm:py-3 sm:text-xs' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}>
               {isDownloading ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
               {downloadLabel || (fullscreenViewer ? 'Download PDF' : 'PDF')}
             </button>
-            <button type="button" onClick={onPrint} disabled={isReissuing || isDownloading || isLoading || isBlocked} className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-white shadow-md transition-colors disabled:opacity-50 ${fullscreenViewer ? 'bg-blue-600 hover:bg-blue-700 sm:px-6 sm:py-3 sm:text-xs' : 'bg-[#001a33] hover:bg-blue-900'}`}>
+            <button type="button" onClick={onPrint} disabled={isOperationBusy || isLoading || isBlocked} className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-white shadow-md transition-colors disabled:opacity-50 ${fullscreenViewer ? 'bg-blue-600 hover:bg-blue-700 sm:px-6 sm:py-3 sm:text-xs' : 'bg-[#001a33] hover:bg-blue-900'}`}>
               {isReissuing ? <Loader2 size={13} className="animate-spin" /> : <Printer size={13} />} {printLabel}
             </button>
             {!fullscreenViewer && (
@@ -192,6 +207,12 @@ const ReprintModal: React.FC<Props> = ({
           </div>
         </div>
 
+        {onIdentityUpdated && canUpdateDocumentIdentity(emission) && (
+          <p className="bg-slate-50 px-6 py-2 text-xs text-slate-600">
+            Atualizar identificação cria uma nova versão com os dados do cadastro atual. O documento anterior permanece no histórico.
+          </p>
+        )}
+        {identityUpdate.error && <p role="alert" className="bg-rose-50 px-6 py-3 text-sm text-rose-700">{identityUpdate.error}</p>}
         <div className={`flex min-h-0 flex-1 justify-center overflow-auto p-3 custom-scrollbar sm:p-6 lg:p-8 ${fullscreenViewer ? 'bg-slate-900' : 'bg-slate-100'}`}>
           <div
             ref={printContentRef}

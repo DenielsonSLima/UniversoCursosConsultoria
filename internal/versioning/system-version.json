@@ -1,8 +1,8 @@
 {
-  "version": "4.8.126",
+  "version": "4.8.127",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 135,
+  "revision": 136,
   "releasedAt": "2026-09-27",
-  "summary": "Consulta pública respeita os campos autorizados por documento"
+  "summary": "Documentos respeitam CIN, RG e matrícula do aluno"
 }

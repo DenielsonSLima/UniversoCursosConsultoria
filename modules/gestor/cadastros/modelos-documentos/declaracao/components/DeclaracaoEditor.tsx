@@ -1,10 +1,10 @@
+import { DeclaracaoEditorLoadError, replaceStudentPreviewTokens, getPreviewValidationCode } from './declaracao-editor.preview';
 import React, { useEffect, useRef, useState } from 'react';
 import { declaracaoService } from '../declaracao.service';
 import { marcaDaguaService } from '../../../../configuracoes/marca-dagua/marca-dagua.service';
 import { assinaturasService } from '../../../../configuracoes/assinaturas/assinaturas.service';
 import { getDocumentValidationUrl } from '../../../../../shared/document-validation/document-validation.url';
 import {
-  escapeHtmlText,
   sanitizeHtml,
   sanitizeTemplateFields,
 } from '../../../../../../lib/htmlSanitizer';
@@ -392,30 +392,11 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
     }
   };
 
-  const getValidationCode = () => {
-    let codeStr = 'VALIDACAO-PADRAO';
-    if (qrConfig && qrConfig.pattern) {
-      codeStr = qrConfig.pattern.map((token: string) => {
-        if (token === '{POLO_ID}') return polo.id.slice(0, 3).toUpperCase();
-        if (token === '{ANO_ATUAL}') return new Date().getFullYear();
-        return token.replace(/[{}]/g, '').substring(0, 4);
-      }).join(qrConfig.separator || '-');
-    }
-    return `${validationPrefix}-${codeStr}`;
-  };
-
-  const validationCode = getValidationCode();
+  const validationCode = getPreviewValidationCode(qrConfig, polo, validationPrefix);
   const qrCodeExampleUrl = getDocumentValidationUrl(validationCode);
   const textPages = splitDocumentPages(textContent, pageCount);
-  const replacePreviewTokens = (source: string, escapeValues: boolean) => {
-    if (!studentPreview) return source;
-    return Object.entries(studentPreview.replacements).reduce(
-      (result, [token, value]) => result.split(token).join(
-        escapeValues ? escapeHtmlText(String(value ?? '')) : String(value ?? ''),
-      ),
-      source,
-    );
-  };
+  const replacePreviewTokens = (source: string, escapeValues: boolean) =>
+    replaceStudentPreviewTokens(source, escapeValues, studentPreview);
   const previewTextPages = previewActive
     ? textPages.map(page => replacePreviewTokens(page, true))
     : textPages;
@@ -430,30 +411,7 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
     return <div className="p-12 text-center text-slate-500">Carregando editor...</div>;
   }
 
-  if (loadError) {
-    return (
-      <div className="flex min-h-80 flex-col items-center justify-center rounded-3xl border border-rose-200 bg-rose-50 p-8 text-center">
-        <p className="font-black text-rose-800">{loadError}</p>
-        <p className="mt-1 text-sm font-medium text-rose-600">Verifique sua conexão e tente novamente.</p>
-        <div className="mt-5 flex gap-2">
-          <button
-            type="button"
-            onClick={onBack}
-            className="rounded-xl border border-rose-200 bg-white px-4 py-2 text-[10px] font-black uppercase tracking-widest text-rose-700"
-          >
-            Voltar
-          </button>
-          <button
-            type="button"
-            onClick={() => void loadData()}
-            className="rounded-xl bg-rose-700 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white"
-          >
-            Tentar novamente
-          </button>
-        </div>
-      </div>
-    );
-  }
+  if (loadError) return <DeclaracaoEditorLoadError loadError={loadError} onBack={onBack} onRetry={() => void loadData()} />;
 
   return (
     <div className="flex flex-col h-[calc(100vh-100px)] animate-fadeIn">

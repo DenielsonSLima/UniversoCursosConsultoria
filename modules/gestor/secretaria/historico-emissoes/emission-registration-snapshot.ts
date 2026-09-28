@@ -1,3 +1,4 @@
+import { prepareStudentIdentityTemplate, resolveSnapshotStudentIdentity } from '../../../shared/utils/student-document-presentation';
 import { canonicalAsRecord } from '../shared/canonical-document-render.utils';
 import { canonicalText } from '../shared/canonical-document-render.utils';
 import { snapshotFirst } from './voter-snapshot';
@@ -11,6 +12,7 @@ import {
   replaceRegistrationIssuerState,
 } from '../../cadastros/ficha-matricula/registration-document-formatters';
 import { resolveStudentIdentityDocument } from '../../../shared/utils/studentIdentityDocument';
+import { prepareRegistrationIdentityTemplate } from '../../cadastros/ficha-matricula/registration-identity-presentation';
 
 /**
  * Interpolação limitada ao snapshot já persistido para Pasta/Ficha. Não busca
@@ -35,6 +37,7 @@ export const resolveRegistrationSnapshotTemplate = (
   const snapshotText = (key: string, legacyValue: unknown = '') => canonicalText(
     snapshotValue(key, legacyValue),
   );
+  const identity = resolveSnapshotStudentIdentity(data, emission.aluno);
   const months = [
     'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
     'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
@@ -81,7 +84,7 @@ export const resolveRegistrationSnapshotTemplate = (
     ALUNO_CPF: formatSnapshotCpf(snapshotValue('studentCpf', emission.aluno?.cpf_cnpj)),
     ALUNO_DOCUMENTO_TIPO: snapshotText('studentDocumentType', liveIdentity.label),
     ALUNO_TIPO_DOCUMENTO: snapshotText('studentDocumentType', liveIdentity.label),
-    ALUNO_RG: snapshotText('studentRg', liveIdentity.number),
+    ALUNO_RG: identity.isCin ? formatSnapshotCpf(identity.number) : snapshotText('studentRg', liveIdentity.number),
     ALUNO_NASCIMENTO: formatSnapshotDate(snapshotValue('studentBirthDate', emission.aluno?.data_nascimento)),
     ALUNO_SEXO: snapshotText('studentSex', emission.aluno?.sexo),
     ALUNO_ESTADO_CIVIL: snapshotText('studentMaritalStatus'),
@@ -102,9 +105,9 @@ export const resolveRegistrationSnapshotTemplate = (
     ALUNO_CIDADE: snapshotText('studentCity'),
     ALUNO_UF: snapshotText('studentState'),
     ALUNO_CEP: snapshotText('studentZipCode'),
-    ALUNO_RG_ORGAO: snapshotText('studentRgIssuer', liveIdentity.issuer),
-    ALUNO_RG_UF: snapshotText('studentRgState', liveIdentity.state),
-    ALUNO_RG_EMISSAO: formatSnapshotDate(snapshotValue('studentRgIssueDate', liveIdentity.issueDate)),
+    ALUNO_RG_ORGAO: identity.isCin ? '' : snapshotText('studentRgIssuer', liveIdentity.issuer),
+    ALUNO_RG_UF: identity.isCin ? '' : snapshotText('studentRgState', liveIdentity.state),
+    ALUNO_RG_EMISSAO: identity.isCin ? '' : formatSnapshotDate(snapshotValue('studentRgIssueDate', liveIdentity.issueDate)),
     ALUNO_TITULO_ELEITOR: formatRegistrationVoterId(snapshotText('studentVoterId', emission.aluno?.titulo_eleitor)),
     ALUNO_TITULO_ZONA: snapshotText('studentVoterZone', emission.aluno?.titulo_eleitor_zona),
     ALUNO_TITULO_SECAO: snapshotText('studentVoterSection', emission.aluno?.titulo_eleitor_secao),
@@ -139,11 +142,11 @@ export const resolveRegistrationSnapshotTemplate = (
   };
 
   const issuerState = formatRegistrationIssuerState(
-    snapshotText('studentRgIssuer', liveIdentity.issuer),
-    snapshotText('studentRgState', liveIdentity.state),
+    identity.isCin ? '' : snapshotText('studentRgIssuer', liveIdentity.issuer),
+    identity.isCin ? '' : snapshotText('studentRgState', liveIdentity.state),
   );
   const preparedSource = replaceRegistrationIssuerState(
-    String(source || ''),
+    prepareRegistrationIdentityTemplate(String(source || ''), identity.isCin),
     escapeValues ? escapeTemplateValue(issuerState) : issuerState,
   );
   return Object.entries(replacements).reduce((result, [token, rawValue]) => {
@@ -168,7 +171,7 @@ export const resolveAcademicSnapshotTemplate = (
 ) => {
   const { emission, preview } = source;
   const snapshot = canonicalAsRecord(emission.dados_emissao);
-  const identity = resolveStudentIdentityDocument(emission.aluno);
+  const identity = resolveSnapshotStudentIdentity(snapshot, emission.aluno);
   const academic = preview.academicData;
   const polo = canonicalAsRecord(preview.polo);
   const emittedDateParts = String(emission.emitido_em || '').split('T')[0].split('-');
@@ -181,8 +184,10 @@ export const resolveAcademicSnapshotTemplate = (
     : formatSnapshotDate(emission.emitido_em);
   const replacements: Record<string, unknown> = {
     ALUNO_NOME: canonicalText(snapshot.studentName, emission.aluno?.nome).toUpperCase(),
-    ALUNO_CPF: formatSnapshotCpf(snapshot.studentCpf ?? emission.aluno?.cpf_cnpj),
-    ALUNO_RG: canonicalText(snapshot.studentRg, identity.number),
+    ALUNO_CPF: formatSnapshotCpf(snapshotFirst(snapshot, 'studentCpf', emission.aluno?.cpf_cnpj)),
+    ALUNO_RG: identity.isCin ? formatSnapshotCpf(identity.number) : canonicalText(snapshot.studentRg, identity.number),
+    ALUNO_DOCUMENTO_TIPO: identity.label,
+    ALUNO_TIPO_DOCUMENTO: identity.label,
     ALUNO_MATRICULA: canonicalText(snapshot.studentMatricula, emission.matricula_id),
     CURSO_NOME: canonicalText(snapshot.courseName),
     TURMA_NOME: canonicalText(snapshot.className, emission.matricula?.turma?.nome),
@@ -209,7 +214,7 @@ export const resolveAcademicSnapshotTemplate = (
       ? String(rawValue || '')
       : escapeTemplateValue(rawValue);
     return result.split(`{{${token}}}`).join(replacement);
-  }, String(value || ''));
+  }, prepareStudentIdentityTemplate(String(value || ''), identity.isCin));
 };
 
 export const resolveEmissionVectorTemplate = (

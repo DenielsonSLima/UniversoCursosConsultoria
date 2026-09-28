@@ -30,64 +30,13 @@ import {
   waitForCanonicalEmissionRender,
 } from './reissue-flow';
 import { printPdfBlob } from '../shared/pdf-blob-print';
-import { normalizeCanonicalDocumentRenderPayload } from '../shared/canonical-document-render.utils';
-import { isContratoAlunoRenderPayloadReady } from '../contratos-aluno/components/ContratoAlunoDocumentRenderer';
-import type { ContratoAlunoPreparedDocument } from '../contratos-aluno/types/contratos-aluno.types';
-
-interface VectorPreviewPdf {
-  blob: Blob;
-  url: string;
-  emissionKey: string;
-}
+import { createContractHistoryPdf, type VectorPreviewPdf } from './contract-history-pdf';
 
 const isContractDocument = (documento: string) => documento === 'contrato_aluno';
 const getEmissionPreviewKey = (emission: EmissionLog) => (
   `${emission.documento}:${emission.codigo || emission.id}`
 );
 
-const toContractPreparedDocument = (emission: EmissionLog): ContratoAlunoPreparedDocument => {
-  const frozen = emission.dados_emissao || {};
-  const renderPayload = normalizeCanonicalDocumentRenderPayload({
-    template: frozen.templateSnapshot ?? frozen.template_snapshot,
-    template_revision: frozen.templateRevision ?? frozen.template_revision,
-    snapshot: frozen.contractSnapshot ?? frozen.contract_snapshot,
-    rendered: frozen.renderedDocument ?? frozen.rendered_document,
-  });
-
-  const document: ContratoAlunoPreparedDocument = {
-    emissionId: emission.codigo || emission.id,
-    documentId: emission.id,
-    title: String(
-      frozen.templateSnapshot?.tituloDocumento
-      || frozen.template_snapshot?.tituloDocumento
-      || 'Contrato do Aluno'
-    ),
-    targetName: String(
-      frozen.contractSnapshot?.aluno?.nome
-      || frozen.contract_snapshot?.aluno?.nome
-      || emission.aluno?.nome
-      || 'Aluno'
-    ),
-    validationCode: emission.codigo || null,
-    validationUrl: emission.codigo ? `/validador?code=${emission.codigo}` : null,
-    validUntil: emission.validade_ate,
-    fileUrl: null,
-    statusLabel: emission.status,
-    renderPayload,
-  };
-
-  if (!isContratoAlunoRenderPayloadReady(document)) {
-    throw new Error(
-      'O contrato histórico não possui template, snapshot e páginas canônicas congeladas para reimpressão.'
-    );
-  }
-  return document;
-};
-
-const createContractHistoryPdf = async (emission: EmissionLog) => {
-  const { createContratosAlunoPdf } = await import('../contratos-aluno/contratos-aluno.pdf');
-  return createContratosAlunoPdf([toContractPreparedDocument(emission)]);
-};
 
 const SecretariaHistoricoEmissoesPage: React.FC = () => {
   const context = getSecretariaContext();
@@ -532,6 +481,10 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
           isReissuing={isReissuing}
           fullscreenViewer
           printContentRef={printContentRef}
+          onIdentityUpdated={async (updated) => {
+            setReloadVersion((version) => version + 1);
+            await handleOpenPreview(updated);
+          }}
           onClose={clearPreview}
           onDownload={handleDownload}
           onPrint={handlePrint}
