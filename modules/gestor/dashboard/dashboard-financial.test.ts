@@ -85,7 +85,7 @@ test('formata decimal textual sem perder centavos acima do limite seguro', () =>
   assert.equal(getDashboardCompetencia(new Date(2026, 8, 27, 23, 30)), '2026-09-01');
 });
 
-test('consulta financeira é escopada e só é habilitada para perfil autorizado', () => {
+test('consulta canônica permanece disponível sem montar o Radar no Início', () => {
   const serviceSource = readFileSync(new URL('./dashboard-financial.service.ts', import.meta.url), 'utf8');
   const querySource = readFileSync(new URL('./dashboard.queries.ts', import.meta.url), 'utf8');
   const pageSource = readFileSync(new URL('./DashboardPage.tsx', import.meta.url), 'utf8');
@@ -96,9 +96,10 @@ test('consulta financeira é escopada e só é habilitada para perfil autorizado
   assert.match(serviceSource, /mapDashboardFinancialRadar\(data, \{ poloId, competencia \}\)/);
   assert.match(querySource, /financialRadar: \(poloId: string, competencia: string\)/);
   assert.match(querySource, /staleTime: 15_000/);
-  assert.match(pageSource, /enabled: Boolean\(activePoloId\) && canViewFinancialRadar/);
-  assert.match(pageSource, /financialRadarDestination = getDashboardPayablesDestination\(permissions\)/);
-  assert.match(pageSource, /onNavigate\?\.\(financialRadarDestination\)/);
+  assert.doesNotMatch(pageSource, /dashboardFinancialRadarQueryOptions|useDashboardFinancialRealtime|DashboardFinancialRadar/);
+  assert.match(pageSource, /payablesDestination = canAccessDashboardPayables\(permissions\)/);
+  assert.match(pageSource, /financialShortcutDestination/);
+  assert.match(pageSource, /onNavigate\?\.\(financialShortcutDestination\)/);
 });
 
 test('Radar financeiro não transforma contas em eventos do calendário', () => {
@@ -108,4 +109,5 @@ test('Radar financeiro não transforma contas em eventos do calendário', () => 
   assert.doesNotMatch(radarSource, /calendarioService|CalendarEvent|addEvent/);
   assert.match(pageSource, /<DashboardOfficialCalendar/);
   assert.match(pageSource, /events=\{officialEvents\}/);
+  assert.match(pageSource, /hasQuickActionsContent/);
 });

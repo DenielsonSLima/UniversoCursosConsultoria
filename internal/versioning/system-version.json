@@ -1,8 +1,8 @@
 {
-  "version": "4.8.123",
+  "version": "4.8.124",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 132,
+  "revision": 133,
   "releasedAt": "2026-09-27",
-  "summary": "Caixa ativa cockpit seguro com agenda e drill-down canônico"
+  "summary": "Caixa recupera análise por polos e Financeiro recebe tesouraria clara"
 }

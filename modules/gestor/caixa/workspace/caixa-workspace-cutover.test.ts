@@ -5,29 +5,30 @@ import test from 'node:test';
 
 const repoRoot = process.cwd();
 
-test('rota do Caixa abre o módulo integrado do Workspace v2', () => {
+test('rota do Caixa volta à análise mensal com navegação por polos', () => {
   const moduleContent = readFileSync(join(
     repoRoot,
     'modules/gestor/components/GestorModuleContent.tsx',
   ), 'utf8');
 
-  assert.match(moduleContent, /import\('\.\.\/caixa\/CaixaWorkspaceModule'\)/);
+  assert.match(moduleContent, /import\('\.\.\/caixa\/CaixaPage'\)/);
 });
 
-test('cutover mantém modos exclusivos no mesmo polo explícito', () => {
-  const source = readFileSync(join(
+test('workspace de tesouraria ocupa o Resumo financeiro no polo explícito', () => {
+  const pageSource = readFileSync(join(
     repoRoot,
-    'modules/gestor/caixa/CaixaWorkspaceModule.tsx',
+    'modules/gestor/financeiro/FinanceiroPage.tsx',
+  ), 'utf8');
+  const summarySource = readFileSync(join(
+    repoRoot,
+    'modules/gestor/financeiro/resumo/FinanceiroResumoTab.tsx',
   ), 'utf8');
 
-  assert.match(source, /const workspacePoloId = poloId/);
-  assert.match(source, /<CaixaWorkspaceView/);
-  assert.match(source, /<CaixaPage \{\.\.\.props\} isGlobal=\{false\} isMatriz=\{false\}/);
-  assert.match(source, /enabled: mode === 'workspace' && Boolean\(poloId\)/);
-  assert.match(source, /mode === 'monthly' \? \(/);
-  assert.match(source, /Cockpit de tesouraria/);
-  assert.match(source, /Análise mensal/);
-  assert.doesNotMatch(source, /workspacePoloId\s*=.*'todos'/);
+  assert.match(pageSource, /<FinanceiroResumoTab/);
+  assert.match(summarySource, /<CaixaWorkspaceView/);
+  assert.match(summarySource, /poloId=\{selectedPoloId\}/);
+  assert.match(summarySource, /availableTabs\.includes\('despesas'\)/);
+  assert.doesNotMatch(summarySource, /reduce\(|parseFloat|Number\(/);
 });
 
 test('resolução de empresa usa somente o vínculo protegido do polo', () => {

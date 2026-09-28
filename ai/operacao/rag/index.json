@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-09-27T23:39:59.634Z",
+  "builtAt": "2026-09-28T00:40:12.330Z",
   "manifestVersion": 2,
-  "sourceSignature": "defdbdbd48aaecf2d93f8f4b2d1c01d98412d197b8cc04d86d8bd6e1d515c62d",
+  "sourceSignature": "ef9be08614e87b1a07c6a5c3be09c0e50b6c443233c1c88141cad137ff9ef0c2",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "f9bb6b62f08b96f6c562e116274ad9a1f256c420dc7196b4ad72316658209771"
+      "hash": "5ef49ea6156b9c26a5f8f443650a620141f8e0f5f20b30f2383fd620b9482ffe"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -204,13 +204,13 @@
       "part": 1
     },
     {
-      "id": "a45eca63a202f3cf092c",
-      "hash": "a45eca63a202f3cf092cff91a130e42e193403066a4cd9c9a34875be01404bf9",
+      "id": "0f5727b8781236730562",
+      "hash": "0f5727b87812367305625655599e98003f1825a6ce282aa0fa89ed6518b2320d",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Lote: 2026-09-27-caixa-workspace-v2-integracao",
-      "text": "Estado: RPCs APLICADAS E VALIDADAS — CUTOVER CONTROLADO PRONTO PARA PUBLICAÇÃO Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-27-caixa-workspace-v2-integracao.md` - O core privado publicado na versão 4.8.122 permanece imutável. - A Etapa 3 aplicou o core por empresa, o wrapper seguro, o drill-down e a correção de unidade de contagem no Supabase. - A Etapa 3B adiciona transporte TanStack Query, validação pedido/resposta e invalidação Realtime por empresa/escopo. - A primeira dobra e o drill-down paginado entram no módulo Caixa pelo modo `Cockpit de tesouraria`. - `Cockpit de tesouraria` e `Análise mensal` são modos mutuamente exclusivos; somente o modo visível consulta dados e assina Realtime. - Gráficos sem série canônica continuam explicitamente indisponíveis; o frontend não calcula dinheiro, percentual, escala, classificação ou paginação. - `allPolos` conserva a autorização atual de administrador global do sistema. Um futuro isolamento por empresa exigirá vínculo gestor ↔ empresa explícito. - O cutover integral depende das séries canônicas restantes; este lote ativa o cockpit de contas a pagar e preserva o modo mensal.",
-      "normalizedText": "estado rpcs aplicadas e validadas cutover controlado pronto para publicacao manifesto explicito ai operacao registros alteracoes 2026 09 27 caixa workspace v2 integracao md o core privado publicado na versao 4 8 122 permanece imutavel a etapa 3 aplicou o core por empresa o wrapper seguro o drill down e a correcao de unidade de contagem no supabase a etapa 3b adiciona transporte tanstack query validacao pedido resposta e invalidacao realtime por empresa escopo a primeira dobra e o drill down paginado entram no modulo caixa pelo modo cockpit de tesouraria cockpit de tesouraria e analise mensal sao modos mutuamente exclusivos somente o modo visivel consulta dados e assina realtime graficos sem serie canonica continuam explicitamente indisponiveis o frontend nao calcula dinheiro percentual escala classificacao ou paginacao allpolos conserva a autorizacao atual de administrador global do sistema um futuro isolamento por empresa exigira vinculo gestor empresa explicito o cutover integral depende das series canonicas restantes este lote ativa o cockpit de contas a pagar e preserva o modo mensal",
-      "tokenCount": 143,
+      "text": "Estado: PUBLICADO NA VERSÃO 4.8.124 — AGUARDANDO SMOKE VISUAL FINAL Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-27-caixa-workspace-v2-integracao.md` - O core, as RPCs e as regras financeiras já publicados permanecem imutáveis. - O Caixa volta a abrir diretamente a análise mensal com consolidado e polos para a Matriz global. - A primeira dobra e o drill-down paginado passam a compor o `Resumo` do Financeiro no polo selecionado, acima dos indicadores já existentes. - O Radar financeiro foi removido do Início para evitar duplicidade com o Financeiro. - A apresentação do cockpit usa superfícies claras; funcionalidades sem contrato canônico deixam de ocupar a interface. - Gráficos sem série canônica continuam explicitamente indisponíveis; o frontend não calcula dinheiro, percentual, escala, classificação ou paginação. - `allPolos` conserva a autorização global vigente; o corte por polo continua explícito.",
+      "normalizedText": "estado publicado na versao 4 8 124 aguardando smoke visual final manifesto explicito ai operacao registros alteracoes 2026 09 27 caixa workspace v2 integracao md o core as rpcs e as regras financeiras ja publicados permanecem imutaveis o caixa volta a abrir diretamente a analise mensal com consolidado e polos para a matriz global a primeira dobra e o drill down paginado passam a compor o resumo do financeiro no polo selecionado acima dos indicadores ja existentes o radar financeiro foi removido do inicio para evitar duplicidade com o financeiro a apresentacao do cockpit usa superficies claras funcionalidades sem contrato canonico deixam de ocupar a interface graficos sem serie canonica continuam explicitamente indisponiveis o frontend nao calcula dinheiro percentual escala classificacao ou paginacao allpolos conserva a autorizacao global vigente o corte por polo continua explicito",
+      "tokenCount": 114,
       "part": 1
     },
     {

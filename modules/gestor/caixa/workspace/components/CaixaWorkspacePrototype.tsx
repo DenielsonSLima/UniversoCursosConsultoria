@@ -6,7 +6,6 @@ import {
   Landmark,
   ReceiptText,
   ShieldCheck,
-  WalletCards,
 } from 'lucide-react';
 import {
   formatCaixaCanonicalCurrency,
@@ -33,7 +32,7 @@ interface CaixaWorkspacePrototypeProps {
 
 const formatQuantity = (value: number) => new Intl.NumberFormat('pt-BR').format(value);
 
-const metricIconClass = 'text-blue-200';
+const metricIconClass = 'text-blue-600';
 
 export const CaixaWorkspacePrototype = ({
   payload,
@@ -75,28 +74,10 @@ export const CaixaWorkspacePrototype = ({
     },
   ];
 
-  const unavailableLayers = [
-    {
-      label: 'Contas a receber',
-      section: commitments.contas_a_receber,
-      description: 'Recebíveis canônicos entram em uma etapa posterior.',
-    },
-    {
-      label: 'Inadimplência',
-      section: commitments.inadimplencia,
-      description: 'A coorte mensal ainda não faz parte deste snapshot.',
-    },
-    {
-      label: 'Fluxo de caixa',
-      section: secoes.fluxo,
-      description: 'Série temporal não fornecida; nenhum gráfico foi fabricado no navegador.',
-    },
-  ];
-
   return (
     <section
       aria-labelledby="caixa-workspace-title"
-      className="overflow-hidden rounded-[28px] border border-slate-200 bg-[#f7f9fc] shadow-[0_24px_70px_-38px_rgba(0,26,51,0.55)]"
+      className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_22px_65px_-42px_rgba(0,26,51,0.45)]"
     >
       <div className="flex flex-col gap-4 border-b border-slate-200 bg-white px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
         <div className="flex min-w-0 items-center gap-3">
@@ -126,21 +107,21 @@ export const CaixaWorkspacePrototype = ({
         </dl>
       </div>
 
-      <div className="relative overflow-hidden bg-[#001a33] text-white">
-        <div aria-hidden="true" className="absolute -right-24 -top-32 h-72 w-72 rounded-full border-[44px] border-blue-400/10" />
-        <div aria-hidden="true" className="absolute -bottom-28 left-1/3 h-56 w-56 rounded-full border-[36px] border-rose-400/[0.06]" />
+      <div className="relative overflow-hidden bg-[linear-gradient(135deg,#f8fbff_0%,#eef5ff_52%,#ffffff_100%)] text-[#001a33]">
+        <div aria-hidden="true" className="absolute -right-24 -top-32 h-72 w-72 rounded-full border-[44px] border-blue-400/[0.08]" />
+        <div aria-hidden="true" className="absolute -bottom-28 left-1/3 h-56 w-56 rounded-full border-[36px] border-rose-300/[0.08]" />
 
         <div className="relative grid lg:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.75fr)]">
           <div className="order-2 px-4 py-6 sm:px-6 lg:order-1 lg:px-8 lg:py-8">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-blue-300">
+                <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-blue-700">
                   Competência
                 </p>
-                <h2 id="caixa-workspace-title" className="mt-2 max-w-2xl text-2xl font-black tracking-[-0.035em] text-white sm:text-3xl">
+                <h2 id="caixa-workspace-title" className="mt-2 max-w-2xl text-2xl font-black tracking-[-0.035em] text-[#001a33] sm:text-3xl">
                   Compromissos e vencimentos, com o corte à vista.
                 </h2>
-                <p className="mt-2 max-w-xl text-sm leading-6 text-slate-300">
+                <p className="mt-2 max-w-xl text-sm leading-6 text-slate-600">
                   Valores realizados e posições abertas permanecem visualmente separados.
                 </p>
               </div>
@@ -160,21 +141,21 @@ export const CaixaWorkspacePrototype = ({
                   disabled={!onOpenPayables}
                   aria-haspopup="dialog"
                   aria-controls="caixa-workspace-payables-dialog"
-                  className="rounded-2xl border border-white/10 bg-white/[0.055] p-4 text-left backdrop-blur-sm transition enabled:hover:-translate-y-0.5 enabled:hover:border-blue-300/40 enabled:hover:bg-white/[0.09] enabled:focus-visible:outline-none enabled:focus-visible:ring-2 enabled:focus-visible:ring-blue-300 disabled:cursor-default"
+                  className="rounded-2xl border border-slate-200/90 bg-white/90 p-4 text-left shadow-sm backdrop-blur-sm transition enabled:hover:-translate-y-0.5 enabled:hover:border-blue-200 enabled:hover:shadow-md enabled:focus-visible:outline-none enabled:focus-visible:ring-2 enabled:focus-visible:ring-blue-500 disabled:cursor-default"
                 >
-                  <div className="flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-[0.12em] text-slate-300">
+                  <div className="flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-[0.12em] text-slate-500">
                     {metric.icon}
                     <span>{metric.label}</span>
                   </div>
-                  <p className="mt-3 break-words text-xl font-black leading-tight tracking-[-0.025em] text-white">
+                  <p className="mt-3 break-words text-xl font-black leading-tight tracking-[-0.025em] text-[#001a33]">
                     {formatCaixaCanonicalCurrency(metric.value)}
                   </p>
-                  <p className="mt-2 text-[10px] leading-4 text-slate-400">
-                    <strong className="text-slate-200">{formatQuantity(metric.quantity)} títulos físicos</strong>
+                  <p className="mt-2 text-[10px] leading-4 text-slate-500">
+                    <strong className="text-slate-700">{formatQuantity(metric.quantity)} títulos físicos</strong>
                     {' · '}{metric.detail}
                   </p>
                   {onOpenPayables && (
-                    <span className="mt-3 inline-flex text-[10px] font-extrabold uppercase tracking-[0.12em] text-blue-200">
+                    <span className="mt-3 inline-flex text-[10px] font-extrabold uppercase tracking-[0.12em] text-blue-700">
                       Abrir detalhes
                     </span>
                   )}
@@ -183,22 +164,22 @@ export const CaixaWorkspacePrototype = ({
             </div>
           </div>
 
-          <aside className="relative order-1 border-b border-white/10 bg-[#071f36]/90 px-4 py-6 sm:px-6 lg:order-2 lg:border-b-0 lg:border-l lg:px-7 lg:py-8" aria-labelledby="caixa-workspace-overdue-title">
+          <aside className="relative order-1 border-b border-rose-100 bg-rose-50/85 px-4 py-6 sm:px-6 lg:order-2 lg:border-b-0 lg:border-l lg:border-rose-100 lg:px-7 lg:py-8" aria-labelledby="caixa-workspace-overdue-title">
             <div className="flex items-center justify-between gap-3">
-              <span className="inline-flex items-center gap-2 rounded-full border border-rose-300/20 bg-rose-400/10 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.14em] text-rose-200">
+              <span className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-white px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.14em] text-rose-700">
                 <CalendarDays aria-hidden="true" size={12} /> Obrigações imediatas
               </span>
-              <time dateTime={meta.data_corte} className="text-[10px] font-semibold text-slate-400">
+              <time dateTime={meta.data_corte} className="text-[10px] font-semibold text-slate-500">
                 Corte {formatCaixaDate(meta.data_corte)}
               </time>
             </div>
-            <h3 id="caixa-workspace-overdue-title" className="mt-6 text-sm font-bold text-slate-300">
+            <h3 id="caixa-workspace-overdue-title" className="mt-6 text-sm font-bold text-slate-700">
               Em atraso no corte
             </h3>
-            <p className="mt-2 break-words text-3xl font-black tracking-[-0.04em] text-rose-300">
+            <p className="mt-2 break-words text-3xl font-black tracking-[-0.04em] text-rose-600">
               {formatCaixaCanonicalCurrency(payables.em_atraso.valor)}
             </p>
-            <p className="mt-2 text-xs leading-5 text-slate-300">
+            <p className="mt-2 text-xs leading-5 text-slate-600">
               {payables.em_atraso.quantidade === 0 && !payables.em_atraso.data_mais_antiga
                 ? 'Nenhum título vencido no corte'
                 : `${formatQuantity(payables.em_atraso.quantidade)} títulos vencidos · mais antigo em ${
@@ -207,8 +188,8 @@ export const CaixaWorkspacePrototype = ({
                     : 'data não informada'
                 }`}
             </p>
-            <div className="mt-6 flex items-start gap-2 rounded-2xl border border-white/10 bg-black/10 p-3 text-xs leading-5 text-slate-300">
-              <ShieldCheck aria-hidden="true" size={15} className="mt-0.5 shrink-0 text-blue-300" />
+            <div className="mt-6 flex items-start gap-2 rounded-2xl border border-blue-100 bg-white/80 p-3 text-xs leading-5 text-slate-600 shadow-sm">
+              <ShieldCheck aria-hidden="true" size={15} className="mt-0.5 shrink-0 text-blue-600" />
               <span>Somente pagamentos efetivos integram o realizado; compromissos abertos permanecem posição.</span>
             </div>
             {onOpenPayables && (
@@ -217,7 +198,7 @@ export const CaixaWorkspacePrototype = ({
                 onClick={() => onOpenPayables('ATRASADAS')}
                 aria-haspopup="dialog"
                 aria-controls="caixa-workspace-payables-dialog"
-                className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-rose-300/25 bg-rose-400/10 px-4 py-2 text-xs font-extrabold uppercase tracking-[0.12em] text-rose-100 transition hover:bg-rose-400/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-200"
+                className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-rose-200 bg-white px-4 py-2 text-xs font-extrabold uppercase tracking-[0.12em] text-rose-700 shadow-sm transition hover:border-rose-300 hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
               >
                 Ver contas em atraso
               </button>
@@ -244,26 +225,6 @@ export const CaixaWorkspacePrototype = ({
         </div>
       )}
 
-      <div className="px-4 py-5 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-2 text-slate-800">
-          <WalletCards aria-hidden="true" size={16} className="text-blue-700" />
-          <h2 className="text-sm font-extrabold uppercase tracking-[0.14em]">Camadas em preparação</h2>
-        </div>
-        <p className="mt-1 text-xs leading-5 text-slate-500">
-          Ausência de contrato canônico é mostrada como indisponibilidade, não como resultado financeiro zero.
-        </p>
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          {unavailableLayers.map((layer) => (
-            <div key={layer.label}>
-              <CaixaWorkspaceSectionState
-                label={layer.label}
-                section={layer.section}
-                description={layer.description}
-              />
-            </div>
-          ))}
-        </div>
-      </div>
     </section>
   );
 };

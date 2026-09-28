@@ -5,7 +5,6 @@ import { CalendarDays, Clock3, GraduationCap, Sparkles, Users } from 'lucide-rea
 import type { RecentActivityItem } from './dashboard.service';
 import {
   dashboardActivityQueryOptions,
-  dashboardFinancialRadarQueryOptions,
   dashboardKpisQueryOptions,
 } from './dashboard.queries';
 import { gestorCalendarQueryOptions } from '../calendario/calendario.queries';
@@ -22,7 +21,6 @@ import {
 } from '../access-control';
 import DashboardAgendaSection from './components/DashboardAgendaSection';
 import DashboardFinancialShortcut from './components/DashboardFinancialShortcut';
-import DashboardFinancialRadar from './components/DashboardFinancialRadar';
 import DashboardMetricCard from './components/DashboardMetricCard';
 import DashboardOfficialCalendar from './components/DashboardOfficialCalendar';
 import DashboardQuickActionsHeader from './components/DashboardQuickActionsHeader';
@@ -31,7 +29,6 @@ import DashboardRecentActivity from './components/DashboardRecentActivity';
 import {
   addDays,
   formatShortDate,
-  getDashboardCompetencia,
   startOfDay,
   startOfWeek,
   type DashboardDaySummary,
@@ -39,7 +36,6 @@ import {
   type DashboardQuickActionMode,
 } from './dashboard.presentation';
 import { getDashboardStudentFinanceAccess } from './student-finance/dashboard-student-finance.access';
-import { useDashboardFinancialRealtime } from './useDashboardFinancialRealtime';
 
 interface DashboardPageProps {
   poloId?: string | null;
@@ -61,18 +57,13 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   const weekStart = startOfWeek(today);
   const weekEnd = addDays(weekStart, 7);
   const activePoloId = poloId || '';
-  const competencia = getDashboardCompetencia(today);
 
   const allowedWidgets = getAllowedDashboardWidgets(permissions);
   const widgetSet = new Set<DashboardWidgetId>(allowedWidgets);
   const hasWidget = (widgetId: DashboardWidgetId) => widgetSet.has(widgetId);
   const dashboardAccessKey = buildDashboardAccessKey(permissions, cacheIdentity);
   const preset = getDashboardPreset(permissions);
-  const canViewFinancialRadar = canAccessDashboardPayables(permissions);
-  const financialRadarDestination = getDashboardPayablesDestination(permissions);
   const showAcademicWorkspace = preset !== 'FINANCEIRO';
-
-  useDashboardFinancialRealtime(canViewFinancialRadar, activePoloId, competencia);
 
   const showStudents = hasWidget('alunos-ativos');
   const showEnrollments = hasWidget('matriculas-mes');
@@ -91,6 +82,19 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   const canUseFinance = canAccessGestorModule(permissions, 'financeiro');
   const canCreatePartner = canAccessGestorModule(permissions, 'parceiros');
   const studentFinanceAccess = getDashboardStudentFinanceAccess(permissions);
+  const hasQuickActionsContent = showQuickActions
+    && (canCreatePartner || studentFinanceAccess.canSearch);
+  const payablesDestination = canAccessDashboardPayables(permissions)
+    ? getDashboardPayablesDestination(permissions)
+    : null;
+  const financialShortcutDestination = payablesDestination
+    || (canUseFinance && hasFinancialShortcut ? 'financeiro' : null);
+  const visibleFinancialShortcutLabels = payablesDestination
+    ? [
+      payablesDestination === 'caixa' ? 'Análise mensal' : 'Contas a pagar',
+      ...financialShortcutLabels,
+    ]
+    : financialShortcutLabels;
 
   const { data: kpis, isLoading: loadingKpis, isError: kpisError } = useQuery({
     ...dashboardKpisQueryOptions(activePoloId, dashboardAccessKey),
@@ -105,15 +109,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   const { data: calendarData, isLoading: loadingCalendar } = useQuery({
     ...gestorCalendarQueryOptions(activePoloId),
     enabled: Boolean(activePoloId) && canUseCalendar,
-  });
-
-  const {
-    data: financialRadar,
-    isLoading: loadingFinancialRadar,
-    isError: financialRadarError,
-  } = useQuery({
-    ...dashboardFinancialRadarQueryOptions(activePoloId, competencia),
-    enabled: Boolean(activePoloId) && canViewFinancialRadar,
   });
 
   const eventTypes = useMemo(
@@ -168,10 +163,9 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
 
   const hasHomeContent = canUseCalendar
     || showAcademicKpis
-    || canViewFinancialRadar
-    || showQuickActions
+    || hasQuickActionsContent
     || showRecentActivity
-    || (canUseFinance && hasFinancialShortcut);
+    || Boolean(financialShortcutDestination);
 
   const openCalendar = () => {
     if (canUseCalendar) onNavigate?.('calendario');
@@ -184,11 +178,13 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
 
   return (
     <div className="animate-fadeIn space-y-6 pb-10 text-[#001a33] antialiased">
-      <DashboardQuickActionsHeader
-        canCreatePartner={showQuickActions && canCreatePartner}
-        canSearchStudentFinance={showQuickActions && studentFinanceAccess.canSearch}
-        onOpenAction={setQuickActionMode}
-      />
+      {hasQuickActionsContent ? (
+        <DashboardQuickActionsHeader
+          canCreatePartner={canCreatePartner}
+          canSearchStudentFinance={studentFinanceAccess.canSearch}
+          onOpenAction={setQuickActionMode}
+        />
+      ) : null}
 
       {showAcademicWorkspace ? (
         <section className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${metricGridClass}`}>
@@ -233,17 +229,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
         </section>
       ) : null}
 
-      {canViewFinancialRadar ? (
-        <DashboardFinancialRadar
-          radar={financialRadar}
-          loading={loadingFinancialRadar}
-          hasError={financialRadarError}
-          onOpenPayables={() => {
-            if (financialRadarDestination) onNavigate?.(financialRadarDestination);
-          }}
-        />
-      ) : null}
-
       {showAcademicWorkspace ? (
         <DashboardAgendaSection
           weekStart={weekStart}
@@ -271,12 +256,16 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
         <DashboardRecentActivity activities={recentActivity} loading={loadingActivity} now={now} />
       )}
 
-      {canUseFinance && hasFinancialShortcut && !canViewFinancialRadar && (
+      {financialShortcutDestination ? (
         <DashboardFinancialShortcut
-          labels={financialShortcutLabels}
-          onOpen={() => onNavigate?.('financeiro')}
+          labels={visibleFinancialShortcutLabels}
+          title={financialShortcutDestination === 'caixa' ? 'Caixa mensal' : 'Resumo financeiro'}
+          description={financialShortcutDestination === 'caixa'
+            ? 'Consulte a análise mensal consolidada e por polo no módulo Caixa.'
+            : 'Consulte compromissos, vencimentos e os indicadores completos no Financeiro.'}
+          onOpen={() => onNavigate?.(financialShortcutDestination)}
         />
-      )}
+      ) : null}
 
       {!hasHomeContent && (
         <div className="rounded-[1.75rem] border border-dashed border-slate-300 bg-white px-6 py-12 text-center shadow-sm">

@@ -7,7 +7,7 @@ import { POLO_CADASTROS_ALLOWED } from '../gestor-navigation';
 import type { ParceiroFormType } from '../parceiros/ParceirosPage';
 
 export const loadSecretariaPage = () => import('../secretaria/SecretariaPage');
-export const loadCaixaPage = () => import('../caixa/CaixaWorkspaceModule');
+export const loadCaixaPage = () => import('../caixa/CaixaPage');
 const BibliotecaPage = lazy(() => import('../biblioteca/BibliotecaPage'));
 const CadastrosPage = lazy(() => import('../cadastros/CadastrosPage'));
 const ChecklistEstagioPage = lazy(() => import('../cadastros/checklist-estagio/ChecklistEstagioPage'));
@@ -220,7 +220,7 @@ const GestorModuleContentView: React.FC<GestorModuleContentProps> = ({
       />
     );
     case 'caixa': return <CaixaPage poloId={scopedPoloId} poloName={currentPoloName} isGlobal={isGlobal} isMatriz={isMatrizSelected} />;
-    case 'financeiro': return <FinanceiroPage poloId={scopedPoloId} isMatriz={isMatrizSelected} allowedTabs={getEffectiveFinanceiroTabs(permissions)} />;
+    case 'financeiro': return <FinanceiroPage poloId={scopedPoloId} poloName={currentPoloName} isMatriz={isMatrizSelected} allowedTabs={getEffectiveFinanceiroTabs(permissions)} />;
     case 'patrimonio': return (
       <PatrimonioPage
         poloId={scopedPoloId}

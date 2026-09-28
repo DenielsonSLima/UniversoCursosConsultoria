@@ -1,6 +1,6 @@
 # Caixa Workspace v2 — integração segura e cockpit
 
-Estado: RPCs APLICADAS E VALIDADAS — CUTOVER CONTROLADO PRONTO PARA PUBLICAÇÃO
+Estado: PUBLICADO NA VERSÃO 4.8.124 — AGUARDANDO SMOKE VISUAL FINAL
 
 ## Objetivo
 
@@ -13,7 +13,7 @@ Continuar o Workspace v2 publicado na versão 4.8.122 com escopo obrigatório de
 - O frontend valida, confronta o pedido, formata strings monetárias e apresenta estados canônicos.
 - O consolidado é filtrado por `p_company_id`; `allPolos` mantém a semântica vigente de administrador global do sistema.
 - Core privado sem execução cliente; wrapper com identidade, gestor, módulo/aba, empresa e polo validados antes da leitura.
-- Workspace v2 e análise mensal legada são modos mutuamente exclusivos; nenhum fallback mistura snapshots ou mantém consultas dos dois modos ativas.
+- Workspace v2 ocupa o Resumo do Financeiro no polo selecionado; o Caixa permanece dedicado à análise mensal consolidada e por polo.
 - Supabase e GitHub remotos somente pelos MCPs próprios; smoke autenticado somente no Safari.
 
 ## Etapas deste lote
@@ -23,7 +23,7 @@ Continuar o Workspace v2 publicado na versão 4.8.122 com escopo obrigatório de
 3. Invalidação Realtime por empresa, polo e consolidado, sempre relendo o snapshot.
 4. Primeira dobra da mesa de tesouraria com urgência, competência, agenda e estados de completude.
 5. Drill-down paginado de contas a pagar.
-6. Cutover controlado no módulo Caixa com alternância exclusiva entre cockpit e análise mensal.
+6. Cutover inicial controlado no módulo Caixa e posterior reorganização, após feedback visual, para o Resumo do Financeiro.
 7. Revisão cruzada, testes locais, aplicação remota, smoke e publicação atômica.
 
 ## Critérios de aceite
@@ -48,12 +48,14 @@ O modelo de autorização atual não possui vínculo gestor ↔ empresa. `allPol
 - Drill-down oferece seis filtros canônicos com paginação, totais, flags de navegação e valores monetários calculados no banco.
 - Serviço, contrato, cache e Realtime segregam empresa, polo, competência, histórico, filtro e página; cancelamento é propagado até a requisição Supabase.
 - Realtime não injeta deltas financeiros no cache: apenas invalida os escopos atingidos e solicita um snapshot novo.
-- Primeira dobra apresenta urgência, competência e agenda D0–D+7; seções ainda não entregues permanecem indisponíveis, sem gráficos ou zeros inventados.
+- Primeira dobra apresenta urgência, competência e agenda D0–D+7; seções ainda não entregues não ocupam a interface nem simulam gráficos ou zeros.
 - Modal do drill-down possui loading, erro, vazio, foco inicial/restaurado, Escape, ciclo de Tab e layout móvel.
-- O módulo Caixa abre o cockpit v2 por padrão e oferece a análise mensal como modo alternativo; somente o modo ativo monta queries e Realtime.
-- Cockpit e análise mensal permanecem presos ao polo explícito selecionado no portal. O consolidado legado foi desabilitado neste cutover para não cruzar empresas.
+- O módulo Caixa volta a abrir diretamente a análise mensal e recupera o consolidado e a lista de polos para a Matriz global.
+- O cockpit passa a ocupar o topo do Resumo do Financeiro e permanece preso ao polo explícito selecionado no portal.
+- O Radar financeiro sai do Início; calendário e demais widgets autorizados permanecem no módulo.
+- A apresentação abandona a grande superfície navy em favor de fundo claro, cards brancos e uso pontual das cores institucionais.
 - Os três KPIs da competência e o bloco de atraso abrem o drill-down canônico com foco, paginação e snapshot consistente.
-- `modules/gestor/caixa/CaixaPage.tsx` e suas alterações paralelas permanecem fora do lote; a integração ocorre pelo compositor `CaixaWorkspaceModule.tsx`.
+- `modules/gestor/caixa/CaixaPage.tsx` e suas alterações paralelas permanecem fora do lote; o Workspace é composto no Financeiro por `FinanceiroResumoTab.tsx` e `CaixaWorkspaceView.tsx`.
 
 ## Validação local
 
@@ -62,6 +64,8 @@ O modelo de autorização atual não possui vínculo gestor ↔ empresa. `allPol
 - `npx tsc --noEmit --pretty false`: aprovado.
 - `npx eslint modules/gestor/caixa/workspace`: aprovado.
 - `npm run build`: aprovado; somente os avisos já existentes de chunks acima de 500 kB.
+- Reorganização pós-feedback: contratos focados 48/48, `tsc --noEmit`, ESLint focado e build completo aprovados.
+- Smoke visual local no Safari pendente porque a janela estava sendo alterada por outra sessão ativa; nenhum navegador alternativo foi usado.
 - Todos os arquivos manuais deste manifesto possuem no máximo 500 linhas.
 - O gate global de linhas encontrou 12 referências ausentes no checkout local e fora deste manifesto; nenhuma falha pertence ao lote do Caixa.
 - O smoke autenticado final será executado no Safari após a Preview/produção receber a versão, pois a sessão autenticada disponível está no domínio publicado.
@@ -118,9 +122,12 @@ O modelo de autorização atual não possui vínculo gestor ↔ empresa. `allPol
 - `modules/gestor/caixa/workspace/caixa-workspace-cutover.test.ts`
 - `modules/gestor/caixa/CaixaWorkspaceModule.tsx`
 - `modules/gestor/components/GestorModuleContent.tsx`
+- `modules/gestor/dashboard/DashboardPage.tsx`
+- `modules/gestor/financeiro/FinanceiroPage.tsx`
+- `modules/gestor/financeiro/resumo/FinanceiroResumoTab.tsx`
 - `internal/versioning/system-version.json`
 - `internal/versioning/CHANGELOG.md`
 
-Total: 44 arquivos.
+Total: 47 arquivos.
 
-O manifesto está congelado para a publicação do cutover controlado. A `CaixaPage.tsx` atual e quaisquer alterações paralelas permanecem fora do lote.
+O manifesto registra o cutover publicado e a reorganização local solicitada após o feedback visual. A `CaixaPage.tsx` atual e quaisquer alterações paralelas permanecem fora do lote.

@@ -321,7 +321,7 @@ test('preset financeiro exige acesso explícito a Contas a Pagar', () => {
   assert.equal(getDashboardPreset(somenteResumo), 'ACADEMICO');
 });
 
-test('perfil Início + Caixa recebe Radar e navega para Caixa', () => {
+test('perfil Início + Caixa recebe atalho operacional e navega para Caixa', () => {
   const caixa = permissions({
     modules: ['inicio', 'caixa'],
     financeiroTabs: [],
