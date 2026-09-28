@@ -1,8 +1,8 @@
 {
-  "version": "4.8.124",
+  "version": "4.8.126",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 133,
+  "revision": 135,
   "releasedAt": "2026-09-27",
-  "summary": "Caixa recupera análise por polos e Financeiro recebe tesouraria clara"
+  "summary": "Consulta pública respeita os campos autorizados por documento"
 }
