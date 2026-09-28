@@ -99,7 +99,11 @@ test('seis resumos recebem o mês visível e AbortSignal, sem repetir timeout SQ
       assert.equal(call.args.p_competencia, '2026-07-01');
       assert.ok(call.signal instanceof AbortSignal);
     }
-    assert.equal(calls.find(call => call.name === 'get_caixa_prestacao_mensal_secure')?.args.p_meses_historico, 3);
+    const visualCall = calls.find(
+      call => call.name === 'get_caixa_prestacao_mensal_visual_secure',
+    );
+    assert.ok(visualCall);
+    assert.equal('p_meses_historico' in visualCall.args, false);
   } finally { client.clear(); }
 });
 

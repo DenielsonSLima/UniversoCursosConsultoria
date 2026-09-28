@@ -148,7 +148,7 @@ test('mantém a RPC, o card e a invalidação patrimonial isolados no Caixa', ()
   assert.match(cardSource, /Patrimônio não altera o caixa disponível nem o resultado operacional/);
 });
 
-test('exibe posição total, posição líquida, patrimônio, financiamento e custos após a conciliação do período', () => {
+test('organiza visão, riscos, estrutura e governança sem remover contratos financeiros', () => {
   const pageSource = readFileSync(
     join(process.cwd(), 'modules/gestor/caixa/CaixaPage.tsx'),
     'utf8',
@@ -158,24 +158,34 @@ test('exibe posição total, posição líquida, patrimônio, financiamento e cu
     'utf8',
   );
   const monthlySectionIndex = pageSource.indexOf('<CaixaStatementSection');
-  const resumoOperacionalIndex = monthlySource.indexOf('label="Entradas operacionais no mês"');
-  const compromissosIndex = monthlySource.indexOf('<CaixaCompromissosCards');
-  const graficoIndex = monthlySource.indexOf('<CaixaMovimentacaoChart');
-  const conciliacaoIndex = monthlySource.indexOf('<CaixaReconciliationCard');
+  const heroIndex = monthlySource.indexOf('<CaixaExecutiveHero');
+  const graficoIndex = monthlySource.indexOf('<CaixaImmersiveComboChart');
+  const composicaoIndex = monthlySource.indexOf('<CaixaImmersiveDonutChart');
+  const riscoIndex = pageSource.indexOf('id="caixa-risco"');
+  const contasPagarIndex = pageSource.indexOf('<CaixaContasPagarResumoCard');
+  const compromissosIndex = pageSource.indexOf('<CaixaCompromissosCards');
+  const custosIndex = pageSource.indexOf('<CaixaLinhaCorteCard');
+  const estruturaIndex = pageSource.indexOf('id="caixa-estrutura"');
   const posicaoTotalIndex = pageSource.indexOf('<CaixaPosicaoTotalResumoCard');
   const posicaoLiquidaIndex = pageSource.indexOf('<CaixaPosicaoLiquidaResumoCard');
   const patrimonioIndex = pageSource.indexOf('<CaixaPatrimonioResumoCard');
   const financiamentoIndex = pageSource.indexOf('<CaixaFinanciamentoResumoCard');
-  const custosIndex = pageSource.indexOf('<CaixaLinhaCorteCard');
+  const governancaIndex = pageSource.indexOf('id="caixa-governanca"');
+  const conciliacaoIndex = pageSource.indexOf('<CaixaReconciliationCard');
 
-  assert.ok(resumoOperacionalIndex >= 0);
-  assert.ok(compromissosIndex > resumoOperacionalIndex);
-  assert.ok(graficoIndex > compromissosIndex);
-  assert.ok(conciliacaoIndex > graficoIndex);
+  assert.ok(heroIndex >= 0);
+  assert.ok(graficoIndex > heroIndex);
+  assert.ok(composicaoIndex > graficoIndex);
   assert.ok(monthlySectionIndex >= 0);
-  assert.ok(posicaoTotalIndex > monthlySectionIndex);
+  assert.ok(riscoIndex > monthlySectionIndex);
+  assert.ok(contasPagarIndex > riscoIndex);
+  assert.ok(compromissosIndex > contasPagarIndex);
+  assert.ok(custosIndex > compromissosIndex);
+  assert.ok(estruturaIndex > custosIndex);
+  assert.ok(posicaoTotalIndex > estruturaIndex);
   assert.ok(posicaoLiquidaIndex > posicaoTotalIndex);
   assert.ok(patrimonioIndex > posicaoLiquidaIndex);
   assert.ok(financiamentoIndex > patrimonioIndex);
-  assert.ok(custosIndex > financiamentoIndex);
+  assert.ok(governancaIndex > financiamentoIndex);
+  assert.ok(conciliacaoIndex > governancaIndex);
 });
