@@ -13,12 +13,14 @@ import {
   CERTIDAO_CIVIL_TYPE_OPTIONS,
 } from '../../../utils/parceiros.constants';
 import ParceiroAlunoDisplayField from './ParceiroAlunoDisplayField';
+import OrgaoEmissorPicker from '../../formularioparceiros/aluno/OrgaoEmissorPicker';
 import { formatDocumentTypeLabel, formatPhoneDisplay } from './parceiro-aluno-dados.utils';
 
 interface DetailsSectionsProps {
   formData: any;
   isEditing: boolean;
   onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
+  onOrgaoEmissorChange: (value: string) => void;
 }
 
 const ParceiroAlunoFamilySection: React.FC<DetailsSectionsProps> = ({ formData, isEditing, onChange }) => (
@@ -98,6 +100,7 @@ const ParceiroAlunoDocumentsSection: React.FC<DetailsSectionsProps> = ({
   formData,
   isEditing,
   onChange,
+  onOrgaoEmissorChange,
 }) => {
   const isCin = isCinDocumentType(formData.tipoDocumento);
   const isCnh = isCnhDocumentType(formData.tipoDocumento);
@@ -138,8 +141,9 @@ const ParceiroAlunoDocumentsSection: React.FC<DetailsSectionsProps> = ({
           {isLegacyRg || isOtherLegacyType ? (
             <>
               <div className="space-y-1.5">
-                <label htmlFor="aluno-orgaoEmissor" className="block text-xs font-medium text-slate-600">Órgão expedidor</label>
-                <input id="aluno-orgaoEmissor" type="text" name="orgaoEmissor" value={formData.orgaoEmissor || ''} onChange={onChange} className="w-full min-h-11 sm:min-h-10 px-3 py-2 text-base sm:text-sm bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none" />
+                <OrgaoEmissorPicker value={formData.orgaoEmissor || ''} onChange={onOrgaoEmissorChange}
+                  label="Órgão expedidor" labelClassName="mb-1.5 block text-xs font-medium text-slate-600"
+                  inputClassName="w-full min-h-11 sm:min-h-10 px-3 py-2 text-base sm:text-sm bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none" />
               </div>
               <div className="space-y-1.5">
                 <label htmlFor="aluno-rgUfEmissao" className="block text-xs font-medium text-slate-600">UF de expedição</label>

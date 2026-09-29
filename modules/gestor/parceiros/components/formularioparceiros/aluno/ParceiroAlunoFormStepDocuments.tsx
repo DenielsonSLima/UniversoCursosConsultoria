@@ -13,8 +13,11 @@ import {
 } from '../../../utils/parceiros.constants';
 import { INPUT_CLS, LABEL_CLS, sectionHeaderCls, UFS } from './parceiro-aluno-form.constants';
 import type { AlunoFormStepProps } from './parceiro-aluno-form.types';
+import OrgaoEmissorPicker from './OrgaoEmissorPicker';
 
-const ParceiroAlunoFormStepDocuments: React.FC<AlunoFormStepProps> = ({ formData, onChange }) => {
+const ParceiroAlunoFormStepDocuments: React.FC<AlunoFormStepProps & {
+  onOrgaoEmissorChange: (value: string) => void;
+}> = ({ formData, onChange, onOrgaoEmissorChange }) => {
   const isCin = isCinDocumentType(formData.tipoDocumento);
   const isCnh = isCnhDocumentType(formData.tipoDocumento);
   const isLegacyRg = isLegacyRgDocumentType(formData.tipoDocumento);
@@ -73,11 +76,7 @@ const ParceiroAlunoFormStepDocuments: React.FC<AlunoFormStepProps> = ({ formData
               className={INPUT_CLS} placeholder="Número do RG" />
           </div>
 
-          <div>
-            <label className={LABEL_CLS}>Órgão Emissor</label>
-            <input type="text" name="orgaoEmissor" value={formData.orgaoEmissor} onChange={onChange}
-              className={INPUT_CLS} placeholder="SSP, IFP..." />
-          </div>
+          <OrgaoEmissorPicker value={formData.orgaoEmissor} onChange={onOrgaoEmissorChange} />
 
           <div>
             <label className={LABEL_CLS}>UF Emissão</label>

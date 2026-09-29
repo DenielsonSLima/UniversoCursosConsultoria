@@ -1,4 +1,4 @@
-import { normalizeAlunoSexo, normalizeAlunoOrgao } from './parceiro-aluno-edicao';
+import { normalizeAlunoSexo } from './parceiro-aluno-edicao';
 import { formatPhone, onlyDigits } from '../../../../../../lib/documentFormatters';
 import {
   formatTechnicalDocumentTypeLabel,
@@ -55,7 +55,8 @@ export const normalizeAlunoFormData = (data: any) => {
     || (normalized.escolaridadeAnterior === 'ENSINO MÉDIO COMPLETO' ? 'CONCLUIDO' : '');
   return {
     ...normalized,
-    ...normalizeAlunoOrgao(normalized.orgaoEmissor, normalized.rgUfEmissao),
+    // Preserva o valor legado literal; somente o picker pode trocar o órgão.
+    orgaoEmissor: normalized.orgaoEmissor ?? '',
     sexo: normalizeAlunoSexo(normalized.sexo),
     cpf: maskCpf(normalized.cpf || normalized.cpf_cnpj),
     cep: maskCep(normalized.cep),

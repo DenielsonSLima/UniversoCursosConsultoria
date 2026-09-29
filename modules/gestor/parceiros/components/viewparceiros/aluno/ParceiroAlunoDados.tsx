@@ -225,6 +225,7 @@ const ParceiroAlunoDados: React.FC<ParceiroAlunoDadosProps> = ({
         formData={formData}
         isEditing={isEditing}
         onChange={handleChange}
+        onOrgaoEmissorChange={(orgaoEmissor) => setFormData((previous: any) => ({ ...previous, orgaoEmissor }))}
       />
       <ParceiroAlunoAddressSection
         formData={formData}

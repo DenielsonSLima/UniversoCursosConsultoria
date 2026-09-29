@@ -9,6 +9,7 @@ interface DocumentosChecklistProps {
   onPreview?: (item: DocumentoAlunoChecklistItem) => void;
   onHistory?: (item: DocumentoAlunoChecklistItem) => void;
   onReview?: (item: DocumentoAlunoChecklistItem) => void;
+  onDelete?: (item: DocumentoAlunoChecklistItem) => void;
   onArchive?: (item: DocumentoAlunoChecklistItem) => void;
   onUpload?: (item: DocumentoAlunoChecklistItem, files: File[]) => void;
   onMarkReceived?: (item: DocumentoAlunoChecklistItem) => void;
@@ -22,6 +23,7 @@ const DocumentosChecklist: React.FC<DocumentosChecklistProps> = ({
   onHistory,
   onReview,
   onArchive,
+  onDelete,
   onUpload,
   onMarkReceived,
   onRevokeReceived,
@@ -47,6 +49,7 @@ const DocumentosChecklist: React.FC<DocumentosChecklistProps> = ({
         </div>
         <span className="text-xs font-semibold text-slate-500">{itens.length} itens</span>
       </div>
+      <p className="mb-3 px-1 text-xs text-slate-500">Confirme a entrega pelo ✓. Anexar um arquivo é opcional.</p>
       <div className="space-y-3">
         {itens.map((item) => (
           <DocumentoChecklistCard
@@ -57,6 +60,7 @@ const DocumentosChecklist: React.FC<DocumentosChecklistProps> = ({
             onHistory={onHistory}
             onReview={onReview}
             onArchive={onArchive}
+            onDelete={onDelete}
             onUpload={onUpload}
             onMarkReceived={onMarkReceived}
             onRevokeReceived={onRevokeReceived}
