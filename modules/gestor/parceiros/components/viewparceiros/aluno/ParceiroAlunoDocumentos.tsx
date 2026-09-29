@@ -11,7 +11,6 @@ import { documentosAlunoV2Service } from '../../../../../shared/documentos-aluno
 import AlunoDocumentosSummary from './documentos/AlunoDocumentosSummary';
 import DocumentoArchiveDialog from './documentos/DocumentoArchiveDialog';
 import DocumentoDeleteDialog from './documentos/DocumentoDeleteDialog';
-import DocumentoLegacyReceiptModal from './documentos/DocumentoLegacyReceiptModal';
 import DocumentoPreviewHistoryModal from './documentos/DocumentoPreviewHistoryModal';
 import DocumentoReviewModal from './documentos/DocumentoReviewModal';
 import DocumentosChecklist from './documentos/DocumentosChecklist';
@@ -49,14 +48,12 @@ const ParceiroAlunoDocumentos: React.FC<ParceiroAlunoDocumentosProps> = ({
   const [archiveReason, setArchiveReason] = useState('');
   const [deleteItem, setDeleteItem] = useState<DocumentoAlunoChecklistItem | null>(null);
   const [deleteArquivoIds, setDeleteArquivoIds] = useState<string[]>([]);
+  const [deleteVersaoAtualId, setDeleteVersaoAtualId] = useState<string | undefined>();
   const [deleteReason, setDeleteReason] = useState('');
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [mappingLot, setMappingLot] = useState<DocumentoAlunoLotePdf | null>(null);
   const [mappings, setMappings] = useState<DocumentoAlunoPdfMapeamento[]>([]);
   const [operationError, setOperationError] = useState<string | null>(null);
-  const [legacyReceiptItem, setLegacyReceiptItem] =
-    useState<DocumentoAlunoChecklistItem | null>(null);
-  const [legacyReceiptReason, setLegacyReceiptReason] = useState('');
   const [implantationEnrollment, setImplantationEnrollment] =
     useState<MatriculaTecnicaPendenteDocumento | null>(null);
   const [implantationReason, setImplantationReason] = useState('');
@@ -103,8 +100,8 @@ const ParceiroAlunoDocumentos: React.FC<ParceiroAlunoDocumentosProps> = ({
       ? workflow.uploadMutation.variables?.documentoId || null
       : reviewItem?.id && workflow.reviewMutation.isPending
       ? reviewItem.id
-      : legacyReceiptItem?.id && workflow.legacyReceiptMutation.isPending
-        ? legacyReceiptItem.id
+      : workflow.legacyReceiptMutation.isPending
+        ? workflow.legacyReceiptMutation.variables?.documentoId || null
       : workflow.legacyReceiptRevokeMutation.isPending
         ? workflow.legacyReceiptRevokeMutation.variables?.documentoId || null
       : archiveItem?.id && workflow.archiveMutation.isPending
@@ -218,8 +215,8 @@ const ParceiroAlunoDocumentos: React.FC<ParceiroAlunoDocumentosProps> = ({
       <DocumentosChecklist
         itens={painel.itens}
         busyItemId={busyItemId}
-        onPreview={(item) => void openPreview(item)}
-        onHistory={(item) => void openPreview(item)}
+        onPreview={(item) => void openPreview(item).catch((error) => setOperationError(errorMessage(error)))}
+        onHistory={(item) => void openPreview(item).catch((error) => setOperationError(errorMessage(error)))}
         onReview={(item) => {
           setOperationError(null);
           setDecision('aprovado');
@@ -231,6 +228,14 @@ const ParceiroAlunoDocumentos: React.FC<ParceiroAlunoDocumentosProps> = ({
           setArchiveReason('');
           setArchiveItem(item);
         }}
+        onDelete={(item) => {
+          setOperationError(null);
+          setDeleteReason('');
+          setDeleteConfirmation('');
+          setDeleteArquivoIds(item.versaoAtual?.fontes.map((source) => source.arquivo.id) || []);
+          setDeleteVersaoAtualId(item.versaoAtual?.id);
+          setDeleteItem(item);
+        }}
         onUpload={(item, files) => {
           setOperationError(null);
           void workflow.uploadMutation.mutateAsync({ documentoId: item.id, files })
@@ -239,8 +244,8 @@ const ParceiroAlunoDocumentos: React.FC<ParceiroAlunoDocumentosProps> = ({
         onMarkReceived={painel.podeRegistrarRecebimentoSemAnexo
           ? (item) => {
             setOperationError(null);
-            setLegacyReceiptReason('');
-            setLegacyReceiptItem(item);
+            void workflow.legacyReceiptMutation.mutateAsync({ documentoId: item.id, motivo: '' })
+              .catch((error) => setOperationError(errorMessage(error)));
           }
           : undefined}
         onRevokeReceived={(item) => {
@@ -337,6 +342,7 @@ const ParceiroAlunoDocumentos: React.FC<ParceiroAlunoDocumentosProps> = ({
           setDeleteReason('');
           setDeleteConfirmation('');
           setDeleteArquivoIds([source.arquivo.id]);
+          setDeleteVersaoAtualId(undefined);
           setDeleteItem(previewItem);
         }}
         onClose={() => setPreviewItem(null)}
@@ -361,25 +367,6 @@ const ParceiroAlunoDocumentos: React.FC<ParceiroAlunoDocumentosProps> = ({
           }).then(() => setReviewItem(null)).catch((error) => setOperationError(errorMessage(error)));
         }}
         onClose={() => setReviewItem(null)}
-      />
-
-      <DocumentoLegacyReceiptModal
-        open={Boolean(legacyReceiptItem)}
-        documentName={legacyReceiptItem?.nome || ''}
-        reason={legacyReceiptReason}
-        submitting={workflow.legacyReceiptMutation.isPending}
-        error={operationError}
-        onReasonChange={setLegacyReceiptReason}
-        onSubmit={() => {
-          const documentoId = legacyReceiptItem?.id;
-          if (!documentoId) return;
-          void workflow.legacyReceiptMutation.mutateAsync({
-            documentoId,
-            motivo: legacyReceiptReason,
-          }).then(() => setLegacyReceiptItem(null)).catch((error) =>
-            setOperationError(errorMessage(error)));
-        }}
-        onClose={() => setLegacyReceiptItem(null)}
       />
 
       <MatriculaImplantacaoDialog
@@ -427,7 +414,9 @@ const ParceiroAlunoDocumentos: React.FC<ParceiroAlunoDocumentosProps> = ({
 
       <DocumentoDeleteDialog
         open={Boolean(deleteItem)}
-        documentName={deleteItem?.nome || ''}
+        documentName={`${deleteItem?.nome || ''} · ${deleteArquivoIds.length} arquivo(s). ${deleteVersaoAtualId
+          ? 'A versão atual será arquivada e os anexos serão removidos. Histórico e auditoria serão preservados.'
+          : 'O arquivo selecionado será removido. Histórico e auditoria serão preservados.'}`}
         reason={deleteReason}
         confirmationText={deleteConfirmation}
         submitting={workflow.deleteMutation.isPending}
@@ -440,6 +429,8 @@ const ParceiroAlunoDocumentos: React.FC<ParceiroAlunoDocumentosProps> = ({
           void workflow.deleteMutation.mutateAsync({
             arquivoIds: arquivos,
             motivo: deleteReason,
+            documentoId: deleteItem?.id,
+            versaoAtualId: deleteVersaoAtualId,
           }).then(() => setDeleteItem(null)).catch((error) =>
             setOperationError(errorMessage(error)));
         }}

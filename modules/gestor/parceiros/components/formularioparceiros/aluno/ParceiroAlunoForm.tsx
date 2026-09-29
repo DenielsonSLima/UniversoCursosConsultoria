@@ -302,7 +302,8 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({
             onRemovePhoto={() => setFormData((previous) => ({ ...previous, foto: '' }))}
           />
         )}
-        {currentStep === 2 && <ParceiroAlunoFormStepDocuments formData={formData} onChange={handleChange} />}
+        {currentStep === 2 && <ParceiroAlunoFormStepDocuments formData={formData} onChange={handleChange}
+          onOrgaoEmissorChange={(orgaoEmissor) => setFormData((previous) => ({ ...previous, orgaoEmissor }))} />}
         {currentStep === 3 && <ParceiroAlunoFormStepFamily formData={formData} isMinor={isMinor()} onChange={handleChange} />}
         {currentStep === 4 && <ParceiroAlunoFormStepEducation formData={formData} onChange={handleChange} />}
         {currentStep === 5 && <ParceiroAlunoFormStepContact formData={formData} onChange={handleChange} onCepBlur={handleCepBlur} />}

@@ -1,6 +1,6 @@
 import React, { useId, useRef } from 'react';
 import {
-  Archive, ClipboardCheck, Eye, FileClock, FileText, Loader2,
+  Archive, Check, Eye, FileClock, FileText, Loader2,
   MoreHorizontal, RotateCcw, ShieldCheck, Trash2,
 } from 'lucide-react';
 import { DocumentoAlunoChecklistItem } from '../../../../../../shared/documentos-aluno/documentos-aluno.types';
@@ -12,6 +12,7 @@ interface DocumentoChecklistCardProps {
   onPreview?: (item: DocumentoAlunoChecklistItem) => void;
   onHistory?: (item: DocumentoAlunoChecklistItem) => void;
   onReview?: (item: DocumentoAlunoChecklistItem) => void;
+  onDelete?: (item: DocumentoAlunoChecklistItem) => void;
   onArchive?: (item: DocumentoAlunoChecklistItem) => void;
   onUpload?: (item: DocumentoAlunoChecklistItem, files: File[]) => void;
   onMarkReceived?: (item: DocumentoAlunoChecklistItem) => void;
@@ -23,7 +24,7 @@ const actionClassName =
 
 const DocumentoChecklistCard: React.FC<DocumentoChecklistCardProps> = ({
   item, busy = false, onPreview, onHistory, onReview, onArchive,
-  onUpload, onMarkReceived, onRevokeReceived,
+  onUpload, onMarkReceived, onRevokeReceived, onDelete,
 }) => {
   const uploadInputId = useId();
   const uploadInput = useRef<HTMLInputElement>(null);
@@ -36,13 +37,11 @@ const DocumentoChecklistCard: React.FC<DocumentoChecklistCardProps> = ({
   const primaryAction = canUpload && onUpload ? 'upload' : canReview ? 'review' : 'preview';
   const actions = [
     { id: 'upload', label: 'Anexar', icon: FileText, visible: canUpload && !!onUpload, disabled: busy, run: () => uploadInput.current?.click() },
-    { id: 'received', label: 'Marcar entregue', icon: ClipboardCheck, visible: canMarkReceived && !!onMarkReceived, disabled: busy, run: () => onMarkReceived?.(item) },
     { id: 'revoke', label: 'Corrigir registro', icon: RotateCcw, visible: hasLegacyReceipt && !!onRevokeReceived, disabled: busy, run: () => onRevokeReceived?.(item) },
     { id: 'preview', label: 'Visualizar', icon: Eye, visible: true, disabled: !hasVersion || busy, run: () => onPreview?.(item) },
     { id: 'history', label: 'Histórico', icon: FileClock, visible: true, disabled: item.versoes.length === 0 || busy, run: () => onHistory?.(item) },
     { id: 'review', label: 'Revisar', icon: ShieldCheck, visible: true, disabled: !canReview || busy, run: () => onReview?.(item) },
     { id: 'archive', label: 'Arquivar', icon: Archive, visible: true, disabled: !hasVersion || busy, run: () => onArchive?.(item) },
-    { id: 'delete', label: 'Excluir', icon: Trash2, visible: true, disabled: true, run: () => {}, title: 'Arquive a versão atual e use o Histórico para excluir o arquivo.' },
   ].filter((action) => action.visible);
   const primary = actions.find((action) => action.id === primaryAction)!;
   const PrimaryIcon = primary.icon;
@@ -77,7 +76,7 @@ const DocumentoChecklistCard: React.FC<DocumentoChecklistCardProps> = ({
             )}
           </div>
         </div>
-        <div className="flex shrink-0 items-center justify-between gap-2 lg:justify-end">
+        <div className="flex shrink-0 flex-wrap items-center gap-2 lg:justify-end">
           {canUpload && onUpload && (
             <input ref={uploadInput} id={uploadInputId} type="file" multiple
               aria-label={`Anexar arquivo a ${item.nome}`}
@@ -88,6 +87,27 @@ const DocumentoChecklistCard: React.FC<DocumentoChecklistCardProps> = ({
                 event.target.value = '';
                 if (files.length) onUpload(item, files);
               }} />
+          )}
+          {(canMarkReceived && onMarkReceived || hasLegacyReceipt) && (
+            <button type="button" aria-label={`${hasLegacyReceipt ? 'Corrigir registro de entrega' : 'Marcar entregue'}: ${item.nome}`}
+              aria-pressed={hasLegacyReceipt} disabled={busy || (hasLegacyReceipt && !onRevokeReceived)}
+              title={hasLegacyReceipt ? 'Corrigir registro de entrega' : 'Confirmar entrega sem anexar arquivo'}
+              onClick={() => hasLegacyReceipt ? onRevokeReceived?.(item) : onMarkReceived?.(item)}
+              className={`${actionClassName} border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100`}>
+              <Check aria-hidden="true" size={16} /> {hasLegacyReceipt ? 'Entregue' : 'Marcar entregue'}
+            </button>
+          )}
+          {hasVersion && primaryAction !== 'preview' && onPreview && (
+            <button type="button" disabled={busy} onClick={() => onPreview(item)}
+              className={`${actionClassName} border-slate-200 text-slate-600 hover:bg-slate-50`}>
+              <Eye aria-hidden="true" size={14} /> Visualizar
+            </button>
+          )}
+          {hasVersion && onDelete && (
+            <button type="button" disabled={busy} onClick={() => onDelete(item)}
+              className={`${actionClassName} border-red-200 text-red-600 hover:bg-red-50`}>
+              <Trash2 aria-hidden="true" size={14} /> Excluir anexo
+            </button>
           )}
           <button type="button" disabled={primary.disabled} onClick={primary.run}
             className={`${actionClassName} border-[#001a33] bg-[#001a33] text-white hover:bg-blue-950`}>
@@ -106,14 +126,13 @@ const DocumentoChecklistCard: React.FC<DocumentoChecklistCardProps> = ({
               <MoreHorizontal aria-hidden="true" size={16} /> Mais
             </summary>
             <div className="absolute right-0 z-20 mt-2 w-56 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg">
-              {actions.filter((action) => action.id !== primaryAction).map(({ id, label, icon: Icon, disabled, run, title }) => (
-                <button key={id} type="button" disabled={disabled} title={title}
+              {actions.filter((action) => action.id !== primaryAction && !(hasVersion && action.id === 'preview')).map(({ id, label, icon: Icon, disabled, run }) => (
+                <button key={id} type="button" disabled={disabled}
                   onClick={() => { if (more.current) more.current.open = false; more.current?.querySelector('summary')?.focus(); run(); }}
                   className="flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-45">
                   <Icon aria-hidden="true" size={15} /> {label}
                 </button>
               ))}
-              <p className="px-3 py-2 text-xs text-slate-500">Exclusão de arquivos pelo Histórico, após arquivar a versão atual.</p>
             </div>
           </details>
           {busy && <Loader2 role="status" aria-label="Processando" className="animate-spin text-blue-600" size={16} />}

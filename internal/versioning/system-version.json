@@ -1,8 +1,8 @@
 {
-  "version": "4.8.127",
+  "version": "4.8.128",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 136,
-  "releasedAt": "2026-09-27",
-  "summary": "Documentos respeitam CIN, RG e matrícula do aluno"
+  "revision": 137,
+  "releasedAt": "2026-09-28",
+  "summary": "Entrega rápida de documentos e órgão emissor por catálogo"
 }

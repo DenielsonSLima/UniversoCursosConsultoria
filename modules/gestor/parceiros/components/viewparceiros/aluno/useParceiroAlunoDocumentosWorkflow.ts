@@ -1,3 +1,4 @@
+import { excluirAnexosDocumento } from './documentos/excluir-anexos-documento';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { parceirosService } from '../../../parceiros.service';
 import {
@@ -84,9 +85,11 @@ export const useParceiroAlunoDocumentosWorkflow = (alunoId: string) => {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (input: { arquivoIds: string[]; motivo: string }) =>
-      documentosAlunoV2Service.excluirArquivos(input.arquivoIds, input.motivo),
-    onSuccess: invalidate,
+    mutationFn: async (input: { arquivoIds: string[]; motivo: string; documentoId?: string; versaoAtualId?: string }) => {
+      const painelAtual = await documentosAlunoV2Service.getPainel(alunoId);
+      return excluirAnexosDocumento(input, painelAtual.itens, documentosAlunoV2Service);
+    },
+    onSettled: invalidate,
   });
 
   const pagesMutation = useMutation({

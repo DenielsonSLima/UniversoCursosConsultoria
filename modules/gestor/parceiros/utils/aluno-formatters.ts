@@ -14,7 +14,6 @@ const ALUNO_UPPERCASE_FIELDS = [
   'racaCor',
   'rg',
   'tipoDocumento',
-  'orgaoEmissor',
   'rgUfEmissao',
   'certidaoTipo',
   'certidaoModelo',
@@ -39,7 +38,8 @@ const ALUNO_UPPERCASE_FIELDS = [
 
 /**
  * Padroniza os campos textuais do cadastro do aluno sem alterar e-mails,
- * telefones, documentos numéricos, URLs ou outros identificadores.
+ * telefones, documentos numéricos, URLs ou outros identificadores. Órgão emissor
+ * é uma chave do catálogo; seu legado deve permanecer literal até nova seleção.
  */
 export const uppercaseAlunoTextFields = <T extends Record<string, any>>(data: T): T => {
   const normalized: Record<string, any> = { ...data };
