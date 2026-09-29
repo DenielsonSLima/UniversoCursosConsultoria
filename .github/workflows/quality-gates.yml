@@ -42,7 +42,9 @@ jobs:
         run: npm run check:file-lines -- --check-diff "${{ github.event.pull_request.base.sha }}" "${{ github.sha }}"
 
       - name: Validar contrato operacional dos agentes
-        run: npm run test:agent-operations
+        run: |
+          node scripts/agent-memory-rag.mjs index
+          npm run test:agent-operations
 
       - name: Validar TypeScript
         run: node --max-old-space-size=6144 ./node_modules/typescript/bin/tsc --noEmit
@@ -288,7 +290,9 @@ jobs:
       - name: Testar preservação do rascunho do aluno
         run: |
           node --test \
-            modules/gestor/parceiros/components/viewparceiros/aluno/parceiro-aluno-edicao.test.ts
+            modules/gestor/parceiros/components/viewparceiros/aluno/parceiro-aluno-edicao.test.ts \
+            modules/gestor/parceiros/components/viewparceiros/aluno/orgao-emissor-roundtrip.test.mjs \
+            modules/gestor/parceiros/components/viewparceiros/aluno/documentos/documento-entrega-anexos.test.mjs
 
       - name: Testar arquivo privado e replay Proesc
         run: |
@@ -358,6 +362,7 @@ jobs:
           node supabase/tests/pdv-printing.isolated.test.mjs
           node supabase/tests/pdv-receipt-identity.isolated.test.mjs
           node supabase/tests/banese_pdv_confirmation.isolated.test.mjs
+          node supabase/tests/student_identity_issuers.isolated.test.mjs
 
       - name: Gerar build de produção
         run: npm run build

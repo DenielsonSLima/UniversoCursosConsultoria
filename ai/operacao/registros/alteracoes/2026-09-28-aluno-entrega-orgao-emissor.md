@@ -40,7 +40,9 @@ Lote anterior preservado em `2026-09-27-caixa-workspace-v2-integracao.md`, publi
 - `internal/versioning/CHANGELOG.md`
 - `supabase/tests/student_identity_issuers.rollback.sql`
 
-Total: 23 arquivos.
+- `.github/workflows/quality-gates.yml`
+
+Total: 24 arquivos.
 
 ## Contratos e risco
 
@@ -68,3 +70,5 @@ Total: 23 arquivos.
 - Supabase: catálogo de 10 opções, trigger conectado a parceiros, RLS e grants mínimos confirmados remotamente. Contrato real da trigger executado em tabela temporária com papel authenticated e ROLLBACK: seleção canônica, rejeição de texto livre/alteração/conversão, vazio e legado aprovados. Nenhum cadastro real alterado.
 - Nova tentativa de Safari falhou com `failed to start Node runtime: No such file or directory`. A validação visual autenticada permanece pendente; não é substituída pelo build.
 - Entrega GitHub por manifesto atômico; preview e produção em acompanhamento.
+
+- CI inicial confirmou teto de linhas e imutabilidade das migrations, mas falhou por cache RAG antigo. A etapa agora reconstrói explicitamente o índice antes de testar o contrato, sem publicar cache nem remover verificações. Novas regressões do checklist, órgão legado e SQL também integram o workflow existente.
