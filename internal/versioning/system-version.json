@@ -1,8 +1,8 @@
 {
-  "version": "4.8.128",
+  "version": "4.8.129",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 137,
-  "releasedAt": "2026-09-28",
-  "summary": "Entrega rápida de documentos e órgão emissor por catálogo"
+  "revision": 138,
+  "releasedAt": "2026-09-29",
+  "summary": "Matrícula técnica acadêmica simplificada sem acesso financeiro"
 }

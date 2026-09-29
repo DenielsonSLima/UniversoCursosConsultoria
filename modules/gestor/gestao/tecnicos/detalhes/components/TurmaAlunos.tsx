@@ -43,6 +43,17 @@ interface TurmaAlunosProps {
   turma: Turma;
   canManageFinanceiro?: boolean;
 }
+
+const ACADEMIC_ONLY_ENROLLMENT_SUBMISSION: EnrollmentFinanceSubmission = {
+  intent: 'PENDENTE',
+  primeiroVencimento: '',
+  ativarEm: '',
+  override: null,
+  codigoAutorizacao: null,
+  motivo: null,
+  justificativa: null,
+};
+
 const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma, canManageFinanceiro = false }) => {
   const { toasts, removeToast, toast } = useToast();
   const queryClient = useQueryClient();
@@ -317,31 +328,37 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma, canManageFinanceiro = 
         />
       )}
 
-      {pendingEnrollment && requireTechnicalProfile && (
+      {pendingEnrollment && requireTechnicalProfile && canManageFinanceiro && (
         <ConfirmarMatriculaModal
           turma={turma}
           student={pendingEnrollment}
-          regra={canManageFinanceiro
-            ? enrollmentWorkspaceQuery.data?.regra
-            : preVinculoContextoQuery.data?.regra}
-          canManageFinanceiro={canManageFinanceiro}
+          regra={enrollmentWorkspaceQuery.data?.regra}
+          canManageFinanceiro
           manualFinanceMode={manualFinanceMode}
-          loading={canManageFinanceiro
-            ? enrollmentWorkspaceQuery.isLoading
-            : preVinculoContextoQuery.isLoading}
-          error={canManageFinanceiro
-            ? enrollmentWorkspaceQuery.isError
-            : preVinculoContextoQuery.isError}
-          retrying={canManageFinanceiro
-            ? enrollmentWorkspaceQuery.isFetching
-            : preVinculoContextoQuery.isFetching}
+          loading={enrollmentWorkspaceQuery.isLoading}
+          error={enrollmentWorkspaceQuery.isError}
+          retrying={enrollmentWorkspaceQuery.isFetching}
           isPending={technicalEnrollmentConfirmation.isPending}
-          onRetry={() => {
-            if (canManageFinanceiro) void enrollmentWorkspaceQuery.refetch();
-            else void preVinculoContextoQuery.refetch();
-          }}
+          onRetry={() => { void enrollmentWorkspaceQuery.refetch(); }}
           onClose={closeEnrollmentConfirmation}
           onConfirm={(submission) => { void confirmEnrollmentFinance(submission); }}
+        />
+      )}
+
+      {pendingEnrollment && requireTechnicalProfile && !canManageFinanceiro && (
+        <ConfirmarVinculoAcademicoModal
+          turma={turma}
+          student={pendingEnrollment}
+          loading={preVinculoContextoQuery.isLoading}
+          error={preVinculoContextoQuery.isError}
+          retrying={preVinculoContextoQuery.isFetching}
+          ready={Boolean(preVinculoContextoQuery.data?.regra)}
+          pending={technicalEnrollmentConfirmation.isPending}
+          onRetry={() => { void preVinculoContextoQuery.refetch(); }}
+          onClose={closeEnrollmentConfirmation}
+          onConfirm={() => {
+            void confirmEnrollmentFinance(ACADEMIC_ONLY_ENROLLMENT_SUBMISSION);
+          }}
         />
       )}
 
