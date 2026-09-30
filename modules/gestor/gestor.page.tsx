@@ -27,6 +27,7 @@ import { buildGestorNavigation, GESTOR_MODULE_ORDER, POLO_CADASTROS_ALLOWED } fr
 import { useGestorPoloTransition } from './hooks/useGestorPoloTransition';
 import { useGestorPolos } from './hooks/useGestorPolos';
 import { useGestorSearch } from './hooks/useGestorSearch';
+import { buildGlobalSearchAccessKey } from './global-search/gestor-global-search.model';
 import { useGestorGlobalSearchNavigation } from './global-search/useGestorGlobalSearchNavigation';
 import { meuPerfilService } from './meu-perfil/meu-perfil.service';
 import type { MeuPerfilGestorData } from './meu-perfil/meu-perfil.types';
@@ -328,12 +329,10 @@ const GestorPage: React.FC = () => {
     });
   }, [activeModule]);
 
-  const searchAccessKey = useMemo(() => JSON.stringify({
-    dashboardAccessKey,
-    contextId: profile?.contextId || null,
-    isGlobal: gestorScope.isGlobal,
-    allowedPoloIds: [...gestorScope.allowedPoloIds].sort(),
-  }), [dashboardAccessKey, gestorScope.allowedPoloIds, gestorScope.isGlobal, profile?.contextId]);
+  const searchAccessKey = useMemo(
+    () => buildGlobalSearchAccessKey({ dashboardAccessKey, contextId: profile?.contextId, scope: gestorScope }),
+    [dashboardAccessKey, gestorScope, profile?.contextId],
+  );
   const {
     searchQuery, setSearchQuery, searchResults, isSearchFocused, setIsSearchFocused,
     isSearchLoading, isSearchError, isSearchReady, isSearchAvailable, retrySearch,

@@ -1,5 +1,5 @@
 # Lote ativo
 
-## Lote: 2026-09-30-parceiros-busca-global-cards
+## Lote: 2026-09-30-hotfix-gestor-global-null
 
-Estado: EM VALIDAÇÃO — PRODUÇÃO AUTORIZADA. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-30-parceiros-busca-global-cards.md`. A busca do cabeçalho consulta pessoas em todos os polos autorizados pelo servidor, abre o cadastro no polo correto e exibe documento, cidade/UF e turma. Cards de alunos priorizam identidade, nascimento e filiação sem repetir polo ou turma; filtros controlados deixam de permanecer invisivelmente presos. Lote anterior preservado em `2026-09-30-recebimentos-manuais-interface.md`.
+Estado: VALIDADO PARA PUBLICAÇÃO — PRODUÇÃO AUTORIZADA. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-30-hotfix-gestor-global-null.md`. O Portal do Gestor volta a carregar para perfis globais quando a lista de polos autorizados é representada por `null`, preservando esse significado na chave da busca e mantendo a ordenação segura para perfis restritos. Lote anterior preservado em `2026-09-30-parceiros-busca-global-cards.md`.
