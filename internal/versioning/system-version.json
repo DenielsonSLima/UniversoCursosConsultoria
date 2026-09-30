@@ -1,8 +1,8 @@
 {
-  "version": "4.8.140",
+  "version": "4.8.141",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 149,
+  "revision": 150,
   "releasedAt": "2026-09-30",
-  "summary": "Continuação local da T42 e matrícula retroativa da T46"
+  "summary": "Auditoria interna dos ciclos T42/T46 e contrato de prévia sem emissão"
 }

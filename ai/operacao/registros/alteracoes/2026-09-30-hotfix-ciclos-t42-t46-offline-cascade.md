@@ -1,6 +1,6 @@
 # Hotfix T42/T46: continuação local e cascata de vencimentos
 
-Estado: VALIDADO PARA PUBLICAÇÃO — PRODUÇÃO AUTORIZADA
+Estado: PUBLICADO EM PRODUÇÃO — SMOKE AUTENTICADO PENDENTE
 
 ## Objetivo e aceite
 
@@ -57,7 +57,8 @@ Total: 23 arquivos.
 
 ## Validação
 
-- [PR #231](https://github.com/DenielsonSLima/UniversoCursosConsultoria/pull/231) com Preview Vercel aprovado no head anterior; novo head exige nova rodada de CI e Preview antes do merge.
+- [PR #231](https://github.com/DenielsonSLima/UniversoCursosConsultoria/pull/231) incorporado por squash `f391897da706ee9a1a07b7e0b7e7d66b327fdaee`; head revisado `d5b531db6c0aeda8fa0dd14c6595e17ad70ad476`, CI de qualidade/versionamento e Preview Vercel aprovados.
+- Produção Vercel `AWxwHVwvuGJW2PEJQph7jsR6RGxR` com sucesso; `universocc.com.br/gestor` entrega `/assets/main-81CHl2Du.js`, contendo exclusivamente a versão `4.8.140`.
 - Reunião de três agentes: auditoria remota, revisão frontend e contrato backend/C2.
 - T42 auditada integralmente no momento da correção: 15 matrículas elegíveis para C2, 5 já geradas, 4 protegidas por histórico, 9 ativas ainda sem evidência C1 confirmada e 2 trancadas; esses dois últimos grupos permanecem corretamente bloqueados.
 - Alvo T42 validado: elegível, 12 recebíveis históricos, zero run C2 antes e depois dos testes; nenhuma cobrança foi criada.
@@ -67,4 +68,5 @@ Total: 23 arquivos.
 - Testes SQL transacionais com `rollback` aprovados em produção para o ponto pós-run/pré-recebível da T42 e os três modos da T46, inclusive preservação do C2.
 - Migrations remotas aplicadas: `20260930194246`, `20260930194344` e `20260930201128`; nenhuma migration aplicada foi reescrita.
 - Todos os arquivos manuais deste manifesto permanecem com no máximo 500 linhas.
-- Smoke autenticado final deve abrir apenas as prévias e cancelar antes da confirmação, seguido de conferência de zero criação nos alvos.
+- Smoke autenticado final pendente: Safari passou para `/sistema/login` com Turnstile após encerramento da sessão. Nenhum contorno foi realizado. Conferência pós-deploy manteve T42 alvo em zero runs/12 recebíveis e ambos os alvos T46 em zero runs/zero recebíveis.
+- O check de linhas local encontrou 12 arquivos/manifestações ausentes preexistentes no workspace desatualizado; o mesmo gate passou no CI do head publicado. Nenhuma mudança paralela foi incluída para reparar essa divergência local.
