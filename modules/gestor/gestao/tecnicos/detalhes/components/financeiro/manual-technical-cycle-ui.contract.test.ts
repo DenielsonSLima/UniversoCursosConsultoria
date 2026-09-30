@@ -327,7 +327,7 @@ test("modo da matrícula existe no passo 1 e integra a primeira prévia", () => 
   assert.match(dialogSource, /cycleNumber !== 1 \|\| enrollmentMode !== null/);
   assert.match(
     dialogSource,
-    /mode === 'REGISTRO_SEM_BOLETO'\) setDateSource\('INDIVIDUAL'\)/,
+    /mode === 'REGISTRO_SEM_BOLETO' && enrollmentMode !== 'REGISTRO_SEM_BOLETO'\) \{\s*setIndividualDate\(''\);\s*setDateSource\('INDIVIDUAL'\);/,
   );
   assert.match(
     dialogSource,

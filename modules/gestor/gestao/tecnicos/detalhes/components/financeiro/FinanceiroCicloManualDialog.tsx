@@ -166,7 +166,10 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
 
   const changeEnrollmentMode = (mode: CicloManualModoMatricula) => {
     setEnrollmentMode(mode);
-    if (mode === 'REGISTRO_SEM_BOLETO') setDateSource('INDIVIDUAL');
+    if (mode === 'REGISTRO_SEM_BOLETO' && enrollmentMode !== 'REGISTRO_SEM_BOLETO') {
+      setIndividualDate('');
+      setDateSource('INDIVIDUAL');
+    }
     if (mode !== 'REGISTRO_SEM_BOLETO') setOpenSettlement(false);
   };
 

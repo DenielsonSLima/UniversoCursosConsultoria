@@ -10,7 +10,7 @@ const input = {
   expectedCronogramaFingerprint: 'schedule', conferirProesc: true,
 };
 
-test('prévia e emissão usam somente a autoridade financeira local mesmo com marcador Proesc legado', async () => {
+test('T42 durável usa autoridade local; revisão pendente preserva o preflight Proesc', async () => {
   const functionsDescriptor = Object.getOwnPropertyDescriptor(supabase, 'functions');
   const invoke = supabase.functions.invoke;
   const rpc = supabase.rpc;
@@ -26,15 +26,18 @@ test('prévia e emissão usam somente a autoridade financeira local mesmo com ma
   }) as unknown as typeof rpc;
   try {
     calls.length = 0;
-    await assert.rejects(matriculaTecnicaCicloManualService.preview(input), /prévia simulada/);
-    assert.deepEqual(calls, ['preview-rpc']);
+    await assert.rejects(matriculaTecnicaCicloManualService.preview(input), /Proesc/);
+    assert.deepEqual(calls, ['proesc-api:review_cycles']);
 
     calls.length = 0;
     await assert.rejects(matriculaTecnicaCicloManualService.generate(input));
-    assert.deepEqual(calls, ['technical-manual-cycle-issuance:generate']);
+    assert.deepEqual(calls, ['proesc-api:review_cycles']);
 
     calls.length = 0;
-    await assert.rejects(matriculaTecnicaCicloManualService.preview({ ...input, conferirProesc: false }));
+    await assert.rejects(
+      matriculaTecnicaCicloManualService.preview({ ...input, conferirProesc: false }),
+      /prévia simulada/,
+    );
     assert.deepEqual(calls, ['preview-rpc']);
   } finally {
     if (functionsDescriptor) Object.defineProperty(supabase, 'functions', functionsDescriptor);
