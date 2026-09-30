@@ -1,8 +1,8 @@
 {
-  "version": "4.8.132",
+  "version": "4.8.133",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 141,
+  "revision": 142,
   "releasedAt": "2026-09-30",
-  "summary": "Busca global e identificação de alunos"
+  "summary": "Hotfix de carregamento do Gestor global"
 }

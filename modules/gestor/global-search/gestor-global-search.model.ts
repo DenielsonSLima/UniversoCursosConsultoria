@@ -1,6 +1,28 @@
 import { formatCpfCnpj } from '../../../lib/documentFormatters.ts';
 import type { GestorGlobalSearchResult } from './gestor-global-search.types';
 
+interface GlobalSearchAccessKeyOptions {
+  dashboardAccessKey: string;
+  contextId?: string | null;
+  scope: {
+    isGlobal: boolean;
+    allowedPoloIds?: readonly string[] | null;
+  };
+}
+
+export const buildGlobalSearchAccessKey = ({
+  dashboardAccessKey,
+  contextId,
+  scope,
+}: GlobalSearchAccessKeyOptions) => JSON.stringify({
+  dashboardAccessKey,
+  contextId: contextId || null,
+  isGlobal: scope.isGlobal,
+  allowedPoloIds: Array.isArray(scope.allowedPoloIds)
+    ? [...scope.allowedPoloIds].sort()
+    : null,
+});
+
 export const formatGlobalSearchDocument = (value?: string | null) =>
   formatCpfCnpj(value) || 'Documento não informado';
 
