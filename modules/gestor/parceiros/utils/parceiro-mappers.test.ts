@@ -1,6 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { toCamel, toSnake } from './parceiro-mappers.ts';
+import { normalizePartnerAccountType, toCamel, toSnake } from './parceiro-mappers.ts';
+
+test('normaliza o tipo de conta para o contrato aceito pelo banco', () => {
+  assert.equal(normalizePartnerAccountType('Corrente'), 'CORRENTE');
+  assert.equal(normalizePartnerAccountType('poupanca'), 'POUPANÇA');
+  assert.equal(normalizePartnerAccountType('Poupança'), 'POUPANÇA');
+  assert.equal(normalizePartnerAccountType(''), null);
+
+  assert.equal(toSnake({ tipo: 'Professor', tipoConta: 'Corrente' }).tipo_conta, 'CORRENTE');
+});
 
 test('mapeia categoria e tipo de parceria sem perder os textos legados', () => {
   const parceiro = toCamel({
@@ -222,6 +231,20 @@ test('grava aluno e parceiro PF no polo ativo recebido pelo formulário', () => 
   assert.deepEqual(aluno.polo_ids, [poloAtivo]);
   assert.equal(parceiroPf.polo_id, poloAtivo);
   assert.deepEqual(parceiroPf.polo_ids, [poloAtivo]);
+});
+
+test('grava professor no polo principal e preserva todos os polos selecionados', () => {
+  const poloPrincipal = '11111111-1111-4111-8111-111111111111';
+  const poloAdicional = '22222222-2222-4222-8222-222222222222';
+  const professor = toSnake({
+    tipo: 'Professor',
+    nomeCompleto: 'Professora de Teste',
+    poloId: poloPrincipal,
+    poloIds: [poloPrincipal, poloAdicional],
+  });
+
+  assert.equal(professor.polo_id, poloPrincipal);
+  assert.deepEqual(professor.polo_ids, [poloPrincipal, poloAdicional]);
 });
 
 test('mantém a parceria PJ global sem polo individual', () => {

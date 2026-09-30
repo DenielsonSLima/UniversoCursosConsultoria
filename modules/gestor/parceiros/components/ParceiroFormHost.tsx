@@ -9,8 +9,10 @@ type FormType = 'aluno' | 'professor' | 'selection' | 'pf' | 'pj' | null;
 interface ParceiroFormHostProps {
   showForm: FormType;
   onCancel: () => void;
-  onSaveAluno: (data: any) => void;
+  onSaveAluno: (data: any) => Promise<unknown>;
+  isSavingAluno?: boolean;
   onSaveProfessor: (data: any) => void;
+  isSavingProfessor?: boolean;
   onSavePF: (data: any) => void;
   onSavePJ: (data: any) => void;
   defaultPoloId?: string | null;
@@ -37,7 +39,9 @@ const ParceiroFormHost: React.FC<ParceiroFormHostProps> = ({
   showForm,
   onCancel,
   onSaveAluno,
+  isSavingAluno = false,
   onSaveProfessor,
+  isSavingProfessor = false,
   onSavePF,
   onSavePJ,
   defaultPoloId,
@@ -56,10 +60,19 @@ const ParceiroFormHost: React.FC<ParceiroFormHostProps> = ({
             onSave={onSaveAluno}
             defaultPoloId={defaultPoloId}
             onScopeError={onScopeError}
+            isSaving={isSavingAluno}
           />
         );
       case 'professor':
-        return <ParceiroProfessorForm onCancel={onCancel} onSave={onSaveProfessor} />;
+        return (
+          <ParceiroProfessorForm
+            onCancel={onCancel}
+            onSave={onSaveProfessor}
+            defaultPoloId={defaultPoloId}
+            onScopeError={onScopeError}
+            isSaving={isSavingProfessor}
+          />
+        );
       case 'pf':
         return (
           <ParceiroPFForm

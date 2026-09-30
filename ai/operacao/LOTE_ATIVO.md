@@ -1,5 +1,5 @@
 # Lote ativo
 
-## Lote: 2026-09-30-foto-alunos-turma
+## Lote: 2026-09-30-cadastro-professor-polos-pix
 
-Estado: VALIDADO PARA PUBLICAÇÃO — PRODUÇÃO AUTORIZADA. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-30-foto-alunos-turma.md`. A lista Gestão > Turma > Alunos passa a receber a foto canônica do cadastro pela RPC protegida e mantém a inicial quando a foto estiver ausente ou falhar. Lote anterior preservado em `2026-09-30-hotfix-mascara-monetaria-baixa.md`.
+Estado: VALIDADO PARA PUBLICAÇÃO — PRODUÇÃO NÃO AUTORIZADA. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-30-cadastro-professor-polos-pix.md`. O cadastro de professor passa a exigir somente polo, nome e CPF, identifica cada polo por cidade/UF, tipa e formata a chave Pix e corrige o contrato de conta bancária, o polo persistido e o feedback de falha. Lote anterior preservado em `2026-09-30-foto-alunos-turma.md`.

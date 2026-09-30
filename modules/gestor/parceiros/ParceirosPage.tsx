@@ -252,8 +252,10 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
         <ParceiroFormHost
           showForm={showForm}
           onCancel={() => setShowForm(null)}
-          onSaveAluno={(data) => saveAlunoMutation.mutate(data)}
+          onSaveAluno={(data) => saveAlunoMutation.mutateAsync(data)}
+          isSavingAluno={saveAlunoMutation.isPending}
           onSaveProfessor={(data) => saveProfessorMutation.mutate(data)}
+          isSavingProfessor={saveProfessorMutation.isPending}
           onSavePF={(data) => savePFMutation.mutate(data)}
           onSavePJ={(data) => savePJMutation.mutate(data)}
           defaultPoloId={poloId}
