@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Landmark, Link as LinkIcon, Loader2, Plus, QrCode, Tag, WalletCards, X } from 'lucide-react';
 import DespesaCredorPicker from '../despesas/components/DespesaCredorPicker';
@@ -48,31 +48,90 @@ export const OtherCreditCreateModal = ({ model }: { model: ModalModel }) => {
     showCategoryModal, setShowCategoryModal, partners, categories, activePolo, activeAccounts,
     createMutation, closeCreateModal, validateAndSubmit, isModalOpen,
   } = model;
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isModalOpen) return undefined;
+    const previousActiveElement = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    dialogRef.current?.focus({ preventScroll: true });
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      previousActiveElement?.focus?.({ preventScroll: true });
+    };
+  }, [isModalOpen]);
+
+  const handleDialogKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Escape' && !createMutation.isPending) {
+      event.preventDefault();
+      closeCreateModal();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+
+    const focusable = dialogRef.current
+      ? (Array.from(dialogRef.current.querySelectorAll(
+          'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        )) as HTMLElement[]).filter((element) => element.offsetParent !== null)
+      : [];
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+
   if (!isModalOpen || typeof document === 'undefined') return null;
   return createPortal((
         <div
-          className="fixed inset-0 z-[120] flex h-[100dvh] w-screen items-center justify-center overflow-y-auto bg-[#001a33]/65 p-4 backdrop-blur-sm"
+          ref={dialogRef}
+          className="fixed inset-0 z-[140] flex h-[100dvh] w-screen flex-col overflow-hidden bg-[#eef2f7] text-[#071b3f]"
           role="dialog"
           aria-modal="true"
           aria-labelledby="outros-creditos-modal-title"
+          aria-busy={createMutation.isPending}
+          tabIndex={-1}
+          onKeyDown={handleDialogKeyDown}
         >
-          <div className="max-h-[calc(100dvh-2rem)] w-full max-w-4xl overflow-y-auto rounded-[2rem] bg-white p-6 shadow-2xl">
-            <div className="mb-5 flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-600">Novo crédito</p>
-                <h4 id="outros-creditos-modal-title" className="text-xl font-black uppercase tracking-tight text-[#001a33]">Registrar entrada avulsa</h4>
+          <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
+            <div className="absolute inset-x-0 top-0 h-56 bg-[#001a33]" />
+            <div className="absolute -right-32 -top-24 h-96 w-96 rounded-full bg-emerald-400/15 blur-[100px]" />
+            <div className="absolute left-[8%] top-36 h-44 w-44 rounded-full bg-blue-400/10 blur-[80px]" />
+          </div>
+
+          <header className="relative z-20 shrink-0 border-t-[3px] border-t-emerald-500 bg-[#001a33]/95 text-white shadow-lg shadow-slate-950/10 backdrop-blur-xl">
+            <div className="mx-auto flex min-h-[82px] w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-8">
+              <div className="flex min-w-0 items-center gap-4">
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-emerald-300/20 bg-emerald-300/10 text-emerald-300">
+                  <Landmark size={22} />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[9px] font-black uppercase tracking-[0.22em] text-emerald-300 sm:text-[10px]">Outros créditos · recebimento manual</p>
+                  <h2 id="outros-creditos-modal-title" className="mt-1 truncate text-lg font-black tracking-tight sm:text-xl">Registrar entrada avulsa</h2>
+                </div>
               </div>
               <button
+                type="button"
                 onClick={closeCreateModal}
                 disabled={createMutation.isPending}
-                className="rounded-xl bg-slate-100 p-2 text-slate-500 hover:bg-slate-200 disabled:opacity-50"
+                aria-label="Fechar novo crédito"
+                className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.07] px-3 text-sm font-bold text-white transition hover:border-white/30 hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 disabled:opacity-40 sm:px-4"
               >
-                <X size={18} />
+                <span className="hidden sm:inline">Fechar</span><X size={18} />
               </button>
             </div>
+          </header>
 
-            <form onSubmit={validateAndSubmit}>
-              <fieldset disabled={createMutation.isPending} className="space-y-5 disabled:opacity-70">
+          <main className="flex-1 overflow-y-auto overscroll-contain">
+            <form onSubmit={validateAndSubmit} className="relative z-10 mx-auto w-full max-w-7xl px-4 py-5 sm:px-8 sm:py-8">
+              <fieldset disabled={createMutation.isPending} className="space-y-5 rounded-[2rem] border border-white bg-white p-4 shadow-[0_28px_80px_-36px_rgba(0,26,51,0.45)] disabled:opacity-70 sm:p-6 lg:p-8">
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {[
                   { id: 'LOCAL_PAGO' as const, label: 'Receber agora', desc: 'Entrada local no caixa/conta', icon: Landmark },
@@ -269,7 +328,7 @@ export const OtherCreditCreateModal = ({ model }: { model: ModalModel }) => {
               </div>
             </fieldset>
             </form>
-          </div>
+          </main>
         </div>
   ), document.body);
 };

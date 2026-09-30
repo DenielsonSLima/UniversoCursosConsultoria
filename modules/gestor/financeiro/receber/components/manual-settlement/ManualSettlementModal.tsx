@@ -23,6 +23,7 @@ import ManualSettlementCombobox, {
 } from './ManualSettlementCombobox';
 import { todayInMaceio } from './manual-settlement-date';
 import {
+  formatCurrencyInput,
   sanitizeCurrencyInput,
   useManualSettlementForm,
   type ManualSettlementPayload,
@@ -68,6 +69,8 @@ const CurrencyField: React.FC<{
           aria-invalid={invalid}
           aria-describedby={`${detailId}${invalid ? ` ${errorId}` : ''}`}
           onChange={(event) => onChange(sanitizeCurrencyInput(event.target.value, value))}
+          onBlur={(event) => onChange(formatCurrencyInput(event.currentTarget.value))}
+          onFocus={(event) => event.currentTarget.select()}
           placeholder="0,00"
           className={`h-12 w-full rounded-xl border bg-white py-3 pl-10 pr-3 text-sm font-black text-[#001a33] outline-none transition-all placeholder:text-slate-300 focus:ring-4 ${
             invalid
