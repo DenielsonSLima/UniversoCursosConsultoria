@@ -1,35 +1,64 @@
-import React, { useMemo, useState } from 'react';
-import { CreditCard, Handshake, Search, Settings, User } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { gestorGlobalSearchService } from '../global-search/gestor-global-search.service';
+import {
+  GESTOR_GLOBAL_SEARCH_MIN_LENGTH,
+  type GestorGlobalSearchResult,
+  type GestorGlobalSearchState,
+} from '../global-search/gestor-global-search.types';
 
-const MOCK_SEARCH_DATA = [
-  { id: 1, type: 'student', title: 'Ana Clara Souza', subtitle: 'Enfermagem - Matutino', module: 'cadastros-alunos' },
-  { id: 2, type: 'student', title: 'João Pedro Alves', subtitle: 'Radiologia - Noturno', module: 'cadastros-alunos' },
-  { id: 3, type: 'financial', title: 'Pagamento Pendente', subtitle: 'Mensalidade Fev/2026 - Marcos Silva', module: 'financeiro' },
-  { id: 4, type: 'financial', title: 'Fluxo de Caixa', subtitle: 'Relatório diário de entradas', module: 'caixa' },
-  { id: 5, type: 'module', title: 'Emitir Declaração', subtitle: 'Acesso rápido à Secretaria', module: 'secretaria' },
-  { id: 6, type: 'module', title: 'Cadastrar Novo Aluno', subtitle: 'Atalho para Parceiros', module: 'parceiros-novo-aluno' },
-  { id: 7, type: 'partner', title: 'Prefeitura de Japoatã', subtitle: 'Convênio Ativo', module: 'parceiros' },
-];
+interface UseGestorSearchOptions {
+  enabled: boolean;
+  accessKey: string;
+}
 
-export const useGestorSearch = (canOpenModule: (moduleId: string) => boolean) => {
+const SEARCH_DEBOUNCE_MS = 320;
+
+export const useGestorSearch = ({
+  enabled,
+  accessKey,
+}: UseGestorSearchOptions): GestorGlobalSearchState => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const searchResults = useMemo(() => {
-    if (!searchQuery.trim()) return [];
-    return MOCK_SEARCH_DATA.filter(item => canOpenModule(item.module) && (
-      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.subtitle.toLowerCase().includes(searchQuery.toLowerCase())
-    ));
-  }, [canOpenModule, searchQuery]);
-  return { searchQuery, setSearchQuery, searchResults, isSearchFocused, setIsSearchFocused };
-};
+  const normalizedQuery = searchQuery.trim();
+  const isSearchReady = normalizedQuery.length >= GESTOR_GLOBAL_SEARCH_MIN_LENGTH;
 
-export const getResultIcon = (type: string) => {
-  switch (type) {
-    case 'student': return <User size={16} className="text-blue-500" />;
-    case 'financial': return <CreditCard size={16} className="text-emerald-500" />;
-    case 'module': return <Settings size={16} className="text-slate-500" />;
-    case 'partner': return <Handshake size={16} className="text-purple-500" />;
-    default: return <Search size={16} />;
-  }
+  useEffect(() => {
+    if (!isSearchReady) {
+      setDebouncedQuery(normalizedQuery);
+      return;
+    }
+    const timer = window.setTimeout(() => setDebouncedQuery(normalizedQuery), SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [isSearchReady, normalizedQuery]);
+
+  const query = useQuery<GestorGlobalSearchResult[]>({
+    queryKey: ['gestor-global-search', accessKey, debouncedQuery],
+    queryFn: ({ signal }) => gestorGlobalSearchService.search(debouncedQuery, signal),
+    enabled: enabled
+      && debouncedQuery.length >= GESTOR_GLOBAL_SEARCH_MIN_LENGTH
+      && debouncedQuery === normalizedQuery,
+    staleTime: 15_000,
+    gcTime: 60_000,
+    retry: 1,
+  });
+
+  const hasSettledTerm = debouncedQuery === normalizedQuery;
+  const searchResults = enabled && isSearchReady && hasSettledTerm
+    ? query.data || []
+    : [];
+
+  return {
+    searchQuery,
+    setSearchQuery,
+    searchResults,
+    isSearchFocused,
+    setIsSearchFocused,
+    isSearchLoading: enabled && isSearchReady && (!hasSettledTerm || query.isFetching),
+    isSearchError: enabled && isSearchReady && hasSettledTerm && query.isError,
+    isSearchReady,
+    isSearchAvailable: enabled,
+    retrySearch: () => { void query.refetch(); },
+  };
 };

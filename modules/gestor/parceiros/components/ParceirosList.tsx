@@ -23,10 +23,11 @@ const ParceirosList: React.FC<ParceirosListProps> = ({
 }) => {
   const [page, setPage] = useState(1);
 
-  // Reseta para a página 1 ao alterar a quantidade de itens (filtros)
+  // Reseta para a página 1 sempre que o conjunto filtrado mudar, mesmo quando
+  // dois filtros diferentes retornarem a mesma quantidade de itens.
   useEffect(() => {
     setPage(1);
-  }, [items.length]);
+  }, [items]);
 
   // Paginação simplificada 
   const itemsPerPage = 20;

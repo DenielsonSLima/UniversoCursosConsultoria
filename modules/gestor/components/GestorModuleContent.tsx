@@ -5,6 +5,7 @@ import { canAccessGestorModule, canAccessTab, getEffectiveFinanceiroTabs } from 
 import type { GestorPermissions } from '../access-control';
 import { POLO_CADASTROS_ALLOWED } from '../gestor-navigation';
 import type { ParceiroFormType } from '../parceiros/ParceirosPage';
+import type { GestorGlobalSearchResult } from '../global-search/gestor-global-search.types';
 
 export const loadSecretariaPage = () => import('../secretaria/SecretariaPage');
 export const loadCaixaPage = () => import('../caixa/CaixaPage');
@@ -51,6 +52,9 @@ interface GestorModuleContentProps {
   profile: PortalAuthProfile;
   profileAvatarUrl: string | null;
   onAutomationDraftDirtyChange: (dirty: boolean) => void;
+  onPartnerDetailsOpenChange: (open: boolean) => void;
+  globalSearchTarget: GestorGlobalSearchResult | null;
+  onGlobalSearchTargetCleared: () => void;
   onProfileUpdated: (updated: {
     id: string;
     nome: string;
@@ -167,6 +171,9 @@ const GestorModuleContentView: React.FC<GestorModuleContentProps> = ({
   profile,
   profileAvatarUrl,
   onAutomationDraftDirtyChange,
+  onPartnerDetailsOpenChange,
+  globalSearchTarget,
+  onGlobalSearchTargetCleared,
   onProfileUpdated,
 }) => {
   if (!canOpenModule(activeModule)) return <AccessDenied />;
@@ -191,7 +198,16 @@ const GestorModuleContentView: React.FC<GestorModuleContentProps> = ({
   switch (activeModule) {
     case 'inicio': return <DashboardPage poloId={currentPoloId} onNavigate={setActiveModule} permissions={permissions} cacheIdentity={profile.id} />;
     case 'calendario': return <CalendarioPage poloId={scopedPoloId} />;
-    case 'parceiros': return <ParceirosPage poloId={scopedPoloId} includeGlobal={isGlobal} onRequestScrollTop={onRequestScrollTop} />;
+    case 'parceiros': return (
+      <ParceirosPage
+        poloId={scopedPoloId}
+        includeGlobal={isGlobal}
+        onRequestScrollTop={onRequestScrollTop}
+        initialParceiroTarget={globalSearchTarget}
+        onInitialParceiroTargetCleared={onGlobalSearchTargetCleared}
+        onDetailsOpenChange={onPartnerDetailsOpenChange}
+      />
+    );
     case 'cadastros': return <CadastrosPage onNavigate={setActiveModule} readOnly={!isMatrizSelected} allowedTabs={allowedCadastroTabs} />;
     case 'cadastros-checklist': return <ChecklistEstagioPage />;
     case 'cadastros-ead': return <CursosEadPage />;

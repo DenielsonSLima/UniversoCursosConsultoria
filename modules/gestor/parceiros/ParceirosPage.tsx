@@ -29,6 +29,7 @@ import { useParceirosQueries } from './hooks/useParceirosQueries';
 import { filterTurmasByModalidades } from './parceiros-turmas.utils';
 import ResponsaveisTab from './responsaveis/ResponsaveisTab';
 import CoordenacoesTab from './coordenacoes/CoordenacoesTab';
+import type { GestorGlobalSearchResult } from '../global-search/gestor-global-search.types';
 
 export type ParceiroFormType = 'aluno' | 'professor' | 'responsavel' | 'selection' | 'pf' | 'pj';
 type HostedParceiroFormType = Exclude<ParceiroFormType, 'responsavel'>;
@@ -43,6 +44,9 @@ interface ParceirosPageProps {
   poloId?: string | null;
   includeGlobal?: boolean;
   onRequestScrollTop?: () => void;
+  initialParceiroTarget?: GestorGlobalSearchResult | null;
+  onInitialParceiroTargetCleared?: () => void;
+  onDetailsOpenChange?: (open: boolean) => void;
 }
 
 const tabs = [
@@ -61,6 +65,9 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
   poloId,
   includeGlobal = false,
   onRequestScrollTop,
+  initialParceiroTarget,
+  onInitialParceiroTargetCleared,
+  onDetailsOpenChange,
 }) => {
   const { toasts, removeToast, toast } = useToast();
   const [showForm, setShowForm] = useState<FormType>(
@@ -80,6 +87,12 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
   );
 
   useEffect(() => {
+    onDetailsOpenChange?.(Boolean(selectedParceiro));
+  }, [onDetailsOpenChange, selectedParceiro]);
+
+  useEffect(() => () => onDetailsOpenChange?.(false), [onDetailsOpenChange]);
+
+  useEffect(() => {
     setActiveTab(activeTabInicial);
   }, [activeTabInicial]);
 
@@ -93,6 +106,28 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
     }
     if (initialForm) setShowForm(initialForm);
   }, [initialForm, onRequestScrollTop]);
+
+  useEffect(() => {
+    if (!initialParceiroTarget) return;
+    const tabByType: Record<GestorGlobalSearchResult['entityType'], ParceirosTabType> = {
+      Aluno: 'alunos',
+      Professor: 'professores',
+      PF: 'pf',
+      PJ: 'pj',
+    };
+    setShowForm(null);
+    setActiveTab(tabByType[initialParceiroTarget.entityType]);
+    setSelectedParceiro({
+      id: initialParceiroTarget.partnerId,
+      tipo: initialParceiroTarget.entityType,
+      nome: initialParceiroTarget.name,
+      cpf: initialParceiroTarget.entityType === 'PJ' ? null : initialParceiroTarget.document,
+      cnpj: initialParceiroTarget.entityType === 'PJ' ? initialParceiroTarget.document : null,
+      status: initialParceiroTarget.status,
+      poloId: initialParceiroTarget.poloId,
+    });
+    onRequestScrollTop?.();
+  }, [initialParceiroTarget, onRequestScrollTop]);
 
   const isDedicatedGovernanceTab = activeTab === 'responsaveis' || activeTab === 'coordenacoes';
 
@@ -115,6 +150,7 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
   const {
     searchTerm,
     statusFilter,
+    sortOrder,
     alunoModalidadeFilter,
     turmaFilter,
     setStatusFilter,
@@ -179,19 +215,20 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
   if (selectedParceiro) {
     const handleBackFromDetails = () => {
       setSelectedParceiro(null);
+      onInitialParceiroTargetCleared?.();
       onRequestScrollTop?.();
     };
 
     if (selectedParceiro.tipo === 'Aluno') {
-      return <>{toastNotification}<ParceiroAlunoDetalhes alunoInicial={selectedParceiro} onBack={handleBackFromDetails} onRequestScrollTop={onRequestScrollTop} /></>;
+      return <>{toastNotification}<ParceiroAlunoDetalhes key={selectedParceiro.id} alunoInicial={selectedParceiro} onBack={handleBackFromDetails} onRequestScrollTop={onRequestScrollTop} /></>;
     }
     if (selectedParceiro.tipo === 'Professor') {
-      return <>{toastNotification}<ParceiroProfessorDetalhes professorInicial={selectedParceiro} onBack={handleBackFromDetails} /></>;
+      return <>{toastNotification}<ParceiroProfessorDetalhes key={selectedParceiro.id} professorInicial={selectedParceiro} onBack={handleBackFromDetails} /></>;
     }
     if (selectedParceiro.tipo === 'PJ') {
-      return <>{toastNotification}<ParceiroPJDetalhes pjInicial={selectedParceiro} onBack={handleBackFromDetails} /></>;
+      return <>{toastNotification}<ParceiroPJDetalhes key={selectedParceiro.id} pjInicial={selectedParceiro} onBack={handleBackFromDetails} /></>;
     }
-    return <>{toastNotification}<ParceiroPFDetalhes pfInicial={selectedParceiro} onBack={handleBackFromDetails} /></>;
+    return <>{toastNotification}<ParceiroPFDetalhes key={selectedParceiro.id} pfInicial={selectedParceiro} onBack={handleBackFromDetails} /></>;
   }
 
   if (showForm === 'selection') {
@@ -332,6 +369,9 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
       ) : (
         <>
       <ParceirosFilters
+        searchTerm={searchTerm}
+        statusFilter={statusFilter}
+        sortOrder={sortOrder}
         onSearch={handleSearch}
         onSortChange={handleSort}
         onStatusChange={setStatusFilter}
@@ -352,6 +392,7 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
         items={sortedAndFilteredPartners}
         isLoading={loadingPartners}
         onSelectParceiro={(parceiro) => {
+          onInitialParceiroTargetCleared?.();
           setSelectedParceiro(parceiro);
           onRequestScrollTop?.();
         }}

@@ -90,22 +90,26 @@ export const useGestorPoloTransition = ({
     }
   }, [activeModule, dashboardAccessKey, dashboardWidgets, queryClient]);
 
-  const executePoloChange = async (poloId: string) => {
+  const executePoloChange = async (poloId: string): Promise<boolean> => {
     if (!gestorScope.isGlobal && !gestorScope.allowedPoloIds?.includes(poloId)) {
-      return;
+      return false;
     }
 
     const nextPolo = visiblePolos.find(polo => polo.id === poloId);
-    if (!nextPolo || !currentPolo || poloId === effectivePoloId) {
+    if (poloId === effectivePoloId) {
       setIsPoloSelectorOpen(false);
-      return;
+      return true;
+    }
+    if (!nextPolo || !currentPolo) {
+      setIsPoloSelectorOpen(false);
+      return false;
     }
     if (poloTransition?.status === 'loading' || poloTransition?.status === 'success') {
-      return;
+      return false;
     }
     if (hasUnsavedAutomationDraft && !window.confirm('Descartar as alterações não salvas deste rascunho antes de trocar de polo?')) {
       setIsPoloSelectorOpen(false);
-      return;
+      return false;
     }
 
     // O Caixa gerencia sua competência e seus estados de consulta. Confirmar o
@@ -121,7 +125,7 @@ export const useGestorPoloTransition = ({
       }
       setHasUnsavedAutomationDraft(false);
       setPoloTransition(null);
-      return;
+      return true;
     }
 
     const runId = ++poloTransitionRunRef.current;
@@ -150,7 +154,7 @@ export const useGestorPoloTransition = ({
 
     try {
       await prepareCriticalPoloData(poloId);
-      if (poloTransitionRunRef.current !== runId) return;
+      if (poloTransitionRunRef.current !== runId) return false;
 
       setCurrentPoloId(poloId);
       sessionStorage.setItem('current_polo_id', poloId);
@@ -168,7 +172,7 @@ export const useGestorPoloTransition = ({
       if (remainingMinimum > 0) {
         await new Promise((resolve) => window.setTimeout(resolve, remainingMinimum));
       }
-      if (poloTransitionRunRef.current !== runId) return;
+      if (poloTransitionRunRef.current !== runId) return false;
 
       setHasUnsavedAutomationDraft(false);
       setPoloTransition((current) => current?.toPoloId === poloId
@@ -178,8 +182,9 @@ export const useGestorPoloTransition = ({
       if (poloTransitionRunRef.current === runId) {
         setPoloTransition(null);
       }
+      return true;
     } catch (error) {
-      if (poloTransitionRunRef.current !== runId) return;
+      if (poloTransitionRunRef.current !== runId) return false;
       console.error('Não foi possível concluir a troca de polo no portal do gestor:', error);
 
       if (hasCommitted) {
@@ -195,6 +200,7 @@ export const useGestorPoloTransition = ({
             errorMessage: 'Não foi possível carregar os dados do polo selecionado. Verifique sua conexão e tente novamente.',
           }
         : current);
+      return false;
     }
   };
 
@@ -243,5 +249,5 @@ export const useGestorPoloTransition = ({
       ) : null}
     </>
   );
-  return { handlePoloChange, transitionOverlay };
+  return { handlePoloChange, changePolo: executePoloChange, transitionOverlay };
 };

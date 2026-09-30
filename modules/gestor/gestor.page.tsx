@@ -1,6 +1,3 @@
-
-// File: modules/gestor/gestor.page.tsx
-
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
@@ -29,12 +26,10 @@ import GestorModuleContent, { loadCaixaPage, loadSecretariaPage } from './compon
 import { buildGestorNavigation, GESTOR_MODULE_ORDER, POLO_CADASTROS_ALLOWED } from './gestor-navigation';
 import { useGestorPoloTransition } from './hooks/useGestorPoloTransition';
 import { useGestorPolos } from './hooks/useGestorPolos';
-import { getResultIcon, useGestorSearch } from './hooks/useGestorSearch';
+import { useGestorSearch } from './hooks/useGestorSearch';
+import { useGestorGlobalSearchNavigation } from './global-search/useGestorGlobalSearchNavigation';
 import { meuPerfilService } from './meu-perfil/meu-perfil.service';
 import type { MeuPerfilGestorData } from './meu-perfil/meu-perfil.types';
-
-
-
 
 const GestorPage: React.FC = () => {
   const contentScrollRef = useRef<HTMLDivElement>(null);
@@ -43,18 +38,18 @@ const GestorPage: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
   const [isPoloSelectorOpen, setIsPoloSelectorOpen] = useState(false);
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
+  const [hasOpenPartnerDetails, setHasOpenPartnerDetails] = useState(false);
 
-  const setActiveModule = useCallback((moduleId: string) => {
-    if (moduleId === activeModule) return;
-    if (hasUnsavedAutomationDraft && !window.confirm('Descartar as alterações não salvas deste rascunho antes de sair?')) {
-      return;
+  const setActiveModule = useCallback((moduleId: string, skipUnsavedConfirmation = false) => {
+    if (moduleId === activeModule) return true;
+    if (!skipUnsavedConfirmation && hasUnsavedAutomationDraft && !window.confirm('Descartar as alterações não salvas deste rascunho antes de sair?')) {
+      return false;
     }
     setHasUnsavedAutomationDraft(false);
     setActiveModuleState(moduleId);
+    return true;
   }, [activeModule, hasUnsavedAutomationDraft]);
-  
-
-  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -71,9 +66,7 @@ const GestorPage: React.FC = () => {
     sessionStorage.getItem('active_polo_id') ||
     '44444444-4444-4444-4444-444444444444'
   );
-
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
-
   const gestorPermissions = useMemo(
     () => profile?.gestorPermissions || normalizeGestorPermissions(null, { fallbackFullAccess: false }),
     [profile],
@@ -134,8 +127,6 @@ const GestorPage: React.FC = () => {
   });
 
   const pendingChatsCount = usePendingCommunicationCount(canUseCommunication);
-
-
   useEffect(() => {
     let mounted = true;
 
@@ -337,8 +328,19 @@ const GestorPage: React.FC = () => {
     });
   }, [activeModule]);
 
-  const { searchQuery, setSearchQuery, searchResults, isSearchFocused, setIsSearchFocused } =
-    useGestorSearch(canOpenModule);
+  const searchAccessKey = useMemo(() => JSON.stringify({
+    dashboardAccessKey,
+    contextId: profile?.contextId || null,
+    isGlobal: gestorScope.isGlobal,
+    allowedPoloIds: [...gestorScope.allowedPoloIds].sort(),
+  }), [dashboardAccessKey, gestorScope.allowedPoloIds, gestorScope.isGlobal, profile?.contextId]);
+  const {
+    searchQuery, setSearchQuery, searchResults, isSearchFocused, setIsSearchFocused,
+    isSearchLoading, isSearchError, isSearchReady, isSearchAvailable, retrySearch,
+  } = useGestorSearch({
+    enabled: canUsePortal && canOpenModule('parceiros'),
+    accessKey: searchAccessKey,
+  });
 
   const scrollContentToTop = useCallback(() => {
     requestAnimationFrame(() => {
@@ -351,10 +353,14 @@ const GestorPage: React.FC = () => {
     scrollContentToTop();
   }, [activeModule, scrollContentToTop]);
 
-  const { handlePoloChange, transitionOverlay } = useGestorPoloTransition({
+  const { handlePoloChange, changePolo, transitionOverlay } = useGestorPoloTransition({
     gestorScope, visiblePolos, currentPolo, effectivePoloId, activeModule,
     dashboardWidgets, dashboardAccessKey, hasUnsavedAutomationDraft,
     setIsPoloSelectorOpen, setCurrentPoloId, setActiveModule, setHasUnsavedAutomationDraft,
+  });
+  const { searchTarget, clearSearchTarget, handleSearchResultClick } = useGestorGlobalSearchNavigation({
+    activeModule, effectivePoloId, hasOpenPartnerDetails, canOpenModule, changePolo, setActiveModule,
+    setSearchQuery, setIsSearchFocused,
   });
 
   if (isAuthLoading || !profile) {
@@ -394,13 +400,6 @@ const GestorPage: React.FC = () => {
   const isDesktopMenuExpanded = (menuId: string) =>
     expandedMenus.size > 0 ? expandedMenus.has(menuId) : isMenuPinned(menuId);
 
-  const handleSearchResultClick = (module: string) => {
-    if (!canOpenModule(module)) return;
-    setActiveModule(module);
-    setSearchQuery('');
-    setIsSearchFocused(false);
-  };
-
   const { visibleCadastroSubItems, visibleMenuItems } = buildGestorNavigation({
     permissions: gestorPermissions,
     isMatrizSelected,
@@ -424,6 +423,9 @@ const GestorPage: React.FC = () => {
       profile={profile}
       profileAvatarUrl={profileAvatarUrl}
       onAutomationDraftDirtyChange={setHasUnsavedAutomationDraft}
+      onPartnerDetailsOpenChange={setHasOpenPartnerDetails}
+      globalSearchTarget={searchTarget}
+      onGlobalSearchTargetCleared={clearSearchTarget}
       onProfileUpdated={(updated: MeuPerfilGestorData) => {
         setProfile((current) => {
           if (!current) return current;
@@ -443,8 +445,6 @@ const GestorPage: React.FC = () => {
       }}
     />
   );
-
-
 
   return (
     <>
@@ -466,8 +466,12 @@ const GestorPage: React.FC = () => {
         searchResults={searchResults}
         isSearchFocused={isSearchFocused}
         setIsSearchFocused={setIsSearchFocused}
+        isSearchLoading={isSearchLoading}
+        isSearchError={isSearchError}
+        isSearchReady={isSearchReady}
+        isSearchAvailable={isSearchAvailable}
+        retrySearch={retrySearch}
         handleSearchResultClick={handleSearchResultClick}
-        getResultIcon={getResultIcon}
         isLoadingPolos={isLoadingPolos}
         currentPolo={currentPolo}
         visiblePolos={visiblePolos}
@@ -483,9 +487,7 @@ const GestorPage: React.FC = () => {
         setIsLogoutConfirmOpen={setIsLogoutConfirmOpen}
         executeLogout={executeLogout}
       />
-
       {transitionOverlay}
-
       {isAccessRefreshing ? (
         <div className="fixed inset-0 z-[75]">
           <AccessCheckingScreen portal="Gestor" />

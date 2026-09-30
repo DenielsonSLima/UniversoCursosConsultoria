@@ -1,7 +1,7 @@
 // File: modules/gestor/parceiros/components/cards/AlunoCard.tsx
 
 import React, { useState, useRef, useEffect } from 'react';
-import { BookOpen, GraduationCap, MapPin, Mail, Phone, ChevronRight, MoreVertical, Edit3, Trash2, ToggleLeft, ToggleRight, Users } from 'lucide-react';
+import { CalendarDays, GraduationCap, MapPin, Mail, Phone, ChevronRight, MoreVertical, Edit3, Trash2, ToggleLeft, ToggleRight, Users } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { parceirosService } from '../../parceiros.service';
 import { formatMatricula } from '../../../../../lib/academicUtils';
@@ -31,8 +31,6 @@ const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick, onDelete }) => {
   const isAtivo = data.status?.toUpperCase() === 'ATIVO';
   const formattedCpf = formatCpf(data.cpf);
   const telefone = data.telefone || data.contato1;
-  const matriculasAluno = Array.isArray(data.matriculasAluno) ? data.matriculasAluno : [];
-  const matriculaAtual = matriculasAluno[0];
   const displayName = getPersonDisplayName(data);
 
   const toggleStatusMutation = useMutation({
@@ -64,7 +62,7 @@ const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick, onDelete }) => {
       {/* Header */}
       <div className="flex justify-between items-start mb-4 relative z-20">
         <div className="flex min-w-0 flex-1 items-center gap-3">
-          <div className="w-11 h-11 rounded-[14px] bg-blue-50 text-blue-600 flex items-center justify-center overflow-hidden border border-blue-100 shadow-sm shrink-0">
+          <div className="h-[52px] w-[52px] shrink-0 overflow-hidden rounded-2xl border border-blue-100 bg-blue-50 text-blue-600 shadow-sm">
             <img
               src={data.foto || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=E0F2FE&color=2563EB&bold=true`}
               alt={displayName}
@@ -72,13 +70,13 @@ const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick, onDelete }) => {
             />
           </div>
           <div className="flex flex-col min-w-0">
-            <h3 className="line-clamp-1 text-xs font-bold leading-4 tracking-[-0.01em] text-slate-800 transition-colors group-hover:text-blue-600" title={displayName}>
+            <h3 className="line-clamp-1 text-[13px] font-extrabold leading-[1.35] tracking-normal text-slate-950 antialiased transition-colors group-hover:text-blue-700" title={displayName}>
               {displayName}
             </h3>
-            <div className="text-[11px] text-slate-400 font-medium font-mono flex items-center gap-1.5 flex-wrap">
-              {data.cpf && <span>{formattedCpf}</span>}
+            <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-medium">
+              {data.cpf && <span className="font-semibold tabular-nums text-slate-900">{formattedCpf}</span>}
               {data.cpf && <span className="text-slate-300">•</span>}
-              <span className="text-purple-650 font-semibold">
+              <span className="font-semibold text-slate-500">
                 {formatMatricula(data.id, data.createdAt, data.poloId)}
               </span>
             </div>
@@ -160,45 +158,34 @@ const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick, onDelete }) => {
             <span className="truncate">{data.cidade}{data.uf ? `/${data.uf}` : ''}</span>
           </div>
         )}
-        {(data.nomeMae || data.nomePai) && (
-          <div className="flex items-start gap-2 text-xs text-slate-500 pt-1">
-            <Users size={13} className="text-slate-400 shrink-0 mt-0.5" />
-            <div className="flex flex-col min-w-0">
-              {data.nomeMae && <span className="truncate"><span className="text-[10px] font-semibold text-slate-400 mr-1">Mãe:</span>{data.nomeMae}</span>}
-              {data.nomePai && <span className="truncate"><span className="text-[10px] font-semibold text-slate-400 mr-1">Pai:</span>{data.nomePai}</span>}
-            </div>
-          </div>
-        )}
-
-        <div className="pt-2">
-          <div className={`flex items-start gap-2.5 rounded-xl border p-3 ${matriculaAtual ? 'border-blue-100 bg-blue-50/70' : 'border-slate-100 bg-slate-50'}`}>
-            <BookOpen size={14} className={`mt-0.5 shrink-0 ${matriculaAtual ? 'text-blue-600' : 'text-slate-400'}`} />
-            {matriculaAtual ? (
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[11px] font-bold text-slate-800" title={matriculaAtual.cursoNome}>
-                  {matriculaAtual.cursoNome}
-                </p>
-                <p className="mt-0.5 truncate text-[10px] font-semibold text-slate-500" title={matriculaAtual.turmaNome}>
-                  Turma: {matriculaAtual.turmaNome}
-                </p>
-                {matriculasAluno.length > 1 && (
-                  <p className="mt-1 text-[9px] font-bold text-blue-600">
-                    +{matriculasAluno.length - 1} {matriculasAluno.length === 2 ? 'outro vínculo' : 'outros vínculos'}
-                  </p>
-                )}
+        {(data.dataNascimento || data.nomeMae || data.nomePai) && (
+          <div className="mt-2 space-y-2 rounded-xl border border-slate-100 bg-slate-50/70 p-3">
+            {data.dataNascimento && (
+              <div className="flex items-center gap-2 text-xs text-slate-800">
+                <CalendarDays size={13} className="shrink-0 text-blue-500" />
+                <span className="truncate">
+                  <span className="mr-1 text-[10px] font-bold text-slate-500">Nascimento:</span>
+                  <span className="font-semibold tabular-nums">{data.dataNascimento}</span>
+                </span>
               </div>
-            ) : (
-              <p className="text-[10px] font-semibold text-slate-400">Sem curso ou turma vinculados</p>
+            )}
+            {(data.nomeMae || data.nomePai) && (
+              <div className="flex items-start gap-2 text-xs text-slate-700">
+                <Users size={13} className="mt-0.5 shrink-0 text-slate-400" />
+                <div className="flex min-w-0 flex-col">
+                  {data.nomeMae && <span className="truncate"><span className="mr-1 text-[10px] font-bold text-slate-500">Mãe:</span>{data.nomeMae}</span>}
+                  {data.nomePai && <span className="truncate"><span className="mr-1 text-[10px] font-bold text-slate-500">Pai:</span>{data.nomePai}</span>}
+                </div>
+              </div>
             )}
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Footer */}
-      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between relative z-10">
-        <span className="text-[10px] text-slate-400 font-medium">{data.poloNome || 'Matriz'}</span>
-        <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-400 group-hover:text-blue-600 transition-colors">
-          Abrir <ChevronRight size={13} className="opacity-0 -ml-1 group-hover:opacity-100 group-hover:ml-0 transition-all" />
+      <div className="relative z-10 mt-4 flex items-center justify-end border-t border-slate-100 pt-3">
+        <div className="flex items-center gap-1 text-[11px] font-bold text-slate-500 transition-colors group-hover:text-blue-700">
+          Abrir cadastro
+          <ChevronRight size={13} className="transition-transform group-hover:translate-x-0.5" />
         </div>
       </div>
     </div>
