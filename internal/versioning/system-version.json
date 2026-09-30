@@ -1,8 +1,8 @@
 {
-  "version": "4.8.135",
+  "version": "4.8.136",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 144,
+  "revision": 145,
   "releasedAt": "2026-09-30",
-  "summary": "Máscara monetária por centavos na baixa manual"
+  "summary": "Foto do aluno nas matrículas da turma"
 }

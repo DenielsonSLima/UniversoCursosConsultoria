@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-09-28T00:40:12.330Z",
+  "builtAt": "2026-09-30T18:57:19.160Z",
   "manifestVersion": 2,
-  "sourceSignature": "ef9be08614e87b1a07c6a5c3be09c0e50b6c443233c1c88141cad137ff9ef0c2",
+  "sourceSignature": "ed411976ae145e8f1a150f0bf40a972a459c9c6b7298f967896af48e37ea2dad",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "5ef49ea6156b9c26a5f8f443650a620141f8e0f5f20b30f2383fd620b9482ffe"
+      "hash": "891aaba29b1d321ea54160bfc1668011ebd01e8c11e77a38687ad1a638de5017"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -204,13 +204,13 @@
       "part": 1
     },
     {
-      "id": "0f5727b8781236730562",
-      "hash": "0f5727b87812367305625655599e98003f1825a6ce282aa0fa89ed6518b2320d",
+      "id": "42a2b877b9c4ec322149",
+      "hash": "42a2b877b9c4ec322149ef4317058bbdb0da1e7ec1238c73672ccdf1692ddf81",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-09-27-caixa-workspace-v2-integracao",
-      "text": "Estado: PUBLICADO NA VERSÃO 4.8.124 — AGUARDANDO SMOKE VISUAL FINAL Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-27-caixa-workspace-v2-integracao.md` - O core, as RPCs e as regras financeiras já publicados permanecem imutáveis. - O Caixa volta a abrir diretamente a análise mensal com consolidado e polos para a Matriz global. - A primeira dobra e o drill-down paginado passam a compor o `Resumo` do Financeiro no polo selecionado, acima dos indicadores já existentes. - O Radar financeiro foi removido do Início para evitar duplicidade com o Financeiro. - A apresentação do cockpit usa superfícies claras; funcionalidades sem contrato canônico deixam de ocupar a interface. - Gráficos sem série canônica continuam explicitamente indisponíveis; o frontend não calcula dinheiro, percentual, escala, classificação ou paginação. - `allPolos` conserva a autorização global vigente; o corte por polo continua explícito.",
-      "normalizedText": "estado publicado na versao 4 8 124 aguardando smoke visual final manifesto explicito ai operacao registros alteracoes 2026 09 27 caixa workspace v2 integracao md o core as rpcs e as regras financeiras ja publicados permanecem imutaveis o caixa volta a abrir diretamente a analise mensal com consolidado e polos para a matriz global a primeira dobra e o drill down paginado passam a compor o resumo do financeiro no polo selecionado acima dos indicadores ja existentes o radar financeiro foi removido do inicio para evitar duplicidade com o financeiro a apresentacao do cockpit usa superficies claras funcionalidades sem contrato canonico deixam de ocupar a interface graficos sem serie canonica continuam explicitamente indisponiveis o frontend nao calcula dinheiro percentual escala classificacao ou paginacao allpolos conserva a autorizacao global vigente o corte por polo continua explicito",
-      "tokenCount": 114,
+      "section": "Lote: 2026-09-30-foto-alunos-turma",
+      "text": "Estado: VALIDADO PARA PUBLICAÇÃO — PRODUÇÃO AUTORIZADA. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-30-foto-alunos-turma.md`. A lista Gestão > Turma > Alunos passa a receber a foto canônica do cadastro pela RPC protegida e mantém a inicial quando a foto estiver ausente ou falhar. Lote anterior preservado em `2026-09-30-hotfix-mascara-monetaria-baixa.md`.",
+      "normalizedText": "estado validado para publicacao producao autorizada manifesto explicito ai operacao registros alteracoes 2026 09 30 foto alunos turma md a lista gestao turma alunos passa a receber a foto canonica do cadastro pela rpc protegida e mantem a inicial quando a foto estiver ausente ou falhar lote anterior preservado em 2026 09 30 hotfix mascara monetaria baixa md",
+      "tokenCount": 52,
       "part": 1
     },
     {

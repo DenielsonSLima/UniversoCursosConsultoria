@@ -13,6 +13,7 @@ export interface AcademicStudent {
   aluno_id: string;
   nome: string;
   cpf: string | null;
+  foto_url: string | null;
   data_nascimento: string | null;
   data_matricula: string;
   status: string;
