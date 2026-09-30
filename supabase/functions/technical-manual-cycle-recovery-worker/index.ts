@@ -9,8 +9,9 @@ import { createManualCycleIssuanceDependencies } from "../technical-manual-cycle
 import { runManualCycleIssuance } from "../technical-manual-cycle-issuance/orchestrator.ts";
 import {
   InternalCycleRecoveryRequestError,
-  parseInternalCycleRecoveryRequest,
+  parseInternalCycleWorkerRequest,
 } from "./contract.ts";
+import { correctKnownTechnicalTitleDueDate } from "./due-date-correction.ts";
 import { recoverReviewedCycleItems } from "./review-recovery.ts";
 
 const MAX_BODY_BYTES = 1_024;
@@ -81,21 +82,46 @@ Deno.serve(async (request: Request) => {
   }
 
   try {
-    const internal = parseInternalCycleRecoveryRequest(await readBody(request));
-    const reviewedRecovered = await recoverReviewedCycleItems(admin, internal);
+    const internal = parseInternalCycleWorkerRequest(await readBody(request));
+    const correction = internal.action ===
+        "correct_known_technical_title_due_date"
+      ? await correctKnownTechnicalTitleDueDate(admin, internal)
+      : null;
+    const reviewedRecovered = internal.action ===
+        "resume_existing_technical_cycle"
+      ? await recoverReviewedCycleItems(admin, internal)
+      : 0;
+    const baseDependencies = createManualCycleIssuanceDependencies({
+      admin,
+      userClient: admin,
+      supabaseUrl,
+      internalRecovery: {
+        expectedMatriculaId: internal.matriculaId,
+        expectedCycleNumber: internal.cicloNumero,
+        expectedCycleRequestId: internal.expectedCycleRequestId,
+        expectedItemCount: internal.expectedItemCount,
+      },
+    });
+    const dependencies = internal.action ===
+        "correct_known_technical_title_due_date"
+      ? {
+        ...baseDependencies,
+        issueReceivable: (
+          context: Parameters<typeof baseDependencies.issueReceivable>[0],
+          receivableId: string,
+        ) => {
+          if (receivableId !== internal.receivableId) {
+            throw new Error(
+              "A correção one-off não pode emitir outro recebível do run.",
+            );
+          }
+          return baseDependencies.issueReceivable(context, receivableId);
+        },
+      }
+      : baseDependencies;
     const result = await runManualCycleIssuance(
       resumeRequest(internal.matriculaId, internal.cicloNumero),
-      createManualCycleIssuanceDependencies({
-        admin,
-        userClient: admin,
-        supabaseUrl,
-        internalRecovery: {
-          expectedMatriculaId: internal.matriculaId,
-          expectedCycleNumber: internal.cicloNumero,
-          expectedCycleRequestId: internal.expectedCycleRequestId,
-          expectedItemCount: internal.expectedItemCount,
-        },
-      }),
+      dependencies,
     );
     console.info("technical manual cycle internal recovery completed", {
       matriculaId: internal.matriculaId,
@@ -108,16 +134,19 @@ Deno.serve(async (request: Request) => {
     return json({
       success: result.ciclo.status === "EMITIDO_BANESE" &&
         result.ciclo.quantidadeItens === internal.expectedItemCount &&
-        result.ciclo.emitidosBanese === (result.ciclo.quantidadeBancaria ?? result.ciclo.quantidadeItens) &&
+        result.ciclo.emitidosBanese ===
+          (result.ciclo.quantidadeBancaria ?? result.ciclo.quantidadeItens) &&
         result.ciclo.pendentesEmissao === 0 && result.ciclo.emRevisao === 0,
       replayed: result.replayed,
       reviewedRecovered,
+      ...(correction ? { dueDateCorrection: correction } : {}),
       requestId: result.requestId,
       ciclo: {
         numero: result.ciclo.numero,
         status: result.ciclo.status,
         quantidadeItens: result.ciclo.quantidadeItens,
-        quantidadeBancaria: result.ciclo.quantidadeBancaria ?? result.ciclo.quantidadeItens,
+        quantidadeBancaria: result.ciclo.quantidadeBancaria ??
+          result.ciclo.quantidadeItens,
         quantidadeLocal: result.ciclo.quantidadeLocal ?? 0,
         emitidosBanese: result.ciclo.emitidosBanese,
         pendentesEmissao: result.ciclo.pendentesEmissao,

@@ -1,8 +1,8 @@
 {
-  "version": "4.8.138",
+  "version": "4.8.139",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 147,
+  "revision": 148,
   "releasedAt": "2026-09-30",
-  "summary": "Cadastro de aluno protegido contra reenvio durante o salvamento"
+  "summary": "Hotfix dos ciclos financeiros T42 e T46"
 }

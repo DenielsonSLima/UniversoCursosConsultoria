@@ -318,6 +318,7 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
               <p className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-600">Etapa 2 de 3</p>
               <h3 id="manual-cycle-step-2" className="mt-1 text-2xl font-black text-[#001a33]">Composição das cobranças</h3>
               <p className="mt-1 text-sm font-medium text-slate-500">Revise cada cobrança. Os valores iniciais vêm da turma; alterações serão recalculadas pelo sistema antes da confirmação.</p>
+              {cycleNumber === 1 ? <p className="mt-3 rounded-xl border border-blue-100 bg-blue-50 p-3 text-xs font-semibold text-blue-900">O vencimento da matrícula é independente das mensalidades. Ao alterar a Mensalidade 1, as demais avançam por mês de calendário, preservando o dia-base ou o último dia disponível.</p> : null}
               {cycleNumber === 1 ? (
                 <FinanceiroCicloManualEnrollmentOptions
                   mode={revisionState.draft?.modoMatricula ?? 'BOLETO'}

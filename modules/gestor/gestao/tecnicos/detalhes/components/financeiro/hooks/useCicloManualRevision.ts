@@ -5,6 +5,12 @@ import type {
   CicloFinanceiroTecnicoManualRevisaoItem,
   CicloManualModoMatricula,
 } from '../matricula-tecnica-ciclo-manual.types';
+import {
+  changeCicloManualEnrollmentMode,
+  changeCicloManualRevisionItem,
+  cicloManualScheduleFromPreview,
+  type CicloManualScheduleItem,
+} from '../ciclo-manual-due-schedule';
 
 export const revisionFromPreview = (
   preview: CicloFinanceiroTecnicoManualPreview,
@@ -25,11 +31,13 @@ interface RevisionState {
   contextKey: string;
   revision: CicloFinanceiroTecnicoManualRevisao | null;
   draft: CicloFinanceiroTecnicoManualRevisao | null;
+  schedule: CicloManualScheduleItem[];
+  originDate: string | null;
   dirty: boolean;
 }
 
 const initialState = (contextKey: string): RevisionState => ({
-  contextKey, revision: null, draft: null, dirty: false,
+  contextKey, revision: null, draft: null, schedule: [], originDate: null, dirty: false,
 });
 
 export const useCicloManualRevision = (contextKey: string) => {
@@ -49,6 +57,8 @@ export const useCicloManualRevision = (contextKey: string) => {
       const canonicalKeys = new Set(canonical.itens.map((item) => item.chave));
       return {
         ...existing,
+        schedule: cicloManualScheduleFromPreview(preview),
+        originDate: preview.dataOrigem,
         draft: {
           modoMatricula: canonical.modoMatricula,
           emitirMatricula: canonical.emitirMatricula,
@@ -69,16 +79,20 @@ export const useCicloManualRevision = (contextKey: string) => {
     setState((previous) => previous.draft ? {
       ...previous,
       dirty: true,
-      draft: {
-        ...previous.draft,
-        itens: previous.draft.itens.map((item) => item.chave === key ? { ...item, [field]: value } : item),
-      },
+      draft: changeCicloManualRevisionItem(previous.draft, previous.schedule, key, field, value),
     } : previous);
   };
 
   const changeEnrollmentMode = (modoMatricula: CicloManualModoMatricula) => {
     setState((previous) => previous.draft ? {
-      ...previous, dirty: true, draft: { ...previous.draft, modoMatricula, emitirMatricula: modoMatricula === 'BOLETO' },
+      ...previous,
+      dirty: true,
+      draft: changeCicloManualEnrollmentMode(
+        previous.draft,
+        previous.schedule,
+        modoMatricula,
+        previous.originDate,
+      ),
     } : previous);
   };
 
