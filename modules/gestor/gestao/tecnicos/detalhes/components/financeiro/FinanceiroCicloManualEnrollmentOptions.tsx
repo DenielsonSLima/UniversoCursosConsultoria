@@ -12,8 +12,8 @@ interface Props {
 
 const options = [
   ['BOLETO', 'Emitir boleto da matrícula', 'Cria a matrícula e emite o boleto junto às mensalidades.'],
-  ['REGISTRO_SEM_BOLETO', 'Registrar matrícula sem boleto', 'Cria a matrícula pendente no financeiro, para registrar o recebimento separadamente.'],
-  ['OMITIR', 'Não incluir matrícula', 'Gera somente as mensalidades, sem criar cobrança de matrícula neste ciclo.'],
+  ['REGISTRO_SEM_BOLETO', 'Registrar matrícula sem boleto', 'Cria a matrícula pendente no financeiro; seu vencimento pode registrar uma data anterior em até cinco anos e o recebimento é separado.'],
+  ['OMITIR', 'Não incluir matrícula', 'Gera somente as mensalidades; a data inicial passa a ser o vencimento da Mensalidade 1.'],
 ] as const;
 
 const FinanceiroCicloManualEnrollmentOptions: React.FC<Props> = ({
@@ -36,10 +36,10 @@ const FinanceiroCicloManualEnrollmentOptions: React.FC<Props> = ({
           <label className="flex items-start gap-3 font-semibold">
             <input type="checkbox" checked={openSettlement} className="mt-0.5"
               onChange={(event) => onOpenSettlementChange(event.target.checked)} />
-            Abrir recebimento da matrícula após gerar o ciclo
+            Após gerar o ciclo, abrir o formulário de recebimento da matrícula
           </label>
         ) : <p>O recebimento poderá ser registrado por um usuário com permissão de baixa financeira.</p>}
-        <p className="mt-2 font-medium">Esta escolha não registra pagamento. O recebimento exige confirmação de valor, data, conta e forma de pagamento.</p>
+        <p className="mt-2 font-medium">Marcar esta opção apenas abre o formulário. Nenhum pagamento é registrado sem confirmar valor, data, conta e forma de pagamento.</p>
       </div>
     ) : null}
   </fieldset>

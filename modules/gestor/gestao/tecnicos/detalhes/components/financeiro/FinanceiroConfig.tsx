@@ -17,7 +17,10 @@ import {
   usePreverRegraFinanceiraTecnica,
   useSalvarRegraFinanceiraTecnica,
 } from './hooks/useMatriculaTecnicaFinanceiro';
-import { isRegraFinanceiraConflict } from './matricula-tecnica-financeiro.service';
+import {
+  isFinanceiroContractError,
+  isRegraFinanceiraConflict,
+} from './matricula-tecnica-financeiro.service';
 
 interface FinanceiroConfigProps {
   turma: Turma;
@@ -155,7 +158,12 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma, regra, polic
         toast.warning('Regra alterada em outra sessão', 'O rascunho foi preservado. Descarte-o para carregar a versão atual.');
         return;
       }
-      toast.error('Regra não salva', error instanceof Error ? error.message : 'O servidor não confirmou a alteração.');
+      toast.error(
+        'Regra não salva',
+        isFinanceiroContractError(error)
+          ? 'O servidor retornou uma confirmação incompatível. Atualize a página e confira a regra antes de tentar novamente.'
+          : 'O servidor não confirmou a alteração. Tente novamente.',
+      );
     }
   };
 
@@ -185,6 +193,28 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma, regra, polic
             <p className="text-xs font-black uppercase">A regra mudou em outra sessão</p>
             <p className="mt-1 text-xs font-semibold">Seu rascunho foi preservado, mas salvar está bloqueado. Clique em Cancelar para carregar a versão atual.</p>
           </div>
+        </div>
+      ) : null}
+      {previewQuery.isError ? (
+        <div role="alert" className="mb-4 flex items-start justify-between gap-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-800">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 shrink-0" size={18} />
+            <div>
+              <p className="text-xs font-black uppercase">Não foi possível calcular a prévia</p>
+              <p className="mt-1 text-xs font-semibold">
+                {isFinanceiroContractError(previewQuery.error)
+                  ? 'O servidor retornou uma prévia incompatível. Atualize a página ou tente novamente.'
+                  : 'O servidor não confirmou o cálculo financeiro. Tente novamente.'}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => { void previewQuery.refetch(); }}
+            className="shrink-0 rounded-xl border border-rose-300 bg-white px-3 py-2 text-[10px] font-black uppercase hover:bg-rose-100"
+          >
+            Tentar novamente
+          </button>
         </div>
       ) : null}
       <FinanceiroConfigEditor

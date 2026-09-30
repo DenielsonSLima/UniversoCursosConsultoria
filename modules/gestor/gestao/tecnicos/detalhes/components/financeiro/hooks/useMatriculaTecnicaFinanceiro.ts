@@ -70,6 +70,9 @@ export const usePreverRegraFinanceiraTecnica = (
   enabled: enabled && Boolean(input.turmaId),
   staleTime: 30_000,
   gcTime: 5 * 60_000,
+  retry: (failureCount, error) => (
+    !isFinanceiroContractError(error) && failureCount < 1
+  ),
 });
 
 const reconcileWorkspace = (

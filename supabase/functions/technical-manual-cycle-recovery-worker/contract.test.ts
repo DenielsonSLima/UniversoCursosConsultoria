@@ -1,7 +1,10 @@
 import { strict as assert } from "node:assert";
 import {
   InternalCycleRecoveryRequestError,
+  KNOWN_DUE_DATE_CORRECTION,
   parseInternalCycleRecoveryRequest,
+  parseInternalCycleWorkerRequest,
+  parseKnownDueDateCorrectionRequest,
 } from "./contract.ts";
 
 const valid = {
@@ -39,8 +42,43 @@ Deno.test("rejeita geração, UUID inválido e cardinalidade fora do limite", ()
 
 Deno.test("retomada aceita 60 parcelas mais taxa, preservando CAS da quantidade total", () => {
   for (const cicloNumero of [1, 2]) {
-    assert.equal(parseInternalCycleRecoveryRequest({
-      ...valid, cicloNumero, expectedItemCount: 61,
-    }).expectedItemCount, 61);
+    assert.equal(
+      parseInternalCycleRecoveryRequest({
+        ...valid,
+        cicloNumero,
+        expectedItemCount: 61,
+      }).expectedItemCount,
+      61,
+    );
+  }
+});
+
+Deno.test("correção one-off aceita somente a identidade exata do título e run antigos", () => {
+  const request = { ...KNOWN_DUE_DATE_CORRECTION };
+  assert.deepEqual(parseKnownDueDateCorrectionRequest(request), request);
+  assert.deepEqual(parseInternalCycleWorkerRequest(request), request);
+});
+
+Deno.test("correção one-off rejeita qualquer troca de UUID, run, item ou data", () => {
+  const request = { ...KNOWN_DUE_DATE_CORRECTION };
+  for (
+    const patch of [
+      { receivableId: valid.matriculaId },
+      { matriculaId: valid.matriculaId },
+      { turmaId: valid.matriculaId },
+      { cicloNumero: 2 },
+      { expectedCycleRequestId: valid.expectedCycleRequestId },
+      { expectedItemCount: 13 },
+      { correctionRequestId: valid.expectedCycleRequestId },
+      { expectedAuthorizationRequestId: valid.expectedCycleRequestId },
+      { expectedItemKey: "ciclo-2-parc-12" },
+      { expectedDueDate: "2026-10-15" },
+      { correctedDueDate: "2027-10-15" },
+    ]
+  ) {
+    assert.throws(
+      () => parseKnownDueDateCorrectionRequest({ ...request, ...patch }),
+      InternalCycleRecoveryRequestError,
+    );
   }
 });

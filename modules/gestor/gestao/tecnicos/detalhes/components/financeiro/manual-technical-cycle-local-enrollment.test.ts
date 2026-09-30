@@ -4,6 +4,12 @@ import { readFileSync } from 'node:fs';
 import {
   isIssuedCycleReceivable, isProvenLocalEnrollment, readCycleQuantities,
 } from './matricula-tecnica-ciclo-manual-destination';
+import {
+  addCicloManualCalendarMonths,
+  changeCicloManualEnrollmentMode,
+  changeCicloManualRevisionItem,
+  cicloManualScheduleFromPreview,
+} from './ciclo-manual-due-schedule';
 import { requireCicloFinanceiroTecnicoManualPreview } from './matricula-tecnica-ciclo-manual-preview.parser';
 
 const instruction = 'Condições revisadas da cobrança';
@@ -46,12 +52,20 @@ test('prévia local mantém 13 registros, 12 boletos e datas canônicas', () => 
   assert.equal(result.itens[1].vencimento, '2027-02-20');
   assert.equal(result.itens[12].vencimento, '2028-01-20');
   const omitted = preview();
+  const omittedInstallments = omitted.itens.slice(1).map((entry, index) => ({
+    ...entry,
+    vencimento: addCicloManualCalendarMonths(omitted.dataOrigem, index)!,
+  }));
   Object.assign(omitted, {
     modoMatricula: 'OMITIR', quantidadeItens: 12, quantidadeLocal: 0,
-    matriculaSemBoleto: omitted.itens[0], itens: omitted.itens.slice(1), primeiroVencimento: '2027-02-20',
+    matriculaSemBoleto: omitted.itens[0], itens: omittedInstallments,
+    primeiroVencimento: '2027-01-20',
   });
   const parsedOmitted = requireCicloFinanceiroTecnicoManualPreview(omitted);
-  assert.deepEqual(parsedOmitted.itens.map((entry) => entry.vencimento), result.itens.slice(1).map((entry) => entry.vencimento));
+  assert.deepEqual(
+    parsedOmitted.itens.map((entry) => entry.vencimento),
+    Array.from({ length: 12 }, (_, index) => addCicloManualCalendarMonths('2027-01-20', index)),
+  );
 });
 
 test('destino local exige escolha coerente, matrícula e contadores completos', () => {
@@ -84,6 +98,108 @@ test('matrícula LOCAL paga só representa baixa local; boleto pago exige prova 
   }
 });
 
+test('primeira mensalidade recalcula o calendário sem acoplar a matrícula local', () => {
+  const parsed = requireCicloFinanceiroTecnicoManualPreview(preview());
+  const revision = {
+    modoMatricula: 'REGISTRO_SEM_BOLETO' as const,
+    emitirMatricula: false,
+    itens: parsed.itens.map(({ chave, valor, vencimento }) => ({
+      chave, valor, vencimento, descontoPontualidade: '0',
+      jurosAtrasoPercentual: '0', multaAtrasoPercentual: '0',
+    })),
+  };
+  const schedule = cicloManualScheduleFromPreview(parsed);
+  const enrollmentKey = parsed.itens[0].chave;
+  const firstInstallmentKey = parsed.itens[1].chave;
+  const withRetroactiveEnrollment = changeCicloManualRevisionItem(
+    revision, schedule, enrollmentKey, 'vencimento', '2026-08-15',
+  );
+  assert.equal(
+    withRetroactiveEnrollment.itens.find((entry) => entry.chave === firstInstallmentKey)?.vencimento,
+    '2027-02-20',
+    'A data própria da matrícula não pode deslocar as mensalidades.',
+  );
+  const recalculated = changeCicloManualRevisionItem(
+    withRetroactiveEnrollment, schedule, firstInstallmentKey, 'vencimento', '2027-01-31',
+  );
+
+  assert.equal(recalculated.itens.find((entry) => entry.chave === enrollmentKey)?.vencimento, '2026-08-15');
+  assert.deepEqual(
+    recalculated.itens.slice(1, 5).map((entry) => entry.vencimento),
+    ['2027-01-31', '2027-02-28', '2027-03-31', '2027-04-30'],
+  );
+  assert.equal(addCicloManualCalendarMonths('2028-01-31', 1), '2028-02-29');
+  assert.equal(addCicloManualCalendarMonths('2027-01-31', 1), '2027-02-28');
+});
+
+test('alternar matrícula restaura o mês reservado sem sobrescrever troca entre boleto e local', () => {
+  const parsed = requireCicloFinanceiroTecnicoManualPreview(preview());
+  const revision = {
+    modoMatricula: 'BOLETO' as const,
+    emitirMatricula: true,
+    itens: parsed.itens.map(({ chave, valor, vencimento }) => ({
+      chave, valor, vencimento, descontoPontualidade: '0',
+      jurosAtrasoPercentual: '0', multaAtrasoPercentual: '0',
+    })),
+  };
+  const adjustedBoleto = changeCicloManualRevisionItem(
+    revision,
+    cicloManualScheduleFromPreview(parsed),
+    'item-1',
+    'vencimento',
+    '2027-03-17',
+  );
+  const switchedDirectlyToLocal = changeCicloManualEnrollmentMode(
+    adjustedBoleto,
+    cicloManualScheduleFromPreview(parsed),
+    'REGISTRO_SEM_BOLETO',
+    '2026-10-15',
+  );
+  assert.equal(switchedDirectlyToLocal.itens.find((entry) => entry.chave === 'item-1')?.vencimento, '2027-03-17');
+  assert.equal(switchedDirectlyToLocal.itens.find((entry) => entry.chave === 'item-12')?.vencimento, '2028-02-17');
+
+  const omitted = changeCicloManualEnrollmentMode(
+    revision,
+    cicloManualScheduleFromPreview(parsed),
+    'OMITIR',
+    '2026-10-15',
+  );
+  const installments = omitted.itens.filter((entry) => entry.chave.startsWith('item-')
+    && entry.chave !== 'item-0');
+
+  assert.equal(omitted.emitirMatricula, false);
+  assert.equal(omitted.modoMatricula, 'OMITIR');
+  assert.equal(omitted.itens.find((entry) => entry.chave === 'item-0')?.vencimento, '2027-01-20');
+  assert.equal(installments[0]?.vencimento, '2026-10-15');
+  assert.equal(installments[11]?.vencimento, '2027-09-15');
+
+  const restoredLocal = changeCicloManualEnrollmentMode(
+    omitted,
+    cicloManualScheduleFromPreview(parsed),
+    'REGISTRO_SEM_BOLETO',
+    '2026-10-15',
+  );
+  const restoredInstallments = restoredLocal.itens.filter((entry) => entry.chave !== 'item-0');
+  assert.equal(restoredInstallments[0]?.vencimento, '2026-11-15');
+  assert.equal(restoredInstallments[11]?.vencimento, '2027-10-15');
+
+  const manuallyAdjusted = changeCicloManualRevisionItem(
+    restoredLocal,
+    cicloManualScheduleFromPreview(parsed),
+    'item-1',
+    'vencimento',
+    '2027-03-17',
+  );
+  const switchedToBoleto = changeCicloManualEnrollmentMode(
+    manuallyAdjusted,
+    cicloManualScheduleFromPreview(parsed),
+    'BOLETO',
+    '2026-10-15',
+  );
+  assert.equal(switchedToBoleto.itens.find((entry) => entry.chave === 'item-1')?.vencimento, '2027-03-17');
+  assert.equal(switchedToBoleto.itens.find((entry) => entry.chave === 'item-12')?.vencimento, '2028-02-17');
+});
+
 test('baixa usa serviço canônico, trava síncrona, permissão e ação persistente sem gerar ciclo', () => {
   const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
   const hook = read('./hooks/useCicloManualEnrollmentSettlement.ts');
@@ -96,7 +212,10 @@ test('baixa usa serviço canônico, trava síncrona, permissão e ação persist
   assert.match(hook, /isManualEnrollmentSettlementAccount\(account, poloId\)/);
   assert.doesNotMatch(hook, /\.update\(|\.insert\(|gerar_ciclo|settlementContext|setStatus/);
   assert.match(table, /matriculaLocal[\s\S]*?Registrar recebimento da matrícula/);
-  assert.match(options, /Esta escolha não registra pagamento/);
+  assert.match(options, /apenas abre o formulário/);
+  assert.match(options, /Nenhum pagamento é registrado sem confirmar/);
+  assert.match(options, /vencimento pode registrar uma data anterior/);
+  assert.match(options, /data inicial passa a ser o vencimento da Mensalidade 1/);
   assert.match(list, /if \(abrirRecebimento && local\) settlement\.open/);
   assert.match(list, /onSettleEnrollment=\{canSettleEnrollment \? settlement\.open : undefined\}/);
 });
