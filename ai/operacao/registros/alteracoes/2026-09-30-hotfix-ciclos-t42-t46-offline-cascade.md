@@ -36,8 +36,9 @@ Estado: VALIDADO PARA PUBLICAÇÃO — PRODUÇÃO AUTORIZADA
 - `ai/operacao/qualidade/limite-linhas-manifestos.json`
 - `internal/versioning/system-version.json`
 - `internal/versioning/CHANGELOG.md`
+- `internal/versioning/changelog/2026-09-13-versoes-4-8-53-a-4-8-64.md`
 
-Total: 19 arquivos.
+Total: 20 arquivos.
 
 ## Contratos e segurança
 
@@ -49,6 +50,7 @@ Total: 19 arquivos.
 
 ## Validação
 
+- [PR #231](https://github.com/DenielsonSLima/UniversoCursosConsultoria/pull/231) com Preview Vercel aprovado.
 - Reunião de três agentes: auditoria remota, revisão frontend e contrato backend/C2.
 - T42 auditada integralmente: alvo elegível, 12/12 do C1 localmente pagos, zero C2 antes do smoke; grupos não confirmados permanecem bloqueados.
 - T46 auditada: alvo elegível, zero runs e zero recebíveis; a tentativa rejeitada não gerou cobrança.
