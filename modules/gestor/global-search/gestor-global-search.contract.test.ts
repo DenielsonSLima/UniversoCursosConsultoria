@@ -34,6 +34,11 @@ test('combobox expõe três linhas úteis e navegação por teclado', () => {
   assert.match(ui, /Turma ·/);
   assert.match(ui, /Limpar busca global/);
   assert.match(ui, /scrollIntoView\(\{ block: 'nearest' \}\)/);
+  assert.match(ui, /result\.photoUrl && !imageFailed/);
+  assert.match(ui, /onError=\{\(\) => setImageFailed\(true\)\}/);
+  assert.match(ui, /truncate text-\[12px\] font-extrabold/);
+  assert.match(ui, /text-\[10px\] font-semibold text-slate-700/);
+  assert.match(service, /photoUrl: row\.photo_url \|\| null/);
 });
 
 test('atalho troca o polo antes de abrir e protege cadastro já aberto', () => {
@@ -45,7 +50,7 @@ test('atalho troca o polo antes de abrir e protege cadastro já aberto', () => {
 
 test('card do aluno prioriza identidade e filtros são controlados', () => {
   assert.match(card, /h-\[52px\] w-\[52px\]/);
-  assert.match(card, /text-\[13px\] font-extrabold[^"']*antialiased/);
+  assert.match(card, /text-\[11px\] font-extrabold[^"']*antialiased/);
   assert.match(card, /tabular-nums text-slate-900/);
   assert.ok(card.indexOf('data.dataNascimento') < card.indexOf('data.nomeMae'));
   assert.doesNotMatch(card, /data\.poloNome|Turma:|matriculaAtual/);

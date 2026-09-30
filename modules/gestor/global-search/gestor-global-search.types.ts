@@ -10,6 +10,7 @@ export interface GestorGlobalSearchResult {
   name: string;
   document: string | null;
   status: string;
+  photoUrl: string | null;
   poloId: string | null;
   poloName: string | null;
   poloCity: string | null;

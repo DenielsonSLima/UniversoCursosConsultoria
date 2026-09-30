@@ -12,6 +12,7 @@ interface GestorGlobalSearchRpcRow {
   entity_name?: string;
   document_number?: string | null;
   entity_status?: string | null;
+  photo_url?: string | null;
   polo_id?: string | null;
   polo_name?: string | null;
   polo_city?: string | null;
@@ -32,6 +33,7 @@ const mapSearchResult = (row: GestorGlobalSearchRpcRow): GestorGlobalSearchResul
     name: String(row.entity_name || 'Cadastro sem nome'),
     document: row.document_number || null,
     status: String(row.entity_status || 'ATIVO'),
+    photoUrl: row.photo_url || null,
     poloId,
     poloName: row.polo_name || null,
     poloCity: row.polo_city || null,

@@ -12,8 +12,13 @@ const [
   emailStatusSource,
   alunoCardSource,
   partnerAccessSource,
+  studentEmailAccessStatusSource,
   firstAccessPageSource,
   publicAuthEntry,
+  studentInviteHandlerSource,
+  portalAuthHandlerSource,
+  studentFormSource,
+  studentContactStepSource,
 ] = await Promise.all([
   readSource('./hooks/useParceirosMutations.ts'),
   readSource('./portal-activation.service.ts'),
@@ -21,8 +26,13 @@ const [
   readSource('./components/cards/EmailConfirmationStatus.tsx'),
   readSource('./components/cards/AlunoCard.tsx'),
   readSource('./components/viewparceiros/shared/ParceiroAcesso.tsx'),
+  readSource('./components/viewparceiros/shared/StudentEmailAccessStatus.tsx'),
   readSource('../../public/login/AlunoFirstAccessPage.tsx'),
   readSource('../../public/login/aluno-public-auth.service.ts'),
+  readSource('../../../supabase/functions/portal-user-management/handlers/send-student-invite.ts'),
+  readSource('../../../supabase/functions/portal-auth/index.ts'),
+  readSource('./components/formularioparceiros/aluno/ParceiroAlunoForm.tsx'),
+  readSource('./components/formularioparceiros/aluno/ParceiroAlunoFormStepContact.tsx'),
 ]);
 const publicAuthSource = [
   publicAuthEntry,
@@ -55,6 +65,29 @@ test('gestor possui fallback assistido, auditado e sem senha persistida', () => 
   assert.match(partnerAccessSource, /setTemporaryPassword/);
   assert.doesNotMatch(partnerAccessSource, /window\.confirm/);
   assert.match(emailStatusSource, /gestor pode validar o canal na aba Acesso/);
+});
+
+test('aluno sem e-mail usa matrícula sem passar pela validação de caixa postal', () => {
+  assert.match(studentContactStepSource, /E-mail \(opcional\)/);
+  assert.doesNotMatch(studentContactStepSource, /placeholder="aluno@email\.com" required/);
+  assert.match(studentFormSource, /formData\.email\.trim\(\) && !isValidEmail\(formData\.email\)/);
+  assert.match(studentFormSource, /deixe o campo em branco para usar a matrícula como login/);
+  assert.match(studentEmailAccessStatusSource, /Confirmação de e-mail não se aplica/);
+  assert.match(studentEmailAccessStatusSource, /login será feito pela matrícula/);
+  assert.match(partnerAccessSource, /enabled: tipo === 'Aluno' && Boolean\(parceiroId\) && hasContactEmail/);
+  assert.match(partnerAccessSource, /!hasContactEmail[\s\S]*?confirmação de e-mail não se aplica/i);
+  assert.match(partnerAccessSource, /hasContactEmail && <button[\s\S]*?Gerar senha temporária/);
+});
+
+test('backend cria acesso por matrícula confirmado e devolve link para entrega manual', () => {
+  assert.match(studentInviteHandlerSource, /isSyntheticAuthEmail = authEmail\.endsWith/);
+  assert.match(studentInviteHandlerSource, /admin\.auth\.admin\.createUser\(\{[\s\S]*?email_confirm: true/);
+  assert.match(studentInviteHandlerSource, /recoveryLink: recovery\.data\?\.properties\?\.action_link \|\| null/);
+  assert.match(studentInviteHandlerSource, /Aluno sem e-mail: envie o link seguro por um canal previamente verificado/);
+  assert.match(portalAuthHandlerSource, /admin\.rpc\("resolve_portal_login_identity"/);
+  assert.match(portalAuthHandlerSource, /resolvedEmail = identifier\.includes\("@"\)[\s\S]*?: await resolveLoginIdentity\(admin, identifier\)/);
+  assert.match(portalAuthHandlerSource, /const authEmail = resolvedEmail \|\|/);
+  assert.match(portalAuthHandlerSource, /body: JSON\.stringify\(\{[\s\S]*?email: authEmail,[\s\S]*?password: payload\.password/);
 });
 
 test('card considera a validação administrativa sem mascarar a confirmação do Auth', () => {

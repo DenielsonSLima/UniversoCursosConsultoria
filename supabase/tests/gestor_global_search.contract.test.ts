@@ -13,6 +13,10 @@ const typeFix = readFileSync(resolve(
   root,
   'supabase/migrations/20260930012500_fix_gestor_global_search_result_types.sql',
 ), 'utf8');
+const photoContract = readFileSync(resolve(
+  root,
+  'supabase/migrations/20260930015130_add_photo_to_gestor_global_search.sql',
+), 'utf8');
 const signatureEnd = source.indexOf('RETURNS TABLE');
 const signature = source.slice(0, signatureEnd);
 
@@ -41,4 +45,17 @@ test('função é definer endurecida e executável somente pelos papéis previst
   assert.match(typeFix, /matched\.scoped_polo_state::text AS polo_state/);
   assert.match(typeFix, /IF v_rewritten = v_definition THEN/);
   assert.match(typeFix, /FROM PUBLIC, anon, authenticated, service_role/);
+});
+
+test('contrato de foto preserva o escopo seguro da busca global', () => {
+  assert.match(photoContract, /photo_url text/);
+  assert.match(photoContract, /partner\.foto_url/);
+  assert.match(photoContract, /matched\.foto_url AS photo_url/);
+  assert.match(photoContract, /gestor_has_module\('parceiros'\)/);
+  assert.match(photoContract, /gestor_allowed_polo_ids\(\)/);
+  assert.match(photoContract, /is_partner_in_gestor_read_scope\(partner\.polo_id, partner\.polo_ids\)/);
+  assert.match(photoContract, /SECURITY DEFINER/);
+  assert.match(photoContract, /SET search_path = ''/);
+  assert.match(photoContract, /FROM PUBLIC, anon, authenticated, service_role/);
+  assert.match(photoContract, /TO authenticated, service_role/);
 });

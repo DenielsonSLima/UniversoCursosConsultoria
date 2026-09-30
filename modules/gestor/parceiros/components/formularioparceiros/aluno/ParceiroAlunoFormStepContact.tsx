@@ -68,11 +68,11 @@ const ParceiroAlunoFormStepContact: React.FC<ContactStepProps> = ({ formData, on
 
     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
       <div className="md:col-span-2">
-        <label className={LABEL_CLS}><Mail size={12} className="inline mr-1" />E-mail <span className="text-red-500">*</span></label>
+        <label className={LABEL_CLS}><Mail size={12} className="inline mr-1" />E-mail (opcional)</label>
         <input type="email" name="email" value={formData.email} onChange={onChange}
-          className={INPUT_CLS} placeholder="aluno@email.com" required />
+          className={INPUT_CLS} placeholder="aluno@email.com" />
         <p className="text-[10px] text-slate-400 mt-1 ml-0.5 flex items-center gap-1">
-          <AlertCircle size={10} />Boleto e acesso ao portal serão enviados para este e-mail.
+          <AlertCircle size={10} />Sem e-mail, o aluno entra com a matrícula e recebe o primeiro acesso por um canal confirmado.
         </p>
       </div>
 
