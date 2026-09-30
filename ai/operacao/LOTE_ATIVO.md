@@ -1,5 +1,5 @@
 # Lote ativo
 
-## Lote: 2026-09-30-cadastro-professor-polos-pix
+## Lote: 2026-09-30-hotfix-cadastro-aluno-reenvio
 
-Estado: VALIDADO PARA PUBLICAÇÃO — PRODUÇÃO NÃO AUTORIZADA. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-30-cadastro-professor-polos-pix.md`. O cadastro de professor passa a exigir somente polo, nome e CPF, identifica cada polo por cidade/UF, tipa e formata a chave Pix e corrige o contrato de conta bancária, o polo persistido e o feedback de falha. Lote anterior preservado em `2026-09-30-foto-alunos-turma.md`.
+Estado: VALIDADO E AUTORIZADO PARA PRODUÇÃO. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-30-hotfix-cadastro-aluno-reenvio.md`. O cadastro de aluno aguarda a mutation real, bloqueia clique ou Enter repetido e apresenta o estado “Salvando...” até a conclusão. Lote anterior preservado em `2026-09-30-cadastro-professor-polos-pix.md`.
