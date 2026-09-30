@@ -56,10 +56,17 @@ test('parser monetário usa centavos e rejeita formatos divergentes do backend',
   }
 });
 
-test('sanitização preserva o valor anterior quando a digitação é inválida', () => {
-  assert.equal(sanitizeCurrencyInput('10,50', ''), '10,50');
-  assert.equal(sanitizeCurrencyInput('1 2', '1'), '1');
-  assert.equal(sanitizeCurrencyInput('abc1', ''), '');
+test('digitação monetária desloca centavos e formata o real brasileiro em tempo real', () => {
+  assert.equal(sanitizeCurrencyInput('1', ''), '0,01');
+  assert.equal(sanitizeCurrencyInput('0,019', '0,01'), '0,19');
+  assert.equal(sanitizeCurrencyInput('0,190', '0,19'), '1,90');
+  assert.equal(sanitizeCurrencyInput('1,900', '1,90'), '19,00');
+  assert.equal(sanitizeCurrencyInput('1,9', '1,90'), '0,19');
+  assert.equal(sanitizeCurrencyInput('0,0', '0,01'), '');
+  assert.equal(sanitizeCurrencyInput('R$ 1.234,56', ''), '1.234,56');
+  assert.equal(sanitizeCurrencyInput('0,01a', '0,01'), '0,01');
+  assert.equal(sanitizeCurrencyInput('90000000000000001', '1,00'), '1,00');
+  assert.equal(sanitizeCurrencyInput('', '19,00'), '');
 });
 
 test('campo monetário normaliza automaticamente para real brasileiro com duas casas', () => {

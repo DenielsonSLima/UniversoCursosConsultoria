@@ -64,7 +64,7 @@ const CurrencyField: React.FC<{
         <input
           id={inputId}
           type="text"
-          inputMode="decimal"
+          inputMode="numeric"
           value={value}
           aria-invalid={invalid}
           aria-describedby={`${detailId}${invalid ? ` ${errorId}` : ''}`}
