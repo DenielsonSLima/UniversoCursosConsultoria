@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ArrowRightLeft, History, PauseCircle, RotateCcw, Trash2, UserX } from 'lucide-react';
 import { formatMatricula } from '../../../../../../../lib/academicUtils';
 import { formatCpf } from '../../../../../../../lib/documentFormatters';
@@ -24,6 +24,32 @@ const getStatusStyle = (status: string) => {
     case 'CONCLUIDO': return 'bg-blue-100 text-blue-700';
     default: return 'bg-slate-100 text-slate-600';
   }
+};
+
+const StudentAvatar: React.FC<{ student: AcademicStudent }> = ({ student }) => {
+  const [imageFailed, setImageFailed] = useState(false);
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [student.foto_url]);
+
+  const initial = student.nome.trim().charAt(0).toUpperCase() || '?';
+
+  return (
+    <div
+      aria-hidden="true"
+      className="w-10 h-10 shrink-0 rounded-full overflow-hidden bg-slate-100 flex items-center justify-center text-sm font-black text-slate-500 border border-slate-200"
+    >
+      {student.foto_url && !imageFailed ? (
+        <img
+          src={student.foto_url}
+          alt=""
+          className="w-full h-full object-cover"
+          onError={() => setImageFailed(true)}
+        />
+      ) : initial}
+    </div>
+  );
 };
 
 const TurmaAlunosTable: React.FC<TurmaAlunosTableProps> = ({
@@ -66,9 +92,7 @@ const TurmaAlunosTable: React.FC<TurmaAlunosTableProps> = ({
             <tr key={student.matricula_id} className="hover:bg-slate-50 transition-colors">
               <td className="px-6 py-5">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-sm font-black text-slate-500 border border-slate-200">
-                    {student.nome.charAt(0)}
-                  </div>
+                  <StudentAvatar student={student} />
                   <div>
                     <span className="font-bold text-[#001a33] text-sm block">{student.nome}</span>
                     <span className="text-[10px] text-slate-500">
