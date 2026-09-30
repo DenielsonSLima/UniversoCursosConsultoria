@@ -63,6 +63,19 @@ export const currencyInputToCents = (value: string) => {
   return Number.isSafeInteger(cents) && cents <= MAX_CENTS ? cents : null;
 };
 
+export const formatCurrencyInput = (value: string) => {
+  const cents = currencyInputToCents(value);
+  if (cents === null) return value;
+
+  const integerPart = Math.floor(cents / 100).toLocaleString('pt-BR', {
+    maximumFractionDigits: 0,
+    useGrouping: true,
+  });
+  const decimalPart = String(cents % 100).padStart(2, '0');
+
+  return `${integerPart},${decimalPart}`;
+};
+
 export interface ManualSettlementAdjustmentValues {
   interestValue: string;
   penaltyValue: string;

@@ -7,6 +7,7 @@ import { build } from 'esbuild';
 const require = createRequire(import.meta.url);
 const lucideEntry = join(dirname(require.resolve('lucide-react/package.json')), 'dist/esm/lucide-react.js');
 const tests = [
+  'modules/gestor/financeiro/outros-creditos/other-credit-create-modal.test.ts',
   'modules/gestor/financeiro/outros-creditos/pdv-receipt.test.ts',
   'modules/gestor/financeiro/outros-creditos/pdv-receipt-identity.test.ts',
   'modules/gestor/financeiro/outros-creditos/pdv-confirmation-loop.test.ts',

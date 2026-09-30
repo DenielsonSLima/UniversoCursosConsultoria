@@ -5,6 +5,7 @@ import {
   calculateManualSettlementBreakdown,
   calculateManualSettlementTotal,
   currencyInputToCents,
+  formatCurrencyInput,
   sanitizeCurrencyInput,
 } from './manual-settlement-calculation.ts';
 
@@ -59,6 +60,15 @@ test('sanitização preserva o valor anterior quando a digitação é inválida'
   assert.equal(sanitizeCurrencyInput('10,50', ''), '10,50');
   assert.equal(sanitizeCurrencyInput('1 2', '1'), '1');
   assert.equal(sanitizeCurrencyInput('abc1', ''), '');
+});
+
+test('campo monetário normaliza automaticamente para real brasileiro com duas casas', () => {
+  assert.equal(formatCurrencyInput(''), '0,00');
+  assert.equal(formatCurrencyInput('19'), '19,00');
+  assert.equal(formatCurrencyInput('19,9'), '19,90');
+  assert.equal(formatCurrencyInput('1234,56'), '1.234,56');
+  assert.equal(formatCurrencyInput('1,234.56'), '1.234,56');
+  assert.equal(formatCurrencyInput('1,2,3'), '1,2,3');
 });
 
 test('breakdown identifica cada ajuste inválido e calcula o ajuste líquido em centavos', () => {
@@ -187,6 +197,11 @@ test('modal usa seletores próprios e explicita cobrança e valor final', async 
   assert.match(allComponents, /role="option"/);
   assert.match(modal, /Valor da cobrança/i);
   assert.match(modal, /Valor final recebido/i);
+  assert.match(
+    modal,
+    /onBlur=\{\(event\) => onChange\(formatCurrencyInput\(event\.currentTarget\.value\)\)\}/,
+    'Os ajustes devem assumir o padrão brasileiro com duas casas ao sair do campo.',
+  );
 });
 
 test('combobox fecha e recusa seleção quando o modal fica desabilitado', async () => {

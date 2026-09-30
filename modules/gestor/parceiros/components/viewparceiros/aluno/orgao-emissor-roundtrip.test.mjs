@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
@@ -15,6 +16,10 @@ async function load(file) {
 const { toCamel, toSnake } = await load('../../../utils/parceiro-mappers.ts');
 const { normalizeAlunoFormData } = await load('./parceiro-aluno-dados.utils.ts');
 const { prepareAlunoSaveData, updateAlunoDraft } = await load('./parceiro-aluno-edicao.ts');
+const [createFormSource, detailsSource] = await Promise.all([
+  readFile(new URL('../../formularioparceiros/aluno/ParceiroAlunoFormStepDocuments.tsx', import.meta.url), 'utf8'),
+  readFile(new URL('./ParceiroAlunoDetailsSections.tsx', import.meta.url), 'utf8'),
+]);
 
 const formFor = (orgao) => normalizeAlunoFormData(toCamel({
   tipo: 'Aluno', orgao_emissor: orgao, rg_uf_emissao: null, telefone: '79999990000',
@@ -43,4 +48,15 @@ test('seleção explícita substitui legado pela sigla canônica e permite limpa
 test('cadastro sem órgão permanece opcional', () => {
   const baseline = formFor(null);
   assert.equal(save(baseline, baseline).orgao_emissor, null);
+});
+
+test('seletor de órgão permanece visível para CIN, CNH, RG e tipos legados', () => {
+  assert.match(createFormSource, /const hasIdentityDocument = Boolean\(formData\.tipoDocumento\);/);
+  assert.match(createFormSource, /\{hasIdentityDocument \? \(\s*<OrgaoEmissorPicker/);
+  assert.doesNotMatch(createFormSource, /<input[^>]+name=["']orgaoEmissor["']/);
+
+  assert.match(detailsSource, /const hasIdentityDocument = Boolean\(formData\.tipoDocumento\);/);
+  assert.match(detailsSource, /\{hasIdentityDocument \? \([\s\S]{0,300}<OrgaoEmissorPicker/);
+  assert.match(detailsSource, /\{hasIdentityDocument \? <ParceiroAlunoDisplayField label="Órgão expedidor"/);
+  assert.doesNotMatch(detailsSource, /<input[^>]+name=["']orgaoEmissor["']/);
 });

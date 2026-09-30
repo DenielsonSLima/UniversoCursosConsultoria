@@ -5,6 +5,7 @@ import { calculateManualSettlementBreakdown } from './manual-settlement-calculat
 
 export {
   calculateManualSettlementTotal,
+  formatCurrencyInput,
   sanitizeCurrencyInput,
 } from './manual-settlement-calculation';
 export type { ManualSettlementAdjustmentValues } from './manual-settlement-calculation';
