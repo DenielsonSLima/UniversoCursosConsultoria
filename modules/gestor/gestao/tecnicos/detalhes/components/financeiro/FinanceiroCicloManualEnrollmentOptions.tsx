@@ -2,7 +2,7 @@ import React from 'react';
 import type { CicloManualModoMatricula } from './matricula-tecnica-ciclo-manual.types';
 
 interface Props {
-  mode: CicloManualModoMatricula;
+  mode: CicloManualModoMatricula | null;
   disabled: boolean;
   canSettle: boolean;
   openSettlement: boolean;

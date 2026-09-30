@@ -8,6 +8,7 @@ import {
   addCicloManualCalendarMonths,
   changeCicloManualEnrollmentMode,
   changeCicloManualRevisionItem,
+  cicloManualRevisionForEnrollmentMode,
   cicloManualScheduleFromPreview,
 } from './ciclo-manual-due-schedule';
 import { requireCicloFinanceiroTecnicoManualPreview } from './matricula-tecnica-ciclo-manual-preview.parser';
@@ -98,7 +99,18 @@ test('matrícula LOCAL paga só representa baixa local; boleto pago exige prova 
   }
 });
 
-test('primeira mensalidade recalcula o calendário sem acoplar a matrícula local', () => {
+test('modo explícito já forma a revisão enviada na primeira prévia', () => {
+  assert.deepEqual(cicloManualRevisionForEnrollmentMode('BOLETO'), {
+    modoMatricula: 'BOLETO', emitirMatricula: true, itens: [],
+  });
+  for (const mode of ['REGISTRO_SEM_BOLETO', 'OMITIR'] as const) {
+    assert.deepEqual(cicloManualRevisionForEnrollmentMode(mode), {
+      modoMatricula: mode, emitirMatricula: false, itens: [],
+    });
+  }
+});
+
+test('data da matrícula local recalcula automaticamente as mensalidades subsequentes', () => {
   const parsed = requireCicloFinanceiroTecnicoManualPreview(preview());
   const revision = {
     modoMatricula: 'REGISTRO_SEM_BOLETO' as const,
@@ -112,24 +124,41 @@ test('primeira mensalidade recalcula o calendário sem acoplar a matrícula loca
   const enrollmentKey = parsed.itens[0].chave;
   const firstInstallmentKey = parsed.itens[1].chave;
   const withRetroactiveEnrollment = changeCicloManualRevisionItem(
-    revision, schedule, enrollmentKey, 'vencimento', '2026-08-15',
+    revision, schedule, enrollmentKey, 'vencimento', '2026-09-05',
   );
-  assert.equal(
-    withRetroactiveEnrollment.itens.find((entry) => entry.chave === firstInstallmentKey)?.vencimento,
-    '2027-02-20',
-    'A data própria da matrícula não pode deslocar as mensalidades.',
+  assert.deepEqual(
+    withRetroactiveEnrollment.itens.slice(1, 5).map((entry) => entry.vencimento),
+    ['2026-10-05', '2026-11-05', '2026-12-05', '2027-01-05'],
   );
   const recalculated = changeCicloManualRevisionItem(
     withRetroactiveEnrollment, schedule, firstInstallmentKey, 'vencimento', '2027-01-31',
   );
 
-  assert.equal(recalculated.itens.find((entry) => entry.chave === enrollmentKey)?.vencimento, '2026-08-15');
+  assert.equal(recalculated.itens.find((entry) => entry.chave === enrollmentKey)?.vencimento, '2026-09-05');
   assert.deepEqual(
     recalculated.itens.slice(1, 5).map((entry) => entry.vencimento),
     ['2027-01-31', '2027-02-28', '2027-03-31', '2027-04-30'],
   );
   assert.equal(addCicloManualCalendarMonths('2028-01-31', 1), '2028-02-29');
   assert.equal(addCicloManualCalendarMonths('2027-01-31', 1), '2027-02-28');
+
+  const monthEndEnrollment = changeCicloManualRevisionItem(
+    revision, schedule, enrollmentKey, 'vencimento', '2027-01-31',
+  );
+  assert.deepEqual(
+    monthEndEnrollment.itens.slice(1, 4).map((entry) => entry.vencimento),
+    ['2027-02-28', '2027-03-31', '2027-04-30'],
+  );
+
+  const boleto = { ...revision, modoMatricula: 'BOLETO' as const, emitirMatricula: true };
+  const unchanged = changeCicloManualRevisionItem(
+    boleto, schedule, enrollmentKey, 'vencimento', '2026-09-05',
+  );
+  assert.equal(
+    unchanged.itens.find((entry) => entry.chave === firstInstallmentKey)?.vencimento,
+    '2027-02-20',
+    'A cascata da data da matrícula é exclusiva do registro local.',
+  );
 });
 
 test('alternar matrícula restaura o mês reservado sem sobrescrever troca entre boleto e local', () => {

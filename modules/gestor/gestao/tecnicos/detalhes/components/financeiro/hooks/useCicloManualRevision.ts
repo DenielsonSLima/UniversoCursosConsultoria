@@ -8,6 +8,7 @@ import type {
 import {
   changeCicloManualEnrollmentMode,
   changeCicloManualRevisionItem,
+  cicloManualRevisionForEnrollmentMode,
   cicloManualScheduleFromPreview,
   type CicloManualScheduleItem,
 } from '../ciclo-manual-due-schedule';
@@ -36,22 +37,44 @@ interface RevisionState {
   dirty: boolean;
 }
 
-const initialState = (contextKey: string): RevisionState => ({
-  contextKey, revision: null, draft: null, schedule: [], originDate: null, dirty: false,
-});
+const initialState = (
+  contextKey: string,
+  enrollmentMode: CicloManualModoMatricula | null,
+): RevisionState => {
+  const revision = enrollmentMode
+    ? cicloManualRevisionForEnrollmentMode(enrollmentMode)
+    : null;
+  return {
+    contextKey,
+    revision,
+    draft: revision,
+    schedule: [],
+    originDate: null,
+    dirty: false,
+  };
+};
 
-export const useCicloManualRevision = (contextKey: string) => {
-  const [state, setState] = useState(() => initialState(contextKey));
-  const current = state.contextKey === contextKey ? state : initialState(contextKey);
+export const useCicloManualRevision = (
+  contextKey: string,
+  enrollmentMode: CicloManualModoMatricula | null = null,
+) => {
+  const [state, setState] = useState(() => initialState(contextKey, enrollmentMode));
+  const current = state.contextKey === contextKey
+    ? state
+    : initialState(contextKey, enrollmentMode);
 
   useEffect(() => {
-    setState((previous) => previous.contextKey === contextKey ? previous : initialState(contextKey));
-  }, [contextKey]);
+    setState((previous) => previous.contextKey === contextKey
+      ? previous
+      : initialState(contextKey, enrollmentMode));
+  }, [contextKey, enrollmentMode]);
 
   const seedPreview = useCallback((preview: CicloFinanceiroTecnicoManualPreview | undefined) => {
     if (!preview) return;
     setState((previous) => {
-      const existing = previous.contextKey === contextKey ? previous : initialState(contextKey);
+      const existing = previous.contextKey === contextKey
+        ? previous
+        : initialState(contextKey, enrollmentMode);
       if (existing.dirty) return existing;
       const canonical = revisionFromPreview(preview);
       const canonicalKeys = new Set(canonical.itens.map((item) => item.chave));
@@ -69,7 +92,7 @@ export const useCicloManualRevision = (contextKey: string) => {
         },
       };
     });
-  }, [contextKey]);
+  }, [contextKey, enrollmentMode]);
 
   const changeItem = (
     key: string,

@@ -13,6 +13,14 @@ export type CicloManualScheduleItem = Pick<
 
 type RevisionField = keyof Omit<CicloFinanceiroTecnicoManualRevisaoItem, 'chave'>;
 
+export const cicloManualRevisionForEnrollmentMode = (
+  modoMatricula: CicloManualModoMatricula,
+): CicloFinanceiroTecnicoManualRevisao => ({
+  modoMatricula,
+  emitirMatricula: modoMatricula === 'BOLETO',
+  itens: [],
+});
+
 const parseIsoDate = (value: string) => {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   if (!match) return null;
@@ -54,21 +62,29 @@ export const changeCicloManualRevisionItem = (
   value: string,
 ): CicloFinanceiroTecnicoManualRevisao => {
   const changed = schedule.find((item) => item.chave === key);
-  const baseDate = field === 'vencimento' && changed?.tipo === 'PARCELA' && changed.numero === 1
-    ? addCicloManualCalendarMonths(value, 0)
-    : null;
+  const installmentOriginDate = field === 'vencimento'
+      && changed?.tipo === 'PARCELA' && changed.numero === 1
+    ? addCicloManualCalendarMonths(value, 0) : null;
+  const localEnrollmentOriginDate = field === 'vencimento'
+      && changed?.tipo === 'MATRICULA'
+      && revision.modoMatricula === 'REGISTRO_SEM_BOLETO'
+    ? addCicloManualCalendarMonths(value, 0) : null;
+  const cascadeOriginDate = installmentOriginDate ?? localEnrollmentOriginDate;
+  const firstInstallmentOffset = localEnrollmentOriginDate ? 1 : 0;
   const scheduleByKey = new Map(schedule.map((item) => [item.chave, item]));
 
   return {
     ...revision,
     itens: revision.itens.map((item) => {
-      if (baseDate) {
+      if (cascadeOriginDate) {
         const identity = scheduleByKey.get(item.chave);
         if (identity?.tipo === 'PARCELA' && identity.numero >= 1) {
           return {
             ...item,
-            vencimento: addCicloManualCalendarMonths(baseDate, identity.numero - 1)
-              ?? item.vencimento,
+            vencimento: addCicloManualCalendarMonths(
+              cascadeOriginDate,
+              firstInstallmentOffset + identity.numero - 1,
+            ) ?? item.vencimento,
           };
         }
       }
