@@ -1,252 +1,245 @@
-// File: modules/gestor/parceiros/components/formularioparceiros/professor/ParceiroProfessorForm.tsx
-// Formulário completo de Professor em 4 etapas (Wizard)
-
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-  User, MapPin, Phone, Mail, Save, X, AlertCircle, FileText,
-  GraduationCap, DollarSign, ChevronRight, ChevronLeft,
-  CheckCircle2, Plus, Upload, Loader2
+  AlertCircle,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  DollarSign,
+  GraduationCap,
+  Loader2,
+  MapPin,
+  Save,
+  User,
+  X,
 } from 'lucide-react';
 import { empresasService } from '../../../../configuracoes/empresas/empresas.service';
 import { parceirosService } from '../../../parceiros.service';
-import { formatCpf, isValidCpf, isValidEmail, normalizeEmail } from '../../../../../shared/utils/identityValidation';
-import { RACA_COR_OPTIONS } from '../../../utils/parceiros.constants';
+import { formatCpf, normalizeEmail } from '../../../../../shared/utils/identityValidation';
+import ProfessorContactStep from './ProfessorContactStep';
+import ProfessorEducationStep from './ProfessorEducationStep';
+import ProfessorPaymentStep from './ProfessorPaymentStep';
+import ProfessorPersonalStep from './ProfessorPersonalStep';
+import {
+  createInitialProfessorFormData,
+  formatPixKeyInput,
+  getProfessorFormError,
+  getProfessorStepError,
+  maskCep,
+  maskDate,
+  maskPhone,
+  normalizePixKey,
+  type PixKeyType,
+  type ProfessorPoloOption,
+} from './professor-form.model';
 
 interface ParceiroProfessorFormProps {
   onCancel?: () => void;
-  onSave?: (data: any) => void;
+  onSave?: (data: unknown) => void;
+  defaultPoloId?: string | null;
+  onScopeError?: (message: string) => void;
+  isSaving?: boolean;
 }
 
 const STEPS = [
-  { id: 1, label: 'Dados Pessoais', icon: User, color: 'purple' },
-  { id: 2, label: 'Formação', icon: GraduationCap, color: 'indigo' },
-  { id: 3, label: 'Financeiro', icon: DollarSign, color: 'emerald' },
-  { id: 4, label: 'Endereço & Contato', icon: MapPin, color: 'violet' },
-];
+  { id: 1, label: 'Dados pessoais', icon: User },
+  { id: 2, label: 'Formação', icon: GraduationCap },
+  { id: 3, label: 'Financeiro', icon: DollarSign },
+  { id: 4, label: 'Endereço e contato', icon: MapPin },
+] as const;
 
-const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
-const PRESET_TITULACOES = ['GRADUAÇÃO', 'ESPECIALIZAÇÃO', 'MESTRADO', 'DOUTORADO', 'PÓS-DOUTORADO'];
-const REGISTROS = ['CRM','COREN','CRO','CRN','CRP','CRF','CREA','CRC','OAB','CREFITO','Não possui'];
-const PRESET_VINCULOS = ['CLT', 'PJ', 'AUTÔNOMO', 'VOLUNTÁRIO', 'CONTRATO'];
-const BANCOS = [
-  'Banco do Brasil', 'Caixa Econômica Federal', 'Bradesco', 'Itaú', 'Santander',
-  'Nubank', 'Inter', 'Sicoob', 'Sicredi', 'BTG Pactual', 'Outro'
-];
+const inputCls = 'w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] font-medium focus:border-purple-500 focus:bg-white outline-none transition-all placeholder:text-slate-400 text-sm disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400';
+const labelCls = 'block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1.5 ml-0.5';
 
-const ParceiroProfessorForm: React.FC<ParceiroProfessorFormProps> = ({ onCancel, onSave }) => {
+const ParceiroProfessorForm: React.FC<ParceiroProfessorFormProps> = ({
+  onCancel,
+  onSave,
+  defaultPoloId,
+  onScopeError,
+  isSaving = false,
+}) => {
   const [currentStep, setCurrentStep] = useState(1);
-  const [polosList, setPolosList] = useState<any[]>([]);
+  const [formData, setFormData] = useState(() => createInitialProfessorFormData(defaultPoloId));
+  const [polosList, setPolosList] = useState<ProfessorPoloOption[]>([]);
+  const [polosLoading, setPolosLoading] = useState(true);
+  const [polosError, setPolosError] = useState('');
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [validationError, setValidationError] = useState('');
 
-  useEffect(() => {
-    const fetchPolos = async () => {
-      try {
-        const data = await parceirosService.getPolos();
-        setPolosList(data);
-      } catch (err) {
-        console.error('Erro ao buscar polos:', err);
-      }
-    };
-    fetchPolos();
+  const loadPolos = useCallback(async () => {
+    setPolosLoading(true);
+    setPolosError('');
+    try {
+      const data = await parceirosService.getPolos();
+      setPolosList((data || []).map((polo: any) => ({
+        id: String(polo.id),
+        nome: String(polo.nome || 'Polo sem nome'),
+        cidade: String(polo.cidade || 'Cidade não informada'),
+        estado: polo.estado || null,
+        uf: polo.uf || null,
+      })));
+    } catch (error) {
+      console.error('Erro ao buscar polos:', error);
+      setPolosError('Não foi possível carregar os polos.');
+    } finally {
+      setPolosLoading(false);
+    }
   }, []);
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  useEffect(() => {
+    void loadPolos();
+  }, [loadPolos]);
+
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
     if (!file) return;
+    setValidationError('');
     setIsUploadingPhoto(true);
     try {
       const url = await empresasService.uploadLogo(file);
-      setFormData(prev => ({ ...prev, foto: url }));
-    } catch (err: any) {
-      alert('Erro ao enviar foto: ' + (err.message || err));
+      setFormData((previous) => ({ ...previous, foto: url }));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setValidationError(`Não foi possível enviar a foto: ${message}`);
     } finally {
       setIsUploadingPhoto(false);
     }
   };
 
-  // Dynamic category states
-  const [showCustomTitulacao, setShowCustomTitulacao] = useState(false);
-  const [customTitulacao, setCustomTitulacao] = useState('');
-  const [selectedTitulacao, setSelectedTitulacao] = useState('');
+  const handleChange = (
+    event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
+  ) => {
+    const { name, value, tagName } = event.target;
+    setValidationError('');
 
-  const [showCustomVinculo, setShowCustomVinculo] = useState(false);
-  const [customVinculo, setCustomVinculo] = useState('');
-  const [selectedVinculo, setSelectedVinculo] = useState('');
-
-  const [formData, setFormData] = useState({
-    // Step 1 — Dados Pessoais
-    polo: 'matriz',
-    poloIds: [] as string[],
-    foto: '',
-    nomeCompleto: '',
-    cpf: '',
-    dataNascimento: '',
-    sexo: '',
-    racaCor: '',
-    rg: '',
-    orgaoEmissor: '',
-
-    // Step 2 — Formação Acadêmica
-    titulacao: '',
-    areaFormacao: '',
-    instituicaoFormacao: '',
-    especialidade: '',
-    registroProfissional: '',
-    numeroRegistro: '',
-
-    // Step 3 — Financeiro & Vínculo
-    tipoVinculo: '',
-    chavePix: '',
-    banco: '',
-    agencia: '',
-    conta: '',
-    tipoConta: 'Corrente',
-
-    // Step 4 — Endereço & Contato
-    cep: '',
-    endereco: '',
-    numero: '',
-    complemento: '',
-    bairro: '',
-    cidade: '',
-    uf: '',
-    email: '',
-    contato1: '',
-    contato2: '',
-    observacao: '',
-  });
-
-  const maskCPF = formatCpf;
-  const maskCEP = (v: string) => v.replace(/\D/g,'').replace(/(\d{5})(\d)/,'$1-$2').replace(/(-\d{3})\d+?$/,'$1');
-  const maskPhone = (v: string) => v.replace(/\D/g,'').replace(/(\d{2})(\d)/,'($1) $2').replace(/(\d{5})(\d)/,'$1-$2').replace(/(-\d{4})\d+?$/,'$1');
-  const maskDate = (v: string) => v.replace(/\D/g,'').replace(/(\d{2})(\d)/,'$1/$2').replace(/(\d{2})(\d)/,'$1/$2').replace(/(\/\d{4})\d+?$/,'$1');
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target;
-    let finalValue = value;
-    if (type === 'text' || type === 'textarea' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
-      if (name !== 'email') {
-        finalValue = value.toUpperCase();
-      }
+    if (name === 'tipoChavePix') {
+      setFormData((previous) => ({
+        ...previous,
+        tipoChavePix: value as PixKeyType,
+        chavePix: '',
+      }));
+      return;
     }
-    if (name === 'email') finalValue = normalizeEmail(finalValue);
-    if (name === 'cpf') finalValue = maskCPF(finalValue);
-    if (name === 'cep') finalValue = maskCEP(finalValue);
-    if (name === 'contato1' || name === 'contato2') finalValue = maskPhone(finalValue);
-    if (name === 'dataNascimento') finalValue = maskDate(finalValue);
-    setFormData(prev => ({ ...prev, [name]: finalValue }));
+
+    let finalValue = value;
+    if (name === 'email') finalValue = normalizeEmail(value);
+    else if (name === 'cpf') finalValue = formatCpf(value);
+    else if (name === 'cep') finalValue = maskCep(value);
+    else if (name === 'contato1' || name === 'contato2') finalValue = maskPhone(value);
+    else if (name === 'dataNascimento') finalValue = maskDate(value);
+    else if (name === 'chavePix') finalValue = formatPixKeyInput(formData.tipoChavePix, value);
+    else if (tagName === 'INPUT' || tagName === 'TEXTAREA') finalValue = value.toUpperCase();
+
+    setFormData((previous) => ({ ...previous, [name]: finalValue }));
+  };
+
+  const handleTogglePolo = (poloId: string) => {
+    setValidationError('');
+    setFormData((previous) => {
+      const nextPoloIds = previous.poloIds.includes(poloId)
+        ? previous.poloIds.filter((id) => id !== poloId)
+        : [...previous.poloIds, poloId];
+      return { ...previous, poloIds: nextPoloIds, poloId: nextPoloIds[0] || '' };
+    });
   };
 
   const handleCepBlur = async () => {
     const cep = formData.cep.replace(/\D/g, '');
     if (cep.length !== 8) return;
     try {
-      const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-      const data = await res.json();
+      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      const data = await response.json();
       if (!data.erro) {
-        setFormData(prev => ({
-          ...prev,
-          endereco: data.logradouro || '',
-          bairro: data.bairro || '',
-          cidade: data.localidade || '',
-          uf: data.uf || '',
+        setFormData((previous) => ({
+          ...previous,
+          endereco: String(data.logradouro || '').toUpperCase(),
+          bairro: String(data.bairro || '').toUpperCase(),
+          cidade: String(data.localidade || '').toUpperCase(),
+          uf: String(data.uf || '').toUpperCase(),
         }));
       }
     } catch {
-      // ViaCEP failures should not block manual address entry.
+      // Falhas no ViaCEP não impedem o preenchimento manual opcional.
     }
-  };
-
-  const stepValid = () => {
-    if (currentStep === 1) {
-      return formData.nomeCompleto.trim() !== ''
-        && (!formData.cpf || isValidCpf(formData.cpf))
-        && (!formData.dataNascimento || formData.dataNascimento.length === 10);
-    }
-    if (currentStep === 4) {
-      return (!formData.email || isValidEmail(formData.email))
-        && (!formData.contato1 || formData.contato1.length >= 14);
-    }
-    return true;
   };
 
   const handleNext = () => {
-    if (!stepValid()) {
-      if (currentStep === 1) alert('Informe o nome e, se preencher, use CPF e data de nascimento válidos.');
-      if (currentStep === 4) alert('Se preencher, informe e-mail válido e telefone completo.');
+    const message = getProfessorStepError(currentStep, formData);
+    if (message) {
+      setValidationError(message);
+      if (currentStep === 1 && formData.poloIds.length === 0) onScopeError?.(message);
       return;
     }
-    if (currentStep < 4) setCurrentStep(s => s + 1);
+    setValidationError('');
+    setCurrentStep((step) => Math.min(step + 1, 4));
   };
-  const handleBack = () => { if (currentStep > 1) setCurrentStep(s => s - 1); };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const finalTitulacao = showCustomTitulacao ? customTitulacao.trim().toUpperCase() : selectedTitulacao;
-    const finalVinculo = showCustomVinculo ? customVinculo.trim().toUpperCase() : selectedVinculo;
-    if (formData.cpf && !isValidCpf(formData.cpf)) {
-      alert('CPF do professor inválido. Corrija antes de salvar.');
+  const handleBack = () => {
+    setValidationError('');
+    setCurrentStep((step) => Math.max(step - 1, 1));
+  };
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (isSaving) return;
+
+    const error = getProfessorFormError(formData);
+    if (error) {
+      setCurrentStep(error.step);
+      setValidationError(error.message);
+      if (formData.poloIds.length === 0) onScopeError?.(error.message);
       return;
     }
-    if (formData.dataNascimento && formData.dataNascimento.length !== 10) {
-      alert('Data de nascimento do professor inválida. Corrija antes de salvar.');
-      return;
-    }
-    if (formData.email && !isValidEmail(formData.email)) {
-      alert('E-mail do professor inválido. Ele será usado como login quando informado.');
-      return;
-    }
-    if (formData.contato1 && formData.contato1.length < 14) {
-      alert('Telefone/WhatsApp do professor inválido. Corrija antes de salvar.');
-      return;
-    }
-    if (onSave) onSave({
+
+    setValidationError('');
+    onSave?.({
       ...formData,
       email: normalizeEmail(formData.email),
-      titulacao: finalTitulacao,
-      tipoVinculo: finalVinculo,
+      chavePix: normalizePixKey(formData.tipoChavePix, formData.chavePix),
     });
   };
 
-  const inputCls = 'w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] font-medium focus:border-purple-500 focus:bg-white outline-none transition-all placeholder:text-slate-400 text-sm';
-  const labelCls = 'block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1.5 ml-0.5';
-
   return (
-    <div className="">
-      {/* Header */}
-      <div className="flex justify-between items-center border-b border-slate-100 pb-5 mb-6">
+    <div>
+      <div className="mb-6 flex items-center justify-between border-b border-slate-100 pb-5">
         <div>
-          <h3 className="text-xl font-black text-[#001a33] uppercase tracking-tight">Novo Professor</h3>
-          <p className="text-slate-500 text-sm font-medium mt-0.5">Cadastro completo de vínculo docente</p>
+          <h3 className="text-xl font-black uppercase tracking-tight text-[#001a33]">Novo professor</h3>
+          <p className="mt-0.5 text-sm font-medium text-slate-500">Somente polo, nome e CPF são obrigatórios.</p>
         </div>
         {onCancel && (
-          <button type="button" onClick={onCancel} className="p-2 rounded-full text-slate-400 hover:bg-slate-50 hover:text-red-500 transition-colors">
+          <button type="button" onClick={onCancel} className="rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-50 hover:text-red-500" aria-label="Cancelar cadastro">
             <X size={20} />
           </button>
         )}
       </div>
 
-      {/* Step Indicator */}
-      <div className="flex items-center justify-between mb-8 relative">
-        <div className="absolute top-5 left-0 right-0 h-0.5 bg-slate-100 z-0" />
+      <div className="relative mb-8 flex items-center justify-between">
+        <div className="absolute left-0 right-0 top-5 z-0 h-0.5 bg-slate-100" />
         {STEPS.map((step) => {
           const Icon = step.icon;
           const done = currentStep > step.id;
           const active = currentStep === step.id;
           return (
-            <div key={step.id} className="flex flex-col items-center gap-2 z-10 flex-1">
+            <div key={step.id} className="z-10 flex flex-1 flex-col items-center gap-2">
               <button
                 type="button"
-                onClick={() => done && setCurrentStep(step.id)}
-                className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
-                  done ? 'bg-emerald-500 border-emerald-500 text-white cursor-pointer' :
-                  active ? 'bg-purple-600 border-purple-600 text-white shadow-lg shadow-purple-500/30' :
-                  'bg-white border-slate-200 text-slate-400 cursor-default'
+                onClick={() => {
+                  if (done) {
+                    setValidationError('');
+                    setCurrentStep(step.id);
+                  }
+                }}
+                className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all duration-300 ${
+                  done
+                    ? 'cursor-pointer border-emerald-500 bg-emerald-500 text-white'
+                    : active
+                      ? 'border-purple-600 bg-purple-600 text-white shadow-lg shadow-purple-500/30'
+                      : 'cursor-default border-slate-200 bg-white text-slate-400'
                 }`}
+                aria-label={`Etapa ${step.id}: ${step.label}`}
               >
                 {done ? <CheckCircle2 size={18} /> : <Icon size={16} />}
               </button>
-              <span className={`text-[9px] font-black uppercase tracking-wider text-center leading-tight ${
+              <span className={`text-center text-[9px] font-black uppercase leading-tight tracking-wider ${
                 active ? 'text-purple-600' : done ? 'text-emerald-600' : 'text-slate-400'
               }`}>
                 {step.label}
@@ -256,490 +249,57 @@ const ParceiroProfessorForm: React.FC<ParceiroProfessorFormProps> = ({ onCancel,
         })}
       </div>
 
-      <form onSubmit={handleSubmit}>
-        {/* ══════════════ STEP 1: DADOS PESSOAIS ══════════════ */}
+      <form onSubmit={handleSubmit} noValidate>
+        {validationError && (
+          <div role="alert" aria-live="assertive" className="mb-5 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+            <AlertCircle size={18} className="mt-0.5 shrink-0" />
+            <span>{validationError}</span>
+          </div>
+        )}
+
         {currentStep === 1 && (
-          <div className="space-y-5 ">
-            <div className="flex items-center gap-2 text-purple-600 border-b border-slate-100 pb-2 mb-5">
-              <User size={16} />
-              <h4 className="text-xs font-black uppercase tracking-wider">Dados Pessoais & Identificação</h4>
-            </div>
-
-            {/* Foto Upload */}
-            <div className="flex flex-col md:flex-row gap-6 items-center bg-slate-50 p-5 rounded-2xl border border-slate-200 mb-5">
-              <div className="w-24 h-24 rounded-full bg-slate-100 border-2 border-slate-200 relative overflow-hidden group shrink-0">
-                {formData.foto ? (
-                  <img src={formData.foto} alt="Prévia da Foto" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-slate-400">
-                    <User size={40} />
-                  </div>
-                )}
-                {isUploadingPhoto && (
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white">
-                    <Loader2 size={24} className="animate-spin" />
-                  </div>
-                )}
-              </div>
-              <div className="space-y-2 text-left w-full">
-                <h5 className="text-sm font-bold text-[#001a33] uppercase">Foto do Professor</h5>
-                <p className="text-xs text-slate-400">Envie uma foto recente de identificação (JPG, PNG).</p>
-                <div className="flex gap-2">
-                  <label className="px-4 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-purple-700 transition-colors cursor-pointer flex items-center gap-1.5 shadow-md shadow-purple-600/10">
-                    <Upload size={14} />
-                    Selecionar Foto
-                    <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} disabled={isUploadingPhoto} />
-                  </label>
-                  {formData.foto && (
-                    <button
-                      type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, foto: '' }))}
-                      className="px-4 py-2 bg-slate-100 text-slate-600 border border-slate-200 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-slate-200 transition-colors"
-                    >
-                      Remover
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Polo Multi-select */}
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-5">
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1.5 ml-0.5">Polos / Unidades Vinculadas (Selecione um ou mais)</label>
-              <div className="flex flex-wrap gap-3 mt-2">
-                {polosList.length > 0 ? (
-                  polosList.map((poloItem) => {
-                    const isSelected = formData.poloIds.includes(poloItem.id);
-                    return (
-                      <button
-                        type="button"
-                        key={poloItem.id}
-                        onClick={() => {
-                          const isAlreadySelected = formData.poloIds.includes(poloItem.id);
-                          let newPoloIds = [];
-                          if (isAlreadySelected) {
-                            newPoloIds = formData.poloIds.filter(id => id !== poloItem.id);
-                          } else {
-                            newPoloIds = [...formData.poloIds, poloItem.id];
-                          }
-                          const firstPolo = newPoloIds[0] || '';
-                          const poloKey = firstPolo === '44444444-4444-4444-4444-444444444444' 
-                            ? 'matriz' 
-                            : (firstPolo === '55555555-5555-5555-5555-555555555555' ? 'estancia' : 'matriz');
-                          
-                          setFormData(prev => ({
-                            ...prev,
-                            poloIds: newPoloIds,
-                            polo: poloKey
-                          }));
-                        }}
-                        className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border ${
-                          isSelected
-                            ? 'bg-purple-600 text-white border-purple-600 shadow-md shadow-purple-600/10'
-                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                        }`}
-                      >
-                        {poloItem.nome}
-                      </button>
-                    );
-                  })
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const isAlreadySelected = formData.poloIds.includes('44444444-4444-4444-4444-444444444444');
-                        let newPoloIds = isAlreadySelected 
-                          ? formData.poloIds.filter(id => id !== '44444444-4444-4444-4444-444444444444')
-                          : [...formData.poloIds, '44444444-4444-4444-4444-444444444444'];
-                        setFormData(prev => ({ ...prev, poloIds: newPoloIds, polo: 'matriz' }));
-                      }}
-                      className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border ${
-                        formData.poloIds.includes('44444444-4444-4444-4444-444444444444')
-                          ? 'bg-purple-600 text-white border-purple-600'
-                          : 'bg-white text-slate-600 border-slate-200'
-                      }`}
-                    >
-                      Matriz — Aracaju
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const isAlreadySelected = formData.poloIds.includes('55555555-5555-5555-5555-555555555555');
-                        let newPoloIds = isAlreadySelected 
-                          ? formData.poloIds.filter(id => id !== '55555555-5555-5555-5555-555555555555')
-                          : [...formData.poloIds, '55555555-5555-5555-5555-555555555555'];
-                        setFormData(prev => ({ ...prev, poloIds: newPoloIds, polo: 'estancia' }));
-                      }}
-                      className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border ${
-                        formData.poloIds.includes('55555555-5555-5555-5555-555555555555')
-                          ? 'bg-purple-600 text-white border-purple-600'
-                          : 'bg-white text-slate-600 border-slate-200'
-                      }`}
-                    >
-                      Polo Estância
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-
-              <div className="md:col-span-2">
-                <label className={labelCls}>Nome Completo <span className="text-red-500">*</span></label>
-                <input type="text" name="nomeCompleto" value={formData.nomeCompleto} onChange={handleChange}
-                  className={inputCls} placeholder="Ex: Dr. Roberto Santos" required />
-              </div>
-
-              <div>
-                <label className={labelCls}>CPF</label>
-                <input type="text" name="cpf" value={formData.cpf} onChange={handleChange}
-                  maxLength={14} className={`${inputCls} font-mono`} placeholder="000.000.000-00" />
-              </div>
-
-              <div>
-                <label className={labelCls}>Data de Nascimento</label>
-                <input type="text" name="dataNascimento" value={formData.dataNascimento} onChange={handleChange}
-                  maxLength={10} className={inputCls} placeholder="DD/MM/AAAA" />
-              </div>
-
-              <div>
-                <label className={labelCls}>Sexo</label>
-                <select name="sexo" value={formData.sexo} onChange={handleChange} className={inputCls}>
-                  <option value="">Selecione...</option>
-                  <option value="MASCULINO">MASCULINO</option>
-                  <option value="FEMININO">FEMININO</option>
-                  <option value="NÃO-BINÁRIO">NÃO-BINÁRIO</option>
-                  <option value="PREFIRO NÃO INFORMAR">PREFIRO NÃO INFORMAR</option>
-                </select>
-              </div>
-
-              <div>
-                <label className={labelCls}>Raça/Cor</label>
-                <select name="racaCor" value={formData.racaCor} onChange={handleChange} className={inputCls}>
-                  <option value="">Selecione...</option>
-                  {RACA_COR_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
-                </select>
-              </div>
-
-              <div className="md:col-span-2">
-                <label className={labelCls}>RG</label>
-                <input type="text" name="rg" value={formData.rg} onChange={handleChange}
-                  className={inputCls} placeholder="Número do RG" />
-              </div>
-
-              <div>
-                <label className={labelCls}>Órgão Emissor</label>
-                <input type="text" name="orgaoEmissor" value={formData.orgaoEmissor} onChange={handleChange}
-                  className={inputCls} placeholder="SSP/SE" />
-              </div>
-            </div>
-          </div>
+          <ProfessorPersonalStep
+            formData={formData}
+            polosList={polosList}
+            polosLoading={polosLoading}
+            polosError={polosError}
+            isUploadingPhoto={isUploadingPhoto}
+            inputCls={inputCls}
+            labelCls={labelCls}
+            onChange={handleChange}
+            onPhotoUpload={handlePhotoUpload}
+            onRemovePhoto={() => setFormData((previous) => ({ ...previous, foto: '' }))}
+            onTogglePolo={handleTogglePolo}
+            onReloadPolos={() => void loadPolos()}
+          />
         )}
+        {currentStep === 2 && <ProfessorEducationStep formData={formData} inputCls={inputCls} labelCls={labelCls} onChange={handleChange} />}
+        {currentStep === 3 && <ProfessorPaymentStep formData={formData} inputCls={inputCls} labelCls={labelCls} onChange={handleChange} />}
+        {currentStep === 4 && <ProfessorContactStep formData={formData} inputCls={inputCls} labelCls={labelCls} onChange={handleChange} onCepBlur={handleCepBlur} />}
 
-        {/* ══════════════ STEP 2: FORMAÇÃO ══════════════ */}
-        {currentStep === 2 && (
-          <div className="space-y-5 ">
-            <div className="flex items-center gap-2 text-indigo-600 border-b border-slate-100 pb-2 mb-5">
-              <GraduationCap size={16} />
-              <h4 className="text-xs font-black uppercase tracking-wider">Formação Acadêmica & Registro Profissional</h4>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div>
-                <label className={labelCls}>Titulação <span className="text-red-500">*</span></label>
-                <div className="flex gap-2">
-                  {!showCustomTitulacao ? (
-                    <select
-                      value={selectedTitulacao}
-                      onChange={(e) => setSelectedTitulacao(e.target.value)}
-                      className={`${inputCls} flex-grow`}
-                    >
-                      <option value="">Selecione a titulação...</option>
-                      {PRESET_TITULACOES.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                  ) : (
-                    <input
-                      type="text"
-                      value={customTitulacao}
-                      onChange={(e) => setCustomTitulacao(e.target.value.toUpperCase())}
-                      placeholder="EX: TECNOLÓLOGO, LICENCIATURA..."
-                      className={`${inputCls} flex-grow`}
-                    />
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => { setShowCustomTitulacao(!showCustomTitulacao); setCustomTitulacao(''); }}
-                    className="px-4 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center shadow-sm"
-                    title={showCustomTitulacao ? 'Escolher da lista' : 'Informar outra titulação'}
-                  >
-                    {showCustomTitulacao ? <X size={16} /> : <Plus size={16} />}
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className={labelCls}>Área de Formação <span className="text-red-500">*</span></label>
-                <input type="text" name="areaFormacao" value={formData.areaFormacao} onChange={handleChange}
-                  className={inputCls} placeholder="Ex: Enfermagem, Administração..." />
-              </div>
-
-              <div className="md:col-span-2">
-                <label className={labelCls}>Instituição de Formação</label>
-                <input type="text" name="instituicaoFormacao" value={formData.instituicaoFormacao} onChange={handleChange}
-                  className={inputCls} placeholder="Nome da universidade / faculdade" />
-              </div>
-
-              <div className="md:col-span-2">
-                <label className={labelCls}>Especialidade / Disciplinas que Leciona</label>
-                <input type="text" name="especialidade" value={formData.especialidade} onChange={handleChange}
-                  className={inputCls} placeholder="Ex: Anatomia, Microbiologia, Gestão..." />
-              </div>
-
-              <div>
-                <label className={labelCls}>Conselho / Registro Profissional</label>
-                <select name="registroProfissional" value={formData.registroProfissional} onChange={handleChange} className={inputCls}>
-                  <option value="">Selecione...</option>
-                  {REGISTROS.map(r => <option key={r} value={r}>{r}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label className={labelCls}>Número do Registro</label>
-                <input type="text" name="numeroRegistro" value={formData.numeroRegistro} onChange={handleChange}
-                  className={inputCls} placeholder="Ex: COREN-SE 123456" />
-              </div>
-            </div>
-
-            <div className="bg-indigo-50 rounded-2xl p-4 border border-indigo-100 flex items-start gap-3">
-              <AlertCircle size={16} className="text-indigo-400 mt-0.5 flex-shrink-0" />
-              <p className="text-xs text-indigo-700 font-medium">
-                Para cursos na área da saúde (Enfermagem, Radiologia, etc.), o registro profissional ativo no respectivo conselho é obrigatório para ministrar aulas práticas.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* ══════════════ STEP 3: FINANCEIRO ══════════════ */}
-        {currentStep === 3 && (
-          <div className="space-y-5 ">
-            <div className="flex items-center gap-2 text-emerald-600 border-b border-slate-100 pb-2 mb-5">
-              <DollarSign size={16} />
-              <h4 className="text-xs font-black uppercase tracking-wider">Tipo de Vínculo & Dados para Pagamento</h4>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="md:col-span-2">
-                <label className={labelCls}>Tipo de Vínculo <span className="text-red-500">*</span></label>
-                <div className="flex gap-2">
-                  {!showCustomVinculo ? (
-                    <select
-                      value={selectedVinculo}
-                      onChange={(e) => setSelectedVinculo(e.target.value)}
-                      className={`${inputCls} flex-grow`}
-                    >
-                      <option value="">Selecione...</option>
-                      {PRESET_VINCULOS.map(v => <option key={v} value={v}>{v}</option>)}
-                    </select>
-                  ) : (
-                    <input
-                      type="text"
-                      value={customVinculo}
-                      onChange={(e) => setCustomVinculo(e.target.value.toUpperCase())}
-                      placeholder="DESCREVA O TIPO DE VÍNCULO"
-                      className={`${inputCls} flex-grow`}
-                    />
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => { setShowCustomVinculo(!showCustomVinculo); setCustomVinculo(''); }}
-                    className="px-4 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center shadow-sm"
-                    title={showCustomVinculo ? 'Escolher da lista' : 'Informar outro tipo de vínculo'}
-                  >
-                    {showCustomVinculo ? <X size={16} /> : <Plus size={16} />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="md:col-span-2">
-                <div className="h-px bg-slate-100 my-2" />
-                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-3">Dados para pagamento (PIX ou Transferência)</p>
-              </div>
-
-              <div className="md:col-span-2">
-                <label className={labelCls}>Chave PIX</label>
-                <input type="text" name="chavePix" value={formData.chavePix} onChange={handleChange}
-                  className={inputCls} placeholder="CPF, telefone, e-mail ou chave aleatória" />
-              </div>
-
-              <div className="md:col-span-2">
-                <div className="h-px bg-slate-100 my-1" />
-                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-3">Ou dados bancários</p>
-              </div>
-
-              <div>
-                <label className={labelCls}>Banco</label>
-                <select name="banco" value={formData.banco} onChange={handleChange} className={inputCls}>
-                  <option value="">Selecione o banco...</option>
-                  {BANCOS.map(b => <option key={b} value={b}>{b}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label className={labelCls}>Tipo de Conta</label>
-                <select name="tipoConta" value={formData.tipoConta} onChange={handleChange} className={inputCls}>
-                  <option value="Corrente">Corrente</option>
-                  <option value="Poupança">Poupança</option>
-                </select>
-              </div>
-
-              <div>
-                <label className={labelCls}>Agência</label>
-                <input type="text" name="agencia" value={formData.agencia} onChange={handleChange}
-                  className={inputCls} placeholder="0000" />
-              </div>
-
-              <div>
-                <label className={labelCls}>Número da Conta</label>
-                <input type="text" name="conta" value={formData.conta} onChange={handleChange}
-                  className={inputCls} placeholder="00000-0" />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ══════════════ STEP 4: ENDEREÇO & CONTATO ══════════════ */}
-        {currentStep === 4 && (
-          <div className="space-y-6 ">
-            <div className="flex items-center gap-2 text-violet-600 border-b border-slate-100 pb-2 mb-5">
-              <MapPin size={16} />
-              <h4 className="text-xs font-black uppercase tracking-wider">Endereço Completo</h4>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-              <div>
-                <label className={labelCls}>CEP</label>
-                <input type="text" name="cep" value={formData.cep} onChange={handleChange} onBlur={handleCepBlur}
-                  maxLength={9} className={inputCls} placeholder="00000-000" />
-              </div>
-
-              <div className="md:col-span-3">
-                <label className={labelCls}>Endereço</label>
-                <input type="text" name="endereco" value={formData.endereco} onChange={handleChange}
-                  className={inputCls} placeholder="Rua / Avenida" />
-              </div>
-
-              <div>
-                <label className={labelCls}>Número</label>
-                <input type="text" name="numero" value={formData.numero} onChange={handleChange}
-                  className={inputCls} placeholder="123" />
-              </div>
-
-              <div>
-                <label className={labelCls}>Complemento</label>
-                <input type="text" name="complemento" value={formData.complemento} onChange={handleChange}
-                  className={inputCls} placeholder="Apto, Bloco..." />
-              </div>
-
-              <div className="md:col-span-2">
-                <label className={labelCls}>Bairro</label>
-                <input type="text" name="bairro" value={formData.bairro} onChange={handleChange}
-                  className={inputCls} placeholder="Bairro" />
-              </div>
-
-              <div className="md:col-span-3">
-                <label className={labelCls}>Cidade</label>
-                <input type="text" name="cidade" value={formData.cidade} onChange={handleChange}
-                  className={inputCls} placeholder="Nome da cidade" />
-              </div>
-
-              <div>
-                <label className={labelCls}>UF</label>
-                <select name="uf" value={formData.uf} onChange={handleChange} className={inputCls}>
-                  <option value="">UF</option>
-                  {UFS.map(u => <option key={u} value={u}>{u}</option>)}
-                </select>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 text-violet-600 border-b border-slate-100 pb-2">
-              <Phone size={16} />
-              <h4 className="text-xs font-black uppercase tracking-wider">Contato e Acesso</h4>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="md:col-span-2">
-                <label className={labelCls}><Mail size={12} className="inline mr-1" />E-mail de acesso</label>
-                <input type="email" name="email" value={formData.email} onChange={handleChange}
-                  className={inputCls} placeholder="professor@email.com" />
-                <p className="text-[10px] text-slate-400 mt-1 ml-0.5 flex items-center gap-1">
-                  <AlertCircle size={10} />Quando um e-mail válido for informado, o professor receberá um convite para criar a própria senha.
-                </p>
-              </div>
-
-              <div>
-                <label className={labelCls}>Celular / WhatsApp</label>
-                <input type="tel" name="contato1" value={formData.contato1} onChange={handleChange}
-                  maxLength={15} className={inputCls} placeholder="(00) 00000-0000" />
-              </div>
-
-              <div>
-                <label className={labelCls}>Telefone Secundário</label>
-                <input type="tel" name="contato2" value={formData.contato2} onChange={handleChange}
-                  maxLength={15} className={inputCls} placeholder="(00) 00000-0000" />
-              </div>
-            </div>
-
-            <div>
-              <label className={labelCls}><FileText size={12} className="inline mr-1" />Observações Internas</label>
-              <textarea name="observacao" value={formData.observacao} onChange={handleChange} rows={3}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 text-sm focus:border-violet-400 outline-none transition-all resize-none" placeholder="Disponibilidade de horários, restrições, etc..." />
-            </div>
-          </div>
-        )}
-
-        {/* Navegação */}
-        <div className="flex justify-between gap-3 pt-6 mt-6 border-t border-slate-100">
-          <button
-            type="button"
-            onClick={currentStep === 1 ? onCancel : handleBack}
-            className="flex items-center gap-2 px-6 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs uppercase tracking-wider hover:bg-slate-50 transition-colors"
-          >
-            <ChevronLeft size={16} />
-            {currentStep === 1 ? 'Cancelar' : 'Voltar'}
+        <div className="mt-6 flex justify-between gap-3 border-t border-slate-100 pt-6">
+          <button type="button" onClick={currentStep === 1 ? onCancel : handleBack} disabled={isSaving} className="flex items-center gap-2 rounded-xl border border-slate-200 px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50">
+            <ChevronLeft size={16} /> {currentStep === 1 ? 'Cancelar' : 'Voltar'}
           </button>
-
           {currentStep < 4 ? (
-            <button
-              type="button"
-              onClick={handleNext}
-              disabled={!stepValid()}
-              className="flex items-center gap-2 px-8 py-3 rounded-xl bg-purple-600 text-white font-bold text-xs uppercase tracking-wider hover:bg-purple-700 shadow-lg shadow-purple-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+            <button key="next-step" type="button" onClick={handleNext} className="flex items-center gap-2 rounded-xl bg-purple-600 px-8 py-3 text-xs font-bold uppercase tracking-wider text-white shadow-lg shadow-purple-500/20 transition-all hover:bg-purple-700">
               Próximo <ChevronRight size={16} />
             </button>
           ) : (
-            <button
-              type="submit"
-              className="flex items-center gap-2 px-8 py-3 rounded-xl bg-[#001a33] text-white font-bold text-xs uppercase tracking-wider hover:bg-purple-900 shadow-lg shadow-purple-900/20 transition-all"
-            >
-              <Save size={16} /> Salvar Professor
+            <button key="submit-professor" type="submit" disabled={isSaving} className="flex items-center gap-2 rounded-xl bg-[#001a33] px-8 py-3 text-xs font-bold uppercase tracking-wider text-white shadow-lg shadow-purple-900/20 transition-all hover:bg-purple-900 disabled:cursor-not-allowed disabled:opacity-60">
+              {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+              {isSaving ? 'Salvando...' : 'Salvar professor'}
             </button>
           )}
         </div>
 
-        {/* Progresso */}
         <div className="mt-4">
-          <div className="flex justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+          <div className="mb-1 flex justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400">
             <span>Etapa {currentStep} de 4</span>
             <span>{Math.round((currentStep / 4) * 100)}% concluído</span>
           </div>
-          <div className="w-full bg-slate-100 rounded-full h-1.5">
-            <div
-              className="bg-purple-600 h-1.5 rounded-full transition-all duration-500"
-              style={{ width: `${(currentStep / 4) * 100}%` }}
-            />
+          <div className="h-1.5 w-full rounded-full bg-slate-100">
+            <div className="h-1.5 rounded-full bg-purple-600 transition-all duration-500" style={{ width: `${(currentStep / 4) * 100}%` }} />
           </div>
         </div>
       </form>

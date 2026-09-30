@@ -219,7 +219,10 @@ export const useParceirosMutations = ({
       }
       setShowForm(null);
     },
-    onError: () => toast.error('Erro ao salvar professor', 'Verifique se o CPF já está cadastrado.')
+    onError: (error: any) => toast.error(
+      'Erro ao salvar professor',
+      error?.message || 'Não foi possível concluir o cadastro. Confira os dados e tente novamente.',
+    )
   });
 
   const savePFMutation = useMutation({

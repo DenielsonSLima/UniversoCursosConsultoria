@@ -1,10 +1,24 @@
-import { dateBrToDb, dateDbToBr } from './date-utils';
-import { ESTANCIA_LEGACY_POLO_ID, MATRIZ_POLO_ID, UUID_RE } from './parceiros.constants';
-import { uppercaseAlunoTextFields } from './aluno-formatters';
-import { normalizeTechnicalDocumentType } from '../../../shared/utils/technicalEnrollmentRequirements';
+import { dateBrToDb, dateDbToBr } from './date-utils.ts';
+import { ESTANCIA_LEGACY_POLO_ID, MATRIZ_POLO_ID, UUID_RE } from './parceiros.constants.ts';
+import { uppercaseAlunoTextFields } from './aluno-formatters.ts';
+import { normalizeTechnicalDocumentType } from '../../../shared/utils/technicalEnrollmentRequirements.ts';
 
 const uniqueTruthy = <T,>(values: Array<T | null | undefined>) =>
   Array.from(new Set(values.filter(Boolean) as T[]));
+
+export const normalizePartnerAccountType = (value?: string | null) => {
+  const original = String(value || '').trim();
+  if (!original) return null;
+
+  const comparable = original
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase();
+
+  if (comparable === 'CORRENTE') return 'CORRENTE';
+  if (comparable === 'POUPANCA') return 'POUPANÇA';
+  return original.toUpperCase();
+};
 
 const resolvePoloId = (data: any): string | null => {
   const directPoloId = data?.poloId || data?.polo_id;
@@ -264,7 +278,7 @@ export function toSnake(c: any) {
     banco: source.banco || null,
     agencia: source.agencia || null,
     conta: source.conta || null,
-    tipo_conta: source.tipoConta || null,
+    tipo_conta: normalizePartnerAccountType(source.tipoConta),
     tipo_servico: source.tipoServico || null,
     categoria_id: source.categoriaId || source.categoria_id || null,
     tipo_parceria_id: source.tipoParceriaId || source.tipo_parceria_id || null,

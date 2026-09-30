@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { validateAlunoProfessorIdentity } from "./parceiro-validators.ts";
 
-test("permite professor parcial sem CPF e e-mail para cadastro inicial", () => {
+test("permite professor parcial sem CPF e e-mail em atualização", () => {
   const professor = {
     tipo: "Professor",
     nome: "Professor Parcial",
@@ -11,6 +11,16 @@ test("permite professor parcial sem CPF e e-mail para cadastro inicial", () => {
   };
 
   assert.doesNotThrow(() => validateAlunoProfessorIdentity(professor));
+});
+
+test("exige CPF válido do professor no cadastro inicial", () => {
+  assert.throws(
+    () => validateAlunoProfessorIdentity(
+      { tipo: "Professor", nome: "Professor sem CPF", cpf: "" },
+      { requireProfessorCpf: true },
+    ),
+    /CPF válido para cadastrar o professor/i,
+  );
 });
 
 test("permite aluno sem e-mail quando o CPF obrigatório é válido", () => {

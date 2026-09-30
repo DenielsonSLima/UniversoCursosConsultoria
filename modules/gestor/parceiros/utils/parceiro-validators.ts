@@ -1,6 +1,9 @@
-import { isValidCpf, isValidEmail, normalizeEmail } from '../../../shared/utils/identityValidation';
+import { isValidCpf, isValidEmail, normalizeEmail } from '../../../shared/utils/identityValidation.ts';
 
-export function validateAlunoProfessorIdentity(data: any, options: { requireAlunoCpf?: boolean } = {}) {
+export function validateAlunoProfessorIdentity(
+  data: any,
+  options: { requireAlunoCpf?: boolean; requireProfessorCpf?: boolean } = {},
+) {
   const tipo = data?.tipo;
   if (tipo !== 'Aluno' && tipo !== 'Professor') return;
 
@@ -12,8 +15,14 @@ export function validateAlunoProfessorIdentity(data: any, options: { requireAlun
     throw new Error('Informe um CPF válido para cadastrar o aluno.');
   }
 
+  if (tipo === 'Professor' && options.requireProfessorCpf && !isValidCpf(cpf || '')) {
+    throw new Error('Informe um CPF válido para cadastrar o professor.');
+  }
+
   if (hasCpf) {
-    const allowsBlankProfessorCpf = tipo === 'Professor' && !String(cpf || '').trim();
+    const allowsBlankProfessorCpf = tipo === 'Professor'
+      && !options.requireProfessorCpf
+      && !String(cpf || '').trim();
     if (!allowsBlankProfessorCpf && !isValidCpf(cpf || '')) {
       throw new Error(`CPF inválido para cadastro de ${tipo.toLowerCase()}.`);
     }

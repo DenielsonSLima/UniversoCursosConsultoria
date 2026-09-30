@@ -1,8 +1,8 @@
 {
-  "version": "4.8.136",
+  "version": "4.8.137",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 145,
+  "revision": 146,
   "releasedAt": "2026-09-30",
-  "summary": "Foto do aluno nas matrículas da turma"
+  "summary": "Cadastro de professor com polos identificados e Pix tipado"
 }
