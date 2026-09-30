@@ -1,7 +1,7 @@
 // Cadastro inicial de aluno, sem iniciar matrícula neste módulo.
 
-import React, { useEffect, useState } from 'react';
-import { CheckCircle2, ChevronLeft, ChevronRight, Save, X } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { CheckCircle2, ChevronLeft, ChevronRight, Loader2, Save, X } from 'lucide-react';
 
 import { empresasService } from '../../../../configuracoes/empresas/empresas.service';
 import ProfilePhotoAdjustModal from '../../../../../shared/components/ProfilePhotoAdjustModal';
@@ -25,9 +25,10 @@ import type { AlunoCatalogPatch, AlunoFormData } from './parceiro-aluno-form.typ
 
 interface ParceiroAlunoFormProps {
   onCancel?: () => void;
-  onSave?: (data: any) => void;
+  onSave?: (data: any) => Promise<unknown>;
   defaultPoloId?: string | null;
   onScopeError?: (message: string) => void;
+  isSaving?: boolean;
 }
 
 const maskCEP = (value: string) => value.replace(/\D/g,'').replace(/(\d{5})(\d)/,'$1-$2').replace(/(-\d{3})\d+?$/,'$1');
@@ -39,11 +40,13 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({
   onSave,
   defaultPoloId,
   onScopeError,
+  isSaving = false,
 }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [pendingPhotoFile, setPendingPhotoFile] = useState<File | null>(null);
   const [formData, setFormData] = useState<AlunoFormData>(() => createInitialFormData(defaultPoloId));
+  const submitGuardRef = useRef(false);
 
   useEffect(() => {
     if (!defaultPoloId) return;
@@ -190,10 +193,11 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    if (currentStep === 5) handleFinalize();
+    if (currentStep === 5) void handleFinalize();
   };
 
-  const handleFinalize = () => {
+  const handleFinalize = async () => {
+    if (isSaving || submitGuardRef.current) return;
     if (!formData.poloId) {
       onScopeError?.('Selecione um polo ativo no cabeçalho antes de cadastrar o aluno.');
       return;
@@ -227,13 +231,22 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({
       alert('E-mail do responsável inválido.');
       return;
     }
-    onSave?.(uppercaseAlunoTextFields({
-      ...formData,
-      email: normalizeEmail(formData.email),
-      responsavelEmail: normalizeEmail(formData.responsavelEmail),
-      // O módulo Parceiros só cria o cadastro. A matrícula é iniciada em Gestão.
-      matricularAgora: false,
-    }));
+    if (!onSave) return;
+
+    submitGuardRef.current = true;
+    try {
+      await onSave?.(uppercaseAlunoTextFields({
+        ...formData,
+        email: normalizeEmail(formData.email),
+        responsavelEmail: normalizeEmail(formData.responsavelEmail),
+        // O módulo Parceiros só cria o cadastro. A matrícula é iniciada em Gestão.
+        matricularAgora: false,
+      }));
+    } catch {
+      // A mutation já apresenta o erro canônico ao usuário em onError.
+    } finally {
+      submitGuardRef.current = false;
+    }
   };
 
   return (
@@ -255,7 +268,7 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({
           <p className="text-slate-500 text-sm font-medium mt-0.5">Cadastro inicial do aluno</p>
         </div>
         {onCancel && (
-          <button type="button" onClick={onCancel} className="p-2 rounded-full text-slate-400 hover:bg-slate-50 hover:text-red-500 transition-colors">
+          <button type="button" onClick={onCancel} disabled={isSaving} className="p-2 rounded-full text-slate-400 hover:bg-slate-50 hover:text-red-500 transition-colors disabled:cursor-not-allowed disabled:opacity-50" aria-label="Cancelar cadastro">
             <X size={20} />
           </button>
         )}
@@ -276,11 +289,13 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({
               <button
                 type="button"
                 onClick={() => done && setCurrentStep(step.id)}
+                disabled={isSaving}
                 className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
-                  done ? 'bg-emerald-500 border-emerald-500 text-white cursor-pointer' :
+                  done ? `bg-emerald-500 border-emerald-500 text-white ${isSaving ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}` :
                   active ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/30' :
                   'bg-white border-slate-200 text-slate-400 cursor-default'
                 }`}
+                aria-label={`Etapa ${step.id}: ${step.label}`}
               >
                 {done ? <CheckCircle2 size={18} /> : <Icon size={16} />}
               </button>
@@ -294,7 +309,7 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({
         })}
       </div>
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} aria-busy={isSaving}>
         {currentStep === 1 && (
           <ParceiroAlunoFormStepPersonal
             formData={formData}
@@ -315,7 +330,8 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({
           <button
             type="button"
             onClick={currentStep === 1 ? onCancel : () => setCurrentStep((step) => step - 1)}
-            className="flex items-center gap-2 px-6 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs uppercase tracking-wider hover:bg-slate-50 transition-colors"
+            disabled={isSaving}
+            className="flex items-center gap-2 px-6 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs uppercase tracking-wider hover:bg-slate-50 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
           >
             <ChevronLeft size={16} />
             {currentStep === 1 ? 'Cancelar' : 'Voltar'}
@@ -325,7 +341,7 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({
             <button
               type="button"
               onClick={handleNext}
-              disabled={!stepValid()}
+              disabled={isSaving || !stepValid()}
               className="flex items-center gap-2 px-8 py-3 rounded-xl bg-blue-600 text-white font-bold text-xs uppercase tracking-wider hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Próximo <ChevronRight size={16} />
@@ -333,9 +349,11 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({
           ) : (
             <button
               type="submit"
-              className="flex items-center gap-2 px-8 py-3 rounded-xl bg-[#001a33] text-white font-bold text-xs uppercase tracking-wider hover:bg-blue-900 shadow-lg shadow-blue-900/20 transition-all"
+              disabled={isSaving}
+              className="flex items-center gap-2 px-8 py-3 rounded-xl bg-[#001a33] text-white font-bold text-xs uppercase tracking-wider hover:bg-blue-900 shadow-lg shadow-blue-900/20 transition-all disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <Save size={16} /> Salvar Cadastro
+              {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+              {isSaving ? 'Salvando...' : 'Salvar Cadastro'}
             </button>
           )}
         </div>
