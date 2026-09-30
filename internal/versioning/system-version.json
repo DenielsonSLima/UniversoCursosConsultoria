@@ -1,8 +1,8 @@
 {
-  "version": "4.8.129",
+  "version": "4.8.130",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 138,
+  "revision": 139,
   "releasedAt": "2026-09-29",
-  "summary": "Matrícula técnica acadêmica simplificada sem acesso financeiro"
+  "summary": "Baixa manual com composição automática e seletores próprios"
 }
