@@ -13,6 +13,29 @@ test("permite professor parcial sem CPF e e-mail para cadastro inicial", () => {
   assert.doesNotThrow(() => validateAlunoProfessorIdentity(professor));
 });
 
+test("permite aluno sem e-mail quando o CPF obrigatório é válido", () => {
+  const aluno = {
+    tipo: "Aluno",
+    cpf: "529.982.247-25",
+    email: "",
+  };
+
+  assert.doesNotThrow(() => validateAlunoProfessorIdentity(
+    aluno,
+    { requireAlunoCpf: true },
+  ));
+});
+
+test("continua recusando e-mail de aluno preenchido em formato inválido", () => {
+  assert.throws(
+    () => validateAlunoProfessorIdentity({
+      tipo: "Aluno",
+      email: "email-inválido",
+    }),
+    /E-mail inválido/i,
+  );
+});
+
 test("continua recusando identificadores de professor parcialmente preenchidos e inválidos", () => {
   assert.throws(
     () => validateAlunoProfessorIdentity({

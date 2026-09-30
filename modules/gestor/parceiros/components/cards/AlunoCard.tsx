@@ -70,7 +70,7 @@ const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick, onDelete }) => {
             />
           </div>
           <div className="flex flex-col min-w-0">
-            <h3 className="line-clamp-1 text-[13px] font-extrabold leading-[1.35] tracking-normal text-slate-950 antialiased transition-colors group-hover:text-blue-700" title={displayName}>
+            <h3 className="line-clamp-1 text-[11px] font-extrabold leading-[1.35] tracking-normal text-slate-950 antialiased transition-colors group-hover:text-blue-700" title={displayName}>
               {displayName}
             </h3>
             <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-medium">

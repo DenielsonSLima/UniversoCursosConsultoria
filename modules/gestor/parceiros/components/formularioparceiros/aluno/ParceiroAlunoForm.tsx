@@ -172,14 +172,17 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({
 
   const stepValid = () => {
     if (currentStep === 1) return formData.nomeCompleto.trim() !== '' && isValidCpf(formData.cpf) && formData.dataNascimento.length === 10;
-    if (currentStep === 5) return isValidEmail(formData.email) && formData.contato1.length >= 14;
+    if (currentStep === 5) {
+      const email = formData.email.trim();
+      return (!email || isValidEmail(email)) && formData.contato1.length >= 14;
+    }
     return true;
   };
 
   const handleNext = () => {
     if (!stepValid()) {
       if (currentStep === 1) alert('Informe nome, CPF válido e data de nascimento para avançar.');
-      if (currentStep === 5) alert('Informe e-mail válido e telefone para concluir.');
+      if (currentStep === 5) alert('Informe o telefone e, se preencher o e-mail, use um endereço válido.');
       return;
     }
     if (currentStep < 5) setCurrentStep((step) => step + 1);
@@ -203,8 +206,8 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({
       alert('Data de nascimento do aluno é obrigatória.');
       return;
     }
-    if (!isValidEmail(formData.email)) {
-      alert('E-mail do aluno inválido. Ele será usado como login.');
+    if (formData.email.trim() && !isValidEmail(formData.email)) {
+      alert('E-mail do aluno inválido. Corrija o endereço ou deixe o campo em branco para usar a matrícula como login.');
       return;
     }
     if (formData.contato1.length < 14) {

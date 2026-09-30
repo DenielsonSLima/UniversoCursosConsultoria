@@ -51,6 +51,30 @@ const entityIcon = (type: GestorGlobalSearchEntityType) => {
   return <UserRound size={18} aria-hidden="true" />;
 };
 
+const SearchResultAvatar: React.FC<{ result: GestorGlobalSearchResult }> = ({ result }) => {
+  const [imageFailed, setImageFailed] = useState(false);
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [result.photoUrl]);
+
+  return (
+    <span
+      aria-hidden="true"
+      className={`relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl border ${typeStyles[result.entityType]}`}
+    >
+      {result.photoUrl && !imageFailed ? (
+        <img
+          src={result.photoUrl}
+          alt=""
+          className="h-full w-full object-cover"
+          onError={() => setImageFailed(true)}
+        />
+      ) : entityIcon(result.entityType)}
+    </span>
+  );
+};
+
 const GestorGlobalSearch: React.FC<GestorGlobalSearchProps> = ({
   searchQuery,
   setSearchQuery,
@@ -175,8 +199,8 @@ const GestorGlobalSearch: React.FC<GestorGlobalSearchProps> = ({
         <div className="absolute left-0 top-full z-50 mt-2 w-full min-w-[min(92vw,30rem)] overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl shadow-slate-950/15 animate-fadeIn">
           <div className="flex items-center justify-between border-b border-slate-100 bg-gradient-to-r from-slate-50 to-blue-50/60 px-4 py-3">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-600">Busca global</p>
-              <p className="mt-0.5 text-xs font-semibold text-slate-600">Resultados em todos os seus polos</p>
+              <p className="text-[9px] font-black uppercase tracking-[0.18em] text-blue-600">Busca global</p>
+              <p className="mt-0.5 text-[11px] font-semibold text-slate-600">Resultados em todos os seus polos</p>
             </div>
             {isSearchReady && !isSearchLoading && !isSearchError ? (
               <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-bold text-slate-500">
@@ -222,23 +246,21 @@ const GestorGlobalSearch: React.FC<GestorGlobalSearchProps> = ({
                         : 'border-transparent hover:border-slate-200 hover:bg-slate-50'
                     }`}
                   >
-                    <span aria-hidden="true" className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border ${typeStyles[result.entityType]}`}>
-                      {entityIcon(result.entityType)}
-                    </span>
+                    <SearchResultAvatar result={result} />
                     <span className="min-w-0 flex-1">
                       <span className="flex min-w-0 items-center gap-2">
-                        <span className="truncate text-sm font-extrabold text-slate-950" title={result.name}>{result.name}</span>
-                        <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-wide ${typeStyles[result.entityType]}`}>
+                        <span className="truncate text-[12px] font-extrabold text-slate-950" title={result.name}>{result.name}</span>
+                        <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[8px] font-black uppercase tracking-wide ${typeStyles[result.entityType]}`}>
                           {result.entityType}
                         </span>
                       </span>
-                      <span className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-semibold text-slate-700">
+                      <span className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-semibold text-slate-700">
                         <span className="inline-flex items-center gap-1 tabular-nums"><IdCard size={12} className="text-slate-400" aria-hidden="true" />{formatGlobalSearchDocument(result.document)}</span>
                         <span className="text-slate-300" aria-hidden="true">•</span>
                         <span className="inline-flex min-w-0 items-center gap-1"><MapPin size={12} className="shrink-0 text-blue-500" aria-hidden="true" /><span className="truncate">{formatGlobalSearchPolo(result)}</span></span>
                       </span>
                       {classLabel ? (
-                        <span className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[11px] font-semibold text-blue-700">
+                        <span className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[10px] font-semibold text-blue-700">
                           <BookOpenCheck size={12} className="shrink-0" aria-hidden="true" />
                           <span className="truncate" title={classLabel}>Turma · {classLabel}</span>
                         </span>

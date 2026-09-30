@@ -1,8 +1,8 @@
 {
-  "version": "4.8.133",
+  "version": "4.8.134",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 142,
+  "revision": 143,
   "releasedAt": "2026-09-30",
-  "summary": "Hotfix de carregamento do Gestor global"
+  "summary": "Acesso por matrícula e busca global com fotos"
 }

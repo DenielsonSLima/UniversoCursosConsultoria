@@ -21,8 +21,7 @@ export function validateAlunoProfessorIdentity(data: any, options: { requireAlun
 
   if (hasEmail) {
     const email = String(data?.email || '').trim();
-    const allowsBlankProfessorEmail = tipo === 'Professor' && !email;
-    if (!allowsBlankProfessorEmail && !isValidEmail(email)) {
+    if (email && !isValidEmail(email)) {
       throw new Error(`E-mail inválido para cadastro de ${tipo.toLowerCase()}. Ele será usado como login.`);
     }
     if (email) data.email = normalizeEmail(email);
