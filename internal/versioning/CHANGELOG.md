@@ -8,6 +8,7 @@ Histórico anterior: [08/09/2026 a 12/09/2026 — versões 4.8.37 a 4.8.52](./ch
 
 - Juros, multa, desconto e acréscimos da baixa manual passam a normalizar automaticamente valores como `19` para `R$ 19,00`, com agrupamento brasileiro e duas casas decimais.
 - Novo crédito em Outros Créditos abre como workspace de tela cheia fora do PDV, com rolagem interna, bloqueio da página e navegação de foco contida.
+- Órgão expedidor volta a aparecer para CIN e CNH no cadastro, na edição e na consulta do aluno, sempre pelo catálogo controlado e sem texto livre.
 
 ## [4.8.130] - 2026-09-29
 

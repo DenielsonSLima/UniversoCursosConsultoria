@@ -106,6 +106,7 @@ const ParceiroAlunoDocumentsSection: React.FC<DetailsSectionsProps> = ({
   const isCnh = isCnhDocumentType(formData.tipoDocumento);
   const isLegacyRg = isLegacyRgDocumentType(formData.tipoDocumento);
   const isOtherLegacyType = Boolean(formData.tipoDocumento) && !isCin && !isCnh && !isLegacyRg;
+  const hasIdentityDocument = Boolean(formData.tipoDocumento);
 
   return (
   <div id="aluno-documentacao" className="scroll-mt-28 space-y-4 border-t border-slate-100 pt-6">
@@ -138,13 +139,15 @@ const ParceiroAlunoDocumentsSection: React.FC<DetailsSectionsProps> = ({
               <input id="aluno-rg" type="text" name="rg" value={formData.rg || ''} onChange={onChange} className="w-full min-h-11 sm:min-h-10 px-3 py-2 text-base sm:text-sm bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none" />
             </div>
           ) : null}
+          {hasIdentityDocument ? (
+            <div className="space-y-1.5">
+              <OrgaoEmissorPicker value={formData.orgaoEmissor || ''} onChange={onOrgaoEmissorChange}
+                label="Órgão expedidor" labelClassName="mb-1.5 block text-xs font-medium text-slate-600"
+                inputClassName="w-full min-h-11 sm:min-h-10 px-3 py-2 text-base sm:text-sm bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none" />
+            </div>
+          ) : null}
           {isLegacyRg || isOtherLegacyType ? (
             <>
-              <div className="space-y-1.5">
-                <OrgaoEmissorPicker value={formData.orgaoEmissor || ''} onChange={onOrgaoEmissorChange}
-                  label="Órgão expedidor" labelClassName="mb-1.5 block text-xs font-medium text-slate-600"
-                  inputClassName="w-full min-h-11 sm:min-h-10 px-3 py-2 text-base sm:text-sm bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none" />
-              </div>
               <div className="space-y-1.5">
                 <label htmlFor="aluno-rgUfEmissao" className="block text-xs font-medium text-slate-600">UF de expedição</label>
                 <select id="aluno-rgUfEmissao" name="rgUfEmissao" value={formData.rgUfEmissao || ''} onChange={onChange} className="w-full min-h-11 sm:min-h-10 px-3 py-2 text-base sm:text-sm bg-slate-50 border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none">
@@ -239,9 +242,9 @@ const ParceiroAlunoDocumentsSection: React.FC<DetailsSectionsProps> = ({
           {isCnh || isLegacyRg || isOtherLegacyType ? (
             <ParceiroAlunoDisplayField label={isCnh ? 'Número de registro da CNH' : isLegacyRg ? 'Número do RG antigo' : 'Número do documento'} value={formData.rg} />
           ) : null}
+          {hasIdentityDocument ? <ParceiroAlunoDisplayField label="Órgão expedidor" value={formData.orgaoEmissor} /> : null}
           {isLegacyRg || isOtherLegacyType ? (
             <>
-              <ParceiroAlunoDisplayField label="Órgão expedidor" value={formData.orgaoEmissor} />
               <ParceiroAlunoDisplayField label="UF de expedição" value={formData.rgUfEmissao} />
               <ParceiroAlunoDisplayField label="Data de expedição" value={formData.rgDataEmissao} />
             </>

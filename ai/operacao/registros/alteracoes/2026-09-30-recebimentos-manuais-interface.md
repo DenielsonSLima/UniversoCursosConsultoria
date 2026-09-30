@@ -1,10 +1,10 @@
-# Interface dos recebimentos manuais
+# Interface dos recebimentos manuais e órgão expedidor
 
 Estado: VALIDADO PARA PUBLICAÇÃO — PRODUÇÃO AUTORIZADA
 
 ## Objetivo e aceite
 
-Normalizar juros, multa, desconto e outros acréscimos da baixa manual para real brasileiro ao sair do campo e abrir o cadastro manual de Outros Créditos como workspace de viewport completo, sem alterar contratos financeiros.
+Normalizar juros, multa, desconto e outros acréscimos da baixa manual para real brasileiro ao sair do campo, abrir o cadastro manual de Outros Créditos como workspace de viewport completo e restaurar o seletor controlado de órgão expedidor para CIN e CNH, sem alterar contratos financeiros ou dados do aluno.
 
 ## Manifesto explícito
 
@@ -14,6 +14,9 @@ Normalizar juros, multa, desconto e outros acréscimos da baixa manual para real
 - `modules/gestor/financeiro/receber/components/manual-settlement/manual-settlement-calculation.test.ts`
 - `modules/gestor/financeiro/outros-creditos/OtherCreditCreateModal.tsx`
 - `modules/gestor/financeiro/outros-creditos/other-credit-create-modal.test.ts`
+- `modules/gestor/parceiros/components/formularioparceiros/aluno/ParceiroAlunoFormStepDocuments.tsx`
+- `modules/gestor/parceiros/components/viewparceiros/aluno/ParceiroAlunoDetailsSections.tsx`
+- `modules/gestor/parceiros/components/viewparceiros/aluno/orgao-emissor-roundtrip.test.mjs`
 - `scripts/test-pdv-receipts.mjs`
 - `ai/operacao/LOTE_ATIVO.md`
 - `ai/operacao/qualidade/limite-linhas-manifestos.json`
@@ -21,19 +24,22 @@ Normalizar juros, multa, desconto e outros acréscimos da baixa manual para real
 - `internal/versioning/system-version.json`
 - `internal/versioning/CHANGELOG.md`
 
-Total: 12 arquivos.
+Total: 15 arquivos.
 
 ## Contratos preservados
 
 - A máscara atua somente na apresentação; composição e payload continuam derivados dos mesmos centavos.
 - Entrada inválida permanece visível para correção e continua bloqueando a confirmação.
 - O workspace de Outros Créditos preserva modos, validação, payload e mutação existentes; somente a contenção visual, rolagem e foco mudam.
+- O seletor de órgão expedidor continua usando exclusivamente o catálogo já publicado; mapper, serviço, banco e payload permanecem inalterados.
 - Backend, RPC, autorização, idempotência, banco e invalidações permanecem inalterados.
 
 ## Validação
 
 - Reprodução confirmada pelas imagens de produção: `19` permanecia cru na baixa e Novo crédito era limitado a um diálogo central.
 - Treze testes da baixa e 31 testes do fluxo PDV/Outros Créditos aprovados.
+- Quatro testes do órgão emissor aprovados, incluindo o contrato de visibilidade para CIN, CNH, RG e tipos legados e a ausência de entrada livre.
 - TypeScript, ESLint focado e verificação de diff aprovados; arquivos manuais permanecem abaixo de 500 linhas.
 - Revisão independente confirmou que o portal já era correto e que `max-w-4xl` causava a contenção indevida.
+- Revisão independente confirmou que o seletor não havia sido removido: uma condição o limitava por engano ao RG antigo; cadastro, edição e consulta foram corrigidos.
 - Publicação em GitHub, Vercel e produção autorizada explicitamente pelo usuário em 30/09/2026.

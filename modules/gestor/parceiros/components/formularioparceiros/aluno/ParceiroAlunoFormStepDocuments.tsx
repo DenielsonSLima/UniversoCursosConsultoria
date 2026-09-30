@@ -21,6 +21,7 @@ const ParceiroAlunoFormStepDocuments: React.FC<AlunoFormStepProps & {
   const isCin = isCinDocumentType(formData.tipoDocumento);
   const isCnh = isCnhDocumentType(formData.tipoDocumento);
   const isLegacyRg = isLegacyRgDocumentType(formData.tipoDocumento);
+  const hasIdentityDocument = Boolean(formData.tipoDocumento);
 
   return (
   <div className="space-y-5 ">
@@ -69,15 +70,19 @@ const ParceiroAlunoFormStepDocuments: React.FC<AlunoFormStepProps & {
       ) : null}
 
       {isLegacyRg ? (
+        <div className="md:col-span-2">
+          <label className={LABEL_CLS}>Número do RG Antigo</label>
+          <input type="text" name="rg" value={formData.rg} onChange={onChange}
+            className={INPUT_CLS} placeholder="Número do RG" />
+        </div>
+      ) : null}
+
+      {hasIdentityDocument ? (
+        <OrgaoEmissorPicker value={formData.orgaoEmissor} onChange={onOrgaoEmissorChange} />
+      ) : null}
+
+      {isLegacyRg ? (
         <>
-          <div className="md:col-span-2">
-            <label className={LABEL_CLS}>Número do RG Antigo</label>
-            <input type="text" name="rg" value={formData.rg} onChange={onChange}
-              className={INPUT_CLS} placeholder="Número do RG" />
-          </div>
-
-          <OrgaoEmissorPicker value={formData.orgaoEmissor} onChange={onOrgaoEmissorChange} />
-
           <div>
             <label className={LABEL_CLS}>UF Emissão</label>
             <select name="rgUfEmissao" value={formData.rgUfEmissao} onChange={onChange} className={INPUT_CLS}>
