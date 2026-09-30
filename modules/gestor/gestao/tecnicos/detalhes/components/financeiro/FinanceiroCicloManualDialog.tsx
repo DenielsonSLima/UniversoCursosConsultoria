@@ -16,6 +16,7 @@ import type { MatriculaTecnicaFinanceiroRow } from './matricula-tecnica-financei
 import type {
   CicloFinanceiroTecnicoManualPreview,
   CicloFinanceiroTecnicoManualRevisao,
+  CicloManualModoMatricula,
 } from './matricula-tecnica-ciclo-manual.types';
 import FinanceiroCicloManualEnrollmentOptions from './FinanceiroCicloManualEnrollmentOptions';
 import FinanceiroCicloManualChargeRows from './FinanceiroCicloManualChargeRows';
@@ -74,6 +75,7 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
   const [externalHistoryConfirmed, setExternalHistoryConfirmed] = useState(false);
   const plannedEntry = row.cicloManual.criterioElegibilidade === 'TRANSFERENCIA_PLANEJADA';
   const requiresIndividualDate = cycleNumber === 2 || plannedEntry;
+  const [enrollmentMode, setEnrollmentMode] = useState<CicloManualModoMatricula | null>(null);
   const [openSettlement, setOpenSettlement] = useState(false);
   const [step, setStep] = useState<WizardStep>(1);
   const [dateSource, setDateSource] = useState<'TURMA' | 'INDIVIDUAL'>(
@@ -88,13 +90,19 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
   const issuanceStartedRef = useRef(false);
   const firstDueDate = dateSource === 'INDIVIDUAL' ? individualDate || null : null;
   const cycleIdentityChanged = requestedCycleNumber !== cycleNumber;
-  const revisionContext = `${row.matriculaId}:${cycleNumber}:${dateSource}:${individualDate}`;
-  const revisionState = useCicloManualRevision(revisionContext);
+  const revisionContext = `${row.matriculaId}:${cycleNumber}:${dateSource}:${individualDate}:${
+    cycleNumber === 1 ? enrollmentMode : 'SEM_MATRICULA'
+  }`;
+  const revisionState = useCicloManualRevision(
+    revisionContext,
+    cycleNumber === 1 ? enrollmentMode : null,
+  );
   const lastPreviewRef = useRef<{ context: string; preview: CicloFinanceiroTecnicoManualPreview } | null>(null);
   useEffect(() => {
     if (pending || !cycleIdentityChanged) return;
     setCycleNumber(requestedCycleNumber);
     setStep(1);
+    setEnrollmentMode(null);
     setOpenSettlement(false);
     setDateSource(requestedCycleNumber === 2 || plannedEntry ? 'INDIVIDUAL' : 'TURMA');
     setIndividualDate(row.cicloManual.primeiroVencimentoSugerido ?? '');
@@ -105,6 +113,7 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
   const previewEnabled = !pending && !cycleIdentityChanged && cycleNumber !== null
     && row.cicloManual.estado === 'ELEGIVEL'
     && row.cicloManual.podeGerar
+    && (cycleNumber !== 1 || enrollmentMode !== null)
     && (dateSource === 'TURMA' || Boolean(individualDate));
   const previewQuery = usePreviewCicloFinanceiroTecnicoManual({
     turmaId,
@@ -153,6 +162,15 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
   const goToStep = (nextStep: WizardStep) => {
     if (pending || (nextStep > step && (!previewReady || (nextStep === 3 && !positiveAmounts)))) return;
     setStep(nextStep);
+  };
+
+  const changeEnrollmentMode = (mode: CicloManualModoMatricula) => {
+    setEnrollmentMode(mode);
+    if (mode === 'REGISTRO_SEM_BOLETO' && enrollmentMode !== 'REGISTRO_SEM_BOLETO') {
+      setIndividualDate('');
+      setDateSource('INDIVIDUAL');
+    }
+    if (mode !== 'REGISTRO_SEM_BOLETO') setOpenSettlement(false);
   };
 
   const startIssuance = () => {
@@ -243,7 +261,7 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
               <div className="mb-5">
                 <p className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-600">Etapa 1 de 3</p>
                 <h3 id="manual-cycle-step-1" className="mt-1 text-2xl font-black text-[#001a33]">Dados e vencimento</h3>
-                <p className="mt-1 max-w-2xl text-sm font-medium text-slate-500">Defina a data inicial. O sistema apresentará a {cycleNumber === 1 ? 'matrícula' : 'rematrícula'} e as mensalidades para revisão antes de emitir.</p>
+                <p className="mt-1 max-w-2xl text-sm font-medium text-slate-500">{cycleNumber === 1 ? 'Escolha como tratar a matrícula e defina a data inicial.' : 'Defina a data inicial.'} O sistema apresentará a {cycleNumber === 1 ? 'matrícula' : 'rematrícula'} e as mensalidades para revisão antes de emitir.</p>
               </div>
 
               {eligibilityLabel ? (
@@ -255,6 +273,17 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
 
               <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
                 <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+                  {cycleNumber === 1 ? (
+                    <FinanceiroCicloManualEnrollmentOptions
+                      mode={enrollmentMode}
+                      disabled={previewQuery.isFetching}
+                      canSettle={canSettleEnrollment}
+                      openSettlement={openSettlement}
+                      onModeChange={changeEnrollmentMode}
+                      onOpenSettlementChange={setOpenSettlement}
+                    />
+                  ) : null}
+
                   {requiresIndividualDate ? (
                     <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
                       <p className="text-[10px] font-black uppercase tracking-wider text-blue-700">{plannedEntry ? 'Vencimento definido na transferência' : 'Data individual obrigatória no 2º ciclo'}</p>
@@ -291,7 +320,7 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
                   ) : null}
 
                   {!previewEnabled ? (
-                    <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50 p-3 text-xs font-semibold text-amber-800">Informe o primeiro vencimento para visualizar todas as cobranças do ciclo.</div>
+                    <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50 p-3 text-xs font-semibold text-amber-800">{cycleNumber === 1 && !enrollmentMode ? 'Escolha como tratar a matrícula para calcular o ciclo.' : 'Informe o primeiro vencimento para visualizar todas as cobranças do ciclo.'}</div>
                   ) : previewQuery.isLoading || previewQuery.isFetching ? (
                     <div className="mt-4 flex items-center justify-center rounded-xl border border-slate-100 bg-slate-50 py-6 text-sm font-bold text-slate-500" role="status"><Loader2 className="mr-2 animate-spin" size={18} /> Calculando cobranças no sistema...</div>
                   ) : previewQuery.isError || !preview ? (
@@ -318,17 +347,7 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
               <p className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-600">Etapa 2 de 3</p>
               <h3 id="manual-cycle-step-2" className="mt-1 text-2xl font-black text-[#001a33]">Composição das cobranças</h3>
               <p className="mt-1 text-sm font-medium text-slate-500">Revise cada cobrança. Os valores iniciais vêm da turma; alterações serão recalculadas pelo sistema antes da confirmação.</p>
-              {cycleNumber === 1 ? <p className="mt-3 rounded-xl border border-blue-100 bg-blue-50 p-3 text-xs font-semibold text-blue-900">O vencimento da matrícula é independente das mensalidades. Ao alterar a Mensalidade 1, as demais avançam por mês de calendário, preservando o dia-base ou o último dia disponível.</p> : null}
-              {cycleNumber === 1 ? (
-                <FinanceiroCicloManualEnrollmentOptions
-                  mode={revisionState.draft?.modoMatricula ?? 'BOLETO'}
-                  disabled={previewQuery.isFetching || !revisionState.draft}
-                  canSettle={canSettleEnrollment}
-                  openSettlement={openSettlement}
-                  onModeChange={revisionState.changeEnrollmentMode}
-                  onOpenSettlementChange={setOpenSettlement}
-                />
-              ) : null}
+              {cycleNumber === 1 ? <p className="mt-3 rounded-xl border border-blue-100 bg-blue-50 p-3 text-xs font-semibold text-blue-900">No registro sem boleto, alterar o vencimento da matrícula move a Mensalidade 1 para o mês seguinte e recalcula as demais por mês de calendário. Nos outros modos, altere a Mensalidade 1 para recalcular as seguintes.</p> : null}
               {!positiveAmounts ? <p className="mt-3 text-xs font-semibold text-amber-800" role="alert">Informe um valor maior que zero em cada cobrança ou escolha não incluir a matrícula.</p> : null}
 
               <div className="mt-5 grid gap-3 sm:grid-cols-3">

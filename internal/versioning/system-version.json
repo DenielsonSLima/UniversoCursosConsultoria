@@ -1,8 +1,8 @@
 {
-  "version": "4.8.139",
+  "version": "4.8.140",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 148,
+  "revision": 149,
   "releasedAt": "2026-09-30",
-  "summary": "Hotfix dos ciclos financeiros T42 e T46"
+  "summary": "Continuação local da T42 e matrícula retroativa da T46"
 }

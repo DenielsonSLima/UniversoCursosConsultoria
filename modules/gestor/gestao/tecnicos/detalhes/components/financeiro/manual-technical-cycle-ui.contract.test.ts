@@ -17,6 +17,7 @@ const readSource = (relativePath: string) =>
 const listSource = `${readSource("FinanceiroAlunosList.tsx")}\n${readSource("FinanceiroAlunosTable.tsx")}`;
 const statusSource = readSource("FinanceiroCicloManualStatus.tsx");
 const dialogSource = readSource("FinanceiroCicloManualDialog.tsx");
+const revisionHookSource = readSource("hooks/useCicloManualRevision.ts");
 const serviceSource = readSource("matricula-tecnica-ciclo-manual.service.ts");
 const destinationSource = readSource("matricula-tecnica-ciclo-manual-destination.ts");
 const previewParserSource = readSource(
@@ -316,6 +317,30 @@ test("ciclo 1 mantém escolha de vencimento e ciclo 2 exige data individual", ()
     listSource,
     /preview\.cicloNumero === 2\s*\? 'Informe uma data individual futura válida para o 2º ciclo e confirme novamente\.'\s*: 'Revise a data individual ou use as datas configuradas na turma\.'/,
   );
+});
+
+test("modo da matrícula existe no passo 1 e integra a primeira prévia", () => {
+  const stepOne = between(dialogSource, "{step === 1 ? (", "{step === 2 && preview ? (");
+  assert.match(stepOne, /<FinanceiroCicloManualEnrollmentOptions/);
+  assert.match(stepOne, /mode=\{enrollmentMode\}/);
+  assert.match(dialogSource, /useState<CicloManualModoMatricula \| null>\(null\)/);
+  assert.match(dialogSource, /cycleNumber !== 1 \|\| enrollmentMode !== null/);
+  assert.match(
+    dialogSource,
+    /mode === 'REGISTRO_SEM_BOLETO' && enrollmentMode !== 'REGISTRO_SEM_BOLETO'\) \{\s*setIndividualDate\(''\);\s*setDateSource\('INDIVIDUAL'\);/,
+  );
+  assert.match(
+    dialogSource,
+    /useCicloManualRevision\(\s*revisionContext,\s*cycleNumber === 1 \? enrollmentMode : null,?\s*\)/,
+  );
+  assert.match(dialogSource, /revisao: revisionState\.revision/);
+  assert.match(dialogSource, /primeiroVencimento: firstDueDate/);
+  assert.match(revisionHookSource, /cicloManualRevisionForEnrollmentMode\(enrollmentMode\)/);
+  assert.match(revisionHookSource, /revision,\s*draft: revision/);
+  const stepTwo = between(dialogSource, "{step === 2 && preview ? (", "{step === 3 && preview ? (");
+  assert.doesNotMatch(stepTwo, /<FinanceiroCicloManualEnrollmentOptions/);
+  assert.doesNotMatch(dialogSource, /O vencimento da matrícula é independente das mensalidades/);
+  assert.match(dialogSource, /alterar o vencimento da matrícula move a Mensalidade 1 para o mês seguinte/);
 });
 
 test("prévia canônica lista 1+N e a confirmação comunica emissão BolePix única", () => {

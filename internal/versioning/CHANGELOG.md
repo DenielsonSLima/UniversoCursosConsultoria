@@ -2,7 +2,13 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
-Histórico anterior: [08/09/2026 a 12/09/2026 — versões 4.8.37 a 4.8.52](./changelog/2026-09-08-a-2026-09-12-versoes-4-8-37-a-4-8-52.md), [03/09/2026 a 08/09/2026 — versões 4.8.30 a 4.8.36](./changelog/2026-09-03-a-2026-09-08-versoes-4-8-30-a-4-8-36.md), [02/09/2026 — versões 4.8.27 a 4.8.29](./changelog/2026-09-02-versoes-4-8-27-a-4-8-29.md), [01/09/2026 — versões 4.8.23 a 4.8.26](./changelog/2026-09-01-versoes-4-8-23-a-4-8-26.md), [01/09/2026 — versões 4.8.20 a 4.8.22](./changelog/2026-09-01-versoes-4-8-20-a-4-8-22.md), [27/08/2026 a 31/08/2026 — versões 4.8.8 a 4.8.19](./changelog/2026-08-27-a-2026-08-31.md), [26/08/2026 — versões 4.8.6 a 4.8.7](./changelog/2026-08-26.md), [25/08/2026 — versões 4.8.2 a 4.8.5](./changelog/2026-08-25-parte-1.md), [24/08/2026 — versões 4.8.0 a 4.8.1](./changelog/2026-08-24-parte-2.md), [24/08/2026 — versões 4.7.5 a 4.7.7](./changelog/2026-08-24-parte-1.md), [22/08/2026 a 23/08/2026](./changelog/2026-08-22-a-2026-08-23.md), [21/08/2026 a 22/08/2026 — parte 2](./changelog/2026-08-21-a-2026-08-22-parte-2.md), [21/08/2026 — parte 1](./changelog/2026-08-21-parte-1.md), [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+Histórico anterior: [13/09/2026 — versões 4.8.53 a 4.8.64](./changelog/2026-09-13-versoes-4-8-53-a-4-8-64.md), [08/09/2026 a 12/09/2026 — versões 4.8.37 a 4.8.52](./changelog/2026-09-08-a-2026-09-12-versoes-4-8-37-a-4-8-52.md), [03/09/2026 a 08/09/2026 — versões 4.8.30 a 4.8.36](./changelog/2026-09-03-a-2026-09-08-versoes-4-8-30-a-4-8-36.md), [02/09/2026 — versões 4.8.27 a 4.8.29](./changelog/2026-09-02-versoes-4-8-27-a-4-8-29.md), [01/09/2026 — versões 4.8.23 a 4.8.26](./changelog/2026-09-01-versoes-4-8-23-a-4-8-26.md), [01/09/2026 — versões 4.8.20 a 4.8.22](./changelog/2026-09-01-versoes-4-8-20-a-4-8-22.md), [27/08/2026 a 31/08/2026 — versões 4.8.8 a 4.8.19](./changelog/2026-08-27-a-2026-08-31.md), [26/08/2026 — versões 4.8.6 a 4.8.7](./changelog/2026-08-26.md), [25/08/2026 — versões 4.8.2 a 4.8.5](./changelog/2026-08-25-parte-1.md), [24/08/2026 — versões 4.8.0 a 4.8.1](./changelog/2026-08-24-parte-2.md), [24/08/2026 — versões 4.7.5 a 4.7.7](./changelog/2026-08-24-parte-1.md), [22/08/2026 a 23/08/2026](./changelog/2026-08-22-a-2026-08-23.md), [21/08/2026 a 22/08/2026 — parte 2](./changelog/2026-08-21-a-2026-08-22-parte-2.md), [21/08/2026 — parte 1](./changelog/2026-08-21-parte-1.md), [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
+
+## [4.8.140] - 2026-09-30
+
+- Alunos da T42 com primeiro ciclo importado e confirmado localmente seguem para o segundo ciclo sem depender de nova consulta online ao Proesc; cobranças futuras permanecem no sistema local e são emitidas pelo Banese.
+- No primeiro ciclo da T46, a escolha de registrar matrícula sem boleto ocorre antes da primeira prévia e permite vencimento retroativo controlado sem emitir título bancário para a matrícula.
+- Alterar a data da matrícula local recalcula a Mensalidade 1 para o mês seguinte e mantém as demais em sequência por mês-calendário; os modos boleto, omitir e o segundo ciclo permanecem protegidos.
 
 ## [4.8.139] - 2026-09-30
 
@@ -437,63 +443,3 @@ Histórico anterior: [08/09/2026 a 12/09/2026 — versões 4.8.37 a 4.8.52](./ch
 - Conflitos reais respondem imediatamente, preservando o bloqueio de segurança e evitando repetição até expirar a operação.
 - Mensagens de falha preservam o motivo retornado pelo banco; nova operação não herda o erro anterior.
 - Tentativas reconciliadas podem ser encerradas por revisão auditada para permitir novo recebimento com outra conta, preservando o histórico original.
-
-## [4.8.64] - 2026-09-13
-
-- Conferência dos ciclos Proesc acontece automaticamente para todos os alunos, pelo worker e ao abrir o financeiro da turma, sem botão separado.
-- Ciclos já emitidos no Proesc ou Banese continuam protegidos; matrículas trancadas e transferidas não podem gerar novas cobranças.
-- A elegibilidade exibida acompanha o histórico confirmado, com nova consulta automática antes da prévia e da emissão.
-- Cobertura comprovada apenas do segundo ciclo Proesc preserva o bloqueio e sua identificação, mesmo quando as parcelas do primeiro ciclo não foram importadas.
-
-## [4.8.63] - 2026-09-13
-
-- Restaura a legenda integral dos instrumentos avaliativos em cada página de notas dos diários, inclusive importados e em branco.
-- Preserva as colunas dos originais, incluindo P/P em Anatomia e P/TG/CQ em Microbiologia, com espaço para a legenda abaixo da tabela.
-- Validação: 45 testes focados, extração vetorial e revisão visual dos PDFs de Anatomia e Microbiologia.
-
-## [4.8.61] - 2026-09-13
-
-- Turmas importadas recebem as regras financeiras confirmadas e voltam a carregar o resumo, com matrícula, rematrícula e mensalidades discriminadas.
-- Segundo ciclo confere cobranças na API Proesc por aluno antes da prévia e da geração, preservando ciclos externos e títulos já emitidos.
-- Caixa, Contas a Receber, conciliação, extrato e Outros Créditos distinguem desconto, juros e multa da API ou calculados pelas regras informadas, mantendo o valor efetivamente recebido e as diferenças a conferir.
-- PDFs usam a mesma composição financeira e preservam os modelos institucionais configurados.
-
-## [4.8.60] - 2026-09-13
-
-- Diário apresenta Instrumentos Avaliativos em um cabeçalho agrupado, com as siglas utilizadas na linha abaixo, no PDF preenchido e em branco.
-- Siglas originais são preservadas: duas colunas P continuam P e P, sem numeração criada pelo sistema e sem alteração das notas.
-- Frequência agrupa Falta e % conforme o modelo do diário; testes conferem a posição e a estrutura dos cabeçalhos.
-
-## [4.8.59] - 2026-09-13
-
-- Notas e PDF do diário mostram somente os instrumentos usados ou selecionados, com uma avaliação por coluna e cabeçalho único.
-- Provas repetidas aparecem como P1/P2; categorias combinadas e a precisão das notas e médias são preservadas.
-- Testes automáticos protegem as colunas, as seleções e a apresentação do diário em futuras publicações.
-
-## [4.8.58] - 2026-09-13
-
-- Proesc preserva pagamentos comprovados fora da competência consultada e continua bloqueando conjuntos repetidos entre períodos.
-- Receitas futuras do Caixa considera somente obrigações abertas comprovadas e informa a quantidade em conferência.
-- Diagnóstico interno guarda motivos específicos de revisão de forma sanitizada, sem alterar a decisão financeira nem o histórico.
-
-## [4.8.57] - 2026-09-13
-
-- Diários importados da T41 e T42 passam a preencher aulas, conteúdo, notas e frequência no fluxo normal, refletindo a carga na grade.
-- Datas e resultados escritos são preservados. A carga das aulas é ajustada à exigência oficial da disciplina, com estágio separado.
-- Instrumentos repetidos e símbolos documentais continuam identificados na consulta e na prévia do diário.
-
-## [4.8.56] - 2026-09-13
-
-- Posição total do Caixa reconhece os movimentos históricos confirmados da conta Proesc, mantendo as proteções de saldo-base das contas bancárias.
-- Inadimplência e margem identificam apuração parcial e exibem quantidade e valor nominal das cobranças em conferência.
-
-## [4.8.54] - 2026-09-13
-
-- Diários técnicos importados exibem aulas, conteúdos, notas e frequência com evidência por célula e pendências de conferência.
-- Médias documentadas são preservadas pelo servidor, com proteção contra mistura de lançamentos regulares, mudança de matrícula ou alteração financeira pela importação.
-- Consulta histórica mantém fechamento e PDF preenchido protegidos enquanto os registros aguardam conferência acadêmica.
-
-## [4.8.53] - 2026-09-13
-
-- Conciliação Banese, cancelamento Banese e dispatcher Push recuperam uma falha temporária de leitura da configuração com uma única nova tentativa, prazo total e interrupção antes da fila em caso de falha persistente.
-- Diagnóstico sanitizado distingue timeout, erro HTTP e recuperação da leitura; o mecanismo não repete operações bancárias, baixas ou envios.
