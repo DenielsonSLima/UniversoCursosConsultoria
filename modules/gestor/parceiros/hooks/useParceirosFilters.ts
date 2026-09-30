@@ -1,18 +1,8 @@
-import { useMemo, useState } from 'react';
-import { textMatchesSearch } from '../../../../lib/search';
+import { useEffect, useMemo, useState } from 'react';
 import type { AlunoModalidadeFilter } from '../components/ParceirosFilters';
+import { filterParceiros, sortParceiros } from '../parceiros-filters.model';
 
 export type ParceirosTabType = 'todos' | 'professores' | 'alunos' | 'responsaveis' | 'coordenacoes' | 'pj' | 'pf';
-
-const expectedTipoByTab: Record<ParceirosTabType, string> = {
-  todos: '',
-  professores: 'Professor',
-  alunos: 'Aluno',
-  responsaveis: '',
-  coordenacoes: '',
-  pj: 'PJ',
-  pf: 'PF',
-};
 
 export const useParceirosFilters = (allPartners: any[], activeTab: ParceirosTabType) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -20,6 +10,15 @@ export const useParceirosFilters = (allPartners: any[], activeTab: ParceirosTabT
   const [alunoModalidadeFilter, setAlunoModalidadeFilter] = useState<AlunoModalidadeFilter[]>([]);
   const [turmaFilter, setTurmaFilter] = useState('todas');
   const [sortOrder, setSortOrder] = useState('az');
+
+  useEffect(() => {
+    if (activeTab !== 'todos' && activeTab !== 'alunos') {
+      setAlunoModalidadeFilter([]);
+    }
+    if (!['todos', 'alunos', 'professores'].includes(activeTab)) {
+      setTurmaFilter('todas');
+    }
+  }, [activeTab]);
 
   const toggleAlunoModalidadeFilter = (modalidade: AlunoModalidadeFilter) => {
     setAlunoModalidadeFilter((current) => (
@@ -30,62 +29,19 @@ export const useParceirosFilters = (allPartners: any[], activeTab: ParceirosTabT
   };
 
   const filteredPartners = useMemo(() => {
-    return allPartners.filter(item => {
-      const expectedTipo = expectedTipoByTab[activeTab];
-      if (expectedTipo && item.tipo !== expectedTipo) return false;
-
-      if (statusFilter !== 'todos' && item.status?.toLowerCase() !== statusFilter.toLowerCase()) {
-        return false;
-      }
-
-      if (searchTerm) {
-        const matchesSearch = textMatchesSearch(searchTerm, [
-          item.nome,
-          item.cpf,
-          item.cnpj,
-          item.cidade,
-          item.email,
-          item.telefone,
-        ]);
-        if (!matchesSearch) return false;
-      }
-
-      if (alunoModalidadeFilter.length > 0) {
-        if (item.tipo !== 'Aluno') return false;
-        const modalidadesAluno = Array.isArray(item.modalidadesAluno) ? item.modalidadesAluno : [];
-        const matchesAlunoModalidade = alunoModalidadeFilter.some((modalidade) => (
-          modalidadesAluno.includes(modalidade)
-        ));
-        if (!matchesAlunoModalidade) return false;
-      }
-
-      if (turmaFilter !== 'todas') {
-        if (item.tipo !== 'Aluno' && item.tipo !== 'Professor') return false;
-        const turmasAlunoIds = Array.isArray(item.turmasAlunoIds) ? item.turmasAlunoIds : [];
-        if (item.turmaId !== turmaFilter && !turmasAlunoIds.includes(turmaFilter)) return false;
-      }
-
-      return true;
+    return filterParceiros(allPartners, {
+      activeTab, searchTerm, statusFilter, alunoModalidadeFilter, turmaFilter,
     });
   }, [allPartners, activeTab, searchTerm, statusFilter, alunoModalidadeFilter, turmaFilter]);
 
   const sortedAndFilteredPartners = useMemo(() => {
-    const sorted = [...filteredPartners];
-    if (sortOrder === 'az') {
-      sorted.sort((a, b) => a.nome.localeCompare(b.nome));
-    } else if (sortOrder === 'za') {
-      sorted.sort((a, b) => b.nome.localeCompare(a.nome));
-    } else if (sortOrder === 'recent') {
-      sorted.sort((a, b) => (b.id || '').localeCompare(a.id || ''));
-    } else if (sortOrder === 'oldest') {
-      sorted.sort((a, b) => (a.id || '').localeCompare(b.id || ''));
-    }
-    return sorted;
+    return sortParceiros(filteredPartners, sortOrder);
   }, [filteredPartners, sortOrder]);
 
   return {
     searchTerm,
     statusFilter,
+    sortOrder,
     alunoModalidadeFilter,
     turmaFilter,
     setStatusFilter,

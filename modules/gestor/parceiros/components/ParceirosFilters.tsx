@@ -1,11 +1,14 @@
 
 import React from 'react';
-import { Search, Filter, Layers, CheckCircle2, MonitorPlay, BookOpenCheck, Stethoscope, Wrench, Users } from 'lucide-react';
+import { Search, Filter, Layers, CheckCircle2, MonitorPlay, BookOpenCheck, Stethoscope, Wrench, Users, X } from 'lucide-react';
 import type { ParceirosTabType } from '../hooks/useParceirosFilters';
 
 export type AlunoModalidadeFilter = 'EAD' | 'LIVRE' | 'ESPECIALIZACAO' | 'TECNICO';
 
 interface ParceirosFiltersProps {
+  searchTerm: string;
+  statusFilter: string;
+  sortOrder: string;
   onSearch: (term: string) => void;
   onSortChange: (sort: string) => void;
   onStatusChange?: (status: string) => void;
@@ -29,6 +32,9 @@ const alunoModalidadeOptions = [
 ];
 
 const ParceirosFilters: React.FC<ParceirosFiltersProps> = ({ 
+  searchTerm,
+  statusFilter,
+  sortOrder,
   onSearch, 
   onSortChange,
   onStatusChange,
@@ -44,6 +50,12 @@ const ParceirosFilters: React.FC<ParceirosFiltersProps> = ({
   activeTab = 'todos',
 }) => {
   const hasAlunoModalidadeFilter = selectedAlunoModalidades.length > 0;
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
+
+  const clearSearch = () => {
+    onSearch('');
+    requestAnimationFrame(() => searchInputRef.current?.focus());
+  };
 
   return (
     <div className="space-y-3 mb-6 w-full">
@@ -55,11 +67,24 @@ const ParceirosFilters: React.FC<ParceirosFiltersProps> = ({
             <Search size={18} />
           </div>
           <input 
+            ref={searchInputRef}
             type="text" 
             placeholder="Pesquisar por nome, CNPJ, CPF ou cidade..." 
-            className="w-full pl-11 pr-5 py-3 bg-white border border-slate-200 rounded-2xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 text-slate-700 font-medium text-sm shadow-sm transition-all placeholder:text-slate-400"
+            className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-12 text-sm font-medium text-slate-700 shadow-sm outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+            value={searchTerm}
             onChange={(e) => onSearch(e.target.value)}
           />
+          {searchTerm && (
+            <button
+              type="button"
+              aria-label="Limpar busca"
+              title="Limpar busca"
+              onClick={clearSearch}
+              className="absolute right-2.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            >
+              <X size={16} aria-hidden="true" />
+            </button>
+          )}
         </div>
 
         <div className="flex flex-col md:flex-row flex-[3] gap-3">
@@ -71,9 +96,10 @@ const ParceirosFilters: React.FC<ParceirosFiltersProps> = ({
             <select 
               aria-label="Filtrar parceiros por status"
               className="w-full appearance-none bg-white pl-11 pr-10 py-3 border border-slate-200 rounded-2xl outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 text-slate-700 font-bold text-sm cursor-pointer shadow-sm relative z-0"
+              value={statusFilter}
               onChange={(e) => onStatusChange && onStatusChange(e.target.value)}
             >
-              <option value="todos">Todos Status</option>
+              <option value="todos">Todos os status</option>
               <option value="ativo">Ativos</option>
               <option value="inativo">Inativos</option>
             </select>
@@ -123,6 +149,7 @@ const ParceirosFilters: React.FC<ParceirosFiltersProps> = ({
             <select 
               aria-label="Ordenar parceiros"
               className="w-full appearance-none bg-white pl-11 pr-10 py-3 border border-slate-200 rounded-2xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 text-slate-700 font-bold text-sm cursor-pointer shadow-sm relative z-0"
+              value={sortOrder}
               onChange={(e) => onSortChange(e.target.value)}
             >
               <option value="az">A - Z</option>
@@ -197,4 +224,3 @@ const ParceirosFilters: React.FC<ParceirosFiltersProps> = ({
 };
 
 export default ParceirosFilters;
-

@@ -1,24 +1,9 @@
 import React, { Suspense } from 'react';
-import { Building, CalendarDays, ChevronDown, ChevronRight, Clock, LogOut, Menu, Search, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, Clock, LogOut, Menu, X } from 'lucide-react';
 import { PortalAuthProfile } from '../../login/portal-session';
 import ConfirmModal from '../../shared/components/ConfirmModal';
-
-interface PoloOption {
-  id: string;
-  nome?: string;
-  cidade?: string;
-  estado?: string;
-  cnpj?: string;
-  is_matriz?: boolean;
-}
-
-interface SearchResult {
-  id: number;
-  type: string;
-  title: string;
-  subtitle: string;
-  module: string;
-}
+import GestorPortalHeader, { GestorPoloHeaderOption } from './GestorPortalHeader';
+import type { GestorGlobalSearchResult } from '../global-search/gestor-global-search.types';
 
 export interface GestorMenuItem {
   id: string;
@@ -45,14 +30,18 @@ interface GestorPortalShellProps {
   handleLogout: () => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
-  searchResults: SearchResult[];
+  searchResults: GestorGlobalSearchResult[];
   isSearchFocused: boolean;
   setIsSearchFocused: (focused: boolean) => void;
-  handleSearchResultClick: (moduleId: string) => void;
-  getResultIcon: (type: string) => React.ReactNode;
+  isSearchLoading: boolean;
+  isSearchError: boolean;
+  isSearchReady: boolean;
+  isSearchAvailable: boolean;
+  retrySearch: () => void;
+  handleSearchResultClick: (result: GestorGlobalSearchResult) => void | Promise<void>;
   isLoadingPolos: boolean;
-  currentPolo?: PoloOption;
-  visiblePolos: PoloOption[];
+  currentPolo?: GestorPoloHeaderOption;
+  visiblePolos: GestorPoloHeaderOption[];
   currentPoloId: string | null;
   isPoloSelectorOpen: boolean;
   setIsPoloSelectorOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -65,12 +54,6 @@ interface GestorPortalShellProps {
   setIsLogoutConfirmOpen: (open: boolean) => void;
   executeLogout: () => void | Promise<void>;
 }
-
-const formatPoloLocation = (polo: PoloOption) =>
-  [polo.cidade, polo.estado].filter(Boolean).join(' - ');
-
-const formatPoloDetails = (polo: PoloOption) =>
-  [polo.cnpj, formatPoloLocation(polo)].filter(Boolean).join(' • ');
 
 const GestorPortalShell: React.FC<GestorPortalShellProps> = ({
   profile,
@@ -90,8 +73,12 @@ const GestorPortalShell: React.FC<GestorPortalShellProps> = ({
   searchResults,
   isSearchFocused,
   setIsSearchFocused,
+  isSearchLoading,
+  isSearchError,
+  isSearchReady,
+  isSearchAvailable,
+  retrySearch,
   handleSearchResultClick,
-  getResultIcon,
   isLoadingPolos,
   currentPolo,
   visiblePolos,
@@ -361,181 +348,28 @@ const GestorPortalShell: React.FC<GestorPortalShellProps> = ({
       )}
 
       <main className="flex-1 overflow-auto relative w-full lg:pt-0 pt-16 flex flex-col">
-        <header className="sticky top-0 z-30 flex min-h-[84px] items-center justify-between border-b border-slate-200 bg-white px-8 py-3 shadow-sm">
-          <div className="flex items-center gap-4">
-             <h2 className="text-xl font-bold text-[#001a33] uppercase tracking-tight flex items-center gap-2">
-              <span className="hidden sm:inline">
-                Portal de Gestão
-              </span>
-            </h2>
-          </div>
-
-          <div className="flex-1 max-w-lg mx-4 relative">
-            <div className={`flex items-center bg-slate-100 rounded-xl px-4 py-2.5 border transition-all ${isSearchFocused ? 'border-blue-500 ring-2 ring-blue-100 bg-white' : 'border-transparent'}`}>
-              <Search size={18} className="text-slate-400 mr-3" />
-              <input
-                type="text"
-                placeholder="Pesquisar..."
-                className="bg-transparent border-none outline-none w-full text-sm text-slate-700 placeholder-slate-400 font-medium"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onFocus={() => setIsSearchFocused(true)}
-                onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
-              />
-            </div>
-
-            {searchQuery && (
-              <div className="absolute top-full left-0 w-full mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden z-50 animate-fadeIn">
-                <div className="p-3">
-                  {searchResults.length > 0 ? (
-                    <div className="space-y-1">
-                      {searchResults.map((result) => (
-                        <button key={result.id} onClick={() => handleSearchResultClick(result.module)} className="w-full flex items-center justify-between p-3 hover:bg-blue-50 rounded-xl transition-colors text-left group">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 bg-slate-100 rounded-lg group-hover:bg-white transition-colors">
-                              {getResultIcon(result.type)}
-                            </div>
-                            <div>
-                              <p className="text-sm font-bold text-[#001a33]">{result.title}</p>
-                              <p className="text-[10px] text-slate-500 uppercase tracking-wide">{result.subtitle}</p>
-                            </div>
-                          </div>
-                          <ChevronRight size={14} className="text-slate-300 group-hover:text-blue-500" />
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-6"><p className="text-sm text-slate-500">Nenhum resultado.</p></div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center gap-6">
-
-            <div className="relative hidden h-12 w-[23rem] md:block">
-              {isLoadingPolos || !currentPolo ? (
-                <div className="flex h-12 w-full items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 shadow-sm">
-                  <div className="h-7 w-7 flex-shrink-0 rounded-lg bg-slate-100 animate-pulse" />
-                  <div className="min-w-0 flex-1 space-y-1.5">
-                    <div className="h-2.5 w-4/5 rounded-full bg-slate-200/80" />
-                    <div className="h-2 w-3/5 rounded-full bg-slate-200/70" />
-                  </div>
-                </div>
-              ) : (
-              <div
-                className="h-12 w-full"
-                onBlur={event => {
-                  if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-                    setIsPoloSelectorOpen(false);
-                  }
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={() => setIsPoloSelectorOpen(open => !open)}
-                  aria-haspopup="listbox"
-                  aria-expanded={isPoloSelectorOpen}
-                  disabled={visiblePolos.length <= 1}
-                  className="flex h-12 w-full min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-white px-3.5 text-left transition-all hover:bg-slate-50 hover:border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/10 disabled:cursor-default disabled:hover:bg-white disabled:hover:border-slate-200 shadow-sm"
-                >
-                  <Building size={16} className="text-blue-600 flex-shrink-0" />
-                  <span className="min-w-0 flex-1">
-                    <span className="flex min-w-0 items-center gap-2">
-                      <span className="truncate text-xs font-bold text-slate-800 tracking-tight">
-                        {currentPolo?.nome}
-                      </span>
-                      <span className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider ${
-                        currentPolo?.is_matriz
-                          ? 'bg-blue-50 text-blue-600 border border-blue-200/50'
-                          : 'bg-slate-100 text-slate-600 border border-slate-200'
-                      }`}>
-                        {currentPolo?.is_matriz ? 'Matriz' : 'Polo'}
-                      </span>
-                    </span>
-                    <span className="block truncate text-[10px] text-slate-500 mt-0.5 font-normal">
-                      {formatPoloDetails(currentPolo)}
-                    </span>
-                  </span>
-                  <ChevronDown
-                    size={14}
-                    className={`text-slate-400 flex-shrink-0 transition-transform ${visiblePolos.length <= 1 ? 'opacity-0' : ''} ${
-                      isPoloSelectorOpen ? 'rotate-180' : ''
-                    }`}
-                  />
-                </button>
-
-                {isPoloSelectorOpen && (
-                  <div
-                    role="listbox"
-                    className="absolute top-full right-0 z-50 mt-2 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 shadow-2xl shadow-slate-900/15 animate-fadeIn"
-                  >
-                    {visiblePolos.map(polo => {
-                      const isSelected = polo.id === currentPoloId;
-
-                      return (
-                        <button
-                          key={polo.id}
-                          type="button"
-                          role="option"
-                          aria-selected={isSelected}
-                          onClick={() => handlePoloChange(polo.id)}
-                          className={`w-full rounded-xl px-3 py-2.5 text-left transition-colors ${
-                            isSelected
-                              ? 'bg-blue-50/60 text-blue-900'
-                              : 'text-slate-700 hover:bg-slate-50'
-                          }`}
-                        >
-                          <span className="flex items-center gap-3">
-                            <span
-                              className={`h-2 w-2 flex-shrink-0 rounded-full ${
-                                isSelected ? 'bg-blue-600' : 'bg-slate-300'
-                              }`}
-                            />
-                            <span className="min-w-0 flex-1">
-                              <span className="flex min-w-0 items-center gap-2">
-                                <span className={`truncate text-xs tracking-tight ${isSelected ? 'font-bold text-blue-900' : 'font-semibold text-slate-700'}`}>
-                                  {polo.nome}
-                                </span>
-                                <span className={`flex-shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider ${
-                                  polo.is_matriz
-                                    ? 'bg-blue-100/50 text-blue-700'
-                                    : 'bg-slate-200/50 text-slate-600'
-                                }`}>
-                                  {polo.is_matriz ? 'Matriz' : 'Polo'}
-                                </span>
-                              </span>
-                              <span className="block truncate text-[10px] text-slate-500 mt-0.5 font-normal">
-                                {formatPoloDetails(polo)}
-                              </span>
-                            </span>
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-              )}
-            </div>
-
-            <div className="w-px h-8 bg-slate-200 hidden sm:block"></div>
-
-            <div className="flex items-center gap-2.5 pl-4 hidden sm:flex text-left">
-              <CalendarDays size={18} className="text-amber-500 flex-shrink-0" />
-              <div className="flex flex-col justify-center">
-                <span className="text-xs font-bold text-slate-800 leading-tight">
-                  {formattedDate}
-                </span>
-                <span className="text-[10px] text-slate-400 font-medium leading-tight mt-0.5">
-                  {formattedDayOfWeek}
-                </span>
-              </div>
-            </div>
-
-          </div>
-        </header>
+        <GestorPortalHeader
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          searchResults={searchResults}
+          isSearchFocused={isSearchFocused}
+          setIsSearchFocused={setIsSearchFocused}
+          isSearchLoading={isSearchLoading}
+          isSearchError={isSearchError}
+          isSearchReady={isSearchReady}
+          isSearchAvailable={isSearchAvailable}
+          retrySearch={retrySearch}
+          handleSearchResultClick={handleSearchResultClick}
+          isLoadingPolos={isLoadingPolos}
+          currentPolo={currentPolo}
+          visiblePolos={visiblePolos}
+          currentPoloId={currentPoloId}
+          isPoloSelectorOpen={isPoloSelectorOpen}
+          setIsPoloSelectorOpen={setIsPoloSelectorOpen}
+          handlePoloChange={handlePoloChange}
+          formattedDate={formattedDate}
+          formattedDayOfWeek={formattedDayOfWeek}
+        />
 
         <div ref={contentScrollRef} className="p-8 flex-1 overflow-auto">
           <Suspense fallback={(

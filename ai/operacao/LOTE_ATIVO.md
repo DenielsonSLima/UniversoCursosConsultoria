@@ -1,5 +1,5 @@
 # Lote ativo
 
-## Lote: 2026-09-30-recebimentos-manuais-interface
+## Lote: 2026-09-30-parceiros-busca-global-cards
 
-Estado: VALIDADO PARA PUBLICAÇÃO — PRODUÇÃO AUTORIZADA. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-30-recebimentos-manuais-interface.md`. A baixa manual normaliza os quatro ajustes para real brasileiro, Novo crédito em Outros Créditos abre como workspace de viewport completo fora do PDV e o seletor controlado de órgão expedidor volta a aparecer para CIN e CNH. Cálculo em centavos, contratos financeiros, banco e payload do aluno permanecem. Lote anterior preservado em `2026-09-29-modal-baixa-manual-composicao.md`.
+Estado: EM VALIDAÇÃO — PRODUÇÃO AUTORIZADA. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-30-parceiros-busca-global-cards.md`. A busca do cabeçalho consulta pessoas em todos os polos autorizados pelo servidor, abre o cadastro no polo correto e exibe documento, cidade/UF e turma. Cards de alunos priorizam identidade, nascimento e filiação sem repetir polo ou turma; filtros controlados deixam de permanecer invisivelmente presos. Lote anterior preservado em `2026-09-30-recebimentos-manuais-interface.md`.
