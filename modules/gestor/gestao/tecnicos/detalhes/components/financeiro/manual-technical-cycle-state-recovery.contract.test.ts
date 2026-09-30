@@ -30,11 +30,14 @@ test('Voltar permite corrigir erro da prévia; avançar e emitir continuam bloqu
 
 test('mudança ociosa C1 para C2 reinicia datas e confirmação sem reaproveitar edição C1', () => {
   assert.match(dialog, /const \[cycleNumber, setCycleNumber\] = useState\(requestedCycleNumber\)/);
-  assert.match(dialog, /const revisionContext = `\$\{row\.matriculaId\}:\$\{cycleNumber\}:\$\{dateSource\}:\$\{individualDate\}`/);
+  assert.match(
+    dialog,
+    /const revisionContext = `\$\{row\.matriculaId\}:\$\{cycleNumber\}:\$\{dateSource\}:\$\{individualDate\}:\$\{[\s\S]*?cycleNumber === 1 \? enrollmentMode : 'SEM_MATRICULA'[\s\S]*?\}`/,
+  );
   const transitionBody = dialog.split('if (pending || !cycleIdentityChanged) return;')[1]?.split('}, [pending, cycleIdentityChanged')[0];
   assert.ok(transitionBody, 'transição do ciclo não preserva a emissão pendente');
   for (const operation of [
-    'setCycleNumber(requestedCycleNumber)', 'setStep(1)',
+    'setCycleNumber(requestedCycleNumber)', 'setStep(1)', 'setEnrollmentMode(null)',
     "setDateSource(requestedCycleNumber === 2 || plannedEntry ? 'INDIVIDUAL' : 'TURMA')",
     "setIndividualDate(row.cicloManual.primeiroVencimentoSugerido ?? '')",
     'setExternalHistoryConfirmed(false)', 'setIssuanceSnapshot(null)', 'lastPreviewRef.current = null',
