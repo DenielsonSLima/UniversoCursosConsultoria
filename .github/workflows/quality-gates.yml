@@ -127,6 +127,7 @@ jobs:
       - name: Testar Financeiros e sincronização dos portais
         run: |
           node --test \
+            modules/gestor/financeiro/receber/components/manual-settlement/manual-settlement-calculation.test.ts \
             modules/gestor/financeiro/receber/components/modalidade-receber/receivables-period.test.ts \
             scripts/test-manual-settlement-audit.mjs \
             modules/gestor/financeiro/financeiro.receivables-request.test.ts \
