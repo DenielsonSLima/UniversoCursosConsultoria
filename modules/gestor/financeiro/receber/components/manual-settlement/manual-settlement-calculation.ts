@@ -1,11 +1,27 @@
-export const sanitizeCurrencyInput = (value: string, previousValue = '') => {
-  if (value === '') return '';
-  const normalized = value.trim().replace(/^R\$\s*/i, '');
-  if (normalized.length > 24 || !/^[0-9.,+-]*$/.test(normalized)) return previousValue;
-  return normalized;
+const MAX_CENTS = 9_000_000_000_000_000;
+
+const formatCentsAsCurrencyInput = (cents: number) => {
+  const integerPart = Math.floor(cents / 100).toLocaleString('pt-BR', {
+    maximumFractionDigits: 0,
+    useGrouping: true,
+  });
+  const decimalPart = String(cents % 100).padStart(2, '0');
+
+  return `${integerPart},${decimalPart}`;
 };
 
-const MAX_CENTS = 9_000_000_000_000_000;
+export const sanitizeCurrencyInput = (value: string, previousValue = '') => {
+  if (value === '') return '';
+
+  const digits = value.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+  if (!digits) return previousValue;
+
+  const cents = Number(digits);
+  if (!Number.isSafeInteger(cents) || cents > MAX_CENTS) return previousValue;
+  if (cents === 0 && previousValue !== '' && value.length < previousValue.length) return '';
+
+  return formatCentsAsCurrencyInput(cents);
+};
 
 const strictGroupedInteger = (value: string, separator: '.' | ',') => {
   const escapedSeparator = separator === '.' ? '\\.' : ',';
@@ -67,13 +83,7 @@ export const formatCurrencyInput = (value: string) => {
   const cents = currencyInputToCents(value);
   if (cents === null) return value;
 
-  const integerPart = Math.floor(cents / 100).toLocaleString('pt-BR', {
-    maximumFractionDigits: 0,
-    useGrouping: true,
-  });
-  const decimalPart = String(cents % 100).padStart(2, '0');
-
-  return `${integerPart},${decimalPart}`;
+  return formatCentsAsCurrencyInput(cents);
 };
 
 export interface ManualSettlementAdjustmentValues {
