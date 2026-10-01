@@ -15,13 +15,16 @@ import {
 import type { MatriculaTecnicaFinanceiroRow } from './matricula-tecnica-financeiro.types';
 import type {
   CicloFinanceiroTecnicoManualPreview,
-  CicloFinanceiroTecnicoManualRevisao,
   CicloManualModoMatricula,
 } from './matricula-tecnica-ciclo-manual.types';
 import FinanceiroCicloManualEnrollmentOptions from './FinanceiroCicloManualEnrollmentOptions';
 import FinanceiroCicloManualChargeRows from './FinanceiroCicloManualChargeRows';
 import FinanceiroCicloManualDatesSummary from './FinanceiroCicloManualDatesSummary';
 import FinanceiroCicloManualIssuanceProgress from './FinanceiroCicloManualIssuanceProgress';
+import {
+  startCicloManualIssuance,
+  type CicloManualOnConfirm,
+} from './manual-technical-cycle-confirmation';
 import { getCriterioElegibilidadeLabel } from './matricula-tecnica-ciclo-manual.parser';
 import { usePreviewCicloFinanceiroTecnicoManual } from './hooks/useMatriculaTecnicaCicloManual';
 import { useAccessibleDialog } from './hooks/useAccessibleDialog';
@@ -33,12 +36,7 @@ interface FinanceiroCicloManualDialogProps {
   pending: boolean;
   canSettleEnrollment?: boolean;
   onClose: () => void;
-  onConfirm: (
-    preview: CicloFinanceiroTecnicoManualPreview,
-    primeiroVencimento: string | null,
-    revisao: CicloFinanceiroTecnicoManualRevisao | null,
-    abrirRecebimento: boolean,
-  ) => Promise<void>;
+  onConfirm: CicloManualOnConfirm;
 }
 
 type WizardStep = 1 | 2 | 3;
@@ -174,13 +172,10 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
   };
 
   const startIssuance = () => {
-    if (externalHistory && !externalHistoryConfirmed) return;
-    if (!preview || !previewReady || !positiveAmounts || issuanceStartedRef.current) return;
-    issuanceStartedRef.current = true;
-    setIssuanceSnapshot(preview);
-    void onConfirm(preview, firstDueDate, revisionState.revision,
-      canSettleEnrollment && preview.modoMatricula === 'REGISTRO_SEM_BOLETO' && openSettlement).finally(() => {
-      issuanceStartedRef.current = false;
+    void startCicloManualIssuance({
+      canSettleEnrollment, externalHistory, externalHistoryConfirmed, firstDueDate,
+      issuanceStarted: issuanceStartedRef, onConfirm, openSettlement, positiveAmounts,
+      preview, previewReady, setIssuanceSnapshot,
     });
   };
 

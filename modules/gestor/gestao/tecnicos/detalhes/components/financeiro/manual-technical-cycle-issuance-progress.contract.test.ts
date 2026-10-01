@@ -12,6 +12,10 @@ const dialogSource = readFileSync(
   resolve(baseDir, "FinanceiroCicloManualDialog.tsx"),
   "utf8",
 );
+const confirmationSource = readFileSync(
+  resolve(baseDir, "manual-technical-cycle-confirmation.ts"),
+  "utf8",
+);
 const progressSource = readFileSync(
   resolve(baseDir, "FinanceiroCicloManualIssuanceProgress.tsx"),
   "utf8",
@@ -38,8 +42,8 @@ test("a emissão pendente substitui o wizard por uma tela cheia de progresso", (
 
 test("a prévia revisada é preservada antes do início da mutation", () => {
   assert.match(
-    dialogSource,
-    /setIssuanceSnapshot\(preview\);\s*void onConfirm\(preview, firstDueDate, revisionState\.revision,\s*canSettleEnrollment && preview\.modoMatricula === 'REGISTRO_SEM_BOLETO' && openSettlement\)/,
+    confirmationSource,
+    /const confirmedRevision = revisionFromPreview\(preview\);[\s\S]*?setIssuanceSnapshot\(preview\);\s*await onConfirm\(\s*preview,\s*firstDueDate,\s*confirmedRevision,\s*canSettleEnrollment && preview\.modoMatricula === 'REGISTRO_SEM_BOLETO' && openSettlement/,
   );
   assert.match(
     dialogSource,
@@ -52,14 +56,14 @@ test("a prévia revisada é preservada antes do início da mutation", () => {
 test("uma trava síncrona impede dois envios antes do estado pending renderizar", () => {
   assert.match(dialogSource, /const issuanceStartedRef = useRef\(false\)/);
   assert.match(
-    dialogSource,
-    /if \(!preview \|\| !previewReady \|\| !positiveAmounts \|\| issuanceStartedRef\.current\) return;/,
+    confirmationSource,
+    /if \(!preview \|\| !previewReady \|\| !positiveAmounts \|\| issuanceStarted\.current\) return null;/,
   );
-  assert.match(dialogSource, /issuanceStartedRef\.current = true;/);
+  assert.match(confirmationSource, /issuanceStarted\.current = true;/);
   assert.match(dialogSource, /onClick=\{startIssuance\}/);
   assert.match(
-    dialogSource,
-    /onConfirm\(preview, firstDueDate, revisionState\.revision,\s*canSettleEnrollment && preview\.modoMatricula === 'REGISTRO_SEM_BOLETO' && openSettlement\)\.finally\(\(\) => \{\s*issuanceStartedRef\.current = false;/,
+    confirmationSource,
+    /try \{[\s\S]*?await onConfirm\([\s\S]*?confirmedRevision,[\s\S]*?\} finally \{\s*issuanceStarted\.current = false;/,
   );
 });
 

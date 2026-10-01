@@ -1,8 +1,8 @@
 {
-  "version": "4.8.140",
+  "version": "4.8.142",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 149,
+  "revision": 151,
   "releasedAt": "2026-09-30",
-  "summary": "Continuação local da T42 e matrícula retroativa da T46"
+  "summary": "Confirmação canônica da emissão de ciclos técnicos"
 }
