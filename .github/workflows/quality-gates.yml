@@ -198,8 +198,18 @@ jobs:
             supabase/functions/technical-manual-cycle-issuance/ \
             supabase/functions/technical-manual-cycle-recovery-worker/
 
+      - name: Testar passagem importada e cancelamento por trancamento
+        run: |
+          deno test --allow-read \
+            supabase/tests/imported_cycle_facts.contract.test.ts \
+            modules/gestor/gestao/tecnicos/detalhes/trancamento-financeiro.contract.test.ts \
+            supabase/tests/technical_trancamento_banese_cancellation.contract.test.ts
+          deno test --allow-read --allow-env \
+            supabase/functions/banese-cancellation-worker/worker.test.ts
+
       - name: Testar ações financeiras dos ciclos técnicos
         run: |
+          node scripts/test-financial-cycle-capabilities.mjs
           node --input-type=module <<'JS'
           import { build } from 'esbuild';
           for (const [index, entry] of [

@@ -13,6 +13,8 @@ import { AcademicMovementType, AcademicStudent } from '../../academic-lifecycle.
 import { getMaceioIsoDate } from '../../../technicalClassDates';
 import TransferFinancialPreview from './TransferFinancialPreview';
 import type { TransferFinancialPreview as FinancialPreview } from '../../transfer-finance.contract';
+import TrancamentoFinancialPreview from './TrancamentoFinancialPreview';
+import type { TrancamentoFinancialPreview as TrancamentoPreview } from '../../trancamento-financeiro.contract';
 
 export type OperationMode = 'MOVIMENTACAO' | 'TRANSFERENCIA' | 'RETORNO';
 export type TransferType = 'INTERNA_TURMA' | 'INTERNA_POLO' | 'EXTERNA_ENVIADA';
@@ -49,6 +51,11 @@ interface MovimentacaoAlunoModalProps {
   financialCanConfirm?: boolean;
   financialCanReplay?: boolean;
   onRetryFinancial?: () => void;
+  trancamentoPreview?: TrancamentoPreview;
+  trancamentoLoading?: boolean;
+  trancamentoError?: string | null;
+  trancamentoCanConfirm?: boolean;
+  onRetryTrancamento?: () => void;
   onOperationModeChange: (mode: OperationMode) => void;
   onMovementTypeChange: (type: AcademicMovementType) => void;
   onTransferTypeChange: (type: TransferType) => void;
@@ -87,6 +94,11 @@ const MovimentacaoAlunoModal: React.FC<MovimentacaoAlunoModalProps> = ({
   financialCanConfirm = false,
   financialCanReplay = false,
   onRetryFinancial = () => {},
+  trancamentoPreview,
+  trancamentoLoading = false,
+  trancamentoError = null,
+  trancamentoCanConfirm = false,
+  onRetryTrancamento = () => {},
   onOperationModeChange,
   onMovementTypeChange,
   onTransferTypeChange,
@@ -106,10 +118,13 @@ const MovimentacaoAlunoModal: React.FC<MovimentacaoAlunoModalProps> = ({
     || operationDate > today
     || Boolean(enrollmentDate && operationDate < enrollmentDate);
   const replayingTransfer = operationMode === 'TRANSFERENCIA' && financialCanReplay;
+  const reviewingTrancamento = operationMode === 'MOVIMENTACAO'
+    && movementType === 'TRANCAMENTO';
   const disabled = movementPending
     || transferPending
     || returnPending
     || (operationMode === 'TRANSFERENCIA' && !financialCanConfirm)
+    || (reviewingTrancamento && !trancamentoCanConfirm)
     || (!replayingTransfer && (!reason.trim() || invalidOperationDate))
     || (!replayingTransfer && operationMode === 'TRANSFERENCIA'
       && transferType !== 'EXTERNA_ENVIADA'
@@ -315,6 +330,19 @@ const MovimentacaoAlunoModal: React.FC<MovimentacaoAlunoModalProps> = ({
           {operationMode === 'TRANSFERENCIA' && <TransferFinancialPreview
             preview={financialPreview} loading={financialLoading} error={financialError}
             locked={financialLocked} onRetry={onRetryFinancial} />}
+
+          {reviewingTrancamento && <TrancamentoFinancialPreview
+            preview={trancamentoPreview}
+            loading={trancamentoLoading}
+            error={trancamentoError}
+            onRetry={onRetryTrancamento}
+          />}
+
+          {operationMode === 'MOVIMENTACAO' && movementType === 'REATIVACAO' && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs font-bold text-amber-900">
+              A reativação não recria nem reabre boletos já confirmados como CANCELADOS no Banese.
+            </div>
+          )}
 
           <div className="flex gap-3 pt-2">
             <button onClick={onClose} disabled={financialLocked} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-500 font-black uppercase text-xs disabled:opacity-40">

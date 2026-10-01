@@ -1,3 +1,5 @@
+import { parseBaneseCancellation, parseReceivableOperationCapabilities } from './financeiro.operation-capabilities';
+
 export interface FinancialCompositionPresentation {
   label: string;
   tone: 'confirmed' | 'calculated' | 'partial';
@@ -47,6 +49,8 @@ const optionalAmount = (value: unknown): number | undefined => {
 // Presentation maps only amounts supplied by the canonical RPC. It never
 // reconstructs a discount, penalty, interest or residual from totals/dates.
 export const mapReceivableFinancialComposition = (row: Record<string, unknown>) => ({
+  operationCapabilities: parseReceivableOperationCapabilities(row.operation_capabilities),
+  baneseCancellation: parseBaneseCancellation(row.banese_cancellation),
   descontoAplicado: optionalAmount(row.desconto_aplicado),
   jurosAplicados: optionalAmount(row.juros_aplicados),
   multaAplicada: optionalAmount(row.multa_aplicada),

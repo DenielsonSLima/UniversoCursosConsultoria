@@ -18,6 +18,7 @@ const claimedJob = {
   job_id: JOB_ID,
   lease_token: LEASE_TOKEN,
   receivable_id: RECEIVABLE_ID,
+  reason: "TRANCAMENTO_FUTURO",
   environment: "production",
   convenio: "15528",
   nosso_numero: OUR_NUMBER,
@@ -92,7 +93,7 @@ const fakeAdmin = (options: {
 const callsNamed = (calls: RpcCall[], name: string) =>
   calls.filter((call) => call.name === name);
 
-Deno.test("worker cancela no Banese antes da conclusão local atômica", async () => {
+Deno.test("worker aceita TRANCAMENTO_FUTURO e conclui somente após o Banese", async () => {
   const { admin, calls } = fakeAdmin();
   let mutationStarted = false;
   const summary = await processBaneseCancellationBatch(admin, 1, {

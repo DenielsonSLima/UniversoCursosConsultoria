@@ -9,6 +9,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import type { ContasReceber } from '../../../financeiro.service';
+import { baneseCancellationLabel } from '../../../financeiro.operation-capabilities';
 import { hasProescEvidence, isProescPaymentUnderReview } from '../../../financeiro.proesc-evidence';
 import { receivableIssuanceNotice } from '../../../financeiro.receivable-issuance';
 import { formatEnrollment } from './modalidade-receber.enrollment';
@@ -50,6 +51,7 @@ interface ItemProps {
 
 export const ReceivableStatusBadge: React.FC<{ item: ContasReceber }> = ({ item }) => {
   const underReview = isProescPaymentUnderReview(item);
+  const cancellationLabel = baneseCancellationLabel(item);
   return (
   <span title={underReview ? 'A situação de pagamento ainda aguarda confirmação na origem.' : undefined} className={`inline-flex max-w-[220px] items-center gap-1 rounded-full px-2.5 py-1 text-[9px] font-black uppercase ${
     underReview ? 'bg-amber-50 text-amber-700' : item.status === 'PAGO'
@@ -63,12 +65,24 @@ export const ReceivableStatusBadge: React.FC<{ item: ContasReceber }> = ({ item 
             : 'bg-amber-50 text-amber-700'
   }`}>
     {item.status === 'PAGO' ? <CheckCircle2 size={11} /> : <Clock3 size={11} />}
-    {underReview ? 'Histórico Proesc em conferência' : item.status}
+    {cancellationLabel || (underReview ? 'Histórico Proesc em conferência' : item.status)}
   </span>
   );
 };
 
 export const ReceivableActionButtons: React.FC<ItemProps> = ({ item, actions }) => {
+  if (hasProescEvidence(item) || ['PROESC', 'CONFLICT'].includes(item.operationCapabilities?.sourceSystem || '')) {
+    return (
+      <span className="text-[10px] font-bold text-slate-500" role="status">
+        {item.operationCapabilities?.sourceSystem === 'CONFLICT'
+          ? 'Origem em revisão. Operações financeiras bloqueadas.'
+          : 'Histórico Proesc — somente consulta. Recebimentos e cancelamentos são tratados na origem.'}
+      </span>
+    );
+  }
+  if (baneseCancellationLabel(item) && item.status !== 'PAGO') {
+    return <span className="text-[10px] font-bold text-slate-500" role="status">{baneseCancellationLabel(item)}</span>;
+  }
   if (item.status === 'PAGO') {
     const paidThroughAsaas = isPaidThroughAsaas(item);
     return (
@@ -121,7 +135,8 @@ export const ReceivableActionButtons: React.FC<ItemProps> = ({ item, actions }) 
   const gatewayCode = paymentGatewayCode(item);
   const isBanese = ['banese_card', 'banese'].includes(gatewayCode || '');
   const isBaneseIdentityQuarantine = isBanese && isBaneseIdentityQuarantined(item);
-  const canOpenBanese = canOpenBaneseDocument(item);
+  const canOpenBanese = item.operationCapabilities?.canOpenExisting === true
+    && canOpenBaneseDocument(item);
   const hasExternalChargeUrl = !isBanese
     && Boolean(item.asaasInvoiceUrl || item.asaasBankSlipUrl);
   const externalHistoryWithoutGateway = !gatewayCode
@@ -130,14 +145,16 @@ export const ReceivableActionButtons: React.FC<ItemProps> = ({ item, actions }) 
 
   return (
     <div className="grid w-full max-w-[180px] grid-cols-2 gap-2">
-      <button
+      {item.operationCapabilities?.canSettle === true ? <button
         type="button"
         onClick={() => actions.onOpenPayment(item)}
         className="col-span-2 rounded-xl bg-[#001a33] px-3 py-2.5 text-[10px] font-black uppercase tracking-wider text-white hover:bg-emerald-700"
         title="Confirmar recebimento manual"
       >
         Receber
-      </button>
+      </button> : <span className="col-span-2 text-[10px] font-bold text-slate-500" role="status">
+        {item.operationCapabilities?.readOnlyReason || 'Recebimento indisponível para este título.'}
+      </span>}
       {issuanceNotice ? (
         <div className="col-span-2 rounded-xl bg-slate-50 px-3 py-2 text-center" role="status">
           <p className="text-[10px] font-black text-slate-700">{issuanceNotice.title}</p>
@@ -187,7 +204,7 @@ export const ReceivableActionButtons: React.FC<ItemProps> = ({ item, actions }) 
         <span className="col-span-2 rounded-xl bg-slate-50 px-3 py-2 text-center text-[10px] font-bold text-slate-500" role="status">
           Boleto emitido. Atualize a tela para consultar.
         </span>
-      ) : (
+      ) : item.operationCapabilities?.canEmit === true ? (
         <button
           type="button"
           onClick={() => actions.onSync(item)}
@@ -197,7 +214,7 @@ export const ReceivableActionButtons: React.FC<ItemProps> = ({ item, actions }) 
           <RefreshCw className={actions.syncPending ? 'animate-spin' : ''} size={12} />
           Enviar ao banco
         </button>
-      )}
+      ) : null}
     </div>
   );
 };
@@ -251,7 +268,7 @@ export const ReceivableRow: React.FC<ReceivableRowProps> = ({
       <div className="space-y-2">
         <ReceivableStatusBadge item={item} />
         <p className="text-[10px] font-bold text-slate-500">Forma: {paymentMethodLabel(item)}</p>
-        <p className="text-[10px] font-bold text-slate-500">Origem: {hasProescEvidence(item) ? 'Proesc' : paymentOriginLabel(item)}</p>
+        <p className="text-[10px] font-bold text-slate-500">Origem: {hasProescEvidence(item) ? 'Proesc' : item.operationCapabilities?.provenanceKind === 'BANESE_LEGACY_IMPORTED' ? 'Banese importado' : paymentOriginLabel(item)}</p>
         <ManualSettlementAudit item={item} />
         {['DELETED', 'CANCELED'].includes(String(item.asaasStatus || '').toUpperCase()) ? (
           <p className="text-[10px] font-bold text-rose-600">
@@ -331,7 +348,7 @@ export const ReceivableCard: React.FC<ItemProps> = ({ item, actions }) => (
     </div>
     <div className="mt-4 rounded-xl border border-slate-100 px-3 py-2">
       <p className="text-[10px] font-bold text-slate-500">Forma: {paymentMethodLabel(item)}</p>
-      <p className="mt-1 text-[10px] font-bold text-slate-500">Origem: {hasProescEvidence(item) ? 'Proesc' : paymentOriginLabel(item)}</p>
+      <p className="mt-1 text-[10px] font-bold text-slate-500">Origem: {hasProescEvidence(item) ? 'Proesc' : item.operationCapabilities?.provenanceKind === 'BANESE_LEGACY_IMPORTED' ? 'Banese importado' : paymentOriginLabel(item)}</p>
       <ManualSettlementAudit item={item} />
     </div>
     <div className="mt-4 border-t border-slate-100 pt-3">

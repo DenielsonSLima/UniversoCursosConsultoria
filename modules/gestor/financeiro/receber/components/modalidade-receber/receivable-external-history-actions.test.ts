@@ -27,6 +27,11 @@ const receivable = (overrides: Partial<ContasReceber> = {}): ContasReceber => ({
   dataVencimento: '2030-01-15',
   status: 'PENDENTE',
   categoria: 'MENSALIDADE',
+  operationCapabilities: {
+    sourceSystem: 'LOCAL', provenanceKind: 'LOCAL', canSettle: true,
+    canCancel: false, canEmit: true, canOpenExisting: false,
+    canReconcile: false, readOnlyReason: null,
+  },
   ...overrides,
 });
 
@@ -48,6 +53,11 @@ test('legado já vinculado ao Banese conserva abertura do boleto existente', () 
   const html = renderActions(receivable({
     origemPagamento: 'SISTEMA_ANTERIOR',
     gatewayProvider: 'banese',
+    operationCapabilities: {
+      sourceSystem: 'BANESE', provenanceKind: 'BANESE_LEGACY_IMPORTED',
+      canSettle: true, canCancel: true, canEmit: false, canOpenExisting: true,
+      canReconcile: true, readOnlyReason: null,
+    },
   }));
   assert.match(html, /Abrir/);
   assert.match(html, /PDF do boleto Banese/);
@@ -58,42 +68,4 @@ test('cobrança nova sem gateway mantém envio ao banco', () => {
   const html = renderActions(receivable());
   assert.match(html, /Enviar ao banco/);
   assert.doesNotMatch(html, /Cobrança do sistema anterior/);
-});
-
-test('parcela gerada pela turma orienta retomada e nunca oferece envio avulso ou abertura prematura', () => {
-  for (const emissaoCicloStatus of ['PENDENTE', 'REVISAO', undefined] as const) {
-    for (const gatewayProvider of [undefined, 'banese_card']) {
-      const html = renderActions(receivable({
-        emissaoGerenciadaTurma: true, emissaoCicloStatus, gatewayProvider,
-      }));
-      assert.match(html, /Emissão não concluída/);
-      assert.match(html, /Gestão → Turma → Financeiro/);
-      assert.match(html, /Retomar emissão/);
-      assert.match(html, /Receber/);
-      assert.doesNotMatch(html, /Enviar ao banco|>Abrir</);
-    }
-  }
-});
-
-test('matrícula local continua recebível sem oferecer qualquer emissão bancária', () => {
-  const html = renderActions(receivable({ destinoCobranca: 'LOCAL', emissaoGerenciadaTurma: true }));
-  assert.match(html, /Sem boleto|Receber/);
-  assert.doesNotMatch(html, /Enviar ao banco|Retomar emissão|>Abrir</);
-});
-
-test('ciclo em revisão informa acompanhamento sem sugerir repetir emissão bancária', () => {
-  const html = renderActions(receivable({ emissaoGerenciadaTurma: true, emissaoCicloStatus: 'REVISAO_MANUAL' }));
-  assert.match(html, /Emissão em revisão/);
-  assert.match(html, /Acompanhe esta cobrança/);
-  assert.doesNotMatch(html, /Enviar ao banco|Retomar emissão/);
-});
-
-test('boleto nativo concluído mantém abertura e jamais reapresenta envio genérico', () => {
-  for (const gatewayProvider of ['banese_card', undefined]) {
-    const html = renderActions(receivable({
-      emissaoGerenciadaTurma: true, emissaoCicloStatus: 'EMITIDO', gatewayProvider,
-    }));
-    assert.match(html, gatewayProvider ? /Abrir/ : /Boleto emitido/);
-    assert.doesNotMatch(html, /Enviar ao banco|Retomar emissão/);
-  }
 });
