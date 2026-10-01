@@ -1,8 +1,8 @@
 {
-  "version": "4.8.145",
+  "version": "4.8.146",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 154,
+  "revision": 155,
   "releasedAt": "2026-10-01",
-  "summary": "Contrato e auditoria dos ciclos técnicos e cancelamentos confirmados"
+  "summary": "Retomada segura do segundo ciclo local após histórico Proesc"
 }

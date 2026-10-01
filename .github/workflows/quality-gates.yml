@@ -202,10 +202,23 @@ jobs:
         run: |
           deno test --allow-read \
             supabase/tests/imported_cycle_facts.contract.test.ts \
+            supabase/tests/proesc_local_c2_issuance.contract.test.ts \
             modules/gestor/gestao/tecnicos/detalhes/trancamento-financeiro.contract.test.ts \
             supabase/tests/technical_trancamento_banese_cancellation.contract.test.ts
           deno test --allow-read --allow-env \
             supabase/functions/banese-cancellation-worker/worker.test.ts
+
+      - name: Testar aviso individual do histórico importado
+        run: |
+          node --input-type=module <<'JS'
+          import { build } from 'esbuild';
+          await build({
+            entryPoints: ['modules/gestor/gestao/tecnicos/detalhes/components/financeiro/financeiro-config-readonly.test.ts'],
+            bundle: true, platform: 'node', format: 'cjs',
+            outfile: '/tmp/financeiro-config-readonly.test.cjs',
+          });
+          JS
+          node --test /tmp/financeiro-config-readonly.test.cjs
 
       - name: Testar ações financeiras dos ciclos técnicos
         run: |
