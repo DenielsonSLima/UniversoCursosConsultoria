@@ -12,21 +12,7 @@ import {
   cicloManualScheduleFromPreview,
   type CicloManualScheduleItem,
 } from '../ciclo-manual-due-schedule';
-
-export const revisionFromPreview = (
-  preview: CicloFinanceiroTecnicoManualPreview,
-): CicloFinanceiroTecnicoManualRevisao => ({
-  modoMatricula: preview.modoMatricula ?? (preview.matriculaSemBoleto ? 'OMITIR' : 'BOLETO'),
-  emitirMatricula: (preview.modoMatricula ?? (preview.matriculaSemBoleto ? 'OMITIR' : 'BOLETO')) === 'BOLETO',
-  itens: [...preview.itens, ...(preview.matriculaSemBoleto ? [preview.matriculaSemBoleto] : [])].map((item) => ({
-    chave: item.chave,
-    valor: item.valor,
-    vencimento: item.vencimento,
-    descontoPontualidade: item.detalhesBoleto.desconto?.valor ?? '0',
-    jurosAtrasoPercentual: item.detalhesBoleto.juros?.percentualMes ?? '0',
-    multaAtrasoPercentual: item.detalhesBoleto.multa?.percentual ?? '0',
-  })),
-});
+import { revisionFromPreview } from '../manual-technical-cycle-confirmation';
 
 interface RevisionState {
   contextKey: string;

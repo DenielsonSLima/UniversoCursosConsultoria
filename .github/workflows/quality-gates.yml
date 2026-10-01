@@ -181,6 +181,8 @@ jobs:
       - name: Testar geração manual dos ciclos técnicos
         run: |
           deno test --allow-read --allow-env=NODE_ENV \
+            modules/gestor/gestao/tecnicos/detalhes/components/financeiro/manual-technical-cycle-confirmation-revision.test.ts
+          deno test --allow-read --allow-env=NODE_ENV \
             modules/gestor/gestao/tecnicos/detalhes/components/alunos/technical-enrollment-no-finance-access.contract.test.mjs \
             modules/gestor/financeiro/financeiro.local-enrollment-reversal.test.ts \
             modules/gestor/gestao/tecnicos/detalhes/components/financeiro/ciclo-manual-settlement-account.test.ts \
