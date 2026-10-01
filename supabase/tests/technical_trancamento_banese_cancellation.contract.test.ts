@@ -17,7 +17,7 @@ const [policy, projection, raceFence, terminal, lane, preview, rollback, complet
   read('../migrations/20260826235920_complete_all_unpaid_terminal_cancellations.sql'),
   read('../migrations/20260827002500_require_confirmed_banese_terminal_cancellation.sql'),
   read('../functions/banese/core/adapter/boleto-cancellation.ts'),
-  read('../migrations/20260912133702_align_receivables_summary_payment_period.sql'),
+  read('../migrations/20260831133000_add_active_class_filter_to_receivables.sql'),
   read('../../modules/gestor/gestao/tecnicos/detalhes/components/alunos/MovimentacaoAlunoModal.tsx'),
   read('../../modules/gestor/gestao/tecnicos/detalhes/components/alunos/TrancamentoFinancialPreview.tsx'),
 ]);
