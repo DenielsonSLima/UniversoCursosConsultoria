@@ -1,8 +1,8 @@
 {
-  "version": "4.8.144",
+  "version": "4.8.145",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 153,
-  "releasedAt": "2026-09-30",
-  "summary": "Continuidade de ciclos importados e cancelamento Banese por trancamento"
+  "revision": 154,
+  "releasedAt": "2026-10-01",
+  "summary": "Contrato e auditoria dos ciclos técnicos e cancelamentos confirmados"
 }

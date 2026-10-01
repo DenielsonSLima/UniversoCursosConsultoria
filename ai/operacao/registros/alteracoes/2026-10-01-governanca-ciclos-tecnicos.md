@@ -1,7 +1,7 @@
 # Governança dos ciclos técnicos
 
 Lote operacional separado da correção de produto, solicitado pelo usuário.
-Estado: REVISADO — GO independente; fechamento operacional da produção 4.8.144.
+Estado: REVISADO — GO independente; fechamento operacional 4.8.145 da produção 4.8.144.
 
 ## Manifesto explícito
 
@@ -13,8 +13,11 @@ Estado: REVISADO — GO independente; fechamento operacional da produção 4.8.1
 - `ai/operacao/registros/alteracoes/2026-10-01-ciclos-confiaveis-e-trancamento.md`
 - `ai/operacao/LOTE_ATIVO.md`
 - `ai/operacao/qualidade/limite-linhas-manifestos.json`
+- `internal/versioning/system-version.json`
+- `internal/versioning/CHANGELOG.md`
 
-Total: 8 arquivos.
+Total: 10 arquivos. O registro de manifestos JSON exige avanço de versão no gate
+vigente; 4.8.145 registra apenas governança e metadados, sem nova lógica financeira.
 
 ## Aceite
 
