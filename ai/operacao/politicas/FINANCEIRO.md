@@ -8,6 +8,8 @@ Carregue esta política somente para financeiro, Caixa, patrimônio, empréstimo
 - O frontend coleta entradas e exibe o resultado canônico.
 - Toda mutação é autorizada por escopo, idempotente, auditável e conciliada por TanStack Query/Realtime.
 - Ciclos técnicos seguem o [contrato de elegibilidade, matrícula local, baixa, estorno e C2](../../../docs/decisions/ciclos-tecnicos-cobrancas.md); origem importada não autoriza nova emissão.
+- Continuidade Proesc/Banese e trancamento seguem o [contrato de passagem e proveniência](../../../docs/contracts/ciclos-tecnicos-passagem-e-proveniencia.md): confirmação durável por matrícula/ciclo, Proesc somente consulta e cancelamento Banese confirmado antes de excluir saldo pendente.
+- Para alterar esses fluxos, carregar também a [skill versionada de ciclos técnicos](../skills/universo-ciclos-tecnicos-financeiros/SKILL.md), com os contratos e ensaios de confirmação e cancelamento completos.
 
 ## Gateways
 
