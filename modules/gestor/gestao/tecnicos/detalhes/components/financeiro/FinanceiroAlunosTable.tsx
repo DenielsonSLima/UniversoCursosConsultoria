@@ -22,6 +22,7 @@ import type { MatriculaTecnicaFinanceiroRow } from './matricula-tecnica-financei
 interface FinanceiroAlunosTableProps {
   turma: Pick<Turma, 'id' | 'poloId'>;
   rows: MatriculaTecnicaFinanceiroRow[];
+  valuesVisible?: boolean;
   eligibleSelected: string[];
   pending: boolean;
   reviewingProesc?: boolean;
@@ -47,6 +48,16 @@ const formatMoney = (value: string | null | undefined) => {
     currency: 'BRL',
   }).format(parsed);
 };
+
+const MoneyValue = ({ value, valuesVisible }: {
+  value: string | null | undefined;
+  valuesVisible: boolean;
+}) => valuesVisible ? formatMoney(value) : (
+  <>
+    <span aria-hidden="true">R$ •••••</span>
+    <span className="sr-only">Valor oculto</span>
+  </>
+);
 
 const formatDateTime = (value: string | null) => value
   ? new Date(value).toLocaleString('pt-BR')
@@ -90,6 +101,7 @@ const statusBadge = (row: MatriculaTecnicaFinanceiroRow) => {
 const FinanceiroAlunosTable = ({
   turma,
   rows,
+  valuesVisible = false,
   eligibleSelected,
   pending,
   reviewingProesc,
@@ -105,21 +117,21 @@ const FinanceiroAlunosTable = ({
   onSettleEnrollment,
   onCarnetFeedback,
 }: FinanceiroAlunosTableProps) => (
-  <div className="overflow-x-auto">
-    <table className="w-full min-w-[1020px] text-left">
-      <thead className="border-b border-slate-200 bg-slate-50">
+  <div className="overflow-x-auto bg-slate-50/30">
+    <table className="w-full min-w-[1120px] table-fixed text-left">
+      <thead className="border-b border-slate-200 bg-slate-100/80">
         <tr>
-          <th className="px-4 py-4 text-xs font-black uppercase tracking-wider text-slate-500 lg:px-6">Aluno</th>
-          <th className="px-4 py-4 text-xs font-black uppercase tracking-wider text-slate-500 lg:px-6">Valores</th>
-          <th className="px-4 py-4 text-xs font-black uppercase tracking-wider text-slate-500 lg:px-6">Progresso Pagto.</th>
-          <th className="px-4 py-4 text-xs font-black uppercase tracking-wider text-slate-500 lg:px-6">Status</th>
-          <th className="px-4 py-4 text-right text-xs font-black uppercase tracking-wider text-slate-500 lg:px-6">Ações</th>
+          <th className="w-[25%] px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">Aluno</th>
+          <th className="w-[12%] px-3 py-2.5 text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">Valores do plano</th>
+          <th className="w-[13%] px-3 py-2.5 text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">Pagamento</th>
+          <th className="w-[17%] px-3 py-2.5 text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">Situação</th>
+          <th className="w-[33%] px-4 py-2.5 text-right text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">Cobrança e acessos</th>
         </tr>
       </thead>
       <tbody>
         {rows.length === 0 ? (
           <tr>
-            <td colSpan={5} className="px-6 py-12 text-center text-sm text-slate-400">
+            <td colSpan={5} className="px-6 py-12 text-center text-sm text-slate-500">
               <XCircle size={32} className="mx-auto mb-2 text-slate-300 opacity-50" />
               <p className="font-bold">Nenhum aluno encontrado.</p>
             </td>
@@ -136,11 +148,11 @@ const FinanceiroAlunosTable = ({
               key={row.matriculaId}
               data-student-band={index % 2 === 0 ? 'even' : 'odd'}
               onClick={() => onOpenStatement(row.matriculaId)}
-              className={`${index % 2 === 0 ? 'bg-white' : 'bg-blue-50/45'} group cursor-pointer border-b border-slate-100 transition-colors hover:bg-blue-100/55`}
+              className={`${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/65'} group cursor-pointer border-b border-slate-200/70 transition-colors hover:bg-blue-50/80 focus-within:bg-blue-50/80`}
               title="Abrir extrato financeiro do aluno"
             >
-              <td className="px-4 py-4 lg:px-6">
-                <div className="flex items-center gap-3">
+              <td className="px-4 py-3 align-top">
+                <div className="flex items-start gap-2.5">
                   {canActivate ? (
                     <input
                       type="checkbox"
@@ -148,19 +160,20 @@ const FinanceiroAlunosTable = ({
                       checked={eligibleSelected.includes(row.matriculaId)}
                       onClick={(event) => event.stopPropagation()}
                       onChange={(event) => onSelectionChange(row, event.target.checked)}
+                      className="mt-1 h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                     />
                   ) : null}
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-white bg-slate-200 text-xs font-bold text-slate-500 shadow-sm">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white bg-slate-200 text-[10px] font-black text-slate-500 shadow-sm">
                     {row.alunoNome.charAt(0)}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-bold text-[#001a33]">{row.alunoNome}</p>
-                    <p className="mt-0.5 whitespace-nowrap text-[9px] font-semibold text-slate-500">
+                    <p className="text-[13px] font-extrabold leading-4 text-[#001a33]">{row.alunoNome}</p>
+                    <p className="mt-0.5 whitespace-nowrap text-[9px] font-semibold leading-4 text-slate-500">
                       CPF: {formatStudentDocument(row.alunoCpf)} · Matrícula: {row.matriculaExibicao}
                     </p>
-                    {row.overrideAtivo ? <p className="mt-0.5 text-[8px] font-black uppercase text-violet-600">Regra individual</p> : null}
+                    {row.overrideAtivo ? <p className="mt-0.5 text-[8px] font-black uppercase tracking-wide text-violet-600">Regra individual</p> : null}
                     {row.cicloManual.continuidadeFinanceira?.cadeiaOrigemIds.map((originId, index, origins) => (
-                      <button type="button" className="mt-1 text-xs font-semibold text-blue-700 underline"
+                      <button type="button" className="mt-1 block text-left text-[10px] font-semibold text-blue-700 underline underline-offset-2"
                         key={originId}
                         onClick={(event) => { event.stopPropagation(); onOpenStatement(originId); }}>
                         Consultar financeiro da matrícula de origem{origins.length > 1 ? ` ${index + 1}` : ''}
@@ -169,71 +182,114 @@ const FinanceiroAlunosTable = ({
                   </div>
                 </div>
               </td>
-              <td className="px-4 py-4 lg:px-6">
+              <td className="px-3 py-3 align-top">
                 <div className="space-y-1">
-                  <p className="text-[10px] font-black uppercase text-emerald-700">Mat. {formatMoney(row.valorMatriculaEfetivo)}</p>
-                  <p className="text-[10px] font-bold uppercase text-slate-500">Mens. {formatMoney(row.valorMensalidadeEfetivo)}</p>
+                  <p className="text-[8px] font-black uppercase tracking-wide text-slate-500">Matrícula</p>
+                  <p className="text-[11px] font-extrabold tabular-nums text-emerald-700"><MoneyValue value={row.valorMatriculaEfetivo} valuesVisible={valuesVisible} /></p>
+                  <p className="pt-0.5 text-[8px] font-black uppercase tracking-wide text-slate-500">Mensalidade</p>
+                  <p className="text-[11px] font-bold tabular-nums text-slate-600"><MoneyValue value={row.valorMensalidadeEfetivo} valuesVisible={valuesVisible} /></p>
                 </div>
               </td>
-              <td className="px-4 py-4 lg:px-6">
-                <div className="flex items-center gap-2">
-                  <div className="h-2 w-24 flex-1 overflow-hidden rounded-full bg-slate-200/80">
+              <td className="px-3 py-3 align-top">
+                <div className="pt-0.5">
+                  <div className="mb-1.5 flex items-center justify-between gap-2 text-[9px] font-bold text-slate-500">
+                    <span>{row.parcelasPagas} de {row.totalParcelas} pagas</span>
+                    <span className="tabular-nums">{row.progressoPercentual}%</span>
+                  </div>
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200/80" title={`${row.progressoPercentual}% pago`}>
                     <div
                       className={`h-full rounded-full ${row.situacaoFinanceira === 'INADIMPLENTE' ? 'bg-red-500' : 'bg-blue-500'}`}
                       style={{ width: `${row.progressoPercentual}%` }}
                     />
                   </div>
-                  <span className="text-[10px] font-bold text-slate-500">{row.parcelasPagas}/{row.totalParcelas}</span>
                 </div>
               </td>
-              <td className="px-4 py-4 lg:px-6">
-                <div className="space-y-2">
+              <td className="px-3 py-3 align-top">
+                <div className="space-y-1.5">
                   <MatriculaAcademicaBadge status={row.statusAcademico} />
                   {manualMode
-                    ? <p className="text-[9px] font-black uppercase text-slate-600">Cobrança: {situationLabel(row)}</p>
+                    ? <p className="max-w-52 text-[9px] font-bold leading-4 text-slate-600">Cobrança: {situationLabel(row)}</p>
                     : statusBadge(row)}
                   {!manualMode && row.financeiro.status === 'AGENDADA'
                     ? <p className="text-[8px] font-bold text-blue-600">{formatDateTime(row.financeiro.ativarEm)}</p>
                     : null}
                 </div>
               </td>
-              <td className="px-4 py-4 text-right lg:px-6">
-                <div className="relative flex flex-wrap items-center justify-end gap-2" onClick={(event) => event.stopPropagation()}>
-                  {manualMode ? (
-                    <FinanceiroCicloManualStatus
-                      cicloManual={row.cicloManual}
-                      statusAcademico={row.statusAcademico}
-                      disabled={pending}
-                      reviewingProesc={reviewingProesc && row.cicloManual.conferenciaProesc?.necessaria}
-                      onGenerate={() => onOpenManualCycle(row.matriculaId)}
-                      onResume={() => onResumeCycle(row)}
-                    />
-                  ) : null}
-                  {row.cicloManual.matriculaLocal && onSettleEnrollment
-                    && ['PENDENTE', 'VENCIDO'].includes(row.cicloManual.matriculaLocal.status) ? (
-                      <button type="button" disabled={pending} onClick={() => onSettleEnrollment(row)}
-                        className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[9px] font-black uppercase text-emerald-800 disabled:opacity-50">
-                        Registrar recebimento da matrícula
-                      </button>
+              <td className="px-4 py-3 align-top text-right">
+                <div
+                  className="ml-auto max-w-[430px] space-y-2"
+                  onClick={(event) => event.stopPropagation()}
+                  onKeyDown={(event) => {
+                    if (event.key !== 'Escape' || actionMenuId !== row.matriculaId) return;
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onActionMenuChange(null);
+                    event.currentTarget.querySelector('[data-billing-toggle]')?.focus();
+                  }}
+                >
+                  {manualMode || (row.cicloManual.matriculaLocal && onSettleEnrollment
+                    && ['PENDENTE', 'VENCIDO'].includes(row.cicloManual.matriculaLocal.status)) ? (
+                      <div className="rounded-xl border border-slate-200 bg-white/85 p-2 text-left shadow-sm">
+                        <p className="mb-1 text-[8px] font-black uppercase tracking-[0.14em] text-slate-500">Próximo passo</p>
+                        <div className="flex flex-wrap items-end justify-between gap-2">
+                          {manualMode ? (
+                            <FinanceiroCicloManualStatus
+                              cicloManual={row.cicloManual}
+                              statusAcademico={row.statusAcademico}
+                              disabled={pending}
+                              reviewingProesc={reviewingProesc && row.cicloManual.conferenciaProesc?.necessaria}
+                              onGenerate={() => onOpenManualCycle(row.matriculaId)}
+                              onResume={() => onResumeCycle(row)}
+                            />
+                          ) : null}
+                          {row.cicloManual.matriculaLocal && onSettleEnrollment
+                            && ['PENDENTE', 'VENCIDO'].includes(row.cicloManual.matriculaLocal.status) ? (
+                              <button type="button" disabled={pending} onClick={() => onSettleEnrollment(row)}
+                                className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-2 text-[9px] font-black uppercase text-emerald-800 transition hover:bg-emerald-100 disabled:opacity-50">
+                                Registrar recebimento da matrícula
+                              </button>
+                            ) : null}
+                        </div>
+                      </div>
                     ) : null}
-                  <FinanceiroAlunoCarneAction
-                    row={row}
-                    poloId={turma.poloId}
-                    turmaId={turma.id}
-                    disabled={pending}
-                    onFeedback={onCarnetFeedback}
-                  />
-                  <button type="button" onClick={() => onOpenStatement(row.matriculaId)} title="Extrato Financeiro" aria-label={`Abrir extrato de ${row.alunoNome}`} className="rounded-lg border border-blue-100 bg-blue-50 p-2 text-blue-600 transition-colors hover:bg-blue-100"><FileText size={16} /></button>
-                  {!protectedExisting && row.cicloManual.estado !== 'CICLOS_CONCLUIDOS' ? <button type="button" onClick={() => onOpenOverride(row.matriculaId)} title="Configuração individual" aria-label={`Configuração financeira de ${row.alunoNome}`} className="rounded-lg border border-violet-100 bg-violet-50 p-2 text-violet-600 transition-colors hover:bg-violet-100"><Settings2 size={16} /></button> : null}
-                  {!manualMode ? <button type="button" onClick={() => onActionMenuChange(actionMenuId === row.matriculaId ? null : row.matriculaId)} title="Mais opções" aria-label={`Mais opções para ${row.alunoNome}`} className="rounded-lg border border-transparent p-2 text-slate-400 transition-colors hover:border-slate-200 hover:bg-slate-100 hover:text-slate-600"><MoreHorizontal size={16} /></button> : null}
+                  <div className="flex flex-wrap items-center justify-end gap-1.5" role="group" aria-label={`Acessos financeiros de ${row.alunoNome}`}>
+                    <span className="mr-0.5 text-[8px] font-black uppercase tracking-[0.12em] text-slate-500">Acessos</span>
+                    <FinanceiroAlunoCarneAction
+                      row={row}
+                      poloId={turma.poloId}
+                      turmaId={turma.id}
+                      disabled={pending}
+                      onFeedback={onCarnetFeedback}
+                    />
+                    <button type="button" onClick={() => onOpenStatement(row.matriculaId)} title="Abrir extrato financeiro" aria-label={`Abrir extrato de ${row.alunoNome}`} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-blue-100 bg-blue-50 px-2.5 text-[9px] font-black uppercase text-blue-700 transition-colors hover:bg-blue-100"><FileText size={14} /> Extrato</button>
+                    {!protectedExisting && row.cicloManual.estado !== 'CICLOS_CONCLUIDOS' ? <button type="button" onClick={() => onOpenOverride(row.matriculaId)} title="Configuração individual" aria-label={`Configuração individual de ${row.alunoNome}`} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-violet-100 bg-violet-50 px-2.5 text-[9px] font-black uppercase text-violet-700 transition-colors hover:bg-violet-100"><Settings2 size={14} /> Ajustes</button> : null}
+                    {!manualMode ? <button
+                        type="button"
+                        data-billing-toggle
+                        onClick={() => onActionMenuChange(actionMenuId === row.matriculaId ? null : row.matriculaId)}
+                        title="Mais opções"
+                        aria-label={`Mais opções para ${row.alunoNome}`}
+                        aria-expanded={actionMenuId === row.matriculaId}
+                        aria-controls={`financeiro-cobranca-${row.matriculaId}`}
+                        className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-[9px] font-black uppercase text-slate-600 transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                      >
+                        <MoreHorizontal size={14} /> Cobrança
+                      </button> : null}
+                  </div>
                   {!manualMode && actionMenuId === row.matriculaId ? (
-                    <div className="absolute right-0 top-10 z-20 w-44 rounded-xl border border-slate-100 bg-white p-2 text-left shadow-xl">
+                    <div
+                      id={`financeiro-cobranca-${row.matriculaId}`}
+                      className="rounded-xl border border-slate-200 bg-slate-50 p-2 text-left"
+                      role="group"
+                      aria-label={`Ações de cobrança de ${row.alunoNome}`}
+                    >
                       {canActivate ? (
                         <>
-                          <button type="button" disabled={pending} onClick={() => onActivateNow(row)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[10px] font-black uppercase text-emerald-700 hover:bg-emerald-50"><ReceiptText size={14} /> Gerar agora</button>
-                          <button type="button" disabled={pending} onClick={() => onSchedule(row)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[10px] font-black uppercase text-blue-700 hover:bg-blue-50"><CalendarClock size={14} /> Agendar</button>
+                          <p className="px-2 pb-1 pt-0.5 text-[8px] font-black uppercase tracking-[0.12em] text-slate-500">Ativação financeira</p>
+                          <button type="button" disabled={pending} onClick={() => onActivateNow(row)} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-[10px] font-black uppercase text-emerald-700 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"><ReceiptText size={14} /> Gerar agora</button>
+                          <button type="button" disabled={pending} onClick={() => onSchedule(row)} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-[10px] font-black uppercase text-blue-700 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"><CalendarClock size={14} /> Agendar geração</button>
                         </>
-                      ) : <p className="px-3 py-2 text-[10px] font-bold text-slate-400">Sem ação pendente.</p>}
+                      ) : <p className="px-2.5 py-2 text-[10px] font-bold text-slate-500">Nenhuma ação pendente.</p>}
                     </div>
                   ) : null}
                 </div>

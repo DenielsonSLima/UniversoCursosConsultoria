@@ -5,7 +5,11 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import FinanceiroConfigSummary from './FinanceiroConfigSummary';
 import { DEFAULT_FINANCEIRO_CONFIG } from './financeiro-config.service';
 
-const renderSummary = (somenteConsulta: boolean, somenteSegundoCiclo = false) => (
+const renderSummary = (
+  somenteConsulta: boolean,
+  somenteSegundoCiclo = false,
+  valuesVisible = true,
+) => (
   renderToStaticMarkup(createElement(FinanceiroConfigSummary, {
     config: {
       ...DEFAULT_FINANCEIRO_CONFIG,
@@ -32,6 +36,7 @@ const renderSummary = (somenteConsulta: boolean, somenteSegundoCiclo = false) =>
     onEdit: () => assert.fail('A apresentação não deve executar uma ação'),
     somenteConsulta,
     somenteSegundoCiclo,
+    valuesVisible,
   }))
 );
 
@@ -59,4 +64,16 @@ test('turma com segundo ciclo permitido conserva acesso à edição e à orienta
   assert.match(html, /Editar/);
   assert.match(html, /Somente o 2º ciclo/);
   assert.doesNotMatch(html, /Sem novas cobranças neste sistema/);
+});
+
+test('modo privado mascara valores monetários sem ocultar regras e percentuais', () => {
+  const html = renderSummary(false, false, false);
+  for (const value of ['200,00', '100,00', '279,90', '19,90', '260,00', '291,10', '5,60', '0,19']) {
+    assert.doesNotMatch(html, new RegExp(value.replace('.', '\\.')));
+  }
+  assert.match(html, /aria-hidden="true">R\$ •••••/);
+  assert.match(html, /sr-only">Valor oculto/);
+  assert.match(html, /12x por ciclo/);
+  assert.match(html, /2% ao mês/);
+  assert.match(html, /Editar regras/);
 });

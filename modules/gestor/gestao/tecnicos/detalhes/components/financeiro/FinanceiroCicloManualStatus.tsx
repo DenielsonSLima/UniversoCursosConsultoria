@@ -81,21 +81,21 @@ const GeneratedCycleStatus = ({ generated, disabled, allowResume = true, onResum
 }) => {
   const fullyIssued = isFullyIssued(generated);
   return (
-    <div className="space-y-2" role="status">
-      <span className={`inline-flex items-center gap-1 rounded px-2 py-1 text-[9px] font-black uppercase ${
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1" role="status">
+      <span className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[9px] font-black uppercase ${
         fullyIssued ? 'bg-emerald-100 text-emerald-800' : 'bg-cyan-100 text-cyan-800'
       }`}>
         {fullyIssued ? <CheckCircle2 size={12} /> : <ReceiptText size={12} />}
         {cycleLabel(generated.numero)} {fullyIssued ? 'já gerado e emitido' : 'com emissão incompleta'}
       </span>
-      <p className="text-[9px] font-bold text-slate-500">
+      <p className="text-[9px] font-bold leading-4 text-slate-500">
         {generated.emitidosBanese}/{generated.quantidadeBancaria ?? generated.quantidadeItens} títulos emitidos
         {generated.quantidadeLocal ? ` · ${generated.quantidadeLocal} registro sem boleto` : ''}
         {generated.pendentesEmissao > 0 ? ` · ${generated.pendentesEmissao} pendentes` : ''}
         {generated.emRevisao > 0 ? ` · ${generated.emRevisao} em revisão` : ''}
       </p>
       {generated.emRevisao > 0 ? (
-        <p className="flex items-center gap-1 text-[9px] font-bold text-amber-700">
+        <p className="flex basis-full items-center gap-1 text-[9px] font-bold text-amber-700">
           <AlertTriangle size={12} />
           Revisão manual necessária; emissão automática bloqueada para evitar duplicidade.
         </p>
@@ -105,7 +105,7 @@ const GeneratedCycleStatus = ({ generated, disabled, allowResume = true, onResum
           type="button"
           disabled={disabled}
           onClick={onResume}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-2 text-[9px] font-black uppercase text-blue-700 transition-colors hover:bg-blue-100 disabled:opacity-50"
+          className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2.5 text-[9px] font-black uppercase text-blue-700 transition-colors hover:bg-blue-100 disabled:opacity-50"
         >
           <Landmark size={12} /> Retomar emissão
         </button>
@@ -118,7 +118,7 @@ export const MatriculaAcademicaBadge = ({ status }: { status: string }) => {
   const normalized = status.trim().toUpperCase();
   const blocked = ['TRANCADO', 'CANCELADO', 'TRANSFERIDO', 'CONCLUIDO'].includes(normalized);
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[9px] font-black uppercase ${
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-black uppercase ${
       blocked ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600'
     }`}>
       {blocked ? <LockKeyhole size={11} /> : <ShieldCheck size={11} />}
@@ -152,13 +152,13 @@ const FinanceiroCicloManualStatus = ({
         : 'Contrato completo protegido contra novas cobranças.'
       : 'Protegido contra novas cobranças.';
     return (
-      <div className="space-y-1.5" role="status">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1" role="status">
         <span className="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-1 text-[9px] font-black uppercase text-emerald-800">
           <ShieldCheck size={12} /> {individualHistory
             ? 'Histórico financeiro existente'
             : `${generatedLabel} ${isIssuedInProesc(generated) ? 'já emitido no Proesc' : 'já gerado e emitido'}`}
         </span>
-        <p className="text-[9px] font-bold text-slate-500">{protectionMessage}</p>
+        <p className="text-[9px] font-bold leading-4 text-slate-500">{protectionMessage}</p>
       </div>
     );
   }
@@ -167,9 +167,9 @@ const FinanceiroCicloManualStatus = ({
     || (statusAcademico !== undefined && !['PENDENTE', 'ATIVO'].includes(statusAcademico.trim().toUpperCase()));
   if (academicBlocked) {
     return (
-      <div className="max-w-56 space-y-2" role="status">
+      <div className="flex max-w-80 flex-wrap items-center gap-x-2 gap-y-1" role="status">
         {generated ? <GeneratedCycleStatus generated={generated} disabled={disabled} allowResume={false} onResume={onResume} /> : null}
-        <p className="text-[9px] font-semibold leading-relaxed text-rose-700">
+        <p className="text-[9px] font-semibold leading-4 text-rose-700">
           <LockKeyhole size={12} className="mr-1 inline" />
           {cicloManual.bloqueio?.codigo === 'STATUS_ACADEMICO'
             ? cicloManual.bloqueio.mensagem
@@ -195,9 +195,9 @@ const FinanceiroCicloManualStatus = ({
 
   if (cicloManual.estado === 'ELEGIVEL' && cicloManual.podeGerar) {
     return (
-      <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
         {generated ? <GeneratedCycleStatus generated={generated} disabled={disabled} onResume={onResume} /> : null}
-        <div className={generated ? 'border-t border-slate-100 pt-2' : ''}>
+        <div className={`flex flex-wrap items-center gap-1.5 ${generated ? 'border-l border-slate-200 pl-2' : ''}`}>
           <span className="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-1 text-[9px] font-black uppercase text-emerald-800">
             <CheckCircle2 size={12} /> {cycleLabel(cicloManual.proximoCicloNumero)} elegível
           </span>
@@ -205,7 +205,7 @@ const FinanceiroCicloManualStatus = ({
             type="button"
             disabled={disabled || reviewingProesc}
             onClick={onGenerate}
-            className="mt-1.5 block rounded-lg bg-emerald-600 px-3 py-2 text-[9px] font-black uppercase text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
+            className="inline-flex h-7 items-center rounded-lg bg-emerald-700 px-2.5 text-[9px] font-black uppercase text-white transition-colors hover:bg-emerald-800 disabled:opacity-50"
           >
             Gerar e emitir {cycleLabel(cicloManual.proximoCicloNumero)}
           </button>
@@ -216,13 +216,13 @@ const FinanceiroCicloManualStatus = ({
 
   if (cicloManual.estado === 'BLOQUEADO') {
     return (
-      <div className="max-w-56 space-y-3" role="status">
+      <div className="flex max-w-80 flex-wrap items-center gap-2" role="status">
         {generated ? <GeneratedCycleStatus generated={generated} disabled={disabled} onResume={onResume} /> : null}
-        <div className={generated ? 'border-t border-slate-100 pt-2' : ''}>
+        <div className={generated ? 'border-l border-slate-200 pl-2' : ''}>
           <span className="inline-flex items-center gap-1 rounded bg-rose-100 px-2 py-1 text-[9px] font-black uppercase text-rose-800">
             <LockKeyhole size={12} /> {cycleLabel(cicloManual.proximoCicloNumero)} bloqueado
           </span>
-          <p className="mt-1.5 text-[9px] font-semibold leading-relaxed text-rose-700">
+          <p className="mt-1 text-[9px] font-semibold leading-4 text-rose-700">
             {cicloManual.bloqueio?.mensagem || 'O servidor não liberou a geração deste ciclo.'}
           </p>
         </div>
@@ -232,7 +232,7 @@ const FinanceiroCicloManualStatus = ({
 
   if (cicloManual.estado === 'CICLOS_CONCLUIDOS') {
     return (
-      <div className="space-y-2" role="status">
+      <div className="flex flex-wrap items-center gap-2" role="status">
         {generated ? <GeneratedCycleStatus generated={generated} disabled={disabled} onResume={onResume} /> : null}
         <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-1 text-[9px] font-black uppercase text-slate-600">
           <CheckCircle2 size={12} /> Sem novas cobranças

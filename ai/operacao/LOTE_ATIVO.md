@@ -1,5 +1,5 @@
 # Lote ativo
 
-## Lote: 2026-10-01-confirmacao-canonica-ciclo-manual
+## Lote: 2026-09-30-financeiro-turma-compacto-privacidade
 
-Estado: VALIDADO INTERNAMENTE — AGUARDANDO CI, PREVIEW E SMOKE. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-01-confirmacao-canonica-ciclo-manual.md`. A confirmação usa os itens canônicos da prévia e preserva os três modos de matrícula. Publicação em produção solicitada pelo usuário; nenhuma emissão real autorizada para testes. As regras duráveis de importação e trancamento seguem em lote separado.
+Estado: VALIDADO INTERNAMENTE — PUBLICAÇÃO AUTORIZADA, AGUARDANDO CI, PREVIEW E SMOKE DE PRODUÇÃO. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-30-financeiro-turma-compacto-privacidade.md`. Remodelação visual do financeiro da turma com valores ocultos por padrão, regras compactas e ações identificadas, sem alterar contratos financeiros. Revisão independente em três frentes concluída. Nenhuma emissão ou baixa real autorizada para testes.
