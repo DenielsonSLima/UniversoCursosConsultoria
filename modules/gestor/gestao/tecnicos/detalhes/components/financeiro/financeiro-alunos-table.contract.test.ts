@@ -38,8 +38,26 @@ test('o carnê usa a matrícula exata e somente o compositor documental existent
 });
 
 test('o carnê bloqueia emissão incompleta e expõe ação acessível', () => {
-  assert.match(carnet, /generatedCycle\.emitidosBanese !== generatedCycle\.quantidadeItens/);
+  assert.match(carnet, /generatedCycle\.emitidosBanese !== \(generatedCycle\.quantidadeBancaria \?\? generatedCycle\.quantidadeItens\)/);
   assert.match(carnet, /generatedCycle\.pendentesEmissao > 0/);
   assert.match(carnet, /generatedCycle\.emRevisao > 0/);
   assert.match(carnet, /aria-label=\{`Gerar carnê de \$\{row\.alunoNome\}`\}/);
+});
+
+test('a listagem mascara somente a interface e organiza as ações por intenção', () => {
+  assert.match(list, /valuesVisible = false/);
+  assert.match(table, /valuesVisible = false/);
+  assert.match(table, /valuesVisible \? formatMoney\(value\) : \(/);
+  assert.match(table, /<span aria-hidden="true">R\$ •••••<\/span>/);
+  assert.match(table, /<span className="sr-only">Valor oculto<\/span>/);
+  assert.match(list, /<FinanceiroAlunosTable[\s\S]*?valuesVisible=\{valuesVisible\}/);
+  assert.match(list, /const exportRows = filteredAlunos\.map[\s\S]*?formatMoney\(row\.valorMatriculaEfetivo\)/);
+  assert.match(table, />Próximo passo</);
+  assert.match(table, />Acessos</);
+  assert.match(table, /<FileText size=\{14\} \/> Extrato/);
+  assert.match(table, /<Settings2 size=\{14\} \/> Ajustes/);
+  assert.match(table, /<MoreHorizontal size=\{14\} \/> Cobrança/);
+  assert.match(table, /Registrar recebimento da matrícula/);
+  assert.match(table, /title="Configuração individual"/);
+  assert.match(table, /title="Mais opções"/);
 });

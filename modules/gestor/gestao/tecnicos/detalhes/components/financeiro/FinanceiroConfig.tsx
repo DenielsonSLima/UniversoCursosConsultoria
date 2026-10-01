@@ -26,13 +26,23 @@ interface FinanceiroConfigProps {
   turma: Turma;
   regra: MatriculaTecnicaRegra;
   policy: MatriculaTecnicaCicloFinanceiroPolicy;
+  valuesVisible?: boolean;
+  onRevealValues: () => void;
+  onEditingChange: (editing: boolean) => void;
 }
 
 const inputFingerprint = (data: FinanceiroConfigData) => JSON.stringify(
   mapConfigToRegraTecnicaInput(data),
 );
 
-const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma, regra, policy }) => {
+const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({
+  turma,
+  regra,
+  policy,
+  valuesVisible = false,
+  onRevealValues,
+  onEditingChange,
+}) => {
   const blocked = policy.habilitado && policy.estadoInicial === 'IMPORTADA_CONCLUIDA';
   const external = policy.habilitado && policy.criterioElegibilidade === 'HISTORICO_EXTERNO';
   const { toasts, removeToast, toast } = useToast();
@@ -49,6 +59,15 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma, regra, polic
   const saveMutation = useSalvarRegraFinanceiraTecnica();
   const turmaLabel = [turma.codigo, turma.nome].filter(Boolean).join(' — ');
   const draftFingerprint = inputFingerprint(formData);
+
+  useEffect(() => {
+    onEditingChange(isEditing && !blocked);
+    return () => onEditingChange(false);
+  }, [blocked, isEditing, onEditingChange]);
+
+  useEffect(() => {
+    if (blocked) setIsEditing(false);
+  }, [blocked]);
 
   useEffect(() => {
     if (!isEditing) {
@@ -113,6 +132,7 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma, regra, polic
 
   const openEditor = () => {
     if (blocked) return;
+    if (!valuesVisible) onRevealValues();
     const next = mapRegraTecnicaToConfig(regra);
     setFormData(next);
     setPreviewForm(next);
@@ -178,6 +198,7 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma, regra, polic
           turmaLabel={turmaLabel}
           somenteSegundoCiclo={external}
           somenteConsulta={blocked}
+          valuesVisible={valuesVisible}
         />
         <ToastNotification toasts={toasts} onRemove={removeToast} />
       </>
