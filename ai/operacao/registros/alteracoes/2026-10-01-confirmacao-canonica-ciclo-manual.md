@@ -1,6 +1,6 @@
 # Confirmação canônica do ciclo manual
 
-Estado: VALIDADO INTERNAMENTE — AGUARDANDO CI, PREVIEW E SMOKE
+Estado: PUBLICADO EM PRODUÇÃO — SMOKE DO WIZARD AINDA PENDENTE
 
 ## Causa e aceite
 
@@ -31,12 +31,16 @@ Total: 12 arquivos.
 
 - 58 testes focados aprovados: handler real, parser real da Edge, orquestrador real com dependências bancárias falsas, termos, datas, três modos, 12 mensalidades, duplicidade e falhas.
 - TypeScript global aprovado no workspace; validação limpa de integração repetida no CI antes do merge.
+- CI completo e Preview Vercel aprovados no head `36c9a129716fdd97d4b0920d5285c050ec97dbc2`.
+- RPCs reais, somente leitura: nos três modos a revisão preenchida manteve itens e fingerprints idênticos à prévia inicial; o alvo permaneceu com zero recebíveis.
 - A trava síncrona é liberada por `finally`, inclusive se o callback lançar antes de devolver uma Promise.
 - O smoke autenticado usa somente a prévia e revisão; o clique final é validado exclusivamente com banco simulado.
 - Nenhum teste chama o Banese real. O erro anterior é reproduzível no parser com revisão vazia e continua sendo rejeitado com segurança.
 
 ## Publicação
 
-- Versão proposta: 4.8.142. A 4.8.141 permanece em PR de revisão anterior sem correção de runtime; este hotfix não depende dele.
-- O manifesto será composto sobre `main` remoto, preservando alterações locais paralelas e sem publicar o estado amplo do workspace.
+- Versão publicada: 4.8.142, [PR #233](https://github.com/DenielsonSLima/UniversoCursosConsultoria/pull/233), merge `6102eec1c42bf4ebb064f6282b5b37e8606a6c05`.
+- Produção Vercel `6Cb465odkRjXQeHaP65bDmzjJwDX` com sucesso; Safari autenticado confirmou 4.8.142 no domínio oficial. A navegação do wizard foi interrompida por `noWindowsAvailable`; não foi declarada validada nem houve clique de emissão.
+- A 4.8.141 permanece em PR de revisão anterior sem correção de runtime; este hotfix não depende dele.
+- O manifesto foi composto sobre `main` remoto, preservando alterações locais paralelas e sem publicar o estado amplo do workspace.
 - Continuidade importada, cancelamento por trancamento e documentação operacional serão publicados separadamente após validação própria.

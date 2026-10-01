@@ -36,6 +36,7 @@ import { useMatriculaTecnicaFinanceiroRealtime } from './financeiro/hooks/useMat
 import { isManualTechnicalCycleContext } from './alunos/technical-enrollment-manual-policy';
 import { useTechnicalEnrollmentConfirmation } from './alunos/useTechnicalEnrollmentConfirmation';
 import { useTransferFinancialReview } from '../hooks/useTransferFinancialReview';
+import { useTrancamentoFinancialPreview } from '../hooks/useTrancamentoFinancialPreview';
 import { transferFinanceKeys } from '../transfer-finance.service';
 import TransferFinancialHistory from './alunos/TransferFinancialHistory';
 
@@ -128,6 +129,16 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma, canManageFinanceiro = 
     ),
   );
   const destinationClasses = destinationClassesQuery.data || [];
+  const trancamentoReview = useTrancamentoFinancialPreview(
+    selectedStudent
+      && operationMode === 'MOVIMENTACAO'
+      && movementType === 'TRANCAMENTO'
+      ? {
+        matriculaId: selectedStudent.matricula_id,
+        cutoffDate: operationDate,
+      }
+      : null,
+  );
   const invalidateAcademicData = useTurmaAcademicInvalidation(turma.id);
   const legacyEnrollMutation = useMutation({
     mutationFn: (alunoId: string) => academicLifecycleService.matricularAluno(turma.id, alunoId),
@@ -199,10 +210,20 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma, canManageFinanceiro = 
     }
   };
   const movementMutation = useMovementMutation(
-    async () => {
+    async (_result, input) => {
+      const trancamento = input.tipo === 'TRANCAMENTO'
+        ? trancamentoReview.query.data
+        : undefined;
       await invalidateAcademicData();
       closeOperationModal();
-      toast.success('Movimentação registrada', 'O histórico acadêmico da matrícula foi atualizado.');
+      if (trancamento && (trancamento.futureBaneseToCancel > 0 || trancamento.futureBaneseReview > 0)) {
+        toast.success(
+          'Trancamento registrado; baixa em andamento',
+          'Os boletos Banese futuros seguem em aberto e provisionados até a confirmação do banco; itens em revisão não são baixa confirmada.',
+        );
+      } else {
+        toast.success('Movimentação registrada', 'O histórico acadêmico da matrícula foi atualizado.');
+      }
     },
     (error: any) => toast.error('Movimentação não realizada', error.message),
   );
@@ -397,6 +418,13 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma, canManageFinanceiro = 
           financialCanConfirm={transferReview.canConfirm}
           financialCanReplay={transferReview.canReplay}
           onRetryFinancial={() => { void transferReview.query.refetch(); }}
+          trancamentoPreview={trancamentoReview.query.data}
+          trancamentoLoading={trancamentoReview.query.isFetching}
+          trancamentoError={trancamentoReview.query.isError
+            ? trancamentoReview.query.error.message
+            : null}
+          trancamentoCanConfirm={trancamentoReview.canConfirm}
+          onRetryTrancamento={() => { void trancamentoReview.query.refetch(); }}
           onOperationModeChange={setOperationMode}
           onMovementTypeChange={setMovementType}
           onTransferTypeChange={setTransferType}

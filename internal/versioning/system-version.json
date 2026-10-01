@@ -1,8 +1,8 @@
 {
-  "version": "4.8.143",
+  "version": "4.8.144",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 152,
+  "revision": 153,
   "releasedAt": "2026-09-30",
-  "summary": "Financeiro da turma compacto com privacidade de valores"
+  "summary": "Continuidade de ciclos importados e cancelamento Banese por trancamento"
 }

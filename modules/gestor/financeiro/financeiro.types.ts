@@ -45,6 +45,8 @@ export const isContaDisponivelNoPolo = (
 );
 
 export interface ContasReceber {
+  operationCapabilities?: import('./financeiro.operation-capabilities').ReceivableOperationCapabilities;
+  baneseCancellation?: import('./financeiro.operation-capabilities').BaneseCancellationPresentation;
   id?: string;
   poloId: string;
   poloNome?: string;

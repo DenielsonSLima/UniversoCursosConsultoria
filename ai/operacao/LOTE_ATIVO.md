@@ -1,5 +1,5 @@
 # Lote ativo
 
-## Lote: 2026-09-30-financeiro-turma-compacto-privacidade
+## Lote: 2026-10-01-ciclos-confiaveis-e-trancamento
 
-Estado: VALIDADO INTERNAMENTE — PUBLICAÇÃO AUTORIZADA, AGUARDANDO CI, PREVIEW E SMOKE DE PRODUÇÃO. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-30-financeiro-turma-compacto-privacidade.md`. Remodelação visual do financeiro da turma com valores ocultos por padrão, regras compactas e ações identificadas, sem alterar contratos financeiros. Revisão independente em três frentes concluída. Nenhuma emissão ou baixa real autorizada para testes.
+Estado: EM VALIDAÇÃO. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-01-ciclos-confiaveis-e-trancamento.md`. Continuidade por matrícula/ciclo, Proesc somente consulta e cancelamento Banese futuro por corte comprovado. Publicação em produção solicitada; nenhuma emissão real para testes. Cancelamentos existentes somente pela lane canônica após confirmação de escopo. Governança/skill permanece em lote operacional separado.
