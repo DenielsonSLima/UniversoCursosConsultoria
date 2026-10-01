@@ -272,6 +272,50 @@ begin
   assert internal_academic.is_technical_manual_cycle_protected(v_enrollment),
     'C1 enrollment protection must remain after the local C2 is complete';
 
+  -- The common wrapper preserves the imported-Banese continuation only while
+  -- no durable external C2 fact exists. The canonical lock closes that race.
+  assert internal_academic.technical_imported_c1_receivable_is_local_c2(
+    v_c2_receivable, v_enrollment
+  ), 'Common imported-C1 wrapper rejected the valid Banese continuation';
+  begin
+    perform internal_academic.lock_technical_imported_cycle_fact(
+      v_enrollment, 2
+    );
+    insert into internal_academic.technical_imported_cycle_facts(
+      matricula_id, turma_id, cycle_number, administration_origin,
+      source_system, proof_kind, source_scope_id, proof_reference_id,
+      proof_hash, audit_hash, identity_hash, proof_manifest_hash,
+      evidence_revision, source_observed_at, confirmed_at
+    ) values (
+      v_enrollment, v_class, 2, 'EXTERNAL_PROESC', 'PROESC',
+      'PROESC_API_SCHEDULE', v_scope, gen_random_uuid(), repeat('9', 64),
+      repeat('a', 64), v_context ->> 'identityHash',
+      v_context ->> 'manifestHash', 1, now(), now()
+    );
+    assert not internal_academic.technical_imported_c1_receivable_is_local_c2(
+      v_c2_receivable, v_enrollment
+    ), 'Imported Banese C1 ignored the newly confirmed external C2';
+    begin
+      update public.contas_receber
+      set gateway_creation_token = gen_random_uuid()
+      where id = v_c2_receivable;
+    exception when others then
+      v_blocked := true;
+      v_sqlstate := sqlstate;
+    end;
+    assert v_blocked and v_sqlstate = '42501',
+      'External C2 fact did not block the Banese C2 first-claim guard';
+    raise exception 'rollback Banese plus external C2 negative'
+      using errcode = 'ZX001';
+  exception when sqlstate 'ZX001' then null;
+  end;
+  v_blocked := false;
+  v_sqlstate := null;
+  assert not internal_academic.technical_imported_cycle_exists(v_enrollment, 2)
+    and internal_academic.technical_imported_c1_receivable_is_local_c2(
+      v_c2_receivable, v_enrollment
+    ), 'Banese C2 negative did not rollback to the valid positive lane';
+
   begin
     update public.contas_receber
     set gateway_creation_token = gen_random_uuid()

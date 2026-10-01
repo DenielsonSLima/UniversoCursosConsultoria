@@ -1,5 +1,5 @@
 # Lote ativo
 
-## Lote: 2026-10-01-governanca-ciclos-tecnicos
+## Lote: 2026-10-01-retomada-c2-proesc
 
-Estado: REVISADO — FECHAMENTO OPERACIONAL. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-01-governanca-ciclos-tecnicos.md`. Produto 4.8.144 publicado no PR 235, com aceite SQL pós-aplicação e CI/Preview/produção confirmados. Este lote registra o contrato por matrícula/ciclo, a skill financeira e a auditoria final. Nenhuma emissão de teste; smoke visual autenticado completo segue pendente por indisponibilidade da janela Safari.
+Estado: BANCO APLICADO E VALIDADO — FECHAMENTO 4.8.146. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-01-retomada-c2-proesc.md`. Retomada do C2 local após C1 Proesc confirmado, com cerca comum contra C2 externo. Três agentes aprovaram; RPC/claims reais passaram em rollback e a T46 foi preservada. Nenhuma emissão ou recriação de cobranças. Smoke Safari indisponível; publicação solicitada pelo usuário, condicionada ao CI e à Preview.

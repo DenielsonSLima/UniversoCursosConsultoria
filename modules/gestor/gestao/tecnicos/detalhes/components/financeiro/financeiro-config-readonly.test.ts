@@ -52,17 +52,22 @@ test('turma com ciclos externos mantém valores e encargos visíveis sem ediçã
   assert.doesNotMatch(html, /<button|Cronograma de Cobrança|Clique em Editar/);
 });
 
-test('consulta prevalece sobre o atalho de continuidade do segundo ciclo', () => {
+test('consulta prevalece sobre a orientação de histórico importado', () => {
   const html = renderSummary(true, true);
   assert.match(html, /Sem novas cobranças neste sistema/);
-  assert.doesNotMatch(html, /Somente o 2º ciclo|ao gerar o 2º ciclo|<button/);
+  assert.doesNotMatch(html, /Histórico importado|A situação é conferida por aluno|<button/);
 });
 
-test('turma com segundo ciclo permitido conserva acesso à edição e à orientação', () => {
+test('turma com histórico importado orienta a conferência individual sem afirmar ciclo único', () => {
   const html = renderSummary(false, true);
   assert.match(html, /<button/);
   assert.match(html, /Editar/);
-  assert.match(html, /Somente o 2º ciclo/);
+  assert.match(html, /Valores e encargos das cobranças autorizadas neste sistema/);
+  assert.match(html, /Histórico importado/);
+  assert.match(html, /A situação é conferida por aluno/);
+  assert.match(html, /O 2º ciclo só pode ser gerado quando ainda não existe/);
+  assert.match(html, /ciclos já registrados no Proesc ou no Banese permanecem protegidos contra nova geração/);
+  assert.doesNotMatch(html, /Somente o 2º ciclo|O 1º ciclo permanece|Valores e encargos somente para o 2º ciclo/);
   assert.doesNotMatch(html, /Sem novas cobranças neste sistema/);
 });
 

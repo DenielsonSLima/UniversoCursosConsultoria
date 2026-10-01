@@ -55,7 +55,7 @@ const FinanceiroConfigSummary: React.FC<FinanceiroConfigSummaryProps> = ({
               {somenteConsulta
                 ? 'Condições cadastradas para consulta. Os títulos já emitidos seguem os valores do sistema de origem.'
                 : somenteSegundoCiclo
-                  ? 'Valores e encargos somente para o 2º ciclo. O 1º ciclo permanece no sistema anterior.'
+                  ? 'Valores e encargos das cobranças autorizadas neste sistema. O histórico importado permanece preservado.'
                   : 'Parâmetros aplicados a todos os alunos desta turma.'}
             </p>
           </div>
@@ -198,8 +198,8 @@ const FinanceiroConfigSummary: React.FC<FinanceiroConfigSummaryProps> = ({
         </aside>
       ) : somenteSegundoCiclo ? (
         <aside className="self-start rounded-2xl border border-blue-100 bg-blue-50 p-4 shadow-sm">
-          <h4 className="text-sm font-black text-[#001a33]">Somente o 2º ciclo</h4>
-          <p className="mt-2 text-xs leading-relaxed text-slate-600">O 1º ciclo permanece no sistema anterior. Confira as datas e o total na prévia individual ao gerar o 2º ciclo.</p>
+          <h4 className="text-sm font-black text-[#001a33]">Histórico importado</h4>
+          <p className="mt-2 text-xs leading-relaxed text-slate-600">A situação é conferida por aluno. O 2º ciclo só pode ser gerado quando ainda não existe; ciclos já registrados no Proesc ou no Banese permanecem protegidos contra nova geração.</p>
         </aside>
       ) : (
         <aside
