@@ -1,6 +1,6 @@
 # Ciclos confiáveis e trancamento financeiro
 
-Estado: VALIDADO INTERNAMENTE; aguardando CI, Preview e publicação 4.8.144. Autorização: usuário confirmou correções e cancelamento
+Estado: PUBLICADO EM PRODUÇÃO — 4.8.144, PR 235, commit `17f6504377a52d13d1deac254e9b19df037e1bfe`. Autorização: usuário confirmou correções e cancelamento
 Banese de títulos não pagos com vencimento posterior ao trancamento. Nenhuma
 emissão de teste autorizada. Publicação somente após validação/revisão do lote.
 
@@ -93,9 +93,52 @@ Total: 55 arquivos.
 - Contratos importação/trancamento, 15 testes do worker, 12 testes das ações financeiras, TypeScript e build completo passaram.
 - Trancamento SQL completo passou em rollback: RPC real, claim/start/complete, reativação e terminal; capacidades e RPCs page_v4/groups_v3 reais também passaram.
 - Após rollback: nenhum helper/fato novo persistido e zero títulos sintéticos. Nenhuma chamada bancária ocorreu nos testes SQL.
-- Gate local de linhas reportou 12 arquivos antigos ausentes, fora deste lote; manifesto atual será conferido explicitamente e pela árvore limpa do CI remoto.
+- Gate local global reportou 12 arquivos antigos ausentes fora do lote; a árvore limpa do CI passou, inclusive limite de linhas (55 arquivos, máximo 499), lint, TypeScript, testes e build.
 - Hotfix da confirmação canônica T46 já publicado separadamente em 4.8.142 (PR 233).
 - Smoke visual autenticado completo pendente: Safari sem janela acessível nesta etapa. Nenhuma emissão de teste.
 - Testes usam mocks ou transações revertidas; não exercitam emissão bancária real.
 - Alterações paralelas preservadas; publicação preparada sobre main, somente hunks do lote.
 - Documentação normativa/skill pertence a lote operacional separado da correção.
+
+## Publicação e aceite remoto
+
+- PR: https://github.com/DenielsonSLima/UniversoCursosConsultoria/pull/235.
+- Head validado: `d137d298d1292d7282afc56b62a08698aebea2a7`; CI integral e gate de versão aprovados.
+- Preview Vercel `3tEySm4PHByey4PrzYZsDuWtYEmv` e produção `BnSh55EdLYcoHqtWVkSVtrTsTLkK` confirmadas como sucesso pela integração GitHub/Vercel. Connector direto Vercel sem acesso ao escopo (403); sem alegação de smoke visual completo.
+- Pós-aplicação: T42 35 matrículas, 15 elegíveis sem cache recente, 16 C1 confirmados; C2/conflitos e casos sem prova continuam protegidos. T46 preservou o fingerprint das 6 matrículas.
+- RPCs reais de página/grupos e confirmação canônica nos 3 modos passaram novamente; nenhuma emissão.
+- Prévia de trancamento recusou usuário sem identidade e mantém anon sem EXECUTE. Avisos esperados do advisor: tabelas privadas com RLS sem políticas e RPC SECURITY DEFINER autenticada com autorização por turma.
+- Referência do advisor: https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy.
+
+## Migrations aplicadas e imutáveis
+
+Cada arquivo do manifesto foi aplicado via MCP, em ordem. O ledger remoto usa os IDs abaixo; não reaplicar nem renomear o conteúdo aplicado.
+
+| Nome da migration | ID remoto |
+| --- | --- |
+| `create_imported_cycle_facts` | `20261001024709` |
+| `capture_imported_banese_cycle_facts` | `20261001024713` |
+| `capture_external_cycle_coverage_facts` | `20261001024715` |
+| `allow_seed_imported_cycle_review` | `20261001024719` |
+| `apply_imported_cycle_fact_guards` | `20261001024721` |
+| `allow_imported_banese_c1_continuation` | `20261001024724` |
+| `add_trancamento_banese_cancellation_policy` | `20261001024726` |
+| `project_trancamento_banese_cancellation` | `20261001024728` |
+| `fence_trancamento_manual_settlement_races` | `20261001024730` |
+| `preserve_trancamento_during_terminal_movement` | `20261001024733` |
+| `extend_banese_cancellation_claim_for_trancamento` | `20261001024735` |
+| `preview_trancamento_financeiro` | `20261001024737` |
+| `receivable_source_capabilities` | `20261001024740` |
+| `restore_receivable_cycle_presentation_dependency` | `20261001024742` |
+| `restore_receivable_projection_wiring` | `20261001024744` |
+| `project_receivable_operation_capabilities` | `20261001024746` |
+
+## Operação pontual de títulos legados
+
+- Autorizada pelo usuário: somente não pagos/sem parcial posteriores ao trancamento comprovado.
+- Allowlist privada de 9 recebíveis, uma matrícula, corte 30/09/2026, total nominal R$ 2.519,10; sem dados pessoais neste registro.
+- Diagnóstico GET-only integral do worker v102 confirmou os 9 títulos (identidade, CPF, nominal, vencimento, termos, ASBACE, proveniência, pagamentos); código 2 e nenhum pagamento.
+- Guardas transacionais: locks, snapshot exato, transação única, corte atual, ausência de Proesc/baixa manual/outbox e diagnóstico até 5 minutos. Ensaio em rollback antes do commit.
+- Em 01/10/2026 02:51 UTC, os 9 SUSPENSO passaram a PENDENTE e entraram na outbox. O cron executou o fluxo bancário e concluiu os 9 em uma tentativa cada, até 02:52:12 UTC.
+- Pós-operação: 9 outbox DONE/CANCELED, 9 recebíveis CANCELADO/gateway CANCELED, projeção CANCELED e saldo aberto desses títulos igual a zero. Total retirado do saldo aberto: R$ 2.519,10. Histórico preservado; nenhuma emissão.
+- Títulos anteriores ao corte não foram cancelados: duas mensalidades VENCIDO, uma PENDENTE e matrícula PAGO permanecem preservadas.

@@ -1,5 +1,5 @@
 # Lote ativo
 
-## Lote: 2026-10-01-ciclos-confiaveis-e-trancamento
+## Lote: 2026-10-01-governanca-ciclos-tecnicos
 
-Estado: EM VALIDAÇÃO. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-01-ciclos-confiaveis-e-trancamento.md`. Continuidade por matrícula/ciclo, Proesc somente consulta e cancelamento Banese futuro por corte comprovado. Publicação em produção solicitada; nenhuma emissão real para testes. Cancelamentos existentes somente pela lane canônica após confirmação de escopo. Governança/skill permanece em lote operacional separado.
+Estado: REVISADO — FECHAMENTO OPERACIONAL. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-01-governanca-ciclos-tecnicos.md`. Produto 4.8.144 publicado no PR 235, com aceite SQL pós-aplicação e CI/Preview/produção confirmados. Este lote registra o contrato por matrícula/ciclo, a skill financeira e a auditoria final. Nenhuma emissão de teste; smoke visual autenticado completo segue pendente por indisponibilidade da janela Safari.
