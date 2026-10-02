@@ -1,3 +1,4 @@
+/* global TextDecoder */
 import { buildQueryUrl, object, ProescError } from './contract.ts';
 import { v2Headers } from './connection-contract.ts';
 

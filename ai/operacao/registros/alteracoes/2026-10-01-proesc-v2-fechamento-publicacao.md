@@ -89,6 +89,9 @@ após extração minimizada; fatos financeiros e evidências duráveis permanece
 - Reconferência remota: runtimes V1 de sincronização/ciclos desabilitados, V2
   habilitada; execução RECENT concluída às23h52 BRT. Controlador:19testes
   aprovados, incluindo HTTP410 das ações V1 sem chamada ao fornecedor.
+- Segundo CI aprovou orçamento documental e TypeScript, mas identificou a
+  declaração ESLint ausente para TextDecoder na fonte nova. Comentário global
+  restrito ao arquivo resolve o lint, sem mudança de execução ou relaxar regra.
 
 ## Manifesto explícito
 
