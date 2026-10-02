@@ -236,7 +236,7 @@ test('serviço rejeita resposta de outro polo antes do mapper', async () => {
   }
 });
 
-test('CaixaPage monta CaixaLinhaCorteCard preservando a integridade dos demais cards', () => {
+test('CaixaPage monta o cockpit de linha de corte preservando os demais capítulos', () => {
   const pageSource = readFileSync(
     join(process.cwd(), 'modules/gestor/caixa/CaixaPage.tsx'),
     'utf8',
@@ -251,10 +251,8 @@ test('CaixaPage monta CaixaLinhaCorteCard preservando a integridade dos demais c
   assert.match(statementSource, /<CaixaFlowHero/);
   assert.match(statementSource, /<CaixaCommitmentTracks/);
   assert.match(statementSource, /<CaixaCompositionCards/);
-  assert.match(statementSource, /<CaixaReconciliationCard/);
+  assert.match(statementSource, /reconciliation=\{statement\.conciliacao\}/);
   assert.match(pageSource, /<CaixaAdvancedAnalysis/);
-  assert.match(pageSource, /<CaixaFinanciamentoResumoCard/);
-  assert.match(pageSource, /<CaixaPatrimonioResumoCard/);
-  assert.match(pageSource, /<CaixaPosicaoLiquidaResumoCard/);
-  assert.match(pageSource, /<CaixaPosicaoTotalResumoCard/);
+  assert.match(pageSource, /<CaixaLinkedCapitalOverview/);
+  assert.match(pageSource, /<CaixaStructuralOverview/);
 });

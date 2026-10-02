@@ -1,5 +1,5 @@
 # Lote ativo
 
-## Lote: 2026-10-01-caixa-painel-financeiro-imersivo
+## Lote: 2026-10-01-caixa-metade-inferior-imersiva
 
-Estado: MIGRATION APLICADA E VALIDADA — PUBLICAÇÃO 4.8.147 AUTORIZADA. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-01-caixa-painel-financeiro-imersivo.md`. O Caixa preserva as leituras existentes em uma hierarquia imersiva, separa fluxo realizado, compromissos e posição, inclui roscas canônicas e adiciona os cards de composição dos recebimentos e das despesas com a mesma fonte do PDF. Lote anterior preservado em `2026-10-01-retomada-c2-proesc.md`.
+Estado: VALIDADO LOCALMENTE — PUBLICAÇÃO 4.8.148 AUTORIZADA. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-01-caixa-metade-inferior-imersiva.md`. A metade inferior do Caixa deixa de repetir os cards antigos em gavetas e passa a apresentar pulso operacional, mapa estrutural, capital vinculado e cockpit de equilíbrio em uma narrativa contínua. Todos os valores financeiros continuam canônicos e calculados exclusivamente pelo backend. Lote anterior preservado em `2026-10-01-caixa-painel-financeiro-imersivo.md`.

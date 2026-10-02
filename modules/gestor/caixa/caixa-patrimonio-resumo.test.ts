@@ -127,25 +127,25 @@ test('rejeita resumo patrimonial de outro polo, consolidado ou competência', ()
   );
 });
 
-test('mantém a RPC, o card e a invalidação patrimonial isolados no Caixa', () => {
+test('mantém a RPC, a narrativa e a invalidação patrimonial isoladas no Caixa', () => {
   const caixaRoot = join(process.cwd(), 'modules/gestor/caixa');
   const serviceSource = readFileSync(join(caixaRoot, 'caixa.service.ts'), 'utf8');
   const pageSource = readFileSync(join(caixaRoot, 'CaixaPage.tsx'), 'utf8');
   const realtimeSource = readFileSync(join(caixaRoot, 'useCaixaRealtime.ts'), 'utf8');
   const cardSource = readFileSync(
-    join(caixaRoot, 'components/CaixaPatrimonioResumoCard.tsx'),
+    join(caixaRoot, 'components/CaixaStructuralOverview.tsx'),
     'utf8',
   );
 
   assert.match(serviceSource, /rpc\('get_caixa_patrimonio_resumo_secure', \{/);
   assert.match(serviceSource, /p_polo_id: normalizedPoloId/);
   assert.match(serviceSource, /p_competencia: competencia/);
-  assert.match(pageSource, /<CaixaPatrimonioResumoCard/);
+  assert.match(pageSource, /<CaixaStructuralOverview/);
   assert.match(realtimeSource, /caixaQueryKeys\.patrimonioResumosForPolo\(scope\)/);
   assert.match(realtimeSource, /caixaReportQueryKeys\.monthlyForPolo\(scope\)/);
   assert.match(realtimeSource, /queryKey: caixaReportQueryKeys\.monthly/);
-  assert.match(cardSource, /Valor ativo a custo/);
-  assert.match(cardSource, /Patrimônio não altera o caixa disponível nem o resultado operacional/);
+  assert.match(cardSource, /Ativo a custo/);
+  assert.match(cardSource, /sem alterar caixa ou resultado operacional/);
 });
 
 test('preserva fluxo, compromissos, composição, conciliação e análises estruturais na nova hierarquia', () => {
@@ -163,12 +163,10 @@ test('preserva fluxo, compromissos, composição, conciliação e análises estr
   const composicaoIndex = monthlySource.indexOf('<CaixaCompositionCards');
   const distribuicoesIndex = monthlySource.indexOf('<CaixaDistributionDonuts');
   const graficoIndex = monthlySource.indexOf('<CaixaMovementAndAccounts');
-  const conciliacaoIndex = monthlySource.indexOf('<CaixaReconciliationCard');
+  const conciliacaoIndex = monthlySource.indexOf('reconciliation={statement.conciliacao}');
   const analisesIndex = pageSource.indexOf('<CaixaAdvancedAnalysis');
-  const posicaoTotalIndex = pageSource.indexOf('<CaixaPosicaoTotalResumoCard');
-  const posicaoLiquidaIndex = pageSource.indexOf('<CaixaPosicaoLiquidaResumoCard');
-  const patrimonioIndex = pageSource.indexOf('<CaixaPatrimonioResumoCard');
-  const financiamentoIndex = pageSource.indexOf('<CaixaFinanciamentoResumoCard');
+  const posicaoIndex = pageSource.indexOf('<CaixaStructuralOverview');
+  const capitalIndex = pageSource.indexOf('<CaixaLinkedCapitalOverview');
   const custosIndex = pageSource.indexOf('<CaixaLinhaCorteCard');
 
   assert.ok(resumoOperacionalIndex >= 0);
@@ -179,9 +177,7 @@ test('preserva fluxo, compromissos, composição, conciliação e análises estr
   assert.ok(conciliacaoIndex > graficoIndex);
   assert.ok(monthlySectionIndex >= 0);
   assert.ok(analisesIndex > monthlySectionIndex);
-  assert.ok(posicaoTotalIndex > analisesIndex);
-  assert.ok(posicaoLiquidaIndex > posicaoTotalIndex);
-  assert.ok(patrimonioIndex > posicaoLiquidaIndex);
-  assert.ok(financiamentoIndex > patrimonioIndex);
-  assert.ok(custosIndex > financiamentoIndex);
+  assert.ok(posicaoIndex > analisesIndex);
+  assert.ok(capitalIndex > posicaoIndex);
+  assert.ok(custosIndex > capitalIndex);
 });

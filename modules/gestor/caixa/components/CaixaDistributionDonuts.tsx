@@ -147,12 +147,16 @@ export const CaixaDistributionDonut: React.FC<CaixaDistributionDonutProps> = ({
           </ul>
         </div>
       ) : (
-        <div className="mt-5 flex min-h-44 flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 px-5 text-center">
-          <CircleSlash2 size={25} className="text-slate-300" aria-hidden="true" />
-          <p className="mt-3 text-sm font-semibold text-slate-600">{emptyLabel}</p>
-          <p className="mt-1 text-[11px] text-slate-400">
+        <div className="mt-4 flex min-h-28 items-center gap-4 rounded-2xl bg-slate-50 px-4 py-4 text-left">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-slate-300 shadow-sm">
+            <CircleSlash2 size={22} aria-hidden="true" />
+          </span>
+          <div>
+            <p className="text-sm font-semibold text-slate-600">{emptyLabel}</p>
+            <p className="mt-1 text-[10px] leading-4 text-slate-400">
             O gráfico será exibido quando houver percentuais canônicos confirmados.
-          </p>
+            </p>
+          </div>
         </div>
       )}
     </article>

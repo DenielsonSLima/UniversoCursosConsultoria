@@ -77,17 +77,17 @@ test('separa a posição líquida por polo, consolidado e competência', () => {
   );
 });
 
-test('o Caixa exibe somente a posição líquida retornada pela RPC', () => {
+test('o Caixa exibe somente a posição líquida retornada pela RPC na narrativa estrutural', () => {
   const caixaRoot = join(process.cwd(), 'modules/gestor/caixa');
   const serviceSource = readFileSync(join(caixaRoot, 'caixa.service.ts'), 'utf8');
   const pageSource = readFileSync(join(caixaRoot, 'CaixaPage.tsx'), 'utf8');
   const cardSource = readFileSync(
-    join(caixaRoot, 'components/CaixaPosicaoLiquidaResumoCard.tsx'),
+    join(caixaRoot, 'components/CaixaStructuralOverview.tsx'),
     'utf8',
   );
 
   assert.match(serviceSource, /rpc\('get_caixa_posicao_liquida_resumo_secure', \{/);
-  assert.match(pageSource, /<CaixaPosicaoLiquidaResumoCard/);
-  assert.match(cardSource, /Patrimônio a custo menos empréstimos a pagar/);
+  assert.match(pageSource, /posicaoLiquida=\{posicaoLiquidaResumo\}/);
+  assert.match(cardSource, /Leitura patrimonial líquida/);
   assert.doesNotMatch(cardSource, /valorPatrimonialCusto\s*-/);
 });

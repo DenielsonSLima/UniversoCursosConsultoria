@@ -78,6 +78,12 @@ const statement = {
       codigoInterno: 'BANESE',
     },
   ],
+  conciliacao: {
+    recebimentosConciliados: 4,
+    pagamentosConciliados: 2,
+    pendentes: 1,
+    ultimaAtualizacao: '2026-10-01T21:30:00-03:00',
+  },
 } as unknown as CaixaMonthlyStatement;
 
 const payables: CaixaContasPagarResumo = {
@@ -234,37 +240,39 @@ test('painel de contas preserva posição do polo e total da conta sem combiná-
 
 test('visão de movimento e contas mantém as duas leituras no mesmo bloco responsivo', () => {
   const html = renderToStaticMarkup(
-    <CaixaMovementAndAccounts serieMensal={statement.serieMensal} accounts={statement.contas} />,
+    <CaixaMovementAndAccounts
+      serieMensal={statement.serieMensal}
+      accounts={statement.contas}
+      reconciliation={statement.conciliacao}
+    />,
   );
 
   assert.match(html, /Evolução mensal e localização do saldo/);
   assert.match(html, /Movimentação operacional/);
   assert.match(html, /Nenhuma movimentação ou inadimplência confirmada/);
   assert.match(html, /Onde está o saldo/);
+  assert.match(html, /Conciliação do período/);
+  assert.match(html, /Recebimentos/);
+  assert.match(html, /Pendências/);
 });
 
-test('análises avançadas preservam todos os domínios em disclosures acessíveis', () => {
+test('análises avançadas mantêm os três capítulos visíveis e navegáveis', () => {
   const html = renderToStaticMarkup(
     <CaixaAdvancedAnalysis
-      posicaoTotal={<div>posição total completa</div>}
-      posicaoLiquida={<div>posição líquida completa</div>}
-      patrimonio={<div>patrimônio completo</div>}
-      convenios={<div>convênios completos</div>}
-      financiamento={<div>financiamento completo</div>}
-      linhaCorte={<div>linha de corte completa</div>}
+      position={<div>mapa estrutural completo</div>}
+      capital={<div>capital vinculado completo</div>}
+      lineCut={<div>cockpit de equilíbrio completo</div>}
       lineCutAttention
     />,
   );
 
-  assert.equal((html.match(/<details/g) ?? []).length, 3);
+  assert.equal((html.match(/<details/g) ?? []).length, 0);
+  assert.match(html, /Capítulos da análise financeira/);
   assert.match(html, /Posição e patrimônio/);
   assert.match(html, /Convênios e financiamento/);
   assert.match(html, /Linha de corte e ponto de equilíbrio/);
   assert.match(html, /Requer atenção/);
-  assert.match(html, /posição total completa/);
-  assert.match(html, /posição líquida completa/);
-  assert.match(html, /patrimônio completo/);
-  assert.match(html, /convênios completos/);
-  assert.match(html, /financiamento completo/);
-  assert.match(html, /linha de corte completa/);
+  assert.match(html, /mapa estrutural completo/);
+  assert.match(html, /capital vinculado completo/);
+  assert.match(html, /cockpit de equilíbrio completo/);
 });

@@ -120,18 +120,18 @@ test('separa a posição total por polo, consolidado e competência', () => {
   );
 });
 
-test('Caixa consome somente a RPC e apresenta o valor composto devolvido pelo backend', () => {
+test('Caixa consome somente a RPC e apresenta a posição total devolvida pelo backend', () => {
   const caixaRoot = join(process.cwd(), 'modules/gestor/caixa');
   const serviceSource = readFileSync(join(caixaRoot, 'caixa.service.ts'), 'utf8');
   const pageSource = readFileSync(join(caixaRoot, 'CaixaPage.tsx'), 'utf8');
   const cardSource = readFileSync(
-    join(caixaRoot, 'components/CaixaPosicaoTotalResumoCard.tsx'),
+    join(caixaRoot, 'components/CaixaStructuralOverview.tsx'),
     'utf8',
   );
 
   assert.match(serviceSource, /rpc\('get_caixa_posicao_total_resumo_secure', \{/);
-  assert.match(pageSource, /<CaixaPosicaoTotalResumoCard/);
-  assert.match(cardSource, /Caixa no corte \+ patrimônio a custo − empréstimos a pagar/);
+  assert.match(pageSource, /posicaoTotal=\{posicaoTotalResumo\}/);
+  assert.match(cardSource, /Como a posição registrada é formada/);
   assert.doesNotMatch(cardSource, /saldoCaixaRegistrado\s*[+-]/);
   assert.doesNotMatch(cardSource, /valorPatrimonialCusto\s*[+-]/);
 });

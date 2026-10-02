@@ -8,7 +8,6 @@ import { CaixaCompositionCards } from './CaixaCompositionCards';
 import { CaixaDistributionDonuts } from './CaixaDistributionDonuts';
 import { CaixaFlowHero } from './CaixaFlowHero';
 import { CaixaMovementAndAccounts } from './CaixaMovementAndAccounts';
-import { CaixaReconciliationCard } from './CaixaReconciliationCard';
 
 interface CaixaStatementSectionProps {
   statement?: CaixaMonthlyStatement;
@@ -112,9 +111,8 @@ export const CaixaStatementSection: React.FC<CaixaStatementSectionProps> = ({
       <CaixaMovementAndAccounts
         serieMensal={statement.serieMensal}
         accounts={statement.contas}
+        reconciliation={statement.conciliacao}
       />
-
-      <CaixaReconciliationCard reconciliation={statement.conciliacao} />
     </div>
   );
 };

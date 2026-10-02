@@ -26,16 +26,13 @@ import {
 } from './caixa.formatters';
 import { CaixaStatementSection } from './components/CaixaStatementSection';
 import { CaixaReportLauncher } from './report/CaixaReportLauncher';
-import { CaixaFinanciamentoResumoCard } from './components/CaixaFinanciamentoResumoCard';
 import { CaixaLinhaCorteCard } from './components/CaixaLinhaCorteCard';
 import { caixaLinhaCorteQueryOptions } from './caixa-linha-corte.service';
-import { CaixaPatrimonioResumoCard } from './components/CaixaPatrimonioResumoCard';
-import { CaixaPosicaoLiquidaResumoCard } from './components/CaixaPosicaoLiquidaResumoCard';
-import { CaixaPosicaoTotalResumoCard } from './components/CaixaPosicaoTotalResumoCard';
-import { CaixaConveniosResumoCard } from './components/CaixaConveniosResumoCard';
 import { caixaConveniosResumoQueryOptions } from './caixa-convenios.service';
 import { CaixaContasPagarResumoCard } from './components/CaixaContasPagarResumoCard';
 import { CaixaAdvancedAnalysis } from './components/CaixaAdvancedAnalysis';
+import { CaixaLinkedCapitalOverview } from './components/CaixaLinkedCapitalOverview';
+import { CaixaStructuralOverview } from './components/CaixaStructuralOverview';
 import { caixaComposicaoQueryOptions } from './caixa-composicao.queries';
 
 interface CaixaPageProps {
@@ -285,42 +282,30 @@ const CaixaScopePage: React.FC<CaixaScopePageProps> = ({
       ) : null}
 
       <CaixaAdvancedAnalysis
-        posicaoTotal={(
-          <CaixaPosicaoTotalResumoCard
-            resumo={posicaoTotalResumo}
-            isLoading={isPosicaoTotalLoading}
-            hasError={hasPosicaoTotalError}
+        position={(
+          <CaixaStructuralOverview
+            posicaoTotal={posicaoTotalResumo}
+            posicaoLiquida={posicaoLiquidaResumo}
+            patrimonio={patrimonioResumo}
+            isPosicaoTotalLoading={isPosicaoTotalLoading}
+            hasPosicaoTotalError={hasPosicaoTotalError}
+            isPosicaoLiquidaLoading={isPosicaoLiquidaLoading}
+            hasPosicaoLiquidaError={hasPosicaoLiquidaError}
+            isPatrimonioLoading={isPatrimonioLoading}
+            hasPatrimonioError={hasPatrimonioError}
           />
         )}
-        posicaoLiquida={(
-          <CaixaPosicaoLiquidaResumoCard
-            resumo={posicaoLiquidaResumo}
-            isLoading={isPosicaoLiquidaLoading}
-            hasError={hasPosicaoLiquidaError}
+        capital={(
+          <CaixaLinkedCapitalOverview
+            convenios={conveniosResumo}
+            financiamento={financiamentoResumo}
+            isConveniosLoading={isConveniosLoading}
+            hasConveniosError={hasConveniosError}
+            isFinanciamentoLoading={isFinanciamentoLoading}
+            hasFinanciamentoError={hasFinanciamentoError}
           />
         )}
-        patrimonio={(
-          <CaixaPatrimonioResumoCard
-            resumo={patrimonioResumo}
-            isLoading={isPatrimonioLoading}
-            hasError={hasPatrimonioError}
-          />
-        )}
-        convenios={(
-          <CaixaConveniosResumoCard
-            resumo={conveniosResumo}
-            isLoading={isConveniosLoading}
-            hasError={hasConveniosError}
-          />
-        )}
-        financiamento={(
-          <CaixaFinanciamentoResumoCard
-            resumo={financiamentoResumo}
-            isLoading={isFinanciamentoLoading}
-            hasError={hasFinanciamentoError}
-          />
-        )}
-        linhaCorte={(
+        lineCut={(
           <CaixaLinhaCorteCard
             resumo={linhaCorteResumo}
             isLoading={isLinhaCorteLoading}
