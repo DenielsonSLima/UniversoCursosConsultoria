@@ -8,6 +8,7 @@ import {
 import { caixaQueryKeys } from './caixa.service';
 import { caixaReportQueryKeys } from './report/caixa-report.service';
 import { caixaConveniosQueryKeys } from './caixa-convenios.service';
+import { caixaComposicaoQueryKeys } from './caixa-composicao.queries';
 
 const DEBOUNCE_MS = 500;
 
@@ -46,6 +47,7 @@ export const useCaixaRealtime = () => {
         });
         void queryClient.invalidateQueries({ queryKey: caixaReportQueryKeys.monthly, refetchType });
         void queryClient.invalidateQueries({ queryKey: caixaConveniosQueryKeys.root, refetchType });
+        void queryClient.invalidateQueries({ queryKey: caixaComposicaoQueryKeys.root, refetchType });
       } else {
         pendingFinancialScopes.forEach((scope) => {
           void queryClient.invalidateQueries({
@@ -78,6 +80,10 @@ export const useCaixaRealtime = () => {
           });
           void queryClient.invalidateQueries({
             queryKey: caixaConveniosQueryKeys.forPolo(scope),
+            refetchType,
+          });
+          void queryClient.invalidateQueries({
+            queryKey: caixaComposicaoQueryKeys.forScope(scope),
             refetchType,
           });
         });

@@ -148,7 +148,7 @@ test('mantém a RPC, o card e a invalidação patrimonial isolados no Caixa', ()
   assert.match(cardSource, /Patrimônio não altera o caixa disponível nem o resultado operacional/);
 });
 
-test('exibe posição total, posição líquida, patrimônio, financiamento e custos após a conciliação do período', () => {
+test('preserva fluxo, compromissos, composição, conciliação e análises estruturais na nova hierarquia', () => {
   const pageSource = readFileSync(
     join(process.cwd(), 'modules/gestor/caixa/CaixaPage.tsx'),
     'utf8',
@@ -158,10 +158,13 @@ test('exibe posição total, posição líquida, patrimônio, financiamento e cu
     'utf8',
   );
   const monthlySectionIndex = pageSource.indexOf('<CaixaStatementSection');
-  const resumoOperacionalIndex = monthlySource.indexOf('label="Entradas operacionais no mês"');
-  const compromissosIndex = monthlySource.indexOf('<CaixaCompromissosCards');
-  const graficoIndex = monthlySource.indexOf('<CaixaMovimentacaoChart');
+  const resumoOperacionalIndex = monthlySource.indexOf('<CaixaFlowHero');
+  const compromissosIndex = monthlySource.indexOf('<CaixaCommitmentTracks');
+  const composicaoIndex = monthlySource.indexOf('<CaixaCompositionCards');
+  const distribuicoesIndex = monthlySource.indexOf('<CaixaDistributionDonuts');
+  const graficoIndex = monthlySource.indexOf('<CaixaMovementAndAccounts');
   const conciliacaoIndex = monthlySource.indexOf('<CaixaReconciliationCard');
+  const analisesIndex = pageSource.indexOf('<CaixaAdvancedAnalysis');
   const posicaoTotalIndex = pageSource.indexOf('<CaixaPosicaoTotalResumoCard');
   const posicaoLiquidaIndex = pageSource.indexOf('<CaixaPosicaoLiquidaResumoCard');
   const patrimonioIndex = pageSource.indexOf('<CaixaPatrimonioResumoCard');
@@ -170,10 +173,13 @@ test('exibe posição total, posição líquida, patrimônio, financiamento e cu
 
   assert.ok(resumoOperacionalIndex >= 0);
   assert.ok(compromissosIndex > resumoOperacionalIndex);
-  assert.ok(graficoIndex > compromissosIndex);
+  assert.ok(composicaoIndex > compromissosIndex);
+  assert.ok(distribuicoesIndex > composicaoIndex);
+  assert.ok(graficoIndex > distribuicoesIndex);
   assert.ok(conciliacaoIndex > graficoIndex);
   assert.ok(monthlySectionIndex >= 0);
-  assert.ok(posicaoTotalIndex > monthlySectionIndex);
+  assert.ok(analisesIndex > monthlySectionIndex);
+  assert.ok(posicaoTotalIndex > analisesIndex);
   assert.ok(posicaoLiquidaIndex > posicaoTotalIndex);
   assert.ok(patrimonioIndex > posicaoLiquidaIndex);
   assert.ok(financiamentoIndex > patrimonioIndex);

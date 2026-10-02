@@ -35,6 +35,8 @@ import { CaixaPosicaoTotalResumoCard } from './components/CaixaPosicaoTotalResum
 import { CaixaConveniosResumoCard } from './components/CaixaConveniosResumoCard';
 import { caixaConveniosResumoQueryOptions } from './caixa-convenios.service';
 import { CaixaContasPagarResumoCard } from './components/CaixaContasPagarResumoCard';
+import { CaixaAdvancedAnalysis } from './components/CaixaAdvancedAnalysis';
+import { caixaComposicaoQueryOptions } from './caixa-composicao.queries';
 
 interface CaixaPageProps {
   poloId?: string | null;
@@ -156,11 +158,21 @@ const CaixaScopePage: React.FC<CaixaScopePageProps> = ({
     enabled: Boolean(selectedPolo),
   });
 
+  const {
+    data: composicaoResumo,
+    isLoading: isComposicaoLoading,
+    isError: hasComposicaoError,
+    refetch: refetchComposicao,
+  } = useQuery({
+    ...caixaComposicaoQueryOptions(selectedPolo, competencia),
+    enabled: Boolean(selectedPolo),
+  });
+
   const isCurrentCompetencia = competencia === currentCompetencia;
   const isConsolidated = selectedPolo === 'todos';
 
   return (
-    <div className="mx-auto max-w-7xl animate-fadeIn space-y-5 pb-12">
+    <div className="mx-auto max-w-[1680px] animate-fadeIn space-y-5 pb-12">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <div className="flex items-center gap-2">
@@ -249,54 +261,74 @@ const CaixaScopePage: React.FC<CaixaScopePageProps> = ({
         </div>
       </div>
 
-      <CaixaContasPagarResumoCard
-        resumo={contasPagarResumo}
-        isLoading={isContasPagarLoading}
-        hasError={hasContasPagarError}
-      />
-
       <CaixaStatementSection
         statement={statement}
         isLoading={isLoading}
         hasError={Boolean(error)}
         isConsolidated={isConsolidated}
         onRetry={() => { void refetchStatement(); }}
+        contasPagar={contasPagarResumo}
+        isPayablesLoading={isContasPagarLoading}
+        hasPayablesError={hasContasPagarError}
+        composicao={composicaoResumo}
+        isCompositionLoading={isComposicaoLoading}
+        hasCompositionError={hasComposicaoError}
+        onRetryComposition={() => { void refetchComposicao(); }}
       />
 
-      <CaixaConveniosResumoCard
-        resumo={conveniosResumo}
-        isLoading={isConveniosLoading}
-        hasError={hasConveniosError}
-      />
+      {(Boolean(error) || (!isLoading && !statement)) ? (
+        <CaixaContasPagarResumoCard
+          resumo={contasPagarResumo}
+          isLoading={isContasPagarLoading}
+          hasError={hasContasPagarError}
+        />
+      ) : null}
 
-      <CaixaPosicaoTotalResumoCard
-        resumo={posicaoTotalResumo}
-        isLoading={isPosicaoTotalLoading}
-        hasError={hasPosicaoTotalError}
-      />
-
-      <CaixaPosicaoLiquidaResumoCard
-        resumo={posicaoLiquidaResumo}
-        isLoading={isPosicaoLiquidaLoading}
-        hasError={hasPosicaoLiquidaError}
-      />
-
-      <CaixaPatrimonioResumoCard
-        resumo={patrimonioResumo}
-        isLoading={isPatrimonioLoading}
-        hasError={hasPatrimonioError}
-      />
-
-      <CaixaFinanciamentoResumoCard
-        resumo={financiamentoResumo}
-        isLoading={isFinanciamentoLoading}
-        hasError={hasFinanciamentoError}
-      />
-
-      <CaixaLinhaCorteCard
-        resumo={linhaCorteResumo}
-        isLoading={isLinhaCorteLoading}
-        hasError={hasLinhaCorteError}
+      <CaixaAdvancedAnalysis
+        posicaoTotal={(
+          <CaixaPosicaoTotalResumoCard
+            resumo={posicaoTotalResumo}
+            isLoading={isPosicaoTotalLoading}
+            hasError={hasPosicaoTotalError}
+          />
+        )}
+        posicaoLiquida={(
+          <CaixaPosicaoLiquidaResumoCard
+            resumo={posicaoLiquidaResumo}
+            isLoading={isPosicaoLiquidaLoading}
+            hasError={hasPosicaoLiquidaError}
+          />
+        )}
+        patrimonio={(
+          <CaixaPatrimonioResumoCard
+            resumo={patrimonioResumo}
+            isLoading={isPatrimonioLoading}
+            hasError={hasPatrimonioError}
+          />
+        )}
+        convenios={(
+          <CaixaConveniosResumoCard
+            resumo={conveniosResumo}
+            isLoading={isConveniosLoading}
+            hasError={hasConveniosError}
+          />
+        )}
+        financiamento={(
+          <CaixaFinanciamentoResumoCard
+            resumo={financiamentoResumo}
+            isLoading={isFinanciamentoLoading}
+            hasError={hasFinanciamentoError}
+          />
+        )}
+        linhaCorte={(
+          <CaixaLinhaCorteCard
+            resumo={linhaCorteResumo}
+            isLoading={isLinhaCorteLoading}
+            hasError={hasLinhaCorteError}
+          />
+        )}
+        lineCutAttention={linhaCorteResumo?.cobertura.statusOperacional === 'ABAIXO_DA_LINHA'
+          || linhaCorteResumo?.inadimplencia.impacto === 'CRITICO'}
       />
 
       <footer className="flex items-start gap-2 px-1 text-[10px] leading-4 text-slate-400">
