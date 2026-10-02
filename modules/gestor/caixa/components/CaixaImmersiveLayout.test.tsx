@@ -150,6 +150,9 @@ test('trilhas mostram receber e pagar a partir de campos canônicos independente
       contasPagar={payables}
       isPayablesLoading={false}
       hasPayablesError={false}
+      receivablesPosition={{ poloId: null, competencia: '2026-10-01', dataCorte: '2026-10-01', geradoEm: '2026-10-01T12:00:00Z',
+        monthly: { openConfirmed: '2500.00', overdue: '125.00', toDue: '2375.00', count: 8, reviewCount: 2, reviewNominal: '410.00' },
+        portfolio: { openConfirmed: '9999.00', overdue: '1000.00', toDue: '8999.00', count: 100, reviewCount: 3, reviewNominal: '740.00' } }}
     />,
   );
 
@@ -158,7 +161,10 @@ test('trilhas mostram receber e pagar a partir de campos canônicos independente
   assert.match(html, /2\.500,00/);
   assert.match(html, /Vencido no mês \(parcial\)/);
   assert.match(html, /8,75% da base/);
-  assert.match(html, /Carteira futura parcial/);
+  assert.match(html, /Em aberto no mês/);
+  assert.match(html, /Registros em conferência — mês/);
+  assert.match(html, /Conferência de dados: 2 registro\(s\) local\(is\)/);
+  assert.doesNotMatch(html, /Carteira futura parcial|9\.999,00/);
   assert.match(html, /Trilha a pagar/);
   assert.match(html, /Total das contas da competência/i);
   assert.match(html, /9\.007\.199\.254\.740\.993,25/);

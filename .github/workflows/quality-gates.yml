@@ -383,7 +383,7 @@ jobs:
             supabase/functions/gestor-other-credit-payment/payment-check.test.ts \
             supabase/functions/banese-reconciliation-worker/query-token-retry.test.ts
 
-      - name: Testar contratos SQL isolados do PDV
+      - name: Testar contratos SQL isolados do PDV e Caixa
         run: |
           npm install --prefix /tmp/universo-pdv-sql --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.3.16
           export PGLITE_MODULE_PATH=/tmp/universo-pdv-sql/node_modules/@electric-sql/pglite/dist/index.js
@@ -391,6 +391,9 @@ jobs:
           node supabase/tests/pdv-receipt-identity.isolated.test.mjs
           node supabase/tests/banese_pdv_confirmation.isolated.test.mjs
           node supabase/tests/student_identity_issuers.isolated.test.mjs
+          node supabase/tests/caixa_review_drilldown.isolated.test.mjs
+          node supabase/tests/proesc_administrative_archive.isolated.test.mjs
+          node supabase/tests/proesc_portal_payment_confirmation.isolated.test.mjs
 
       - name: Gerar build de produção
         run: npm run build

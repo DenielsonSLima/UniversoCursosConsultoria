@@ -1,8 +1,8 @@
 {
-  "version": "4.8.149",
+  "version": "4.8.150",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 158,
-  "releasedAt": "2026-10-01",
-  "summary": "Proesc V2, abertura dos polos e composição financeira identificada"
+  "revision": 159,
+  "releasedAt": "2026-10-02",
+  "summary": "Caixa com visão mensal, carteira geral no corte e pendências detalhadas"
 }

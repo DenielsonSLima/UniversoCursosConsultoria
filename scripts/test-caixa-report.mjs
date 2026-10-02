@@ -13,6 +13,7 @@ const tests = [
   'modules/gestor/caixa/caixa-composicao.test.ts',
   'modules/gestor/caixa/components/CaixaCompositionCards.test.tsx',
   'modules/gestor/caixa/components/CaixaImmersiveLayout.test.tsx',
+  'modules/gestor/caixa/review-pending/caixa-review-pending.test.tsx',
   'modules/gestor/caixa/components/CaixaLowerNarratives.test.tsx',
   'modules/gestor/caixa/components/CaixaMovimentacaoChart.test.tsx',
   'modules/gestor/caixa/caixa-contas-pagar-resumo.test.tsx',
