@@ -395,5 +395,14 @@ jobs:
           node supabase/tests/proesc_administrative_archive.isolated.test.mjs
           node supabase/tests/proesc_portal_payment_confirmation.isolated.test.mjs
 
+      - name: Testar atividades extra-classe retroativas e recuperáveis
+        run: |
+          npm install --prefix /tmp/universo-atividade-tests --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.3.16 jsdom@26.1.0
+          export ATIVIDADE_TEST_PGLITE_PATH=/tmp/universo-atividade-tests/node_modules/@electric-sql/pglite
+          export ATIVIDADE_TEST_JSDOM_PATH=/tmp/universo-atividade-tests/node_modules/jsdom
+          node --test supabase/tests/atividade_extra_management.isolated.test.mjs
+          node --test modules/gestor/gestao/tecnicos/detalhes/components/grade/turma-grade-atividade.test.mjs
+          node --test modules/gestor/gestao/tecnicos/detalhes/components/grade/turma-grade-atividade.interaction.test.mjs
+
       - name: Gerar build de produção
         run: npm run build

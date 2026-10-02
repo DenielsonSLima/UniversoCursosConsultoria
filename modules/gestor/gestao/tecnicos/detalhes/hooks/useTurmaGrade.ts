@@ -130,7 +130,6 @@ const useTurmaGradeInvalidation = (
       }),
       queryClient.invalidateQueries({
         queryKey: atividadesExtraClasseKeys.turma(turmaId),
-        exact: true,
       }),
       queryClient.invalidateQueries({
         queryKey: academicLifecycleKeys.diarios(turmaId),
@@ -421,7 +420,7 @@ export const useAddTurmaAtividadeExtraClasseMutation = (
   onSuccess?: (input: TurmaAtividadeExtraClasseInput) => void | Promise<void>,
   onError?: (error: any) => void,
 ) => {
-  const invalidate = useTurmaGradeInvalidation(turmaId);
+  const invalidate = useTurmaGradeInvalidation(turmaId, false, true);
 
   return useMutation({
     mutationFn: (input: TurmaAtividadeExtraClasseInput) => turmaGradeService.addAtividadeExtraClasse(turmaId, input),

@@ -1,8 +1,8 @@
 {
-  "version": "4.8.150",
+  "version": "4.8.151",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 159,
+  "revision": 160,
   "releasedAt": "2026-10-02",
-  "summary": "Caixa com visão mensal, carteira geral no corte e pendências detalhadas"
+  "summary": "Atividades extra-classe com datas retroativas, edição e arquivamento recuperável na grade"
 }
