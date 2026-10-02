@@ -117,7 +117,12 @@ const mapAulasByDisciplina = (aulas: any[]): Record<string, TurmaAulaPlanejada[]
   return result;
 };
 
-const mapAtividadesByDisciplina = (atividades: any[]): Record<string, TurmaAtividadeExtraClasse[]> => {
+const mapAtividadesByDisciplina = (
+  atividades: any[],
+  turmaId: string,
+  modalidade: string,
+  metricasGrade: any[],
+): Record<string, TurmaAtividadeExtraClasse[]> => {
   const result: Record<string, TurmaAtividadeExtraClasse[]> = {};
 
   (atividades || []).forEach((atividade) => {
@@ -129,6 +134,15 @@ const mapAtividadesByDisciplina = (atividades: any[]): Record<string, TurmaAtivi
       cargaHoraria: parseFloat(atividade.carga_horaria_compensacao || 0),
       prazoEntrega: atividade.prazo_entrega,
       status: atividade.status || 'PUBLICADA',
+      statusAnterior: atividade.status_antes_arquivo || null,
+      updatedAt: atividade.updated_at || null,
+      respostasCount: Number(atividade.respostas?.[0]?.count || 0),
+      contexto: {
+        turmaId,
+        modalidade,
+        turmaStatus: String((Array.isArray(atividade.turma) ? atividade.turma[0] : atividade.turma)?.status || ''),
+        periodoStatus: metricasGrade.find((item) => item.disciplina_id === atividade.disciplina_id)?.periodo_status || null,
+      },
     });
   });
 
@@ -179,9 +193,8 @@ export const turmaGradeService = {
         .eq('turma_id', turmaId),
       supabase
         .from('atividades_extra_classe')
-        .select('id, disciplina_id, titulo, tema, carga_horaria_compensacao, prazo_entrega, status')
-        .eq('turma_id', turmaId)
-        .neq('status', 'ARQUIVADA'),
+        .select('id, disciplina_id, titulo, tema, carga_horaria_compensacao, prazo_entrega, status, status_antes_arquivo, updated_at, turma:turmas(status), respostas:atividade_extra_classe_respostas(count)')
+        .eq('turma_id', turmaId),
       supabase
         .from('parceiros')
         .select('id, nome')
@@ -217,7 +230,7 @@ export const turmaGradeService = {
         ...dbConfigs,
       },
       aulas: mapAulasByDisciplina(aulasData || []),
-      atividadesExtraClasse: mapAtividadesByDisciplina(atividadesData || []),
+      atividadesExtraClasse: mapAtividadesByDisciplina(atividadesData || [], turmaId, cursoBase.modalidade || 'TECNICO', metricasGrade),
       professores: (profsData || []).map((professor: any) => ({
         id: professor.id,
         nome: professor.nome,

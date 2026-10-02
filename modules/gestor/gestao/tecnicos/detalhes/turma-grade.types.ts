@@ -37,6 +37,15 @@ export interface TurmaAtividadeExtraClasse {
   cargaHoraria: number;
   prazoEntrega?: string | null;
   status: string;
+  statusAnterior?: 'RASCUNHO' | 'PUBLICADA' | null;
+  updatedAt?: string | null;
+  respostasCount?: number;
+  contexto?: {
+    turmaId: string;
+    turmaStatus: string;
+    modalidade: string;
+    periodoStatus: string | null;
+  };
 }
 
 export interface TurmaGradeData {

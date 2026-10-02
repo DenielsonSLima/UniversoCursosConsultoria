@@ -5,7 +5,6 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronRight,
-  ClipboardCheck,
   CornerDownRight,
   Loader2,
   Pencil,
@@ -20,6 +19,7 @@ import { isAcademicClassContentPending } from '../../../../../../../lib/academic
 import { formatGradeHours } from './turma-grade-ui';
 import PlanoCursoStatusControl from './plano-curso/PlanoCursoStatusControl';
 import TurmaGradePlanejamentoForm from './TurmaGradePlanejamentoForm';
+import TurmaGradeAtividades from './TurmaGradeAtividades';
 import type { TurmaGradeDisciplinaProps } from './TurmaGradeDisciplina.types';
 
 const TurmaGradeDisciplina: React.FC<TurmaGradeDisciplinaProps> = ({
@@ -398,42 +398,7 @@ const TurmaGradeDisciplina: React.FC<TurmaGradeDisciplinaProps> = ({
                     </div>
                   );
                 })}
-                {atividades.map((atividade, index) => {
-                  const dataFormatada = atividade.prazoEntrega
-                    ? new Date(`${atividade.prazoEntrega}T00:00:00`).toLocaleDateString('pt-BR', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                      })
-                    : null;
-
-                  return (
-                    <div
-                      key={atividade.id}
-                      className="group pl-3.5 border-l-2 border-emerald-400 transition-colors py-2 bg-emerald-50/50 pr-3 rounded-r-xl border-y border-r border-emerald-100 shadow-sm space-y-1"
-                    >
-                      <div className="flex items-center justify-between gap-2 text-xs">
-                        <div className="flex items-center gap-2 flex-wrap min-w-0">
-                          <ClipboardCheck size={13} className="text-emerald-600 shrink-0" />
-                          <span className="font-bold text-emerald-900">
-                            Extra {index + 1}
-                          </span>
-                          {dataFormatada && (
-                            <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded border border-emerald-200/70">
-                              {dataFormatada}
-                            </span>
-                          )}
-                          <span className="text-[11px] font-bold text-emerald-800 bg-white px-2 py-0.5 rounded border border-emerald-200 font-mono">
-                            {formatGradeHours(atividade.cargaHoraria)}h
-                          </span>
-                        </div>
-                      </div>
-                      <div className="pl-5 text-xs text-slate-700 font-normal leading-relaxed break-words">
-                        {atividade.titulo}
-                      </div>
-                    </div>
-                  );
-                })}
+                <TurmaGradeAtividades atividades={atividades} />
               </>
             )}
           </div>

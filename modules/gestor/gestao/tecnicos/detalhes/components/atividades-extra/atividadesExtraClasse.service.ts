@@ -7,7 +7,6 @@ import {
   DisciplinaOption,
 } from './atividadesExtraClasse.types';
 import {
-  isAtividadePrazoEncerrado,
   normalizeAtividadeHttpUrl,
   parsePerguntas,
 } from './atividadesExtraClasse.utils';
@@ -207,9 +206,6 @@ export const atividadesExtraClasseService = {
     if (!input.form.disciplinaId) throw new Error('Selecione a disciplina da atividade.');
     if (!titulo) throw new Error('Informe o título da atividade.');
     if (!Number.isFinite(horas) || horas <= 0) throw new Error('Informe uma carga horária maior que zero.');
-    if (isAtividadePrazoEncerrado(input.form.prazoEntrega)) {
-      throw new Error('Informe um prazo de entrega igual ou posterior à data de hoje.');
-    }
 
     const videoUrl = normalizeAtividadeHttpUrl(input.form.videoUrl, 'O link do vídeo');
     if (['PERGUNTAS', 'MISTO'].includes(input.form.tipoResposta) && perguntas.length === 0) {
