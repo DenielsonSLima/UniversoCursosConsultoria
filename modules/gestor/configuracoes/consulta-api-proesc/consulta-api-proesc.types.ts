@@ -98,7 +98,9 @@ export interface ProescDashboard {
   selectedPoloId: string | null;
   polos: Array<{ id: string; name: string }>;
   period: { startedFrom: string; startedTo: string };
+  capabilities?: { executionHistoryVersion?: 'v1'; monitorVersion?: 'v2' };
   monitor: {
+    version?: 'v2';
     enabled: boolean;
     schedule: string | null;
     running: boolean;

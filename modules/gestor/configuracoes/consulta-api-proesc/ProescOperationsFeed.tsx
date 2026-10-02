@@ -18,10 +18,10 @@ const modeLabels: Record<ProescSettlement['mode'], string> = {
   AUTO: 'Automação', IMPORT: 'Importação', CORRECTION: 'Correção',
 };
 const headings: Record<ProescFeedContext, [string, string]> = {
-  runs: ['Execuções', 'Lotes processados pela automação. Consultadas indica cobranças; HTTP indica requisições à API.'],
-  observations: ['Consultas', 'Evidências registradas por cobrança. Conferências sem novidade aparecem nos totais das execuções.'],
+  runs: ['Execuções V1 (histórico)', 'Lotes registrados pela integração V1. Estes contadores não representam a automação atual V2. Consultadas indica cobranças; HTTP indica requisições da V1.'],
+  observations: ['Consultas', 'Evidências financeiras registradas por cobrança, preservando o histórico anterior.'],
   settlements: ['Baixas', 'Pagamentos aplicados no sistema, com a origem da baixa identificada.'],
-  errors: ['Erros', 'Falhas registradas nas execuções e requisições. Evidências em conferência aparecem na aba Consultas.'],
+  errors: ['Erros V1 (histórico)', 'Falhas das execuções e requisições V1. Esta lista não mede falhas atuais da V2. Evidências em conferência aparecem na aba Consultas.'],
 };
 const money = (value?: number | null) => value == null
   ? 'Não informado'

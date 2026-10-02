@@ -38,7 +38,7 @@ Deno.test('versões não aceitam a credencial da outra conexão; WAF só entra e
   assert(headers.Authorization === `Bearer ${v2}` && headers['x-proesc-waf'] === waf);
 });
 
-Deno.test('status e gravação projetam só metadados, isolam versão e ignoram intenção forjada', async () => {
+Deno.test('status histórico projeta só metadados e somente V2 permite configuração', async () => {
   for (const version of ['v1', 'v2']) {
     const { admin, calls } = fixture({ configured: true, token: 'PRIVATE', revision: 'PRIVATE',
       wafHeader: 'PRIVATE', wafConfigured: true, updatedAt: '2026-09-18T00:00:00Z' });
@@ -48,6 +48,13 @@ Deno.test('status e gravação projetam só metadados, isolam versão e ignoram 
     assert((status as { wafConfigured: boolean }).wafConfigured === (version === 'v2'));
     assert(calls[0].p_action === 'status' && calls[0].p_actor_id === 'actor');
     assert(JSON.stringify(calls[0].p_payload) === JSON.stringify({ version }));
+    if (version === 'v1') {
+      for (const action of ['save_connection', 'remove_connection', 'test_connection']) {
+        await rejects(() => handleConnectionAction(admin, 'actor', { action, version, token: v1 }, noNetwork), 'aposentada');
+      }
+      assert(calls.length === 1);
+      continue;
+    }
     const saved = await handleConnectionAction(admin, 'actor', { action: 'save_connection', version,
       token: version === 'v1' ? v1 : v2, ...(version === 'v2' ? { wafHeader: waf } : {}) }, noNetwork);
     assert(JSON.stringify(saved) === JSON.stringify({ version, configured: true }));
@@ -117,17 +124,18 @@ Deno.test('V2 interpreta meta, usa WAF e mantém paginação no host fixo', asyn
   await rejects(() => conflict.readPage('people', filters, cursor), 'conflitante');
 });
 
-Deno.test('seleção de operação usa V1 para legado e V2 para pessoas sem fallback no 403', async () => {
-  for (const operation of ['legacy_configuration', 'people'] as const) {
-    const { admin, calls } = fixture({ token: operation === 'people' ? v2 : v1, revision: 'r1' });
+Deno.test('seleção de operação aposenta V1 antes de credencial/rede e V2 não faz fallback no403', async () => {
+  for (const operation of ['legacy_configuration', 'legacy_accounting', 'people'] as const) {
+    const { admin, calls } = fixture({ token: v2, revision: 'r1' });
     let networkCalls = 0;
     await rejects(() => readProescOperation(admin, 'actor', operation === 'people'
-      ? { operation, filters, cursor } : { operation }, (input) => {
+      ? { operation, filters, cursor } : operation === 'legacy_accounting'
+        ? { operation, query: { unitId: '1', year: 2026, month: 9 } } : { operation }, (input) => {
         networkCalls++;
-        assert(String(input).startsWith(operation === 'people' ? 'https://api.proesc.com/api/v2/' : 'https://app.proesc.com/api/v1/'));
+        assert(String(input).startsWith('https://api.proesc.com/api/v2/'));
         return Promise.resolve(new Response('', { status: 403 }));
       }), 'Proesc');
-    assert(networkCalls === 1 && calls.length === 1);
-    assert((calls[0].p_payload as { version: string }).version === (operation === 'people' ? 'v2' : 'v1'));
+    assert(networkCalls === (operation === 'people' ? 1 : 0) && calls.length === networkCalls);
+    if (operation === 'people') assert((calls[0].p_payload as { version: string }).version === 'v2');
   }
 });

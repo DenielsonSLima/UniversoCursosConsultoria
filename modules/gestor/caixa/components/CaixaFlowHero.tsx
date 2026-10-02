@@ -131,7 +131,7 @@ export const CaixaFlowHero: React.FC<CaixaFlowHeroProps> = ({
               {formatCaixaCurrency(statement.saldosHoje.registradoTotal)}
             </p>
             <p className="mt-1 text-[10px] leading-4 text-slate-300">
-              Posição contábil no corte. Não compõe a equação do resultado mensal.
+              Saldo contábil atual. Não compõe a equação do resultado mensal.
             </p>
           </div>
           <div className="mt-4 grid grid-cols-2 gap-2 border-t border-white/10 pt-3 text-[10px]">

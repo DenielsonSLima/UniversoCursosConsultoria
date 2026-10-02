@@ -17,6 +17,7 @@ Deno.test('consulta explicita todos os meses e não filtra somente pendentes ou 
   assert(url.origin === 'https://api.proesc.com');
   assert(url.searchParams.get('expiration_year') === '2025');
   assert(url.searchParams.get('expiration_month') === '12');
+  assert(buildQueryUrl('invoices', filters, { year: 2026, month: 9, page: 1 }).searchParams.get('expiration_month') === '09');
   assert(!url.searchParams.has('status') && !url.searchParams.has('invoice_type_id'));
   rejects(() => validateConsultation({ resource: 'debits/create', filters }));
   rejects(() => validateConsultation({ resource: 'invoices', filters: { ...filters, end: '2025-11' } }));

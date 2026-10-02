@@ -262,6 +262,25 @@ export const assertPosicaoTotalResumoPayload = (payload: RawItem) => {
     ) {
       throw new Error('Contrato inválido da posição total do Caixa.');
     }
+    if (dados.fechamento_implantacao !== undefined) {
+      const fechamento = dados.fechamento_implantacao;
+      if (!isRecord(fechamento)
+        || !isCaixaDate(fechamento.data_encerramento)
+        || !isCaixaDate(fechamento.data_abertura)
+        || fechamento.data_encerramento !== payload.data_corte
+        || !isCaixaSignedCanonicalDecimalText(fechamento.saldo_historico_controle_proesc)
+        || !isCaixaSignedCanonicalDecimalText(fechamento.ajuste_encerramento_operacional)
+        || !isCaixaSignedCanonicalDecimalText(fechamento.saldo_encerramento_proesc)
+        || !isCaixaSignedCanonicalDecimalText(fechamento.saldo_abertura_proesc)
+      ) throw new Error('Contrato inválido do fechamento de implantação do Caixa.');
+      const encerramento = Date.parse(`${fechamento.data_encerramento}T00:00:00Z`);
+      const abertura = Date.parse(`${fechamento.data_abertura}T00:00:00Z`);
+      if (!Number.isFinite(encerramento) || !Number.isFinite(abertura)
+        || new Date(encerramento).toISOString().slice(0, 10) !== fechamento.data_encerramento
+        || new Date(abertura).toISOString().slice(0, 10) !== fechamento.data_abertura
+        || abertura - encerramento !== 86_400_000
+      ) throw new Error('Datas inválidas do fechamento de implantação do Caixa.');
+    }
     return;
   }
 

@@ -4,7 +4,7 @@ export interface ProescStatus {
   configured: boolean;
   updatedAt: string | null;
 }
-export type ProescVersion = 'v1' | 'v2';
+export type ProescVersion = 'v2';
 export interface ProescConnectionStatus extends ProescStatus {
   version: ProescVersion;
   wafConfigured: boolean;
@@ -62,17 +62,23 @@ export const proescKeys = {
   classes: (offset: number) => ['configuracoes', 'proesc', 'classes', offset] as const,
   events: (classId: string, offset: number) => ['configuracoes', 'proesc', 'events', classId, offset] as const,
 };
+
+async function connectionInvoke<T>(version: ProescVersion, action: string, payload: object = {}): Promise<T> {
+  if (version !== 'v2') throw new Error('A conexão Proesc V1 foi encerrada. Utilize a V2.');
+  return invoke<T>(action, { ...payload, version });
+}
+
 export const proescService = {
-  connectionStatus: (version: ProescVersion) => invoke<ProescConnectionStatus>('connection_status', { version }),
-  saveConnection: (version: ProescVersion, token: string, wafHeader?: string) => invoke<ProescConnectionStatus>(
-    'save_connection', { version, token, ...(version === 'v2' && wafHeader?.trim() ? { wafHeader: wafHeader.trim() } : {}) },
+  connectionStatus: (version: ProescVersion) => connectionInvoke<ProescConnectionStatus>(version, 'connection_status'),
+  saveConnection: (version: ProescVersion, token: string, wafHeader?: string) => connectionInvoke<ProescConnectionStatus>(
+    version, 'save_connection', { token, ...(wafHeader?.trim() ? { wafHeader: wafHeader.trim() } : {}) },
   ),
-  removeConnection: (version: ProescVersion) => invoke<ProescConnectionStatus>('remove_connection', { version }),
-  testConnection: (version: ProescVersion) => invoke<ProescTokenTest>('test_connection', { version }),
-  status: () => invoke<ProescStatus>('status'),
-  saveToken: (token: string) => invoke('save_token', { token }),
-  removeToken: () => invoke('remove_token'),
-  testToken: () => invoke<ProescTokenTest>('test_token'),
+  removeConnection: (version: ProescVersion) => connectionInvoke<ProescConnectionStatus>(version, 'remove_connection'),
+  testConnection: (version: ProescVersion) => connectionInvoke<ProescTokenTest>(version, 'test_connection'),
+  status: () => connectionInvoke<ProescStatus>('v2', 'connection_status'),
+  saveToken: (token: string) => connectionInvoke('v2', 'save_connection', { token }),
+  removeToken: () => connectionInvoke('v2', 'remove_connection'),
+  testToken: () => connectionInvoke<ProescTokenTest>('v2', 'test_connection'),
   classes: (offset = 0) => invoke<{ classes: ProescClassHistory[]; totalClasses: number }>('class_history', { offset }),
   events: (classId: string, offset = 0) => invoke<{ events: ProescHistoryEvent[]; totalEvents: number }>('class_events', { classId, offset }),
 };

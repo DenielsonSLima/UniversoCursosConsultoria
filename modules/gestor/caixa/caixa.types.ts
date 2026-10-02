@@ -209,12 +209,22 @@ export interface CaixaPosicaoLiquidaResumo {
  * caixa, patrimônio a custo e empréstimos a pagar. Os valores continuam como
  * texto decimal, pois esse contrato nunca deve ser recomposto pelo cliente.
  */
+export interface CaixaFechamentoImplantacao {
+  dataEncerramento: string;
+  dataAbertura: string;
+  saldoHistoricoControleProesc: string;
+  ajusteEncerramentoOperacional: string;
+  saldoEncerramentoProesc: string;
+  saldoAberturaProesc: string;
+}
+
 export interface CaixaPosicaoTotalDados {
   saldoCaixaRegistrado: string;
   valorPatrimonialCusto: string;
   saldoEmprestimosAPagar: string;
   valorTotalLiquido: string;
   observacao: string;
+  fechamentoImplantacao?: CaixaFechamentoImplantacao;
 }
 
 interface CaixaPosicaoTotalResumoBase {

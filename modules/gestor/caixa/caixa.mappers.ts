@@ -259,6 +259,7 @@ export const mapCaixaPosicaoTotalResumo = (value: unknown): CaixaPosicaoTotalRes
 
   if (payload.disponivel === true) {
     const dados = asRecord(payload.dados);
+    const fechamento = asRecord(dados.fechamento_implantacao);
     return {
       ...base,
       disponivel: true,
@@ -268,6 +269,16 @@ export const mapCaixaPosicaoTotalResumo = (value: unknown): CaixaPosicaoTotalRes
         saldoEmprestimosAPagar: asString(dados.saldo_emprestimos_a_pagar),
         valorTotalLiquido: asString(dados.valor_total_liquido),
         observacao: asString(dados.observacao),
+        ...(dados.fechamento_implantacao === undefined ? {} : {
+          fechamentoImplantacao: {
+            dataEncerramento: asString(fechamento.data_encerramento),
+            dataAbertura: asString(fechamento.data_abertura),
+            saldoHistoricoControleProesc: asString(fechamento.saldo_historico_controle_proesc),
+            ajusteEncerramentoOperacional: asString(fechamento.ajuste_encerramento_operacional),
+            saldoEncerramentoProesc: asString(fechamento.saldo_encerramento_proesc),
+            saldoAberturaProesc: asString(fechamento.saldo_abertura_proesc),
+          },
+        }),
       },
     };
   }

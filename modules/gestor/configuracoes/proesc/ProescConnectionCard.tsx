@@ -2,19 +2,19 @@ import { useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AlertCircle, CheckCircle2, ExternalLink, Loader2, Save, ShieldCheck, Trash2, Wifi } from 'lucide-react';
 import { useToast } from '../../components/ToastNotification';
-import { proescKeys, proescService, type ProescTokenTest, type ProescVersion } from './proesc.service';
+import { proescKeys, proescService, type ProescTokenTest } from './proesc.service';
 
 const inputClass = 'w-full rounded-xl border border-slate-200 bg-slate-50 p-3.5 text-sm font-semibold text-[#001a33] outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 disabled:opacity-50';
 const buttonClass = 'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-5 py-3 text-[10px] font-black uppercase tracking-wider transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40';
 const formatDate = (value: string) => new Date(value).toLocaleString('pt-BR');
 
 interface Props {
-  version: ProescVersion;
   toast: ReturnType<typeof useToast>['toast'];
-  onBusyChange: (version: ProescVersion, busy: boolean) => void;
+  onBusyChange: (busy: boolean) => void;
 }
 
-export default function ProescConnectionCard({ version, toast, onBusyChange }: Props) {
+export default function ProescConnectionCard({ toast, onBusyChange }: Props) {
+  const version = 'v2';
   const status = useQuery({
     queryKey: proescKeys.connection(version), queryFn: () => proescService.connectionStatus(version),
     retry: false, gcTime: 0,
@@ -35,21 +35,21 @@ export default function ProescConnectionCard({ version, toast, onBusyChange }: P
     if (inFlightRef.current) return;
     inFlightRef.current = true;
     setOperation(kind);
-    onBusyChange(version, true);
+    onBusyChange(true);
     setFailure('');
     setTestResult(null);
     try { await action(); toast.success(success); await status.refetch(); }
     catch (error) {
       const message = error instanceof Error ? error.message : 'Não foi possível concluir.';
       setFailure(message); toast.error('Proesc', message);
-    } finally { inFlightRef.current = false; setOperation(null); onBusyChange(version, false); }
+    } finally { inFlightRef.current = false; setOperation(null); onBusyChange(false); }
   };
 
   const testToken = async () => {
     if (inFlightRef.current || configUnavailable || !configured) return;
     inFlightRef.current = true;
     setOperation('test');
-    onBusyChange(version, true);
+    onBusyChange(true);
     setFailure('');
     setTestResult(null);
     try {
@@ -61,15 +61,13 @@ export default function ProescConnectionCard({ version, toast, onBusyChange }: P
       const message = error instanceof Error ? error.message : 'Não foi possível testar o token. Tente novamente.';
       setFailure(message);
       toast.error('Teste não concluído', message);
-    } finally { inFlightRef.current = false; setOperation(null); onBusyChange(version, false); }
+    } finally { inFlightRef.current = false; setOperation(null); onBusyChange(false); }
   };
 
   return <section aria-label={`Conexão Proesc ${label}`} className="space-y-4">
     <div className="px-1">
       <h3 className="text-lg font-black uppercase tracking-tight text-[#001a33]">Proesc {label}</h3>
-      <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">{version === 'v1'
-        ? 'Legado e conciliação: conexão com a chave geral da instituição.'
-        : 'Consulta de dados e pessoas: conexão com token e liberação de acesso da API V2.'}</p>
+      <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">Consulta de pessoas, matrículas e parcelas com token e liberação de acesso da API V2.</p>
     </div>
         {failure ? <p role="alert" className="rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-semibold text-red-800">{failure}</p> : null}
         <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
@@ -85,7 +83,7 @@ export default function ProescConnectionCard({ version, toast, onBusyChange }: P
           event.preventDefault();
           if (inFlightRef.current || configUnavailable) return;
           const token = tokenRef.current?.value || '';
-          const wafHeader = version === 'v2' ? wafRef.current?.value : undefined;
+          const wafHeader = wafRef.current?.value;
           if (tokenRef.current) tokenRef.current.value = '';
           if (wafRef.current) wafRef.current.value = '';
           void act('save', () => proescService.saveConnection(version, token, wafHeader), `Conexão ${label} salva`);
@@ -93,16 +91,16 @@ export default function ProescConnectionCard({ version, toast, onBusyChange }: P
           <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500">{configured ? 'Substituir token' : 'Token da API'}
             <input ref={tokenRef} type="password" autoComplete="new-password" required minLength={12} maxLength={8200}
               disabled={configUnavailable} aria-label={`Token Proesc ${label}`} placeholder={`Cole o token Proesc ${label}`} className={`${inputClass} mt-2 normal-case tracking-normal`} /></label>
-          {version === 'v2' ? <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500">Chave WAF V2 (opcional)
+          <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500">Chave WAF V2 (opcional)
             <input ref={wafRef} type="password" autoComplete="new-password" maxLength={8200}
               aria-label="Chave WAF Proesc V2" disabled={configUnavailable} placeholder={status.data?.wafConfigured ? 'Chave já salva; preencha somente para substituir' : 'Cole a chave WAF fornecida pelo Proesc'}
               className={`${inputClass} mt-2 normal-case tracking-normal`} />
             <span className="mt-2 block text-[11px] font-semibold normal-case tracking-normal text-slate-500">{status.data?.wafConfigured
               ? 'Chave WAF cadastrada. Deixar vazio mantém a chave salva.'
               : 'Informe se o Proesc forneceu uma chave WAF para esta conexão.'}</span>
-          </label> : null}
+          </label>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <a href={version === 'v1' ? 'https://proesc.readme.io/v1.0/reference/autorizacao' : 'https://proesc.readme.io/reference/autorizacao'} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-800">Como obter o token <ExternalLink size={13} /></a>
+            <a href="https://proesc.readme.io/reference/autorizacao" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-800">Como obter o token <ExternalLink size={13} /></a>
             <button type="submit" disabled={configUnavailable} className={`${buttonClass} bg-blue-600 text-white shadow-md shadow-blue-600/15 hover:bg-blue-700`}>
               {operation === 'save' ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}{operation === 'save' ? 'Salvando…' : 'Salvar token'}
             </button>
@@ -115,7 +113,7 @@ export default function ProescConnectionCard({ version, toast, onBusyChange }: P
         </div>
         {configured ? <button type="button" disabled={busy} onClick={() => setRemoveOpen(true)} className="inline-flex min-h-9 items-center gap-2 text-[10px] font-black uppercase tracking-wider text-red-600 hover:text-red-800 disabled:opacity-40"><Trash2 size={14} />Remover conexão {label}</button> : null}
         {removeOpen ? <div className="rounded-xl border border-red-100 bg-red-50 p-4 text-xs font-semibold leading-relaxed text-red-900">
-          <p>Remover a conexão {label} apaga suas credenciais e desativa esse acesso. A outra versão e o histórico registrado serão preservados.</p>
+          <p>Remover a conexão {label} apaga suas credenciais e interrompe as consultas ao Proesc. O histórico registrado será preservado.</p>
           <div className="mt-3 flex flex-wrap gap-2"><button type="button" disabled={busy} onClick={() => void act('remove', async () => { await proescService.removeConnection(version); setRemoveOpen(false); }, `Conexão ${label} removida`)} className={`${buttonClass} bg-red-600 text-white hover:bg-red-700`}>{operation === 'remove' ? 'Removendo…' : 'Confirmar remoção'}</button><button type="button" disabled={busy} onClick={() => setRemoveOpen(false)} className={`${buttonClass} border border-red-200 bg-white text-red-700`}>Cancelar</button></div>
         </div> : null}
         </section>

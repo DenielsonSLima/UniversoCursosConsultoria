@@ -12,10 +12,10 @@ import type { ProescConsoleFilters, ProescConsoleTab } from './consulta-api-proe
 
 export const proescConsoleTabs: Array<{ id: ProescConsoleTab; label: string }> = [
   { id: 'overview', label: 'Visão geral' },
-  { id: 'runs', label: 'Execuções' },
+  { id: 'runs', label: 'Execuções V1 (histórico)' },
   { id: 'observations', label: 'Consultas' },
   { id: 'settlements', label: 'Baixas' },
-  { id: 'errors', label: 'Erros' },
+  { id: 'errors', label: 'Erros V1 (histórico)' },
 ];
 
 export const proescConsoleInitialFilters: ProescConsoleFilters = {
@@ -163,10 +163,10 @@ export default function ConsultaApiProescConfig() {
           </form>
           <aside className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-xs leading-relaxed text-blue-900">
             {dashboard.data.historyStartedAt
-              ? `Histórico detalhado de execuções e requisições disponível a partir de ${proescDateTime(dashboard.data.historyStartedAt)}. `
-              : 'O histórico detalhado começará com as próximas execuções registradas. '}
-            Observações e baixas anteriores podem aparecer nas respectivas abas.
-            Os registros são atualizados automaticamente.
+              ? `Histórico detalhado de execuções V1 disponível a partir de ${proescDateTime(dashboard.data.historyStartedAt)}. `
+              : 'Não há início registrado para o histórico de execuções V1. '}
+            O monitor atual acompanha a V2. As abas Execuções e Erros exibem o histórico da V1;
+            elas não representam as execuções atuais da V2. Consultas e Baixas preservam as evidências financeiras registradas.
           </aside>
           {tab === 'overview' ? (
             <ProescConsoleOverview data={dashboard.data} />

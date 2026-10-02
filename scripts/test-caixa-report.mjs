@@ -28,6 +28,8 @@ const tests = [
   'modules/gestor/caixa/report/caixa-report.mapper.test.ts',
   'modules/gestor/caixa/report/caixa-report.pagination.test.ts',
   'modules/gestor/caixa/report/caixa-report.vector-pdf.test.ts',
+  'modules/gestor/caixa/report/caixa-report.fechamento-implantacao.test.tsx',
+  'modules/gestor/caixa/report/caixa-report.composicao-parcial.test.tsx',
 ];
 
 try {

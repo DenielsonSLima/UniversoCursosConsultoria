@@ -34,15 +34,17 @@ export const ProescConsoleHeader = () => (
 );
 
 export default function ProescConsoleOverview({ data }: { data: ProescDashboard }) {
+  const v2Monitor = data.monitor.version === 'v2' ? data.monitor : null;
+  const executionVersion = data.capabilities?.executionHistoryVersion?.toUpperCase() ?? 'V1';
   const cards = [
     ['Cobranças acompanhadas', data.totals.monitored, 'Vínculos do polo selecionado'],
-    ['Consulta automática ativa', data.totals.autoEnabled, 'Cobranças habilitadas'],
-    ['Observações no período', data.totals.observations, 'Evidências registradas; conferências repetidas constam nas execuções'],
+    ['Cobranças habilitadas', data.totals.autoEnabled, 'Vínculos autorizados para acompanhamento automático'],
+    ['Observações no período', data.totals.observations, 'Evidências financeiras registradas, incluindo o histórico anterior'],
     ['Baixas automáticas', data.totals.appliedAuto, 'Aplicadas pela automação no período'],
     ['Importações e correções', data.totals.appliedImport, 'Baixas com outras origens no período'],
     ['Observações em conferência', data.totals.review, 'Registros do período que precisam de conferência'],
-    ['Execuções com falha', data.totals.failedRuns, 'No período selecionado'],
-    ['Requisições HTTP', data.totals.httpRequests, 'Consultas compartilhadas entre turmas'],
+    [`Execuções com falha — ${executionVersion}`, data.totals.failedRuns, `Histórico da ${executionVersion} no período; não mede falhas da V2`],
+    [`Requisições HTTP — ${executionVersion}`, data.totals.httpRequests, `Histórico da ${executionVersion}; contagem HTTP da V2 ainda não disponível neste painel`],
   ] as const;
 
   return (
@@ -51,44 +53,45 @@ export default function ProescConsoleOverview({ data }: { data: ProescDashboard 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="flex items-center gap-2 font-black text-[#001a33]">
             <Clock3 size={18} />
-            Monitor geral da automação
+            Monitor atual da automação V2
           </h3>
           <span className={`rounded-full px-3 py-1 text-xs font-bold ${
-            data.monitor.running
+            v2Monitor?.running
               ? 'bg-blue-100 text-blue-800'
-              : data.monitor.enabled
+              : v2Monitor?.enabled
                 ? 'bg-emerald-100 text-emerald-800'
                 : 'bg-slate-200 text-slate-600'
           }`}>
-            {data.monitor.running
-              ? 'Em execução'
-              : data.monitor.enabled ? 'Automação ativa' : 'Automação inativa'}
+            {!v2Monitor ? 'Status V2 não informado' : v2Monitor.running
+              ? 'V2 em execução'
+              : v2Monitor.enabled ? 'Automação V2 ativa' : 'Automação V2 inativa'}
           </span>
         </div>
         <p className="mt-2 text-xs text-slate-500">
-          A execução é compartilhada entre os polos. Os indicadores abaixo seguem o filtro selecionado.
+          O monitor mostra a V2 e é compartilhado entre os polos. Os indicadores seguem o filtro selecionado.
+          Execuções e requisições HTTP detalhadas permanecem como histórico da V1.
         </p>
         <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-3">
           <div>
             <dt className="text-slate-500">Último início</dt>
-            <dd className="mt-1 font-bold text-slate-700">{proescDateTime(data.monitor.lastStartedAt)}</dd>
+            <dd className="mt-1 font-bold text-slate-700">{proescDateTime(v2Monitor?.lastStartedAt)}</dd>
           </div>
           <div>
             <dt className="text-slate-500">Última conclusão</dt>
-            <dd className="mt-1 font-bold text-slate-700">{proescDateTime(data.monitor.lastFinishedAt)}</dd>
+            <dd className="mt-1 font-bold text-slate-700">{proescDateTime(v2Monitor?.lastFinishedAt)}</dd>
           </div>
           <div>
             <dt className="text-slate-500">Duração da última execução</dt>
             <dd className="mt-1 font-bold text-slate-700">
-              {data.monitor.lastDurationMs == null
+              {v2Monitor?.lastDurationMs == null
                 ? 'Não registrada'
-                : `${data.monitor.lastDurationMs.toLocaleString('pt-BR')} ms`}
+                : `${v2Monitor.lastDurationMs.toLocaleString('pt-BR')} ms`}
             </dd>
           </div>
         </dl>
-        {!data.configured && (
+        {v2Monitor && !data.configured && (
           <p className="mt-4 text-sm text-amber-800">
-            A conexão Proesc ainda não está configurada.
+            A conexão Proesc V2 ainda não está configurada.
             O token é gerenciado no cartão Proesc das Configurações.
           </p>
         )}

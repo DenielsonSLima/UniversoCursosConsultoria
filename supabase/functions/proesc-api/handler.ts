@@ -3,16 +3,10 @@ import {
 } from '../_shared/authz.ts';
 import { buildCorsHeaders, isRateLimitExceeded, json } from '../_shared/http.ts';
 import { object, ProescError } from './contract.ts';
-import { testProescV1Token } from './test-token.ts';
 import { connectionActions, handleConnectionAction } from './connections.ts';
-import { connectionToken } from './connection-contract.ts';
-import { runProescSync } from './sync-worker.ts';
-import { runProescReadOnlyDiagnostic } from './diagnostic-readonly.ts';
+import { runProescV2Sync } from './v2-sync-worker.ts';
 import { runProescInvoiceDiagnostic } from './diagnostic-invoices.ts';
-import { reviewProescCycles } from './cycle-review.ts';
-import { reviewProescClassCycles, runProescCycleReviewWorker } from './cycle-review-batch.ts';
 import { readProescTechnicalHistory } from '../_shared/proesc-technical-history.ts';
-import { createProescV1PacedTransport } from './v1-paced-transport.ts';
 
 type Admin = Parameters<typeof requireGestorAtivo>[1];
 const publicActions = new Set(['status', 'save_token', 'remove_token', 'class_history', 'class_events', 'test_token', 'technical_history']);
@@ -34,21 +28,15 @@ export const createHandler = (admin: Admin, transport: typeof fetch = fetch) => 
     try { body = object(JSON.parse(text)); } catch { throw new ProescError('Solicitação inválida.'); }
     const action = typeof body.action === 'string' ? body.action : '';
     let actorId: string;
-    if (action === 'internal_sync') {
+    if (action === 'internal_sync' || action === 'internal_v2_sync') {
       const key = req.headers.get('X-Proesc-Sync-Secret') || '';
       if (!/^[0-9a-f]{64}$/.test(key)) throw new ProescError('Acesso interno não autorizado.', 403);
-      const { data, error } = await admin.rpc('proesc_sync_runtime_service', {
+      const { data, error } = await admin.rpc('proesc_v2_worker_service', {
         p_action: 'authorize', p_payload: { key },
       });
       if (error || typeof data?.actorId !== 'string') throw new ProescError('Acesso interno não autorizado.', 403);
-      const sharedTransport = createProescV1PacedTransport(transport);
-      const [sync, cycleReview] = await Promise.allSettled([
-        runProescSync(admin, data.actorId, sharedTransport),
-        runProescCycleReviewWorker(admin, data.actorId, sharedTransport),
-      ]);
-      if (sync.status === 'rejected') throw new ProescError('Não foi possível concluir a atualização Proesc.', 409);
-      return respond({ ...sync.value, cycleReview: cycleReview.status === 'fulfilled'
-        ? cycleReview.value : { success: false, message: 'A consulta automática será retomada.' } });
+      if (action === 'internal_sync') throw new ProescError('Rotina V1 aposentada. Use a rotina Proesc V2.', 410);
+      return respond(await runProescV2Sync(admin, data.actorId, transport));
     } else if (action === 'internal_probe' || action === 'internal_accounting_probe'
       || action === 'internal_data_probe' || action === 'internal_invoice_probe') {
       const key = req.headers.get('X-Proesc-Worker-Secret') || '';
@@ -65,7 +53,11 @@ export const createHandler = (admin: Admin, transport: typeof fetch = fetch) => 
         if (isRateLimitExceeded(`proesc-class-cycle-review:${gestor.id}`, 8, 60000)) {
           return respond({ error: 'A atualização automática está em andamento. Aguarde alguns instantes.' }, 429);
         }
-        return respond(await reviewProescClassCycles(admin, gestor.id, body.turmaId, transport));
+        const { data, error } = await admin.rpc('proesc_v2_class_cycle_review_service', {
+          p_actor_id: gestor.id, p_turma_id: body.turmaId,
+        });
+        if (error) throw new ProescError('Não foi possível conferir os ciclos da turma.', 409);
+        return respond(object(data));
       }
       if (action === 'review_cycles') {
         // The service reuses can_operate_turma_academics + gestor_has_tab for
@@ -73,7 +65,12 @@ export const createHandler = (admin: Admin, transport: typeof fetch = fetch) => 
         if (isRateLimitExceeded(`proesc-cycle-review:${gestor.id}`, 12, 60000)) {
           return respond({ error: 'Muitas conferências. Aguarde um minuto e retome.' }, 429);
         }
-        return respond(await reviewProescCycles(admin, gestor.id, body.matriculaId, transport));
+        if (typeof body.matriculaId !== 'string' || !uuidPattern.test(body.matriculaId)) throw new ProescError('Matrícula inválida.');
+        const { data, error } = await admin.rpc('proesc_v2_cycle_review_service', {
+          p_actor_id: gestor.id, p_matricula_id: body.matriculaId,
+        });
+        if (error) throw new ProescError('Não foi possível conferir os ciclos da matrícula.', 409);
+        return respond(object(data));
       }
       requireGestorGlobal(gestor);
       requireGestorModule(gestor, 'configuracoes');
@@ -100,10 +97,7 @@ export const createHandler = (admin: Admin, transport: typeof fetch = fetch) => 
         { action: 'test_connection', version: 'v2' }, transport));
     }
     if (action === 'internal_accounting_probe') {
-      if (isRateLimitExceeded(`proesc-accounting-probe:${actorId}`, 5, 60000)) {
-        throw new ProescError('Aguarde um minuto antes de consultar novamente.', 429);
-      }
-      return respond(await runProescReadOnlyDiagnostic(admin, actorId, body, transport));
+      throw new ProescError('Consulta contábil V1 aposentada. Use as parcelas Proesc V2.', 410);
     }
     if (action === 'internal_invoice_probe') {
       if (isRateLimitExceeded(`proesc-invoice-probe:${actorId}`, 5, 60000)) {
@@ -121,26 +115,16 @@ export const createHandler = (admin: Admin, transport: typeof fetch = fetch) => 
     };
     if (action === 'test_token' || action === 'internal_probe') {
       if (isRateLimitExceeded(`proesc-test:${actorId}`, 5, 60000)) throw new ProescError('Aguarde um minuto antes de testar novamente.', 429);
-      const credential = object(await rpc('proesc_workspace_service', 'token'));
-      if (typeof credential.token !== 'string' || !credential.token) throw new ProescError('Cadastre o token antes de testar.');
-      const result = await testProescV1Token(credential.token, transport);
-      const current = object(await rpc('proesc_workspace_service', 'token'));
-      if (current.revision !== credential.revision) throw new ProescError('O token foi alterado durante o teste. Teste novamente.', 409);
-      return respond(result);
+      return respond(await handleConnectionAction(admin, actorId,
+        { action: 'test_connection', version: 'v2' }, transport));
     }
     if (action === 'status') {
-      const result = object(await rpc('proesc_workspace_service', action));
+      const result = object(await rpc('proesc_connection_service', action, { version: 'v2' }));
       return respond({ configured: result.configured === true,
         updatedAt: typeof result.updatedAt === 'string' ? result.updatedAt : null });
     }
-    if (action === 'remove_token') {
-      await rpc('proesc_workspace_service', action);
-      return respond({ configured: false });
-    }
-    if (action === 'save_token') {
-      const token = connectionToken('v1', body.token);
-      await rpc('proesc_workspace_service', action, { token });
-      return respond({ configured: true });
+    if (action === 'remove_token' || action === 'save_token') {
+      throw new ProescError('Cadastro V1 aposentado. Use a conexão Proesc V2.', 410);
     }
     const offset = body.offset ?? 0;
     if (!Number.isInteger(offset) || Number(offset) < 0 || Number(offset) > 100000) throw new ProescError('Página de histórico inválida.');

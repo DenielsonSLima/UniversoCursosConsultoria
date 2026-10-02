@@ -1,4 +1,5 @@
 import type { jsPDF } from 'jspdf';
+import { CAIXA_PARTIAL_COMPOSITION_NOTE, caixaPartialCompositionLabel } from '../caixa-composicao.presentation';
 import {
   formatCaixaCompetencia,
   formatCaixaCanonicalCurrency,
@@ -26,6 +27,22 @@ import type {
   CaixaReportTotals,
 } from './caixa-report.types';
 import type { CaixaReportPosicaoTotal } from './caixa-report.posicao-total';
+import type { CaixaFechamentoImplantacao } from '../caixa.types';
+import { caixaFechamentoImplantacaoPresentation } from '../caixa-fechamento-implantacao.presentation';
+
+export const drawFechamentoImplantacao = (pdf: jsPDF, value: CaixaFechamentoImplantacao | undefined, y: number) => {
+  const content = caixaFechamentoImplantacaoPresentation(value);
+  if (!content) return;
+  pdf.setFillColor('#eff6ff');
+  pdf.setDrawColor('#dbeafe');
+  pdf.roundedRect(CONTENT_LEFT, y, CONTENT_WIDTH, 47, 2, 2, 'FD');
+  setText(pdf, COLORS.navy, 12, 'bold');
+  drawText(pdf, content.title, CONTENT_LEFT + 5, y + 5, CONTENT_WIDTH - 10, { maxLines: 1 });
+  setText(pdf, COLORS.slate700, 9);
+  content.lines.forEach((line, index) => {
+    drawText(pdf, line, CONTENT_LEFT + 5, y + 16 + index * 9, CONTENT_WIDTH - 10, { maxLines: 2 });
+  });
+};
 
 export const drawTotalPositionCard = (
   pdf: jsPDF,
@@ -48,7 +65,7 @@ export const drawTotalPositionCard = (
   pdf.setDrawColor(border);
   pdf.roundedRect(x, y, width, height, 2.2, 2.2, 'FD');
   setText(pdf, label, 5.2, 'black');
-  drawText(pdf, 'POSIÇÃO TOTAL NO CORTE', x + 2.0, y + 1.8, width - 4.0, { maxLines: 1 });
+  drawText(pdf, availablePosition?.dados.fechamentoImplantacao ? 'POSIÇÃO NO ENCERRAMENTO OPERACIONAL' : 'POSIÇÃO TOTAL NO CORTE', x + 2.0, y + 1.8, width - 4.0, { maxLines: 1 });
 
   if (!availablePosition) {
     setText(pdf, '#92400e', 9.5, 'black');
@@ -97,6 +114,7 @@ export const drawComposition = (
 ) => {
   const accent = tone === 'emerald' ? COLORS.emerald700 : COLORS.rose700;
   const border = tone === 'emerald' ? COLORS.emerald100 : COLORS.rose100;
+  const partialLabel = caixaPartialCompositionLabel(totals.quantidadeNaoDiscriminada);
   pdf.setFillColor(COLORS.white);
   pdf.setDrawColor(border);
   pdf.roundedRect(x, y, width, 20.5, 2.2, 2.2, 'FD');
@@ -105,7 +123,7 @@ export const drawComposition = (
   setText(pdf, accent, 9.8, 'bold');
   drawText(pdf, formatCaixaCurrency(totals.valorFinal), x + width - 2.5, y + 1.8, undefined, { align: 'right' });
   setText(pdf, COLORS.slate500, 5.2);
-  drawText(pdf, tone === 'emerald' ? 'Ajustes identificados nos recebimentos confirmados' : 'Pagamentos confirmados, sem duplicar lançamentos vinculados', x + 2.5, y + 6.0);
+  drawText(pdf, partialLabel ?? (tone === 'emerald' ? 'Ajustes identificados nos recebimentos confirmados' : 'Pagamentos confirmados, sem duplicar lançamentos vinculados'), x + 2.5, y + 6.0);
   pdf.setDrawColor(border);
   pdf.line(x + 2.5, y + 9.0, x + width - 2.5, y + 9.0);
   const values = [
@@ -124,6 +142,10 @@ export const drawComposition = (
     setText(pdf, COLORS.slate700, 6.0, 'bold');
     drawText(pdf, formatCaixaCurrency(value), columnX, y + 14.2, columnWidth - 1, { maxLines: 1 });
   });
+  if (partialLabel) {
+    setText(pdf, COLORS.slate500, 4.8);
+    drawText(pdf, CAIXA_PARTIAL_COMPOSITION_NOTE, x + 2.5, y + 18.0);
+  }
 };
 
 export const drawSummaryPanels = (pdf: jsPDF, report: CaixaDetailedReport, y: number) => {

@@ -52,7 +52,7 @@ export function buildQueryUrl(resource: Resource, filters: Filters, cursor: Curs
   }
   if (resource === 'invoices') {
     url.searchParams.set('expiration_year', String(integer(cursor.year, 2000, 2099)));
-    url.searchParams.set('expiration_month', String(integer(cursor.month, 1, 12)));
+    url.searchParams.set('expiration_month', String(integer(cursor.month, 1, 12)).padStart(2, '0'));
   }
   return url;
 }

@@ -19,38 +19,65 @@ function setup(response = { data: { configured: true }, error: null }) {
   return { ...exports, calls };
 }
 
-test('cada ação envia a versão selecionada sem fallback', async () => {
+test('cada ação operacional envia V2 sem fallback', async () => {
   const { proescService: service, calls } = setup();
-  for (const version of ['v1', 'v2']) {
-    await service.connectionStatus(version);
-    await service.saveConnection(version, 'synthetic-token');
-    await service.testConnection(version);
-    await service.removeConnection(version);
-  }
-  assert.deepEqual(calls.map(({ body }) => body), ['v1', 'v2'].flatMap((version) => [
-    { action: 'connection_status', version },
-    { action: 'save_connection', version, token: 'synthetic-token' },
-    { action: 'test_connection', version },
-    { action: 'remove_connection', version },
-  ]));
+  await service.connectionStatus('v2');
+  await service.saveConnection('v2', 'synthetic-token');
+  await service.testConnection('v2');
+  await service.removeConnection('v2');
+  assert.deepEqual(calls.map(({ body }) => body), [
+    { action: 'connection_status', version: 'v2' },
+    { action: 'save_connection', version: 'v2', token: 'synthetic-token' },
+    { action: 'test_connection', version: 'v2' },
+    { action: 'remove_connection', version: 'v2' },
+  ]);
   assert.ok(calls.every(({ name }) => name === 'proesc-api'));
 });
 
-test('WAF é enviado só na V2 e vazio preserva o valor remoto', async () => {
+test('chamadas V1 antigas são recusadas antes de acessar a rede', async () => {
   const { proescService: service, calls } = setup();
-  await service.saveConnection('v1', 'synthetic-token', 'synthetic-waf');
+  await assert.rejects(service.connectionStatus('v1'), /V1 foi encerrada/);
+  await assert.rejects(service.saveConnection('v1', 'synthetic-token'), /V1 foi encerrada/);
+  await assert.rejects(service.testConnection('v1'), /V1 foi encerrada/);
+  await assert.rejects(service.removeConnection('v1'), /V1 foi encerrada/);
+  assert.equal(calls.length, 0);
+});
+
+test('aliases de token também usam as ações versionadas V2', async () => {
+  const { proescService: service, calls } = setup();
+  await service.status();
+  await service.saveToken('synthetic-token');
+  await service.testToken();
+  await service.removeToken();
+  assert.deepEqual(calls.map(({ body }) => body), [
+    { action: 'connection_status', version: 'v2' },
+    { action: 'save_connection', version: 'v2', token: 'synthetic-token' },
+    { action: 'test_connection', version: 'v2' },
+    { action: 'remove_connection', version: 'v2' },
+  ]);
+});
+
+test('WAF vazio preserva o valor remoto e preenchido é normalizado', async () => {
+  const { proescService: service, calls } = setup();
   await service.saveConnection('v2', 'synthetic-token', '   ');
   await service.saveConnection('v2', 'synthetic-token', ' synthetic-waf ');
   assert.equal(Object.hasOwn(calls[0].body, 'wafHeader'), false);
-  assert.equal(Object.hasOwn(calls[1].body, 'wafHeader'), false);
-  assert.equal(calls[2].body.wafHeader, 'synthetic-waf');
+  assert.equal(calls[1].body.wafHeader, 'synthetic-waf');
 });
 
-test('cache de configuração separa versões e não contém credenciais', () => {
+test('cache de configuração V2 não contém credenciais', () => {
   const { proescKeys: keys } = setup();
-  assert.notDeepEqual(keys.connection('v1'), keys.connection('v2'));
-  assert.deepEqual(keys.connection('v1'), ['configuracoes', 'proesc', 'connection', 'v1']);
   assert.deepEqual(keys.connection('v2'), ['configuracoes', 'proesc', 'connection', 'v2']);
+});
+
+test('histórico de turmas mantém a consulta de registros existentes', async () => {
+  const { proescService: service, calls } = setup();
+  await service.classes(20);
+  await service.events('synthetic-class', 40);
+  assert.deepEqual(calls.map(({ body }) => body), [
+    { action: 'class_history', offset: 20 },
+    { action: 'class_events', classId: 'synthetic-class', offset: 40 },
+  ]);
 });
 
 test('erro de acesso V2 não dispara tentativa V1', async () => {

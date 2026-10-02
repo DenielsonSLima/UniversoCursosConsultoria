@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { formatCaixaCanonicalCurrency } from '../caixa.formatters.ts';
+import { CAIXA_PARTIAL_COMPOSITION_NOTE } from '../caixa-composicao.presentation.ts';
 import type {
   CaixaComposicaoDados,
   CaixaComposicaoMensalPayload,
@@ -99,15 +100,19 @@ const compositionMetrics = (dados: CaixaComposicaoDados) => [
 const CompositionMetrics = ({
   dados,
   tone,
+  partial,
   className,
 }: {
   dados: CaixaComposicaoDados;
   tone: CompositionTone;
+  partial: boolean;
   className: string;
 }) => (
   <dl className={className}>
     {compositionMetrics(dados).map((metric) => {
       const formattedValue = formatProvenMoney(metric.value);
+      const subtotal = partial && !['Base', 'Diferença a conferir'].includes(metric.label)
+        && formattedValue !== null;
       return (
         <div
           key={metric.label}
@@ -115,6 +120,7 @@ const CompositionMetrics = ({
         >
           <dt className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-slate-500">
             {metric.label}
+            {subtotal ? <span className="mt-0.5 block normal-case tracking-normal">Subtotal identificado</span> : null}
           </dt>
           <dd
             className={`mt-1.5 break-words text-sm font-black tracking-tight ${
@@ -224,6 +230,7 @@ const CompositionCard = ({
           <CompositionMetrics
             dados={section.dados}
             tone={copy.tone}
+            partial={!section.completo}
             className="relative mt-4 hidden grid-cols-3 gap-2 sm:grid"
           />
 
@@ -232,7 +239,7 @@ const CompositionCard = ({
               tabIndex={0}
               className={`flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-xs font-extrabold text-slate-700 transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 motion-reduce:transition-none [&::-webkit-details-marker]:hidden ${classes.focus}`}
             >
-              <span>Ver composição completa</span>
+              <span>Ver componentes disponíveis</span>
               <ChevronDown
                 aria-hidden="true"
                 size={16}
@@ -242,6 +249,7 @@ const CompositionCard = ({
             <CompositionMetrics
               dados={section.dados}
               tone={copy.tone}
+              partial={!section.completo}
               className="mt-2 grid grid-cols-2 gap-2"
             />
           </details>
@@ -252,6 +260,7 @@ const CompositionCard = ({
               <p>
                 <strong>{formatQuantity(section.dados.quantidade_a_conferir)} movimento(s) a conferir.</strong>{' '}
                 {section.observacao}
+                {' '}{CAIXA_PARTIAL_COMPOSITION_NOTE}
               </p>
             </div>
           ) : null}
