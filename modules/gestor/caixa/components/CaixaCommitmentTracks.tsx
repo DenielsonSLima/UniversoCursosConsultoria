@@ -11,6 +11,7 @@ import {
   ReceiptText,
 } from 'lucide-react';
 import type { CaixaContasPagarResumo, CaixaMonthlyStatement } from '../caixa.types';
+import type { CaixaReceivablesPosition } from '../review-pending/caixa-receivables-position.service';
 import {
   formatCaixaCanonicalCurrency,
   formatCaixaCurrency,
@@ -23,6 +24,10 @@ interface CaixaCommitmentTracksProps {
   contasPagar?: CaixaContasPagarResumo;
   isPayablesLoading: boolean;
   hasPayablesError: boolean;
+  onReviewPending?: (context: 'MONTHLY' | 'FUTURE') => void;
+  receivablesPosition?: CaixaReceivablesPosition;
+  isReceivablesLoading?: boolean;
+  hasReceivablesError?: boolean;
 }
 
 const QUANTITY_FORMATTER = new Intl.NumberFormat('pt-BR');
@@ -38,10 +43,14 @@ export const CaixaCommitmentTracks: React.FC<CaixaCommitmentTracksProps> = ({
   contasPagar,
   isPayablesLoading,
   hasPayablesError,
+  onReviewPending,
+  receivablesPosition,
+  isReceivablesLoading = false,
+  hasReceivablesError = false,
 }) => {
   const commitments = statement.compromissos;
   const monthlyDelinquency = commitments.inadimplenciaMensal;
-  const futureReceivables = commitments.receitasFuturas;
+  const monthlyReview = !hasReceivablesError ? receivablesPosition?.monthly : undefined;
 
   return (
     <section aria-labelledby="caixa-commitment-tracks-title" className="space-y-4">
@@ -69,7 +78,7 @@ export const CaixaCommitmentTracks: React.FC<CaixaCommitmentTracksProps> = ({
               <div>
                 <h3 className="text-sm font-extrabold text-emerald-950">Trilha a receber</h3>
                 <p className="mt-0.5 text-[11px] text-emerald-800/70">
-                  Recebido, carteira confirmada e atraso mensal
+                  Visão mensal: recebido, em aberto e atraso da competência
                 </p>
               </div>
             </div>
@@ -92,18 +101,22 @@ export const CaixaCommitmentTracks: React.FC<CaixaCommitmentTracksProps> = ({
             />
             <TrackMetric
               icon={<CalendarClock size={14} className="text-blue-600" aria-hidden="true" />}
-              label={futureReceivables ? 'Em aberto confirmado' : 'A receber'}
-              value={formatCaixaCurrency(futureReceivables?.valorConfirmado ?? commitments.aReceber)}
-              helper={futureReceivables
-                ? `${formatQuantity(futureReceivables.quantidadeElegiveis)} cobrança(s) elegível(is)`
-                : 'Posição canônica em aberto'}
+              label="Em aberto no mês"
+              value={!hasReceivablesError && receivablesPosition
+                ? formatCaixaCanonicalCurrency(receivablesPosition.monthly.openConfirmed) : '—'}
+              helper={hasReceivablesError ? 'Posição mensal indisponível'
+                : isReceivablesLoading || !receivablesPosition ? 'Carregando posição mensal…'
+                  : `${formatQuantity(receivablesPosition.monthly.count)} cobrança(s) da competência · corte ${formatCaixaDate(receivablesPosition.dataCorte)}`}
               tone="blue"
             />
             <TrackMetric
               icon={<AlertTriangle size={14} className="text-amber-600" aria-hidden="true" />}
-              label={`Vencido no mês${monthlyDelinquency.completo ? '' : ' (parcial)'}`}
-              value={formatCaixaCurrency(commitments.receberVencido)}
-              helper={`${formatCaixaPercent(commitments.margemInadimplencia)} da base · corte ${formatCaixaDate(monthlyDelinquency.dataCorte)}`}
+              label={`Vencido no mês${monthlyReview && monthlyReview.reviewCount > 0 ? ' (parcial)' : ''}`}
+              value={!hasReceivablesError && receivablesPosition
+                ? formatCaixaCanonicalCurrency(receivablesPosition.monthly.overdue) : '—'}
+              helper={hasReceivablesError ? 'Posição mensal indisponível'
+                : !receivablesPosition ? 'Carregando posição mensal…'
+                  : `${formatCaixaPercent(commitments.margemInadimplencia)} da base · corte ${formatCaixaDate(receivablesPosition.dataCorte)}`}
               tone="amber"
             />
           </div>
@@ -113,22 +126,21 @@ export const CaixaCommitmentTracks: React.FC<CaixaCommitmentTracksProps> = ({
             {formatQuantity(monthlyDelinquency.quantidadeElegiveis)} cobrança(s).
           </TrackFooter>
 
-          {!monthlyDelinquency.completo || futureReceivables?.completo === false ? (
+          {monthlyReview && monthlyReview.reviewCount > 0 ? (
             <div className="border-t border-amber-100 bg-amber-50/70 px-4 py-3 text-[10px] leading-4 text-amber-900">
               <div className="flex items-start gap-2">
                 <CircleDot size={12} className="mt-0.5 shrink-0 text-amber-600" aria-hidden="true" />
                 <div>
-                  {!monthlyDelinquency.completo ? (
-                    <p>
-                      Inadimplência parcial: {formatQuantity(monthlyDelinquency.quantidadeEmConferencia)} cobrança(s), no valor nominal de{' '}
-                      {formatCaixaCurrency(monthlyDelinquency.valorNominalEmConferencia)}, ainda estão em conferência.
-                    </p>
-                  ) : null}
-                  {futureReceivables?.completo === false ? (
-                    <p className={monthlyDelinquency.completo ? '' : 'mt-1'}>
-                      Carteira futura parcial: {formatQuantity(futureReceivables.quantidadeEmConferencia)} cobrança(s), no valor nominal de{' '}
-                      {formatCaixaCurrency(futureReceivables.valorNominalEmConferencia)}, ainda não integram o confirmado.
-                    </p>
+                  {monthlyReview.reviewCount > 0 ? (
+                    <button type="button" onClick={() => onReviewPending?.('MONTHLY')}
+                      disabled={!onReviewPending} aria-haspopup="dialog"
+                      className="block min-h-11 w-full rounded-lg px-2 py-2 text-left transition hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-700 disabled:cursor-default motion-reduce:transition-none">
+                      <strong className="block">Registros em conferência — mês</strong>
+                      Conferência de dados: {formatQuantity(monthlyReview.reviewCount)} registro(s) local(is) (valor nominal cadastrado{' '}
+                      {formatCaixaCanonicalCurrency(monthlyReview.reviewNominal)}), não incluídos nos valores confirmados.
+                      <span className="ml-1 font-extrabold underline underline-offset-2">Ver registros</span>
+                      <span className="mt-1 block">Estes registros não comprovam cobrança em aberto nem inadimplência. Podem corresponder a divergências de importação, quitações ou cancelamentos ainda não conciliados.</span>
+                    </button>
                   ) : null}
                 </div>
               </div>

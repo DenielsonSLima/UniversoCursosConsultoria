@@ -9,6 +9,7 @@ import { caixaQueryKeys } from './caixa.service';
 import { caixaReportQueryKeys } from './report/caixa-report.service';
 import { caixaConveniosQueryKeys } from './caixa-convenios.service';
 import { caixaComposicaoQueryKeys } from './caixa-composicao.queries';
+import { caixaReviewKeys } from './review-pending/caixa-review-pending.service';
 
 const DEBOUNCE_MS = 500;
 
@@ -48,8 +49,10 @@ export const useCaixaRealtime = () => {
         void queryClient.invalidateQueries({ queryKey: caixaReportQueryKeys.monthly, refetchType });
         void queryClient.invalidateQueries({ queryKey: caixaConveniosQueryKeys.root, refetchType });
         void queryClient.invalidateQueries({ queryKey: caixaComposicaoQueryKeys.root, refetchType });
+        void queryClient.invalidateQueries({ queryKey: caixaReviewKeys.root, refetchType });
       } else {
         pendingFinancialScopes.forEach((scope) => {
+          void queryClient.invalidateQueries({ queryKey: caixaReviewKeys.forPolo(scope), refetchType });
           void queryClient.invalidateQueries({
             queryKey: caixaQueryKeys.statementsForPolo(scope),
             refetchType,

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   CalendarDays,
@@ -34,6 +34,10 @@ import { CaixaAdvancedAnalysis } from './components/CaixaAdvancedAnalysis';
 import { CaixaLinkedCapitalOverview } from './components/CaixaLinkedCapitalOverview';
 import { CaixaStructuralOverview } from './components/CaixaStructuralOverview';
 import { caixaComposicaoQueryOptions } from './caixa-composicao.queries';
+import { CaixaReviewPendingModal } from './review-pending/CaixaReviewPendingModal';
+import { normalizeReviewPolo } from './review-pending/caixa-review-pending.service';
+import { caixaReceivablesPositionQueryOptions } from './review-pending/caixa-receivables-position.service';
+import type { CaixaReviewContext } from './review-pending/caixa-review-pending.contract';
 
 interface CaixaPageProps {
   poloId?: string | null;
@@ -66,6 +70,13 @@ const CaixaScopePage: React.FC<CaixaScopePageProps> = ({
   const [selectedPolo, setSelectedPolo] = useState(
     poloId || (canViewConsolidated ? 'todos' : ''),
   );
+  const [review, setReview] = useState<{ scope: string; context: CaixaReviewContext } | null>(null);
+  const reviewScope = `${selectedPolo}:${competencia}`;
+  useEffect(() => { setReview(null); }, [reviewScope]);
+  const positionQuery = useQuery({
+    ...caixaReceivablesPositionQueryOptions(normalizeReviewPolo(selectedPolo), competencia),
+    enabled: Boolean(selectedPolo),
+  });
 
   const { data: polos = [] } = useQuery({
     ...caixaPolosQueryOptions(),
@@ -91,6 +102,8 @@ const CaixaScopePage: React.FC<CaixaScopePageProps> = ({
     ...caixaDashboardQueryOptions(selectedPolo, competencia),
     enabled: Boolean(selectedPolo),
   });
+  const positionCutMismatch = Boolean(positionQuery.data && statement
+    && positionQuery.data.dataCorte !== statement.compromissos.inadimplenciaMensal.dataCorte);
 
   const {
     data: financiamentoResumo,
@@ -271,7 +284,17 @@ const CaixaScopePage: React.FC<CaixaScopePageProps> = ({
         isCompositionLoading={isComposicaoLoading}
         hasCompositionError={hasComposicaoError}
         onRetryComposition={() => { void refetchComposicao(); }}
+        receivablesPosition={positionQuery.data}
+        isReceivablesLoading={positionQuery.isPending}
+        hasReceivablesError={positionQuery.isError || positionCutMismatch}
+        onRetryReceivables={() => { void positionQuery.refetch(); void refetchStatement(); }}
+        onReviewPending={(context) => setReview({ scope: reviewScope, context })}
       />
+
+      {review?.scope === reviewScope ? <CaixaReviewPendingModal
+        key={`${reviewScope}:${review.context}`} poloId={normalizeReviewPolo(selectedPolo)}
+        poloLabel={selectedPolo === 'todos' ? 'Todos os polos' : formatPoloName(visiblePolos.find((polo) => polo.id === selectedPolo))}
+        competencia={competencia} context={review.context} onClose={() => setReview(null)} /> : null}
 
       {(Boolean(error) || (!isLoading && !statement)) ? (
         <CaixaContasPagarResumoCard

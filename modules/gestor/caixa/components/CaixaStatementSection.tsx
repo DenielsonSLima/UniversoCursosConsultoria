@@ -8,6 +8,8 @@ import { CaixaCompositionCards } from './CaixaCompositionCards';
 import { CaixaDistributionDonuts } from './CaixaDistributionDonuts';
 import { CaixaFlowHero } from './CaixaFlowHero';
 import { CaixaMovementAndAccounts } from './CaixaMovementAndAccounts';
+import { CaixaReceivablesPortfolio } from '../review-pending/CaixaReceivablesPortfolio';
+import type { CaixaReceivablesPosition } from '../review-pending/caixa-receivables-position.service';
 
 interface CaixaStatementSectionProps {
   statement?: CaixaMonthlyStatement;
@@ -22,6 +24,11 @@ interface CaixaStatementSectionProps {
   isCompositionLoading?: boolean;
   hasCompositionError?: boolean;
   onRetryComposition?: () => void;
+  onReviewPending?: (context: 'MONTHLY' | 'FUTURE') => void;
+  receivablesPosition?: CaixaReceivablesPosition;
+  isReceivablesLoading?: boolean;
+  hasReceivablesError?: boolean;
+  onRetryReceivables?: () => void;
 }
 
 export const CaixaStatementSection: React.FC<CaixaStatementSectionProps> = ({
@@ -37,6 +44,11 @@ export const CaixaStatementSection: React.FC<CaixaStatementSectionProps> = ({
   isCompositionLoading = false,
   hasCompositionError = false,
   onRetryComposition,
+  onReviewPending,
+  receivablesPosition,
+  isReceivablesLoading = false,
+  hasReceivablesError = false,
+  onRetryReceivables,
 }) => {
   if (isLoading) {
     return (
@@ -84,7 +96,16 @@ export const CaixaStatementSection: React.FC<CaixaStatementSectionProps> = ({
         contasPagar={contasPagar}
         isPayablesLoading={isPayablesLoading}
         hasPayablesError={hasPayablesError}
+        onReviewPending={onReviewPending}
+        receivablesPosition={receivablesPosition}
+        isReceivablesLoading={isReceivablesLoading}
+        hasReceivablesError={hasReceivablesError}
       />
+
+      <CaixaReceivablesPortfolio position={receivablesPosition}
+        loading={isReceivablesLoading} hasError={hasReceivablesError}
+        onRetry={onRetryReceivables ?? onRetry}
+        onReview={() => onReviewPending?.('FUTURE')} />
 
       <section aria-labelledby="caixa-composition-section-title">
         <div className="mb-4 px-1">

@@ -1,10 +1,21 @@
 # Proesc V2 — conferência, abertura e publicação 4.8.149
 
-Estado: BACKEND APLICADO; FRONTEND VALIDADO PARA PUBLICAÇÃO AUTORIZADA.
+Estado: PUBLICADA E VERSÃO PÚBLICA CONFERIDA — 4.8.149.
 Base GitHub conferida: `22d563b3c5e61becc1e5ba78b878ec2c337b93d1` (4.8.148).
 PR240 contém este manifesto; produção somente após CI e Preview aprovados.
 O status final de build/deploy deve ser conferido no GitHub/Vercel; este registro
 não transforma preparação local em publicação comprovada.
+
+## Publicação concluída
+
+PR240 incorporado por squash `a2a0c0d0e3f57380e5414a6bdc8249f157d39504`.
+Qualidade e versão aprovadas no HEAD `07592e03062f73a323cc971df2d54249015f54d0`.
+Preview e deploy de produção Vercel SUCCESS. Site público serviu
+`/assets/main-SiLT_p6_.js`, contendo versão4.8.149 e seu resumo exato.
+Safari local autenticado mostrou o PDF real com recebido1.560,00,
+desconto99,50 e diferença-19,90; produção estava na tela de login, portanto
+o smoke financeiro autenticado em produção permanece pendente.
+O pedido posterior de visão mensal/carteira geral e modal é outro lote.
 
 ## Escopo e aceite
 
