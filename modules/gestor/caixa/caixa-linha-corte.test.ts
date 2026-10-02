@@ -248,8 +248,11 @@ test('CaixaPage monta CaixaLinhaCorteCard preservando a integridade dos demais c
   const statementSource = readFileSync(
     join(process.cwd(), 'modules/gestor/caixa/components/CaixaStatementSection.tsx'), 'utf8',
   );
-  assert.match(statementSource, /<CaixaMetricCard/);
+  assert.match(statementSource, /<CaixaFlowHero/);
+  assert.match(statementSource, /<CaixaCommitmentTracks/);
+  assert.match(statementSource, /<CaixaCompositionCards/);
   assert.match(statementSource, /<CaixaReconciliationCard/);
+  assert.match(pageSource, /<CaixaAdvancedAnalysis/);
   assert.match(pageSource, /<CaixaFinanciamentoResumoCard/);
   assert.match(pageSource, /<CaixaPatrimonioResumoCard/);
   assert.match(pageSource, /<CaixaPosicaoLiquidaResumoCard/);
