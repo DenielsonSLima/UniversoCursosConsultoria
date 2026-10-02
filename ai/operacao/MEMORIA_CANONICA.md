@@ -1,6 +1,6 @@
 # Memória canônica do projeto
 
-Atualizada em: 2026-09-27
+Atualizada em: 2026-10-01
 
 ## Finalidade
 
@@ -88,3 +88,15 @@ Contrato vigente: [ciclos financeiros técnicos](../../docs/decisions/ciclos-tec
 - Patch restrito à leitura dos segredos Banese/Push, usado em três workers, com uma repetição, prazo total e metadados sanitizados. Sem alteração de dados financeiros, credenciais ou cron.
 - Edge conciliação v101, Push v16 e cancelamento v6 publicadas via MCP. 45 testes e revisão aprovados; tipagem cancelamento mantém erro preexistente reproduzido no remoto, sem alteração financeira. Smoke natural: 14 execuções HTTP200; duas falhas504 internas recuperadas na segunda tentativa. A instabilidade externa não foi declarada eliminada.
 - Registro: registros/alteracoes/2026-09-13-workers-configuracao-resiliente.md.
+
+## Proesc V2 operacional — backend ativado (01/10/2026)
+
+- O usuário determinou consultar as turmas/alunos existentes pela V2 e encerrar rede V1. A [decisão V2](../../docs/decisions/proesc-v2-operacional.md) e a [skill única](integracoes/proesc/SKILL.md) substituem orientações antigas de selecionar V1; provas históricas não são apagadas nem usadas como fallback de rede.
+- `/invoices` exige mês de dois dígitos (`09`). Setembro retornou 308 parcelas/16 páginas; a ausência anterior com `9` não era ausência financeira. `PAGAMENTO PARCIAL`/`SUPERIOR` não comprovam saldo: preservar quitações e componentes contábeis anteriores; ausência V2 não comprova cancelamento.
+- Sete migrations V2 e Edge `proesc-api` v28 implantadas via MCP; backend ativado às 22h21 de Brasília. FULL completo: 1.971 pessoas e 12.814 parcelas em 47 meses; 402/402 matrículas financeiras de 400 alunos conferidas em dez turmas. Foram aplicadas 38 quitações (R$ 9.743,70), confirmadas 2.532 abertas e preservados 3.820 pagamentos. Duas parciais e 25 obrigações ausentes continuam em conferência; 6.422 parcelas sem vínculo local não geraram cobranças. [Registro da migração](registros/alteracoes/2026-10-01-proesc-v2-operacional.md).
+- Runtimes V1 desligados, rotas antigas HTTP410 e agendamento V2 habilitado, sem fallback. Caixa de setembro no polo conferido: base R$ 46.933,90, 173 elegíveis, uma pendência de R$ 279,90 (antes 38/R$ 10.636,20); vencido no corte R$ 23.420,70 e margem 49,90%. O indicador ainda não é completo. Banese/541 contas fora do Proesc e 402 matrículas preservados integralmente.
+- Fonte V2, identidade inequívoca, principal/vencimento, opt-out, cancelamentos antigos e pagamentos locais cercam a projeção. Banese e fatos acadêmicos/ciclos já comprovados ficam preservados. Classificação de ciclo desconhecida não vira C1 pela quantidade de parcelas.
+- Configuração e monitor V2 preparados localmente; publicação frontend e smoke autenticado ainda não atestados. Não confundir implantação da Edge/banco com publicação do site.
+- Correção posterior autorizada e aplicada: abertura operacional zero em 01/10 apenas no polo Japoatã/conta Proesc; posição de outubro R$ 1.300,00, sem carregar R$ 3.139,90 históricos. Quatro composições aprovadas exibem desconto calculado de R$ 19,90 cada; uma atrasada conserva diferença não discriminada. Não confundir desconto calculado por regra com componente comprovado pela API, nem estender a aprovação a outras parcelas. [Correção de abertura/composição](registros/alteracoes/2026-10-01-proesc-v2-virada-composicao.md).
+- Ampliação posterior autorizada: abertura zero nos quatro polos e encerramento operacional separado em 30/09, histórico intacto. Outubro Japoatã R$ 1.300,00, Porto R$ 260,00, demais zero. Quinta composição calculada em Porto; política automática desde 01/10 limitada às regras homologadas T43/T44/T45 e pagamentos pontuais com identidade/valor/configuração comprovados. Subtotais conhecidos não desaparecem por um componente desconhecido. [Entrega 4.8.149, testes e publicação](registros/alteracoes/2026-10-01-proesc-v2-fechamento-publicacao.md).
+- Reconferência dirigida: 27 Proesc em revisão (25 ausentes e duas parciais), incluindo as três de outubro. Matrícula x Financeiro retornou HTTP401 com token atual; Pessoas/Parcelas HTTP200. Tarifas de R$ 3,97 vistas no extrato não foram fornecidas pelas consultas V2 e não viraram despesa automática. Liberação bancária não substitui data de pagamento.

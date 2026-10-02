@@ -119,6 +119,41 @@ test('fonte indisponível não apresenta ausência como zero', () => {
   assert.doesNotMatch(html, /Total recebido[\s\S]{0,180}R\$ 0,00/);
 });
 
+test('Japoatã mantém desconto conhecido de 79,60 com um recebimento ainda em conferência', () => {
+  const partial: CaixaComposicaoSecao = {
+    disponivel: true, completo: false, motivo: 'DADOS_INCOMPLETOS',
+    observacao: 'Uma composição ainda não foi discriminada.',
+    dados: {
+      total: '1300.00', quantidade: 5, base: '1399.50',
+      juros: '0.00', multa: '0.00', acrescimo: '0.00', desconto: '79.60',
+      diferenca_a_conferir: '-19.90', quantidade_a_conferir: 1,
+    },
+  };
+  const html = render(payload(partial));
+  for (const value of ['1.300,00', '1.399,50', '79,60', '-19,90']) {
+    assert.ok(html.includes(`R$ ${value}`));
+  }
+  assert.match(html, /Subtotal identificado/);
+  assert.match(html, /Componentes não informados não integram os subtotais/);
+  assert.match(html, /1 movimento\(s\) a conferir/);
+  assert.match(html, /Ver componentes disponíveis/);
+  assert.doesNotMatch(html, /79,60[\s\S]{0,20}Composição comprovada/);
+});
+
+test('componentes inteiramente desconhecidos continuam travessão sem subtotal zero', () => {
+  const html = render(payload({
+    disponivel: true, completo: false, motivo: 'DADOS_INCOMPLETOS',
+    observacao: 'Nenhum componente informado.',
+    dados: {
+      total: '260.00', quantidade: 1, base: '279.90',
+      juros: null, multa: null, acrescimo: null, desconto: null,
+      diferenca_a_conferir: '-19.90', quantidade_a_conferir: 1,
+    },
+  }));
+  assert.match(html, /aria-label="Desconto: valor não comprovado"/);
+  assert.doesNotMatch(html, /Subtotal identificado/);
+});
+
 test('disclosure móvel é navegável por teclado e respeita movimento reduzido', () => {
   const html = render(payload());
   assert.match(html, /<details class="group relative mt-4 sm:hidden">/);

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Proesc API — Universo Cursos"
+  short_description: "Proesc V2: pessoas, vínculos e conciliação financeira"
+  default_prompt: "Use $universo-proesc-api para consultar a V2 e validar pessoas, matrículas e parcelas preservando as provas financeiras históricas."

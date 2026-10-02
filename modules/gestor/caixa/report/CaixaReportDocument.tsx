@@ -1,4 +1,6 @@
 import React, { useMemo } from 'react';
+import { CAIXA_PARTIAL_COMPOSITION_NOTE, caixaPartialCompositionLabel } from '../caixa-composicao.presentation';
+import { caixaFechamentoImplantacaoPresentation } from '../caixa-fechamento-implantacao.presentation';
 import DocumentHeader from '../../components/DocumentHeader';
 import ReportWatermark from '../../relatorios/components/ReportWatermark';
 import {
@@ -75,7 +77,7 @@ const PositionTotalMetric: React.FC<{
       <div className="flex items-start justify-between gap-1">
         <div className="min-w-0">
           <p className="text-[7px] font-black uppercase tracking-wide text-blue-100">
-            Posição total no corte
+            {dados.fechamentoImplantacao ? 'Posição no encerramento operacional' : 'Posição total no corte'}
           </p>
           <p className={`mt-0.5 text-[11px] font-black leading-none ${
             totalIsNegative ? 'text-rose-300' : 'text-emerald-300'
@@ -175,7 +177,8 @@ const SummaryPage: React.FC<{ report: CaixaDetailedReport }> = ({ report }) => {
                 Composição dos recebimentos
               </p>
               <p className="mt-0.5 text-[7.5px] text-slate-600">
-                Ajustes identificados nos recebimentos confirmados
+                {caixaPartialCompositionLabel(report.totaisRecebimentos.quantidadeNaoDiscriminada)
+                  ?? 'Ajustes identificados nos recebimentos confirmados'}
               </p>
             </div>
             <strong className="text-sm text-emerald-700">
@@ -190,6 +193,8 @@ const SummaryPage: React.FC<{ report: CaixaDetailedReport }> = ({ report }) => {
             <p>Desconto<br /><strong>{formatCaixaCurrency(report.totaisRecebimentos.descontoIdentificado)}</strong></p>
             <p>Diferença a conferir<br /><strong>{formatCaixaCurrency(report.totaisRecebimentos.diferencaNaoDiscriminada)}</strong></p>
           </div>
+          {report.totaisRecebimentos.quantidadeNaoDiscriminada > 0
+            ? <p className="mt-1 text-[7px] text-slate-600">{CAIXA_PARTIAL_COMPOSITION_NOTE}</p> : null}
         </div>
 
         <div className="rounded-xl border border-rose-200 bg-white p-2.5">
@@ -199,7 +204,8 @@ const SummaryPage: React.FC<{ report: CaixaDetailedReport }> = ({ report }) => {
                 Composição das despesas
               </p>
               <p className="mt-0.5 text-[7.5px] text-slate-600">
-                Pagamentos confirmados, sem duplicar lançamentos vinculados
+                {caixaPartialCompositionLabel(report.totaisDespesas.quantidadeNaoDiscriminada)
+                  ?? 'Pagamentos confirmados, sem duplicar lançamentos vinculados'}
               </p>
             </div>
             <strong className="text-sm text-rose-700">
@@ -214,6 +220,8 @@ const SummaryPage: React.FC<{ report: CaixaDetailedReport }> = ({ report }) => {
             <p>Desconto<br /><strong>{formatCaixaCurrency(report.totaisDespesas.descontoIdentificado)}</strong></p>
             <p>Diferença a conferir<br /><strong>{formatCaixaCurrency(report.totaisDespesas.diferencaNaoDiscriminada)}</strong></p>
           </div>
+          {report.totaisDespesas.quantidadeNaoDiscriminada > 0
+            ? <p className="mt-1 text-[7px] text-slate-600">{CAIXA_PARTIAL_COMPOSITION_NOTE}</p> : null}
         </div>
       </div>
 
@@ -231,6 +239,18 @@ const SummaryPage: React.FC<{ report: CaixaDetailedReport }> = ({ report }) => {
       <CaixaReportSummaryBreakdowns report={report} />
     </div>
   );
+};
+
+const ClosingPage: React.FC<{ report: CaixaDetailedReport }> = ({ report }) => {
+  const content = caixaFechamentoImplantacaoPresentation(
+    report.posicaoTotal.disponivel ? report.posicaoTotal.dados.fechamentoImplantacao : undefined,
+  );
+  return content ? (
+    <section className="rounded-xl border border-blue-100 bg-blue-50 p-5 text-blue-950">
+      <h2 className="text-base font-extrabold">{content.title}</h2>
+      {content.lines.map((line) => <p className="mt-5 text-xs leading-5" key={line}>{line}</p>)}
+    </section>
+  ) : null;
 };
 
 const SectionHeading: React.FC<{
@@ -261,8 +281,9 @@ export const CaixaReportDocument: React.FC<{
       report.despesas,
       report.analiseRecorrente.turmas,
       report.convenios.disponivel ? report.convenios.dados.itens : [],
+      report.posicaoTotal.disponivel && Boolean(report.posicaoTotal.dados.fechamentoImplantacao),
     ),
-    [report.analiseRecorrente.turmas, report.convenios, report.despesas, report.recebimentos],
+    [report.analiseRecorrente.turmas, report.convenios, report.despesas, report.recebimentos, report.posicaoTotal],
   );
   const polo = {
     ...report.institucional,
@@ -319,6 +340,7 @@ export const CaixaReportDocument: React.FC<{
 
             <div data-caixa-report-content className="relative z-10 min-h-0 pl-[7mm]">
               {page.section === 'RESUMO' && <SummaryPage report={report} />}
+              {page.section === 'FECHAMENTO_IMPLANTACAO' && <ClosingPage report={report} />}
               {page.section === 'POSICOES_COMPLEMENTARES' && (
                 <CaixaReportNonOperationalPositions report={report} />
               )}

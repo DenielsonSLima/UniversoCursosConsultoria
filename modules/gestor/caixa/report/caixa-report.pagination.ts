@@ -7,6 +7,7 @@ import type { CaixaConvenioResumoItem } from '../caixa-convenios.service';
 
 export type CaixaReportSection =
   | 'RESUMO'
+  | 'FECHAMENTO_IMPLANTACAO'
   | 'POSICOES_COMPLEMENTARES'
   | 'CONVENIOS'
   | 'RECEBIMENTOS'
@@ -34,18 +35,23 @@ export const buildCaixaReportPages = (
   expenses: CaixaReportExpense[],
   recurringClasses: CaixaReportRecurringClass[],
   convenios: CaixaConvenioResumoItem[] = [],
+  hasClosing = false,
 ): CaixaReportPage[] => {
   const pages: CaixaReportPage[] = [{
     key: 'summary',
     section: 'RESUMO',
     sectionPage: 1,
     rows: [],
-  }, {
+  }];
+  if (hasClosing) pages.push({
+    key: 'closing', section: 'FECHAMENTO_IMPLANTACAO', sectionPage: 1, rows: [],
+  });
+  pages.push({
     key: 'positions',
     section: 'POSICOES_COMPLEMENTARES',
     sectionPage: 1,
     rows: [],
-  }];
+  });
 
   chunk(convenios, 6).forEach((rows, index) => {
     pages.push({

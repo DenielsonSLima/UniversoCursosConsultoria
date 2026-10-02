@@ -19,6 +19,7 @@ import type {
   CaixaPosicaoTotalResumo,
 } from '../caixa.types';
 import { formatCaixaCanonicalCurrency, formatCaixaDate } from '../caixa.formatters';
+import { caixaFechamentoImplantacaoPresentation } from '../caixa-fechamento-implantacao.presentation';
 
 interface CaixaStructuralOverviewProps {
   posicaoTotal?: CaixaPosicaoTotalResumo;
@@ -52,6 +53,7 @@ export const CaixaStructuralOverview: React.FC<CaixaStructuralOverviewProps> = (
 }) => {
   const totalAvailable = posicaoTotal?.disponivel === true;
   const totalData = totalAvailable ? posicaoTotal.dados : undefined;
+  const fechamento = caixaFechamentoImplantacaoPresentation(totalData?.fechamentoImplantacao);
   const totalNegative = totalData?.valorTotalLiquido.startsWith('-') ?? false;
   const liquidNegative = posicaoLiquida?.valorLiquido.startsWith('-') ?? false;
 
@@ -99,9 +101,9 @@ export const CaixaStructuralOverview: React.FC<CaixaStructuralOverviewProps> = (
           ) : (
             <div className="grid items-stretch gap-2 md:grid-cols-[1fr_auto_1fr_auto_1fr_auto_1.2fr] md:gap-3">
               <EquationMetric
-                label="Caixa registrado"
+                label={fechamento ? 'Caixa no encerramento operacional' : 'Caixa registrado'}
                 value={formatCaixaCanonicalCurrency(totalData.saldoCaixaRegistrado)}
-                helper="Saldo contábil no corte"
+                helper={fechamento ? 'Inclui o ajuste de implantação Proesc' : 'Saldo contábil no corte'}
                 icon={<CircleDollarSign size={15} aria-hidden="true" />}
                 tone="blue"
               />
@@ -136,6 +138,13 @@ export const CaixaStructuralOverview: React.FC<CaixaStructuralOverviewProps> = (
           )}
         </div>
       </header>
+
+      {fechamento ? (
+        <aside className="border-b border-blue-100 bg-blue-50 px-5 py-4 text-xs leading-5 text-blue-950 sm:px-7" aria-label={fechamento.title}>
+          <h4 className="font-extrabold">{fechamento.title}</h4>
+          {fechamento.lines.map((line) => <p key={line}>{line}</p>)}
+        </aside>
+      ) : null}
 
       <div className="grid gap-0 xl:grid-cols-[0.92fr_1.08fr]">
         <article className="border-b border-slate-200 p-5 sm:p-7 xl:border-b-0 xl:border-r">

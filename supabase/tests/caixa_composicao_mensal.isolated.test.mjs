@@ -19,6 +19,9 @@ const migration = readFileSync(new URL(
 ), 'utf8');
 
 const signature = 'public.get_caixa_composicao_mensal_secure(uuid,date)';
+const subtotalsMigration = readFileSync(new URL(
+  '../migrations/20261002011300_caixa_composition_known_subtotals.sql', import.meta.url,
+), 'utf8');
 const poloA = '00000000-0000-0000-0000-000000000001';
 const poloB = '00000000-0000-0000-0000-000000000002';
 const poloEmpty = '00000000-0000-0000-0000-000000000003';
@@ -214,6 +217,20 @@ test('composição mensal é canônica, isolada e suporta mais de 300 movimentos
     `);
     await setAccess();
 
+    const before = await call();
+    assert.equal(before.recebimentos.dados.desconto, null, 'Reproduces hidden known components');
+    const fingerprint = async () => (await db.query(`SELECT
+      (SELECT jsonb_agg(to_jsonb(r) ORDER BY id) FROM test_caixa.receipts r) receipts,
+      (SELECT jsonb_agg(to_jsonb(e) ORDER BY id) FROM test_caixa.expenses e) expenses
+    `)).rows[0];
+    const factsBefore = await fingerprint();
+    const metadataBefore = (await db.query(`SELECT to_jsonb(p)-'prosrc' AS metadata
+      FROM pg_proc p WHERE oid='${signature}'::regprocedure`)).rows[0].metadata;
+    await db.exec(subtotalsMigration);
+    assert.deepEqual(await fingerprint(), factsBefore, 'No financial facts changed');
+    assert.deepEqual((await db.query(`SELECT to_jsonb(p)-'prosrc' AS metadata
+      FROM pg_proc p WHERE oid='${signature}'::regprocedure`)).rows[0].metadata,
+    metadataBefore, 'Owner, ACL and security metadata preserved');
     const payload = await call();
     assert.equal(payload.versao, 1);
     assert.equal(payload.competencia, '2026-10-01');
@@ -223,8 +240,8 @@ test('composição mensal é canônica, isolada e suporta mais de 300 movimentos
     assert.equal(payload.polo_id, poloA);
     assert.equal(typeof payload.gerado_em, 'string');
     assert.deepEqual(payload.recebimentos.dados, {
-      total: '3012.00', quantidade: 301, base: '3010.00', juros: null,
-      multa: null, acrescimo: null, desconto: null,
+      total: '3012.00', quantidade: 301, base: '3010.00', juros: '0.00',
+      multa: '0.00', acrescimo: '0.00', desconto: '0.00',
       diferenca_a_conferir: '2.00', quantidade_a_conferir: 1,
     });
     assert.equal(payload.recebimentos.disponivel, true);
@@ -232,12 +249,33 @@ test('composição mensal é canônica, isolada e suporta mais de 300 movimentos
     assert.equal(payload.recebimentos.motivo, 'DADOS_INCOMPLETOS');
     assert.match(payload.recebimentos.observacao, /1 recebimento/);
     assert.deepEqual(payload.despesas.dados, {
-      total: '145.00', quantidade: 2, base: '140.00', juros: null,
-      multa: null, acrescimo: null, desconto: null,
+      total: '145.00', quantidade: 2, base: '140.00', juros: '10.00',
+      multa: '0.00', acrescimo: '0.00', desconto: '0.00',
       diferenca_a_conferir: '-5.00', quantidade_a_conferir: 1,
     });
     assert.equal(payload.despesas.completo, false);
     assert.equal(payload.despesas.motivo, 'DADOS_INCOMPLETOS');
+    assert.match(payload.recebimentos.observacao, /subtotais identificados/);
+
+    // Unknown-only is still null, not a fabricated zero. A known discount
+    // survives an incomplete sibling exactly as in October's Proesc receipts.
+    await db.exec(`UPDATE test_caixa.receipts SET juros=NULL WHERE polo_id='${poloA}';
+      UPDATE test_caixa.receipts SET desconto=19.90, valor_base=29.90
+      WHERE id='10000000-0000-0000-0000-000000000001'`);
+    const known = await call();
+    assert.equal(known.recebimentos.dados.juros, null);
+    assert.equal(known.recebimentos.dados.desconto, '19.90');
+    assert.equal(known.recebimentos.dados.total, '3012.00');
+    assert.equal(known.recebimentos.completo, false);
+    await db.exec(`UPDATE test_caixa.receipts SET juros=0 WHERE composicao_status='SEM_DIFERENCA_FINANCEIRA';
+      UPDATE test_caixa.receipts SET desconto=0,valor_base=10
+      WHERE id='10000000-0000-0000-0000-000000000001'`);
+
+    // Complete sections retain the strict component equation.
+    await db.exec(`UPDATE test_caixa.receipts SET juros=1 WHERE polo_id='${poloB}'`);
+    await setAccess({ role: 'service_role' });
+    await expectCode(() => call(poloB), 'P0001');
+    await db.exec(`UPDATE test_caixa.receipts SET juros=0 WHERE polo_id='${poloB}'`);
 
     await setAccess({ allowedPolo: poloEmpty });
     const empty = await call(poloEmpty);

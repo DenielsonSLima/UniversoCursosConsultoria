@@ -1,6 +1,6 @@
 import { object, ProescError } from './contract.ts';
 import { connectionToken, connectionWaf, proescVersion, type ProescVersion } from './connection-contract.ts';
-import { testProescV1Token, testProescV2Token } from './test-token.ts';
+import { testProescV2Token } from './test-token.ts';
 
 type Admin = { rpc(name: string, args: Record<string, unknown>): PromiseLike<{ data?: unknown; error?: unknown }> };
 export const connectionActions = new Set(['connection_status', 'save_connection', 'remove_connection', 'test_connection']);
@@ -22,10 +22,10 @@ export async function handleConnectionAction(admin: Admin, actorId: string, inpu
       updatedAt: typeof result.updatedAt === 'string' ? result.updatedAt : null,
       wafConfigured: version === 'v2' && result.wafConfigured === true };
   }
+  if (version !== 'v2') throw new ProescError('A conexão V1 foi aposentada. Use a conexão Proesc V2.', 410);
   if (body.action === 'save_connection') {
     const token = connectionToken(version, body.token);
-    if (version === 'v1' && body.wafHeader) throw new ProescError('A liberação WAF pertence à conexão V2.');
-    const wafHeader = version === 'v2' ? connectionWaf(body.wafHeader) : undefined;
+    const wafHeader = connectionWaf(body.wafHeader);
     await connectionRpc(admin, actorId, version, 'save', { token, ...(wafHeader ? { wafHeader } : {}) });
     return { version, configured: true };
   }
@@ -37,9 +37,8 @@ export async function handleConnectionAction(admin: Admin, actorId: string, inpu
   const credential = await connectionRpc(admin, actorId, version, 'credential');
   const token = connectionToken(version, credential.token);
   if (typeof credential.revision !== 'string' || !credential.revision) throw new ProescError('Conexão indisponível.', 409);
-  const waf = version === 'v2' ? connectionWaf(credential.wafHeader ?? undefined) : undefined;
-  const result = version === 'v1' ? await testProescV1Token(token, transport)
-    : await testProescV2Token(token, waf, transport);
+  const waf = connectionWaf(credential.wafHeader ?? undefined);
+  const result = await testProescV2Token(token, waf, transport);
   const current = await connectionRpc(admin, actorId, version, 'credential');
   if (current.revision !== credential.revision || current.token !== credential.token
     || current.wafHeader !== credential.wafHeader) {

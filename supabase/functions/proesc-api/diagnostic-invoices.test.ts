@@ -101,7 +101,7 @@ Deno.test('invoice probe usa GET V2, revisão da conexão, redirecionamento bloq
     assert(url.origin === 'https://api.proesc.com' && url.pathname === '/api/v2/invoices');
     assert(url.searchParams.size === 4 && url.searchParams.get('page') === '1');
     assert(url.searchParams.get('unit_id') === '1' && url.searchParams.get('expiration_year') === '2026');
-    assert(url.searchParams.get('expiration_month') === '9' && !url.searchParams.has('token'));
+    assert(url.searchParams.get('expiration_month') === '09' && !url.searchParams.has('token'));
     assert(init?.method === 'GET' && init.redirect === 'error' && init.signal !== undefined);
     const headers = new Headers(init.headers);
     assert(headers.get('Authorization') === `Bearer ${token}` && headers.get('x-proesc-waf') === wafHeader);
@@ -130,7 +130,7 @@ Deno.test('invoice probe consulta todas as unidades somente por opção explíci
     assert(url.origin === 'https://api.proesc.com' && url.pathname === '/api/v2/invoices');
     assert(url.searchParams.size === 3 && !url.searchParams.has('unit_id'));
     assert(url.searchParams.get('page') === '1' && url.searchParams.get('expiration_year') === '2026');
-    assert(url.searchParams.get('expiration_month') === '9');
+    assert(url.searchParams.get('expiration_month') === '09');
     assert(init?.method === 'GET' && init.redirect === 'error');
     return Promise.resolve(page([invoice]));
   };

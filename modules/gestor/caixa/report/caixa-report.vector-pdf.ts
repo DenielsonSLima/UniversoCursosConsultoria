@@ -16,7 +16,7 @@ import {
   registerInterFont,
   type PdfWithInternals,
 } from './caixa-report.vector-pdf.shared';
-import { drawSummaryPage } from './caixa-report.vector-pdf.summary';
+import { drawSummaryPage, drawFechamentoImplantacao } from './caixa-report.vector-pdf.summary';
 import { drawNonOperationalPositionsPage } from './caixa-report.vector-pdf.non-operational';
 import { drawConveniosPage } from './caixa-report.vector-pdf.convenios';
 import type { CaixaConvenioResumoItem } from '../caixa-convenios.service';
@@ -102,6 +102,7 @@ export const createCaixaReportPdfDocument = async (
     report.despesas,
     report.analiseRecorrente.turmas,
     convenioItems,
+    report.posicaoTotal.disponivel && Boolean(report.posicaoTotal.dados.fechamentoImplantacao),
   );
   const institution = normalizeCanonicalInstitutionalHeader({
     ...report.institucional,
@@ -131,6 +132,9 @@ export const createCaixaReportPdfDocument = async (
     const contentTop = headerLayout.contentTop;
     const isLastSectionPage = pageIndex === pages.length - 1 || pages[pageIndex + 1]?.section !== page.section;
     if (page.section === 'RESUMO') drawSummaryPage(pdf, report, contentTop);
+    if (page.section === 'FECHAMENTO_IMPLANTACAO' && report.posicaoTotal.disponivel) {
+      drawFechamentoImplantacao(pdf, report.posicaoTotal.dados.fechamentoImplantacao, contentTop);
+    }
     if (page.section === 'POSICOES_COMPLEMENTARES') {
       drawNonOperationalPositionsPage(pdf, report, contentTop);
     }

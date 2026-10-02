@@ -14,7 +14,8 @@ export const dashboardFixture: ProescDashboard = {
   available: true, configured: true, canViewReceivableDetails: true, historyStartedAt: '2026-09-12T22:00:00Z',
   selectedPoloId: null, polos: [{ id: 'polo-demo', name: 'Matriz' }],
   period: { startedFrom: '2026-09-01T00:00:00Z', startedTo: '2026-09-12T23:00:00Z' },
-  monitor: { enabled: true, schedule: '*/2 * * * *', running: false, lastStartedAt: '2026-09-12T22:10:00Z', lastFinishedAt: '2026-09-12T22:10:19Z', lastDurationMs: 19000, lastCounts: { consulted: 60, applied: 2, unchanged: 58, review: 0, failed: 0 } },
+  capabilities: { executionHistoryVersion: 'v1', monitorVersion: 'v2' },
+  monitor: { version: 'v2', enabled: true, schedule: '*/2 * * * *', running: false, lastStartedAt: '2026-09-12T22:10:00Z', lastFinishedAt: '2026-09-12T22:10:19Z', lastDurationMs: 19000, lastCounts: { consulted: 60, applied: 2, unchanged: 58, review: 0, failed: 0 } },
   totals: { monitored: 6417, autoEnabled: 6417, observations: 120, appliedAuto: 2, appliedImport: 30, review: 4, failedRuns: 1, httpRequests: 8 },
 };
 export const observationFixture: ProescObservation = { id: 'observation-demo', observedAt: '2026-09-12T22:10:00Z', recordedAt: '2026-09-12T22:10:00Z', classId: 'class-demo', classCode: 'ENF-DEMO', className: 'Turma demonstrativa', poloId: 'polo-demo', poloName: 'Matriz', sourceStatus: 'UNKNOWN', verification: 'REVIEW', reviewReasons: ['PAYMENT_HISTORY_INCOMPLETE'], principalAmount: 279.9, receivedAmount: 0, paymentDate: null };
@@ -26,6 +27,29 @@ test('overview uses server counters, distinguishes automatic and imported paymen
   assert.match(html, /Baixas automáticas/); assert.match(html, /Importações e correções/);
   assert.match(html, /6\.417/); assert.match(html, /19\.000 ms/);
   assert.doesNotMatch(html, /<button|token de acesso|Executar agora|Importar alunos/);
+});
+test('monitor identifies V2 while failure and HTTP totals are explicitly historical V1', () => {
+  const html = renderToStaticMarkup(<ProescConsoleOverview data={dashboardFixture} />);
+  assert.match(html, /Monitor atual da automação V2/);
+  assert.match(html, /Automação V2 ativa/);
+  assert.match(html, /Execuções com falha — V1/);
+  assert.match(html, /Requisições HTTP — V1/);
+  assert.match(html, /não mede falhas da V2/);
+  assert.match(html, /contagem HTTP da V2 ainda não disponível/);
+});
+test('a dashboard without version metadata cannot present old runtime state as current V2', () => {
+  const data = { ...dashboardFixture, monitor: { ...dashboardFixture.monitor, version: undefined, enabled: false } };
+  const html = renderToStaticMarkup(<ProescConsoleOverview data={data} />);
+  assert.match(html, /Status V2 não informado/);
+  assert.doesNotMatch(html, /Automação V2 inativa|19\.000 ms/);
+});
+test('run and error feeds disclose historical V1 scope even for empty results', () => {
+  const runs = renderFeed('runs', makePage([]));
+  const errors = renderFeed('errors', makePage([]));
+  assert.match(runs, /Execuções V1 \(histórico\)/);
+  assert.match(runs, /não representam a automação atual V2/);
+  assert.match(errors, /Erros V1 \(histórico\)/);
+  assert.match(errors, /não mede falhas atuais da V2/);
 });
 test('UNKNOWN remains in review and restricted financial details are not rendered', () => {
   const html = renderFeed('observations', makePage([observationFixture]), false);
