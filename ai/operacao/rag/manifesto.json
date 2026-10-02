@@ -6,12 +6,7 @@
     { "path": "ai/operacao/LOTE_ATIVO.md", "recursive": false },
     { "path": "ai/operacao/PROTOCOLO_DE_LOTES.md", "recursive": false },
     { "path": "ai/operacao/politicas", "recursive": true },
-    { "path": "docs/decisions", "recursive": true },
-    { "path": "ai/operacao/integracoes/proesc/SKILL.md", "recursive": false },
-    { "path": "ai/operacao/integracoes/proesc/references/v2-operacional.md", "recursive": false },
-    { "path": "ai/operacao/integracoes/proesc/references/v2-evidencia-setembro-2026.md", "recursive": false },
-    { "path": "ai/operacao/integracoes/proesc/references/v2-mapa-migracao.md", "recursive": false },
-    { "path": "ai/operacao/integracoes/proesc/references/v2-fontes-2026-10-01.md", "recursive": false }
+    { "path": "docs/decisions", "recursive": true }
   ],
   "includeExtensions": [".md"],
   "excludePaths": [

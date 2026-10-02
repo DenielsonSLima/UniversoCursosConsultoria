@@ -2,7 +2,7 @@
 
 Estado: BACKEND APLICADO; FRONTEND VALIDADO PARA PUBLICAÇÃO AUTORIZADA.
 Base GitHub conferida: `22d563b3c5e61becc1e5ba78b878ec2c337b93d1` (4.8.148).
-Um commit/Preview para este manifesto, seguido de produção após validação.
+PR240 contém este manifesto; produção somente após CI e Preview aprovados.
 O status final de build/deploy deve ser conferido no GitHub/Vercel; este registro
 não transforma preparação local em publicação comprovada.
 
@@ -77,11 +77,18 @@ após extração minimizada; fatos financeiros e evidências duráveis permanece
   implantação/parcialidade renderizadas sem sobreposição. Não é exportação
   institucional real autenticada. Sem abrir navegador no fluxo Proesc, conforme
   preferência do usuário; smoke autenticado final permanece pendente.
-- Verificador global de linhas mantém14referências ausentes anteriores de outros
-  lotes; este manifesto é conferido separadamente, sem ampliar reparos de dívida.
+- Verificador global local encontra14referências ausentes anteriores; o checkout
+  completo do CI aprovou o teto de linhas e a imutabilidade das migrations.
 - Migrations aplicadas anteriores são imutáveis; nenhuma reescrita.
-- Documentação/skill operacional consolidada e RAG reindexado uma vez no
-  fechamento, sem dados pessoais, dumps, segredos ou artefatos gerados.
+- Primeiro CI do PR240 bloqueou bootstrap21942bytes e RAG164trechos; Preview
+  aprovada. Corrigido o roteamento documental, sem alterar limites/testes:
+  memória histórica resume e aponta registros intactos; decisão V2 aponta skill
+  e referências completas fora do corpus padrão. Novo índice de fechamento:
+  15fontes/79trechos, bootstrap15084bytes, busca41ms sem escrita. A correção
+  documental exige nova execução CI/Preview antes de incorporar o PR.
+- Reconferência remota: runtimes V1 de sincronização/ciclos desabilitados, V2
+  habilitada; execução RECENT concluída às23h52 BRT. Controlador:19testes
+  aprovados, incluindo HTTP410 das ações V1 sem chamada ao fornecedor.
 
 ## Manifesto explícito
 
@@ -186,4 +193,3 @@ Total: 93 arquivos.
 - [Migração V2](2026-10-01-proesc-v2-operacional.md).
 - [Abertura inicial/composição](2026-10-01-proesc-v2-virada-composicao.md).
 - [Abertura dos demais polos e PDF](2026-10-01-proesc-todos-polos-encerramento.md).
-
