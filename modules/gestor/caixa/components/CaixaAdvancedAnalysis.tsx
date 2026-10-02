@@ -1,153 +1,131 @@
 import React from 'react';
-import {
-  Archive,
-  Building2,
-  ChevronDown,
-  Landmark,
-  LineChart,
-  Scale,
-} from 'lucide-react';
+import { Building2, LineChart, Scale, Sparkles } from 'lucide-react';
 
 interface CaixaAdvancedAnalysisProps {
-  posicaoTotal: React.ReactNode;
-  posicaoLiquida: React.ReactNode;
-  patrimonio: React.ReactNode;
-  convenios: React.ReactNode;
-  financiamento: React.ReactNode;
-  linhaCorte: React.ReactNode;
+  position: React.ReactNode;
+  capital: React.ReactNode;
+  lineCut: React.ReactNode;
   lineCutAttention?: boolean;
 }
 
-interface AnalysisDisclosureProps {
+interface AnalysisChapterProps {
+  number: string;
+  eyebrow: string;
   title: string;
   description: string;
-  badge: string;
   icon: React.ReactNode;
   children: React.ReactNode;
   attention?: boolean;
-  defaultOpen?: boolean;
+  last?: boolean;
 }
 
-/**
- * Mantém leituras estruturais completas sem competir com o fluxo mensal. Os
- * conteúdos são recebidos prontos e não têm seus contratos reinterpretados.
- */
+/** Exibe as leituras estruturais como capítulos contínuos, sem escondê-las. */
 export const CaixaAdvancedAnalysis: React.FC<CaixaAdvancedAnalysisProps> = ({
-  posicaoTotal,
-  posicaoLiquida,
-  patrimonio,
-  convenios,
-  financiamento,
-  linhaCorte,
+  position,
+  capital,
+  lineCut,
   lineCutAttention = false,
 }) => (
-  <section aria-labelledby="caixa-advanced-analysis-title" className="rounded-3xl border border-slate-200 bg-slate-100/60 p-4 sm:p-5">
-    <div className="flex flex-col gap-2 px-1 sm:flex-row sm:items-end sm:justify-between">
-      <div>
-        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-blue-600">Análises avançadas</p>
-        <h2 id="caixa-advanced-analysis-title" className="mt-1 text-lg font-extrabold text-[#001a33]">
-          Estrutura financeira e sustentabilidade
-        </h2>
-      </div>
-      <p className="max-w-xl text-xs leading-5 text-slate-500 sm:text-right">
-        Abra somente a leitura necessária. Patrimônio, financiamento e projeções não alteram o resultado operacional realizado.
-      </p>
-    </div>
+  <section aria-labelledby="caixa-advanced-analysis-title" className="relative overflow-hidden rounded-[32px] border border-slate-200 bg-[#f5f8fc] px-4 py-6 sm:px-6 sm:py-8">
+    <div className="pointer-events-none absolute bottom-10 left-[35px] top-44 hidden w-px bg-gradient-to-b from-blue-300 via-violet-200 to-transparent lg:block" />
 
-    <div className="mt-4 space-y-3">
-      <AnalysisDisclosure
-        title="Posição e patrimônio"
-        description="Caixa registrado, bens a custo e empréstimos no mesmo corte"
-        badge="3 leituras"
-        icon={<Scale size={17} aria-hidden="true" />}
-        defaultOpen
-      >
-        <div className="space-y-3">
-          {posicaoTotal}
-          {posicaoLiquida}
-          {patrimonio}
+    <header className="relative overflow-hidden rounded-[26px] bg-[#061a2f] px-5 py-6 text-white shadow-xl shadow-slate-900/10 sm:px-7">
+      <div className="pointer-events-none absolute -right-20 -top-28 h-64 w-64 rounded-full border-[42px] border-blue-400/10" />
+      <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.16em] text-cyan-200">
+            <Sparkles size={11} aria-hidden="true" /> Leitura guiada
+          </span>
+          <h2 id="caixa-advanced-analysis-title" className="mt-3 text-xl font-black tracking-tight sm:text-2xl">
+            Estrutura, capital e sustentabilidade
+          </h2>
+          <p className="mt-1.5 max-w-2xl text-xs leading-5 text-slate-300">
+            Uma leitura contínua do que a operação possui, do que está vinculado e do que precisa cobrir.
+          </p>
         </div>
-      </AnalysisDisclosure>
 
-      <AnalysisDisclosure
+        <nav aria-label="Capítulos da análise financeira" className="flex flex-wrap gap-2">
+          <ChapterLink href="#caixa-position-chapter" number="01" label="Posição" />
+          <ChapterLink href="#caixa-capital-chapter" number="02" label="Capital" />
+          <ChapterLink href="#caixa-line-cut-chapter" number="03" label="Equilíbrio" attention={lineCutAttention} />
+        </nav>
+      </div>
+    </header>
+
+    <div className="mt-6 space-y-8">
+      <AnalysisChapter
+        number="01"
+        eyebrow="O que está registrado"
+        title="Posição e patrimônio"
+        description="Caixa, bens e empréstimos no mesmo corte contábil."
+        icon={<Scale size={17} aria-hidden="true" />}
+      >
+        <div id="caixa-position-chapter" className="scroll-mt-28">{position}</div>
+      </AnalysisChapter>
+
+      <AnalysisChapter
+        number="02"
+        eyebrow="O que tem destinação"
         title="Convênios e financiamento"
-        description="Recursos vinculados, crédito, obrigações e rateios"
-        badge="2 leituras"
+        description="Recursos vinculados, crédito, obrigações e rateios em trilhas separadas."
         icon={<Building2 size={17} aria-hidden="true" />}
       >
-        <div className="space-y-3">
-          {convenios}
-          {financiamento}
-        </div>
-      </AnalysisDisclosure>
+        <div id="caixa-capital-chapter" className="scroll-mt-28">{capital}</div>
+      </AnalysisChapter>
 
-      <AnalysisDisclosure
+      <AnalysisChapter
+        number="03"
+        eyebrow="O que sustenta a operação"
         title="Linha de corte e ponto de equilíbrio"
-        description="Cobertura de custos e acompanhamento da meta operacional"
-        badge={lineCutAttention ? 'Requer atenção' : 'Projeção'}
+        description="Cobertura, margem, risco de inadimplência e comparação histórica."
         icon={<LineChart size={17} aria-hidden="true" />}
         attention={lineCutAttention}
+        last
       >
-        {linhaCorte}
-      </AnalysisDisclosure>
-    </div>
-
-    <div className="mt-4 grid gap-2 text-[10px] leading-4 text-slate-500 sm:grid-cols-3">
-      <ContextNote icon={<Archive size={12} aria-hidden="true" />}>
-        Patrimônio permanece a custo e separado do caixa disponível.
-      </ContextNote>
-      <ContextNote icon={<Landmark size={12} aria-hidden="true" />}>
-        Crédito de empréstimo não é receita operacional.
-      </ContextNote>
-      <ContextNote icon={<LineChart size={12} aria-hidden="true" />}>
-        Linha de corte é projeção, não saldo bancário.
-      </ContextNote>
+        <div id="caixa-line-cut-chapter" className="scroll-mt-28">{lineCut}</div>
+      </AnalysisChapter>
     </div>
   </section>
 );
 
-const AnalysisDisclosure: React.FC<AnalysisDisclosureProps> = ({
+const AnalysisChapter: React.FC<AnalysisChapterProps> = ({
+  number,
+  eyebrow,
   title,
   description,
-  badge,
   icon,
   children,
   attention = false,
-  defaultOpen = false,
+  last = false,
 }) => (
-  <details open={defaultOpen} className={`group overflow-hidden rounded-2xl border bg-white shadow-sm ${
-    attention ? 'border-amber-200' : 'border-slate-200'
-  }`}>
-    <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 px-4 py-3 outline-none transition hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 [&::-webkit-details-marker]:hidden">
-      <span className={`rounded-xl p-2 ${
-        attention ? 'bg-amber-50 text-amber-700' : 'bg-blue-50 text-blue-700'
+  <article className="relative lg:pl-14">
+    <div className="mb-4 flex items-start gap-3">
+      <span className={`relative z-10 hidden h-9 w-9 shrink-0 items-center justify-center rounded-full border-4 border-[#f5f8fc] text-[10px] font-black shadow-sm lg:flex ${
+        attention ? 'bg-amber-500 text-white' : 'bg-blue-600 text-white'
       }`}>
-        {icon}
+        {number}
       </span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-sm font-extrabold text-slate-900">{title}</span>
-        <span className="mt-0.5 block text-[11px] leading-4 text-slate-500">{description}</span>
-      </span>
-      <span className={`hidden rounded-full px-2 py-1 text-[9px] font-bold uppercase tracking-wide sm:inline ${
-        attention ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-500'
-      }`}>
-        {badge}
-      </span>
-      <ChevronDown
-        size={17}
-        aria-hidden="true"
-        className="shrink-0 text-slate-400 transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none"
-      />
-    </summary>
-    <div className="border-t border-slate-100 bg-slate-50/60 p-3 sm:p-4">
-      {children}
+      <span className={`rounded-xl p-2 lg:hidden ${attention ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>{icon}</span>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className={`text-[9px] font-bold uppercase tracking-[0.18em] ${attention ? 'text-amber-700' : 'text-blue-700'}`}>{eyebrow}</p>
+          {attention ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-bold uppercase text-amber-800">Requer atenção</span> : null}
+        </div>
+        <h3 className="mt-1 text-lg font-extrabold text-[#061a2f]">{title}</h3>
+        <p className="mt-0.5 text-xs leading-5 text-slate-500">{description}</p>
+      </div>
     </div>
-  </details>
+    {children}
+    {!last ? <div className="mx-auto mt-8 h-px w-2/3 bg-gradient-to-r from-transparent via-slate-200 to-transparent lg:hidden" /> : null}
+  </article>
 );
 
-const ContextNote: React.FC<{ icon: React.ReactNode; children: React.ReactNode }> = ({ icon, children }) => (
-  <div className="flex items-start gap-2 rounded-xl bg-white/80 px-3 py-2">
-    <span className="mt-0.5 shrink-0 text-blue-600">{icon}</span>
-    <span>{children}</span>
-  </div>
+const ChapterLink: React.FC<{ href: string; number: string; label: string; attention?: boolean }> = ({ href, number, label, attention = false }) => (
+  <a href={href} className={`inline-flex min-h-10 items-center gap-2 rounded-xl border px-3 py-2 text-[10px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 motion-reduce:transition-none ${
+    attention
+      ? 'border-amber-300/30 bg-amber-300/10 text-amber-100 hover:bg-amber-300/20'
+      : 'border-white/10 bg-white/5 text-slate-200 hover:bg-white/10'
+  }`}>
+    <span className="text-[9px] opacity-60">{number}</span>{label}
+  </a>
 );
