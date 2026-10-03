@@ -28,6 +28,7 @@ interface FinancialUnderlineTabsProps<T extends string> {
   equalWidth?: boolean;
   idPrefix?: string;
   mobileMode?: 'scroll' | 'select';
+  showHorizontalScrollbar?: boolean;
 }
 
 const FinancialUnderlineTabs = <T extends string,>({
@@ -40,6 +41,7 @@ const FinancialUnderlineTabs = <T extends string,>({
   equalWidth = false,
   idPrefix,
   mobileMode = 'scroll',
+  showHorizontalScrollbar = false,
 }: FinancialUnderlineTabsProps<T>) => {
   const activeTabRef = useRef<FinancialTabElement | null>(null);
 
@@ -85,7 +87,13 @@ const FinancialUnderlineTabs = <T extends string,>({
         </label>
       ) : null}
 
-      <div className={`max-w-full scroll-smooth overflow-x-auto border-b border-slate-200 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${mobileMode === 'select' ? 'hidden md:block' : ''}`}>
+      <div
+        className={`max-w-full scroll-smooth border-b border-slate-200 ${
+          showHorizontalScrollbar
+            ? 'overflow-x-scroll pb-1 [scrollbar-color:#94a3b8_#e2e8f0] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-400 [&::-webkit-scrollbar-thumb:hover]:bg-slate-500 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-slate-200'
+            : 'overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
+        } ${mobileMode === 'select' ? 'hidden md:block' : ''}`}
+      >
         <div
           role="tablist"
           aria-label={ariaLabel}

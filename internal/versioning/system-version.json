@@ -1,8 +1,8 @@
 {
-  "version": "4.8.153",
+  "version": "4.8.154",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 162,
+  "revision": 163,
   "releasedAt": "2026-10-03",
-  "summary": "Caixa distingue falta de detalhamento de diferença monetária sem alterar recebimentos"
+  "summary": "Propostas de renegociação, modais em tela cheia e abas financeiras com rolagem visível"
 }
