@@ -248,6 +248,23 @@ test('lista entrega 1 ou N IDs ao wizard, que revalida refetch, erro e identidad
     assert.match(currentDialog.textContent, /Resumo da seleção/);
     assert.match(currentDialog.textContent, /R\$\s*100,00/);
     assert.match(currentDialog.textContent, /A conferir/, 'wizard não inventa desconto indisponível');
+    await interact(() => [...currentDialog.querySelectorAll('footer button')].find((button) => button.textContent.includes('Continuar')).click());
+    currentDialog = dialog();
+    assert.match(currentDialog.textContent, /Resumo da seleção/, 'condições repetem o resumo original canônico');
+    const byLabel = (label) => [...currentDialog.querySelectorAll('label')].find((element) => element.textContent.includes(label));
+    assert.equal(byLabel('Total do acordo (incluindo entrada)').querySelector('input').value, '103,00');
+    const interestControl = byLabel('Juros por atraso ao mês').querySelector('input[type="checkbox"]');
+    await interact(() => interestControl.click());
+    const interestInput = byLabel('Novo percentual mensal').querySelector('input');
+    await interact(() => {
+      Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype, 'value').set.call(interestInput, '1,37');
+      interestInput.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+    });
+    queries['mat-1'] = { ...queries['mat-1'], data: { ...correctData,
+      policyDefaults: { ...policyDefaults, monthlyInterest: { ...policyDefaults.monthlyInterest, basisPoints: 250 } } } };
+    await rerenderHarness();
+    assert.equal(interestInput.value, '1,37', 'refetch não sobrescreve personalização do operador');
+    queries['mat-1'] = { ...queries['mat-1'], data: correctData };
     await closeWizard();
 
     const selectAll = [...listPanel().querySelectorAll('button')].find((button) => button.textContent.includes('Marcar elegíveis'));

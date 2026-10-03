@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 import { AlertTriangle, CalendarDays, CheckCircle2, FileText, Receipt } from 'lucide-react';
 import {
   formatCents,
@@ -9,13 +9,13 @@ import {
 import type {
   RenegociacaoPolicySnapshot,
   RenegociacaoPreviewTotals,
-  RenegociacaoScheduleEntry,
+  RenegociacaoPreview,
   RenegociacaoSourceItem,
 } from '../renegociacoes.types';
 
 interface CanonicalSummaryProps {
   totals: RenegociacaoPreviewTotals;
-  schedule: { installmentCount: number; firstDueDate: string; entries: RenegociacaoScheduleEntry[] };
+  schedule: RenegociacaoPreview['schedule'];
   policy: RenegociacaoPolicySnapshot;
   sourceItems: RenegociacaoSourceItem[];
   requiresApproval?: boolean;
@@ -32,7 +32,9 @@ const CanonicalSummary: React.FC<CanonicalSummaryProps> = ({
   sourceItems,
   requiresApproval,
   approvalReasons = [],
-}) => (
+}) => {
+  const headingPrefix = useId();
+  return (
   <div className="space-y-4">
     {requiresApproval ? (
       <div role="status" className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
@@ -56,9 +58,9 @@ const CanonicalSummary: React.FC<CanonicalSummaryProps> = ({
       </div>
     )}
 
-    <section aria-labelledby="renegociacao-composicao" className="rounded-2xl border border-slate-200 bg-white p-4">
+    <section aria-labelledby={`${headingPrefix}-composicao`} className="rounded-2xl border border-slate-200 bg-white p-4">
       <h4
-        id="renegociacao-composicao"
+        id={`${headingPrefix}-composicao`}
         className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-[#001a33]"
       >
         <Receipt size={16} className="text-blue-600" /> Composição canônica
@@ -77,8 +79,8 @@ const CanonicalSummary: React.FC<CanonicalSummaryProps> = ({
       </dl>
     </section>
 
-    <section aria-labelledby="renegociacao-politica" className="rounded-2xl border border-slate-200 bg-white p-4">
-      <h4 id="renegociacao-politica" className="text-xs font-black uppercase tracking-wide text-[#001a33]">
+    <section aria-labelledby={`${headingPrefix}-politica`} className="rounded-2xl border border-slate-200 bg-white p-4">
+      <h4 id={`${headingPrefix}-politica`} className="text-xs font-black uppercase tracking-wide text-[#001a33]">
         Condições financeiras
       </h4>
       <p className="mt-1 text-[11px] font-medium text-slate-500">
@@ -105,15 +107,22 @@ const CanonicalSummary: React.FC<CanonicalSummaryProps> = ({
           inheritedFrom={renegociacaoPolicyInheritedLabel(policy.defaults.origin)}
         />
       </div>
+      {policy.receiptPolicy ? <p className="mt-3 rounded-xl bg-amber-50 p-3 text-xs font-bold text-amber-900">
+        {policy.receiptPolicy.instruction}
+      </p> : null}
     </section>
 
-    <section aria-labelledby="renegociacao-cronograma" className="rounded-2xl border border-slate-200 bg-white p-4">
+    <section aria-labelledby={`${headingPrefix}-cronograma`} className="rounded-2xl border border-slate-200 bg-white p-4">
       <h4
-        id="renegociacao-cronograma"
+        id={`${headingPrefix}-cronograma`}
         className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-[#001a33]"
       >
         <CalendarDays size={16} className="text-blue-600" /> Cronograma
       </h4>
+      {schedule.cadence ? <p className="mt-1 text-xs text-slate-500">
+        {schedule.cadence === 'MONTHLY' ? 'Vencimentos mensais pelo calendário.' : `Intervalo fixo de ${schedule.intervalDays} dias.`}
+        {' '}A entrada está separada das novas parcelas.
+      </p> : null}
       <div className="mt-3 divide-y divide-slate-100 rounded-xl border border-slate-100">
         {schedule.entries.map((entry) => (
           <div
@@ -132,9 +141,9 @@ const CanonicalSummary: React.FC<CanonicalSummaryProps> = ({
       </div>
     </section>
 
-    <section aria-labelledby="renegociacao-originais" className="rounded-2xl border border-slate-200 bg-white p-4">
+    <section aria-labelledby={`${headingPrefix}-originais`} className="rounded-2xl border border-slate-200 bg-white p-4">
       <h4
-        id="renegociacao-originais"
+        id={`${headingPrefix}-originais`}
         className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-[#001a33]"
       >
         <FileText size={16} className="text-blue-600" /> Títulos originais ({sourceItems.length})
@@ -152,7 +161,8 @@ const CanonicalSummary: React.FC<CanonicalSummaryProps> = ({
       </div>
     </section>
   </div>
-);
+  );
+};
 
 const Value: React.FC<{ label: string; value: string; strong?: boolean }> = ({ label, value, strong }) => (
   <div>

@@ -13,10 +13,10 @@ const pageSource = readFileSync(new URL('./FinanceiroPage.tsx', import.meta.url)
 const tabsSource = readFileSync(new URL('./components/FinancialUnderlineTabs.tsx', import.meta.url), 'utf8');
 const receivablesSource = readFileSync(new URL('./receber/ReceberTab.tsx', import.meta.url), 'utf8');
 
-test('navegação mantém abas lado a lado com Conciliação por último', () => {
+test('navegação mantém Renegociações depois de A Pagar e Conciliação por último', () => {
   const ids = [...pageSource.matchAll(/id: '([^']+)' as const/g)].map((match) => match[1]);
   assert.deepEqual(ids, [
-    'resumo', 'receber', 'renegociacoes', 'despesas', 'emprestimos',
+    'resumo', 'receber', 'despesas', 'renegociacoes', 'emprestimos',
     'convenios', 'transferencias', 'outros-debitos', 'outros-creditos', 'conciliacao-bancaria',
   ]);
   assert.match(pageSource, /<FinancialUnderlineTabs/);

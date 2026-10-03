@@ -81,6 +81,14 @@ export const renegociacaoUnavailableMessage = (reason?: string, fallback?: strin
     RPC_NOT_APPLIED: 'Renegociações ainda não está disponível neste ambiente.',
     RENEGOTIATION_RULES_NOT_READY: 'As regras de renegociação ainda não estão disponíveis.',
     OPERATIONAL_ACTIVATION_NOT_IMPLEMENTED: 'A ativação ficará disponível após a integração bancária.',
+    ACTIVATION_DEPENDENCIES_NOT_APPLIED: 'A integração de efetivação ainda não está preparada neste ambiente.',
+    ACTIVATION_REVIEW_REQUIRED: 'A operação precisa de revisão antes de qualquer nova ação bancária.',
+    AGREEMENT_ALREADY_ACTIVE: 'Este acordo já foi efetivado.',
+    ACTIVATION_ACTOR_MISMATCH: 'Somente o operador que iniciou esta efetivação pode retomá-la.',
+    ACTIVATION_ALREADY_STARTED: 'A efetivação já foi iniciada. Confira e retome a mesma operação.',
+    PROPOSAL_NOT_SUBMITTED: 'Salve a proposta antes de solicitar a efetivação.',
+    RENEGOTIATION_APPROVAL_REQUIRED: 'As condições personalizadas exigem aprovação explícita de um usuário com acesso autorizado ao Financeiro neste polo.',
+    PROPOSAL_REQUIRES_NEW_SIMULATION: 'Esta proposta usa condições antigas. Gere uma nova simulação antes de efetivar.',
   };
   return (reason && messages[reason]) || fallback || 'Esta função ainda não está disponível.';
 };

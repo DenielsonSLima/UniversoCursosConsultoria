@@ -25,17 +25,25 @@ test('serviço usa apenas RPCs canônicos e save envia CAS sem snapshot do clien
   assert.doesNotMatch(payloads, /snapshot|totals|schedule/);
 });
 
-test('interface não simula ativação e informa escopo inicial', async () => {
-  const [tab, wizard, detail] = await Promise.all([
+test('salvar proposta não efetiva e a substituição usa confirmação e serviço bancário separados', async () => {
+  const [tab, wizard, detail, activation, confirmation, service] = await Promise.all([
     read('./RenegociacoesTab.tsx'),
     read('./components/RenegociacaoWizard.tsx'),
     read('./components/ProposalDetail.tsx'),
+    read('./components/ActivationPanel.tsx'),
+    read('./components/ActivationConfirmation.tsx'),
+    read('./renegociacoes.activation.service.ts'),
   ]);
   assert.match(tab, /Escopo inicial/);
   assert.match(tab, /Proesc, EAD e parcelas com pagamento parcial/);
   assert.match(wizard.replace(/\s+/g, ' '), /Nenhum título original será cancelado, substituído ou enviado ao banco/);
-  assert.match(detail.replace(/\s+/g, ' '), /ativação e a emissão dos novos títulos ficarão disponíveis/);
-  assert.doesNotMatch(`${tab}${wizard}${detail}`, /activate_receivable|cancel_source|issue_replacement/i);
+  assert.match(detail, /ActivationPanel/);
+  assert.match(activation, /proposal.capabilities.canActivate/);
+  assert.match(activation, /capabilities.cancelSourceTitles && capabilities.issueReplacementTitles/);
+  assert.match(confirmation, /disabled=\{!confirmed \|\| pending \|\| \(requiresApproval && !approvalConfirmed\)\}/);
+  assert.match(confirmation, /Aprovo explicitamente as condições personalizadas/);
+  assert.match(service, /functions.invoke\('receivable-renegotiation-activate'/);
+  assert.doesNotMatch(`${tab}${wizard}${detail}`, /cancel_source|issue_replacement/i);
 });
 
 test('realtime cobre fontes da renegociação e recupera reconexão', async () => {

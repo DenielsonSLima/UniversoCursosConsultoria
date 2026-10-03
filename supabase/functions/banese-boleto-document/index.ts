@@ -1,4 +1,4 @@
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.95.3";
 import {
   bearerTokenFromRequest,
   requireBaneseBoletoDocumentReadAccess,
@@ -18,8 +18,8 @@ import type {
 import { loadBaneseAcademicBillingContext } from "../banese/internal/technical-billing-context.ts";
 import {
   buildBaneseDependencyBillingInstructions,
-  buildBaneseTechnicalBillingInstructions,
 } from "../banese/internal/technical-billing-instructions.ts";
+import { buildBaneseReceivableBillingInstructions } from "../banese/internal/renegotiation-billing-instructions.ts";
 import {
   dependencyBillingSnapshotFrom,
   isDependencyReceivable,
@@ -167,6 +167,7 @@ Deno.serve(async (req: Request) => {
       .select(`
         id, cliente_id, matricula_id, turma_id, polo_id, descricao, valor, data_vencimento,
         tipo_lancamento, regra_financeira_dependencia_snapshot,
+        regra_financeira_renegociacao_snapshot, renegotiation_agreement_id,
         gateway_boleto_issued_at,
         gateway_environment, gateway_payment_id, gateway_pix_payload,
         gateway_pix_encoded_image, gateway_boleto_linha_digitavel,
@@ -320,7 +321,8 @@ Deno.serve(async (req: Request) => {
           documentKind: "boleto",
           description: dependencyDescription,
         })
-        : buildBaneseTechnicalBillingInstructions({
+        : buildBaneseReceivableBillingInstructions({
+          receivable: row,
           environment,
           documentKind: "boleto",
           description: row.descricao,

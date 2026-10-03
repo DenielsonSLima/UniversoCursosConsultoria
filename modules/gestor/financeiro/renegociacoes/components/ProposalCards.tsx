@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronRight, Clock3, FileCheck2, FileX2, WalletCards } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ChevronRight, Clock3, FileCheck2, FileX2, WalletCards } from 'lucide-react';
 import { formatCents, formatRenegociacaoDate } from '../renegociacoes.model';
 import type { RenegociacaoProposalPage, RenegociacaoProposalSummary } from '../renegociacoes.types';
 import { EmptyPanel, ErrorPanel, LoadingPanel, Pagination } from './RenegociacaoPanels';
@@ -8,6 +8,9 @@ const statusPresentation = {
   DRAFT: { label: 'Rascunho', className: 'bg-slate-100 text-slate-700', icon: Clock3 },
   PROPOSED: { label: 'Proposta salva', className: 'bg-blue-100 text-blue-800', icon: FileCheck2 },
   CANCELED: { label: 'Descartada', className: 'bg-rose-100 text-rose-800', icon: FileX2 },
+  ACTIVATING: { label: 'Em efetivação', className: 'bg-amber-100 text-amber-800', icon: Clock3 },
+  ACTIVE: { label: 'Acordo efetivado', className: 'bg-emerald-100 text-emerald-800', icon: CheckCircle2 },
+  REVIEW_REQUIRED: { label: 'Revisão necessária', className: 'bg-amber-100 text-amber-800', icon: AlertTriangle },
 } as const;
 
 interface ProposalCardsProps {
@@ -61,12 +64,16 @@ const ProposalCards: React.FC<ProposalCardsProps> = ({ data, loading, error, sea
                 <Metric label="Total proposto" value={formatCents(proposal.negotiatedCents)} strong />
                 <Metric
                   label="Plano"
-                  value={`${proposal.installmentCount}x • ${formatRenegociacaoDate(proposal.firstDueDate)}`}
+                  value={proposal.installmentCount === 0 ? 'Entrada integral' : `${proposal.installmentCount}x • ${formatRenegociacaoDate(proposal.firstDueDate)}`}
                 />
               </dl>
               <div className="mt-4 flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-[10px] font-medium text-slate-500">
                 <WalletCards size={14} className="shrink-0" />
-                <span>Ativação e emissão ainda indisponíveis.</span>
+                <span>{proposal.lifecycleStatus === 'ACTIVE' ? 'Substituição dos títulos confirmada.'
+                  : proposal.lifecycleStatus === 'REVIEW_REQUIRED' ? 'Confira o andamento antes de qualquer nova ação.'
+                  : proposal.capabilities.canResume ? 'Abra para acompanhar e continuar a mesma operação.'
+                  : proposal.capabilities.canActivate ? 'Pronta para conferência e confirmação da efetivação.'
+                  : 'Consulte os detalhes e as condições de efetivação.'}</span>
               </div>
               <button
                 type="button"

@@ -43,7 +43,7 @@ const RenegociacoesTab: React.FC<RenegociacoesTabProps> = ({ poloId, isMatriz, o
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState<RenegociacaoCandidateFilters>({ courseType: '', turmaId: '' });
   const [ongoingStatus, setOngoingStatus] =
-    useState<Extract<RenegociacaoLifecycleStatus, 'DRAFT' | 'PROPOSED'>>('PROPOSED');
+    useState<Exclude<RenegociacaoLifecycleStatus, 'CANCELED'>>('PROPOSED');
   const [wizard, setWizard] = useState<{ group: RenegociacaoCandidateGroup; selectedIds: string[] } | null>(null);
   const [proposalId, setProposalId] = useState<string | null>(null);
   const workspaceHeadingRef = useRef<globalThis.HTMLHeadingElement>(null);
@@ -112,7 +112,7 @@ const RenegociacoesTab: React.FC<RenegociacoesTabProps> = ({ poloId, isMatriz, o
     setProposalId(proposal.id);
     toast.success(
       replayed ? 'Proposta já salva' : 'Proposta salva',
-      'Nenhum título original foi alterado. A ativação permanece indisponível nesta etapa.',
+      'Nenhum título original foi alterado ao salvar. Confira os detalhes para verificar se a efetivação está autorizada.',
     );
   };
 
@@ -159,7 +159,7 @@ const RenegociacoesTab: React.FC<RenegociacoesTabProps> = ({ poloId, isMatriz, o
     workspace = (
       <EmptyPanel
         title="Acompanhamento ainda indisponível"
-        description="O acompanhamento de acordos em atraso começa após a ativação dos acordos. Nesta etapa, nenhuma proposta é tratada como acordo ativo."
+        description="Acompanhe os acordos efetivados em Em andamento. A classificação automática de inadimplência ainda não está disponível nesta visão."
       />
     );
   } else {

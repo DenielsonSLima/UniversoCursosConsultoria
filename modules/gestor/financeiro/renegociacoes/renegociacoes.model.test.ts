@@ -8,6 +8,7 @@ import {
   parseCandidateItems,
   parsePreview,
   parseProposalDetail,
+  parseProposalPage,
   parseReadiness,
   renegociacaoPolicyInheritedLabel,
 } from './renegociacoes.model.ts';
@@ -132,6 +133,47 @@ test('normaliza preview canônico sem recalcular totais ou cronograma', () => {
     [1000, 4500, 4500],
   );
   assert.equal(preview.requiresApproval, true);
+});
+
+test('preserva cronograma v2, termos bancários e regra de 60 dias recebidos do cálculo oficial', () => {
+  const base = buildPreviewPayload();
+  const payload = { ...base, version: 2,
+    policySnapshot: { ...base.policySnapshot, receiptPolicy: { daysAfterDue: 60, instruction: 'Não receber após 60 dias do vencimento.' } },
+    schedule: { ...base.schedule, cadence: 'FIXED_DAYS', intervalDays: 45,
+      entries: base.schedule.entries.map((entry) => ({ ...entry, financialTerms: { nominalAmount: entry.amountCents / 100, dueDate: entry.dueDate } })) },
+  };
+  const result = parsePreview(payload);
+  assert.equal(result.schedule.cadence, 'FIXED_DAYS');
+  assert.equal(result.schedule.intervalDays, 45);
+  assert.deepEqual(result.schedule.entries, payload.schedule.entries);
+  assert.deepEqual(result.policySnapshot.receiptPolicy, payload.policySnapshot.receiptPolicy);
+  assert.throws(() => parsePreview({ ...payload, schedule: { ...payload.schedule, cadence: 'FORTNIGHTLY' } }), /frequência.*inválida/);
+});
+
+test('readiness só habilita ativação pelas capabilities operacionais retornadas', () => {
+  const available = parseReadiness({ applied: true, version: 2, rulesReady: true, capabilities: {
+    activateProposal: true, cancelSourceTitles: true, issueReplacementTitles: true, getActivation: true,
+  }, lifecycleStatuses: ['PROPOSED', 'ACTIVATING', 'ACTIVE', 'REVIEW_REQUIRED'] });
+  assert.equal(available.availability === 'AVAILABLE' && available.capabilities.activate, true);
+  const absent = parseReadiness({ applied: true, capabilities: {} });
+  assert.equal(absent.availability === 'AVAILABLE' && absent.capabilities.activate, false);
+  assert.equal(absent.availability === 'AVAILABLE' && absent.capabilities.getActivation, false);
+});
+
+test('aprovação customizada depende de capability booleana do backend, sem inferência de cargo ou ativação', () => {
+  const row = {
+    id: 'agreement', lifecycleStatus: 'PROPOSED', version: 2,
+    poloId: 'polo', alunoId: 'aluno', matriculaId: 'matricula', turmaId: 'turma', studentName: 'Aluno sintético',
+    sourcePrincipalCents: 10000, sourceOpenCents: 10000, negotiatedCents: 9000, asOf: '2026-10-03',
+    selectionFingerprint: 'selection', policyFingerprint: 'policy', calculationFingerprint: 'calculation', proposalFingerprint: 'proposal',
+  };
+  const parse = (canApproveCustomTerms: unknown) => parseProposalPage({ rows: [{ ...row,
+    capabilities: { canActivate: true, canApproveCustomTerms } }] }).rows[0].capabilities;
+  assert.equal(parse(true).canApproveCustomTerms, true);
+  for (const value of [false, undefined, null, 'true', 1]) {
+    assert.equal(parse(value).canApproveCustomTerms, false);
+    assert.equal(parse(value).canActivate, true, 'canActivate não concede aprovação por si só');
+  }
 });
 
 test('falha fechado quando metadados de aprovação vêm ausentes ou malformados', () => {

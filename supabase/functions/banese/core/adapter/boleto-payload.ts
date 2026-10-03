@@ -7,6 +7,7 @@ import {
   dependencyBillingSnapshotFrom,
   isDependencyReceivable,
 } from "../../internal/dependency-billing.ts";
+import { renegotiationBillingSnapshotFromReceivable } from "../../internal/renegotiation-billing.ts";
 import {
   type AdapterCreateChargeInput,
   BaneseAdapterConfigurationError,
@@ -143,7 +144,13 @@ export const validateBaneseBoletoPayloadInput = (
       "O boleto de dependência deve permanecer disponível por 60 dias após o vencimento.",
     );
   }
-  const quantidadeDiasBaixaDevolucao = dependencySnapshot
+  const renegotiationSnapshot = renegotiationBillingSnapshotFromReceivable(input.receivable);
+  if (renegotiationSnapshot && dependencySnapshot) {
+    throw new BaneseAdapterError("A parcela possui origens financeiras conflitantes.");
+  }
+  const quantidadeDiasBaixaDevolucao = renegotiationSnapshot
+    ? renegotiationSnapshot.receiptPolicy.daysAfterDue
+    : dependencySnapshot
     ? DEPENDENCY_BILLING_DAYS_TO_WRITE_OFF
     : boundedInteger(
       metadata.quantidadeDiasBaixaDevolucao,
@@ -161,6 +168,10 @@ export const validateBaneseBoletoPayloadInput = (
   const financialTermsPayload = financialTerms
     ? mapBaneseFinancialTermsToPayload(financialTerms)
     : {};
+  if (renegotiationSnapshot && JSON.stringify(financialTerms) !==
+    JSON.stringify(normalizeBaneseFinancialTerms(renegotiationSnapshot.financialTerms))) {
+    throw new BaneseAdapterError("O payload diverge dos termos canônicos da renegociação.");
+  }
 
   return {
     dueDate,

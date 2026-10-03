@@ -99,7 +99,7 @@ const parsePolicyDefaults = (value: unknown): RenegociacaoPolicyDefaults => {
 };
 
 const isLifecycleStatus = (value: unknown): value is RenegociacaoLifecycleStatus =>
-  value === 'DRAFT' || value === 'PROPOSED' || value === 'CANCELED';
+  ['DRAFT', 'PROPOSED', 'CANCELED', 'ACTIVATING', 'ACTIVE', 'REVIEW_REQUIRED'].includes(String(value));
 
 export const parseReadiness = (value: unknown): RenegociacaoReadiness => {
   const row = record(unwrapRenegociacaoRpc(value));
@@ -116,9 +116,10 @@ export const parseReadiness = (value: unknown): RenegociacaoReadiness => {
       viewProposal: capabilities.viewProposal === true,
       saveProposal: capabilities.saveProposal === true,
       discardProposal: capabilities.discardProposal === true,
-      activate: false,
-      cancelSourceTitles: false,
-      issueReplacementTitles: false,
+      activate: capabilities.activateProposal === true,
+      cancelSourceTitles: capabilities.cancelSourceTitles === true,
+      issueReplacementTitles: capabilities.issueReplacementTitles === true,
+      getActivation: capabilities.getActivation === true,
     },
     unavailableReasons: Object.fromEntries(
       Object.entries(reasons).filter((item): item is [string, string] => typeof item[1] === 'string'),
@@ -277,16 +278,17 @@ const parsePolicySnapshot = (value: unknown): RenegociacaoPolicySnapshot => {
       penalty: provenanceValue('penalty'),
     },
     differsFromDefault: row.differsFromDefault === true,
+    ...(row.receiptPolicy == null ? {} : { receiptPolicy: {
+      daysAfterDue: strictInteger(record(row.receiptPolicy).daysAfterDue, 'o prazo de recebimento'),
+      instruction: required(record(row.receiptPolicy), 'a instrução de recebimento', 'instruction'),
+    } }),
   };
 };
 
 export const parsePreview = (value: unknown): RenegociacaoPreview => {
   const row = record(unwrapRenegociacaoRpc(value));
-  const totals = record(row.totals);
   const selection = record(row.selection);
-  const schedule = record(row.schedule);
   const approval = approvalMetadata(row, 'da simulação');
-  const negotiated = money(totals.negotiatedCents ?? totals.negotiatedTotalCents, 'o valor negociado');
   return {
     version: integer(row.version, 1),
     asOf: required(row, 'a data-base da simulação', 'asOf'),
@@ -300,34 +302,8 @@ export const parsePreview = (value: unknown): RenegociacaoPreview => {
     sourceItems: array(row, 'sourceItems').map(parseSourceItem),
     policySnapshot: parsePolicySnapshot(row.policySnapshot),
     calculationSnapshot: record(row.calculationSnapshot),
-    totals: {
-      principalCents: money(totals.principalCents, 'o principal simulado'),
-      accruedInterestCents: money(totals.accruedInterestCents, 'os juros simulados'),
-      accruedPenaltyCents: money(totals.accruedPenaltyCents, 'a multa simulada'),
-      grossDebtCents: money(totals.grossDebtCents, 'a dívida simulada'),
-      waivedInterestCents: money(totals.waivedInterestCents, 'o perdão de juros'),
-      waivedPenaltyCents: money(totals.waivedPenaltyCents, 'o perdão de multa'),
-      commercialDiscountCents: money(totals.commercialDiscountCents, 'o desconto comercial'),
-      negotiatedCents: negotiated,
-      negotiatedTotalCents:
-        totals.negotiatedTotalCents == null ? negotiated : money(totals.negotiatedTotalCents, 'o total negociado'),
-      downPaymentCents: money(totals.downPaymentCents, 'a entrada'),
-      financedCents: money(totals.financedCents, 'o valor financiado'),
-    },
-    schedule: {
-      installmentCount: integer(schedule.installmentCount),
-      firstDueDate: text(schedule.firstDueDate),
-      entries: array(schedule, 'entries').map((entry) => {
-        const item = record(entry);
-        const kind = item.kind === 'DOWN_PAYMENT' ? 'DOWN_PAYMENT' : 'INSTALLMENT';
-        return {
-          sequence: strictInteger(item.sequence, 'a sequência do cronograma'),
-          kind,
-          dueDate: required(item, 'a data do cronograma', 'dueDate'),
-          amountCents: money(item.amountCents, 'o valor do cronograma'),
-        };
-      }),
-    },
+    totals: parseTotals(row.totals),
+    schedule: parseSchedule(row.schedule),
     requiresApproval: approval.requiresApproval,
     approvalReasons: approval.approvalReasons,
     selectionFingerprint: required(row, 'a identidade da seleção', 'selectionFingerprint'),
@@ -358,9 +334,14 @@ const parseTotals = (value: unknown) => {
 
 const parseSchedule = (value: unknown) => {
   const schedule = record(value);
+  if (schedule.cadence != null && schedule.cadence !== 'MONTHLY' && schedule.cadence !== 'FIXED_DAYS')
+    throw new Error('O servidor retornou uma frequência de parcelas inválida.');
+  const cadence = schedule.cadence as 'MONTHLY' | 'FIXED_DAYS' | undefined;
   return {
     installmentCount: integer(schedule.installmentCount),
     firstDueDate: text(schedule.firstDueDate),
+    cadence,
+    intervalDays: schedule.intervalDays == null ? null : strictInteger(schedule.intervalDays, 'o intervalo das parcelas'),
     entries: array(schedule, 'entries').map((entry) => {
       const item = record(entry);
       const kind = item.kind === 'DOWN_PAYMENT' ? ('DOWN_PAYMENT' as const) : ('INSTALLMENT' as const);
@@ -369,6 +350,7 @@ const parseSchedule = (value: unknown) => {
         kind,
         dueDate: required(item, 'a data do cronograma', 'dueDate'),
         amountCents: money(item.amountCents, 'o valor do cronograma'),
+        ...(item.financialTerms == null ? {} : { financialTerms: record(item.financialTerms) }),
       };
     }),
   };
@@ -404,7 +386,9 @@ const parseProposal = (value: unknown): RenegociacaoProposalSummary => {
     canceledReason: nullableText(row.canceledReason),
     capabilities: {
       canDiscard: capabilities.canDiscard === true,
-      canActivate: false,
+      canActivate: capabilities.canActivate === true && row.lifecycleStatus === 'PROPOSED',
+      canApproveCustomTerms: capabilities.canApproveCustomTerms === true,
+      canResume: capabilities.canResume === true && row.lifecycleStatus === 'ACTIVATING',
       activationUnavailableReason: text(
         capabilities.activationUnavailableReason,
         'A ativação ficará disponível após a integração bancária.',

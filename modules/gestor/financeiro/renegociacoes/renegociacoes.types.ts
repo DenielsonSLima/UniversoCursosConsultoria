@@ -1,6 +1,6 @@
 export type RenegociacaoView = 'A_NEGOCIAR' | 'EM_ANDAMENTO' | 'EM_ATRASO' | 'ENCERRADOS';
 
-export type RenegociacaoLifecycleStatus = 'DRAFT' | 'PROPOSED' | 'CANCELED';
+export type RenegociacaoLifecycleStatus = 'DRAFT' | 'PROPOSED' | 'CANCELED' | 'ACTIVATING' | 'ACTIVE' | 'REVIEW_REQUIRED';
 
 export type RenegociacaoCourseType = 'TECNICO' | 'LIVRE' | 'ESPECIALIZACAO' | 'EAD';
 
@@ -25,9 +25,10 @@ export interface RenegociacaoCapabilities {
   viewProposal: boolean;
   saveProposal: boolean;
   discardProposal: boolean;
-  activate: false;
-  cancelSourceTitles: false;
-  issueReplacementTitles: false;
+  activate: boolean;
+  cancelSourceTitles: boolean;
+  issueReplacementTitles: boolean;
+  getActivation?: boolean;
 }
 
 export type RenegociacaoReadiness =
@@ -134,10 +135,13 @@ export interface RenegociacaoPolicyOverrides {
 }
 
 export interface RenegociacaoTerms {
+  targetNegotiatedCents?: number;
   commercialDiscountCents?: number;
   downPaymentCents?: number;
   installmentCount?: number;
   firstDueDate?: string;
+  cadence?: 'MONTHLY' | 'FIXED_DAYS';
+  intervalDays?: number;
 }
 
 export interface RenegociacaoScheduleEntry {
@@ -145,6 +149,7 @@ export interface RenegociacaoScheduleEntry {
   dueDate: string;
   amountCents: number;
   kind: 'DOWN_PAYMENT' | 'INSTALLMENT';
+  financialTerms?: Record<string, unknown>;
 }
 
 export interface RenegociacaoSourceItem
@@ -177,6 +182,7 @@ export interface RenegociacaoPolicySnapshot {
     penalty: 'HERDADO' | 'PROPOSTO';
   };
   differsFromDefault: boolean;
+  receiptPolicy?: { daysAfterDue: number; instruction: string };
 }
 
 export interface RenegociacaoPreviewTotals {
@@ -210,6 +216,8 @@ export interface RenegociacaoPreview {
   schedule: {
     installmentCount: number;
     firstDueDate: string;
+    cadence?: 'MONTHLY' | 'FIXED_DAYS';
+    intervalDays?: number | null;
     entries: RenegociacaoScheduleEntry[];
   };
   requiresApproval: boolean;
@@ -245,7 +253,9 @@ export interface RenegociacaoProposalSummary extends RenegociacaoIdentity {
   canceledReason: string | null;
   capabilities: {
     canDiscard: boolean;
-    canActivate: false;
+    canActivate: boolean;
+    canApproveCustomTerms?: boolean;
+    canResume?: boolean;
     activationUnavailableReason: string;
   };
 }
