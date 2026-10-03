@@ -1,5 +1,6 @@
 import React from 'react';
 import { AlertCircle, FileSearch, Loader2, RefreshCw, Search } from 'lucide-react';
+import FinancialUnderlineTabs from '../../components/FinancialUnderlineTabs';
 import { renegociacaoErrorMessage, viewLabel } from '../renegociacoes.model';
 import type { RenegociacaoView } from '../renegociacoes.types';
 
@@ -7,24 +8,15 @@ export const RenegociacaoViewTabs: React.FC<{
   value: RenegociacaoView;
   onChange: (view: RenegociacaoView) => void;
 }> = ({ value, onChange }) => (
-  <div
-    className="grid grid-cols-2 gap-1 rounded-2xl bg-slate-100 p-1 sm:grid-cols-4"
-    role="tablist"
-    aria-label="Visões de renegociação"
-  >
-    {(Object.keys(viewLabel) as RenegociacaoView[]).map((view) => (
-      <button
-        key={view}
-        type="button"
-        role="tab"
-        aria-selected={value === view}
-        onClick={() => onChange(view)}
-        className={`min-h-11 rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-wide transition ${value === view ? 'bg-white text-blue-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
-      >
-        {viewLabel[view]}
-      </button>
-    ))}
-  </div>
+  <FinancialUnderlineTabs
+    items={(Object.keys(viewLabel) as RenegociacaoView[]).map((view) => ({ id: view, label: viewLabel[view] }))}
+    value={value}
+    onChange={onChange}
+    ariaLabel="Visões de renegociação"
+    idPrefix="renegociacoes"
+    mobileMode="scroll"
+    showHorizontalScrollbar
+  />
 );
 
 export const RenegociacaoSearch: React.FC<{

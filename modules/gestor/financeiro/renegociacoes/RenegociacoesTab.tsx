@@ -5,11 +5,11 @@ import CandidateGroups from './components/CandidateGroups';
 import ProposalCards from './components/ProposalCards';
 import ProposalDetail from './components/ProposalDetail';
 import RenegociacaoWizard from './components/RenegociacaoWizard';
+import RenegociacaoFilters from './components/RenegociacaoFilters';
 import {
   EmptyPanel,
   ErrorPanel,
   LoadingPanel,
-  RenegociacaoSearch,
   RenegociacaoViewTabs,
 } from './components/RenegociacaoPanels';
 import {
@@ -21,6 +21,7 @@ import { useRenegociacoesRealtime } from './hooks/useRenegociacoesRealtime';
 import { renegociacaoUnavailableMessage } from './renegociacoes.model';
 import type {
   RenegociacaoCandidateGroup,
+  RenegociacaoCandidateFilters,
   RenegociacaoLifecycleStatus,
   RenegociacaoProposalSummary,
   RenegociacaoView,
@@ -40,9 +41,10 @@ const RenegociacoesTab: React.FC<RenegociacoesTabProps> = ({ poloId, isMatriz, o
   const [search, setSearch] = useState('');
   const deferredSearch = useDeferredValue(search.trim());
   const [page, setPage] = useState(1);
+  const [filters, setFilters] = useState<RenegociacaoCandidateFilters>({ courseType: '', turmaId: '' });
   const [ongoingStatus, setOngoingStatus] =
     useState<Extract<RenegociacaoLifecycleStatus, 'DRAFT' | 'PROPOSED'>>('PROPOSED');
-  const [wizardGroup, setWizardGroup] = useState<RenegociacaoCandidateGroup | null>(null);
+  const [wizard, setWizard] = useState<{ group: RenegociacaoCandidateGroup; selectedIds: string[] } | null>(null);
   const [proposalId, setProposalId] = useState<string | null>(null);
   const workspaceHeadingRef = useRef<globalThis.HTMLHeadingElement>(null);
   const workspaceFocusFrameRef = useRef<number | null>(null);
@@ -56,6 +58,7 @@ const RenegociacoesTab: React.FC<RenegociacoesTabProps> = ({ poloId, isMatriz, o
     deferredSearch,
     page,
     hasScope && rulesReady && view === 'A_NEGOCIAR',
+    filters,
   );
   const proposalStatus: RenegociacaoLifecycleStatus = view === 'ENCERRADOS' ? 'CANCELED' : ongoingStatus;
   const proposals = useRenegociacaoProposals(
@@ -69,7 +72,12 @@ const RenegociacoesTab: React.FC<RenegociacoesTabProps> = ({ poloId, isMatriz, o
 
   useEffect(() => {
     setPage(1);
-  }, [deferredSearch, view, ongoingStatus]);
+  }, [deferredSearch, view, ongoingStatus, filters]);
+  useEffect(() => {
+    setFilters({ courseType: '', turmaId: '' });
+    setWizard(null);
+    setPage(1);
+  }, [scopedPoloId]);
   useEffect(
     () => () => {
       if (workspaceFocusFrameRef.current !== null) {
@@ -97,7 +105,7 @@ const RenegociacoesTab: React.FC<RenegociacoesTabProps> = ({ poloId, isMatriz, o
   };
 
   const saved = (proposal: RenegociacaoProposalSummary, replayed: boolean) => {
-    setWizardGroup(null);
+    setWizard(null);
     setView('EM_ANDAMENTO');
     setOngoingStatus(proposal.lifecycleStatus === 'DRAFT' ? 'DRAFT' : 'PROPOSED');
     detailOpenedFromWizardRef.current = true;
@@ -157,12 +165,18 @@ const RenegociacoesTab: React.FC<RenegociacoesTabProps> = ({ poloId, isMatriz, o
   } else {
     workspace = (
       <>
-        <WorkspaceFilters
+        <RenegociacaoFilters
           view={view}
           ongoingStatus={ongoingStatus}
           search={search}
           onStatus={setOngoingStatus}
           onSearch={setSearch}
+          filters={filters}
+          filterOptions={candidates.data?.filterOptions}
+          loading={candidates.isPending}
+          error={candidates.isError}
+          onFilters={(next) => { setFilters(next); setPage(1); }}
+          onRetry={() => { void candidates.refetch(); }}
         />
         {view === 'A_NEGOCIAR' ? (
           <CandidateGroups
@@ -173,7 +187,7 @@ const RenegociacoesTab: React.FC<RenegociacoesTabProps> = ({ poloId, isMatriz, o
             onRetry={() => {
               void candidates.refetch();
             }}
-            onStart={setWizardGroup}
+            onStart={(group, selectedIds) => setWizard({ group, selectedIds })}
             onPage={setPage}
           />
         ) : (
@@ -238,14 +252,17 @@ const RenegociacoesTab: React.FC<RenegociacoesTabProps> = ({ poloId, isMatriz, o
           local/Banese. Proesc, EAD e parcelas com pagamento parcial não entram nesta etapa.
         </p>
       </div>
-      {workspace}
+      <section id={`renegociacoes-${view}-panel`} role="tabpanel" aria-labelledby={`renegociacoes-${view}-tab`}>
+        {workspace}
+      </section>
 
-      {wizardGroup && readiness.data?.availability === 'AVAILABLE' ? (
+      {wizard && readiness.data?.availability === 'AVAILABLE' ? (
         <RenegociacaoWizard
-          group={wizardGroup}
+          group={wizard.group}
+          initialSelectedIds={wizard.selectedIds}
           canSave={readiness.data.capabilities.saveProposal}
           saveUnavailableReason={renegociacaoUnavailableMessage(readiness.data.unavailableReasons.saveProposal)}
-          onClose={() => setWizardGroup(null)}
+          onClose={() => setWizard(null)}
           onSaved={saved}
         />
       ) : null}
@@ -266,44 +283,6 @@ const RenegociacoesTab: React.FC<RenegociacoesTabProps> = ({ poloId, isMatriz, o
     </div>
   );
 };
-
-const WorkspaceFilters: React.FC<{
-  view: RenegociacaoView;
-  ongoingStatus: Extract<RenegociacaoLifecycleStatus, 'DRAFT' | 'PROPOSED'>;
-  search: string;
-  onStatus: (status: Extract<RenegociacaoLifecycleStatus, 'DRAFT' | 'PROPOSED'>) => void;
-  onSearch: (value: string) => void;
-}> = ({ view, ongoingStatus, search, onStatus, onSearch }) => (
-  <div className="flex flex-col gap-3 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm sm:flex-row sm:items-center">
-    {view === 'EM_ANDAMENTO' ? (
-      <div className="grid grid-cols-2 rounded-xl bg-slate-100 p-1" role="group" aria-label="Situação das propostas">
-        {(
-          [
-            ['PROPOSED', 'Propostas'],
-            ['DRAFT', 'Rascunhos'],
-          ] as const
-        ).map(([status, label]) => (
-          <button
-            key={status}
-            type="button"
-            aria-pressed={ongoingStatus === status}
-            onClick={() => onStatus(status)}
-            className={`min-h-10 rounded-lg px-3 text-[10px] font-black uppercase tracking-wide ${ongoingStatus === status ? 'bg-white text-blue-800 shadow-sm' : 'text-slate-500'}`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-    ) : null}
-    <RenegociacaoSearch
-      value={search}
-      onChange={onSearch}
-      placeholder={
-        view === 'A_NEGOCIAR' ? 'Buscar aluno, matrícula ou turma...' : 'Buscar proposta por aluno ou turma...'
-      }
-    />
-  </div>
-);
 
 const ClosedScopeNotice = () => (
   <div className="flex gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-medium text-slate-600">

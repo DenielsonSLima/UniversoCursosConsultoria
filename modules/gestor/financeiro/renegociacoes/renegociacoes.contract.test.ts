@@ -11,7 +11,7 @@ test('serviço usa apenas RPCs canônicos e save envia CAS sem snapshot do clien
   ]);
   for (const rpc of [
     'get_receivable_renegotiation_readiness_secure',
-    'list_receivable_renegotiation_candidate_groups_secure',
+    'list_receivable_renegotiation_candidate_groups_v2_secure',
     'list_receivable_renegotiation_candidate_items_secure',
     'preview_receivable_renegotiation_secure',
     'save_receivable_renegotiation_proposal_secure',
@@ -56,9 +56,8 @@ test('navegação e modais usam composição fullscreen responsiva com pilha de 
     read('./hooks/useRenegociacaoDialogFocus.ts'),
     read('./components/WizardSteps.tsx'),
   ]);
-  assert.match(panels, /grid-cols-2/);
-  assert.match(panels, /sm:grid-cols-4/);
-  assert.doesNotMatch(panels, /overflow-x-auto|min-w-max/);
+  assert.match(panels, /FinancialUnderlineTabs/);
+  assert.match(panels, /idPrefix="renegociacoes"/);
   assert.match(wizard, /h-\[100dvh\] w-screen/);
   assert.doesNotMatch(wizard, /94vh|sm:max-w-5xl/);
   assert.match(detail, /createPortal/);

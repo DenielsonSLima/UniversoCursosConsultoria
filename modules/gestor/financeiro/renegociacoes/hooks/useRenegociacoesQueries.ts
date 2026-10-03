@@ -5,6 +5,7 @@ import { renegociacoesService } from '../renegociacoes.service';
 import type {
   DiscardRenegociacaoProposalInput,
   PreviewRenegociacaoInput,
+  RenegociacaoCandidateFilters,
   RenegociacaoLifecycleStatus,
   SaveRenegociacaoProposalInput,
 } from '../renegociacoes.types';
@@ -24,11 +25,13 @@ export const useRenegociacaoCandidates = (
   search: string,
   page: number,
   enabled: boolean,
+  filters?: RenegociacaoCandidateFilters,
 ) =>
   useQuery({
-    queryKey: renegociacoesQueryKeys.candidates(poloId, search, page),
-    queryFn: ({ signal }) => renegociacoesService.listCandidates(poloId, search, page, signal),
+    queryKey: renegociacoesQueryKeys.candidates(poloId, search, page, filters),
+    queryFn: ({ signal }) => renegociacoesService.listCandidates(poloId, search, page, signal, filters),
     enabled,
+    retry: false,
     staleTime: 10_000,
     ...refreshOnReturn,
   });
@@ -38,6 +41,7 @@ export const useRenegociacaoCandidateItems = (matriculaId?: string | null, asOf?
     queryKey: renegociacoesQueryKeys.candidateItems(matriculaId || 'sem-matricula', asOf),
     queryFn: ({ signal }) => renegociacoesService.listCandidateItems(matriculaId!, asOf, signal),
     enabled: Boolean(matriculaId),
+    retry: false,
     staleTime: 5_000,
     ...refreshOnReturn,
   });
