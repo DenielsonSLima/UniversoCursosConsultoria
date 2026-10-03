@@ -2,11 +2,15 @@ import React, { useState } from 'react';
 import { ChevronDown, UserRound } from 'lucide-react';
 import type { RenegociacaoCandidateGroup } from '../renegociacoes.types';
 import CandidateEnrollment from './CandidateEnrollment';
+import type { CandidateSelectionState } from './candidateSelection.model';
 
 interface CandidateStudentCardProps {
   studentId: string;
   studentName: string;
   groups: RenegociacaoCandidateGroup[];
+  selection: CandidateSelectionState;
+  onSelectionChange: (group: RenegociacaoCandidateGroup, selectedIds: string[]) => void;
+  onClearSelection: () => void;
   onStart: (group: RenegociacaoCandidateGroup, selectedIds: string[]) => void;
 }
 
@@ -23,10 +27,16 @@ const CandidateStudentCard: React.FC<CandidateStudentCardProps> = ({
   studentId,
   studentName,
   groups,
+  selection,
+  onSelectionChange,
+  onClearSelection,
   onStart,
 }) => {
   const [expanded, setExpanded] = useState(false);
   const panelId = `candidate-student-${studentId}`;
+  const selectedHere = Boolean(
+    selection.ownerIdentity?.alunoId === studentId && selection.selectedIds.length,
+  );
 
   return (
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -49,7 +59,11 @@ const CandidateStudentCard: React.FC<CandidateStudentCardProps> = ({
             </span>
           </span>
           <span className="hidden text-[10px] font-black uppercase tracking-wide text-blue-700 sm:inline">
-            {expanded ? 'Recolher' : 'Ver parcelas'}
+            {selectedHere
+              ? `${selection.selectedIds.length} selecionada${selection.selectedIds.length === 1 ? '' : 's'}`
+              : expanded
+                ? 'Recolher'
+                : 'Ver parcelas'}
           </span>
           <ChevronDown
             size={19}
@@ -68,6 +82,9 @@ const CandidateStudentCard: React.FC<CandidateStudentCardProps> = ({
             key={`${group.matriculaId}-${group.turmaId}`}
             group={group}
             active={expanded}
+            selection={selection}
+            onSelectionChange={onSelectionChange}
+            onClearSelection={onClearSelection}
             onStart={onStart}
           />
         ))}

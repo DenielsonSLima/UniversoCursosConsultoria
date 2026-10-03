@@ -99,6 +99,7 @@ await build({
     name: 'renegociacao-query-fixture',
     setup(buildApi) {
       buildApi.onResolve({ filter: /useRenegociacoesQueries$/ }, () => ({ path: 'renegociacao-query', namespace: 'fixture' }));
+      buildApi.onResolve({ filter: /useRenegociacaoSelectionSummary$/ }, () => ({ path: 'selection-summary', namespace: 'summary-fixture' }));
       buildApi.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({
         loader: 'js',
         contents: `
@@ -111,6 +112,21 @@ await build({
             reset: () => {},
           };
           export const useRenegociacaoMutations = () => ({ preview: mutation, save: mutation });
+        `,
+      }));
+      buildApi.onLoad({ filter: /.*/, namespace: 'summary-fixture' }, () => ({
+        loader: 'js',
+        contents: `
+          export const useRenegociacaoSelectionSummary = (identity, ids, asOf) => {
+            const selectedIds = [...ids].sort();
+            globalThis.__selectionSummaryCalls.push({
+              matriculaId: identity.matriculaId, selectedIds, asOf,
+            });
+            return {
+              data: globalThis.__selectionSummaries[JSON.stringify(selectedIds)],
+              loading: false, error: null, refetch: async () => {},
+            };
+          };
         `,
       }));
     },
@@ -135,6 +151,20 @@ const item = (receivableId, label, eligible, reason = '') => ({
   lateDays: 23, principalCents: 10000, interestCents: 100, penaltyCents: 200, debtCents: 10300,
   policyKind: 'TECHNICAL', sourceSystem: 'LOCAL', eligibility: { eligible, code: eligible ? 'ELIGIBLE' : 'LINKED', reason },
 });
+const selectionIdentity = {
+  poloId: 'polo-1', alunoId: 'aluno-1', matriculaId: 'mat-1', turmaId: 'turma-1',
+};
+const summary = (receivableIds, principalCents, grossDebtCents) => ({
+  version: 1, asOf: '2026-10-03', identity: selectionIdentity,
+  receivableIds, count: receivableIds.length,
+  totals: {
+    principalCents, punctualDiscountCents: null, discountedPrincipalCents: null,
+    interestCents: grossDebtCents - principalCents, penaltyCents: 0, grossDebtCents,
+    payableCents: null,
+  },
+  discount: { status: 'UNAVAILABLE', message: 'Desconto não comprovado nesta fixture.', appliedToProposal: false },
+  payableStatus: 'UNAVAILABLE', payableMessage: 'Total de pagamento não confirmado nesta fixture.',
+});
 
 test('lista entrega 1 ou N IDs ao wizard, que revalida refetch, erro e identidade', async () => {
   const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>', {
@@ -144,7 +174,7 @@ test('lista entrega 1 ou N IDs ao wizard, que revalida refetch, erro e identidad
   const globalKeys = [
     'window', 'document', 'navigator', 'HTMLElement', 'Node', 'Event', 'MouseEvent', 'FocusEvent',
     'MessageChannel', 'requestAnimationFrame', 'cancelAnimationFrame', 'getComputedStyle',
-    'IS_REACT_ACT_ENVIRONMENT', '__wizardQueries',
+    'IS_REACT_ACT_ENVIRONMENT', '__wizardQueries', '__selectionSummaryCalls', '__selectionSummaries',
   ];
   const previousGlobals = new Map(globalKeys.map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
   const originalItems = [
@@ -177,6 +207,11 @@ test('lista entrega 1 ou N IDs ao wizard, que revalida refetch, erro e identidad
     getComputedStyle: dom.window.getComputedStyle.bind(dom.window),
     IS_REACT_ACT_ENVIRONMENT: true,
     __wizardQueries: queries,
+    __selectionSummaryCalls: [],
+    __selectionSummaries: {
+      '["rec-1"]': summary(['rec-1'], 10000, 10300),
+      '["rec-1","rec-2"]': summary(['rec-1', 'rec-2'], 20000, 20600),
+    },
   };
   for (const [key, value] of Object.entries(testGlobals)) {
     Object.defineProperty(globalThis, key, { configurable: true, writable: true, value });
@@ -205,6 +240,12 @@ test('lista entrega 1 ou N IDs ao wizard, que revalida refetch, erro e identidad
     assert.equal(currentDialog.querySelector('[data-receivable-id="rec-1"]').checked, true);
     assert.equal(currentDialog.querySelector('[data-receivable-id="rec-2"]').checked, false);
     assert.equal(currentDialog.querySelector('[data-receivable-id="rec-blocked"]').disabled, true);
+    assert.deepEqual(globalThis.__selectionSummaryCalls.at(-1), {
+      matriculaId: 'mat-1', selectedIds: ['rec-1'], asOf: '2026-10-03',
+    });
+    assert.match(currentDialog.textContent, /Resumo da seleção/);
+    assert.match(currentDialog.textContent, /R\$\s*100,00/);
+    assert.match(currentDialog.textContent, /A conferir/, 'wizard não inventa desconto indisponível');
     await closeWizard();
 
     const selectAll = [...listPanel().querySelectorAll('button')].find((button) => button.textContent.includes('Marcar elegíveis'));
@@ -213,6 +254,8 @@ test('lista entrega 1 ou N IDs ao wizard, que revalida refetch, erro e identidad
     currentDialog = dialog();
     assert.equal(currentDialog.querySelector('[data-receivable-id="rec-1"]').checked, true);
     assert.equal(currentDialog.querySelector('[data-receivable-id="rec-2"]').checked, true);
+    assert.deepEqual(globalThis.__selectionSummaryCalls.at(-1).selectedIds, ['rec-1', 'rec-2']);
+    assert.match(currentDialog.textContent, /R\$\s*200,00/);
 
     queries['mat-1'] = {
       ...queries['mat-1'],
@@ -231,6 +274,8 @@ test('lista entrega 1 ou N IDs ao wizard, que revalida refetch, erro e identidad
     assert.equal(currentDialog.querySelector('[data-receivable-id="rec-1"]').checked, true);
     assert.equal(currentDialog.querySelector('[data-receivable-id="rec-2"]').checked, false);
     assert.equal(currentDialog.querySelector('[data-receivable-id="rec-2"]').disabled, true);
+    assert.deepEqual(globalThis.__selectionSummaryCalls.at(-1).selectedIds, ['rec-1']);
+    assert.match(currentDialog.textContent, /R\$\s*100,00/);
     const continueButton = [...currentDialog.querySelectorAll('footer button')].find((button) => button.textContent.includes('Continuar'));
     assert.equal(continueButton.disabled, false, 'refetch preserva a parcela que continua elegível');
 

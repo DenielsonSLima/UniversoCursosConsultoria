@@ -14,6 +14,7 @@ import type {
   RenegociacaoTerms,
 } from '../renegociacoes.types';
 import CanonicalSummary from './CanonicalSummary';
+import SelectionFinancialSummary from './SelectionFinancialSummary';
 import { ErrorPanel, LoadingPanel } from './RenegociacaoPanels';
 import { Field, inputClass, SelectionStep, TermsStep } from './WizardSteps';
 import {
@@ -268,6 +269,7 @@ const RenegociacaoWizard: React.FC<RenegociacaoWizardProps> = ({
             </div>
           ) : step === 'SELECTION' ? (
             <div className="space-y-4">
+              <SelectionFinancialSummary group={group} selectedIds={selected} asOf={candidateData?.asOf} />
               <SelectionStep
                 items={candidateItems}
                 selected={selected}
