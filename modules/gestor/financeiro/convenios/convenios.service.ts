@@ -3,6 +3,7 @@ import {
   mapConvenioDetail,
   mapConveniosList,
   mapCriarConvenioResult,
+  mapExcluirConvenioResult,
   mapFinalizarMesResult,
   mapLancarCreditoResult,
 } from './convenios.mapper';
@@ -13,6 +14,8 @@ import type {
   ConveniosListResult,
   CriarConvenioInput,
   CriarConvenioResult,
+  ExcluirConvenioInput,
+  ExcluirConvenioResult,
   FinalizarConvenioMesInput,
   FinalizarConvenioMesResult,
   LancarConvenioCreditoInput,
@@ -22,6 +25,16 @@ import type {
 const unwrap = (data: unknown) => Array.isArray(data) ? data[0] : data;
 
 export const conveniosService = {
+  async excluir(input: ExcluirConvenioInput): Promise<ExcluirConvenioResult> {
+    const { data, error } = await supabase.rpc('excluir_convenio_financeiro_secure', {
+      p_request_id: input.requestId,
+      p_polo_id: input.poloId,
+      p_convenio_id: input.convenioId,
+    });
+    if (error) throw error;
+    return mapExcluirConvenioResult(unwrap(data));
+  },
+
   async listarFaculdadesParceiras(
     poloId: string,
     signal?: AbortSignal,

@@ -114,3 +114,16 @@ export interface FinalizarConvenioMesResult {
   mesFechado: ConvenioFinanceiroMes;
   proximaMes: ConvenioFinanceiroMes | null;
 }
+
+export interface ExcluirConvenioInput {
+  requestId: string;
+  poloId: string;
+  convenioId: string;
+}
+
+export interface ExcluirConvenioResult {
+  replayed: boolean;
+  poloId: string;
+  convenioId: string;
+  competenciaIds: string[];
+}

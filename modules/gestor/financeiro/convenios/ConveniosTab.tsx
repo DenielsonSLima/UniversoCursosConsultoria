@@ -13,10 +13,12 @@ import { isContaDisponivelNoPolo } from '../financeiro.service';
 import { useFinanceiroSharedQueries } from '../hooks/useFinanceiroSharedQueries';
 import { invalidateConveniosScope } from './convenios.cache';
 import { conveniosService } from './convenios.service';
+import { conveniosQueryKeys } from './convenios.queryKeys';
 import type {
   ConvenioFinanceiroMes,
   ConvenioStatusScope,
   CriarConvenioInput,
+  ExcluirConvenioInput,
   FinalizarConvenioMesInput,
   LancarConvenioCreditoInput,
 } from './convenios.types';
@@ -24,6 +26,7 @@ import { useConvenioDetailQuery, useConvenioPartnersQuery, useConveniosListQuery
 import { useConveniosRealtime } from './hooks/useConveniosRealtime';
 import ConvenioCloseMonthModal from './components/ConvenioCloseMonthModal';
 import ConvenioCreditModal from './components/ConvenioCreditModal';
+import ConvenioDeleteModal from './components/ConvenioDeleteModal';
 import ConvenioFormModal from './components/ConvenioFormModal';
 import ConvenioMonthCard from './components/ConvenioMonthCard';
 import ConvenioMonthDetailsPage from './components/ConvenioMonthDetailsPage';
@@ -36,7 +39,7 @@ interface ConveniosTabProps {
 
 type ViewMode = 'cards' | 'table';
 
-const ConveniosTab: React.FC<ConveniosTabProps> = ({ poloId: scopedPoloId }) => {
+const ConveniosPoloTab: React.FC<ConveniosTabProps> = ({ poloId: scopedPoloId }) => {
   const poloId = scopedPoloId && scopedPoloId !== 'todos' ? scopedPoloId : '';
   const queryClient = useQueryClient();
   const { toasts, removeToast, toast } = useToast();
@@ -48,6 +51,7 @@ const ConveniosTab: React.FC<ConveniosTabProps> = ({ poloId: scopedPoloId }) => 
   const [selectedMes, setSelectedMes] = useState<ConvenioFinanceiroMes | null>(null);
   const [creditMes, setCreditMes] = useState<ConvenioFinanceiroMes | null>(null);
   const [closeMes, setCloseMes] = useState<ConvenioFinanceiroMes | null>(null);
+  const [deleteMes, setDeleteMes] = useState<ConvenioFinanceiroMes | null>(null);
 
   const shared = useFinanceiroSharedQueries({
     poloId,
@@ -122,6 +126,42 @@ const ConveniosTab: React.FC<ConveniosTabProps> = ({ poloId: scopedPoloId }) => 
     onError: (error: Error) => toast.error('Erro ao finalizar mês', error.message),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (input: ExcluirConvenioInput) => conveniosService.excluir(input),
+    onSuccess: async (result) => {
+      setDeleteMes(null);
+      setSelectedMes((current) => current?.convenioId === result.convenioId ? null : current);
+      for (const competenciaId of result.competenciaIds) {
+        queryClient.removeQueries({ queryKey: conveniosQueryKeys.detail(result.poloId, competenciaId), exact: true });
+      }
+      await invalidateConveniosScope(queryClient, result.poloId);
+      toast.success(
+        result.replayed ? 'Exclusão já confirmada' : 'Convênio excluído',
+        'O convênio foi retirado da lista. O parceiro e a auditoria foram preservados.',
+      );
+    },
+    onError: (error: Error) => toast.error('Não foi possível excluir o convênio', error.message),
+  });
+
+  const openDeleteModal = (mes: ConvenioFinanceiroMes) => {
+    if (mes.poloId !== poloId || deleteMutation.isPending) return;
+    deleteMutation.reset();
+    setDeleteMes(mes);
+  };
+  const deleteModal = deleteMes ? (
+    <ConvenioDeleteModal
+      key={deleteMes.convenioId}
+      mes={deleteMes}
+      isPending={deleteMutation.isPending}
+      error={deleteMutation.error as Error | null}
+      onClose={() => { if (!deleteMutation.isPending) setDeleteMes(null); }}
+      onConfirm={(input) => {
+        if (input.poloId !== poloId || deleteMutation.isPending) return;
+        deleteMutation.mutate(input);
+      }}
+    />
+  ) : null;
+
   const items = listQuery.data?.itens || [];
   const resumo = listQuery.data?.resumo;
 
@@ -137,8 +177,10 @@ const ConveniosTab: React.FC<ConveniosTabProps> = ({ poloId: scopedPoloId }) => 
           onBack={() => setSelectedMes(null)}
           onCredit={setCreditMes}
           onCloseMonth={setCloseMes}
+          onDelete={openDeleteModal}
           onRetry={() => { void detailQuery.refetch(); }}
         />
+        {deleteModal}
         {creditMes ? <ConvenioCreditModal mes={creditMes} contas={contas} isPending={creditMutation.isPending} error={creditMutation.error as Error | null} onClose={() => { if (!creditMutation.isPending) setCreditMes(null); }} onConfirm={(input) => creditMutation.mutate(input)} /> : null}
         {closeMes ? <ConvenioCloseMonthModal mes={closeMes} isPending={closeMutation.isPending} error={closeMutation.error as Error | null} onClose={() => { if (!closeMutation.isPending) setCloseMes(null); }} onConfirm={(input) => closeMutation.mutate(input)} /> : null}
       </div>
@@ -148,6 +190,7 @@ const ConveniosTab: React.FC<ConveniosTabProps> = ({ poloId: scopedPoloId }) => 
   return (
     <div className="space-y-5 animate-fadeIn">
       <ToastNotification toasts={toasts} onRemove={removeToast} />
+      {deleteModal}
 
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
@@ -192,9 +235,9 @@ const ConveniosTab: React.FC<ConveniosTabProps> = ({ poloId: scopedPoloId }) => 
       ) : items.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-200 bg-white py-16 text-center text-slate-400"><Handshake size={44} className="mx-auto mb-3 opacity-30" /><p className="text-sm font-black uppercase tracking-wide">Nenhum mês encontrado</p><p className="mt-1 text-xs font-medium">Crie um convênio ou ajuste a busca e o status.</p></div>
       ) : viewMode === 'cards' ? (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">{items.map((mes) => <ConvenioMonthCard key={mes.id} mes={mes} onOpen={setSelectedMes} onCloseMonth={setCloseMes} />)}</div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">{items.map((mes) => <ConvenioMonthCard key={mes.id} mes={mes} onOpen={setSelectedMes} onCloseMonth={setCloseMes} onDelete={openDeleteModal} />)}</div>
       ) : (
-        <ConvenioMonthsTable items={items} onOpen={setSelectedMes} onCloseMonth={setCloseMes} />
+        <ConvenioMonthsTable items={items} onOpen={setSelectedMes} onCloseMonth={setCloseMes} onDelete={openDeleteModal} />
       )}
 
       {showCreate ? <ConvenioFormModal poloId={poloId} parceiros={partnersQuery.data || []} parceirosLoading={partnersQuery.isPending} parceirosError={partnersQuery.isError} isPending={createMutation.isPending} error={createMutation.error as Error | null} onClose={() => { if (!createMutation.isPending) setShowCreate(false); }} onConfirm={(input) => createMutation.mutate(input)} /> : null}
@@ -202,5 +245,10 @@ const ConveniosTab: React.FC<ConveniosTabProps> = ({ poloId: scopedPoloId }) => 
     </div>
   );
 };
+
+// Uma troca de unidade encerra seleção, detalhe e confirmações do escopo anterior.
+const ConveniosTab: React.FC<ConveniosTabProps> = (props) => (
+  <ConveniosPoloTab key={props.poloId || 'sem-polo'} {...props} />
+);
 
 export default ConveniosTab;

@@ -8,6 +8,7 @@ import type {
   ConveniosListResult,
   ConveniosResumo,
   CriarConvenioResult,
+  ExcluirConvenioResult,
   FinalizarConvenioMesResult,
   LancarConvenioCreditoResult,
 } from './convenios.types';
@@ -179,5 +180,18 @@ export const mapFinalizarMesResult = (value: unknown): FinalizarConvenioMesResul
     proximaMes: payload.proxima_mes === null
       ? null
       : mapConvenioMes(payload.proxima_mes, 'finalizar.proxima_mes'),
+  };
+};
+
+export const mapExcluirConvenioResult = (value: unknown): ExcluirConvenioResult => {
+  const { payload, replayed } = mapMutationBase(value, 'excluir');
+  const competenciaIds = list(payload.competencia_ids, 'excluir.competencia_ids')
+    .map((id, index) => string(id, `excluir.competencia_ids[${index}]`));
+  if (competenciaIds.length === 0) throw new Error('Contrato inválido de Convênios: excluir.competencia_ids.');
+  return {
+    replayed,
+    poloId: string(payload.polo_id, 'excluir.polo_id'),
+    convenioId: string(payload.convenio_id, 'excluir.convenio_id'),
+    competenciaIds,
   };
 };
