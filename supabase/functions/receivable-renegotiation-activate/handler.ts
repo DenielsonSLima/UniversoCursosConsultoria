@@ -5,7 +5,7 @@ import { activationFailure, runActivation } from "./orchestrator.ts";
 export type ActivationHandlerDependencies = {
   authorize: (request: Request, activation: ActivationRequest) => Promise<{ operationId: string }>;
   privileged: (authorized: { operationId: string }) => ActivationDependencies;
-  headers?: (request: Request) => HeadersInit;
+  headers?: (request: Request) => ConstructorParameters<typeof Headers>[0];
 };
 
 const response = (request: Request, dependencies: ActivationHandlerDependencies,

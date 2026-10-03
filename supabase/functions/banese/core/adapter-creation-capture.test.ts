@@ -24,7 +24,7 @@ Deno.test("durable callback preserves original POST Pix before later terms GET f
   try {
     await assert.rejects(() => createBaneseBoletoCharge({ ...input, environment: "production",
       financialTerms: { nominalAmount: input.amount, dueDate: input.dueDate },
-      onCreationResponse: async (capture) => { captured = structuredClone(capture); calls.push("CAPTURE"); },
+      onCreationResponse: async (capture) => { captured = globalThis.structuredClone(capture); calls.push("CAPTURE"); },
     }), /503/);
     assert.deepEqual(calls, ["GET", "POST", "CAPTURE", "GET"]);
     assert.equal((captured as unknown as BaneseCreationResponseCapture).request.nossoNumero, response.NossoNumero);

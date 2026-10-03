@@ -4,7 +4,7 @@ import { createActivationHandler } from "./handler.ts";
 import { startActivation } from "./dependencies.ts";
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 
-const request = (body: unknown, headers: HeadersInit = { Authorization: "Bearer synthetic" }) =>
+const request = (body: unknown, headers: ConstructorParameters<typeof Headers>[0] = { Authorization: "Bearer synthetic" }) =>
   new Request("http://localhost/activate", { method: "POST", headers, body: JSON.stringify(body) });
 const body = { agreementId: "11111111-1111-4111-8111-111111111111",
   requestId: "22222222-2222-4222-8222-222222222222", expectedVersion: 2,

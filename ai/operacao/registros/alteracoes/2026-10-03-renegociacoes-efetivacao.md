@@ -199,9 +199,11 @@ Somente estes caminhos pertencem ao lote; artefatos de teste e build ficam fora.
 
 - Não houve alteração de fontes do corpus RAG neste lote; caches não pertencem
   ao manifesto. LOTE_ATIVO, memória, AGENTS e mudanças paralelas foram preservados.
-- A publicação foi autorizada e o DDL está aplicado. O deploy da Edge de ativação
-  e do reader documental foi bloqueado pela revisão de segurança do provedor por
-  tamanho do pacote; nenhuma função foi implantada e o bloqueio não será contornado.
+- A publicação foi autorizada e o DDL está aplicado. Depois de novo pedido
+  explícito do usuário para produção, o mesmo payload foi reenviado e o Guardian
+  voltou a negar o envio da ativação pelo limite de 200.000 bytes. O reader não
+  foi reenviado. O limite não foi liberado; a ativação segue ausente e o reader na
+  v21 anterior. Nenhuma função foi implantada e o bloqueio não será contornado.
 - O código será preservado em branch/PR de revisão, sem merge em produção até
   liberar e conferir as funções. Não promover frontend isolado nem confundir DDL
   aplicado com fluxo bancário disponível.
@@ -212,7 +214,17 @@ Somente estes caminhos pertencem ao lote; artefatos de teste e build ficam fora.
   ao final. Cinco testes de navegação e 36 do fluxo passaram, além do build local
   4.8.160/revisão 169. A CI deve validar o manifesto sobre a base remota, pois o
   build local também vê alterações paralelas preservadas.
+- A primeira CI remota do PR 249 passou teto, preservação de migrations,
+  contrato operacional e TypeScript, mas parou no lint antes dos testes/build:
+  seis `no-undef` em cinco arquivos (`structuredClone` e `HeadersInit`). A correção
+  apenas qualificou APIs do runtime/tipos, sem alterar semântica ou configuração.
+- Validação exata da correção: ESLint focado nos cinco arquivos com a configuração
+  byte a byte igual à main remota (blob `29e8781da9ee96dbea6c9bd5e638ee2d7b59f94f`),
+  `deno check` dos mesmos cinco e `deno test --allow-read --allow-env` dos quatro
+  testes afetados: 20 passaram, zero falhou. A CI remota ainda precisa repetir o
+  manifesto; não houve novo build global local.
 
 Estado: implementação e validação local concluídas; 13 migrations aplicadas com
-conteúdo imutável. Edge e publicação de produção aguardam revisão de segurança.
+conteúdo imutável. A correção do lint aguarda nova CI remota; Edge e publicação de
+produção aguardam revisão de segurança.
 Sem deploy de função, cancelamento, emissão ou baixa real neste lote.

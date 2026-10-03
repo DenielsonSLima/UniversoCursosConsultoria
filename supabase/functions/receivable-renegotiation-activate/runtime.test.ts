@@ -45,7 +45,7 @@ Deno.test("invalid later source and incomplete payer fail before any cancellatio
   context.sources[0].bankSnapshot!.account = "";
   assert.throws(() => assertActivationPlan(context, "2029-12-01"), /Identidade bancária/);
   const invalidSecond = syntheticContext();
-  invalidSecond.sources.push(structuredClone(invalidSecond.sources[0]));
+  invalidSecond.sources.push(globalThis.structuredClone(invalidSecond.sources[0]));
   invalidSecond.sources[1].bankSnapshot!.barcode = "0".repeat(44);
   assert.throws(() => assertActivationPlan(invalidSecond, "2029-12-01"));
   assert.throws(() => assertPlanPayloads(syntheticContext(), { ...validInput.payer, postalCode: "" }), /CEP/);

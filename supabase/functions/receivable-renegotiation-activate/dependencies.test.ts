@@ -19,9 +19,9 @@ Deno.test("source confirmation requires persisted canonical context and item sta
   const context = syntheticContext();
   const missing = setup({ success: true });
   await assert.rejects(() => missing.dependencies.confirmSource(context, context.sources[0], evidence));
-  const notConfirmed = setup(structuredClone(context));
+  const notConfirmed = setup(globalThis.structuredClone(context));
   await assert.rejects(() => notConfirmed.dependencies.confirmSource(context, context.sources[0], evidence), /não foi persistida/);
-  const saved = structuredClone(context); saved.sources[0].state = "CANCELED_CONFIRMED";
+  const saved = globalThis.structuredClone(context); saved.sources[0].state = "CANCELED_CONFIRMED";
   const positive = setup(saved);
   await positive.dependencies.confirmSource(context, context.sources[0], evidence);
   assert.deepEqual(positive.calls[0], { name: "confirm_receivable_renegotiation_source_cancel_secure", args: {
