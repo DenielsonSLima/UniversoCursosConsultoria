@@ -292,6 +292,7 @@ const RenegociacaoWizard: React.FC<RenegociacaoWizardProps> = ({
             </div>
           ) : step === 'TERMS' && defaults ? (
             <div className="space-y-4">
+              <SelectionFinancialSummary group={group} selectedIds={selected} asOf={candidateData?.asOf} />
               <TermsStep
                 defaults={defaults}
                 disabled={preview.isPending}

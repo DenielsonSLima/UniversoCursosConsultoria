@@ -1,8 +1,8 @@
 {
-  "version": "4.8.162",
+  "version": "4.8.163",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 171,
+  "revision": 172,
   "releasedAt": "2026-10-03",
-  "summary": "Exclusão segura de convênios sem movimentação, com confirmação e auditoria"
+  "summary": "Resumo da seleção visível na etapa Condições da renegociação"
 }
