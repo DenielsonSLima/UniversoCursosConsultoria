@@ -1,8 +1,8 @@
 {
-  "version": "4.8.159",
+  "version": "4.8.160",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 168,
+  "revision": 169,
   "releasedAt": "2026-10-03",
-  "summary": "Resumo flutuante acompanha a seleção de parcelas na renegociação"
+  "summary": "Aba Renegociações posicionada após A Pagar no Financeiro"
 }

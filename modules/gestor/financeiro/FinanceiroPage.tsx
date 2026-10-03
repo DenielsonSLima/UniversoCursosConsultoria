@@ -44,8 +44,8 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ poloId, poloName, isMat
   const tabs = useMemo(() => [
     { id: 'resumo' as const, label: 'Resumo', icon: <Layers size={14} /> },
     { id: 'receber' as const, label: 'A Receber', icon: <TrendingUp size={14} /> },
-    { id: 'renegociacoes' as const, label: 'Renegociações', icon: <Handshake size={14} /> },
     { id: 'despesas' as const, label: 'A Pagar', icon: <TrendingDown size={14} /> },
+    { id: 'renegociacoes' as const, label: 'Renegociações', icon: <Handshake size={14} /> },
     { id: 'emprestimos' as const, label: 'Empréstimos', icon: <Landmark size={14} /> },
     { id: 'convenios' as const, label: 'Convênios', icon: <Handshake size={14} /> },
     { id: 'transferencias' as const, label: 'Transferências', icon: <ArrowRightLeft size={14} /> },
