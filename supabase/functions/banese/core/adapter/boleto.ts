@@ -26,6 +26,7 @@ import {
 } from "./types.ts";
 import {
   assertEnvironment,
+  awaitBaneseRead,
   firstString,
   markRemotePaymentMayExist,
   metadataFrom,
@@ -47,6 +48,7 @@ export const createBaneseBoletoCharge = async (
   input: AdapterCreateChargeInput,
 ): Promise<AdapterCreateChargeResult> => {
   assertEnvironment(input.environment);
+  input.signal?.throwIfAborted();
   if (input.paymentMethod !== "BOLETO") {
     throw new BaneseAdapterError(
       "createBaneseBoletoCharge aceita apenas BOLETO.",
@@ -108,9 +110,16 @@ export const createBaneseBoletoCharge = async (
   convenio = reservation.convenio;
   agencia = reservation.agencia;
 
+  if (reservation.recoveryPending && input.onCreationResponse) {
+    throw new BaneseAdapterError(
+      "A emissão com captura durável não pode executar recuperação de incidentes legados. Revisão obrigatória, sem novo POST.",
+    );
+  }
+
   const token: BaneseAccessToken = await requestBaneseBoletoAccessToken(
     input.admin,
     input.environment,
+    { signal: input.signal },
   );
   if (reservation.recoveryPending) {
     const recovery = await recoverBaneseIncidentReservation({
@@ -167,6 +176,7 @@ export const createBaneseBoletoCharge = async (
         raw,
         baseEndpoint: `${endpoint}/${payload.NossoNumero}`,
         token,
+        signal: input.signal,
       });
     }
     let confirmedRaw = raw;
@@ -178,6 +188,7 @@ export const createBaneseBoletoCharge = async (
           payload,
           currentRaw: raw,
           repairMismatch: input.environment === "sandbox",
+          signal: input.signal,
         });
       } catch (error) {
         throw markRemotePaymentMayExist(error);
@@ -236,18 +247,20 @@ export const createBaneseBoletoCharge = async (
   };
 
   for (let attempt = 0; attempt < 25; attempt += 1) {
+    input.signal?.throwIfAborted();
     const nossoNumero = reservation.nossoNumero;
     const payload = payloadFor(nossoNumero);
     let preflightRaw: unknown;
     let preflightStatus: number;
     try {
-      const preflight = await fetch(`${endpoint}/${nossoNumero}`, {
+      const preflight = await awaitBaneseRead(fetch(`${endpoint}/${nossoNumero}`, {
         headers: {
           Authorization: `${token.tokenType} ${token.accessToken}`,
         },
-      });
+        signal: input.signal,
+      }), input.signal);
       preflightStatus = preflight.status;
-      preflightRaw = await readResponseBody(preflight);
+      preflightRaw = await awaitBaneseRead(readResponseBody(preflight), input.signal);
     } catch (cause) {
       throw new BaneseAdapterError(
         `A consulta preventiva Banese falhou antes de qualquer POST: ${
@@ -278,6 +291,7 @@ export const createBaneseBoletoCharge = async (
     }
 
     try {
+      input.signal?.throwIfAborted();
       await claimBaneseApiSubmissionAttempt(input.admin, {
         receivableId,
         environment: input.environment,
@@ -295,15 +309,17 @@ export const createBaneseBoletoCharge = async (
     }
 
     try {
-      const response = await fetch(endpoint, {
+      input.signal?.throwIfAborted();
+      const response = await awaitBaneseRead(fetch(endpoint, {
         method: "POST",
         headers: {
           Authorization: `${token.tokenType} ${token.accessToken}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
-      });
-      const raw = await readResponseBody(response);
+        signal: input.signal,
+      }), input.signal);
+      const raw = await awaitBaneseRead(readResponseBody(response), input.signal);
       if (!response.ok) {
         const rawText = typeof raw === "string" ? raw : JSON.stringify(raw);
         const error = new BaneseAdapterError(
@@ -312,12 +328,13 @@ export const createBaneseBoletoCharge = async (
         const duplicate = response.status === 409 ||
           /JA_EXISTE|J[AÁ] EXISTE|DUPLIC/i.test(rawText);
         if (duplicate) {
-          const duplicateQuery = await fetch(`${endpoint}/${nossoNumero}`, {
+          const duplicateQuery = await awaitBaneseRead(fetch(`${endpoint}/${nossoNumero}`, {
             headers: {
               Authorization: `${token.tokenType} ${token.accessToken}`,
             },
-          });
-          const duplicateRaw = await readResponseBody(duplicateQuery);
+            signal: input.signal,
+          }), input.signal);
+          const duplicateRaw = await awaitBaneseRead(readResponseBody(duplicateQuery), input.signal);
           if (!duplicateQuery.ok) throw error;
           const collision = await classifyBaneseBoletoCollision(
             duplicateRaw,
@@ -333,6 +350,13 @@ export const createBaneseBoletoCharge = async (
         throw error;
       }
 
+      // Preserve the original POST (including QrCode) before any parser or GET
+      // can fail. This private evidence is not yet a confirmed receivable.
+      await input.onCreationResponse?.({ response: raw, request: {
+        nossoNumero, amount: payload.ValorNominal, dueDate: payload.DataVencimento,
+        convenio, agency: agencia,
+      } });
+
       const creationPix = isProduction(input.environment)
         ? await normalizeBanesePixFromResponses(
           [{ source: "creation", raw }],
@@ -343,12 +367,13 @@ export const createBaneseBoletoCharge = async (
       if (
         creationPix && (!creationPix.pixPayload || !creationPix.pixEncodedImage)
       ) {
-        const lookup = await fetch(`${endpoint}/${nossoNumero}`, {
+        const lookup = await awaitBaneseRead(fetch(`${endpoint}/${nossoNumero}`, {
           headers: {
             Authorization: `${token.tokenType} ${token.accessToken}`,
           },
-        });
-        postLookupRaw = await readResponseBody(lookup);
+          signal: input.signal,
+        }), input.signal);
+        postLookupRaw = await awaitBaneseRead(readResponseBody(lookup), input.signal);
         if (!lookup.ok) {
           throw new BaneseAdapterError(
             `O boleto foi criado, mas a consulta unica do QrCode falhou (${lookup.status}).`,
@@ -369,6 +394,7 @@ export const createBaneseBoletoCharge = async (
           payload,
           currentRaw: isProduction(input.environment) ? postLookupRaw : raw,
           repairMismatch: false,
+          signal: input.signal,
         });
       }
       const result = boletoResultFromResponse(
@@ -394,6 +420,7 @@ export const createBaneseBoletoCharge = async (
           raw: confirmedRaw,
           baseEndpoint: `${endpoint}/${nossoNumero}`,
           token,
+          signal: input.signal,
         });
       }
       return withRequiredBaneseProductionPix(result, pix, {

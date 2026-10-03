@@ -19,6 +19,7 @@ import {
 } from "./types.ts";
 import {
   asRecord,
+  awaitBaneseRead,
   assertEnvironment,
   firstString,
   onlyDigits,
@@ -38,11 +39,13 @@ const boletoFinancialTermsPayload = (payload: BaneseFinancialPayload) =>
 const readBaneseBoletoAt = async (
   endpoint: string,
   token: BaneseAccessToken,
+  signal?: AbortSignal,
 ) => {
-  const response = await fetch(endpoint, {
+  const response = await awaitBaneseRead(fetch(endpoint, {
     headers: { Authorization: `${token.tokenType} ${token.accessToken}` },
-  });
-  const raw = await readResponseBody(response);
+    signal,
+  }), signal);
+  const raw = await awaitBaneseRead(readResponseBody(response), signal);
   return { response, raw };
 };
 
@@ -53,6 +56,7 @@ export const confirmBaneseBoletoFinancialTerms = async (input: {
   currentRaw?: unknown;
   repairMismatch: boolean;
   allowDiscountRemoval?: boolean;
+  signal?: AbortSignal;
 }) => {
   const expected = baneseFinancialTermsFromPayload(
     input.payload,
@@ -61,7 +65,7 @@ export const confirmBaneseBoletoFinancialTerms = async (input: {
   );
   let raw = input.currentRaw;
   if (!raw) {
-    const current = await readBaneseBoletoAt(input.endpoint, input.token);
+    const current = await readBaneseBoletoAt(input.endpoint, input.token, input.signal);
     if (!current.response.ok) {
       throw new BaneseAdapterError(
         `Nao foi possivel confirmar os termos do boleto Banese (${current.response.status}).`,
@@ -113,15 +117,16 @@ export const confirmBaneseBoletoFinancialTerms = async (input: {
         "Titulo Banese possui termos inesperados e a remocao automatica foi bloqueada.",
       );
     }
-    const updateResponse = await fetch(input.endpoint, {
+    const updateResponse = await awaitBaneseRead(fetch(input.endpoint, {
       method: "PUT",
       headers: {
         Authorization: `${input.token.tokenType} ${input.token.accessToken}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(updatePayload),
-    });
-    const updateRaw = await readResponseBody(updateResponse);
+      signal: input.signal,
+    }), input.signal);
+    const updateRaw = await awaitBaneseRead(readResponseBody(updateResponse), input.signal);
     if (!updateResponse.ok) {
       throw new BaneseAdapterError(
         `Banese recusou a correcao dos termos do boleto (${updateResponse.status}): ${
@@ -131,7 +136,7 @@ export const confirmBaneseBoletoFinancialTerms = async (input: {
     }
   }
 
-  const confirmed = await readBaneseBoletoAt(input.endpoint, input.token);
+  const confirmed = await readBaneseBoletoAt(input.endpoint, input.token, input.signal);
   if (!confirmed.response.ok) {
     throw new BaneseAdapterError(
       `Banese alterou o boleto, mas a confirmacao falhou (${confirmed.response.status}).`,

@@ -1,12 +1,13 @@
 import React, { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, Clock3, Info, Trash2 } from 'lucide-react';
+import { ArrowLeft, Clock3, Trash2 } from 'lucide-react';
 import { createRenegociacaoRequestId, formatCents, formatRenegociacaoDate } from '../renegociacoes.model';
 import { useRenegociacaoDialogFocus } from '../hooks/useRenegociacaoDialogFocus';
 import { useRenegociacaoMutations, useRenegociacaoProposal } from '../hooks/useRenegociacoesQueries';
 import type { DiscardRenegociacaoProposalInput } from '../renegociacoes.types';
 import CanonicalSummary from './CanonicalSummary';
 import DiscardProposalDialog from './DiscardProposalDialog';
+import ActivationPanel from './ActivationPanel';
 import { ErrorPanel, LoadingPanel } from './RenegociacaoPanels';
 
 interface ProposalDetailProps {
@@ -20,24 +21,22 @@ const ProposalDetail: React.FC<ProposalDetailProps> = ({ agreementId, poloId, on
   const query = useRenegociacaoProposal(agreementId);
   const { discard } = useRenegociacaoMutations(poloId);
   const [showDiscard, setShowDiscard] = useState(false);
+  const [showActivation, setShowActivation] = useState(false);
+  const [activationPending, setActivationPending] = useState(false);
   const [discardPayload, setDiscardPayload] = useState<DiscardRenegociacaoProposalInput | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const busyRef = useRef(false);
   const closeActionRef = useRef(onBack);
-  busyRef.current = discard.isPending;
+  busyRef.current = discard.isPending || activationPending;
   closeActionRef.current = onBack;
   useRenegociacaoDialogFocus({ isOpen: true, dialogRef, submittingRef: busyRef, closeRef: closeActionRef });
 
   const detail = query.data;
   const proposal = detail?.proposal;
-  const statusLabel =
-    proposal?.lifecycleStatus === 'CANCELED'
-      ? 'Proposta descartada'
-      : proposal?.lifecycleStatus === 'DRAFT'
-        ? 'Rascunho'
-        : proposal
-          ? 'Proposta salva'
-          : 'Detalhes da proposta';
+  const statusLabel = proposal ? {
+    DRAFT: 'Rascunho', PROPOSED: 'Proposta salva', CANCELED: 'Proposta descartada',
+    ACTIVATING: 'Efetivação em andamento', ACTIVE: 'Acordo efetivado', REVIEW_REQUIRED: 'Revisão necessária',
+  }[proposal.lifecycleStatus] : 'Detalhes da proposta';
 
   const confirmDiscard = async (reason: string) => {
     if (!proposal) return;
@@ -65,8 +64,8 @@ const ProposalDetail: React.FC<ProposalDetailProps> = ({ agreementId, poloId, on
       role="dialog"
       aria-modal="true"
       aria-labelledby="renegociacao-detail-title"
-      aria-busy={query.isFetching || discard.isPending}
-      aria-hidden={showDiscard ? true : undefined}
+      aria-busy={query.isFetching || discard.isPending || activationPending}
+      aria-hidden={showDiscard || showActivation ? true : undefined}
       className="fixed inset-0 z-[2147482500] flex h-[100dvh] w-screen flex-col overflow-hidden bg-slate-50 text-slate-900 outline-none"
     >
       <header className="shrink-0 border-b border-slate-200 bg-white shadow-sm">
@@ -74,7 +73,7 @@ const ProposalDetail: React.FC<ProposalDetailProps> = ({ agreementId, poloId, on
           <button
             type="button"
             onClick={onBack}
-            disabled={discard.isPending}
+            disabled={discard.isPending || activationPending}
             aria-label="Fechar detalhes da proposta"
             className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 text-xs font-black uppercase tracking-wide text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-40"
           >
@@ -115,6 +114,7 @@ const ProposalDetail: React.FC<ProposalDetailProps> = ({ agreementId, poloId, on
                   {proposal.capabilities.canDiscard ? (
                     <button
                       type="button"
+                      disabled={activationPending}
                       onClick={() => {
                         setDiscardPayload(null);
                         discard.reset();
@@ -132,14 +132,9 @@ const ProposalDetail: React.FC<ProposalDetailProps> = ({ agreementId, poloId, on
                   <HeaderValue label="Títulos" value={String(proposal.sourceCount)} />
                   <HeaderValue label="Primeiro vencimento" value={formatRenegociacaoDate(proposal.firstDueDate)} />
                 </dl>
-                <div className="mt-4 flex gap-2 rounded-xl border border-blue-100 bg-blue-50 p-3 text-xs font-medium text-blue-900">
-                  <Info size={16} className="shrink-0" />
-                  <p>
-                    A ativação e a emissão dos novos títulos ficarão disponíveis após a integração bancária. Nenhum
-                    título original foi alterado.
-                  </p>
-                </div>
               </section>
+
+              <ActivationPanel key={proposal.id} detail={detail} onDialogChange={setShowActivation} onBusyChange={setActivationPending} />
 
               <CanonicalSummary
                 totals={detail.totals}

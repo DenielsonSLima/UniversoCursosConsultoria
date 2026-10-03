@@ -27,6 +27,12 @@ export type AdapterReceivable = Record<string, unknown> & {
   id?: string | number | null;
 };
 
+/** Private durable evidence; not a trusted financial projection or a public response. */
+export type BaneseCreationResponseCapture = {
+  response: unknown;
+  request: { nossoNumero: string; amount: number; dueDate: string; convenio: string; agency: string };
+};
+
 export type AdapterCreateChargeInput = {
   admin: SupabaseAdminRpcClient;
   supabaseUrl: string;
@@ -41,10 +47,14 @@ export type AdapterCreateChargeInput = {
   pendingUrl?: string | null;
   financialTerms?: BaneseFinancialTermsInput | null;
   /**
-   * Permite que o EAD preserve um boleto validado quando o Banese ainda nao
-   * repetiu o QrCode oficial. Outros consumidores continuam falhando fechado.
+   * Opt-in para preservar o boleto validado quando o banco ainda não trouxe QR.
+   * EAD recupera via Pix-only; a saga de renegociação permanece pendente,
+   * exclusivamente GET-only, até confirmar e persistir o par Pix completo.
+   * Consumidores sem opt-in continuam falhando fechado.
    */
   allowPendingBolePix?: boolean;
+  signal?: AbortSignal;
+  onCreationResponse?: (capture: BaneseCreationResponseCapture) => Promise<void>;
 };
 
 export type AdapterCreateChargeResult = {

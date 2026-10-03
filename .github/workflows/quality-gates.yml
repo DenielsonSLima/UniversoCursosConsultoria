@@ -406,7 +406,7 @@ jobs:
           node --test modules/gestor/gestao/tecnicos/detalhes/components/grade/turma-grade-atividade.test.mjs
           node --test modules/gestor/gestao/tecnicos/detalhes/components/grade/turma-grade-atividade.interaction.test.mjs
 
-      - name: Testar propostas de renegociação sem efeitos bancários
+      - name: Testar renegociação, termos e efetivação simulada
         run: |
           npm install --prefix /tmp/universo-renegociacao-tests --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.5.8 jsdom@26.1.0
           export PGLITE_MODULE_PATH=/tmp/universo-renegociacao-tests/node_modules/@electric-sql/pglite/dist/index.js
@@ -414,11 +414,23 @@ jobs:
           node --test modules/gestor/financeiro/renegociacoes/hooks/useRenegociacaoDialogFocus.test.mjs modules/gestor/financeiro/renegociacoes/components/RenegociacaoFilters.test.mjs modules/gestor/financeiro/renegociacoes/components/CandidateGroups.test.mjs modules/gestor/financeiro/renegociacoes/components/RenegociacaoWizard.test.mjs
           node --test modules/gestor/financeiro/financeiro-sections.test.ts modules/gestor/financeiro/renegociacoes/renegociacoes.model.test.ts modules/gestor/financeiro/renegociacoes/renegociacoes.contract.test.ts modules/gestor/financeiro/renegociacoes/renegociacoes.candidates.test.ts modules/gestor/financeiro/renegociacoes/components/candidateSelection.model.test.ts
           node --test modules/gestor/financeiro/renegociacoes/renegociacoes.selection-summary.test.ts modules/gestor/financeiro/renegociacoes/hooks/useRenegociacaoSelectionSummary.test.mjs modules/gestor/financeiro/renegociacoes/components/SelectionSummaryPanel.test.mjs
+          node --test \
+            modules/gestor/financeiro/renegociacoes/components/ActivationPanel.test.mjs \
+            modules/gestor/financeiro/renegociacoes/components/CanonicalSummary.test.mjs \
+            modules/gestor/financeiro/renegociacoes/renegociacoes.activation.service.test.mjs \
+            modules/gestor/financeiro/renegociacoes/renegociacoes.activation.test.ts \
+            modules/gestor/financeiro/renegociacoes/renegociacoes.activation-sequence.test.ts \
+            modules/gestor/financeiro/renegociacoes/renegociacoes.terms-form.test.ts
           node scripts/test-renegociacao-selecao-sql.mjs
           node --test modules/gestor/financeiro/renegociacoes/components/FloatingSelectionSummary.test.mjs
           node scripts/test-renegociacao-listagem-sql.mjs
           node scripts/test-renegociacao-sql.mjs
           RENEGOTIATION_RULES_MODE=real node scripts/test-renegociacao-sql.mjs
+          node scripts/test-renegociacao-termos-v2.mjs
+          node scripts/test-renegociacao-activation-sql.mjs
+          deno test --allow-read --allow-env \
+            supabase/functions/receivable-renegotiation-activate/*.test.ts
 
       - name: Gerar build de produção
         run: npm run build
+

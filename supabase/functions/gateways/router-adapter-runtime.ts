@@ -1,4 +1,5 @@
 import type { BaneseFinancialTermsInput } from "../banese/internal/financial-terms.ts";
+import type { BaneseCreationResponseCapture } from "../banese/core/adapter/types.ts";
 
 export type GatewayEnvironment = "sandbox" | "production";
 export type GatewayPaymentMethod = "PIX" | "BOLETO" | "CREDIT_CARD";
@@ -32,6 +33,9 @@ export type GatewayChargeInput = {
   issuer?: GatewayIssuer | null;
   financialTerms?: BaneseFinancialTermsInput | null;
   allowPendingBolePix?: boolean;
+  signal?: AbortSignal;
+  onCreationResponse?: (capture: BaneseCreationResponseCapture) => Promise<void>;
+  onProviderMetadataResolved?: (metadata: Record<string, unknown>, issuer: GatewayIssuer) => void;
 };
 
 export type GatewayChargeResult = {
@@ -141,6 +145,7 @@ export const withProviderMetadata = async (
       "O emissor financeiro do recebível divergiu da Matriz antes do envio ao banco.",
     );
   }
+  input.onProviderMetadataResolved?.(metadata, issuer);
   return {
     ...input,
     issuer,

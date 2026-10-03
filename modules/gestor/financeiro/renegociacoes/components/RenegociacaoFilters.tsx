@@ -10,13 +10,13 @@ import { RenegociacaoSearch } from './RenegociacaoPanels';
 
 interface RenegociacaoFiltersProps {
   view: RenegociacaoView;
-  ongoingStatus: Extract<RenegociacaoLifecycleStatus, 'DRAFT' | 'PROPOSED'>;
+  ongoingStatus: Exclude<RenegociacaoLifecycleStatus, 'CANCELED'>;
   search: string;
   filters: RenegociacaoCandidateFilters;
   filterOptions?: RenegociacaoFilterOptions;
   loading: boolean;
   error: boolean;
-  onStatus: (status: Extract<RenegociacaoLifecycleStatus, 'DRAFT' | 'PROPOSED'>) => void;
+  onStatus: (status: Exclude<RenegociacaoLifecycleStatus, 'CANCELED'>) => void;
   onSearch: (value: string) => void;
   onFilters: (filters: RenegociacaoCandidateFilters) => void;
   onRetry: () => void;
@@ -30,7 +30,8 @@ const RenegociacaoFilters: React.FC<RenegociacaoFiltersProps> = ({
     {view === 'EM_ANDAMENTO' ? (
       <div className="flex gap-2" role="group" aria-label="Situação das propostas">
         {([
-          ['PROPOSED', 'Propostas'], ['DRAFT', 'Rascunhos'],
+          ['PROPOSED', 'Propostas'], ['ACTIVATING', 'Em efetivação'], ['ACTIVE', 'Acordos ativos'],
+          ['REVIEW_REQUIRED', 'Revisão necessária'], ['DRAFT', 'Rascunhos'],
         ] as const).map(([status, label]) => (
           <button
             key={status}

@@ -1,22 +1,23 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowLeft, ArrowRight, Check, Info, Loader2, X } from 'lucide-react';
-import { createRenegociacaoRequestId, formatCentsInput, parseCurrencyToCents } from '../renegociacoes.model';
+import { createRenegociacaoRequestId } from '../renegociacoes.model';
 import { useRenegociacaoCandidateItems, useRenegociacaoMutations } from '../hooks/useRenegociacoesQueries';
 import { useRenegociacaoDialogFocus } from '../hooks/useRenegociacaoDialogFocus';
 import type {
   PreviewRenegociacaoInput,
   RenegociacaoCandidateGroup,
-  RenegociacaoPenalty,
-  RenegociacaoPolicyOverrides,
   RenegociacaoProposalSummary,
   SaveRenegociacaoProposalInput,
-  RenegociacaoTerms,
 } from '../renegociacoes.types';
 import CanonicalSummary from './CanonicalSummary';
-import SelectionFinancialSummary from './SelectionFinancialSummary';
+import SelectionSummaryPanel from './SelectionSummaryPanel';
+import RenegociacaoTermsStep from './RenegociacaoTermsStep';
+import { useRenegociacaoTermsForm } from '../hooks/useRenegociacaoTermsForm';
+import { useRenegociacaoSelectionSummary } from '../hooks/useRenegociacaoSelectionSummary';
+import { buildTermsInput, termsFormError } from '../renegociacoes.terms-form';
 import { ErrorPanel, LoadingPanel } from './RenegociacaoPanels';
-import { Field, inputClass, SelectionStep, TermsStep } from './WizardSteps';
+import { Field, inputClass, SelectionStep } from './WizardSteps';
 import {
   allEligibleCandidatesSelected,
   candidateIdentityMatchesGroup,
@@ -40,16 +41,6 @@ const stepHeading: Record<WizardStep, string> = {
   TERMS: 'Etapa 2 de 3: condições da proposta',
   REVIEW: 'Etapa 3 de 3: revisão e salvamento',
 };
-const moneyInitial = '0,00';
-const parseBasisPoints = (value: string) => {
-  const parsed = Number(value.replace(',', '.'));
-  return Number.isFinite(parsed) && parsed >= 0 ? Math.round(parsed * 100) : Number.NaN;
-};
-const penaltyDefaultValue = (penalty: RenegociacaoPenalty) =>
-  penalty.kind === 'PERCENTAGE'
-    ? String((penalty.basisPoints || 0) / 100).replace('.', ',')
-    : formatCentsInput(penalty.amountCents || 0);
-
 const RenegociacaoWizard: React.FC<RenegociacaoWizardProps> = ({
   group,
   canSave,
@@ -67,18 +58,6 @@ const RenegociacaoWizard: React.FC<RenegociacaoWizardProps> = ({
   const { preview, save } = useRenegociacaoMutations(group.poloId);
   const [step, setStep] = useState<WizardStep>('SELECTION');
   const [selected, setSelected] = useState<string[]>(() => [...new Set(initialSelectedIds || [])]);
-  const [commercialDiscount, setCommercialDiscount] = useState(moneyInitial);
-  const [downPayment, setDownPayment] = useState(moneyInitial);
-  const [installmentCount, setInstallmentCount] = useState('1');
-  const [firstDueDate, setFirstDueDate] = useState('');
-  const [customPunctual, setCustomPunctual] = useState(false);
-  const [customInterest, setCustomInterest] = useState(false);
-  const [customPenalty, setCustomPenalty] = useState(false);
-  const [punctualDiscount, setPunctualDiscount] = useState(moneyInitial);
-  const [monthlyInterest, setMonthlyInterest] = useState('0');
-  const [penalty, setPenalty] = useState(moneyInitial);
-  const [waivedInterest, setWaivedInterest] = useState(moneyInitial);
-  const [waivedPenalty, setWaivedPenalty] = useState(moneyInitial);
   const [reason, setReason] = useState('');
   const [frozenInput, setFrozenInput] = useState<PreviewRenegociacaoInput | null>(null);
   const [requestId, setRequestId] = useState<string | null>(null);
@@ -91,12 +70,9 @@ const RenegociacaoWizard: React.FC<RenegociacaoWizardProps> = ({
     [candidateData, identityMatches],
   );
   const defaults = identityMatches ? candidateData?.policyDefaults : null;
-  useEffect(() => {
-    if (!defaults) return;
-    setPunctualDiscount(formatCentsInput(defaults.punctualDiscount.amountCents));
-    setMonthlyInterest(String(defaults.monthlyInterest.basisPoints / 100).replace('.', ','));
-    setPenalty(penaltyDefaultValue(defaults.penalty));
-  }, [defaults]);
+  const financialSummary = useRenegociacaoSelectionSummary(group, selected, candidateData?.asOf);
+  const { form, setField } = useRenegociacaoTermsForm(defaults, financialSummary.data?.totals.grossDebtCents);
+  const formError = termsFormError(form, defaults);
   const busyRef = useRef(false);
   busyRef.current = save.isPending || preview.isPending;
   useRenegociacaoDialogFocus({ isOpen: true, dialogRef, submittingRef: busyRef, closeRef: closeActionRef });
@@ -129,38 +105,10 @@ const RenegociacaoWizard: React.FC<RenegociacaoWizardProps> = ({
     return () => window.cancelAnimationFrame(frame);
   }, [step]);
 
-  const buildInput = (): PreviewRenegociacaoInput | null => {
-    const count = Number(installmentCount);
-    const interestBps = parseBasisPoints(monthlyInterest);
-    if (
-      !canContinue ||
-      !firstDueDate ||
-      !Number.isInteger(count) ||
-      count < 0 ||
-      (customInterest && !Number.isFinite(interestBps)) ||
-      !defaults
-    )
-      return null;
-    const terms: RenegociacaoTerms = {
-      commercialDiscountCents: parseCurrencyToCents(commercialDiscount),
-      downPaymentCents: parseCurrencyToCents(downPayment),
-      installmentCount: count,
-      firstDueDate,
-    };
-    const policyOverrides: RenegociacaoPolicyOverrides = {};
-    if (customPunctual) policyOverrides.punctualDiscountCents = parseCurrencyToCents(punctualDiscount);
-    if (customInterest) policyOverrides.monthlyInterestBasisPoints = interestBps;
-    if (customPenalty)
-      policyOverrides.penalty =
-        defaults.penalty.kind === 'PERCENTAGE'
-          ? { kind: 'PERCENTAGE', basisPoints: parseBasisPoints(penalty) }
-          : { kind: 'FIXED_CENTS', amountCents: parseCurrencyToCents(penalty) };
-    const waivedInterestCents = parseCurrencyToCents(waivedInterest);
-    const waivedPenaltyCents = parseCurrencyToCents(waivedPenalty);
-    if (waivedInterestCents) policyOverrides.waivedInterestCents = waivedInterestCents;
-    if (waivedPenaltyCents) policyOverrides.waivedPenaltyCents = waivedPenaltyCents;
-    return { receivableIds: selected, terms, policyOverrides, asOf: candidateData?.asOf || null };
-  };
+  const buildInput = (): PreviewRenegociacaoInput | null => canContinue && defaults
+    ? buildTermsInput(form, defaults, selected, candidateData?.asOf) : null;
+  const selectionSummary = <SelectionSummaryPanel summary={financialSummary.data} count={selected.length}
+    loading={financialSummary.loading} error={financialSummary.error} onRetry={() => { void financialSummary.refetch(); }} />;
 
   const simulate = async () => {
     const input = buildInput();
@@ -269,7 +217,7 @@ const RenegociacaoWizard: React.FC<RenegociacaoWizardProps> = ({
             </div>
           ) : step === 'SELECTION' ? (
             <div className="space-y-4">
-              <SelectionFinancialSummary group={group} selectedIds={selected} asOf={candidateData?.asOf} />
+              {selectionSummary}
               <SelectionStep
                 items={candidateItems}
                 selected={selected}
@@ -292,34 +240,9 @@ const RenegociacaoWizard: React.FC<RenegociacaoWizardProps> = ({
             </div>
           ) : step === 'TERMS' && defaults ? (
             <div className="space-y-4">
-              <TermsStep
-                defaults={defaults}
-                disabled={preview.isPending}
-                commercialDiscount={commercialDiscount}
-                downPayment={downPayment}
-                installmentCount={installmentCount}
-                firstDueDate={firstDueDate}
-                customPunctual={customPunctual}
-                customInterest={customInterest}
-                customPenalty={customPenalty}
-                punctualDiscount={punctualDiscount}
-                monthlyInterest={monthlyInterest}
-                penalty={penalty}
-                waivedInterest={waivedInterest}
-                waivedPenalty={waivedPenalty}
-                setCommercialDiscount={setCommercialDiscount}
-                setDownPayment={setDownPayment}
-                setInstallmentCount={setInstallmentCount}
-                setFirstDueDate={setFirstDueDate}
-                setCustomPunctual={setCustomPunctual}
-                setCustomInterest={setCustomInterest}
-                setCustomPenalty={setCustomPenalty}
-                setPunctualDiscount={setPunctualDiscount}
-                setMonthlyInterest={setMonthlyInterest}
-                setPenalty={setPenalty}
-                setWaivedInterest={setWaivedInterest}
-                setWaivedPenalty={setWaivedPenalty}
-              />
+              {selectionSummary}
+              <RenegociacaoTermsStep defaults={defaults} disabled={preview.isPending} form={form} setField={setField} />
+              {formError ? <p role="status" className="text-xs font-medium text-amber-800">{formError}</p> : null}
               {preview.isError ? <ErrorPanel error={preview.error} /> : null}
             </div>
           ) : step === 'REVIEW' && preview.data ? (
