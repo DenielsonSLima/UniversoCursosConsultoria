@@ -262,6 +262,11 @@ test('expande sob demanda, seleciona 1 ou N e bloqueia erros de escopo/eligibili
   const started = () => document.getElementById('started').dataset;
   const lastSummaryCall = (matriculaId) =>
     globalThis.__selectionSummaryCalls.filter((call) => call.matriculaId === matriculaId).at(-1);
+  const floatingSummary = () =>
+    document.querySelector('[role="region"][aria-label="Resumo flutuante da seleção"]');
+  const floatingAction = (label) =>
+    [...(floatingSummary()?.querySelectorAll('button') || [])]
+      .find((button) => button.textContent.includes(label));
 
   try {
     assert.deepEqual(globalThis.__candidateRequests, [], 'lista inicial não consulta detalhes em N+1');
@@ -282,22 +287,30 @@ test('expande sob demanda, seleciona 1 ou N e bloqueia erros de escopo/eligibili
     assert.equal(blockedCheckbox.disabled, true);
     assert.match(blockedCheckbox.closest('label').textContent, /Já vinculada a outra proposta/);
     assert.equal(actionButton.disabled, true);
+    assert.equal(floatingSummary(), null, 'sem seleção não há resumo flutuante');
 
     await interact(() => firstCheckbox.click());
-    assert.equal(actionButton.disabled, false);
-    assert.match(actionButton.textContent, /Continuar com 1/);
+    assert.equal(floatingAction('Continuar').disabled, false);
+    assert.match(floatingAction('Continuar').textContent, /Continuar com 1/);
     assert.deepEqual(lastSummaryCall('mat-1'), {
       matriculaId: 'mat-1', selectedIds: ['rec-1'], asOf: '2026-10-03',
     });
-    assert.match(firstPanel.textContent, /Resumo da seleção/);
-    assert.match(firstPanel.textContent, /R\$\s*100,00/);
-    assert.match(firstPanel.textContent, /A conferir/, 'desconto não comprovado permanece indisponível');
+    assert.ok(floatingSummary(), 'selecionar cria o resumo flutuante');
+    assert.equal(floatingSummary().parentElement, document.body, 'portal fica fora do fluxo da lista');
+    assert.equal(firstPanel.contains(floatingSummary()), false);
+    assert.match(floatingSummary().textContent, /Resumo da seleção/);
+    assert.match(floatingSummary().textContent, /R\$\s*100,00/);
+    assert.match(floatingSummary().textContent, /A conferir/, 'desconto não comprovado permanece indisponível');
     await interact(() => studentButton.click());
-    assert.ok(document.querySelector('[role="status"] button'), 'recolher mantém a seleção e a ação de limpeza');
+    assert.equal(floatingSummary(), null, 'recolher o aluno oculta o resumo da viewport');
     await interact(() => studentButton.click());
     firstCheckbox = firstPanel.querySelector('[data-receivable-id="rec-1"]');
-    actionButton = [...firstPanel.querySelectorAll('button')].find((button) => button.textContent.includes('Continuar com'));
     assert.equal(firstCheckbox.checked, true, 'expandir novamente preserva a seleção controlada');
+    assert.ok(floatingSummary(), 'reabrir restaura o resumo da seleção preservada');
+    await interact(() => enrollmentButtons()[0].click());
+    assert.equal(floatingSummary(), null, 'recolher a matrícula também oculta o resumo');
+    await interact(() => enrollmentButtons()[0].click());
+    assert.ok(floatingSummary());
 
     await interact(() => studentButtons[1].click());
     const secondEnrollmentButton = document.querySelector('button[aria-controls="candidate-enrollment-mat-4"]');
@@ -310,15 +323,15 @@ test('expande sob demanda, seleciona 1 ou N e bloqueia erros de escopo/eligibili
     assert.equal(secondCheckbox.checked, false, 'controle bloqueado não cria uma segunda seleção');
     assert.equal(firstCheckbox.checked, true);
 
-    await interact(() => actionButton.click());
+    await interact(() => floatingAction('Continuar').click());
     assert.deepEqual({ group: started().group, ids: started().ids }, { group: 'mat-1', ids: 'rec-1' });
 
     const toggleAll = [...firstPanel.querySelectorAll('button')].find((button) => button.textContent.includes('Marcar elegíveis'));
     await interact(() => toggleAll.click());
-    assert.match(actionButton.textContent, /Continuar com 2/);
+    assert.match(floatingAction('Continuar').textContent, /Continuar com 2/);
     assert.deepEqual(lastSummaryCall('mat-1').selectedIds, ['rec-1', 'rec-2']);
-    assert.match(firstPanel.textContent, /R\$\s*200,00/);
-    await interact(() => actionButton.click());
+    assert.match(floatingSummary().textContent, /R\$\s*200,00/);
+    await interact(() => floatingAction('Continuar').click());
     assert.deepEqual({ group: started().group, ids: started().ids }, { group: 'mat-1', ids: 'rec-1,rec-2' });
 
     queries['mat-1'] = {
@@ -334,10 +347,10 @@ test('expande sob demanda, seleciona 1 ou N e bloqueia erros de escopo/eligibili
     };
     globalThis.__candidateQueries = queries;
     await rerenderHarness();
-    assert.match(actionButton.textContent, /Continuar com 1/);
+    assert.match(floatingAction('Continuar').textContent, /Continuar com 1/);
     assert.deepEqual(lastSummaryCall('mat-1').selectedIds, ['rec-1']);
-    assert.match(firstPanel.textContent, /R\$\s*100,00/);
-    await interact(() => actionButton.click());
+    assert.match(floatingSummary().textContent, /R\$\s*100,00/);
+    await interact(() => floatingAction('Continuar').click());
     assert.deepEqual(
       { group: started().group, ids: started().ids },
       { group: 'mat-1', ids: 'rec-1' },
@@ -345,19 +358,24 @@ test('expande sob demanda, seleciona 1 ou N e bloqueia erros de escopo/eligibili
     );
     const clearAll = [...firstPanel.querySelectorAll('button')].find((button) => button.textContent.includes('Desmarcar todas'));
     await interact(() => clearAll.click());
+    actionButton = [...firstPanel.querySelectorAll('button')].find((button) => button.textContent.includes('Continuar com'));
     assert.equal(actionButton.disabled, true);
+    assert.equal(floatingSummary(), null, 'desmarcar a última parcela remove o portal');
     assert.equal(secondCheckbox.matches(':disabled'), false, 'desmarcar a última parcela libera outra matrícula');
     await interact(() => secondCheckbox.click());
     assert.equal(secondCheckbox.checked, true);
     assert.deepEqual(lastSummaryCall('mat-4'), {
       matriculaId: 'mat-4', selectedIds: ['rec-4'], asOf: '2026-10-03',
     });
-    assert.match(secondPanel.textContent, /Resumo da seleção/);
+    assert.ok(floatingSummary());
+    assert.equal(secondPanel.contains(floatingSummary()), false);
+    firstCheckbox = firstPanel.querySelector('[data-receivable-id="rec-1"]');
     assert.equal(firstCheckbox.matches(':disabled'), true, 'a nova identidade passa a ser a única dona da seleção');
-    const globalClear = document.querySelector('[role="status"] button');
+    const globalClear = floatingAction('Limpar');
     await interact(() => globalClear.click());
     assert.equal(secondCheckbox.checked, false);
-    assert.match(secondPanel.textContent, /Selecione as parcelas para conferir os valores/);
+    assert.equal(floatingSummary(), null, 'limpar seleção remove imediatamente o resumo');
+    assert.equal(document.activeElement, secondCheckbox, 'limpar devolve o foco às parcelas sem rolar a página');
     assert.equal(firstCheckbox.matches(':disabled'), false);
 
     await interact(() => enrollmentButtons()[1].click());
@@ -373,9 +391,9 @@ test('expande sob demanda, seleciona 1 ou N e bloqueia erros de escopo/eligibili
     assert.equal(guardedPanel.querySelectorAll('[data-receivable-id]').length, 0);
 
     await interact(() => secondCheckbox.click());
-    assert.ok(document.querySelector('[role="status"] button'), 'seleção ativa oferece limpeza explícita');
+    assert.ok(floatingAction('Limpar'), 'seleção ativa oferece limpeza explícita no resumo');
     await interact(() => document.getElementById('change-selection-context').click());
-    assert.equal(document.querySelector('[role="status"] button'), null, 'trocar página/filtros/polo reinicia a seleção');
+    assert.equal(floatingSummary(), null, 'trocar página/filtros/polo reinicia a seleção e remove o resumo');
     const refreshedStudents = [...document.querySelectorAll('button[aria-controls^="candidate-student-"]')];
     await interact(() => refreshedStudents[1].click());
     await interact(() => document.querySelector('button[aria-controls="candidate-enrollment-mat-4"]').click());

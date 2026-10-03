@@ -7,7 +7,8 @@ const SelectionFinancialSummary: React.FC<{
   group: RenegociacaoIdentity;
   selectedIds: string[];
   asOf?: string | null;
-}> = ({ group, selectedIds, asOf }) => {
+  compact?: boolean;
+}> = ({ group, selectedIds, asOf, compact = false }) => {
   const summary = useRenegociacaoSelectionSummary(group, selectedIds, asOf);
   return <SelectionSummaryPanel
     summary={summary.data}
@@ -15,6 +16,7 @@ const SelectionFinancialSummary: React.FC<{
     loading={summary.loading}
     error={summary.error}
     onRetry={() => { void summary.refetch(); }}
+    compact={compact}
   />;
 };
 

@@ -1,11 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarClock, ChevronDown, CircleAlert, GraduationCap, ReceiptText } from 'lucide-react';
 import { useRenegociacaoCandidateItems } from '../hooks/useRenegociacoesQueries';
 import { formatCents, formatRenegociacaoDate } from '../renegociacoes.model';
 import type { RenegociacaoCandidateGroup, RenegociacaoCourseType } from '../renegociacoes.types';
 import { ErrorPanel, LoadingPanel } from './RenegociacaoPanels';
 import { SelectionStep } from './WizardSteps';
-import SelectionFinancialSummary from './SelectionFinancialSummary';
+import FloatingSelectionSummary from './FloatingSelectionSummary';
 import {
   allEligibleCandidatesSelected,
   candidateIdentityMatchesGroup,
@@ -45,6 +45,7 @@ const CandidateEnrollment: React.FC<CandidateEnrollmentProps> = ({
   onStart,
 }) => {
   const [expanded, setExpanded] = useState(false);
+  const selectionRef = useRef<globalThis.HTMLFieldSetElement>(null);
   const requestMatriculaId = active && expanded ? group.matriculaId : null;
   const itemsQuery = useRenegociacaoCandidateItems(requestMatriculaId);
   const panelId = `candidate-enrollment-${group.matriculaId}`;
@@ -88,6 +89,12 @@ const CandidateEnrollment: React.FC<CandidateEnrollmentProps> = ({
     const safeSelection = reconcileCandidateSelection(selectedIds, items);
     if (!canStart || !safeSelection.length) return;
     onStart(group, safeSelection);
+  };
+  const clearFloatingSelection = () => {
+    onClearSelection();
+    window.requestAnimationFrame(() => {
+      selectionRef.current?.querySelector<globalThis.HTMLInputElement>('input:not(:disabled)')?.focus({ preventScroll: true });
+    });
   };
 
   return (
@@ -173,7 +180,7 @@ const CandidateEnrollment: React.FC<CandidateEnrollmentProps> = ({
                 </button>
               </div>
             ) : null}
-            <fieldset disabled={selectionLocked} className={selectionLocked ? 'opacity-60' : undefined}>
+            <fieldset ref={selectionRef} disabled={selectionLocked} className={selectionLocked ? 'opacity-60' : undefined}>
               <SelectionStep
                 items={items}
                 selected={selectedIds}
@@ -186,13 +193,16 @@ const CandidateEnrollment: React.FC<CandidateEnrollmentProps> = ({
                 }
               />
             </fieldset>
-            <SelectionFinancialSummary group={group} selectedIds={selectedIds} asOf={itemsQuery.data?.asOf} />
+            {active && selectedIds.length > 0 ? (
+              <FloatingSelectionSummary group={group} selectedIds={selectedIds} asOf={itemsQuery.data?.asOf}
+                canContinue={canStart} onContinue={startProposal} onClear={clearFloatingSelection} />
+            ) : null}
             {!itemsQuery.data?.policyDefaults ? (
               <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-bold text-amber-800">
                 A regra financeira desta matrícula não pôde ser confirmada. Nenhuma proposta pode ser iniciada.
               </div>
             ) : null}
-            <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
+            {selectedIds.length === 0 ? <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="flex items-center gap-2 text-xs font-bold text-slate-600" aria-live="polite">
                 {selectedIds.length ? (
                   <ReceiptText size={15} className="text-blue-600" aria-hidden="true" />
@@ -215,7 +225,7 @@ const CandidateEnrollment: React.FC<CandidateEnrollmentProps> = ({
               >
                 Continuar com {selectedIds.length || 0}
               </button>
-            </div>
+            </div> : null}
           </div>
         ) : null}
       </div>

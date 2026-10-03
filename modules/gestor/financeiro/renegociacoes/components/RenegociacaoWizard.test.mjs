@@ -221,7 +221,9 @@ test('lista entrega 1 ou N IDs ao wizard, que revalida refetch, erro e identidad
   const unmount = await mountHarness(document.getElementById('root'));
   const dialog = () => document.querySelector('[role="dialog"]');
   const listPanel = () => document.getElementById('candidate-enrollment-mat-1');
-  const listAction = () => [...listPanel().querySelectorAll('button')].find((button) => button.textContent.includes('Continuar com'));
+  const listAction = () => [...document.querySelectorAll(
+    '[role="region"][aria-label="Resumo flutuante da seleção"] button',
+  )].find((button) => button.textContent.includes('Continuar com'));
   const closeWizard = async () => {
     const close = dialog().querySelector('button[aria-label="Fechar renegociação"]');
     await interact(() => close.click());

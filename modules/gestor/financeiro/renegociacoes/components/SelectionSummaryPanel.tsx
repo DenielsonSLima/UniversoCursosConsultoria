@@ -9,9 +9,10 @@ interface SelectionSummaryPanelProps {
   loading: boolean;
   error: unknown;
   onRetry: () => void;
+  compact?: boolean;
 }
 
-const SelectionSummaryPanel: React.FC<SelectionSummaryPanelProps> = ({ summary, count, loading, error, onRetry }) => {
+const SelectionSummaryPanel: React.FC<SelectionSummaryPanelProps> = ({ summary, count, loading, error, onRetry, compact = false }) => {
   const headingId = useId();
   if (count === 0) {
     return (
@@ -57,18 +58,9 @@ const SelectionSummaryPanel: React.FC<SelectionSummaryPanelProps> = ({ summary, 
     ? formatCents(summary.totals.punctualDiscountCents)
     : 'A conferir';
 
-  return (
-    <section aria-labelledby={headingId} className="space-y-3 rounded-2xl border border-slate-200 bg-white p-3 sm:p-4">
-      <header className="flex flex-wrap items-center justify-between gap-2">
-        <h4 id={headingId} className="text-xs font-black uppercase tracking-wide text-[#001a33]">Resumo da seleção</h4>
-        <p className="text-[11px] font-medium text-slate-500">Data-base: {formatRenegociacaoDate(summary.asOf)}</p>
-      </header>
-      <dl className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard label="Parcelas selecionadas" value={String(summary.count)} />
-        <SummaryCard label="Valor normal" value={formatCents(summary.totals.principalCents)} />
-        <SummaryCard label="Com desconto de pontualidade" value={discountedPrincipal} />
-        <SummaryCard label="Com multa e juros" value={formatCents(summary.totals.grossDebtCents)} />
-      </dl>
+  const details = (
+    <>
+      {compact ? <p className="text-[11px] text-slate-500">Data-base: {formatRenegociacaoDate(summary.asOf)}</p> : null}
       <dl className="grid gap-2 border-t border-slate-100 pt-3 sm:grid-cols-3">
         <DetailValue label="Desconto de pontualidade deduzido" value={discountDeducted} />
         <DetailValue label="Juros apurados" value={formatCents(summary.totals.interestCents)} />
@@ -82,14 +74,37 @@ const SelectionSummaryPanel: React.FC<SelectionSummaryPanelProps> = ({ summary, 
         <Info size={14} className="mt-0.5 shrink-0" />
         <span>Resumo dos títulos originais. O desconto de pontualidade não é concedido automaticamente à proposta. Estes valores não substituem a conferência da cobrança para pagamento.</span>
       </p>
+    </>
+  );
+
+  return (
+    <section aria-labelledby={headingId} className={compact ? 'space-y-2' : 'space-y-3 rounded-2xl border border-slate-200 bg-white p-3 sm:p-4'}>
+      <header className={compact ? 'sr-only' : 'flex flex-wrap items-center justify-between gap-2'}>
+        <h4 id={headingId} className="text-xs font-black uppercase tracking-wide text-[#001a33]">Resumo da seleção</h4>
+        <p className="text-[11px] font-medium text-slate-500">Data-base: {formatRenegociacaoDate(summary.asOf)}</p>
+      </header>
+      <dl className={compact ? 'grid grid-cols-3 gap-2' : 'grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4'}>
+        {!compact ? <SummaryCard label="Parcelas selecionadas" value={String(summary.count)} /> : null}
+        <SummaryCard label="Valor normal" value={formatCents(summary.totals.principalCents)} compact={compact} />
+        <SummaryCard label="Com desconto de pontualidade" value={discountedPrincipal} compact={compact} />
+        <SummaryCard label="Com multa e juros" value={formatCents(summary.totals.grossDebtCents)} compact={compact} />
+      </dl>
+      {compact ? (
+        <details className="text-xs text-slate-600">
+          <summary className="cursor-pointer rounded-lg py-2 font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+            Ver juros, multa e detalhes
+          </summary>
+          <div className="space-y-2 pt-1">{details}</div>
+        </details>
+      ) : details}
     </section>
   );
 };
 
-const SummaryCard: React.FC<{ label: string; value: string }> = ({ label, value }) => (
-  <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3">
+const SummaryCard: React.FC<{ label: string; value: string; compact?: boolean }> = ({ label, value, compact }) => (
+  <div className={`min-w-0 rounded-xl border border-slate-200 bg-slate-50 ${compact ? 'p-2 sm:p-3' : 'p-3'}`}>
     <dt className="text-[9px] font-black uppercase tracking-wide text-slate-500">{label}</dt>
-    <dd className="mt-1 break-words text-lg font-black text-[#001a33]">{value}</dd>
+    <dd className={`mt-1 break-words font-black text-[#001a33] ${compact ? 'text-sm sm:text-lg' : 'text-lg'}`}>{value}</dd>
   </div>
 );
 
