@@ -420,5 +420,10 @@ jobs:
           node scripts/test-renegociacao-sql.mjs
           RENEGOTIATION_RULES_MODE=real node scripts/test-renegociacao-sql.mjs
 
+      - name: Testar seletores e saldo das transferências por polo
+        run: |
+          node --test modules/gestor/financeiro/transferencias/transferencias.accounts.test.mjs modules/gestor/financeiro/transferencias/components/transferencia-options.test.ts
+          PGLITE_MODULE_PATH=/tmp/universo-renegociacao-tests/node_modules/@electric-sql/pglite/dist/index.js node supabase/tests/transfer_replay_scope.isolated.test.mjs
+
       - name: Gerar build de produção
         run: npm run build

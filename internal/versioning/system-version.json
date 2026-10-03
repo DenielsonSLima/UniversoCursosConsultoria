@@ -1,8 +1,8 @@
 {
-  "version": "4.8.160",
+  "version": "4.8.161",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 169,
+  "revision": 170,
   "releasedAt": "2026-10-03",
-  "summary": "Aba Renegociações posicionada após A Pagar no Financeiro"
+  "summary": "Transferências com empresas identificadas e saldos separados por polo"
 }

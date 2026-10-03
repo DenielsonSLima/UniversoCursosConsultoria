@@ -34,9 +34,9 @@ export const financeiroSharedServiceMethods = {
       saldoInicial: Number(cb.saldo_inicial),
       saldoAtual: Number(cb.saldo_atual),
       saldoContabilConta: Number(cb.saldo_contabil_conta ?? cb.saldo_atual ?? 0),
-      saldoGerencialPolo: cb.saldo_gerencial_polo === undefined
+      saldoGerencialPolo: cb.saldo_gerencial_polo == null
         ? undefined
-        : Number(cb.saldo_gerencial_polo || 0),
+        : Number(cb.saldo_gerencial_polo),
       compartilhada: cb.compartilhada === true
         || (Array.isArray(cb.polos_uso) && cb.polos_uso.length > 1),
       recebido: Number(cb.recebido),

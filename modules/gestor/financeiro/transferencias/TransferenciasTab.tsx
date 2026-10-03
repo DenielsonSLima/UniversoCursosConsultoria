@@ -1,17 +1,11 @@
 // File: modules/gestor/financeiro/transferencias/TransferenciasTab.tsx
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowRightLeft,
-  ChevronLeft,
-  ChevronRight,
-  Landmark,
-  Loader2,
   Plus,
   Search,
-  X,
 } from 'lucide-react';
 import ToastNotification, { useToast } from '../../components/ToastNotification';
 import {
@@ -28,6 +22,10 @@ import { useFinanceiroSharedQueries } from '../hooks/useFinanceiroSharedQueries'
 import { useTransferenciasQueries } from './hooks/useTransferenciasQueries';
 import { caixaQueryKeys } from '../../caixa/caixa.service';
 import FinancialUnderlineTabs from '../components/FinancialUnderlineTabs';
+import TransferenciaFormModal, { type TransferFormState } from './components/TransferenciaFormModal';
+import TransferenciasList from './components/TransferenciasList';
+import { formatTransferCurrency } from './components/transferencia-options';
+import { useTransferenciaAccountsQueries } from './hooks/useTransferenciaAccountsQueries';
 
 type PeriodScope = 'current_month' | 'all';
 
@@ -35,16 +33,6 @@ interface TransferenciasTabProps {
   poloId?: string | null;
 }
 
-interface TransferFormState {
-  requestId: string;
-  dataTransferencia: string;
-  observacao: string;
-  valor: string;
-  poloOrigemId: string;
-  contaOrigemId: string;
-  poloDestinoId: string;
-  contaDestinoId: string;
-}
 
 const today = () => {
   const now = new Date();
@@ -80,20 +68,8 @@ const parseCurrencyInput = (value: string) => {
   return Number(normalized || 0);
 };
 
-const formatCurrencyInput = (value: string) => {
-  const parsed = parseCurrencyInput(value);
-  if (!Number.isFinite(parsed) || parsed <= 0) return '';
-  return parsed.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-};
-
-const formatDate = (value?: string) =>
-  value ? new Date(`${value}T00:00:00`).toLocaleDateString('pt-BR') : '-';
-
 const accountLabel = (account: ContaBancaria) =>
   `${account.banco} - ${account.conta}`;
-
-const accountOptionLabel = (account: ContaBancaria) =>
-  `${accountLabel(account)} - Saldo: ${formatCurrency(account.saldoAtual || 0)}`;
 
 const TransferenciasTab: React.FC<TransferenciasTabProps> = ({ poloId }) => {
   const queryClient = useQueryClient();
@@ -145,21 +121,18 @@ const TransferenciasTab: React.FC<TransferenciasTabProps> = ({ poloId }) => {
     [activeAccounts, activePoloId],
   );
 
-  const originAccounts = useMemo(
-    () => activeAccounts.filter((account) => isContaDisponivelNoPolo(account, form.poloOrigemId)),
-    [activeAccounts, form.poloOrigemId],
+  const { originAccountsQuery, destinationAccountsQuery } = useTransferenciaAccountsQueries(
+    form.poloOrigemId, form.poloDestinoId, isModalOpen,
   );
-
+  const originAccounts = originAccountsQuery.data || [];
   const destinationAccounts = useMemo(
-    () => activeAccounts.filter((account) => (
-      isContaDisponivelNoPolo(account, form.poloDestinoId)
-      && !(
-        form.poloOrigemId === form.poloDestinoId
-        && account.id === form.contaOrigemId
-      )
+    () => (destinationAccountsQuery.data || []).filter((account) => !(
+      form.poloOrigemId === form.poloDestinoId && account.id === form.contaOrigemId
     )),
-    [activeAccounts, form.contaOrigemId, form.poloDestinoId, form.poloOrigemId],
+    [destinationAccountsQuery.data, form.contaOrigemId, form.poloDestinoId, form.poloOrigemId],
   );
+  const originAccountsLoading = originAccountsQuery.isLoading || originAccountsQuery.isFetching;
+  const destinationAccountsLoading = destinationAccountsQuery.isLoading || destinationAccountsQuery.isFetching;
 
   const totalPages = Math.max(1, Math.ceil(transferencias.length / pageSize));
   const currentPage = Math.min(page, totalPages);
@@ -189,16 +162,18 @@ const TransferenciasTab: React.FC<TransferenciasTabProps> = ({ poloId }) => {
   }, [activePoloId, form.poloOrigemId]);
 
   useEffect(() => {
+    if (!isModalOpen || originAccountsLoading || originAccountsQuery.isError) return;
     if (form.contaOrigemId && !originAccounts.some((account) => account.id === form.contaOrigemId)) {
       setForm((current) => ({ ...current, contaOrigemId: '' }));
     }
-  }, [form.contaOrigemId, originAccounts]);
+  }, [form.contaOrigemId, isModalOpen, originAccounts, originAccountsLoading, originAccountsQuery.isError]);
 
   useEffect(() => {
+    if (!isModalOpen || destinationAccountsLoading || destinationAccountsQuery.isError) return;
     if (form.contaDestinoId && !destinationAccounts.some((account) => account.id === form.contaDestinoId)) {
       setForm((current) => ({ ...current, contaDestinoId: '' }));
     }
-  }, [destinationAccounts, form.contaDestinoId]);
+  }, [destinationAccounts, destinationAccountsLoading, destinationAccountsQuery.isError, form.contaDestinoId, isModalOpen]);
 
   const invalidateTransferencias = async () => {
     await Promise.all([
@@ -233,7 +208,7 @@ const TransferenciasTab: React.FC<TransferenciasTabProps> = ({ poloId }) => {
       requestId: createRequestId(),
       dataTransferencia: today(),
       observacao: `Estorno: ${transfer.observacao || 'Transferência interna'}`,
-      valor: formatCurrencyInput(String(transfer.valor)),
+      valor: formatTransferCurrency(transfer.valor),
       poloOrigemId: transfer.poloDestinoId || activePoloId,
       contaOrigemId: transfer.contaDestinoId,
       poloDestinoId: transfer.poloId || activePoloId,
@@ -244,6 +219,19 @@ const TransferenciasTab: React.FC<TransferenciasTabProps> = ({ poloId }) => {
 
   const buildTransferInput = (): TransferenciaInput | null => {
     const numericValue = parseCurrencyInput(form.valor);
+
+    if (originAccountsLoading || destinationAccountsLoading || originAccountsQuery.isError
+      || destinationAccountsQuery.isError || polosQuery.isLoading || polosQuery.isError) {
+      toast.warning('Contas indisponíveis', 'Aguarde o carregamento das empresas e dos saldos por polo.');
+      return null;
+    }
+    if (!polos.some((polo) => polo.id === form.poloOrigemId)
+      || !polos.some((polo) => polo.id === form.poloDestinoId)
+      || !originAccounts.some((account) => account.id === form.contaOrigemId)
+      || !destinationAccounts.some((account) => account.id === form.contaDestinoId)) {
+      toast.warning('Seleção obrigatória', 'Selecione empresas e contas disponíveis para a transferência.');
+      return null;
+    }
 
     if (!form.dataTransferencia) {
       toast.warning('Data obrigatória', 'Informe a data da transferência.');
@@ -271,7 +259,7 @@ const TransferenciasTab: React.FC<TransferenciasTabProps> = ({ poloId }) => {
       );
       return null;
     }
-    if (!numericValue || numericValue <= 0) {
+    if (!Number.isFinite(numericValue) || numericValue <= 0) {
       toast.warning('Valor inválido', 'Informe um valor maior que zero.');
       return null;
     }
@@ -290,17 +278,11 @@ const TransferenciasTab: React.FC<TransferenciasTabProps> = ({ poloId }) => {
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
+    if (saveMutation.isPending) return;
     const input = buildTransferInput();
     if (!input) return;
     saveMutation.mutate(input);
   };
-
-  const renderPoloOption = (polo: any) => (
-    <option key={polo.id} value={polo.id}>
-      {polo.is_matriz ? 'Matriz' : 'Polo'} - {polo.nome}
-      {polo.cidade ? ` (${polo.cidade}/${polo.estado || ''})` : ''}
-    </option>
-  );
 
   return (
     <div className="animate-fadeIn space-y-6">
@@ -452,273 +434,35 @@ const TransferenciasTab: React.FC<TransferenciasTabProps> = ({ poloId }) => {
         )}
       </div>
 
-      <div className="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm">
-        {isLoading ? (
-          <div className="flex items-center justify-center gap-3 py-20">
-            <Loader2 className="animate-spin text-[#001a33]" size={22} />
-            <span className="text-sm font-bold text-slate-500">Carregando transferências...</span>
-          </div>
-        ) : transferenciasQuery.isError ? (
-          <div className="py-20 text-center text-sm font-bold text-rose-700">
-            Não foi possível carregar as transferências.
-          </div>
-        ) : transferencias.length === 0 ? (
-          <div className="py-20 text-center">
-            <ArrowRightLeft className="mx-auto mb-3 text-slate-300" size={36} />
-            <p className="text-sm font-black uppercase tracking-wider text-slate-500">Nenhuma transferência encontrada</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] text-left">
-              <thead className="bg-slate-50">
-                <tr>
-                  {['Data / descrição', 'Origem', 'Destino', 'Valor', 'Ações'].map((head) => (
-                    <th key={head} className="px-5 py-4 text-[10px] font-black uppercase tracking-wider text-slate-500">
-                      {head}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {pageItems.map((transfer, index) => (
-                  <tr
-                    key={transfer.id}
-                    className={`${
-                      index % 2 === 0 ? 'bg-white' : 'bg-[#eef6ff]'
-                    } transition-colors hover:bg-[#dfeeff]`}
-                  >
-                    <td className="px-5 py-4">
-                      <p className="text-xs font-black text-[#001a33]">{formatDate(transfer.dataTransferencia)}</p>
-                      <p className="mt-1 text-sm font-bold text-slate-700">{transfer.observacao || 'Transferência interna'}</p>
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="flex items-start gap-3">
-                        <span className="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-2xl bg-rose-50 text-rose-600">
-                          <Landmark size={16} />
-                        </span>
-                        <div>
-                          <p className="text-xs font-black uppercase text-[#001a33]">{transfer.contaOrigemNome}</p>
-                          <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                            {transfer.poloNome || 'Polo não informado'}
-                          </p>
-                          <p className="text-[10px] font-bold text-slate-400">
-                            Ag. {transfer.contaOrigemAgencia || '-'} / Conta {transfer.contaOrigemConta || '-'}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="flex items-start gap-3">
-                        <span className="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
-                          <Landmark size={16} />
-                        </span>
-                        <div>
-                          <p className="text-xs font-black uppercase text-[#001a33]">{transfer.contaDestinoNome}</p>
-                          <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                            {transfer.poloDestinoNome || 'Polo não informado'}
-                          </p>
-                          <p className="text-[10px] font-bold text-slate-400">
-                            Ag. {transfer.contaDestinoAgencia || '-'} / Conta {transfer.contaDestinoConta || '-'}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-5 py-4">
-                      <p className="text-lg font-black text-[#001a33]">{formatCurrency(transfer.valor)}</p>
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          onClick={() => openReverseModal(transfer)}
-                          className="inline-flex items-center gap-1 rounded-xl border border-amber-200 px-3 py-2 text-[10px] font-black uppercase text-amber-700 hover:bg-amber-50"
-                        >
-                          <ArrowRightLeft size={13} /> Estornar
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+      <TransferenciasList
+        isLoading={isLoading}
+        isError={transferenciasQuery.isError}
+        transferencias={transferencias}
+        pageItems={pageItems}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        setPage={setPage}
+        openReverseModal={openReverseModal}
+      />
 
-        <div className="flex flex-col gap-3 border-t border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs font-bold text-slate-400">
-            Mostrando {pageItems.length} de {transferencias.length} lançamento(s)
-          </p>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setPage((current) => Math.max(1, current - 1))}
-              disabled={currentPage === 1}
-              className="rounded-xl border border-slate-200 p-2 text-slate-500 disabled:opacity-40"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <span className="text-xs font-black text-slate-500">{currentPage} / {totalPages}</span>
-            <button
-              onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
-              disabled={currentPage === totalPages}
-              className="rounded-xl border border-slate-200 p-2 text-slate-500 disabled:opacity-40"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {isModalOpen && typeof document !== 'undefined' && createPortal((
-        <div className="fixed inset-0 z-[9999] flex min-h-[100dvh] items-center justify-center bg-[#001a33]/70 p-4 backdrop-blur-sm">
-          <div className="max-h-[calc(100vh-2rem)] w-full max-w-5xl overflow-y-auto rounded-[2rem] bg-white p-6 shadow-2xl">
-            <div className="mb-5 flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">
-                  Nova transferência
-                </p>
-                <h4 className="text-xl font-black uppercase tracking-tight text-[#001a33]">Transferência entre contas</h4>
-              </div>
-              <button onClick={() => setIsModalOpen(false)} className="rounded-xl bg-slate-100 p-2 text-slate-500 hover:bg-slate-200">
-                <X size={18} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="grid gap-4 md:grid-cols-[1fr_1.2fr_0.8fr]">
-                <label className="space-y-1">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Data</span>
-                  <input
-                    type="date"
-                    value={form.dataTransferencia}
-                    onChange={(event) => setForm((current) => ({ ...current, dataTransferencia: event.target.value }))}
-                    className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:bg-white"
-                  />
-                </label>
-                <label className="space-y-1">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Descrição</span>
-                  <input
-                    value={form.observacao}
-                    onChange={(event) => setForm((current) => ({ ...current, observacao: event.target.value }))}
-                    placeholder="Ex.: Repasse para conta operacional"
-                    className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:bg-white"
-                  />
-                </label>
-                <label className="space-y-1">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Valor</span>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    value={form.valor}
-                    onChange={(event) => setForm((current) => ({ ...current, valor: normalizeCurrencyInput(event.target.value) }))}
-                    onBlur={() => setForm((current) => ({ ...current, valor: formatCurrencyInput(current.valor) }))}
-                    placeholder="0,00"
-                    className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:bg-white"
-                  />
-                </label>
-              </div>
-
-              <div className="grid gap-4 lg:grid-cols-2">
-                <div className="rounded-3xl border border-rose-100 bg-rose-50/50 p-4">
-                  <div className="mb-4 flex items-center gap-2 text-xs font-black uppercase tracking-wider text-rose-700">
-                    <Landmark size={15} /> Origem
-                  </div>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <label className="space-y-1">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Polo</span>
-                      <select
-                        value={form.poloOrigemId}
-                        onChange={(event) => setForm((current) => ({
-                          ...current,
-                          poloOrigemId: event.target.value,
-                          contaOrigemId: '',
-                        }))}
-                        className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 outline-none focus:border-rose-300"
-                      >
-                        <option value="">Selecione</option>
-                        {polos.map(renderPoloOption)}
-                      </select>
-                    </label>
-                    <label className="space-y-1">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Conta bancária</span>
-                      <select
-                        value={form.contaOrigemId}
-                        onChange={(event) => setForm((current) => ({ ...current, contaOrigemId: event.target.value }))}
-                        className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 outline-none focus:border-rose-300"
-                      >
-                        <option value="">Selecione</option>
-                        {originAccounts.map((account) => (
-                          <option key={account.id} value={account.id}>
-                            {accountOptionLabel(account)}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
-                </div>
-
-                <div className="rounded-3xl border border-emerald-100 bg-emerald-50/50 p-4">
-                  <div className="mb-4 flex items-center gap-2 text-xs font-black uppercase tracking-wider text-emerald-700">
-                    <Landmark size={15} /> Destino
-                  </div>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <label className="space-y-1">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Polo</span>
-                      <select
-                        value={form.poloDestinoId}
-                        onChange={(event) => setForm((current) => ({
-                          ...current,
-                          poloDestinoId: event.target.value,
-                          contaDestinoId: '',
-                        }))}
-                        className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 outline-none focus:border-emerald-300"
-                      >
-                        <option value="">Selecione</option>
-                        {polos.map(renderPoloOption)}
-                      </select>
-                    </label>
-                    <label className="space-y-1">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Conta bancária</span>
-                      <select
-                        value={form.contaDestinoId}
-                        onChange={(event) => setForm((current) => ({ ...current, contaDestinoId: event.target.value }))}
-                        className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 outline-none focus:border-emerald-300"
-                      >
-                        <option value="">
-                          {form.poloOrigemId === form.poloDestinoId && form.contaOrigemId
-                            ? 'Selecione outra conta'
-                            : 'Selecione'}
-                        </option>
-                        {destinationAccounts.map((account) => (
-                          <option key={account.id} value={account.id}>
-                            {accountOptionLabel(account)}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:justify-end">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="rounded-2xl border border-slate-200 px-5 py-3 text-xs font-black uppercase tracking-wider text-slate-500 hover:bg-slate-50"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={saveMutation.isPending}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#001a33] px-6 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg shadow-slate-900/15 disabled:opacity-50"
-                >
-                  {saveMutation.isPending ? <Loader2 className="animate-spin" size={16} /> : <Plus size={16} />}
-                  Salvar transferência
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      ), document.body)}
+      {isModalOpen && (
+        <TransferenciaFormModal
+          form={form}
+          setForm={setForm}
+          polos={polos}
+          polosLoading={polosQuery.isLoading}
+          polosError={polosQuery.isError}
+          originAccounts={originAccounts}
+          destinationAccounts={destinationAccounts}
+          originAccountsLoading={originAccountsLoading}
+          originAccountsError={originAccountsQuery.isError}
+          destinationAccountsLoading={destinationAccountsLoading}
+          destinationAccountsError={destinationAccountsQuery.isError}
+          isPending={saveMutation.isPending}
+          onClose={() => setIsModalOpen(false)}
+          onSubmit={handleSubmit}
+        />
+      )}
     </div>
   );
 };
