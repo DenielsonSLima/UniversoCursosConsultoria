@@ -20,6 +20,8 @@ Lote independente da efetivação bancária bloqueada no PR 249.
 
 ## Manifesto explícito
 
+Total: 20 arquivos.
+
 - `modules/gestor/financeiro/convenios/ConveniosTab.tsx`
 - `modules/gestor/financeiro/convenios/convenios.types.ts`
 - `modules/gestor/financeiro/convenios/convenios.service.ts`
