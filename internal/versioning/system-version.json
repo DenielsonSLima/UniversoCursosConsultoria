@@ -1,8 +1,8 @@
 {
-  "version": "4.8.154",
+  "version": "4.8.156",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 163,
+  "revision": 165,
   "releasedAt": "2026-10-03",
-  "summary": "Propostas de renegociação, modais em tela cheia e abas financeiras com rolagem visível"
+  "summary": "Proesc: desconto líquido automático em pagamentos quitados e composição conferida"
 }
