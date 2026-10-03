@@ -1,8 +1,8 @@
 {
-  "version": "4.8.158",
+  "version": "4.8.159",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 167,
+  "revision": 168,
   "releasedAt": "2026-10-03",
-  "summary": "Renegociações com seleção exclusiva por aluno e resumo financeiro canônico"
+  "summary": "Resumo flutuante acompanha a seleção de parcelas na renegociação"
 }
