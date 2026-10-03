@@ -66,7 +66,7 @@ const nonEmptyString = (value: unknown, field: string): string => {
   return value;
 };
 
-const dados = (value: unknown, field: string): CaixaComposicaoDados => {
+const dados = (value: unknown, field: string, version: 1 | 2): CaixaComposicaoDados => {
   const item = record(value, field);
   exactKeys(item, [
     'total',
@@ -78,8 +78,9 @@ const dados = (value: unknown, field: string): CaixaComposicaoDados => {
     'desconto',
     'diferenca_a_conferir',
     'quantidade_a_conferir',
+    ...(version === 2 ? ['quantidade_sem_detalhamento', 'quantidade_com_diferenca'] : []),
   ], field);
-  return {
+  const result: CaixaComposicaoDados = {
     total: money(item.total, `${field}.total`),
     quantidade: count(item.quantidade, `${field}.quantidade`),
     base: nullableMoney(item.base, `${field}.base`),
@@ -97,9 +98,23 @@ const dados = (value: unknown, field: string): CaixaComposicaoDados => {
       `${field}.quantidade_a_conferir`,
     ),
   };
+  if (version === 2) {
+    result.quantidade_sem_detalhamento = count(
+      item.quantidade_sem_detalhamento, `${field}.quantidade_sem_detalhamento`,
+    );
+    result.quantidade_com_diferenca = count(
+      item.quantidade_com_diferenca, `${field}.quantidade_com_diferenca`,
+    );
+    if (
+      result.quantidade_sem_detalhamento + result.quantidade_com_diferenca
+        !== result.quantidade_a_conferir
+      || result.quantidade_a_conferir > result.quantidade
+    ) fail(`${field}.contagens_conferencia`);
+  }
+  return result;
 };
 
-const section = (value: unknown, field: string): CaixaComposicaoSecao => {
+const section = (value: unknown, field: string, version: 1 | 2): CaixaComposicaoSecao => {
   const item = record(value, field);
   exactKeys(item, ['disponivel', 'completo', 'motivo', 'observacao', 'dados'], field);
 
@@ -109,7 +124,7 @@ const section = (value: unknown, field: string): CaixaComposicaoSecao => {
     && item.motivo === null
     && item.observacao === null
   ) {
-    const completeData = dados(item.dados, `${field}.dados`);
+    const completeData = dados(item.dados, `${field}.dados`, version);
     if (
       completeData.quantidade_a_conferir !== 0
       || completeData.base === null
@@ -133,7 +148,7 @@ const section = (value: unknown, field: string): CaixaComposicaoSecao => {
     && item.completo === false
     && item.motivo === 'DADOS_INCOMPLETOS'
   ) {
-    const partialData = dados(item.dados, `${field}.dados`);
+    const partialData = dados(item.dados, `${field}.dados`, version);
     if (partialData.quantidade_a_conferir === 0) fail(`${field}.dados.quantidade_a_conferir`);
     return {
       disponivel: true,
@@ -178,7 +193,7 @@ export function assertCaixaComposicaoMensalPayload(
     'despesas',
   ], 'payload');
 
-  if (payload.versao !== 1) fail('versao');
+  if (payload.versao !== 1 && payload.versao !== 2) fail('versao');
   const competencia = date(payload.competencia, 'competencia');
   if (!COMPETENCIA_PATTERN.test(competencia)) fail('competencia');
   if (date(payload.periodo_inicio, 'periodo_inicio') !== competencia) fail('periodo_inicio');
@@ -198,8 +213,8 @@ export function assertCaixaComposicaoMensalPayload(
     || !Number.isFinite(Date.parse(payload.gerado_em))
   ) fail('gerado_em');
 
-  section(payload.recebimentos, 'recebimentos');
-  section(payload.despesas, 'despesas');
+  section(payload.recebimentos, 'recebimentos', payload.versao);
+  section(payload.despesas, 'despesas', payload.versao);
 }
 
 export const isCaixaComposicaoMensalPayload = (

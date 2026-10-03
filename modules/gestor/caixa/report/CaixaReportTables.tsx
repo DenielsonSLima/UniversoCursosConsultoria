@@ -53,7 +53,7 @@ const TotalsFooter: React.FC<{
         {label} · {totals.quantidade} movimento(s)
         {totals.quantidadeNaoDiscriminada > 0 && (
           <span className="ml-2 text-amber-700">
-            · {totals.quantidadeNaoDiscriminada} com diferença a conferir
+            · {totals.quantidadeNaoDiscriminada} com composição a conferir
           </span>
         )}
       </td>

@@ -127,7 +127,7 @@ export const drawMovementTable = (
   pdf.rect(x, footerY, CONTENT_WIDTH, footerHeight, 'F');
   setText(pdf, COLORS.slate700, 6.2, 'black');
   const undiscriminatedLabel = totals.quantidadeNaoDiscriminada > 0
-    ? ` · ${totals.quantidadeNaoDiscriminada} COM DIFERENÇA A CONFERIR`
+    ? ` · ${totals.quantidadeNaoDiscriminada} COM COMPOSIÇÃO A CONFERIR`
     : '';
   drawText(pdf, `${tone === 'emerald' ? 'TOTAL RECEBIDO' : 'TOTAL PAGO'} · ${totals.quantidade} MOVIMENTO(S)${undiscriminatedLabel}`, x + 2, footerY + 6, 165, { maxLines: 2 });
   drawText(pdf, formatCaixaCurrency(totals.valorBase), x + 207, footerY + 6, undefined, { align: 'right' });

@@ -394,6 +394,7 @@ jobs:
           node supabase/tests/caixa_review_drilldown.isolated.test.mjs
           node supabase/tests/proesc_administrative_archive.isolated.test.mjs
           node supabase/tests/proesc_portal_payment_confirmation.isolated.test.mjs
+          node supabase/tests/caixa_composition_classification_v2.isolated.test.mjs
 
       - name: Testar atividades extra-classe retroativas e recuperáveis
         run: |

@@ -48,7 +48,7 @@ const scopeKey = (poloId: string | null | undefined) => {
 };
 
 export const caixaComposicaoQueryKeys = {
-  root: ['caixa', 'composicao-mensal', 'v1'] as const,
+  root: ['caixa', 'composicao-mensal', 'v2'] as const,
   forScope: (poloId?: string | null) => [
     ...caixaComposicaoQueryKeys.root,
     'escopo',

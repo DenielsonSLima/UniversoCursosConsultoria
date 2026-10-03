@@ -10,6 +10,9 @@ export interface CaixaComposicaoDados {
   desconto: CaixaComposicaoMoney | null;
   diferenca_a_conferir: CaixaComposicaoMoney | null;
   quantidade_a_conferir: number;
+  /** Contagens canônicas obrigatórias no payload v2; ausentes no v1. */
+  quantidade_sem_detalhamento?: number;
+  quantidade_com_diferenca?: number;
 }
 
 export type CaixaComposicaoSecao =
@@ -36,14 +39,14 @@ export type CaixaComposicaoSecao =
   };
 
 /**
- * Contrato físico v1 devolvido por `get_caixa_composicao_mensal_secure`.
+ * Contratos físicos v1/v2 da composição mensal; a leitura usa a RPC v2.
  *
  * Valores monetários chegam prontos do backend como texto decimal com duas
  * casas. Campos nulos não foram comprovados e nunca devem ser recalculados no
  * cliente.
  */
 export interface CaixaComposicaoMensalPayload {
-  versao: 1;
+  versao: 1 | 2;
   competencia: string;
   periodo_inicio: string;
   periodo_fim_exclusivo: string;

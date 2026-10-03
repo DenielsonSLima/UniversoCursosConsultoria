@@ -7,7 +7,7 @@ import {
   caixaComposicaoQueryOptions,
   retryCaixaComposicaoRead,
 } from './caixa-composicao.queries.ts';
-import { CaixaComposicaoClientContractError } from './caixa-composicao.service.ts';
+import { CaixaComposicaoClientContractError, getCaixaComposicaoMensal } from './caixa-composicao.service.ts';
 import {
   assertCaixaComposicaoMensalPayload,
   isCaixaComposicaoMensalPayload,
@@ -46,6 +46,23 @@ const payload = () => ({
   despesas: completeSection(),
 });
 
+const payloadV2 = () => {
+  const v1 = payload();
+  const withCounts = (section: ReturnType<typeof completeSection>) => ({
+    ...section,
+    dados: {
+      ...section.dados,
+      quantidade_sem_detalhamento: 0,
+      quantidade_com_diferenca: 0,
+    },
+  });
+  return {
+    ...v1, versao: 2,
+    recebimentos: withCounts(v1.recebimentos),
+    despesas: withCounts(v1.despesas),
+  };
+};
+
 test('valida exatamente o payload v1 e preserva dinheiro textual acima do limite seguro', () => {
   const result = payload();
   assert.doesNotThrow(() => assertCaixaComposicaoMensalPayload(result));
@@ -64,6 +81,95 @@ test('rejeita dinheiro numérico, casas decimais incompletas e drift estrutural'
 
   const extraField = { ...payload(), total_calculado_no_front: '0.00' };
   assert.throws(() => assertCaixaComposicaoMensalPayload(extraField), /payload/);
+});
+
+test('v2 distingue ausência de detalhamento e diferença por contagens canônicas', () => {
+  const result = payloadV2();
+  result.recebimentos = {
+    ...result.recebimentos,
+    completo: false, motivo: 'DADOS_INCOMPLETOS', observacao: 'Componentes não informados.',
+    dados: {
+      ...result.recebimentos.dados,
+      juros: null,
+      // Diferenças individuais podem se compensar; não inferir contagens pelo total.
+      diferenca_a_conferir: '0.00',
+      quantidade_a_conferir: 3,
+      quantidade_sem_detalhamento: 1,
+      quantidade_com_diferenca: 2,
+    },
+  } as never;
+  assert.doesNotThrow(() => assertCaixaComposicaoMensalPayload(result));
+  assert.equal(result.recebimentos.dados.quantidade_com_diferenca, 2);
+  assert.equal(result.recebimentos.dados.juros, null);
+});
+
+test('v2 exige contagens válidas, coerentes entre si e limitadas ao total de movimentos', () => {
+  for (const field of ['quantidade_sem_detalhamento', 'quantidade_com_diferenca']) {
+    const absent = payloadV2();
+    delete (absent.recebimentos.dados as Record<string, unknown>)[field];
+    assert.throws(() => assertCaixaComposicaoMensalPayload(absent), /recebimentos\.dados/);
+    for (const invalid of [-1, 0.5, '0', null]) {
+      const result = payloadV2();
+      (result.recebimentos.dados as Record<string, unknown>)[field] = invalid;
+      assert.throws(() => assertCaixaComposicaoMensalPayload(result), new RegExp(field));
+    }
+  }
+  const inconsistent = payloadV2();
+  inconsistent.recebimentos.dados.quantidade_com_diferenca = 1;
+  assert.throws(() => assertCaixaComposicaoMensalPayload(inconsistent), /contagens_conferencia/);
+  const aboveTotal = payloadV2();
+  aboveTotal.recebimentos.dados.quantidade_a_conferir = 8;
+  aboveTotal.recebimentos.dados.quantidade_sem_detalhamento = 8;
+  assert.throws(() => assertCaixaComposicaoMensalPayload(aboveTotal), /contagens_conferencia/);
+  const mixedVersion = { ...payloadV2(), versao: 1 };
+  assert.throws(() => assertCaixaComposicaoMensalPayload(mixedVersion), /recebimentos\.dados/);
+});
+
+test('serviço lê a RPC v2 com escopo e competência e preserva o payload validado', async () => {
+  const result = payloadV2();
+  const calls: unknown[][] = [];
+  const rpc = mock.method(supabase, 'rpc', (...args: unknown[]) => {
+    calls.push(args);
+    return Promise.resolve({ data: result, error: null });
+  });
+  try {
+    assert.equal(await getCaixaComposicaoMensal(poloId, competencia), result);
+    assert.deepEqual(calls, [[
+      'get_caixa_composicao_mensal_v2_secure',
+      { p_polo_id: poloId, p_competencia: competencia },
+    ]]);
+  } finally {
+    rpc.mock.restore();
+  }
+});
+
+test('usa V1 somente quando a RPC V2 ainda não está publicada', async () => {
+  const result = payload();
+  const calls: string[] = [];
+  const rpc = mock.method(supabase, 'rpc', (name: string) => {
+    calls.push(name);
+    return Promise.resolve(name.endsWith('_v2_secure')
+      ? { data: null, error: { code: 'PGRST202', message: 'Could not find public.get_caixa_composicao_mensal_v2_secure in schema cache' } }
+      : { data: result, error: null });
+  });
+  try {
+    assert.equal(await getCaixaComposicaoMensal(poloId, competencia), result);
+    assert.deepEqual(calls, ['get_caixa_composicao_mensal_v2_secure', 'get_caixa_composicao_mensal_secure']);
+  } finally { rpc.mock.restore(); }
+});
+
+test('não usa fallback para permissão, rede ou outra função ausente', async () => {
+  for (const error of [
+    { code: '42501', message: 'Sem acesso' },
+    { code: '502', message: 'Falha de rede' },
+    { code: 'PGRST202', message: 'Could not find public.other_function' },
+  ]) {
+    const rpc = mock.method(supabase, 'rpc', () => Promise.resolve({ data: null, error }));
+    try {
+      await assert.rejects(getCaixaComposicaoMensal(poloId, competencia), (reason) => reason === error);
+      assert.equal(rpc.mock.callCount(), 1);
+    } finally { rpc.mock.restore(); }
+  }
 });
 
 test('distingue completo, parcial e fonte indisponível sem transformar ausência em zero', () => {
@@ -143,7 +249,7 @@ test('query key separa versão, escopo e competência', () => {
   assert.deepEqual(caixaComposicaoQueryKeys.detail(poloId, competencia), [
     'caixa',
     'composicao-mensal',
-    'v1',
+    'v2',
     'escopo',
     'POLO',
     poloId,
