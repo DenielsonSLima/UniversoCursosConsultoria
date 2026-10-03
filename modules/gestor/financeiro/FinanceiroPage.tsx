@@ -1,6 +1,6 @@
 // File: modules/gestor/financeiro/FinanceiroPage.tsx
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useMemo } from 'react';
 import {
   ArrowRightLeft,
   FileText,
@@ -24,6 +24,10 @@ import ConciliacaoBancariaTab from './conciliacao-bancaria/ConciliacaoBancariaTa
 import OutrosDebitosTab from './outros-debitos/OutrosDebitosTab';
 import OutrosCreditosTab from './outros-creditos/OutrosCreditosTab';
 import FinancialUnderlineTabs from './components/FinancialUnderlineTabs';
+import { canOpenFinancialSection } from './financeiro-sections';
+import { useFinancialSection } from './hooks/useFinancialSection';
+
+const RenegociacoesTab = lazy(() => import('./renegociacoes/RenegociacoesTab'));
 
 type FinancialTab = FinanceiroTabId;
 
@@ -35,33 +39,34 @@ interface FinanceiroPageProps {
 }
 
 const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ poloId, poloName, isMatriz, allowedTabs }) => {
-  const [activeTab, setActiveTab] = useState<FinancialTab>('resumo');
+  const [activeTab, setActiveTab] = useFinancialSection();
 
   const tabs = useMemo(() => [
     { id: 'resumo' as const, label: 'Resumo', icon: <Layers size={14} /> },
     { id: 'receber' as const, label: 'A Receber', icon: <TrendingUp size={14} /> },
+    { id: 'renegociacoes' as const, label: 'Renegociações', icon: <Handshake size={14} /> },
     { id: 'despesas' as const, label: 'A Pagar', icon: <TrendingDown size={14} /> },
     { id: 'emprestimos' as const, label: 'Empréstimos', icon: <Landmark size={14} /> },
     { id: 'convenios' as const, label: 'Convênios', icon: <Handshake size={14} /> },
     { id: 'transferencias' as const, label: 'Transferências', icon: <ArrowRightLeft size={14} /> },
-    { id: 'conciliacao-bancaria' as const, label: 'Conciliação', icon: <FileText size={14} /> },
     { id: 'outros-debitos' as const, label: 'Outros Débitos', icon: <TrendingDown size={14} className="rotate-90" /> },
     { id: 'outros-creditos' as const, label: 'Outros Créditos', icon: <TrendingUp size={14} className="-rotate-90" /> },
+    { id: 'conciliacao-bancaria' as const, label: 'Conciliação', icon: <FileText size={14} /> },
   ], []);
   const visibleTabs = useMemo(() => {
     if (!allowedTabs) return tabs;
-    return tabs.filter(tab => allowedTabs.includes(tab.id));
+    return tabs.filter(tab => canOpenFinancialSection(tab.id, allowedTabs));
   }, [allowedTabs, tabs]);
-  const visibleTabIds = useMemo(() => visibleTabs.map((tab) => tab.id), [visibleTabs]);
+  const visibleTabIds = useMemo(() => visibleTabs.map((tab) => tab.id).filter((id): id is FinancialTab => id !== 'renegociacoes'), [visibleTabs]);
   const effectiveActiveTab = visibleTabs.some(tab => tab.id === activeTab)
     ? activeTab
     : visibleTabs[0]?.id || 'resumo';
 
   useEffect(() => {
     if (activeTab !== effectiveActiveTab) {
-      setActiveTab(effectiveActiveTab);
+      setActiveTab(effectiveActiveTab, true);
     }
-  }, [activeTab, effectiveActiveTab]);
+  }, [activeTab, effectiveActiveTab, setActiveTab]);
 
   const renderActiveTab = () => {
     switch (effectiveActiveTab) {
@@ -76,6 +81,12 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ poloId, poloName, isMat
         );
       case 'receber':
         return <ReceberTab poloId={poloId} isMatriz={isMatriz} />;
+      case 'renegociacoes':
+        return (
+          <Suspense fallback={<p role="status" className="p-6 text-sm text-slate-500">Carregando renegociações…</p>}>
+            <RenegociacoesTab key={poloId || 'sem-polo'} poloId={poloId} isMatriz={isMatriz} onNavigateToReceivables={() => setActiveTab('receber')} />
+          </Suspense>
+        );
       case 'despesas':
         return <DespesasTab poloId={poloId} />;
       case 'emprestimos':
@@ -121,7 +132,8 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ poloId, poloName, isMat
           onChange={setActiveTab}
           ariaLabel="Seções do módulo financeiro"
           idPrefix="financeiro"
-          mobileMode="select"
+          mobileMode="scroll"
+          showHorizontalScrollbar
         />
       </div>
 

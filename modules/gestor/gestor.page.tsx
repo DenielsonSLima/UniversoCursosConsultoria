@@ -31,10 +31,11 @@ import { buildGlobalSearchAccessKey } from './global-search/gestor-global-search
 import { useGestorGlobalSearchNavigation } from './global-search/useGestorGlobalSearchNavigation';
 import { meuPerfilService } from './meu-perfil/meu-perfil.service';
 import type { MeuPerfilGestorData } from './meu-perfil/meu-perfil.types';
+import { initialGestorFinancialModule, leaveFinancialSection } from './financeiro/financeiro-sections';
 
 const GestorPage: React.FC = () => {
   const contentScrollRef = useRef<HTMLDivElement>(null);
-  const [activeModule, setActiveModuleState] = useState('inicio');
+  const [activeModule, setActiveModuleState] = useState(initialGestorFinancialModule);
   const [hasUnsavedAutomationDraft, setHasUnsavedAutomationDraft] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
@@ -48,7 +49,7 @@ const GestorPage: React.FC = () => {
       return false;
     }
     setHasUnsavedAutomationDraft(false);
-    setActiveModuleState(moduleId);
+    setActiveModuleState(leaveFinancialSection(moduleId));
     return true;
   }, [activeModule, hasUnsavedAutomationDraft]);
 

@@ -405,5 +405,15 @@ jobs:
           node --test modules/gestor/gestao/tecnicos/detalhes/components/grade/turma-grade-atividade.test.mjs
           node --test modules/gestor/gestao/tecnicos/detalhes/components/grade/turma-grade-atividade.interaction.test.mjs
 
+      - name: Testar propostas de renegociação sem efeitos bancários
+        run: |
+          npm install --prefix /tmp/universo-renegociacao-tests --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.5.8 jsdom@26.1.0
+          export PGLITE_MODULE_PATH=/tmp/universo-renegociacao-tests/node_modules/@electric-sql/pglite/dist/index.js
+          export RENEGOCIACAO_JSDOM_PATH=/tmp/universo-renegociacao-tests/node_modules/jsdom
+          node --test modules/gestor/financeiro/renegociacoes/hooks/useRenegociacaoDialogFocus.test.mjs
+          node --test modules/gestor/financeiro/financeiro-sections.test.ts modules/gestor/financeiro/renegociacoes/renegociacoes.model.test.ts modules/gestor/financeiro/renegociacoes/renegociacoes.contract.test.ts
+          node scripts/test-renegociacao-sql.mjs
+          RENEGOTIATION_RULES_MODE=real node scripts/test-renegociacao-sql.mjs
+
       - name: Gerar build de produção
         run: npm run build
