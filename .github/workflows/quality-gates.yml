@@ -415,6 +415,8 @@ jobs:
           node --test modules/gestor/financeiro/financeiro-sections.test.ts modules/gestor/financeiro/renegociacoes/renegociacoes.model.test.ts modules/gestor/financeiro/renegociacoes/renegociacoes.contract.test.ts modules/gestor/financeiro/renegociacoes/renegociacoes.candidates.test.ts modules/gestor/financeiro/renegociacoes/components/candidateSelection.model.test.ts
           node --test modules/gestor/financeiro/renegociacoes/renegociacoes.selection-summary.test.ts modules/gestor/financeiro/renegociacoes/hooks/useRenegociacaoSelectionSummary.test.mjs modules/gestor/financeiro/renegociacoes/components/SelectionSummaryPanel.test.mjs
           node --test modules/gestor/financeiro/renegociacoes/components/RenegociacaoWizardSummary.test.mjs
+          node --test modules/gestor/financeiro/renegociacoes/components/CanonicalSummary.test.mjs modules/gestor/financeiro/renegociacoes/components/RenegociacaoWizardSchedule.test.mjs
+          node scripts/test-renegociacao-cronograma-custom.mjs
           node scripts/test-renegociacao-selecao-sql.mjs
           node --test modules/gestor/financeiro/renegociacoes/components/FloatingSelectionSummary.test.mjs
           node scripts/test-renegociacao-listagem-sql.mjs
@@ -435,3 +437,4 @@ jobs:
 
       - name: Gerar build de produção
         run: npm run build
+

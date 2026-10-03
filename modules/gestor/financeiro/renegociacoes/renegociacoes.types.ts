@@ -134,6 +134,7 @@ export interface RenegociacaoPolicyOverrides {
 }
 
 export interface RenegociacaoTerms {
+  scheduleEntries?: Array<Pick<RenegociacaoScheduleEntry, 'sequence' | 'dueDate' | 'amountCents'>>;
   commercialDiscountCents?: number;
   downPaymentCents?: number;
   installmentCount?: number;
@@ -318,3 +319,4 @@ export interface DiscardRenegociacaoProposalInput {
 }
 
 export type DiscardRenegociacaoResult = SaveRenegociacaoResult;
+

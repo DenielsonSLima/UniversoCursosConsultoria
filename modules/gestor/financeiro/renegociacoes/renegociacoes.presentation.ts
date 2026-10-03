@@ -59,6 +59,10 @@ export const renegociacaoErrorMessage = (error: unknown) => {
   const row = record(error);
   const code = text(row.code);
   const message = text(row.message);
+  if (/RENEGOTIATION_CUSTOM_SCHEDULE_TOTAL_MISMATCH/.test(message))
+    return 'A soma dos valores das parcelas deve ser igual ao saldo parcelado. Ajuste os valores e valide novamente.';
+  if (/RENEGOTIATION_INVALID_CUSTOM_SCHEDULE/.test(message))
+    return 'Revise o cronograma: valores positivos, todas as parcelas e vencimentos válidos em ordem crescente, a partir da data-base.';
   if (code === '57014' || /statement timeout/i.test(message))
     return 'A consulta excedeu o tempo permitido. Refine os filtros ou tente novamente.';
   if (code === 'PGRST202')

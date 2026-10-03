@@ -12,8 +12,11 @@ import type {
   RenegociacaoProposalSummary,
   SaveRenegociacaoProposalInput,
   RenegociacaoTerms,
+  RenegociacaoPreview,
 } from '../renegociacoes.types';
 import CanonicalSummary from './CanonicalSummary';
+import RenegociacaoScheduleEditor from './RenegociacaoScheduleEditor';
+import { useRenegociacaoScheduleDraft } from '../hooks/useRenegociacaoScheduleDraft';
 import SelectionFinancialSummary from './SelectionFinancialSummary';
 import { ErrorPanel, LoadingPanel } from './RenegociacaoPanels';
 import { Field, inputClass, SelectionStep, TermsStep } from './WizardSteps';
@@ -82,6 +85,8 @@ const RenegociacaoWizard: React.FC<RenegociacaoWizardProps> = ({
   const [reason, setReason] = useState('');
   const [frozenInput, setFrozenInput] = useState<PreviewRenegociacaoInput | null>(null);
   const [requestId, setRequestId] = useState<string | null>(null);
+  const [reviewPreview, setReviewPreview] = useState<RenegociacaoPreview | null>(null);
+  const scheduleDraft = useRenegociacaoScheduleDraft(reviewPreview?.schedule.entries);
   const [submittedPayload, setSubmittedPayload] = useState<SaveRenegociacaoProposalInput | null>(null);
 
   const candidateData = itemsQuery.data;
@@ -166,7 +171,9 @@ const RenegociacaoWizard: React.FC<RenegociacaoWizardProps> = ({
     const input = buildInput();
     if (!input) return;
     try {
-      await preview.mutateAsync(input);
+      const result = await preview.mutateAsync(input);
+      setReviewPreview(result);
+      scheduleDraft.reset();
       setFrozenInput(input);
       setRequestId(createRenegociacaoRequestId());
       setStep('REVIEW');
@@ -174,12 +181,24 @@ const RenegociacaoWizard: React.FC<RenegociacaoWizardProps> = ({
       /* feedback is rendered next to the action */
     }
   };
+  const validateSchedule = async () => {
+    if (!frozenInput || !scheduleDraft.payload || submittedPayload || preview.isPending) return;
+    const input = { ...frozenInput, terms: { ...frozenInput.terms, scheduleEntries: scheduleDraft.payload } };
+    try {
+      const result = await preview.mutateAsync(input);
+      setReviewPreview(result);
+      setFrozenInput(input);
+      setRequestId(createRenegociacaoRequestId());
+      scheduleDraft.reset();
+    } catch { /* keep the draft and the last canonical preview for correction */ }
+  };
   const submit = async () => {
-    if (!frozenInput || !preview.data || !requestId || (preview.data.requiresApproval && !reason.trim())) return;
+    if (!frozenInput || !reviewPreview || !requestId || scheduleDraft.changed || preview.isPending ||
+      (reviewPreview.requiresApproval && !reason.trim())) return;
     const payload = submittedPayload || {
       ...frozenInput,
       requestId,
-      expectedProposalFingerprint: preview.data.proposalFingerprint,
+      expectedProposalFingerprint: reviewPreview.proposalFingerprint,
       submit: true,
       reason: reason.trim() || null,
     };
@@ -323,24 +342,33 @@ const RenegociacaoWizard: React.FC<RenegociacaoWizardProps> = ({
               />
               {preview.isError ? <ErrorPanel error={preview.error} /> : null}
             </div>
-          ) : step === 'REVIEW' && preview.data ? (
+          ) : step === 'REVIEW' && reviewPreview ? (
             <div className="space-y-4">
               <CanonicalSummary
-                totals={preview.data.totals}
-                schedule={preview.data.schedule}
-                policy={preview.data.policySnapshot}
-                sourceItems={preview.data.sourceItems}
-                requiresApproval={preview.data.requiresApproval}
-                approvalReasons={preview.data.approvalReasons}
+                totals={reviewPreview.totals}
+                schedule={reviewPreview.schedule}
+                policy={reviewPreview.policySnapshot}
+                sourceItems={reviewPreview.sourceItems}
+                requiresApproval={reviewPreview.requiresApproval}
+                approvalReasons={reviewPreview.approvalReasons}
+                scheduleEditor={<RenegociacaoScheduleEditor
+                  rows={scheduleDraft.rows} entries={reviewPreview.schedule.entries}
+                  financedCents={reviewPreview.totals.financedCents}
+                  changed={scheduleDraft.changed} valid={scheduleDraft.valid}
+                  disabled={preview.isPending || save.isPending || Boolean(submittedPayload)}
+                  pending={preview.isPending} onChange={scheduleDraft.update}
+                  onValidate={() => { void validateSchedule(); }} onReset={scheduleDraft.reset}
+                />}
               />
-              <Field label={preview.data.requiresApproval ? 'Justificativa obrigatória' : 'Observação da proposta'}>
+              {preview.isError ? <ErrorPanel error={preview.error} /> : null}
+              <Field label={reviewPreview.requiresApproval ? 'Justificativa obrigatória' : 'Observação da proposta'}>
                 <textarea
                   rows={3}
                   value={reason}
                   disabled={Boolean(submittedPayload)}
                   onChange={(event) => setReason(event.target.value)}
                   placeholder={
-                    preview.data.requiresApproval ? 'Explique por que estas condições foram concedidas...' : 'Opcional'
+                    reviewPreview.requiresApproval ? 'Explique por que estas condições foram concedidas...' : 'Opcional'
                   }
                   className={`${inputClass} resize-y py-3 disabled:opacity-60`}
                 />
@@ -375,6 +403,8 @@ const RenegociacaoWizard: React.FC<RenegociacaoWizardProps> = ({
                 else {
                   setStep(step === 'REVIEW' ? 'TERMS' : 'SELECTION');
                   if (step === 'REVIEW') {
+                    scheduleDraft.reset();
+                    setReviewPreview(null);
                     setFrozenInput(null);
                     setRequestId(null);
                     setSubmittedPayload(null);
@@ -382,7 +412,7 @@ const RenegociacaoWizard: React.FC<RenegociacaoWizardProps> = ({
                   }
                 }
               }}
-              disabled={save.isPending || preview.isPending}
+              disabled={save.isPending || preview.isPending || Boolean(submittedPayload)}
               className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 px-4 text-xs font-black uppercase tracking-wide text-slate-600 disabled:opacity-40"
             >
               <ArrowLeft size={15} /> {step === 'SELECTION' ? 'Cancelar' : 'Voltar'}
@@ -408,7 +438,7 @@ const RenegociacaoWizard: React.FC<RenegociacaoWizardProps> = ({
             {step === 'REVIEW' ? (
               <button
                 type="button"
-                disabled={!canSave || save.isPending || Boolean(preview.data?.requiresApproval && !reason.trim())}
+                disabled={!canSave || save.isPending || preview.isPending || scheduleDraft.changed || Boolean(reviewPreview?.requiresApproval && !reason.trim())}
                 onClick={() => {
                   void submit();
                 }}

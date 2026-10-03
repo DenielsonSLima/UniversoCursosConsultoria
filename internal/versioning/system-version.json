@@ -1,8 +1,9 @@
 {
-  "version": "4.8.163",
+  "version": "4.8.164",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 172,
+  "revision": 173,
   "releasedAt": "2026-10-03",
-  "summary": "Resumo da seleção visível na etapa Condições da renegociação"
+  "summary": "Cronograma de renegociação editável por parcela e desconto detalhado"
 }
+
