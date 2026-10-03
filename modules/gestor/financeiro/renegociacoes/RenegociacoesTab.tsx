@@ -180,6 +180,7 @@ const RenegociacoesTab: React.FC<RenegociacoesTabProps> = ({ poloId, isMatriz, o
         />
         {view === 'A_NEGOCIAR' ? (
           <CandidateGroups
+            selectionContextKey={JSON.stringify([scopedPoloId, deferredSearch, page, filters.courseType, filters.turmaId])}
             data={candidates.data}
             loading={candidates.isPending}
             error={candidates.error}

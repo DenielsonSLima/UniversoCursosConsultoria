@@ -413,6 +413,8 @@ jobs:
           export RENEGOCIACAO_JSDOM_PATH=/tmp/universo-renegociacao-tests/node_modules/jsdom
           node --test modules/gestor/financeiro/renegociacoes/hooks/useRenegociacaoDialogFocus.test.mjs modules/gestor/financeiro/renegociacoes/components/RenegociacaoFilters.test.mjs modules/gestor/financeiro/renegociacoes/components/CandidateGroups.test.mjs modules/gestor/financeiro/renegociacoes/components/RenegociacaoWizard.test.mjs
           node --test modules/gestor/financeiro/financeiro-sections.test.ts modules/gestor/financeiro/renegociacoes/renegociacoes.model.test.ts modules/gestor/financeiro/renegociacoes/renegociacoes.contract.test.ts modules/gestor/financeiro/renegociacoes/renegociacoes.candidates.test.ts modules/gestor/financeiro/renegociacoes/components/candidateSelection.model.test.ts
+          node --test modules/gestor/financeiro/renegociacoes/renegociacoes.selection-summary.test.ts modules/gestor/financeiro/renegociacoes/hooks/useRenegociacaoSelectionSummary.test.mjs modules/gestor/financeiro/renegociacoes/components/SelectionSummaryPanel.test.mjs
+          node scripts/test-renegociacao-selecao-sql.mjs
           node scripts/test-renegociacao-listagem-sql.mjs
           node scripts/test-renegociacao-sql.mjs
           RENEGOTIATION_RULES_MODE=real node scripts/test-renegociacao-sql.mjs

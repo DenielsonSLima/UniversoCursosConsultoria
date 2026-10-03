@@ -5,6 +5,53 @@ import type {
 } from '../renegociacoes.types';
 
 type SelectableCandidate = Pick<RenegociacaoCandidateItem, 'receivableId' | 'eligibility'>;
+type CandidateIdentity = Pick<RenegociacaoIdentity, 'poloId' | 'alunoId' | 'matriculaId' | 'turmaId'>;
+
+export interface CandidateSelectionState {
+  ownerIdentity: CandidateIdentity | null;
+  selectedIds: string[];
+}
+
+export const emptyCandidateSelection = (): CandidateSelectionState => ({
+  ownerIdentity: null,
+  selectedIds: [],
+});
+
+export const candidateIdentityFromGroup = (group: CandidateIdentity): CandidateIdentity => ({
+  poloId: group.poloId,
+  alunoId: group.alunoId,
+  matriculaId: group.matriculaId,
+  turmaId: group.turmaId,
+});
+
+export const candidateIdentitiesMatch = (left: CandidateIdentity, right: CandidateIdentity) =>
+  left.poloId === right.poloId &&
+  left.alunoId === right.alunoId &&
+  left.matriculaId === right.matriculaId &&
+  left.turmaId === right.turmaId;
+
+export const candidateSelectionOwnedBy = (selection: CandidateSelectionState, group: CandidateIdentity) =>
+  Boolean(
+    selection.ownerIdentity &&
+      selection.selectedIds.length > 0 &&
+      candidateIdentitiesMatch(selection.ownerIdentity, group),
+  );
+
+export const candidateSelectionIdsEqual = (left: readonly string[], right: readonly string[]) =>
+  left.length === right.length && left.every((id, index) => id === right[index]);
+
+export const updateCandidateSelection = (
+  current: CandidateSelectionState,
+  group: CandidateIdentity,
+  selectedIds: readonly string[],
+): CandidateSelectionState => {
+  const normalizedIds = [...new Set(selectedIds.filter(Boolean))];
+  const currentIsOwnedByGroup = candidateSelectionOwnedBy(current, group);
+  if (!normalizedIds.length) return currentIsOwnedByGroup ? emptyCandidateSelection() : current;
+  if (current.ownerIdentity && current.selectedIds.length > 0 && !currentIsOwnedByGroup) return current;
+  if (currentIsOwnedByGroup && candidateSelectionIdsEqual(current.selectedIds, normalizedIds)) return current;
+  return { ownerIdentity: candidateIdentityFromGroup(group), selectedIds: normalizedIds };
+};
 
 export const eligibleCandidateIds = (items: readonly SelectableCandidate[]) => {
   const seen = new Set<string>();
@@ -56,8 +103,4 @@ export const toggleAllEligibleCandidates = (
 export const candidateIdentityMatchesGroup = (
   group: Pick<RenegociacaoCandidateGroup, 'poloId' | 'alunoId' | 'matriculaId' | 'turmaId'>,
   identity: RenegociacaoIdentity,
-) =>
-  group.poloId === identity.poloId &&
-  group.alunoId === identity.alunoId &&
-  group.matriculaId === identity.matriculaId &&
-  group.turmaId === identity.turmaId;
+) => candidateIdentitiesMatch(group, identity);

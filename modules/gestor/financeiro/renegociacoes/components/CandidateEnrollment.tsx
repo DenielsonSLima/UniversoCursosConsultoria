@@ -5,18 +5,25 @@ import { formatCents, formatRenegociacaoDate } from '../renegociacoes.model';
 import type { RenegociacaoCandidateGroup, RenegociacaoCourseType } from '../renegociacoes.types';
 import { ErrorPanel, LoadingPanel } from './RenegociacaoPanels';
 import { SelectionStep } from './WizardSteps';
+import SelectionFinancialSummary from './SelectionFinancialSummary';
 import {
   allEligibleCandidatesSelected,
   candidateIdentityMatchesGroup,
+  candidateSelectionIdsEqual,
+  candidateSelectionOwnedBy,
   eligibleCandidateIds,
   reconcileCandidateSelection,
   toggleAllEligibleCandidates,
   toggleCandidateSelection,
+  type CandidateSelectionState,
 } from './candidateSelection.model';
 
 interface CandidateEnrollmentProps {
   group: RenegociacaoCandidateGroup;
   active: boolean;
+  selection: CandidateSelectionState;
+  onSelectionChange: (group: RenegociacaoCandidateGroup, selectedIds: string[]) => void;
+  onClearSelection: () => void;
   onStart: (group: RenegociacaoCandidateGroup, selectedIds: string[]) => void;
 }
 
@@ -29,9 +36,15 @@ const courseTypeLabel: Record<RenegociacaoCourseType, string> = {
   EAD: 'EAD',
 };
 
-const CandidateEnrollment: React.FC<CandidateEnrollmentProps> = ({ group, active, onStart }) => {
+const CandidateEnrollment: React.FC<CandidateEnrollmentProps> = ({
+  group,
+  active,
+  selection,
+  onSelectionChange,
+  onClearSelection,
+  onStart,
+}) => {
   const [expanded, setExpanded] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const requestMatriculaId = active && expanded ? group.matriculaId : null;
   const itemsQuery = useRenegociacaoCandidateItems(requestMatriculaId);
   const panelId = `candidate-enrollment-${group.matriculaId}`;
@@ -48,22 +61,26 @@ const CandidateEnrollment: React.FC<CandidateEnrollmentProps> = ({ group, active
   );
   const eligibleIds = useMemo(() => eligibleCandidateIds(items), [items]);
   const eligibleIdSet = useMemo(() => new Set(eligibleIds), [eligibleIds]);
+  const ownsSelection = candidateSelectionOwnedBy(selection, group);
+  const hasActiveSelection = Boolean(selection.ownerIdentity && selection.selectedIds.length);
+  const selectionLocked = hasActiveSelection && !ownsSelection;
+  const selectedIds = ownsSelection ? selection.selectedIds : [];
   const allSelected = allEligibleCandidatesSelected(selectedIds, items);
 
   useEffect(() => {
-    if (!requestMatriculaId || !itemsQuery.data) return;
-    if (!identityMatches) {
-      setSelectedIds([]);
-      return;
-    }
-    setSelectedIds((current) => reconcileCandidateSelection(current, itemsQuery.data.items));
-  }, [identityMatches, itemsQuery.data, requestMatriculaId]);
+    if (!requestMatriculaId || !itemsQuery.data || !ownsSelection) return;
+    const reconciled = identityMatches
+      ? reconcileCandidateSelection(selection.selectedIds, itemsQuery.data.items)
+      : [];
+    if (!candidateSelectionIdsEqual(selection.selectedIds, reconciled)) onSelectionChange(group, reconciled);
+  }, [group, identityMatches, itemsQuery.data, onSelectionChange, ownsSelection, requestMatriculaId, selection.selectedIds]);
 
   const canStart = Boolean(
     !itemsQuery.isPending &&
       !itemsQuery.isError &&
       identityMatches &&
       itemsQuery.data?.policyDefaults &&
+      ownsSelection &&
       selectedIds.length > 0 &&
       selectedIds.every((id) => eligibleIdSet.has(id)),
   );
@@ -138,13 +155,38 @@ const CandidateEnrollment: React.FC<CandidateEnrollmentProps> = ({ group, active
         ) : null}
         {expanded && !itemsQuery.isPending && !itemsQuery.isError && identityMatches ? (
           <div className="space-y-4">
-            <SelectionStep
-              items={items}
-              selected={selectedIds}
-              allSelected={allSelected}
-              onToggleAll={() => setSelectedIds((current) => toggleAllEligibleCandidates(current, items))}
-              onToggle={(id) => setSelectedIds((current) => toggleCandidateSelection(current, id, items))}
-            />
+            {selectionLocked ? (
+              <div
+                role="status"
+                className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <p className="text-xs font-bold text-amber-900">
+                  Já há parcelas selecionadas em {selection.ownerIdentity?.alunoId === group.alunoId ? 'outra matrícula deste aluno' : 'outro aluno'}.
+                  {' '}Limpe a seleção ativa antes de escolher parcelas aqui.
+                </p>
+                <button
+                  type="button"
+                  onClick={onClearSelection}
+                  className="min-h-10 shrink-0 rounded-xl border border-amber-300 bg-white px-4 text-xs font-black uppercase tracking-wide text-amber-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+                >
+                  Limpar seleção
+                </button>
+              </div>
+            ) : null}
+            <fieldset disabled={selectionLocked} className={selectionLocked ? 'opacity-60' : undefined}>
+              <SelectionStep
+                items={items}
+                selected={selectedIds}
+                allSelected={allSelected}
+                onToggleAll={() =>
+                  onSelectionChange(group, toggleAllEligibleCandidates(selectedIds, items))
+                }
+                onToggle={(id) =>
+                  onSelectionChange(group, toggleCandidateSelection(selectedIds, id, items))
+                }
+              />
+            </fieldset>
+            <SelectionFinancialSummary group={group} selectedIds={selectedIds} asOf={itemsQuery.data?.asOf} />
             {!itemsQuery.data?.policyDefaults ? (
               <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-bold text-amber-800">
                 A regra financeira desta matrícula não pôde ser confirmada. Nenhuma proposta pode ser iniciada.

@@ -1,8 +1,8 @@
 {
-  "version": "4.8.157",
+  "version": "4.8.158",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 166,
+  "revision": 167,
   "releasedAt": "2026-10-03",
-  "summary": "Renegociações com listagem por aluno, filtros por tipo e turma e seleção múltipla"
+  "summary": "Renegociações com seleção exclusiva por aluno e resumo financeiro canônico"
 }

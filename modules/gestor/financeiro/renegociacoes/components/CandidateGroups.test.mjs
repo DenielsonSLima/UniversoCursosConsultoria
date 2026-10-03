@@ -27,27 +27,35 @@ const fixture = String.raw`
   import { createRoot } from 'react-dom/client';
   import CandidateGroups from './CandidateGroups.tsx';
 
-  const group = (id, turma) => ({
-    poloId: 'polo-1', alunoId: 'aluno-1', matriculaId: id, turmaId: 'turma-' + id,
-    alunoNome: 'Ana Souza', matriculaCodigo: id.toUpperCase(), turmaNome: turma,
+  const group = (id, turma, alunoId = 'aluno-1', alunoNome = 'Ana Souza') => ({
+    poloId: 'polo-1', alunoId, matriculaId: id, turmaId: 'turma-' + id,
+    alunoNome, matriculaCodigo: id.toUpperCase(), turmaNome: turma,
     policyKind: 'TECHNICAL', courseType: 'TECNICO', openCount: 3, eligibilityPending: true,
     eligibleCount: null, blockedCount: null, overdueCount: 2, futureCount: 1,
     principalCents: 30000, accruedInterestCents: null, accruedPenaltyCents: null,
     grossDebtCents: null, oldestDueDate: '2026-08-10', nextDueDate: '2026-11-10',
   });
-  const groups = [group('mat-1', 'Turma Alfa'), group('mat-2', 'Turma Beta'), group('mat-3', 'Turma Gama')];
+  const groups = [
+    group('mat-1', 'Turma Alfa'),
+    group('mat-2', 'Turma Beta'),
+    group('mat-3', 'Turma Gama'),
+    group('mat-4', 'Turma Delta', 'aluno-2', 'Bruno Lima'),
+  ];
 
   function Harness() {
     const [started, setStarted] = useState({ groupId: '', ids: [] });
+    const [selectionContextKey, setSelectionContextKey] = useState('scope-a');
     return <>
+      <button id="change-selection-context" type="button" onClick={() => setSelectionContextKey('scope-b')}>Trocar contexto</button>
       <CandidateGroups
-        data={{ version: 2, asOf: '2026-10-03', groups, totalGroups: 3, totalStudents: 1, pageBy: 'STUDENT', page: 1, pageSize: 20 }}
+        data={{ version: 2, asOf: '2026-10-03', groups, totalGroups: 4, totalStudents: 2, pageBy: 'STUDENT', page: 1, pageSize: 20 }}
         loading={false}
         error={null}
         search=""
         onRetry={() => {}}
         onPage={() => {}}
         onStart={(candidateGroup, ids) => setStarted({ groupId: candidateGroup.matriculaId, ids })}
+        selectionContextKey={selectionContextKey}
       />
       <output id="started" data-group={started.groupId} data-ids={started.ids.join(',')} />
     </>;
@@ -93,6 +101,7 @@ await build({
     name: 'candidate-query-fixture',
     setup(build) {
       build.onResolve({ filter: /useRenegociacoesQueries$/ }, () => ({ path: 'candidate-query', namespace: 'fixture' }));
+      build.onResolve({ filter: /useRenegociacaoSelectionSummary$/ }, () => ({ path: 'selection-summary', namespace: 'summary-fixture' }));
       build.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({
         loader: 'js',
         contents: `
@@ -101,6 +110,21 @@ await build({
             return matriculaId
               ? globalThis.__candidateQueries[matriculaId]
               : { data: undefined, isPending: false, isError: false, error: null, refetch: async () => {} };
+          };
+        `,
+      }));
+      build.onLoad({ filter: /.*/, namespace: 'summary-fixture' }, () => ({
+        loader: 'js',
+        contents: `
+          export const useRenegociacaoSelectionSummary = (identity, ids, asOf) => {
+            const selectedIds = [...ids].sort();
+            globalThis.__selectionSummaryCalls.push({
+              matriculaId: identity.matriculaId, selectedIds, asOf,
+            });
+            return {
+              data: globalThis.__selectionSummaries[JSON.stringify(selectedIds)],
+              loading: false, error: null, refetch: async () => {},
+            };
           };
         `,
       }));
@@ -126,6 +150,19 @@ const item = (receivableId, label, eligible, reason = '') => ({
   lateDays: 23, principalCents: 10000, interestCents: 100, penaltyCents: 200, debtCents: 10300,
   policyKind: 'TECHNICAL', sourceSystem: 'LOCAL', eligibility: { eligible, code: eligible ? 'ELIGIBLE' : 'LINKED', reason },
 });
+const correctIdentity = (matriculaId, alunoId) => ({
+  poloId: 'polo-1', alunoId, matriculaId, turmaId: `turma-${matriculaId}`,
+});
+const summary = (identity, receivableIds, principalCents, grossDebtCents) => ({
+  version: 1, asOf: '2026-10-03', identity, receivableIds, count: receivableIds.length,
+  totals: {
+    principalCents, punctualDiscountCents: null, discountedPrincipalCents: null,
+    interestCents: grossDebtCents - principalCents, penaltyCents: 0, grossDebtCents,
+    payableCents: null,
+  },
+  discount: { status: 'UNAVAILABLE', message: 'Desconto não comprovado nesta fixture.', appliedToProposal: false },
+  payableStatus: 'UNAVAILABLE', payableMessage: 'Total de pagamento não confirmado nesta fixture.',
+});
 
 test('expande sob demanda, seleciona 1 ou N e bloqueia erros de escopo/eligibilidade', async () => {
   const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>', {
@@ -136,6 +173,7 @@ test('expande sob demanda, seleciona 1 ou N e bloqueia erros de escopo/eligibili
     'window', 'document', 'navigator', 'HTMLElement', 'Node', 'Event', 'MouseEvent',
     'MessageChannel', 'requestAnimationFrame', 'cancelAnimationFrame', 'getComputedStyle',
     'IS_REACT_ACT_ENVIRONMENT', '__candidateRequests', '__candidateQueries', '__candidateRetries',
+    '__selectionSummaryCalls', '__selectionSummaries',
   ];
   const previousGlobals = new Map(globalKeys.map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
   const retries = { 'mat-2': 0 };
@@ -177,6 +215,19 @@ test('expande sob demanda, seleciona 1 ou N e bloqueia erros de escopo/eligibili
       error: null,
       refetch: async () => {},
     },
+    'mat-4': {
+      data: {
+        version: 2,
+        asOf: '2026-10-03',
+        identity: { poloId: 'polo-1', alunoId: 'aluno-2', matriculaId: 'mat-4', turmaId: 'turma-mat-4' },
+        policyDefaults,
+        items: [item('rec-4', 'Parcela 4', true)],
+      },
+      isPending: false,
+      isError: false,
+      error: null,
+      refetch: async () => {},
+    },
   };
   const testGlobals = {
     window: dom.window,
@@ -194,6 +245,12 @@ test('expande sob demanda, seleciona 1 ou N e bloqueia erros de escopo/eligibili
     __candidateRequests: [],
     __candidateQueries: queries,
     __candidateRetries: retries,
+    __selectionSummaryCalls: [],
+    __selectionSummaries: {
+      '["rec-1"]': summary(correctIdentity('mat-1', 'aluno-1'), ['rec-1'], 10000, 10300),
+      '["rec-1","rec-2"]': summary(correctIdentity('mat-1', 'aluno-1'), ['rec-1', 'rec-2'], 20000, 20600),
+      '["rec-4"]': summary(correctIdentity('mat-4', 'aluno-2'), ['rec-4'], 10000, 10300),
+    },
   };
   for (const [key, value] of Object.entries(testGlobals)) {
     Object.defineProperty(globalThis, key, { configurable: true, writable: true, value });
@@ -203,22 +260,25 @@ test('expande sob demanda, seleciona 1 ou N e bloqueia erros de escopo/eligibili
   const unmount = await mountHarness(document.getElementById('root'));
   const enrollmentButtons = () => [...document.querySelectorAll('button[aria-controls^="candidate-enrollment-"]')];
   const started = () => document.getElementById('started').dataset;
+  const lastSummaryCall = (matriculaId) =>
+    globalThis.__selectionSummaryCalls.filter((call) => call.matriculaId === matriculaId).at(-1);
 
   try {
     assert.deepEqual(globalThis.__candidateRequests, [], 'lista inicial não consulta detalhes em N+1');
-    const studentButton = document.querySelector('button[aria-controls^="candidate-student-"]');
+    const studentButtons = [...document.querySelectorAll('button[aria-controls^="candidate-student-"]')];
+    const studentButton = studentButtons[0];
     assert.equal(studentButton.getAttribute('aria-expanded'), 'false');
     await interact(() => studentButton.click());
     assert.equal(studentButton.getAttribute('aria-expanded'), 'true');
-    assert.equal(enrollmentButtons().length, 3);
+    assert.equal(enrollmentButtons().length, 4);
     assert.deepEqual(globalThis.__candidateRequests, [], 'abrir aluno ainda não consulta cada matrícula');
 
     await interact(() => enrollmentButtons()[0].click());
     assert.ok(globalThis.__candidateRequests.includes('mat-1'));
     const firstPanel = document.getElementById('candidate-enrollment-mat-1');
-    const firstCheckbox = firstPanel.querySelector('[data-receivable-id="rec-1"]');
+    let firstCheckbox = firstPanel.querySelector('[data-receivable-id="rec-1"]');
     const blockedCheckbox = firstPanel.querySelector('[data-receivable-id="rec-blocked"]');
-    const actionButton = [...firstPanel.querySelectorAll('button')].find((button) => button.textContent.includes('Continuar com'));
+    let actionButton = [...firstPanel.querySelectorAll('button')].find((button) => button.textContent.includes('Continuar com'));
     assert.equal(blockedCheckbox.disabled, true);
     assert.match(blockedCheckbox.closest('label').textContent, /Já vinculada a outra proposta/);
     assert.equal(actionButton.disabled, true);
@@ -226,12 +286,38 @@ test('expande sob demanda, seleciona 1 ou N e bloqueia erros de escopo/eligibili
     await interact(() => firstCheckbox.click());
     assert.equal(actionButton.disabled, false);
     assert.match(actionButton.textContent, /Continuar com 1/);
+    assert.deepEqual(lastSummaryCall('mat-1'), {
+      matriculaId: 'mat-1', selectedIds: ['rec-1'], asOf: '2026-10-03',
+    });
+    assert.match(firstPanel.textContent, /Resumo da seleção/);
+    assert.match(firstPanel.textContent, /R\$\s*100,00/);
+    assert.match(firstPanel.textContent, /A conferir/, 'desconto não comprovado permanece indisponível');
+    await interact(() => studentButton.click());
+    assert.ok(document.querySelector('[role="status"] button'), 'recolher mantém a seleção e a ação de limpeza');
+    await interact(() => studentButton.click());
+    firstCheckbox = firstPanel.querySelector('[data-receivable-id="rec-1"]');
+    actionButton = [...firstPanel.querySelectorAll('button')].find((button) => button.textContent.includes('Continuar com'));
+    assert.equal(firstCheckbox.checked, true, 'expandir novamente preserva a seleção controlada');
+
+    await interact(() => studentButtons[1].click());
+    const secondEnrollmentButton = document.querySelector('button[aria-controls="candidate-enrollment-mat-4"]');
+    await interact(() => secondEnrollmentButton.click());
+    const secondPanel = document.getElementById('candidate-enrollment-mat-4');
+    const secondCheckbox = secondPanel.querySelector('[data-receivable-id="rec-4"]');
+    assert.equal(secondCheckbox.matches(':disabled'), true, 'outra matrícula fica bloqueada enquanto há seleção');
+    assert.match(secondPanel.textContent, /Limpar seleção/);
+    await interact(() => secondCheckbox.click());
+    assert.equal(secondCheckbox.checked, false, 'controle bloqueado não cria uma segunda seleção');
+    assert.equal(firstCheckbox.checked, true);
+
     await interact(() => actionButton.click());
     assert.deepEqual({ group: started().group, ids: started().ids }, { group: 'mat-1', ids: 'rec-1' });
 
     const toggleAll = [...firstPanel.querySelectorAll('button')].find((button) => button.textContent.includes('Marcar elegíveis'));
     await interact(() => toggleAll.click());
     assert.match(actionButton.textContent, /Continuar com 2/);
+    assert.deepEqual(lastSummaryCall('mat-1').selectedIds, ['rec-1', 'rec-2']);
+    assert.match(firstPanel.textContent, /R\$\s*200,00/);
     await interact(() => actionButton.click());
     assert.deepEqual({ group: started().group, ids: started().ids }, { group: 'mat-1', ids: 'rec-1,rec-2' });
 
@@ -249,6 +335,8 @@ test('expande sob demanda, seleciona 1 ou N e bloqueia erros de escopo/eligibili
     globalThis.__candidateQueries = queries;
     await rerenderHarness();
     assert.match(actionButton.textContent, /Continuar com 1/);
+    assert.deepEqual(lastSummaryCall('mat-1').selectedIds, ['rec-1']);
+    assert.match(firstPanel.textContent, /R\$\s*100,00/);
     await interact(() => actionButton.click());
     assert.deepEqual(
       { group: started().group, ids: started().ids },
@@ -258,6 +346,19 @@ test('expande sob demanda, seleciona 1 ou N e bloqueia erros de escopo/eligibili
     const clearAll = [...firstPanel.querySelectorAll('button')].find((button) => button.textContent.includes('Desmarcar todas'));
     await interact(() => clearAll.click());
     assert.equal(actionButton.disabled, true);
+    assert.equal(secondCheckbox.matches(':disabled'), false, 'desmarcar a última parcela libera outra matrícula');
+    await interact(() => secondCheckbox.click());
+    assert.equal(secondCheckbox.checked, true);
+    assert.deepEqual(lastSummaryCall('mat-4'), {
+      matriculaId: 'mat-4', selectedIds: ['rec-4'], asOf: '2026-10-03',
+    });
+    assert.match(secondPanel.textContent, /Resumo da seleção/);
+    assert.equal(firstCheckbox.matches(':disabled'), true, 'a nova identidade passa a ser a única dona da seleção');
+    const globalClear = document.querySelector('[role="status"] button');
+    await interact(() => globalClear.click());
+    assert.equal(secondCheckbox.checked, false);
+    assert.match(secondPanel.textContent, /Selecione as parcelas para conferir os valores/);
+    assert.equal(firstCheckbox.matches(':disabled'), false);
 
     await interact(() => enrollmentButtons()[1].click());
     const errorPanel = document.getElementById('candidate-enrollment-mat-2');
@@ -270,6 +371,17 @@ test('expande sob demanda, seleciona 1 ou N e bloqueia erros de escopo/eligibili
     const guardedPanel = document.getElementById('candidate-enrollment-mat-3');
     assert.match(guardedPanel.textContent, /não pertencem a este aluno, matrícula, turma e polo/);
     assert.equal(guardedPanel.querySelectorAll('[data-receivable-id]').length, 0);
+
+    await interact(() => secondCheckbox.click());
+    assert.ok(document.querySelector('[role="status"] button'), 'seleção ativa oferece limpeza explícita');
+    await interact(() => document.getElementById('change-selection-context').click());
+    assert.equal(document.querySelector('[role="status"] button'), null, 'trocar página/filtros/polo reinicia a seleção');
+    const refreshedStudents = [...document.querySelectorAll('button[aria-controls^="candidate-student-"]')];
+    await interact(() => refreshedStudents[1].click());
+    await interact(() => document.querySelector('button[aria-controls="candidate-enrollment-mat-4"]').click());
+    const refreshedSecondCheckbox = document.querySelector('#candidate-enrollment-mat-4 [data-receivable-id="rec-4"]');
+    assert.equal(refreshedSecondCheckbox.checked, false);
+    assert.equal(refreshedSecondCheckbox.matches(':disabled'), false);
   } finally {
     await unmount();
     dom.window.close();
