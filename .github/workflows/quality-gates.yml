@@ -425,5 +425,12 @@ jobs:
           node --test modules/gestor/financeiro/transferencias/transferencias.accounts.test.mjs modules/gestor/financeiro/transferencias/components/transferencia-options.test.ts
           PGLITE_MODULE_PATH=/tmp/universo-renegociacao-tests/node_modules/@electric-sql/pglite/dist/index.js node supabase/tests/transfer_replay_scope.isolated.test.mjs
 
+      - name: Testar exclusão segura de convênios
+        run: |
+          npm run test:convenios-financeiros
+          node --test modules/gestor/financeiro/convenios/convenios-exclusao.test.ts supabase/tests/convenios_financeiros_exclusao_logica.contract.test.ts
+          CONVENIOS_JSDOM_PATH=/tmp/universo-renegociacao-tests/node_modules/jsdom node --test modules/gestor/financeiro/convenios/convenios-exclusao.behavior.test.mjs
+          PGLITE_MODULE_PATH=/tmp/universo-renegociacao-tests/node_modules/@electric-sql/pglite/dist/index.js node scripts/test-convenios-exclusao-logica-sql.mjs
+
       - name: Gerar build de produção
         run: npm run build

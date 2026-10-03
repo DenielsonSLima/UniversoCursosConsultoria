@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight, LockKeyhole } from 'lucide-react';
+import { ArrowRight, LockKeyhole, Trash2 } from 'lucide-react';
 import type { ConvenioFinanceiroMes } from '../convenios.types';
 import {
   convenioStatusClass,
@@ -12,9 +12,10 @@ interface ConvenioMonthsTableProps {
   items: ConvenioFinanceiroMes[];
   onOpen: (mes: ConvenioFinanceiroMes) => void;
   onCloseMonth: (mes: ConvenioFinanceiroMes) => void;
+  onDelete: (mes: ConvenioFinanceiroMes) => void;
 }
 
-const ConvenioMonthsTable: React.FC<ConvenioMonthsTableProps> = ({ items, onOpen, onCloseMonth }) => {
+const ConvenioMonthsTable: React.FC<ConvenioMonthsTableProps> = ({ items, onOpen, onCloseMonth, onDelete }) => {
   if (items.length === 0) return null;
   return (
     <div className="overflow-x-auto rounded-2xl border border-slate-100 bg-white">
@@ -33,7 +34,13 @@ const ConvenioMonthsTable: React.FC<ConvenioMonthsTableProps> = ({ items, onOpen
               <td className="px-4 py-3"><span className="block text-sm font-black text-rose-700">{formatConvenioCurrency(mes.despesasPagas)}</span><span className="text-[9px] font-bold text-amber-700">{formatConvenioCurrency(mes.despesasPendentes)} pendente</span></td>
               <td className={`px-4 py-3 text-sm font-black ${mes.saldoProjetado < 0 ? 'text-rose-700' : 'text-[#001a33]'}`}>{formatConvenioCurrency(mes.saldoProjetado)}</td>
               <td className="px-4 py-3"><span className={`rounded-lg border px-2 py-1 text-[9px] font-black uppercase tracking-wide ${convenioStatusClass(mes.status)}`}>{convenioStatusLabel(mes.status)}</span></td>
-              <td className="px-4 py-3"><div className="flex justify-end gap-2">{mes.status === 'ABERTO' ? <button type="button" onClick={() => onCloseMonth(mes)} aria-label={`Finalizar ${mes.nome}`} className="rounded-lg border border-cyan-200 p-2 text-cyan-800 hover:bg-cyan-50"><LockKeyhole size={14} /></button> : null}<button type="button" onClick={() => onOpen(mes)} aria-label={`Abrir ${mes.nome}`} className="rounded-lg bg-[#001a33] p-2 text-white hover:bg-blue-950"><ArrowRight size={14} /></button></div></td>
+              <td className="px-4 py-3">
+                <div className="flex justify-end gap-2">
+                  <button type="button" onClick={() => onDelete(mes)} aria-label={`Excluir convênio ${mes.nome}`} title="Excluir convênio" className="rounded-lg border border-rose-200 p-2 text-rose-700 hover:bg-rose-50"><Trash2 size={14} /></button>
+                  {mes.status === 'ABERTO' ? <button type="button" onClick={() => onCloseMonth(mes)} aria-label={`Finalizar ${mes.nome}`} className="rounded-lg border border-cyan-200 p-2 text-cyan-800 hover:bg-cyan-50"><LockKeyhole size={14} /></button> : null}
+                  <button type="button" onClick={() => onOpen(mes)} aria-label={`Abrir ${mes.nome}`} className="rounded-lg bg-[#001a33] p-2 text-white hover:bg-blue-950"><ArrowRight size={14} /></button>
+                </div>
+              </td>
             </tr>
           ))}
         </tbody>

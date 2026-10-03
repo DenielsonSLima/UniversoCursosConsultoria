@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight, CalendarDays, Handshake, LockKeyhole } from 'lucide-react';
+import { ArrowRight, CalendarDays, Handshake, LockKeyhole, Trash2 } from 'lucide-react';
 import type { ConvenioFinanceiroMes } from '../convenios.types';
 import {
   convenioStatusClass,
@@ -12,9 +12,10 @@ interface ConvenioMonthCardProps {
   mes: ConvenioFinanceiroMes;
   onOpen: (mes: ConvenioFinanceiroMes) => void;
   onCloseMonth: (mes: ConvenioFinanceiroMes) => void;
+  onDelete: (mes: ConvenioFinanceiroMes) => void;
 }
 
-const ConvenioMonthCard: React.FC<ConvenioMonthCardProps> = ({ mes, onOpen, onCloseMonth }) => (
+const ConvenioMonthCard: React.FC<ConvenioMonthCardProps> = ({ mes, onOpen, onCloseMonth, onDelete }) => (
   <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
     <div className="border-b border-slate-100 bg-gradient-to-br from-cyan-50/80 via-white to-white p-5">
       <div className="flex items-start justify-between gap-3">
@@ -52,7 +53,8 @@ const ConvenioMonthCard: React.FC<ConvenioMonthCardProps> = ({ mes, onOpen, onCl
         </span>
         <span className="text-right text-[9px] font-bold uppercase tracking-wide text-slate-400">{mes.quantidadeDespesas} despesa(s)</span>
       </div>
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-wrap justify-end gap-2">
+        <button type="button" onClick={() => onDelete(mes)} aria-label={`Excluir convênio ${mes.nome}`} className="mr-auto inline-flex items-center gap-1.5 rounded-xl border border-rose-200 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-rose-700 hover:bg-rose-50"><Trash2 size={13} /> Excluir</button>
         {mes.status === 'ABERTO' ? (
           <button type="button" onClick={() => onCloseMonth(mes)} className="inline-flex items-center gap-1.5 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-cyan-800 hover:bg-cyan-100"><LockKeyhole size={13} /> Finalizar</button>
         ) : null}

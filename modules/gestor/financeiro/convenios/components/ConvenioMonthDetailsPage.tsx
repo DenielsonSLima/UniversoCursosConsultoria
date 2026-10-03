@@ -8,6 +8,7 @@ import {
   Loader2,
   LockKeyhole,
   ReceiptText,
+  Trash2,
   WalletCards,
 } from 'lucide-react';
 import type { ConvenioFinanceiroMes, ConvenioMesDetalhe, ConvenioMovimento } from '../convenios.types';
@@ -29,6 +30,7 @@ interface ConvenioMonthDetailsPageProps {
   onBack: () => void;
   onCredit: (mes: ConvenioFinanceiroMes) => void;
   onCloseMonth: (mes: ConvenioFinanceiroMes) => void;
+  onDelete: (mes: ConvenioFinanceiroMes) => void;
   onRetry: () => void;
 }
 
@@ -47,6 +49,7 @@ const ConvenioMonthDetailsPage: React.FC<ConvenioMonthDetailsPageProps> = ({
   onBack,
   onCredit,
   onCloseMonth,
+  onDelete,
   onRetry,
 }) => {
   const mes = detail?.mes || mesFallback;
@@ -71,12 +74,13 @@ const ConvenioMonthDetailsPage: React.FC<ConvenioMonthDetailsPageProps> = ({
           <p className="mt-1 flex items-center gap-2 text-sm font-semibold text-slate-500"><CalendarDays size={15} className="text-cyan-700" /> {formatConvenioCompetencia(mes.competencia)} · {mes.poloNome}</p>
           {mes.parceiroNome ? <p className="mt-1 text-xs font-medium text-slate-400">Parceiro: {mes.parceiroNome}</p> : null}
         </div>
-        {mes.status === 'ABERTO' ? (
-          <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={() => onDelete(mes)} className="inline-flex items-center gap-2 rounded-2xl border border-rose-200 bg-white px-4 py-3 text-xs font-black uppercase tracking-wide text-rose-700 hover:bg-rose-50"><Trash2 size={16} /> Excluir convênio</button>
+          {mes.status === 'ABERTO' ? <>
             <button type="button" onClick={() => onCredit(mes)} className="inline-flex items-center gap-2 rounded-2xl bg-cyan-700 px-4 py-3 text-xs font-black uppercase tracking-wide text-white shadow-lg shadow-cyan-950/15 hover:bg-cyan-800"><HandCoins size={16} /> Lançar crédito</button>
             <button type="button" onClick={() => onCloseMonth(mes)} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs font-black uppercase tracking-wide text-slate-700 hover:bg-slate-50"><LockKeyhole size={16} /> Finalizar mês</button>
-          </div>
-        ) : null}
+          </> : null}
+        </div>
       </header>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
