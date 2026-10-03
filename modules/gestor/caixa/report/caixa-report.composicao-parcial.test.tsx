@@ -3,6 +3,10 @@ import test from 'node:test';
 import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { jsPDF } from 'jspdf';
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { CaixaReceiptsTable } from './CaixaReportTables';
+import { drawMovementTable } from './caixa-report.vector-pdf.tables';
 import { drawComposition } from './caixa-report.vector-pdf.summary';
 import { makeCaixaReportFixture } from './caixa-report.fixture';
 import { createCaixaReportPdfDocument } from './caixa-report.vector-pdf';
@@ -39,6 +43,25 @@ test('prévia usa os mesmos rótulos e não recalcula os subtotais canônicos', 
   assert.match(preview, /caixaPartialCompositionLabel\(report\.totaisRecebimentos\.quantidadeNaoDiscriminada\)/);
   assert.match(preview, /caixaPartialCompositionLabel\(report\.totaisDespesas\.quantidadeNaoDiscriminada\)/);
   assert.match(preview, /formatCaixaCurrency\(report\.totaisRecebimentos\.descontoIdentificado\)/);
+});
+
+test('rodapé nativo e prévia não confundem composição incompleta com diferença de valor', () => {
+  const noDifference = { ...totals, diferencaNaoDiscriminada: 0 };
+  const html = renderToStaticMarkup(
+    <CaixaReceiptsTable rows={[]} totals={noDifference} showTotals />,
+  );
+  assert.match(html, /1 com composição a conferir/);
+  assert.doesNotMatch(html, /com diferença a conferir/i);
+  const pdf = new jsPDF();
+  pdf.setFont = (() => pdf) as typeof pdf.setFont;
+  const text: string[] = [];
+  pdf.text = ((value: string | string[]) => {
+    text.push(...(Array.isArray(value) ? value : [value]));
+    return pdf;
+  }) as typeof pdf.text;
+  drawMovementTable(pdf, [], noDifference, true, 'emerald', 10);
+  assert.match(text.join(' '), /1 COM COMPOSIÇÃO A CONFERIR/);
+  assert.doesNotMatch(text.join(' '), /COM DIFERENÇA A CONFERIR/);
 });
 
 test('fixture parcial usa exportador canônico, fontes e recursos institucionais isolados', {

@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { formatCaixaCanonicalCurrency } from '../caixa.formatters.ts';
-import { CAIXA_PARTIAL_COMPOSITION_NOTE } from '../caixa-composicao.presentation.ts';
+import { caixaCompositionObservation } from '../caixa-composicao.presentation.ts';
 import type {
   CaixaComposicaoDados,
   CaixaComposicaoMensalPayload,
@@ -258,9 +258,20 @@ const CompositionCard = ({
             <div role="status" className="relative mt-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/90 p-3 text-xs leading-5 text-amber-950">
               <AlertTriangle aria-hidden="true" size={15} className="mt-0.5 shrink-0 text-amber-600" />
               <p>
-                <strong>{formatQuantity(section.dados.quantidade_a_conferir)} movimento(s) a conferir.</strong>{' '}
-                {section.observacao}
-                {' '}{CAIXA_PARTIAL_COMPOSITION_NOTE}
+                {section.dados.quantidade_com_diferenca === undefined
+                  || section.dados.quantidade_sem_detalhamento === undefined ? (
+                    <strong>{formatQuantity(section.dados.quantidade_a_conferir)} movimento(s) a conferir. </strong>
+                  ) : (
+                    <>
+                      {section.dados.quantidade_com_diferenca > 0 && (
+                        <strong>{formatQuantity(section.dados.quantidade_com_diferenca)} movimento(s) com valor ou diferença a conferir. </strong>
+                      )}
+                      {section.dados.quantidade_sem_detalhamento > 0 && (
+                        <span>{formatQuantity(section.dados.quantidade_sem_detalhamento)} {copy.tone === 'receipts' ? 'recebimento(s)' : 'pagamento(s)'} sem detalhamento da origem, sem diferença de valor. </span>
+                      )}
+                    </>
+                  )}
+                {caixaCompositionObservation(section.observacao)}
               </p>
             </div>
           ) : null}

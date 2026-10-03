@@ -119,6 +119,45 @@ test('fonte indisponível não apresenta ausência como zero', () => {
   assert.doesNotMatch(html, /Total recebido[\s\S]{0,180}R\$ 0,00/);
 });
 
+test('v2 separa detalhamento ausente de diferença financeira sem inferir pelo valor agregado', () => {
+  const result = payload({
+    disponivel: true, completo: false, motivo: 'DADOS_INCOMPLETOS',
+    observacao: 'Componentes não informados não integram os subtotais.',
+    dados: {
+      total: '1300.00', quantidade: 5, base: '1300.00',
+      juros: null, multa: null, acrescimo: null, desconto: null,
+      diferenca_a_conferir: '0.00', quantidade_a_conferir: 3,
+      quantidade_com_diferenca: 2, quantidade_sem_detalhamento: 1,
+    },
+  });
+  result.versao = 2;
+  const html = render(result);
+  assert.match(html, /2 movimento\(s\) com valor ou diferença a conferir/);
+  assert.match(html, /1 recebimento\(s\) sem detalhamento da origem, sem diferença de valor/);
+  assert.doesNotMatch(html, /3 movimento\(s\) a conferir/);
+  assert.equal(html.match(/Componentes não informados não integram os subtotais/g)?.length, 1);
+  assert.match(html, /aria-label="Juros: valor não comprovado"/);
+});
+
+test('v2 não chama recebimento sem detalhamento e sem diferença de erro monetário', () => {
+  const result = payload({
+    disponivel: true, completo: false, motivo: 'DADOS_INCOMPLETOS',
+    observacao: 'Somente subtotais identificados; componentes não informados não integram os subtotais.',
+    dados: {
+      total: '279.90', quantidade: 1, base: '279.90',
+      juros: null, multa: null, acrescimo: null, desconto: null,
+      diferenca_a_conferir: '0.00', quantidade_a_conferir: 1,
+      quantidade_com_diferenca: 0, quantidade_sem_detalhamento: 1,
+    },
+  });
+  result.versao = 2;
+  const html = render(result);
+  assert.match(html, /1 recebimento\(s\) sem detalhamento da origem, sem diferença de valor/);
+  assert.doesNotMatch(html, /movimento\(s\).*a conferir/);
+  assert.equal(html.match(/componentes não informados não integram os subtotais/gi)?.length, 1);
+  assert.match(html, /Leitura parcial/);
+});
+
 test('Japoatã mantém desconto conhecido de 79,60 com um recebimento ainda em conferência', () => {
   const partial: CaixaComposicaoSecao = {
     disponivel: true, completo: false, motivo: 'DADOS_INCOMPLETOS',

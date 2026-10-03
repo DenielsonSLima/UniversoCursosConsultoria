@@ -1,8 +1,8 @@
 {
-  "version": "4.8.151",
+  "version": "4.8.153",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 160,
-  "releasedAt": "2026-10-02",
-  "summary": "Atividades extra-classe com datas retroativas, edição e arquivamento recuperável na grade"
+  "revision": 162,
+  "releasedAt": "2026-10-03",
+  "summary": "Caixa distingue falta de detalhamento de diferença monetária sem alterar recebimentos"
 }

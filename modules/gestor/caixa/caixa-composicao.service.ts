@@ -55,12 +55,22 @@ export const getCaixaComposicaoMensal = async (
   signal?: AbortSignal,
 ): Promise<CaixaComposicaoMensalPayload> => {
   const normalizedPoloId = assertRequest(poloId, competencia);
-  const request = supabase.rpc('get_caixa_composicao_mensal_secure', {
-    p_polo_id: normalizedPoloId,
-    p_competencia: competencia,
-  });
-  if (signal) request.abortSignal(signal);
-  const { data, error } = await request;
+  const read = (name: string) => {
+    const request = supabase.rpc(name, {
+      p_polo_id: normalizedPoloId,
+      p_competencia: competencia,
+    });
+    if (signal) request.abortSignal(signal);
+    return request;
+  };
+  let { data, error } = await read('get_caixa_composicao_mensal_v2_secure');
+  // Deployment compatibility only: never mask authorization, transport or
+  // contract errors. Both versions retain their original secure RPC guards.
+  if (error?.code === 'PGRST202'
+    && error.message.includes('public.get_caixa_composicao_mensal_v2_secure')
+    && !signal?.aborted) {
+    ({ data, error } = await read('get_caixa_composicao_mensal_secure'));
+  }
 
   if (error) throw error;
 
