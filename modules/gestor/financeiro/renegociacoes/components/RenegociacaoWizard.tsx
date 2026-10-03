@@ -16,11 +16,19 @@ import type {
 import CanonicalSummary from './CanonicalSummary';
 import { ErrorPanel, LoadingPanel } from './RenegociacaoPanels';
 import { Field, inputClass, SelectionStep, TermsStep } from './WizardSteps';
+import {
+  allEligibleCandidatesSelected,
+  candidateIdentityMatchesGroup,
+  reconcileCandidateSelection,
+  toggleAllEligibleCandidates,
+  toggleCandidateSelection,
+} from './candidateSelection.model';
 
 interface RenegociacaoWizardProps {
   group: RenegociacaoCandidateGroup;
   canSave: boolean;
   saveUnavailableReason?: string;
+  initialSelectedIds?: string[];
   onClose: () => void;
   onSaved: (proposal: RenegociacaoProposalSummary, replayed: boolean) => void;
 }
@@ -45,6 +53,7 @@ const RenegociacaoWizard: React.FC<RenegociacaoWizardProps> = ({
   group,
   canSave,
   saveUnavailableReason,
+  initialSelectedIds,
   onClose,
   onSaved,
 }) => {
@@ -56,7 +65,7 @@ const RenegociacaoWizard: React.FC<RenegociacaoWizardProps> = ({
   const itemsQuery = useRenegociacaoCandidateItems(group.matriculaId);
   const { preview, save } = useRenegociacaoMutations(group.poloId);
   const [step, setStep] = useState<WizardStep>('SELECTION');
-  const [selected, setSelected] = useState<string[]>([]);
+  const [selected, setSelected] = useState<string[]>(() => [...new Set(initialSelectedIds || [])]);
   const [commercialDiscount, setCommercialDiscount] = useState(moneyInitial);
   const [downPayment, setDownPayment] = useState(moneyInitial);
   const [installmentCount, setInstallmentCount] = useState('1');
@@ -74,7 +83,13 @@ const RenegociacaoWizard: React.FC<RenegociacaoWizardProps> = ({
   const [requestId, setRequestId] = useState<string | null>(null);
   const [submittedPayload, setSubmittedPayload] = useState<SaveRenegociacaoProposalInput | null>(null);
 
-  const defaults = itemsQuery.data?.policyDefaults;
+  const candidateData = itemsQuery.data;
+  const identityMatches = Boolean(candidateData && candidateIdentityMatchesGroup(group, candidateData.identity));
+  const candidateItems = useMemo(
+    () => (identityMatches ? candidateData?.items || [] : []),
+    [candidateData, identityMatches],
+  );
+  const defaults = identityMatches ? candidateData?.policyDefaults : null;
   useEffect(() => {
     if (!defaults) return;
     setPunctualDiscount(formatCentsInput(defaults.punctualDiscount.amountCents));
@@ -86,16 +101,23 @@ const RenegociacaoWizard: React.FC<RenegociacaoWizardProps> = ({
   useRenegociacaoDialogFocus({ isOpen: true, dialogRef, submittingRef: busyRef, closeRef: closeActionRef });
 
   const eligibleItems = useMemo(
-    () => itemsQuery.data?.items.filter((item) => item.eligibility.eligible) || [],
-    [itemsQuery.data],
+    () => candidateItems.filter((item) => item.eligibility.eligible),
+    [candidateItems],
   );
   const eligibleIds = useMemo(() => new Set(eligibleItems.map((item) => item.receivableId)), [eligibleItems]);
-  const allSelected =
-    eligibleItems.length > 0 && selected.length === eligibleItems.length && selected.every((id) => eligibleIds.has(id));
-  const canContinue = Boolean(defaults && selected.length > 0 && selected.every((id) => eligibleIds.has(id)));
+  const allSelected = allEligibleCandidatesSelected(selected, candidateItems);
+  const canContinue = Boolean(
+    !itemsQuery.isPending &&
+      !itemsQuery.isError &&
+      identityMatches &&
+      defaults &&
+      selected.length > 0 &&
+      selected.every((id) => eligibleIds.has(id)),
+  );
   useEffect(() => {
-    setSelected((current) => current.filter((id) => eligibleIds.has(id)));
-  }, [eligibleIds]);
+    if (!candidateData) return;
+    setSelected((current) => reconcileCandidateSelection(current, candidateItems));
+  }, [candidateData, candidateItems]);
   useEffect(() => {
     if (itemsQuery.data && !defaults && step !== 'SELECTION') setStep('SELECTION');
   }, [defaults, itemsQuery.data, step]);
@@ -136,7 +158,7 @@ const RenegociacaoWizard: React.FC<RenegociacaoWizardProps> = ({
     const waivedPenaltyCents = parseCurrencyToCents(waivedPenalty);
     if (waivedInterestCents) policyOverrides.waivedInterestCents = waivedInterestCents;
     if (waivedPenaltyCents) policyOverrides.waivedPenaltyCents = waivedPenaltyCents;
-    return { receivableIds: selected, terms, policyOverrides, asOf: itemsQuery.data?.asOf || null };
+    return { receivableIds: selected, terms, policyOverrides, asOf: candidateData?.asOf || null };
   };
 
   const simulate = async () => {
@@ -239,17 +261,22 @@ const RenegociacaoWizard: React.FC<RenegociacaoWizardProps> = ({
                 void itemsQuery.refetch();
               }}
             />
+          ) : candidateData && !identityMatches ? (
+            <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs font-bold text-rose-800">
+              Os dados retornados não pertencem a este aluno, matrícula, turma e polo. Feche a proposta e atualize a
+              lista antes de continuar.
+            </div>
           ) : step === 'SELECTION' ? (
             <div className="space-y-4">
               <SelectionStep
-                items={itemsQuery.data?.items || []}
+                items={candidateItems}
                 selected={selected}
                 allSelected={allSelected}
-                onToggleAll={() => setSelected(allSelected ? [] : eligibleItems.map((item) => item.receivableId))}
+                onToggleAll={() =>
+                  setSelected((current) => toggleAllEligibleCandidates(current, candidateItems))
+                }
                 onToggle={(id) =>
-                  setSelected((current) =>
-                    current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
-                  )
+                  setSelected((current) => toggleCandidateSelection(current, id, candidateItems))
                 }
               />
               {!defaults ? (

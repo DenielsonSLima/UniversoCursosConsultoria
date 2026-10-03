@@ -2,6 +2,18 @@ export type RenegociacaoView = 'A_NEGOCIAR' | 'EM_ANDAMENTO' | 'EM_ATRASO' | 'EN
 
 export type RenegociacaoLifecycleStatus = 'DRAFT' | 'PROPOSED' | 'CANCELED';
 
+export type RenegociacaoCourseType = 'TECNICO' | 'LIVRE' | 'ESPECIALIZACAO' | 'EAD';
+
+export interface RenegociacaoCandidateFilters {
+  courseType: '' | RenegociacaoCourseType;
+  turmaId: string;
+}
+
+export interface RenegociacaoFilterOptions {
+  courseTypes: Array<{ id: RenegociacaoCourseType; label: string }>;
+  turmas: Array<{ id: string; label: string; courseType: RenegociacaoCourseType }>;
+}
+
 export interface RenegociacaoEligibility {
   eligible: boolean;
   code: string;
@@ -42,14 +54,17 @@ export interface RenegociacaoCandidateGroup extends RenegociacaoIdentity {
   matriculaCodigo: string | null;
   turmaNome: string;
   policyKind: string;
-  eligibleCount: number;
-  blockedCount: number;
+  courseType?: RenegociacaoCourseType;
+  openCount?: number;
+  eligibilityPending?: boolean;
+  eligibleCount: number | null;
+  blockedCount: number | null;
   overdueCount: number;
   futureCount: number;
   principalCents: number;
-  accruedInterestCents: number;
-  accruedPenaltyCents: number;
-  grossDebtCents: number;
+  accruedInterestCents: number | null;
+  accruedPenaltyCents: number | null;
+  grossDebtCents: number | null;
   oldestDueDate: string | null;
   nextDueDate: string | null;
 }
@@ -91,6 +106,9 @@ export interface RenegociacaoCandidatePage {
   asOf: string;
   groups: RenegociacaoCandidateGroup[];
   totalGroups: number;
+  totalStudents?: number;
+  pageBy?: 'STUDENT';
+  filterOptions?: RenegociacaoFilterOptions;
   page: number;
   pageSize: number;
 }

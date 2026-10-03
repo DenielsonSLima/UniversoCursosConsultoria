@@ -59,6 +59,10 @@ export const renegociacaoErrorMessage = (error: unknown) => {
   const row = record(error);
   const code = text(row.code);
   const message = text(row.message);
+  if (code === '57014' || /statement timeout/i.test(message))
+    return 'A consulta excedeu o tempo permitido. Refine os filtros ou tente novamente.';
+  if (code === 'PGRST202')
+    return 'A consulta atualizada de renegociações ainda não está disponível. Tente novamente após a atualização.';
   if (code === '42501' || /RENEGOTIATION_FORBIDDEN/.test(message))
     return 'Seu usuário não possui autorização para esta operação.';
   if (code === '40001' || /RENEGOTIATION_(STALE|PREVIEW_STALE)/.test(message))

@@ -2,17 +2,19 @@ import { supabase } from '../../../../lib/supabase';
 import {
   isMissingRenegociacaoRpc,
   parseCandidateItems,
-  parseCandidatePage,
   parseMutationResult,
   parsePreview,
   parseProposalDetail,
   parseProposalPage,
   parseReadiness,
 } from './renegociacoes.model';
+import { parseCandidatePageV2 } from './renegociacoes.candidates';
+import { withRenegociacaoReadDeadline } from './renegociacoes.read-request';
 import { buildDiscardRpcArgs, buildPreviewRpcArgs, buildSaveRpcArgs } from './renegociacoes.payloads';
 import type {
   DiscardRenegociacaoProposalInput,
   PreviewRenegociacaoInput,
+  RenegociacaoCandidateFilters,
   RenegociacaoLifecycleStatus,
   SaveRenegociacaoProposalInput,
 } from './renegociacoes.types';
@@ -39,17 +41,25 @@ export const renegociacoesService = {
     return parseReadiness(data);
   },
 
-  async listCandidates(poloId: string | null | undefined, search: string, page: number, signal?: AbortSignal) {
-    const request = supabase.rpc('list_receivable_renegotiation_candidate_groups_secure', {
+  async listCandidates(
+    poloId: string | null | undefined,
+    search: string,
+    page: number,
+    signal?: AbortSignal,
+    filters?: RenegociacaoCandidateFilters,
+  ) {
+    const request = supabase.rpc('list_receivable_renegotiation_candidate_groups_v2_secure', {
       p_polo_id: poloId || null,
       p_search: search.trim() || null,
       p_page: page,
       p_page_size: 20,
       p_as_of: null,
+      p_course_type: filters?.courseType || null,
+      p_turma_id: filters?.turmaId || null,
     });
-    const { data, error } = await withSignal(request, signal);
+    const { data, error } = await withRenegociacaoReadDeadline(request, signal);
     if (error) throw error;
-    return parseCandidatePage(data);
+    return parseCandidatePageV2(data);
   },
 
   async listCandidateItems(matriculaId: string, asOf?: string | null, signal?: AbortSignal) {
@@ -57,7 +67,7 @@ export const renegociacoesService = {
       p_matricula_id: matriculaId,
       p_as_of: asOf || null,
     });
-    const { data, error } = await withSignal(request, signal);
+    const { data, error } = await withRenegociacaoReadDeadline(request, signal);
     if (error) throw error;
     return parseCandidateItems(data);
   },

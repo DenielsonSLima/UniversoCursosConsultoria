@@ -2,7 +2,6 @@ import React from 'react';
 import {
   formatCents,
   formatCandidateAmount,
-  formatCandidateCharges,
   formatCentsInput,
   formatRenegociacaoDate,
   formatPolicyPercentage,
@@ -78,8 +77,10 @@ export const SelectionStep: React.FC<{
   allSelected: boolean;
   onToggle: (id: string) => void;
   onToggleAll: () => void;
-}> = ({ items, selected, allSelected, onToggle, onToggleAll }) => (
-  <section>
+}> = ({ items, selected, allSelected, onToggle, onToggleAll }) => {
+  const eligibleCount = items.filter((item) => item.eligibility.eligible).length;
+  return (
+    <section>
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div>
         <h3 className="text-base font-black text-[#001a33]">Escolha qualquer combinação de parcelas</h3>
@@ -90,9 +91,10 @@ export const SelectionStep: React.FC<{
       <button
         type="button"
         onClick={onToggleAll}
-        className="min-h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs font-black text-blue-700"
+        disabled={!eligibleCount}
+        className="min-h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs font-black text-blue-700 disabled:cursor-not-allowed disabled:opacity-45"
       >
-        {allSelected ? 'Limpar seleção' : 'Selecionar elegíveis'}
+        {allSelected ? 'Desmarcar todas' : `Marcar elegíveis (${eligibleCount})`}
       </button>
     </div>
     <div className="mt-4 space-y-2">
@@ -100,7 +102,8 @@ export const SelectionStep: React.FC<{
         const checked = selected.includes(item.receivableId);
         const blocked = !item.eligibility.eligible;
         const principal = formatCandidateAmount(item.principalCents);
-        const charges = formatCandidateCharges(item.interestCents, item.penaltyCents);
+        const interest = formatCandidateAmount(item.interestCents);
+        const penalty = formatCandidateAmount(item.penaltyCents);
         const debt = formatCandidateAmount(item.debtCents);
         return (
           <label
@@ -115,6 +118,8 @@ export const SelectionStep: React.FC<{
           >
             <input
               type="checkbox"
+              aria-label={`Selecionar ${item.label}`}
+              data-receivable-id={item.receivableId}
               checked={checked}
               disabled={blocked}
               onChange={() => onToggle(item.receivableId)}
@@ -130,7 +135,8 @@ export const SelectionStep: React.FC<{
                 </span>
               </span>
               <span className="mt-1 block text-xs text-slate-500">
-                Vencimento {formatRenegociacaoDate(item.dueDate)} • Principal {principal} • Encargos {charges}
+                Vencimento {formatRenegociacaoDate(item.dueDate)} • Principal {principal} • Juros {interest} • Multa{' '}
+                {penalty}
               </span>
               {blocked ? (
                 <span className="mt-1 block text-[11px] font-bold text-amber-700">{item.eligibility.reason}</span>
@@ -142,7 +148,8 @@ export const SelectionStep: React.FC<{
       })}
     </div>
   </section>
-);
+  );
+};
 
 interface TermsStepProps {
   defaults: RenegociacaoPolicyDefaults;
