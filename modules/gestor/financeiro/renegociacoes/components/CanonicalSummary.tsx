@@ -1,4 +1,5 @@
 import React from 'react';
+import { approvalReasonLabel } from '../renegociacoes.approval-labels';
 import { AlertTriangle, CalendarDays, CheckCircle2, FileText, Receipt } from 'lucide-react';
 import {
   formatCents,
@@ -20,6 +21,7 @@ interface CanonicalSummaryProps {
   sourceItems: RenegociacaoSourceItem[];
   requiresApproval?: boolean;
   approvalReasons?: string[];
+  scheduleEditor?: React.ReactNode;
 }
 
 const penaltyLabel = (penalty: RenegociacaoPolicySnapshot['effective']['penalty']) =>
@@ -32,6 +34,7 @@ const CanonicalSummary: React.FC<CanonicalSummaryProps> = ({
   sourceItems,
   requiresApproval,
   approvalReasons = [],
+  scheduleEditor,
 }) => (
   <div className="space-y-4">
     {requiresApproval ? (
@@ -45,7 +48,7 @@ const CanonicalSummary: React.FC<CanonicalSummaryProps> = ({
         {approvalReasons.length ? (
           <ul className="mt-2 list-inside list-disc text-xs">
             {approvalReasons.map((reason) => (
-              <li key={reason}>{reason}</li>
+              <li key={reason}>{approvalReasonLabel(reason)}</li>
             ))}
           </ul>
         ) : null}
@@ -70,11 +73,19 @@ const CanonicalSummary: React.FC<CanonicalSummaryProps> = ({
         <Value label="Dívida bruta" value={formatCents(totals.grossDebtCents)} />
         <Value label="Perdão de juros" value={`− ${formatCents(totals.waivedInterestCents)}`} />
         <Value label="Perdão de multa" value={`− ${formatCents(totals.waivedPenaltyCents)}`} />
-        <Value label="Desconto comercial" value={`− ${formatCents(totals.commercialDiscountCents)}`} />
+        <Value
+          label="Desconto comercial concedido"
+          value={`− ${formatCents(totals.commercialDiscountCents)}`}
+          highlighted
+        />
         <Value label="Total negociado" value={formatCents(totals.negotiatedCents)} strong />
         <Value label="Entrada" value={formatCents(totals.downPaymentCents)} />
         <Value label="Saldo parcelado" value={formatCents(totals.financedCents)} strong />
       </dl>
+      <p className="mt-3 text-xs font-medium text-slate-500">
+        O desconto comercial já está abatido do total negociado nesta proposta.
+        Ele é diferente do benefício por pagamento pontual das novas parcelas.
+      </p>
     </section>
 
     <section aria-labelledby="renegociacao-politica" className="rounded-2xl border border-slate-200 bg-white p-4">
@@ -87,7 +98,7 @@ const CanonicalSummary: React.FC<CanonicalSummaryProps> = ({
       </p>
       <div className="mt-3 grid gap-2 sm:grid-cols-3">
         <PolicyValue
-          label="Desconto de pontualidade"
+          label="Desconto de pontualidade futuro"
           value={formatCents(policy.effective.punctualDiscount.amountCents)}
           provenance={policy.provenance.punctualDiscount}
           inheritedFrom={renegociacaoPolicyInheritedLabel(policy.defaults.origin)}
@@ -105,32 +116,38 @@ const CanonicalSummary: React.FC<CanonicalSummaryProps> = ({
           inheritedFrom={renegociacaoPolicyInheritedLabel(policy.defaults.origin)}
         />
       </div>
+      <p className="mt-3 text-xs font-medium text-slate-500">
+        O desconto de pontualidade depende do pagamento pontual de cada nova parcela;
+        não foi abatido do total negociado acima.
+      </p>
     </section>
 
-    <section aria-labelledby="renegociacao-cronograma" className="rounded-2xl border border-slate-200 bg-white p-4">
-      <h4
-        id="renegociacao-cronograma"
-        className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-[#001a33]"
-      >
-        <CalendarDays size={16} className="text-blue-600" /> Cronograma
-      </h4>
-      <div className="mt-3 divide-y divide-slate-100 rounded-xl border border-slate-100">
-        {schedule.entries.map((entry) => (
-          <div
-            key={`${entry.kind}-${entry.sequence}`}
-            className="flex items-center justify-between gap-4 px-3 py-2.5 text-xs"
-          >
-            <span>
-              <strong className="text-slate-700">
-                {entry.kind === 'DOWN_PAYMENT' ? 'Entrada' : `Parcela ${entry.sequence}`}
-              </strong>
-              <span className="ml-2 text-slate-400">{formatRenegociacaoDate(entry.dueDate)}</span>
-            </span>
-            <strong className="shrink-0 text-[#001a33]">{formatCents(entry.amountCents)}</strong>
-          </div>
-        ))}
-      </div>
-    </section>
+    {scheduleEditor ?? (
+      <section aria-labelledby="renegociacao-cronograma" className="rounded-2xl border border-slate-200 bg-white p-4">
+        <h4
+          id="renegociacao-cronograma"
+          className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-[#001a33]"
+        >
+          <CalendarDays size={16} className="text-blue-600" /> Cronograma
+        </h4>
+        <div className="mt-3 divide-y divide-slate-100 rounded-xl border border-slate-100">
+          {schedule.entries.map((entry) => (
+            <div
+              key={`${entry.kind}-${entry.sequence}`}
+              className="flex items-center justify-between gap-4 px-3 py-2.5 text-xs"
+            >
+              <span>
+                <strong className="text-slate-700">
+                  {entry.kind === 'DOWN_PAYMENT' ? 'Entrada' : `Parcela ${entry.sequence}`}
+                </strong>
+                <span className="ml-2 text-slate-400">{formatRenegociacaoDate(entry.dueDate)}</span>
+              </span>
+              <strong className="shrink-0 text-[#001a33]">{formatCents(entry.amountCents)}</strong>
+            </div>
+          ))}
+        </div>
+      </section>
+    )}
 
     <section aria-labelledby="renegociacao-originais" className="rounded-2xl border border-slate-200 bg-white p-4">
       <h4
@@ -154,10 +171,16 @@ const CanonicalSummary: React.FC<CanonicalSummaryProps> = ({
   </div>
 );
 
-const Value: React.FC<{ label: string; value: string; strong?: boolean }> = ({ label, value, strong }) => (
-  <div>
-    <dt className="text-[9px] font-black uppercase tracking-wide text-slate-400">{label}</dt>
-    <dd className={`mt-0.5 text-sm ${strong ? 'font-black text-blue-800' : 'font-bold text-slate-700'}`}>{value}</dd>
+const Value: React.FC<{ label: string; value: string; strong?: boolean; highlighted?: boolean }> = ({
+  label, value, strong, highlighted,
+}) => (
+  <div className={highlighted ? 'rounded-xl border border-emerald-100 bg-emerald-50 p-3' : undefined}>
+    <dt className={`text-[9px] font-black uppercase tracking-wide ${highlighted ? 'text-emerald-800' : 'text-slate-400'}`}>
+      {label}
+    </dt>
+    <dd className={`mt-0.5 text-sm ${highlighted ? 'font-black text-emerald-800' : strong ? 'font-black text-blue-800' : 'font-bold text-slate-700'}`}>
+      {value}
+    </dd>
   </div>
 );
 const PolicyValue: React.FC<{
