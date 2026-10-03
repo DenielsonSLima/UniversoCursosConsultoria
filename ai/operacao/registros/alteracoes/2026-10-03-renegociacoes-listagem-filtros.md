@@ -100,7 +100,7 @@ Smoke visual autenticado: não executado, conforme escolha explícita do usuári
 
 ## Publicação e limites
 
-Versão alvo: 4.8.155, revisão 164. Um commit atômico com este manifesto, CI e Preview antes da promoção autorizada. Resultado final registrado no PR.
+Versão alvo final: 4.8.157, revisão 166. A prévia 4.8.155 passou no CI, mas main avançou para 4.8.156 durante a validação. Conciliação sobre a nova base preserva integralmente a entrega Proesc, atualiza somente os quatro arquivos compartilhados e mantém este manifesto de 32 arquivos. Sem reescrever histórico: commit de conciliação na branch, novo CI/Preview e squash atômico na promoção autorizada. Resultado final registrado no PR.
 
 O incremento continua sendo de propostas: não ativa acordos nem cancela parcelas originais. Aprovação/aceite, substituição bancária e acompanhamento de quitação real permanecem fora deste lote.
 
