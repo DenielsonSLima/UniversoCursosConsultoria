@@ -20,6 +20,9 @@ O lote Proesc e arquivos paralelos não integram este manifesto.
 
 ## Manifesto explícito
 
+- `supabase/migrations/20260912133433_align_receivables_page_payment_period.sql`
+- `supabase/migrations/20260912133700_align_receivables_groups_payment_period.sql`
+- `supabase/migrations/20260912133702_align_receivables_summary_payment_period.sql`
 - `supabase/migrations/20261004155607_classify_optional_ead_checkout.sql`
 - `supabase/migrations/20261004155625_exclude_optional_ead_from_debt.sql`
 - `supabase/migrations/20261004155644_exclude_optional_ead_from_overdue_receivables.sql`
@@ -32,7 +35,7 @@ O lote Proesc e arquivos paralelos não integram este manifesto.
 - `ai/operacao/registros/alteracoes/2026-10-04-ead-compra-opcional-publicacao.md`
 - `ai/operacao/qualidade/limite-linhas-manifestos.json`
 
-Total: 11 arquivos.
+Total: 14 arquivos.
 
 ## Reprodução e evidência após aplicação
 
@@ -48,6 +51,13 @@ Nenhuma chamada de cancelamento ou alteração dos fatos foi executada.
 
 ## Validação e limites
 
+O primeiro CI específico encontrou três dependências de setembro aplicadas no banco,
+mas ausentes no GitHub. Esta entrega as versiona sem reaplicação ou alteração:
+os três arquivos correspondem byte a byte ao SQL de uma entrada do ledger cada,
+confirmados pelos hashes MD5 8e272193c22c4ecee3c745dac36b9334,
+bab3db3f9541a4f7473130028d3681dd e 9754e547aa36cdb4c1868f063d173cf6.
+A CI completa de TypeScript, lint, testes e build passou no primeiro head.
+
 Ensaio PostgreSQL/WASM aprovado após renomeação canônica: dívida versus
 expiração, pagamento parcial/remoto, identidade Banese, receita confirmada,
 obrigações ativas/manuais/técnicas, ACL, drift e fatos preservados.
@@ -59,7 +69,7 @@ O evento de criação comprova começo auditado, sem ser snapshot literal de PEN
 legado sem prova temporal suficiente permanece no critério existente.
 
 O workflow específico executa esse ensaio no CI, junto ao CI completo existente.
-Migrations aplicadas são imutáveis; os onze arquivos obedecem ao teto de 500 linhas.
+Migrations aplicadas são imutáveis; os quatorze arquivos obedecem ao teto de 500 linhas.
 
 O smoke autenticado final está pendente: Safari voltou à tela de login com
 verificação humana depois da aplicação. Foi solicitado ao responsável reabrir
