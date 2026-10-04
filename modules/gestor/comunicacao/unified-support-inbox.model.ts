@@ -15,6 +15,7 @@ export interface UnifiedSupportItem {
   connectionName: string | null;
   categoryId: string | null;
   name: string;
+  phone: string | null;
   lastText: string;
   lastAt: string;
   status: UnifiedSupportStatus;
@@ -55,6 +56,7 @@ export const mergeUnifiedSupportItems = ({
       connectionName: null,
       categoryId: chat.categoria_id,
       name: chat.remetente_nome,
+      phone: null,
       lastText: chat.ultimo_texto || 'Sem mensagens...',
       lastAt: chat.ultima_data,
       status: chat.status === 'pendente' ? 'open' : 'closed',
@@ -72,6 +74,7 @@ export const mergeUnifiedSupportItems = ({
     connectionName: whatsappConnectionNames[conversation.conexao_id || whatsappConnectionId || ''] || whatsappConnectionName,
     categoryId: null,
     name: conversation.contato_nome,
+    phone: conversation.telefone,
     lastText: conversation.ultimo_texto || 'Sem mensagens...',
     lastAt: conversation.ultima_data,
     status: conversation.status === 'aberta' ? 'open' : 'closed',
@@ -89,11 +92,13 @@ export const filterUnifiedSupportItems = (
   categoryId: string | null = null,
 ) => {
   const term = search.trim().toLocaleLowerCase('pt-BR');
+  const phoneTerm = /^[\d\s()+.-]+$/.test(term) ? term.replace(/\D/g, '') : '';
   return items.filter((item) => {
     if (item.status !== status) return false;
     if (categoryId && item.categoryId !== categoryId) return false;
     if (!term) return true;
-    return [item.name, item.lastText, item.sourceLabel, item.connectionName]
+    if (phoneTerm && item.phone?.replace(/\D/g, '').includes(phoneTerm)) return true;
+    return [item.name, item.phone, item.lastText, item.sourceLabel, item.connectionName]
       .filter(Boolean)
       .join(' ')
       .toLocaleLowerCase('pt-BR')

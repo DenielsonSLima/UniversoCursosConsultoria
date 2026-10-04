@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type SetStateAction } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { resolveCommunicationAttachmentUrls } from '../../shared/comunicacao/comunicacao-attachments.service';
 import {
@@ -23,6 +23,22 @@ export const useGestorComunicacaoRealtime = () => {
   const [loadingChats, setLoadingChats] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const currentChatIdRef = useRef(activeChatId);
+  const mountedRef = useRef(false);
+
+  useLayoutEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+  useLayoutEffect(() => { currentChatIdRef.current = activeChatId; }, [activeChatId]);
+
+  const setMessagesForActiveChat = (next: SetStateAction<GestorMessage[]>) => {
+    if (!activeChatId || !mountedRef.current || currentChatIdRef.current !== activeChatId) return;
+    setMessages((current) => {
+      if (!mountedRef.current || currentChatIdRef.current !== activeChatId) return current;
+      return typeof next === 'function' ? next(current) : next;
+    });
+  };
 
   useEffect(() => {
     const loadInitialData = async () => {
@@ -106,12 +122,16 @@ export const useGestorComunicacaoRealtime = () => {
   }, []);
 
   useEffect(() => {
+    let disposed = false;
+    const isCurrent = () => !disposed && mountedRef.current && currentChatIdRef.current === activeChatId;
+    setMessages([]);
+    setLoadingMessages(Boolean(activeChatId));
     if (!activeChatId) {
-      setMessages([]);
       return;
     }
 
     const markAsRead = async () => {
+      if (!isCurrent()) return;
       try {
         await supabase.from('comunicacao_mensagens').update({ lida: true })
           .eq('chat_id', activeChatId).in('remetente_tipo', ['aluno', 'professor']).eq('lida', false);
@@ -120,16 +140,17 @@ export const useGestorComunicacaoRealtime = () => {
       }
     };
     const loadMessages = async () => {
-      setLoadingMessages(true);
       try {
         const { data, error } = await supabase.from('comunicacao_mensagens').select('*')
           .eq('chat_id', activeChatId).order('created_at', { ascending: true });
         if (error) throw error;
-        setMessages(await resolveCommunicationAttachmentUrls(data || []));
+        if (!isCurrent()) return;
+        const resolvedMessages = await resolveCommunicationAttachmentUrls(data || []);
+        if (isCurrent()) setMessages(resolvedMessages);
       } catch (error) {
-        console.error('Erro ao carregar mensagens:', error);
+        if (isCurrent()) console.error('Erro ao carregar mensagens:', error);
       } finally {
-        setLoadingMessages(false);
+        if (isCurrent()) setLoadingMessages(false);
       }
     };
 
@@ -138,7 +159,9 @@ export const useGestorComunicacaoRealtime = () => {
       .on('postgres_changes', {
         event: 'INSERT', schema: 'public', table: 'comunicacao_mensagens', filter: `chat_id=eq.${activeChatId}`,
       }, async (payload) => {
+        if (!isCurrent()) return;
         const [newMessage] = await resolveCommunicationAttachmentUrls([payload.new as GestorMessage]);
+        if (!isCurrent() || !newMessage) return;
         setMessages((current) => current.some((message) => message.id === newMessage.id)
           ? current : [...current, newMessage]);
         if (newMessage.remetente_tipo === 'aluno' || newMessage.remetente_tipo === 'professor') {
@@ -147,7 +170,10 @@ export const useGestorComunicacaoRealtime = () => {
         }
       }).subscribe();
     markAsRead();
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      disposed = true;
+      supabase.removeChannel(channel);
+    };
   }, [activeChatId]);
 
   useEffect(() => {
@@ -160,6 +186,6 @@ export const useGestorComunicacaoRealtime = () => {
       setActiveChatId(id);
       if (id) notifyUnifiedSupportOpened({ channel: 'internal', conversationId: id });
     },
-    setChats, setMessages, unreadChatIds,
+    setChats, setMessages: setMessagesForActiveChat, unreadChatIds,
   };
 };

@@ -99,3 +99,18 @@ test('categoria interna não mistura conversas WhatsApp nem elimina o filtro Tod
   assert.deepEqual(filterUnifiedSupportItems(items, 'open', '', 'category-1').map((item) => item.key), ['internal:internal-1']);
   assert.equal(filterUnifiedSupportItems(items, 'open', '', null).length, 2);
 });
+
+test('busca WhatsApp pelo telefone completo, parcial ou formatado além do nome', () => {
+  const items = mergeUnifiedSupportItems({
+    internalChats: [internalChat],
+    whatsappConversations: [whatsappConversation],
+  });
+  assert.equal(items.find((item) => item.channel === 'internal')?.phone, null);
+  assert.equal(items.find((item) => item.channel === 'whatsapp')?.phone, whatsappConversation.telefone);
+  for (const term of ['5579999999999', '9999999', '+55 (79) 99999-9999', 'Contato WhatsApp']) {
+    assert.deepEqual(filterUnifiedSupportItems(items, 'open', term).map((item) => item.key), ['whatsapp:connection-1:whatsapp-1']);
+  }
+  assert.equal(filterUnifiedSupportItems(items, 'open', 'Contato 9999999').length, 0);
+  assert.equal(filterUnifiedSupportItems(items, 'closed', '9999999').length, 0);
+  assert.equal(filterUnifiedSupportItems(items, 'open', '9999999', 'category-1').length, 0);
+});

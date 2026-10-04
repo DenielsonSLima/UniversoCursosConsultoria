@@ -99,7 +99,7 @@ const UnifiedSupportInbox: React.FC<UnifiedSupportInboxProps> = ({
         />
         <Search size={13} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
       </label>
-      {categories.length > 0 && <UnifiedCategoryFilter categories={categories} value={categoryId} onChange={onCategoryChange} />}
+      {(categories.length > 0 || categoryId !== null) && <UnifiedCategoryFilter categories={categories} value={categoryId} onChange={onCategoryChange} />}
       {canSelectWhatsApp && filteredItems.some((item) => item.channel === 'whatsapp') && (
         <p className="flex items-center gap-1.5 text-[10px] font-medium text-slate-400"><ListChecks size={12} /> Marque conversas do WhatsApp para ações em lote.</p>
       )}
