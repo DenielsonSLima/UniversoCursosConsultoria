@@ -51,8 +51,8 @@ const UnifiedWhatsAppStart: React.FC<UnifiedWhatsAppStartProps> = ({
       const result = await whatsappService.sendMessage({ connectionId, alunoId: selectedContact.id, to: phone, message: message.trim() });
       await refresh();
       onSuccess('WhatsApp enviado', `Mensagem enviada para ${selectedContact.nome}.`);
-      onClose();
       if (result?.conversaId) onCreated(String(result.conversaId), connectionId);
+      else onClose();
     } catch (error) {
       onError('Erro no WhatsApp', error instanceof Error ? error.message : 'Não foi possível enviar pela API da Meta.');
     } finally {

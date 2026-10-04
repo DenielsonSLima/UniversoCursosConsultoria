@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Globe2, MessageCircle, MessagesSquare, Radio, Smartphone, X } from 'lucide-react';
 import type { PortalAuthProfile } from '../../login/portal-session';
 import ComunicacaoPage from './ComunicacaoPage';
@@ -43,7 +43,9 @@ const UnifiedCommunicationPage: React.FC<UnifiedCommunicationPageProps> = ({
   const [bulkIds, setBulkIds] = useState<Set<string>>(new Set());
   const [bulkConnectionId, setBulkConnectionId] = useState<string | null>(null);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
-  const selectionBeforeStart = useRef<string | null>(null);
+  const inboxBeforeStart = useRef<{
+    selectedKey: string | null; status: UnifiedSupportStatus; search: string; categoryId: string | null;
+  }>({ selectedKey: null, status: 'open', search: '', categoryId: null });
   const [startChooserOpen, setStartChooserOpen] = useState(false);
   const [pendingStartChannel, setPendingStartChannel] = useState<UnifiedSupportChannel | null>(null);
   const [heldDetailChannel, setHeldDetailChannel] = useState<UnifiedSupportChannel | null>(null);
@@ -76,11 +78,17 @@ const UnifiedCommunicationPage: React.FC<UnifiedCommunicationPageProps> = ({
     setPendingStartChannel(null);
   }), []);
 
-  useEffect(() => subscribeUnifiedSupportStartClosed(() => {
-    setSelectedKey(selectionBeforeStart.current);
+  const restoreInboxAfterStart = useCallback(() => {
+    const previous = inboxBeforeStart.current;
+    setSelectedKey(previous.selectedKey);
+    setStatus(previous.status);
+    setSearch(previous.search);
+    setCategoryId(previous.categoryId);
     setHeldDetailChannel(null);
     setPendingStartChannel(null);
-  }), []);
+  }, []);
+
+  useEffect(() => subscribeUnifiedSupportStartClosed(restoreInboxAfterStart), [restoreInboxAfterStart]);
 
   useEffect(() => {
     if (pendingStartChannel || heldDetailChannel) return;
@@ -122,7 +130,7 @@ const UnifiedCommunicationPage: React.FC<UnifiedCommunicationPageProps> = ({
   }, [detailChannel, pendingStartChannel]);
 
   const launchStart = (channel: UnifiedSupportChannel) => {
-    selectionBeforeStart.current = selectedKey;
+    inboxBeforeStart.current = { selectedKey, status, search, categoryId };
     setStartChooserOpen(false);
     setSearch('');
     setCategoryId(null);
@@ -226,7 +234,7 @@ const UnifiedCommunicationPage: React.FC<UnifiedCommunicationPageProps> = ({
               startOpen={pendingStartChannel === 'whatsapp'}
               selectedIds={bulkIds}
               onSelectionChange={(ids) => { setBulkIds(ids); if (ids.size === 0) setBulkConnectionId(null); }}
-              onStartClose={() => { setSelectedKey(selectionBeforeStart.current); setPendingStartChannel(null); setHeldDetailChannel(null); }}
+              onStartClose={restoreInboxAfterStart}
               onCreated={selectCreatedWhatsApp}
               onConnectionChange={() => { setSelectedKey(null); setHeldDetailChannel('whatsapp'); setBulkIds(new Set()); setBulkConnectionId(null); }}
             />
