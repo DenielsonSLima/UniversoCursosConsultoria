@@ -1,8 +1,8 @@
 {
-  "version": "4.8.166",
+  "version": "4.8.167",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 175,
+  "revision": 176,
   "releasedAt": "2026-10-04",
-  "summary": "Revisão da fila unificada com isolamento de histórico, seleção em lote e filtros recuperáveis"
+  "summary": "Compra EAD opcional fora da inadimplência, com conciliação e registros preservados"
 }
