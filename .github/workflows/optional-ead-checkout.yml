@@ -1,0 +1,35 @@
+name: Compra EAD opcional
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/tests/**'
+      - '.github/workflows/optional-ead-checkout.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/tests/**'
+      - '.github/workflows/optional-ead-checkout.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  optional-ead-checkout:
+    name: Contrato financeiro da compra EAD opcional
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Preparar PostgreSQL isolado
+        run: npm install --prefix "$RUNNER_TEMP/optional-ead-qa" --no-audit --no-fund @electric-sql/pglite@0.5.8
+      - name: Validar dívida, conciliação e fatos preservados
+        run: |
+          PGLITE_MODULE_PATH="$RUNNER_TEMP/optional-ead-qa/node_modules/@electric-sql/pglite/dist/index.js" \
+            node supabase/tests/optional_ead_checkout.isolated.test.mjs
