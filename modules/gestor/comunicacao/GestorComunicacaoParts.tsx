@@ -1,4 +1,5 @@
-import React, { RefObject } from 'react';
+import React, { RefObject, useEffect } from 'react';
+import { registerUnifiedInternalStart } from './unified-support-selection';
 import {
   AlertTriangle, CheckCircle, Clock, File, FileSpreadsheet, FileText, Filter, Image,
   MessageSquare, Mic, Paperclip, Plus, Search, Send, Sparkles, Square, Tag, Trash2, X,
@@ -51,15 +52,16 @@ export const GestorInbox: React.FC<GestorInboxProps> = ({
   searchText, selectedCategory, solvedCount, unreadChatIds, onActiveChat, onActiveStatus,
   onCategory, onSearch, onStart,
 }) => {
+  useEffect(() => registerUnifiedInternalStart(onStart), [onStart]);
   const selectStatus = (status: 'pendente' | 'solucionada') => {
     onActiveStatus(status);
     const first = chats.find((chat) => chat.status === status);
     if (first) onActiveChat(first.id);
   };
   return (
-    <div className="w-[360px] border-r border-slate-200 flex flex-col bg-white shrink-0">
+    <div data-unified-inbox-sidebar className="w-[360px] border-r border-slate-200 flex flex-col bg-white shrink-0">
       <div className="space-y-3 border-b border-slate-100 bg-white p-4">
-        <button onClick={onStart} className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl bg-[#001a33] px-4 text-xs font-bold uppercase tracking-wide text-white shadow-sm transition-colors hover:bg-blue-900"><Plus size={15} />Iniciar conversa</button>
+        <button data-unified-support-start="internal" onClick={onStart} className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl bg-[#001a33] px-4 text-xs font-bold uppercase tracking-wide text-white shadow-sm transition-colors hover:bg-blue-900"><Plus size={15} />Iniciar conversa</button>
         <div className="grid grid-cols-2 gap-2">
           <button onClick={() => selectStatus('pendente')} className={`flex min-h-[38px] items-center justify-center gap-2 rounded-xl text-xs font-bold transition-all ${activeStatus === 'pendente' ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-100' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-amber-600'}`}><Clock size={14} /> Abertas <span className="rounded-full bg-white/80 px-1.5 text-[10px]">{pendingCount}</span></button>
           <button onClick={() => selectStatus('solucionada')} className={`flex min-h-[38px] items-center justify-center gap-2 rounded-xl text-xs font-bold transition-all ${activeStatus === 'solucionada' ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-emerald-600'}`}><CheckCircle size={14} /> Resolvidas <span className="rounded-full bg-white/80 px-1.5 text-[10px]">{solvedCount}</span></button>
