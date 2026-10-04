@@ -296,6 +296,14 @@ html[data-aluno-fullscreen='true'] body {
   will-change: opacity, transform;
 }
 
+.unified-support-detail [data-unified-inbox-sidebar] {
+  display: none;
+}
+
+.unified-support-detail [data-unified-whatsapp-layout] {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }

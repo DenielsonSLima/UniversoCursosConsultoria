@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bot, CheckCircle2, Clock3, MessageCircle, PauseCircle, RefreshCcw } from 'lucide-react';
+import { Bot, CheckCircle2, Clock3, MessageCircle, PauseCircle, RefreshCcw, Send, Trash2, X } from 'lucide-react';
 import { WhatsAppConversation, WhatsAppFlowSession, WhatsAppMessage, WhatsAppSector } from './whatsapp.types';
 import { formatPhone, normalizePhone } from './whatsapp.utils';
 import { whatsappService } from './whatsapp.service';
@@ -24,6 +24,10 @@ interface WhatsAppInboxProps {
   apiReady: boolean;
   loadingConversations: boolean;
   loadingMessages: boolean;
+  externalSelection?: {
+    ids: Set<string>;
+    onChange: (ids: Set<string>) => void;
+  };
   onSelectConversation: (conversationId: string) => void;
   onSendReply: (message: string) => Promise<void>;
   onDeleteConversations: (conversationIds: string[]) => Promise<void>;
@@ -48,6 +52,7 @@ const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
   apiReady,
   loadingConversations,
   loadingMessages,
+  externalSelection,
   onSelectConversation,
   onSendReply,
   onDeleteConversations,
@@ -60,8 +65,16 @@ const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<ConversationStatusFilter>('aberta');
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [localSelectedIds, setLocalSelectedIds] = useState<Set<string>>(new Set());
+  const selectedIds = externalSelection?.ids || localSelectedIds;
+  const setSelectedIds = (value: Set<string> | ((current: Set<string>) => Set<string>)) => {
+    const next = typeof value === 'function' ? value(selectedIds) : value;
+    if (externalSelection) externalSelection.onChange(next);
+    else setLocalSelectedIds(next);
+  };
   const [deleting, setDeleting] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
   const [batchOpen, setBatchOpen] = useState(false);
   const { data: routingPolos = [] } = useQuery({
     queryKey: ['whatsapp', 'routing-polos'],
@@ -121,15 +134,14 @@ const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
 
   const handleDeleteSelected = async () => {
     if (validSelectedIds.length === 0) return;
-    const confirmed = window.confirm(
-      `Apagar ${validSelectedIds.length} conversa(s) do WhatsApp? O histórico de mensagens dessas conversas também será removido.`
-    );
-    if (!confirmed) return;
-
     setDeleting(true);
+    setDeleteError('');
     try {
       await onDeleteConversations(validSelectedIds);
       setSelectedIds(new Set());
+      setDeleteConfirmOpen(false);
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : 'Não foi possível apagar as conversas.');
     } finally {
       setDeleting(false);
     }
@@ -176,8 +188,8 @@ const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
   };
 
   return (
-    <div className="grid min-h-0 flex-1 grid-cols-[380px_minmax(0,1fr)] overflow-hidden">
-      <aside className="flex min-h-0 flex-col border-r border-slate-200 bg-white">
+    <div data-unified-whatsapp-layout className="grid min-h-0 flex-1 grid-cols-[380px_minmax(0,1fr)] overflow-hidden">
+      <aside data-unified-inbox-sidebar className="flex min-h-0 flex-col border-r border-slate-200 bg-white">
         <ConversationToolbar
           search={search}
           statusFilter={statusFilter}
@@ -192,7 +204,7 @@ const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
           onToggleAll={toggleAllFiltered}
           onSearchChange={setSearch}
           onBatchSend={() => setBatchOpen(true)}
-          onDelete={handleDeleteSelected}
+          onDelete={() => setDeleteConfirmOpen(true)}
           onClearSelection={() => setSelectedIds(new Set())}
         />
 
@@ -223,7 +235,15 @@ const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
       </aside>
 
       <main className="flex min-h-0 flex-col bg-[#efeae2]">
-        <div className="flex min-h-[72px] items-center justify-between border-b border-[#d8dbdf] bg-[#f0f2f5] px-5">
+        {externalSelection && validSelectedIds.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 border-b border-emerald-100 bg-emerald-50 px-4 py-2">
+            <button type="button" onClick={() => setSelectedIds(new Set())} aria-label="Cancelar seleção de conversas" className="rounded-lg p-2 text-slate-500 hover:bg-white"><X size={17} /></button>
+            <span className="mr-auto text-xs font-bold text-emerald-800">{validSelectedIds.length} conversa(s) selecionada(s)</span>
+            <button type="button" disabled={sendableSelectedConversations.length === 0} onClick={() => setBatchOpen(true)} className="inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-xs font-bold text-emerald-700 disabled:opacity-40"><Send size={14} /> Enviar em lote</button>
+            <button type="button" onClick={() => setDeleteConfirmOpen(true)} className="inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-xs font-bold text-rose-700"><Trash2 size={14} /> Apagar selecionadas</button>
+          </div>
+        )}
+        <div className="flex min-h-[72px] flex-wrap items-center justify-between gap-2 border-b border-[#d8dbdf] bg-[#f0f2f5] px-5 py-3">
           {activeConversation ? (
             <div className="flex min-w-0 items-center gap-3">
               <ContactAvatar name={activeConversation.contato_nome} photo={activeConversation.contato_foto} />
@@ -248,7 +268,7 @@ const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
             </div>
           )}
           {activeConversation && (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
               {activeFlowSession && (
                 <span className={`inline-flex min-h-[30px] items-center gap-1 rounded-xl px-3 text-[11px] font-bold uppercase ${activeFlowSession.handoff_required || activeFlowSession.status === 'handoff' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>
                   <Bot size={13} />
@@ -325,6 +345,20 @@ const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
           onClose={() => setBatchOpen(false)}
           onSend={handleBatchSend}
         />
+      )}
+
+      {deleteConfirmOpen && (
+        <div role="dialog" aria-modal="true" aria-labelledby="delete-whatsapp-title" className="fixed inset-0 z-[100] flex items-center justify-center bg-[#001a33]/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <h3 id="delete-whatsapp-title" className="text-lg font-black text-[#001a33]">Apagar conversas selecionadas?</h3>
+            <p className="mt-3 text-sm font-medium text-slate-500">As {validSelectedIds.length} conversa(s) e seus históricos serão removidos. Esta ação não pode ser desfeita.</p>
+            {deleteError && <p role="alert" className="mt-3 rounded-xl bg-rose-50 p-3 text-xs font-bold text-rose-700">{deleteError}</p>}
+            <div className="mt-6 flex justify-end gap-2">
+              <button type="button" disabled={deleting} onClick={() => setDeleteConfirmOpen(false)} className="rounded-xl bg-slate-100 px-4 py-3 text-xs font-bold text-slate-600">Cancelar</button>
+              <button type="button" disabled={deleting || validSelectedIds.length === 0} onClick={handleDeleteSelected} className="rounded-xl bg-rose-600 px-4 py-3 text-xs font-bold text-white disabled:opacity-40">{deleting ? 'Apagando...' : 'Apagar conversas'}</button>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>

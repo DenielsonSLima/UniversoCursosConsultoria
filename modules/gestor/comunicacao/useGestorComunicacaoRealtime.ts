@@ -7,6 +7,12 @@ import {
   GestorMessage,
   playGestorMessageSound,
 } from './gestor-comunicacao.types';
+import {
+  getUnifiedSupportSelection,
+  isUnifiedSupportActive,
+  subscribeUnifiedSupportSelection,
+  notifyUnifiedSupportOpened,
+} from './unified-support-selection';
 
 export const useGestorComunicacaoRealtime = () => {
   const [chats, setChats] = useState<GestorChat[]>([]);
@@ -36,7 +42,14 @@ export const useGestorComunicacaoRealtime = () => {
         setUnreadChatIds(new Set(unreadData?.map((message) => message.chat_id) || []));
 
         if (chatData?.length) {
-          setActiveChatId(chatData.find((chat) => chat.status === 'pendente')?.id || chatData[0].id);
+          const unifiedSelection = getUnifiedSupportSelection();
+          const selectedId = unifiedSelection?.channel === 'internal'
+            && chatData.some((chat) => chat.id === unifiedSelection.conversationId)
+            ? unifiedSelection.conversationId
+            : null;
+          if (selectedId || !isUnifiedSupportActive()) {
+            setActiveChatId(selectedId || chatData.find((chat) => chat.status === 'pendente')?.id || chatData[0].id);
+          }
         }
       } catch (error) {
         console.error('Erro ao carregar dados iniciais de comunicação:', error);
@@ -46,6 +59,11 @@ export const useGestorComunicacaoRealtime = () => {
     };
     loadInitialData();
   }, []);
+
+  useEffect(() => subscribeUnifiedSupportSelection((selection) => {
+    if (selection?.channel === 'internal') setActiveChatId(selection.conversationId);
+    else if (isUnifiedSupportActive()) setActiveChatId(null);
+  }), []);
 
   useEffect(() => {
     const fetchUnread = async () => {
@@ -138,6 +156,10 @@ export const useGestorComunicacaoRealtime = () => {
 
   return {
     activeChatId, categories, chats, loadingChats, loadingMessages, messages, messagesEndRef,
-    setActiveChatId, setChats, setMessages, unreadChatIds,
+    setActiveChatId: (id: string | null) => {
+      setActiveChatId(id);
+      if (id) notifyUnifiedSupportOpened({ channel: 'internal', conversationId: id });
+    },
+    setChats, setMessages, unreadChatIds,
   };
 };

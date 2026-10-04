@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { MessageSquare, RefreshCw, Search, Send, UserRound, X } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
+import { notifyUnifiedSupportStartClosed } from '../unified-support-selection';
 
 export interface InternalConversationContact {
   id: string;
@@ -142,7 +143,7 @@ const StartInternalConversationModal: React.FC<StartInternalConversationModalPro
             </div>
           </div>
           <button
-            onClick={onClose}
+            onClick={() => { onClose(); notifyUnifiedSupportStartClosed('internal'); }}
             className="rounded-xl p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
             title="Fechar"
           >

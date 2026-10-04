@@ -1,9 +1,8 @@
 {
-  "version": "4.8.164",
+  "version": "4.8.165",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 173,
-  "releasedAt": "2026-10-03",
-  "summary": "Cronograma de renegociação editável por parcela e desconto detalhado"
+  "revision": 174,
+  "releasedAt": "2026-10-04",
+  "summary": "Fila única de atendimento com identificação de Portal, App e WhatsApp"
 }
-

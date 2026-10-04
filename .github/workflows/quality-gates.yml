@@ -435,6 +435,9 @@ jobs:
           CONVENIOS_JSDOM_PATH=/tmp/universo-renegociacao-tests/node_modules/jsdom node --test modules/gestor/financeiro/convenios/convenios-exclusao.behavior.test.mjs
           PGLITE_MODULE_PATH=/tmp/universo-renegociacao-tests/node_modules/@electric-sql/pglite/dist/index.js node scripts/test-convenios-exclusao-logica-sql.mjs
 
+      - name: Testar fila unificada de atendimento
+        run: node --test modules/gestor/comunicacao/unified-support-inbox.model.test.ts modules/gestor/comunicacao/unified-support-selection.test.ts
+
       - name: Gerar build de produção
         run: npm run build
 
