@@ -436,7 +436,13 @@ jobs:
           PGLITE_MODULE_PATH=/tmp/universo-renegociacao-tests/node_modules/@electric-sql/pglite/dist/index.js node scripts/test-convenios-exclusao-logica-sql.mjs
 
       - name: Testar fila unificada de atendimento
-        run: node --test modules/gestor/comunicacao/unified-support-inbox.model.test.ts modules/gestor/comunicacao/unified-support-selection.test.ts
+        run: |
+          node --test \
+            modules/gestor/comunicacao/unified-support-inbox.model.test.ts \
+            modules/gestor/comunicacao/unified-support-selection.test.ts \
+            modules/gestor/comunicacao/unified-support-category.component.test.ts \
+            modules/gestor/comunicacao/useGestorComunicacaoRealtime.test.mjs \
+            modules/gestor/comunicacao/components/whatsapp/WhatsAppInbox.async.test.mjs
 
       - name: Gerar build de produção
         run: npm run build

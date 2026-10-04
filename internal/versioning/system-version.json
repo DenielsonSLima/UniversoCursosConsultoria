@@ -1,8 +1,8 @@
 {
-  "version": "4.8.165",
+  "version": "4.8.166",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 174,
+  "revision": 175,
   "releasedAt": "2026-10-04",
-  "summary": "Fila única de atendimento com identificação de Portal, App e WhatsApp"
+  "summary": "Revisão da fila unificada com isolamento de histórico, seleção em lote e filtros recuperáveis"
 }

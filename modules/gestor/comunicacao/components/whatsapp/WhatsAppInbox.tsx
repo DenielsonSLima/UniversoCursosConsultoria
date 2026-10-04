@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bot, CheckCircle2, Clock3, MessageCircle, PauseCircle, RefreshCcw, Send, Trash2, X } from 'lucide-react';
 import { WhatsAppConversation, WhatsAppFlowSession, WhatsAppMessage, WhatsAppSector } from './whatsapp.types';
@@ -67,6 +67,19 @@ const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
   const [statusFilter, setStatusFilter] = useState<ConversationStatusFilter>('aberta');
   const [localSelectedIds, setLocalSelectedIds] = useState<Set<string>>(new Set());
   const selectedIds = externalSelection?.ids || localSelectedIds;
+  const currentSelectionRef = useRef(selectedIds);
+  const mountedRef = useRef(false);
+  const operationScopeRef = useRef(0);
+  useLayoutEffect(() => { currentSelectionRef.current = selectedIds; }, [selectedIds]);
+  useLayoutEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      operationScopeRef.current += 1;
+    };
+  }, [connectionId]);
+  const selectionIsCurrent = (snapshot: Set<string>, scope: number) =>
+    mountedRef.current && operationScopeRef.current === scope && currentSelectionRef.current === snapshot;
   const setSelectedIds = (value: Set<string> | ((current: Set<string>) => Set<string>)) => {
     const next = typeof value === 'function' ? value(selectedIds) : value;
     if (externalSelection) externalSelection.onChange(next);
@@ -134,20 +147,28 @@ const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
 
   const handleDeleteSelected = async () => {
     if (validSelectedIds.length === 0) return;
+    const selectionSnapshot = selectedIds;
+    const operationScope = operationScopeRef.current;
     setDeleting(true);
     setDeleteError('');
     try {
       await onDeleteConversations(validSelectedIds);
-      setSelectedIds(new Set());
-      setDeleteConfirmOpen(false);
+      if (selectionIsCurrent(selectionSnapshot, operationScope)) {
+        setSelectedIds(new Set());
+        setDeleteConfirmOpen(false);
+      }
     } catch (error) {
-      setDeleteError(error instanceof Error ? error.message : 'Não foi possível apagar as conversas.');
+      if (mountedRef.current && operationScopeRef.current === operationScope) {
+        setDeleteError(error instanceof Error ? error.message : 'Não foi possível apagar as conversas.');
+      }
     } finally {
-      setDeleting(false);
+      if (mountedRef.current && operationScopeRef.current === operationScope) setDeleting(false);
     }
   };
 
   const handleBatchSend = async (message: string): Promise<BatchSendResult> => {
+    const selectionSnapshot = selectedIds;
+    const operationScope = operationScopeRef.current;
     let sent = 0;
     const failures: string[] = [];
 
@@ -163,7 +184,7 @@ const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
     queryClient.invalidateQueries({ queryKey: ['whatsapp', connectionId, 'conversas'] });
     queryClient.invalidateQueries({ queryKey: ['whatsapp', connectionId, 'mensagens'] });
     queryClient.invalidateQueries({ queryKey: ['whatsapp', 'uso-mensal'] });
-    if (sent > 0) setSelectedIds(new Set());
+    if (sent > 0 && selectionIsCurrent(selectionSnapshot, operationScope)) setSelectedIds(new Set());
     return { sent, skipped: selectedConversations.length - sendableSelectedConversations.length, failures };
   };
 

@@ -14,7 +14,8 @@ const UnifiedCategoryFilter: React.FC<UnifiedCategoryFilterProps> = ({ categorie
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
-  const label = categories.find((category) => category.id === value)?.nome || 'Todas as categorias';
+  const label = value === null ? 'Todas as categorias'
+    : categories.find((category) => category.id === value)?.nome || 'Categoria indisponível';
   const options = [{ id: null, nome: 'Todas as categorias' }, ...categories]
     .filter((category) => category.nome.toLocaleLowerCase('pt-BR').includes(query.toLocaleLowerCase('pt-BR')));
 
@@ -28,6 +29,7 @@ const UnifiedCategoryFilter: React.FC<UnifiedCategoryFilterProps> = ({ categorie
   }, [open]);
 
   const choose = (categoryId: string | null) => { onChange(categoryId); setOpen(false); };
+  const openOptions = () => { setQuery(''); setActive(0); setOpen(true); };
 
   return (
     <div ref={rootRef} className="relative">
@@ -40,14 +42,15 @@ const UnifiedCategoryFilter: React.FC<UnifiedCategoryFilterProps> = ({ categorie
         aria-autocomplete="list"
         aria-activedescendant={open && options[active] ? `${id}-option-${active}` : undefined}
         value={open ? query : label}
-        onFocus={() => { setQuery(''); setActive(0); setOpen(true); }}
+        onFocus={openOptions}
+        onClick={() => { if (!open) openOptions(); }}
         onChange={(event) => { setQuery(event.target.value); setActive(0); setOpen(true); }}
         onBlur={(event) => { if (!rootRef.current?.contains(event.relatedTarget as Node)) setOpen(false); }}
         onKeyDown={(event) => {
           if (event.key === 'Escape' || event.key === 'Tab') { setOpen(false); return; }
           if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
             event.preventDefault();
-            if (!open) { setQuery(''); setActive(0); setOpen(true); return; }
+            if (!open) { openOptions(); return; }
             setActive((current) => Math.max(0, Math.min(options.length - 1, current + (event.key === 'ArrowDown' ? 1 : -1))));
           }
           if (event.key === 'Enter' && open && options[active]) { event.preventDefault(); choose(options[active].id); }
