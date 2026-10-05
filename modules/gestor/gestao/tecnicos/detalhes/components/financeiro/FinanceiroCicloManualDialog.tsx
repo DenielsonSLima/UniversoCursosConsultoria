@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   AlertTriangle,
@@ -86,6 +86,7 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
     CicloFinanceiroTecnicoManualPreview | null
   >(null);
   const issuanceStartedRef = useRef(false);
+  const scrollAreaRef = useRef<HTMLElement>(null);
   const firstDueDate = dateSource === 'INDIVIDUAL' ? individualDate || null : null;
   const cycleIdentityChanged = requestedCycleNumber !== cycleNumber;
   const revisionContext = `${row.matriculaId}:${cycleNumber}:${dateSource}:${individualDate}:${
@@ -156,6 +157,10 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
   useEffect(() => {
     if (pending) dialogRef.current?.focus();
   }, [dialogRef, pending]);
+
+  useLayoutEffect(() => {
+    if (scrollAreaRef.current) scrollAreaRef.current.scrollTop = 0;
+  }, [step]);
 
   const goToStep = (nextStep: WizardStep) => {
     if (pending || (nextStep > step && (!previewReady || (nextStep === 3 && !positiveAmounts)))) return;
@@ -249,7 +254,7 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
         </nav>
       </header>
 
-      <main className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-8" data-testid="manual-cycle-scroll-area">
+      <main ref={scrollAreaRef} className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-8" data-testid="manual-cycle-scroll-area">
         <div className="mx-auto w-full max-w-6xl">
           {step === 1 ? (
             <section aria-labelledby="manual-cycle-step-1">
