@@ -35,7 +35,8 @@ const facts=()=>scalar(`select md5(jsonb_build_object('cr',(select jsonb_agg(to_
 try {
   for(const f of ['caixa_monthly_optimization.fixture.sql','optional_ead_checkout.fixture.sql']) await db.exec(fixture(f));
   await db.exec(`alter table public.contas_receber add column ead_checkout_attempt_id uuid;
-    create table public.ead_checkout_attempts(id uuid primary key,receivable_id uuid,nature text)`);
+    create table public.ead_checkout_attempts(id uuid primary key,receivable_id uuid,nature text,
+      matricula_id uuid,curso_id uuid,inscription_id uuid,transaction_id uuid,state text)`);
   await db.exec(source('20261004155607_classify_optional_ead_checkout.sql'));
   await db.exec(functionSource(source('20261004173625_preserve_optional_ead_historical_cutoff.sql'),
     'internal_contas.ead_checkout_paid_after_cutoff'));
@@ -56,7 +57,8 @@ try {
       receivable_id,status,pago_em,gateway_provider,gateway_environment,gateway_payment_id)
       values($1,$2,$3,$1,$1,$1,$4,$5,'banese_card','production',$6)`,
     [id(n),ead,turma,paid?'PAGO':'AGUARDANDO_PAGAMENTO',paid,String(n)]);
-    if(managed) await db.query("insert into public.ead_checkout_attempts values($1,$1,'COMPRA_OPCIONAL')",[id(n)]);
+    if(managed) await db.query(`insert into public.ead_checkout_attempts(id,receivable_id,nature,
+      matricula_id,curso_id,inscription_id,state) values($1,$1,'COMPRA_OPCIONAL',$1,$2,$1,'OPEN')`,[id(n),ead]);
   };
   await add(1); // Screenshot: optional unpaid initial purchase.
   await add(2,{matStatus:'ATIVO'}); // A genuine active obligation stays debt.
@@ -121,8 +123,64 @@ try {
   await assert.rejects(()=>scalar('select internal_contas.ead_checkout_is_optional($1) value',[id(4)]),/Unexpected optional/);
   await assert.rejects(()=>scalar('select internal_contas.ead_checkout_paid_after_cutoff($1,$2) value',[id(5),'2026-11-01']),/Unexpected historical/);
   await db.exec(oldOptional);await db.exec(oldHistorical);
+  await db.exec(functionSource(projection,'internal_contas.ead_expiration_eligible'));
+  await add(11,{managed:true,matStatus:'ATIVO'});
+  await add(12,{managed:true,matStatus:'ATIVO',status:'PAGO',origin:'BANESE',paid:'2026-10-04'});
+  await db.query(`update public.contas_receber set matricula_id=$1,gateway_status='PAID',
+    gateway_settlement_source='API' where id=$2`,[id(11),id(12)]);
+  await db.query('update public.inscricoes_online set matricula_id=$1 where id=$2',[id(11),id(12)]);
+  await db.query("update public.ead_checkout_attempts set state='PAID',matricula_id=$1 where id=$2",[id(11),id(12)]);
+  await db.query(`insert into public.payment_gateway_transactions(id,receivable_id,inscricao_online_id,
+    provider_code,environment,remote_payment_id,remote_status)
+    values($1,$1,$1,'banese_card','production','11','PENDING')`,[id(11)]);
+  await db.query(`update public.ead_checkout_attempts set state='PAYMENT_RECOVERY_FENCED',
+    transaction_id=$1 where id=$1`,[id(11)]);
+  const eligible=n=>scalar('select internal_contas.ead_expiration_eligible($1) value',[id(n)]);
+  const eligibilitySnapshot=()=>scalar(`select jsonb_agg(jsonb_build_object('id',c.id,
+    'eligible',internal_contas.ead_expiration_eligible(c.id)) order by c.id) value from public.contas_receber c
+    where c.id::text like '00000000-0000-4000-8000-%'`);
+  const eligibleBefore=await eligibilitySnapshot();
+  const eligibilityOid=await scalar("select 'internal_contas.ead_expiration_eligible(uuid)'::regprocedure::oid value");
+  await db.exec(source('20261005022413_cache_optional_ead_expiration_eligibility.sql'));
+  assert.deepEqual(await eligibilitySnapshot(),eligibleBefore,'Strict legacy and duplicate cancellation decisions remain identical');
+  assert.equal(await scalar("select 'internal_contas.ead_expiration_eligible(uuid)'::regprocedure::oid value"),eligibilityOid);
+  assert.equal(await eligible(1),true);
+  for(const n of [2,3,4,5,6,7,8,9,12]) assert.equal(await eligible(n),false);
+  assert.equal(await eligible(11),true,'A canonical paid purchase permits cleanup of its own unpaid fenced sibling');
+  for(const sql of [
+    "update public.contas_receber set gateway_settlement_source=null where id=$1",
+    "update public.contas_receber set gateway_status='PENDING' where id=$1",
+    "update public.contas_receber set valor_pago=0 where id=$1",
+    "update public.contas_receber set data_pagamento=null where id=$1",
+    "update public.ead_checkout_attempts set state='OPEN' where id=$1",
+    "update public.ead_checkout_attempts set curso_id='00000000-0000-0000-0000-000000000011' where id=$1",
+  ]) {
+    await db.exec('begin');await db.query(sql,[id(12)]);
+    assert.equal(await eligible(11),false,'Unproven paid sibling never authorizes bank cleanup');await db.exec('rollback');
+  }
+  for(const sql of [
+    'update public.contas_receber set valor_pago=1 where id=$1',
+    "update public.contas_receber set data_pagamento='2026-10-04' where id=$1",
+    'update public.contas_receber set manual_settlement_id=$1 where id=$1',
+    "update public.inscricoes_online set status='PAGO' where id=$1",
+    "update public.payment_gateway_transactions set remote_status='PAID' where id=$1",
+  ]) {
+    await db.exec('begin');await db.query(sql,[id(11)]);
+    assert.equal(await eligible(11),false,'Own pending settlement blocks cancellation even with another paid purchase');await db.exec('rollback');
+  }
+  const oldExpiration=await scalar("select pg_get_functiondef('internal_contas.ead_checkout_can_expire(uuid)'::regprocedure) value");
+  await db.exec(`create or replace function internal_contas.ead_checkout_can_expire(p_receivable_id uuid)
+    returns boolean language plpgsql stable set search_path='' as $$ begin
+      raise exception 'Unexpected expiration legacy fallback'; end $$;`);
+  assert.equal(await scalar(`select count(*) value from public.contas_receber c
+    where c.id::text like '00000000-0000-4000-8001-%' and not internal_contas.ead_expiration_eligible(c.id)`),2000);
+  assert.equal(await eligible(11),true,'Durable duplicate cleanup keeps its independent canonical proof');
+  await assert.rejects(()=>eligible(1),/Unexpected expiration legacy fallback/);
+  await db.exec(oldExpiration);
   for(const role of ['anon','authenticated','service_role']) for(const signature of [
     'internal_contas.ead_checkout_is_optional(uuid)','internal_contas.ead_checkout_paid_after_cutoff(uuid,date)',
   ]) assert.equal(await scalar('select has_function_privilege($1,$2,\'execute\') value',[role,signature]),false);
-  console.log('PASS: cached financial classifiers preserve OIDs/facts/revenue/cutoffs and skip 2,000 irrelevant legacy calls');
+  for(const role of ['anon','authenticated','service_role']) assert.equal(await scalar(
+    "select has_function_privilege($1,'internal_contas.ead_expiration_eligible(uuid)','execute') value",[role]),false);
+  console.log('PASS: cached financial/expiration helpers preserve OIDs/facts/revenue/cutoffs/strict cancellation and skip 2,000 irrelevant legacy calls');
 } finally { await db.close(); }

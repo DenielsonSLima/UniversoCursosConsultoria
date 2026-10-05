@@ -53,6 +53,7 @@ jobs:
           node supabase/tests/ead_checkout_attempts.isolated.test.mjs
           node supabase/tests/ead_expiration_schedule.isolated.test.mjs
           node supabase/tests/ead_financial_classifier_cache.isolated.test.mjs
+          node supabase/tests/ead_expiration_recovery_review.isolated.test.mjs
       - name: Banco e checkout com respostas simuladas
         run: |
           deno test --no-config --allow-read --allow-env --sloppy-imports \
