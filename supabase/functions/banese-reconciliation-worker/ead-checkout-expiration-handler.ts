@@ -8,6 +8,7 @@ import { processOneBaneseEadCheckoutExpiration } from "./ead-checkout-expiration
 
 type Runtime = WorkerSecretRuntime<typeof createClient> & {
   processExpiration?: typeof processOneBaneseEadCheckoutExpiration;
+  now?: () => number;
 };
 
 // Separate cron lane: canceled-title observation never consumes the normal
@@ -42,14 +43,27 @@ export const handleBaneseEadCheckoutExpirationRequest = async (
   }
   try {
     const process = dependencies.processExpiration ?? processOneBaneseEadCheckoutExpiration;
-    const action = await process(admin, { claimLane: "ACTION" });
-    const result = action.handled ? action : await process(admin, { claimLane: "OBSERVE" });
+    // Alternate UTC minutes so a persistent action backlog cannot starve
+    // canceled-title payment recovery. An idle lane lends its slot; each
+    // invocation still processes at most one title with the same bank budget.
+    const firstLane = Math.floor((dependencies.now ?? Date.now)() / 60_000) % 2 === 0
+      ? "OBSERVE" : "ACTION";
+    const first = await process(admin, { claimLane: firstLane });
+    const second = first.handled ? undefined : await process(admin, {
+      claimLane: firstLane === "ACTION" ? "OBSERVE" : "ACTION",
+    });
+    const result = second ?? first;
+    const action = firstLane === "ACTION" ? first : second;
+    const observation = firstLane === "OBSERVE" ? first : second;
+    const actionReviewRequired = action?.reviewRequired === true;
+    const observationReviewRequired = observation?.reviewRequired === true;
     return json({
       success: !["RETRY", "REVIEW_REQUIRED", "PAID_REVIEW"].includes(result.result ?? "") &&
-        !action.reviewRequired,
+        !actionReviewRequired && !observationReviewRequired,
       skipped: !result.handled,
       eadCheckoutExpiration: result,
-      ...(action.reviewRequired ? { actionReviewRequired: true } : {}),
+      ...(actionReviewRequired ? { actionReviewRequired: true } : {}),
+      ...(observationReviewRequired ? { observationReviewRequired: true } : {}),
     });
   } catch {
     // Bank errors can contain private response fields. Log only a static code.
