@@ -1,11 +1,11 @@
 # Lote ativo
 
-## Lote: 2026-10-05-aluno-zoom-nitidez
+## Lote: 2026-10-05-caixa-abas-polos-nitidez
 
-Estado: ajustes preparados para 4.8.170; produção autorizada, condicionada aos checks e Preview finais.
-Objetivo: corrigir autozoom e renderização turva no acesso/portal do aluno em PC e celular, preservando design e zoom manual.
-Aceite: campos mobile >=16px, renderização local sem camadas persistentes, teclado/zoom distintos e nenhuma abertura de navegador.
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-05-aluno-zoom-nitidez.md` (16 arquivos).
-Validação: três agentes e reunião; testes de viewport, cascade CSS, tipos/lint/build e HTTP. Smoke visual/autenticado pendente por solicitação expressa.
-Base: main `78afddaf51a5fe738621c8e19feb2c6dfef5db24`, versão 4.8.169. Somente manifesto publicado via MCP GitHub.
-Histórico: lote Proesc anterior preservado em `ai/operacao/registros/alteracoes/2026-10-03-proesc-desconto-liquido.md`.
+Estado: ajuste visual preparado para 4.8.171; produção autorizada pela sessão, condicionada à CI/Preview.
+Objetivo: melhorar legibilidade das abas de polos do Caixa e retirar camada transformada persistente.
+Aceite: nomes 16px/peso médio, selo Matriz 12px, contraste legível, renderização auto localizada; sem navegador.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-05-caixa-abas-polos-nitidez.md` (9 arquivos).
+Validação: teste focado Caixa, cascade compilada, tipagem/lint/build; smoke visual/autenticado pendente por orientação expressa.
+Base: main `c47cd4f0bb15b502be8c4d556d60d8140d039417`, versão 4.8.170. GitHub somente MCP.
+Histórico: entrega aluno 4.8.170 publicada, registro `ai/operacao/registros/alteracoes/2026-10-05-aluno-zoom-nitidez.md` preservado.

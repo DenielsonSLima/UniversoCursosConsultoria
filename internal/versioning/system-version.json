@@ -1,8 +1,8 @@
 {
-  "version": "4.8.170",
+  "version": "4.8.171",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 179,
+  "revision": 180,
   "releasedAt": "2026-10-05",
-  "summary": "Acesso do aluno com campos legíveis, zoom acessível e renderização sem camadas persistentes"
+  "summary": "Abas de polos do Caixa com letras maiores, contraste reforçado e renderização sem camada persistente"
 }

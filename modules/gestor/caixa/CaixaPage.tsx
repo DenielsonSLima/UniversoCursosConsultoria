@@ -182,7 +182,7 @@ const CaixaScopePage: React.FC<CaixaScopePageProps> = ({
   const isConsolidated = selectedPolo === 'todos';
 
   return (
-    <div className="mx-auto max-w-[1680px] animate-fadeIn space-y-5 pb-12">
+    <div className="caixa-page mx-auto max-w-[1680px] animate-fadeIn space-y-5 pb-12">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <div className="flex items-center gap-2">
@@ -230,14 +230,14 @@ const CaixaScopePage: React.FC<CaixaScopePageProps> = ({
         </div>
       </header>
 
-      <div className="overflow-x-auto border-b border-slate-200">
+      <div className="caixa-polo-tabs overflow-x-auto border-b border-slate-200">
         <div className="flex min-w-max gap-1">
           {canViewConsolidated && (
             <button
               type="button"
               onClick={() => setSelectedPolo('todos')}
-              className={`relative flex items-center gap-2 px-3 pb-3 pt-2 text-sm font-semibold transition ${
-                isConsolidated ? 'text-blue-700' : 'text-slate-500 hover:text-slate-800'
+              className={`relative flex items-center gap-2 px-3 pb-3 pt-2 text-base font-medium leading-6 tracking-normal transition-colors ${
+                isConsolidated ? 'text-blue-700' : 'text-slate-600 hover:text-slate-800'
               }`}
             >
               <Scale size={15} />
@@ -253,14 +253,14 @@ const CaixaScopePage: React.FC<CaixaScopePageProps> = ({
                 type="button"
                 onClick={() => setSelectedPolo(polo.id)}
                 disabled={!canViewConsolidated}
-                className={`relative flex items-center gap-2 px-3 pb-3 pt-2 text-sm font-semibold transition ${
-                  active ? 'text-blue-700' : 'text-slate-500 hover:text-slate-800'
+                className={`relative flex items-center gap-2 px-3 pb-3 pt-2 text-base font-medium leading-6 tracking-normal transition-colors ${
+                  active ? 'text-blue-700' : 'text-slate-600 hover:text-slate-800'
                 }`}
               >
                 <Landmark size={15} />
                 {formatPoloName(polo)}
                 {polo.is_matriz && (
-                  <span className="rounded bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold text-blue-600">
+                  <span className="rounded bg-blue-50 px-1.5 py-0.5 text-xs font-medium leading-4 text-blue-700">
                     Matriz
                   </span>
                 )}
