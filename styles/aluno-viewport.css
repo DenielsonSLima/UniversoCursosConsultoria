@@ -1,0 +1,49 @@
+/* Escopo do aluno: usa a renderização da plataforma sem mudar a fonte de
+   marca ou as demais áreas do sistema. A especificidade vence #root * e
+   os utilitários antialiased presentes nas telas internas. */
+#root .aluno-typography,
+#root .aluno-typography *,
+html[data-aluno-fullscreen='true'] #root,
+html[data-aluno-fullscreen='true'] #root * {
+  -webkit-font-smoothing: auto;
+  -moz-osx-font-smoothing: auto;
+  text-rendering: auto;
+}
+
+/* A barra lateral tem regras próprias no CSS global. */
+#root .aluno-typography .portal-sidebar-typography,
+#root .aluno-typography .portal-sidebar-typography * {
+  -webkit-font-smoothing: auto;
+  -moz-osx-font-smoothing: auto;
+}
+
+/* WebKit amplia a página ao focar campos menores que 16px. Não limitar
+   maximum-scale/user-scalable: o zoom escolhido pelo aluno é preservado. */
+@media (max-width: 767px), (pointer: coarse) {
+  #root :is(.aluno-typography, .aluno-auth-typography) :is(input, select, textarea),
+  html[data-aluno-fullscreen='true'] #root :is(input, select, textarea) {
+    font-size: max(16px, 1em);
+  }
+}
+
+/* Entradas de conteúdo não precisam manter uma camada transformada depois
+   de aparecer. A animação global dos outros portais continua intacta. */
+#root :is(.aluno-typography, .aluno-auth-typography) .animate-fadeIn,
+html[data-aluno-fullscreen='true'] #root .animate-fadeIn {
+  animation: aluno-content-fade 0.25s ease-out;
+  backface-visibility: visible;
+  transform: none;
+  will-change: auto;
+}
+
+@keyframes aluno-content-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #root :is(.aluno-typography, .aluno-auth-typography) .animate-fadeIn,
+  html[data-aluno-fullscreen='true'] #root .animate-fadeIn {
+    animation: none;
+  }
+}

@@ -1,11 +1,11 @@
 # Lote ativo
 
-## Lote: 2026-10-03-proesc-desconto-liquido
+## Lote: 2026-10-05-aluno-zoom-nitidez
 
-Estado: regra aplicada e paridade confirmada no banco; publicação 4.8.156 autorizada e condicionada à CI final. Provas individuais incorporadas com auditoria privada. Versão local 4.8.155 reservada para trabalho paralelo, preservado.
-Objetivo: parcelas Proesc confirmadas PAGA, com recebido inferior ao nominal e composição ausente, usam a diferença como desconto líquido calculado conforme orientação expressa do responsável.
-Aceite: preservar provas explícitas, pagamentos parciais, valores recebidos, datas, saldos e corte operacional em 01/10/2026; não inventar tarifa nem meio de pagamento. Não escrever no Proesc.
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-03-proesc-desconto-liquido.md` (8 arquivos).
-Validação: ensaio SQL isolado, revisão independente, aplicação MCP, paridade de recebimentos/abertura e CI do manifesto remoto. Smoke autenticado depende de sessão disponível.
-Base remota: main `0ad684e3d577e37508124b55a81f97c9e2805ea0`, versão 4.8.154; propostas de renegociação e demais trabalhos paralelos serão preservados.
-Histórico: `ai/operacao/registros/alteracoes/2026-10-03-proesc-composicao-automatica.md` e `ai/operacao/registros/alteracoes/2026-10-02-renegociacoes-propostas.md`.
+Estado: ajustes preparados para 4.8.170; produção autorizada, condicionada aos checks e Preview finais.
+Objetivo: corrigir autozoom e renderização turva no acesso/portal do aluno em PC e celular, preservando design e zoom manual.
+Aceite: campos mobile >=16px, renderização local sem camadas persistentes, teclado/zoom distintos e nenhuma abertura de navegador.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-05-aluno-zoom-nitidez.md` (16 arquivos).
+Validação: três agentes e reunião; testes de viewport, cascade CSS, tipos/lint/build e HTTP. Smoke visual/autenticado pendente por solicitação expressa.
+Base: main `78afddaf51a5fe738621c8e19feb2c6dfef5db24`, versão 4.8.169. Somente manifesto publicado via MCP GitHub.
+Histórico: lote Proesc anterior preservado em `ai/operacao/registros/alteracoes/2026-10-03-proesc-desconto-liquido.md`.

@@ -1,8 +1,8 @@
 {
-  "version": "4.8.169",
+  "version": "4.8.170",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 178,
+  "revision": 179,
   "releasedAt": "2026-10-05",
-  "summary": "Revisão EAD: recuperação bancária sem bloqueio de fila e revisões por polos autorizados"
+  "summary": "Acesso do aluno com campos legíveis, zoom acessível e renderização sem camadas persistentes"
 }
