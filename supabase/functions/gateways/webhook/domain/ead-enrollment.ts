@@ -96,12 +96,14 @@ export const syncOnlineInscriptionPayment = async (
   if (!input.receivable?.matricula_id) return;
 
   const matriculaId = String(input.receivable.matricula_id);
-  const { data: existingInscription, error: existingInscriptionError } =
-    await context.admin
+  let inscriptionQuery = context.admin
       .from("inscricoes_online")
-      .select("id, receivable_id")
-      .eq("matricula_id", matriculaId)
-      .maybeSingle();
+      .select("id, receivable_id");
+  inscriptionQuery = input.receivable.ead_checkout_attempt_id
+    ? inscriptionQuery.eq("receivable_id", input.receivable.id)
+    : inscriptionQuery.eq("matricula_id", matriculaId);
+  const { data: existingInscription, error: existingInscriptionError } =
+    await inscriptionQuery.maybeSingle();
   if (existingInscriptionError) throw existingInscriptionError;
 
   const existingReceivableId = String(

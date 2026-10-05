@@ -14,6 +14,7 @@ import {
   renderPaymentWindowError,
 } from '../../shared/paymentWindow';
 import { fetchBaneseBoletoDocument } from '../../shared/baneseBoletoDocument';
+import { getEadPurchaseUi } from '../eadPurchaseState';
 
 interface UseCourseCheckoutInput {
   alunoId?: string;
@@ -73,19 +74,22 @@ export const useCourseCheckout = ({
       checkoutWindow,
       sameTab,
       paymentSelection,
+      requestId,
     }: {
       course: any;
       turmaId?: string | null;
       checkoutWindow: Window | null;
       sameTab?: boolean;
       paymentSelection?: CheckoutPaymentSelection;
+      requestId: string;
     }) => {
       if (!alunoId) throw new Error('Aluno não identificado para iniciar a compra.');
-      const result = await paymentCheckoutService.getPublicCheckout(course.id, alunoId, turmaId, paymentSelection);
+      const result = await paymentCheckoutService.getPublicCheckout(course.id, alunoId, turmaId, paymentSelection, null, requestId);
       if (!result?.url || typeof result.url !== 'string') {
         throw new Error('A resposta do checkout não retornou um link válido.');
       }
       return {
+        courseId: course.id,
         url: result.url,
         payment: result.payment,
         requestedPaymentMethod: String(paymentSelection?.method || '').toUpperCase(),
@@ -99,11 +103,20 @@ export const useCourseCheckout = ({
         alreadyPaid: result.alreadyPaid === true,
         alreadyPending: result.alreadyPending === true,
         awaitingWebhook: result.awaitingWebhook === true,
+        awaitingConfirmation: result.awaitingConfirmation === true,
+        paymentReviewRequired: result.paymentReviewRequired === true,
       };
     },
     onMutate: () => setCheckoutError(''),
-    onSuccess: async ({ url, payment, requestedPaymentMethod, requestedPresentation, returnedPresentation, presentationFallbackReason, matriculaId, receivableId, checkoutWindow, sameTab, alreadyPaid, alreadyPending, awaitingWebhook }) => {
+    onSuccess: async ({ url, payment, requestedPaymentMethod, requestedPresentation, returnedPresentation, presentationFallbackReason, matriculaId, receivableId, checkoutWindow, sameTab, alreadyPaid, alreadyPending, awaitingWebhook, awaitingConfirmation, paymentReviewRequired }) => {
       setEadCheckoutReview(null);
+      if (awaitingConfirmation || paymentReviewRequired) {
+        if (checkoutWindow && !checkoutWindow.closed) checkoutWindow.close();
+        setEadPaymentPanel(null);
+        setCheckoutError('');
+        invalidateStudentCourseAccess();
+        return;
+      }
       const paymentMethod = String(payment?.method || requestedPaymentMethod || '').toUpperCase();
       const paymentProvider = String((payment as any)?.provider || 'asaas').toLowerCase();
       const hasPixQrCode = Boolean((payment as any)?.pixQrCode?.payload || (payment as any)?.pixQrCode?.encodedImage);
@@ -210,6 +223,11 @@ export const useCourseCheckout = ({
 
   const startCheckout = (course: any, turma?: any | null, paymentSelection?: CheckoutPaymentSelection) => {
     const isEadCheckout = String(course?.modalidade || '').toUpperCase() === 'EAD';
+    if (isEadCheckout && getEadPurchaseUi(course.eadPurchase).disabled) {
+      setEadCheckoutReview(null);
+      invalidateStudentCourseAccess();
+      return;
+    }
     const isTechnicalCheckout = String(course?.modalidade || '').toUpperCase() === 'TECNICO';
     if (isTechnicalCheckout) {
       if (loadingTechnicalEnrollmentProfile) {
@@ -231,10 +249,11 @@ export const useCourseCheckout = ({
       : null;
     checkoutMutation.mutate({
       course,
-      turmaId: turma?.id || null,
+      turmaId: turma?.id || (isEadCheckout ? course.eadPurchase?.turmaId || course.alunoMatricula?.turmaId : null) || null,
       checkoutWindow,
       sameTab: isEadCheckout && !opensBoletoInNewTab,
       paymentSelection,
+      requestId: crypto.randomUUID(),
     });
   };
 

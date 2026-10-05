@@ -8,6 +8,10 @@ const COURSE_ID = "11111111-1111-4111-8111-111111111111";
 const ALUNO_ID = "22222222-2222-4222-8222-222222222222";
 const TURMA_ID = "33333333-3333-4333-8333-333333333333";
 const MATRICULA_ID = "44444444-4444-4444-8444-444444444444";
+const AUTH_USER_ID = "88888888-8888-4888-8888-888888888888";
+const RECEIVABLE_ID = "77777777-7777-4777-8777-777777777777";
+const ATTEMPT_ID = "99999999-9999-4999-8999-999999999999";
+const TOKEN_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 
 const queryResultFor = (
   table: string,
@@ -45,7 +49,7 @@ const queryResultFor = (
   }
   if (table === "usuarios_sistema") return null;
   if (table === "parceiros") {
-    return { id: ALUNO_ID, tipo: "Aluno", email: "aluno@example.com" };
+    return { id: ALUNO_ID, auth_user_id: AUTH_USER_ID, tipo: "Aluno", email: "aluno@example.com" };
   }
   if (table === "turmas") {
     return turmasOverride || [{
@@ -72,7 +76,10 @@ const createQuery = (
   const response = { data: value, error: null };
   const query: any = {
     select: () => query,
-    eq: () => query,
+    eq: (column: string, value: unknown) => {
+      if (table === "parceiros" && column === "auth_user_id") assert.equal(value, AUTH_USER_ID);
+      return query;
+    },
     neq: () => query,
     ilike: () => query,
     limit: () => query,
@@ -94,13 +101,18 @@ const buildRuntime = (
 ) => ({
   admin: {
     from: (table: string) => createQuery(table, turmasOverride, providerCode),
-    rpc: async (name: string) => {
-      assert.equal(name, "payment_checkout_upsert_matricula");
-      return { data: { id: MATRICULA_ID }, error: null };
+    rpc: async (name: string, payload: any) => {
+      if (name === "portal_identidade_institucional_acesso_liberado") return { data: false, error: null };
+      assert.equal(name, "ead_prepare_checkout_attempt");
+      return { data: { action: "CREATE", matriculaId: MATRICULA_ID, attemptId: ATTEMPT_ID,
+        receivableId: RECEIVABLE_ID, inscricaoId: ALUNO_ID, creationToken: TOKEN_ID,
+        receivable: { id: RECEIVABLE_ID, matricula_id: MATRICULA_ID, ead_checkout_attempt_id: ATTEMPT_ID,
+          gateway_status: "CREATING", gateway_creation_token: TOKEN_ID,
+          valor: payload.p_amount, data_vencimento: payload.p_due_date, descricao: payload.p_description } }, error: null };
     },
     auth: {
       getUser: async () => ({
-        data: { user: { email: "aluno@example.com" } },
+        data: { user: { id: AUTH_USER_ID, email: "aluno@example.com" } },
         error: null,
       }),
     },
@@ -136,7 +148,10 @@ Deno.test("titulo existente ignora janela e vagas sem recalcular seus termos", a
   let rpcCalls = 0;
   runtime.admin.rpc = async () => {
     rpcCalls += 1;
-    return { data: null, error: null };
+    return { data: { action: "AWAITING_CONFIRMATION", matriculaId: MATRICULA_ID, attemptId: ATTEMPT_ID,
+      receivableId: RECEIVABLE_ID, inscricaoId: ALUNO_ID, creationToken: null,
+      receivable: { id: RECEIVABLE_ID, matricula_id: MATRICULA_ID, ead_checkout_attempt_id: ATTEMPT_ID,
+        valor: 89.9, data_vencimento: "2026-06-10", descricao: "Inscricao EAD contratada" } }, error: null };
   };
   const context = await buildEadCheckoutContext(runtime, {
     receivableId: "77777777-7777-4777-8777-777777777777",
@@ -174,7 +189,8 @@ Deno.test("titulo existente ignora janela e vagas sem recalcular seus termos", a
   assert.equal(context.charge.value, 89.9);
   assert.equal(context.charge.dueDate, "2026-06-10");
   assert.equal(context.charge.description, "Inscricao EAD contratada");
-  assert.equal(rpcCalls, 0);
+  assert.equal(rpcCalls, 1);
+  assert.equal(context.checkoutAttempt?.action, "AWAITING_CONFIRMATION");
 });
 
 Deno.test("rota Asaas antiga falha fechada para nova cobranca", async () => {
@@ -190,7 +206,7 @@ Deno.test("usuario comum nao gera checkout em nome de outro aluno", async () => 
   runtime.body.alunoId = "77777777-7777-4777-8777-777777777777";
   await assert.rejects(
     () => buildEadCheckoutContext(runtime),
-    /sessao invalida para esta acao financeira/i,
+    /Acesso institucional bloqueado/i,
   );
 });
 
@@ -247,4 +263,14 @@ Deno.test("quantidade total de vagas bloqueia novas matriculas EAD", async () =>
     Error,
     "Nao ha turma EAD aberta para este curso no momento.",
   );
+});
+
+Deno.test("recompra reutiliza a reserva do próprio aluno sem ocupar outra vaga", async () => {
+  const context = await buildEadCheckoutContext(buildRuntime([{
+    id: TURMA_ID, nome: "Turma EAD", vagas_totais: 1,
+    bloquear_matriculas_apos_completar_vagas: true,
+    matriculas: [{ status: "PENDENTE", aluno_id: ALUNO_ID }],
+  }]) as any);
+  assert.equal(context?.matricula.id, MATRICULA_ID);
+  assert.equal(context?.checkoutAttempt?.receivableId, RECEIVABLE_ID);
 });

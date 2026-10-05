@@ -30,8 +30,6 @@ import {
 } from "../utils.ts";
 import {
   clearPreviousGatewayFields,
-  EAD_PAYMENT_RECIPIENT,
-  firstHttpUrl,
   paymentResponseFromReceivable,
   shouldReuseReceivable,
 } from "./gateway-view.ts";
@@ -49,6 +47,8 @@ import {
   repairCheckoutInscricao,
 } from "./gateway-reuse.ts";
 import { AUTOMATIC_ENROLLMENT_ACTIVATION_SOURCE_STATUSES } from "../../webhook/domain/ead-enrollment.ts";
+import { bindEadCheckoutAttempt, blockedEadCheckoutResponse, issueReservedEadCheckout } from "../ead-checkout-attempt.ts";
+import { createdEadCheckoutResult } from "./gateway-created-response.ts";
 
 const markRemotePaymentCreated = (error: unknown) => {
   if (error && typeof error === "object") {
@@ -61,10 +61,14 @@ const markRemotePaymentCreated = (error: unknown) => {
 };
 
 export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
+  const blockedResponse = blockedEadCheckoutResponse(context);
+  if (blockedResponse) return blockedResponse;
   const providerCode = context.route.providerCode;
-  const targetedReceivableId = context.body.receivableId
+  const preparedAttempt = context.checkoutAttempt;
+  const ownsPreparedCreation = preparedAttempt?.action === "CREATE";
+  const targetedReceivableId = preparedAttempt?.receivableId || (context.body.receivableId
     ? String(context.body.receivableId)
-    : null;
+    : null);
   let receivable = await loadGatewayCheckoutReceivable({
     admin: context.admin,
     matriculaId: context.matricula.id,
@@ -77,6 +81,7 @@ export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
           value: context.charge.value,
           dueDate: context.charge.dueDate,
           description: context.charge.description,
+          ...(preparedAttempt?.attemptId ? { attemptId: preparedAttempt.attemptId } : {}),
         },
       }
       : {}),
@@ -115,6 +120,9 @@ export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
       receivable,
       providerCode,
     );
+    await bindEadCheckoutAttempt(context, receivable);
+    const blockedAfterBind = blockedEadCheckoutResponse(context);
+    if (blockedAfterBind) return blockedAfterBind;
     const url = gatewayOnlyPrimaryUrl(receivable) ||
       gatewayPrimaryUrl(receivable);
     return {
@@ -159,7 +167,7 @@ export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
   );
   const ambiguousAsaasCreation = providerCode === "asaas" &&
     hasAmbiguousRemoteCreation(receivable);
-  if (!ambiguousAsaasCreation) {
+  if (!ambiguousAsaasCreation && !ownsPreparedCreation) {
     assertGatewayTitleCanBeReset(receivable, {
       allowBaneseRecovery: preserveReservedBaneseNumber,
     });
@@ -180,7 +188,7 @@ export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
     resetGatewayFields.gateway_financial_terms_confirmed_at =
       receivable.gateway_financial_terms_confirmed_at || null;
   }
-  const usesTargetedReceivable = Boolean(context.body.receivableId);
+  const usesTargetedReceivable = Boolean(targetedReceivableId);
   const receivablePayload = {
     polo_id: usesTargetedReceivable
       ? receivable.polo_id || context.turma.polo_id
@@ -195,7 +203,7 @@ export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
     forma_pagamento: paymentMethodForLegacyField(context.charge.method),
     categoria: "MENSALIDADE",
     tipo_lancamento: "MATRICULA",
-    origem_cronograma_id: "matricula",
+    origem_cronograma_id: receivable?.origem_cronograma_id || "matricula",
     origem_pagamento: "GATEWAY_EAD",
     ...resetGatewayFields,
     gateway_provider: providerCode,
@@ -211,11 +219,16 @@ export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
     updated_at: new Date().toISOString(),
   };
 
-  const attemptToken = crypto.randomUUID();
+  const attemptToken = preparedAttempt?.creationToken || crypto.randomUUID();
   let lockedReceivable: any = null;
   let creationOwnedByThisRequest = false;
 
-  if (receivable?.id && !ambiguousAsaasCreation) {
+  if (ownsPreparedCreation) {
+    assertGatewayCreationFence({ receivable, providerCode,
+      environment: context.environment, paymentMethod: context.charge.method, attemptToken });
+    lockedReceivable = receivable;
+    creationOwnedByThisRequest = true;
+  } else if (receivable?.id && !ambiguousAsaasCreation) {
     lockedReceivable = await claimExistingGatewayCheckout({
       admin: context.admin,
       receivable,
@@ -269,6 +282,9 @@ export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
         currentReceivable,
         providerCode,
       );
+      await bindEadCheckoutAttempt(context, reusableReceivable);
+      const blockedAfterBind = blockedEadCheckoutResponse(context);
+      if (blockedAfterBind) return blockedAfterBind;
       const url = gatewayOnlyPrimaryUrl(reusableReceivable) ||
         gatewayPrimaryUrl(reusableReceivable);
       return {
@@ -318,19 +334,22 @@ export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
       )
       : null;
     try {
-      gatewayResult = await createGatewayCharge(
+      gatewayResult = await issueReservedEadCheckout(context, lockedReceivable, () => createGatewayCharge(
         buildGatewayChargeInput(context, lockedReceivable, financialTerms),
-      );
+      ));
     } catch (error) {
+      if ((error as any)?.eadCheckoutIssuanceBlocked === true) throw error;
       const remotePaymentMayExist = Boolean(
         error && typeof error === "object" &&
           (error as Record<string, unknown>).remotePaymentCreated === true,
       );
+      const reservedAttempt = Boolean(context.checkoutAttempt?.attemptId);
+      const preserveCreation = remotePaymentMayExist || reservedAttempt;
       await context.admin.from("contas_receber").update({
-        gateway_status: remotePaymentMayExist ? "CREATING" : null,
-        gateway_creation_token: remotePaymentMayExist ? attemptToken : null,
+        gateway_status: preserveCreation ? "CREATING" : null,
+        gateway_creation_token: preserveCreation ? attemptToken : null,
         gateway_last_error: normalizeErrorMessage(error),
-        ...(remotePaymentMayExist
+        ...(preserveCreation
           ? {
             gateway_submission_channel: "API",
             gateway_submission_status:
@@ -360,11 +379,6 @@ export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
   }
 
   let updatedReceivable: any;
-  const checkoutUrl = (value: any) =>
-    firstHttpUrl(gatewayOnlyPrimaryUrl(value)) || firstHttpUrl(
-      value?.gateway_payment_link_id,
-    );
-
   try {
     const { data: postCreateSnapshot, error: postCreateSnapshotError } =
       await context.admin
@@ -447,49 +461,13 @@ export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
         result: gatewayResult,
       });
     }
+    await bindEadCheckoutAttempt(context, updatedReceivable);
   } catch (error) {
     throw markRemotePaymentCreated(error);
   }
 
-  const url = checkoutUrl(updatedReceivable);
-  const pixQrCode = gatewayResult.pixPayload || gatewayResult.pixEncodedImage
-    ? {
-      payload: gatewayResult.pixPayload,
-      encodedImage: gatewayResult.pixEncodedImage,
-    }
-    : null;
-  if (!url && !pixQrCode) {
-    throw markRemotePaymentCreated(
-      new Error(
-        "Nao foi possivel recuperar o link do checkout gerado pelo provedor configurado.",
-      ),
-    );
-  }
+  const blockedAfterCreation = blockedEadCheckoutResponse(context);
+  if (blockedAfterCreation) return { ...blockedAfterCreation, createdRemotePayment: true };
 
-  return {
-    response: {
-      url,
-      matriculaId: context.matricula.id,
-      receivableId: updatedReceivable.id,
-      payment: {
-        id: gatewayResult.remotePaymentId || gatewayResult.remotePaymentLinkId,
-        provider: providerCode,
-        method: context.charge.method,
-        installments: context.charge.installmentCount,
-        status: gatewayResult.remoteStatus,
-        value: context.charge.value,
-        courseName: context.course.nome,
-        recipient: EAD_PAYMENT_RECIPIENT,
-        dueDate: context.charge.dueDate,
-        invoiceUrl: updatedReceivable.gateway_invoice_url,
-        bankSlipUrl: updatedReceivable.gateway_bank_slip_url,
-        bankSlipDigitableLine: updatedReceivable.gateway_boleto_linha_digitavel,
-        bankSlipBarcode: updatedReceivable.gateway_boleto_codigo_barras,
-        bankSlipOurNumber: updatedReceivable.gateway_boleto_nosso_numero,
-        pixQrCode,
-      },
-    },
-    createdRemotePayment: true,
-    receivableId: updatedReceivable.id,
-  };
+  return createdEadCheckoutResult(context, updatedReceivable, gatewayResult);
 };

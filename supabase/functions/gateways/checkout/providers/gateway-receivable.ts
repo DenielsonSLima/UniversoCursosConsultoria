@@ -11,6 +11,7 @@ export type GatewayReceivableExpectation = {
   value: number;
   dueDate: string;
   description: string;
+  attemptId?: string;
 };
 
 const matchesGatewayReceivableExpectation = (
@@ -24,7 +25,8 @@ const matchesGatewayReceivableExpectation = (
   String(receivable?.data_vencimento || "").slice(0, 10) ===
     String(expectation.dueDate || "").slice(0, 10) &&
   String(receivable?.descricao || "").trim() ===
-    String(expectation.description || "").trim();
+    String(expectation.description || "").trim() &&
+  (!expectation.attemptId || receivable?.ead_checkout_attempt_id === expectation.attemptId);
 
 export const isGatewayReceivableLocallyPayable = (receivable: any) => {
   const status = String(receivable?.status || "").trim().toUpperCase();

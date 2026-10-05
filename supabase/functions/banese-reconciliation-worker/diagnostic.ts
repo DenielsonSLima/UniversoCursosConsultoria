@@ -4,6 +4,7 @@ import {
 } from "../banese/internal/financial-terms.ts";
 import { calculateBaneseSettlementRange } from "../banese/internal/settlement-range.ts";
 import { assertBaneseFinancialTermsEqual } from "../banese/internal/financial-terms-response.ts";
+import { baneseLastPaymentDate } from "../banese/internal/receipt-deadline.ts";
 import {
   assertBaneseReceivableTitleCompatible,
   assertBaneseReconciliationProvenance,
@@ -59,6 +60,7 @@ export const diagnoseBaneseReceivable = async (
       nossoNumero,
       recoverPix: false,
       skipEffectivePaymentsWhenOfficiallyUnpaid: false,
+      strictEffectivePayments: true,
       // CPF, nominal, due date and ASBACE are validated even for legacy titles.
       // Legacy has no local document/company ID to compare with the bank.
       validateTitleIdentity: true,
@@ -73,6 +75,7 @@ export const diagnoseBaneseReceivable = async (
     });
     if (!snapshot.financialTerms || snapshot.financialTermsError || snapshot.paymentsError) throw new Error("INVALID_REMOTE_SNAPSHOT");
     assertBaneseFinancialTermsEqual(terms, snapshot.financialTerms);
+    const lastPaymentDate = baneseLastPaymentDate(snapshot.raw, terms.dueDate);
     const amount = Math.round(sumBanesePaymentValues(snapshot.payments) * 100) / 100;
     const dates = snapshot.payments.map(banesePaymentDate).sort();
     const paymentDate = dates.at(-1) ?? null;
@@ -82,6 +85,7 @@ export const diagnoseBaneseReceivable = async (
       checkedAt: new Date().toISOString(), environment,
       paid: snapshot.paid, remoteStatus: snapshot.remoteStatus,
       situationCode: snapshot.situationCode, amount, paymentDate,
+      strictEffectivePayments: true, lastPaymentDate,
       nominalAmount: terms.nominalAmount, financialTerms: terms,
       calculatedRange: range,
       withinCalculatedRange: range ? amount >= range.minimumAmount && amount <= range.maximumAmount : null,

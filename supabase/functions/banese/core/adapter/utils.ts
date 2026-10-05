@@ -34,6 +34,8 @@ export const sanitizedBoletoSnapshot = (value: unknown) =>
     "CodigoMoeda",
     "DataEmissao",
     "DataVencimento",
+    "DataLimitePagamento",
+    "dataLimitePagamento",
     "ValorNominal",
     "NumeroDocumento",
     "IdTituloEmpresa",

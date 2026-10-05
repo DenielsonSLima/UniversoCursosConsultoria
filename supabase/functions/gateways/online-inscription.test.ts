@@ -5,131 +5,7 @@ import {
   repairOnlineInscription,
 } from "./online-inscription.ts";
 
-const createAdmin = (
-  initialRows: Array<Record<string, any>> = [],
-) => {
-  const rows = new Map<string, Record<string, any>>(
-    initialRows.map((row) => [String(row.matricula_id), { ...row }]),
-  );
-  const upserts: Array<Record<string, any>> = [];
-  const transactionLinks: Array<Record<string, any>> = [];
-
-  const admin = {
-    from(table: string) {
-      if (table === "inscricoes_online") {
-        return {
-          select() {
-            return {
-              eq(column: string, value: unknown) {
-                assert.equal(column, "matricula_id");
-                return {
-                  maybeSingle: async () => ({
-                    data: rows.get(String(value)) || null,
-                    error: null,
-                  }),
-                };
-              },
-            };
-          },
-          upsert(payload: Record<string, any>, options: Record<string, any>) {
-            assert.equal(options.onConflict, "matricula_id");
-            upserts.push(payload);
-            const key = String(payload.matricula_id);
-            const current = rows.get(key);
-            if (
-              current?.receivable_id &&
-              current.receivable_id !== payload.receivable_id
-            ) {
-              return {
-                select: () => ({
-                  single: async () => ({
-                    data: null,
-                    error: new Error("recebivel canonico divergente"),
-                  }),
-                }),
-              };
-            }
-            if (
-              current?.gateway_payment_link_id &&
-              current.gateway_payment_link_id !==
-                payload.gateway_payment_link_id
-            ) {
-              return {
-                select: () => ({
-                  single: async () => ({
-                    data: null,
-                    error: new Error("link canonico divergente"),
-                  }),
-                }),
-              };
-            }
-            const next: Record<string, any> = {
-              id: current?.id || `inscription-${rows.size + 1}`,
-              ...(current || {}),
-              ...payload,
-            };
-            // Espelha a protecao monotona criada pela migration.
-            if (current?.status === "PAGO" && payload.status !== "PAGO") {
-              next.status = "PAGO";
-            } else if (
-              current?.status === "CANCELADO" &&
-              !["PAGO", "CANCELADO"].includes(payload.status)
-            ) {
-              next.status = "CANCELADO";
-            }
-            if (next.status === "PAGO") {
-              next.pago_em = current?.pago_em || payload.pago_em;
-              next.confirmado_em = current?.confirmado_em ||
-                payload.confirmado_em;
-              next.erro = null;
-            }
-            rows.set(key, next);
-            return {
-              select() {
-                return {
-                  single: async () => ({
-                    data: { id: next.id, status: next.status },
-                    error: null,
-                  }),
-                };
-              },
-            };
-          },
-        };
-      }
-
-      if (table === "payment_gateway_transactions") {
-        return {
-          update(payload: Record<string, any>) {
-            const filters: Record<string, any> = {};
-            const query = {
-              eq(column: string, value: unknown) {
-                filters[column] = value;
-                return query;
-              },
-              select() {
-                return query;
-              },
-              async maybeSingle() {
-                transactionLinks.push({ payload, filters });
-                return { data: null, error: null };
-              },
-              then(resolve: (value: unknown) => unknown) {
-                transactionLinks.push({ payload, filters });
-                return Promise.resolve({ error: null }).then(resolve);
-              },
-            };
-            return query;
-          },
-        };
-      }
-
-      throw new Error(`Tabela inesperada no teste: ${table}`);
-    },
-  };
-
-  return { admin, rows, upserts, transactionLinks };
-};
+import { createOnlineInscriptionAdmin as createAdmin } from "./online-inscription.fixture.ts";
 
 const academic = {
   course: { id: "course-1", nome: "Curso" },
@@ -205,7 +81,7 @@ Deno.test("link existente sem inscricao cria somente a projecao local", async ()
   );
 });
 
-Deno.test("upserts concorrentes convergem para uma inscricao por matricula", async () => {
+Deno.test("inserts concorrentes convergem para uma inscricao legada por recebível", async () => {
   const runtime = createAdmin();
 
   const results = await Promise.all([

@@ -27,6 +27,7 @@ const bankTitle = {
   NumeroLinhaDigitavel: fixture.digitableLine,
   NumeroCodigoBarras: fixture.barcode,
   ValorNominal: fixture.amount, DataVencimento: fixture.dueDate,
+  DataLimitePagamento: "2027-02-14",
   CodigoSituacaoBoleto: 3,
   Pagador: { TipoPessoa: "F", NumeroCPFCNPJ: fixture.payer.document },
 };
@@ -59,6 +60,7 @@ const fakeAdmin = (changes: Record<string, unknown> = {}) => {
 const withOfficialQuery = async (
   title: Record<string, unknown>,
   work: (query: typeof queryBaneseBoleto, requests: string[]) => Promise<void>,
+  paymentResponse?: { status: number; body: unknown },
 ) => {
   const originalFetch = globalThis.fetch;
   const requests: string[] = [];
@@ -66,13 +68,15 @@ const withOfficialQuery = async (
     const url = input instanceof Request ? input.url : String(input);
     requests.push(`${init?.method ?? "GET"} ${url.endsWith("/pagamentos/efetivados") ? "payments" : "title"}`);
     return new Response(JSON.stringify(url.endsWith("/pagamentos/efetivados")
+      && paymentResponse ? paymentResponse.body : url.endsWith("/pagamentos/efetivados")
       ? { PagamentosEfetivados: [{ ValorPago: fixture.amount - 10, DataPagamento: fixture.dueDate,
         CPF: fixture.payer.document, token: "never-expose-this-token", "unsafe-key": "private" }] }
-      : title));
+      : title), { status: url.endsWith("/pagamentos/efetivados") ? paymentResponse?.status ?? 200 : 200 });
   };
   const query: typeof queryBaneseBoleto = (admin, environment, input) => {
     assert.equal(input.recoverPix, false);
     assert.equal(input.skipEffectivePaymentsWhenOfficiallyUnpaid, false);
+    assert.equal(input.strictEffectivePayments, true);
     assert.equal(input.validateTitleIdentity, true);
     return queryBaneseBoleto(admin, environment, {
       ...input, accessToken: { accessToken: "synthetic-token", tokenType: "Bearer", expiresIn: 3600, scope: null, raw: null },
@@ -88,6 +92,8 @@ Deno.test("diagnóstico consulta somente GETs, mostra divergência sem baixar e 
     assert.deepEqual(requests, ["GET title", "GET payments"]);
     assert.equal(result.readOnly, true);
     assert.equal(result.paid, true);
+    assert.equal(result.strictEffectivePayments, true);
+    assert.equal(result.lastPaymentDate, "2027-02-14");
     assert.equal(result.amount, fixture.amount - 10);
     assert.equal(result.paymentDate, fixture.dueDate);
     assert.equal(result.withinCalculatedRange, false);
@@ -100,6 +106,25 @@ Deno.test("diagnóstico consulta somente GETs, mostra divergência sem baixar e 
     }
     assert.equal(calls.some((name) => /queue|attempt|run/.test(name)), false);
   });
+});
+
+Deno.test("diagnóstico strict não infere não pago de 404 ou envelope bancário incompleto", async () => {
+  for (const response of [{ status: 404, body: {} },
+    { status: 200, body: { PagamentosEfetivados: [] , Erros: [{ CodigoErroProcessamento: "500" }] } },
+    { status: 200, body: { unexpected: true } }]) {
+    await withOfficialQuery(bankTitle, async (query, requests) => {
+      await assert.rejects(() => diagnoseBaneseReceivable(fakeAdmin().admin, receivableId, query), /PagamentosEfetivados/);
+      assert.deepEqual(requests, ["GET title", "GET payments"]);
+    }, response);
+  }
+});
+
+Deno.test("diagnóstico recusa data limite ausente ou inválida sem persistir", async () => {
+  for (const DataLimitePagamento of [undefined, "2026-02-30", "2000-01-01"]) {
+    await withOfficialQuery({ ...bankTitle, DataLimitePagamento }, async (query) => {
+      await assert.rejects(() => diagnoseBaneseReceivable(fakeAdmin().admin, receivableId, query), /RECEIPT_DEADLINE/);
+    });
+  }
 });
 
 Deno.test("diagnóstico rejeita CPF remoto ausente/divergente antes de pagamentos", async () => {
@@ -150,7 +175,7 @@ Deno.test("diagnóstico inválido/erro nunca cai na manutenção ou conciliaçã
 });
 
 Deno.test("entrada autentica antes do diagnóstico e retorna antes de toda manutenção", async () => {
-  const source = await Deno.readTextFile(new URL("./index.ts", import.meta.url));
+  const source = await Deno.readTextFile(new URL("./handler.ts", import.meta.url));
   const auth = source.indexOf("if (!safeEqual(requestSecret, configuredSecret))");
   const diagnostic = source.indexOf("const diagnostic = await handleDiagnosticRequest(req, admin)");
   const earlyReturn = source.indexOf("if (diagnostic) return diagnostic");

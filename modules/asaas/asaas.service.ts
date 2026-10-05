@@ -1,3 +1,4 @@
+import type { PublicCheckoutResult } from './checkout-result';
 import { supabase } from '../../lib/supabase';
 import {
   buildEnrollmentSyncPayload,
@@ -234,121 +235,18 @@ export const asaasIntegrationService = {
     turmaId?: string | null,
     paymentSelection?: CheckoutPaymentSelection,
     receivableId?: string | null,
-  ): Promise<{
-    url: string;
-    presentation?: 'BOLETO' | 'PIX';
-    presentationFallbackReason?: 'PIX_UNAVAILABLE_USE_BOLETO';
-    alreadyPaid?: boolean;
-    alreadyPending?: boolean;
-    awaitingWebhook?: boolean;
-    matriculaId?: string;
-    receivableId?: string;
-    payment?: {
-      id?: string | null;
-      provider?: string | null;
-      method?: string | null;
-      installments?: number | null;
-      status?: string | null;
-      value?: number | null;
-      displayValue?: string | null;
-      dueDate?: string | null;
-      invoiceUrl?: string | null;
-      bankSlipUrl?: string | null;
-      courseName?: string | null;
-      recipient?: {
-        name?: string | null;
-        document?: string | null;
-      } | null;
-      pixQrCode?: {
-        encodedImage?: string | null;
-        payload?: string | null;
-        expirationDate?: string | null;
-      } | null;
-    };
-  }> {
-    const payload = {
-      courseId,
-      alunoId,
-      turmaId,
+    requestId: string = crypto.randomUUID(),
+  ): Promise<PublicCheckoutResult> {
+    const result = await invokeFunction<PublicCheckoutResult>('payment-checkout', {
+      courseId, alunoId, turmaId, receivableId, requestId,
       method: paymentSelection?.method,
       paymentMethod: paymentSelection?.method,
       installments: paymentSelection?.installments,
       eadPaymentMethod: paymentSelection?.method,
       eadInstallments: paymentSelection?.installments,
       presentation: paymentSelection?.presentation,
-      receivableId,
-    };
-
-    let result: {
-      url: string;
-      presentation?: 'BOLETO' | 'PIX';
-      presentationFallbackReason?: 'PIX_UNAVAILABLE_USE_BOLETO';
-      alreadyPaid?: boolean;
-      alreadyPending?: boolean;
-      awaitingWebhook?: boolean;
-      matriculaId?: string;
-      receivableId?: string;
-      payment?: {
-        id?: string | null;
-        provider?: string | null;
-        method?: string | null;
-        installments?: number | null;
-        status?: string | null;
-        value?: number | null;
-        displayValue?: string | null;
-        dueDate?: string | null;
-        invoiceUrl?: string | null;
-        bankSlipUrl?: string | null;
-        courseName?: string | null;
-        recipient?: {
-          name?: string | null;
-          document?: string | null;
-        } | null;
-        pixQrCode?: {
-          encodedImage?: string | null;
-          payload?: string | null;
-          expirationDate?: string | null;
-        } | null;
-      };
-    };
-
-    result = await invokeFunction<{
-      url: string;
-      presentation?: 'BOLETO' | 'PIX';
-      presentationFallbackReason?: 'PIX_UNAVAILABLE_USE_BOLETO';
-      alreadyPaid?: boolean;
-      alreadyPending?: boolean;
-      awaitingWebhook?: boolean;
-      matriculaId?: string;
-      receivableId?: string;
-      payment?: {
-        id?: string | null;
-        provider?: string | null;
-        method?: string | null;
-        installments?: number | null;
-        status?: string | null;
-        value?: number | null;
-        displayValue?: string | null;
-        dueDate?: string | null;
-        invoiceUrl?: string | null;
-        bankSlipUrl?: string | null;
-        courseName?: string | null;
-        recipient?: {
-          name?: string | null;
-          document?: string | null;
-        } | null;
-        pixQrCode?: {
-          encodedImage?: string | null;
-          payload?: string | null;
-          expirationDate?: string | null;
-        } | null;
-      };
-    }>('payment-checkout', payload);
-
-    if (!result?.url) {
-      throw new Error('Resposta do checkout sem URL do pagamento.');
-    }
-
+    });
+    if (!result?.url) throw new Error('Resposta do checkout sem URL do pagamento.');
     return result;
   },
 
