@@ -10,6 +10,7 @@ Histórico anterior: [16/09/2026 a 25/09/2026 — versões 4.8.65 a 4.8.90](./ch
 - Nova compra preserva a matrícula e o boleto anterior; pagamento tardio recupera o recebimento original e protege tentativas concorrentes.
 - Pagamentos duplicados permanecem na receita e entram em revisão com vínculo auditado de devolução já paga e comprovada.
 - Worker dedicado e calendário verificado por polo; estados pendentes e falhas bancárias continuam fora da inadimplência.
+- Prestação mensal evita replanejar a prova EAD em cobranças comuns, corrigindo o timeout observado na implantação.
 
 ## [4.8.167] - 2026-10-04
 

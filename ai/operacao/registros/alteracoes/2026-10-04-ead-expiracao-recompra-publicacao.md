@@ -42,6 +42,7 @@ e o evento “Ativou expiração EAD opcional” são a evidência de ativação
 - `supabase/migrations/20261005020046_ead_attempt_release_legacy_singletons.sql`
 - `supabase/migrations/20261005020048_schedule_ead_checkout_expiration.sql`
 - `supabase/migrations/20261005020051_release_ead_checkout_lifecycle.sql`
+- `supabase/migrations/20261005021410_cache_optional_ead_financial_classifiers.sql`
 - `supabase/tests/ead_checkout_expiration.fixture.sql`
 - `supabase/tests/ead_checkout_expiration_test_setup.mjs`
 - `supabase/tests/ead_checkout_expiration.isolated.test.mjs`
@@ -49,6 +50,7 @@ e o evento “Ativou expiração EAD opcional” são a evidência de ativação
 - `supabase/tests/ead_checkout_attempts.fixture.sql`
 - `supabase/tests/ead_checkout_attempts.isolated.test.mjs`
 - `supabase/tests/ead_expiration_schedule.isolated.test.mjs`
+- `supabase/tests/ead_financial_classifier_cache.isolated.test.mjs`
 - `supabase/functions/banese-ead-checkout-expiration-worker/index.ts`
 - `supabase/functions/banese-reconciliation-worker/ead-checkout-expiration-handler.ts`
 - `supabase/functions/banese-reconciliation-worker/ead-checkout-expiration-handler.test.ts`
@@ -104,7 +106,7 @@ e o evento “Ativou expiração EAD opcional” são a evidência de ativação
 - `ai/operacao/qualidade/limite-linhas-manifestos.json`
 - `ai/operacao/registros/alteracoes/2026-10-04-ead-expiracao-recompra-publicacao.md`
 
-Total: 75 arquivos.
+Total: 77 arquivos.
 
 ## Sequência de implantação
 
@@ -134,6 +136,19 @@ Build, TypeScript e lint focado passaram. Ensaios PostgreSQL/WASM cobrem emissã
 replay, margem, processamento, intenção/timeout, recuperação, recompra, corrida entre
 emissão e pagamento antigo, duas receitas/um acesso, devolução e autorização por polo.
 Comparação independente de 1.029 combinações SQL/TypeScript: zero divergências.
+
+A implantação revelou timeout de oito segundos na prestação mensal: os wrappers
+SQL planejavam a prova legada para 1.546 lançamentos, embora apenas quatro fossem
+candidatos. A migration corretiva preserva os OIDs e critérios e usa statements
+PL/pgSQL reutilizados, com filtros equivalentes antes da prova legada.
+Regressão independente: 129 combinações, histórico, natureza durável e receitas
+preservados; 2.000 cobranças comuns não consultam a prova legada pesada.
+As migrations anteriores já aplicadas permanecem imutáveis.
+Aceite real interno após a corretiva: RPC mensal completa com o perfil do gestor,
+Matriz, outubro e três meses de histórico, sob statement_timeout de oito segundos.
+Execução PostgreSQL: 486,688 ms; payload v2 no polo correto, três competências,
+R$ 2.847,02 recebidos em 11 registros, base R$ 41.994,50 e atraso R$ 0,00.
+O aumento de recebimentos corresponde aos dados atuais, sem fixture financeira.
 
 Regressões executadas nos pacotes efetivos, com banco simulado: worker 47,
 checkout 40, gateway API 24, Asaas 24, checkout API 22, webhook 17 e novo worker 24.
