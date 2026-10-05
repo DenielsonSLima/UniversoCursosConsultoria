@@ -33,6 +33,7 @@ export const queryBaneseBoleto = async (
     accessToken?: BaneseAccessToken;
     recoverPix?: boolean;
     skipEffectivePaymentsWhenOfficiallyUnpaid?: boolean;
+    strictEffectivePayments?: boolean;
     validateTitleIdentity?: boolean;
     expectedAmount?: unknown;
     expectedDueDate?: unknown;
@@ -155,6 +156,7 @@ export const queryBaneseBoleto = async (
   const remoteStatus = BANESE_BOLETO_STATUS[situationCode] || "UNKNOWN";
   const officiallyUnpaid = [2, 4, 5, 6, 7, 8].includes(situationCode);
   const skipPayments =
+    input.strictEffectivePayments !== true &&
     input.skipEffectivePaymentsWhenOfficiallyUnpaid === true &&
     officiallyUnpaid;
   const { payments, raw: paymentsRaw, error: paymentsError } = skipPayments
@@ -167,6 +169,7 @@ export const queryBaneseBoleto = async (
       baseEndpoint,
       token,
       signal: input.signal,
+      strict: input.strictEffectivePayments === true,
       allowFailure: Boolean(
         recoveredPix?.pixPayload && recoveredPix.pixEncodedImage,
       ),

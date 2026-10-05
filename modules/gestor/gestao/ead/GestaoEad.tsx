@@ -12,8 +12,9 @@ import TurmaEadDetalhes from './detalhes/TurmaEadDetalhes';
 import { invalidateSiteTickerQueries } from '../../../public/siteTicker.keys';
 import { useGestaoCursos } from '../hooks/useGestaoCursos';
 import { gestaoQueryKeys } from '../gestao.query-keys';
-import type { GestorPermissions } from '../../access-control';
+import { canAccessGestaoTurmaTab, canAccessGestorModule, type GestorPermissions } from '../../access-control';
 import GestaoDataError from '../components/GestaoDataError';
+import EadPaymentReviewPanel from './components/EadPaymentReviewPanel';
 
 interface GestaoEadProps {
   onToggleDetails?: (isOpen: boolean) => void;
@@ -100,6 +101,7 @@ const GestaoEad: React.FC<GestaoEadProps> = ({ onToggleDetails, permissions }) =
       <TurmasFilters {...list} onSearchChange={list.setSearch} onDataInicialChange={list.setDataInicial}
         onDataFinalChange={list.setDataFinal} onSortByChange={list.changeSortBy}
         onApply={list.applyFilters} onPageChange={list.setPage} />
+      {canAccessGestorModule(permissions, 'financeiro') && canAccessGestaoTurmaTab(permissions, 'financeiro') && <EadPaymentReviewPanel />}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         {list.loading ? (

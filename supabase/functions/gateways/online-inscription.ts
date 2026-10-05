@@ -1,252 +1,6 @@
-export const ONLINE_INSCRIPTION_PENDING_STATUS = "AGUARDANDO_PAGAMENTO";
-
-export type OnlineInscriptionStatus =
-  | "AGUARDANDO_PAGAMENTO"
-  | "PAGO"
-  | "CANCELADO"
-  | "ERRO";
-
-export type OnlineInscriptionAcademicSnapshot = {
-  course?: any;
-  turma?: any;
-  aluno?: any;
-  matricula?: any;
-  technicalSchoolSnapshot?: Record<string, unknown>;
-};
-
-export type RepairOnlineInscriptionInput = {
-  admin: any;
-  receivable: any;
-  gatewayProvider?: string | null;
-  environment?: string | null;
-  paymentId?: string | null;
-  customerId?: string | null;
-  paymentLinkId?: string | null;
-  localStatus?: string | null;
-  legacyPaymentMethod?: string | null;
-  pendingStatus?: string | null;
-  paidAt?: string | null;
-  errorMessage?: string | null;
-  academic?: OnlineInscriptionAcademicSnapshot;
-  requireGatewayTransaction?: boolean;
-};
-
-type ExistingOnlineInscriptionIdentity = {
-  id?: string | null;
-  matricula_id?: string | null;
-  receivable_id?: string | null;
-  gateway_provider?: string | null;
-  gateway_environment?: string | null;
-  gateway_payment_id?: string | null;
-  gateway_payment_link_id?: string | null;
-  asaas_payment_id?: string | null;
-  asaas_payment_link_id?: string | null;
-};
-
-const PROVIDERS = new Set(["asaas", "mercado_pago", "banese_card"]);
-const ENVIRONMENTS = new Set(["sandbox", "production"]);
-
-const firstString = (...values: unknown[]) => {
-  for (const value of values) {
-    const candidate = String(value ?? "").trim();
-    if (candidate) return candidate;
-  }
-  return null;
-};
-
-const onlyDigits = (value: unknown) =>
-  String(value ?? "").replace(/\D/g, "") || null;
-
-export const normalizeGatewayPaymentIdentity = (
-  providerCodeValue: unknown,
-  value: unknown,
-) => {
-  const candidate = firstString(value);
-  if (!candidate) return null;
-  const providerCode = firstString(providerCodeValue)?.toLowerCase();
-  if (providerCode !== "banese_card" || !/^\d{1,9}$/.test(candidate)) {
-    return candidate;
-  }
-  return candidate.padStart(9, "0");
-};
-
-export const hasRepairableOnlineInscriptionIdentity = (receivable: any) => {
-  const providerCode = firstString(receivable?.gateway_provider)?.toLowerCase();
-  const environment = firstString(receivable?.gateway_environment)
-    ?.toLowerCase();
-  return Boolean(
-    receivable?.id &&
-      receivable?.matricula_id &&
-      providerCode && PROVIDERS.has(providerCode) &&
-      environment && ENVIRONMENTS.has(environment) &&
-      firstString(
-        receivable?.gateway_payment_id,
-        receivable?.gateway_payment_link_id,
-        providerCode === "asaas" ? receivable?.asaas_payment_id : null,
-        providerCode === "asaas" ? receivable?.asaas_payment_link_id : null,
-        receivable?.gateway_boleto_nosso_numero,
-      ),
-  );
-};
-
-export const normalizeOnlineInscriptionStatus = (
-  value: unknown,
-  pendingStatus: unknown = ONLINE_INSCRIPTION_PENDING_STATUS,
-): OnlineInscriptionStatus => {
-  const normalized = String(value || "").trim().toUpperCase();
-  if (normalized === "PAGO") return "PAGO";
-  if (["CANCELADO", "CANCELLED", "CANCELED"].includes(normalized)) {
-    return "CANCELADO";
-  }
-  if (normalized === "ERRO") return "ERRO";
-  const normalizedPending = String(pendingStatus || "").trim().toUpperCase();
-  return normalizedPending === "AGUARDANDO_PAGAMENTO"
-    ? "AGUARDANDO_PAGAMENTO"
-    : ONLINE_INSCRIPTION_PENDING_STATUS;
-};
-
-export const assertCompatibleOnlineInscriptionIdentity = (input: {
-  existing?: ExistingOnlineInscriptionIdentity | null;
-  matriculaId: string;
-  receivableId: string;
-  providerCode: string;
-  environment: string;
-  paymentId: string | null;
-  paymentLinkId: string | null;
-}) => {
-  const existing = input.existing;
-  if (!existing?.id) {
-    return {
-      paymentId: input.paymentId || input.paymentLinkId,
-      paymentLinkId: input.paymentLinkId,
-    };
-  }
-
-  const assertImmutable = (
-    label: string,
-    current: unknown,
-    incoming: unknown,
-  ) => {
-    const currentValue = firstString(current);
-    const incomingValue = firstString(incoming);
-    if (currentValue && incomingValue && currentValue !== incomingValue) {
-      throw new Error(
-        `A inscricao online ja possui ${label} canonico diferente; a segunda cobranca foi recusada.`,
-      );
-    }
-  };
-
-  assertImmutable("matricula", existing.matricula_id, input.matriculaId);
-  assertImmutable("recebivel", existing.receivable_id, input.receivableId);
-  assertImmutable("provedor", existing.gateway_provider, input.providerCode);
-  assertImmutable(
-    "ambiente",
-    existing.gateway_environment,
-    input.environment,
-  );
-  assertImmutable(
-    "link de pagamento",
-    firstString(
-      existing.gateway_payment_link_id,
-      input.providerCode === "asaas" ? existing.asaas_payment_link_id : null,
-    ),
-    input.paymentLinkId,
-  );
-
-  const existingLinkId = firstString(
-    existing.gateway_payment_link_id,
-    input.providerCode === "asaas" ? existing.asaas_payment_link_id : null,
-  );
-  const paymentLinkId = firstString(input.paymentLinkId, existingLinkId);
-  const existingPaymentId = normalizeGatewayPaymentIdentity(
-    input.providerCode,
-    firstString(
-      existing.gateway_payment_id,
-      input.providerCode === "asaas" ? existing.asaas_payment_id : null,
-    ),
-  );
-  const incomingPaymentId = normalizeGatewayPaymentIdentity(
-    input.providerCode,
-    input.paymentId,
-  );
-  if (
-    existingPaymentId && incomingPaymentId &&
-    existingPaymentId !== incomingPaymentId
-  ) {
-    const promotesLinkPlaceholder = Boolean(
-      existingLinkId &&
-        existingPaymentId === existingLinkId &&
-        paymentLinkId === existingLinkId,
-    );
-    if (!promotesLinkPlaceholder) {
-      throw new Error(
-        "A inscricao online ja possui pagamento remoto canonico diferente; a segunda cobranca foi recusada.",
-      );
-    }
-  }
-
-  return {
-    paymentId: incomingPaymentId || existingPaymentId || paymentLinkId,
-    paymentLinkId,
-  };
-};
-
-const assertStrongIdentity = (input: {
-  receivable: any;
-  matriculaId: string | null;
-  providerCode: string | null;
-  environment: string | null;
-  remoteIdentity: string | null;
-}) => {
-  if (!input.receivable?.id) {
-    throw new Error(
-      "Nao e possivel reparar a inscricao online sem o recebivel canonico.",
-    );
-  }
-  if (!input.matriculaId) {
-    throw new Error(
-      "Nao e possivel reparar a inscricao online sem a matricula canonica.",
-    );
-  }
-  if (!input.providerCode || !PROVIDERS.has(input.providerCode)) {
-    throw new Error("Provedor invalido ao reparar a inscricao online.");
-  }
-  if (!input.environment || !ENVIRONMENTS.has(input.environment)) {
-    throw new Error("Ambiente invalido ao reparar a inscricao online.");
-  }
-  if (!input.remoteIdentity) {
-    throw new Error(
-      "A inscricao online so pode ser reparada depois que a cobranca remota estiver identificada.",
-    );
-  }
-
-  const receivableMatriculaId = firstString(input.receivable.matricula_id);
-  if (
-    receivableMatriculaId && receivableMatriculaId !== input.matriculaId
-  ) {
-    throw new Error(
-      "A matricula informada nao pertence ao recebivel usado no reparo da inscricao online.",
-    );
-  }
-  const receivableProvider = firstString(
-    input.receivable.gateway_provider,
-  )?.toLowerCase() || null;
-  if (receivableProvider && receivableProvider !== input.providerCode) {
-    throw new Error(
-      "O provedor da inscricao diverge do provedor do recebivel canonico.",
-    );
-  }
-  const receivableEnvironment = firstString(
-    input.receivable.gateway_environment,
-  )?.toLowerCase() || null;
-  if (
-    receivableEnvironment && receivableEnvironment !== input.environment
-  ) {
-    throw new Error(
-      "O ambiente da inscricao diverge do ambiente do recebivel canonico.",
-    );
-  }
-};
+import { assertCompatibleOnlineInscriptionIdentity, assertStrongIdentity, firstString, onlyDigits, normalizeOnlineInscriptionStatus, type RepairOnlineInscriptionInput, type ExistingOnlineInscriptionIdentity, type OnlineInscriptionStatus } from "./online-inscription-identity.ts";
+export { ONLINE_INSCRIPTION_PENDING_STATUS, normalizeGatewayPaymentIdentity, hasRepairableOnlineInscriptionIdentity, normalizeOnlineInscriptionStatus, assertCompatibleOnlineInscriptionIdentity } from "./online-inscription-identity.ts";
+export type { OnlineInscriptionStatus, OnlineInscriptionAcademicSnapshot, RepairOnlineInscriptionInput } from "./online-inscription-identity.ts";
 
 const loadAcademicSnapshot = async (
   input: RepairOnlineInscriptionInput,
@@ -325,15 +79,31 @@ const loadExistingIdentity = async (
   input: RepairOnlineInscriptionInput,
   matriculaId: string,
 ) => {
-  const { data, error } = await input.admin
+  let query = input.admin
     .from("inscricoes_online")
     .select(
-      "id, matricula_id, receivable_id, gateway_provider, gateway_environment, gateway_payment_id, gateway_payment_link_id, asaas_payment_id, asaas_payment_link_id",
-    )
-    .eq("matricula_id", matriculaId)
-    .maybeSingle();
+      "id, matricula_id, receivable_id, ead_checkout_attempt_id, updated_at, gateway_provider, gateway_environment, gateway_payment_id, gateway_payment_link_id, asaas_payment_id, asaas_payment_link_id",
+    );
+  query = input.receivable.ead_checkout_attempt_id
+    ? query.eq("receivable_id", input.receivable.id)
+    : query.eq("matricula_id", matriculaId).is("ead_checkout_attempt_id", null);
+  const { data, error } = await query.maybeSingle();
   if (error) throw error;
   return (data || null) as ExistingOnlineInscriptionIdentity | null;
+};
+
+const persistInscription = async (
+  input: RepairOnlineInscriptionInput,
+  payload: Record<string, unknown>,
+  existing: ExistingOnlineInscriptionIdentity | null,
+) => {
+  if (existing?.id) {
+    let update = input.admin.from("inscricoes_online").update(payload)
+      .eq("id", existing.id).eq("matricula_id", payload.matricula_id);
+    update = existing.updated_at ? update.eq("updated_at", existing.updated_at) : update.is("updated_at", null);
+    return await update.select("id, status").maybeSingle();
+  }
+  return await input.admin.from("inscricoes_online").insert(payload).select("id, status").single();
 };
 
 const linkGatewayTransaction = async (
@@ -368,7 +138,8 @@ const linkGatewayTransaction = async (
 
 /**
  * Reconstroi a projecao de inscricoes_online a partir do recebivel que ja
- * possui identidade remota. A unicidade por matricula torna o UPSERT atomico:
+ * possui identidade remota. A identidade existente é atualizada por CAS;
+ * inserts concorrentes convergem pela unicidade global do recebível.
  * retries e requisicoes concorrentes convergem para a mesma linha sem criar
  * uma segunda cobranca.
  */
@@ -417,6 +188,7 @@ export const repairOnlineInscription = async (
     environment: environment!,
     paymentId: proposedPaymentId,
     paymentLinkId: proposedPaymentLinkId,
+    attemptId: input.receivable.ead_checkout_attempt_id || null,
   });
   const paymentId = compatibleIdentity.paymentId;
   const paymentLinkId = compatibleIdentity.paymentLinkId;
@@ -447,6 +219,10 @@ export const repairOnlineInscription = async (
   }
 
   const payload: Record<string, unknown> = {
+    ...(existingIdentity?.id ? { id: existingIdentity.id } : {}),
+    ...(input.receivable.ead_checkout_attempt_id
+      ? { ead_checkout_attempt_id: input.receivable.ead_checkout_attempt_id }
+      : {}),
     ...(input.academic?.technicalSchoolSnapshot || {}),
     curso_id: academic.course.id,
     turma_id: academic.turma.id,
@@ -486,11 +262,15 @@ export const repairOnlineInscription = async (
     updated_at: now,
   };
 
-  const { data, error } = await input.admin
-    .from("inscricoes_online")
-    .upsert(payload, { onConflict: "matricula_id" })
-    .select("id, status")
-    .single();
+  let { data, error } = await persistInscription(input, payload, existingIdentity);
+  if (error?.code === "23505" && !existingIdentity?.id) {
+    const winner = await loadExistingIdentity(input, matriculaId!);
+    if (!winner?.id) throw new Error("Outra inscrição foi criada. Atualize a compra antes de tentar novamente.");
+    assertCompatibleOnlineInscriptionIdentity({ existing: winner, matriculaId: matriculaId!,
+      receivableId: String(input.receivable.id), providerCode: providerCode!, environment: environment!,
+      paymentId, paymentLinkId, attemptId: input.receivable.ead_checkout_attempt_id || null });
+    ({ data, error } = await persistInscription(input, { ...payload, id: winner.id }, winner));
+  }
   if (error) {
     throw new Error(
       `Nao foi possivel reparar a inscricao online: ${

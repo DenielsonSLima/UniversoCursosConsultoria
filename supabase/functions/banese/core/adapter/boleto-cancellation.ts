@@ -1,5 +1,10 @@
 import { requestBaneseBoletoAccessToken } from "./auth.ts";
 import { queryBaneseBoleto } from "./boleto-query.ts";
+import { assertBaneseLastPaymentDate } from "../../internal/receipt-deadline.ts";
+import {
+  bankRejectedCancellationForProcessingPayment,
+  BaneseBoletoPaymentProcessingError,
+} from "./boleto-cancellation-processing.ts";
 import {
   assertBaneseFinancialTermsEqual,
 } from "../../internal/financial-terms-response.ts";
@@ -38,7 +43,9 @@ export type CancelBaneseBoletoInput = {
   expectedDigitableLine?: unknown;
   expectedBarcode?: unknown;
   expectedFinancialTerms?: BaneseFinancialTermsInput;
+  expectedLastPaymentDate?: string;
   signal?: AbortSignal;
+  strictEffectivePayments?: boolean;
 };
 
 const identityOptions = (input: CancelBaneseBoletoInput) => ({
@@ -52,6 +59,7 @@ const identityOptions = (input: CancelBaneseBoletoInput) => ({
   expectedCompanyTitleId: input.expectedCompanyTitleId,
   expectedPayerDocument: input.expectedPayerDocument,
   signal: input.signal,
+  strictEffectivePayments: input.strictEffectivePayments === true,
 });
 
 const assertLocalBankNumbers = (
@@ -99,6 +107,14 @@ const assertExpectedFinancialTerms = (
   }
 };
 
+const assertExpectedReceiptDeadline = (
+  snapshot: Awaited<ReturnType<typeof queryBaneseBoleto>>,
+  input: CancelBaneseBoletoInput,
+) => {
+  if (input.expectedLastPaymentDate === undefined) return;
+  assertBaneseLastPaymentDate(snapshot.raw, String(input.expectedDueDate ?? ""), input.expectedLastPaymentDate);
+};
+
 export const cancelBaneseBoleto = async (
   admin: SupabaseAdminRpcClient,
   environment: Environment,
@@ -120,6 +136,7 @@ export const cancelBaneseBoleto = async (
   });
   assertLocalBankNumbers(current.raw, input);
   assertExpectedFinancialTerms(current, input);
+  assertExpectedReceiptDeadline(current, input);
   if (current.paymentsError) {
     throw new BaneseAdapterError(
       "Nao foi possivel confirmar PagamentosEfetivados antes da baixa Banese.",
@@ -184,7 +201,9 @@ export const cancelBaneseBoleto = async (
     }),
     input.signal,
   );
-  await awaitBaneseRead(readResponseBody(response), input.signal);
+  const cancellationResponse = await awaitBaneseRead(
+    readResponseBody(response), input.signal,
+  );
 
   const confirmed = await queryBaneseBoleto(admin, environment, {
     convenio,
@@ -193,6 +212,7 @@ export const cancelBaneseBoleto = async (
   });
   assertLocalBankNumbers(confirmed.raw, input);
   assertExpectedFinancialTerms(confirmed, input);
+  assertExpectedReceiptDeadline(confirmed, input);
   if (confirmed.paymentsError) {
     throw new BaneseAdapterError(
       "Nao foi possivel confirmar PagamentosEfetivados depois da baixa Banese.",
@@ -204,6 +224,10 @@ export const cancelBaneseBoleto = async (
     );
   }
   if (confirmed.situationCode !== 5) {
+    if (confirmed.situationCode === 2 && confirmed.payments.length === 0 &&
+      bankRejectedCancellationForProcessingPayment(cancellationResponse)) {
+      throw new BaneseBoletoPaymentProcessingError();
+    }
     const requestStatus = response.ok
       ? "aceita"
       : `recusada (${response.status})`;

@@ -3,6 +3,7 @@ import type {
   GatewayPaymentMethod,
   GatewayProviderCode,
 } from "../router.ts";
+import type { EadCheckoutAttempt } from "./ead-checkout-attempt.ts";
 
 export type { GatewayEnvironment, GatewayPaymentMethod, GatewayProviderCode };
 
@@ -57,4 +58,5 @@ export type EadCheckoutContext = CheckoutRuntime & {
   matricula: any;
   charge: EadCharge;
   route: CheckoutRoute;
+  checkoutAttempt?: EadCheckoutAttempt;
 };

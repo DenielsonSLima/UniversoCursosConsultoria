@@ -1,0 +1,72 @@
+name: Ciclo seguro da compra EAD
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/**ead**'
+      - 'supabase/tests/**ead**'
+      - 'supabase/functions/banese/**'
+      - 'supabase/functions/banese-reconciliation-worker/**'
+      - 'supabase/functions/banese-ead-checkout-expiration-worker/**'
+      - 'supabase/functions/gateways/**'
+      - 'modules/aluno/cursos/**'
+      - 'modules/gestor/gestao/ead/**'
+      - '.github/workflows/ead-checkout-lifecycle.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**ead**'
+      - 'supabase/tests/**ead**'
+      - 'supabase/functions/banese/**'
+      - 'supabase/functions/banese-reconciliation-worker/**'
+      - 'supabase/functions/banese-ead-checkout-expiration-worker/**'
+      - 'supabase/functions/gateways/**'
+      - 'modules/aluno/cursos/**'
+      - 'modules/gestor/gestao/ead/**'
+      - '.github/workflows/ead-checkout-lifecycle.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  ead-lifecycle:
+    name: Expiração, recompra e recuperação EAD
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.1
+      - name: Preparar PostgreSQL isolado
+        run: npm install --prefix "$RUNNER_TEMP/ead-lifecycle-qa" --no-audit --no-fund @electric-sql/pglite@0.5.8
+      - name: Contratos financeiros e permissões em PostgreSQL
+        env:
+          PGLITE_MODULE_PATH: ${{ runner.temp }}/ead-lifecycle-qa/node_modules/@electric-sql/pglite/dist/index.js
+        run: |
+          node supabase/tests/ead_checkout_expiration.isolated.test.mjs
+          node supabase/tests/ead_checkout_expiration_release_gate.isolated.test.mjs
+          node supabase/tests/ead_checkout_attempts.isolated.test.mjs
+          node supabase/tests/ead_expiration_schedule.isolated.test.mjs
+      - name: Banco e checkout com respostas simuladas
+        run: |
+          deno test --no-config --allow-read --allow-env --sloppy-imports \
+            supabase/functions/banese-reconciliation-worker/ead-checkout-expiration.test.ts \
+            supabase/functions/banese-reconciliation-worker/ead-checkout-expiration-lifecycle.test.ts \
+            supabase/functions/banese-reconciliation-worker/ead-checkout-payment-recovery.test.ts \
+            supabase/functions/banese-reconciliation-worker/ead-checkout-expiration-handler.test.ts \
+            supabase/functions/banese-reconciliation-worker/diagnostic.test.ts \
+            supabase/functions/banese/core/adapter/boleto-payment-query-strict.test.ts \
+            supabase/functions/banese/core/adapter/boleto-cancellation-processing.test.ts \
+            supabase/functions/banese/core/adapter/boleto-query-receipt-deadline.test.ts \
+            supabase/functions/banese/internal/receipt-deadline.test.ts \
+            supabase/functions/gateways/checkout/ead-context.test.ts \
+            supabase/functions/gateways/checkout/ead-checkout-attempt.test.ts \
+            supabase/functions/gateways/online-inscription.test.ts \
+            supabase/functions/gateways/online-inscription-attempts.test.ts
+      - name: Estados do aluno e devolução comprovada
+        run: node --test modules/aluno/cursos/eadPurchaseState.test.ts

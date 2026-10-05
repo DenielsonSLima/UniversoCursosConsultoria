@@ -19,6 +19,7 @@ import {
   hasPendingEadPayment,
 } from '../cursosPage.utils';
 import { formatEadCheckoutMoney } from '../eadCheckoutOptions';
+import { getEadBlockedCheckoutUi, getEadPurchaseUi } from '../eadPurchaseState';
 
 interface CourseCatalogGridProps {
   groupedCourses: [string, any[]][];
@@ -70,6 +71,9 @@ const CourseCatalogGrid: React.FC<CourseCatalogGridProps> = ({
             const isOnlineClassModality = ONLINE_CLASS_MODALITIES.has(modality);
             const canAccess = isEad && hasEadAccess(course);
             const pendingPayment = isEad && hasPendingEadPayment(course);
+            const checkoutFeedback = !canAccess && !course.eadPurchase && checkoutMutation.data?.courseId === course.id
+              ? getEadBlockedCheckoutUi(checkoutMutation.data) : null;
+            const purchaseUi = checkoutFeedback || getEadPurchaseUi(course.eadPurchase);
             const onlineAvailability = course.onlineAvailability;
             const onlineClassAvailable = Boolean(onlineAvailability?.isAvailable);
             const availableTurmas = onlineAvailability?.availableTurmas || [];
@@ -82,7 +86,7 @@ const CourseCatalogGrid: React.FC<CourseCatalogGridProps> = ({
               || null;
             const courseProgress = progressByCourseId.get(course.id);
             const courseProgressPercent = getCourseProgressPercent(courseProgress, course.alunoMatricula?.status);
-            const showCourseProgress = Boolean(course.alunoMatricula);
+            const showCourseProgress = isEad ? canAccess : Boolean(course.alunoMatricula);
             const enrolledLiveTurmaId = isLive && hasLinkedLiveEnrollment(course)
               ? String(course.alunoMatricula.turmaId)
               : '';
@@ -192,6 +196,9 @@ const CourseCatalogGrid: React.FC<CourseCatalogGridProps> = ({
                   )}
 
                   {isEad ? (
+                    <div className="space-y-3">
+                    {purchaseUi.message && <p role="status" className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-3 text-xs leading-relaxed text-blue-800">{purchaseUi.message}</p>}
+                    {
                     canAccess ? (
                       <button
                         onClick={() => onSelectCourse(course)}
@@ -203,13 +210,14 @@ const CourseCatalogGrid: React.FC<CourseCatalogGridProps> = ({
                     ) : (
                       <button
                         onClick={() => onOpenEadCheckout(course)}
-                        disabled={isCheckoutLoading}
+                        disabled={isCheckoutLoading || purchaseUi.disabled}
                         className="w-full flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-white bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 rounded-xl py-3 transition-all"
                       >
                         {isCheckoutLoading ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
-                        {isCheckoutLoading ? 'Preparando pagamento' : pendingPayment ? 'Continuar pagamento' : 'Comprar curso'}
+                        {isCheckoutLoading ? 'Preparando pagamento' : course.eadPurchase || checkoutFeedback ? purchaseUi.label : pendingPayment ? 'Continuar pagamento' : 'Comprar curso'}
                       </button>
-                    )
+                    )}
+                    </div>
                   ) : enrolledLiveTurmaId ? (
                     onOpenEnrollment ? (
                       <button

@@ -8,7 +8,7 @@ import type {
   StudentEadCheckoutTarget,
 } from "./types.ts";
 import { resolveEadCharge, resolveTargetedEadCharge } from "./ead-finance.ts";
-import { upsertEadMatricula } from "./ead-enrollment.ts";
+import { prepareEadCheckoutAttempt } from "./ead-checkout-attempt.ts";
 import { assertStoredProviderAdapterReady } from "../api/config.ts";
 import {
   type GestorAutorizado,
@@ -39,7 +39,7 @@ const toDateString = (value: unknown) => {
 
 const currentIsoDate = () => new Date().toISOString().slice(0, 10);
 
-const getAvailableTurma = (turmas: any[]) => {
+const getAvailableTurma = (turmas: any[], alunoId?: string) => {
   const today = currentIsoDate();
 
   for (const turma of turmas || []) {
@@ -58,7 +58,9 @@ const getAvailableTurma = (turmas: any[]) => {
     const max = Number(turma?.vagas_totais || 0);
     const shouldBlock =
       turma?.bloquear_matriculas_apos_completar_vagas !== false;
-    if (shouldBlock && max > 0 && matriculados >= max) {
+    const ownReservation = matriculas.some((matricula: any) => matricula.aluno_id === alunoId &&
+      BLOCKING_ENROLLMENT_STATUSES.has(String(matricula.status || "").toUpperCase()));
+    if (!ownReservation && shouldBlock && max > 0 && matriculados >= max) {
       continue;
     }
 
@@ -392,13 +394,13 @@ export const buildEadCheckoutContext = async (
       .getUser(
         token,
       );
-    const authEmail = String(authData?.user?.email || "").trim().toLowerCase();
-    if (authError || !authEmail) {
+    const authUserId = String(authData?.user?.id || "").trim();
+    if (authError || !UUID_RE.test(authUserId)) {
       throw new Error("Sessao invalida para pagamento EAD.");
     }
     const { data: authenticatedAluno, error: authenticatedAlunoError } =
       await runtime.admin.from("parceiros").select("*").eq("tipo", "Aluno")
-        .ilike("email", authEmail).order("created_at", { ascending: false })
+        .eq("auth_user_id", authUserId).order("created_at", { ascending: false })
         .limit(1).maybeSingle();
     if (authenticatedAlunoError) throw authenticatedAlunoError;
     aluno = authenticatedAluno;
@@ -430,7 +432,7 @@ export const buildEadCheckoutContext = async (
     let turmasQuery = runtime.admin.from("turmas").select(`
         id, nome, polo_id, vagas_totais, qtd_vagas_minima,
         bloquear_matriculas_apos_completar_vagas,
-        data_inicio_inscricao, data_fim_inscricao, matriculas(status)
+        data_inicio_inscricao, data_fim_inscricao, matriculas(status, aluno_id)
       `).eq("curso_id", course.id).eq("status", "EM_ANDAMENTO");
     if (turmaId) turmasQuery = turmasQuery.eq("id", turmaId);
     const { data: turmas, error: turmasError } = await turmasQuery.order(
@@ -438,7 +440,7 @@ export const buildEadCheckoutContext = async (
       { ascending: true },
     );
     if (turmasError) throw turmasError;
-    turma = getAvailableTurma(turmas || []);
+    turma = getAvailableTurma(turmas || [], aluno.id);
     if (!turma) {
       throw new Error("Nao ha turma EAD aberta para este curso no momento.");
     }
@@ -451,20 +453,26 @@ export const buildEadCheckoutContext = async (
   if (checkoutTarget && checkoutTarget.turmaId !== turma.id) {
     throw new Error("Cobranca EAD nao corresponde a turma informada.");
   }
-  const matricula = checkoutTarget?.matricula ||
-    await upsertEadMatricula(runtime.admin, aluno.id, turma.id);
-  if (!matricula?.id) {
-    throw new Error("Nao foi possivel registrar a matricula EAD.");
-  }
-
-  return {
+  const preparedContext = {
     ...runtime,
     environment: gatewayEnvironment,
     course,
     aluno,
     turma,
-    matricula,
     charge,
     route,
+  };
+  const checkoutAttempt = await prepareEadCheckoutAttempt(preparedContext);
+  const receivable = checkoutAttempt.receivable;
+  return {
+    ...preparedContext,
+    matricula: { id: checkoutAttempt.matriculaId, aluno_id: aluno.id, turma_id: turma.id },
+    checkoutAttempt,
+    charge: receivable ? {
+      ...charge,
+      value: Number(receivable.valor),
+      dueDate: String(receivable.data_vencimento).slice(0, 10),
+      description: String(receivable.descricao),
+    } : charge,
   };
 };

@@ -1,8 +1,8 @@
 {
-  "version": "4.8.167",
+  "version": "4.8.168",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 176,
+  "revision": 177,
   "releasedAt": "2026-10-04",
-  "summary": "Compra EAD opcional fora da inadimplência, com conciliação e registros preservados"
+  "summary": "Compra EAD opcional com expiração segura, recompra e recuperação de pagamentos tardios"
 }

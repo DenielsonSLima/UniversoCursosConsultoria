@@ -7,6 +7,7 @@ export const queryBaneseEffectivePayments = async (input: {
   token: BaneseAccessToken;
   signal?: AbortSignal;
   allowFailure: boolean;
+  strict?: boolean;
 }) => {
   try {
     const response = await awaitBaneseRead(
@@ -24,9 +25,9 @@ export const queryBaneseEffectivePayments = async (input: {
       ),
       input.signal,
     );
-    // HTTP 404 significa que nenhum pagamento foi efetuado ainda (boleto pendente).
-    // Não é um erro de consulta — o titulo está ativo e em aberto no banco.
-    if (response.status === 404) {
+    // Mantém o tratamento legado de 404 como lista vazia. A expiração EAD
+    // exige uma resposta oficial válida e não usa essa inferência.
+    if (response.status === 404 && !input.strict) {
       return {
         payments: [] as Array<Record<string, unknown>>,
         raw: null,
@@ -40,6 +41,18 @@ export const queryBaneseEffectivePayments = async (input: {
       );
     }
     const record = asRecord(raw);
+    if (input.strict && (
+      !Array.isArray(record.PagamentosEfetivados) ||
+      (record.Erros != null &&
+        (!Array.isArray(record.Erros) || record.Erros.length > 0)) ||
+      record.PagamentosEfetivados.some((item: unknown) =>
+        !item || typeof item !== "object" || Array.isArray(item) ||
+        Object.keys(item).length === 0)
+    )) {
+      throw new BaneseAdapterError(
+        "PagamentosEfetivados não retornou uma lista oficial válida; o pagamento não pôde ser descartado.",
+      );
+    }
     const items = Array.isArray(raw)
       ? raw
       : record.PagamentosEfetivados ?? record.pagamentosEfetivados ?? [];

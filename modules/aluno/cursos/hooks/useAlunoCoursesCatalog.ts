@@ -13,6 +13,7 @@ import {
   isEligiblePublicTurmaStatus,
 } from '../../../public/courseAvailability';
 import type { CourseCatalogTab, EadProgressState } from '../cursosPage.types';
+import { parseEadPurchaseStates, eadPurchaseNeedsRefresh } from '../eadPurchaseState';
 import {
   EAD_PENDING_STATUSES,
   ONLINE_CLASS_MODALITIES,
@@ -40,8 +41,9 @@ export const useAlunoCoursesCatalog = (alunoId?: string) => {
 
   const { data: courses = [], isLoading, isError } = useQuery<any[]>({
     queryKey: alunoCourseAccessKeys.catalog(alunoId || ''),
+    refetchInterval: (query) => query.state.data?.some(course => eadPurchaseNeedsRefresh(course.eadPurchase, hasEadAccess(course))) ? 30_000 : false,
     queryFn: async () => {
-      const [coursesResult, matriculasResult, turmasOnlineResult] = await Promise.all([
+      const [coursesResult, matriculasResult, turmasOnlineResult, purchasesResult] = await Promise.all([
         supabase.from('cursos').select('*').eq('status', 'ativo').order('nome', { ascending: true }),
         hasAlunoContext
           ? supabase
@@ -71,11 +73,17 @@ export const useAlunoCoursesCatalog = (alunoId?: string) => {
           .eq('permitir_inscricoes_online', true)
           .in('cursos.modalidade', ['LIVRE', 'ESPECIALIZACAO', 'TECNICO'])
           .order('data_inicio', { ascending: true }),
+        hasAlunoContext
+          ? supabase.rpc('ead_get_student_checkout_states', { p_aluno_id: alunoId })
+          : Promise.resolve({ data: [], error: null }),
       ]);
 
       if (coursesResult.error) throw coursesResult.error;
       if (matriculasResult.error) throw matriculasResult.error;
       if (turmasOnlineResult.error) throw turmasOnlineResult.error;
+      if (purchasesResult.error) throw purchasesResult.error;
+      const purchasesByCourse = new Map(parseEadPurchaseStates(purchasesResult.data)
+        .map(purchase => [purchase.cursoId, purchase]));
 
       const allMatriculas = matriculasResult.data || [];
       const turmasByCourse = new Map<string, any[]>();
@@ -146,7 +154,8 @@ export const useAlunoCoursesCatalog = (alunoId?: string) => {
         const onlineAvailability = ONLINE_CLASS_MODALITIES.has(modality)
           ? getCourseEnrollmentAvailability(turmasByCourse.get(course.id) || [])
           : null;
-        return { ...course, alunoMatricula: enrollmentByCourse.get(course.id) || null, onlineAvailability };
+        return { ...course, alunoMatricula: enrollmentByCourse.get(course.id) || null,
+          eadPurchase: purchasesByCourse.get(course.id) || null, onlineAvailability };
       });
     },
   });
