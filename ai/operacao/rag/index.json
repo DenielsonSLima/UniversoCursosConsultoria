@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-09-30T18:57:19.160Z",
+  "builtAt": "2026-10-05T13:53:30.812Z",
   "manifestVersion": 2,
-  "sourceSignature": "ed411976ae145e8f1a150f0bf40a972a459c9c6b7298f967896af48e37ea2dad",
+  "sourceSignature": "4fcd747521072335be203c6d877247df4be74a79c075fb3141f25d98733344e9",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,11 +11,11 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "891aaba29b1d321ea54160bfc1668011ebd01e8c11e77a38687ad1a638de5017"
+      "hash": "2641b8290dad18f66f1c75dfbcfd517ba2e03725a1ee759fce2d335632d1dc51"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
-      "hash": "c05804852b3800ff6fb10edcd7388164bd82df10752b9ae74aa365df81bf0956"
+      "hash": "946532201a484334f401d51cf655fa7800811555181308014e8af40375c2e3a0"
     },
     {
       "path": "ai/operacao/PROTOCOLO_DE_LOTES.md",
@@ -23,7 +23,7 @@
     },
     {
       "path": "ai/operacao/politicas/FINANCEIRO.md",
-      "hash": "fc8f21ab0a9c2b736f8dca8d6e291eb7f4d1add0a4de779736621a8cc30dadac"
+      "hash": "e58a24e89be875e9e10429ec06197dcfac76a95e34bc3a3cf09827039c7a479f"
     },
     {
       "path": "ai/operacao/politicas/INTERFACE.md",
@@ -51,11 +51,15 @@
     },
     {
       "path": "docs/decisions/ciclos-tecnicos-cobrancas.md",
-      "hash": "9f4a5fdbf6e75d0bcc172382584a85999fe2f1d6fa8281e3702fcfc03ec42e95"
+      "hash": "19037d367621f81a8c3dd5846b59c8d9ed9b158d837cd67e56561ddda9ed4b80"
     },
     {
       "path": "docs/decisions/patrimonio-contas-a-pagar-emprestimos.md",
       "hash": "7a888d21c6756b741a5b3dbc5b3e5179db46ea5581c98ee762d07139d529a6cd"
+    },
+    {
+      "path": "docs/decisions/proesc-v2-operacional.md",
+      "hash": "1ae6efe9e5014f595bfcb62fab2903797fe090f7d61172235965ac31445bfd14"
     },
     {
       "path": "docs/decisions/transferencias-tecnicas.md",
@@ -204,22 +208,22 @@
       "part": 1
     },
     {
-      "id": "42a2b877b9c4ec322149",
-      "hash": "42a2b877b9c4ec322149ef4317058bbdb0da1e7ec1238c73672ccdf1692ddf81",
+      "id": "f513d59d04d9790274ba",
+      "hash": "f513d59d04d9790274bad7db670efe5d351158e8f45f6c515ea2d04d0cc98d06",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-09-30-foto-alunos-turma",
-      "text": "Estado: VALIDADO PARA PUBLICAÇÃO — PRODUÇÃO AUTORIZADA. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-09-30-foto-alunos-turma.md`. A lista Gestão > Turma > Alunos passa a receber a foto canônica do cadastro pela RPC protegida e mantém a inicial quando a foto estiver ausente ou falhar. Lote anterior preservado em `2026-09-30-hotfix-mascara-monetaria-baixa.md`.",
-      "normalizedText": "estado validado para publicacao producao autorizada manifesto explicito ai operacao registros alteracoes 2026 09 30 foto alunos turma md a lista gestao turma alunos passa a receber a foto canonica do cadastro pela rpc protegida e mantem a inicial quando a foto estiver ausente ou falhar lote anterior preservado em 2026 09 30 hotfix mascara monetaria baixa md",
-      "tokenCount": 52,
+      "section": "Lote: 2026-10-05-aluno-zoom-nitidez",
+      "text": "Estado: ajustes preparados para 4.8.170; produção autorizada, condicionada aos checks e Preview finais. Objetivo: corrigir autozoom e renderização turva no acesso/portal do aluno em PC e celular, preservando design e zoom manual. Aceite: campos mobile >=16px, renderização local sem camadas persistentes, teclado/zoom distintos e nenhuma abertura de navegador. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-05-aluno-zoom-nitidez.md` (16 arquivos). Validação: três agentes e reunião; testes de viewport, cascade CSS, tipos/lint/build e HTTP. Smoke visual/autenticado pendente por solicitação expressa. Base: main `78afddaf51a5fe738621c8e19feb2c6dfef5db24`, versão 4.8.169. Somente manifesto publicado via MCP GitHub. Histórico: lote Proesc anterior preservado em `ai/operacao/registros/alteracoes/2026-10-03-proesc-desconto-liquido.md`.",
+      "normalizedText": "estado ajustes preparados para 4 8 170 producao autorizada condicionada aos checks e preview finais objetivo corrigir autozoom e renderizacao turva no acesso portal do aluno em pc e celular preservando design e zoom manual aceite campos mobile 16px renderizacao local sem camadas persistentes teclado zoom distintos e nenhuma abertura de navegador manifesto explicito ai operacao registros alteracoes 2026 10 05 aluno zoom nitidez md 16 arquivos validacao tres agentes e reuniao testes de viewport cascade css tipos lint build e http smoke visual autenticado pendente por solicitacao expressa base main 78afddaf51a5fe738621c8e19feb2c6dfef5db24 versao 4 8 169 somente manifesto publicado via mcp github historico lote proesc anterior preservado em ai operacao registros alteracoes 2026 10 03 proesc desconto liquido md",
+      "tokenCount": 108,
       "part": 1
     },
     {
-      "id": "bbb55ebbfc2c5954f51c",
-      "hash": "bbb55ebbfc2c5954f51c889afd4be26b4911d90e0ea0adb34e0924ba1b623caf",
+      "id": "cbd4dd650a86dc9a8867",
+      "hash": "cbd4dd650a86dc9a8867bfded2180486251d1d6aee76a9a2297b398fbc1c0866",
       "path": "ai/operacao/MEMORIA_CANONICA.md",
       "section": "Memória canônica do projeto",
-      "text": "Atualizada em: 2026-09-27",
-      "normalizedText": "atualizada em 2026 09 27",
+      "text": "Atualizada em: 2026-10-01",
+      "normalizedText": "atualizada em 2026 10 01",
       "tokenCount": 5,
       "part": 1
     },
@@ -284,63 +288,23 @@
       "part": 1
     },
     {
-      "id": "310e072c314b24534737",
-      "hash": "310e072c314b245347370dbc44ae3332acc9eaf1a437f0bfa61a240f420877a0",
+      "id": "fd3999c0eb6de5f4ff50",
+      "hash": "fd3999c0eb6de5f4ff50472cb9b6ba35ce624c0d9ad66bce75c02ba6de23ef40",
       "path": "ai/operacao/MEMORIA_CANONICA.md",
-      "section": "Entrega financeira publicada — 2026-09-12 (4.8.47)",
-      "text": "- PR 141: squash e026a0f56c301f86ba9aee30c263042d97ff1631; Vercel success e versão pública 4.8.47 confirmada. GitHub Actions ficou QUEUED sem runner; não confundir testes locais aprovados com CI concluído. - Banese reconhece o próximo dia útil nacional comprovado de 2026, sem alterar os termos. Título revisado da Radiologia pago por R$ 260,00 em 08/09/2026. - Composição Proesc exige prova compatível com principal, recebido e data; evidência posterior conflitante invalida a prova. Desconhecido permanece nulo. Duas provas históricas foram gravadas com desconto de R$ 19,90 cada e recebíveis preservados. - Auditoria da T42 após essas provas: 346 vínculos, 204 pagos, 142 abertos, R$ 53.813,57 recebidos. A importação de outras turmas possui lote e conferência próprios; não inferir cobertura de ciclos pelo número da turma. - Registro: registros/alteracoes/2026-09-12-revisao-banese-proesc.md.",
-      "normalizedText": "pr 141 squash e026a0f56c301f86ba9aee30c263042d97ff1631 vercel success e versao publica 4 8 47 confirmada github actions ficou queued sem runner nao confundir testes locais aprovados com ci concluido banese reconhece o proximo dia util nacional comprovado de 2026 sem alterar os termos titulo revisado da radiologia pago por r 260 00 em 08 09 2026 composicao proesc exige prova compativel com principal recebido e data evidencia posterior conflitante invalida a prova desconhecido permanece nulo duas provas historicas foram gravadas com desconto de r 19 90 cada e recebiveis preservados auditoria da t42 apos essas provas 346 vinculos 204 pagos 142 abertos r 53 813 57 recebidos a importacao de outras turmas possui lote e conferencia proprios nao inferir cobertura de ciclos pelo numero da turma registro registros alteracoes 2026 09 12 revisao banese proesc md",
-      "tokenCount": 122,
+      "section": "Histórico Proesc, Caixa e conciliação — 4.8.47–52",
+      "text": "Composição exige identidade, principal, recebido e data compatíveis; prova posterior conflitante invalida a anterior e desconhecido fica nulo. Banese conserva o próximo dia útil nacional comprovado de 2026, sem presumir outros calendários. [Auditoria T42 e entrega 4.8.47](registros/alteracoes/2026-09-12-revisao-banese-proesc.md). XLS comprova cadastro/turma/situação acadêmica; API comprova pagamentos. CPF canônico preserva pessoas e visibilidade por polo; estado acadêmico pertence à matrícula. Não inferir turno, datas, IDs ou cobertura de ciclos. Pagamento não autoriza novo ciclo/boleto. [Importação 4.8.48–49, totais e provas](registros/alteracoes/2026-09-12-proesc-importacao-xls.md).",
+      "normalizedText": "composicao exige identidade principal recebido e data compativeis prova posterior conflitante invalida a anterior e desconhecido fica nulo banese conserva o proximo dia util nacional comprovado de 2026 sem presumir outros calendarios auditoria t42 e entrega 4 8 47 registros alteracoes 2026 09 12 revisao banese proesc md xls comprova cadastro turma situacao academica api comprova pagamentos cpf canonico preserva pessoas e visibilidade por polo estado academico pertence a matricula nao inferir turno datas ids ou cobertura de ciclos pagamento nao autoriza novo ciclo boleto importacao 4 8 48 49 totais e provas registros alteracoes 2026 09 12 proesc importacao xls md",
+      "tokenCount": 90,
       "part": 1
     },
     {
-      "id": "9e5b5079b1a5b1dec2d7",
-      "hash": "9e5b5079b1a5b1dec2d74d1ef00afe076911be636f886863db86822e6a265987",
+      "id": "e7a3eb47724ac708a3dc",
+      "hash": "e7a3eb47724ac708a3dc6041e5e1045607cc27a5e24cef76cd08ecced8d25fc8",
       "path": "ai/operacao/MEMORIA_CANONICA.md",
-      "section": "Importação Proesc por XLS — 2026-09-12",
-      "text": "- Cadastros por CPF canônico preservam pessoas existentes; estado acadêmico pertence à matrícula, não ao cadastro global. Reuso em outro polo acrescenta visibilidade sem mover o polo original. - A fonte XLS comprova cadastro, turma e situação acadêmica; os pagamentos são conferidos pela API. Turno, data final, ID nativo e cobertura financeira não são inferidos quando ausentes. - Etapa aplicada: 385 pessoas (382 novas, 3 reutilizadas), quatro turmas INTEGRAL de Japoatã e 207 matrículas; histórico com 2.940 cobranças e 1.854 pagamentos, total recebido de R$ 470.746,72. As cinco turmas SEM tiveram INTEGRAL e aulas aos sábados confirmados pelo usuário; nove turmas e 392 matrículas concluídas para os 385 alunos; financeiro adicional concluído. Total das nove turmas: 6.071 cobranças, 3.536 pagamentos confirmados, R$ 898.688,99 recebidos e 2.535 registros em conferência, com identidade, datas e valores auditados sem divergências. Nove eventos PARCIAL/PROESC_API preservam a conferência residual; monitor habilitado para os 6.071 novos vínculos e os 346 da T42, com uma Conta Proesc compartilhada. Um cadastro aguarda CPF. - Cobertura financeira é individual e permanece em revisão até prova",
-      "normalizedText": "cadastros por cpf canonico preservam pessoas existentes estado academico pertence a matricula nao ao cadastro global reuso em outro polo acrescenta visibilidade sem mover o polo original a fonte xls comprova cadastro turma e situacao academica os pagamentos sao conferidos pela api turno data final id nativo e cobertura financeira nao sao inferidos quando ausentes etapa aplicada 385 pessoas 382 novas 3 reutilizadas quatro turmas integral de japoata e 207 matriculas historico com 2 940 cobrancas e 1 854 pagamentos total recebido de r 470 746 72 as cinco turmas sem tiveram integral e aulas aos sabados confirmados pelo usuario nove turmas e 392 matriculas concluidas para os 385 alunos financeiro adicional concluido total das nove turmas 6 071 cobrancas 3 536 pagamentos confirmados r 898 688 99 recebidos e 2 535 registros em conferencia com identidade datas e valores auditados sem divergencias nove eventos parcial proesc api preservam a conferencia residual monitor habilitado para os 6 071 novos vinculos e os 346 da t42 com uma conta proesc compartilhada um cadastro aguarda cpf cobertura financeira e individual e permanece em revisao ate prova",
-      "tokenCount": 160,
-      "part": 1
-    },
-    {
-      "id": "a87bf94d85c92355d176",
-      "hash": "a87bf94d85c92355d176c242a8cd66bd87c1104afcef4e6d26538137597b6961",
-      "path": "ai/operacao/MEMORIA_CANONICA.md",
-      "section": "Importação Proesc por XLS — 2026-09-12",
-      "text": "suficiente. Sincronizar pagamento confirmado não autoriza criar outro ciclo ou boleto. T42 e Radiologia mantêm as regras existentes. - Base 4.8.48 publicada no PR142, squash b5b185e5067e5a7ea02075edfb6667ddcb5fb72b, com CI/Vercel e versão pública confirmados. 4.8.49/revisão 58 publicada no PR143/squash 58a6675fcc531d4e907987b0d5281698fb6ad7e6: CI/Vercel SUCCESS, HTTP200 com asset main-BVVN6ra3.js e acesso autenticado confirmados. Resumo e classificação financeira vêm do backend, sem cálculo no frontend. RAG indexado uma vez no fechamento pelo coordenador. Registro: registros/alteracoes/2026-09-12-proesc-importacao-xls.md.",
-      "normalizedText": "suficiente sincronizar pagamento confirmado nao autoriza criar outro ciclo ou boleto t42 e radiologia mantem as regras existentes base 4 8 48 publicada no pr142 squash b5b185e5067e5a7ea02075edfb6667ddcb5fb72b com ci vercel e versao publica confirmados 4 8 49 revisao 58 publicada no pr143 squash 58a6675fcc531d4e907987b0d5281698fb6ad7e6 ci vercel success http200 com asset main bvvn6ra3 js e acesso autenticado confirmados resumo e classificacao financeira vem do backend sem calculo no frontend rag indexado uma vez no fechamento pelo coordenador registro registros alteracoes 2026 09 12 proesc importacao xls md",
-      "tokenCount": 78,
-      "part": 2
-    },
-    {
-      "id": "6dcd8021ce98b7ffc25e",
-      "hash": "6dcd8021ce98b7ffc25e2483155d0e3b72089660657ad6617df5802140eb7bfc",
-      "path": "ai/operacao/MEMORIA_CANONICA.md",
-      "section": "Conciliação publicada — 4.8.50",
-      "text": "- Remover Atualizar Dados e textos indevidos de Mercado Pago; acrescentar filtro Proesc/Banese junto à busca. - Origem, filtro, paginação e totais pertencem à RPC, mantendo autorização por polo. Não desligar monitores nem alterar fatos financeiros ao remover a ação visual. - Versão 4.8.50/revisão 59 publicada no PR144/squash 4b513e085dcb6c0dcf133cf9c0975f28a0023caf, com Vercel SUCCESS e HTTP200 asset main-B8U4uhUw.js; smoke autenticado dos filtros confirmado em produção na 4.8.52. Duas migrations aplicadas e imutáveis. RAG indexado uma vez pelo coordenador, 11 fontes/71 chunks. Proesc REVIEW não implica vencimento confirmado nem permite consulta Banese. Registro: registros/alteracoes/2026-09-12-conciliacao-origem-proesc-banese.md.",
-      "normalizedText": "remover atualizar dados e textos indevidos de mercado pago acrescentar filtro proesc banese junto a busca origem filtro paginacao e totais pertencem a rpc mantendo autorizacao por polo nao desligar monitores nem alterar fatos financeiros ao remover a acao visual versao 4 8 50 revisao 59 publicada no pr144 squash 4b513e085dcb6c0dcf133cf9c0975f28a0023caf com vercel success e http200 asset main b8u4uhuw js smoke autenticado dos filtros confirmado em producao na 4 8 52 duas migrations aplicadas e imutaveis rag indexado uma vez pelo coordenador 11 fontes 71 chunks proesc review nao implica vencimento confirmado nem permite consulta banese registro registros alteracoes 2026 09 12 conciliacao origem proesc banese md",
-      "tokenCount": 96,
-      "part": 1
-    },
-    {
-      "id": "78b8bcddfdea5127aa43",
-      "hash": "78b8bcddfdea5127aa43391390c64ec0fad51039c262a0fce4333ed3bf052d0a",
-      "path": "ai/operacao/MEMORIA_CANONICA.md",
-      "section": "Caixa mensal publicado — 4.8.51",
-      "text": "- Inadimplência e margem devem representar o mês e polo selecionados, com numerador, denominador e resultado canônico calculados no backend/RPC. - Base é o principal elegível com vencimento no mês; atraso usa posição no corte atual/encerramento. Pagamento posterior preserva atraso histórico; desconto não cria saldo residual. Proesc sem prova fica fora das bases com metadados de conferência. Nenhum cálculo financeiro no frontend. - PR145 publicado após autorização renovada, squash 02409544d1def71a655e2831c0a6c72cd30fc891; CI/Vercel/HTTP200 confirmados. Asset main-C8lAX0ye.js, rótulos/linha laranja observados nas imagens do usuário em produção. Duas migrations imutáveis, 64 testes, SQL real e PDF aprovados. Smoke autenticado do PDF final e teste com usuário restrito ainda sem fixture. Registro: registros/alteracoes/2026-09-12-caixa-indicadores-mensais.md.",
-      "normalizedText": "inadimplencia e margem devem representar o mes e polo selecionados com numerador denominador e resultado canonico calculados no backend rpc base e o principal elegivel com vencimento no mes atraso usa posicao no corte atual encerramento pagamento posterior preserva atraso historico desconto nao cria saldo residual proesc sem prova fica fora das bases com metadados de conferencia nenhum calculo financeiro no frontend pr145 publicado apos autorizacao renovada squash 02409544d1def71a655e2831c0a6c72cd30fc891 ci vercel http200 confirmados asset main c8lax0ye js rotulos linha laranja observados nas imagens do usuario em producao duas migrations imutaveis 64 testes sql real e pdf aprovados smoke autenticado do pdf final e teste com usuario restrito ainda sem fixture registro registros alteracoes 2026 09 12 caixa indicadores mensais md",
-      "tokenCount": 112,
-      "part": 1
-    },
-    {
-      "id": "9cffa881c2fafe48a659",
-      "hash": "9cffa881c2fafe48a659fff4e84535699ebffbcf4ee540461020dd541a3928a7",
-      "path": "ai/operacao/MEMORIA_CANONICA.md",
-      "section": "Consulta API Proesc e Banese — 4.8.52",
-      "text": "- Painel separado de Token/Histórico, apenas leitura de RPC. Execuções futuras reais e sanitizadas; observações, importações e baixas automáticas são conceitos distintos. - Banese mantém os erros históricos e informa recuperação posterior e estado atual separadamente; nenhum reprocessamento é autorizado pela simples existência de erro antigo. - Sete migrations Proesc e uma Banese aplicadas, Edge Proesc v7 ativa e duas execuções reais de 60 cobranças concluídas com telemetria completa. Seis unidades SQL isoladas aprovadas; índices resolvem contagem pesada. Financeiro/Caixa recuperados e preservados após timeouts, com smoke autenticado. Frontend não repete consultas após erro. - PR146 publicado, squash b2b11a5cbd5fba8e4fd8fdea8d76b537e9add785, CI/Vercel/HTTP200 aprovados. Safari autenticado em produção confirmou as cinco abas, Caixa/Recebíveis e filtros de Conciliação. Aviso EDI7 conferido anteriormente. - Usuário renovou autorização para corrigir e publicar em 12/09 às21:09. Registro: registros/alteracoes/2026-09-12-consulta-api-proesc-banese.md.",
-      "normalizedText": "painel separado de token historico apenas leitura de rpc execucoes futuras reais e sanitizadas observacoes importacoes e baixas automaticas sao conceitos distintos banese mantem os erros historicos e informa recuperacao posterior e estado atual separadamente nenhum reprocessamento e autorizado pela simples existencia de erro antigo sete migrations proesc e uma banese aplicadas edge proesc v7 ativa e duas execucoes reais de 60 cobrancas concluidas com telemetria completa seis unidades sql isoladas aprovadas indices resolvem contagem pesada financeiro caixa recuperados e preservados apos timeouts com smoke autenticado frontend nao repete consultas apos erro pr146 publicado squash b2b11a5cbd5fba8e4fd8fdea8d76b537e9add785 ci vercel http200 aprovados safari autenticado em producao confirmou as cinco abas caixa recebiveis e filtros de conciliacao aviso edi7 conferido anteriormente usuario renovou autorizacao para corrigir e publicar em 12 09 as21 09 registro registros alteracoes 2026 09 12 consulta api proesc banese md",
-      "tokenCount": 131,
+      "section": "Histórico Proesc, Caixa e conciliação — 4.8.47–52",
+      "text": "Origem, escopo por polo, paginação, bases mensais e valores pertencem às RPCs. Pagamento posterior preserva atraso histórico; desconto não cria saldo residual. REVIEW não comprova vencimento nem autoriza consulta Banese. [Conciliação 4.8.50](registros/alteracoes/2026-09-12-conciliacao-origem-proesc-banese.md) e [Caixa 4.8.51](registros/alteracoes/2026-09-12-caixa-indicadores-mensais.md). Painel API é somente leitura; observação, importação e baixa são distintas. Preservar erros Banese e separar recuperação posterior; erro antigo não autoriza reprocessamento. Frontend não repete consultas após erro. [Consulta API 4.8.52, incidente e smoke](registros/alteracoes/2026-09-12-consulta-api-proesc-banese.md). Histórico completo de publicações, agregados, testes e limitações permanece nesses registros inalterados.",
+      "normalizedText": "origem escopo por polo paginacao bases mensais e valores pertencem as rpcs pagamento posterior preserva atraso historico desconto nao cria saldo residual review nao comprova vencimento nem autoriza consulta banese conciliacao 4 8 50 registros alteracoes 2026 09 12 conciliacao origem proesc banese md e caixa 4 8 51 registros alteracoes 2026 09 12 caixa indicadores mensais md painel api e somente leitura observacao importacao e baixa sao distintas preservar erros banese e separar recuperacao posterior erro antigo nao autoriza reprocessamento frontend nao repete consultas apos erro consulta api 4 8 52 incidente e smoke registros alteracoes 2026 09 12 consulta api proesc banese md historico completo de publicacoes agregados testes e limitacoes permanece nesses registros inalterados",
+      "tokenCount": 104,
       "part": 1
     },
     {
@@ -350,6 +314,16 @@
       "section": "Recuperação de configuração dos workers — 4.8.53 em publicação",
       "text": "- HTTP504 intermitente nos getters de configuração precede operações bancárias; getter SQL direto em 2,740 ms. Causa exata na camada de API ainda inconclusiva. - Patch restrito à leitura dos segredos Banese/Push, usado em três workers, com uma repetição, prazo total e metadados sanitizados. Sem alteração de dados financeiros, credenciais ou cron. - Edge conciliação v101, Push v16 e cancelamento v6 publicadas via MCP. 45 testes e revisão aprovados; tipagem cancelamento mantém erro preexistente reproduzido no remoto, sem alteração financeira. Smoke natural: 14 execuções HTTP200; duas falhas504 internas recuperadas na segunda tentativa. A instabilidade externa não foi declarada eliminada. - Registro: registros/alteracoes/2026-09-13-workers-configuracao-resiliente.md.",
       "normalizedText": "http504 intermitente nos getters de configuracao precede operacoes bancarias getter sql direto em 2 740 ms causa exata na camada de api ainda inconclusiva patch restrito a leitura dos segredos banese push usado em tres workers com uma repeticao prazo total e metadados sanitizados sem alteracao de dados financeiros credenciais ou cron edge conciliacao v101 push v16 e cancelamento v6 publicadas via mcp 45 testes e revisao aprovados tipagem cancelamento mantem erro preexistente reproduzido no remoto sem alteracao financeira smoke natural 14 execucoes http200 duas falhas504 internas recuperadas na segunda tentativa a instabilidade externa nao foi declarada eliminada registro registros alteracoes 2026 09 13 workers configuracao resiliente md",
+      "tokenCount": 102,
+      "part": 1
+    },
+    {
+      "id": "440d364b19df526233e0",
+      "hash": "440d364b19df526233e014c93fb1a84330b49b368b3a46e6ac29d41515c6946c",
+      "path": "ai/operacao/MEMORIA_CANONICA.md",
+      "section": "Proesc V2 operacional — 01/10/2026",
+      "text": "V2 é a única fonte de rede; V1 permanece só como prova histórica, sem fallback. Mês exige `09`; ausência/parcial/superior não comprovam baixa ou saldo. Leia a [decisão](../../docs/decisions/proesc-v2-operacional.md) e a [skill](integracoes/proesc/SKILL.md) antes de operar. Abertura operacional zero em 01/10 nos quatro polos, histórico preservado. Descontos calculados somente por regras homologadas e guardas; desconhecido continua em conferência e subtotal conhecido permanece visível. Vinte e sete parcelas pendentes, uma composição atrasada e tarifas sem retorno aplicado exigem prova adicional. [Entrega 4.8.149, resultados, pendências e publicação](registros/alteracoes/2026-10-01-proesc-v2-fechamento-publicacao.md); backend aplicado não comprova publicação do site.",
+      "normalizedText": "v2 e a unica fonte de rede v1 permanece so como prova historica sem fallback mes exige 09 ausencia parcial superior nao comprovam baixa ou saldo leia a decisao docs decisions proesc v2 operacional md e a skill integracoes proesc skill md antes de operar abertura operacional zero em 01 10 nos quatro polos historico preservado descontos calculados somente por regras homologadas e guardas desconhecido continua em conferencia e subtotal conhecido permanece visivel vinte e sete parcelas pendentes uma composicao atrasada e tarifas sem retorno aplicado exigem prova adicional entrega 4 8 149 resultados pendencias e publicacao registros alteracoes 2026 10 01 proesc v2 fechamento publicacao md backend aplicado nao comprova publicacao do site",
       "tokenCount": 102,
       "part": 1
     },
@@ -454,13 +428,13 @@
       "part": 1
     },
     {
-      "id": "1749b28561b2215c5962",
-      "hash": "1749b28561b2215c59627b3fa536811cf4851a4c2befd788b33830e2a736e831",
+      "id": "72ed65531c647dba774d",
+      "hash": "72ed65531c647dba774d1e07eede628719aecce388097018917ecbaf77bd12df",
       "path": "ai/operacao/politicas/FINANCEIRO.md",
       "section": "Regras gerais",
-      "text": "- Cálculos, valores, parcelas, juros, multa, desconto, saldo e rateio pertencem ao backend/RPC. - O frontend coleta entradas e exibe o resultado canônico. - Toda mutação é autorizada por escopo, idempotente, auditável e conciliada por TanStack Query/Realtime. - Ciclos técnicos seguem o [contrato de elegibilidade, matrícula local, baixa, estorno e C2](../../../docs/decisions/ciclos-tecnicos-cobrancas.md); origem importada não autoriza nova emissão.",
-      "normalizedText": "calculos valores parcelas juros multa desconto saldo e rateio pertencem ao backend rpc o frontend coleta entradas e exibe o resultado canonico toda mutacao e autorizada por escopo idempotente auditavel e conciliada por tanstack query realtime ciclos tecnicos seguem o contrato de elegibilidade matricula local baixa estorno e c2 docs decisions ciclos tecnicos cobrancas md origem importada nao autoriza nova emissao",
-      "tokenCount": 53,
+      "text": "- Cálculos, valores, parcelas, juros, multa, desconto, saldo e rateio pertencem ao backend/RPC. - O frontend coleta entradas e exibe o resultado canônico. - Toda mutação é autorizada por escopo, idempotente, auditável e conciliada por TanStack Query/Realtime. - Ciclos técnicos seguem o [contrato de elegibilidade, matrícula local, baixa, estorno e C2](../../../docs/decisions/ciclos-tecnicos-cobrancas.md); origem importada não autoriza nova emissão. - Continuidade Proesc/Banese e trancamento seguem o [contrato de passagem e proveniência](../../../docs/contracts/ciclos-tecnicos-passagem-e-proveniencia.md): confirmação durável por matrícula/ciclo, Proesc somente consulta e cancelamento Banese confirmado antes de excluir saldo pendente. - Para alterar esses fluxos, carregar também a [skill versionada de ciclos técnicos](../skills/universo-ciclos-tecnicos-financeiros/SKILL.md), com os contratos e ensaios de confirmação e cancelamento completos.",
+      "normalizedText": "calculos valores parcelas juros multa desconto saldo e rateio pertencem ao backend rpc o frontend coleta entradas e exibe o resultado canonico toda mutacao e autorizada por escopo idempotente auditavel e conciliada por tanstack query realtime ciclos tecnicos seguem o contrato de elegibilidade matricula local baixa estorno e c2 docs decisions ciclos tecnicos cobrancas md origem importada nao autoriza nova emissao continuidade proesc banese e trancamento seguem o contrato de passagem e proveniencia docs contracts ciclos tecnicos passagem e proveniencia md confirmacao duravel por matricula ciclo proesc somente consulta e cancelamento banese confirmado antes de excluir saldo pendente para alterar esses fluxos carregar tambem a skill versionada de ciclos tecnicos skills universo ciclos tecnicos financeiros skill md com os contratos e ensaios de confirmacao e cancelamento completos",
+      "tokenCount": 111,
       "part": 1
     },
     {
@@ -744,23 +718,23 @@
       "part": 1
     },
     {
-      "id": "36527912a08182331c8f",
-      "hash": "36527912a08182331c8f97b13ef9995fb4077eca407b8350fdbdbc13c45eb844",
+      "id": "722029f7aa8cfcebd843",
+      "hash": "722029f7aa8cfcebd843a6d196636d3fa50b926d10adbc49d2e6303e48447462",
       "path": "docs/decisions/ciclos-tecnicos-cobrancas.md",
       "section": "Contrato dos ciclos financeiros técnicos — 24/09/2026",
-      "text": "O backend calcula a prévia e os termos por item; a interface permite revisar valor, desconto, multa, juros e vencimento. Toda edição exige nova prévia canônica; item incluído com valor zero bloqueia confirmação. Omitir/reincluir matrícula preserva as datas das mensalidades. Exibir data inicial e primeira mensalidade calculadas pela RPC. Rascunho e fingerprints pertencem à matrícula, ciclo e origem/data escolhidas; troca ociosa reinicia a revisão, emissão em curso preserva o snapshot. Erro, recálculo pendente ou revisão não confirmada bloqueiam emissão.",
-      "normalizedText": "o backend calcula a previa e os termos por item a interface permite revisar valor desconto multa juros e vencimento toda edicao exige nova previa canonica item incluido com valor zero bloqueia confirmacao omitir reincluir matricula preserva as datas das mensalidades exibir data inicial e primeira mensalidade calculadas pela rpc rascunho e fingerprints pertencem a matricula ciclo e origem data escolhidas troca ociosa reinicia a revisao emissao em curso preserva o snapshot erro recalculo pendente ou revisao nao confirmada bloqueiam emissao",
-      "tokenCount": 70,
+      "text": "O backend calcula a prévia e os termos por item; a interface permite revisar valor, desconto, multa, juros e vencimento. Toda edição exige nova prévia canônica; item incluído com valor zero bloqueia confirmação. No `REGISTRO_SEM_BOLETO`, alterar o vencimento da matrícula recalcula a Mensalidade 1 para o mês-calendário seguinte e as demais a partir dela; nos outros modos, alterar a Mensalidade 1 recalcula as seguintes sem mudar a matrícula. `OMITIR` ancora a Mensalidade 1 na data de origem; ao reincluir matrícula com boleto ou registro local, a Mensalidade 1 volta para o mês seguinte. Trocas diretas entre boleto e registro local preservam ajustes manuais. Exibir data inicial e primeira mensalidade calculadas pela RPC. Rascunho e fingerprints pertencem à matrícula, ciclo e origem/data escolhidas; troca ociosa reinicia a revisão, emissão em curso preserva o snapshot. Erro, recálculo pendente ou revisão não confirmada bloqueiam emissão.",
+      "normalizedText": "o backend calcula a previa e os termos por item a interface permite revisar valor desconto multa juros e vencimento toda edicao exige nova previa canonica item incluido com valor zero bloqueia confirmacao no registro sem boleto alterar o vencimento da matricula recalcula a mensalidade 1 para o mes calendario seguinte e as demais a partir dela nos outros modos alterar a mensalidade 1 recalcula as seguintes sem mudar a matricula omitir ancora a mensalidade 1 na data de origem ao reincluir matricula com boleto ou registro local a mensalidade 1 volta para o mes seguinte trocas diretas entre boleto e registro local preservam ajustes manuais exibir data inicial e primeira mensalidade calculadas pela rpc rascunho e fingerprints pertencem a matricula ciclo e origem data escolhidas troca ociosa reinicia a revisao emissao em curso preserva o snapshot erro recalculo pendente ou revisao nao confirmada bloqueiam emissao",
+      "tokenCount": 120,
       "part": 1
     },
     {
-      "id": "102903c4ba8e252450ac",
-      "hash": "102903c4ba8e252450acd90574ac0a727b42db79f1ae4e355bead2f67b1e6661",
+      "id": "5c4918931c7684c737a1",
+      "hash": "5c4918931c7684c737a1a458fbce8a3d521fd0799b6b08ca2dbcfbc6fef8a930",
       "path": "docs/decisions/ciclos-tecnicos-cobrancas.md",
       "section": "Contrato dos ciclos financeiros técnicos — 24/09/2026",
-      "text": "C2 regular segue a regra de rematrícula e 12 mensalidades; C2 inicial por transferência segue o plano recebido, com primeiro vencimento individual confirmado. Na nova modalidade individual, C1 constituído e com sua parte bancária emitida permite C2, independentemente de quitação. LOCAL pendente, pago ou estornado exige a prova canônica correspondente; estorno auditado não exige quitação para C2. Critérios importados/legados conservam suas exigências; não aplicar a regra nova retroativamente. Competência de entrada e datas de transferência vêm da análise canônica, sem duplicar períodos.",
-      "normalizedText": "c2 regular segue a regra de rematricula e 12 mensalidades c2 inicial por transferencia segue o plano recebido com primeiro vencimento individual confirmado na nova modalidade individual c1 constituido e com sua parte bancaria emitida permite c2 independentemente de quitacao local pendente pago ou estornado exige a prova canonica correspondente estorno auditado nao exige quitacao para c2 criterios importados legados conservam suas exigencias nao aplicar a regra nova retroativamente competencia de entrada e datas de transferencia vem da analise canonica sem duplicar periodos",
-      "tokenCount": 76,
+      "text": "C2 regular segue a regra de rematrícula e 12 mensalidades; C2 inicial por transferência segue o plano recebido, com primeiro vencimento individual confirmado. Na nova modalidade individual, C1 constituído e com sua parte bancária emitida permite C2, independentemente de quitação. LOCAL pendente, pago ou estornado exige a prova canônica correspondente; estorno auditado não exige quitação para C2. Continuidade importada e trancamento seguem o [contrato de passagem e proveniência](../contracts/ciclos-tecnicos-passagem-e-proveniencia.md): passagem individual comprovada não exige quitação do C1 nem cache Proesc atual; cobertura existente e identidades conflitantes continuam protegidas. Competência de entrada e datas de transferência vêm da análise canônica, sem duplicar períodos.",
+      "normalizedText": "c2 regular segue a regra de rematricula e 12 mensalidades c2 inicial por transferencia segue o plano recebido com primeiro vencimento individual confirmado na nova modalidade individual c1 constituido e com sua parte bancaria emitida permite c2 independentemente de quitacao local pendente pago ou estornado exige a prova canonica correspondente estorno auditado nao exige quitacao para c2 continuidade importada e trancamento seguem o contrato de passagem e proveniencia contracts ciclos tecnicos passagem e proveniencia md passagem individual comprovada nao exige quitacao do c1 nem cache proesc atual cobertura existente e identidades conflitantes continuam protegidas competencia de entrada e datas de transferencia vem da analise canonica sem duplicar periodos",
+      "tokenCount": 97,
       "part": 1
     },
     {
@@ -841,6 +815,26 @@
       "text": "- No fechamento não havia empréstimos legados; logo, o backfill de escopo não precisou classificar contratos históricos. - O usuário deve liberar explicitamente as permissões de Patrimônio e Empréstimos para perfis personalizados que precisarem das novas telas. A sessão precisa ser renovada (ou receber recarga forçada) para refletir uma permissão alterada. - A publicação Web permanece em lote único: commit/PR/Preview depois da validação, e produção somente com solicitação explícita.",
       "normalizedText": "no fechamento nao havia emprestimos legados logo o backfill de escopo nao precisou classificar contratos historicos o usuario deve liberar explicitamente as permissoes de patrimonio e emprestimos para perfis personalizados que precisarem das novas telas a sessao precisa ser renovada ou receber recarga forcada para refletir uma permissao alterada a publicacao web permanece em lote unico commit pr preview depois da validacao e producao somente com solicitacao explicita",
       "tokenCount": 62,
+      "part": 1
+    },
+    {
+      "id": "3799fda6fb1eb9372b97",
+      "hash": "3799fda6fb1eb9372b97724e4df025df1dd9c4490de0f1444841cb87cd3b34e4",
+      "path": "docs/decisions/proesc-v2-operacional.md",
+      "section": "Proesc: V2 operacional, histórico V1 preservado",
+      "text": "Decisão de 01/10/2026: consultas e sincronizações usam apenas V2; preservar provas, vínculos e fatos V1 sem fallback de rede. Mês tem dois dígitos (`09`), paginação deve ser completa e identidade/unidade/principal/vencimento comprovados. Ausência, parcial ou superior não autorizam cancelamento, baixa ou saldo por diferença. Proesc consulta o legado; Banese continua no contrato local. Pagamento posterior preserva o corte histórico. Configuração de desconto/encargos não comprova composição aplicada, nem consulta autoriza criar débitos ou frequência. Leia a [skill única](../../ai/operacao/integracoes/proesc/SKILL.md) e o [contrato operacional](../../ai/operacao/integracoes/proesc/references/v2-operacional.md), incluindo guardas de identidade, escopo, opt-out, idempotência e preservação acadêmica/financeira.",
+      "normalizedText": "decisao de 01 10 2026 consultas e sincronizacoes usam apenas v2 preservar provas vinculos e fatos v1 sem fallback de rede mes tem dois digitos 09 paginacao deve ser completa e identidade unidade principal vencimento comprovados ausencia parcial ou superior nao autorizam cancelamento baixa ou saldo por diferenca proesc consulta o legado banese continua no contrato local pagamento posterior preserva o corte historico configuracao de desconto encargos nao comprova composicao aplicada nem consulta autoriza criar debitos ou frequencia leia a skill unica ai operacao integracoes proesc skill md e o contrato operacional ai operacao integracoes proesc references v2 operacional md incluindo guardas de identidade escopo opt out idempotencia e preservacao academica financeira",
+      "tokenCount": 103,
+      "part": 1
+    },
+    {
+      "id": "5618c1bfb9c37f7789af",
+      "hash": "5618c1bfb9c37f7789afb312196a18665cbf2888c063284d40e2e1aa67617d9a",
+      "path": "docs/decisions/proesc-v2-operacional.md",
+      "section": "Proesc: V2 operacional, histórico V1 preservado",
+      "text": "Backend V2 ativado, Edge v28 e V1 bloqueada antes da rede. Evidências e limites estão no [estudo agregado](../../ai/operacao/integracoes/proesc/references/v2-evidencia-setembro-2026.md); chamadas e aceite no [mapa de migração](../../ai/operacao/integracoes/proesc/references/v2-mapa-migracao.md); endpoints nas [fontes oficiais](../../ai/operacao/integracoes/proesc/references/v2-fontes-2026-10-01.md). Abertura zero nos quatro polos e composição calculada por regras homologadas não apagam fatos. Vinte e sete parcelas e uma composição atrasada continuam em conferência; tarifa de extrato não vira valor fixo presumido. [Registro 4.8.149](../../ai/operacao/registros/alteracoes/2026-10-01-proesc-v2-fechamento-publicacao.md) contém resultados, testes e limites. Backend, publicação do frontend e smoke autenticado são evidências distintas. RAG indexa esta decisão curta; referências completas permanecem por esses links, fora do corpus padrão.",
+      "normalizedText": "backend v2 ativado edge v28 e v1 bloqueada antes da rede evidencias e limites estao no estudo agregado ai operacao integracoes proesc references v2 evidencia setembro 2026 md chamadas e aceite no mapa de migracao ai operacao integracoes proesc references v2 mapa migracao md endpoints nas fontes oficiais ai operacao integracoes proesc references v2 fontes 2026 10 01 md abertura zero nos quatro polos e composicao calculada por regras homologadas nao apagam fatos vinte e sete parcelas e uma composicao atrasada continuam em conferencia tarifa de extrato nao vira valor fixo presumido registro 4 8 149 ai operacao registros alteracoes 2026 10 01 proesc v2 fechamento publicacao md contem resultados testes e limites backend publicacao do frontend e smoke autenticado sao evidencias distintas rag indexa esta decisao curta referencias completas permanecem por esses links fora do corpus padrao",
+      "tokenCount": 128,
       "part": 1
     },
     {

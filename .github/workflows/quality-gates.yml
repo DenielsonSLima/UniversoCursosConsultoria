@@ -444,6 +444,8 @@ jobs:
             modules/gestor/comunicacao/useGestorComunicacaoRealtime.test.mjs \
             modules/gestor/comunicacao/components/whatsapp/WhatsAppInbox.async.test.mjs
 
+      - name: Testar viewport do aluno sem navegador
+        run: node --test modules/aluno/login-app/aluno-viewport-height.test.ts
+
       - name: Gerar build de produção
         run: npm run build
-

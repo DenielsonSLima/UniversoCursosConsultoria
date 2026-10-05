@@ -1,4 +1,5 @@
 import { type RefObject, useLayoutEffect } from 'react';
+import { getAlunoViewportHeight } from './aluno-viewport-height';
 
 const FULLSCREEN_ATTRIBUTE = 'data-aluno-fullscreen';
 
@@ -13,17 +14,20 @@ export const useAlunoFullscreenViewport = () => {
     root.setAttribute(FULLSCREEN_ATTRIBUTE, 'true');
 
     const viewport = window.visualViewport;
-    let largestViewportHeight = viewport?.height || window.innerHeight;
+    const readViewportHeight = () => getAlunoViewportHeight(
+      viewport?.height, viewport?.scale, window.innerHeight,
+    );
+    let largestViewportHeight = readViewportHeight();
 
     const syncViewport = () => {
-      const viewportHeight = viewport?.height || window.innerHeight;
+      const viewportHeight = readViewportHeight();
       largestViewportHeight = Math.max(largestViewportHeight, viewportHeight);
       root.style.setProperty('--aluno-visual-viewport-height', `${Math.round(viewportHeight)}px`);
       root.toggleAttribute('data-aluno-keyboard', largestViewportHeight - viewportHeight > 120);
     };
 
     const resetViewportBaseline = () => {
-      largestViewportHeight = viewport?.height || window.innerHeight;
+      largestViewportHeight = readViewportHeight();
       syncViewport();
     };
 

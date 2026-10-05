@@ -1,3 +1,5 @@
+@import './styles/aluno-viewport.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -127,21 +129,20 @@ body,
   letter-spacing: 0;
 }
 
-/* Replica nos campos de login do aluno a tipografia usada no acesso do
-   gestor, evitando a aparência pesada/turva da fonte nativa no Safari. */
+/* Campos legíveis sem o autozoom do WebKit ao receber foco. */
 #root .aluno-auth-typography .aluno-login-input {
-  font-family: inherit;
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 1rem;
+  font-weight: 500;
   letter-spacing: 0;
-  line-height: 1.25rem;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
+  text-rendering: auto;
+  -webkit-font-smoothing: auto;
+  -moz-osx-font-smoothing: auto;
 }
 
 #root .aluno-auth-typography .aluno-login-input[type='password'] {
-  font-weight: 600;
+  font-weight: 400;
   letter-spacing: 0;
 }
 
@@ -185,7 +186,7 @@ html[data-aluno-fullscreen='true'] body {
 
 #root .aluno-contained-scroll {
   overflow-y: hidden;
-  touch-action: pan-y;
+  touch-action: pan-y pinch-zoom;
 }
 
 #root .aluno-contained-scroll[data-can-scroll='true'] {

@@ -237,7 +237,7 @@ const AlunoFirstAccessPage = ({ role = 'Aluno' }: AlunoFirstAccessPageProps) => 
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 py-8">
+    <div className={`${role === 'Aluno' ? 'aluno-typography ' : ''}min-h-screen bg-slate-50 py-8`}>
       <div className="mx-auto w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-6 shadow-lg sm:p-8">
         <div className="mb-6 flex items-center justify-between">
           <div>

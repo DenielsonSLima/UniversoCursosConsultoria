@@ -20,7 +20,7 @@ interface PasswordRecoveryAppViewProps {
 }
 
 const PasswordRecoveryAppView: React.FC<PasswordRecoveryAppViewProps> = ({ model }) => (
-  <main className="fixed inset-0 overflow-hidden bg-[#001a33] text-white">
+  <main className="aluno-typography fixed inset-0 overflow-hidden bg-[#001a33] text-white">
     <img
       src="/banner1.png"
       alt=""

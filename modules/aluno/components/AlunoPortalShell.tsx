@@ -127,7 +127,7 @@ const AlunoPortalShell = ({
   }, [isMobileMenuOpen, onMobileMenuChange]);
 
   return (
-    <div className="flex h-dvh min-w-0 overflow-hidden bg-slate-100 font-sans antialiased">
+    <div className="aluno-typography flex h-dvh min-w-0 overflow-hidden bg-slate-100 font-sans">
       <aside className="portal-sidebar-typography hidden w-64 flex-col bg-[#001a33] text-white shadow-xl z-20 lg:flex">
         <div className="border-b border-white/10 p-6">
           <div className="flex items-center justify-center rounded-2xl bg-white p-3 shadow-md">

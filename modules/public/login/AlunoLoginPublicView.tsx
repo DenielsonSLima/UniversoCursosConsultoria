@@ -18,7 +18,7 @@ const AlunoLoginPublicView: React.FC<AlunoLoginPublicViewProps> = ({ model }) =>
   const hasMultipleProfiles = model.profileSelectorProps.profiles.length > 1;
 
   return (
-    <div className="relative min-h-screen bg-slate-50">
+    <div className="aluno-typography relative min-h-screen bg-slate-50">
       <main className="grid min-h-screen lg:grid-cols-[1.04fr_0.96fr]">
         <AlunoLoginHero {...model.heroProps} />
         <section className="aluno-auth-typography relative flex min-h-screen flex-col items-center justify-start bg-slate-50 px-4 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))] text-slate-900 sm:px-8 sm:py-8 lg:justify-center">
