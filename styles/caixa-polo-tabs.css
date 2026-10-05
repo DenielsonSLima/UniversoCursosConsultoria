@@ -1,0 +1,28 @@
+/* Preserva a fonte do sistema, deixando a plataforma renderizar os nomes
+   dos polos sem a suavização global que afina as letras. */
+#root .caixa-polo-tabs,
+#root .caixa-polo-tabs * {
+  -webkit-font-smoothing: auto;
+  -moz-osx-font-smoothing: auto;
+  text-rendering: auto;
+}
+
+/* O texto das abas também era afetado pela camada transformada da página.
+   A entrada continua suave, mas termina sem transform ou camada permanente. */
+#root .caixa-page.animate-fadeIn {
+  animation: caixa-page-fade 0.25s ease-out;
+  backface-visibility: visible;
+  transform: none;
+  will-change: auto;
+}
+
+@keyframes caixa-page-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #root .caixa-page.animate-fadeIn {
+    animation: none;
+  }
+}

@@ -1,4 +1,5 @@
 @import './styles/aluno-viewport.css';
+@import './styles/caixa-polo-tabs.css';
 
 @tailwind base;
 @tailwind components;
