@@ -249,7 +249,7 @@ const CalendarioPage: React.FC<CalendarioPageProps> = ({ poloId }) => {
   };
 
   return (
-    <>
+    <div className="calendario-readable">
       <AgendaWorkspace
         poloId={poloId}
         currentYear={currentYear}
@@ -317,7 +317,7 @@ const CalendarioPage: React.FC<CalendarioPageProps> = ({ poloId }) => {
           onClose={() => setPdfPreview(null)}
         />
       ) : null}
-    </>
+    </div>
   );
 };
 

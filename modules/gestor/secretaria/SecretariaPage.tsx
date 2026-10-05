@@ -282,7 +282,7 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({
 
 
   return (
-    <div ref={pageRef} className="animate-fadeIn min-h-screen pb-10">
+    <div ref={pageRef} className="secretaria-readable animate-fadeIn min-h-screen pb-10">
       {/* Header Geral da Secretaria */}
       <div className="mb-8 flex items-center gap-4">
         {!isDashboard && (
@@ -297,11 +297,11 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({
         <div>
           <div className="flex items-center gap-2 text-blue-600 mb-1">
             <FileText size={20} />
-            <span className="text-xs font-bold uppercase tracking-[0.2em]">
+            <span className="text-xs font-semibold uppercase tracking-wide">
               {isDashboard ? 'Módulo Administrativo' : 'Secretaria Digital'}
             </span>
           </div>
-          <h2 className="text-3xl font-black text-[#001a33] uppercase tracking-tight">
+          <h2 className="text-3xl font-bold text-[#001a33] uppercase tracking-tight">
             {currentHeader.title}
           </h2>
           <p className="text-slate-500 font-medium">{currentHeader.description}</p>

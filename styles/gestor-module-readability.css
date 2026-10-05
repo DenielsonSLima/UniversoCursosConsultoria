@@ -1,0 +1,62 @@
+/* Renderização da plataforma, restrita aos três módulos revisados. */
+#root :is(.dashboard-readable, .secretaria-readable, .calendario-readable),
+#root :is(.dashboard-readable, .secretaria-readable, .calendario-readable) * {
+  -webkit-font-smoothing: auto;
+  -moz-osx-font-smoothing: auto;
+  text-rendering: auto;
+}
+
+/* Rótulos pequenos do painel e da agenda não dependem de zoom para leitura.
+   Documentos e formulários da Secretaria preservam seus tamanhos próprios. */
+#root :is(.dashboard-readable, .calendario-readable)
+  :is(.text-\[8px\], .text-\[9px\], .text-\[10px\], .text-\[11px\]) {
+  font-size: 0.75rem;
+  line-height: 1.125rem;
+}
+
+#root :is(.dashboard-readable, .calendario-readable)
+  :is(.text-\[8px\], .text-\[9px\], .text-\[10px\], .text-\[11px\]).uppercase {
+  letter-spacing: 0.025em;
+}
+
+#root :is(.dashboard-readable, .calendario-readable)
+  :is(p, span, label, h2, h3, h4, button).text-slate-400 {
+  color: rgb(71 85 105);
+}
+
+#root .calendario-readable .text-\[13px\],
+#root .calendario-readable select {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+/* A entrada termina sem conservar uma camada transformada para o texto. */
+#root :is(.dashboard-readable, .secretaria-readable).animate-fadeIn,
+#root .dashboard-readable .animate-fadeIn,
+#root .secretaria-readable .secretaria-navigation.animate-fadeIn,
+#root .calendario-readable .agenda-typography.animate-fadeIn {
+  animation: gestor-module-fade 0.25s ease-out;
+  backface-visibility: visible;
+  transform: none;
+  will-change: auto;
+}
+
+@keyframes gestor-module-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (max-width: 767px), (pointer: coarse) {
+  #root .calendario-readable :is(input, select, textarea) {
+    font-size: max(16px, 1em);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #root :is(.dashboard-readable, .secretaria-readable).animate-fadeIn,
+  #root .dashboard-readable .animate-fadeIn,
+  #root .secretaria-readable .secretaria-navigation.animate-fadeIn,
+  #root .calendario-readable .agenda-typography.animate-fadeIn {
+    animation: none;
+  }
+}

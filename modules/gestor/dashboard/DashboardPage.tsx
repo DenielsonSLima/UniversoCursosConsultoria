@@ -177,7 +177,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   };
 
   return (
-    <div className="animate-fadeIn space-y-6 pb-10 text-[#001a33] antialiased">
+    <div className="dashboard-readable animate-fadeIn space-y-6 pb-10 text-[#001a33]">
       {hasQuickActionsContent ? (
         <DashboardQuickActionsHeader
           canCreatePartner={canCreatePartner}
