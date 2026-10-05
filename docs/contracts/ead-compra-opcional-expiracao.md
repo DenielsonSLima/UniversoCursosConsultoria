@@ -69,6 +69,10 @@ Não existe prazo arbitrário de 14 dias que transforme ausência de consulta em
 prova de ausência de pagamento. Observação é espaçada e não paralisa a conciliação
 normal de títulos correntes.
 
+O cron alterna a prioridade de ação e observação a cada minuto e permite que uma
+faixa vazia ceda seu lugar. Cada execução processa no máximo um título; uma fila
+contínua de falhas de ação não impede a consulta de títulos já cancelados.
+
 Pagamento integral validado é baixado idempotentemente no recebível original.
 A baixa preserva data e evidência do cancelamento anterior, bem como IDs bancários.
 Curso EAD pago é liberado automaticamente uma única vez.
@@ -83,6 +87,10 @@ Se as duas tentativas pagarem, conservar os dois recebimentos reais e um acesso.
 Criar revisão financeira visível ao gestor autorizado por polo. Valor divergente,
 múltiplos pagamentos ou evidência incompatível também entram em revisão, com
 montante, data, contagem e referência sanitizados; sem inventar baixa ou canal.
+
+A consulta sem polo explícito lista somente os polos autorizados ao gestor com
+acesso ao financeiro e à aba de recebíveis. Um polo explícito continua sujeito à
+validação de escopo; a consulta não concede acesso global a gestores locais.
 
 ## Devolução comprovada
 

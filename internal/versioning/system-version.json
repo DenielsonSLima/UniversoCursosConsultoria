@@ -1,8 +1,8 @@
 {
-  "version": "4.8.168",
+  "version": "4.8.169",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 177,
-  "releasedAt": "2026-10-04",
-  "summary": "Compra EAD opcional com expiração segura, recompra e recuperação de pagamentos tardios"
+  "revision": 178,
+  "releasedAt": "2026-10-05",
+  "summary": "Revisão EAD: recuperação bancária sem bloqueio de fila e revisões por polos autorizados"
 }
