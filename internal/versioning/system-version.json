@@ -1,8 +1,8 @@
 {
-  "version": "4.8.171",
+  "version": "4.8.172",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 180,
+  "revision": 181,
   "releasedAt": "2026-10-05",
-  "summary": "Abas de polos do Caixa com letras maiores, contraste reforçado e renderização sem camada persistente"
+  "summary": "Início, Secretaria e Calendário com tipografia legível e renderização sem camadas persistentes"
 }
