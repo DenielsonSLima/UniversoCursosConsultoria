@@ -164,8 +164,8 @@ export const usePerfilDadosForm = ({ profile, editing, technicalEnrollmentNotice
 
   const supplementalFields: TextFieldConfig[] = [
     { label: 'Data de nascimento', value: dataNascimento, setter: setDataNascimento, placeholder: 'DD/MM/AAAA' },
-    { label: 'Nome da mãe', value: nomeMae, setter: setNomeMae, placeholder: 'Nome completo' },
-    { label: 'Nome do pai', value: nomePai, setter: setNomePai, placeholder: 'Opcional' },
+    { label: 'Nome da mãe (obrigatório para matrícula técnica)', value: nomeMae, setter: setNomeMae, placeholder: 'Nome completo' },
+    { label: 'Nome do pai (opcional)', value: nomePai, setter: setNomePai, placeholder: 'Opcional' },
     { label: 'Responsável', value: responsavelNome, setter: setResponsavelNome, placeholder: 'Se aplicável' },
     { label: 'CPF responsável', value: responsavelCpf, setter: setResponsavelCpf, placeholder: '000.000.000-00' },
     { label: 'Telefone responsável', value: responsavelTelefone, setter: setResponsavelTelefone, placeholder: '(00) 00000-0000' },

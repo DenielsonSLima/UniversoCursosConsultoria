@@ -1,14 +1,13 @@
 # Lote ativo
 
-## Lote: 2026-10-05-gestor-inicio-secretaria-calendario-nitidez
+## Lote: 2026-10-06-filiacao-mae-obrigatoria
 
-Estado: ajuste visual preparado para 4.8.172; produção autorizada na sessão, condicionada à CI/Preview.
-Objetivo: revisar legibilidade de Início, Secretaria e Calendário do gestor.
-Aceite: renderização auto localizada; pequenos rótulos de painel/agenda >=12px;
-navegação Secretaria 16px/600 e descrições 14px; campos agenda >=16px em toque;
-entrada sem transform persistente; movimento reduzido; sem navegador.
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-05-gestor-inicio-secretaria-calendario-nitidez.md` (13 arquivos).
-Validação: smoke DOM dos controles, cascade compilada, tipagem/lint/build e CI;
-smoke visual/autenticado pendente por orientação expressa do responsável.
-Base: main `1b62dd25ef366aa2a7be6b8333629112e42178aa`, versão 4.8.171. GitHub somente MCP.
-Histórico: entregas aluno 4.8.170 e abas Caixa 4.8.171 publicadas; registros anteriores preservados.
+Estado: frontend preparado para 4.8.175; migration aplicada; produção autorizada pelo responsável, aguardando fechamento de validação, CI e Preview.
+Objetivo: permitir cadastro e matrícula técnica com apenas o nome da mãe na filiação.
+Aceite: nome da mãe obrigatório na validação do ingresso técnico; nome do pai opcional no formulário e no perfil, sem pendência cadastral ou bloqueio de matrícula por ausência do pai.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-06-filiacao-mae-obrigatoria.md`.
+Risco: divergência entre checklist cliente e RPC corrigida por migration aditiva; função instalada conferida byte a byte, sem modificar cadastros reais.
+Validação: 8 testes frontend e matriz de 20 casos aprovados; teste SQL em transação/rollback em validação. CI, Preview e publicação ainda não concluídos.
+Smoke visual/autenticado Safari: pendente porque esta sessão não oferece Safari autenticado.
+Base: main `c5315f327f48429a3a09314215aadee01d8b3ef2`, versão 4.8.174. GitHub e Supabase somente MCP.
+Reunião: três agentes revisaram interface, regra canônica e publicação; divergência da RPC identificada e incluída no mesmo domínio. Migration remota `20261006172335` preserva assinatura/ACL.

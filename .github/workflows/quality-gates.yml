@@ -315,6 +315,9 @@ jobs:
             modules/gestor/secretaria/historico-emissoes/emission-pasta-photo.pdf.test.ts \
             modules/gestor/secretaria/historico-emissoes/emission-document.pdf.contract.test.ts
 
+      - name: Testar filiação e pendências da matrícula técnica
+        run: deno test --allow-read --unstable-sloppy-imports modules/shared/utils/technicalEnrollmentRequirements.test.ts
+
       - name: Testar preservação do rascunho do aluno
         run: |
           node --test \

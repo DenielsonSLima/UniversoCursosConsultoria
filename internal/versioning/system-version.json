@@ -1,8 +1,8 @@
 {
-  "version": "4.8.174",
+  "version": "4.8.175",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 183,
-  "releasedAt": "2026-10-05",
-  "summary": "Calendário cronológico da turma com múltiplos módulos e período opcional em PDF único"
+  "revision": 184,
+  "releasedAt": "2026-10-06",
+  "summary": "Filiação exige somente o nome da mãe; nome do pai opcional no cadastro e na matrícula técnica"
 }

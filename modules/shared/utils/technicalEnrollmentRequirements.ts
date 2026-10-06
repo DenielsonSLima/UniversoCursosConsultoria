@@ -150,14 +150,6 @@ export const getTechnicalEnrollmentMissingFields = (
     });
   }
 
-  if (!hasText(profile?.nomePai ?? profile?.nome_pai)) {
-    missing.push({
-      key: 'nomePai',
-      label: 'Nome do pai',
-      description: 'Informe a filiação paterna do aluno.',
-    });
-  }
-
   if (!hasText(profile?.endereco)) {
     missing.push({
       key: 'endereco',
