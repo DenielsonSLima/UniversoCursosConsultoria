@@ -16,18 +16,18 @@ const ParceiroAlunoFormStepFamily: React.FC<FamilyStepProps> = ({ formData, isMi
     </div>
 
     <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-xs font-medium leading-relaxed text-rose-800">
-      Estes dados podem ser preenchidos depois no cadastro inicial. Para matrícula técnica de aluno menor de idade, os dados do responsável legal serão solicitados.
+      Estes dados podem ser preenchidos depois no cadastro inicial. Para matrícula técnica, somente o nome da mãe é obrigatório na filiação; o nome do pai é opcional. Para aluno menor de idade, os dados do responsável legal serão solicitados.
     </div>
 
     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
       <div>
-        <label className={LABEL_CLS}>Nome da Mãe</label>
+        <label className={LABEL_CLS}>Nome da Mãe (Obrigatório para matrícula técnica)</label>
         <input type="text" name="nomeMae" value={formData.nomeMae} onChange={onChange}
           className={INPUT_CLS} placeholder="Nome completo da mãe" />
       </div>
 
       <div>
-        <label className={LABEL_CLS}>Nome do Pai</label>
+        <label className={LABEL_CLS}>Nome do Pai (Opcional)</label>
         <input type="text" name="nomePai" value={formData.nomePai} onChange={onChange}
           className={INPUT_CLS} placeholder="Nome completo do pai (opcional)" />
       </div>

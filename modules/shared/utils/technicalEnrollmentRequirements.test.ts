@@ -8,6 +8,7 @@ import {
   isAcceptedTechnicalDocumentType,
   isCinDocumentType,
   normalizeTechnicalDocumentType,
+  type TechnicalEnrollmentProfile,
 } from './technicalEnrollmentRequirements.ts';
 
 const completeProfile = {
@@ -55,13 +56,32 @@ test('lista somente o mínimo pessoal e bancário sem cobrar Ensino Médio ou an
     'nomeCompleto',
     'cpf',
     'nomeMae',
-    'nomePai',
     'endereco',
     'cep',
     'bairro',
     'cidade',
     'uf',
   ]);
+});
+
+test('pai ausente não gera pendência, mas mãe continua obrigatória nos dois aliases', () => {
+  const mother = completeProfile.nome_mae;
+  const base = { ...completeProfile, nome_mae: undefined, nome_pai: undefined };
+  for (const alias of ['camelCase', 'snake_case']) {
+    const motherKey = alias === 'camelCase' ? 'nomeMae' : 'nome_mae';
+    const fatherKey = alias === 'camelCase' ? 'nomePai' : 'nome_pai';
+    for (const father of [undefined, null, '', '   ', 'PAI DA ALUNA']) {
+      const profile: TechnicalEnrollmentProfile = { ...base, [motherKey]: mother, [fatherKey]: father };
+      assert.deepEqual(getTechnicalEnrollmentMissingFields(profile), []);
+      assert.equal(profile[fatherKey], father);
+    }
+    for (const absentMother of [undefined, null, '', '   ']) {
+      const missing = getTechnicalEnrollmentMissingFields({
+        ...base, [motherKey]: absentMother, [fatherKey]: 'PAI DA ALUNA',
+      });
+      assert.deepEqual(missing.map((field) => field.key), ['nomeMae']);
+    }
+  }
 });
 
 test('rejeita CPF, CEP e UF apenas formatados, mas estruturalmente inválidos', () => {

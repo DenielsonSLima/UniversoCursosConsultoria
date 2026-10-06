@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-10-05T14:35:07.891Z",
+  "builtAt": "2026-10-06T17:24:55.783Z",
   "manifestVersion": 2,
-  "sourceSignature": "c003fe07b76a56dd18c4044b23d95fad0b3a7f77bdffc1a595eba02e098c94a3",
+  "sourceSignature": "07e346600762d30a8ce0ad34632410657c3406cb1eff7a03d5a3b8b6f0881c3a",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "144585dedc4867e71601ea6c1ad79fef0e80533c603673b7b03ce190bcda49f0"
+      "hash": "a96226ef87a1470f6ad7bd5c2f6d5fa60b4c866682e3a0a99f93c12be7d5ede3"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -208,14 +208,24 @@
       "part": 1
     },
     {
-      "id": "9348b6871c6157e48288",
-      "hash": "9348b6871c6157e48288ec27442d78e4af699b53d73437c3a368351b86a7015d",
+      "id": "477731781da0f7a5193f",
+      "hash": "477731781da0f7a5193f5beb23cbb4b88a4fc6fd14b8ea6edfe8d171f75d1327",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-10-05-gestor-inicio-secretaria-calendario-nitidez",
-      "text": "Estado: ajuste visual preparado para 4.8.172; produção autorizada na sessão, condicionada à CI/Preview. Objetivo: revisar legibilidade de Início, Secretaria e Calendário do gestor. Aceite: renderização auto localizada; pequenos rótulos de painel/agenda >=12px; navegação Secretaria 16px/600 e descrições 14px; campos agenda >=16px em toque; entrada sem transform persistente; movimento reduzido; sem navegador. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-05-gestor-inicio-secretaria-calendario-nitidez.md` (13 arquivos). Validação: smoke DOM dos controles, cascade compilada, tipagem/lint/build e CI; smoke visual/autenticado pendente por orientação expressa do responsável. Base: main `1b62dd25ef366aa2a7be6b8333629112e42178aa`, versão 4.8.171. GitHub somente MCP. Histórico: entregas aluno 4.8.170 e abas Caixa 4.8.171 publicadas; registros anteriores preservados.",
-      "normalizedText": "estado ajuste visual preparado para 4 8 172 producao autorizada na sessao condicionada a ci preview objetivo revisar legibilidade de inicio secretaria e calendario do gestor aceite renderizacao auto localizada pequenos rotulos de painel agenda 12px navegacao secretaria 16px 600 e descricoes 14px campos agenda 16px em toque entrada sem transform persistente movimento reduzido sem navegador manifesto explicito ai operacao registros alteracoes 2026 10 05 gestor inicio secretaria calendario nitidez md 13 arquivos validacao smoke dom dos controles cascade compilada tipagem lint build e ci smoke visual autenticado pendente por orientacao expressa do responsavel base main 1b62dd25ef366aa2a7be6b8333629112e42178aa versao 4 8 171 github somente mcp historico entregas aluno 4 8 170 e abas caixa 4 8 171 publicadas registros anteriores preservados",
-      "tokenCount": 107,
+      "section": "Lote: 2026-10-06-filiacao-mae-obrigatoria",
+      "text": "Estado: frontend preparado para 4.8.175; migration aplicada; produção autorizada pelo responsável, aguardando fechamento de validação, CI e Preview. Objetivo: permitir cadastro e matrícula técnica com apenas o nome da mãe na filiação. Aceite: nome da mãe obrigatório na validação do ingresso técnico; nome do pai opcional no formulário e no perfil, sem pendência cadastral ou bloqueio de matrícula por ausência do pai. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-06-filiacao-mae-obrigatoria.md`. Risco: divergência entre checklist cliente e RPC corrigida por migration aditiva; função instalada conferida byte a byte, sem modificar cadastros reais. Validação: 8 testes frontend e matriz de 20 casos aprovados; teste SQL em transação/rollback em validação. CI, Preview e publicação ainda não concluídos. Smoke visual/autenticado Safari: pendente porque esta sessão não oferece Safari autenticado. Base: main `c5315f327f48429a3a09314215aadee01d8b3ef2`, versão 4.8.174. GitHub e Supabase somente MCP. Reunião: três agentes revisaram interface, regra canônica e publicação; divergência da RPC identificada e incluída no mesmo domínio. Migration remota `20261006172335` preserva",
+      "normalizedText": "estado frontend preparado para 4 8 175 migration aplicada producao autorizada pelo responsavel aguardando fechamento de validacao ci e preview objetivo permitir cadastro e matricula tecnica com apenas o nome da mae na filiacao aceite nome da mae obrigatorio na validacao do ingresso tecnico nome do pai opcional no formulario e no perfil sem pendencia cadastral ou bloqueio de matricula por ausencia do pai manifesto explicito ai operacao registros alteracoes 2026 10 06 filiacao mae obrigatoria md risco divergencia entre checklist cliente e rpc corrigida por migration aditiva funcao instalada conferida byte a byte sem modificar cadastros reais validacao 8 testes frontend e matriz de 20 casos aprovados teste sql em transacao rollback em validacao ci preview e publicacao ainda nao concluidos smoke visual autenticado safari pendente porque esta sessao nao oferece safari autenticado base main c5315f327f48429a3a09314215aadee01d8b3ef2 versao 4 8 174 github e supabase somente mcp reuniao tres agentes revisaram interface regra canonica e publicacao divergencia da rpc identificada e incluida no mesmo dominio migration remota 20261006172335 preserva",
+      "tokenCount": 152,
       "part": 1
+    },
+    {
+      "id": "17987616197e2190cb69",
+      "hash": "17987616197e2190cb690031ff88819d92a7eb7b7cd214c4b6eefe12b25bc686",
+      "path": "ai/operacao/LOTE_ATIVO.md",
+      "section": "Lote: 2026-10-06-filiacao-mae-obrigatoria",
+      "text": "assinatura/ACL.",
+      "normalizedText": "assinatura acl",
+      "tokenCount": 2,
+      "part": 2
     },
     {
       "id": "cbd4dd650a86dc9a8867",
