@@ -143,7 +143,7 @@ test('prévia do editor reutiliza o cabeçalho e a marca institucional configura
 
 test('mantém a marca gráfica visível sob as linhas transparentes da grade', async () => {
   const renderer = await readFile(
-    'modules/gestor/calendario/exportacao-aulas/calendarioAulasExportacao.pdf.ts',
+    'modules/gestor/calendario/exportacao-aulas/calendarioAulasExportacao.pdf.layout.ts',
     'utf8',
   );
   const rowRendererStart = renderer.indexOf('const drawRowChunk');
@@ -156,7 +156,7 @@ test('mantém a marca gráfica visível sob as linhas transparentes da grade', a
 
 test('centraliza o conteúdo da grade no PDF e no espelho do editor', async () => {
   const renderer = await readFile(
-    'modules/gestor/calendario/exportacao-aulas/calendarioAulasExportacao.pdf.ts',
+    'modules/gestor/calendario/exportacao-aulas/calendarioAulasExportacao.pdf.layout.ts',
     'utf8',
   );
   const editor = await readFile(
@@ -243,7 +243,7 @@ test('a migration final do calendário remove recorte mensal quando módulo téc
 
 test('alinha a escala e o centro da marca do PDF à prévia A4 do editor', async () => {
   const renderer = await readFile(
-    'modules/gestor/calendario/exportacao-aulas/calendarioAulasExportacao.pdf.ts',
+    'modules/gestor/calendario/exportacao-aulas/calendarioAulasExportacao.pdf.assets.ts',
     'utf8',
   );
   const editor = await readFile(
@@ -259,18 +259,23 @@ test('alinha a escala e o centro da marca do PDF à prévia A4 do editor', async
   assert.doesNotMatch(renderer, /pageWidth - PAGE_MARGIN_X \* 2\) \* \(scale \/ 100\)/);
 });
 
-test('espelha a tipografia e a área segura do cabeçalho da Declaração', async () => {
-  const renderer = await readFile(
-    'modules/gestor/calendario/exportacao-aulas/calendarioAulasExportacao.pdf.ts',
+test('reutiliza o cabeçalho institucional canônico do editor sem desenho privado', async () => {
+  const layout = await readFile(
+    'modules/gestor/calendario/exportacao-aulas/calendarioAulasExportacao.pdf.layout.ts',
+    'utf8',
+  );
+  const canonicalHeader = await readFile(
+    'modules/gestor/secretaria/shared/canonical-institutional-header-pdf.ts',
     'utf8',
   );
 
-  assert.match(renderer, /const HEADER_MARGIN_X = 20/);
-  assert.match(renderer, /const HEADER_TOP = 20/);
-  assert.match(renderer, /const HEADER_BOTTOM = 55/);
-  assert.match(renderer, /pdf\.setFont\('times', 'bold'\)/);
-  assert.match(renderer, /pdf\.setFont\('times', 'normal'\)/);
-  assert.match(renderer, /pdf\.line\(HEADER_MARGIN_X, HEADER_BOTTOM/);
+  assert.match(layout, /drawCanonicalInstitutionalHeader\(/);
+  assert.match(layout, /resolveInstitutionalHeader\(/);
+  assert.match(layout, /orientation: 'portrait'/);
+  assert.doesNotMatch(layout, /const drawInstitutionalHeader|const drawHeaderDetail|pdf\.roundedRect/);
+  assert.match(canonicalHeader, /left: 20/);
+  assert.match(canonicalHeader, /top: 20/);
+  assert.match(canonicalHeader, /bottom: 55/);
 });
 
 test('painel entrega o mesmo PDF pronto ao visualizador, sem download direto ou rasterização', async () => {
