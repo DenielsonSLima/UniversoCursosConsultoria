@@ -35,6 +35,12 @@ export interface CalendarioAulasTurmaModulo {
   moduloOrdem: number | null;
 }
 
+/** Módulo incluído no documento cronológico, mesmo quando não há aula no recorte. */
+export interface CalendarioAulasModuloSelecionado extends CalendarioAulasTurmaModulo {
+  moduloRotulo: string;
+  totalAulas: number;
+}
+
 /**
  * Metadados visuais já resolvidos pelo servidor a partir do modelo ativo e
  * do polo. O renderer apenas posiciona estes textos no documento.
@@ -49,6 +55,12 @@ export interface CalendarioAulasDocumento {
   curso: string;
   turma: string;
   modulo: string | null;
+  /** Ausente no payload legado por módulo. */
+  modoExportacao?: 'CRONOLOGICO';
+  alcance?: string | null;
+  dataInicio?: string | null;
+  dataFim?: string | null;
+  modulosSelecionados?: CalendarioAulasModuloSelecionado[];
   exibirMarcaDagua: boolean;
   exibirModulo: boolean;
   cabecalhosTabela: CalendarioAulasCabecalhosTabela;
@@ -66,6 +78,8 @@ export interface CalendarioAulasDocumento {
   cabecalhoInstitucional: CalendarioAulasCabecalhoInstitucional;
   arquivoNome: string;
   emitidoEm: string | null;
+  templateRevision?: number | null;
+  template?: Record<string, unknown> | null;
 }
 
 /**
@@ -103,6 +117,14 @@ export interface CalendarioAulasLinha {
   horarioExibicao: string;
   /** Nome do professor. O nome do campo permanece compatível com a RPC legada. */
   professoresObservacao: string;
+  /** Identidade e ordenação canônicas presentes somente no modo cronológico. */
+  encontroId?: string;
+  disciplinaId?: string;
+  moduloId?: string;
+  moduloNome?: string;
+  moduloRotulo?: string;
+  dataIso?: string;
+  horaInicio?: string | null;
 }
 
 export interface CalendarioAulasExportacaoPayload {
@@ -120,6 +142,13 @@ export interface PrepararCalendarioAulasExportacaoInput {
   mesReferencia: string;
   /** Filtro opcional por módulo (somente cursos técnicos). */
   moduloId?: string | null;
+  /** Ausente preserva a exportação completa do módulo selecionado. */
+  modoExportacao?: 'MODULO_COMPLETO' | 'CRONOLOGICO';
+  /** No modo cronológico, null seleciona todos os módulos da grade da turma. */
+  moduloIds?: string[] | null;
+  /** No modo cronológico, ambos ausentes abrangem todas as aulas datadas. */
+  dataInicio?: string | null;
+  dataFim?: string | null;
 }
 
 export interface CalendarioAulasPdfDocument {

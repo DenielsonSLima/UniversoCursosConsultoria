@@ -1,8 +1,8 @@
 {
-  "version": "4.8.173",
+  "version": "4.8.174",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 182,
+  "revision": 183,
   "releasedAt": "2026-10-05",
-  "summary": "C1 importado de matrícula T42 confirmado; assistente do segundo ciclo volta ao topo em cada etapa"
+  "summary": "Calendário cronológico da turma com múltiplos módulos e período opcional em PDF único"
 }
