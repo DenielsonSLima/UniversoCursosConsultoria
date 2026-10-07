@@ -1,8 +1,8 @@
 {
-  "version": "4.8.175",
+  "version": "4.8.176",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 184,
-  "releasedAt": "2026-10-06",
-  "summary": "Filiação exige somente o nome da mãe; nome do pai opcional no cadastro e na matrícula técnica"
+  "revision": 185,
+  "releasedAt": "2026-10-07",
+  "summary": "Índices concorrentes para a composição do Caixa com regras financeiras preservadas"
 }

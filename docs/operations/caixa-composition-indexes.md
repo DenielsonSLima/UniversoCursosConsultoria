@@ -24,6 +24,8 @@ compatible evidence. Do not include wide normalized JSON in the index.
 - supabase/tests/proesc_composition_lookup_indexes.isolated.test.mjs
 - supabase/tests/proesc_paid_net_discount_rule.isolated.test.mjs
 - docs/operations/caixa-composition-indexes.md
+- internal/versioning/system-version.json
+- internal/versioning/CHANGELOG.md
 
 ## Nontransactional application
 
