@@ -4,10 +4,11 @@ import { boundedCorrectionService } from './bounded-correction.service';
 import { useAccessibleDialog } from './hooks/useAccessibleDialog';
 const money = (value: string | number) => Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const date = (value: string) => value.split('-').reverse().join('/');
-export default function FinanceiroBoundedCorrectionDialog({ correction, onClose, onConfirm }: {
+interface FinanceiroBoundedCorrectionDialogProps {
   correction: CorrectionSummary; onClose: () => void;
   onConfirm: (preview: CorrectionPreview) => Promise<void>;
-}) {
+}
+const FinanceiroBoundedCorrectionDialog: React.FC<FinanceiroBoundedCorrectionDialogProps> = ({ correction, onClose, onConfirm }) => {
   const [preview, setPreview] = useState<CorrectionPreview | null>(null);
   const [error, setError] = useState('');
   const [accepted, setAccepted] = useState(false);
@@ -72,4 +73,5 @@ export default function FinanceiroBoundedCorrectionDialog({ correction, onClose,
       </div>
     </div>
   </div>;
-}
+};
+export default FinanceiroBoundedCorrectionDialog;
