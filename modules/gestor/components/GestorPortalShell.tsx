@@ -48,7 +48,7 @@ interface GestorPortalShellProps {
   handlePoloChange: (poloId: string) => void;
   formattedDate: string;
   formattedDayOfWeek: string;
-  contentScrollRef: React.RefObject<HTMLDivElement | null>;
+  contentScrollRef: React.RefObject<HTMLElement | null>;
   renderContent: () => React.ReactNode;
   isLogoutConfirmOpen: boolean;
   setIsLogoutConfirmOpen: (open: boolean) => void;
@@ -95,7 +95,7 @@ const GestorPortalShell: React.FC<GestorPortalShellProps> = ({
   executeLogout,
 }) => {
   return (
-    <div className="flex h-screen bg-slate-100 font-sans antialiased overflow-hidden">
+    <div className="flex h-screen supports-[height:100dvh]:h-dvh bg-slate-100 font-sans antialiased overflow-hidden">
 
       <aside className="hidden lg:flex flex-col w-64 bg-[#001a33] text-white shadow-xl z-20">
         <div className="border-b border-white/10 px-5 py-3">
@@ -347,7 +347,13 @@ const GestorPortalShell: React.FC<GestorPortalShellProps> = ({
         </div>
       )}
 
-      <main className="flex-1 overflow-auto relative w-full lg:pt-0 pt-16 flex flex-col">
+      {/* O main é o único proprietário da rolagem do conteúdo do portal. */}
+      <main
+        ref={contentScrollRef}
+        aria-label="Conteúdo do portal"
+        tabIndex={0}
+        className="min-h-0 min-w-0 flex-1 overflow-auto overscroll-contain scroll-pt-[148px] lg:scroll-pt-[84px] relative w-full lg:pt-0 pt-16 flex flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"
+      >
         <GestorPortalHeader
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
@@ -371,7 +377,7 @@ const GestorPortalShell: React.FC<GestorPortalShellProps> = ({
           formattedDayOfWeek={formattedDayOfWeek}
         />
 
-        <div ref={contentScrollRef} className="p-8 flex-1 overflow-auto">
+        <div className="min-w-0 p-8 flex-1">
           <Suspense fallback={(
             <div className="flex min-h-[420px] items-center justify-center gap-3 text-xs font-black uppercase tracking-widest text-slate-500">
               <Clock className="animate-pulse text-blue-600" size={24} /> Preparando módulo...

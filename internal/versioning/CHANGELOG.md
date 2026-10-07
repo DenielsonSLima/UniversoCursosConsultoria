@@ -6,6 +6,12 @@ Histórico anterior: [16/09/2026 a 25/09/2026 — versões 4.8.65 a 4.8.90](./ch
 
 Histórico arquivado: [25/09/2026 a 26/09/2026 — versões 4.8.91 a 4.8.110](./changelog/2026-09-25-a-2026-09-26-versoes-4-8-91-a-4-8-110.md).
 
+## [4.8.179] - 2026-10-07
+
+- O Portal do Gestor passa a ter um único contêiner de rolagem, evitando a segunda barra e o deslocamento para uma área vazia no financeiro da turma.
+- Reset de navegação, cabeçalho fixo mobile e foco por teclado acompanham o contêiner correto, sem alterar regras financeiras.
+- Seis contratos de fonte e revisão independente; smoke interativo autenticado permanece pendente.
+
 ## [4.8.178] - 2026-10-07
 
 - Boleto e carnê preservam a logo oficial Banese quando o carregamento remoto falha, usando os mesmos bytes do recurso oficial já existente no projeto.
