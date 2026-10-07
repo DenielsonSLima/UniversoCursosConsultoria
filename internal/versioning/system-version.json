@@ -1,8 +1,9 @@
 {
-  "version": "4.8.179",
+  "version": "4.8.180",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 188,
+  "revision": 189,
   "releasedAt": "2026-10-07",
-  "summary": "Rolagem única no Portal do Gestor, com navegação por teclado e cabeçalho móvel preservados"
+  "summary": "Confirmação explícita do segundo ciclo com parcelas em aberto e releitura antes da emissão"
 }
+

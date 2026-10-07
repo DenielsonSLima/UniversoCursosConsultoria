@@ -1,5 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import FinanceiroSecondCycleWarning from './FinanceiroSecondCycleWarning';
+import { formatMoney, formatDate, formatPercent } from './manual-cycle-dialog-presentation';
 import {
   AlertTriangle,
   ArrowLeft,
@@ -47,18 +49,6 @@ const WIZARD_STEPS: Array<{ number: WizardStep; label: string }> = [
   { number: 3, label: 'Revisão e confirmação' },
 ];
 
-const formatMoney = (value: string) => new Intl.NumberFormat('pt-BR', {
-  style: 'currency',
-  currency: 'BRL',
-}).format(Number(value));
-
-const formatDate = (value: string) => new Date(`${value}T00:00:00`).toLocaleDateString('pt-BR');
-
-const formatPercent = (value: string) => `${new Intl.NumberFormat('pt-BR', {
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 2,
-}).format(Number(value))}%`;
-
 const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = ({
   turmaId,
   row,
@@ -67,6 +57,7 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
   onClose,
   onConfirm,
 }) => {
+  const [warningContext, setWarningContext] = useState<string | null>(null);
   const requestedCycleNumber = row.cicloManual.proximoCicloNumero;
   const [cycleNumber, setCycleNumber] = useState(requestedCycleNumber);
   const externalHistory = row.cicloManual.criterioElegibilidade === 'HISTORICO_EXTERNO';
@@ -152,7 +143,13 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
   const eligibilityLabel = getCriterioElegibilidadeLabel(
     row.cicloManual.criterioElegibilidade,
   );
-  const { dialogRef, initialFocusRef } = useAccessibleDialog(true, onClose, pending);
+  const confirmationContext = JSON.stringify([turmaId, revisionContext, preview?.regraEfetivaFingerprint,
+    preview?.politicaFingerprint, preview?.cronogramaFingerprint]);
+  const showWarning = warningContext === confirmationContext && previewReady && !pending;
+  useEffect(() => {
+    if (!previewReady || pending || warningContext !== confirmationContext) setWarningContext(null);
+  }, [previewReady, pending, warningContext, confirmationContext]);
+  const { dialogRef, initialFocusRef } = useAccessibleDialog(!showWarning, onClose, pending);
 
   useEffect(() => {
     if (pending) dialogRef.current?.focus();
@@ -177,12 +174,18 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
   };
 
   const startIssuance = () => {
-    void startCicloManualIssuance({
+    return startCicloManualIssuance({
       canSettleEnrollment, externalHistory, externalHistoryConfirmed, firstDueDate,
       issuanceStarted: issuanceStartedRef, onConfirm, openSettlement, positiveAmounts,
       preview, previewReady, setIssuanceSnapshot,
     });
   };
+
+  if (showWarning) return <FinanceiroSecondCycleWarning
+    key={confirmationContext} matriculaId={row.matriculaId} alunoNome={row.alunoNome}
+    matriculaExibicao={row.matriculaExibicao} onCancel={() => setWarningContext(null)}
+    onConfirm={() => { setWarningContext(null); return startIssuance() ?? undefined; }}
+  />;
 
   const dialog = (
     <div
@@ -473,7 +476,7 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
             {step < 3 ? (
               <button type="button" disabled={pending || !previewReady || (step === 2 && !positiveAmounts)} onClick={() => goToStep((step + 1) as WizardStep)} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-[10px] font-black uppercase text-white transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-40 sm:flex-none">{step === 1 ? 'Ver composição' : 'Revisar geração'} <ChevronRight size={14} /></button>
             ) : (
-              <button type="button" disabled={pending || !previewReady || !positiveAmounts || (externalHistory && !externalHistoryConfirmed)} onClick={startIssuance} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-[10px] font-black uppercase text-white transition hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:opacity-40 sm:flex-none">
+              <button type="button" disabled={pending || !previewReady || !positiveAmounts || (externalHistory && !externalHistoryConfirmed)} onClick={() => cycleNumber === 2 ? setWarningContext(confirmationContext) : void startIssuance()} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-[10px] font-black uppercase text-white transition hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:opacity-40 sm:flex-none">
                 {pending ? <><Loader2 className="animate-spin" size={14} /> Gerando e emitindo BolePix...</> : <><ReceiptText size={14} /> Gerar e emitir BolePix</>}
               </button>
             )}
@@ -489,3 +492,4 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
 };
 
 export default FinanceiroCicloManualDialog;
+

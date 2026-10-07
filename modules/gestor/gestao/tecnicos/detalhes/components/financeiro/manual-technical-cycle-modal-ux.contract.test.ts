@@ -276,7 +276,7 @@ test("revisão usa um único CTA de geração e emissão bancária", () => {
 });
 
 test("foco, Escape, rolagem e restauração permanecem protegidos", () => {
-  assert.match(dialogSource, /useAccessibleDialog\(true, onClose, pending\)/);
+  assert.match(dialogSource, /useAccessibleDialog\(!showWarning, onClose, pending\)/);
   assert.match(dialogSource, /role="dialog"/);
   assert.match(dialogSource, /aria-modal="true"/);
   assert.match(dialogSource, /aria-labelledby="manual-cycle-title"/);
@@ -300,3 +300,4 @@ test("foco, Escape, rolagem e restauração permanecem protegidos", () => {
   );
   assert.match(accessibleDialogSource, /previouslyFocused\?\.focus\(\)/);
 });
+
