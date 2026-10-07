@@ -3,7 +3,7 @@
 ## Objetivo e contrato
 
 Versão candidata: 4.8.181, baseada no main 4.8.180.
-Candidato de PR em rascunho. Nenhuma migration, permissão, Edge Function ou operação financeira real é aplicada por este lote.
+Atualização do registro em 2026-10-07: 14 migrations de implementação e uma migration de sete grants aprovados instaladas; worker de recuperação v12 e emissor v10 ativos. Execução financeira dos 49 títulos ainda pendente.
 Preservar obrigações e runs originais; exigir prova de cancelamento bancário antes do ajuste interno; exigir novo consentimento real e emissão manual.
 O C2 histórico cancelado não pode ser retomado. Após C1 corrigido completo sem C2 cancelado, a continuidade volta às regras canônicas e ao aviso explícito existente.
 
@@ -15,7 +15,8 @@ O C2 histórico cancelado não pode ser retomado. Após C1 corrigido completo se
 - Prévia canônica completa, novo consentimento do usuário atual, chaves novas por recebível e proteção contra replay por outro ator.
 - Correção de elegibilidade LOCAL é limitada à prova de dispensa finalizada; não aceita CANCELADO genérico nem altera proteções acadêmicas/importadas.
 - UI preserva confirmação do C2, bloqueios, cancelamento, respostas tardias, clique repetido e retomada após fechar/reabrir.
-- SQL somente em `supabase/review-drafts/bounded-financial-correction`, fora da aplicação automática.
+- SQL aplicado preservado byte a byte em `supabase/migrations`, com versões e ordem reais do histórico remoto; drafts de revisão mantidos como fonte dos testes isolados.
+- Comentários originais de revisão/proposta não são reescritos em migrations já aplicadas; a instalação é registrada aqui e no histórico remoto.
 
 ## Manifesto explícito
 
@@ -49,6 +50,21 @@ O C2 histórico cancelado não pode ser retomado. Após C1 corrigido completo se
 - `supabase/functions/technical-manual-cycle-issuance/orchestrator.ts`
 - `supabase/functions/technical-manual-cycle-issuance/receivable-issuance.ts`
 - `supabase/functions/technical-manual-cycle-recovery-worker/index.ts`
+- `supabase/migrations/20261007231109_bounded_financial_correction_storage.sql`
+- `supabase/migrations/20261007231128_bounded_financial_correction_source_guards.sql`
+- `supabase/migrations/20261007231210_bounded_financial_correction_approval.sql`
+- `supabase/migrations/20261007231222_bounded_financial_correction_bank_service.sql`
+- `supabase/migrations/20261007231230_bounded_financial_correction_bank_evidence.sql`
+- `supabase/migrations/20261007231257_bounded_financial_correction_reset_proofs.sql`
+- `supabase/migrations/20261007231308_bounded_financial_correction_finalize.sql`
+- `supabase/migrations/20261007231319_bounded_financial_correction_finalized_proofs.sql`
+- `supabase/migrations/20261007231333_bounded_financial_correction_projection.sql`
+- `supabase/migrations/20261007231344_bounded_financial_correction_consent.sql`
+- `supabase/migrations/20261007231356_bounded_financial_correction_fences_dispatch.sql`
+- `supabase/migrations/20261007231414_bounded_financial_correction_canonical_adapters.sql`
+- `supabase/migrations/20261007231425_bounded_financial_correction_local_waiver_projection.sql`
+- `supabase/migrations/20261007231438_bounded_financial_correction_native_eligibility.sql`
+- `supabase/migrations/20261007231549_bounded_financial_correction_approved_runtime_grants.sql`
 - `supabase/review-drafts/bounded-financial-correction/01_bounded_storage.draft.sql`
 - `supabase/review-drafts/bounded-financial-correction/02_bounded_guards.draft.sql`
 - `supabase/review-drafts/bounded-financial-correction/03_bounded_approval.draft.sql`
@@ -144,7 +160,7 @@ O C2 histórico cancelado não pode ser retomado. Após C1 corrigido completo se
 - `tests/bounded-local-waiver.contract.test.mjs`
 - `tests/check-bounded-correction-sql-preview.mjs`
 
-Total: 124 arquivos.
+Total: 139 arquivos.
 
 ## Validação e limites
 
@@ -153,7 +169,10 @@ Total: 124 arquivos.
 - Dez testes adicionais usam a cadeia real de elegibilidade nativa/importada e persistência canônica das 36 emissões simuladas, incluindo a continuidade C2 após conclusão.
 - Saída real de RPC isolada passa pelos parsers de UI/Edge; dispensa, histórico pago, total histórico e total ativo são distintos.
 - Novo CI verifica o grafo Deno completo, versão/teto, regressões, SQL/UI e sessões PostgreSQL independentes em serviço efêmero sem credenciais de produção.
-- Resultados do CI do commit exato ainda pendentes na abertura do PR. Testes de fixture não equivalem a implantação ou RLS/RBAC real.
+- Conferir novamente CI/Preview no commit exato desta atualização. Testes de fixture não equivalem a validação bancária real ou smoke autenticado.
 - Smoke Safari autenticado e validação bancária real continuam pendentes e exigem ambiente/ação autorizados.
-- Sete grants propostos, deploy, transformação dos drafts em migrations e execução financeira exigem aprovações separadas. Nenhum grant proposto é aplicado automaticamente.
+- Histórico remoto lido por MCP: 14 migrations entre `20261007231109` e `20261007231438`, seguidas dos sete grants aprovados em `20261007231549`; 15 cópias canônicas conferidas byte a byte.
+- Estado das Edge Functions conferido por MCP: worker v12 e emissor v10 ativos. A instalação não comprova execução financeira.
+- Cancelamento dos 49 títulos e ajuste interno permanecem pendentes. Reemissão não é automática e exige revisão completa e novo consentimento real.
+- R$ 200,00 permanecem como pendência separada e não resolvida, sem inferir baixa, estorno ou devolução.
 - Não houve emissão/cancelamento real, baixa, estorno, devolução, alteração acadêmica ou comunicação aos alunos.

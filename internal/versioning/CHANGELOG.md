@@ -10,7 +10,7 @@ Histórico arquivado: [25/09/2026 a 26/09/2026 — versões 4.8.91 a 4.8.110](./
 
 - Prepara correção financeira limitada, mantendo recebíveis e ciclos históricos com confirmação bancária antes do ajuste interno.
 - Exige revisão dos termos e novo consentimento do usuário para retomar a emissão, sem reemissão automática.
-- Distingue matrícula local dispensada, histórico pago preservado e totais ativos; SQL permanece em revisão, sem aplicação ou ampliação de acesso neste candidato.
+- Distingue matrícula local dispensada, histórico pago preservado e totais ativos; registra as 14 migrations e os sete grants aprovados já instalados, com cópias canônicas imutáveis e execução financeira ainda pendente.
 
 ## [4.8.180] - 2026-10-07
 
