@@ -65,7 +65,7 @@ const FinanceiroBoundedCorrectionDialog: React.FC<FinanceiroBoundedCorrectionDia
         </label>
       </>}
       <div className="mt-5 flex justify-end gap-3">
-        <button ref={initialFocusRef as React.RefObject<HTMLButtonElement>} type="button" disabled={pending} onClick={onClose}>Cancelar</button>
+        <button ref={(node) => { initialFocusRef.current = node; }} type="button" disabled={pending} onClick={onClose}>Cancelar</button>
         <button type="button" disabled={pending || !accepted || !preview || !canReviewCorrection(preview)} onClick={() => void confirm()}
           className="rounded-lg bg-blue-700 px-4 py-2 font-bold text-white disabled:opacity-40">
           {pending ? 'Confirmando emissão...' : 'Confirmar termos e emitir 1º ciclo'}

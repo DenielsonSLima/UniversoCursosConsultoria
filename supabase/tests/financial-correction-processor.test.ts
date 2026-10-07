@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   cancelCorrectionItem, manifestFingerprint, manifestCanonicalText,
-  type Identity, type Manifest, type Claim, type BankInput,
+  type Identity, type Manifest, type Claim,
   type CorrectionStore, type CorrectionBank,
 } from "../functions/technical-financial-correction/processor.ts";
 
@@ -24,7 +24,7 @@ async function fixture() {
     state: "APPROVED", items: [item],
   };
   const claim: Claim = {
-    operationId, manifestFingerprint: fingerprint, item: structuredClone(item),
+    operationId, manifestFingerprint: fingerprint, item: globalThis.structuredClone(item),
     leaseToken: id(5), mode: "CANCEL_ALLOWED",
   };
   const bankResult = (alreadyCanceled = false) => ({
