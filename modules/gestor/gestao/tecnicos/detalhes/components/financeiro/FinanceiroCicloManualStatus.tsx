@@ -1,3 +1,6 @@
+import FinanceiroLocalWaiverHistory from './FinanceiroLocalWaiverHistory';
+import FinanceiroBoundedCorrectionStatus from './FinanceiroBoundedCorrectionStatus';
+import { correctionLabels, usesCanonicalCycleAfterCorrection } from './bounded-correction';
 import React from 'react';
 import {
   AlertTriangle,
@@ -38,6 +41,7 @@ const isIssuedInProesc = (generated: GeneratedCycle | null) => (
 );
 
 export const getFinanceiroSituationLabel = (row: MatriculaTecnicaFinanceiroRow) => {
+  if (row.cicloManual.correcaoEmissao && !usesCanonicalCycleAfterCorrection(row.cicloManual.correcaoEmissao)) return correctionLabels[row.cicloManual.correcaoEmissao.status];
   if (row.cicloManual.habilitado && row.cicloManual.modo === 'MANUAL') {
     const generated = row.cicloManual.cicloGerado;
     const generatedCycle = generated?.numero;
@@ -135,6 +139,9 @@ const FinanceiroCicloManualStatus = ({
   onResume,
   reviewingProesc,
 }: FinanceiroCicloManualStatusProps) => {
+  const academicBlocked = cicloManual.bloqueio?.codigo === 'STATUS_ACADEMICO'
+    || (statusAcademico !== undefined && !['PENDENTE', 'ATIVO'].includes(statusAcademico.trim().toUpperCase()));
+  if (cicloManual.correcaoEmissao && !usesCanonicalCycleAfterCorrection(cicloManual.correcaoEmissao)) return <FinanceiroBoundedCorrectionStatus correction={cicloManual.correcaoEmissao} disabled={disabled || academicBlocked} onReview={onResume} />;
   const generated = cicloManual.cicloGerado;
   const generatedLabel = cycleLabel(generated?.numero);
 
@@ -163,8 +170,6 @@ const FinanceiroCicloManualStatus = ({
     );
   }
 
-  const academicBlocked = cicloManual.bloqueio?.codigo === 'STATUS_ACADEMICO'
-    || (statusAcademico !== undefined && !['PENDENTE', 'ATIVO'].includes(statusAcademico.trim().toUpperCase()));
   if (academicBlocked) {
     return (
       <div className="flex max-w-80 flex-wrap items-center gap-x-2 gap-y-1" role="status">
@@ -248,4 +253,10 @@ const FinanceiroCicloManualStatus = ({
   );
 };
 
-export default FinanceiroCicloManualStatus;
+const FinanceiroCicloManualStatusWithHistory = (props: FinanceiroCicloManualStatusProps) => <>
+  <FinanceiroCicloManualStatus {...props} />
+  <FinanceiroLocalWaiverHistory cicloManual={props.cicloManual} />
+</>;
+
+export default FinanceiroCicloManualStatusWithHistory;
+

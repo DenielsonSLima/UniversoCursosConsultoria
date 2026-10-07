@@ -1,17 +1,16 @@
 # Lote ativo
 
-## Lote: 2026-10-07-aviso-segundo-ciclo
+## Lote: 2026-10-07-correcao-financeira-limitada
 
-Estado: candidato 4.8.180, revisão independente e validação focada concluídas; aguardando CI/Preview do commit.
-Objetivo: exigir aviso explícito com as parcelas em aberto antes da geração do segundo ciclo técnico.
-Aceite: lista canônica por matrícula; releitura antes de confirmar; mudança/erro/cancelamento invalida o aceite; C1 e C2 legítimo preservados.
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-07-aviso-segundo-ciclo.md`.
-Validação: 35 testes focados e sete cenários React DOM sintéticos; sem emissão ou cancelamento bancário.
-Smoke autenticado visual: pendente; build/lint/TypeScript completos aguardam o CI do commit exato.
-Publicação: PR separado; nenhuma alteração de banco/Edge Function ou operação financeira neste lote.
+Estado: candidato 4.8.181 em PR de rascunho; validação local revisada, CI e validações complementares pendentes.
+Objetivo: corrigir obrigações técnicas preservando recebíveis/ciclos, separar cancelamento bancário do ajuste interno e exigir novo consentimento real antes da reemissão manual.
+Aceite: escopo e termos imutáveis; banco confirmado antes do ajuste; C2 cancelado não reabre; matrícula paga preservada; dispensa LOCAL comprovada; nenhuma emissão automática.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-07-correcao-financeira-limitada.md`.
+Validação: SQL e UI sintéticos; caminho canônico de persistência com banco simulado e identidade original; nenhum título real cancelado ou emitido.
+CI/Preview: aguardando commit exato. Build Deno completo, elegibilidade C2 com definições reais, concorrência PostgreSQL e smoke Safari autenticado devem ser conferidos conforme o registro.
+Publicação: apenas código de revisão; SQL fora de supabase/migrations, sem grants, aplicação de banco, deploy de Edge Function ou execução financeira autorizados por este lote.
 
 ## Contexto anterior preservado
 
-Lote anterior: `ai/operacao/registros/alteracoes/2026-10-07-contract-v3-pagination.md`.
-O registro anterior mantinha o candidato 4.8.177 com migrations aplicadas/verificadas e smoke autenticado Safari pendente.
-Este lote não altera o compositor de contratos nem declara concluída a validação visual anterior.
+Lote anterior: `ai/operacao/registros/alteracoes/2026-10-07-aviso-segundo-ciclo.md`.
+O aviso C2 publicado na 4.8.180 permanece inalterado. Este lote não autoriza novo ciclo ou dispensa de confirmação de parcelas abertas.

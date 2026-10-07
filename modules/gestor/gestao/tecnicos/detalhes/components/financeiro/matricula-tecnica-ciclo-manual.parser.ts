@@ -1,3 +1,4 @@
+import { parseCorrectionSummary, usesCanonicalCycleAfterCorrection } from './bounded-correction';
 import { isProvenLocalEnrollment, readCycleQuantities } from './matricula-tecnica-ciclo-manual-destination';
 import type {
   MatriculaTecnicaCicloManual,
@@ -105,6 +106,7 @@ export const requireMatriculaTecnicaCicloManual = (
     && Number.isInteger(generated.quantidadeItens)
     && Number(generated.quantidadeItens) > 0
     && isDecimalString(generated.total)
+    && (generated.activeTotal === undefined || (isDecimalString(generated.activeTotal) && Number(generated.activeTotal) >= 0))
     && Number.isInteger(generated.emitidosBanese)
     && Number(generated.emitidosBanese) >= 0
     && Number.isInteger(generated.pendentesEmissao)
@@ -201,6 +203,16 @@ export const requireMatriculaTecnicaCicloManual = (
   if (!baseValid) {
     throw new Error('O servidor retornou um estado manual de ciclo incompleto.');
   }
+  if (value.correcaoEmissao !== undefined && value.correcaoEmissao !== null) {
+    const correction = parseCorrectionSummary(value.correcaoEmissao);
+    if (!usesCanonicalCycleAfterCorrection(correction)) {
+      if (value.podeGerar !== false || next !== null || !value.habilitado || value.modo !== 'MANUAL') {
+        throw new Error('Correção financeira não pode liberar um novo ciclo.');
+      }
+      return value as unknown as MatriculaTecnicaCicloManual;
+    }
+    // A completed C1-only correction must still pass every normal eligibility check below.
+  }
   if (protectedHistoryOnly) {
     return value as unknown as MatriculaTecnicaCicloManual;
   }
@@ -244,3 +256,4 @@ export const requireMatriculaTecnicaCicloManual = (
   }
   return value as unknown as MatriculaTecnicaCicloManual;
 };
+

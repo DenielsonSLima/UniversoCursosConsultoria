@@ -1,0 +1,129 @@
+name: Bounded financial correction review
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  bounded-financial-correction:
+    name: Isolated SQL, Edge and UI contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout review candidate
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Set up repository Deno runtime
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.1
+
+      - name: Install locked application dependencies
+        run: npm ci
+
+      - name: Install pinned isolated test dependencies
+        env:
+          TEST_DEPS: ${{ runner.temp }}/bounded-correction-test-deps
+        run: |
+          npm install --prefix "$TEST_DEPS" --no-save --package-lock=false --ignore-scripts \
+            @electric-sql/pglite@0.3.14 jsdom@26.1.0
+          mkdir -p node_modules/@electric-sql tmp
+          test ! -e node_modules/@electric-sql/pglite
+          ln -s "$TEST_DEPS/node_modules/@electric-sql/pglite" node_modules/@electric-sql/pglite
+          echo "CORRECTION_JSDOM_PATH=$TEST_DEPS/node_modules/jsdom" >> "$GITHUB_ENV"
+
+      - name: Validate version and audited file limits
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          npm run check:version -- --check-diff "$BASE_SHA" "$HEAD_SHA"
+          npm run check:file-lines -- --check-diff "$BASE_SHA" "$HEAD_SHA"
+
+      - name: Type-check real Edge dependency graph
+        run: |
+          deno check \
+            supabase/functions/technical-manual-cycle-recovery-worker/index.ts \
+            supabase/functions/technical-manual-cycle-issuance/index.ts \
+            supabase/functions/technical-manual-cycle-issuance/dependencies.ts \
+            supabase/functions/technical-manual-cycle-issuance/contract.ts \
+            supabase/functions/technical-manual-cycle-issuance/receivable-issuance.ts \
+            supabase/functions/technical-financial-correction/bank.ts \
+            supabase/functions/technical-financial-correction/processor.ts \
+            supabase/functions/technical-financial-correction/request.ts \
+            supabase/functions/technical-financial-correction/store.ts \
+            supabase/functions/technical-financial-correction/worker-action.ts \
+            supabase/functions/banese/core/adapter/boleto-cancellation.ts
+
+      - name: Preserve original one-off regressions without network permission
+        run: |
+          deno test --allow-read --allow-env \
+            supabase/functions/technical-manual-cycle-recovery-worker/contract.test.ts \
+            supabase/functions/technical-manual-cycle-recovery-worker/due-date-correction.test.ts \
+            supabase/functions/technical-manual-cycle-recovery-worker/due-date-correction-migrations.test.ts
+
+      - name: Test correction processor, store and worker authentication
+        run: node scripts/test-bounded-financial-correction.mjs worker
+
+      - name: Test all 61 isolated SQL and PGlite cases
+        run: node scripts/test-bounded-financial-correction.mjs sql
+
+      - name: Test native and imported eligibility with review draft 14
+        run: node scripts/test-bounded-financial-correction.mjs eligibility
+
+      - name: Test five UI and Edge contract suites
+        run: node scripts/test-bounded-financial-correction.mjs ui
+
+      - name: Verify committed SQL preview through UI and Edge parsers
+        run: node scripts/test-bounded-financial-correction.mjs bridge
+
+  bounded-postgres-concurrency:
+    name: Independent-session PostgreSQL concurrency
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: bounded_ci
+          POSTGRES_PASSWORD: synthetic_ephemeral_ci_only
+          POSTGRES_DB: bounded_correction_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U bounded_ci -d bounded_correction_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - name: Checkout review candidate
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install pinned test-only PostgreSQL client outside repository
+        env:
+          TEST_DEPS: ${{ runner.temp }}/bounded-postgres-test-deps
+        run: |
+          npm install --prefix "$TEST_DEPS" --no-save --package-lock=false --ignore-scripts pg@8.16.3
+          echo "BOUNDED_PG_MODULE=$TEST_DEPS/node_modules/pg" >> "$GITHUB_ENV"
+      - name: Verify actual independent-session lock and commit races
+        env:
+          BOUNDED_EPHEMERAL_POSTGRES: synthetic-postgres-17-only
+        run: node supabase/tests/bounded-postgres-concurrency.mjs

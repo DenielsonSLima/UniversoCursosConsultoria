@@ -14,6 +14,10 @@ import {
 import { correctKnownTechnicalTitleDueDate } from "./due-date-correction.ts";
 import { recoverReviewedCycleItems } from "./review-recovery.ts";
 
+import { CORRECTION_ACTION } from "../technical-financial-correction/request.ts";
+import { runApprovedCorrectionItem } from "../technical-financial-correction/worker-action.ts";
+import { CorrectionBlocked } from "../technical-financial-correction/processor.ts";
+
 const MAX_BODY_BYTES = 1_024;
 
 const json = (body: unknown, status = 200) =>
@@ -82,7 +86,13 @@ Deno.serve(async (request: Request) => {
   }
 
   try {
-    const internal = parseInternalCycleWorkerRequest(await readBody(request));
+    const body = await readBody(request);
+    if (body && typeof body === "object" && !Array.isArray(body) && (body as Record<string, unknown>).action === CORRECTION_ACTION) {
+      // The bounded bank stage returns here. Never fall through to automatic issuance.
+      const result = await runApprovedCorrectionItem(admin, body);
+      return json({ ...result, state: "BANK_CONFIRMED", internalFinalized: false, reissued: false });
+    }
+    const internal = parseInternalCycleWorkerRequest(body);
     const correction = internal.action ===
         "correct_known_technical_title_due_date"
       ? await correctKnownTechnicalTitleDueDate(admin, internal)
@@ -154,6 +164,9 @@ Deno.serve(async (request: Request) => {
       },
     });
   } catch (error) {
+    if (error instanceof CorrectionBlocked) {
+      return json({ error: "Cancelamento exige revisão.", code: error.code }, 409);
+    }
     if (error instanceof InternalCycleRecoveryRequestError) {
       return json({ error: error.message, code: "INVALID_REQUEST" }, 400);
     }
@@ -177,3 +190,4 @@ Deno.serve(async (request: Request) => {
     return json({ error: "A recuperação interna não foi concluída." }, 500);
   }
 });
+

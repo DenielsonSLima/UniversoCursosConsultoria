@@ -30,7 +30,8 @@ export const isProvenLocalEnrollment = (value: unknown) => {
     && Number(value.valor) > 0
     && parsedDate !== null && !Number.isNaN(parsedDate.getTime())
     && parsedDate.toISOString().slice(0, 10) === date
-    && ['PENDENTE', 'VENCIDO', 'PAGO'].includes(String(value.status))
+    && ((['PENDENTE', 'VENCIDO', 'PAGO'].includes(String(value.status)) && value.localFeeWaiverProven !== true)
+      || (value.status === 'CANCELADO' && value.localFeeWaiverProven === true))
     && value.destinoCobranca === 'LOCAL' && value.localSemBoletoComprovado === true;
 };
 
@@ -41,7 +42,12 @@ export const isIssuedCycleReceivable = (item: RecordValue, cycleNumber: number) 
       && isProvenLocalEnrollment(item);
   }
   return (item.destinoCobranca === undefined || item.destinoCobranca === 'BANESE')
-    && item.localSemBoletoComprovado !== true && item.emissaoBanese === 'EMITIDO'
+    && item.localSemBoletoComprovado !== true && item.localFeeWaiverProven !== true && item.emissaoBanese === 'EMITIDO'
     && (['PENDENTE', 'VENCIDO'].includes(String(item.status))
       || (item.status === 'PAGO' && item.emissaoHistoricaComprovada === true));
 };
+
+
+export const isProvenWaivedLocalEnrollment = (value: unknown) =>
+  isCycleRecord(value) && value.status === 'CANCELADO' && value.localFeeWaiverProven === true
+  && isProvenLocalEnrollment(value);
