@@ -41,7 +41,7 @@ const isIssuedInProesc = (generated: GeneratedCycle | null) => (
 );
 
 export const getFinanceiroSituationLabel = (row: MatriculaTecnicaFinanceiroRow) => {
-  if (row.cicloManual.correcaoEmissao && !usesCanonicalCycleAfterCorrection(row.cicloManual.correcaoEmissao)) return correctionLabels[row.cicloManual.correcaoEmissao.status];
+  if (row.cicloManual.correcaoEmissao && row.cicloManual.estado !== 'PROTEGIDO_EXISTENTE' && !usesCanonicalCycleAfterCorrection(row.cicloManual.correcaoEmissao)) return correctionLabels[row.cicloManual.correcaoEmissao.status];
   if (row.cicloManual.habilitado && row.cicloManual.modo === 'MANUAL') {
     const generated = row.cicloManual.cicloGerado;
     const generatedCycle = generated?.numero;
@@ -139,9 +139,6 @@ const FinanceiroCicloManualStatus = ({
   onResume,
   reviewingProesc,
 }: FinanceiroCicloManualStatusProps) => {
-  const academicBlocked = cicloManual.bloqueio?.codigo === 'STATUS_ACADEMICO'
-    || (statusAcademico !== undefined && !['PENDENTE', 'ATIVO'].includes(statusAcademico.trim().toUpperCase()));
-  if (cicloManual.correcaoEmissao && !usesCanonicalCycleAfterCorrection(cicloManual.correcaoEmissao)) return <FinanceiroBoundedCorrectionStatus correction={cicloManual.correcaoEmissao} disabled={disabled || academicBlocked} onReview={onResume} />;
   const generated = cicloManual.cicloGerado;
   const generatedLabel = cycleLabel(generated?.numero);
 
@@ -169,6 +166,10 @@ const FinanceiroCicloManualStatus = ({
       </div>
     );
   }
+
+  const academicBlocked = cicloManual.bloqueio?.codigo === 'STATUS_ACADEMICO'
+    || (statusAcademico !== undefined && !['PENDENTE', 'ATIVO'].includes(statusAcademico.trim().toUpperCase()));
+  if (cicloManual.correcaoEmissao && !usesCanonicalCycleAfterCorrection(cicloManual.correcaoEmissao)) return <FinanceiroBoundedCorrectionStatus correction={cicloManual.correcaoEmissao} disabled={disabled || academicBlocked} onReview={onResume} />;
 
   if (academicBlocked) {
     return (

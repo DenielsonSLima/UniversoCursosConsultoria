@@ -118,7 +118,7 @@ await build({ entryPoints: [base + 'FinanceiroCicloManualStatus.tsx'], outfile: 
 const { default: Status } = await import(pathToFileURL(resolve('tmp/correction-status.mjs')));
 for (const status of ['WAITING_BANK','WAITING_CONSENT','READY','PARTIAL','COMPLETE','REVIEW']) {
   reset(); preview.status=status; host=document.createElement('div');document.body.append(host);root=createRoot(host);
-  await React.act(async()=>{root.render(React.createElement(Status,{cicloManual:{correcaoEmissao:preview,
+  await React.act(async()=>{root.render(React.createElement(Status,{cicloManual:{habilitado:true,modo:'MANUAL',correcaoEmissao:preview,
     cicloGerado:{numero:2,quantidadeItens:13,emitidosBanese:0,pendentesEmissao:13,emRevisao:0}},
     disabled:false,statusAcademico:'ATIVO',onGenerate:()=>{throw Error('No generation');},onResume:()=>{resumed++;}}));});
   assert.doesNotMatch(host.textContent,/Retomar emissão|Gerar e emitir/);
@@ -127,7 +127,7 @@ for (const status of ['WAITING_BANK','WAITING_CONSENT','READY','PARTIAL','COMPLE
   clean();
 }
 reset(); host=document.createElement('div');document.body.append(host);root=createRoot(host);
-await React.act(async()=>{root.render(React.createElement(Status,{cicloManual:{correcaoEmissao:preview},
+await React.act(async()=>{root.render(React.createElement(Status,{cicloManual:{habilitado:true,modo:'MANUAL',correcaoEmissao:preview},
   disabled:false,statusAcademico:'TRANCADO',onGenerate:()=>{},onResume:()=>{resumed++;}}));});
 assert.equal(host.querySelector('button').disabled,true);assert.equal(resumed,0);clean();
 for (const paid of [false,true]) {
@@ -146,11 +146,19 @@ for (const paid of [false,true]) {
 console.log('PASS: corrected full terms DOM, 12 dates, explicit consent, cancel/Escape, stale consent, same-key retry, partial failure and double-click fence; historical C2 has no resume/generation action; academic block retained; reopened partial/lost-response consent replay and changed-actor rejection');
 reset(); let generatedC2=0; preview.status='COMPLETE';preview.historicalCycle2Count=0;
 host=document.createElement('div');document.body.append(host);root=createRoot(host);
-await React.act(async()=>{root.render(React.createElement(Status,{cicloManual:{correcaoEmissao:preview,
- habilitado:true,modo:'MANUAL',estado:'ELEGIVEL',podeGerar:true,proximoCicloNumero:2,bloqueio:null,
+await React.act(async()=>{root.render(React.createElement(Status,{cicloManual:{habilitado:true,modo:'MANUAL',correcaoEmissao:preview,
+ estado:'ELEGIVEL',podeGerar:true,proximoCicloNumero:2,bloqueio:null,
  cicloGerado:{numero:1,quantidadeItens:13,quantidadeBancaria:12,quantidadeLocal:1,total:'3558.80',
  emitidosBanese:12,pendentesEmissao:0,emRevisao:0}},disabled:false,statusAcademico:'ATIVO',
  onGenerate:()=>{generatedC2++;},onResume:()=>{throw Error('Completed correction must not resume C1');}}));});
 const nextCycleButton=[...host.querySelectorAll('button')].find(button=>button.textContent.includes('Gerar e emitir 2º ciclo'));
 assert.ok(nextCycleButton);await React.act(async()=>nextCycleButton.click());assert.equal(generatedC2,1);clean();
 console.log('PASS: COMPLETE without canceled C2 routes to existing canonical C2 action');
+
+reset(); host=document.createElement('div');document.body.append(host);root=createRoot(host);
+await React.act(async()=>{root.render(React.createElement(Status,{cicloManual:{habilitado:true,modo:'MANUAL',
+ estado:'PROTEGIDO_EXISTENTE',correcaoEmissao:preview,bloqueio:{codigo:'HISTORICO_FINANCEIRO_EXISTENTE',mensagem:'Histórico protegido'},
+ cicloGerado:{numero:2,quantidadeItens:13,emitidosBanese:0,pendentesEmissao:13,emRevisao:0}},
+ disabled:false,statusAcademico:'ATIVO',onGenerate:()=>{throw Error('Protected');},onResume:()=>{throw Error('Protected');}}));});
+assert.equal(host.querySelectorAll('button').length,0);assert.match(host.textContent,/Histórico protegido/);clean();
+console.log('PASS: protected history takes precedence over correction actions');
