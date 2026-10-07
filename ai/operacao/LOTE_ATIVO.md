@@ -2,7 +2,7 @@
 
 ## Lote: 2026-10-07-contract-v3-pagination
 
-Estado: candidato 4.8.176 revisado e migrations aplicadas/verificadas; aguardando publicação web.
+Estado: candidato 4.8.177 revisado e migrations aplicadas/verificadas; aguardando publicação web.
 Objetivo: eliminar transbordamento de páginas do contrato técnico e recuperar prévia/histórico sem nova emissão.
 Aceite: paginação de servidor; texto/revisão/identidade preservados; mesmos controles de acesso; PDF vetorial válido.
 Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-07-contract-v3-pagination.md`.

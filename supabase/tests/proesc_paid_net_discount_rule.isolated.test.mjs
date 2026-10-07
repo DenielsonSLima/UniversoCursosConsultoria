@@ -98,6 +98,14 @@ try {
   const before = await immutable();
   assert.equal((await composition()).composicao_status, 'NAO_DISCRIMINADA');
   await db.exec(migration('20261003050000_proesc_paid_net_discount_rule.sql'));
+  // The performance migration must preserve all documentary/financial guards.
+  // PGlite is single-process: validate index definitions and financial parity,
+  // not the production CONCURRENTLY build protocol (which needs real backends).
+  for (const name of ['caixa-composition-invoice-index.concurrent.sql',
+    'caixa-composition-full-run-index.concurrent.sql']) {
+    const source = readFileSync(new URL(`../../docs/operations/sql/${name}`, import.meta.url), 'utf8');
+    await db.exec(source.replace('CREATE INDEX CONCURRENTLY', 'CREATE INDEX'));
+  }
   assert.deepEqual(await scalar("select to_jsonb(p)-'prosrc' value from pg_proc p where oid=$1::regprocedure", [signature]), metadata);
   assert.equal(await candidate(), true);
   const calculated = await composition();
