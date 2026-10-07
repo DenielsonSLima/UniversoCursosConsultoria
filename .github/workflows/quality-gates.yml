@@ -399,6 +399,8 @@ jobs:
           node supabase/tests/proesc_portal_payment_confirmation.isolated.test.mjs
           node supabase/tests/caixa_composition_classification_v2.isolated.test.mjs
           node supabase/tests/proesc_paid_net_discount_rule.isolated.test.mjs
+          node --input-type=module -e "import { build } from 'esbuild'; await build({ entryPoints: ['supabase/tests/contract_v3_pagination.isolated.test.mjs'], bundle: true, platform: 'node', format: 'esm', packages: 'external', outfile: 'tmp/contract-v3-pagination.test.mjs' });"
+          node tmp/contract-v3-pagination.test.mjs
 
       - name: Testar atividades extra-classe retroativas e recuperáveis
         run: |
@@ -452,3 +454,4 @@ jobs:
 
       - name: Gerar build de produção
         run: npm run build
+

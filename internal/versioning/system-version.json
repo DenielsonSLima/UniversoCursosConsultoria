@@ -1,8 +1,8 @@
 {
-  "version": "4.8.176",
+  "version": "4.8.177",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 185,
+  "revision": 186,
   "releasedAt": "2026-10-07",
-  "summary": "Índices concorrentes para a composição do Caixa com regras financeiras preservadas"
+  "summary": "Paginação segura do contrato técnico, com recuperação de prévia e histórico sem nova emissão"
 }

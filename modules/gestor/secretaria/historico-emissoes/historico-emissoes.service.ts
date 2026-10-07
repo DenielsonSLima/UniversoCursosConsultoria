@@ -404,6 +404,25 @@ export const historicoEmissoesService = {
     if (!data) {
       throw new Error(`A emissão canônica atualizada não foi localizada para o código ${normalizedCode}.`);
     }
+    if (data.documento === 'contrato_aluno'
+      && data.dados_emissao?.contractSnapshot?.instituicao?.presentationVersion
+        === 'CONTRATO_A4_INSTITUCIONAL_V3_MINUTA_COMPLETA') {
+      // A RPC existente projeta páginas seguras do snapshot, sem reemitir.
+      const projected = await supabase.rpc('search_secretaria_emissions_secure', {
+        p_polo_id: data.polo_id,
+        p_documento: 'contrato_aluno',
+        p_turma_id: null,
+        p_search: normalizedCode,
+        p_offset: 0,
+        p_limit: 1,
+      });
+      if (projected.error) throw projected.error;
+      const contract = projected.data?.items?.[0] as EmissionLog | undefined;
+      if (!contract || contract.id !== data.id || contract.codigo !== data.codigo) {
+        throw new Error('A projeção canônica do contrato não foi localizada.');
+      }
+      return contract;
+    }
     return data as EmissionLog;
   },
 
@@ -425,3 +444,4 @@ export const historicoEmissoesService = {
     return loadPreviewBatch(emissions, fallbackPoloId, onProgress);
   },
 };
+
