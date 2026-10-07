@@ -1,0 +1,29 @@
+name: Gestor portal scroll
+
+on:
+  pull_request:
+    paths:
+      - 'modules/gestor/components/GestorPortalShell.tsx'
+      - 'modules/gestor/components/GestorPortalHeader.tsx'
+      - 'modules/gestor/components/gestor-portal-scroll.contract.test.mjs'
+      - '.github/workflows/gestor-portal-scroll.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'modules/gestor/components/GestorPortalShell.tsx'
+      - 'modules/gestor/components/GestorPortalHeader.tsx'
+      - 'modules/gestor/components/gestor-portal-scroll.contract.test.mjs'
+      - '.github/workflows/gestor-portal-scroll.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  scroll-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node --test modules/gestor/components/gestor-portal-scroll.contract.test.mjs

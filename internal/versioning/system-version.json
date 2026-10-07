@@ -1,8 +1,8 @@
 {
-  "version": "4.8.178",
+  "version": "4.8.179",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 187,
+  "revision": 188,
   "releasedAt": "2026-10-07",
-  "summary": "Logo oficial Banese preservada no boleto e carnê mesmo quando a imagem remota falha"
+  "summary": "Rolagem única no Portal do Gestor, com navegação por teclado e cabeçalho móvel preservados"
 }

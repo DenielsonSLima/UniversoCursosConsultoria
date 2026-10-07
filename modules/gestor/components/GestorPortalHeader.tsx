@@ -63,7 +63,7 @@ const GestorPortalHeader: React.FC<GestorPortalHeaderProps> = ({
   formattedDate,
   formattedDayOfWeek,
 }) => (
-  <header className="sticky top-0 z-30 flex min-h-[84px] items-center justify-between border-b border-slate-200 bg-white px-4 py-3 shadow-sm sm:px-6 lg:px-8">
+  <header className="sticky top-16 z-30 flex min-h-[84px] shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 py-3 shadow-sm sm:px-6 lg:top-0 lg:px-8">
     <div className="hidden items-center gap-4 xl:flex">
       <h2 className="flex items-center gap-2 text-xl font-bold uppercase tracking-tight text-[#001a33]">
         Portal de Gestão
