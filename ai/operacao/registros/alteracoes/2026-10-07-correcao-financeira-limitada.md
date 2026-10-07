@@ -3,7 +3,7 @@
 ## Objetivo e contrato
 
 Versão candidata: 4.8.181, baseada no main 4.8.180.
-Atualização do registro em 2026-10-07: 14 migrations de implementação e uma migration de sete grants aprovados instaladas; worker de recuperação v12 e emissor v10 ativos. Execução financeira dos 49 títulos ainda pendente.
+Atualização do registro em 2026-10-07: 14 migrations de implementação e uma migration de sete grants aprovados instaladas; worker de recuperação v12 e emissor v10 ativos. No checkpoint de instalação, antes do início da execução, os 49 títulos aguardavam processamento.
 Preservar obrigações e runs originais; exigir prova de cancelamento bancário antes do ajuste interno; exigir novo consentimento real e emissão manual.
 O C2 histórico cancelado não pode ser retomado. Após C1 corrigido completo sem C2 cancelado, a continuidade volta às regras canônicas e ao aviso explícito existente.
 
@@ -173,6 +173,6 @@ Total: 139 arquivos.
 - Smoke Safari autenticado e validação bancária real continuam pendentes e exigem ambiente/ação autorizados.
 - Histórico remoto lido por MCP: 14 migrations entre `20261007231109` e `20261007231438`, seguidas dos sete grants aprovados em `20261007231549`; 15 cópias canônicas conferidas byte a byte.
 - Estado das Edge Functions conferido por MCP: worker v12 e emissor v10 ativos. A instalação não comprova execução financeira.
-- Cancelamento dos 49 títulos e ajuste interno permanecem pendentes. Reemissão não é automática e exige revisão completa e novo consentimento real.
+- No checkpoint de instalação, cancelamento e ajuste interno ainda não haviam iniciado. Reemissão não é automática e exige revisão completa e novo consentimento real.
 - R$ 200,00 permanecem como pendência separada e não resolvida, sem inferir baixa, estorno ou devolução.
-- Não houve emissão/cancelamento real, baixa, estorno, devolução, alteração acadêmica ou comunicação aos alunos.
+- No checkpoint de instalação, antes de iniciar a execução, não havia emissão/cancelamento real, baixa, estorno, devolução, alteração acadêmica ou comunicação aos alunos.

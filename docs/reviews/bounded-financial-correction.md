@@ -2,7 +2,7 @@
 
 Estado verificado em 2026-10-07: 14 migrations de implementação e uma migration de sete grants aprovados estão instaladas.
 As cópias canônicas em `supabase/migrations` preservam os payloads exatos do histórico remoto; os drafts originais continuam disponíveis para os testes isolados.
-O worker de recuperação está ativo na versão 12 e o emissor na versão 10. A execução financeira dos 49 títulos permanece pendente; implantação não significa cancelamento, ajuste interno ou reemissão concluídos.
+O worker de recuperação está ativo na versão 12 e o emissor na versão 10. No checkpoint de instalação, antes do início da execução, os 49 títulos aguardavam processamento. Implantação não comprova cancelamento, ajuste interno ou reemissão concluídos.
 
 ## Contrato
 
