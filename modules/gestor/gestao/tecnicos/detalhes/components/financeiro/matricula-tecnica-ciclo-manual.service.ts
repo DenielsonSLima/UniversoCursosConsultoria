@@ -89,6 +89,7 @@ const requireGenerationResult = (
     Number(cycle.quantidadeItens) < 1 || Number(cycle.quantidadeItens) > 61 ||
     cycle.quantidadeItens !== receivables.length ||
     !isDecimalString(cycle.total) ||
+    (cycle.activeTotal !== undefined && (!isDecimalString(cycle.activeTotal) || Number(cycle.activeTotal) < 0)) ||
     !quantities ||
     cycle.emitidosBanese !== quantities.bank ||
     typedReceivables.filter((item) => item.destinoCobranca === 'LOCAL').length !== quantities.local ||
@@ -219,6 +220,7 @@ const reconcileIssuedCycle = (
     !validTransition ||
     generated?.numero !== cycleNumber ||
     generated.quantidadeItens !== result.ciclo.quantidadeItens ||
+    (result.ciclo.activeTotal !== undefined && generated.activeTotal !== result.ciclo.activeTotal) ||
     generated.emitidosBanese !== (result.ciclo.quantidadeBancaria ?? result.ciclo.quantidadeItens) ||
     (generated.quantidadeBancaria ?? generated.quantidadeItens) !== (result.ciclo.quantidadeBancaria ?? result.ciclo.quantidadeItens) ||
     (generated.quantidadeLocal ?? 0) !== (result.ciclo.quantidadeLocal ?? 0) ||
@@ -354,8 +356,20 @@ export const matriculaTecnicaCicloManualService = {
       action: "resume",
       matriculaId: input.matriculaId,
       cicloNumero: input.cicloNumero,
+      ...(input.correctionOperationId ? { correctionOperationId: input.correctionOperationId } : {}),
     });
+    if (input.correctionOperationId) {
+      const correction = result.cicloManual.correcaoEmissao;
+      if (input.cicloNumero !== 1 || result.ciclo.numero !== 1 || result.ciclo.quantidadeItens !== 12
+        || result.ciclo.quantidadeLocal !== 0 || result.ciclo.total !== '3358.80'
+        || correction?.operationId !== input.correctionOperationId || correction.matriculaId !== input.matriculaId
+        || correction.status !== 'COMPLETE' || result.cicloManual.podeGerar) {
+        throw new Error('O servidor não reconciliou a emissão do 1º ciclo corrigido.');
+      }
+      return result;
+    }
     reconcileIssuedCycle(result, input.cicloNumero);
     return result;
   },
 };
+

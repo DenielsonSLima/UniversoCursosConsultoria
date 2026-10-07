@@ -52,7 +52,8 @@ const isProvenLocalEnrollment = (
 ) => cycle === 1 && item.tipo === 'MATRICULA' && item.numero === 0
   && item.destinoCobranca === 'LOCAL' && item.emissaoBanese === 'NAO_APLICAVEL'
   && item.localSemBoletoComprovado === true && item.emissaoHistoricaComprovada !== true
-  && ['PENDENTE', 'VENCIDO', 'PAGO'].includes(item.status);
+  && ((['PENDENTE', 'VENCIDO', 'PAGO'].includes(item.status) && item.localFeeWaiverProven !== true)
+    || (item.status === 'CANCELADO' && item.localFeeWaiverProven === true));
 
 const assertRequestedContext = (
   request: ManualCycleIssuanceRequest,
@@ -193,3 +194,4 @@ export const runManualCycleIssuance = async (
     throw await partialError(request, dependencies, error);
   }
 };
+

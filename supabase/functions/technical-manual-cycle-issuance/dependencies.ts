@@ -1,3 +1,4 @@
+import { parseBoundedCorrectionContext } from './bounded-correction-context.ts';
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import type { GestorAutorizado } from "../_shared/authz.ts";
 import { requireGestorForPolo, requireGestorTab } from "../_shared/authz.ts";
@@ -143,6 +144,16 @@ export const createManualCycleIssuanceDependencies = (input: {
   });
 
   const loadContext = async (request: ManualCycleIssuanceRequest) => {
+    if (request.correctionOperationId) {
+      if (input.internalRecovery || !input.gestor || !scope) {
+        throw new Error('Correção exige retomada manual autenticada.');
+      }
+      const { data, error } = await input.userClient.rpc('preview_bounded_financial_correction_secure', {
+        p_operation_id: request.correctionOperationId, p_matricula_id: request.matriculaId,
+      });
+      if (error) throw error;
+      return parseBoundedCorrectionContext(data, request, scope);
+    }
     const { data, error } = await input.admin.rpc(
       "obter_emissao_ciclo_financeiro_tecnico_manual_service",
       {
@@ -162,6 +173,9 @@ export const createManualCycleIssuanceDependencies = (input: {
 
   return {
     async preflight(request) {
+      if (request.correctionOperationId && (input.internalRecovery || request.action !== 'resume' || request.cicloNumero !== 1)) {
+        throw new Error('Correção não pode gerar ciclo ou executar recuperação interna.');
+      }
       if (input.internalRecovery) {
         const { data, error } = await input.admin.rpc(
           "assert_technical_manual_cycle_recovery_service",
@@ -226,3 +240,4 @@ export const createManualCycleIssuanceDependencies = (input: {
     issueReceivable,
   };
 };
+

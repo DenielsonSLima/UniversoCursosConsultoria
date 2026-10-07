@@ -1,3 +1,4 @@
+import { correctionAuthorizationRequestId } from './bounded-correction-context.ts';
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { queryBaneseBoleto } from "../banese/core/adapter.ts";
 import {
@@ -339,7 +340,8 @@ async (context: ManualCycleContext, receivableId: string) => {
     loaded.receivable.polo_id !== scope.poloId
   ) throw new Error("Recebível mudou de escopo durante a emissão.");
 
-  const authorizationRequestId = await deterministicReceivableRequestId(
+  const authorizationRequestId = correctionAuthorizationRequestId(context, receivableId)
+    ?? await deterministicReceivableRequestId(
     context.requestId,
     receivableId,
   );
@@ -489,3 +491,4 @@ async (context: ManualCycleContext, receivableId: string) => {
     throw error;
   }
 };
+

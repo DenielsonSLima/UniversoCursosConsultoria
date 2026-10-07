@@ -1,9 +1,8 @@
 {
-  "version": "4.8.180",
+  "version": "4.8.181",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 189,
+  "revision": 190,
   "releasedAt": "2026-10-07",
-  "summary": "Confirmação explícita do segundo ciclo com parcelas em aberto e releitura antes da emissão"
+  "summary": "Correção financeira limitada com histórico preservado e nova confirmação manual"
 }
-

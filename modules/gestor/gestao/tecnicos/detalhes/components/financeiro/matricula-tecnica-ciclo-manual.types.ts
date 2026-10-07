@@ -1,3 +1,4 @@
+import type { CorrectionSummary } from './bounded-correction';
 export type MatriculaTecnicaCicloManualEstado =
   | "ELEGIVEL"
   | "BLOQUEADO"
@@ -33,12 +34,14 @@ export interface CicloManualMatriculaLocal {
   descricao: string;
   valor: string;
   vencimento: string;
-  status: "PENDENTE" | "VENCIDO" | "PAGO";
+  status: "PENDENTE" | "VENCIDO" | "PAGO" | "CANCELADO";
+  localFeeWaiverProven?: boolean;
   destinoCobranca: "LOCAL";
   localSemBoletoComprovado: true;
 }
 
 export interface MatriculaTecnicaCicloManual {
+  correcaoEmissao?: CorrectionSummary | null;
   planoEntrada?: CicloManualPlanoEntrada | null;
   continuidadeFinanceira?: {
     matriculaOrigemId: string;
@@ -76,6 +79,7 @@ export interface MatriculaTecnicaCicloManual {
     quantidadeBancaria?: number;
     quantidadeLocal?: number;
     total: string;
+    activeTotal?: string;
     emitidosBanese: number;
     pendentesEmissao: number;
     emRevisao: number;
@@ -188,6 +192,7 @@ export interface GerarCicloFinanceiroTecnicoManualInput {
 }
 
 export interface RetomarEmissaoCicloFinanceiroTecnicoManualInput {
+  correctionOperationId?: string;
   turmaId: string;
   matriculaId: string;
   cicloNumero: number;
@@ -211,7 +216,8 @@ export interface CicloFinanceiroTecnicoManualRecebivel {
   descricao: string;
   valor: string;
   vencimento: string;
-  status: "PENDENTE" | "VENCIDO" | "PAGO";
+  status: "PENDENTE" | "VENCIDO" | "PAGO" | "CANCELADO";
+  localFeeWaiverProven?: boolean;
   emissaoBanese: "EMITIDO" | "NAO_APLICAVEL";
   destinoCobranca?: "BANESE" | "LOCAL";
   localSemBoletoComprovado?: boolean;
@@ -229,6 +235,7 @@ export interface GerarCicloFinanceiroTecnicoManualResult {
     quantidadeBancaria?: number;
     quantidadeLocal?: number;
     total: string;
+    activeTotal?: string;
     emitidosBanese: number;
     pendentesEmissao: number;
     emRevisao: number;
@@ -236,3 +243,4 @@ export interface GerarCicloFinanceiroTecnicoManualResult {
   };
   cicloManual: MatriculaTecnicaCicloManual;
 }
+

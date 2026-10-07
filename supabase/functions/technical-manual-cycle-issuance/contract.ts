@@ -1,3 +1,4 @@
+import type { BoundedCorrectionContext } from './bounded-correction-context.ts';
 import type { GatewayChargeResult } from "../gateways/router.ts";
 import { parseManualCycleRevision, type ManualCycleRevision } from './revision.ts';
 import {
@@ -17,6 +18,7 @@ export const DATABASE_UUID_RE =
 export const FINGERPRINT_RE = /^[0-9a-f]{64}$/;
 
 export type ManualCycleIssuanceRequest = {
+  correctionOperationId?: string;
   revisao?: ManualCycleRevision | null;
   action: "generate" | "resume";
   matriculaId: string;
@@ -51,9 +53,11 @@ export type ManualCycleReceivableSummary = {
   emissaoHistoricaComprovada?: boolean;
   destinoCobranca?: "BANESE" | "LOCAL";
   localSemBoletoComprovado?: boolean;
+  localFeeWaiverProven?: boolean;
 };
 
 export type ManualCycleContext = {
+  boundedCorrection?: BoundedCorrectionContext;
   requestId: string;
   replayed: boolean;
   matriculaId: string;
@@ -63,6 +67,7 @@ export type ManualCycleContext = {
     numero: number;
     status: string;
     total: string;
+    activeTotal?: string;
     recebiveis: ManualCycleReceivableSummary[];
   };
   cicloManual: unknown;
@@ -140,9 +145,15 @@ export const parseIssuanceRequest = (
   if (!Number.isInteger(cicloNumero) || cicloNumero < 1 || cicloNumero > 2) {
     throw new IssuanceHttpError(400, "Ciclo inválido.", "INVALID_REQUEST");
   }
+  const correctionOperationId = body.correctionOperationId === undefined ? undefined
+    : requiredUuid(body.correctionOperationId, 'Operação de correção', DATABASE_UUID_RE);
+  if (correctionOperationId && (action !== 'resume' || cicloNumero !== 1)) {
+    throw new IssuanceHttpError(400, 'Correção permite somente retomada manual do 1º ciclo.', 'INVALID_REQUEST');
+  }
   if (action === "resume") {
     return {
       action,
+      correctionOperationId,
       matriculaId,
       cicloNumero,
       primeiroVencimento: null,
@@ -244,6 +255,13 @@ const parseReceivableSummary = (
   ) {
     throw new Error("Recebível do ciclo manual inválido.");
   }
+  const waiverProven = item.localFeeWaiverProven === true;
+  const canceled = stringValue(item.status).toUpperCase() === 'CANCELADO';
+  if ((waiverProven || canceled) && !(waiverProven && canceled && type === 'MATRICULA'
+    && number === 0 && destination === 'LOCAL' && item.localSemBoletoComprovado === true
+    && item.emissaoHistoricaComprovada !== true && item.emissaoBanese === 'NAO_APLICAVEL')) {
+    throw new Error('Cancelamento local exige prova canônica de dispensa sem pagamento.');
+  }
   return {
     id: stringValue(item.id),
     chave: stringValue(item.chave),
@@ -257,6 +275,7 @@ const parseReceivableSummary = (
     emissaoHistoricaComprovada: item.emissaoHistoricaComprovada === true,
     destinoCobranca: destination as "BANESE" | "LOCAL",
     localSemBoletoComprovado: item.localSemBoletoComprovado === true,
+    localFeeWaiverProven: waiverProven,
   };
 };
 
@@ -275,7 +294,7 @@ export const parseCycleContext = (value: unknown): ManualCycleContext => {
     (matriculaId && !DATABASE_UUID_RE.test(matriculaId)) ||
     (turmaId && !DATABASE_UUID_RE.test(turmaId)) ||
     (poloId && !DATABASE_UUID_RE.test(poloId)) ||
-    !decimalValue(cycle.total) || receivables.length < 1 ||
+    !decimalValue(cycle.total) || (cycle.activeTotal !== undefined && !decimalValue(cycle.activeTotal)) || receivables.length < 1 ||
     new Set(receivables.map((item) => item.id)).size !== receivables.length ||
     new Set(receivables.map((item) => item.chave)).size !== receivables.length
   ) {
@@ -286,7 +305,8 @@ export const parseCycleContext = (value: unknown): ManualCycleContext => {
     pendentesEmissao: cycle.pendentesEmissao ??
       receivables.filter((item) => item.destinoCobranca !== "LOCAL" && item.emissaoBanese !== "EMITIDO").length,
   });
-  if (progress.quantidadeItens !== receivables.length
+  if ((progress.cicloNumero !== 1 && receivables.some((item) => item.localFeeWaiverProven === true))
+    || progress.quantidadeItens !== receivables.length
     || progress.quantidadeLocal !== receivables.filter((item) => item.destinoCobranca === "LOCAL").length) {
     throw new Error("Quantidade de recebíveis do ciclo manual diverge.");
   }
@@ -300,6 +320,7 @@ export const parseCycleContext = (value: unknown): ManualCycleContext => {
       numero: Number(cycle.numero),
       status: stringValue(cycle.status),
       total: decimalValue(cycle.total)!,
+      ...(cycle.activeTotal !== undefined ? { activeTotal: decimalValue(cycle.activeTotal)! } : {}),
       recebiveis: receivables,
       ...progress,
     },
@@ -414,3 +435,4 @@ export const remotePaymentMayExist = (error: unknown) =>
     error && typeof error === "object" &&
       (error as Record<string, unknown>).remotePaymentCreated === true,
   );
+

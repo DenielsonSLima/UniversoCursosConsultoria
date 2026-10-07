@@ -1,3 +1,5 @@
+import { usesCanonicalCycleAfterCorrection } from './bounded-correction';
+import FinanceiroBoundedCorrectionDialog from './FinanceiroBoundedCorrectionDialog';
 import React, { useMemo, useRef, useState } from 'react';
 import { Loader2, Search } from 'lucide-react';
 import ToastNotification, { useToast } from '../../../../../parceiros/components/shared/ToastNotification';
@@ -119,7 +121,12 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
   }, [alunos, searchTerm, focusedMatriculaId]);
   const manualContractError = useMemo(() => {
     try {
-      alunos.forEach((row) => requireMatriculaTecnicaCicloManual(row.cicloManual));
+      alunos.forEach((row) => {
+        requireMatriculaTecnicaCicloManual(row.cicloManual);
+        if (row.cicloManual.correcaoEmissao && row.cicloManual.correcaoEmissao.matriculaId !== row.matriculaId) {
+          throw new Error('A correção financeira pertence a outra matrícula.');
+        }
+      });
       return null;
     } catch (error) {
       return error instanceof Error ? error : new Error('Estado manual inválido.');
@@ -315,6 +322,7 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
   };
 
   const resumeManualCycle = (row: MatriculaTecnicaFinanceiroRow) => {
+    if (row.cicloManual.correcaoEmissao && !usesCanonicalCycleAfterCorrection(row.cicloManual.correcaoEmissao)) { setManualCycleMatriculaId(row.matriculaId); return; }
     resumeCycleMutation.mutate({
       turmaId: turma.id,
       matriculaId: row.matriculaId,
@@ -457,7 +465,15 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
         />
       ) : null}
 
-      {currentManualCycleRow ? (
+      {currentManualCycleRow?.cicloManual.correcaoEmissao && !usesCanonicalCycleAfterCorrection(currentManualCycleRow.cicloManual.correcaoEmissao) ? (
+        <FinanceiroBoundedCorrectionDialog key={currentManualCycleRow.matriculaId}
+          correction={currentManualCycleRow.cicloManual.correcaoEmissao}
+          onClose={() => setManualCycleMatriculaId(null)}
+          onConfirm={async (preview) => { await resumeCycleMutation.mutateAsync({
+            turmaId: turma.id, matriculaId: preview.matriculaId, cicloNumero: 1,
+            correctionOperationId: preview.operationId,
+          }); }} />
+      ) : currentManualCycleRow ? (
         <FinanceiroCicloManualDialog
           key={currentManualCycleRow.matriculaId}
           row={currentManualCycleRow}
@@ -479,3 +495,4 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
 };
 
 export default FinanceiroAlunosList;
+

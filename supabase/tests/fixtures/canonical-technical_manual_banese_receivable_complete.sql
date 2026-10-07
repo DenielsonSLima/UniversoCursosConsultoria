@@ -1,0 +1,115 @@
+CREATE OR REPLACE FUNCTION internal_academic.technical_manual_banese_receivable_complete(p_receivable contas_receber)
+ RETURNS boolean
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare
+  v_expected_terms jsonb;
+  v_total integer;
+  v_matching integer;
+begin
+  begin
+    v_expected_terms :=
+      internal_academic.technical_manual_banese_expected_terms(p_receivable);
+  exception when others then
+    return false;
+  end;
+  if p_receivable.gateway_provider is distinct from 'banese_card'
+    or p_receivable.gateway_environment is distinct from 'production'
+    or p_receivable.gateway_payment_method is distinct from 'BOLETO'
+    or p_receivable.forma_pagamento is distinct from 'BOLETO'
+    or p_receivable.gateway_submission_channel is distinct from 'API'
+    or p_receivable.gateway_submission_status is distinct from 'API_REGISTERED'
+    or upper(coalesce(p_receivable.status, '')) not in ('PENDENTE', 'VENCIDO')
+    or p_receivable.data_pagamento is not null
+    or p_receivable.valor_pago is not null
+    or p_receivable.manual_settlement_id is not null
+    or p_receivable.manual_settlement_principal_cents is not null
+    or p_receivable.manual_settlement_interest_cents is not null
+    or p_receivable.manual_settlement_penalty_cents is not null
+    or p_receivable.manual_settlement_addition_cents is not null
+    or p_receivable.manual_settlement_discount_cents is not null
+    or p_receivable.manual_settlement_received_cents is not null
+    or p_receivable.manual_settlement_reversed_at is not null
+    or p_receivable.gateway_settlement_channel is not null
+    or p_receivable.gateway_settlement_source is not null
+    or p_receivable.gateway_settlement_evidence is not null
+    or p_receivable.gateway_settlement_recorded_at is not null
+    or p_receivable.gateway_transaction_receipt_url is not null
+    or p_receivable.gateway_creation_token is not null
+    or p_receivable.gateway_payment_link_id is not null
+    or p_receivable.gateway_cnab_file_id is not null
+    or upper(coalesce(p_receivable.gateway_status, '')) <> 'PENDING'
+    or p_receivable.gateway_boleto_issued_at is null
+    or p_receivable.gateway_financial_terms_confirmed_at is null
+    or p_receivable.gateway_financial_terms is distinct from v_expected_terms
+    or p_receivable.gateway_payment_id is distinct from
+      p_receivable.gateway_boleto_nosso_numero
+    or coalesce(p_receivable.gateway_payment_id, '') !~ '^[0-9]{9}$'
+    or coalesce(p_receivable.gateway_boleto_linha_digitavel, '')
+      !~ '^0479[0-9]{43}$'
+    or coalesce(p_receivable.gateway_boleto_codigo_barras, '')
+      !~ '^0479[0-9]{40}$'
+    or substring(p_receivable.gateway_boleto_codigo_barras from 31 for 9)
+      <> p_receivable.gateway_payment_id
+    or concat(
+      substring(p_receivable.gateway_boleto_linha_digitavel from 1 for 4),
+      substring(p_receivable.gateway_boleto_linha_digitavel from 33 for 1),
+      substring(p_receivable.gateway_boleto_linha_digitavel from 34 for 14),
+      substring(p_receivable.gateway_boleto_linha_digitavel from 5 for 5),
+      substring(p_receivable.gateway_boleto_linha_digitavel from 11 for 10),
+      substring(p_receivable.gateway_boleto_linha_digitavel from 22 for 10)
+    ) <> p_receivable.gateway_boleto_codigo_barras
+    or coalesce(p_receivable.gateway_pix_payload, '') !~*
+      '^000201.*BR[.]GOV[.]BCB[.]PIX.*5303986.*5802BR.*6304[0-9A-Fa-f]{4}$'
+    or coalesce(p_receivable.gateway_pix_encoded_image, '') !~
+      '^data:image/(png|jpeg);base64,(iVBORw0KGgo|/9j/)[A-Za-z0-9+/=]+$'
+    or exists (
+      select 1
+      from internal_academic.technical_manual_cycle_runs run
+      join public.contas_receber sibling
+        on sibling.id = any(run.receivable_ids)
+       and sibling.id <> p_receivable.id
+      where p_receivable.id = any(run.receivable_ids)
+        and run.state = 'LOCAL_CREATED'
+        and (
+          sibling.gateway_boleto_nosso_numero =
+            p_receivable.gateway_boleto_nosso_numero
+          or sibling.gateway_boleto_linha_digitavel =
+            p_receivable.gateway_boleto_linha_digitavel
+          or sibling.gateway_boleto_codigo_barras =
+            p_receivable.gateway_boleto_codigo_barras
+          or sibling.gateway_pix_payload = p_receivable.gateway_pix_payload
+        )
+    )
+  then
+    return false;
+  end if;
+  select count(*)::integer,
+    count(*) filter (where
+      transaction.provider_code = 'banese_card'
+      and transaction.environment = 'production'
+      and transaction.payment_method = 'BOLETO'
+      and transaction.remote_payment_id = p_receivable.gateway_payment_id
+      and transaction.remote_status = p_receivable.gateway_status
+      and round(transaction.amount, 2) = round(p_receivable.valor, 2)
+      and transaction.origin_polo_id = p_receivable.polo_id
+      and transaction.issuer_polo_id = p_receivable.gateway_issuer_polo_id
+      and transaction.bank_slip_our_number =
+        p_receivable.gateway_boleto_nosso_numero
+      and transaction.bank_slip_digitable_line =
+        p_receivable.gateway_boleto_linha_digitavel
+      and transaction.bank_slip_barcode =
+        p_receivable.gateway_boleto_codigo_barras
+      and transaction.pix_payload = p_receivable.gateway_pix_payload
+      and transaction.pix_encoded_image = p_receivable.gateway_pix_encoded_image
+      and jsonb_typeof(transaction.raw_payload -> 'manualCycleIssuance')
+        = 'object'
+    )::integer
+  into v_total, v_matching
+  from public.payment_gateway_transactions transaction
+  where transaction.receivable_id = p_receivable.id;
+  return v_total = 1 and v_matching = 1;
+end;
+$function$
