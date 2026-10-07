@@ -15,7 +15,7 @@ interface Props {
 const money = (value: string) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value));
 const date = (value: string) => value.split('-').reverse().join('/');
 
-export default function FinanceiroSecondCycleWarning(props: Props) {
+const FinanceiroSecondCycleWarning: React.FC<Props> = (props) => {
   const [state, setState] = useState<SecondCycleWarningState>({ charges: null, busy: true, error: null, changed: false });
   const controllerRef = useRef<ReturnType<typeof createSecondCycleWarning> | null>(null);
   const confirmRef = useRef(props.onConfirm);
@@ -69,4 +69,6 @@ export default function FinanceiroSecondCycleWarning(props: Props) {
     </div>
   );
   return typeof document === 'undefined' ? dialog : createPortal(dialog, document.body);
-}
+};
+
+export default FinanceiroSecondCycleWarning;
