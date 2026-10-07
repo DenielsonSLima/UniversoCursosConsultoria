@@ -198,6 +198,12 @@ jobs:
             supabase/functions/technical-manual-cycle-issuance/ \
             supabase/functions/technical-manual-cycle-recovery-worker/
 
+      - name: Testar aviso antes do segundo ciclo
+        run: |
+          node --test modules/gestor/gestao/tecnicos/detalhes/components/financeiro/second-cycle-warning.test.ts
+          npm install --prefix /tmp/universo-cycle-warning --no-save --package-lock=false --ignore-scripts jsdom@26.1.0
+          CYCLE_WARNING_JSDOM_PATH=/tmp/universo-cycle-warning/node_modules/jsdom node --test modules/gestor/gestao/tecnicos/detalhes/components/financeiro/second-cycle-warning.interaction.test.mjs
+
       - name: Testar passagem importada e cancelamento por trancamento
         run: |
           deno test --allow-read \
@@ -454,4 +460,5 @@ jobs:
 
       - name: Gerar build de produção
         run: npm run build
+
 

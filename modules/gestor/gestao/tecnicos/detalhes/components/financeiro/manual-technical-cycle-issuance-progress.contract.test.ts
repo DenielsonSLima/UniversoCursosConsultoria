@@ -60,7 +60,8 @@ test("uma trava síncrona impede dois envios antes do estado pending renderizar"
     /if \(!preview \|\| !previewReady \|\| !positiveAmounts \|\| issuanceStarted\.current\) return null;/,
   );
   assert.match(confirmationSource, /issuanceStarted\.current = true;/);
-  assert.match(dialogSource, /onClick=\{startIssuance\}/);
+  assert.match(dialogSource, /onClick=\{\(\) => cycleNumber === 2 \? setWarningContext\(confirmationContext\) : void startIssuance\(\)\}/);
+  assert.match(dialogSource, /onConfirm=\{\(\) => \{ setWarningContext\(null\); return startIssuance\(\) \?\? undefined; \}\}/);
   assert.match(
     confirmationSource,
     /try \{[\s\S]*?await onConfirm\([\s\S]*?confirmedRevision,[\s\S]*?\} finally \{\s*issuanceStarted\.current = false;/,
@@ -120,3 +121,4 @@ test("interrupções exibem o toast visual de alerta em vez de falhar em runtime
   assert.match(toastSource, /warning:\s*\{[\s\S]*?border-l-amber-500/);
   assert.match(toastSource, /addToast\(['"]warning['"]/);
 });
+

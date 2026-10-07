@@ -6,6 +6,12 @@ Histórico anterior: [16/09/2026 a 25/09/2026 — versões 4.8.65 a 4.8.90](./ch
 
 Histórico arquivado: [25/09/2026 a 26/09/2026 — versões 4.8.91 a 4.8.110](./changelog/2026-09-25-a-2026-09-26-versoes-4-8-91-a-4-8-110.md).
 
+## [4.8.180] - 2026-10-07
+
+- Adiciona aviso antes de emitir o segundo ciclo, mostrando as cobranças em aberto da matrícula.
+- Exige confirmação explícita e nova consulta das parcelas; alterações, erros e revisões invalidam a confirmação anterior.
+- Preserva a elegibilidade do segundo ciclo, permissões, idempotência e recuperação existentes, sem cancelar ou substituir títulos.
+
 ## [4.8.179] - 2026-10-07
 
 - O Portal do Gestor passa a ter um único contêiner de rolagem, evitando a segunda barra e o deslocamento para uma área vazia no financeiro da turma.
@@ -407,4 +413,5 @@ Histórico arquivado: [25/09/2026 a 26/09/2026 — versões 4.8.91 a 4.8.110](./
 - Financeiro ganha o submódulo Convênios, com competências mensais, créditos, despesas vinculadas e fechamento manual com transporte de saldo.
 - Contas a Pagar permite vincular uma despesa ao convênio do mesmo polo sem duplicar a saída; Caixa e relatório v7 mostram a posição separada sem recompor os totais físicos.
 - Permissões granulares, RLS, idempotência, Realtime e índices de integridade protegem o fluxo em produção.
+
 
