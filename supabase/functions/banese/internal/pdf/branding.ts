@@ -5,6 +5,7 @@ import {
   formatBaneseDigitableLine,
 } from "../types.ts";
 import { OFFICIAL_UNIVERSO_LOGO_BASE64 } from "../assets/universo-logo.ts";
+import { OFFICIAL_BANESE_LOGO_BASE64 } from "../assets/banese-logo.ts";
 import {
   BANESE_PDF_COLORS,
   type BaneseDocumentBox,
@@ -16,7 +17,7 @@ import {
 } from "./primitives.ts";
 
 export type BaneseDocumentBrandAssets = {
-  bankLogo: PDFImage | null;
+  bankLogo: PDFImage;
   companyLogo: PDFImage | null;
 };
 
@@ -34,33 +35,16 @@ export const drawBaneseBankHeader = (
     y: box.y,
     width: brandWidth,
     height: box.height,
-    color: assets.bankLogo
-      ? BANESE_PDF_COLORS.darkGreen
-      : BANESE_PDF_COLORS.white,
+    color: BANESE_PDF_COLORS.darkGreen,
     borderColor: BANESE_PDF_COLORS.black,
     borderWidth: 1,
   });
-  if (assets.bankLogo) {
-    drawBaneseImageContain(page, assets.bankLogo, {
-      x: box.x + 5,
-      y: box.y + 3,
-      width: brandWidth - 10,
-      height: box.height - 6,
-    });
-  } else {
-    page.drawRectangle({
-      x: box.x + 5,
-      y: box.y + 5,
-      width: 20,
-      height: box.height - 10,
-      color: BANESE_PDF_COLORS.green,
-    });
-    drawBaneseText(page, fonts, "Banese", box.x + 30, box.y + 8, {
-      size: 15,
-      bold: true,
-      color: BANESE_PDF_COLORS.green,
-    });
-  }
+  drawBaneseImageContain(page, assets.bankLogo, {
+    x: box.x + 5,
+    y: box.y + 3,
+    width: brandWidth - 10,
+    height: box.height - 6,
+  });
   page.drawRectangle({
     x: box.x + brandWidth,
     y: box.y,
@@ -147,13 +131,22 @@ const embedImage = async (pdf: PDFDocument, value?: string | null) => {
 export const embedBaneseBrandAssets = async (
   pdf: PDFDocument,
   branding: BaneseDocumentBranding = {},
-): Promise<BaneseDocumentBrandAssets> => ({
-  bankLogo: await embedImage(pdf, branding.bankLogoBase64),
-  companyLogo: await embedImage(
+): Promise<BaneseDocumentBrandAssets> => {
+  // O fetch remoto pode falhar (inclusive por redirect bloqueado). A reserva
+  // local e a mesma logo oficial, nunca um desenho ou texto substituto.
+  const bankLogo = await embedImage(
     pdf,
-    branding.companyLogoBase64 || OFFICIAL_UNIVERSO_LOGO_BASE64,
-  ),
-});
+    branding.bankLogoBase64 || OFFICIAL_BANESE_LOGO_BASE64,
+  );
+  if (!bankLogo) throw new Error("Logo oficial Banese indisponivel.");
+  return {
+    bankLogo,
+    companyLogo: await embedImage(
+      pdf,
+      branding.companyLogoBase64 || OFFICIAL_UNIVERSO_LOGO_BASE64,
+    ),
+  };
+};
 
 export const embedBanesePixQr = async (
   pdf: PDFDocument,
@@ -256,3 +249,4 @@ export const drawBanesePixPanel = (
     },
   );
 };
+
