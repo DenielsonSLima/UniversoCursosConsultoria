@@ -1,0 +1,36 @@
+name: PDFs Banese - marca oficial
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/functions/banese/internal/**'
+      - 'public/logos/payment-gateways/banese.png'
+      - '.github/workflows/banese-document-branding.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  banese-document-branding:
+    name: Validar marca oficial e PDFs Banese
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Verificar identidade do recurso oficial
+        run: |
+          python3 - <<'PY'
+          import base64, pathlib, re
+          root = pathlib.Path('.')
+          source = (root / 'supabase/functions/banese/internal/assets/banese-logo.ts').read_text()
+          encoded = re.search(r'data:image/png;base64,([A-Za-z0-9+/=]+)', source).group(1)
+          assert base64.b64decode(encoded) == (root / 'public/logos/payment-gateways/banese.png').read_bytes()
+          PY
+      - name: Testar compositores nativos com checagem de tipos
+        run: |
+          deno test --no-config --no-lock --node-modules-dir=none --allow-read --allow-env \
+            supabase/functions/banese/internal/pdf/branding.test.ts \
+            supabase/functions/banese/internal/carne/carne-pdf.test.ts \
+            supabase/functions/banese/internal/boletos/boleto-pdf.test.ts
