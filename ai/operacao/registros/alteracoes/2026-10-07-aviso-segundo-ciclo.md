@@ -34,7 +34,9 @@ Não há migration, deploy de Edge Function, cancelamento, baixa ou emissão fin
 - `modules/gestor/gestao/tecnicos/detalhes/components/financeiro/second-cycle-warning.interaction.test.mjs`
 - `modules/gestor/gestao/tecnicos/detalhes/components/financeiro/manual-technical-cycle-modal-ux.contract.test.ts`
 
-Total: 13 arquivos.
+- `modules/gestor/gestao/tecnicos/detalhes/components/financeiro/manual-technical-cycle-issuance-progress.contract.test.ts`
+
+Total: 14 arquivos.
 
 ## Validação e limites
 
