@@ -102,7 +102,7 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
     setIssuanceSnapshot(null);
     lastPreviewRef.current = null;
   }, [pending, cycleIdentityChanged, requestedCycleNumber, plannedEntry, row.cicloManual.primeiroVencimentoSugerido]);
-  const previewEnabled = !showWarning && !pending && !cycleIdentityChanged && cycleNumber !== null
+  const previewEnabled = !pending && !cycleIdentityChanged && !showWarning && cycleNumber !== null
     && row.cicloManual.estado === 'ELEGIVEL'
     && row.cicloManual.podeGerar
     && (cycleNumber !== 1 || enrollmentMode !== null)

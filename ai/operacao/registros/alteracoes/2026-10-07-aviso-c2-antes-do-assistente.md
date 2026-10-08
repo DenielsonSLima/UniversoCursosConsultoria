@@ -43,8 +43,11 @@ Total: 9 arquivos.
   assistente, parcelas abertas, continuação sem emissão, Cancelar/Escape,
   ausência de data/prévia, recálculo, erro/retry, troca de matrícula, releitura
   alterada, reabertura e regressão do primeiro ciclo.
-- 28 testes focados de parser/controlador, confirmação canônica, progresso e
-  contrato visual aprovados. Lint dos quatro arquivos de código/teste aprovado.
+- 31 testes focados de parser/controlador, confirmação canônica, progresso,
+  recuperação de estado e contrato visual aprovados. Lint focal aprovado.
+- Primeira execução remota aprovou TypeScript, lint e build da prévia Vercel.
+  A asserção existente de recuperação exigia os guards na ordem anterior;
+  a ordem foi preservada, sem alterar sua lógica. Regressão local aprovada.
 - Revisão independente e checklist React sem achados bloqueantes.
 - Dados exclusivamente sintéticos. Nenhuma chamada bancária ou emissão real.
 - Validação visual em navegador não executada por proibição expressa do usuário.
