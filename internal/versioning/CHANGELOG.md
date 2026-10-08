@@ -12,6 +12,14 @@ Histórico arquivado: [25/09/2026 a 26/09/2026 — versões 4.8.91 a 4.8.110](./
 - Salva as coordenadas no modelo e preserva o mesmo posicionamento na prévia, no PDF nativo e na reimpressão do histórico.
 - Corrige os números sobre as linhas das testemunhas e impede sobreposição entre campos e textos do encerramento.
 
+## [4.8.182] - 2026-10-07
+
+- Registra a restauração já aplicada do primeiro ciclo das três matrículas da turma 46 e a reversão do lançamento local incorreto, sem repetir a operação financeira.
+
+- O botão de gerar o segundo ciclo abre primeiro o aviso com as parcelas em aberto, antes da tela de datas e valores.
+- Continuar abre a revisão padrão; Cancelar fecha o aviso. A emissão permanece na confirmação final do fluxo existente.
+- Mantém a releitura das parcelas, bloqueio por erro e proteção contra clique duplo; o primeiro ciclo conserva seu fluxo normal.
+
 ## [4.8.181] - 2026-10-07
 
 - Prepara correção financeira limitada, mantendo recebíveis e ciclos históricos com confirmação bancária antes do ajuste interno.
@@ -425,6 +433,5 @@ Histórico arquivado: [25/09/2026 a 26/09/2026 — versões 4.8.91 a 4.8.110](./
 - Financeiro ganha o submódulo Convênios, com competências mensais, créditos, despesas vinculadas e fechamento manual com transporte de saldo.
 - Contas a Pagar permite vincular uma despesa ao convênio do mesmo polo sem duplicar a saída; Caixa e relatório v7 mostram a posição separada sem recompor os totais físicos.
 - Permissões granulares, RLS, idempotência, Realtime e índices de integridade protegem o fluxo em produção.
-
 
 

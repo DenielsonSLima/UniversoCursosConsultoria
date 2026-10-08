@@ -2,7 +2,7 @@
 
 ## Objetivo e aceite
 
-Candidata 4.8.183 sobre main 4.8.181. O editor permite mover individualmente
+Entrega 4.8.183, integrada à entrega financeira 4.8.182. O editor permite mover individualmente
 QR, contratante, contratada e duas testemunhas, ajustar coordenadas em mm,
 tamanho do QR e largura das linhas, e restaurar cada posição padrão.
 As posições salvas devem aparecer na prévia, no PDF e na reimpressão congelada.
@@ -75,7 +75,13 @@ Total: 31 arquivos.
 - Revisão independente não encontrou perda de configuração ou conteúdo.
 - Smoke visual autenticado não executado por proibição expressa de navegador.
   A inspeção visual acima foi feita em PNGs renderizados dos PDFs nativos.
-- Produção não autorizada. A versão 4.8.182 do aviso C2 continua no PR #275,
-  separada deste lote; a restauração T46 está registrada no PR #274.
+- Publicação em produção autorizada expressamente em 08/10/2026 após revisão
+  de três agentes. PR #276 integrado ao PR #275, preservando os manifestos,
+  histórico das versões e fontes da restauração T46 já aplicada (PR #274).
+- Reunião final: interface aprovou hashes, dez cenários C2 e fluxo do editor;
+  dados confirmou ledger idêntico e C1 normal; revisão PDF aprovou geometria,
+  snapshot, 31 arquivos e fidelidade. Nenhum bloqueio de produto encontrado.
+- CI e Vercel são conferidos no commit integrado antes do merge. O status e
+  os identificadores finais da publicação são registrados no PR #276.
 - Alterações paralelas locais no registro de manifestos/changelog são mantidas;
-  o payload remoto inclui somente este lote sobre a base declarada.
+  o payload remoto preserva a entrega financeira e adiciona somente este lote.
