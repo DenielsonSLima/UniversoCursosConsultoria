@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { getSecretariaContext } from '../shared/secretaria-documentos.service';
 import CertificadoPreview from './components/CertificadoPreview';
+import EadCertificatePreviewPortal from './components/EadCertificatePreviewPortal';
 import {
   useCertificadosQuery,
   useCertificadoTemplatesQuery,
@@ -94,7 +95,7 @@ const SecretariaCertificadosPage: React.FC = () => {
 
   useEffect(() => {
     setTurmaId('todos');
-    setStatus('PENDENTE');
+    setStatus(modalidade === 'EAD' ? 'FINALIZADO' : 'PENDENTE');
     setSelected(null);
     setPreview(null);
   }, [modalidade]);
@@ -121,6 +122,7 @@ const SecretariaCertificadosPage: React.FC = () => {
   const groupedEntries = Object.entries(grouped) as Array<[string, CertificadoAcademico[]]>;
 
   const openIssue = (item: CertificadoAcademico) => {
+    if (item.modalidade === 'EAD') return;
     setSelected(item);
     setForm({
       certificadoNumero: item.certificado_numero || '',
@@ -134,9 +136,9 @@ const SecretariaCertificadosPage: React.FC = () => {
   };
 
   const handleIssue = async () => {
-    if (!selected) return;
+    if (!selected || selected.modalidade === 'EAD') return;
     if (
-      ['TECNICO', 'EAD'].includes(selected.modalidade)
+      selected.modalidade === 'TECNICO'
       && [form.certificadoNumero, form.paginaLivro, form.livroRegistro]
         .some(value => !value.trim())
     ) {
@@ -162,6 +164,58 @@ const SecretariaCertificadosPage: React.FC = () => {
     || (!validationSnapshotQuery.isPending && !validationSnapshotQuery.data)
   );
 
+  const previewContent = (
+    preview?.status === 'FINALIZADO' && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/75 p-6 backdrop-blur-sm">
+          <div className="mx-auto max-w-6xl">
+            <div className="mb-4 flex justify-end gap-2">
+              <button
+                onClick={() => void handlePrintCertificate()}
+                disabled={validationSnapshotPending || validationSnapshotUnavailable}
+                className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-xs font-black uppercase text-white disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {validationSnapshotPending
+                  ? <Loader2 className="animate-spin" size={15} />
+                  : <Printer size={15} />}
+                Imprimir
+              </button>
+              <button onClick={() => setPreview(null)} aria-label="Fechar prévia do certificado" className="rounded-xl bg-white p-3 text-slate-600"><X size={18}/></button>
+            </div>
+            {validationSnapshotPending ? (
+              <div className="flex min-h-80 items-center justify-center gap-3 rounded-3xl bg-white text-xs font-black uppercase tracking-widest text-slate-500">
+                <Loader2 className="animate-spin text-blue-600" size={26} />
+                Conferindo a emissão original...
+              </div>
+            ) : validationSnapshotUnavailable ? (
+              <div className="flex min-h-80 flex-col items-center justify-center rounded-3xl border border-red-200 bg-red-50 p-8 text-center">
+                <h4 className="font-black uppercase text-red-800">Emissão não confirmada</h4>
+                <p className="mt-2 max-w-lg text-sm font-semibold text-red-700">
+                  Não foi possível confirmar o QR e a validade registrados neste certificado. A impressão foi bloqueada para evitar uma segunda via divergente.
+                </p>
+                {previewHasValidationCode && (
+                  <button
+                    type="button"
+                    onClick={() => void validationSnapshotQuery.refetch()}
+                    className="mt-5 rounded-xl bg-red-700 px-5 py-3 text-[10px] font-black uppercase tracking-wider text-white"
+                  >
+                    Tentar novamente
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div ref={certificatePrintRef}>
+                <CertificadoPreview
+                  certificado={preview}
+                  modelo={modelo}
+                  showValidationQrCode={validationSnapshotQuery.data?.validationPublic === true}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )
+  );
+
   return (
     <div className="space-y-6 animate-fadeIn">
       <div className="rounded-[2rem] bg-[#001a33] p-7 text-white shadow-xl">
@@ -185,6 +239,13 @@ const SecretariaCertificadosPage: React.FC = () => {
           );
         })}
       </div>
+
+      {modalidade === 'EAD' && (
+        <p className="rounded-2xl border border-blue-100 bg-blue-50 px-5 py-4 text-sm font-semibold text-blue-800">
+          Certificados EAD são liberados automaticamente após a conclusão aprovada do curso.
+          {' '}Os registros pendentes continuam disponíveis para acompanhamento.
+        </p>
+      )}
 
       <div className="flex gap-2">
         {(['PENDENTE', 'FINALIZADO'] as CertificadoStatus[]).map(value => (
@@ -246,7 +307,8 @@ const SecretariaCertificadosPage: React.FC = () => {
                     <td><span className={`rounded-full px-2 py-1 text-[9px] font-black ${item.status === 'FINALIZADO' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{item.status}</span></td>
                     <td className="p-4 text-right">
                       <div className="inline-flex gap-2">
-                        {item.status === 'PENDENTE' && <button onClick={() => openIssue(item)} className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-[10px] font-black uppercase text-white"><Settings2 size={13} /> Preparar</button>}
+                        {item.status === 'PENDENTE' && item.modalidade !== 'EAD' && <button onClick={() => openIssue(item)} className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-[10px] font-black uppercase text-white"><Settings2 size={13} /> Preparar</button>}
+                        {item.status === 'PENDENTE' && item.modalidade === 'EAD' && <span className="px-3 py-2 text-[10px] font-bold text-slate-500">Aguardando liberação automática</span>}
                         {item.status === 'FINALIZADO' && <button onClick={() => setPreview(item)} className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:text-blue-600" title="Pré-visualizar"><Eye size={15} /></button>}
                         {item.status === 'FINALIZADO' && <button onClick={() => setPreview(item)} className="flex items-center gap-1.5 rounded-lg bg-[#001a33] px-3 py-2 text-[10px] font-black uppercase text-white"><Printer size={13} /> 2ª Via</button>}
                       </div>
@@ -259,7 +321,7 @@ const SecretariaCertificadosPage: React.FC = () => {
         </section>
       ))}
 
-      {selected && (
+      {selected && selected.modalidade !== 'EAD' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
           <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-[2rem] bg-white p-7 shadow-2xl">
             <div className="mb-6 flex justify-between"><div><h4 className="text-xl font-black uppercase text-[#001a33]">Preparar Certificado</h4><p className="text-sm text-slate-500">{selected.aluno.nome} · {selected.curso.nome}</p></div><button onClick={() => setSelected(null)}><X /></button></div>
@@ -271,7 +333,7 @@ const SecretariaCertificadosPage: React.FC = () => {
                   <input value={form.ensinoMedioAnoConclusao} onChange={e => setForm({...form, ensinoMedioAnoConclusao:e.target.value})} placeholder="Ano de conclusão" className="rounded-xl border p-3 text-sm" />
                 </div></div>
               )}
-              {['TECNICO', 'EAD'].includes(selected.modalidade) && (
+              {selected.modalidade === 'TECNICO' && (
                 <div><h5 className="mb-3 text-xs font-black uppercase tracking-wider text-blue-700">Registro do verso</h5><div className="grid gap-3 md:grid-cols-2">
                   <input value={form.certificadoNumero} onChange={e => setForm({...form, certificadoNumero:e.target.value})} placeholder="Certificado expedido Nº" className="rounded-xl border p-3 text-sm" />
                   <input value={form.paginaLivro} onChange={e => setForm({...form, paginaLivro:e.target.value})} placeholder="Página" className="rounded-xl border p-3 text-sm" />
@@ -285,57 +347,14 @@ const SecretariaCertificadosPage: React.FC = () => {
         </div>
       )}
 
-      {preview?.status === 'FINALIZADO' && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/75 p-6 backdrop-blur-sm">
-          <div className="mx-auto max-w-6xl">
-            <div className="mb-4 flex justify-end gap-2">
-              <button
-                onClick={() => void handlePrintCertificate()}
-                disabled={validationSnapshotPending || validationSnapshotUnavailable}
-                className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-xs font-black uppercase text-white disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {validationSnapshotPending
-                  ? <Loader2 className="animate-spin" size={15} />
-                  : <Printer size={15} />}
-                Imprimir
-              </button>
-              <button onClick={() => setPreview(null)} className="rounded-xl bg-white p-3 text-slate-600"><X size={18}/></button>
-            </div>
-            {validationSnapshotPending ? (
-              <div className="flex min-h-80 items-center justify-center gap-3 rounded-3xl bg-white text-xs font-black uppercase tracking-widest text-slate-500">
-                <Loader2 className="animate-spin text-blue-600" size={26} />
-                Conferindo a emissão original...
-              </div>
-            ) : validationSnapshotUnavailable ? (
-              <div className="flex min-h-80 flex-col items-center justify-center rounded-3xl border border-red-200 bg-red-50 p-8 text-center">
-                <h4 className="font-black uppercase text-red-800">Emissão não confirmada</h4>
-                <p className="mt-2 max-w-lg text-sm font-semibold text-red-700">
-                  Não foi possível confirmar o QR e a validade registrados neste certificado. A impressão foi bloqueada para evitar uma segunda via divergente.
-                </p>
-                {previewHasValidationCode && (
-                  <button
-                    type="button"
-                    onClick={() => void validationSnapshotQuery.refetch()}
-                    className="mt-5 rounded-xl bg-red-700 px-5 py-3 text-[10px] font-black uppercase tracking-wider text-white"
-                  >
-                    Tentar novamente
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div ref={certificatePrintRef}>
-                <CertificadoPreview
-                  certificado={preview}
-                  modelo={modelo}
-                  showValidationQrCode={validationSnapshotQuery.data?.validationPublic === true}
-                />
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      {preview?.modalidade === 'EAD' ? (
+        <EadCertificatePreviewPortal onClose={() => setPreview(null)}>
+          {previewContent}
+        </EadCertificatePreviewPortal>
+      ) : previewContent}
     </div>
   );
 };
 
 export default SecretariaCertificadosPage;
+

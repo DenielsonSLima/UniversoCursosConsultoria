@@ -1,11 +1,6 @@
 import { supabase } from '../../../../lib/supabase';
 import { CertificadoAcademico, CertificadoModalidade, CertificadoStatus } from './certificados.types';
 import {
-  buildEadProgressMap,
-  getEadProgressKey,
-  hasValidEadCertificateCompletion,
-} from './eadCertificateEligibility';
-import {
   normalizeSecretariaSearch,
   secretariaSearchIncludes,
 } from '../secretaria-search';
@@ -38,25 +33,8 @@ export const certificadosService = {
     if (filters.poloId) query = query.eq('polo_id', filters.poloId);
     const { data, error } = await query;
     if (error) throw error;
-    let rows = (data || []) as unknown as CertificadoAcademico[];
-
-    if (filters.modalidade === 'EAD' && rows.length) {
-      const alunoIds = [...new Set(rows.map(row => row.aluno_id).filter(Boolean))];
-      const cursoIds = [...new Set(rows.map(row => row.curso_id).filter(Boolean))];
-      const { data: progressRows, error: progressError } = await supabase
-        .from('ead_aluno_progresso')
-        .select('aluno_id, curso_id, progress')
-        .in('aluno_id', alunoIds)
-        .in('curso_id', cursoIds);
-
-      if (progressError) throw progressError;
-
-      const progressByStudentCourse = buildEadProgressMap(progressRows || []);
-      rows = rows.filter(row => hasValidEadCertificateCompletion(
-        row,
-        progressByStudentCourse.get(getEadProgressKey(row.aluno_id, row.curso_id))
-      ));
-    }
+    // The backend owns completion and issuance; preserve its canonical status.
+    const rows = (data || []) as unknown as CertificadoAcademico[];
 
     const search = normalizeSecretariaSearch(filters.search);
     return search
@@ -105,3 +83,4 @@ export const certificadosService = {
     return data;
   },
 };
+

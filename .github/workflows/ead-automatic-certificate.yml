@@ -1,0 +1,50 @@
+name: Certificado automático EAD
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/ead-automatic-certificate.yml'
+      - 'supabase/migrations/**'
+      - 'supabase/tests/ead_automatic_certificate*'
+      - 'supabase/tests/fixtures/ead-auto-certificate*'
+      - 'supabase/tests/fixtures/ead-certificate-original-issuers.sql'
+      - 'modules/gestor/secretaria/certificados/**'
+      - 'modules/ead/**'
+      - 'package-lock.json'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/ead-automatic-certificate.yml'
+      - 'supabase/migrations/**'
+      - 'supabase/tests/ead_automatic_certificate*'
+      - 'supabase/tests/fixtures/ead-auto-certificate*'
+      - 'supabase/tests/fixtures/ead-certificate-original-issuers.sql'
+      - 'modules/gestor/secretaria/certificados/**'
+      - 'modules/ead/**'
+      - 'package-lock.json'
+
+permissions:
+  contents: read
+
+jobs:
+  ead-automatic-certificate:
+    name: Emissão EAD, idempotência e isolamento de modalidades
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Preparar PostgreSQL isolado
+        run: npm install --prefix "$RUNNER_TEMP/ead-certificate-sql" --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.3.14
+      - name: Validar emissão automática, autorização e replays
+        run: PGLITE_MODULE_PATH="$RUNNER_TEMP/ead-certificate-sql/node_modules/@electric-sql/pglite/dist/index.js" node supabase/tests/ead_automatic_certificate.isolated.test.mjs
+      - name: Preparar navegador e dependências isoladas da interface
+        run: |
+          npm install --prefix "$RUNNER_TEMP/ead-certificate-ui" --no-save --package-lock=false --ignore-scripts react@19.2.7 react-dom@19.2.7 esbuild@0.25.12 playwright@1.56.1 lucide-react@0.564.0
+          node "$RUNNER_TEMP/ead-certificate-ui/node_modules/playwright/cli.js" install --with-deps chromium
+      - name: Validar EAD automático, prévia acessível e registro técnico preservado
+        run: EAD_UI_NODE_MODULES="$RUNNER_TEMP/ead-certificate-ui/node_modules" node modules/gestor/secretaria/certificados/ead-certificates.ui.test.mjs
