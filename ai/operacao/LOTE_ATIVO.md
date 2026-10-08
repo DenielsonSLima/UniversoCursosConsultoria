@@ -1,15 +1,15 @@
 # Lote ativo
 
-## Lote: 2026-10-07-correcao-financeira-limitada
+## Lote: 2026-10-07-aviso-c2-antes-do-assistente
 
-Estado: 4.8.181; 14 migrations e sete grants instalados, worker v12 e emissor v10 ativos. No checkpoint de instalação, a execução financeira ainda não havia iniciado.
-Objetivo/aceite: preservar recebíveis, runs e termos; confirmar cancelamento bancário antes do ajuste; manter C2 cancelado histórico, matrícula paga intacta e dispensa LOCAL comprovada; exigir consentimento real e reemissão manual.
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-07-correcao-financeira-limitada.md`.
-Publicação: 15 payloads SQL canônicos idênticos ao histórico remoto; drafts sintéticos preservados.
-Validação: SQL, UI/Edge, elegibilidade e persistência simulada; conferir CI/Preview do commit exato. Smoke Safari autenticado e validação bancária real separados.
-Pendência separada: R$ 200,00 não resolvidos; sem baixa, estorno ou devolução confirmados.
+Estado: entrega financeira 4.8.182 autorizada para produção em 08/10/2026, após revisão de três agentes.
+Objetivo/aceite: C2 abre aviso de parcelas antes do assistente; Continuar não emite; Cancelar fecha; C1 normal. Fonte da restauração T46 já aplicada sincronizada sem reaplicação.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-07-aviso-c2-antes-do-assistente.md`.
+Validação: dez cenários React DOM, 31 testes de contrato/handler, cinco regressões T46, lint, TypeScript, build e revisão independente aprovados. CI e Vercel são conferidos no commit integrado do PR #275.
+Base remota: main `3f7a749149050f6dac08b095e6d54106824fd9b0` (4.8.181). Nenhuma nova mutation financeira ou emissão nesta publicação.
+Limitação: navegador proibido pelo responsável; smoke visual autenticado não executado.
 
-## Contexto anterior preservado
+## Rastreabilidade
 
-Lote anterior: `ai/operacao/registros/alteracoes/2026-10-07-aviso-segundo-ciclo.md`.
-O aviso C2 da 4.8.180 permanece obrigatório. Este lote não autoriza novo ciclo nem dispensa confirmação das parcelas abertas.
+Restauração T46 já aplicada: PR #274 e `ai/operacao/registros/alteracoes/2026-10-07-restauracao-c1-t46.md`. Fonte da migration idêntica ao ledger remoto, sem reaplicação.
+Editor do contrato: PR #276, candidata 4.8.183 em revisão final separada.

@@ -37,7 +37,7 @@ await build({
             a.path === 'supabase'
               ? `export const supabase={rpc:(...a)=>globalThis.rpc(...a)};`
               : a.path === 'query'
-                ? `export const usePreviewCicloFinanceiroTecnicoManual=()=>globalThis.query;`
+                ? `export const usePreviewCicloFinanceiroTecnicoManual=(_,enabled)=>{globalThis.previewEnabled=enabled;return globalThis.query;};`
                 : a.path === 'revision'
                   ? `export const useCicloManualRevision=()=>globalThis.revision;`
                   : a.path === 'icons'
@@ -193,97 +193,137 @@ const review = () => {
 };
 const open = () => fireEvent.click(screen.getByRole('button', { name: /Gerar e emitir BolePix/ }));
 const ready = () =>
-  waitFor(() => assert.equal(screen.getByRole('button', { name: 'Sim, gerar o 2º ciclo' }).disabled, false));
+  waitFor(() => assert.equal(screen.getByRole('button', { name: 'Continuar' }).disabled, false));
+const continueToWizard = async () => {
+  await ready();
+  fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+  await waitFor(() => assert.ok(screen.getByRole('dialog')));
+  assert.equal(issued, 0);
+};
 reset();
 render(React.createElement(Dialog, props()));
-review();
-open();
+assert.ok(screen.getByRole('alertdialog'));
+assert.equal(screen.queryByRole('dialog'), null);
+assert.equal(globalThis.previewEnabled, false);
 await ready();
 assert.equal(issued, 0);
 assert.match(screen.getByRole('alertdialog').textContent, /Mensalidade anterior teste/);
 assert.match(screen.getByRole('alertdialog').textContent, /Valor nominal/);
 assert.match(screen.getByRole('alertdialog').textContent, /Valor pago informado/);
 assert.equal(screen.queryByRole('dialog'), null);
-fireEvent.keyDown(document, { key: 'Escape' });
-assert.equal(closed, 0);
-assert.ok(screen.getByRole('dialog'));
-open();
-await ready();
-fireEvent.click(screen.getByRole('button', { name: 'Sim, gerar o 2º ciclo' }));
-await waitFor(() => assert.equal(issued, 1));
-assert.equal(reads, 3);
-console.log(
-  'PASS real DOM: C2 list, nominal/partial display, Escape returns to review, explicit confirm and fresh reread',
-);
-reset();
-const view = render(React.createElement(Dialog, props()));
+const continueButton = screen.getByRole('button', { name: 'Continuar' });
+fireEvent.click(continueButton);
+fireEvent.click(continueButton);
+await waitFor(() => assert.ok(screen.getByRole('dialog')));
+assert.equal(issued, 0);
+assert.equal(reads, 2);
+assert.equal(globalThis.previewEnabled, true);
+assert.equal(screen.queryByRole('alertdialog'), null);
 review();
 open();
+await waitFor(() => assert.equal(issued, 1));
+assert.equal(reads, 2);
+assert.equal(screen.queryByRole('alertdialog'), null);
+console.log(
+  'PASS real DOM: warning before wizard, one continue/recheck, issuance only at final standard confirmation',
+);
+reset();
+render(React.createElement(Dialog, props()));
+await ready();
+fireEvent.keyDown(document, { key: 'Escape' });
+assert.equal(closed, 1);
+assert.equal(issued, 0);
+assert.equal(screen.queryByRole('dialog'), null);
+console.log('PASS real DOM: Escape closes entry warning without opening wizard');
+reset();
+render(React.createElement(Dialog, props()));
 await ready();
 let release;
 globalThis.rpc = () => new Promise((r) => (release = r));
-const yes = screen.getByRole('button', { name: 'Sim, gerar o 2º ciclo' });
+const yes = screen.getByRole('button', { name: 'Continuar' });
 fireEvent.click(yes);
 fireEvent.click(yes);
-fireEvent.click(screen.getByRole('button', { name: 'Voltar à revisão' }));
+fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
 await React.act(async () => release({ data: statement, error: null }));
 assert.equal(issued, 0);
-console.log('PASS real DOM: double click and cancel during pending recheck cannot emit');
+assert.equal(closed, 1);
+assert.equal(screen.queryByRole('dialog'), null);
+console.log('PASS real DOM: cancel during pending recheck cannot continue or emit');
+reset();
+globalThis.query = { ...globalThis.query, data: undefined, isFetching: true };
+render(React.createElement(Dialog, {
+  ...props(), row: { ...row, cicloManual: { ...row.cicloManual, primeiroVencimentoSugerido: null } },
+}));
+assert.ok(screen.getByRole('alertdialog'));
+assert.equal(globalThis.previewEnabled, false);
+await continueToWizard();
+assert.equal(globalThis.previewEnabled, false);
+assert.equal(screen.getByRole('button', { name: /Ver composição/ }).disabled, true);
+console.log('PASS real DOM: C2 without date or preview still requires entry warning');
 reset();
 const changed = render(React.createElement(Dialog, props()));
+await continueToWizard();
 review();
-open();
-await ready();
 globalThis.query = { ...globalThis.query, isFetching: true };
 changed.rerender(React.createElement(Dialog, props()));
 assert.equal(screen.queryByRole('alertdialog'), null);
-globalThis.query = { ...globalThis.query, isFetching: false };
+assert.equal(screen.getByRole('button', { name: /Gerar e emitir BolePix/ }).disabled, true);
+globalThis.query = { ...globalThis.query, isFetching: false,
+  data: { preview: { ...preview, cronogramaFingerprint: 'changed' } } };
 changed.rerender(React.createElement(Dialog, props()));
 assert.equal(screen.queryByRole('alertdialog'), null);
 assert.equal(issued, 0);
-console.log('PASS real DOM: recalc/loading invalidates acknowledgement without reopening');
+console.log('PASS real DOM: editing/recalculating the wizard does not repeat entry confirmation');
 reset();
-render(React.createElement(Dialog, props()));
-review();
 globalThis.rpc = async () => ({ data: null, error: { message: 'permission denied' } });
-open();
+render(React.createElement(Dialog, props()));
 await waitFor(() => assert.ok(screen.getByRole('alert')));
-assert.equal(screen.getByRole('button', { name: 'Sim, gerar o 2º ciclo' }).disabled, true);
+assert.equal(screen.getByRole('button', { name: 'Continuar' }).disabled, true);
+assert.equal(screen.queryByRole('dialog'), null);
 assert.equal(issued, 0);
-console.log('PASS real DOM: permission/read failure blocks issuance');
+globalThis.rpc = async () => ({ data: statement, error: null });
+fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+await continueToWizard();
+console.log('PASS real DOM: read failure blocks entry until successful retry and explicit continue');
 reset();
-const fingerprintView = render(React.createElement(Dialog, props()));
-review();
-open();
+const selectionView = render(React.createElement(Dialog, props()));
 await ready();
 let finishOldRead;
 globalThis.rpc = () => new Promise((done) => (finishOldRead = done));
-fireEvent.click(screen.getByRole('button', { name: 'Sim, gerar o 2º ciclo' }));
-globalThis.query = {
-  ...globalThis.query,
-  data: { preview: { ...preview, cronogramaFingerprint: 'changed' } },
-};
-fingerprintView.rerender(React.createElement(Dialog, props()));
+fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+globalThis.rpc = async () => ({ data: { ...statement, matriculaId: 'm2' }, error: null });
+selectionView.rerender(React.createElement(Dialog, {
+  ...props(), row: { ...row, matriculaId: 'm2', alunoNome: 'Outro aluno teste' },
+}));
 await React.act(async () => finishOldRead({ data: statement, error: null }));
+await ready();
 assert.equal(issued, 0);
-assert.equal(screen.queryByRole('alertdialog'), null);
-console.log('PASS real DOM: preview fingerprint change rejects old asynchronous confirmation');
+assert.equal(screen.queryByRole('dialog'), null);
+assert.match(screen.getByRole('alertdialog').textContent, /Outro aluno teste/);
+await continueToWizard();
+console.log('PASS real DOM: changing enrollment discards late acknowledgement and requires its own warning');
 reset();
 render(React.createElement(Dialog, props()));
-review();
-open();
 await ready();
 const updated = { ...statement, recebiveis: [] };
 globalThis.rpc = async () => ({ data: updated, error: null });
-fireEvent.click(screen.getByRole('button', { name: 'Sim, gerar o 2º ciclo' }));
+fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
 await ready();
 assert.equal(issued, 0);
 assert.match(screen.getByRole('alert').textContent, /mudaram/);
-fireEvent.click(screen.getByRole('button', { name: 'Sim, gerar o 2º ciclo' }));
-await waitFor(() => assert.equal(issued, 1));
+assert.equal(screen.queryByRole('dialog'), null);
+await continueToWizard();
 console.log(
-  'PASS real DOM: changed obligations require another click; empty statement permits legitimate C2',
+  'PASS real DOM: changed obligations require another acknowledgement, even when no open charges remain',
 );
+reset();
+render(React.createElement(Dialog, props()));
+await continueToWizard();
+cleanup();
+render(React.createElement(Dialog, props()));
+assert.ok(screen.getByRole('alertdialog'));
+assert.equal(screen.queryByRole('dialog'), null);
+console.log('PASS real DOM: closing and reopening C2 requires a new warning');
 reset();
 globalThis.query.data.preview = { ...preview, cicloNumero: 1 };
 render(
