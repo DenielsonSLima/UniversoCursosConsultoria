@@ -6,6 +6,12 @@ Histórico anterior: [16/09/2026 a 25/09/2026 — versões 4.8.65 a 4.8.90](./ch
 
 Histórico arquivado: [25/09/2026 a 26/09/2026 — versões 4.8.91 a 4.8.110](./changelog/2026-09-25-a-2026-09-26-versoes-4-8-91-a-4-8-110.md).
 
+## [4.8.186] - 2026-10-08
+
+- Inclui no verso do certificado EAD os módulos cadastrados, com conteúdo, ordem e paginação fornecidos pelo backend.
+- Unifica a grade da Secretaria, do aluno e da reimpressão pelo snapshot da emissão, preservando o modelo configurado.
+- Completa a grade ausente dos certificados EAD já emitidos sem trocar códigos, datas ou contadores de emissão.
+
 ## [4.8.185] - 2026-10-08
 
 - Libera automaticamente o certificado EAD após aprovação acadêmica validada no backend, com código de validação e proteção contra emissão duplicada.

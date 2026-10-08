@@ -1,8 +1,8 @@
 {
-  "version": "4.8.185",
+  "version": "4.8.186",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 194,
+  "revision": 195,
   "releasedAt": "2026-10-08",
-  "summary": "Certificação EAD automática após aprovação, sem registro técnico manual"
+  "summary": "Grade curricular canônica no verso do certificado EAD"
 }

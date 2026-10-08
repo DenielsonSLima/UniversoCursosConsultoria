@@ -168,6 +168,7 @@ const EmissionDocumentPages: React.FC<EmissionDocumentPagesProps> = ({
       <div className="space-y-6">
         <CertificadoPreview
           certificado={certificatePreview}
+          curriculumSnapshot={emission.dados_emissao?.eadCurriculum}
           modelo={templateConfig}
           pdfMode
           showValidationQrCode={validationPublic}
@@ -254,3 +255,4 @@ const EmissionDocumentPages: React.FC<EmissionDocumentPagesProps> = ({
 };
 
 export default EmissionDocumentPages;
+

@@ -6,9 +6,13 @@ on:
       - '.github/workflows/ead-automatic-certificate.yml'
       - 'supabase/migrations/**'
       - 'supabase/tests/ead_automatic_certificate*'
+      - 'supabase/tests/ead_certificate_curriculum*'
+      - 'supabase/tests/fixtures/ead-certificate-test-harness.mjs'
       - 'supabase/tests/fixtures/ead-auto-certificate*'
       - 'supabase/tests/fixtures/ead-certificate-original-issuers.sql'
       - 'modules/gestor/secretaria/certificados/**'
+      - 'modules/aluno/cursos/**'
+      - 'modules/gestor/cadastros/modelos-documentos/diploma/**'
       - 'modules/ead/**'
       - 'package-lock.json'
   push:
@@ -17,9 +21,13 @@ on:
       - '.github/workflows/ead-automatic-certificate.yml'
       - 'supabase/migrations/**'
       - 'supabase/tests/ead_automatic_certificate*'
+      - 'supabase/tests/ead_certificate_curriculum*'
+      - 'supabase/tests/fixtures/ead-certificate-test-harness.mjs'
       - 'supabase/tests/fixtures/ead-auto-certificate*'
       - 'supabase/tests/fixtures/ead-certificate-original-issuers.sql'
       - 'modules/gestor/secretaria/certificados/**'
+      - 'modules/aluno/cursos/**'
+      - 'modules/gestor/cadastros/modelos-documentos/diploma/**'
       - 'modules/ead/**'
       - 'package-lock.json'
 
@@ -42,9 +50,21 @@ jobs:
         run: npm install --prefix "$RUNNER_TEMP/ead-certificate-sql" --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.3.14
       - name: Validar emissão automática, autorização e replays
         run: PGLITE_MODULE_PATH="$RUNNER_TEMP/ead-certificate-sql/node_modules/@electric-sql/pglite/dist/index.js" node supabase/tests/ead_automatic_certificate.isolated.test.mjs
+      - name: Validar currículo canônico e exportar payload SQL sintético
+        run: PGLITE_MODULE_PATH="$RUNNER_TEMP/ead-certificate-sql/node_modules/@electric-sql/pglite/dist/index.js" EAD_CURRICULUM_FIXTURE_OUT="$RUNNER_TEMP/ead-curriculum-payload.json" node supabase/tests/ead_certificate_curriculum.isolated.test.mjs
       - name: Preparar navegador e dependências isoladas da interface
         run: |
-          npm install --prefix "$RUNNER_TEMP/ead-certificate-ui" --no-save --package-lock=false --ignore-scripts react@19.2.7 react-dom@19.2.7 esbuild@0.25.12 playwright@1.56.1 lucide-react@0.564.0
+          npm install --prefix "$RUNNER_TEMP/ead-certificate-ui" --no-save --package-lock=false --ignore-scripts react@19.2.7 react-dom@19.2.7 esbuild@0.25.12 playwright@1.56.1 lucide-react@0.564.0 dompurify@3.4.13 qrcode@1.5.4 tailwindcss@3.4.17 postcss@8.5.6
           node "$RUNNER_TEMP/ead-certificate-ui/node_modules/playwright/cli.js" install --with-deps chromium
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils
       - name: Validar EAD automático, prévia acessível e registro técnico preservado
         run: EAD_UI_NODE_MODULES="$RUNNER_TEMP/ead-certificate-ui/node_modules" node modules/gestor/secretaria/certificados/ead-certificates.ui.test.mjs
+      - name: Validar contrato de apresentação EAD
+        run: node modules/gestor/secretaria/certificados/components/ead-certificate-curriculum.test.mjs
+      - name: Validar compositor real, texto PDF e recursos
+        run: EAD_UI_NODE_MODULES="$RUNNER_TEMP/ead-certificate-ui/node_modules" EAD_CURRICULUM_FIXTURE_OUT="$RUNNER_TEMP/ead-curriculum-payload.json" EAD_CURRICULUM_ARTIFACTS="$RUNNER_TEMP/ead-curriculum-pdf" node modules/gestor/secretaria/certificados/ead-curriculum.pdf.test.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ead-curriculum-synthetic-pdf
+          path: ${{ runner.temp }}/ead-curriculum-pdf

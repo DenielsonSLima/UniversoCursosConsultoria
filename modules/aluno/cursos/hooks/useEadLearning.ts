@@ -29,7 +29,6 @@ import {
 } from '../eadAssessmentRuntime';
 import {
   MAIN_EAD_VIDEO_ID,
-  buildEadGradeCurricular,
   formatCountdown,
   getActivityLessonIndex,
   getLegacyMainVideoLesson,
@@ -257,7 +256,6 @@ export const useEadLearning = ({ alunoId, hasAlunoContext, selectedCourse, query
   const completedAtDate = completedAt ? new Date(Number(completedAt)) : null;
   const startedAtDate = progress?.startedAt ? new Date(Number(progress.startedAt)) : null;
   const completedLessonCount = Array.isArray(progress?.completedContentIds) ? progress.completedContentIds.length : 0;
-  const eadGradeCurricular = buildEadGradeCurricular(selectedCourse);
 
   const { data: alunoCertificado, isLoading: certificateLoading, isError: certificateError } = useQuery<CertificadoAcademico | null>({
     queryKey: ['aluno-certificado-ead', alunoId, selectedCourse?.id],
@@ -480,7 +478,7 @@ export const useEadLearning = ({ alunoId, hasAlunoContext, selectedCourse, query
     selectedLessonActivities, activityConfigurationValidation,
     quizPassed, progressPercent, allLessonsDone, allActivitiesDone, allVideosDone,
     questionsTotal, minimumQuestions, quizRetryBlocked, retryCountdownLabel, canTakeQuiz, completedAtDate,
-    startedAtDate, completedLessonCount, eadGradeCurricular, alunoCertificado, certificateStatusTitle,
+    startedAtDate, completedLessonCount, alunoCertificado, certificateStatusTitle,
     certificateStatusMessage, eadCertificateModel, randomizedQuizQuestions, displayedQuizAnswers,
     retryAvailableLabel, retryReleaseRefreshing, isLessonLocked,
     isProgressReady: progressAvailability.isReady,
@@ -492,3 +490,4 @@ export const useEadLearning = ({ alunoId, hasAlunoContext, selectedCourse, query
     isProgressUpdatePending, updateProgress,
   };
 };
+

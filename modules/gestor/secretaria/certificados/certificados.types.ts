@@ -1,6 +1,14 @@
 export type CertificadoModalidade = 'TECNICO' | 'LIVRE' | 'EAD' | 'ESPECIALIZACAO';
 export type CertificadoStatus = 'PENDENTE' | 'FINALIZADO' | 'CANCELADO';
 
+export interface EadCertificateCurriculum {
+  version: 1;
+  source: 'cronograma' | 'conteudos';
+  items: Array<{ id: string; title: string }>;
+  totalHours: number | null;
+  pages: Array<{ number: number; lines: string[] }>;
+}
+
 export interface CertificadoAcademico {
   id: string;
   matricula_id: string;
@@ -22,8 +30,14 @@ export interface CertificadoAcademico {
   ensino_medio_ano_conclusao: string | null;
   codigo_validacao: string | null;
   emitido_em: string | null;
+  metadados?: {
+    eadCurriculum?: EadCertificateCurriculum;
+    programContent?: string;
+    [key: string]: unknown;
+  } | null;
   aluno: { nome: string; cpf_cnpj: string | null; rg?: string | null; tipo_documento?: string | null; data_nascimento?: string | null; naturalidade?: string | null };
   turma: { nome: string; codigo: string };
   curso: { nome: string; carga_horaria: number; area?: string | null; ead_config?: any };
   polo: { nome: string; cidade: string; estado: string } | null;
 }
+
