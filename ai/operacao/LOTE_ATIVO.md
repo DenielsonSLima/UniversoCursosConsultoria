@@ -1,15 +1,15 @@
 # Lote ativo
 
-## Lote: 2026-10-07-aviso-c2-antes-do-assistente
+## Lote: 2026-10-07-contrato-posicoes-qr-assinaturas
 
-Estado: entrega financeira 4.8.182 autorizada para produção em 08/10/2026, após revisão de três agentes.
-Objetivo/aceite: C2 abre aviso de parcelas antes do assistente; Continuar não emite; Cancelar fecha; C1 normal. Fonte da restauração T46 já aplicada sincronizada sem reaplicação.
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-07-aviso-c2-antes-do-assistente.md`.
-Validação: dez cenários React DOM, 31 testes de contrato/handler, cinco regressões T46, lint, TypeScript, build e revisão independente aprovados. CI e Vercel são conferidos no commit integrado do PR #275.
-Base remota: main `3f7a749149050f6dac08b095e6d54106824fd9b0` (4.8.181). Nenhuma nova mutation financeira ou emissão nesta publicação.
+Estado: entrega 4.8.183 autorizada para produção em 08/10/2026, após reunião e aprovação de três agentes.
+Objetivo/aceite: mover QR e quatro assinaturas, ajustar coordenadas/tamanhos, preservar no PDF e retirar os números das linhas de testemunhas.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-07-contrato-posicoes-qr-assinaturas.md`.
+Validação: 77 testes, TypeScript, lint, build, PDF nativo renderizado e revisão independente aprovados. Manifesto com 31 arquivos dentro de 500 linhas. Integração financeira conferida por hashes e testes DOM; CI/Preview do commit integrado e produção acompanhados no PR #276.
 Limitação: navegador proibido pelo responsável; smoke visual autenticado não executado.
+Dados: nenhuma migration ou emissão real necessária para o editor; configuração permanece no snapshot do modelo.
 
-## Rastreabilidade
+## Entrega financeira preservada
 
-Restauração T46 já aplicada: PR #274 e `ai/operacao/registros/alteracoes/2026-10-07-restauracao-c1-t46.md`. Fonte da migration idêntica ao ledger remoto, sem reaplicação.
-Editor do contrato: PR #276, candidata 4.8.183 em revisão final separada.
+Aviso C2 antes do assistente: PR #275, versão 4.8.182; registro `ai/operacao/registros/alteracoes/2026-10-07-aviso-c2-antes-do-assistente.md`.
+Restauração T46 já aplicada: PR #274 incorporado à entrega financeira; registro `ai/operacao/registros/alteracoes/2026-10-07-restauracao-c1-t46.md`. Fonte idêntica ao ledger; nenhuma reaplicação nesta publicação.

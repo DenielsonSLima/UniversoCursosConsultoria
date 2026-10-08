@@ -26,6 +26,12 @@ const toVisibleValue = (value: string) => value
   .replace(/[_–—-]+/g, '')
   .trim();
 
+const toVisibleWitnessValue = (value: string) => {
+  const content = value.replace(/^\s*[12]\s*:\s*/, '').trim();
+  if (/^[\s_–—-]*$/.test(content)) return '';
+  return content.replace(/_+/g, '').trim();
+};
+
 const splitLabelAndValue = (line: string, expression: RegExp) => {
   const match = line.match(expression);
   if (!match) return null;
@@ -64,13 +70,13 @@ export const parseContratoAlunoClosingLayout = (value: string | null | undefined
       witnessSection = true;
       const witnessRawValue = line.replace(/^testemunhas?\s*:?\s*/i, '').trim();
       if (witnessRawValue) {
-        witnesses.push({ label: `TESTEMUNHA ${witnesses.length + 1}`, value: toVisibleValue(witnessRawValue) });
+        witnesses.push({ label: `TESTEMUNHA ${witnesses.length + 1}`, value: toVisibleWitnessValue(witnessRawValue) });
       }
       return;
     }
 
     if (witnessSection) {
-      witnesses.push({ label: `TESTEMUNHA ${witnesses.length + 1}`, value: toVisibleValue(line) });
+      witnesses.push({ label: `TESTEMUNHA ${witnesses.length + 1}`, value: toVisibleWitnessValue(line) });
       return;
     }
 

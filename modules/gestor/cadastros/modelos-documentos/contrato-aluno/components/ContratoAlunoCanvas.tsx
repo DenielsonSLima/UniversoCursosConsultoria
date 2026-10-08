@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { FileText, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import DocumentHeader from '../../../../components/DocumentHeader';
 import { LocalQrCodeImage } from '../../../../../shared/qrcode/LocalQrCodeImage';
-import { parseContratoAlunoClosingLayout } from '../../../../../shared/contrato-aluno/closing-layout';
+import { ContractClosingPreview } from '../../../../../shared/contrato-aluno/ContractClosingPreview';
+import { normalizeContractClosingPositions, type ContractClosingElementId, type ContractClosingPositions } from '../../../../../shared/contrato-aluno/closing-positions';
 import { normalizeContractSectionHeader } from '../../../../../shared/contrato-aluno/section-header';
 import { buildContractSemanticRuns } from '../../../../../shared/contrato-aluno/semantic-format';
 import type { ConfiguracaoQrContrato } from '../types/contrato-aluno.types';
+import { useContractClosingDrag } from '../hooks/useContractClosingDrag';
 
 export const PAGE_WIDTH = 794;
 export const PAGE_HEIGHT = 1123;
@@ -123,6 +125,10 @@ interface ContratoAlunoCanvasProps {
   } | null;
   activePageIndex?: number;
   onPageSelect?: (index: number) => void;
+  layoutEncerramento?: ContractClosingPositions;
+  onChangeClosingPositions?: (positions: ContractClosingPositions) => void;
+  selectedClosingElement?: ContractClosingElementId;
+  onSelectClosingElement?: (id: ContractClosingElementId) => void;
 }
 
 export const ContratoAlunoCanvas: React.FC<ContratoAlunoCanvasProps> = ({
@@ -137,10 +143,16 @@ export const ContratoAlunoCanvas: React.FC<ContratoAlunoCanvasProps> = ({
   centralWatermark,
   activePageIndex = 0,
   onPageSelect,
+  layoutEncerramento,
+  onChangeClosingPositions,
+  selectedClosingElement,
+  onSelectClosingElement,
 }) => {
   const [zoomScale, setZoomScale] = useState<number>(0.58);
   const pages = autoPaginateContractText(corpo, rodape);
   const totalPages = pages.length;
+  const closingPositions = normalizeContractClosingPositions(layoutEncerramento, rodape, qr.habilitado);
+  const closingInteractiveProps = useContractClosingDrag(closingPositions, onChangeClosingPositions, onSelectClosingElement);
   const isCompleteMinuta = normalizeContratoTemplateLineBreaks(corpo).length >= 20_000;
 
   const watermarkUrl =
@@ -232,7 +244,6 @@ export const ContratoAlunoCanvas: React.FC<ContratoAlunoCanvasProps> = ({
           const isSelected = activePageIndex === pageIndex;
           const isFinalPage = pageIndex === totalPages - 1;
           const shouldRenderClosing = isFinalPage && Boolean(pageText.footer || qr.habilitado);
-          const closingLayout = parseContratoAlunoClosingLayout(pageText.footer);
           const bodyRuns = buildContractSemanticRuns(pageText.body, {
             criticalHighlights: destaquesCriticos,
             attentionHighlights: destaquesAtencao,
@@ -265,6 +276,7 @@ export const ContratoAlunoCanvas: React.FC<ContratoAlunoCanvasProps> = ({
               >
                 {/* A4 Sheet Render Container (fixed 794px x 1123px scaled via transform) */}
                 <article
+                  data-contract-page="true"
                   className="relative bg-white overflow-hidden text-left origin-top-left"
                   style={{
                     width: `${PAGE_WIDTH}px`,
@@ -358,83 +370,22 @@ export const ContratoAlunoCanvas: React.FC<ContratoAlunoCanvasProps> = ({
 
                   {/* O encerramento da minuta e seu QR são exclusivos da última página. */}
                   {shouldRenderClosing && (
-                    <footer className="absolute bottom-[176px] left-[76px] right-[76px] z-10 border-t border-slate-200 pt-4">
-                      <div className="grid grid-cols-[minmax(0,1fr)_112px] items-start gap-5">
-                        <div className="min-w-0">
-                          {closingLayout.fallbackText ? (
-                            <p className="whitespace-pre-wrap text-[9px] leading-relaxed text-slate-600 font-sans">
-                              {closingLayout.fallbackText}
-                            </p>
-                          ) : (
-                            <div className="space-y-4 font-sans text-slate-600">
-                              {closingLayout.location && (
-                                <p className="text-[9px] font-medium leading-relaxed">{closingLayout.location}</p>
-                              )}
-
-                              {closingLayout.parties.length > 0 && (
-                                <div className="grid grid-cols-2 gap-7">
-                                  {closingLayout.parties.map((party) => (
-                                    <div key={party.label} className="min-w-0 text-center">
-                                      <div className="flex h-8 items-end justify-center border-b border-slate-500 px-2 text-[8px] font-medium text-slate-700">
-                                        {party.value}
-                                      </div>
-                                      <p className="mt-1 text-[7px] font-black uppercase tracking-wider text-slate-500">{party.label}</p>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-
-                              {closingLayout.witnesses.length > 0 && (
-                                <div>
-                                  <p className="mb-2 text-[7px] font-black uppercase tracking-wider text-slate-500">Testemunhas</p>
-                                  <div className="grid grid-cols-2 gap-7">
-                                    {closingLayout.witnesses.map((witness) => (
-                                      <div key={witness.label} className="min-w-0 text-center">
-                                        <div className="flex h-6 items-end justify-center border-b border-slate-400 px-2 text-[7px] font-medium text-slate-700">
-                                          {witness.value}
-                                        </div>
-                                        <p className="mt-1 text-[6.5px] font-bold uppercase tracking-wider text-slate-400">{witness.label}</p>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-
-                              {closingLayout.additionalLines.length > 0 && (
-                                <p className="whitespace-pre-wrap text-[8px] leading-relaxed text-slate-500">
-                                  {closingLayout.additionalLines.join('\n')}
-                                </p>
-                              )}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* QR Code Container */}
-                        {qr.habilitado && (
-                          <div className="shrink-0 rounded-xl border border-slate-200 bg-white p-2 text-center shadow-sm w-28">
-                            <div className="w-16 h-16 mx-auto bg-white flex items-center justify-center">
-                              <LocalQrCodeImage
-                                value="https://universocursos.com/validar/PREVIA-CONTRATO"
-                                size={160}
-                                alt="QR Code de validação"
-                                className="w-full h-full pointer-events-none"
-                              />
-                            </div>
-                            <p className="mt-1 text-[7px] font-black uppercase tracking-wider text-slate-500">
-                              {qr.rotulo || 'Validar documento'}
-                            </p>
-                            <p className="text-[8px] font-mono font-black text-blue-700 tracking-wider">
-                              CON-PREVIA-001
-                            </p>
-                            <p className="text-[6.5px] font-semibold text-slate-400">
-                              {qr.modoValidade === 'POR_DIAS' && qr.diasValidade
-                                ? `Validade: ${qr.diasValidade} dias`
-                                : 'Sem vencimento'}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </footer>
+                    <ContractClosingPreview
+                      footer={pageText.footer || ''}
+                      positions={closingPositions}
+                      hasQr={qr.habilitado}
+                      pixelsPerMm={PAGE_WIDTH / 210}
+                      selectedElement={selectedClosingElement}
+                      getInteractiveProps={closingInteractiveProps}
+                      qrImage={<LocalQrCodeImage
+                        value="https://universocursos.com/validar/PREVIA-CONTRATO"
+                        size={160} alt="QR Code de validação" className="h-full w-full pointer-events-none"
+                      />}
+                      qrLabel={qr.rotulo || 'Validar documento'}
+                      validationCode="CON-PREVIA-001"
+                      validityLabel={qr.modoValidade === 'POR_DIAS' && qr.diasValidade
+                        ? `Validade: ${qr.diasValidade} dias` : 'Sem vencimento'}
+                    />
                   )}
                 </article>
               </div>

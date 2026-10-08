@@ -2,6 +2,12 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
+
+const readContractPdfSource = async () => (await Promise.all([
+  './contratos-aluno.pdf.ts',
+  ...['model', 'assets', 'body', 'closing', 'page'].map((name) => `./pdf/${name}.ts`),
+].map((path) => readFile(new URL(path, import.meta.url), 'utf8')))).join('\n');
+
 test('Contratos de Aluno segue os três fluxos visuais da Pasta de Identificação', async () => {
   const workspace = await readFile(
     new URL('./components/ContratosAlunoEmissionWorkspace.tsx', import.meta.url),
@@ -51,17 +57,18 @@ test('troca de modo limpa estado oculto e emissão abre a prévia canônica dire
 });
 
 test('Histórico reconstrói contrato somente do snapshot congelado e reutiliza o PDF vetorial', async () => {
-  const [history, constants] = await Promise.all([
+  const [history, constants, contractHistory] = await Promise.all([
     readFile(new URL('../historico-emissoes/SecretariaHistoricoEmissoesPage.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../historico-emissoes/historico-emissoes.constants.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../historico-emissoes/contract-history-pdf.ts', import.meta.url), 'utf8'),
   ]);
 
   assert.match(constants, /key: 'contrato_aluno'/);
-  assert.match(history, /normalizeCanonicalDocumentRenderPayload/);
-  assert.match(history, /frozen\.templateSnapshot/);
-  assert.match(history, /frozen\.contractSnapshot/);
-  assert.match(history, /frozen\.renderedDocument/);
-  assert.match(history, /createContratosAlunoPdf/);
+  assert.match(contractHistory, /normalizeCanonicalDocumentRenderPayload/);
+  assert.match(contractHistory, /frozen\.templateSnapshot/);
+  assert.match(contractHistory, /frozen\.contractSnapshot/);
+  assert.match(contractHistory, /frozen\.renderedDocument/);
+  assert.match(contractHistory, /createContratosAlunoPdf/);
   assert.match(history, /previewLoadTokenRef\.current !== loadToken/);
   assert.match(history, /vectorPreviewPdfRef\.current\?\.emissionKey === preparedEmissionKey/);
   assert.match(history, /const pdfBlob = previewBlob/);
@@ -113,7 +120,7 @@ test('confirmação de ativação ocupa a viewport inteira por portal', async ()
 test('minuta compacta remove subtítulo e filete vermelho sem afetar versões históricas', async () => {
   const [renderer, pdf] = await Promise.all([
     readFile(new URL('./components/ContratoAlunoDocumentRenderer.tsx', import.meta.url), 'utf8'),
-    readFile(new URL('./contratos-aluno.pdf.ts', import.meta.url), 'utf8'),
+    readContractPdfSource(),
   ]);
 
   assert.match(renderer, /!isCompleteMinutaPresentation && pageIndex === 0 && sectionHeader/u);
@@ -127,10 +134,7 @@ test('minuta compacta remove subtítulo e filete vermelho sem afetar versões hi
 });
 
 test('PDF vetorial numera todas as páginas dentro de cada contrato', async () => {
-  const pdf = await readFile(
-    new URL('./contratos-aluno.pdf.ts', import.meta.url),
-    'utf8',
-  );
+  const pdf = await readContractPdfSource();
 
   assert.match(pdf, /const drawContractPageNumber =/u);
   assert.match(pdf, /`Página \$\{currentPage\} de \$\{totalPages\}`/u);

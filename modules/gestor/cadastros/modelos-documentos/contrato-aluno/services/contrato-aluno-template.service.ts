@@ -7,6 +7,7 @@ import {
   type SalvarModeloDocumentoSeguroInput,
 } from '../types/contrato-aluno.types';
 import { normalizeContractSectionHeader } from '../../../../../shared/contrato-aluno/section-header';
+import { normalizeContractClosingPositions, validateContractClosingPositions } from '../../../../../shared/contrato-aluno/closing-positions';
 import {
   DEFAULT_CONTRACT_ATTENTION_HIGHLIGHTS,
   DEFAULT_CONTRACT_CRITICAL_HIGHLIGHTS,
@@ -108,6 +109,9 @@ const normalizeContent = (
     destaquesCriticos: normalizeContractCriticalHighlights(value.destaquesCriticos),
     destaquesAtencao: normalizeContractAttentionHighlights(value.destaquesAtencao),
     rodape: asString(value.rodape, fallback.rodape),
+    ...(value.layoutEncerramento == null ? {} : {
+      layoutEncerramento: normalizeContractClosingPositions(value.layoutEncerramento, asString(value.rodape, fallback.rodape)),
+    }),
     observacaoEscopo: asString(value.observacaoEscopo, fallback.observacaoEscopo),
     fonte,
     presentationVersion: value.presentationVersion === 'CONTRATO_A4_INSTITUCIONAL_V3_MINUTA_COMPLETA'
@@ -215,6 +219,8 @@ export const contratoAlunoTemplateService = {
   async saveTemplate(
     input: SalvarModeloDocumentoSeguroInput<ConteudoModeloContratoAluno>,
   ) {
+    const layoutErrors = validateContractClosingPositions(input.conteudo.layoutEncerramento, input.conteudo.rodape);
+    if (layoutErrors.length) throw new Error(layoutErrors.join(' '));
     const { data, error } = await supabase.rpc('save_modelo_documento_template_secure', {
       p_template_key: input.templateKey,
       p_modality: input.modalidade,

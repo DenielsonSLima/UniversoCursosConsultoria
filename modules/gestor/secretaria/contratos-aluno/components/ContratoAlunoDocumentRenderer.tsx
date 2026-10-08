@@ -1,7 +1,8 @@
-import { FileWarning, QrCode } from 'lucide-react';
+import { FileWarning } from 'lucide-react';
 import DocumentHeader from '../../../components/DocumentHeader';
 import { DocumentValidationQrCodeImage } from '../../../../shared/document-validation/DocumentValidationQrCodeImage';
-import { parseContratoAlunoClosingLayout } from '../../../../shared/contrato-aluno/closing-layout';
+import { ContractClosingPreview } from '../../../../shared/contrato-aluno/ContractClosingPreview';
+import { normalizeContractClosingPositions, validateContractClosingPositions } from '../../../../shared/contrato-aluno/closing-positions';
 import { normalizeContractSectionHeader } from '../../../../shared/contrato-aluno/section-header';
 import {
   buildContractSemanticRuns,
@@ -22,23 +23,34 @@ const toVisibleMultilineText = (value: string | null | undefined) => String(valu
   .replace(/\\r\\n/g, '\n')
   .replace(/\\n/g, '\n');
 
+const getContractClosingConfigurationError = (document: ContratoAlunoPreparedDocument) => {
+  const rendered = document.renderPayload?.rendered;
+  const lastPage = rendered?.pages.at(-1);
+  if (!lastPage) return null;
+  const template = canonicalAsRecord(document.renderPayload?.template);
+  const errors = validateContractClosingPositions(template.layoutEncerramento,
+    toVisibleMultilineText(lastPage.footer), rendered?.qr?.enabled === true);
+  return errors.length ? `As posições do contrato não podem ser exibidas: ${errors.join(' ')}` : null;
+};
+
 export const isContratoAlunoRenderPayloadReady = (document: ContratoAlunoPreparedDocument) => {
   const template = document.renderPayload?.template;
   const snapshot = document.renderPayload?.snapshot;
   const rendered = document.renderPayload?.rendered;
   if (!template || !snapshot || !rendered?.pages.length) return false;
-  return !(rendered.qr?.enabled && !document.validationCode);
+  return !(rendered.qr?.enabled && !document.validationCode)
+    && getContractClosingConfigurationError(document) === null;
 };
 
-const ContractPayloadUnavailable = () => (
+const ContractPayloadUnavailable = ({ message }: { message?: string } = {}) => (
   <section
-    data-render-error="O servidor não retornou as páginas canônicas do contrato."
+    data-render-error={message || 'O servidor não retornou as páginas canônicas do contrato.'}
     className="mx-auto flex min-h-[420px] w-[min(210mm,100%)] flex-col items-center justify-center rounded-2xl border border-amber-200 bg-white p-8 text-center shadow-xl"
   >
     <FileWarning className="text-amber-500" size={38} />
     <h5 className="mt-4 text-sm font-black uppercase tracking-wide text-[#001a33]">Prévia canônica indisponível</h5>
     <p className="mt-2 max-w-md text-sm font-medium leading-relaxed text-slate-500">
-      O contrato foi preparado, mas o serviço não enviou as páginas finais já resolvidas. A prévia, o PDF e a impressão permanecem bloqueados para não exibir cláusulas incompletas.
+      {message || 'O contrato foi preparado, mas o serviço não enviou as páginas finais já resolvidas. A prévia, o PDF e a impressão permanecem bloqueados para não exibir cláusulas incompletas.'}
     </p>
   </section>
 );
@@ -48,6 +60,8 @@ const ContratoAlunoDocumentRenderer = ({ document }: ContratoAlunoDocumentRender
   const rendered = payload?.rendered;
 
   if (!rendered?.pages.length) return <ContractPayloadUnavailable />;
+  const closingConfigurationError = getContractClosingConfigurationError(document);
+  if (closingConfigurationError) return <ContractPayloadUnavailable message={closingConfigurationError} />;
 
   const snapshot = canonicalAsRecord(payload?.snapshot);
   const template = canonicalAsRecord(payload?.template);
@@ -99,7 +113,6 @@ const ContratoAlunoDocumentRenderer = ({ document }: ContratoAlunoDocumentRender
         const isFinalPage = pageIndex === rendered.pages.length - 1;
         const footerText = toVisibleMultilineText(page.footer);
         const showClosing = isFinalPage && Boolean(footerText || requiresQr);
-        const closingLayout = parseContratoAlunoClosingLayout(footerText);
         const sectionHeader = normalizeContractSectionHeader(page.header, [
           poloInfo.nomeFantasia,
           poloInfo.nome,
@@ -176,65 +189,16 @@ const ContratoAlunoDocumentRenderer = ({ document }: ContratoAlunoDocumentRender
           </div>
 
           {showClosing && (
-            <footer className="absolute bottom-[46mm] left-[18mm] right-[18mm] z-10 border-t border-slate-200 pt-3">
-              <div className="grid grid-cols-[minmax(0,1fr)_31mm] items-start gap-5">
-                <div className="min-w-0">
-                  {closingLayout.fallbackText ? (
-                    <p className="whitespace-pre-wrap text-[8px] leading-4 text-slate-500">{closingLayout.fallbackText}</p>
-                  ) : (
-                    <div className="space-y-3 text-slate-600">
-                      {closingLayout.location && <p className="text-[8px] leading-4">{closingLayout.location}</p>}
-
-                      {closingLayout.parties.length > 0 && (
-                        <div className="grid grid-cols-2 gap-6">
-                          {closingLayout.parties.map((party) => (
-                            <div key={party.label} className="min-w-0 text-center">
-                              <div className="flex h-[10mm] items-end justify-center border-b border-slate-500 px-2 text-[8px] text-slate-700">
-                                {party.value}
-                              </div>
-                              <p className="mt-1 text-[6px] font-black uppercase tracking-wider text-slate-500">{party.label}</p>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {closingLayout.witnesses.length > 0 && (
-                        <div>
-                          <p className="mb-1.5 text-[6px] font-black uppercase tracking-wider text-slate-500">Testemunhas</p>
-                          <div className="grid grid-cols-2 gap-6">
-                            {closingLayout.witnesses.map((witness) => (
-                              <div key={witness.label} className="min-w-0 text-center">
-                                <div className="flex h-[8mm] items-end justify-center border-b border-slate-400 px-2 text-[7px] text-slate-700">
-                                  {witness.value}
-                                </div>
-                                <p className="mt-1 text-[5.5px] font-bold uppercase tracking-wider text-slate-400">{witness.label}</p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {closingLayout.additionalLines.length > 0 && (
-                        <p className="whitespace-pre-wrap text-[7px] leading-3 text-slate-500">{closingLayout.additionalLines.join('\n')}</p>
-                      )}
-                    </div>
-                  )}
-                </div>
-                {requiresQr && document.validationCode && (
-                  <div className="shrink-0 rounded-lg border border-slate-200 bg-white p-1.5 text-center shadow-sm">
-                    <DocumentValidationQrCodeImage
-                      code={document.validationCode}
-                      size={200}
-                      alt="QR Code de validação do contrato"
-                      className="mx-auto h-[17mm] w-[17mm]"
-                    />
-                    <div className="mt-1 flex items-center justify-center gap-1 text-[6px] font-black uppercase tracking-wide text-slate-500"><QrCode size={8} /> {qr?.label || 'Validar documento'}</div>
-                    <p className="mt-0.5 text-[6px] font-black tracking-wider text-blue-700">{document.validationCode}</p>
-                    {validityLabel && <p className="mt-0.5 text-[6px] font-semibold text-slate-500">Validade: {validityLabel}</p>}
-                  </div>
-                )}
-              </div>
-            </footer>
+            <ContractClosingPreview
+              footer={footerText}
+              positions={normalizeContractClosingPositions(template.layoutEncerramento, footerText, requiresQr)}
+              hasQr={requiresQr}
+              qrImage={<DocumentValidationQrCodeImage code={document.validationCode || ''}
+                size={200} alt="QR Code de validação do contrato" className="h-full w-full" />}
+              qrLabel={qr?.label || 'Validar documento'}
+              validationCode={document.validationCode || ''}
+              validityLabel={validityLabel ? `Validade: ${validityLabel}` : ''}
+            />
           )}
         </article>
         );
