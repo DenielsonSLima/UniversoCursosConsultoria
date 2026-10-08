@@ -1,8 +1,8 @@
 {
-  "version": "4.8.183",
+  "version": "4.8.184",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 192,
-  "releasedAt": "2026-10-07",
-  "summary": "Posição editável do QR e assinaturas no contrato do aluno"
+  "revision": 193,
+  "releasedAt": "2026-10-08",
+  "summary": "Acesso Banese por identidade autenticada e desconto bancário no financeiro do aluno"
 }

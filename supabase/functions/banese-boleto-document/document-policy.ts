@@ -5,7 +5,10 @@ export const BANESE_DOCUMENT_SECURITY_HEADERS = Object.freeze({
   "X-Content-Type-Options": "nosniff",
 });
 
-const normalize = (value: unknown) => String(value ?? "").trim().toLowerCase();
+export {
+  isEligibleBaneseStudentOwner,
+  isUniqueEligibleBaneseStudentOwner,
+} from "../_shared/banese-student-identity.ts";
 
 export const allowedBaneseLogoUrl = (value: unknown) => {
   try {
@@ -38,33 +41,6 @@ export const allowedBaneseLogoUrl = (value: unknown) => {
   return null;
 };
 
-export const isEligibleBaneseStudentOwner = (
-  payer: { tipo?: unknown; email?: unknown; status?: unknown },
-  authenticatedEmail: unknown,
-) =>
-  normalize(payer.tipo) === "aluno" &&
-  normalize(payer.email) === normalize(authenticatedEmail) &&
-  !["inativo", "inactive", "bloqueado", "cancelado"].includes(
-    normalize(payer.status),
-  );
-
-export const isUniqueEligibleBaneseStudentOwner = (
-  candidates: Array<{
-    id?: unknown;
-    tipo?: unknown;
-    email?: unknown;
-    status?: unknown;
-  }>,
-  payerId: unknown,
-  authenticatedEmail: unknown,
-) => {
-  const owners = candidates.filter((candidate) =>
-    isEligibleBaneseStudentOwner(candidate, authenticatedEmail)
-  );
-  return owners.length === 1 &&
-    String(owners[0].id ?? "").trim() === String(payerId ?? "").trim();
-};
-
 export const baneseBoletoIssueDate = (value: unknown) => {
   const date = String(value ?? "").trim().slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
@@ -74,3 +50,4 @@ export const baneseBoletoIssueDate = (value: unknown) => {
   }
   return date;
 };
+

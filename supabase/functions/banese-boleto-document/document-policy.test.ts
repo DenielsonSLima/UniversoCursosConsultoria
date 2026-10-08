@@ -52,37 +52,40 @@ Deno.test("autoriza aluno elegivel dono do boleto", () => {
   const payer = {
     tipo: "Aluno",
     email: "aluno@universo.test",
+    auth_user_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     status: "ATIVO",
   };
-  assert.equal(isEligibleBaneseStudentOwner(payer, "ALUNO@universo.test"), true);
+  assert.equal(isEligibleBaneseStudentOwner(payer, payer.auth_user_id), true);
   assert.equal(
-    isEligibleBaneseStudentOwner({ ...payer, status: "TRANCADO" }, payer.email),
+    isEligibleBaneseStudentOwner({ ...payer, status: "TRANCADO" }, payer.auth_user_id),
     true,
   );
   assert.equal(
-    isEligibleBaneseStudentOwner({ ...payer, status: "CONCLUIDO" }, payer.email),
+    isEligibleBaneseStudentOwner({ ...payer, status: "CONCLUIDO" }, payer.auth_user_id),
     true,
   );
   assert.equal(
-    isEligibleBaneseStudentOwner({ ...payer, tipo: "Professor" }, payer.email),
+    isEligibleBaneseStudentOwner({ ...payer, tipo: "Professor" }, payer.auth_user_id),
     false,
   );
   assert.equal(
-    isEligibleBaneseStudentOwner({ ...payer, status: "INATIVO" }, payer.email),
+    isEligibleBaneseStudentOwner({ ...payer, status: "INATIVO" }, payer.auth_user_id),
     false,
   );
-  assert.equal(isEligibleBaneseStudentOwner(payer, "outro@universo.test"), false);
+  assert.equal(isEligibleBaneseStudentOwner(payer, "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"), false);
+  assert.equal(isEligibleBaneseStudentOwner(payer, payer.email), false);
 });
 
-Deno.test("aluno proprietário precisa ser o único cadastro ativo do e-mail", () => {
+Deno.test("aluno proprietário precisa ser o único cadastro do UID autenticado", () => {
   const payer = {
     id: "11111111-1111-4111-8111-111111111111",
     tipo: "Aluno",
     email: "aluno@universo.test",
+    auth_user_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     status: "ATIVO",
   };
   assert.equal(
-    isUniqueEligibleBaneseStudentOwner([payer], payer.id, payer.email),
+    isUniqueEligibleBaneseStudentOwner([payer], payer.id, payer.auth_user_id),
     true,
   );
   assert.equal(
@@ -92,7 +95,7 @@ Deno.test("aluno proprietário precisa ser o único cadastro ativo do e-mail", (
         { ...payer, id: "22222222-2222-4222-8222-222222222222" },
       ],
       payer.id,
-      payer.email,
+      payer.auth_user_id,
     ),
     false,
   );
@@ -100,7 +103,7 @@ Deno.test("aluno proprietário precisa ser o único cadastro ativo do e-mail", (
     isUniqueEligibleBaneseStudentOwner(
       [{ ...payer, status: "INATIVO" }],
       payer.id,
-      payer.email,
+      payer.auth_user_id,
     ),
     false,
   );
@@ -161,3 +164,4 @@ Deno.test("logo do documento aceita apenas origens e caminhos confiáveis", () =
     null,
   );
 });
+

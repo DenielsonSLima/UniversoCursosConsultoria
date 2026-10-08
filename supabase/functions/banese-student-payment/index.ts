@@ -8,12 +8,12 @@ import {
 import {
   buildBaneseStudentPaymentDto,
   deriveOpaqueGroupMarker,
-  isActiveStudentStatus,
   selectSafeInstallmentRows,
   UUID_RE,
 } from "./payment-dto.ts";
 import type { BaneseStudentPaymentRow } from "./types.ts";
 import { recoverMissingEadBanesePix } from "../gateways/ead-banese-pix-recovery.ts";
+import { readBaneseStudentIdentity } from "../_shared/banese-student-identity.ts";
 
 const PAYMENT_SELECT = `
   id,
@@ -82,33 +82,6 @@ const secureJson = (body: unknown, status: number, req: Request) => {
   response.headers.set("Referrer-Policy", "no-referrer");
   response.headers.set("X-Content-Type-Options", "nosniff");
   return response;
-};
-
-const escapedIlikeLiteral = (value: string) =>
-  value.replace(/[\\%_]/g, (character) => `\\${character}`);
-
-const readStudentProfile = async (client: SupabaseClient, email: string) => {
-  const { data, error } = await client
-    .from("parceiros")
-    .select("id,nome,email,cpf_cnpj,status,created_at")
-    .eq("tipo", "Aluno")
-    .ilike("email", escapedIlikeLiteral(email))
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (error) throw error;
-  if (
-    !data ||
-    String(data.email ?? "").trim().toLowerCase() !== email ||
-    !isActiveStudentStatus(data.status)
-  ) {
-    throw new HttpError(403, "Acesso restrito ao aluno autenticado.");
-  }
-  return data as {
-    id: string;
-    nome: string | null;
-    cpf_cnpj: string | null;
-  };
 };
 
 const readSelectedPayment = async (
@@ -212,12 +185,15 @@ Deno.serve(async (req: Request) => {
     const { data: authData, error: authError } = await client.auth.getUser(
       token,
     );
-    const email = String(authData.user?.email ?? "").trim().toLowerCase();
-    if (authError || !email) {
+    const authenticatedUserId = authData.user?.id;
+    if (authError || !authenticatedUserId) {
       throw new HttpError(401, "Sessão inválida.");
     }
 
-    const student = await readStudentProfile(client, email);
+    const student = await readBaneseStudentIdentity(client, authenticatedUserId);
+    if (!student) {
+      throw new HttpError(403, "Acesso restrito ao aluno autenticado.");
+    }
     let selected = await readSelectedPayment(
       client,
       receivableId,
@@ -266,3 +242,4 @@ Deno.serve(async (req: Request) => {
     );
   }
 });
+
