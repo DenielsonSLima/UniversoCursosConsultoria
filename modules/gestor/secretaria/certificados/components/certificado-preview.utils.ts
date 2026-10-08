@@ -2,6 +2,7 @@ import { prepareStudentIdentityTemplate } from '../../../../shared/utils/student
 import { getDocumentValidationUrl } from '../../../../shared/document-validation/document-validation.url';
 import { resolveStudentIdentityDocument } from '../../../../shared/utils/studentIdentityDocument';
 import { CertificadoAcademico } from '../certificados.types';
+import { curriculumTextToHtml, getCertificateCurriculumText, getEadCertificateCurriculum } from './ead-certificate-curriculum';
 
 const formatCertificateDate = (date?: string | null) =>
   date ? new Date(date.includes('T') ? date : `${date}T12:00:00`).toLocaleDateString('pt-BR') : '';
@@ -48,13 +49,14 @@ const buildCertificateTemplateVars = (certificado: CertificadoAcademico) => {
   const dataFim = formatCertificateDate(certificado.data_conclusao);
   const dataFimExtenso = formatCertificateDateLong(certificado.data_conclusao);
   const identity = resolveStudentIdentityDocument(certificado.aluno);
+  const curriculum = getEadCertificateCurriculum(certificado);
 
   return {
     nome_aluno: certificado.aluno?.nome || '',
     cpf: certificado.aluno?.cpf_cnpj || '',
     curso_nome: certificado.curso?.nome || '',
     curso_titulo: getTechnicalCourseTitle(certificado.curso?.nome),
-    carga_horaria: String(certificado.curso?.carga_horaria || ''),
+    carga_horaria: String(curriculum ? curriculum.totalHours ?? '' : certificado.curso?.carga_horaria || ''),
     rg: identity.number || '________________',
     naturalidade: certificado.aluno?.naturalidade || '________________',
     data_nascimento: formatCertificateDate(certificado.aluno?.data_nascimento) || '________________',
@@ -67,7 +69,7 @@ const buildCertificateTemplateVars = (certificado: CertificadoAcademico) => {
     periodo: dataInicio && dataFim ? `${dataInicio} até ${dataFim}` : dataFim,
     data_conclusao: dataFim,
     data_conclusao_extenso: dataFimExtenso || dataFim,
-    grade_curricular: 'Grade curricular conforme histórico acadêmico do aluno.',
+    grade_curricular: curriculumTextToHtml(getCertificateCurriculumText(certificado)),
     livro_registro: `Certificado Expedido N° ${certificado.certificado_numero || '____'} · Página ${certificado.pagina_livro || '____'} · Livro ${certificado.livro_registro || '____'}`,
     certificado_numero: certificado.certificado_numero || '____',
     codigo_certificado: certificado.codigo_validacao || certificado.certificado_numero || '____',
@@ -112,7 +114,7 @@ const replaceCertificateVars = (
 ) => Object.entries({ ...buildCertificateTemplateVars(certificado), ...extraVars }).reduce(
   (result, [key, value]) => result.replace(
     new RegExp(`{{${key}}}`, 'g'),
-    strong ? `<strong>${value}</strong>` : value,
+    () => strong ? `<strong>${value}</strong>` : value,
   ),
   prepareStudentIdentityTemplate(text || '', resolveStudentIdentityDocument(certificado.aluno).isCin),
 );
@@ -121,10 +123,15 @@ export const replaceVars = (
   text: string,
   certificado: CertificadoAcademico,
   extraVars: Record<string, string> = {},
-) => highlightApprovalStatus(replaceCertificateVars(text, certificado, extraVars, true));
+) => {
+  const html = replaceCertificateVars(text, certificado, extraVars, true);
+  return certificado.modalidade === 'EAD' && text.includes('{{grade_curricular}}')
+    ? html : highlightApprovalStatus(html);
+};
 
 export const replaceVarsPlain = (
   text: string,
   certificado: CertificadoAcademico,
   extraVars: Record<string, string> = {},
 ) => replaceCertificateVars(text, certificado, extraVars, false);
+

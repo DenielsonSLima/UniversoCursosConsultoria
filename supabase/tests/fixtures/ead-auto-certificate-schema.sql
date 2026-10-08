@@ -32,7 +32,10 @@ CREATE TABLE public.parceiros (
   cidade text, uf text, ano_conclusao_ensino_medio text
 );
 CREATE TABLE public.polos (id uuid PRIMARY KEY, nome text);
-CREATE TABLE public.cursos (id uuid PRIMARY KEY, nome text, modalidade text, ead_config jsonb);
+CREATE TABLE public.cursos (
+  id uuid PRIMARY KEY, nome text, modalidade text, ead_config jsonb,
+  carga_horaria numeric, updated_at timestamptz DEFAULT '2026-01-01'
+);
 CREATE TABLE public.turmas (id uuid PRIMARY KEY, nome text, codigo text, curso_id uuid, polo_id uuid);
 CREATE TABLE public.matriculas (
   id uuid PRIMARY KEY, aluno_id uuid, turma_id uuid, status text,

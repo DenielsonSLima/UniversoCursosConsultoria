@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Award } from 'lucide-react';
 import { getBlocks, getTemplateBackgroundUrl } from '../../../cadastros/modelos-documentos/diploma/components/DiplomaPreview';
-import { CertificadoAcademico } from '../certificados.types';
+import type { CertificadoAcademico, EadCertificateCurriculum } from '../certificados.types';
+import { curriculumTextToHtml, getCertificateCurriculumText, getEadCertificateCurriculum, MISSING_EAD_CURRICULUM } from './ead-certificate-curriculum';
 import { assinaturasService, AssinaturasData } from '../../../configuracoes/assinaturas/assinaturas.service';
 import { DocumentValidationQrCodeImage } from '../../../../shared/document-validation/DocumentValidationQrCodeImage';
 import { getDocumentValidationUrl } from '../../../../shared/document-validation/document-validation.url';
@@ -18,6 +19,7 @@ interface CertificadoPreviewProps {
   certificado: CertificadoAcademico;
   modelo?: any;
   gradeCurricular?: string;
+  curriculumSnapshot?: EadCertificateCurriculum;
   pdfMode?: boolean;
   showValidationQrCode?: boolean;
   validationCode?: string;
@@ -27,11 +29,16 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({
   certificado,
   modelo,
   gradeCurricular,
+  curriculumSnapshot,
   pdfMode = false,
   showValidationQrCode = true,
   validationCode,
 }) => {
   const isTecnico = certificado.modalidade === 'TECNICO';
+  const isEad = certificado.modalidade === 'EAD';
+  const curriculum = getEadCertificateCurriculum(certificado, curriculumSnapshot);
+  const curriculumText = getCertificateCurriculumText(certificado, gradeCurricular, curriculumSnapshot);
+  const curriculumPages = curriculum?.pages || [undefined];
   const modelHasValidationQrCode = hasActiveCertificateQrBlock(modelo);
   const canRenderValidationQrCode =
     showValidationQrCode && modelHasValidationQrCode;
@@ -52,7 +59,8 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({
   >('loading');
   const [signatureError, setSignatureError] = useState('');
   const templateVars = {
-    grade_curricular: gradeCurricular || 'Grade curricular conforme histórico acadêmico do aluno.',
+    grade_curricular: isEad ? curriculumTextToHtml(curriculumText) : curriculumText,
+    carga_horaria: String(curriculum ? curriculum.totalHours ?? '' : certificado.curso?.carga_horaria || ''),
     diretoria_geral_nome: assinaturas.diretoriaGeralNome || '________________',
     diretoria_geral_cargo: assinaturas.diretoriaGeralCargo || 'Diretora Geral',
     secretaria_nome: assinaturas.secretariaNome || '________________',
@@ -104,7 +112,10 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({
   const frontText = modelo?.textoFrente
     || 'Certificamos que <strong>{{nome_aluno}}</strong>, CPF {{cpf}}, concluiu o curso <strong>{{curso_nome}}</strong>, com carga horária de {{carga_horaria}} horas, em {{data_conclusao}}.';
 
-  const renderBlock = (block: any) => {
+  const renderBlock = (block: any, curriculumPage?: EadCertificateCurriculum['pages'][number]) => {
+    const blockVars = curriculumPage
+      ? { ...templateVars, grade_curricular: curriculumTextToHtml(curriculumPage.lines.join('\n')) }
+      : templateVars;
     switch (block.type) {
       case 'logo':
         return (
@@ -126,7 +137,7 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({
               textTransform: ['titulo', 'subtitulo', 'cidadeData'].includes(block.id) ? 'uppercase' : 'none',
               letterSpacing: block.id === 'subtitulo' ? '0.3em' : 0,
             }}
-            dangerouslySetInnerHTML={sanitizedHtml(replaceVars(publicText(block.content || ''), certificado, templateVars))}
+            dangerouslySetInnerHTML={sanitizedHtml(replaceVars(publicText(block.content || ''), certificado, blockVars))}
           />
         );
       case 'signature': {
@@ -136,8 +147,8 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({
         const signatureNameFontSize = Number(block.signatureNameFontSize || signatureLabelFontSize + 1);
         const signatureImageOffsetY = Number(block.signatureImageOffsetY || 0);
         const hasSeparateSignatureImage = currentPageBlocks.some((item: any) => item.type === 'signatureImage' && item.signatureBlockId === block.id);
-        const signerNameHtml = block.signerNameContent ? replaceVars(block.signerNameContent, certificado, templateVars) : '';
-        const signerTitleHtml = replaceVars(block.title || 'Assinatura', certificado, templateVars);
+        const signerNameHtml = block.signerNameContent ? replaceVars(block.signerNameContent, certificado, blockVars) : '';
+        const signerTitleHtml = replaceVars(block.title || 'Assinatura', certificado, blockVars);
         return (
           <div style={{ width: block.width || 256 }} className="text-center flex flex-col items-center justify-end">
             {!hasSeparateSignatureImage && (
@@ -214,11 +225,12 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({
         );
       }
       case 'table': {
-        const tableText = replaceVarsPlain(block.content || '', certificado, templateVars);
-        const programmaticRows = parseProgrammaticRows(tableText);
+        const isEadCurriculumBlock = isEad && (block.content || '').includes('{{grade_curricular}}');
+        const tableText = replaceVarsPlain(block.content || '', certificado, blockVars);
+        const programmaticRows = isEadCurriculumBlock ? [] : parseProgrammaticRows(tableText);
         const compactTable = programmaticRows.length > 6;
         const denseTable = programmaticRows.length > 10;
-        const tableFontSize = Math.min(
+        const tableFontSize = isEadCurriculumBlock ? Number(block.fontSize || 16) : Math.min(
           Number(block.fontSize || 11),
           denseTable ? 8 : compactTable ? 9 : 11
         );
@@ -228,10 +240,11 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({
           fontFamily: block.fontFamily || 'monospace',
           fontSize: tableFontSize,
           textAlign: block.textAlign || 'left',
+          ...(isEadCurriculumBlock ? { lineHeight: block.lineHeight ?? 1.2 } : {}),
         };
 
         return (
-          <div style={{ width: block.width || 560, padding: denseTable ? 8 : compactTable ? 10 : 16 }} className="rounded-xl border border-slate-200 bg-white/90">
+          <div data-certificate-curriculum={isEadCurriculumBlock ? 'true' : undefined} style={{ width: block.width || 560, padding: denseTable ? 8 : compactTable ? 10 : 16 }} className="rounded-xl border border-slate-200 bg-white/90">
             {block.tableTitleVisible !== false && (
               <h2 className="mb-3 border-b border-slate-800 pb-1.5 text-sm font-black uppercase tracking-tight text-slate-800">Histórico Escolar</h2>
             )}
@@ -264,7 +277,7 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({
               <div
                 className="whitespace-pre-wrap leading-relaxed"
                 style={tableTextStyle}
-                dangerouslySetInnerHTML={sanitizedHtml(replaceVars(publicText(block.content || ''), certificado, templateVars))}
+                dangerouslySetInnerHTML={sanitizedHtml(replaceVars(publicText(block.content || ''), certificado, blockVars))}
               />
             )}
           </div>
@@ -313,7 +326,7 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({
 
   let currentPageBlocks: any[] = [];
 
-  const renderVisualPage = (page: 'frente' | 'verso') => {
+  const renderVisualPage = (page: 'frente' | 'verso', curriculumPage?: EadCertificateCurriculum['pages'][number]) => {
     const blocks = getBlocks(modelo || {}).filter((block: any) => block.page === page && block.visible);
     currentPageBlocks = blocks;
     const backgroundUrl = getTemplateBackgroundUrl(modelo, page);
@@ -328,6 +341,7 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({
 
     return (
       <section
+        key={`${page}-${curriculumPage?.number || 0}`}
         data-certificate-pdf-page={pdfMode ? 'true' : undefined}
         className={`relative overflow-hidden bg-white ${
           pdfMode
@@ -359,7 +373,7 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({
 
           return (
             <div key={block.id} className="absolute z-10" style={blockStyle}>
-              {renderBlock(block)}
+              {renderBlock(block, curriculumPage)}
             </div>
           );
         })}
@@ -369,7 +383,8 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({
 
   const renderReadinessProps = {
     'data-render-ready': signatureReadiness === 'loading' ? 'false' : 'true',
-    'data-render-error': signatureReadiness === 'error' ? signatureError : undefined,
+    'data-render-error': isEad && !curriculum ? MISSING_EAD_CURRICULUM
+      : signatureReadiness === 'error' ? signatureError : undefined,
     'data-requires-qr-code': canRenderValidationQrCode ? 'true' : undefined,
   };
 
@@ -377,7 +392,7 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({
     return (
       <div className="space-y-6" {...renderReadinessProps}>
         {renderVisualPage('frente')}
-        {(modelo?.hasVerso !== false || isTecnico) && renderVisualPage('verso')}
+        {(modelo?.hasVerso !== false || isTecnico) && curriculumPages.map(page => renderVisualPage('verso', page))}
       </div>
     );
   }
@@ -399,7 +414,7 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({
           <h2 className="my-5 font-serif text-4xl font-black uppercase text-[#001a33]">Certificado</h2>
           <div
             className="max-w-3xl font-serif text-lg leading-loose text-slate-800"
-            dangerouslySetInnerHTML={sanitizedHtml(replaceVars(publicText(frontText), certificado))}
+            dangerouslySetInnerHTML={sanitizedHtml(replaceVars(publicText(frontText), certificado, templateVars))}
           />
             <p className="mt-8 text-sm font-bold text-slate-600">
             {certificado.polo?.cidade || 'Não informado'}/{certificado.polo?.estado || 'Não informado'}, {new Date(`${certificado.data_conclusao}T12:00:00`).toLocaleDateString('pt-BR')}
@@ -407,8 +422,9 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({
           </div>
         </section>
 
-      {(modelo?.hasVerso !== false || isTecnico) && (
+      {(modelo?.hasVerso !== false || isTecnico) && curriculumPages.map(curriculumPage => (
         <section
+          key={curriculumPage?.number || 0}
           data-certificate-pdf-page={pdfMode ? 'true' : undefined}
           className={`relative overflow-hidden border-[10px] border-double border-blue-700 bg-white p-8 ${
             pdfMode
@@ -421,8 +437,8 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({
               <h3 className="mb-3 font-black uppercase">Histórico / Conteúdo Programático</h3>
               <p className="whitespace-pre-wrap leading-relaxed">
                 {modelo?.textoVerso
-                  ? publicText(modelo.textoVerso).replace('{{grade_curricular}}', gradeCurricular || 'Grade curricular conforme histórico acadêmico.')
-                  : gradeCurricular || 'Grade curricular conforme histórico acadêmico.'}
+                  ? publicText(modelo.textoVerso).replace('{{grade_curricular}}', () => curriculumPage?.lines.join('\n') || curriculumText)
+                  : curriculumPage?.lines.join('\n') || curriculumText}
               </p>
             </div>
             <div className="space-y-4">
@@ -460,9 +476,10 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({
             </div>
           </div>
         </section>
-      )}
+      ))}
     </div>
   );
 };
 
 export default CertificadoPreview;
+

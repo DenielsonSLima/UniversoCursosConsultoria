@@ -6,6 +6,7 @@ import {
 } from '../../shared/pdf/dom-to-selectable-pdf';
 import { ZoomIn, ZoomOut } from 'lucide-react';
 import CertificadoPreview from '../../gestor/secretaria/certificados/components/CertificadoPreview';
+import { getCertificatePreviewPageCount } from '../../gestor/secretaria/certificados/components/ead-certificate-curriculum';
 import { defaultEadCheckoutMethod, resolveEadCheckoutOptions } from './eadCheckoutOptions';
 import CourseCatalogView from './components/CourseCatalogView';
 import EadCourseRoom from './components/EadCourseRoom';
@@ -88,7 +89,6 @@ const CursosPage: React.FC<CursosPageProps> = ({
     completedAtDate,
     startedAtDate,
     completedLessonCount,
-    eadGradeCurricular,
     alunoCertificado,
     certificateStatusTitle,
     certificateStatusMessage,
@@ -219,7 +219,7 @@ const CursosPage: React.FC<CursosPageProps> = ({
     return (
       <div className="fixed left-[-20000px] top-0 z-[-1] bg-white" aria-hidden="true">
         <div ref={certificatePdfSourceRef}>
-          <CertificadoPreview certificado={alunoCertificado} modelo={eadCertificateModel} gradeCurricular={eadGradeCurricular} pdfMode />
+          <CertificadoPreview certificado={alunoCertificado} modelo={eadCertificateModel} pdfMode />
         </div>
       </div>
     );
@@ -228,7 +228,7 @@ const CursosPage: React.FC<CursosPageProps> = ({
   const renderCertificatePreview = () => {
     if (!alunoCertificado) return null;
 
-    const certificatePageCount = eadCertificateModel?.hasVerso !== false || alunoCertificado.modalidade === 'TECNICO' ? 2 : 1;
+    const certificatePageCount = getCertificatePreviewPageCount(alunoCertificado, eadCertificateModel);
     const previewScale = certificateZoom / 100;
     const previewWidth = A4_LANDSCAPE_PREVIEW_WIDTH_PX * previewScale;
     const previewHeight = (
@@ -287,7 +287,7 @@ const CursosPage: React.FC<CursosPageProps> = ({
                 transformOrigin: 'top left',
               }}
             >
-              <CertificadoPreview certificado={alunoCertificado} modelo={eadCertificateModel} gradeCurricular={eadGradeCurricular} pdfMode />
+              <CertificadoPreview certificado={alunoCertificado} modelo={eadCertificateModel} pdfMode />
             </div>
           </div>
         </div>
@@ -361,3 +361,4 @@ const CursosPage: React.FC<CursosPageProps> = ({
 };
 
 export default CursosPage;
+
