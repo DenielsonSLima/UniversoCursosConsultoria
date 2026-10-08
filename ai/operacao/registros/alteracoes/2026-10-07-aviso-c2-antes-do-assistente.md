@@ -35,7 +35,12 @@ etapa. O teste de interação reproduziu esse problema antes do patch.
 - `modules/gestor/gestao/tecnicos/detalhes/components/financeiro/manual-technical-cycle-issuance-progress.contract.test.ts`
 - `modules/gestor/gestao/tecnicos/detalhes/components/financeiro/second-cycle-warning.interaction.test.mjs`
 
-Total: 9 arquivos.
+- `ai/operacao/registros/alteracoes/2026-10-07-restauracao-c1-t46.md`
+- `supabase/migrations/20261008021540_restore_t46_normal_first_cycle.sql`
+- `supabase/tests/t46-canonical-cycle-reset-ui.test.mjs`
+- `supabase/tests/t46_normal_first_cycle_reset.rollback.sql`
+
+Total: 13 arquivos.
 
 ## Validação e entrega
 
@@ -51,7 +56,9 @@ Total: 9 arquivos.
 - Revisão independente e checklist React sem achados bloqueantes.
 - Dados exclusivamente sintéticos. Nenhuma chamada bancária ou emissão real.
 - Validação visual em navegador não executada por proibição expressa do usuário.
-- Produção depende de autorização explícita conforme AGENTS.md. Este registro
-  descreve a candidata e não declara sua publicação no site.
-- Alterações paralelas do registro local de manifestos são preservadas e ficam
-  fora do payload remoto: ele inclui somente a entrada deste lote sobre main.
+- Publicação em produção autorizada expressamente em 08/10/2026 após revisão
+  de três agentes. CI e Vercel são conferidos no commit integrado do PR #275.
+- Incorpora os quatro arquivos do PR #274, que registram a restauração T46 já
+  aplicada. Migration preservada byte a byte; nenhuma reaplicação ou nova emissão.
+- Manifestos de interface e restauração permanecem identificados; alterações
+  paralelas locais ficam fora do payload remoto.

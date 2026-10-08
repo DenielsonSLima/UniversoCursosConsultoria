@@ -8,6 +8,8 @@ Histórico arquivado: [25/09/2026 a 26/09/2026 — versões 4.8.91 a 4.8.110](./
 
 ## [4.8.182] - 2026-10-07
 
+- Registra a restauração já aplicada do primeiro ciclo das três matrículas da turma 46 e a reversão do lançamento local incorreto, sem repetir a operação financeira.
+
 - O botão de gerar o segundo ciclo abre primeiro o aviso com as parcelas em aberto, antes da tela de datas e valores.
 - Continuar abre a revisão padrão; Cancelar fecha o aviso. A emissão permanece na confirmação final do fluxo existente.
 - Mantém a releitura das parcelas, bloqueio por erro e proteção contra clique duplo; o primeiro ciclo conserva seu fluxo normal.

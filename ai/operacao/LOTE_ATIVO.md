@@ -2,14 +2,14 @@
 
 ## Lote: 2026-10-07-aviso-c2-antes-do-assistente
 
-Estado: candidata 4.8.182; patch, testes focados e revisão aprovados; publicação em produção ainda não autorizada.
-Objetivo/aceite: clicar em gerar C2 abre primeiro o aviso com parcelas abertas; Continuar abre o assistente existente sem emitir; Cancelar fecha; C1 permanece normal.
+Estado: entrega financeira 4.8.182 autorizada para produção em 08/10/2026, após revisão de três agentes.
+Objetivo/aceite: C2 abre aviso de parcelas antes do assistente; Continuar não emite; Cancelar fecha; C1 normal. Fonte da restauração T46 já aplicada sincronizada sem reaplicação.
 Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-07-aviso-c2-antes-do-assistente.md`.
-Validação: reprodução do defeito, dez cenários React DOM, 31 testes de contrato/handler, lint e revisão independente; TypeScript e build da prévia remota aprovados. Navegador proibido pelo responsável; smoke visual não executado.
-Base remota: main `3f7a749149050f6dac08b095e6d54106824fd9b0` (4.8.181). Sem mutation financeira, migration ou deploy de Edge Function.
+Validação: dez cenários React DOM, 31 testes de contrato/handler, cinco regressões T46, lint, TypeScript, build e revisão independente aprovados. CI e Vercel são conferidos no commit integrado do PR #275.
+Base remota: main `3f7a749149050f6dac08b095e6d54106824fd9b0` (4.8.181). Nenhuma nova mutation financeira ou emissão nesta publicação.
+Limitação: navegador proibido pelo responsável; smoke visual autenticado não executado.
 
-## Contexto anterior preservado
+## Rastreabilidade
 
-Aviso original: `ai/operacao/registros/alteracoes/2026-10-07-aviso-segundo-ciclo.md`.
-Correção anterior: `ai/operacao/registros/alteracoes/2026-10-07-correcao-financeira-limitada.md`.
-A restauração operacional de três matrículas da T46 foi concluída em lote separado, registrada no PR #274; não integra este manifesto de interface.
+Restauração T46 já aplicada: PR #274 e `ai/operacao/registros/alteracoes/2026-10-07-restauracao-c1-t46.md`. Fonte da migration idêntica ao ledger remoto, sem reaplicação.
+Editor do contrato: PR #276, candidata 4.8.183 em revisão final separada.
