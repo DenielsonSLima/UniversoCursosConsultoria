@@ -1,15 +1,18 @@
 # Lote ativo
 
-## Lote: 2026-10-07-contrato-posicoes-qr-assinaturas
+## Lote: 2026-10-08-aluno-banese-identidade-desconto
 
-Estado: entrega 4.8.183 autorizada para produção em 08/10/2026, após reunião e aprovação de três agentes.
-Objetivo/aceite: mover QR e quatro assinaturas, ajustar coordenadas/tamanhos, preservar no PDF e retirar os números das linhas de testemunhas.
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-07-contrato-posicoes-qr-assinaturas.md`.
-Validação: 77 testes, TypeScript, lint, build, PDF nativo renderizado e revisão independente aprovados. Manifesto com 31 arquivos dentro de 500 linhas. Integração financeira conferida por hashes e testes DOM; CI/Preview do commit integrado e produção acompanhados no PR #276.
-Limitação: navegador proibido pelo responsável; smoke visual autenticado não executado.
-Dados: nenhuma migration ou emissão real necessária para o editor; configuração permanece no snapshot do modelo.
+Estado: implementação e validação da entrega 4.8.184; publicação em produção autorizada pelo usuário em 08/10/2026.
+Objetivo/aceite: aluno autenticado por matrícula abre BolePix, boleto PDF e carnê próprios; o financeiro exibe desconto bancário confirmado e valor pagável dentro da validade.
+Cálculos: exclusivamente backend/RPC; frontend recebe valores canônicos. Valor nominal, termos do título e histórico de pagamentos preservados.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-08-aluno-banese-identidade-desconto.md`.
+Revisão: três agentes, com frentes de identidade, financeiro e revisão independente.
+Validação: cadastro e termos bancários reais conferidos por consulta restrita; testes de regressão e CI em preparação.
+Limitação: sessão autenticada do aluno não está disponível no ambiente; smoke de navegador deve ser distinguido dos testes contratuais.
+Dados: lote de software; sem cancelamento, reemissão ou alteração de valores dos títulos.
 
-## Entrega financeira preservada
+## Entregas anteriores preservadas
 
-Aviso C2 antes do assistente: PR #275, versão 4.8.182; registro `ai/operacao/registros/alteracoes/2026-10-07-aviso-c2-antes-do-assistente.md`.
-Restauração T46 já aplicada: PR #274 incorporado à entrega financeira; registro `ai/operacao/registros/alteracoes/2026-10-07-restauracao-c1-t46.md`. Fonte idêntica ao ledger; nenhuma reaplicação nesta publicação.
+Contrato 4.8.183: PR #276; registro `ai/operacao/registros/alteracoes/2026-10-07-contrato-posicoes-qr-assinaturas.md`.
+Financeiro 4.8.182: PR #275; registro `ai/operacao/registros/alteracoes/2026-10-07-aviso-c2-antes-do-assistente.md`.
+Restauração T46: PR #274; registro `ai/operacao/registros/alteracoes/2026-10-07-restauracao-c1-t46.md`. Não reaplicada neste lote.

@@ -28,6 +28,7 @@ import {
 } from "./document-policy.ts";
 import { buildBaneseCarnetDocumentInputs } from "./document-input.ts";
 import { loadBaneseAcademicBillingContext } from "../banese/internal/technical-billing-context.ts";
+import { readBaneseStudentIdentity } from "../_shared/banese-student-identity.ts";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -52,9 +53,6 @@ class HttpError extends Error {
 }
 
 const text = (value: unknown) => String(value ?? "").trim();
-const escapedIlikeLiteral = (value: string) =>
-  value.replace(/[\\%_]/g, (character) => `\\${character}`);
-
 const secureHeaders = (req: Request) => ({
   ...buildCorsHeaders(req, { methods: "POST, OPTIONS" }),
   ...BANESE_DOCUMENT_SECURITY_HEADERS,
@@ -141,21 +139,15 @@ const authorize = async (
   req: Request,
   admin: SupabaseClient,
   payer: Record<string, unknown>,
-  email: string,
+  authenticatedUserId: string,
   poloId: string | null,
 ) => {
-  const { data: studentOwners, error: studentOwnersError } = await admin
-    .from("parceiros")
-    .select("id,tipo,email,status")
-    .eq("tipo", "Aluno")
-    .ilike("email", escapedIlikeLiteral(email))
-    .limit(2);
-  if (studentOwnersError) throw studentOwnersError;
+  const studentOwner = await readBaneseStudentIdentity(admin, authenticatedUserId);
   if (
     isUniqueEligibleBaneseStudentOwner(
-      studentOwners ?? [],
+      studentOwner ? [studentOwner] : [],
       payer.id,
-      email,
+      authenticatedUserId,
     )
   ) return;
 
@@ -255,8 +247,10 @@ Deno.serve(async (req: Request) => {
     const { data: authData, error: authError } = await admin.auth.getUser(
       token,
     );
-    const email = text(authData.user?.email).toLowerCase();
-    if (authError || !email) throw new HttpError(401, "Sessão inválida.");
+    const authenticatedUserId = authData.user?.id;
+    if (authError || !authenticatedUserId) {
+      throw new HttpError(401, "Sessão inválida.");
+    }
 
     const { data: selectedData, error: selectedError } = await admin
       .from("contas_receber")
@@ -283,7 +277,7 @@ Deno.serve(async (req: Request) => {
       throw new HttpError(404, "Parcela Banese não encontrada.");
     }
     const payer = payerData as Record<string, unknown>;
-    await authorize(req, admin, payer, email, text(selected.polo_id) || null);
+    await authorize(req, admin, payer, authenticatedUserId, text(selected.polo_id) || null);
     const scope = readBaneseCarnetScope(selected);
 
     const [candidatesResult, issuerResult, credentialResult] = await Promise
@@ -371,3 +365,4 @@ Deno.serve(async (req: Request) => {
     );
   }
 });
+

@@ -1,0 +1,70 @@
+name: Financeiro Banese do aluno
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/student-banese-finance.yml'
+      - 'supabase/functions/_shared/banese-student-identity*'
+      - 'supabase/functions/_shared/authz.ts'
+      - 'supabase/functions/banese-student-payment/**'
+      - 'supabase/functions/banese-boleto-document/**'
+      - 'supabase/functions/banese-carnet-document/**'
+      - 'supabase/functions/banese/internal/**'
+      - 'supabase/migrations/**'
+      - 'supabase/tests/banese_student_identity_handlers*'
+      - 'supabase/tests/student_banese_discount*'
+      - 'supabase/tests/fixtures/student-banese-*'
+      - 'modules/aluno/financeiro/**'
+      - 'package-lock.json'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/student-banese-finance.yml'
+      - 'supabase/functions/_shared/banese-student-identity*'
+      - 'supabase/functions/_shared/authz.ts'
+      - 'supabase/functions/banese-student-payment/**'
+      - 'supabase/functions/banese-boleto-document/**'
+      - 'supabase/functions/banese-carnet-document/**'
+      - 'supabase/functions/banese/internal/**'
+      - 'supabase/migrations/**'
+      - 'supabase/tests/banese_student_identity_handlers*'
+      - 'supabase/tests/student_banese_discount*'
+      - 'supabase/tests/fixtures/student-banese-*'
+      - 'modules/aluno/financeiro/**'
+      - 'package-lock.json'
+
+permissions:
+  contents: read
+
+jobs:
+  student-banese-finance:
+    name: Identidade, documentos e desconto canônico
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.1
+      - name: Instalar dependências versionadas
+        run: npm ci
+      - name: Validar identidade e autorização dos três endpoints
+        run: |
+          node supabase/functions/_shared/banese-student-identity.test.ts
+          node --experimental-vm-modules supabase/tests/banese_student_identity_handlers.test.mjs
+      - name: Preservar contratos de BolePix, boleto e carnê
+        run: |
+          deno test --allow-read --allow-env \
+            supabase/functions/banese-student-payment/payment-dto.test.ts \
+            supabase/functions/banese-boleto-document/document-policy.test.ts \
+            supabase/functions/banese-carnet-document/document-policy.test.ts
+      - name: Preparar PostgreSQL isolado
+        run: npm install --prefix "$RUNNER_TEMP/student-banese-sql" --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.3.14
+      - name: Validar desconto, estados financeiros e isolamento do aluno
+        run: PGLITE_MODULE_PATH="$RUNNER_TEMP/student-banese-sql/node_modules/@electric-sql/pglite/dist/index.js" node supabase/tests/student_banese_discount.isolated.test.mjs

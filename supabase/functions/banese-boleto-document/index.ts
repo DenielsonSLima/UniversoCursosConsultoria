@@ -30,6 +30,7 @@ import {
   baneseBoletoIssueDate,
   isUniqueEligibleBaneseStudentOwner,
 } from "./document-policy.ts";
+import { readBaneseStudentIdentity } from "../_shared/banese-student-identity.ts";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -72,9 +73,6 @@ const parseReceivableId = async (req: Request) => {
 
 const text = (value: unknown) => String(value ?? "").trim();
 const digits = (value: unknown) => text(value).replace(/\D/g, "");
-const escapedIlikeLiteral = (value: string) =>
-  value.replace(/[\\%_]/g, (character) => `\\${character}`);
-
 const addressFrom = (party: Record<string, unknown>): BaneseDocumentAddress => {
   const street = [
     text(party.endereco),
@@ -159,8 +157,10 @@ Deno.serve(async (req: Request) => {
     const { data: authData, error: authError } = await admin.auth.getUser(
       token,
     );
-    const email = text(authData.user?.email).toLowerCase();
-    if (authError || !email) throw new HttpError(401, "Sessão inválida.");
+    const authenticatedUserId = authData.user?.id;
+    if (authError || !authenticatedUserId) {
+      throw new HttpError(401, "Sessão inválida.");
+    }
 
     const { data: row, error: receivableError } = await admin
       .from("contas_receber")
@@ -185,7 +185,7 @@ Deno.serve(async (req: Request) => {
     const [
       { data: payer, error: payerError },
       { data: issuer, error: issuerError },
-      { data: studentOwners, error: studentOwnersError },
+      studentOwner,
     ] = await Promise.all([
       admin.from("parceiros").select(
         "id,nome,tipo,cpf_cnpj,email,status,endereco,numero,complemento,bairro,cidade,uf,cep",
@@ -193,14 +193,10 @@ Deno.serve(async (req: Request) => {
       admin.from("polos").select(
         "id,nome,cnpj,endereco,numero,bairro,cidade,estado,cep,logo_url",
       ).eq("id", row.gateway_issuer_polo_id).maybeSingle(),
-      admin.from("parceiros").select("id,tipo,email,status")
-        .eq("tipo", "Aluno")
-        .ilike("email", escapedIlikeLiteral(email))
-        .limit(2),
+      readBaneseStudentIdentity(admin, authenticatedUserId),
     ]);
     if (payerError) throw payerError;
     if (issuerError) throw issuerError;
-    if (studentOwnersError) throw studentOwnersError;
     if (!payer || !issuer) {
       throw new HttpError(
         422,
@@ -209,9 +205,9 @@ Deno.serve(async (req: Request) => {
     }
 
     const isOwner = isUniqueEligibleBaneseStudentOwner(
-      studentOwners ?? [],
+      studentOwner ? [studentOwner] : [],
       payer.id,
-      email,
+      authenticatedUserId,
     );
     if (!isOwner) {
       try {
@@ -371,3 +367,4 @@ Deno.serve(async (req: Request) => {
     );
   }
 });
+

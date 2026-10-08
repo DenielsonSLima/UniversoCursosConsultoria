@@ -6,6 +6,12 @@ Histórico anterior: [16/09/2026 a 25/09/2026 — versões 4.8.65 a 4.8.90](./ch
 
 Histórico arquivado: [25/09/2026 a 26/09/2026 — versões 4.8.91 a 4.8.110](./changelog/2026-09-25-a-2026-09-26-versoes-4-8-91-a-4-8-110.md).
 
+## [4.8.184] - 2026-10-08
+
+- Corrige a identificação do aluno por conta autenticada na abertura do BolePix, PDF do boleto e carnê, preservando titularidade e autorização do gestor.
+- Exibe no financeiro do aluno o desconto bancário confirmado e o valor pagável dentro da validade, calculados exclusivamente no backend/RPC.
+- Acrescenta testes de identidade, isolamento de cobranças e condições financeiras bancárias.
+
 ## [4.8.183] - 2026-10-07
 
 - Permite arrastar e ajustar posição e tamanho do QR Code e largura dos campos de assinatura na última página do contrato.

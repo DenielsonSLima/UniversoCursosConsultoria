@@ -7,7 +7,9 @@ Edge Function de leitura para a tela de pagamento Banese do aluno.
 - `POST` autenticado com `{ "action": "get", "receivableId": "<uuid>" }`.
 - O JWT e validado no gateway da Edge Function e novamente com `auth.getUser`.
 - Toda consulta usa o cliente autenticado, portanto respeita o RLS, e ainda
-  exige que `cliente_id` seja o perfil de aluno correspondente ao e-mail do JWT.
+  exige que `cliente_id` seja o perfil de aluno vinculado ao UID validado por
+  `auth.getUser`, usando `parceiros.auth_user_id`. E-mail de contato e alias de
+  matricula nao autorizam a cobranca. Perfil inativo ou vinculo ambiguo falha fechado.
 - Ausencia e cobranca fora do escopo retornam o mesmo `404`.
 - Nao faz chamada ao Banese nem tenta reconciliar o titulo durante a leitura.
 - Nao devolve CPF completo, `cliente_id`, `matricula_id`, polo emissor,
@@ -28,3 +30,4 @@ Defina, preferencialmente, `BANESE_STUDENT_GROUP_MARKER_SECRET` com pelo menos
 16 caracteres. Enquanto ele nao existir, a funcao usa a chave `service_role`
 somente como chave HMAC; ela nunca e usada como cliente de banco e nunca e
 devolvida ao navegador.
+
