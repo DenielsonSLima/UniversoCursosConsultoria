@@ -253,6 +253,22 @@ jobs:
       - name: Testar validação documental
         run: npm run test:document-validation
 
+      - name: Testar posições do editor e PDF de contrato
+        env:
+          CONTRACT_EDITOR_JSDOM_PATH: /tmp/universo-cycle-warning/node_modules/jsdom
+        run: |
+          npm run test:contratos-aluno
+          deno test --allow-read --allow-env \
+            modules/shared/contrato-aluno/closing-layout.test.ts \
+            modules/shared/contrato-aluno/closing-positions.test.ts \
+            modules/gestor/secretaria/contratos-aluno/pdf/closing.contract.test.ts
+          # O TypeScript do produto já foi validado pelo tsc acima.
+          deno test --no-check --allow-read --allow-env \
+            modules/gestor/cadastros/modelos-documentos/contrato-aluno/contract-closing-editor.test.tsx
+          node --test \
+            modules/gestor/cadastros/modelos-documentos/contrato-aluno/services/contrato-aluno-template.positions.test.mjs \
+            modules/gestor/cadastros/modelos-documentos/contrato-aluno/contract-closing-editor.interaction.test.mjs
+
       - name: Testar contratos críticos do lote
         run: |
           node --test \
@@ -460,5 +476,3 @@ jobs:
 
       - name: Gerar build de produção
         run: npm run build
-
-

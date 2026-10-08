@@ -1,15 +1,14 @@
 # Lote ativo
 
-## Lote: 2026-10-07-correcao-financeira-limitada
+## Lote: 2026-10-07-contrato-posicoes-qr-assinaturas
 
-Estado: 4.8.181; 14 migrations e sete grants instalados, worker v12 e emissor v10 ativos. No checkpoint de instalação, a execução financeira ainda não havia iniciado.
-Objetivo/aceite: preservar recebíveis, runs e termos; confirmar cancelamento bancário antes do ajuste; manter C2 cancelado histórico, matrícula paga intacta e dispensa LOCAL comprovada; exigir consentimento real e reemissão manual.
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-07-correcao-financeira-limitada.md`.
-Publicação: 15 payloads SQL canônicos idênticos ao histórico remoto; drafts sintéticos preservados.
-Validação: SQL, UI/Edge, elegibilidade e persistência simulada; conferir CI/Preview do commit exato. Smoke Safari autenticado e validação bancária real separados.
-Pendência separada: R$ 200,00 não resolvidos; sem baixa, estorno ou devolução confirmados.
+Estado: candidata 4.8.183 validada localmente e revisada; produção não autorizada.
+Objetivo/aceite: mover QR e quatro assinaturas, ajustar coordenadas/tamanhos, preservar no PDF e retirar os números das linhas de testemunhas.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-07-contrato-posicoes-qr-assinaturas.md`.
+Validação: 77 testes, TypeScript, lint, build, PDF renderizado e revisão independente aprovados. Manifesto com 31 arquivos dentro de 500 linhas. Navegador proibido pelo responsável; smoke autenticado pendente.
+Base remota: main `3f7a749149050f6dac08b095e6d54106824fd9b0` (4.8.181). Sem mudança remota de dados/schema.
 
 ## Contexto anterior preservado
 
-Lote anterior: `ai/operacao/registros/alteracoes/2026-10-07-aviso-segundo-ciclo.md`.
-O aviso C2 da 4.8.180 permanece obrigatório. Este lote não autoriza novo ciclo nem dispensa confirmação das parcelas abertas.
+Aviso C2 antes do assistente: PR #275, candidata 4.8.182 aprovada em CI, ainda aguardando publicação. Registro: `ai/operacao/registros/alteracoes/2026-10-07-aviso-c2-antes-do-assistente.md`.
+Restauração T46 concluída em lote separado: PR #274 e registro `ai/operacao/registros/alteracoes/2026-10-07-restauracao-c1-t46.md`.

@@ -6,6 +6,12 @@ Histórico anterior: [16/09/2026 a 25/09/2026 — versões 4.8.65 a 4.8.90](./ch
 
 Histórico arquivado: [25/09/2026 a 26/09/2026 — versões 4.8.91 a 4.8.110](./changelog/2026-09-25-a-2026-09-26-versoes-4-8-91-a-4-8-110.md).
 
+## [4.8.183] - 2026-10-07
+
+- Permite arrastar e ajustar posição e tamanho do QR Code e largura dos campos de assinatura na última página do contrato.
+- Salva as coordenadas no modelo e preserva o mesmo posicionamento na prévia, no PDF nativo e na reimpressão do histórico.
+- Corrige os números sobre as linhas das testemunhas e impede sobreposição entre campos e textos do encerramento.
+
 ## [4.8.181] - 2026-10-07
 
 - Prepara correção financeira limitada, mantendo recebíveis e ciclos históricos com confirmação bancária antes do ajuste interno.

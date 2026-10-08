@@ -1,3 +1,5 @@
+import type { ContractClosingPositions } from '../../../../../shared/contrato-aluno/closing-positions';
+
 export const CONTRATO_ALUNO_MODALIDADES = ['TECNICO', 'LIVRE', 'SUPERIOR'] as const;
 
 export type ContratoAlunoModalidade = (typeof CONTRATO_ALUNO_MODALIDADES)[number];
@@ -55,6 +57,7 @@ export interface ConteudoModeloContratoAluno {
   /** Âncoras dos três parágrafos exibidos com realce rosa discreto. */
   destaquesAtencao: string[];
   rodape: string;
+  layoutEncerramento?: ContractClosingPositions;
   observacaoEscopo: string;
   fonte: FonteModeloContrato;
   presentationVersion: 'CONTRATO_A4_INSTITUCIONAL_V2' | 'CONTRATO_A4_INSTITUCIONAL_V3_MINUTA_COMPLETA';

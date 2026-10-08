@@ -21,6 +21,8 @@ import {
   type ContratoAlunoModalidade,
 } from '../types/contrato-aluno.types';
 import { ContratoAlunoCanvas } from './ContratoAlunoCanvas';
+import { ContratoAlunoClosingControls } from './ContratoAlunoClosingControls';
+import { validateContractClosingPositions, type ContractClosingElementId } from '../../../../../shared/contrato-aluno/closing-positions';
 
 interface ContratoAlunoTemplateEditorProps {
   modalidade: ContratoAlunoModalidade;
@@ -46,6 +48,8 @@ export const ContratoAlunoTemplateEditor = ({ modalidade }: ContratoAlunoTemplat
   const [companyInfo, setCompanyInfo] = useState<any>(null);
   const [watermarkInfo, setWatermarkInfo] = useState<any>(null);
   const loadedVersion = useRef<string | null>(null);
+  const draftRef = useRef<ConteudoModeloContratoAluno | null>(null);
+  const [selectedClosingElement, setSelectedClosingElement] = useState<ContractClosingElementId>('qr');
 
   useEffect(() => {
     let isMounted = true;
@@ -75,6 +79,7 @@ export const ContratoAlunoTemplateEditor = ({ modalidade }: ContratoAlunoTemplat
     const nextVersion = `${modalidade}:${templateQuery.data.revisao}`;
     if (loadedVersion.current === nextVersion) return;
     loadedVersion.current = nextVersion;
+    draftRef.current = templateQuery.data.conteudo;
     setDraft(templateQuery.data.conteudo);
   }, [modalidade, templateQuery.data]);
 
@@ -85,12 +90,24 @@ export const ContratoAlunoTemplateEditor = ({ modalidade }: ContratoAlunoTemplat
   const update = <K extends keyof ConteudoModeloContratoAluno>(
     key: K,
     value: ConteudoModeloContratoAluno[K],
-  ) => setDraft((current) => current ? { ...current, [key]: value } : current);
+  ) => {
+    const current = draftRef.current;
+    if (!current) return;
+    const next = { ...current, [key]: value };
+    draftRef.current = next;
+    setDraft(next);
+  };
 
   const [activePageIndex, setActivePageIndex] = useState(0);
+  const closingErrors = draft
+    ? validateContractClosingPositions(draft.layoutEncerramento, draft.rodape, draft.qr.habilitado)
+    : [];
 
   const save = () => {
-    if (draft) saveMutation.mutate(draft);
+    const current = draftRef.current;
+    if (current && validateContractClosingPositions(current.layoutEncerramento, current.rodape, current.qr.habilitado).length === 0) {
+      saveMutation.mutate(current);
+    }
   };
 
   if (templateQuery.isError) {
@@ -200,7 +217,7 @@ export const ContratoAlunoTemplateEditor = ({ modalidade }: ContratoAlunoTemplat
           <button
             type="button"
             onClick={save}
-            disabled={!isDirty || saveMutation.isPending}
+            disabled={!isDirty || saveMutation.isPending || closingErrors.length > 0}
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#ed1c4e] px-5 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg shadow-rose-500/20 transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
           >
             {saveMutation.isPending ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
@@ -391,11 +408,23 @@ export const ContratoAlunoTemplateEditor = ({ modalidade }: ContratoAlunoTemplat
                 />
               </div>
             </div>
+            <ContratoAlunoClosingControls
+              footer={draft.rodape} hasQr={draft.qr.habilitado} positions={draft.layoutEncerramento}
+              selected={selectedClosingElement} onSelect={setSelectedClosingElement}
+              onChange={(positions) => update('layoutEncerramento', positions)} errors={closingErrors}
+            />
           </section>
         )}
 
         {(activeTab === 'split' || activeTab === 'preview') && (
           <aside className="w-full overflow-x-auto rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm xl:sticky xl:top-6 xl:self-start">
+            {activeTab === 'preview' && <div className="mb-4">
+              <ContratoAlunoClosingControls
+                footer={draft.rodape} hasQr={draft.qr.habilitado} positions={draft.layoutEncerramento}
+                selected={selectedClosingElement} onSelect={setSelectedClosingElement}
+                onChange={(positions) => update('layoutEncerramento', positions)} errors={closingErrors}
+              />
+            </div>}
             <ContratoAlunoCanvas
               tituloDocumento={draft.tituloDocumento}
               cabecalho={draft.cabecalho}
@@ -409,6 +438,10 @@ export const ContratoAlunoTemplateEditor = ({ modalidade }: ContratoAlunoTemplat
               centralWatermark={watermarkInfo}
               activePageIndex={activePageIndex}
               onPageSelect={setActivePageIndex}
+              layoutEncerramento={draft.layoutEncerramento}
+              onChangeClosingPositions={(positions) => update('layoutEncerramento', positions)}
+              selectedClosingElement={selectedClosingElement}
+              onSelectClosingElement={setSelectedClosingElement}
             />
           </aside>
         )}

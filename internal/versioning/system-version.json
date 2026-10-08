@@ -1,8 +1,8 @@
 {
-  "version": "4.8.181",
+  "version": "4.8.183",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 190,
+  "revision": 192,
   "releasedAt": "2026-10-07",
-  "summary": "Correção financeira limitada com histórico preservado e nova confirmação manual"
+  "summary": "Posição editável do QR e assinaturas no contrato do aluno"
 }
