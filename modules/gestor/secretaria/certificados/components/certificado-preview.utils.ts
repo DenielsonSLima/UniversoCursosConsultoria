@@ -2,7 +2,7 @@ import { prepareStudentIdentityTemplate } from '../../../../shared/utils/student
 import { getDocumentValidationUrl } from '../../../../shared/document-validation/document-validation.url';
 import { resolveStudentIdentityDocument } from '../../../../shared/utils/studentIdentityDocument';
 import { CertificadoAcademico } from '../certificados.types';
-import { curriculumTextToHtml, getCertificateCurriculumText, getEadCertificateCurriculum } from './ead-certificate-curriculum';
+import { curriculumTextToHtml, escapeCurriculumHtml, getCertificateCurriculumText, getEadCertificateCurriculum } from './ead-certificate-curriculum';
 
 const formatCertificateDate = (date?: string | null) =>
   date ? new Date(date.includes('T') ? date : `${date}T12:00:00`).toLocaleDateString('pt-BR') : '';
@@ -81,6 +81,49 @@ const buildCertificateTemplateVars = (certificado: CertificadoAcademico) => {
     ensino_medio_ano_conclusao: certificado.ensino_medio_ano_conclusao || 'Não informado',
     url_validacao: getDocumentValidationUrl(certificado.codigo_validacao || ''),
   };
+};
+
+export const buildEadCertificateTemplateVars = (
+  certificado: CertificadoAcademico,
+  input: {
+    curriculumText?: string;
+    totalHours?: number | null;
+    validationCode?: string;
+    signatureVars?: Record<string, string>;
+  } = {},
+): Record<string, string> => {
+  if (certificado.modalidade !== 'EAD') throw new Error('Adapter exclusivo do certificado EAD.');
+  const original = buildCertificateTemplateVars(certificado);
+  const code = input.validationCode ?? certificado.codigo_validacao ?? '';
+  const values = {
+    ...original,
+    ...input.signatureVars,
+    grade_curricular: input.curriculumText ?? getCertificateCurriculumText(certificado),
+    carga_horaria: input.totalHours === undefined ? original.carga_horaria : String(input.totalHours ?? ''),
+    codigo_certificado: code,
+    codigo_validacao: code,
+    url_validacao: getDocumentValidationUrl(code),
+  };
+  return values;
+};
+
+export const prepareEadCertificateTemplate = (text: string, certificado: CertificadoAcademico): string =>
+  prepareStudentIdentityTemplate(text, resolveStudentIdentityDocument(certificado.aluno).isCin);
+
+export const replaceEadCertificateVars = (
+  text: string,
+  certificado: CertificadoAcademico,
+  values: Record<string, string>,
+  strong = true,
+): string => {
+  const template = prepareEadCertificateTemplate(text, certificado);
+  const configuredHtml = strong ? highlightApprovalStatus(template) : template;
+  return configuredHtml.replace(/\{\{([\w]+)\}\}/g, (token, key: string) => {
+    if (!Object.prototype.hasOwnProperty.call(values, key)) return token;
+    if (!strong) return values[key];
+    const html = key === 'grade_curricular' ? curriculumTextToHtml(values[key]) : escapeCurriculumHtml(values[key]);
+    return `<strong>${html}</strong>`;
+  });
 };
 
 export const parseProgrammaticRows = (content: string) => {

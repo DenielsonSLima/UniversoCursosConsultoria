@@ -1,8 +1,8 @@
 {
-  "version": "4.8.186",
+  "version": "4.8.187",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 195,
+  "revision": 196,
   "releasedAt": "2026-10-08",
-  "summary": "Grade curricular canônica no verso do certificado EAD"
+  "summary": "Certificado EAD fiel ao modelo configurado no editor"
 }

@@ -6,7 +6,7 @@ import {
 } from '../../shared/pdf/dom-to-selectable-pdf';
 import { ZoomIn, ZoomOut } from 'lucide-react';
 import CertificadoPreview from '../../gestor/secretaria/certificados/components/CertificadoPreview';
-import { getCertificatePreviewPageCount } from '../../gestor/secretaria/certificados/components/ead-certificate-curriculum';
+import { getCertificatePreviewPageCount } from '../../gestor/secretaria/certificados/components/ead-certificate-layout';
 import { defaultEadCheckoutMethod, resolveEadCheckoutOptions } from './eadCheckoutOptions';
 import CourseCatalogView from './components/CourseCatalogView';
 import EadCourseRoom from './components/EadCourseRoom';
@@ -93,6 +93,8 @@ const CursosPage: React.FC<CursosPageProps> = ({
     certificateStatusTitle,
     certificateStatusMessage,
     eadCertificateModel,
+    certificateModelLoading,
+    certificateModelError,
     isProgressReady,
     isProgressLoading,
     isProgressRefreshing,
@@ -100,6 +102,7 @@ const CursosPage: React.FC<CursosPageProps> = ({
     retryProgress,
     isUpdatingProgress,
   } = eadLearning;
+  const certificateModelUnavailable = certificateModelLoading || Boolean(certificateModelError);
 
   useEffect(() => {
     if (!initialCourseId || courses.length === 0) return;
@@ -143,7 +146,7 @@ const CursosPage: React.FC<CursosPageProps> = ({
   }, [courses, selectedCourse, setSelectedCourse]);
 
   const buildCertificatePdfBlob = async () => {
-    if (!certificatePdfSourceRef.current || !alunoCertificado) return null;
+    if (!certificatePdfSourceRef.current || !alunoCertificado || certificateModelUnavailable) return null;
 
     await waitForDocumentAssets(certificatePdfSourceRef.current);
     const pages = Array.from(
@@ -160,7 +163,7 @@ const CursosPage: React.FC<CursosPageProps> = ({
   };
 
   const downloadCertificatePdf = async () => {
-    if (!alunoCertificado) return;
+    if (!alunoCertificado || certificateModelUnavailable) return;
 
     setIsDownloadingCertificate(true);
     try {
@@ -179,7 +182,7 @@ const CursosPage: React.FC<CursosPageProps> = ({
   };
 
   const printCertificate = async () => {
-    if (!alunoCertificado) return;
+    if (!alunoCertificado || certificateModelUnavailable) return;
 
     setIsDownloadingCertificate(true);
     try {
@@ -214,7 +217,7 @@ const CursosPage: React.FC<CursosPageProps> = ({
   };
 
   const renderCertificatePdfSource = () => {
-    if (!alunoCertificado) return null;
+    if (!alunoCertificado || certificateModelUnavailable) return null;
 
     return (
       <div className="fixed left-[-20000px] top-0 z-[-1] bg-white" aria-hidden="true">
@@ -227,6 +230,11 @@ const CursosPage: React.FC<CursosPageProps> = ({
 
   const renderCertificatePreview = () => {
     if (!alunoCertificado) return null;
+    if (certificateModelUnavailable) return (
+      <p role={certificateModelError ? 'alert' : 'status'} className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm font-semibold text-slate-700">
+        {certificateModelError || 'Atualizando o modelo do certificado...'}
+      </p>
+    );
 
     const certificatePageCount = getCertificatePreviewPageCount(alunoCertificado, eadCertificateModel);
     const previewScale = certificateZoom / 100;
@@ -306,7 +314,7 @@ const CursosPage: React.FC<CursosPageProps> = ({
     const learningView = {
       ...eadLearning,
       selectedCourse,
-      isDownloadingCertificate,
+      isDownloadingCertificate: isDownloadingCertificate || certificateModelUnavailable,
       printCertificate,
       downloadCertificatePdf,
       renderCertificatePreview,
@@ -329,7 +337,7 @@ const CursosPage: React.FC<CursosPageProps> = ({
         certificateStatusMessage,
         printCertificate,
         downloadCertificatePdf,
-        isDownloadingCertificate,
+        isDownloadingCertificate: isDownloadingCertificate || certificateModelUnavailable,
         renderCertificatePreview,
         progressPercent,
         completedLessonCount,

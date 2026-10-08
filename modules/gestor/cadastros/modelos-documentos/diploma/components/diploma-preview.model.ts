@@ -3,6 +3,8 @@ export interface DiplomaPreviewProps {
   page: 'frente' | 'verso';
   zoomLevel: number;
   previewValues?: Record<string, string>;
+  programmaticRows?: Array<{ nome: string; carga: string; status: string }>;
+  replaceText?: (text: string, extraVars: Record<string, string>, strong: boolean) => string;
   isEditable?: boolean;
   selectedBlockId?: string | null;
   onSelectBlock?: (blockId: string | null) => void;
@@ -101,3 +103,4 @@ export const getTemplateBackgroundUrl = (template: any, page: 'frente' | 'verso'
   }
   return template.bgVersoUrl || template.versoUrl || template.backgroundVersoUrl || template.bg_verso_url || '';
 };
+

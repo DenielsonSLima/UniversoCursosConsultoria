@@ -1,5 +1,7 @@
 import { supabase } from '../../../../lib/supabase';
 import type { CertificadoAcademico } from '../certificados/certificados.types';
+import { diplomaService } from '../../cadastros/modelos-documentos/diploma/diploma.service';
+import { MISSING_EAD_CERTIFICATE_MODEL, selectEadCertificateModel } from '../certificados/ead-certificate-model';
 import { carteirinhaService } from '../../cadastros/modelos-documentos/carteirinha/carteirinha.service';
 import { crachaService } from '../../cadastros/modelos-documentos/cracha/cracha.service';
 import { declaracaoService } from '../../cadastros/modelos-documentos/declaracao/declaracao.service';
@@ -89,8 +91,18 @@ const fetchCertificateForEmission = async (
 const loadTemplate = async (
   emission: EmissionLog,
   poloId: string,
-  academicConfigs: any
+  academicConfigs: any,
+  certificate?: CertificadoAcademico | null,
 ) => {
+  if (emission.documento === 'certificado_ead') {
+    if (!certificate || certificate.modalidade !== 'EAD') {
+      throw new Error('O certificado EAD finalizado não foi localizado para selecionar o modelo.');
+    }
+    const templates = await diplomaService.getPersistedTemplates();
+    const configured = selectEadCertificateModel(templates, certificate.curso);
+    if (!configured) throw new Error(MISSING_EAD_CERTIFICATE_MODEL);
+    return configured;
+  }
   const hasFrozenRegistrationTemplate = Object.prototype.hasOwnProperty.call(
     emission.dados_emissao || {},
     'documentTemplateSnapshot',
@@ -204,6 +216,8 @@ const loadPreviewResource = <T>(
 );
 
 const getTemplateCacheKey = (emission: EmissionLog, poloId: string) => {
+  // Modelos EAD e sua configuração no curso são consultados a cada segunda via.
+  if (emission.documento === 'certificado_ead') return null;
   if (Object.prototype.hasOwnProperty.call(
     emission.dados_emissao || {},
     'documentTemplateSnapshot',
@@ -287,7 +301,8 @@ const loadPreviewBatch = async (
       'transferencia',
     ].includes(emission.documento);
     const templateKey = getTemplateCacheKey(emission, poloId);
-    const [academicData, certificate, template] = await Promise.all([
+    const isEad = emission.documento === 'certificado_ead';
+    const [academicData, certificate, cachedTemplate] = await Promise.all([
       needsAcademic
         ? loadPreviewResource(
             cacheMode,
@@ -297,12 +312,12 @@ const loadPreviewBatch = async (
         : Promise.resolve(null),
       isCertificateDocument(emission.documento)
         ? loadPreviewResource(
-            cacheMode,
+            isEad ? 'fresh' : cacheMode,
             `certificate:${emission.codigo}`,
             () => fetchCertificateForEmission(emission),
           )
         : Promise.resolve(null),
-      templateKey
+      isEad ? Promise.resolve(null) : templateKey
         ? loadPreviewResource(
             cacheMode,
             templateKey,
@@ -314,6 +329,9 @@ const loadPreviewBatch = async (
     if (isCertificateDocument(emission.documento) && !certificate) {
       throw new Error('O certificado acadêmico finalizado não foi localizado para esta emissão.');
     }
+    const template = isEad
+      ? await loadTemplate(emission, poloId, academicConfigs, certificate)
+      : cachedTemplate;
     const preview = {
       template: emission.documento === 'pasta_identificacao'
         ? adaptPastaTemplateForStudentPhoto(template, snapshotFirst(
@@ -444,4 +462,5 @@ export const historicoEmissoesService = {
     return loadPreviewBatch(emissions, fallbackPoloId, onProgress);
   },
 };
+
 

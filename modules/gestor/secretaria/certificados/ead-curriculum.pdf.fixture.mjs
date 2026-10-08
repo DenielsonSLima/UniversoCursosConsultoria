@@ -1,4 +1,5 @@
 export const syntheticModel = {
+  id: 'certificado_ead',
   tipoCurso: 'Educação a Distância (EAD)', hasVerso: true,
   ocultarDesignPadrao: true, hasValidationQrCode: true,
   exibirAssinatura1: false, exibirAssinatura2: false, exibirLogo: false,
@@ -32,3 +33,26 @@ export const signatureFixtureModule = `
     getSignatures: async () => (window.__fixture.signatures || {}),
   };
 `;
+
+// Runs inside Chromium. Compare document coordinates independently of viewport scale.
+export const measureCertificatePages = (selectors) => selectors.map(selector => {
+  const root = document.querySelector(selector);
+  const origin = root.getBoundingClientRect();
+  const scale = origin.width / parseFloat(getComputedStyle(root).width);
+  const box = node => {
+    const rect = node.getBoundingClientRect();
+    return [rect.x - origin.x, rect.y - origin.y, rect.width, rect.height]
+      .map(value => Math.round(value / scale * 1000) / 1000);
+  };
+  const styleKeys = ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight',
+    'letterSpacing', 'textTransform', 'textAlign', 'color', 'borderWidth',
+    'borderRadius', 'padding', 'opacity'];
+  return [...root.children].filter(node => getComputedStyle(node).position === 'absolute').map(block => ({
+    geometry: box(block), text: block.textContent,
+    elements: [...block.querySelectorAll('*')].map(node => ({
+      tag: node.tagName, geometry: box(node), text: node.childElementCount ? null : node.textContent,
+      styles: Object.fromEntries(styleKeys.map(key => [key, getComputedStyle(node)[key]])),
+      image: node instanceof HTMLImageElement ? node.currentSrc : null,
+    })),
+  }));
+});

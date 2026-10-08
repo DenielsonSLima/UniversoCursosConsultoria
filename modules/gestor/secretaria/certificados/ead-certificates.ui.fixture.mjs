@@ -24,12 +24,24 @@ export const mockModules = {
     const rows = ${JSON.stringify(rows)};
     const response = (data) => ({data, isLoading:false, isError:false, refetch:async()=>({data})});
     export const useCertificadosQuery = (filters) => response(rows.filter(
-      row => row.modalidade === filters.modalidade && row.status === filters.status));
+      row => row.modalidade === filters.modalidade && row.status === filters.status).map(row => ({
+        ...row, curso:{...row.curso, ead_config:{certificacao:{modeloDocumento:window.testConfiguredModelId}}}
+      })));
     export const useCertificadoTurmasQuery = () => response([]);
     export const useCertificadoTemplatesQuery = () => response([
       {tipoCurso:'Educação a Distância (EAD)', testModel:'modelo-ead-configurado'}]);
     export const useFinalizarCertificadoMutation = () => ({isPending:false,
       mutateAsync:async(value)=>{ window.testIssuances.push(value); }});
+  `,
+  './usePersistedEadCertificateTemplates': `
+    export const usePersistedEadCertificateTemplates = () => ({refetch:async()=>{
+      window.testTemplateFetches = (window.testTemplateFetches || 0) + 1;
+      if (window.testDelayTemplateFetch) await new Promise(resolve => { window.testResolveTemplateFetch = resolve; });
+      if (window.testTemplateError) return {isError:true,error:new Error('Falha de consulta sintética')};
+      return {data:window.testPersistedModels || [
+        {id:'ead-persisted',tipoCurso:'Educação a Distância (EAD)',testModel:'modelo-ead-configurado'}
+      ],isError:false};
+    }});
   `,
   '@tanstack/react-query': `
     export const useQuery = () => ({isPending:false,
@@ -47,7 +59,9 @@ export const mockModules = {
   `,
   './components/CertificadoPreview': `
     import React from 'react';
-    export default ({certificado, modelo}) => <div data-testid="certificate-document"
+    export default ({certificado, modelo, pdfMode}) => <div data-testid="certificate-document"
+      data-certificate-pdf-page={pdfMode ? 'true' : undefined} data-pdf-mode={String(Boolean(pdfMode))}
+      style={pdfMode ? {width:'297mm',height:'210mm',boxSizing:'border-box'} : undefined}
       data-model={modelo?.testModel}>{certificado.aluno.nome}</div>;
   `,
 };

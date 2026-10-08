@@ -141,6 +141,73 @@ test('EAD preview keeps printing blocked when the backend emission snapshot is u
   } finally { await page.close(); }
 });
 
+test('EAD reopens with the freshly saved model and hides the cached document during refresh', async () => {
+  const page = await browser.newPage();
+  try {
+    await page.goto(origin);
+    await page.getByRole('button', { name: 'EAD / Online', exact: true }).click();
+    await page.getByTitle('Pré-visualizar', { exact: true }).click();
+    await page.getByTestId('certificate-document').waitFor();
+    assert.equal(await page.getByTestId('certificate-document').getAttribute('data-model'), 'modelo-ead-configurado');
+    await page.keyboard.press('Escape');
+    await page.evaluate(() => {
+      window.testDelayTemplateFetch = true;
+      window.testPersistedModels = [{id:'ead-persisted',tipoCurso:'Educação a Distância (EAD)',testModel:'modelo-salvo-agora'}];
+    });
+    await page.getByTitle('Pré-visualizar', { exact: true }).click();
+    await page.getByText('Atualizando o modelo do certificado...', { exact: true }).waitFor();
+    assert.equal(await page.getByTestId('certificate-document').count(), 0);
+    assert.equal(await page.getByRole('button', { name: 'Imprimir', exact: true }).isDisabled(), true);
+    await page.evaluate(() => window.testResolveTemplateFetch());
+    await page.getByTestId('certificate-document').waitFor();
+    assert.equal(await page.getByTestId('certificate-document').getAttribute('data-model'), 'modelo-salvo-agora');
+    assert.equal(await page.evaluate(() => window.testTemplateFetches), 2);
+  } finally { await page.close(); }
+});
+
+test('EAD blocks unavailable configured or default models and failed persisted-template reads', async () => {
+  for (const failure of ['configured-model-missing', 'empty-catalog', 'no-ead-model', 'fetch-error']) {
+    const page = await browser.newPage();
+    try {
+      await page.goto(origin);
+      await page.evaluate((value) => {
+        window.testConfiguredModelId = value === 'configured-model-missing' ? 'modelo-removido' : undefined;
+        window.testTemplateError = value === 'fetch-error';
+        if (value === 'empty-catalog') window.testPersistedModels = [];
+        if (value === 'no-ead-model') window.testPersistedModels = [{id:'technical',tipoCurso:'Cursos Técnicos'}];
+      }, failure);
+      await page.getByRole('button', { name: 'EAD / Online', exact: true }).click();
+      await page.getByTitle('Pré-visualizar', { exact: true }).click();
+      await page.getByRole('alert').waitFor();
+      assert.equal(await page.getByTestId('certificate-document').count(), 0);
+      assert.equal(await page.getByRole('button', { name: 'Imprimir', exact: true }).isDisabled(), true);
+      assert.equal(await page.evaluate(() => window.testPrints), 0);
+    } finally { await page.close(); }
+  }
+});
+
+test('EAD keeps canonical A4 size under visual scale and removes scaling for print', async () => {
+  for (const viewport of [{width:1440,height:900}, {width:390,height:844}]) {
+    const page = await browser.newPage({viewport});
+    try {
+      await page.goto(origin);
+      await page.getByRole('button', { name: 'EAD / Online', exact: true }).click();
+      await page.getByTitle('Pré-visualizar', { exact: true }).click();
+      const document = page.getByTestId('certificate-document');
+      await document.waitFor();
+      assert.equal(await document.getAttribute('data-pdf-mode'), 'true');
+      assert.ok(Math.abs(await document.evaluate(element => parseFloat(getComputedStyle(element).width)) - 297 * 96 / 25.4) < 1);
+      const displayed = await document.boundingBox();
+      assert.ok(displayed.width <= viewport.width && displayed.x >= 0);
+      await page.emulateMedia({media:'print'});
+      const printed = await document.boundingBox();
+      assert.ok(Math.abs(printed.width - 297 * 96 / 25.4) < 1);
+      assert.ok(Math.abs(printed.height - 210 * 96 / 25.4) < 1);
+      assert.equal(await page.locator('[data-ead-certificate-preview-document]').evaluate(element => getComputedStyle(element).transform), 'none');
+    } finally { await page.close(); }
+  }
+});
+
 test('list service trusts backend certificate status and does not query or filter student progress', async () => {
   const calls = [];
   const sourceRows = [certificate('canonical-final', 'EAD', 'FINALIZADO'), certificate('canonical-pending', 'EAD', 'PENDENTE')];

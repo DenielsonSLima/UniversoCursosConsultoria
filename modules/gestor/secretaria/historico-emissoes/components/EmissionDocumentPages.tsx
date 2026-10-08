@@ -168,7 +168,8 @@ const EmissionDocumentPages: React.FC<EmissionDocumentPagesProps> = ({
       <div className="space-y-6">
         <CertificadoPreview
           certificado={certificatePreview}
-          curriculumSnapshot={emission.dados_emissao?.eadCurriculum}
+          curriculumSnapshot={emission.dados_emissao?.eadCurriculum ?? null}
+          curriculumTableSnapshot={emission.dados_emissao?.eadCurriculumTable ?? null}
           modelo={templateConfig}
           pdfMode
           showValidationQrCode={validationPublic}
