@@ -1,8 +1,8 @@
 {
-  "version": "4.8.181",
+  "version": "4.8.182",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 190,
-  "releasedAt": "2026-10-07",
-  "summary": "Correção financeira limitada com histórico preservado e nova confirmação manual"
+  "revision": 191,
+  "releasedAt": "2026-10-08",
+  "summary": "Revisão da dispensa LOCAL após reversão auditada de baixa de controle"
 }

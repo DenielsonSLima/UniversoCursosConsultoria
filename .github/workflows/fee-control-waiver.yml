@@ -1,0 +1,55 @@
+name: Fee control waiver review
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/review-drafts/fee-control-waiver/**'
+      - 'supabase/tests/bounded-*.mjs'
+      - 'supabase/tests/fixtures/**'
+      - '.github/workflows/fee-control-waiver.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fee-only-regression:
+    name: Fee reversal canonical guards and independent-session races
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: synthetic_ephemeral_ci_only
+          POSTGRES_DB: fee_control_waiver_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d fee_control_waiver_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install pinned test-only dependencies outside repository
+        env:
+          TEST_DEPS: ${{ runner.temp }}/fee-control-test-deps
+        run: |
+          npm install --prefix "$TEST_DEPS" --no-save --package-lock=false --ignore-scripts pg@8.16.3 @electric-sql/pglite@0.3.14
+          mkdir -p node_modules/@electric-sql
+          test ! -e node_modules/@electric-sql/pglite
+          ln -s "$TEST_DEPS/node_modules/@electric-sql/pglite" node_modules/@electric-sql/pglite
+          echo "FEE_PG_MODULE=$TEST_DEPS/node_modules/pg" >> "$GITHUB_ENV"
+      - name: Run focused canonical-guard regression
+        run: node --test supabase/review-drafts/fee-control-waiver/tests/single-fee-reversal.test.mjs
+      - name: Prove genuine lock waits, drift rejection, consent preservation and guard isolation
+        env:
+          FEE_EPHEMERAL_POSTGRES: synthetic-postgres-17-only
+        run: node supabase/review-drafts/fee-control-waiver/tests/fee-postgres-concurrency.mjs
