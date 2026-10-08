@@ -1,12 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { waitForDocumentAssets } from '../../shared/qrcode/document-assets';
-import {
-  buildSelectablePdfBlobFromElements,
-  downloadPdfBlob,
-} from '../../shared/pdf/dom-to-selectable-pdf';
-import { ZoomIn, ZoomOut } from 'lucide-react';
-import CertificadoPreview from '../../gestor/secretaria/certificados/components/CertificadoPreview';
-import { getCertificatePreviewPageCount } from '../../gestor/secretaria/certificados/components/ead-certificate-layout';
+import { EadCertificatePdfView, useEadCertificatePdf } from '../../gestor/secretaria/certificados/useEadCertificatePdf';
 import { defaultEadCheckoutMethod, resolveEadCheckoutOptions } from './eadCheckoutOptions';
 import CourseCatalogView from './components/CourseCatalogView';
 import EadCourseRoom from './components/EadCourseRoom';
@@ -14,12 +7,8 @@ import { useAlunoCoursesCatalog } from './hooks/useAlunoCoursesCatalog';
 import { useCourseCheckout } from './hooks/useCourseCheckout';
 import { useEadLearning } from './hooks/useEadLearning';
 import type { CursosPageProps } from './cursosPage.types';
-import { getCertificateFileName, hasEadAccess } from './cursosPage.utils';
+import { hasEadAccess } from './cursosPage.utils';
 
-const A4_LANDSCAPE_PREVIEW_WIDTH_PX = 1123;
-const A4_LANDSCAPE_PREVIEW_HEIGHT_PX = 794;
-const CERTIFICATE_PREVIEW_GAP_PX = 24;
-const CERTIFICATE_PDF_PAGE_SELECTOR = '[data-certificate-pdf-page="true"]';
 const CursosPage: React.FC<CursosPageProps> = ({
   alunoId,
   initialCourseId,
@@ -48,10 +37,7 @@ const CursosPage: React.FC<CursosPageProps> = ({
   const setSelectedCourse = React.useCallback((course: any | null) => {
     setSelectedCourseContext(course ? { alunoId: selectedCourseOwnerId, course } : null);
   }, [selectedCourseOwnerId]);
-  const [isDownloadingCertificate, setIsDownloadingCertificate] = useState(false);
-  const [certificateZoom, setCertificateZoom] = useState(65);
   const [selectedTurmaByCourse, setSelectedTurmaByCourse] = useState<Record<string, string>>({});
-  const certificatePdfSourceRef = React.useRef<HTMLDivElement>(null);
   const initialCheckoutCourseRef = React.useRef<string | null>(null);
 
   useEffect(() => {
@@ -103,6 +89,12 @@ const CursosPage: React.FC<CursosPageProps> = ({
     isUpdatingProgress,
   } = eadLearning;
   const certificateModelUnavailable = certificateModelLoading || Boolean(certificateModelError);
+  const certificatePdf = useEadCertificatePdf(alunoCertificado || null, eadCertificateModel,
+    Boolean(alunoCertificado && !certificateModelUnavailable));
+  const isDownloadingCertificate = !certificatePdf.ready || certificatePdf.printing;
+  const downloadCertificatePdf = certificatePdf.download;
+  const printCertificate = certificatePdf.print;
+
 
   useEffect(() => {
     if (!initialCourseId || courses.length === 0) return;
@@ -145,89 +137,7 @@ const CursosPage: React.FC<CursosPageProps> = ({
     }
   }, [courses, selectedCourse, setSelectedCourse]);
 
-  const buildCertificatePdfBlob = async () => {
-    if (!certificatePdfSourceRef.current || !alunoCertificado || certificateModelUnavailable) return null;
-
-    await waitForDocumentAssets(certificatePdfSourceRef.current);
-    const pages = Array.from(
-      certificatePdfSourceRef.current.querySelectorAll<HTMLElement>(CERTIFICATE_PDF_PAGE_SELECTOR),
-    );
-    const captureTargets = pages.length ? pages : [certificatePdfSourceRef.current];
-    return buildSelectablePdfBlobFromElements(captureTargets, {
-      orientation: 'landscape',
-      artworkFormat: 'PNG',
-      artworkScale: 2,
-      title: `Certificado - ${alunoCertificado.curso?.nome || selectedCourse?.nome || 'Curso'}`,
-      subject: 'Certificado acadêmico',
-    });
-  };
-
-  const downloadCertificatePdf = async () => {
-    if (!alunoCertificado || certificateModelUnavailable) return;
-
-    setIsDownloadingCertificate(true);
-    try {
-      const pdfBlob = await buildCertificatePdfBlob();
-      if (!pdfBlob) return;
-      downloadPdfBlob(
-        pdfBlob,
-        getCertificateFileName(alunoCertificado.curso?.nome || selectedCourse?.nome),
-      );
-    } catch (error) {
-      console.error('Erro ao baixar certificado em PDF:', error);
-      alert('Não foi possível baixar o certificado em PDF agora.');
-    } finally {
-      setIsDownloadingCertificate(false);
-    }
-  };
-
-  const printCertificate = async () => {
-    if (!alunoCertificado || certificateModelUnavailable) return;
-
-    setIsDownloadingCertificate(true);
-    try {
-      const pdfBlob = await buildCertificatePdfBlob();
-      if (!pdfBlob) return;
-      const pdfUrl = URL.createObjectURL(pdfBlob);
-      const iframe = document.createElement('iframe');
-      iframe.style.position = 'fixed';
-      iframe.style.right = '0';
-      iframe.style.bottom = '0';
-      iframe.style.width = '0';
-      iframe.style.height = '0';
-      iframe.style.border = '0';
-      iframe.src = pdfUrl;
-      iframe.onload = () => {
-        window.setTimeout(() => {
-          iframe.contentWindow?.focus();
-          iframe.contentWindow?.print();
-        }, 250);
-      };
-      document.body.appendChild(iframe);
-      window.setTimeout(() => {
-        iframe.remove();
-        URL.revokeObjectURL(pdfUrl);
-      }, 60000);
-    } catch (error) {
-      console.error('Erro ao imprimir certificado em PDF:', error);
-      alert('Não foi possível preparar a impressão do certificado agora.');
-    } finally {
-      setIsDownloadingCertificate(false);
-    }
-  };
-
-  const renderCertificatePdfSource = () => {
-    if (!alunoCertificado || certificateModelUnavailable) return null;
-
-    return (
-      <div className="fixed left-[-20000px] top-0 z-[-1] bg-white" aria-hidden="true">
-        <div ref={certificatePdfSourceRef}>
-          <CertificadoPreview certificado={alunoCertificado} modelo={eadCertificateModel} pdfMode />
-        </div>
-      </div>
-    );
-  };
-
+  const renderCertificatePdfSource = () => certificatePdf.source;
   const renderCertificatePreview = () => {
     if (!alunoCertificado) return null;
     if (certificateModelUnavailable) return (
@@ -235,72 +145,7 @@ const CursosPage: React.FC<CursosPageProps> = ({
         {certificateModelError || 'Atualizando o modelo do certificado...'}
       </p>
     );
-
-    const certificatePageCount = getCertificatePreviewPageCount(alunoCertificado, eadCertificateModel);
-    const previewScale = certificateZoom / 100;
-    const previewWidth = A4_LANDSCAPE_PREVIEW_WIDTH_PX * previewScale;
-    const previewHeight = (
-      A4_LANDSCAPE_PREVIEW_HEIGHT_PX * certificatePageCount
-      + CERTIFICATE_PREVIEW_GAP_PX * Math.max(0, certificatePageCount - 1)
-    ) * previewScale;
-
-    return (
-      <div id="ead-certificate-print-area" className="mt-5 overflow-hidden rounded-[1.5rem] border border-slate-100 bg-slate-100">
-        <div className="flex flex-col gap-3 border-b border-slate-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-blue-600">Prévia PDF</p>
-            <p className="mt-0.5 text-[11px] font-bold text-slate-500">A4 horizontal, mesmo arquivo usado no download e impressão.</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setCertificateZoom((value) => Math.max(35, value - 10))}
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:text-blue-600"
-              title="Diminuir zoom"
-            >
-              <ZoomOut size={16} />
-            </button>
-            <input
-              aria-label="Zoom da prévia do certificado"
-              type="range"
-              min="35"
-              max="120"
-              step="5"
-              value={certificateZoom}
-              onChange={(event) => setCertificateZoom(Number(event.target.value))}
-              className="h-2 w-28 accent-blue-600"
-            />
-            <button
-              type="button"
-              onClick={() => setCertificateZoom((value) => Math.min(120, value + 10))}
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:text-blue-600"
-              title="Aumentar zoom"
-            >
-              <ZoomIn size={16} />
-            </button>
-            <span className="min-w-12 text-right text-[10px] font-black tabular-nums tracking-widest text-slate-500">{certificateZoom}%</span>
-          </div>
-        </div>
-
-        <div className="max-h-[78vh] overflow-auto bg-slate-200/70 p-4">
-          <div
-            className="relative mx-auto"
-            style={{ width: `${previewWidth}px`, height: `${previewHeight}px` }}
-          >
-            <div
-              className="absolute left-0 top-0"
-              style={{
-                width: '297mm',
-                transform: `scale(${previewScale})`,
-                transformOrigin: 'top left',
-              }}
-            >
-              <CertificadoPreview certificado={alunoCertificado} modelo={eadCertificateModel} pdfMode />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    return <div className="mt-5"><EadCertificatePdfView {...certificatePdf} /></div>;
   };
 
   const closeSelectedCourse = async () => {

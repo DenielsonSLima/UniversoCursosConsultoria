@@ -1,8 +1,8 @@
 {
-  "version": "4.8.187",
+  "version": "4.8.188",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 196,
+  "revision": 197,
   "releasedAt": "2026-10-08",
-  "summary": "Certificado EAD fiel ao modelo configurado no editor"
+  "summary": "Certificado EAD com identidade individual e PDF completo para baixar e imprimir"
 }

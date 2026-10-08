@@ -6,6 +6,12 @@ Histórico anterior: [16/09/2026 a 25/09/2026 — versões 4.8.65 a 4.8.90](./ch
 
 Histórico arquivado: [25/09/2026 a 26/09/2026 — versões 4.8.91 a 4.8.110](./changelog/2026-09-25-a-2026-09-26-versoes-4-8-91-a-4-8-110.md).
 
+## [4.8.188] - 2026-10-08
+
+- Certificados EAD identificam CPF/RG ou CIN conforme o cadastro individual, formatam CPF/CIN e preservam a identidade congelada da emissão.
+- Prévia, Baixar PDF e Imprimir reutilizam o mesmo arquivo, com fundo do modelo incorporado e texto/tabela vetoriais.
+- Corrigida a omissão do tipo de documento nos acessos do aluno e do histórico, sem reclassificar cadastros legados nem alterar outras modalidades.
+
 ## [4.8.187] - 2026-10-08
 
 - Certificado EAD reutiliza o renderizador do editor, preservando tabela, fontes, imagens e coordenadas do modelo salvo.

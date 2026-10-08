@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, type QueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
 import type { CertificadoAcademico } from '../../../gestor/secretaria/certificados/certificados.types';
+import { getAlunoEadCertificate } from '../ead-certificate.service';
 import { MISSING_EAD_CERTIFICATE_MODEL, selectEadCertificateModel } from '../../../gestor/secretaria/certificados/ead-certificate-model';
 import { usePersistedEadCertificateTemplates } from '../../../gestor/secretaria/certificados/usePersistedEadCertificateTemplates';
 import {
@@ -263,25 +264,7 @@ export const useEadLearning = ({ alunoId, hasAlunoContext, selectedCourse, query
     enabled: hasAlunoContext && !!selectedCourse?.id && quizPassed,
     queryFn: async () => {
       if (!alunoId) throw new Error('Aluno não identificado para este contexto.');
-      const { data, error } = await supabase
-        .from('certificados_academicos')
-        .select(`
-          *,
-          aluno:parceiros!certificados_academicos_aluno_id_fkey(nome, cpf_cnpj),
-          turma:turmas!certificados_academicos_turma_id_fkey(nome, codigo),
-          curso:cursos!certificados_academicos_curso_id_fkey(nome, carga_horaria),
-          polo:polos!certificados_academicos_polo_id_fkey(nome, cidade, estado)
-        `)
-        .eq('aluno_id', alunoId)
-        .eq('curso_id', selectedCourse!.id)
-        .eq('modalidade', 'EAD')
-        .eq('status', 'FINALIZADO')
-        .not('codigo_validacao', 'is', null)
-        .order('data_conclusao', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (error) throw error;
-      return (data || null) as unknown as CertificadoAcademico | null;
+      return getAlunoEadCertificate(alunoId, selectedCourse!.id);
     },
     refetchInterval: query => query.state.data ? false : 30_000,
   });
