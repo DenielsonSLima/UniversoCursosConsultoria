@@ -7,6 +7,11 @@ import {
 import { getSecretariaContext } from '../shared/secretaria-documentos.service';
 import CertificadoPreview from './components/CertificadoPreview';
 import EadCertificatePreviewPortal from './components/EadCertificatePreviewPortal';
+import EadCertificateScaledPreview from './components/EadCertificateScaledPreview';
+import {
+  MISSING_EAD_CERTIFICATE_MODEL, selectEadCertificateModel,
+} from './ead-certificate-model';
+import { usePersistedEadCertificateTemplates } from './usePersistedEadCertificateTemplates';
 import {
   useCertificadosQuery,
   useCertificadoTemplatesQuery,
@@ -48,6 +53,10 @@ const SecretariaCertificadosPage: React.FC = () => {
   const [groupBy, setGroupBy] = useState<'nenhum' | 'polo' | 'turma'>('turma');
   const [selected, setSelected] = useState<CertificadoAcademico | null>(null);
   const [preview, setPreview] = useState<CertificadoAcademico | null>(null);
+  const previewRequestRef = useRef(0);
+  const [eadPreviewTemplates, setEadPreviewTemplates] = useState<{
+    status: 'loading' | 'ready' | 'error'; models: any[];
+  }>({ status: 'loading', models: [] });
   const [form, setForm] = useState({
     certificadoNumero: '', paginaLivro: '', livroRegistro: '', validacaoSistec: '',
     ensinoMedioEstabelecimento: '', ensinoMedioLocalidadeUf: '', ensinoMedioAnoConclusao: '',
@@ -57,6 +66,7 @@ const SecretariaCertificadosPage: React.FC = () => {
   const certificadosQuery = useCertificadosQuery({ modalidade, status, turmaId, poloId });
   const turmasQuery = useCertificadoTurmasQuery(modalidade, poloId);
   const templatesQuery = useCertificadoTemplatesQuery();
+  const eadTemplatesQuery = usePersistedEadCertificateTemplates('secretaria-preview', false);
   const validationSnapshotQuery = useQuery({
     queryKey: ['certificate-validation-snapshot', preview?.codigo_validacao || 'nenhum'],
     queryFn: () => documentValidationService.getSnapshot(preview!.codigo_validacao!),
@@ -76,6 +86,28 @@ const SecretariaCertificadosPage: React.FC = () => {
       turmasQuery.refetch(),
       templatesQuery.refetch(),
     ]);
+  };
+
+  const openPreview = async (item: CertificadoAcademico) => {
+    const request = ++previewRequestRef.current;
+    setPreview(item);
+    if (item.modalidade !== 'EAD') return;
+    setEadPreviewTemplates({ status: 'loading', models: [] });
+    try {
+      const result = await eadTemplatesQuery.refetch();
+      if (request !== previewRequestRef.current) return;
+      if (result.isError) throw result.error;
+      setEadPreviewTemplates({ status: 'ready', models: result.data || [] });
+    } catch (error) {
+      if (request !== previewRequestRef.current) return;
+      console.error('[SecretariaCertificadosPage] Modelo EAD indisponível:', error);
+      setEadPreviewTemplates({ status: 'error', models: [] });
+    }
+  };
+
+  const closePreview = () => {
+    previewRequestRef.current += 1;
+    setPreview(null);
   };
 
   const handlePrintCertificate = async () => {
@@ -154,7 +186,15 @@ const SecretariaCertificadosPage: React.FC = () => {
   };
 
   const previewModalidade = preview?.modalidade || modalidade;
-  const modelo = templates.find(item => item.tipoCurso === templateType[previewModalidade]);
+  const isEadPreview = preview?.modalidade === 'EAD';
+  const modelo = isEadPreview
+    ? selectEadCertificateModel(eadPreviewTemplates.models, preview.curso)
+    : templates.find(item => item.tipoCurso === templateType[previewModalidade]);
+  const modelPending = isEadPreview && eadPreviewTemplates.status === 'loading';
+  const modelError = !isEadPreview ? '' : eadPreviewTemplates.status === 'error'
+    ? 'Não foi possível atualizar o modelo do certificado. Tente novamente.'
+    : !modelPending && !modelo
+      ? MISSING_EAD_CERTIFICATE_MODEL : '';
   const previewHasValidationCode = Boolean(preview?.codigo_validacao?.trim());
   const validationSnapshotPending = previewHasValidationCode
     && validationSnapshotQuery.isPending;
@@ -168,23 +208,29 @@ const SecretariaCertificadosPage: React.FC = () => {
     preview?.status === 'FINALIZADO' && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/75 p-6 backdrop-blur-sm">
           <div className="mx-auto max-w-6xl">
-            <div className="mb-4 flex justify-end gap-2">
+            <div data-ead-certificate-preview-actions className="mb-4 flex justify-end gap-2">
               <button
                 onClick={() => void handlePrintCertificate()}
-                disabled={validationSnapshotPending || validationSnapshotUnavailable}
+                disabled={modelPending || Boolean(modelError) || validationSnapshotPending || validationSnapshotUnavailable}
                 className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-xs font-black uppercase text-white disabled:cursor-not-allowed disabled:opacity-40"
               >
-                {validationSnapshotPending
+                {modelPending || validationSnapshotPending
                   ? <Loader2 className="animate-spin" size={15} />
                   : <Printer size={15} />}
                 Imprimir
               </button>
-              <button onClick={() => setPreview(null)} aria-label="Fechar prévia do certificado" className="rounded-xl bg-white p-3 text-slate-600"><X size={18}/></button>
+              <button onClick={closePreview} aria-label="Fechar prévia do certificado" className="rounded-xl bg-white p-3 text-slate-600"><X size={18}/></button>
             </div>
-            {validationSnapshotPending ? (
+            {modelPending || validationSnapshotPending ? (
               <div className="flex min-h-80 items-center justify-center gap-3 rounded-3xl bg-white text-xs font-black uppercase tracking-widest text-slate-500">
                 <Loader2 className="animate-spin text-blue-600" size={26} />
-                Conferindo a emissão original...
+                {modelPending ? 'Atualizando o modelo do certificado...' : 'Conferindo a emissão original...'}
+              </div>
+            ) : modelError ? (
+              <div role="alert" className="flex min-h-80 flex-col items-center justify-center rounded-3xl border border-red-200 bg-red-50 p-8 text-center">
+                <h4 className="font-black uppercase text-red-800">Modelo do certificado indisponível</h4>
+                <p className="mt-2 max-w-lg text-sm font-semibold text-red-700">{modelError}</p>
+                <button type="button" onClick={() => void openPreview(preview)} className="mt-5 rounded-xl bg-red-700 px-5 py-3 text-[10px] font-black uppercase tracking-wider text-white">Tentar novamente</button>
               </div>
             ) : validationSnapshotUnavailable ? (
               <div className="flex min-h-80 flex-col items-center justify-center rounded-3xl border border-red-200 bg-red-50 p-8 text-center">
@@ -204,11 +250,16 @@ const SecretariaCertificadosPage: React.FC = () => {
               </div>
             ) : (
               <div ref={certificatePrintRef}>
-                <CertificadoPreview
+                {isEadPreview ? <EadCertificateScaledPreview><CertificadoPreview
+                  certificado={preview}
+                  modelo={modelo}
+                  pdfMode
+                  showValidationQrCode={validationSnapshotQuery.data?.validationPublic === true}
+                /></EadCertificateScaledPreview> : <CertificadoPreview
                   certificado={preview}
                   modelo={modelo}
                   showValidationQrCode={validationSnapshotQuery.data?.validationPublic === true}
-                />
+                />}
               </div>
             )}
           </div>
@@ -309,8 +360,8 @@ const SecretariaCertificadosPage: React.FC = () => {
                       <div className="inline-flex gap-2">
                         {item.status === 'PENDENTE' && item.modalidade !== 'EAD' && <button onClick={() => openIssue(item)} className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-[10px] font-black uppercase text-white"><Settings2 size={13} /> Preparar</button>}
                         {item.status === 'PENDENTE' && item.modalidade === 'EAD' && <span className="px-3 py-2 text-[10px] font-bold text-slate-500">Aguardando liberação automática</span>}
-                        {item.status === 'FINALIZADO' && <button onClick={() => setPreview(item)} className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:text-blue-600" title="Pré-visualizar"><Eye size={15} /></button>}
-                        {item.status === 'FINALIZADO' && <button onClick={() => setPreview(item)} className="flex items-center gap-1.5 rounded-lg bg-[#001a33] px-3 py-2 text-[10px] font-black uppercase text-white"><Printer size={13} /> 2ª Via</button>}
+                        {item.status === 'FINALIZADO' && <button onClick={() => void openPreview(item)} className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:text-blue-600" title="Pré-visualizar"><Eye size={15} /></button>}
+                        {item.status === 'FINALIZADO' && <button onClick={() => void openPreview(item)} className="flex items-center gap-1.5 rounded-lg bg-[#001a33] px-3 py-2 text-[10px] font-black uppercase text-white"><Printer size={13} /> 2ª Via</button>}
                       </div>
                     </td>
                   </tr>
@@ -348,7 +399,7 @@ const SecretariaCertificadosPage: React.FC = () => {
       )}
 
       {preview?.modalidade === 'EAD' ? (
-        <EadCertificatePreviewPortal onClose={() => setPreview(null)}>
+        <EadCertificatePreviewPortal onClose={closePreview}>
           {previewContent}
         </EadCertificatePreviewPortal>
       ) : previewContent}

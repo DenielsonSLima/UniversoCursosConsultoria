@@ -13,6 +13,9 @@ interface DiplomaBlockContentProps {
   validationUrl: string;
   visibleBlocks: any[];
   getSignatureUrl: (block: any) => string;
+  programmaticRows?: Array<{ nome: string; carga: string; status: string }>;
+  validationCode?: string;
+  replaceText?: (text: string, extraVars: Record<string, string>, strong: boolean) => string;
 }
 
 const DiplomaBlockContent: React.FC<DiplomaBlockContentProps> = ({
@@ -24,11 +27,14 @@ const DiplomaBlockContent: React.FC<DiplomaBlockContentProps> = ({
   validationUrl,
   visibleBlocks,
   getSignatureUrl,
+  programmaticRows: canonicalRows,
+  validationCode,
+  replaceText,
 }) => {
   const parseText = (text: string, extraVars: Record<string, string> = {}) =>
-    replacePreviewVariables(text, previewData, extraVars, true);
+    replaceText ? replaceText(text, extraVars, true) : replacePreviewVariables(text, previewData, extraVars, true);
   const resolvePlainText = (text: string, extraVars: Record<string, string> = {}) =>
-    replacePreviewVariables(text, previewData, extraVars);
+    replaceText ? replaceText(text, extraVars, false) : replacePreviewVariables(text, previewData, extraVars);
 
   switch (block.type) {
     case 'logo': {
@@ -153,7 +159,7 @@ const DiplomaBlockContent: React.FC<DiplomaBlockContentProps> = ({
       return (
         <div style={{ width: qrW }} className="bg-white p-1 rounded border border-slate-200 flex flex-col items-center shadow-sm">
           <DocumentValidationQrCodeImage
-            code={previewData.codigo_validacao}
+              code={validationCode ?? previewData.codigo_validacao}
             size={qrSize * 2}
             alt="QR de validação"
             className="pointer-events-none h-auto w-full"
@@ -165,7 +171,7 @@ const DiplomaBlockContent: React.FC<DiplomaBlockContentProps> = ({
 
     case 'table': {
       const tableText = resolvePlainText(block.content || '');
-      const programmaticRows = parseProgrammaticRows(tableText);
+      const programmaticRows = canonicalRows ?? parseProgrammaticRows(tableText);
       const compactTable = programmaticRows.length > 6;
       const denseTable = programmaticRows.length > 10;
       const tableFontSize = Math.min(Number(block.fontSize || 11), denseTable ? 8 : compactTable ? 9 : 11);
@@ -178,6 +184,7 @@ const DiplomaBlockContent: React.FC<DiplomaBlockContentProps> = ({
       };
       return (
         <div
+          data-certificate-curriculum={canonicalRows ? 'true' : undefined}
           className="flex flex-col border border-slate-200 bg-white/90 rounded-xl"
           style={{ width: `${block.width || 550}px`, padding: denseTable ? '8px' : compactTable ? '10px' : '16px' }}
         >
@@ -274,3 +281,4 @@ const DiplomaBlockContent: React.FC<DiplomaBlockContentProps> = ({
 };
 
 export default DiplomaBlockContent;
+

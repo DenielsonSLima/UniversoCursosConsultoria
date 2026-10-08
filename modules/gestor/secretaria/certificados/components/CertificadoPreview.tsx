@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Award } from 'lucide-react';
 import { getBlocks, getTemplateBackgroundUrl } from '../../../cadastros/modelos-documentos/diploma/components/DiplomaPreview';
-import type { CertificadoAcademico, EadCertificateCurriculum } from '../certificados.types';
-import { curriculumTextToHtml, getCertificateCurriculumText, getEadCertificateCurriculum, MISSING_EAD_CURRICULUM } from './ead-certificate-curriculum';
+import type { CertificadoAcademico, EadCertificateCurriculum, EadCertificateCurriculumTable, EadCertificatePage } from '../certificados.types';
+import EadCertificateBlock from './EadCertificateBlock';
+import { curriculumTextToHtml, getCertificateCurriculumText, getEadCertificateCurriculum, getEadCertificateCurriculumTable, MISSING_EAD_CURRICULUM, MISSING_EAD_CURRICULUM_TABLE } from './ead-certificate-curriculum';
+import { hasEadCurriculumTableBlock } from './ead-certificate-layout';
 import { assinaturasService, AssinaturasData } from '../../../configuracoes/assinaturas/assinaturas.service';
 import { DocumentValidationQrCodeImage } from '../../../../shared/document-validation/DocumentValidationQrCodeImage';
 import { getDocumentValidationUrl } from '../../../../shared/document-validation/document-validation.url';
@@ -19,7 +21,8 @@ interface CertificadoPreviewProps {
   certificado: CertificadoAcademico;
   modelo?: any;
   gradeCurricular?: string;
-  curriculumSnapshot?: EadCertificateCurriculum;
+  curriculumSnapshot?: EadCertificateCurriculum | null;
+  curriculumTableSnapshot?: EadCertificateCurriculumTable | null;
   pdfMode?: boolean;
   showValidationQrCode?: boolean;
   validationCode?: string;
@@ -30,6 +33,7 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({
   modelo,
   gradeCurricular,
   curriculumSnapshot,
+  curriculumTableSnapshot,
   pdfMode = false,
   showValidationQrCode = true,
   validationCode,
@@ -38,7 +42,9 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({
   const isEad = certificado.modalidade === 'EAD';
   const curriculum = getEadCertificateCurriculum(certificado, curriculumSnapshot);
   const curriculumText = getCertificateCurriculumText(certificado, gradeCurricular, curriculumSnapshot);
-  const curriculumPages = curriculum?.pages || [undefined];
+  const curriculumTable = getEadCertificateCurriculumTable(certificado, curriculumTableSnapshot);
+  const usesCurriculumTable = isEad && hasEadCurriculumTableBlock(modelo);
+  const curriculumPages: Array<EadCertificatePage | undefined> = (usesCurriculumTable ? curriculumTable?.pages : curriculum?.pages) || [undefined];
   const modelHasValidationQrCode = hasActiveCertificateQrBlock(modelo);
   const canRenderValidationQrCode =
     showValidationQrCode && modelHasValidationQrCode;
@@ -112,10 +118,15 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({
   const frontText = modelo?.textoFrente
     || 'Certificamos que <strong>{{nome_aluno}}</strong>, CPF {{cpf}}, concluiu o curso <strong>{{curso_nome}}</strong>, com carga horária de {{carga_horaria}} horas, em {{data_conclusao}}.';
 
-  const renderBlock = (block: any, curriculumPage?: EadCertificateCurriculum['pages'][number]) => {
+  const renderBlock = (block: any, curriculumPage?: EadCertificatePage) => {
     const blockVars = curriculumPage
-      ? { ...templateVars, grade_curricular: curriculumTextToHtml(curriculumPage.lines.join('\n')) }
+      ? { ...templateVars, grade_curricular: curriculumTextToHtml(curriculumPage.lines?.join('\n') || curriculumText) }
       : templateVars;
+    if (isEad) return <EadCertificateBlock block={block} certificate={certificado} model={modelo}
+      curriculumPage={curriculumPage} curriculumText={curriculumText} totalHours={curriculum?.totalHours}
+      signatures={assinaturas}
+      validationCode={canonicalValidationCode} validationUrl={validationUrl} validationPublic={showValidationQrCode}
+      visibleBlocks={currentPageBlocks} getSignatureUrl={getSignatureUrl} />;
     switch (block.type) {
       case 'logo':
         return (
@@ -225,12 +236,11 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({
         );
       }
       case 'table': {
-        const isEadCurriculumBlock = isEad && (block.content || '').includes('{{grade_curricular}}');
         const tableText = replaceVarsPlain(block.content || '', certificado, blockVars);
-        const programmaticRows = isEadCurriculumBlock ? [] : parseProgrammaticRows(tableText);
+        const programmaticRows = parseProgrammaticRows(tableText);
         const compactTable = programmaticRows.length > 6;
         const denseTable = programmaticRows.length > 10;
-        const tableFontSize = isEadCurriculumBlock ? Number(block.fontSize || 16) : Math.min(
+        const tableFontSize = Math.min(
           Number(block.fontSize || 11),
           denseTable ? 8 : compactTable ? 9 : 11
         );
@@ -240,11 +250,10 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({
           fontFamily: block.fontFamily || 'monospace',
           fontSize: tableFontSize,
           textAlign: block.textAlign || 'left',
-          ...(isEadCurriculumBlock ? { lineHeight: block.lineHeight ?? 1.2 } : {}),
         };
 
         return (
-          <div data-certificate-curriculum={isEadCurriculumBlock ? 'true' : undefined} style={{ width: block.width || 560, padding: denseTable ? 8 : compactTable ? 10 : 16 }} className="rounded-xl border border-slate-200 bg-white/90">
+          <div style={{ width: block.width || 560, padding: denseTable ? 8 : compactTable ? 10 : 16 }} className="rounded-xl border border-slate-200 bg-white/90">
             {block.tableTitleVisible !== false && (
               <h2 className="mb-3 border-b border-slate-800 pb-1.5 text-sm font-black uppercase tracking-tight text-slate-800">Histórico Escolar</h2>
             )}
@@ -326,7 +335,7 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({
 
   let currentPageBlocks: any[] = [];
 
-  const renderVisualPage = (page: 'frente' | 'verso', curriculumPage?: EadCertificateCurriculum['pages'][number]) => {
+  const renderVisualPage = (page: 'frente' | 'verso', curriculumPage?: EadCertificatePage) => {
     const blocks = getBlocks(modelo || {}).filter((block: any) => block.page === page && block.visible);
     currentPageBlocks = blocks;
     const backgroundUrl = getTemplateBackgroundUrl(modelo, page);
@@ -384,9 +393,12 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({
   const renderReadinessProps = {
     'data-render-ready': signatureReadiness === 'loading' ? 'false' : 'true',
     'data-render-error': isEad && !curriculum ? MISSING_EAD_CURRICULUM
+      : usesCurriculumTable && !curriculumTable ? MISSING_EAD_CURRICULUM_TABLE
       : signatureReadiness === 'error' ? signatureError : undefined,
     'data-requires-qr-code': canRenderValidationQrCode ? 'true' : undefined,
   };
+
+  if (isEad && !modelo?.blocks?.length) return <div data-render-ready="true" data-render-error="Modelo EAD indisponível.">Modelo EAD indisponível.</div>;
 
   if (shouldRenderVisualTemplate) {
     return (
@@ -437,8 +449,8 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({
               <h3 className="mb-3 font-black uppercase">Histórico / Conteúdo Programático</h3>
               <p className="whitespace-pre-wrap leading-relaxed">
                 {modelo?.textoVerso
-                  ? publicText(modelo.textoVerso).replace('{{grade_curricular}}', () => curriculumPage?.lines.join('\n') || curriculumText)
-                  : curriculumPage?.lines.join('\n') || curriculumText}
+                  ? publicText(modelo.textoVerso).replace('{{grade_curricular}}', () => curriculumPage?.lines?.join('\n') || curriculumText)
+                  : curriculumPage?.lines?.join('\n') || curriculumText}
               </p>
             </div>
             <div className="space-y-4">

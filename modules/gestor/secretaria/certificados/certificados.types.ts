@@ -9,6 +9,24 @@ export interface EadCertificateCurriculum {
   pages: Array<{ number: number; lines: string[] }>;
 }
 
+export interface EadCertificateCurriculumRow {
+  nome: string;
+  carga: string;
+  status: string;
+}
+
+export interface EadCertificateCurriculumTable {
+  version: 2;
+  rows: EadCertificateCurriculumRow[];
+  pages: Array<{ number: number; rows: EadCertificateCurriculumRow[] }>;
+}
+
+export interface EadCertificatePage {
+  number: number;
+  lines?: string[];
+  rows?: EadCertificateCurriculumRow[];
+}
+
 export interface CertificadoAcademico {
   id: string;
   matricula_id: string;
@@ -32,6 +50,7 @@ export interface CertificadoAcademico {
   emitido_em: string | null;
   metadados?: {
     eadCurriculum?: EadCertificateCurriculum;
+    eadCurriculumTable?: EadCertificateCurriculumTable;
     programContent?: string;
     [key: string]: unknown;
   } | null;

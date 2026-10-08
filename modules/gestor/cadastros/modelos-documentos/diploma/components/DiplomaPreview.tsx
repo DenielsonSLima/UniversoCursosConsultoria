@@ -43,13 +43,15 @@ const buildDefaultPreviewData = (formData: any): Record<string, string> => ({
   curso_titulo: getTechnicalCourseTitle(
     formData.tipoCurso === 'Cursos Técnicos' ? 'Técnico em Enfermagem' : 'Curso de Formação',
   ),
-  carga_horaria: '1200',
+  carga_horaria: formData.tipoCurso === 'Educação a Distância (EAD)' ? '—' : '1200',
   data_inicio: '04/12/2025',
   data_fim: '30/12/2025',
   periodo: '04/12/2025 até 30/12/2025',
   data_conclusao: '20 de Maio de 2026',
   data_conclusao_extenso: '20 de Maio de 2026',
-  grade_curricular: 'Anatomia Humana - 80h - Nota: 9.0\nFisiologia - 80h - Nota: 8.5\nPrimeiros Socorros - 40h - Nota: 10.0\nFarmacologia Aplicada - 60h - Nota: 9.5\nÉtica e Deontologia - 40h - Nota: 9.0\nEstágio Supervisionado I - 200h - Aprovado',
+  grade_curricular: formData.tipoCurso === 'Educação a Distância (EAD)'
+    ? 'Componente de exemplo 1 - — - —\nComponente de exemplo 2 - — - —\nComponente de exemplo 3 - — - —\nComponente de exemplo 4 - — - —\nComponente de exemplo 5 - — - —\nComponente de exemplo 6 - — - —'
+    : 'Anatomia Humana - 80h - Nota: 9.0\nFisiologia - 80h - Nota: 8.5\nPrimeiros Socorros - 40h - Nota: 10.0\nFarmacologia Aplicada - 60h - Nota: 9.5\nÉtica e Deontologia - 40h - Nota: 9.0\nEstágio Supervisionado I - 200h - Aprovado',
   livro_registro: 'Livro: 12, Folha: 45, Registro: 1024',
   ensino_medio_estabelecimento: 'COLÉGIO ESTADUAL EXEMPLO',
   ensino_medio_localidade_uf: 'JAPOATÃ - SE',
@@ -75,6 +77,8 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
   page,
   zoomLevel,
   previewValues = {},
+  programmaticRows,
+  replaceText,
   isEditable = false,
   selectedBlockId = null,
   onSelectBlock,
@@ -221,6 +225,8 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
                 validationUrl={validationUrl}
                 visibleBlocks={visibleBlocks}
                 getSignatureUrl={getSignatureUrl}
+                programmaticRows={block.type === 'table' && String(block.content || '').includes('{{grade_curricular}}') ? programmaticRows : undefined}
+                replaceText={replaceText}
               />
               {isEditable ? (
                 <button
@@ -240,3 +246,4 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
 };
 
 export default DiplomaPreview;
+

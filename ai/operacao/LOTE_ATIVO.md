@@ -1,19 +1,19 @@
 # Lote ativo
 
-## Lote: 2026-10-08-ead-grade-certificado
+## Lote: 2026-10-08-ead-modelo-fiel
 
-Estado: validação da entrega 4.8.186; correção EAD e publicação autorizadas em 08/10/2026.
-Objetivo/aceite: verso com os seis módulos; backend fornece conteúdo, ordem e páginas para Secretaria, aluno e reimpressão.
-Causa: grade não fazia parte do snapshot da emissão; o adapter do certificado substituía o campo pela frase genérica.
-Escopo: somente EAD. Modelo configurado, demais modalidades e liberação automática da entrega anterior preservados.
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-08-ead-grade-certificado.md`.
-Revisão: três agentes; backend, interface e revisão independente do PDF real.
-Dados: complemento privado da grade ausente em dois certificados EAD finalizados, com curso inalterado desde a emissão, mantendo códigos, datas, nota, status e contadores.
-Validação: SQL de emissão/complemento, contrato UI, PDF real do compositor, texto extraído, recursos e inspeção visual do verso; CI e Preview antes de publicar.
-Limitação: sessão autenticada real indisponível; render de validação usa dados pessoais sintéticos e modelo configurado inventariado.
+Estado: validação da entrega 4.8.187; correção EAD e publicação autorizadas pelo usuário.
+Objetivo/aceite: emissão EAD respeita o modelo salvo, com tabela, fontes, imagens e posições iguais ao editor.
+Causa: renderizadores separados; o patch anterior desviou a tabela EAD para texto genérico.
+Escopo: EAD; dados, cargas coerentes, status e páginas vêm do backend. Outras modalidades preservadas.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-08-ead-modelo-fiel.md`.
+Revisão: três agentes, responsáveis por backend, interface e paridade visual independente.
+Dados: completar somente a tabela dos dois certificados revisados, preservando código, datas e contador.
+Validação: SQL real, editor e emissão com mesmo modelo/dados, prévia Secretaria, texto PDF e frente/verso; CI/Preview antes da publicação.
+Limitação: não há sessão autenticada real; ensaio usa identidade sintética e configuração real inventariada.
 
 ## Entregas anteriores preservadas
 
-Certificação EAD 4.8.185: PR #278, produção publicada; dois certificados pendentes liberados e verificados. Registro `ai/operacao/registros/alteracoes/2026-10-08-ead-certificado-automatico.md`.
-Financeiro do aluno 4.8.184: PR #277, produção publicada e verificada. Registro `ai/operacao/registros/alteracoes/2026-10-08-aluno-banese-identidade-desconto.md`.
-Contrato 4.8.183: PR #276. Registro `ai/operacao/registros/alteracoes/2026-10-07-contrato-posicoes-qr-assinaturas.md`.
+Grade EAD 4.8.186: PR #279; seis módulos nos dois certificados, corrigindo ausência de conteúdo. A fidelidade da tabela é corrigida neste lote.
+Emissão automática EAD 4.8.185: PR #278; dois certificados liberados sem registro técnico.
+Financeiro do aluno 4.8.184: PR #277; identidade Banese e desconto canônico corrigidos.

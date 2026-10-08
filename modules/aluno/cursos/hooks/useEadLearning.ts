@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, type QueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
-import { diplomaService } from '../../../gestor/cadastros/modelos-documentos/diploma/diploma.service';
 import type { CertificadoAcademico } from '../../../gestor/secretaria/certificados/certificados.types';
+import { MISSING_EAD_CERTIFICATE_MODEL, selectEadCertificateModel } from '../../../gestor/secretaria/certificados/ead-certificate-model';
+import { usePersistedEadCertificateTemplates } from '../../../gestor/secretaria/certificados/usePersistedEadCertificateTemplates';
 import {
   getStudentCourseAccessKey,
   recordStudentCourseAccess,
@@ -286,25 +287,21 @@ export const useEadLearning = ({ alunoId, hasAlunoContext, selectedCourse, query
   });
   const certificateStatusTitle = certificateError
     ? 'Situação do certificado indisponível'
-    : alunoCertificado ? 'Certificado EAD disponível' : 'Certificado pendente na Secretaria';
+    : alunoCertificado ? 'Certificado EAD disponível' : 'Aguardando liberação automática';
   const certificateStatusMessage = certificateLoading
     ? 'Consultando a situação do certificado acadêmico.'
     : certificateError
       ? 'Não foi possível consultar o certificado agora. Tente novamente em instantes.'
       : alunoCertificado
         ? `Código de validação: ${alunoCertificado.codigo_validacao || 'gerado na emissão'}`
-        : 'Sua conclusão já foi enviada à Secretaria. O documento será liberado após o registro do número, livro e página.';
-  const { data: certificateTemplates = [] } = useQuery<any[]>({
-    queryKey: ['aluno-certificado-modelos'],
-    enabled: !!selectedCourse?.id && quizPassed,
-    staleTime: 0,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
-    queryFn: () => diplomaService.getTemplates(),
-  });
-  const eadCertificateModel = certificateTemplates.find((modelo) =>
-    String(modelo.tipoCurso || '').toLocaleLowerCase('pt-BR').includes('ead')
-    || String(modelo.modalidade || '').toUpperCase() === 'EAD');
+        : 'O certificado será liberado automaticamente após a confirmação da conclusão aprovada do curso.';
+  const { data: certificateTemplates = [], isFetching: certificateModelFetching, isPending: certificateModelPending, isError: certificateModelFailed } =
+    usePersistedEadCertificateTemplates(selectedCourse?.id || '', !!selectedCourse?.id && quizPassed);
+  const certificateModelLoading = certificateModelFetching || certificateModelPending;
+  const eadCertificateModel = selectEadCertificateModel(certificateTemplates, selectedCourse);
+  const certificateModelError = certificateModelFailed ? 'Não foi possível atualizar o modelo do certificado. Tente novamente.'
+    : !certificateModelLoading && !eadCertificateModel
+      ? MISSING_EAD_CERTIFICATE_MODEL : '';
   const randomizedQuizQuestions = useMemo(() => {
     const questoes = Array.isArray(currentProva?.questoes) ? currentProva.questoes : [];
     return shuffleWithSeed(questoes, quizSeed + hashString(selectedCourse?.id || '')).map((questao: any, qIdx: number) => ({
@@ -479,7 +476,7 @@ export const useEadLearning = ({ alunoId, hasAlunoContext, selectedCourse, query
     quizPassed, progressPercent, allLessonsDone, allActivitiesDone, allVideosDone,
     questionsTotal, minimumQuestions, quizRetryBlocked, retryCountdownLabel, canTakeQuiz, completedAtDate,
     startedAtDate, completedLessonCount, alunoCertificado, certificateStatusTitle,
-    certificateStatusMessage, eadCertificateModel, randomizedQuizQuestions, displayedQuizAnswers,
+    certificateStatusMessage, eadCertificateModel, certificateModelLoading, certificateModelError, randomizedQuizQuestions, displayedQuizAnswers,
     retryAvailableLabel, retryReleaseRefreshing, isLessonLocked,
     isProgressReady: progressAvailability.isReady,
     isProgressLoading: progressAvailability.isLoading,

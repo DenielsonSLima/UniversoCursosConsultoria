@@ -311,6 +311,19 @@ const normalizeFixedTemplates = (templates: any[] = []) => {
 };
 
 export const diplomaService = {
+  async getPersistedTemplates(): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('documentos_templates')
+      .select('conteudo')
+      .eq('id', 'diplomas')
+      .maybeSingle();
+    if (error) throw error;
+    if (!Array.isArray(data?.conteudo)) {
+      throw new Error('Os modelos de certificado salvos não estão disponíveis.');
+    }
+    return data.conteudo;
+  },
+
   async getTemplates(): Promise<any[]> {
     try {
       const { data, error } = await supabase
