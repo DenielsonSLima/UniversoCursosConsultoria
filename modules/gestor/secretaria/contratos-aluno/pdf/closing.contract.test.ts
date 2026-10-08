@@ -84,7 +84,7 @@ test('as quatro assinaturas usam as coordenadas salvas e mantêm nomes acima das
 test('o PDF oficial preserva snapshot e aceita posições padrão e personalizadas', async () => {
   for (const custom of [false, true]) {
     const document = fixture(custom);
-    const before = structuredClone(document);
+    const before = globalThis.structuredClone(document);
     const result = await createContratosAlunoPdf([document]);
     assert.ok(result.blob.size > 1000);
     assert.deepEqual(document, before);
