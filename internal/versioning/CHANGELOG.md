@@ -6,6 +6,13 @@ Histórico anterior: [16/09/2026 a 25/09/2026 — versões 4.8.65 a 4.8.90](./ch
 
 Histórico arquivado: [25/09/2026 a 26/09/2026 — versões 4.8.91 a 4.8.110](./changelog/2026-09-25-a-2026-09-26-versoes-4-8-91-a-4-8-110.md).
 
+## [4.8.185] - 2026-10-08
+
+- Libera automaticamente o certificado EAD após aprovação acadêmica validada no backend, com código de validação e proteção contra emissão duplicada.
+- Retira do EAD a preparação manual de número, livro e página, preservando o fluxo das demais modalidades.
+- Abre a prévia EAD no nível da tela, sem ficar presa ao contêiner da Secretaria.
+- Inclui revisão e regularização controlada dos certificados EAD pendentes elegíveis.
+
 ## [4.8.184] - 2026-10-08
 
 - Corrige a identificação do aluno por conta autenticada na abertura do BolePix, PDF do boleto e carnê, preservando titularidade e autorização do gestor.

@@ -1,8 +1,8 @@
 {
-  "version": "4.8.184",
+  "version": "4.8.185",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 193,
+  "revision": 194,
   "releasedAt": "2026-10-08",
-  "summary": "Acesso Banese por identidade autenticada e desconto bancário no financeiro do aluno"
+  "summary": "Certificação EAD automática após aprovação, sem registro técnico manual"
 }
