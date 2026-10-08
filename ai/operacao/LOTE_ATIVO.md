@@ -1,15 +1,14 @@
 # Lote ativo
 
-## Lote: 2026-10-07-correcao-financeira-limitada
+## Lote: 2026-10-08-dispensa-controle-local
 
-Estado: 4.8.181; 14 migrations e sete grants instalados, worker v12 e emissor v10 ativos. No checkpoint de instalação, a execução financeira ainda não havia iniciado.
-Objetivo/aceite: preservar recebíveis, runs e termos; confirmar cancelamento bancário antes do ajuste; manter C2 cancelado histórico, matrícula paga intacta e dispensa LOCAL comprovada; exigir consentimento real e reemissão manual.
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-07-correcao-financeira-limitada.md`.
-Publicação: 15 payloads SQL canônicos idênticos ao histórico remoto; drafts sintéticos preservados.
-Validação: SQL, UI/Edge, elegibilidade e persistência simulada; conferir CI/Preview do commit exato. Smoke Safari autenticado e validação bancária real separados.
-Pendência separada: R$ 200,00 não resolvidos; sem baixa, estorno ou devolução confirmados.
+Estado: candidato 4.8.182/revisão 191 para PR de rascunho, sem aplicação remota neste lote.
+Objetivo/aceite: reconhecer dispensa LOCAL apenas com reversão auditada da baixa de controle; preservar histórico, identidade e guardas; nenhum novo grant ou emissão automática.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-08-dispensa-controle-local.md`.
+Validação: testes sintéticos isolados e CI do commit exato; revisão independente antes de qualquer aplicação.
+SQL: review-drafts fora das migrations automáticas; nomes canônicos somente após aplicação e histórico conhecido.
 
 ## Contexto anterior preservado
 
-Lote anterior: `ai/operacao/registros/alteracoes/2026-10-07-aviso-segundo-ciclo.md`.
-O aviso C2 da 4.8.180 permanece obrigatório. Este lote não autoriza novo ciclo nem dispensa confirmação das parcelas abertas.
+Lote anterior: `ai/operacao/registros/alteracoes/2026-10-07-correcao-financeira-limitada.md`.
+A 4.8.181 e o aviso C2 permanecem preservados; este lote não autoriza novo ciclo ou dispensa de consentimento.

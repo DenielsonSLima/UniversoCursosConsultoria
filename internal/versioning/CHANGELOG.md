@@ -6,6 +6,12 @@ Histórico anterior: [16/09/2026 a 25/09/2026 — versões 4.8.65 a 4.8.90](./ch
 
 Histórico arquivado: [25/09/2026 a 26/09/2026 — versões 4.8.91 a 4.8.110](./changelog/2026-09-25-a-2026-09-26-versoes-4-8-91-a-4-8-110.md).
 
+## [4.8.182] - 2026-10-08
+
+- Prepara prova específica de dispensa LOCAL após reversão auditada de baixa de controle.
+- Mantém histórico, permissões e emissão manual; templates sem dados reais permanecem fora das migrations automáticas.
+- Acrescenta validações isoladas com dados sintéticos, sem concluir implantação ou execução financeira por publicação de código.
+
 ## [4.8.181] - 2026-10-07
 
 - Prepara correção financeira limitada, mantendo recebíveis e ciclos históricos com confirmação bancária antes do ajuste interno.
