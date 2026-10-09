@@ -17,6 +17,7 @@ interface CrachaPreviewProps {
     polo?: string;
     curso?: string;
     validade?: string;
+    emissao?: string;
     fotoUrl?: string | null;
     foto?: string | null;
     validationCode?: string;
@@ -99,7 +100,7 @@ const CrachaPreview: React.FC<CrachaPreviewProps> = ({
       polo: aluno.polo || 'POLO JAPOATÃ (MATRIZ)',
       curso: aluno.curso || 'TÉCNICO EM ENFERMAGEM',
       admissao: '05/01/2024',
-      emissao: today.toLocaleDateString('pt-BR'),
+      emissao: aluno.emissao ?? today.toLocaleDateString('pt-BR'),
       validade: aluno.validade || validadeDate.toLocaleDateString('pt-BR'),
       instituicao: 'UNIVERSO CURSOS E CONSULTORIA',
       fotoUrl: aluno.fotoUrl || aluno.foto || null,
@@ -217,6 +218,7 @@ const CrachaPreview: React.FC<CrachaPreviewProps> = ({
   const containerStyle: React.CSSProperties = {
     transform: `scale(${zoomScale})`, 
     backgroundColor: 'white',
+    fontFamily: 'Arial, Helvetica, sans-serif',
     width: '54mm',
     height: '85.6mm',
     position: 'relative',
@@ -245,7 +247,7 @@ const CrachaPreview: React.FC<CrachaPreviewProps> = ({
 
   return (
     <div style={previewFrameStyle}>
-      <div style={containerStyle} className="bg-white">
+      <div style={containerStyle} className="bg-white" data-internship-badge-page={page}>
       {isEditable && (
         <div className="absolute inset-0 z-[8] pointer-events-none">
           <div
@@ -440,3 +442,4 @@ const CrachaPreview: React.FC<CrachaPreviewProps> = ({
 };
 
 export default CrachaPreview;
+

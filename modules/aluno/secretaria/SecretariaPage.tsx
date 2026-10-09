@@ -292,10 +292,13 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId, contextId }) =
       electionAlunoData={electionAlunoData}
       studentCardCode={cardValidation.data?.code}
       internshipBadgeCode={badgeValidation.data?.code}
+      internshipBadgeIssuedAt={badgeValidation.data?.issuedAt}
+      internshipBadgeExpiresAt={badgeValidation.data?.expiresAt}
+      internshipBadgeError={badgeValidation.isError}
+      onRetryInternshipBadge={() => void badgeValidation.refetch()}
       studentCardExpiresAt={cardValidation.data?.expiresAt}
       onTabChange={setTab}
       onRetryStudentCardTemplate={() => void studentCardTemplateQuery.refetch()}
-      onPrintRegistered={printRegistered}
     />
   );
 

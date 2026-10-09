@@ -11,6 +11,7 @@ interface StudentCardPrintDialogProps {
   pdfBlob: Blob | null;
   preparing: boolean;
   fileName?: string;
+  badge?: boolean;
 }
 
 const StudentCardPrintDialog: React.FC<StudentCardPrintDialogProps> = ({
@@ -21,6 +22,7 @@ const StudentCardPrintDialog: React.FC<StudentCardPrintDialogProps> = ({
   pdfBlob,
   preparing,
   fileName = 'carteirinha-estudantil-a4.pdf',
+  badge = false,
 }) => {
   const iframeRef = useRef<React.ElementRef<'iframe'>>(null);
   const dialogRef = useRef<React.ElementRef<'section'>>(null);
@@ -82,7 +84,7 @@ const StudentCardPrintDialog: React.FC<StudentCardPrintDialogProps> = ({
     setPrintError(null);
     const printWindow = iframeRef.current?.contentWindow;
     if (!printWindow || !previewReady) {
-      setPrintError('A prévia A4 ainda não terminou de carregar.');
+      setPrintError('A prévia ainda não terminou de carregar.');
       return;
     }
 
@@ -114,7 +116,7 @@ const StudentCardPrintDialog: React.FC<StudentCardPrintDialogProps> = ({
             </div>
             <div className="min-w-0">
               <p className="text-[9px] font-black uppercase tracking-[0.22em] text-blue-300">Prévia de impressão</p>
-              <h2 id="student-card-print-title" className="truncate text-base font-black uppercase tracking-tight sm:text-lg">Carteirinha em folha A4</h2>
+              <h2 id="student-card-print-title" className="truncate text-base font-black uppercase tracking-tight sm:text-lg">{badge ? 'Crachá de identificação' : 'Carteirinha em folha A4'}</h2>
             </div>
           </div>
           <button data-modal-close type="button" onClick={onClose} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-300 transition hover:bg-white/10 hover:text-white md:h-10 md:w-10" aria-label="Fechar prévia de impressão">
@@ -123,17 +125,17 @@ const StudentCardPrintDialog: React.FC<StudentCardPrintDialogProps> = ({
         </header>
 
         <div className="flex shrink-0 gap-2 overflow-x-auto border-b border-slate-200 bg-white px-4 py-2.5 md:grid md:grid-cols-3 md:px-7 md:py-3">
-          <div className="flex shrink-0 items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-[9px] font-black uppercase tracking-wider text-slate-600 md:bg-transparent md:p-0 md:text-[10px]"><FileText size={14} className="text-blue-600" /> Uma única folha A4</div>
-          <div className="flex shrink-0 items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-[9px] font-black uppercase tracking-wider text-slate-600 md:bg-transparent md:p-0 md:text-[10px]"><Scissors size={14} className="text-blue-600" /> Frente e verso lado a lado</div>
-          <div className="shrink-0 rounded-lg bg-slate-50 px-3 py-2 text-[9px] font-black uppercase tracking-wider text-slate-600 md:bg-transparent md:p-0 md:text-right md:text-[10px]">Tamanho real: 85,6 × 54 mm</div>
+          <div className="flex shrink-0 items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-[9px] font-black uppercase tracking-wider text-slate-600 md:bg-transparent md:p-0 md:text-[10px]"><FileText size={14} className="text-blue-600" /> {badge ? 'PDF do modelo oficial' : 'Uma única folha A4'}</div>
+          <div className="flex shrink-0 items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-[9px] font-black uppercase tracking-wider text-slate-600 md:bg-transparent md:p-0 md:text-[10px]"><Scissors size={14} className="text-blue-600" /> {badge ? 'Uma face por página' : 'Frente e verso lado a lado'}</div>
+          <div className="shrink-0 rounded-lg bg-slate-50 px-3 py-2 text-[9px] font-black uppercase tracking-wider text-slate-600 md:bg-transparent md:p-0 md:text-right md:text-[10px]">Tamanho real: {badge ? '54 × 85,6' : '85,6 × 54'} mm</div>
         </div>
 
         <div className="relative min-h-0 flex-1 overflow-hidden bg-slate-200 p-3 sm:p-5">
           {preparing ? (
             <div className="flex h-full flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white text-center shadow-inner">
               <Loader2 size={30} className="animate-spin text-blue-600" />
-              <p className="mt-4 text-xs font-black uppercase tracking-[0.18em] text-[#001a33]">Preparando a folha A4</p>
-              <p className="mt-1 text-xs font-medium text-slate-500">Montando frente, verso e marcas de recorte.</p>
+              <p className="mt-4 text-xs font-black uppercase tracking-[0.18em] text-[#001a33]">{badge ? 'Preparando o crachá' : 'Preparando a folha A4'}</p>
+              <p className="mt-1 text-xs font-medium text-slate-500">{badge ? 'Carregando as faces do modelo oficial.' : 'Montando frente, verso e marcas de recorte.'}</p>
             </div>
           ) : error ? (
             <div className="flex h-full flex-col items-center justify-center rounded-2xl border border-rose-200 bg-white px-6 text-center shadow-inner">
@@ -147,18 +149,18 @@ const StudentCardPrintDialog: React.FC<StudentCardPrintDialogProps> = ({
               className="h-full w-full rounded-2xl border border-slate-300 bg-white shadow-xl"
               onLoad={() => setPreviewReady(true)}
               src={`${pdfUrl}#toolbar=0&navpanes=0&scrollbar=0&view=Fit`}
-              title="Prévia A4 da carteirinha"
+              title={badge ? 'Prévia de impressão do crachá' : 'Prévia A4 da carteirinha'}
             />
           ) : null}
         </div>
 
         <footer className="relative flex shrink-0 flex-col gap-3 border-t border-slate-200 bg-white px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 md:flex-row md:items-center md:justify-between md:px-7 md:py-4">
           <p className="max-w-2xl text-[10px] font-semibold leading-relaxed text-slate-500">
-            Imprima em A4, escala 100% ou tamanho real. O sistema já posicionou as duas faces juntas e centralizadas para recorte.
+            {badge ? 'Imprima em escala 100% ou tamanho real. O fundo e todos os elementos já estão incluídos no PDF.' : 'Imprima em A4, escala 100% ou tamanho real. O sistema já posicionou as duas faces juntas e centralizadas para recorte.'}
           </p>
           <div className="grid shrink-0 grid-cols-[auto_1fr] gap-2 md:flex">
             <button type="button" onClick={onClose} className="min-h-12 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 md:min-h-0">Cancelar</button>
-            <button type="button" disabled={!pdfBlob || preparing || Boolean(error)} onClick={() => pdfBlob && downloadPdfBlob(pdfBlob, fileName)} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-600 disabled:opacity-50 md:min-h-0"><Download size={14} /> Baixar A4</button>
+            <button type="button" disabled={!pdfBlob || preparing || Boolean(error)} onClick={() => pdfBlob && downloadPdfBlob(pdfBlob, fileName)} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-600 disabled:opacity-50 md:min-h-0"><Download size={14} /> {badge ? 'Baixar PDF' : 'Baixar A4'}</button>
             <button type="button" onClick={handlePrint} disabled={preparing || Boolean(error) || !previewReady} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-[10px] font-black uppercase tracking-widest text-white shadow-lg shadow-blue-900/20 hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none md:min-h-0">
               <Printer size={14} /> Abrir impressão
             </button>

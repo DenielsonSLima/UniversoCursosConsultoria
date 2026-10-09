@@ -6,6 +6,12 @@ Histórico anterior: [16/09/2026 a 25/09/2026 — versões 4.8.65 a 4.8.90](./ch
 
 Histórico arquivado: [25/09/2026 a 26/09/2026 — versões 4.8.91 a 4.8.110](./changelog/2026-09-25-a-2026-09-26-versoes-4-8-91-a-4-8-110.md).
 
+## [4.8.192] - 2026-10-09
+
+- Crachá de identificação tem download em PDF separado da impressão e preserva o fundo do modelo cadastrado.
+- Consulta pública da carteirinha respeita a configuração de campos salva, inclusive em códigos já emitidos.
+- Grade curricular permite expandir disciplinas para consultar os dias de aula cadastrados.
+
 ## [4.8.191] - 2026-10-09
 
 - Declarações de matrícula e cursando exibem a identificação cadastrada, formatam CPF/CIN e omitem campos ausentes sem inserir “Não informado”.

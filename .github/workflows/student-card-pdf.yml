@@ -1,11 +1,17 @@
-name: Carteirinha PDF
+name: Documentos e grade do aluno
 
 on:
   pull_request:
     paths:
       - 'modules/aluno/secretaria/**'
+      - 'modules/aluno/turmas/**'
+      - 'modules/public/validator/**'
+      - 'supabase/migrations/*carteirinha_current_public_policy.sql'
+      - 'supabase/tests/carteirinha_current_policy.isolated.test.mjs'
+      - 'supabase/tests/fixtures/carteirinha-current-policy-*.sql'
       - 'modules/gestor/secretaria/carteirinhas/**'
       - 'modules/gestor/cadastros/modelos-documentos/carteirinha/**'
+      - 'modules/gestor/cadastros/modelos-documentos/cracha/**'
       - 'modules/shared/pdf/student-card/**'
       - 'modules/shared/pdf/PdfPagePreview.tsx'
       - '.github/workflows/student-card-pdf.yml'
@@ -13,8 +19,14 @@ on:
     branches: [main]
     paths:
       - 'modules/aluno/secretaria/**'
+      - 'modules/aluno/turmas/**'
+      - 'modules/public/validator/**'
+      - 'supabase/migrations/*carteirinha_current_public_policy.sql'
+      - 'supabase/tests/carteirinha_current_policy.isolated.test.mjs'
+      - 'supabase/tests/fixtures/carteirinha-current-policy-*.sql'
       - 'modules/gestor/secretaria/carteirinhas/**'
       - 'modules/gestor/cadastros/modelos-documentos/carteirinha/**'
+      - 'modules/gestor/cadastros/modelos-documentos/cracha/**'
       - 'modules/shared/pdf/student-card/**'
       - 'modules/shared/pdf/PdfPagePreview.tsx'
       - '.github/workflows/student-card-pdf.yml'
@@ -28,17 +40,30 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Preparar PostgreSQL isolado para a política pública
+        run: npm install --prefix "$RUNNER_TEMP/student-card-sql" --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.3.14
+      - name: Conferir campos atuais, máscaras, snapshots e permissões da CIE
+        run: PGLITE_MODULE_PATH="$RUNNER_TEMP/student-card-sql/node_modules/@electric-sql/pglite/dist/index.js" node supabase/tests/carteirinha_current_policy.isolated.test.mjs
       - name: Preparar dependências do navegador controlado
         run: |
-          npm install --prefix "$RUNNER_TEMP/student-card-ui" --no-save --package-lock=false --ignore-scripts react@19.2.7 react-dom@19.2.7 esbuild@0.25.12 playwright@1.58.2 lucide-react@0.564.0 qrcode@1.5.4 tailwindcss@3.4.17 postcss@8.5.6 jspdf@4.2.1 pdf-lib@1.17.1 pdfjs-dist@5.6.205 @napi-rs/canvas@0.1.100
+          npm install --prefix "$RUNNER_TEMP/student-card-ui" --no-save --package-lock=false --ignore-scripts react@19.2.7 react-dom@19.2.7 esbuild@0.25.12 playwright@1.58.2 lucide-react@0.564.0 qrcode@1.5.4 tailwindcss@3.4.17 postcss@8.5.6 jspdf@4.2.1 pdf-lib@1.17.1 pdfjs-dist@5.6.205 @napi-rs/canvas@0.1.100 @tanstack/react-query@5.101.0
           node "$RUNNER_TEMP/student-card-ui/node_modules/playwright/cli.js" install --with-deps chromium
       - name: Preservar seleção durante emissão e atualização do workspace
         run: EAD_UI_NODE_MODULES="$RUNNER_TEMP/student-card-ui/node_modules" node modules/gestor/secretaria/carteirinhas/secretaria-carteirinhas-workspace.test.mjs
       - name: Conferir modelos, PDF real, prévia, download, impressão e falhas de ativos
         run: STUDENT_CARD_NODE_MODULES="$RUNNER_TEMP/student-card-ui/node_modules" STUDENT_CARD_ARTIFACTS="$RUNNER_TEMP/student-card-artifacts" node modules/gestor/secretaria/carteirinhas/student-card.browser.test.mjs
+      - name: Conferir crachá vertical, PDF único, fundo e entrega autorizada
+        run: STUDENT_CARD_NODE_MODULES="$RUNNER_TEMP/student-card-ui/node_modules" BADGE_ARTIFACTS="$RUNNER_TEMP/badge-artifacts" node modules/aluno/secretaria/internship-badge.browser.test.mjs
+      - name: Conferir expansão das disciplinas e isolamento dos dias de aula
+        run: ALUNO_UI_NODE_MODULES="$RUNNER_TEMP/student-card-ui/node_modules" ALUNO_GRADE_ARTIFACTS="$RUNNER_TEMP/curriculum-artifacts" node modules/aluno/turmas/curriculum-days.ui.test.mjs
+      - name: Conferir campos selecionados na apresentação pública da carteirinha
+        run: ALUNO_UI_NODE_MODULES="$RUNNER_TEMP/student-card-ui/node_modules" node modules/public/validator/carteirinha/current-policy.rendering.test.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: student-card-synthetic-pdf
-          path: ${{ runner.temp }}/student-card-artifacts
+          path: |
+            ${{ runner.temp }}/student-card-artifacts
+            ${{ runner.temp }}/badge-artifacts
+            ${{ runner.temp }}/curriculum-artifacts
           if-no-files-found: warn

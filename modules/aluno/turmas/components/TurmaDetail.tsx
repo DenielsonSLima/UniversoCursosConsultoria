@@ -99,7 +99,7 @@ const TurmaDetail: React.FC<TurmaDetailProps> = ({ alunoId, matricula, detailTab
 
       {activeTab === 'certificado' ? <CertificateTab certificate={certificate} state={data.certificatesState} eadProgress={data.selectedEadProgress} /> : null}
       {activeTab === 'resumo' && data.selectedIsEad ? <EadSummaryTab matricula={matricula} progress={data.selectedEadProgress} onOpenCourse={onOpenEad} /> : null}
-      {activeTab === 'resumo' && !data.selectedIsEad ? <AcademicSummaryTab disciplines={data.disciplines} summaries={data.disciplineSummaries} isTechnical={data.selectedIsTechnical} state={data.disciplinesState} /> : null}
+      {activeTab === 'resumo' && !data.selectedIsEad ? <AcademicSummaryTab disciplines={data.disciplines} summaries={data.disciplineSummaries} isTechnical={data.selectedIsTechnical} state={data.disciplinesState} classes={data.classes} classesState={data.classesState} scheduleScopeKey={`${alunoId}:${matricula.id}:${data.selectedTurmaId}`} /> : null}
       {activeTab === 'atividades' && data.selectedTurmaId ? <AlunoAtividadesExtraClasseTab alunoId={alunoId} turmaId={data.selectedTurmaId} /> : null}
       {activeTab === 'diario' ? <AttendanceTab disciplines={data.disciplineSummaries} classes={data.classes} attendance={data.attendance} disciplinesState={data.disciplinesState} classesState={data.classesState} attendanceState={data.attendanceState} /> : null}
       {activeTab === 'notas' ? <GradesTab disciplines={data.disciplineSummaries} disciplinesState={data.disciplinesState} resultsState={data.resultsState} sharedQueryState={data.selectedIsTechnical} /> : null}
@@ -111,3 +111,4 @@ const TurmaDetail: React.FC<TurmaDetailProps> = ({ alunoId, matricula, detailTab
 };
 
 export default TurmaDetail;
+

@@ -169,11 +169,11 @@ function paint(context: Context, node: Node, inheritedOpacity = 1, inheritedMult
 }
 
 export function drawStudentCard(pdf: jsPDF, card: HTMLElement, x: number, y: number,
-  assets: Pick<Context, 'images' | 'svgSources'>) {
+  assets: Pick<Context, 'images' | 'svgSources'>, size = { width: 85.6, height: 54 }) {
   const origin = card.getBoundingClientRect();
   const logicalWidth = numeric(window.getComputedStyle(card).width);
-  if (origin.width <= 0 || logicalWidth <= 0 || Math.abs(origin.width / origin.height - 85.6 / 54) > 0.01) {
+  if (origin.width <= 0 || logicalWidth <= 0 || Math.abs(origin.width / origin.height - size.width / size.height) > 0.01) {
     throw new Error('A carteirinha não está no tamanho CR80 configurado.');
   }
-  paint({ pdf, origin, x, y, factor: 85.6 / origin.width, cssScale: origin.width / logicalWidth, ...assets }, card);
+  paint({ pdf, origin, x, y, factor: size.width / origin.width, cssScale: origin.width / logicalWidth, ...assets }, card);
 }

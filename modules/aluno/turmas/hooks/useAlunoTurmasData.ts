@@ -3,7 +3,6 @@ import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
 import { alunoCourseAccessKeys } from '../../shared/aluno-course-access.queries';
 import type {
-  AulaTurmaAluno,
   CertificadoAluno,
   FrequenciaAluno,
   MatriculaAluno,
@@ -24,6 +23,7 @@ import {
   sortCurriculumDisciplines,
 } from '../turmas.utils';
 import { useAlunoInternships } from './useAlunoInternships';
+import { useAlunoClassSchedule } from './useAlunoClassSchedule';
 
 interface TechnicalAcademicData {
   disciplines: TurmaDisciplinaAluno[];
@@ -270,18 +270,12 @@ export const useAlunoTurmasData = (alunoId: string, selectedMatricula: Matricula
     [disciplines],
   );
 
-  const classesQuery = useQuery<AulaTurmaAluno[]>({
-    queryKey: ['aluno-turma-aulas', selectedTurmaId],
-    enabled: Boolean(selectedTurmaId && !selectedIsEad && selectedHasAcademicAccess),
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('aulas_turma')
-        .select('id, titulo, carga_horaria, data_aula, disciplina_id, sessao')
-        .eq('turma_id', selectedTurmaId!)
-        .order('data_aula', { ascending: true, nullsFirst: false });
-      if (error) throw error;
-      return (data || []) as AulaTurmaAluno[];
-    },
+  const classesQuery = useAlunoClassSchedule({
+    alunoId,
+    matriculaId: selectedMatricula?.id || null,
+    turmaId: selectedTurmaId,
+    enabled: Boolean(!selectedIsEad && selectedHasAcademicAccess
+      && selectedMatricula?.aluno_id === alunoId),
   });
 
   const attendanceQuery = useQuery<FrequenciaAluno[]>({
@@ -424,3 +418,4 @@ export const useAlunoTurmasData = (alunoId: string, selectedMatricula: Matricula
     disciplineSummaries,
   };
 };
+
