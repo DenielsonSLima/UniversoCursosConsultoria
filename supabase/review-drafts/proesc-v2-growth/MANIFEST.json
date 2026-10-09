@@ -1,0 +1,202 @@
+{
+  "status": "REVIEW_BRANCH_CI_AUTHORIZED",
+  "upstreamRepository": "DenielsonSLima/UniversoCursosConsultoria",
+  "upstreamBase": "3886e6b0e12e45001f5a7bf2858965b4d8d4307d",
+  "generatedAt": "2026-10-09T22:10:00Z",
+  "productionChanged": false,
+  "payloadStorageEnabled": false,
+  "remoteUploadImplemented": false,
+  "cleanupEnabled": false,
+  "nativePostgres17Gate": "AWAITING_CI",
+  "aggregateRepositoryCheck": "AWAITING_EXACT_HEAD_CI",
+  "focusedLineCheck": "PASS_ALL_UNDER_500",
+  "files": [
+    {
+      "path": ".github/workflows/proesc-v2-payload.yml",
+      "bytes": 2209,
+      "lines": 54,
+      "sha256": "25862eaf431955504ddcd37d4c2eaf433b9fe0bafe94aa5a1110c8c2c1ec2bf4"
+    },
+    {
+      "path": ".github/workflows/quality-gates.yml",
+      "bytes": 29831,
+      "lines": 480,
+      "sha256": "d9b5bd85ef21a040a8eb603ceabef3347fdaf16554546a6427b71b20f1ea4d1b"
+    },
+    {
+      "path": "ai/operacao/qualidade/limite-linhas-manifestos.json",
+      "bytes": 15736,
+      "lines": 193,
+      "sha256": "444cb2e093d655b2456aa360bc069e9b878895240e136bd6678b8c3bcb2eba82"
+    },
+    {
+      "path": "ai/operacao/registros/alteracoes/2026-10-09-proesc-v2-payload-candidato.md",
+      "bytes": 4392,
+      "lines": 77,
+      "sha256": "87147d2e0cc66d72de4b03fd45aa4f2ef4c311d10d0c82ad158b516b96945e7b"
+    },
+    {
+      "path": "internal/versioning/CHANGELOG.md",
+      "bytes": 38609,
+      "lines": 487,
+      "sha256": "0b33dfc355b65e9807d8aef186dcae2bf15e05217bb98d7ce1df6e38e68c1af2"
+    },
+    {
+      "path": "internal/versioning/changelog/2026-09-27-versoes-4-8-113-a-4-8-115.md",
+      "bytes": 1216,
+      "lines": 18,
+      "sha256": "71fd146f16a3aa46dc07a5e344f1a83ad165e0a226c97b5e6c6ada648750cff1"
+    },
+    {
+      "path": "internal/versioning/system-version.json",
+      "bytes": 240,
+      "lines": 8,
+      "sha256": "0ac69883f307663c6682655d28d8695314806f596d917e919aa36e38ffbbd0b6"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/01_payload_storage.draft.sql",
+      "bytes": 5513,
+      "lines": 108,
+      "sha256": "63afe9468d7b0578eb91f23d0556f0d1c73cf5b27da56af80be53f0e4bcf9649"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/02_payload_readers.draft.sql",
+      "bytes": 6804,
+      "lines": 155,
+      "sha256": "7c078be10074ea06c4de13fece9c8ddfc20cea344529800b8b72cd435935bedb"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/03_payload_writer.draft.sql",
+      "bytes": 1980,
+      "lines": 31,
+      "sha256": "90e0915722ef18a57864e28b85625e55e3aa3778020f4bc982185b19c7d1c09e"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/04_payload_activation_gate.draft.sql",
+      "bytes": 7995,
+      "lines": 160,
+      "sha256": "945b3e9efd5620e023a91d2eafaf23b4447c8c2f4ca8546e42594319cdd56c80"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/INDEPENDENT_REVIEW.md",
+      "bytes": 6689,
+      "lines": 123,
+      "sha256": "5116bc8f19681e9da525eb65c3561ac6fc384d7ffd4551d7d5529b679599fbfb"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/README.md",
+      "bytes": 9377,
+      "lines": 145,
+      "sha256": "ac39586bbf44fdfea2fc8088a7e466dcfc089e06ddf5162e2a588643e8c1a0cb"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/archive/README.md",
+      "bytes": 8866,
+      "lines": 142,
+      "sha256": "057e509980ad1306e2a88cb68829cdc93bb23daf0f79e1f8636ca804a662b032"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/archive/archive.mjs",
+      "bytes": 9475,
+      "lines": 182,
+      "sha256": "318d08667d7d4bc911334b943c87f5cbde0a58b4098be40151ff5d6e25769252"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/archive/archive.test.mjs",
+      "bytes": 11453,
+      "lines": 206,
+      "sha256": "c8db97816e251ea00fea8d7d9f1112d48f6ca7787b19700952f0bfeeaa0383d7"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/archive/local-store.mjs",
+      "bytes": 2234,
+      "lines": 58,
+      "sha256": "d6e3d6963b28d20cbdcbcb64bfedc4a58e184b06b157b9787edf34ce2804b7ac"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/ci/postgres17-concurrency.mjs",
+      "bytes": 6047,
+      "lines": 80,
+      "sha256": "07432bba8b740a4bced3e1e4f7d1732ecec8b049b2b5957503cca5f939f70cd7"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/ci/postgres17.workflow.yml.disabled",
+      "bytes": 2300,
+      "lines": 55,
+      "sha256": "d6eb6397fc08a72466ce33bb31d1950737e1f6de35067774d27cbb315f05eb03"
+    },
+    {
+      "path": "supabase/tests/fixtures/proesc-v2-growth.fixture.mjs",
+      "bytes": 9983,
+      "lines": 134,
+      "sha256": "c56520c4b25121e79069ca61880073dd4cf5489a06f4bd9b94d77bd2c29680df"
+    },
+    {
+      "path": "supabase/tests/fixtures/proesc-v2-growth/fixture_confirm_portal_payment.sql",
+      "bytes": 12538,
+      "lines": 154,
+      "sha256": "865b78715b97adf6d838e8656602ec793174e6373ff826095fa96446b5a7ff9b"
+    },
+    {
+      "path": "supabase/tests/fixtures/proesc-v2-growth/fixture_v2_apply_invoice.sql",
+      "bytes": 10234,
+      "lines": 163,
+      "sha256": "596af83389660f463afd3d6dd869599f607dabf3cb0e32e56b127197c6ef5d12"
+    },
+    {
+      "path": "supabase/tests/fixtures/proesc-v2-growth/fixture_v2_calculated_composition_candidate.sql",
+      "bytes": 4467,
+      "lines": 65,
+      "sha256": "a4386c8f3d3884538d63e8adf868372d47ba95d0d902114c9f78b560e88bc42d"
+    },
+    {
+      "path": "supabase/tests/fixtures/proesc-v2-growth/fixture_v2_net_discount_candidate.sql",
+      "bytes": 6478,
+      "lines": 87,
+      "sha256": "4fb16d81df11ff0a90f058ef9d371a50d21a0f8f3696c415bad620b0e005395f"
+    },
+    {
+      "path": "supabase/tests/proesc_v2_payload_adversarial.isolated.test.mjs",
+      "bytes": 9599,
+      "lines": 128,
+      "sha256": "1243880689f9d3a894b7272a5137e325861ec815a3833df88f9610a062f8edff"
+    },
+    {
+      "path": "supabase/tests/proesc_v2_payload_composition.isolated.test.mjs",
+      "bytes": 5250,
+      "lines": 63,
+      "sha256": "a70b4c9650161951daeb43fcd4fefe464ad029976198238bb6bec70dc8761fbd"
+    },
+    {
+      "path": "supabase/tests/proesc_v2_payload_portal.isolated.test.mjs",
+      "bytes": 12549,
+      "lines": 146,
+      "sha256": "deb1743df0ce4920935b637050a55c17d26571c72f0da9c4d825c24565bbaf5c"
+    },
+    {
+      "path": "supabase/tests/proesc_v2_payload_reader_gate.isolated.test.mjs",
+      "bytes": 5258,
+      "lines": 67,
+      "sha256": "26df738b8482eb8c7594faf4ff5de142613b7a46a918dc30c23ac87e5d7a5eb2"
+    },
+    {
+      "path": "supabase/tests/proesc_v2_payload_scale.isolated.test.mjs",
+      "bytes": 4449,
+      "lines": 62,
+      "sha256": "50d3286c6f260989f19b7965249bf23ced7c55a41d1dad48439c3f6c27ecda47"
+    },
+    {
+      "path": "supabase/tests/proesc_v2_payload_storage.isolated.test.mjs",
+      "bytes": 11035,
+      "lines": 137,
+      "sha256": "40cd24bc581ced4a51a43e1c352e606c62ea380bc75cc031f910154856f6616b"
+    },
+    {
+      "path": "supabase/tests/proesc_v2_payload_writer.isolated.test.mjs",
+      "bytes": 8429,
+      "lines": 103,
+      "sha256": "ea3d0de80534a8e0a751c890d2e603c8f0af7cd4742a1c65d1ea2aaeb1855e18"
+    }
+  ],
+  "remoteBranch": "review/proesc-v2-payload-20261009"
+}

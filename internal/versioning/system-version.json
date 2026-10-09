@@ -1,8 +1,8 @@
 {
-  "version": "4.8.195",
-  "display": "ESTÁVEL",
-  "stage": "stable",
-  "revision": 204,
+  "version": "4.8.196-rc.1",
+  "display": "RC",
+  "stage": "rc",
+  "revision": 1,
   "releasedAt": "2026-10-09",
-  "summary": "Card, cadastro e acesso do aluno exibem a mesma matrícula acadêmica principal"
+  "summary": "Candidato de validação: payload Proesc V2 compartilhado e arquivo sintético, sem ativação em produção"
 }
