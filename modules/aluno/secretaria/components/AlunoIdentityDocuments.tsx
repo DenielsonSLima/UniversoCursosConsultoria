@@ -1,7 +1,7 @@
 import React from 'react';
 import { BadgeCheck, CreditCard, Download, ImageOff, Loader2, RefreshCw } from 'lucide-react';
 import StudentCardDocument from './StudentCardDocument';
-import CrachaPreview from '../../../gestor/cadastros/modelos-documentos/cracha/components/CrachaPreview';
+import InternshipBadgeDocument from './InternshipBadgeDocument';
 import CrachaPeriodoEleitoralPreview from '../../../gestor/cadastros/modelos-documentos/cracha-periodo-eleitoral/components/CrachaPeriodoEleitoralPreview';
 import FinancialUnderlineTabs, { type FinancialUnderlineTabItem } from '../../../gestor/financeiro/components/FinancialUnderlineTabs';
 import useAlunoMobileLayout from '../../hooks/useAlunoMobileLayout';
@@ -22,10 +22,13 @@ interface Props {
   electionAlunoData: any;
   studentCardCode?: string;
   internshipBadgeCode?: string;
+  internshipBadgeIssuedAt?: string;
+  internshipBadgeExpiresAt?: string | null;
+  internshipBadgeError?: boolean;
+  onRetryInternshipBadge?: () => void;
   studentCardExpiresAt?: string | null;
   onTabChange: (tab: AlunoIdentityTab) => void;
   onRetryStudentCardTemplate: () => void;
-  onPrintRegistered: (code: string | undefined, label: string) => void;
 }
 
 const AlunoIdentityDocuments: React.FC<Props> = (props) => {
@@ -67,7 +70,14 @@ const AlunoIdentityDocuments: React.FC<Props> = (props) => {
           )}
         </section>
       ) : null}
-      {props.tab === 'cracha' && props.internshipBadgeTemplate && props.canInternshipBadge ? <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm animate-fadeIn"><header className="flex flex-col gap-4 border-b border-slate-100 px-4 py-5 md:flex-row md:items-center md:justify-between md:px-6"><div><h3 className="flex items-center gap-2 text-sm font-black uppercase tracking-tight text-[#001a33]"><BadgeCheck size={15} className="text-blue-600" /> Crachá de Identificação</h3><p className="mt-0.5 text-xs font-medium text-slate-500">Frente e verso do crachá oficial.</p></div><button type="button" onClick={() => props.onPrintRegistered(props.internshipBadgeCode, 'crachá')} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#001a33] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white shadow-md hover:bg-blue-600 md:w-auto"><Download size={13} /> Baixar / Imprimir</button></header><div id="print-area-cracha" className="flex flex-col items-center justify-center gap-8 p-5 md:flex-row md:items-start md:gap-12 md:p-8">{(['frente', 'verso'] as const).map((page) => <div key={page} className="flex flex-col items-center gap-3"><span className="text-[9px] font-black uppercase tracking-widest text-slate-400">◆ {page}</span><div className="overflow-hidden rounded-2xl shadow-xl ring-1 ring-slate-200"><CrachaPreview formData={props.internshipBadgeTemplate} page={page} zoomLevel={90} aluno={{ ...props.alunoData, validationCode: props.internshipBadgeCode }} isEditable={false} /></div></div>)}</div></section> : null}
+      {props.tab === 'cracha' && props.internshipBadgeTemplate && props.canInternshipBadge ? (
+        <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm animate-fadeIn">
+          <InternshipBadgeDocument template={props.internshipBadgeTemplate} aluno={props.alunoData}
+            code={props.internshipBadgeCode} issuedAt={props.internshipBadgeIssuedAt}
+            expiresAt={props.internshipBadgeExpiresAt} registrationError={props.internshipBadgeError}
+            onRetryRegistration={props.onRetryInternshipBadge} />
+        </section>
+      ) : null}
       {props.tab === 'cracha-eleitoral' && props.electionBadgeTemplate && props.canElectionBadge ? <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm animate-fadeIn"><header className="flex flex-col gap-4 border-b border-slate-100 px-4 py-5 md:flex-row md:items-center md:justify-between md:px-6"><div><h3 className="flex items-center gap-2 text-sm font-black uppercase tracking-tight text-[#001a33]"><BadgeCheck size={15} className="text-cyan-600" /> Crachá SES</h3><p className="mt-0.5 text-xs font-medium text-slate-500">Liberado após o registro de entrada no estágio.</p></div><button type="button" onClick={() => window.print()} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#001a33] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white shadow-md hover:bg-blue-600 md:w-auto"><Download size={13} /> Baixar / Imprimir</button></header><div id="print-area-cracha-eleitoral" className="flex flex-col items-center justify-center gap-8 overflow-hidden p-4 md:p-8">{(['frente', 'verso'] as const).map((page) => <div key={page} className="flex flex-col items-center gap-3"><span className="text-[9px] font-black uppercase tracking-widest text-slate-400">◆ {page}</span><div className="overflow-hidden shadow-xl ring-1 ring-slate-200"><CrachaPeriodoEleitoralPreview formData={props.electionBadgeTemplate} page={page} zoomLevel={electionBadgePreviewZoom} aluno={props.electionAlunoData} /></div></div>)}</div></section> : null}
     </>
   );

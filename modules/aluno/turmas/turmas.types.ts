@@ -65,6 +65,7 @@ export interface TurmaDisciplinaAluno {
 
 export interface AulaTurmaAluno {
   id: string;
+  turma_id?: string | null;
   titulo?: string | null;
   carga_horaria?: number | string | null;
   data_aula?: string | null;
@@ -161,3 +162,4 @@ export interface ProgressDisplayState {
   isLoading: boolean;
   isError: boolean;
 }
+

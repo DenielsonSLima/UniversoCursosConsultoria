@@ -1,18 +1,22 @@
 import React, { useMemo } from 'react';
 import { BookOpen } from 'lucide-react';
-import type { DisciplinaResumoAluno, QueryDisplayState, TurmaDisciplinaAluno } from '../../turmas.types';
+import type { AulaTurmaAluno, DisciplinaResumoAluno, QueryDisplayState, TurmaDisciplinaAluno } from '../../turmas.types';
 import { groupCurriculumDisciplines } from '../../turmas.utils';
 import CurriculumModuleSection from './CurriculumModuleSection';
 import QueryStateNotice from '../QueryStateNotice';
+import CurriculumDisciplineSection from './CurriculumDisciplineSection';
 
 interface AcademicSummaryTabProps {
   disciplines: TurmaDisciplinaAluno[];
   summaries: DisciplinaResumoAluno[];
   isTechnical: boolean;
   state: QueryDisplayState;
+  classes: AulaTurmaAluno[];
+  classesState: QueryDisplayState;
+  scheduleScopeKey: string;
 }
 
-const AcademicSummaryTab: React.FC<AcademicSummaryTabProps> = ({ disciplines, summaries, isTechnical, state }) => {
+const AcademicSummaryTab: React.FC<AcademicSummaryTabProps> = ({ disciplines, summaries, isTechnical, state, classes, classesState, scheduleScopeKey }) => {
   const summaryById = useMemo(
     () => new Map<string, DisciplinaResumoAluno>(summaries.map((item) => [item.id, item])),
     [summaries],
@@ -46,11 +50,14 @@ const AcademicSummaryTab: React.FC<AcademicSummaryTabProps> = ({ disciplines, su
                 const disciplineId = item.disciplinas?.id || item.disciplina_id || '';
                 const completed = isTechnical ? summaryById.get(disciplineId)?.concluida === true : item.concluida === true;
                 return (
-                  <div key={item.id} className="grid gap-3 bg-white p-4 text-xs sm:grid-cols-[40px_minmax(0,1fr)_auto] sm:items-center">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-[10px] font-black text-slate-400">{String(disciplineIndex + 1).padStart(2, '0')}</span>
-                    <div className="min-w-0"><p className="break-words font-bold text-[#001a33]">{item.disciplinas?.nome || 'Disciplina'}</p><p className="mt-1 text-[10px] text-slate-400">{item.disciplinas?.carga_horaria || 0}h • Docente: {item.professor_nome || 'A definir'}</p></div>
-                    <span className={`w-max rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-wider ${completed ? 'bg-emerald-50 text-emerald-700' : 'bg-blue-50 text-blue-700'}`}>{completed ? 'Concluída' : 'Em andamento'}</span>
-                  </div>
+                  <CurriculumDisciplineSection
+                    key={`${scheduleScopeKey}:${item.id}`}
+                    discipline={item}
+                    order={disciplineIndex + 1}
+                    completed={completed}
+                    classes={classes}
+                    classesState={classesState}
+                  />
                 );
               })}
             </div>
@@ -62,3 +69,4 @@ const AcademicSummaryTab: React.FC<AcademicSummaryTabProps> = ({ disciplines, su
 };
 
 export default AcademicSummaryTab;
+

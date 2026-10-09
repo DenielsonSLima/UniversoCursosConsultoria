@@ -7,7 +7,7 @@ const CARD_WIDTH = 85.6;
 const CARD_HEIGHT = 54;
 export type StudentCardPdfMode = 'digital' | 'a4';
 export interface StudentCardPdfOptions { signal?: AbortSignal }
-interface Placement { card: HTMLElement; x: number; y: number }
+interface Placement { card: HTMLElement; x: number; y: number; size?: { width: number; height: number } }
 interface FoldGuide { x: number; y: number; height: number; width: number; color: [number, number, number] }
 interface Page { width: number; height: number; placements: Placement[]; cropMarks?: boolean; guides?: FoldGuide[] }
 
@@ -22,7 +22,7 @@ function cropMarks(pdf: jsPDF, x: number, y: number) {
   ].forEach(([x1, y1, x2, y2]) => pdf.line(x1, y1, x2, y2));
 }
 
-async function compose(pages: Page[], options: StudentCardPdfOptions): Promise<Blob> {
+async function compose(pages: Page[], options: StudentCardPdfOptions, title = 'Carteirinha estudantil'): Promise<Blob> {
   const checkCancelled = () => {
     if (options.signal?.aborted) throw new window.DOMException('Preparação da carteirinha cancelada.', 'AbortError');
   };
@@ -38,12 +38,12 @@ async function compose(pages: Page[], options: StudentCardPdfOptions): Promise<B
   const pdf = new jsPDF({ unit: 'mm', format: [first.width, first.height],
     orientation: first.width > first.height ? 'landscape' : 'portrait',
     compress: true, precision: 6, putOnlyUsedFonts: true });
-  pdf.setProperties({ title: 'Carteirinha estudantil', author: 'Universo Cursos e Consultoria' });
+  pdf.setProperties({ title, author: 'Universo Cursos e Consultoria' });
   pages.forEach((page, index) => {
     checkCancelled();
     if (index) pdf.addPage([page.width, page.height], page.width > page.height ? 'landscape' : 'portrait');
-    page.placements.forEach(({ card, x, y }) => {
-      drawStudentCard(pdf, card, x, y, assets);
+    page.placements.forEach(({ card, x, y, size }) => {
+      drawStudentCard(pdf, card, x, y, assets, size);
       if (page.cropMarks) cropMarks(pdf, x, y);
     });
     page.guides?.forEach(guide => {
@@ -68,6 +68,15 @@ async function compose(pages: Page[], options: StudentCardPdfOptions): Promise<B
   const bytes = await document.save();
   checkCancelled();
   return new Blob([new Uint8Array(bytes).buffer], { type: 'application/pdf' });
+}
+
+/** The configured vertical badge uses the same vector painter and asset readiness gate. */
+export async function buildInternshipBadgePdf(root: HTMLElement, options: StudentCardPdfOptions = {}): Promise<Blob> {
+  await waitForCarteirinhaAssets(root, options);
+  const cards = [...root.querySelectorAll<HTMLElement>('[data-internship-badge-page]')];
+  if (!cards.length || cards.length > 2) throw new Error('A prévia individual do crachá não está disponível.');
+  const size = { width: 54, height: 85.6 };
+  return compose(cards.map(card => ({ ...size, placements: [{ card, x: 0, y: 0, size }] })), options, 'Crachá de identificação');
 }
 
 /** Same compositor and rendered model for CR80 download and its A4 print arrangement. */
