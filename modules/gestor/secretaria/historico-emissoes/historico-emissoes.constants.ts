@@ -49,6 +49,8 @@ export const isCertificateDocument = (documento: string) =>
   documento in CERTIFICATE_DOCUMENT_MODALITY;
 
 const OFFICIAL_VECTOR_DOCUMENTS = new Set([
+  'declaracao_matricula',
+  'declaracao_frequencia',
   'boletim',
   'pasta_identificacao',
   'ficha_matricula',

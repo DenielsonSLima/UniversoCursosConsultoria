@@ -12,7 +12,7 @@ export const historyPrintIo = {
       loadPreview:async()=>resources(),loadPreviewFresh:async()=>resources(),
       loadEmissionByCode:async()=>structuredClone(window.historyFixture.emission),
     };`,
-  './emission-document.pdf': `export const createEmissionDocumentsPdf=async()=>{throw Error('EAD must use its canonical compositor')};`,
+  './emission-browser-pdf': `export const createBrowserEmissionDocumentsPdf=async()=>{throw Error('EAD must use its canonical compositor')};`,
   './contract-history-pdf': `export const createContractHistoryPdf=async()=>{throw Error('EAD is not a contract')};`,
   '../useUpdateDocumentIdentity': `export const canUpdateDocumentIdentity=()=>false;export const useUpdateDocumentIdentity=()=>({isUpdating:false,error:null});`,
   '../../../components/DocumentHeader': `export default()=>null;`,

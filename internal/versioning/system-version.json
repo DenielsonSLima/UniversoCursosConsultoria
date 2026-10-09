@@ -1,8 +1,8 @@
 {
-  "version": "4.8.192",
+  "version": "4.8.193",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 201,
+  "revision": 202,
   "releasedAt": "2026-10-09",
-  "summary": "Crachá com PDF fiel, consulta da carteirinha atualizada e dias de aula na grade do aluno"
+  "summary": "Identificação individual nos contratos e segunda via vetorial das declarações"
 }

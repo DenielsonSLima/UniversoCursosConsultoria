@@ -200,11 +200,11 @@ const EmissionDocumentPages: React.FC<EmissionDocumentPagesProps> = ({
           }}
         >
           {watermark?.watermarkUrl && (
-            <div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center overflow-hidden">
+            <div data-emission-watermark className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center overflow-hidden">
               <img src={watermark.watermarkUrl} alt="Watermark" style={{ opacity: watermark.watermarkOpacity || 0.1, width: `${watermark.watermarkScale || 50}%`, transform: watermark.watermarkRotate !== false ? 'rotate(-45deg)' : 'none' }} />
             </div>
           )}
-          <DocumentHeader polo={poloInfo} orientation="portrait" />
+          <div data-emission-header><DocumentHeader polo={poloInfo} orientation="portrait" /></div>
           {pageIndex === 0 && (
             <div className="relative z-10 mb-12 mt-6 text-center">
               <h2 className="text-2xl font-bold uppercase text-[#001a33] underline decoration-2 decoration-blue-600 underline-offset-4">

@@ -1,22 +1,25 @@
 # Lote ativo
 
-## Lote: 2026-10-09-portal-aluno-cracha-consulta-grade
+## Lote: 2026-10-09-contrato-identidade-segunda-via
 
-Estado: implementação e revisão cruzada concluídas; fechamento para publicação 4.8.192.
-Aceite: crachá com PDF fiel e botões separados; consulta respeita configuração salva;
-disciplinas da grade permitem consultar os dias de aula cadastrados.
-Escopo: documentos de identificação e consulta acadêmica do portal do aluno.
-Base: 4.8.191, commit cd6a2641b99e7a3ca77a6b25ce1c8793dc3cae66.
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-09-portal-aluno-cracha-consulta-grade.md`.
-Banco: migration 20261009145431 aplicada e consulta real da CIE antiga validada.
-PDF: compositor vetorial e mesmo Blob em prévia, download e impressão.
-Segurança: política e máscaras canônicas no backend; snapshots não regravados.
-Validação: crachá/modelo real, regressão da carteirinha, grade, SQL e render público.
-Limitação: Safari autenticado e impressão física indisponíveis no ambiente atual.
-Publicação: revisão conjunta e testes focados concluídos; CI/Preview antes do merge.
+Estado: implementação revisada; aguardando CI/Preview.
+Aceite: CIN individual sem duplicação CPF/RG no contrato; CPF e RG legados conforme cadastro;
+declarações antigas e novas com segunda via PDF fiel, sem erro da camada de texto.
+Base: 4.8.192, commit 638f21a377f85e382dcf52495e551cdc3e65f5a5.
+Escopo: identidade canônica do contrato e PDF de declarações matrícula/cursando.
+Backend: snapshot novo com tipo documental; projeção de leitura de contratos antigos,
+preservando cláusulas, financeiro, código, datas, auditoria e documentos assinados.
+PDF: modelo cadastrado, texto vetorial, mesmo Blob na prévia/download/impressão.
+Dispatcher browser separado do compositor nativo compatível com Deno.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-09-contrato-identidade-segunda-via.md`.
+Validação: SQL 11/11, consulta 7/7, PDF contrato 3/3 e declaração 4/4;
+declaração validada em origem HTTPS controlada até o término da impressão sem erro;
+três contratos reais conferidos, registros originais e advisors preservados.
+Limitação: Safari autenticado e impressora física indisponíveis no ambiente.
+Publicação: GitHub MCP, CI e Preview antes do merge autorizado pelo usuário.
 
 ## Entregas anteriores preservadas
 
-4.8.191: declarações e segunda via EAD, PR #284.
-4.8.190: login por matrícula acadêmica, PR #283. 4.8.189: carteirinha, PR #282.
-4.8.188–184: identidade/modelo/grade EAD, emissão automática, Banese e desconto.
+4.8.192: crachá PDF, consulta CIE atual e dias na grade, PR #285.
+4.8.191: identidade das declarações e PDF EAD, PR #284.
+4.8.190: login por matrícula acadêmica, PR #283.
