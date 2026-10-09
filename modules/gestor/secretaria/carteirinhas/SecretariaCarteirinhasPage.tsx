@@ -8,7 +8,7 @@ import {
   documentValidationService,
 } from '../../../shared/document-validation/document-validation.service';
 import { TEMPLATE_DEFAULT } from './secretaria-carteirinhas.helpers';
-import { downloadCarteirinhasPdf, printCarteirinhas } from './secretaria-carteirinhas.pdf';
+import { preloadCarteirinhaBackgrounds } from '../../cadastros/modelos-documentos/carteirinha/carteirinha-assets';
 import {
   secretariaCarteirinhasWorkspaceQueryOptions,
   type CarteirinhaTechnicalClass,
@@ -43,23 +43,24 @@ const SecretariaCarteirinhasPage: React.FC<SecretariaCarteirinhasPageProps> = ({
   const [selectedTurmaId, setSelectedTurmaId] = useState('todos');
   const [layoutType, setLayoutType] = useState<CarteirinhaLayoutType>('dobra');
   const [isPrinting, setIsPrinting] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
   const [isPreparingValidation, setIsPreparingValidation] = useState(false);
   const [validationSnapshots, setValidationSnapshots] = useState<Record<string, {
     code: string;
     expiresAt: string | null;
     validationPublic: boolean;
   }>>({});
-  const printContentRef = useRef<HTMLDivElement>(null);
   const validationRequestRef = useRef<{
     fingerprint: string;
     idempotencyKey: string;
   } | null>(null);
   const validationRequestInFlightRef = useRef(false);
   const workspaceQuery = useQuery(secretariaCarteirinhasWorkspaceQueryOptions(activePoloId));
+  const appliedWorkspaceRef = useRef<typeof workspaceQuery.data>(undefined);
   useEffect(() => {
     const workspace = workspaceQuery.data;
-    if (!workspace) return;
+    // Uma atualização em segundo plano não troca o lote que já está sendo emitido.
+    if (!workspace || isPrinting || isPreparingValidation || appliedWorkspaceRef.current === workspace) return;
+    appliedWorkspaceRef.current = workspace;
 
     const eligibleEnrollments = workspace.enrollments;
     const institutionalData = workspace.institutionalData;
@@ -122,10 +123,14 @@ const SecretariaCarteirinhasPage: React.FC<SecretariaCarteirinhasPageProps> = ({
     setTurmas(workspace.classes);
     setAlunos(mapped);
     setTemplateConfig(mergedTemplate);
+    // Antecipação apenas de recursos; a emissão verifica novamente todos os ativos.
+    void preloadCarteirinhaBackgrounds([
+      mergedTemplate.bgFrenteUrl, mergedTemplate.bgVersoUrl,
+    ]).catch(() => undefined);
     setSelectedAluno(null);
     setCustomSelectedAlunos([]);
     setSelectedTurmaId('todos');
-  }, [workspaceQuery.data]);
+  }, [workspaceQuery.data, isPrinting, isPreparingValidation]);
 
   const handleSearch = () => {
     if (!searchQuery.trim()) return;
@@ -200,16 +205,6 @@ const SecretariaCarteirinhasPage: React.FC<SecretariaCarteirinhasPageProps> = ({
     }
   };
 
-  const handleDownload = async () => {
-    if (!printContentRef.current?.querySelector('.print-page')) return;
-    setIsDownloading(true);
-    try {
-      await downloadCarteirinhasPdf(printContentRef.current, layoutType);
-    } finally {
-      setIsDownloading(false);
-    }
-  };
-
   const rawAlunosParaImprimir = mode === 'individual'
     ? (selectedAluno ? [selectedAluno] : [])
     : mode === 'lote'
@@ -235,6 +230,18 @@ const SecretariaCarteirinhasPage: React.FC<SecretariaCarteirinhasPageProps> = ({
     };
   });
 
+  if (isPrinting) {
+    return (
+      <SecretariaCarteirinhasPrintLayout
+        alunos={alunosParaImprimir}
+        layoutType={layoutType}
+        onBack={() => setIsPrinting(false)}
+        startNumber={startNumber}
+        templateConfig={templateConfig}
+      />
+    );
+  }
+
   if (workspaceQuery.isLoading) {
     return (
       <div className="flex min-h-[400px] flex-col items-center justify-center">
@@ -259,21 +266,6 @@ const SecretariaCarteirinhasPage: React.FC<SecretariaCarteirinhasPageProps> = ({
     );
   }
 
-  if (isPrinting) {
-    return (
-      <SecretariaCarteirinhasPrintLayout
-        alunos={alunosParaImprimir}
-        isDownloading={isDownloading}
-        layoutType={layoutType}
-        onBack={() => setIsPrinting(false)}
-        onDownload={handleDownload}
-        onPrint={() => { void printCarteirinhas(printContentRef.current); }}
-        printContentRef={printContentRef}
-        startNumber={startNumber}
-        templateConfig={templateConfig}
-      />
-    );
-  }
 
   return (
     <SecretariaCarteirinhasControls
@@ -304,3 +296,4 @@ const SecretariaCarteirinhasPage: React.FC<SecretariaCarteirinhasPageProps> = ({
 };
 
 export default SecretariaCarteirinhasPage;
+

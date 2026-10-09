@@ -12,6 +12,10 @@ const protectedVectorGenerators = [
   'modules/gestor/calendario/calendario.pdf.ts',
   'modules/gestor/gestao/tecnicos/detalhes/components/diarios/diario-pdf.ts',
   'modules/aluno/secretaria/student-card-pdf.ts',
+  'modules/shared/pdf/student-card/index.ts',
+  'modules/shared/pdf/student-card/render.ts',
+  'modules/shared/pdf/student-card/text.ts',
+  'modules/gestor/secretaria/carteirinhas/secretaria-carteirinhas.pdf.ts',
   'modules/gestor/caixa/report/caixa-report.vector-pdf.ts',
   'modules/gestor/calendario/exportacao-aulas/calendarioAulasExportacao.pdf.ts',
   'modules/gestor/secretaria/contratos-aluno/contratos-aluno.pdf.ts',
@@ -25,6 +29,14 @@ const protectedVectorGenerators = [
 // Documentos oficiais novos não aceitam nem a ponte híbrida nem canvas de
 // página. QR, foto e marca-d'água são ativos isolados; o restante é nativo.
 const strictNativeDocumentFlows = [
+  'modules/shared/pdf/student-card/index.ts',
+  'modules/shared/pdf/student-card/render.ts',
+  'modules/shared/pdf/student-card/text.ts',
+  'modules/shared/pdf/student-card/assets.ts',
+  'modules/aluno/secretaria/student-card-pdf.ts',
+  'modules/aluno/secretaria/components/StudentCardDocument.tsx',
+  'modules/gestor/secretaria/carteirinhas/secretaria-carteirinhas.pdf.ts',
+  'modules/gestor/secretaria/carteirinhas/SecretariaCarteirinhasPrintLayout.tsx',
   'modules/gestor/secretaria/shared/CanonicalDocumentPreviewModal.tsx',
   'modules/gestor/calendario/exportacao-aulas/calendarioAulasExportacao.pdf.ts',
   'modules/gestor/calendario/exportacao-aulas/components/CalendarioAulasExportPanel.tsx',
@@ -42,19 +54,7 @@ const strictNativeDocumentFlows = [
 // Inventário temporário de pipelines antigos que ainda rasterizam a página.
 // Eles NÃO estão aprovados: permanecem aqui apenas para impedir regressão da
 // camada textual enquanto cada fluxo é migrado para composição nativa.
-const legacyHybridRasterPipelines = new Map([
-  [
-    'modules/gestor/secretaria/carteirinhas/secretaria-carteirinhas.pdf.ts',
-    {
-      reason: 'A página da carteirinha ainda é rasterizada; a camada textual apenas reduz o dano e não torna o pipeline conforme.',
-      requiredSignals: [
-        ['coleta de texto', /\bcollectPdfTextRuns\s*\(/m],
-        ['camada textual', /\baddSelectableTextLayer\s*\(/m],
-        ['texto vetorial jsPDF', /\bpdf\.text\s*\(/m],
-      ],
-    },
-  ],
-]);
+const legacyHybridRasterPipelines = new Map();
 
 // Novos consumidores da ponte DOM→imagem são proibidos. A lista representa
 // somente dívida já existente e deve encolher até chegar a zero.
@@ -383,3 +383,4 @@ if (failures.length > 0) {
   const legacyDebtCount = helperConsumers.length + seenLegacyHybridPipelines.size;
   console.log(`\nRESULTADO: OK — nenhum pipeline raster novo; ${legacyDebtCount} fluxo(s) legado(s) não conforme(s) permanecem inventariado(s).`);
 }
+
