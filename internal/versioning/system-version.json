@@ -1,8 +1,8 @@
 {
-  "version": "4.8.189",
+  "version": "4.8.190",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 198,
+  "revision": 199,
   "releasedAt": "2026-10-09",
-  "summary": "Carteirinha fiel ao modelo, com PDF único por formato e carregamento completo dos fundos"
+  "summary": "Login do aluno pela matrícula acadêmica, mantendo o acesso anterior e a mesma conta"
 }
