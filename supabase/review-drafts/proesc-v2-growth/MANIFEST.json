@@ -1,21 +1,21 @@
 {
-  "status": "REVIEW_BRANCH_CI_AUTHORIZED",
+  "status": "INSTALLED_OFF_CONSTRAINTS_VALIDATED",
   "upstreamRepository": "DenielsonSLima/UniversoCursosConsultoria",
   "upstreamBase": "3886e6b0e12e45001f5a7bf2858965b4d8d4307d",
-  "generatedAt": "2026-10-09T22:33:00Z",
-  "productionChanged": false,
+  "generatedAt": "2026-10-09T22:48:00Z",
+  "productionChanged": true,
   "payloadStorageEnabled": false,
   "remoteUploadImplemented": false,
   "cleanupEnabled": false,
-  "nativePostgres17Gate": "RC2_PASS_RC3_AWAITING_CI",
-  "aggregateRepositoryCheck": "RC2_PASS_RC3_AWAITING_EXACT_HEAD_CI",
+  "nativePostgres17Gate": "RC3_PASS_RECEIPT_RC4_AWAITING_CI",
+  "aggregateRepositoryCheck": "RC3_PASS_RECEIPT_RC4_AWAITING_EXACT_HEAD_CI",
   "focusedLineCheck": "PASS_ALL_UNDER_500",
   "files": [
     {
       "path": ".github/workflows/proesc-v2-payload.yml",
-      "bytes": 2274,
-      "lines": 55,
-      "sha256": "27e179ae17a1b8265eeb239f52d89f0a8816df63e7a834660f330f492fbcf3e7"
+      "bytes": 2343,
+      "lines": 56,
+      "sha256": "c88443c7b50ee7a30d622370e7760606400d4488d5c82c674ff58101080763f5"
     },
     {
       "path": ".github/workflows/quality-gates.yml",
@@ -31,15 +31,15 @@
     },
     {
       "path": "ai/operacao/registros/alteracoes/2026-10-09-proesc-v2-payload-candidato.md",
-      "bytes": 5108,
-      "lines": 87,
-      "sha256": "0ce6ff4e405674839a6c62ba7350abe517b446925cbac367e6ea20db61f10116"
+      "bytes": 5712,
+      "lines": 96,
+      "sha256": "6fb65eff01e428873d977f7fb5c0eb177e2c4316e2fd18669dc09fca401dda36"
     },
     {
       "path": "internal/versioning/CHANGELOG.md",
-      "bytes": 39354,
-      "lines": 499,
-      "sha256": "fa86c058adfe8c392e0e97bfd00952886d43924ee55dc625aff3a206bdbec576"
+      "bytes": 38680,
+      "lines": 488,
+      "sha256": "f82ef0cf91979c91e6a285d8f9dcf8003340645f140d3ba5086d756eb36c6319"
     },
     {
       "path": "internal/versioning/changelog/2026-09-27-versoes-4-8-113-a-4-8-115.md",
@@ -48,16 +48,28 @@
       "sha256": "71fd146f16a3aa46dc07a5e344f1a83ad165e0a226c97b5e6c6ada648750cff1"
     },
     {
-      "path": "internal/versioning/system-version.json",
-      "bytes": 240,
-      "lines": 8,
-      "sha256": "a6935393a2c9bc54026b2994cfed2b1846162e774699940577b4f4bed534d8ea"
+      "path": "internal/versioning/changelog/2026-10-09-proesc-v2-candidatos-rc1-a-rc3.md",
+      "bytes": 1185,
+      "lines": 20,
+      "sha256": "c0dc5f8a14b56049aceb8146486830afc5d5e7adabdb2e1cdba0673046695d02"
     },
     {
-      "path": "supabase/migrations/20261009223000_prepare_proesc_v2_payload_storage_off.sql",
+      "path": "internal/versioning/system-version.json",
+      "bytes": 226,
+      "lines": 8,
+      "sha256": "762eecf8510ff5235a17e911fc97c4c4af04c64d556919dee61a91a39388a6fd"
+    },
+    {
+      "path": "supabase/migrations/20261009224423_prepare_proesc_v2_payload_storage_off.sql",
       "bytes": 22631,
       "lines": 462,
       "sha256": "3b6cf3bb72d093027838ae5b422750c87deb22e2d7b4ebaa5912c3dcb764b84e"
+    },
+    {
+      "path": "supabase/migrations/20261009224508_validate_proesc_v2_payload_constraints_off.sql",
+      "bytes": 694,
+      "lines": 19,
+      "sha256": "c2b537c9bf85683274e51e0492fc43a37b464016edbe8f835bb89786114d15de"
     },
     {
       "path": "supabase/review-drafts/proesc-v2-growth/01_payload_storage.draft.sql",
@@ -90,16 +102,22 @@
       "sha256": "5116bc8f19681e9da525eb65c3561ac6fc384d7ffd4551d7d5529b679599fbfb"
     },
     {
+      "path": "supabase/review-drafts/proesc-v2-growth/INSTALLATION.md",
+      "bytes": 4357,
+      "lines": 78,
+      "sha256": "ca64e252dab5f976c6a9f7c62b837e1a36ceec91d3c7019686a8b3f7c5a3074f"
+    },
+    {
       "path": "supabase/review-drafts/proesc-v2-growth/PREFLIGHT.md",
-      "bytes": 5787,
-      "lines": 94,
-      "sha256": "88d461d63264b993c51dbf802db86898e4602f55d9c36c0444abf3dd416579f8"
+      "bytes": 6006,
+      "lines": 97,
+      "sha256": "ffa5e9d3199c9e1f0bdc3e6f8a0b31f4203b625086bef7d34f0eea84921b677a"
     },
     {
       "path": "supabase/review-drafts/proesc-v2-growth/README.md",
-      "bytes": 9805,
-      "lines": 150,
-      "sha256": "ba9ecdf9e400b9aa10d71805e76b315f5768c995f0412410d57710589d3cb00c"
+      "bytes": 9945,
+      "lines": 154,
+      "sha256": "353a67c95fa0055342c94797382663ed1ea2ddd34bee9e0ee6d6b0e61236a283"
     },
     {
       "path": "supabase/review-drafts/proesc-v2-growth/archive/README.md",
@@ -127,15 +145,15 @@
     },
     {
       "path": "supabase/review-drafts/proesc-v2-growth/ci/postgres17-concurrency.mjs",
-      "bytes": 7686,
+      "bytes": 7738,
       "lines": 99,
-      "sha256": "c4d66b9550efe47f12f58ad55553951b66153f41cb92a1ac45d6cbd7acef8869"
+      "sha256": "3afccc8e360c813dea13bde60cfec9d2023e2cbc2aae2b8afc047860fa2225d9"
     },
     {
       "path": "supabase/review-drafts/proesc-v2-growth/ci/postgres17.workflow.yml.disabled",
-      "bytes": 2365,
+      "bytes": 2343,
       "lines": 56,
-      "sha256": "336fdfd73e3904d779ac837b57982f657d4c0059833af3fd6b7c162231ec8971"
+      "sha256": "c88443c7b50ee7a30d622370e7760606400d4488d5c82c674ff58101080763f5"
     },
     {
       "path": "supabase/tests/fixtures/proesc-v2-growth.caixa.fixture.mjs",
@@ -217,9 +235,9 @@
     },
     {
       "path": "supabase/tests/proesc_v2_payload_migration.isolated.test.mjs",
-      "bytes": 5752,
-      "lines": 66,
-      "sha256": "e0235050ca1d16f0a332ad910d77a0e8e4eb22194d476d2486421fd39c7c06dc"
+      "bytes": 5958,
+      "lines": 69,
+      "sha256": "80b542308b05062134d9246575eb6b5a40d31c3487a3c61afe690fe54616dd8b"
     },
     {
       "path": "supabase/tests/proesc_v2_payload_portal.isolated.test.mjs",
@@ -246,6 +264,12 @@
       "sha256": "40cd24bc581ced4a51a43e1c352e606c62ea380bc75cc031f910154856f6616b"
     },
     {
+      "path": "supabase/tests/proesc_v2_payload_validation.isolated.test.mjs",
+      "bytes": 2462,
+      "lines": 37,
+      "sha256": "27e28b1136b412036fa6b7a7b0827775b400880bbedc11b49d2aeb67bd3e015f"
+    },
+    {
       "path": "supabase/tests/proesc_v2_payload_writer.isolated.test.mjs",
       "bytes": 8429,
       "lines": 103,
@@ -253,8 +277,13 @@
     }
   ],
   "remoteBranch": "review/proesc-v2-payload-20261009",
-  "candidateVersion": "4.8.196-rc.3",
+  "candidateVersion": "4.8.196-rc.4",
   "remoteCatalogPreflight": "METADATA_READ_ONLY_COMPLETE_EXTRA_CAIXA_READER_ADAPTED",
-  "atomicMigration": "supabase/migrations/20261009223000_prepare_proesc_v2_payload_storage_off.sql",
-  "migrationApplied": false
+  "atomicMigration": "supabase/migrations/20261009224423_prepare_proesc_v2_payload_storage_off.sql",
+  "migrationApplied": true,
+  "appliedMigrationVersions": [
+    "20261009224423",
+    "20261009224508"
+  ],
+  "installationReceipt": "supabase/review-drafts/proesc-v2-growth/INSTALLATION.md"
 }

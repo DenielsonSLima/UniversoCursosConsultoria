@@ -1,3 +1,6 @@
+> Atualização 22h45 UTC: instalação OFF e validação autorizadas foram concluídas.
+> Este documento conserva o diagnóstico e o plano anteriores; resultado em [INSTALLATION.md](./INSTALLATION.md).
+
 # Preflight somente leitura e candidato de instalação OFF
 
 Catálogo consultado em 09/10/2026, entre 22h17 e 22h21 UTC, exclusivamente por MCP.
@@ -55,10 +58,10 @@ pg_blocking_pids, comprova que o modo não muda antes do commit e preserva a lin
 canônica gravada. Também verifica rejeição de ON com run em andamento e ON→OFF
 após término. A chave continua global, sem canário por unidade.
 
-## Próximos gates, sem executar nesta etapa
+## Plano anterior à instalação (OFF e validação concluídos depois)
 
 1. Conferir CI do SHA RC.3 e preflight atual; PASS de revisão anterior não basta.
-2. Migration preparada: 20261009223000_prepare_proesc_v2_payload_storage_off.sql,
+2. Migration preparada: 20261009224423_prepare_proesc_v2_payload_storage_off.sql,
    com 462 linhas e transação única. Nenhuma aplicação foi executada.
    Os testes verificam igualdade com as quatro fases, rollback inclusive após
    adaptação de leitores e hashes legados preservados, sem janela intermediária.
@@ -83,7 +86,7 @@ executam testes/build e o job novo só usa banco descartável sem segredos.
 A listagem de branches Supabase estava vazia. Não foi chamada apply_migration,
 merge_branch ou qualquer operação de escrita no banco de produção.
 
-## Instalação OFF: proposta para decisão posterior
+## Proposta original de instalação OFF
 
 Aplicar uma única migration pelo MCP, usando exatamente o arquivo aprovado.
 Confirmar atomicidade/registro remoto, hashes/ACL, singleton false, novas tabelas

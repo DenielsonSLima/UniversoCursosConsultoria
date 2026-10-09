@@ -1,9 +1,13 @@
+> Estado em 09/10/2026, 22h45 UTC: estrutura instalada e constraints validadas;
+> escrita canônica OFF. Ver [recibo e versões](./INSTALLATION.md).
+
 # Proesc V2: candidato de crescimento sustentável
 
-Estado: publicação em branch de revisão e CI autorizada em 09/10/2026.
-Sem migração, ativação, backfill, upload ou remoção de dados de produção. Os quatro drafts preservam a revisão por fases. A migration atômica
-`20261009223000_prepare_proesc_v2_payload_storage_off.sql` está preparada na
-pasta canônica, mas não foi aplicada. A flag nasce desligada.
+Estado: instalação OFF e validação autorizadas concluídas em 09/10/2026.
+Os quatro drafts preservam a revisão por fases. Os arquivos canônicos aplicados
+são 20261009224423_prepare_proesc_v2_payload_storage_off.sql e
+20261009224508_validate_proesc_v2_payload_constraints_off.sql.
+A chave permanece desligada; não houve backfill, upload ou remoção.
 
 Base consultada pelo MCP GitHub: `3886e6b0e12e45001f5a7bf2858965b4d8d4307d`,
 main de DenielsonSLima/UniversoCursosConsultoria, reconferida em 09/10/2026.

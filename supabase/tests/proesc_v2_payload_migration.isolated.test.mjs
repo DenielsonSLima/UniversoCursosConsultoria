@@ -1,17 +1,20 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { createFixture } from './fixtures/proesc-v2-growth.fixture.mjs';
 import { installCaixaFixture } from './fixtures/proesc-v2-growth.caixa.fixture.mjs';
 const names=['01_payload_storage','02_payload_readers','03_payload_writer','04_payload_activation_gate'];
 const draft=(n)=>readFileSync(new URL(`../review-drafts/proesc-v2-growth/${n}.draft.sql`,import.meta.url),'utf8');
-const migration=readFileSync(new URL('../migrations/20261009223000_prepare_proesc_v2_payload_storage_off.sql',import.meta.url),'utf8');
+const migration=readFileSync(new URL('../migrations/20261009224423_prepare_proesc_v2_payload_storage_off.sql',import.meta.url),'utf8');
 const expected='-- Prepared for explicit installation approval. Atomic, OFF by default; no backfill or cleanup.\nBEGIN;\n'+
  names.map(n=>'-- Phase '+n+'\n'+draft(n).split('\n').slice(1).filter(l=>!['BEGIN;','COMMIT;'].includes(l)).join('\n').trim()).join('\n\n')+'\nCOMMIT;\n';
 assert.equal(migration,expected,'Published migration must exactly combine the reviewed phases');
 assert.ok(migration.split('\n').length<=501,'Migration stays within 500 physical lines');
 assert.equal((migration.match(/^BEGIN;$/gm)||[]).length,1);
 assert.equal((migration.match(/^COMMIT;$/gm)||[]).length,1);
-let checks=4;
+assert.equal(createHash('sha256').update(migration).digest('hex'),
+ '3b6cf3bb72d093027838ae5b422750c87deb22e2d7b4ebaa5912c3dcb764b84e','Applied SQL is immutable');
+let checks=5;
 for(const failure of ['unknown-reader','metadata-drift','writer-drift',null]) {
  const f=await createFixture(),{db}=f;
  const value=async(sql)=>(await db.query(sql)).rows[0].value;

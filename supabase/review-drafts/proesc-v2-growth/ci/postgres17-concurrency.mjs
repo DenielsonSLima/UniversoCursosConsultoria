@@ -21,11 +21,11 @@ try {
   where n.nspname not in ('pg_catalog','information_schema') and n.nspname not like 'pg_%'
   and c.relkind in ('r','p','v','m')`)),0,'Refuse to touch any pre-existing application data');
  const {id,actor,revision,personHash}=await createFixture({db:adapter,nativePgcrypto:true});
- await q(readFileSync(new URL('../../../migrations/20261009223000_prepare_proesc_v2_payload_storage_off.sql',import.meta.url),'utf8'));
+ await q(readFileSync(new URL('../../../migrations/20261009224423_prepare_proesc_v2_payload_storage_off.sql',import.meta.url),'utf8'));
  assert.equal(await value('select enabled value from internal_proesc.v2_payload_storage_control'),false);checks++;
- await q(`alter table internal_proesc.v2_invoice_observations validate constraint v2_invoice_payload_identity_fk;
-  alter table internal_proesc.v2_invoice_observations validate constraint v2_invoice_one_payload;
-  select internal_proesc.v2_set_payload_storage_enabled(true)`);
+ await q(readFileSync(new URL('../../../migrations/20261009224508_validate_proesc_v2_payload_constraints_off.sql',import.meta.url),'utf8'));
+ assert.equal(await value('select enabled value from internal_proesc.v2_payload_storage_control'),false);checks++;
+ await q('select internal_proesc.v2_set_payload_storage_enabled(true)');
  const payload={invoiceId:'456',unitId:'3145',personId:'11',sourceEnrollmentId:'22',sourceClassId:'123',personHash,
   dueDate:'2026-09-15',principalCents:27990,paidCents:0,paymentDate:null,sourceStatus:'VENCIDO',reviewReasons:[]};
  const intern=(client,row)=>client.query('select internal_proesc.v2_intern_invoice_payload($1,$2,$3::jsonb) value',
