@@ -6,6 +6,12 @@ Histórico anterior: [16/09/2026 a 25/09/2026 — versões 4.8.65 a 4.8.90](./ch
 
 Histórico arquivado: [25/09/2026 a 26/09/2026 — versões 4.8.91 a 4.8.110](./changelog/2026-09-25-a-2026-09-26-versoes-4-8-91-a-4-8-110.md).
 
+## [4.8.190] - 2026-10-09
+
+- Login do aluno reconhece a matrícula acadêmica exibida no cadastro, mesmo sem e-mail pessoal.
+- Preserva a matrícula de acesso anterior e resolve a mesma conta no backend, recusando identificadores ambíguos.
+- Testes cobrem senha sem transformação, Turnstile, acesso restrito à RPC e colisões entre matrículas.
+
 ## [4.8.189] - 2026-10-09
 
 - Carteirinha do aluno mantém no PDF o modelo cadastrado, com fontes, quebras de linha, fotos, fundos e posições da prévia.

@@ -1,20 +1,19 @@
 # Lote ativo
 
-## Lote: 2026-10-09-carteirinha-preview-pdf
+## Lote: 2026-10-09-login-matricula-academica
 
-Estado: validação da entrega 4.8.189; correção autorizada no aluno e na Secretaria.
-Aceite: PDF fiel ao modelo CR80 salvo, fundos completos e emissão estável em lote A4.
-Causas: download reconstruía texto; imagens falhas eram ignoradas ou aguardadas sem limite.
-Escopo: carteirinhas, compositor nativo e prontidão de recursos; sem mudança de banco.
-Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-09-carteirinha-preview-pdf.md`.
-PDF: mesmo Blob por formato em prévia, download e impressão; recursos originais isolados.
-Validade: fornecida pela emissão no backend; frontend somente apresenta o valor recebido.
-Validação: modelo cadastrado com identidade sintética, texto extraído e PDF renderizado.
-Limitação: ensaios locais; smoke com sessão autenticada real permanece pendente.
-Publicação: revisão dos três agentes, CI e Preview antes de produção.
+Estado: validação da entrega 4.8.190; correção de login autorizada.
+Aceite: matrícula acadêmica do cadastro acessa a mesma conta, inclusive sem e-mail pessoal.
+Causa: o resolvedor consultava apenas a matrícula de acesso separada.
+Escopo: resolução no backend; alias antigo preservado e ambiguidades recusadas.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-09-login-matricula-academica.md`.
+Banco: migration 20261009112324 aplicada; RPC somente service_role e search_path vazio.
+Validação: 17 testes focados e autenticação nativa real pelo identificador acadêmico.
+Credencial: ajuste individual autorizado, sem dados pessoais no repositório.
+Limitação: navegador Safari autenticado indisponível; verificação real ocorreu no backend.
+Publicação: revisão de três agentes, CI e Preview antes do merge autorizado.
 
 ## Entregas anteriores preservadas
 
-4.8.188: identidade individual e PDF EAD; PR #281.
-4.8.187: modelo salvo e tabela EAD; PR #280. 4.8.186: grade EAD; PR #279.
-4.8.185: emissão automática EAD; PR #278. 4.8.184: Banese e desconto; PR #277.
+4.8.189: carteirinha e fundos; PR #282. 4.8.188: identidade e PDF EAD; PR #281.
+4.8.187–184: modelo e grade EAD, emissão automática, Banese e desconto.

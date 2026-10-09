@@ -1,0 +1,51 @@
+name: Login por matrícula do aluno
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/functions/portal-auth/**'
+      - 'supabase/functions/_shared/http.ts'
+      - 'supabase/functions/portal-user-management/redirects.ts'
+      - 'supabase/functions/portal-user-management/types.ts'
+      - 'supabase/migrations/**'
+      - 'supabase/tests/portal_academic_registration_login.isolated.test.mjs'
+      - 'supabase/tests/fixtures/portal-academic-registration-formatter.sql'
+      - 'lib/academicUtils.ts'
+      - 'modules/gestor/configuracoes/academicos/**'
+      - '.github/workflows/student-registration-login.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/portal-auth/**'
+      - 'supabase/functions/_shared/http.ts'
+      - 'supabase/functions/portal-user-management/redirects.ts'
+      - 'supabase/functions/portal-user-management/types.ts'
+      - 'supabase/migrations/**'
+      - 'supabase/tests/portal_academic_registration_login.isolated.test.mjs'
+      - 'supabase/tests/fixtures/portal-academic-registration-formatter.sql'
+      - 'lib/academicUtils.ts'
+      - 'modules/gestor/configuracoes/academicos/**'
+      - '.github/workflows/student-registration-login.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  registration-login-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Preparar dependências isoladas
+        run: |
+          npm install --prefix "$RUNNER_TEMP/student-registration-login" --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.3.14 esbuild@0.25.12
+          ln -s "$RUNNER_TEMP/student-registration-login/node_modules" node_modules
+      - name: Validar resolução SQL e autenticação sem serviços externos
+        env:
+          PGLITE_MODULE_PATH: ${{ runner.temp }}/student-registration-login/node_modules/@electric-sql/pglite/dist/index.js
+        run: |
+          node supabase/tests/portal_academic_registration_login.isolated.test.mjs
+          node supabase/functions/portal-auth/registration-login.test.mjs
