@@ -1,8 +1,9 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, Download, Loader2, Printer } from 'lucide-react';
+import { ArrowLeft, Download, Loader2, Printer, RefreshCw, AlertTriangle } from 'lucide-react';
 import CarteirinhaPreview from '../../cadastros/modelos-documentos/carteirinha/components/CarteirinhaPreview';
 import type { Aluno } from './secretaria-carteirinhas.types';
+import { useCarteirinhasPdf } from './useCarteirinhasPdf';
 
 export type CarteirinhaLayoutType = 'dobra' | 'espelhado';
 export type CarteirinhaPrintAluno = Aluno & {
@@ -12,12 +13,8 @@ export type CarteirinhaPrintAluno = Aluno & {
 
 interface SecretariaCarteirinhasPrintLayoutProps {
   alunos: CarteirinhaPrintAluno[];
-  isDownloading: boolean;
   layoutType: CarteirinhaLayoutType;
   onBack: () => void;
-  onDownload: () => void;
-  onPrint: () => void;
-  printContentRef: React.RefObject<HTMLDivElement | null>;
   startNumber: number;
   templateConfig: any;
 }
@@ -104,7 +101,7 @@ const DobraPages = ({
               <div className="relative flex overflow-hidden rounded-[2.5mm] border border-slate-300 shadow-sm">
                 <div className="relative h-[54mm] w-[85.6mm] border-r border-dashed border-slate-455">
                   <CarteirinhaPreview formData={templateConfig} page="frente" zoomLevel={100} aluno={aluno} showValidationQrCode={aluno.validationPublic === true} />
-                  <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-20 w-px border-r border-dashed border-slate-400" />
+                  <div data-card-fold-guide="true" className="pointer-events-none absolute bottom-0 right-0 top-0 z-20 w-px border-r border-dashed border-slate-400" />
                 </div>
                 <div className="relative h-[54mm] w-[85.6mm]">
                   <CarteirinhaPreview formData={templateConfig} page="verso" zoomLevel={100} aluno={aluno} showValidationQrCode={aluno.validationPublic === true} />
@@ -132,110 +129,72 @@ const DobraPages = ({
   </>
 );
 
-const PRINT_STYLES = `
-  @media print {
-    body * { visibility: hidden; }
-    #print-layout, #print-layout * {
-      visibility: visible;
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-    }
-    #print-layout {
-      position: absolute; left: 0; top: 0; width: 210mm !important;
-      height: auto !important; background: white !important; margin: 0 !important;
-      padding: 0 !important; overflow: visible !important; box-shadow: none !important;
-    }
-    .print-page {
-      width: 210mm !important; height: 297mm !important; page-break-after: always !important;
-      page-break-inside: avoid !important; margin: 0 !important; padding: 5mm !important;
-      box-shadow: none !important; border: none !important; background: white !important;
-      box-sizing: border-box !important; overflow: hidden !important;
-    }
-    .print-card-grid {
-      display: grid !important; grid-template-columns: repeat(2, 85.6mm) !important;
-      grid-template-rows: repeat(5, 54mm) !important; column-gap: 3mm !important;
-      row-gap: 1.5mm !important; justify-content: center !important; align-content: start !important;
-    }
-    .print-fold-grid {
-      display: grid !important; grid-template-rows: repeat(5, 54mm) !important;
-      row-gap: 1.5mm !important; align-content: start !important;
-    }
-    .print-page img {
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-    }
-  }
-  @page { size: A4 portrait; margin: 0; }
-`;
-
 const SecretariaCarteirinhasPrintLayout: React.FC<SecretariaCarteirinhasPrintLayoutProps> = ({
-  alunos,
-  isDownloading,
-  layoutType,
-  onBack,
-  onDownload,
-  onPrint,
-  printContentRef,
-  startNumber,
-  templateConfig,
+  alunos, layoutType, onBack, startNumber, templateConfig,
 }) => {
+  const sourceKey = JSON.stringify({ alunos, layoutType, startNumber, templateConfig });
+  const pdf = useCarteirinhasPdf(sourceKey, layoutType);
   React.useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
+    return () => { document.body.style.overflow = previousOverflow; };
   }, []);
 
-  const layout = (
-  <div className="fixed inset-0 z-[2147483000] flex h-screen h-[100dvh] w-screen flex-col overflow-y-auto bg-slate-950 custom-scrollbar" id="print-layout">
-    <div className="sticky top-0 z-[10000] flex items-center justify-between bg-slate-800 p-4 text-white shadow-md print:hidden">
-      <div className="flex items-center gap-4">
-        <button onClick={onBack} className="flex items-center gap-2 rounded-xl bg-slate-700/50 p-2 text-xs font-bold uppercase tracking-wider text-slate-300 transition-colors hover:bg-slate-700 hover:text-white">
-          <ArrowLeft size={16} /> Voltar
-        </button>
-        <div>
-          <h3 className="text-sm font-black uppercase tracking-widest text-white">Visualizador de Impressão A4</h3>
-          <p className="mt-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-            Layout: {layoutType === 'dobra' ? 'Dobra Lateral (5 por Folha)' : 'Frente e Verso Espelhado (10 por Folha)'}
-          </p>
-        </div>
-      </div>
-      <div className="flex items-center gap-3">
-        <button onClick={onDownload} disabled={isDownloading} className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-5 py-3 text-xs font-bold uppercase tracking-widest text-white transition-all hover:bg-white/20 disabled:opacity-60">
-          {isDownloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-          {isDownloading ? 'Gerando...' : 'Fazer Download'}
-        </button>
-        <button onClick={onPrint} className="flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-xs font-bold uppercase tracking-widest text-white shadow-lg shadow-blue-950/30 transition-all hover:bg-blue-700">
-          <Printer size={16} /> Confirmar Impressão
-        </button>
-      </div>
-    </div>
-
-    <div className="flex flex-1 flex-col items-center overflow-y-auto bg-slate-900 p-8">
-      <div className="mb-8 flex w-full max-w-[210mm] animate-fadeIn items-center justify-between gap-4 rounded-2xl border border-blue-800 bg-blue-950/70 p-4 text-white print:hidden">
-        <div className="flex items-center gap-3">
-          <div className="rounded-lg bg-blue-900 p-2 text-blue-300"><Printer size={20} /></div>
+  return createPortal(
+    <div className="fixed inset-0 z-[2147483000] flex h-screen h-[100dvh] w-screen flex-col overflow-hidden bg-slate-950" id="print-layout">
+      <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-800 p-4 text-white shadow-md">
+        <div className="flex items-center gap-4">
+          <button type="button" onClick={onBack} className="flex items-center gap-2 rounded-xl bg-slate-700/50 p-2 text-xs font-bold uppercase tracking-wider text-slate-300 hover:bg-slate-700 hover:text-white">
+            <ArrowLeft size={16} /> Voltar
+          </button>
           <div>
-            <h4 className="text-xs font-black uppercase tracking-wider">Dica de Configuração de Impressão</h4>
-            <p className="mt-1 text-[10px] font-medium leading-normal text-blue-200">
-              A folha já está configurada em A4 sem margens. O PNG do modelo agora é impresso como imagem real, sem depender da opção “Imprimir fundos” do navegador.
+            <h3 className="text-sm font-black uppercase tracking-widest">Visualizador de Impressão A4</h3>
+            <p className="mt-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              {layoutType === 'dobra' ? 'Dobra Lateral (5 por Folha)' : 'Frente e Verso Espelhado (10 por Folha)'}
             </p>
           </div>
         </div>
+        <div className="flex items-center gap-3">
+          <button type="button" onClick={pdf.download} disabled={!pdf.ready} className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-5 py-3 text-xs font-bold uppercase tracking-widest hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50">
+            <Download size={16} /> Baixar PDF
+          </button>
+          <button type="button" onClick={() => { void pdf.print(); }} disabled={!pdf.ready || pdf.printing} className="flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-xs font-bold uppercase tracking-widest shadow-lg hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50">
+            {pdf.printing ? <Loader2 size={16} className="animate-spin" /> : <Printer size={16} />}
+            {pdf.printing ? 'Abrindo impressão...' : 'Confirmar Impressão'}
+          </button>
+        </div>
       </div>
-
-      <div ref={printContentRef} className="print-content flex flex-col items-center">
+      {pdf.actionError && <p role="alert" className="bg-rose-50 px-6 py-3 text-sm text-rose-800">{pdf.actionError}</p>}
+      <div className="relative min-h-0 flex-1">
+        {pdf.error ? (
+          <div role="alert" className="flex h-full min-h-[320px] flex-col items-center justify-center gap-4 p-8 text-center text-white">
+            <AlertTriangle size={32} className="text-amber-400" />
+            <h4 className="font-bold">Não foi possível preparar as carteirinhas</h4>
+            <p className="max-w-xl text-sm text-slate-300">{pdf.error}</p>
+            <button type="button" onClick={pdf.retry} className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 font-bold hover:bg-blue-700">
+              <RefreshCw size={16} /> Tentar novamente
+            </button>
+          </div>
+        ) : pdf.url ? (
+          <iframe title="PDF oficial das carteirinhas" src={pdf.url} className="h-full w-full border-0" />
+        ) : (
+          <div role="status" className="flex h-full min-h-[320px] flex-col items-center justify-center gap-4 p-8 text-center text-white">
+            <Loader2 size={32} className="animate-spin text-blue-400" />
+            <p className="font-bold">Preparando as carteirinhas</p>
+            <p className="text-sm text-slate-300">Carregando o modelo, as fotografias e os códigos de validação…</p>
+          </div>
+        )}
+      </div>
+      <div key={pdf.attempt} ref={pdf.sourceRef} aria-hidden="true" className="carteirinha-pdf-source" style={{
+        position: 'fixed', left: '-20000px', top: 0, width: '210mm', pointerEvents: 'none',
+      }}>
         {layoutType === 'dobra'
           ? <DobraPages alunos={alunos} startNumber={startNumber} templateConfig={templateConfig} />
           : <EspelhadoPages alunos={alunos} startNumber={startNumber} templateConfig={templateConfig} />}
       </div>
-    </div>
-    <style dangerouslySetInnerHTML={{ __html: PRINT_STYLES }} />
-  </div>
+      <style>{`.carteirinha-pdf-source .print-page { margin: 0; border: 0; box-shadow: none; }`}</style>
+    </div>, document.body,
   );
-
-  return createPortal(layout, document.body);
 };
 
 export default SecretariaCarteirinhasPrintLayout;

@@ -6,6 +6,13 @@ Histórico anterior: [16/09/2026 a 25/09/2026 — versões 4.8.65 a 4.8.90](./ch
 
 Histórico arquivado: [25/09/2026 a 26/09/2026 — versões 4.8.91 a 4.8.110](./changelog/2026-09-25-a-2026-09-26-versoes-4-8-91-a-4-8-110.md).
 
+## [4.8.189] - 2026-10-09
+
+- Carteirinha do aluno mantém no PDF o modelo cadastrado, com fontes, quebras de linha, fotos, fundos e posições da prévia.
+- Prévia, download e impressão reutilizam o mesmo arquivo por formato; Secretaria preserva os lotes A4 em dobra e espelhado.
+- Aguarda fundos, assinatura e QR Code, apresenta falhas com nova tentativa e elimina consultas repetidas de assinatura no lote.
+- A validade exibida ao aluno vem da emissão no backend, sem cálculo de prazo no frontend.
+
 ## [4.8.188] - 2026-10-08
 
 - Certificados EAD identificam CPF/RG ou CIN conforme o cadastro individual, formatam CPF/CIN e preservam a identidade congelada da emissão.

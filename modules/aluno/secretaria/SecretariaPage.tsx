@@ -23,12 +23,10 @@ import { buildDocumentVariableReplacer, buildFallbackValidationCode, buildValida
 import { resolveStudentIdentityDocument } from '../../shared/utils/studentIdentityDocument';
 import AlunoIdentityDocuments, { AlunoIdentityTab } from './components/AlunoIdentityDocuments';
 import AlunoSecretariaServicesPanel from './components/AlunoSecretariaServicesPanel';
-import StudentCardPrintDialog from './components/StudentCardPrintDialog';
 import { alunoSecretariaKeys, alunoSecretariaService } from './secretaria-aluno.service';
 import { useAlunoSecretariaData } from './useAlunoSecretariaData';
 import { AlunoSecretariaSolicitacaoTipo } from './secretaria-aluno.types';
 import { useIRPFFiscalData } from './useIRPFFiscalData';
-import { createStudentCardPrintPdfBlob, downloadStudentCardPdf } from './student-card-pdf';
 import { waitForQrCodeAssets } from '../../shared/qrcode/qr-code-assets';
 import AlunoMobileSecretaria from './components/mobile/AlunoMobileSecretaria';
 import useAlunoMobileLayout from '../hooks/useAlunoMobileLayout';
@@ -62,11 +60,6 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId, contextId }) =
   const [selectedIrpfYear, setSelectedIrpfYear] = useState(getDefaultIrpfCalendarYear);
   const [availabilityNow, setAvailabilityNow] = useState(() => new Date());
   const [toast, setToast] = useState<Toast | null>(null);
-  const [downloadingCard, setDownloadingCard] = useState(false);
-  const [cardPrintOpen, setCardPrintOpen] = useState(false);
-  const [cardPrintPreparing, setCardPrintPreparing] = useState(false);
-  const [cardPrintBlob, setCardPrintBlob] = useState<Blob | null>(null);
-  const [cardPrintError, setCardPrintError] = useState<string | null>(null);
   const toastTimerRef = useRef<number | null>(null);
   const showToast = (message: string, type: Toast['type'] = 'success') => {
     setToast({ message, type });
@@ -229,37 +222,9 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId, contextId }) =
     onError: (error: any) => showToast(error?.message || 'Erro ao registrar solicitação.', 'error'),
   });
 
-  const prepareStudentCardPrint = async () => {
-    if (!cardValidation.data?.code) {
-      showToast('Aguarde o registro do código da carteirinha.', 'warning');
-      return;
-    }
-
-    setCardPrintOpen(true);
-    setCardPrintPreparing(true);
-    setCardPrintBlob(null);
-    setCardPrintError(null);
-    try {
-      setCardPrintBlob(await createStudentCardPrintPdfBlob('print-area'));
-    } catch (error) {
-      console.error('[SecretariaAluno] Falha ao preparar impressão da carteirinha:', error);
-      setCardPrintError(
-        error instanceof Error
-          ? error.message
-          : 'Não foi possível preparar a folha A4 da carteirinha.',
-      );
-    } finally {
-      setCardPrintPreparing(false);
-    }
-  };
-
   const printRegistered = async (code: string | undefined, label: string) => {
     if (!code) {
       showToast(`Aguarde o registro do código da ${label}.`, 'warning');
-      return;
-    }
-    if (label === 'carteirinha') {
-      await prepareStudentCardPrint();
       return;
     }
     const printAreaId = label === 'carteirinha'
@@ -282,21 +247,6 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId, contextId }) =
         'error',
       );
     }
-  };
-  const onDownloadCard = async () => {
-    if (!cardValidation.data?.code) return showToast('Aguarde o registro do código da carteirinha.', 'warning');
-    setDownloadingCard(true);
-    try { await downloadStudentCardPdf('print-area', aluno?.nome); showToast('PDF da carteirinha gerado com frente e verso.'); }
-    catch (error) {
-      console.error('[SecretariaAluno] Falha ao gerar PDF da carteirinha:', error);
-      showToast(
-        error instanceof Error
-          ? error.message
-          : 'Não foi possível gerar o PDF da carteirinha agora.',
-        'error',
-      );
-    }
-    finally { setDownloadingCard(false); }
   };
   const onOpenIrpf = () => {
     if (!eligibility.canEmitIrpf) return showToast('O IRPF está disponível apenas para vínculo técnico.', 'warning');
@@ -342,9 +292,8 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId, contextId }) =
       electionAlunoData={electionAlunoData}
       studentCardCode={cardValidation.data?.code}
       internshipBadgeCode={badgeValidation.data?.code}
-      downloadingStudentCard={downloadingCard}
+      studentCardExpiresAt={cardValidation.data?.expiresAt}
       onTabChange={setTab}
-      onDownloadStudentCard={() => void onDownloadCard()}
       onRetryStudentCardTemplate={() => void studentCardTemplateQuery.refetch()}
       onPrintRegistered={printRegistered}
     />
@@ -425,14 +374,6 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId, contextId }) =
           ) : null}
         </>
       )}
-      <StudentCardPrintDialog
-        error={cardPrintError}
-        onClose={() => setCardPrintOpen(false)}
-        onRetry={() => void prepareStudentCardPrint()}
-        open={cardPrintOpen}
-        pdfBlob={cardPrintBlob}
-        preparing={cardPrintPreparing}
-      />
       <AcademicResultsModal
         open={bulletinOpen}
         onClose={() => setBulletinOpen(false)}
@@ -462,3 +403,4 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId, contextId }) =
 };
 
 export default SecretariaPage;
+

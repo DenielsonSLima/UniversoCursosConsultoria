@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { assinaturasService } from '../../../../configuracoes/assinaturas/assinaturas.service';
+import { loadCarteirinhaSignatures } from '../carteirinha-signatures';
 import { resolveStudentIdentityDocument } from '../../../../../shared/utils/studentIdentityDocument';
 import { CarteirinhaAbsoluteLayout } from './CarteirinhaAbsoluteLayout';
 import { CarteirinhaStandardLayout } from './CarteirinhaStandardLayout';
@@ -72,51 +72,48 @@ const CarteirinhaPreview: React.FC<CarteirinhaPreviewProps> = ({
     && formData.assinaturaOrigem !== 'manual'
     && formData.assinaturaOrigem !== 'none';
 
-  // Busca assinatura central do Supabase de forma assíncrona (multi-browser safe)
-  const [assinaturaUrl, setAssinaturaUrl] = useState<string>(
-    formData.assinaturaOrigem === 'manual' || !formData.assinaturaOrigem || formData.assinaturaOrigem === 'none'
-      ? (formData.assinaturaDiretorPngUrl || '')
-      : (assinaturasService.getSignaturesSync()[formData.assinaturaOrigem as keyof ReturnType<typeof assinaturasService.getSignaturesSync>] || '')
-  );
-  const [signatureState, setSignatureState] = useState<'loading' | 'ready' | 'error'>(() => (
-    requiresRemoteSignature ? 'loading' : 'ready'
-  ));
+  const signatureKey = JSON.stringify([
+    page, formData.showAssinaturaDiretor, formData.assinaturaOrigem, formData.assinaturaDiretorPngUrl,
+  ]);
+  const [signature, setSignature] = useState<{
+    key: string; url: string; status: 'loading' | 'ready' | 'error';
+  }>({ key: '', url: '', status: 'loading' });
+  const activeSignature = signature.key === signatureKey
+    ? signature
+    : {
+      url: !requiresRemoteSignature && page === 'verso' && formData.showAssinaturaDiretor !== false
+        ? formData.assinaturaDiretorPngUrl || '' : '',
+      status: requiresRemoteSignature ? 'loading' : 'ready',
+    };
+  const assinaturaUrl = activeSignature.url;
 
   useEffect(() => {
     let active = true;
-    if (page !== 'verso' || formData.showAssinaturaDiretor === false) {
-      setSignatureState('ready');
-    } else if (formData.assinaturaOrigem === 'manual') {
-      setAssinaturaUrl(formData.assinaturaDiretorPngUrl || '');
-      setSignatureState('ready');
-    } else if (formData.assinaturaOrigem && formData.assinaturaOrigem !== 'none') {
-      setSignatureState('loading');
-      // Busca do Supabase — fonte primária — garante sincronização entre navegadores
-      assinaturasService.getSignatures().then((sigs) => {
-        if (!active) return;
-        const url = sigs[formData.assinaturaOrigem as keyof typeof sigs] || '';
-        setAssinaturaUrl(url);
-        setSignatureState(url ? 'ready' : 'error');
-      }).catch(() => {
-        if (!active) return;
-        // fallback: tenta sync (pode ser vazio no primeiro acesso)
-        const syncSigs = assinaturasService.getSignaturesSync();
-        const url = syncSigs[formData.assinaturaOrigem as keyof typeof syncSigs] || '';
-        setAssinaturaUrl(url);
-        setSignatureState(url ? 'ready' : 'error');
+    if (!requiresRemoteSignature) {
+      setSignature({
+        key: signatureKey,
+        url: page === 'verso' && formData.showAssinaturaDiretor !== false
+          ? formData.assinaturaDiretorPngUrl || '' : '',
+        status: 'ready',
       });
     } else {
-      setAssinaturaUrl(formData.assinaturaDiretorPngUrl || '');
-      setSignatureState('ready');
+      setSignature({ key: signatureKey, url: '', status: 'loading' });
+      void loadCarteirinhaSignatures().then((signatures) => {
+        if (!active) return;
+        const url = signatures[formData.assinaturaOrigem as keyof typeof signatures] || '';
+        setSignature({ key: signatureKey, url, status: url ? 'ready' : 'error' });
+      }).catch(() => {
+        if (active) setSignature({ key: signatureKey, url: '', status: 'error' });
+      });
     }
     return () => { active = false; };
-  }, [formData.assinaturaOrigem, formData.assinaturaDiretorPngUrl, formData.showAssinaturaDiretor, page]);
+  }, [signatureKey, requiresRemoteSignature, formData.assinaturaOrigem,
+    formData.assinaturaDiretorPngUrl, formData.showAssinaturaDiretor, page]);
 
   const renderReadinessProps = {
-    'data-render-ready': signatureState === 'loading' ? 'false' : 'true',
-    'data-render-error': signatureState === 'error'
-      ? 'A assinatura institucional não pôde ser carregada.'
-      : undefined,
+    'data-render-ready': activeSignature.status === 'ready' ? 'true' : 'false',
+    'data-render-error': activeSignature.status === 'error'
+      ? 'A assinatura institucional não pôde ser carregada.' : undefined,
   };
 
   const studentData = aluno || {
@@ -255,3 +252,4 @@ const CarteirinhaPreview: React.FC<CarteirinhaPreviewProps> = ({
 };
 
 export default CarteirinhaPreview;
+

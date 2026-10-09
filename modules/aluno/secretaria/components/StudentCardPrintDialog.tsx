@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { FileText, Loader2, Printer, Scissors, X } from 'lucide-react';
+import { Download, FileText, Loader2, Printer, Scissors, X } from 'lucide-react';
+import { downloadPdfBlob } from '../../../shared/pdf/download-pdf-blob';
 
 interface StudentCardPrintDialogProps {
   error: string | null;
@@ -9,6 +10,7 @@ interface StudentCardPrintDialogProps {
   open: boolean;
   pdfBlob: Blob | null;
   preparing: boolean;
+  fileName?: string;
 }
 
 const StudentCardPrintDialog: React.FC<StudentCardPrintDialogProps> = ({
@@ -18,6 +20,7 @@ const StudentCardPrintDialog: React.FC<StudentCardPrintDialogProps> = ({
   open,
   pdfBlob,
   preparing,
+  fileName = 'carteirinha-estudantil-a4.pdf',
 }) => {
   const iframeRef = useRef<React.ElementRef<'iframe'>>(null);
   const dialogRef = useRef<React.ElementRef<'section'>>(null);
@@ -155,6 +158,7 @@ const StudentCardPrintDialog: React.FC<StudentCardPrintDialogProps> = ({
           </p>
           <div className="grid shrink-0 grid-cols-[auto_1fr] gap-2 md:flex">
             <button type="button" onClick={onClose} className="min-h-12 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 md:min-h-0">Cancelar</button>
+            <button type="button" disabled={!pdfBlob || preparing || Boolean(error)} onClick={() => pdfBlob && downloadPdfBlob(pdfBlob, fileName)} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-600 disabled:opacity-50 md:min-h-0"><Download size={14} /> Baixar A4</button>
             <button type="button" onClick={handlePrint} disabled={preparing || Boolean(error) || !previewReady} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-[10px] font-black uppercase tracking-widest text-white shadow-lg shadow-blue-900/20 hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none md:min-h-0">
               <Printer size={14} /> Abrir impressão
             </button>
@@ -168,3 +172,4 @@ const StudentCardPrintDialog: React.FC<StudentCardPrintDialogProps> = ({
 };
 
 export default StudentCardPrintDialog;
+

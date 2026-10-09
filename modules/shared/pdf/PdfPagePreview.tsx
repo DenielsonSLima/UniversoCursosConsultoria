@@ -29,10 +29,11 @@ interface PdfPagePreviewProps {
   pageNumber: number;
   title: string;
   overlay?: React.ReactNode;
+  aspectRatio?: string;
 }
 
 /** Renderiza uma página do próprio Blob PDF; não replica o documento em HTML. */
-const PdfPagePreview: React.FC<PdfPagePreviewProps> = ({ blob, pageNumber, title, overlay }) => {
+const PdfPagePreview: React.FC<PdfPagePreviewProps> = ({ blob, pageNumber, title, overlay, aspectRatio = '210 / 297' }) => {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<React.ElementRef<'canvas'>>(null);
   const loadingTaskRef = useRef<PDFDocumentLoadingTask | null>(null);
@@ -135,7 +136,8 @@ const PdfPagePreview: React.FC<PdfPagePreviewProps> = ({ blob, pageNumber, title
   return (
     <div
       ref={wrapperRef}
-      className="relative mx-auto aspect-[210/297] w-full max-w-[760px] overflow-hidden bg-white shadow-2xl"
+      className="relative mx-auto w-full max-w-[760px] overflow-hidden bg-white shadow-2xl"
+      style={{ aspectRatio }}
       aria-label={`Prévia real de ${title}, página ${pageNumber}`}
       aria-busy={rendering}
     >
@@ -162,3 +164,4 @@ const PdfPagePreview: React.FC<PdfPagePreviewProps> = ({ blob, pageNumber, title
 };
 
 export default PdfPagePreview;
+
