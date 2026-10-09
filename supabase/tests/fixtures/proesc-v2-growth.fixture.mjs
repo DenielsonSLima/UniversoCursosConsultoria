@@ -130,5 +130,19 @@ export async function createFixture(options = {}) {
   await db.exec(`REVOKE ALL ON FUNCTION internal_proesc.v2_calculated_composition_candidate(uuid,uuid),
     internal_proesc.v2_net_discount_candidate(uuid,uuid),internal_proesc.confirm_portal_payment(uuid,uuid,jsonb)
     FROM PUBLIC,anon,authenticated,service_role;`);
+  // Catalog preflight 2026-10-09: private relations are postgres-owned, RLS enabled,
+  // no user policies and no direct client grants. No production rows are copied.
+  await db.exec(`
+    ALTER TABLE internal_proesc.financial_snapshots ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE internal_proesc.portal_payment_confirmations ENABLE ROW LEVEL SECURITY;
+    REVOKE ALL ON internal_proesc.v2_invoice_observations,
+      internal_proesc.financial_snapshots,internal_proesc.portal_payment_confirmations
+      FROM PUBLIC,anon,authenticated,service_role;
+    CREATE INDEX IF NOT EXISTS proesc_v2_invoice_staged_task_id
+      ON internal_proesc.v2_invoice_observations(task_id,id) WHERE result='STAGED';
+    CREATE INDEX IF NOT EXISTS proesc_v2_invoice_source_latest
+      ON internal_proesc.v2_invoice_observations(unit_id,invoice_id,observed_at DESC,recorded_at DESC,id DESC);
+  `);
+  await db.exec(readFileSync(new URL('./proesc-v2-growth/fixture_snapshot_triggers.sql', import.meta.url), 'utf8'));
   return { db, id, actor, enrollment, classId, person, revision, runId, personHash };
 }

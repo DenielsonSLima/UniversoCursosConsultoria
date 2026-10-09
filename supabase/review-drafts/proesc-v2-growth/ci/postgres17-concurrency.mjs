@@ -61,6 +61,7 @@ try {
  // A complete people-only FULL scope exists even with no linked obligations in this fixture.
  await rpc(main,'commit',{...lease(task),page:1,lastPage:1,total:0,observedAt:new Date().toISOString(),records:[]});
  await rpc(main,'start',{runId:id(6001),mode:'RECENT'});
+ await assert.rejects(value('select internal_proesc.v2_set_payload_storage_enabled(true) value'),/current run/);checks++;
  task=(await rpc(main,'claim')).rows[0].value;
  const month=task.month,year=task.year;
  const record={...payload,invoiceId:'458',dueDate:`${year}-${String(month).padStart(2,'0')}-15`};
@@ -71,7 +72,25 @@ try {
  assert.equal((await secondCommit).rows[0].value.replayed,true);await b.query('COMMIT');checks++;
  assert.equal(Number(await value("select count(*) value from internal_proesc.v2_invoice_observations where invoice_id='458'")),1);checks++;
  const walBytes=await value('select pg_wal_lsn_diff(pg_current_wal_insert_lsn(),$1)::text value',[walBefore]);
+ // A real second-page commit owns the runtime lock while emergency OFF waits.
+ const nextTask=(await rpc(main,'claim')).rows[0].value;
+ assert.ok(nextTask.taskId,'RECENT fixture retains its second month');
+ const nextRecord={...payload,invoiceId:'459',dueDate:`${nextTask.year}-${String(nextTask.month).padStart(2,'0')}-15`};
+ await a.query('BEGIN');await rpc(a,'commit',{...page(nextTask),records:[nextRecord]});
+ await b.query('BEGIN');const toggle=b.query('select internal_proesc.v2_set_payload_storage_enabled(false) value');
+ await waitBlocked(toggle);
+ assert.equal(await value('select enabled value from internal_proesc.v2_payload_storage_control'),true);checks++;
+ await a.query('COMMIT');assert.equal((await toggle).rows[0].value.enabled,false);await b.query('COMMIT');checks++;
+ assert.equal(Number(await value("select count(*) value from internal_proesc.v2_invoice_observations where invoice_id='459' and normalized_payload_id is not null")),1);checks++;
+ // Finish both collected tasks through the real runtime before allowing ON again.
+ for(let count=0;count<2;count++) {
+  const applyTask=(await rpc(main,'claim')).rows[0].value;
+  assert.equal(applyTask.resource,'apply');await rpc(main,'apply',lease(applyTask));
+ }
+ assert.equal((await rpc(main,'status',{runId:id(6001)})).rows[0].value.run.status,'COMPLETE');checks++;
+ assert.equal((await value('select internal_proesc.v2_set_payload_storage_enabled(true) value')).enabled,true);checks++;
  assert.equal((await value('select internal_proesc.v2_set_payload_storage_enabled(false) value')).enabled,false);checks++;
+
  console.log(JSON.stringify({result:'PASS',checks,postgres:actualVersion,
   walBytesForIsolatedReplayScenario:walBytes,walScope:'Includes all writes in this isolated transaction window; not a savings estimate'}));
 } finally {

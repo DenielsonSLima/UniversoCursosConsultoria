@@ -26,6 +26,7 @@ BEGIN
         OR p.prorettype='internal_proesc.v2_invoice_observations'::regtype::oid)
       AND p.oid NOT IN (SELECT to_regprocedure(value)::oid FROM jsonb_array_elements_text(
         $allowed$[
+  "public.get_caixa_review_pending_page_secure(uuid,date,text,integer,integer)",
   "internal_proesc.v2_run_status(uuid)",
   "public.proesc_v2_runtime_service(text,uuid,jsonb)",
   "internal_proesc.v2_monitor_state(uuid)",
@@ -44,6 +45,10 @@ BEGIN
     RAISE EXCEPTION 'Unreviewed V2 observation function: expand reader inventory';
   END IF;
   FOR v_item IN SELECT value FROM jsonb_array_elements($metadata$[
+  {
+    "signature": "public.get_caixa_review_pending_page_secure(uuid,date,text,integer,integer)",
+    "hash": "2e99bb1426b9f2d3a2a2683c1156de74"
+  },
   {
     "signature": "internal_proesc.v2_run_status(uuid)",
     "hash": "041cd992b61ebf2f9131cc4785116be0"

@@ -8,6 +8,7 @@ Base consultada pelo MCP GitHub: `3886e6b0e12e45001f5a7bf2858965b4d8d4307d`,
 main de DenielsonSLima/UniversoCursosConsultoria, reconferida em 09/10/2026.
 O checkout de trabalho é um snapshot parcial do domínio, em branch local
 `prepare/proesc-v2-growth`; seus commits locais não têm ancestralidade remota.
+Ver `PREFLIGHT.md` para os achados do catálogo e a revisão RC.2.
 A branch remota `review/proesc-v2-payload-20261009` parte do commit remoto
 indicado, preservando o restante do repositório. O manifesto explícito do lote
 lista código, testes, CI e registro da versão candidata. O lote ativo paralelo,
@@ -84,7 +85,7 @@ Resultados da primeira rodada representativa:
 - Uma amostra fria: escrita aproximadamente 882 → 973 ms. O lookup/hash tem
   custo; a amostra não comprova ganho de latência e não serve como SLA.
 
-O workflow `.github/workflows/proesc-v2-payload.yml` executa as sete suítes,
+O workflow `.github/workflows/proesc-v2-payload.yml` executa as nove suítes,
 os 16 testes de arquivo e o ensaio PostgreSQL 17 nativo, com pgcrypto real.
 Exige banco dedicado vazio em loopback; consulta pg_blocking_pids para provar
 contenção entre backends e cobre commit, rollback e replay. A janela WAL é

@@ -1,6 +1,6 @@
 # Proesc V2: payload compartilhado em candidato de revisão
 
-Versão candidata: 4.8.196-rc.1. Base: 3886e6b0e12e45001f5a7bf2858965b4d8d4307d.
+Versão candidata: 4.8.196-rc.2. Base: 3886e6b0e12e45001f5a7bf2858965b4d8d4307d.
 Branch: review/proesc-v2-payload-20261009. Estado: publicação e CI autorizados.
 
 ## Objetivo e limites
@@ -15,7 +15,8 @@ Preserva o lote ativo paralelo de matrícula principal e suas alterações.
 
 Paridade financeira, hashes legados e A→B→A; isolamento por unidade/invoice;
 replay idempotente, rollback, catálogo fail-closed, pgcrypto e concorrência real.
-Revisão inicial: sete suítes SQL locais e 16 testes de arquivo aprovados.
+Revisão RC.2: nove suítes SQL locais e 16 testes de arquivo aprovados.
+Preflight encontrou leitor adicional do Caixa, cadastrado por assinatura/hash.
 CI novo roda PostgreSQL 17 descartável; qualidade completa usa o head exato.
 Observações leves, snapshots OPEN e pessoas continuam crescendo.
 Medição WAL de uma janela não comprova economia OFF/ON nem taxa de produção.
@@ -35,6 +36,7 @@ Medição WAL de uma janela não comprova economia OFF/ON nem taxa de produção
 - `supabase/review-drafts/proesc-v2-growth/04_payload_activation_gate.draft.sql`
 - `supabase/review-drafts/proesc-v2-growth/INDEPENDENT_REVIEW.md`
 - `supabase/review-drafts/proesc-v2-growth/MANIFEST.json`
+- `supabase/review-drafts/proesc-v2-growth/PREFLIGHT.md`
 - `supabase/review-drafts/proesc-v2-growth/README.md`
 - `supabase/review-drafts/proesc-v2-growth/archive/README.md`
 - `supabase/review-drafts/proesc-v2-growth/archive/archive.mjs`
@@ -42,12 +44,18 @@ Medição WAL de uma janela não comprova economia OFF/ON nem taxa de produção
 - `supabase/review-drafts/proesc-v2-growth/archive/local-store.mjs`
 - `supabase/review-drafts/proesc-v2-growth/ci/postgres17-concurrency.mjs`
 - `supabase/review-drafts/proesc-v2-growth/ci/postgres17.workflow.yml.disabled`
+- `supabase/tests/fixtures/proesc-v2-growth.caixa.fixture.mjs`
 - `supabase/tests/fixtures/proesc-v2-growth.fixture.mjs`
+- `supabase/tests/fixtures/proesc-v2-growth/fixture_caixa_review_authorizer.sql`
+- `supabase/tests/fixtures/proesc-v2-growth/fixture_caixa_review_reader.sql`
 - `supabase/tests/fixtures/proesc-v2-growth/fixture_confirm_portal_payment.sql`
+- `supabase/tests/fixtures/proesc-v2-growth/fixture_snapshot_triggers.sql`
 - `supabase/tests/fixtures/proesc-v2-growth/fixture_v2_apply_invoice.sql`
 - `supabase/tests/fixtures/proesc-v2-growth/fixture_v2_calculated_composition_candidate.sql`
 - `supabase/tests/fixtures/proesc-v2-growth/fixture_v2_net_discount_candidate.sql`
 - `supabase/tests/proesc_v2_payload_adversarial.isolated.test.mjs`
+- `supabase/tests/proesc_v2_payload_caixa.isolated.test.mjs`
+- `supabase/tests/proesc_v2_payload_catalog.isolated.test.mjs`
 - `supabase/tests/proesc_v2_payload_composition.isolated.test.mjs`
 - `supabase/tests/proesc_v2_payload_portal.isolated.test.mjs`
 - `supabase/tests/proesc_v2_payload_reader_gate.isolated.test.mjs`
@@ -55,7 +63,7 @@ Medição WAL de uma janela não comprova economia OFF/ON nem taxa de produção
 - `supabase/tests/proesc_v2_payload_storage.isolated.test.mjs`
 - `supabase/tests/proesc_v2_payload_writer.isolated.test.mjs`
 
-Total: 32 arquivos.
+Total: 39 arquivos.
 
 ## Validação e publicação
 

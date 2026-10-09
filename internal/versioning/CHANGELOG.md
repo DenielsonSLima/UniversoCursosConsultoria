@@ -6,6 +6,12 @@ Histórico anterior: [16/09/2026 a 25/09/2026 — versões 4.8.65 a 4.8.90](./ch
 
 Histórico arquivado: [27/09/2026 — versões 4.8.113 a 4.8.115](./changelog/2026-09-27-versoes-4-8-113-a-4-8-115.md), [27/09/2026 — versão 4.8.112](./changelog/2026-09-27-versao-4-8-112.md), [27/09/2026 — versão 4.8.111](./changelog/2026-09-27-versao-4-8-111.md), [25/09/2026 a 26/09/2026 — versões 4.8.91 a 4.8.110](./changelog/2026-09-25-a-2026-09-26-versoes-4-8-91-a-4-8-110.md).
 
+## [4.8.196-rc.2] - 2026-10-09
+
+- Inclui no inventário exato o leitor de revisão do Caixa encontrado no catálogo, sem alterar sua regra financeira.
+- Amplia testes com RLS/ACL observadas, gatilhos reais dos snapshots e concorrência entre página e chave OFF.
+- Mantém a implantação e a ativação bloqueadas até autorização própria; não altera dados de produção.
+
 ## [4.8.196-rc.1] - 2026-10-09
 
 - Candidato de revisão para compartilhar payloads Proesc V2 repetidos, preservando observações por execução e evidência financeira.
