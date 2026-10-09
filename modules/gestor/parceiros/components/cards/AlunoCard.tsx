@@ -4,7 +4,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { CalendarDays, GraduationCap, MapPin, Mail, Phone, ChevronRight, MoreVertical, Edit3, Trash2, ToggleLeft, ToggleRight, Users } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { parceirosService } from '../../parceiros.service';
-import { formatMatricula } from '../../../../../lib/academicUtils';
 import { formatCpf, formatPhone } from '../../../../../lib/documentFormatters';
 import { getPersonDisplayName, hasDistinctSocialName } from '../../../../shared/utils/personDisplayName';
 import EmailConfirmationStatus from './EmailConfirmationStatus';
@@ -77,7 +76,7 @@ const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick, onDelete }) => {
               {data.cpf && <span className="font-semibold tabular-nums text-slate-900">{formattedCpf}</span>}
               {data.cpf && <span className="text-slate-300">•</span>}
               <span className="font-semibold text-slate-500">
-                {formatMatricula(data.id, data.createdAt, data.poloId)}
+                {data.matriculaPrincipal?.numero || 'Sem matrícula acadêmica'}
               </span>
             </div>
             {hasDistinctSocialName(data) && (

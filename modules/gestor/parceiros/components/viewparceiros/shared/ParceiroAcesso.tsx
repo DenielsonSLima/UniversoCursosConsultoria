@@ -6,7 +6,6 @@ import {
   KeyRound,
   Loader2,
   Unlink2,
-  UserRound,
 } from 'lucide-react';
 import GoogleLogo from '../../../../../shared/auth/GoogleLogo';
 import ConfirmModal from '../../../../../shared/components/ConfirmModal';
@@ -14,6 +13,7 @@ import { TERMS_VERSION } from '../../../../../shared/constants/terms';
 import { portalActivationService } from '../../../portal-activation.service';
 import { buildConfiguredAuthRedirectUrl } from '../../../../../../lib/app-url';
 import StudentEmailAccessStatus from './StudentEmailAccessStatus';
+import StudentRegistrationAccess from './StudentRegistrationAccess';
 
 type AccessToast = {
   success: (title: string, message: string) => void;
@@ -24,6 +24,8 @@ interface ParceiroAcessoProps {
   parceiroId: string;
   email?: string | null;
   matriculaAcesso?: string | null;
+  matriculaPrincipal?: string | null;
+  matriculaPrincipalStatus?: 'loading' | 'error' | 'ready';
   tipo?: 'Aluno' | 'Professor';
   acessoStatus?: string | null;
   acessoErro?: string | null;
@@ -37,6 +39,8 @@ const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({
   parceiroId,
   email,
   matriculaAcesso,
+  matriculaPrincipal,
+  matriculaPrincipalStatus = 'ready',
   tipo = 'Aluno',
   acessoStatus,
   acessoErro,
@@ -244,21 +248,11 @@ const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({
 
         <div className="space-y-6">
           {tipo === 'Aluno' && (
-            <div className="rounded-2xl border border-blue-100 bg-blue-50 p-6">
-              <h4 className="mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-slate-800">
-                <UserRound size={16} className="text-blue-600" />
-                Matrícula de acesso
-              </h4>
-              <input
-                type="text"
-                readOnly
-                value={matriculaAcesso || 'Gerada automaticamente pelo sistema'}
-                className="w-full rounded-xl border border-blue-100 bg-white px-4 py-3 font-black tracking-wider text-slate-800"
-              />
-              <p className="mt-3 text-xs font-medium leading-relaxed text-slate-500">
-                Identificador permanente para entrar no portal. Ele não contém CPF e não muda quando o aluno troca de curso.
-              </p>
-            </div>
+            <StudentRegistrationAccess
+              matriculaPrincipal={matriculaPrincipal}
+              status={matriculaPrincipalStatus}
+              legacyIdentifier={matriculaAcesso}
+            />
           )}
 
           <StudentEmailAccessStatus

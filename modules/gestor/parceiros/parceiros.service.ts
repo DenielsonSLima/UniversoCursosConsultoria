@@ -7,6 +7,8 @@ import { mapAlunoLookup, toCamel, toSnake } from './utils/parceiro-mappers';
 import { validateAlunoProfessorIdentity } from './utils/parceiro-validators';
 import { parceirosMatriculasService } from './parceiros-matriculas.service';
 import { documentosAlunoService } from './documentos-aluno.service';
+import { academicosService } from '../configuracoes/academicos/academicos.service';
+import { comparePrimaryEnrollments, formatAcademicEnrollment } from './utils/aluno-primary-enrollment';
 
 const ensureProfessorInstitutionalAccess = async (partner: any) => {
   if (partner?.tipo !== 'Professor' || !partner?.id) return partner;
@@ -79,10 +81,13 @@ export const parceirosService = {
     let enrichedPartners = partners;
 
     if (alunoIds.length > 0) {
-      const { data: matriculas, error: matriculasError } = await supabase
-        .from('matriculas')
-        .select('aluno_id, turma_id, status, data_matricula, turmas(id, nome, curso_id, cursos(id, nome, modalidade))')
-        .in('aluno_id', alunoIds);
+      const [{ data: matriculas, error: matriculasError }, academicConfig] = await Promise.all([
+        supabase
+          .from('matriculas')
+          .select('id, aluno_id, turma_id, status, data_matricula, turmas(id, nome, polo_id, curso_id, cursos(id, nome, modalidade))')
+          .in('aluno_id', alunoIds),
+        academicosService.getConfigsStrict(),
+      ]);
 
       if (matriculasError) {
         console.error('Erro ao buscar modalidades dos alunos:', matriculasError);
@@ -94,6 +99,9 @@ export const parceirosService = {
         cursos: Set<string>;
         turmas: Set<string>;
         matriculas: Array<{
+          id: string;
+          poloId: string | null;
+          numero: string | null;
           turmaId: string;
           turmaNome: string;
           cursoId: string;
@@ -110,7 +118,7 @@ export const parceirosService = {
 
         const turma = Array.isArray(matricula.turmas) ? matricula.turmas[0] : matricula.turmas;
         const curso = turma && (Array.isArray(turma.cursos) ? turma.cursos[0] : turma.cursos);
-        if (!matricula.aluno_id || !turma) return;
+        if (!matricula.aluno_id || !matricula.id) return;
 
         const current = alunoCursos.get(matricula.aluno_id) || {
           modalidades: new Set<string>(),
@@ -125,8 +133,11 @@ export const parceirosService = {
           if (matricula.turma_id) current.turmas.add(matricula.turma_id);
         }
         current.matriculas.push({
-          turmaId: matricula.turma_id || turma.id || '',
-          turmaNome: turma.nome || 'Turma sem nome',
+          id: matricula.id,
+          poloId: turma?.polo_id || null,
+          numero: formatAcademicEnrollment(matricula, academicConfig),
+          turmaId: matricula.turma_id || turma?.id || '',
+          turmaNome: turma?.nome || 'Turma sem nome',
           cursoId: curso?.id || '',
           cursoNome: curso?.nome || 'Curso não informado',
           modalidade: curso?.modalidade || '',
@@ -139,18 +150,15 @@ export const parceirosService = {
       enrichedPartners = partners.map((partner) => {
         const alunoInfo = alunoCursos.get(partner.id);
         if (!alunoInfo) return partner;
+        const matriculasAluno = [...alunoInfo.matriculas].sort(comparePrimaryEnrollments);
 
         return {
           ...partner,
           modalidadesAluno: Array.from(alunoInfo.modalidades),
           cursosAlunoIds: Array.from(alunoInfo.cursos),
           turmasAlunoIds: Array.from(alunoInfo.turmas),
-          matriculasAluno: [...alunoInfo.matriculas].sort((a, b) => {
-            const statusPriority = (item: typeof a) => item.status === 'ATIVO' ? 0 : 1;
-            const priorityDiff = statusPriority(a) - statusPriority(b);
-            if (priorityDiff !== 0) return priorityDiff;
-            return String(b.dataMatricula || '').localeCompare(String(a.dataMatricula || ''));
-          }),
+          matriculasAluno,
+          matriculaPrincipal: matriculasAluno[0] || null,
         };
       });
     }

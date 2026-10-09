@@ -1,8 +1,8 @@
 {
-  "version": "4.8.194",
+  "version": "4.8.195",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 203,
+  "revision": 204,
   "releasedAt": "2026-10-09",
-  "summary": "Declaração do aluno usa o modelo institucional e o mesmo PDF na prévia, download e impressão"
+  "summary": "Card, cadastro e acesso do aluno exibem a mesma matrícula acadêmica principal"
 }

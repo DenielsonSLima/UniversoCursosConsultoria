@@ -11,6 +11,7 @@ on:
       - 'supabase/tests/portal_academic_registration_login.isolated.test.mjs'
       - 'supabase/tests/fixtures/portal-academic-registration-formatter.sql'
       - 'lib/academicUtils.ts'
+      - 'modules/gestor/parceiros/**'
       - 'modules/gestor/configuracoes/academicos/**'
       - '.github/workflows/student-registration-login.yml'
   push:
@@ -24,6 +25,7 @@ on:
       - 'supabase/tests/portal_academic_registration_login.isolated.test.mjs'
       - 'supabase/tests/fixtures/portal-academic-registration-formatter.sql'
       - 'lib/academicUtils.ts'
+      - 'modules/gestor/parceiros/**'
       - 'modules/gestor/configuracoes/academicos/**'
       - '.github/workflows/student-registration-login.yml'
 
@@ -41,11 +43,28 @@ jobs:
           node-version: '24'
       - name: Preparar dependências isoladas
         run: |
-          npm install --prefix "$RUNNER_TEMP/student-registration-login" --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.3.14 esbuild@0.25.12
+          npm install --prefix "$RUNNER_TEMP/student-registration-login" --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.3.14 esbuild@0.25.12 react@19.2.7 react-dom@19.2.7 playwright@1.58.2 lucide-react@0.564.0 @tanstack/react-query@5.101.0 postcss@8.5.6 tailwindcss@3.4.17
           ln -s "$RUNNER_TEMP/student-registration-login/node_modules" node_modules
+          node "$RUNNER_TEMP/student-registration-login/node_modules/playwright/cli.js" install --with-deps chromium
       - name: Validar resolução SQL e autenticação sem serviços externos
         env:
           PGLITE_MODULE_PATH: ${{ runner.temp }}/student-registration-login/node_modules/@electric-sql/pglite/dist/index.js
         run: |
           node supabase/tests/portal_academic_registration_login.isolated.test.mjs
           node supabase/functions/portal-auth/registration-login.test.mjs
+
+      - name: Validar matrícula principal compartilhada
+        env:
+          EAD_UI_NODE_MODULES: ${{ runner.temp }}/student-registration-login/node_modules
+        run: node modules/gestor/parceiros/aluno-primary-enrollment.test.mjs
+      - name: Conferir card, cadastro e acesso no navegador
+        env:
+          EAD_UI_NODE_MODULES: ${{ runner.temp }}/student-registration-login/node_modules
+          ALUNO_REGISTRATION_ARTIFACTS: ${{ runner.temp }}/aluno-registration
+        run: node modules/gestor/parceiros/aluno-registration.browser.test.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: aluno-registration-synthetic
+          path: ${{ runner.temp }}/aluno-registration
+          if-no-files-found: warn

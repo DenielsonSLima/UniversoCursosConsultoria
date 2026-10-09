@@ -13,7 +13,8 @@ import ParceiroAcesso from '../shared/ParceiroAcesso';
 import ParceiroAlunoSecretaria from './ParceiroAlunoSecretaria';
 import ParceiroAlunoVacinas from './ParceiroAlunoVacinas';
 import { parceirosService } from '../../../parceiros.service';
-import { formatMatricula } from '../../../../../../lib/academicUtils';
+import { academicosService } from '../../../../configuracoes/academicos/academicos.service';
+import { formatAcademicEnrollment, selectPrimaryEnrollment } from '../../../utils/aluno-primary-enrollment';
 import { supabase } from '../../../../../../lib/supabase';
 import ToastNotification, { useToast } from '../../shared/ToastNotification';
 import ParceiroAlunoNavigation, { alunoTabs, type AlunoTab } from './ParceiroAlunoNavigation';
@@ -55,16 +56,22 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
     initialData: alunoInicial,
   });
 
-  const { data: currentEnrollment } = useQuery<any | null>({
+  const { data: currentEnrollment, isPending: isLoadingEnrollment, isError: enrollmentError } = useQuery<any | null>({
     queryKey: ['parceiro', alunoInicial.id, 'matricula-atual'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('matriculas')
-        .select('id, status, data_matricula, turmas(nome, cursos(nome))')
-        .eq('aluno_id', alunoInicial.id)
-        .order('data_matricula', { ascending: false });
+      const [{ data, error }, academicConfig] = await Promise.all([
+        supabase
+          .from('matriculas')
+          .select('id, status, data_matricula, turmas(nome, polo_id, cursos(nome))')
+          .eq('aluno_id', alunoInicial.id),
+        academicosService.getConfigsStrict(),
+      ]);
       if (error) throw error;
-      return (data || []).find((item) => item.status === 'ATIVO') || data?.[0] || null;
+      const enrollment = selectPrimaryEnrollment(data || []);
+      return enrollment ? {
+        ...enrollment,
+        numero: formatAcademicEnrollment(enrollment, academicConfig),
+      } : null;
     },
     staleTime: 15_000,
   });
@@ -157,8 +164,8 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
               <div className="min-w-0">
                 <h1 className="break-words text-[22px] font-semibold leading-7 tracking-tight text-[#001a33]">{alunoData.nome}</h1>
                 <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs leading-5 text-slate-600">
-                  {currentEnrollment ? <>
-                    <span>Matrícula {formatMatricula(currentEnrollment.id, currentEnrollment.data_matricula, alunoData.polo_id)}</span>
+                  {isLoadingEnrollment ? <span>Carregando matrícula...</span> : enrollmentError ? <span>Matrícula indisponível</span> : currentEnrollment ? <>
+                    <span>Matrícula {currentEnrollment.numero}</span>
                     <span className={`rounded-full px-2 py-0.5 font-medium ${currentEnrollment.status === 'ATIVO' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-800'}`}>
                       Vínculo {currentEnrollment.status}
                     </span>
@@ -204,6 +211,8 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
             tipo="Aluno"
             email={alunoData.email || null}
             matriculaAcesso={alunoData.matriculaAcesso || null}
+            matriculaPrincipal={currentEnrollment?.numero || null}
+            matriculaPrincipalStatus={isLoadingEnrollment ? 'loading' : enrollmentError ? 'error' : 'ready'}
             acessoStatus={alunoData.acessoStatus || null}
             acessoErro={alunoData.acessoErro || null}
             trocaSenhaObrigatoria={alunoData.trocaSenhaObrigatoria ?? null}
