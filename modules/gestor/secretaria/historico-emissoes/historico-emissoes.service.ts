@@ -422,10 +422,8 @@ export const historicoEmissoesService = {
     if (!data) {
       throw new Error(`A emissão canônica atualizada não foi localizada para o código ${normalizedCode}.`);
     }
-    if (data.documento === 'contrato_aluno'
-      && data.dados_emissao?.contractSnapshot?.instituicao?.presentationVersion
-        === 'CONTRATO_A4_INSTITUCIONAL_V3_MINUTA_COMPLETA') {
-      // A RPC existente projeta páginas seguras do snapshot, sem reemitir.
+    if (data.documento === 'contrato_aluno') {
+      // Identidade e páginas vêm da projeção autorizada, inclusive em modelos legados.
       const projected = await supabase.rpc('search_secretaria_emissions_secure', {
         p_polo_id: data.polo_id,
         p_documento: 'contrato_aluno',

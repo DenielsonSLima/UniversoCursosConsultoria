@@ -13,7 +13,7 @@ import {
   downloadEmissionPdf,
   saveEmissionPdfBlob,
 } from './preview-utils';
-import { createEmissionDocumentsPdf } from './emission-document.pdf';
+import { createBrowserEmissionDocumentsPdf as createEmissionDocumentsPdf } from './emission-browser-pdf';
 import type {
   AcademicPreviewData,
   EmissionLog,

@@ -71,13 +71,16 @@ before(async () => {
     resolve(root, 'modules/gestor/cadastros/modelos-documentos/diploma/**/*.tsx'),
   ] })]).process(styles, { from: resolve(root, 'styles.css') })).css;
   if (!process.env.EAD_HISTORY_COMPILE_ONLY) browser = await chromium.launch({ headless: true,
-    ...(process.env.EAD_UI_BROWSER_EXECUTABLE ? { executablePath: process.env.EAD_UI_BROWSER_EXECUTABLE } : {}) });
+    ...(process.env.EAD_UI_BROWSER_EXECUTABLE
+      ? { executablePath: process.env.EAD_UI_BROWSER_EXECUTABLE } : { channel: 'chromium' }) });
 });
 after(async () => { await browser?.close(); });
 
 async function open(value = fixture) {
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
-  await page.setContent('<!doctype html><html lang="pt-BR"><body><div id="root"></div></body></html>');
+  await page.route('https://documents.test/**', route => route.fulfill({ contentType: 'text/html',
+    body: '<!doctype html><html lang="pt-BR"><body><div id="root"></div></body></html>' }));
+  await page.goto('https://documents.test/');
   await page.addStyleTag({ content: css });
   await page.addScriptTag({ content: javascript });
   await page.evaluate(data => window.renderHistory(data), value);
@@ -132,7 +135,8 @@ run('second-copy preview, download and print use identical two-page A4 PDF bytes
     await page.getByRole('button', { name: 'Imprimir (Registrar 2ª Via)', exact: true }).click();
     await page.waitForFunction(() => window.historyPrintBytes.length === 1);
     assert.equal(hash(Buffer.from(await page.evaluate(() => window.historyPrintBytes[0]))), hash(before));
-    await page.getByRole('button', { name: 'Imprimir (Registrar 2ª Via)', exact: true }).waitFor({ state: 'visible' });
+    await page.waitForFunction(() => document.querySelector('#reprint-modal[aria-busy="false"]'));
+    assert.equal(await page.getByRole('button', { name: 'Imprimir (Registrar 2ª Via)', exact: true }).isEnabled(), true);
     const events = await page.evaluate(() => window.historyEvents);
     assert.deepEqual(events.map(event => event.type), ['prepare', 'confirm', 'prepare', 'confirm']);
     assert.equal(events[0].request.idempotencyKey, events[1].request.idempotencyKey);

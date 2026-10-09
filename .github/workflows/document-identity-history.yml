@@ -1,0 +1,65 @@
+name: Identidade dos contratos e segunda via de declarações
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/document-identity-history.yml'
+      - 'modules/gestor/secretaria/contratos-aluno/**'
+      - 'modules/gestor/secretaria/historico-emissoes/**'
+      - 'modules/gestor/secretaria/shared/**'
+      - 'modules/gestor/components/DocumentHeader.tsx'
+      - 'modules/shared/pdf/**'
+      - 'modules/shared/utils/**'
+      - 'supabase/migrations/*contract_student_identity*.sql'
+      - 'supabase/tests/contract_student_identity.isolated.test.mjs'
+      - 'supabase/tests/fixtures/contract-identity-*'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/document-identity-history.yml'
+      - 'modules/gestor/secretaria/contratos-aluno/**'
+      - 'modules/gestor/secretaria/historico-emissoes/**'
+      - 'modules/gestor/secretaria/shared/**'
+      - 'modules/gestor/components/DocumentHeader.tsx'
+      - 'modules/shared/pdf/**'
+      - 'modules/shared/utils/**'
+      - 'supabase/migrations/*contract_student_identity*.sql'
+      - 'supabase/tests/contract_student_identity.isolated.test.mjs'
+      - 'supabase/tests/fixtures/contract-identity-*'
+
+permissions:
+  contents: read
+
+jobs:
+  document-identity-history:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Preparar PostgreSQL, compositor PDF e navegador isolados
+        run: |
+          npm install --prefix "$RUNNER_TEMP/document-identity" --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.3.14 react@19.2.7 react-dom@19.2.7 esbuild@0.25.12 playwright@1.58.2 lucide-react@0.564.0 dompurify@3.4.13 qrcode@1.5.4 tailwindcss@3.4.17 postcss@8.5.6 @tanstack/react-query@5.101.0 jspdf@4.2.1 pdf-lib@1.17.1 pdfjs-dist@5.6.205 @napi-rs/canvas@0.1.100 html2canvas@1.4.1
+          node "$RUNNER_TEMP/document-identity/node_modules/playwright/cli.js" install --with-deps chromium
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils
+      - name: Conferir identidade individual, autorização e preservação das emissões
+        run: PGLITE_MODULE_PATH="$RUNNER_TEMP/document-identity/node_modules/@electric-sql/pglite/dist/index.js" node supabase/tests/contract_student_identity.isolated.test.mjs
+      - name: Conferir consulta autorizada dos contratos antigos
+        run: CONTRACT_UI_NODE_MODULES="$RUNNER_TEMP/document-identity/node_modules" node modules/gestor/secretaria/historico-emissoes/contract-history-identity.integration.test.mjs
+      - name: Conferir identidade SQL no PDF nativo do contrato e da segunda via
+        run: PGLITE_MODULE_PATH="$RUNNER_TEMP/document-identity/node_modules/@electric-sql/pglite/dist/index.js" CONTRACT_UI_NODE_MODULES="$RUNNER_TEMP/document-identity/node_modules" CONTRACT_PDF_ARTIFACTS="$RUNNER_TEMP/contract-identity-pdf" node modules/gestor/secretaria/contratos-aluno/contract-identity.pdf.test.mjs
+      - name: Conferir declaração configurada, lote, download e impressão do mesmo PDF
+        run: EAD_UI_NODE_MODULES="$RUNNER_TEMP/document-identity/node_modules" DECLARATION_PDF_ARTIFACTS="$RUNNER_TEMP/declaration-pdf" node modules/gestor/secretaria/historico-emissoes/declaration-pdf.ui.test.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: document-identity-synthetic-pdfs
+          path: |
+            ${{ runner.temp }}/contract-identity-pdf
+            ${{ runner.temp }}/declaration-pdf
+          if-no-files-found: warn

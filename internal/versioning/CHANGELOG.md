@@ -6,6 +6,12 @@ Histórico anterior: [16/09/2026 a 25/09/2026 — versões 4.8.65 a 4.8.90](./ch
 
 Histórico arquivado: [25/09/2026 a 26/09/2026 — versões 4.8.91 a 4.8.110](./changelog/2026-09-25-a-2026-09-26-versoes-4-8-91-a-4-8-110.md).
 
+## [4.8.193] - 2026-10-09
+
+- Contratos identificam CIN ou CPF e RG conforme o cadastro, com formatação e omissão de campos ausentes.
+- Reabertura de contratos antigos corrige a apresentação da identidade, preservando condições, registros e arquivos de assinatura.
+- Segunda via de matrícula e cursando usa PDF vetorial do modelo configurado, sem falha na preparação da camada de texto.
+
 ## [4.8.192] - 2026-10-09
 
 - Crachá de identificação tem download em PDF separado da impressão e preserva o fundo do modelo cadastrado.
