@@ -1,8 +1,9 @@
 # Proesc V2: candidato de crescimento sustentável
 
 Estado: publicação em branch de revisão e CI autorizada em 09/10/2026.
-Sem migração, ativação, backfill, upload ou remoção de dados de produção. Os SQLs são drafts e não
-integram a pasta de migrations aplicáveis. A flag nasce desligada.
+Sem migração, ativação, backfill, upload ou remoção de dados de produção. Os quatro drafts preservam a revisão por fases. A migration atômica
+`20261009223000_prepare_proesc_v2_payload_storage_off.sql` está preparada na
+pasta canônica, mas não foi aplicada. A flag nasce desligada.
 
 Base consultada pelo MCP GitHub: `3886e6b0e12e45001f5a7bf2858965b4d8d4307d`,
 main de DenielsonSLima/UniversoCursosConsultoria, reconferida em 09/10/2026.
@@ -85,7 +86,7 @@ Resultados da primeira rodada representativa:
 - Uma amostra fria: escrita aproximadamente 882 → 973 ms. O lookup/hash tem
   custo; a amostra não comprova ganho de latência e não serve como SLA.
 
-O workflow `.github/workflows/proesc-v2-payload.yml` executa as nove suítes,
+O workflow `.github/workflows/proesc-v2-payload.yml` executa as dez suítes,
 os 16 testes de arquivo e o ensaio PostgreSQL 17 nativo, com pgcrypto real.
 Exige banco dedicado vazio em loopback; consulta pg_blocking_pids para provar
 contenção entre backends e cobre commit, rollback e replay. A janela WAL é
@@ -98,6 +99,9 @@ linhas, contrato operacional, TypeScript, lint, testes e build. Os resultados de
 CI pertencem ao SHA apresentado nos checks; execução local parcial não os
 substitui. Todos os novos arquivos foram conferidos contra o teto de 500 linhas.
 O relatório independente inicial preserva o estado anterior à execução de CI.
+A suíte da migration compara seu conteúdo às quatro fases e prova rollback de
+schema, funções/ACL e observações em falhas antes/depois de adaptar os leitores.
+O PG17 nativo carrega o mesmo arquivo real e confirma a instalação OFF.
 
 ## Etapa B: arquivo recuperável, ainda local e inativo
 
@@ -126,8 +130,8 @@ como parte automática. Uma cópia noutra tabela não é arquivamento externo.
    confirmar SHA remoto e todos os checks antes de propor a próxima etapa.
 2. Executar a suíte focada e o gate PostgreSQL 17 multi-backend/latência/WAL em
    ambiente descartável/CI. Investigar regressões; não ativar sem esse resultado.
-3. Sob autorização específica de migração, converter os drafts em migrations
-   versionadas, via fluxo MCP, mantendo a ordem 01→04 e flag false. Conferir
+3. Sob autorização específica de migração, aplicar o arquivo atômico versionado
+   via fluxo MCP, mantendo flag false. Revalidar base/catálogo antes. Conferir
    advisors, grants, hashes e constraints. Validar as duas constraints NOT VALID
    em janela aprovada; não há backfill nesse passo.
 4. Autorizar e chamar a chave ON somente com os gates satisfeitos e run ocioso.

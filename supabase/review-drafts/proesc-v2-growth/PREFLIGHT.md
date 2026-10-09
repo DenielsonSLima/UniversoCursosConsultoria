@@ -1,4 +1,4 @@
-# Preflight somente leitura e revisão RC.2
+# Preflight somente leitura e candidato de instalação OFF
 
 Catálogo consultado em 09/10/2026, entre 22h17 e 22h21 UTC, exclusivamente por MCP.
 Nenhuma execução das funções financeiras, leitura de payload, dados pessoais,
@@ -57,12 +57,13 @@ após término. A chave continua global, sem canário por unidade.
 
 ## Próximos gates, sem executar nesta etapa
 
-1. Conferir CI do novo SHA e preflight atual; não usar o PASS de RC.1 para RC.2.
-2. Promover os quatro drafts para migration atômica versionada OFF, preservando
-   a ordem e eliminando commits intermediários. Somam menos de 500 linhas.
-   Isso evita o intervalo entre adicionar a coluna e adaptar hashes/leitores.
-3. Testar o arquivo de migration real, falha atômica, metadados e contratos
-   afetados no banco descartável. Revalidar catálogo/migrations antes de instalar.
+1. Conferir CI do SHA RC.3 e preflight atual; PASS de revisão anterior não basta.
+2. Migration preparada: 20261009223000_prepare_proesc_v2_payload_storage_off.sql,
+   com 462 linhas e transação única. Nenhuma aplicação foi executada.
+   Os testes verificam igualdade com as quatro fases, rollback inclusive após
+   adaptação de leitores e hashes legados preservados, sem janela intermediária.
+3. PG17 executa o arquivo real e afirma OFF antes da validação/ativação sintética.
+   Revalidar catálogo/migrations imediatamente antes da instalação autorizada.
 4. Obter autorização específica para instalação OFF. DDL tem lock_timeout de 3s;
    se não adquirir o lock, abortar e reagendar, sem encerrar sessões de usuários.
 5. Validar FK/XOR em janela autorizada: lê histórico, embora não faça backfill.
@@ -73,3 +74,21 @@ após término. A chave continua global, sem canário por unidade.
 
 Integração com Storage, retenção financeira e exclusão não estão autorizadas nem
 implementadas. O protótipo de arquivo continua local, sintético e sem cleanup.
+
+## Segurança da publicação do arquivo
+
+Workflows do repositório, package scripts e vercel.json foram lidos antes da
+promoção. Não contêm aplicação de migrations ou deploy de banco; pipelines
+executam testes/build e o job novo só usa banco descartável sem segredos.
+A listagem de branches Supabase estava vazia. Não foi chamada apply_migration,
+merge_branch ou qualquer operação de escrita no banco de produção.
+
+## Instalação OFF: proposta para decisão posterior
+
+Aplicar uma única migration pelo MCP, usando exatamente o arquivo aprovado.
+Confirmar atomicidade/registro remoto, hashes/ACL, singleton false, novas tabelas
+vazias e constraints NOT VALID. Não executar ON como parte da instalação.
+Validar as duas constraints em etapa própria autorizada; há leitura do histórico
+com custo de IO, embora sem backfill ou remoção. Não prometer execução sem custo.
+Se houver drift ou timeout de lock, interromper e investigar; não forçar acesso,
+encerrar sessões, desabilitar triggers ou afrouxar guards para concluir.

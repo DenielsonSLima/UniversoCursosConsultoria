@@ -1,8 +1,8 @@
 {
-  "version": "4.8.196-rc.2",
+  "version": "4.8.196-rc.3",
   "display": "RC",
   "stage": "rc",
-  "revision": 2,
+  "revision": 3,
   "releasedAt": "2026-10-09",
   "summary": "Candidato de validação: payload Proesc V2 compartilhado e arquivo sintético, sem ativação em produção"
 }

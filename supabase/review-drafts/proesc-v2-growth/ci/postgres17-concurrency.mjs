@@ -21,8 +21,8 @@ try {
   where n.nspname not in ('pg_catalog','information_schema') and n.nspname not like 'pg_%'
   and c.relkind in ('r','p','v','m')`)),0,'Refuse to touch any pre-existing application data');
  const {id,actor,revision,personHash}=await createFixture({db:adapter,nativePgcrypto:true});
- for(const name of ['01_payload_storage','02_payload_readers','03_payload_writer','04_payload_activation_gate'])
-  await q(readFileSync(new URL(`../${name}.draft.sql`,import.meta.url),'utf8'));
+ await q(readFileSync(new URL('../../../migrations/20261009223000_prepare_proesc_v2_payload_storage_off.sql',import.meta.url),'utf8'));
+ assert.equal(await value('select enabled value from internal_proesc.v2_payload_storage_control'),false);checks++;
  await q(`alter table internal_proesc.v2_invoice_observations validate constraint v2_invoice_payload_identity_fk;
   alter table internal_proesc.v2_invoice_observations validate constraint v2_invoice_one_payload;
   select internal_proesc.v2_set_payload_storage_enabled(true)`);
