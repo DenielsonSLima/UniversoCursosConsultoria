@@ -1,4 +1,5 @@
 import { prepareStudentIdentityTemplate, resolveSnapshotStudentIdentity } from '../../../shared/utils/student-document-presentation';
+import { isEnrollmentDeclaration, renderDeclarationIdentity } from '../../../shared/utils/declaration-identity-presentation';
 import { formatMatricula } from '../../../../lib/academicUtils';
 import { formatCpf } from '../../../../lib/documentFormatters';
 import { escapeHtmlText } from '../../../../lib/htmlSanitizer';
@@ -66,6 +67,9 @@ export const parseEmissionTemplate = (
   const identity = resolveSnapshotStudentIdentity(emissionData, data.aluno);
   const documentType = identity.label;
   const documentNumber = identity.isCin ? formatCpf(identity.number) : identity.number;
+  const identityTemplate = isEnrollmentDeclaration(data.documento)
+    ? renderDeclarationIdentity(htmlText, identity, snapshotFirst(emissionData, 'studentCpf', data.aluno?.cpf_cnpj))
+    : prepareStudentIdentityTemplate(htmlText, identity.isCin, data.documento === 'declaracao_irpf');
   const academicData = [
     'boletim',
     'atestado_conclusao_tecnico',
@@ -297,9 +301,10 @@ export const parseEmissionTemplate = (
 
   return replacements.reduce(
     (parsed, [pattern, value]) => parsed.replace(pattern, value),
-    replaceRegistrationIssuerState(prepareStudentIdentityTemplate(htmlText, identity.isCin, data.documento === 'declaracao_irpf'), formatRegistrationIssuerState(
+    replaceRegistrationIssuerState(identityTemplate, formatRegistrationIssuerState(
       identity.isCin ? '' : snapshotFirst(emissionData, 'studentRgIssuer', liveIdentity.issuer),
       identity.isCin ? '' : snapshotFirst(emissionData, 'studentRgState', liveIdentity.state),
     ) || '—')
   );
 };
+

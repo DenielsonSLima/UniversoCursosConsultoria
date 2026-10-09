@@ -40,6 +40,7 @@ const denoTests = [
   'supabase/tests/document_validation_effective_rpc.contract.test.ts',
   'supabase/tests/document_validation_policy_governance.contract.test.ts',
   'supabase/tests/document_validation_idempotent_reissue.contract.test.ts',
+  'supabase/tests/document_validation_reissue_delivery.contract.test.ts',
   'supabase/tests/document_validation_migration_ledger.contract.test.ts',
   'supabase/tests/diario_canonical_validation.contract.test.ts',
 ];
@@ -103,3 +104,4 @@ try {
 } finally {
   await rm(outputDirectory, { recursive: true, force: true });
 }
+

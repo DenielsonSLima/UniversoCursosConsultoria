@@ -1,8 +1,8 @@
 {
-  "version": "4.8.190",
+  "version": "4.8.191",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 199,
+  "revision": 200,
   "releasedAt": "2026-10-09",
-  "summary": "Login do aluno pela matrícula acadêmica, mantendo o acesso anterior e a mesma conta"
+  "summary": "Identificação nas declarações e segunda via EAD com PDF fiel, assinatura e impressão completas"
 }

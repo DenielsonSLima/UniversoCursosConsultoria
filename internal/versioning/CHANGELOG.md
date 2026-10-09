@@ -6,6 +6,12 @@ Histórico anterior: [16/09/2026 a 25/09/2026 — versões 4.8.65 a 4.8.90](./ch
 
 Histórico arquivado: [25/09/2026 a 26/09/2026 — versões 4.8.91 a 4.8.110](./changelog/2026-09-25-a-2026-09-26-versoes-4-8-91-a-4-8-110.md).
 
+## [4.8.191] - 2026-10-09
+
+- Declarações de matrícula e cursando exibem a identificação cadastrada, formatam CPF/CIN e omitem campos ausentes sem inserir “Não informado”.
+- Histórico recebe tipo, órgão e UF corretos; novas declarações preservam a identidade da emissão.
+- Segunda via do certificado EAD usa o mesmo PDF na prévia, download e impressão, com linha do diretor e duas páginas completas.
+
 ## [4.8.190] - 2026-10-09
 
 - Login do aluno reconhece a matrícula acadêmica exibida no cadastro, mesmo sem e-mail pessoal.

@@ -47,7 +47,7 @@ test('tipo vazio não presume CIN nem reaproveita RG', () => {
     { frequenciesByStudent: {} },
   );
 
-  assert.equal(parsed, 'Documento não informado|Não informado');
+  assert.equal(parsed, '|');
 });
 
 test('compositor modular preserva modelo, cabeçalho, QR e os quatro parâmetros da marca', async () => {
@@ -74,3 +74,4 @@ test('compositor modular preserva modelo, cabeçalho, QR e os quatro parâmetros
     assert.ok(pages.includes(property), `Compositor sem ${property}`);
   }
 });
+

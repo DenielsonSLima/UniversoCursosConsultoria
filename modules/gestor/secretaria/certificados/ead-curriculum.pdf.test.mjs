@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { Buffer } from 'node:buffer';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
@@ -8,6 +9,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { after, before, test } from 'node:test';
 import { syntheticIdentity, syntheticModel, signatureFixtureModule, measureCertificatePages, certificateIdentityCases, withCertificateIdentityCase } from './ead-curriculum.pdf.fixture.mjs';
 import { mockModules as secretariaIo } from './ead-certificates.ui.fixture.mjs';
+import { withOpaqueSignature, measureDirectorLine, assertNativeSignatureLine, assertVisibleSignatureLine } from './ead-signature-pdf.assertions.mjs';
 
 const directory = fileURLToPath(new URL('.', import.meta.url));
 const root = resolve(directory, '../../../..');
@@ -19,7 +21,7 @@ const { chromium } = requireTool('playwright');
 const postcss = requireTool('postcss');
 const tailwindcss = requireTool('tailwindcss');
 const { PDFDocument, PDFName, PDFDict, PDFArray, PDFRawStream, decodePDFRawStream } = requireTool('pdf-lib');
-const { createCanvas } = requireTool('@napi-rs/canvas');
+const { createCanvas, loadImage } = requireTool('@napi-rs/canvas');
 const { getDocument } = await import(pathToFileURL(requireTool.resolve('pdfjs-dist/legacy/build/pdf.mjs')));
 const standardFontDataUrl = resolve(requireTool.resolve('pdfjs-dist/package.json'), '../standard_fonts') + '/';
 const output = resolve(process.env.EAD_CURRICULUM_ARTIFACTS || '/tmp/ead-curriculum-pdf');
@@ -174,7 +176,7 @@ test('real editor and emitted EAD use identical block geometry, table columns, f
       '#editor-front > div > div', '#editor-back > div > div',
       '#issued [data-certificate-pdf-page]:nth-child(1)', '#issued [data-certificate-pdf-page]:nth-child(2)',
     ].map(selector => {
-      const style = getComputedStyle(document.querySelector(selector));
+      const style = window.getComputedStyle(document.querySelector(selector));
       return style.backgroundImage === 'none' ? ['none']
         : [style.backgroundImage, style.backgroundSize, style.backgroundPosition];
     }));
@@ -245,7 +247,7 @@ async function saveProductPdf(page, pdfPath) {
   await renderSavedPdf(pdfPath);
   const expectedBackgrounds = await page.locator('[data-certificate-pdf-page]').evaluateAll(async pages =>
     Promise.all(pages.map(async (node,index) => {
-      const background = getComputedStyle(node).backgroundImage;
+      const background = window.getComputedStyle(node).backgroundImage;
       if (background === 'none') return null;
       const source = /^url\(["']?(.*?)["']?\)$/.exec(background)?.[1];
       if (!source) throw Error('Configured background could not be inspected.');
@@ -265,7 +267,7 @@ async function saveProductPdf(page, pdfPath) {
   const fontResources = execFileSync('pdffonts', [pdfPath], {encoding:'utf8'});
   const usesInter900 = await page.locator('[data-certificate-pdf-page]').evaluateAll(pages =>
     pages.some(root => [...root.querySelectorAll('*')].some(node => {
-      const style = getComputedStyle(node);
+      const style = window.getComputedStyle(node);
       return /Inter/.test(style.fontFamily) && Number(style.fontWeight) === 900 && node.textContent.trim();
     })));
   assert.ok(usesInter900, 'The real fixture must exercise Inter at weight 900.');
@@ -295,7 +297,7 @@ async function saveProductPdf(page, pdfPath) {
   await page.evaluate(() => {
     window.__eadPrintedPdfBytes = [];
     const observed = new Set();
-    new MutationObserver(() => {
+    new window.MutationObserver(() => {
       document.querySelectorAll('iframe[src^="blob:"]:not([data-ead-certificate-pdf-preview])').forEach(async frame => {
         if (observed.has(frame.src)) return;
         observed.add(frame.src);
@@ -346,6 +348,29 @@ test('the real Secretariat uses the same PDF Blob for preview, download and prin
       execFileSync('pdftoppm', ['-f','1','-l','2','-scale-to','2000','-png',pdfPath,resolve(output,`secretariat-${width}`)]);
     } finally { await page.close(); }
   }
+});
+
+test('configured director line survives an opaque overlapping signature in the downloaded vector PDF', async () => {
+  const value = withOpaqueSignature(fixture, createCanvas);
+  const page = await open({ ...value, secretaria: true });
+  try {
+    const geometry = await page.evaluate(measureDirectorLine);
+    const path = resolve(output, 'director-signature-line.pdf');
+    await saveProductPdf(page, path);
+    const document = await PDFDocument.load(await readFile(path));
+    assertNativeSignatureLine(document, geometry, { PDFArray, PDFRawStream, decodePDFRawStream, PDFName, PDFDict });
+    const rendered = await loadImage(path.replace(/\.pdf$/, '-pdfjs-1.png'));
+    const evidence = assertVisibleSignatureLine(rendered, geometry, createCanvas);
+    const preview = await open(value);
+    try {
+      await preview.locator('[data-certificate-pdf-page]').first()
+        .screenshot({ path: resolve(output, 'director-signature-preview.png') });
+    } finally { await preview.close(); }
+    await writeFile(resolve(output, 'director-signature-line.json'), JSON.stringify({
+      ...evidence, nativeStroke: true, opaqueSignature: true, multiplyPreserved: true,
+      pdfPages: document.getPageCount(),
+    }, null, 2));
+  } finally { await page.close(); }
 });
 
 test('the real Secretariat blocks a failed persisted-model read or missing configured model', async () => {

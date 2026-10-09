@@ -16,6 +16,10 @@ on:
       - 'modules/gestor/secretaria/historico-emissoes/**'
       - 'modules/gestor/secretaria/shared/**'
       - 'modules/shared/utils/**'
+      - 'modules/shared/secretaria/**'
+      - 'modules/gestor/secretaria/declaracao-matricula/**'
+      - 'supabase/tests/declaration_identity*'
+      - 'supabase/tests/fixtures/declaration-identity-schema.sql'
       - 'modules/shared/pdf/**'
       - 'modules/aluno/cursos/**'
       - 'modules/gestor/cadastros/modelos-documentos/diploma/**'
@@ -37,6 +41,10 @@ on:
       - 'modules/gestor/secretaria/historico-emissoes/**'
       - 'modules/gestor/secretaria/shared/**'
       - 'modules/shared/utils/**'
+      - 'modules/shared/secretaria/**'
+      - 'modules/gestor/secretaria/declaracao-matricula/**'
+      - 'supabase/tests/declaration_identity*'
+      - 'supabase/tests/fixtures/declaration-identity-schema.sql'
       - 'modules/shared/pdf/**'
       - 'modules/aluno/cursos/**'
       - 'modules/gestor/cadastros/modelos-documentos/diploma/**'
@@ -60,6 +68,8 @@ jobs:
           node-version: 24
       - name: Preparar PostgreSQL isolado
         run: npm install --prefix "$RUNNER_TEMP/ead-certificate-sql" --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.3.14
+      - name: Validar identidade das declarações e autorização do histórico
+        run: PGLITE_MODULE_PATH="$RUNNER_TEMP/ead-certificate-sql/node_modules/@electric-sql/pglite/dist/index.js" node supabase/tests/declaration_identity.isolated.test.mjs
       - name: Validar emissão automática, autorização e replays
         run: PGLITE_MODULE_PATH="$RUNNER_TEMP/ead-certificate-sql/node_modules/@electric-sql/pglite/dist/index.js" node supabase/tests/ead_automatic_certificate.isolated.test.mjs
       - name: Validar currículo canônico e exportar payload SQL sintético
@@ -76,6 +86,8 @@ jobs:
           node "$RUNNER_TEMP/ead-certificate-ui/node_modules/playwright/cli.js" install --with-deps chromium
           sudo apt-get update
           sudo apt-get install -y poppler-utils
+      - name: Validar identidade e campos opcionais nas três entradas de declaração
+        run: EAD_UI_NODE_MODULES="$RUNNER_TEMP/ead-certificate-ui/node_modules" node modules/shared/utils/declaration-identity.integration.test.mjs
       - name: Validar EAD automático, prévia acessível e registro técnico preservado
         run: EAD_UI_NODE_MODULES="$RUNNER_TEMP/ead-certificate-ui/node_modules" node modules/gestor/secretaria/certificados/ead-certificates.ui.test.mjs
       - name: Validar contrato de apresentação EAD
@@ -92,8 +104,12 @@ jobs:
         run: EAD_UI_NODE_MODULES="$RUNNER_TEMP/ead-certificate-ui/node_modules" node modules/gestor/secretaria/certificados/ead-identity.integration.test.mjs
       - name: Validar editor, identidade e PDF real da Secretaria
         run: EAD_UI_NODE_MODULES="$RUNNER_TEMP/ead-certificate-ui/node_modules" EAD_CURRICULUM_FIXTURE_OUT="$RUNNER_TEMP/ead-table-payload.json" EAD_CURRICULUM_ARTIFACTS="$RUNNER_TEMP/ead-curriculum-pdf" node modules/gestor/secretaria/certificados/ead-curriculum.pdf.test.mjs
+      - name: Validar segunda via EAD, linha de assinatura e PDF único
+        run: EAD_UI_NODE_MODULES="$RUNNER_TEMP/ead-certificate-ui/node_modules" EAD_CURRICULUM_FIXTURE_OUT="$RUNNER_TEMP/ead-table-payload.json" EAD_HISTORY_ARTIFACTS="$RUNNER_TEMP/ead-history-pdf" node modules/gestor/secretaria/historico-emissoes/ead-history-print.ui.test.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: ead-curriculum-synthetic-pdf
-          path: ${{ runner.temp }}/ead-curriculum-pdf
+          path: |
+            ${{ runner.temp }}/ead-curriculum-pdf
+            ${{ runner.temp }}/ead-history-pdf
