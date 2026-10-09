@@ -3,6 +3,7 @@ import { getDocumentValidationUrl } from '../../../../shared/document-validation
 import { resolveStudentIdentityDocument } from '../../../../shared/utils/studentIdentityDocument';
 import { CertificadoAcademico } from '../certificados.types';
 import { curriculumTextToHtml, escapeCurriculumHtml, getCertificateCurriculumText, getEadCertificateCurriculum } from './ead-certificate-curriculum';
+import { buildEadCertificateIdentityVars, prepareEadCertificateIdentityTemplate } from './ead-certificate-identity';
 
 const formatCertificateDate = (date?: string | null) =>
   date ? new Date(date.includes('T') ? date : `${date}T12:00:00`).toLocaleDateString('pt-BR') : '';
@@ -98,6 +99,7 @@ export const buildEadCertificateTemplateVars = (
   const values = {
     ...original,
     ...input.signatureVars,
+    ...buildEadCertificateIdentityVars(certificado),
     grade_curricular: input.curriculumText ?? getCertificateCurriculumText(certificado),
     carga_horaria: input.totalHours === undefined ? original.carga_horaria : String(input.totalHours ?? ''),
     codigo_certificado: code,
@@ -108,7 +110,7 @@ export const buildEadCertificateTemplateVars = (
 };
 
 export const prepareEadCertificateTemplate = (text: string, certificado: CertificadoAcademico): string =>
-  prepareStudentIdentityTemplate(text, resolveStudentIdentityDocument(certificado.aluno).isCin);
+  prepareEadCertificateIdentityTemplate(text, certificado);
 
 export const replaceEadCertificateVars = (
   text: string,

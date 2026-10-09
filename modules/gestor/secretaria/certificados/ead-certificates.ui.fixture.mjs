@@ -43,6 +43,18 @@ export const mockModules = {
       ],isError:false};
     }});
   `,
+  './useEadCertificatePdf': `
+    import React from 'react';
+    export const useEadCertificatePdf = (_certificate,model,enabled) => ({
+      source:null,blob:null,url:enabled ? 'blob:fixture/'+encodeURIComponent(model?.testModel || '') : '',
+      loading:false,ready:enabled,error:'',retry:()=>{},
+      print:()=>{if(enabled)window.testPrints++;},
+      download:()=>{if(enabled)window.testDownloads++;},
+    });
+    export const EadCertificatePdfView = ({url}) => url ? <div
+      data-testid="certificate-document" data-model={decodeURIComponent(url.split('/').at(-1))}
+      data-pdf-viewer="true" style={{width:'100%',minHeight:420}}>PDF sintético de navegação</div> : null;
+  `,
   '@tanstack/react-query': `
     export const useQuery = () => ({isPending:false,
       isError:window.testValidationUnavailable === true,
@@ -70,6 +82,7 @@ export const mockModules = {
 // The real Page and portal retain their own Tailwind class names.
 export const fixtureHtml = `<!doctype html><html><head><meta charset="utf-8">
 <style>
+  *,*::before,*::after{box-sizing:border-box}
   body{margin:0;font:14px sans-serif;background:#e2e8f0}
   #transformed-panel{transform:translateZ(0);margin:90px 110px;width:650px;height:600px;overflow:hidden}
   .fixed{position:fixed}.inset-0{inset:0}.w-screen{width:100vw}
@@ -84,5 +97,5 @@ export const fixtureHtml = `<!doctype html><html><head><meta charset="utf-8">
   input{display:block;margin:8px;padding:10px}table{min-width:980px}td{padding:12px}
   [data-testid="certificate-document"]{background:white;color:#001a33;padding:80px;text-align:center}
 </style></head><body><div id="transformed-panel"><div id="root"></div></div>
-<script>window.testIssuances=[];window.testPrints=0;window.print=()=>window.testPrints++;</script>
+<script>window.testIssuances=[];window.testPrints=0;window.testDownloads=0;window.print=()=>window.testPrints++;</script>
 <script type="module" src="/bundle.js"></script></body></html>`;

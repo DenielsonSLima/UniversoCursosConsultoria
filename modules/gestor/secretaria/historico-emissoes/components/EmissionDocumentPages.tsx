@@ -18,6 +18,7 @@ import type {
   EmissionLog,
 } from '../historico-emissoes.types';
 import type { CertificadoAcademico } from '../../certificados/certificados.types';
+import { withCertificateEmissionIdentity } from '../../certificados/certificate-identity-snapshot';
 import {
   hasExplicitQrCodeField,
   isPublicDocumentValidationEnabled,
@@ -167,7 +168,7 @@ const EmissionDocumentPages: React.FC<EmissionDocumentPagesProps> = ({
     return (
       <div className="space-y-6">
         <CertificadoPreview
-          certificado={certificatePreview}
+          certificado={withCertificateEmissionIdentity(certificatePreview, emission.dados_emissao)}
           curriculumSnapshot={emission.dados_emissao?.eadCurriculum ?? null}
           curriculumTableSnapshot={emission.dados_emissao?.eadCurriculumTable ?? null}
           modelo={templateConfig}

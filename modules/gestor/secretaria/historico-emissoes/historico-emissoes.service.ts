@@ -36,7 +36,7 @@ import { assertCertificateAlignedWithEmission } from './certificate-emission-con
 
 const certificateSelect = `
   *,
-  aluno:parceiros!certificados_academicos_aluno_id_fkey(nome, cpf_cnpj),
+  aluno:parceiros!certificados_academicos_aluno_id_fkey(nome, cpf_cnpj, rg, tipo_documento, orgao_emissor, rg_uf_emissao, rg_data_emissao),
   turma:turmas!certificados_academicos_turma_id_fkey(nome, codigo),
   curso:cursos!certificados_academicos_curso_id_fkey(nome, carga_horaria, ead_config),
   polo:polos!certificados_academicos_polo_id_fkey(nome, cidade, estado)

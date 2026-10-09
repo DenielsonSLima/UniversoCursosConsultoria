@@ -2,12 +2,12 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Award, BookOpen, CheckCircle2, Eye, Filter, GraduationCap,
-  Loader2, MonitorPlay, Printer, Search, Settings2, X, Zap,
+  Download, Loader2, MonitorPlay, Printer, Search, Settings2, X, Zap,
 } from 'lucide-react';
 import { getSecretariaContext } from '../shared/secretaria-documentos.service';
 import CertificadoPreview from './components/CertificadoPreview';
 import EadCertificatePreviewPortal from './components/EadCertificatePreviewPortal';
-import EadCertificateScaledPreview from './components/EadCertificateScaledPreview';
+import { EadCertificatePdfView, useEadCertificatePdf } from './useEadCertificatePdf';
 import {
   MISSING_EAD_CERTIFICATE_MODEL, selectEadCertificateModel,
 } from './ead-certificate-model';
@@ -204,21 +204,29 @@ const SecretariaCertificadosPage: React.FC = () => {
     || (!validationSnapshotQuery.isPending && !validationSnapshotQuery.data)
   );
 
+  const eadPdf = useEadCertificatePdf(preview, modelo, Boolean(isEadPreview
+    && !modelPending && !modelError && !validationSnapshotPending && !validationSnapshotUnavailable),
+    validationSnapshotQuery.data?.validationPublic === true);
+
   const previewContent = (
     preview?.status === 'FINALIZADO' && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/75 p-6 backdrop-blur-sm">
           <div className="mx-auto max-w-6xl">
             <div data-ead-certificate-preview-actions className="mb-4 flex justify-end gap-2">
               <button
-                onClick={() => void handlePrintCertificate()}
-                disabled={modelPending || Boolean(modelError) || validationSnapshotPending || validationSnapshotUnavailable}
+                onClick={() => isEadPreview ? eadPdf.print() : void handlePrintCertificate()}
+                disabled={modelPending || Boolean(modelError) || validationSnapshotPending || validationSnapshotUnavailable || (isEadPreview && (!eadPdf.ready || eadPdf.printing))}
                 className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-xs font-black uppercase text-white disabled:cursor-not-allowed disabled:opacity-40"
               >
-                {modelPending || validationSnapshotPending
+                {modelPending || validationSnapshotPending || (isEadPreview && eadPdf.loading)
                   ? <Loader2 className="animate-spin" size={15} />
                   : <Printer size={15} />}
                 Imprimir
               </button>
+              {isEadPreview && <button type="button" onClick={eadPdf.download} disabled={!eadPdf.ready}
+                className="flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-xs font-black uppercase text-blue-700 disabled:opacity-40">
+                <Download size={15} /> Baixar PDF
+              </button>}
               <button onClick={closePreview} aria-label="Fechar prévia do certificado" className="rounded-xl bg-white p-3 text-slate-600"><X size={18}/></button>
             </div>
             {modelPending || validationSnapshotPending ? (
@@ -250,12 +258,7 @@ const SecretariaCertificadosPage: React.FC = () => {
               </div>
             ) : (
               <div ref={certificatePrintRef}>
-                {isEadPreview ? <EadCertificateScaledPreview><CertificadoPreview
-                  certificado={preview}
-                  modelo={modelo}
-                  pdfMode
-                  showValidationQrCode={validationSnapshotQuery.data?.validationPublic === true}
-                /></EadCertificateScaledPreview> : <CertificadoPreview
+                {isEadPreview ? <>{eadPdf.source}<EadCertificatePdfView {...eadPdf} /></> : <CertificadoPreview
                   certificado={preview}
                   modelo={modelo}
                   showValidationQrCode={validationSnapshotQuery.data?.validationPublic === true}

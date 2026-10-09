@@ -24,7 +24,7 @@ test('EAD variables retain literal data while interpolation preserves CIN and es
   assert.equal(values.nome_aluno, certificate.aluno.nome);
   assert.equal(values.carga_horaria, '120');
   const html = replaceEadCertificateVars('{{nome_aluno}} | CPF {{cpf}} | {{carga_horaria}} h', certificate, values);
-  assert.equal(html, '<strong>ALUNO &amp; &lt;literal&gt; $&amp; - Aprovado {{cpf}}</strong> | CIN <strong>00000000000</strong> | <strong>120</strong> h');
+  assert.equal(html, '<strong>ALUNO &amp; &lt;literal&gt; $&amp; - Aprovado {{cpf}}</strong> | CIN <strong>000.000.000-00</strong> | <strong>120</strong> h');
   assert.ok(!html.includes('<span'));
 });
 

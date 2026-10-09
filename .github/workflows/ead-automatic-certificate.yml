@@ -8,11 +8,15 @@ on:
       - 'supabase/tests/ead_automatic_certificate*'
       - 'supabase/tests/ead_certificate_curriculum*'
       - 'supabase/tests/ead_certificate_table*'
+      - 'supabase/tests/ead_certificate_identity*'
       - 'supabase/tests/fixtures/ead-certificate-test-harness.mjs'
       - 'supabase/tests/fixtures/ead-auto-certificate*'
       - 'supabase/tests/fixtures/ead-certificate-original-issuers.sql'
       - 'modules/gestor/secretaria/certificados/**'
       - 'modules/gestor/secretaria/historico-emissoes/**'
+      - 'modules/gestor/secretaria/shared/**'
+      - 'modules/shared/utils/**'
+      - 'modules/shared/pdf/**'
       - 'modules/aluno/cursos/**'
       - 'modules/gestor/cadastros/modelos-documentos/diploma/**'
       - 'modules/ead/**'
@@ -25,11 +29,15 @@ on:
       - 'supabase/tests/ead_automatic_certificate*'
       - 'supabase/tests/ead_certificate_curriculum*'
       - 'supabase/tests/ead_certificate_table*'
+      - 'supabase/tests/ead_certificate_identity*'
       - 'supabase/tests/fixtures/ead-certificate-test-harness.mjs'
       - 'supabase/tests/fixtures/ead-auto-certificate*'
       - 'supabase/tests/fixtures/ead-certificate-original-issuers.sql'
       - 'modules/gestor/secretaria/certificados/**'
       - 'modules/gestor/secretaria/historico-emissoes/**'
+      - 'modules/gestor/secretaria/shared/**'
+      - 'modules/shared/utils/**'
+      - 'modules/shared/pdf/**'
       - 'modules/aluno/cursos/**'
       - 'modules/gestor/cadastros/modelos-documentos/diploma/**'
       - 'modules/ead/**'
@@ -58,9 +66,13 @@ jobs:
         run: PGLITE_MODULE_PATH="$RUNNER_TEMP/ead-certificate-sql/node_modules/@electric-sql/pglite/dist/index.js" EAD_CURRICULUM_FIXTURE_OUT="$RUNNER_TEMP/ead-curriculum-payload.json" node supabase/tests/ead_certificate_curriculum.isolated.test.mjs
       - name: Validar tabela canônica e exportar payload SQL para paridade com o editor
         run: PGLITE_MODULE_PATH="$RUNNER_TEMP/ead-certificate-sql/node_modules/@electric-sql/pglite/dist/index.js" EAD_TABLE_FIXTURE_OUT="$RUNNER_TEMP/ead-table-payload.json" node supabase/tests/ead_certificate_table.isolated.test.mjs
+      - name: Validar identidade congelada da emissão EAD
+        run: PGLITE_MODULE_PATH="$RUNNER_TEMP/ead-certificate-sql/node_modules/@electric-sql/pglite/dist/index.js" node supabase/tests/ead_certificate_identity.isolated.test.mjs
+      - name: Validar prioridade e presença dos campos de identidade
+        run: node modules/gestor/secretaria/certificados/certificate-identity-snapshot.test.mjs
       - name: Preparar navegador e dependências isoladas da interface
         run: |
-          npm install --prefix "$RUNNER_TEMP/ead-certificate-ui" --no-save --package-lock=false --ignore-scripts react@19.2.7 react-dom@19.2.7 esbuild@0.25.12 playwright@1.56.1 lucide-react@0.564.0 dompurify@3.4.13 qrcode@1.5.4 tailwindcss@3.4.17 postcss@8.5.6 @tanstack/react-query@5.101.0
+          npm install --prefix "$RUNNER_TEMP/ead-certificate-ui" --no-save --package-lock=false --ignore-scripts react@19.2.7 react-dom@19.2.7 esbuild@0.25.12 playwright@1.56.1 lucide-react@0.564.0 dompurify@3.4.13 qrcode@1.5.4 tailwindcss@3.4.17 postcss@8.5.6 @tanstack/react-query@5.101.0 jspdf@4.2.1 pdf-lib@1.17.1 pdfjs-dist@5.6.205 @napi-rs/canvas@0.1.100
           node "$RUNNER_TEMP/ead-certificate-ui/node_modules/playwright/cli.js" install --with-deps chromium
           sudo apt-get update
           sudo apt-get install -y poppler-utils
@@ -74,9 +86,14 @@ jobs:
         run: EAD_UI_NODE_MODULES="$RUNNER_TEMP/ead-certificate-ui/node_modules" node modules/gestor/secretaria/certificados/ead-certificate-model.test.mjs
       - name: Validar modelo por curso e leitura atualizada no histórico EAD
         run: EAD_UI_NODE_MODULES="$RUNNER_TEMP/ead-certificate-ui/node_modules" node modules/gestor/secretaria/historico-emissoes/ead-emission-template.test.mjs
-      - name: Validar editor, Secretaria, compositor real e impressão nativa
+      - name: Validar formato e rótulos individuais de documentos EAD
+        run: EAD_UI_NODE_MODULES="$RUNNER_TEMP/ead-certificate-ui/node_modules" node modules/gestor/secretaria/certificados/components/ead-certificate-identity.test.mjs
+      - name: Validar projeções reais de identidade do aluno e histórico
+        run: EAD_UI_NODE_MODULES="$RUNNER_TEMP/ead-certificate-ui/node_modules" node modules/gestor/secretaria/certificados/ead-identity.integration.test.mjs
+      - name: Validar editor, identidade e PDF real da Secretaria
         run: EAD_UI_NODE_MODULES="$RUNNER_TEMP/ead-certificate-ui/node_modules" EAD_CURRICULUM_FIXTURE_OUT="$RUNNER_TEMP/ead-table-payload.json" EAD_CURRICULUM_ARTIFACTS="$RUNNER_TEMP/ead-curriculum-pdf" node modules/gestor/secretaria/certificados/ead-curriculum.pdf.test.mjs
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: ead-curriculum-synthetic-pdf
           path: ${{ runner.temp }}/ead-curriculum-pdf

@@ -35,7 +35,7 @@ const config = {
 
 const newDatabase = async ({
   modality = 'EAD', status = 'ATIVO', lessons = true,
-  courseConfig = config, totalHours = 120, curriculum = true, table = true,
+  courseConfig = config, totalHours = 120, curriculum = true, table = true, identity = true,
 } = {}) => {
   const db = new PGlite();
   await db.exec(await read('./fixtures/ead-auto-certificate-schema.sql'));
@@ -44,6 +44,7 @@ const newDatabase = async ({
   for (const name of migrations) await db.exec(await read(`../migrations/${name}`));
   if (curriculum) await applyCurriculumMigrations(db);
   if (curriculum && table) await applyTableMigrations(db);
+  if (curriculum && table && identity) await applyIdentityMigration(db);
   await db.query("SELECT set_config('test.aluno_id', $1, false)", [alumno]);
   await db.query('INSERT INTO parceiros(id,nome,cpf_cnpj) VALUES ($1,$2,$3)',
     [alumno, 'Aluno sintético', '00000000000']);
@@ -99,5 +100,9 @@ const applyTableMigrations = async (db) => {
   ]) await db.exec(await read(`../migrations/${name}`));
 };
 
-export { newDatabase, submit, state, pending, emit, applyCurriculumMigrations,
+const applyIdentityMigration = async db => db.exec(
+  await read('../migrations/20261008220000_snapshot_identity_on_ead_issue.sql'),
+);
+
+export { newDatabase, submit, state, pending, emit, applyCurriculumMigrations, applyIdentityMigration,
   applyTableMigrations, alumno, other, course, turma, enrollment, unit, certId, config };

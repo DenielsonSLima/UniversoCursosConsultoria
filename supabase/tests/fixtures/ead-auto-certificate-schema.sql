@@ -28,6 +28,7 @@ $$;
 
 CREATE TABLE public.parceiros (
   id uuid PRIMARY KEY, nome text, cpf_cnpj text, tipo_documento text, rg text,
+  orgao_emissor text, rg_uf_emissao text, rg_data_emissao date,
   data_nascimento date, foto_url text, instituicao_origem text,
   cidade text, uf text, ano_conclusao_ensino_medio text
 );

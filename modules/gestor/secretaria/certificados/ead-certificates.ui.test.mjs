@@ -186,7 +186,7 @@ test('EAD blocks unavailable configured or default models and failed persisted-t
   }
 });
 
-test('EAD keeps canonical A4 size under visual scale and removes scaling for print', async () => {
+test('EAD exposes the ready PDF and its download/print controls on desktop and mobile', async () => {
   for (const viewport of [{width:1440,height:900}, {width:390,height:844}]) {
     const page = await browser.newPage({viewport});
     try {
@@ -195,15 +195,14 @@ test('EAD keeps canonical A4 size under visual scale and removes scaling for pri
       await page.getByTitle('Pré-visualizar', { exact: true }).click();
       const document = page.getByTestId('certificate-document');
       await document.waitFor();
-      assert.equal(await document.getAttribute('data-pdf-mode'), 'true');
-      assert.ok(Math.abs(await document.evaluate(element => parseFloat(getComputedStyle(element).width)) - 297 * 96 / 25.4) < 1);
+      assert.equal(await document.getAttribute('data-pdf-viewer'), 'true');
       const displayed = await document.boundingBox();
       assert.ok(displayed.width <= viewport.width && displayed.x >= 0);
-      await page.emulateMedia({media:'print'});
-      const printed = await document.boundingBox();
-      assert.ok(Math.abs(printed.width - 297 * 96 / 25.4) < 1);
-      assert.ok(Math.abs(printed.height - 210 * 96 / 25.4) < 1);
-      assert.equal(await page.locator('[data-ead-certificate-preview-document]').evaluate(element => getComputedStyle(element).transform), 'none');
+      await page.getByRole('button', {name:'Baixar PDF',exact:true}).click();
+      await page.getByRole('button', {name:'Imprimir',exact:true}).click();
+      assert.equal(await page.evaluate(() => window.testDownloads), 1);
+      assert.equal(await page.evaluate(() => window.testPrints), 1);
+      assert.deepEqual(await page.evaluate(() => window.testIssuances), []);
     } finally { await page.close(); }
   }
 });
