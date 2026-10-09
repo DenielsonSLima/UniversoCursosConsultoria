@@ -25,6 +25,8 @@ interface Props {
   printContentRef: React.RefObject<HTMLDivElement>;
   /** URL do Blob PDF oficial. Quando presente, a prévia deixa de renderizar DOM. */
   pdfUrl?: string | null;
+  /** Renders a measured source for the canonical EAD PDF, never the printable modal. */
+  certificatePdfSource?: boolean;
   onClose: () => void;
   onDownload: () => void;
   onPrint: () => void;
@@ -56,6 +58,7 @@ const ReprintModal: React.FC<Props> = ({
   isReissuing,
   printContentRef,
   pdfUrl = null,
+  certificatePdfSource = false,
   onClose,
   onDownload,
   onPrint,
@@ -215,7 +218,7 @@ const ReprintModal: React.FC<Props> = ({
         {identityUpdate.error && <p role="alert" className="bg-rose-50 px-6 py-3 text-sm text-rose-700">{identityUpdate.error}</p>}
         <div className={`flex min-h-0 flex-1 justify-center overflow-auto p-3 custom-scrollbar sm:p-6 lg:p-8 ${fullscreenViewer ? 'bg-slate-900' : 'bg-slate-100'}`}>
           <div
-            ref={printContentRef}
+            ref={certificatePdfSource ? undefined : printContentRef}
             className="print-content-container"
             data-emission-render-key={
               !isLoading && !error ? getEmissionRenderKey(emission) : undefined
@@ -261,6 +264,16 @@ const ReprintModal: React.FC<Props> = ({
           </div>
         </div>
       </div>
+      {certificatePdfSource && certificatePreview && templateConfig && !error && (
+        <div aria-hidden="true" style={{ position: 'fixed', left: -20000, top: 0,
+          width: '297mm', pointerEvents: 'none', zIndex: -1 }}>
+          <div ref={printContentRef} data-emission-render-key={getEmissionRenderKey(emission)}>
+            <EmissionDocumentPages emission={emission} templateConfig={templateConfig}
+              certificatePreview={certificatePreview} watermark={watermark}
+              poloInfo={poloInfo} academicPreviewData={academicPreviewData} />
+          </div>
+        </div>
+      )}
       <style dangerouslySetInnerHTML={{ __html: buildPrintCss(isCertificate) }} />
     </div>
   );
@@ -286,3 +299,4 @@ const buildPrintCss = (landscape: boolean) => `
 `;
 
 export default ReprintModal;
+

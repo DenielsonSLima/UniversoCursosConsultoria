@@ -39,7 +39,7 @@ test('snapshot explícito domina cadastro vivo e tipo legado não se torna CIN',
 test('shared replacer e editor adaptam narrativa antes dos tokens, sem duplicação', () => {
   const context = { aluno: identity, enrollment: {}, polo: {}, formattedEnrollment: '', template: {}, selectedYear: 2026, irpfPayments: [] };
   const rendered = buildDocumentVariableReplacer(context)(declaration);
-  assert.equal(rendered.split(cpf).length - 1, 1);
+  assert.equal(rendered.split('000.000.000-00').length - 1, 1);
   assert.doesNotMatch(rendered, /CPF|RESÍDUO/);
   assert.match(buildDocumentVariableReplacer({ ...context, documentType: 'declaracao_irpf' })('CPF {{ALUNO_CPF}}'), /^CPF /);
   const editor = replaceStudentPreviewTokens(declaration, true, { enrollmentId: 'fixture', label: '', replacements: {
@@ -81,3 +81,4 @@ for (const frozenCpf of ['', null]) {
     }
   });
 }
+

@@ -1,4 +1,4 @@
-import { prepareStudentIdentityTemplate } from '../../../shared/utils/student-document-presentation';
+import { renderDeclarationIdentity } from '../../../shared/utils/declaration-identity-presentation';
 import { onlyDigits } from '../../../../lib/documentFormatters';
 import { matchesSecretariaSearch } from '../secretaria-search';
 import { resolveStudentIdentityDocument } from '../../../shared/utils/studentIdentityDocument';
@@ -44,12 +44,9 @@ export const parseDeclaracaoTemplate = (
     return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : dataStr;
   };
   const identity = resolveStudentIdentityDocument(aluno);
-  parsed = prepareStudentIdentityTemplate(parsed, identity.isCin);
+  parsed = renderDeclarationIdentity(parsed, identity, aluno.cpf);
 
   parsed = parsed.replace(/{{ALUNO_NOME}}/g, aluno.nome.toUpperCase());
-  parsed = parsed.replace(/{{ALUNO_CPF}}/g, aluno.cpf || 'Não informado');
-  parsed = parsed.replace(/{{ALUNO_DOCUMENTO_TIPO}}/g, identity.label || 'Documento não informado');
-  parsed = parsed.replace(/{{ALUNO_RG}}/g, identity.number || 'Não informado');
   parsed = parsed.replace(/{{ALUNO_NASCIMENTO}}/g, formatarData(aluno.nascimento));
   parsed = parsed.replace(/{{ALUNO_MATRICULA}}/g, aluno.matricula || 'Não gerada');
   parsed = parsed.replace(/{{CURSO_NOME}}/g, aluno.curso || '');
@@ -76,3 +73,4 @@ export const parseDeclaracaoTemplate = (
   );
   return parsed;
 };
+

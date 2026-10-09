@@ -14,6 +14,9 @@ export interface DeclaracaoAluno {
   instituicao: string;
   fotoUrl?: string | null;
   tipoDocumento?: string;
+  orgaoEmissor?: string;
+  rgUfEmissao?: string;
+  rgDataEmissao?: string;
   turmaIds?: string[];
   poloNome: string;
   poloCnpj: string;
@@ -44,3 +47,4 @@ export interface SecretariaDeclaracaoMatriculaPageProps {
   documentType?: DeclaracaoDocumentType;
   fileSlug?: string;
 }
+

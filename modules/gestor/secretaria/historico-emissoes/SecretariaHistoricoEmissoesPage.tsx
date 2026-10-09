@@ -1,10 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { getSecretariaContext } from '../shared/secretaria-documentos.service';
 import {
-  createDocumentReissueKey,
   documentValidationService,
 } from '../../../shared/document-validation/document-validation.service';
-import type { ValidatableDocumentType } from '../../../shared/document-validation/document-validation.types';
 import ToastNotification, { useToast } from '../../components/ToastNotification';
 import EmissionsToolbar from './components/EmissionsToolbar';
 import EmissionsTable from './components/EmissionsTable';
@@ -31,6 +29,8 @@ import {
 } from './reissue-flow';
 import { printPdfBlob } from '../shared/pdf-blob-print';
 import { createContractHistoryPdf, type VectorPreviewPdf } from './contract-history-pdf';
+import { isEadCertificateEmission, prepareEadHistoryPdf } from './ead-history-pdf';
+import { useReissueSession } from './useReissueSession';
 
 const isContractDocument = (documento: string) => documento === 'contrato_aluno';
 const getEmissionPreviewKey = (emission: EmissionLog) => (
@@ -42,11 +42,7 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
   const context = getSecretariaContext();
   const { toasts, removeToast, toast } = useToast();
   const printContentRef = useRef<HTMLDivElement>(null);
-  const reissueOperationRef = useRef(false);
-  const reissueRequestRef = useRef<{
-    fingerprint: string;
-    idempotencyKey: string;
-  } | null>(null);
+  const reissueSession = useReissueSession(context.userId);
   const vectorPreviewPdfRef = useRef<VectorPreviewPdf | null>(null);
   const previewLoadTokenRef = useRef(0);
 
@@ -133,7 +129,7 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
   }, [activeTab, appliedSearch, context.poloId, page, reloadVersion, selectedTurmaId]);
 
   const clearPreview = () => {
-    if (reissueOperationRef.current) return;
+    if (reissueSession.operation.current) return;
     previewLoadTokenRef.current += 1;
     setIsPreviewOpen(false);
     setIsLoadingPreview(false);
@@ -179,7 +175,11 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
         : await historicoEmissoesService.loadPreview(emission, context.poloId);
       if (previewLoadTokenRef.current !== loadToken) return;
       applyPreview(resources);
-      if (isContractDocument(emission.documento)) {
+      if (isEadCertificateEmission(emission)) {
+        const pdf = await prepareEadHistoryPdf(emission, resources, () => printContentRef.current, null);
+        if (previewLoadTokenRef.current !== loadToken) return;
+        replaceVectorPreviewPdf(pdf.blob, pdf.emissionKey);
+      } else if (isContractDocument(emission.documento)) {
         const pdf = await createContractHistoryPdf(emission);
         if (previewLoadTokenRef.current !== loadToken) return;
         replaceVectorPreviewPdf(pdf.blob, emissionKey);
@@ -200,36 +200,12 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
     }
   };
 
-  const getReissueRequest = (emission: EmissionLog) => {
-    const fingerprint = JSON.stringify([
-      emission.documento,
-      emission.matricula_id,
-      emission.periodo_referencia || null,
-      emission.referencia_externa || null,
-      context.userId || null,
-    ]);
-    if (reissueRequestRef.current?.fingerprint !== fingerprint) {
-      reissueRequestRef.current = {
-        fingerprint,
-        idempotencyKey: createDocumentReissueKey(),
-      };
-    }
-    return {
-      type: emission.documento as ValidatableDocumentType,
-      enrollmentId: emission.matricula_id,
-      referencePeriod: emission.periodo_referencia || undefined,
-      sourceReference: emission.referencia_externa || undefined,
-      issuedBy: context.userId,
-      idempotencyKey: reissueRequestRef.current.idempotencyKey,
-    };
-  };
-
   const prepareReissueOutput = async (emission: EmissionLog) => {
     setIsLoadingPreview(true);
     setPreviewError(null);
     try {
       const prepared = await documentValidationService.prepareReissue(
-        getReissueRequest(emission),
+        reissueSession.getRequest(emission),
       );
       const canonicalEmission =
         await historicoEmissoesService.loadEmissionByCode(prepared.code);
@@ -261,6 +237,14 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
 
       setSelectedEmission(preparedEmission);
       applyPreview(resources);
+      if (isEadCertificateEmission(preparedEmission)) {
+        const pdf = await prepareEadHistoryPdf(
+          preparedEmission, resources, () => printContentRef.current, vectorPreviewPdfRef.current,
+        );
+        if (vectorPreviewPdfRef.current?.blob !== pdf.blob) replaceVectorPreviewPdf(pdf.blob, pdf.emissionKey);
+        setIsLoadingPreview(false);
+        return { canonicalEmission: preparedEmission, container: null, pdfBlob: pdf.blob };
+      }
       if (isContractDocument(preparedEmission.documento)) {
         const preparedEmissionKey = getEmissionPreviewKey(preparedEmission);
         const previewBlob = vectorPreviewPdfRef.current?.emissionKey === preparedEmissionKey
@@ -314,7 +298,8 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
       return { canonicalEmission: preparedEmission, container, pdfBlob };
     } catch (error) {
       if (
-        isContractDocument(emission.documento)
+        isEadCertificateEmission(emission)
+        || isContractDocument(emission.documento)
         || isOfficialVectorDocument(emission.documento)
       ) {
         replaceVectorPreviewPdf(null);
@@ -331,42 +316,18 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
 
   const confirmCanonicalReissue = async (emission: EmissionLog) => {
     const issued = await documentValidationService.reissue(
-      getReissueRequest(emission),
+      reissueSession.getRequest(emission),
     );
     assertEmissionAlignedWithIssue(emission, issued);
     setReloadVersion((version) => version + 1);
     return issued;
   };
 
-  const beginReissueOperation = (): boolean => {
-    if (reissueOperationRef.current) return false;
-    reissueOperationRef.current = true;
-    return true;
-  };
-
-  const endReissueOperation = () => {
-    reissueOperationRef.current = false;
-  };
-
-  const finishReissueRequest = () => {
-    reissueRequestRef.current = null;
-  };
-
-  const discardStalePreparedRequest = (error: unknown) => {
-    if (
-      typeof error === 'object'
-      && error !== null
-      && 'code' in error
-      && error.code === '40001'
-    ) {
-      finishReissueRequest();
-    }
-  };
-
   const handlePrint = async () => {
     const isVectorPdf = Boolean(
       selectedEmission && (
-        isContractDocument(selectedEmission.documento)
+        isEadCertificateEmission(selectedEmission)
+        || isContractDocument(selectedEmission.documento)
         || isOfficialVectorDocument(selectedEmission.documento)
       )
     );
@@ -374,7 +335,7 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
       !selectedEmission
       || (!isVectorPdf && !printContentRef.current)
       || previewError
-      || !beginReissueOperation()
+      || !reissueSession.begin()
     ) return;
     setIsReissuing(true);
     try {
@@ -385,9 +346,9 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
       } else {
         window.print();
       }
-      finishReissueRequest();
+      reissueSession.finish();
     } catch (error) {
-      discardStalePreparedRequest(error);
+      reissueSession.discardStale(error);
       console.error('Erro ao preparar segunda via:', error);
       toast.error(
         'Erro ao preparar impressão',
@@ -397,14 +358,15 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
       );
     } finally {
       setIsReissuing(false);
-      endReissueOperation();
+      reissueSession.end();
     }
   };
 
   const handleDownload = async () => {
     const isVectorPdf = Boolean(
       selectedEmission && (
-        isContractDocument(selectedEmission.documento)
+        isEadCertificateEmission(selectedEmission)
+        || isContractDocument(selectedEmission.documento)
         || isOfficialVectorDocument(selectedEmission.documento)
       )
     );
@@ -412,7 +374,7 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
       !selectedEmission
       || (!isVectorPdf && !printContentRef.current)
       || previewError
-      || !beginReissueOperation()
+      || !reissueSession.begin()
     ) return;
     setIsDownloading(true);
     try {
@@ -420,14 +382,14 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
         await prepareReissueOutput(selectedEmission);
       await confirmCanonicalReissue(canonicalEmission);
       saveEmissionPdfBlob(pdfBlob, canonicalEmission);
-      finishReissueRequest();
+      reissueSession.finish();
     } catch (error) {
-      discardStalePreparedRequest(error);
+      reissueSession.discardStale(error);
       console.error('Erro ao gerar PDF da segunda via:', error);
       toast.error('Erro ao Processar', 'Erro ao processar o PDF.');
     } finally {
       setIsDownloading(false);
-      endReissueOperation();
+      reissueSession.end();
     }
   };
 
@@ -470,7 +432,8 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
           poloInfo={poloInfo}
           academicPreviewData={academicPreviewData}
           pdfUrl={(
-            isContractDocument(selectedEmission.documento)
+            isEadCertificateEmission(selectedEmission)
+            || isContractDocument(selectedEmission.documento)
             || isOfficialVectorDocument(selectedEmission.documento)
           )
             ? vectorPreviewPdf?.url || null
@@ -480,6 +443,7 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
           isDownloading={isDownloading}
           isReissuing={isReissuing}
           fullscreenViewer
+          certificatePdfSource={isEadCertificateEmission(selectedEmission)}
           printContentRef={printContentRef}
           onIdentityUpdated={async (updated) => {
             setReloadVersion((version) => version + 1);
@@ -496,3 +460,4 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
 };
 
 export default SecretariaHistoricoEmissoesPage;
+

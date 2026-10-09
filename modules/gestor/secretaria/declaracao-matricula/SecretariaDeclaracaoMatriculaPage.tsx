@@ -85,7 +85,8 @@ const SecretariaDeclaracaoMatriculaPage = ({
           .from('matriculas')
           .select(`
             id, aluno_id, turma_id, status, data_matricula,
-            parceiros!inner(id, nome, cpf_cnpj, rg, data_nascimento, foto_url, tipo_documento),
+            parceiros!inner(id, nome, cpf_cnpj, rg, data_nascimento, foto_url, tipo_documento,
+              orgao_emissor, rg_uf_emissao, rg_data_emissao),
             turmas!inner(
               id, nome, codigo, status, polo_id,
               cursos!inner(nome), polos(nome, cnpj, cidade, estado)
@@ -136,6 +137,9 @@ const SecretariaDeclaracaoMatriculaPage = ({
           instituicao: 'Universo Cursos e Consultoria',
           fotoUrl: student.foto_url || null,
           tipoDocumento: student.tipo_documento || '',
+          orgaoEmissor: student.orgao_emissor || '',
+          rgUfEmissao: student.rg_uf_emissao || '',
+          rgDataEmissao: student.rg_data_emissao || '',
           turmaIds: studentEnrollments.map((enrollment) => enrollment.turma_id),
           poloNome: turmaPolo.nome || poloData?.nome || 'Universo Cursos e Consultoria',
           poloCnpj: turmaPolo.cnpj || poloData?.cnpj || '',
@@ -342,3 +346,4 @@ const SecretariaDeclaracaoMatriculaPage = ({
 };
 
 export default SecretariaDeclaracaoMatriculaPage;
+

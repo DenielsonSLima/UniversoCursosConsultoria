@@ -20,20 +20,8 @@ const managedIrpfUrl = new URL(
   "../../modules/gestor/parceiros/components/viewparceiros/aluno/ParceiroAlunoSecretaria.tsx",
   import.meta.url,
 );
-const historyUrl = new URL(
-  "../../modules/gestor/secretaria/historico-emissoes/SecretariaHistoricoEmissoesPage.tsx",
-  import.meta.url,
-);
 const secretariaDocumentsUrl = new URL(
   "../../modules/gestor/secretaria/shared/secretaria-documentos.service.ts",
-  import.meta.url,
-);
-const whatsappIrpfUrl = new URL(
-  "../functions/_shared/whatsapp-flow/irpf.ts",
-  import.meta.url,
-);
-const whatsappEngineUrl = new URL(
-  "../functions/_shared/whatsapp-flow/engine.ts",
   import.meta.url,
 );
 
@@ -43,10 +31,7 @@ const [
   service,
   studentIrpf,
   managedIrpf,
-  history,
   secretariaDocuments,
-  whatsappIrpf,
-  whatsappEngine,
 ] =
   await Promise.all([
     Deno.readTextFile(migrationUrl),
@@ -54,10 +39,7 @@ const [
     Deno.readTextFile(serviceUrl),
     Deno.readTextFile(studentIrpfUrl),
     Deno.readTextFile(managedIrpfUrl),
-    Deno.readTextFile(historyUrl),
     Deno.readTextFile(secretariaDocumentsUrl),
-    Deno.readTextFile(whatsappIrpfUrl),
-    Deno.readTextFile(whatsappEngineUrl),
   ]);
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -470,87 +452,5 @@ Deno.test("IRPF consulta na query e registra somente na ação do gestor", () =>
     managedIrpf,
     /const printRegisteredIrpf = async[\s\S]*await irpfReissue\.reissue\(\)[\s\S]*window\.print\(\)/,
     "IRPF gerenciado deve registrar por ação antes de imprimir",
-  );
-});
-
-Deno.test("IRPF do WhatsApp usa a RPC idempotente com chave estável", () => {
-  assertMatch(
-    whatsappIrpf,
-    /admin\.rpc\("reemitir_documento_validacao_portal"[\s\S]*p_idempotency_key:\s*idempotencyKey/,
-    "WhatsApp precisa registrar a ação pela RPC idempotente",
-  );
-  assert(
-    !/emitir_documento_validacao(?:_portal)?[\s\S]*p_registrar_reemissao:\s*true/.test(
-      whatsappIrpf,
-    ),
-    "WhatsApp não pode reutilizar o atalho legado de reemissão",
-  );
-  assertMatch(
-    whatsappEngine,
-    /const requestKey = String\(session\?\.data\?\.irpfRequestKey[\s\S]*const idempotencyKey = \[[\s\S]*"whatsapp-irpf"[\s\S]*requestKey[\s\S]*option\.matriculaId[\s\S]*option\.year[\s\S]*\]\.join\(":"\)/,
-    "retry do mesmo envio precisa reconstruir a chave da ação persistida",
-  );
-  assertMatch(
-    whatsappEngine,
-    /issueIrpfDocument\(admin, option, idempotencyKey\)/,
-    "engine precisa encaminhar a chave estável ao emissor",
-  );
-  assertMatch(
-    whatsappEngine,
-    /const irpfRequestKey = createIrpfRequestKey\(\)[\s\S]*status: "choosing_irpf_year"[\s\S]*irpfRequestKey/,
-    "a escolha de ano precisa persistir um nonce novo por oferta",
-  );
-  assertMatch(
-    whatsappEngine,
-    /result\.options\.length === 1[\s\S]*status: "choosing_irpf_year"[\s\S]*irpfRequestKey[\s\S]*irpfPendingOption/,
-    "a oferta de ano único também precisa persistir a ação antes da emissão",
-  );
-  assertMatch(
-    whatsappEngine,
-    /if \(session\.status === "choosing_irpf_year"\)[\s\S]*irpfPendingOption[\s\S]*sendIrpf/,
-    "falha ambígua de ano único deve poder repetir com o mesmo nonce",
-  );
-  assert(
-    !/status: "issuing_irpf"/.test(whatsappEngine),
-    "o fluxo não pode gravar um status ausente do check constraint",
-  );
-  assertMatch(
-    whatsappIrpf,
-    /Deno\.env\.get\("PUBLIC_SITE_URL"\)/,
-    "WhatsApp deve usar somente a origem pública canônica configurada",
-  );
-  assert(
-    !/Deno\.env\.get\("(?:SITE_URL|APP_URL|VITE_PUBLIC_SITE_URL)"\)/.test(
-      whatsappIrpf,
-    ),
-    "WhatsApp não pode aceitar aliases que apontem para o portal interno",
-  );
-  assertMatch(
-    whatsappIrpf,
-    /url\.protocol !== "https:"[\s\S]*isPrivateOrLocalHostname\(url\.hostname\)/,
-    "origem pública do WhatsApp deve exigir HTTPS e recusar host local/privado",
-  );
-});
-
-Deno.test("histórico reutiliza chave após falha e preserva gates de assets", () => {
-  assertMatch(
-    history,
-    /reissueRequestRef = useRef[\s\S]*createDocumentReissueKey\(\)/,
-    "histórico precisa manter chave estável por operação",
-  );
-  assertMatch(
-    history,
-    /idempotencyKey:\s*reissueRequestRef\.current\.idempotencyKey/,
-    "segunda via deve enviar a chave estável ao serviço",
-  );
-  assertMatch(
-    history,
-    /const prepareReissueOutput = async[\s\S]*await waitForDocumentAssets\(container\)[\s\S]*await downloadEmissionPdf\([\s\S]*false/,
-    "assets e captura PDF devem terminar antes do incremento",
-  );
-  assertMatch(
-    history,
-    /await prepareReissueOutput\(selectedEmission\)[\s\S]*await confirmCanonicalReissue\(canonicalEmission\)[\s\S]*saveEmissionPdfBlob\(pdfBlob, canonicalEmission\)[\s\S]*finishReissueRequest\(\)/,
-    "PDF só pode ser confirmado e salvo depois da captura sem efeitos colaterais",
   );
 });

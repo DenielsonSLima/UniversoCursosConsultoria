@@ -1,4 +1,5 @@
 import { prepareStudentIdentityTemplate } from '../utils/student-document-presentation';
+import { isEnrollmentDeclaration, renderDeclarationIdentity } from '../utils/declaration-identity-presentation';
 import { getDocumentValidationUrl } from '../document-validation/document-validation.url';
 import { resolveStudentIdentityDocument } from '../utils/studentIdentityDocument';
 
@@ -95,7 +96,10 @@ export const buildDocumentVariableReplacer = (context: DocumentVariableContext) 
     VALOR_TOTAL: new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(irpfTotal),
     VALOR_EXTENSO: amountInWords(irpfTotal),
   };
-  return Object.entries(replacements).reduce((text, [token, value]) => replaceToken(text, token, value), prepareStudentIdentityTemplate(source, identity.isCin, context.documentType === 'declaracao_irpf'));
+  const prepared = isEnrollmentDeclaration(context.documentType || 'declaracao_matricula')
+    ? renderDeclarationIdentity(source, identity, alunoCpf)
+    : prepareStudentIdentityTemplate(source, identity.isCin, context.documentType === 'declaracao_irpf');
+  return Object.entries(replacements).reduce((text, [token, value]) => replaceToken(text, token, value), prepared);
 };
 
 interface ValidationCodeContext {
@@ -131,3 +135,4 @@ export const buildValidationUrl = (registeredCode: string | undefined, fallbackC
   void baseUrl;
   return getDocumentValidationUrl(registeredCode || fallbackCode);
 };
+
