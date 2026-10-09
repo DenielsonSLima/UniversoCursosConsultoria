@@ -97,6 +97,7 @@ const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
 
   const invalidate = async () => {
     await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['parceiros'] }),
       queryClient.invalidateQueries({ queryKey: ['parceiro', alunoId, 'matriculas'] }),
       queryClient.invalidateQueries({ queryKey: ['parceiro', alunoId, 'matricula-atual'] }),
       queryClient.invalidateQueries({ queryKey: ['parceiro', alunoId, 'matricula-movimentacoes'] }),

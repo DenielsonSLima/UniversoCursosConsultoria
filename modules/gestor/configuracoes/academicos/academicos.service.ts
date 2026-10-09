@@ -42,39 +42,47 @@ let _memCache: AcademicosConfigData | null = null;
 let _memCacheTs = 0;
 const CACHE_TTL_MS = 60_000; // 1 minuto
 
-export const academicosService = {
-  /**
-   * Busca configurações diretamente do Supabase.
-   * Usa cache em memória por até 1 minuto para evitar re-fetches desnecessários.
-   * NUNCA usa localStorage.
-   */
-  async getConfigs(): Promise<AcademicosConfigData> {
-    const now = Date.now();
-    if (_memCache && now - _memCacheTs < CACHE_TTL_MS) {
+const loadConfigs = async (strict: boolean): Promise<AcademicosConfigData> => {
+  const now = Date.now();
+  if (_memCache && now - _memCacheTs < CACHE_TTL_MS) {
+    return _memCache;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('documentos_templates')
+      .select('conteudo')
+      .eq('id', 'academicos_config')
+      .maybeSingle();
+
+    if (error) throw error;
+
+    if (data && data.conteudo) {
+      _memCache = {
+        ...DEFAULT_CONFIGS,
+        ...data.conteudo,
+        validacaoUrl: getDocumentValidationBaseUrl(),
+      } as AcademicosConfigData;
+      _memCacheTs = now;
       return _memCache;
     }
+  } catch (e) {
+    console.error('[academicosService] Erro ao buscar configs do Supabase:', e);
+    if (strict) throw e;
+  }
 
-    try {
-      const { data, error } = await supabase
-        .from('documentos_templates')
-        .select('conteudo')
-        .eq('id', 'academicos_config')
-        .maybeSingle();
+  return DEFAULT_CONFIGS;
+};
 
-      if (!error && data && data.conteudo) {
-        _memCache = {
-          ...DEFAULT_CONFIGS,
-          ...data.conteudo,
-          validacaoUrl: getDocumentValidationBaseUrl(),
-        } as AcademicosConfigData;
-        _memCacheTs = now;
-        return _memCache;
-      }
-    } catch (e) {
-      console.error('[academicosService] Erro ao buscar configs do Supabase:', e);
-    }
+export const academicosService = {
+  /** Lê o Supabase com cache em memória de 1 minuto; nunca usa localStorage. */
+  getConfigs(): Promise<AcademicosConfigData> {
+    return loadConfigs(false);
+  },
 
-    return DEFAULT_CONFIGS;
+  /** Propaga falhas de leitura; ausência válida conserva os defaults canônicos. */
+  getConfigsStrict(): Promise<AcademicosConfigData> {
+    return loadConfigs(true);
   },
 
   /**
@@ -129,3 +137,4 @@ export const academicosService = {
     return this.getConfigs();
   },
 };
+

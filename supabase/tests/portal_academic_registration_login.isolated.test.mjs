@@ -8,7 +8,8 @@ const moduleName = process.env.PGLITE_MODULE_PATH
   ? pathToFileURL(resolve(process.env.PGLITE_MODULE_PATH)).href : '@electric-sql/pglite';
 const { PGlite } = await import(moduleName);
 const read = path => readFile(new URL(path, import.meta.url), 'utf8');
-const migration = await read('../migrations/20261009112324_resolve_academic_student_login_identity.sql');
+const previousMigration = await read('../migrations/20261009112324_resolve_academic_student_login_identity.sql');
+const migration = `${previousMigration}\n${await read('../migrations/20261009193037_resolve_student_login_enrollment_polo.sql')}`;
 const legacyMigration = await read('../migrations/20260728150552_secure_student_registration_portal_auth.sql');
 const legacyStart = legacyMigration.indexOf('create or replace function public.resolve_portal_login_identity(');
 assert.ok(legacyStart >= 0);
@@ -31,9 +32,10 @@ test('matrícula acadêmica resolve somente uma identidade canônica', async t =
       id uuid primary key, tipo text, status text, matricula_acesso text,
       auth_login_email text, polo_id uuid
     );
+    create table public.turmas (id uuid primary key, polo_id uuid);
     create table public.matriculas (
       id uuid primary key, aluno_id uuid references public.parceiros(id),
-      data_matricula timestamptz, status text
+      data_matricula timestamptz, status text, turma_id uuid references public.turmas(id)
     );
     create function public.is_active_status(value text) returns boolean
       language sql immutable as $$ select lower(value) = 'ativo' $$;
@@ -45,18 +47,24 @@ test('matrícula acadêmica resolve somente uma identidade canônica', async t =
     return result.rows[0].email;
   };
   const reset = async () => {
-    await db.exec('truncate public.matriculas, public.parceiros, public.documentos_templates;');
+    await db.exec('truncate public.matriculas, public.parceiros, public.turmas, public.documentos_templates;');
     await db.query(`insert into public.parceiros values
       ($1, 'Aluno', 'ATIVO', $2, $3, null),
       ($4, 'Aluno', 'ATIVO', 'UNIV-A-00000002', 'student-two@acesso.universocc.invalid', null)`,
     [firstStudent, firstAlias, firstEmail, secondStudent]);
-    await db.query(`insert into public.matriculas values ($1, $2, '2026-07-01T00:00:00Z', 'ATIVO')`,
+    await db.query(`insert into public.matriculas (id, aluno_id, data_matricula, status) values ($1, $2, '2026-07-01T00:00:00Z', 'ATIVO')`,
       [firstEnrollment, firstStudent]);
   };
   const setConfig = config => db.query(`insert into public.documentos_templates values
     ('academicos_config', $1::jsonb) on conflict (id) do update set conteudo = excluded.conteudo`,
   [JSON.stringify(config)]);
   const scenario = async (name, body) => t.test(name, async () => { await reset(); await body(); });
+  const attachDifferentClassPolo = async () => {
+    await setConfig({ usePoloCode: true });
+    await db.exec(`insert into public.turmas values
+      ('40000000-0000-0000-0000-000000000001', '55555555-5555-5555-5555-555555555555');`);
+    await db.query(`update public.matriculas set turma_id = '40000000-0000-0000-0000-000000000001' where id = $1`, [firstEnrollment]);
+  };
 
   try {
     await scenario('reproduz falha original e confirma correção para o mesmo vínculo', async () => {
@@ -91,11 +99,37 @@ test('matrícula acadêmica resolve somente uma identidade canônica', async t =
     });
 
     await scenario('vários vínculos do mesmo aluno contam como uma pessoa', async () => {
-      await db.query(`insert into public.matriculas values
+      await db.query(`insert into public.matriculas (id, aluno_id, data_matricula, status) values
         ('30000000-0000-0000-0000-00000000002a', $1, '2026-08-01', 'CONCLUIDO'),
         ('30000000-0000-0000-0000-00000000002b', $1, '2026-08-01', 'CONCLUIDO')`, [firstStudent]);
       assert.equal(await resolveIdentity('UNIV-260042'), firstEmail);
       assert.equal(await resolveIdentity('UNIV-260043'), firstEmail);
+    });
+
+    await scenario('polo da turma diferente do cadastro resolve a matrícula exibida nas três telas', async () => {
+      await attachDifferentClassPolo();
+      await db.exec(previousMigration);
+      assert.equal(await resolveIdentity('UNIV-26020042'), null, 'resolvedor anterior ignorava o polo da turma');
+      await db.exec(migration);
+      assert.equal(await resolveIdentity('UNIV-26020042'), firstEmail);
+    });
+
+    await scenario('matrícula anterior pelo polo do parceiro e alias de acesso continuam aceitos', async () => {
+      await attachDifferentClassPolo();
+      assert.equal(await resolveIdentity('UNIV-26020042'), firstEmail);
+      assert.equal(await resolveIdentity('UNIV-26010042'), firstEmail);
+      assert.equal(await resolveIdentity(firstAlias), firstEmail);
+    });
+
+    await scenario('colisão da matrícula pelo polo da turma com matrícula legada de outro aluno é recusada', async () => {
+      await attachDifferentClassPolo();
+      await db.query(`update public.parceiros set polo_id = '55555555-5555-5555-5555-555555555555' where id = $1`, [secondStudent]);
+      await db.query(`insert into public.matriculas (id, aluno_id, data_matricula, status) values
+        ('30000000-0000-0000-0000-00000000002a', $1, '2026-07-01', 'ATIVO')`, [secondStudent]);
+      assert.equal(await resolveIdentity('UNIV-26020042'), null);
+      await db.query('update public.parceiros set auth_login_email = null where id = $1', [secondStudent]);
+      assert.equal(await resolveIdentity('UNIV-26020042'), null, 'aluno sem Auth também conta na colisão');
+      assert.equal(await resolveIdentity(firstAlias), firstEmail);
     });
 
     await scenario('matrícula concluída não bloqueia aluno cujo cadastro continua ativo', async () => {
@@ -107,7 +141,7 @@ test('matrícula acadêmica resolve somente uma identidade canônica', async t =
     });
 
     await scenario('dois alunos com a mesma matrícula principal são recusados inclusive sem Auth', async () => {
-      await db.query(`insert into public.matriculas values
+      await db.query(`insert into public.matriculas (id, aluno_id, data_matricula, status) values
         ('30000000-0000-0000-0000-00000000002a', $1, '2026-07-01', 'ATIVO')`, [secondStudent]);
       assert.equal(await resolveIdentity('UNIV-260042'), null);
       await db.query('update public.parceiros set auth_login_email = $1 where id = $2', [firstEmail, secondStudent]);
