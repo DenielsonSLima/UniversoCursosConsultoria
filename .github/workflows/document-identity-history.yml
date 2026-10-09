@@ -4,6 +4,10 @@ on:
   pull_request:
     paths:
       - '.github/workflows/document-identity-history.yml'
+      - 'modules/aluno/secretaria/**'
+      - 'supabase/migrations/*student_enrollment_declaration_pdf.sql'
+      - 'supabase/tests/student_declaration_pdf.isolated.test.mjs'
+      - 'supabase/tests/fixtures/student-declaration-boundaries.sql'
       - 'modules/gestor/secretaria/contratos-aluno/**'
       - 'modules/gestor/secretaria/historico-emissoes/**'
       - 'modules/gestor/secretaria/shared/**'
@@ -17,6 +21,10 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/document-identity-history.yml'
+      - 'modules/aluno/secretaria/**'
+      - 'supabase/migrations/*student_enrollment_declaration_pdf.sql'
+      - 'supabase/tests/student_declaration_pdf.isolated.test.mjs'
+      - 'supabase/tests/fixtures/student-declaration-boundaries.sql'
       - 'modules/gestor/secretaria/contratos-aluno/**'
       - 'modules/gestor/secretaria/historico-emissoes/**'
       - 'modules/gestor/secretaria/shared/**'
@@ -55,6 +63,10 @@ jobs:
         run: PGLITE_MODULE_PATH="$RUNNER_TEMP/document-identity/node_modules/@electric-sql/pglite/dist/index.js" CONTRACT_UI_NODE_MODULES="$RUNNER_TEMP/document-identity/node_modules" CONTRACT_PDF_ARTIFACTS="$RUNNER_TEMP/contract-identity-pdf" node modules/gestor/secretaria/contratos-aluno/contract-identity.pdf.test.mjs
       - name: Conferir declaração configurada, lote, download e impressão do mesmo PDF
         run: EAD_UI_NODE_MODULES="$RUNNER_TEMP/document-identity/node_modules" DECLARATION_PDF_ARTIFACTS="$RUNNER_TEMP/declaration-pdf" node modules/gestor/secretaria/historico-emissoes/declaration-pdf.ui.test.mjs
+      - name: Conferir modelo autorizado da declaração do próprio aluno
+        run: PGLITE_MODULE_PATH="$RUNNER_TEMP/document-identity/node_modules/@electric-sql/pglite/dist/index.js" node supabase/tests/student_declaration_pdf.isolated.test.mjs
+      - name: Conferir declaração do aluno, download, impressão e modelo atualizado
+        run: EAD_UI_NODE_MODULES="$RUNNER_TEMP/document-identity/node_modules" ALUNO_DECLARATION_ARTIFACTS="$RUNNER_TEMP/aluno-declaration" node modules/aluno/secretaria/aluno-declaration.browser.test.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -62,4 +74,5 @@ jobs:
           path: |
             ${{ runner.temp }}/contract-identity-pdf
             ${{ runner.temp }}/declaration-pdf
+            ${{ runner.temp }}/aluno-declaration
           if-no-files-found: warn

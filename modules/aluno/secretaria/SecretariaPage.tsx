@@ -3,7 +3,6 @@ import { AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import { formatMatricula } from '../../../lib/academicUtils';
-import { declaracaoService } from '../../gestor/cadastros/modelos-documentos/declaracao/declaracao.service';
 import { irpfService } from '../../gestor/cadastros/modelos-documentos/irpf/irpf.service';
 import { marcaDaguaService } from '../../gestor/configuracoes/marca-dagua/marca-dagua.service';
 import { academicosService } from '../../gestor/configuracoes/academicos/academicos.service';
@@ -22,6 +21,7 @@ import { alunoCourseAccessKeys } from '../shared/aluno-course-access.queries';
 import { buildDocumentVariableReplacer, buildFallbackValidationCode, buildValidationUrl } from '../../shared/secretaria/document-template.helpers';
 import { resolveStudentIdentityDocument } from '../../shared/utils/studentIdentityDocument';
 import AlunoIdentityDocuments, { AlunoIdentityTab } from './components/AlunoIdentityDocuments';
+import AlunoDeclarationDialog from './components/AlunoDeclarationDialog';
 import AlunoSecretariaServicesPanel from './components/AlunoSecretariaServicesPanel';
 import { alunoSecretariaKeys, alunoSecretariaService } from './secretaria-aluno.service';
 import { useAlunoSecretariaData } from './useAlunoSecretariaData';
@@ -40,10 +40,10 @@ type Toast = { message: string; type: 'success' | 'error' | 'warning' };
 
 const printStyles = `@media print {
   body * { visibility: hidden; }
-  #print-area, #print-area *, #print-area-cracha, #print-area-cracha *, #print-area-cracha-eleitoral, #print-area-cracha-eleitoral *, #print-area-declaracao, #print-area-declaracao *, #print-area-irpf, #print-area-irpf * { visibility: visible; }
+  #print-area, #print-area *, #print-area-cracha, #print-area-cracha *, #print-area-cracha-eleitoral, #print-area-cracha-eleitoral *, #print-area-irpf, #print-area-irpf * { visibility: visible; }
   #print-area, #print-area-cracha { position:absolute;left:0;top:0;width:100%;padding:20mm!important;box-shadow:none!important;border:none!important; }
   #print-area-cracha-eleitoral { position:absolute;left:0;top:0;width:100%;padding:8mm!important;box-shadow:none!important;border:none!important;background:white!important;-webkit-print-color-adjust:exact;print-color-adjust:exact; }
-  #print-area-declaracao, #print-area-irpf { position:absolute;left:0;top:0;width:794px!important;height:1123px!important;padding:60px 80px!important;box-shadow:none!important;border:none!important;background:white!important;-webkit-print-color-adjust:exact;print-color-adjust:exact; }
+  #print-area-irpf { position:absolute;left:0;top:0;width:794px!important;height:1123px!important;padding:60px 80px!important;box-shadow:none!important;border:none!important;background:white!important;-webkit-print-color-adjust:exact;print-color-adjust:exact; }
 }`;
 
 const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId, contextId }) => {
@@ -78,9 +78,7 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId, contextId }) =
   const declarationEnrollment = eligibility.declarationEnrollment;
   const irpfEnrollment = eligibility.irpfEnrollment;
   const activePoloId = activeEnrollment?.turmas?.polo_id || activeEnrollment?.polo_id;
-  const declarationPoloId = declarationEnrollment?.turmas?.polo_id || declarationEnrollment?.polo_id || activePoloId;
   const irpfPoloId = irpfEnrollment?.turmas?.polo_id || irpfEnrollment?.polo_id || activePoloId;
-  const documentPoloId = irpfOpen ? irpfPoloId : declarationPoloId;
   const alunoCpf = aluno?.cpf || aluno?.cpf_cnpj || '';
   const formattedEnrollment = activeEnrollment
     ? formatMatricula(activeEnrollment.id, activeEnrollment.data_matricula, activeEnrollment.turmas?.polo_id || activeEnrollment.polo_id)
@@ -102,7 +100,6 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId, contextId }) =
 
   const cardValidation = useDocumentValidationCode(identityEnrollment ? { type: 'carteirinha', enrollmentId: identityEnrollment.id } : null, tab === 'carteirinha' && eligibility.canEmitStudentCard);
   const badgeValidation = useDocumentValidationCode(identityEnrollment ? { type: 'cracha_estagio', enrollmentId: identityEnrollment.id } : null, tab === 'cracha' && eligibility.canEmitInternshipBadge);
-  const declarationValidation = useDocumentValidationCode(declarationEnrollment ? { type: 'declaracao_matricula', enrollmentId: declarationEnrollment.id } : null, declarationOpen && eligibility.canEmitEnrollmentDeclaration);
 
   const bulletinTurmaId = bulletinEnrollment?.turma_id;
   const bulletinModulesQuery = useQuery({
@@ -142,11 +139,6 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId, contextId }) =
     staleTime: 60_000,
   });
   const academicResults = academicResultsQuery.data || [];
-  const { data: declarationTemplate } = useQuery({
-    queryKey: ['print-declaracao-template', declarationPoloId],
-    queryFn: () => declarationPoloId ? declaracaoService.getTemplate(declarationPoloId) : null,
-    enabled: !!declarationPoloId,
-  });
   const { data: irpfTemplate } = useQuery({
     queryKey: ['print-irpf-template', irpfPoloId],
     queryFn: () => irpfPoloId ? irpfService.getTemplate(irpfPoloId) : null,
@@ -158,17 +150,16 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId, contextId }) =
   const irpfReleased = isIrpfYearReleased(selectedIrpfYear, irpfReleaseDate);
   const irpfValidation = useDocumentValidationCode(irpfEnrollment ? { type: 'declaracao_irpf', enrollmentId: irpfEnrollment.id, referencePeriod: String(selectedIrpfYear) } : null, irpfOpen && eligibility.canEmitIrpf && irpfReleased);
   const { data: irpfPayments = [] } = useIRPFFiscalData(alunoId, selectedIrpfYear, irpfEnrollment?.turma_id, eligibility.canEmitIrpf && irpfReleased);
-  const { data: polo } = useQuery({ queryKey: ['print-polo-details', documentPoloId], queryFn: async () => {
-    if (!documentPoloId) return null;
-    const { data, error } = await supabase.from('polos').select('*').eq('id', documentPoloId).single();
+  const { data: polo } = useQuery({ queryKey: ['print-polo-details', irpfPoloId], queryFn: async () => {
+    if (!irpfPoloId) return null;
+    const { data, error } = await supabase.from('polos').select('*').eq('id', irpfPoloId).single();
     if (error) throw error;
     return data;
-  }, enabled: !!documentPoloId });
+  }, enabled: !!irpfPoloId });
   const { data: watermarks } = useQuery({ queryKey: ['print-watermarks'], queryFn: marcaDaguaService.getCompaniesWithWatermark });
-  const { data: declarationQr } = useQuery({ queryKey: ['print-declaracao-qr-config'], queryFn: declaracaoService.getQrConfig });
   const { data: academicConfigs } = useQuery({ queryKey: ['print-academic-configs'], queryFn: academicosService.getConfigs });
   const { data: irpfQr } = useQuery({ queryKey: ['print-irpf-qr-config'], queryFn: irpfService.getQrConfig });
-  const watermark = watermarks?.find((item: any) => item.id === documentPoloId);
+  const watermark = watermarks?.find((item: any) => item.id === irpfPoloId);
 
   useEffect(() => {
     const timer = window.setInterval(() => setAvailabilityNow(new Date()), 60_000);
@@ -227,14 +218,7 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId, contextId }) =
       showToast(`Aguarde o registro do código da ${label}.`, 'warning');
       return;
     }
-    const printAreaId = label === 'carteirinha'
-      ? 'print-area'
-      : label === 'crachá'
-        ? 'print-area-cracha'
-        : label.includes('IRPF')
-          ? 'print-area-irpf'
-          : 'print-area-declaracao';
-    const printArea = document.getElementById(printAreaId);
+    const printArea = document.getElementById('print-area-irpf');
     if (!printArea) return;
     try {
       await waitForQrCodeAssets(printArea);
@@ -255,13 +239,8 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId, contextId }) =
     setIrpfOpen(true);
   };
 
-  const variableEnrollment = irpfOpen ? irpfEnrollment : declarationEnrollment || activeEnrollment;
-  const variableEnrollmentNumber = irpfOpen ? formattedIrpfEnrollment : formattedEnrollment;
-  const variableTemplate = irpfOpen ? irpfTemplate : declarationTemplate;
-  const replaceVariables = useMemo(() => buildDocumentVariableReplacer({ documentType: irpfOpen ? 'declaracao_irpf' : 'declaracao_matricula', aluno, enrollment: variableEnrollment, polo, formattedEnrollment: variableEnrollmentNumber, template: variableTemplate, selectedYear: selectedIrpfYear, irpfPayments }), [irpfOpen, aluno, variableEnrollment, polo, variableEnrollmentNumber, variableTemplate, selectedIrpfYear, irpfPayments]);
-  const declarationCode = buildFallbackValidationCode({ prefix: 'DEC', registeredCode: declarationValidation.data?.code, pattern: declarationQr?.pattern, separator: declarationQr?.separator, enrollment: declarationEnrollment, alunoCpf, formattedEnrollment });
+  const replaceVariables = useMemo(() => buildDocumentVariableReplacer({ documentType: 'declaracao_irpf', aluno, enrollment: irpfEnrollment, polo, formattedEnrollment: formattedIrpfEnrollment, template: irpfTemplate, selectedYear: selectedIrpfYear, irpfPayments }), [aluno, irpfEnrollment, polo, formattedIrpfEnrollment, irpfTemplate, selectedIrpfYear, irpfPayments]);
   const irpfCode = buildFallbackValidationCode({ prefix: 'IRPF', registeredCode: irpfValidation.data?.code, pattern: irpfQr?.pattern, separator: irpfQr?.separator, enrollment: irpfEnrollment, alunoCpf, formattedEnrollment: formattedIrpfEnrollment });
-  const declarationUrl = buildValidationUrl(declarationValidation.data?.code, declarationCode, academicConfigs?.validacaoUrl);
   const irpfUrl = buildValidationUrl(irpfValidation.data?.code, irpfCode, academicConfigs?.validacaoUrl);
   const identityDocument = resolveStudentIdentityDocument(aluno);
   const alunoData = { nome: aluno?.nome?.toUpperCase() || 'NOME DO ALUNO', cpf: alunoCpf || 'CPF não cadastrado', rg: identityDocument.number || 'Doc. não cadastrado', nascimento: aluno?.data_nascimento ? formatCarteirinhaDate(aluno.data_nascimento) : 'Não informado', matricula: formattedEnrollment, curso: identityEnrollment?.turmas?.cursos?.nome || activeEnrollment?.turmas?.cursos?.nome || 'CURSO GERAL', instituicao: institutionalData?.poloNome || 'UNIVERSO CURSOS E CONSULTORIA', validade: `01/${new Date().getFullYear() + 1}`, fotoUrl: aluno?.foto_url || null, tipoDocumento: identityDocument.label, cargo: 'ALUNO(A)', polo: identityEnrollment?.turmas?.polos?.nome || activeEnrollment?.turmas?.polos?.nome || 'Polo Principal', poloRazaoSocial: institutionalData?.razaoSocial, poloCnpj: institutionalData?.cnpj, poloTelefone: institutionalData?.telefone };
@@ -397,7 +376,9 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId, contextId }) =
           void academicResultsQuery.refetch();
         }}
       />
-      <TemplateDocumentModal open={declarationOpen && eligibility.canEmitEnrollmentDeclaration} onClose={() => setDeclarationOpen(false)} title="Declaração de Cursando" documentTitle="Declaração de Matrícula" printAreaId="print-area-declaracao" code={declarationValidation.data?.code || declarationCode} validationUrl={declarationUrl} template={declarationTemplate} polo={polo} watermark={watermark} replaceVariables={replaceVariables} onPrint={() => printRegistered(declarationValidation.data?.code, 'declaração')} />
+      <AlunoDeclarationDialog open={declarationOpen && eligibility.canEmitEnrollmentDeclaration}
+        onClose={() => setDeclarationOpen(false)} alunoId={alunoId}
+        enrollmentId={declarationEnrollment?.id || ''} contextId={contextId} />
       <TemplateDocumentModal open={irpfOpen} onClose={() => setIrpfOpen(false)} title="Declaração de Rendimentos (IRPF)" documentTitle="Declaração de Anuidade / Rendimentos Escolares" printAreaId="print-area-irpf" code={irpfValidation.data?.code || irpfCode} validationUrl={irpfUrl} template={irpfTemplate} polo={polo} watermark={watermark} replaceVariables={replaceVariables} accent="emerald" printDisabled={!irpfReleased || !irpfPayments.length} onPrint={() => printRegistered(irpfValidation.data?.code, 'declaração de IRPF')} beforeDocument={<div className="w-[794px] max-w-full rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 shadow-lg print:hidden"><label htmlFor="student-irpf-calendar-year" className="text-[9px] font-black uppercase tracking-widest text-slate-400">Ano-calendário</label><select id="student-irpf-calendar-year" value={selectedIrpfYear} onChange={(event) => setSelectedIrpfYear(Number(event.target.value))} className="mt-1 min-h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-base font-black text-[#001a33] outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 md:min-h-0 md:w-auto md:text-xs">{irpfYearOptions.map((option) => <option key={option.year} value={option.year}>{option.year}{option.released ? '' : ` - libera em ${option.releaseLabel}`}</option>)}</select></div>} />
       {toast ? <div className="fixed inset-x-4 top-[calc(4.75rem+env(safe-area-inset-top))] z-[9999] md:left-auto md:right-6 md:top-6" role={toast.type === 'error' ? 'alert' : 'status'} aria-live={toast.type === 'error' ? 'assertive' : 'polite'}><div className={`flex items-center gap-3 rounded-2xl border px-4 py-3.5 text-white shadow-2xl md:px-6 ${toast.type === 'success' ? 'bg-emerald-500/95' : toast.type === 'warning' ? 'bg-amber-500/95' : 'bg-red-500/95'}`}>{toast.type === 'success' ? <CheckCircle size={18} /> : <AlertTriangle size={18} />}<span className="text-xs font-black uppercase tracking-wide">{toast.message}</span></div></div> : null}
       <style dangerouslySetInnerHTML={{ __html: printStyles }} />

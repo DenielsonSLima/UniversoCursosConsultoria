@@ -1,8 +1,8 @@
 {
-  "version": "4.8.193",
+  "version": "4.8.194",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 202,
+  "revision": 203,
   "releasedAt": "2026-10-09",
-  "summary": "Identificação individual nos contratos e segunda via vetorial das declarações"
+  "summary": "Declaração do aluno usa o modelo institucional e o mesmo PDF na prévia, download e impressão"
 }
