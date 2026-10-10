@@ -13,14 +13,15 @@ const output = await mkdtemp(join(tmpdir(), 'aluno-extrato-presentation-'));
 after(() => rm(output, { recursive: true, force: true }));
 await build({
   stdin: {
-    contents: `export * from './alunoExtrato.mapper'; export * from './alunoExtrato.presentation';`,
+    contents: `export * from './alunoExtrato.mapper'; export * from './alunoExtrato.presentation'; export * from './alunoExtrato.settlement-policy';`,
     resolveDir: directory, loader: 'ts',
   },
   bundle: true, platform: 'node', format: 'esm',
   outfile: join(output, 'contract.mjs'),
 });
 const { mapAlunoExtratoRecebivel: map, extratoChargePresentation: charge,
-  extratoChargeAction: action, extratoPaymentOrigin: origin } = await import(
+  extratoChargeAction: action, extratoPaymentOrigin: origin,
+  extratoPaymentMethod: method, canSettleExtratoReceivable: canSettle } = await import(
   pathToFileURL(resolve(output, 'contract.mjs')).href
 );
 
@@ -60,6 +61,7 @@ test('issued Banese title remains unpaid, with bank link and stored discount', (
   assert.deepEqual(item.operationCapabilities, capabilities);
   assert.deepEqual(charge(item), { label: 'Boleto emitido', detail: 'Banese', tone: 'confirmed' });
   assert.equal(origin(item), 'Banese');
+  assert.equal(method(item), 'Boleto/Pix');
   assert.equal(action(item), 'banese');
 });
 
@@ -67,14 +69,52 @@ test('payment and composition are displayed only when returned by the backend', 
   const item = map({ ...title, status: 'PAGO', valor_pago: '260.00',
     data_pagamento: '2026-10-09', origem_pagamento: 'PRESENCIAL',
     gateway_status: 'CANCELED', composicao_status: 'COMPOSICAO_EXPLICITA',
-    desconto_aplicado: '19.90', gateway_settlement_source: 'MANUAL' }, context);
+    desconto_aplicado: '19.90', gateway_settlement_source: 'MANUAL',
+    emissao_ciclo_status: 'PENDENTE', forma_pagamento: 'PIX' }, context);
   assert.equal(item.valorPago, 260);
   assert.equal(item.descontoAplicado, 19.9);
   assert.equal(item.dataPagamento, '2026-10-09');
   assert.equal(item.gatewaySettlementSource, 'MANUAL');
   assert.match(origin(item), /^Manual/);
+  assert.equal(method(item), 'Pix');
   assert.equal(action(item), null);
   assert.match(charge(item).label, /Cancelado no Banese/);
+  assert.equal(charge(item).detail, '');
+});
+
+test('manual receipt presents its recorded method independently from the canceled bank title', () => {
+  for (const [stored, expected] of [
+    ['PIX', 'Pix'], ['DINHEIRO', 'Dinheiro'], ['CARTAO', 'Cartão'],
+    ['BOLETO', 'Boleto'], [null, 'Não definido'],
+  ]) {
+    const item = map({ ...title, status: 'PAGO', origem_pagamento: 'PRESENCIAL',
+      forma_pagamento: stored, gateway_status: 'CANCELED' }, context);
+    assert.equal(method(item), expected);
+  }
+});
+
+test('bank settlement keeps the channel supplied by the gateway without inferring Pix', () => {
+  const paid = { ...title, status: 'PAGO', gateway_status: 'RECEIVED' };
+  assert.equal(method(map({ ...paid, gateway_settlement_channel: 'PIX' }, context)), 'Pix (BolePix)');
+  assert.equal(method(map({ ...paid, gateway_settlement_channel: 'BOLETO' }, context)), 'Boleto');
+  assert.equal(method(map(paid, context)), 'Boleto/Pix — canal não identificado');
+});
+
+test('paid titles never suggest resuming issuance even with stale cycle or gateway metadata', () => {
+  for (const gatewayStatus of ['PENDING', 'RECEIVED', null]) {
+    const item = map({ ...title, status: 'PAGO', valor_pago: '279.90',
+      data_pagamento: '2026-10-09', emissao_ciclo_status: 'PENDENTE',
+      gateway_status: gatewayStatus }, context);
+    assert.deepEqual(charge(item), { label: 'Pagamento registrado', detail: '', tone: 'confirmed' });
+    assert.equal(action(item), null);
+  }
+});
+
+test('confirmed bank cancellation is displayed before an incomplete cycle notice', () => {
+  const item = map({ ...title, gateway_status: 'CANCELED',
+    emissao_ciclo_status: 'PENDENTE' }, context);
+  assert.deepEqual(charge(item), { label: 'Cancelado no Banese', detail: '', tone: 'neutral' });
+  assert.equal(action(item), null);
 });
 
 test('no capability, issuance pending, quarantine and cancellation never open a title', () => {
@@ -118,4 +158,25 @@ test('legacy Asaas URL remains compatible without naming a Banese title Asaas', 
   assert.equal(action(legacy), 'external');
   assert.equal(legacy.asaasInvoiceUrl, 'https://billing.example/old-id');
   assert.equal(origin(map({ ...title, asaas_payment_id: 'stale-id' }, context)), 'Banese');
+});
+
+test('manual settlement requires operator permission, polo and server capability together', () => {
+  const item = map(title, context);
+  assert.equal(canSettle(item, true), true);
+  assert.equal(canSettle({ ...item, status: 'VENCIDO' }, true), true);
+  assert.equal(canSettle(item, false), false);
+  assert.equal(canSettle({ ...item, poloId: undefined }, true), false);
+  assert.equal(canSettle({ ...item, operationCapabilities: undefined }, true), false);
+  assert.equal(canSettle({ ...item, operationCapabilities: { ...capabilities, canSettle: false } }, true), false);
+});
+
+test('terminal titles and origin or cancellation restrictions never allow manual settlement', () => {
+  for (const patch of [
+    ...['PAGO', 'CANCELADO', 'ESTORNADO', 'DEVOLVIDO', 'SUSPENSO'].map(status => ({ status })),
+    { operation_capabilities: { ...capabilities, sourceSystem: 'PROESC', provenanceKind: 'PROESC_HISTORY' } },
+    { operation_capabilities: { ...capabilities, sourceSystem: 'CONFLICT', provenanceKind: 'CONFLICT' } },
+    { gateway_last_error: 'BANESE_IDENTITY_QUARANTINED: mismatch' },
+    { banese_cancellation: { state: 'REVIEW_REQUIRED', reason: 'TRANCAMENTO_FUTURO',
+      movementId: 'movement-a', cutoffDate: '2026-10-09' } },
+  ]) assert.equal(canSettle(map({ ...title, ...patch }, context), true), false);
 });

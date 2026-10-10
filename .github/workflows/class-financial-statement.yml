@@ -7,6 +7,9 @@ on:
       - 'modules/gestor/gestao/tecnicos/detalhes/components/financeiro/extrato/**'
       - 'modules/gestor/financeiro/financeiro.*'
       - 'modules/gestor/financeiro/receber/components/modalidade-receber/**'
+      - 'modules/gestor/financeiro/receber/components/manual-settlement/**'
+      - 'modules/gestor/gestao/tecnicos/detalhes/components/financeiro/FinanceiroAlunosList.tsx'
+      - 'modules/gestor/gestao/tecnicos/detalhes/components/financeiro/ciclo-manual-settlement-account.ts'
       - 'modules/gestor/financeiro/receber/banese/**'
       - 'supabase/migrations/**'
       - 'supabase/tests/turma_student_statement*'
@@ -18,6 +21,9 @@ on:
       - 'modules/gestor/gestao/tecnicos/detalhes/components/financeiro/extrato/**'
       - 'modules/gestor/financeiro/financeiro.*'
       - 'modules/gestor/financeiro/receber/components/modalidade-receber/**'
+      - 'modules/gestor/financeiro/receber/components/manual-settlement/**'
+      - 'modules/gestor/gestao/tecnicos/detalhes/components/financeiro/FinanceiroAlunosList.tsx'
+      - 'modules/gestor/gestao/tecnicos/detalhes/components/financeiro/ciclo-manual-settlement-account.ts'
       - 'modules/gestor/financeiro/receber/banese/**'
       - 'supabase/migrations/**'
       - 'supabase/tests/turma_student_statement*'
@@ -28,7 +34,7 @@ permissions:
 
 jobs:
   class-financial-statement:
-    name: Extrato, isolamento e boletos existentes
+    name: Extrato, baixa manual e isolamento
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -54,6 +60,11 @@ jobs:
           EAD_UI_NODE_MODULES: ${{ runner.temp }}/class-financial-statement/node_modules
           ALUNO_EXTRATO_ARTIFACTS: ${{ runner.temp }}/aluno-extrato
         run: node modules/gestor/gestao/tecnicos/detalhes/components/financeiro/extrato/alunoExtrato.browser.test.mjs
+      - name: Conferir baixa manual e reconciliação entre módulos
+        env:
+          EAD_UI_NODE_MODULES: ${{ runner.temp }}/class-financial-statement/node_modules
+          ALUNO_EXTRATO_ARTIFACTS: ${{ runner.temp }}/aluno-extrato
+        run: node modules/gestor/gestao/tecnicos/detalhes/components/financeiro/extrato/alunoExtrato.settlement.browser.test.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

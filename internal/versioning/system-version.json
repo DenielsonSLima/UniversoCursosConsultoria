@@ -1,8 +1,8 @@
 {
-  "version": "4.8.196",
+  "version": "4.8.197",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 205,
+  "revision": 206,
   "releasedAt": "2026-10-10",
-  "summary": "Extrato financeiro da turma exibe boletos Banese e acompanha a situação de Contas a Receber"
+  "summary": "Baixa manual pelo extrato financeiro do aluno na turma com o mesmo fluxo do Financeiro"
 }
