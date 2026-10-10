@@ -6,6 +6,11 @@ Histórico anterior: [27/09/2026 — versões 4.8.117 a 4.8.127](./changelog/202
 
 Histórico arquivado: [27/09/2026 — versões 4.8.115 a 4.8.116](./changelog/2026-09-27-versoes-4-8-115-a-4-8-116.md), [27/09/2026 — versão 4.8.114](./changelog/2026-09-27-versao-4-8-114.md), [27/09/2026 — versão 4.8.113](./changelog/2026-09-27-versao-4-8-113.md), [27/09/2026 — versão 4.8.112](./changelog/2026-09-27-versao-4-8-112.md), [27/09/2026 — versão 4.8.111](./changelog/2026-09-27-versao-4-8-111.md), [25/09/2026 a 26/09/2026 — versões 4.8.91 a 4.8.110](./changelog/2026-09-25-a-2026-09-26-versoes-4-8-91-a-4-8-110.md).
 
+## [4.8.204] - 2026-10-10
+
+- Diário permite O opcional por aluno e mantém campos vazios sem nota; zero exige lançamento explícito.
+- Médias calculadas no backend preservam duas casas decimais, com fechamento e validação documental coerentes.
+
 ## [4.8.203] - 2026-10-10
 
 - Seleção de docentes passa a listar os professores ativos vinculados ao polo da turma, incluindo professores com mais de uma unidade.

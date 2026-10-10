@@ -79,3 +79,12 @@ test('duas provas documentais preservam P e P sem inventar numeração no cabeç
   assert.doesNotMatch(markup, /\bP[12]\b/);
   assert.equal((table(markup).match(/<input\b/g) ?? []).length, 1, 'somente recuperação; notas documentais são literais');
 });
+
+test('lançamento aceita centésimos e explica que O é opcional por aluno', () => {
+  const markup = render({ ...onlyP, ti: true, o: true });
+  const inputs = table(markup).match(/<input\b[^>]*>/g) ?? [];
+  assert.equal(inputs.length, 4, 'P, TI, O e recuperação');
+  for (const input of inputs) assert.match(input, /step="0\.01"/);
+  assert.match(markup, /O é opcional por aluno/);
+  assert.match(markup, /salvas ao sair do campo/);
+});
