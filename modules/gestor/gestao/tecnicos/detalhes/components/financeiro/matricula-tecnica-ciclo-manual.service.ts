@@ -1,4 +1,4 @@
-import { isIssuedCycleReceivable, readCycleQuantities } from './matricula-tecnica-ciclo-manual-destination';
+import { isFeeOnlyExternalTransferPlan, isIssuedCycleReceivable, readCycleQuantities } from './matricula-tecnica-ciclo-manual-destination';
 import { supabase } from "../../../../../../../lib/supabase";
 import { reviewProescCycles } from './proesc-cycle-review.service';
 import { requireEligibleProescCycleReview } from './proesc-cycle-review.parser';
@@ -62,7 +62,8 @@ const requireGenerationResult = (
   }
   const cycle = value.ciclo;
   const receivables = cycle.recebiveis as unknown[];
-  const quantities = readCycleQuantities(cycle);
+  const quantities = readCycleQuantities(cycle, isRecord(value.cicloManual)
+    && isFeeOnlyExternalTransferPlan(value.cicloManual.planoEntrada, Number(cycle.numero)));
   const validReceivables = receivables.every((item) => (
     isRecord(item) &&
     isNonEmptyString(item.id) &&
@@ -372,4 +373,3 @@ export const matriculaTecnicaCicloManualService = {
     return result;
   },
 };
-

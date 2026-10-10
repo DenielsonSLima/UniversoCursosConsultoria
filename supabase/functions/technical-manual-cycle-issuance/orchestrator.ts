@@ -1,6 +1,7 @@
 import {
   errorMessage,
   IssuanceHttpError,
+  isFeeOnlyTransferPlan,
   type ManualCycleContext,
   type ManualCycleIssuanceRequest,
   type ManualCycleProgress,
@@ -70,6 +71,8 @@ const assertRequestedContext = (
     ? (request.revisao?.emitirMatricula === false && !localRequested ? 0 : 1) : null;
   const reviewedInstallments = request.revisao?.itens.filter((item) =>
     item.chave.startsWith(`ciclo-${request.cicloNumero}-parc-`));
+  const feeOnly = isFeeOnlyTransferPlan(context.cicloManual, request.cicloNumero)
+    && installments.length === 0 && leadItems.length === 1 && context.ciclo.quantidadeItens === 1;
   if (
     context.ciclo.numero !== request.cicloNumero ||
     (context.matriculaId && context.matriculaId !== request.matriculaId) ||
@@ -83,7 +86,7 @@ const assertRequestedContext = (
     context.ciclo.recebiveis.some((item) => (
       item.destinoCobranca === 'LOCAL' || item.localSemBoletoComprovado === true || item.emissaoBanese === 'NAO_APLICAVEL'
     ) && !isProvenLocalEnrollment(item, context.ciclo.numero)) ||
-    installments.length < 1 || installments.length > 60 || leadItems.length > 1 ||
+    (installments.length < 1 && !feeOnly) || installments.length > 60 || leadItems.length > 1 ||
     leadItems.some((item) => item.tipo !== expectedLead || item.numero !== 0) ||
     new Set(installments.map((item) => item.numero)).size !== installments.length ||
     installments.some((item) => !Number.isInteger(item.numero) || item.numero < 1 || item.numero > installments.length) ||
@@ -194,4 +197,3 @@ export const runManualCycleIssuance = async (
     throw await partialError(request, dependencies, error);
   }
 };
-

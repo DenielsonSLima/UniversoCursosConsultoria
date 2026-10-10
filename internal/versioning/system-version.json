@@ -1,8 +1,8 @@
 {
-  "version": "4.8.197",
+  "version": "4.8.198",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 206,
+  "revision": 207,
   "releasedAt": "2026-10-10",
-  "summary": "Baixa manual pelo extrato financeiro do aluno na turma com o mesmo fluxo do Financeiro"
+  "summary": "Recebimento de transferência externa pela Secretaria com turma, notas e condições financeiras individuais"
 }

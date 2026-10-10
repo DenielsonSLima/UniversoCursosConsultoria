@@ -1,5 +1,6 @@
 import { parseCorrectionSummary, usesCanonicalCycleAfterCorrection } from './bounded-correction';
-import { isProvenLocalEnrollment, readCycleQuantities } from './matricula-tecnica-ciclo-manual-destination';
+import { isFeeOnlyExternalTransferPlan, isProvenLocalEnrollment, readCycleQuantities } from './matricula-tecnica-ciclo-manual-destination';
+import { isExternalTransferConditions } from '../academic/external-transfer.contract';
 import type {
   MatriculaTecnicaCicloManual,
   MatriculaTecnicaCicloManualCriterio,
@@ -80,7 +81,8 @@ export const requireMatriculaTecnicaCicloManual = (
     && isNonEmptyString(value.bloqueio.mensagem)
   );
   const generated = value.cicloGerado;
-  const quantities = isRecord(generated) ? readCycleQuantities(generated) : null;
+  const quantities = isRecord(generated) ? readCycleQuantities(generated,
+    isFeeOnlyExternalTransferPlan(value.planoEntrada, Number(generated.numero))) : null;
   const hasExternalOrigin = isRecord(generated) && (
     generated.origemEmissao !== undefined
     || generated.abrangencia !== undefined
@@ -100,6 +102,7 @@ export const requireMatriculaTecnicaCicloManual = (
     isRecord(generated)
     && generatedOriginValid
     && quantities !== null
+    && (quantities.bank > 0 || (generated.numero === 1 && isProvenLocalEnrollment(value.matriculaLocal)))
     && Number.isInteger(generated.numero)
     && Number(generated.numero) > 0
     && isNonEmptyString(generated.status)
@@ -126,7 +129,12 @@ export const requireMatriculaTecnicaCicloManual = (
     ? Number(value.proximoCicloNumero) : null;
   const generatedNumber = isRecord(generated) ? Number(generated.numero) : null;
   const entry = value.planoEntrada;
+  const entryConditionsValid = isRecord(entry) && (
+    (entry.cobrarMensalidades === undefined && entry.condicoes === undefined)
+    || (typeof entry.cobrarMensalidades === 'boolean' && isExternalTransferConditions(entry.condicoes))
+  );
   const entryValid = isRecord(entry)
+    && entryConditionsValid
     && [1, 2].includes(Number(entry.cicloInicial)) && Number.isInteger(entry.cicloInicial)
     && Number.isInteger(entry.quantidadeParcelas)
     && Number(entry.quantidadeParcelas) >= 1 && Number(entry.quantidadeParcelas) <= 60
@@ -136,10 +144,16 @@ export const requireMatriculaTecnicaCicloManual = (
     && (entry.cicloInicial === 2 ? isNonEmptyString(entry.justificativaCiclo2)
       : entry.justificativaCiclo2 === null);
   const plannedInitialCycle = value.criterioElegibilidade === 'TRANSFERENCIA_PLANEJADA';
+  const noPlannedCharges = entryValid && entry.cobrarMensalidades === false
+    && isExternalTransferConditions(entry.condicoes)
+    && (entry.cicloInicial === 1 ? !entry.condicoes.cobrarMatricula : !entry.condicoes.cobrarRematricula);
   const plannedTransitionValid = plannedInitialCycle && entryValid
-    && generated === null && baseline === 0 && maximum === 2
-    && state === 'ELEGIVEL' && value.podeGerar === true
-    && value.bloqueio === null && next === entry.cicloInicial
+    && generated === null && baseline === 0 && [1, 2].includes(maximum!)
+    && (noPlannedCharges
+      ? state === 'BLOQUEADO' && value.podeGerar === false && isRecord(value.bloqueio)
+        && value.bloqueio.codigo === 'SEM_COBRANCAS_PLANEJADAS'
+      : state === 'ELEGIVEL' && value.podeGerar === true && value.bloqueio === null)
+    && next === entry.cicloInicial
     && value.primeiroVencimentoSugerido === entry.primeiroVencimento;
   const continuity = value.continuidadeFinanceira;
   const continuityValid = isRecord(continuity)
@@ -256,4 +270,3 @@ export const requireMatriculaTecnicaCicloManual = (
   }
   return value as unknown as MatriculaTecnicaCicloManual;
 };
-

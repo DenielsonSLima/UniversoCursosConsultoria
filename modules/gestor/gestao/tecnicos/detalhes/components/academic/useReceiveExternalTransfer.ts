@@ -8,28 +8,37 @@ import {
   type ExternalTransferInput, type ExternalTransferPreview, type ExternalTransferResult,
 } from './external-transfer.contract';
 import {
-  buildExternalTransferInput, createExternalTransferDraft, externalTransferDraftError,
+  applyExternalTransferDefaults, buildExternalTransferInput, createExternalTransferDraft, externalTransferDraftError,
   externalTransferPlan, type ExternalTransferDraft,
 } from './external-transfer-draft';
 import { externalTransferService } from './external-transfer.service';
 import { ExternalTransferAttempt } from './external-transfer-attempt';
 
+export interface ExternalTransferStudent {
+  id: string;
+  nome: string;
+  cpf_cnpj: string | null;
+}
+
 interface Options {
   turmaId: string;
   canReceive: boolean;
+  initialStudent?: ExternalTransferStudent;
   onSaved: (result: ExternalTransferResult) => Promise<void>;
 }
 
-export const useReceiveExternalTransfer = ({ turmaId, canReceive, onSaved }: Options) => {
-  const [draft, setDraft] = useState(createExternalTransferDraft);
+export const useReceiveExternalTransfer = ({ turmaId, canReceive, initialStudent, onSaved }: Options) => {
+  const [draft, setDraft] = useState(() => createExternalTransferDraft(initialStudent?.id));
   const [reviewed, setReviewed] = useState<{ studentId: string; planKey: string; data: ExternalTransferPreview } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uncertain, setUncertain] = useState(false);
   const [result, setResult] = useState<ExternalTransferResult | null>(null);
   const attempt = useRef(new ExternalTransferAttempt());
+  const defaultsApplied = useRef('');
 
   const studentsQuery = useQuery({
     queryKey: [...academicLifecycleKeys.turma(turmaId), 'alunos-recebimento'],
+    enabled: !initialStudent,
     queryFn: async () => {
       const { data, error: loadError } = await supabase.from('parceiros')
         .select('id, nome, cpf_cnpj').eq('tipo', 'Aluno').order('nome');
@@ -50,12 +59,13 @@ export const useReceiveExternalTransfer = ({ turmaId, canReceive, onSaved }: Opt
   const context = contextQuery.data;
   useEffect(() => {
     if (!context || attempt.current.hasInput) return;
-    setDraft((current) => current.installments ? current : {
-      ...current, installments: String(context.financeiro.quantidadeParcelas),
-    });
-  }, [context]);
+    const contextKey = `${turmaId}:${draft.studentId}`;
+    if (defaultsApplied.current === contextKey) return;
+    defaultsApplied.current = contextKey;
+    setDraft((current) => applyExternalTransferDefaults(current, context));
+  }, [context, draft.studentId, turmaId]);
 
-  const plan = externalTransferPlan(draft, context?.quantidadeMaxima || 0);
+  const plan = externalTransferPlan(draft, context?.quantidadeMaxima || 0, context?.maxCiclos || 1);
   const planKey = JSON.stringify(plan);
   const review = reviewed?.studentId === draft.studentId && reviewed.planKey === planKey ? reviewed.data : null;
   const previewMutation = useMutation({
@@ -79,8 +89,8 @@ export const useReceiveExternalTransfer = ({ turmaId, canReceive, onSaved }: Opt
     retry: false,
   });
   const locked = saveMutation.isPending || uncertain || Boolean(result);
-  const loading = studentsQuery.isFetching || disciplinesQuery.isFetching;
-  const loadError = studentsQuery.isError || disciplinesQuery.isError;
+  const loading = (!initialStudent && studentsQuery.isFetching) || disciplinesQuery.isFetching;
+  const loadError = (!initialStudent && studentsQuery.isError) || disciplinesQuery.isError;
   const financialError = contextQuery.isError ? transferErrorMessage(contextQuery.error) : null;
   const ready = canReceive && !loading && !loadError && !contextQuery.isFetching
     && !contextQuery.isError && !previewMutation.isPending && !previewMutation.isError
@@ -91,6 +101,7 @@ export const useReceiveExternalTransfer = ({ turmaId, canReceive, onSaved }: Opt
     if (!attempt.current.canEdit) return;
     setError(null);
     if (field === 'studentId') {
+      defaultsApplied.current = '';
       setDraft(createExternalTransferDraft(String(value)));
       setReviewed(null);
       previewMutation.reset();
@@ -120,10 +131,19 @@ export const useReceiveExternalTransfer = ({ turmaId, canReceive, onSaved }: Opt
     }
   };
 
+  const restoreDefaults = () => {
+    if (!context || !attempt.current.canEdit) return;
+    setDraft((current) => applyExternalTransferDefaults(current, context));
+    setReviewed(null);
+    previewMutation.reset();
+    setError(null);
+  };
+
   return {
-    draft, change, students: studentsQuery.data || [], disciplines: disciplinesQuery.data || [],
+    draft, change, students: initialStudent ? [initialStudent] : studentsQuery.data || [], disciplines: disciplinesQuery.data || [],
     loading, loadError, context, financialError, financialLoading: contextQuery.isFetching,
-    review, reviewing: previewMutation.isPending, canReview: Boolean(plan) && !contextQuery.isFetching && !contextQuery.isError,
+    review, reviewing: previewMutation.isPending, canReview: canReceive && Boolean(plan) && !contextQuery.isFetching && !contextQuery.isError,
+    restoreDefaults,
     reviewPlan: () => { if (attempt.current.canEdit && !previewMutation.isPending) previewMutation.mutate(); },
     ready, pending: saveMutation.isPending, locked, uncertain, result, error, confirm,
     canClose: !saveMutation.isPending && !uncertain,

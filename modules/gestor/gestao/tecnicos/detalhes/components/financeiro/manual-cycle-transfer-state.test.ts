@@ -24,6 +24,61 @@ test('plano autoriza representar C1/C2 inicial sem criar histórico fictício de
   }
 });
 
+const conditions = {
+  cobrarMatricula: false, valorMatricula: '100.00', valorMensalidade: '250.00',
+  cobrarRematricula: false, valorRematricula: '100.00', descontoPontualidade: '20.00',
+  jurosAtrasoPercentual: '2.00', multaAtrasoPercentual: '2.00',
+  aplicarDescontoMatricula: false, aplicarMultaJurosMatricula: false,
+  aplicarDescontoMensalidade: true, aplicarMultaJurosMensalidade: true,
+  aplicarDescontoRematricula: false, aplicarMultaJurosRematricula: false,
+};
+
+test('plano sem cobranças bloqueia emissão e conserva o ciclo inicial acadêmico', () => {
+  for (const cycle of [1, 2] as const) {
+    const state = { ...planned(cycle), estado: 'BLOQUEADO', podeGerar: false,
+      bloqueio: { codigo: 'SEM_COBRANCAS_PLANEJADAS', mensagem: 'Nenhuma cobrança selecionada.' },
+      planoEntrada: { ...planned(cycle).planoEntrada, cobrarMensalidades: false, condicoes: conditions } };
+    assert.equal(requireMatriculaTecnicaCicloManual(state).proximoCicloNumero, cycle);
+    for (const patch of [
+      { cobrarMensalidades: true }, { condicoes: undefined },
+      { condicoes: { ...conditions, [cycle === 1 ? 'cobrarMatricula' : 'cobrarRematricula']: true } },
+    ]) assert.throws(() => requireMatriculaTecnicaCicloManual({
+      ...state, planoEntrada: { ...state.planoEntrada, ...patch },
+    }));
+    assert.throws(() => requireMatriculaTecnicaCicloManual({ ...state, estado: 'ELEGIVEL',
+      podeGerar: true, bloqueio: null }));
+    assert.throws(() => requireMatriculaTecnicaCicloManual({ ...state,
+      bloqueio: { codigo: 'OUTRO', mensagem: 'Outra condição.' } }));
+  }
+});
+
+test('taxa isolada e turma de ciclo único conservam elegibilidade sem inventar C2', () => {
+  const state = { ...planned(1), cicloMaximo: 1,
+    planoEntrada: { ...planned(1).planoEntrada, cobrarMensalidades: false,
+      condicoes: { ...conditions, cobrarMatricula: true } } };
+  assert.equal(requireMatriculaTecnicaCicloManual(state).podeGerar, true);
+  assert.throws(() => requireMatriculaTecnicaCicloManual({ ...planned(2), cicloMaximo: 1 }));
+  assert.throws(() => requireMatriculaTecnicaCicloManual({ ...state,
+    planoEntrada: { ...state.planoEntrada, cobrarMensalidades: 'false' } }));
+});
+
+test('matrícula LOCAL isolada exige plano completo e prova do registro local no ciclo gerado', () => {
+  const state = { ...planned(1), criterioElegibilidade: 'MANUAL_APOS_EMISSAO', proximoCicloNumero: 2,
+    planoEntrada: { ...planned(1).planoEntrada, cobrarMensalidades: false,
+      condicoes: { ...conditions, cobrarMatricula: true, cobrarRematricula: true } },
+    matriculaLocal: { id: 'taxa-local', tipo: 'MATRICULA', numero: 0, descricao: 'Matrícula local',
+      valor: '100.00', vencimento: '2027-01-20', status: 'PENDENTE', emissaoBanese: 'NAO_APLICAVEL',
+      destinoCobranca: 'LOCAL', localSemBoletoComprovado: true },
+    cicloGerado: { numero: 1, status: 'EMITIDO_BANESE', quantidadeItens: 1, quantidadeBancaria: 0,
+      quantidadeLocal: 1, total: '100.00', emitidosBanese: 0, pendentesEmissao: 0, emRevisao: 0 },
+  };
+  assert.equal(requireMatriculaTecnicaCicloManual(state).cicloGerado?.emitidosBanese, 0);
+  for (const patch of [{ planoEntrada: null }, { matriculaLocal: null },
+    { matriculaLocal: { ...state.matriculaLocal, localSemBoletoComprovado: false } }]) {
+    assert.throws(() => requireMatriculaTecnicaCicloManual({ ...state, ...patch }));
+  }
+});
+
 test('exceção de entrada C2 exige plano completo, justificativa e estado coerente', () => {
   for (const patch of [
     { planoEntrada: undefined }, { planoEntrada: null }, { cicloBaseHistorico: 1 },

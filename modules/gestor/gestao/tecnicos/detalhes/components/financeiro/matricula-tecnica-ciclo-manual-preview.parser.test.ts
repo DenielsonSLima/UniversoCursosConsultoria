@@ -98,6 +98,37 @@ test("aceita a prévia canônica completa retornada pelo backend", () => {
   assert.equal(requireCicloFinanceiroTecnicoManualPreview(preview), preview);
 });
 
+test('taxa isolada exige prova canônica de mensalidades desabilitadas e um único item', () => {
+  const original = canonicalPreview();
+  const preview = { ...original, mensalidadesHabilitadas: false, quantidadeItens: 1,
+    total: '100.00', itens: [original.itens[0]] };
+  assert.equal(requireCicloFinanceiroTecnicoManualPreview(preview), preview);
+  for (const flag of [undefined, true, 'false']) {
+    assert.throws(() => requireCicloFinanceiroTecnicoManualPreview({ ...preview,
+      mensalidadesHabilitadas: flag }), /incompleta/);
+  }
+  assert.throws(() => requireCicloFinanceiroTecnicoManualPreview({ ...original,
+    mensalidadesHabilitadas: false }), /incompleta/);
+  assert.throws(() => requireCicloFinanceiroTecnicoManualPreview({ ...preview,
+    itens: [], quantidadeItens: 0, total: '0.00' }), /incompleta/);
+  assert.throws(() => requireCicloFinanceiroTecnicoManualPreview({ ...preview,
+    itens: [original.itens[1]], primeiroVencimento: original.itens[1].vencimento }), /incompleta/);
+  assert.throws(() => requireCicloFinanceiroTecnicoManualPreview({ ...preview,
+    cicloNumero: 1 }), /incompleta/);
+});
+
+test('taxa LOCAL isolada preserva um registro local e zero boletos', () => {
+  const original = canonicalPreview();
+  const preview = { ...original, cicloNumero: 1, mensalidadesHabilitadas: false,
+    modoMatricula: 'REGISTRO_SEM_BOLETO', quantidadeItens: 1, quantidadeBancaria: 0, quantidadeLocal: 1,
+    total: '100.00', itens: [{ ...original.itens[0], tipo: 'MATRICULA', destinoCobranca: 'LOCAL',
+      aplicacao: { desconto: false, multaJuros: true } }] };
+  assert.equal(requireCicloFinanceiroTecnicoManualPreview(preview), preview);
+  for (const patch of [{ mensalidadesHabilitadas: true }, { modoMatricula: 'BOLETO' }, { quantidadeLocal: 0 }]) {
+    assert.throws(() => requireCicloFinanceiroTecnicoManualPreview({ ...preview, ...patch }), /incompleta/);
+  }
+});
+
 test("condições individuais canônicas prevalecem sem relaxar flags legadas", () => {
   const preview = canonicalPreview();
   preview.termos.aplicacao.mensalidade = { desconto: false, multaJuros: false };

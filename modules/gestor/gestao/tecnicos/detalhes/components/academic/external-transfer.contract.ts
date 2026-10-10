@@ -10,14 +10,35 @@ export interface ExternalTransferFinancialPlan {
   quantidadeParcelas: number;
   primeiroVencimento: string;
   justificativaCiclo2: string | null;
+  cobrarMensalidades: boolean;
+  condicoes: ExternalTransferConditions;
+}
+
+export interface ExternalTransferConditions {
+  cobrarMatricula: boolean;
+  valorMatricula: string;
+  valorMensalidade: string;
+  cobrarRematricula: boolean;
+  valorRematricula: string;
+  descontoPontualidade: string;
+  jurosAtrasoPercentual: string;
+  multaAtrasoPercentual: string;
+  aplicarDescontoMatricula: boolean;
+  aplicarMultaJurosMatricula: boolean;
+  aplicarDescontoMensalidade: boolean;
+  aplicarMultaJurosMensalidade: boolean;
+  aplicarDescontoRematricula: boolean;
+  aplicarMultaJurosRematricula: boolean;
 }
 
 interface Application { desconto: boolean; multaJuros: boolean }
 export interface ExternalTransferPreview {
-  versao: 1;
+  versao: 2;
   regraFingerprint: string;
   quantidadeMaxima: number;
+  maxCiclos: 1 | 2;
   financeiro: ExternalTransferFinancialPlan;
+  totais: { cicloInicialNominal: string; totalNominal: string };
   regra: {
     valorMatricula: string;
     valorMensalidade: string;
@@ -47,7 +68,7 @@ export interface ExternalTransferInput {
 }
 
 export interface ExternalTransferResult {
-  versao: 1;
+  versao: 2;
   requestId: string;
   replayed: boolean;
   matriculaId: string;
@@ -60,9 +81,27 @@ const record = (value: unknown): value is Record<string, unknown> => (
   value !== null && typeof value === 'object' && !Array.isArray(value)
 );
 const text = (value: unknown): value is string => typeof value === 'string' && value.trim() !== '';
-const decimal = (value: unknown) => typeof value === 'string' && /^\d+(?:\.\d+)?$/.test(value);
+const decimal = (value: unknown) => typeof value === 'string' && /^\d+(?:\.\d+)?$/.test(value) && Number.isFinite(Number(value));
 const application = (value: unknown) => record(value)
   && typeof value.desconto === 'boolean' && typeof value.multaJuros === 'boolean';
+const conditionAmounts: Array<keyof ExternalTransferConditions> = [
+  'valorMatricula', 'valorMensalidade', 'valorRematricula', 'descontoPontualidade',
+  'jurosAtrasoPercentual', 'multaAtrasoPercentual',
+];
+const conditionFlags: Array<keyof ExternalTransferConditions> = [
+  'cobrarMatricula', 'cobrarRematricula', 'aplicarDescontoMatricula', 'aplicarMultaJurosMatricula',
+  'aplicarDescontoMensalidade', 'aplicarMultaJurosMensalidade', 'aplicarDescontoRematricula', 'aplicarMultaJurosRematricula',
+];
+export const isExternalTransferRate = (value: unknown): value is string => typeof value === 'string'
+  && /^\d{1,3}(?:\.\d{1,6})?$/.test(value) && Number(value) < 100;
+
+export const isExternalTransferConditions = (value: unknown): value is ExternalTransferConditions => record(value)
+  && conditionAmounts.every((key) => key === 'jurosAtrasoPercentual' || key === 'multaAtrasoPercentual'
+    ? isExternalTransferRate(value[key])
+    : decimal(value[key]) && /^\d+(?:\.\d{1,2})?$/.test(String(value[key])) && Number(value[key]) <= 9999999.99)
+  && conditionFlags.every((key) => typeof value[key] === 'boolean')
+  && (!value.cobrarMatricula || Number(value.valorMatricula) > 0)
+  && (!value.cobrarRematricula || Number(value.valorRematricula) > 0);
 
 export const isTransferDate = (value: unknown): value is string => {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -71,18 +110,23 @@ export const isTransferDate = (value: unknown): value is string => {
 };
 
 export const requireExternalTransferPreview = (value: unknown): ExternalTransferPreview => {
-  if (!record(value) || value.versao !== 1 || !text(value.regraFingerprint)
+  if (!record(value) || value.versao !== 2 || !text(value.regraFingerprint)
     || !Number.isInteger(value.quantidadeMaxima) || Number(value.quantidadeMaxima) < 1
+    || (value.maxCiclos !== 1 && value.maxCiclos !== 2)
     || Number(value.quantidadeMaxima) > 60 || !record(value.financeiro) || !record(value.regra)) {
     throw new Error('O servidor não retornou o plano financeiro da transferência.');
   }
   const plan = value.financeiro;
   const rule = value.regra;
   if (![1, 2].includes(Number(plan.cicloNumero)) || typeof plan.cicloNumero !== 'number'
+    || plan.cicloNumero > value.maxCiclos
     || !Number.isInteger(plan.quantidadeParcelas) || Number(plan.quantidadeParcelas) < 1
     || Number(plan.quantidadeParcelas) > Number(value.quantidadeMaxima)
     || !isTransferDate(plan.primeiroVencimento)
     || (plan.cicloNumero === 2 ? !text(plan.justificativaCiclo2) : plan.justificativaCiclo2 !== null)
+    || typeof plan.cobrarMensalidades !== 'boolean' || !isExternalTransferConditions(plan.condicoes)
+    || (plan.cobrarMensalidades && record(plan.condicoes) && Number(plan.condicoes.valorMensalidade) <= 0)
+    || !record(value.totais) || !decimal(value.totais.cicloInicialNominal) || !decimal(value.totais.totalNominal)
     || !decimal(rule.valorMatricula) || !decimal(rule.valorMensalidade) || !decimal(rule.valorRematricula)
     || !record(rule.encargos) || !decimal(rule.encargos.descontoPontualidade)
     || !decimal(rule.encargos.jurosAtrasoPercentual) || !decimal(rule.encargos.multaAtrasoPercentual)
@@ -95,7 +139,7 @@ export const requireExternalTransferPreview = (value: unknown): ExternalTransfer
 };
 
 export const requireExternalTransferResult = (value: unknown, requestId: string): ExternalTransferResult => {
-  if (!record(value) || value.versao !== 1 || value.requestId !== requestId
+  if (!record(value) || value.versao !== 2 || value.requestId !== requestId
     || typeof value.replayed !== 'boolean' || !text(value.matriculaId) || !text(value.transferenciaId)
     || value.cobrancaGerada !== false) {
     throw new Error('Não foi possível confirmar o resultado do recebimento. Repita a mesma operação.');

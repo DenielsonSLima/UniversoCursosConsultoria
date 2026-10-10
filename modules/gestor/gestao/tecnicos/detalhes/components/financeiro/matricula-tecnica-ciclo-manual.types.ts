@@ -1,4 +1,5 @@
 import type { CorrectionSummary } from './bounded-correction';
+import type { ExternalTransferConditions } from '../academic/external-transfer.contract';
 export type MatriculaTecnicaCicloManualEstado =
   | "ELEGIVEL"
   | "BLOQUEADO"
@@ -21,6 +22,8 @@ export interface CicloManualPlanoEntrada {
   primeiroVencimento: string;
   justificativaCiclo2: string | null;
   requestId: string;
+  cobrarMensalidades?: boolean;
+  condicoes?: ExternalTransferConditions;
 }
 
 export type CicloManualModoMatricula = "BOLETO" | "REGISTRO_SEM_BOLETO" | "OMITIR";
@@ -130,6 +133,7 @@ export interface CicloFinanceiroTecnicoManualTermos {
 }
 
 export interface CicloFinanceiroTecnicoManualPreview {
+  mensalidadesHabilitadas?: boolean;
   modoMatricula?: CicloManualModoMatricula;
   quantidadeBancaria?: number;
   quantidadeLocal?: number;
@@ -243,4 +247,3 @@ export interface GerarCicloFinanceiroTecnicoManualResult {
   };
   cicloManual: MatriculaTecnicaCicloManual;
 }
-

@@ -1,15 +1,19 @@
-import React from 'react';
-import { AlertTriangle, Loader2, X } from 'lucide-react';
-import type { ExternalCreditDraft } from './external-transfer-draft';
+import React, { useRef, useState } from 'react';
+import { ArrowLeft, ArrowRight, Loader2, X } from 'lucide-react';
+import ExternalTransferAcademicFields, { type ExternalTransferDiscipline } from './ExternalTransferAcademicFields';
+import ExternalTransferReview from './ExternalTransferReview';
+import { externalTransferDraftError, type ExternalTransferDraft } from './external-transfer-draft';
+import type { ExternalTransferPreview } from './external-transfer.contract';
+import type { ExternalTransferStudent } from './useReceiveExternalTransfer';
 export type { ExternalCreditDraft } from './external-transfer-draft';
-import { getMaceioIsoDate } from '../../../technicalClassDates';
 
-interface ReceiveExternalTransferModalProps {
-  students: any[];
-  disciplines: any[];
+interface Props {
+  students: ExternalTransferStudent[];
+  disciplines: ExternalTransferDiscipline[];
+  draft: ExternalTransferDraft;
+  onChange: <K extends keyof ExternalTransferDraft>(field: K, value: ExternalTransferDraft[K]) => void;
   loading: boolean;
   loadError: boolean;
-  retrying: boolean;
   pending: boolean;
   locked: boolean;
   canClose: boolean;
@@ -17,159 +21,64 @@ interface ReceiveExternalTransferModalProps {
   uncertain: boolean;
   error: string | null;
   financialSection: React.ReactNode;
-  selectedStudentId: string;
-  originInstitution: string;
-  originCourse: string;
-  reason: string;
-  notes: string;
-  transferDate: string;
-  credits: Record<string, ExternalCreditDraft>;
-  onStudentChange: (value: string) => void;
-  onInstitutionChange: (value: string) => void;
-  onCourseChange: (value: string) => void;
-  onReasonChange: (value: string) => void;
-  onNotesChange: (value: string) => void;
-  onTransferDateChange: (value: string) => void;
-  onCreditsChange: (value: Record<string, ExternalCreditDraft>) => void;
+  review: ExternalTransferPreview | null;
+  studentFixed?: boolean;
+  destinationLabel?: string;
   onRetry: () => void;
   onClose: () => void;
   onConfirm: () => void;
 }
+const steps = ['Origem e disciplinas', 'Plano financeiro', 'Conferir recebimento'];
 
-const emptyCredit = (): ExternalCreditDraft => ({
-  selected: false,
-  mediaFinal: '',
-  frequenciaPercent: '',
-  situacao: 'EQUIVALENCIA',
-});
-
-const ReceiveExternalTransferModal: React.FC<ReceiveExternalTransferModalProps> = ({
-  students,
-  disciplines,
-  loading,
-  loadError,
-  retrying,
-  pending,
-  locked,
-  canClose,
-  canConfirm,
-  uncertain,
-  error,
-  financialSection,
-  selectedStudentId,
-  originInstitution,
-  originCourse,
-  reason,
-  notes,
-  transferDate,
-  credits,
-  onStudentChange,
-  onInstitutionChange,
-  onCourseChange,
-  onReasonChange,
-  onNotesChange,
-  onTransferDateChange,
-  onCreditsChange,
-  onRetry,
-  onClose,
-  onConfirm,
+const ReceiveExternalTransferModal: React.FC<Props> = ({
+  students, disciplines, draft, onChange, loading, loadError, pending, locked, canClose, canConfirm,
+  uncertain, error, financialSection, review, studentFixed = false, destinationLabel, onRetry, onClose, onConfirm,
 }) => {
-  const updateCredit = (disciplineId: string, patch: Partial<ExternalCreditDraft>) => {
-    onCreditsChange({
-      ...credits,
-      [disciplineId]: { ...(credits[disciplineId] || emptyCredit()), ...patch },
-    });
+  const [step, setStep] = useState(0);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const academicError = externalTransferDraftError(draft);
+  const canAdvanceAcademic = !loading && !loadError && !academicError;
+  const changeStep = (next: number) => {
+    if (locked) return;
+    setStep(next);
+    bodyRef.current?.scrollTo({ top: 0 });
   };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-4 backdrop-blur-sm">
-      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white shadow-2xl">
-        <header className="sticky top-0 z-10 flex items-start justify-between bg-violet-700 p-6 text-white">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-violet-200">Entrada acadêmica</p>
-            <h3 className="mt-1 text-xl font-black">Receber transferência externa</h3>
-          </div>
-          <button disabled={!canClose} aria-label="Fechar recebimento" onClick={onClose} className="rounded-full p-2 hover:bg-white/10"><X size={18} /></button>
-        </header>
-
-        <div className="space-y-4 p-6">
-          <fieldset disabled={locked} className="space-y-4">
-          {loadError ? (
-            <div className="rounded-xl border border-red-100 bg-red-50 p-4 text-xs font-bold text-red-700">
-              <p>Alunos ou disciplinas não foram carregados. O recebimento foi bloqueado.</p>
-              <button onClick={onRetry} disabled={retrying} className="mt-2 rounded-lg bg-white px-3 py-2 text-[10px] font-black uppercase disabled:opacity-50">
-                Tentar novamente
-              </button>
-            </div>
-          ) : (
-            <select value={selectedStudentId} onChange={(event) => onStudentChange(event.target.value)} disabled={loading} className="w-full rounded-xl border border-slate-200 p-3.5 outline-none focus:border-violet-500 disabled:opacity-50">
-              <option value="">{loading ? 'Carregando alunos...' : 'Selecione o aluno já cadastrado...'}</option>
-              {students.map((student) => <option key={student.id} value={student.id}>{student.nome} — {student.cpf_cnpj || 'sem CPF'}</option>)}
-            </select>
-          )}
-          <input value={originInstitution} onChange={(event) => onInstitutionChange(event.target.value)} placeholder="Instituição de origem" className="w-full rounded-xl border border-slate-200 p-3.5 outline-none focus:border-violet-500" />
-          <input value={originCourse} onChange={(event) => onCourseChange(event.target.value)} placeholder="Curso de origem (opcional)" className="w-full rounded-xl border border-slate-200 p-3.5 outline-none focus:border-violet-500" />
-          <textarea value={reason} onChange={(event) => onReasonChange(event.target.value)} placeholder="Motivo e contexto da transferência" className="min-h-24 w-full resize-none rounded-xl border border-slate-200 p-3.5 outline-none focus:border-violet-500" />
-          <div>
-            <label className="mb-2 block text-[10px] font-black uppercase tracking-wider text-slate-500">Data da transferência</label>
-            <input
-              type="date"
-              required
-              max={getMaceioIsoDate()}
-              value={transferDate}
-              onChange={(event) => onTransferDateChange(event.target.value)}
-              className="w-full rounded-xl border border-slate-200 p-3.5 outline-none focus:border-violet-500"
-            />
-          </div>
-          <textarea value={notes} onChange={(event) => onNotesChange(event.target.value)} placeholder="Observações adicionais (opcional)" className="min-h-20 w-full resize-none rounded-xl border border-slate-200 p-3.5 outline-none focus:border-violet-500" />
-
-          <section className="rounded-2xl border border-violet-100 bg-violet-50/60 p-4">
-            <div className="mb-3 flex gap-2 text-violet-800">
-              <AlertTriangle size={16} className="mt-0.5 shrink-0" />
-              <div>
-                <p className="text-xs font-black uppercase">Equivalências aprovadas</p>
-                <p className="mt-1 text-xs">Marque somente as disciplinas já analisadas. Média e frequência são opcionais.</p>
-              </div>
-            </div>
-            <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
-              {disciplines.map((discipline) => {
-                const credit = credits[discipline.id] || emptyCredit();
-                return (
-                  <div key={discipline.id} className="rounded-xl border border-violet-100 bg-white p-3">
-                    <label className="flex items-center gap-2 text-xs font-bold text-slate-700">
-                      <input type="checkbox" checked={credit.selected} onChange={(event) => updateCredit(discipline.id, { selected: event.target.checked })} />
-                      <span>{discipline.nome}</span>
-                      <span className="ml-auto text-[10px] text-slate-400">{discipline.carga_horaria || 0}h</span>
-                    </label>
-                    {credit.selected && (
-                      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
-                        <select value={credit.situacao} onChange={(event) => updateCredit(discipline.id, { situacao: event.target.value as ExternalCreditDraft['situacao'] })} className="rounded-lg border border-slate-200 p-2 text-xs">
-                          <option value="EQUIVALENCIA">Equivalência</option>
-                          <option value="APROVEITADO">Aproveitado</option>
-                          <option value="DISPENSADO">Dispensado</option>
-                        </select>
-                        <input type="number" min={0} max={10} step={0.1} value={credit.mediaFinal} onChange={(event) => updateCredit(discipline.id, { mediaFinal: event.target.value })} placeholder="Média (0–10)" className="rounded-lg border border-slate-200 p-2 text-xs" />
-                        <input type="number" min={0} max={100} step={0.01} value={credit.frequenciaPercent} onChange={(event) => updateCredit(discipline.id, { frequenciaPercent: event.target.value })} placeholder="Frequência %" className="rounded-lg border border-slate-200 p-2 text-xs" />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-
-          {financialSection}
-          </fieldset>
-          {error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-xs text-red-700">{error}</p>}
-          {uncertain && <p className="rounded-xl bg-amber-50 p-3 text-xs text-amber-800">O resultado ainda não foi confirmado. Repita a mesma operação para conferir o recebimento, sem criar outro pedido.</p>}
-          <button onClick={onConfirm} disabled={pending || (!uncertain && (!canConfirm || loading || loadError || !selectedStudentId || !originInstitution.trim() || !reason.trim() || !transferDate || transferDate > getMaceioIsoDate()))} className="flex w-full items-center justify-center gap-2 rounded-xl bg-violet-700 py-3 text-xs font-black uppercase text-white disabled:opacity-40">
-            {pending && <Loader2 size={14} className="animate-spin" />}
-            {pending ? 'Registrando...' : uncertain ? 'Conferir a mesma operação' : 'Registrar recebimento e plano'}
-          </button>
-        </div>
+  return <>
+    <header className="flex shrink-0 items-start justify-between bg-violet-700 p-5 text-white sm:p-6">
+      <div>
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-violet-200">Entrada acadêmica</p>
+        <h3 className="mt-1 text-xl font-black">Receber transferência externa</h3>
+        {destinationLabel && <p className="mt-2 text-xs text-violet-100">Destino: {destinationLabel}</p>}
       </div>
+      <button type="button" disabled={!canClose} aria-label="Fechar recebimento" onClick={onClose} className="rounded-full p-2 hover:bg-white/10 disabled:opacity-40"><X size={18} /></button>
+    </header>
+    <ol className="grid shrink-0 grid-cols-3 border-b border-slate-100 bg-slate-50 p-3">
+      {steps.map((label, index) => <li key={label} aria-current={step === index ? 'step' : undefined} className={`px-1 text-center text-[10px] font-black sm:text-xs ${step === index ? 'text-violet-700' : 'text-slate-400'}`}>
+        <span className="block">{index + 1}. {label}</span>
+      </li>)}
+    </ol>
+    <div ref={bodyRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5 sm:p-6">
+      {step === 0 && <ExternalTransferAcademicFields draft={draft} onChange={onChange} students={students} disciplines={disciplines}
+        studentFixed={studentFixed} loading={loading} loadError={loadError} disabled={locked} onRetry={onRetry} />}
+      {step === 1 && financialSection}
+      {step === 2 && <ExternalTransferReview draft={draft} disciplines={disciplines} review={review} destinationLabel={destinationLabel}
+        studentName={students.find((student) => student.id === draft.studentId)?.nome || ''} />}
+      {error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-xs text-red-700">{error}</p>}
+      {uncertain && <p role="alert" className="rounded-xl bg-amber-50 p-3 text-xs text-amber-800">O resultado ainda não foi confirmado. Confira a mesma operação para recuperar o recebimento. As informações estão preservadas.</p>}
+      {step === 0 && academicError && draft.studentId && <p role="status" className="text-xs text-slate-500">{academicError}</p>}
     </div>
-  );
+    <footer className="flex shrink-0 flex-wrap justify-between gap-3 border-t border-slate-100 bg-slate-50 p-4 sm:px-6">
+      {step > 0 ? <button type="button" onClick={() => changeStep(step - 1)} disabled={locked} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-600 disabled:opacity-40"><ArrowLeft size={14} />Voltar</button>
+        : <button type="button" onClick={onClose} disabled={!canClose} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-600 disabled:opacity-40">Cancelar</button>}
+      {step < 2 ? <button type="button" onClick={() => changeStep(step + 1)} disabled={locked || (step === 0 ? !canAdvanceAcademic : !canConfirm)}
+        className="flex items-center gap-2 rounded-xl bg-violet-700 px-4 py-3 text-xs font-black text-white disabled:opacity-40">
+        {step === 0 ? 'Continuar para o financeiro' : 'Conferir recebimento'}<ArrowRight size={14} />
+      </button> : <button type="button" onClick={onConfirm} disabled={pending || (!uncertain && !canConfirm)}
+        className="flex items-center gap-2 rounded-xl bg-violet-700 px-4 py-3 text-xs font-black text-white disabled:opacity-40">
+        {pending && <Loader2 size={14} className="animate-spin" />}{pending ? 'Registrando...' : uncertain ? 'Conferir a mesma operação' : 'Registrar recebimento e plano'}
+      </button>}
+    </footer>
+  </>;
 };
 
 export default ReceiveExternalTransferModal;
