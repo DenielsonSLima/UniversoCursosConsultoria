@@ -55,7 +55,7 @@ export const migrateBoletimTemplate = (template: DocumentTemplate): DocumentTemp
 const baseService = createDocumentTemplateService(
   'boletim_tecnico',
   defaultTemplate,
-  { sharedTemplate: true },
+  { sharedTemplate: true, failOnReadError: true },
 );
 
 export const boletimService = {
