@@ -1,24 +1,8 @@
 import { supabase } from '../../../../../../../../lib/supabase';
 import { formatMatricula } from '../../../../../../../../lib/academicUtils';
-import { mapReceivableFinancialComposition } from '../../../../../../financeiro/financeiro.composition-presentation';
+import { mapAlunoExtratoRecebivel, type AlunoExtratoRecebivel } from './alunoExtrato.mapper';
 
-export interface AlunoExtratoRecebivel extends Partial<ReturnType<typeof mapReceivableFinancialComposition>> {
-  id: string;
-  descricao: string;
-  valor: number;
-  valorPago?: number;
-  dataVencimento: string;
-  dataPagamento?: string;
-  status: string;
-  formaPagamento?: string;
-  origemPagamento?: string;
-  tipoLancamento?: string;
-  parcelaNumero?: number;
-  asaasStatus?: string;
-  asaasInvoiceUrl?: string;
-  asaasPaymentId?: string;
-  createdAt?: string;
-}
+export type { AlunoExtratoRecebivel } from './alunoExtrato.mapper';
 
 export interface AlunoExtratoFinanceiro {
   matriculaId: string;
@@ -46,24 +30,9 @@ export const alunoExtratoService = {
     if (error) throw error;
     if (!data) throw new Error('Extrato financeiro não encontrado.');
 
-    const rows = (data.recebiveis || []).map((item: any) => ({
-      id: item.id,
-      descricao: item.descricao,
-      valor: Number(item.valor || 0),
-      valorPago: item.valor_pago == null ? undefined : Number(item.valor_pago),
-      ...mapReceivableFinancialComposition(item),
-      dataVencimento: item.data_vencimento,
-      dataPagamento: item.data_pagamento || undefined,
-      status: item.status,
-      formaPagamento: item.forma_pagamento || undefined,
-      origemPagamento: item.origem_pagamento || undefined,
-      tipoLancamento: item.tipo_lancamento || undefined,
-      parcelaNumero: item.parcela_numero ?? undefined,
-      asaasStatus: item.asaas_status || undefined,
-      asaasInvoiceUrl: item.asaas_invoice_url || undefined,
-      asaasPaymentId: item.asaas_payment_id || undefined,
-      createdAt: item.created_at || undefined,
-    }));
+    const rows = (data.recebiveis || []).map((item: Record<string, any>) => (
+      mapAlunoExtratoRecebivel(item, { poloId: data.poloId, matriculaId: data.matriculaId })
+    ));
 
     return {
       matriculaId: data.matriculaId,
@@ -84,3 +53,4 @@ export const alunoExtratoService = {
     };
   },
 };
+

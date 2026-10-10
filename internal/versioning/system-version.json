@@ -1,8 +1,8 @@
 {
-  "version": "4.8.195",
+  "version": "4.8.196",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 204,
-  "releasedAt": "2026-10-09",
-  "summary": "Card, cadastro e acesso do aluno exibem a mesma matrícula acadêmica principal"
+  "revision": 205,
+  "releasedAt": "2026-10-10",
+  "summary": "Extrato financeiro da turma exibe boletos Banese e acompanha a situação de Contas a Receber"
 }
