@@ -1,3 +1,7 @@
+> Atualização 10/10/2026: ativação autorizada realizada e RECENT natural verificado;
+> FULL natural segue em acompanhamento. O recibo abaixo preserva o estado OFF
+> da instalação de 09/10. Nenhum arquivo foi enviado ao Storage real.
+
 # Instalação autorizada e validação OFF
 
 Operação concluída em 09/10/2026, entre 22h44 e 22h46 UTC, no projeto Universo

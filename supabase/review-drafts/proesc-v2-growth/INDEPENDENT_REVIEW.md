@@ -121,3 +121,13 @@ SHA-256:
   `945b3e9efd5620e023a91d2eafaf23b4447c8c2f4ca8546e42594319cdd56c80`
 
 Qualquer alteração posterior exige revalidar as verificações afetadas.
+
+## Complemento copy-only em 10/10/2026
+
+Revisão independente da preparação local: 80/80 testes de arquivo/HTTP, 10 grupos
+adversariais do catálogo e 7 verificações integradas SQL→HTTP mock→recibo→restore
+passaram. Autorização, escopo, precisão financeira, drift, rollback atômico e
+imutabilidade foram conferidos. O novo helper usa inventário por hash exato.
+Não há bloqueio local restante conhecido; PostgreSQL nativo/concorrência do novo
+candidato e checks do head ainda precisam ser confirmados. Não é homologação do
+Storage real nem autorização de instalação, grants, upload, remoção ou merge.

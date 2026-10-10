@@ -1,0 +1,62 @@
+name: Extrato financeiro da turma
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/class-financial-statement.yml'
+      - 'modules/gestor/gestao/tecnicos/detalhes/components/financeiro/extrato/**'
+      - 'modules/gestor/financeiro/financeiro.*'
+      - 'modules/gestor/financeiro/receber/components/modalidade-receber/**'
+      - 'modules/gestor/financeiro/receber/banese/**'
+      - 'supabase/migrations/**'
+      - 'supabase/tests/turma_student_statement*'
+      - 'supabase/tests/fixtures/turma-student-statement*'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/class-financial-statement.yml'
+      - 'modules/gestor/gestao/tecnicos/detalhes/components/financeiro/extrato/**'
+      - 'modules/gestor/financeiro/financeiro.*'
+      - 'modules/gestor/financeiro/receber/components/modalidade-receber/**'
+      - 'modules/gestor/financeiro/receber/banese/**'
+      - 'supabase/migrations/**'
+      - 'supabase/tests/turma_student_statement*'
+      - 'supabase/tests/fixtures/turma-student-statement*'
+
+permissions:
+  contents: read
+
+jobs:
+  class-financial-statement:
+    name: Extrato, isolamento e boletos existentes
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Preparar dependências isoladas
+        run: |
+          npm install --prefix "$RUNNER_TEMP/class-financial-statement" --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.3.14 esbuild@0.25.12 react@19.2.7 react-dom@19.2.7 playwright@1.58.2 lucide-react@0.564.0 @tanstack/react-query@5.101.0 postcss@8.5.6 tailwindcss@3.4.17
+          ln -s "$RUNNER_TEMP/class-financial-statement/node_modules" node_modules
+          node "$RUNNER_TEMP/class-financial-statement/node_modules/playwright/cli.js" install --with-deps chromium
+      - name: Validar projeção SQL e isolamento sem serviços externos
+        env:
+          PGLITE_MODULE_PATH: ${{ runner.temp }}/class-financial-statement/node_modules/@electric-sql/pglite/dist/index.js
+        run: node supabase/tests/turma_student_statement.isolated.test.mjs
+      - name: Validar apresentação e ações somente de leitura
+        run: node modules/gestor/gestao/tecnicos/detalhes/components/financeiro/extrato/alunoExtrato.presentation.test.mjs
+      - name: Conferir extrato e atualização no navegador
+        env:
+          EAD_UI_NODE_MODULES: ${{ runner.temp }}/class-financial-statement/node_modules
+          ALUNO_EXTRATO_ARTIFACTS: ${{ runner.temp }}/aluno-extrato
+        run: node modules/gestor/gestao/tecnicos/detalhes/components/financeiro/extrato/alunoExtrato.browser.test.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: class-financial-statement-synthetic
+          path: ${{ runner.temp }}/aluno-extrato
+          if-no-files-found: warn

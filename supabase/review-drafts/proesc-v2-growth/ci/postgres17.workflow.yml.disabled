@@ -47,8 +47,8 @@ jobs:
           ln -s "$RUNNER_TEMP/proesc-ci/node_modules" node_modules
       - name: Test actual SQL and financial evidence parity
         run: node --test --test-concurrency=1 supabase/tests/proesc_v2_payload_*.isolated.test.mjs
-      - name: Test offline synthetic archive and restoration
-        run: node --test supabase/review-drafts/proesc-v2-growth/archive/archive.test.mjs
+      - name: Test synthetic archive, HTTP adapter and restoration
+        run: node --test supabase/review-drafts/proesc-v2-growth/archive/*.test.mjs
       - name: Exercise native pgcrypto, backend contention and replay
         env:
           PROESC_SYNTHETIC_PG17: '1'

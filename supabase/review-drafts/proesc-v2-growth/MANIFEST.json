@@ -1,21 +1,21 @@
 {
-  "status": "INSTALLED_OFF_CONSTRAINTS_VALIDATED",
+  "status": "PAYLOAD_ON_COPY_ONLY_CANDIDATE_LOCAL_VALIDATED",
   "upstreamRepository": "DenielsonSLima/UniversoCursosConsultoria",
-  "upstreamBase": "3886e6b0e12e45001f5a7bf2858965b4d8d4307d",
-  "generatedAt": "2026-10-09T22:48:00Z",
+  "upstreamBase": "971c09242774316a364b9b63ccdb543dd8d30910",
+  "generatedAt": "2026-10-10T10:52:00Z",
   "productionChanged": true,
-  "payloadStorageEnabled": false,
-  "remoteUploadImplemented": false,
+  "payloadStorageEnabled": true,
+  "remoteUploadImplemented": true,
   "cleanupEnabled": false,
-  "nativePostgres17Gate": "RC3_PASS_RECEIPT_RC4_AWAITING_CI",
-  "aggregateRepositoryCheck": "RC3_PASS_RECEIPT_RC4_AWAITING_EXACT_HEAD_CI",
+  "nativePostgres17Gate": "RC4_PASS_NEW_COPY_CONCURRENCY_PENDING_EXACT_HEAD_CI",
+  "aggregateRepositoryCheck": "PENDING_EXACT_HEAD_CI_LOCAL_PARTIAL_CHECKOUT",
   "focusedLineCheck": "PASS_ALL_UNDER_500",
   "files": [
     {
       "path": ".github/workflows/proesc-v2-payload.yml",
-      "bytes": 2343,
-      "lines": 56,
-      "sha256": "c88443c7b50ee7a30d622370e7760606400d4488d5c82c674ff58101080763f5"
+      "bytes": 2485,
+      "lines": 58,
+      "sha256": "77702271703b17dff7464d70d84129d2a204aa6d4a762f02359249cd8f29a751"
     },
     {
       "path": ".github/workflows/quality-gates.yml",
@@ -25,39 +25,39 @@
     },
     {
       "path": "ai/operacao/qualidade/limite-linhas-manifestos.json",
-      "bytes": 15736,
-      "lines": 193,
-      "sha256": "444cb2e093d655b2456aa360bc069e9b878895240e136bd6678b8c3bcb2eba82"
+      "bytes": 15814,
+      "lines": 194,
+      "sha256": "fb55ed7e2463416c07a6c9b888a65a3027d51c9746ade2dee957b64e8c478971"
     },
     {
       "path": "ai/operacao/registros/alteracoes/2026-10-09-proesc-v2-payload-candidato.md",
-      "bytes": 5712,
-      "lines": 96,
-      "sha256": "6fb65eff01e428873d977f7fb5c0eb177e2c4316e2fd18669dc09fca401dda36"
+      "bytes": 8949,
+      "lines": 145,
+      "sha256": "5e52d5881bbd5d66a1eb1a8fb61fe999136a041031de8c775a22460f606214bd"
     },
     {
       "path": "internal/versioning/CHANGELOG.md",
-      "bytes": 38680,
-      "lines": 488,
-      "sha256": "f82ef0cf91979c91e6a285d8f9dcf8003340645f140d3ba5086d756eb36c6319"
+      "bytes": 39131,
+      "lines": 493,
+      "sha256": "0b71539bd522281de3be4f4bc9aa6771942bf78a62793eb45797234639d2466d"
     },
     {
       "path": "internal/versioning/changelog/2026-09-27-versoes-4-8-113-a-4-8-115.md",
-      "bytes": 1216,
-      "lines": 18,
-      "sha256": "71fd146f16a3aa46dc07a5e344f1a83ad165e0a226c97b5e6c6ada648750cff1"
+      "bytes": 897,
+      "lines": 14,
+      "sha256": "957450f90f23fd0d8874867fddca57b19e26da10c69fb0caf4589fd2c57f2394"
     },
     {
       "path": "internal/versioning/changelog/2026-10-09-proesc-v2-candidatos-rc1-a-rc3.md",
-      "bytes": 1185,
-      "lines": 20,
-      "sha256": "c0dc5f8a14b56049aceb8146486830afc5d5e7adabdb2e1cdba0673046695d02"
+      "bytes": 1651,
+      "lines": 28,
+      "sha256": "534de1daf431882a0afff8889992bb4a35a326511ddfc1bb906b85c182adc8a3"
     },
     {
       "path": "internal/versioning/system-version.json",
-      "bytes": 226,
+      "bytes": 234,
       "lines": 8,
-      "sha256": "762eecf8510ff5235a17e911fc97c4c4af04c64d556919dee61a91a39388a6fd"
+      "sha256": "12e7a9758a08f489d254437a22a6b87855776ab3d0bcdee7d039c562171c270d"
     },
     {
       "path": "supabase/migrations/20261009224423_prepare_proesc_v2_payload_storage_off.sql",
@@ -96,16 +96,28 @@
       "sha256": "a2940717fcd7e7a3245e016dac35b57d68789f346853f9464f188f04eefc0a8b"
     },
     {
+      "path": "supabase/review-drafts/proesc-v2-growth/05_copy_only_catalog.draft.sql",
+      "bytes": 13637,
+      "lines": 222,
+      "sha256": "ba854c41d482314e9191dd2f4adc7c4f169387b879dcfef9126234ba84e6967d"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/COPY-ONLY.md",
+      "bytes": 6640,
+      "lines": 112,
+      "sha256": "68d4bbd5d7eca034148aadc3d3b12c409d4512eda20d70ee30e9f72af36b981c"
+    },
+    {
       "path": "supabase/review-drafts/proesc-v2-growth/INDEPENDENT_REVIEW.md",
-      "bytes": 6689,
-      "lines": 123,
-      "sha256": "5116bc8f19681e9da525eb65c3561ac6fc384d7ffd4551d7d5529b679599fbfb"
+      "bytes": 7318,
+      "lines": 133,
+      "sha256": "56525fa8014c2fea88a971cc960d6513b77e508368bb54f41411d155ea1cfdf9"
     },
     {
       "path": "supabase/review-drafts/proesc-v2-growth/INSTALLATION.md",
-      "bytes": 4357,
-      "lines": 78,
-      "sha256": "ca64e252dab5f976c6a9f7c62b837e1a36ceec91d3c7019686a8b3f7c5a3074f"
+      "bytes": 4597,
+      "lines": 82,
+      "sha256": "a93a1bc664a1c4d5a426c831e22484a9c62a200f9b9234aaee88fe3de0278483"
     },
     {
       "path": "supabase/review-drafts/proesc-v2-growth/PREFLIGHT.md",
@@ -115,15 +127,27 @@
     },
     {
       "path": "supabase/review-drafts/proesc-v2-growth/README.md",
-      "bytes": 9945,
-      "lines": 154,
-      "sha256": "353a67c95fa0055342c94797382663ed1ea2ddd34bee9e0ee6d6b0e61236a283"
+      "bytes": 10394,
+      "lines": 160,
+      "sha256": "2ec7c36837332825892ccded9460db7fbf49e0fe5b3a27df29890deac53d88bc"
     },
     {
       "path": "supabase/review-drafts/proesc-v2-growth/archive/README.md",
-      "bytes": 8866,
-      "lines": 142,
-      "sha256": "057e509980ad1306e2a88cb68829cdc93bb23daf0f79e1f8636ca804a662b032"
+      "bytes": 10083,
+      "lines": 161,
+      "sha256": "044c706bb647e1d6cfcae05106fc9228e2fb75d1b79d735d62658fe8bfe51bde"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/archive/STORAGE-PREPARATION.md",
+      "bytes": 13199,
+      "lines": 204,
+      "sha256": "fd93667df924d021096d0f2b7f962c02356f06babcd42e0fd0e8739a10afe51d"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/archive/V2-COPY.md",
+      "bytes": 8268,
+      "lines": 132,
+      "sha256": "b1dcdb096d0eb406f2df22dfd58f52d71a376c9ed07fc5a90c8ff4de164fe706"
     },
     {
       "path": "supabase/review-drafts/proesc-v2-growth/archive/archive.mjs",
@@ -144,16 +168,100 @@
       "sha256": "d6e3d6963b28d20cbdcbcb64bfedc4a58e184b06b157b9787edf34ce2804b7ac"
     },
     {
+      "path": "supabase/review-drafts/proesc-v2-growth/archive/storage-http-fixture.mjs",
+      "bytes": 3884,
+      "lines": 73,
+      "sha256": "a6f6da62fd61078f3ed351b7b1f9a610fe0e3df49c766e9d9742921904f3cd00"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/archive/storage-transfer.mjs",
+      "bytes": 8297,
+      "lines": 123,
+      "sha256": "2779bf70f4d08b0f1348d922c8ea734ac1169d096e9624bdb085af54c6735f07"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/archive/storage-transfer.test.mjs",
+      "bytes": 20440,
+      "lines": 349,
+      "sha256": "e1b69744322c25eebf937c7dee8d8ae6adc04527cc23e964606cae1118914a1b"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/archive/supabase-store.mjs",
+      "bytes": 9074,
+      "lines": 185,
+      "sha256": "95a56a04d8bbca72cf7cb6795610f86df44ad277da065da54f11ba4124a1b630"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/archive/supabase-store.test.mjs",
+      "bytes": 13894,
+      "lines": 259,
+      "sha256": "f5f6dd9e5102aaa31b4103147e47b0054a23e93746489d117e6d6f83f5a897db"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/archive/v2-copy-codec.mjs",
+      "bytes": 11404,
+      "lines": 165,
+      "sha256": "7698bd34b429dfddb1288ab70ddca13ec7984722b3ad53b04c4d06c83523d759"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/archive/v2-copy-codec.test.mjs",
+      "bytes": 8941,
+      "lines": 144,
+      "sha256": "80c811bbd4e5c99acbaa41a8301175d11d6842c1446d677e65cafb21f83be62e"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/archive/v2-copy-fixture.mjs",
+      "bytes": 3998,
+      "lines": 57,
+      "sha256": "9a8faf8608f0e9addff74a4089f6c0b09868fe1d7ae0bd2571444544fc0c75d1"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/archive/v2-copy-local-store.mjs",
+      "bytes": 2490,
+      "lines": 60,
+      "sha256": "6d20a47354d26e4c650bf662c1799bddb3c566f271979735b359903566d741bb"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/archive/v2-copy-transfer.mjs",
+      "bytes": 3446,
+      "lines": 52,
+      "sha256": "35388debc512b18d4370de6e91264e1ae8a6995786aff36ed08815693ece6c39"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/archive/v2-copy-transfer.test.mjs",
+      "bytes": 10886,
+      "lines": 178,
+      "sha256": "977b5b362adcbb3a43f567c36ed5541e72418ed52efe0b7cefc4fafb5f6fa8ff"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/archive/v2-copy-worker.mjs",
+      "bytes": 1860,
+      "lines": 32,
+      "sha256": "fb1f98fbf9972a7c6c70ac47df19a3d06b3d71d6a47953f0db7f0ad25355bf6d"
+    },
+    {
       "path": "supabase/review-drafts/proesc-v2-growth/ci/postgres17-concurrency.mjs",
-      "bytes": 7738,
-      "lines": 99,
-      "sha256": "3afccc8e360c813dea13bde60cfec9d2023e2cbc2aae2b8afc047860fa2225d9"
+      "bytes": 7905,
+      "lines": 101,
+      "sha256": "9e2f08814dd02d845d5bb61ca461a34bd40f42d166ce44c5938cdb13d52e9ebf"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/ci/postgres17-copy-concurrency.mjs",
+      "bytes": 4355,
+      "lines": 59,
+      "sha256": "646f11f818d9c8c9571e3b4a0c28dde46bc164b372acd303181e2d07f4952a3f"
     },
     {
       "path": "supabase/review-drafts/proesc-v2-growth/ci/postgres17.workflow.yml.disabled",
       "bytes": 2343,
       "lines": 56,
-      "sha256": "c88443c7b50ee7a30d622370e7760606400d4488d5c82c674ff58101080763f5"
+      "sha256": "301e33f7fd0bcd12d4e0341f49c2b9e9046d008585bcb7066dfa3e2aa00a3733"
+    },
+    {
+      "path": "supabase/tests/fixtures/proesc-v2-copy.fixture.mjs",
+      "bytes": 3728,
+      "lines": 58,
+      "sha256": "7f2cba18b37f3f594a6470426cfa3b08312566d3f9dd39d8dd98916c065b24cc"
     },
     {
       "path": "supabase/tests/fixtures/proesc-v2-growth.caixa.fixture.mjs",
@@ -208,6 +316,24 @@
       "bytes": 6478,
       "lines": 87,
       "sha256": "4fb16d81df11ff0a90f058ef9d371a50d21a0f8f3696c415bad620b0e005395f"
+    },
+    {
+      "path": "supabase/tests/proesc_v2_copy_adversarial.isolated.test.mjs",
+      "bytes": 6001,
+      "lines": 92,
+      "sha256": "31cbd1e092fd9f77547befe378c196c059481cca12229f5ed363ba415aad1689"
+    },
+    {
+      "path": "supabase/tests/proesc_v2_copy_catalog.isolated.test.mjs",
+      "bytes": 9928,
+      "lines": 123,
+      "sha256": "cacade0b2e5a9f7d29919894faae341e386848bc4f8316f630b7e7ac04815de1"
+    },
+    {
+      "path": "supabase/tests/proesc_v2_copy_transfer.isolated.test.mjs",
+      "bytes": 6842,
+      "lines": 91,
+      "sha256": "8b0263afc26ec071f7460571d6e7ccd6a24646222d542c66bb4dd61835a39222"
     },
     {
       "path": "supabase/tests/proesc_v2_payload_adversarial.isolated.test.mjs",
@@ -277,7 +403,7 @@
     }
   ],
   "remoteBranch": "review/proesc-v2-payload-20261009",
-  "candidateVersion": "4.8.196-rc.4",
+  "candidateVersion": "4.8.197-rc.1",
   "remoteCatalogPreflight": "METADATA_READ_ONLY_COMPLETE_EXTRA_CAIXA_READER_ADAPTED",
   "atomicMigration": "supabase/migrations/20261009224423_prepare_proesc_v2_payload_storage_off.sql",
   "migrationApplied": true,
@@ -285,5 +411,19 @@
     "20261009224423",
     "20261009224508"
   ],
-  "installationReceipt": "supabase/review-drafts/proesc-v2-growth/INSTALLATION.md"
+  "installationReceipt": "supabase/review-drafts/proesc-v2-growth/INSTALLATION.md",
+  "storageAdapterImplemented": true,
+  "storageAdapterValidation": "80_HTTP_MOCK_TESTS_PASS_NOT_DEPLOYED",
+  "storageProductionEnabled": false,
+  "naturalFullGate": "PENDING_NATURAL_CYCLE_AFTER_2026_10_10_2138Z",
+  "originalPayloadBase": "3886e6b0e12e45001f5a7bf2858965b4d8d4307d",
+  "preparedCommitParents": [
+    "048a7d4b36600f9d72fb17b8bc0f769ed98f82fd",
+    "971c09242774316a364b9b63ccdb543dd8d30910"
+  ],
+  "remoteUploadExecuted": false,
+  "copyCatalogPrepared": true,
+  "copyCatalogApplied": false,
+  "copyServiceGrantsApplied": false,
+  "selfExcludedFromHashes": true
 }

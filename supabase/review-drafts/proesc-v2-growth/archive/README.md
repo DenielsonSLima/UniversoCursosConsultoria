@@ -1,9 +1,10 @@
 # Arquivo offline de histórico Proesc: ensaio sintético
 
-Este módulo é um rascunho local de `archive -> verify -> restore`, implementado
-com Node 24 e bibliotecas nativas. Não é um cliente Supabase, uma migration ou
-uma rotina pronta para produção. Não busca dados, acessa rede, recebe credenciais,
-cria buckets, altera banco ou exclui arquivos/registros. A marca
+O núcleo offline é um rascunho local de `archive -> verify -> restore`, implementado
+com Node 24 e bibliotecas nativas. Seus arquivos originais não buscam dados,
+acessam rede, recebem credenciais, criam buckets, alteram banco ou excluem dados.
+O adapter HTTP adicional está descrito abaixo e ainda não é uma rotina homologada
+para produção. A marca
 `syntheticOnly: true` é uma declaração obrigatória do chamador, não um detector
 automático de dados pessoais: somente fixtures inventadas podem ser usadas aqui.
 
@@ -14,6 +15,10 @@ A partir da raiz deste pacote local:
 ```sh
 node --test supabase/review-drafts/proesc-v2-growth/archive/archive.test.mjs
 ```
+
+Para incluir o adapter HTTP e a ponte de transferência/restauração, sempre com
+fixtures inventadas e transporte em memória, executar `node --test
+supabase/review-drafts/proesc-v2-growth/archive/*.test.mjs`.
 
 Os testes criam diretórios temporários com prefixo `proesc-synthetic-archive-`.
 Corrupção intencional e arquivos interrompidos existem somente nessas fixtures.
@@ -71,11 +76,25 @@ operacional no banco. Agrupar registros evita um objeto/metadado por invoice.
 Não reexportar todo o histórico em cada cron, não comprimir dentro de transação
 SQL e não manter duas cópias pesadas no banco como suposta economia.
 
-O adapter remoto ainda não existe. Ele exigirá autorização do destino/dados,
-acesso mínimo por tenant, teste de RLS, sem acesso público nem credenciais no
-cliente, chaves imutáveis e publicação consistente do catálogo após verificação.
-Arquivos acima de 6 MB devem considerar upload resumível, conforme recomendação
-oficial; o limite efetivo por arquivo depende da configuração global e do bucket.
+O adapter HTTP `supabase-store.mjs` e a ponte `storage-transfer.mjs` foram
+implementados e testados com HTTP simulado. O adapter vem desligado, requer
+transporte e provedor de credenciais injetados pelo backend confiável, confere
+bucket privado e usa somente GET/POST com `x-upsert: false` e readback.
+Não há integração com a conta real, exportador SQL ou catálogo de produção.
+O contrato sintético offline original permanece intacto. Ver
+[preparo do Storage privado](STORAGE-PREPARATION.md) para autenticação,
+restrições, autorização futura e critérios conservadores de seleção.
+
+O adapter usa 4 MiB por objeto por padrão, compatível com o limite reportado do
+bucket privado existente `proesc-history`, que aceita somente `application/gzip`.
+Dados e manifesto remoto são gzip; o recibo v2 distingue hash/tamanho do manifesto
+comprimido e do JSON original. O JSON local permanece intacto. Manifestos têm
+limites próprios de 64 KiB antes/depois da compressão. Os testes usam apenas um
+bucket fictício com essas restrições, sem mudar policies ou MIME da conta real.
+Lotes maiores precisam ser divididos. O teto genérico configurável é 6 MiB e
+nunca supera o limite menor informado pelo bucket; para este destino, manter
+4 MiB. Upload resumível não está implementado. O limite real por arquivo também
+depende da configuração global e do bucket.
 Não aumentar limites ou criar credenciais como efeito colateral da implantação.
 
 Backups/PITR do banco incluem metadados de Storage, não os arquivos. O arquivo

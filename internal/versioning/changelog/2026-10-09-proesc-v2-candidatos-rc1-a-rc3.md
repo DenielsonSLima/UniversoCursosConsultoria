@@ -18,3 +18,11 @@
 - Validação isolada de SQL, concorrência PostgreSQL 17 e arquivo recuperável com dados sintéticos.
 - Recursos permanecem desligados; não aplica migrations, não envia arquivos ao Storage e não remove histórico de produção.
 
+
+## [4.8.196-rc.4] - 2026-10-09
+
+- Registra instalação autorizada da estrutura e validação dos vínculos Proesc V2, mantendo a escrita canônica desligada.
+- Concilia os nomes dos arquivos com as versões atribuídas pelo MCP, preservando o SQL já aplicado.
+- Testa a migration de validação efetiva; ativação, Storage e remoção continuam pendentes de autorização.
+- Candidatos anteriores: [RC.1 a RC.3](./2026-10-09-proesc-v2-candidatos-rc1-a-rc3.md).
+

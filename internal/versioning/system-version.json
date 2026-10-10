@@ -1,8 +1,8 @@
 {
-  "version": "4.8.196-rc.4",
+  "version": "4.8.197-rc.1",
   "display": "RC",
   "stage": "rc",
-  "revision": 4,
-  "releasedAt": "2026-10-09",
-  "summary": "Estrutura Proesc V2 instalada e validada com nova escrita desligada; ativação ainda pendente"
+  "revision": 1,
+  "releasedAt": "2026-10-10",
+  "summary": "Storage gzip, exportador V2 e catálogo copy-only preparados localmente; reaproveitamento Proesc ativo"
 }

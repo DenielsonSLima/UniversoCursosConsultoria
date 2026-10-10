@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { setTimeout as delay } from 'node:timers/promises';
 import { Client } from 'pg';
 import { createFixture } from '../../../tests/fixtures/proesc-v2-growth.fixture.mjs';
+import { runNativeCopyChecks } from './postgres17-copy-concurrency.mjs';
 const url = new URL(process.env.PROESC_SYNTHETIC_PG17_URL ?? 'postgres://invalid');
 assert.equal(process.env.PROESC_SYNTHETIC_PG17, '1', 'Explicit disposable-test opt-in required');
 assert.ok(['localhost','127.0.0.1'].includes(url.hostname), 'Only loopback disposable database permitted');
@@ -91,7 +92,8 @@ try {
  assert.equal((await value('select internal_proesc.v2_set_payload_storage_enabled(true) value')).enabled,true);checks++;
  assert.equal((await value('select internal_proesc.v2_set_payload_storage_enabled(false) value')).enabled,false);checks++;
 
- console.log(JSON.stringify({result:'PASS',checks,postgres:actualVersion,
+ const copyOnly=await runNativeCopyChecks({main,a,b,id,runId:id(6001),waitBlocked});
+ console.log(JSON.stringify({result:'PASS',checks,postgres:actualVersion,copyOnly,
   walBytesForIsolatedReplayScenario:walBytes,walScope:'Includes all writes in this isolated transaction window; not a savings estimate'}));
 } finally {
  await Promise.allSettled([a.query('ROLLBACK'),b.query('ROLLBACK')]);

@@ -1,5 +1,11 @@
-> Estado em 09/10/2026, 22h45 UTC: estrutura instalada e constraints validadas;
-> escrita canônica OFF. Ver [recibo e versões](./INSTALLATION.md).
+> Estado em 10/10/2026: estrutura e vínculos validados; reaproveitamento ON sob
+> autorização específica. FULL natural em acompanhamento. Storage segue somente
+> preparado/testado com HTTP sintético. Ver [recibo e versões](./INSTALLATION.md).
+
+O complemento [copy-only](./COPY-ONLY.md) prepara exportação V2 limitada e catálogo
+privado, com prova HTTP simulada. Após cancelamento do RC.5, a reapresentação
+foi autorizada como 4.8.197-rc.1 sobre main 971c0924, preservando o lote Banese.
+O novo CI e qualquer instalação/transferência Storage continuam pendentes.
 
 # Proesc V2: candidato de crescimento sustentável
 
@@ -7,7 +13,7 @@ Estado: instalação OFF e validação autorizadas concluídas em 09/10/2026.
 Os quatro drafts preservam a revisão por fases. Os arquivos canônicos aplicados
 são 20261009224423_prepare_proesc_v2_payload_storage_off.sql e
 20261009224508_validate_proesc_v2_payload_constraints_off.sql.
-A chave permanece desligada; não houve backfill, upload ou remoção.
+A chave foi ativada sob autorização posterior em 10/10; não houve backfill, upload ou remoção.
 
 Base consultada pelo MCP GitHub: `3886e6b0e12e45001f5a7bf2858965b4d8d4307d`,
 main de DenielsonSLima/UniversoCursosConsultoria, reconferida em 09/10/2026.
@@ -128,7 +134,7 @@ referências e elegibilidade no commit do lote. Janela financeira exige decisão
 de negócio; nenhum prazo foi inventado. Não usar VACUUM FULL/TRUNCATE/REINDEX
 como parte automática. Uma cópia noutra tabela não é arquivamento externo.
 
-## Gates e ativação reversível futura
+## Gates e reversão operacional
 
 1. Revalidar main/catálogo e o manifesto. Publicação em branch e CI autorizada;
    confirmar SHA remoto e todos os checks antes de propor a próxima etapa.
