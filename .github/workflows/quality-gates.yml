@@ -17,6 +17,7 @@ jobs:
       - name: Baixar o repositório
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -39,7 +40,7 @@ jobs:
 
       - name: Preservar migrations aplicadas contra a base
         if: github.event_name == 'pull_request'
-        run: npm run check:file-lines -- --check-diff "${{ github.event.pull_request.base.sha }}" "${{ github.sha }}"
+        run: npm run check:file-lines -- --check-diff "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}"
 
       - name: Validar contrato operacional dos agentes
         run: |
@@ -476,3 +477,4 @@ jobs:
 
       - name: Gerar build de produção
         run: npm run build
+

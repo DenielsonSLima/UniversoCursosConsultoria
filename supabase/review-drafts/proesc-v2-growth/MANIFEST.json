@@ -1,0 +1,463 @@
+{
+  "status": "PAYLOAD_ON_SINGLE_COPY_PILOT_VERIFIED",
+  "upstreamRepository": "DenielsonSLima/UniversoCursosConsultoria",
+  "upstreamBase": "c03052fff0f0db83cd6dcaa0724c70b930435b08",
+  "generatedAt": "2026-10-10T11:35:00Z",
+  "productionChanged": true,
+  "payloadStorageEnabled": true,
+  "remoteUploadImplemented": true,
+  "cleanupEnabled": false,
+  "nativePostgres17Gate": "RC198_2_PASS_RC198_3_RECEIPT_CI_PENDING",
+  "aggregateRepositoryCheck": "RC198_2_TEN_WORKFLOWS_PASS_RC198_3_PENDING",
+  "focusedLineCheck": "PASS_ALL_UNDER_500",
+  "files": [
+    {
+      "path": ".github/workflows/proesc-v2-payload.yml",
+      "bytes": 3684,
+      "lines": 84,
+      "sha256": "4b746878376237eec3dac84f1d3d1fb8dfb2cfef2b6f0643adb9bb4ed4d3b031"
+    },
+    {
+      "path": ".github/workflows/quality-gates.yml",
+      "bytes": 29831,
+      "lines": 480,
+      "sha256": "d9b5bd85ef21a040a8eb603ceabef3347fdaf16554546a6427b71b20f1ea4d1b"
+    },
+    {
+      "path": "ai/operacao/qualidade/limite-linhas-manifestos.json",
+      "bytes": 15888,
+      "lines": 195,
+      "sha256": "aae6350e3440294d9f2c5b761d56480de65e4476778eeebf5ba2bdf515281f67"
+    },
+    {
+      "path": "ai/operacao/registros/alteracoes/2026-10-09-proesc-v2-payload-candidato.md",
+      "bytes": 11976,
+      "lines": 194,
+      "sha256": "38065dbad1a5cd686a50da5a4c1a7a1aba047c35acfaee9b834c5f005b841b74"
+    },
+    {
+      "path": "internal/versioning/CHANGELOG.md",
+      "bytes": 39516,
+      "lines": 500,
+      "sha256": "0e5a3b22d768bdc6603b1a04c7079e110b12650c654f85dbecf19f1ccec9b20c"
+    },
+    {
+      "path": "internal/versioning/changelog/2026-09-27-versoes-4-8-113-a-4-8-115.md",
+      "bytes": 316,
+      "lines": 7,
+      "sha256": "fa0295d0c6f98849032d9b448917fa5dbad686e66c81e511bb878bedfc3087d8"
+    },
+    {
+      "path": "internal/versioning/changelog/2026-10-09-proesc-v2-candidatos-rc1-a-rc3.md",
+      "bytes": 2735,
+      "lines": 45,
+      "sha256": "ac9622ce90f546b150308ea7041b8f336cc3ce32c05fd32b4dc85680146434fc"
+    },
+    {
+      "path": "internal/versioning/system-version.json",
+      "bytes": 219,
+      "lines": 8,
+      "sha256": "d1de2f86cfec32a001be199c8c69acd6809e119e64c43e218093ebb4ffb44c10"
+    },
+    {
+      "path": "supabase/migrations/20261009224423_prepare_proesc_v2_payload_storage_off.sql",
+      "bytes": 22631,
+      "lines": 462,
+      "sha256": "3b6cf3bb72d093027838ae5b422750c87deb22e2d7b4ebaa5912c3dcb764b84e"
+    },
+    {
+      "path": "supabase/migrations/20261009224508_validate_proesc_v2_payload_constraints_off.sql",
+      "bytes": 694,
+      "lines": 19,
+      "sha256": "c2b537c9bf85683274e51e0492fc43a37b464016edbe8f835bb89786114d15de"
+    },
+    {
+      "path": "supabase/migrations/20261010112854_prepare_proesc_v2_copy_only_catalog.sql",
+      "bytes": 13667,
+      "lines": 223,
+      "sha256": "eae553eec2a5c91af98c9ba223fbcdf89bfbe1a3d2b141702aea34c1a1c0887f"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/01_payload_storage.draft.sql",
+      "bytes": 5513,
+      "lines": 108,
+      "sha256": "63afe9468d7b0578eb91f23d0556f0d1c73cf5b27da56af80be53f0e4bcf9649"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/02_payload_readers.draft.sql",
+      "bytes": 7037,
+      "lines": 160,
+      "sha256": "5be3268d57b5ff4723e5df427ef97cbb9cc163dc9834bccb1c1fdb4068b014d2"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/03_payload_writer.draft.sql",
+      "bytes": 1980,
+      "lines": 31,
+      "sha256": "90e0915722ef18a57864e28b85625e55e3aa3778020f4bc982185b19c7d1c09e"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/04_payload_activation_gate.draft.sql",
+      "bytes": 8228,
+      "lines": 165,
+      "sha256": "a2940717fcd7e7a3245e016dac35b57d68789f346853f9464f188f04eefc0a8b"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/05_copy_only_catalog.draft.sql",
+      "bytes": 13667,
+      "lines": 223,
+      "sha256": "eae553eec2a5c91af98c9ba223fbcdf89bfbe1a3d2b141702aea34c1a1c0887f"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/COPY-ONLY.md",
+      "bytes": 6941,
+      "lines": 116,
+      "sha256": "8c7ffcfe1bc54b2b9d75b436159fef6c80898d36a8f440fd7509bfb02a9306b6"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/INDEPENDENT_REVIEW.md",
+      "bytes": 7318,
+      "lines": 133,
+      "sha256": "56525fa8014c2fea88a971cc960d6513b77e508368bb54f41411d155ea1cfdf9"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/INSTALLATION.md",
+      "bytes": 4597,
+      "lines": 82,
+      "sha256": "a93a1bc664a1c4d5a426c831e22484a9c62a200f9b9234aaee88fe3de0278483"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/MANIFEST-BACKEND.json",
+      "bytes": 3073,
+      "lines": 90,
+      "sha256": "8d302b5995aecbff326cb01f1e43cc2f2d9ce19e07ef372254e24e2a8b391443"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/PREFLIGHT.md",
+      "bytes": 6006,
+      "lines": 97,
+      "sha256": "ffa5e9d3199c9e1f0bdc3e6f8a0b31f4203b625086bef7d34f0eea84921b677a"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/README.md",
+      "bytes": 10469,
+      "lines": 161,
+      "sha256": "e6ac4b46baa2e6ceb1e4781bbb55c1e24b9afea47b6c4f9e66e8ed3090efe6c6"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/archive/README.md",
+      "bytes": 10083,
+      "lines": 161,
+      "sha256": "044c706bb647e1d6cfcae05106fc9228e2fb75d1b79d735d62658fe8bfe51bde"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/archive/STORAGE-PREPARATION.md",
+      "bytes": 13199,
+      "lines": 204,
+      "sha256": "fd93667df924d021096d0f2b7f962c02356f06babcd42e0fd0e8739a10afe51d"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/archive/V2-COPY.md",
+      "bytes": 8678,
+      "lines": 137,
+      "sha256": "035fcc2d241cf0e0c12f791b0f92c96f7b6c5c139dd795d4e4eae78250542ddc"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/archive/archive.mjs",
+      "bytes": 9475,
+      "lines": 182,
+      "sha256": "318d08667d7d4bc911334b943c87f5cbde0a58b4098be40151ff5d6e25769252"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/archive/archive.test.mjs",
+      "bytes": 11453,
+      "lines": 206,
+      "sha256": "c8db97816e251ea00fea8d7d9f1112d48f6ca7787b19700952f0bfeeaa0383d7"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/archive/bounded-gunzip.mjs",
+      "bytes": 1822,
+      "lines": 52,
+      "sha256": "400877b9b26577ae2673950e8c0368a98a3d38acba74a1d0191162672db34e1a"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/archive/bounded-gunzip.test.mjs",
+      "bytes": 1654,
+      "lines": 32,
+      "sha256": "9c12ae8bfa9367d2a059d024e13c53fadf5766a66282c49dbcd6490153acf9b5"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/archive/local-store.mjs",
+      "bytes": 2234,
+      "lines": 58,
+      "sha256": "d6e3d6963b28d20cbdcbcb64bfedc4a58e184b06b157b9787edf34ce2804b7ac"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/archive/storage-http-fixture.mjs",
+      "bytes": 3884,
+      "lines": 73,
+      "sha256": "a6f6da62fd61078f3ed351b7b1f9a610fe0e3df49c766e9d9742921904f3cd00"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/archive/storage-transfer.mjs",
+      "bytes": 8297,
+      "lines": 123,
+      "sha256": "2779bf70f4d08b0f1348d922c8ea734ac1169d096e9624bdb085af54c6735f07"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/archive/storage-transfer.test.mjs",
+      "bytes": 20440,
+      "lines": 349,
+      "sha256": "e1b69744322c25eebf937c7dee8d8ae6adc04527cc23e964606cae1118914a1b"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/archive/supabase-store.mjs",
+      "bytes": 9112,
+      "lines": 186,
+      "sha256": "d957984aaa49cda606beacda890ce391c376f8893394a054dbb7933386d599cf"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/archive/supabase-store.test.mjs",
+      "bytes": 13894,
+      "lines": 259,
+      "sha256": "f5f6dd9e5102aaa31b4103147e47b0054a23e93746489d117e6d6f83f5a897db"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/archive/v2-copy-codec.mjs",
+      "bytes": 11420,
+      "lines": 167,
+      "sha256": "068ed22d1f366678c497b55d311d915aee2dc0a649395371b33082bd0295dfa0"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/archive/v2-copy-codec.test.mjs",
+      "bytes": 8941,
+      "lines": 144,
+      "sha256": "80c811bbd4e5c99acbaa41a8301175d11d6842c1446d677e65cafb21f83be62e"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/archive/v2-copy-fixture.mjs",
+      "bytes": 4036,
+      "lines": 58,
+      "sha256": "fe249ad048f0cb65022fed2799b009ca5495e0406377b1433c51dd5e4b3c8bbf"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/archive/v2-copy-local-store.mjs",
+      "bytes": 2528,
+      "lines": 61,
+      "sha256": "5ce19f93ddfe32300f930b1e3f5b1ba6270e2d341a1722cafc9ae73ff1b40ee5"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/archive/v2-copy-transfer.mjs",
+      "bytes": 3492,
+      "lines": 53,
+      "sha256": "2170b88d5762156a5a8545f6483961906a9d882c4c996134de9de938a6e0f116"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/archive/v2-copy-transfer.test.mjs",
+      "bytes": 10886,
+      "lines": 178,
+      "sha256": "977b5b362adcbb3a43f567c36ed5541e72418ed52efe0b7cefc4fafb5f6fa8ff"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/archive/v2-copy-worker.mjs",
+      "bytes": 1860,
+      "lines": 32,
+      "sha256": "fb1f98fbf9972a7c6c70ac47df19a3d06b3d71d6a47953f0db7f0ad25355bf6d"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/ci/postgres17-concurrency.mjs",
+      "bytes": 7905,
+      "lines": 101,
+      "sha256": "9e2f08814dd02d845d5bb61ca461a34bd40f42d166ce44c5938cdb13d52e9ebf"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/ci/postgres17-copy-concurrency.mjs",
+      "bytes": 4355,
+      "lines": 59,
+      "sha256": "646f11f818d9c8c9571e3b4a0c28dde46bc164b372acd303181e2d07f4952a3f"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/ci/postgres17.workflow.yml.disabled",
+      "bytes": 2343,
+      "lines": 56,
+      "sha256": "301e33f7fd0bcd12d4e0341f49c2b9e9046d008585bcb7066dfa3e2aa00a3733"
+    },
+    {
+      "path": "supabase/tests/fixtures/proesc-v2-copy.fixture.mjs",
+      "bytes": 4176,
+      "lines": 65,
+      "sha256": "1e680f53f18e3cb450563727ba9c7589c2b005bd8ba9fb2eb6efb122aa384f13"
+    },
+    {
+      "path": "supabase/tests/fixtures/proesc-v2-growth.caixa.fixture.mjs",
+      "bytes": 5520,
+      "lines": 75,
+      "sha256": "63e66ab3b7dcbb9821726c0e0d13707f36c729adcec94a82bc2e4e14eb60b550"
+    },
+    {
+      "path": "supabase/tests/fixtures/proesc-v2-growth.fixture.mjs",
+      "bytes": 10979,
+      "lines": 148,
+      "sha256": "a18e7a3851e7b62f0d665dff016fd9a108c0f2a363ed7501f5aa25ef2d01af49"
+    },
+    {
+      "path": "supabase/tests/fixtures/proesc-v2-growth/fixture_caixa_review_authorizer.sql",
+      "bytes": 1139,
+      "lines": 23,
+      "sha256": "d1a8ed473bbea61feaf961c4ead1d590ed6616dd055230e3ba37c2474dec9d0f"
+    },
+    {
+      "path": "supabase/tests/fixtures/proesc-v2-growth/fixture_caixa_review_reader.sql",
+      "bytes": 5326,
+      "lines": 77,
+      "sha256": "077d915491bc0c6060d10c8a7ca4a8b86b4400c2cd9f16efa695e62686945da7"
+    },
+    {
+      "path": "supabase/tests/fixtures/proesc-v2-growth/fixture_confirm_portal_payment.sql",
+      "bytes": 12538,
+      "lines": 154,
+      "sha256": "865b78715b97adf6d838e8656602ec793174e6373ff826095fa96446b5a7ff9b"
+    },
+    {
+      "path": "supabase/tests/fixtures/proesc-v2-growth/fixture_snapshot_triggers.sql",
+      "bytes": 2342,
+      "lines": 58,
+      "sha256": "f5fde03b913427c9942daca57c12cdd30139d90bb02b74114c265070ed212871"
+    },
+    {
+      "path": "supabase/tests/fixtures/proesc-v2-growth/fixture_v2_apply_invoice.sql",
+      "bytes": 10234,
+      "lines": 163,
+      "sha256": "596af83389660f463afd3d6dd869599f607dabf3cb0e32e56b127197c6ef5d12"
+    },
+    {
+      "path": "supabase/tests/fixtures/proesc-v2-growth/fixture_v2_calculated_composition_candidate.sql",
+      "bytes": 4467,
+      "lines": 65,
+      "sha256": "a4386c8f3d3884538d63e8adf868372d47ba95d0d902114c9f78b560e88bc42d"
+    },
+    {
+      "path": "supabase/tests/fixtures/proesc-v2-growth/fixture_v2_net_discount_candidate.sql",
+      "bytes": 6478,
+      "lines": 87,
+      "sha256": "4fb16d81df11ff0a90f058ef9d371a50d21a0f8f3696c415bad620b0e005395f"
+    },
+    {
+      "path": "supabase/tests/proesc_v2_copy_adversarial.isolated.test.mjs",
+      "bytes": 6001,
+      "lines": 92,
+      "sha256": "31cbd1e092fd9f77547befe378c196c059481cca12229f5ed363ba415aad1689"
+    },
+    {
+      "path": "supabase/tests/proesc_v2_copy_catalog.isolated.test.mjs",
+      "bytes": 9928,
+      "lines": 123,
+      "sha256": "cacade0b2e5a9f7d29919894faae341e386848bc4f8316f630b7e7ac04815de1"
+    },
+    {
+      "path": "supabase/tests/proesc_v2_copy_transfer.isolated.test.mjs",
+      "bytes": 6842,
+      "lines": 91,
+      "sha256": "8b0263afc26ec071f7460571d6e7ccd6a24646222d542c66bb4dd61835a39222"
+    },
+    {
+      "path": "supabase/tests/proesc_v2_payload_adversarial.isolated.test.mjs",
+      "bytes": 9599,
+      "lines": 128,
+      "sha256": "1243880689f9d3a894b7272a5137e325861ec815a3833df88f9610a062f8edff"
+    },
+    {
+      "path": "supabase/tests/proesc_v2_payload_caixa.isolated.test.mjs",
+      "bytes": 7587,
+      "lines": 113,
+      "sha256": "582e809961ea955e971722a3cd82db5853df470af5407b6ebc4aa9949a79272a"
+    },
+    {
+      "path": "supabase/tests/proesc_v2_payload_catalog.isolated.test.mjs",
+      "bytes": 3927,
+      "lines": 44,
+      "sha256": "b5b3a71d5ded7cb60e344299308dd30ae8a6386df7d93a612c2c374e35113f56"
+    },
+    {
+      "path": "supabase/tests/proesc_v2_payload_composition.isolated.test.mjs",
+      "bytes": 5250,
+      "lines": 63,
+      "sha256": "a70b4c9650161951daeb43fcd4fefe464ad029976198238bb6bec70dc8761fbd"
+    },
+    {
+      "path": "supabase/tests/proesc_v2_payload_migration.isolated.test.mjs",
+      "bytes": 5958,
+      "lines": 69,
+      "sha256": "80b542308b05062134d9246575eb6b5a40d31c3487a3c61afe690fe54616dd8b"
+    },
+    {
+      "path": "supabase/tests/proesc_v2_payload_portal.isolated.test.mjs",
+      "bytes": 12549,
+      "lines": 146,
+      "sha256": "deb1743df0ce4920935b637050a55c17d26571c72f0da9c4d825c24565bbaf5c"
+    },
+    {
+      "path": "supabase/tests/proesc_v2_payload_reader_gate.isolated.test.mjs",
+      "bytes": 5258,
+      "lines": 67,
+      "sha256": "26df738b8482eb8c7594faf4ff5de142613b7a46a918dc30c23ac87e5d7a5eb2"
+    },
+    {
+      "path": "supabase/tests/proesc_v2_payload_scale.isolated.test.mjs",
+      "bytes": 4449,
+      "lines": 62,
+      "sha256": "50d3286c6f260989f19b7965249bf23ced7c55a41d1dad48439c3f6c27ecda47"
+    },
+    {
+      "path": "supabase/tests/proesc_v2_payload_storage.isolated.test.mjs",
+      "bytes": 11035,
+      "lines": 137,
+      "sha256": "40cd24bc581ced4a51a43e1c352e606c62ea380bc75cc031f910154856f6616b"
+    },
+    {
+      "path": "supabase/tests/proesc_v2_payload_validation.isolated.test.mjs",
+      "bytes": 2462,
+      "lines": 37,
+      "sha256": "27e28b1136b412036fa6b7a7b0827775b400880bbedc11b49d2aeb67bd3e015f"
+    },
+    {
+      "path": "supabase/tests/proesc_v2_payload_writer.isolated.test.mjs",
+      "bytes": 8429,
+      "lines": 103,
+      "sha256": "ea3d0de80534a8e0a751c890d2e603c8f0af7cd4742a1c65d1ea2aaeb1855e18"
+    }
+  ],
+  "remoteBranch": "review/proesc-v2-payload-20261009",
+  "candidateVersion": "4.8.198-rc.3",
+  "remoteCatalogPreflight": "METADATA_READ_ONLY_COMPLETE_EXTRA_CAIXA_READER_ADAPTED",
+  "atomicMigration": "supabase/migrations/20261009224423_prepare_proesc_v2_payload_storage_off.sql",
+  "migrationApplied": true,
+  "appliedMigrationVersions": [
+    "20261009224423",
+    "20261009224508",
+    "20261010112854"
+  ],
+  "installationReceipt": "supabase/review-drafts/proesc-v2-growth/INSTALLATION.md",
+  "storageAdapterImplemented": true,
+  "storageAdapterValidation": "83_MOCK_TESTS_AND_SINGLE_REAL_COPY_PILOT_PASS",
+  "storageProductionEnabled": true,
+  "naturalFullGate": "PENDING_NATURAL_CYCLE_AFTER_2026_10_10_2138Z",
+  "originalPayloadBase": "3886e6b0e12e45001f5a7bf2858965b4d8d4307d",
+  "preparedCommitParents": [
+    "0bd7eb9c386ca0290e0a088bec7d31f0cb1346e8"
+  ],
+  "remoteUploadExecuted": true,
+  "copyCatalogPrepared": true,
+  "copyCatalogApplied": true,
+  "copyServiceGrantsApplied": true,
+  "selfExcludedFromHashes": true,
+  "backendPrepared": true,
+  "backendDeployed": true,
+  "backendRuntimeGate": "RC198_2_DENO_2_1_4_AND_2_9_1_PASS",
+  "fileManifests": [
+    "supabase/review-drafts/proesc-v2-growth/MANIFEST-BACKEND.json"
+  ],
+  "copyPilotRows": 1,
+  "copyPilotRestoreVerified": true,
+  "copyCatalogMigration": "20261010112854",
+  "copyPilotReceipt": "supabase/review-drafts/proesc-v2-growth/PILOT-RECEIPT.md"
+}

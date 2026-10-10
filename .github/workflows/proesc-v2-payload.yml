@@ -1,0 +1,84 @@
+name: Proesc V2 payload validation
+on:
+  pull_request:
+    paths:
+      - 'supabase/review-drafts/proesc-v2-growth/**'
+      - 'supabase/functions/proesc-v2-copy-archive/**'
+      - 'supabase/migrations/*proesc_v2_payload_storage_off.sql'
+      - 'supabase/migrations/*proesc_v2_payload_constraints_off.sql'
+      - 'supabase/migrations/*proesc_v2_copy_only_catalog.sql'
+      - 'supabase/tests/proesc_v2_payload_*'
+      - 'supabase/tests/proesc_v2_copy_*'
+      - 'supabase/tests/fixtures/proesc-v2-growth*'
+      - 'supabase/tests/fixtures/proesc-v2-copy*'
+      - 'supabase/tests/fixtures/proesc-v2-growth/**'
+      - '.github/workflows/proesc-v2-payload.yml'
+permissions:
+  contents: read
+jobs:
+  isolated-postgres17:
+    name: Payload SQL, archive and PostgreSQL 17 concurrency
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17.6-bookworm
+        env:
+          POSTGRES_DB: proesc_payload_ci
+          POSTGRES_PASSWORD: synthetic_ci_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - name: Record exact source and database image
+        run: |
+          git rev-parse HEAD
+          docker image inspect postgres:17.6-bookworm --format '{{json .RepoDigests}}'
+      - name: Install pinned isolated test dependencies
+        run: |
+          npm install --prefix "$RUNNER_TEMP/proesc-ci" --ignore-scripts @electric-sql/pglite@0.3.14 pg@8.16.3
+          ln -s "$RUNNER_TEMP/proesc-ci/node_modules" node_modules
+      - name: Test actual SQL and financial evidence parity
+        run: node --test --test-concurrency=1 supabase/tests/proesc_v2_payload_*.isolated.test.mjs supabase/tests/proesc_v2_copy_*.isolated.test.mjs
+      - name: Test synthetic archive, HTTP adapter and restoration
+        run: node --test supabase/review-drafts/proesc-v2-growth/archive/*.test.mjs
+      - name: Test bounded backend handler with synthetic callbacks
+        run: node --test supabase/functions/proesc-v2-copy-archive/*.test.mjs
+      - name: Exercise native pgcrypto, backend contention and replay
+        env:
+          PROESC_SYNTHETIC_PG17: '1'
+          PROESC_SYNTHETIC_PG17_URL: postgres://postgres:synthetic_ci_only@127.0.0.1:5432/proesc_payload_ci
+        run: node supabase/review-drafts/proesc-v2-growth/ci/postgres17-concurrency.mjs
+  backend-runtime:
+    name: Backend SDK and gzip on Deno ${{ matrix.deno }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        deno: ['v2.1.4', 'v2.9.1']
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed
+        with:
+          deno-version: ${{ matrix.deno }}
+      - name: Check entrypoint and real pinned SDK without runtime network permission
+        run: |
+          git rev-parse HEAD
+          deno --version
+          deno check --no-config --no-lock --node-modules-dir=none supabase/functions/proesc-v2-copy-archive/index.ts
+          deno test --no-config --no-lock --node-modules-dir=none supabase/functions/proesc-v2-copy-archive/sdk-real.test.ts

@@ -1,0 +1,34 @@
+{
+  "status": "DEPLOYED_AUTHORIZED_SINGLE_PILOT_VERIFIED",
+  "projectRef": "kfekgwyqozhicpfuunpo",
+  "name": "proesc-v2-copy-archive",
+  "entrypoint_path": "supabase/functions/proesc-v2-copy-archive/index.ts",
+  "verify_jwt": false,
+  "files": [
+    "supabase/functions/proesc-v2-copy-archive/handler.mjs",
+    "supabase/functions/proesc-v2-copy-archive/index.ts",
+    "supabase/functions/proesc-v2-copy-archive/memory-restore.mjs",
+    "supabase/functions/proesc-v2-copy-archive/sdk-bridge.mjs",
+    "supabase/review-drafts/proesc-v2-growth/archive/bounded-gunzip.mjs",
+    "supabase/review-drafts/proesc-v2-growth/archive/supabase-store.mjs",
+    "supabase/review-drafts/proesc-v2-growth/archive/v2-copy-codec.mjs",
+    "supabase/review-drafts/proesc-v2-growth/archive/v2-copy-transfer.mjs",
+    "supabase/review-drafts/proesc-v2-growth/archive/v2-copy-worker.mjs"
+  ],
+  "externalImports": [
+    "node:buffer",
+    "node:crypto",
+    "node:util",
+    "node:zlib",
+    "npm:@supabase/supabase-js@2.95.3"
+  ],
+  "existingServerEnvironment": [
+    "SUPABASE_URL",
+    "SUPABASE_SERVICE_ROLE_KEY"
+  ],
+  "newSecretsRequired": false,
+  "copyOnly": true,
+  "cleanupEnabled": false,
+  "deployedVersion": 1,
+  "deployedSourceCommit": "0bd7eb9c386ca0290e0a088bec7d31f0cb1346e8"
+}
