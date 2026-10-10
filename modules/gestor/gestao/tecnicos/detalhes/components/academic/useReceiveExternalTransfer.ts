@@ -9,7 +9,7 @@ import {
 } from './external-transfer.contract';
 import {
   applyExternalTransferDefaults, buildExternalTransferInput, createExternalTransferDraft, externalTransferDraftError,
-  externalTransferCreditsError, externalTransferFinancialError, externalTransferPlan, type ExternalTransferDraft,
+  externalTransferCreditsError, externalTransferFinancialError, externalTransferPlan, sameExternalTransferPlan, type ExternalTransferDraft,
 } from './external-transfer-draft';
 import { externalTransferService } from './external-transfer.service';
 import { ExternalTransferAttempt } from './external-transfer-attempt';
@@ -40,7 +40,7 @@ interface PreviewRequest {
 export const useReceiveExternalTransfer = ({ turmaId, canReceive, initialStudent, onSaved }: Options) => {
   const [draft, setDraft] = useState(() => createExternalTransferDraft(initialStudent?.id));
   const [configurations, setConfigurations] = useState<ExternalTransferFinancialConfigurations | null>(null);
-  const [reviewed, setReviewed] = useState<{ studentId: string; planKey: string; data: ExternalTransferPreview } | null>(null);
+  const [reviewed, setReviewed] = useState<{ studentId: string; data: ExternalTransferPreview } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uncertain, setUncertain] = useState(false);
   const [result, setResult] = useState<ExternalTransferResult | null>(null);
@@ -76,8 +76,8 @@ export const useReceiveExternalTransfer = ({ turmaId, canReceive, initialStudent
     setConfigurations(createExternalTransferFinancialConfigurations(context));
   }, [context, draft.studentId, turmaId]);
   const plan = externalTransferPlan(draft, context?.quantidadeMaxima || 0, context?.maxCiclos || 1);
-  const planKey = JSON.stringify(plan);
-  const review = reviewed?.studentId === draft.studentId && reviewed.planKey === planKey ? reviewed.data : null;
+  const review = plan && reviewed?.studentId === draft.studentId && sameExternalTransferPlan(plan, reviewed.data.financeiro)
+    ? reviewed.data : null;
   const previewMutation = useMutation({
     mutationFn: async (request: PreviewRequest) => {
       if (!draft.studentId || (!request.restore && !plan)) throw new Error('Confira as informações de cada cobrança.');
@@ -104,7 +104,7 @@ export const useReceiveExternalTransfer = ({ turmaId, canReceive, initialStudent
       if (value.data) {
         const data = value.data;
         setDraft((current) => applyExternalTransferDefaults(current, data));
-        setReviewed(value.reviewed ? { studentId: value.studentId, planKey: JSON.stringify(data.financeiro), data } : null);
+        setReviewed(value.reviewed ? { studentId: value.studentId, data } : null);
         if (value.restore) setConfigurations(createExternalTransferFinancialConfigurations(data));
         if (data.regraFingerprint !== context?.regraFingerprint) void contextQuery.refetch();
       }
@@ -136,6 +136,7 @@ export const useReceiveExternalTransfer = ({ turmaId, canReceive, initialStudent
     && !creditsError;
   const change = <K extends keyof ExternalTransferDraft>(field: K, value: ExternalTransferDraft[K]) => {
     if (!attempt.current.canEdit || previewBusy.current) return;
+    if (field === 'studentId' && String(value) === draft.studentId) return;
     setError(null);
     if (field === 'studentId') {
       defaultsApplied.current = '';

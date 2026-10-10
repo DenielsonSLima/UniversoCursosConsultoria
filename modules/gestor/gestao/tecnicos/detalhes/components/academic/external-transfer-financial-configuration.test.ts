@@ -4,6 +4,7 @@ import {
   buildExternalTransferFinancialAdjustments, clearExternalTransferFinancialConfigurationChanges,
   createExternalTransferFinancialConfigurations, externalTransferFinancialConfigurationError,
   syncExternalTransferFinancialConfigurations, updateExternalTransferFinancialConfiguration,
+  type ExternalTransferCycleValues,
 } from './external-transfer-financial-configuration.ts';
 import { externalTransferScheduleItemError } from './external-transfer-presentation.ts';
 
@@ -158,4 +159,72 @@ Deno.test('voltar da lista preserva opções dos grupos desligados sem reativá-
   assert.equal(withoutFee[1].valorTaxa, original[1].valorTaxa);
   assert.equal(withoutFee[1].vencimentoTaxa, original[1].vencimentoTaxa);
   assert.deepEqual(withoutFee[1].changedKeys, []);
+});
+
+Deno.test('alternâncias booleanas canceladas preservam cobranças individuais e seleção repetida é idempotente', () => {
+  const context = preview();
+  const edited = context.financeiro.itens.map((item, index) => index === 2 ? {
+    ...item, vencimento: '2026-11-15', valor: '250.00', descontoPontualidade: '20.00',
+    jurosAtrasoPercentual: '3.000000', multaAtrasoPercentual: '4.000000',
+  } : item);
+  const original = syncExternalTransferFinancialConfigurations(createExternalTransferFinancialConfigurations(context), context, edited);
+  const flags = ['enabled', 'cobrarMensalidades', 'cobrarTaxa', 'aplicarDesconto', 'aplicarJuros', 'aplicarMulta'] as const;
+  assert.equal(original[1].hasIndividualConditions, true);
+  for (const flag of flags) {
+    const initial = original[1][flag];
+    assert.equal(updateExternalTransferFinancialConfiguration(original, 1, flag, initial), original, flag);
+    let values = updateExternalTransferFinancialConfiguration(original, 1, flag, !initial);
+    assert.deepEqual(values[1].changedKeys, [flag]);
+    assert.equal(updateExternalTransferFinancialConfiguration(values, 1, flag, !initial), values, flag);
+    values = updateExternalTransferFinancialConfiguration(values, 1, flag, initial);
+    assert.deepEqual(values[1].changedKeys, [], flag);
+    assert.deepEqual(buildExternalTransferFinancialAdjustments(values, context, today), [], flag);
+    assert.equal(values[2], original[2]);
+  }
+  assert.equal(edited[2].valor, '250.00');
+  assert.equal(edited[2].vencimento, '2026-11-15');
+});
+
+Deno.test('cancelar alternâncias preserva alterações reais de valor, data e outro ciclo', () => {
+  const context = preview();
+  let values = createExternalTransferFinancialConfigurations(context);
+  values = updateExternalTransferFinancialConfiguration(values, 1, 'valorMensalidade', '225.00');
+  values = updateExternalTransferFinancialConfiguration(values, 1, 'vencimentoTaxa', '2026-10-15');
+  values = updateExternalTransferFinancialConfiguration(values, 2, 'primeiroVencimento', '2027-11-05');
+  const otherCycle = values[2];
+  const flags: Array<keyof Pick<ExternalTransferCycleValues, 'enabled' | 'cobrarMensalidades' | 'cobrarTaxa' | 'aplicarDesconto' | 'aplicarJuros' | 'aplicarMulta'>> = [
+    'enabled', 'cobrarMensalidades', 'cobrarTaxa', 'aplicarDesconto', 'aplicarJuros', 'aplicarMulta',
+  ];
+  for (const flag of flags) {
+    const initial = values[1][flag];
+    values = updateExternalTransferFinancialConfiguration(values, 1, flag, !initial);
+    values = updateExternalTransferFinancialConfiguration(values, 1, flag, initial);
+  }
+  assert.deepEqual(values[1].changedKeys, ['valorMensalidade', 'vencimentoTaxa']);
+  assert.equal(values[2], otherCycle);
+  assert.deepEqual(buildExternalTransferFinancialAdjustments(values, context, today), [
+    { acao: 'CONFIGURAR_CICLO', cicloNumero: 1, valorMensalidade: '225.00', vencimentoTaxa: '2026-10-15' },
+    { acao: 'CONFIGURAR_CICLO', cicloNumero: 2, primeiroVencimento: '2027-11-05', periodicidade: 'MENSAL_CALENDARIO' },
+  ]);
+});
+
+Deno.test('reativar um ciclo depois de aplicar a desativação ainda envia toda a configuração preservada', () => {
+  const context = preview();
+  const original = createExternalTransferFinancialConfigurations(context);
+  let values = updateExternalTransferFinancialConfiguration(original, 1, 'enabled', false);
+  assert.deepEqual(buildExternalTransferFinancialAdjustments(values, context, today), [
+    { acao: 'CONFIGURAR_CICLO', cicloNumero: 1, quantidadeParcelas: 0, cobrarTaxa: false },
+  ]);
+  values = clearExternalTransferFinancialConfigurationChanges(values, 1);
+  const withoutCycle = context.financeiro.itens.filter((item) => item.cicloNumero !== 1);
+  values = syncExternalTransferFinancialConfigurations(values, context, withoutCycle);
+  values = updateExternalTransferFinancialConfiguration(values, 1, 'enabled', true);
+  assert.deepEqual(values[1].changedKeys, ['enabled']);
+  assert.deepEqual(buildExternalTransferFinancialAdjustments(values, context, today), [{
+    acao: 'CONFIGURAR_CICLO', cicloNumero: 1, quantidadeParcelas: 2, primeiroVencimento: '2026-10-30',
+    periodicidade: 'MENSAL_CALENDARIO', valorMensalidade: '200.00', descontoPontualidade: '10.00',
+    jurosAtrasoPercentual: '1.000000', multaAtrasoPercentual: '0.000000', alvoEncargos: 'MENSALIDADES',
+    cobrarTaxa: true, valorTaxa: '150.00', vencimentoTaxa: '2026-10-13',
+  }]);
+  assert.deepEqual(values[2], original[2]);
 });

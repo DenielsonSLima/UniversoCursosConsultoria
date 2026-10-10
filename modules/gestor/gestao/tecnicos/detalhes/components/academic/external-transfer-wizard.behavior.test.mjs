@@ -199,3 +199,89 @@ test('rejeição definitiva recarrega a matriz e permite remover somente aprovei
   assert.equal(state.draft.credits[uuid(6)].mediaFinal, '8.5');
   assert.equal(state.draft.institution, 'Escola sintética');
 });
+
+test('reselecionar o mesmo aluno preserva o recebimento conferido; trocar aluno reinicia os dados', async () => {
+  const runtime = new TransferHookRuntime({ ...options, initialStudent: undefined }, grade, defaults,
+    async (_, args) => ({ data: preview(args.p_financeiro?.itens || defaults.financeiro.itens), error: null }));
+  await runtime.initialize();
+  runtime.state.change('studentId', uuid(9));
+  let state = runtime.render();
+  state.change('institution', 'Escola sintética');
+  state.change('reason', 'Continuidade dos estudos');
+  state.change('notes', 'Observação individual');
+  state.change('transferDate', '2000-01-01');
+  state.change('credits', { [uuid(4)]: { selected: true, mediaFinal: '0', frequenciaPercent: '90', situacao: 'EQUIVALENCIA' } });
+  state.change('items', domain.updateExternalTransferItem(state.draft.items, uuid(11), { valor: '123.45' }));
+  state.changeConfiguration(1, 'periodicidade', 'DIAS_CORRIDOS_30');
+  state = runtime.render();
+  assert.equal(await state.configurePlan(), true);
+  state = runtime.render();
+  state.syncConfigurations();
+  state = runtime.render();
+  assert.equal(await state.reviewPlan(), true);
+  state = runtime.render();
+  assert.equal(state.ready, true);
+  const before = globalThis.structuredClone({ draft: state.draft, configurations: state.configurations, review: state.review });
+  const tree = domain.AcademicFields({ draft: state.draft, onChange: state.change,
+    students: [options.initialStudent], studentFixed: false, loading: false, loadError: false, disabled: false, onRetry: () => {},
+  });
+  const picker = React.Children.toArray(tree.props.children).find((child) => child.props?.label === 'Aluno cadastrado');
+  picker.props.onChange(uuid(9));
+  state = runtime.render();
+  assert.deepEqual({ draft: state.draft, configurations: state.configurations, review: state.review }, before);
+  assert.equal(state.ready, true);
+  assert.equal(state.canConfigure, true);
+  assert.equal(state.canReview, true);
+  assert.equal(state.confirmationIssue, null);
+
+  state.change('studentId', uuid(90));
+  state = runtime.render();
+  assert.equal(state.draft.studentId, uuid(90));
+  assert.equal(state.draft.institution, '');
+  assert.equal(state.draft.reason, '');
+  assert.equal(state.draft.notes, '');
+  assert.deepEqual(state.draft.credits, {});
+  assert.deepEqual(state.draft.items, defaults.financeiro.itens);
+  assert.deepEqual(state.configurations, domain.createExternalTransferFinancialConfigurations(defaults));
+  assert.equal(state.review, null);
+  assert.equal(state.ready, false);
+});
+
+test('retorno JSONB mantém a revisão, inclusive sem cobranças; valor, data ou regra alterados bloqueiam registro', async () => {
+  const jsonbPreview = (items) => ({ ...preview(items), financeiro: {
+    itens: items.map((item) => Object.fromEntries(Object.entries(item).reverse())), versao: 3,
+  } });
+  for (const items of [defaults.financeiro.itens, []]) {
+    const context = jsonbPreview(items);
+    const { runtime } = await setup(async (_, args) => ({ data: jsonbPreview(args.p_financeiro.itens), error: null }), grade, context);
+    const modal = await createModalRuntime();
+    modal.step = 3;
+    findButton(modal.render(props(runtime.state)), 'Conferir e revisar').props.onClick();
+    await settleAction();
+    let state = runtime.render();
+    assert.equal(modal.step, 4);
+    assert.ok(state.review, 'A ordem das chaves JSONB não deve invalidar o plano conferido.');
+    assert.equal(state.ready, true);
+    assert.equal(state.confirmationIssue, null);
+    assert.equal(findButton(modal.render(props(state)), 'Registrar recebimento e plano').props.disabled, false);
+    if (items.length) {
+      const original = globalThis.structuredClone(state.draft.items);
+      state.change('items', domain.updateExternalTransferItem(original, uuid(11), { valor: '200.01' }));
+      state = runtime.render();
+      assert.equal(state.review, null);
+      assert.equal(state.ready, false);
+      state.change('items', domain.updateExternalTransferItem(original, uuid(11), { vencimento: '2100-01-11' }));
+      state = runtime.render();
+      assert.equal(state.review, null);
+      assert.equal(state.ready, false);
+      state.change('items', original);
+      state = runtime.render();
+      assert.equal(state.ready, true);
+    }
+    const query = [...runtime.queries.entries()].find(([key]) => key.includes('recebimento-financeiro-v3'))[1];
+    query.data = { ...query.data, regraFingerprint: 'regra-alterada' };
+    state = runtime.render();
+    assert.equal(state.ready, false);
+    assert.equal(state.confirmationIssue.recovery, 'REVIEW');
+  }
+});
