@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { supabase } from '../../../../lib/supabase';
 import type { EmissionLog } from './historico-emissoes.types';
+import { historicoEmissoesService } from './historico-emissoes.service';
 
 export const canUpdateDocumentIdentity = (emission: EmissionLog) => (
   ['pasta_identificacao', 'ficha_matricula', 'carteirinha'].includes(emission.documento)
@@ -26,7 +27,6 @@ export const requestDocumentIdentityUpdate = async (
   dependencies = {
     client: supabase,
     load: async (code: string) => {
-      const { historicoEmissoesService } = await import('./historico-emissoes.service');
       return historicoEmissoesService.loadEmissionByCode(code);
     },
   },

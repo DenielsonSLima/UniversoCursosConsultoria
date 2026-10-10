@@ -79,6 +79,13 @@ before(async () => {
     bundle: true, format: 'iife', write: false, define: { 'import.meta.env': '{}' },
     nodePaths: dependencies ? [dependencies] : [],
     plugins: [{ name: 'controlled-io-real-renderers', setup(plugin) {
+      plugin.onResolve({ filter: /\.ttf\?url$/ }, args => ({
+        path: resolve(args.resolveDir, args.path.replace(/\?url$/, '')), namespace: 'font-asset',
+      }));
+      plugin.onLoad({ filter: /.*/, namespace: 'font-asset' }, async args => ({
+        contents: `export default ${JSON.stringify(`data:font/ttf;base64,${(await readFile(args.path)).toString('base64')}`)}`,
+        loader: 'js',
+      }));
       const io = { ...secretariaIo };
       delete io['./components/CertificadoPreview'];
       delete io['./useEadCertificatePdf'];

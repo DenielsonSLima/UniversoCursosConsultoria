@@ -9,7 +9,7 @@ const CONFIG_PATH = 'ai/operacao/qualidade/limite-linhas.json';
 const MIGRATION_EXEMPTIONS_PATH = 'ai/operacao/qualidade/migrations-aplicadas.json';
 const ACTIVE_LOT_PATH = 'ai/operacao/LOTE_ATIVO.md';
 const ALLOWED_IGNORED_EXTENSIONS = new Set([
-  '.avif', '.gif', '.ico', '.jpeg', '.jpg', '.lock', '.pdf', '.png', '.webp', '.woff', '.woff2',
+  '.avif', '.gif', '.ico', '.jpeg', '.jpg', '.lock', '.pdf', '.png', '.ttf', '.webp', '.woff', '.woff2',
 ]);
 const ALLOWED_IGNORED_FILE_NAMES = new Set([
   'bun.lock', 'bun.lockb', 'npm-shrinkwrap.json', 'package-lock.json', 'pnpm-lock.yaml', 'yarn.lock',

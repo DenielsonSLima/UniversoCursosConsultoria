@@ -11,6 +11,12 @@
       "uuid": "11.1.1"
     }
   },
+  "allowScripts": {
+    "@firebase/util": false,
+    "core-js": false,
+    "esbuild@0.25.12": true,
+    "protobufjs": false
+  },
   "scripts": {
     "dev": "vite --force",
     "build": "npm run check:version && vite build && node scripts/generate-social-share-pages.mjs",

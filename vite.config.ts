@@ -25,6 +25,25 @@ export default defineConfig(({ mode }) => {
             main: path.resolve(__dirname, 'index.html'),
             nativeTurnstile: path.resolve(__dirname, 'native-turnstile.html'),
           },
+          output: {
+            onlyExplicitManualChunks: true,
+            manualChunks(id) {
+              const modulePath = id.replaceAll('\\', '/');
+              // Keep shared helpers independent to avoid vendor -> entry cycles.
+              if (modulePath.includes('commonjsHelpers.js') || modulePath.includes('/node_modules/tslib/')) {
+                return 'vendor-runtime';
+              }
+              if (/\/node_modules\/(react|react-dom|scheduler|react-router)\//.test(modulePath)) {
+                return 'vendor-react';
+              }
+              if (/\/node_modules\/(pako|@pdf-lib\/upng)\//.test(modulePath)) {
+                return 'vendor-pdf-codecs';
+              }
+              if (/\/node_modules\/(pdf-lib|@pdf-lib\/standard-fonts)\//.test(modulePath)) {
+                return 'vendor-pdf';
+              }
+            },
+          },
         },
       },
       define: {

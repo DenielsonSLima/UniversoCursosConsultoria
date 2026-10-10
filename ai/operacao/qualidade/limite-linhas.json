@@ -483,6 +483,7 @@
     ".lock",
     ".pdf",
     ".png",
+    ".ttf",
     ".webp",
     ".woff",
     ".woff2"
