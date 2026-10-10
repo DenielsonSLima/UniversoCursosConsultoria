@@ -74,15 +74,24 @@ export const changeExternalTransferItemCycle = (items: ExternalTransferScheduleI
   remaining.splice(insertion || (cycle === 2 ? remaining.length : 0), 0, { ...selected, cicloNumero: cycle });
   return reorderExternalTransferItems(remaining);
 };
-export const externalTransferDraftError = (draft: ExternalTransferDraft, today = getMaceioIsoDate()): string | null => {
+export const externalTransferOriginError = (draft: ExternalTransferDraft, today = getMaceioIsoDate()): string | null => {
   if (!draft.studentId || !draft.institution.trim() || !draft.reason.trim()) return 'Informe aluno, escola anterior e motivo da transferência.';
   if (!isTransferDate(draft.transferDate) || draft.transferDate > today) return 'Informe a data efetiva, sem data futura.';
+  return null;
+};
+export const externalTransferCreditsError = (draft: ExternalTransferDraft, disciplineIds?: Set<string>): string | null => {
+  if (disciplineIds && Object.entries(draft.credits).some(([id, credit]) => credit.selected && !disciplineIds.has(id))) {
+    return 'Uma disciplina selecionada não pertence à grade atual. Recarregue as disciplinas antes de continuar.';
+  }
   for (const credit of Object.values(draft.credits).filter((item) => item.selected)) {
     if (credit.mediaFinal !== '' && (!Number.isFinite(Number(credit.mediaFinal)) || Number(credit.mediaFinal) < 0 || Number(credit.mediaFinal) > 10)) return 'A média deve ficar entre 0 e 10.';
     if (credit.frequenciaPercent !== '' && (!Number.isFinite(Number(credit.frequenciaPercent)) || Number(credit.frequenciaPercent) < 0 || Number(credit.frequenciaPercent) > 100)) return 'A frequência deve ficar entre 0 e 100.';
   }
   return null;
 };
+export const externalTransferDraftError = (draft: ExternalTransferDraft, today = getMaceioIsoDate()): string | null => (
+  externalTransferOriginError(draft, today) || externalTransferCreditsError(draft)
+);
 export const buildExternalTransferInput = (draft: ExternalTransferDraft, turmaId: string, preview: ExternalTransferPreview, requestId: string): ExternalTransferInput => {
   const error = externalTransferDraftError(draft);
   const financeiro = externalTransferPlan(draft, preview.quantidadeMaxima, preview.maxCiclos);

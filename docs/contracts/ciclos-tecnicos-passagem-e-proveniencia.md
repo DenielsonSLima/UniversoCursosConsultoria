@@ -60,6 +60,29 @@ recalcula mensalidades pelo backend; a Mensalidade 1 também pode ser ajustada
 independentemente. A periodicidade é mês-calendário, preservando o dia-base ou
 o último dia disponível; não acumular dias fixos e deslocar vencimentos mensais.
 
+## Novo ingresso e recebimento de transferência
+
+Novo vínculo direto em turma técnica exige data inicial definida e data atual
+de America/Maceio menor ou igual a `data_inicio + 365 dias`. Fase, permissão,
+escopo e capacidade continuam sujeitos aos contratos existentes. A partir do
+dia 366, usar transferência oficial. A regra não modifica vínculos já existentes,
+ativação, reativação, financeiro nem replay com a mesma intenção confirmada.
+Importação histórica exige prova privada do importador, sem exceção genérica
+para `service_role`, texto de origem ou identificador de transferência antiga.
+
+O recebimento apresenta a grade do curso de destino, agrupada por módulo.
+Configuração específica de professor na turma não é pré-requisito para listar
+uma disciplina ou registrar seu aproveitamento. A gravação valida o vínculo da
+disciplina com o curso/turma e mantém nota, frequência e situação informadas.
+
+O assistente divide aluno/destino, notas, configuração financeira, edição das
+parcelas e revisão geral. Avançar confere o cronograma no servidor; erro mantém
+a intenção preenchida. Taxa e mensalidades possuem vencimentos independentes.
+Neste recebimento, a periodicidade escolhida pode ser mês-calendário ou intervalo
+fixo de 30 dias. Essa escolha explícita não altera o calendário dos demais fluxos.
+Editar um ciclo não modifica o outro; cada item permanece ajustável. A conclusão
+persiste o plano conferido e os aproveitamentos, sem emitir cobranças bancárias.
+
 ## Trancamento e contas a receber
 
 Trancamento autorizado solicita cancelamento Banese apenas de títulos não pagos,

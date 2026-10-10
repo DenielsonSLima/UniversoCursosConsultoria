@@ -169,7 +169,7 @@ const TechnicalLandingHero: React.FC<TechnicalLandingHeroProps> = ({ data, confi
               href={onlineEnrollmentAvailable ? '/contato' : '#inscricao-tecnica'}
               className="group inline-flex min-h-14 items-center justify-center gap-3 rounded-2xl border border-white/25 bg-white/10 px-7 py-4 text-xs font-black uppercase tracking-[0.12em] text-white shadow-xl shadow-black/10 backdrop-blur transition hover:bg-white/15 focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-blue-300"
             >
-              Falar com a secretaria
+              {data.turma.admission.transferenciaObrigatoria ? 'Consultar transferência' : 'Falar com a secretaria'}
               {onlineEnrollmentAvailable ? <ArrowRight size={18} /> : <ArrowDown size={18} />}
             </a>
           </div>

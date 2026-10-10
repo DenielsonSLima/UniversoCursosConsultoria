@@ -33,9 +33,11 @@ export const getTechnicalFinancialSummary = (turma: TechnicalLandingClass) => {
   };
 };
 
-export type TechnicalEnrollmentState = 'OPEN' | 'UPCOMING' | 'SOLD_OUT' | 'CLOSED' | 'OFFLINE';
+export type TechnicalEnrollmentState = 'OPEN' | 'UPCOMING' | 'SOLD_OUT' | 'CLOSED' | 'OFFLINE' | 'TRANSFER_ONLY' | 'BLOCKED';
 
 export const getTechnicalEnrollmentState = (turma: TechnicalLandingClass): TechnicalEnrollmentState => {
+  if (turma.admission.transferenciaObrigatoria) return 'TRANSFER_ONLY';
+  if (!turma.admission.matriculaDiretaPermitida) return 'BLOCKED';
   if (turma.onlineEnrollmentAvailable) return 'OPEN';
 
   const label = turma.availabilityLabel

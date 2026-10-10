@@ -1,4 +1,6 @@
 import { supabase } from '../../../../lib/supabase';
+import { isPublicTechnicalClassOpen, type PublicTechnicalClassRow } from '../../publicTechnicalClasses.client';
+import { publicTechnicalClassesService } from '../../publicTechnicalClasses.service';
 import type {
   TechnicalLandingClass,
   TechnicalLandingCourse,
@@ -29,7 +31,7 @@ const mapCourse = (row: any): TechnicalLandingCourse => ({
   paymentMethods: paymentMethodsFromConfig(row.financeiro_config),
 });
 
-const mapTurma = (row: any): TechnicalLandingClass => ({
+const mapTurma = (row: PublicTechnicalClassRow): TechnicalLandingClass => ({
   id: String(row.turma_id),
   courseId: String(row.curso_id),
   name: String(row.turma_nome || 'Turma técnica'),
@@ -43,7 +45,8 @@ const mapTurma = (row: any): TechnicalLandingClass => ({
   totalSeats: Number(row.vagas_totais || 0),
   occupiedSeats: Number(row.vagas_ocupadas || 0),
   availableSeats: Number(row.vagas_disponiveis || 0),
-  onlineEnrollmentAvailable: row.inscricoes_online_disponiveis === true,
+  onlineEnrollmentAvailable: isPublicTechnicalClassOpen(row),
+  admission: row.ingresso,
   enrollmentFee: Number(row.valor_matricula || 0),
   reEnrollmentFee: Number(row.valor_rematricula || 0),
   installments: Number(row.qtd_parcelas || 0),
@@ -100,23 +103,14 @@ const attachCoursePaymentConfig = async (rows: any[]) => {
 
 export const technicalLandingService = {
   async listPublishedClasses(limit = 3): Promise<TechnicalLandingData[]> {
-    const { data, error } = await supabase.rpc('list_public_technical_classes', {
-      p_limit: Math.max(1, Math.min(3, limit)),
-      p_turma_id: null,
-    });
-    if (error) throw error;
-    const rows = await attachCoursePaymentConfig(Array.isArray(data) ? data : []);
+    const data = await publicTechnicalClassesService.list({ limit: Math.max(1, Math.min(3, limit)) });
+    const rows = await attachCoursePaymentConfig(data);
     return rows.map(mapLandingData);
   },
 
   async getPublishedClass(turmaId: string): Promise<TechnicalLandingData> {
-    const { data, error } = await supabase.rpc('list_public_technical_classes', {
-      p_limit: 1,
-      p_turma_id: turmaId,
-    });
-
-    if (error) throw error;
-    const rows = await attachCoursePaymentConfig(Array.isArray(data) ? data : []);
+    const data = await publicTechnicalClassesService.list({ limit: 1, turmaId });
+    const rows = await attachCoursePaymentConfig(data);
     const row = rows[0] || null;
     if (!row) throw new Error('Turma técnica não encontrada ou não publicada no site.');
 

@@ -6,6 +6,14 @@ Histórico anterior: [27/09/2026 — versões 4.8.117 a 4.8.127](./changelog/202
 
 Histórico arquivado: [27/09/2026 — versões 4.8.115 a 4.8.116](./changelog/2026-09-27-versoes-4-8-115-a-4-8-116.md), [27/09/2026 — versão 4.8.114](./changelog/2026-09-27-versao-4-8-114.md), [27/09/2026 — versão 4.8.113](./changelog/2026-09-27-versao-4-8-113.md), [27/09/2026 — versão 4.8.112](./changelog/2026-09-27-versao-4-8-112.md), [27/09/2026 — versão 4.8.111](./changelog/2026-09-27-versao-4-8-111.md), [25/09/2026 a 26/09/2026 — versões 4.8.91 a 4.8.110](./changelog/2026-09-25-a-2026-09-26-versoes-4-8-91-a-4-8-110.md).
 
+## [4.8.201] - 2026-10-10
+
+- Turmas técnicas aceitam novas matrículas diretas até 365 dias após a data de início, inclusive; após o prazo, o ingresso exige transferência.
+- Gestor e inscrição pública mostram o prazo e o motivo do bloqueio, usando a mesma elegibilidade do banco.
+- Matrículas existentes, ativações, replays e recebimentos oficiais de transferência mantêm seus fluxos.
+- Recebimento usa a grade completa do curso e organiza aluno, notas, configuração financeira, edição das parcelas e revisão geral em cinco etapas.
+- Matrícula e mensalidades têm vencimentos independentes; o cronograma permite intervalo de 30 dias e confere os ajustes ao avançar.
+
 ## [4.8.200] - 2026-10-10
 
 - Configurações, Financeiro e Parceiros carregam módulos sob demanda, reduzindo os chunks JavaScript abaixo de 500 kB.
@@ -442,4 +450,3 @@ Histórico arquivado: [27/09/2026 — versões 4.8.115 a 4.8.116](./changelog/20
 - Checklist do aluno oferece confirmação direta de entrega sem anexo, correção do registro e ações de visualizar e excluir arquivos.
 - Órgão emissor usa catálogo pesquisável no cadastro e na edição, com bloqueio de novos textos livres no banco e preservação dos dados históricos.
 - Exclusão protege arquivos compartilhados e versões atuais; histórico não arquiva a versão ativa, e falhas parciais informam como retomar.
-

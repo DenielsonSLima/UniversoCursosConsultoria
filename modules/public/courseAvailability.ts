@@ -1,4 +1,6 @@
 import { supabase } from '../../lib/supabase';
+import { isPublicTechnicalClassOpen, toPublicTechnicalTurma } from './publicTechnicalClasses.client';
+import { publicTechnicalClassesService } from './publicTechnicalClasses.service';
 
 type PublicCourseModality = 'LIVRE' | 'ESPECIALIZACAO' | 'TECNICO';
 
@@ -57,7 +59,10 @@ export const fetchPublicCoursesWithOpenTurmas = async (modalidade: PublicCourseM
   const courseIds = (cursos || []).map((curso: any) => curso.id).filter(Boolean);
   if (courseIds.length === 0) return cursos || [];
 
-  const { data: turmas, error: turmasError } = await supabase
+  const { data: turmas, error: turmasError } = modalidade === 'TECNICO'
+    ? { data: (await publicTechnicalClassesService.list())
+      .filter(isPublicTechnicalClassOpen).map(toPublicTechnicalTurma), error: null }
+    : await supabase
     .from('turmas')
     .select(PUBLIC_TURMA_COLUMNS)
     .in('status', [...PUBLIC_ENROLLMENT_TURMA_STATUSES])
@@ -68,7 +73,7 @@ export const fetchPublicCoursesWithOpenTurmas = async (modalidade: PublicCourseM
   if (turmasError) throw turmasError;
 
   const turmasByCourse = new Map<string, any[]>();
-  const eligibleTurmas = (turmas || []).filter((turma: any) => (
+  const eligibleTurmas = modalidade === 'TECNICO' ? (turmas || []) : (turmas || []).filter((turma: any) => (
     isEligiblePublicTurmaStatus(turma?.status, modalidade)
     && isWithinPublicEnrollmentWindow(turma)
   ));
@@ -111,6 +116,10 @@ export const fetchOpenTurmasForCourse = async (courseId: string) => {
     .order('data_inicio', { ascending: true });
 
   if (error) throw error;
+  if ((data || []).some((turma: any) => toSingle(turma?.cursos)?.modalidade === 'TECNICO')) {
+    const rows = await publicTechnicalClassesService.list({ courseId });
+    return rows.filter(isPublicTechnicalClassOpen).map(toPublicTechnicalTurma);
+  }
   return (data || []).filter((turma: any) => {
     const curso = toSingle(turma?.cursos);
     return isEligiblePublicTurmaStatus(turma?.status, curso?.modalidade)

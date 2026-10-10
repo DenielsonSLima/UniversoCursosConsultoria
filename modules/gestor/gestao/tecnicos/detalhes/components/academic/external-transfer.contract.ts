@@ -9,9 +9,12 @@ export type { TransferScheduleItem as ExternalTransferScheduleItem, TransferSche
 import { isTransferSchedulePlan, type TransferScheduleItem as ExternalTransferScheduleItem, type TransferSchedulePlan as ExternalTransferFinancialPlan } from '../../../../../../../supabase/functions/_shared/technical-transfer-schedule';
 export type ExternalTransferScheduleAdjustment = {
   acao: 'ADICIONAR_ITEM'; itemId: string; cicloNumero: 1 | 2; tipo: ExternalTransferScheduleItem['tipo']; valor?: string;
+  periodicidade?: 'MENSAL_CALENDARIO' | 'DIAS_CORRIDOS_30';
 } | {
   acao: 'CONFIGURAR_CICLO'; cicloNumero: 1 | 2;
   quantidadeParcelas?: number; primeiroVencimento?: string;
+  vencimentoTaxa?: string; periodicidade?: 'MENSAL_CALENDARIO' | 'DIAS_CORRIDOS_30';
+  alvoEncargos?: 'MENSALIDADES';
   valorMensalidade?: string; cobrarTaxa?: boolean; valorTaxa?: string;
   descontoPontualidade?: string; jurosAtrasoPercentual?: string; multaAtrasoPercentual?: string;
 };

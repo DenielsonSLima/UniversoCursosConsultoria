@@ -3,6 +3,8 @@ import { supabase } from '../../../../lib/supabase';
 import { paymentCheckoutService } from '../../../asaas/asaas.service';
 import { getPortalProfile, savePortalSession, type PortalAuthProfile } from '../../../login/portal-session';
 import type { TechnicalEnrollmentPayload } from './technicalLanding.types';
+import { publicTechnicalClassesService } from '../../publicTechnicalClasses.service';
+import { requirePublicTechnicalCheckoutClass } from '../../publicTechnicalClasses.client';
 
 const profilePatchFor = (payload: TechnicalEnrollmentPayload) => {
   const studying = payload.highSchoolSituation !== 'CONCLUIDO';
@@ -54,6 +56,12 @@ export const useTechnicalEnrollmentController = () => {
       if (!currentProfile || currentProfile.tipo !== 'Aluno') {
         throw new Error('Entre com seu cadastro de aluno para continuar a matrícula.');
       }
+
+      const [turma] = await publicTechnicalClassesService.list({
+        limit: 1, turmaId: payload.turmaId, courseId: payload.courseId,
+      });
+      if (!turma) throw new Error('Turma técnica não encontrada ou não publicada no site.');
+      requirePublicTechnicalCheckoutClass(turma, payload.courseId, payload.turmaId);
 
       const { error } = await supabase
         .from('parceiros')

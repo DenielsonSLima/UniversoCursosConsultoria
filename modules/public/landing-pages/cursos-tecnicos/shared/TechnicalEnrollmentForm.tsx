@@ -47,12 +47,13 @@ const TechnicalEnrollmentForm: React.FC<TechnicalEnrollmentFormProps> = ({
     setValues((current) => ({ ...current, ...patch }));
   };
 
-  // State: Online Enrollment NOT available (Presencial or Sold Out)
-  if (!data.turma.onlineEnrollmentAvailable) {
+  if (!data.turma.onlineEnrollmentAvailable || !data.turma.admission.matriculaDiretaPermitida) {
     const enrollmentState = getTechnicalEnrollmentState(data.turma);
     const soldOut = enrollmentState === 'SOLD_OUT';
     const comingSoon = enrollmentState === 'UPCOMING';
     const closed = enrollmentState === 'CLOSED';
+    const transferOnly = enrollmentState === 'TRANSFER_ONLY';
+    const blocked = enrollmentState === 'BLOCKED';
     const address = [data.polo.address, data.polo.number, data.polo.district].filter(Boolean).join(', ');
     const financial = getTechnicalFinancialSummary(data.turma);
 
@@ -73,7 +74,11 @@ const TechnicalEnrollmentForm: React.FC<TechnicalEnrollmentFormProps> = ({
         </div>
 
         <h2 className="mt-3 text-2xl font-black text-[#001a33]">
-          {soldOut
+          {transferOnly
+            ? 'Entrada Somente por Transferência'
+            : blocked
+              ? 'Matrícula Direta Indisponível'
+            : soldOut
             ? 'Vagas Esgotadas para esta Turma'
             : closed
               ? 'Inscrições Encerradas'
@@ -83,7 +88,9 @@ const TechnicalEnrollmentForm: React.FC<TechnicalEnrollmentFormProps> = ({
         </h2>
 
         <p className="mt-3 text-xs font-semibold leading-relaxed text-slate-500">
-          {soldOut
+          {transferOnly || blocked
+            ? data.turma.admission.mensagem
+            : soldOut
             ? 'Esta turma atingiu o limite de vagas disponíveis. Entre em contato para ingressar na lista de espera ou verificar turmas futuras.'
             : closed
               ? 'O período de inscrição desta turma foi encerrado. Consulte o catálogo para conhecer outras turmas disponíveis.'
@@ -92,7 +99,7 @@ const TechnicalEnrollmentForm: React.FC<TechnicalEnrollmentFormProps> = ({
               : 'As matrículas desta turma são finalizadas diretamente com nossa equipe no polo presencial. Entre em contato para confirmar sua vaga.'}
         </p>
 
-        {!soldOut && !closed && financial.hasPunctualDiscount ? (
+        {!transferOnly && !blocked && !soldOut && !closed && financial.hasPunctualDiscount ? (
           <div className="mt-6 overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50">
             <div className="border-b border-emerald-200/70 px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.15em] text-emerald-800">
               Condição de pontualidade
@@ -129,7 +136,7 @@ const TechnicalEnrollmentForm: React.FC<TechnicalEnrollmentFormProps> = ({
           href={soldOut || closed ? '/cursos-tecnicos' : '/contato'}
           className="mt-6 flex w-full items-center justify-center gap-2.5 rounded-2xl bg-[#001a33] px-5 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg transition-all duration-300 hover:bg-blue-800 hover:scale-[1.02]"
         >
-          {soldOut || closed ? 'Ver Outras Turmas' : comingSoon ? 'Consultar a Abertura' : 'Falar com a Secretaria'}
+          {transferOnly ? 'Consultar Transferência' : soldOut || closed ? 'Ver Outras Turmas' : comingSoon ? 'Consultar a Abertura' : 'Falar com a Secretaria'}
           {soldOut || closed ? <ArrowRight size={16} /> : <PhoneCall size={16} />}
         </a>
       </section>

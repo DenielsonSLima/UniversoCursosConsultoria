@@ -33,6 +33,7 @@ import {
 import EnrollmentContinuitySummary from './EnrollmentContinuitySummary';
 import { financeiroQueryKeys } from '../../../../financeiro/financeiro.queryKeys';
 import { useParceiroAlunoMatriculasQueries } from './useParceiroAlunoMatriculasQueries';
+import { useTechnicalAdmission } from '../../../../gestao/tecnicos/detalhes/hooks/useTechnicalAdmission';
 
 interface Props { alunoId: string; }
 const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
@@ -69,6 +70,11 @@ const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
   const movements = movementsQuery.data || [];
   const aluno = alunoQuery.data;
   const allClasses = allClassesQuery.data || [];
+  const admissionClass = pendingNewEnrollment || allClasses.find((item) => item.id === newClassId);
+  const admissionQuery = useTechnicalAdmission(
+    admissionClass?.id || '',
+    Boolean((showNew || pendingNewEnrollment) && admissionClass?.cursos?.modalidade === 'TECNICO'),
+  );
   const destinationClasses = useMemo(
     () => allClasses.filter((item) =>
       item.id !== selected?.turma_id
@@ -113,10 +119,11 @@ const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
 
   const newEnrollmentMutation = useMutation({
     mutationFn: async () => {
-      const selectedClass = allClasses.find((item) => item.id === newClassId);
+      const selectedClass = admissionClass;
       const modalidade = selectedClass?.cursos?.modalidade;
 
       if (modalidade === 'TECNICO') {
+        await admissionQuery.requireAllowed();
         const origem = selectedClass?.origem_financeira || 'NORMAL';
         const financeiroHerdado = Boolean(selectedClass?.financeiro_herdado) || origem === 'LEGADO';
 
@@ -162,15 +169,16 @@ const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
       }
     },
     onError: (error: any) => {
-      toast.error('Matrícula não realizada', `Não foi possível validar/criar a cobrança no gateway: ${error.message}`);
+      toast.error('Matrícula não realizada', error.message);
     },
   });
 
-  const confirmNewEnrollment = () => {
+  const confirmNewEnrollment = async () => {
     const selectedClass = allClasses.find((item) => item.id === newClassId);
     if (!selectedClass) return;
 
     const isTechnical = selectedClass.cursos?.modalidade === 'TECNICO';
+    if (isTechnical && !await admissionQuery.verify((message) => toast.error('Matrícula indisponível', message))) return;
     const origem = selectedClass?.origem_financeira || 'NORMAL';
     const financeiroHerdado = Boolean(selectedClass?.financeiro_herdado) || origem === 'LEGADO';
     const deveSincronizarGateway = isTechnical
@@ -190,6 +198,10 @@ const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
   };
 
   const submitNewEnrollment = () => {
+    if (!admissionQuery.admission.allowed) {
+      toast.error('Matrícula indisponível', admissionQuery.admission.message || 'A política de ingresso não foi confirmada.');
+      return;
+    }
     const origem = pendingNewEnrollment?.origem_financeira || 'NORMAL';
     const financeiroHerdado = Boolean(pendingNewEnrollment?.financeiro_herdado) || origem === 'LEGADO';
     const requiresPaymentMethod = pendingNewEnrollment?.cursos?.modalidade === 'TECNICO'
@@ -405,6 +417,8 @@ const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
         classId={newClassId}
         classes={allClasses}
         pendingClass={pendingNewEnrollment}
+        admission={admissionQuery.admission}
+        onRetryAdmission={() => { void admissionQuery.refetch(); }}
         paymentMethod={newEnrollmentPaymentMethod}
         availablePaymentMethods={newEnrollmentPaymentOptions}
         paymentOptionsLoading={newEnrollmentOptionsQuery.isLoading}

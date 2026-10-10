@@ -1,6 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import {
+  getPublicTechnicalClassReason, isPublicTechnicalClassOpen, toPublicTechnicalTurma,
+} from '../publicTechnicalClasses.client';
+import { publicTechnicalClassesService } from '../publicTechnicalClasses.service';
+import {
   PUBLIC_ENROLLMENT_TURMA_STATUSES,
   getCurrentDateInMaceio,
   isEligiblePublicTurmaStatus,
@@ -134,6 +138,22 @@ export const useCourseEnrollmentAvailability = (courseId?: string) => {
         const curso = Array.isArray(turma?.cursos) ? turma.cursos[0] : turma?.cursos;
         return isEligiblePublicTurmaStatus(turma?.status, curso?.modalidade);
       });
+
+      if (eligibleTurmas.some((turma: any) => {
+        const curso = Array.isArray(turma?.cursos) ? turma.cursos[0] : turma?.cursos;
+        return curso?.modalidade === 'TECNICO';
+      })) {
+        const rows = await publicTechnicalClassesService.list({ courseId });
+        const selected = rows.find(isPublicTechnicalClassOpen) || rows[0];
+        return {
+          isAvailable: Boolean(selected && isPublicTechnicalClassOpen(selected)),
+          turma: selected ? {
+            ...hydrateTurma(toPublicTechnicalTurma(selected)),
+            alunosMatriculados: Number(selected.vagas_ocupadas || 0),
+          } : null,
+          reason: selected ? getPublicTechnicalClassReason(selected) : 'Não há turma aberta para este curso no momento.',
+        };
+      }
 
       if (eligibleTurmas.length === 0) {
         return {

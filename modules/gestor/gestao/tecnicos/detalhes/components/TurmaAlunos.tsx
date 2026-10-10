@@ -39,10 +39,12 @@ import { useTransferFinancialReview } from '../hooks/useTransferFinancialReview'
 import { useTrancamentoFinancialPreview } from '../hooks/useTrancamentoFinancialPreview';
 import { transferFinanceKeys } from '../transfer-finance.service';
 import TransferFinancialHistory from './alunos/TransferFinancialHistory';
+import { useTechnicalAdmission } from '../hooks/useTechnicalAdmission';
 
 interface TurmaAlunosProps {
   turma: Turma;
   canManageFinanceiro?: boolean;
+  onReceiveTransfer?: () => void;
 }
 
 const ACADEMIC_ONLY_ENROLLMENT_SUBMISSION: EnrollmentFinanceSubmission = {
@@ -55,7 +57,7 @@ const ACADEMIC_ONLY_ENROLLMENT_SUBMISSION: EnrollmentFinanceSubmission = {
   justificativa: null,
 };
 
-const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma, canManageFinanceiro = false }) => {
+const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma, canManageFinanceiro = false, onReceiveTransfer }) => {
   const { toasts, removeToast, toast } = useToast();
   const queryClient = useQueryClient();
   const [showMatricularModal, setShowMatricularModal] = useState(false);
@@ -75,7 +77,8 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma, canManageFinanceiro = 
   const [historyStudent, setHistoryStudent] = useState<AcademicStudent | null>(null);
   const requireTechnicalProfile = String(turma.modalidade || '').toUpperCase() === 'TECNICO';
   const turmaStatus = String(turma.status || '').toUpperCase();
-  const canEnroll = ENROLLMENT_PHASES.has(turmaStatus);
+  const admissionQuery = useTechnicalAdmission(turma.id, requireTechnicalProfile, ENROLLMENT_PHASES.has(turmaStatus));
+  const canEnroll = admissionQuery.admission.allowed;
   const isReadOnly = turmaStatus === 'FINALIZADA';
   useMatriculaTecnicaFinanceiroRealtime(
     requireTechnicalProfile && canManageFinanceiro ? turma.id : '',
@@ -159,6 +162,8 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma, canManageFinanceiro = 
     turmaId: turma.id,
     alunoId: pendingEnrollment?.id,
     canEnroll,
+    admissionMessage: admissionQuery.admission.message,
+    verifyAdmission: admissionQuery.requireAllowed,
     canManageFinanceiro,
     contextError: financialContextError,
     manualFinanceMode,
@@ -172,7 +177,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma, canManageFinanceiro = 
   });
   const confirmEnrollment = (student: any) => {
     if (!canEnroll) {
-      toast.error('Matrícula indisponível', 'A fase atual da turma não permite novas matrículas.');
+      toast.error('Matrícula indisponível', admissionQuery.admission.message || 'A fase atual da turma não permite novas matrículas.');
       return;
     }
     if (requireTechnicalProfile) {
@@ -198,6 +203,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma, canManageFinanceiro = 
       if (submission) await technicalEnrollmentConfirmation.confirm(submission);
       return;
     }
+    if (!await admissionQuery.verify((message) => toast.error('Matrícula indisponível', message))) return;
     try {
       await legacyEnrollMutation.mutateAsync(pendingEnrollment.id);
       await queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.alunos(turma.id) });
@@ -278,8 +284,9 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma, canManageFinanceiro = 
     setDestinationClassId('');
     setDestinationInstitution('');
   };
-  const openEnrollmentSearch = () => {
+  const openEnrollmentSearch = async () => {
     if (!canEnroll) return;
+    if (!await admissionQuery.verify((message) => toast.error('Matrícula indisponível', message))) return;
     setSearchTerm('');
     setShowMatricularModal(true);
   };
@@ -315,7 +322,8 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma, canManageFinanceiro = 
 
   return (
     <div className="">
-      <TurmaAlunosHeader totalStudents={students.length} onEnroll={openEnrollmentSearch} canEnroll={canEnroll} />
+      <TurmaAlunosHeader totalStudents={students.length} onEnroll={openEnrollmentSearch} canEnroll={canEnroll}
+        admission={admissionQuery.admission} onReceiveTransfer={onReceiveTransfer} onRetryAdmission={() => { void admissionQuery.refetch(); }} />
 
       <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
         <TurmaAlunosTable

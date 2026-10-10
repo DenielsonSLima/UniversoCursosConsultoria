@@ -11,6 +11,8 @@ import {
 import { AcademicMovementType } from '../../../../gestao/tecnicos/detalhes/academic-lifecycle.service';
 import { getMaceioIsoDate } from '../../../../gestao/tecnicos/technicalClassDates';
 import type { GatewayPaymentMethod } from '../../../../../asaas/asaas.service';
+import type { TechnicalAdmissionUiState } from '../../../../../shared/utils/technicalAdmissionPolicy';
+import TechnicalAdmissionNotice from '../../../../gestao/tecnicos/detalhes/components/alunos/TechnicalAdmissionNotice';
 
 export type OperationMode = 'MOVIMENTACAO' | 'TRANSFERENCIA';
 export type TransferType = 'INTERNA_TURMA' | 'INTERNA_POLO' | 'EXTERNA_ENVIADA';
@@ -31,6 +33,8 @@ interface EnrollmentModalProps {
   classId: string;
   classes: any[];
   pendingClass: any;
+  admission?: TechnicalAdmissionUiState;
+  onRetryAdmission?: () => void;
   paymentMethod: GatewayPaymentMethod | null;
   availablePaymentMethods: GatewayPaymentMethod[];
   paymentOptionsLoading: boolean;
@@ -49,6 +53,7 @@ const EnrollmentModals: React.FC<EnrollmentModalProps> = ({
   paymentMethod, availablePaymentMethods, paymentOptionsLoading,
   paymentOptionsError, onPaymentMethodChange, onConfirm, onCloseEnrollment,
   onCloseConfirmation,
+  admission, onRetryAdmission,
 }) => {
   const origemFinanceira = pendingClass?.origem_financeira || 'NORMAL';
   const financeiroHerdado = Boolean(pendingClass?.financeiro_herdado)
@@ -82,7 +87,8 @@ const EnrollmentModals: React.FC<EnrollmentModalProps> = ({
             <option value="">Selecione a turma...</option>
             {classes.map((item) => <option key={item.id} value={item.id}>{item.cursos?.nome} — {item.nome} — {item.polos?.nome}</option>)}
           </select>
-          <button onClick={onPrepare} disabled={!classId || mutation.isPending} className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#001a33] py-3.5 text-xs font-black uppercase text-white disabled:opacity-40">
+          {admission && <div className="mt-4"><TechnicalAdmissionNotice admission={admission} onRetry={onRetryAdmission} /></div>}
+          <button onClick={onPrepare} disabled={!classId || mutation.isPending || (admission && !admission.allowed)} className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#001a33] py-3.5 text-xs font-black uppercase text-white disabled:opacity-40">
             {mutation.isPending && <Loader2 size={15} className="animate-spin" />} Confirmar matrícula
           </button>
         </div>
@@ -99,6 +105,7 @@ const EnrollmentModals: React.FC<EnrollmentModalProps> = ({
             <button onClick={onCloseConfirmation} className="rounded-full p-2 text-blue-200 hover:bg-white/10"><X size={18} /></button>
           </div>
           <div className="space-y-4 p-6">
+            {admission && <TechnicalAdmissionNotice admission={admission} onRetry={onRetryAdmission} />}
             {pendingClass.cursos?.modalidade === 'TECNICO' ? (
               <>
                 <p className="text-sm font-semibold leading-relaxed text-slate-600">
@@ -176,6 +183,7 @@ const EnrollmentModals: React.FC<EnrollmentModalProps> = ({
               <button
                 onClick={onConfirm}
                 disabled={mutation.isPending
+                  || (admission && !admission.allowed)
                   || (requiresPaymentMethod && !paymentMethod)
                   || (requiresGatewayValidation && (
                     paymentOptionsLoading
