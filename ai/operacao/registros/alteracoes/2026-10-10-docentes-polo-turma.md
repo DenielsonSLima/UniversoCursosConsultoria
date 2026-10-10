@@ -12,7 +12,7 @@ A migration adiciona uma função privada e um trigger AFTER para validar soment
 
 ## Validação
 
-Reprodução anterior: os três testes novos do serviço falharam. Com a correção, oito testes de serviço/sincronização passaram, assim como lint focado. Revisão independente confirmou filtro, multipolo, retenção e contrato do trigger. PGlite 0.3.16: três testes aprovados com as RPCs canônicas, cobrindo o defeito anterior, a regra nova e a falha de BEFORE no upsert legado. O harness simula somente a autorização de operação, sem substituir a validação visual ou de RLS. TypeScript e build aprovados; os testes passam a executar no CI.
+Reprodução anterior: os três testes novos do serviço falharam. Com a correção, oito testes de serviço/sincronização passaram, assim como lint focado. Revisão independente confirmou filtro, multipolo, retenção e contrato do trigger. PGlite 0.3.16: três testes aprovados com as RPCs canônicas, cobrindo o defeito anterior, a regra nova e a falha de BEFORE no upsert legado. O harness simula somente a autorização de operação, sem substituir a validação visual ou de RLS. TypeScript e build aprovados; os testes passam a executar no CI. Uma verificação antiga de atividades delimitava sua consulta pela posição da consulta de professores; o recorte agora termina no próprio filtro de turma. Os 19 testes de atividades passaram após esse ajuste.
 
 Produção consultada antes do patch: 12 turmas técnicas, nenhuma sem polo; 14 vínculos docentes existentes, nenhum fora do escopo. Nenhum cadastro real será removido ou criado para testar. O teste SQL usa somente fixtures sintéticas e rollback no ambiente isolado.
 
@@ -22,10 +22,11 @@ Conferência visual pendente com o usuário, conforme orientação anterior. O a
 
 ## Manifesto explícito
 
-Total: 11 arquivos.
+Total: 12 arquivos.
 
 - `modules/gestor/gestao/tecnicos/detalhes/turma-grade.service.ts`
 - `modules/gestor/gestao/tecnicos/detalhes/turma-grade-professores.service.test.mjs`
+- `modules/gestor/gestao/tecnicos/detalhes/components/grade/turma-grade-atividade.test.mjs`
 - `supabase/migrations/20261010210000_technical_teacher_polo_scope.sql`
 - `supabase/tests/technical_teacher_polo_scope.rollback.sql`
 - `supabase/tests/technical_teacher_polo_scope.isolated.test.mjs`
@@ -35,4 +36,3 @@ Total: 11 arquivos.
 - `ai/operacao/qualidade/limite-linhas-manifestos.json`
 - `internal/versioning/system-version.json`
 - `internal/versioning/CHANGELOG.md`
-
