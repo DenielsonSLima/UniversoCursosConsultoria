@@ -279,6 +279,7 @@ jobs:
             lib/supabase-auth-storage.test.ts \
             scripts/test-despesas-contas-pagar-contract.mjs \
             modules/login/logout-scope.contract.test.ts \
+            modules/shared/hooks/useInactivityLogout.behavior.test.mjs \
             modules/login/portal-context-access.contract.test.ts \
             modules/login/portal-logout-flow.test.ts \
             modules/login/profile-selection-session.test.ts \

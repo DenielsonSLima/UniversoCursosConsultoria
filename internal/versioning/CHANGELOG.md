@@ -6,6 +6,11 @@ Histórico anterior: [27/09/2026 — versões 4.8.117 a 4.8.127](./changelog/202
 
 Histórico arquivado: [27/09/2026 — versões 4.8.115 a 4.8.116](./changelog/2026-09-27-versoes-4-8-115-a-4-8-116.md), [27/09/2026 — versão 4.8.114](./changelog/2026-09-27-versao-4-8-114.md), [27/09/2026 — versão 4.8.113](./changelog/2026-09-27-versao-4-8-113.md), [27/09/2026 — versão 4.8.112](./changelog/2026-09-27-versao-4-8-112.md), [27/09/2026 — versão 4.8.111](./changelog/2026-09-27-versao-4-8-111.md), [25/09/2026 a 26/09/2026 — versões 4.8.91 a 4.8.110](./changelog/2026-09-25-a-2026-09-26-versoes-4-8-91-a-4-8-110.md).
 
+## [4.8.206] - 2026-10-10
+
+- Atividade em painéis internos e controles que interrompem eventos renova corretamente o prazo da sessão.
+- Abas sincronizam a atividade mais recente antes do logout, preservando os 30 minutos de inatividade.
+
 ## [4.8.205] - 2026-10-10
 
 - Frequência acomoda seis encontros de manhã/tarde no mesmo bloco, com larguras fixas para identificação do aluno e faltas.

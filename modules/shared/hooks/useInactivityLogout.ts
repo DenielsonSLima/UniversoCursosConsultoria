@@ -18,8 +18,13 @@ const ACTIVITY_EVENTS: Array<keyof WindowEventMap> = [
   'click',
   'mousedown',
   'mousemove',
+  'pointerdown',
+  'pointermove',
   'keydown',
+  'input',
   'touchstart',
+  'touchmove',
+  'wheel',
   'scroll',
 ];
 
@@ -78,10 +83,21 @@ export const useInactivityLogout = ({
       });
     };
 
+    const syncLatestActivityAt = () => {
+      const storedActivityAt = readLastActivityAt();
+      if (storedActivityAt !== null) {
+        lastActivityAtRef.current = Math.max(lastActivityAtRef.current, storedActivityAt);
+        lastPersistedActivityAtRef.current = Math.max(lastPersistedActivityAtRef.current, storedActivityAt);
+      }
+      return storedActivityAt;
+    };
+
     const scheduleExpirationCheck = () => {
       clearExistingTimeout();
       if (!isEnabledRef.current || isTimingOutRef.current) return;
 
+      // A suspended tab may run its timer before a newer cross-tab storage event.
+      syncLatestActivityAt();
       const now = Date.now();
       if (hasInactivityExpired(lastActivityAtRef.current, now, timeoutMs)) {
         triggerTimeout();
@@ -105,6 +121,7 @@ export const useInactivityLogout = ({
     };
 
     const checkBeforeRegisteringActivity = () => {
+      syncLatestActivityAt();
       if (hasInactivityExpired(lastActivityAtRef.current, Date.now(), timeoutMs)) {
         triggerTimeout();
         return;
@@ -115,8 +132,11 @@ export const useInactivityLogout = ({
 
     const handleActivity = () => {
       if (hasInactivityExpired(lastActivityAtRef.current, Date.now(), timeoutMs)) {
-        triggerTimeout();
-        return;
+        syncLatestActivityAt();
+        if (hasInactivityExpired(lastActivityAtRef.current, Date.now(), timeoutMs)) {
+          triggerTimeout();
+          return;
+        }
       }
       registerActivity();
     };
@@ -132,15 +152,13 @@ export const useInactivityLogout = ({
       }
     };
 
-    const handleStorage = (event: { key: string | null; newValue: string | null }) => {
+    const handleStorage = (event: { key: string | null }) => {
       if (event.key !== PORTAL_LAST_ACTIVITY_STORAGE_KEY) return;
-      const nextValue = Number(event.newValue);
-      if (!Number.isFinite(nextValue) || nextValue <= 0) {
+      // The current value wins over queued events from before a new login.
+      if (syncLatestActivityAt() === null) {
         triggerTimeout();
         return;
       }
-      lastActivityAtRef.current = nextValue;
-      lastPersistedActivityAtRef.current = nextValue;
       scheduleExpirationCheck();
     };
 
@@ -151,7 +169,7 @@ export const useInactivityLogout = ({
     scheduleExpirationCheck();
 
     ACTIVITY_EVENTS.forEach((eventName) => {
-      window.addEventListener(eventName, handleActivity, { passive: true });
+      window.addEventListener(eventName, handleActivity, { passive: true, capture: true });
     });
     window.addEventListener('focus', checkBeforeRegisteringActivity);
     window.addEventListener('storage', handleStorage);
@@ -159,7 +177,7 @@ export const useInactivityLogout = ({
 
     return () => {
       ACTIVITY_EVENTS.forEach((eventName) => {
-        window.removeEventListener(eventName, handleActivity);
+        window.removeEventListener(eventName, handleActivity, true);
       });
       window.removeEventListener('focus', checkBeforeRegisteringActivity);
       window.removeEventListener('storage', handleStorage);
