@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   ArrowLeft,
@@ -6,7 +6,6 @@ import {
   Clock3,
   Copy,
   ExternalLink,
-  FileText,
   Loader2,
   Receipt,
   WalletCards,
@@ -14,7 +13,10 @@ import {
 import { alunoExtratoService, AlunoExtratoRecebivel } from './alunoExtrato.service';
 import ToastNotification, { useToast } from '../../../../../../parceiros/components/shared/ToastNotification';
 import { ReceivableAmountSummary } from '../../../../../../financeiro/receber/components/modalidade-receber/ReceivableAmountSummary';
-import { isProescFinancialComposition } from '../../../../../../financeiro/financeiro.composition-presentation';
+import { paymentMethodLabel } from '../../../../../../financeiro/receber/components/modalidade-receber/modalidade-receber.utils';
+import { gestorBanesePaymentService } from '../../../../../../financeiro/receber/banese/gestor-banese-payment.service';
+import { extratoChargeAction, extratoChargePresentation, extratoPaymentOrigin } from './alunoExtrato.presentation';
+import { alunoExtratoQueryKey, useAlunoExtratoRealtime } from './useAlunoExtratoRealtime';
 
 interface AlunoFinanceiroExtratoProps {
   matriculaId: string;
@@ -27,54 +29,14 @@ const formatCurrency = (value: number) =>
 const formatDate = (value?: string) =>
   value ? new Date(`${value}T00:00:00`).toLocaleDateString('pt-BR') : '—';
 
-const paymentOriginLabel = (item: AlunoExtratoRecebivel) => {
-  if (isProescFinancialComposition(item.composicaoStatus)) return 'Proesc';
-  if (item.origemPagamento === 'SISTEMA_ANTERIOR') return 'Sistema anterior';
-  if (item.origemPagamento === 'ASAAS' || item.asaasPaymentId) return 'Asaas';
-  if (item.origemPagamento === 'PRESENCIAL') return 'Manual';
-  return item.status === 'PAGO' ? 'Manual' : 'Aguardando';
-};
-
-const paymentMethodLabel = (item: AlunoExtratoRecebivel) => {
-  if (item.formaPagamento === 'CARTAO') return 'Cartão';
-  if (item.formaPagamento === 'BOLETO') return 'Boleto';
-  if (item.formaPagamento === 'PIX') return 'Pix';
-  if (item.formaPagamento === 'DINHEIRO') return 'Dinheiro';
-  return item.asaasPaymentId ? 'Link Asaas' : 'Não definido';
-};
-
-const asaasStatusLabel = (status?: string) => {
-  const normalized = (status || '').toUpperCase();
-  if (!normalized) return 'Sem sincronização';
-  const labels: Record<string, string> = {
-    PENDING: 'Pendente',
-    CONFIRMED: 'Confirmado',
-    RECEIVED: 'Recebido',
-    OVERDUE: 'Vencido',
-    DELETED: 'Cancelado',
-    REFUNDED: 'Estornado',
-    REFUND_REQUESTED: 'Estorno solicitado',
-    CHARGEBACK_REQUESTED: 'Chargeback solicitado',
-    CHARGEBACK_DISPUTE: 'Chargeback em disputa',
-    AWAITING_RISK_ANALYSIS: 'Em análise',
-  };
-  return labels[normalized] || normalized;
-};
-
-const asaasStatusClass = (status?: string) => {
-  const normalized = (status || '').toUpperCase();
-  if (['CONFIRMED', 'RECEIVED'].includes(normalized)) return 'text-emerald-700 bg-emerald-50 border-emerald-100';
-  if (['OVERDUE', 'DELETED', 'REFUNDED'].includes(normalized)) return 'text-rose-700 bg-rose-50 border-rose-100';
-  if (normalized === 'PENDING') return 'text-amber-700 bg-amber-50 border-amber-100';
-  return 'text-slate-500 bg-slate-50 border-slate-100';
-};
-
 const StatusBadge = ({ status }: { status: string }) => (
   <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-black uppercase ${
     status === 'PAGO'
       ? 'bg-emerald-50 text-emerald-700'
       : status === 'VENCIDO'
         ? 'bg-rose-50 text-rose-700'
+        : ['CANCELADO', 'ESTORNADO', 'DEVOLVIDO', 'SUSPENSO'].includes(status)
+          ? 'bg-slate-100 text-slate-600'
         : 'bg-amber-50 text-amber-700'
   }`}>
     {status === 'PAGO' ? <CheckCircle2 size={12} /> : <Clock3 size={12} />}
@@ -84,19 +46,45 @@ const StatusBadge = ({ status }: { status: string }) => (
 
 const AlunoFinanceiroExtrato: React.FC<AlunoFinanceiroExtratoProps> = ({ matriculaId, onBack }) => {
   const { toasts, removeToast, toast } = useToast();
+  const [openingId, setOpeningId] = useState<string | null>(null);
+  useAlunoExtratoRealtime(matriculaId);
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['turma-financeiro-extrato-aluno', matriculaId],
+    queryKey: alunoExtratoQueryKey(matriculaId),
     queryFn: () => alunoExtratoService.getExtrato(matriculaId),
     staleTime: 10_000,
   });
 
   const copyChargeLink = async (item: AlunoExtratoRecebivel) => {
-    if (!item.asaasInvoiceUrl) {
-      toast.info('Cobrança sem link', 'Esta parcela ainda não possui link de cobrança no Asaas.');
+    const url = item.asaasInvoiceUrl || item.asaasBankSlipUrl;
+    if (!url || extratoChargeAction(item) !== 'external') return;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success('Link copiado', 'O link de cobrança foi copiado para envio ao aluno.');
+    } catch {
+      toast.error('Não foi possível copiar', 'Abra a cobrança e copie o endereço no navegador.');
+    }
+  };
+
+  const openCharge = async (item: AlunoExtratoRecebivel) => {
+    const action = extratoChargeAction(item);
+    if (!action || openingId) return;
+    if (action === 'external') {
+      window.open(item.asaasBankSlipUrl || item.asaasInvoiceUrl, '_blank', 'noopener,noreferrer');
       return;
     }
-    await navigator.clipboard.writeText(item.asaasInvoiceUrl);
-    toast.success('Link copiado', 'O link de cobrança foi copiado para envio ao aluno.');
+    const preparedTab = window.open('about:blank', '_blank');
+    if (!preparedTab) {
+      toast.error('Nova aba bloqueada', 'Permita pop-ups para este portal e tente abrir o boleto novamente.');
+      return;
+    }
+    setOpeningId(item.id);
+    try {
+      await gestorBanesePaymentService.openBoletoPdfInNewTab(item.id, preparedTab);
+    } catch (error) {
+      toast.error('Boleto Banese indisponível', error instanceof Error ? error.message : 'Não foi possível abrir o boleto.');
+    } finally {
+      setOpeningId(null);
+    }
   };
 
   if (isLoading) {
@@ -188,7 +176,10 @@ const AlunoFinanceiroExtrato: React.FC<AlunoFinanceiroExtratoProps> = ({ matricu
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {data.recebiveis.map((item, index) => (
+              {data.recebiveis.map((item, index) => {
+                const charge = extratoChargePresentation(item);
+                const action = extratoChargeAction(item);
+                return (
                 <tr key={item.id} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'}>
                   <td className="px-5 py-4">
                     <p className="text-xs font-bold text-slate-700">{item.descricao}</p>
@@ -204,39 +195,37 @@ const AlunoFinanceiroExtrato: React.FC<AlunoFinanceiroExtratoProps> = ({ matricu
                     <div className="space-y-1.5">
                       <StatusBadge status={item.status} />
                       <p className="text-[10px] font-bold text-slate-500">Forma: {paymentMethodLabel(item)}</p>
-                      <p className="text-[10px] font-bold text-slate-500">Origem: {paymentOriginLabel(item)}</p>
+                      <p className="text-[10px] font-bold text-slate-500">Origem: {extratoPaymentOrigin(item)}</p>
+                      {item.status === 'PENDENTE' && <p className="text-[10px] font-bold text-slate-500">Aguardando pagamento</p>}
                       {item.dataPagamento && <p className="text-[10px] font-bold text-emerald-700">Pago: {formatDate(item.dataPagamento)}</p>}
                     </div>
                   </td>
                   <td className="px-5 py-4">
-                    <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-wider ${asaasStatusClass(item.asaasStatus)}`}>
-                      {item.origemPagamento === 'SISTEMA_ANTERIOR'
-                        ? isProescFinancialComposition(item.composicaoStatus) ? 'Histórico Proesc' : 'Sistema anterior'
-                        : asaasStatusLabel(item.asaasStatus)}
+                    <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-wider ${
+                      charge.tone === 'confirmed' ? 'text-emerald-700 bg-emerald-50 border-emerald-100'
+                        : charge.tone === 'warning' ? 'text-amber-700 bg-amber-50 border-amber-100'
+                          : 'text-slate-500 bg-slate-50 border-slate-100'
+                    }`}>
+                      {charge.label}
                     </span>
-                    {item.asaasPaymentId && (
-                      <p className="mt-2 max-w-[170px] truncate text-[10px] font-mono text-slate-400">
-                        ID Asaas: {item.asaasPaymentId}
-                      </p>
-                    )}
+                    {charge.detail && <p className="mt-2 max-w-[220px] text-[10px] font-bold text-slate-500">{charge.detail}</p>}
                   </td>
                   <td className="px-5 py-4">
                     <div className="flex gap-2">
-                      <button onClick={() => copyChargeLink(item)} className="rounded-xl border border-emerald-200 p-2 text-emerald-700" title="Copiar link">
+                      {action === 'external' && <button type="button" onClick={() => copyChargeLink(item)} className="rounded-xl border border-emerald-200 p-2 text-emerald-700" title="Copiar link" aria-label="Copiar link de cobrança">
                         <Copy size={14} />
-                      </button>
-                      {item.asaasInvoiceUrl && (
-                        <a href={item.asaasInvoiceUrl} target="_blank" rel="noreferrer" className="rounded-xl border border-blue-200 p-2 text-blue-600" title="Abrir cobrança">
-                          <ExternalLink size={14} />
-                        </a>
-                      )}
-                      <button className="rounded-xl border border-slate-200 p-2 text-slate-500" title="Documento financeiro">
-                        <FileText size={14} />
-                      </button>
+                      </button>}
+                      {action && <button type="button" onClick={() => openCharge(item)} disabled={openingId !== null}
+                        className="inline-flex items-center gap-1 rounded-xl border border-blue-200 p-2 text-[10px] font-black text-blue-600 disabled:opacity-50">
+                        {openingId === item.id ? <Loader2 size={14} className="animate-spin" /> : <ExternalLink size={14} />}
+                        {action === 'banese' ? 'Abrir boleto' : 'Abrir cobrança'}
+                      </button>}
+                      {!action && <span className="text-[10px] font-bold text-slate-400">—</span>}
                     </div>
                   </td>
                 </tr>
-              ))}
+              );
+              })}
             </tbody>
           </table>
         </div>
@@ -246,3 +235,4 @@ const AlunoFinanceiroExtrato: React.FC<AlunoFinanceiroExtratoProps> = ({ matricu
 };
 
 export default AlunoFinanceiroExtrato;
+
