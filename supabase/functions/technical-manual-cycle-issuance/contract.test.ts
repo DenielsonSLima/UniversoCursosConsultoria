@@ -117,6 +117,26 @@ Deno.test("segundo ciclo não aceita modo de matrícula local nem omitida", () =
   }
 });
 
+Deno.test('matrícula LOCAL isolada exige plano externo canônico, contadores e prova local', () => {
+  const envelope = {
+    requestId: REQUEST_ID, matriculaId: RECEIVABLE_ID,
+    cicloManual: { planoEntrada: { requestId: REQUEST_ID, cobrarMensalidades: false,
+      condicoes: { cobrarMatricula: true, cobrarRematricula: false } } },
+    ciclo: { numero: 1, quantidadeItens: 1, quantidadeBancaria: 0, quantidadeLocal: 1,
+      emitidosBanese: 0, pendentesEmissao: 0, emRevisao: 0, total: '100.00', status: 'EMITIDO_BANESE',
+      recebiveis: [{ id: RECEIVABLE_ID, chave: 'matricula', tipo: 'MATRICULA', numero: 0,
+        descricao: 'Taxa local sintética', valor: '100.00', vencimento: '2027-01-15', status: 'PENDENTE',
+        emissaoBanese: 'NAO_APLICAVEL', destinoCobranca: 'LOCAL', localSemBoletoComprovado: true }] },
+  };
+  assert.equal(parseCycleContext(envelope).ciclo.quantidadeBancaria, 0);
+  for (const proof of [null, {}, { planoEntrada: { ...envelope.cicloManual.planoEntrada, cobrarMensalidades: true } }]) {
+    assert.throws(() => parseCycleContext({ ...envelope, cicloManual: proof }), /inválido/);
+  }
+  assert.throws(() => parseCycleContext({ ...envelope, ciclo: { ...envelope.ciclo, quantidadeLocal: 0 } }), /inválido|diverge/);
+  assert.throws(() => parseCycleContext({ ...envelope, ciclo: { ...envelope.ciclo,
+    recebiveis: [{ ...envelope.ciclo.recebiveis[0], localSemBoletoComprovado: false }] } }), /inválido/);
+});
+
 Deno.test("id determinístico por recebível é estável e não colide no ciclo", async () => {
   const first = await deterministicReceivableRequestId(
     REQUEST_ID,

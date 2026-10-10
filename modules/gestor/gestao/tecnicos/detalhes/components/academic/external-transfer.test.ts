@@ -1,23 +1,34 @@
 import assert from 'node:assert/strict';
 import {
-  isDefiniteTransferRejection, requireExternalTransferPreview, requireExternalTransferResult,
+  isDefiniteTransferRejection, isExternalTransferRate, requireExternalTransferPreview, requireExternalTransferResult,
   type ExternalTransferPreview, type ExternalTransferResult,
 } from './external-transfer.contract.ts';
 import { ExternalTransferAttempt } from './external-transfer-attempt.ts';
 import { createExternalTransferClient } from './external-transfer.client.ts';
 import {
-  buildExternalTransferInput, createExternalTransferDraft, externalTransferDraftError,
-  externalTransferPlan,
+  applyExternalTransferDefaults, buildExternalTransferInput, createExternalTransferDraft, externalTransferDraftError,
+  externalTransferFinancialError, externalTransferPlan,
 } from './external-transfer-draft.ts';
 
 declare const Deno: { test: (name: string, fn: () => void | Promise<void>) => void };
 
 const preview = (): ExternalTransferPreview => ({
-  versao: 1, regraFingerprint: 'canonical-rule', quantidadeMaxima: 10,
-  financeiro: { cicloNumero: 1, quantidadeParcelas: 6, primeiroVencimento: '2027-01-20', justificativaCiclo2: null },
+  versao: 2, regraFingerprint: 'canonical-rule', quantidadeMaxima: 10, maxCiclos: 2,
+  financeiro: {
+    cicloNumero: 1, quantidadeParcelas: 6, primeiroVencimento: '2027-01-20', justificativaCiclo2: null,
+    cobrarMensalidades: true, condicoes: {
+      cobrarMatricula: true, valorMatricula: '100.00', valorMensalidade: '200.00',
+      cobrarRematricula: true, valorRematricula: '100.00', descontoPontualidade: '10.00',
+      jurosAtrasoPercentual: '1.000000', multaAtrasoPercentual: '2.000000',
+      aplicarDescontoMatricula: false, aplicarMultaJurosMatricula: false,
+      aplicarDescontoMensalidade: true, aplicarMultaJurosMensalidade: true,
+      aplicarDescontoRematricula: false, aplicarMultaJurosRematricula: false,
+    },
+  },
+  totais: { cicloInicialNominal: '1300.00', totalNominal: '1400.00' },
   regra: {
     valorMatricula: '100.00', valorMensalidade: '200.00', valorRematricula: '100.00',
-    encargos: { descontoPontualidade: '10.00', jurosAtrasoPercentual: '1.00', multaAtrasoPercentual: '2.00' },
+    encargos: { descontoPontualidade: '10.00', jurosAtrasoPercentual: '1.000000', multaAtrasoPercentual: '2.000000' },
     aplicacao: {
       matricula: { desconto: false, multaJuros: false },
       mensalidade: { desconto: true, multaJuros: true },
@@ -25,7 +36,7 @@ const preview = (): ExternalTransferPreview => ({
     },
   }, avisos: [],
 });
-const draft = () => ({ ...createExternalTransferDraft('student-a', '2000-01-01'),
+const draft = () => ({ ...applyExternalTransferDefaults(createExternalTransferDraft('student-a', '2000-01-01'), preview()),
   institution: 'Instituição de origem', reason: 'Continuidade', installments: '6', firstDueDate: '2027-01-20',
   credits: {
     discipline: { selected: true, mediaFinal: '0', frequenciaPercent: '', situacao: 'EQUIVALENCIA' as const },
@@ -34,7 +45,7 @@ const draft = () => ({ ...createExternalTransferDraft('student-a', '2000-01-01')
 });
 const input = () => buildExternalTransferInput(draft(), 'class', preview(), 'request-1');
 const result = (requestId = 'request-1'): ExternalTransferResult => ({
-  versao: 1, requestId, replayed: false, matriculaId: 'enrollment', transferenciaId: 'transfer',
+  versao: 2, requestId, replayed: false, matriculaId: 'enrollment', transferenciaId: 'transfer',
   financeiro: preview(), cobrancaGerada: false,
 });
 
@@ -154,4 +165,72 @@ Deno.test('permissão recusada no replay não apaga a incerteza do primeiro comm
   assert.equal(attempt.uncertain, true);
   assert.equal(attempt.hasInput, true);
   assert.equal(attempt.canEdit, false);
+});
+
+Deno.test('padrões canônicos preenchem o plano completo sem perder origem/notas', () => {
+  const current = draft();
+  const restored = applyExternalTransferDefaults({ ...current, chargeMonthly: false, chargeDiscount: false, installments: '3' }, preview());
+  assert.equal(restored.installments, '6');
+  assert.equal(restored.firstDueDate, '2027-01-20');
+  assert.equal(restored.chargeMonthly, true);
+  assert.equal(restored.chargeDiscount, true);
+  assert.deepEqual(restored.conditions, preview().financeiro.condicoes);
+  assert.deepEqual(restored.credits, current.credits);
+  assert.equal(restored.institution, current.institution);
+});
+
+Deno.test('flags opcionais preservam valores do rascunho e zeram encargos somente no plano enviado', () => {
+  const current = draft();
+  current.chargeMonthly = false;
+  current.chargeDiscount = false;
+  current.chargeFine = false;
+  const plan = externalTransferPlan(current, 10)!;
+  assert.equal(plan.cobrarMensalidades, false);
+  assert.equal(plan.quantidadeParcelas, 6);
+  assert.equal(plan.condicoes.valorMensalidade, '200.00');
+  assert.equal(plan.condicoes.descontoPontualidade, '0.00');
+  assert.equal(plan.condicoes.multaAtrasoPercentual, '0.00');
+  assert.equal(plan.condicoes.jurosAtrasoPercentual, '1.000000');
+  assert.equal(current.conditions!.descontoPontualidade, '10.00');
+  assert.equal(externalTransferPlan({ ...current, chargeMonthly: true, conditions: { ...current.conditions!, valorMensalidade: '0.00' } }, 10), null);
+  assert.equal(externalTransferPlan({ ...current, conditions: { ...current.conditions!, jurosAtrasoPercentual: '101.00' } }, 10), null);
+});
+
+Deno.test('mudança de valores exige revisão; normalização decimal preserva plano equivalente', () => {
+  const edited = draft();
+  edited.conditions = { ...edited.conditions!, valorMensalidade: '150.00' };
+  assert.throws(() => buildExternalTransferInput(edited, 'class', preview(), 'request'), /plano mudou/);
+  edited.conditions.valorMensalidade = '200';
+  const value = buildExternalTransferInput(edited, 'class', preview(), 'request');
+  assert.equal(value.financeiro.condicoes.valorMensalidade, '200.00');
+  assert.throws(() => requireExternalTransferPreview({ ...preview(), versao: 1 }));
+  assert.throws(() => requireExternalTransferPreview({ ...preview(), financeiro: { ...preview().financeiro, condicoes: undefined } }));
+  assert.throws(() => requireExternalTransferPreview({ ...preview(), totais: undefined }));
+});
+
+Deno.test('quantidade de ciclos vem da turma e não muda ao dispensar rematrícula', () => {
+  const current = draft();
+  current.conditions = { ...current.conditions!, cobrarRematricula: false };
+  current.cycle = 2;
+  current.cycle2Reason = 'Continuidade externa comprovada';
+  assert.equal(externalTransferPlan(current, 10, 2)?.cicloNumero, 2);
+  assert.equal(externalTransferPlan(current, 10, 1), null);
+  assert.throws(() => requireExternalTransferPreview({ ...preview(), maxCiclos: undefined }));
+  assert.throws(() => requireExternalTransferPreview({ ...preview(), maxCiclos: 1, financeiro: { ...preview().financeiro, cicloNumero: 2, justificativaCiclo2: 'Continuidade externa comprovada' } }));
+  assert.equal(requireExternalTransferPreview({ ...preview(), maxCiclos: 1 }).maxCiclos, 1);
+});
+
+Deno.test('percentuais canônicos com seis casas mantêm padrões revisáveis e respeitam limite menor que 100', () => {
+  const canonical = requireExternalTransferPreview(preview());
+  const current = applyExternalTransferDefaults(draft(), canonical);
+  assert.equal(current.conditions!.jurosAtrasoPercentual, '1.000000');
+  assert.equal(current.conditions!.multaAtrasoPercentual, '2.000000');
+  assert.equal(externalTransferFinancialError(current, canonical.quantidadeMaxima, canonical.maxCiclos), null);
+  assert.deepEqual(externalTransferPlan(current, canonical.quantidadeMaxima, canonical.maxCiclos), canonical.financeiro);
+  for (const rate of ['0', '0.000001', '1.000000', '99.999999']) assert.equal(isExternalTransferRate(rate), true);
+  for (const rate of ['100', '100.000000', '101', '1.0000001', '-1']) {
+    assert.equal(isExternalTransferRate(rate), false);
+    assert.equal(externalTransferPlan({ ...current, conditions: { ...current.conditions!, jurosAtrasoPercentual: rate } }, 10), null);
+    assert.throws(() => requireExternalTransferPreview({ ...canonical, financeiro: { ...canonical.financeiro, condicoes: { ...canonical.financeiro.condicoes, jurosAtrasoPercentual: rate } } }));
+  }
 });

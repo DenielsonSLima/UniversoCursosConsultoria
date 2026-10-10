@@ -90,6 +90,17 @@ const asRecord = (value: unknown): Record<string, unknown> | null =>
     ? value as Record<string, unknown>
     : null;
 
+export const isFeeOnlyTransferPlan = (value: unknown, cycle: number) => {
+  const state = asRecord(value);
+  const plan = asRecord(state?.planoEntrada);
+  const conditions = asRecord(plan?.condicoes);
+  return [1, 2].includes(cycle) && plan?.cobrarMensalidades === false
+    && REQUEST_UUID_RE.test(String(plan.requestId))
+    && typeof conditions?.cobrarMatricula === 'boolean'
+    && typeof conditions.cobrarRematricula === 'boolean'
+    && (cycle === 1 ? conditions.cobrarMatricula === true : conditions.cobrarRematricula === true);
+};
+
 const stringValue = (value: unknown) => String(value ?? "").trim();
 const decimalValue = (value: unknown) => {
   const candidate = stringValue(value);
@@ -211,7 +222,7 @@ export const parseIssuanceRequest = (
   };
 };
 
-const parseProgress = (value: Record<string, unknown>): ManualCycleProgress => {
+const parseProgress = (value: Record<string, unknown>, allowLocalOnly = false): ManualCycleProgress => {
   const progress = {
     cicloNumero: Number(value.cicloNumero ?? value.numero),
     quantidadeItens: Number(value.quantidadeItens),
@@ -225,7 +236,9 @@ const parseProgress = (value: Record<string, unknown>): ManualCycleProgress => {
     !Object.values(progress).every(Number.isInteger) ||
     progress.cicloNumero < 1 || progress.cicloNumero > 2 ||
     progress.quantidadeItens < 1 || progress.quantidadeItens > 61 ||
-    progress.quantidadeBancaria < 1 || progress.quantidadeLocal < 0 || progress.quantidadeLocal > 1 ||
+    (progress.quantidadeBancaria < 1 && !(allowLocalOnly && progress.cicloNumero === 1
+      && progress.quantidadeBancaria === 0 && progress.quantidadeLocal === 1 && progress.quantidadeItens === 1)) ||
+    progress.quantidadeLocal < 0 || progress.quantidadeLocal > 1 ||
     progress.quantidadeBancaria + progress.quantidadeLocal !== progress.quantidadeItens ||
     progress.emitidosBanese < 0 || progress.pendentesEmissao < 0 ||
     progress.emRevisao < 0 ||
@@ -304,7 +317,12 @@ export const parseCycleContext = (value: unknown): ManualCycleContext => {
     ...cycle,
     pendentesEmissao: cycle.pendentesEmissao ??
       receivables.filter((item) => item.destinoCobranca !== "LOCAL" && item.emissaoBanese !== "EMITIDO").length,
-  });
+  }, isFeeOnlyTransferPlan(envelope.cicloManual, Number(cycle.numero))
+    && receivables.length === 1 && receivables[0].tipo === 'MATRICULA'
+    && receivables[0].numero === 0 && receivables[0].destinoCobranca === 'LOCAL'
+    && receivables[0].localSemBoletoComprovado === true
+    && receivables[0].emissaoBanese === 'NAO_APLICAVEL'
+    && receivables[0].emissaoHistoricaComprovada !== true);
   if ((progress.cicloNumero !== 1 && receivables.some((item) => item.localFeeWaiverProven === true))
     || progress.quantidadeItens !== receivables.length
     || progress.quantidadeLocal !== receivables.filter((item) => item.destinoCobranca === "LOCAL").length) {
@@ -435,4 +453,3 @@ export const remotePaymentMayExist = (error: unknown) =>
     error && typeof error === "object" &&
       (error as Record<string, unknown>).remotePaymentCreated === true,
   );
-

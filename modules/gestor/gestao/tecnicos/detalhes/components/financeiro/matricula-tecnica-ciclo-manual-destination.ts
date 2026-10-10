@@ -1,4 +1,5 @@
 import type { CicloManualModoMatricula } from './matricula-tecnica-ciclo-manual.types';
+import { isExternalTransferConditions } from '../academic/external-transfer.contract';
 
 type RecordValue = Record<string, unknown>;
 export const isCycleRecord = (value: unknown): value is RecordValue =>
@@ -7,13 +8,21 @@ export const isCycleRecord = (value: unknown): value is RecordValue =>
 export const isCycleEnrollmentMode = (value: unknown): value is CicloManualModoMatricula =>
   ['BOLETO', 'REGISTRO_SEM_BOLETO', 'OMITIR'].includes(String(value));
 
-export const readCycleQuantities = (value: RecordValue) => {
+export const isFeeOnlyExternalTransferPlan = (plan: unknown, cycle: number) =>
+  isCycleRecord(plan) && [1, 2].includes(cycle) && plan.cobrarMensalidades === false
+  && typeof plan.requestId === 'string'
+  && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(plan.requestId)
+  && isExternalTransferConditions(plan.condicoes)
+  && (cycle === 1 ? plan.condicoes.cobrarMatricula : plan.condicoes.cobrarRematricula);
+
+export const readCycleQuantities = (value: RecordValue, allowLocalOnly = false) => {
   const total = value.quantidadeItens;
   const legacy = value.quantidadeBancaria === undefined && value.quantidadeLocal === undefined;
   const bank = legacy ? total : value.quantidadeBancaria;
   const local = legacy ? 0 : value.quantidadeLocal;
   if (!Number.isInteger(total) || !Number.isInteger(bank) || !Number.isInteger(local)
-    || Number(bank) < 1 || Number(local) < 0 || Number(local) > 1
+    || (Number(bank) < 1 && !(allowLocalOnly && bank === 0 && local === 1 && total === 1))
+    || Number(local) < 0 || Number(local) > 1
     || Number(bank) + Number(local) !== total) return null;
   return { bank: Number(bank), local: Number(local), total: Number(total) };
 };

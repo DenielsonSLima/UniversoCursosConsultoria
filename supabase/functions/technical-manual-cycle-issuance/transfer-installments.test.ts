@@ -76,3 +76,32 @@ Deno.test('divergência de quantidade, chave, ordinal ou identidade bloqueia ant
     assert.equal(value.calls.length, 0);
   }
 });
+
+const feeOnlyProof = {
+  planoEntrada: { requestId: '11111111-1111-4111-8111-111111111111', cobrarMensalidades: false,
+    condicoes: { cobrarMatricula: true, cobrarRematricula: true } },
+};
+
+Deno.test('taxa isolada comprovada emite só a taxa e matrícula LOCAL não chama o banco', async () => {
+  for (const [cycle, mode] of [[1, 'BOLETO'], [2, 'BOLETO'], [1, 'REGISTRO_SEM_BOLETO']] as const) {
+    const value = scenario(0, cycle, mode);
+    value.context.cicloManual = feeOnlyProof;
+    const result = await runManualCycleIssuance(value.request, value.dependencies);
+    assert.equal(value.calls.length, mode === 'BOLETO' ? 1 : 0);
+    assert.equal(result.ciclo.quantidadeItens, 1);
+    assert.equal(result.ciclo.emitidosBanese, mode === 'BOLETO' ? 1 : 0);
+    await runManualCycleIssuance({ ...value.request, action: 'resume', revisao: null }, value.dependencies);
+    assert.equal(value.calls.length, mode === 'BOLETO' ? 1 : 0);
+  }
+});
+
+Deno.test('ausência de mensalidades sem plano ou com taxa desligada permanece bloqueada', async () => {
+  for (const proof of [null, {}, { planoEntrada: { ...feeOnlyProof.planoEntrada, cobrarMensalidades: true } },
+    { planoEntrada: { ...feeOnlyProof.planoEntrada, requestId: 'sem-auditoria' } },
+    { planoEntrada: { ...feeOnlyProof.planoEntrada, condicoes: { cobrarMatricula: false, cobrarRematricula: false } } }]) {
+    const value = scenario(0, 1, 'BOLETO');
+    value.context.cicloManual = proof;
+    await assert.rejects(() => runManualCycleIssuance(value.request, value.dependencies), /cobranças revisadas/);
+    assert.equal(value.calls.length, 0);
+  }
+});

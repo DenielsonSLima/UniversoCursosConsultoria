@@ -122,7 +122,8 @@ export const requireCicloFinanceiroTecnicoManualPreview = (
     throw new Error("O servidor não retornou a prévia canônica do ciclo.");
   }
   const items = value.itens as unknown[];
-  const quantities = readCycleQuantities(value);
+  const quantities = readCycleQuantities(value, value.mensalidadesHabilitadas === false
+    && value.cicloNumero === 1 && value.modoMatricula === 'REGISTRO_SEM_BOLETO');
   const terms = value.termos;
   const validTerms = isRecord(terms) &&
     isDecimalString(terms.descontoPontualidade) &&
@@ -180,8 +181,13 @@ export const requireCicloFinanceiroTecnicoManualPreview = (
   const installments = typedItems.filter((item) => item.tipo === "PARCELA");
   const leadItems = typedItems.filter((item) => item.tipo !== "PARCELA");
   const expectedLeadType = cycleNumber === 1 ? "MATRICULA" : "REMATRICULA";
+  const monthlyProofValid = value.mensalidadesHabilitadas === undefined
+    || typeof value.mensalidadesHabilitadas === 'boolean';
+  const installmentCompositionValid = value.mensalidadesHabilitadas === false
+    ? installments.length === 0 && leadItems.length === 1 && typedItems.length === 1
+    : installments.length > 0;
   const coherentComposition = validItems &&
-    installments.length > 0 &&
+    monthlyProofValid && installmentCompositionValid &&
     leadItems.length <= 1 &&
     leadItems.every((item) =>
       item.tipo === expectedLeadType && item.numero === 0

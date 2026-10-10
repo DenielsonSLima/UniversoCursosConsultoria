@@ -32,6 +32,7 @@ const moduleLoaders = {
   'atestado-conclusao': () => import('./atestado-conclusao/SecretariaAtestadoConclusaoPage'),
   'pasta-identificacao': () => import('./pasta-identificacao/SecretariaPastaIdentificacaoPage'),
   'ficha-matricula': () => import('./ficha-matricula/SecretariaFichaMatriculaPage'),
+  transferencia: () => import('./transferencia/SecretariaTransferenciaPage'),
   documento: () => import('./shared/SecretariaDocumentoEmissionPage'),
 } as const;
 
@@ -56,6 +57,7 @@ const SecretariaAssinaturasPage = lazy(moduleLoaders['assinatura-eletronica']);
 const SecretariaAtestadoConclusaoPage = lazy(moduleLoaders['atestado-conclusao']);
 const SecretariaPastaIdentificacaoPage = lazy(moduleLoaders['pasta-identificacao']);
 const SecretariaFichaMatriculaPage = lazy(moduleLoaders['ficha-matricula']);
+const SecretariaTransferenciaPage = lazy(moduleLoaders.transferencia);
 const SecretariaDocumentoEmissionPage = lazy(moduleLoaders.documento);
 
 const secretariaModuleHeaders: Record<string, { title: string; description: string }> = {
@@ -184,7 +186,7 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({
   }, [activeModule]);
 
   const preloadModule = (moduleId: string) => {
-    if (moduleId === 'cracha-periodo-eleitoral' || moduleId === 'transferencia') {
+    if (moduleId === 'cracha-periodo-eleitoral') {
       void moduleLoaders.documento();
       return;
     }
@@ -250,7 +252,7 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({
       case 'ficha-matricula':
         return <SecretariaFichaMatriculaPage />;
       case 'transferencia':
-        return <SecretariaDocumentoEmissionPage definition={secretariaDocumentoDefinitions.transferencia} />;
+        return <SecretariaTransferenciaPage poloId={poloId} gestorPermissions={gestorPermissions} />;
       case 'boletim':
         return <SecretariaBoletinsPage />;
       case 'atestado-conclusao':
