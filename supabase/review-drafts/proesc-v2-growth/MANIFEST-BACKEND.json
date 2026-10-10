@@ -1,0 +1,84 @@
+{
+  "generated": true,
+  "scope": "Deployable backend, bounded invocation and pilot runbook",
+  "files": [
+    {
+      "path": "supabase/functions/proesc-v2-copy-archive/README.md",
+      "bytes": 6698,
+      "lines": 113,
+      "sha256": "16b486695f1ba120611a9c507047eb84e2f434d0ff29c01a216236a1f50d824f"
+    },
+    {
+      "path": "supabase/functions/proesc-v2-copy-archive/backend-fixture.mjs",
+      "bytes": 3154,
+      "lines": 49,
+      "sha256": "097e7ac02ea63f8155d45709766ce43c1f8e8ba54a5650d90cf2c520f06456b1"
+    },
+    {
+      "path": "supabase/functions/proesc-v2-copy-archive/bundle.test.mjs",
+      "bytes": 1629,
+      "lines": 31,
+      "sha256": "75dae8f95f724a77cb7d58b817089cb63f8bc06bd07fdf92eaccd879575e2359"
+    },
+    {
+      "path": "supabase/functions/proesc-v2-copy-archive/handler.mjs",
+      "bytes": 6557,
+      "lines": 123,
+      "sha256": "257e02ac33ad706021f4f6a8756e0a9d7eec4ed936fc9e0876c925ef8db33f6d"
+    },
+    {
+      "path": "supabase/functions/proesc-v2-copy-archive/handler.test.mjs",
+      "bytes": 11971,
+      "lines": 197,
+      "sha256": "d7573038ee740520877cea1c9147f5a5499531058f9c965d9354d6498933b54e"
+    },
+    {
+      "path": "supabase/functions/proesc-v2-copy-archive/index.ts",
+      "bytes": 609,
+      "lines": 13,
+      "sha256": "e775f12987be70d747f56349a14693ba3ff7fbd757c32aaaeeaa43598fe7d205"
+    },
+    {
+      "path": "supabase/functions/proesc-v2-copy-archive/memory-restore.mjs",
+      "bytes": 1022,
+      "lines": 27,
+      "sha256": "a62086f3515869d65c0c3d891a01b136ca36424f4fb73d1a47701b7e57cc2bac"
+    },
+    {
+      "path": "supabase/functions/proesc-v2-copy-archive/sdk-bridge.mjs",
+      "bytes": 5516,
+      "lines": 96,
+      "sha256": "9de16e59c60dbf8ec021e02410c2f744742c91af7c4b78040ae61400c54c46dd"
+    },
+    {
+      "path": "supabase/functions/proesc-v2-copy-archive/sdk-real.test.ts",
+      "bytes": 6490,
+      "lines": 112,
+      "sha256": "b54c7568c948282c1612afac627b5c532a3ff0b635557a50e9a7c09b41f506a9"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/EDGE-BUNDLE.json",
+      "bytes": 1086,
+      "lines": 31,
+      "sha256": "fd4bbe6145ec4c8b29a3444a536266dacbf6332cac31d28c130653137ffceaa8"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/PILOT-RUNBOOK.md",
+      "bytes": 7404,
+      "lines": 111,
+      "sha256": "8428b17b82473f213f5e2491d3d95c7e0365db2ec0ae57d3ba82995d700d7226"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/invoke-copy-pilot.template.sql",
+      "bytes": 1891,
+      "lines": 39,
+      "sha256": "d0911835c8788e9091ecd6e4616639bd54b7a8e4dbf695380f8c2db8bd5ac705"
+    },
+    {
+      "path": "supabase/tests/proesc_v2_copy_invocation.isolated.test.mjs",
+      "bytes": 4440,
+      "lines": 52,
+      "sha256": "6fdfce3268cc7b3de3a4200da5730dbff9b1970453e4497894c946bfa5e8a8b4"
+    }
+  ]
+}

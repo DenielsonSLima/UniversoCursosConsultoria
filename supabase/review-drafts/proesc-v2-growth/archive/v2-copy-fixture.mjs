@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer';
 // Invented data and an in-memory Fetch transport only. No server, DNS or real credentials.
 import { createHash } from 'node:crypto';
 import { createSupabasePrivateStore } from './supabase-store.mjs';

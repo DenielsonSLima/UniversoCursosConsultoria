@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer';
 import { constants } from 'node:fs';
 import { lstat, mkdir, open, realpath } from 'node:fs/promises';
 import { join } from 'node:path';

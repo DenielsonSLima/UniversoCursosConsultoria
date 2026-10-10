@@ -1,7 +1,8 @@
 # Proesc V2: primeiro lote copy-only, ainda não instalado
 
-Data: 10/10/2026. Candidato 4.8.197-rc.1, conciliado com main 4.8.196. O cancelamento anterior
-do RC.5 foi seguido de nova autorização de publicação/CI; o novo head exige checks.
+Data: 10/10/2026. Candidato 4.8.198-rc.1, conciliado com main 4.8.197. O candidato
+anterior passou dez workflows. Endpoint e piloto completos em PILOT-RUNBOOK.md;
+nenhuma instalação copy-only, grant ou transferência real foi executada.
 
 ## Destino existente verificado somente por leitura
 
@@ -94,7 +95,7 @@ Os testes locais usam SQL real isolado em PGlite e HTTP em memória, sem acesso 
 conta. Cobrem fontes mistas, números exatos, escopo, limites, autorização, replay,
 drift, imutabilidade e preservação das tabelas de origem. O harness PostgreSQL 17
 inclui corridas de plano/recibo e mudança de fonte em sessões separadas, mas sua
-nova versão depende da publicação autorizada e do CI no commit exato.
+versão publicada em 7b3d6176 passou. O novo endpoint Deno exige CI no novo commit.
 
 O atributo statement_timeout de uma função não é prova de limite efetivo em
 chamada direta. Aplicar timeout antes do comando SQL e deadline no cliente/HTTP;

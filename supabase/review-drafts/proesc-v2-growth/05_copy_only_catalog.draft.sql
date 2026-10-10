@@ -219,4 +219,5 @@ BEGIN
   PERFORM internal_proesc.v2_assert_payload_readers();
 END;
 $inventory$;
+NOTIFY pgrst,'reload schema';
 COMMIT;

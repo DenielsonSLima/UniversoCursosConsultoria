@@ -84,8 +84,10 @@ resposta de upload sozinha ou conflito sem bytes iguais não confirma a cópia.
 `proesc_v2_record_copy_receipt_service(p_batch,p_receipt)`. O worker aceita somente
 ack com batch exato, status `COPY_RECEIPT_RECORDED` e `copyOnly=true`, sem extras.
 O catálogo SQL confere o vínculo ao plano; não consegue atestar Storage por si só.
-A confiança no worker backend continua necessária. Este código não contém o
-shim de cliente PostgREST, endpoint, segredo ou autenticação real.
+A confiança no worker backend continua necessária. O shim revisável em
+`supabase/functions/proesc-v2-copy-archive` conecta o SDK pinado e autenticação
+V2 existente; seu README detalha o contrato, CI Deno e gates de implantação.
+Nenhum valor de segredo é incluído neste pacote.
 
 ## Falhas, retomada e restauração
 
@@ -110,10 +112,11 @@ Diretório distinto do banco/origem é requisito operacional; o tipo de adapter
 local separado impede reutilizar por engano o adapter sintético. Não importa SQL.
 Arquivos/symlinks existentes divergentes bloqueiam; replay idêntico é permitido.
 
-O recibo atesta o fluxo de cópia/readback e não afirma que o operador executou
-uma restauração independente. O piloto real deve restaurar em local autorizado e
-comparar bytes/hash/contagem antes de declarar recuperabilidade ou concluir seu
-gate operacional. Tal ensaio não libera exclusão das fontes.
+O recibo do worker genérico atesta o fluxo de cópia/readback. O shim backend
+acrescenta restauração isolada em memória, por GETs novos, antes de registrar o
+catálogo, e só então responde `restoreVerified: true`. Isso não afirma que o
+operador executou um ensaio posterior de desastre. O piloto real deve ainda
+conferir bytes/hash/contagem e custódia antes de concluir seu gate operacional. Tal ensaio não libera exclusão das fontes.
 
 ## Validação e gates restantes
 

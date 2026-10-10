@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer';
 // Preparation adapter: no default fetch, environment access, credential storage,
 // bucket creation, signed/public URLs, overwrite, SQL or deletion operations.
 import { createHash } from 'node:crypto';

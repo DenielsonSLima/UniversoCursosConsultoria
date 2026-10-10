@@ -3,9 +3,11 @@
 > preparado/testado com HTTP sintético. Ver [recibo e versões](./INSTALLATION.md).
 
 O complemento [copy-only](./COPY-ONLY.md) prepara exportação V2 limitada e catálogo
-privado, com prova HTTP simulada. Após cancelamento do RC.5, a reapresentação
-foi autorizada como 4.8.197-rc.1 sobre main 971c0924, preservando o lote Banese.
-O novo CI e qualquer instalação/transferência Storage continuam pendentes.
+privado. O candidato 7b3d6176 passou dez workflows. O novo candidato 4.8.198-rc.1
+incorpora o [endpoint implantável](../../../functions/proesc-v2-copy-archive/README.md)
+e o [roteiro completo de piloto](./PILOT-RUNBOOK.md), preservando main c03052ff.
+Deploy, grants e transferência real continuam dependentes de aprovação específica.
+MANIFEST.json referencia MANIFEST-BACKEND.json para o conjunto complementar.
 
 # Proesc V2: candidato de crescimento sustentável
 

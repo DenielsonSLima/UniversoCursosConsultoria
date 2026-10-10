@@ -35,7 +35,8 @@ export async function restoreV2Copy(remote, inputReceipt, destination, filename)
   remote = snapshotCopyRemote(remote);
   const receipt = snapshotReceipt(inputReceipt, remote.scope);
   validateBudget(receipt, remote);
-  if (destination?.kind !== 'proesc-v2-copy-local-restore' || typeof destination.putImmutable !== 'function'
+  if (!['proesc-v2-copy-local-restore', 'proesc-v2-copy-memory-restore'].includes(destination?.kind)
+    || typeof destination.putImmutable !== 'function'
     || typeof destination.read !== 'function' || typeof filename !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}\.json$/.test(filename ?? '')) {
     throw fail('LOCAL_RESTORE_REQUIRED');
   }

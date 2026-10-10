@@ -4,13 +4,19 @@ Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente
 
 Histórico anterior: [16/09/2026 a 25/09/2026 — versões 4.8.65 a 4.8.90](./changelog/2026-09-16-a-2026-09-25-versoes-4-8-65-a-4-8-90.md), [13/09/2026 — versões 4.8.53 a 4.8.64](./changelog/2026-09-13-versoes-4-8-53-a-4-8-64.md), [08/09/2026 a 12/09/2026 — versões 4.8.37 a 4.8.52](./changelog/2026-09-08-a-2026-09-12-versoes-4-8-37-a-4-8-52.md), [03/09/2026 a 08/09/2026 — versões 4.8.30 a 4.8.36](./changelog/2026-09-03-a-2026-09-08-versoes-4-8-30-a-4-8-36.md), [02/09/2026 — versões 4.8.27 a 4.8.29](./changelog/2026-09-02-versoes-4-8-27-a-4-8-29.md), [01/09/2026 — versões 4.8.23 a 4.8.26](./changelog/2026-09-01-versoes-4-8-23-a-4-8-26.md), [01/09/2026 — versões 4.8.20 a 4.8.22](./changelog/2026-09-01-versoes-4-8-20-a-4-8-22.md), [27/08/2026 a 31/08/2026 — versões 4.8.8 a 4.8.19](./changelog/2026-08-27-a-2026-08-31.md), [26/08/2026 — versões 4.8.6 a 4.8.7](./changelog/2026-08-26.md), [25/08/2026 — versões 4.8.2 a 4.8.5](./changelog/2026-08-25-parte-1.md), [24/08/2026 — versões 4.8.0 a 4.8.1](./changelog/2026-08-24-parte-2.md), [24/08/2026 — versões 4.7.5 a 4.7.7](./changelog/2026-08-24-parte-1.md), [22/08/2026 a 23/08/2026](./changelog/2026-08-22-a-2026-08-23.md), [21/08/2026 a 22/08/2026 — parte 2](./changelog/2026-08-21-a-2026-08-22-parte-2.md), [21/08/2026 — parte 1](./changelog/2026-08-21-parte-1.md), [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
 
-Histórico arquivado: [09/10 — candidatos Proesc RC.1 a RC.4](./changelog/2026-10-09-proesc-v2-candidatos-rc1-a-rc3.md), [27/09 — versão 4.8.113, registro paralelo](./changelog/2026-09-27-versao-4-8-113.md), [27/09/2026 — versões 4.8.114 a 4.8.115](./changelog/2026-09-27-versoes-4-8-113-a-4-8-115.md), [27/09/2026 — versão 4.8.112](./changelog/2026-09-27-versao-4-8-112.md), [27/09/2026 — versão 4.8.111](./changelog/2026-09-27-versao-4-8-111.md), [25/09/2026 a 26/09/2026 — versões 4.8.91 a 4.8.110](./changelog/2026-09-25-a-2026-09-26-versoes-4-8-91-a-4-8-110.md).
+Histórico arquivado: [candidatos Proesc](./changelog/2026-10-09-proesc-v2-candidatos-rc1-a-rc3.md), [27/09 — versão 4.8.115](./changelog/2026-09-27-versoes-4-8-113-a-4-8-115.md), [27/09/2026 — versão 4.8.114](./changelog/2026-09-27-versao-4-8-114.md), [27/09/2026 — versão 4.8.113](./changelog/2026-09-27-versao-4-8-113.md), [27/09/2026 — versão 4.8.112](./changelog/2026-09-27-versao-4-8-112.md), [27/09/2026 — versão 4.8.111](./changelog/2026-09-27-versao-4-8-111.md), [25/09/2026 a 26/09/2026 — versões 4.8.91 a 4.8.110](./changelog/2026-09-25-a-2026-09-26-versoes-4-8-91-a-4-8-110.md).
 
-## [4.8.197-rc.1] - 2026-10-10
+## [4.8.198-rc.1] - 2026-10-10
 
-- Prepara Storage privado gzip com readback/restauração, exportador V2 limitado e catálogo copy-only em draft local.
-- Mantém upload real, políticas, buckets e limpeza fora desta etapa; testes não acessam a conta de Storage.
-- Registra ativação autorizada do reaproveitamento Proesc; acompanhamento do FULL natural permanece aberto.
+- Prepara endpoint backend V2 copy-only com autenticação existente, SDK pinado, prazos e restauração verificada.
+- Inclui roteiro de instalação e piloto único; deploy, grants e cópia real dependem de aprovação específica.
+- Preserva o lote paralelo de recebimento no extrato da turma e mantém o acompanhamento do FULL natural.
+
+## [4.8.197] - 2026-10-10
+
+- Extrato financeiro do aluno na turma ganha Receber com a mesma janela e baixa manual do Financeiro.
+- Confirmação atualiza extrato, totais da turma, Contas a Receber e saldos, respeitando permissões, origem e conta do polo.
+- Parcela paga após cancelamento bancário deixa de sugerir retomar emissão e mostra a forma registrada na baixa manual.
 
 ## [4.8.196] - 2026-10-10
 
@@ -491,3 +497,4 @@ Histórico arquivado: [09/10 — candidatos Proesc RC.1 a RC.4](./changelog/2026
 - Novo Convênio deixa de aceitar nome digitado e passa a exigir uma PJ cadastrada como `FACULDADE PARCEIRA / AFILIADO`.
 - O seletor mostra somente as faculdades globais ou vinculadas ao polo, incluindo Anhanguera e Unopar na Matriz.
 - O nome é derivado do cadastro também no backend, e o texto informativo sobre polo e primeiro aporte foi removido.
+

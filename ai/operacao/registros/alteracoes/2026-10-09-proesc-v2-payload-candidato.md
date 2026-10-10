@@ -1,6 +1,6 @@
 # Proesc V2: payload compartilhado em candidato de revisão
 
-Versão candidata: 4.8.197-rc.1. Base atual: 971c09242774316a364b9b63ccdb543dd8d30910.
+Versão candidata: 4.8.198-rc.1. Base atual: c03052fff0f0db83cd6dcaa0724c70b930435b08.
 Branch: review/proesc-v2-payload-20261009. Estado: reaproveitamento ON autorizado; adapter Storage somente sintético.
 
 ## Objetivo e limites
@@ -9,7 +9,7 @@ Reduzir cópias futuras de JSON de invoice sem remover observações, runs, FKs,
 snapshots ou evidência financeira. Migration atômica preparada na pasta canônica,
 instalada em OFF em 09/10; vínculos validados e ON autorizado em 10/10. Arquivo recuperável é protótipo local com dados sintéticos.
 Não altera frequência, pagamentos, saldos, emissão nem histórico.
-Preserva integralmente o lote paralelo do extrato Banese publicado em main 4.8.196.
+Preserva integralmente o lote paralelo do extrato Banese publicado em main 4.8.197.
 
 ## Aceite e risco
 
@@ -31,6 +31,15 @@ Medição WAL de uma janela não comprova economia OFF/ON nem taxa de produção
 - `internal/versioning/changelog/2026-09-27-versoes-4-8-113-a-4-8-115.md`
 - `internal/versioning/changelog/2026-10-09-proesc-v2-candidatos-rc1-a-rc3.md`
 - `internal/versioning/system-version.json`
+- `supabase/functions/proesc-v2-copy-archive/README.md`
+- `supabase/functions/proesc-v2-copy-archive/backend-fixture.mjs`
+- `supabase/functions/proesc-v2-copy-archive/bundle.test.mjs`
+- `supabase/functions/proesc-v2-copy-archive/handler.mjs`
+- `supabase/functions/proesc-v2-copy-archive/handler.test.mjs`
+- `supabase/functions/proesc-v2-copy-archive/index.ts`
+- `supabase/functions/proesc-v2-copy-archive/memory-restore.mjs`
+- `supabase/functions/proesc-v2-copy-archive/sdk-bridge.mjs`
+- `supabase/functions/proesc-v2-copy-archive/sdk-real.test.ts`
 - `supabase/migrations/20261009224423_prepare_proesc_v2_payload_storage_off.sql`
 - `supabase/migrations/20261009224508_validate_proesc_v2_payload_constraints_off.sql`
 - `supabase/review-drafts/proesc-v2-growth/01_payload_storage.draft.sql`
@@ -39,9 +48,12 @@ Medição WAL de uma janela não comprova economia OFF/ON nem taxa de produção
 - `supabase/review-drafts/proesc-v2-growth/04_payload_activation_gate.draft.sql`
 - `supabase/review-drafts/proesc-v2-growth/05_copy_only_catalog.draft.sql`
 - `supabase/review-drafts/proesc-v2-growth/COPY-ONLY.md`
+- `supabase/review-drafts/proesc-v2-growth/EDGE-BUNDLE.json`
 - `supabase/review-drafts/proesc-v2-growth/INDEPENDENT_REVIEW.md`
 - `supabase/review-drafts/proesc-v2-growth/INSTALLATION.md`
+- `supabase/review-drafts/proesc-v2-growth/MANIFEST-BACKEND.json`
 - `supabase/review-drafts/proesc-v2-growth/MANIFEST.json`
+- `supabase/review-drafts/proesc-v2-growth/PILOT-RUNBOOK.md`
 - `supabase/review-drafts/proesc-v2-growth/PREFLIGHT.md`
 - `supabase/review-drafts/proesc-v2-growth/README.md`
 - `supabase/review-drafts/proesc-v2-growth/archive/README.md`
@@ -65,6 +77,7 @@ Medição WAL de uma janela não comprova economia OFF/ON nem taxa de produção
 - `supabase/review-drafts/proesc-v2-growth/ci/postgres17-concurrency.mjs`
 - `supabase/review-drafts/proesc-v2-growth/ci/postgres17-copy-concurrency.mjs`
 - `supabase/review-drafts/proesc-v2-growth/ci/postgres17.workflow.yml.disabled`
+- `supabase/review-drafts/proesc-v2-growth/invoke-copy-pilot.template.sql`
 - `supabase/tests/fixtures/proesc-v2-copy.fixture.mjs`
 - `supabase/tests/fixtures/proesc-v2-growth.caixa.fixture.mjs`
 - `supabase/tests/fixtures/proesc-v2-growth.fixture.mjs`
@@ -77,6 +90,7 @@ Medição WAL de uma janela não comprova economia OFF/ON nem taxa de produção
 - `supabase/tests/fixtures/proesc-v2-growth/fixture_v2_net_discount_candidate.sql`
 - `supabase/tests/proesc_v2_copy_adversarial.isolated.test.mjs`
 - `supabase/tests/proesc_v2_copy_catalog.isolated.test.mjs`
+- `supabase/tests/proesc_v2_copy_invocation.isolated.test.mjs`
 - `supabase/tests/proesc_v2_copy_transfer.isolated.test.mjs`
 - `supabase/tests/proesc_v2_payload_adversarial.isolated.test.mjs`
 - `supabase/tests/proesc_v2_payload_caixa.isolated.test.mjs`
@@ -90,7 +104,7 @@ Medição WAL de uma janela não comprova economia OFF/ON nem taxa de produção
 - `supabase/tests/proesc_v2_payload_validation.isolated.test.mjs`
 - `supabase/tests/proesc_v2_payload_writer.isolated.test.mjs`
 
-Total: 66 arquivos.
+Total: 80 arquivos.
 
 ## Validação e publicação
 
@@ -143,3 +157,20 @@ Revisão independente confirmou os testes e corrigiu leitores, limites de decode
 mutação de entradas e vínculo de nomes/hashes. O CI nativo novo testa seis
 corridas copy-only, mas depende do SHA exato publicado. Não confundir fixture
 com homologação do Storage, permissões, quota ou endpoint real.
+
+## Endpoint implantável, sem deploy
+
+Candidato 4.8.198-rc.1 preserva main c03052ff e prepara a entrada backend
+V2 com autorização existente, SDK2.95.3, deadline e restauração em memória antes
+do recibo. Bundle enumera oito módulos runtime; não inclui testes/fixtures.
+O roteiro fecha instalação, grants mínimos, deploy e piloto de uma observação.
+Não houve credencial nova, deploy, instalação copy-only ou envio de dados reais.
+
+O candidato anterior 7b3d6176 passou os dez workflows, 14 suítes SQL,
+80 testes de arquivo/HTTP e PostgreSQL17 com corridas copy-only. O novo CI
+testa também Deno2.1.4/2.9.1 com SDK real e transporte mock; depende do head.
+O template pg_net/Vault passa onze verificações SQL sintéticas, incluindo limite
+de uma observação e reconciliação antes de repetir. Não executa HTTP no teste.
+
+O novo main arquivou 4.8.114 em arquivo próprio; a cópia duplicada no histórico
+combinado foi retirada, preservando 4.8.115 e todas as entradas canônicas.

@@ -26,3 +26,9 @@
 - Testa a migration de validação efetiva; ativação, Storage e remoção continuam pendentes de autorização.
 - Candidatos anteriores: [RC.1 a RC.3](./2026-10-09-proesc-v2-candidatos-rc1-a-rc3.md).
 
+## [4.8.197-rc.1] - 2026-10-10
+
+- Prepara Storage privado gzip com readback/restauração, exportador V2 limitado e catálogo copy-only em draft local.
+- Mantém upload real, políticas, buckets e limpeza fora desta etapa; testes não acessam a conta de Storage.
+- Registra ativação autorizada do reaproveitamento Proesc; acompanhamento do FULL natural permanece aberto.
+

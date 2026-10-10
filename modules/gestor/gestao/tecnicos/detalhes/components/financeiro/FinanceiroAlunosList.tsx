@@ -343,7 +343,7 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
     return <div className="flex items-center justify-center rounded-[2rem] border border-slate-100 bg-white py-10 shadow-sm"><Loader2 className="animate-spin text-[#001a33]" size={24} /><span className="ml-2 text-sm font-bold text-slate-500">Carregando listagem financeira...</span></div>;
   }
   if (selectedMatriculaId) {
-    return <AlunoFinanceiroExtrato matriculaId={selectedMatriculaId} onBack={() => setSelectedMatriculaId(null)} />;
+    return <AlunoFinanceiroExtrato matriculaId={selectedMatriculaId} turmaId={turma.id} canSettle={canSettleEnrollment} onBack={() => setSelectedMatriculaId(null)} />;
   }
   if (isError) {
     return <TechnicalDataError title="Situação financeira dos alunos não carregada" message="A lista foi bloqueada para não confundir uma falha de consulta com ausência de cobrança." retrying={isFetching} onRetry={onRetry} />;
@@ -495,4 +495,3 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
 };
 
 export default FinanceiroAlunosList;
-
