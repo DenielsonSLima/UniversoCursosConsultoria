@@ -105,3 +105,24 @@ Deno.test('ausência de mensalidades sem plano ou com taxa desligada permanece b
     assert.equal(value.calls.length, 0);
   }
 });
+
+Deno.test('cronograma v3 com taxa isolada conserva destino LOCAL e retomada sem banco', async () => {
+  for (const [cycle, mode] of [[1, 'REGISTRO_SEM_BOLETO'], [1, 'BOLETO'], [2, 'BOLETO']] as const) {
+    const value = scenario(0, cycle, mode);
+    const planoEntrada = { versao: 3, requestId: '11111111-1111-4111-8111-111111111111',
+      cicloInicial: cycle, maxCiclos: 2, cronogramaFingerprint: 'a'.repeat(64), itens: [{
+        itemId: '22222222-2222-4222-8222-222222222222', cicloNumero: cycle,
+        tipo: cycle === 1 ? 'MATRICULA' : 'REMATRICULA', ordem: 1, vencimento: '2027-01-20',
+        valor: '100.00', descontoPontualidade: '0.00', jurosAtrasoPercentual: '0', multaAtrasoPercentual: '0',
+      }] };
+    value.context.cicloManual = { planoEntrada };
+    await runManualCycleIssuance(value.request, value.dependencies);
+    assert.equal(value.calls.length, mode === 'BOLETO' ? 1 : 0);
+    await runManualCycleIssuance({ ...value.request, action: 'resume', revisao: null }, value.dependencies);
+    assert.equal(value.calls.length, mode === 'BOLETO' ? 1 : 0);
+    const invalid = scenario(0, cycle, mode);
+    invalid.context.cicloManual = { planoEntrada: { ...planoEntrada, cronogramaFingerprint: null } };
+    await assert.rejects(() => runManualCycleIssuance(invalid.request, invalid.dependencies), /cobranças revisadas/);
+    assert.equal(invalid.calls.length, 0);
+  }
+});

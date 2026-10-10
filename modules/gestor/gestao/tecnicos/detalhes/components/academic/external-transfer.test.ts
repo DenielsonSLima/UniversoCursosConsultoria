@@ -1,43 +1,47 @@
 import assert from 'node:assert/strict';
 import {
   isDefiniteTransferRejection, isExternalTransferRate, requireExternalTransferPreview, requireExternalTransferResult,
-  type ExternalTransferPreview, type ExternalTransferResult,
+  type ExternalTransferPreview, type ExternalTransferResult, type ExternalTransferScheduleItem,
 } from './external-transfer.contract.ts';
 import { ExternalTransferAttempt } from './external-transfer-attempt.ts';
 import { createExternalTransferClient } from './external-transfer.client.ts';
 import {
-  applyExternalTransferDefaults, buildExternalTransferInput, createExternalTransferDraft, externalTransferDraftError,
-  externalTransferFinancialError, externalTransferPlan,
+  applyExternalTransferDefaults, buildExternalTransferInput, changeExternalTransferItemCycle, createExternalTransferDraft,
+  externalTransferDraftError, externalTransferFinancialError, externalTransferPlan, moveExternalTransferItem,
+  removeExternalTransferItem, updateExternalTransferItem,
 } from './external-transfer-draft.ts';
+import { formatExternalTransferDecimal, parseExternalTransferDecimal } from './external-transfer-presentation.ts';
 
 declare const Deno: { test: (name: string, fn: () => void | Promise<void>) => void };
 
+const itemId = (number: number) => `00000000-0000-4000-8000-${String(number).padStart(12, '0')}`;
+const item = (id: number, cicloNumero: 1 | 2, tipo: ExternalTransferScheduleItem['tipo'], ordem: number): ExternalTransferScheduleItem => ({
+  itemId: itemId(id), cicloNumero, tipo, ordem, vencimento: cicloNumero === 1 ? '2027-01-20' : '2028-01-20',
+  valor: tipo === 'MATRICULA' ? '150.00' : tipo === 'REMATRICULA' ? '100.00' : '200.00',
+  descontoPontualidade: tipo === 'PARCELA' ? '10.00' : '0.00',
+  jurosAtrasoPercentual: '1.000000', multaAtrasoPercentual: '2.000000',
+});
 const preview = (): ExternalTransferPreview => ({
-  versao: 2, regraFingerprint: 'canonical-rule', quantidadeMaxima: 10, maxCiclos: 2,
-  financeiro: {
-    cicloNumero: 1, quantidadeParcelas: 6, primeiroVencimento: '2027-01-20', justificativaCiclo2: null,
-    cobrarMensalidades: true, condicoes: {
-      cobrarMatricula: true, valorMatricula: '100.00', valorMensalidade: '200.00',
-      cobrarRematricula: true, valorRematricula: '100.00', descontoPontualidade: '10.00',
-      jurosAtrasoPercentual: '1.000000', multaAtrasoPercentual: '2.000000',
-      aplicarDescontoMatricula: false, aplicarMultaJurosMatricula: false,
-      aplicarDescontoMensalidade: true, aplicarMultaJurosMensalidade: true,
-      aplicarDescontoRematricula: false, aplicarMultaJurosRematricula: false,
-    },
-  },
-  totais: { cicloInicialNominal: '1300.00', totalNominal: '1400.00' },
+  versao: 3, regraFingerprint: 'canonical-rule', quantidadeMaxima: 60, maxCiclos: 2,
+  financeiro: { versao: 3, itens: [
+    item(1, 1, 'MATRICULA', 1), ...Array.from({ length: 12 }, (_, index) => item(index + 2, 1, 'PARCELA', index + 2)),
+    item(14, 2, 'REMATRICULA', 1), ...Array.from({ length: 12 }, (_, index) => item(index + 15, 2, 'PARCELA', index + 2)),
+  ] },
+  totais: { porCiclo: [
+    { cicloNumero: 1, totalNominal: '2550.00', quantidadeParcelas: 12, quantidadeItens: 13 },
+    { cicloNumero: 2, totalNominal: '2500.00', quantidadeParcelas: 12, quantidadeItens: 13 },
+  ], totalNominal: '5050.00' },
   regra: {
-    valorMatricula: '100.00', valorMensalidade: '200.00', valorRematricula: '100.00',
+    valorMatricula: '150.00', valorMensalidade: '200.00', valorRematricula: '100.00',
     encargos: { descontoPontualidade: '10.00', jurosAtrasoPercentual: '1.000000', multaAtrasoPercentual: '2.000000' },
     aplicacao: {
-      matricula: { desconto: false, multaJuros: false },
-      mensalidade: { desconto: true, multaJuros: true },
+      matricula: { desconto: false, multaJuros: false }, mensalidade: { desconto: true, multaJuros: true },
       rematricula: { desconto: false, multaJuros: false },
     },
   }, avisos: [],
 });
 const draft = () => ({ ...applyExternalTransferDefaults(createExternalTransferDraft('student-a', '2000-01-01'), preview()),
-  institution: 'Instituição de origem', reason: 'Continuidade', installments: '6', firstDueDate: '2027-01-20',
+  institution: 'Escola anterior', reason: 'Continuidade',
   credits: {
     discipline: { selected: true, mediaFinal: '0', frequenciaPercent: '', situacao: 'EQUIVALENCIA' as const },
     ignored: { selected: false, mediaFinal: '9', frequenciaPercent: '95', situacao: 'APROVEITADO' as const },
@@ -45,63 +49,116 @@ const draft = () => ({ ...applyExternalTransferDefaults(createExternalTransferDr
 });
 const input = () => buildExternalTransferInput(draft(), 'class', preview(), 'request-1');
 const result = (requestId = 'request-1'): ExternalTransferResult => ({
-  versao: 2, requestId, replayed: false, matriculaId: 'enrollment', transferenciaId: 'transfer',
+  versao: 3, requestId, replayed: false, matriculaId: 'enrollment', transferenciaId: 'transfer',
   financeiro: preview(), cobrancaGerada: false,
 });
 
-Deno.test('novo aluno começa sem créditos, origem, ciclo ou data financeira anteriores', () => {
-  const previous = draft();
-  previous.cycle = 2;
-  previous.cycle2Reason = 'Continuidade anterior';
+Deno.test('novo aluno limpa rascunho; recebimento envia escola anterior e cursoOrigem null', () => {
   const changed = createExternalTransferDraft('student-b', '2000-01-02');
   assert.equal(changed.studentId, 'student-b');
   assert.deepEqual(changed.credits, {});
   assert.equal(changed.institution, '');
-  assert.equal(changed.firstDueDate, '');
-  assert.equal(changed.cycle2Reason, '');
-  assert.equal(changed.cycle, 1);
-  assert.equal(externalTransferPlan(changed, 10), null);
+  assert.equal(changed.items, null);
+  assert.equal(externalTransferPlan(changed, 60), null);
+  assert.equal(input().cursoOrigem, null);
+  assert.deepEqual(input().aproveitamentos, [{ disciplinaId: 'discipline', mediaFinal: 0, frequenciaPercent: null, situacao: 'EQUIVALENCIA' }]);
 });
 
-Deno.test('plano respeita limite canônico e exige data e justificativa explícita de C2', () => {
+Deno.test('padrão 150 matrícula e 12 parcelas por ciclo; edição C1 preserva C2 e notas', () => {
   const current = draft();
-  assert.equal(externalTransferPlan({ ...current, installments: '11' }, 10), null);
-  assert.equal(externalTransferPlan({ ...current, installments: '1.5' }, 10), null);
-  assert.equal(externalTransferPlan({ ...current, firstDueDate: '2027-02-30' }, 10), null);
-  assert.equal(externalTransferPlan({ ...current, cycle: 2 }, 10), null);
-  assert.equal(externalTransferPlan({ ...current, cycle: 2, cycle2Reason: ' Histórico externo ' }, 10)?.justificativaCiclo2, 'Histórico externo');
+  assert.equal(externalTransferFinancialError(current, 60), null);
+  assert.equal(current.items![0].valor, '150.00');
+  const cycle2 = current.items!.filter((row) => row.cicloNumero === 2);
+  const edited = { ...current, items: current.items!.filter((row) => row.cicloNumero === 2 || row.ordem <= 6) };
+  assert.equal(edited.items.filter((row) => row.cicloNumero === 1 && row.tipo === 'PARCELA').length, 5);
+  assert.deepEqual(edited.items.filter((row) => row.cicloNumero === 2), cycle2);
+  const restored = applyExternalTransferDefaults(edited, preview());
+  assert.deepEqual(restored.items, preview().financeiro.itens);
+  assert.deepEqual(restored.credits, current.credits);
+  assert.equal(restored.institution, current.institution);
 });
 
-Deno.test('envio usa somente créditos selecionados, preserva zero e rejeita nota inválida', () => {
-  assert.deepEqual(input().aproveitamentos, [
-    { disciplinaId: 'discipline', mediaFinal: 0, frequenciaPercent: null, situacao: 'EQUIVALENCIA' },
-  ]);
-  const invalid = draft();
-  invalid.credits.discipline.mediaFinal = '11';
-  assert.match(externalTransferDraftError(invalid) || '', /média/);
-  assert.throws(() => buildExternalTransferInput(invalid, 'class', preview(), 'request'), /média/);
-  assert.throws(() => buildExternalTransferInput({ ...draft(), installments: '5' }, 'class', preview(), 'request'), /plano mudou/);
+Deno.test('edição por linha preserva demais cobranças e obriga nova revisão', () => {
+  const current = draft();
+  const changed = updateExternalTransferItem(current.items!, itemId(2), { valor: '175.00', vencimento: '2027-02-20' });
+  assert.equal(changed[1].valor, '175.00');
+  assert.deepEqual(changed.filter((row) => row.itemId !== itemId(2)), current.items!.filter((row) => row.itemId !== itemId(2)));
+  assert.throws(() => buildExternalTransferInput({ ...current, items: changed }, 'class', preview(), 'request'), /plano mudou/);
+  current.credits.discipline.mediaFinal = '11';
+  assert.match(externalTransferDraftError(current) || '', /média/);
 });
 
-Deno.test('parser rejeita plano incompleto, quantidade fora da regra e falsa geração', () => {
+Deno.test('mover preserva ciclo e datas; remoção e troca de ciclo preservam IDs restantes', () => {
+  const rows = preview().financeiro.itens;
+  const moved = moveExternalTransferItem(rows, itemId(3), -1);
+  assert.equal(moved[1].itemId, itemId(3));
+  assert.equal(moved[1].cicloNumero, 1);
+  assert.equal(moved[1].vencimento, rows[2].vencimento);
+  assert.deepEqual(moved.filter((row) => row.cicloNumero === 2), rows.filter((row) => row.cicloNumero === 2));
+  assert.equal(moveExternalTransferItem(rows, itemId(1), 1), rows);
+  const transferred = changeExternalTransferItemCycle(rows, itemId(3), 2);
+  assert.equal(transferred.find((row) => row.itemId === itemId(3))?.cicloNumero, 2);
+  assert.equal(transferred.find((row) => row.itemId === itemId(3))?.valor, '200.00');
+  assert.equal(changeExternalTransferItemCycle(rows, itemId(1), 2), rows);
+  const removed = removeExternalTransferItem(rows, itemId(2));
+  assert.equal(removed.some((row) => row.itemId === itemId(2)), false);
+  assert.equal(removed[1].ordem, 2);
+  assert.deepEqual(removed.filter((row) => row.cicloNumero === 2), rows.filter((row) => row.cicloNumero === 2));
+});
+
+Deno.test('parser rejeita cronograma inconsistente e falsa emissão; vazio é acadêmico sem cobrança', () => {
   assert.deepEqual(requireExternalTransferPreview(preview()), preview());
-  assert.throws(() => requireExternalTransferPreview({ ...preview(), regraFingerprint: '' }));
-  assert.throws(() => requireExternalTransferPreview({ ...preview(), quantidadeMaxima: 5 }));
-  assert.throws(() => requireExternalTransferPreview({ ...preview(), financeiro: { ...preview().financeiro, cicloNumero: 2 } }));
+  assert.deepEqual(externalTransferPlan({ ...draft(), items: [] }, 60), { versao: 3, itens: [] });
+  for (const patch of [{ valor: '0.00' }, { cicloNumero: 2 }, { jurosAtrasoPercentual: '100.000000' }, { descontoPontualidade: '150.00' }, { ordem: 0 }]) {
+    const bad = { ...preview(), financeiro: { versao: 3, itens: [{ ...preview().financeiro.itens[0], ...patch }] } };
+    assert.throws(() => requireExternalTransferPreview(bad));
+  }
+  assert.throws(() => requireExternalTransferPreview({ ...preview(), financeiro: { versao: 3, itens: [item(2, 1, 'PARCELA', 1), item(2, 1, 'PARCELA', 2)] } }));
+  assert.throws(() => requireExternalTransferPreview({ ...preview(), maxCiclos: 1 }));
+  assert.throws(() => requireExternalTransferPreview({ ...preview(), versao: 2 }));
   assert.throws(() => requireExternalTransferResult(result('different-request'), 'request-1'));
   assert.throws(() => requireExternalTransferResult({ ...result(), cobrancaGerada: true }, 'request-1'));
 });
 
-Deno.test('cliente transmite plano e fingerprint na RPC canônica sem emissão', async () => {
+Deno.test('cronograma somente C2 não exige justificativa extra de continuidade', () => {
+  const context = preview();
+  context.financeiro.itens = context.financeiro.itens.filter((row) => row.cicloNumero === 2);
+  context.totais.porCiclo[0] = { cicloNumero: 1, totalNominal: '0.00', quantidadeParcelas: 0, quantidadeItens: 0 };
+  context.totais.totalNominal = '2500.00';
+  const current = applyExternalTransferDefaults(draft(), context);
+  assert.equal('cycle2Reason' in current, false);
+  assert.equal(externalTransferFinancialError(current, 60), null);
+  assert.deepEqual(buildExternalTransferInput(current, 'class', context, 'request').financeiro, context.financeiro);
+});
+
+Deno.test('entrada pt-BR formata 150 e 1.500,25; percentuais mantêm seis casas e limite menor que100', () => {
+  assert.equal(parseExternalTransferDecimal('150'), '150.00');
+  assert.equal(formatExternalTransferDecimal('150.00'), '150,00');
+  assert.equal(parseExternalTransferDecimal('1.500,25'), '1500.25');
+  assert.equal(parseExternalTransferDecimal('R$ 1.500,25'), '1500.25');
+  assert.equal(parseExternalTransferDecimal('150.00'), '150.00');
+  assert.equal(parseExternalTransferDecimal('1,123456', true), '1.123456');
+  assert.equal(formatExternalTransferDecimal('1.123456', true), '1,123456');
+  assert.equal(parseExternalTransferDecimal('-1'), null);
+  assert.equal(parseExternalTransferDecimal('1,1234567', true), null);
+  for (const value of ['0.000000', '1.000000', '99.999999']) assert.equal(isExternalTransferRate(value), true);
+  for (const value of ['-1', '100.000000', '1.1234567']) assert.equal(isExternalTransferRate(value), false);
+});
+
+Deno.test('cliente usa RPCv3 e ajuste específico de C1 sem alterar intenção de C2 nem emitir', async () => {
   const calls: Array<{ name: string; params: Record<string, unknown> }> = [];
   const client = createExternalTransferClient(async (name, params) => {
     calls.push({ name, params });
     return { data: name.startsWith('preview_') ? preview() : result(), error: null };
   });
-  await client.preview('student-a', 'class', preview().financeiro);
+  const adjustment = { acao: 'CONFIGURAR_CICLO' as const, cicloNumero: 1 as const, quantidadeParcelas: 5, cobrarTaxa: true, valorTaxa: '150.00' };
+  await client.preview('student-a', 'class', preview().financeiro, adjustment);
   await client.receive(input());
-  assert.equal(calls[0].name, 'preview_recebimento_transferencia_tecnica_secure');
-  assert.equal(calls[1].name, 'receber_transferencia_tecnica_planejada_secure');
+  assert.equal(calls[0].name, 'preview_recebimento_transferencia_tecnica_v3_secure');
+  assert.deepEqual(calls[0].params.p_ajuste, adjustment);
+  assert.deepEqual(calls[0].params.p_financeiro, preview().financeiro);
+  assert.equal(calls[1].name, 'receber_transferencia_tecnica_v3_secure');
+  assert.equal(calls[1].params.p_curso_origem, null);
   assert.equal(calls[1].params.p_request_id, 'request-1');
   assert.equal(calls[1].params.p_expected_regra_fingerprint, 'canonical-rule');
   assert.deepEqual(calls[1].params.p_financeiro, preview().financeiro);
@@ -167,70 +224,3 @@ Deno.test('permissão recusada no replay não apaga a incerteza do primeiro comm
   assert.equal(attempt.canEdit, false);
 });
 
-Deno.test('padrões canônicos preenchem o plano completo sem perder origem/notas', () => {
-  const current = draft();
-  const restored = applyExternalTransferDefaults({ ...current, chargeMonthly: false, chargeDiscount: false, installments: '3' }, preview());
-  assert.equal(restored.installments, '6');
-  assert.equal(restored.firstDueDate, '2027-01-20');
-  assert.equal(restored.chargeMonthly, true);
-  assert.equal(restored.chargeDiscount, true);
-  assert.deepEqual(restored.conditions, preview().financeiro.condicoes);
-  assert.deepEqual(restored.credits, current.credits);
-  assert.equal(restored.institution, current.institution);
-});
-
-Deno.test('flags opcionais preservam valores do rascunho e zeram encargos somente no plano enviado', () => {
-  const current = draft();
-  current.chargeMonthly = false;
-  current.chargeDiscount = false;
-  current.chargeFine = false;
-  const plan = externalTransferPlan(current, 10)!;
-  assert.equal(plan.cobrarMensalidades, false);
-  assert.equal(plan.quantidadeParcelas, 6);
-  assert.equal(plan.condicoes.valorMensalidade, '200.00');
-  assert.equal(plan.condicoes.descontoPontualidade, '0.00');
-  assert.equal(plan.condicoes.multaAtrasoPercentual, '0.00');
-  assert.equal(plan.condicoes.jurosAtrasoPercentual, '1.000000');
-  assert.equal(current.conditions!.descontoPontualidade, '10.00');
-  assert.equal(externalTransferPlan({ ...current, chargeMonthly: true, conditions: { ...current.conditions!, valorMensalidade: '0.00' } }, 10), null);
-  assert.equal(externalTransferPlan({ ...current, conditions: { ...current.conditions!, jurosAtrasoPercentual: '101.00' } }, 10), null);
-});
-
-Deno.test('mudança de valores exige revisão; normalização decimal preserva plano equivalente', () => {
-  const edited = draft();
-  edited.conditions = { ...edited.conditions!, valorMensalidade: '150.00' };
-  assert.throws(() => buildExternalTransferInput(edited, 'class', preview(), 'request'), /plano mudou/);
-  edited.conditions.valorMensalidade = '200';
-  const value = buildExternalTransferInput(edited, 'class', preview(), 'request');
-  assert.equal(value.financeiro.condicoes.valorMensalidade, '200.00');
-  assert.throws(() => requireExternalTransferPreview({ ...preview(), versao: 1 }));
-  assert.throws(() => requireExternalTransferPreview({ ...preview(), financeiro: { ...preview().financeiro, condicoes: undefined } }));
-  assert.throws(() => requireExternalTransferPreview({ ...preview(), totais: undefined }));
-});
-
-Deno.test('quantidade de ciclos vem da turma e não muda ao dispensar rematrícula', () => {
-  const current = draft();
-  current.conditions = { ...current.conditions!, cobrarRematricula: false };
-  current.cycle = 2;
-  current.cycle2Reason = 'Continuidade externa comprovada';
-  assert.equal(externalTransferPlan(current, 10, 2)?.cicloNumero, 2);
-  assert.equal(externalTransferPlan(current, 10, 1), null);
-  assert.throws(() => requireExternalTransferPreview({ ...preview(), maxCiclos: undefined }));
-  assert.throws(() => requireExternalTransferPreview({ ...preview(), maxCiclos: 1, financeiro: { ...preview().financeiro, cicloNumero: 2, justificativaCiclo2: 'Continuidade externa comprovada' } }));
-  assert.equal(requireExternalTransferPreview({ ...preview(), maxCiclos: 1 }).maxCiclos, 1);
-});
-
-Deno.test('percentuais canônicos com seis casas mantêm padrões revisáveis e respeitam limite menor que 100', () => {
-  const canonical = requireExternalTransferPreview(preview());
-  const current = applyExternalTransferDefaults(draft(), canonical);
-  assert.equal(current.conditions!.jurosAtrasoPercentual, '1.000000');
-  assert.equal(current.conditions!.multaAtrasoPercentual, '2.000000');
-  assert.equal(externalTransferFinancialError(current, canonical.quantidadeMaxima, canonical.maxCiclos), null);
-  assert.deepEqual(externalTransferPlan(current, canonical.quantidadeMaxima, canonical.maxCiclos), canonical.financeiro);
-  for (const rate of ['0', '0.000001', '1.000000', '99.999999']) assert.equal(isExternalTransferRate(rate), true);
-  for (const rate of ['100', '100.000000', '101', '1.0000001', '-1']) {
-    assert.equal(isExternalTransferRate(rate), false);
-    assert.equal(externalTransferPlan({ ...current, conditions: { ...current.conditions!, jurosAtrasoPercentual: rate } }, 10), null);
-    assert.throws(() => requireExternalTransferPreview({ ...canonical, financeiro: { ...canonical.financeiro, condicoes: { ...canonical.financeiro.condicoes, jurosAtrasoPercentual: rate } } }));
-  }
-});

@@ -92,17 +92,18 @@ export const useCicloManualRevision = (
     } : previous);
   };
 
-  const changeEnrollmentMode = (modoMatricula: CicloManualModoMatricula) => {
-    setState((previous) => previous.draft ? {
-      ...previous,
-      dirty: true,
-      draft: changeCicloManualEnrollmentMode(
-        previous.draft,
-        previous.schedule,
-        modoMatricula,
-        previous.originDate,
-      ),
-    } : previous);
+  const changeEnrollmentMode = (modoMatricula: CicloManualModoMatricula, applyImmediately = false) => {
+    setState((previous) => {
+      const draft = previous.draft
+        ? changeCicloManualEnrollmentMode(previous.draft, previous.schedule, modoMatricula, previous.originDate)
+        : cicloManualRevisionForEnrollmentMode(modoMatricula);
+      return {
+        ...previous,
+        dirty: !applyImmediately,
+        draft,
+        revision: applyImmediately ? draft : previous.revision,
+      };
+    });
   };
 
   const apply = () => {

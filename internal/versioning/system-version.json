@@ -1,8 +1,8 @@
 {
-  "version": "4.8.198",
+  "version": "4.8.199",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 207,
+  "revision": 208,
   "releasedAt": "2026-10-10",
-  "summary": "Recebimento de transferência externa pela Secretaria com turma, notas e condições financeiras individuais"
+  "summary": "Transferência externa com nosso curso técnico e cronograma de cobranças editável por ciclo e item"
 }

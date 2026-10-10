@@ -1,4 +1,5 @@
 import type { BoundedCorrectionContext } from './bounded-correction-context.ts';
+import { isFeeOnlyTransferSchedule } from '../_shared/technical-transfer-schedule.ts';
 import type { GatewayChargeResult } from "../gateways/router.ts";
 import { parseManualCycleRevision, type ManualCycleRevision } from './revision.ts';
 import {
@@ -93,6 +94,7 @@ const asRecord = (value: unknown): Record<string, unknown> | null =>
 export const isFeeOnlyTransferPlan = (value: unknown, cycle: number) => {
   const state = asRecord(value);
   const plan = asRecord(state?.planoEntrada);
+  if (plan?.versao === 3) return isFeeOnlyTransferSchedule(plan, cycle);
   const conditions = asRecord(plan?.condicoes);
   return [1, 2].includes(cycle) && plan?.cobrarMensalidades === false
     && REQUEST_UUID_RE.test(String(plan.requestId))

@@ -28,7 +28,7 @@ const ReceiveExternalTransferController: React.FC<Props> = ({ onClose, onOpenFin
       </div>
       <p className="text-sm text-slate-700">Matrícula, aproveitamentos e plano financeiro foram registrados. Nenhuma cobrança foi gerada.</p>
       {destinationLabel && <p className="text-sm font-bold text-slate-700">Destino: {destinationLabel}</p>}
-      <p className="text-sm text-slate-700">Ciclo inicial: {result.financeiro.financeiro.cicloNumero}º. {result.financeiro.financeiro.cobrarMensalidades ? `Mensalidades: ${result.financeiro.financeiro.quantidadeParcelas}.` : 'Sem mensalidades.'} Primeiro vencimento: {result.financeiro.financeiro.primeiroVencimento.split('-').reverse().join('/')}.</p>
+      <p className="text-sm text-slate-700">{result.financeiro.financeiro.itens.length} cobranças planejadas. Os ciclos seguem o cronograma individual conferido.</p>
       <p className="text-xs text-slate-600">As condições individuais ficam no Financeiro da turma para conferência e emissão das cobranças aplicáveis.</p>
       {state.error && <p role="alert" className="text-xs text-amber-800">{state.error}</p>}
       <button type="button" onClick={() => onOpenFinanceiro ? onOpenFinanceiro(result.matriculaId) : close()}
@@ -47,6 +47,7 @@ const ReceiveExternalTransferController: React.FC<Props> = ({ onClose, onOpenFin
         loading={state.financialLoading} error={state.financialError} disabled={state.locked}
         reviewing={state.reviewing} canReview={state.canReview} onReview={state.reviewPlan}
         onRetry={state.retryFinancial} onRestoreDefaults={state.restoreDefaults}
+        onAdjust={state.adjustSchedule}
       />}
     />}
   </ExternalTransferModalShell>;

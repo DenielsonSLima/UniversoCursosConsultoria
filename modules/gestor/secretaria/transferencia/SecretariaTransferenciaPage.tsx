@@ -11,7 +11,8 @@ import { secretariaDocumentoDefinitions } from '../shared/secretaria-documentos.
 import { secretariaDocumentosKeys } from '../shared/secretaria-documentos.keys';
 import { getSecretariaErrorMessage } from '../shared/secretaria-error';
 import type { SecretariaAlunoResumo, SecretariaTurmaResumo } from '../shared/secretaria-documentos.types';
-import TransferenciaTurmaPicker from './TransferenciaTurmaPicker';
+import TransferenciaDestinoPicker from './TransferenciaDestinoPicker';
+import { transferenciaCursoOptions, transferenciaTurmaOptions, transferenciaTurmasDoCurso } from './transferencia-destinos';
 
 const SecretariaDocumentoEmissionPage = lazy(() => import('../shared/SecretariaDocumentoEmissionPage'));
 
@@ -26,10 +27,12 @@ const SecretariaTransferenciaPage: React.FC<Props> = ({ poloId, gestorPermission
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [student, setStudent] = useState<SecretariaAlunoResumo | null>(null);
+  const [courseId, setCourseId] = useState('');
   const [classId, setClassId] = useState('');
   const [receipt, setReceipt] = useState<{ student: SecretariaAlunoResumo; turma: SecretariaTurmaResumo } | null>(null);
   const received = useRef(false);
   const studentInput = useRef<HTMLInputElement>(null);
+  const courseInput = useRef<HTMLInputElement>(null);
   const classInput = useRef<HTMLInputElement>(null);
   const permissions = useMemo(() => normalizeGestorPermissions(
     gestorPermissions, { fallbackFullAccess: false },
@@ -43,7 +46,7 @@ const SecretariaTransferenciaPage: React.FC<Props> = ({ poloId, gestorPermission
   }, [search]);
 
   useEffect(() => {
-    setStudent(null); setClassId(''); setSearch(''); setDebouncedSearch(''); setReceipt(null);
+    setStudent(null); setCourseId(''); setClassId(''); setSearch(''); setDebouncedSearch(''); setReceipt(null);
   }, [poloId]);
 
   const students = useQuery({
@@ -58,14 +61,22 @@ const SecretariaTransferenciaPage: React.FC<Props> = ({ poloId, gestorPermission
     enabled: mode === 'receber' && canReceive && Boolean(poloId),
     retry: false,
   });
-  const selectedClass = classes.data?.find((item) => item.id === classId);
+  const courses = useMemo(() => transferenciaCursoOptions(classes.data || []), [classes.data]);
+  const availableClasses = useMemo(() => transferenciaTurmasDoCurso(classes.data || [], courseId), [classes.data, courseId]);
+  const classOptions = useMemo(() => transferenciaTurmaOptions(availableClasses), [availableClasses]);
+  const selectedCourse = courses.find((item) => item.id === courseId);
+  const selectedClass = availableClasses.find((item) => item.id === classId);
   const chooseStudent = (item: SecretariaAlunoResumo) => {
     setStudent(item); setSearch(item.nome);
-    window.requestAnimationFrame(() => classInput.current?.focus());
+    window.requestAnimationFrame(() => courseInput.current?.focus());
   };
   const changeStudent = () => {
-    setStudent(null); setSearch(''); setDebouncedSearch('');
+    setStudent(null); setCourseId(''); setClassId(''); setSearch(''); setDebouncedSearch('');
     window.requestAnimationFrame(() => studentInput.current?.focus());
+  };
+  const chooseCourse = (id: string) => {
+    if (id !== courseId) { setCourseId(id); setClassId(''); }
+    window.requestAnimationFrame(() => classInput.current?.focus());
   };
 
   return (
@@ -103,7 +114,7 @@ const SecretariaTransferenciaPage: React.FC<Props> = ({ poloId, gestorPermission
           className="space-y-6 rounded-[2rem] border border-slate-200 bg-white p-6 md:p-8">
           <div>
             <h3 className="text-lg font-black text-[#001a33]">Recebimento de transferência externa</h3>
-            <p className="mt-2 text-sm text-slate-600">Selecione o aluno cadastrado e a turma em que ele vai ingressar. Depois informe a escola de origem, os aproveitamentos aprovados e o plano financeiro.</p>
+            <p className="mt-2 text-sm text-slate-600">Selecione o aluno, nosso curso técnico e a turma em que ele vai ingressar. Depois informe a escola de origem, as disciplinas aproveitadas e o plano financeiro.</p>
           </div>
           {!canReceive ? (
             <p role="alert" className="rounded-xl bg-amber-50 p-4 text-sm text-amber-800">O recebimento exige acesso ao Financeiro da turma e a Financeiro → Receber.</p>
@@ -138,11 +149,19 @@ const SecretariaTransferenciaPage: React.FC<Props> = ({ poloId, gestorPermission
                   </div>
                 </div>
               )}
-              <TransferenciaTurmaPicker options={classes.data || []} value={classId} inputRef={classInput}
-                loading={classes.isFetching} error={classes.isError} onChange={setClassId} />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <TransferenciaDestinoPicker label="Curso técnico no Universo" options={courses} value={courseId} inputRef={courseInput}
+                  placeholder={student ? 'Pesquise ou selecione nosso curso técnico' : 'Primeiro selecione o aluno'}
+                  emptyMessage="Nenhum curso técnico com turma em andamento nesta unidade."
+                  disabled={!student} loading={classes.isFetching} error={classes.isError} onChange={chooseCourse} />
+                <TransferenciaDestinoPicker label="Turma de destino no Universo" options={classOptions} value={classId} inputRef={classInput}
+                  placeholder={selectedCourse ? 'Pesquise ou selecione a turma' : 'Primeiro selecione o curso técnico'}
+                  emptyMessage={selectedCourse ? 'Nenhuma turma em andamento para este curso.' : 'Selecione nosso curso técnico para ver as turmas.'}
+                  disabled={!student || !selectedCourse} loading={classes.isFetching} error={classes.isError} onChange={setClassId} />
+              </div>
               {classes.isError && <button type="button" onClick={() => { void classes.refetch(); }} className="text-sm font-bold text-violet-700">Tentar carregar turmas novamente</button>}
               <p className="text-xs text-slate-500">A matrícula e o plano financeiro só serão registrados ao confirmar o recebimento. Confira as condições antes de concluir.</p>
-              <button type="button" disabled={!student || !selectedClass || classes.isFetching || classes.isError}
+              <button type="button" disabled={!student || !selectedCourse || !selectedClass || classes.isFetching || classes.isError}
                 onClick={() => {
                   if (!student || !selectedClass) return;
                   received.current = false;

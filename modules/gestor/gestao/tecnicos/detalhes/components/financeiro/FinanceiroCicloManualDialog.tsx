@@ -19,7 +19,8 @@ import type {
   CicloFinanceiroTecnicoManualPreview,
   CicloManualModoMatricula,
 } from './matricula-tecnica-ciclo-manual.types';
-import FinanceiroCicloManualEnrollmentOptions from './FinanceiroCicloManualEnrollmentOptions';
+import FinanceiroCicloManualSetupFields from './FinanceiroCicloManualSetupFields';
+import { cicloManualTransferSetup } from './ciclo-manual-transfer-setup';
 import FinanceiroCicloManualChargeRows from './FinanceiroCicloManualChargeRows';
 import FinanceiroCicloManualDatesSummary from './FinanceiroCicloManualDatesSummary';
 import FinanceiroCicloManualIssuanceProgress from './FinanceiroCicloManualIssuanceProgress';
@@ -65,8 +66,12 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
   const externalHistory = row.cicloManual.criterioElegibilidade === 'HISTORICO_EXTERNO';
   const [externalHistoryConfirmed, setExternalHistoryConfirmed] = useState(false);
   const plannedEntry = row.cicloManual.criterioElegibilidade === 'TRANSFERENCIA_PLANEJADA';
-  const requiresIndividualDate = cycleNumber === 2 || plannedEntry;
+  const transferSetup = cicloManualTransferSetup(row.cicloManual.planoEntrada, cycleNumber);
+  const explicitSchedule = transferSetup.explicitSchedule;
+  const requiresIndividualDate = cycleNumber === 2 || plannedEntry || explicitSchedule;
   const [enrollmentMode, setEnrollmentMode] = useState<CicloManualModoMatricula | null>(null);
+  const effectiveEnrollmentMode = explicitSchedule && cycleNumber === 1 && !transferSetup.enrollmentAvailable
+    ? 'OMITIR' : enrollmentMode;
   const [openSettlement, setOpenSettlement] = useState(false);
   const [step, setStep] = useState<WizardStep>(1);
   const [dateSource, setDateSource] = useState<'TURMA' | 'INDIVIDUAL'>(
@@ -80,14 +85,16 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
   >(null);
   const issuanceStartedRef = useRef(false);
   const scrollAreaRef = useRef<HTMLElement>(null);
-  const firstDueDate = dateSource === 'INDIVIDUAL' ? individualDate || null : null;
+  const firstDueDate = explicitSchedule
+    ? row.cicloManual.primeiroVencimentoSugerido
+    : dateSource === 'INDIVIDUAL' ? individualDate || null : null;
   const cycleIdentityChanged = requestedCycleNumber !== cycleNumber;
-  const revisionContext = `${row.matriculaId}:${cycleNumber}:${dateSource}:${individualDate}:${
-    cycleNumber === 1 ? enrollmentMode : 'SEM_MATRICULA'
-  }`;
+  const revisionContext = explicitSchedule
+    ? `${row.matriculaId}:${cycleNumber}:${transferSetup.fingerprint}`
+    : `${row.matriculaId}:${cycleNumber}:${dateSource}:${individualDate}:${cycleNumber === 1 ? enrollmentMode : 'SEM_MATRICULA'}`;
   const revisionState = useCicloManualRevision(
     revisionContext,
-    cycleNumber === 1 ? enrollmentMode : null,
+    cycleNumber === 1 ? effectiveEnrollmentMode : null,
   );
   const lastPreviewRef = useRef<{ context: string; preview: CicloFinanceiroTecnicoManualPreview } | null>(null);
   useEffect(() => {
@@ -96,17 +103,17 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
     setStep(1);
     setEnrollmentMode(null);
     setOpenSettlement(false);
-    setDateSource(requestedCycleNumber === 2 || plannedEntry ? 'INDIVIDUAL' : 'TURMA');
+    setDateSource(requestedCycleNumber === 2 || plannedEntry || explicitSchedule ? 'INDIVIDUAL' : 'TURMA');
     setIndividualDate(row.cicloManual.primeiroVencimentoSugerido ?? '');
     setExternalHistoryConfirmed(false);
     setIssuanceSnapshot(null);
     lastPreviewRef.current = null;
-  }, [pending, cycleIdentityChanged, requestedCycleNumber, plannedEntry, row.cicloManual.primeiroVencimentoSugerido]);
+  }, [pending, cycleIdentityChanged, requestedCycleNumber, plannedEntry, explicitSchedule, row.cicloManual.primeiroVencimentoSugerido]);
   const previewEnabled = !pending && !cycleIdentityChanged && !showWarning && cycleNumber !== null
     && row.cicloManual.estado === 'ELEGIVEL'
     && row.cicloManual.podeGerar
-    && (cycleNumber !== 1 || enrollmentMode !== null)
-    && (dateSource === 'TURMA' || Boolean(individualDate));
+    && (cycleNumber !== 1 || effectiveEnrollmentMode !== null)
+    && (explicitSchedule ? Boolean(firstDueDate) : dateSource === 'TURMA' || Boolean(individualDate));
   const previewQuery = usePreviewCicloFinanceiroTecnicoManual({
     turmaId,
     conferirProesc: row.cicloManual.conferenciaProesc?.necessaria === true,
@@ -161,8 +168,10 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
   };
 
   const changeEnrollmentMode = (mode: CicloManualModoMatricula) => {
+    if (explicitSchedule && !transferSetup.enrollmentAvailable) return;
     setEnrollmentMode(mode);
-    if (mode === 'REGISTRO_SEM_BOLETO' && enrollmentMode !== 'REGISTRO_SEM_BOLETO') {
+    if (explicitSchedule) revisionState.changeEnrollmentMode(mode, true);
+    if (!explicitSchedule && mode === 'REGISTRO_SEM_BOLETO' && enrollmentMode !== 'REGISTRO_SEM_BOLETO') {
       setIndividualDate('');
       setDateSource('INDIVIDUAL');
     }
@@ -260,7 +269,7 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
               <div className="mb-5">
                 <p className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-600">Etapa 1 de 3</p>
                 <h3 id="manual-cycle-step-1" className="mt-1 text-2xl font-black text-[#001a33]">Dados e vencimento</h3>
-                <p className="mt-1 max-w-2xl text-sm font-medium text-slate-500">{cycleNumber === 1 ? 'Escolha como tratar a matrícula e defina a data inicial.' : 'Defina a data inicial.'} O sistema apresentará a {cycleNumber === 1 ? 'matrícula' : 'rematrícula'} e as mensalidades para revisão antes de emitir.</p>
+                <p className="mt-1 max-w-2xl text-sm font-medium text-slate-500">{explicitSchedule ? 'Confira o cronograma recebido. Os valores e vencimentos serão preservados e podem ser revisados individualmente.' : `${cycleNumber === 1 ? 'Escolha como tratar a matrícula e defina a data inicial.' : 'Defina a data inicial.'} O sistema apresentará a ${cycleNumber === 1 ? 'matrícula' : 'rematrícula'} e as mensalidades para revisão antes de emitir.`}</p>
               </div>
 
               {eligibilityLabel ? (
@@ -272,54 +281,19 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
 
               <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
                 <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-                  {cycleNumber === 1 ? (
-                    <FinanceiroCicloManualEnrollmentOptions
-                      mode={enrollmentMode}
-                      disabled={previewQuery.isFetching}
-                      canSettle={canSettleEnrollment}
-                      openSettlement={openSettlement}
-                      onModeChange={changeEnrollmentMode}
-                      onOpenSettlementChange={setOpenSettlement}
-                    />
-                  ) : null}
-
-                  {requiresIndividualDate ? (
-                    <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-blue-700">{plannedEntry ? 'Vencimento definido na transferência' : 'Data individual obrigatória no 2º ciclo'}</p>
-                      <p className="mt-2 text-xs font-semibold leading-relaxed text-blue-900">{plannedEntry
-                        ? `Plano de entrada: ${row.cicloManual.planoEntrada?.quantidadeParcelas} mensalidades no ${cycleNumber}º ciclo. Confira a data e cada cobrança antes de emitir.`
-                        : 'A data será o vencimento da rematrícula — ou do primeiro item, se ela não for cobrada. Quando houver rematrícula, a mensalidade 1 vencerá no mês seguinte.'}</p>
-                    </div>
-                  ) : (
-                    <fieldset>
-                      <legend className="text-[10px] font-black uppercase tracking-wider text-slate-500">Vencimentos do aluno</legend>
-                      <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                        {([
-                          ['TURMA', 'Usar datas da turma', 'O sistema aplica o dia-base configurado.'],
-                          ['INDIVIDUAL', 'Definir primeira data', 'O sistema recalcula todo o cronograma.'],
-                        ] as const).map(([value, label, description]) => (
-                          <label key={value} className={`cursor-pointer rounded-2xl border p-3 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-blue-500 ${dateSource === value ? 'border-blue-300 bg-blue-50' : 'border-slate-200 bg-white'}`}>
-                            <input type="radio" name="manual-cycle-date-source" value={value} checked={dateSource === value} onChange={() => setDateSource(value)} className="sr-only" />
-                            <span className="block text-xs font-black text-[#001a33]">{label}</span>
-                            <span className="mt-1 block text-[10px] font-semibold text-slate-500">{description}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </fieldset>
-                  )}
-
-                  {dateSource === 'INDIVIDUAL' ? (
-                    <label className="mt-4 block space-y-2">
-                      <span className="text-[10px] font-black uppercase text-slate-500">{cycleNumber === 2 ? 'Vencimento da rematrícula / primeiro item' : 'Primeiro vencimento individual'}</span>
-                      <input type="date" value={individualDate} onChange={(event) => setIndividualDate(event.target.value)} className="w-full rounded-xl border border-slate-200 p-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
-                      {row.cicloManual.primeiroVencimentoSugerido ? (
-                        <span className="block text-[10px] font-semibold text-slate-500">{plannedEntry ? 'Data registrada no plano de entrada. Você pode revisar antes da emissão.' : 'Sugestão automática: um mês após o último boleto do ciclo anterior. Você pode alterar esta data.'}</span>
-                      ) : null}
-                    </label>
-                  ) : null}
+                  <FinanceiroCicloManualSetupFields
+                    cycleNumber={cycleNumber} explicitSchedule={explicitSchedule}
+                    enrollmentAvailable={transferSetup.enrollmentAvailable} plannedEntry={plannedEntry}
+                    installments={transferSetup.installments} enrollmentMode={effectiveEnrollmentMode}
+                    fetching={previewQuery.isFetching} canSettleEnrollment={canSettleEnrollment}
+                    openSettlement={openSettlement} dateSource={dateSource} individualDate={individualDate}
+                    suggestedDate={row.cicloManual.primeiroVencimentoSugerido}
+                    onModeChange={changeEnrollmentMode} onOpenSettlementChange={setOpenSettlement}
+                    onDateSourceChange={setDateSource} onDateChange={setIndividualDate}
+                  />
 
                   {!previewEnabled ? (
-                    <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50 p-3 text-xs font-semibold text-amber-800">{cycleNumber === 1 && !enrollmentMode ? 'Escolha como tratar a matrícula para calcular o ciclo.' : 'Informe o primeiro vencimento para visualizar todas as cobranças do ciclo.'}</div>
+                    <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50 p-3 text-xs font-semibold text-amber-800">{cycleNumber === 1 && !effectiveEnrollmentMode ? 'Escolha como tratar a matrícula para calcular o ciclo.' : explicitSchedule ? 'Confira o plano recebido para visualizar as cobranças do ciclo.' : 'Informe o primeiro vencimento para visualizar todas as cobranças do ciclo.'}</div>
                   ) : previewQuery.isLoading || previewQuery.isFetching ? (
                     <div className="mt-4 flex items-center justify-center rounded-xl border border-slate-100 bg-slate-50 py-6 text-sm font-bold text-slate-500" role="status"><Loader2 className="mr-2 animate-spin" size={18} /> Calculando cobranças no sistema...</div>
                   ) : previewQuery.isError || !preview ? (
@@ -332,7 +306,7 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
                 <aside className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                   <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">O que acontece agora</p>
                   <ol className="mt-4 space-y-4 text-xs font-semibold text-slate-600">
-                    <li className="flex gap-3"><span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-blue-100 font-black text-blue-700">1</span><span>Você informa o vencimento inicial.</span></li>
+                    <li className="flex gap-3"><span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-blue-100 font-black text-blue-700">1</span><span>{explicitSchedule ? 'Você confere o cronograma recebido.' : 'Você informa o vencimento inicial.'}</span></li>
                     <li className="flex gap-3"><span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-slate-100 font-black text-slate-600">2</span><span>Confere rematrícula, mensalidades, descontos, juros e multa.</span></li>
                     <li className="flex gap-3"><span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-slate-100 font-black text-slate-600">3</span><span>Confirma a criação das cobranças e a emissão BolePix.</span></li>
                   </ol>
@@ -345,8 +319,8 @@ const FinanceiroCicloManualDialog: React.FC<FinanceiroCicloManualDialogProps> = 
             <section aria-labelledby="manual-cycle-step-2">
               <p className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-600">Etapa 2 de 3</p>
               <h3 id="manual-cycle-step-2" className="mt-1 text-2xl font-black text-[#001a33]">Composição das cobranças</h3>
-              <p className="mt-1 text-sm font-medium text-slate-500">Revise cada cobrança. Os valores iniciais vêm da turma; alterações serão recalculadas pelo sistema antes da confirmação.</p>
-              {cycleNumber === 1 ? <p className="mt-3 rounded-xl border border-blue-100 bg-blue-50 p-3 text-xs font-semibold text-blue-900">No registro sem boleto, alterar o vencimento da matrícula move a Mensalidade 1 para o mês seguinte e recalcula as demais por mês de calendário. Nos outros modos, altere a Mensalidade 1 para recalcular as seguintes.</p> : null}
+              <p className="mt-1 text-sm font-medium text-slate-500">{explicitSchedule ? 'Revise cada cobrança do plano recebido. Alterar um valor ou vencimento preserva as outras cobranças e o outro ciclo.' : 'Revise cada cobrança. Os valores iniciais vêm da turma; alterações serão recalculadas pelo sistema antes da confirmação.'}</p>
+              {!explicitSchedule && cycleNumber === 1 ? <p className="mt-3 rounded-xl border border-blue-100 bg-blue-50 p-3 text-xs font-semibold text-blue-900">No registro sem boleto, alterar o vencimento da matrícula move a Mensalidade 1 para o mês seguinte e recalcula as demais por mês de calendário. Nos outros modos, altere a Mensalidade 1 para recalcular as seguintes.</p> : null}
               {!positiveAmounts ? <p className="mt-3 text-xs font-semibold text-amber-800" role="alert">Informe um valor maior que zero em cada cobrança ou escolha não incluir a matrícula.</p> : null}
 
               <div className="mt-5 grid gap-3 sm:grid-cols-3">

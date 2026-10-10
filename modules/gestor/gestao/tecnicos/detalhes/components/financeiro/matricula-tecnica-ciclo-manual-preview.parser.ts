@@ -1,4 +1,5 @@
 import { isCycleEnrollmentMode, readCycleQuantities } from './matricula-tecnica-ciclo-manual-destination';
+import { TRANSFER_FINGERPRINT_RE, TRANSFER_UUID_RE } from '../../../../../../../supabase/functions/_shared/technical-transfer-schedule';
 import type {
   CicloFinanceiroTecnicoManualPreview,
 } from "./matricula-tecnica-ciclo-manual.types";
@@ -122,6 +123,14 @@ export const requireCicloFinanceiroTecnicoManualPreview = (
     throw new Error("O servidor não retornou a prévia canônica do ciclo.");
   }
   const items = value.itens as unknown[];
+  const scheduleV3 = value.cronogramaEntradaVersao === 3;
+  const scheduleProofValid = scheduleV3
+    ? typeof value.cronogramaEntradaFingerprint === 'string'
+      && TRANSFER_FINGERPRINT_RE.test(value.cronogramaEntradaFingerprint)
+      && items.every((item) => isRecord(item) && typeof item.itemId === 'string'
+        && TRANSFER_UUID_RE.test(item.itemId))
+      && new Set(items.map((item) => String((item as Record<string, unknown>).itemId).toLowerCase())).size === items.length
+    : value.cronogramaEntradaVersao === undefined && value.cronogramaEntradaFingerprint === undefined;
   const quantities = readCycleQuantities(value, value.mensalidadesHabilitadas === false
     && value.cicloNumero === 1 && value.modoMatricula === 'REGISTRO_SEM_BOLETO');
   const terms = value.termos;
@@ -197,10 +206,10 @@ export const requireCicloFinanceiroTecnicoManualPreview = (
       item.tipo === "PARCELA"
     ) &&
     installments.every((item, index) => item.numero === index + 1) &&
-    typedItems.every((item, index) => (
+    (scheduleV3 || typedItems.every((item, index) => (
       index === 0 ||
       String(typedItems[index - 1].vencimento) <= String(item.vencimento)
-    )) &&
+    ))) &&
     new Set(keys).size === keys.length &&
     typedItems[0]?.vencimento === value.primeiroVencimento;
   const localItems = typedItems.filter((item) => item.destinoCobranca === 'LOCAL');
@@ -213,7 +222,7 @@ export const requireCicloFinanceiroTecnicoManualPreview = (
       && (cycleNumber !== 1 || (value.modoMatricula === 'OMITIR'
         ? leadItems.length === 0 : leadItems.length === 1));
   if (
-    !quantities || localItems.length !== quantities.local || !modeValid ||
+    !quantities || localItems.length !== quantities.local || !modeValid || !scheduleProofValid ||
     !Number.isInteger(value.cicloNumero) ||
     cycleNumber < 1 ||
     cycleNumber > 2 ||

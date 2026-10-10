@@ -1,20 +1,20 @@
 import {
   requireExternalTransferPreview, requireExternalTransferResult,
-  type ExternalTransferFinancialPlan, type ExternalTransferInput,
+  type ExternalTransferFinancialPlan, type ExternalTransferInput, type ExternalTransferScheduleAdjustment,
 } from './external-transfer.contract';
 
 type Rpc = (name: string, params: Record<string, unknown>) => PromiseLike<{ data: unknown; error: unknown }>;
 
 export const createExternalTransferClient = (rpc: Rpc) => ({
-  async preview(alunoId: string, turmaDestinoId: string, financeiro: ExternalTransferFinancialPlan | null = null) {
-    const { data, error } = await rpc('preview_recebimento_transferencia_tecnica_secure', {
-      p_aluno_id: alunoId, p_turma_destino_id: turmaDestinoId, p_financeiro: financeiro,
+  async preview(alunoId: string, turmaDestinoId: string, financeiro: ExternalTransferFinancialPlan | null = null, ajuste: ExternalTransferScheduleAdjustment | null = null) {
+    const { data, error } = await rpc('preview_recebimento_transferencia_tecnica_v3_secure', {
+      p_aluno_id: alunoId, p_turma_destino_id: turmaDestinoId, p_financeiro: financeiro, p_ajuste: ajuste,
     });
     if (error) throw error;
     return requireExternalTransferPreview(data);
   },
   async receive(input: ExternalTransferInput) {
-    const { data, error } = await rpc('receber_transferencia_tecnica_planejada_secure', {
+    const { data, error } = await rpc('receber_transferencia_tecnica_v3_secure', {
       p_request_id: input.requestId,
       p_aluno_id: input.alunoId,
       p_turma_destino_id: input.turmaDestinoId,
