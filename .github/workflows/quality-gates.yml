@@ -283,6 +283,8 @@ jobs:
             modules/login/portal-logout-flow.test.ts \
             modules/login/profile-selection-session.test.ts \
             modules/gestor/gestao/tecnicos/detalhes/components/grade/TurmaGradePlanejamento.test.ts \
+            modules/gestor/gestao/tecnicos/detalhes/turma-grade-professores.service.test.mjs \
+            modules/gestor/gestao/tecnicos/detalhes/turma-grade-sync.contract.test.mjs \
             modules/gestor/parceiros/parceiros-responsavel-selection.contract.test.ts \
             modules/gestor/secretaria/shared/voter-template-repair.test.ts
           deno test --allow-read --allow-env \
@@ -420,6 +422,7 @@ jobs:
           node supabase/tests/pdv-receipt-identity.isolated.test.mjs
           node supabase/tests/banese_pdv_confirmation.isolated.test.mjs
           node supabase/tests/student_identity_issuers.isolated.test.mjs
+          node supabase/tests/technical_teacher_polo_scope.isolated.test.mjs
           node supabase/tests/caixa_review_drilldown.isolated.test.mjs
           node supabase/tests/proesc_administrative_archive.isolated.test.mjs
           node supabase/tests/proesc_portal_payment_confirmation.isolated.test.mjs
