@@ -1,6 +1,6 @@
 # Proesc V2: primeiro lote copy-only, ainda não instalado
 
-Data: 10/10/2026. Candidato 4.8.198-rc.1, conciliado com main 4.8.197. O candidato
+Data: 10/10/2026. Candidato 4.8.198-rc.2, conciliado com main 4.8.197. O candidato
 anterior passou dez workflows. Endpoint e piloto completos em PILOT-RUNBOOK.md;
 nenhuma instalação copy-only, grant ou transferência real foi executada.
 

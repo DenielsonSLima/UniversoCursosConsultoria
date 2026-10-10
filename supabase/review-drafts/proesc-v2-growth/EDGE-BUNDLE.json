@@ -9,6 +9,7 @@
     "supabase/functions/proesc-v2-copy-archive/index.ts",
     "supabase/functions/proesc-v2-copy-archive/memory-restore.mjs",
     "supabase/functions/proesc-v2-copy-archive/sdk-bridge.mjs",
+    "supabase/review-drafts/proesc-v2-growth/archive/bounded-gunzip.mjs",
     "supabase/review-drafts/proesc-v2-growth/archive/supabase-store.mjs",
     "supabase/review-drafts/proesc-v2-growth/archive/v2-copy-codec.mjs",
     "supabase/review-drafts/proesc-v2-growth/archive/v2-copy-transfer.mjs",

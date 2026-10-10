@@ -1,8 +1,8 @@
 {
-  "version": "4.8.198-rc.1",
+  "version": "4.8.198-rc.2",
   "display": "RC",
   "stage": "rc",
-  "revision": 1,
+  "revision": 2,
   "releasedAt": "2026-10-10",
-  "summary": "Endpoint V2 copy-only preparado com autenticação existente, restauração e roteiro de piloto único"
+  "summary": "Backend V2 copy-only com descompressão explicitamente limitada para compatibilidade Deno"
 }

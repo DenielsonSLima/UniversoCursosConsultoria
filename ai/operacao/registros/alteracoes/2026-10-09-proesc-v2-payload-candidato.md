@@ -1,6 +1,6 @@
 # Proesc V2: payload compartilhado em candidato de revisão
 
-Versão candidata: 4.8.198-rc.1. Base atual: c03052fff0f0db83cd6dcaa0724c70b930435b08.
+Versão candidata: 4.8.198-rc.2. Base atual: c03052fff0f0db83cd6dcaa0724c70b930435b08.
 Branch: review/proesc-v2-payload-20261009. Estado: reaproveitamento ON autorizado; adapter Storage somente sintético.
 
 ## Objetivo e limites
@@ -61,6 +61,8 @@ Medição WAL de uma janela não comprova economia OFF/ON nem taxa de produção
 - `supabase/review-drafts/proesc-v2-growth/archive/V2-COPY.md`
 - `supabase/review-drafts/proesc-v2-growth/archive/archive.mjs`
 - `supabase/review-drafts/proesc-v2-growth/archive/archive.test.mjs`
+- `supabase/review-drafts/proesc-v2-growth/archive/bounded-gunzip.mjs`
+- `supabase/review-drafts/proesc-v2-growth/archive/bounded-gunzip.test.mjs`
 - `supabase/review-drafts/proesc-v2-growth/archive/local-store.mjs`
 - `supabase/review-drafts/proesc-v2-growth/archive/storage-http-fixture.mjs`
 - `supabase/review-drafts/proesc-v2-growth/archive/storage-transfer.mjs`
@@ -104,7 +106,7 @@ Medição WAL de uma janela não comprova economia OFF/ON nem taxa de produção
 - `supabase/tests/proesc_v2_payload_validation.isolated.test.mjs`
 - `supabase/tests/proesc_v2_payload_writer.isolated.test.mjs`
 
-Total: 80 arquivos.
+Total: 82 arquivos.
 
 ## Validação e publicação
 
@@ -160,9 +162,9 @@ com homologação do Storage, permissões, quota ou endpoint real.
 
 ## Endpoint implantável, sem deploy
 
-Candidato 4.8.198-rc.1 preserva main c03052ff e prepara a entrada backend
+Candidato 4.8.198-rc.2 preserva main c03052ff e prepara a entrada backend
 V2 com autorização existente, SDK2.95.3, deadline e restauração em memória antes
-do recibo. Bundle enumera oito módulos runtime; não inclui testes/fixtures.
+do recibo. Bundle enumera nove módulos runtime; não inclui testes/fixtures.
 O roteiro fecha instalação, grants mínimos, deploy e piloto de uma observação.
 Não houve credencial nova, deploy, instalação copy-only ou envio de dados reais.
 
@@ -174,3 +176,8 @@ de uma observação e reconciliação antes de repetir. Não executa HTTP no tes
 
 O novo main arquivou 4.8.114 em arquivo próprio; a cópia duplicada no histórico
 combinado foi retirada, preservando 4.8.115 e todas as entradas canônicas.
+
+O CI de 166af1c comprovou que Deno2.1.4 ignora maxOutputLength do gunzip.
+RC.2 substitui somente a descompressão V2 por streaming com contagem própria
+antes de reter chunks e mantém ERR_BUFFER_TOO_LARGE obrigatório nos testes.
+Deno2.9.1, SQL15 e PostgreSQL17 já haviam passado; novo head deve repetir gates.

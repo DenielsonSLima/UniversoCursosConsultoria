@@ -1,9 +1,10 @@
 import { Buffer } from 'node:buffer';
 import { createHash } from 'node:crypto';
 import { promisify } from 'node:util';
-import { gzip, gunzip } from 'node:zlib';
+import { gzip } from 'node:zlib';
+import { boundedGunzip } from './bounded-gunzip.mjs';
 
-const compress = promisify(gzip), decompress = promisify(gunzip);
+const compress = promisify(gzip);
 export const COPY_LIMITS = Object.freeze({ raw: 1048576, compressed: 4194304, manifest: 65536, rows: 100 });
 export const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
@@ -147,7 +148,7 @@ export async function decodeV2CopyManifest(input, inputReceipt) {
   require(Buffer.isBuffer(input) && input.length === receipt.manifestCompressedBytes, 'MANIFEST_COMPRESSED_INTEGRITY');
   const compressed = Buffer.from(input);
   require(sha256(compressed) === receipt.manifestCompressedSha256, 'MANIFEST_COMPRESSED_INTEGRITY');
-  const plain = await decompress(compressed, { maxOutputLength: receipt.manifestJsonBytes });
+  const plain = await boundedGunzip(compressed, receipt.manifestJsonBytes);
   require(plain.length === receipt.manifestJsonBytes && sha256(plain) === receipt.manifestJsonSha256, 'MANIFEST_JSON_INTEGRITY');
   const manifest = snapshotManifest(parseUtf8(plain));
   validateMetadata(manifest, receipt.batchId, receipt.storageScope);
@@ -160,7 +161,7 @@ export async function decodeV2CopyPayload(input, inputManifest) {
   require(Buffer.isBuffer(input) && input.length === manifest.compressedBytes, 'COMPRESSED_INTEGRITY');
   const compressed = Buffer.from(input);
   require(sha256(compressed) === manifest.compressedSha256, 'COMPRESSED_INTEGRITY');
-  const payload = await decompress(compressed, { maxOutputLength: manifest.rawBytes });
+  const payload = await boundedGunzip(compressed, manifest.rawBytes);
   validatePayload(payload, manifest);
   return payload;
 }

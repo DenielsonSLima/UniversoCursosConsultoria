@@ -29,7 +29,7 @@ define `verify_jwt=false` somente para este novo endpoint, com autorização
 específica de implantação ainda necessária. A autenticação é o header custom
 validado pelo authorizer V2; não habilita CORS para frontend. O
 [EDGE-BUNDLE.json](../../review-drafts/proesc-v2-growth/EDGE-BUNDLE.json) enumera
-os oito arquivos runtime, sem fixtures, e a dependência SDK pinada.
+os arquivos runtime, sem fixtures, e a dependência SDK pinada.
 
 Após autenticação, a RPC `proesc_v2_export_copy_service(p_batch)` devolve o plano
 aprovado e payload exato. O handler valida batch/projeto/bucket/namespace/unidade
@@ -87,6 +87,13 @@ O teste real cobre fluxo/replay do SDK, erros sem retry, abortSignal, deadline,
 AbortSignal.any no Storage, limites de gzip no runtime Deno e restauração que
 falha depois do upload sem registrar catálogo. Imports `node:buffer` explícitos
 estão nos módulos alcançados pelo runtime que usam Buffer.
+
+O CI detectou que Deno 2.1.4 ignora `gunzip.maxOutputLength`, embora Deno 2.9.1
+tenha passado. O codec V2 usa agora `bounded-gunzip.mjs`: streaming com contador
+próprio por chunk, interrupção antes de acumular acima do teto e erro próprio
+`ERR_BUFFER_TOO_LARGE`. Os testes exigem esse erro, não aceitando falha posterior
+por hash/JSON como prova do limite. A revisão deve passar novamente nos runtimes
+Deno cobertos pelo CI; o núcleo sintético anterior não foi modificado.
 
 Deno/SDK não estavam instalados no executor de desenvolvimento. Portanto o
 resultado Node não substitui o gate Deno 2.9.1 no CI do commit publicado. A versão

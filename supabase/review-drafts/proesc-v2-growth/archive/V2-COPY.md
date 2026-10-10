@@ -7,6 +7,8 @@ pacote, e transporte HTTP em memória. Não há endpoint ou implantação autom�
 
 ## API e arquivos
 
+- `bounded-gunzip.mjs`: limite independente de bytes durante streaming, sem
+  confiar em `maxOutputLength` de versões antigas do Deno.
 - `v2-copy-codec.mjs`: `encodeV2Copy(exported, expectedBatchId, approvedScope)`,
   `decodeV2CopyManifest(gzip, receipt)` e `decodeV2CopyPayload(gzip, manifest)`.
 - `v2-copy-transfer.mjs`: `publishV2Copy(exported, remote, expectedBatchId)` devolve

@@ -65,7 +65,7 @@ Deno.test('real SDK abortSignal and global deadline prevent late export from adv
   assert.equal(mock.catalog, undefined);
 });
 
-Deno.test('Deno node:zlib enforces manifest and payload maxOutputLength on compression bombs', async () => {
+Deno.test('V2 streaming gunzip enforces manifest and payload byte ceilings on Deno', async () => {
   const remote = createV2CopyHttpFixture().remote;
   const bundle = await encodeV2Copy(copyExportFixture(), BATCH, remote.scope);
   const manifest = await decodeV2CopyManifest(bundle.manifestCompressed, bundle.receipt);

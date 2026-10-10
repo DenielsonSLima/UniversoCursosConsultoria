@@ -3,7 +3,7 @@
 > preparado/testado com HTTP sintético. Ver [recibo e versões](./INSTALLATION.md).
 
 O complemento [copy-only](./COPY-ONLY.md) prepara exportação V2 limitada e catálogo
-privado. O candidato 7b3d6176 passou dez workflows. O novo candidato 4.8.198-rc.1
+privado. O candidato 7b3d6176 passou dez workflows. O novo candidato 4.8.198-rc.2
 incorpora o [endpoint implantável](../../../functions/proesc-v2-copy-archive/README.md)
 e o [roteiro completo de piloto](./PILOT-RUNBOOK.md), preservando main c03052ff.
 Deploy, grants e transferência real continuam dependentes de aprovação específica.

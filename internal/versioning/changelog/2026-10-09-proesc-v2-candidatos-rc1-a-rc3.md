@@ -32,3 +32,8 @@
 - Mantém upload real, políticas, buckets e limpeza fora desta etapa; testes não acessam a conta de Storage.
 - Registra ativação autorizada do reaproveitamento Proesc; acompanhamento do FULL natural permanece aberto.
 
+## [4.8.198-rc.1] - 2026-10-10
+
+- Prepara endpoint backend V2 copy-only com autenticação existente, SDK pinado, prazos e restauração verificada.
+- Inclui roteiro de instalação e piloto único; deploy, grants e cópia real dependem de aprovação específica.
+- Preserva o lote paralelo de recebimento no extrato da turma e mantém o acompanhamento do FULL natural.

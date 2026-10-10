@@ -18,7 +18,8 @@ O formato suporta até 100 IDs explícitos, mas isso não amplia o primeiro pilo
   integralmente links, snapshots, pagamentos ou tabelas relacionadas.
 - Runtime: Edge Function nova `proesc-v2-copy-archive`, SDK
   `npm:@supabase/supabase-js@2.95.3`, módulos Node crypto/zlib/util/buffer sob Deno.
-  O CI usa Deno 2.9.1 e SDK real com transporte HTTP em memória.
+  O CI usa Deno 2.1.4/2.9.1 e SDK real com transporte HTTP em memória.
+  Descompressão usa contador streaming próprio, sem depender de maxOutputLength.
 - Identidade: somente os envs backend existentes SUPABASE_URL e
   SUPABASE_SERVICE_ROLE_KEY. Nenhum valor é lido pela operação preparatória.
 - Autorização de chamada: X-Proesc-Sync-Secret, validado pelo RPC existente
