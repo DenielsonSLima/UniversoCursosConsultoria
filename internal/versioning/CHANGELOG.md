@@ -6,11 +6,11 @@ Histórico anterior: [16/09/2026 a 25/09/2026 — versões 4.8.65 a 4.8.90](./ch
 
 Histórico arquivado: [candidatos Proesc](./changelog/2026-10-09-proesc-v2-candidatos-rc1-a-rc3.md), [27/09 — versão 4.8.115](./changelog/2026-09-27-versoes-4-8-113-a-4-8-115.md), [27/09/2026 — versão 4.8.114](./changelog/2026-09-27-versao-4-8-114.md), [27/09/2026 — versão 4.8.113](./changelog/2026-09-27-versao-4-8-113.md), [27/09/2026 — versão 4.8.112](./changelog/2026-09-27-versao-4-8-112.md), [27/09/2026 — versão 4.8.111](./changelog/2026-09-27-versao-4-8-111.md), [25/09/2026 a 26/09/2026 — versões 4.8.91 a 4.8.110](./changelog/2026-09-25-a-2026-09-26-versoes-4-8-91-a-4-8-110.md).
 
-## [4.8.198-rc.2] - 2026-10-10
+## [4.8.198-rc.3] - 2026-10-10
 
-- Limita explicitamente a descompressão gzip do backend copy-only em runtimes Deno antigos e atuais.
-- Mantém o teste de arquivo expansivo e a restauração em memória antes do recibo, sem relaxar os limites.
-- Preserva a preparação do piloto privado e os gates de instalação, deploy e cópia real.
+- Registra instalação autorizada do catálogo privado e do serviço V2 copy-only, preservando os SQLs aplicados.
+- Piloto de uma observação confirmou cópia, readback e restauração em memória no Storage privado.
+- Mantém a origem, pagamentos e histórico; lotes maiores e remoção dependem de decisão separada.
 
 ## [4.8.197] - 2026-10-10
 

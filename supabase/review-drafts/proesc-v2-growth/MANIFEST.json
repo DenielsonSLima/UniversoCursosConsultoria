@@ -1,21 +1,21 @@
 {
-  "status": "PAYLOAD_ON_COPY_BACKEND_PREPARED_NOT_DEPLOYED",
+  "status": "PAYLOAD_ON_SINGLE_COPY_PILOT_VERIFIED",
   "upstreamRepository": "DenielsonSLima/UniversoCursosConsultoria",
   "upstreamBase": "c03052fff0f0db83cd6dcaa0724c70b930435b08",
-  "generatedAt": "2026-10-10T11:16:00Z",
+  "generatedAt": "2026-10-10T11:35:00Z",
   "productionChanged": true,
   "payloadStorageEnabled": true,
   "remoteUploadImplemented": true,
   "cleanupEnabled": false,
-  "nativePostgres17Gate": "RC197_PASS_RC198_PENDING_EXACT_HEAD_CI",
-  "aggregateRepositoryCheck": "RC197_TEN_WORKFLOWS_PASS_RC198_PENDING_EXACT_HEAD_CI",
+  "nativePostgres17Gate": "RC198_2_PASS_RC198_3_RECEIPT_CI_PENDING",
+  "aggregateRepositoryCheck": "RC198_2_TEN_WORKFLOWS_PASS_RC198_3_PENDING",
   "focusedLineCheck": "PASS_ALL_UNDER_500",
   "files": [
     {
       "path": ".github/workflows/proesc-v2-payload.yml",
-      "bytes": 3621,
-      "lines": 83,
-      "sha256": "2d5558f0e2c6cb6123aa39f89480d1dfc8e526dc0ed9b8a9e29b866b1b839d06"
+      "bytes": 3684,
+      "lines": 84,
+      "sha256": "4b746878376237eec3dac84f1d3d1fb8dfb2cfef2b6f0643adb9bb4ed4d3b031"
     },
     {
       "path": ".github/workflows/quality-gates.yml",
@@ -31,15 +31,15 @@
     },
     {
       "path": "ai/operacao/registros/alteracoes/2026-10-09-proesc-v2-payload-candidato.md",
-      "bytes": 11284,
-      "lines": 183,
-      "sha256": "d3590e9041d024efd639869fdd6bd11be1e43e7859cff757b91f75fdacf5a797"
+      "bytes": 11976,
+      "lines": 194,
+      "sha256": "38065dbad1a5cd686a50da5a4c1a7a1aba047c35acfaee9b834c5f005b841b74"
     },
     {
       "path": "internal/versioning/CHANGELOG.md",
-      "bytes": 39501,
+      "bytes": 39516,
       "lines": 500,
-      "sha256": "11a3ee88ab8d99cc082d2b41cad28df6b40c9ac93dfdf7b0e7e820b4854439db"
+      "sha256": "0e5a3b22d768bdc6603b1a04c7079e110b12650c654f85dbecf19f1ccec9b20c"
     },
     {
       "path": "internal/versioning/changelog/2026-09-27-versoes-4-8-113-a-4-8-115.md",
@@ -49,15 +49,15 @@
     },
     {
       "path": "internal/versioning/changelog/2026-10-09-proesc-v2-candidatos-rc1-a-rc3.md",
-      "bytes": 2396,
-      "lines": 39,
-      "sha256": "f3ad160374abdd5ba0e42d1ab1ecff598bdad1395f71a1bac566bd9705154be7"
+      "bytes": 2735,
+      "lines": 45,
+      "sha256": "ac9622ce90f546b150308ea7041b8f336cc3ce32c05fd32b4dc85680146434fc"
     },
     {
       "path": "internal/versioning/system-version.json",
-      "bytes": 221,
+      "bytes": 219,
       "lines": 8,
-      "sha256": "e3b140047255715ad12603d45173518bdfef5983ed8d818e44995b0990b64adc"
+      "sha256": "d1de2f86cfec32a001be199c8c69acd6809e119e64c43e218093ebb4ffb44c10"
     },
     {
       "path": "supabase/migrations/20261009224423_prepare_proesc_v2_payload_storage_off.sql",
@@ -70,6 +70,12 @@
       "bytes": 694,
       "lines": 19,
       "sha256": "c2b537c9bf85683274e51e0492fc43a37b464016edbe8f835bb89786114d15de"
+    },
+    {
+      "path": "supabase/migrations/20261010112854_prepare_proesc_v2_copy_only_catalog.sql",
+      "bytes": 13667,
+      "lines": 223,
+      "sha256": "eae553eec2a5c91af98c9ba223fbcdf89bfbe1a3d2b141702aea34c1a1c0887f"
     },
     {
       "path": "supabase/review-drafts/proesc-v2-growth/01_payload_storage.draft.sql",
@@ -103,9 +109,9 @@
     },
     {
       "path": "supabase/review-drafts/proesc-v2-growth/COPY-ONLY.md",
-      "bytes": 6707,
-      "lines": 113,
-      "sha256": "e341df2a65155d2a2c8b85042f0e06dfbb68355255fa385dcab0e5711ac65ac8"
+      "bytes": 6941,
+      "lines": 116,
+      "sha256": "8c7ffcfe1bc54b2b9d75b436159fef6c80898d36a8f440fd7509bfb02a9306b6"
     },
     {
       "path": "supabase/review-drafts/proesc-v2-growth/INDEPENDENT_REVIEW.md",
@@ -121,9 +127,9 @@
     },
     {
       "path": "supabase/review-drafts/proesc-v2-growth/MANIFEST-BACKEND.json",
-      "bytes": 2863,
-      "lines": 84,
-      "sha256": "1680d7d246da47317eb71e20c39cc6739f0fc7862e70ef616ff7d203472d30ca"
+      "bytes": 3073,
+      "lines": 90,
+      "sha256": "8d302b5995aecbff326cb01f1e43cc2f2d9ce19e07ef372254e24e2a8b391443"
     },
     {
       "path": "supabase/review-drafts/proesc-v2-growth/PREFLIGHT.md",
@@ -133,9 +139,9 @@
     },
     {
       "path": "supabase/review-drafts/proesc-v2-growth/README.md",
-      "bytes": 10570,
-      "lines": 162,
-      "sha256": "a97b6922830b7daa6c121fac334c565cc70163934918f22875962367fdde94ac"
+      "bytes": 10469,
+      "lines": 161,
+      "sha256": "e6ac4b46baa2e6ceb1e4781bbb55c1e24b9afea47b6c4f9e66e8ed3090efe6c6"
     },
     {
       "path": "supabase/review-drafts/proesc-v2-growth/archive/README.md",
@@ -277,9 +283,9 @@
     },
     {
       "path": "supabase/tests/fixtures/proesc-v2-copy.fixture.mjs",
-      "bytes": 3728,
-      "lines": 58,
-      "sha256": "7f2cba18b37f3f594a6470426cfa3b08312566d3f9dd39d8dd98916c065b24cc"
+      "bytes": 4176,
+      "lines": 65,
+      "sha256": "1e680f53f18e3cb450563727ba9c7589c2b005bd8ba9fb2eb6efb122aa384f13"
     },
     {
       "path": "supabase/tests/fixtures/proesc-v2-growth.caixa.fixture.mjs",
@@ -421,32 +427,37 @@
     }
   ],
   "remoteBranch": "review/proesc-v2-payload-20261009",
-  "candidateVersion": "4.8.198-rc.2",
+  "candidateVersion": "4.8.198-rc.3",
   "remoteCatalogPreflight": "METADATA_READ_ONLY_COMPLETE_EXTRA_CAIXA_READER_ADAPTED",
   "atomicMigration": "supabase/migrations/20261009224423_prepare_proesc_v2_payload_storage_off.sql",
   "migrationApplied": true,
   "appliedMigrationVersions": [
     "20261009224423",
-    "20261009224508"
+    "20261009224508",
+    "20261010112854"
   ],
   "installationReceipt": "supabase/review-drafts/proesc-v2-growth/INSTALLATION.md",
   "storageAdapterImplemented": true,
-  "storageAdapterValidation": "80_HTTP_MOCK_TESTS_PASS_NOT_DEPLOYED",
-  "storageProductionEnabled": false,
+  "storageAdapterValidation": "83_MOCK_TESTS_AND_SINGLE_REAL_COPY_PILOT_PASS",
+  "storageProductionEnabled": true,
   "naturalFullGate": "PENDING_NATURAL_CYCLE_AFTER_2026_10_10_2138Z",
   "originalPayloadBase": "3886e6b0e12e45001f5a7bf2858965b4d8d4307d",
   "preparedCommitParents": [
-    "166af1c10465fb6fb8a7e33a40c884880e240d13"
+    "0bd7eb9c386ca0290e0a088bec7d31f0cb1346e8"
   ],
-  "remoteUploadExecuted": false,
+  "remoteUploadExecuted": true,
   "copyCatalogPrepared": true,
-  "copyCatalogApplied": false,
-  "copyServiceGrantsApplied": false,
+  "copyCatalogApplied": true,
+  "copyServiceGrantsApplied": true,
   "selfExcludedFromHashes": true,
   "backendPrepared": true,
-  "backendDeployed": false,
-  "backendRuntimeGate": "DENO_2_1_4_AND_2_9_1_REAL_SDK_MOCK_PENDING_CI",
+  "backendDeployed": true,
+  "backendRuntimeGate": "RC198_2_DENO_2_1_4_AND_2_9_1_PASS",
   "fileManifests": [
     "supabase/review-drafts/proesc-v2-growth/MANIFEST-BACKEND.json"
-  ]
+  ],
+  "copyPilotRows": 1,
+  "copyPilotRestoreVerified": true,
+  "copyCatalogMigration": "20261010112854",
+  "copyPilotReceipt": "supabase/review-drafts/proesc-v2-growth/PILOT-RECEIPT.md"
 }

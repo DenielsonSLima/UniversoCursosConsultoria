@@ -37,3 +37,9 @@
 - Prepara endpoint backend V2 copy-only com autenticação existente, SDK pinado, prazos e restauração verificada.
 - Inclui roteiro de instalação e piloto único; deploy, grants e cópia real dependem de aprovação específica.
 - Preserva o lote paralelo de recebimento no extrato da turma e mantém o acompanhamento do FULL natural.
+
+## [4.8.198-rc.2] - 2026-10-10
+
+- Limita explicitamente a descompressão gzip do backend copy-only em runtimes Deno antigos e atuais.
+- Mantém o teste de arquivo expansivo e a restauração em memória antes do recibo, sem relaxar os limites.
+- Preserva a preparação do piloto privado e os gates de instalação, deploy e cópia real.

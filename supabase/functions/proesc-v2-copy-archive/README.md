@@ -1,7 +1,8 @@
-# Endpoint V2 copy-only: shim backend em preparação
+# Endpoint V2 copy-only: backend do piloto autorizado
 
-Código para revisão/publicação; não implantado por esta etapa. Nenhuma consulta,
-exportação, credencial, arquivo Storage ou plano real foi usado nos testes.
+Implantado na versão 1 em 10/10/2026, com autorização para um piloto de uma observação.
+Os testes abaixo continuam exclusivamente sintéticos. Recibo agregado e limites
+em ../../review-drafts/proesc-v2-growth/PILOT-RECEIPT.md.
 
 ## Fluxo implantável
 

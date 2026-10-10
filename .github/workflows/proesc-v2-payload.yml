@@ -6,6 +6,7 @@ on:
       - 'supabase/functions/proesc-v2-copy-archive/**'
       - 'supabase/migrations/*proesc_v2_payload_storage_off.sql'
       - 'supabase/migrations/*proesc_v2_payload_constraints_off.sql'
+      - 'supabase/migrations/*proesc_v2_copy_only_catalog.sql'
       - 'supabase/tests/proesc_v2_payload_*'
       - 'supabase/tests/proesc_v2_copy_*'
       - 'supabase/tests/fixtures/proesc-v2-growth*'

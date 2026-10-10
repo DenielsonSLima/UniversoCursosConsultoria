@@ -4,9 +4,9 @@
   "files": [
     {
       "path": "supabase/functions/proesc-v2-copy-archive/README.md",
-      "bytes": 7176,
-      "lines": 120,
-      "sha256": "25859f9e9d48a14e75171d65c68dae78fab08a2c43c1870790fa6ff9746ef917"
+      "bytes": 7244,
+      "lines": 121,
+      "sha256": "8527b8874ffc9708802deaface099dc81f7c98decc6de3f6a8d6362823684e7e"
     },
     {
       "path": "supabase/functions/proesc-v2-copy-archive/backend-fixture.mjs",
@@ -58,15 +58,21 @@
     },
     {
       "path": "supabase/review-drafts/proesc-v2-growth/EDGE-BUNDLE.json",
-      "bytes": 1160,
-      "lines": 32,
-      "sha256": "13e62745b838389a3f85a174889fc278b897234c73c7beb58ccba42346864fc6"
+      "bytes": 1274,
+      "lines": 34,
+      "sha256": "663d7e4da0ffc98708f1ce2f913861cae5f2385ac70ad248258e97756e853acb"
+    },
+    {
+      "path": "supabase/review-drafts/proesc-v2-growth/PILOT-RECEIPT.md",
+      "bytes": 3255,
+      "lines": 56,
+      "sha256": "2ec48918cb75aef470c0f43ea22f448ebe981da8a7bc19949ea154d260fdae10"
     },
     {
       "path": "supabase/review-drafts/proesc-v2-growth/PILOT-RUNBOOK.md",
-      "bytes": 7493,
-      "lines": 112,
-      "sha256": "8ead911d633935b0016e37d5123ec67b4b231962a5b74fa7ddd4fbf4a92fe529"
+      "bytes": 7634,
+      "lines": 115,
+      "sha256": "ad3888aec4cc3293072db5764519c0730be26f7e9f1bd3d92fb8d4e4e408d97a"
     },
     {
       "path": "supabase/review-drafts/proesc-v2-growth/invoke-copy-pilot.template.sql",

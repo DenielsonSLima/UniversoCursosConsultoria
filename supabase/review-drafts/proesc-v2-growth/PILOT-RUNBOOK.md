@@ -1,4 +1,7 @@
-# Piloto V2 copy-only: pacote preparado, execução ainda não autorizada
+# Piloto V2 copy-only: roteiro da execução autorizada
+
+> Piloto único autorizado e executado em 10/10/2026. Resultado agregado em
+> [PILOT-RECEIPT.md](./PILOT-RECEIPT.md). Este roteiro não autoriza novos lotes.
 
 Destino único: projeto `kfekgwyqozhicpfuunpo`, bucket privado `proesc-history`,
 prefixo `proesc-v2-copy/<unit_id>/`. O primeiro piloto proposto contém uma única

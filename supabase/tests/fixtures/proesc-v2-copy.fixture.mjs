@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { createFixture } from './proesc-v2-growth.fixture.mjs';
 
 export async function createCopyFixture(options = {}) {
@@ -30,7 +31,13 @@ export async function createCopyFixture(options = {}) {
 
 export async function installCopyDraft(db) {
   await installCopyAuthorizerFixture(db);
-  await db.exec(readFileSync(new URL('../../review-drafts/proesc-v2-growth/05_copy_only_catalog.draft.sql', import.meta.url), 'utf8'));
+  const applied = readFileSync(new URL('../../migrations/20261010112854_prepare_proesc_v2_copy_only_catalog.sql', import.meta.url), 'utf8');
+  const draft = readFileSync(new URL('../../review-drafts/proesc-v2-growth/05_copy_only_catalog.draft.sql', import.meta.url), 'utf8');
+  if (applied !== draft || createHash('sha256').update(applied).digest('hex')
+    !== 'eae553eec2a5c91af98c9ba223fbcdf89bfbe1a3d2b141702aea34c1a1c0887f') {
+    throw new Error('Applied copy-only migration bytes must remain immutable');
+  }
+  await db.exec(applied);
 }
 
 export async function installCopyAuthorizerFixture(db) {

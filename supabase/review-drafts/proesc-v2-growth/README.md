@@ -1,12 +1,11 @@
-> Estado em 10/10/2026: estrutura e vínculos validados; reaproveitamento ON sob
-> autorização específica. FULL natural em acompanhamento. Storage segue somente
-> preparado/testado com HTTP sintético. Ver [recibo e versões](./INSTALLATION.md).
+> Estado em 10/10/2026: reaproveitamento ON sob autorização específica;
+> piloto Storage privado de uma observação concluído com restauração verificada.
+> FULL natural permanece em acompanhamento. Ver [recibo](./PILOT-RECEIPT.md).
 
-O complemento [copy-only](./COPY-ONLY.md) prepara exportação V2 limitada e catálogo
-privado. O candidato 7b3d6176 passou dez workflows. O novo candidato 4.8.198-rc.2
-incorpora o [endpoint implantável](../../../functions/proesc-v2-copy-archive/README.md)
-e o [roteiro completo de piloto](./PILOT-RUNBOOK.md), preservando main c03052ff.
-Deploy, grants e transferência real continuam dependentes de aprovação específica.
+O candidato implantado 0bd7eb9c passou dez workflows. O candidato 4.8.198-rc.3
+concilia a migration copy-only aplicada e registra o resultado sem dados pessoais.
+O serviço tem nove módulos runtime revisados e usa a identidade interna existente.
+Lotes maiores, retenção, remoção e merge continuam fora da autorização do piloto.
 MANIFEST.json referencia MANIFEST-BACKEND.json para o conjunto complementar.
 
 # Proesc V2: candidato de crescimento sustentável

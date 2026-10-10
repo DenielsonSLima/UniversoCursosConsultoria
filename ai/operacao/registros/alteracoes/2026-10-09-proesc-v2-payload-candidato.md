@@ -1,7 +1,7 @@
 # Proesc V2: payload compartilhado em candidato de revisão
 
-Versão candidata: 4.8.198-rc.2. Base atual: c03052fff0f0db83cd6dcaa0724c70b930435b08.
-Branch: review/proesc-v2-payload-20261009. Estado: reaproveitamento ON autorizado; adapter Storage somente sintético.
+Versão candidata: 4.8.198-rc.3. Base atual: c03052fff0f0db83cd6dcaa0724c70b930435b08.
+Branch: review/proesc-v2-payload-20261009. Estado: reaproveitamento ON e piloto copy-only de uma observação autorizados e verificados.
 
 ## Objetivo e limites
 
@@ -42,6 +42,7 @@ Medição WAL de uma janela não comprova economia OFF/ON nem taxa de produção
 - `supabase/functions/proesc-v2-copy-archive/sdk-real.test.ts`
 - `supabase/migrations/20261009224423_prepare_proesc_v2_payload_storage_off.sql`
 - `supabase/migrations/20261009224508_validate_proesc_v2_payload_constraints_off.sql`
+- `supabase/migrations/20261010112854_prepare_proesc_v2_copy_only_catalog.sql`
 - `supabase/review-drafts/proesc-v2-growth/01_payload_storage.draft.sql`
 - `supabase/review-drafts/proesc-v2-growth/02_payload_readers.draft.sql`
 - `supabase/review-drafts/proesc-v2-growth/03_payload_writer.draft.sql`
@@ -53,6 +54,7 @@ Medição WAL de uma janela não comprova economia OFF/ON nem taxa de produção
 - `supabase/review-drafts/proesc-v2-growth/INSTALLATION.md`
 - `supabase/review-drafts/proesc-v2-growth/MANIFEST-BACKEND.json`
 - `supabase/review-drafts/proesc-v2-growth/MANIFEST.json`
+- `supabase/review-drafts/proesc-v2-growth/PILOT-RECEIPT.md`
 - `supabase/review-drafts/proesc-v2-growth/PILOT-RUNBOOK.md`
 - `supabase/review-drafts/proesc-v2-growth/PREFLIGHT.md`
 - `supabase/review-drafts/proesc-v2-growth/README.md`
@@ -106,7 +108,7 @@ Medição WAL de uma janela não comprova economia OFF/ON nem taxa de produção
 - `supabase/tests/proesc_v2_payload_validation.isolated.test.mjs`
 - `supabase/tests/proesc_v2_payload_writer.isolated.test.mjs`
 
-Total: 82 arquivos.
+Total: 84 arquivos.
 
 ## Validação e publicação
 
@@ -162,7 +164,7 @@ com homologação do Storage, permissões, quota ou endpoint real.
 
 ## Endpoint implantável, sem deploy
 
-Candidato 4.8.198-rc.2 preserva main c03052ff e prepara a entrada backend
+Candidato 4.8.198-rc.3 preserva main c03052ff e prepara a entrada backend
 V2 com autorização existente, SDK2.95.3, deadline e restauração em memória antes
 do recibo. Bundle enumera nove módulos runtime; não inclui testes/fixtures.
 O roteiro fecha instalação, grants mínimos, deploy e piloto de uma observação.
@@ -181,3 +183,12 @@ O CI de 166af1c comprovou que Deno2.1.4 ignora maxOutputLength do gunzip.
 RC.2 substitui somente a descompressão V2 por streaming com contagem própria
 antes de reter chunks e mantém ERR_BUFFER_TOO_LARGE obrigatório nos testes.
 Deno2.9.1, SQL15 e PostgreSQL17 já haviam passado; novo head deve repetir gates.
+
+## Piloto real autorizado e conciliado
+
+Instalação 20261010112854 e endpoint v1 executados a partir do commit 0bd7eb9c.
+Nove módulos recuperados do deploy coincidiram com o revisado. Uma observação
+foi copiada, relida e restaurada em memória; origem e snapshot mantiveram os hashes.
+Revisão independente passou 13 verificações por metadados, sem conteúdo pessoal.
+Arquivo aplicado permanece idêntico ao draft aprovado; fixture passa a carregar
+a migration canônica com SHA256 fixo. Nenhum novo lote, delete ou pagamento.

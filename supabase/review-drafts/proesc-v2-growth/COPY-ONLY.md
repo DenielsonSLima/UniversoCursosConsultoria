@@ -1,8 +1,11 @@
-# Proesc V2: primeiro lote copy-only, ainda não instalado
+> Piloto único autorizado executado em 10/10/2026. Ver [recibo agregado](./PILOT-RECEIPT.md).
+> As condições abaixo descrevem o preparo e o contrato; não autorizam novos lotes.
 
-Data: 10/10/2026. Candidato 4.8.198-rc.2, conciliado com main 4.8.197. O candidato
+# Proesc V2: primeiro lote copy-only instalado e verificado
+
+Data: 10/10/2026. Candidato 4.8.198-rc.3, conciliado com main 4.8.197. O candidato
 anterior passou dez workflows. Endpoint e piloto completos em PILOT-RUNBOOK.md;
-nenhuma instalação copy-only, grant ou transferência real foi executada.
+a instalação, os dois grants e o piloto único foram autorizados e concluídos depois.
 
 ## Destino existente verificado somente por leitura
 
@@ -23,8 +26,8 @@ ACTIVE de uma função não prova que o agendamento esteja habilitado.
 
 ## Exportação limitada e identidade
 
-`05_copy_only_catalog.draft.sql` é um draft local, fora de migrations automáticas.
-Se aprovado futuramente, cria duas tabelas privadas com RLS, sem grants diretos
+`05_copy_only_catalog.draft.sql` preserva o SQL revisado. A cópia canônica aplicada
+é `20261010112854_prepare_proesc_v2_copy_only_catalog.sql`. Criou duas tabelas privadas com RLS, sem grants diretos
 a anon, authenticated ou service_role:
 
 - `v2_copy_archive_plans`: seleção aprovada, IDs, hash e tamanho; não guarda payload;

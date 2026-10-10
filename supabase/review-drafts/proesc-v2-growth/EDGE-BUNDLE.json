@@ -1,5 +1,5 @@
 {
-  "status": "PREPARED_NOT_DEPLOYED",
+  "status": "DEPLOYED_AUTHORIZED_SINGLE_PILOT_VERIFIED",
   "projectRef": "kfekgwyqozhicpfuunpo",
   "name": "proesc-v2-copy-archive",
   "entrypoint_path": "supabase/functions/proesc-v2-copy-archive/index.ts",
@@ -28,5 +28,7 @@
   ],
   "newSecretsRequired": false,
   "copyOnly": true,
-  "cleanupEnabled": false
+  "cleanupEnabled": false,
+  "deployedVersion": 1,
+  "deployedSourceCommit": "0bd7eb9c386ca0290e0a088bec7d31f0cb1346e8"
 }
