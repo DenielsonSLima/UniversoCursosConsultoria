@@ -170,6 +170,25 @@ const buildDefaultConfigs = (curso: Curso): Record<string, TurmaDisciplinaConfig
   return configs;
 };
 
+const getProfessoresDaTurma = async (turmaId: string) => {
+  const { data: turma, error } = await supabase
+    .from('turmas')
+    .select('polo_id')
+    .eq('id', turmaId)
+    .single();
+  if (error) throw error;
+  if (!turma?.polo_id) {
+    throw new Error('O polo da turma não está definido. Defina a unidade antes de selecionar docentes.');
+  }
+  return supabase
+    .from('parceiros')
+    .select('id, nome')
+    .eq('tipo', 'Professor')
+    .eq('status', 'ATIVO')
+    .or(`polo_id.eq.${turma.polo_id},polo_ids.cs.{${turma.polo_id}}`)
+    .order('nome', { ascending: true });
+};
+
 export const turmaGradeService = {
   async getGradeData(turmaId: string, cursoId: string): Promise<TurmaGradeData> {
     const [
@@ -195,12 +214,7 @@ export const turmaGradeService = {
         .from('atividades_extra_classe')
         .select('id, disciplina_id, titulo, tema, carga_horaria_compensacao, prazo_entrega, status, status_antes_arquivo, updated_at, turma:turmas(status), respostas:atividade_extra_classe_respostas(count)')
         .eq('turma_id', turmaId),
-      supabase
-        .from('parceiros')
-        .select('id, nome')
-        .eq('tipo', 'Professor')
-        .eq('status', 'ATIVO')
-        .order('nome', { ascending: true }),
+      getProfessoresDaTurma(turmaId),
       academicLifecycleService.getDiarios(turmaId),
     ]);
 

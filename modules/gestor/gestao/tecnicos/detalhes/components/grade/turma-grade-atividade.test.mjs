@@ -171,7 +171,10 @@ test('both creation surfaces remain free of client-side past-date blocking', () 
 
 test('grade retains archived rows, response counts, revision and class context from the server', () => {
   const text = source('../../turma-grade.service.ts');
-  const query = text.slice(text.indexOf(".from('atividades_extra_classe')"), text.indexOf(".from('parceiros')"));
+  const start = text.indexOf(".from('atividades_extra_classe')");
+  const end = text.indexOf(".eq('turma_id', turmaId)", start);
+  assert.ok(start >= 0 && end > start, 'A consulta de atividades deve estar delimitada pela turma.');
+  const query = text.slice(start, end);
   assert.match(query, /status_antes_arquivo, updated_at, turma:turmas\(status\), respostas:atividade_extra_classe_respostas\(count\)/);
   assert.doesNotMatch(query, /\.neq\('status',\s*'ARQUIVADA'\)/);
   assert.match(text, /respostasCount: Number\(atividade\.respostas\?\.\[0\]\?\.count \|\| 0\)/);
