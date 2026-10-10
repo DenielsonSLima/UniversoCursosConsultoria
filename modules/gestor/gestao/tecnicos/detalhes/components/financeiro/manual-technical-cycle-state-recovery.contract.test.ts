@@ -32,13 +32,14 @@ test('mudança ociosa C1 para C2 reinicia datas e confirmação sem reaproveitar
   assert.match(dialog, /const \[cycleNumber, setCycleNumber\] = useState\(requestedCycleNumber\)/);
   assert.match(
     dialog,
-    /const revisionContext = `\$\{row\.matriculaId\}:\$\{cycleNumber\}:\$\{dateSource\}:\$\{individualDate\}:\$\{[\s\S]*?cycleNumber === 1 \? enrollmentMode : 'SEM_MATRICULA'[\s\S]*?\}`/,
+    /: `\$\{row\.matriculaId\}:\$\{cycleNumber\}:\$\{dateSource\}:\$\{individualDate\}:\$\{cycleNumber === 1 \? enrollmentMode : 'SEM_MATRICULA'\}`/,
   );
+  assert.match(dialog, /const revisionContext = explicitSchedule\s*\? `\$\{row\.matriculaId\}:\$\{cycleNumber\}:\$\{transferSetup\.fingerprint\}`/);
   const transitionBody = dialog.split('if (pending || !cycleIdentityChanged) return;')[1]?.split('}, [pending, cycleIdentityChanged')[0];
   assert.ok(transitionBody, 'transição do ciclo não preserva a emissão pendente');
   for (const operation of [
     'setCycleNumber(requestedCycleNumber)', 'setStep(1)', 'setEnrollmentMode(null)',
-    "setDateSource(requestedCycleNumber === 2 || plannedEntry ? 'INDIVIDUAL' : 'TURMA')",
+    "setDateSource(requestedCycleNumber === 2 || plannedEntry || explicitSchedule ? 'INDIVIDUAL' : 'TURMA')",
     "setIndividualDate(row.cicloManual.primeiroVencimentoSugerido ?? '')",
     'setExternalHistoryConfirmed(false)', 'setIssuanceSnapshot(null)', 'lastPreviewRef.current = null',
   ]) assert.ok(transitionBody.includes(operation), `reset ausente: ${operation}`);

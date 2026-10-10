@@ -1,4 +1,5 @@
 import { isFeeOnlyExternalTransferPlan, isIssuedCycleReceivable, readCycleQuantities } from './matricula-tecnica-ciclo-manual-destination';
+import { requireTransferSchedulePreview } from './manual-cycle-transfer-schedule';
 import { supabase } from "../../../../../../../lib/supabase";
 import { reviewProescCycles } from './proesc-cycle-review.service';
 import { requireEligibleProescCycleReview } from './proesc-cycle-review.parser';
@@ -244,6 +245,7 @@ const requirePreviewResult = (
   }
   const cicloManual = requireMatriculaTecnicaCicloManual(value.cicloManual);
   const preview = requireCicloFinanceiroTecnicoManualPreview(value.preview);
+  requireTransferSchedulePreview(cicloManual.planoEntrada, preview);
   return {
     matriculaId: value.matriculaId,
     turmaId: value.turmaId,

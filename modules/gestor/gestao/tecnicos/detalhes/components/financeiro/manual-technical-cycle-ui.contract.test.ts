@@ -17,6 +17,7 @@ const readSource = (relativePath: string) =>
 const listSource = `${readSource("FinanceiroAlunosList.tsx")}\n${readSource("FinanceiroAlunosTable.tsx")}`;
 const statusSource = readSource("FinanceiroCicloManualStatus.tsx");
 const dialogSource = readSource("FinanceiroCicloManualDialog.tsx");
+const setupFieldsSource = readSource("FinanceiroCicloManualSetupFields.tsx");
 const revisionHookSource = readSource("hooks/useCicloManualRevision.ts");
 const serviceSource = readSource("matricula-tecnica-ciclo-manual.service.ts");
 const destinationSource = readSource("matricula-tecnica-ciclo-manual-destination.ts");
@@ -266,9 +267,9 @@ test("modo manual sai integralmente da ativação AGORA, AGENDADA e lote legados
 
 test("ciclo 1 mantém escolha de vencimento e ciclo 2 exige data individual", () => {
   assert.match(dialogSource, /usePreviewCicloFinanceiroTecnicoManual/);
-  assert.match(dialogSource, /Usar datas da turma/);
-  assert.match(dialogSource, /Definir primeira data/);
-  assert.match(dialogSource, /O sistema recalcula todo o cronograma/);
+  assert.match(setupFieldsSource, /Usar datas da turma/);
+  assert.match(setupFieldsSource, /Definir primeira data/);
+  assert.match(setupFieldsSource, /O sistema recalcula todo o cronograma/);
   assert.match(
     dialogSource,
     /const requiresIndividualDate = cycleNumber === 2/,
@@ -277,21 +278,21 @@ test("ciclo 1 mantém escolha de vencimento e ciclo 2 exige data individual", ()
     dialogSource,
     /requiresIndividualDate \? 'INDIVIDUAL' : 'TURMA'/,
   );
-  assert.match(dialogSource, /Data individual obrigatória no 2º ciclo/);
-  assert.match(dialogSource, /vencimento da rematrícula — ou do primeiro item/);
-  assert.match(dialogSource, /mensalidade 1 vencerá no mês seguinte/);
+  assert.match(setupFieldsSource, /Data individual obrigatória no 2º ciclo/);
+  assert.match(setupFieldsSource, /vencimento da rematrícula — ou do primeiro item/);
+  assert.match(setupFieldsSource, /mensalidade 1 vencerá no mês seguinte/);
   assert.match(
     dialogSource,
     /useState\([\s\S]*?row\.cicloManual\.primeiroVencimentoSugerido \?\? ''/,
   );
   assert.match(
-    dialogSource,
-    /type="date" value=\{individualDate\} onChange=\{\(event\) => setIndividualDate\(event\.target\.value\)\}/,
+    setupFieldsSource,
+    /type="date" value=\{individualDate\} onChange=\{\(event\) => onDateChange\(event\.target\.value\)\}/,
   );
-  const dateInput = dialogSource.match(/<input type="date"[^>]*>/)?.[0];
+  const dateInput = setupFieldsSource.match(/<input type="date"[^>]*>/)?.[0];
   assert.ok(dateInput);
   assert.doesNotMatch(dateInput, /disabled|readOnly/);
-  assert.match(dialogSource, /um mês após o último boleto do ciclo anterior/);
+  assert.match(setupFieldsSource, /um mês após o último boleto do ciclo anterior/);
   assert.match(
     listSource,
     /<FinanceiroCicloManualDialog\s+key=\{currentManualCycleRow\.matriculaId\}/,
@@ -321,17 +322,18 @@ test("ciclo 1 mantém escolha de vencimento e ciclo 2 exige data individual", ()
 
 test("modo da matrícula existe no passo 1 e integra a primeira prévia", () => {
   const stepOne = between(dialogSource, "{step === 1 ? (", "{step === 2 && preview ? (");
-  assert.match(stepOne, /<FinanceiroCicloManualEnrollmentOptions/);
-  assert.match(stepOne, /mode=\{enrollmentMode\}/);
+  assert.match(stepOne, /<FinanceiroCicloManualSetupFields/);
+  assert.match(stepOne, /enrollmentMode=\{effectiveEnrollmentMode\}/);
+  assert.match(setupFieldsSource, /<FinanceiroCicloManualEnrollmentOptions/);
   assert.match(dialogSource, /useState<CicloManualModoMatricula \| null>\(null\)/);
-  assert.match(dialogSource, /cycleNumber !== 1 \|\| enrollmentMode !== null/);
+  assert.match(dialogSource, /cycleNumber !== 1 \|\| effectiveEnrollmentMode !== null/);
   assert.match(
     dialogSource,
     /mode === 'REGISTRO_SEM_BOLETO' && enrollmentMode !== 'REGISTRO_SEM_BOLETO'\) \{\s*setIndividualDate\(''\);\s*setDateSource\('INDIVIDUAL'\);/,
   );
   assert.match(
     dialogSource,
-    /useCicloManualRevision\(\s*revisionContext,\s*cycleNumber === 1 \? enrollmentMode : null,?\s*\)/,
+    /useCicloManualRevision\(\s*revisionContext,\s*cycleNumber === 1 \? effectiveEnrollmentMode : null,?\s*\)/,
   );
   assert.match(dialogSource, /revisao: revisionState\.revision/);
   assert.match(dialogSource, /primeiroVencimento: firstDueDate/);

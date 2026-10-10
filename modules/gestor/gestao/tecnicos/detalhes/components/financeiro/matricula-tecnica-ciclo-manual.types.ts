@@ -1,5 +1,6 @@
 import type { CorrectionSummary } from './bounded-correction';
 import type { ExternalTransferConditions } from '../academic/external-transfer.contract';
+import type { TransferEntrySnapshot } from '../../../../../../../supabase/functions/_shared/technical-transfer-schedule';
 export type MatriculaTecnicaCicloManualEstado =
   | "ELEGIVEL"
   | "BLOQUEADO"
@@ -16,7 +17,7 @@ export type MatriculaTecnicaCicloManualCriterio =
   | "TRANSFERENCIA_INTERNA_CANONICA"
   | "HISTORICO_EXTERNO";
 
-export interface CicloManualPlanoEntrada {
+export interface CicloManualPlanoEntradaLegado {
   cicloInicial: 1 | 2;
   quantidadeParcelas: number;
   primeiroVencimento: string;
@@ -25,6 +26,8 @@ export interface CicloManualPlanoEntrada {
   cobrarMensalidades?: boolean;
   condicoes?: ExternalTransferConditions;
 }
+
+export type CicloManualPlanoEntrada = CicloManualPlanoEntradaLegado | TransferEntrySnapshot;
 
 export type CicloManualModoMatricula = "BOLETO" | "REGISTRO_SEM_BOLETO" | "OMITIR";
 
@@ -90,6 +93,7 @@ export interface MatriculaTecnicaCicloManual {
 }
 
 export interface CicloFinanceiroTecnicoManualPreviewItem {
+  itemId?: string;
   destinoCobranca?: "BANESE" | "LOCAL";
   aplicacao?: { desconto: boolean; multaJuros: boolean };
   chave: string;
@@ -133,6 +137,8 @@ export interface CicloFinanceiroTecnicoManualTermos {
 }
 
 export interface CicloFinanceiroTecnicoManualPreview {
+  cronogramaEntradaVersao?: 3;
+  cronogramaEntradaFingerprint?: string;
   mensalidadesHabilitadas?: boolean;
   modoMatricula?: CicloManualModoMatricula;
   quantidadeBancaria?: number;

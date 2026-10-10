@@ -46,11 +46,8 @@ const ExternalTransferAcademicFields: React.FC<Props> = ({
       emptyMessage="Nenhum aluno encontrado" disabled={disabled || loading || loadError}
     />}
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      <label className="space-y-1 text-xs font-bold text-slate-600">Instituição de origem *
+      <label className="space-y-1 text-xs font-bold text-slate-600">Escola anterior / instituição de origem *
         <input className={inputClass} value={draft.institution} onChange={(event) => onChange('institution', event.target.value)} maxLength={300} />
-      </label>
-      <label className="space-y-1 text-xs font-bold text-slate-600">Curso de origem (opcional)
-        <input className={inputClass} value={draft.course} onChange={(event) => onChange('course', event.target.value)} maxLength={300} />
       </label>
       <label className="space-y-1 text-xs font-bold text-slate-600">Data efetiva da transferência *
         <input type="date" max={getMaceioIsoDate()} className={inputClass} value={draft.transferDate} onChange={(event) => onChange('transferDate', event.target.value)} />

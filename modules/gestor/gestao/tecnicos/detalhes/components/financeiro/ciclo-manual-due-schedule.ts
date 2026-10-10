@@ -9,7 +9,7 @@ import type {
 export type CicloManualScheduleItem = Pick<
   CicloFinanceiroTecnicoManualPreviewItem,
   'chave' | 'tipo' | 'numero'
->;
+> & { cronogramaEntradaVersao?: 3 };
 
 type RevisionField = keyof Omit<CicloFinanceiroTecnicoManualRevisaoItem, 'chave'>;
 
@@ -52,7 +52,10 @@ export const cicloManualScheduleFromPreview = (
 ): CicloManualScheduleItem[] => [
   ...preview.itens,
   ...(preview.matriculaSemBoleto ? [preview.matriculaSemBoleto] : []),
-].map(({ chave, tipo, numero }) => ({ chave, tipo, numero }));
+].map(({ chave, tipo, numero }) => ({
+  chave, tipo, numero,
+  ...(preview.cronogramaEntradaVersao === 3 ? { cronogramaEntradaVersao: 3 as const } : {}),
+}));
 
 export const changeCicloManualRevisionItem = (
   revision: CicloFinanceiroTecnicoManualRevisao,
@@ -61,6 +64,12 @@ export const changeCicloManualRevisionItem = (
   field: RevisionField,
   value: string,
 ): CicloFinanceiroTecnicoManualRevisao => {
+  if (schedule.some((item) => item.cronogramaEntradaVersao === 3)) {
+    return {
+      ...revision,
+      itens: revision.itens.map((item) => item.chave === key ? { ...item, [field]: value } : item),
+    };
+  }
   const changed = schedule.find((item) => item.chave === key);
   const installmentOriginDate = field === 'vencimento'
       && changed?.tipo === 'PARCELA' && changed.numero === 1
@@ -106,7 +115,8 @@ export const changeCicloManualEnrollmentMode = (
     modoMatricula: mode,
     emitirMatricula: mode === 'BOLETO',
   };
-  if (!schedule.some((item) => item.tipo === 'MATRICULA')) {
+  if (schedule.some((item) => item.cronogramaEntradaVersao === 3)
+    || !schedule.some((item) => item.tipo === 'MATRICULA')) {
     return changed;
   }
   const firstInstallment = schedule.find(

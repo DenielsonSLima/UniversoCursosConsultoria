@@ -1,4 +1,5 @@
 import type { CicloManualModoMatricula } from './matricula-tecnica-ciclo-manual.types';
+import { isFeeOnlyTransferSchedule } from '../../../../../../../supabase/functions/_shared/technical-transfer-schedule';
 import { isExternalTransferConditions } from '../academic/external-transfer.contract';
 
 type RecordValue = Record<string, unknown>;
@@ -9,11 +10,12 @@ export const isCycleEnrollmentMode = (value: unknown): value is CicloManualModoM
   ['BOLETO', 'REGISTRO_SEM_BOLETO', 'OMITIR'].includes(String(value));
 
 export const isFeeOnlyExternalTransferPlan = (plan: unknown, cycle: number) =>
-  isCycleRecord(plan) && [1, 2].includes(cycle) && plan.cobrarMensalidades === false
+  isCycleRecord(plan) && (plan.versao === 3 ? isFeeOnlyTransferSchedule(plan, cycle)
+  : [1, 2].includes(cycle) && plan.cobrarMensalidades === false
   && typeof plan.requestId === 'string'
   && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(plan.requestId)
   && isExternalTransferConditions(plan.condicoes)
-  && (cycle === 1 ? plan.condicoes.cobrarMatricula : plan.condicoes.cobrarRematricula);
+  && (cycle === 1 ? plan.condicoes.cobrarMatricula : plan.condicoes.cobrarRematricula));
 
 export const readCycleQuantities = (value: RecordValue, allowLocalOnly = false) => {
   const total = value.quantidadeItens;

@@ -1,6 +1,7 @@
 import { parseCorrectionSummary, usesCanonicalCycleAfterCorrection } from './bounded-correction';
 import { isFeeOnlyExternalTransferPlan, isProvenLocalEnrollment, readCycleQuantities } from './matricula-tecnica-ciclo-manual-destination';
 import { isExternalTransferConditions } from '../academic/external-transfer.contract';
+import { isTransferEntrySnapshot } from '../../../../../../../supabase/functions/_shared/technical-transfer-schedule';
 import type {
   MatriculaTecnicaCicloManual,
   MatriculaTecnicaCicloManualCriterio,
@@ -133,7 +134,8 @@ export const requireMatriculaTecnicaCicloManual = (
     (entry.cobrarMensalidades === undefined && entry.condicoes === undefined)
     || (typeof entry.cobrarMensalidades === 'boolean' && isExternalTransferConditions(entry.condicoes))
   );
-  const entryValid = isRecord(entry)
+  const scheduleEntry = isTransferEntrySnapshot(entry) ? entry : null;
+  const legacyEntryValid = isRecord(entry) && entry.versao !== 3
     && entryConditionsValid
     && [1, 2].includes(Number(entry.cicloInicial)) && Number.isInteger(entry.cicloInicial)
     && Number.isInteger(entry.quantidadeParcelas)
@@ -143,18 +145,26 @@ export const requireMatriculaTecnicaCicloManual = (
     && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entry.requestId)
     && (entry.cicloInicial === 2 ? isNonEmptyString(entry.justificativaCiclo2)
       : entry.justificativaCiclo2 === null);
+  const entryValid = legacyEntryValid || scheduleEntry !== null;
   const plannedInitialCycle = value.criterioElegibilidade === 'TRANSFERENCIA_PLANEJADA';
-  const noPlannedCharges = entryValid && entry.cobrarMensalidades === false
+  const noPlannedCharges = scheduleEntry ? scheduleEntry.itens.length === 0
+    : legacyEntryValid && entry.cobrarMensalidades === false
     && isExternalTransferConditions(entry.condicoes)
     && (entry.cicloInicial === 1 ? !entry.condicoes.cobrarMatricula : !entry.condicoes.cobrarRematricula);
-  const plannedTransitionValid = plannedInitialCycle && entryValid
+  const plannedTransitionValid = plannedInitialCycle && entryValid && isRecord(entry)
     && generated === null && baseline === 0 && [1, 2].includes(maximum!)
     && (noPlannedCharges
       ? state === 'BLOQUEADO' && value.podeGerar === false && isRecord(value.bloqueio)
         && value.bloqueio.codigo === 'SEM_COBRANCAS_PLANEJADAS'
       : state === 'ELEGIVEL' && value.podeGerar === true && value.bloqueio === null)
     && next === entry.cicloInicial
-    && value.primeiroVencimentoSugerido === entry.primeiroVencimento;
+    && (scheduleEntry
+      ? (scheduleEntry.maxCiclos === maximum && (noPlannedCharges
+        ? isIsoCalendarDate(value.primeiroVencimentoSugerido)
+        : value.primeiroVencimentoSugerido === [...scheduleEntry.itens]
+          .sort((a, b) => a.cicloNumero - b.cicloNumero
+            || Number(a.tipo === 'PARCELA') - Number(b.tipo === 'PARCELA') || a.ordem - b.ordem)[0]?.vencimento))
+      : value.primeiroVencimentoSugerido === entry.primeiroVencimento);
   const continuity = value.continuidadeFinanceira;
   const continuityValid = isRecord(continuity)
     && [continuity.matriculaOrigemId, continuity.transferenciaId].every((id) =>
