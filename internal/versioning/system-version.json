@@ -1,8 +1,8 @@
 {
-  "version": "4.8.203",
+  "version": "4.8.204",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 212,
+  "revision": 213,
   "releasedAt": "2026-10-10",
-  "summary": "Seleção de docentes respeita o polo da turma e preserva vínculos entre unidades"
+  "summary": "Diário calcula médias com O opcional por aluno e preserva duas casas decimais"
 }

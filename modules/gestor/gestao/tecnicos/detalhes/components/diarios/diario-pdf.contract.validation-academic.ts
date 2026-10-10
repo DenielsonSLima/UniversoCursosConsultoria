@@ -315,7 +315,7 @@ const assertGradeValues = (
 ) => {
   if (grade.resultado_final !== "APROVEITADO") {
     instrumentKeys.forEach((key) => {
-      if (instruments[key] === true && grade[key] === null) {
+      if (key !== "o" && instruments[key] === true && grade[key] === null) {
         fail(
           `gradesMap.${studentId}.${key}`,
           "nota ativa ausente no snapshot fechado",
@@ -328,19 +328,26 @@ const assertGradeValues = (
         );
       }
     });
-    const expectedPartial = Math.min(
-      10,
-      Math.round(
-        instrumentKeys.reduce(
-          (sum, key) =>
-            sum + (instruments[key] === true ? Number(grade[key]) : 0),
-          0,
-        ) * 10,
-      ) / 10,
+    const filledActiveKeys = instrumentKeys.filter(
+      (key) => instruments[key] === true && grade[key] !== null,
     );
+    if (filledActiveKeys.length === 0) {
+      fail(
+        `gradesMap.${studentId}.media_parcial`,
+        "nenhuma nota ativa lançada; estado pendente incompatível com snapshot fechado",
+      );
+    }
+    const sum = filledActiveKeys.reduce(
+      (total, key) => total + Number(grade[key]),
+      0,
+    );
+    const expectedPartial = Math.min(10, Math.round(sum * 100) / 100);
+    // Snapshots já congelados podem conter o arredondamento legado de uma casa.
+    const legacyPartial = Math.min(10, Math.round(sum * 10) / 10);
     if (
       typeof grade.media_parcial !== "number" ||
-      !nearlyEqual(grade.media_parcial, expectedPartial, 0.001)
+      (!nearlyEqual(grade.media_parcial, expectedPartial, 0.001) &&
+        !nearlyEqual(grade.media_parcial, legacyPartial, 0.001))
     ) {
       fail(
         `gradesMap.${studentId}.media_parcial`,
@@ -348,9 +355,9 @@ const assertGradeValues = (
       );
     }
     const expectedFinal =
-      typeof grade.rec === "number" && grade.rec > expectedPartial
+      typeof grade.rec === "number" && grade.rec > grade.media_parcial
         ? grade.rec
-        : expectedPartial;
+        : grade.media_parcial;
     if (
       typeof grade.media_final !== "number" ||
       !nearlyEqual(grade.media_final, expectedFinal, 0.001)
