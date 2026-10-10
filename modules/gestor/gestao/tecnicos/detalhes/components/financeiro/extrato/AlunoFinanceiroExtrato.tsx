@@ -13,13 +13,17 @@ import {
 import { alunoExtratoService, AlunoExtratoRecebivel } from './alunoExtrato.service';
 import ToastNotification, { useToast } from '../../../../../../parceiros/components/shared/ToastNotification';
 import { ReceivableAmountSummary } from '../../../../../../financeiro/receber/components/modalidade-receber/ReceivableAmountSummary';
-import { paymentMethodLabel } from '../../../../../../financeiro/receber/components/modalidade-receber/modalidade-receber.utils';
 import { gestorBanesePaymentService } from '../../../../../../financeiro/receber/banese/gestor-banese-payment.service';
-import { extratoChargeAction, extratoChargePresentation, extratoPaymentOrigin } from './alunoExtrato.presentation';
+import { extratoChargeAction, extratoChargePresentation, extratoPaymentMethod, extratoPaymentOrigin } from './alunoExtrato.presentation';
 import { alunoExtratoQueryKey, useAlunoExtratoRealtime } from './useAlunoExtratoRealtime';
+import { canSettleExtratoReceivable } from './alunoExtrato.settlement-policy';
+import { useAlunoExtratoSettlement } from './useAlunoExtratoSettlement';
+import AlunoExtratoSettlementModal from './AlunoExtratoSettlementModal';
 
 interface AlunoFinanceiroExtratoProps {
   matriculaId: string;
+  turmaId?: string;
+  canSettle?: boolean;
   onBack: () => void;
 }
 
@@ -44,7 +48,7 @@ const StatusBadge = ({ status }: { status: string }) => (
   </span>
 );
 
-const AlunoFinanceiroExtrato: React.FC<AlunoFinanceiroExtratoProps> = ({ matriculaId, onBack }) => {
+const AlunoFinanceiroExtrato: React.FC<AlunoFinanceiroExtratoProps> = ({ matriculaId, turmaId, canSettle = false, onBack }) => {
   const { toasts, removeToast, toast } = useToast();
   const [openingId, setOpeningId] = useState<string | null>(null);
   useAlunoExtratoRealtime(matriculaId);
@@ -53,6 +57,7 @@ const AlunoFinanceiroExtrato: React.FC<AlunoFinanceiroExtratoProps> = ({ matricu
     queryFn: () => alunoExtratoService.getExtrato(matriculaId),
     staleTime: 10_000,
   });
+  const settlement = useAlunoExtratoSettlement({ matriculaId, turmaId, canSettle, recebiveis: data?.recebiveis, toast });
 
   const copyChargeLink = async (item: AlunoExtratoRecebivel) => {
     const url = item.asaasInvoiceUrl || item.asaasBankSlipUrl;
@@ -110,6 +115,7 @@ const AlunoFinanceiroExtrato: React.FC<AlunoFinanceiroExtratoProps> = ({ matricu
   return (
     <div className=" space-y-6">
       <ToastNotification toasts={toasts} onRemove={removeToast} />
+      <AlunoExtratoSettlementModal controller={settlement} />
       <button
         onClick={onBack}
         className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50"
@@ -179,6 +185,7 @@ const AlunoFinanceiroExtrato: React.FC<AlunoFinanceiroExtratoProps> = ({ matricu
               {data.recebiveis.map((item, index) => {
                 const charge = extratoChargePresentation(item);
                 const action = extratoChargeAction(item);
+                const canReceive = canSettleExtratoReceivable(item, canSettle);
                 return (
                 <tr key={item.id} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'}>
                   <td className="px-5 py-4">
@@ -194,7 +201,7 @@ const AlunoFinanceiroExtrato: React.FC<AlunoFinanceiroExtratoProps> = ({ matricu
                   <td className="px-5 py-4">
                     <div className="space-y-1.5">
                       <StatusBadge status={item.status} />
-                      <p className="text-[10px] font-bold text-slate-500">Forma: {paymentMethodLabel(item)}</p>
+                      <p className="text-[10px] font-bold text-slate-500">Forma: {extratoPaymentMethod(item)}</p>
                       <p className="text-[10px] font-bold text-slate-500">Origem: {extratoPaymentOrigin(item)}</p>
                       {item.status === 'PENDENTE' && <p className="text-[10px] font-bold text-slate-500">Aguardando pagamento</p>}
                       {item.dataPagamento && <p className="text-[10px] font-bold text-emerald-700">Pago: {formatDate(item.dataPagamento)}</p>}
@@ -211,7 +218,12 @@ const AlunoFinanceiroExtrato: React.FC<AlunoFinanceiroExtratoProps> = ({ matricu
                     {charge.detail && <p className="mt-2 max-w-[220px] text-[10px] font-bold text-slate-500">{charge.detail}</p>}
                   </td>
                   <td className="px-5 py-4">
-                    <div className="flex gap-2">
+                    <div className="flex flex-col gap-2">
+                      {canReceive && <button type="button" onClick={() => settlement.open(item, data.alunoNome)}
+                        disabled={settlement.pending}
+                        className="rounded-xl bg-[#001a33] px-3 py-2.5 text-[10px] font-black uppercase tracking-wider text-white hover:bg-emerald-700 disabled:opacity-50">
+                        Receber
+                      </button>}
                       {action === 'external' && <button type="button" onClick={() => copyChargeLink(item)} className="rounded-xl border border-emerald-200 p-2 text-emerald-700" title="Copiar link" aria-label="Copiar link de cobrança">
                         <Copy size={14} />
                       </button>}
@@ -220,7 +232,7 @@ const AlunoFinanceiroExtrato: React.FC<AlunoFinanceiroExtratoProps> = ({ matricu
                         {openingId === item.id ? <Loader2 size={14} className="animate-spin" /> : <ExternalLink size={14} />}
                         {action === 'banese' ? 'Abrir boleto' : 'Abrir cobrança'}
                       </button>}
-                      {!action && <span className="text-[10px] font-bold text-slate-400">—</span>}
+                      {!action && !canReceive && <span className="text-[10px] font-bold text-slate-400">—</span>}
                     </div>
                   </td>
                 </tr>

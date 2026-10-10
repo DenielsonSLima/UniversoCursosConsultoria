@@ -8,6 +8,7 @@ import {
   paymentGatewayCode,
   paymentGatewayLabel,
   paymentGatewayStatusLabel,
+  paymentMethodLabel,
   paymentOriginLabel,
 } from '../../../../../../financeiro/receber/components/modalidade-receber/modalidade-receber.utils';
 import type { AlunoExtratoRecebivel } from './alunoExtrato.mapper';
@@ -23,6 +24,16 @@ export const extratoPaymentOrigin = (item: AlunoExtratoRecebivel) => (
       ? 'Banese importado' : paymentOriginLabel(item)
 );
 
+export const extratoPaymentMethod = (item: AlunoExtratoRecebivel) => {
+  if (item.status === 'PAGO' && item.origemPagamento === 'PRESENCIAL') {
+    const manualMethods: Record<string, string> = {
+      PIX: 'Pix', BOLETO: 'Boleto', CARTAO: 'Cartão', DINHEIRO: 'Dinheiro',
+    };
+    return manualMethods[item.formaPagamento || ''] || 'Não definido';
+  }
+  return paymentMethodLabel(item);
+};
+
 export const extratoChargePresentation = (item: AlunoExtratoRecebivel) => {
   const cancellation = baneseCancellationLabel(item);
   if (cancellation) return { label: cancellation, detail: '', tone: 'neutral' };
@@ -34,16 +45,19 @@ export const extratoChargePresentation = (item: AlunoExtratoRecebivel) => {
   if (item.origemPagamento === 'SISTEMA_ANTERIOR' && !paymentGatewayCode(item)) {
     return { label: 'Sistema anterior', detail: 'Somente consulta', tone: 'neutral' };
   }
+  const gatewayStatus = String(item.asaasStatus || '').toUpperCase();
+  if (['DELETED', 'CANCELED', 'CANCELLED', 'REFUNDED'].includes(gatewayStatus)) {
+    return { label: paymentGatewayStatusLabel(item), detail: '', tone: 'neutral' };
+  }
+  // Manual settlement cancels the bank title. A stale cycle issuance state
+  // must never tell the operator to reissue a charge that is already paid.
+  if (item.status === 'PAGO') return { label: 'Pagamento registrado', detail: '', tone: 'confirmed' };
   if (isBaneseIdentityQuarantined(item)) {
     return { label: 'Boleto em revisão', detail: 'Dados bancários em conferência.', tone: 'warning' };
   }
   const notice = receivableIssuanceNotice(item);
   if (notice) return { label: notice.title, detail: notice.message, tone: 'neutral' };
   const gateway = paymentGatewayCode(item);
-  const gatewayStatus = String(item.asaasStatus || '').toUpperCase();
-  if (['DELETED', 'CANCELED', 'CANCELLED', 'REFUNDED'].includes(gatewayStatus)) {
-    return { label: paymentGatewayStatusLabel(item), detail: '', tone: 'neutral' };
-  }
   if (gateway && (item.emissaoCicloStatus === 'EMITIDO' || item.asaasPaymentId
     || item.boletoNossoNumero || item.asaasInvoiceUrl || item.asaasBankSlipUrl)) {
     return {
@@ -58,8 +72,8 @@ export const extratoChargePresentation = (item: AlunoExtratoRecebivel) => {
   return { label: 'Sem boleto emitido', detail: '', tone: 'neutral' };
 };
 
-// This screen only opens existing documents. It never emits or settles a
-// title. Missing server capabilities do not grant permission to open Banese.
+// This action only opens existing documents. Missing server capabilities
+// do not grant permission to open Banese.
 export const extratoChargeAction = (item: AlunoExtratoRecebivel): 'banese' | 'external' | null => {
   if (!['PENDENTE', 'VENCIDO'].includes(item.status)
     || isProesc(item) || item.operationCapabilities?.sourceSystem === 'CONFLICT'

@@ -14,6 +14,8 @@ const { build } = requireTool('esbuild');
 const { chromium } = requireTool('playwright');
 const output = resolve(process.env.ALUNO_EXTRATO_ARTIFACTS || '/tmp/aluno-extrato');
 let browser, javascript, css;
+const compileOnly = process.env.ALUNO_EXTRATO_COMPILE_ONLY === '1';
+const browserTest = compileOnly ? test.skip : test;
 
 before(async () => {
   await mkdir(output, { recursive: true });
@@ -45,6 +47,7 @@ before(async () => {
         rpc: supabaseStub,
         academic: 'export const formatMatricula=()=>"TEST-0001";',
         pdf: 'export const financialReportValueToText=()=>"";',
+        finance: 'export const financeiroService = new Proxy({}, {get(){throw new Error("Financial mutation forbidden in read-only test");}});',
         toast: `import React,{useState} from 'react';
           export function useToast(){const [toasts,setToasts]=useState([]);const add=(title,message)=>setToasts(list=>[...list,{title,message}]);
             return {toasts,removeToast(){},toast:{success:add,error:add,info:add,warning:add}};}
@@ -53,6 +56,7 @@ before(async () => {
       for (const [filter, path] of [
         [/lib\/supabase$/, 'rpc'], [/lib\/academicUtils$/, 'academic'],
         [/shared\/ToastNotification$/, 'toast'], [/financial-report\.vector-pdf\.resources$/, 'pdf'],
+        [/financeiro\.service$/, 'finance'],
       ]) plugin.onResolve({ filter }, () => ({ path, namespace: 'controlled' }));
       plugin.onLoad({ filter: /.*/, namespace: 'controlled' }, ({ path }) => ({ contents: stubs[path], loader: 'tsx', resolveDir: root }));
     } }],
@@ -63,10 +67,14 @@ before(async () => {
   css = (await requireTool('postcss')([requireTool('tailwindcss')({ ...config,
     content: [resolve(directory, '*.tsx'), resolve(root, 'modules/gestor/financeiro/receber/components/modalidade-receber/ReceivableAmountSummary.tsx')],
   })]).process(styles, { from: resolve(root, 'styles.css') })).css;
+  if (compileOnly) return;
   browser = await chromium.launch({ headless: true, ...(process.env.EAD_UI_BROWSER_EXECUTABLE
     ? { executablePath: process.env.EAD_UI_BROWSER_EXECUTABLE } : { channel: 'chromium' }) });
 });
 after(async () => { await browser?.close(); });
+test('compile the real statement bundle without launching a browser', { skip: !compileOnly }, () => {
+  assert.ok(javascript.length > 0);
+});
 
 async function open(fixture = createFixture(), width = 1440) {
   const context = await browser.newContext({ viewport: { width, height: 1000 } });
@@ -95,7 +103,7 @@ async function assertReadOnlyCalls(page) {
     || call.kind === 'function' && call.name === 'banese-boleto-document'));
 }
 
-test('an issued Banese boleto remains unpaid and opens only the existing authenticated document', async () => {
+browserTest('an issued Banese boleto remains unpaid and opens only the existing authenticated document', async () => {
   const { page, context, errors } = await open();
   try {
     const installment = await row(page);
@@ -116,7 +124,7 @@ test('an issued Banese boleto remains unpaid and opens only the existing authent
   } finally { await context.close(); }
 });
 
-test('payment and reversal events refresh only the mounted enrollment statement', async () => {
+browserTest('payment and reversal events refresh only the mounted enrollment statement', async () => {
   const { page, context, errors } = await open();
   try {
     await row(page);
@@ -146,7 +154,7 @@ test('payment and reversal events refresh only the mounted enrollment statement'
   } finally { await context.close(); }
 });
 
-test('reconnection reconciles a missed settlement without changing another enrollment', async () => {
+browserTest('reconnection reconciles a missed settlement without changing another enrollment', async () => {
   const { page, context, errors } = await open();
   try {
     await row(page);
@@ -168,7 +176,7 @@ test('reconnection reconciles a missed settlement without changing another enrol
   } finally { await context.close(); }
 });
 
-test('local, imported and canceled charges never gain an issuance or settlement action', async () => {
+browserTest('local, imported and canceled charges never gain an issuance or settlement action', async () => {
   const local = issuedReceivable({ descricao: 'Matrícula local', gateway_provider: null, gateway_payment_id: null,
     gateway_status: null, destino_cobranca: 'LOCAL', emissao_ciclo_status: 'NAO_APLICAVEL', origem_pagamento: 'LOCAL' });
   const imported = issuedReceivable({ id: 'legacy', descricao: 'Histórico sintético', origem_pagamento: 'SISTEMA_ANTERIOR',
@@ -188,7 +196,7 @@ test('local, imported and canceled charges never gain an issuance or settlement 
   } finally { await context.close(); }
 });
 
-test('legacy Asaas link is retained without submitting a new bank operation', async () => {
+browserTest('legacy Asaas link is retained without submitting a new bank operation', async () => {
   const legacy = issuedReceivable({ gateway_provider: null, gateway_payment_id: null, gateway_status: null,
     gateway_payment_method: null, emissao_gerenciada_turma: false, emissao_ciclo_status: null,
     destino_cobranca: null, asaas_payment_id: 'legacy-id', asaas_status: 'PENDING',
@@ -207,7 +215,7 @@ test('legacy Asaas link is retained without submitting a new bank operation', as
   } finally { await context.close(); }
 });
 
-test('denied document access stays denied and produces visible feedback', async () => {
+browserTest('denied document access stays denied and produces visible feedback', async () => {
   const { page, context, errors } = await open(createFixture(undefined, { documentError: true }));
   try {
     await (await row(page)).getByRole('button', { name: 'Abrir boleto', exact: true }).click();
@@ -217,7 +225,7 @@ test('denied document access stays denied and produces visible feedback', async 
   } finally { await context.close(); }
 });
 
-test('failed statement read displays an error without presenting stale financial totals', async () => {
+browserTest('failed statement read displays an error without presenting stale financial totals', async () => {
   const { page, context, errors } = await open(createFixture(undefined, { readError: true }));
   try {
     await page.getByText('Não foi possível carregar o extrato financeiro.', { exact: true }).waitFor();
