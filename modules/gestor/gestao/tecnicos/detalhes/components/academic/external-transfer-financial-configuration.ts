@@ -65,9 +65,14 @@ export const updateExternalTransferFinancialConfiguration = <K extends keyof Ext
   value: ExternalTransferCycleValues[K],
 ): ExternalTransferFinancialConfigurations => {
   const previous = configurations[cycle];
+  const booleanChange = typeof value === 'boolean';
+  if (booleanChange && previous[field] === value) return configurations;
+  // A second toggle restores a boolean flag to its last applied state.
+  const changedKeys = booleanChange && previous.changedKeys.includes(field)
+    ? previous.changedKeys.filter((key) => key !== field)
+    : [...new Set([...previous.changedKeys, field])];
   return { ...configurations, [cycle]: {
-    ...previous, [field]: value,
-    changedKeys: [...new Set([...previous.changedKeys, field])],
+    ...previous, [field]: value, changedKeys,
   } };
 };
 

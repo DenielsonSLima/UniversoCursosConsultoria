@@ -6,6 +6,12 @@ Histórico anterior: [27/09/2026 — versões 4.8.117 a 4.8.127](./changelog/202
 
 Histórico arquivado: [27/09/2026 — versões 4.8.115 a 4.8.116](./changelog/2026-09-27-versoes-4-8-115-a-4-8-116.md), [27/09/2026 — versão 4.8.114](./changelog/2026-09-27-versao-4-8-114.md), [27/09/2026 — versão 4.8.113](./changelog/2026-09-27-versao-4-8-113.md), [27/09/2026 — versão 4.8.112](./changelog/2026-09-27-versao-4-8-112.md), [27/09/2026 — versão 4.8.111](./changelog/2026-09-27-versao-4-8-111.md), [25/09/2026 a 26/09/2026 — versões 4.8.91 a 4.8.110](./changelog/2026-09-25-a-2026-09-26-versoes-4-8-91-a-4-8-110.md).
 
+## [4.8.202] - 2026-10-10
+
+- Revisão financeira reconhece o mesmo cronograma retornado pelo banco, sem exigir nova conferência por diferença na ordem dos campos da resposta.
+- Reselecionar o mesmo aluno no recebimento de transferência preserva origem, notas, plano financeiro e revisão, mantendo as cinco etapas disponíveis.
+- Desligar e religar opções financeiras antes de aplicá-las preserva as condições individuais das parcelas.
+
 ## [4.8.201] - 2026-10-10
 
 - Turmas técnicas aceitam novas matrículas diretas até 365 dias após a data de início, inclusive; após o prazo, o ingresso exige transferência.
