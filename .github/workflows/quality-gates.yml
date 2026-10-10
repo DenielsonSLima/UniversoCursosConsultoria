@@ -324,6 +324,7 @@ jobs:
           JS
           node --test /tmp/diario-ui.test.cjs
           deno test --allow-read --allow-env modules/gestor/gestao/tecnicos/detalhes/components/diarios/diario-pdf-snapshot-contract.test.ts
+          deno test --allow-read --allow-env modules/gestor/gestao/tecnicos/detalhes/components/diarios/diario-pdf-frequency-layout.test.ts
           deno test --allow-read --allow-env modules/gestor/gestao/tecnicos/detalhes/components/diarios/diario-pdf-documentary.test.ts modules/gestor/gestao/tecnicos/detalhes/components/diarios/diario-pdf-server-boundary.test.ts
 
       - name: Testar conexões Proesc V1 e V2
@@ -426,6 +427,7 @@ jobs:
           node supabase/tests/student_identity_issuers.isolated.test.mjs
           node supabase/tests/technical_teacher_polo_scope.isolated.test.mjs
           node --test supabase/tests/diario_optional_o_and_precision.isolated.test.mjs
+          node --test supabase/tests/diario_sum_filled_instruments.isolated.test.mjs
           node supabase/tests/caixa_review_drilldown.isolated.test.mjs
           node supabase/tests/proesc_administrative_archive.isolated.test.mjs
           node supabase/tests/proesc_portal_payment_confirmation.isolated.test.mjs

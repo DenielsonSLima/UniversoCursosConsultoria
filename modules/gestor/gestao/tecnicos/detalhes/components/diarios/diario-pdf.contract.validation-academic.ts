@@ -315,12 +315,6 @@ const assertGradeValues = (
 ) => {
   if (grade.resultado_final !== "APROVEITADO") {
     instrumentKeys.forEach((key) => {
-      if (key !== "o" && instruments[key] === true && grade[key] === null) {
-        fail(
-          `gradesMap.${studentId}.${key}`,
-          "nota ativa ausente no snapshot fechado",
-        );
-      }
       if (instruments[key] === false && grade[key] !== null) {
         fail(
           `gradesMap.${studentId}.${key}`,

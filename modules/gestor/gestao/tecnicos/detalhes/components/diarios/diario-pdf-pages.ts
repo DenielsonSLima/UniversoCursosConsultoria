@@ -83,7 +83,7 @@ export const drawFrequencyPages = (
   institution: CanonicalInstitutionalHeader,
 ) => {
   const isBlank = props.exportMode === "EM_BRANCO";
-  groupAulasBySessionLimit(props.aulas, 10).forEach((aulaGroup, aulaIndex) => {
+  groupAulasBySessionLimit(props.aulas, 12).forEach((aulaGroup, aulaIndex) => {
     const sessoesNoBloco = aulaGroup.reduce(
       (total, aula) => total + aula.sessoes.length,
       0,
@@ -145,12 +145,14 @@ export const drawFrequencyPages = (
         ]),
         widths: [
           8,
-          60,
-          ...aulaGroup.flatMap((aula) => aula.sessoes.map(() => 30)),
-          15,
+          84,
+          ...aulaGroup.flatMap((aula) =>
+            aula.sessoes.map(() => (CONTENT_WIDTH - 8 - 84 - 12) / sessoesNoBloco)
+          ),
+          12,
         ],
         startY: STANDARD_CONTENT_TOP,
-        fontSize: sessoesNoBloco > 8 ? 5.4 : 6,
+        fontSize: 6,
         rowHeight: (STANDARD_CONTENT_BOTTOM - STANDARD_CONTENT_TOP - 9.5) /
           rowsPerPage,
       });
