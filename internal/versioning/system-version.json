@@ -1,8 +1,8 @@
 {
-  "version": "4.8.205",
+  "version": "4.8.206",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 214,
+  "revision": 215,
   "releasedAt": "2026-10-10",
-  "summary": "Diário soma notas preenchidas e reúne seis datas de frequência por bloco"
+  "summary": "Sessão reconhece atividade em painéis internos e sincroniza abas antes de expirar"
 }
