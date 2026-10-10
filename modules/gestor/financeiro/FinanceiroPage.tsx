@@ -13,20 +13,19 @@ import {
 } from 'lucide-react';
 import { FinanceiroTabId } from '../access-control';
 
-// Submodule Tab Imports
-import FinanceiroResumoTab from './resumo/FinanceiroResumoTab';
-import ReceberTab from './receber/ReceberTab';
-import DespesasTab from './despesas/DespesasTab';
-import EmprestimosTab from './emprestimos/EmprestimosTab';
-import ConveniosTab from './convenios/ConveniosTab';
-import TransferenciasTab from './transferencias/TransferenciasTab';
-import ConciliacaoBancariaTab from './conciliacao-bancaria/ConciliacaoBancariaTab';
-import OutrosDebitosTab from './outros-debitos/OutrosDebitosTab';
-import OutrosCreditosTab from './outros-creditos/OutrosCreditosTab';
 import FinancialUnderlineTabs from './components/FinancialUnderlineTabs';
 import { canOpenFinancialSection } from './financeiro-sections';
 import { useFinancialSection } from './hooks/useFinancialSection';
 
+const FinanceiroResumoTab = lazy(() => import('./resumo/FinanceiroResumoTab'));
+const ReceberTab = lazy(() => import('./receber/ReceberTab'));
+const DespesasTab = lazy(() => import('./despesas/DespesasTab'));
+const EmprestimosTab = lazy(() => import('./emprestimos/EmprestimosTab'));
+const ConveniosTab = lazy(() => import('./convenios/ConveniosTab'));
+const TransferenciasTab = lazy(() => import('./transferencias/TransferenciasTab'));
+const ConciliacaoBancariaTab = lazy(() => import('./conciliacao-bancaria/ConciliacaoBancariaTab'));
+const OutrosDebitosTab = lazy(() => import('./outros-debitos/OutrosDebitosTab'));
+const OutrosCreditosTab = lazy(() => import('./outros-creditos/OutrosCreditosTab'));
 const RenegociacoesTab = lazy(() => import('./renegociacoes/RenegociacoesTab'));
 
 type FinancialTab = FinanceiroTabId;
@@ -145,7 +144,9 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ poloId, poloName, isMat
         tabIndex={0}
         className="min-h-[450px] rounded-3xl border border-slate-100 bg-slate-50/40 p-4 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 md:p-6"
       >
-        {renderActiveTab()}
+        <Suspense fallback={<p role="status" className="p-6 text-sm text-slate-500">Carregando seção financeira…</p>}>
+          {renderActiveTab()}
+        </Suspense>
       </div>
     </div>
   );

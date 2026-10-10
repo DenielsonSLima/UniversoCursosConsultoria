@@ -1,8 +1,8 @@
 {
-  "version": "4.8.199",
+  "version": "4.8.200",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 208,
+  "revision": 209,
   "releasedAt": "2026-10-10",
-  "summary": "Transferência externa com nosso curso técnico e cronograma de cobranças editável por ciclo e item"
+  "summary": "Build sem avisos de chunks/importação, carregamento sob demanda e fontes Inter preservadas como assets"
 }

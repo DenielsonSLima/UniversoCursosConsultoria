@@ -1,20 +1,23 @@
 import type { jsPDF } from 'jspdf';
+import { INTER_WEIGHTS, invalidateInterFontData, loadInterFontData } from './pdf-assets/inter-fonts';
 
 export const EAD_INTER_FAMILY = 'Universo EAD Inter';
-const WEIGHTS = [400, 600, 700, 900] as const;
 let fontFaces: Promise<void> | null = null;
-
-const bytes = (value: string) => Uint8Array.from(atob(value), character => character.charCodeAt(0));
 
 /** Identical original TTF bytes feed the DOM measurement and the embedded PDF. */
 export async function loadEadCertificateFontFaces(family = EAD_INTER_FAMILY): Promise<void> {
   const load = async () => {
-    const { EAD_INTER_TTF } = await import('./pdf-assets/inter-ttf');
-    await Promise.all(WEIGHTS.map(async weight => {
-      const face = new window.FontFace(family, bytes(EAD_INTER_TTF[weight]).buffer, { weight: String(weight), style: 'normal' });
-      await face.load();
-      document.fonts.add(face);
-    }));
+    try {
+      const fonts = await loadInterFontData();
+      await Promise.all(INTER_WEIGHTS.map(async weight => {
+        const face = new window.FontFace(family, fonts[weight].buffer, { weight: String(weight), style: 'normal' });
+        await face.load();
+        document.fonts.add(face);
+      }));
+    } catch (error) {
+      invalidateInterFontData();
+      throw error;
+    }
   };
   if (family !== EAD_INTER_FAMILY) return load();
   if (!fontFaces) fontFaces = load().catch(error => { fontFaces = null; throw error; });
@@ -23,12 +26,12 @@ export async function loadEadCertificateFontFaces(family = EAD_INTER_FAMILY): Pr
 
 export async function prepareEadCertificateFonts(pdf: jsPDF, root: HTMLElement) {
   await loadEadCertificateFontFaces();
-  const { EAD_INTER_TTF } = await import('./pdf-assets/inter-ttf');
+  const fonts = await loadInterFontData();
   const aliases: Record<string, string> = {};
-  WEIGHTS.forEach(weight => {
+  INTER_WEIGHTS.forEach(weight => {
     const family = `EadInter${weight}`;
     const file = `${family}.ttf`;
-    pdf.addFileToVFS(file, EAD_INTER_TTF[weight]);
+    pdf.addFileToVFS(file, fonts[weight].base64);
     pdf.addFont(file, family, 'normal');
     aliases[`${EAD_INTER_FAMILY}:${weight}`] = family;
   });

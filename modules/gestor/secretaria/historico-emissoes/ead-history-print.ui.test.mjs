@@ -51,6 +51,7 @@ before(async () => {
         createRoot(document.getElementById('root')).render(<History/>);
       };`, loader: 'tsx', resolveDir: directory },
     bundle: true, format: 'iife', write: false, define: { 'import.meta.env': '{}' },
+    loader: { '.ttf': 'dataurl' },
     nodePaths: dependencies ? [dependencies] : [],
     plugins: [{ name: 'history-controlled-io', setup(plugin) {
       plugin.onResolve({ filter: /.*/ }, args => Object.hasOwn(historyPrintIo, args.path)

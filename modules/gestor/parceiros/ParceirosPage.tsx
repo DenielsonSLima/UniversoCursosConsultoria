@@ -13,23 +13,25 @@ import {
 import ParceirosKpis from './components/ParceirosKpis';
 import ParceirosFilters from './components/ParceirosFilters';
 import ParceirosList from './components/ParceirosList';
-import ParceiroAlunoDetalhes from './components/viewparceiros/aluno/ParceiroAlunoDetalhes';
-import ParceiroProfessorDetalhes from './components/viewparceiros/professor/ParceiroProfessorDetalhes';
-import ParceiroPJDetalhes from './components/viewparceiros/pj/ParceiroPJDetalhes';
-import ParceiroPFDetalhes from './components/viewparceiros/pf/ParceiroPFDetalhes';
-import ParceirosExportModal from './components/export/ParceirosExportModal';
 import ToastNotification, { useToast } from './components/shared/ToastNotification';
 import ParceiroSelectionModal from './components/ParceiroSelectionModal';
-import ParceiroFormHost from './components/ParceiroFormHost';
 import EnrollmentModal from './components/EnrollmentModal';
 import DeleteParceiroModal from './components/DeleteParceiroModal';
 import { useParceirosFilters, ParceirosTabType } from './hooks/useParceirosFilters';
 import { useParceirosMutations } from './hooks/useParceirosMutations';
 import { useParceirosQueries } from './hooks/useParceirosQueries';
 import { filterTurmasByModalidades } from './parceiros-turmas.utils';
-import ResponsaveisTab from './responsaveis/ResponsaveisTab';
-import CoordenacoesTab from './coordenacoes/CoordenacoesTab';
 import type { GestorGlobalSearchResult } from '../global-search/gestor-global-search.types';
+
+const ParceiroAlunoDetalhes = React.lazy(() => import('./components/viewparceiros/aluno/ParceiroAlunoDetalhes'));
+const ParceiroProfessorDetalhes = React.lazy(() => import('./components/viewparceiros/professor/ParceiroProfessorDetalhes'));
+const ParceiroPJDetalhes = React.lazy(() => import('./components/viewparceiros/pj/ParceiroPJDetalhes'));
+const ParceiroPFDetalhes = React.lazy(() => import('./components/viewparceiros/pf/ParceiroPFDetalhes'));
+const ParceiroFormHost = React.lazy(() => import('./components/ParceiroFormHost'));
+const ParceirosExportModal = React.lazy(() => import('./components/export/ParceirosExportModal'));
+const ResponsaveisTab = React.lazy(() => import('./responsaveis/ResponsaveisTab'));
+const CoordenacoesTab = React.lazy(() => import('./coordenacoes/CoordenacoesTab'));
+const loadingPartnerSection = <p role="status" className="p-6 text-sm text-slate-500">Carregando cadastro…</p>;
 
 export type ParceiroFormType = 'aluno' | 'professor' | 'responsavel' | 'selection' | 'pf' | 'pj';
 type HostedParceiroFormType = Exclude<ParceiroFormType, 'responsavel'>;
@@ -219,16 +221,25 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
       onRequestScrollTop?.();
     };
 
-    if (selectedParceiro.tipo === 'Aluno') {
-      return <>{toastNotification}<ParceiroAlunoDetalhes key={selectedParceiro.id} alunoInicial={selectedParceiro} onBack={handleBackFromDetails} onRequestScrollTop={onRequestScrollTop} /></>;
-    }
-    if (selectedParceiro.tipo === 'Professor') {
-      return <>{toastNotification}<ParceiroProfessorDetalhes key={selectedParceiro.id} professorInicial={selectedParceiro} onBack={handleBackFromDetails} /></>;
-    }
-    if (selectedParceiro.tipo === 'PJ') {
-      return <>{toastNotification}<ParceiroPJDetalhes key={selectedParceiro.id} pjInicial={selectedParceiro} onBack={handleBackFromDetails} /></>;
-    }
-    return <>{toastNotification}<ParceiroPFDetalhes key={selectedParceiro.id} pfInicial={selectedParceiro} onBack={handleBackFromDetails} /></>;
+    const detail = selectedParceiro.tipo === 'Aluno' ? (
+      <ParceiroAlunoDetalhes key={selectedParceiro.id} alunoInicial={selectedParceiro}
+        onBack={handleBackFromDetails} onRequestScrollTop={onRequestScrollTop} />
+    ) : selectedParceiro.tipo === 'Professor' ? (
+      <ParceiroProfessorDetalhes key={selectedParceiro.id} professorInicial={selectedParceiro}
+        onBack={handleBackFromDetails} />
+    ) : selectedParceiro.tipo === 'PJ' ? (
+      <ParceiroPJDetalhes key={selectedParceiro.id} pjInicial={selectedParceiro}
+        onBack={handleBackFromDetails} />
+    ) : (
+      <ParceiroPFDetalhes key={selectedParceiro.id} pfInicial={selectedParceiro}
+        onBack={handleBackFromDetails} />
+    );
+    return (
+      <>
+        {toastNotification}
+        <React.Suspense fallback={loadingPartnerSection}>{detail}</React.Suspense>
+      </>
+    );
   }
 
   if (showForm === 'selection') {
@@ -249,6 +260,7 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
     return (
       <>
         {toastNotification}
+        <React.Suspense fallback={loadingPartnerSection}>
         <ParceiroFormHost
           showForm={showForm}
           onCancel={() => setShowForm(null)}
@@ -262,6 +274,7 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
           canAssociateAllPolos={includeGlobal}
           onScopeError={(message) => toast.error('Polo não selecionado', message)}
         />
+        </React.Suspense>
       </>
     );
   }
@@ -354,6 +367,7 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
         </div>
       </div>
 
+      <React.Suspense fallback={loadingPartnerSection}>
       {activeTab === 'responsaveis' ? (
         <ResponsaveisTab
           poloId={poloId}
@@ -401,6 +415,7 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
         onDeleteParceiro={setDeletingParceiro}
       />
 
+      {showExportModal && <React.Suspense fallback={<p role="status">Carregando exportação…</p>}>
       <ParceirosExportModal
         isOpen={showExportModal}
         onClose={() => setShowExportModal(false)}
@@ -409,6 +424,7 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
         poloId={poloId}
         filtrosAtuais={{ searchTerm, statusFilter, alunoModalidadeFilter, turmaFilter, turmaFilterLabel }}
       />
+      </React.Suspense>}
 
       {showEnrollmentModalForAlunoId && (
         <EnrollmentModal
@@ -422,7 +438,6 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
           onConfirm={(input) => enrollAlunoMutation.mutate(input)}
         />
       )}
-
       {deletingParceiro && (
         <DeleteParceiroModal
           parceiro={deletingParceiro}
@@ -433,6 +448,7 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
       )}
         </>
       )}
+      </React.Suspense>
     </div>
   );
 };

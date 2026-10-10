@@ -28,31 +28,31 @@ import {
   Printer
 } from 'lucide-react';
 
-// Importação dos Submódulos
-import EmpresasConfig from './empresas/EmpresasConfig';
-import UsuariosConfig from './usuarios/UsuariosConfig';
-import MarcaDaguaConfig from './marca-dagua/MarcaDaguaConfig';
-import ContasBancariasConfig from './contas-bancarias/ContasBancariasConfig';
-import SaldoInicialConfig from './saldo-inicial/SaldoInicialConfig';
-import IntegracaoBancariaConfig from './integracao-bancaria/IntegracaoBancariaConfig';
-import ApiStatusConfig from './api-status/ApiStatusConfig';
-import CategoriasConfig from './categorias/CategoriasConfig';
-import TiposParceriaConfig from './tipos-parceria/TiposParceriaConfig';
-import MensageriaConfig from './mensageria/MensageriaConfig';
-import TemplatesMensagensConfig from './templates-mensagens/TemplatesMensagensConfig';
-import PolosConfig from './polos/PolosConfig';
-import AcademicosConfig from './academicos/AcademicosConfig';
-import AssinaturasConfig from './assinaturas/AssinaturasConfig';
-import AssinaturaEletronicaConfig from './assinatura-eletronica/AssinaturaEletronicaConfig';
-import CategoriasFinanceirasConfig from './categorias-financeiras/CategoriasFinanceirasConfig';
-import SitePublicoConfig from './site-publico/SitePublicoConfig';
-import LogsEventosConfig from './logs-eventos/LogsEventosConfig';
-import PerfisAcessoConfig from './perfis-acesso/PerfisAcessoConfig';
-import ConsultaApiBaneseConfig from './consulta-api-banese/ConsultaApiBaneseConfig';
-import ArmazenamentoConfig from './armazenamento/ArmazenamentoConfig';
-import DispositivosAppConfig from './dispositivos-app/DispositivosAppConfig';
-import PushNotificationsConfig from './push-notifications/PushNotificationsConfig';
-import TiposProdutosConfig from './tipos-produtos/TiposProdutosConfig';
+// Cada submódulo é carregado somente ao abrir sua seção.
+const EmpresasConfig = React.lazy(() => import('./empresas/EmpresasConfig'));
+const UsuariosConfig = React.lazy(() => import('./usuarios/UsuariosConfig'));
+const MarcaDaguaConfig = React.lazy(() => import('./marca-dagua/MarcaDaguaConfig'));
+const ContasBancariasConfig = React.lazy(() => import('./contas-bancarias/ContasBancariasConfig'));
+const SaldoInicialConfig = React.lazy(() => import('./saldo-inicial/SaldoInicialConfig'));
+const IntegracaoBancariaConfig = React.lazy(() => import('./integracao-bancaria/IntegracaoBancariaConfig'));
+const ApiStatusConfig = React.lazy(() => import('./api-status/ApiStatusConfig'));
+const CategoriasConfig = React.lazy(() => import('./categorias/CategoriasConfig'));
+const TiposParceriaConfig = React.lazy(() => import('./tipos-parceria/TiposParceriaConfig'));
+const MensageriaConfig = React.lazy(() => import('./mensageria/MensageriaConfig'));
+const TemplatesMensagensConfig = React.lazy(() => import('./templates-mensagens/TemplatesMensagensConfig'));
+const PolosConfig = React.lazy(() => import('./polos/PolosConfig'));
+const AcademicosConfig = React.lazy(() => import('./academicos/AcademicosConfig'));
+const AssinaturasConfig = React.lazy(() => import('./assinaturas/AssinaturasConfig'));
+const AssinaturaEletronicaConfig = React.lazy(() => import('./assinatura-eletronica/AssinaturaEletronicaConfig'));
+const CategoriasFinanceirasConfig = React.lazy(() => import('./categorias-financeiras/CategoriasFinanceirasConfig'));
+const SitePublicoConfig = React.lazy(() => import('./site-publico/SitePublicoConfig'));
+const LogsEventosConfig = React.lazy(() => import('./logs-eventos/LogsEventosConfig'));
+const PerfisAcessoConfig = React.lazy(() => import('./perfis-acesso/PerfisAcessoConfig'));
+const ConsultaApiBaneseConfig = React.lazy(() => import('./consulta-api-banese/ConsultaApiBaneseConfig'));
+const ArmazenamentoConfig = React.lazy(() => import('./armazenamento/ArmazenamentoConfig'));
+const DispositivosAppConfig = React.lazy(() => import('./dispositivos-app/DispositivosAppConfig'));
+const PushNotificationsConfig = React.lazy(() => import('./push-notifications/PushNotificationsConfig'));
+const TiposProdutosConfig = React.lazy(() => import('./tipos-produtos/TiposProdutosConfig'));
 const ProescConfig = React.lazy(() => import('./proesc/ProescConfig'));
 const ConsultaApiProescConfig = React.lazy(() => import('./consulta-api-proesc/ConsultaApiProescConfig'));
 const ImpressorasConfig = React.lazy(() => import('./impressoras/ImpressorasConfig'));
@@ -166,7 +166,9 @@ const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({
           <span>Voltar para Configurações</span>
         </button>
         <div className="min-h-[600px] rounded-[2rem] border border-slate-100 bg-white p-4 shadow-sm sm:p-8">
-          {renderSection()}
+          <React.Suspense fallback={<p role="status" className="text-sm text-slate-500">Carregando configuração…</p>}>
+            {renderSection()}
+          </React.Suspense>
         </div>
       </div>
     );
