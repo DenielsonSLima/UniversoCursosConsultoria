@@ -46,6 +46,7 @@ const TurmaTecnicoDetalhes: React.FC<TurmaTecnicoDetalhesProps> = ({
   gestorContextId,
 }) => {
   const [activeTab, setActiveTab] = useState('resumo');
+  const [receiveTransferTurmaId, setReceiveTransferTurmaId] = useState<string | null>(null);
   const [financialTarget, setFinancialTarget] = useState<{ turmaId: string; matriculaId: string } | null>(null);
   const queryClient = useQueryClient();
   const canViewAtividades = canAccessGestaoTurmaTab(permissions, 'atividades');
@@ -123,7 +124,10 @@ const TurmaTecnicoDetalhes: React.FC<TurmaTecnicoDetalhesProps> = ({
     if (!tabs.some((tab) => tab.id === activeTab)) return null;
     switch (activeTab) {
       case 'resumo': return <TurmaResumo turma={turma} canViewFinanceiro={canViewFinanceiro} canViewAulas={canViewAulas} />;
-      case 'alunos': return <TurmaAlunos turma={turma} canManageFinanceiro={canViewFinanceiro} />;
+      case 'alunos': return <TurmaAlunos turma={turma} canManageFinanceiro={canViewFinanceiro}
+        onReceiveTransfer={canReceiveExternalTransfer && canAccessGestaoTurmaTab(permissions, 'academico') && turma.status === 'EM_ANDAMENTO' ? () => {
+          setReceiveTransferTurmaId(turma.id); setActiveTab('academico');
+        } : undefined} />;
       case 'grade': return <TurmaGrade turma={turma} />;
       case 'atividades': return <AtividadesExtraClasse turmaId={turma.id} cursoId={turma.cursoId} modo="GESTOR" />;
       case 'diarios': return <TurmaDiarios turma={turma} gestorContextId={gestorContextId} />;
@@ -143,6 +147,8 @@ const TurmaTecnicoDetalhes: React.FC<TurmaTecnicoDetalhesProps> = ({
         <TurmaAcademico
           turma={turma}
           canReceiveExternalTransfer={canReceiveExternalTransfer}
+          receiveTransferRequested={receiveTransferTurmaId === turma.id}
+          onReceiveTransferRequestHandled={() => setReceiveTransferTurmaId(null)}
           onTurmaUpdated={onTurmaUpdated}
           onTurmaFinalizada={onBack}
           onOpenFinanceiro={canViewFinanceiro ? (matriculaId) => {

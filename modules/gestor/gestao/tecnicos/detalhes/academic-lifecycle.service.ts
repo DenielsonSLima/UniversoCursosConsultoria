@@ -1,5 +1,6 @@
 import { supabase } from '../../../../../lib/supabase';
 import { getMaceioIsoDate } from '../technicalClassDates';
+import { loadExternalTransferGrade } from './components/academic/external-transfer-grade';
 
 export type AcademicMovementType =
   | 'TRANCAMENTO'
@@ -208,16 +209,8 @@ export const academicLifecycleService = {
     return (data || []).filter((turma: any) => turma.cursos?.modalidade === 'TECNICO');
   },
 
-  async getDisciplinasAproveitamento(turmaId: string) {
-    const { data, error } = await supabase
-      .from('turmas_disciplinas')
-      .select('disciplina_id, disciplinas(id, nome, carga_horaria)')
-      .eq('turma_id', turmaId);
-    if (error) throw error;
-    return (data || [])
-      .map((item: any) => item.disciplinas)
-      .filter(Boolean)
-      .sort((a: any, b: any) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  async getGradeRecebimentoTransferencia(turmaId: string) {
+    return loadExternalTransferGrade((name, params) => supabase.rpc(name, params), turmaId);
   },
 
   async matricularAluno(turmaId: string, alunoId: string) {

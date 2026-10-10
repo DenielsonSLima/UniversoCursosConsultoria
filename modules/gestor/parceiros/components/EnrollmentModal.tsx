@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BookOpen, CheckCircle2, X } from 'lucide-react';
+import { useTechnicalAdmission } from '../../gestao/tecnicos/detalhes/hooks/useTechnicalAdmission';
+import TechnicalAdmissionNotice from '../../gestao/tecnicos/detalhes/components/alunos/TechnicalAdmissionNotice';
 
 interface EnrollmentModalProps {
   alunoNome: string;
@@ -21,7 +23,17 @@ const EnrollmentModal: React.FC<EnrollmentModalProps> = ({
   onClose,
   onSelectTurma,
   onConfirm,
-}) => (
+}) => {
+  const selectedClass = turmas.find((turma) => turma.id === selectedTurmaId);
+  const admissionQuery = useTechnicalAdmission(selectedTurmaId, selectedClass?.modalidade === 'TECNICO');
+  const [confirmationError, setConfirmationError] = useState<string | null>(null);
+  const confirm = async () => {
+    setConfirmationError(null);
+    if (!selectedClass || !admissionQuery.admission.allowed) return;
+    if (!await admissionQuery.verify(setConfirmationError)) return;
+    onConfirm({ alunoId, turmaId: selectedClass.id });
+  };
+  return (
   <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#001a33]/60 backdrop-blur-sm ">
     <div className="bg-white rounded-[2.5rem] p-8 max-w-lg w-full shadow-2xl relative border border-slate-100">
       <button
@@ -50,7 +62,7 @@ const EnrollmentModal: React.FC<EnrollmentModalProps> = ({
           turmas.map((turma) => (
             <button
               key={turma.id}
-              onClick={() => onSelectTurma(turma.id)}
+              onClick={() => { setConfirmationError(null); onSelectTurma(turma.id); }}
               className={`w-full flex justify-between items-center p-4 rounded-2xl border text-left transition-all ${
                 selectedTurmaId === turma.id
                   ? 'border-blue-500 bg-blue-50/50 shadow-md ring-2 ring-blue-100'
@@ -72,6 +84,11 @@ const EnrollmentModal: React.FC<EnrollmentModalProps> = ({
         )}
       </div>
 
+      <div className="mt-4">
+        <TechnicalAdmissionNotice admission={admissionQuery.admission} onRetry={() => { void admissionQuery.refetch(); }} />
+        {confirmationError && <p role="alert" className="mt-2 text-xs text-rose-700">{confirmationError}</p>}
+      </div>
+
       <div className="flex gap-3 mt-8 pt-4 border-t border-slate-100">
         <button
           onClick={onClose}
@@ -80,8 +97,8 @@ const EnrollmentModal: React.FC<EnrollmentModalProps> = ({
           Pular Matrícula
         </button>
         <button
-          onClick={() => selectedTurmaId && onConfirm({ alunoId, turmaId: selectedTurmaId })}
-          disabled={!selectedTurmaId || isPending}
+          onClick={() => { void confirm(); }}
+          disabled={!selectedClass || isPending || !admissionQuery.admission.allowed}
           className="flex-1 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider transition-colors shadow-lg shadow-blue-500/20 disabled:opacity-50"
         >
           {isPending ? 'Matriculando...' : 'Confirmar Matrícula'}
@@ -89,6 +106,7 @@ const EnrollmentModal: React.FC<EnrollmentModalProps> = ({
       </div>
     </div>
   </div>
-);
+  );
+};
 
 export default EnrollmentModal;

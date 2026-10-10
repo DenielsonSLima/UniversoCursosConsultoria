@@ -52,7 +52,7 @@ test('deriva o fluxo restrito da permissão explícita da aba Financeiro', () =>
   );
   assert.match(
     turmaTecnicoDetalhesSource,
-    /<TurmaAlunos turma=\{turma\} canManageFinanceiro=\{canViewFinanceiro\} \/>/,
+    /<TurmaAlunos turma=\{turma\} canManageFinanceiro=\{canViewFinanceiro\}\s+onReceiveTransfer=/,
   );
   assert.match(
     turmaAlunosSource,

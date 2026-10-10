@@ -258,7 +258,7 @@ export const useParceirosMutations = ({
       setSelectedTurmaIdForEnrollment('');
       toast.success('Matrícula efetuada!', `${createdAlunoNome} foi matriculado(a) com sucesso.`);
     },
-    onError: () => toast.error('Erro na matrícula', 'Não foi possível realizar a matrícula.')
+    onError: (error: any) => toast.error('Erro na matrícula', error?.message || 'Não foi possível realizar a matrícula.')
   });
 
   const deleteMutation = useMutation({

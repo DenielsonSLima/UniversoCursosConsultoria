@@ -30,6 +30,8 @@ interface TurmaAcademicoProps {
   onTurmaFinalizada?: () => void;
   onOpenFinanceiro?: (matriculaId: string) => void;
   canReceiveExternalTransfer?: boolean;
+  receiveTransferRequested?: boolean;
+  onReceiveTransferRequestHandled?: () => void;
 }
 
 const MOVEMENTS_PAGE_SIZE = 10;
@@ -40,6 +42,8 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({
   onTurmaFinalizada,
   onOpenFinanceiro,
   canReceiveExternalTransfer = false,
+  receiveTransferRequested = false,
+  onReceiveTransferRequestHandled,
 }) => {
   const { toasts, removeToast, toast } = useToast();
   const queryClient = useQueryClient();
@@ -173,6 +177,12 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({
     ? 'O recebimento exige acesso ao Financeiro da turma e a Financeiro > Receber.'
     : canReceiveTransfer ? 'Receber transferência externa'
       : 'Transferências só podem ser recebidas com a turma em andamento.';
+
+  useEffect(() => {
+    if (!receiveTransferRequested) return;
+    if (canReceiveTransfer) setShowReceiveTransfer(true);
+    onReceiveTransferRequestHandled?.();
+  }, [receiveTransferRequested, canReceiveTransfer, onReceiveTransferRequestHandled]);
 
   return (
     <div className="space-y-7 ">
@@ -342,6 +352,7 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({
         <ReceiveExternalTransferController
           key={turma.id}
           turmaId={turma.id}
+          destinationLabel={`${turma.cursoNome} — ${turma.nome}`}
           canReceive={canReceiveTransfer}
           onClose={() => setShowReceiveTransfer(false)}
           onSaved={async () => { await invalidate(); }}

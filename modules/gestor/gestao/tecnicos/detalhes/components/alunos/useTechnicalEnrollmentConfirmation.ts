@@ -15,6 +15,7 @@ import {
 import type { MatriculaTecnicaRegraIdentidade } from "../financeiro/matricula-tecnica-financeiro.types";
 import type { EnrollmentFinanceSubmission } from "./ConfirmarMatriculaModal";
 import { gestaoQueryKeys } from "../../../../gestao.query-keys";
+import { resolveTechnicalEnrollmentAttempt } from './technical-enrollment-attempt';
 
 interface EnrollmentToast {
   error: (title: string, message: string) => void;
@@ -26,6 +27,8 @@ interface UseTechnicalEnrollmentConfirmationInput {
   turmaId: string;
   alunoId?: string;
   canEnroll: boolean;
+  admissionMessage?: string | null;
+  verifyAdmission?: () => Promise<void>;
   canManageFinanceiro: boolean;
   contextError: boolean;
   manualFinanceMode: boolean;
@@ -38,15 +41,21 @@ export const useTechnicalEnrollmentConfirmation = ({
   turmaId,
   alunoId,
   canEnroll,
+  admissionMessage,
+  verifyAdmission,
   canManageFinanceiro,
   contextError,
-  manualFinanceMode,
-  regra,
+  manualFinanceMode: currentManualFinanceMode,
+  regra: currentRegra,
   onSuccess,
   toast,
 }: UseTechnicalEnrollmentConfirmationInput) => {
   const queryClient = useQueryClient();
   const preLinkRequestIds = useRef(new Map<string, string>());
+  const retrySnapshots = useRef(new Map<string, {
+    regra: MatriculaTecnicaRegraIdentidade;
+    manualFinanceMode: boolean;
+  }>());
   const overrideRequestIds = useRef(new Map<string, string>());
   const activationRequestIds = useRef(new Map<string, string>());
   const preLinkMutation = usePreVincularAlunoTecnico();
@@ -55,7 +64,16 @@ export const useTechnicalEnrollmentConfirmation = ({
 
   const confirm = async (submission: EnrollmentFinanceSubmission) => {
     if (!alunoId) return;
-    if (!canEnroll || contextError || !regra) {
+    const retryIdentity = JSON.stringify({ alunoId, canManageFinanceiro, submission });
+    const previousAttempt = retrySnapshots.current.get(retryIdentity);
+    const regra = canEnroll ? currentRegra : previousAttempt?.regra;
+    const manualFinanceMode = canEnroll ? currentManualFinanceMode
+      : previousAttempt?.manualFinanceMode ?? currentManualFinanceMode;
+    if (!canEnroll && !previousAttempt) {
+      toast.error('Matrícula indisponível', admissionMessage || 'A turma não permite nova matrícula direta.');
+      return;
+    }
+    if ((contextError && !previousAttempt) || !regra) {
       toast.error(
         "Regra não carregada",
         "Recarregue o workspace financeiro oficial antes de confirmar.",
@@ -92,9 +110,17 @@ export const useTechnicalEnrollmentConfirmation = ({
     const preLinkKey = `${alunoId}:${
       primeiroVencimento || "CANONICO"
     }:${regra.revisao}:${regra.fingerprint}`;
-    const preLinkRequestId = preLinkRequestIds.current.get(preLinkKey) ||
-      createFinanceiroRequestId();
-    preLinkRequestIds.current.set(preLinkKey, preLinkRequestId);
+    let preLinkRequestId: string;
+    try {
+      preLinkRequestId = await resolveTechnicalEnrollmentAttempt({
+        requestIds: preLinkRequestIds.current, key: preLinkKey, canEnroll,
+        admissionMessage, verifyAdmission, createRequestId: createFinanceiroRequestId,
+      });
+    } catch (error) {
+      toast.error('Matrícula indisponível', error instanceof Error ? error.message : 'Não foi possível conferir a política de ingresso.');
+      return;
+    }
+    retrySnapshots.current.set(retryIdentity, { regra, manualFinanceMode });
     let preLinkConfirmed = false;
 
     try {
@@ -202,6 +228,7 @@ export const useTechnicalEnrollmentConfirmation = ({
       }
 
       preLinkRequestIds.current.clear();
+      retrySnapshots.current.clear();
       overrideRequestIds.current.clear();
       activationRequestIds.current.clear();
       onSuccess();

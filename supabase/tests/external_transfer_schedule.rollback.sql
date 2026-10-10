@@ -276,6 +276,7 @@ begin
           end if;
         end if;
       end if;
+      execute 'set constraints all immediate';
       raise exception 'Rollback synthetic case' using errcode='ZX009';
     exception when sqlstate 'ZX009' then null; end;
   end loop;

@@ -2,6 +2,7 @@ import React from 'react';
 import { CheckCircle2, X } from 'lucide-react';
 import ReceiveExternalTransferModal from './ReceiveExternalTransferModal';
 import ExternalTransferFinancialFields from './ExternalTransferFinancialFields';
+import ExternalTransferScheduleFields from './ExternalTransferScheduleFields';
 import ExternalTransferModalShell from './ExternalTransferModalShell';
 import { useReceiveExternalTransfer, type ExternalTransferStudent } from './useReceiveExternalTransfer';
 import type { ExternalTransferResult } from './external-transfer.contract';
@@ -36,18 +37,27 @@ const ReceiveExternalTransferController: React.FC<Props> = ({ onClose, onOpenFin
         {onOpenFinanceiro ? 'Abrir Financeiro da turma' : 'Concluir recebimento'}
       </button>
     </section> : <ReceiveExternalTransferModal
-      students={state.students} disciplines={state.disciplines} draft={draft} onChange={change}
+      students={state.students} disciplines={state.disciplines} modules={state.modules} draft={draft} onChange={change}
       loading={state.loading} loadError={state.loadError}
+      academicLoading={state.academicLoading} academicError={state.academicError}
       pending={state.pending} locked={state.locked} canClose={state.canClose}
       canConfirm={state.ready} uncertain={state.uncertain} error={state.error}
       studentFixed={Boolean(options.initialStudent)} destinationLabel={destinationLabel} review={state.review}
+      canConfigure={state.canConfigure} canReview={state.canReview}
+      scheduleError={state.scheduleError}
+      confirmationIssue={state.confirmationIssue} onRetryFinancial={state.retryFinancial}
+      onRetryAcademic={state.retryAcademic} onBackToConfiguration={state.syncConfigurations}
+      onFinancialConfigurationAdvance={state.configurePlan} onFinancialScheduleAdvance={state.reviewPlan}
       onRetry={state.retry} onClose={close} onConfirm={() => { void state.confirm(); }}
-      financialSection={<ExternalTransferFinancialFields
+      configurationSection={<ExternalTransferFinancialFields
+        configurations={state.configurations} onConfigurationChange={state.changeConfiguration} context={state.context}
+        loading={state.financialLoading} error={state.financialError} disabled={state.locked}
+        onRetry={state.retryFinancial} onRestoreDefaults={state.restoreDefaults}
+      />}
+      scheduleSection={<ExternalTransferScheduleFields
         draft={draft} onChange={change} context={state.context} review={state.review}
         loading={state.financialLoading} error={state.financialError} disabled={state.locked}
-        reviewing={state.reviewing} canReview={state.canReview} onReview={state.reviewPlan}
-        onRetry={state.retryFinancial} onRestoreDefaults={state.restoreDefaults}
-        onAdjust={state.adjustSchedule}
+        onRetry={state.retryFinancial} onAdjust={state.adjustSchedule}
       />}
     />}
   </ExternalTransferModalShell>;

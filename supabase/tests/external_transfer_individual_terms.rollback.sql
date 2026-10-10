@@ -234,6 +234,7 @@ begin
           'ESCOLA SINTETICA',null,'Transferência transacional de teste',null,v_today,'[]',v_plan,v_preview->>'regraFingerprint');
         raise exception 'Authorization was skipped for replay' using errcode='P0001';
       exception when insufficient_privilege then null; end;
+      execute 'set constraints all immediate';
       raise exception 'ROLLBACK_SYNTHETIC_CASE' using errcode='ZX001';
     exception when sqlstate 'ZX001' then null; end;
   end loop;

@@ -242,8 +242,12 @@ jobs:
 
       - name: Testar transferências técnicas e planos individuais
         run: |
+          node --test \
+            modules/gestor/gestao/tecnicos/detalhes/components/academic/external-transfer-grade.test.ts \
+            modules/gestor/gestao/tecnicos/detalhes/components/academic/external-transfer-wizard.behavior.test.mjs
           deno test --allow-read --allow-env=NODE_ENV \
             modules/gestor/gestao/tecnicos/detalhes/components/academic/external-transfer.test.ts \
+            modules/gestor/gestao/tecnicos/detalhes/components/academic/external-transfer-financial-configuration.test.ts \
             modules/gestor/gestao/tecnicos/detalhes/components/academic/external-transfer-access.test.ts \
             modules/gestor/gestao/tecnicos/detalhes/hooks/transfer-financial-attempt.test.ts \
             modules/gestor/gestao/tecnicos/detalhes/transfer-finance.contract.test.ts \
@@ -473,6 +477,12 @@ jobs:
 
       - name: Testar viewport do aluno sem navegador
         run: node --test modules/aluno/login-app/aluno-viewport-height.test.ts
+
+      - name: Testar ingresso técnico por prazo
+        run: |
+          node --test modules/shared/utils/technicalAdmissionPolicy.test.ts modules/gestor/gestao/tecnicos/detalhes/components/alunos/technical-admission-ui.behavior.test.mjs
+          node --test modules/gestor/gestao/tecnicos/detalhes/components/alunos/technical-enrollment-attempt.test.ts
+          node --test modules/public/publicTechnicalClasses.contract.test.ts
 
       - name: Gerar build de produção
         run: npm run build

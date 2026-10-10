@@ -1,3 +1,5 @@
+import type { TechnicalAdmissionPolicy } from '../../../shared/utils/technicalAdmissionPolicy';
+
 export type TechnicalLandingTemplateKey =
   | 'enfermagem'
   | 'seguranca-do-trabalho'
@@ -64,6 +66,7 @@ export interface TechnicalLandingClass {
   occupiedSeats: number;
   availableSeats: number;
   onlineEnrollmentAvailable: boolean;
+  admission: TechnicalAdmissionPolicy;
   enrollmentFee: number;
   reEnrollmentFee: number;
   installments: number;
