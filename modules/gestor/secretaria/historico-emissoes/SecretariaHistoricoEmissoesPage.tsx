@@ -31,6 +31,7 @@ import { printPdfBlob } from '../shared/pdf-blob-print';
 import { createContractHistoryPdf, type VectorPreviewPdf } from './contract-history-pdf';
 import { isEadCertificateEmission, prepareEadHistoryPdf } from './ead-history-pdf';
 import { useReissueSession } from './useReissueSession';
+import { prepareHistoryVectorPreview } from './history-vector-preview';
 
 const isContractDocument = (documento: string) => documento === 'contrato_aluno';
 const getEmissionPreviewKey = (emission: EmissionLog) => (
@@ -184,9 +185,9 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
         if (previewLoadTokenRef.current !== loadToken) return;
         replaceVectorPreviewPdf(pdf.blob, emissionKey);
       } else if (isOfficialVectorDocument(emission.documento)) {
-        const pdf = await createEmissionDocumentsPdf([{ emission, preview: resources }]);
+        const pdf = await prepareHistoryVectorPreview(emission, resources, null, createEmissionDocumentsPdf);
         if (previewLoadTokenRef.current !== loadToken) return;
-        replaceVectorPreviewPdf(pdf.blob, emissionKey);
+        replaceVectorPreviewPdf(pdf.blob, pdf.emissionKey);
       }
     } catch (error) {
       if (previewLoadTokenRef.current !== loadToken) return;
@@ -261,20 +262,15 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
         };
       }
       if (isOfficialVectorDocument(preparedEmission.documento)) {
-        const preparedEmissionKey = getEmissionPreviewKey(preparedEmission);
-        const previewBlob = vectorPreviewPdfRef.current?.emissionKey === preparedEmissionKey
-          ? vectorPreviewPdfRef.current.blob
-          : null;
-        const pdfBlob = previewBlob || (await createEmissionDocumentsPdf([{
-          emission: preparedEmission,
-          preview: resources,
-        }])).blob;
-        if (!previewBlob) replaceVectorPreviewPdf(pdfBlob, preparedEmissionKey);
+        const pdf = await prepareHistoryVectorPreview(
+          preparedEmission, resources, vectorPreviewPdfRef.current, createEmissionDocumentsPdf,
+        );
+        if (vectorPreviewPdfRef.current?.blob !== pdf.blob) replaceVectorPreviewPdf(pdf.blob, pdf.emissionKey);
         setIsLoadingPreview(false);
         return {
           canonicalEmission: preparedEmission,
           container: null,
-          pdfBlob,
+          pdfBlob: pdf.blob,
         };
       }
 
@@ -460,4 +456,3 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
 };
 
 export default SecretariaHistoricoEmissoesPage;
-

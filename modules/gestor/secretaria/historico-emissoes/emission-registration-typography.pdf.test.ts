@@ -73,6 +73,13 @@ const inspectPdf = async (blob: Blob) => {
       imageTransforms: operators.fnArray.flatMap((operation, index) => (
         operation === OPS.transform ? [operators.argsArray[index] as number[]] : []
       )),
+      images: operators.fnArray.flatMap((operation, index) => {
+        if (operation !== OPS.paintImageXObject) return [];
+        const [, width, height] = operators.argsArray[index] as [string, number, number];
+        const transformIndex = operators.fnArray.slice(0, index).lastIndexOf(OPS.transform);
+        assert.ok(transformIndex >= 0, 'imagem sem geometria nativa');
+        return [{ width, height, transform: operators.argsArray[transformIndex] as number[] }];
+      }),
     };
   } finally {
     await document.destroy();
@@ -97,15 +104,21 @@ for (const documento of ['pasta_identificacao', 'ficha_matricula'] as const) {
     assert.equal(rendered.fontSize('E-MAIL'), 6);
     assert.equal(rendered.fontSize('DOCUMENTOS'), 7);
     assert.equal(rendered.imageCount, 2, 'somente foto e QR isolados, sem imagem de página');
-    const expectedTransforms = [
-      [75.3466, 0, 0, 75.3466, 56.9785, 491.6005],
-      [55.1254, 0, 0, 55.1254, 467.2508, documento === 'pasta_identificacao' ? 116.5511 : 33.3367],
+    const expectedImages = [
+      { label: 'foto', width: 1, height: 1, transform: [75.3466, 0, 0, 75.3466, 56.9785, 491.6005] },
+      { label: 'QR', width: 640, height: 640,
+        transform: [55.1254, 0, 0, 55.1254, 467.2508, documento === 'pasta_identificacao' ? 116.5511 : 33.3367] },
     ];
-    assert.equal(rendered.imageTransforms.length, expectedTransforms.length);
-    expectedTransforms.forEach((expected, index) => expected.forEach((coordinate, axis) => {
-      assert.ok(Math.abs(rendered.imageTransforms[index][axis] - coordinate) < 0.02,
-        `a geometria de ${index === 0 ? 'foto' : 'QR'} foi alterada`);
-    }));
+    assert.equal(rendered.imageTransforms.length, expectedImages.length);
+    // Layer order follows the editor's zIndex; bitmap identity fixes each geometry.
+    expectedImages.forEach((expected) => {
+      const images = rendered.images.filter(image => image.width === expected.width && image.height === expected.height);
+      assert.equal(images.length, 1, `recurso isolado de ${expected.label} ausente ou duplicado`);
+      expected.transform.forEach((coordinate, axis) => {
+        assert.ok(Math.abs(images[0].transform[axis] - coordinate) < 0.02,
+          `a geometria de ${expected.label} foi alterada`);
+      });
+    });
   });
 }
 

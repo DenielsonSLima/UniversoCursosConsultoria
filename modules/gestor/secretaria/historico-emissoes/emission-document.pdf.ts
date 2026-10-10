@@ -50,6 +50,7 @@ import {
 import { REGISTRATION_VECTOR_DOCUMENTS, resolveEmissionVectorTemplate } from './emission-registration-snapshot';
 import { drawAcademicBulletinBody } from './emission-pdf-bulletin';
 import { drawRegistrationGrid } from './emission-pdf-registration-grid';
+import { drawEmissionFieldLayer, orderedEmissionFields, saveEmissionPdfWithFieldLayers } from './emission-pdf-field-layers';
 export { emissionHtmlToVectorText, getRegistrationWatermarkGeometry } from './emission-pdf-core';
 export type { EmissionPdfSource } from './emission-pdf-core';
 export { resolveRegistrationSnapshotTemplate } from './emission-registration-snapshot';
@@ -385,7 +386,9 @@ const drawVectorPage = (
   } else {
     drawBody(pdf, page.body, pageIndex === 0);
   }
-  page.fields.forEach((field) => drawField(pdf, visual, field, pageIndex));
+  orderedEmissionFields(page.fields).forEach((field) => {
+    drawEmissionFieldLayer(pdf, GState, field, () => drawField(pdf, visual, field, pageIndex));
+  });
 };
 
 /**
@@ -439,7 +442,7 @@ export const createEmissionDocumentsPdf = async (
 
   const first = sources[0].emission;
   return {
-    blob: pdf.output('blob'),
+    blob: await saveEmissionPdfWithFieldLayers(pdf),
     fileName: sources.length > 1
       ? `${first.documento}-lote-${sources.length}-documentos.pdf`
       : `emissao-${first.documento}-${first.codigo}.pdf`,

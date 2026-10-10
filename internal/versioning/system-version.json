@@ -1,8 +1,8 @@
 {
-  "version": "4.8.206",
+  "version": "4.8.207",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 215,
+  "revision": 216,
   "releasedAt": "2026-10-10",
-  "summary": "Sessão reconhece atividade em painéis internos e sincroniza abas antes de expirar"
+  "summary": "Reemissão do boletim atualiza o PDF e preserva a mesclagem da assinatura do modelo"
 }

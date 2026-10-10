@@ -108,6 +108,12 @@ const loadTemplate = async (
     'documentTemplateSnapshot',
   );
   const frozenRegistrationTemplate = emission.dados_emissao?.documentTemplateSnapshot;
+  if (emission.documento === 'boletim' && frozenRegistrationTemplate != null) {
+    if (typeof frozenRegistrationTemplate !== 'object' || Array.isArray(frozenRegistrationTemplate)) {
+      throw new Error('O modelo congelado do boletim está inválido.');
+    }
+    return frozenRegistrationTemplate;
+  }
   if (hasFrozenRegistrationTemplate && emission.documento === 'carteirinha'
     && (!frozenRegistrationTemplate || typeof frozenRegistrationTemplate !== 'object'
       || Array.isArray(frozenRegistrationTemplate))) {
@@ -216,8 +222,8 @@ const loadPreviewResource = <T>(
 );
 
 const getTemplateCacheKey = (emission: EmissionLog, poloId: string) => {
-  // Modelos EAD e sua configuração no curso são consultados a cada segunda via.
-  if (emission.documento === 'certificado_ead') return null;
+  // O boletim legado deve incorporar o modelo salvo ao abrir ou emitir novamente.
+  if (['certificado_ead', 'boletim'].includes(emission.documento)) return null;
   if (Object.prototype.hasOwnProperty.call(
     emission.dados_emissao || {},
     'documentTemplateSnapshot',
@@ -443,7 +449,9 @@ export const historicoEmissoesService = {
   },
 
   async loadPreview(emission: EmissionLog, fallbackPoloId: string): Promise<PreviewResources> {
-    const [preview] = await loadPreviewBatch([emission], fallbackPoloId);
+    const [preview] = await loadPreviewBatch(
+      [emission], fallbackPoloId, undefined, emission.documento === 'boletim' ? 'fresh' : 'shared',
+    );
     return preview;
   },
 
@@ -460,5 +468,4 @@ export const historicoEmissoesService = {
     return loadPreviewBatch(emissions, fallbackPoloId, onProgress);
   },
 };
-
 

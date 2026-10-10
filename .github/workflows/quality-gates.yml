@@ -345,7 +345,9 @@ jobs:
             modules/gestor/cadastros/ficha-matricula/registration-document-formatters.test.ts \
             modules/gestor/secretaria/historico-emissoes/emission-registration-fields.test.ts \
             modules/gestor/secretaria/historico-emissoes/emission-pasta-photo.pdf.test.ts \
-            modules/gestor/secretaria/historico-emissoes/emission-document.pdf.contract.test.ts
+            modules/gestor/secretaria/historico-emissoes/emission-document.pdf.contract.test.ts \
+            modules/gestor/secretaria/historico-emissoes/emission-pdf-field-layers.test.ts
+          node --test modules/gestor/cadastros/modelos-documentos/boletim/boletim-template-read.test.mjs modules/gestor/secretaria/historico-emissoes/boletim-history-template.test.mjs modules/gestor/secretaria/historico-emissoes/history-vector-preview.test.ts
 
       - name: Testar filiação e pendências da matrícula técnica
         run: deno test --allow-read --unstable-sloppy-imports modules/shared/utils/technicalEnrollmentRequirements.test.ts

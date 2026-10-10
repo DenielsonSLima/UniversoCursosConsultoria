@@ -10,6 +10,7 @@ export interface DocumentTemplate {
 
 interface DocumentTemplateServiceOptions {
   sharedTemplate?: boolean;
+  failOnReadError?: boolean;
 }
 
 const DEFAULT_QR_CONFIG = {
@@ -31,6 +32,7 @@ export const createDocumentTemplateService = (
         .eq('id', templateId)
         .maybeSingle();
 
+      if (error && options.failOnReadError) throw error;
       if (!error && data?.conteudo) return data.conteudo;
 
       if (options.sharedTemplate && poloId) {
@@ -40,9 +42,11 @@ export const createDocumentTemplateService = (
           .eq('id', `${documentId}_${poloId}`)
           .maybeSingle();
 
+        if (legacyError && options.failOnReadError) throw legacyError;
         if (!legacyError && legacyData?.conteudo) return legacyData.conteudo;
       }
     } catch (error) {
+      if (options.failOnReadError) throw error;
       console.error(`[${documentId}Service] Erro ao buscar o modelo:`, error);
     }
 
