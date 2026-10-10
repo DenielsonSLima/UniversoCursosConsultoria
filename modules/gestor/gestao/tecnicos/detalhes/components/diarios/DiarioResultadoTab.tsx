@@ -36,7 +36,7 @@ const DiarioResultadoTab: React.FC<DiarioResultadoTabProps> = ({
     { key: 'tg', label: 'TG', fullTitle: 'Trabalho em Grupo' },
     { key: 's', label: 'S', fullTitle: 'Seminário' },
     { key: 'cq', label: 'CQ', fullTitle: 'Critérios Qualitativos' },
-    { key: 'o', label: 'O', fullTitle: 'Outros Instrumentos (opcional por aluno)' },
+    { key: 'o', label: 'O', fullTitle: 'Outros Instrumentos' },
   ];
 
   const visibleInstruments = instrumentsList.filter((instrument) => activeInstruments[instrument.key]);
@@ -85,7 +85,7 @@ const DiarioResultadoTab: React.FC<DiarioResultadoTabProps> = ({
 
       {!documentary && (
         <p className="px-4 py-3 border-b border-slate-200 text-xs text-slate-600">
-          As notas são salvas ao sair do campo ou pressionar Enter. O é opcional por aluno: deixe vazio quando não utilizado e informe 0 somente quando essa for a nota.
+          As notas são salvas ao sair do campo ou pressionar Enter. Campos vazios não entram na soma; informe 0 somente quando essa for a nota, em qualquer coluna.
         </p>
       )}
 
@@ -215,7 +215,7 @@ const DiarioResultadoTab: React.FC<DiarioResultadoTabProps> = ({
         <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-[11px] font-bold leading-relaxed text-blue-900">
           {documentary
             ? 'As avaliações registradas aparecem separadas. Médias, frequência e resultado são informados pelo sistema.'
-            : 'A Média Parcial soma as notas dos instrumentos ativos, com até duas casas decimais e limite de 10,00. O é opcional por aluno; os demais instrumentos ativos precisam de nota. Instrumentos anulados ficam fora da soma. Sem nenhuma nota, o resultado permanece sem lançamento.'}
+            : 'A Média Parcial soma apenas as notas preenchidas nos instrumentos ativos, com até duas casas decimais e limite de 10,00. Campos vazios e instrumentos anulados ficam fora da soma. Zero é uma nota e deve ser informado quando aplicável. Sem nenhuma nota, o resultado permanece sem lançamento.'}
         </div>
       </div>
     </div>

@@ -200,22 +200,27 @@ Deno.test("snapshot rejeita períodos, presença, notas, faltas e mapas incoeren
   );
 });
 
-Deno.test("snapshot fechado permite O opcional por aluno sem tratar nota zero como ausência", () => {
-  for (const [other, partial] of [[null, 7], [0, 7], [0.05, 7.05]] as const) {
-    const snapshot = cloneSnapshot();
-    snapshot.gradesMap[IDS.student].o = other;
-    snapshot.gradesMap[IDS.student].media_parcial = partial;
-    snapshot.gradesMap[IDS.student].media_final = partial;
-    assert.doesNotThrow(() => assertValidDiarioPdfAcademicSnapshot(snapshot));
-  }
+Deno.test("snapshot fechado permite qualquer instrumento ativo opcional por aluno e distingue zero de ausência", () => {
+  for (const key of ["p", "ti", "tg", "s", "cq", "o"] as const) {
+    for (const value of [null, 0, 0.05]) {
+      const snapshot = cloneSnapshot();
+      const grade = snapshot.gradesMap[IDS.student];
+      const partial = 8 - Number(grade[key]) + (value ?? 0);
+      grade[key] = value;
+      grade.media_parcial = partial;
+      grade.media_final = partial;
+      assert.doesNotThrow(() => assertValidDiarioPdfAcademicSnapshot(snapshot));
+    }
 
-  const onlyOther = cloneSnapshot();
-  onlyOther.activeInstruments = { p: false, ti: false, tg: false, s: false, cq: false, o: true };
-  Object.assign(onlyOther.gradesMap[IDS.student], {
-    p: null, ti: null, tg: null, s: null, cq: null, o: 0,
-    rec: 6.55, media_parcial: 0, media_final: 6.55,
-  });
-  assert.doesNotThrow(() => assertValidDiarioPdfAcademicSnapshot(onlyOther));
+    for (const value of [0, 7.25]) {
+      const snapshot = cloneSnapshot();
+      Object.assign(snapshot.gradesMap[IDS.student], {
+        p: null, ti: null, tg: null, s: null, cq: null, o: null,
+        [key]: value, rec: 7.5, media_parcial: value, media_final: 7.5,
+      });
+      assert.doesNotThrow(() => assertValidDiarioPdfAcademicSnapshot(snapshot));
+    }
+  }
 });
 
 Deno.test("snapshot conserva soma com centésimos e arredondamento legado sem aceitar médias adulteradas", () => {
@@ -242,21 +247,17 @@ Deno.test("snapshot conserva soma com centésimos e arredondamento legado sem ac
   assert.throws(() => assertValidDiarioPdfAcademicSnapshot(alteredFinal), /media_final/u);
 });
 
-Deno.test("snapshot fechado exige os outros instrumentos ativos e rejeita nenhuma nota ativa lançada", () => {
-  for (const key of ["p", "ti", "tg", "s", "cq"] as const) {
-    const snapshot = cloneSnapshot();
-    snapshot.gradesMap[IDS.student][key] = null;
-    assert.throws(() => assertValidDiarioPdfAcademicSnapshot(snapshot), /nota ativa ausente/u);
+Deno.test("snapshot fechado rejeita ausência de todas as notas ativas sem convertê-la em zero", () => {
+  for (const active of [true, false]) {
+    const empty = cloneSnapshot();
+    empty.activeInstruments = { p: active, ti: active, tg: active, s: active, cq: active, o: active };
+    Object.assign(empty.gradesMap[IDS.student], {
+      p: null, ti: null, tg: null, s: null, cq: null, o: null,
+      rec: null, media_parcial: null, media_final: null, resultado_final: "SEM_LANCAMENTO",
+    });
+    assert.throws(() => assertValidDiarioPdfAcademicSnapshot(empty), /nenhuma nota ativa/u);
+
+    Object.assign(empty.gradesMap[IDS.student], { media_parcial: 0, media_final: 0, resultado_final: "APROVADO" });
+    assert.throws(() => assertValidDiarioPdfAcademicSnapshot(empty), /nenhuma nota ativa/u);
   }
-
-  const empty = cloneSnapshot();
-  empty.activeInstruments = { p: false, ti: false, tg: false, s: false, cq: false, o: true };
-  Object.assign(empty.gradesMap[IDS.student], {
-    p: null, ti: null, tg: null, s: null, cq: null, o: null,
-    rec: null, media_parcial: null, media_final: null, resultado_final: "SEM_LANCAMENTO",
-  });
-  assert.throws(() => assertValidDiarioPdfAcademicSnapshot(empty), /nenhuma nota ativa/u);
-
-  Object.assign(empty.gradesMap[IDS.student], { media_parcial: 0, media_final: 0, resultado_final: "APROVADO" });
-  assert.throws(() => assertValidDiarioPdfAcademicSnapshot(empty), /nenhuma nota ativa/u);
 });
