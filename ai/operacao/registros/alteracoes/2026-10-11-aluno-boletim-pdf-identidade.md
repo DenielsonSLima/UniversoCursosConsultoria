@@ -51,6 +51,8 @@ Mudança crítica de documentos acadêmicos: interface, payload SQL e PDF oficia
 - `modules/gestor/cadastros/modelos-documentos/boletim/boletim-template-read.test.mjs`
 - `modules/shared/utils/student-document-presentation.ts`
 - `modules/shared/utils/student-document-presentation.test.ts`
+- `modules/gestor/secretaria/historico-emissoes/document-identity-update.test.ts`
+- `modules/gestor/cadastros/modelos-documentos/carteirinha/carteirinha-identity.rendering.test.tsx`
 - `.github/workflows/document-identity-history.yml`
 - `ai/operacao/registros/alteracoes/2026-10-11-aluno-boletim-pdf-identidade.md`
 - `ai/operacao/LOTE_ATIVO.md`
@@ -59,13 +61,13 @@ Mudança crítica de documentos acadêmicos: interface, payload SQL e PDF oficia
 - `internal/versioning/CHANGELOG.md`
 - `internal/versioning/changelog/2026-09-28-a-2026-09-30-versoes-4-8-128-a-4-8-137.md`
 
-Total: 30 arquivos.
+Total: 32 arquivos.
 
 ## Validação e entrega
 
 Três frentes independentes: interface, backend e fidelidade documental, com revisão cruzada. Os testes usam identidades sintéticas. PDFs e PNGs gerados, caches, build e harnesses temporários não entram no manifesto.
 
-A validação anterior passou em 60 casos Node, 12 contratos Deno de impressão, lint, TypeScript e build 4.8.210. A revisão seguinte passou em 26 casos SQL, 16 de modelo/PDF, 14 de identidade/ficha/pasta e três do PDF canônico de contratos. Os demais contratos seguem como evidência dos caminhos não alterados. O manifesto contém 30 arquivos, limitados a 500 linhas. O workflow de identidade executa histórico congelado, cancelamento de impressão e identidade nos modelos personalizados.
+A validação anterior passou em 60 casos Node, 12 contratos Deno de impressão, lint, TypeScript e build 4.8.210. A revisão seguinte passou em 26 casos SQL, 16 de modelo/PDF, 14 de identidade/ficha/pasta e três do PDF canônico de contratos. Os demais contratos seguem como evidência dos caminhos não alterados. O manifesto contém 32 arquivos, limitados a 500 linhas. O workflow de identidade executa histórico congelado, cancelamento de impressão e o runner completo de identidade.
 
 No fechamento deste delta, TypeScript e build 4.8.210 passaram novamente, e o novo step esbuild do workflow compilou os sete testes diretos; esses sete e os 16 testes de modelo/PDF passaram. YAML válido. O build local inclui também o cadastro ainda não publicado; o CI de cada head isolado é necessário para validar sua composição exata.
 
@@ -92,4 +94,4 @@ O fingerprint normaliza timestamps em UTC e usa a data de America/Maceio. Regres
 - Não há redefinição de senha, aceite de termos, alteração financeira ou ampliação do acesso do gestor neste lote.
 - Novas emissões congelam modelo, instituição, marca e dados acadêmicos. Documentos antigos sem esses snapshots continuam usando a leitura canônica existente, sem reescrever o registro histórico.
 - A correção do adapter melhora a reprodução de modelos anteriores sem modificar seus snapshots; não promete bytes idênticos ao PDF antigo que continha a falha.
-- O runner amplo de identidade mantém duas falhas anteriores, reproduzidas com o helper do head anterior: DOMPurify.addHook e uma asserção obsoleta da fonte de carteirinha. Os contratos diretamente afetados estão verdes; essas duas falhas não foram incluídas no escopo.
+- As duas falhas antigas do runner foram corrigidas somente nos testes: bootstrap Node do registro de hooks do DOMPurify e contrato atualizado do exportador de carteirinha. O runner completo passou em 39 casos Node e 10 Deno, com renderização SSR real e PDFs nativos; lint dos dois testes passou. O workflow passa a executar esse runner completo. CI e Preview precisam validar o novo head antes da promoção.
