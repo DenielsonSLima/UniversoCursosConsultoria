@@ -20,6 +20,7 @@ const checks = [
     '--test',
     'supabase/tests/student_email_confirmation.isolated.test.mjs',
     'supabase/tests/student_invite_state.isolated.test.mjs',
+    'supabase/tests/student_invite_actor.isolated.test.mjs',
   ]],
 ];
 

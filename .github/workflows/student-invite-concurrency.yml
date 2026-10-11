@@ -1,0 +1,66 @@
+name: Student invite PostgreSQL concurrency
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/student-invite-concurrency.yml'
+      - 'supabase/tests/student-invite-postgres-concurrency.mjs'
+      - 'supabase/tests/fixtures/student-invite-postgres-harness.mjs'
+      - 'supabase/tests/fixtures/student_email_confirmation_schema.sql'
+      - 'supabase/tests/fixtures/student-email-confirmation-harness.mjs'
+      - 'supabase/migrations/*student_invite_actor_cas.sql'
+      - 'supabase/functions/portal-user-management/handlers/student-invite*.ts'
+      - 'supabase/functions/portal-user-management/handlers/send-student-invite*.ts'
+      - 'supabase/functions/portal-user-management/handlers/student-access-identity.ts'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/student-invite-concurrency.yml'
+      - 'supabase/tests/student-invite-postgres-concurrency.mjs'
+      - 'supabase/tests/fixtures/student-invite-postgres-harness.mjs'
+      - 'supabase/tests/fixtures/student_email_confirmation_schema.sql'
+      - 'supabase/tests/fixtures/student-email-confirmation-harness.mjs'
+      - 'supabase/migrations/*student_invite_actor_cas.sql'
+      - 'supabase/functions/portal-user-management/handlers/student-invite*.ts'
+      - 'supabase/functions/portal-user-management/handlers/send-student-invite*.ts'
+      - 'supabase/functions/portal-user-management/handlers/student-access-identity.ts'
+
+permissions:
+  contents: read
+
+jobs:
+  student-invite-postgres-concurrency:
+    name: Student invite independent-session PostgreSQL 17
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: student_invite_ci
+          POSTGRES_PASSWORD: synthetic_ephemeral_ci_only
+          POSTGRES_DB: student_invite_concurrency_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U student_invite_ci -d student_invite_concurrency_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install pinned isolated PostgreSQL client
+        env:
+          TEST_DEPS: ${{ runner.temp }}/student-invite-postgres-deps
+        run: |
+          npm install --prefix "$TEST_DEPS" --no-save --package-lock=false --ignore-scripts pg@8.16.3
+          echo "STUDENT_INVITE_PG_MODULE=$TEST_DEPS/node_modules/pg" >> "$GITHUB_ENV"
+      - name: Prove actual row, advisory, permission and commit races
+        env:
+          STUDENT_INVITE_EPHEMERAL_POSTGRES: synthetic-postgres-17-only
+        run: node supabase/tests/student-invite-postgres-concurrency.mjs

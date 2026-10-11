@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { createStudentEmailDatabase, seedStudentEmailDatabase, ids } from './student-email-confirmation-harness.mjs';
 import { handleSendStudentInvite } from '../../functions/portal-user-management/handlers/send-student-invite.ts';
 
@@ -5,12 +6,22 @@ export { ids };
 
 export async function createInviteFixture(options = {}) {
   const db = await createStudentEmailDatabase();
+  // Produção substituiu o contexto inicial para exigir primeiro acesso institucional.
+  // O override é exclusivo deste fixture; o harness histórico de e-mail fica intacto.
+  const actorSql = await readFile(new URL('../../migrations/20260822113020_close_institutional_gate_bypasses.sql', import.meta.url), 'utf8');
+  const actorStart = actorSql.indexOf('CREATE OR REPLACE FUNCTION public.portal_identidade_actor_gestor_contexto(');
+  const actorEnd = actorSql.indexOf('$function$;', actorStart);
+  if (actorStart < 0 || actorEnd < 0) throw new Error('Guard institucional vigente ausente');
+  await db.exec(actorSql.slice(actorStart, actorEnd + '$function$;'.length));
   await seedStudentEmailDatabase(db);
   await db.exec(`ALTER TABLE public.parceiros ADD COLUMN convite_enviado_em timestamptz;
+    UPDATE public.usuarios_sistema SET primeiro_acesso_institucional_pendente=false,
+      acesso_institucional_origem='LEGADO' WHERE id='${ids.actorRecord}';
     UPDATE auth.users SET email_confirmed_at='2026-10-01' WHERE id='${ids.auth}';
     UPDATE public.parceiros SET senha_atualizada_em=NULL, troca_senha_obrigatoria=true,
       acesso_status='pendente' WHERE id='${ids.student}';
     DELETE FROM public.portal_identidade_institucional_senha_eventos WHERE auth_user_id='${ids.auth}';`);
+  await db.exec(await readFile(new URL('../../migrations/20261011160000_guard_student_invite_actor_cas.sql', import.meta.url), 'utf8'));
   if (options.unlinked) await db.query('UPDATE public.parceiros SET auth_user_id=NULL WHERE id=$1', [ids.student]);
   if (options.poloIds) await db.query('UPDATE public.parceiros SET polo_ids=$1::uuid[] WHERE id=$2',
     [`{${options.poloIds.join(',')}}`, ids.student]);
@@ -23,7 +34,7 @@ export async function createInviteFixture(options = {}) {
   const row = async () => (await db.query('SELECT to_jsonb(p) AS row FROM public.parceiros p WHERE id=$1', [ids.student])).rows[0].row;
   const snapshot = await row();
   const hooks = {};
-  const counts = { writes: 0, applied: 0, recovery: 0, emails: 0, invites: 0 };
+  const counts = { writes: 0, applied: 0, recovery: 0, emails: 0, invites: 0, checkpoints: 0 };
   const completePassword = () => db.query('UPDATE auth.users SET encrypted_password=$1 WHERE id=$2',
     ['opaque-own-hash-created-during-request', ids.auth]);
   const authUser = async () => {
@@ -31,38 +42,29 @@ export async function createInviteFixture(options = {}) {
     return { id: user.id, email: user.email, email_confirmed_at: user.email_confirmed_at,
       user_metadata: user.raw_user_meta_data };
   };
-  const update = (table, patch) => {
-    const filters = [];
-    const query = {
-      eq: (field, value) => { filters.push([field, value]); return query; },
-      is: (field, value) => { filters.push([field, value]); return query; },
-      select: () => query,
-      maybeSingle: async () => {
-        counts.writes += 1;
-        const injectedError = await hooks.beforeWrite?.(counts.writes, patch);
-        if (injectedError) return { data: null, error: injectedError };
-        const entries = Object.entries(patch);
-        const values = entries.map(([, value]) => value);
-        const conditions = filters.map(([field, value]) => {
-          if (value == null) return `"${field}" IS NULL`;
-          values.push(value);
-          return `"${field}"=$${values.length}`;
-        });
-        try {
-          const result = await db.query(`UPDATE public.${table}
-            SET ${entries.map(([field], index) => `"${field}"=$${index + 1}`).join(',')}
-            WHERE ${conditions.join(' AND ')} RETURNING to_jsonb(${table}) AS row`, values);
-          counts.applied += result.rows.length;
-          return { data: result.rows[0]?.row ?? null, error: null };
-        } catch (error) {
-          return { data: null, error: { code: error.code, message: error.message } };
-        }
-      },
-    };
-    return query;
+  const write = async args => {
+    const checkpoint = Object.keys(args.p_patch).length === 0;
+    if (checkpoint) {
+      counts.checkpoints += 1;
+      await hooks.beforeCheckpoint?.(counts.checkpoints);
+    } else {
+      counts.writes += 1;
+      const injectedError = await hooks.beforeWrite?.(counts.writes, args.p_patch);
+      if (injectedError) return { data: null, error: injectedError };
+    }
+    try {
+      const result = await db.query('SELECT public.portal_atualizar_acesso_aluno_por_gestor_cas($1,$2,$3::jsonb,$4::jsonb) AS row',
+        [args.p_actor_auth_user_id,args.p_partner_id,JSON.stringify(args.p_expected_snapshot),JSON.stringify(args.p_patch)]);
+      if (!checkpoint) counts.applied += 1;
+      return { data: result.rows[0].row, error: null };
+    } catch (error) {
+      return { data: null, error: { code: error.code, message: error.message } };
+    }
   };
   const admin = {
-    rpc: async (name) => {
+    rpc: async (name, args) => {
+      if (name === 'portal_atualizar_acesso_aluno_por_gestor_cas') return options.rpcMissing
+        ? { data: null, error: { code: 'PGRST202', message: 'RPC ausente' } } : write(args);
       if (name === 'portal_identidade_listar_responsaveis_vinculados') return { data: [], error: null };
       if (name === 'portal_identidade_credencial_compartilhada_liberada') {
         await hooks.sharedProof?.();
@@ -70,7 +72,7 @@ export async function createInviteFixture(options = {}) {
       }
       return { data: 'a'.repeat(64), error: null };
     },
-    from: table => ({ update: patch => update(table, patch), select: () => {
+    from: table => ({ update: () => { throw new Error("UPDATE direto não é autorizado no fixture de convite"); }, select: () => {
       const query = { eq: () => query, neq: () => query,
         limit: async () => ({ data: options.shared && table === 'parceiros' ? [{
           id: ids.other, tipo: 'Professor', cpf_cnpj: snapshot.cpf_cnpj,

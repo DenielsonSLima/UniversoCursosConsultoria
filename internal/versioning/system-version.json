@@ -1,8 +1,8 @@
 {
-  "version": "4.8.210",
+  "version": "4.8.211",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 219,
+  "revision": 220,
   "releasedAt": "2026-10-11",
-  "summary": "Boletim oficial imediato do aluno com matrícula legível e documentos pessoais adaptáveis"
+  "summary": "Convite e recuperação revalidam identidade e autorização do gestor"
 }
