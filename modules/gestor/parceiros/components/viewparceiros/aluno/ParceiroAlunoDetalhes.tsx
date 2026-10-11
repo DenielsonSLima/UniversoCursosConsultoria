@@ -10,6 +10,8 @@ import ParceiroAlunoMatriculas from './ParceiroAlunoMatriculas';
 import ParceiroAlunoDocumentos from './ParceiroAlunoDocumentos';
 import ParceiroAlunoFinanceiro from './ParceiroAlunoFinanceiro';
 import ParceiroAcesso from '../shared/ParceiroAcesso';
+import { refreshStudentAccess, type StudentAccessRefreshStatus } from '../shared/student-access-refresh';
+import { portalActivationService } from '../../../portal-activation.service';
 import ParceiroAlunoSecretaria from './ParceiroAlunoSecretaria';
 import ParceiroAlunoVacinas from './ParceiroAlunoVacinas';
 import { parceirosService } from '../../../parceiros.service';
@@ -34,6 +36,8 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [pendingDestination, setPendingDestination] = useState<AlunoTab | 'back' | null>(null);
+  const [accessRefreshAttempt, setAccessRefreshAttempt] = useState(0);
+  const [accessRefresh, setAccessRefresh] = useState<{ partnerId: string; status: StudentAccessRefreshStatus }>({ partnerId: alunoInicial.id, status: 'idle' });
   const scrollTopRef = useRef(onRequestScrollTop);
 
   useEffect(() => {
@@ -55,6 +59,31 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
     queryFn: () => parceirosService.getById(alunoInicial.id),
     initialData: alunoInicial,
   });
+
+  useEffect(() => {
+    if (activeTab !== 'acesso') return;
+    let cancelled = false;
+    const controller = new AbortController();
+    const partnerId = alunoInicial.id;
+    setAccessRefresh({ partnerId, status: 'loading' });
+    void refreshStudentAccess(queryClient, partnerId, {
+      getPartner: () => parceirosService.getById(partnerId),
+      getEmailStatus: async () => {
+        const [status] = await portalActivationService.getPartnerEmailStatuses([partnerId]);
+        return status || null;
+      },
+    }, controller.signal).then(() => {
+      if (!cancelled) setAccessRefresh({ partnerId, status: 'ready' });
+    }).catch(() => {
+      if (!cancelled) setAccessRefresh({ partnerId, status: 'error' });
+    });
+    return () => { cancelled = true; controller.abort(); };
+  }, [activeTab, alunoInicial.id, accessRefreshAttempt, queryClient]);
+
+  const retryAccessRefresh = () => {
+    setAccessRefresh({ partnerId: alunoInicial.id, status: 'idle' });
+    setAccessRefreshAttempt((attempt) => attempt + 1);
+  };
 
   const { data: currentEnrollment, isPending: isLoadingEnrollment, isError: enrollmentError } = useQuery<any | null>({
     queryKey: ['parceiro', alunoInicial.id, 'matricula-atual'],
@@ -134,6 +163,7 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
       onBack();
       return;
     }
+    if (destination === 'acesso') setAccessRefresh({ partnerId: alunoInicial.id, status: 'idle' });
     setActiveTab(destination);
     onRequestScrollTop?.();
   };
@@ -208,6 +238,8 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
         {activeTab === 'acesso' && (
           <ParceiroAcesso
             parceiroId={alunoData.id}
+            accessRefreshStatus={accessRefresh.partnerId === alunoData.id ? accessRefresh.status : 'idle'}
+            onRefreshAccess={retryAccessRefresh}
             tipo="Aluno"
             email={alunoData.email || null}
             matriculaAcesso={alunoData.matriculaAcesso || null}

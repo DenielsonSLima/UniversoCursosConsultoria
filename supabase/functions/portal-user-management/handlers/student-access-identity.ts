@@ -2,6 +2,7 @@ import { normalizeEmail } from "../auth-users.ts";
 import { findAuthIdentityConflict } from "../auth-identity-ownership.ts";
 import type { StudentAccessPatch } from "../student-access.ts";
 import type { HandlerContext, Partner } from "../types.ts";
+import type { StudentInviteWriter } from "./student-invite-state.ts";
 
 type CanonicalStudentIdentity = {
   authUser: any;
@@ -83,7 +84,9 @@ const bindStudentIdentityIfUnchanged = async (
   authUserId: string,
   authEmail: string,
   patch: StudentAccessPatch,
+  write?: StudentInviteWriter,
 ): Promise<StudentIdentityBindingResult> => {
+  if (write) return write(patch);
   let query = admin
     .from("parceiros")
     .update(patch)
@@ -164,6 +167,7 @@ export const bindSharedStudentIdentity = async (
   authUserId: string,
   authEmail: string,
   accessWasActive: boolean,
+  write?: StudentInviteWriter,
 ): Promise<SharedStudentIdentityBindingResult> => {
   const targetHasTemporaryFence = Boolean(
     partner.senha_temporaria_pendente ||
@@ -185,6 +189,7 @@ export const bindSharedStudentIdentity = async (
         auth_login_email: authEmail,
         acesso_erro: null,
       },
+      write,
     );
     return { ...binding, credentialReady: true };
   }
@@ -239,6 +244,7 @@ export const bindSharedStudentIdentity = async (
         acesso_erro: null,
         acesso_ativado_em: null,
       },
+    write,
   );
   return { ...binding, credentialReady: credential.ready };
 };
@@ -249,6 +255,7 @@ export const bindCreatedStudentIdentity = (
   authUserId: string,
   authEmail: string,
   invitationExists: boolean,
+  write?: StudentInviteWriter,
 ) =>
   bindStudentIdentityIfUnchanged(admin, partner, authUserId, authEmail, {
     auth_user_id: authUserId,
@@ -263,7 +270,7 @@ export const bindCreatedStudentIdentity = (
       }
       : {}),
     acesso_ativado_em: null,
-  });
+  }, write);
 
 export const resolveCanonicalStudentIdentity = async (
   context: HandlerContext,

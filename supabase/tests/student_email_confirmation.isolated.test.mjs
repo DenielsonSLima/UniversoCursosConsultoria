@@ -271,6 +271,116 @@ test('senha temporária ainda vigente admite reserva, mas senha posterior própr
   await rejectsCode(() => reserve(db), '55000');
 }));
 
+const replaceContextWithRevocation = async (db, revocationSql) => {
+  await db.exec(`ALTER FUNCTION public.portal_identidade_actor_gestor_contexto(uuid)
+    RENAME TO fixture_original_actor_context;
+    CREATE FUNCTION public.portal_identidade_actor_gestor_contexto(p_actor_auth_user_id uuid)
+    RETURNS jsonb LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path='' AS $$
+    DECLARE snapshot jsonb;
+    BEGIN
+      snapshot := public.fixture_original_actor_context(p_actor_auth_user_id);
+      ${revocationSql}
+      RETURN snapshot;
+    END;
+    $$;`);
+};
+
+for (const [name, revocationSql] of [
+  ['escopo', `UPDATE public.usuarios_sistema SET context='polo',polo_ids='{}',
+    permissoes='{"allPolos":false,"modules":["parceiros"]}'
+    WHERE auth_user_id=p_actor_auth_user_id;`],
+  ['status', `UPDATE public.usuarios_sistema SET status='Inativo'
+    WHERE auth_user_id=p_actor_auth_user_id;`],
+]) test(`reserva recusa revogação de ${name} entre preflight e locks sem alterar o aluno`, () => isolated(async db => {
+  await db.exec(`UPDATE public.parceiros SET senha_atualizada_em=NULL;`);
+  const before = await one(db, `SELECT to_jsonb(aluno) AS row FROM public.parceiros aluno`);
+  const authBefore = await preserved(db);
+  await replaceContextWithRevocation(db, revocationSql);
+  await rejectsCode(() => reserve(db), '42501');
+  assert.deepEqual(await one(db, `SELECT to_jsonb(aluno) AS row FROM public.parceiros aluno`), before);
+  assert.deepEqual(await preserved(db), authBefore);
+}));
+
+test('reserva relê a permissão herdada do perfil após as locks', () => isolated(async db => {
+  await db.exec(`INSERT INTO public.perfis_acesso(id,permissoes)
+    VALUES ('${ids.other}','{"modules":["parceiros"]}');
+    UPDATE public.usuarios_sistema SET perfil_acesso_id='${ids.other}';
+    UPDATE public.parceiros SET senha_atualizada_em=NULL;`);
+  const before = await one(db, `SELECT to_jsonb(aluno) AS row FROM public.parceiros aluno`);
+  await replaceContextWithRevocation(db, `UPDATE public.perfis_acesso SET permissoes='{"modules":[]}'
+    WHERE id='${ids.other}';`);
+  await rejectsCode(() => reserve(db), '42501');
+  assert.deepEqual(await one(db, `SELECT to_jsonb(aluno) AS row FROM public.parceiros aluno`), before);
+}));
+
+test('reserva relê a condição de matriz do polo que concedia escopo global', () => isolated(async db => {
+  await db.exec(`INSERT INTO public.polos(id,is_matriz,status)
+    VALUES ('${ids.other}',true,'Ativo');
+    UPDATE public.usuarios_sistema SET context='${ids.other}';
+    UPDATE public.parceiros SET senha_atualizada_em=NULL;`);
+  const before = await one(db, `SELECT to_jsonb(aluno) AS row FROM public.parceiros aluno`);
+  await replaceContextWithRevocation(db, `UPDATE public.polos SET is_matriz=false
+    WHERE id='${ids.other}';`);
+  await rejectsCode(() => reserve(db), '42501');
+  assert.deepEqual(await one(db, `SELECT to_jsonb(aluno) AS row FROM public.parceiros aluno`), before);
+}));
+
+test('reserva autoriza novamente o replay e mantém a emissão quando o escopo foi revogado', () => isolated(async db => {
+  await db.exec(`UPDATE public.parceiros SET senha_atualizada_em=NULL;`);
+  assert.equal((await reserve(db)).rows[0].portal_reservar_emissao_senha_temporaria, true);
+  const before = await one(db, `SELECT to_jsonb(aluno) AS row FROM public.parceiros aluno`);
+  await replaceContextWithRevocation(db, `UPDATE public.usuarios_sistema SET context='polo',
+    polo_ids='{}',permissoes='{"allPolos":false,"modules":["parceiros"]}'
+    WHERE auth_user_id=p_actor_auth_user_id;`);
+  await rejectsCode(() => reserve(db), '42501');
+  assert.deepEqual(await one(db, `SELECT to_jsonb(aluno) AS row FROM public.parceiros aluno`), before);
+}));
+
+test('confirmação relê permissão herdada revogada antes de alterar Auth ou auditoria', () => isolated(async db => {
+  await db.exec(`INSERT INTO public.perfis_acesso(id,permissoes)
+    VALUES ('${ids.other}','{"modules":["parceiros"]}');
+    UPDATE public.usuarios_sistema SET perfil_acesso_id='${ids.other}';`);
+  const before = await preserved(db);
+  await replaceContextWithRevocation(db, `UPDATE public.perfis_acesso SET permissoes='{"modules":[]}'
+    WHERE id='${ids.other}';`);
+  await rejectsCode(() => confirm(db), '42501');
+  assert.deepEqual(await preserved(db), before);
+  assert.deepEqual(await one(db, `SELECT email_confirmed_at IS NULL AS pending,
+    confirmation_token='confirmation-fixture' AS token_preserved FROM auth.users`), {
+    pending: true, token_preserved: true,
+  });
+  assert.equal((await one(db, 'SELECT count(*)::int AS n FROM public.sistema_eventos')).n, 0);
+}));
+
+test('confirmação relê matriz revogada antes de alterar Auth ou auditoria', () => isolated(async db => {
+  await db.exec(`INSERT INTO public.polos(id,is_matriz,status)
+    VALUES ('${ids.other}',true,'Ativo');
+    UPDATE public.usuarios_sistema SET context='${ids.other}';`);
+  const before = await preserved(db);
+  await replaceContextWithRevocation(db, `UPDATE public.polos SET is_matriz=false
+    WHERE id='${ids.other}';`);
+  await rejectsCode(() => confirm(db), '42501');
+  assert.deepEqual(await preserved(db), before);
+  assert.equal((await one(db, `SELECT email_confirmed_at IS NULL AS pending FROM auth.users`)).pending, true);
+  assert.equal((await one(db, 'SELECT count(*)::int AS n FROM public.sistema_eventos')).n, 0);
+}));
+
+test('reconfirmação com perfil e matriz herdados preserva senha própria, termos e único evento', () => isolated(async db => {
+  await db.exec(`INSERT INTO public.perfis_acesso(id,permissoes)
+    VALUES ('${ids.other}','{"modules":["parceiros"]}');
+    INSERT INTO public.polos(id,is_matriz,status) VALUES ('${ids.other}',true,'Ativo');
+    UPDATE public.usuarios_sistema SET perfil_acesso_id='${ids.other}',context='${ids.other}';`);
+  const before = await preserved(db);
+  assert.equal((await confirm(db)).rows[0].ok, true);
+  const completed = await one(db, `SELECT email_confirmed_at,senha_atualizada_em
+    FROM auth.users JOIN public.parceiros ON auth_user_id=auth.users.id`);
+  assert.equal((await confirm(db)).rows[0].ok, true);
+  assert.deepEqual(await preserved(db), before);
+  assert.deepEqual(await one(db, `SELECT email_confirmed_at,senha_atualizada_em
+    FROM auth.users JOIN public.parceiros ON auth_user_id=auth.users.id`), completed);
+  assert.equal((await one(db, 'SELECT count(*)::int AS n FROM public.sistema_eventos')).n, 1);
+}));
+
 test('contrato usa locks sem espera nas duas linhas e advisories compartilhadas', async () => {
   const sql = await readFile(new URL('../migrations/20261010193000_confirm_student_email_atomically.sql', import.meta.url), 'utf8');
   assert.equal((sql.match(/FOR UPDATE NOWAIT/g) || []).length, 2);

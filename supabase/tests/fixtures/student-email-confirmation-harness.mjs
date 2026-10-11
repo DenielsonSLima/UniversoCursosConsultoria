@@ -15,6 +15,7 @@ export const confirmationMigrations = [
   '20261010193000_confirm_student_email_atomically.sql',
   '20261010193100_preserve_created_student_password.sql',
   '20261010193200_require_password_proof_on_email_confirmation.sql',
+  '20261011123000_revalidate_student_temporary_password_reservation_actor.sql',
 ];
 
 export async function createStudentEmailDatabase() {

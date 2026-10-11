@@ -25,14 +25,15 @@ const makeContext = (mode: FailureMode) => {
       error: null,
     }),
     from: () => ({
-      update: () => ({
-        eq: () => {
-          updateCalls += 1;
-          return mode === "processing-db" && updateCalls === 1
-            ? { error: { code: "XX000", message: RAW_FAILURE } }
-            : { error: null };
-        },
-      }),
+      update: (patch: Record<string, unknown>) => {
+        updateCalls += 1;
+        const query: any = { eq: () => query, is: () => query,
+          select: () => query, maybeSingle: () =>
+            mode === "processing-db" && updateCalls === 1
+              ? { data: null, error: { code: "XX000", message: RAW_FAILURE } }
+              : { data: { ...partner, ...patch }, error: null } };
+        return query;
+      },
     }),
     auth: {
       admin: {
