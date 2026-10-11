@@ -1,15 +1,10 @@
-import {
-  findAuthUserByEmail,
-  normalizeEmail,
-  sendRecoveryEmail,
-} from "../auth-users.ts";
+import { findAuthUserByEmail, normalizeEmail } from "../auth-users.ts";
 import { findAuthIdentityConflict } from "../auth-identity-ownership.ts";
 import {
   buildPartnerInviteOperationMetadata,
   readValidPartnerInviteOperationMarker,
 } from "./partner-invite-reconciliation.ts";
 import { resolveRedirectTarget } from "../redirects.ts";
-import { accessErrorSummary } from "../student-access.ts";
 import type {
   HandlerContext,
   Partner,
@@ -23,10 +18,7 @@ import {
 import { createStudentInviteFailureResponder } from "./student-invite-failure.ts";
 import { hasCreatedStudentPassword } from "./student-first-access-state.ts";
 import { createStudentInviteState } from "./student-invite-state.ts";
-import {
-  validateStudentRecoveryLink,
-  type StudentRecoveryResult,
-} from "./student-recovery-link.ts";
+import { handleStudentInviteRecovery } from "./student-invite-recovery.ts";
 
 type AuthUserRecord = {
   id: string;
@@ -63,9 +55,10 @@ export const handleSendStudentInvite = async (
     partner.auth_login_email || options.email || partner.email,
   );
   const passwordWasCreated = hasCreatedStudentPassword(partner);
-  const accessWasActive = passwordWasCreated && partner.acesso_status === "ativo" &&
+  const accessWasActive = passwordWasCreated &&
+    partner.acesso_status === "ativo" &&
     partner.troca_senha_obrigatoria === false;
-  const state = createStudentInviteState(admin, partner);
+  const state = createStudentInviteState(context, partner);
   const { failAccess, failInternal } = createStudentInviteFailureResponder(
     context,
     authEmail,
@@ -166,6 +159,10 @@ export const handleSendStudentInvite = async (
     } catch (error) {
       return failInternal("build-invite-proof", error);
     }
+    const invitePermit = await state.check();
+    if (invitePermit.error) {
+      return failAccess(invitePermit.error, invitePermit.status);
+    }
     let inviteResult: AuthOperationResult;
     try {
       inviteResult = await admin.auth.admin.inviteUserByEmail(authEmail, {
@@ -221,6 +218,10 @@ export const handleSendStudentInvite = async (
         "O e-mail real de acesso deve coincidir com o contato do aluno para receber o convite.",
         400,
       );
+    }
+    const createPermit = await state.check();
+    if (createPermit.error) {
+      return failAccess(createPermit.error, createPermit.status);
     }
     let createdUser: AuthOperationResult;
     try {
@@ -313,8 +314,10 @@ export const handleSendStudentInvite = async (
 
   if (!identityWasCreated && identityConflict.hasCompatibleProfile) {
     if (passwordWasCreated && !authUser.email_confirmed_at) {
-      return json({ success: false,
-        error: "A senha já criada foi preservada. Confirme o e-mail antes de reutilizar o acesso nos demais perfis.",
+      return json({
+        success: false,
+        error:
+          "A senha já criada foi preservada. Confirme o e-mail antes de reutilizar o acesso nos demais perfis.",
       }, 409);
     }
     const sharedBinding = await bindSharedStudentIdentity(
@@ -359,13 +362,15 @@ export const handleSendStudentInvite = async (
     }
   } else {
     const binding = await state.write(
-      passwordWasCreated ? { auth_login_email: authEmail, acesso_erro: null } : {
-        auth_login_email: authEmail,
-        troca_senha_obrigatoria: true,
-        acesso_status: "processando",
-        acesso_erro: null,
-        acesso_ativado_em: null,
-      },
+      passwordWasCreated
+        ? { auth_login_email: authEmail, acesso_erro: null }
+        : {
+          auth_login_email: authEmail,
+          troca_senha_obrigatoria: true,
+          acesso_status: "processando",
+          acesso_erro: null,
+          acesso_ativado_em: null,
+        },
     );
     if (binding.error) {
       return failInternal("update-linked-student", binding.error);
@@ -398,96 +403,16 @@ export const handleSendStudentInvite = async (
     });
   }
 
-  let deliveryError: string | null = null;
-  if (canDeliverByEmail) {
-    const emailDelivery = options.publicApiKey.apiKey
-      ? await sendRecoveryEmail(
-        options.supabaseUrl,
-        options.publicApiKey.apiKey,
-        authEmail,
-        finalRedirect,
-      )
-      : { sent: false, message: options.publicApiKey.message };
-
-    if (emailDelivery.sent) {
-      state.markRecoveryEmailSent();
-      const sentAt = new Date().toISOString();
-      const sent = await state.write(
-        passwordWasCreated
-          ? {
-            acesso_erro: null,
-          }
-          : {
-            acesso_status: "convite_enviado",
-            acesso_erro: null,
-            convite_enviado_em: sentAt,
-          },
-      );
-      if (sent.error) {
-        return failInternal("mark-recovery-sent", sent.error);
-      }
-
-      return json({
-        success: true,
-        action: "recovery",
-        userId: authUser.id,
-        inviteSent: false,
-        recoveryEmailSent: true,
-        recoveryLink: null,
-        message: accessWasActive
-          ? "O acesso do aluno já estava ativo. Enviamos um link para redefinir a senha, sem alterar o acesso atual."
-          : passwordWasCreated ? "A senha já criada foi preservada. Enviamos um link de recuperação por e-mail."
-          : "Já existia uma conta para este e-mail. Enviamos um link para concluir o acesso.",
-      });
-    }
-    deliveryError = emailDelivery.message ||
-      "Não foi possível enviar o link por e-mail.";
-  }
-
-  let recovery: StudentRecoveryResult;
-  try {
-    recovery = await admin.auth.admin.generateLink({
-      type: "recovery",
-      email: authEmail,
-      options: { redirectTo: finalRedirect },
-    });
-  } catch (error) {
-    return failInternal("generate-recovery-link", error);
-  }
-  if (recovery.error) {
-    return failInternal("generate-recovery-link-result", recovery.error);
-  }
-  const recoveryLink = validateStudentRecoveryLink(recovery, authUser.id);
-  if ("error" in recoveryLink) {
-    return json({ success: false, error: recoveryLink.error, ...state.delivery() }, recoveryLink.status);
-  }
-
-  const pending = await state.write(
-    passwordWasCreated
-      ? {
-        acesso_erro: deliveryError ? accessErrorSummary(deliveryError) : null,
-      }
-      : {
-        acesso_status: "pendente",
-        acesso_erro: deliveryError ? accessErrorSummary(deliveryError) : null,
-      },
-  );
-  if (pending.error) {
-    return failInternal("mark-access-pending", pending.error);
-  }
-
-  return json({
-    success: true,
-    action: "recovery",
-    userId: authUser.id,
-    inviteSent: false,
-    recoveryEmailSent: false,
-    recoveryLink: recoveryLink.link,
-    message: accessWasActive
-      ? "O acesso do aluno já estava ativo. Geramos apenas um link para redefinir a senha, sem alterar o acesso atual."
-      : passwordWasCreated ? "A senha já criada foi preservada. Geramos um link de recuperação para envio manual."
-      : canDeliverByEmail
-      ? "Geramos um link seguro para envio manual por um canal previamente verificado."
-      : "Aluno sem e-mail: envie o link seguro por um canal previamente verificado, como o WhatsApp cadastrado.",
+  return handleStudentInviteRecovery({
+    context,
+    state,
+    authUserId: authUser.id,
+    authEmail,
+    canDeliverByEmail,
+    passwordWasCreated,
+    accessWasActive,
+    finalRedirect,
+    options,
+    failure: { failAccess, failInternal },
   });
 };

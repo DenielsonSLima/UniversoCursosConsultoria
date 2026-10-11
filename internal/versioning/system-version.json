@@ -4,5 +4,5 @@
   "stage": "stable",
   "revision": 220,
   "releasedAt": "2026-10-11",
-  "summary": "Link manual de recuperação validado pela identidade Auth do aluno"
+  "summary": "Convite e recuperação revalidam identidade e autorização do gestor"
 }

@@ -8,6 +8,8 @@ Histórico arquivado: [28/09/2026 a 30/09/2026 — versões 4.8.128 a 4.8.137](.
 
 ## [4.8.211] - 2026-10-11
 
+- Convite e recuperação revalidam a permissão do gestor e o estado do aluno no banco antes de concluir; revogação bloqueia escrita e entrega posterior do link.
+
 - Link manual de recuperação confere a identidade retornada pelo Auth antes de entregá-lo ao gestor.
 - Identidade divergente ou link ausente interrompe a operação com resposta sanitizada e preserva a credencial atual.
 

@@ -38,6 +38,7 @@ const [
   readSource('./components/viewparceiros/shared/student-access-state.ts'),
   readSource('./components/viewparceiros/shared/StudentAccessSummary.tsx'),
 ]);
+const studentRecoverySource = await readSource('../../../supabase/functions/portal-user-management/handlers/student-invite-recovery.ts');
 const publicAuthSource = [
   publicAuthEntry,
   await readSource('../../public/login/aluno-public-auth.helpers.ts'),
@@ -86,10 +87,10 @@ test('aluno sem e-mail usa matrícula sem passar pela validação de caixa posta
 test('backend cria acesso por matrícula confirmado e devolve link para entrega manual', () => {
   assert.match(studentInviteHandlerSource, /isSyntheticAuthEmail = authEmail\.endsWith/);
   assert.match(studentInviteHandlerSource, /admin\.auth\.admin\.createUser\(\{[\s\S]*?email_confirm: true/);
-  assert.match(studentInviteHandlerSource, /validateStudentRecoveryLink\(recovery, authUser\.id\)/);
-  assert.match(studentInviteHandlerSource, /if \("error" in recoveryLink\) \{[\s\S]*?return json\([\s\S]*?state\.delivery\(\)[\s\S]*?const pending = await state\.write/);
-  assert.match(studentInviteHandlerSource, /recoveryLink: recoveryLink\.link/);
-  assert.match(studentInviteHandlerSource, /Aluno sem e-mail: envie o link seguro por um canal previamente verificado/);
+  assert.match(studentRecoverySource, /validateStudentRecoveryLink\(recovery, authUserId\)/);
+  assert.match(studentRecoverySource, /if \("error" in recoveryLink\) \{[\s\S]*?return json\([\s\S]*?state\.delivery\(\)[\s\S]*?const pending = await state\.write/);
+  assert.match(studentRecoverySource, /recoveryLink: recoveryLink\.link/);
+  assert.match(studentRecoverySource, /Aluno sem e-mail: envie o link seguro por um canal previamente verificado/);
   assert.match(portalAuthHandlerSource, /admin\.rpc\("resolve_portal_login_identity"/);
   assert.match(portalAuthHandlerSource, /resolvedEmail = identifier\.includes\("@"\)[\s\S]*?: await resolveLoginIdentity\(admin, identifier\)/);
   assert.match(portalAuthHandlerSource, /const authEmail = resolvedEmail \|\|/);

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { handleSendStudentInvite } from "./send-student-invite.ts";
 import { SHARED_CREDENTIAL_READY_RPC } from "./student-access-identity.ts";
 import type { HandlerContext, Partner } from "../types.ts";
+import { STUDENT_INVITE_CAS_RPC } from "./student-invite-state.ts";
 
 const CPF = "52998224725";
 const EMAIL = "pessoa@example.com";
@@ -57,7 +58,24 @@ const makeFixture = (options: FixtureOptions = {}) => {
   };
 
   const admin = {
-    rpc: async (name: string, args: Record<string, unknown>) => {
+    rpc: async (name: string, args: Record<string, any>) => {
+      if (name === STUDENT_INVITE_CAS_RPC) {
+        if (Object.keys(args.p_patch).length) updates.push(args.p_patch);
+        if (options.bindingErrorCode) {
+          return {
+            data: null,
+            error: { code: options.bindingErrorCode, message: "CAS recusado" },
+          };
+        }
+        return {
+          data: {
+            id: args.p_partner_id,
+            ...args.p_expected_snapshot,
+            ...args.p_patch,
+          },
+          error: null,
+        };
+      }
       if (name === "portal_identidade_listar_responsaveis_vinculados") {
         return { data: rows.responsaveis_legais || [], error: null };
       }
@@ -131,7 +149,10 @@ const makeFixture = (options: FixtureOptions = {}) => {
 
   const context: HandlerContext = {
     admin,
-    gestor: { id: "gestor-1" },
+    gestor: {
+      id: "gestor-1",
+      auth_user_id: "11111111-1111-4111-8111-111111111111",
+    },
     gestorEmail: "gestor@example.com",
     json: responder,
   };

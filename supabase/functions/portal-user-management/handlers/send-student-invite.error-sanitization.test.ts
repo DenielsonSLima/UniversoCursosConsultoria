@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { handleSendStudentInvite } from "./send-student-invite.ts";
 import type { HandlerContext, Partner } from "../types.ts";
+import { STUDENT_INVITE_CAS_RPC } from "./student-invite-state.ts";
 
 const RAW_FAILURE = "db-host.internal token=segredo-operacional";
 const partner: Partner = {
@@ -18,20 +19,39 @@ type FailureMode = "throw-list" | "processing-db" | "invite-result";
 const makeContext = (mode: FailureMode) => {
   let updateCalls = 0;
   const admin = {
-    rpc: (name: string) => ({
-      data: name === "portal_identidade_listar_responsaveis_vinculados"
-        ? []
-        : "a".repeat(64),
-      error: null,
-    }),
+    rpc: (name: string, args: any) => {
+      if (name === STUDENT_INVITE_CAS_RPC) {
+        if (Object.keys(args.p_patch).length) updateCalls += 1;
+        return mode === "processing-db" && updateCalls === 1
+          ? { data: null, error: { code: "XX000", message: RAW_FAILURE } }
+          : {
+            data: {
+              id: args.p_partner_id,
+              ...args.p_expected_snapshot,
+              ...args.p_patch,
+            },
+            error: null,
+          };
+      }
+      return {
+        data: name === "portal_identidade_listar_responsaveis_vinculados"
+          ? []
+          : "a".repeat(64),
+        error: null,
+      };
+    },
     from: () => ({
       update: (patch: Record<string, unknown>) => {
         updateCalls += 1;
-        const query: any = { eq: () => query, is: () => query,
-          select: () => query, maybeSingle: () =>
+        const query: any = {
+          eq: () => query,
+          is: () => query,
+          select: () => query,
+          maybeSingle: () =>
             mode === "processing-db" && updateCalls === 1
               ? { data: null, error: { code: "XX000", message: RAW_FAILURE } }
-              : { data: { ...partner, ...patch }, error: null } };
+              : { data: { ...partner, ...patch }, error: null },
+        };
         return query;
       },
     }),

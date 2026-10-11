@@ -48,14 +48,17 @@ export const createStudentInviteFailureResponder = (
   state: StudentInviteState,
 ) => {
   const failAccess = async (message: string, status = 500) => {
-    if (state.hasConflict()) return state.conflictResponse(context);
+    if (state.hasFailure()) return state.failureResponse(context);
     await state.write({
       ...(authEmail ? { auth_login_email: authEmail } : {}),
       ...(!accessWasActive ? { acesso_status: "erro" as const } : {}),
       acesso_erro: accessErrorSummary(message),
     });
-    if (state.hasConflict()) return state.conflictResponse(context);
-    return context.json({ success: false, error: message, ...state.delivery() }, status);
+    if (state.hasFailure()) return state.failureResponse(context);
+    return context.json(
+      { success: false, error: message, ...state.delivery() },
+      status,
+    );
   };
 
   const failInternal = (
