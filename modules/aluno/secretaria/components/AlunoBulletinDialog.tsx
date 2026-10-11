@@ -21,6 +21,7 @@ const ActiveBulletinDialog: React.FC<ActiveDialogProps> = ({ onClose, alunoId, e
   const dialogRef = useRef<HTMLElement | null>(null);
   const closeRef = useRef(onClose);
   const activeRef = useRef(true);
+  const printControllerRef = useRef<AbortController | null>(null);
   const [revision, setRevision] = useState(0);
   const [state, setState] = useState<PdfState>({ revision: -1, result: null, url: '', error: null });
   const [printing, setPrinting] = useState(false);
@@ -33,7 +34,10 @@ const ActiveBulletinDialog: React.FC<ActiveDialogProps> = ({ onClose, alunoId, e
   useEffect(() => { closeRef.current = onClose; }, [onClose]);
   useEffect(() => {
     activeRef.current = true;
-    return () => { activeRef.current = false; };
+    return () => {
+      activeRef.current = false;
+      printControllerRef.current?.abort();
+    };
   }, []);
 
   useEffect(() => {
@@ -89,11 +93,14 @@ const ActiveBulletinDialog: React.FC<ActiveDialogProps> = ({ onClose, alunoId, e
     if (!result || printing) return;
     setPrinting(true);
     setPrintError(null);
+    const controller = new AbortController();
+    printControllerRef.current = controller;
     try {
-      await printPdfBlob(result.blob, { title: 'Boletim escolar' });
+      await printPdfBlob(result.blob, { title: 'Boletim escolar', signal: controller.signal });
     } catch (failure) {
       if (activeRef.current) setPrintError(failure instanceof Error ? failure.message : 'Não foi possível abrir a impressão.');
     } finally {
+      if (printControllerRef.current === controller) printControllerRef.current = null;
       if (activeRef.current) setPrinting(false);
     }
   };

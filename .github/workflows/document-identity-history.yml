@@ -57,6 +57,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: 2.9.1
       - name: Preparar PostgreSQL, compositor PDF e navegador isolados
         run: |
           npm install --prefix "$RUNNER_TEMP/document-identity" --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.3.14 react@19.2.7 react-dom@19.2.7 esbuild@0.25.12 playwright@1.58.2 lucide-react@0.564.0 dompurify@3.4.13 qrcode@1.5.4 tailwindcss@3.4.17 postcss@8.5.6 @tanstack/react-query@5.101.0 jspdf@4.2.1 pdf-lib@1.17.1 pdfjs-dist@5.6.205 @napi-rs/canvas@0.1.100 html2canvas@1.4.1
@@ -80,7 +83,9 @@ jobs:
           PGLITE_MODULE_PATH: ${{ runner.temp }}/document-identity/node_modules/@electric-sql/pglite/dist/index.js
         run: |
           ln -s "$RUNNER_TEMP/document-identity/node_modules" node_modules
-          node --test supabase/tests/student_bulletin_pdf.isolated.test.mjs modules/aluno/secretaria/aluno-bulletin.service.test.mjs modules/aluno/secretaria/aluno-bulletin.test.mjs
+          node --test supabase/tests/student_bulletin_pdf.isolated.test.mjs modules/aluno/secretaria/aluno-bulletin.service.test.mjs modules/aluno/secretaria/aluno-bulletin.test.mjs modules/gestor/secretaria/historico-emissoes/academic-preview-snapshot.test.mjs
+      - name: Conferir cancelamento da preparação de impressão e retenção após print
+        run: deno test --allow-read --allow-env modules/gestor/secretaria/shared/pdf-blob-print.test.ts
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -349,3 +349,75 @@ for (const requireAfterPrint of [false, true]) {
     }
   });
 }
+
+for (const phase of ['before', 'load', 'settle', 'started'] as const) {
+  Deno.test(`cancelamento da impressão em ${phase} respeita a vida do PDF`, async () => {
+    const previous = Object.fromEntries(['document', 'URL', 'window'].map(key =>
+      [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
+    const frameEvents = createEventHub();
+    const printEvents = createEventHub();
+    const controller = new AbortController();
+    let created = 0;
+    let prints = 0;
+    let removed = 0;
+    let revoked = 0;
+    let resolveSettle!: () => void;
+    let resolveStarted!: () => void;
+    const settling = new Promise<void>(resolve => { resolveSettle = resolve; });
+    const started = new Promise<void>(resolve => { resolveStarted = resolve; });
+    const iframe = Object.assign(frameEvents, {
+      contentWindow: Object.assign(printEvents, {
+        focus: () => undefined,
+        print: () => { prints++; resolveStarted(); },
+      }),
+      remove: () => { removed++; },
+      setAttribute: () => undefined,
+      src: '', style: {}, title: '',
+    });
+    Object.defineProperty(globalThis, 'window', { configurable: true, value: {
+      clearTimeout: globalThis.clearTimeout.bind(globalThis),
+      setTimeout: (callback: () => void, milliseconds: number) => {
+        const timer = globalThis.setTimeout(callback, milliseconds);
+        if (milliseconds === 101) resolveSettle();
+        return timer;
+      },
+    } });
+    Object.defineProperty(globalThis, 'URL', { configurable: true, value: {
+      createObjectURL: () => 'blob:cancelable-print',
+      revokeObjectURL: () => { revoked++; },
+    } });
+    Object.defineProperty(globalThis, 'document', { configurable: true, value: {
+      createElement: () => { created++; return iframe; },
+      body: { appendChild: () => iframe },
+    } });
+    try {
+      if (phase === 'before') controller.abort();
+      const request = printPdfBlob(new Blob(['%PDF-SYNTHETIC'], { type: 'application/pdf' }), {
+        signal: controller.signal, loadTimeoutMs: 1_000,
+        settleMs: phase === 'settle' ? 101 : 0,
+        requireAfterPrint: true, afterPrintFallbackMs: 1_000,
+      });
+      if (phase === 'load') controller.abort();
+      if (phase === 'settle' || phase === 'started') frameEvents.dispatch('load');
+      if (phase === 'settle') { await settling; controller.abort(); }
+      if (phase === 'started') {
+        await started;
+        controller.abort();
+        assert.equal(prints, 1);
+        assert.equal(removed, 0, 'abortar não desmonta o PDF com impressão já aberta');
+        assert.equal(revoked, 0);
+        printEvents.dispatch('afterprint');
+        await request;
+      } else {
+        await assert.rejects(request, error => error instanceof globalThis.DOMException && error.name === 'AbortError');
+        frameEvents.dispatch('load');
+        assert.equal(prints, 0, 'load tardio não abre uma impressão cancelada');
+      }
+      assert.equal(created, phase === 'before' ? 0 : 1);
+      assert.equal(removed, phase === 'before' ? 0 : 1);
+      assert.equal(revoked, phase === 'before' ? 0 : 1);
+    } finally {
+      for (const key of ['document', 'URL', 'window'] as const) restoreGlobal(key, previous[key]);
+    }
+  });
+}

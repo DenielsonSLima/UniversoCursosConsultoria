@@ -20,6 +20,9 @@ Mudança crítica de documentos acadêmicos: interface, payload SQL e PDF oficia
 | CPF/RG/CIN/ausência | Adaptar o texto aos dados presentes. |
 | Modelo configurado | Transportar o objeto completo, assinatura e quatro parâmetros da marca d’água. |
 | Replay e documento histórico | Preservar código e snapshots; recusar conteúdo incompatível. |
+| Nova emissão após mudança de notas ou modelo | Gerar outro código para o conteúdo atual, preservando a emissão anterior. |
+| Histórico do aluno e gestor | Reproduzir o mesmo snapshot acadêmico no mesmo código. |
+| Impressão cancelada antes de iniciar | Encerrar a preparação ao fechar ou trocar o contexto do modal. |
 
 ## Manifesto explícito
 
@@ -40,6 +43,9 @@ Mudança crítica de documentos acadêmicos: interface, payload SQL e PDF oficia
 - `modules/gestor/cadastros/modelos-documentos/shared/documentVariables.ts`
 - `modules/gestor/secretaria/historico-emissoes/historico-emissoes.types.ts`
 - `modules/gestor/secretaria/historico-emissoes/academic-preview.ts`
+- `modules/gestor/secretaria/historico-emissoes/academic-preview-snapshot.test.mjs`
+- `modules/gestor/secretaria/shared/pdf-blob-print.ts`
+- `modules/gestor/secretaria/shared/pdf-blob-print.test.ts`
 - `modules/gestor/cadastros/modelos-documentos/boletim/boletim-template-read.test.mjs`
 - `.github/workflows/document-identity-history.yml`
 - `ai/operacao/registros/alteracoes/2026-10-11-aluno-boletim-pdf-identidade.md`
@@ -49,19 +55,28 @@ Mudança crítica de documentos acadêmicos: interface, payload SQL e PDF oficia
 - `internal/versioning/CHANGELOG.md`
 - `internal/versioning/changelog/2026-09-28-a-2026-09-30-versoes-4-8-128-a-4-8-137.md`
 
-Total: 25 arquivos.
+Total: 28 arquivos.
 
 ## Validação e entrega
 
 Três frentes independentes: interface, backend e fidelidade documental, com revisão cruzada. Os testes usam identidades sintéticas. PDFs e PNGs gerados, caches, build e harnesses temporários não entram no manifesto.
 
-Validação local: 56 casos Node (19 SQL, 9 serviço, 7 interface e 21 modelo/histórico), 40 contratos Deno do compositor, TypeScript, lint focado e build 4.8.210 passaram. O gate confirma todos os 25 arquivos deste manifesto dentro do teto de 500 linhas; a maior implementação é SecretariaPage.tsx, com 410. O workflow existente de identidade passa a executar os três testes novos do aluno usando dependências isoladas, e sua sintaxe YAML foi conferida.
+Após a nova revisão, 60 casos Node (25 SQL, nove serviço, oito interface, quatro snapshot/histórico e 14 modelo/PDF), 12 contratos Deno de impressão, lint focado, TypeScript e build 4.8.210 passaram. Os 40 contratos anteriores do compositor seguem como evidência da validação inicial; o compositor não foi alterado nesta revisão. O manifesto agora contém 28 arquivos, todos limitados a 500 linhas. O workflow de identidade executa também o histórico congelado e o cancelamento da impressão.
 
 Cinco PDFs sintéticos de identidade (RG, CIN, CNI, somente CPF e sem número) foram extraídos e renderizados: uma página A4 vetorial, seis componentes, matrícula humana, recursos isolados e nenhuma colisão de assinatura/QR. A interface também gerou PDF real pelo compositor do gestor, com sete componentes. Revisão cruzada aprovada pelas três frentes.
 
-Readback MCP somente leitura confirmou schema, vínculos e os corpos efetivos preservados. O harness usa o emissor aplicado 20261009130712, idêntico ao remoto; os 19 casos SQL foram repetidos após esse alinhamento. As três migrations novas estão ausentes do ledger. Os corpos e grants efetivos serão conferidos novamente antes/depois de qualquer aplicação autorizada.
+Readback MCP somente leitura confirmou schema, vínculos e os corpos efetivos preservados. O harness usa o emissor aplicado 20261009130712, idêntico ao remoto, e pgcrypto real para o fingerprint. As três migrations novas estão ausentes do ledger. Os corpos e grants efetivos serão conferidos novamente antes/depois de qualquer aplicação autorizada.
 
-CI e Preview precisam passar antes da promoção; seus resultados finais ficam na PR de entrega. O smoke autenticado no Safari será realizado quando o controle do navegador estiver disponível. A RPC nova ainda não foi aplicada ao banco remoto; emissão real permanece pendente dessa aplicação autorizada.
+CI e Preview do candidato corrigido precisam passar antes da promoção; o resultado verde do candidato anterior não valida estes deltas. Seus resultados finais ficam na PR304. O controle Safari permitiu smoke da aba Acesso publicada 4.8.209; emissão/impressão real do aluno permanecem pendentes da aplicação autorizada da RPC nova.
+
+## Achados corrigidos na revisão adicional
+
+- P1: solicitar após mudança de notas reutilizava o primeiro boletim. O SHA256 do conteúdo canônico e da data local passa a distinguir versões; conteúdo/data iguais reutilizam código, validade e snapshots.
+- P1: histórico do gestor relia notas atuais no código congelado do aluno. Snapshot acadêmico presente passa a ser obrigatório e a preservar ordem e resumo; documentos antigos sem a chave mantêm o comportamento legado.
+- P2: marca congelada nula, array ou objeto vazio era aceita. A guarda recusa estruturas inválidas e preserva URL ausente legitimamente configurada, opacidade zero e rotação falsa.
+- P2: fechar ou trocar contexto durante a preparação podia abrir a impressão anterior. AbortSignal cancela somente antes de print; recursos permanecem vivos durante o diálogo iniciado.
+
+O fingerprint normaliza timestamps em UTC e usa a data de America/Maceio. Regressões exercitam fusos de sessão distintos, mudança de identidade/modelo/instituição/marca, validade e preservação byte a byte do documento anterior. Revisão cruzada dos três agentes aprovada no manifesto final.
 
 ## Limites
 

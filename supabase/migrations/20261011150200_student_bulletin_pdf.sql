@@ -1,3 +1,33 @@
+-- Validate presentation shape without replacing an explicitly empty watermark URL.
+CREATE OR REPLACE FUNCTION internal_academic.assert_bulletin_watermark(p_watermark jsonb, p_polo_id uuid)
+RETURNS void LANGUAGE plpgsql IMMUTABLE SET search_path = '' AS $watermark$
+BEGIN
+  IF jsonb_typeof(p_watermark) IS DISTINCT FROM 'object'
+    OR NOT (p_watermark ?& ARRAY['id', 'nomeFantasia', 'cidade', 'uf', 'watermarkUrl',
+      'watermarkOpacity', 'watermarkScale', 'watermarkRotate'])
+    OR p_watermark ->> 'id' IS DISTINCT FROM p_polo_id::text
+    OR nullif(btrim(p_watermark ->> 'nomeFantasia'), '') IS NULL
+    OR jsonb_typeof(p_watermark -> 'nomeFantasia') IS DISTINCT FROM 'string'
+    OR jsonb_typeof(p_watermark -> 'cidade') NOT IN ('string', 'null')
+    OR jsonb_typeof(p_watermark -> 'uf') NOT IN ('string', 'null')
+    OR jsonb_typeof(p_watermark -> 'watermarkUrl') NOT IN ('string', 'null')
+    OR jsonb_typeof(p_watermark -> 'watermarkOpacity') IS DISTINCT FROM 'number'
+    OR jsonb_typeof(p_watermark -> 'watermarkScale') IS DISTINCT FROM 'number'
+    OR jsonb_typeof(p_watermark -> 'watermarkRotate') IS DISTINCT FROM 'boolean'
+  THEN
+    RAISE EXCEPTION 'O snapshot da marca d’água do boletim está inválido.' USING ERRCODE = '55000';
+  END IF;
+  IF (p_watermark ->> 'watermarkOpacity')::numeric NOT BETWEEN 0 AND 1
+    OR (p_watermark ->> 'watermarkScale')::numeric NOT BETWEEN 5 AND 100
+  THEN
+    RAISE EXCEPTION 'A configuração da marca d’água do boletim está inválida.' USING ERRCODE = '55000';
+  END IF;
+
+END;
+$watermark$;
+REVOKE ALL ON FUNCTION internal_academic.assert_bulletin_watermark(jsonb, uuid)
+  FROM PUBLIC, anon, authenticated, service_role;
+
 -- Own-student bulletin emission. The generic privileged issuer stays private.
 CREATE OR REPLACE FUNCTION public.obter_boletim_aluno_pdf(
   p_matricula_id uuid,
@@ -7,6 +37,7 @@ RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = ''
+SET timezone = 'UTC'
 AS $function$
 DECLARE
   v_aluno_id uuid;
@@ -18,6 +49,8 @@ DECLARE
   v_issue record;
   v_emission jsonb;
   v_snapshot jsonb;
+  v_policy jsonb;
+  v_reference text;
 BEGIN
   IF auth.uid() IS NULL OR p_matricula_id IS NULL OR p_modulo_id IS NULL THEN
     RAISE EXCEPTION 'Acesso ao boletim do aluno não autorizado.' USING ERRCODE = '42501';
@@ -28,7 +61,7 @@ BEGIN
   END IF;
 
   -- Keep ownership and academic eligibility stable until the emission commits.
-  SELECT enrollment.id, enrollment.turma_id, class.polo_id,
+  SELECT enrollment.id, enrollment.turma_id, class.polo_id, course.id AS course_id, course.nome AS course_name,
     jsonb_build_object('id', enrollment.id, 'status', enrollment.status,
       'turma', jsonb_build_object('id', class.id, 'nome', class.nome, 'codigo', class.codigo)) AS matricula,
     jsonb_build_object('id', student.id, 'nome', student.nome,
@@ -67,67 +100,9 @@ BEGIN
     RAISE EXCEPTION 'O módulo selecionado não está iniciado nesta turma.' USING ERRCODE = '42501';
   END IF;
 
-  -- Canonical policy controls validity/QR and stable identity includes the selected module.
-  SELECT issued.* INTO v_issue FROM public.emitir_documento_validacao_interno(
-    'boletim', p_matricula_id, p_modulo_id::text, NULL, NULL, NULL, false
-  ) issued;
-
-  select jsonb_build_object(
-      'id', validation.id,
-      'identidade', validation.identidade,
-      'codigo', validation.codigo,
-      'documento', validation.documento,
-      'matricula_id', validation.matricula_id,
-      'aluno_id', validation.aluno_id,
-      'polo_id', validation.polo_id,
-      'periodo_referencia', validation.periodo_referencia,
-      'referencia_externa', validation.referencia_externa,
-      'status', validation.status,
-      'emitido_em', validation.emitido_em,
-      'ultima_emissao_em', validation.ultima_emissao_em,
-      'validade_ate', validation.validade_ate,
-      'validacao_publica', validation.validacao_publica,
-      'revogado_em', validation.revogado_em,
-      'emitido_por', validation.emitido_por,
-      'quantidade_emissoes', validation.quantidade_emissoes,
-      'dados_emissao', validation.dados_emissao,
-      'aluno', v_enrollment.aluno,
-      'matricula', v_enrollment.matricula
-    )
-  into v_emission
-  from public.documentos_validacao as validation
-  where validation.codigo = v_issue.codigo
-    and validation.documento = 'boletim'
-    and validation.periodo_referencia = p_modulo_id::text
-    and validation.matricula_id = p_matricula_id
-    and validation.aluno_id = v_aluno_id
-    and validation.polo_id = v_enrollment.polo_id
-    and validation.status = 'ATIVO';
-
-
-  IF v_emission IS NULL THEN
-    RAISE EXCEPTION 'A emissão oficial do boletim não foi localizada.' USING ERRCODE = '55000';
-  END IF;
-  v_snapshot := v_emission -> 'dados_emissao';
-  IF v_snapshot ? 'academicDataSnapshot' THEN
-    v_academic := v_snapshot -> 'academicDataSnapshot';
-  ELSE
-    v_academic := internal_academic.get_document_payload(p_matricula_id, 'boletim', p_modulo_id);
-  END IF;
-  IF v_snapshot ? 'documentTemplateSnapshot' THEN
-    v_template := v_snapshot -> 'documentTemplateSnapshot';
-  ELSE
-    v_template := internal_academic.get_bulletin_template();
-  END IF;
-  IF jsonb_typeof(v_template) IS DISTINCT FROM 'object'
-    OR jsonb_typeof(v_template -> 'textContent') IS DISTINCT FROM 'string'
-    OR nullif(btrim(v_template ->> 'textContent'), '') IS NULL
-    OR (v_template ? 'absoluteFields'
-      AND jsonb_typeof(v_template -> 'absoluteFields') IS DISTINCT FROM 'array')
-  THEN
-    RAISE EXCEPTION 'O snapshot do modelo oficial do boletim está inválido.' USING ERRCODE = '55000';
-  END IF;
-  IF NOT (v_snapshot ? 'institutionSnapshot' AND v_snapshot ? 'watermarkSnapshot') THEN
+  -- Capture the complete current content before deriving its stable version identity.
+  v_academic := internal_academic.get_document_payload(p_matricula_id, 'boletim', p_modulo_id);
+  v_template := internal_academic.get_bulletin_template();
   -- Keep the same header fallbacks as polosService.getById. Return only PDF fields.
   select jsonb_build_object(
       'id', unit.id,
@@ -167,15 +142,95 @@ BEGIN
     order by enterprise.id
     limit 1
   ) as principal on true
-  where unit.id = v_enrollment.polo_id;
+  where unit.id = v_enrollment.polo_id
+  for share of unit nowait;
 
-    if v_polo is null then
-      raise exception 'A instituição da matrícula não foi localizada.'
-        using errcode = '55000';
-    end if;
+  IF v_polo IS NULL THEN
+    RAISE EXCEPTION 'A instituição da matrícula não foi localizada.' USING ERRCODE = '55000';
   END IF;
+  IF jsonb_typeof(v_academic) IS DISTINCT FROM 'object'
+    OR jsonb_typeof(v_academic -> 'componentes') IS DISTINCT FROM 'array'
+    OR jsonb_array_length(v_academic -> 'componentes') = 0
+    OR EXISTS (SELECT 1 FROM jsonb_array_elements(v_academic -> 'componentes') component
+      WHERE component ->> 'moduleId' IS DISTINCT FROM p_modulo_id::text)
+  THEN
+    RAISE EXCEPTION 'Os dados acadêmicos do boletim estão inválidos.' USING ERRCODE = '55000';
+  END IF;
+  PERFORM internal_academic.assert_bulletin_watermark(v_watermark, v_enrollment.polo_id);
+  SELECT to_jsonb(policy) INTO v_policy
+  FROM public.documentos_validacao_politicas policy WHERE policy.documento = 'boletim' FOR SHARE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'A política oficial do boletim não foi localizada.' USING ERRCODE = '55000';
+  END IF;
+  -- Equal content on the local issue date is a retry; changed content creates a new document.
+  -- A later day can issue again without reviving an expired or revoked historical code.
+  v_reference := 'boletim-v1:' || encode(extensions.digest(jsonb_build_object(
+    'issueDate', (now() AT TIME ZONE 'America/Maceio')::date,
+    'enrollmentId', p_matricula_id, 'studentId', v_aluno_id, 'moduleId', p_modulo_id,
+    'enrollment', v_enrollment.matricula, 'student', v_enrollment.aluno,
+    'courseId', v_enrollment.course_id, 'courseName', v_enrollment.course_name,
+    'academicData', v_academic, 'template', v_template,
+    'institution', v_polo, 'watermark', v_watermark, 'policy', v_policy
+  )::text, 'sha256'), 'hex');
+
+  -- Canonical policy controls validity/QR and stable identity includes the selected module.
+  SELECT issued.* INTO v_issue FROM public.emitir_documento_validacao_interno(
+    'boletim', p_matricula_id, p_modulo_id::text, v_reference, NULL, NULL, false
+  ) issued;
+
+  select jsonb_build_object(
+      'id', validation.id,
+      'identidade', validation.identidade,
+      'codigo', validation.codigo,
+      'documento', validation.documento,
+      'matricula_id', validation.matricula_id,
+      'aluno_id', validation.aluno_id,
+      'polo_id', validation.polo_id,
+      'periodo_referencia', validation.periodo_referencia,
+      'referencia_externa', validation.referencia_externa,
+      'status', validation.status,
+      'emitido_em', validation.emitido_em,
+      'ultima_emissao_em', validation.ultima_emissao_em,
+      'validade_ate', validation.validade_ate,
+      'validacao_publica', validation.validacao_publica,
+      'revogado_em', validation.revogado_em,
+      'emitido_por', validation.emitido_por,
+      'quantidade_emissoes', validation.quantidade_emissoes,
+      'dados_emissao', validation.dados_emissao,
+      'aluno', v_enrollment.aluno,
+      'matricula', v_enrollment.matricula
+    )
+  into v_emission
+  from public.documentos_validacao as validation
+  where validation.codigo = v_issue.codigo
+    and validation.documento = 'boletim'
+    and validation.periodo_referencia = p_modulo_id::text
+    and validation.matricula_id = p_matricula_id
+    and validation.aluno_id = v_aluno_id
+    and validation.polo_id = v_enrollment.polo_id
+    and validation.referencia_externa = v_reference
+    and validation.status = 'ATIVO'
+  for share;
 
 
+  IF v_emission IS NULL THEN
+    RAISE EXCEPTION 'A emissão oficial do boletim não foi localizada.' USING ERRCODE = '55000';
+  END IF;
+  v_snapshot := v_emission -> 'dados_emissao';
+  IF v_snapshot ? 'academicDataSnapshot' THEN
+    v_academic := v_snapshot -> 'academicDataSnapshot';
+  END IF;
+  IF v_snapshot ? 'documentTemplateSnapshot' THEN
+    v_template := v_snapshot -> 'documentTemplateSnapshot';
+  END IF;
+  IF jsonb_typeof(v_template) IS DISTINCT FROM 'object'
+    OR jsonb_typeof(v_template -> 'textContent') IS DISTINCT FROM 'string'
+    OR nullif(btrim(v_template ->> 'textContent'), '') IS NULL
+    OR (v_template ? 'absoluteFields'
+      AND jsonb_typeof(v_template -> 'absoluteFields') IS DISTINCT FROM 'array')
+  THEN
+    RAISE EXCEPTION 'O snapshot do modelo oficial do boletim está inválido.' USING ERRCODE = '55000';
+  END IF;
   IF v_snapshot ? 'institutionSnapshot' THEN
     v_polo := v_snapshot -> 'institutionSnapshot';
   END IF;
@@ -184,6 +239,11 @@ BEGIN
   THEN
     RAISE EXCEPTION 'O snapshot institucional do boletim está inválido.' USING ERRCODE = '55000';
   END IF;
+
+  IF v_snapshot ? 'watermarkSnapshot' THEN
+    v_watermark := v_snapshot -> 'watermarkSnapshot';
+  END IF;
+  PERFORM internal_academic.assert_bulletin_watermark(v_watermark, v_enrollment.polo_id);
 
   -- Presence matters: malformed/null frozen content must fail, never become live data.
   IF jsonb_typeof(v_academic) IS DISTINCT FROM 'object'
@@ -211,7 +271,8 @@ BEGIN
       'watermarkSnapshot', v_watermark, 'academicDataSnapshot', v_academic)
     WHERE validation.codigo = v_issue.codigo AND validation.documento = 'boletim'
       AND validation.matricula_id = p_matricula_id AND validation.aluno_id = v_aluno_id
-      AND validation.periodo_referencia = p_modulo_id::text AND validation.status = 'ATIVO'
+      AND validation.periodo_referencia = p_modulo_id::text
+      AND validation.referencia_externa = v_reference AND validation.status = 'ATIVO'
     RETURNING validation.dados_emissao INTO v_snapshot;
     v_emission := jsonb_set(v_emission, '{dados_emissao}', v_snapshot);
   END IF;
@@ -228,4 +289,4 @@ $function$;
 REVOKE ALL ON FUNCTION public.obter_boletim_aluno_pdf(uuid, uuid) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.obter_boletim_aluno_pdf(uuid, uuid) TO authenticated, service_role;
 COMMENT ON FUNCTION public.obter_boletim_aluno_pdf(uuid, uuid) IS
-  'Boletim canônico imediato do próprio aluno, por módulo iniciado, com snapshots integrais e código estável.';
+  'Boletim canônico atual do próprio aluno, por módulo iniciado, com versão por conteúdo/data e histórico imutável.';

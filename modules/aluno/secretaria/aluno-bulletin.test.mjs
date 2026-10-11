@@ -62,7 +62,8 @@ const bundle = await build({
           import React, { useState as useRealState } from 'react';
           export { useRef } from 'react';
           export const fixture = { buttons: [], effects: [], pdfState: null, activeKey: '',
-            downloads: [], prints: [], requests: [], pending: null, stateWrites: 0, emissions: 0 };
+            downloads: [], prints: [], requests: [], pending: null, printingPending: null,
+            stateWrites: 0, emissions: 0 };
           export const useEffect = (setup, deps) => { fixture.effects.push({ setup, deps }); };
           export const useState = (initial) => {
             const isPdf = initial && typeof initial === 'object' && 'revision' in initial;
@@ -81,7 +82,7 @@ const bundle = await build({
         portal: 'export const createPortal = children => children;',
         useMediaQuery: 'export default () => false;',
         'download-pdf-blob': "import {fixture} from 'bulletin-ui-fixture'; export const downloadPdfBlob=(blob,fileName)=>fixture.downloads.push({blob,fileName});",
-        'pdf-blob-print': "import {fixture} from 'bulletin-ui-fixture'; export const printPdfBlob=async(blob,options)=>{fixture.prints.push({blob,options});};",
+        'pdf-blob-print': "import {fixture} from 'bulletin-ui-fixture'; export const printPdfBlob=async(blob,options)=>{fixture.prints.push({blob,options});await fixture.printingPending;};",
         'aluno-bulletin.service': `
           import { fixture } from 'bulletin-ui-fixture';
           export const loadAlunoBulletinPdf = (enrollmentId, alunoId, moduleId, signal) => {
@@ -171,6 +172,24 @@ test('RPC recusada mostra erro e mantém download e impressão bloqueados sem pr
   assert.equal(findButton('Baixar PDF').disabled, true);
   assert.equal(findButton('Imprimir').disabled, true);
   cleanup();
+});
+
+test('fechar ou trocar o contexto aborta a preparação da impressão da instância anterior', async () => {
+  fixture.pdfState = { revision: 0, result: pdf, url: 'blob:official-bulletin', error: null };
+  let finishPrint;
+  fixture.printingPending = new Promise(resolve => { finishPrint = resolve; });
+  ui.renderPdf();
+  const cleanup = fixture.effects.find(effect => effect.deps?.length === 0).setup();
+  findButton('Imprimir').onClick();
+  const { blob, options } = fixture.prints.at(-1);
+  assert.equal(blob, pdf.blob);
+  assert.ok(options.signal instanceof AbortSignal);
+  assert.equal(options.signal.aborted, false);
+  cleanup();
+  assert.equal(options.signal.aborted, true);
+  finishPrint();
+  await setImmediate();
+  fixture.printingPending = null;
 });
 
 test('troca de matrícula, módulo ou contexto troca a identidade do dialog e cancela resposta antiga', async () => {

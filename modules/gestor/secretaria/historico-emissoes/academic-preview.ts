@@ -218,6 +218,17 @@ export const loadAcademicPreview = async (
   if (!emission.matricula_id) {
     throw new Error('A emissão não possui matrícula acadêmica vinculada.');
   }
+  const snapshot = emission.dados_emissao;
+  if (emission.documento === 'boletim' && Object.prototype.hasOwnProperty.call(snapshot || {}, 'academicDataSnapshot')) {
+    const frozen = snapshot.academicDataSnapshot as AcademicPreviewRpcPayload | null;
+    if (!frozen || typeof frozen !== 'object' || Array.isArray(frozen)
+      || !Array.isArray(frozen.componentes) || !frozen.componentes.length
+      || !emission.periodo_referencia
+      || frozen.componentes.some((row) => !row || row.moduleId !== emission.periodo_referencia)) {
+      throw new Error('O snapshot acadêmico do boletim está inválido ou pertence a outro módulo.');
+    }
+    return buildAcademicPreviewFromPayload(frozen, null, true);
+  }
   const { data, error } = await (supabase.rpc as any)(
     'get_secretaria_documento_academico',
     { p_matricula_id: emission.matricula_id, p_documento: emission.documento },

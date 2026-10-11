@@ -87,10 +87,11 @@ test('private core, model and generic issuer grants do not create a student bypa
     const grants = await db.query(`SELECT
       has_function_privilege('authenticated','internal_academic.get_document_payload(uuid,text,uuid)','EXECUTE') AS core,
       has_function_privilege('authenticated','internal_academic.get_bulletin_template()','EXECUTE') AS model,
+      has_function_privilege('authenticated','internal_academic.assert_bulletin_watermark(jsonb,uuid)','EXECUTE') AS watermark,
       has_function_privilege('authenticated','public.emitir_documento_validacao_interno(text,uuid,text,text,timestamptz,uuid,boolean)','EXECUTE') AS issuer,
       has_function_privilege('anon','public.obter_boletim_aluno_pdf(uuid,uuid)','EXECUTE') AS anon,
       has_function_privilege('authenticated','public.obter_boletim_aluno_pdf(uuid,uuid)','EXECUTE') AS student`);
-    assert.deepEqual(grants.rows[0], { core: false, model: false, issuer: false, anon: false, student: true });
+    assert.deepEqual(grants.rows[0], { core: false, model: false, watermark: false, issuer: false, anon: false, student: true });
     await reject(() => db.query('SELECT public.get_secretaria_documento_academico($1,$2)',[enrollmentId,'boletim']));
     await db.exec('SET ROLE authenticated');
     assert.equal((await issueBulletin(db)).emission.documento, 'boletim');
@@ -123,14 +124,11 @@ test('existing academic eligibility is unchanged, including final class with dep
   });
 });
 
-test('replay preserves code, issue count and every snapshot despite live model, identity and grade changes', async () => {
+test('same current content retries the same code without changing snapshots, count or validity', async () => {
   await scenario(async db => {
     const first = await issueBulletin(db);
-    await db.exec(`UPDATE public.documentos_templates SET conteudo='null'::jsonb WHERE id='boletim_tecnico';
-      UPDATE public.test_diary_results SET media_final=1;
-      UPDATE public.parceiros SET cpf_cnpj=NULL,rg=NULL,tipo_documento='CIN' WHERE id='${studentId}';
-      UPDATE public.polos SET watermark_opacity=0.8, watermark_scale=10, watermark_rotate=true`);
     const replay = await issueBulletin(db);
+    assert.match(first.emission.referencia_externa, /^boletim-v1:[0-9a-f]{64}$/);
     assert.equal(replay.emission.codigo, first.emission.codigo);
     assert.equal(replay.emission.quantidade_emissoes, 1);
     assert.equal(replay.emission.ultima_emissao_em, first.emission.ultima_emissao_em);
@@ -138,6 +136,80 @@ test('replay preserves code, issue count and every snapshot despite live model, 
     assert.deepEqual(replay.emission.dados_emissao, first.emission.dados_emissao);
     assert.deepEqual(replay.preview, first.preview);
   }, { template: configuredBulletin });
+});
+
+test('changed grades issue current results with a new code and keep the previous document immutable', async () => {
+  await scenario(async db => {
+    const first = await issueBulletin(db);
+    const before = (await db.query('SELECT * FROM public.documentos_validacao WHERE codigo=$1',
+      [first.emission.codigo])).rows[0];
+    await db.exec("UPDATE public.test_diary_results SET media_final=10,frequencia_percent=100,resultado_final='APROVADO'");
+    const current = await issueBulletin(db);
+    assert.notEqual(current.emission.codigo, first.emission.codigo);
+    assert.notEqual(current.emission.referencia_externa, first.emission.referencia_externa);
+    assert.equal(current.preview.academicData.mediaGeral, 10);
+    assert.equal(current.preview.academicData.frequenciaGeral, 100);
+    assert.equal(first.preview.academicData.mediaGeral, 7);
+    assert.equal(first.preview.academicData.frequenciaGeral, 80);
+    assert.deepEqual((await db.query('SELECT * FROM public.documentos_validacao WHERE codigo=$1',
+      [first.emission.codigo])).rows[0], before);
+    assert.equal((await issueBulletin(db)).emission.codigo, current.emission.codigo);
+    assert.equal((await db.query('SELECT count(*)::int AS count FROM public.documentos_validacao')).rows[0].count, 2);
+  });
+});
+
+test('session timezones cannot change the same content fingerprint or its frozen dates', async () => {
+  await scenario(async db => {
+    await db.exec("SET TIMEZONE='Pacific/Auckland'");
+    const first = await issueBulletin(db);
+    await db.exec("SET TIMEZONE='America/Los_Angeles'");
+    const retry = await issueBulletin(db);
+    assert.equal(retry.emission.codigo, first.emission.codigo);
+    assert.deepEqual(retry.preview, first.preview);
+    assert.equal((await db.query('SHOW TIMEZONE')).rows[0].TimeZone, 'America/Los_Angeles');
+  });
+});
+
+test('identity, full model and institutional watermark changes create versions without rewriting history', async () => {
+  await scenario(async db => {
+    let previous = await issueBulletin(db);
+    for (const update of [
+      "UPDATE public.parceiros SET tipo_documento='CIN',rg=NULL",
+      "UPDATE public.documentos_templates SET conteudo=jsonb_set(conteudo,'{footer}','{\"custom\":\"new\"}')",
+      "UPDATE public.polos SET nome='Instituição atual', watermark_opacity=0.8, watermark_scale=10, watermark_rotate=true",
+      "UPDATE public.documentos_validacao_politicas SET validade_dias=45"
+    ]) {
+      const before = (await db.query('SELECT * FROM public.documentos_validacao WHERE codigo=$1',
+        [previous.emission.codigo])).rows[0];
+      await db.exec(update);
+      const current = await issueBulletin(db);
+      assert.notEqual(current.emission.codigo, previous.emission.codigo);
+      assert.deepEqual((await db.query('SELECT * FROM public.documentos_validacao WHERE codigo=$1',
+        [previous.emission.codigo])).rows[0], before);
+      previous = current;
+    }
+    assert.equal(previous.preview.watermark.watermarkOpacity, 0.8);
+    assert.equal(previous.preview.watermark.watermarkScale, 10);
+    assert.equal(previous.preview.watermark.watermarkRotate, true);
+  }, { template: configuredBulletin });
+});
+
+test('the local issue date changes at Maceio midnight and avoids an eternally expired content identity', async () => {
+  await scenario(async db => {
+    const sql = await readFile(new URL('../migrations/20261011150200_student_bulletin_pdf.sql', import.meta.url), 'utf8');
+    // Replace only the clock dependency; keep the timezone conversion and all RPC logic intact.
+    const setClock = async instant => db.exec(sql.replace("now() AT TIME ZONE 'America/Maceio'",
+      "'" + instant + "'::timestamptz AT TIME ZONE 'America/Maceio'"));
+    await setClock('2026-10-12T02:59:00Z');
+    const first = await issueBulletin(db);
+    await setClock('2026-10-12T03:01:00Z');
+    const nextDay = await issueBulletin(db);
+    assert.notEqual(nextDay.emission.codigo, first.emission.codigo);
+    assert.equal((await issueBulletin(db)).emission.codigo, nextDay.emission.codigo);
+    await db.query("UPDATE public.documentos_validacao SET validade_ate=now()-interval '1 day' WHERE codigo=$1",[first.emission.codigo]);
+    await setClock('2026-11-15T15:00:00Z');
+    assert.notEqual((await issueBulletin(db)).emission.codigo, first.emission.codigo);
+  });
 });
 
 test('different modules produce separate stable identities and reject corrupted cross-module snapshot', async () => {
@@ -153,19 +225,19 @@ test('different modules produce separate stable identities and reject corrupted 
   });
 });
 
-test('legacy snapshots and explicit null identity remain immutable on replay', async () => {
+test('a new content version leaves legacy snapshots and explicit null identity intact', async () => {
   await scenario(async db => {
     const issued = (await db.query(`SELECT * FROM public.emitir_documento_validacao_interno(
       'boletim',$1,$2,NULL,NULL,NULL,false)`,[enrollmentId,moduleId])).rows[0];
     await db.query(`UPDATE public.documentos_validacao SET dados_emissao=dados_emissao ||
       jsonb_build_object('studentCpf',NULL,'studentRg',NULL,'studentDocumentType',NULL,
         'documentTemplateSnapshot',$1::jsonb) WHERE codigo=$2`,[configuredBulletin,issued.codigo]);
-    const before = (await db.query('SELECT dados_emissao FROM public.documentos_validacao WHERE codigo=$1',[issued.codigo])).rows[0].dados_emissao;
-    const replay = await issueBulletin(db);
-    assert.deepEqual(replay.emission.dados_emissao, before);
-    assert.deepEqual(replay.preview.template, configuredBulletin);
-    assert.equal(replay.emission.dados_emissao.studentCpf, null);
-    assert.equal(replay.preview.academicData.studentMatricula, 'UNIV-260001');
+    const before = (await db.query('SELECT * FROM public.documentos_validacao WHERE codigo=$1',[issued.codigo])).rows[0];
+    const current = await issueBulletin(db);
+    assert.notEqual(current.emission.codigo, issued.codigo);
+    assert.deepEqual((await db.query('SELECT * FROM public.documentos_validacao WHERE codigo=$1',[issued.codigo])).rows[0], before);
+    assert.equal(before.dados_emissao.studentCpf, null);
+    assert.equal(current.preview.academicData.studentMatricula, 'UNIV-260001');
   });
 });
 
@@ -199,6 +271,36 @@ test('malformed frozen institution cannot fall back to a generic live header', a
       await reject(() => issueBulletin(db),'55000');
       assert.deepEqual((await db.query('SELECT dados_emissao FROM public.documentos_validacao WHERE codigo=$1',
         [first.emission.codigo])).rows[0].dados_emissao.institutionSnapshot,institution);
+    }
+  });
+});
+
+test('malformed frozen watermark fails without replacing the snapshot or omitting the brand', async () => {
+  await scenario(async db => {
+    const first = await issueBulletin(db);
+    const valid = first.preview.watermark;
+    for (const watermark of [null, [], {}, { ...valid, watermarkUrl: {} },
+      { ...valid, watermarkOpacity: '0.5' }, { ...valid, watermarkOpacity: 2 },
+      { ...valid, watermarkScale: -1 }, { ...valid, watermarkRotate: null }]) {
+      await db.query(`UPDATE public.documentos_validacao SET dados_emissao=jsonb_set(dados_emissao,
+        '{watermarkSnapshot}',$1::jsonb) WHERE codigo=$2`, [JSON.stringify(watermark),first.emission.codigo]);
+      await reject(() => issueBulletin(db), '55000');
+      assert.deepEqual((await db.query('SELECT dados_emissao FROM public.documentos_validacao WHERE codigo=$1',
+        [first.emission.codigo])).rows[0].dados_emissao.watermarkSnapshot, watermark);
+    }
+  });
+});
+
+test('an explicitly absent configured watermark URL is valid and preserves zero opacity and false rotation', async () => {
+  await scenario(async db => {
+    for (const url of [null, '']) {
+      await db.query('UPDATE public.polos SET watermark_url=$1', [url]);
+      const first = await issueBulletin(db);
+      assert.equal(first.preview.watermark.watermarkUrl, url);
+      assert.equal(first.preview.watermark.watermarkOpacity, 0);
+      assert.equal(first.preview.watermark.watermarkScale, 100);
+      assert.equal(first.preview.watermark.watermarkRotate, false);
+      assert.deepEqual((await issueBulletin(db)).preview.watermark, first.preview.watermark);
     }
   });
 });

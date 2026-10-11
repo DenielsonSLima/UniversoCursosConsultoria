@@ -21,9 +21,15 @@ export async function createStudentBulletinDatabase({ template } = {}) {
   const moduleName = process.env.PGLITE_MODULE_PATH
     ? pathToFileURL(resolve(process.env.PGLITE_MODULE_PATH)).href : '@electric-sql/pglite';
   const { PGlite } = await import(moduleName);
-  const db = new PGlite();
+  const cryptoModule = process.env.PGLITE_MODULE_PATH
+    ? new URL('./contrib/pgcrypto.js', moduleName).href : '@electric-sql/pglite/contrib/pgcrypto';
+  const { pgcrypto } = await import(cryptoModule);
+  const db = new PGlite({ extensions: { pgcrypto } });
   try {
     await db.exec(await readBulletinFixture('./declaration-identity-schema.sql'));
+    await db.exec(`CREATE SCHEMA test_crypto; CREATE EXTENSION pgcrypto WITH SCHEMA test_crypto;
+      CREATE FUNCTION extensions.digest(text,text) RETURNS bytea LANGUAGE sql IMMUTABLE
+      AS $digest$ SELECT test_crypto.digest($1,$2) $digest$;`);
     const boundary = await readBulletinFixture('./student-declaration-boundaries.sql');
     await db.exec(boundary.slice(0, boundary.indexOf('CREATE OR REPLACE FUNCTION public.emitir_')));
     await db.exec(await readBulletinFixture('./portal-academic-registration-formatter.sql') + ';');
