@@ -1,8 +1,8 @@
 {
-  "version": "4.8.209",
+  "version": "4.8.210",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 218,
+  "revision": 219,
   "releasedAt": "2026-10-11",
-  "summary": "Acesso do aluno atualiza o cadastro completo e preserva senha e autorização em operações concorrentes"
+  "summary": "Boletim oficial imediato do aluno com matrícula legível e documentos pessoais adaptáveis"
 }

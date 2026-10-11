@@ -85,6 +85,16 @@ test('prévia, impressão e exportação ativa usam a apresentação compartilha
     assert.match(source, /page="verso"/);
   }
   const page = readFileSync('modules/gestor/secretaria/carteirinhas/SecretariaCarteirinhasPage.tsx', 'utf8');
-  assert.match(page, /downloadCarteirinhasPdf\(printContentRef\.current/);
   assert.match(page, /tipoDocumento: enrollment\.tipoDocumento/);
+  assert.match(page, /<SecretariaCarteirinhasPrintLayout\s+alunos=\{alunosParaImprimir\}/);
+  const layout = readFileSync('modules/gestor/secretaria/carteirinhas/SecretariaCarteirinhasPrintLayout.tsx', 'utf8');
+  assert.match(layout, /useCarteirinhasPdf\(sourceKey, layoutType\)/);
+  assert.match(layout, /ref=\{pdf\.sourceRef\}/);
+  assert.match(layout, /<iframe[^>]*src=\{pdf\.url\}/);
+  assert.match(layout, /onClick=\{pdf\.download\}/);
+  assert.match(layout, /void pdf\.print\(\)/);
+  const hook = readFileSync('modules/gestor/secretaria/carteirinhas/useCarteirinhasPdf.ts', 'utf8');
+  assert.match(hook, /createCarteirinhasPdf\(source, controller\.signal\)/);
+  assert.match(hook, /downloadCarteirinhasPdf\(current\.blob, layoutType\)/);
+  assert.match(hook, /printCarteirinhas\(current\.blob\)/);
 });

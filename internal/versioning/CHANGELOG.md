@@ -4,7 +4,15 @@ Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente
 
 Histórico anterior: [27/09/2026 — versões 4.8.117 a 4.8.127](./changelog/2026-09-27-versoes-4-8-117-a-4-8-127.md), [16/09/2026 a 25/09/2026 — versões 4.8.65 a 4.8.90](./changelog/2026-09-16-a-2026-09-25-versoes-4-8-65-a-4-8-90.md), [13/09/2026 — versões 4.8.53 a 4.8.64](./changelog/2026-09-13-versoes-4-8-53-a-4-8-64.md), [08/09/2026 a 12/09/2026 — versões 4.8.37 a 4.8.52](./changelog/2026-09-08-a-2026-09-12-versoes-4-8-37-a-4-8-52.md), [03/09/2026 a 08/09/2026 — versões 4.8.30 a 4.8.36](./changelog/2026-09-03-a-2026-09-08-versoes-4-8-30-a-4-8-36.md), [02/09/2026 — versões 4.8.27 a 4.8.29](./changelog/2026-09-02-versoes-4-8-27-a-4-8-29.md), [01/09/2026 — versões 4.8.23 a 4.8.26](./changelog/2026-09-01-versoes-4-8-23-a-4-8-26.md), [01/09/2026 — versões 4.8.20 a 4.8.22](./changelog/2026-09-01-versoes-4-8-20-a-4-8-22.md), [27/08/2026 a 31/08/2026 — versões 4.8.8 a 4.8.19](./changelog/2026-08-27-a-2026-08-31.md), [26/08/2026 — versões 4.8.6 a 4.8.7](./changelog/2026-08-26.md), [25/08/2026 — versões 4.8.2 a 4.8.5](./changelog/2026-08-25-parte-1.md), [24/08/2026 — versões 4.8.0 a 4.8.1](./changelog/2026-08-24-parte-2.md), [24/08/2026 — versões 4.7.5 a 4.7.7](./changelog/2026-08-24-parte-1.md), [22/08/2026 a 23/08/2026](./changelog/2026-08-22-a-2026-08-23.md), [21/08/2026 a 22/08/2026 — parte 2](./changelog/2026-08-21-a-2026-08-22-parte-2.md), [21/08/2026 — parte 1](./changelog/2026-08-21-parte-1.md), [11/08/2026 a 20/08/2026](./changelog/2026-08-11-a-2026-08-20.md), [09/08/2026 a 10/08/2026](./changelog/2026-08-09-a-2026-08-10.md), [05/08/2026 — parte 1](./changelog/2026-08-05-parte-1.md), [04/08/2026](./changelog/2026-08-04.md), [03/08/2026](./changelog/2026-08-03.md), [02/08/2026 — continuação](./changelog/2026-08-02-parte-2.md), [02/08/2026 a 31/07/2026](./changelog/2026-07-31-a-2026-08-02.md), [31/07/2026 a 26/07/2026](./changelog/2026-07-26-a-2026-07-31.md) e [26/07/2026 a 14/07/2026](./changelog/2026-07-14-a-2026-07-26.md).
 
-Histórico arquivado: [27/09/2026 — versões 4.8.115 a 4.8.116](./changelog/2026-09-27-versoes-4-8-115-a-4-8-116.md), [27/09/2026 — versão 4.8.114](./changelog/2026-09-27-versao-4-8-114.md), [27/09/2026 — versão 4.8.113](./changelog/2026-09-27-versao-4-8-113.md), [27/09/2026 — versão 4.8.112](./changelog/2026-09-27-versao-4-8-112.md), [27/09/2026 — versão 4.8.111](./changelog/2026-09-27-versao-4-8-111.md), [25/09/2026 a 26/09/2026 — versões 4.8.91 a 4.8.110](./changelog/2026-09-25-a-2026-09-26-versoes-4-8-91-a-4-8-110.md).
+Histórico arquivado: [28/09/2026 a 30/09/2026 — versões 4.8.128 a 4.8.137](./changelog/2026-09-28-a-2026-09-30-versoes-4-8-128-a-4-8-137.md), [27/09/2026 — versões 4.8.115 a 4.8.116](./changelog/2026-09-27-versoes-4-8-115-a-4-8-116.md), [27/09/2026 — versão 4.8.114](./changelog/2026-09-27-versao-4-8-114.md), [27/09/2026 — versão 4.8.113](./changelog/2026-09-27-versao-4-8-113.md), [27/09/2026 — versão 4.8.112](./changelog/2026-09-27-versao-4-8-112.md), [27/09/2026 — versão 4.8.111](./changelog/2026-09-27-versao-4-8-111.md), [25/09/2026 a 26/09/2026 — versões 4.8.91 a 4.8.110](./changelog/2026-09-25-a-2026-09-26-versoes-4-8-91-a-4-8-110.md).
+
+## [4.8.210] - 2026-10-11
+
+- Portal do aluno emite o boletim oficial em PDF do módulo iniciado, com prévia, download e impressão do mesmo arquivo.
+- Boletins exibem matrícula humana e documentos pessoais adaptáveis por CPF, RG e CIN, conforme os dados presentes.
+- Modelo institucional completo, assinatura, QR e marca d’água acompanham novas emissões e seus snapshots.
+- Novas notas geram outro código; o histórico do gestor preserva o mesmo conteúdo do aluno e a impressão pode ser cancelada antes de iniciar.
+- Identificação por CIN preserva nome e matrícula dos modelos personalizados; datas do boletim seguem o dia local congelado na emissão.
 
 ## [4.8.209] - 2026-10-11
 
@@ -436,63 +444,3 @@ Histórico arquivado: [27/09/2026 — versões 4.8.115 a 4.8.116](./changelog/20
 - O cadastro de aluno bloqueia clique, Enter, cancelamento e troca de etapa enquanto o salvamento está em andamento.
 - O botão exibe “Salvando...” com indicador de progresso e impede que a mesma solicitação seja disparada novamente antes da resposta.
 - Falhas liberam a trava para nova tentativa, preservando a mensagem canônica da mutation e evitando o falso retorno “Aluno já cadastrado” causado por replay.
-
-## [4.8.137] - 2026-09-30
-
-- Cadastro de professor exige somente polo, nome e CPF; os demais dados permanecem opcionais e falhas aparecem na própria etapa.
-- Polos são exibidos verticalmente, com nome e cidade/UF em duas linhas, e o polo real selecionado é persistido sem substituição pela matriz.
-- Chave Pix ganha tipo controlado (CPF, CNPJ, telefone, e-mail ou aleatória), máscara e validação correspondentes; conta corrente/poupança passa a respeitar o contrato aceito pelo banco.
-
-## [4.8.136] - 2026-09-30
-
-- Matrículas da Turma exibem a mesma foto já cadastrada no perfil do aluno, sem consulta paralela no navegador.
-- Alunos sem foto ou com arquivo indisponível continuam identificados pela inicial, sem imagem quebrada.
-- A RPC acadêmica preserva autorização por turma, grants mínimos e a ordem dos dez campos já existentes.
-
-## [4.8.135] - 2026-09-30
-
-- Juros, multa, desconto e outros acréscimos da baixa manual formatam cada dígito imediatamente como centavos: `1` vira `R$ 0,01`, `19` vira `R$ 0,19` e `190` vira `R$ 1,90`.
-- Milhares e centavos seguem o padrão brasileiro durante a digitação, a colagem e a exclusão, com teclado numérico em dispositivos compatíveis.
-- Cálculo, parser do payload, idempotência e validação financeira do servidor permanecem inalterados.
-
-## [4.8.134] - 2026-09-30
-
-- Cadastro e acesso do aluno aceitam e-mail vazio; nesse caso o login usa a matrícula e o primeiro acesso é entregue por link seguro, sem validação de caixa postal.
-- E-mails reais continuam validados e confirmados antes do acesso assistido, preservando o contrato de segurança existente.
-- Busca global exibe a foto autorizada do cadastro e reduz proporcionalmente sua tipografia; o nome no card do aluno também fica mais compacto.
-
-## [4.8.133] - 2026-09-30
-
-- Corrige a tela branca do Portal do Gestor para perfis globais ao gerar a chave segura da busca com escopo de polos nulo.
-- Adiciona regressão para o escopo global e preserva a ordenação dos polos restritos sem alterar o perfil em memória.
-
-## [4.8.132] - 2026-09-30
-
-- Busca global passa a localizar alunos, professores, pessoas físicas e jurídicas em todos os polos autorizados ao usuário, sem depender do polo selecionado.
-- Resultados mostram nome, CPF/CNPJ formatado, cidade/UF e turma; ao escolher outro polo, o portal conclui a troca antes de abrir o cadastro.
-- Cards de alunos ganham foto maior, CPF legível, nascimento antes da filiação e removem repetições de polo e turma.
-- Busca e filtros de parceiros tornam-se controlados, com botão de limpar e restauração correta dos resultados após trocar status, aba ou filtro.
-
-## [4.8.131] - 2026-09-30
-
-- Juros, multa, desconto e acréscimos da baixa manual passam a normalizar automaticamente valores como `19` para `R$ 19,00`, com agrupamento brasileiro e duas casas decimais.
-- Novo crédito em Outros Créditos abre como workspace de tela cheia fora do PDV, com rolagem interna, bloqueio da página e navegação de foco contida.
-- Órgão expedidor volta a aparecer para CIN e CNH no cadastro, na edição e na consulta do aluno, sempre pelo catálogo controlado e sem texto livre.
-
-## [4.8.130] - 2026-09-29
-
-- Confirmação de recebimento destaca o valor da cobrança, cada ajuste e o valor final recebido em uma composição profissional e responsiva.
-- Desconto reduz automaticamente o valor recebido; juros, multa e outros acréscimos o atualizam em centavos, com bloqueio de composições inválidas.
-- Conta bancária e forma de pagamento passam a usar comboboxes pesquisáveis próprios, acessíveis por teclado e sem menus genéricos do navegador.
-
-## [4.8.129] - 2026-09-29
-
-- Usuários da aba Alunos sem acesso ao Financeiro passam diretamente da seleção do aluno para a confirmação do vínculo acadêmico.
-- O fluxo simplificado não exibe valores, vencimentos ou condições financeiras e mantém toda cobrança pendente para um usuário autorizado.
-- Falhas ao carregar o contexto mínimo bloqueiam a confirmação e oferecem nova tentativa, enquanto o assistente financeiro completo permanece inalterado.
-
-## [4.8.128] - 2026-09-28
-
-- Checklist do aluno oferece confirmação direta de entrega sem anexo, correção do registro e ações de visualizar e excluir arquivos.
-- Órgão emissor usa catálogo pesquisável no cadastro e na edição, com bloqueio de novos textos livres no banco e preservação dos dados históricos.
-- Exclusão protege arquivos compartilhados e versões atuais; histórico não arquiva a versão ativa, e falhas parciais informam como retomar.

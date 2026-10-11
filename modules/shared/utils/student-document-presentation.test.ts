@@ -63,7 +63,7 @@ test('parser histórico respeita tipo snapshot e não adapta declaração fiscal
 
 for (const frozenCpf of ['', null]) {
   test(`CPF congelado ${frozenCpf === null ? 'nulo' : 'vazio'} não usa cadastro vivo em CIN`, async () => {
-    const snapshot = { studentDocumentType: 'CIN', studentCpf: frozenCpf, studentRg: 'RESÍDUO' };
+    const snapshot = { studentDocumentType: 'CIN', studentCpf: frozenCpf, studentRg: 'RESÍDUO', studentMatricula: 'UNIV-SYNTHETIC-001' };
     const emission = { documento: 'boletim', emitido_em: '2026-09-28T12:00:00Z', dados_emissao: snapshot, aluno: { tipo_documento: 'CIN', cpf_cnpj: '11111111111' } } as any;
     const context = { academicData: null, poloInfo: {}, templateConfig: {} };
     for (const token of ['{{ALUNO_CPF}}', '{{cpf}}']) {
@@ -75,10 +75,10 @@ for (const frozenCpf of ['', null]) {
     const preview = { polo: {}, template: {}, academicData: null } as any;
     const academic = resolveAcademicSnapshotTemplate({ emission, preview }, 'CPF {{ALUNO_CPF}}');
     const registration = resolveRegistrationSnapshotTemplate('CPF {{ALUNO_CPF}}', emission, preview);
+    assert.equal(academic, '');
+    assert.match(registration, /CIN/);
     for (const text of [academic, registration]) {
-      assert.match(text, /CIN/);
       assert.doesNotMatch(text, /111\.111\.111-11|11111111111|RESÍDUO/);
     }
-  });
+});
 }
-

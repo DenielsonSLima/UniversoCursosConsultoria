@@ -22,6 +22,7 @@ import { buildDocumentVariableReplacer, buildFallbackValidationCode, buildValida
 import { resolveStudentIdentityDocument } from '../../shared/utils/studentIdentityDocument';
 import AlunoIdentityDocuments, { AlunoIdentityTab } from './components/AlunoIdentityDocuments';
 import AlunoDeclarationDialog from './components/AlunoDeclarationDialog';
+import AlunoBulletinDialog from './components/AlunoBulletinDialog';
 import AlunoSecretariaServicesPanel from './components/AlunoSecretariaServicesPanel';
 import { alunoSecretariaKeys, alunoSecretariaService } from './secretaria-aluno.service';
 import { useAlunoSecretariaData } from './useAlunoSecretariaData';
@@ -55,6 +56,7 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId, contextId }) =
   const [electionBadgeTemplate, setElectionBadgeTemplate] = useState<any>(null);
   const [bulletinOpen, setBulletinOpen] = useState(false);
   const [selectedBulletinPeriodId, setSelectedBulletinPeriodId] = useState('');
+  const [bulletinPdfRequest, setBulletinPdfRequest] = useState<{ contextId: string; alunoId: string; enrollmentId: string; moduleId: string } | null>(null);
   const [declarationOpen, setDeclarationOpen] = useState(false);
   const [irpfOpen, setIrpfOpen] = useState(false);
   const [selectedIrpfYear, setSelectedIrpfYear] = useState(getDefaultIrpfCalendarYear);
@@ -168,6 +170,10 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId, contextId }) =
   useEffect(() => () => {
     if (toastTimerRef.current !== null) window.clearTimeout(toastTimerRef.current);
   }, []);
+  useEffect(() => {
+    setBulletinPdfRequest(null);
+    setBulletinOpen(false);
+  }, [alunoId, contextId]);
   useEffect(() => {
     const defaultYear = getDefaultIrpfCalendarYear(irpfReleaseDate);
     setSelectedIrpfYear((year) => isIrpfYearReleased(year, irpfReleaseDate) ? year : defaultYear);
@@ -366,6 +372,14 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId, contextId }) =
         modules={bulletinModules}
         selectedPeriodId={selectedBulletinPeriodId}
         onModuleChange={setSelectedBulletinPeriodId}
+        onEmitPdf={() => {
+          if (!eligibility.canEmitBulletin || !bulletinEnrollment || !selectedBulletinModule
+            || bulletinModulesQuery.isLoading || academicResultsQuery.isLoading
+            || bulletinModulesQuery.isError || academicResultsQuery.isError) return;
+          setBulletinPdfRequest({ contextId, alunoId, enrollmentId: bulletinEnrollment.id, moduleId: selectedBulletinModule.moduleId });
+          setBulletinOpen(false);
+        }}
+        emitPdfDisabled={!eligibility.canEmitBulletin || !bulletinEnrollment || !selectedBulletinModule}
         isLoading={bulletinModulesQuery.isLoading || academicResultsQuery.isLoading}
         isError={bulletinModulesQuery.isError || academicResultsQuery.isError}
         onRetry={() => {
@@ -375,6 +389,13 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId, contextId }) =
           }
           void academicResultsQuery.refetch();
         }}
+      />
+      <AlunoBulletinDialog
+        open={Boolean(bulletinPdfRequest && bulletinPdfRequest.contextId === contextId && bulletinPdfRequest.alunoId === alunoId)}
+        onClose={() => { setBulletinPdfRequest(null); setBulletinOpen(true); }}
+        alunoId={alunoId} contextId={contextId}
+        enrollmentId={bulletinPdfRequest?.enrollmentId || ''}
+        moduleId={bulletinPdfRequest?.moduleId || ''}
       />
       <AlunoDeclarationDialog open={declarationOpen && eligibility.canEmitEnrollmentDeclaration}
         onClose={() => setDeclarationOpen(false)} alunoId={alunoId}
@@ -387,4 +408,3 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId, contextId }) =
 };
 
 export default SecretariaPage;
-

@@ -1,8 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
-import { canUpdateDocumentIdentity, identityUpdateError, requestDocumentIdentityUpdate } from './useUpdateDocumentIdentity';
+import DOMPurify from 'dompurify';
 import type { EmissionLog } from './historico-emissoes.types';
+
+// Esta unidade testa RPC e vínculo, sem renderizar ou sanitizar HTML. O serviço
+// importado registra hooks no browser; Node precisa apenas dessa inicialização.
+if (!DOMPurify.addHook) DOMPurify.addHook = () => {};
+const { canUpdateDocumentIdentity, identityUpdateError, requestDocumentIdentityUpdate } =
+  await import('./useUpdateDocumentIdentity');
 
 const source = { codigo: 'PASTA-ORIGINAL', documento: 'pasta_identificacao', aluno_id: 'aluno', matricula_id: 'matricula', status: 'ATIVO' } as EmissionLog;
 const updated = { ...source, codigo: 'PASTA-NOVA' };
