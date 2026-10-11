@@ -9,11 +9,11 @@ import {
 } from 'lucide-react';
 import GoogleLogo from '../../../../../shared/auth/GoogleLogo';
 import ConfirmModal from '../../../../../shared/components/ConfirmModal';
-import { TERMS_VERSION } from '../../../../../shared/constants/terms';
 import { portalActivationService } from '../../../portal-activation.service';
 import { buildConfiguredAuthRedirectUrl } from '../../../../../../lib/app-url';
 import StudentEmailAccessStatus from './StudentEmailAccessStatus';
 import StudentRegistrationAccess from './StudentRegistrationAccess';
+import { buildStudentAccessState, type StudentCredentialEvidence } from './student-access-state';
 
 type AccessToast = {
   success: (title: string, message: string) => void;
@@ -30,7 +30,9 @@ interface ParceiroAcessoProps {
   acessoStatus?: string | null;
   acessoErro?: string | null;
   trocaSenhaObrigatoria?: boolean | null;
+  credentialEvidence?: StudentCredentialEvidence;
   aceitouTermosUso?: boolean | null;
+  aceitouTermosUsoEm?: string | null;
   termosUsoVersao?: string | null;
   toast?: AccessToast;
 }
@@ -45,7 +47,9 @@ const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({
   acessoStatus,
   acessoErro,
   trocaSenhaObrigatoria,
+  credentialEvidence,
   aceitouTermosUso,
+  aceitouTermosUsoEm,
   termosUsoVersao,
   toast,
 }) => {
@@ -83,24 +87,15 @@ const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({
   const emailConfirmed = Boolean(emailConfirmation?.emailConfirmed);
   const emailValidatedByManager = Boolean(emailConfirmation?.emailValidatedByManager);
   const emailVerifiedForAssistedAccess = emailConfirmed || emailValidatedByManager;
-  const termsAreCurrent = aceitouTermosUso === true && termosUsoVersao === TERMS_VERSION;
-  const accessIsFullyActive = acessoStatus === 'ativo' && !trocaSenhaObrigatoria && termsAreCurrent;
-  const needsFirstAccess = tipo === 'Aluno' && !accessIsFullyActive;
-  const canConfirmEmail = hasContactEmail && emailConfirmation?.status === 'pending' && !emailValidatedByManager && needsFirstAccess;
-  const canIssueTemporaryPassword = emailVerifiedForAssistedAccess && needsFirstAccess;
-  const accessRedirectTo = buildConfiguredAuthRedirectUrl(
-    needsFirstAccess ? '/login' : '/recuperar-senha',
-  );
-  const accessActionLabel = !hasContactEmail
-    ? 'Gerar link de primeiro acesso'
-    : needsFirstAccess
-      ? 'Reenviar primeiro acesso'
-      : 'Enviar recuperação de senha';
-  const accessDescription = !hasContactEmail
-    ? 'Gera um link seguro para o aluno sem e-mail criar a senha de acesso.'
-    : needsFirstAccess
-      ? 'Reenvia o link para o aluno criar a primeira senha e aceitar os termos.'
-      : 'Envia um link seguro para o aluno redefinir a senha de uma conta já ativa.';
+  const emailConfirmationStatus = emailConfirmationQuery.isError ? 'unknown' : emailConfirmation?.status;
+  const accessState = buildStudentAccessState({
+    hasContactEmail, emailConfirmed, emailValidatedByManager,
+    emailConfirmationStatus, emailStatusLoading: emailConfirmationQuery.isLoading,
+    accessStatus: acessoStatus, requiresPasswordReset: trocaSenhaObrigatoria,
+    credentialEvidence, acceptedTerms: aceitouTermosUso,
+    acceptedTermsAt: aceitouTermosUsoEm, acceptedTermsVersion: termosUsoVersao,
+  });
+  const accessRedirectTo = buildConfiguredAuthRedirectUrl(accessState.redirectPath);
 
   const accessMutation = useMutation({
     mutationFn: () => portalActivationService.ensureStudentAccess({
@@ -133,10 +128,10 @@ const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({
   const confirmEmailMutation = useMutation({
     mutationFn: () => portalActivationService.confirmStudentEmail(parceiroId),
     onSuccess: (result) => {
-      setAccessHint(result.message || 'E-mail validado para acesso assistido.');
+      setAccessHint(result.message || 'Situação do e-mail atualizada.');
       toast?.success(
-        'E-mail validado',
-        'Agora você pode gerar uma senha temporária para o aluno.',
+        result.emailConfirmed ? 'E-mail confirmado' : 'E-mail validado',
+        result.message || 'A validação do e-mail foi atualizada. Confira as etapas do acesso.',
       );
       queryClient.invalidateQueries({
         queryKey: ['partner-email-confirmation-status', parceiroId],
@@ -173,7 +168,7 @@ const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({
   };
 
   const issueTemporaryPassword = async () => {
-    if (isIssuingTemporaryPassword) return;
+    if (isIssuingTemporaryPassword || !accessState.canIssueTemporaryPassword) return;
     setIsIssuingTemporaryPassword(true);
     setTemporaryPassword('');
     setRecoveryLink('');
@@ -260,10 +255,10 @@ const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({
             email={email}
             emailConfirmed={emailConfirmed}
             emailValidatedByManager={emailValidatedByManager}
-            confirmationStatus={emailConfirmation?.status}
+            confirmationStatus={emailConfirmationStatus}
             isLoading={emailConfirmationQuery.isLoading}
             isConfirming={confirmEmailMutation.isPending}
-            canConfirmEmail={canConfirmEmail}
+            canConfirmEmail={accessState.canConfirmEmail}
             onConfirmEmail={() => setIsConfirmEmailOpen(true)}
           />
 
@@ -313,19 +308,20 @@ const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({
                 Situação do acesso
               </p>
               <p className="mt-1 text-sm font-bold text-slate-800">
-                {trocaSenhaObrigatoria
-                  ? 'Primeiro acesso pendente — troca de senha obrigatória'
-                  : !termsAreCurrent && acessoStatus === 'ativo'
-                    ? 'Termos de uso pendentes — acesso ainda não concluído'
-                  : ({
-                    sem_acesso: 'Acesso ainda não preparado',
-                    pendente: 'Preparação ou envio pendente',
-                    processando: 'Preparando acesso',
-                    convite_enviado: 'Convite enviado — aguardando o aluno',
-                    ativo: 'Acesso ativo',
-                    erro: 'Falha ao preparar o acesso',
-                  }[acessoStatus || ''] || 'Situação ainda não registrada')}
+                {accessState.summary}
               </p>
+              <dl className="mt-3 grid gap-3 text-xs sm:grid-cols-3">
+                {[
+                  ['E-mail', accessState.emailLabel],
+                  ['Senha', accessState.passwordLabel],
+                  ['Termos de uso', accessState.termsLabel],
+                ].map(([label, value]) => (
+                  <div key={label}>
+                    <dt className="font-bold text-slate-500">{label}</dt>
+                    <dd className="mt-1 font-medium text-slate-700">{value}</dd>
+                  </div>
+                ))}
+              </dl>
               {acessoErro ? (
                 <p className="mt-1 text-xs font-semibold text-red-600">{acessoErro}</p>
               ) : null}
@@ -333,41 +329,37 @@ const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
                 <h4 className="mb-1 text-sm font-bold uppercase tracking-widest text-slate-800">
-                  Primeiro acesso e recuperação
+                  {accessState.actionTitle}
                 </h4>
                 <p className="text-xs font-medium text-slate-500">
-                  {accessDescription}
+                  {accessState.actionDescription}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => accessMutation.mutate()}
-                disabled={accessMutation.isPending}
+                disabled={accessMutation.isPending || accessState.credentialStatus === 'issuing'}
                 className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#001a33] px-6 py-3 text-xs font-bold uppercase tracking-wider text-white transition-colors hover:bg-blue-900 disabled:opacity-60"
               >
                 {accessMutation.isPending && <Loader2 className="animate-spin" size={14} />}
-                {accessActionLabel}
+                {accessState.actionLabel}
               </button>
             </div>
 
-            <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
+            {(accessState.showTemporaryPasswordAssistance || temporaryPassword) && <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
                   <h4 className="mb-1 text-sm font-bold uppercase tracking-widest text-amber-950">
                     Senha temporária assistida
                   </h4>
                   <p className="text-xs font-medium leading-relaxed text-amber-900">
-                    {!hasContactEmail
-                      ? 'Para aluno sem e-mail, use o link seguro acima. A confirmação de e-mail não se aplica e o login será feito pela matrícula.'
-                      : needsFirstAccess
-                      ? 'Disponível apenas após a validação do e-mail. A senha anterior deixa de funcionar e o aluno deverá criar outra no primeiro login.'
-                      : 'Este aluno já concluiu o primeiro acesso. Use a recuperação de senha por e-mail quando necessário.'}
+                    Disponível apenas quando há criação ou troca de senha pendente e o e-mail foi validado. A senha anterior deixa de funcionar e o aluno deverá criar outra no próximo login.
                   </p>
                 </div>
                 {hasContactEmail && <button
                   type="button"
                   onClick={() => setIsTemporaryPasswordConfirmOpen(true)}
-                  disabled={!canIssueTemporaryPassword || isIssuingTemporaryPassword || emailConfirmationQuery.isLoading}
+                  disabled={!accessState.canIssueTemporaryPassword || isIssuingTemporaryPassword || emailConfirmationQuery.isLoading}
                   className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-amber-600 px-5 py-3 text-xs font-bold uppercase tracking-wider text-white transition-colors hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isIssuingTemporaryPassword && <Loader2 className="animate-spin" size={14} />}
@@ -415,7 +407,7 @@ const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({
                   </button>
                 </div>
               )}
-            </div>
+            </div>}
 
             {accessHint && (
               <p className="mt-4 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs font-semibold leading-relaxed text-blue-800">
@@ -450,9 +442,9 @@ const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({
         isOpen={isConfirmEmailOpen}
         onClose={() => setIsConfirmEmailOpen(false)}
         onConfirm={() => confirmEmailMutation.mutate()}
-        title="Validar e-mail"
-        message="Use esta opção somente depois de validar, por ligação, mensagem ou presencialmente, que o aluno controla este endereço. A confirmação do login será concluída ao gerar a senha temporária."
-        confirmText="Validar e-mail"
+        title={emailValidatedByManager ? 'Confirmar e-mail para login' : 'Validar e-mail'}
+        message="Confirme esta ação somente depois de verificar, por ligação, mensagem ou presencialmente, que o aluno controla este endereço. A confirmação do e-mail preserva a senha existente e o aceite dos termos será feito pelo próprio aluno."
+        confirmText="Confirmar e-mail"
         variant="warning"
       />
 

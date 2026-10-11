@@ -182,7 +182,7 @@ Deno.test("recusa rebaixar acesso concluído somente depois dos termos vigentes"
   assert.equal(fixture.updates.length, 0);
 });
 
-Deno.test("permite assistência quando a senha mudou mas os termos ainda não foram aceitos", async () => {
+Deno.test("preserva senha própria mesmo quando faltam os termos", async () => {
   const fixture = makeFixture();
   const response = await handleIssueStudentTemporaryPassword(
     fixture.context,
@@ -191,11 +191,14 @@ Deno.test("permite assistência quando a senha mudou mas os termos ainda não fo
       acesso_status: "ativo",
       troca_senha_obrigatoria: false,
       aceitou_termos_uso: false,
+      senha_atualizada_em: "2026-08-21T12:00:00.000Z",
     },
   );
 
-  assert.equal(response.status, 200);
-  assert.equal(fixture.updates.length, 3);
+  assert.equal(response.status, 409);
+  assert.equal(fixture.updates.length, 0);
+  assert.equal(fixture.audits.length, 0);
+  assert.equal(fixture.rpcCalls.length, 0);
 });
 
 Deno.test("recusa identidade vinculada a outro parceiro", async () => {

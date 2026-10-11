@@ -1,8 +1,8 @@
 {
-  "version": "4.8.207",
+  "version": "4.8.208",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 216,
+  "revision": 217,
   "releasedAt": "2026-10-10",
-  "summary": "Reemissão do boletim atualiza o PDF e preserva a mesclagem da assinatura do modelo"
+  "summary": "Acesso do aluno separa confirmação de e-mail, senha criada e aceite dos termos"
 }

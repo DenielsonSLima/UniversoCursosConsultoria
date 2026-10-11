@@ -4,6 +4,7 @@ import { recordStudentAccessAudit } from "./student-access-audit.ts";
 import {
   getCurrentTermsVersion,
   hasCompletedStudentFirstAccess,
+  hasCreatedStudentPassword,
 } from "./student-first-access-state.ts";
 import { resolveCanonicalStudentIdentity } from "./student-access-identity.ts";
 import { generateTemporaryPassword } from "./temporary-password.ts";
@@ -241,6 +242,14 @@ export const handleIssueStudentTemporaryPassword = async (
   partner: Partner,
 ) => {
   const { admin, json } = context;
+  if (hasCreatedStudentPassword(partner)) {
+    return json({
+      success: false,
+      code: "ALUNO_SENHA_PROPRIA_JA_CRIADA",
+      error:
+        "Este aluno já criou uma senha. Confirme o e-mail pendente ou use a recuperação de senha por e-mail quando necessário.",
+    }, 409);
+  }
   const identity = await resolveCanonicalStudentIdentity(context, partner);
   if ("error" in identity) {
     return json({ success: false, error: identity.error }, identity.status);
@@ -319,6 +328,16 @@ export const handleIssueStudentTemporaryPassword = async (
     actorAuthUserId,
   );
   if (reservation.failed) {
+    if (
+      reservation.errorMessage?.includes("PORTAL_ALUNO_SENHA_PROPRIA_JA_CRIADA")
+    ) {
+      return json({
+        success: false,
+        code: "ALUNO_SENHA_PROPRIA_JA_CRIADA",
+        error:
+          "Este aluno já criou uma senha. Use a recuperação de senha por e-mail quando necessário.",
+      }, 409);
+    }
     if (
       reservation.errorMessage?.includes(
         "PORTAL_EMISSAO_SENHA_TEMPORARIA_ALUNO_IDENTIDADE_MULTIPERFIL",

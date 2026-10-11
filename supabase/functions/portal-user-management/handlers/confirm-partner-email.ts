@@ -1,10 +1,8 @@
 import type { HandlerContext, Partner } from "../types.ts";
 import { isUuid } from "../permissions.ts";
 import { recordStudentAccessAudit } from "./student-access-audit.ts";
-import {
-  getCurrentTermsVersion,
-  hasCompletedStudentFirstAccess,
-} from "./student-first-access-state.ts";
+import { normalizeEmail } from "../auth-users.ts";
+import { hasCreatedStudentPassword } from "./student-first-access-state.ts";
 import { resolveCanonicalStudentIdentity } from "./student-access-identity.ts";
 
 export const handleConfirmPartnerEmail = async (
@@ -27,18 +25,6 @@ export const handleConfirmPartnerEmail = async (
   const identity = await resolveCanonicalStudentIdentity(context, partner);
   if ("error" in identity) {
     return json({ success: false, error: identity.error }, identity.status);
-  }
-
-  const terms = await getCurrentTermsVersion(context);
-  if ("error" in terms) {
-    return json({ success: false, error: terms.error }, 500);
-  }
-  if (hasCompletedStudentFirstAccess(partner, terms.version)) {
-    return json({
-      success: false,
-      error:
-        "Este aluno já concluiu o primeiro acesso. Use a recuperação de senha por e-mail quando necessário.",
-    }, 409);
   }
 
   const actorAuthUserId = String(context.gestor?.auth_user_id || "").trim();
@@ -64,35 +50,84 @@ export const handleConfirmPartnerEmail = async (
   }
 
   let validationError: any;
+  let validated: boolean;
   try {
-    ({ error: validationError } = await admin.rpc(
+    const result = await admin.rpc(
       "portal_validar_email_aluno_por_gestor",
       {
         p_partner_id: partner.id,
         p_actor_auth_user_id: actorAuthUserId,
+        p_expected_auth_user_id: identity.authUser.id,
+        p_expected_email: identity.email,
       },
-    ));
+    );
+    validationError = result.error;
+    validated = result.data === true;
   } catch {
     return json({
       success: false,
       error: "Não foi possível registrar a validação do e-mail.",
     }, 500);
   }
-  if (validationError) {
+  if (validationError || !validated) {
+    const status = validationError?.code === "42501" ? 403
+      : ["40001", "55P03", "23514", "55000"].includes(validationError?.code)
+      ? 409
+      : 500;
     return json({
       success: false,
-      error: validationError.message ||
+      error: validationError?.message ||
         "Não foi possível registrar a validação do e-mail.",
+    }, status);
+  }
+
+  let currentAuthUser: any;
+  let currentPartner: Partner;
+  try {
+    const authResult = await admin.auth.admin.getUserById(identity.authUser.id);
+    const partnerResult = await admin.from("parceiros")
+      .select(
+        "id, email, auth_login_email, auth_user_id, acesso_status, troca_senha_obrigatoria, senha_atualizada_em, senha_temporaria_pendente, senha_temporaria_emitida_em, senha_temporaria_emissao_id, senha_temporaria_emissao_iniciada_em, senha_temporaria_emissao_senha_alterada_em",
+      )
+      .eq("id", partner.id)
+      .eq("auth_user_id", identity.authUser.id)
+      .maybeSingle();
+    if (authResult.error || partnerResult.error || !partnerResult.data) {
+      throw new Error("Estado indisponível.");
+    }
+    currentAuthUser = authResult.data?.user;
+    currentPartner = partnerResult.data;
+  } catch {
+    return json({
+      success: false,
+      error:
+        "A confirmação foi processada, mas não foi possível conferir o estado atual. Atualize os dados e tente novamente.",
     }, 500);
+  }
+  if (
+    currentAuthUser?.id !== identity.authUser.id ||
+    normalizeEmail(currentAuthUser?.email) !== identity.email ||
+    normalizeEmail(currentPartner.email) !== identity.email ||
+    normalizeEmail(currentPartner.auth_login_email || currentPartner.email) !==
+      identity.email || !currentAuthUser.email_confirmed_at
+  ) {
+    return json({
+      success: false,
+      error:
+        "A identidade de acesso mudou durante a confirmação. Atualize os dados e tente novamente.",
+    }, 409);
   }
 
   return json({
     success: true,
     action: "confirm-partner-email",
     userId: identity.authUser.id,
-    emailConfirmed: Boolean(identity.authUser.email_confirmed_at),
+    emailConfirmed: true,
     emailValidatedByManager: true,
-    message:
-      "E-mail validado pelo gestor. Agora você pode gerar uma senha temporária.",
+    studentAccessPending: currentPartner.acesso_status !== "ativo" ||
+      currentPartner.troca_senha_obrigatoria !== false,
+    message: hasCreatedStudentPassword(currentPartner)
+      ? "E-mail confirmado. A senha já criada pelo aluno foi preservada."
+      : "E-mail confirmado. O aluno deverá criar sua senha para concluir o primeiro acesso.",
   });
 };

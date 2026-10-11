@@ -21,10 +21,12 @@ import {
   bindSharedStudentIdentity,
 } from "./student-access-identity.ts";
 import { createStudentInviteFailureResponder } from "./student-invite-failure.ts";
+import { hasCreatedStudentPassword } from "./student-first-access-state.ts";
 
 type AuthUserRecord = {
   id: string;
   email?: string | null;
+  email_confirmed_at?: string | null;
   user_metadata?: Record<string, unknown> | null;
 };
 
@@ -63,18 +65,14 @@ export const handleSendStudentInvite = async (
   const authEmail = normalizeEmail(
     partner.auth_login_email || options.email || partner.email,
   );
-  const accessWasActive = partner.acesso_status === "ativo" &&
-    partner.troca_senha_obrigatoria === false &&
-    Boolean(partner.senha_atualizada_em) &&
-    !partner.senha_temporaria_pendente &&
-    !partner.senha_temporaria_emissao_id &&
-    !partner.senha_temporaria_emissao_iniciada_em &&
-    !partner.senha_temporaria_emissao_senha_alterada_em;
+  const passwordWasCreated = hasCreatedStudentPassword(partner);
+  const accessWasActive = passwordWasCreated && partner.acesso_status === "ativo" &&
+    partner.troca_senha_obrigatoria === false;
   const { failAccess, failInternal } = createStudentInviteFailureResponder(
     context,
     partner,
     authEmail,
-    accessWasActive,
+    passwordWasCreated,
   );
 
   if (!authEmail) {
@@ -98,7 +96,7 @@ export const handleSendStudentInvite = async (
   }
   const finalRedirect = redirectResolution.redirectTo;
 
-  if (!accessWasActive) {
+  if (!passwordWasCreated) {
     const processingError = await updateStudentAccess(admin, partner.id, {
       acesso_status: "processando",
       acesso_erro: null,
@@ -145,7 +143,7 @@ export const handleSendStudentInvite = async (
     }
   }
 
-  if (accessWasActive && !authUser) {
+  if (passwordWasCreated && !authUser) {
     return failAccess(
       "O acesso estava ativo, mas a identidade vinculada não foi encontrada.",
       409,
@@ -315,12 +313,17 @@ export const handleSendStudentInvite = async (
   }
 
   if (!identityWasCreated && identityConflict.hasCompatibleProfile) {
+    if (passwordWasCreated && !authUser.email_confirmed_at) {
+      return json({ success: false,
+        error: "A senha já criada foi preservada. Confirme o e-mail antes de reutilizar o acesso nos demais perfis.",
+      }, 409);
+    }
     const sharedBinding = await bindSharedStudentIdentity(
       admin,
       partner,
       authUser.id,
       authEmail,
-      accessWasActive,
+      accessWasActive && Boolean(authUser.email_confirmed_at),
     );
     if (sharedBinding.error) {
       return failAccess(sharedBinding.error, sharedBinding.status);
@@ -357,7 +360,7 @@ export const handleSendStudentInvite = async (
     const bindingError = await updateStudentAccess(
       admin,
       partner.id,
-      accessWasActive ? { auth_login_email: authEmail, acesso_erro: null } : {
+      passwordWasCreated ? { auth_login_email: authEmail, acesso_erro: null } : {
         auth_login_email: authEmail,
         troca_senha_obrigatoria: true,
         acesso_status: "processando",
@@ -412,7 +415,7 @@ export const handleSendStudentInvite = async (
       const stateError = await updateStudentAccess(
         admin,
         partner.id,
-        accessWasActive
+        passwordWasCreated
           ? {
             acesso_erro: null,
           }
@@ -435,6 +438,7 @@ export const handleSendStudentInvite = async (
         recoveryLink: null,
         message: accessWasActive
           ? "O acesso do aluno já estava ativo. Enviamos um link para redefinir a senha, sem alterar o acesso atual."
+          : passwordWasCreated ? "A senha já criada foi preservada. Enviamos um link de recuperação por e-mail."
           : "Já existia uma conta para este e-mail. Enviamos um link para concluir o acesso.",
       });
     }
@@ -459,7 +463,7 @@ export const handleSendStudentInvite = async (
   const pendingError = await updateStudentAccess(
     admin,
     partner.id,
-    accessWasActive
+    passwordWasCreated
       ? {
         acesso_erro: deliveryError ? accessErrorSummary(deliveryError) : null,
       }
@@ -481,6 +485,7 @@ export const handleSendStudentInvite = async (
     recoveryLink: recovery.data?.properties?.action_link || null,
     message: accessWasActive
       ? "O acesso do aluno já estava ativo. Geramos apenas um link para redefinir a senha, sem alterar o acesso atual."
+      : passwordWasCreated ? "A senha já criada foi preservada. Geramos um link de recuperação para envio manual."
       : canDeliverByEmail
       ? "Geramos um link seguro para envio manual por um canal previamente verificado."
       : "Aluno sem e-mail: envie o link seguro por um canal previamente verificado, como o WhatsApp cadastrado.",

@@ -19,6 +19,7 @@ const [
   portalAuthHandlerSource,
   studentFormSource,
   studentContactStepSource,
+  studentAccessStateSource,
 ] = await Promise.all([
   readSource('./hooks/useParceirosMutations.ts'),
   readSource('./portal-activation.service.ts'),
@@ -33,6 +34,7 @@ const [
   readSource('../../../supabase/functions/portal-auth/index.ts'),
   readSource('./components/formularioparceiros/aluno/ParceiroAlunoForm.tsx'),
   readSource('./components/formularioparceiros/aluno/ParceiroAlunoFormStepContact.tsx'),
+  readSource('./components/viewparceiros/shared/student-access-state.ts'),
 ]);
 const publicAuthSource = [
   publicAuthEntry,
@@ -75,7 +77,7 @@ test('aluno sem e-mail usa matrícula sem passar pela validação de caixa posta
   assert.match(studentEmailAccessStatusSource, /Confirmação de e-mail não se aplica/);
   assert.match(studentEmailAccessStatusSource, /login será feito pela matrícula/);
   assert.match(partnerAccessSource, /enabled: tipo === 'Aluno' && Boolean\(parceiroId\) && hasContactEmail/);
-  assert.match(partnerAccessSource, /!hasContactEmail[\s\S]*?confirmação de e-mail não se aplica/i);
+  assert.match(studentAccessStateSource, /showTemporaryPasswordAssistance: input\.hasContactEmail && needsPasswordSetup/);
   assert.match(partnerAccessSource, /hasContactEmail && <button[\s\S]*?Gerar senha temporária/);
 });
 
@@ -117,12 +119,13 @@ test('a finalização passa pelo Auth e RPC sem concluir estado no cliente', () 
   assert.match(publicAuthSource, /const profile = await getPortalProfile\(\{/);
 });
 
-test('reenvio pendente volta ao primeiro acesso e recuperação fica restrita a conta ativa com termos vigentes', () => {
-  assert.match(partnerAccessSource, /const termsAreCurrent = aceitouTermosUso === true && termosUsoVersao === TERMS_VERSION/);
-  assert.match(partnerAccessSource, /const accessIsFullyActive = acessoStatus === 'ativo' && !trocaSenhaObrigatoria && termsAreCurrent/);
-  assert.match(partnerAccessSource, /const needsFirstAccess = tipo === 'Aluno' && !accessIsFullyActive/);
-  assert.match(partnerAccessSource, /needsFirstAccess \? '\/login' : '\/recuperar-senha'/);
-  assert.match(partnerAccessSource, /Reenviar primeiro acesso/);
-  assert.match(partnerAccessSource, /Enviar recuperação de senha/);
-  assert.match(partnerAccessSource, /criar a primeira senha e aceitar os termos/);
+test('interface usa estados independentes e a prontidão comprovada decide a recuperação', () => {
+  assert.match(partnerAccessSource, /buildStudentAccessState\(/);
+  assert.match(partnerAccessSource, /buildConfiguredAuthRedirectUrl\(accessState\.redirectPath\)/);
+  assert.match(partnerAccessSource, /accessState\.emailLabel/);
+  assert.match(partnerAccessSource, /accessState\.passwordLabel/);
+  assert.match(partnerAccessSource, /accessState\.termsLabel/);
+  assert.match(partnerAccessSource, /accessState\.showTemporaryPasswordAssistance/);
+  assert.doesNotMatch(partnerAccessSource, /const needsFirstAccess|criar a primeira senha e aceitar os termos/);
+  assert.doesNotMatch(studentEmailAccessStatusSource, /confirmação do login ocorrerá ao gerar a senha temporária/);
 });

@@ -216,7 +216,16 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
             acessoStatus={alunoData.acessoStatus || null}
             acessoErro={alunoData.acessoErro || null}
             trocaSenhaObrigatoria={alunoData.trocaSenhaObrigatoria ?? null}
+            credentialEvidence={{
+              passwordUpdatedAt: alunoData.senhaAtualizadaEm ?? null,
+              temporaryPasswordPending: alunoData.senhaTemporariaPendente ?? null,
+              temporaryPasswordIssuedAt: alunoData.senhaTemporariaEmitidaEm ?? null,
+              temporaryPasswordIssueId: alunoData.senhaTemporariaEmissaoId ?? null,
+              temporaryPasswordIssueStartedAt: alunoData.senhaTemporariaEmissaoIniciadaEm ?? null,
+              temporaryPasswordIssuePasswordChangedAt: alunoData.senhaTemporariaEmissaoSenhaAlteradaEm ?? null,
+            }}
             aceitouTermosUso={alunoData.aceitouTermosUso ?? null}
+            aceitouTermosUsoEm={alunoData.aceitouTermosUsoEm ?? null}
             termosUsoVersao={alunoData.termosUsoVersao ?? null}
             toast={toast}
           />
