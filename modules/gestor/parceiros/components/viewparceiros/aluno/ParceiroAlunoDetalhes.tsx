@@ -38,6 +38,7 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
   const [pendingDestination, setPendingDestination] = useState<AlunoTab | 'back' | null>(null);
   const [accessRefreshAttempt, setAccessRefreshAttempt] = useState(0);
   const [accessRefresh, setAccessRefresh] = useState<{ partnerId: string; status: StudentAccessRefreshStatus }>({ partnerId: alunoInicial.id, status: 'idle' });
+  const [hydratedCadastroId, setHydratedCadastroId] = useState<string | null>(null);
   const scrollTopRef = useRef(onRequestScrollTop);
 
   useEffect(() => {
@@ -49,16 +50,36 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
     setIsEditing(false);
     setIsDirty(false);
     setIsSaving(false);
+    setHydratedCadastroId(null);
     setPendingDestination(null);
     scrollTopRef.current?.();
   }, [alunoInicial.id]);
 
-  // Carregar dados reais usando React Query com initialData do parceiro selecionado
-  const { data: alunoData = alunoInicial } = useQuery({
+  // O resumo da busca serve ao cabeçalho, nunca como base de edição.
+  const alunoQuery = useQuery({
     queryKey: ['parceiro', alunoInicial.id],
-    queryFn: () => parceirosService.getById(alunoInicial.id),
-    initialData: alunoInicial,
+    queryFn: async () => {
+      const aluno = await parceirosService.getById(alunoInicial.id);
+      if (aluno?.id !== alunoInicial.id || aluno?.tipo !== 'Aluno') {
+        throw new Error('O cadastro retornado não corresponde ao aluno selecionado.');
+      }
+      return aluno;
+    },
+    placeholderData: alunoInicial,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
+  const alunoData = alunoQuery.data || alunoInicial;
+  const cadastroReady = hydratedCadastroId === alunoInicial.id
+    && alunoData.id === alunoInicial.id && alunoData.tipo === 'Aluno';
+
+  useEffect(() => {
+    if (alunoQuery.isSuccess && alunoQuery.isFetchedAfterMount && !alunoQuery.isPlaceholderData
+      && !alunoQuery.isFetching && alunoData.id === alunoInicial.id && alunoData.tipo === 'Aluno') {
+      setHydratedCadastroId(alunoInicial.id);
+    }
+  }, [alunoInicial.id, alunoData.id, alunoData.tipo, alunoQuery.isSuccess, alunoQuery.isFetchedAfterMount,
+    alunoQuery.isPlaceholderData, alunoQuery.isFetching]);
 
   useEffect(() => {
     if (activeTab !== 'acesso') return;
@@ -112,13 +133,21 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
     : currentEnrollmentTurma?.cursos;
 
   const updateMutation = useMutation({
-    mutationFn: (newData: any) => parceirosService.update(alunoData.id, newData),
+    mutationFn: async (newData: any) => {
+      if (!cadastroReady) throw new Error('Aguarde o carregamento completo do cadastro antes de salvar.');
+      if (newData?.id !== alunoInicial.id) throw new Error('O rascunho não corresponde ao aluno selecionado.');
+      const updated = await parceirosService.update(alunoInicial.id, newData);
+      if (updated?.id !== alunoInicial.id || updated?.tipo !== 'Aluno') {
+        throw new Error('A resposta da atualização não corresponde ao aluno selecionado.');
+      }
+      return updated;
+    },
     onSuccess: (updated) => {
-      queryClient.setQueryData(['parceiro', alunoData.id], updated);
+      queryClient.setQueryData(['parceiro', updated.id], updated);
       queryClient.invalidateQueries({ queryKey: ['parceiros'] });
-      toast.success('Aluno atualizado', `${updated.nome || alunoData.nome} teve os dados salvos com sucesso.`, {
-        avatarUrl: updated.foto || alunoData.foto,
-        avatarName: updated.nome || alunoData.nome,
+      toast.success('Aluno atualizado', `${updated.nome || 'Aluno'} teve os dados salvos com sucesso.`, {
+        avatarUrl: updated.foto,
+        avatarName: updated.nome,
         contextLabel: 'Cadastro do aluno',
       });
     },
@@ -212,7 +241,16 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
         </header>
         <section id={`aluno-panel-${activeTab}`} role="tabpanel" aria-label={currentAreaLabel}
           tabIndex={0} className="p-4 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 sm:p-6">
-        {activeTab === 'dados' && (
+        {activeTab === 'dados' && !cadastroReady && (alunoQuery.isError ? (
+          <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            <p>Não foi possível carregar o cadastro completo do aluno.</p>
+            <button type="button" onClick={() => { void alunoQuery.refetch(); }}
+              className="mt-3 inline-flex min-h-11 items-center rounded-lg border border-red-200 px-4 font-medium hover:bg-red-100 focus-visible:ring-2 focus-visible:ring-red-500">
+              Tentar novamente
+            </button>
+          </div>
+        ) : <p role="status" className="py-6 text-sm text-slate-500">Carregando cadastro completo do aluno…</p>)}
+        {activeTab === 'dados' && cadastroReady && (
             <ParceiroAlunoDados 
                 aluno={alunoData} 
                 onChange={handleDataChange} 
