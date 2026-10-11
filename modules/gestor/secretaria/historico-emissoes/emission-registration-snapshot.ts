@@ -182,7 +182,15 @@ export const resolveAcademicSnapshotTemplate = (
     throw new Error('O payload canônico do boletim não retornou o número da matrícula acadêmica.');
   }
   const polo = canonicalAsRecord(preview.polo);
-  const emittedDateParts = String(emission.emitido_em || '').split('T')[0].split('-');
+  const hasCanonicalDate = Object.prototype.hasOwnProperty.call(snapshot, 'documentIssueDate');
+  const issueDate = hasCanonicalDate ? snapshot.documentIssueDate
+    : String(emission.emitido_em || '').split('T')[0];
+  if (hasCanonicalDate && (typeof issueDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(issueDate)
+    || !Number.isFinite(Date.parse(`${issueDate}T00:00:00Z`))
+    || new Date(`${issueDate}T00:00:00Z`).toISOString().slice(0, 10) !== issueDate)) {
+    throw new Error('A data canônica de emissão do boletim está inválida.');
+  }
+  const emittedDateParts = String(issueDate || '').split('-');
   const months = [
     'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
     'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
@@ -203,7 +211,7 @@ export const resolveAcademicSnapshotTemplate = (
     CIDADE_POLO: canonicalText(polo.cidade),
     POLO_UF: canonicalText(polo.estado, polo.uf),
     DATA_ATUAL: dateInFull,
-    DATA_EMISSAO: formatSnapshotDate(emission.emitido_em),
+    DATA_EMISSAO: formatSnapshotDate(issueDate),
     DATA_CONCLUSAO: formatSnapshotDate(academic?.fimCurso),
     MODULO_PERIODO: academic?.moduleNames.join(', ') || '—',
     ANO_LETIVO: emittedDateParts[0] || '',

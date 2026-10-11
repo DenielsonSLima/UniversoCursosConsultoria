@@ -287,3 +287,69 @@ test('snapshot histórico conserva texto e documento vazio explicitamente, ignor
   Object.assign(source.preview.academicData, { studentDocumentType: 'CIN', studentCpf: '12345678909', studentRg: 'DADO VIVO' });
   assert.equal(resolveAcademicSnapshotTemplate(source, identityLine), '<p></p>');
 });
+
+test('modelo personalizado conserva nome, matrícula, tags e snapshot ao adaptar RG/CIN/CNI', async () => {
+  const bodies = [
+    '<div style="color:blue"><strong>Aluno(a):</strong> {{ALUNO_NOME}}; Matrícula: {{ALUNO_MATRICULA}}; <b>CPF nº</b> <span>{{ALUNO_CPF}}</span></div><div><strong>RG / Documento</strong> {{ALUNO_RG}}</div>',
+    '<div><strong>Aluno(a): {{ALUNO_NOME}}; CPF nº {{ALUNO_CPF}}; Matrícula: {{ALUNO_MATRICULA}}</strong></div><div><strong>RG / Documento</strong> {{ALUNO_RG}}</div>',
+    '<div><strong>Aluno(a): {{ALUNO_NOME}}</strong>; Matrícula: {{ALUNO_MATRICULA}}; RG nº {{ALUNO_RG}}</div>',
+    '<div><strong>{{ALUNO_NOME}}</strong><span> - RG nº {{ALUNO_RG}}</span></div><p>Matrícula {{ALUNO_MATRICULA}}</p>',
+    '<div><strong>{{ALUNO_NOME}}</strong>; Matrícula: {{ALUNO_MATRICULA}}; <b>CPF:</b> nº <span>{{ALUNO_CPF}}</span>; <strong>RG:</strong> nº {{ALUNO_RG}}</div>',
+    '<p style="color:blue"><strong>Aluno(a): {{ALUNO_NOME}}</strong>; Matrícula: {{ALUNO_MATRICULA}}; CPF: nº {{ALUNO_CPF}}; RG: nº {{ALUNO_RG}}</p>',
+    '<table><tbody><tr><td style="padding:4px"><strong>Aluno(a): {{ALUNO_NOME}}</strong>; Matrícula: {{ALUNO_MATRICULA}}; CPF: nº {{ALUNO_CPF}}; RG: nº {{ALUNO_RG}}</td></tr></tbody></table>',
+  ];
+  for (const body of bodies) {
+    for (const studentDocumentType of ['RG', 'CIN', 'CNI', '']) {
+      const source = makeBoletimSource();
+      Object.assign(source.emission.dados_emissao, {
+        studentName: 'ALUNA SINTETICA REVIEW', studentMatricula: 'UNIV-SYNTHETIC-001',
+        studentDocumentType, studentCpf: '12345678909', studentRg: 'RG-REVIEW',
+      });
+      const template = { ...source.preview.template, v: 3,
+        textContent: body + '{{TABELA_BOLETIM_TECNICO}}' };
+      source.emission.dados_emissao.documentTemplateSnapshot = template;
+      source.preview.template = template;
+      const before = JSON.stringify(source);
+      assert.equal(migrateBoletimTemplate(template), template);
+      const parsed = resolveAcademicSnapshotTemplate(source, body);
+      if (studentDocumentType) assert.deepEqual(parsed.match(/<[^>]*>/g), body.match(/<[^>]*>/g));
+      assert.match(parsed, /ALUNA SINTETICA REVIEW/);
+      assert.match(parsed, /UNIV-SYNTHETIC-001/);
+      const result = await createEmissionDocumentsPdf([source]);
+      const text = await textFromPdf(result.blob);
+      assert.match(text, /ALUNA SINTETICA REVIEW/);
+      assert.match(text, /UNIV-SYNTHETIC-001/);
+      if (studentDocumentType === 'RG') {
+        assert.match(text, /RG-REVIEW/);
+      } else if (studentDocumentType) {
+        assert.match(text, /CIN/);
+        assert.equal(text.split('123.456.789-09').length - 1, 1);
+        assert.doesNotMatch(text, /RG-REVIEW|CPF nº/);
+      } else {
+        if (body.includes('{{ALUNO_CPF}}')) assert.match(text, /CPF:?\s+nº\s+123\.456\.789-09/);
+        assert.doesNotMatch(text, /RG-REVIEW|RG nº|CIN/);
+      }
+      assert.equal(JSON.stringify(source), before);
+    }
+  }
+});
+
+test('data canônica congelada rege data escrita, data numérica e ano letivo do boletim', () => {
+  for (const [documentIssueDate, emitidoEm, expected] of [
+    ['2026-10-11', '2026-10-12T00:30:00.000Z', '11 de outubro de 2026|11/10/2026|2026'],
+    ['2026-12-31', '2027-01-01T00:30:00.000Z', '31 de dezembro de 2026|31/12/2026|2026'],
+  ]) {
+    const source = makeBoletimSource();
+    source.emission.emitido_em = emitidoEm;
+    source.emission.dados_emissao.documentIssueDate = documentIssueDate;
+    const before = JSON.stringify(source);
+    assert.equal(resolveAcademicSnapshotTemplate(source,
+      '{{DATA_ATUAL}}|{{DATA_EMISSAO}}|{{ANO_LETIVO}}'), expected);
+    assert.equal(JSON.stringify(source), before);
+  }
+  for (const documentIssueDate of [null, '', '2026-02-30', '11/10/2026']) {
+    const source = makeBoletimSource();
+    source.emission.dados_emissao.documentIssueDate = documentIssueDate;
+    assert.throws(() => resolveAcademicSnapshotTemplate(source, '{{DATA_ATUAL}}'), /data canônica.*inválida/);
+  }
+});

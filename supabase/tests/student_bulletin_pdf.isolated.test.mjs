@@ -14,6 +14,20 @@ const noEmissions = async db => assert.equal((await db.query(
   'SELECT count(*)::int AS count FROM public.documentos_validacao')).rows[0].count, 0);
 const reject = async (operation, code = '42501') => assert.rejects(operation, error => error.code === code);
 
+test('malformed frozen issue date fails without replacing the authoritative date', async () => {
+  await scenario(async db => {
+    const first = await issueBulletin(db);
+    for (const date of [null, [], {}, '', '2026-02-30', '2026-13-01']) {
+      await db.query(`UPDATE public.documentos_validacao SET dados_emissao=jsonb_set(dados_emissao,
+        '{documentIssueDate}',$1::jsonb) WHERE codigo=$2`, [JSON.stringify(date), first.emission.codigo]);
+      await reject(() => issueBulletin(db), '55000');
+      const snapshot = (await db.query('SELECT dados_emissao FROM public.documentos_validacao WHERE codigo=$1',
+        [first.emission.codigo])).rows[0].dados_emissao;
+      assert.deepEqual(snapshot.documentIssueDate, date);
+    }
+  });
+});
+
 test('own started module emits canonical matrícula, exact identity, server grades and complete model', async () => {
   await scenario(async db => {
     const source = await issueBulletin(db);
@@ -21,6 +35,8 @@ test('own started module emits canonical matrícula, exact identity, server grad
     assert.equal(source.emission.aluno_id, studentId);
     assert.equal(source.emission.quantidade_emissoes, 1);
     assert.equal(source.emission.validacao_publica, true);
+    const businessDate = (await db.query("SELECT (now() AT TIME ZONE 'America/Maceio')::date::text AS value")).rows[0].value;
+    assert.equal(source.emission.dados_emissao.documentIssueDate, businessDate);
     const academic = source.preview.academicData;
     assert.equal(academic.studentMatricula, 'UNIV-260001');
     assert.equal(academic.studentDocumentType, 'RG (ANTIGO)');

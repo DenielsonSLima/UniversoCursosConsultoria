@@ -14,23 +14,52 @@ export const resolveSnapshotStudentIdentity = (snapshot: Record<string, any>, li
   });
 };
 
+/** Remove texto reconhecido sem apagar tags, estilos ou conteúdo vizinho. */
+const removeTextKeepingMarkup = (source: string, pattern: RegExp): string => {
+  const text = source.replace(/<[^>]*>/g, '');
+  const ranges = [...text.matchAll(pattern)].map((match) => [match.index, match.index + match[0].length]);
+  let textOffset = 0;
+  return source.replace(/<[^>]*>|[^<]+|</g, (part) => {
+    if (part.startsWith('<') && part.endsWith('>')) return part;
+    const offset = textOffset;
+    textOffset += part.length;
+    let result = '';
+    let cursor = 0;
+    for (const [start, end] of ranges) {
+      const from = Math.max(0, start - offset);
+      const to = Math.min(part.length, end - offset);
+      if (to <= from) continue;
+      result += part.slice(cursor, from);
+      cursor = to;
+    }
+    return result + part.slice(cursor);
+  });
+};
+
 /** Somente tokens do aluno; CPF fiscal ou do responsável não é reclassificado. */
 export const prepareStudentIdentityTemplate = (source: string, isCin: boolean, fiscal = false): string => {
   if (!isCin || fiscal || /\{\{?(?:ANO_CALENDARIO|VALOR_TOTAL|VALOR_EXTENSO|RESPONSAVEL_FINANCEIRO_)/.test(source)) return source;
   const cpf = '\\{\\{?(?:ALUNO_CPF|cpf)\\}\\}?';
   const rg = '\\{\\{?(?:ALUNO_RG|rg)\\}\\}?';
   const inline = '(?:\\s|&nbsp;|<\\/?(?:b|strong|span|i|em)\\b[^>]*>)*';
-  const numberLabel = '(?:n[º°o.]?\\s*)?';
+  const numberLabel = '(?:n\\.?(?:[º°o]|&ordm;|&deg;)?\\.?(?:\\s|&nbsp;|&#160;)*)?';
+  const separator = `${inline}(?::${inline})?${numberLabel}${inline}(?::${inline})?`;
   // Forma conhecida da declaração: conserva a primeira identidade e retira só a cláusula redundante do aluno.
-  let result = source.replace(new RegExp(`(CPF${inline}${numberLabel}${inline}${cpf}${inline}),${inline}\\{\\{?ALUNO_(?:DOCUMENTO_TIPO|TIPO_DOCUMENTO)\\}\\}?${inline}${numberLabel}${inline}${rg}${inline}`, 'gi'), '$1');
-  const hasIdentitySlot = new RegExp(rg).test(result);
-  result = result.replace(/(<div\b[^>]*>)((?:(?!<\/?div\b)[\s\S])*?)(<\/div>)/gi,
-    (cell, open: string, content: string, close: string) => {
-      if (hasIdentitySlot && new RegExp(cpf).test(content) && !new RegExp(rg).test(content)) return `${open}${close}`;
-      if (!new RegExp(rg).test(content)) return cell;
-      return `${open}${content.replace(/(<strong\b[^>]*>)[\s\S]*?(<\/strong>)/i, '$1CIN$2')}${close}`;
+  let result = source.replace(new RegExp(`(CPF${separator}${cpf}${inline}),${inline}\\{\\{?ALUNO_(?:DOCUMENTO_TIPO|TIPO_DOCUMENTO)\\}\\}?${separator}${rg}${inline}`, 'gi'), '$1');
+  const hasIdentitySlot = new RegExp(rg).test(result.replace(/<[^>]*>/g, ''));
+  const space = '(?:\\s|&nbsp;|&#160;)*';
+  const cpfClause = `(?:[,;]${space})?\\bCPF${space}(?::${space})?`
+    + `(?:n\\.?(?:[º°o]|&ordm;|&deg;)?\\.?${space})?(?::${space})?${cpf}`;
+  result = result.replace(/(<(div|p|td)\b[^>]*>)((?:(?!<\/?(?:div|p|td)\b)[\s\S])*?)(<\/\2>)/gi,
+    (cell, open: string, _tag: string, content: string, close: string) => {
+      if (!hasIdentitySlot || !new RegExp(cpf).test(content)) return cell;
+      const text = content.replace(/<[^>]*>/g, '');
+      const standalone = new RegExp(`^${space}${cpf}${space}$`, 'i').test(text);
+      const prepared = removeTextKeepingMarkup(content, new RegExp(standalone ? cpf : cpfClause, 'gi'));
+      const onlyIdentity = new RegExp(`^${space}$`, 'i').test(prepared.replace(/<[^>]*>/g, ''));
+      return `${open}${onlyIdentity ? '' : prepared}${close}`;
     });
   // Rótulos textuais só mudam quando imediatamente associados ao token correspondente.
-  result = result.replace(new RegExp(`\\bCPF(?=${inline}${numberLabel}${inline}${cpf})`, 'gi'), 'CIN');
-  return result.replace(new RegExp(`\\bRG(?:\\s*\\/\\s*Documento)?(?=${inline}${numberLabel}${inline}${rg})`, 'gi'), 'CIN');
+  result = result.replace(new RegExp(`\\bCPF(?=${separator}${cpf})`, 'gi'), 'CIN');
+  return result.replace(new RegExp(`\\bRG(?:\\s*\\/\\s*Documento)?(?=${separator}${rg})`, 'gi'), 'CIN');
 };

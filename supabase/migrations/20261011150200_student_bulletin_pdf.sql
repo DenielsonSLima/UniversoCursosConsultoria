@@ -217,6 +217,18 @@ BEGIN
     RAISE EXCEPTION 'A emissão oficial do boletim não foi localizada.' USING ERRCODE = '55000';
   END IF;
   v_snapshot := v_emission -> 'dados_emissao';
+  IF v_snapshot ? 'documentIssueDate' THEN
+    IF jsonb_typeof(v_snapshot -> 'documentIssueDate') IS DISTINCT FROM 'string'
+      OR v_snapshot ->> 'documentIssueDate' !~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+    THEN
+      RAISE EXCEPTION 'A data canônica de emissão do boletim está inválida.' USING ERRCODE = '55000';
+    END IF;
+    BEGIN
+      PERFORM (v_snapshot ->> 'documentIssueDate')::date;
+    EXCEPTION WHEN invalid_datetime_format OR datetime_field_overflow THEN
+      RAISE EXCEPTION 'A data canônica de emissão do boletim está inválida.' USING ERRCODE = '55000';
+    END;
+  END IF;
   IF v_snapshot ? 'academicDataSnapshot' THEN
     v_academic := v_snapshot -> 'academicDataSnapshot';
   END IF;
@@ -261,6 +273,7 @@ BEGIN
   IF NOT v_issue.reutilizado THEN
     UPDATE public.documentos_validacao validation
     SET dados_emissao = validation.dados_emissao || jsonb_build_object(
+      'documentIssueDate', (now() AT TIME ZONE 'America/Maceio')::date,
       'studentMatricula', v_academic -> 'studentMatricula',
       'studentDocumentType', v_academic -> 'studentDocumentType',
       'studentCpf', v_academic -> 'studentCpf', 'studentRg', v_academic -> 'studentRg',
