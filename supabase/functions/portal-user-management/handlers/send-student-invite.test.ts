@@ -59,7 +59,7 @@ const makeAdmin = (
           is: () => query,
           select: () => query,
           maybeSingle: async () => ({
-            data: fixtureOptions.bindingResult === undefined
+            data: fixtureOptions.bindingResult === undefined || !("auth_user_id" in patch)
               ? { id: basePartner.id, ...patch }
               : fixtureOptions.bindingResult,
             error: null,
@@ -454,7 +454,7 @@ Deno.test("falha fechado para prova incompatível ou RPC indisponível", async (
   }
 });
 
-Deno.test("CAS do primeiro vínculo só reconcilia corrida com o mesmo UID", async () => {
+Deno.test("CAS do primeiro vínculo exige snapshot atual mesmo quando o UID coincide", async () => {
   const sameUid = makeAdmin([], {}, undefined, {
     bindingResult: null,
     currentPartner: {
@@ -468,7 +468,8 @@ Deno.test("CAS do primeiro vínculo só reconcilia corrida com o mesmo UID", asy
     basePartner,
     options,
   );
-  assert.equal(sameResponse.status, 200);
+  assert.equal(sameResponse.status, 409);
+  assert.equal((await sameResponse.json()).inviteSent, true);
 
   const otherUid = makeAdmin([], {}, undefined, {
     bindingResult: null,

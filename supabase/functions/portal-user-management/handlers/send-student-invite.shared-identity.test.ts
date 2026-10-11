@@ -297,7 +297,7 @@ Deno.test("conflito transacional da credencial pede retry sem expor SQL", async 
 
     assert.equal(response.status, 409);
     assert.equal(body.success, false);
-    assert.match(body.error, /mudou durante o vínculo/i);
+    assert.match(body.error, /mudou durante o envio/i);
     assert.doesNotMatch(JSON.stringify(body), /PORTAL_IDENTIDADE/);
   }
 });

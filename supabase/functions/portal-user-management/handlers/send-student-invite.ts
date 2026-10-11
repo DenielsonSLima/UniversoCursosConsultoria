@@ -9,7 +9,7 @@ import {
   readValidPartnerInviteOperationMarker,
 } from "./partner-invite-reconciliation.ts";
 import { resolveRedirectTarget } from "../redirects.ts";
-import { accessErrorSummary, updateStudentAccess } from "../student-access.ts";
+import { accessErrorSummary } from "../student-access.ts";
 import type {
   HandlerContext,
   Partner,
@@ -22,6 +22,7 @@ import {
 } from "./student-access-identity.ts";
 import { createStudentInviteFailureResponder } from "./student-invite-failure.ts";
 import { hasCreatedStudentPassword } from "./student-first-access-state.ts";
+import { createStudentInviteState } from "./student-invite-state.ts";
 
 type AuthUserRecord = {
   id: string;
@@ -68,11 +69,12 @@ export const handleSendStudentInvite = async (
   const passwordWasCreated = hasCreatedStudentPassword(partner);
   const accessWasActive = passwordWasCreated && partner.acesso_status === "ativo" &&
     partner.troca_senha_obrigatoria === false;
+  const state = createStudentInviteState(admin, partner);
   const { failAccess, failInternal } = createStudentInviteFailureResponder(
     context,
-    partner,
     authEmail,
     passwordWasCreated,
+    state,
   );
 
   if (!authEmail) {
@@ -97,12 +99,12 @@ export const handleSendStudentInvite = async (
   const finalRedirect = redirectResolution.redirectTo;
 
   if (!passwordWasCreated) {
-    const processingError = await updateStudentAccess(admin, partner.id, {
+    const processing = await state.write({
       acesso_status: "processando",
       acesso_erro: null,
     });
-    if (processingError) {
-      return failInternal("mark-processing", processingError);
+    if (processing.error) {
+      return failInternal("mark-processing", processing.error);
     }
   }
 
@@ -179,6 +181,7 @@ export const handleSendStudentInvite = async (
     }
 
     if (!inviteResult.error && inviteResult.data?.user) {
+      state.markInviteSent();
       const invitedAuthUser = inviteResult.data.user;
       let inviteMarker;
       try {
@@ -324,6 +327,7 @@ export const handleSendStudentInvite = async (
       authUser.id,
       authEmail,
       accessWasActive && Boolean(authUser.email_confirmed_at),
+      state.write,
     );
     if (sharedBinding.error) {
       return failAccess(sharedBinding.error, sharedBinding.status);
@@ -352,14 +356,13 @@ export const handleSendStudentInvite = async (
       authUser.id,
       authEmail,
       inviteSent || identityOrigin === "reconciled-invite",
+      state.write,
     );
     if (initialBinding.error) {
       return failAccess(initialBinding.error, initialBinding.status);
     }
   } else {
-    const bindingError = await updateStudentAccess(
-      admin,
-      partner.id,
+    const binding = await state.write(
       passwordWasCreated ? { auth_login_email: authEmail, acesso_erro: null } : {
         auth_login_email: authEmail,
         troca_senha_obrigatoria: true,
@@ -368,8 +371,8 @@ export const handleSendStudentInvite = async (
         acesso_ativado_em: null,
       },
     );
-    if (bindingError) {
-      return failInternal("update-linked-student", bindingError);
+    if (binding.error) {
+      return failInternal("update-linked-student", binding.error);
     }
   }
 
@@ -411,10 +414,9 @@ export const handleSendStudentInvite = async (
       : { sent: false, message: options.publicApiKey.message };
 
     if (emailDelivery.sent) {
+      state.markRecoveryEmailSent();
       const sentAt = new Date().toISOString();
-      const stateError = await updateStudentAccess(
-        admin,
-        partner.id,
+      const sent = await state.write(
         passwordWasCreated
           ? {
             acesso_erro: null,
@@ -425,8 +427,8 @@ export const handleSendStudentInvite = async (
             convite_enviado_em: sentAt,
           },
       );
-      if (stateError) {
-        return failInternal("mark-recovery-sent", stateError);
+      if (sent.error) {
+        return failInternal("mark-recovery-sent", sent.error);
       }
 
       return json({
@@ -460,9 +462,7 @@ export const handleSendStudentInvite = async (
     return failInternal("generate-recovery-link-result", recovery.error);
   }
 
-  const pendingError = await updateStudentAccess(
-    admin,
-    partner.id,
+  const pending = await state.write(
     passwordWasCreated
       ? {
         acesso_erro: deliveryError ? accessErrorSummary(deliveryError) : null,
@@ -472,8 +472,8 @@ export const handleSendStudentInvite = async (
         acesso_erro: deliveryError ? accessErrorSummary(deliveryError) : null,
       },
   );
-  if (pendingError) {
-    return failInternal("mark-access-pending", pendingError);
+  if (pending.error) {
+    return failInternal("mark-access-pending", pending.error);
   }
 
   return json({

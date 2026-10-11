@@ -1,6 +1,7 @@
-import { accessErrorSummary, updateStudentAccess } from "../student-access.ts";
-import type { HandlerContext, Partner } from "../types.ts";
+import { accessErrorSummary } from "../student-access.ts";
+import type { HandlerContext } from "../types.ts";
 import { logPortalHandlerFailure } from "./handler-error-log.ts";
+import type { StudentInviteState } from "./student-invite-state.ts";
 
 const ACTION = "send-student-invite";
 const INTERNAL_FAILURE_MESSAGES = {
@@ -42,17 +43,19 @@ type InternalFailurePhase = keyof typeof INTERNAL_FAILURE_MESSAGES;
 
 export const createStudentInviteFailureResponder = (
   context: HandlerContext,
-  partner: Partner,
   authEmail: string,
   accessWasActive: boolean,
+  state: StudentInviteState,
 ) => {
   const failAccess = async (message: string, status = 500) => {
-    await updateStudentAccess(context.admin, partner.id, {
+    if (state.hasConflict()) return state.conflictResponse(context);
+    await state.write({
       ...(authEmail ? { auth_login_email: authEmail } : {}),
       ...(!accessWasActive ? { acesso_status: "erro" as const } : {}),
       acesso_erro: accessErrorSummary(message),
     });
-    return context.json({ success: false, error: message }, status);
+    if (state.hasConflict()) return state.conflictResponse(context);
+    return context.json({ success: false, error: message, ...state.delivery() }, status);
   };
 
   const failInternal = (

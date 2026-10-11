@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   CheckCircle2,
@@ -14,6 +14,8 @@ import { buildConfiguredAuthRedirectUrl } from '../../../../../../lib/app-url';
 import StudentEmailAccessStatus from './StudentEmailAccessStatus';
 import StudentRegistrationAccess from './StudentRegistrationAccess';
 import { buildStudentAccessState, type StudentCredentialEvidence } from './student-access-state';
+import StudentAccessSummary from './StudentAccessSummary';
+import type { StudentAccessRefreshStatus } from './student-access-refresh';
 
 type AccessToast = {
   success: (title: string, message: string) => void;
@@ -35,6 +37,8 @@ interface ParceiroAcessoProps {
   aceitouTermosUsoEm?: string | null;
   termosUsoVersao?: string | null;
   toast?: AccessToast;
+  accessRefreshStatus?: StudentAccessRefreshStatus;
+  onRefreshAccess?: () => void;
 }
 
 const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({
@@ -52,6 +56,8 @@ const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({
   aceitouTermosUsoEm,
   termosUsoVersao,
   toast,
+  accessRefreshStatus = 'ready',
+  onRefreshAccess,
 }) => {
   const queryClient = useQueryClient();
   const [googleHint, setGoogleHint] = useState('');
@@ -63,6 +69,8 @@ const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({
   const [isTemporaryPasswordConfirmOpen, setIsTemporaryPasswordConfirmOpen] = useState(false);
   const [isGoogleUnlinkConfirmOpen, setIsGoogleUnlinkConfirmOpen] = useState(false);
   const hasContactEmail = Boolean(String(email || '').trim());
+  const isAccessCurrent = accessRefreshStatus === 'ready';
+  const isAccessRefreshing = accessRefreshStatus === 'idle' || accessRefreshStatus === 'loading';
 
   const googleStatusQuery = useQuery({
     queryKey: ['partner-google-identity-status', parceiroId],
@@ -87,7 +95,7 @@ const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({
   const emailConfirmed = Boolean(emailConfirmation?.emailConfirmed);
   const emailValidatedByManager = Boolean(emailConfirmation?.emailValidatedByManager);
   const emailVerifiedForAssistedAccess = emailConfirmed || emailValidatedByManager;
-  const emailConfirmationStatus = emailConfirmationQuery.isError ? 'unknown' : emailConfirmation?.status;
+  const emailConfirmationStatus = emailConfirmationQuery.isError || !isAccessCurrent ? 'unknown' : emailConfirmation?.status;
   const accessState = buildStudentAccessState({
     hasContactEmail, emailConfirmed, emailValidatedByManager,
     emailConfirmationStatus, emailStatusLoading: emailConfirmationQuery.isLoading,
@@ -96,6 +104,10 @@ const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({
     acceptedTermsAt: aceitouTermosUsoEm, acceptedTermsVersion: termosUsoVersao,
   });
   const accessRedirectTo = buildConfiguredAuthRedirectUrl(accessState.redirectPath);
+
+  useEffect(() => {
+    if (!isAccessCurrent || !accessState.needsPasswordSetup) setTemporaryPassword('');
+  }, [isAccessCurrent, accessState.needsPasswordSetup]);
 
   const accessMutation = useMutation({
     mutationFn: () => portalActivationService.ensureStudentAccess({
@@ -122,6 +134,7 @@ const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({
     onError: (error: any) => {
       setRecoveryLink('');
       setAccessHint(error?.message || 'Não foi possível preparar o acesso do aluno.');
+      onRefreshAccess?.();
     },
   });
 
@@ -168,7 +181,7 @@ const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({
   };
 
   const issueTemporaryPassword = async () => {
-    if (isIssuingTemporaryPassword || !accessState.canIssueTemporaryPassword) return;
+    if (!isAccessCurrent || isIssuingTemporaryPassword || !accessState.canIssueTemporaryPassword) return;
     setIsIssuingTemporaryPassword(true);
     setTemporaryPassword('');
     setRecoveryLink('');
@@ -256,9 +269,9 @@ const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({
             emailConfirmed={emailConfirmed}
             emailValidatedByManager={emailValidatedByManager}
             confirmationStatus={emailConfirmationStatus}
-            isLoading={emailConfirmationQuery.isLoading}
+            isLoading={emailConfirmationQuery.isLoading || isAccessRefreshing}
             isConfirming={confirmEmailMutation.isPending}
-            canConfirmEmail={accessState.canConfirmEmail}
+            canConfirmEmail={isAccessCurrent && accessState.canConfirmEmail}
             onConfirmEmail={() => setIsConfirmEmailOpen(true)}
           />
 
@@ -303,29 +316,8 @@ const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({
 
         {tipo === 'Aluno' && (
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6">
-            <div className="mb-5 rounded-xl border border-slate-200 bg-white px-4 py-3">
-              <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                Situação do acesso
-              </p>
-              <p className="mt-1 text-sm font-bold text-slate-800">
-                {accessState.summary}
-              </p>
-              <dl className="mt-3 grid gap-3 text-xs sm:grid-cols-3">
-                {[
-                  ['E-mail', accessState.emailLabel],
-                  ['Senha', accessState.passwordLabel],
-                  ['Termos de uso', accessState.termsLabel],
-                ].map(([label, value]) => (
-                  <div key={label}>
-                    <dt className="font-bold text-slate-500">{label}</dt>
-                    <dd className="mt-1 font-medium text-slate-700">{value}</dd>
-                  </div>
-                ))}
-              </dl>
-              {acessoErro ? (
-                <p className="mt-1 text-xs font-semibold text-red-600">{acessoErro}</p>
-              ) : null}
-            </div>
+            <StudentAccessSummary state={accessState} accessError={acessoErro}
+              refreshStatus={accessRefreshStatus} onRefresh={onRefreshAccess} />
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
                 <h4 className="mb-1 text-sm font-bold uppercase tracking-widest text-slate-800">
@@ -338,15 +330,15 @@ const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({
               <button
                 type="button"
                 onClick={() => accessMutation.mutate()}
-                disabled={accessMutation.isPending || accessState.credentialStatus === 'issuing'}
+                disabled={!isAccessCurrent || accessMutation.isPending || accessState.credentialStatus === 'issuing'}
                 className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#001a33] px-6 py-3 text-xs font-bold uppercase tracking-wider text-white transition-colors hover:bg-blue-900 disabled:opacity-60"
               >
                 {accessMutation.isPending && <Loader2 className="animate-spin" size={14} />}
-                {accessState.actionLabel}
+                {isAccessCurrent ? accessState.actionLabel : 'Verificar acesso'}
               </button>
             </div>
 
-            {(accessState.showTemporaryPasswordAssistance || temporaryPassword) && <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
+            {isAccessCurrent && (accessState.showTemporaryPasswordAssistance || temporaryPassword) && <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
                   <h4 className="mb-1 text-sm font-bold uppercase tracking-widest text-amber-950">
@@ -441,7 +433,7 @@ const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({
       <ConfirmModal
         isOpen={isConfirmEmailOpen}
         onClose={() => setIsConfirmEmailOpen(false)}
-        onConfirm={() => confirmEmailMutation.mutate()}
+        onConfirm={() => { if (isAccessCurrent) confirmEmailMutation.mutate(); }}
         title={emailValidatedByManager ? 'Confirmar e-mail para login' : 'Validar e-mail'}
         message="Confirme esta ação somente depois de verificar, por ligação, mensagem ou presencialmente, que o aluno controla este endereço. A confirmação do e-mail preserva a senha existente e o aceite dos termos será feito pelo próprio aluno."
         confirmText="Confirmar e-mail"

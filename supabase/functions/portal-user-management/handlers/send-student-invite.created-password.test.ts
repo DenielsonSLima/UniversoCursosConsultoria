@@ -29,7 +29,11 @@ Deno.test("reenvio preserva senha própria ainda com e-mail ou termos pendentes"
           select: () => query,
           update: (patch: Record<string, unknown>) => {
             updates.push(patch);
-            return { eq: async () => ({ error: null }) };
+            const update: any = { eq: () => update, is: () => update,
+              select: () => update, maybeSingle: async () => ({
+                data: { ...basePartner, ...patch }, error: null,
+              }) };
+            return update;
           },
         }),
         auth: { admin: {

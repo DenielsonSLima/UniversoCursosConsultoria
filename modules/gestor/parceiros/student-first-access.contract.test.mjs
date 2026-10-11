@@ -20,6 +20,7 @@ const [
   studentFormSource,
   studentContactStepSource,
   studentAccessStateSource,
+  studentAccessSummarySource,
 ] = await Promise.all([
   readSource('./hooks/useParceirosMutations.ts'),
   readSource('./portal-activation.service.ts'),
@@ -35,6 +36,7 @@ const [
   readSource('./components/formularioparceiros/aluno/ParceiroAlunoForm.tsx'),
   readSource('./components/formularioparceiros/aluno/ParceiroAlunoFormStepContact.tsx'),
   readSource('./components/viewparceiros/shared/student-access-state.ts'),
+  readSource('./components/viewparceiros/shared/StudentAccessSummary.tsx'),
 ]);
 const publicAuthSource = [
   publicAuthEntry,
@@ -122,9 +124,9 @@ test('a finalização passa pelo Auth e RPC sem concluir estado no cliente', () 
 test('interface usa estados independentes e a prontidão comprovada decide a recuperação', () => {
   assert.match(partnerAccessSource, /buildStudentAccessState\(/);
   assert.match(partnerAccessSource, /buildConfiguredAuthRedirectUrl\(accessState\.redirectPath\)/);
-  assert.match(partnerAccessSource, /accessState\.emailLabel/);
-  assert.match(partnerAccessSource, /accessState\.passwordLabel/);
-  assert.match(partnerAccessSource, /accessState\.termsLabel/);
+  assert.match(studentAccessSummarySource, /state\.emailLabel/);
+  assert.match(studentAccessSummarySource, /state\.passwordLabel/);
+  assert.match(studentAccessSummarySource, /state\.termsLabel/);
   assert.match(partnerAccessSource, /accessState\.showTemporaryPasswordAssistance/);
   assert.doesNotMatch(partnerAccessSource, /const needsFirstAccess|criar a primeira senha e aceitar os termos/);
   assert.doesNotMatch(studentEmailAccessStatusSource, /confirmação do login ocorrerá ao gerar a senha temporária/);

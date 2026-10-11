@@ -1,8 +1,8 @@
 {
-  "version": "4.8.208",
+  "version": "4.8.209",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 217,
-  "releasedAt": "2026-10-10",
-  "summary": "Acesso do aluno separa confirmação de e-mail, senha criada e aceite dos termos"
+  "revision": 218,
+  "releasedAt": "2026-10-11",
+  "summary": "Acesso do aluno atualiza o cadastro completo e preserva senha e autorização em operações concorrentes"
 }
