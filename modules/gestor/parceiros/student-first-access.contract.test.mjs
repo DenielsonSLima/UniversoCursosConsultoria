@@ -86,7 +86,9 @@ test('aluno sem e-mail usa matrícula sem passar pela validação de caixa posta
 test('backend cria acesso por matrícula confirmado e devolve link para entrega manual', () => {
   assert.match(studentInviteHandlerSource, /isSyntheticAuthEmail = authEmail\.endsWith/);
   assert.match(studentInviteHandlerSource, /admin\.auth\.admin\.createUser\(\{[\s\S]*?email_confirm: true/);
-  assert.match(studentInviteHandlerSource, /recoveryLink: recovery\.data\?\.properties\?\.action_link \|\| null/);
+  assert.match(studentInviteHandlerSource, /validateStudentRecoveryLink\(recovery, authUser\.id\)/);
+  assert.match(studentInviteHandlerSource, /if \("error" in recoveryLink\) \{[\s\S]*?return json\([\s\S]*?state\.delivery\(\)[\s\S]*?const pending = await state\.write/);
+  assert.match(studentInviteHandlerSource, /recoveryLink: recoveryLink\.link/);
   assert.match(studentInviteHandlerSource, /Aluno sem e-mail: envie o link seguro por um canal previamente verificado/);
   assert.match(portalAuthHandlerSource, /admin\.rpc\("resolve_portal_login_identity"/);
   assert.match(portalAuthHandlerSource, /resolvedEmail = identifier\.includes\("@"\)[\s\S]*?: await resolveLoginIdentity\(admin, identifier\)/);

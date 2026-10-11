@@ -23,6 +23,10 @@ import {
 import { createStudentInviteFailureResponder } from "./student-invite-failure.ts";
 import { hasCreatedStudentPassword } from "./student-first-access-state.ts";
 import { createStudentInviteState } from "./student-invite-state.ts";
+import {
+  validateStudentRecoveryLink,
+  type StudentRecoveryResult,
+} from "./student-recovery-link.ts";
 
 type AuthUserRecord = {
   id: string;
@@ -33,14 +37,6 @@ type AuthUserRecord = {
 
 type AuthOperationResult = {
   data?: { user?: AuthUserRecord | null } | null;
-  error?: { code?: string; message?: string } | null;
-};
-
-type RecoveryResult = {
-  data?: {
-    user?: { id?: string | null } | null;
-    properties?: { action_link?: string | null } | null;
-  } | null;
   error?: { code?: string; message?: string } | null;
 };
 
@@ -448,7 +444,7 @@ export const handleSendStudentInvite = async (
       "Não foi possível enviar o link por e-mail.";
   }
 
-  let recovery: RecoveryResult;
+  let recovery: StudentRecoveryResult;
   try {
     recovery = await admin.auth.admin.generateLink({
       type: "recovery",
@@ -460,6 +456,10 @@ export const handleSendStudentInvite = async (
   }
   if (recovery.error) {
     return failInternal("generate-recovery-link-result", recovery.error);
+  }
+  const recoveryLink = validateStudentRecoveryLink(recovery, authUser.id);
+  if ("error" in recoveryLink) {
+    return json({ success: false, error: recoveryLink.error, ...state.delivery() }, recoveryLink.status);
   }
 
   const pending = await state.write(
@@ -479,10 +479,10 @@ export const handleSendStudentInvite = async (
   return json({
     success: true,
     action: "recovery",
-    userId: authUser.id || recovery.data?.user?.id || null,
+    userId: authUser.id,
     inviteSent: false,
     recoveryEmailSent: false,
-    recoveryLink: recovery.data?.properties?.action_link || null,
+    recoveryLink: recoveryLink.link,
     message: accessWasActive
       ? "O acesso do aluno já estava ativo. Geramos apenas um link para redefinir a senha, sem alterar o acesso atual."
       : passwordWasCreated ? "A senha já criada foi preservada. Geramos um link de recuperação para envio manual."

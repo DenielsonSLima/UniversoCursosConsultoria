@@ -1,8 +1,8 @@
 {
-  "version": "4.8.209",
+  "version": "4.8.211",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 218,
+  "revision": 220,
   "releasedAt": "2026-10-11",
-  "summary": "Acesso do aluno atualiza o cadastro completo e preserva senha e autorização em operações concorrentes"
+  "summary": "Link manual de recuperação validado pela identidade Auth do aluno"
 }

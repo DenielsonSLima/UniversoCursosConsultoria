@@ -133,7 +133,8 @@ const makeAdmin = (
         generateLink: async () => {
           generateLinkCalls += 1;
           return {
-            data: { properties: { action_link: "https://example.test/link" } },
+            data: { user: { id: authUsers[0]?.id || "auth-1" },
+              properties: { action_link: "https://example.test/link" } },
             error: null,
           };
         },

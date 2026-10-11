@@ -42,7 +42,7 @@ Deno.test("reenvio preserva senha própria ainda com e-mail ou termos pendentes"
           } }, error: null }),
           generateLink: async () => {
             recoveryCalls += 1;
-            return { data: { properties: {
+            return { data: { user: { id: basePartner.auth_user_id }, properties: {
               action_link: "https://example.test/recovery",
             } }, error: null };
           },
@@ -66,6 +66,67 @@ Deno.test("reenvio preserva senha própria ainda com e-mail ou termos pendentes"
         "troca_senha_obrigatoria", "acesso_status", "senha_atualizada_em",
         "acesso_ativado_em", "aceitou_termos_uso", "termos_uso_versao",
       ]) assert.equal(field in patch, false, `${field} não pode ser rebaixado.`);
+    }
+  }
+});
+
+Deno.test("recuperação só libera link da identidade verificada e não persiste resposta inválida", async () => {
+  const cases = [
+    { user: { id: "44444444-4444-4444-8444-444444444444" }, link: "https://example.test/foreign-secret", status: 409 },
+    { user: null, link: "https://example.test/missing-identity-secret", status: 409 },
+    { user: { id: basePartner.auth_user_id }, link: null, status: 500 },
+    { user: { id: basePartner.auth_user_id }, link: "   ", status: 500 },
+  ];
+  for (const testCase of cases) {
+    const updates: Record<string, unknown>[] = [];
+    let writesBeforeRecovery = -1;
+    const query: any = {
+      eq: () => query, neq: () => query,
+      limit: async () => ({ data: [], error: null }),
+    };
+    const context: HandlerContext = {
+      gestor: { id: "gestor-sintético" }, gestorEmail: "gestor@example.com",
+      json: (payload, status = 200) => new Response(JSON.stringify(payload), { status }),
+      admin: {
+        rpc: async () => ({ data: [], error: null }),
+        from: () => ({
+          select: () => query,
+          update: (patch: Record<string, unknown>) => {
+            updates.push(patch);
+            const update: any = { eq: () => update, is: () => update,
+              select: () => update, maybeSingle: async () => ({
+                data: { ...basePartner, ...patch }, error: null,
+              }) };
+            return update;
+          },
+        }),
+        auth: { admin: {
+          getUserById: async () => ({ data: { user: {
+            id: basePartner.auth_user_id, email: basePartner.email,
+          } }, error: null }),
+          generateLink: async () => {
+            writesBeforeRecovery = updates.length;
+            return { data: { user: testCase.user, properties: { action_link: testCase.link } }, error: null };
+          },
+        } },
+      },
+    };
+    const response = await handleSendStudentInvite(context, basePartner, {
+      supabaseUrl: "https://example.test", redirectTo: "/recuperar-senha",
+      publicApiKey: { apiKey: null, message: "Sem envio no teste isolado." },
+    });
+    const body = await response.json();
+    assert.equal(response.status, testCase.status);
+    assert.equal(body.success, false);
+    assert.equal(body.recoveryLink, null);
+    assert.equal(body.inviteSent, false);
+    assert.equal(body.recoveryEmailSent, false);
+    assert.equal("userId" in body, false);
+    assert.doesNotMatch(JSON.stringify(body), /foreign-secret|missing-identity-secret|44444444/);
+    assert.equal(updates.length, writesBeforeRecovery, "Não pode gravar estado pendente após resposta inválida.");
+    for (const patch of updates) {
+      for (const field of ["troca_senha_obrigatoria", "senha_atualizada_em", "aceitou_termos_uso", "termos_uso_versao"])
+        assert.equal(field in patch, false, `${field} precisa ser preservado.`);
     }
   }
 });
