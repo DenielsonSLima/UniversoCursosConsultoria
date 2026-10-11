@@ -4,13 +4,20 @@ import type { HandlerContext, Partner } from "../types.ts";
 
 const GESTOR_AUTH_USER_ID = "11111111-1111-4111-8111-111111111111";
 
-const makeFixture = (options: { auditFailureAt?: number | null } = {}) => {
+const makeFixture = (options: {
+  auditFailureAt?: number | null;
+  rpcError?: { code: string; message: string };
+  currentPartner?: Partial<Partner>;
+  skipAuthConfirmation?: boolean;
+  readbackFailure?: boolean;
+} = {}) => {
   const rpcCalls: Array<{ name: string; args?: Record<string, unknown> }> = [];
   const audits: Array<Record<string, unknown>> = [];
   let auditCount = 0;
   const authUser = {
     id: "auth-1",
     email: "aluno@example.com",
+    email_confirmed_at: null as string | null,
     app_metadata: { provider: "email" },
     user_metadata: { partner_id: "partner-1" },
   };
@@ -30,6 +37,10 @@ const makeFixture = (options: { auditFailureAt?: number | null } = {}) => {
         return { data: "2026-08-05", error: null };
       }
       if (name === "portal_validar_email_aluno_por_gestor") {
+        if (options.rpcError) return { data: null, error: options.rpcError };
+        if (!options.skipAuthConfirmation) {
+          authUser.email_confirmed_at = "2026-10-10T19:00:00.000Z";
+        }
         return { data: true, error: null };
       }
       return { data: null, error: { message: `RPC inesperada: ${name}` } };
@@ -52,6 +63,16 @@ const makeFixture = (options: { auditFailureAt?: number | null } = {}) => {
         eq: () => query,
         neq: () => query,
         limit: async () => ({ data: [], error: null }),
+        maybeSingle: async () => ({
+          data: options.readbackFailure ? null : {
+            ...partner,
+            acesso_status: "ativo",
+            troca_senha_obrigatoria: false,
+            senha_atualizada_em: "2026-10-10T18:00:00.000Z",
+            ...options.currentPartner,
+          },
+          error: null,
+        }),
       };
       return { select: () => query };
     },
@@ -68,7 +89,7 @@ const makeFixture = (options: { auditFailureAt?: number | null } = {}) => {
     json: (payload, status = 200) =>
       new Response(JSON.stringify(payload), { status }),
   };
-  return { context, rpcCalls, audits };
+  return { context, rpcCalls, audits, authUser };
 };
 
 const partner: Partner = {
@@ -82,7 +103,7 @@ const partner: Partner = {
   troca_senha_obrigatoria: true,
 };
 
-Deno.test("gestor registra validação administrativa do e-mail sem confirmar o Auth isoladamente", async () => {
+Deno.test("gestor confirma o e-mail por RPC com snapshot e relê a credencial preservada", async () => {
   const fixture = makeFixture();
 
   const response = await handleConfirmPartnerEmail(
@@ -94,19 +115,22 @@ Deno.test("gestor registra validação administrativa do e-mail sem confirmar o 
 
   assert.equal(response.status, 200);
   assert.equal(body.success, true);
-  assert.equal(body.emailConfirmed, false);
+  assert.equal(body.emailConfirmed, true);
   assert.equal(body.emailValidatedByManager, true);
+  assert.equal(body.studentAccessPending, false);
+  assert.match(body.message, /senha já criada.*preservada/);
   assert.deepEqual(
     fixture.rpcCalls.map((call) => call.name),
     [
       "portal_identidade_listar_responsaveis_vinculados",
-      "portal_identidade_termos_versao_vigente",
       "portal_validar_email_aluno_por_gestor",
     ],
   );
-  assert.deepEqual(fixture.rpcCalls[2].args, {
+  assert.deepEqual(fixture.rpcCalls[1].args, {
     p_partner_id: "partner-1",
     p_actor_auth_user_id: GESTOR_AUTH_USER_ID,
+    p_expected_auth_user_id: "auth-1",
+    p_expected_email: "aluno@example.com",
   });
   assert.equal(fixture.audits.length, 1);
   assert.deepEqual(fixture.audits[0].detalhes, {
@@ -114,8 +138,8 @@ Deno.test("gestor registra validação administrativa do e-mail sem confirmar o 
   });
 });
 
-Deno.test("relata confirmação do aluno apenas por email_confirmed_at", async () => {
-  const fixture = makeFixture();
+Deno.test("não declara sucesso só com confirmed_at quando a RPC não confirmou o e-mail", async () => {
+  const fixture = makeFixture({ skipAuthConfirmation: true });
   fixture.context.admin.auth.admin.getUserById = async () => ({
     data: {
       user: {
@@ -136,8 +160,8 @@ Deno.test("relata confirmação do aluno apenas por email_confirmed_at", async (
   );
   const body = await response.json();
 
-  assert.equal(response.status, 200);
-  assert.equal(body.emailConfirmed, false);
+  assert.equal(response.status, 409);
+  assert.equal(body.success, false);
 });
 
 Deno.test("recusa validação manual sem declaração explícita do gestor", async () => {
@@ -197,4 +221,53 @@ Deno.test("não valida antes da auditoria prévia e permite uma nova tentativa",
     ).length,
     1,
   );
+});
+
+Deno.test("confirma e-mail de aluno que já criou senha sem exigir termos ou primeiro acesso", async () => {
+  const fixture = makeFixture();
+  const response = await handleConfirmPartnerEmail(fixture.context, {
+    ...partner,
+    acesso_status: "ativo",
+    troca_senha_obrigatoria: false,
+    aceitou_termos_uso: true,
+    termos_uso_versao: "versão-anterior",
+    email_validado_gestor_em: "2026-08-21T12:00:00.000Z",
+    senha_atualizada_em: "2026-08-21T12:00:00.000Z",
+  }, true);
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).emailConfirmed, true);
+});
+
+Deno.test("confirma somente e-mail e conserva criação de senha pendente", async () => {
+  const fixture = makeFixture({ currentPartner: {
+    acesso_status: "pendente", troca_senha_obrigatoria: true, senha_atualizada_em: null,
+  } });
+  const response = await handleConfirmPartnerEmail(fixture.context, partner, true);
+  const body = await response.json();
+  assert.equal(response.status, 200);
+  assert.equal(body.emailConfirmed, true);
+  assert.equal(body.studentAccessPending, true);
+  assert.match(body.message, /deverá criar sua senha/);
+});
+
+Deno.test("conflito ou bloqueio de emissão não retorna confirmação otimista", async () => {
+  for (const code of ["40001", "55P03", "55000", "42501"]) {
+    const fixture = makeFixture({ rpcError: { code, message: "conflito controlado" } });
+    const response = await handleConfirmPartnerEmail(fixture.context, partner, true);
+    assert.equal(response.status, code === "42501" ? 403 : 409);
+    assert.equal(fixture.authUser.email_confirmed_at, null);
+    assert.equal((await response.json()).success, false);
+  }
+});
+
+Deno.test("falha de releitura ou identidade alterada impede declarar sucesso", async () => {
+  for (const options of [
+    { readbackFailure: true },
+    { currentPartner: { email: "outro@example.com" } },
+  ]) {
+    const fixture = makeFixture(options);
+    const response = await handleConfirmPartnerEmail(fixture.context, partner, true);
+    assert.equal(response.status, options.readbackFailure ? 500 : 409);
+    assert.equal((await response.json()).success, false);
+  }
 });

@@ -428,6 +428,7 @@ jobs:
           node supabase/tests/pdv-receipt-identity.isolated.test.mjs
           node supabase/tests/banese_pdv_confirmation.isolated.test.mjs
           node supabase/tests/student_identity_issuers.isolated.test.mjs
+          node scripts/test-student-email-access.mjs
           node supabase/tests/technical_teacher_polo_scope.isolated.test.mjs
           node --test supabase/tests/diario_optional_o_and_precision.isolated.test.mjs
           node --test supabase/tests/diario_sum_filled_instruments.isolated.test.mjs

@@ -9,6 +9,14 @@ export const temporaryPasswordStillRequiresChange = (partner: Partner) => {
     passwordUpdatedAt <= issuedAt;
 };
 
+/** A senha própria não depende do aceite dos termos nem da confirmação postal. */
+export const hasCreatedStudentPassword = (partner: Partner) =>
+  Number.isFinite(Date.parse(partner.senha_atualizada_em || "")) &&
+  !partner.senha_temporaria_emissao_id &&
+  !partner.senha_temporaria_emissao_iniciada_em &&
+  !partner.senha_temporaria_emissao_senha_alterada_em &&
+  !temporaryPasswordStillRequiresChange(partner);
+
 export const getCurrentTermsVersion = async (context: HandlerContext) => {
   try {
     const { data, error } = await context.admin.rpc(

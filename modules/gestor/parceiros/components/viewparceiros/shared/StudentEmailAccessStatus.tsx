@@ -24,7 +24,7 @@ const StudentEmailAccessStatus = ({
   onConfirmEmail,
 }: StudentEmailAccessStatusProps) => {
   const hasContactEmail = Boolean(String(email || '').trim());
-  const emailVerified = emailConfirmed || emailValidatedByManager;
+  const confirmedForLogin = emailConfirmed && confirmationStatus === 'confirmed' && !isLoading;
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6">
@@ -49,7 +49,7 @@ const StudentEmailAccessStatus = ({
               Confirmação de e-mail não se aplica
             </p>
             <p className="mt-1 text-xs font-medium leading-relaxed text-slate-600">
-              O login será feito pela matrícula. Gere o link seguro de primeiro acesso e envie por um canal confirmado, como o WhatsApp cadastrado.
+              O login será feito pela matrícula. Quando necessário, envie o link seguro de acesso por um canal confirmado, como o WhatsApp cadastrado.
             </p>
           </div>
         </div>
@@ -58,29 +58,32 @@ const StudentEmailAccessStatus = ({
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-start gap-3">
               <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-                emailVerified
+                confirmedForLogin
                   ? 'bg-emerald-100 text-emerald-700'
                   : 'bg-amber-100 text-amber-700'
               }`}>
-                {emailVerified ? <CheckCircle2 size={18} /> : <ShieldCheck size={18} />}
+                {confirmedForLogin ? <CheckCircle2 size={18} /> : <ShieldCheck size={18} />}
               </div>
               <div>
                 <p className="text-xs font-black uppercase tracking-wider text-slate-700">
-                  Validação administrativa do e-mail
+                  Confirmação do e-mail para login
                 </p>
                 <p className="mt-1 text-xs font-medium leading-relaxed text-slate-500">
                   {isLoading
                     ? 'Verificando a confirmação do e-mail...'
-                    : emailConfirmed
-                      ? 'E-mail confirmado para o acesso do aluno.'
-                      : emailValidatedByManager
-                        ? 'E-mail validado pelo gestor. A confirmação do login ocorrerá ao gerar a senha temporária.'
+                    : confirmationStatus === 'unknown' || !confirmationStatus
+                      ? 'Não foi possível confirmar a situação do e-mail agora.'
+                      : confirmedForLogin
+                        ? 'E-mail confirmado para o acesso do aluno.'
                         : confirmationStatus === 'no_auth_user'
-                          ? 'Envie ou reenvie o primeiro acesso antes de validar este e-mail.'
-                          : confirmationStatus === 'unknown'
-                            ? 'Não foi possível confirmar a situação do e-mail agora.'
-                            : 'Use somente se você validou com o aluno que ele controla este endereço.'}
+                          ? 'Prepare o acesso antes de confirmar este e-mail para login.'
+                          : 'Confirmação para login pendente. Confirme somente após verificar que o aluno controla este endereço.'}
                 </p>
+                {emailValidatedByManager && (
+                  <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-600">
+                    Canal validado pelo gestor.
+                  </p>
+                )}
               </div>
             </div>
             <button
@@ -90,7 +93,7 @@ const StudentEmailAccessStatus = ({
               className="flex shrink-0 items-center justify-center gap-2 rounded-xl border border-blue-200 bg-white px-5 py-3 text-xs font-bold uppercase tracking-wider text-blue-700 transition-colors hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isConfirming && <Loader2 className="animate-spin" size={14} />}
-              {emailConfirmed ? 'E-mail confirmado' : emailValidatedByManager ? 'E-mail validado' : 'Validar e-mail'}
+              {confirmedForLogin ? 'E-mail confirmado' : emailValidatedByManager ? 'Confirmar e-mail' : 'Validar e-mail'}
             </button>
           </div>
         </div>

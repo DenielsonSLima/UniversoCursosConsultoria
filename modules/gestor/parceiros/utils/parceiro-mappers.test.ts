@@ -2,6 +2,29 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizePartnerAccountType, toCamel, toSnake } from './parceiro-mappers.ts';
 
+test('transporta a prova de senha e os fences sem concluir flags desconhecidas', () => {
+  const aluno = toCamel({
+    tipo: 'Aluno',
+    senha_atualizada_em: '2026-10-10T12:00:00Z',
+    senha_temporaria_pendente: false,
+    senha_temporaria_emitida_em: '2026-10-10T11:00:00Z',
+    senha_temporaria_emissao_id: 'emission-id',
+    senha_temporaria_emissao_iniciada_em: '2026-10-10T11:59:00Z',
+    senha_temporaria_emissao_senha_alterada_em: '2026-10-10T11:59:30Z',
+    troca_senha_obrigatoria: false,
+  });
+  assert.equal(aluno.senhaAtualizadaEm, '2026-10-10T12:00:00Z');
+  assert.equal(aluno.senhaTemporariaPendente, false);
+  assert.equal(aluno.senhaTemporariaEmitidaEm, '2026-10-10T11:00:00Z');
+  assert.equal(aluno.senhaTemporariaEmissaoId, 'emission-id');
+  assert.equal(aluno.senhaTemporariaEmissaoIniciadaEm, '2026-10-10T11:59:00Z');
+  assert.equal(aluno.senhaTemporariaEmissaoSenhaAlteradaEm, '2026-10-10T11:59:30Z');
+  assert.equal(aluno.trocaSenhaObrigatoria, false);
+  const unknown = toCamel({ tipo: 'Aluno' });
+  assert.equal(unknown.senhaTemporariaPendente, undefined);
+  assert.equal(unknown.trocaSenhaObrigatoria, undefined);
+});
+
 test('normaliza o tipo de conta para o contrato aceito pelo banco', () => {
   assert.equal(normalizePartnerAccountType('Corrente'), 'CORRENTE');
   assert.equal(normalizePartnerAccountType('poupanca'), 'POUPANÇA');
