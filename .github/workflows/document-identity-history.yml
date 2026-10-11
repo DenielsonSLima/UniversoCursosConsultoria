@@ -62,7 +62,7 @@ jobs:
           deno-version: 2.9.1
       - name: Preparar PostgreSQL, compositor PDF e navegador isolados
         run: |
-          npm install --prefix "$RUNNER_TEMP/document-identity" --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.3.16 @types/node@22.20.1 react@19.2.7 react-dom@19.2.7 esbuild@0.25.12 playwright@1.58.2 lucide-react@0.564.0 dompurify@3.4.13 qrcode@1.5.4 tailwindcss@3.4.17 postcss@8.5.6 @tanstack/react-query@5.101.0 jspdf@4.2.1 pdf-lib@1.17.1 pdfjs-dist@5.6.205 @napi-rs/canvas@0.1.100 html2canvas@1.4.1
+          npm install --prefix "$RUNNER_TEMP/document-identity" --no-save --package-lock=false --ignore-scripts @supabase/supabase-js@2.106.1 @capacitor/core@8.5.0 @electric-sql/pglite@0.3.16 @types/node@22.20.1 react@19.2.7 react-dom@19.2.7 esbuild@0.25.12 playwright@1.58.2 lucide-react@0.564.0 dompurify@3.4.13 qrcode@1.5.4 tailwindcss@3.4.17 postcss@8.5.6 @tanstack/react-query@5.101.0 jspdf@4.2.1 pdf-lib@1.17.1 pdfjs-dist@5.6.205 @napi-rs/canvas@0.1.100 html2canvas@1.4.1
           node "$RUNNER_TEMP/document-identity/node_modules/playwright/cli.js" install --with-deps chromium
           sudo apt-get update
           sudo apt-get install -y poppler-utils
