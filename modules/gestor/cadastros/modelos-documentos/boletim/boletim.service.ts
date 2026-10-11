@@ -3,10 +3,12 @@ import {
   type DocumentTemplate,
 } from '../shared/document-template.service';
 
-const BOLETIM_TEMPLATE_VERSION = 3;
+const BOLETIM_TEMPLATE_VERSION = 4;
+const STUDENT_HEADER = '<p>Aluno(a): {{ALUNO_NOME}} &nbsp; Matrícula: {{ALUNO_MATRICULA}}</p>';
+const STUDENT_IDENTITY = '<p>CPF nº {{ALUNO_CPF}}, {{ALUNO_DOCUMENTO_TIPO}} nº {{ALUNO_RG}}</p>';
 
 const defaultTemplate: DocumentTemplate = {
-  textContent: `<p><b>DADOS ACADÊMICOS</b></p><p>Aluno(a): {{ALUNO_NOME}} &nbsp; Matrícula: {{ALUNO_MATRICULA}}</p><p>Curso técnico: {{CURSO_NOME}} &nbsp; Turma: {{TURMA_NOME}}</p><p>Módulos: {{MODULO_PERIODO}} &nbsp; Ano letivo: {{ANO_LETIVO}}</p><br><p><b>RESULTADO POR COMPONENTE CURRICULAR</b></p>{{TABELA_BOLETIM_TECNICO}}<br><p>Média geral: <b>{{MEDIA_GERAL}}</b> &nbsp; Frequência geral: <b>{{FREQUENCIA_GERAL}}</b></p><p>Situação: <b>{{SITUACAO_ACADEMICA}}</b></p><p class="text-sm">Documento informativo sujeito à consolidação pela Secretaria Acadêmica.</p>`,
+  textContent: `<p><b>DADOS ACADÊMICOS</b></p>${STUDENT_HEADER}${STUDENT_IDENTITY}<p>Curso técnico: {{CURSO_NOME}} &nbsp; Turma: {{TURMA_NOME}}</p><p>Módulos: {{MODULO_PERIODO}} &nbsp; Ano letivo: {{ANO_LETIVO}}</p><br><p><b>RESULTADO POR COMPONENTE CURRICULAR</b></p>{{TABELA_BOLETIM_TECNICO}}<br><p>Média geral: <b>{{MEDIA_GERAL}}</b> &nbsp; Frequência geral: <b>{{FREQUENCIA_GERAL}}</b></p><p>Situação: <b>{{SITUACAO_ACADEMICA}}</b></p><p class="text-sm">Documento informativo sujeito à consolidação pela Secretaria Acadêmica.</p>`,
   absoluteFields: [
     {
       id: 'boletim_data',
@@ -32,17 +34,26 @@ const defaultTemplate: DocumentTemplate = {
 };
 
 /**
- * Migração restrita ao campo legado padrão. Modelos já personalizados não têm
- * suas coordenadas reescritas pelo exportador.
+ * Somente leitura do modelo vivo: acrescenta identidade no corpo padrão
+ * reconhecido. Snapshots históricos não passam por esta migração.
  */
 export const migrateBoletimTemplate = (template: DocumentTemplate): DocumentTemplate => {
   if (Number(template.v || 0) >= BOLETIM_TEMPLATE_VERSION) return template;
+  const textContent = String(template.textContent || '');
+  const legacyDefault = defaultTemplate.textContent.replace(STUDENT_IDENTITY, '');
+  // O modelo legado salvo escapava as aspas de class. Só essa diferença é admitida.
+  const addIdentity = textContent.replace(/\\+"/g, '"') === legacyDefault;
+  if (!addIdentity && Number(template.v || 0) >= 3) return template;
 
   return {
     ...template,
-    v: BOLETIM_TEMPLATE_VERSION,
+    v: addIdentity ? BOLETIM_TEMPLATE_VERSION : 3,
+    textContent: addIdentity
+      ? textContent.replace(STUDENT_HEADER, () => STUDENT_HEADER + STUDENT_IDENTITY)
+      : template.textContent,
     absoluteFields: (template.absoluteFields || []).map((field) => (
-      field?.id === 'boletim_data'
+      Number(template.v || 0) < 3
+      && field?.id === 'boletim_data'
       && Number(field.x) === 455
       && Number(field.y) === 875
       && Number(field.width) === 260

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Loader2, Printer, RefreshCw, ScrollText, X } from 'lucide-react';
+import { FileDown, Loader2, Printer, RefreshCw, ScrollText, X } from 'lucide-react';
 import type { SecretariaAcademicResult } from './academic-results.service';
 import type { SecretariaAcademicModule } from './academic-results.modules';
 import useMediaQuery from '../hooks/useMediaQuery';
@@ -13,6 +13,8 @@ interface AcademicResultsModalProps {
   classCode?: string | null;
   poloName?: string | null;
   onPrint?: () => void;
+  onEmitPdf?: () => void;
+  emitPdfDisabled?: boolean;
   modules?: SecretariaAcademicModule[];
   selectedPeriodId?: string;
   onModuleChange?: (periodId: string) => void;
@@ -57,6 +59,8 @@ const AcademicResultsModal: React.FC<AcademicResultsModalProps> = ({
   classCode,
   poloName,
   onPrint,
+  onEmitPdf,
+  emitPdfDisabled = false,
   modules,
   selectedPeriodId,
   onModuleChange,
@@ -253,7 +257,19 @@ const AcademicResultsModal: React.FC<AcademicResultsModalProps> = ({
           </div>
           )}
         </div>
-        {onPrint ? <div className="border-t border-slate-200 bg-white px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 print:hidden md:flex md:justify-end md:bg-slate-50 md:p-4"><button type="button" onClick={onPrint} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#001a33] px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white shadow-lg hover:bg-blue-900 md:min-h-0 md:w-auto"><Printer size={14} /> Imprimir Boletim</button></div> : null}
+        {onEmitPdf || onPrint ? (
+          <div className="border-t border-slate-200 bg-white px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 print:hidden md:flex md:justify-end md:bg-slate-50 md:p-4">
+            {onEmitPdf ? (
+              <button type="button" onClick={onEmitPdf}
+                disabled={emitPdfDisabled || isLoading || isError || !selectedModule}
+                className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#001a33] px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white shadow-lg hover:bg-blue-900 disabled:cursor-not-allowed disabled:opacity-40 md:min-h-0 md:w-auto">
+                <FileDown size={14} /> Emitir boletim em PDF
+              </button>
+            ) : (
+              <button type="button" onClick={onPrint} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#001a33] px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white shadow-lg hover:bg-blue-900 md:min-h-0 md:w-auto"><Printer size={14} /> Imprimir Boletim</button>
+            )}
+          </div>
+        ) : null}
       </section>
     </div>,
     document.body,

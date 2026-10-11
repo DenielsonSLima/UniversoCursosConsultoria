@@ -1,4 +1,5 @@
-import { prepareStudentIdentityTemplate, resolveSnapshotStudentIdentity } from '../../../shared/utils/student-document-presentation';
+import { resolveSnapshotStudentIdentity } from '../../../shared/utils/student-document-presentation';
+import { renderDeclarationIdentity } from '../../../shared/utils/declaration-identity-presentation';
 import { canonicalAsRecord } from '../shared/canonical-document-render.utils';
 import { canonicalText } from '../shared/canonical-document-render.utils';
 import { snapshotFirst } from './voter-snapshot';
@@ -171,8 +172,15 @@ export const resolveAcademicSnapshotTemplate = (
 ) => {
   const { emission, preview } = source;
   const snapshot = canonicalAsRecord(emission.dados_emissao);
-  const identity = resolveSnapshotStudentIdentity(snapshot, emission.aluno);
   const academic = preview.academicData;
+  const studentSnapshot = { ...academic, ...snapshot };
+  const identity = resolveSnapshotStudentIdentity(studentSnapshot, emission.aluno);
+  const enrollmentNumber = [snapshot.studentMatricula, academic?.studentMatricula]
+    .map((number) => String(number || '').trim())
+    .find((number) => number && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(number));
+  if (!enrollmentNumber) {
+    throw new Error('O payload canônico do boletim não retornou o número da matrícula acadêmica.');
+  }
   const polo = canonicalAsRecord(preview.polo);
   const emittedDateParts = String(emission.emitido_em || '').split('T')[0].split('-');
   const months = [
@@ -184,11 +192,11 @@ export const resolveAcademicSnapshotTemplate = (
     : formatSnapshotDate(emission.emitido_em);
   const replacements: Record<string, unknown> = {
     ALUNO_NOME: canonicalText(snapshot.studentName, emission.aluno?.nome).toUpperCase(),
-    ALUNO_CPF: formatSnapshotCpf(snapshotFirst(snapshot, 'studentCpf', emission.aluno?.cpf_cnpj)),
-    ALUNO_RG: identity.isCin ? formatSnapshotCpf(identity.number) : canonicalText(snapshot.studentRg, identity.number),
+    ALUNO_CPF: formatSnapshotCpf(snapshotFirst(studentSnapshot, 'studentCpf', emission.aluno?.cpf_cnpj)),
+    ALUNO_RG: identity.isCin ? formatSnapshotCpf(identity.number) : identity.number,
     ALUNO_DOCUMENTO_TIPO: identity.label,
     ALUNO_TIPO_DOCUMENTO: identity.label,
-    ALUNO_MATRICULA: canonicalText(snapshot.studentMatricula, emission.matricula_id),
+    ALUNO_MATRICULA: enrollmentNumber,
     CURSO_NOME: canonicalText(snapshot.courseName),
     TURMA_NOME: canonicalText(snapshot.className, emission.matricula?.turma?.nome),
     POLO_NOME: canonicalText(snapshot.unitName, polo.nomeFantasia, polo.nome),
@@ -214,7 +222,10 @@ export const resolveAcademicSnapshotTemplate = (
       ? String(rawValue || '')
       : escapeTemplateValue(rawValue);
     return result.split(`{{${token}}}`).join(replacement);
-  }, prepareStudentIdentityTemplate(String(value || ''), identity.isCin));
+  }, renderDeclarationIdentity(
+    String(value || ''), identity,
+    snapshotFirst(studentSnapshot, 'studentCpf', emission.aluno?.cpf_cnpj),
+  ));
 };
 
 export const resolveEmissionVectorTemplate = (

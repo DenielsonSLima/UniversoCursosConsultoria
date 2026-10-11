@@ -67,7 +67,14 @@ export interface AcademicComponentRow {
   situacao: string;
 }
 
-export interface AcademicPreviewData {
+export interface AcademicStudentIdentity {
+  studentMatricula?: string | null;
+  studentDocumentType?: string | null;
+  studentCpf?: string | null;
+  studentRg?: string | null;
+}
+
+export interface AcademicPreviewData extends AcademicStudentIdentity {
   componentes: AcademicComponentRow[];
   componentesTable: string;
   historicoTable: string;
@@ -86,7 +93,7 @@ export interface AcademicPreviewData {
   moduleNames: string[];
 }
 
-export interface AcademicPreviewRpcPayload {
+export interface AcademicPreviewRpcPayload extends AcademicStudentIdentity {
   componentes?: AcademicComponentRow[];
   cargaHorariaCumprida?: number;
   cargaHorariaTotal?: number;

@@ -8,6 +8,10 @@ on:
       - 'supabase/migrations/*student_enrollment_declaration_pdf.sql'
       - 'supabase/tests/student_declaration_pdf.isolated.test.mjs'
       - 'supabase/tests/fixtures/student-declaration-boundaries.sql'
+      - 'supabase/migrations/*canonical_academic_document_identity.sql'
+      - 'supabase/migrations/*student_bulletin*.sql'
+      - 'supabase/tests/student_bulletin_pdf.isolated.test.mjs'
+      - 'supabase/tests/fixtures/student-bulletin-harness.mjs'
       - 'modules/gestor/secretaria/contratos-aluno/**'
       - 'modules/gestor/secretaria/historico-emissoes/**'
       - 'modules/gestor/secretaria/shared/**'
@@ -25,6 +29,10 @@ on:
       - 'supabase/migrations/*student_enrollment_declaration_pdf.sql'
       - 'supabase/tests/student_declaration_pdf.isolated.test.mjs'
       - 'supabase/tests/fixtures/student-declaration-boundaries.sql'
+      - 'supabase/migrations/*canonical_academic_document_identity.sql'
+      - 'supabase/migrations/*student_bulletin*.sql'
+      - 'supabase/tests/student_bulletin_pdf.isolated.test.mjs'
+      - 'supabase/tests/fixtures/student-bulletin-harness.mjs'
       - 'modules/gestor/secretaria/contratos-aluno/**'
       - 'modules/gestor/secretaria/historico-emissoes/**'
       - 'modules/gestor/secretaria/shared/**'
@@ -67,6 +75,12 @@ jobs:
         run: PGLITE_MODULE_PATH="$RUNNER_TEMP/document-identity/node_modules/@electric-sql/pglite/dist/index.js" node supabase/tests/student_declaration_pdf.isolated.test.mjs
       - name: Conferir declaração do aluno, download, impressão e modelo atualizado
         run: EAD_UI_NODE_MODULES="$RUNNER_TEMP/document-identity/node_modules" ALUNO_DECLARATION_ARTIFACTS="$RUNNER_TEMP/aluno-declaration" node modules/aluno/secretaria/aluno-declaration.browser.test.mjs
+      - name: Conferir boletim imediato, autorização, snapshots e PDF canônico do aluno
+        env:
+          PGLITE_MODULE_PATH: ${{ runner.temp }}/document-identity/node_modules/@electric-sql/pglite/dist/index.js
+        run: |
+          ln -s "$RUNNER_TEMP/document-identity/node_modules" node_modules
+          node --test supabase/tests/student_bulletin_pdf.isolated.test.mjs modules/aluno/secretaria/aluno-bulletin.service.test.mjs modules/aluno/secretaria/aluno-bulletin.test.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
