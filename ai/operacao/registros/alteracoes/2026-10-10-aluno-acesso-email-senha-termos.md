@@ -78,8 +78,10 @@ A entrega geral foi autorizada: migrations e deploy de `portal-user-management` 
 | `20261010193100_preserve_created_student_password.sql` | `20261010194527` |
 | `20261010193200_require_password_proof_on_email_confirmation.sql` | `20261010194529` |
 
-`portal-user-management` está ACTIVE na versão 37, com JWT habilitado. O pacote remoto anterior foi preservado; somente os quatro handlers/helpers autorizados foram substituídos. A leitura posterior conferiu os 39 arquivos, sem diferenças de conteúdo contra o pacote candidato.
+`portal-user-management` está ACTIVE na versão 38, com JWT habilitado. O pacote remoto anterior foi preservado; somente os quatro handlers/helpers autorizados foram substituídos. A leitura posterior conferiu os 39 arquivos, sem diferenças de conteúdo contra o pacote candidato. A versão 38 remove somente uma atribuição inicial inútil apontada pelo lint do CI; lint focado e nove testes do handler passaram depois da correção.
 
 A revisão independente remota confirmou os três corpos SQL idênticos à fonte local, RPC com quatro argumentos obrigatórios, ausência da assinatura antiga, grants efetivos exclusivos de service_role/proprietário e trigger ativo. A chamada real de retry com gestor autorizado passou; snapshot divergente foi recusado e asserções preservaram integralmente Auth, perfil e contagem da auditoria. A confirmação inicial e os demais cenários adversariais foram exercitados nos 20 testes SQL isolados.
 
 O runner do CI passou localmente com 32 casos Node, seis Deno e 20 SQL. Build 4.8.208 e gate de linhas passaram após inclusão dos arquivos de publicação. Resultados de CI, Preview e promoção são registrados na PR de entrega, cujo manifesto deve conter somente estes 29 arquivos.
+
+O primeiro Preview estava READY, porém sem configuração pública do Supabase e com renderização vazia. Foram adicionadas somente as quatro configurações públicas VITE necessárias na branch deste lote (URL Supabase, chave anon/publishable, URL do site e modo da aplicação), preservando os valores e escopos de produção e das demais branches. O novo commit deve gerar outro Preview com esses valores. Nenhuma chave service_role foi transferida.

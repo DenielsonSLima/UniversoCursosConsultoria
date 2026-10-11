@@ -50,7 +50,7 @@ export const handleConfirmPartnerEmail = async (
   }
 
   let validationError: any;
-  let validated = false;
+  let validated: boolean;
   try {
     const result = await admin.rpc(
       "portal_validar_email_aluno_por_gestor",
