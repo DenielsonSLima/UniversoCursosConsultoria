@@ -58,7 +58,7 @@ const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({
   toast,
   accessRefreshStatus = 'ready',
   onRefreshAccess,
-}) => {
+}: ParceiroAcessoProps) => {
   const queryClient = useQueryClient();
   const [googleHint, setGoogleHint] = useState('');
   const [accessHint, setAccessHint] = useState('');
