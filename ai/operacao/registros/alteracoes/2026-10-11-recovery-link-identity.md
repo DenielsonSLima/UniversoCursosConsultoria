@@ -21,7 +21,6 @@ Revisão crítica de Auth solicitada com três agentes, restrita ao convite e re
 - `ai/operacao/qualidade/limite-linhas-manifestos.json`
 - `internal/versioning/system-version.json`
 - `internal/versioning/CHANGELOG.md`
-- `internal/versioning/changelog/2026-09-28-a-2026-09-30-versoes-4-8-128-a-4-8-137.md`
 - `supabase/migrations/20261011160000_guard_student_invite_actor_cas.sql`
 - `supabase/functions/portal-user-management/handlers/student-invite-state.ts`
 - `supabase/functions/portal-user-management/handlers/student-invite-failure.ts`
@@ -33,7 +32,11 @@ Revisão crítica de Auth solicitada com três agentes, restrita ao convite e re
 - `supabase/tests/fixtures/student-invite-state-harness.mjs`
 - `scripts/test-student-email-access.mjs`
 
-Total: 21 arquivos. Metadados compostos sobre main 4.8.209, sem incluir produto de boletim nem a correção independente do formulário de cadastro. A entrada antiga do changelog permanece integral no histórico; migrations aplicadas são imutáveis.
+- `supabase/tests/student-invite-postgres-concurrency.mjs`
+- `supabase/tests/fixtures/student-invite-postgres-harness.mjs`
+- `.github/workflows/student-invite-concurrency.yml`
+
+Total: 23 arquivos próprios, compostos sobre a PR304/4.8.210. Boletim e histórico são herdados da base e não pertencem ao delta desta etapa. O cadastro segue em entrega posterior 4.8.212. Migrations aplicadas são imutáveis.
 
 ## Validação e entrega
 
@@ -43,5 +46,5 @@ Total: 21 arquivos. Metadados compostos sobre main 4.8.209, sem incluir produto 
 
 - A migration nova 20261011160000 é local e não aplicada. Deve preceder a implantação do handler; RPC ausente falha fechada. Produção depende de autorização e readback de corpos/grants.
 - Checkpoint autoriza início do despacho; CAS final autoriza escrita/entrega. Não há atomicidade banco/Auth/HTTP: envio iniciado não pode ser desfeito e persiste a janela entre commit do checkpoint e início da chamada externa.
-- PGlite controla a intercalação, sem provar NOWAIT entre duas sessões PostgreSQL. Smoke positivo de recuperação real e rollout permanecem pendentes.
+- Quatorze cenários novos usam PostgreSQL 17 efêmero, três conexões independentes e pg_blocking_pids como barreira real. Cobrem NOWAIT, retenção de locks, revogação antes/depois do checkpoint, releitura após commit, advisory locks, ACL e CAS concorrente. O resultado nativo deve passar no CI do head final; PGlite permanece como teste de contrato, sem alegação de concorrência. Smoke positivo de recuperação real e rollout permanecem pendentes.
 - Nenhuma senha, documento pessoal, token ou payload de produção integra este lote. Preview do frontend não valida uma Edge ainda não aplicada.

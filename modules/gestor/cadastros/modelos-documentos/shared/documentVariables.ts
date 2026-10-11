@@ -56,6 +56,7 @@ export const HISTORICO_VARIABLES = [
 
 export const BOLETIM_TECNICO_VARIABLES = [
   ...BASE_DOCUMENT_VARIABLES,
+  { code: '{{ALUNO_DOCUMENTO_TIPO}}', label: 'Tipo de documento do aluno (RG/CIN/CNH)' },
   { code: '{{MODULO_PERIODO}}', label: 'Módulo / Período' },
   { code: '{{ANO_LETIVO}}', label: 'Ano Letivo' },
   { code: '{{TABELA_BOLETIM_TECNICO}}', label: 'Tabela de Notas e Frequência' },

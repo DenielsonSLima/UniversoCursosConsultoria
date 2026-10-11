@@ -4,6 +4,7 @@ interface PdfBlobPrintOptions {
   afterPrintFallbackMs?: number;
   requireAfterPrint?: boolean;
   title?: string;
+  signal?: AbortSignal;
 }
 
 interface CancelableWaiter {
@@ -11,9 +12,26 @@ interface CancelableWaiter {
   promise: Promise<void>;
 }
 
-const wait = (milliseconds: number) => new Promise<void>((resolve) => {
-  window.setTimeout(resolve, milliseconds);
-});
+const createSettleWaiter = (milliseconds: number): CancelableWaiter => {
+  let cancel = () => undefined;
+  const promise = new Promise<void>((resolve) => {
+    const timeout = window.setTimeout(resolve, milliseconds);
+    cancel = () => { window.clearTimeout(timeout); resolve(); };
+  });
+  return { cancel, promise };
+};
+
+const preparationAborted = () => new globalThis.DOMException('A preparação da impressão foi cancelada.', 'AbortError');
+const createPreparationAbortWaiter = (signal: AbortSignal): CancelableWaiter => {
+  let cancel = () => undefined;
+  const promise = new Promise<void>((_resolve, reject) => {
+    const onAbort = () => reject(preparationAborted());
+    signal.addEventListener('abort', onAbort, { once: true });
+    cancel = () => signal.removeEventListener('abort', onAbort);
+    if (signal.aborted) onAbort();
+  });
+  return { cancel, promise };
+};
 
 const createFrameLoadWaiter = (
   iframe: Pick<
@@ -106,7 +124,9 @@ export const printPdfBlob = async (
     afterPrintFallbackMs = 5_000,
     requireAfterPrint = false,
     title = 'Lote de documentos emitidos',
+    signal,
   } = options;
+  if (signal?.aborted) throw preparationAborted();
   const iframe = document.createElement('iframe');
   const objectUrl = URL.createObjectURL(blob);
   iframe.title = title;
@@ -122,15 +142,20 @@ export const printPdfBlob = async (
     pointerEvents: 'none',
   });
   const frameWaiter = createFrameLoadWaiter(iframe, loadTimeoutMs);
+  const abortWaiter = signal ? createPreparationAbortWaiter(signal) : null;
+  let settleWaiter: CancelableWaiter | null = null;
   let printWaiter: CancelableWaiter | null = null;
+  const waitForPreparation = (promise: Promise<void>) => abortWaiter
+    ? Promise.race([promise, abortWaiter.promise]) : promise;
 
   try {
     // Registra a prontidão antes de atribuir a URL para não perder um load
     // imediato de Blob em navegadores que mantêm o PDF em cache.
     iframe.src = objectUrl;
     document.body.appendChild(iframe);
-    await frameWaiter.promise;
-    await wait(settleMs);
+    await waitForPreparation(frameWaiter.promise);
+    settleWaiter = createSettleWaiter(settleMs);
+    await waitForPreparation(settleWaiter.promise);
     const printWindow = iframe.contentWindow;
     if (!printWindow) {
       throw new Error('O navegador não disponibilizou a janela do PDF agregado.');
@@ -138,10 +163,15 @@ export const printPdfBlob = async (
 
     printWaiter = createPrintCompletionWaiter(printWindow, afterPrintFallbackMs, requireAfterPrint);
     printWindow.focus();
+    if (signal?.aborted) throw preparationAborted();
+    // After dispatching print, keep the PDF alive until the normal completion.
+    abortWaiter?.cancel();
     printWindow.print();
     await printWaiter.promise;
   } finally {
     frameWaiter.cancel();
+    settleWaiter?.cancel();
+    abortWaiter?.cancel();
     printWaiter?.cancel();
     iframe.remove();
     URL.revokeObjectURL(objectUrl);

@@ -13,6 +13,14 @@ Histórico arquivado: [28/09/2026 a 30/09/2026 — versões 4.8.128 a 4.8.137](.
 - Link manual de recuperação confere a identidade retornada pelo Auth antes de entregá-lo ao gestor.
 - Identidade divergente ou link ausente interrompe a operação com resposta sanitizada e preserva a credencial atual.
 
+## [4.8.210] - 2026-10-11
+
+- Portal do aluno emite o boletim oficial em PDF do módulo iniciado, com prévia, download e impressão do mesmo arquivo.
+- Boletins exibem matrícula humana e documentos pessoais adaptáveis por CPF, RG e CIN, conforme os dados presentes.
+- Modelo institucional completo, assinatura, QR e marca d’água acompanham novas emissões e seus snapshots.
+- Novas notas geram outro código; o histórico do gestor preserva o mesmo conteúdo do aluno e a impressão pode ser cancelada antes de iniciar.
+- Identificação por CIN preserva nome e matrícula dos modelos personalizados; datas do boletim seguem o dia local congelado na emissão.
+
 ## [4.8.209] - 2026-10-11
 
 - Aba Acesso relê cadastro completo e confirmação do e-mail, inclusive ao abrir o aluno pela busca global.

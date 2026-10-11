@@ -8,12 +8,18 @@ on:
       - 'supabase/migrations/*student_enrollment_declaration_pdf.sql'
       - 'supabase/tests/student_declaration_pdf.isolated.test.mjs'
       - 'supabase/tests/fixtures/student-declaration-boundaries.sql'
+      - 'supabase/migrations/*canonical_academic_document_identity.sql'
+      - 'supabase/migrations/*student_bulletin*.sql'
+      - 'supabase/tests/student_bulletin_pdf.isolated.test.mjs'
+      - 'supabase/tests/fixtures/student-bulletin-harness.mjs'
       - 'modules/gestor/secretaria/contratos-aluno/**'
       - 'modules/gestor/secretaria/historico-emissoes/**'
       - 'modules/gestor/secretaria/shared/**'
       - 'modules/gestor/components/DocumentHeader.tsx'
       - 'modules/shared/pdf/**'
       - 'modules/shared/utils/**'
+      - 'modules/gestor/cadastros/modelos-documentos/carteirinha/**'
+      - 'scripts/test-document-identity.mjs'
       - 'supabase/migrations/*contract_student_identity*.sql'
       - 'supabase/tests/contract_student_identity.isolated.test.mjs'
       - 'supabase/tests/fixtures/contract-identity-*'
@@ -25,12 +31,18 @@ on:
       - 'supabase/migrations/*student_enrollment_declaration_pdf.sql'
       - 'supabase/tests/student_declaration_pdf.isolated.test.mjs'
       - 'supabase/tests/fixtures/student-declaration-boundaries.sql'
+      - 'supabase/migrations/*canonical_academic_document_identity.sql'
+      - 'supabase/migrations/*student_bulletin*.sql'
+      - 'supabase/tests/student_bulletin_pdf.isolated.test.mjs'
+      - 'supabase/tests/fixtures/student-bulletin-harness.mjs'
       - 'modules/gestor/secretaria/contratos-aluno/**'
       - 'modules/gestor/secretaria/historico-emissoes/**'
       - 'modules/gestor/secretaria/shared/**'
       - 'modules/gestor/components/DocumentHeader.tsx'
       - 'modules/shared/pdf/**'
       - 'modules/shared/utils/**'
+      - 'modules/gestor/cadastros/modelos-documentos/carteirinha/**'
+      - 'scripts/test-document-identity.mjs'
       - 'supabase/migrations/*contract_student_identity*.sql'
       - 'supabase/tests/contract_student_identity.isolated.test.mjs'
       - 'supabase/tests/fixtures/contract-identity-*'
@@ -49,9 +61,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: 2.9.1
       - name: Preparar PostgreSQL, compositor PDF e navegador isolados
         run: |
-          npm install --prefix "$RUNNER_TEMP/document-identity" --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.3.14 react@19.2.7 react-dom@19.2.7 esbuild@0.25.12 playwright@1.58.2 lucide-react@0.564.0 dompurify@3.4.13 qrcode@1.5.4 tailwindcss@3.4.17 postcss@8.5.6 @tanstack/react-query@5.101.0 jspdf@4.2.1 pdf-lib@1.17.1 pdfjs-dist@5.6.205 @napi-rs/canvas@0.1.100 html2canvas@1.4.1
+          npm install --prefix "$RUNNER_TEMP/document-identity" --no-save --package-lock=false --ignore-scripts @supabase/supabase-js@2.106.1 @capacitor/core@8.5.0 @electric-sql/pglite@0.3.16 @types/node@22.20.1 react@19.2.7 react-dom@19.2.7 esbuild@0.25.12 playwright@1.58.2 lucide-react@0.564.0 dompurify@3.4.13 qrcode@1.5.4 tailwindcss@3.4.17 postcss@8.5.6 @tanstack/react-query@5.101.0 jspdf@4.2.1 pdf-lib@1.17.1 pdfjs-dist@5.6.205 @napi-rs/canvas@0.1.100 html2canvas@1.4.1
           node "$RUNNER_TEMP/document-identity/node_modules/playwright/cli.js" install --with-deps chromium
           sudo apt-get update
           sudo apt-get install -y poppler-utils
@@ -67,6 +82,18 @@ jobs:
         run: PGLITE_MODULE_PATH="$RUNNER_TEMP/document-identity/node_modules/@electric-sql/pglite/dist/index.js" node supabase/tests/student_declaration_pdf.isolated.test.mjs
       - name: Conferir declaração do aluno, download, impressão e modelo atualizado
         run: EAD_UI_NODE_MODULES="$RUNNER_TEMP/document-identity/node_modules" ALUNO_DECLARATION_ARTIFACTS="$RUNNER_TEMP/aluno-declaration" node modules/aluno/secretaria/aluno-declaration.browser.test.mjs
+      - name: Conferir boletim imediato, autorização, snapshots e PDF canônico do aluno
+        env:
+          PGLITE_MODULE_PATH: ${{ runner.temp }}/document-identity/node_modules/@electric-sql/pglite/dist/index.js
+        run: |
+          ln -s "$RUNNER_TEMP/document-identity/node_modules" node_modules
+          node --test supabase/tests/student_bulletin_pdf.isolated.test.mjs modules/aluno/secretaria/aluno-bulletin.service.test.mjs modules/aluno/secretaria/aluno-bulletin.test.mjs modules/gestor/secretaria/historico-emissoes/academic-preview-snapshot.test.mjs
+      - name: Conferir identidade adaptável em modelos personalizados
+        run: |
+          node scripts/test-document-identity.mjs
+          node --test modules/gestor/cadastros/modelos-documentos/boletim/boletim-template-read.test.mjs
+      - name: Conferir cancelamento da preparação de impressão e retenção após print
+        run: deno test --allow-read --allow-env modules/gestor/secretaria/shared/pdf-blob-print.test.ts
       - uses: actions/upload-artifact@v4
         if: always()
         with:

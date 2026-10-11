@@ -47,7 +47,7 @@ const buildAcademicTableByDocument = (rows: AcademicComponentRow[]) => {
   }
 
   const rowsByModule = new Map<string, AcademicComponentRow[]>();
-  sortRows(rows).forEach((row) => {
+  rows.forEach((row) => {
     const moduleRows = rowsByModule.get(row.moduleName) || [];
     moduleRows.push(row);
     rowsByModule.set(row.moduleName, moduleRows);
@@ -89,7 +89,7 @@ const buildHistoricoTable = (rows: AcademicComponentRow[]) => {
   }
 
   const rowsByModule = new Map<string, AcademicComponentRow[]>();
-  sortRows(rows).forEach((row) => {
+  rows.forEach((row) => {
     const moduleName = row.moduleName || 'Módulo';
     const moduleRows = rowsByModule.get(moduleName) || [];
     moduleRows.push(row);
@@ -137,28 +137,12 @@ const buildHistoricoTable = (rows: AcademicComponentRow[]) => {
     </table>`;
 };
 
-export const loadAcademicPreview = async (
-  emission: EmissionLog
-): Promise<AcademicPreviewData> => {
-  if (!emission.matricula_id) {
-    throw new Error('A emissão não possui matrícula acadêmica vinculada.');
-  }
-
-  const { data, error } = await (supabase.rpc as any)(
-    'get_secretaria_documento_academico',
-    {
-      p_matricula_id: emission.matricula_id,
-      p_documento: emission.documento,
-    }
-  );
-  if (error) throw error;
-  if (!data) throw new Error('O histórico acadêmico não retornou dados para esta matrícula.');
-
-  const payload = data as AcademicPreviewRpcPayload;
+export const buildAcademicPreviewFromPayload = (
+  payload: AcademicPreviewRpcPayload,
+  selectedModuleId: string | null = null,
+  preserveBackendOrder = false,
+): AcademicPreviewData => {
   const allRows = Array.isArray(payload.componentes) ? payload.componentes : [];
-  const selectedModuleId = emission.documento === 'boletim'
-    ? emission.periodo_referencia
-    : null;
   const rows = selectedModuleId
     ? allRows.filter((row) => row.moduleId === selectedModuleId)
     : allRows;
@@ -187,9 +171,14 @@ export const loadAcademicPreview = async (
     .filter((row) => ['Aprovado', 'Aproveitado'].includes(row.situacao))
     .reduce((sum, row) => sum + (Number(row.cargaHoraria) || 0), 0);
   const moduleNames = [...new Set(rows.map((row) => row.moduleName).filter(Boolean))];
-  const componentes = sortRows(rows);
+  const componentes = preserveBackendOrder ? [...rows] : sortRows(rows);
+  const studentIdentity = Object.fromEntries([
+    'studentMatricula', 'studentDocumentType', 'studentCpf', 'studentRg',
+  ].filter((key) => Object.prototype.hasOwnProperty.call(payload, key))
+    .map((key) => [key, payload[key as keyof AcademicPreviewRpcPayload]]));
 
   return {
+    ...studentIdentity,
     componentes,
     componentesTable: buildAcademicTableByDocument(componentes),
     historicoTable: buildHistoricoTable(componentes),
@@ -221,4 +210,33 @@ export const loadAcademicPreview = async (
     courseProfessionalProfile: String(payload.courseProfessionalProfile || ''),
     moduleNames,
   };
+};
+
+export const loadAcademicPreview = async (
+  emission: EmissionLog,
+): Promise<AcademicPreviewData> => {
+  if (!emission.matricula_id) {
+    throw new Error('A emissão não possui matrícula acadêmica vinculada.');
+  }
+  const snapshot = emission.dados_emissao;
+  if (emission.documento === 'boletim' && Object.prototype.hasOwnProperty.call(snapshot || {}, 'academicDataSnapshot')) {
+    const frozen = snapshot.academicDataSnapshot as AcademicPreviewRpcPayload | null;
+    if (!frozen || typeof frozen !== 'object' || Array.isArray(frozen)
+      || !Array.isArray(frozen.componentes) || !frozen.componentes.length
+      || !emission.periodo_referencia
+      || frozen.componentes.some((row) => !row || row.moduleId !== emission.periodo_referencia)) {
+      throw new Error('O snapshot acadêmico do boletim está inválido ou pertence a outro módulo.');
+    }
+    return buildAcademicPreviewFromPayload(frozen, null, true);
+  }
+  const { data, error } = await (supabase.rpc as any)(
+    'get_secretaria_documento_academico',
+    { p_matricula_id: emission.matricula_id, p_documento: emission.documento },
+  );
+  if (error) throw error;
+  if (!data) throw new Error('O histórico acadêmico não retornou dados para esta matrícula.');
+  return buildAcademicPreviewFromPayload(
+    data as AcademicPreviewRpcPayload,
+    emission.documento === 'boletim' ? emission.periodo_referencia : null,
+  );
 };
