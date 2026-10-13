@@ -19,8 +19,8 @@ const model = {
   syncMutation: { isPending: false, mutate() {} },
   refreshMutation: { isPending: false, mutate() {} },
 };
-const render = (receipt: ContasReceber) => renderToStaticMarkup(
-  <table><tbody><OtherCreditRow item={receipt} index={0} model={model as any} /></tbody></table>,
+const render = (receipt: ContasReceber, onOpenPlan?: (id: string) => void) => renderToStaticMarkup(
+  <table><tbody><OtherCreditRow item={receipt} index={0} model={model as any} onOpenPlan={onOpenPlan} /></tbody></table>,
 ).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
 
 test('Outros Créditos discrimina Proesc sem exigir identificador Banese', () => {
@@ -51,4 +51,14 @@ test('cobrança Banese permite abrir o caixa existente', () => {
   const text = render({ ...item, origemPagamento: 'BANESE', gatewayProvider: 'banese_card', asaasPaymentId: 'bank-id', status: 'PENDENTE' });
   assert.match(text, /Abrir caixa/);
   assert.doesNotMatch(text, /Gerar link/);
+});
+
+test('título de carnê oferece abertura do plano e concentra emissão no fluxo de retomada', () => {
+  const installment = { ...item, status: 'PENDENTE', origemPagamento: 'LOCAL', outrosCreditosPlanoId: 'plan' } as ContasReceber;
+  const pending = render(installment, () => {});
+  assert.match(pending, /Abrir carnê/);
+  assert.doesNotMatch(pending, /Gerar link/);
+  const issued = render({ ...installment, gatewayProvider: 'banese_card', asaasPaymentId: 'bank-id' }, () => {});
+  assert.match(issued, /Abrir carnê/);
+  assert.match(issued, /Abrir caixa/);
 });

@@ -106,7 +106,9 @@ export interface ContasReceber {
   composicaoStatus?: string;
   composicaoProveniencia?: string;
   createdAt?: string;
-  tipoLancamento?: 'MATRICULA' | 'PARCELA' | 'REMATRICULA' | 'DEPENDENCIA';
+  tipoLancamento?: 'MATRICULA' | 'PARCELA' | 'REMATRICULA' | 'DEPENDENCIA' | 'OUTRO_CREDITO';
+  outrosCreditosPlanoId?: string;
+  outrosCreditosPapel?: 'PARCELA' | 'MATRICULA' | 'REMATRICULA';
   parcelaNumero?: number;
   origemCronogramaId?: string;
   turmaNome?: string;

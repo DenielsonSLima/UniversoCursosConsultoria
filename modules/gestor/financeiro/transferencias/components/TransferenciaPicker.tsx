@@ -7,7 +7,11 @@ export interface TransferenciaPickerOption {
   id: string;
   label: string;
   detail: string;
+  keywords?: string;
 }
+
+export const filterTransferenciaPickerOptions = (options: TransferenciaPickerOption[], query: string) =>
+  options.filter(option => textMatchesSearch(query, [option.label, option.detail, option.keywords]));
 
 interface TransferenciaPickerProps {
   label: string;
@@ -34,7 +38,7 @@ export default function TransferenciaPicker({
   const [position, setPosition] = useState({ left: 0, top: 0, width: 0, maxHeight: 280 });
   const selected = options.find((option) => option.id === value);
   const filtered = useMemo(
-    () => options.filter((option) => textMatchesSearch(query, [option.label, option.detail])),
+    () => filterTransferenciaPickerOptions(options, query),
     [options, query],
   );
   const available = !loading && !error && !disabled;

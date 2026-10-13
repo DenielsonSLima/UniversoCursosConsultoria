@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 
-const routeUrl = new URL("./index.ts", import.meta.url);
+const routeUrl = new URL("./settlement.actions.ts", import.meta.url);
 const source = await Deno.readTextFile(routeUrl);
 const reversalStart = source.indexOf('if (action === "reverse-manual-settlement")');
-const reversalEnd = source.indexOf('\n    if (action === "create-course-link")', reversalStart);
+const reversalEnd = source.indexOf('\n  return null;', reversalStart);
 assert.notEqual(reversalStart, -1, "rota de estorno manual ausente");
 assert.notEqual(reversalEnd, -1, "fim da rota de estorno manual ausente");
 const reversalRoute = source.slice(reversalStart, reversalEnd);

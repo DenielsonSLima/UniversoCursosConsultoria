@@ -494,3 +494,6 @@ verify_jwt = false
 # Segredo interno e autorização SQL precedem operações no arquivo técnico privado.
 [functions.proesc-technical-history-archive]
 verify_jwt = false
+
+[functions.other-credit-carnet-document]
+verify_jwt = true
