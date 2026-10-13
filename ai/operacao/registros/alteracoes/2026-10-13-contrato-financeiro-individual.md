@@ -1,4 +1,4 @@
-# Contrato técnico com condições individuais — 4.8.213
+# Contrato técnico com condições individuais — 4.8.213 / 4.8.214
 
 ## Objetivo e diagnóstico
 
@@ -43,12 +43,27 @@ Três frentes: financeiro, texto/identidade e PDF. Consultas via MCP confirmaram
 
 ## Resultado dos testes
 
-- 14 cenários financeiros SQL: regra individual/padrão, ciclos futuros, transferência parcial e v3, revisão, omissão comprovada, obrigação local, dispensa, encargos e datas.
+- 15 cenários financeiros SQL: regra individual/padrão, ciclos futuros, transferência parcial e v3, revisão, omissão comprovada, obrigação local, dispensa, encargos, datas e contenção dos locks financeiros.
 - Integração das oito migrations: modelo revisionado, identidade, financeiro calculado, renderer V4 e paridade histórica.
 - Emissor base e wrapper reais executados isoladamente: revisão/aprovação, adulto/menor, condições diferentes, rollback, replay autorizado e histórico imutável. Fonte financeira e fronteiras de autorização são sintéticas nesse teste; loader real é testado separadamente.
 - PDF final de 12 páginas sintéticas: texto integral, corpo em 12 pt, encerramento isolado, QR completo e posições configuradas. Marca institucional também inspecionada com ativos isolados, sem dados pessoais.
 - Compositor/adapter: 11 testes da revisão; contratos legados/cabeçalho/encerramento e identidade preservados. Build Vite final e auditoria de limite de linhas concluídos.
 - CI adicionada para executar SQL → payload sintético → compositor PDF e publicar somente artefatos sintéticos.
+
+## Revisão antes da aplicação
+
+- MCP confirmou que as três migrations financeiras ainda não estavam aplicadas. A revisão dos produtores reais encontrou ordens opostas de locks: persistência Banese trava recebível antes do ciclo; correções financeiras travam ciclo antes do recebível.
+- O loader contratual usa `FOR SHARE NOWAIT` nos cinco locks financeiros e retorna `55P03` com orientação de tentar novamente após a atualização. Assim não espera segurando o lock oposto ao retorno bancário; falha aborta a emissão sem produzir snapshot parcial. Os locks acadêmicos do wrapper existente permanecem fora desta alteração.
+- Teste focado confere as cinco cláusulas executáveis e a tradução de `55P03`, preservando o resultado após rollback. O runtime isolado tem uma sessão; não foi feito ensaio simultâneo de duas sessões PostgreSQL.
+- O hook financeiro só atua em `CONTRATO_A4_INSTITUCIONAL_V4_LEGIVEL`. A instalação das sete migrations de infraestrutura conserva novas emissões com modelo legado aprovado; a migration de revisão do modelo é separada e continua exigindo aprovação jurídica. Teste do RPC real comprova que o helper novo não é invocado no legado, inclusive com uma fonte V4 inválida no fixture.
+
+## Publicação autorizada em 13/10/2026
+
+- Usuário solicitou explicitamente analisar, aplicar e atualizar produção. PR307 integrado no commit `02242b2abed2e88c83c224d063cfa14bf5cf6318`; Vercel confirmou sucesso e o bundle público informa 4.8.213.
+- Revisão de segurança 4.8.214 adiciona NOWAIT e gate V4 antes de aplicar a migration 120200. Cinco testes do emissor real incluem instalação das sete migrations de infraestrutura conservando emissão e replay V3.
+- Aplicação do modelo 121212 fica separada: ela colocaria a única revisão em EM_REVISAO e bloquearia emissões. O fluxo vigente exige declaração APROVADO_JURIDICAMENTE e gestor autenticado; o canal MCP não possui identidade de gestor. Nenhuma aprovação será simulada ou reutilizada.
+- As migrations 120000 e 120100 foram aplicadas com sucesso; as seguintes dependem da publicação do ajuste e verificação remota. Consultas posteriores retornaram erro interno do conector, pendente nova verificação.
+- Vercel MCP não tem acesso à equipe, mas integração GitHub publicou normalmente; verificação pública do bundle foi possível. Smoke autenticado em Safari permanece pendente.
 
 ## Manifesto explícito
 

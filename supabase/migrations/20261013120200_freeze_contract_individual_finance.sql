@@ -44,10 +44,10 @@ begin
       using errcode = '55000';
   end if;
   select c.* into v_config from public.matriculas_tecnicas_financeiro_config c
-    where c.matricula_id = p_matricula_id for share;
+    where c.matricula_id = p_matricula_id for share nowait;
   v_has_config := found;
   select e.* into v_entry from internal_academic.technical_transfer_entry_plans e
-    where e.matricula_id = p_matricula_id for share;
+    where e.matricula_id = p_matricula_id for share nowait;
   if found then v_entry_json := to_jsonb(v_entry); end if;
   if not v_has_config and v_entry_json is null then
     raise exception 'Contrato: financeiro individual ainda não configurado. Revise a matrícula antes da emissão.' using errcode = '55000';
@@ -58,9 +58,12 @@ begin
 
   -- Existing ledger items corroborate reviewed cycles. They are never the
   -- sole source of the plan or its future installment count.
+  -- Bank persistence locks receivable -> run, while financial corrections
+  -- lock run -> receivable. Never wait while holding the opposite lock: fail
+  -- this read-only projection and let the financial writer finish first.
   perform 1 from internal_academic.technical_manual_cycle_runs r
-    where r.matricula_id = p_matricula_id order by r.cycle_number for share;
-  perform 1 from public.contas_receber r where r.matricula_id = p_matricula_id order by r.id for share;
+    where r.matricula_id = p_matricula_id order by r.cycle_number for share nowait;
+  perform 1 from public.contas_receber r where r.matricula_id = p_matricula_id order by r.id for share nowait;
   if exists(select 1 from public.contas_receber r where r.matricula_id = p_matricula_id
     and not exists(select 1 from internal_academic.technical_manual_cycle_runs run
       where run.matricula_id = p_matricula_id and r.id = any(run.receivable_ids))) then
@@ -73,7 +76,7 @@ begin
     v_enrollment_mode := null;
     select r.response into v_request_response from internal_academic.technical_financial_requests r
       where r.request_id = v_run.request_id and r.operation = 'GERACAO_CICLO_TECNICO_MANUAL'
-      for share;
+      for share nowait;
     if found and v_request_response #>> '{ciclo,numero}' = v_run.cycle_number::text
       and v_request_response #>> '{ciclo,quantidadeItens}' = v_run.item_count::text then
       v_enrollment_mode := v_request_response #>> '{ciclo,modoMatricula}';
@@ -136,14 +139,18 @@ begin
   end loop;
   v_plan := internal_academic.contract_financial_plan(v_rule, v_entry_json, v_runs, v_first_due);
   return jsonb_set(p_snapshot, '{financeiro}', internal_academic.contract_financial_summary(v_plan), true);
+exception when lock_not_available then
+  raise exception 'O financeiro desta matrícula está sendo atualizado. Aguarde a conclusão e tente emitir o contrato novamente.'
+    using errcode = '55P03';
 end;
 $function$;
 
 revoke all on function internal_academic.freeze_contract_individual_finance(uuid, jsonb)
   from public, anon, authenticated, service_role;
 
--- Patch only the new-emission boundary. Authorization, locks, replay and the
--- immutability trigger keep previously issued contracts unchanged.
+-- Only V4 templates have the complete plan and conditions tokens. Installing
+-- infrastructure must not replace finances under an approved legacy model.
+-- Authorization, replay and the immutability trigger stay unchanged.
 do $wire$
 declare
   v_definition text;
@@ -157,7 +164,9 @@ begin
     raise exception 'Contract emission boundary changed; financial snapshot migration not applied.';
   end if;
   execute replace(v_definition, v_boundary,
-    E'    v_snapshot := internal_academic.freeze_contract_individual_finance(v_target.matricula_id, v_snapshot);\n\n'
+    E'    if v_model.conteudo ->> ''presentationVersion'' = ''CONTRATO_A4_INSTITUCIONAL_V4_LEGIVEL'' then\n'
+    || E'      v_snapshot := internal_academic.freeze_contract_individual_finance(v_target.matricula_id, v_snapshot);\n'
+    || E'    end if;\n\n'
     || v_boundary);
 end;
 $wire$;
