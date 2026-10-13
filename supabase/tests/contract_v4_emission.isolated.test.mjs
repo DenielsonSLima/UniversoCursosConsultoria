@@ -80,16 +80,27 @@ try {
   const wireStart = wireSource.indexOf('do $wire$');
   const wireEnd = wireSource.indexOf('$wire$;', wireStart);
   await db.exec(wireSource.slice(wireStart, wireEnd + '$wire$;'.length));
+  for (const name of ['20261013121000_contract_party_snapshot', '20261013121100_contract_individual_terms_render',
+    '20261013123000_contract_v4_pagination', '20261013123010_contract_v4_renderer_pagination']) {
+    await db.exec(await migration(name));
+  }
+  await check('infrastructure alone preserves new legacy emissions until a V4 model is approved', async () => {
+    // This invalid new-plan source would fail if the V4-only helper ran.
+    await db.query("update test_contract_v4.financial_rules set rule='{}' where matricula_id=$1", [enrollment(3)]);
+    const legacy = await issue(3, 91);
+    const payload = legacy.documents[0].render_payload;
+    assert.notEqual(payload.template.presentationVersion, 'CONTRATO_A4_INSTITUCIONAL_V4_LEGIVEL');
+    assert.deepEqual(payload.snapshot.financeiro, historical.documents[0].render_payload.snapshot.financeiro);
+    assert.deepEqual(await issue(3, 90), historical);
+    assert.deepEqual(await issue(3, 91), legacy);
+    await db.query('update test_contract_v4.financial_rules set rule=$1 where matricula_id=$2', [baseRule, enrollment(3)]);
+  });
   const draftSource = await migration('20260809210000_create_full_technical_contract_draft');
   const factoryStart = draftSource.indexOf('do $create_full_contract_draft$');
   const factoryEnd = draftSource.indexOf('$create_full_contract_draft$;', factoryStart);
   await db.exec('update public.documentos_modelos_configuracoes set revisao=3');
   await db.exec(draftSource.slice(factoryStart, factoryEnd + '$create_full_contract_draft$;'.length));
-  for (const name of ['20261013121000_contract_party_snapshot', '20261013121100_contract_individual_terms_render',
-    '20261013121200_revise_technical_contract_individual_terms',
-    '20261013123000_contract_v4_pagination', '20261013123010_contract_v4_renderer_pagination']) {
-    await db.exec(await migration(name));
-  }
+  await db.exec(await migration('20261013121200_revise_technical_contract_individual_terms'));
   const model = (await db.query('select * from public.documentos_modelos_configuracoes')).rows[0];
   await check('revised model remains blocked until its own approval; nonempty header passes the unchanged gate', async () => {
     assert.equal(model.status, 'EM_REVISAO');
@@ -97,7 +108,7 @@ try {
     await assert.rejects(() => issue(1), (error) => error.code === '55000');
     await db.exec("update public.documentos_modelos_configuracoes set status='ATIVO'");
     await assert.rejects(() => issue(1), (error) => error.code === '55000' && /aprovação/.test(error.message));
-    assert.equal(await count(), 1, 'failed preparation leaves no ledger rows');
+    assert.equal(await count(), 2, 'failed preparation leaves no ledger rows');
     await db.query(`insert into public.documentos_modelos_aprovacoes(template_key,modalidade,revisao,termo_confirmacao)
       values ('contrato_aluno','TECNICO',$1,'APROVADO_JURIDICAMENTE')`, [model.revisao]);
     await db.exec(`update public.documentos_modelos_configuracoes set conteudo=jsonb_set(conteudo,'{cabecalho}','""')`);

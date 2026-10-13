@@ -237,9 +237,34 @@ try {
       'public.preparar_emissao_contrato_aluno_base_secure(uuid,text,uuid[],text,uuid)'::regprocedure) as body,
       has_function_privilege('authenticated','internal_academic.freeze_contract_individual_finance(uuid,jsonb)','execute') as callable`);
     assert.match(result.rows[0].body, /freeze_contract_individual_finance\(v_target.matricula_id, v_snapshot\)/);
+    assert.match(result.rows[0].body,
+      /if v_model\.conteudo ->> 'presentationVersion' = 'CONTRATO_A4_INSTITUCIONAL_V4_LEGIVEL' then\s+v_snapshot := internal_academic\.freeze_contract_individual_finance/);
     assert.equal(result.rows[0].callable, false);
     const migration = await read('supabase/migrations/20261013120200_freeze_contract_individual_finance.sql');
     assert.doesNotMatch(migration, /update\s+(?:public\.)?documentos_validacao/i);
+  });
+  await check('financial locks never wait behind either bank or correction lock ordering', async () => {
+    // PGlite is single-session: verify the executable SQL lock contract here;
+    // this does not claim to reproduce two concurrent database transactions.
+    const body = (await db.query(`select pg_get_functiondef(
+      'internal_academic.freeze_contract_individual_finance(uuid,jsonb)'::regprocedure) as body`)).rows[0].body;
+    for (const table of ['public.matriculas_tecnicas_financeiro_config',
+      'internal_academic.technical_transfer_entry_plans', 'internal_academic.technical_manual_cycle_runs',
+      'public.contas_receber', 'internal_academic.technical_financial_requests']) {
+      const locks = body.split(';').filter((statement) => statement.includes(`from ${table} `)
+        && /for share/i.test(statement));
+      assert.equal(locks.length, 1, `${table} has one financial lock statement`);
+      assert.match(locks[0], /for share nowait/i, `${table} cannot create a lock wait cycle`);
+    }
+    await db.exec('begin');
+    try {
+      await db.exec(`create or replace function internal_academic.technical_financial_effective_rule(uuid)
+        returns jsonb language plpgsql set search_path='' as $$ begin
+          raise exception 'isolated lock contention' using errcode='55P03'; end $$`);
+      await assert.rejects(() => freeze(), (error) => error.code === '55P03'
+        && /financeiro desta matrícula está sendo atualizado/.test(error.message));
+    } finally { await db.exec('rollback'); }
+    assert.equal((await freeze()).financeiro.quantidadeMatriculas, 0);
   });
   console.log(`${passed} contract finance checks passed`);
 } finally {

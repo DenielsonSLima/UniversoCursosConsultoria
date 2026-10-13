@@ -58,7 +58,7 @@ returns boolean language sql stable as $$ select $1.test_waived; $$;
 -- Minimal emitter for applying the actual guarded wiring migration.
 create function public.preparar_emissao_contrato_aluno_base_secure(uuid,text,uuid[],text,uuid)
 returns jsonb language plpgsql as $function$
-declare v_target record; v_snapshot jsonb; v_rendered jsonb;
+declare v_target record; v_model record; v_snapshot jsonb; v_rendered jsonb;
 begin
     v_rendered := public.renderizar_contrato_aluno_documento(
       '{}'::jsonb, v_snapshot, null::text, null::timestamptz);
