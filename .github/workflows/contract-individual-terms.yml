@@ -48,7 +48,8 @@ jobs:
           CONTRACT_PDF_ARTIFACTS: ${{ runner.temp }}/contract-pdfs
         run: |
           node --test modules/gestor/secretaria/contratos-aluno/pdf/legibility.pdf.test.mjs \
-            modules/gestor/cadastros/modelos-documentos/contrato-aluno/services/contrato-aluno-template.service.test.mjs
+            modules/gestor/cadastros/modelos-documentos/contrato-aluno/services/contrato-aluno-template.service.test.mjs \
+            modules/gestor/cadastros/modelos-documentos/contrato-aluno/contract-v4-structural-preview.test.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: contract-individual-synthetic-pdfs

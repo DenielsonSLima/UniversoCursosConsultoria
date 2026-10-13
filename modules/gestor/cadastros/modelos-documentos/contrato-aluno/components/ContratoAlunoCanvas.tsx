@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { FileText, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import DocumentHeader from '../../../../components/DocumentHeader';
 import { LocalQrCodeImage } from '../../../../../shared/qrcode/LocalQrCodeImage';
@@ -8,6 +8,7 @@ import { normalizeContractSectionHeader } from '../../../../../shared/contrato-a
 import { buildContractSemanticRuns } from '../../../../../shared/contrato-aluno/semantic-format';
 import type { ConfiguracaoQrContrato } from '../types/contrato-aluno.types';
 import { useContractClosingDrag } from '../hooks/useContractClosingDrag';
+import { CONTRACT_STRUCTURAL_V4, STRUCTURAL_V4_LAYOUT, paginateStructuralV4 } from './contract-structural-pagination';
 
 export const PAGE_WIDTH = 794;
 export const PAGE_HEIGHT = 1123;
@@ -35,9 +36,14 @@ export const normalizeContratoTemplateLineBreaks = (value: string) => value
 export const autoPaginateContractText = (
   corpoText: string,
   footerText = '',
+  presentationVersion?: string,
+  hasQr = true,
 ): ContratoAlunoTemplatePage[] => {
   const normalizedBody = normalizeContratoTemplateLineBreaks(corpoText);
   const normalizedFooter = normalizeContratoTemplateLineBreaks(footerText).trim();
+  if (presentationVersion === CONTRACT_STRUCTURAL_V4) {
+    return paginateStructuralV4(normalizedBody, normalizedFooter, hasQr);
+  }
   const isCompleteMinuta = normalizedBody.length >= 20_000;
   // A minuta completa usa composição mais compacta. Na folha final, 38 linhas
   // deixam a área inferior livre para assinaturas e QR sem criar página vazia.
@@ -107,6 +113,7 @@ export const autoPaginateContractText = (
 };
 
 interface ContratoAlunoCanvasProps {
+  presentationVersion?: string;
   tituloDocumento: string;
   cabecalho: string;
   corpo: string;
@@ -132,6 +139,7 @@ interface ContratoAlunoCanvasProps {
 }
 
 export const ContratoAlunoCanvas: React.FC<ContratoAlunoCanvasProps> = ({
+  presentationVersion,
   tituloDocumento,
   cabecalho,
   corpo,
@@ -149,7 +157,11 @@ export const ContratoAlunoCanvas: React.FC<ContratoAlunoCanvasProps> = ({
   onSelectClosingElement,
 }) => {
   const [zoomScale, setZoomScale] = useState<number>(0.58);
-  const pages = autoPaginateContractText(corpo, rodape);
+  const isV4 = presentationVersion === CONTRACT_STRUCTURAL_V4;
+  const pages = useMemo(
+    () => autoPaginateContractText(corpo, rodape, presentationVersion, qr.habilitado),
+    [corpo, rodape, presentationVersion, qr.habilitado],
+  );
   const totalPages = pages.length;
   const closingPositions = normalizeContractClosingPositions(layoutEncerramento, rodape, qr.habilitado);
   const closingInteractiveProps = useContractClosingDrag(closingPositions, onChangeClosingPositions, onSelectClosingElement);
@@ -182,7 +194,7 @@ export const ContratoAlunoCanvas: React.FC<ContratoAlunoCanvasProps> = ({
         <div className="flex items-center gap-2">
           <FileText size={17} className="text-[#ed1c4e]" />
           <span className="text-xs font-black uppercase tracking-wider text-[#001a33]">
-            Prévia Estrutural A4 ({totalPages} {totalPages === 1 ? 'Página' : 'Páginas'})
+            Prévia Estrutural A4 ({totalPages} {totalPages === 1 ? 'Página estimada' : 'Páginas estimadas'})
           </span>
         </div>
 
@@ -237,6 +249,10 @@ export const ContratoAlunoCanvas: React.FC<ContratoAlunoCanvasProps> = ({
           </div>
         </div>
       </div>
+
+      <p className="w-full px-4 text-xs text-slate-600">
+        A quantidade final de páginas depende dos dados do aluno preenchidos na emissão.
+      </p>
 
       {/* Pages render container */}
       <div className="flex flex-col gap-6 w-full items-center overflow-x-auto overflow-y-auto max-h-[820px] custom-scrollbar p-4 bg-slate-200/60 rounded-3xl border border-slate-300 shadow-inner">
@@ -327,23 +343,31 @@ export const ContratoAlunoCanvas: React.FC<ContratoAlunoCanvasProps> = ({
 
                   {/* Document Title Header (shown on page 1) */}
                   {pageIndex === 0 && (
-                    <div className="relative z-10 mt-6 mb-6 text-center">
-                      {!isCompleteMinuta && visibleSectionHeader && (
+                    <div className="relative z-10 mt-6 mb-6 text-center"
+                      style={isV4 ? { position: 'absolute', top: '60mm', left: '18mm', right: '18mm', margin: 0 } : undefined}>
+                      {!isV4 && !isCompleteMinuta && visibleSectionHeader && (
                         <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#001a33]">
                           {visibleSectionHeader}
                         </p>
                       )}
-                      {!isCompleteMinuta && (
+                      {!isV4 && !isCompleteMinuta && (
                         <div className={`mx-auto h-0.5 w-20 bg-[#ed1c4e] ${visibleSectionHeader ? 'mt-2.5' : ''}`} />
                       )}
-                      <h1 className={`${isCompleteMinuta ? '' : 'mt-4'} text-xl font-black uppercase leading-tight tracking-tight text-[#001a33]`}>
+                      <h1 className={`${isCompleteMinuta || isV4 ? '' : 'mt-4'} text-xl font-black uppercase leading-tight tracking-tight text-[#001a33]`}
+                        style={isV4 ? { fontSize: '13pt', lineHeight: 1.15 } : undefined}>
                         {tituloDocumento || 'CONTRATO DE PRESTAÇÃO DE SERVIÇOS EDUCACIONAIS'}
                       </h1>
                     </div>
                   )}
 
                   {/* Page Body Text Content */}
-                  <div className={`relative z-10 mt-6 mb-20 text-justify text-slate-800 font-serif whitespace-pre-wrap break-words ${isCompleteMinuta ? 'text-[10.5px] leading-[1.45]' : 'text-[11.5px] leading-[1.8]'}`}>
+                  <div data-contract-body="true"
+                    className={`relative z-10 mt-6 mb-20 text-justify text-slate-800 font-serif whitespace-pre-wrap break-words ${isV4 ? '' : isCompleteMinuta ? 'text-[10.5px] leading-[1.45]' : 'text-[11.5px] leading-[1.8]'}`}
+                    style={isV4 ? {
+                      position: 'absolute', left: '18mm', right: '18mm', margin: 0,
+                      top: `${pageIndex === 0 ? STRUCTURAL_V4_LAYOUT.firstBodyTopMm : STRUCTURAL_V4_LAYOUT.continuationBodyTopMm}mm`,
+                      fontFamily: '"Times New Roman", Times, serif', fontSize: '12pt', lineHeight: 1.25,
+                    } : undefined}>
                     {bodyRuns.length > 0 ? bodyRuns.map((run, runIndex) => (
                       <span
                         key={`${pageIndex}-trecho-${runIndex}`}
@@ -361,7 +385,7 @@ export const ContratoAlunoCanvas: React.FC<ContratoAlunoCanvasProps> = ({
                       >
                         {run.text}
                       </span>
-                    )) : (
+                    )) : !isV4 && (
                       <span className="italic text-slate-400 font-sans">
                         Página {pageIndex + 1} vazia ou sem texto configurado.
                       </span>
