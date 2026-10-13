@@ -19,6 +19,9 @@ export const V2_BODY_START = 82;
 export const V2_CONTINUATION_BODY_START = 62;
 export const V3_BODY_START = 75;
 export const V3_CONTINUATION_BODY_START = 60;
+export const V4_BODY_START = 69;
+export const V4_CONTINUATION_BODY_START = 60;
+export const V4_CONTRACT_TITLE_TOP = 60;
 /** Área exclusiva de encerramento: sobe as assinaturas sem invadir o corpo canônico. */
 export const CLOSING_TOP = 210;
 export const LEGACY_CONTRACT_TITLE_TOP = 47.5;
@@ -29,6 +32,7 @@ export const CONTRACT_TITLE_LINE_HEIGHT = 1.12;
 export const CONTRACT_PRESENTATION_LEGACY = "CONTRATO_A4_INSTITUCIONAL_V1";
 export const CONTRACT_PRESENTATION_V2 = "CONTRATO_A4_INSTITUCIONAL_V2";
 export const CONTRACT_PRESENTATION_V3 = "CONTRATO_A4_INSTITUCIONAL_V3_MINUTA_COMPLETA";
+export const CONTRACT_PRESENTATION_V4 = "CONTRATO_A4_INSTITUCIONAL_V4_LEGIVEL";
 
 export type PdfGStateConstructor = new (parameters: { opacity: number }) => unknown;
 
@@ -77,7 +81,7 @@ export interface ContractVisualDocument {
   };
 }
 
-export type ContractPresentationMode = "LEGACY" | "V2" | "V3";
+export type ContractPresentationMode = "LEGACY" | "V2" | "V3" | "V4";
 
 export const resolveContractPresentationMode = (
   presentationVersion: string | null | undefined,
@@ -87,6 +91,7 @@ export const resolveContractPresentationMode = (
   }
   if (presentationVersion === CONTRACT_PRESENTATION_V2) return "V2";
   if (presentationVersion === CONTRACT_PRESENTATION_V3) return "V3";
+  if (presentationVersion === CONTRACT_PRESENTATION_V4) return "V4";
   throw new Error(
     `A versão de apresentação do contrato não é suportada: ${presentationVersion}.`,
   );
@@ -101,6 +106,9 @@ export const readContractVisualDocument = (
     throw new Error(
       "O contrato não possui páginas canônicas suficientes para gerar o PDF.",
     );
+  }
+  if (rendered.pages.slice(0, -1).some((page) => canonicalText(page.footer).trim())) {
+    throw new Error('O contrato contém encerramento fora da última página. Revise a paginação no servidor antes de emitir.');
   }
 
   const snapshot = canonicalAsRecord(document.renderPayload?.snapshot);

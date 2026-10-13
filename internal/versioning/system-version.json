@@ -1,8 +1,8 @@
 {
-  "version": "4.8.212",
+  "version": "4.8.213",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 221,
-  "releasedAt": "2026-10-11",
-  "summary": "Cadastro completo do aluno e preservação de rascunhos e identidade ao salvar"
+  "revision": 222,
+  "releasedAt": "2026-10-13",
+  "summary": "Contrato com plano financeiro individual completo, identificação das partes e PDF legível"
 }

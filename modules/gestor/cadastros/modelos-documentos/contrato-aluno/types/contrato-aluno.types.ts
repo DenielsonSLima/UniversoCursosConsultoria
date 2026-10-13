@@ -60,7 +60,9 @@ export interface ConteudoModeloContratoAluno {
   layoutEncerramento?: ContractClosingPositions;
   observacaoEscopo: string;
   fonte: FonteModeloContrato;
-  presentationVersion: 'CONTRATO_A4_INSTITUCIONAL_V2' | 'CONTRATO_A4_INSTITUCIONAL_V3_MINUTA_COMPLETA';
+  presentationVersion: 'CONTRATO_A4_INSTITUCIONAL_V2'
+    | 'CONTRATO_A4_INSTITUCIONAL_V3_MINUTA_COMPLETA'
+    | 'CONTRATO_A4_INSTITUCIONAL_V4_LEGIVEL';
   regrasDinamicas: RegrasDinamicasContratoAluno;
   sourceDocument: FonteDocumentoContratoAluno | null;
   marcaDagua: ConfiguracaoMarcaDaguaContrato;

@@ -9,6 +9,7 @@ import {
   PAGE_WIDTH, PAGE_HEIGHT, PAGE_LEFT, PAGE_RIGHT, PAGE_BOTTOM, PAGE_NUMBER_Y,
   CLOSING_TOP, LEGACY_CONTRACT_TITLE_SIZE, LEGACY_CONTRACT_TITLE_TOP,
   V2_CONTRACT_TITLE_SIZE, V2_CONTRACT_TITLE_TOP, CONTRACT_TITLE_LINE_HEIGHT,
+  V4_CONTRACT_TITLE_TOP,
   resolveContractPresentationMode, type ContractVisualDocument,
   type ContractVisualPage, type PdfGStateConstructor, type ContractPresentationMode,
 } from './model';
@@ -19,7 +20,8 @@ import {
 import {
   drawContractWatermark, drawContractWatermarkLegacy, drawContractInstitutionalHeaderLegacy,
 } from './assets';
-import { getClosingHeight, drawContractClosing, drawContractQr } from './closing';
+import { getClosingHeight, drawContractClosing } from './closing';
+import { assertContractQrFits, drawContractQr } from './qr';
 
 export const assertContractPageFits = (
   pdf: jsPDF,
@@ -118,6 +120,7 @@ export const drawContractPage = (
   ]);
   const hasClosing = isFinalPage &&
     Boolean(normalizeCanonicalPdfText(page.footer) || visual.qr.enabled);
+  if (hasClosing) assertContractQrFits(pdf, visual, document);
   assertContractPageFits(
     pdf,
     page,
@@ -153,7 +156,10 @@ export const drawContractPage = (
       pdf.setFont("helvetica", "bold");
       pdf.setTextColor(0, 26, 51);
       pdf.setFontSize(6.2);
-      drawCanonicalPdfText(pdf, sectionHeader, PAGE_WIDTH / 2, 60, {
+      if (pdf.getTextWidth(sectionHeader) > PAGE_WIDTH - PAGE_LEFT - PAGE_RIGHT) {
+        throw new Error('O cabeçalho do modelo ultrapassa a área segura do contrato. Revise o modelo antes de emitir.');
+      }
+      drawCanonicalPdfText(pdf, sectionHeader, PAGE_WIDTH / 2, presentationMode === "V4" ? 57 : 60, {
         align: "center",
         maxWidth: PAGE_WIDTH - PAGE_LEFT - PAGE_RIGHT,
         maxLines: 1,
@@ -169,6 +175,7 @@ export const drawContractPage = (
     drawContractInstitutionalHeaderLegacy(pdf, page, visual, logo);
   }
   const shouldDrawAccent = presentationMode !== "V3"
+    && presentationMode !== "V4"
     && (presentationMode === "LEGACY" || isFirstPage);
   if (shouldDrawAccent) {
     pdf.setDrawColor(237, 28, 78);
@@ -182,7 +189,7 @@ export const drawContractPage = (
     const titleSize = presentationMode !== "LEGACY"
       ? V2_CONTRACT_TITLE_SIZE
       : LEGACY_CONTRACT_TITLE_SIZE;
-    const titleTop = presentationMode !== "LEGACY"
+    const titleTop = presentationMode === "V4" ? V4_CONTRACT_TITLE_TOP : presentationMode !== "LEGACY"
       ? V2_CONTRACT_TITLE_TOP
       : LEGACY_CONTRACT_TITLE_TOP;
     pdf.setFontSize(titleSize);

@@ -1,0 +1,55 @@
+name: Contrato individual e PDF legível
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/contract-individual-terms.yml'
+      - 'modules/gestor/secretaria/contratos-aluno/**'
+      - 'modules/gestor/cadastros/modelos-documentos/contrato-aluno/**'
+      - 'supabase/migrations/*contract*individual*.sql'
+      - 'supabase/migrations/*contract_financial_summary.sql'
+      - 'supabase/migrations/*contract_party_snapshot.sql'
+      - 'supabase/migrations/*contract_v4*.sql'
+      - 'supabase/tests/contract_individual*'
+      - 'supabase/tests/contract_v4*'
+
+permissions:
+  contents: read
+
+jobs:
+  contract-individual:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Preparar dependências do produto e PostgreSQL isolado
+        run: |
+          npm ci
+          npm install --prefix "$RUNNER_TEMP/contract-sql" --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.3.16
+      - name: Validar plano individual, revisão, histórico e paginação
+        env:
+          PGLITE_MODULE_PATH: ${{ runner.temp }}/contract-sql/node_modules/@electric-sql/pglite/dist/index.js
+          CONTRACT_TERMS_OUTPUT: ${{ runner.temp }}/contract-prepared-synthetic.json
+        run: |
+          node --test supabase/tests/contract_individual_finance.isolated.test.mjs \
+            supabase/tests/contract_individual_terms.isolated.test.mjs \
+            supabase/tests/contract_individual_terms.contract.test.ts \
+            supabase/tests/contract_v4_emission.isolated.test.mjs \
+            supabase/tests/contract_v4_pagination.test.mjs
+      - name: Validar tipografia, QR, fechamento e ida e volta do modelo
+        env:
+          CONTRACT_LEGIBILITY_FIXTURE: ${{ runner.temp }}/contract-prepared-synthetic.json
+          CONTRACT_PDF_ARTIFACTS: ${{ runner.temp }}/contract-pdfs
+        run: |
+          node --test modules/gestor/secretaria/contratos-aluno/pdf/legibility.pdf.test.mjs \
+            modules/gestor/cadastros/modelos-documentos/contrato-aluno/services/contrato-aluno-template.service.test.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: contract-individual-synthetic-pdfs
+          path: ${{ runner.temp }}/contract-pdfs

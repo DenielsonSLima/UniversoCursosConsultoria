@@ -115,7 +115,8 @@ const normalizeContent = (
     observacaoEscopo: asString(value.observacaoEscopo, fallback.observacaoEscopo),
     fonte,
     presentationVersion: value.presentationVersion === 'CONTRATO_A4_INSTITUCIONAL_V3_MINUTA_COMPLETA'
-      ? 'CONTRATO_A4_INSTITUCIONAL_V3_MINUTA_COMPLETA'
+      || value.presentationVersion === 'CONTRATO_A4_INSTITUCIONAL_V4_LEGIVEL'
+      ? value.presentationVersion
       : fallback.presentationVersion,
     regrasDinamicas: {
       minimoAlunosTurma: asRuleValue(regrasDinamicas.minimoAlunosTurma, fallback.regrasDinamicas.minimoAlunosTurma),
