@@ -4,7 +4,7 @@ import test from 'node:test';
 
 const readContractPdfSource = async () => (await Promise.all([
   '../contratos-aluno/contratos-aluno.pdf.ts',
-  ...['model', 'assets', 'body', 'closing', 'page'].map((name) => `../contratos-aluno/pdf/${name}.ts`),
+  ...['model', 'assets', 'body', 'closing', 'qr', 'page'].map((name) => `../contratos-aluno/pdf/${name}.ts`),
 ].map((path) => readFile(new URL(path, import.meta.url), 'utf8')))).join('\n');
 
 test("preview oficial recebe um Blob PDF nativo, sem conversor de página em canvas", async () => {

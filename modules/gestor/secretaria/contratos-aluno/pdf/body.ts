@@ -5,6 +5,7 @@ import {
   PAGE_WIDTH, PAGE_LEFT, PAGE_RIGHT,
   LEGACY_BODY_START, V2_BODY_START, V2_CONTINUATION_BODY_START,
   V3_BODY_START, V3_CONTINUATION_BODY_START,
+  V4_BODY_START, V4_CONTINUATION_BODY_START, V4_CONTRACT_TITLE_TOP,
   LEGACY_CONTRACT_TITLE_SIZE, LEGACY_CONTRACT_TITLE_TOP,
   V2_CONTRACT_TITLE_SIZE, V2_CONTRACT_TITLE_TOP, CONTRACT_TITLE_LINE_HEIGHT,
   type ContractVisualDocument, type ContractPresentationMode,
@@ -17,6 +18,7 @@ export const getContractBodyStart = (
   showTitle = true,
 ) => {
   if (!showTitle && presentationMode !== "LEGACY") {
+    if (presentationMode === "V4") return V4_CONTINUATION_BODY_START;
     return presentationMode === "V3"
       ? V3_CONTINUATION_BODY_START
       : V2_CONTINUATION_BODY_START;
@@ -24,10 +26,10 @@ export const getContractBodyStart = (
   const titleSize = presentationMode !== "LEGACY"
     ? V2_CONTRACT_TITLE_SIZE
     : LEGACY_CONTRACT_TITLE_SIZE;
-  const titleTop = presentationMode !== "LEGACY"
+  const titleTop = presentationMode === "V4" ? V4_CONTRACT_TITLE_TOP : presentationMode !== "LEGACY"
     ? V2_CONTRACT_TITLE_TOP
     : LEGACY_CONTRACT_TITLE_TOP;
-  const bodyStart = presentationMode === "V3"
+  const bodyStart = presentationMode === "V4" ? V4_BODY_START : presentationMode === "V3"
     ? V3_BODY_START
     : presentationMode === "V2"
       ? V2_BODY_START
@@ -38,7 +40,10 @@ export const getContractBodyStart = (
     normalizeCanonicalPdfText(title),
     PAGE_WIDTH - PAGE_LEFT - PAGE_RIGHT,
   ) as string[];
-  const visibleTitleLines = Math.min(Math.max(titleLines.length, 1), 2);
+  if (titleLines.length > 2) {
+    throw new Error('O título do contrato ultrapassa a área segura do PDF. Revise o modelo antes de emitir.');
+  }
+  const visibleTitleLines = Math.max(titleLines.length, 1);
   const titleHeight = visibleTitleLines * titleSize * 0.352778 *
     CONTRACT_TITLE_LINE_HEIGHT;
   return Math.max(bodyStart, titleTop + titleHeight + 3);
@@ -76,13 +81,20 @@ export const CONTRACT_BODY_FONT_SIZE = 10.5;
 export const CONTRACT_BODY_LINE_HEIGHT_FACTOR = 1.7;
 export const CONTRACT_V3_BODY_FONT_SIZE = 8.5;
 export const CONTRACT_V3_BODY_LINE_HEIGHT_FACTOR = 1.22;
+export const CONTRACT_V4_BODY_FONT_SIZE = 12;
+export const CONTRACT_V4_BODY_LINE_HEIGHT_FACTOR = 1.25;
 export const CONTRACT_BODY_NORMAL_COLOR = [30, 41, 59] as const;
 export const CONTRACT_BODY_ACCENT_COLOR = [237, 28, 78] as const;
 export const CONTRACT_BODY_ATTENTION_COLOR = [255, 245, 247] as const;
 export const CONTRACT_BODY_MIN_SPACE_WIDTH = 1.2;
 
 export const getContractBodyTypography = (presentationMode: ContractPresentationMode) => (
-  presentationMode === "V3"
+  presentationMode === "V4"
+    ? {
+      fontSize: CONTRACT_V4_BODY_FONT_SIZE,
+      lineHeightFactor: CONTRACT_V4_BODY_LINE_HEIGHT_FACTOR,
+    }
+    : presentationMode === "V3"
     ? {
       fontSize: CONTRACT_V3_BODY_FONT_SIZE,
       lineHeightFactor: CONTRACT_V3_BODY_LINE_HEIGHT_FACTOR,
@@ -96,7 +108,7 @@ export const getContractBodyTypography = (presentationMode: ContractPresentation
 export const getContractPdfSpaceWidth = (
   pdf: jsPDF,
   presentationMode: ContractPresentationMode,
-) => presentationMode === "V3"
+) => presentationMode === "V3" || presentationMode === "V4"
   ? Math.max(pdf.getTextWidth(" "), CONTRACT_BODY_MIN_SPACE_WIDTH)
   : pdf.getTextWidth(" ");
 
@@ -118,6 +130,7 @@ export const contractRunsToPdfWords = (
   pdf: jsPDF,
   runs: readonly ContractSemanticRun[],
   fontSize: number,
+  useGlyphAdvances = false,
 ) => {
   const tokens: Array<ContractPdfWord | "BREAK"> = [];
   let pieces: ContractPdfPiece[] = [];
@@ -130,7 +143,11 @@ export const contractRunsToPdfWords = (
     pieces.push({
       ...pieceStyle,
       text: pieceText,
-      width: pdf.getTextWidth(pieceText),
+      // Cada peça vira um objeto text sem ajuste de kerning. Medir o mesmo
+      // avanço evita que palavras em caixa alta invadam o espaço seguinte.
+      width: useGlyphAdvances
+        ? pdf.getStringUnitWidth(pieceText, { doKerning: false }) * fontSize / pdf.internal.scaleFactor
+        : pdf.getTextWidth(pieceText),
     });
     pieceText = "";
     pieceStyle = null;
@@ -189,7 +206,7 @@ export const layoutContractSemanticBody = (
     criticalHighlights: visual.criticalHighlights,
     attentionHighlights: visual.attentionHighlights,
   });
-  const tokens = contractRunsToPdfWords(pdf, runs, typography.fontSize);
+  const tokens = contractRunsToPdfWords(pdf, runs, typography.fontSize, presentationMode === 'V4');
   pdf.setFont("times", "normal");
   pdf.setFontSize(typography.fontSize);
   const spaceWidth = getContractPdfSpaceWidth(pdf, presentationMode);
@@ -211,6 +228,9 @@ export const layoutContractSemanticBody = (
     if (token === "BREAK") {
       flushLine(true);
       return;
+    }
+    if (token.width > maxWidth) {
+      throw new Error('O contrato contém uma palavra maior que a largura segura do PDF. Revise o conteúdo antes de emitir.');
     }
     const gapWidth = words.length ? spaceWidth : 0;
     if (words.length && width + gapWidth + token.width > maxWidth) {

@@ -10,9 +10,8 @@ import {
   type ContractClosingPosition,
   type ContractClosingPositions,
 } from '../../../../shared/contrato-aluno/closing-positions';
-import { drawCanonicalPdfText, type CanonicalPdfImage } from '../../shared/canonical-document-vector-pdf';
-import type { ContratoAlunoPreparedDocument } from '../types/contratos-aluno.types';
-import { PAGE_WIDTH, PAGE_LEFT, PAGE_RIGHT, CLOSING_TOP, type ContractVisualDocument } from './model';
+import { drawCanonicalPdfText } from '../../shared/canonical-document-vector-pdf';
+import { PAGE_WIDTH, PAGE_LEFT, PAGE_RIGHT, CLOSING_TOP } from './model';
 
 const getClosingTextFlow = (footer: string, hasQr: boolean) => {
   const layout = parseContratoAlunoClosingLayout(footer);
@@ -60,6 +59,9 @@ const drawSignature = (
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(71, 85, 105);
     pdf.setFontSize(witness ? 6.8 : 7.2);
+    if (pdf.getTextWidth(party.value) > width - 2) {
+      throw new Error('O nome da assinatura ultrapassa a largura configurada. Amplie a assinatura no modelo do contrato.');
+    }
     drawCanonicalPdfText(pdf, party.value, x + width / 2, y + 1, {
       align: 'center', maxWidth: width - 2, maxLines: 1,
     });
@@ -92,13 +94,16 @@ export const drawContractClosing = (
   if (layout.fallbackText) {
     pdf.setFontSize(8);
     drawCanonicalPdfText(pdf, layout.fallbackText, x, fallbackY, {
-      maxWidth: width, maxLines: 10, lineHeight: 1.35,
+      maxWidth: width, lineHeight: 1.35,
     });
     return;
   }
   if (layout.location) {
     pdf.setTextColor(71, 85, 105);
     pdf.setFontSize(8);
+    if ((pdf.splitTextToSize(layout.location, width) as string[]).length > 2) {
+      throw new Error('O local e a data do contrato ultrapassam a área segura do encerramento.');
+    }
     drawCanonicalPdfText(pdf, layout.location, x, locationY, {
       maxWidth: width, maxLines: 2, lineHeight: 1.25,
     });
@@ -114,48 +119,8 @@ export const drawContractClosing = (
     pdf.setTextColor(100, 116, 139);
     pdf.setFontSize(7);
     drawCanonicalPdfText(pdf, layout.additionalLines.join('\n'), x, additionalY, {
-      maxWidth: width, maxLines: 4, lineHeight: 1.3,
+      maxWidth: width, lineHeight: 1.3,
     });
   }
 };
 
-export const drawContractQr = (
-  pdf: jsPDF,
-  visual: ContractVisualDocument,
-  document: ContratoAlunoPreparedDocument,
-  qr: CanonicalPdfImage | null,
-) => {
-  if (!visual.qr.enabled) return;
-  if (!qr || !document.validationCode) {
-    throw new Error('O contrato exige QR Code, mas a imagem de validação não foi preparada.');
-  }
-  const position = visual.closingPositions.elements.qr;
-  const size = position.width - 3;
-  const qrX = position.x + 1.5;
-  const qrY = position.y + 1.5;
-  pdf.setFillColor(255, 255, 255);
-  pdf.setDrawColor(226, 232, 240);
-  pdf.roundedRect(position.x, position.y, position.width,
-    getContractClosingElementHeight('qr', position), 1.5, 1.5, 'FD');
-  pdf.addImage(qr.dataUrl, qr.format, qrX, qrY, size, size,
-    `contrato-qr-${document.emissionId}`, 'FAST');
-  pdf.setFont('helvetica', 'bold');
-  pdf.setTextColor(71, 85, 105);
-  pdf.setFontSize(5.7);
-  drawCanonicalPdfText(pdf, visual.qr.label, qrX + size / 2, qrY + size + 0.9, {
-    align: 'center', maxWidth: size + 2, maxLines: 1,
-  });
-  pdf.setTextColor(29, 78, 216);
-  pdf.setFontSize(5.8);
-  drawCanonicalPdfText(pdf, document.validationCode, qrX + size / 2, qrY + size + 3.4, {
-    align: 'center', maxWidth: size + 2, maxLines: 1,
-  });
-  if (visual.qr.validityLabel) {
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(100, 116, 139);
-    pdf.setFontSize(5.4);
-    drawCanonicalPdfText(pdf, `Validade: ${visual.qr.validityLabel}`, qrX + size / 2, qrY + size + 5.8, {
-      align: 'center', maxWidth: size + 2, maxLines: 1,
-    });
-  }
-};
