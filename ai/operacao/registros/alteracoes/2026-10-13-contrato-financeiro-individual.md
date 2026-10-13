@@ -1,4 +1,4 @@
-# Contrato técnico com condições individuais — 4.8.213 / 4.8.214
+# Contrato técnico com condições individuais — 4.8.213 a 4.8.215
 
 ## Objetivo e diagnóstico
 
@@ -65,6 +65,18 @@ Três frentes: financeiro, texto/identidade e PDF. Consultas via MCP confirmaram
 - As migrations 120000 e 120100 foram aplicadas com sucesso; as seguintes dependem da publicação do ajuste e verificação remota. Consultas posteriores retornaram erro interno do conector, pendente nova verificação.
 - Vercel MCP não tem acesso à equipe, mas integração GitHub publicou normalmente; verificação pública do bundle foi possível. Smoke autenticado em Safari permanece pendente.
 
+## Retomada após teste real do usuário — 4.8.215
+
+- A publicação técnica anterior estava concluída, mas a migration do modelo foi retida. Isso deixou o cadastro na revisão 7 ATIVO e tornou impossível aprovar a revisão 8, que ainda não existia no sistema. A entrega anterior não corrigiu o fluxo visível de emissão.
+- Em 13/10/2026, aplicada a migration versionada `20261013121200_revise_technical_contract_individual_terms.sql`, registrada remotamente como `20261013173710_revise_technical_contract_individual_terms`. Produção confirmou revisão 8 V4 em EM_REVISAO, total contratado/plano completo/contratante presentes e histórico correspondente.
+- O botão de aprovação desabilitado era consequência do status ATIVO da revisão 7. A revisão 8 sem alterações locais pendentes permite abrir o modal de aprovação, cuja confirmação é registrada pelo usuário autenticado. Nenhuma aprovação ou identidade foi fabricada.
+- Durante EM_REVISAO, novas emissões técnicas aguardam aprovação; a segunda via histórica permanece disponível. O emissor atual usa request novo para gerar outro contrato, enquanto Imprimir/Baixar do Histórico conserva código e conteúdo anteriores. Não foram reescritos contratos nem inferida ausência de assinatura física a partir do sistema.
+- A prévia estrutural do editor ignorava presentationVersion: tanto V3 como V4 eram mostrados com 10,5 px e sete páginas estimadas. O ajuste transmite o preset, aplica 12 pt/1,25 ao V4 e ajusta a capacidade estimada; texto e dados financeiros não são substituídos por exemplos fixos. O PDF oficial continua paginado pelo servidor.
+- O contrato histórico consultado preservou seu checksum após a aplicação do modelo. A versão pública 4.8.214 e o backend estavam íntegros; o problema era a implantação incompleta do modelo e a prévia legada.
+
+- QA somente leitura no renderer remoto: revisão 8 com plano real comprovado retornou 12 páginas, dois ciclos, todos os valores/encargos e zero tokens pendentes. Não foi emissão nem aprovação.
+- Cinco testes da prévia real via React SSR e dois do adapter passaram; revisão independente confirmou guardas de aprovação/salvamento e ramo V3 intactos. Prévia V4 usa métrica Times determinística, sem canvas, e conserva texto/encerramento; paginação oficial permanece no backend. Smoke autenticado em Safari continua indisponível.
+
 ## Manifesto explícito
 
 - `.github/workflows/contract-individual-terms.yml`
@@ -99,4 +111,9 @@ Três frentes: financeiro, texto/identidade e PDF. Consultas via MCP confirmaram
 - `supabase/tests/contract_v4_emission.isolated.test.mjs`
 - `supabase/tests/contract_v4_pagination.test.mjs`
 
-Total: 31 arquivos.
+- `modules/gestor/cadastros/modelos-documentos/contrato-aluno/components/ContratoAlunoCanvas.tsx`
+- `modules/gestor/cadastros/modelos-documentos/contrato-aluno/components/ContratoAlunoTemplateEditor.tsx`
+- `modules/gestor/cadastros/modelos-documentos/contrato-aluno/components/contract-structural-pagination.ts`
+- `modules/gestor/cadastros/modelos-documentos/contrato-aluno/contract-v4-structural-preview.test.mjs`
+
+Total: 35 arquivos acumulados; hotfix 4.8.215 com nove arquivos.

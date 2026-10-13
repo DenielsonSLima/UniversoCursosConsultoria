@@ -426,6 +426,7 @@ export const ContratoAlunoTemplateEditor = ({ modalidade }: ContratoAlunoTemplat
               />
             </div>}
             <ContratoAlunoCanvas
+              presentationVersion={draft.presentationVersion}
               tituloDocumento={draft.tituloDocumento}
               cabecalho={draft.cabecalho}
               corpo={draft.corpo}
