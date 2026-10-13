@@ -6,6 +6,7 @@ import {
   dependencyBillingSnapshotFrom,
   isDependencyReceivable,
 } from "../../banese/internal/dependency-billing.ts";
+import { buildOtherCreditPlanBaneseFinancialTerms } from "./banese-other-credit-financial-terms.ts";
 
 const roundMoney = (value: unknown) =>
   Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
@@ -334,6 +335,8 @@ export const buildConfiguredBaneseFinancialTerms = (input: {
   matricula?: any;
 }): BaneseFinancialTermsInput => {
   const { receivable, turma, matricula } = input;
+  const otherCreditTerms = buildOtherCreditPlanBaneseFinancialTerms(receivable);
+  if (otherCreditTerms) return otherCreditTerms;
   if (
     isDependencyReceivable(receivable) && dependencyPlanSnapshot(receivable)
   ) {
@@ -394,6 +397,8 @@ export const resolveBaneseReceivableFinancialTerms = async (
   admin: any,
   receivable: any,
 ): Promise<BaneseFinancialTermsInput> => {
+  const otherCreditTerms = buildOtherCreditPlanBaneseFinancialTerms(receivable);
+  if (otherCreditTerms) return otherCreditTerms;
   const confirmedTerms = confirmedBaneseFinancialTerms(receivable);
   if (confirmedTerms) return confirmedTerms;
   if (

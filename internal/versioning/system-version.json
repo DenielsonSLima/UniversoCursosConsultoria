@@ -1,8 +1,8 @@
 {
-  "version": "4.8.215",
+  "version": "4.8.216",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 224,
+  "revision": 225,
   "releasedAt": "2026-10-13",
-  "summary": "Modelo contratual corrigido disponível para aprovação e prévia estrutural compatível com V4"
+  "summary": "Carnê avulso em Outros Créditos com parcelas, encargos, descontos e taxas opcionais"
 }

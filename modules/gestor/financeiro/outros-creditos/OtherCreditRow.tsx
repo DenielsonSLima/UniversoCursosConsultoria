@@ -1,5 +1,5 @@
 import React from 'react';
-import { Banknote, CheckCircle2, Copy, ExternalLink, Link as LinkIcon, QrCode, RefreshCw } from 'lucide-react';
+import { Banknote, BookOpen, CheckCircle2, Copy, ExternalLink, Link as LinkIcon, QrCode, RefreshCw } from 'lucide-react';
 import type { ContasReceber } from '../financeiro.types';
 import { ReceivableAmountSummary } from '../receber/components/modalidade-receber/ReceivableAmountSummary';
 import type { OutrosCreditosModel } from './useOutrosCreditos';
@@ -14,8 +14,8 @@ type RowModel = Pick<OutrosCreditosModel,
 >;
 
 export const OtherCreditRow: React.FC<{
-  item: ContasReceber; index: number; model: RowModel;
-}> = ({ item, index, model }) => {
+  item: ContasReceber; index: number; model: RowModel; onOpenPlan?: (id: string) => void;
+}> = ({ item, index, model, onOpenPlan }) => {
   const {
     syncMutation, refreshMutation, copyLink, openReceiveModal, openPaymentModal,
   } = model;
@@ -54,6 +54,12 @@ export const OtherCreditRow: React.FC<{
       </td>
       <td className="px-5 py-4">
         <div className="flex flex-wrap gap-2">
+          {item.outrosCreditosPlanoId && onOpenPlan ? (
+            <button type="button" onClick={() => onOpenPlan(item.outrosCreditosPlanoId!)}
+              className="inline-flex items-center gap-1 rounded-xl border border-emerald-200 px-3 py-2 text-[10px] font-black uppercase text-emerald-700 hover:bg-emerald-50">
+              <BookOpen size={13} /> Abrir carnê
+            </button>
+          ) : null}
           {item.status !== 'PAGO' && !['CANCELADO', 'ESTORNADO'].includes(item.status) && (
             <button
               onClick={() => openReceiveModal(item)}
@@ -62,7 +68,7 @@ export const OtherCreditRow: React.FC<{
               <CheckCircle2 size={13} /> Receber
             </button>
           )}
-          {!legacy && !item.asaasPaymentId && !item.asaasPaymentLinkId && item.status !== 'PAGO' && !['CANCELADO', 'ESTORNADO'].includes(item.status) && (
+          {!legacy && !item.outrosCreditosPlanoId && !item.asaasPaymentId && !item.asaasPaymentLinkId && item.status !== 'PAGO' && !['CANCELADO', 'ESTORNADO'].includes(item.status) && (
             <button
               onClick={() => syncMutation.mutate(item.id!)}
               disabled={syncMutation.isPending}

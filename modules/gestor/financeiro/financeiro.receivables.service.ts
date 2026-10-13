@@ -67,6 +67,8 @@ const mapReceivableRpcRow = (row: any): ContasReceber => ({
   ...mapReceivableFinancialComposition(row),
   createdAt: row.created_at || undefined,
   tipoLancamento: row.tipo_lancamento || undefined,
+  outrosCreditosPlanoId: row.outros_creditos_plano_id || undefined,
+  outrosCreditosPapel: row.outros_creditos_papel || undefined,
   parcelaNumero: row.parcela_numero === null || row.parcela_numero === undefined
     ? undefined : Number(row.parcela_numero),
   origemCronogramaId: row.origem_cronograma_id || undefined,
@@ -114,6 +116,8 @@ const mapReceivable = (cr: any): ContasReceber => ({
   asaasLastError: cr.asaas_last_error || cr.gateway_last_error,
   createdAt: cr.created_at,
   tipoLancamento: cr.tipo_lancamento,
+  outrosCreditosPlanoId: cr.outros_creditos_plano_id || undefined,
+  outrosCreditosPapel: cr.outros_creditos_papel || undefined,
   parcelaNumero: cr.parcela_numero,
   origemCronogramaId: cr.origem_cronograma_id,
   taxa: (cr.asaas_fee_value ?? cr.gateway_fee_value) == null ? undefined

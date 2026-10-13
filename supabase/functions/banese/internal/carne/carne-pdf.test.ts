@@ -93,6 +93,14 @@ Deno.test("mantem limite seguro com maxItems invalido em tempo de execucao", asy
   assert.equal(String.fromCharCode(...bytes.slice(0, 4)), "%PDF");
 });
 
+Deno.test("carnê avulso aceita 60 parcelas e duas taxas sem alterar limite acadêmico", async () => {
+  const bytes = await buildBaneseCarnetPdf(items(62), { minItems: 1, maxItems: 62 });
+  const pdf = await PDFDocument.load(bytes);
+  assert.equal(pdf.getPageCount(), 21);
+  await assert.rejects(() => buildBaneseCarnetPdf(items(31)), /no maximo 30 boletos/);
+  await assert.rejects(() => buildBaneseCarnetPdf(items(63), { minItems: 1, maxItems: 99 }), /no maximo 62 boletos/);
+});
+
 Deno.test("bloqueia carne Banese com pagadores diferentes", async () => {
   const differentPayer = {
     ...BANESE_DOCUMENT_FIXTURE,

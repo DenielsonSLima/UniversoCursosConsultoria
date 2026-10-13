@@ -12,6 +12,7 @@ import {
 } from "./carne-layout.ts";
 
 export type BaneseCarnetPdfOptions = {
+  minItems?: 1 | 3;
   maxItems?: number;
   branding?: BaneseDocumentBranding;
 };
@@ -20,13 +21,16 @@ export const buildBaneseCarnetPdf = async (
   rawItems: BaneseBoletoDocumentInput[],
   options: BaneseCarnetPdfOptions = {},
 ) => {
+  const minItems = options.minItems === 1 ? 1 : 3;
   const configuredMaxItems = Number(options.maxItems ?? 30);
   const maxItems = Number.isFinite(configuredMaxItems)
-    ? Math.max(1, Math.min(60, Math.trunc(configuredMaxItems)))
+    ? Math.max(1, Math.min(62, Math.trunc(configuredMaxItems)))
     : 30;
-  if (!Array.isArray(rawItems) || rawItems.length < 3) {
+  if (!Array.isArray(rawItems) || rawItems.length < minItems) {
     throw new Error(
-      "O carne Banese exige ao menos 3 parcelas registradas. Matricula e cobrancas com ate 2 parcelas devem ser emitidas individualmente.",
+      minItems === 1
+        ? "O carne de Outros Creditos exige ao menos um boleto registrado."
+        : "O carne Banese exige ao menos 3 parcelas registradas. Matricula e cobrancas com ate 2 parcelas devem ser emitidas individualmente.",
     );
   }
   if (rawItems.length > maxItems) {

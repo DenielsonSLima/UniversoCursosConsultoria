@@ -1,5 +1,5 @@
 import React from 'react';
-import { Banknote, ChevronDown, ChevronLeft, ChevronRight, Loader2, Plus, QrCode, Search, WalletCards } from 'lucide-react';
+import { Banknote, BookOpen, ChevronDown, ChevronLeft, ChevronRight, Loader2, Plus, QrCode, Search, WalletCards } from 'lucide-react';
 import ToastNotification from '../../components/ToastNotification';
 import ManualSettlementModal from '../receber/components/manual-settlement/ManualSettlementModal';
 import FinancialUnderlineTabs from '../components/FinancialUnderlineTabs';
@@ -8,12 +8,15 @@ import { OtherCreditRow } from './OtherCreditRow';
 import { OtherCreditPaymentModal } from './OtherCreditPaymentModal';
 import { OtherCreditCreateModal } from './OtherCreditCreateModal';
 import { OtherCreditPdvModal } from './OtherCreditPdvModal';
+import { OtherCreditPlanModal } from './OtherCreditPlanModal';
+import { useOtherCreditPlan } from './useOtherCreditPlan';
 import { formatCurrency, formatDate, type OtherCreditGroupMode } from './outros-creditos.presentation';
 
 interface OutrosCreditosTabProps { poloId?: string | null; }
 
 const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId }) => {
   const model = useOutrosCreditos(poloId);
+  const planModel = useOtherCreditPlan(poloId);
   const {
     toasts, removeToast, statusScope, setStatusScope, search, setSearch,
     startDate, setStartDate, endDate, setEndDate, categoryFilterId, setCategoryFilterId,
@@ -34,7 +37,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId }) => {
           </p>
           <h3 className="text-2xl font-black uppercase tracking-tight text-[#001a33]">Outros Créditos</h3>
           <p className="mt-1 max-w-2xl text-sm font-medium text-slate-500">
-            Entradas avulsas, juros e rendimentos. Cobranças de cursos e matrículas são acompanhadas em A receber.
+            Entradas avulsas, juros, rendimentos e carnês para serviços ou aulas de prática.
           </p>
         </div>
         <div className="flex flex-wrap gap-3"><button
@@ -43,6 +46,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId }) => {
         >
           <Plus size={16} /> Novo crédito
         </button>
+        <button onClick={planModel.openNew} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-xs font-black uppercase tracking-wider text-emerald-800 hover:bg-emerald-100"><BookOpen size={16} /> Gerar carnê</button>
         <button onClick={model.openPdv} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-6 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg shadow-emerald-900/15 hover:bg-emerald-800"><QrCode size={18} /> Abrir PDV</button></div>
       </div>
 
@@ -172,7 +176,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId }) => {
               </thead>
               {groupMode === 'none' ? (
                 <tbody className="divide-y divide-slate-100">
-                  {pageItems.map((item, index) => <OtherCreditRow key={item.id} item={item} index={index} model={model} />)}
+                  {pageItems.map((item, index) => <OtherCreditRow key={item.id} item={item} index={index} model={model} onOpenPlan={planModel.openPlan} />)}
                 </tbody>
               ) : pageGroups.map((group) => {
                 const isExpanded = expandedGroups.has(group.key);
@@ -221,7 +225,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId }) => {
                         </button>
                       </td>
                     </tr>
-                    {isExpanded && group.items.map((item, index) => <OtherCreditRow key={item.id} item={item} index={index} model={model} />)}
+                    {isExpanded && group.items.map((item, index) => <OtherCreditRow key={item.id} item={item} index={index} model={model} onOpenPlan={planModel.openPlan} />)}
                   </tbody>
                 );
               })}
@@ -260,6 +264,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId }) => {
 
       <OtherCreditCreateModal model={model} />
       <OtherCreditPdvModal model={model} />
+      <OtherCreditPlanModal model={planModel} resources={model} />
       {model.paymentReceivableId && (
         <OtherCreditPaymentModal
           key={model.paymentReceivableId}
