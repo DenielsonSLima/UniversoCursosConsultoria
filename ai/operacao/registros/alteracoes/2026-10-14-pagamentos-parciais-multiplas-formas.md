@@ -73,6 +73,7 @@ TypeScript, lint, build, 17 testes Deno, quatro suítes SQL/PGlite, routing, smo
 - `modules/gestor/financeiro/settlements/financial-payment.types.ts`
 - `modules/gestor/financeiro/settlements/useFinancialPaymentForm.ts`
 - `modules/gestor/financeiro/settlements/useLegacyFullReceipt.ts`
+- `scripts/test-despesas-contas-pagar-contract.mjs`
 - `supabase/functions/financial-receivable-payment/academic.ts`
 - `supabase/functions/financial-receivable-payment/bank.test.ts`
 - `supabase/functions/financial-receivable-payment/bank.ts`
@@ -115,4 +116,4 @@ TypeScript, lint, build, 17 testes Deno, quatro suítes SQL/PGlite, routing, smo
 - `supabase/tests/financial_payment_title_readers.fixture.sql`
 - `supabase/tests/receivable_payment.isolated.test.mjs`
 
-Total: 82 arquivos.
+Total: 83 arquivos.
