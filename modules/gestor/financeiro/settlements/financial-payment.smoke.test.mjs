@@ -16,6 +16,7 @@ test('React DOM: saldo do servidor, múltiplas formas, preview atual, dupla conf
   const { JSDOM } = require(jsdomPath ? resolve(jsdomPath) : 'jsdom');
   const temporary = await mkdtemp(join(tmpdir(), 'financial-payment-smoke-'));
   const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'http://localhost' });
+  dom.window.HTMLElement.prototype.scrollIntoView = function () {};
   const previousGlobals = new Map();
   for (const key of ['window', 'document', 'HTMLElement', 'Event', 'MouseEvent', 'Node', 'navigator', 'IS_REACT_ACT_ENVIRONMENT', '__paymentSmokeClient']) {
     previousGlobals.set(key, Object.getOwnPropertyDescriptor(globalThis, key));
@@ -107,7 +108,15 @@ test('React DOM: saldo do servidor, múltiplas formas, preview atual, dupla conf
       });
     };
     const click = async element => { assert.ok(element); await act(async () => { element.click(); await tick(); }); };
+    const picker = (row, field) => byLabel(`Pagamento ${row}`).querySelectorAll('[role="combobox"]')[field];
+    const choose = async (row, field, optionId) => {
+      await click(picker(row, field));
+      await click([...document.querySelectorAll('[role="option"]')].find(option => option.id.endsWith(`-${optionId}`)));
+    };
     await mount();
+    assert.match(document.body.textContent, /Confirmar recebimento/);
+    assert.match(document.body.textContent, /Resumo da composição/);
+    assert.ok(byLabel('Ajustes desta baixa'));
     assert.equal(byLabel('Valor do pagamento 1').value, '100,00', 'saldo sugerido veio do histórico backend');
     await settle(300);
     assert.equal(button('Confirmar quitação').disabled, false);
@@ -116,7 +125,8 @@ test('React DOM: saldo do servidor, múltiplas formas, preview atual, dupla conf
     await click(button('Adicionar forma de pagamento'));
     assert.equal(document.querySelectorAll('[aria-label^="Valor do pagamento"]').length, 2);
     await change('Valor do pagamento 2', '40,00');
-    await change('Conta do pagamento 2', id(3));
+    await choose(2, 0, id(3));
+    await choose(2, 1, 'PIX');
     await settle(300);
     const preview = fake.previews.at(-1).p_input;
     assert.deepEqual(preview.components.map(({ method, amount }) => ({ method, amount })), [{ method: 'DINHEIRO', amount: '30.00' }, { method: 'PIX', amount: '40.00' }]);
@@ -177,7 +187,9 @@ test('React DOM: saldo do servidor, múltiplas formas, preview atual, dupla conf
     await act(async () => reactRoot.unmount()); reactRoot = null;
     await mount('EXPENSE');
     await settle(300);
-    assert.ok([...byLabel('Forma do pagamento 1').options].some(option => option.value === 'TED'));
+    await choose(1, 1, 'TED');
+    assert.equal(picker(1, 1).value, 'TED');
+    await settle(300);
     await click(button('Confirmar quitação'));
     assert.equal(fake.confirmations.length, 6, 'despesa confirma via RPC com os mesmos inputs');
     await act(async () => { fake.finish({ data: { success: true, replayed: false, paymentId: id(8), preview: { ...summary, status: 'PAGO', remainingAfter: '0.00', paymentAmount: '100.00' } }, error: null }); await tick(); });

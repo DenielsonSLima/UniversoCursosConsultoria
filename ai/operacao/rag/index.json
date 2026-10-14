@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-10-06T17:24:55.783Z",
+  "builtAt": "2026-10-14T19:28:20.436Z",
   "manifestVersion": 2,
-  "sourceSignature": "07e346600762d30a8ce0ad34632410657c3406cb1eff7a03d5a3b8b6f0881c3a",
+  "sourceSignature": "d408899a0ce96eb824d85728174b865febb0966594f0a6ba56afd94ce1954af7",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "a96226ef87a1470f6ad7bd5c2f6d5fa60b4c866682e3a0a99f93c12be7d5ede3"
+      "hash": "83fe990ee284ff40526662e3356dc6fd72ca4bf4d24a658defdecc67fd5d14e0"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -208,24 +208,24 @@
       "part": 1
     },
     {
-      "id": "477731781da0f7a5193f",
-      "hash": "477731781da0f7a5193f5beb23cbb4b88a4fc6fd14b8ea6edfe8d171f75d1327",
+      "id": "81be7fed56159ab08a84",
+      "hash": "81be7fed56159ab08a846127b3becdb95296f3dd5248005fda78fecee629f532",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-10-06-filiacao-mae-obrigatoria",
-      "text": "Estado: frontend preparado para 4.8.175; migration aplicada; produção autorizada pelo responsável, aguardando fechamento de validação, CI e Preview. Objetivo: permitir cadastro e matrícula técnica com apenas o nome da mãe na filiação. Aceite: nome da mãe obrigatório na validação do ingresso técnico; nome do pai opcional no formulário e no perfil, sem pendência cadastral ou bloqueio de matrícula por ausência do pai. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-06-filiacao-mae-obrigatoria.md`. Risco: divergência entre checklist cliente e RPC corrigida por migration aditiva; função instalada conferida byte a byte, sem modificar cadastros reais. Validação: 8 testes frontend e matriz de 20 casos aprovados; teste SQL em transação/rollback em validação. CI, Preview e publicação ainda não concluídos. Smoke visual/autenticado Safari: pendente porque esta sessão não oferece Safari autenticado. Base: main `c5315f327f48429a3a09314215aadee01d8b3ef2`, versão 4.8.174. GitHub e Supabase somente MCP. Reunião: três agentes revisaram interface, regra canônica e publicação; divergência da RPC identificada e incluída no mesmo domínio. Migration remota `20261006172335` preserva",
-      "normalizedText": "estado frontend preparado para 4 8 175 migration aplicada producao autorizada pelo responsavel aguardando fechamento de validacao ci e preview objetivo permitir cadastro e matricula tecnica com apenas o nome da mae na filiacao aceite nome da mae obrigatorio na validacao do ingresso tecnico nome do pai opcional no formulario e no perfil sem pendencia cadastral ou bloqueio de matricula por ausencia do pai manifesto explicito ai operacao registros alteracoes 2026 10 06 filiacao mae obrigatoria md risco divergencia entre checklist cliente e rpc corrigida por migration aditiva funcao instalada conferida byte a byte sem modificar cadastros reais validacao 8 testes frontend e matriz de 20 casos aprovados teste sql em transacao rollback em validacao ci preview e publicacao ainda nao concluidos smoke visual autenticado safari pendente porque esta sessao nao oferece safari autenticado base main c5315f327f48429a3a09314215aadee01d8b3ef2 versao 4 8 174 github e supabase somente mcp reuniao tres agentes revisaram interface regra canonica e publicacao divergencia da rpc identificada e incluida no mesmo dominio migration remota 20261006172335 preserva",
-      "tokenCount": 152,
+      "section": "Lote ativo",
+      "text": "Lote 2026-10-14-restauracao-modal-financeiro. PRONTO_PARA_PUBLICACAO. Versão 4.8.223/revisão232. Restauração do visual aprovado do modal financeiro, preservando múltiplas formas, baixas parciais e cálculos no servidor. Correção e publicação autorizadas; conferência na tela será feita pelo usuário por orientação expressa. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-14-restauracao-modal-financeiro.md`.",
+      "normalizedText": "lote 2026 10 14 restauracao modal financeiro pronto para publicacao versao 4 8 223 revisao232 restauracao do visual aprovado do modal financeiro preservando multiplas formas baixas parciais e calculos no servidor correcao e publicacao autorizadas conferencia na tela sera feita pelo usuario por orientacao expressa manifesto explicito ai operacao registros alteracoes 2026 10 14 restauracao modal financeiro md",
+      "tokenCount": 54,
       "part": 1
     },
     {
-      "id": "17987616197e2190cb69",
-      "hash": "17987616197e2190cb690031ff88819d92a7eb7b7cd214c4b6eefe12b25bc686",
+      "id": "3d8a50c21c07d7a5f823",
+      "hash": "3d8a50c21c07d7a5f8237d4a4e1e5b46574f92de1eb5d7f4000448ab88831184",
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote: 2026-10-06-filiacao-mae-obrigatoria",
-      "text": "assinatura/ACL.",
-      "normalizedText": "assinatura acl",
-      "tokenCount": 2,
-      "part": 2
+      "section": "Lote ativo",
+      "text": "Base confirmada: main bf980f548fd57b3d3130938193a19df4ab2c54da, versão 4.8.221/revisão230, produção Vercel READY com os domínios institucionais. A revisão local 4.8.222 não faz parte deste lote e não foi tratada como publicada.",
+      "normalizedText": "base confirmada main bf980f548fd57b3d3130938193a19df4ab2c54da versao 4 8 221 revisao230 producao vercel ready com os dominios institucionais a revisao local 4 8 222 nao faz parte deste lote e nao foi tratada como publicada",
+      "tokenCount": 27,
+      "part": 1
     },
     {
       "id": "cbd4dd650a86dc9a8867",
