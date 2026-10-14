@@ -87,7 +87,7 @@ export function FinancialPaymentEditor({ form, accounts, expense }: { form: Fina
             onChange={value => setComponent(index, 'method', value)} placeholder="Busque a forma de pagamento"
             emptyMessage="Nenhuma forma de pagamento encontrada" disabled={disabled} />
           {index === 0 ? <label className="block">
-            <span className={labelClass}>Data do pagamento <span aria-hidden="true" className="text-emerald-600">*</span></span>
+            <span className={`${labelClass} block`}>Data do pagamento <span aria-hidden="true" className="text-emerald-600">*</span></span>
             <span className="relative mt-1.5 block">
               <CalendarDays size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input aria-label="Data do pagamento" aria-required="true" type="date" max={todayInMaceio()} value={form.draft.paymentDate}

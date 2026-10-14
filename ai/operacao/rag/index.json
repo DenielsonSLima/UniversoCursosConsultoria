@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-10-14T19:43:35.101Z",
+  "builtAt": "2026-10-14T19:49:28.131Z",
   "manifestVersion": 2,
-  "sourceSignature": "574f95a2bf44328610769b72f44252601517ab80e1c5f7ed3e6ecf3cf8290b25",
+  "sourceSignature": "f53021df1780068e032d0a8798e6ace9de8a48595ab0a0da6725343969f3331c",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "b4a6bc3ae6be1dc307d45311b4a44741f3343bcd51df0f61220a686dad9c0668"
+      "hash": "5858c7132ff1ed39587d7cc1ad5ecc8dda3a9e2ec58e4badc80477a93c59a58f"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -208,13 +208,13 @@
       "part": 1
     },
     {
-      "id": "3f82f1abed7a27eec294",
-      "hash": "3f82f1abed7a27eec294ee5d17314a5789835859c8457a601070b62b6fbbc114",
+      "id": "c5fa1e924d18aa7d5130",
+      "hash": "c5fa1e924d18aa7d5130dee16c84058d67d41d2f78cfd68c9c8392210c3171ee",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Lote ativo",
-      "text": "Lote 2026-10-14-valor-automatico-baixa-unica. BACKEND_APLICADO_FRONTEND_PRONTO. Versão 4.8.225/revisão234. Valor sugerido acompanha desconto e encargos no servidor para uma forma. Valores manuais e múltiplas formas preservados. Conferência na tela reservada ao usuário. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-14-valor-automatico-baixa-unica.md`.",
-      "normalizedText": "lote 2026 10 14 valor automatico baixa unica backend aplicado frontend pronto versao 4 8 225 revisao234 valor sugerido acompanha desconto e encargos no servidor para uma forma valores manuais e multiplas formas preservados conferencia na tela reservada ao usuario manifesto explicito ai operacao registros alteracoes 2026 10 14 valor automatico baixa unica md",
-      "tokenCount": 50,
+      "text": "Lote 2026-10-14-alinhamento-data-pagamento. PRONTO_PARA_PUBLICACAO. Versão 4.8.226/revisão235. Alinhamento vertical entre forma e data do pagamento. Conferência na tela reservada ao usuário, sem testes ou navegador. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-14-alinhamento-data-pagamento.md`.",
+      "normalizedText": "lote 2026 10 14 alinhamento data pagamento pronto para publicacao versao 4 8 226 revisao235 alinhamento vertical entre forma e data do pagamento conferencia na tela reservada ao usuario sem testes ou navegador manifesto explicito ai operacao registros alteracoes 2026 10 14 alinhamento data pagamento md",
+      "tokenCount": 43,
       "part": 1
     },
     {

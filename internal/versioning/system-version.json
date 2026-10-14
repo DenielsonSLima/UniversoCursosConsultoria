@@ -1,8 +1,8 @@
 {
-  "version": "4.8.225",
+  "version": "4.8.226",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 234,
+  "revision": 235,
   "releasedAt": "2026-10-14",
-  "summary": "Valor sugerido da baixa acompanha descontos e encargos calculados pelo servidor"
+  "summary": "Alinhamento dos campos forma e data do pagamento no modal financeiro"
 }
