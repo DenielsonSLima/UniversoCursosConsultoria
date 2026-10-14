@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Banknote, CalendarDays, CreditCard, Landmark, Plus, ReceiptText, Smartphone, Trash2, WalletCards } from 'lucide-react';
 import type { ContaBancaria } from '../financeiro.types';
 import type { FinancialPaymentForm } from './useFinancialPaymentForm';
+import { canonicalPaymentAmount } from './financial-payment.form';
 import { todayInMaceio } from '../receber/components/manual-settlement/manual-settlement-date';
 import ManualSettlementCombobox, { type ManualSettlementComboboxOption } from '../receber/components/manual-settlement/ManualSettlementCombobox';
 
@@ -15,15 +16,26 @@ const paymentMethods: ManualSettlementComboboxOption[] = [
 ];
 const expenseMethods = [...paymentMethods, { value: 'TED', label: 'TED', description: 'Transferência bancária confirmada', keywords: 'transferencia banco', icon: <Landmark size={17} /> }];
 
+// Input mask only; financial calculations remain on the server.
+function maskCurrencyDigits(value: string): string {
+  const digits = value.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+  if (!digits) return '';
+  const padded = digits.padStart(3, '0');
+  const integer = padded.slice(0, -2).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return `${integer},${padded.slice(-2)}`;
+}
+
 function CurrencyField({ label, ariaLabel, value, onChange, detail, discount = false }: {
   label: string; ariaLabel: string; value: string; onChange: (value: string) => void; detail?: string; discount?: boolean;
 }) {
+  const canonical = canonicalPaymentAmount(value);
+  const displayValue = value && canonical !== null ? maskCurrencyDigits(canonical) : value;
   return <label className="block">
     <span className={labelClass}>{label}</span>
     <span className="relative mt-1.5 block">
       <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-xs font-black ${discount ? 'text-emerald-600' : 'text-slate-400'}`}>R$</span>
-      <input aria-label={ariaLabel} type="text" inputMode="decimal" value={value} placeholder="0,00"
-        onFocus={event => event.currentTarget.select()} onChange={event => onChange(event.target.value)}
+      <input aria-label={ariaLabel} type="text" inputMode="numeric" value={displayValue} placeholder="0,00"
+        onFocus={event => event.currentTarget.select()} onChange={event => onChange(maskCurrencyDigits(event.target.value))}
         className={`${inputClass} font-black ${discount ? 'border-emerald-200' : ''}`} />
     </span>
     {detail ? <span className="mt-1 block text-[10px] font-medium text-slate-400">{detail}</span> : null}
