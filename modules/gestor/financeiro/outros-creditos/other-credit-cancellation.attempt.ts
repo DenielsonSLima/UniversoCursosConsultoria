@@ -5,7 +5,7 @@ export type OtherCreditCancellationAttempt = {
   createdAt: number;
 };
 export const OTHER_CREDIT_PENDING_ATTEMPT_LIMIT = 10;
-type AttemptStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
+type AttemptStorage = Pick<typeof window.sessionStorage, 'getItem' | 'setItem' | 'removeItem'>;
 const uuid = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i;
 const storageKey = (userId: string, poloId?: string | null) => `universo:other-credit-cancellation:v1:${userId}:${poloId || 'todos'}`;
 const browserStorage = (): AttemptStorage | undefined => {
