@@ -1,3 +1,3 @@
 # Lote ativo
 
-Lote 2026-10-14-valor-automatico-baixa-unica. BACKEND_APLICADO_FRONTEND_PRONTO. Versão 4.8.225/revisão234. Valor sugerido acompanha desconto e encargos no servidor para uma forma. Valores manuais e múltiplas formas preservados. Conferência na tela reservada ao usuário. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-14-valor-automatico-baixa-unica.md`.
+Lote 2026-10-14-alinhamento-data-pagamento. PRONTO_PARA_PUBLICACAO. Versão 4.8.226/revisão235. Alinhamento vertical entre forma e data do pagamento. Conferência na tela reservada ao usuário, sem testes ou navegador. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-14-alinhamento-data-pagamento.md`.
