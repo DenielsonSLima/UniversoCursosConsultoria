@@ -5,6 +5,7 @@ import { spawnSync } from 'node:child_process';
 const sources = [
   'modules/gestor/financeiro/outros-creditos/OtherCreditRow.test.tsx',
   'modules/gestor/financeiro/outros-creditos/other-credit-cancellation.test.tsx',
+  'modules/gestor/financeiro/outros-creditos/other-credit-plan.test.tsx',
 ];
 await mkdir('tmp/other-credit-tests', { recursive: true });
 const files = [];

@@ -1,5 +1,5 @@
 # Lote ativo
 
-Lote 2026-10-14-pagamentos-parciais-multiplas-formas. BACKEND_APLICADO. Versão candidata 4.8.221/revisão230. Pagamentos parciais e múltiplas formas em Receber, Outros Créditos e Despesas, cálculos backend, histórico e Caixa por componente. Produção explicitamente autorizada; smoke Safari autenticado pendente. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-14-pagamentos-parciais-multiplas-formas.md`.
+Lote 2026-10-14-revisao-pagamentos-parciais. BACKEND_APLICADO. Versão 4.8.222/revisão231. Revisão com três agentes de saldos vencidos, resumos, retomada segura, conciliação e baixa de convênio. Produção explicitamente autorizada; smoke Safari autenticado pendente. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-14-revisao-pagamentos-parciais.md`.
 
-Entrega anterior: 4.8.220/revisão229 em produção, PR314 merge a056b7bf9a1920625e2220ca31faa93f55d84b81, versão pública confirmada. Seleção e cancelamento em lote de Outros Créditos, sem operação financeira real executada pelo agente.
+Entrega anterior: 4.8.221/revisão230 em produção, PR315 merge bf980f548fd57b3d3130938193a19df4ab2c54da, versão pública confirmada. Pagamentos parciais/múltiplas formas e 19 migrations aplicadas, Edge financial-receivable-payment v1.

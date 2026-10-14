@@ -26,6 +26,12 @@ export const OtherCreditRow: React.FC<{
   const cancellationBlock = otherCreditCancellationBlockReason(item);
   const legacy = item.origemPagamento === 'SISTEMA_ANTERIOR' || item.gatewayProvider === 'proesc';
   const nativeBanese = !legacy && item.gatewayProvider === 'banese_card';
+  const hasLedger = item.paymentSummary?.hasEvents === true;
+  const closedCharge = ['CANCELADO', 'ESTORNADO'].includes(item.status)
+    || ['CANCELED', 'CANCELLED', 'CANCELADO', 'DELETED', 'REFUNDED'].includes((item.asaasStatus || '').toUpperCase());
+  const canOpenBank = !hasLedger && !closedCharge && item.operationCapabilities?.canOpenExisting === true;
+  const canShareLink = !hasLedger && !closedCharge && Boolean(item.asaasInvoiceUrl) && (!nativeBanese || canOpenBank);
+
   return (
     <tr key={item.id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-emerald-50/45'} transition-colors hover:bg-emerald-50/75`}>
       {cancellation ? <td className="w-12 px-4 py-4" title={cancellationBlock || undefined}>
@@ -80,7 +86,7 @@ export const OtherCreditRow: React.FC<{
               <CheckCircle2 size={13} /> {hasPartialPayment(item.paymentSummary) ? 'Receber saldo' : 'Receber'}
             </button>
           )}
-          {!legacy && !item.outrosCreditosPlanoId && !item.asaasPaymentId && !item.asaasPaymentLinkId && item.status !== 'PAGO' && !['CANCELADO', 'ESTORNADO'].includes(item.status) && (
+          {!hasLedger && item.operationCapabilities?.canEmit === true && !legacy && !item.outrosCreditosPlanoId && !item.asaasPaymentId && !item.asaasPaymentLinkId && item.status !== 'PAGO' && !['CANCELADO', 'ESTORNADO'].includes(item.status) && (
             <button
               onClick={() => syncMutation.mutate(item.id!)}
               disabled={syncMutation.isPending}
@@ -97,7 +103,7 @@ export const OtherCreditRow: React.FC<{
               <XCircle size={13} /> Cancelar
             </button>
           )}
-          {nativeBanese && (
+          {nativeBanese && canOpenBank && (
             <button
               onClick={() => openPaymentModal(item)}
               className="inline-flex items-center gap-1 rounded-xl border border-emerald-200 px-3 py-2 text-[10px] font-black uppercase text-emerald-700 hover:bg-emerald-50"
@@ -105,14 +111,14 @@ export const OtherCreditRow: React.FC<{
               <QrCode size={13} /> {item.status === 'PAGO' ? 'Comprovante' : 'Abrir caixa'}
             </button>
           )}
-          <button
+          {canShareLink && <button
             onClick={() => copyLink(item)}
             className="rounded-xl border border-emerald-200 p-2 text-emerald-700 hover:bg-emerald-50"
             title="Copiar link bancário"
           >
             <Copy size={14} />
-          </button>
-          {item.asaasInvoiceUrl && (
+          </button>}
+          {canShareLink && (
             <a
               href={item.asaasInvoiceUrl}
               target="_blank"

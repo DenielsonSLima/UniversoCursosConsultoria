@@ -4,6 +4,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { mapLancamento } from './despesas.mapper.ts';
 import { mapReceivableFinancialComposition } from '../financeiro.composition-presentation.ts';
+import { usesLegacyExpenseSettlement } from './despesas-legacy-payment.model.ts';
 import { validateConvenioExpenseMvp } from './despesas-convenios.model.ts';
 
 const fixture = {
@@ -84,4 +85,17 @@ test('mappers puros preservam o saldo canônico de pagamentos sem depender de Re
     assert.equal(mapper({ payment_summary: { ...paymentSummary, remainingBefore: 'inválido' } }).paymentSummary, undefined);
     assert.equal(mapper({ payment_summary: null }).paymentSummary, undefined);
   }
+});
+
+
+test('convênio canônico aberto usa baixa integral existente e nunca retorna ao legado após ledger', () => {
+  const expense = mapLancamento({ id: 'expense', status: 'PENDENTE', convenio_mes_id: 'month' });
+  assert.equal(usesLegacyExpenseSettlement(expense), true);
+  assert.equal(usesLegacyExpenseSettlement({ ...expense, status: 'VENCIDO' }), true);
+  assert.equal(usesLegacyExpenseSettlement({ ...expense, convenioMesId: undefined }), false);
+  assert.equal(usesLegacyExpenseSettlement({ ...expense, isRateioDerived: true }), false);
+  for (const status of ['PAGO', 'CANCELADO'] as const) assert.equal(usesLegacyExpenseSettlement({ ...expense, status }), false);
+  assert.equal(usesLegacyExpenseSettlement({ ...expense, paymentSummary: {
+    originalAmount: '100.00', previouslyPaid: '0.00', remainingBefore: '100.00', status: 'PENDENTE', hasEvents: true,
+  } }), false);
 });

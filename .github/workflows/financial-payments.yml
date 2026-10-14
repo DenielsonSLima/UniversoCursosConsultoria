@@ -8,6 +8,7 @@ on:
       - 'supabase/migrations/*receivable_payment*'
       - 'supabase/tests/financial_payment*'
       - 'supabase/tests/receivable_payment*'
+      - 'supabase/tests/receivable_reconciliation*'
       - '.github/workflows/financial-payments.yml'
 permissions:
   contents: read
@@ -42,7 +43,10 @@ jobs:
           node supabase/tests/receivable_payment.isolated.test.mjs
           node supabase/tests/financial_payment_cash.isolated.test.mjs
           node supabase/tests/financial_payment_title_counts.isolated.test.mjs
+          node supabase/tests/financial_payment_review.isolated.test.mjs
+          node supabase/tests/financial_payment_replay.isolated.test.mjs
       - name: Exercise real React payment flow
         run: |
-          node --test modules/gestor/financeiro/settlements/financial-payment.routing.test.ts
+          node --test modules/gestor/financeiro/settlements/financial-payment.routing.test.ts modules/gestor/financeiro/despesas/despesas-convenios.test.ts
+          node scripts/test-other-credit-cancellation-ui.mjs
           node --test --test-force-exit modules/gestor/financeiro/settlements/financial-payment.smoke.test.mjs

@@ -289,12 +289,13 @@ export function useOtherCreditPlan(poloId?: string | null) {
   const pendingCount = states.filter(state => state === 'pending').length;
   const issuedCount = states.filter(state => state === 'issued').length;
   const needsReview = states.includes('review');
+  const hasLocalBalance = states.includes('local');
   return {
     isOpen, planId, form, preview, schedule, step, attempt, message, busy, progress, refreshProgress,
     previewPending: previewMutation.isPending, createPending: createMutation.isPending,
     issuePending: issueMutation.isPending, documentPending: documentMutation.isPending,
     plan, planLoading: planQuery.isLoading, planError: planQuery.error?.message,
-    planRefreshing: planQuery.isFetching || refreshMutation.isPending, pendingCount, issuedCount, needsReview,
+    planRefreshing: planQuery.isFetching || refreshMutation.isPending, pendingCount, issuedCount, needsReview, hasLocalBalance,
     changeForm, openNew, openPlan, previewPlan, nextStep, createPlan, issuePlan,
     previousStep: () => { if (!busy && !attempt) { setStep(current => current === 3 ? 2 : 1); setMessage(null); } },
     close: () => { if (!busy) setIsOpen(false); },

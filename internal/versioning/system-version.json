@@ -1,8 +1,8 @@
 {
-  "version": "4.8.221",
+  "version": "4.8.222",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 230,
+  "revision": 231,
   "releasedAt": "2026-10-14",
-  "summary": "Pagamentos parciais e múltiplas formas com saldo e histórico calculados no servidor"
+  "summary": "Revisão de pagamentos parciais: saldos vencidos, recuperação segura e baixa de convênios"
 }

@@ -19,7 +19,7 @@ function harness(mode: Claim['mode'] = 'CANCEL_ALLOWED') {
     complete: async (_id, _lease, proof) => {
       calls.push('complete'); assert.equal(proof.paymentsCount, 0); return result;
     },
-    review: async (_id, _lease, reason) => { calls.push(reason); },
+    review: async (_id, _lease, reason) => { calls.push(reason); return { safeToEdit: false }; },
   };
   const bank: ReceiptBank = async (_claim, start) => {
     calls.push('get');
@@ -74,4 +74,23 @@ test('bank confirmed and local append failed remains recoverable same intent', a
   const h = harness(); h.dependencies.store.complete = async () => { throw new Error('rollback'); };
   await assert.rejects(processReceipt(ATTEMPT, ID, h.dependencies));
   assert.equal(h.calls.at(-1), 'LOCAL_SYNC_AFTER_REMOTE');
+});
+test('preflight failure unlocks editing only after durable safe termination', async () => {
+  const h = harness(); h.dependencies.bank = async () => { throw new Error('bank reports paid'); };
+  h.dependencies.store.review = async () => ({ safeToEdit: true });
+  await assert.rejects(processReceipt(ATTEMPT, ID, h.dependencies), error => {
+    assert.equal((error as any).safeToEdit, true); assert.match((error as Error).message, /Nenhum novo recebimento/); return true;
+  });
+  const uncertain = harness(); uncertain.dependencies.bank = h.dependencies.bank;
+  uncertain.dependencies.store.review = async () => { throw new Error('response lost'); };
+  await assert.rejects(processReceipt(ATTEMPT, ID, uncertain.dependencies), error => {
+    assert.equal((error as any).safeToEdit, false); return true;
+  });
+});
+test('safe terminal replay never calls the bank or appends a payment', async () => {
+  const h = harness('FAILED_SAFE');
+  await assert.rejects(processReceipt(ATTEMPT, ID, h.dependencies), error => {
+    assert.equal((error as any).safeToEdit, true); return true;
+  });
+  assert.deepEqual(h.calls, ['claim']);
 });

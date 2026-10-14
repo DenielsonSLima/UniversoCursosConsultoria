@@ -4,7 +4,7 @@ import type { OtherCreditPlan, OtherCreditPlanPreview as Preview, OtherCreditPla
 import { otherCreditPlanEmissionState } from './other-credit-plan.model';
 
 const labels: Record<OtherCreditPlanRole, string> = { PARCELA: 'Parcela', MATRICULA: 'Matrícula', REMATRICULA: 'Rematrícula' };
-const stateLabels = { closed: 'Encerrada', review: 'Conferir emissão', issued: 'Boleto emitido', pending: 'A emitir' };
+const stateLabels = { local: 'Saldo local', closed: 'Encerrada', review: 'Conferir emissão', issued: 'Boleto emitido', pending: 'A emitir' };
 
 export function OtherCreditPlanPreview({ preview, plan }: { preview: Preview; plan?: OtherCreditPlan }) {
   return <section aria-label="Prévia do carnê" className="space-y-4">
