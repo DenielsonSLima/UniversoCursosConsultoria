@@ -8,6 +8,12 @@ Histórico arquivado: [28/09/2026 a 30/09/2026 — versões 4.8.128 a 4.8.137](.
 
 Histórico arquivado: [30/09/2026 — versões 4.8.138 a 4.8.144](./changelog/2026-09-30-versoes-4-8-138-a-4-8-144.md).
 
+## [4.8.223] - 2026-10-14
+
+- O modal financeiro recupera o cabeçalho, os campos organizados e o resumo lateral do visual aprovado.
+- As formas de pagamento adicionais permanecem integradas ao formulário, com recebimentos e pagamentos parciais preservados.
+- Saldo, encargos, desconto e valor da baixa continuam exibindo os resultados canônicos do servidor; as regras de confirmação e retomada permanecem intactas.
+
 ## [4.8.221] - 2026-10-14
 
 - Contas a Receber, Outros Créditos e Contas a Pagar permitem registrar pagamentos parciais e combinar formas e contas na mesma baixa.
