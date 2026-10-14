@@ -33,6 +33,17 @@ export function useFinanceiroRealtime(poloId?: string | null) {
       });
     };
 
+    const invalidateOtherCredits = () => {
+      void queryClient.invalidateQueries({
+        predicate: (query) => (
+          query.queryKey[0] === financeiroQueryKeys.outrosCreditosRoot[0]
+          && query.queryKey[1] === financeiroQueryKeys.outrosCreditosRoot[1]
+          && queryMatchesPolo(query.queryKey)
+        ),
+        refetchType: 'active',
+      });
+    };
+
     const flush = () => {
       refreshTimer = undefined;
 
@@ -61,14 +72,7 @@ export function useFinanceiroRealtime(poloId?: string | null) {
         // Outros Créditos usa um read model próprio. A alteração de uma conta
         // a receber pode incluir/retirar um vínculo de empréstimo, portanto a
         // aba precisa receber a mesma invalidação escopada, sem botão manual.
-        void queryClient.invalidateQueries({
-          predicate: (query) => (
-            query.queryKey[0] === financeiroQueryKeys.outrosCreditosRoot[0]
-            && query.queryKey[1] === financeiroQueryKeys.outrosCreditosRoot[1]
-            && queryMatchesPolo(query.queryKey)
-          ),
-          refetchType: 'active',
-        });
+        invalidateOtherCredits();
 
         turmaIds.forEach((turmaId) => {
           void queryClient.invalidateQueries({ queryKey: ['turma-financeiro', turmaId] });
@@ -188,7 +192,11 @@ export function useFinanceiroRealtime(poloId?: string | null) {
         expensesChanged = true;
         schedule();
       })
-      .subscribe();
+      .subscribe((status) => {
+        // Recover changes between the first read and subscription/reconnection.
+        // This only rereads the scoped local data; it never calls a bank gateway.
+        if (status === 'SUBSCRIBED') invalidateOtherCredits();
+      });
 
     return () => {
       if (refreshTimer !== undefined) window.clearTimeout(refreshTimer);

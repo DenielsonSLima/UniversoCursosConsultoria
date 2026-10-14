@@ -1,0 +1,42 @@
+name: Other credit cancellation
+on:
+  pull_request:
+    paths:
+      - 'modules/gestor/financeiro/outros-creditos/**'
+      - 'modules/gestor/financeiro/hooks/useFinanceiroRealtime*'
+      - 'supabase/functions/gestor-other-credit-cancellation/**'
+      - 'supabase/migrations/*other_credit_cancellation*'
+      - 'supabase/tests/other_credit_cancellation*'
+      - '.github/workflows/other-credit-cancellation.yml'
+permissions:
+  contents: read
+jobs:
+  cancellation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.1
+      - run: npm ci
+      - name: Install isolated test dependencies
+        run: |
+          npm install --prefix "$RUNNER_TEMP/credit-tests" --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.3.14 jsdom@26.1.0
+          echo "PGLITE_MODULE_PATH=$RUNNER_TEMP/credit-tests/node_modules/@electric-sql/pglite/dist/index.js" >> "$GITHUB_ENV"
+          echo "OTHER_CREDIT_JSDOM_PATH=$RUNNER_TEMP/credit-tests/node_modules/jsdom/lib/api.js" >> "$GITHUB_ENV"
+      - name: Check cancellation Edge graph
+        run: deno check --node-modules-dir=auto --no-lock supabase/functions/gestor-other-credit-cancellation/index.ts
+      - name: Exercise cancellation contracts
+        run: |
+          deno test --node-modules-dir=auto --no-lock --allow-read --allow-env supabase/functions/gestor-other-credit-cancellation/*.test.ts
+          node --test supabase/tests/other_credit_cancellation*.test.mjs
+          node scripts/test-other-credit-cancellation-ui.mjs
+          node --test --test-force-exit modules/gestor/financeiro/outros-creditos/other-credit-cancellation.smoke.test.mjs
+          node --test modules/gestor/financeiro/hooks/useFinanceiroRealtime*.test.*

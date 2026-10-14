@@ -49,6 +49,7 @@ const optionalAmount = (value: unknown): number | undefined => {
 // Presentation maps only amounts supplied by the canonical RPC. It never
 // reconstructs a discount, penalty, interest or residual from totals/dates.
 export const mapReceivableFinancialComposition = (row: Record<string, unknown>) => ({
+  otherCreditCancellationEligible: row.other_credit_cancellation_eligible === true,
   operationCapabilities: parseReceivableOperationCapabilities(row.operation_capabilities),
   baneseCancellation: parseBaneseCancellation(row.banese_cancellation),
   descontoAplicado: optionalAmount(row.desconto_aplicado),

@@ -8,6 +8,13 @@ Histórico arquivado: [28/09/2026 a 30/09/2026 — versões 4.8.128 a 4.8.137](.
 
 Histórico arquivado: [30/09/2026 — versões 4.8.138 a 4.8.144](./changelog/2026-09-30-versoes-4-8-138-a-4-8-144.md).
 
+## [4.8.220] - 2026-10-14
+
+- Outros Créditos permite selecionar parcelas, grupos ou a página para cancelar até 25 lançamentos por operação.
+- Cancelamento Banese confirma a situação no banco antes da baixa interna, preserva o histórico e informa o resultado de cada crédito.
+- Operações interrompidas retomam a mesma intenção; pagamentos e cobranças fora do escopo impedem o cancelamento.
+- Listagem recupera alterações ao reconectar; consulta manual repetida por boleto removida.
+
 ## [4.8.219] - 2026-10-14
 
 - Corrigida a projeção do vencimento individual de transferências para carregar o financeiro sem alterar o histórico da turma.
