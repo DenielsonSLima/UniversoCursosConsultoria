@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
-import { PDFDocument } from "npm:pdf-lib@1.17.1";
+import { TextDecoder } from "node:util";
+import { decodePDFRawStream, PDFArray, PDFDocument, PDFRawStream } from "npm:pdf-lib@1.17.1";
 import { buildBaneseCarnetPdf } from "../banese/internal/carne/carne-pdf.ts";
+import { normalizeBaneseFinancialTerms } from "../banese/internal/financial-terms.ts";
+import { presentBaneseFinancialTerms } from "../banese/internal/pdf/financial-terms.ts";
 import {
   buildOtherCreditCarnetDocumentInputs,
   parseOtherCreditPlanDocumentRequest,
@@ -15,6 +18,26 @@ import {
   PLAN_ID,
   planForOtherCreditRows,
 } from "./document-fixture.ts";
+
+// Inspect visible native text operators produced by the existing Helvetica compositor.
+const nativePdfText = async (bytes: Uint8Array) => {
+  const pdf = await PDFDocument.load(bytes);
+  const lines: string[] = [];
+  for (const page of pdf.getPages()) {
+    const contents = page.node.Contents();
+    const references = contents instanceof PDFArray ? contents.asArray() : [contents!];
+    for (const reference of references) {
+      const stream = pdf.context.lookup(reference);
+      assert.ok(stream instanceof PDFRawStream);
+      const commands = new TextDecoder().decode(decodePDFRawStream(stream).decode());
+      for (const match of commands.matchAll(/<([\da-f]+)>\s*Tj/gi)) {
+        const textBytes = Uint8Array.from(match[1].match(/../g)!, byte => parseInt(byte, 16));
+        lines.push(new TextDecoder('windows-1252').decode(textBytes));
+      }
+    }
+  }
+  return { pdf, text: lines.join('\n') };
+};
 
 Deno.test("documento avulso recebe apenas ID e nunca dados bancários do cliente", () => {
   assert.equal(
@@ -219,6 +242,58 @@ Deno.test("taxas comerciais opcionais mantêm descrição própria e não aument
     await buildBaneseCarnetPdf(inputs, { minItems: 1, maxItems: 62 }),
   );
   assert.equal(pdf.getPageCount(), 2);
+});
+
+Deno.test("carnê nativo apresenta três condições próprias e rejeita drift das taxas", async () => {
+  const installment = otherCreditDocumentRowAt(0);
+  const enrollment = otherCreditDocumentFeeAt(1, 'MATRICULA');
+  const reenrollment = otherCreditDocumentFeeAt(2, 'REMATRICULA');
+  const candidates = [installment, enrollment, reenrollment];
+  const conditions = [
+    { discount: { type: 'fixed' as const, value: 20 }, interest: 2, penalty: 2 },
+    { discount: { type: 'percentage' as const, value: 10, validUntil: '2026-07-23' }, interest: 0.5, penalty: 1.75 },
+    { discount: { type: 'fixed' as const, value: 5.01, validUntil: '2026-07-30' }, interest: 2.75, penalty: 3.5 },
+  ];
+  candidates.forEach((row, index) => {
+    const own = conditions[index];
+    const terms = normalizeBaneseFinancialTerms({
+      nominalAmount: Number(row.valor), dueDate: row.data_vencimento!, discount: own.discount,
+      interest: { type: 'monthly-percentage', value: own.interest },
+      penalty: { type: 'percentage', value: own.penalty },
+    });
+    row.gateway_financial_terms = terms;
+    row.regra_financeira_outros_creditos_snapshot.financialTerms = terms;
+  });
+  const plan = planForOtherCreditRows(candidates);
+  const rows = selectOtherCreditCarnetDocumentRows(plan, candidates);
+  const inputs = buildOtherCreditCarnetDocumentInputs(
+    rows, OTHER_CREDIT_DOCUMENT_PAYER, OTHER_CREDIT_DOCUMENT_ISSUER, OTHER_CREDIT_DOCUMENT_METADATA,
+  );
+  assert.deepEqual(inputs.map(input => input.documentNumber), ['MATRICULA', 'REMATRICULA', 'PARC-01']);
+  for (const [index, input] of inputs.entries()) {
+    assert.deepEqual(input.financialTerms, rows[index].regra_financeira_outros_creditos_snapshot.financialTerms);
+  }
+  const { pdf, text } = await nativePdfText(await buildBaneseCarnetPdf(inputs, { minItems: 1, maxItems: 62 }));
+  assert.equal(pdf.getPageCount(), 1);
+  for (const input of inputs) {
+    const fields = presentBaneseFinancialTerms(input.financialTerms!);
+    for (const field of [fields.discount, fields.penalty, fields.interest]) {
+      assert.ok(text.includes(field.label), `Visible PDF label: ${field.label}`);
+      assert.ok(text.includes(field.value), `Visible PDF value: ${field.value}`);
+    }
+  }
+  for (const fee of [enrollment, reenrollment]) {
+    const others = candidates.filter(row => row.id !== fee.id);
+    assert.throws(() => selectOtherCreditCarnetDocumentRows(plan, [
+      ...others, { ...fee, gateway_financial_terms: { ...fee.gateway_financial_terms!, discount: null } },
+    ]), /não foram confirmadas|não possui|diverge|revisão|lançamentos/i);
+    assert.throws(() => selectOtherCreditCarnetDocumentRows(plan, [
+      ...others, { ...fee, regra_financeira_outros_creditos_snapshot: {
+        ...fee.regra_financeira_outros_creditos_snapshot,
+        financialTerms: { ...fee.gateway_financial_terms!, interest: { type: 'monthly-percentage', value: 9 } },
+      } },
+    ]), /lançamentos divergem/i);
+  }
 });
 
 Deno.test("carnê exige títulos bancários e slots comerciais exclusivos", () => {

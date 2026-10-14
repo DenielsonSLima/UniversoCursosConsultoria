@@ -1,5 +1,5 @@
 import type { OtherCreditPlanForm } from './other-credit-plan.model';
-import { validateOtherCreditPlanInput } from './other-credit-plan.model';
+import { initialOtherCreditPlanForm, validateOtherCreditPlanInput } from './other-credit-plan.model';
 import type { OtherCreditPlanInput } from './other-credit-plan.types';
 import { isDefinitiveOtherCreditPlanCreationError } from './other-credit-plan-error';
 
@@ -32,8 +32,13 @@ export function loadOtherCreditPlanAttempt(poloId: string, storage = browserStor
       || !['FIXO', 'PERCENTUAL'].includes(attempt.form.discountType)) return null;
     for (const fee of [attempt.form.enrollment, attempt.form.reenrollment]) {
       if (!fee || typeof fee.enabled !== 'boolean' || typeof fee.value !== 'string' || typeof fee.dueDate !== 'string') return null;
+      if (fee.terms && (['interest', 'penalty', 'discount', 'discountDays'].some(key => typeof fee.terms[key] !== 'string')
+        || !['FIXO', 'PERCENTUAL'].includes(fee.terms.discountType))) return null;
     }
-    return { ...attempt, phase: 'uncertain' };
+    const form = { ...initialOtherCreditPlanForm(), ...attempt.form };
+    if (!['MENSAL_CALENDARIO', 'DIAS_CORRIDOS_30'].includes(form.periodicity) || !Array.isArray(form.installments)
+      || form.installments.some(item => !item || !Number.isInteger(item.number) || typeof item.value !== 'string' || typeof item.dueDate !== 'string')) return null;
+    return { ...attempt, form, phase: 'uncertain' };
   } catch { return null; }
 }
 
