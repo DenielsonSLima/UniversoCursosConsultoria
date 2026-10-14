@@ -47,12 +47,12 @@ import {
 } from './matricula-tecnica-ciclo-manual.service';
 
 interface FinanceiroAlunosListProps {
-  turma: Turma;
+  turma: Pick<Turma, 'id' | 'poloId' | 'codigo' | 'nome' | 'cursoNome' | 'poloNome'>;
   canSettleEnrollment?: boolean;
   initialMatriculaId?: string;
   valuesVisible?: boolean;
   regra: MatriculaTecnicaRegra;
-  resumo: MatriculaTecnicaFinanceiroWorkspace['resumo'];
+  resumo: Pick<MatriculaTecnicaFinanceiroWorkspace['resumo'], 'total' | 'recebido' | 'inadimplencia'>;
   alunos: MatriculaTecnicaFinanceiroRow[];
   isLoading: boolean;
   isError: boolean;
@@ -390,7 +390,7 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
               tone="blue"
               columns={[{ label: 'Aluno / CPF / Matrícula' }, { label: 'Valores' }, { label: 'Pagas / total', align: 'center' }, { label: 'Status', align: 'center' }]}
               rows={exportRows}
-              filters={[{ label: 'Turma', value: `${turma.nome}${turma.codigo ? ` (${turma.codigo})` : ''}` }, { label: 'Curso', value: turma.cursoNome }, { label: 'Unidade / Polo', value: turma.poloNome || 'Matriz' }]}
+              filters={[{ label: 'Turma', value: `${turma.nome}${turma.codigo ? ` (${turma.codigo})` : ''}` }, { label: 'Curso', value: turma.cursoNome }, { label: 'Unidade / Polo', value: turma.poloNome || 'Unidade selecionada' }]}
               summaryCards={[{ label: 'Plano lançado', value: formatMoney(resumo.total), tone: 'blue' }, { label: 'Recebido', value: formatMoney(resumo.recebido), tone: 'emerald' }, { label: 'Inadimplência', value: formatMoney(resumo.inadimplencia), tone: Number(resumo.inadimplencia) > 0 ? 'rose' : 'slate' }]}
               footerNote={focusedMatriculaId ? 'Relatório do aluno recebido por transferência.' : searchTerm ? `Relatório filtrado pela busca: "${searchTerm}".` : 'Relação completa dos alunos exibidos na situação financeira da turma.'}
             />

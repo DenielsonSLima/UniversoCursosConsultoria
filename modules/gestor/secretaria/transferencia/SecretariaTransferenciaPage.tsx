@@ -11,10 +11,13 @@ import { secretariaDocumentoDefinitions } from '../shared/secretaria-documentos.
 import { secretariaDocumentosKeys } from '../shared/secretaria-documentos.keys';
 import { getSecretariaErrorMessage } from '../shared/secretaria-error';
 import type { SecretariaAlunoResumo, SecretariaTurmaResumo } from '../shared/secretaria-documentos.types';
+import type { TransferenciaFinanceiroTarget } from './SecretariaTransferenciaFinanceiro';
+import { matriculaTecnicaFinanceiroKeys } from '../../gestao/tecnicos/detalhes/components/financeiro/matricula-tecnica-financeiro.keys';
 import TransferenciaDestinoPicker from './TransferenciaDestinoPicker';
 import { transferenciaCursoOptions, transferenciaTurmaOptions, transferenciaTurmasDoCurso } from './transferencia-destinos';
 
 const SecretariaDocumentoEmissionPage = lazy(() => import('../shared/SecretariaDocumentoEmissionPage'));
+const SecretariaTransferenciaFinanceiro = lazy(() => import('./SecretariaTransferenciaFinanceiro'));
 
 interface Props {
   poloId?: string | null;
@@ -30,6 +33,7 @@ const SecretariaTransferenciaPage: React.FC<Props> = ({ poloId, gestorPermission
   const [courseId, setCourseId] = useState('');
   const [classId, setClassId] = useState('');
   const [receipt, setReceipt] = useState<{ student: SecretariaAlunoResumo; turma: SecretariaTurmaResumo } | null>(null);
+  const [financialTarget, setFinancialTarget] = useState<TransferenciaFinanceiroTarget | null>(null);
   const received = useRef(false);
   const studentInput = useRef<HTMLInputElement>(null);
   const courseInput = useRef<HTMLInputElement>(null);
@@ -46,7 +50,7 @@ const SecretariaTransferenciaPage: React.FC<Props> = ({ poloId, gestorPermission
   }, [search]);
 
   useEffect(() => {
-    setStudent(null); setCourseId(''); setClassId(''); setSearch(''); setDebouncedSearch(''); setReceipt(null);
+    setStudent(null); setCourseId(''); setClassId(''); setSearch(''); setDebouncedSearch(''); setReceipt(null); setFinancialTarget(null);
   }, [poloId]);
 
   const students = useQuery({
@@ -78,6 +82,13 @@ const SecretariaTransferenciaPage: React.FC<Props> = ({ poloId, gestorPermission
     if (id !== courseId) { setCourseId(id); setClassId(''); }
     window.requestAnimationFrame(() => classInput.current?.focus());
   };
+
+  if (financialTarget && financialTarget.poloId === poloId) return (
+    <Suspense fallback={<p role="status" className="text-sm text-slate-500">Carregando financeiro individual...</p>}>
+      <SecretariaTransferenciaFinanceiro target={financialTarget} permissions={permissions}
+        onBack={() => { setFinancialTarget(null); changeStudent(); }} />
+    </Suspense>
+  );
 
   return (
     <div className="space-y-6">
@@ -183,11 +194,18 @@ const SecretariaTransferenciaPage: React.FC<Props> = ({ poloId, gestorPermission
             setReceipt(null);
             if (received.current) changeStudent();
           }}
+          onOpenFinanceiro={(matriculaId) => {
+            if (!poloId || !canReceive) return;
+            setFinancialTarget({ poloId, turmaId: receipt.turma.id, alunoId: receipt.student.id,
+              matriculaId, cursoNome: receipt.turma.cursoNome });
+            setReceipt(null);
+          }}
           onSaved={async () => {
             received.current = true;
             await Promise.all([
               client.invalidateQueries({ queryKey: scope }),
               client.invalidateQueries({ queryKey: academicLifecycleKeys.turma(receipt.turma.id) }),
+              client.invalidateQueries({ queryKey: matriculaTecnicaFinanceiroKeys.turma(receipt.turma.id) }),
               client.invalidateQueries({ queryKey: ['parceiro', receipt.student.id] }),
               client.invalidateQueries({ queryKey: ['aluno-matriculas', poloId, receipt.student.id] }),
               client.invalidateQueries({ queryKey: ['secretaria-alunos-search', poloId] }),

@@ -30,12 +30,19 @@ const ReceiveExternalTransferController: React.FC<Props> = ({ onClose, onOpenFin
       <p className="text-sm text-slate-700">Matrícula, aproveitamentos e plano financeiro foram registrados. Nenhuma cobrança foi gerada.</p>
       {destinationLabel && <p className="text-sm font-bold text-slate-700">Destino: {destinationLabel}</p>}
       <p className="text-sm text-slate-700">{result.financeiro.financeiro.itens.length} cobranças planejadas. Os ciclos seguem o cronograma individual conferido.</p>
-      <p className="text-xs text-slate-600">As condições individuais ficam no Financeiro da turma para conferência e emissão das cobranças aplicáveis.</p>
+      <ul className="space-y-1 text-xs text-slate-600" aria-label="Cobranças planejadas por ciclo">
+        {result.financeiro.totais.porCiclo.filter((cycle) => cycle.quantidadeItens > 0).map((cycle) => (
+          <li key={cycle.cicloNumero}>{cycle.cicloNumero}º ciclo: {cycle.quantidadeItens} cobranças planejadas.</li>
+        ))}
+      </ul>
+      <p className="text-xs text-slate-600">Confira cada ciclo antes de emitir. Você também pode continuar depois pelo Financeiro da turma, sem refazer a transferência.</p>
       {state.error && <p role="alert" className="text-xs text-amber-800">{state.error}</p>}
       <button type="button" onClick={() => onOpenFinanceiro ? onOpenFinanceiro(result.matriculaId) : close()}
         className="w-full rounded-xl bg-violet-700 py-3 text-xs font-black uppercase text-white">
-        {onOpenFinanceiro ? 'Abrir Financeiro da turma' : 'Concluir recebimento'}
+        {onOpenFinanceiro ? 'Conferir e emitir BolePix' : 'Concluir recebimento'}
       </button>
+      {onOpenFinanceiro && <button type="button" onClick={close}
+        className="w-full rounded-xl border border-slate-200 py-3 text-xs font-bold text-slate-600">Emitir depois</button>}
     </section> : <ReceiveExternalTransferModal
       students={state.students} disciplines={state.disciplines} modules={state.modules} draft={draft} onChange={change}
       loading={state.loading} loadError={state.loadError}
