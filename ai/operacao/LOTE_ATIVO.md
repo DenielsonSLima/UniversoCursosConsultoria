@@ -1,5 +1,10 @@
 # Lote ativo
 
+Lote 2026-10-14-contrato-matricula-presencial: EM_VALIDACAO. Escopo exclusivo: composição do contrato por matrícula, valor recebido externamente incluído uma vez e identificado como já pago. Nenhuma alteração de boleto, caixa, saldo ou snapshot emitido. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-14-contrato-matricula-presencial.md`. Versão 4.8.218/revisão227. Pedido de produção autorizado nesta conversa; falta validação e implantação.
+
+Entrega anterior:
+
 Lote 2026-10-13-outros-creditos-tres-etapas: EM_PUBLICACAO_PRODUCAO. Versão 4.8.217/revisão226. Pedido: carnê avulso com dados, financeiro editável (mensal/30 dias, valores/datas individuais e taxas separadas, juros/multa/desconto por tipo) e revisão final. Classificação: mudança crítica financeira. Aceite local: cálculo canônico no banco, edição sem perder dados ao voltar, criação somente na revisão atual e replay legado preservado. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-13-outros-creditos-tres-etapas.md` (23 arquivos). Testes UI (19), SQL isolado (3 ensaios), Deno de emissão/documento (14), TSC, revisão independente e limites aprovados. Smoke Safari desktop/móvel do wizard e edição dos três grupos concluído: nominal300/pontualidade270, termos próprios e retenção ao voltar aprovados. PDF nativo com termos próprios extraído/renderizado e conferido. Migration ledger20261014011056 aplicada; asaas-api v104 e other-credit-carnet-document v2 ACTIVE/JWT, readbacks íntegros e cálculo real aprovado. Pendentes: publicação do frontend e smoke autenticado da versão nova no domínio oficial. Aplicação e produção autorizadas explicitamente pelo usuário em 13/10/2026.
 
 Entrega anterior preservada: 2026-10-13-outros-creditos-carne PUBLICADO_EM_PRODUCAO, 4.8.216/revisão225, PR310/main c718f19, cinco migrations e Edges aplicadas, produção READY. Registro: ai/operacao/registros/alteracoes/2026-10-13-outros-creditos-carne.md. Fechamentos anteriores permanecem nos registros próprios citados nessa entrega.
+

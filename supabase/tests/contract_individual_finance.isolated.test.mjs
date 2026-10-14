@@ -266,6 +266,80 @@ try {
     } finally { await db.exec('rollback'); }
     assert.equal((await freeze()).financeiro.quantidadeMatriculas, 0);
   });
+  const beforeExternal = (await freeze()).financeiro;
+  const beforeLedger = (await db.query('select jsonb_agg(to_jsonb(c) order by id) as rows from public.contas_receber c')).rows[0].rows;
+  // Proof compatibility has its own executable test; keep the loader boundary isolated.
+  await db.exec(`create function internal_academic.contract_local_waiver_complete(public.contas_receber)
+    returns boolean language sql as $$ select internal_financial_correction.local_waiver_complete($1) $$`);
+  await db.exec(await read('supabase/migrations/20261014133000_contract_individual_external_enrollment.sql')); 
+  await check('external receipt infrastructure changes nothing without enrollment evidence', async () => {
+    assert.deepEqual((await freeze()).financeiro, beforeExternal);
+  });
+  await db.query(`insert into internal_academic.contract_external_enrollment_receipts
+    (matricula_id,turma_id,amount,first_cycle_request_id,source_note,operation_reference)
+    values ($1,$2,175.25,$3,'Synthetic administrative declaration of historical payment','test-external-enrollment')`,
+  [id(1), id(2), id(99)]);
+  await check('external paid enrollment belongs to contract total but never creates a receivable', async () => {
+    const result = (await freeze()).financeiro;
+    assert.equal(result.valorTotalContrato, beforeExternal.valorTotalContrato + 175.25);
+    assert.equal(result.valorTotalMatriculas, 175.25);
+    assert.equal(result.quantidadeMatriculas, 1);
+    assert.equal(result.quantidadeParcelas, beforeExternal.quantidadeParcelas);
+    assert.match(result.planoPagamentoExibicao, /R\$ 175,25, já recebida presencialmente/);
+    assert.match(result.planoPagamentoExibicao, /sem nova cobrança/);
+    assert.equal(result.condicoesExibicao, beforeExternal.condicoesExibicao);
+    assert.equal(result.recebimentoExternoMatricula.dataPagamento, null);
+    assert.equal(result.recebimentoExternoMatricula.incluiSaldoACobrar, false);
+    assert.equal(result.vencimentosPendentesConfirmacao, beforeExternal.vencimentosPendentesConfirmacao);
+    assert.deepEqual((await db.query('select jsonb_agg(to_jsonb(c) order by id) as rows from public.contas_receber c')).rows[0].rows, beforeLedger);
+    assert.deepEqual((await freeze()).financeiro, result);
+  });
+  await check('external evidence is individual, retains configured amounts and rejects double counting', async () => {
+    await db.query('update internal_academic.contract_external_enrollment_receipts set amount=230.10 where matricula_id=$1', [id(1)]);
+    assert.equal((await freeze()).financeiro.valorTotalMatriculas, 230.10);
+    const noEvidence = (await db.query('select internal_academic.contract_summary_with_external_enrollment($1,$2) as result',
+      [id(77), beforeExternal.planoContratual])).rows[0].result;
+    assert.deepEqual(noEvidence, beforeExternal);
+    const duplicatePlan = clone(beforeExternal.planoContratual);
+    duplicatePlan.itens.push({ tipo: 'MATRICULA', cicloNumero: 1, ordem: 0, valor: 230.10,
+      vencimento: null, descontoPontualidade: 0, jurosAtrasoPercentual: 0, multaAtrasoPercentual: 0 });
+    await rejectsPlan(() => db.query('select internal_academic.contract_summary_with_external_enrollment($1,$2)', [id(1), duplicatePlan]));
+    await assert.rejects(() => db.query(`insert into internal_academic.contract_external_enrollment_receipts
+      select * from internal_academic.contract_external_enrollment_receipts where matricula_id=$1`, [id(1)]),
+    (error) => error.code === '23505');
+  });
+  await check('changed cycle evidence and unauthorized emission remain blocked', async () => {
+    await db.query('update internal_academic.contract_external_enrollment_receipts set first_cycle_request_id=$1', [id(88)]);
+    await rejectsPlan(() => freeze());
+    await db.query('update internal_academic.contract_external_enrollment_receipts set first_cycle_request_id=$1', [id(99)]);
+    await db.exec('update test_contract.scope set allowed_polo=null');
+    await assert.rejects(() => freeze(), (error) => error.code === '42501');
+    await db.query('update test_contract.scope set allowed_polo=$1', [id(3)]);
+    for (const role of ['anon', 'authenticated', 'service_role']) {
+      const access = (await db.query(`select
+        has_function_privilege($1,'internal_academic.contract_summary_with_external_enrollment(uuid,jsonb)','execute') as call,
+        has_table_privilege($1,'internal_academic.contract_external_enrollment_receipts','select,insert,update,delete') as data`, [role])).rows[0];
+      assert.deepEqual(access, { call: false, data: false });
+    }
+  });
+  await check('proven canceled local fee may be included as externally received exactly once', async () => {
+    await db.exec('begin');
+    try {
+      await db.query('update internal_academic.contract_external_enrollment_receipts set amount=180 where matricula_id=$1', [id(1)]);
+      await db.query(`insert into public.contas_receber
+        (id,matricula_id,turma_id,origem_cronograma_id,valor,data_vencimento,status,regra_financeira_tecnica_snapshot,test_waived)
+        values ($1,$2,$3,'matricula',180,'2027-01-12','CANCELADO',$4,true)`, [id(10), id(1), id(2), policy]);
+      await db.query(`update internal_academic.technical_manual_cycle_runs set item_count=2,
+        reviewed_items=$1,receivable_ids=$2`, [items, [id(10), id(11)]]);
+      await db.query('update internal_academic.technical_financial_requests set response=$1',
+        [{ ciclo: { numero: 1, quantidadeItens: 2, modoMatricula: 'REGISTRO_SEM_BOLETO' } }]);
+      const result = (await freeze()).financeiro;
+      assert.equal(result.valorTotalContrato, beforeExternal.valorTotalContrato + 180);
+      assert.equal(result.quantidadeMatriculas, 1);
+      await db.query('update public.contas_receber set test_waived=false where id=$1', [id(10)]);
+      await rejectsPlan(() => freeze());
+    } finally { await db.exec('rollback'); }
+  });
   console.log(`${passed} contract finance checks passed`);
 } finally {
   await db.close();

@@ -1,8 +1,9 @@
 {
-  "version": "4.8.217",
+  "version": "4.8.218",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 226,
-  "releasedAt": "2026-10-13",
-  "summary": "Carnê em três etapas com cronograma editável e condições próprias para parcelas, matrícula e rematrícula"
+  "revision": 227,
+  "releasedAt": "2026-10-14",
+  "summary": "Contrato inclui matrícula recebida presencialmente, sem gerar cobrança"
 }
+

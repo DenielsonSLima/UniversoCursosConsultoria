@@ -38,6 +38,7 @@ jobs:
           CONTRACT_TERMS_OUTPUT: ${{ runner.temp }}/contract-prepared-synthetic.json
         run: |
           node --test supabase/tests/contract_individual_finance.isolated.test.mjs \
+            supabase/tests/contract_individual_waiver.isolated.test.mjs \
             supabase/tests/contract_individual_terms.isolated.test.mjs \
             supabase/tests/contract_individual_terms.contract.test.ts \
             supabase/tests/contract_v4_emission.isolated.test.mjs \
@@ -54,3 +55,4 @@ jobs:
         with:
           name: contract-individual-synthetic-pdfs
           path: ${{ runner.temp }}/contract-pdfs
+
