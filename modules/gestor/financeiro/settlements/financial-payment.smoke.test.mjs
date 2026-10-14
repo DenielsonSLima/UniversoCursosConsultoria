@@ -22,9 +22,11 @@ test('React DOM: saldo do servidor, múltiplas formas, preview atual, dupla conf
     Object.defineProperty(globalThis, key, { configurable: true, writable: true, value: key === 'IS_REACT_ACT_ENVIRONMENT' ? true : dom.window[key] });
   }
   const summary = { originalAmount: '100.00', previouslyPaid: '0.00', remainingBefore: '100.00', status: 'PENDENTE', hasEvents: false };
-  const fake = { confirmations: [], previews: [], reversals: [], events: [], finish: null, auth: {
+  const fake = { linkCalls: [], links: [], linksMalformed: false, legacyExpenses: [], confirmations: [], previews: [], reversals: [], events: [], finish: null, auth: {
     getSession: async () => ({ data: { session: { user: { id: id(9) } } } }),
   }, rpc: async (name, params) => {
+    if (name === 'get_expense_settlement_links_secure') { fake.linkCalls.push(params.p_expense_ids); return { data: fake.linksMalformed ? {} : fake.links.filter(link => params.p_expense_ids.includes(link.despesa_lancamento_id)), error: null }; }
+    if (name === 'baixar_despesa_secure') { fake.legacyExpenses.push(params); return new Promise(done => { fake.finish = done; }); }
     if (name === 'get_financial_payment_history_secure') return { data: { summary, events: fake.events }, error: null };
     if (name === 'confirm_expense_payment_secure') { fake.confirmations.push(params.p_input); return new Promise(done => { fake.finish = done; }); }
     if (name === 'reverse_expense_payment_secure') { fake.reversals.push(params); return new Promise(done => { fake.finish = done; }); }
@@ -50,9 +52,11 @@ test('React DOM: saldo do servidor, múltiplas formas, preview atual, dupla conf
       export { renderToStaticMarkup } from 'react-dom/server';
       export { OtherCreditRow } from './modules/gestor/financeiro/outros-creditos/OtherCreditRow';
       export { ReceivableActionButtons } from './modules/gestor/financeiro/receber/components/modalidade-receber/ReceivableItemPresentation';
+      export { default as DespesaBaixaModal } from './modules/gestor/financeiro/despesas/components/DespesaBaixaModal';
       export { default as DespesaTable } from './modules/gestor/financeiro/despesas/components/DespesaTable';
       export { FinancialPaymentModal } from './modules/gestor/financeiro/settlements/FinancialPaymentModal';
       export { ReceivablePaymentModal } from './modules/gestor/financeiro/settlements/ReceivablePaymentModal';
+      export { enrichExpenseSettlementLinks } from './modules/gestor/financeiro/despesas/despesas-settlement-links.service';
       export { confirmFinancialPayment } from './modules/gestor/financeiro/settlements/financial-payment.service';
       export { canonicalPaymentAmount, normalizePaymentDraft, isStoredFinancialPayment } from './modules/gestor/financeiro/settlements/financial-payment.form';
     `, resolveDir: rootDirectory, loader: 'ts' }, outfile: output, bundle: true, platform: 'node', format: 'cjs', logLevel: 'silent', plugins: [{
@@ -62,8 +66,21 @@ test('React DOM: saldo do servidor, múltiplas formas, preview atual, dupla conf
       },
     }] });
     const components = require(output);
-    const { React, createRoot, renderToStaticMarkup, OtherCreditRow, ReceivableActionButtons, DespesaTable, FinancialPaymentModal, ReceivablePaymentModal, confirmFinancialPayment, canonicalPaymentAmount, isStoredFinancialPayment } = components;
+    const { React, createRoot, renderToStaticMarkup, OtherCreditRow, ReceivableActionButtons, DespesaTable, DespesaBaixaModal, FinancialPaymentModal, ReceivablePaymentModal, confirmFinancialPayment, enrichExpenseSettlementLinks, canonicalPaymentAmount, isStoredFinancialPayment } = components;
     act = components.act;
+    assert.deepEqual(await enrichExpenseSettlementLinks([]), []);
+    assert.equal(fake.linkCalls.length, 0);
+    fake.links = [{ despesa_lancamento_id: id(1), convenio_mes_id: id(10), convenio_id: id(11) }];
+    const enriched = await enrichExpenseSettlementLinks(Array.from({ length: 501 }, (_, index) => ({ id: id(index + 1) })));
+    assert.deepEqual(fake.linkCalls.map(batch => batch.length), [500, 1]);
+    assert.equal(enriched[0].convenio_mes_id, id(10));
+    assert.equal(enriched[1].convenio_id, null, 'sem vínculo ativo não inventa convênio');
+    fake.linksMalformed = true;
+    await assert.rejects(enrichExpenseSettlementLinks([{ id: id(1) }]), /conferir os vínculos/);
+    fake.linksMalformed = false;
+    fake.links[0].convenio_mes_id = 'inválido';
+    await assert.rejects(enrichExpenseSettlementLinks([{ id: id(1) }]), /dados inválidos/);
+    fake.links = [];
     assert.equal(canonicalPaymentAmount('1.234,56'), '1234.56');
     assert.equal(canonicalPaymentAmount('1,999'), null);
     assert.equal(canonicalPaymentAmount('-1'), null);
@@ -224,6 +241,48 @@ test('React DOM: saldo do servidor, múltiplas formas, preview atual, dupla conf
     assert.doesNotMatch(document.body.textContent, /Confirmar recebimento/);
     assert.match(document.body.textContent, /Histórico de pagamentos/, 'ledger permanece no fluxo novo mesmo com proveniência legada');
 
+    await act(async () => reactRoot.unmount()); reactRoot = null;
+    const beforeConvenioPreviews = fake.previews.length;
+    const convenioExpense = { ...item, paymentSummary: undefined, convenioMesId: id(10), poloId: id(5) };
+    let confirmedConvenio = 0;
+    let failLegacyRefresh = true;
+    const mountExpense = async routedItem => {
+      reactRoot = createRoot(container);
+      await act(async () => { reactRoot.render(h(DespesaBaixaModal, { item: routedItem, contas: accounts, poloId: id(5),
+        onClose: noop, onReversed: async () => { if (failLegacyRefresh) throw new Error('Falha ao atualizar lista após baixa registrada'); confirmedConvenio += 1; }, isPending: false,
+        onConfirm: () => assert.fail('Convênio sem ledger não confirma pagamento parcial') })); await tick(); });
+    };
+    await mountExpense(convenioExpense);
+    assert.match(document.body.textContent, /Baixa integral/);
+    assert.doesNotMatch(document.body.textContent, /Adicionar forma de pagamento/);
+    await click(button('Selecionar conta...'));
+    await click(document.querySelector('[role="option"]'));
+    const expenseConfirm = button('Confirmar');
+    await act(async () => { expenseConfirm.click(); expenseConfirm.click(); await tick(); });
+    assert.equal(fake.legacyExpenses.length, 1, 'convênio mantém RPC integral e evita duplo envio');
+    assert.equal(fake.legacyExpenses[0].p_despesa_id, convenioExpense.id);
+    assert.equal(fake.legacyExpenses[0].p_conta_bancaria_id, id(2));
+    assert.equal(fake.legacyExpenses[0].p_juros_valor, 0);
+    assert.equal('components' in fake.legacyExpenses[0], false);
+    await act(async () => { fake.finish({ data: null, error: { message: 'Convênio fechado' } }); await tick(); });
+    assert.match(document.body.textContent, /Convênio fechado/);
+    assert.equal(fake.previews.length, beforeConvenioPreviews, 'erro integral não muda para fluxo genérico');
+    assert.equal(document.querySelector('fieldset').disabled, true, 'primeira tentativa integral mantém os dados bloqueados');
+    await click(button('Conferir baixa'));
+    assert.deepEqual(fake.legacyExpenses[1], fake.legacyExpenses[0], 'repetição preserva requestId integral');
+    await act(async () => { fake.finish({ data: {}, error: null }); await tick(); });
+    assert.equal(confirmedConvenio, 0, 'falha após baixa registrada não encerra a conferência');
+    assert.match(document.body.textContent, /Falha ao atualizar lista após baixa registrada/);
+    assert.equal(document.querySelector('fieldset').disabled, true);
+    failLegacyRefresh = false;
+    await click(button('Conferir baixa'));
+    assert.deepEqual(fake.legacyExpenses[2], fake.legacyExpenses[0], 'falha de atualização reapresenta a mesma chave e dados à RPC idempotente');
+    await act(async () => { fake.finish({ data: {}, error: null }); await tick(); });
+    assert.equal(confirmedConvenio, 1);
+    await act(async () => reactRoot.unmount()); reactRoot = null;
+    await mountExpense({ ...convenioExpense, paymentSummary: partialSummary });
+    assert.doesNotMatch(document.body.textContent, /Baixa integral/);
+    assert.match(document.body.textContent, /Histórico de pagamentos/);
 
   } finally {
     if (reactRoot && act) await act(async () => reactRoot.unmount());

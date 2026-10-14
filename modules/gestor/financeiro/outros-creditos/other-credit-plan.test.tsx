@@ -325,3 +325,30 @@ test('falha interrompe emissão e retorno ambíguo impede reenvio automático', 
   assert.equal(otherCreditPlanEmissionState(ambiguous), 'review');
   await assert.rejects(issueOtherCreditPlanSequentially('plan', async () => plan([ambiguous]), async () => { assert.fail('Não deve reenviar.'); }, () => {}), /conferência bancária/);
 });
+
+
+test('parcela com saldo local bloqueia carnê encerrado e fica fora de emissão e consulta bancárias', async () => {
+  const partial = { id: 'partial', status: 'PENDENTE', gateway_provider: 'banese_card', gateway_payment_id: 'old-bank',
+    gateway_status: 'CANCELED', gateway_submission_status: 'API_REGISTERED', gateway_boleto_nosso_numero: 'old-number',
+    outros_creditos_papel: 'PARCELA' as const, parcela_numero: 1,
+    payment_summary: { originalAmount: '120.00', previouslyPaid: '70.00', remainingBefore: '50.00', status: 'PENDENTE', hasEvents: true } };
+  assert.equal(otherCreditPlanEmissionState(partial), 'local');
+  assert.equal(otherCreditPlanEmissionState({ ...partial, status: 'PAGO' }), 'closed');
+  assert.equal(otherCreditPlanEmissionState({ ...partial, payment_summary: undefined }), 'review');
+  let current = plan([partial, { id: 'next', status: 'PENDENTE' }]);
+  const emitted: string[] = [];
+  const progress: unknown[] = [];
+  await issueOtherCreditPlanSequentially('plan', async () => current, async id => {
+    emitted.push(id);
+    current = plan(current.receivables.map(row => row.id === id ? { ...row, gateway_provider: 'banese_card', gateway_payment_id: 'new-bank' } : row));
+  }, state => progress.push(state));
+  assert.deepEqual(emitted, ['next']);
+  assert.deepEqual(progress, [{ done: 0, total: 1 }, { done: 1, total: 1 }]);
+  await refreshOtherCreditPlanSequentially('plan', async () => current, async () => { assert.fail('Saldo local não consulta boleto encerrado.'); }, () => {});
+  const html = renderContent({ planId: 'plan', plan: current, issuedCount: 1, pendingCount: 0, needsReview: false, hasLocalBalance: true });
+  assert.match(html, /Saldo local/);
+  assert.match(html, /histórico dos pagamentos disponível/);
+  const download = [...html.matchAll(/<button\b[^>]*>[\s\S]*?<\/button>/g)].find(([button]) => button.includes('Baixar carnê'))?.[0];
+  assert.ok(download);
+  assert.match(download, /disabled=""/);
+});

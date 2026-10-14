@@ -1,6 +1,7 @@
 import { PaymentRequestError, UUID_RE } from './contract.ts';
 import type { ReceiptBank } from './bank.ts';
 import type { PaymentStore, PaymentEvidence } from './store.ts';
+const safeFailureMessage = 'Nenhum novo recebimento foi registrado e nenhum cancelamento foi solicitado ao banco. Confira a situação da cobrança antes de revisar o pagamento.';
 const digest = async (value: unknown) => Array.from(new Uint8Array(await crypto.subtle.digest(
   'SHA-256', new TextEncoder().encode(JSON.stringify(value)),
 ))).map(byte => byte.toString(16).padStart(2, '0')).join('');
@@ -9,10 +10,11 @@ export async function processReceipt(attemptId: string, receivableId: string,
 ) {
   const { store, bank } = dependencies;
   const claim = await store.claim(attemptId);
-  if (!claim || !['CANCEL_ALLOWED', 'CONFIRM_ONLY', 'LOCAL', 'COMPLETE', 'BUSY'].includes(claim.mode)) {
+  if (!claim || !['CANCEL_ALLOWED', 'CONFIRM_ONLY', 'LOCAL', 'COMPLETE', 'BUSY', 'FAILED_SAFE'].includes(claim.mode)) {
     throw new Error('PAYMENT_CLAIM_INVALID');
   }
   if (claim.mode === 'COMPLETE') return claim.result;
+  if (claim.mode === 'FAILED_SAFE') throw new PaymentRequestError(409, safeFailureMessage, true);
   if (claim.mode === 'BUSY') throw new PaymentRequestError(409, 'Recebimento em processamento. Retome a mesma solicitação em instantes.');
   if (!UUID_RE.test(claim.leaseToken ?? '') || claim.receivable?.id !== receivableId) {
     throw new Error('PAYMENT_CLAIM_SCOPE_MISMATCH');
@@ -51,7 +53,10 @@ export async function processReceipt(attemptId: string, receivableId: string,
   } catch {
     const reason = remoteConfirmed ? 'LOCAL_SYNC_AFTER_REMOTE' :
       mutationStarted || claim.mode === 'CONFIRM_ONLY' ? 'REMOTE_AMBIGUOUS' : 'REMOTE_PREFLIGHT_ERROR';
-    try { await store.review(attemptId, lease, reason); } catch { /* Same durable key remains retryable. */ }
+    let safeToEdit = false;
+    try { safeToEdit = (await store.review(attemptId, lease, reason)).safeToEdit === true; }
+    catch { /* Without durable confirmation, preserve the immutable request for retry. */ }
+    if (safeToEdit) throw new PaymentRequestError(409, safeFailureMessage, true);
     throw new PaymentRequestError(409, remoteConfirmed
       ? 'O boleto foi cancelado no banco; o recebimento ainda precisa ser confirmado. Retome a mesma solicitação.'
       : 'Recebimento não confirmado. Retome a mesma solicitação para conferir o boleto e concluir com segurança.');

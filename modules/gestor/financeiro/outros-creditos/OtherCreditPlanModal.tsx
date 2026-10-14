@@ -12,7 +12,7 @@ const buttonClass = 'inline-flex min-h-12 items-center justify-center gap-2 roun
 export function OtherCreditPlanContent({ model, resources }: { model: OtherCreditPlanModel; resources: Resources }) {
   const shownPreview = model.planId ? model.plan?.plano.preview : model.preview;
   const customerName = model.plan?.plano.cliente_nome || resources.partners.find(partner => partner.id === model.plan?.plano.cliente_id)?.nome;
-  const canDownload = model.issuedCount > 0 && !model.pendingCount && !model.needsReview;
+  const canDownload = model.issuedCount > 0 && !model.pendingCount && !model.needsReview && !model.hasLocalBalance;
   return <div className="space-y-5">
     <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-xs leading-5 text-emerald-900">
       <strong>{resources.activePolo?.nome || 'Unidade atual'}</strong> · Cobrança avulsa para aulas de prática ou outros serviços.
@@ -25,6 +25,7 @@ export function OtherCreditPlanContent({ model, resources }: { model: OtherCredi
         <h3 className="text-lg font-black text-[#001a33]">{model.plan.plano.descricao}</h3>
         <p className="mt-1 text-sm text-slate-500">{customerName || 'Pagador cadastrado'} · {model.plan.plano.input.quantidadeParcelas} parcela(s) · {model.plan.plano.input.periodicidade === 'DIAS_CORRIDOS_30' ? 'A cada 30 dias' : 'Mensal'}</p>
       </div> : null}
+      {model.hasLocalBalance ? <p role="status" className="rounded-2xl bg-amber-50 p-4 text-sm font-medium text-amber-900">Este carnê inclui uma parcela com saldo local após recebimento. O saldo continua em Outros Créditos, com histórico dos pagamentos disponível. O carnê não pode ser baixado com essa parcela; cobranças bancárias encerradas não podem ser reutilizadas.</p> : null}
       {model.needsReview ? <p role="status" className="rounded-2xl bg-amber-50 p-4 text-sm font-medium text-amber-900">Há uma cobrança aguardando conferência. Atualize o carnê para verificar o retorno bancário.</p> : null}
     </> : <OtherCreditPlanWizard model={model} resources={resources} />}
     {model.planId && shownPreview ? <OtherCreditPlanPreview preview={shownPreview} plan={model.plan} /> : null}

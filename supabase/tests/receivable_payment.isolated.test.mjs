@@ -56,7 +56,7 @@ try {
  '20261014183509_financial_payment_append.sql','20261014183512_financial_payment_source_guards.sql',
  '20261014183558_receivable_payment_saga.sql','20261014183602_receivable_payment_commands.sql',
  '20261014183605_receivable_payment_completion.sql','20261014183608_receivable_payment_fences.sql',
- '20261014183611_receivable_payment_capabilities.sql']) {
+ '20261014183611_receivable_payment_capabilities.sql','20261014191409_receivable_payment_safe_preflight.sql']) {
  await db.exec(source(`../migrations/${file}`));
  }
  await db.query('INSERT INTO auth.users VALUES($1),($2)',[actor,otherActor]);
@@ -86,6 +86,7 @@ try {
  assert.equal(row.status,'PENDENTE'); assert.equal(row.valor_pago,100); assert.equal(row.payment_summary.remainingBefore,'100.00');
  const capability=await scalar('SELECT internal_academic.receivable_operation_capabilities(r) value FROM public.contas_receber r WHERE id=$1',[local]);
  assert.equal(capability.canSettle,true); assert.equal(capability.canEmit,false); assert.equal(capability.canCancel,false);
+ await fail(()=>db.query("UPDATE public.contas_receber SET gateway_provider='banese_card',gateway_status='CREATING',gateway_creation_token=$2 WHERE id=$1",[local,id(88000)]),'BANK_HISTORY_REQUIRES_REVIEW');
  await setting('role','authenticated'); assert.equal((await begin(local,first.data)).attemptId,first.data.requestId);
  await setting('uid',otherActor); await fail(()=>begin(local,first.data),'REQUEST_CONFLICT'); await setting('uid',actor);
  await setting('role','service_role'); assert.equal((await claim(first.data.requestId)).result.replayed,true);
@@ -128,7 +129,62 @@ try {
  await fail(()=>begin(imported,imp),'TRANSACTION_CHANGED');
  const loan=await add(105); await db.query('INSERT INTO public.emprestimos_financeiros VALUES($1)',[loan]);
  const l=input(loan,20600); l.fingerprint=(await preview(loan,l)).fingerprint; await fail(()=>begin(loan,l),'TITLE_REQUIRES_REVIEW');
+ // A rejected GET before durable intent must release the title for paid reconciliation.
+ const preflight=await add(107,true); const pre=await prepare(preflight,20800);
+ await fail(()=>rpc('review_receivable_payment_service',[pre.data.requestId,id(99999),'REMOTE_PREFLIGHT_ERROR']),'REVIEW_SCOPE');
+ assert.equal(await scalar('SELECT state value FROM internal_receivable_payments.attempts WHERE id=$1',[pre.data.requestId]),'LEASED');
+ const safelyFailed=await rpc('review_receivable_payment_service',[pre.data.requestId,pre.lease.leaseToken,'REMOTE_PREFLIGHT_ERROR']);
+ assert.deepEqual(safelyFailed,{reviewed:true,state:'FAILED_SAFE',safeToEdit:true});
+ assert.equal(await scalar('SELECT intent_at IS NULL AND completed_at IS NOT NULL value FROM internal_receivable_payments.attempts WHERE id=$1',[pre.data.requestId]),true);
+ assert.equal((await claim(pre.data.requestId)).mode,'FAILED_SAFE');
+ await fail(()=>start(pre.data.requestId,pre.lease.leaseToken),'LEASE_OR_INTENT');
+ await fail(()=>complete(pre.data.requestId,pre.lease.leaseToken,proof(true,107)),'LEASE_EXPIRED');
+ await db.query("UPDATE public.banese_reconciliation_queue SET state='LEASED',lease_run_id=$2 WHERE receivable_id=$1",[preflight,id(111)]);
+ await db.query("UPDATE public.payment_gateway_transactions SET remote_status='PAID' WHERE receivable_id=$1",[preflight]);
+ await db.query("UPDATE public.contas_receber SET status='PAGO',gateway_status='PAID' WHERE id=$1",[preflight]);
+ // Failed safe attempts remain audited, but no longer monopolize the same source.
+ const recoverable=await add(108); const rec=await prepare(recoverable,20900);
+ await rpc('review_receivable_payment_service',[rec.data.requestId,rec.lease.leaseToken,'REMOTE_PREFLIGHT_ERROR']);
+ const replacement=await prepare(recoverable,20901); await complete(replacement.data.requestId,replacement.lease.leaseToken,proof());
+ const afterPartial=await prepare(recoverable,20902);
+ assert.equal((await rpc('review_receivable_payment_service',[afterPartial.data.requestId,afterPartial.lease.leaseToken,'REMOTE_PREFLIGHT_ERROR'])).safeToEdit,true);
+ assert.equal(await scalar('SELECT count(*)::int value FROM public.financial_payment_events WHERE source_id=$1',[recoverable]),1);
+ // Lost start response cannot convert a persisted intent into a safe failure.
+ const lostStart=await add(109,true); const lost=await prepare(lostStart,21000); await start(lost.data.requestId,lost.lease.leaseToken);
+ assert.equal((await rpc('review_receivable_payment_service',[lost.data.requestId,lost.lease.leaseToken,'REMOTE_PREFLIGHT_ERROR'])).safeToEdit,false);
+ assert.equal((await claim(lost.data.requestId)).mode,'CONFIRM_ONLY');
+ await fail(()=>db.query("UPDATE public.contas_receber SET status='PAGO' WHERE id=$1",[lostStart]),'Recebimento em andamento');
+ // Defensive ledger check is keyed to this request, including inconsistent recovery data.
+ const ledgerConflict=await add(110); const conflict=await prepare(ledgerConflict,21100);
+ await db.query(`INSERT INTO public.financial_payment_events(request_id,actor_id,source_kind,source_id,polo_id,payment_date,
+ original_cents,principal_cents,interest_cents,penalty_cents,addition_cents,discount_cents,payment_cents,input,payload_hash,preview)
+ VALUES($1,$2,'RECEIVABLE',$3,$4,'2026-01-01',20000,10000,0,0,0,0,10000,'{}','synthetic','{}')`,[conflict.data.requestId,actor,ledgerConflict,polo]);
+ assert.equal((await rpc('review_receivable_payment_service',[conflict.data.requestId,conflict.lease.leaseToken,'REMOTE_PREFLIGHT_ERROR'])).safeToEdit,false);
+ // A genuinely superseded lease cannot terminate the replacement worker's attempt.
+ const leaseRace=await add(111); const leaseA=await prepare(leaseRace,21200);
+ await db.query("UPDATE internal_receivable_payments.attempts SET lease_until=now()-interval '1 minute' WHERE id=$1",[leaseA.data.requestId]);
+ const leaseB=await claim(leaseA.data.requestId); assert.notEqual(leaseB.leaseToken,leaseA.lease.leaseToken);
+ await fail(()=>rpc('review_receivable_payment_service',[leaseA.data.requestId,leaseA.lease.leaseToken,'REMOTE_PREFLIGHT_ERROR']),'REVIEW_SCOPE');
+ await fail(()=>db.query("UPDATE public.contas_receber SET status='PAGO' WHERE id=$1",[leaseRace]),'Recebimento em andamento');
+ assert.equal((await rpc('review_receivable_payment_service',[leaseA.data.requestId,leaseB.leaseToken,'REMOTE_PREFLIGHT_ERROR'])).safeToEdit,true);
+ // Current worker regression: one busy receipt used to abort the whole batch.
+ await db.exec(source('receivable_reconciliation.fixture.sql'));
+ await db.exec(source('receivable_reconciliation.baseline.sql'));
+ await db.query("UPDATE public.banese_reconciliation_queue SET state='DONE',lease_run_id=NULL,lease_until=NULL");
+ const busyTitle=await add(112,true); const busyReceipt=await prepare(busyTitle,21300);
+ await rpc('review_receivable_payment_service',[busyReceipt.data.requestId,busyReceipt.lease.leaseToken,'REMOTE_AMBIGUOUS']);
+ const availableTitle=await add(113,true);
+ await fail(()=>rpc('prepare_banese_reconciliation_batch_v3',[]),'Recebimento em andamento');
+ assert.equal(await scalar('SELECT count(*)::int value FROM public.banese_reconciliation_runs'),0);
+ await db.exec(source('../migrations/20261014191412_receivable_payment_reconciliation_queue.sql'));
+ for(const role of ['anon','authenticated']) assert.equal(await scalar("SELECT has_function_privilege($1,'public.receivable_payment_reconciliation_available_service(uuid,boolean)','EXECUTE') value",[role]),false);
+ const batch=await rpc('prepare_banese_reconciliation_batch_v3',[]);
+ assert.equal(batch.claimed,1); assert.equal(batch.items[0].receivableId,availableTitle);
+ assert.equal(await scalar('SELECT state value FROM public.banese_reconciliation_queue WHERE receivable_id=$1',[busyTitle]),'READY');
+ assert.equal(await scalar('SELECT state value FROM internal_receivable_payments.attempts WHERE id=$1',[busyReceipt.data.requestId]),'REVIEW');
+ assert.equal(await scalar('SELECT claimed value FROM public.banese_reconciliation_runs WHERE id=$1',[batch.runId]),1);
  await db.query("UPDATE public.usuarios_sistema SET status='inativo' WHERE auth_user_id=$1",[actor]);
  await fail(()=>claim(first.data.requestId),'UNAUTHORIZED');
+ await fail(()=>claim(pre.data.requestId),'UNAUTHORIZED');
  console.log('Receivable saga PASS: partial100+100, bank proof, replay/auth, leases, ambiguous recovery, legacy and webhook fences, source/preview guards.');
 } finally { await db.close(); }

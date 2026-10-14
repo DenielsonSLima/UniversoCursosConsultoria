@@ -111,6 +111,8 @@ export function validateOtherCreditPlanInput(input: OtherCreditPlanInput, poloId
 const closedStatuses = new Set(['PAGO', 'CANCELADO', 'ESTORNADO', 'DEVOLVIDO']);
 export function otherCreditPlanEmissionState(item: OtherCreditPlanReceivable) {
   if (closedStatuses.has(item.status || '')) return 'closed';
+  if (item.payment_summary?.hasEvents === true) return 'local';
+  if (['CANCELED', 'CANCELLED', 'CANCELADO', 'DELETED', 'REFUNDED'].includes((item.gateway_status || '').toUpperCase())) return 'review';
   if (item.status === 'SUSPENSO' || item.gateway_status?.toUpperCase() === 'CREATING'
     || /AMBIGUOUS|REVIEW|PENDING|SUBMITTING|IN_PROGRESS|CREATING/.test(item.gateway_submission_status || '')) return 'review';
   if (item.gateway_payment_id && item.gateway_provider === 'banese_card') return 'issued';
@@ -187,7 +189,7 @@ export async function refreshOtherCreditPlanSequentially(
     await refresh(id);
     plan = await read(planId);
     const updated = plan.receivables.find(item => item.id === id);
-    if (!updated || !['issued', 'closed'].includes(otherCreditPlanEmissionState(updated))) {
+    if (!updated || !['issued', 'closed', 'local'].includes(otherCreditPlanEmissionState(updated))) {
       throw new Error('A consulta bancária ainda não confirmou esta cobrança. Aguarde e atualize o carnê antes de continuar.');
     }
     done += 1;
@@ -203,7 +205,7 @@ export async function issueOtherCreditPlanSequentially(
   onProgress: (progress: OtherCreditPlanProgress) => void,
 ) {
   let plan = await read(planId);
-  const total = plan.receivables.filter(item => otherCreditPlanEmissionState(item) !== 'closed').length;
+  const total = plan.receivables.filter(item => !['closed', 'local'].includes(otherCreditPlanEmissionState(item))).length;
   const progress = () => onProgress({ total, done: plan.receivables.filter(item => otherCreditPlanEmissionState(item) === 'issued').length });
   progress();
   while (true) {
@@ -214,7 +216,7 @@ export async function issueOtherCreditPlanSequentially(
     await issue(next.id);
     plan = await read(planId);
     const updated = plan.receivables.find(item => item.id === next.id);
-    if (!updated || !['issued', 'closed'].includes(otherCreditPlanEmissionState(updated))) {
+    if (!updated || !['issued', 'closed', 'local'].includes(otherCreditPlanEmissionState(updated))) {
       throw new Error('A emissão desta cobrança ainda não foi confirmada. Atualize o carnê para conferir antes de continuar.');
     }
     progress();

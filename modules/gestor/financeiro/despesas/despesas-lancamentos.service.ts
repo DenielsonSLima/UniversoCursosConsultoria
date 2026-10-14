@@ -2,6 +2,7 @@ import { supabase } from '../../../../lib/supabase';
 import { confirmFinancialPayment } from '../settlements/financial-payment.service';
 import type { DespesasFilters } from './despesas.queryKeys';
 import { mapLancamento } from './despesas.mapper';
+import { enrichExpenseSettlementLinks } from './despesas-settlement-links.service';
 import { validateConvenioExpenseMvp } from './despesas-convenios.model';
 import {
   cleanupDespesaAnexoIfRequestFailed,
@@ -67,7 +68,7 @@ export const getDespesas = async (
     }
     if (response.error) throw response.error;
     const rows = Array.isArray(response.data) ? response.data : [];
-    return (legacy ? await enrichLegacyRowsWithLaunchDate(rows) : rows).map(mapLancamento);
+    return (legacy ? await enrichExpenseSettlementLinks(await enrichLegacyRowsWithLaunchDate(rows)) : rows).map(mapLancamento);
   }
 
   let query = supabase.from('despesas_lancamentos').select(`
@@ -89,7 +90,7 @@ export const getDespesas = async (
   if (filters.dataFim) query = query.lte('data_vencimento', filters.dataFim);
   const { data, error } = await query.order('data_vencimento', { ascending: true });
   if (error) throw error;
-  return (data || []).map(mapLancamento);
+  return (await enrichExpenseSettlementLinks(data || [])).map(mapLancamento);
 };
 
 const fetchCreatedExpense = async (id: string) => {
@@ -99,7 +100,7 @@ const fetchCreatedExpense = async (id: string) => {
     .eq('id', id)
     .single();
   if (error) throw error;
-  return mapLancamento(data);
+  return mapLancamento((await enrichExpenseSettlementLinks([data]))[0]);
 };
 
 export const createDespesa = async (

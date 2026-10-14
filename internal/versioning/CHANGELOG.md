@@ -8,6 +8,13 @@ Histórico arquivado: [28/09/2026 a 30/09/2026 — versões 4.8.128 a 4.8.137](.
 
 Histórico arquivado: [30/09/2026 — versões 4.8.138 a 4.8.144](./changelog/2026-09-30-versoes-4-8-138-a-4-8-144.md).
 
+## [4.8.222] - 2026-10-14
+
+- Saldo parcial vencido conserva a situação de atraso; resumos de despesas mostram valores pagos e saldo restante corretamente.
+- Corrigida a retomada de pagamentos já registrados e a liberação segura de tentativas recusadas antes do cancelamento bancário.
+- A conciliação continua processando outros títulos quando existe um recebimento em andamento.
+- Baixa integral de despesas de convênio restaurada; ações e carnês deixam de oferecer boletos encerrados após pagamento parcial.
+
 ## [4.8.221] - 2026-10-14
 
 - Contas a Receber, Outros Créditos e Contas a Pagar permitem registrar pagamentos parciais e combinar formas e contas na mesma baixa.

@@ -55,6 +55,7 @@ export type OtherCreditPlanPreview = {
 };
 
 export type OtherCreditPlanReceivable = Omit<BanesePaymentRecord, 'gateway_financial_terms'> & {
+  payment_summary?: import('../settlements/financial-payment.summary.ts').FinancialPaymentSummary;
   outros_creditos_papel?: OtherCreditPlanRole;
   gateway_submission_status?: string | null;
   gateway_financial_terms?: OtherCreditPlanFinancialTerms | null;
