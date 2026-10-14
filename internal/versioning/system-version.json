@@ -1,8 +1,8 @@
 {
-  "version": "4.8.224",
+  "version": "4.8.225",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 233,
+  "revision": 234,
   "releasedAt": "2026-10-14",
-  "summary": "Máscara de real brasileiro com duas casas decimais durante a digitação no modal financeiro"
+  "summary": "Valor sugerido da baixa acompanha descontos e encargos calculados pelo servidor"
 }

@@ -8,6 +8,11 @@ Histórico arquivado: [28/09/2026 a 30/09/2026 — versões 4.8.128 a 4.8.137](.
 
 Histórico arquivado: [30/09/2026 — versões 4.8.138 a 4.8.144](./changelog/2026-09-30-versoes-4-8-138-a-4-8-144.md).
 
+## [4.8.225] - 2026-10-14
+
+- Em uma única forma de pagamento, o valor sugerido acompanha automaticamente descontos, juros, multa e acréscimos calculados no servidor.
+- Valores parciais informados manualmente e múltiplas formas continuam preservados.
+
 ## [4.8.224] - 2026-10-14
 
 - Campos de pagamento, juros, multa, desconto e acréscimos formatam reais automaticamente com duas casas decimais durante a digitação.

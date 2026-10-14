@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-10-14T19:36:18.004Z",
+  "builtAt": "2026-10-14T19:43:35.101Z",
   "manifestVersion": 2,
-  "sourceSignature": "877f7cf334986f569472d93f7b8b13b8c499bf5e37ba794382ef317d98f08308",
+  "sourceSignature": "574f95a2bf44328610769b72f44252601517ab80e1c5f7ed3e6ecf3cf8290b25",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "0efa4070f51d95735c6aae88399438fa5a48835192c003afb6c63699db72b3fd"
+      "hash": "b4a6bc3ae6be1dc307d45311b4a44741f3343bcd51df0f61220a686dad9c0668"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -208,13 +208,13 @@
       "part": 1
     },
     {
-      "id": "93942de9539667fe8800",
-      "hash": "93942de9539667fe88003b33116cd9aeba2b29a37aa7b998bc231b021d11ed90",
+      "id": "3f82f1abed7a27eec294",
+      "hash": "3f82f1abed7a27eec294ee5d17314a5789835859c8457a601070b62b6fbbc114",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Lote ativo",
-      "text": "Lote 2026-10-14-mascara-real-modal-financeiro. PRONTO_PARA_PUBLICACAO. Versão 4.8.224/revisão233. Máscara de real nos campos monetários do modal, sem alteração de layout ou cálculos. Conferência na tela reservada ao usuário. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-14-mascara-real-modal-financeiro.md`.",
-      "normalizedText": "lote 2026 10 14 mascara real modal financeiro pronto para publicacao versao 4 8 224 revisao233 mascara de real nos campos monetarios do modal sem alteracao de layout ou calculos conferencia na tela reservada ao usuario manifesto explicito ai operacao registros alteracoes 2026 10 14 mascara real modal financeiro md",
-      "tokenCount": 48,
+      "text": "Lote 2026-10-14-valor-automatico-baixa-unica. BACKEND_APLICADO_FRONTEND_PRONTO. Versão 4.8.225/revisão234. Valor sugerido acompanha desconto e encargos no servidor para uma forma. Valores manuais e múltiplas formas preservados. Conferência na tela reservada ao usuário. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-14-valor-automatico-baixa-unica.md`.",
+      "normalizedText": "lote 2026 10 14 valor automatico baixa unica backend aplicado frontend pronto versao 4 8 225 revisao234 valor sugerido acompanha desconto e encargos no servidor para uma forma valores manuais e multiplas formas preservados conferencia na tela reservada ao usuario manifesto explicito ai operacao registros alteracoes 2026 10 14 valor automatico baixa unica md",
+      "tokenCount": 50,
       "part": 1
     },
     {
