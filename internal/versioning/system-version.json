@@ -1,8 +1,8 @@
 {
-  "version": "4.8.220",
+  "version": "4.8.221",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 229,
+  "revision": 230,
   "releasedAt": "2026-10-14",
-  "summary": "Outros Créditos com seleção, cancelamento em lote Banese e recuperação automática da listagem"
+  "summary": "Pagamentos parciais e múltiplas formas com saldo e histórico calculados no servidor"
 }

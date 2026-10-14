@@ -1,4 +1,5 @@
 import { supabase } from '../../../../lib/supabase';
+import { confirmFinancialPayment } from '../settlements/financial-payment.service';
 import type { DespesasFilters } from './despesas.queryKeys';
 import { mapLancamento } from './despesas.mapper';
 import { validateConvenioExpenseMvp } from './despesas-convenios.model';
@@ -196,17 +197,8 @@ export const createDespesa = async (
 };
 
 export const markDespesaPaga = async (id: string, params: DespesaBaixaParams) => {
-  const { error } = await supabase.rpc('baixar_despesa_secure', {
-    p_despesa_id: id,
-    p_request_id: params.requestId,
-    p_conta_bancaria_id: params.contaBancariaId,
-    p_data_pagamento: params.dataPagamento,
-    p_forma_pagamento: params.formaPagamento,
-    p_juros_valor: params.jurosValor || 0,
-    p_multa_valor: params.multaValor || 0,
-    p_desconto_valor: params.descontoValor || 0,
-  });
-  if (error) throw error;
+  if (params.input.sourceId !== id) throw new Error('A despesa do pagamento mudou. Abra novamente o lançamento.');
+  return confirmFinancialPayment('EXPENSE', params.input, params.fingerprint);
 };
 
 export const updateDespesa = async (id: string, input: UpdateDespesaInput) => {

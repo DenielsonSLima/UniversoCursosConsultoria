@@ -18,7 +18,7 @@ interface UseDespesaPendingDeletionParams {
 }
 
 const isEligible = (item: DespesaLancamento) => (
-  !item.isRateioDerived && (item.status === 'PENDENTE' || item.status === 'VENCIDO')
+  !item.isRateioDerived && !item.paymentSummary?.hasEvents && (item.status === 'PENDENTE' || item.status === 'VENCIDO')
 );
 
 export const useDespesaPendingDeletion = ({

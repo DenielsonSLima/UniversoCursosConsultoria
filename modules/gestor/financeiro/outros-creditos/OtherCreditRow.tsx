@@ -1,5 +1,6 @@
 import React from 'react';
 import { Banknote, BookOpen, CheckCircle2, Copy, ExternalLink, Link as LinkIcon, QrCode, XCircle } from 'lucide-react';
+import { FinancialPaymentBalance, hasPartialPayment } from '../settlements/financial-payment.presentation';
 import type { ContasReceber } from '../financeiro.types';
 import { ReceivableAmountSummary } from '../receber/components/modalidade-receber/ReceivableAmountSummary';
 import type { OutrosCreditosModel } from './useOutrosCreditos';
@@ -52,7 +53,7 @@ export const OtherCreditRow: React.FC<{
       <td className="px-5 py-4">
         <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-black uppercase ${statusClass(item.status)}`}>
           {item.status === 'PAGO' ? <CheckCircle2 size={12} /> : <Banknote size={12} />}
-          {item.status}
+          {hasPartialPayment(item.paymentSummary) ? 'Baixa parcial' : item.status}
         </span>
         <p className="mt-1 text-[10px] font-bold text-slate-500">Origem: {origemLabel(item)}</p>
         <p className="text-[10px] font-bold text-slate-500">Forma: {item.formaPagamento || (item.asaasPaymentId || item.asaasPaymentLinkId ? 'Link bancário' : 'Não definida')}</p>
@@ -60,9 +61,11 @@ export const OtherCreditRow: React.FC<{
       </td>
       <td className="px-5 py-4">
         <ReceivableAmountSummary item={item} compact />
+        <FinancialPaymentBalance summary={item.paymentSummary} />
       </td>
       <td className="px-5 py-4">
         <div className="flex flex-wrap gap-2">
+          {item.paymentSummary?.hasEvents ? <button type="button" onClick={() => openReceiveModal(item)} className="rounded-xl border border-emerald-200 px-3 py-2 text-[10px] font-black text-emerald-700">Histórico</button> : null}
           {item.outrosCreditosPlanoId && onOpenPlan ? (
             <button type="button" onClick={() => onOpenPlan(item.outrosCreditosPlanoId!)}
               className="inline-flex items-center gap-1 rounded-xl border border-emerald-200 px-3 py-2 text-[10px] font-black uppercase text-emerald-700 hover:bg-emerald-50">
@@ -74,7 +77,7 @@ export const OtherCreditRow: React.FC<{
               onClick={() => openReceiveModal(item)}
               className="inline-flex items-center gap-1 rounded-xl bg-[#001a33] px-3 py-2 text-[10px] font-black uppercase text-white hover:bg-[#062849]"
             >
-              <CheckCircle2 size={13} /> Receber
+              <CheckCircle2 size={13} /> {hasPartialPayment(item.paymentSummary) ? 'Receber saldo' : 'Receber'}
             </button>
           )}
           {!legacy && !item.outrosCreditosPlanoId && !item.asaasPaymentId && !item.asaasPaymentLinkId && item.status !== 'PAGO' && !['CANCELADO', 'ESTORNADO'].includes(item.status) && (

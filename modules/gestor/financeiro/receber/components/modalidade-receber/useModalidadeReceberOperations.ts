@@ -1,3 +1,4 @@
+import { useLegacyFullReceipt } from '../../../settlements/useLegacyFullReceipt';
 import { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { asaasIntegrationService } from '../../../../../asaas/asaas.service';
@@ -8,7 +9,8 @@ import type { ContasReceber } from '../../../financeiro.service';
 import { financeiroService } from '../../../financeiro.service';
 import { receivableIssuanceNotice, submitReceivableFromFinanceiro } from '../../../financeiro.receivable-issuance';
 import { gestorBanesePaymentService } from '../../banese/gestor-banese-payment.service';
-import type { ManualSettlementPayload } from '../manual-settlement/useManualSettlementForm';
+import { confirmFinancialPayment, type FinancialPaymentConfirmation } from '../../../settlements/financial-payment.service';
+import { paymentMoneyLabel } from '../../../settlements/financial-payment.form';
 import {
   isPaidThroughAsaas,
   paymentGatewayCode,
@@ -37,33 +39,32 @@ export const useModalidadeReceberOperations = (toast: OperationToast) => {
     setRecreateAsaas(true);
   };
 
+  const invalidateReceiptPayments = () => Promise.all([
+    queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.receivablesRoot }),
+    queryClient.invalidateQueries({ queryKey: ['financeiro-aluno-receivables'] }),
+    queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.resumoKpis }),
+    queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos }),
+    queryClient.invalidateQueries({ queryKey: ['aluno-financeiro'] }),
+    selected?.turmaId
+      ? queryClient.invalidateQueries({ queryKey: ['turma-financeiro', selected.turmaId] })
+      : Promise.resolve(),
+    selected?.turmaId
+      ? queryClient.invalidateQueries({ queryKey: matriculaTecnicaFinanceiroKeys.turma(selected.turmaId) })
+      : Promise.resolve(),
+  ]);
+  const legacyPaymentMutation = useLegacyFullReceipt(selected, async () => {
+    await invalidateReceiptPayments();
+    setSelected(null);
+  }, toast);
+
   const paymentMutation = useMutation({
-    mutationFn: (payload: ManualSettlementPayload) =>
-      financeiroService.markReceivablePaid(selected!.id!, payload),
+    mutationFn: (payload: FinancialPaymentConfirmation) =>
+      confirmFinancialPayment('RECEIVABLE', payload.input, payload.fingerprint),
     onSuccess: async (result) => {
-      const paidReceivable = selected;
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.receivablesRoot }),
-        queryClient.invalidateQueries({ queryKey: ['financeiro-aluno-receivables'] }),
-        queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.resumoKpis }),
-        queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos }),
-        queryClient.invalidateQueries({ queryKey: ['aluno-financeiro'] }),
-        selected?.turmaId
-          ? queryClient.invalidateQueries({ queryKey: ['turma-financeiro', selected.turmaId] })
-          : Promise.resolve(),
-        selected?.turmaId
-          ? queryClient.invalidateQueries({ queryKey: matriculaTecnicaFinanceiroKeys.turma(selected.turmaId) })
-          : Promise.resolve(),
-      ]);
+      await invalidateReceiptPayments();
       toast.success(
-        'Recebimento confirmado',
-        result.futureSyncWarning
-          ? `Baixa registrada. Atenção na sincronização futura: ${result.futureSyncWarning}`
-          : result.gatewayCanceled && paidReceivable
-            ? `Baixa manual registrada e título ${result.gatewayPaymentId || paidReceivable.asaasPaymentId || ''} cancelado no ${paymentGatewayLabel(paidReceivable)}.`
-            : paidReceivable?.asaasPaymentId
-              ? `Baixa manual registrada. A cobrança no ${paymentGatewayLabel(paidReceivable)} já estava confirmada/recebida ou não exigia cancelamento.`
-              : 'Baixa manual registrada na conta selecionada.',
+        result.preview.status === 'PAGO' ? 'Recebimento confirmado' : 'Recebimento parcial registrado',
+        `Recebido: ${paymentMoneyLabel(result.preview.paymentAmount)}. Saldo restante: ${paymentMoneyLabel(result.preview.remainingAfter)}.${result.academicSyncWarning ? ` ${result.academicSyncWarning}` : ''}`,
       );
       setSelected(null);
     },
@@ -178,8 +179,8 @@ export const useModalidadeReceberOperations = (toast: OperationToast) => {
     if (!selected && !reversalItem && !receiptItem) return;
 
     const onDocumentKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      if (selected && !paymentMutation.isPending) setSelected(null);
+      if (event.key !== 'Escape' || event.defaultPrevented) return;
+      if (selected && !paymentMutation.isPending && !legacyPaymentMutation.isPending) setSelected(null);
       if (receiptItem) setReceiptItem(null);
       if (reversalItem && !reversalMutation.isPending) {
         setReversalItem(null);
@@ -190,7 +191,7 @@ export const useModalidadeReceberOperations = (toast: OperationToast) => {
 
     document.addEventListener('keydown', onDocumentKeyDown);
     return () => document.removeEventListener('keydown', onDocumentKeyDown);
-  }, [paymentMutation.isPending, receiptItem, reversalItem, reversalMutation.isPending, selected]);
+  }, [paymentMutation.isPending, legacyPaymentMutation.isPending, receiptItem, reversalItem, reversalMutation.isPending, selected]);
 
   const copyInvoiceUrl = async (item: ContasReceber) => {
     const url = item.asaasInvoiceUrl || item.asaasBankSlipUrl;
@@ -259,7 +260,7 @@ export const useModalidadeReceberOperations = (toast: OperationToast) => {
     receiptItem,
     reversalReason,
     recreateAsaas,
-    paymentMutation,
+    paymentMutation, legacyPaymentMutation,
     syncMutation,
     refreshMutation,
     baneseDetailsMutation,
@@ -268,6 +269,7 @@ export const useModalidadeReceberOperations = (toast: OperationToast) => {
     setRecreateAsaas,
     openPayment: (item: ContasReceber) => {
       paymentMutation.reset();
+      legacyPaymentMutation.reset();
       setSelected(item);
     },
     closePaymentModal,

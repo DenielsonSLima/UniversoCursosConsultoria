@@ -1,4 +1,5 @@
 import React from 'react';
+import { FinancialPaymentBalance, hasPartialPayment } from '../../settlements/financial-payment.presentation';
 import {
   AlertCircle, Banknote, CheckCircle2, Clock, Paperclip, Pencil,
   Printer, RotateCcw, Trash2, XCircle,
@@ -10,6 +11,7 @@ import DespesaConvenioBadge from './DespesaConvenioBadge';
 
 const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
   const configs: Record<string, { label: string; className: string; Icon: React.ElementType }> = {
+    PARCIAL: { label: 'Baixa parcial', className: 'border-amber-200 bg-amber-50 text-amber-700', Icon: Clock },
     PAGO: { label: 'Pago', className: 'border-emerald-200 bg-emerald-50 text-emerald-700', Icon: CheckCircle2 },
     PENDENTE: { label: 'Pendente', className: 'border-amber-200 bg-amber-50 text-amber-700', Icon: Clock },
     VENCIDO: { label: 'Vencido', className: 'border-rose-200 bg-rose-50 text-rose-700', Icon: AlertCircle },
@@ -61,7 +63,7 @@ const DespesaTable: React.FC<DespesaTableProps> = ({
             const isPago = item.status === 'PAGO';
             const isCancelado = item.status === 'CANCELADO';
             const isAberto = item.status === 'PENDENTE' || item.status === 'VENCIDO';
-            const selectable = isAberto && !item.isRateioDerived && Boolean(onSelectionChange);
+            const selectable = isAberto && !item.paymentSummary?.hasEvents && !item.isRateioDerived && Boolean(onSelectionChange);
             const selected = selectedIds?.has(item.id) || false;
             const contaLabel = getDespesaContaLabel(item, contas);
             const hasBaixaEstornada = isCancelado && Boolean(item.estornadoEm);
@@ -86,23 +88,25 @@ const DespesaTable: React.FC<DespesaTableProps> = ({
                 </td>
                 <td className="px-4 py-4 text-xs">
                   <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Previsto</p><p className="mt-0.5 text-sm font-black text-slate-900">{formatDespesaCurrency(item.valor)}</p>
-                  {isPago && <p className="mt-1 font-bold text-emerald-700">Pago: {formatDespesaCurrency(item.valorPago ?? item.valor)}</p>}
+                  {isPago && !item.paymentSummary?.hasEvents && <p className="mt-1 font-bold text-emerald-700">Pago: {formatDespesaCurrency(item.valorPago ?? item.valor)}</p>}
+                  <FinancialPaymentBalance summary={item.paymentSummary} expense />
                   {hasBaixaEstornada && <p className="mt-1 font-bold text-slate-500">Estornado: {formatDespesaCurrency(item.valorPago ?? item.valor)}</p>}
                   {(item.jurosValor > 0 || item.multaValor > 0 || item.descontoValor > 0) && <p className="mt-1 text-[9px] font-semibold text-slate-400">Base {formatDespesaCurrency(item.valorBase)}</p>}
                 </td>
                 <td className="px-4 py-4 text-[10px] font-semibold leading-5 text-slate-600">
-                  {isPago ? <><p className="font-black text-slate-700">{contaLabel || 'Conta não localizada'}</p><p className="text-emerald-700">Pago em {formatDespesaDate(item.dataPagamento)}{item.formaPagamento ? ` · ${item.formaPagamento}` : ''}</p></>
+                  {item.paymentSummary?.hasEvents ? <p className="font-black text-slate-700">Consulte as formas e contas no histórico de pagamentos.</p> : isPago ? <><p className="font-black text-slate-700">{contaLabel || 'Conta não localizada'}</p><p className="text-emerald-700">Pago em {formatDespesaDate(item.dataPagamento)}{item.formaPagamento ? ` · ${item.formaPagamento}` : ''}</p></>
                     : hasBaixaEstornada ? <><p className="font-black text-slate-600">Baixa estornada</p><p>{contaLabel || 'Conta preservada no histórico'}</p></>
                     : <><p className="font-black text-slate-600">Ainda não baixada</p><p>{item.turmaNome ? `Turma: ${item.turmaNome}` : item.observacao || 'Sem observação adicional'}</p></>}
                 </td>
-                <td className="px-4 py-4"><StatusBadge status={item.status} />
+                <td className="px-4 py-4"><StatusBadge status={hasPartialPayment(item.paymentSummary) ? 'PARCIAL' : item.status} />
                   {item.isRateioDerived ? <p className="mt-2 text-[10px] font-bold text-slate-400">Somente informativa</p> : <div className="mt-2 grid grid-cols-2 gap-1.5">
-                    {isAberto && onEditar && <button type="button" onClick={() => onEditar(item)} className={`${actionClass} border-blue-200 text-blue-700 hover:bg-blue-50 focus-visible:ring-blue-500`} aria-label={`Editar lançamento ${item.descricao}`}><Pencil size={13} /> Editar</button>}
-                    {isAberto && onPagar && <button type="button" onClick={() => onPagar(item)} className={`${actionClass} border-emerald-200 text-emerald-700 hover:bg-emerald-50 focus-visible:ring-emerald-500`} aria-label={`Dar baixa em ${item.descricao}`}><CheckCircle2 size={13} /> Dar baixa</button>}
-                    {!isCancelado && onImprimir && <button type="button" onClick={() => onImprimir(item)} className={`${actionClass} border-slate-200 text-slate-600 hover:bg-slate-100 focus-visible:ring-slate-500`} aria-label={`Abrir prévia de ${item.descricao}`}><Printer size={13} /> Prévia</button>}
+                    {isAberto && !item.paymentSummary?.hasEvents && onEditar && <button type="button" onClick={() => onEditar(item)} className={`${actionClass} border-blue-200 text-blue-700 hover:bg-blue-50 focus-visible:ring-blue-500`} aria-label={`Editar lançamento ${item.descricao}`}><Pencil size={13} /> Editar</button>}
+                    {isAberto && onPagar && <button type="button" onClick={() => onPagar(item)} className={`${actionClass} border-emerald-200 text-emerald-700 hover:bg-emerald-50 focus-visible:ring-emerald-500`} aria-label={`Dar baixa em ${item.descricao}`}><CheckCircle2 size={13} /> {hasPartialPayment(item.paymentSummary) ? 'Pagar saldo' : 'Dar baixa'}</button>}
+                    {item.paymentSummary?.hasEvents && onPagar && <button type="button" onClick={() => onPagar(item)} className={`${actionClass} border-emerald-200 text-emerald-700`}>Histórico</button>}
+                    {!isCancelado && !item.paymentSummary?.hasEvents && onImprimir && <button type="button" onClick={() => onImprimir(item)} className={`${actionClass} border-slate-200 text-slate-600 hover:bg-slate-100 focus-visible:ring-slate-500`} aria-label={`Abrir prévia de ${item.descricao}`}><Printer size={13} /> Prévia</button>}
                     {item.anexoPath && onAnexo && !isCancelado && <button type="button" onClick={() => onAnexo(item)} className={`${actionClass} border-violet-200 text-violet-700 hover:bg-violet-50 focus-visible:ring-violet-500`} aria-label={`Abrir anexo de ${item.descricao}`}><Paperclip size={13} /> Anexo</button>}
-                    {isAberto && onExcluir ? <button type="button" onClick={() => onExcluir([item])} className={`${actionClass} border-rose-200 text-rose-700 hover:bg-rose-50 focus-visible:ring-rose-500`} aria-label={`Excluir ${item.descricao}`}><Trash2 size={13} /> Excluir</button>
-                      : !isCancelado && onCancelar ? <button type="button" onClick={() => onCancelar(item)} className={`${actionClass} ${isPago ? 'border-rose-200 text-rose-700 hover:bg-rose-50 focus-visible:ring-rose-500' : 'border-slate-200 text-slate-600 hover:bg-slate-100 focus-visible:ring-slate-500'}`} aria-label={`${isPago ? 'Estornar e cancelar' : 'Cancelar'} ${item.descricao}`}>{isPago ? <RotateCcw size={13} /> : <XCircle size={13} />}{isPago ? 'Estornar' : 'Cancelar'}</button> : null}
+                    {isAberto && !item.paymentSummary?.hasEvents && onExcluir ? <button type="button" onClick={() => onExcluir([item])} className={`${actionClass} border-rose-200 text-rose-700 hover:bg-rose-50 focus-visible:ring-rose-500`} aria-label={`Excluir ${item.descricao}`}><Trash2 size={13} /> Excluir</button>
+                      : !isCancelado && !item.paymentSummary?.hasEvents && onCancelar ? <button type="button" onClick={() => onCancelar(item)} className={`${actionClass} ${isPago ? 'border-rose-200 text-rose-700 hover:bg-rose-50 focus-visible:ring-rose-500' : 'border-slate-200 text-slate-600 hover:bg-slate-100 focus-visible:ring-slate-500'}`} aria-label={`${isPago ? 'Estornar e cancelar' : 'Cancelar'} ${item.descricao}`}>{isPago ? <RotateCcw size={13} /> : <XCircle size={13} />}{isPago ? 'Estornar' : 'Cancelar'}</button> : null}
                   </div>}
                 </td>
               </tr>

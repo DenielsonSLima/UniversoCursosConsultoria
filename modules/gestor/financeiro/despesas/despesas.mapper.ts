@@ -1,4 +1,5 @@
 import type { CategoriaFinanceira, DespesaLancamento } from './despesas.types';
+import { parseFinancialPaymentSummary } from '../settlements/financial-payment.presentation';
 
 const toUpper = (value?: string | null) => (value || '').trim().toLocaleUpperCase('pt-BR');
 
@@ -14,6 +15,7 @@ export const mapCategoriaFinanceira = (row: any): CategoriaFinanceira => ({
 export const normalizeCategoriaFinanceiraInput = (value?: string | null) => toUpper(value);
 
 export const mapLancamento = (row: any): DespesaLancamento => ({
+  paymentSummary: parseFinancialPaymentSummary(row.payment_summary),
   id: row.id,
   despesaLancamentoId: row.despesa_lancamento_id ?? row.id,
   poloId: row.polo_id,

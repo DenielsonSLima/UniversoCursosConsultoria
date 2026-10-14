@@ -1,3 +1,4 @@
+import { useLegacyFullReceipt } from '../settlements/useLegacyFullReceipt';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { financeiroService, type ContasReceber, isContaDisponivelNoPolo } from '../financeiro.service';
@@ -7,7 +8,8 @@ import { financeiroQueryKeys } from '../financeiro.queryKeys';
 import { useFinanceiroRealtime } from '../hooks/useFinanceiroRealtime';
 import { useFinanceiroSharedQueries } from '../hooks/useFinanceiroSharedQueries';
 import { useOutrosCreditosQueries } from './hooks/useOutrosCreditosQueries';
-import type { ManualSettlementPayload } from '../receber/components/manual-settlement/useManualSettlementForm';
+import { confirmFinancialPayment, type FinancialPaymentConfirmation } from '../settlements/financial-payment.service';
+import { paymentMoneyLabel } from '../settlements/financial-payment.form';
 import { generateSafeUuid } from '../../../../lib/randomUuid';
 import { textMatchesSearch } from '../../../../lib/search';
 import type { DespesaCredorTipo } from '../despesas/components/DespesaCredorPicker';
@@ -132,20 +134,24 @@ export const useOutrosCreditos = (scopedPoloId?: string | null) => {
     onError: (error: any) => toast.error('Erro no link bancário', error.message),
   });
 
+  const invalidateReceiptPayments = () => Promise.all([
+    queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.outrosCreditosRoot }),
+    queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.resumoKpis }),
+    queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos }),
+  ]);
+  const legacyReceiveMutation = useLegacyFullReceipt(receiveItem, async () => {
+    await invalidateReceiptPayments();
+    setReceiveItem(null);
+  }, toast);
+
   const receiveMutation = useMutation({
-    mutationFn: (payload: ManualSettlementPayload) =>
-      financeiroService.markReceivablePaid(receiveItem!.id!, payload),
+    mutationFn: (payload: FinancialPaymentConfirmation) =>
+      confirmFinancialPayment('RECEIVABLE', payload.input, payload.fingerprint),
     onSuccess: async (result) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.outrosCreditosRoot }),
-        queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.resumoKpis }),
-        queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos }),
-      ]);
+      await invalidateReceiptPayments();
       toast.success(
-        'Recebimento confirmado',
-        result.gatewayCanceled
-          ? 'A baixa manual foi registrada somente após a integração confirmar o cancelamento da cobrança bancária.'
-          : 'O crédito foi baixado na conta/caixa selecionada.',
+        result.preview.status === 'PAGO' ? 'Recebimento confirmado' : 'Recebimento parcial registrado',
+        `Recebido: ${paymentMoneyLabel(result.preview.paymentAmount)}. Saldo restante: ${paymentMoneyLabel(result.preview.remainingAfter)}.`,
       );
       setReceiveItem(null);
     },
@@ -359,6 +365,7 @@ export const useOutrosCreditos = (scopedPoloId?: string | null) => {
   };
 
   const openReceiveModal = (item: ContasReceber) => {
+    receiveMutation.reset(); legacyReceiveMutation.reset();
     setReceiveItem(item);
   };
 
@@ -406,7 +413,7 @@ export const useOutrosCreditos = (scopedPoloId?: string | null) => {
     accountId, setAccountId, paymentMethod, setPaymentMethod, receiveItem, setReceiveItem,
     showCategoryModal, setShowCategoryModal, accounts, partners, categories, credits, isLoading,
     activePolo, activeAccounts, receiveAccounts, createMutation, syncMutation,
-    receiveMutation, openCreateModal, closeCreateModal, filtered, totals, kpis,
+    receiveMutation, legacyReceiveMutation, openCreateModal, closeCreateModal, filtered, totals, kpis,
     allGroups, totalItems, totalPages, currentPage, pageItems, pageGroups,
     validateAndSubmit, copyLink, openReceiveModal, toggleGroup, getGroupSummary,
   };
