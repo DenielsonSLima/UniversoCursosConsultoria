@@ -1,6 +1,6 @@
 # Lote ativo
 
-Lote 2026-10-14-contrato-matricula-presencial: EM_VALIDACAO. Escopo exclusivo: composição do contrato por matrícula, valor recebido externamente incluído uma vez e identificado como já pago. Nenhuma alteração de boleto, caixa, saldo ou snapshot emitido. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-14-contrato-matricula-presencial.md`. Versão 4.8.218/revisão227. Pedido de produção autorizado nesta conversa; falta validação e implantação.
+Lote 2026-10-14-contrato-matricula-presencial: BACKEND_APLICADO. Escopo exclusivo: composição do contrato por matrícula, valor recebido externamente incluído uma vez e identificado como já pago. Nenhuma alteração de boleto, caixa, saldo ou snapshot emitido. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-14-contrato-matricula-presencial.md`. Versão 4.8.218/revisão227. Pedido de produção autorizado nesta conversa; Composição real conferida nos 18 alunos; migrations e anotações contratuais aplicadas. Frontend sem mudança funcional; publicação da versão aguarda CI.
 
 Entrega anterior:
 
