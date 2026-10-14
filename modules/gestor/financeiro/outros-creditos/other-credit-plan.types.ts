@@ -1,6 +1,15 @@
 import type { BanesePaymentRecord } from '../../../aluno/financeiro/banese/banese-payment.types';
 
 export type OtherCreditPlanRole = 'PARCELA' | 'MATRICULA' | 'REMATRICULA';
+export type OtherCreditPlanPeriodicity = 'MENSAL_CALENDARIO' | 'DIAS_CORRIDOS_30';
+export type OtherCreditPlanConditionsInput = {
+  jurosMensalPercentual: number;
+  multaPercentual: number;
+  descontoTipo: 'FIXO' | 'PERCENTUAL';
+  descontoValor: number;
+  descontoDiasAntecedencia: number;
+};
+export type OtherCreditPlanFeeInput = { valor: number; vencimento: string; condicoes?: OtherCreditPlanConditionsInput };
 export type OtherCreditPlanFinancialTerms = {
   nominalAmount: number;
   dueDate: string;
@@ -15,13 +24,15 @@ export type OtherCreditPlanInput = {
   quantidadeParcelas: number;
   valorParcela: number;
   primeiroVencimento: string;
+  periodicidade?: OtherCreditPlanPeriodicity;
+  parcelasPersonalizadas?: { numero: number; valor: number; vencimento: string }[];
   jurosMensalPercentual: number;
   multaPercentual: number;
   descontoTipo: 'FIXO' | 'PERCENTUAL';
   descontoValor: number;
   descontoDiasAntecedencia: number;
-  matricula: { valor: number; vencimento: string } | null;
-  rematricula: { valor: number; vencimento: string } | null;
+  matricula: OtherCreditPlanFeeInput | null;
+  rematricula: OtherCreditPlanFeeInput | null;
 };
 
 export type OtherCreditPlanPreview = {

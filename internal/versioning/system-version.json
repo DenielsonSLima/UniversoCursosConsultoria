@@ -1,8 +1,8 @@
 {
-  "version": "4.8.216",
+  "version": "4.8.217",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 225,
+  "revision": 226,
   "releasedAt": "2026-10-13",
-  "summary": "Carnê avulso em Outros Créditos com parcelas, encargos, descontos e taxas opcionais"
+  "summary": "Carnê em três etapas com cronograma editável e condições próprias para parcelas, matrícula e rematrícula"
 }

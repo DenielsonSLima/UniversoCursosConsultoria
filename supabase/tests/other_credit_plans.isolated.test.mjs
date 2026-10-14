@@ -11,7 +11,8 @@ const db = new PGlite();
 const source = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
 const migrations = ['20261013170000_other_credit_plans_schema.sql',
   '20261013170100_other_credit_plans_calculator.sql', '20261013170200_other_credit_plans_rpc.sql',
-  '20261013170300_other_credit_plans_integrity.sql'];
+  '20261013170300_other_credit_plans_integrity.sql',
+  '20261014010500_other_credit_plans_schedule.sql'];
 const id = (n) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const polo = id(1), otherPolo = id(2), payer = id(3), category = id(4), actor = id(5);
 const input = (overrides = {}) => ({ clienteId: payer, descricao: 'Aulas de prática',

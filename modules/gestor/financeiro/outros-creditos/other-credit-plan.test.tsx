@@ -10,6 +10,7 @@ import {
   initialOtherCreditPlanForm, issueOtherCreditPlanSequentially, otherCreditPlanEmissionState,
   recoverOrCreateOtherCreditPlan, refreshOtherCreditPlanSequentially,
   toOtherCreditPlanInput, validateOtherCreditPlanInput,
+  otherCreditPlanInputsEqual,
 } from './other-credit-plan.model';
 import { clearOtherCreditPlanAttempt, loadOtherCreditPlanAttempt, resolveOtherCreditPlanCreationFailure, saveOtherCreditPlanAttempt } from './other-credit-plan-attempt';
 import type { OtherCreditPlanCreationAttempt } from './other-credit-plan-attempt';
@@ -29,9 +30,9 @@ const plan = (receivables: OtherCreditPlan['receivables']): OtherCreditPlan => (
 });
 const resources = { partners: [], categories: [], activePolo: { nome: 'Unidade de teste' }, partnersLoading: false, partnersError: false, retryPartners() {} };
 const baseModel = {
-  form: completeForm(), planId: null, busy: false, message: null, preview: null, attempt: null,
+  form: completeForm(), step: 3, schedule: null, planId: null, busy: false, message: null, preview: null, attempt: null,
   previewPending: false, createPending: false, progress: null,
-  changeForm() {}, previewPlan() {}, createPlan() {}, issuePlan() {}, refresh() {}, download() {},
+  changeForm() {}, previewPlan() {}, nextStep() {}, previousStep() {}, createPlan() {}, issuePlan() {}, refresh() {}, download() {},
 };
 const renderContent = (changes = {}) => renderToStaticMarkup(<OtherCreditPlanContent resources={resources as any}
   model={{ ...baseModel, ...changes } as unknown as OtherCreditPlanModel} />);
@@ -66,11 +67,82 @@ test('criação exige prévia atual e pedido incerto bloqueia edição mantendo 
   assert.match(renderContent(), /<button[^>]*disabled=""[^>]*>[\s\S]*?Criar carnê/);
   const ready = renderContent({ preview });
   assert.match(ready, /Criar carnê/);
-  assert.doesNotMatch(ready, /<button[^>]*disabled=""/);
+  assert.doesNotMatch(ready, /<button[^>]*disabled=""[^>]*>[\s\S]*?Criar carnê/);
   const uncertain = renderContent({ attempt: { requestId: 'same-request' }, message: 'Confirmar pedido' });
   assert.match(uncertain, /<fieldset[^>]*disabled=""/);
   assert.match(uncertain, /Confirmar criação novamente/);
   assert.doesNotMatch(uncertain, /Conferir parcelas/);
+});
+
+test('três etapas separam dados, cronograma editável e revisão sem permitir criação antecipada', () => {
+  const data = renderContent({ step: 1 });
+  assert.match(data, /Etapa 1 de 3/);
+  assert.match(data, /Pagador cadastrado/);
+  assert.doesNotMatch(data, /Criar carnê|Valor de cada parcela|Cronograma financeiro/);
+  const financial = renderContent({ step: 2, schedule: preview, preview });
+  assert.match(financial, /Etapa 2 de 3/);
+  assert.match(financial, /A cada 30 dias/);
+  assert.match(financial, /aria-label="Vencimento de Parcela 1\/4"/);
+  assert.match(financial, /aria-label="Valor de Parcela 1\/4"/);
+  assert.match(financial, /Revisar carnê/);
+  assert.doesNotMatch(financial, /Criar carnê|Total nominal/);
+  const review = renderContent({ step: 3, preview });
+  assert.match(review, /Etapa 3 de 3/);
+  assert.match(review, /Total nominal/);
+  assert.match(review, /Criar carnê/);
+  assert.doesNotMatch(review, /type="date"|Periodicidade das parcelas/);
+});
+
+test('envia parcelas personalizadas e compara replay incluindo vencimento, valor e periodicidade', () => {
+  const form = { ...completeForm(), periodicity: 'DIAS_CORRIDOS_30' as const, quantity: '2', installments: [
+    { number: 1, value: '100,00', dueDate: '2026-10-25' }, { number: 2, value: '150,00', dueDate: '2026-11-28' },
+  ] };
+  const input = toOtherCreditPlanInput(form);
+  assert.deepEqual(input.parcelasPersonalizadas, [
+    { numero: 1, valor: 100, vencimento: '2026-10-25' }, { numero: 2, valor: 150, vencimento: '2026-11-28' },
+  ]);
+  assert.equal(validateOtherCreditPlanInput(input, 'polo'), null);
+  assert.equal(validateOtherCreditPlanInput({ ...input, valorParcela: 1, descontoValor: 10 }, 'polo'), null);
+  assert.equal(otherCreditPlanInputsEqual(input, JSON.parse(JSON.stringify(input))), true);
+  assert.equal(otherCreditPlanInputsEqual(input, { ...input, periodicidade: 'MENSAL_CALENDARIO' }), false);
+  for (const patch of [{ valor: 101 }, { vencimento: '2026-10-26' }]) {
+    assert.equal(otherCreditPlanInputsEqual(input, { ...input, parcelasPersonalizadas: [{ ...input.parcelasPersonalizadas![0], ...patch }, input.parcelasPersonalizadas![1]] }), false);
+  }
+  assert.match(validateOtherCreditPlanInput({ ...input, parcelasPersonalizadas: input.parcelasPersonalizadas!.slice(1) }, 'polo')!, /todas as parcelas/);
+  assert.match(validateOtherCreditPlanInput({ ...input, descontoValor: 100 }, 'polo')!, /cada parcela/);
+  const legacy = toOtherCreditPlanInput(completeForm());
+  assert.equal('periodicidade' in legacy, false);
+  assert.equal('parcelasPersonalizadas' in legacy, false);
+  assert.equal(otherCreditPlanInputsEqual(legacy, { ...legacy, periodicidade: 'MENSAL_CALENDARIO' }), true);
+});
+
+test('matrícula, rematrícula e parcelas enviam juros, multa e desconto independentes', () => {
+  const form = { ...completeForm(), interest: '1', penalty: '2', discount: '10,00', discountDays: '3',
+    enrollment: { enabled: true, value: '40,00', dueDate: '2026-10-20', terms: {
+      interest: '0,5', penalty: '1', discountType: 'PERCENTUAL' as const, discount: '5', discountDays: '1',
+    } }, reenrollment: { enabled: true, value: '60,00', dueDate: '2026-11-10', terms: {
+      interest: '3', penalty: '4', discountType: 'FIXO' as const, discount: '8,00', discountDays: '2',
+    } } };
+  const input = toOtherCreditPlanInput(form);
+  assert.deepEqual(input.matricula?.condicoes, { jurosMensalPercentual: 0.5, multaPercentual: 1, descontoTipo: 'PERCENTUAL', descontoValor: 5, descontoDiasAntecedencia: 1 });
+  assert.deepEqual(input.rematricula?.condicoes, { jurosMensalPercentual: 3, multaPercentual: 4, descontoTipo: 'FIXO', descontoValor: 8, descontoDiasAntecedencia: 2 });
+  assert.equal(input.jurosMensalPercentual, 1);
+  assert.equal(input.descontoValor, 10);
+  assert.equal(validateOtherCreditPlanInput(input, 'polo'), null);
+  for (const fee of ['matricula', 'rematricula'] as const) {
+    const original = input[fee]!;
+    for (const patch of [
+      { jurosMensalPercentual: 2.5 }, { multaPercentual: 3.5 }, { descontoTipo: original.condicoes!.descontoTipo === 'FIXO' ? 'PERCENTUAL' : 'FIXO' },
+      { descontoValor: 9 }, { descontoDiasAntecedencia: 4 },
+    ]) assert.equal(otherCreditPlanInputsEqual(input, { ...input, [fee]: { ...original, condicoes: { ...original.condicoes, ...patch } } }), false);
+  }
+  assert.match(validateOtherCreditPlanInput({ ...input, matricula: { ...input.matricula!, condicoes: { ...input.matricula!.condicoes!, descontoValor: 100 } } }, 'polo')!, /matrícula/);
+  assert.match(validateOtherCreditPlanInput({ ...input, rematricula: { ...input.rematricula!, condicoes: { ...input.rematricula!.condicoes!, descontoDiasAntecedencia: 61 } } }, 'polo')!, /rematrícula/);
+  const html = renderContent({ step: 2, form });
+  assert.match(html, /Juros ao mês de matrícula/);
+  assert.match(html, /Juros ao mês de rematrícula/);
+  assert.match(html, /Juros ao mês de parcelas/);
+  assert.doesNotMatch(html, /desconto se aplica somente às parcelas/);
 });
 
 test('busca encontra CPF completo enquanto opções exibem somente documento mascarado', () => {

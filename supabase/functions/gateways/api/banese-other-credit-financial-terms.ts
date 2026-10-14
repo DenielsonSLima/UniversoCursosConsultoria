@@ -50,8 +50,7 @@ export const buildOtherCreditPlanBaneseFinancialTerms = (
       .some((field) => !Object.prototype.hasOwnProperty.call(terms, field)) ||
     typeof terms.nominalAmount !== "number" ||
     terms.nominalAmount !== Number(receivable.valor) ||
-    terms.dueDate !== text(receivable.data_vencimento).slice(0, 10) ||
-    (role !== "PARCELA" && terms.discount !== null)
+    terms.dueDate !== text(receivable.data_vencimento).slice(0, 10)
   ) throw error();
   try {
     const normalized = normalizeBaneseFinancialTerms(

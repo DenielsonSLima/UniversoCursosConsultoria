@@ -6,6 +6,12 @@ Histórico anterior: [27/09/2026 — versões 4.8.117 a 4.8.127](./changelog/202
 
 Histórico arquivado: [28/09/2026 a 30/09/2026 — versões 4.8.128 a 4.8.137](./changelog/2026-09-28-a-2026-09-30-versoes-4-8-128-a-4-8-137.md), [27/09/2026 — versões 4.8.115 a 4.8.116](./changelog/2026-09-27-versoes-4-8-115-a-4-8-116.md), [27/09/2026 — versão 4.8.114](./changelog/2026-09-27-versao-4-8-114.md), [27/09/2026 — versão 4.8.113](./changelog/2026-09-27-versao-4-8-113.md), [27/09/2026 — versão 4.8.112](./changelog/2026-09-27-versao-4-8-112.md), [27/09/2026 — versão 4.8.111](./changelog/2026-09-27-versao-4-8-111.md), [25/09/2026 a 26/09/2026 — versões 4.8.91 a 4.8.110](./changelog/2026-09-25-a-2026-09-26-versoes-4-8-91-a-4-8-110.md).
 
+## [4.8.217] - 2026-10-13
+
+- Carnê avulso organizado em dados, financeiro editável e revisão final antes da criação.
+- Vencimentos mensais ou a cada 30 dias corridos, com valor e data próprios por parcela e taxas separadas.
+- Matrícula, rematrícula e parcelas recebem juros, multa e desconto próprios, refletidos nos totais, boletos e PDF.
+
 ## [4.8.216] - 2026-10-13
 
 - Outros Créditos permite criar carnê sem turma, com 1–60 parcelas mensais e taxas opcionais de matrícula/rematrícula.

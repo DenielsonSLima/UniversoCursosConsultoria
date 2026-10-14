@@ -20,9 +20,9 @@ export function OtherCreditPlanPreview({ preview, plan }: { preview: Preview; pl
       </div>)}
     </div>
     <div className="overflow-x-auto rounded-2xl border border-slate-200">
-      <table className="w-full min-w-[640px] text-left text-xs">
+      <table className="w-full min-w-[840px] text-left text-xs">
         <thead className="bg-slate-50 text-slate-500"><tr>
-          {['Cobrança', 'Vencimento', 'Valor nominal', 'Com desconto', 'Prazo do desconto', ...(plan ? ['Emissão'] : [])].map(label => (
+          {['Cobrança', 'Vencimento', 'Valor nominal', 'Com desconto', 'Prazo do desconto', 'Juros', 'Multa', ...(plan ? ['Emissão'] : [])].map(label => (
             <th key={label} className="px-4 py-3 font-black">{label}</th>
           ))}
         </tr></thead>
@@ -36,6 +36,12 @@ export function OtherCreditPlanPreview({ preview, plan }: { preview: Preview; pl
               <td className="px-4 py-3 font-bold text-slate-700">{formatCurrency(item.valor)}</td>
               <td className="px-4 py-3 text-emerald-700">{formatCurrency(item.valorComDesconto)}</td>
               <td className="px-4 py-3 text-slate-600">{item.financialTerms.discount ? formatDate(item.financialTerms.discount.validUntil) : 'Sem desconto'}</td>
+              <td className="px-4 py-3 text-slate-600">{item.financialTerms.interest
+                ? item.financialTerms.interest.type === 'monthly-percentage' ? `${item.financialTerms.interest.value.toLocaleString('pt-BR')}% ao mês` : `${formatCurrency(item.financialTerms.interest.value)} ao dia`
+                : 'Sem juros'}</td>
+              <td className="px-4 py-3 text-slate-600">{item.financialTerms.penalty
+                ? item.financialTerms.penalty.type === 'percentage' ? `${item.financialTerms.penalty.value.toLocaleString('pt-BR')}%` : formatCurrency(item.financialTerms.penalty.value)
+                : 'Sem multa'}</td>
               {plan ? <td className="px-4 py-3 font-bold text-slate-600">{receivable ? stateLabels[otherCreditPlanEmissionState(receivable)] : 'A conferir'}</td> : null}
             </tr>;
           })}
@@ -43,8 +49,7 @@ export function OtherCreditPlanPreview({ preview, plan }: { preview: Preview; pl
       </table>
     </div>
     <p className="text-xs leading-5 text-slate-500">
-      Juros de atraso: {preview.input.jurosMensalPercentual.toLocaleString('pt-BR')}% ao mês · Multa: {preview.input.multaPercentual.toLocaleString('pt-BR')}%.
-      {' '}O total com pontualidade depende do pagamento dentro do prazo de cada desconto.
+      Juros, multa e desconto seguem as condições de cada cobrança. O total com pontualidade depende do pagamento dentro do prazo de cada desconto.
     </p>
   </section>;
 }
