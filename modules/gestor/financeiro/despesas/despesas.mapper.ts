@@ -1,5 +1,5 @@
 import type { CategoriaFinanceira, DespesaLancamento } from './despesas.types';
-import { parseFinancialPaymentSummary } from '../settlements/financial-payment.presentation';
+import { parseFinancialPaymentSummary } from '../settlements/financial-payment.summary.ts';
 
 const toUpper = (value?: string | null) => (value || '').trim().toLocaleUpperCase('pt-BR');
 

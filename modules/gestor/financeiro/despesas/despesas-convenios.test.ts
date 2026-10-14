@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { mapLancamento } from './despesas.mapper.ts';
+import { mapReceivableFinancialComposition } from '../financeiro.composition-presentation.ts';
 import { validateConvenioExpenseMvp } from './despesas-convenios.model.ts';
 
 const fixture = {
@@ -73,4 +74,14 @@ test('integração usa wrapper atômico e consulta somente competências abertas
   assert.match(service, /p_convenio_mes_id: input\.convenioMesId/);
   assert.match(form, /useConveniosListQuery\(poloId, 'ABERTOS', ''\)/);
   assert.match(form, /invalidateConveniosScope\(queryClient, poloId, convenioMesId\)/);
+});
+
+
+test('mappers puros preservam o saldo canônico de pagamentos sem depender de React', () => {
+  const paymentSummary = { originalAmount: '100.00', previouslyPaid: '70.00', remainingBefore: '30.00', status: 'PENDENTE', hasEvents: true };
+  for (const mapper of [mapLancamento, mapReceivableFinancialComposition]) {
+    assert.deepEqual(mapper({ payment_summary: paymentSummary }).paymentSummary, paymentSummary);
+    assert.equal(mapper({ payment_summary: { ...paymentSummary, remainingBefore: 'inválido' } }).paymentSummary, undefined);
+    assert.equal(mapper({ payment_summary: null }).paymentSummary, undefined);
+  }
 });

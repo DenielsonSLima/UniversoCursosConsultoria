@@ -10,7 +10,7 @@ export interface CategoriaFinanceira {
 }
 
 export interface DespesaLancamento {
-  paymentSummary?: import('../settlements/financial-payment.presentation').FinancialPaymentSummary;
+  paymentSummary?: import('../settlements/financial-payment.summary.ts').FinancialPaymentSummary;
   id: string;
   despesaLancamentoId?: string;
   poloId?: string;

@@ -1,5 +1,5 @@
-import { parseBaneseCancellation, parseReceivableOperationCapabilities } from './financeiro.operation-capabilities';
-import { parseFinancialPaymentSummary } from './settlements/financial-payment.presentation';
+import { parseBaneseCancellation, parseReceivableOperationCapabilities } from './financeiro.operation-capabilities.ts';
+import { parseFinancialPaymentSummary } from './settlements/financial-payment.summary.ts';
 
 export interface FinancialCompositionPresentation {
   label: string;

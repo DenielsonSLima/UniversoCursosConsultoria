@@ -41,6 +41,7 @@ TypeScript, lint, build, 17 testes Deno, quatro suítes SQL/PGlite, routing, smo
 - `modules/gestor/financeiro/despesas/components/DespesaBaixaModal.tsx`
 - `modules/gestor/financeiro/despesas/components/DespesaCard.tsx`
 - `modules/gestor/financeiro/despesas/components/DespesaTable.tsx`
+- `modules/gestor/financeiro/despesas/despesas-convenios.test.ts`
 - `modules/gestor/financeiro/despesas/despesas-lancamentos.service.ts`
 - `modules/gestor/financeiro/despesas/despesas.mapper.ts`
 - `modules/gestor/financeiro/despesas/despesas.types.ts`
@@ -68,6 +69,7 @@ TypeScript, lint, build, 17 testes Deno, quatro suítes SQL/PGlite, routing, smo
 - `modules/gestor/financeiro/settlements/financial-payment.routing.ts`
 - `modules/gestor/financeiro/settlements/financial-payment.service.ts`
 - `modules/gestor/financeiro/settlements/financial-payment.smoke.test.mjs`
+- `modules/gestor/financeiro/settlements/financial-payment.summary.ts`
 - `modules/gestor/financeiro/settlements/financial-payment.types.ts`
 - `modules/gestor/financeiro/settlements/useFinancialPaymentForm.ts`
 - `modules/gestor/financeiro/settlements/useLegacyFullReceipt.ts`
@@ -113,4 +115,4 @@ TypeScript, lint, build, 17 testes Deno, quatro suítes SQL/PGlite, routing, smo
 - `supabase/tests/financial_payment_title_readers.fixture.sql`
 - `supabase/tests/receivable_payment.isolated.test.mjs`
 
-Total: 80 arquivos.
+Total: 82 arquivos.
