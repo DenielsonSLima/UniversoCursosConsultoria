@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-10-14T19:28:20.436Z",
+  "builtAt": "2026-10-14T19:36:18.004Z",
   "manifestVersion": 2,
-  "sourceSignature": "d408899a0ce96eb824d85728174b865febb0966594f0a6ba56afd94ce1954af7",
+  "sourceSignature": "877f7cf334986f569472d93f7b8b13b8c499bf5e37ba794382ef317d98f08308",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +11,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "83fe990ee284ff40526662e3356dc6fd72ca4bf4d24a658defdecc67fd5d14e0"
+      "hash": "0efa4070f51d95735c6aae88399438fa5a48835192c003afb6c63699db72b3fd"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -208,23 +208,13 @@
       "part": 1
     },
     {
-      "id": "81be7fed56159ab08a84",
-      "hash": "81be7fed56159ab08a846127b3becdb95296f3dd5248005fda78fecee629f532",
+      "id": "93942de9539667fe8800",
+      "hash": "93942de9539667fe88003b33116cd9aeba2b29a37aa7b998bc231b021d11ed90",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Lote ativo",
-      "text": "Lote 2026-10-14-restauracao-modal-financeiro. PRONTO_PARA_PUBLICACAO. Versão 4.8.223/revisão232. Restauração do visual aprovado do modal financeiro, preservando múltiplas formas, baixas parciais e cálculos no servidor. Correção e publicação autorizadas; conferência na tela será feita pelo usuário por orientação expressa. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-14-restauracao-modal-financeiro.md`.",
-      "normalizedText": "lote 2026 10 14 restauracao modal financeiro pronto para publicacao versao 4 8 223 revisao232 restauracao do visual aprovado do modal financeiro preservando multiplas formas baixas parciais e calculos no servidor correcao e publicacao autorizadas conferencia na tela sera feita pelo usuario por orientacao expressa manifesto explicito ai operacao registros alteracoes 2026 10 14 restauracao modal financeiro md",
-      "tokenCount": 54,
-      "part": 1
-    },
-    {
-      "id": "3d8a50c21c07d7a5f823",
-      "hash": "3d8a50c21c07d7a5f8237d4a4e1e5b46574f92de1eb5d7f4000448ab88831184",
-      "path": "ai/operacao/LOTE_ATIVO.md",
-      "section": "Lote ativo",
-      "text": "Base confirmada: main bf980f548fd57b3d3130938193a19df4ab2c54da, versão 4.8.221/revisão230, produção Vercel READY com os domínios institucionais. A revisão local 4.8.222 não faz parte deste lote e não foi tratada como publicada.",
-      "normalizedText": "base confirmada main bf980f548fd57b3d3130938193a19df4ab2c54da versao 4 8 221 revisao230 producao vercel ready com os dominios institucionais a revisao local 4 8 222 nao faz parte deste lote e nao foi tratada como publicada",
-      "tokenCount": 27,
+      "text": "Lote 2026-10-14-mascara-real-modal-financeiro. PRONTO_PARA_PUBLICACAO. Versão 4.8.224/revisão233. Máscara de real nos campos monetários do modal, sem alteração de layout ou cálculos. Conferência na tela reservada ao usuário. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-14-mascara-real-modal-financeiro.md`.",
+      "normalizedText": "lote 2026 10 14 mascara real modal financeiro pronto para publicacao versao 4 8 224 revisao233 mascara de real nos campos monetarios do modal sem alteracao de layout ou calculos conferencia na tela reservada ao usuario manifesto explicito ai operacao registros alteracoes 2026 10 14 mascara real modal financeiro md",
+      "tokenCount": 48,
       "part": 1
     },
     {
