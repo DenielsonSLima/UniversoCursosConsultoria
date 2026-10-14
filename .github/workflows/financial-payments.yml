@@ -1,0 +1,48 @@
+name: Partial and split financial payments
+on:
+  pull_request:
+    paths:
+      - 'modules/gestor/financeiro/**'
+      - 'supabase/functions/financial-receivable-payment/**'
+      - 'supabase/migrations/*financial_payment*'
+      - 'supabase/migrations/*receivable_payment*'
+      - 'supabase/tests/financial_payment*'
+      - 'supabase/tests/receivable_payment*'
+      - '.github/workflows/financial-payments.yml'
+permissions:
+  contents: read
+jobs:
+  payments:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.1
+      - run: npm ci
+      - name: Install isolated test dependencies
+        run: |
+          npm install --prefix "$RUNNER_TEMP/payment-tests" --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.3.14 jsdom@26.1.0
+          echo "PGLITE_MODULE_PATH=$RUNNER_TEMP/payment-tests/node_modules/@electric-sql/pglite/dist/index.js" >> "$GITHUB_ENV"
+          echo "FINANCIAL_PAYMENT_JSDOM_PATH=$RUNNER_TEMP/payment-tests/node_modules/jsdom/lib/api.js" >> "$GITHUB_ENV"
+      - name: Check receipt Edge graph and contracts
+        run: |
+          deno check --node-modules-dir=auto --no-lock supabase/functions/financial-receivable-payment/index.ts
+          deno test --node-modules-dir=auto --no-lock --allow-read --allow-env supabase/functions/financial-receivable-payment/*.test.ts
+      - name: Exercise PostgreSQL ledger, bank saga and cash projections
+        run: |
+          node supabase/tests/financial_payment.isolated.test.mjs
+          node supabase/tests/receivable_payment.isolated.test.mjs
+          node supabase/tests/financial_payment_cash.isolated.test.mjs
+          node supabase/tests/financial_payment_title_counts.isolated.test.mjs
+      - name: Exercise real React payment flow
+        run: |
+          node --test modules/gestor/financeiro/settlements/financial-payment.routing.test.ts
+          node --test --test-force-exit modules/gestor/financeiro/settlements/financial-payment.smoke.test.mjs

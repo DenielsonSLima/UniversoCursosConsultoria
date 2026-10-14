@@ -1,4 +1,5 @@
 import React from 'react';
+import { FinancialPaymentBalance, hasPartialPayment } from '../../settlements/financial-payment.presentation';
 import {
   AlertCircle,
   CheckCircle2,
@@ -60,7 +61,7 @@ const DespesaCard: React.FC<DespesaCardProps> = ({
   const isAberto = item.status === 'PENDENTE' || item.status === 'VENCIDO';
   const hasBaixaEstornada = isCancelado && Boolean(item.estornadoEm);
   const contaLabel = getDespesaContaLabel(item, contas);
-  const selectable = isAberto && !item.isRateioDerived && Boolean(onSelectionChange);
+  const selectable = isAberto && !item.paymentSummary?.hasEvents && !item.isRateioDerived && Boolean(onSelectionChange);
 
   return (
     <article className={`relative overflow-hidden rounded-3xl border bg-white shadow-sm transition-all duration-300 hover:shadow-lg ${selected ? 'ring-2 ring-rose-300' : ''} ${cfg.border}`}>
@@ -101,7 +102,7 @@ const DespesaCard: React.FC<DespesaCardProps> = ({
           </div>
           <span className={`inline-flex flex-shrink-0 items-center gap-1 rounded-xl border px-2.5 py-1 text-[10px] font-bold uppercase ${cfg.bg} ${cfg.text} ${cfg.border}`}>
             <cfg.Icon size={10} />
-            {cfg.label}
+            {hasPartialPayment(item.paymentSummary) ? 'Baixa parcial' : cfg.label}
           </span>
         </div>
 
@@ -110,9 +111,10 @@ const DespesaCard: React.FC<DespesaCardProps> = ({
           <p className={`mt-0.5 text-2xl font-black ${isPago ? 'text-emerald-600' : item.status === 'VENCIDO' ? 'text-rose-600' : 'text-[#001a33]'}`}>
             {formatDespesaCurrency(item.valor)}
           </p>
-          {isPago && (
+          {isPago && !item.paymentSummary?.hasEvents && (
             <p className="mt-0.5 text-xs font-bold text-emerald-700">Valor pago: {formatDespesaCurrency(item.valorPago ?? item.valor)}</p>
           )}
+          <FinancialPaymentBalance summary={item.paymentSummary} expense />
           {hasBaixaEstornada && (
             <p className="mt-0.5 text-xs font-bold text-slate-500">Baixa estornada: {formatDespesaCurrency(item.valorPago ?? item.valor)}</p>
           )}
@@ -152,7 +154,7 @@ const DespesaCard: React.FC<DespesaCardProps> = ({
               <dd className="mt-0.5 truncate font-bold text-indigo-600">{item.turmaNome}</dd>
             </div>
           )}
-          {isPago && (
+          {isPago && !item.paymentSummary?.hasEvents && (
             <>
               <div>
                 <dt className="text-[9px] font-black uppercase tracking-wider text-slate-400">Pagamento</dt>
@@ -184,7 +186,7 @@ const DespesaCard: React.FC<DespesaCardProps> = ({
 
         {!item.isRateioDerived && !isCancelado && (
           <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
-            {isAberto && onEditar && (
+            {isAberto && !item.paymentSummary?.hasEvents && onEditar && (
               <button
                 type="button"
                 onClick={() => onEditar(item)}
@@ -201,10 +203,11 @@ const DespesaCard: React.FC<DespesaCardProps> = ({
                 className={`${actionClass} bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-500`}
                 aria-label={`Dar baixa em ${item.descricao}`}
               >
-                <CheckCircle2 size={13} /> Dar baixa
+                <CheckCircle2 size={13} /> {hasPartialPayment(item.paymentSummary) ? 'Pagar saldo' : 'Dar baixa'}
               </button>
             )}
-            {onImprimir && (
+            {item.paymentSummary?.hasEvents && onPagar && <button type="button" onClick={() => onPagar(item)} className={`${actionClass} border border-emerald-200 text-emerald-700`}>Histórico</button>}
+            {!item.paymentSummary?.hasEvents && onImprimir && (
               <button
                 type="button"
                 onClick={() => onImprimir(item)}
@@ -224,7 +227,7 @@ const DespesaCard: React.FC<DespesaCardProps> = ({
                 <Paperclip size={13} /> Anexo
               </button>
             )}
-            {isAberto && onExcluir && (
+            {isAberto && !item.paymentSummary?.hasEvents && onExcluir && (
               <button
                 type="button"
                 onClick={() => onExcluir([item])}
@@ -234,7 +237,7 @@ const DespesaCard: React.FC<DespesaCardProps> = ({
                 <Trash2 size={13} /> Excluir
               </button>
             )}
-            {onCancelar && (isPago || !onExcluir) && (
+            {onCancelar && !item.paymentSummary?.hasEvents && (isPago || !onExcluir) && (
               <button
                 type="button"
                 onClick={() => onCancelar(item)}

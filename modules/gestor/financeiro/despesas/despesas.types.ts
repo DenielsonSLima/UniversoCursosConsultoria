@@ -10,6 +10,7 @@ export interface CategoriaFinanceira {
 }
 
 export interface DespesaLancamento {
+  paymentSummary?: import('../settlements/financial-payment.summary.ts').FinancialPaymentSummary;
   id: string;
   despesaLancamentoId?: string;
   poloId?: string;
@@ -111,15 +112,7 @@ export interface DespesaReciboSnapshot {
   };
 }
 
-export interface DespesaBaixaParams {
-  requestId: string;
-  contaBancariaId: string;
-  dataPagamento: string;
-  formaPagamento: string;
-  jurosValor?: number;
-  multaValor?: number;
-  descontoValor?: number;
-}
+export type DespesaBaixaParams = import('../settlements/financial-payment.types').FinancialPaymentConfirmation;
 
 export interface UpdateDespesaInput {
   requestId: string;

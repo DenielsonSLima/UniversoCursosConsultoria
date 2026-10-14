@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Banknote, BookOpen, ChevronDown, ChevronLeft, ChevronRight, Loader2, Plus, QrCode, Search, WalletCards, XCircle } from 'lucide-react';
 import ToastNotification from '../../components/ToastNotification';
-import ManualSettlementModal from '../receber/components/manual-settlement/ManualSettlementModal';
+import { ReceivablePaymentModal } from '../settlements/ReceivablePaymentModal';
 import FinancialUnderlineTabs from '../components/FinancialUnderlineTabs';
 import { useOutrosCreditos } from './useOutrosCreditos';
 import { OtherCreditRow } from './OtherCreditRow';
@@ -25,7 +25,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId }) => {
     toasts, removeToast, statusScope, setStatusScope, search, setSearch,
     startDate, setStartDate, endDate, setEndDate, categoryFilterId, setCategoryFilterId,
     setPage, groupMode, setGroupMode, expandedGroups, receiveItem,
-    setReceiveItem, categories, isLoading, receiveAccounts, receiveMutation,
+    setReceiveItem, categories, isLoading, receiveAccounts, receiveMutation, legacyReceiveMutation,
     openCreateModal, filtered, totals, kpis, allGroups, totalItems,
     totalPages, currentPage, pageItems, pageGroups, toggleGroup, getGroupSummary,
   } = model;
@@ -328,17 +328,17 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId }) => {
       )}
 
       {receiveItem && (
-        <ManualSettlementModal
+        <ReceivablePaymentModal
           key={receiveItem.id}
-          receivable={receiveItem}
+          item={receiveItem} readOnly={receiveItem.status === 'PAGO'}
           accounts={receiveAccounts}
           initialAccountId={receiveAccounts[0]?.id || ''}
-          pending={receiveMutation.isPending}
-          error={receiveMutation.error instanceof Error ? receiveMutation.error.message : null}
+          legacyPending={legacyReceiveMutation.isPending} legacyError={legacyReceiveMutation.error}
+          onLegacyConfirm={payload => legacyReceiveMutation.mutate(payload)}
           onClose={() => {
-            if (!receiveMutation.isPending) setReceiveItem(null);
+            if (!receiveMutation.isPending && !legacyReceiveMutation.isPending) setReceiveItem(null);
           }}
-          onConfirm={(payload) => receiveMutation.mutate(payload)}
+          onConfirm={(payload) => receiveMutation.mutateAsync(payload)}
         />
       )}
     </div>

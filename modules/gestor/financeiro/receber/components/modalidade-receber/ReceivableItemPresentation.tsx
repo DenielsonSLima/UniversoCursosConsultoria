@@ -14,6 +14,7 @@ import { hasProescEvidence, isProescPaymentUnderReview } from '../../../financei
 import { receivableIssuanceNotice } from '../../../financeiro.receivable-issuance';
 import { formatEnrollment } from './modalidade-receber.enrollment';
 import { ManualSettlementAudit } from './ManualSettlementAudit';
+import { FinancialPaymentBalance, hasPartialPayment } from '../../../settlements/financial-payment.presentation';
 import { ReceivableAmountSummary } from './ReceivableAmountSummary';
 import {
   canOpenBaneseDocument,
@@ -51,7 +52,7 @@ interface ItemProps {
 
 export const ReceivableStatusBadge: React.FC<{ item: ContasReceber }> = ({ item }) => {
   const underReview = isProescPaymentUnderReview(item);
-  const cancellationLabel = baneseCancellationLabel(item);
+  const cancellationLabel = item.paymentSummary?.hasEvents ? null : baneseCancellationLabel(item);
   return (
   <span title={underReview ? 'A situação de pagamento ainda aguarda confirmação na origem.' : undefined} className={`inline-flex max-w-[220px] items-center gap-1 rounded-full px-2.5 py-1 text-[9px] font-black uppercase ${
     underReview ? 'bg-amber-50 text-amber-700' : item.status === 'PAGO'
@@ -65,7 +66,7 @@ export const ReceivableStatusBadge: React.FC<{ item: ContasReceber }> = ({ item 
             : 'bg-amber-50 text-amber-700'
   }`}>
     {item.status === 'PAGO' ? <CheckCircle2 size={11} /> : <Clock3 size={11} />}
-    {cancellationLabel || (underReview ? 'Histórico Proesc em conferência' : item.status)}
+    {cancellationLabel || (underReview ? 'Histórico Proesc em conferência' : hasPartialPayment(item.paymentSummary) ? 'Baixa parcial' : item.status)}
   </span>
   );
 };
@@ -80,8 +81,11 @@ export const ReceivableActionButtons: React.FC<ItemProps> = ({ item, actions }) 
       </span>
     );
   }
-  if (baneseCancellationLabel(item) && item.status !== 'PAGO') {
+  if (baneseCancellationLabel(item) && item.status !== 'PAGO' && !item.paymentSummary?.hasEvents) {
     return <span className="text-[10px] font-bold text-slate-500" role="status">{baneseCancellationLabel(item)}</span>;
+  }
+  if (item.status === 'PAGO' && item.paymentSummary?.hasEvents) {
+    return <button type="button" onClick={() => actions.onOpenPayment(item)} className="rounded-xl border border-emerald-200 px-3 py-2 text-[10px] font-black text-emerald-700">Histórico de pagamentos</button>;
   }
   if (item.status === 'PAGO') {
     const paidThroughAsaas = isPaidThroughAsaas(item);
@@ -145,13 +149,14 @@ export const ReceivableActionButtons: React.FC<ItemProps> = ({ item, actions }) 
 
   return (
     <div className="grid w-full max-w-[180px] grid-cols-2 gap-2">
+      {item.paymentSummary?.hasEvents ? <button type="button" onClick={() => actions.onOpenPayment(item)} className="col-span-2 rounded-xl border border-emerald-200 px-3 py-2 text-[10px] font-black text-emerald-700">Histórico de pagamentos</button> : null}
       {item.operationCapabilities?.canSettle === true ? <button
         type="button"
         onClick={() => actions.onOpenPayment(item)}
         className="col-span-2 rounded-xl bg-[#001a33] px-3 py-2.5 text-[10px] font-black uppercase tracking-wider text-white hover:bg-emerald-700"
         title="Confirmar recebimento manual"
       >
-        Receber
+        {hasPartialPayment(item.paymentSummary) ? 'Receber saldo' : 'Receber'}
       </button> : <span className="col-span-2 text-[10px] font-bold text-slate-500" role="status">
         {item.operationCapabilities?.readOnlyReason || 'Recebimento indisponível para este título.'}
       </span>}
@@ -303,6 +308,7 @@ export const ReceivableRow: React.FC<ReceivableRowProps> = ({
     </td>
     <td className="py-5 pl-3 pr-2">
       <ReceivableAmountSummary item={item} compact />
+      <FinancialPaymentBalance summary={item.paymentSummary} />
     </td>
     <td className="py-5 pl-2 pr-3"><ReceivableActionButtons item={item} actions={actions} /></td>
   </tr>
@@ -344,6 +350,7 @@ export const ReceivableCard: React.FC<ItemProps> = ({ item, actions }) => (
       <div>
         <p className="text-[9px] font-black uppercase text-slate-400">Valor</p>
         <ReceivableAmountSummary item={item} />
+        <FinancialPaymentBalance summary={item.paymentSummary} />
       </div>
     </div>
     <div className="mt-4 rounded-xl border border-slate-100 px-3 py-2">

@@ -8,6 +8,13 @@ Histórico arquivado: [28/09/2026 a 30/09/2026 — versões 4.8.128 a 4.8.137](.
 
 Histórico arquivado: [30/09/2026 — versões 4.8.138 a 4.8.144](./changelog/2026-09-30-versoes-4-8-138-a-4-8-144.md).
 
+## [4.8.221] - 2026-10-14
+
+- Contas a Receber, Outros Créditos e Contas a Pagar permitem registrar pagamentos parciais e combinar formas e contas na mesma baixa.
+- Saldo restante, ajustes, prévia e histórico são calculados no servidor, com proteção contra confirmação repetida e valores desatualizados.
+- Caixa e relatórios contabilizam cada pagamento na data e conta corretas; despesas permitem estornar um pagamento específico preservando o histórico.
+- Recebimento manual Banese exige cancelamento bancário confirmado; o saldo aberto não gera boleto automaticamente. Fluxos importados e especializados preservam suas regras anteriores.
+
 ## [4.8.220] - 2026-10-14
 
 - Outros Créditos permite selecionar parcelas, grupos ou a página para cancelar até 25 lançamentos por operação.

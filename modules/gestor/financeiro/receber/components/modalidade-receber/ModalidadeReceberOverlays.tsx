@@ -5,8 +5,7 @@ import {
   isContaDisponivelNoPolo,
   type ContaBancaria,
 } from '../../../financeiro.service';
-import ManualSettlementModal from '../manual-settlement/ManualSettlementModal';
-import type { ManualSettlementPayload } from '../manual-settlement/useManualSettlementForm';
+import { ReceivablePaymentModal } from '../../../settlements/ReceivablePaymentModal';
 import InstitutionalReceiptModal from './InstitutionalReceiptModal';
 import type { ModalidadeReceberOperations } from './useModalidadeReceberOperations';
 import { paymentGatewayLabel } from './modalidade-receber.utils';
@@ -26,7 +25,7 @@ export const ModalidadeReceberOverlays: React.FC<ModalidadeReceberOverlaysProps>
     receiptItem,
     reversalReason,
     recreateAsaas,
-    paymentMutation,
+    paymentMutation, legacyPaymentMutation,
     reversalMutation,
     setReversalReason,
     setRecreateAsaas,
@@ -38,19 +37,19 @@ export const ModalidadeReceberOverlays: React.FC<ModalidadeReceberOverlaysProps>
   return (
     <>
       {selected && typeof document !== 'undefined' ? createPortal((
-        <ManualSettlementModal
+        <ReceivablePaymentModal
           key={selected.id}
-          receivable={selected}
+          item={selected} readOnly={selected.status === 'PAGO' || selected.operationCapabilities?.canSettle !== true}
           accounts={settlementAccounts}
           initialAccountId={(
             settlementAccounts.find((account) =>
               isContaDisponivelNoPolo(account, selected.poloId)
             )
           )?.id || ''}
-          pending={paymentMutation.isPending}
-          error={paymentMutation.error instanceof Error ? paymentMutation.error.message : null}
+          legacyPending={legacyPaymentMutation.isPending} legacyError={legacyPaymentMutation.error}
+          onLegacyConfirm={payload => legacyPaymentMutation.mutate(payload)}
           onClose={closePaymentModal}
-          onConfirm={(payload: ManualSettlementPayload) => paymentMutation.mutate(payload)}
+          onConfirm={(payload) => paymentMutation.mutateAsync(payload)}
         />
       ), document.body) : null}
 

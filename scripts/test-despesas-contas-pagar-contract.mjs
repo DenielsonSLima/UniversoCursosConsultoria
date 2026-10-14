@@ -164,10 +164,16 @@ test('modais financeiros são portais do viewport e não ficam presos ao contêi
   assert.ok(modalPortal.includes('createPortal'));
   assert.ok(modalPortal.includes('document.body'));
   assert.ok(modalPortal.includes("document.body.style.overflow = 'hidden'"));
-  for (const modalName of ['DespesaBaixaModal.tsx', 'DespesaEditModal.tsx', 'DespesaCancelModal.tsx']) {
+  for (const modalName of ['DespesaEditModal.tsx', 'DespesaCancelModal.tsx']) {
     const modal = readFileSync(resolve(root, 'modules/gestor/financeiro/despesas/components', modalName), 'utf8');
     assert.ok(modal.includes('DespesaModalPortal'), `${modalName} deve usar o portal de viewport.`);
   }
+  const paymentWrapper = readFileSync(resolve(root, 'modules/gestor/financeiro/despesas/components/DespesaBaixaModal.tsx'), 'utf8');
+  assert.ok(paymentWrapper.includes('<FinancialPaymentModal sourceKind="EXPENSE"'));
+  const paymentModal = readFileSync(resolve(root, 'modules/gestor/financeiro/settlements/FinancialPaymentModal.tsx'), 'utf8');
+  assert.ok(paymentModal.includes('createPortal'));
+  assert.ok(paymentModal.includes('document.body'));
+  assert.ok(paymentModal.includes("document.body.style.overflow = 'hidden'"));
 });
 
 test('edição e estorno são idempotentes, autorizados e auditáveis', () => {

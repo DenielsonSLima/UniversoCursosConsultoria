@@ -1,3 +1,4 @@
+import { useExpensePayment } from '../hooks/useExpensePayment';
 // File: modules/gestor/financeiro/despesas/fixas/DespesasFixasTab.tsx
 
 import React, { useMemo, useState } from 'react';
@@ -9,7 +10,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   CancelarOuEstornarDespesaInput,
   despesasService,
-  DespesaBaixaParams,
   DespesaLancamento,
   UpdateDespesaInput,
 } from '../despesas.service';
@@ -145,16 +145,9 @@ const DespesasFixasTab: React.FC<{ poloId?: string | null }> = ({ poloId: scoped
     await Promise.all(invalidations);
   };
 
-  const baixaMutation = useMutation({
-    mutationFn: (params: DespesaBaixaParams) =>
-      despesasService.markDespesaPaga(baixaItem!.id, params),
-    onSuccess: async () => {
-      await invalidateExpenseData(true);
-      toast.success('Baixa confirmada!', 'O pagamento foi registrado com sucesso.');
-      setBaixaItem(null);
-    },
-    onError: (err: any) => toast.error('Erro ao dar baixa', err.message),
-  });
+  const baixaMutation = useExpensePayment(
+    baixaItem, () => invalidateExpenseData(true), () => setBaixaItem(null), toast,
+  );
 
   const editMutation = useMutation({
     mutationFn: (input: UpdateDespesaInput) => despesasService.updateDespesa(editItem!.id, input),
@@ -439,7 +432,8 @@ const DespesasFixasTab: React.FC<{ poloId?: string | null }> = ({ poloId: scoped
           item={baixaItem}
           contas={contas}
           poloId={poloId}
-          onConfirm={(params) => baixaMutation.mutate(params)}
+          onConfirm={(params) => baixaMutation.mutateAsync(params)}
+          onReversed={async () => { await invalidateExpenseData(true); setBaixaItem(null); }}
           onClose={() => setBaixaItem(null)}
           isPending={baixaMutation.isPending}
         />
