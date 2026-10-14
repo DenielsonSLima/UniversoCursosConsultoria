@@ -35,9 +35,11 @@ const errorMessage = async (error: unknown, fallback: string) => {
 
 export async function previewFinancialPayment(sourceKind: FinancialPaymentSourceKind,
   input: FinancialPaymentInput,
+  automaticAmount = false,
 ): Promise<FinancialPaymentPreview> {
   const { data, error } = await supabase.rpc('preview_financial_payment_secure', {
-    p_source_kind: sourceKind, p_source_id: input.sourceId, p_input: input,
+    p_source_kind: sourceKind, p_source_id: input.sourceId,
+    p_input: automaticAmount ? { ...input, automaticAmount: true } : input,
   });
   if (error) throw new Error(await errorMessage(error, 'Não foi possível calcular o pagamento.'));
   if (!data || typeof data.fingerprint !== 'string' || !Array.isArray(data.components)) {

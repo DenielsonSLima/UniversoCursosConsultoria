@@ -53,8 +53,11 @@ export function FinancialPaymentEditor({ form, accounts, expense }: { form: Fina
       keywords: [account.banco, account.conta, account.agencia, account.titular, account.poloNome].filter(Boolean).join(' '),
       icon: account.natureza === 'CAIXA_INTERNO' ? <WalletCards size={17} /> : <Landmark size={17} />,
     })), [accounts]);
-  const setComponent = (index: number, field: 'accountId' | 'method' | 'amount', value: string) => form.setDraft(current => ({ ...current,
-    components: current.components.map((component, row) => row === index ? { ...component, [field]: value } : component) }));
+  const setComponent = (index: number, field: 'accountId' | 'method' | 'amount', value: string) => {
+    if (field === 'amount') { form.setPaymentAmount(index, value); return; }
+    form.setDraft(current => ({ ...current,
+      components: current.components.map((component, row) => row === index ? { ...component, [field]: value } : component) }));
+  };
 
   return <fieldset disabled={disabled} className="min-w-0 space-y-4">
     <div className="flex items-start justify-between gap-4">
@@ -71,7 +74,7 @@ export function FinancialPaymentEditor({ form, accounts, expense }: { form: Fina
         {form.draft.components.length > 1 ? <div className="mb-3 flex items-center justify-between gap-3">
           <p className="text-xs font-black text-[#001a33]">Pagamento {index + 1}</p>
           <button type="button" aria-label={`Remover pagamento ${index + 1}`} disabled={disabled}
-            onClick={() => form.setDraft(current => ({ ...current, components: current.components.filter((_item, row) => row !== index) }))}
+            onClick={() => { form.disableAutomaticAmount(); form.setDraft(current => ({ ...current, components: current.components.filter((_item, row) => row !== index) })); }}
             className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-700 disabled:opacity-40"><Trash2 size={15} /></button>
         </div> : null}
         <div className="grid gap-4 sm:grid-cols-2">
@@ -100,7 +103,7 @@ export function FinancialPaymentEditor({ form, accounts, expense }: { form: Fina
         </div>
       </div>)}
       <button type="button" disabled={disabled || form.draft.components.length >= 10}
-        onClick={() => form.setDraft(current => ({ ...current, components: [...current.components, { accountId: '', method: 'PIX', amount: '' }] }))}
+        onClick={() => { form.disableAutomaticAmount(); form.setDraft(current => ({ ...current, components: [...current.components, { accountId: '', method: 'PIX', amount: '' }] })); }}
         className="inline-flex items-center gap-1.5 rounded-lg px-1 py-1.5 text-[11px] font-bold text-emerald-700 transition-colors hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-40">
         <Plus size={15} /> Adicionar forma de pagamento
       </button>

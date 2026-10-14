@@ -30,6 +30,7 @@ export function useFinancialPaymentForm(sourceKind: FinancialPaymentSourceKind, 
   const [history, setHistory] = useState<FinancialPaymentHistory | null>(null);
   const [preview, setPreview] = useState<FinancialPaymentPreview | null>(null);
   const [previewKey, setPreviewKey] = useState('');
+  const [automaticAmount, setAutomaticAmount] = useState(true);
   const [loading, setLoading] = useState(true);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [pending, setPending] = useState(false);
@@ -39,7 +40,14 @@ export function useFinancialPaymentForm(sourceKind: FinancialPaymentSourceKind, 
   const storageKey = useRef('');
   const inFlight = useRef(false);
   const input = useMemo(() => normalizePaymentDraft(draft), [draft]);
-  const inputKey = input ? JSON.stringify(input) : '';
+  const automatic = automaticAmount && draft.components.length === 1;
+  const inputKey = input ? JSON.stringify({ input, automatic }) : '';
+  const disableAutomaticAmount = () => setAutomaticAmount(false);
+  const setPaymentAmount = (index: number, amount: string) => {
+    setAutomaticAmount(false);
+    setDraft(current => ({ ...current, components: current.components.map((component, row) =>
+      row === index ? { ...component, amount } : component) }));
+  };
 
   useEffect(() => {
     let active = true;
@@ -51,7 +59,7 @@ export function useFinancialPaymentForm(sourceKind: FinancialPaymentSourceKind, 
       storageKey.current = attemptKey(userId, sourceKind, sourceId);
       const saved = loadAttempt(storageKey.current, sourceId);
       setHistory(data);
-      if (saved) { setSubmitted(saved); setDraft(draftFromCanonical(saved.input)); }
+      if (saved) { setAutomaticAmount(false); setSubmitted(saved); setDraft(draftFromCanonical(saved.input)); }
       else setDraft(current => ({ ...current, components: [{ ...current.components[0], amount: paymentMoneyInput(data.summary.remainingBefore) }] }));
     }).catch(cause => { if (active) setError(cause instanceof Error ? cause.message : 'Não foi possível consultar o saldo.'); })
       .finally(() => { if (active) setLoading(false); });
@@ -60,12 +68,20 @@ export function useFinancialPaymentForm(sourceKind: FinancialPaymentSourceKind, 
 
   useEffect(() => {
     if (loading || submitted || !input || !draft.paymentDate) { setPreviewLoading(false); return; }
+    if (preview && previewKey === inputKey) { setPreviewLoading(false); return; }
     let active = true;
     setPreviewLoading(true);
     const timer = window.setTimeout(() => {
-      void previewFinancialPayment(sourceKind, input).then(result => {
+      void previewFinancialPayment(sourceKind, input, automatic).then(result => {
         if (!active) return;
-        setPreview(result); setPreviewKey(inputKey); setError(null);
+        if (automatic) {
+          const amount = result.components[0]?.amount;
+          if (typeof amount !== 'string') throw new Error('O valor atualizado não foi confirmado pelo servidor.');
+          const adjustedInput = { ...input, components: [{ ...input.components[0], amount }] };
+          setDraft(current => ({ ...current, components: [{ ...current.components[0], amount: paymentMoneyInput(amount) }] }));
+          setPreviewKey(JSON.stringify({ input: adjustedInput, automatic }));
+        } else setPreviewKey(inputKey);
+        setPreview(result); setError(null);
       }).catch(cause => { if (active) { setPreview(null); setPreviewKey(''); setError(cause instanceof Error ? cause.message : 'Não foi possível conferir o pagamento.'); } })
         .finally(() => { if (active) setPreviewLoading(false); });
     }, 250);
@@ -93,7 +109,7 @@ export function useFinancialPaymentForm(sourceKind: FinancialPaymentSourceKind, 
       setError(cause instanceof Error ? cause.message : 'Resultado ainda não confirmado. Confira esta mesma operação.');
     } finally { inFlight.current = false; setPending(false); }
   };
-  return { draft, setDraft, history, preview: previewKey === inputKey ? preview : null, loading, previewLoading,
+  return { draft, setDraft, setPaymentAmount, disableAutomaticAmount, history, preview: previewKey === inputKey ? preview : null, loading, previewLoading,
     pending, error, submitted, storageWarning, canConfirm, confirm, locked: pending || Boolean(submitted) };
 }
 
