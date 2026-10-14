@@ -17,7 +17,6 @@ const item = {
 const model = {
   openReceiveModal() {}, openPaymentModal() {}, copyLink() {},
   syncMutation: { isPending: false, mutate() {} },
-  refreshMutation: { isPending: false, mutate() {} },
 };
 const render = (receipt: ContasReceber, onOpenPlan?: (id: string) => void) => renderToStaticMarkup(
   <table><tbody><OtherCreditRow item={receipt} index={0} model={model as any} onOpenPlan={onOpenPlan} /></tbody></table>,
@@ -50,7 +49,7 @@ test('cobrança importada pendente não oferece nova emissão ou caixa Banese', 
 test('cobrança Banese permite abrir o caixa existente', () => {
   const text = render({ ...item, origemPagamento: 'BANESE', gatewayProvider: 'banese_card', asaasPaymentId: 'bank-id', status: 'PENDENTE' });
   assert.match(text, /Abrir caixa/);
-  assert.doesNotMatch(text, /Gerar link/);
+  assert.doesNotMatch(text, /Gerar link|Atualizar/);
 });
 
 test('título de carnê oferece abertura do plano e concentra emissão no fluxo de retomada', () => {

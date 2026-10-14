@@ -45,7 +45,8 @@ export const useOutrosCreditos = (scopedPoloId?: string | null) => {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [creationAttemptId, setCreationAttemptId] = useState(generateSafeUuid);
 
-  useFinanceiroRealtime(scopedPoloId || poloId);
+  // The subscription follows the list scope, not a remembered creation form polo.
+  useFinanceiroRealtime(scopedPoloId);
 
   const summaryFilters = useMemo(() => ({
     poloId: scopedPoloId || undefined,
@@ -129,15 +130,6 @@ export const useOutrosCreditos = (scopedPoloId?: string | null) => {
       toast.success('Cobrança enviada', 'O link bancário foi gerado ou atualizado.');
     },
     onError: (error: any) => toast.error('Erro no link bancário', error.message),
-  });
-
-  const refreshMutation = useMutation({
-    mutationFn: (id: string) => asaasIntegrationService.refreshReceivableStatus(id),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.outrosCreditosRoot });
-      toast.success('Status atualizado', 'A cobrança bancária foi consultada.');
-    },
-    onError: (error: any) => toast.error('Erro ao atualizar', error.message),
   });
 
   const receiveMutation = useMutation({
@@ -412,8 +404,8 @@ export const useOutrosCreditos = (scopedPoloId?: string | null) => {
     description, setDescription, value, setValue, dueDate, setDueDate,
     categoryId, setCategoryId, partnerType, setPartnerType, partnerId, setPartnerId,
     accountId, setAccountId, paymentMethod, setPaymentMethod, receiveItem, setReceiveItem,
-    showCategoryModal, setShowCategoryModal, accounts, partners, categories, isLoading,
-    activePolo, activeAccounts, receiveAccounts, createMutation, syncMutation, refreshMutation,
+    showCategoryModal, setShowCategoryModal, accounts, partners, categories, credits, isLoading,
+    activePolo, activeAccounts, receiveAccounts, createMutation, syncMutation,
     receiveMutation, openCreateModal, closeCreateModal, filtered, totals, kpis,
     allGroups, totalItems, totalPages, currentPage, pageItems, pageGroups,
     validateAndSubmit, copyLink, openReceiveModal, toggleGroup, getGroupSummary,

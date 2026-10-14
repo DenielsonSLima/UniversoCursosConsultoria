@@ -1,5 +1,5 @@
-import React from 'react';
-import { Banknote, BookOpen, ChevronDown, ChevronLeft, ChevronRight, Loader2, Plus, QrCode, Search, WalletCards } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { Banknote, BookOpen, ChevronDown, ChevronLeft, ChevronRight, Loader2, Plus, QrCode, Search, WalletCards, XCircle } from 'lucide-react';
 import ToastNotification from '../../components/ToastNotification';
 import ManualSettlementModal from '../receber/components/manual-settlement/ManualSettlementModal';
 import FinancialUnderlineTabs from '../components/FinancialUnderlineTabs';
@@ -11,6 +11,10 @@ import { OtherCreditPdvModal } from './OtherCreditPdvModal';
 import { OtherCreditPlanModal } from './OtherCreditPlanModal';
 import { useOtherCreditPlan } from './useOtherCreditPlan';
 import { formatCurrency, formatDate, type OtherCreditGroupMode } from './outros-creditos.presentation';
+import { useOtherCreditCancellation } from './useOtherCreditCancellation';
+import { OtherCreditCancellationModal } from './OtherCreditCancellationModal';
+import { OtherCreditSelectionCheckbox } from './OtherCreditSelectionCheckbox';
+import { OTHER_CREDIT_CANCELLATION_LIMIT, selectableOtherCredits } from './other-credit-cancellation.selection';
 
 interface OutrosCreditosTabProps { poloId?: string | null; }
 
@@ -25,6 +29,11 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId }) => {
     openCreateModal, filtered, totals, kpis, allGroups, totalItems,
     totalPages, currentPage, pageItems, pageGroups, toggleGroup, getGroupSummary,
   } = model;
+  const visibleItems = useMemo(() => groupMode === 'none' ? pageItems : pageGroups.flatMap(group => group.items), [groupMode, pageItems, pageGroups]);
+  const selectionScope = JSON.stringify([poloId, statusScope, search, startDate, endDate, categoryFilterId, groupMode, currentPage]);
+  const cancellation = useOtherCreditCancellation(visibleItems, selectionScope, model.credits, poloId);
+  const eligiblePageItems = selectableOtherCredits(visibleItems).filter(item => !cancellation.reservedIds.has(item.id!));
+  const selectedPageCount = eligiblePageItems.filter(item => cancellation.selectedIds.has(item.id!)).length;
 
   return (
     <div className="animate-fadeIn space-y-6">
@@ -152,6 +161,35 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId }) => {
         )}
       </div>
 
+      {cancellation.savedAttempts.length > 0 ? <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">
+        <div><p className="text-sm font-black text-amber-900">Cancelamentos para conferir</p>
+          <p className="mt-1 text-xs text-amber-800">Retome uma operação para confirmar o resultado de todos os seus créditos.</p>
+          {cancellation.resumeError ? <p role="alert" className="mt-2 text-sm text-rose-800">{cancellation.resumeError}</p> : null}</div>
+        <div className="flex flex-wrap gap-2">
+          <select aria-label="Operação de cancelamento para retomar" value={cancellation.resumeId || cancellation.savedAttempts[0].idempotencyKey}
+            onChange={event => cancellation.setResumeId(event.target.value)} disabled={cancellation.pending}
+            className="max-w-full rounded-xl border border-amber-200 bg-white p-3 text-xs font-bold text-amber-900">
+            {cancellation.savedAttempts.map(attempt => <option key={attempt.idempotencyKey} value={attempt.idempotencyKey}>
+              {attempt.receivableIds.length} crédito(s) · {new Date(attempt.createdAt).toLocaleString('pt-BR')}
+            </option>)}
+          </select>
+          <button type="button" onClick={cancellation.resume} disabled={cancellation.pending || isLoading}
+          className="rounded-xl bg-amber-800 px-4 py-3 text-xs font-black uppercase text-white disabled:opacity-50">Retomar cancelamento</button>
+        </div>
+      </div> : null}
+
+      {cancellation.selectedItems.length > 0 ? <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4">
+        <div><p className="text-sm font-black text-emerald-900">{cancellation.selectedItems.length} crédito(s) selecionado(s)</p>
+          <p className="mt-1 text-xs text-emerald-800">Seleção desta página · até {OTHER_CREDIT_CANCELLATION_LIMIT} créditos por operação</p></div>
+        <div className="flex flex-wrap gap-3">
+          <button type="button" onClick={cancellation.clear} disabled={cancellation.pending} className="rounded-xl px-3 py-2 text-xs font-bold text-slate-600 disabled:opacity-50">Limpar seleção</button>
+          <button type="button" onClick={() => cancellation.open()} disabled={cancellation.selectionLocked}
+            className="inline-flex items-center gap-2 rounded-xl bg-rose-700 px-4 py-3 text-xs font-black uppercase text-white hover:bg-rose-800 disabled:opacity-50">
+            <XCircle size={16} /> Cancelar selecionados
+          </button>
+        </div>
+      </div> : null}
+
       <div className="overflow-hidden rounded-[2rem] border border-slate-100 bg-white shadow-sm">
         {isLoading ? (
           <div className="flex items-center justify-center gap-3 py-16">
@@ -169,6 +207,12 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId }) => {
             <table className="w-full min-w-[980px] text-left">
               <thead className="bg-slate-50">
                 <tr>
+                  <th className="w-12 px-4 py-4"><OtherCreditSelectionCheckbox
+                    label="Selecionar créditos canceláveis desta página"
+                    checked={eligiblePageItems.length > 0 && selectedPageCount === eligiblePageItems.length}
+                    mixed={selectedPageCount > 0 && selectedPageCount < eligiblePageItems.length}
+                    disabled={cancellation.selectionLocked || !eligiblePageItems.length}
+                    onChange={() => cancellation.toggle(visibleItems)} /></th>
                   {['Crédito', 'Parceiro / Polo', 'Vencimento', 'Origem', 'Valor', 'Ações'].map((header) => (
                     <th key={header} className="px-5 py-4 text-[10px] font-black uppercase tracking-wider text-slate-500">{header}</th>
                   ))}
@@ -176,16 +220,24 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId }) => {
               </thead>
               {groupMode === 'none' ? (
                 <tbody className="divide-y divide-slate-100">
-                  {pageItems.map((item, index) => <OtherCreditRow key={item.id} item={item} index={index} model={model} onOpenPlan={planModel.openPlan} />)}
+                  {pageItems.map((item, index) => <OtherCreditRow key={item.id} item={item} index={index} model={model} onOpenPlan={planModel.openPlan} cancellation={cancellation} />)}
                 </tbody>
               ) : pageGroups.map((group) => {
                 const isExpanded = expandedGroups.has(group.key);
                 const summary = getGroupSummary(group.items);
                 const first = summary.first;
+                const eligibleGroup = selectableOtherCredits(group.items).filter(item => !cancellation.reservedIds.has(item.id!));
+                const selectedGroupCount = eligibleGroup.filter(item => cancellation.selectedIds.has(item.id!)).length;
 
                 return (
                   <tbody key={group.key} className="divide-y divide-slate-100">
                     <tr className="bg-slate-50/80 transition-colors hover:bg-emerald-50/65">
+                      <td className="w-12 px-4 py-4"><OtherCreditSelectionCheckbox
+                        label={`Selecionar créditos canceláveis de ${group.label}`}
+                        checked={eligibleGroup.length > 0 && selectedGroupCount === eligibleGroup.length}
+                        mixed={selectedGroupCount > 0 && selectedGroupCount < eligibleGroup.length}
+                        disabled={cancellation.selectionLocked || !eligibleGroup.length}
+                        onChange={() => cancellation.toggle(group.items)} /></td>
                       <td colSpan={6} className="p-0">
                         <button
                           type="button"
@@ -225,7 +277,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId }) => {
                         </button>
                       </td>
                     </tr>
-                    {isExpanded && group.items.map((item, index) => <OtherCreditRow key={item.id} item={item} index={index} model={model} onOpenPlan={planModel.openPlan} />)}
+                    {isExpanded && group.items.map((item, index) => <OtherCreditRow key={item.id} item={item} index={index} model={model} onOpenPlan={planModel.openPlan} cancellation={cancellation} />)}
                   </tbody>
                 );
               })}
@@ -265,6 +317,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId }) => {
       <OtherCreditCreateModal model={model} />
       <OtherCreditPdvModal model={model} />
       <OtherCreditPlanModal model={planModel} resources={model} />
+      <OtherCreditCancellationModal model={cancellation} />
       {model.paymentReceivableId && (
         <OtherCreditPaymentModal
           key={model.paymentReceivableId}
