@@ -6,6 +6,14 @@ Histórico anterior: [27/09/2026 — versões 4.8.117 a 4.8.127](./changelog/202
 
 Histórico arquivado: [28/09/2026 a 30/09/2026 — versões 4.8.128 a 4.8.137](./changelog/2026-09-28-a-2026-09-30-versoes-4-8-128-a-4-8-137.md), [27/09/2026 — versões 4.8.115 a 4.8.116](./changelog/2026-09-27-versoes-4-8-115-a-4-8-116.md), [27/09/2026 — versão 4.8.114](./changelog/2026-09-27-versao-4-8-114.md), [27/09/2026 — versão 4.8.113](./changelog/2026-09-27-versao-4-8-113.md), [27/09/2026 — versão 4.8.112](./changelog/2026-09-27-versao-4-8-112.md), [27/09/2026 — versão 4.8.111](./changelog/2026-09-27-versao-4-8-111.md), [25/09/2026 a 26/09/2026 — versões 4.8.91 a 4.8.110](./changelog/2026-09-25-a-2026-09-26-versoes-4-8-91-a-4-8-110.md).
 
+Histórico arquivado: [30/09/2026 — versões 4.8.138 a 4.8.144](./changelog/2026-09-30-versoes-4-8-138-a-4-8-144.md).
+
+## [4.8.219] - 2026-10-14
+
+- Corrigida a projeção do vencimento individual de transferências para carregar o financeiro sem alterar o histórico da turma.
+- A Secretaria permite continuar para o financeiro individual após registrar a transferência, reutilizando a conferência, emissão BolePix e carnê existentes.
+- Plano, aproveitamentos e cobranças anteriores preservados; a emissão exige confirmação individual.
+
 ## [4.8.218] - 2026-10-14
 
 - Contratos: matrícula recebida presencialmente pode integrar o valor contratual por aluno, sem gerar boleto ou lançamento de caixa.
@@ -453,42 +461,3 @@ Histórico arquivado: [28/09/2026 a 30/09/2026 — versões 4.8.128 a 4.8.137](.
 
 - Documenta a passagem durável por matrícula e ciclo, a separação entre histórico Proesc e operação Banese e o cancelamento confirmado após trancamento.
 - Inclui skill financeira versionada, orientação sob demanda e auditoria da validação e publicação de 4.8.144, sem alterar as regras de execução dessa versão.
-
-## [4.8.144] - 2026-09-30
-
-- Continuidade individual dos ciclos importados com prova durável, sem depender de renovação de cache Proesc.
-- Proteção contra duplicidade de ciclo e preservação de históricos Proesc somente para consulta.
-- Trancamento com prévia, cancelamento Banese confirmado e preservação de pagamentos e vencimentos anteriores ao corte.
-- Ações financeiras autorizadas pela origem canônica da cobrança; cancelados permanecem no histórico e saem do saldo em aberto.
-
-## [4.8.143] - 2026-09-30
-
-- Financeiro da turma ganha painel, regras e listagem mais compactos, preservando dados, cálculos e funcionalidades existentes.
-- Valores iniciam ocultos no painel, cronograma e lista; controle acessível permite exibir ou ocultar em conjunto, com proteção durante a edição.
-- Ações por aluno são organizadas em próximo passo e acessos identificados; cobrança usa painel expansível acessível sem corte na última linha.
-
-## [4.8.142] - 2026-09-30
-
-- A confirmação do ciclo técnico envia os itens da prévia revisada, eliminando a revisão vazia que bloqueava a emissão mesmo após a composição correta.
-- Os três modos de matrícula mantêm seus destinos: boleto, registro local sem boleto e omissão; matrícula local retroativa não é enviada ao banco.
-- O teste integrado atravessa o handler real, a validação da Edge Function e o orquestrador com banco simulado, incluindo as 12 mensalidades, clique repetido e recuperação de erro.
-
-## [4.8.140] - 2026-09-30
-
-- Alunos da T42 com primeiro ciclo importado e confirmado localmente seguem para o segundo ciclo sem depender de nova consulta online ao Proesc; cobranças futuras permanecem no sistema local e são emitidas pelo Banese.
-- No primeiro ciclo da T46, a escolha de registrar matrícula sem boleto ocorre antes da primeira prévia e permite vencimento retroativo controlado sem emitir título bancário para a matrícula.
-- Alterar a data da matrícula local recalcula a Mensalidade 1 para o mês seguinte e mantém as demais em sequência por mês-calendário; os modos boleto, omitir e o segundo ciclo permanecem protegidos.
-
-## [4.8.139] - 2026-09-30
-
-- A conferência Proesc do 2º ciclo da T42 retoma com lease distribuído e prazo limitado, sem transformar processamento concorrente em erro permanente.
-- A T46 aceita matrícula local sem boleto com data retroativa controlada; a primeira mensalidade fica independente e recalcula as seguintes por mês-calendário.
-- A prévia da regra financeira deixa de permanecer em “Aguardando cálculo” quando o servidor já confirmou a composição.
-- O último título histórico incorreto da T46 foi substituído com vencimento em 15/10/2026, preservando o recebível, as outras onze cobranças e o run paralelo.
-
-## [4.8.138] - 2026-09-30
-
-- O cadastro de aluno bloqueia clique, Enter, cancelamento e troca de etapa enquanto o salvamento está em andamento.
-- O botão exibe “Salvando...” com indicador de progresso e impede que a mesma solicitação seja disparada novamente antes da resposta.
-- Falhas liberam a trava para nova tentativa, preservando a mensagem canônica da mutation e evitando o falso retorno “Aluno já cadastrado” causado por replay.
-

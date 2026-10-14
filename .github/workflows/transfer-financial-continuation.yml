@@ -1,0 +1,56 @@
+name: Continuidade financeira de transferência
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/transfer-financial-continuation.yml'
+      - 'modules/gestor/secretaria/transferencia/**'
+      - 'modules/gestor/gestao/tecnicos/detalhes/components/academic/ReceiveExternalTransferController.tsx'
+      - 'modules/gestor/gestao/tecnicos/detalhes/components/financeiro/FinanceiroAlunosList.tsx'
+      - 'supabase/migrations/20261010190040_external_transfer_schedule_projection.sql'
+      - 'supabase/migrations/20261014143702_fix_transfer_schedule_effective_due_date.sql'
+      - 'supabase/tests/transfer_effective_rule_projection.isolated.test.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/transfer-financial-continuation.yml'
+      - 'modules/gestor/secretaria/transferencia/**'
+      - 'modules/gestor/gestao/tecnicos/detalhes/components/academic/ReceiveExternalTransferController.tsx'
+      - 'modules/gestor/gestao/tecnicos/detalhes/components/financeiro/FinanceiroAlunosList.tsx'
+      - 'supabase/migrations/20261010190040_external_transfer_schedule_projection.sql'
+      - 'supabase/migrations/20261014143702_fix_transfer_schedule_effective_due_date.sql'
+      - 'supabase/tests/transfer_effective_rule_projection.isolated.test.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+
+permissions:
+  contents: read
+
+jobs:
+  transfer-financial-continuation:
+    name: Projeção SQL e continuidade individual
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Instalar dependências do produto
+        run: npm ci
+      - name: Preparar PostgreSQL isolado
+        run: npm install --prefix "$RUNNER_TEMP/transfer-projection" --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.3.14
+      - name: Conferir projeção, histórico, permissões e guarda concorrente
+        env:
+          PGLITE_MODULE_PATH: ${{ runner.temp }}/transfer-projection/node_modules/@electric-sql/pglite/dist/index.js
+        run: node --test supabase/tests/transfer_effective_rule_projection.isolated.test.mjs
+      - name: Conferir continuidade sem emissão automática e isolamento da matrícula
+        run: node --test modules/gestor/secretaria/transferencia/transferencia-financeiro-continuation.test.mjs
+      - name: Atualizar índice operacional no fechamento da revisão
+        if: github.event_name == 'pull_request'
+        run: node scripts/agent-memory-rag.mjs index

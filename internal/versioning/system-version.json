@@ -1,9 +1,8 @@
 {
-  "version": "4.8.218",
+  "version": "4.8.219",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 227,
+  "revision": 228,
   "releasedAt": "2026-10-14",
-  "summary": "Contrato inclui matrícula recebida presencialmente, sem gerar cobrança"
+  "summary": "Financeiro individual de transferências com vencimento coerente e continuidade para emissão"
 }
-
