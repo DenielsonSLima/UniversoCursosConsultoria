@@ -27,6 +27,7 @@ const tests = [
   'modules/gestor/caixa/caixa-polos.test.ts',
   'modules/gestor/caixa/report/caixa-report.layout.test.ts',
   'modules/gestor/caixa/report/caixa-report.mapper.test.ts',
+  'modules/gestor/caixa/report/caixa-report.service.test.ts',
   'modules/gestor/caixa/report/caixa-report.pagination.test.ts',
   'modules/gestor/caixa/report/caixa-report.vector-pdf.test.ts',
   'modules/gestor/caixa/report/caixa-report.fechamento-implantacao.test.tsx',

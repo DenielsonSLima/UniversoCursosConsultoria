@@ -1,9 +1,12 @@
+Warning: truncated output (original token count: 27659)
+Total output lines: 861
+
 {
   "schemaVersion": 1,
   "retrieval": "lexical-bm25-with-source-citations",
-  "builtAt": "2026-10-14T19:49:28.131Z",
+  "builtAt": "2026-10-20T00:53:18.111Z",
   "manifestVersion": 2,
-  "sourceSignature": "f53021df1780068e032d0a8798e6ace9de8a48595ab0a0da6725343969f3331c",
+  "sourceSignature": "fcc3e749ed1d4ad02d803999092537b9c05ea06139ba801abce49f5db8dd1973",
   "sources": [
     {
       "path": "AGENTS.md",
@@ -11,7 +14,7 @@
     },
     {
       "path": "ai/operacao/LOTE_ATIVO.md",
-      "hash": "5858c7132ff1ed39587d7cc1ad5ecc8dda3a9e2ec58e4badc80477a93c59a58f"
+      "hash": "199a80ebe10c31290400c99a7c497baccb2de014074f2ca85c6e672695a2d1df"
     },
     {
       "path": "ai/operacao/MEMORIA_CANONICA.md",
@@ -208,13 +211,13 @@
       "part": 1
     },
     {
-      "id": "c5fa1e924d18aa7d5130",
-      "hash": "c5fa1e924d18aa7d5130dee16c84058d67d41d2f78cfd68c9c8392210c3171ee",
+      "id": "ffb28f2753c2c77ec0ce",
+      "hash": "ffb28f2753c2c77ec0ce457d41362a7a3fd42e0a6ce49b5ef3dfee8b746f0703",
       "path": "ai/operacao/LOTE_ATIVO.md",
       "section": "Lote ativo",
-      "text": "Lote 2026-10-14-alinhamento-data-pagamento. PRONTO_PARA_PUBLICACAO. Versão 4.8.226/revisão235. Alinhamento vertical entre forma e data do pagamento. Conferência na tela reservada ao usuário, sem testes ou navegador. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-14-alinhamento-data-pagamento.md`.",
-      "normalizedText": "lote 2026 10 14 alinhamento data pagamento pronto para publicacao versao 4 8 226 revisao235 alinhamento vertical entre forma e data do pagamento conferencia na tela reservada ao usuario sem testes ou navegador manifesto explicito ai operacao registros alteracoes 2026 10 14 alinhamento data pagamento md",
-      "tokenCount": 43,
+      "text": "Lote 2026-10-19-caixa-timeout-relatorio: BACKEND_APLICADO_FRONTEND_EM_PUBLICACAO. Versão 4.8.227/revisão236. Quatro migrations aplicadas no Universo (ledgers20261020003607/004054/004342/004958), readbacks/ACL preservados. Busca por vínculo, gates, planos reutilizados e índice histórico parcial corrigem SQL57014 antes do PDF. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-19-caixa-timeout-relatorio.md` (19 arquivos). Paridade76 títulos,66 guardas financeiras e153 testes Caixa aprovados; build/TypeScript aprovados. RPC completa global outubro versão7/completo=true em6,53s e4,69s, limite8s mantido. Produção autorizada pelo usuário em19/10; publicação sobre main61578d5 preserva entregas remotas. CI exigiu apenas declarar total7 no registro anterior. Smoke visual reservado ao usuário; navegador fora do escopo por instrução expressa.",
+      "normalizedText": "lote 2026 10 19 caixa timeout relatorio backend aplicado frontend em publicacao versao 4 8 227 revisao236 quatro migrations aplicadas no universo ledgers20261020003607 004054 004342 004958 readbacks acl preservados busca por vinculo gates planos reutilizados e indice historico parcial corrigem sql57014 antes do pdf manifesto explicito ai operacao registros alteracoes 2026 10 19 caixa timeout relatorio md 19 arquivos paridade76 titulos 66 guardas financeiras e153 testes caixa aprovados build typescript aprovados rpc completa global outubro versao7 completo true em6 53s e4 69s limite8s mantido producao autorizada pelo usuario em19 10 publicacao sobre main61578d5 preserva entregas remotas ci exigiu apenas declarar total7 no registro anterior smoke visual reservado ao usuario navegador fora do escopo por instrucao expressa",
+      "tokenCount": 113,
       "part": 1
     },
     {
@@ -493,77 +496,7 @@
       "path": "ai/operacao/politicas/PDFS_OFICIAIS.md",
       "section": "PDFs gerados pelo produto",
       "text": "A regra vetorial desta política vale para todo PDF exportado pelo produto. As regras de Blob canônico, cabeçalho institucional e payload de backend aplicam-se aos documentos oficiais, como contratos, carteirinhas, calendários, boletins e declarações.",
-      "normalizedText": "a regra vetorial desta politica vale para todo pdf exportado pelo produto as regras de blob canonico cabecalho institucional e payload de backend aplicam se aos documentos oficiais como contratos carteirinhas calendarios boletins e declaracoes",
-      "tokenCount": 32,
-      "part": 1
-    },
-    {
-      "id": "b036a4daaaf4fcc817dd",
-      "hash": "b036a4daaaf4fcc817dd6cee387d741951c017ad3f66ef6b3e897cc44bf2ada7",
-      "path": "ai/operacao/politicas/PDFS_OFICIAIS.md",
-      "section": "Fonte canônica",
-      "text": "- Prévia, download e impressão reutilizam exatamente o mesmo Blob PDF. - Elegibilidade, dados, ordenação, validade, QR e paginação vêm do backend/RPC. - O frontend apenas solicita o payload e compõe a apresentação vetorial; conteúdo incompatível deve falhar explicitamente.",
-      "normalizedText": "previa download e impressao reutilizam exatamente o mesmo blob pdf elegibilidade dados ordenacao validade qr e paginacao vem do backend rpc o frontend apenas solicita o payload e compoe a apresentacao vetorial conteudo incompativel deve falhar explicitamente",
-      "tokenCount": 30,
-      "part": 1
-    },
-    {
-      "id": "51ff0a606971c27ac290",
-      "hash": "51ff0a606971c27ac290097ebdbb8b72e04bae46e3187ae5f9b87d3778eec0cd",
-      "path": "ai/operacao/politicas/PDFS_OFICIAIS.md",
-      "section": "Fidelidade aos modelos configurados",
-      "text": "- Antes de alterar qualquer gerador, inventarie o modelo aplicável em `Modelos Documentos` e a marca d'água do polo em `Configurações`, incluindo URL, opacidade, escala e rotação. - Capa, contracapa, campos, coordenadas, estilos, imagens isoladas, slots de assinatura, QR, textos e paginação configurados integram o contrato do documento e devem atravessar todos os adapters até o compositor. - É proibido substituir configuração existente por capa, contracapa, marca d'água, posição de assinatura ou layout genérico hardcoded. - Um fallback só é permitido quando não existir configuração aplicável, deve coincidir com o fallback exibido pelo editor e precisa de teste de contrato. - Prévia, download, impressão e artefato assinado usam o mesmo snapshot do modelo e o mesmo compositor. - A publicação fica bloqueada sem teste-fonte do encadeamento da configuração e inspeção renderizada da capa, página interna, contracapa e páginas de assinatura aplicáveis.",
-      "normalizedText": "antes de alterar qualquer gerador inventarie o modelo aplicavel em modelos documentos e a marca d agua do polo em configuracoes incluindo url opacidade escala e rotacao capa contracapa campos coordenadas estilos imagens isoladas slots de assinatura qr textos e paginacao configurados integram o contrato do documento e devem atravessar todos os adapters ate o compositor e proibido substituir configuracao existente por capa contracapa marca d agua posicao de assinatura ou layout generico hardcoded um fallback so e permitido quando nao existir configuracao aplicavel deve coincidir com o fallback exibido pelo editor e precisa de teste de contrato previa download impressao e artefato assinado usam o mesmo snapshot do modelo e o mesmo compositor a publicacao fica bloqueada sem teste fonte do encadeamento da configuracao e inspecao renderizada da capa pagina interna contracapa e paginas de assinatura aplicaveis",
-      "tokenCount": 117,
-      "part": 1
-    },
-    {
-      "id": "1cbc47b50fe43017c41a",
-      "hash": "1cbc47b50fe43017c41a748996f6b92b987949f32afcc871b761c47afc26f31e",
-      "path": "ai/operacao/politicas/PDFS_OFICIAIS.md",
-      "section": "Cabeçalho e marca",
-      "text": "- A referência visual é modules/gestor/components/DocumentHeader.tsx. - A única implementação de exportação é modules/gestor/secretaria/shared/canonical-institutional-header-pdf.ts, nas variantes retrato e paisagem. - Não crie desenhador privado de cabeçalho nem reconstrua logo, nome, selo Matriz, CNPJ, contato, endereço, e-mail, divisor ou área útil dentro de exportador específico. - A marca-d'água é camada de fundo separada, aplicada antes do conteúdo.",
-      "normalizedText": "a referencia visual e modules gestor components documentheader tsx a unica implementacao de exportacao e modules gestor secretaria shared canonical institutional header pdf ts nas variantes retrato e paisagem nao crie desenhador privado de cabecalho nem reconstrua logo nome selo matriz cnpj contato endereco e mail divisor ou area util dentro de exportador especifico a marca d agua e camada de fundo separada aplicada antes do conteudo",
-      "tokenCount": 58,
-      "part": 1
-    },
-    {
-      "id": "9f188fe6a59328fb47f7",
-      "hash": "9f188fe6a59328fb47f7c2efc9d2fb56f50d1e34e2f9aaa474bb6dc104bb596c",
-      "path": "ai/operacao/politicas/PDFS_OFICIAIS.md",
-      "section": "Vetor e recursos",
-      "text": "- Nunca rasterize a página, folha, carteirinha ou documento inteiro com html2canvas, canvas, captura de DOM ou addImage. - Pipeline híbrido que coloca screenshot/PNG da página inteira e adiciona texto vetorial ou invisível por cima também é proibido: seleção aparente não corrige a perda de qualidade da arte rasterizada. - Texto visível, tabelas, linhas, campos, bordas, fundos geométricos e marcações permanecem objetos nativos do PDF, selecionáveis, pesquisáveis e copiáveis. - Zoom não pode degradar texto, linhas ou tabelas. - Logo, marca-d'água, QR, fotografia e assinatura podem ser imagens isoladas e posicionadas independentemente. Prefira SVG/vetor quando existir. - Canvas é permitido apenas como buffer temporário para preparar um recurso isolado, como recorte de foto, transparência de assinatura ou QR; nunca para capturar o contêiner/página. - Uma imagem de fundo ou marca-d'água não pode conter o texto, as linhas, as tabelas ou outros conteúdos do documento. - Nunca use uma imagem A4 que substitua o documento.",
-      "normalizedText": "nunca rasterize a pagina folha carteirinha ou documento inteiro com html2canvas canvas captura de dom ou addimage pipeline hibrido que coloca screenshot png da pagina inteira e adiciona texto vetorial ou invisivel por cima tambem e proibido selecao aparente nao corrige a perda de qualidade da arte rasterizada texto visivel tabelas linhas campos bordas fundos geometricos e marcacoes permanecem objetos nativos do pdf selecionaveis pesquisaveis e copiaveis zoom nao pode degradar texto linhas ou tabelas logo marca d agua qr fotografia e assinatura podem ser imagens isoladas e posicionadas independentemente prefira svg vetor quando existir canvas e permitido apenas como buffer temporario para preparar um recurso isolado como recorte de foto transparencia de assinatura ou qr nunca para capturar o conteiner pagina uma imagem de fundo ou marca d agua nao pode conter o texto as linhas as tabelas ou outros conteudos do documento nunca use uma imagem a4 que substitua o documento",
-      "tokenCount": 139,
-      "part": 1
-    },
-    {
-      "id": "6aadd960a5bd775759e1",
-      "hash": "6aadd960a5bd775759e1aefdee99f1061dd8775c60a33d9dc9a454730474769a",
-      "path": "ai/operacao/politicas/PDFS_OFICIAIS.md",
-      "section": "Validação proporcional",
-      "text": "- Para ajuste localizado, execute o contrato do exportador afetado, extração de texto, inspeção de recursos e revisão visual da página relevante. - A extração deve conter o texto visível e pdfimages deve listar somente recursos isolados compatíveis com logo, marca, foto, assinatura ou QR. - Inspecione o PDF ampliado para comprovar que texto, bordas e tabelas permanecem nítidos. - Preserve o teste que rejeita cabeçalho institucional privado. - Build completo não é requisito automático; use-o apenas por risco de integração ou publicação. - Um ajuste simples de posição/estilo no compositor compartilhado deve continuar sendo tratado por um agente e pelo menor conjunto de arquivos possível. - A skill genérica de PDF pode auxiliar renderização, extração e inspeção; não deve gerar PDF do produto com ReportLab ou pipeline paralelo.",
-      "normalizedText": "para ajuste localizado execute o contrato do exportador afetado extracao de texto inspecao de recursos e revisao visual da pagina relevante a extracao deve conter o texto visivel e pdfimages deve listar somente recursos isolados compativeis com logo marca foto assinatura ou qr inspecione o pdf ampliado para comprovar que texto bordas e tabelas permanecem nitidos preserve o teste que rejeita cabecalho institucional privado build completo nao e requisito automatico use o apenas por risco de integracao ou publicacao um ajuste simples de posicao estilo no compositor compartilhado deve continuar sendo tratado por um agente e pelo menor conjunto de arquivos possivel a skill generica de pdf pode auxiliar renderizacao extracao e inspecao nao deve gerar pdf do produto com reportlab ou pipeline paralelo",
-      "tokenCount": 111,
-      "part": 1
-    },
-    {
-      "id": "48fc0b9349b6785ac716",
-      "hash": "48fc0b9349b6785ac716612d0807f9279689807d86cf331d103127bcf97efd13",
-      "path": "ai/operacao/politicas/PLANO_CURSO.md",
-      "section": "Plano de Curso técnico",
-      "text": "Carregue esta política somente ao alterar Plano de Curso, vínculo docente/disciplina/turma ou sua emissão.",
-      "normalizedText": "carregue esta politica somente ao alterar plano de curso vinculo docente disciplina turma ou sua emissao",
-      "tokenCount": 16,
-      "part": 1
-    },
-    {
-      "id": "11fd582e14d8dd6450e1",
-      "hash": "11fd582e14d8dd6450e19d3eeade149991ac64934712828610a494b74087c8e6",
-      "path": "ai/operacao/politicas/PLANO_CURSO.md",
-      "section": "Plano de Curso técnico",
-      "text": "- O plano pertence ao vínculo canônico entre turma, disciplina e docente. - O professor recebe somente disciplinas atualmente atribuídas com aulas datadas. - Identidade, elegibilidade, datas, horários, carga, ordenação e paginação são derivados nas RPCs. - RASCUNHO nunca é documento oficial para download ou impressão. - A conclusão congela snapshot completo, revisão do modelo, instante e fingerprint SHA-256. - Emissões posteriores usam o snapshot; prévia, impressão e download compartilham o mesmo Blob. - Vínculo com plano não pode ser removido ou reatribuído silenciosamente. - Aulas de plano concluído não podem ser alteradas. - RPCs e triggers mantêm ordem única de locks. - Realtime usa planos_curso; mudanças de elegibilidade usam Broadcast privado por professor e polo.",
-      "normalizedText": "o plano pertence ao vinculo canonico entre turma disciplina e docente o professor recebe somente disciplinas atualmente atribuidas com aulas datadas identidade elegibilidade datas horarios carga ordenacao e paginacao sao derivados nas rpcs rascunho nunca e documento oficial para download ou impressao a conclusao congela snapshot completo revisao do modelo instante e fingerprint sha 256 emissoes posteriores usam o snapshot previa impressao e download compartilham o mesmo blob vinculo com plano nao pode ser removido ou reatribuido silenciosamente aulas de plano concluido nao podem ser alteradas rpcs e triggers mantem ordem unica de locks realtime usa planos curso mudancas de elegibilidade usam broadcast privado por professor e polo",
+      "normalizedText": "a regra vetorial desta politica vale para todo pdf exportado pelo produto as regras de blob canonico cabecalho institucional e payload …2659 tokens truncated… nas rpcs rascunho nunca e documento oficial para download ou impressao a conclusao congela snapshot completo revisao do modelo instante e fingerprint sha 256 emissoes posteriores usam o snapshot previa impressao e download compartilham o mesmo blob vinculo com plano nao pode ser removido ou reatribuido silenciosamente aulas de plano concluido nao podem ser alteradas rpcs e triggers mantem ordem unica de locks realtime usa planos curso mudancas de elegibilidade usam broadcast privado por professor e polo",
       "tokenCount": 96,
       "part": 1
     },
