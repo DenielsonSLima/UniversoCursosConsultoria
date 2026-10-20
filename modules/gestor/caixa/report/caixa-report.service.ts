@@ -1,4 +1,5 @@
 import { queryOptions } from '@tanstack/react-query';
+import { retryDatabaseRead } from '../../../../lib/database-query-retry';
 import { supabase } from '../../../../lib/supabase';
 import { assertCaixaStatementRequest, normalizeCaixaPoloId } from '../caixa.service';
 import { mapCaixaDetailedReport } from './caixa-report.mapper';
@@ -8,15 +9,18 @@ export const caixaReportService = {
   async getDetailedMonthlyReport(
     poloId: string | null | undefined,
     competencia: string,
+    signal?: AbortSignal,
   ): Promise<CaixaDetailedReport> {
     const normalizedPoloId = normalizeCaixaPoloId(poloId);
-    const { data, error } = await supabase.rpc(
+    const request = supabase.rpc(
       'get_caixa_relatorio_mensal_detalhado_secure',
       {
         p_polo_id: normalizedPoloId,
         p_competencia: competencia,
       },
     );
+    if (signal) request.abortSignal(signal);
+    const { data, error } = await request;
 
     if (error) {
       console.error('Erro ao buscar relatório detalhado do Caixa:', {
@@ -56,7 +60,8 @@ export const caixaReportQueryOptions = (
   enabled: boolean,
 ) => queryOptions({
   queryKey: caixaReportQueryKey(poloId, competencia),
-  queryFn: () => caixaReportService.getDetailedMonthlyReport(poloId, competencia),
+  queryFn: ({ signal }) => caixaReportService.getDetailedMonthlyReport(poloId, competencia, signal),
+  retry: retryDatabaseRead,
   enabled,
   staleTime: 0,
   gcTime: 0,

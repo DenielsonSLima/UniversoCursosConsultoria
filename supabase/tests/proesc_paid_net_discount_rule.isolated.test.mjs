@@ -98,6 +98,21 @@ try {
   const before = await immutable();
   assert.equal((await composition()).composicao_status, 'NAO_DISCRIMINADA');
   await db.exec(migration('20261003050000_proesc_paid_net_discount_rule.sql'));
+  const boundedLookup = migration('20261020003000_bound_caixa_latest_proesc_snapshot.sql');
+  const calculatedBeforeLookup = await composition();
+  assert.equal(await scalar('select md5(pg_get_functiondef($1::regprocedure)) value', [signature]),
+    '5f0357c93d635447fd6cb21d7ea7c73c', 'Reconstruct exact deployed resolver');
+  await assert.rejects(() => db.exec(boundedLookup), /Unique nondeferrable receivable link/);
+  await db.exec('ROLLBACK');
+  await db.exec('ALTER TABLE internal_proesc.obligation_links ADD UNIQUE(receivable_id)');
+  await db.exec('BEGIN');
+  await db.exec(`ALTER FUNCTION ${signature} VOLATILE`);
+  await assert.rejects(() => db.exec(boundedLookup), /Composition resolver drift/);
+  await db.exec('ROLLBACK');
+  await db.exec(boundedLookup);
+  assert.deepEqual(await composition(), calculatedBeforeLookup, 'Lookup preserves all financial fields');
+  await db.exec(migration('20261020004500_gate_caixa_proesc_composition_reads.sql'));
+  assert.deepEqual(await composition(), calculatedBeforeLookup, 'Evidence gates preserve financial result');
   // The performance migration must preserve all documentary/financial guards.
   // PGlite is single-process: validate index definitions and financial parity,
   // not the production CONCURRENTLY build protocol (which needs real backends).

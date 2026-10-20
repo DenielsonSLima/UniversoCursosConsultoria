@@ -15,3 +15,5 @@ Sem testes ou navegador por instrução explícita do usuário; conferência vis
 - `ai/operacao/registros/alteracoes/2026-10-14-alinhamento-data-pagamento.md`
 - `ai/operacao/qualidade/limite-linhas-manifestos.json`
 - `ai/operacao/rag/index.json`
+
+Total: 7 arquivos.
