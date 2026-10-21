@@ -148,9 +148,48 @@ try {
       source_status,normalized,'STAGED',null,clock_timestamp(),clock_timestamp(),run_id from internal_proesc.v2_invoice_observations where id=$2`,[id(800+n),id(n)]);
     assert.equal(await scalar('select internal_proesc.v2_apply_invoice($1,$2) value',[actor,id(800+n)]),'PRESERVED');
   }
+  // Preserve the provider label and require the corresponding review reason.
+  // A superior payment needs the same receipt proof as the original partial path.
+  await db.exec(`update internal_proesc.v2_invoice_observations
+    set source_status='PAGAMENTO SUPERIOR',normalized=normalized
+      ||'{"sourceStatus":"PAGAMENTO SUPERIOR","reviewReasons":["OVERPAYMENT_REQUIRES_REVIEW"]}'::jsonb
+    where id='${id(3)}';`);
+  const superior={...await payload(3),portalDueDate:'2026-10-15'};
+  await assert.rejects(()=>call(203,superior),e=>e.code==='40001');
+  await db.exec(source('20261021003000_proesc_portal_superior_payment_confirmation.sql'));
+  for(const [status,reasons] of [
+    ['PAGAMENTO SUPERIOR',['PARTIAL_PAYMENT_REQUIRES_REVIEW']],
+    ['PAGAMENTO SUPERIOR',['OVERPAYMENT_REQUIRES_REVIEW','SOURCE_IDENTITY_MISMATCH']],
+    ['PAGA',['OVERPAYMENT_REQUIRES_REVIEW']],
+    [null,['OVERPAYMENT_REQUIRES_REVIEW']],
+  ]){
+    await db.exec('begin');
+    await db.query(`update internal_proesc.v2_invoice_observations set source_status=$1,
+      normalized=normalized||jsonb_build_object('sourceStatus',$1::text,'reviewReasons',$2::jsonb)
+      where id=$3`,[status,JSON.stringify(reasons),id(3)]);
+    const invalid={...await payload(3),portalDueDate:'2026-10-15'};
+    await assert.rejects(()=>call(203,invalid),e=>e.code==='40001');
+    await db.exec('rollback');
+  }
+  const superiorResult=await call(203,superior);
+  assert.equal(superiorResult.result,'APPLIED');
+  assert.equal(superiorResult.compositionConfirmed,false);
+  assert.equal((await call(203,superior)).replayed,true);
+  await assert.rejects(()=>call(204,superior),e=>e.code==='40001','new request cannot settle the same receipt twice');
+  assert.equal(await scalar(`select source_status value from internal_proesc.v2_invoice_observations where id=$1`,[id(3)]),'PAGAMENTO SUPERIOR');
+  assert.equal(await scalar(`select components value from internal_proesc.financial_snapshots where id=$1`,[superiorResult.snapshotId])
+    .then(value=>Object.values(value).every(component=>component===null)),true);
+  await db.query(`insert into internal_proesc.v2_invoice_observations select $1,unit_id,invoice_id,link_id,snapshot_id,
+    source_status,normalized,'STAGED',null,clock_timestamp(),clock_timestamp(),run_id
+    from internal_proesc.v2_invoice_observations where id=$2`,[id(803),id(3)]);
+  assert.equal(await scalar('select internal_proesc.v2_apply_invoice($1,$2) value',[actor,id(803)]),'PRESERVED');
+  const partialAfterMigration={...await payload(4),portalDueDate:'2026-11-15'};
+  assert.equal((await call(204,partialAfterMigration)).result,'APPLIED',
+    'new partial-payment confirmation remains valid after the superior extension');
+  assert.equal((await call(200,p)).replayed,true,'original partial-payment replay stays valid after migration');
   for(const role of ['anon','authenticated','service_role']){
     assert.equal(await scalar(`select has_function_privilege($1,'internal_proesc.confirm_portal_payment(uuid,uuid,jsonb)','execute') value`,[role]),false);
     assert.equal(await scalar(`select has_table_privilege($1,'internal_proesc.portal_payment_confirmations','select') value`,[role]),false);
   }
-  console.log('PASS portal payment: exact proof, real financial claim/identity guard, September-only receipts, 12 future records unchanged, API evidence unchanged, idempotence, private ACL');
+  console.log('PASS portal payment: exact proof, partial/superior labels, reason pairing, identity guards, immutable API evidence, idempotence, future synchronization preservation, private ACL');
 }catch(e){console.error(e.message,e.code,e.where??'');process.exitCode=1;}finally{await db.close();}

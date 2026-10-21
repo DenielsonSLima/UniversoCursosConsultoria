@@ -10,6 +10,13 @@ Histórico arquivado: [30/09/2026 — versões 4.8.138 a 4.8.144](./changelog/20
 
 Histórico arquivado: [01/10/2026 a 04/10/2026 — versões 4.8.145 a 4.8.168](./changelog/2026-10-01-a-04-versoes-4-8-145-a-168.md).
 
+## 4.8.229 — 21/10/2026
+
+- Caixa: consultas pesadas com concorrência controlada e prioridade para a conferência aberta pelo usuário.
+- Banco: busca da última evidência e validação histórica de composição com índices específicos, preservando regras e valores.
+- Proesc: confirmação individual auditável de quatro pagamentos comprovados, sem duplicar recebimentos ou presumir composição de encargos.
+
+
 ## [4.8.228] - 2026-10-20
 
 - Corrige o timeout ao listar registros em conferência do mês e da carteira no Caixa.
@@ -367,4 +374,3 @@ Histórico arquivado: [01/10/2026 a 04/10/2026 — versões 4.8.145 a 4.8.168](.
 
 - Consultas de pagamentos tardios têm espaço garantido mesmo com uma fila contínua de cancelamentos em análise.
 - Gestores financeiros podem consultar as revisões dos seus polos autorizados, preservando as permissões e a restrição de acesso aos demais polos.
-

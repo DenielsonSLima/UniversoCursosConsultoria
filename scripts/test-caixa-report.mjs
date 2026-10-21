@@ -10,6 +10,7 @@ const tests = [
   'modules/gestor/financeiro/conciliacao-bancaria/components/ConciliacaoRecebimentoRows.test.tsx',
   'modules/gestor/caixa/caixa-data-scope.test.ts',
   'modules/gestor/caixa/caixa-request-orchestration.test.tsx',
+  'modules/gestor/caixa/caixa-read-queue.test.ts',
   'modules/gestor/caixa/caixa-composicao.test.ts',
   'modules/gestor/caixa/components/CaixaCompositionCards.test.tsx',
   'modules/gestor/caixa/components/CaixaImmersiveLayout.test.tsx',

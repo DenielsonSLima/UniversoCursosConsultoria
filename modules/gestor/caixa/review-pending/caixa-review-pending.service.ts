@@ -1,5 +1,6 @@
 import { queryOptions } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
+import { queueCaixaRead } from '../caixa-read-queue';
 import { parseCaixaReviewPage, type CaixaReviewRequest } from './caixa-review-pending.contract';
 
 export const normalizeReviewPolo = (poloId?: string | null) => poloId && poloId !== 'todos' ? poloId : null;
@@ -37,7 +38,8 @@ export async function getCaixaReviewPage(request: CaixaReviewRequest, signal?: A
 
 export const caixaReviewQueryOptions = (request: CaixaReviewRequest) => queryOptions({
   queryKey: caixaReviewKeys.page(request),
-  queryFn: ({ signal }) => getCaixaReviewPage(request, signal),
+  queryFn: ({ signal }) => queueCaixaRead(signal,
+    () => getCaixaReviewPage(request, signal), 'interactive'),
   staleTime: 0, gcTime: 0, retry: false, retryOnMount: false,
   refetchOnWindowFocus: false, refetchOnReconnect: false,
 });

@@ -1,8 +1,8 @@
 {
-  "version": "4.8.228",
+  "version": "4.8.229",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 237,
-  "releasedAt": "2026-10-20",
-  "summary": "Correção da listagem de registros em conferência do Caixa com busca indexada das evidências"
+  "revision": 238,
+  "releasedAt": "2026-10-21",
+  "summary": "Correção da primeira abertura do Caixa e conciliação de pagamentos comprovados no portal Proesc"
 }
