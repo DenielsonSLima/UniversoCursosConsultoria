@@ -53,7 +53,7 @@ export const CaixaCompositionReviewModal: React.FC<Props> = ({ poloId, competenc
   const [page, setPage] = useState(1);
   const dialogRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const closeRef = useRef<HTMLButtonElement>(null);
+  const closeRef = useRef<globalThis.HTMLButtonElement>(null);
   useReviewDialogFocus(dialogRef, closeRef, onClose);
   const query = useQuery(compositionReviewQueryOptions(poloId, competencia));
   const rows = query.data ? selectCompositionReviewRows(query.data.recebimentos, filter) : [];
