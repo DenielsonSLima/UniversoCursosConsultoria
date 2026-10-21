@@ -6,6 +6,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { parceirosService } from '../../parceiros.service';
 import { formatCnpj } from '../../../../../lib/documentFormatters';
 import EmailConfirmationStatus from './EmailConfirmationStatus';
+import { PJIdentityPreview } from './PJIdentityPreview';
 
 interface PJCardProps {
   data: any;
@@ -55,7 +56,7 @@ const PJCard: React.FC<PJCardProps> = ({ data, onClick, onDelete }) => {
 
       {/* Header */}
       <div className="flex justify-between items-start mb-4 relative z-20">
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
           <div className="w-11 h-11 rounded-[14px] bg-white text-slate-600 flex items-center justify-center overflow-hidden border border-slate-200 shadow-sm shrink-0">
             {data.foto && !logoFailed ? (
               <img
@@ -69,9 +70,7 @@ const PJCard: React.FC<PJCardProps> = ({ data, onClick, onDelete }) => {
             )}
           </div>
           <div className="flex flex-col min-w-0">
-            <h3 className="text-sm font-bold text-slate-800 line-clamp-1 group-hover:text-slate-900 transition-colors" title={data.nome}>
-              {data.nome}
-            </h3>
+            <PJIdentityPreview data={data} />
             {data.cnpj && (
               <div className="text-[11px] text-slate-400 font-medium font-mono">{formattedCnpj}</div>
             )}
