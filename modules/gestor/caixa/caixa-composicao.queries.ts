@@ -1,4 +1,5 @@
 import { isCancelledError, queryOptions } from '@tanstack/react-query';
+import { queueCaixaRead } from './caixa-read-queue';
 import {
   CaixaComposicaoClientContractError,
   getCaixaComposicaoMensal,
@@ -66,7 +67,8 @@ export const caixaComposicaoQueryOptions = (
   competencia: string,
 ) => queryOptions({
   queryKey: caixaComposicaoQueryKeys.detail(poloId, competencia),
-  queryFn: ({ signal }) => getCaixaComposicaoMensal(poloId, competencia, signal),
+  queryFn: ({ signal }) => queueCaixaRead(signal,
+    () => getCaixaComposicaoMensal(poloId, competencia, signal)),
   retry: retryCaixaComposicaoRead,
   staleTime: 30_000,
   gcTime: 30 * 60_000,

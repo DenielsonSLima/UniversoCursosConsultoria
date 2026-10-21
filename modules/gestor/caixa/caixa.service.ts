@@ -1,5 +1,6 @@
 import { queryOptions } from '@tanstack/react-query';
 import { retryDatabaseRead } from '../../../lib/database-query-retry';
+import { queueCaixaRead } from './caixa-read-queue';
 import { supabase } from '../../../lib/supabase';
 import { orderCaixaPolosByCreation } from './caixa-polos';
 import type { CaixaPolo } from './caixa-polos';
@@ -336,7 +337,8 @@ export const caixaDashboardQueryOptions = (
   competencia = getCurrentCaixaCompetencia(),
 ) => queryOptions({
   queryKey: caixaQueryKeys.statement(poloId, competencia),
-  queryFn: ({ signal }) => caixaService.getMonthlyStatement(poloId, competencia, signal),
+  queryFn: ({ signal }) => queueCaixaRead(signal,
+    () => caixaService.getMonthlyStatement(poloId, competencia, signal)),
   retry: retryDatabaseRead,
   staleTime: 30_000,
   gcTime: 30 * 60_000,

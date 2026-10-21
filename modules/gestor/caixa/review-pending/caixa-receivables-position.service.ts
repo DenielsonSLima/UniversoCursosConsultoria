@@ -1,5 +1,6 @@
 import { queryOptions } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
+import { queueCaixaRead } from '../caixa-read-queue';
 import { assertCaixaReviewRequest, caixaReviewKeys } from './caixa-review-pending.service';
 
 export interface CaixaReceivablesPositionGroup {
@@ -68,7 +69,8 @@ export async function getCaixaReceivablesPosition(poloId: string | null, compete
 
 export const caixaReceivablesPositionQueryOptions = (poloId: string | null, competencia: string) => queryOptions({
   queryKey: [...caixaReviewKeys.forPolo(poloId), 'position', competencia],
-  queryFn: ({ signal }) => getCaixaReceivablesPosition(poloId, competencia, signal),
+  queryFn: ({ signal }) => queueCaixaRead(signal,
+    () => getCaixaReceivablesPosition(poloId, competencia, signal)),
   staleTime: 15_000, gcTime: 0, retry: false, retryOnMount: false,
   refetchOnWindowFocus: false, refetchOnReconnect: false,
 });
