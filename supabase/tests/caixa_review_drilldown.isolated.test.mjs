@@ -66,8 +66,14 @@ try {
       recorded_at timestamptz,verification text,source_status text,principal_cents bigint,received_cents bigint,
       payment_date date,evidence_kind text,review_reasons jsonb,collector_review_reasons jsonb,
       open_evidence jsonb,components jsonb,accounting_lines jsonb);
-    create table internal_proesc.v2_invoice_observations(id uuid default gen_random_uuid(),snapshot_id uuid,
-      invoice_id text,source_status text,observed_at timestamptz,recorded_at timestamptz);
+    create table internal_proesc.v2_invoice_observations(id uuid primary key default gen_random_uuid(),snapshot_id uuid,
+      invoice_id text,source_status text,observed_at timestamptz,recorded_at timestamptz,
+      run_id uuid,unit_id text,link_id uuid,unique(run_id,unit_id,invoice_id));
+    create index proesc_v2_invoice_link_time
+      on internal_proesc.v2_invoice_observations(link_id,observed_at desc);
+    create index proesc_v2_invoice_source_latest
+      on internal_proesc.v2_invoice_observations
+        (unit_id,invoice_id,observed_at desc,recorded_at desc,id desc);
     insert into public.parceiros values('${aluno}','Aluno de teste','MAT-TESTE','DO_NOT_EXPOSE');
     insert into public.turmas values('${turma}','${polo}','T-TESTE','Turma de teste');
     insert into public.matriculas values('${matricula}','${aluno}','${turma}');
@@ -210,6 +216,65 @@ try {
     'private',has_function_privilege('authenticated','internal_contas.caixa_receivables_position_rows(uuid,date,date)','execute'),
     'summaryAnon',has_function_privilege('anon','public.get_caixa_receivables_position_secure(uuid,date)','execute')) value`);
   assert.deepEqual(privileges,{anon:false,auth:true,private:false,summaryAnon:false});
+
+  // Realistic observation volume exposes the page-only lateral scan. Exercise
+  // the exact production SELECT, including snapshot/invoice identity and all
+  // tie-breakers, rather than substituting a simplified benchmark query.
+  await db.exec(`insert into internal_proesc.v2_invoice_observations
+    (id,snapshot_id,invoice_id,source_status,observed_at,recorded_at,run_id,unit_id,link_id)
+    select md5('observation-'||n)::uuid,md5('snapshot-'||n)::uuid,((n-1)%1000+1)::text,'PAGO',
+      '2026-10-01'::timestamptz,'2026-10-01'::timestamptz,
+      md5('run-'||((n-1)/1000))::uuid,'3145',md5('link-'||n)::uuid
+    from generate_series(1,100000) n;
+    insert into internal_proesc.v2_invoice_observations
+      (id,snapshot_id,invoice_id,source_status,observed_at,recorded_at) values
+      ('${id(8001)}','${id(4)}','4','PAGAMENTO PARCIAL','2026-10-02','2026-10-02'),
+      ('${id(8002)}','${id(4)}','4','PAGAMENTO SUPERIOR','2026-10-02','2026-10-02'),
+      ('${id(8003)}','${id(4)}','wrong-invoice','PAGO','2026-10-03','2026-10-03'),
+      ('${id(8004)}','${id(99)}','4','PAGO','2026-10-03','2026-10-03');
+    analyze internal_proesc.v2_invoice_observations;`);
+  const lookup = source('20261002011400_caixa_review_drilldown.sql').match(
+    /select o\.source_status from internal_proesc\.v2_invoice_observations o[\s\S]*?order by o\.observed_at desc,o\.recorded_at desc,o\.id desc limit 1/)[0];
+  const lookupQuery = `select r.reason_code,observation.source_status
+    from (values
+      ('V2_PAYMENT_STATUS_REVIEW','${id(4)}'::uuid,'4'),
+      ('V2_PAYMENT_STATUS_REVIEW','${id(99)}'::uuid,'missing'),
+      ('SOURCE_UNVERIFIED','${id(4)}'::uuid,'4')
+    ) r(reason_code,snapshot_id,source_key)
+    left join lateral (${lookup}) observation on true`;
+  const plan = async () => (await db.query(`explain (analyze, buffers, format json) ${lookupQuery}`))
+    .rows[0]['QUERY PLAN'][0];
+  const nodes = (node) => [node,...(node.Plans ?? []).flatMap(nodes)];
+  const withoutGeneratedAt = (result) => {
+    const { geradoEm, ...data } = result.data;
+    return { ...result, data };
+  };
+  const contexts = ['MONTHLY','FUTURE'];
+  const pagesBefore = await Promise.all(contexts.map(async (context) =>
+    withoutGeneratedAt(await page(context))));
+  const lookupBefore = (await db.query(lookupQuery)).rows;
+  assert.deepEqual(lookupBefore.map(row=>row.source_status),['PAGAMENTO SUPERIOR',null,null]);
+  const planBefore = await plan();
+  const blocks = (explanation) => explanation.Plan['Shared Hit Blocks']
+    + explanation.Plan['Shared Read Blocks'];
+  const evidenceBefore = await scalar(`select md5(jsonb_agg(to_jsonb(o) order by id)::text) value
+    from internal_proesc.v2_invoice_observations o`);
+  await db.exec(source('20261021001000_index_caixa_review_observation_lookup.sql'));
+  const planAfter = await plan();
+  assert.ok(nodes(planAfter.Plan).some(node =>
+    node['Index Name']==='proesc_v2_invoice_snapshot_lookup_idx'),'planner chooses matching snapshot index');
+  assert.ok(!nodes(planAfter.Plan).some(node => node['Node Type']==='Seq Scan'
+    && node['Relation Name']==='v2_invoice_observations'),'indexed lookup never scans unrelated history');
+  assert.ok(blocks(planBefore)>blocks(planAfter)*5,
+    'snapshot index reduces actual buffer visits beyond existing link/run indexes');
+  assert.deepEqual((await db.query(lookupQuery)).rows,lookupBefore);
+  assert.deepEqual(await Promise.all(contexts.map(async (context) =>
+    withoutGeneratedAt(await page(context)))),pagesBefore,'index preserves full monthly/portfolio payloads');
+  assert.equal(await scalar(`select md5(jsonb_agg(to_jsonb(o) order by id)::text) value
+    from internal_proesc.v2_invoice_observations o`),evidenceBefore,'index leaves observation facts unchanged');
+  console.log(`PASS review lookup: 100000 observations across 100 runs; `
+    + `buffers ${blocks(planBefore)} -> ${blocks(planAfter)}; `
+    + `local execution ${planBefore['Execution Time']}ms -> ${planAfter['Execution Time']}ms`);
   assert.equal(await fingerprint(),before,'all read paths leave receipts, identities and evidence unchanged');
   console.log('PASS Caixa review drilldown + monthly/portfolio position: canonical parity, pagination, cutoffs, sources, ACL, immutability');
 } finally {
