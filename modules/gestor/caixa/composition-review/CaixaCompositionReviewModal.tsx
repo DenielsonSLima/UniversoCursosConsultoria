@@ -12,7 +12,7 @@ import type { CaixaReportReceipt } from '../report/caixa-report.types';
 const money = (value: number | null) => value === null || !Number.isFinite(value) ? 'Não informado' : formatCaixaCurrency(value);
 const buttonClass = 'min-h-11 rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 disabled:opacity-40';
 
-function ReceiptCard({ row }: { row: CaixaReportReceipt }) {
+const ReceiptCard: React.FC<{ row: CaixaReportReceipt }> = ({ row }) => {
   const metrics = [
     ['Base nominal', row.valorBase], ['Recebido', row.valorRecebido],
     ['Juros', row.juros], ['Multa', row.multa], ['Acréscimo', row.acrescimo],
@@ -48,7 +48,7 @@ interface Props {
 }
 
 /** Parent keys the dialog by scope/month so navigation cannot retain an old page. */
-export function CaixaCompositionReviewModal({ poloId, competencia, expectedDifferenceCount, onClose }: Props) {
+export const CaixaCompositionReviewModal: React.FC<Props> = ({ poloId, competencia, expectedDifferenceCount, onClose }) => {
   const [filter, setFilter] = useState<CompositionReviewFilter>('DIFFERENCE');
   const [page, setPage] = useState(1);
   const dialogRef = useRef<HTMLDivElement>(null);
