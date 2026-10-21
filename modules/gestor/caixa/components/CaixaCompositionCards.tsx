@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { CaixaCompositionReviewModal } from '../composition-review/CaixaCompositionReviewModal';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -165,7 +166,9 @@ const CompositionStatus = ({ section }: { section: CaixaComposicaoSecao }) => {
 const CompositionCard = ({
   section,
   copy,
+  onReview,
 }: {
+  onReview?: () => void;
   section: CaixaComposicaoSecao;
   copy: CardCopy;
 }) => {
@@ -272,6 +275,9 @@ const CompositionCard = ({
                     </>
                   )}
                 {caixaCompositionObservation(section.observacao)}
+                {onReview ? <button type="button" onClick={onReview}
+                  className="mt-3 flex min-h-11 items-center justify-center rounded-xl border border-amber-300 bg-white px-4 py-2 text-xs font-extrabold text-amber-900 hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600"
+                  aria-label="Ver registros da composição dos recebimentos">Ver registros</button> : null}
               </p>
             </div>
           ) : null}
@@ -311,6 +317,9 @@ export const CaixaCompositionCards: React.FC<CaixaCompositionCardsProps> = ({
   hasError,
   onRetry,
 }) => {
+  const [reviewScope, setReviewScope] = useState<string | null>(null);
+  const currentScope = composicao ? `${composicao.polo_id ?? 'GLOBAL'}:${composicao.competencia}` : null;
+  useEffect(() => { setReviewScope(null); }, [currentScope]);
   if (isLoading) {
     return (
       <div className="grid gap-4 lg:grid-cols-2">
@@ -351,8 +360,14 @@ export const CaixaCompositionCards: React.FC<CaixaCompositionCardsProps> = ({
 
   return (
     <div className="grid items-start gap-4 lg:grid-cols-2">
-      <CompositionCard section={composicao.recebimentos} copy={copies.receipts} />
+      <CompositionCard section={composicao.recebimentos} copy={copies.receipts}
+        onReview={() => setReviewScope(currentScope)} />
       <CompositionCard section={composicao.despesas} copy={copies.expenses} />
+      {reviewScope !== null && reviewScope === currentScope ? <CaixaCompositionReviewModal
+        key={currentScope} poloId={composicao.polo_id} competencia={composicao.competencia}
+        expectedDifferenceCount={composicao.recebimentos.disponivel ? composicao.recebimentos.dados.quantidade_com_diferenca : undefined}
+        onClose={() => setReviewScope(null)} /> : null}
     </div>
   );
 };
+

@@ -1,8 +1,8 @@
 {
-  "version": "4.8.230",
+  "version": "4.8.231",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 239,
+  "revision": 240,
   "releasedAt": "2026-10-21",
-  "summary": "Nomes menores nos cards de pessoas jurídicas e prévia com identidade completa ao passar o mouse"
+  "summary": "Conferência paginada da composição dos recebimentos, somente leitura"
 }

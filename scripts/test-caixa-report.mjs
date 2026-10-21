@@ -7,6 +7,7 @@ import { build } from 'esbuild';
 const root = resolve(import.meta.dirname, '..');
 const outputDirectory = mkdtempSync(join(tmpdir(), 'caixa-report-tests-'));
 const tests = [
+  'modules/gestor/caixa/composition-review/caixa-composition-review.test.ts',
   'modules/gestor/financeiro/conciliacao-bancaria/components/ConciliacaoRecebimentoRows.test.tsx',
   'modules/gestor/caixa/caixa-data-scope.test.ts',
   'modules/gestor/caixa/caixa-request-orchestration.test.tsx',
@@ -70,3 +71,4 @@ try {
 } finally {
   rmSync(outputDirectory, { recursive: true, force: true });
 }
+

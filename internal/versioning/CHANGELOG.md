@@ -10,6 +10,13 @@ Histórico arquivado: [30/09/2026 — versões 4.8.138 a 4.8.144](./changelog/20
 
 Histórico arquivado: [01/10/2026 a 04/10/2026 — versões 4.8.145 a 4.8.168](./changelog/2026-10-01-a-04-versoes-4-8-145-a-168.md).
 
+## [4.8.231] - 2026-10-21
+
+### Caixa: conferência da composição
+- Adicionado botão Ver registros no aviso dos recebimentos, com lista completa paginada e filtro separado para ausência de detalhamento sem diferença.
+- Modal somente leitura exibe aluno, parcela, recebido, base, componentes identificados, diferença e origem da composição. Valores ausentes não são presumidos zero.
+- Reutilizada RPC segura do relatório mensal sob demanda, sem alteração de cobranças, saldos, banco ou permissões.
+
 ## [4.8.230] - 2026-10-21
 
 - Parceiros: nomes dos cards de pessoas jurídicas menores em aproximadamente15%.
@@ -380,3 +387,4 @@ Histórico arquivado: [01/10/2026 a 04/10/2026 — versões 4.8.145 a 4.8.168](.
 
 - Consultas de pagamentos tardios têm espaço garantido mesmo com uma fila contínua de cancelamentos em análise.
 - Gestores financeiros podem consultar as revisões dos seus polos autorizados, preservando as permissões e a restrição de acesso aos demais polos.
+
