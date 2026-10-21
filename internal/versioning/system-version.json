@@ -1,8 +1,8 @@
 {
-  "version": "4.8.227",
+  "version": "4.8.228",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 236,
-  "releasedAt": "2026-10-19",
-  "summary": "Correção do timeout da prestação de contas do Caixa com consulta limitada e cancelamento de requisições"
+  "revision": 237,
+  "releasedAt": "2026-10-20",
+  "summary": "Correção da listagem de registros em conferência do Caixa com busca indexada das evidências"
 }
