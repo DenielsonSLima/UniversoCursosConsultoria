@@ -1,8 +1,8 @@
 {
-  "version": "4.8.229",
+  "version": "4.8.230",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 238,
+  "revision": 239,
   "releasedAt": "2026-10-21",
-  "summary": "Correção da primeira abertura do Caixa e conciliação de pagamentos comprovados no portal Proesc"
+  "summary": "Nomes menores nos cards de pessoas jurídicas e prévia com identidade completa ao passar o mouse"
 }

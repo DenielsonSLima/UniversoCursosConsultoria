@@ -10,6 +10,12 @@ Histórico arquivado: [30/09/2026 — versões 4.8.138 a 4.8.144](./changelog/20
 
 Histórico arquivado: [01/10/2026 a 04/10/2026 — versões 4.8.145 a 4.8.168](./changelog/2026-10-01-a-04-versoes-4-8-145-a-168.md).
 
+## [4.8.230] - 2026-10-21
+
+- Parceiros: nomes dos cards de pessoas jurídicas menores em aproximadamente15%.
+- Prévia ao passar o mouse ou focar pelo teclado com nome completo, razão social, CNPJ e demais dados disponíveis, sem abrir o cadastro.
+
+
 ## [4.8.229] - 2026-10-21
 
 - Caixa: consultas pesadas com concorrência controlada e prioridade para a conferência aberta pelo usuário.
