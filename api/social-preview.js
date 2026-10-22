@@ -1,6 +1,9 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
+// Private runtime evidence, once per module instance. No request or environment data.
+console.info(`[node-security-runtime] ${process.version}`);
+
 const SITE_URL = (process.env.SOCIAL_SHARE_BASE_URL || 'https://universocc.com.br').replace(/\/+$/, '');
 
 const TEMPLATES = {
@@ -118,3 +121,4 @@ export default async function socialPreview(request, response) {
     response.status(500).send('Não foi possível montar a prévia social.');
   }
 }
+

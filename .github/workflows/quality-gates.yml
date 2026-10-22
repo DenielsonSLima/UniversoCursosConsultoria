@@ -23,7 +23,7 @@ jobs:
       - name: Preparar Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: '>=24.22.1 <25'
           cache: npm
 
       - name: Preparar Deno
@@ -497,4 +497,4 @@ jobs:
           node --test modules/public/publicTechnicalClasses.contract.test.ts
 
       - name: Gerar build de produção
-        run: npm run build
+        run: node --test scripts/check-node-security.test.mjs && npm run build

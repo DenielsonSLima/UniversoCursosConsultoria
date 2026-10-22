@@ -1,8 +1,8 @@
 {
-  "version": "4.8.231",
+  "version": "4.8.232",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 240,
-  "releasedAt": "2026-10-21",
-  "summary": "Conferência paginada da composição dos recebimentos, somente leitura"
+  "revision": 241,
+  "releasedAt": "2026-10-22",
+  "summary": "Validação do piso de segurança Node 24 e evidência privada do runtime"
 }
