@@ -19,7 +19,7 @@
   },
   "scripts": {
     "dev": "vite --force",
-    "build": "npm run check:version && vite build && node scripts/generate-social-share-pages.mjs",
+    "build": "node scripts/check-node-security.mjs && npm run check:version && vite build && node scripts/generate-social-share-pages.mjs",
     "check:version": "node scripts/check-version-record.mjs",
     "check:file-lines": "node scripts/check-file-line-limits.mjs",
     "app:check": "node internal/empacotamento/check-prerequisites.mjs",
@@ -96,3 +96,4 @@
     "vite": "^6.4.3"
   }
 }
+

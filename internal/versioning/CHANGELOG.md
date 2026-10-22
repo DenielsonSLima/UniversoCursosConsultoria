@@ -10,6 +10,12 @@ Histórico arquivado: [30/09/2026 — versões 4.8.138 a 4.8.144](./changelog/20
 
 Histórico arquivado: [01/10/2026 a 04/10/2026 — versões 4.8.145 a 4.8.168](./changelog/2026-10-01-a-04-versoes-4-8-145-a-168.md).
 
+## [4.8.232] - 2026-10-22
+
+- Build exige Node estável 24.22.1 ou posterior na linha 24.x antes de gerar o site.
+- Função de prévia social registra apenas a versão Node em log privado, uma vez por instância, sem alterar respostas ou expor dados.
+- A versão efetiva em produção deve ser confirmada nos logs após a publicação; a configuração 24.x não comprova o patch.
+
 ## [4.8.231] - 2026-10-21
 
 ### Caixa: conferência da composição
@@ -387,4 +393,3 @@ Histórico arquivado: [01/10/2026 a 04/10/2026 — versões 4.8.145 a 4.8.168](.
 
 - Consultas de pagamentos tardios têm espaço garantido mesmo com uma fila contínua de cancelamentos em análise.
 - Gestores financeiros podem consultar as revisões dos seus polos autorizados, preservando as permissões e a restrição de acesso aos demais polos.
-
