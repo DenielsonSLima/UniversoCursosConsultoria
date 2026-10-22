@@ -12,7 +12,7 @@ Histórico arquivado: [01/10/2026 a 04/10/2026 — versões 4.8.145 a 4.8.168](.
 
 ## [4.8.232] - 2026-10-22
 
-- Build exige Node estável 24.22.1 ou posterior na linha 24.x antes de gerar o site.
+- Build exige Node estável 24.22.1 ou posterior na linha 24.x antes de gerar o site; CI seleciona esse piso e testa o gate, sem reutilizar Node antigo em cache.
 - Função de prévia social registra apenas a versão Node em log privado, uma vez por instância, sem alterar respostas ou expor dados.
 - A versão efetiva em produção deve ser confirmada nos logs após a publicação; a configuração 24.x não comprova o patch.
 
