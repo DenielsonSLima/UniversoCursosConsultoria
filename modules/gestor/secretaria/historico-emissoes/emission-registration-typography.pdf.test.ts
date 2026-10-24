@@ -82,7 +82,7 @@ const inspectPdf = async (blob: Blob) => {
       }),
     };
   } finally {
-    await document.destroy();
+    await document.loadingTask.destroy();
   }
 };
 

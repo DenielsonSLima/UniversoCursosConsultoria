@@ -219,7 +219,7 @@ const PdfCanvasPreview: React.FC<PdfCanvasPreviewProps> = ({
         loadingTaskRef.current = loadingTask;
         const loadedPdf = await loadingTask.promise;
         if (cancelled) {
-          await loadedPdf.destroy();
+          await loadedPdf.loadingTask.destroy();
           return;
         }
         setPdf(loadedPdf);

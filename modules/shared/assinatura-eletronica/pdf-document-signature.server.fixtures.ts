@@ -368,7 +368,7 @@ export const extractPdfText = async (bytes: Uint8Array) => {
       );
     }),
   );
-  await document.destroy();
+  await document.loadingTask.destroy();
   return { pageCount: pages.length, pages, text: pages.join("\n") };
 };
 

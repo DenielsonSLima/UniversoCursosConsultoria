@@ -66,7 +66,7 @@ const extract = async blob => {
     const content = await page.getTextContent();
     pages.push(normalizedText(content.items.map(item => item.str ?? '').join(' ')));
   }
-  await pdf.destroy();
+  await pdf.loadingTask.destroy();
   return pages;
 };
 

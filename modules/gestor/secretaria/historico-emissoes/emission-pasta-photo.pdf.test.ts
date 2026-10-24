@@ -69,7 +69,7 @@ const inspectPdf = async (source: EmissionPdfSource) => {
   const imageCount = operators.fnArray.filter((operator) => operator === OPS.paintImageXObject).length;
   const text = items.map((item) => item.str).join('\n');
   const namePosition = name.transform.slice(4, 6);
-  await document.destroy();
+  await document.loadingTask.destroy();
   return { text, namePosition, imageCount };
 };
 

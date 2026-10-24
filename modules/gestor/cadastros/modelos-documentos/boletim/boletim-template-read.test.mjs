@@ -213,7 +213,7 @@ const textFromPdf = async (blob) => {
     assert.equal(pdf.numPages, 1);
     const content = await (await pdf.getPage(1)).getTextContent();
     return content.items.filter(item => 'str' in item).map(item => item.str).join('\n');
-  } finally { await pdf.destroy(); }
+  } finally { await pdf.loadingTask.destroy(); }
 };
 
 for (const [caseName, studentDocumentType, studentCpf, studentRg, expected, forbidden] of [

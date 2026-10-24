@@ -208,6 +208,10 @@
     "ai/operacao/registros/alteracoes/2026-10-13-outros-creditos-carne.md",
     "ai/operacao/registros/alteracoes/2026-10-13-contrato-financeiro-individual.md",
     "ai/operacao/registros/alteracoes/2026-10-13-outros-creditos-tres-etapas.md",
+    "ai/operacao/registros/alteracoes/2026-10-19-caixa-timeout-relatorio.md",
+    "ai/operacao/registros/alteracoes/2026-10-20-caixa-listagem-conferencia.md",
+    "ai/operacao/registros/alteracoes/2026-10-20-caixa-primeira-abertura-conciliacao.md",
+    "ai/operacao/registros/alteracoes/2026-10-21-parceiros-identidade-hover.md",
     "ai/operacao/registros/alteracoes/2026-10-14-contrato-matricula-presencial.md",
     "ai/operacao/registros/alteracoes/2026-10-14-transferencia-financeiro-individual.md",
     "ai/operacao/registros/alteracoes/2026-10-14-outros-creditos-cancelamento-lote.md",
@@ -216,11 +220,8 @@
     "ai/operacao/registros/alteracoes/2026-10-14-mascara-real-modal-financeiro.md",
     "ai/operacao/registros/alteracoes/2026-10-14-valor-automatico-baixa-unica.md",
     "ai/operacao/registros/alteracoes/2026-10-14-alinhamento-data-pagamento.md",
-    "ai/operacao/registros/alteracoes/2026-10-19-caixa-timeout-relatorio.md",
-    "ai/operacao/registros/alteracoes/2026-10-20-caixa-listagem-conferencia.md",
-    "ai/operacao/registros/alteracoes/2026-10-20-caixa-primeira-abertura-conciliacao.md",
-    "ai/operacao/registros/alteracoes/2026-10-21-parceiros-identidade-hover.md",
     "ai/operacao/registros/alteracoes/2026-10-21-caixa-composicao-conferencia.md",
-    "ai/operacao/registros/alteracoes/2026-10-22-node-security.md"
+    "ai/operacao/registros/alteracoes/2026-10-22-node-security.md",
+    "ai/operacao/registros/alteracoes/2026-10-23-seguranca-autorizacao-dependencias.md"
   ]
 }

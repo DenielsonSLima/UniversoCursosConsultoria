@@ -97,7 +97,7 @@ async function inspect(bytes, name) {
         images: operators.fnArray.filter(op => op === OPS.paintImageXObject).length,
         paths: operators.fnArray.filter(op => op === OPS.constructPath).length });
     }
-  } finally { await pdf.destroy(); }
+  } finally { await pdf.loadingTask.destroy(); }
   return evidence;
 }
 

@@ -228,7 +228,7 @@ async function renderSavedPdf(pdfPath) {
       await page.render({ canvas, canvasContext: canvas.getContext('2d'), viewport }).promise;
       await writeFile(pdfPath.replace(/\.pdf$/, `-pdfjs-${number}.png`), canvas.toBuffer('image/png'));
     }
-  } finally { await document.destroy(); }
+  } finally { await document.loadingTask.destroy(); }
 }
 
 async function saveProductPdf(page, pdfPath) {

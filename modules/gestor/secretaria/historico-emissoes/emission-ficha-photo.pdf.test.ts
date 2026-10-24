@@ -70,7 +70,7 @@ const inspectPdf = async (source: EmissionPdfSource, artifact?: string) => {
   assert.deepEqual(operators.argsArray[opacityIndex], [[['ca', 0.17]]]);
   const namePosition = name.transform.slice(4, 6);
   const text = items.map((item) => item.str).join('\n');
-  await document.destroy();
+  await document.loadingTask.destroy();
   return { imageCount, photoFrameCount, namePosition, text };
 };
 
