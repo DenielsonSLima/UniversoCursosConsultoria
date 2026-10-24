@@ -279,15 +279,20 @@ test('email confirmation is required before a student session is issued', () => 
   )
 })
 
-test('Cloudflare challenge origin is preconnected', () => {
-  assert.match(
+test('Turnstile loads on demand without global Cloudflare connection hints', () => {
+  assert.doesNotMatch(
     indexHtml,
-    /rel="preconnect"\s+href="https:\/\/challenges\.cloudflare\.com"/,
+    /<link\b(?=[^>]*\brel=["'](?:preconnect|dns-prefetch)["'])(?=[^>]*\bhref=["'](?:https:)?\/\/challenges\.cloudflare\.com(?:[\/"']))[^>]*>/i,
   )
   assert.match(
-    indexHtml,
-    /rel="dns-prefetch"\s+href="\/\/challenges\.cloudflare\.com"/,
+    turnstileWidget,
+    /https:\/\/challenges\.cloudflare\.com\/turnstile\/v0\/api\.js\?render=explicit/,
   )
+  assert.match(
+    turnstileWidget,
+    /const loadTurnstile\s*=[\s\S]*document\.createElement\('script'\)[\s\S]*script\.src\s*=\s*SCRIPT_URL[\s\S]*document\.head\.appendChild\(script\)/,
+  )
+  assert.match(turnstileWidget, /await loadTurnstile\(\)/)
 })
 
 test('student login switches to the native Turnstile bridge inside the apps', () => {

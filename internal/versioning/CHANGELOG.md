@@ -10,6 +10,11 @@ Histórico arquivado: [30/09/2026 — versões 4.8.138 a 4.8.144](./changelog/20
 
 Histórico arquivado: [01/10/2026 a 04/10/2026 — versões 4.8.145 a 4.8.168](./changelog/2026-10-01-a-04-versoes-4-8-145-a-168.md).
 
+## [4.8.234] - 2026-10-24
+
+- Caixa preserva status HTTP e interrompe tentativas após negação de acesso, sem trocar para versão anterior da consulta.
+- Composição do Caixa agrega totais e classificação na mesma leitura de cada relatório, preservando valores e permissões; conexões antecipadas Cloudflare removidas e captcha sob demanda.
+
 ## [4.8.233] - 2026-10-23
 
 - Consulta financeira passa a negar identidade ausente e restringir resultados aos polos autorizados; calculadora mantém resultados com search_path fixo.

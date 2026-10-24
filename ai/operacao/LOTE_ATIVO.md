@@ -1,5 +1,5 @@
 # Lote ativo
 
-Lote 2026-10-23-seguranca-autorizacao-dependencias: EM_VALIDACAO, PR 327. Versão candidata 4.8.233/revisão 242. Correção autorizada nesta conversa da consulta financeira sem identidade, escopo por polo, dependências vulneráveis e validação separada do runtime Node. Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-23-seguranca-autorizacao-dependencias.md`. Nenhuma migration ou publicação em produção realizada nesta etapa; Preview inicial ainda executa Node 24.21.0.
+Lote 2026-10-24-caixa-avisos-carregamento: EM VALIDAÇÃO/PUBLICAÇÃO AUTORIZADA, PR328. Versão 4.8.234/revisão 243. Três agentes; timeout SQL57014 confirmado, V2 otimizada para uma leitura por core. Sem navegador ou CUA. Registros de carteira de R$ 839,70 fora do escopo.
 
-Entrega remota anterior: 4.8.232 / PR 326, gate do build Node 24.22.1 e observação privada do runtime. A cópia local anterior continha referências até 4.8.230; demais alterações paralelas permanecem preservadas.
+Manifesto explícito: `ai/operacao/registros/alteracoes/2026-10-24-caixa-avisos-carregamento.md`. Migration 20261024161437 aplicada no Universo kfekgwyqozhicpfuunpo; contrato remoto idêntico, autorização preservada e amostra de 1.789 para 1.588 ms. Testes locais e Preview inicial aprovados; candidato final em CI. Smoke interativo não autorizado.
