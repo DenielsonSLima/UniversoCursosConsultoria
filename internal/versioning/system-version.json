@@ -1,8 +1,8 @@
 {
-  "version": "4.8.233",
+  "version": "4.8.234",
   "display": "ESTÁVEL",
   "stage": "stable",
-  "revision": 242,
-  "releasedAt": "2026-10-23",
-  "summary": "Correções de autorização financeira e dependências de segurança; runtime validado separadamente"
+  "revision": 243,
+  "releasedAt": "2026-10-24",
+  "summary": "Correções de carregamento da composição do Caixa e conexões Cloudflare sob demanda"
 }

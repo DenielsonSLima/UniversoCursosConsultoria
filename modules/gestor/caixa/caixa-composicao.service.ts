@@ -63,16 +63,24 @@ export const getCaixaComposicaoMensal = async (
     if (signal) request.abortSignal(signal);
     return request;
   };
-  let { data, error } = await read('get_caixa_composicao_mensal_v2_secure');
+  let { data, error, status } = await read('get_caixa_composicao_mensal_v2_secure');
   // Deployment compatibility only: never mask authorization, transport or
   // contract errors. Both versions retain their original secure RPC guards.
   if (error?.code === 'PGRST202'
+    && status !== 401 && status !== 403
     && error.message.includes('public.get_caixa_composicao_mensal_v2_secure')
     && !signal?.aborted) {
-    ({ data, error } = await read('get_caixa_composicao_mensal_secure'));
+    ({ data, error, status } = await read('get_caixa_composicao_mensal_secure'));
   }
 
-  if (error) throw error;
+  if (error) {
+    // PostgREST keeps the HTTP status beside `error`; preserve it so the
+    // query's no-retry guard also recognizes denials without a SQL code.
+    if (typeof status === 'number') {
+      throw Object.assign(new Error(error.message, { cause: error }), error, { status });
+    }
+    throw error;
+  }
 
   try {
     assertCaixaComposicaoMensalPayload(data);

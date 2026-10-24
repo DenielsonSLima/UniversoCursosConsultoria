@@ -172,6 +172,54 @@ test('não usa fallback para permissão, rede ou outra função ausente', async 
   }
 });
 
+test('HTTP 401/403 preserva o status e não repete a RPC mesmo sem código SQL reconhecido', async () => {
+  for (const status of [401, 403]) {
+    for (const code of ['', 'PGRST202']) {
+      const error = { code, message: 'Could not find public.get_caixa_composicao_mensal_v2_secure', details: '', hint: '' };
+      const rpc = mock.method(supabase, 'rpc', () => {
+        const response = Promise.resolve({ data: null, error, status });
+        return { abortSignal() { return this; }, then: response.then.bind(response) };
+      });
+      const client = new QueryClient();
+      try {
+        await assert.rejects(client.fetchQuery({
+          ...caixaComposicaoQueryOptions(poloId, competencia),
+          retryDelay: 0,
+        }), (reason: unknown) => {
+          assert.equal(rpc.mock.callCount(), 1, 'negação HTTP não repete nem troca para V1');
+          assert.equal((reason as { status: number }).status, status);
+          assert.equal((reason as Error).message, error.message);
+          return true;
+        });
+      } finally {
+        rpc.mock.restore();
+        client.clear();
+      }
+    }
+  }
+});
+
+test('negação HTTP da V1 compatível também encerra a leitura sem repetição', async () => {
+  for (const status of [401, 403]) {
+    const rpc = mock.method(supabase, 'rpc', (name: string) => {
+      const response = Promise.resolve(name.endsWith('_v2_secure')
+        ? { data: null, status: 404, error: { code: 'PGRST202', message: 'Could not find public.get_caixa_composicao_mensal_v2_secure' } }
+        : { data: null, status, error: { code: '', message: 'Request denied' } });
+      return { abortSignal() { return this; }, then: response.then.bind(response) };
+    });
+    const client = new QueryClient();
+    try {
+      await assert.rejects(client.fetchQuery({
+        ...caixaComposicaoQueryOptions(poloId, competencia), retryDelay: 0,
+      }), (reason: unknown) => {
+        assert.equal((reason as { status: number }).status, status);
+        return true;
+      });
+      assert.equal(rpc.mock.callCount(), 2, 'V2 ausente e V1 negada: duas chamadas totais');
+    } finally { rpc.mock.restore(); client.clear(); }
+  }
+});
+
 test('distingue completo, parcial e fonte indisponível sem transformar ausência em zero', () => {
   const partial = payload();
   partial.recebimentos = {
