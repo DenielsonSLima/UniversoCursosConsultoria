@@ -13,7 +13,7 @@ Histórico arquivado: [01/10/2026 a 04/10/2026 — versões 4.8.145 a 4.8.168](.
 ## [4.8.234] - 2026-10-24
 
 - Caixa preserva status HTTP e interrompe tentativas após negação de acesso, sem trocar para versão anterior da consulta.
-- Conexões antecipadas Cloudflare removidas; captcha continua carregando sob demanda. Timeout da composição em investigação por evidência do banco.
+- Composição do Caixa agrega totais e classificação na mesma leitura de cada relatório, preservando valores e permissões; conexões antecipadas Cloudflare removidas e captcha sob demanda.
 
 ## [4.8.233] - 2026-10-23
 

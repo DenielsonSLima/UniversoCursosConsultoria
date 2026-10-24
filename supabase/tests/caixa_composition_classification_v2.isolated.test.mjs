@@ -173,3 +173,6 @@ try {
 } finally {
   await db.close();
 }
+
+// Keep the current V2 optimization in the existing composition CI entrypoint.
+await import('./caixa_composition_single_pass.isolated.test.mjs');
